@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:a3eee5180b7f327b1deb50d23a55546a38badaff81e53337abbb1f9015164306",
+    "d2l_lib_fingerprint": "sha256:9371077e7d50e2c56b036bb1fa51320cfbd956b53f5740a3958baf372032e69b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it hasazcyyyyyyyyyyyyyyyyy'"
+          "text": "'it hasmztjoyzztjoyzztjoyzz'"
         }
       ]
     },
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
-          "bytes": 24795,
-          "sha256": "sha256:d7ca03ec2b437a26a577526e58c93c77b109c8971e88d6537984b6044024d4e9"
+          "bytes": 24440,
+          "sha256": "sha256:654b01d98aeebd3a3066e812a8b1a0ebc341f0c2acf5b34db0781079b0626bd6"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.6, 'time traveller and the than an a t'\n"
+          "text": "perplexity 7.3, 'time traveller and and and and and'\n"
         }
       ]
     }

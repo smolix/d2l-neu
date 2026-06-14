@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "googlenet/googlenet-training-1.svg",
-          "bytes": 20981,
-          "sha256": "sha256:46a58cce0067c122f42e6f4c03a672236eb5f081d3b554216d11ba4b59a18da5"
+          "bytes": 20980,
+          "sha256": "sha256:ea8ba91f97f9bd2fe76447c83db6c33ea82bd4ea9b0c0a7ed6f2ee0c5f153a51"
         }
       ]
     }

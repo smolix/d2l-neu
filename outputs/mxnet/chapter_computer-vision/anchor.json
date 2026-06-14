@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-generating-multiple-anchor-boxes-5-1.svg",
           "bytes": 95767,
-          "sha256": "sha256:ea90f299e437732e1ac5ad8d3f5a9b1a11f6829cb39b25af36c580aa85da6078"
+          "sha256": "sha256:e3c22c44524b494814bc77daabbccfd7ab045301d418559e9372e1ca06cbf882"
         }
       ]
     },
@@ -90,7 +90,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-an-example-1-1.svg",
           "bytes": 94721,
-          "sha256": "sha256:1ad0e1e80362364b1b577be71084fb8713c370b3363c0e9f1cd49f44061e27da"
+          "sha256": "sha256:4648fd7fc6a92da28838effd688c887e5a0d348fcfce025de71c3d6de0985f2f"
         }
       ]
     },
@@ -158,7 +158,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-5-1.svg",
           "bytes": 96403,
-          "sha256": "sha256:26a82be7076ffaf81b0eaaa8905af4102a20b8bd5088a3c70638518dd69641f6"
+          "sha256": "sha256:bc117c0bf4f819ba99c4a92d9240eefafd5475ae55148affe0991c87559487e0"
         }
       ]
     },
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "/home/smola/d2l-neu/.venv-mxnet/lib/python3.12/site-packages/mxnet/numpy/multiarray.py:6140: UserWarning: Currently, MXNet only support quicksort in backend, which is not stable\n  warnings.warn(\"Currently, MXNet only support quicksort in backend, which is not stable\")\n"
+          "text": "/home/smola/d2l-neu/.venv-mxnet/lib/python3.12/site-packages/mxnet/numpy/multiarray.py:6163: UserWarning: Currently, MXNet only support quicksort in backend, which is not stable\n  warnings.warn(\"Currently, MXNet only support quicksort in backend, which is not stable\")\n"
         },
         {
           "type": "execute_result",
@@ -186,7 +186,7 @@
           "mime": "image/svg+xml",
           "asset": "anchor/anchor-predicting-bounding-boxes-with-non-maximum-suppression-7-1.svg",
           "bytes": 93212,
-          "sha256": "sha256:46c27634914fdb2839a8dab966471f27b1c6b62daa12abe572b99f9a407b7689"
+          "sha256": "sha256:9d4abd78a55b91533f16971ae94856988842989c1fdd01d557370f983459dc26"
         }
       ]
     }

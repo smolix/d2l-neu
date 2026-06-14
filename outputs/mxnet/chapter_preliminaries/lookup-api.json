@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['beta', 'chisquare', 'choice', 'exponential', 'f', 'gamma', 'gumbel', 'laplace', 'logistic', 'lognormal', 'multinomial', 'multivariate_normal', 'normal', 'pareto', 'power', 'rand', 'randint', 'randn', 'rayleigh', 'seed']\n"
+          "text": "['beta', 'chisquare', 'choice', 'exponential', 'f', 'gamma', 'gumbel', 'integer_types', 'laplace', 'logistic', 'lognormal', 'multinomial', 'multivariate_normal', 'normal', 'pareto', 'power', 'rand', 'randint', 'randn', 'rayleigh']\n"
         }
       ]
     },

@@ -66,8 +66,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "densenet/densenet-training-1.svg",
-          "bytes": 20517,
-          "sha256": "sha256:9e061b6cf62b8f0e943466a5980905d9911bbd756524d877bbbaad398e9ce90b"
+          "bytes": 20514,
+          "sha256": "sha256:2d40bb28445a2b881c30f36bbf744a05fae67f9a2ef1101241a6f586969c825b"
         }
       ]
     }

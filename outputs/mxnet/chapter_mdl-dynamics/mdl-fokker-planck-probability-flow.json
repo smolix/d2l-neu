@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-cloud-marginals-1.svg",
           "bytes": 71874,
-          "sha256": "sha256:58ea37318c39a341cbaab18030c159973d972a1e34976e3cc0da7b8b7a6905a1"
+          "sha256": "sha256:665ab32d4df95051961a1f1fde3e3ddd29eae1ea0d3c584daf9c993254534d16"
         }
       ]
     },
@@ -71,14 +71,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\nt=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
+          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-pf-ode-overlay-1.svg",
           "bytes": 245349,
-          "sha256": "sha256:15ad78bd70fd2f21db19af242071ccd003e4b44e878f7c985c6056d31abd799e"
+          "sha256": "sha256:92715fc52903bd603aaaa1dd9fd6d8d6122f5c4258c5df6ec432d86bcf08b3c8"
         }
       ]
     },
@@ -96,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-mixture-score-1.svg",
           "bytes": 25825,
-          "sha256": "sha256:93a8f71e2ee721a819f4b3a5236ae033cb3cb00a2eeb4ad3ee714687b09a317e"
+          "sha256": "sha256:721947192cb59e0d593fb1c84b02b5ddf2344fda56684d8fd7369290d124438f"
         }
       ]
     },
@@ -119,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-reverse-sde-1.svg",
           "bytes": 43149,
-          "sha256": "sha256:c8bfeea0a25b05c9cc734fefb7b7cdeb166a3c5ff939a93f281c0e8442c28f79"
+          "sha256": "sha256:fa4e304cde64c210c966e1d974da695bce2d130a5a4e1085b2dd12ee8da9c336"
         }
       ]
     }

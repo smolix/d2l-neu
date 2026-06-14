@@ -137,14 +137,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class err 3.47e-03, bbox mae 3.78e-03\n2738.7 examples/sec on gpu(0)\n"
+          "text": "class err 3.55e-03, bbox mae 3.80e-03\n1813.3 examples/sec on gpu(0)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-training-the-model-1.svg",
-          "bytes": 20978,
-          "sha256": "sha256:e954285fc795d1a2516e5776f7d40583afa878b46dfd3d3991b52ca2e62ab401"
+          "bytes": 20095,
+          "sha256": "sha256:38ef76ffca1cc1799c4df68459989f606f0a27054d03951b1912d938a5c3685e"
         }
       ]
     },
@@ -160,7 +160,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "/home/smola/d2l-neu/.venv-mxnet/lib/python3.12/site-packages/mxnet/numpy/multiarray.py:6140: UserWarning: Currently, MXNet only support quicksort in backend, which is not stable\n  warnings.warn(\"Currently, MXNet only support quicksort in backend, which is not stable\")\n"
+          "text": "/home/smola/d2l-neu/.venv-mxnet/lib/python3.12/site-packages/mxnet/numpy/multiarray.py:6163: UserWarning: Currently, MXNet only support quicksort in backend, which is not stable\n  warnings.warn(\"Currently, MXNet only support quicksort in backend, which is not stable\")\n"
         }
       ]
     },
@@ -172,8 +172,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-prediction-3-1.svg",
-          "bytes": 421069,
-          "sha256": "sha256:2232da2d928e166d6d26a2d54a99e7b0c0ac51c8b2dc901cf0eb4f33a2df2a09"
+          "bytes": 420870,
+          "sha256": "sha256:f786df34c1326e6e38f0417bf3f5e5ced99f1710cc6453ec68f0132361ba3b0f"
         }
       ]
     },
@@ -186,7 +186,7 @@
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-exercises-1-1.svg",
           "bytes": 18956,
-          "sha256": "sha256:f8c07309b13dce08147952e940f725ecaff3db751e6fd1b780faeba743a976e7"
+          "sha256": "sha256:239fdb7c280fadafb872d60442033786a6d080baaddba768f3e69729620c30da"
         }
       ]
     },
@@ -199,7 +199,7 @@
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-exercises-2-1.svg",
           "bytes": 24994,
-          "sha256": "sha256:943ac9f48fbb7bb63c880a7c1da82bc03a623b14ec4b5261a9cd5d2501dfed0f"
+          "sha256": "sha256:15c738a0fcdb0b8f7ef8d990fd723fcc750605af89f7f47f7d6817bfe4d08dd7"
         }
       ]
     }

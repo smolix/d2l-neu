@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:29d5baebaed7e64c9ae0073e104adb5b4e3ec7f4544f39524cfcc25c1d73bd4e",
+    "d2l_lib_fingerprint": "sha256:0b9cda48d49a72bf21f72d0d6f52c383b2a500245d8de89eaf99c9cee1215b8b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 24007,
-          "sha256": "sha256:79bb6ae7dc360a0825e108187512119e50ee408c6d2d4e70ead85f4271767633"
+          "bytes": 23991,
+          "sha256": "sha256:e026385e815e9c29939b32ff95cceddbfdc3a4afcb907485f1bc33cef636a5ac"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.3, 'time traveller dimension and the t'\n"
+          "text": "perplexity 7.4, 'time traveller a mered and the tim'\n"
         }
       ]
     }

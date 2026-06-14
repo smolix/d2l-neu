@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "/home/smola/d2l-neu/.venv-mxnet/lib/python3.12/site-packages/mxnet/util.py:754: UserWarning: Parameter 'bias' is already initialized, ignoring. Set force_reinit=True to re-initialize.\n  return func(*args, **kwargs)\n"
+          "text": "/home/smola/d2l-neu/.venv-mxnet/lib/python3.12/site-packages/mxnet/util.py:800: UserWarning: Parameter 'bias' is already initialized, ignoring. Set force_reinit=True to re-initialize.\n  return func(*args, **kwargs)\n"
         }
       ]
     }

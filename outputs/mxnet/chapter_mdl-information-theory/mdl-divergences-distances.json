@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37614,
-          "sha256": "sha256:fbe68565daa4af023ee764aa64d82a864648b0080cae1474142a3d7b52b1b56c"
+          "sha256": "sha256:e4b4a037cd3551b888b5bb37707a993cb4905c24085553b5ae54faf12d73fc39"
         }
       ]
     },
@@ -60,12 +60,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max TV / sqrt(KL/2) over 10,000 random pairs: 0.9926"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\ncoins 1/2 vs 1/2+0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2+0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2+0.001: TV / sqrt(KL/2) = 0.999999\n"
+          "text": "max TV / sqrt(KL/2) over 10,000 random pairs: 0.9926\ncoins 1/2 vs 1/2+0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2+0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2+0.001: TV / sqrt(KL/2) = 0.999999\n"
         }
       ]
     },
@@ -120,7 +115,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "E[ f'(Z) - Z f(Z) ] for f(x) = x^3: +0.0020\nE[ f'(Z) - Z f(Z) ] for f(x) = sin x: +0.0005\n"
+          "text": "E[ f'(Z) - Z f(Z) ] for f(x) = x^3: +0.0020\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "E[ f'(Z) - Z f(Z) ] for f(x) = sin x: +0.0005\n"
         }
       ]
     }

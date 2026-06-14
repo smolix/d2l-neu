@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(0, dtype=int32),\n array([241., 170., 110., 255.,   4.]),\n array([101.]),\n 363)"
+          "text": "(array(0, dtype=int32),\n array([241., 170., 110., 255.,   4.]),\n array([101.]),\n 1242)"
         }
       ]
     },
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.139, test hit rate 0.386, test AUC 0.890\n261.5 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.143, test hit rate 0.401, test AUC 0.892\n296.8 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seqrec/seqrec-train-the-model-1.svg",
           "bytes": 21503,
-          "sha256": "sha256:5c3beba1bed502cd4f488735dca5e518e06697da751fbb59738248ef3e449007"
+          "sha256": "sha256:0ac3782b4d29d49b2e3e6148a7457d85fcf4012c8ec928db9468213a6c1e034c"
         }
       ]
     }

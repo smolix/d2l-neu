@@ -15,19 +15,14 @@
     },
     "numerical-stability-and-init-vanishing-gradients": {
       "code_fingerprint": "sha256:edfdb7bc3493cab468410131032feec9fac764510f565be62bc0b59e5b80d05e",
-      "kind": "mixed",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[23:49:12] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
           "bytes": 26183,
-          "sha256": "sha256:68b97590c4be9782c33412f2f0bddce2a039643539d7a8929fe8949832fe4fcb"
+          "sha256": "sha256:5ac267ecbbd73a6fcce96afab32d6c8b210b4e905c013a29b28cfb9f1d408d93"
         }
       ]
     },
@@ -38,7 +33,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix [[ 1.2850718  -1.3047626   0.02616209 -0.38465187]\n [-0.527196    0.38112903  0.3841142   0.7033965 ]\n [-1.3902506  -1.077877   -1.131321    1.4460784 ]\n [-0.11182339 -1.887576   -1.0674908   1.2382654 ]]\nafter multiplying 100 matrices [[ 1.21809659e+24  2.72292764e+24  1.17020286e+24  2.79567727e+24]\n [-7.85083916e+24 -1.75497308e+25 -7.54215596e+24 -1.80186147e+25]\n [-7.50824957e+25 -1.67839066e+26 -7.21303664e+25 -1.72323303e+26]\n [-6.97387046e+25 -1.55893582e+26 -6.69966837e+25 -1.60058672e+26]]\n"
+          "text": "a single matrix [[-0.72014946  1.3279046   0.5419619  -0.4377986 ]\n [-0.23027816  0.37441665  0.2861379   0.39494058]\n [ 0.21029717  0.5260555   0.22984217  0.74028295]\n [ 2.6004899   1.0351541   0.7249541   0.46649876]]\nafter multiplying 100 matrices [[ 2.79315537e+23  4.73655534e+23  1.37621115e+23 -3.68227974e+22]\n [ 5.47929053e+22  9.29162859e+22  2.69969203e+22 -7.22347206e+21]\n [-2.10548259e+22 -3.57041956e+22 -1.03738875e+22  2.77570665e+21]\n [-2.63699701e+23 -4.47174693e+23 -1.29927039e+23  3.47641660e+22]]\n"
         }
       ]
     }

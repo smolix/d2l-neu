@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:103b076b6a38334bd11a8090f8635dfa714580d24d4cc5e12632c97066c67dcc"
+          "sha256": "sha256:0c5ccb8b4aaf1e208122084adfa0d702fe2c444cb43c18d4318ee33350a29606"
         }
       ]
     },
@@ -137,7 +137,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Laplace var (2b^2): 1.998  Gaussian var: 2.005\nP(|x| > 3sd): Laplace 0.014575  Gaussian 0.00272\n"
+          "text": "Laplace var (2b^2): 1.998  Gaussian var: 2.005\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "P(|x| > 3sd): Laplace 0.014575  Gaussian 0.00272\n"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:4fa9473e4f90df39b5eb9aa669e5d34153eb3a0bc3f882839f7d6d764ad328aa",
+    "d2l_lib_fingerprint": "sha256:f512be086336efe05de4e6052570dfd2c717d6720478e5cc4cf558c9effe5ea5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 19928,
-          "sha256": "sha256:066d074c840d572cd56f2f5d26fa3d91fead87056c2f2a938a49cd013400b0dc"
+          "bytes": 19923,
+          "sha256": "sha256:442fce147afae95f56995c83904edaa32dade7f2e10dc833cd5984bed884711d"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 19942,
-          "sha256": "sha256:a1e21b16b124a8aced476e00cfcf6ca50f0a607846706712ec1e2dc250d426fb"
+          "bytes": 19943,
+          "sha256": "sha256:a85344938d71a5613861c0fc807caf7197d78ade7f94a7ea57b97d4d316be303"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has a mat the preaid th'"
+          "text": "'it has a mere the time tim'"
         }
       ]
     }

@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[[0.48047394, 0.519526  , 0.        , 0.        ],\n        [0.46952257, 0.53047746, 0.        , 0.        ]],\n\n       [[0.31704965, 0.33934402, 0.34360638, 0.        ],\n        [0.38227016, 0.31750393, 0.3002259 , 0.        ]]])"
+          "text": "array([[[0.69492614, 0.30507386, 0.        , 0.        ],\n        [0.61507887, 0.38492116, 0.        , 0.        ]],\n\n       [[0.36378646, 0.18666245, 0.44955114, 0.        ],\n        [0.27091157, 0.48433262, 0.24475576, 0.        ]]])"
         }
       ]
     },
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.36598307, 0.23078978, 0.40322715, 0.        ]],\n\n       [[0.53047234, 0.4695277 , 0.        , 0.        ],\n        [0.30305406, 0.15413845, 0.2658286 , 0.27697888]]])"
+          "text": "array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.3005257 , 0.42329025, 0.27618405, 0.        ]],\n\n       [[0.62980616, 0.37019384, 0.        , 0.        ],\n        [0.20384759, 0.20222521, 0.3329098 , 0.26101735]]])"
         }
       ]
     },
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-scaled-dot-product-attention-3-1.svg",
-          "bytes": 13613,
-          "sha256": "sha256:7db2fabb84667741489be071f02f604bd7f81bc5e8bdd629d25a278932a0e972"
+          "bytes": 14801,
+          "sha256": "sha256:8b8b196ef6f88a4671a89372084a05580cda984702b2da69781e04270a984432"
         }
       ]
     },
@@ -84,8 +84,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-additive-attention-3-1.svg",
-          "bytes": 13564,
-          "sha256": "sha256:e019500812bc16339f9be62a1212ec04e6cc2e4e0286388481b4d3ece367a24c"
+          "bytes": 13569,
+          "sha256": "sha256:fb1f456e7bfc0983630aa4c9586447edb302ee8db3a16643010ac4f6a1f1c64d"
         }
       ]
     }

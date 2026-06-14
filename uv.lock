@@ -373,7 +373,7 @@ jax = [
     { name = "tensorflow-datasets", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or sys_platform == 'darwin'" },
 ]
 mxnet = [
-    { name = "mxnet", version = "2.0.0+cu13.bw.20260609.1", source = { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260609.1/mxnet-2.0.0%2Bcu13.bw.20260609.1-cp312-cp312-linux_x86_64.whl" }, marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-mxnet') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (sys_platform != 'linux' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-tensorflow') or (extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow')" },
+    { name = "mxnet", version = "2.0.0+cu13.bw.20260614", source = { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260614/mxnet-2.0.0%2Bcu13.bw.20260614-cp312-cp312-linux_x86_64.whl" }, marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'extra-3-d2l-mxnet') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow') or (platform_machine != 'x86_64' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (sys_platform != 'linux' and extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow') or (sys_platform != 'linux' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-tensorflow') or (extra != 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow')" },
     { name = "mxnet", version = "2.0.0+macos.arm64.20260609", source = { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260609.1/mxnet-2.0.0%2Bmacos.arm64.20260609-cp312-cp312-macosx_26_0_arm64.whl" }, marker = "(sys_platform == 'darwin' and extra == 'extra-3-d2l-mxnet') or (extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-mxnet' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-mxnet') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-pytorch') or (extra == 'extra-3-d2l-jax' and extra == 'extra-3-d2l-tensorflow') or (extra == 'extra-3-d2l-pytorch' and extra == 'extra-3-d2l-tensorflow')" },
 ]
 pytorch = [
@@ -418,7 +418,7 @@ requires-dist = [
     { name = "matplotlib" },
     { name = "matplotlib-inline" },
     { name = "mxnet", marker = "python_full_version == '3.12.*' and sys_platform == 'darwin' and extra == 'mxnet'", url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260609.1/mxnet-2.0.0%2Bmacos.arm64.20260609-cp312-cp312-macosx_26_0_arm64.whl" },
-    { name = "mxnet", marker = "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'mxnet'", url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260609.1/mxnet-2.0.0%2Bcu13.bw.20260609.1-cp312-cp312-linux_x86_64.whl" },
+    { name = "mxnet", marker = "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'mxnet'", url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260614/mxnet-2.0.0%2Bcu13.bw.20260614-cp312-cp312-linux_x86_64.whl" },
     { name = "nbconvert", marker = "extra == 'run'" },
     { name = "numpy" },
     { name = "optax", marker = "sys_platform == 'darwin' and extra == 'jax'" },
@@ -1491,8 +1491,8 @@ wheels = [
 
 [[package]]
 name = "mxnet"
-version = "2.0.0+cu13.bw.20260609.1"
-source = { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260609.1/mxnet-2.0.0%2Bcu13.bw.20260609.1-cp312-cp312-linux_x86_64.whl" }
+version = "2.0.0+cu13.bw.20260614"
+source = { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260614/mxnet-2.0.0%2Bcu13.bw.20260614-cp312-cp312-linux_x86_64.whl" }
 resolution-markers = [
     "platform_machine == 'x86_64' and sys_platform == 'linux'",
 ]
@@ -1508,7 +1508,7 @@ dependencies = [
     { name = "scipy-openblas32", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
 ]
 wheels = [
-    { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260609.1/mxnet-2.0.0%2Bcu13.bw.20260609.1-cp312-cp312-linux_x86_64.whl", hash = "sha256:60e0ccf934bcf04e6177ad267dac21efad5047bfaed0508f5b9c26af374fcb11" },
+    { url = "https://github.com/smolix/mxnet/releases/download/v2.0.0%2Bcu13.bw.20260614/mxnet-2.0.0%2Bcu13.bw.20260614-cp312-cp312-linux_x86_64.whl", hash = "sha256:02661d7310171e34e3264b0777b2e5d4885c3ad5823dac55ffc541e6e0de0bf2" },
 ]
 
 [package.metadata]

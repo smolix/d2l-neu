@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass  integral p dx : 1.0\nmean        integral x p dx: 0.0\n"
+          "text": "total mass  integral p dx : 1.0\nmean        integral x p dx: -0.0\n"
         }
       ]
     },
@@ -93,7 +93,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
           "bytes": 43756,
-          "sha256": "sha256:099fdd523e5436c5833dee41380d5d32d5fe2c908e4d09b4d5fa9801934be3a0"
+          "sha256": "sha256:b53aebd0137733b91c8066192f14a536c55ceba6d71b4cb22ee15c5a1c86130c"
         }
       ]
     }

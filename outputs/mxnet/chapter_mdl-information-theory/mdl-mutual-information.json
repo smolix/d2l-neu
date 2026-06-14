@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:60662bbcb9531bf49dafbd6c7c43661862d4a38009aa036e788e794a3cea5374"
+          "sha256": "sha256:fae9b5e2060685004ae41ad63d4ab8965bd3656e1b97a88bfee5d8800888bda7"
         }
       ]
     },
@@ -71,12 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sample correlation rho = -0.0028\nbinned MI estimate     = 0.9814 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "after x -> 2x + 3      = 0.9814 nats\n"
+          "text": "sample correlation rho = -0.0028\nbinned MI estimate     = 0.9814 nats\nafter x -> 2x + 3      = 0.9814 nats\n"
         }
       ]
     },
@@ -100,7 +95,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:5d74d56a5bdb731a8f5879d64e1e46e6b30b89662f189aa44b954efbbf2f41f6"
+          "sha256": "sha256:4245aa61164ba98fd7883a9430b7235c9ee45f28e07935d7bca0f3a215e3f99a"
         }
       ]
     },
@@ -111,7 +106,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
+          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
         }
       ]
     },
@@ -119,6 +124,11 @@
       "code_fingerprint": "sha256:0a4538077c0fc0a38421332de7bd1a8c4a2dfa4d8fca3b62e9af461e58159d4c",
       "kind": "text",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[03:59:15] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        },
         {
           "type": "stream",
           "name": "stdout",
@@ -132,12 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =   32: ln N = 3.466, InfoNCE bound = 1.764 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "N =  128: ln N = 4.852, InfoNCE bound = 1.891 nats\ntrue I(X;Y) = 1.959 nats\n"
+          "text": "N =   32: ln N = 3.466, InfoNCE bound = 1.764 nats\nN =  128: ln N = 4.852, InfoNCE bound = 1.891 nats\ntrue I(X;Y) = 1.959 nats\n"
         }
       ]
     },
@@ -155,7 +160,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:5225d6716e0ebba011bd2ecc462c0e8792c71270f3081c7c427ca6138847eff1"
+          "sha256": "sha256:24e75fee4558706e5a691018129f81579292f7552880b1169a4f48a7ef793d93"
         }
       ]
     },

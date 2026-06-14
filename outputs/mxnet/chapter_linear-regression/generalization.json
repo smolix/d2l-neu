@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/generalization.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "generalization-polynomial-curve-fitting-1": {
+      "code_fingerprint": "sha256:bdcf4ae7171e226b715ad9440679f85098c9a1886fed879e5cc9eb5d862adb65",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-polynomial-curve-fitting-2": {
+      "code_fingerprint": "sha256:34ec364c7e95d5f57859603eb896cd38c2111809500ececbb2eecdc1532266d3",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-polynomial-curve-fitting-3": {
+      "code_fingerprint": "sha256:7012a28430321bb1180fcdef1f90d088084571877af30acb924763d2bec37d79",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-polynomial-curve-fitting-4": {
+      "code_fingerprint": "sha256:4cdf2f1d0b6d0746aee327db93f32acb81d60f6193f6c12e776df95821484b6f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "underfitting (degree 1) : train   1.6698   test       1.7318\njust right   (degree 3) : train   0.0136   test       0.0129\noverfitting   (degree 19): train   0.0000   test 49271508224071.6328\n"
+        }
+      ]
+    },
+    "generalization-polynomial-curve-fitting-5": {
+      "code_fingerprint": "sha256:2240feb3e02e6c654532515fc14a10c7a26c79f289e10e1dbe7c13e1778d8bfa",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "generalization/generalization-polynomial-curve-fitting-5-1.svg",
+          "bytes": 22201,
+          "sha256": "sha256:fb03b004f39fe971d5e46eb4ea0e80be2a7fdfbdae31262dcb4af70223642aea"
+        }
+      ]
+    }
+  }
+}

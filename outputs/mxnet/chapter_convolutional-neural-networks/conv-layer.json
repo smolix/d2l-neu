@@ -75,12 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 4.777\nepoch 4, loss 0.821\nepoch 6, loss 0.146\nepoch 8, loss 0.028\nepoch 10, loss 0.006\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[23:47:44] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "epoch 2, loss 5.354\nepoch 4, loss 0.900\nepoch 6, loss 0.152\nepoch 8, loss 0.026\nepoch 10, loss 0.004\n"
         }
       ]
     },
@@ -90,7 +85,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 0.98376787, -0.99369556]])"
+          "text": "array([[ 0.98960274, -0.98635036]])"
         }
       ]
     }

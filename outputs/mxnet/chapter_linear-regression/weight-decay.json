@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0114810261875391\n"
+          "text": "L2 norm of w: 0.007546192966401577\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 22655,
-          "sha256": "sha256:779026e2fbd7eaaddce147a0eedd16c073e7d92b8fa147963e1f2a50cdcf8e2d"
+          "bytes": 21868,
+          "sha256": "sha256:287976934b0b4e424d4f061ae035298660e0a6fafb843f10bad0ffa87aa253a0"
         }
       ]
     },
@@ -58,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0010342157911509275\n"
+          "text": "L2 norm of w: 0.00041338647133670747\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 26843,
-          "sha256": "sha256:b3935ca536fde3ea00df633e60709f3187f0801a8c9f316aecadcb9e7dfde36c"
+          "bytes": 21619,
+          "sha256": "sha256:4a7e76461dd6be366e00f5aee4469c353af3f9847fd2eaeafbb0686680b7228a"
         }
       ]
     },
@@ -81,14 +81,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0013246915768831968\n"
+          "text": "L2 norm of w: 0.0005341664655134082\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 25225,
-          "sha256": "sha256:8d1f1cdd176ea61a92a4f403592314c21533a939dab39a02d6ca2ede88760aa0"
+          "bytes": 25622,
+          "sha256": "sha256:eb397b1da9b0b32a8db1a1d1b5efd79111e0db45e79af383cfd79eb13488d679"
         }
       ]
     }

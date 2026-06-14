@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(3.9540282e-10)"
+          "text": "array(-2.8262548e-10)"
         }
       ]
     },
@@ -64,7 +64,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.        , 0.        , 0.        ],\n       [0.02962318, 0.        , 0.        ]])"
+          "text": "array([[0.0131681 , 0.06332441, 0.05782281],\n       [0.03928753, 0.08417808, 0.0441781 ]])"
         }
       ]
     },
@@ -74,7 +74,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.],\n       [0.]])"
+          "text": "array([[0.0732046 ],\n       [0.08674183]])"
         }
       ]
     }

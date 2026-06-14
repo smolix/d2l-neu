@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
           "bytes": 24746,
-          "sha256": "sha256:777c11b9dad2566d98ddcdf5f55ded27eb6e6b1858278946ad2a82bbd24a2ef3"
+          "sha256": "sha256:8f86cb514700e4916a6342dacfa6f3e24ca7a5a7eebaced6189723fa6ab42a3d"
         }
       ]
     },
@@ -38,7 +38,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
+          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
         }
       ]
     },
@@ -76,27 +81,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step    0: CFM loss 2.130\n"
+          "text": "step    0: CFM loss 2.125\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[03:58:51] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 1000: CFM loss 1.502\n"
+          "text": "step 1000: CFM loss 1.590\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 2000: CFM loss 1.481\n"
+          "text": "step 2000: CFM loss 1.459\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 3000: CFM loss 1.562\n"
+          "text": "step 3000: CFM loss 1.419\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "step 4000: CFM loss 1.512\n"
+          "text": "step 4000: CFM loss 1.427\n"
         }
       ]
     },
@@ -113,8 +123,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
-          "bytes": 1114848,
-          "sha256": "sha256:9fe9e4070de82fdf35f62fc8f0f6b2a2651b4bfbe3037d45c1e91849165b5b1e"
+          "bytes": 1114875,
+          "sha256": "sha256:6123c4b5b302a6a7772a172f5d2283334c6c468fafa98528ac8bd07f7f148303"
         }
       ]
     },
@@ -125,14 +135,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1: 0.616  2: 0.154  4: 0.031  8: 0.008  16: 0.006  32: 0.007  64: 0.007\n"
+          "text": "1: 0.603  2: 0.129  4: 0.024  8: 0.005  16: 0.003  32: 0.003  64: 0.003\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
-          "bytes": 23847,
-          "sha256": "sha256:039eba11677007e57849258147c2d680d27049396827b3a62653ff0a3df82a0d"
+          "bytes": 24637,
+          "sha256": "sha256:181073b38acd3568c430c24224e8f2f5373f71f519bb3493d542cf1e1b839e7f"
         }
       ]
     },

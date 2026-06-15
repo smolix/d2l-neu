@@ -1219,86 +1219,306 @@ the IPM, before a single parameter is trained.
 
 <!-- slides -->
 
-::: {.slide title="Which notion of 'close'?"}
-Every generative model minimizes "distance from model to data" — the choice
-of *divergence* fixes the objective, the gradients, and the failure modes.
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §26.2]{.kicker}
 
-Three families:
+Choose your divergence, inherit its failure modes<br>**f-divergences, optimal transport, and the objective map**.
+:::
+:::
 
-- **f-divergences**: average a convex $f$ of the density ratio $p/q$ — KL,
-  reverse KL, $\chi^2$, Hellinger, JS.
-- **Integral probability metrics**: largest mean gap any test function can
-  certify — TV, MMD, $W_1$.
-- **Optimal transport**: cheapest way to move the mass — $W_1$, $W_2$.
+::: {.slide title="Which notion of closeness?"}
+[Motivation]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+Every generative model minimizes "distance from model to data." The choice of
+*divergence* — not the architecture — fixes the objective, the gradients, and
+the failure modes. Three families:
+
+- **f-divergences** — a convex $f$ of the ratio $p/q$,
+- **integral probability metrics** — the largest mean gap,
+- **optimal transport** — the cheapest way to move mass.
+:::
+
+::: {.col .fig}
 @fig:mdl-it-divergence-taxonomy
 :::
-
-::: {.slide title="One template, many divergences"}
-$D_f(P\|Q) = \mathbb{E}_{x\sim Q}[f(p/q)]$ with $f$ convex, $f(1)=0$;
-$D_f \ge 0$ is Jensen. Each generator is one curve:
-
-@fig:mdl-it-f-div-generators
-
-. . .
-
-@divergences-distances-f-table
+:::
 :::
 
-::: {.slide title="Duality: divergence as a game"}
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The f-divergence family]{.dtitle}
+
+[one convex generator, many divergences]{.dsub}
+:::
+:::
+
+::: {.slide title="One template, one proof"}
+[The f-divergence]{.kicker}
+
+$D_f(P\|Q) = \mathbb{E}_{x\sim Q}\bigl[f(p/q)\bigr]$ for convex $f$ with
+$f(1)=0$.
+
+::: {.d2l-note .rule}
+*Proof that* $D_f \ge 0$: $\mathbb{E}_Q[f(p/q)] \ge f(\mathbb{E}_Q[p/q])
+= f(1) = 0$ — Jensen, once, for the whole family. $\blacksquare$
+:::
+
+Convexity of $f$ is *exactly* what buys non-negativity.
+:::
+
+::: {.slide title="A gallery of generators"}
+[The gallery]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+One curve $f$ per divergence:
+
+- KL: $u\log u$ · reverse KL: $-\log u$
+- Pearson $\chi^2$: $(u-1)^2$
+- Hellinger: $(\sqrt u-1)^2$
+- total variation: $\tfrac12|u-1|$
+- Jensen–Shannon (symmetric)
+
+Near $P=Q$ they all agree, $\propto f''(1)\,\chi^2$; they differ only far apart.
+:::
+
+::: {.col .fig}
+@fig:mdl-it-f-div-generators
+:::
+:::
+:::
+
+::: {.slide title="The gallery, numerically"}
+[Fingerprints]{.kicker}
+
+Each generator gives a different number on the same pair — KL asymmetric, JS
+symmetric and capped below $\log 2$:
+
+@!divergences-distances-f-table
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Duality: divergence as a game]{.dtitle}
+
+[the Fenchel conjugate, the f-GAN, and mode geometry]{.dsub}
+:::
+:::
+
+::: {.slide title="A divergence is a game against a critic"}
+[Variational form]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
 A convex $f$ is the envelope of its tangents, so for *any* critic $T$:
-$D_f(P\|Q) \ge \mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)]$ — expectations only,
-no densities (the f-GAN; GAN $=$ the Jensen–Shannon case).
 
+$$D_f(P\|Q) \ge \mathbb{E}_P[T] - \mathbb{E}_Q[f^*(T)],$$
+
+expectations only — no densities. The ordinary GAN is the Jensen–Shannon case.
+:::
+
+::: {.col .fig}
 @fig:mdl-it-f-gan-tangent-bound
+:::
+:::
+:::
 
-. . .
+::: {.slide title="Tight only at the right critic"}
+[The f-GAN]{.kicker}
 
-@divergences-distances-f-gan-bound
+For the $\chi^2$ generator the bound hits the true divergence exactly at the
+optimal critic $T^\star = f'(p/q)$, and any other critic falls short:
+
+@!divergences-distances-f-gan-bound
+
+::: {.d2l-note}
+An undertrained critic biases the estimate **low** — the adversary's job is to
+make the bound tight.
+:::
 :::
 
 ::: {.slide title="Forward vs. reverse KL"}
+[Mode geometry]{.kicker}
+
 Same target, two optima: forward KL (maximum likelihood) must *cover* every
-mode; reverse KL (variational inference) *hugs* one and drops the rest.
+mode; reverse KL (variational inference) *hugs* one, paying $\log(1/0.7)$ nats
+for the mass it drops:
 
-@divergences-distances-fwd-rev-kl
+@!divergences-distances-fwd-rev-kl
 :::
 
-::: {.slide title="Total variation, Pinsker, MMD"}
-$\mathrm{TV} = \sup_A |P(A) - Q(A)| = \frac12\|p-q\|_1$: the best advantage
-of any single-sample test. Pinsker:
-$\mathrm{TV} \le \sqrt{D_{\mathrm{KL}}/2}$ — small KL silences *every* test.
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
 
+[Metrics: when densities fail]{.dtitle}
+
+[total variation, MMD, and optimal transport]{.dsub}
+:::
+:::
+
+::: {.slide title="Total variation and Pinsker"}
+[The strongest test]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$\mathrm{TV}(P,Q) = \sup_A|P(A)-Q(A)| = \tfrac12\|p-q\|_1$ — the best advantage
+of any single-sample test.
+
+Pinsker: $\mathrm{TV} \le \sqrt{D_{\mathrm{KL}}/2}$, so a small KL silences
+*every* test at once.
+:::
+
+::: {.col .fig}
 @fig:mdl-it-tv-area
-
-. . .
-
-MMD: the RKHS-ball IPM, unbiased estimator from samples alone:
-
-@divergences-distances-mmd
+:::
+:::
 :::
 
-::: {.slide title="Optimal transport"}
-Disjoint supports: every f-divergence is *constant* (no gradient); $W_1$
-still moves smoothly — that is the WGAN. Dual: 1-Lipschitz critics
-(Kantorovich–Rubinstein). In 1-D, $W_1 = \int |F_P - F_Q|$:
+::: {.slide title="Pinsker's constant is sharp"}
+[A stress test]{.kicker}
 
+Across ten thousand random pairs the ratio
+$\mathrm{TV}/\sqrt{D_{\mathrm{KL}}/2}$ never exceeds $1$, and near-fair coins
+push it to $0.999999$:
+
+@!divergences-distances-pinsker
+
+The factor $\tfrac12$ cannot be improved.
+:::
+
+::: {.slide title="IPMs and the kernel trick"}
+[Sample-only]{.kicker}
+
+An integral probability metric is $\sup_{f\in\mathcal F}\mathbb{E}_P[f]-\mathbb{E}_Q[f]$.
+Over an RKHS ball it becomes **MMD** — a closed-form kernel expectation, no
+critic, no densities:
+
+@!divergences-distances-mmd
+
+A half-$\sigma$ shift jumps $\mathrm{MMD}^2$ by two orders of magnitude.
+:::
+
+::: {.slide title="Optimal transport and Wasserstein"}
+[Moving mass]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+On disjoint supports every f-divergence is *constant* — zero gradient — while
+$W_1$ still moves smoothly. That is the WGAN.
+
+Dual (Kantorovich–Rubinstein): the 1-Lipschitz critics. In one dimension,
+$W_1 = \int|F_P - F_Q|$.
+:::
+
+::: {.col .fig}
 @fig:mdl-it-ot-transport-plan
-
-. . .
-
-@divergences-distances-w1
+:::
+:::
 :::
 
-::: {.slide title="Scores and the capstone map"}
-The score $\nabla_x \log p$ never sees the normalizer $Z$ — Fisher
-divergence compares score fields; score matching and diffusion train on it.
+::: {.slide title="One integral replaces a linear program"}
+[Wasserstein-1]{.kicker}
 
-@fig:mdl-it-score-field
+The CDF formula and a 36-variable transport LP agree to ten digits:
+
+@!divergences-distances-w1
 
 . . .
 
-The map: MLE/flows → forward KL · VAE → reverse KL · GAN → JS · WGAN →
-$W_1$ · MMD-GAN → MMD · diffusion → Fisher. **Choose your divergence,
-inherit its failure modes.**
+Entropic regularization (Sinkhorn) trades exactness for GPU-friendly speed,
+converging to the LP as $\varepsilon\to 0$:
+
+@!divergences-distances-sinkhorn
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Scores and the objective map]{.dtitle}
+
+[the normalizer-free divergence, and the unifying table]{.dsub}
+:::
+:::
+
+::: {.slide title="The score never sees the normalizer"}
+[Fisher divergence]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$s_P(\mathbf x) = \nabla_{\mathbf x}\log p$ drops the intractable $Z$ entirely,
+since $\nabla\log Z = 0$. The Fisher divergence compares score *fields* —
+the basis of score matching and diffusion.
+:::
+
+::: {.col .fig}
+@fig:mdl-it-score-field
+:::
+:::
+:::
+
+::: {.slide title="Normalizer-blindness, numerically"}
+[The point]{.kicker}
+
+Rescaling the density leaves the score unchanged to floating-point dust, and
+the Gaussian Fisher divergence matches its closed form:
+
+@!divergences-distances-score
+
+This is why score matching works where density estimation cannot.
+:::
+
+::: {.slide title="Stein's identity and goodness of fit"}
+[KSD]{.kicker}
+
+For any smooth $f$, $\mathbb{E}_P[f' + f\,s_P] = 0$ — a fingerprint of $P$ that
+needs only its score. Violating it certifies the sample is not from $P$:
+
+@divergences-distances-stein
+
+The kernel Stein discrepancy turns this into a test; its descent direction is
+SVGD.
+:::
+
+::: {.slide title="One map for every objective"}
+[The capstone]{.kicker}
+
+::: {.d2l-note .rule}
+MLE/flows → forward KL · VAE → reverse KL · GAN → JS · f-GAN → any $f$ · WGAN
+→ $W_1$ · MMD-GAN → MMD · diffusion → Fisher · SVGD → KSD.
+:::
+
+Choose the divergence; you have chosen the objective — and inherited its
+failure modes.
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- f-divergence $= \mathbb{E}_Q[f(p/q)]$; one Jensen proof gives $D_f \ge 0$.
+- Fenchel duality turns any $f$ into a critic game — the f-GAN; GAN is the JS case.
+- Forward KL covers modes; reverse KL hugs one.
+:::
+
+::: {.col}
+- TV is the strongest single-sample test; Pinsker bounds it by $\sqrt{\mathrm{KL}/2}$.
+- $W_1$ stays smooth on disjoint supports (WGAN); $W_1=\int|F_P-F_Q|$ in 1-D.
+- The score drops $Z$; the Fisher/Stein row powers diffusion and SVGD.
+:::
+:::
+
+::: {.d2l-note}
+Next: **mutual information** — a divergence from independence, and the engine
+of representation learning.
+:::
 :::

@@ -1406,85 +1406,283 @@ information is at once indispensable and routinely over-read.
 
 <!-- slides -->
 
-::: {.slide title="Mutual information: distance from independence"}
-$I(X;Y) = D_{\mathrm{KL}}(P_{X,Y}\,\|\,P_X \otimes P_Y)$ — how far the pair
-is from independent. Symmetric, $\ge 0$, zero iff independent (Gibbs), and
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §26.3]{.kicker}
 
-$$I(X;Y) = H(X) - H(X\mid Y) = H(X) + H(Y) - H(X,Y).$$
-
-@fig:mdl-it-mi-overlap
-
-. . .
-
-On a $2\times 2$ joint, the KL form and the entropy identity agree:
-
-@mutual-information-discrete-joint
+How far is a pair from independent?<br>**mutual information and the objectives of representation learning**.
+:::
 :::
 
-::: {.slide title="Ground truth and nonlinear correlation"}
-Gaussian anchor: $I = -\tfrac12\log(1-\rho^2)$ — a closed form to test every
-estimator against:
+::: {.slide title="Mutual information: distance from independence"}
+[Motivation]{.kicker}
 
-@mutual-information-gaussian-binned
+::: {.cols .vc}
+::: {.col}
+$I(X;Y) = D_{\mathrm{KL}}(P_{X,Y}\,\|\,P_X\otimes P_Y)$ — how far the joint sits
+from the product of its marginals. Symmetric, $\ge 0$, zero iff independent,
+and
 
-. . .
+$$I = H(X) - H(X\mid Y) = H(X)+H(Y)-H(X,Y).$$
+:::
 
-Correlation sees only *linear* dependence; MI sees all of it ($Y = X^2 +$
-noise: $\rho \approx 0$, $I \approx 1$ nat):
+::: {.col .fig}
+@fig:mdl-it-mi-overlap
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[The calculus of dependence]{.dtitle}
+
+[entropy bookkeeping, invariance, and the data-processing inequality]{.dsub}
+:::
+:::
+
+::: {.slide title="Joint and conditional entropy"}
+[Bookkeeping]{.kicker}
+
+The chain rule $H(X,Y) = H(X) + H(Y\mid X)$ is pure accounting — the surprise
+of the pair is the surprise of $X$ plus the residual in $Y$:
+
+@!mutual-information-joint-conditional
+
+Every entropy quantity, one concrete number.
+:::
+
+::: {.slide title="Three views, one quantity"}
+[Definition]{.kicker}
+
+The shared area of the entropy diagram, computed two ways — the KL-from-
+independence form and the entropy identity — agrees to the digit:
+
+@mutual-information-discrete-joint
+
+Symmetry and $I \ge 0$ are immediate from Gibbs.
+:::
+
+::: {.slide title="The Gaussian anchor"}
+[Ground truth]{.kicker}
+
+Ground truth $I = -\tfrac12\log(1-\rho^2)$ — yet a histogram is already biased
+at $\rho=0.99$:
+
+@!mutual-information-gaussian-binned
+:::
+
+::: {.slide title="MI sees what correlation cannot"}
+[Nonlinear dependence]{.kicker}
+
+Correlation measures only *linear* association. With $Y = X^2 + \text{noise}$,
+$\rho \approx 0$ yet $I \approx 1$ nat — and MI is invariant to any invertible
+reparameterization:
 
 @mutual-information-nonlinear-correlation
 :::
 
-::: {.slide title="Data processing: information only leaks"}
-Markov chain $X \to Y \to Z$: chain rule
-$I(X;Z) + I(X;Y\mid Z) = I(X;Y) + I(X;Z\mid Y)$, and the Markov property
-kills the last term ⟹ $I(X;Z) \le I(X;Y)$.
+::: {.slide title="Pointwise MI ranks co-occurrences"}
+[PMI]{.kicker}
 
+$\mathrm{pmi}(x,y) = \log\frac{p(x,y)}{p(x)\,p(y)}$ scores a single pair, and
+$I = \mathbb{E}[\mathrm{pmi}]$. It corrects for frequency — "new york" beats
+"the day" despite far fewer counts:
+
+@!mutual-information-pmi-corpus
+:::
+
+::: {.slide title="Information only leaks"}
+[The DPI]{.kicker}
+
+For a Markov chain $X\to Y\to Z$, $I(X;Z) \le I(X;Y)$:
+
+*Proof.* Expand $I(X;Y,Z)$ both ways:
+$I(X;Z)+I(X;Y\mid Z) = I(X;Y)+I(X;Z\mid Y)$; the Markov property kills the last
+term. $\blacksquare$
+
+@!mutual-information-dpi-check
+
+::: {.d2l-note}
 No layer can *create* label information; invertible maps lose nothing.
-
-@mutual-information-dpi-check
+:::
 :::
 
-::: {.slide title="No free lunch: the log N ceiling"}
-McAllester–Stratos: a distribution-free high-confidence lower bound from
-$N$ samples cannot exceed $\approx \log N$ nats. A batch of 256 certifies
-$\le 5.5$ nats — *with a perfect critic*:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
 
-@mutual-information-log-n-ceiling
+[Why measuring MI is hard]{.dtitle}
+
+[the curse of estimation and the $\log N$ ceiling]{.dsub}
+:::
 :::
 
-::: {.slide title="Variational lower bounds"}
-Barber–Agakov (decoder), Donsker–Varadhan / MINE and NWJ (critics): bound
-MI below, maximize the bound.
+::: {.slide title="The curse of estimation"}
+[Bad news]{.kicker}
 
+A histogram needs $b^d$ cells — almost all empty in high dimensions. The very
+reparameterization-invariance that makes MI the *right* notion of dependence
+is what makes it hard to estimate: a distribution-free estimator must survive
+every coordinate warping at once.
+
+::: {.d2l-note .rule}
+There is no free lunch: a finite sample cannot certify arbitrarily large
+dependence.
+:::
+:::
+
+::: {.slide title="A ceiling at log N"}
+[McAllester–Stratos]{.kicker}
+
+Any distribution-free high-confidence *lower* bound from $N$ samples cannot
+exceed $\approx\log N$ nats — even with a **perfect** critic the estimate bends
+flat at the batch ceiling:
+
+@!mutual-information-log-n-ceiling
+
+A batch of 256 certifies at most $\ln 256 \approx 5.5$ nats.
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Variational bounds and InfoNCE]{.dtitle}
+
+[bound it below, then maximize the bound]{.dsub}
+:::
+:::
+
+::: {.slide title="Bound MI from below"}
+[The toolkit]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+- **Barber–Agakov**: a decoder, $I \ge H(X)+\mathbb{E}[\log q(x\mid y)]$.
+- **Donsker–Varadhan / MINE**: $I \ge \mathbb{E}_{P}[T] - \log\mathbb{E}_{Q}[e^T]$.
+- **NWJ**: the same with $e^{-1}\mathbb{E}_Q[e^T]$ — unbiased for the bound.
+
+All bound below; all are maximized, not measured.
+:::
+
+::: {.col .fig}
 @fig:mdl-it-mi-variational-bounds
+:::
+:::
+:::
 
-. . .
+::: {.slide title="Bias against variance"}
+[The spectrum]{.kicker}
 
-With *exact* critics on a known-MI pair: DV/NWJ unbiased but exploding
-variance; InfoNCE steady but capped at $\log N$:
+With *exact* critics on a known-MI pair: DV/NWJ are unbiased but their variance
+explodes past $\log N$; InfoNCE is rock-steady but saturates at the ceiling:
 
-@mutual-information-perfect-critic-bounds
+@!mutual-information-perfect-critic-bounds
+
+You pick your poison — bias or variance.
 :::
 
 ::: {.slide title="InfoNCE: estimation as classification"}
-Pick the positive among $N-1$ negatives — a categorical cross-entropy.
-For any critic: $I(X;Y) \ge \log N - \mathcal{L}_{\mathrm{NCE}}$ (and the
-bound never exceeds $\log N$). The loss of CPC, SimCLR, CLIP.
+[Contrastive]{.kicker}
 
-@mutual-information-infonce-train
+::: {.cols .vc}
+::: {.col}
+Pick the positive among $N-1$ negatives — a categorical cross-entropy. For
+any critic,
+
+$$I(X;Y) \ge \log N - \mathcal L_{\mathrm{NCE}},$$
+
+capped at $\log N$, optimal critic $f^\star = \mathrm{pmi}+c$. This is the loss
+of CPC, SimCLR, and CLIP.
 :::
 
-::: {.slide title="The information bottleneck — and honest limits"}
-$\min\, I(X;Z) - \beta\, I(Y;Z)$: compress the input, keep the label. DPI
-makes it well-posed; $\beta$ sweeps the frontier:
+::: {.col .fig}
+@fig:mdl-it-infonce-pos-neg
+:::
+:::
+:::
 
-@mutual-information-ib-plane
+::: {.slide title="Batch size is the instrument's resolution"}
+[In practice]{.kicker}
 
-. . .
+A small MLP critic at $\rho=0.99$ ($I\approx1.96$ nats): at $N=2$ the bound
+cannot clear $\ln 2$; widen the batch and it climbs toward the truth:
 
-- "Compression phase" of ordinary training: contested (Saxe et al. — an
-  estimator artifact for tanh nets).
-- What survives: the calculus, DPI, Fano's floor, the bounds *as bounds*.
-- Read MI objectives as training signals, not measurements.
+@!mutual-information-infonce-train
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[The bottleneck and honest limits]{.dtitle}
+
+[compression with a purpose, Fano, and reading MI honestly]{.dsub}
+:::
+:::
+
+::: {.slide title="The information bottleneck"}
+[Compression with a purpose]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$\min\; I(X;Z) - \beta\,I(Y;Z)$: squeeze the input, keep the label. The DPI
+makes it well-posed ($I(Y;Z)\le I(X;Y)$), and $\beta$ sweeps the frontier —
+below $\beta = 1/\rho^2$ the code collapses to nothing.
+:::
+
+::: {.col .fig}
+@fig:mdl-it-ib-tradeoff
+:::
+:::
+:::
+
+::: {.slide title="Fano: MI floors the error rate"}
+[The guarantee]{.kicker}
+
+$H_b(P_e) + P_e\log(k-1) \ge H(X\mid Y) = H(X) - I(X;Y)$ — too little MI makes
+low error *impossible*:
+
+@mutual-information-fano
+
+5% error on 1000 classes demands $6.36$ nats, which a sample of $N>579$ could
+even certify. The ceiling and the floor meet.
+:::
+
+::: {.slide title="Read MI objectives honestly"}
+[The caveats]{.kicker}
+
+::: {.d2l-note .rule}
+The MI *number* is not a measurement; the *objective* can still be excellent.
+What survives the caveats: the calculus, the DPI, Fano's floor, and the bounds
+**as bounds**.
+:::
+
+The "compression phase" of training is contested (Saxe et al. — an estimator
+artifact for $\tanh$ nets). Read MI as a training signal, not a readout.
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- MI $=$ KL from independence; three entropy forms; symmetric, $\ge 0$.
+- Gaussian anchor $-\tfrac12\log(1-\rho^2)$; MI catches nonlinear dependence.
+- DPI: processing only loses information; invertible maps lose none.
+:::
+
+::: {.col}
+- Distribution-free lower bounds are capped near $\log N$ — batch is resolution.
+- InfoNCE $=$ classification: the loss of CPC, SimCLR, CLIP.
+- IB compresses with a purpose; Fano floors the error; read MI as a signal.
+:::
+:::
+
+::: {.d2l-note}
+The thread of the chapter: a loss is a code length, a divergence is a choice,
+and information is the currency of learning.
+:::
 :::

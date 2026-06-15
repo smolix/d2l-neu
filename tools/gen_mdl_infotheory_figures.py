@@ -317,6 +317,124 @@ def fig_bernoulli_entropy():
     fl.save(fig, "mdl-it-bernoulli-entropy")
 
 
+def fig_code_length_decomposition():
+    """Cross-entropy = entropy + KL, read as code lengths (bits/symbol) for
+    P = (1/2, 1/4, 1/8, 1/8): the matched (Shannon) code spends exactly the
+    entropy floor H(P) = 1.75 bits; coding with the wrong uniform 2-bit code
+    spends CE = 2.0, the extra KL = 0.25 bits being pure waste.
+
+    Output id ``mdl-it-code-length-bars``."""
+    fig, ax = plt.subplots(figsize=(5.7, 3.9))
+
+    H = 1.75       # entropy of P (bits) = optimal expected code length
+    KL = 0.25      # extra bits paid by the mismatched (uniform) code
+    CE = H + KL    # 2.0 bits actually spent
+
+    x0, x1, w = 0.0, 1.0, 0.5
+    # Left bar: the floor — a matched code pays exactly H.
+    ax.bar(x0, H, width=w, color=BLUE, edgecolor="white", lw=1.2, zorder=3)
+    # Right bar: cross-entropy = H (blue) stacked with KL (orange).
+    ax.bar(x1, H, width=w, color=BLUE, edgecolor="white", lw=1.2, zorder=3)
+    ax.bar(x1, KL, width=w, bottom=H, color=ORANGE, edgecolor="white", lw=1.2,
+           zorder=3)
+
+    # The entropy floor you can never beat.
+    ax.axhline(H, ls="--", color=GRAY, lw=1.1, zorder=2)
+    ax.text(-0.52, H + 0.04, r"entropy floor $H(P)=1.75$", color=GRAY,
+            fontsize=9, ha="left", va="bottom")
+
+    # In-bar labels.
+    ax.text(x0, H / 2, r"$H(P)$", color="white", fontsize=13, ha="center",
+            va="center", fontweight="bold")
+    ax.text(x1, H / 2, r"$H(P)$", color="white", fontsize=13, ha="center",
+            va="center", fontweight="bold")
+    ax.text(x1, H + KL / 2, "KL", color="white", fontsize=9.5, ha="center",
+            va="center", fontweight="bold")
+
+    # Total above the cross-entropy bar.
+    ax.text(x1, CE + 0.06, r"$\mathrm{CE}=2.0$", color=BLUE, fontsize=10,
+            ha="center", va="bottom")
+
+    # Waste callout.
+    ax.annotate("extra bits = waste", xy=(x1 + w / 2, H + KL / 2),
+                xytext=(x1 + 0.30, H - 0.34), color=ORANGE, fontsize=9.5,
+                ha="center",
+                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.1))
+
+    ax.set_xticks([x0, x1])
+    ax.set_xticklabels(["matched code\n($Q=P$)", "wrong code\n($Q$ uniform)"])
+    ax.set_ylabel("expected code length (bits / symbol)")
+    ax.set_xlim(-0.55, 1.75)
+    ax.set_ylim(0, 2.4)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-it-code-length-bars")
+
+
+def fig_kraft_tree():
+    """A binary prefix code as a tree for P = (1/2, 1/4, 1/8, 1/8): leaves sit
+    at depths 1, 2, 3, 3 (the Shannon lengths), no codeword is a prefix of
+    another, and the Kraft sum is tight, 1/2 + 1/4 + 1/8 + 1/8 = 1.
+
+    Output id ``mdl-it-kraft-tree``."""
+    fig, ax = plt.subplots(figsize=(5.7, 4.0))
+
+    # Explicit node coordinates (x, y); y is depth (0 at the root, downward).
+    root = (3.0, 0.0)
+    nA = (0.6, -1.0)          # leaf, code "0",   depth 1
+    i1 = (3.6, -1.0)          # internal
+    nB = (2.4, -2.0)          # leaf, code "10",  depth 2
+    i2 = (4.8, -2.0)          # internal
+    nC = (3.9, -3.0)          # leaf, code "110", depth 3
+    nD = (5.7, -3.0)          # leaf, code "111", depth 3
+
+    def edge(a, b, label):
+        ax.plot([a[0], b[0]], [a[1], b[1]], color=GRAY, lw=1.6, zorder=1)
+        mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+        ax.text(mx + (-0.16 if label == "0" else 0.16), my + 0.04, label,
+                color=GRAY, fontsize=10, ha="center", va="bottom")
+
+    edge(root, nA, "0"); edge(root, i1, "1")
+    edge(i1, nB, "0");   edge(i1, i2, "1")
+    edge(i2, nC, "0");   edge(i2, nD, "1")
+
+    # Internal nodes: small gray dots.
+    for nd in (root, i1, i2):
+        ax.plot(*nd, "o", color=GRAY, ms=7, zorder=3)
+
+    # Leaves: colored chips holding the symbol and its codeword, probability
+    # below. Keeping the codeword inside the chip avoids clashing with the
+    # 0/1 edge labels at the deep leaves.
+    leaves = [(nA, "a", "0", "1/2"), (nB, "b", "10", "1/4"),
+              (nC, "c", "110", "1/8"), (nD, "d", "111", "1/8")]
+    for (x, y), sym, code, prob in leaves:
+        ax.add_patch(plt.Rectangle((x - 0.58, y - 0.34), 1.16, 0.68,
+                                   facecolor=BLUE, alpha=0.16, edgecolor=BLUE,
+                                   lw=1.6, zorder=4, joinstyle="round"))
+        ax.text(x, y + 0.13, sym, color=BLUE, fontsize=12, ha="center",
+                va="center", fontweight="bold", zorder=5)
+        ax.text(x, y - 0.15, code, color=ORANGE, fontsize=9.5, ha="center",
+                va="center", family="monospace", zorder=5)
+        ax.text(x, y - 0.52, rf"$p={prob}$", color=GRAY, fontsize=8.5,
+                ha="center", va="top")
+
+    # Depth (= code length) guide on the left.
+    for d in (1, 2, 3):
+        ax.text(-0.7, -d, rf"$\ell={d}$", color=GRAY, fontsize=9, ha="right",
+                va="center")
+    ax.text(-0.7, 0.0, "root", color=GRAY, fontsize=9, ha="right", va="center")
+
+    ax.text(3.0, -3.95, r"$\sum_i 2^{-\ell_i} = "
+            r"\frac{1}{2}+\frac{1}{4}+\frac{1}{8}+\frac{1}{8} = 1$"
+            "   (Kraft, tight)",
+            color=BLUE, fontsize=10.5, ha="center", va="center")
+
+    ax.set_xlim(-1.4, 6.6)
+    ax.set_ylim(-4.35, 0.6)
+    ax.axis("off")
+    fl.save(fig, "mdl-it-kraft-tree")
+
+
 # =========================================================================== #
 # Divergences and distances (sec_mdl-divergences-distances).                  #
 # =========================================================================== #
@@ -767,6 +885,8 @@ FIGURES = [
     # sec_mdl-information_theory
     fig_self_info_curve,         # mdl-it-self-info-curve
     fig_bernoulli_entropy,       # mdl-it-bernoulli-entropy
+    fig_code_length_decomposition,  # mdl-it-code-length-bars
+    fig_kraft_tree,              # mdl-it-kraft-tree
     # sec_mdl-mutual-information
     fig_mutual_information,      # mdl-it-mutual-information (legacy regenerated)
     fig_mi_overlap,              # mdl-it-mi-overlap

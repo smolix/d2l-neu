@@ -1191,114 +1191,293 @@ mutual information, the engine of contrastive representation learning
 
 <!-- slides -->
 
-::: {.slide title="Information theory: the language of losses"}
-The number your training loop prints is a quantity from information theory
-(Shannon, 1948) — a *code length*, in nats:
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §26.1]{.kicker}
 
-- **Self-information** $I(x) = -\log p(x)$ — the surprise of observing $x$.
-- **Entropy** $H(P) = -\mathbb{E}_P[\log p]$ — average surprise; the
-  irreducible floor.
-- **Cross-entropy** $\mathrm{CE}(P,Q) = -\mathbb{E}_P[\log q]$ — what your
-  model actually pays.
-- **KL divergence** $D_{\mathrm{KL}}(P\|Q) = \mathrm{CE}(P,Q) - H(P)$ — the
-  waste you can train away.
-
-Units: nats (natural log) throughout; bits are a $\ln 2$ rescaling.
+The number your loss prints is a code length<br>**entropy, cross-entropy, and KL divergence**.
+:::
 :::
 
-::: {.slide title="Surprise and entropy"}
-Rare = surprising: $I(x) = -\log p(x)$ is zero for certain events and
-diverges as $p \to 0$:
+::: {.slide title="Three numbers in every loss"}
+[Motivation]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+The scalar your training loop reports is a *code length* in nats (Shannon,
+1948). It splits into three pieces:
+
+- **entropy** $H(P)$ — the irreducible floor,
+- **cross-entropy** $\mathrm{CE}(P,Q)$ — what the model pays,
+- **KL** $D_{\mathrm{KL}}(P\|Q)$ — the waste you train away.
+:::
+
+::: {.col .fig}
+@fig:mdl-it-code-length-bars
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[Surprise and entropy]{.dtitle}
+
+[self-information, Shannon's $H$, the uniform maximum]{.dsub}
+:::
+:::
+
+::: {.slide title="Rare events are surprising"}
+[Self-information]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$I(x) = -\log p(x)$ is the *only* measure that is zero for a certain event,
+decreasing in $p$, and additive over independent events — and additivity is
+exactly what forces a logarithm.
+
+The fair coin carries $\ln 2 \approx 0.693$ nats; a one-in-a-million event,
+$\approx 13.8$.
+:::
+
+::: {.col .fig}
 @fig:mdl-it-self-info-curve
+:::
+:::
+:::
 
-. . .
+::: {.slide title="Entropy averages the surprise"}
+[Entropy]{.kicker}
 
-Entropy averages the surprise, $H(P) = -\sum_x p(x)\log p(x)$:
+$H(P) = \mathbb{E}_P[-\log p] = -\sum_x p(x)\log p(x)$, with the convention
+$0\log 0 = 0$ — the expected length of the *best possible* code for $P$:
 
 @information-theory-definition
+
+Less than $\ln 4 \approx 1.386$ nats: this distribution is not uniform.
 :::
 
-::: {.slide title="Entropy peaks at maximal uncertainty"}
-On $k$ outcomes, $0 \le H \le \log k$, with the maximum exactly at the
-uniform distribution (Jensen on $\log$). For the coin, the peak is the fair
-coin: $\ln 2 \approx 0.693$ nats.
+::: {.slide title="Uncertainty peaks at the uniform law"}
+[The maximum]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
+On $k$ outcomes, $0 \le H(P) \le \log k$, with the maximum *exactly* at the
+uniform distribution.
+
+::: {.d2l-note .rule}
+*Proof.* $H = \mathbb{E}[\log\tfrac{1}{p}] \le \log\mathbb{E}[\tfrac1p]
+= \log k$ by Jensen on the concave $\log$; equality iff $1/p$ is constant.
+$\blacksquare$
+:::
+:::
+
+::: {.col .fig}
 @fig:mdl-it-bernoulli-entropy
 :::
-
-::: {.slide title="KL divergence and Gibbs' inequality"}
-$D_{\mathrm{KL}}(P\|Q) = \mathbb{E}_{x\sim P}[\log p(x)/q(x)] \ge 0$, with
-equality iff $P = Q$ (Gibbs, via Jensen on $-\log$). Asymmetric: not a
-metric.
-
-@information-theory-definition-2
-
-. . .
-
-$\mathrm{CE} = H + \mathrm{KL}$, verified on two categoricals:
-
-@information-theory-kl-categorical
+:::
 :::
 
-::: {.slide title="Gaussian KL in closed form"}
-$D_{\mathrm{KL}}(\mathcal{N}(\mu_1,\sigma_1^2)\,\|\,\mathcal{N}(\mu_2,\sigma_2^2))
-= \log\frac{\sigma_2}{\sigma_1} +
-\frac{\sigma_1^2 + (\mu_1-\mu_2)^2}{2\sigma_2^2} - \frac12$ — matches a
-Monte-Carlo estimate, and exposes the asymmetry:
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Cross-entropy and KL]{.dtitle}
+
+[the gap you train away — Gibbs' inequality]{.dsub}
+:::
+:::
+
+::: {.slide title="KL divergence: the price of the wrong model"}
+[Relative entropy]{.kicker}
+
+$D_{\mathrm{KL}}(P\|Q) = \mathbb{E}_{x\sim P}\bigl[\log p(x)/q(x)\bigr]$ — the
+extra nats from coding $P$'s data with $Q$'s code. Asymmetric, and $+\infty$
+where $q(x)=0$ but $p(x)>0$:
+
+@information-theory-definition-2
+:::
+
+::: {.slide title="Gibbs' inequality — the engine"}
+[The one fact]{.kicker}
+
+::: {.d2l-note .rule}
+$D_{\mathrm{KL}}(P\|Q) \ge 0$, with equality **iff** $P=Q$.
+:::
+
+*Proof.* $D_{\mathrm{KL}} = \mathbb{E}_P[-\log\tfrac{q}{p}]
+\ge -\log\mathbb{E}_P[\tfrac{q}{p}] = -\log\sum_x q(x) = 0$ by Jensen on the
+convex $-\log$. $\blacksquare$ Every bound in this chapter is a corollary.
+:::
+
+::: {.slide title="Cross-entropy = floor + waste"}
+[The decomposition]{.kicker}
+
+$\mathrm{CE}(P,Q) = -\mathbb{E}_P[\log q] = H(P) + D_{\mathrm{KL}}(P\|Q)$, so
+Gibbs gives $\mathrm{CE} \ge H(P)$ — minimizing CE in $Q$ *is* minimizing KL:
+
+@information-theory-kl-categorical
+
+The forward KL and $\mathrm{CE}-H$ agree to the digit; KL is asymmetric.
+:::
+
+::: {.slide title="Gaussian KL, in closed form"}
+[A check]{.kicker}
+
+$D_{\mathrm{KL}}\!\bigl(\mathcal N(\mu_1,\sigma_1^2)\,\|\,\mathcal N(\mu_2,\sigma_2^2)\bigr)
+= \log\frac{\sigma_2}{\sigma_1} + \frac{\sigma_1^2+(\mu_1-\mu_2)^2}{2\sigma_2^2} - \frac12$
+matches Monte Carlo:
 
 @information-theory-example-2
 
 . . .
 
+Swapping the arguments changes the number — $0.318$ vs $0.807$ nats:
+
 @information-theory-example-3
 :::
 
 ::: {.slide title="Cross-entropy is the classification loss"}
-One-hot truth $\Rightarrow$ CE collapses to $-\log \hat y_{\text{true}}$,
-the model's surprise at the correct class — same number as every framework
-built-in (maximum likelihood, by
-the NLL $=$ CE equivalence):
+[Maximum likelihood]{.kicker}
+
+A one-hot target collapses CE to $-\log\hat y_{\text{true}}$ — the model's
+surprise at the correct class, averaged over the batch:
 
 @information-theory-formal-definition-2
+
+This is exactly the negative log-likelihood.
 :::
 
-::: {.slide title="The coding view and perplexity"}
-Kraft: prefix codes satisfy $\sum_i 2^{-l_i} \le 1$; Shannon's code achieves
-$H_2 \le \mathbb{E}[l] < H_2 + 1$. Coding with the wrong $Q$ costs
-$\mathrm{CE}$ — KL is *literally the extra bits*:
+::: {.slide title="The same number every framework prints"}
+[One principle]{.kicker}
 
-@information-theory-coding
+Hand-rolled cross-entropy equals the built-in loss to the digit:
 
-. . .
+@information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification
 
-Language models: $\mathrm{PPL} = \exp(\text{mean NLL})$ — an effective
-branching factor:
+::: {.d2l-note}
+Minimizing CE $=$ maximum likelihood $=$ KL-projection of the empirical
+distribution onto the model family. One loss, three readings.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[The coding view]{.dtitle}
+
+[Kraft, Shannon's code, and why KL is *extra bits*]{.dsub}
+:::
+:::
+
+::: {.slide title="Prefix codes and the Kraft inequality"}
+[Codes]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A prefix-free binary code with lengths $\ell_i$ exists **iff**
+$\sum_i 2^{-\ell_i} \le 1$ — each codeword claims a dyadic interval, and
+prefix-free means the intervals are disjoint.
+
+Shannon picks $\ell_i = \lceil\log_2 \tfrac{1}{p_i}\rceil$.
+:::
+
+::: {.col .fig}
+@fig:mdl-it-kraft-tree
+:::
+:::
+:::
+
+::: {.slide title="Shannon's code: KL is the extra bits"}
+[The payoff]{.kicker}
+
+The matched code spends $H_2(P) \le \mathbb{E}[\ell] < H_2(P)+1$; the wrong
+code $Q$ overspends by exactly $D_{\mathrm{KL}}$:
+
+@!information-theory-coding
+
+::: {.d2l-note .rule}
+$H$ is the floor, $\mathrm{CE}$ is the bill, and $D_{\mathrm{KL}}$ is — quite
+literally — the wasted bits.
+:::
+:::
+
+::: {.slide title="Perplexity: an effective branching factor"}
+[Language models]{.kicker}
+
+$\mathrm{PPL} = \exp(\mathrm{CE})$ — the inverse geometric-mean probability, the
+number of equally-likely choices the model is as confused among:
 
 @information-theory-perplexity
+
+Base-free: a single bad token ($p=0.05$) costs as much as several good ones.
 :::
 
-::: {.slide title="Label smoothing and distillation"}
-Smoothed target $(1-\epsilon)\,\mathbf{e}_y + \epsilon\,\mathbf{1}/k$ ⟹ the
-CE optimum is a *finite* logit gap (Gibbs):
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
 
-@information-theory-label-smoothing
+[Three corollaries of Gibbs]{.dtitle}
 
-. . .
+[label smoothing, distillation, one principle]{.dsub}
+:::
+:::
 
-Distillation: $T^2\, D_{\mathrm{KL}}(\text{teacher}_T \|\, \text{student}_T)$;
-the $T^2$ keeps gradients scale-matched:
+::: {.slide title="Label smoothing softens the target"}
+[Calibration]{.kicker}
 
-@information-theory-distillation
+A smoothed target $(1-\epsilon)\,\mathbf e_y + \tfrac{\epsilon}{k}\mathbf 1$
+makes the CE optimum a *finite* logit gap (Gibbs), so the model can no longer
+chase infinite confidence:
+
+@!information-theory-label-smoothing
+
+The loss floors at $H(\mathbf p^\epsilon) > 0$, not zero.
+:::
+
+::: {.slide title="Distillation matches a soft teacher"}
+[Transfer]{.kicker}
+
+The student minimizes $T^2\,D_{\mathrm{KL}}(\text{teacher}_T\,\|\,\text{student}_T)$;
+the $T^2$ cancels the $1/T^2$ gradient shrinkage at temperature $T$, keeping
+the update scale-matched. Autograd confirms the closed form:
+
+@!information-theory-distillation
+:::
+
+::: {.slide title="One principle, many losses"}
+[Synthesis]{.kicker}
+
+::: {.d2l-note .rule}
+Maximum likelihood $=$ cross-entropy minimization $=$ KL-projection of the data
+onto the model. Label smoothing and distillation are both just Gibbs with a
+softened target.
+:::
+
+Pick the target distribution; Gibbs picks the optimum and guarantees the floor.
 :::
 
 ::: {.slide title="Recap"}
-- Entropy = floor, cross-entropy = payment, KL = waste — literally, in code
-  lengths (Kraft + Shannon).
-- Gibbs' inequality ($\mathrm{KL} \ge 0$) powers everything: CE $\ge$ H, the
-  coding bound, the label-smoothing optimum.
-- Minimizing CE = minimizing KL to the data = maximum likelihood.
-- Perplexity = $\exp(\mathrm{CE})$: base-free, an effective branching factor.
-- Next: families of divergences (f-divergences, optimal transport) and
-  mutual information for representation learning.
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- Self-information $-\log p$; entropy $H$ averages it and tops out at $\log k$ (uniform).
+- KL $\ge 0$ (Gibbs, one line of Jensen) underwrites everything.
+- $\mathrm{CE} = H + \mathrm{KL}$: floor plus waste; minimizing it is maximum likelihood.
+:::
+
+::: {.col}
+- Kraft + Shannon make it literal: KL is the extra bits of a wrong code.
+- Perplexity $= \exp(\mathrm{CE})$, a base-free branching factor.
+- Label smoothing and distillation are corollaries of Gibbs.
+:::
+:::
+
+::: {.d2l-note}
+Next: the wider family of **divergences and distances** that define modern
+generative objectives.
+:::
 :::

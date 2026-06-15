@@ -111,6 +111,11 @@ $(foreach v,NUM_GPUS GPU_SLOTS CPU_SLOTS,$(eval $(call _detected,$(v))))
 # across all 4 frameworks). tools/detect_resources.py is the single source for
 # the packing plan (pairs × per_pair) and the jax preallocation fraction.
 $(foreach v,NUM_GPU_PAIRS MULTIGPU_PER_PAIR MULTIGPU_SLOTS JAX_MGPU_MEM_FRACTION,$(eval $(call _detected,$(v))))
+# Slide/PDF render fleet sizing — keeps (jobs × quarto Deno/V8 heap) under the
+# RAM budget so the parallel `quarto render` never SIGKILLs (rc=137) or V8-OOMs
+# (rc=133). See tools/detect_resources.py (RENDER_V8_MIN_MIB / RENDER_JOBS).
+$(foreach v,RENDER_JOBS RENDER_V8_HEAP_MIB,$(eval $(call _detected,$(v))))
+RENDER_V8_ENV := QUARTO_DENO_V8_OPTIONS=--max-old-space-size=$(RENDER_V8_HEAP_MIB),--max-heap-size=$(RENDER_V8_HEAP_MIB)
 FILES         ?=
 SLIDES_FILTER ?= $(FILES)
 
@@ -806,13 +811,18 @@ rebuild-book-artifacts:
 	@rm -f $(SLIDE_STAMPS)
 	@rm -f _book/index.html
 	@for fw in $(FRAMEWORKS); do rm -f "_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; done
-	$(MAKE) -j4 slides
+	@# Render slides/PDFs with a RAM-aware fleet: RENDER_JOBS frameworks in
+	@# parallel, each quarto capped to RENDER_V8_HEAP_MIB. A hardcoded `-j4` at
+	@# the old 24 GiB heap over-committed RAM on <128 GiB boxes (4×24=96 GiB →
+	@# OOM-kill rc=137), and 24 GiB was too small for one framework's full
+	@# single-project render anyway (V8 abort rc=133). See detect_resources.py.
+	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) slides
 	$(MAKE) html
 	@# Clear stale render-scratch PDFs so the parallel PDF render can't
 	@# skip-then-read a corrupt one (Quarto convert_svg, main.lua:7348). This
 	@# makes `make all` self-sufficient without a preceding `make clean`.
 	@find img/outputs -name '*.pdf' -delete 2>/dev/null || true
-	$(MAKE) -j4 pdfs
+	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) pdfs
 	$(MAKE) check-all-artifacts
 
 # Quick build without notebook execution

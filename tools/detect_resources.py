@@ -94,6 +94,17 @@ RAM_HEADROOM_PCT  = _envint("RAM_HEADROOM_PCT",  85)      # leave 15% for OS/cac
 FD_PER_MXNET_JOB   = _envint("FD_PER_MXNET_JOB",   1024)
 PROC_PER_MXNET_JOB = _envint("PROC_PER_MXNET_JOB", 128)
 
+# Slide/PDF rendering (rebuild-book-artifacts) runs one `quarto render` per
+# framework; quarto drives a Deno/V8 heap. A full framework's single-project
+# slide render of the math-heavy book needs a large heap: the historical
+# 24 GiB ceiling aborted with rc=133 (V8 "allocation failure") during project
+# setup, and running all frameworks in parallel (`make -j4`) at 24 GiB each
+# over-committed RAM and was SIGKILLed by the OOM-killer (rc=137). So bound
+# (render parallelism × per-process heap) by the RAM budget: pick the largest
+# safe job count, then give each job the largest heap that still fits.
+RENDER_V8_MIN_MIB = _envint("RENDER_V8_MIN_MIB", 40960)   # 40 GiB floor / job
+NUM_RENDER_FRAMEWORKS = _envint("NUM_RENDER_FRAMEWORKS", 4)
+
 
 def _detect():
     # GPUs: count + minimum VRAM (workers_per_gpu must be uniform).
@@ -211,6 +222,17 @@ def derive(d):
     gpu_slots_total = sum(per_gpu_slots) or gpu_slots   # fall back to flat calc
     cpu_slots_cores = max(1, _floor_div(ncpu, CPU_PER_LIGHT))
 
+    # Slide/PDF render plan: keep (jobs × per-process V8 heap) <= RAM budget so
+    # the parallel `quarto render` fleet neither over-commits RAM (rc=137) nor
+    # starves a single big framework's heap (rc=133). With an unknown RAM budget
+    # fall back to serial rendering at the floor heap.
+    if ram_budget:
+        render_jobs = max(1, min(NUM_RENDER_FRAMEWORKS,
+                                 _floor_div(ram_budget, RENDER_V8_MIN_MIB)))
+        render_heap = max(RENDER_V8_MIN_MIB, _floor_div(ram_budget, render_jobs))
+    else:
+        render_jobs, render_heap = 1, RENDER_V8_MIN_MIB
+
     return dict(
         NUM_GPUS=num_gpus,
         GPU_SLOTS=gpu_slots_total,
@@ -226,6 +248,8 @@ def derive(d):
         MULTIGPU_PER_PAIR=per_pair,
         MULTIGPU_SLOTS=multigpu_slots,
         JAX_MGPU_MEM_FRACTION=jax_mgpu_frac,
+        RENDER_JOBS=render_jobs,
+        RENDER_V8_HEAP_MIB=render_heap,
     ), dict(
         raw_gpu_vram=raw_gpu, raw_cpu_cores=raw_cpu,
         total_ram_jobs=total_ram_jobs, ram_budget_mib=ram_budget,
@@ -288,6 +312,8 @@ def main(argv):
     print(f"  MULTIGPU_SLOTS  = {plan['MULTIGPU_SLOTS']}  "
           f"({plan['NUM_GPU_PAIRS']} GPU pairs × {plan['MULTIGPU_PER_PAIR']} "
           f"packed/pair; jax mem-fraction {plan['JAX_MGPU_MEM_FRACTION']})")
+    print(f"  RENDER_JOBS     = {plan['RENDER_JOBS']}  "
+          f"(slides/pdfs in parallel @ {plan['RENDER_V8_HEAP_MIB']} MiB V8 heap/job)")
     return 0
 
 

@@ -746,12 +746,18 @@ def main():
             # dropping every deck past ~#92 — e.g. all of the multilayer-
             # perceptrons chapter. The launcher appends QUARTO_DENO_V8_OPTIONS
             # *after* its 8192 default and V8 honours the last occurrence of a
-            # flag, so this raises the ceiling. 24 GiB per process × the
-            # frameworks rendered in parallel stays well under a render box's
-            # RAM. Respect a caller-supplied value.
+            # flag, so this raises the ceiling.
+            #
+            # The Makefile (rebuild-book-artifacts) computes a RAM-aware heap
+            # via detect_resources.py and passes it in; respect that. This
+            # standalone default is only the floor for direct invocations of
+            # this script — 24 GiB was still too small for the math-heavy book
+            # (mxnet aborted at rc=133 during project setup), so use a 40 GiB
+            # floor. Callers on small-RAM hosts should lower it AND render
+            # frameworks sequentially (`make -j1 slides`) to fit.
             base_env.setdefault(
                 'QUARTO_DENO_V8_OPTIONS',
-                '--max-old-space-size=24576,--max-heap-size=24576')
+                '--max-old-space-size=40960,--max-heap-size=40960')
 
             error_dir = fw_dir.parent / 'errors' / fw
             error_dir.mkdir(parents=True, exist_ok=True)

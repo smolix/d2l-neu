@@ -318,7 +318,7 @@ angle(np.array([0, 1, 2]), np.array([2, 3, 4]))
 def angle(v, w):
     return torch.acos(v.dot(w) / (torch.norm(v) * torch.norm(w)))
 
-angle(torch.tensor([0, 1, 2], dtype=torch.float32), torch.tensor([2.0, 3, 4]))
+angle(torch.tensor([0.0, 1, 2]), torch.tensor([2.0, 3, 4]))
 ```
 
 ```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
@@ -403,8 +403,9 @@ hyperplane material is now fully self-contained. Second, we just solved a
 genuine (if tiny) *least-squares* problem: we found the best approximation of
 $\mathbf{v}$ from the one-dimensional subspace spanned by $\mathbf{w}$. The
 same idea — project onto a subspace, the residual comes out orthogonal —
-scales up to fitting an arbitrary linear model, which is how the singular value
-decomposition produces optimal least-squares solutions in
+scales up to fitting an arbitrary linear model. We state the general version
+below, as soon as the vocabulary of subspaces and bases is in hand, and the
+singular value decomposition puts it to work on least-squares problems in
 :numref:`sec_mdl-svd-low-rank`.
 
 ### Span, Bases, and Subspaces
@@ -494,6 +495,116 @@ what it destroys. We will measure the first when we define the *rank* below,
 and meet both again among the SVD's *four fundamental subspaces* in
 :numref:`sec_mdl-svd-low-rank`.
 
+### Projection onto a Subspace
+
+The projection proposition dropped $\mathbf{v}$ onto a line. With subspaces and
+bases in hand we can pay off the promise that the idea "scales up": the same
+formula, one matrix heavier, drops a vector onto an arbitrary subspace. Call a
+basis $\mathbf{q}_1, \ldots, \mathbf{q}_k$ of a subspace $S \subseteq
+\mathbb{R}^n$ **orthonormal** when each vector has unit length and distinct
+vectors are orthogonal — compactly, $\mathbf{Q}^\top\mathbf{Q} = \mathbf{I}_k$,
+where $\mathbf{Q}$ is the $n \times k$ matrix with the $\mathbf{q}_i$ as
+columns.
+
+**Proposition (projection onto a subspace).** *Let $\mathbf{Q}$ have
+orthonormal columns spanning $S$, and set $\mathbf{P} =
+\mathbf{Q}\mathbf{Q}^\top$. Then for every $\mathbf{x} \in \mathbb{R}^n$:*
+(i) *$\mathbf{P}\mathbf{x} \in S$, and the residual $\mathbf{x} -
+\mathbf{P}\mathbf{x}$ is orthogonal to every vector of $S$;*
+(ii) *$\mathbf{P}\mathbf{x}$ is the unique closest point of $S$ to
+$\mathbf{x}$;*
+(iii) *$\mathbf{P}^2 = \mathbf{P}$ and $\mathbf{P}^\top = \mathbf{P}$.*
+
+**Proof.** For (i), $\mathbf{P}\mathbf{x} = \mathbf{Q}(\mathbf{Q}^\top\mathbf{x})$
+is a linear combination of the columns of $\mathbf{Q}$, hence lies in $S$; and
+$\mathbf{Q}^\top(\mathbf{x} - \mathbf{P}\mathbf{x}) = \mathbf{Q}^\top\mathbf{x}
+- (\mathbf{Q}^\top\mathbf{Q})\mathbf{Q}^\top\mathbf{x} = \mathbf{0}$, so the
+residual is orthogonal to each $\mathbf{q}_i$ and therefore to everything they
+span. For (ii), take any $\mathbf{s} \in S$ and split $\mathbf{x} - \mathbf{s}
+= (\mathbf{x} - \mathbf{P}\mathbf{x}) + (\mathbf{P}\mathbf{x} - \mathbf{s})$:
+the second piece lies in $S$, the first is orthogonal to it, so Pythagoras
+:eqref:`eq_mdl-pythagoras` gives $\|\mathbf{x} - \mathbf{s}\|^2 = \|\mathbf{x}
+- \mathbf{P}\mathbf{x}\|^2 + \|\mathbf{P}\mathbf{x} - \mathbf{s}\|^2 \ge
+\|\mathbf{x} - \mathbf{P}\mathbf{x}\|^2$, with equality exactly when
+$\mathbf{s} = \mathbf{P}\mathbf{x}$. For (iii), $\mathbf{P}^2 =
+\mathbf{Q}(\mathbf{Q}^\top\mathbf{Q})\mathbf{Q}^\top = \mathbf{Q}\mathbf{Q}^\top
+= \mathbf{P}$, and symmetry is immediate from the form
+$\mathbf{Q}\mathbf{Q}^\top$. $\blacksquare$
+
+Property (iii) is geometry speaking algebra: projecting a second time changes
+nothing, because after the first projection you are already in $S$. For $k = 1$
+with the single unit column $\mathbf{q} = \mathbf{w}/\|\mathbf{w}\|$, the matrix
+$\mathbf{P} = \mathbf{q}\mathbf{q}^\top$ reproduces the one-dimensional formula
+:eqref:`eq_mdl-projection` exactly. And the residual-orthogonality property (i)
+is the entire content of *least squares*: fitting a linear model means
+projecting the target vector onto the column space of the data matrix, and the
+optimal fit is characterized by its error being orthogonal to every feature.
+The pseudoinverse in :numref:`sec_mdl-svd-low-rank` will build precisely this
+projection for an arbitrary matrix.
+
+Where does an orthonormal basis come from? Every framework will manufacture one
+for us: the `qr` routine (the *QR factorization*, a matrix form of the
+Gram–Schmidt process we describe when we meet orthogonal matrices below) turns
+any full-rank matrix into one with orthonormal columns and the same column
+space. Let us verify the proposition numerically on a random 3-dimensional
+subspace of $\mathbb{R}^5$.
+
+```{.python .input #mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace}
+#@tab mxnet
+# A random 5x3 matrix whose columns span a 3-dim subspace of R^5
+np.random.seed(0)
+A = np.random.randn(5, 3)
+Q, _ = np.linalg.qr(A)  # orthonormal basis of the column space
+P = Q.dot(Q.T)          # projection matrix onto that subspace
+x = np.random.randn(5)
+r = x - P.dot(x)        # residual
+(np.linalg.norm(P.dot(P) - P),  # P^2 = P (idempotent)
+ np.linalg.norm(Q.T.dot(r)))    # residual is orthogonal to the subspace
+```
+
+```{.python .input #mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace}
+#@tab pytorch
+# A random 5x3 matrix whose columns span a 3-dim subspace of R^5
+torch.manual_seed(0)
+A = torch.randn(5, 3)
+Q, _ = torch.linalg.qr(A)  # orthonormal basis of the column space
+P = Q @ Q.T                # projection matrix onto that subspace
+x = torch.randn(5)
+r = x - P @ x              # residual
+(torch.norm(P @ P - P),    # P^2 = P (idempotent)
+ torch.norm(Q.T @ r))      # residual is orthogonal to the subspace
+```
+
+```{.python .input #mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace}
+#@tab tensorflow
+# A random 5x3 matrix whose columns span a 3-dim subspace of R^5
+tf.random.set_seed(0)
+A = tf.random.normal((5, 3))
+Q, _ = tf.linalg.qr(A)     # orthonormal basis of the column space
+P = Q @ tf.transpose(Q)    # projection matrix onto that subspace
+x = tf.random.normal((5,))
+r = x - tf.linalg.matvec(P, x)  # residual
+(tf.norm(P @ P - P),       # P^2 = P (idempotent)
+ tf.norm(tf.linalg.matvec(tf.transpose(Q), r)))  # residual orthogonal to S
+```
+
+```{.python .input #mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace}
+#@tab jax
+# A random 5x3 matrix whose columns span a 3-dim subspace of R^5
+key1, key2 = jax.random.split(jax.random.PRNGKey(0))
+A = jax.random.normal(key1, (5, 3))
+Q, _ = jnp.linalg.qr(A)    # orthonormal basis of the column space
+P = Q @ Q.T                # projection matrix onto that subspace
+x = jax.random.normal(key2, (5,))
+r = x - P @ x              # residual
+(jnp.linalg.norm(P @ P - P),  # P^2 = P (idempotent)
+ jnp.linalg.norm(Q.T @ r))    # residual is orthogonal to the subspace
+```
+
+Both numbers are zero up to floating-point roundoff: $\mathbf{P}$ really is
+idempotent, and the residual really is orthogonal to the whole subspace, just
+as the proposition demands — for a subspace nobody chose by hand.
+
 ## Similarity in High Dimensions
 
 It is reasonable to ask why the *angle* — rather than the raw distance — is so
@@ -574,8 +685,25 @@ collapsed into a spike of width $\approx 0.03$.
 ![Histograms of the cosine between independent random unit vectors at dimensions $d = 2$, $10$, and $1000$. In $d = 2$ the mass piles up near $\pm 1$ in an arcsine-shaped density: random directions in the plane are typically far from orthogonal. In moderate dimension the histogram flattens into a bell around $0$, and by $d = 1000$ it is a narrow spike of width $\approx 1/\sqrt{d}$, exactly as the proposition predicts.](../img/mdl-la-cosine-highd.svg)
 :label:`fig_mdl-la-cosine-highd`
 
-The higher the dimension, the more sharply the cosine concentrates at $0$:
-unrelated directions are almost always nearly orthogonal.
+This concentration is not a curiosity — it is the operating environment of
+**dot-product attention** (:numref:`sec_attention-scoring-functions`). An
+attention layer compares one query $\mathbf{q}$ against thousands of keys
+$\mathbf{k}_1, \mathbf{k}_2, \ldots$ by dot product, and near-orthogonality is
+what makes the comparison informative at scale: the scores of the many
+unrelated keys concentrate near zero, so the few keys that genuinely share
+structure with the query stand out against a quiet background. The proposition
+also explains the otherwise mysterious $\sqrt{d}$ in the attention scores
+$\mathbf{Q}\mathbf{K}^\top/\sqrt{d}$. When query and key have independent
+entries of typical size $1$, each has length about $\sqrt{d}$, and our variance
+result gives their cosine a standard deviation of $1/\sqrt{d}$; the raw score
+$\mathbf{q}\cdot\mathbf{k} = \|\mathbf{q}\|\,\|\mathbf{k}\|\cos\theta$ therefore
+has standard deviation about $\sqrt{d}\cdot\sqrt{d}\cdot\tfrac{1}{\sqrt{d}} =
+\sqrt{d}$ — that is, $\operatorname{Var}(\mathbf{q}\cdot\mathbf{k}) = d$, growing
+with the dimension. Dividing by $\sqrt{d}$ is exactly dividing by that standard
+deviation: it standardizes the scores to size $O(1)$ so that the softmax
+downstream stays in its responsive range instead of saturating on whichever
+score happens to be largest (we study that softmax's derivative in
+:numref:`sec_mdl-matrix-calculus-autodiff`).
 
 ## Hyperplanes and Decision Boundaries
 
@@ -702,11 +830,11 @@ test = torchvision.datasets.FashionMNIST(root="../data", transform=trans,
                                          train=False, download=True)
 
 X_train_0 = torch.stack(
-    [x[0] * 256 for x in train if x[1] == 0]).type(torch.float32)
+    [x[0] * 255 for x in train if x[1] == 0]).type(torch.float32)
 X_train_1 = torch.stack(
-    [x[0] * 256 for x in train if x[1] == 1]).type(torch.float32)
+    [x[0] * 255 for x in train if x[1] == 1]).type(torch.float32)
 X_test = torch.stack(
-    [x[0] * 256 for x in test if x[1] == 0 or x[1] == 1]).type(torch.float32)
+    [x[0] * 255 for x in test if x[1] == 0 or x[1] == 1]).type(torch.float32)
 y_test = torch.stack([torch.tensor(x[1]) for x in test
                       if x[1] == 0 or x[1] == 1]).type(torch.float32)
 
@@ -1080,9 +1208,11 @@ independent collection can be converted into an orthonormal basis of its span
 by the *Gram–Schmidt process*: walk through the vectors in order, subtract
 from each one its projection :eqref:`eq_mdl-projection` onto each direction
 already produced, and normalize what remains. In matrix form this algorithm is
-the *QR factorization*. We will not need its details in this chapter — it is
-enough to know that orthonormal bases are cheap to manufacture, which is one
-reason the decompositions built from them are so practical.
+the *QR factorization* — the `qr` call that manufactured the orthonormal basis
+in our subspace-projection demo earlier in this section. We will not need its
+inner workings in this chapter — it is enough to know that orthonormal bases
+are cheap to manufacture, which is one reason the decompositions built from
+them are so practical.
 
 ### Linear Dependence, Rank, and Invertibility
 
@@ -1126,6 +1256,21 @@ $$
 \mathbf{b}_1  + 2\cdot\mathbf{b}_2 = 0.
 $$
 
+The coefficients $(1, 2)$ of this relation are worth a second look: they say
+precisely that $\mathbf{B}[1, 2]^\top = 1\cdot\mathbf{b}_1 + 2\cdot\mathbf{b}_2
+= \mathbf{0}$, so the dependence hands us a nonzero vector in the *null space*
+of $\mathbf{B}$. :numref:`fig_mdl-la-null-collapse` shows the two subspaces of
+$\mathbf{B}$ at work together: the whole plane is crushed onto the column
+space, while the null-space direction is exactly the set of inputs that land
+on the origin. (For this particular $\mathbf{B}$ the two subspaces happen to
+coincide as sets — both are the line $y = 2x$ — an amusing accident, equivalent
+to $\mathbf{B}^2 = \mathbf{0}$, that makes the picture no less instructive:
+what the matrix *produces* and what it *destroys* are different roles even
+when they occupy the same line.)
+
+![The matrix $\mathbf{B} = \left(\begin{smallmatrix}2 & -1 \\ 4 & -2\end{smallmatrix}\right)$ collapsing the plane. Left: the input plane, with three marked points and the null-space direction $(1,2)^\top$ dashed — every input on that line is sent to the origin. Right: the image. The entire grid lands on the column space, the line $y = 2x$ spanned by the columns $\mathbf{b}_1$ and $\mathbf{b}_2$; the marked points land at their images, and the null-space line has collapsed to $\mathbf{0}$. Once distinct inputs collide like this, no inverse can tell them apart.](../img/mdl-la-null-collapse.svg)
+:label:`fig_mdl-la-null-collapse`
+
 In general, we will say that a collection of vectors
 $\mathbf{v}_1, \ldots, \mathbf{v}_k$ are *linearly dependent*
 if there exist coefficients $a_1, \ldots, a_k$ *not all equal to zero* so that
@@ -1147,23 +1292,25 @@ independent, no compression occurs and the operation can be undone.
 
 #### Rank
 
-If we have a general $n\times m$ matrix,
-it is reasonable to ask what dimension space the matrix maps into.
+If we have a general $m\times n$ matrix,
+it is reasonable to ask the dimension of the space the matrix maps *onto* ---
+the dimension of its image.
 A concept known as the *rank* will be our answer.
 In the previous section, we noted that a linear dependence
 bears witness to compression of space into a lower dimension
 and so we will be able to use this to define the notion of rank.
 In particular, the rank of a matrix $\mathbf{A}$
 is the largest number of linearly independent columns
-amongst all subsets of columns. For example, the matrix
+amongst all subsets of columns. For example, our matrix
 
 $$
 \mathbf{B} = \begin{bmatrix}
-2 & 4 \\ -1 & -2
-\end{bmatrix},
+2 & -1 \\ 4 & -2
+\end{bmatrix}
 $$
 
-has $\textrm{rank}(B)=1$, since the two columns are linearly dependent,
+from above has $\textrm{rank}(\mathbf{B})=1$, since the two columns
+$[2, 4]^\top$ and $[-1, -2]^\top$ are linearly dependent,
 while each column on its own is linearly independent.
 For a more challenging example, we can consider
 
@@ -1195,12 +1342,41 @@ to compute the rank of a matrix, but for now,
 this is sufficient to see that the concept
 is well defined and understand the meaning.
 
+The trade-off between compression and survival is exact, and it is the one
+canonical accounting identity of the subject.
+
+**Proposition (rank--nullity).** *For an $m \times n$ matrix $\mathbf{A}$,*
+
+$$
+\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n,
+$$
+
+*where $\ker\mathbf{A}$ denotes the null space.*
+
+**Proof.** Choose a basis $\mathbf{w}_1, \ldots, \mathbf{w}_k$ of the null
+space and extend it to a basis $\mathbf{w}_1, \ldots, \mathbf{w}_k,
+\mathbf{v}_1, \ldots, \mathbf{v}_{n-k}$ of $\mathbb{R}^n$. The images
+$\mathbf{A}\mathbf{v}_1, \ldots, \mathbf{A}\mathbf{v}_{n-k}$ span the column
+space (the $\mathbf{w}_i$ contribute nothing), and they are independent: if
+$\sum_i c_i \mathbf{A}\mathbf{v}_i = \mathbf{0}$ then $\sum_i c_i \mathbf{v}_i$
+lies in the null space, hence is a combination of the $\mathbf{w}_j$ ---
+impossible within a basis unless every $c_i = 0$. So the column space has
+dimension exactly $n - k$. $\blacksquare$
+
+Read it as conservation of directions: of the $n$ directions coming in,
+$\dim\ker\mathbf{A}$ are destroyed and $\operatorname{rank}\mathbf{A}$ survive
+--- what a matrix does not kill, it keeps. Our matrix $\mathbf{B}$ balances the
+books as $1 + 1 = 2$, one column-space direction surviving and one null-space
+direction crushed, exactly as :numref:`fig_mdl-la-null-collapse` shows. The
+singular value decomposition will make this split visible, with orthonormal
+bases attached to both halves, in :numref:`sec_mdl-svd-low-rank`.
+
 #### Invertibility
 
 We have seen above that multiplication by a matrix with linearly dependent columns
-cannot be undone, i.e., there is no inverse operation that can always recover the input.  However, multiplication by a full-rank matrix
-(i.e., some $\mathbf{A}$ that is $n \times n$ matrix with rank $n$),
-we should always be able to undo it.  Consider the matrix
+cannot be undone, i.e., there is no inverse operation that can always recover the input.  However, multiplication by a *full-rank* matrix
+--- an $n \times n$ matrix $\mathbf{A}$ with rank $n$ ---
+can always be undone.  Consider the matrix
 
 $$
 \mathbf{I} = \begin{bmatrix}
@@ -1225,8 +1401,10 @@ If we look at this as a system, we have $n \times n$ unknowns
 (the entries of $\mathbf{A}^{-1}$) and $n \times n$ equations
 (the equality that needs to hold between every entry of the product $\mathbf{A}^{-1}\mathbf{A}$ and every entry of $\mathbf{I}$)
 so we should generically expect a solution to exist.
-Indeed, in the next section we will see a quantity called the *determinant*,
-which has the property that as long as the determinant is not zero, we can find a solution.  We call such a matrix $\mathbf{A}^{-1}$ the *inverse* matrix.
+The hedge "generically" is doing real work in that sentence, and the
+*determinant*, introduced below, is exactly the quantity that makes it
+precise: as long as the determinant is not zero, a solution exists and we can
+find it.  We call such a matrix $\mathbf{A}^{-1}$ the *inverse* matrix.
 As an example, if $\mathbf{A}$ is the general $2 \times 2$ matrix
 
 $$
@@ -1388,20 +1566,21 @@ negated.
 :label:`fig_mdl-la-determinant`
 
 Let's see now that when the determinant is zero, we learn more.
-Consider
+Consider our compressing matrix from before,
 
 $$
 \mathbf{B} = \begin{bmatrix}
-2 & 4 \\ -1 & -2
+2 & -1 \\ 4 & -2
 \end{bmatrix}.
 $$
 
 If we compute the determinant of this matrix,
-we get $2\cdot(-2 ) - 4\cdot(-1) = 0$.
+we get $2\cdot(-2) - (-1)\cdot 4 = 0$.
 Given our understanding above, this makes sense.
 $\mathbf{B}$ compresses the unit square
-down to a line segment, which has zero area ---
-the situation of panel (c) in :numref:`fig_mdl-la-determinant`.
+down to a segment of the line $y = 2x$, which has zero area ---
+the situation of panel (c) in :numref:`fig_mdl-la-determinant`, and exactly
+the collapse pictured in :numref:`fig_mdl-la-null-collapse`.
 And indeed, being compressed into a lower dimensional space
 is the only way to have zero area after the transformation.
 Thus we see the following result is true:
@@ -1612,16 +1791,19 @@ $\mathbf{A}\mathbf{v} = [0, -5]^\top$. Reading index strings like
 `'ij,jk->ik'` is a skill worth acquiring: batched matrix products
 (`'bij,bjk->bik'`), attention scores, and many custom layers are one `einsum`
 call away, and we will reach for the notation whenever a computation is easier
-to state in indices than in matrices.
+to state in indices than in matrices --- as soon as
+:numref:`sec_mdl-svd-low-rank`, where a one-line `einsum` will rebuild a matrix
+from its singular value decomposition.
 
 ## Summary
 * Vectors can be interpreted geometrically as either points or directions in space.
 * Dot products define the notion of angle to arbitrarily high-dimensional spaces.
 * Spans, subspaces, and bases organize collections of vectors: a basis assigns every vector of a subspace unique coordinates, and the dimension counts the basis vectors. The column space and null space of a matrix record what it can produce and what it destroys.
+* Projection produces the closest point of a line — or, via the projection matrix $\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$, of any subspace — and is characterized by an orthogonal residual. This is the geometry of least squares.
 * Hyperplanes are high-dimensional generalizations of lines and planes.  They can be used to define decision planes that are often used as the last step in a classification task.
 * Matrix multiplication can be geometrically interpreted as uniform distortions of the underlying coordinates. They represent a very restricted, but mathematically clean, way to transform vectors. Multiplying two matrices composes the corresponding maps.
 * Orthogonal matrices are the rigid motions: they preserve lengths, angles, and (up to a sign recording reflections) volumes.
-* Linear dependence is a way to tell when a collection of vectors are in a lower dimensional space than we would expect (say you have $3$ vectors living in a $2$-dimensional space). The rank of a matrix is the size of the largest subset of its columns that are linearly independent.
+* Linear dependence is a way to tell when a collection of vectors are in a lower dimensional space than we would expect (say you have $3$ vectors living in a $2$-dimensional space). The rank of a matrix is the size of the largest subset of its columns that are linearly independent, and rank--nullity balances the books: rank plus the dimension of the null space equals the number of columns.
 * When a matrix's inverse is defined, matrix inversion allows us to find another matrix that undoes the action of the first. Matrix inversion is useful in theory, but requires care in practice owing to numerical instability.
 * Determinants allow us to measure how much a matrix expands or contracts a space. A nonzero determinant implies an invertible (non-singular) matrix and a zero-valued determinant means that the matrix is non-invertible (singular).
 * Tensor contractions and Einstein summation provide for a neat and clean notation for expressing many of the computations that are seen in machine learning.

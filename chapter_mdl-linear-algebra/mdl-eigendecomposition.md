@@ -91,8 +91,9 @@ all vectors satisfying $\mathbf{A}\mathbf{v}=\lambda\mathbf{v}$, together with
 $\mathbf 0$, forms a subspace---the *eigenspace* of $\lambda$.
 
 The cleanest way to picture eigenvectors is to ask what a matrix does to the
-*unit circle*, the set of all unit vectors. A general matrix maps it to an
-ellipse, and for a *symmetric* matrix the axes of that ellipse lie exactly along
+*unit circle*, the set of all unit vectors. A full-rank matrix maps it to an
+ellipse (a singular matrix flattens the ellipse further, into a segment or a
+point), and for a *symmetric* matrix the axes of that ellipse lie exactly along
 the eigenvectors, with half-lengths $|\lambda_i|$ (an axis flips when
 $\lambda_i<0$). :numref:`fig_mdl-la-eig-ellipse` draws this for our
 $\operatorname{diag}(2,-1)$ above and for the symmetric
@@ -201,7 +202,12 @@ formula in radicals for the roots of the characteristic polynomial, and
 practical libraries never form that polynomial anyway. They instead reduce
 $\mathbf{A}$ to a nearly-triangular *Hessenberg* form and run the shifted *QR
 algorithm*, an iteration that drives the matrix toward triangular form while
-preserving its eigenvalues :cite:`Golub.Van-Loan.1996`. The *power iteration* we
+preserving its eigenvalues :cite:`Golub.Van-Loan.1996`. Triangular form is the
+finish line because a triangular matrix wears its eigenvalues on its diagonal:
+$\mathbf{T}-\lambda\mathbf{I}$ is again triangular, and a triangular
+determinant is the product of the diagonal entries, so
+$\det(\mathbf{T}-\lambda\mathbf{I})=\prod_i(t_{ii}-\lambda)$ vanishes exactly
+at the diagonal values. The *power iteration* we
 develop later in this section matters in the complementary regime, when
 $\mathbf{A}$ is too large to factor and only matrix--vector products are
 affordable.
@@ -394,6 +400,14 @@ is $2$, so by :numref:`subsec_mdl-multiplicity` there is no eigenbasis and
 $\mathbf{A}$ is not diagonalizable. (Such matrices are handled by the Jordan
 normal form or, more usefully for us, by the singular value decomposition, which
 we revisit for this exact matrix in :numref:`sec_mdl-svd-low-rank`.)
+:numref:`fig_mdl-la-defective-shear` makes the shortage visible: the shear
+slides every horizontal layer of the grid sideways, and the horizontal axis is
+the *only* line through the origin left pointing where it started. A
+diagonalizable $2\times2$ matrix would exhibit two independent such lines; the
+shear has just one, and no change of basis can conjure a second.
+
+![The defective shear acting on the plane. Every horizontal line slides rigidly to the right by an amount proportional to its height, so the grid tilts --- but the $x$-axis (green) is carried to itself: $\mathbf{A}\mathbf{e}_1=\mathbf{e}_1$, the sole eigendirection, with $\lambda=1$. The other basis vector picks up a horizontal component, $\mathbf{A}\mathbf{e}_2=(1,1)^\top$, and *no* second direction is preserved: geometric multiplicity $1$ against algebraic multiplicity $2$.](../img/mdl-la-defective-shear.svg)
+:label:`fig_mdl-la-defective-shear`
 
 We will often restrict attention to matrices where a full set of orthonormal
 eigenvectors is *guaranteed*. The most commonly encountered such family are the
@@ -580,7 +594,9 @@ attempting the factorization, far cheaper than an eigendecomposition, is the
 standard numerical test for definiteness. It is also how multivariate Gaussians
 are sampled: if $\mathbf{z}$ has independent standard normal entries, then
 $\boldsymbol\mu+\mathbf{L}\mathbf{z}$ has mean $\boldsymbol\mu$ and covariance
-$\mathbf{L}\mathbf{L}^\top=\boldsymbol\Sigma$.
+$\mathbf{L}\mathbf{L}^\top=\boldsymbol\Sigma$ --- the recipe behind every
+multivariate-normal sampler, whose geometry we study with the multivariate
+Gaussian in :numref:`sec_mdl-distributions`.
 
 Geometrically, the sign pattern of the eigenvalues is the *shape* of the surface
 $z=\mathbf{x}^\top\mathbf{A}\mathbf{x}$, viewed through the eigenvector axes:
@@ -643,11 +659,31 @@ $\lambda_n\le R(\mathbf x)\le\lambda_1$; the bounds are achieved by putting all
 weight on a single coordinate, i.e. $\mathbf x=\mathbf w_1$ or
 $\mathbf x=\mathbf w_n$. $\blacksquare$
 
+The proposition is easy to *watch*: sweep a unit vector once around the circle,
+record $R(\mathbf{x})$ at each angle, and compare the extremes of the sweep to
+the eigenvalues.
+
+```{.python .input #mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches}
+A = np.array([[3., 1.], [1., 2.]])
+thetas = np.linspace(0, np.pi, 721)   # R has period pi: x and -x agree
+xs = np.stack([np.cos(thetas), np.sin(thetas)])   # unit vectors, all angles
+R = np.sum(xs * (A @ xs), axis=0)     # R(x) = x^T A x  (denominator is 1)
+print(f'sweep of R:  min = {R.min():.6f}, max = {R.max():.6f}')
+print(f'eigvalsh:    {np.linalg.eigvalsh(A).round(6)}')
+```
+
+The sweep never escapes the eigenvalue interval, and its extremes reproduce
+$\lambda_{\min}$ and $\lambda_{\max}$ to the resolution of the angular grid ---
+the two angles where they occur are precisely the eigenvector directions. Every
+direction in between mixes the two eigenvalues in proportion to its squared
+eigen-coordinates, exactly as the weighted-average proof says.
+
 Maximizing over subspaces of fixed dimension recovers *every* eigenvalue in
 between (the *Courant--Fischer min-max theorem*,
 $\lambda_k=\max_{\dim S=k}\min_{\mathbf 0\neq\mathbf x\in S}R(\mathbf x)$); we will
 not need the general form, but it is the workhorse behind comparison and
-perturbation bounds---for symmetric matrices it yields **Weyl's inequality**,
+perturbation bounds---for a symmetric matrix under a *symmetric* perturbation
+$\mathbf{E}$ it yields **Weyl's inequality**,
 $|\lambda_k(\mathbf{A}+\mathbf{E})-\lambda_k(\mathbf{A})|\le\|\mathbf{E}\|_2$, so
 every eigenvalue moves by no more than the size of the perturbation. The Rayleigh
 quotient is a thread that runs through the rest
@@ -962,10 +998,19 @@ Model a random web surfer who at each step follows a random outgoing link;
 collect the click probabilities into a column-stochastic matrix $\mathbf{P}$
 (every column sums to $1$, so $\rho(\mathbf{P})=1$). The fraction of time the
 surfer spends on each page is the stationary distribution $\boldsymbol\pi$ with
-$\mathbf{P}\boldsymbol\pi=\boldsymbol\pi$---the dominant eigenvector. Power
+$\mathbf{P}\boldsymbol\pi=\boldsymbol\pi$---the dominant eigenvector. One wrinkle:
+the raw link matrix fails the theorem's connectivity condition on the real web,
+which is full of dangling pages (no outgoing links) and disconnected pockets. The
+fix is *damping*: iterate the blended matrix
+$\alpha\mathbf{P}+(1-\alpha)\tfrac1n\mathbf{1}\mathbf{1}^\top$ with
+$\alpha\approx0.85$, i.e. with probability $0.15$ the surfer teleports to a
+uniformly random page. Every entry of the blend is positive, so
+Perron--Frobenius applies *by construction*, and it also guarantees a healthy
+gap $|\lambda_2|\le\alpha$ so power iteration converges fast. Power
 iteration started from the uniform distribution converges to $\boldsymbol\pi$, and
 that is precisely how PageRank is computed at web scale: forming $\mathbf{P}$
-explicitly is unthinkable, but multiplying by it is cheap. The same
+explicitly is unthinkable, but multiplying by it is cheap (and the teleportation
+term is rank one, so the damped multiply costs no more). The same
 dominant-eigenvector-by-power-iteration idea reappears across machine learning, in
 the stationary distribution of a Markov chain and in spectral clustering.
 
@@ -1033,6 +1078,25 @@ $2\sqrt{n}$ at finite $n$; we return to singular values in
 related singular values) of random matrices has deep connections to proper
 initialization of neural networks, as discussed in
 :citet:`Pennington.Schoenholz.Ganguli.2017` and subsequent works.
+
+Symmetric random matrices have their own law, and it is the one a data analyst
+meets first. Take $n$ samples of a $d$-dimensional vector with independent,
+mean-zero, unit-variance coordinates---pure noise, true covariance
+$\mathbf{I}$---and form the sample covariance
+$\hat{\boldsymbol\Sigma}=\tfrac1n\mathbf{X}^\top\mathbf{X}$. One might hope its
+eigenvalues all sit near $1$. They do not: for aspect ratio $\gamma=d/n$ held
+fixed, they spread deterministically over the **Marchenko--Pastur bulk**
+$[(1-\sqrt\gamma)^2,\,(1+\sqrt\gamma)^2]$ :cite:`Marchenko.Pastur.1967`---with
+$d=n/4$ the "noise" eigenvalues range across $[0.25, 2.25]$. This bulk is the
+*null hypothesis* of spectral data analysis. An eigenvalue inside it is
+indistinguishable from sampling noise; only eigenvalues that escape *above* the
+bulk edge testify to real structure. That is the principled answer to "how many
+PCA components should I keep?", it is exactly the noise floor that the
+Gavish--Donoho singular-value threshold of :numref:`sec_mdl-svd-low-rank` is
+calibrated against, and it is the baseline against which the heavy-tailed
+spectra of *trained* weight matrices---which spill far outside any
+Marchenko--Pastur bulk---are read as evidence of learned correlation in that
+same section.
 
 The "iterated map" is not just a toy. A recurrent network computes a hidden state
 $\mathbf{h}_t=\phi(\mathbf{W}\mathbf{h}_{t-1}+\cdots)$ by applying (almost) the

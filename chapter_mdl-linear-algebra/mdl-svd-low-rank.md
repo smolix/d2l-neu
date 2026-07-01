@@ -1,8 +1,3 @@
-```{.python .input}
-%load_ext d2lbook.tab
-tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
-```
-
 # Singular Value Decomposition and Low-Rank Approximation
 :label:`sec_mdl-svd-low-rank`
 
@@ -40,14 +35,14 @@ per-framework library once here; the few that are framework-agnostic also have
 `np` in scope.
 
 ```{.python .input #svd-imports}
-%%tab mxnet
+#@tab mxnet
 %matplotlib inline
 from d2l import mxnet as d2l
 import numpy as np
 ```
 
 ```{.python .input #svd-imports}
-%%tab pytorch
+#@tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import numpy as np
@@ -55,7 +50,7 @@ import torch
 ```
 
 ```{.python .input #svd-imports}
-%%tab tensorflow
+#@tab tensorflow
 %matplotlib inline
 from d2l import tensorflow as d2l
 import numpy as np
@@ -63,7 +58,7 @@ import tensorflow as tf
 ```
 
 ```{.python .input #svd-imports}
-%%tab jax
+#@tab jax
 %matplotlib inline
 from d2l import jax as d2l
 import numpy as np
@@ -177,6 +172,20 @@ each term a single outer product weighted by its singular value, ordered from
 largest to smallest. This form---a *ranked* list of rank-one ingredients---is the
 key to the low-rank approximation of :numref:`subsec_mdl-eckart-young`: keep the
 heavy terms, drop the light ones.
+
+The dyadic sum is also a one-line `einsum`---the Einstein notation of
+:numref:`sec_mdl-geometry-linear-algebraic-ops` paying its promised dividend.
+Summing $\sigma_i\,\mathbf{u}_i\mathbf{v}_i^\top$ over $i$ is the index pattern
+`'i,mi,in->mn'` (row $i$ of `Vt` *is* $\mathbf{v}_i^\top$), and it rebuilds the
+matrix exactly:
+
+```{.python .input #mdl-svd-low-rank-rotate-scale-rotate}
+rng = np.random.default_rng(5)
+A = rng.standard_normal((4, 3))
+U, s, Vt = np.linalg.svd(A, full_matrices=False)   # thin SVD
+A_dyads = np.einsum('i,mi,in->mn', s, U, Vt)       # sum_i sigma_i u_i v_i^T
+print('dyadic rebuild error:', round(float(np.linalg.norm(A_dyads - A)), 12))
+```
 
 ### Existence via $\mathbf{A}^\top\mathbf{A}$
 :label:`subsec_mdl-svd-via-ata`
@@ -535,7 +544,12 @@ the data is noisy; Exercise 3 lets you watch the spectrum split. The same
 low-rank-signal premise, with *missing* rather than noisy entries, underlies
 *matrix completion*: recommender systems fill in a sparsely observed ratings
 matrix by seeking the lowest-rank matrix (in practice, the smallest *nuclear norm*
-$\sum_i\sigma_i$, rank's convex surrogate) consistent with the observed entries.
+$\|\mathbf{A}\|_*=\sum_i\sigma_i$, rank's convex surrogate) consistent with the
+observed entries. The nuclear norm is the *dual* of the spectral norm
+($\|\mathbf{A}\|_*=\max_{\|\mathbf{B}\|_2\le1}\operatorname{tr}(\mathbf{B}^\top\mathbf{A})$)
+and plays the role for rank that the $\ell_1$ norm plays for sparsity: it is the
+tightest convex relaxation, which is what turns matrix completion from an
+intractable rank search into a solvable convex program.
 
 :numref:`fig_mdl-la-eckart-young` makes this concrete on a grayscale image. The
 left panel plots the singular-value spectrum on a log scale (note the rapid decay);
@@ -668,7 +682,7 @@ $\mathbf{A}^{+}=\mathbf{V}\boldsymbol{\Sigma}^{-1}\mathbf{U}^\top=\mathbf{A}^{-1
 And *truncating* the pseudoinverse---dropping terms with tiny $\sigma_i$ instead of
 dividing by them---caps the dangerous $1/\sigma_i$ blow-up; this is a form of
 regularization, closely related to ridge regression, which we revisit when we
-discuss weight decay.
+discuss weight decay in :numref:`sec_weight_decay`.
 
 The classical alternative, the *normal equations*
 $\mathbf{A}^\top\mathbf{A}\mathbf{x}=\mathbf{A}^\top\mathbf{b}$, is mathematically
@@ -681,7 +695,7 @@ alongside `cond(A^T A)` to show the normal-equations matrix is far worse
 conditioned.
 
 ```{.python .input #svd-least-squares}
-%%tab mxnet
+#@tab mxnet
 A = np.array([[1., 1.], [1., 2.], [1., 3.], [1., 4.]])  # 4 eqns, 2 unknowns
 b = np.array([6., 5., 7., 10.])
 x_pinv = np.linalg.pinv(A) @ b
@@ -695,7 +709,7 @@ print('cond(A^T A) =', round(float(np.linalg.cond(A.T @ A)), 3), '= cond(A)^2')
 ```
 
 ```{.python .input #svd-least-squares}
-%%tab pytorch
+#@tab pytorch
 A = torch.tensor([[1., 1.], [1., 2.], [1., 3.], [1., 4.]], dtype=torch.float64)
 b = torch.tensor([6., 5., 7., 10.], dtype=torch.float64)
 x_pinv = torch.linalg.pinv(A) @ b
@@ -709,7 +723,7 @@ print('cond(A^T A) =', round(float(torch.linalg.cond(A.T @ A)), 3), '= cond(A)^2
 ```
 
 ```{.python .input #svd-least-squares}
-%%tab tensorflow
+#@tab tensorflow
 A = tf.constant([[1., 1.], [1., 2.], [1., 3.], [1., 4.]], dtype=tf.float64)
 b = tf.constant([[6.], [5.], [7.], [10.]], dtype=tf.float64)
 x_pinv = tf.linalg.pinv(A) @ b
@@ -725,7 +739,7 @@ print('cond(A^T A) =', round(float(sn[0] / sn[-1]), 3), '= cond(A)^2')
 ```
 
 ```{.python .input #svd-least-squares}
-%%tab jax
+#@tab jax
 A = jnp.array([[1., 1.], [1., 2.], [1., 3.], [1., 4.]], dtype=jnp.float64)
 b = jnp.array([6., 5., 7., 10.], dtype=jnp.float64)
 x_pinv = jnp.linalg.pinv(A) @ b
@@ -839,8 +853,13 @@ $$
 :eqlabel:`eq_mdl-lora-ratio`
 
 which for a $4096\times4096$ layer at rank $r=8$ is $8\cdot8192/4096^2\approx0.39\%$
-of the parameters. The hypothesis that fine-tuning updates are *intrinsically low
-rank* is what makes this work. Note what Eckart--Young does and does not say here:
+of the parameters. :numref:`fig_mdl-la-lora` shows the architecture: the frozen
+weight and the trainable low-rank bypass act on the same input, and their outputs
+add. The hypothesis that fine-tuning updates are *intrinsically low
+rank* is what makes this work.
+
+![The LoRA architecture for one layer. The pretrained $\mathbf{W}$ (all $mn = 16.8$M parameters for $m=n=4096$) stays frozen; a parallel bypass first compresses the input to $r=8$ dimensions with $\mathbf{A}$ and then expands back with $\mathbf{B}$, so only $r(m+n) \approx 65.5$K parameters --- about $0.39\%$ --- are trained. The two branches add: $\mathbf{h} = \mathbf{W}\mathbf{x} + \mathbf{B}\mathbf{A}\mathbf{x}$. After training, $\mathbf{B}\mathbf{A}$ can be merged into $\mathbf{W}$, so deployment costs nothing extra.](../img/mdl-la-lora.svg)
+:label:`fig_mdl-la-lora` Note what Eckart--Young does and does not say here:
 LoRA *learns* $\mathbf{B}$ and $\mathbf{A}$ by gradient descent rather than
 truncating a known matrix, so the theorem promises nothing about the learned
 adapter itself. What it quantifies is the *ceiling*: if the update that full
@@ -871,11 +890,37 @@ $\mathbf{X}\leftarrow\tfrac12(3\mathbf{X}-\mathbf{X}\mathbf{X}^\top\mathbf{X})$
 starting from $\mathbf{X}=\mathbf{M}/\|\mathbf{M}\|_F$. Each iteration leaves
 $\mathbf{U}$ and $\mathbf{V}$ untouched and applies the odd polynomial
 $p(\sigma)=\tfrac12(3\sigma-\sigma^3)$ to every singular value, driving each
-nonzero $\sigma_i$ toward the fixed point $1$---so the iterates converge to
+nonzero $\sigma_i$ toward the fixed point $1$. The Frobenius normalization is
+what makes that convergence guaranteed rather than lucky: it puts every singular
+value into $(0, 1]$, comfortably inside $(0, \sqrt3\,)$, the cubic's basin of
+attraction of $1$---start a singular value beyond $\sqrt3$ and the iteration
+would fling it off to $-\infty$ instead. So the iterates converge to
 $\mathbf{U}\mathbf{V}^\top$ using nothing but matrix multiplications (in practice
 Muon tunes the polynomial's coefficients so that about five iterations suffice).
 It is the same GPU-friendly bargain that spectral normalization strikes with
 power iteration below.
+
+The whole mechanism fits in a few lines, and it is worth watching once.
+Frobenius-normalize a random "momentum" matrix, iterate the cubic, and every
+singular value marches to $1$ while the singular *vectors* stay put; the
+iterate lands on the polar factor $\mathbf{U}\mathbf{V}^\top$ computed from an
+honest SVD. With the plain $\tfrac12(3\sigma-\sigma^3)$ coefficients the
+smallest singular value---which starts closest to $0$, where $p$ only multiplies
+it by $\tfrac32$---is the straggler, needing about ten iterations here; Muon's
+tuned polynomials accelerate exactly that small-$\sigma$ regime.
+
+```{.python .input #mdl-svd-low-rank-the-svd-in-modern-deep-learning-1}
+rng = np.random.default_rng(3)
+M = rng.standard_normal((6, 4))          # a stand-in momentum matrix
+X = M / np.linalg.norm(M)                # Frobenius normalize: all sigma <= 1
+for k in range(1, 11):
+    X = 1.5 * X - 0.5 * X @ X.T @ X      # applies p(sigma) = (3 sigma - sigma^3)/2
+    if k % 2 == 0:
+        print(f'iter {k:2d}: sigma =', np.linalg.svd(X, compute_uv=False).round(4))
+U, s, Vt = np.linalg.svd(M, full_matrices=False)
+print('distance to polar factor U V^T:',
+      round(float(np.linalg.norm(X - U @ Vt)), 6))
+```
 
 **Spectral normalization.** Constraining the largest singular value of each weight
 matrix to $1$ caps the per-layer Lipschitz constant
@@ -893,7 +938,8 @@ matrix *is* the squared top singular value.
 (the spectrum panel of :numref:`fig_mdl-la-eckart-young`, applied to $\mathbf{W}$
 instead of an image) reveals its *effective rank* via the energy ratio
 :eqref:`eq_mdl-energy-ratio` and exposes heavy-tailed spectra that correlate with
-generalization. Attention matrices are often empirically near-low-rank, which
+generalization :cite:`Martin.Mahoney.2021`---heavy-tailed precisely against the
+Marchenko--Pastur noise baseline of :numref:`sec_mdl-eigendecompositions`. Attention matrices are often empirically near-low-rank, which
 motivates linear-attention approximations that replace the full softmax attention
 with a low-rank surrogate; the most prominent recent instance is low-rank
 key--value compression, where DeepSeek-V2's multi-head latent attention stores a
@@ -930,13 +976,16 @@ capture them with high probability, so one then factors only the *tiny* matrix
 $\mathbf{Q}^\top\mathbf{A}$ and maps its left singular vectors back through
 $\mathbf{Q}$. The cost drops from the $O(mn\min(m,n))$ of a full SVD to essentially
 a few passes over $\mathbf{A}$---the standard tool when only the leading singular
-triples are needed.
+triples are needed. A related family, the *CUR* (interpolative) decompositions,
+approximates $\mathbf{A}$ using a small set of its *actual* columns and rows
+rather than abstract singular vectors, trading a little accuracy for factors
+that inherit the data's sparsity and interpretability.
 
 Let us verify the two facts the whole section rests on: that the SVD reconstructs
 $\mathbf{A}$, and that $\sigma_i^2$ are the eigenvalues of $\mathbf{A}^\top\mathbf{A}$.
 
 ```{.python .input #svd-verify}
-%%tab mxnet
+#@tab mxnet
 A = np.array([[3., 1.], [1., 3.], [0., 2.]])   # a 3x2 matrix
 U, s, Vt = np.linalg.svd(A, full_matrices=False)
 recon = (U * s) @ Vt
@@ -947,7 +996,7 @@ print('eig(A^T A) sorted:', eig.round(6))
 ```
 
 ```{.python .input #svd-verify}
-%%tab pytorch
+#@tab pytorch
 A = torch.tensor([[3., 1.], [1., 3.], [0., 2.]], dtype=torch.float64)
 U, s, Vt = torch.linalg.svd(A, full_matrices=False)
 recon = (U * s) @ Vt
@@ -958,7 +1007,7 @@ print('eig(A^T A) sorted:', eig.numpy().round(6))
 ```
 
 ```{.python .input #svd-verify}
-%%tab tensorflow
+#@tab tensorflow
 A = tf.constant([[3., 1.], [1., 3.], [0., 2.]], dtype=tf.float64)
 s, U, V = tf.linalg.svd(A)
 recon = U @ tf.linalg.diag(s) @ tf.transpose(V)
@@ -969,7 +1018,7 @@ print('eig(A^T A) sorted:', eig.numpy().round(6))
 ```
 
 ```{.python .input #svd-verify}
-%%tab jax
+#@tab jax
 A = jnp.array([[3., 1.], [1., 3.], [0., 2.]], dtype=jnp.float64)
 U, s, Vt = jnp.linalg.svd(A, full_matrices=False)
 recon = (U * s) @ Vt

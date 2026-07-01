@@ -19,7 +19,7 @@
       "outputs": []
     },
     "geometry-linear-algebraic-ops-dot-products-and-angles": {
-      "code_fingerprint": "sha256:ff7b455c44f76eadb8651831c2dcab3ad708d65026ea96003cba7690f191caab",
+      "code_fingerprint": "sha256:ba69169f1514d5e94c29792e4077c0a232aa6eddf0d7086a7823a7257e05be11",
       "kind": "text",
       "outputs": [
         {
@@ -28,13 +28,23 @@
         }
       ]
     },
+    "mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace": {
+      "code_fingerprint": "sha256:6a1d20cb1f5a6c2a836768ea12791809e446836ec713476b3057c52cd2644578",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(1.7982e-07), tensor(1.4531e-07))"
+        }
+      ]
+    },
     "geometry-linear-algebraic-ops-hyperplanes-1": {
-      "code_fingerprint": "sha256:e19efbfb1a0826ef1d635802aada86eea339e2529310bde5d8dd2c62a48d0e0c",
+      "code_fingerprint": "sha256:0460c31bc955faacdbee58f80c8b69eff5d7ba063f6486ef309b3410443df2c2",
       "kind": "text",
       "outputs": []
     },
     "geometry-linear-algebraic-ops-hyperplanes-2": {
-      "code_fingerprint": "sha256:30ae6e03573415c01bfe3e0797dcfe598616437e2a683bed427c84b3bae1b51d",
+      "code_fingerprint": "sha256:543c96fc602d40a2b6d983cc07768a26deead0531e56d9f717e5ee553fc11908",
       "kind": "asset",
       "outputs": [
         {
@@ -42,12 +52,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
           "bytes": 26105,
-          "sha256": "sha256:2602daf585d99b4a6630d79fedd79e6318f5a8d160f167040d5375b26582f94b"
+          "sha256": "sha256:91f16d912a5f9883aacac551f7b9e86bd8091872cbd0d3a2c1d0a96155bd8db6"
         }
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-4": {
-      "code_fingerprint": "sha256:1b91c24cdf4b79069fac0b0fd4fbb779a415f90cdfa726903550eca709b8c7f2",
+      "code_fingerprint": "sha256:f83887563872a40d1bee9919889d78d299d7b747b4cc6df86a9b6d5943682b4a",
       "kind": "text",
       "outputs": [
         {
@@ -57,20 +67,20 @@
       ]
     },
     "geometry-linear-algebraic-ops-projection-histogram": {
-      "code_fingerprint": "sha256:2b96c6b31baa1b4e6ad524c78f48dee700685fa039f18c9226f578d9657a3f32",
+      "code_fingerprint": "sha256:a85fe59fe2a152aaabde1098d3d51dfd7c3d2ee0ba56137e24e2c5d55d372f92",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
-          "bytes": 39575,
-          "sha256": "sha256:0782dc44811d8ca9e17b6e12d3e35061987ee326fc9558cfbd49c3908a1524e6"
+          "bytes": 39558,
+          "sha256": "sha256:357b2210ca3c6ea947b4b1be7d1429d38072be0017af70692ddefdea602e480c"
         }
       ]
     },
     "geometry-linear-algebraic-ops-invertibility": {
-      "code_fingerprint": "sha256:de62d9ed9677ebc0680cb5af4a1cfc34d8506af6fff8b07d2b90547d303d4ea5",
+      "code_fingerprint": "sha256:18e90453be6388d25c71aeec102ed875c8f6c948cd1063775685b36d37532d9d",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +90,7 @@
       ]
     },
     "geometry-linear-algebraic-ops-determinant": {
-      "code_fingerprint": "sha256:77b3c90fdc65d5ff116d5f212531a09d774dfa3786af62cd169fbdb04339dde9",
+      "code_fingerprint": "sha256:c5dd93e02f34395f276377a720b693f6d87cb5a1a0aee67bdb1dd2c6afeb1e25",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +100,7 @@
       ]
     },
     "geometry-linear-algebraic-ops-expressing-in-code-2": {
-      "code_fingerprint": "sha256:e084de6b0acb7e220ee841d6037994d9e5cad0c6dc358896d71a0d6f86252c06",
+      "code_fingerprint": "sha256:b04459b5f80913c85f047d7e7e4d86a14c30c48481cc0c83e9eeb131113ca508",
       "kind": "text",
       "outputs": [
         {

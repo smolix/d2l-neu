@@ -37,6 +37,7 @@ from d2l import mxnet as d2l
 from mxnet import autograd, gluon, init, np, npx
 npx.set_np()
 import numpy as onp  # plain NumPy for the framework-agnostic demos
+from scipy.special import digamma
 ```
 
 ```{.python .input #mutual-information-imports}
@@ -45,6 +46,7 @@ import numpy as onp  # plain NumPy for the framework-agnostic demos
 from d2l import torch as d2l
 import torch
 import numpy as onp  # plain NumPy for the framework-agnostic demos
+from scipy.special import digamma
 ```
 
 ```{.python .input #mutual-information-imports}
@@ -53,6 +55,7 @@ import numpy as onp  # plain NumPy for the framework-agnostic demos
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import numpy as onp  # plain NumPy for the framework-agnostic demos
+from scipy.special import digamma
 ```
 
 ```{.python .input #mutual-information-imports}
@@ -63,6 +66,7 @@ import jax
 from jax import numpy as jnp
 import optax
 import numpy as onp  # plain NumPy for the framework-agnostic demos
+from scipy.special import digamma
 ```
 
 ## Mutual Information: Definitions and Properties
@@ -515,6 +519,15 @@ No processing of $Y$---deterministic or random, clever or dumb---can
   with $Z$ much "smaller" than $Y$, the map has discarded only what was
   irrelevant to $X$---the information-theoretic definition of sufficiency.
 
+One caution about scope. The data-processing inequality is a statement about
+Markov chains, not about conditioning in general: conditioning can *create*
+dependence, and $I(X; Y \mid Z) > I(X; Y)$ is perfectly possible---in the
+extreme case of two independent fair bits with $Z$ their XOR, conditioning
+turns zero dependence into a full $\ln 2$ nats (Exercise 6 works this out).
+"Processing destroys information" is a theorem about the chain
+$X \to Y \to Z$; it is not a license to read every conditional mutual
+information as a shrunken one.
+
 Let's verify the bookkeeping numerically on the simplest nontrivial chain:
 a fair bit $X$, flipped with probability $0.1$ to give $Y$, flipped again
 with probability $0.2$ to give $Z$.
@@ -564,9 +577,53 @@ histogram has $b^d$ cells; at $d = 10$ and a modest $b = 10$ that is ten
 billion cells, almost all empty at any realistic sample size, and the
 plug-in estimate is dominated by sampling noise in the occupied few. Already
 at $d = 2$ and $\rho = 0.99$ we watched the histogram miss $0.18$ nats.
-Smarter nonparametric estimators (nearest-neighbor methods, kernel density
-estimates) improve the constants, not the story: their guarantees require
-smoothness assumptions that grow teeth as $d$ rises.
+
+Smarter nonparametric estimators improve the constants, not the story. The
+classic of the genre, due to :citet:`Kraskov.Stogbauer.Grassberger.2004`
+(KSG), replaces bins with $k$-nearest-neighbor distances: around each sample
+find the Chebyshev distance $\epsilon_i$ to its $k$-th nearest neighbor in
+the *joint* space, count the marginal neighbors $n_x^{(i)}$ and $n_y^{(i)}$
+lying within $\epsilon_i$, and average
+
+$$\hat{I}_{\textrm{KSG}} = \psi(k) + \psi(n) - \frac{1}{n} \sum_{i=1}^{n} \left(\psi\left(n_x^{(i)} + 1\right) + \psi\left(n_y^{(i)} + 1\right)\right),$$
+
+where $\psi$ is the digamma function. The local radii $\epsilon_i$ adapt the
+resolution to wherever the data actually sit---no bins to choose, no
+bandwidth to tune.
+
+```{.python .input #mdl-mutual-information-the-curse-of-estimation}
+def ksg_mi(x, y, k=5):
+    """Kraskov et al. (2004) k-NN estimate of I(X;Y), in nats."""
+    n = len(x)
+    dx = onp.abs(x[:, None, :] - x[None, :, :]).max(axis=-1)
+    dy = onp.abs(y[:, None, :] - y[None, :, :]).max(axis=-1)
+    d = onp.maximum(dx, dy)               # Chebyshev distance in joint space
+    onp.fill_diagonal(d, onp.inf)
+    eps = onp.sort(d, axis=1)[:, k - 1]   # distance to the k-th neighbor
+    n_x = (dx < eps[:, None]).sum(axis=1) - 1   # marginal counts, minus self
+    n_y = (dy < eps[:, None]).sum(axis=1) - 1
+    return float(digamma(k) + digamma(n)
+                 - (digamma(n_x + 1) + digamma(n_y + 1)).mean())
+
+rng = onp.random.default_rng(1)
+n = 2000
+for dim in (1, 2):
+    for rho in (0.5, 0.7, 0.9):
+        pairs = [gauss_pair(rng, rho, n) for _ in range(dim)]
+        x = onp.stack([u for u, _ in pairs], axis=1)
+        y = onp.stack([v for _, v in pairs], axis=1)
+        print(f'd = {dim}, rho = {rho}: KSG = {ksg_mi(x, y):.3f}, '
+              f'closed form = {-dim / 2 * onp.log(1 - rho**2):.3f} nats')
+```
+
+With $2{,}000$ samples---a hundredth of what the histogram consumed---KSG
+lands within a few hundredths of a nat of the closed form across
+correlations, in one and two dimensions alike, with nothing to tune. That is
+what "improving the constants" buys. What it does not buy is an escape:
+KSG's guarantees rest on smoothness assumptions that grow teeth as $d$
+rises, nearest-neighbor distances concentrate in high dimension, and by the
+time $X$ and $Y$ are images the estimator is as lost as the histogram.
+Better constants, same story.
 
 The reparameterization invariance we celebrated is part of the problem.
 Mutual information cares only about the copula of the joint
@@ -601,8 +658,8 @@ at most about $\log N$ nats.
 
 The practical consequence is immediate, because every estimator we are about
 to meet is computed on minibatches. A batch of $N = 256$ pairs can certify at
-most $\ln 256 \approx 5.5$ nats---about $8$ bits---no matter how expressive
-the critic network is. Two views of the same image share far more information
+most $\ln 256 \approx 5.5$ nats---exactly $8$ bits, since $256 = 2^8$---no
+matter how expressive the critic network is. Two views of the same image share far more information
 than that. So when a contrastive method reports its "estimated MI," the
 number is best read as $\min(I, \log N)$ plus noise.
 
@@ -780,7 +837,7 @@ landscape: a family of estimators stacked under the true value, trading bias
 for variance, with the contrastive bound we meet next sitting lowest but
 steadiest.
 
-![Variational lower bounds on mutual information, after Poole et al. (2019). Every estimator sits at or below the true-MI diagonal: InfoNCE is capped at $\log N$, NWJ / Barber–Agakov is low-variance but biased downward (it flattens as $I$ grows), and Donsker–Varadhan / MINE is nearly unbiased but its estimate spreads with growing variance at high $I$ (shaded band).](../img/mdl-it-mi-variational-bounds.svg)
+![Variational lower bounds on mutual information, after Poole et al. (2019). Every estimator sits at or below the true-MI diagonal, and each fails in its own way as $I$ grows: InfoNCE is low-variance but capped at $\log N$; the decoder-based Barber–Agakov bound is low-variance but biased downward by its decoder's gap (it flattens); and the critic-based NWJ and Donsker–Varadhan / MINE bounds can track the truth in expectation but their batch-to-batch spread explodes at high $I$ (shaded band), NWJ worst of all.](../img/mdl-it-mi-variational-bounds.svg)
 :label:`fig_mdl-mi-variational-bounds`
 
 ### InfoNCE: Estimation as Classification
@@ -793,13 +850,20 @@ $N-1$ negatives, score every candidate with a critic $f(x, y)$, and ask a
 softmax to point at the positive. The **InfoNCE loss**
 :cite:`Oord.Li.Vinyals.2018` is the resulting cross-entropy,
 
-$$\mathcal{L}_{\textrm{NCE}} = -E\left[\log \frac{e^{f(x, y_1)}}{\frac{1}{N}\sum_{j=1}^{N} e^{f(x, y_j)}}\right] + \log N,$$
+$$\mathcal{L}_{\textrm{NCE}} = -E\left[\log \frac{e^{f(x, y_1)}}{\sum_{j=1}^{N} e^{f(x, y_j)}}\right],$$
 :eqlabel:`eq_mdl-infonce_def`
 
 where the expectation is over $(x, y_1) \sim P_{X,Y}$ and
-$y_2, \ldots, y_N \sim P_Y$ i.i.d. (we keep the conventional $\log N$
-bookkeeping explicit: the fraction inside the log is $N$ times a softmax
-probability). Note what this *is*: a $k$-class categorical cross-entropy
+$y_2, \ldots, y_N \sim P_Y$ i.i.d., and the associated mutual-information
+*estimator* is the batch ceiling minus the loss,
+
+$$\hat{I}_{\textrm{NCE}} = \log N - \mathcal{L}_{\textrm{NCE}}.$$
+:eqlabel:`eq_mdl-infonce_est`
+
+(Many papers, following :citet:`Oord.Li.Vinyals.2018`, write the loss with a
+$\frac{1}{N}$ inside the logarithm and a compensating $+\log N$ outside; the
+two cancel, so that convention and :eqref:`eq_mdl-infonce_def` are the same
+number.) Note what the loss *is*: a $k$-class categorical cross-entropy
 with $k = N$, the same loss dissected in
 :numref:`subsec_mdl-nll-crossentropy` and
 :numref:`sec_mdl-information_theory`, with classes that are *other examples
@@ -809,7 +873,7 @@ of CPC, SimCLR, and CLIP-style dual encoders, where $x$ and $y$ are two
 views or two modalities of the same datum and the batch supplies the
 negatives :cite:`Oord.Li.Vinyals.2018,radford2021learning`.
 
-![The InfoNCE game. Left: an anchor $x$ is scored by the critic $f$ against the positive $y^+$ drawn jointly with it and $N-1$ negatives drawn independently from the marginal. Right: a softmax over the $N$ scores must point at the positive; the resulting cross-entropy certifies $I(X;Y) \geq \log N - \mathcal{L}_{\textrm{NCE}}^{(\textrm{ce})}$, a bound that can never exceed $\log N$.](../img/mdl-it-infonce-pos-neg.svg)
+![The InfoNCE game. Left: an anchor $x$ is scored by the critic $f$ against the positive $y^+$ drawn jointly with it and $N-1$ negatives drawn independently from the marginal. Right: a softmax over the $N$ scores must point at the positive; the resulting cross-entropy certifies $I(X;Y) \geq \log N - \mathcal{L}_{\textrm{NCE}}$, a bound that can never exceed $\log N$.](../img/mdl-it-infonce-pos-neg.svg)
 :label:`fig_mdl-infonce-pos-neg`
 
 :numref:`fig_mdl-infonce-pos-neg` draws the game. The payoff is a theorem:
@@ -817,10 +881,8 @@ small InfoNCE loss *certifies* mutual information.
 
 **Proposition (InfoNCE bound).** *For any critic $f$ and any $N \geq 1$,*
 
-$$I(X; Y) \geq \log N - \mathcal{L}_{\textrm{NCE}}^{(\textrm{ce})}, \qquad \textrm{and the right side never exceeds } \log N,$$
+$$I(X; Y) \geq \hat{I}_{\textrm{NCE}} = \log N - \mathcal{L}_{\textrm{NCE}}, \qquad \textrm{and } \hat{I}_{\textrm{NCE}} \textrm{ never exceeds } \log N.$$
 :eqlabel:`eq_mdl-infonce_bound`
-
-*where $\mathcal{L}_{\textrm{NCE}}^{(\textrm{ce})} = -E\left[\log\left(e^{f(x,y_1)} / \sum_j e^{f(x,y_j)}\right)\right]$ is the raw softmax cross-entropy in* :eqref:`eq_mdl-infonce_def`.
 
 **Proof.** Write $V = (Y_1, \ldots, Y_N)$ for the whole bag of candidates,
 where $(X, Y_1) \sim P_{X,Y}$ and the negatives $Y_{2:N} \sim P_Y$ are
@@ -856,13 +918,13 @@ gives
 $$
 I(X; V) \geq E_{p(x, v)}\left[\log \frac{q(v \mid x)}{p(v)}\right]
 = E\left[\log g(X, V)\right]
-= \log N - \mathcal{L}_{\textrm{NCE}}^{(\textrm{ce})}.
+= \log N - \mathcal{L}_{\textrm{NCE}}.
 $$
 
 Combining with Step 1 proves the bound. For the ceiling, the softmax assigns
 the positive a probability at most $1$, so
-$\mathcal{L}_{\textrm{NCE}}^{(\textrm{ce})} \geq 0$ and the right side of
-:eqref:`eq_mdl-infonce_bound` is at most $\log N$. $\blacksquare$
+$\mathcal{L}_{\textrm{NCE}} \geq 0$ and the estimator
+:eqref:`eq_mdl-infonce_est` is at most $\log N$. $\blacksquare$
 
 The two halves of the proposition are the two faces of contrastive learning.
 The bound explains *why it works*: driving the classification loss down
@@ -871,7 +933,14 @@ density ratio $f^*(x,y) = \textrm{pmi}(x,y) + c(x)$. The ceiling explains
 *why batch size matters so much* in practice: with $N$ candidates the bound
 simply cannot certify more than $\log N$ nats, which is why CPC, SimCLR, and
 CLIP push toward enormous batches---and why even those buy information
-certification only logarithmically.
+certification only logarithmically. One practical dial deserves naming: in
+SimCLR-style systems the critic is a scaled cosine similarity between the
+two embeddings, $f(x, y) = \textrm{sim}(z_x, z_y)/\tau$, and the
+*temperature* $\tau$
+:cite:`Chen.Kornblith.Norouzi.ea.2020` is the same knob as the distillation
+temperature of :numref:`sec_mdl-information_theory`---lowering $\tau$
+sharpens the softmax over candidates and concentrates the loss on the
+hardest negatives.
 
 Before training anything, let's compare all three bounds in their ideal
 state---critics set to their optima exactly, using the closed-form Gaussian
@@ -889,6 +958,9 @@ for tm in [0.5, 1.0, 2.0, 4.0, 6.0]:
     for _ in range(B):
         x, y = gauss_pair(rng, rho, N)
         joint = pmi_gauss(x, y, rho)               # T* on positive pairs
+        # A random permutation leaves ~1 fixed point per batch of N=128, so
+        # one "negative" is secretly a true pair; the O(1/N) contamination
+        # is negligible next to the heavy tails probed here.
         prod = pmi_gauss(x, rng.permutation(y), rho)   # T* on shuffled pairs
         dv.append(joint.mean() - onp.log(onp.mean(onp.exp(prod))))
         nwj.append(joint.mean() + 1 - onp.mean(onp.exp(prod)))
@@ -1155,8 +1227,10 @@ relevance instead. The *deep variational information bottleneck* (VIB)
 :cite:`Alemi.Fischer.Dillon.ea.2017` makes :eqref:`eq_mdl-ib_lagrangian`
 trainable by bounding both terms with the machinery we just built: a
 Barber--Agakov-style decoder bound for $I(Y;Z)$ from below and a variational
-upper bound for $I(X;Z)$---another reminder that in deep learning, mutual
-informations are optimized through bounds, not computed. The frontier this
+upper bound for $I(X;Z)$, the same replace-the-intractable-posterior pattern
+as the ELBO of :numref:`sec_mdl-latent-em-elbo`---another reminder that in
+deep learning, mutual informations are optimized through bounds, not
+computed. The frontier this
 tradeoff traces is shown in :numref:`fig_mdl-ib-tradeoff`.
 
 ![The information plane of the Gaussian bottleneck with $\rho = 0.9$: the concave frontier traces the best attainable $I(Y;Z)$ at each compression level $I(X;Z)$, the shaded region above it is infeasible, and the dashed ceiling is the data-processing limit $I(X;Y) = -\tfrac{1}{2}\log(1-\rho^2) \approx 0.830$ nats. Dots mark the operating points the multiplier $\beta$ selects; for $\beta \leq 1/\rho^2$ the optimum collapses to the origin.](../img/mdl-it-ib-tradeoff.svg)
@@ -1386,8 +1460,8 @@ information is at once indispensable and routinely over-read.
    the bound equals $E_y[D_{\textrm{KL}}(p(\cdot \mid y) \| q(\cdot \mid
    y))]$.
 1. Show from :eqref:`eq_mdl-infonce_def` that
-   $\mathcal{L}^{(\textrm{ce})}_{\textrm{NCE}} \geq 0$, conclude that the
-   InfoNCE estimate can never exceed $\log N$, and explain in one paragraph
+   $\mathcal{L}_{\textrm{NCE}} \geq 0$, conclude that the InfoNCE estimator
+   :eqref:`eq_mdl-infonce_est` can never exceed $\log N$, and explain in one paragraph
    why increasing the batch size tightens the bound. What does the optimal
    critic look like?
 1. For the scalar Gaussian bottleneck, derive the critical value

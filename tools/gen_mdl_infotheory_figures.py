@@ -176,10 +176,13 @@ def fig_mi_variational_bounds():
 
       * the diagonal -- the (intractable) true I(X;Y);
       * the log N ceiling -- no sample-based bound certifies more than log N
-        (the McAllester-Stratos barrier; InfoNCE saturates here);
-      * Barber-Agakov / NWJ -- low variance, but they flatten (bias) as MI grows;
-      * Donsker-Varadhan (MINE) -- nearly unbiased but its estimate spreads with
-        increasing variance (shaded band) at high MI.
+        (the McAllester-Stratos barrier); InfoNCE is low-variance but
+        saturates here;
+      * Barber-Agakov -- low variance, but biased downward by its decoder's
+        KL gap, so it flattens as MI grows;
+      * NWJ and Donsker-Varadhan (MINE) -- the critic-based bounds can track
+        the truth in expectation, but their batch-to-batch spread explodes at
+        high MI (shaded band; NWJ is the worst offender).
 
     The numbers are illustrative of the qualitative regimes in Poole et al.
     (2019), not a re-estimation.  Output id ``mdl-it-mi-variational-bounds``."""
@@ -193,35 +196,40 @@ def fig_mi_variational_bounds():
     # True MI: the diagonal y = I.
     ax.plot(I, I, color=GRAY, lw=2.0, label=r"true $I(X;Y)$")
 
-    # InfoNCE / log N ceiling: tracks the diagonal then hard-caps at log N.
+    # InfoNCE / log N ceiling: tracks the diagonal then hard-caps at log N,
+    # with batch-to-batch variance that stays small throughout.
     nce = np.minimum(I, logN)
     ax.plot(I, nce, color=BLUE, lw=2.2,
-            label=r"InfoNCE $(\leq \log N)$")
+            label=r"InfoNCE (low var., $\leq \log N$)")
     ax.axhline(logN, color=BLUE, lw=0.9, ls=":")
     ax.text(I[-1], logN + 0.06, r"$\log N$", color=BLUE, fontsize=9.5,
             ha="right", va="bottom")
 
-    # Barber-Agakov / NWJ: low variance but increasingly biased downward -- a
-    # valid lower bound (always <= the diagonal) whose gap widens with MI.
-    nwj = np.minimum(6.2 * (1.0 - np.exp(-I / 4.0)), I)
-    ax.plot(I, nwj, color=GREEN, lw=2.2, label="NWJ / Barber-Agakov (low var.)")
+    # Barber-Agakov: low variance but increasingly biased downward (the
+    # decoder's KL gap) -- a valid lower bound (always <= the diagonal) whose
+    # gap widens with MI.
+    ba = np.minimum(6.2 * (1.0 - np.exp(-I / 4.0)), I)
+    ax.plot(I, ba, color=GREEN, lw=2.2, label="Barber-Agakov (low var., biased)")
 
-    # Donsker-Varadhan (MINE): nearly unbiased mean (hugs the diagonal from
-    # below) but variance grows with MI -- shown as a widening band that, being a
-    # lower-bound estimator, stays under the true-MI diagonal.
-    dv_mean = np.minimum(I - 0.06 * I, I)
-    dv_sd = 0.05 + 0.10 * I ** 1.6  # variance balloons at high MI
-    ax.fill_between(I, np.maximum(dv_mean - dv_sd, 0.0),
-                    np.minimum(dv_mean + dv_sd, I),
+    # NWJ and Donsker-Varadhan (MINE): the critic-based bounds track the truth
+    # in expectation (mean hugs the diagonal from below) but the heavy tails of
+    # e^T make the batch-to-batch spread explode at high MI -- shown as a
+    # widening band that, being a lower-bound family, is drawn under the
+    # true-MI diagonal.  NWJ spreads worst; DV sits between NWJ and InfoNCE.
+    crit_mean = np.minimum(I - 0.06 * I, I)
+    crit_sd = 0.05 + 0.10 * I ** 1.6  # variance balloons at high MI
+    ax.fill_between(I, np.maximum(crit_mean - crit_sd, 0.0),
+                    np.minimum(crit_mean + crit_sd, I),
                     color=ORANGE, alpha=0.20, lw=0)
-    ax.plot(I, dv_mean, color=ORANGE, lw=2.2, label="DV / MINE (low bias, high var.)")
+    ax.plot(I, crit_mean, color=ORANGE, lw=2.2,
+            label="NWJ / DV (MINE): high variance")
 
     # Annotate the two regimes.
-    ax.annotate("bias\n(flattens)", xy=(8.5, nwj[I.searchsorted(8.5)]),
+    ax.annotate("bias\n(flattens)", xy=(8.5, ba[I.searchsorted(8.5)]),
                 xytext=(8.3, 3.1), color=GREEN, fontsize=9, ha="center",
                 arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.1))
-    ax.annotate("variance\n(spreads)",
-                xy=(7.5, dv_mean[I.searchsorted(7.5)] - dv_sd[I.searchsorted(7.5)]),
+    ax.annotate("variance\n(explodes)",
+                xy=(7.5, crit_mean[I.searchsorted(7.5)] - crit_sd[I.searchsorted(7.5)]),
                 xytext=(3.3, 1.0), color=ORANGE, fontsize=9, ha="center",
                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.1))
 
@@ -825,7 +833,7 @@ def fig_infonce_pos_neg():
     axr.set_ylabel("softmax probability")
     axr.set_ylim(0, 1.0)
     axr.text(N / 2 - 0.5, 0.92,
-             r"$I(X;Y) \geq \log N - \mathcal{L}_{\mathrm{NCE}}^{(\mathrm{ce})}"
+             r"$I(X;Y) \geq \log N - \mathcal{L}_{\mathrm{NCE}}"
              r" \;(\leq \log N)$",
              fontsize=10.5, ha="center", va="center")
     fl.save(fig, "mdl-it-infonce-pos-neg")

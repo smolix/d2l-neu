@@ -155,8 +155,55 @@ true_value = f(x0 + epsilon[0], y0 + epsilon[1])
 print(f'approximation: {approx:.6f}, true value: {true_value:.6f}')
 ```
 
-The two agree to several digits, as a first-order approximation should for a
-small step.
+The two agree to about three decimal places, with a gap of $1.8\times10^{-4}$.
+The gap is not noise, and its size is itself a lesson: a first-order model
+discards terms of order $\|\boldsymbol{\epsilon}\|^2$, and here
+$\|\boldsymbol{\epsilon}\|^2 = 10^{-3}$ — shrink the step tenfold and the gap
+shrinks a hundredfold. The discarded term has a name and a formula (the Hessian
+quadratic $\tfrac12\boldsymbol{\epsilon}^\top\mathbf{H}f\,\boldsymbol{\epsilon}$),
+which we develop at the end of this section.
+
+The same example models a workflow we will use constantly: whenever we derive a
+gradient by hand, we ask automatic differentiation for a second opinion. Here
+autograd should reproduce $\nabla f(0, \log 2) = [\tfrac13, \tfrac23]^\top$.
+
+```{.python .input #mdl-multivariable-calculus-directional-derivatives-1}
+#@tab mxnet
+# Autograd second opinion: the hand gradient at (0, log 2) is [1/3, 2/3]
+xy = np.array([0.0, math.log(2)])
+xy.attach_grad()
+with autograd.record():
+    out = np.log(np.exp(xy).sum())
+out.backward()
+print(f'autograd gradient: {xy.grad}')
+```
+
+```{.python .input #mdl-multivariable-calculus-directional-derivatives-1}
+#@tab pytorch
+# Autograd second opinion: the hand gradient at (0, log 2) is [1/3, 2/3]
+xy = torch.tensor([0.0, math.log(2)], requires_grad=True)
+torch.logsumexp(xy, 0).backward()
+print(f'autograd gradient: {xy.grad}')
+```
+
+```{.python .input #mdl-multivariable-calculus-directional-derivatives-1}
+#@tab tensorflow
+# Autograd second opinion: the hand gradient at (0, log 2) is [1/3, 2/3]
+xy = tf.Variable([0.0, math.log(2.0)])
+with tf.GradientTape() as t:
+    out = tf.reduce_logsumexp(xy)
+print(f'autograd gradient: {t.gradient(out, xy).numpy()}')
+```
+
+```{.python .input #mdl-multivariable-calculus-directional-derivatives-1}
+#@tab jax
+# Autograd second opinion: the hand gradient at (0, log 2) is [1/3, 2/3]
+grad = jax.grad(jax.scipy.special.logsumexp)(jnp.array([0.0, math.log(2.0)]))
+print(f'autograd gradient: {grad}')
+```
+
+Up to display precision, the printout is our hand-computed
+$[\tfrac13, \tfrac23]^\top$.
 
 ## The Geometry of Gradients
 
@@ -369,10 +416,14 @@ $$
 :eqlabel:`eq_mdl-lagrange-condition`
 
 for some scalar $\lambda$, the *Lagrange multiplier*. This single picture — the
-contours of $f$ kissing the constraint surface where their gradients align — is
+contours of $f$ kissing the constraint surface where their gradients align,
+drawn in :numref:`fig_mdl-lagrange-tangency` — is
 the first-order condition for constrained optimization, the seed of the KKT
 conditions and of duality. We meet it again in full force in
 :numref:`sec_mdl-constrained-optimization-duality`.
+
+![Lagrange multipliers as tangency. At the constrained optimum the level set of $f$ kisses the constraint curve $g = c$ and the two gradients align, $\nabla f = \lambda \nabla g$. At a non-optimal feasible point the gradients disagree, so $\nabla f$ keeps a component along the constraint and sliding along it still improves $f$.](../img/mdl-cal-lagrange-tangency.svg)
+:label:`fig_mdl-lagrange-tangency`
 
 ## The Multivariate Chain Rule
 
@@ -480,7 +531,7 @@ In code this is a tidy forward sweep through the graph.
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-1}
 # Compute the value of the function from inputs to outputs
-w, x, y, z = -1, 0, -2, 1
+w, x, y, z = 1, 1, -2, 1
 a, b = (w + x + y + z)**2, (w + x - y - z)**2
 u, v = (a + b)**2, (a - b)**2
 f = (u + v)**2
@@ -519,7 +570,7 @@ the gradient with respect to all inputs at once.
 
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-2}
 # Compute the value of the function from inputs to outputs
-w, x, y, z = -1, 0, -2, 1
+w, x, y, z = 1, 1, -2, 1
 a, b = (w + x + y + z)**2, (w + x - y - z)**2
 u, v = (a + b)**2, (a - b)**2
 f = (u + v)**2
@@ -545,6 +596,12 @@ print(f'df/dy at {w}, {x}, {y}, {z} is {df_dy}')
 print(f'df/dz at {w}, {x}, {y}, {z} is {df_dz}')
 ```
 
+Two sanity checks are visible in the printout. The derivatives with respect to
+$w$ and $x$ agree, as do those with respect to $y$ and $z$ — as they must,
+since $f$ reaches its inputs only through the sums $w+x$ and $y+z$. And the two
+pairs differ in both magnitude and sign, so the sweep is genuinely telling the
+four paths through the graph apart.
+
 Computing derivatives *from $f$ back toward the inputs*, rather than forward from
 the inputs, is what gives the algorithm its name: *backpropagation*. It is two
 passes — a *forward pass* that evaluates the function and records the single-step
@@ -556,7 +613,7 @@ single sweep, and it is what `f.backward()` runs under the hood.
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
 #@tab mxnet
 # Initialize as ndarrays, then attach gradients
-w, x, y, z = np.array(-1), np.array(0), np.array(-2), np.array(1)
+w, x, y, z = np.array(1), np.array(1), np.array(-2), np.array(1)
 
 w.attach_grad()
 x.attach_grad()
@@ -581,8 +638,8 @@ print(f'df/dz at {w}, {x}, {y}, {z} is {z.grad}')
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
 #@tab pytorch
 # Initialize as tensors that require gradients
-w = torch.tensor([-1.], requires_grad=True)
-x = torch.tensor([0.], requires_grad=True)
+w = torch.tensor([1.], requires_grad=True)
+x = torch.tensor([1.], requires_grad=True)
 y = torch.tensor([-2.], requires_grad=True)
 z = torch.tensor([1.], requires_grad=True)
 # Do the computation like usual, tracking gradients
@@ -606,8 +663,8 @@ print(f'df/dz at {w.data.item()}, {x.data.item()}, {y.data.item()}, '
 ```{.python .input #multivariable-calculus-the-backpropagation-algorithm-3}
 #@tab tensorflow
 # Initialize as Variables, which the tape tracks automatically
-w = tf.Variable(tf.constant([-1.]))
-x = tf.Variable(tf.constant([0.]))
+w = tf.Variable(tf.constant([1.]))
+x = tf.Variable(tf.constant([1.]))
 y = tf.Variable(tf.constant([-2.]))
 z = tf.Variable(tf.constant([1.]))
 # Do the computation like usual, tracking gradients
@@ -637,7 +694,7 @@ def f_comp(w, x, y, z):
     u, v = (a + b)**2, (a - b)**2
     return ((u + v)**2).squeeze()
 
-w, x, y, z = jnp.array([-1.]), jnp.array([0.]), jnp.array([-2.]), jnp.array([1.])
+w, x, y, z = jnp.array([1.]), jnp.array([1.]), jnp.array([-2.]), jnp.array([1.])
 
 # Compute gradients with respect to all four arguments
 grad_f = jax.grad(f_comp, argnums=(0, 1, 2, 3))
@@ -802,31 +859,66 @@ curvature" becomes "positive definite." Identity :eqref:`eq_mdl-quadform` makes
 the upward-curving picture precise, writing the quadratic form as a weighted sum
 of squares over the eigenvector directions with the eigenvalues as weights.
 
+The test is one we can run. The surface of :numref:`fig_mdl-taylor-quadratic`,
+$f(x, y) = xe^{-x^2-y^2}$, has exactly two critical points: setting
+$\frac{\partial f}{\partial x} = (1 - 2x^2)\,e^{-x^2-y^2}$ and
+$\frac{\partial f}{\partial y} = -2xy\,e^{-x^2-y^2}$ to zero forces $y = 0$ and
+$x = \pm 1/\sqrt{2}$. The next cell assembles each Hessian from symmetric second
+differences (the same quantity $\Delta_h$ that proved Clairaut's theorem), reads
+off the eigenvalues of a $2 \times 2$ symmetric matrix in closed form, and
+announces the verdict.
+
+```{.python .input #mdl-multivariable-calculus-the-second-derivative-test}
+# Classify the critical points (+-1/sqrt(2), 0) of f(x, y) = x e^(-x^2-y^2)
+def hessian(f, x, y, h=1e-4):  # symmetric second differences
+    fxx = (f(x + h, y) - 2 * f(x, y) + f(x - h, y)) / h**2
+    fyy = (f(x, y + h) - 2 * f(x, y) + f(x, y - h)) / h**2
+    fxy = (f(x + h, y + h) - f(x + h, y - h)
+           - f(x - h, y + h) + f(x - h, y - h)) / (4 * h**2)
+    return fxx, fxy, fyy
+
+for x0 in [-1 / math.sqrt(2), 1 / math.sqrt(2)]:
+    fxx, fxy, fyy = hessian(f, x0, 0.0)
+    mid, r = (fxx + fyy) / 2, math.sqrt(((fxx - fyy) / 2)**2 + fxy**2)
+    lo, hi = mid - r, mid + r  # eigenvalues of [[fxx, fxy], [fxy, fyy]]
+    kind = 'minimum' if lo > 0 else 'maximum' if hi < 0 else 'saddle'
+    print(f'at ({x0:+.4f}, 0): eigenvalues {lo:+.3f}, {hi:+.3f} -> {kind}')
+```
+
+At $(-1/\sqrt{2}, 0)$ both eigenvalues are positive — $\mathbf{H} \succ 0$, a
+strict local minimum — and at $(+1/\sqrt{2}, 0)$ both are negative, a local
+maximum; a saddle would announce itself with one eigenvalue of each sign, as in
+Exercise 5. This five-line loop is the second-derivative test as a program:
+differentiate twice (here numerically; autograd Hessians appear in
+:numref:`sec_mdl-matrix-calculus-autodiff`), extract eigenvalues, read the signs.
+
 The eigenvalue picture also explains why, in high dimension, saddles are the
 rule rather than the exception: a minimum requires *all* $n$ eigenvalues to be
 positive at once, and if the signs at a random critical point behaved like
-independent coin flips, that would happen with probability $2^{-n}$. Indeed,
-the critical points encountered while training deep networks are overwhelmingly
-saddles — one reason gradient methods fare better in practice than the old fear
-of "getting stuck in a bad local minimum" suggests.
+independent coin flips, that would happen with probability $2^{-n}$. The
+coin-flip heuristic can be made precise: for random Gaussian landscapes the
+statistics of critical points can be computed exactly and minima are
+exponentially outnumbered by saddles :cite:`Bray.Dean.2007`, and the critical
+points actually encountered while training deep networks are overwhelmingly
+saddles too :cite:`Dauphin.Pascanu.Gulcehre.ea.2014` — one reason gradient
+methods fare better in practice than the old fear of "getting stuck in a bad
+local minimum" suggests.
 
-## A Bridge to Matrix Calculus
-
-Everything above differentiated a *scalar* loss with respect to a vector of
-parameters, packaging the partials into the gradient $\nabla L$. Real layers,
-however, map *vectors to vectors* and carry *matrix* parameters, so the natural
-derivative becomes a matrix of partials — the *Jacobian* — and the gradient and
-Hessian are special cases of it. The pleasant surprise is that derivatives of
-matrix expressions are often as clean as their scalar analogues: for a fixed
-vector $\boldsymbol{\beta}$ one finds
+With the Hessian in hand, the one-variable story has been fully lifted: gradient
+for slope, Hessian for curvature, and the chain rule organized backward for the
+computation. What has *not* yet been lifted is the function itself — everything
+above differentiated a *scalar* loss, while real layers map vectors to vectors
+and carry matrix parameters, so the derivative becomes a matrix of partials (the
+*Jacobian*, with the gradient and Hessian as special cases) and identities like
 $\frac{\partial}{\partial \mathbf{x}}(\boldsymbol{\beta}^\top\mathbf{x}) =
-\boldsymbol{\beta}$, the exact echo of $\frac{d}{dx}(bx) = b$.
-
-We do not develop the Jacobian machinery, the numerator/denominator layout
-conventions, the standard matrix-derivative identities, or how all of this
-yields backpropagation as reverse-mode automatic differentiation here. That is
-the dedicated subject of :numref:`sec_mdl-matrix-calculus-autodiff`, where these
-ideas are treated in full.
+\boldsymbol{\beta}$ echo their scalar ancestors $\frac{d}{dx}(bx) = b$. One
+caution for that road: the Mean Value Theorem of :numref:`sec_mdl-mvt` does
+*not* survive the passage to vector-valued maps — no single interior point need
+satisfy the equality, and only the inequality
+$\|f(\mathbf{b}) - f(\mathbf{a})\| \le \sup \|Df\| \, \|\mathbf{b}-\mathbf{a}\|$
+remains. The Jacobian machinery, the layout conventions, and how it all yields
+backpropagation as reverse-mode automatic differentiation are the subject of
+:numref:`sec_mdl-matrix-calculus-autodiff`.
 
 ## Summary
 

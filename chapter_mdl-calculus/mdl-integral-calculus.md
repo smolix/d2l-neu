@@ -79,7 +79,11 @@ exactly like a summation index, so $\int_a^b f(x)\,dx = \int_a^b f(z)\,dz$. For
 bounded, piecewise-continuous $f$---all we ever meet in machine learning---the
 limit exists and does not depend on how the slices are chosen. (Some hypothesis
 is genuinely needed: for the function that is $1$ on the rationals and $0$
-elsewhere, the rectangle sums never settle on any value at all.)
+elsewhere, the rectangle sums never settle on any value at all. Lebesgue's
+integral, built on measure theory rather than on slicing the axis, handles even
+that function---its integral is $0$, because the rationals have measure
+zero---and it is the foundation probability theory ultimately stands on; the
+Riemann picture suffices for every computation in this book.)
 
 The definition is honest but not yet a *computation*: only the simplest
 integrands (a line, $\int_a^b x\,dx$) succumb to summing the rectangles by hand.
@@ -442,12 +446,16 @@ integrals measure *signed* area, governed by two independent sign rules. First,
 where $f<0$ the area counts as negative: $\int_0^1 (-1)\,dx = -1$. Second,
 integrating right-to-left negates the result: $\int_b^a f = -\int_a^b f$. Each
 flip---reflecting across the $x$-axis, or reversing the limits---introduces one
-minus sign. Apply them in turn to a single example: $\int_0^{-1} 1\,dx = -1$ (one
+minus sign; :numref:`fig_mdl-signed-area` shows both rules on one curve. Apply
+them in turn to a single example: $\int_0^{-1} 1\,dx = -1$ (one
 flip, from reversed limits), while $\int_0^{-1}(-1)\,dx = 1$ (two flips, which
 cancel). This is the same signed-area bookkeeping the
 determinant did for transformed regions in
 :numref:`sec_mdl-geometry-linear-algebraic-ops`, and it is exactly what makes the
 change-of-variables formula below come out right.
+
+![Signed area. Lobes above the axis count positive and the lobe below counts negative, so $\int_a^b f$ totals the shaded regions with their signs; reversing the limits of integration traverses the same area right-to-left and negates the total.](../img/mdl-cal-signed-area.svg)
+:label:`fig_mdl-signed-area`
 
 ## Change of Variables
 
@@ -456,12 +464,10 @@ fundamental theorem backwards: the sum rule gives linearity, the product rule
 gave us integration by parts (:numref:`subsec_mdl-integration-by-parts`),
 and---most useful for us---the chain rule gives the
 *change-of-variables* formula. It is the substitution that tames otherwise
-intractable integrals, and in higher dimensions it cracks open the Gaussian
-normalizer. Read for *densities* rather than areas, the very same formula becomes
-the engine behind normalizing flows---a specialization we hand off to
-:numref:`sec_mdl-random_variables`.
-
-### Substitution in One Dimension
+intractable integrals; carried into higher dimensions in the next section, it
+cracks open the Gaussian normalizer. Read for *densities* rather than areas, the
+very same formula becomes the engine behind normalizing flows---a specialization
+we hand off to :numref:`sec_mdl-random_variables`.
 
 Suppose we reparametrize the variable through a function $u$. The chain rule says
 $\frac{d}{dx}F(u(x)) = F'(u(x))\,u'(x)$; feeding this through the fundamental
@@ -489,14 +495,25 @@ With the right $u$ this collapses hard integrals to trivial ones. Taking $f=1$
 and $u(x)=e^{-x^2}$ (so $u'(x)=-2x\,e^{-x^2}$),
 
 $$
-e^{-1}-1 = \int_{e^{0}}^{e^{-1}} 1\,dy = -2\int_0^{1} y\,e^{-y^2}\,dy
+e^{-1}-1 = \int_{e^{0}}^{e^{-1}} 1\,dy = -2\int_0^{1} x\,e^{-x^2}\,dx
 \quad\Longrightarrow\quad
-\int_0^{1} y\,e^{-y^2}\,dy = \frac{1-e^{-1}}{2},
+\int_0^{1} x\,e^{-x^2}\,dx = \frac{1-e^{-1}}{2},
 $$
 
-a closed form that no amount of rectangle-summing would have revealed.
+a closed form that no amount of rectangle-summing would have revealed. (Keep the
+two variables apart: $y$ is the transformed variable on the left of
+:eqref:`eq_mdl-change_var`, $x$ the original one on the right; the result is a
+statement about the $x$-integral.)
 
-### Multiple Integrals and Fubini's Theorem
+## Multiple Integrals
+
+In one dimension the integral was a limit of rectangle sums, and nothing in that
+recipe was attached to the line. This section runs the same recipe over regions
+of $\mathbb{R}^n$, establishes the one theorem---Fubini's---that reduces such
+integrals to iterated one-dimensional ones, lifts the change-of-variables rule
+to $n$ dimensions, and cashes everything in on the Gaussian integral.
+
+### Double Integrals
 
 In higher dimensions we integrate over regions. For $f(x,y)$ on a rectangle
 $U=[a,b]\times[c,d]$, the integral is the (signed) volume trapped between the
@@ -525,6 +542,8 @@ famously has no elementary formula---and as the box grows to the whole plane
 the volume becomes exactly $\pi$. Both facts will fall out of the
 change-of-variables machinery below; for now the cell is simply a concrete
 two-dimensional Riemann sum.
+
+### Fubini's Theorem
 
 How do we get from grid sums back to the fundamental theorem? Discretize the
 region into $\epsilon\times
@@ -567,7 +586,7 @@ f(\mathbf{x})\,d\mathbf{x}$.
 ### Change of Variables in Many Dimensions
 
 The one-dimensional stretch factor $\frac{du}{dx}$ has a multidimensional
-successor, and it is the centerpiece of this section. Let $U\subseteq\mathbb{R}^n$
+successor, and it is the key that unlocks the Gaussian integral below. Let $U\subseteq\mathbb{R}^n$
 be open and let $\boldsymbol{\phi}:U\to\mathbb{R}^n$ be a **$C^1$-diffeomorphism**
 onto its image---that is, $\boldsymbol{\phi}$ is continuously differentiable,
 injective, and has $\det D\boldsymbol{\phi}(\mathbf{x})\neq 0$ everywhere on $U$.
@@ -619,8 +638,11 @@ $-\log|\det D\boldsymbol{\phi}|$ correction is the exact mechanism behind
 **normalizing flows** (:numref:`sec_mdl-continuous-normalizing-flows`). We state the
 area theorem here and defer that density specialization to the probability chapter.
 
-The classic payoff is the **Gaussian integral**, which we will meet again as the
-normalizer of the normal distribution. It is the *one-dimensional* integral
+### The Gaussian Integral
+
+The classic payoff of the machinery just assembled is the **Gaussian
+integral**, which we will meet again as the normalizer of the normal
+distribution. It is the *one-dimensional* integral
 
 $$
 \int_{-\infty}^{\infty} e^{-x^2}\,dx
@@ -789,7 +811,10 @@ a stochastic counterpart of the Riemann sum that ignores the geometry of the
 domain. The **law of large numbers** is the guarantee that it works: the sample
 average converges to the true expectation, and the central limit theorem pins the
 error at order $1/\sqrt{n}$---a rate that depends only on the sample size $n$, not
-on the dimension. That dimension-free rate is decisive. A grid laid down to
+on the dimension. (Honesty about the fine print: the *constant* in front of
+$1/\sqrt{n}$ is the standard deviation of $g(X)$, and *that* can grow with the
+dimension; what is dimension-free is the exponent, and it is the exponent that
+grids lose.) That dimension-free rate is decisive. A grid laid down to
 resolution $\epsilon$ in $d$ dimensions costs $N=\epsilon^{-d}$ evaluations.
 The left rule we have used throughout has error $\propto\epsilon$, so it buys
 only $N^{-1/d}$; even a *second-order* rule---midpoint or trapezoid, whose
@@ -850,7 +875,22 @@ convergence) is that, near the current $\boldsymbol{\theta}$, the integrands'
 derivatives are bounded in magnitude by a single integrable function of $x$.
 The smooth, rapidly decaying densities of deep learning almost always comply,
 but the caveat is not decorative---it fails exactly when the integrand's
-support or its spikes move with $\boldsymbol{\theta}$. Two results we lean on
+support or its spikes move with $\boldsymbol{\theta}$. When it is the *limits*
+that move, the correct derivative is known in closed form---the **Leibniz
+rule**,
+
+$$
+\frac{d}{d\theta} \int_{a(\theta)}^{b(\theta)} f(x, \theta)\,dx
+= \int_{a(\theta)}^{b(\theta)} \frac{\partial f}{\partial\theta}(x,\theta)\,dx
++ f\bigl(b(\theta), \theta\bigr)\,b'(\theta)
+- f\bigl(a(\theta), \theta\bigr)\,a'(\theta) .
+$$
+
+The two boundary terms are precisely what the naive swap forgets: each moving
+endpoint sweeps area in or out at the rate the limit moves, weighted by the
+integrand's value there. A density supported on $[0, \theta]$ is the classic
+trap---dropping the boundary term produces a confidently wrong gradient. Two
+results we lean on
 later are nothing but this swap: differentiating the normalization
 $\int p_{\boldsymbol{\theta}}(x)\,dx = 1$ under the integral shows the score
 $\nabla_{\boldsymbol{\theta}}\log p_{\boldsymbol{\theta}}$ has mean zero, the
@@ -910,7 +950,12 @@ the heart of policy-gradient methods.
    $x_i$ uniform on $[0,1]$) and compare with a Riemann sum.
 8. Use integration by parts :eqref:`eq_mdl-parts` twice to evaluate
    $\int_0^\infty u^2 e^{-u}\,du$---the second moment behind the exponential
-   distribution's variance in :numref:`sec_mdl-distributions`.
+   distribution's variance in :numref:`sec_mdl-distributions`. The integral you
+   have computed is $\Gamma(3)$, an instance of the **Gamma function**
+   $\Gamma(t) = \int_0^\infty u^{t-1}e^{-u}\,du$; the same
+   integration-by-parts step, run once at general $t$, gives the recursion
+   $\Gamma(t+1) = t\,\Gamma(t)$ and hence $\Gamma(n+1) = n!$---the function that
+   names the Gamma distribution of :numref:`sec_mdl-distributions`.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/414)

@@ -1444,6 +1444,27 @@ estimate, but *how sure* we are.
 :::
 :::
 
+::: {.slide title="Watch the 1/√n law emerge"}
+[Estimating from data]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+Why $1/\sqrt{n}$? Each toss has variance $p(1-p)$; averaging $n$
+independent tosses gives
+
+$$\textrm{Var}[\hat{p}] = \frac{p(1-p)}{n}.$$
+
+Estimating $p$ from 1000 batches of $n$ tosses each, the standard
+deviation of the estimates hugs the predicted $0.5/\sqrt{n}$ line —
+slope $-\tfrac12$ on log–log axes.
+:::
+
+::: {.col .fig .big}
+@!probability-a-simple-example-tossing-coins-6
+:::
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [02]{.dnum}
@@ -1621,7 +1642,12 @@ The **base rate** dominates a rare-disease test.
 ::: {.col}
 A *second*, independent positive test multiplies the evidence. Applying
 Bayes again drives the posterior from the 0.15% prior to 13%, then to
-**83%**:
+**83%**.
+
+Simulating ten million patients confirms it by brute force (exact
+posterior: $0.8307$):
+
+@!probability-worked-example-hiv-testing-1
 :::
 
 ::: {.col .fig .big}

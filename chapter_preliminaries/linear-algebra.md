@@ -1788,6 +1788,33 @@ flattened — $\|\mathbf{X}\|_\text{F} = \sqrt{\sum_{i,j} x_{ij}^2}$:
 @linear-algebra-norms-3
 :::
 
+::: {.slide title="Eigenvalues: a first look"}
+[Norms]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Norms ask how much a matrix can **stretch**; eigenvectors are directions
+it does not **turn** at all:
+
+$$\mathbf{A}\mathbf{v} = \lambda \mathbf{v}.$$
+
+@linear-algebra-eigenvalues-1
+:::
+
+::: {.col}
+Repeated multiplication amplifies (or damps) by $\max_i|\lambda_i|$ per
+step — watch the norm-growth factor converge to it:
+
+@linear-algebra-eigenvalues-2
+
+::: {.d2l-note}
+Deep nets multiply by many matrices in a row; this amplify-or-damp
+effect returns in :numref:`sec_numerical_stability`.
+:::
+:::
+:::
+:::
+
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
@@ -1801,6 +1828,7 @@ flattened — $\|\mathbf{X}\|_\text{F} = \sqrt{\sum_{i,j} x_{ij}^2}$:
 ::: {.col}
 - **Products:** `dot`, matrix–vector, matrix–matrix (`@`).
 - **Norms:** $\ell_2$, $\ell_1$, Frobenius.
+- **Eigenvectors** are scaled, never rotated: $\mathbf{A}\mathbf{v} = \lambda\mathbf{v}$.
 - Geometry — arrows, angles, lengths — underlies all of it.
 :::
 :::

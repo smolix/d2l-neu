@@ -340,7 +340,7 @@ The Image Classification Dataset<br>**Fashion-MNIST**, the workhorse we will cla
 
 ::: {.cols .vc}
 ::: {.col}
-- **MNIST** (handwritten digits) is solved: a *linear* model already tops 95%, so models are hard to tell apart.
+- **MNIST** (handwritten digits) is solved: even simple models exceed 95% (a *linear* one already tops 90%), so models are hard to tell apart.
 - We want data where a weak model is **clearly outpaced** by a richer one.
 - **Fashion-MNIST**: a drop-in replacement with the same shape and API but harder clothing classes ($28\times28$ grayscale, 10 classes, 60 k / 10 k).
 :::

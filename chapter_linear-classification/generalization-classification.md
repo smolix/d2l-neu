@@ -718,7 +718,7 @@ in :numref:`sec_generalization_deep`.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · Linear Classification]{.kicker}
+[Dive into Deep Learning · §4.6]{.kicker}
 
 **Generalization** in Classification<br>How much should you trust a test score, and can we ever guarantee generalization *before* we see the data?
 :::
@@ -830,6 +830,28 @@ $n\approx 18{,}500$ vs. the asymptotic $10{,}000$. Guarantees that hold for
 :::
 :::
 
+::: {.slide title="The √n law, simulated"}
+[The Test Set · convergence]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+Fix a classifier with true error $0.1$ and draw 1000 hypothetical test
+sets at each size $n$: the spread of the estimates marches down the
+predicted $-\tfrac12$ slope on log–log axes.
+
+::: {.d2l-note}
+The simulated spread sits **on** the CLT line; the Hoeffding envelope
+runs parallel above it — the constant-factor price of a guarantee at
+every finite $n$.
+:::
+:::
+
+::: {.col .fig .big}
+@!generalization-classification-the-test-set-2
+:::
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [02]{.dnum}
@@ -875,6 +897,28 @@ by chance. This is multiple hypothesis testing.
 **Adaptive overfitting.** $f_2$ was chosen *after* you saw $f_1$'s test
 score, so the choice depends on the test set. Once that information leaks to
 the modeler, it is no longer a true test set.
+:::
+:::
+:::
+
+::: {.slide title="Nothing learned, score climbs anyway"}
+[Test-Set Reuse]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+Evaluate $k$ **coin-flip** classifiers (true accuracy exactly $0.5$) on
+one shared test set of $n = 1000$ and track the best score so far:
+past $0.56$ after ten thousand tries, by pure selection.
+
+::: {.d2l-note .warn}
+The climb grows like $\sqrt{\log(k)/(2n)}$ — Hoeffding over $k$ events
+at once. Best-of-many on a shared test set *always* buys some of its
+improvement this way.
+:::
+:::
+
+::: {.col .fig .big}
+@!generalization-classification-test-set-reuse-1
 :::
 :::
 :::

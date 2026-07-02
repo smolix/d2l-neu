@@ -845,6 +845,31 @@ Fashion-MNIST, not a tuning problem. The next slide shows why.
 :::
 :::
 
+::: {.slide title="Where the errors live: the confusion matrix"}
+[Prediction]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Accumulate a $10\times 10$ count matrix over the validation set and
+normalize each column:
+
+- Upper-body garments (t-shirt, pullover, dress, coat, **shirt**) trade
+  errors almost exclusively among themselves.
+- Footwear forms a second, smaller cluster.
+- Trousers and bags are nearly pure diagonal: silhouette suffices.
+
+::: {.d2l-note}
+Same outline, same mass distribution → indistinguishable to a model
+that can only **weigh pixels linearly**.
+:::
+:::
+
+::: {.col .fig}
+@!softmax-regression-scratch-prediction-confusion
+:::
+:::
+:::
+
 ::: {.slide title="Why a linear model caps out"}
 [The ceiling]{.kicker}
 
@@ -854,7 +879,8 @@ A linear classifier draws **straight** decision boundaries. In pixel
 space shirts and pullovers overlap, and no hyperplane separates them.
 
 The capacity of lines is finite: in the plane a line shatters any 3
-points but **never** the 4-point XOR pattern. A single hidden layer
+points but **never** the 4-point XOR pattern (we make this precise in
+:numref:`chap_classification_generalization`). A single hidden layer
 (Chapter 5) bends the boundary and pushes past 83%.
 :::
 

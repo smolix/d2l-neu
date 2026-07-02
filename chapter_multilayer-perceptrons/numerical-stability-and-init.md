@@ -799,10 +799,28 @@ $$\sigma^2 = \frac{2}{n_\textrm{in}}.$$
 
 ::: {.col .narrow}
 ::: {.d2l-note}
-ReLU zeroes half a symmetric signal, **halving** its variance, so He **doubles** the weight variance to compensate.
+ReLU zeroes half a symmetric signal, **halving its second moment** ($E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$), so He **doubles** the weight variance to compensate.
 :::
 
-Rule of thumb: **Xavier for $\tanh$/sigmoid, He for ReLU.** Both ship as framework defaults.
+Rule of thumb: **Xavier for $\tanh$/sigmoid, He for ReLU.** Both ship as named initializers in every framework.
+:::
+:::
+:::
+
+::: {.slide title="Fifty layers, three scales, one plot"}
+[Initialization]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+Push a unit-scale signal through **50 ReLU layers** and track $E[(h^{(l)})^2]$:
+
+- $\mathcal{N}(0,1)$: **explodes** to $\sim\!10^{80}$.
+- **Xavier**: off by the rectifier's $\tfrac12$ per layer, *vanishes* like $2^{-l}$.
+- **He**: essentially **flat** across all fifty layers.
+:::
+
+::: {.col .fig .big}
+@!numerical-stability-and-init-depth-sweep
 :::
 :::
 :::

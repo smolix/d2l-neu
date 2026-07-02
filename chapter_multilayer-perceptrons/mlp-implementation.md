@@ -571,8 +571,8 @@ converges just like the scratch one:
 @mlp-implementation-training-2
 
 ::: {.d2l-note}
-Both versions compute the *same* function. One is just
-easier to read and harder to get wrong.
+Same *architecture*, different init (framework default vs
+$\mathcal{N}(0, 0.01^2)$), so trajectories differ slightly.
 :::
 :::
 
@@ -619,7 +619,7 @@ Each question is the subject of one of the next sections.
 :::
 
 ::: {.col}
-- Both forms compute the **same** model.
+- Both forms declare the **same architecture** (inits differ).
 - The **training loop is unchanged** from softmax
   regression (modularity paying off).
 - Hyperparameters (depth, width, lr) live **outside** the

@@ -1027,14 +1027,20 @@ The small MLP edges out the competent linear baseline (~0.028 vs ~0.032). The ga
 
 ::: {.cols .vc}
 ::: {.col}
-Average the $K$ models' predictions (in price space), then write a
-Kaggle-format `submission.csv`:
+Average the $K$ log-price predictions, exponentiate, submit:
 
 @-kaggle-house-price-submitting-predictions-on-kaggle
 :::
 
 ::: {.col .fig}
-![Upload the CSV and Kaggle scores it instantly against the held-out half of the test set.](../img/kaggle-submit2.png){width=100%}
+![Upload the CSV and Kaggle scores it instantly.](../img/kaggle-submit2.png){width=80%}
+
+::: {.d2l-note}
+The log-space mean is the **RMSLE-consistent** (geometric-mean)
+ensemble. And note: the CV score measured a *single* fold model —
+refitting on all data is the cleaner alternative to this *fold
+ensembling*.
+:::
 :::
 :::
 :::
@@ -1051,7 +1057,8 @@ Kaggle-format `submission.csv`:
 :::
 
 ::: {.col}
-5. **Refit** with the chosen hyperparameters.
+5. **Ensemble the fold models** (log-space mean) — or refit on all data
+   with the chosen hyperparameters.
 6. **Submit** in the host's format.
 
 ::: {.d2l-note}
@@ -1076,7 +1083,7 @@ images, text, audio. The pipeline is identical.
 ::: {.col}
 - **K-fold CV** gives a stable estimate on small data and drives HP
   search.
-- **Refit** on the chosen settings, then submit.
+- **Ensemble the folds in log space** (or refit), then submit.
 - The model is a few lines; **everything around it is the lesson**.
 :::
 :::

@@ -800,8 +800,8 @@ training only.
 ::: {.slide title="Training it"}
 [From Scratch]{.kicker}
 
-Two 256-unit hidden layers, dropout $0.5$ between them, on
-Fashion-MNIST:
+Two 256-unit hidden layers, dropout $0.2$ after the first and $0.5$
+after the second (the convention in action), on Fashion-MNIST:
 
 @!dropout-training
 

@@ -750,7 +750,7 @@ The gradient is the **residual**, predicted probability minus observed label, ex
 
 ::: {.cols .vc}
 ::: {.col}
-**Entropy** $H[P] = \sum_j -P(j)\log P(j)$ is the average bits needed to encode draws from $P$. **Cross-entropy** $H(P, Q) = \sum_j -P(j)\log Q(j)$ is the cost of coding $P$'s draws with a wrong model $Q$.
+**Entropy** $H[P] = \sum_j -P(j)\log P(j)$ is the average number of **nats** needed to encode draws from $P$ (natural log throughout). **Cross-entropy** $H(P, Q) = \sum_j -P(j)\log Q(j)$ is the cost of coding $P$'s draws with a wrong model $Q$.
 :::
 
 ::: {.col .narrow}

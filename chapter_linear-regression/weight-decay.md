@@ -925,6 +925,24 @@ Training loss plunges, validation loss stalls, weight norm large: a textbook ove
 Training loss is now *higher*, but validation loss drops and the weight norm shrinks by an order of magnitude. That gap closing is the payoff.
 :::
 
+::: {.slide title="Why shrinkage helps: the spectral view"}
+[From Scratch · why it works]{.kicker}
+
+Ridge keeps a closed form, and the SVD $\mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^\top$ shows exactly *what* shrinks: the response along the $j$-th principal direction is damped by
+
+$$\frac{d_j^2}{d_j^2 + \tilde{\lambda}}
+\qquad\Rightarrow\qquad
+\textrm{df}(\tilde{\lambda}) = \sum_j \frac{d_j^2}{d_j^2 + \tilde{\lambda}}.$$
+
+On our $20\times 200$ dataset:
+
+@!weight-decay-why-shrinkage-helps-the-spectral-view
+
+::: {.d2l-note .rule}
+Strong directions pass through nearly untouched; weakly-constrained directions — the ones a noise-chasing fit exploits — are suppressed hardest. $\textrm{df}(\tilde\lambda)$ is the complexity dial made literal.
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [02]{.dnum}

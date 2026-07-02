@@ -814,7 +814,7 @@ curb overfitting, the first of many regularizers we will meet.
 Linear regression **from scratch**<br>Building a model, a loss, an optimizer, and a training loop with nothing but tensors and autograd.
 :::
 
-The two-line `nn.Linear` + `MSELoss` of the next section hides four moving parts. We build every one of them by hand once, so that when we later customize a layer, a loss, or an optimizer, we know exactly what we are reaching into.
+Model, loss, optimizer, training loop — built by hand once, demystified for good.
 :::
 
 ::: {.slide title="Four parts, one object graph"}
@@ -853,12 +853,16 @@ We slot them into the `Module` / `Trainer` / `DataModule` classes from :numref:`
 ::: {.slide title="Parameters: small random w, zero b"}
 [The Model]{.kicker}
 
-We need parameters before we can optimize them. Draw `w` from a tiny Gaussian (to break symmetry), set `b` to zero:
+We need parameters before we can optimize them. Draw `w` from a tiny Gaussian, set `b` to zero:
 
 @linear-regression-scratch-defining-the-model-1
 
 ::: {.d2l-note}
 `requires_grad=True` (or the framework's equivalent) tells autograd to track `w` and `b` so their gradients can flow back from the loss.
+:::
+
+::: {.d2l-note}
+For a single linear layer **any** small init works (exercise 1); breaking symmetry only matters once we stack layers — :numref:`sec_numerical_stability`.
 :::
 :::
 

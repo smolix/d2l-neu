@@ -829,6 +829,30 @@ This is the bias–variance U-curve, now traced from real numbers rather than sk
 :::
 :::
 
+::: {.slide title="The U-curve, decomposed"}
+[The Demo · result]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+We know the noiseless target, so we can *compute* bias and variance:
+redraw the training noise 200 times, refit each degree, and measure
+
+- **bias²** — how far the *average* fit is from the truth;
+- **variance** — how much the fit *fluctuates* across draws.
+
+::: {.d2l-note .rule}
+Bias collapses once the model class contains the truth (degree 3);
+variance grows relentlessly with surplus capacity. Their sum bottoms out
+exactly at the sweet spot.
+:::
+:::
+
+::: {.col .fig .big}
+@!generalization-bias-variance-decomposition
+:::
+:::
+:::
+
 ::: {.slide title="What the sweep produces" except="pytorch"}
 [The Demo · result]{.kicker}
 

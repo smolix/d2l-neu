@@ -634,8 +634,12 @@ the optimizer to find a simple interpolant**.
 :::
 
 ::: {.col .narrow}
-Double descent appears as we grow the model **and** as we train for more
-epochs or add more data.
+Three knobs trace the same curve (Nakkiran et al. 2021):
+
+- **model-wise** — grow the network;
+- **epoch-wise** — train longer;
+- **sample-wise** — *more data can hurt*, by pushing a fixed model back
+  into the spike.
 :::
 :::
 :::
@@ -675,24 +679,22 @@ already-benign bias rather than brute-forcing capacity down.
 [Implicit bias]{.kicker}
 
 ::: {.cols .vc}
-::: {.col}
+::: {.col .narrow}
 On small algorithmic tasks, a network first **memorizes** the training
 set, with test accuracy flat near chance.
 
 Then, after **many more** steps at zero training loss, it **suddenly
 generalizes**: test accuracy jumps late.
 
-::: {.d2l-note}
-A vivid reminder that optimization **dynamics**, not architecture alone,
-govern generalization.
+::: {.d2l-note .warn}
+Same architecture, same data, same loss: only **time spent training**
+changes the outcome. Dynamics, not architecture alone, govern
+generalization.
 :::
 :::
 
-::: {.col .narrow}
-::: {.d2l-note .warn}
-The same architecture, same data, same loss: only **time spent training**
-changes the outcome.
-:::
+::: {.col .fig .big}
+![Training accuracy (gray) saturates early; validation accuracy (blue) lingers near chance for orders of magnitude more steps, then rises sharply (after Power et al., 2022).](../img/mdl-mlp-grokking.svg){width=100%}
 :::
 :::
 :::

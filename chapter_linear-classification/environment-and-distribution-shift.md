@@ -1012,6 +1012,18 @@ With a logistic model $P(z{=}1\mid\mathbf{x})=\sigma(h(\mathbf{x}))$ this collap
 :::
 :::
 
+::: {.slide title="The whole pipeline, watched working"}
+[Covariate shift correction]{.kicker}
+
+A 2-D demo: source Gaussian at the origin, target shifted to $(2,0)$, one curved labeling rule. The discriminator recovers the true log-ratio $2x_1 - 2$, and reweighted training pays off *on the target*:
+
+@!environment-and-distribution-shift-covariate-shift-correction-3
+
+::: {.d2l-note}
+Unweighted: fitted where the **source** lives — a coin flip on the target. Weighted: target accuracy above 90%, bought by a worse fit on the discounted source region. Clipping at $c=5$ tames the handful of $\beta > 50$ weights without giving up the correction.
+:::
+:::
+
 ::: {.slide title="Label shift: invert a confusion matrix"}
 [Label shift correction]{.kicker}
 
@@ -1025,7 +1037,7 @@ $$\mathbf{C}\, p(\mathbf{y}) = \mu(\hat{\mathbf{y}}) \quad\Longrightarrow\quad p
 
 . . .
 
-If the classifier is decent (so $\mathbf{C}$ is invertible), this recovers the target label mix, then form $\beta_i$ and reweight.
+If $\mathbf{C}$ is **diagonally dominant** (each class predicted correctly more often than any single confusion), it is invertible and this recovers the target label mix; then form $\beta_i$ and reweight.
 :::
 
 ::: {.slide title="Concept shift: just keep up"}

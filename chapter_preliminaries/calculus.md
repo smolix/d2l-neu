@@ -812,7 +812,7 @@ With many variables $u_1, \ldots, u_m$, each depending on
 $x_1, \ldots, x_n$, the chain rule becomes a **vector–matrix product**:
 
 $$\nabla_{\mathbf{x}} y = \mathbf{A}\, \nabla_{\mathbf{u}} y,
-\qquad \mathbf{A} \in \mathbb{R}^{n \times m}\ \text{(the Jacobian).}$$
+\qquad \mathbf{A} = \left[\frac{\partial u_j}{\partial x_i}\right] \in \mathbb{R}^{n \times m}\ \text{(the transpose of the Jacobian } \partial\mathbf{u}/\partial\mathbf{x}\text{).}$$
 
 ::: {.d2l-note}
 A network's gradient is a chain of such products. Traversed **forward**

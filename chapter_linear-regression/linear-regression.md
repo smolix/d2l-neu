@@ -1147,6 +1147,29 @@ Shifting the **mean** slides it; growing the **variance** flattens it.
 :::
 :::
 
+::: {.slide title="A menu of losses"}
+[Loss Meets Probability]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+The recipe generalizes: **pick the noise model, minimize its NLL.**
+
+- Gaussian → squared error
+- Laplace → **absolute error**
+- log-Gaussian → squared error on $\log y$
+- Poisson → $\lambda - k\log\lambda$
+
+One corrupted label out of twenty:
+
+@!linear-regression-loss-function
+:::
+
+::: {.col .fig}
+![Laplace tails carry far more mass than Gaussian tails, so the loss they induce penalizes a large residual only linearly.](../img/mdl-linreg-loss-menu.svg){width=100%}
+:::
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [04]{.dnum}

@@ -951,9 +951,10 @@ having optimization **discover** such representations.
 ::: {.cols .vc}
 ::: {.col}
 **Universal approximation theorem.** A single hidden layer
-with enough units and *any* sane $\sigma$ can approximate any
-continuous function on a bounded domain, to arbitrary
-accuracy (Cybenko 1989; Hornik 1991).
+with enough units can approximate any continuous function on
+a bounded domain, to arbitrary accuracy — for any
+non-polynomial $\sigma$, ReLU included (Cybenko 1989;
+Leshno et al. 1993).
 :::
 
 ::: {.col .narrow}
@@ -970,6 +971,26 @@ generalizes.
 This is why we reach for **depth**: a deep net often
 represents the same function far more compactly than a shallow
 one would, trading width for layers.
+:::
+
+::: {.slide title="Why it is plausible: one hinge at a time"}
+[Expressive power]{.kicker}
+
+Each ReLU unit contributes a **hinge** $a_k\operatorname{ReLU}(x - t_k)$: with $D$ units the output is piecewise linear with at most $D+1$ pieces. Approximating a curve is then just fitting a **polyline** — more joints, less error.
+
+![Three hinges (left) sum to a 4-piece polyline that tracks the smooth target (right); the shaded band is the error.](../img/mdl-mlp-uat-hinges.svg){width=88%}
+:::
+
+::: {.slide title="Depth multiplies pieces; width only adds" only="pytorch"}
+[Expressive power]{.kicker}
+
+Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the slope jumps, and count the linear pieces (mean over 20 draws, widths 2–16):
+
+@!mlp-region-count
+
+::: {.d2l-note .rule}
+One layer of width $D$: at most $D+1$ pieces. Each extra layer **folds** the graph, roughly *multiplying* the count — the multiplicative-vs-additive gap that makes depth pay.
+:::
 :::
 
 ::: {.slide}

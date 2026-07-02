@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:79e895cb70c4afe249ce73e8a2b929491d4293e2e76bf85777120529c2ce5e07",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
           "bytes": 24746,
-          "sha256": "sha256:46a0b14f9d45407d7585b553ca4fee210963372476c50abc21efb176c6474945"
+          "sha256": "sha256:b86d5cd399f9e46526d0e8c93e9a779314721d2163c2677b74d6b4a9dec2014a"
         }
       ]
     },
@@ -38,7 +38,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
+          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
         }
       ]
     },
@@ -58,8 +63,48 @@
         }
       ]
     },
+    "mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed": {
+      "code_fingerprint": "sha256:33113dd65eea5c5fd48dfc304b9f0d81c1235cb10ae4a257b33bdd50c983d8bd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 10 strides vs 1000: mean |gap| 0.083, KS 0.080, mode fraction 0.495\n 50 strides vs 1000: mean |gap| 0.015, KS 0.018, mode fraction 0.495\nmode fraction at 1000 steps: 0.495; 5% KS threshold: 0.021\n"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule": {
+      "code_fingerprint": "sha256:9ef5753234d16722d95ccb1b2d0d3359cbca9e3fb628caa4f8087928d0dc57db",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gamma =  1.0: mass right of 0: 1.000, mean 0.966, std 0.244\ngamma =  3.0: mass right of 0: 1.000, mean 1.035, std 0.236\ngamma = 10.0: mass right of 0: 1.000, mean 1.072, std 0.234\nthe honest conditional: mean 0.970, std 0.243\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
+          "bytes": 30656,
+          "sha256": "sha256:fe08dddbc48568c6d4fc0cedc341f8946ab99d0f59d2a2a9e7a4b6459d9747b8"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function": {
+      "code_fingerprint": "sha256:aef7814d71e062687755474ca9c17f631f6cf4f905750978b9bf83fc04c7c245",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |u_posterior - u_dictionary| on [-4, 4]: 3.1e-15\n"
+        }
+      ]
+    },
     "score-matching-diffusion-flow-two-moons": {
-      "code_fingerprint": "sha256:b05dd1648e7e0049fe30b1d2cc49ab444685293e044d93fb03f99813af0cf2b8",
+      "code_fingerprint": "sha256:1300896ca9d98ee18c9bada5c91918765e32172f3886dbf531242c37615bf0fb",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +115,7 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-train": {
-      "code_fingerprint": "sha256:f06417d4457c7649158ccfee9f5d5368d0da1dd94cacb0ad7b2b9598cbdf8a52",
+      "code_fingerprint": "sha256:4afa43313f5e150e10a50b28bd94793cf874abce154940a5eebf0c573271987e",
       "kind": "text",
       "outputs": [
         {
@@ -101,25 +146,51 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-sample": {
-      "code_fingerprint": "sha256:497535d516bab8ba410ebab7b67587b86d183a879537faff0b57a4ae0c69d789",
+      "code_fingerprint": "sha256:3801deb282d8eb261cd3fd0727b4080bb42f15507945eb10e035ece688a7bc2f",
       "kind": "text",
       "outputs": []
     },
     "score-matching-diffusion-flow-cfm-panels": {
-      "code_fingerprint": "sha256:3b219bd03e89172c8aa92a264604e5f871939ee5c531237b2e2357e3fb6dd372",
+      "code_fingerprint": "sha256:3fed1f72851e985338a8d8a92f639f68d6a9e9ca74e1e9686107a66a6f34d4ba",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
-          "bytes": 1114862,
-          "sha256": "sha256:654a4f9c86061b8d9a1bf9f4f0bb992264fabeeb4f1ecc0946cb46d080ce994c"
+          "bytes": 1114821,
+          "sha256": "sha256:46404fca1f88dafa1a7d21fc133f2600992dd32609448e7f460e5bef11ef206c"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-one-reflow-round-measured": {
+      "code_fingerprint": "sha256:59bc382b764886461a0f992456f436be1cdc6524ed9278927be683ecfc310e0f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final reflow loss 0.003\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1 step(s): energy distance  CFM 0.582  ->  reflow 0.006\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 2 step(s): energy distance  CFM 0.138  ->  reflow 0.005\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "32 step(s): energy distance  CFM 0.007  ->  reflow 0.005\n"
         }
       ]
     },
     "score-matching-diffusion-flow-steps-quality": {
-      "code_fingerprint": "sha256:f1889b5229a8b596a49f5252f951b3eee725a5663e850c1baf5a75821a9f735a",
+      "code_fingerprint": "sha256:85682d9e3c5dc29f1b92fa9758bdc7a2cc92a81d4b73f8725ccd286e276e8fa2",
       "kind": "mixed",
       "outputs": [
         {
@@ -131,13 +202,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
-          "bytes": 24044,
-          "sha256": "sha256:daad2d71262bb2f403f5521570098f3d80b5ae004605781876e726ab95678e51"
+          "bytes": 24043,
+          "sha256": "sha256:15f331e8555c278be7a8f6f5721ea9940cbe91008a7edc07ef8fab70a41d372e"
         }
       ]
     },
     "score-matching-diffusion-flow-euler-vs-heun": {
-      "code_fingerprint": "sha256:10ca6fba12743f3993c77088b9895df616af61e75b96b1e2cffd6d4c21d49823",
+      "code_fingerprint": "sha256:61daf3fcd13cdb8cf5cac56b2fb434fba7be37be81492e44b28127bd6c5b42f2",
       "kind": "text",
       "outputs": [
         {

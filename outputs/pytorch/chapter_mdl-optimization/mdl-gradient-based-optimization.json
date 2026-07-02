@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "        eta = 0.40 (2/eta = 5.0)   eta = 0.25 (2/eta = 8.0)\n    k      loss    sharpness         loss    sharpness\n     0    0.5097      3.32         0.5097      3.32\n  4000    0.0122      5.06         0.0109      7.71\n  8000    0.0008      5.03         0.0021      8.04\n 12000    0.0007      5.00         0.0007      8.03\n 16000    0.0005      5.00         0.0004      8.03\n 20000    0.0004      5.00         0.0003      8.03\n"
+          "text": "        eta = 0.40 (2/eta = 5.0)   eta = 0.25 (2/eta = 8.0)\n    k      loss    sharpness         loss    sharpness\n     0    0.5097      3.32         0.5097      3.32\n  4000    0.0124      4.94         0.0104      8.02\n  8000    0.0008      4.97         0.0021      7.96\n 12000    0.0007      5.00         0.0007      7.97\n 16000    0.0005      5.00         0.0004      7.97\n 20000    0.0004      5.00         0.0003      7.97\n"
         }
       ]
     },
@@ -103,8 +103,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
-          "bytes": 100458,
-          "sha256": "sha256:9a3b12760ec9b55b9b3f6359b8c281105081c3b121789135d4ba1e108f2ba84a"
+          "bytes": 100456,
+          "sha256": "sha256:71e7a9ad53b6f833e81b3322a1a7e16cc6cd611d42b6f33cfb1c250a111135dd"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD with the optimal step contracts by 0.9802 per step; it needs 691 steps for |x_k| <= 1e-6\nNewton iteration 1:  |grad| = 2.8e-01\nNewton iteration 2:  |grad| = 3.2e-02\nNewton iteration 3:  |grad| = 1.1e-03\nNewton iteration 4:  |grad| = 1.2e-06\nNewton iteration 5:  |grad| = 1.6e-12\nNewton iteration 6:  |grad| = 3.0e-17\nagrees with the SGD section optimum: True\n"
+          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD with the optimal step contracts by 0.9802 per step; it needs 691 steps for |x_k| <= 1e-6\nNewton iteration 1:  |grad| = 2.8e-01\nNewton iteration 2:  |grad| = 3.2e-02\nNewton iteration 3:  |grad| = 1.1e-03\nNewton iteration 4:  |grad| = 1.2e-06\nNewton iteration 5:  |grad| = 1.6e-12\nNewton iteration 6:  |grad| = 3.1e-17\nagrees with the SGD section optimum: True\n"
         }
       ]
     }

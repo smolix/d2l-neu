@@ -43,7 +43,20 @@
           "mime": "image/svg+xml",
           "asset": "generalization/generalization-polynomial-curve-fitting-5-1.svg",
           "bytes": 22201,
-          "sha256": "sha256:fb03b004f39fe971d5e46eb4ea0e80be2a7fdfbdae31262dcb4af70223642aea"
+          "sha256": "sha256:f76713e9e678a172d98e5df9af910aaebcc9a409172a03eaf01cd48325e2a6ce"
+        }
+      ]
+    },
+    "generalization-bias-variance-decomposition": {
+      "code_fingerprint": "sha256:30c57d5007496deb885daddaee303cb45d3158edd7cfbaac28a3005e14fbd1e0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "generalization/generalization-bias-variance-decomposition-1.svg",
+          "bytes": 26809,
+          "sha256": "sha256:f5876674662e38200e11cb464e3d47deaf78723f07f3915ea1f5ecf7d3ac8cb5"
         }
       ]
     }

@@ -24,19 +24,35 @@
         }
       ]
     },
-    "constrained-svm-dual": {
-      "code_fingerprint": "sha256:272c94c1c516e8f8f0c54c88b598cd6167b85f4a0271194a726df482becb4fb3",
+    "constrained-weight-decay": {
+      "code_fingerprint": "sha256:557faaf7c99283bd9cd3c9ee8d517a8448886e9965d04374519a82ba1b490586",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "alpha* = [0.1309 0.0732 0.     0.     0.     0.2442 0.     0.3885]\nw* = [0.5714 0.5714]  b* = -0.4286  separates data: True\nmargins y_i (w^T x_i + b) = [1.     1.     2.1429 2.1429 1.2857 1.     2.4286 1.    ]\nKKT: comp. slack 3.0e-16 | worst primal feas. 7.8e-16\nprimal = 0.418367, dual = 0.418367, gap = 5.0e-16\n"
+          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10       0.4460         9.23e-17             0.1000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   1.00       0.4235         9.64e-17             1.0000\n  10.00       0.2840         5.55e-17            10.0000\n"
+        }
+      ]
+    },
+    "constrained-svm-dual": {
+      "code_fingerprint": "sha256:a2ece2653794ded0823c1884873cd70103e360f928c820269e846ad722b01409",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "alpha* = [0.1309 0.0732 0.     0.     0.     0.2442 0.     0.3885]\nw* = [0.5714 0.5714]  b* = -0.4286  separates data: True\nmargins y_i (w^T x_i + b) = [1.     1.     2.1429 2.1429 1.2857 1.     2.4286 1.    ]\nKKT: comp. slack 3.0e-16 | worst primal feas. 7.8e-16\nprimal = 0.418367, dual = 0.418367, gap = 4.4e-16\n"
         }
       ]
     },
     "constrained-water-filling": {
-      "code_fingerprint": "sha256:352ec9c8f4fe2dd6d2daca26c46774955cf13887b28a17c9d7156fee2c9d8c4d",
+      "code_fingerprint": "sha256:187a648ade035c15292c5daf3dd5c22dcd463564c0979df1b9956f04ca244ce3",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +63,7 @@
       ]
     },
     "constrained-duality-gap": {
-      "code_fingerprint": "sha256:7bc88b879627dab7fda1bda8ab2fc224e2442c7aae21b569f2794c8e75d08bdf",
+      "code_fingerprint": "sha256:237669f88cb13661652e5f6e8f6a7ec04de8226c9507caea81c725407cf973ff",
       "kind": "mixed",
       "outputs": [
         {
@@ -60,7 +76,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/constrained-duality-gap-1.svg",
           "bytes": 26638,
-          "sha256": "sha256:c23332dd83c06d7eb0d1f8f0073eab4c6cdd15090dc6f43d9a2a764f9a0f408e"
+          "sha256": "sha256:50b8b437ee16f0306d04dfdf157eb6611630156df91f03dda93f167414db2123"
         }
       ]
     }

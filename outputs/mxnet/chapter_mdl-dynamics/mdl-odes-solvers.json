@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 29488,
-          "sha256": "sha256:4c05817170e4e31753f2557b4949c188ab2a639468e35d696c199d29f20f9302"
+          "sha256": "sha256:05e37b02558a50e1366d17cf571329f4a233858947ef31f8c40773e10b961a68"
         }
       ]
     },
@@ -53,19 +53,25 @@
         }
       ]
     },
+    "mdl-odes-solvers-gradient-descent-is-a-solver": {
+      "code_fingerprint": "sha256:04ff4da5a7c4d1328fbac3461db6ab4490c92adcda25ef64d2c1b1dba9cb0212",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GD on this quadratic is stable iff eta < 2/lambda_max = 0.2\n     eta  |1-eta*lam_max|  ||x|| after 100 GD steps\n   0.050             0.50                  5.92e-03\n   0.150             0.50                  8.75e-08\n   0.190             0.90                  2.66e-05\n   0.201             1.01                  2.70e+00\n   0.210             1.10                  1.38e+04\n   0.250             1.50                  4.07e+17\n"
+        }
+      ]
+    },
     "odes-solvers-neural-ode-train": {
-      "code_fingerprint": "sha256:14687a2f53d1204aec0f8b820bd2ba6fa575659b7bde76e421f70f06f41d4d63",
+      "code_fingerprint": "sha256:ce5fe8b66ec4943968df5be0a5b27cb39316adee624d78bc0e0c3b777c494f4c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "iter   0  loss 1.27961\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[03:58:34] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",
@@ -90,7 +96,7 @@
       ]
     },
     "odes-solvers-adjoint-check": {
-      "code_fingerprint": "sha256:ca44e78040ec043c36c6458868cddbe8d89e84d893110cbd32b4a643acbc63f5",
+      "code_fingerprint": "sha256:c2c2ce43e0efc0621892d6610c36d372136424e00950193c3c789d4f20f9bc99",
       "kind": "text",
       "outputs": [
         {
@@ -101,23 +107,23 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
         }
       ]
     },
     "odes-solvers-cnf-trace": {
-      "code_fingerprint": "sha256:b959ddd531d0f9ddea8a2fb80c8f62cae9054cf031610fc610a24c1df6136f4d",
+      "code_fingerprint": "sha256:1bdbe2a5203bf05b35c68e50d9430989311cf9e884735b915aff3444b48a899f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Hutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
+          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\nHutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
         }
       ]
     }

@@ -14,7 +14,7 @@
       "outputs": []
     },
     "divergences-distances-f-table": {
-      "code_fingerprint": "sha256:137e3f34845bfeee7c9398b01f912132e0c8f8f26c38a1d67db0c0054a6b27ee",
+      "code_fingerprint": "sha256:c691cff7169e432851d97fe6696ca7a199eaa21d27129c445af72e03a906f09c",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "divergences-distances-f-gan-bound": {
-      "code_fingerprint": "sha256:3106601cbfb9830d958b68e13323334a27547013836c4baf7579088bcdfddf29",
+      "code_fingerprint": "sha256:da2822b54383d5ae30b8015f5ee00e360a4544f88e1ebff452329e0b5b442922",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "divergences-distances-fwd-rev-kl": {
-      "code_fingerprint": "sha256:9241c6d2be17ad818041c5af6b9e516d678adc4c7169a657b094d11d5f5b7bd8",
+      "code_fingerprint": "sha256:cc525562be545cddf03ed38544f8a4ead351194f44bea680109ec81839f865cc",
       "kind": "mixed",
       "outputs": [
         {
@@ -49,12 +49,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37614,
-          "sha256": "sha256:e4b4a037cd3551b888b5bb37707a993cb4905c24085553b5ae54faf12d73fc39"
+          "sha256": "sha256:f098d9ff76b7c177ddcc94a5aee947a2cd43241fce7d081f3f54050416b49f71"
         }
       ]
     },
     "divergences-distances-pinsker": {
-      "code_fingerprint": "sha256:f690f7f98346756736471d3089ebd77b6da9a2020da7254342a28476fae93f5d",
+      "code_fingerprint": "sha256:b98f399570fc2884ae837f91591536c40cf1b7c77013def3a27394251ba2f2fb",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +65,7 @@
       ]
     },
     "divergences-distances-mmd": {
-      "code_fingerprint": "sha256:db1019e0c8b6be74e91dacee5d2ee9ca2b2c9fa17840599e384468d8710f6424",
+      "code_fingerprint": "sha256:25a14a94504172e07bde0552b7c297b84eb4cdcf63eaf3d02c1c611c515f99ed",
       "kind": "text",
       "outputs": [
         {
@@ -76,7 +76,7 @@
       ]
     },
     "divergences-distances-w1": {
-      "code_fingerprint": "sha256:4bad43232f3c33ec6e92b2930c44620720b82dcbd07e9cb4f77becf332dd1730",
+      "code_fingerprint": "sha256:53c95d19a84ef728daf9a48cd8e93740a12bc55fa4c8b0149efba31ccf3df4ee",
       "kind": "text",
       "outputs": [
         {
@@ -87,18 +87,25 @@
       ]
     },
     "divergences-distances-sinkhorn": {
-      "code_fingerprint": "sha256:6b1422c117c3d981b833e95d3aa97c172e10ab7d8c9fa6c34f6ebdbb0c253a9d",
-      "kind": "text",
+      "code_fingerprint": "sha256:6da3e120576f5ae546320850bb8bd9ff09a77e1b696d39334caad8caf924cd15",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "epsilon = 1.00: entropic cost = 1.7700   (unregularized LP: 1.7000)\nepsilon = 0.10: entropic cost = 1.7000   (unregularized LP: 1.7000)\nepsilon = 0.02: entropic cost = 1.7000   (unregularized LP: 1.7000)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
+          "bytes": 35917,
+          "sha256": "sha256:13195ab081ea0a2c18250c050afe4445feae63004bfd3bd0c78ad25dbb6d2d37"
         }
       ]
     },
     "divergences-distances-score": {
-      "code_fingerprint": "sha256:4eddc09e681b5c4dfa20b381bea55ac1c5782fedc841ab3af79836d7d3e6269d",
+      "code_fingerprint": "sha256:2ca2b62dc0eef5eaadc2bdce8d60dcfbaf38583385c9c9fe8c124d0e036b8f5d",
       "kind": "text",
       "outputs": [
         {
@@ -109,18 +116,13 @@
       ]
     },
     "divergences-distances-stein": {
-      "code_fingerprint": "sha256:58a30e257a89e8b4ffe3c1d076a218d84a68c1fae70e436da02b352c3081d595",
+      "code_fingerprint": "sha256:91b9b76fc858220505c09d6a25b19ebf9b103cf0a5d43a3e51a457d30d78a47b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "E[ f'(Z) - Z f(Z) ] for f(x) = x^3: +0.0020\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "E[ f'(Z) - Z f(Z) ] for f(x) = sin x: +0.0005\n"
+          "text": "E[ f'(Z) - Z f(Z) ] for f(x) = x^3: +0.0020\nE[ f'(Z) - Z f(Z) ] for f(x) = sin x: +0.0005\n"
         }
       ]
     }

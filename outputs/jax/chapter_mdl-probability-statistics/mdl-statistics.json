@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -45,18 +45,25 @@
       ]
     },
     "statistics-permutation-test": {
-      "code_fingerprint": "sha256:54a21b89c833dadd6e180d24711ef6295e25be7a580880d0821db3682930e163",
-      "kind": "text",
+      "code_fingerprint": "sha256:48f31959b139e563c366c8edb38847f642771748136111831c962fb123b4b5cf",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "observed gap        = 0.0073\npermutation p-value = 0.0197\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-statistics/statistics-permutation-test-1.svg",
+          "bytes": 32404,
+          "sha256": "sha256:a86b75e5d8aeb14e25049fd69a382af65029e6273aad10b75eb369191c1d2213"
         }
       ]
     },
     "statistics-confidence-interval": {
-      "code_fingerprint": "sha256:ce056d3bd5a0304c72ae6fb257c8e2055f52e8912e0b65e03d112f7c5e87a4db",
+      "code_fingerprint": "sha256:2840d84f72f78af8d4ec1d26b913957146cdb46ffb22bb59934f51d08b25a5a7",
       "kind": "text",
       "outputs": [
         {
@@ -65,8 +72,19 @@
         }
       ]
     },
+    "mdl-statistics-a-gaussian-example-1": {
+      "code_fingerprint": "sha256:ee0697b5d90989bbf5c764dcc4b3fe09e05ac629948cef6e539593901ff4bd93",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "937 of 1000 intervals contain the true mean (expected about 950)\n"
+        }
+      ]
+    },
     "statistics-bootstrap": {
-      "code_fingerprint": "sha256:8e90dcc2e963cebb8d8f43e942e27b39385f443e078dba6f317004d9fe469f7d",
+      "code_fingerprint": "sha256:c1465c436e3591891009ff11310b2c5dffbdaa47f9de8a250538a1c90d63d11c",
       "kind": "text",
       "outputs": [
         {
@@ -77,7 +95,7 @@
       ]
     },
     "statistics-bootstrap-contrast": {
-      "code_fingerprint": "sha256:89e427e07e584bcedaa51bc4c1ed7fea105516f07c85cb77f7dc7bd535373b93",
+      "code_fingerprint": "sha256:19bb62935d3169aeece24270e921e7ddc5ead046bc5c0c4cffe67ac8a6a733aa",
       "kind": "text",
       "outputs": [
         {

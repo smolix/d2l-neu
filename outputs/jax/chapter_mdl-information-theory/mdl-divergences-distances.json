@@ -14,7 +14,7 @@
       "outputs": []
     },
     "divergences-distances-f-table": {
-      "code_fingerprint": "sha256:b451189656f190cd5d252817efe5ab228459650c6f51ab0d663ed3ae4c9edf85",
+      "code_fingerprint": "sha256:bb7427c5a7f9dedee11ae3e7fb950a24900529d26cc3efe516f5f26c7290689a",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "divergences-distances-f-gan-bound": {
-      "code_fingerprint": "sha256:9bfee2009c540a72d9a51d00e56ff27f04fe7b5d5df627178be277a859e467b8",
+      "code_fingerprint": "sha256:ad5d8d9be4b903072cecf0e178f47e82dbf336f8604b19fda6f316fc1fa25bbe",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "divergences-distances-fwd-rev-kl": {
-      "code_fingerprint": "sha256:788af465585f8d9744e8d7a741c851163db1bc900b1afacf8752a7d278b1409d",
+      "code_fingerprint": "sha256:b5fbe52c1c40584c509a95e210f17f692041268448db2f01772db9d9ca5e3467",
       "kind": "mixed",
       "outputs": [
         {
@@ -49,12 +49,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37614,
-          "sha256": "sha256:a43de27aa3d1594ccaf8942dc66a62c0e1cf83856b3ce89f9e5a23a8f62d551e"
+          "sha256": "sha256:08c42a66fe0e55e5cd06779b4cd6f61eb7d974ca2c2faf00bb6ecc9ea0fa09f9"
         }
       ]
     },
     "divergences-distances-pinsker": {
-      "code_fingerprint": "sha256:ffd0bd365f7ec60021acbbfe32940860a026fe0014bfa82aeffd53e6fc8336bd",
+      "code_fingerprint": "sha256:de801e5d9ed46b619e50a7117f9618224d64f22c17d7b64ed88b6cfada6185e4",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +65,7 @@
       ]
     },
     "divergences-distances-mmd": {
-      "code_fingerprint": "sha256:5cda62755515327590bbc70aadf114f9683a6576889843446756ab0615ee49d5",
+      "code_fingerprint": "sha256:dfa10f56eb503624d6c3b74f50992c18967c0d9d92d8312711cd39c6e6a186e4",
       "kind": "text",
       "outputs": [
         {
@@ -76,7 +76,7 @@
       ]
     },
     "divergences-distances-w1": {
-      "code_fingerprint": "sha256:621f5ef9f84e3f43baea4dee9698d4303cb66c512f5d2d583a10362993bf2821",
+      "code_fingerprint": "sha256:9f8df46109b782e98b3d6dfc1fe7bfb12449d2938b507e0372f3afb26e27dae3",
       "kind": "text",
       "outputs": [
         {
@@ -87,18 +87,25 @@
       ]
     },
     "divergences-distances-sinkhorn": {
-      "code_fingerprint": "sha256:ddbf1571b8b70270dce109a4eebc0b76f077f656110a0664891d4c80c6454780",
-      "kind": "text",
+      "code_fingerprint": "sha256:f152a51b168847f13f9f304f993c970e76dc081026e50308f863085cd72faedc",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "epsilon = 1.00: entropic cost = 1.7700   (unregularized LP: 1.7000)\nepsilon = 0.10: entropic cost = 1.7000   (unregularized LP: 1.7000)\nepsilon = 0.02: entropic cost = 1.7000   (unregularized LP: 1.7000)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
+          "bytes": 35917,
+          "sha256": "sha256:ef2aa01d9dee540676b9bf49ee53d32ef79583ad280e44d227c33238256add76"
         }
       ]
     },
     "divergences-distances-score": {
-      "code_fingerprint": "sha256:40fee0ea1abd28e1f4d1c5ac27dfb1c17043e4841039b8cbf639ded69ac9c866",
+      "code_fingerprint": "sha256:e80fd97792ea2e4b327d7b426fa55f9c751821e197b0b9dc8d08d7f5a4200983",
       "kind": "text",
       "outputs": [
         {
@@ -109,7 +116,7 @@
       ]
     },
     "divergences-distances-stein": {
-      "code_fingerprint": "sha256:761e4ffcdb0c6fd0dea062181cb6fd7d2ede9346756d5d1523682d1ee422ee31",
+      "code_fingerprint": "sha256:80a60f0dabadddf85510b742410bc27ad9504f3f98b59f69ff4be0cb7f7b3fca",
       "kind": "text",
       "outputs": [
         {

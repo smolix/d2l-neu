@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
           "bytes": 26188,
-          "sha256": "sha256:c09c773c835925c7968356c9f26205aa93330f0020611c39c7e1d70c72cfb2c4"
+          "sha256": "sha256:c5becf215b5db36786172b86da9a4a87c8375b6359911377f5693073d9408e1c"
         }
       ]
     },
@@ -34,6 +34,19 @@
           "type": "stream",
           "name": "stdout",
           "text": "a single matrix \n [[-2.4424558  -2.0356805   0.20554423 -0.3535502 ]\n [-0.76197404 -1.1785518  -1.1482196   0.29716578]\n [-1.3105359   2.1302025  -0.18957235  0.96401215]\n [-1.3011001  -0.7486938  -0.3729984   0.4427907 ]]\nafter multiplying 100 matrices\n [[ 3.35691989e+22  1.62960807e+23  1.05114213e+23 -1.30175178e+23]\n [ 3.68540817e+22  1.78907297e+23  1.15400147e+23 -1.42913484e+23]\n [ 2.58827815e+22  1.25647115e+23  8.10458151e+22 -1.00368401e+23]\n [ 3.11850833e+22  1.51387186e+23  9.76488936e+22 -1.20930000e+23]]\n"
+        }
+      ]
+    },
+    "numerical-stability-and-init-depth-sweep": {
+      "code_fingerprint": "sha256:99f4af15d1304af0cdc33885af9db96cb210a67d7cf8eef4ac289a27790ed0e5",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
+          "bytes": 31003,
+          "sha256": "sha256:d45ea35f83ec8e0e8a5ccd9cfa19198bb102e5a52844f985b1dda011ee4665cd"
         }
       ]
     }

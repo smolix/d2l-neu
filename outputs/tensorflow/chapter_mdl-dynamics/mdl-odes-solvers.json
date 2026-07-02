@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 29488,
-          "sha256": "sha256:e436f36c1f4b966e47e1344827ce4f67cb3ed927750aee93ba2f0d344fd06b53"
+          "sha256": "sha256:b48503c264f440c7b0c86be62865708dc717b7e439cf1c3e9a5c584cd5a9da72"
         }
       ]
     },
@@ -53,35 +53,51 @@
         }
       ]
     },
-    "odes-solvers-neural-ode-train": {
-      "code_fingerprint": "sha256:6a3f1634db8134c72a1670d5cb6bd36eda7856148eb0f4c07b8bf71e34ecc7ad",
+    "mdl-odes-solvers-gradient-descent-is-a-solver": {
+      "code_fingerprint": "sha256:9c99baffb23cb932d9775efae55d42ff72cae3784ca47f4e161375df91b70d83",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter   0  loss 1.19266\niter 100  loss 0.00005\niter 200  loss 0.00001\niter 300  loss 0.00000\niter 400  loss 0.00000\nmean endpoint error: 0.0014\n"
+          "text": "GD on this quadratic is stable iff eta < 2/lambda_max = 0.2\n     eta  |1-eta*lam_max|  ||x|| after 100 GD steps\n   0.050             0.50                  5.92e-03\n   0.150             0.50                  8.75e-08\n   0.190             0.90                  2.66e-05\n   0.201             1.01                  2.70e+00\n   0.210             1.10                  1.38e+04\n   0.250             1.50                  4.07e+17\n"
         }
       ]
     },
-    "odes-solvers-adjoint-check": {
-      "code_fingerprint": "sha256:e6bf0d020b8f5783e2ef24da18bbd786c6dda24ec0a8a8143f5cfb1598310a91",
+    "odes-solvers-neural-ode-train": {
+      "code_fingerprint": "sha256:a88c4ea7340a3a8d4166fb4f82c7b2399f7d0ecb7704da2cfe00401538fac121",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "discrete adjoint vs finite differences: 1.2e-10\n"
+          "text": "iter   0  loss 1.32376\niter 100  loss 0.00005\niter 200  loss 0.00001\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+          "text": "iter 300  loss 0.00000\niter 400  loss 0.00000\nmean endpoint error: 0.0016\n"
+        }
+      ]
+    },
+    "odes-solvers-adjoint-check": {
+      "code_fingerprint": "sha256:ca3b046f39de017bcb50a0466dcdc7c874dac264982c7ec68bf87af67ed8b9b2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "discrete adjoint vs finite differences: 1.2e-10\nn =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
         }
       ]
     },
     "odes-solvers-cnf-trace": {
-      "code_fingerprint": "sha256:45170e7e053c5a3109739abce3a36a5c2bbf852b553602c2a6ad9b098f81f8dd",
+      "code_fingerprint": "sha256:062a4498b56743d6e75803957074c52cec86df4dd658de03c631fdf129b3d033",
       "kind": "text",
       "outputs": [
         {

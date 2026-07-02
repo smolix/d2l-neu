@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:92aa817f0d7b2bdce78511a2e2dd0cd588aa6567d8b93d831e1a36412006fd26",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
           "bytes": 24746,
-          "sha256": "sha256:8f86cb514700e4916a6342dacfa6f3e24ca7a5a7eebaced6189723fa6ab42a3d"
+          "sha256": "sha256:8629ab16d6a881bc94bb95f3626528b656f19d10f1d4dd0bde2285f7531929be"
         }
       ]
     },
@@ -63,8 +63,48 @@
         }
       ]
     },
+    "mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed": {
+      "code_fingerprint": "sha256:6d847d8ccffdca1d296399804672d401752d000afd97688d70673bc8f45a1372",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 10 strides vs 1000: mean |gap| 0.083, KS 0.080, mode fraction 0.495\n 50 strides vs 1000: mean |gap| 0.015, KS 0.018, mode fraction 0.495\nmode fraction at 1000 steps: 0.495; 5% KS threshold: 0.021\n"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule": {
+      "code_fingerprint": "sha256:a0efb6640de933eed6099c6f4af8893ca657aacba7a35a52b1a0525772e36836",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gamma =  1.0: mass right of 0: 1.000, mean 0.966, std 0.244\ngamma =  3.0: mass right of 0: 1.000, mean 1.035, std 0.236\ngamma = 10.0: mass right of 0: 1.000, mean 1.072, std 0.234\nthe honest conditional: mean 0.970, std 0.243\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
+          "bytes": 30656,
+          "sha256": "sha256:9ba28ad17005dee5331eda4957a9af754cf6b8cbc7cd7d944b027e977e58b794"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function": {
+      "code_fingerprint": "sha256:26902466e9761cb47528371254f40b3eac4807a36f96be2a87d76fbcc5651c79",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |u_posterior - u_dictionary| on [-4, 4]: 3.1e-15\n"
+        }
+      ]
+    },
     "score-matching-diffusion-flow-two-moons": {
-      "code_fingerprint": "sha256:9364ccaf39447be7f3a1663bed10632c21c1baab621f598c69c604b5ab192fcd",
+      "code_fingerprint": "sha256:ebd420b7b72fe14bb843fd0fc334ad2377e2efdf28446f77e0013737bdf203fd",
       "kind": "text",
       "outputs": [
         {
@@ -75,18 +115,13 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-train": {
-      "code_fingerprint": "sha256:f78cfd17ea25a86f85133c18633387d3e206c11db99f4cb43c1b872e2616ab2c",
+      "code_fingerprint": "sha256:9f83e160d42ca8069424a0ad2ccf64e5f7c123e6b3946ac7946541f1c6628609",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "step    0: CFM loss 2.125\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[03:58:51] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",
@@ -111,12 +146,12 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-sample": {
-      "code_fingerprint": "sha256:4faf8b830771d810450e693652adaf6a80c75e39ee70a94788cc4a23394d02d7",
+      "code_fingerprint": "sha256:d24d50563d58b7e42f6cd4210ddb6dbe7a17d11bb12c9dfbc1c37cb529390a5d",
       "kind": "text",
       "outputs": []
     },
     "score-matching-diffusion-flow-cfm-panels": {
-      "code_fingerprint": "sha256:010c9b0463e6a945dcd81548c29e6bfd2130768aee3e75ced7a70f932a1642de",
+      "code_fingerprint": "sha256:9bde83209a288f33e77c14db186bb84b330db469270d113bf03ecea4874cedfc",
       "kind": "asset",
       "outputs": [
         {
@@ -124,12 +159,38 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
           "bytes": 1114875,
-          "sha256": "sha256:6123c4b5b302a6a7772a172f5d2283334c6c468fafa98528ac8bd07f7f148303"
+          "sha256": "sha256:b25262e1bec1440b531edde4fe94cf0f670a792217a30db52ccc22100addbfd5"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-one-reflow-round-measured": {
+      "code_fingerprint": "sha256:b8a9a4c1e233f2bd1b12d1e1bc3453db10b0f1ef83c5da228b997b71051cc323",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final reflow loss 0.003\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1 step(s): energy distance  CFM 0.603  ->  reflow 0.003\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 2 step(s): energy distance  CFM 0.129  ->  reflow 0.003\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "32 step(s): energy distance  CFM 0.003  ->  reflow 0.003\n"
         }
       ]
     },
     "score-matching-diffusion-flow-steps-quality": {
-      "code_fingerprint": "sha256:7c5992e796367c006fd1c4b2415e619272492c8728f15478c531f16b726dbb4b",
+      "code_fingerprint": "sha256:ee160cd73cb15b3add9af2241146b2af252e3f2cb1d001dcb737e9d5a9a39aad",
       "kind": "mixed",
       "outputs": [
         {
@@ -142,12 +203,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
           "bytes": 24637,
-          "sha256": "sha256:181073b38acd3568c430c24224e8f2f5373f71f519bb3493d542cf1e1b839e7f"
+          "sha256": "sha256:4307f6ec5211d0146a18c921a60ae44045087f1822b7ba9d7646e2fc387e9433"
         }
       ]
     },
     "score-matching-diffusion-flow-euler-vs-heun": {
-      "code_fingerprint": "sha256:1ddca5a8f20205610a6c87224829d97040cd3a6fe385249b5ee6ae2719e3f7b0",
+      "code_fingerprint": "sha256:8ba9ee7a520e3772551d60586b5d0bd488bddb1ab895826cce5f6d0162cd7bd3",
       "kind": "text",
       "outputs": [
         {

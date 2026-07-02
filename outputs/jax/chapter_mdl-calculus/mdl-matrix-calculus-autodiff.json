@@ -24,8 +24,24 @@
         }
       ]
     },
+    "mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1": {
+      "code_fingerprint": "sha256:2036769bead1a2ff62b377b76efacb677ec6f6a45e3c9369ee0ed02cecb490ee",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "grad a^T x   equals a        : True\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "grad x^T A x equals (A+A^T)x : True\n"
+        }
+      ]
+    },
     "matrix-calculus-autodiff-softmax-jacobian": {
-      "code_fingerprint": "sha256:8b7ad9575a84eeb9d2cc56bffcc0c456b70e85d8f3bc807431a689db7ae353de",
+      "code_fingerprint": "sha256:6e9457d8bf529b61d77825dbd6880cbfd47640054d09ba9a37769e2c79e26709",
       "kind": "text",
       "outputs": [
         {
@@ -41,12 +57,12 @@
       ]
     },
     "matrix-calculus-autodiff-dual-numbers": {
-      "code_fingerprint": "sha256:e23a2883c27b7e779cdb8764e4147cd5d3f093d64a94b0b4cc790a269730d3c6",
+      "code_fingerprint": "sha256:105148f9c9f942b5d0299fa12e7fc0cbfd467430059e7d99561ea3d4e60ea6ff",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-dual-eval": {
-      "code_fingerprint": "sha256:e4423e497383f65c2c6a1c0c273b25b2f1defa5b9f0da91675f5c20f0a6c9387",
+      "code_fingerprint": "sha256:634db42482b85d60ba48f22a43730baa117c6b12becb993424cb226c5e5c7909",
       "kind": "text",
       "outputs": [
         {
@@ -57,7 +73,7 @@
       ]
     },
     "matrix-calculus-autodiff-forward-jvp": {
-      "code_fingerprint": "sha256:916b4b1efc09ef160015fe7a85075587f18560146d2e23f0523abd12c6bd3a69",
+      "code_fingerprint": "sha256:fa89ba9c684f70be4c2cb32cf6b13b90f0b69a2ce67d1f2594ed976088f3d993",
       "kind": "text",
       "outputs": [
         {
@@ -68,18 +84,51 @@
       ]
     },
     "matrix-calculus-autodiff-tape": {
-      "code_fingerprint": "sha256:1944f628df6c5f9c48fa0d9562c23bd2a739329c2df580da5023ded795384896",
+      "code_fingerprint": "sha256:d8f8d462bfaf933c03aad7b2fef061e0c3b9859fdd61a17f4a03fc735cd476fd",
       "kind": "text",
       "outputs": []
     },
     "matrix-calculus-autodiff-tape-check": {
-      "code_fingerprint": "sha256:8c2397c3065d5e3e49bc29b4b3c5b2a807131362c690238f7575f96b92705ff8",
+      "code_fingerprint": "sha256:9c6c5452510a786f7a7061fd0de8e85040a1ab65291689159a46f3c6831dd3ee",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "our tape   : dy/du = 16.0000  dy/dv = -16.0000\njax        : dy/du = 16.0000  dy/dv = -16.0000\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-autodiff-the-cost-asymmetry-measured": {
+      "code_fingerprint": "sha256:0f3c552b7319e275611a04c61ea9b7e2d91bbc0d41a064fb5d6fafe9135a796b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "forward mode : 200 passes (one per input)\nreverse mode : 1 backward sweep for all 200 partials\nmax |forward - reverse| over the gradient: 0.0e+00\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up": {
+      "code_fingerprint": "sha256:44171c60e46ed1c8e3176ce3b61470f74c94b9301781a139bb6a0b105125c5d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "forward-over-reverse Hv: [3.5 2. ]\nA v                    : [3.5 2. ]\n"
+        }
+      ]
+    },
+    "mdl-matrix-calculus-autodiff-differentiating-through-equations": {
+      "code_fingerprint": "sha256:fbb32c2e6d614eefb17ba4c69e33ce25b7d4a097f49d84edc360bb04eca0805e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "implicit-function gradient: [-0.11311451 -0.69322129]\nfinite-difference check   : [-0.11311451 -0.69322129]\n"
         }
       ]
     }

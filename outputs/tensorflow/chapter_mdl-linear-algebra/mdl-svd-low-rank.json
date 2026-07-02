@@ -13,8 +13,19 @@
       "kind": "text",
       "outputs": []
     },
+    "mdl-svd-low-rank-rotate-scale-rotate": {
+      "code_fingerprint": "sha256:724dfeb47d8a2d99392f5660db9607cdb1e7186685f4e6bfb839dbaf03ecee3a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dyadic rebuild error: 0.0\n"
+        }
+      ]
+    },
     "svd-defective-shear": {
-      "code_fingerprint": "sha256:139da5496125d770ccbbcc0f3ae3521b38b7a76076a64f91f60dd6b146f694cd",
+      "code_fingerprint": "sha256:2733ca4cb1200a35d53f8fb9b9082cd9f03678c4b2b2027c846686cf6bd6e3cc",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +36,7 @@
       ]
     },
     "svd-numerical-rank": {
-      "code_fingerprint": "sha256:5a852454080599f697684998dee993fdc1068247988f1c20335d1fe887f8a614",
+      "code_fingerprint": "sha256:4fda072c2493d5abba8ee319df2933f4cfd46997ec70db141624bab1d1046f70",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +47,7 @@
       ]
     },
     "svd-pca": {
-      "code_fingerprint": "sha256:dc4c4c16c308af837d44e55d1eafeac5bdf1fa5a423ca4e0b62fe5874cdff93b",
+      "code_fingerprint": "sha256:9077314d582a7c17a76f6e8e356f63a6c8c0afed8769c4c50ebb186309c1de95",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +58,7 @@
       ]
     },
     "svd-least-squares": {
-      "code_fingerprint": "sha256:4880c642724c91a5f1079a63f38b7b7d9c658ce53528d0ec573dbac908e027fe",
+      "code_fingerprint": "sha256:7c91e3324fd1e2e8053370483a65a6fb2e83cc3d3118c196aaffae4cee996d4a",
       "kind": "text",
       "outputs": [
         {
@@ -57,8 +68,19 @@
         }
       ]
     },
+    "mdl-svd-low-rank-the-svd-in-modern-deep-learning-1": {
+      "code_fingerprint": "sha256:0375be883c59c17a97788dbfe41a356ef16cdde461adc15db6d41faf01c18faf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "iter  2: sigma = [0.9982 0.8554 0.4648 0.1499]\niter  4: sigma = [1.     0.9987 0.8351 0.3291]\niter  6: sigma = [1.     1.     0.9978 0.6599]\niter  8: sigma = [1.     1.     1.     0.9663]\niter 10: sigma = [1. 1. 1. 1.]\ndistance to polar factor U V^T: 4e-06\n"
+        }
+      ]
+    },
     "svd-weight-spectrum": {
-      "code_fingerprint": "sha256:684d9cba8f5483c9e60c0b93995fef13f7f1d010aafde4e3f7858aa63da4b90c",
+      "code_fingerprint": "sha256:254af5e8f164abef7ab40148fda82d78b076e8e1f16bbf634ef6414b20b2e389",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +91,7 @@
       ]
     },
     "svd-verify": {
-      "code_fingerprint": "sha256:adb5370afc4de3745712521d40a9dd4712fafd9433050a97fc34aa30ad4e4ca5",
+      "code_fingerprint": "sha256:43d8a0fcf90b0b512b1b9027e65e02d098e8f8c3d2206602feb08232f7bd6b8e",
       "kind": "text",
       "outputs": [
         {

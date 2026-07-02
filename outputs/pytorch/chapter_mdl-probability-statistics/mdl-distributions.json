@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0\none sample -> class 1\n"
+          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0000001192092896\none sample -> class 1\n"
         }
       ]
     },
@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:dc832cd022ec33e8765a369b9e4d6db65abd9f03f9fc79d82c5d221a55eeb03f"
+          "sha256": "sha256:7c0e42b61a79c21afc494ad040f3dbdfacd6ef231f0a7642931bf0aaf2b56e45"
         }
       ]
     },
@@ -111,7 +111,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1/lambda = 2.0   sample mean = 2.0006933212280273\nvar 1/lambda^2 = 4.0  sample var = 4.040887832641602\n"
+          "text": "mean 1/lambda = 2.0   sample mean = 2.0006930828094482\nvar 1/lambda^2 = 4.0  sample var = 4.040887832641602\n"
         }
       ]
     },
@@ -124,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:4ea159a28f007b723ff6156d5618a409e8a69dd685e77a2e007e47f96700f37b"
+          "sha256": "sha256:671630c1ce9a51193ee5cf91980092112c986a65db273a10448cbfb13c3395bb"
         }
       ]
     },

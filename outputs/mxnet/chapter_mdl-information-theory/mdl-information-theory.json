@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, array(0.4970637))"
+          "text": "(0.5, array(0.49874008))"
         }
       ]
     },
@@ -100,7 +100,7 @@
       ]
     },
     "information-theory-coding": {
-      "code_fingerprint": "sha256:41eb49b7024e7767be418d4261fbc284f8338b395df6e27db4bedeb9abc85116",
+      "code_fingerprint": "sha256:06bdd4e99cc37ae59ba5172d054e74263615373a70cc8edc57769dea4f1f033e",
       "kind": "text",
       "outputs": [
         {
@@ -110,8 +110,19 @@
         }
       ]
     },
+    "mdl-information-theory-from-symbol-codes-to-arithmetic-coding": {
+      "code_fingerprint": "sha256:41368f8f5e3affacc368c69805c0592ed18d988b6bce4400b075b7f7b65994ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final width = 3.874205e-02, prod of probs = 3.874205e-02\ntotal surprisal = 4.69 bits\narithmetic code: 6 bits, symbol-by-symbol Shannon code: 13 bits\n"
+        }
+      ]
+    },
     "information-theory-perplexity": {
-      "code_fingerprint": "sha256:0512ba625ac956f4ba53515d6bbbbfe3415be08196faad416bf84c2e34b6f5f3",
+      "code_fingerprint": "sha256:9fed8cd5a2f515610ea4012dc61225c565b530c02f838bd8334ebabcdd4784c3",
       "kind": "text",
       "outputs": [
         {
@@ -122,18 +133,18 @@
       ]
     },
     "information-theory-label-smoothing": {
-      "code_fingerprint": "sha256:da3d97b6b10ec93a029da6f317706a52e0a2ba60a53fdcae52b8fe7880ddaf64",
+      "code_fingerprint": "sha256:115b339ccd55795719129e1c30d411f8f949af3bd05c9b5391d3b174f9954a00",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "optimal logit gap = ln(91) = 4.5109 nats\nCE at q* = H(p_eps) = 0.5003 nats\nCE at the overconfident q = 0.9004 nats\n"
+          "text": "optimal logit gap = ln(91) = 4.5109\nCE at q* = H(p_eps) = 0.5003 nats\nCE at the overconfident q = 0.9004 nats\n"
         }
       ]
     },
     "information-theory-distillation": {
-      "code_fingerprint": "sha256:efac0ad073b0902b3d5cdbb3981a33dfe8b15289b8cc7931fb95c8b2d85c730e",
+      "code_fingerprint": "sha256:3d6bda6a9ba44a4f484d17a5978098f35e941bf57b789d1a11a171ce77149d01",
       "kind": "text",
       "outputs": [
         {

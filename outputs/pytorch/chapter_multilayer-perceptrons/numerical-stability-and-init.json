@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
-          "bytes": 26187,
-          "sha256": "sha256:aeeb2a82523e0c349e429f09897f344fce011fdfde16199d405fbe4e7b98d993"
+          "bytes": 26193,
+          "sha256": "sha256:1620af08faad162f67c359dcb296a91d080806914cbcec52ce4b63be0d9edd93"
         }
       ]
     },
@@ -33,7 +33,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix \n tensor([[-0.0577, -0.4662, -0.3684,  0.8909],\n        [-1.0802, -0.5189,  0.8753,  0.5083],\n        [ 2.4085,  0.0341, -0.3920, -0.3687],\n        [ 1.0427, -0.2463, -1.0095,  0.1697]])\nafter multiplying 100 matrices\n tensor([[ 2.9602e+22, -6.9955e+23, -4.9493e+23,  7.5369e+23],\n        [-4.0803e+22,  9.6427e+23,  6.8222e+23, -1.0389e+24],\n        [ 5.6660e+22, -1.3391e+24, -9.4737e+23,  1.4427e+24],\n        [ 6.4834e+22, -1.5321e+24, -1.0840e+24,  1.6507e+24]])\n"
+          "text": "a single matrix \n tensor([[-0.0442, -0.4029,  0.8638,  0.3637],\n        [ 1.2370,  0.4134,  0.0477, -0.8279],\n        [-0.6382,  0.1565, -0.6342, -0.2568],\n        [-0.0615, -0.9342, -0.6624, -1.1510]])\nafter multiplying 100 matrices\n tensor([[ 9.0379e+26,  4.9669e+25, -8.2214e+26,  1.4187e+27],\n        [ 1.8029e+26,  9.9083e+24, -1.6401e+26,  2.8301e+26],\n        [-6.3479e+26, -3.4886e+25,  5.7744e+26, -9.9645e+26],\n        [ 1.3484e+27,  7.4106e+25, -1.2266e+27,  2.1167e+27]])\n"
         }
       ]
     },
@@ -45,8 +45,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31014,
-          "sha256": "sha256:74fd7eb1792cb21fa1aa1688b9c75c0e16356e77214058e691b03c2405f5d47c"
+          "bytes": 31006,
+          "sha256": "sha256:cb079944bef62fd4232987ce6f32022b1461311692c7e91ec242f53489965e8f"
         }
       ]
     }

@@ -41,18 +41,63 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
-          "bytes": 47657,
-          "sha256": "sha256:2a3a4f2927311ef1cae5d9ca01be6104d7874b3804239fb8131e01b91057c646"
+          "bytes": 47953,
+          "sha256": "sha256:c6a1e72fed4cff97637fd7c3e1b6e66e325a89b218b97f6c592225c54299d41e"
         }
       ]
     },
     "naive-bayes-predict": {
-      "code_fingerprint": "sha256:7a41e6b2cd27436352279ad95df4b78dcb7c7a371290152aee21e4c0ddda2166",
+      "code_fingerprint": "sha256:ddb687948509a9b5514785b415721b770e8d7b6808cdce5755885a18afe59f25",
       "kind": "text",
       "outputs": [
         {
+          "type": "stream",
+          "name": "stdout",
+          "text": "float32 underflow: 99.1% of class scores; smallest float64 survivor = 1e-323\n"
+        },
+        {
           "type": "execute_result",
           "text": "0.8427"
+        }
+      ]
+    },
+    "mdl-naive-bayes-calibration-1": {
+      "code_fingerprint": "sha256:52c9830f5b0a8a82d40763593a31ec874d5153f54c9e0d45aa3f2cff55225060",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test accuracy = 0.8427, bootstrap 95% CI = (0.8354, 0.8496)\n"
+        }
+      ]
+    },
+    "mdl-naive-bayes-calibration-2": {
+      "code_fingerprint": "sha256:9b033e69dbf1b98aba608d1e7d9ba5685c07bbe6642c3bd20f111ad072ceef4f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "most confused true->predicted: 4->9 (138), 5->3 (106), 8->3 (68), 7->9 (67)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-naive-bayes/mdl-naive-bayes-calibration-2-1.svg",
+          "bytes": 22680,
+          "sha256": "sha256:bd27d72d38a669ad5d4660b7f5c9ca5e18d7eef13d0850903e51bfc895688664"
+        }
+      ]
+    },
+    "mdl-naive-bayes-calibration-3": {
+      "code_fingerprint": "sha256:7ec1167dcfe7ac0c8d3dff38f553c7a4b15e761a3175631fb4ff590e8ef43557",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean claimed confidence = 0.986,   actual accuracy = 0.843\nconfidence in (0.0, 0.9]:   447 examples,  claimed 0.7229,  achieved 0.3736\nconfidence in (0.9, 0.99]:   455 examples,  claimed 0.9606,  achieved 0.4747\nconfidence in (0.99, 0.999]:   406 examples,  claimed 0.9960,  achieved 0.5640\nconfidence in (0.999, 1.0]:  8692 examples,  claimed 1.0000,  achieved 0.8991\n"
         }
       ]
     }

@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-regression/generalization.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "generalization-polynomial-curve-fitting-1": {
+      "code_fingerprint": "sha256:aed257699cec6032683d1d78d839b8f9e1d09a167bec02a88deedc51f5241d6c",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-polynomial-curve-fitting-2": {
+      "code_fingerprint": "sha256:5a37ce6db7c1cf12c22e76d54fad0a7a68dbf11a1352cebee3e8fe109c51eb0a",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-polynomial-curve-fitting-3": {
+      "code_fingerprint": "sha256:c3808c95aea49cc5fd8e4d5b51a3ff2473fa19e04d069fafd55e346d81baa0da",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-polynomial-curve-fitting-4": {
+      "code_fingerprint": "sha256:8a5dcd3ab6ef9c748a6d8b618d9950cbcfaed1458041731047dbdd5f8c0cb30f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "underfitting (degree 1) : train   1.6698   test       1.7318\njust right   (degree 3) : train   0.0136   test       0.0129\noverfitting   (degree 19): train   0.0000   test 49271508224071.6328\n"
+        }
+      ]
+    },
+    "generalization-polynomial-curve-fitting-5": {
+      "code_fingerprint": "sha256:b7482d64e9a1967ab9345bbc97ba92653cc6d8391d10b4c3e7b8a6f16ad49106",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "generalization/generalization-polynomial-curve-fitting-5-1.svg",
+          "bytes": 22201,
+          "sha256": "sha256:af7a955273e3ee53318a2334f592319b81d2be9af5aaeb12fb793855507047c6"
+        }
+      ]
+    },
+    "generalization-bias-variance-decomposition": {
+      "code_fingerprint": "sha256:4a17b68c9f81e94800133d459bb0e831c1276ddc284a0ef44380b67c4b12f376",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "generalization/generalization-bias-variance-decomposition-1.svg",
+          "bytes": 26809,
+          "sha256": "sha256:87a25150fe5165c555bccae12f850975f14eb2895e13eabcece38318cb775edb"
+        }
+      ]
+    }
+  }
+}

@@ -13,8 +13,19 @@
       "kind": "text",
       "outputs": []
     },
+    "mdl-svd-low-rank-rotate-scale-rotate": {
+      "code_fingerprint": "sha256:b5e342b6181e770891d3033f154d1bfcfd15ae3543fed4769b72b20ec851d436",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dyadic rebuild error: 0.0\n"
+        }
+      ]
+    },
     "svd-defective-shear": {
-      "code_fingerprint": "sha256:a7cc7d1f51a71f560aa52d61502f86c9bcb374b34330b15727e0fc82d4e81113",
+      "code_fingerprint": "sha256:63b01fe0494a1b9fc4934c33e2c9a0b3c0073591d60a11952bc35a1eb353dc5c",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +36,7 @@
       ]
     },
     "svd-numerical-rank": {
-      "code_fingerprint": "sha256:9ab06733b436ec00a312dd1db150280f2dc85778d757a2f16b10032fcc606eb7",
+      "code_fingerprint": "sha256:8544606f9037ff7eca8d40d32b597a728c59074e425181d81e231f2f546853ef",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +47,7 @@
       ]
     },
     "svd-pca": {
-      "code_fingerprint": "sha256:a65dfe1b97ffe12f934ea9029ff66298baf9582eaa8aee174c9346440006f267",
+      "code_fingerprint": "sha256:e76c1c048a3a12fed9a08c47070279ae0cb86cccd7464dccf264106bf98194b3",
       "kind": "text",
       "outputs": [
         {
@@ -47,18 +58,34 @@
       ]
     },
     "svd-least-squares": {
-      "code_fingerprint": "sha256:41ec1bb34211bc884995015d5fd7c88af3a4888a6877b1b8bb1892c2891ff05a",
+      "code_fingerprint": "sha256:c0575481de19c6b369cfff6c9e6b0ac592384981183e1c177f6746aad7c92b9b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pinv : [3.5 1.4]  residual 2.0494\nlstsq: [3.5 1.4]  residual 2.0494\ncond(A)     = 7.469\ncond(A^T A) = 55.782 = cond(A)^2\n"
+          "text": "pinv : [3.5 1.4]  residual 2.0494\nlstsq: [3.5 1.4]  residual 2.0494\ncond(A)     = 7.469\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cond(A^T A) = 55.782 = cond(A)^2\n"
+        }
+      ]
+    },
+    "mdl-svd-low-rank-the-svd-in-modern-deep-learning-1": {
+      "code_fingerprint": "sha256:a46ef6d4f9744de717e3bbfccb8119c635b3c2b796d2e4a9ba573f442d58eea2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "iter  2: sigma = [0.9982 0.8554 0.4648 0.1499]\niter  4: sigma = [1.     0.9987 0.8351 0.3291]\niter  6: sigma = [1.     1.     0.9978 0.6599]\niter  8: sigma = [1.     1.     1.     0.9663]\niter 10: sigma = [1. 1. 1. 1.]\ndistance to polar factor U V^T: 4e-06\n"
         }
       ]
     },
     "svd-weight-spectrum": {
-      "code_fingerprint": "sha256:8d3cb4ca1f0929626bee07f3aa0128117c5261322ece2ecdc6825d7d6b32246d",
+      "code_fingerprint": "sha256:1e17e7d9ee1130665fcd4d9769756394eb546296b0eec9078166949c8c5b82d9",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +96,7 @@
       ]
     },
     "svd-verify": {
-      "code_fingerprint": "sha256:9705ef3ffdec0a7fd0c903350762cbab3eb52a556167e7b2d5bb49ded45bafc8",
+      "code_fingerprint": "sha256:e6ec8e12970ffc589e1202d87b5b6fb31f5bc007fe2e3a2b0fdc8ef0de141056",
       "kind": "text",
       "outputs": [
         {

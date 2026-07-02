@@ -9,12 +9,12 @@
   },
   "cells": {
     "linear-algebra": {
-      "code_fingerprint": "sha256:10bd93d1f581082f85121b0741bb86b86ce2346eca677de2f52b3dd7a7034c29",
+      "code_fingerprint": "sha256:934fd551d91d9735877015aa238acb306a6003eab0e8efd2d1c645d8545b15cf",
       "kind": "text",
       "outputs": []
     },
     "linear-algebra-scalars": {
-      "code_fingerprint": "sha256:fa2e9d90decafbd29edd0ad5d8cd590085dc1996c9238140b034b48a27c1c9df",
+      "code_fingerprint": "sha256:f9cc996b02a5392a627d018ed79376088023d6da8e68ccbf6fbe0aecd3997892",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "linear-algebra-vectors-1": {
-      "code_fingerprint": "sha256:3cc02c4dca356a13f703267fec2150fd8f9e7576d1db73f107cee207012ae279",
+      "code_fingerprint": "sha256:d1785d3872dab0f7bbeea98fdd7ee3c69ae7f1db08d4c3b25c7143b9d51ab12e",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +34,7 @@
       ]
     },
     "linear-algebra-vectors-2": {
-      "code_fingerprint": "sha256:c5d7ee8154484f4f373133245c09f12257367311efc860b0653d4d99222fae55",
+      "code_fingerprint": "sha256:3d19e53284a29c8d53b393e2d92fca3be3fd57a0de41b5fef8badfd071c1a5ee",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "linear-algebra-vectors-3": {
-      "code_fingerprint": "sha256:2bbf48124641af9bd246d92c8c08ccbf4381410532868e46be405424f579ad37",
+      "code_fingerprint": "sha256:bcd4aa1d6d3a6bd9e5f6d3ee2b1ce14e338e6669c5f6d35c59aa44559a75946c",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +54,7 @@
       ]
     },
     "linear-algebra-vectors-4": {
-      "code_fingerprint": "sha256:fd09d1ee37ee1407ddbd0b95a97705e4e3564d262beb11e83901c4943a832467",
+      "code_fingerprint": "sha256:2d468c2d45f8a4326b007d5fadbef8e6dc8596c8e096e5661e971fcb3826202d",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +64,7 @@
       ]
     },
     "linear-algebra-matrices-1": {
-      "code_fingerprint": "sha256:020a3b21faafbe40e6383dd6d3067777676d923dba98656159021f184c44d977",
+      "code_fingerprint": "sha256:1b4b004c9fde481751c0f9415e69941c386a98360d62ab14d48a68bc310b2727",
       "kind": "text",
       "outputs": [
         {
@@ -74,7 +74,7 @@
       ]
     },
     "linear-algebra-matrices-2": {
-      "code_fingerprint": "sha256:339d753680c3a0d5eee090081792ae717ced7fe85849205572b3b9ec5ad33157",
+      "code_fingerprint": "sha256:34c77762a956faff8e3e993c5914a5c64d8af74b0cb8e6772bab7f713e89bce1",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "linear-algebra-matrices-3": {
-      "code_fingerprint": "sha256:590b0774b32c2a5409bb586eeded3335be013c1aee0f4b097a630fa5e48e657d",
+      "code_fingerprint": "sha256:1457a6dde0e6adfcb5fbfef1898c3441eb8151749c2357786ecbfb9e0a9c0e99",
       "kind": "text",
       "outputs": [
         {
@@ -94,7 +94,7 @@
       ]
     },
     "linear-algebra-tensors": {
-      "code_fingerprint": "sha256:feb2baea98ded2d4ba5414dec7c51cebf9bd892593819bed25d5f322ecde6183",
+      "code_fingerprint": "sha256:7fec19d37ca68968f40ad972ceec71cba79f4a459a868ef61d674658f0274c88",
       "kind": "text",
       "outputs": [
         {
@@ -104,7 +104,7 @@
       ]
     },
     "linear-algebra-basic-properties-of-tensor-arithmetic-1": {
-      "code_fingerprint": "sha256:4c0ee641ed0191036abd718058bd4993c2cc16d29d9a1aba0174de086255d0a6",
+      "code_fingerprint": "sha256:b7262d633579c0a23d14639190a22e9d61655c78a349ec6a004874e813baddfa",
       "kind": "text",
       "outputs": [
         {
@@ -114,7 +114,7 @@
       ]
     },
     "linear-algebra-basic-properties-of-tensor-arithmetic-2": {
-      "code_fingerprint": "sha256:3e105b269074954bce3de13f63bb10ffe65979f8e768607968950be28372fff1",
+      "code_fingerprint": "sha256:c27f2e1dd567d08bea014f442c650a0a9d2c890cf8ec57c46bf6e95bb9b727ca",
       "kind": "text",
       "outputs": [
         {
@@ -124,7 +124,7 @@
       ]
     },
     "linear-algebra-basic-properties-of-tensor-arithmetic-3": {
-      "code_fingerprint": "sha256:71a244515d4c7fedbc16a061646b7ed3333d84a276a24eea8e2a2a2fb2517598",
+      "code_fingerprint": "sha256:ce46ad8b325f4297b799fa747be9208c79e2c17d07aba1487be47024137caa79",
       "kind": "text",
       "outputs": [
         {
@@ -134,7 +134,7 @@
       ]
     },
     "linear-algebra-reduction-1": {
-      "code_fingerprint": "sha256:2436671a91e0e818a40e8b74f058c6627a062482da12e8020c7c765f6df31086",
+      "code_fingerprint": "sha256:78f9f25706d9dcf2536da8cd26c91f660257a72e287c79284cf515b3a83e5e8c",
       "kind": "text",
       "outputs": [
         {
@@ -144,7 +144,7 @@
       ]
     },
     "linear-algebra-reduction-2": {
-      "code_fingerprint": "sha256:d1e9fbf2aa6f3280d46e26456799e4580515fe9d3b7fe32d07f7e5567a241eb0",
+      "code_fingerprint": "sha256:f2eed0e9846e93f5f77e7e38469425c36ada5cd2c1fb2902b7d3863523d259ae",
       "kind": "text",
       "outputs": [
         {
@@ -154,7 +154,7 @@
       ]
     },
     "linear-algebra-reduction-3": {
-      "code_fingerprint": "sha256:7d41fac9d5f3914ee3fe09ff76df7952ed5829e42b96385d00980c4ec9e62825",
+      "code_fingerprint": "sha256:e212e3f4edf33130f3998486285b80f356099f8c7e79e5ecad12c55df0530c49",
       "kind": "text",
       "outputs": [
         {
@@ -164,7 +164,7 @@
       ]
     },
     "linear-algebra-reduction-4": {
-      "code_fingerprint": "sha256:822f3d26c57718a88bd3de549f08a4f08fee5ef9f756c517a0d3cb52e93ba8eb",
+      "code_fingerprint": "sha256:2f11411dae83105f794b1e2bb9aed4170d2f3007705b56f9c7b383364bb5fb8f",
       "kind": "text",
       "outputs": [
         {
@@ -174,7 +174,7 @@
       ]
     },
     "linear-algebra-reduction-5": {
-      "code_fingerprint": "sha256:c39876414b137356b4dbabb8bca27d3286cc68b039420f587c882d1db855f2cd",
+      "code_fingerprint": "sha256:bb73e605db5d6be372ae120cec56cc5b5d99fd5b0da2504e9f17165dd069481b",
       "kind": "text",
       "outputs": [
         {
@@ -184,7 +184,7 @@
       ]
     },
     "linear-algebra-reduction-6": {
-      "code_fingerprint": "sha256:89cb5e917b89ed688558cdf331f3cda5f1fb79a779da0848de8302ee947f2b6b",
+      "code_fingerprint": "sha256:d3b180a211ad07042100ba3479e572f0913b9b0505ff2a9fc51982f9d20e379f",
       "kind": "text",
       "outputs": [
         {
@@ -194,7 +194,7 @@
       ]
     },
     "linear-algebra-reduction-7": {
-      "code_fingerprint": "sha256:e30e611d7b95fa3073d2853cd42a1a9a075080e06bc610801031e75265592d91",
+      "code_fingerprint": "sha256:df11410cf66b3005e8449d739db8131334a5bbc84aa2dd260ea779a9788dd1e4",
       "kind": "text",
       "outputs": [
         {
@@ -204,7 +204,7 @@
       ]
     },
     "linear-algebra-non-reduction-sum-1": {
-      "code_fingerprint": "sha256:cfba79baecc2772c44db56554d1eb4bd203f9b1fb098cdf8045ea42969d4e7a2",
+      "code_fingerprint": "sha256:1ab2da7f4d73713a68bf2d2959a0731aecc4f460bda8ee14b376867a9169b9a5",
       "kind": "text",
       "outputs": [
         {
@@ -214,7 +214,7 @@
       ]
     },
     "linear-algebra-non-reduction-sum-2": {
-      "code_fingerprint": "sha256:eb2343e439aab9c19dff85a32a677e797faaf7b7db1444cafd23f70a7605cf59",
+      "code_fingerprint": "sha256:75d8696028518839368e0e65c2160918fd0e1612bf71c14cef07d7a2243fa738",
       "kind": "text",
       "outputs": [
         {
@@ -224,7 +224,7 @@
       ]
     },
     "linear-algebra-non-reduction-sum-3": {
-      "code_fingerprint": "sha256:288aa4b6a2698efcbd01ac7994edfbc3b6c5cb9b3127ead6e04932d296414f22",
+      "code_fingerprint": "sha256:4ea97d902ad3bdcefe37350b59d1133a260ab55e6b34624cd1de3cdc1879d69c",
       "kind": "text",
       "outputs": [
         {
@@ -234,7 +234,7 @@
       ]
     },
     "linear-algebra-dot-products-1": {
-      "code_fingerprint": "sha256:ca79e4ec7d15706a5cd3d4c2048eec4a1b8c1c345f7f668eca8c9392d05ed5e5",
+      "code_fingerprint": "sha256:9f73754772e74e40e82d62245c527d5b189781f5df63ee17b2ac67f73d19d1d0",
       "kind": "text",
       "outputs": [
         {
@@ -244,7 +244,7 @@
       ]
     },
     "linear-algebra-dot-products-2": {
-      "code_fingerprint": "sha256:d7d4622dd5aad1ecb9e39ed8c423e4cd30ac0a1c1290925cfc4d45cf93f99122",
+      "code_fingerprint": "sha256:e43d2520f92c663ec3c7e42b6c9042a7890c6448f48cbb1f36b36258ffc0ee25",
       "kind": "text",
       "outputs": [
         {
@@ -253,8 +253,28 @@
         }
       ]
     },
+    "linear-algebra-dot-products-3": {
+      "code_fingerprint": "sha256:7547265f97ca90db85e16e356b23de562e71917bf8fb2460a6285371f7d43c48",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array(1.7202967, dtype=float32), Array(True, dtype=bool))"
+        }
+      ]
+    },
+    "linear-algebra-matrix-vector-products-2": {
+      "code_fingerprint": "sha256:2cd24ec051bf8b7095b557cb6a795e0ffb55683e2b77c99c256688812022991c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([0., 1.], dtype=float32), Array([-1.,  0.], dtype=float32))"
+        }
+      ]
+    },
     "linear-algebra-matrix-vector-products": {
-      "code_fingerprint": "sha256:8f73d24c4b8ebb84176e3b12cfabc2a658a04a977326e18e2cc3730193551e70",
+      "code_fingerprint": "sha256:6778589a40c44d990e519d516f9e184fad2154660810229a17277de3e62e036d",
       "kind": "text",
       "outputs": [
         {
@@ -264,7 +284,7 @@
       ]
     },
     "linear-algebra-matrix-matrix-multiplication": {
-      "code_fingerprint": "sha256:7e69190dcc53698b35f9626be1f8c2c5c8325ecf71b01e3bc951541243ad6f2f",
+      "code_fingerprint": "sha256:a30cfb22f9b9d95574d2888ae3a282083a329103f0089fe60cc372a7ecb846be",
       "kind": "text",
       "outputs": [
         {
@@ -274,7 +294,7 @@
       ]
     },
     "linear-algebra-norms-1": {
-      "code_fingerprint": "sha256:4eab1cec4f362796f552ef1bdac1d79e65c5bdb654865f3ce6f161b1133b8502",
+      "code_fingerprint": "sha256:2c9ee72e17ee1a1178d27a514987f942d97be8ebddfe2c7ab40c7af16cc8ab74",
       "kind": "text",
       "outputs": [
         {
@@ -284,7 +304,7 @@
       ]
     },
     "linear-algebra-norms-2": {
-      "code_fingerprint": "sha256:5bc9b9cad589cc9ffab00a2815033124239baff6bb768b9d081529a1ae6265d0",
+      "code_fingerprint": "sha256:77dba5cc7e0fd1848ceb377808763dfe566f4396ccc92686779c994220c12e3b",
       "kind": "text",
       "outputs": [
         {
@@ -293,13 +313,44 @@
         }
       ]
     },
+    "linear-algebra-norms-4": {
+      "code_fingerprint": "sha256:059fb083aa4401543394f632d96b0226fa37f5d7ddbf8eac0b450ac97aa3be4c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3.259593 3.259593\nTrue\n"
+        }
+      ]
+    },
     "linear-algebra-norms-3": {
-      "code_fingerprint": "sha256:24b1c822c85fd35e0cb1c07cd3a43aff2a45e30c62e6f135b260658a5c6ec437",
+      "code_fingerprint": "sha256:318570ec2467d021f49aa997177d87424f2df3b5d54ce1ec3f7c409848d03da2",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "Array(6., dtype=float32)"
+        }
+      ]
+    },
+    "linear-algebra-eigenvalues-1": {
+      "code_fingerprint": "sha256:e0f47297646e49ac621836bdeae9e523165e58e699d55749c413eabceade4286",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([-2.262772, -0.598474,  8.861247], dtype=float32)"
+        }
+      ]
+    },
+    "linear-algebra-eigenvalues-2": {
+      "code_fingerprint": "sha256:02c12571e41b72793519c224b26ce92db82fe9e1d96447091bd2a0fddb9c2682",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(8.861246, dtype=float32)"
         }
       ]
     }

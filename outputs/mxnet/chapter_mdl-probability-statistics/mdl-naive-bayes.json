@@ -42,17 +42,62 @@
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
           "bytes": 47953,
-          "sha256": "sha256:197e121c60f964bfd8d300d5d9c698463b5830cc02c386050ded50bdf4c1aeb4"
+          "sha256": "sha256:8576e985a5ffa5165a4cb576fe56cb684e6dea9e05e0b832752284bcee969fc7"
         }
       ]
     },
     "naive-bayes-predict": {
-      "code_fingerprint": "sha256:f5c472e7e77342797c70e10e5b7516ff04ba0ea6b4128aec74e341114a6d2dba",
+      "code_fingerprint": "sha256:c6795074cfe10d57ffcc99e832e2674553b57d93c116b13ff5e50492646a4904",
       "kind": "text",
       "outputs": [
         {
+          "type": "stream",
+          "name": "stdout",
+          "text": "float32 underflow: 99.4% of class scores; smallest float64 survivor = 1e-307\n"
+        },
+        {
           "type": "execute_result",
           "text": "0.8427"
+        }
+      ]
+    },
+    "mdl-naive-bayes-calibration-1": {
+      "code_fingerprint": "sha256:01ae3f1584530843acbd9c552ddef6347601bb405a29dd93de7ac3e5575e284f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test accuracy = 0.8427, bootstrap 95% CI = (0.8354, 0.8496)\n"
+        }
+      ]
+    },
+    "mdl-naive-bayes-calibration-2": {
+      "code_fingerprint": "sha256:561cb33a61205806b526ba37b9f817f0e06c566de179727bdff3b0ab52980322",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "most confused true->predicted: 4->9 (138), 5->3 (106), 8->3 (68), 7->9 (67)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-naive-bayes/mdl-naive-bayes-calibration-2-1.svg",
+          "bytes": 22680,
+          "sha256": "sha256:fdf9cb40362dd456fd2d19ff09f91490711ce69726e6c50e6d977522139a03f1"
+        }
+      ]
+    },
+    "mdl-naive-bayes-calibration-3": {
+      "code_fingerprint": "sha256:36863e0ae2bf75ad510103f51d418cddb8f0ce8306400b16a0d442a40ec9b10f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean claimed confidence = 0.986,   actual accuracy = 0.843\nconfidence in (0.0, 0.9]:   447 examples,  claimed 0.7229,  achieved 0.3736\nconfidence in (0.9, 0.99]:   455 examples,  claimed 0.9606,  achieved 0.4747\nconfidence in (0.99, 0.999]:   406 examples,  claimed 0.9960,  achieved 0.5640\nconfidence in (0.999, 1.0]:  8692 examples,  claimed 1.0000,  achieved 0.8991\n"
         }
       ]
     }

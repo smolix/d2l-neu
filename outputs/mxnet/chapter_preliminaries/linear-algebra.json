@@ -253,8 +253,28 @@
         }
       ]
     },
+    "linear-algebra-dot-products-3": {
+      "code_fingerprint": "sha256:b7c1a824c93f8149f50e9fc5f495f6c4ca3cfe11290fefb8f4e71837ec55bb53",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array(1.6036638), array(True))"
+        }
+      ]
+    },
+    "linear-algebra-matrix-vector-products-2": {
+      "code_fingerprint": "sha256:5f4571674c3a5e0a5c7fd50a96d0834fdd915bf8f2a1e58a3f34d6b1777bf6eb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array([0., 1.]), array([-1.,  0.]))"
+        }
+      ]
+    },
     "linear-algebra-matrix-vector-products": {
-      "code_fingerprint": "sha256:16accfc632160c684a4ee3742f6ebe11ba08ae3624eff663fcad7a5ab67603cc",
+      "code_fingerprint": "sha256:6df85670145fc022d18d863ce4dfe446cc03d64825bb4d7680960f77e73749fe",
       "kind": "text",
       "outputs": [
         {
@@ -264,7 +284,7 @@
       ]
     },
     "linear-algebra-matrix-matrix-multiplication": {
-      "code_fingerprint": "sha256:23e5ecbb5d1ae9cf92967280ce12e36534c1f0a5ec558abb8cefeccf4c1b03c0",
+      "code_fingerprint": "sha256:eff83335c0f80e55513d1d5e34016eb4a9d4ccd1aa00dcb81ff4249dad4105d2",
       "kind": "text",
       "outputs": [
         {
@@ -274,7 +294,7 @@
       ]
     },
     "linear-algebra-norms-1": {
-      "code_fingerprint": "sha256:211f446df7295d9e3419991ee970f9928532c20ce7c144d36cb79e4f26e30dc9",
+      "code_fingerprint": "sha256:7e15974b9651ed38b2b7e5bb51cc7ce5c11cee6bb97585095702f65da15f643d",
       "kind": "text",
       "outputs": [
         {
@@ -284,7 +304,7 @@
       ]
     },
     "linear-algebra-norms-2": {
-      "code_fingerprint": "sha256:e9814789d6c71d36bafb61520663dd054c97415fad7612b880c0fda7b4728107",
+      "code_fingerprint": "sha256:531a4201f5ee96d525fb8f28fbc22b85d6cf5e4595843faf1aa747baf37a518e",
       "kind": "text",
       "outputs": [
         {
@@ -293,13 +313,44 @@
         }
       ]
     },
+    "linear-algebra-norms-4": {
+      "code_fingerprint": "sha256:ed59a880a3ad55fdfa214e7d7f270683205297a3527ca4e4abd86cdf49b03c4b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "6.488939 6.488939\nTrue\n"
+        }
+      ]
+    },
     "linear-algebra-norms-3": {
-      "code_fingerprint": "sha256:090415398d964470fb9bb8bbb9bc87a321d44f8943399fedad64c3189df9ecc8",
+      "code_fingerprint": "sha256:678cfb4206b3c4e3704cf2036dc3409c02321c9e618f4a816b28d2c99a6fce6d",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "array(6.)"
+        }
+      ]
+    },
+    "linear-algebra-eigenvalues-1": {
+      "code_fingerprint": "sha256:302d3c3ccdf872d4458a7349e850878b2b4192501a37b0f370b758b3234cc364",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([-2.2627723, -0.5984747,  8.861247 ])"
+        }
+      ]
+    },
+    "linear-algebra-eigenvalues-2": {
+      "code_fingerprint": "sha256:39c14291bcdb68f4402e35aaedddda18969c11d80f65cc7c269b2866ba0bc585",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array(8.861247)"
         }
       ]
     }

@@ -61,35 +61,35 @@
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-1": {
-      "code_fingerprint": "sha256:b896b82db819daa8d7ac008177002f0a8d9292c3d3054d7db19b2f3480e642f6",
+      "code_fingerprint": "sha256:b4be4683a0b0fd42a92d8dde892c6507de750ed6c93f140028cb79ffe9a4ad1f",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-2": {
-      "code_fingerprint": "sha256:8d2d5e7fa8388b6b3548c8607be70713aa31a2a5ed687e5f7cd98fb09c2fb6ab",
+      "code_fingerprint": "sha256:53a16302e5cd32d1098c8cc3a294a95fe05775c05f32dd2662f8fd781d4103ca",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-model-selection-linear": {
-      "code_fingerprint": "sha256:44b1bba71a4f2ab1180ce607e68fda090428261ad7c22841d960ae50ac4dc329",
+      "code_fingerprint": "sha256:4bb7d0f59ba913438557d9737d85925a94daf9e6b6f3d322d55d071867b0662a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "average validation log mse = 0.17979712426662445\n"
+          "text": "average validation log mse = 0.032737665213644504\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-linear-1.svg",
-          "bytes": 21407,
-          "sha256": "sha256:4f4e77e2fca05f7ac3dc949d7ff156e9c968128e9e132d9284954b5037187114"
+          "bytes": 30885,
+          "sha256": "sha256:34b2764fcf566b4629d61b49e20bb172424585a377faf676c68ef1635a0e9e26"
         }
       ]
     },
     "kaggle-house-price-submitting-predictions-on-kaggle": {
-      "code_fingerprint": "sha256:887358046badab7bdb16842935a245fdaab79a49c573c2b6354abab085ee382f",
+      "code_fingerprint": "sha256:2fcb18cf53b291d72778ac46242c83e48b45eb0edb50e672f67755dab2c70544",
       "kind": "text",
       "outputs": []
     }

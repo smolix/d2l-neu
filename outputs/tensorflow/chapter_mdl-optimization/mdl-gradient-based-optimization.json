@@ -46,8 +46,19 @@
         }
       ]
     },
+    "gradient-based-optimization-edge-of-stability": {
+      "code_fingerprint": "sha256:40ee0f513fe60ee93ae39bab63e89c6efb8373459282656ff2273c9271781ab0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        eta = 0.40 (2/eta = 5.0)   eta = 0.25 (2/eta = 8.0)\n    k      loss    sharpness         loss    sharpness\n     0    0.5097      3.32         0.5097      3.32\n  4000    0.0124      4.94         0.0104      8.02\n  8000    0.0008      4.97         0.0021      7.96\n 12000    0.0007      5.00         0.0007      7.97\n 16000    0.0005      5.00         0.0004      7.97\n 20000    0.0004      5.00         0.0003      7.97\n"
+        }
+      ]
+    },
     "gradient-based-optimization-contraction": {
-      "code_fingerprint": "sha256:a0196ad6b8d59b48bc939af56fa5abb9cafc221aab049e0e7497c44bf9be83e7",
+      "code_fingerprint": "sha256:be413e1e775a6f5cfda8292078fc36fe840c15ff61bb012c829cf313a230cd77",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +69,7 @@
       ]
     },
     "gradient-based-optimization-momentum": {
-      "code_fingerprint": "sha256:14eac4d992780c909c739398ba88741584d83d0f8b43a08301d18bd90fc5fcc8",
+      "code_fingerprint": "sha256:deffb0e64837514a67e1e5a90fb863d8f810804ba61bf0eacbc8a3f0d35422bc",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +80,7 @@
       ]
     },
     "gradient-based-optimization-sgd-variance": {
-      "code_fingerprint": "sha256:393d22be1582fe30392116ff26fc464c98c81405de6397e83006f12e526f4c7a",
+      "code_fingerprint": "sha256:a68aabc9de8d44262dadd4c35b706ac8b90306b1cd7bc534bb53e81c459745c7",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +91,7 @@
       ]
     },
     "gradient-based-optimization-sgd-schedule": {
-      "code_fingerprint": "sha256:fd38c7f9149399bf565252a9674f015402eb5534f2fe3ea2fe218fa6f5d9999c",
+      "code_fingerprint": "sha256:73884144ccd33f76fe623b9789243bde3df5a5259bdc9068e546a3227e940b7a",
       "kind": "mixed",
       "outputs": [
         {
@@ -92,19 +103,19 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
-          "bytes": 100458,
-          "sha256": "sha256:10539de1f306007d68a0a98313824bcc5648902ad1cd23744a5ea834aec4ae77"
+          "bytes": 100456,
+          "sha256": "sha256:30bcd89b93cedf0bbfb890272908fd882cebd9a956c308c1b1f3cb2626fa2a3e"
         }
       ]
     },
     "gradient-based-optimization-newton": {
-      "code_fingerprint": "sha256:c73b9eb91434f82c735aadeb8adb5ed92e795df053179bcd7f56980c1f8a40be",
+      "code_fingerprint": "sha256:3f243a6911db83b7ed59a1304609f330cf21587efe8bd49d1aed3b3de094263c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD with the optimal step contracts by 0.9802 per step; it needs 691 steps for |x_k| <= 1e-6\nNewton iteration 1:  |grad| = 2.8e-01\nNewton iteration 2:  |grad| = 3.2e-02\nNewton iteration 3:  |grad| = 1.1e-03\nNewton iteration 4:  |grad| = 1.2e-06\nNewton iteration 5:  |grad| = 1.6e-12\nNewton iteration 6:  |grad| = 3.0e-17\nagrees with the SGD section optimum: True\n"
+          "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD with the optimal step contracts by 0.9802 per step; it needs 691 steps for |x_k| <= 1e-6\nNewton iteration 1:  |grad| = 2.8e-01\nNewton iteration 2:  |grad| = 3.2e-02\nNewton iteration 3:  |grad| = 1.1e-03\nNewton iteration 4:  |grad| = 1.2e-06\nNewton iteration 5:  |grad| = 1.6e-12\nNewton iteration 6:  |grad| = 3.1e-17\nagrees with the SGD section optimum: True\n"
         }
       ]
     }

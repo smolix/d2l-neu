@@ -253,8 +253,28 @@
         }
       ]
     },
+    "linear-algebra-dot-products-3": {
+      "code_fingerprint": "sha256:1402c7bf36f0592b96bd049d533e0532144b22b698397de68100cf179dc0e795",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=1.654819369316101>,\n <tf.Tensor: shape=(), dtype=bool, numpy=True>)"
+        }
+      ]
+    },
+    "linear-algebra-matrix-vector-products-2": {
+      "code_fingerprint": "sha256:0f07e156b5850cf4e58bc8be77b576e2ee5a85627ab2c1603d911ffa4e11a4f8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0., 1.], dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([-1.,  0.], dtype=float32)>)"
+        }
+      ]
+    },
     "linear-algebra-matrix-vector-products": {
-      "code_fingerprint": "sha256:0000c5b7d956bc14ecf551216293d8a6c0a5f4a3e698ed31b7bcae7bd2105ecf",
+      "code_fingerprint": "sha256:cfa5cf9ce8e82fa0445be549fb5d50d4b6763195062ba3a42cc2cb4b8ee1ecc9",
       "kind": "text",
       "outputs": [
         {
@@ -264,7 +284,7 @@
       ]
     },
     "linear-algebra-matrix-matrix-multiplication": {
-      "code_fingerprint": "sha256:c6726448aaa1f285b9e7ffe86e42cca6fdb19b118318934a6b0e426116717d85",
+      "code_fingerprint": "sha256:7e8fad554da755c712c2ea905b458ebf07754a4f6b66245f7f9b5984fda25548",
       "kind": "text",
       "outputs": [
         {
@@ -274,7 +294,7 @@
       ]
     },
     "linear-algebra-norms-1": {
-      "code_fingerprint": "sha256:514b05a3a70cf2103e99cf581dac699b9e03849ffa9455d82da6643dfe99d8e4",
+      "code_fingerprint": "sha256:59d2d492a146cab1e3b056b20fdf8ce19702d36063d24e1fad0e654ea4262dd9",
       "kind": "text",
       "outputs": [
         {
@@ -284,7 +304,7 @@
       ]
     },
     "linear-algebra-norms-2": {
-      "code_fingerprint": "sha256:c35b98b419771b3bdff05baa5e493f154b57fbbcd5ebafd72a87e3e1e3713eba",
+      "code_fingerprint": "sha256:c67427e1ac49f4e42816d13bf515f96eb30239b4dbde1b6907b145f094bf0ddf",
       "kind": "text",
       "outputs": [
         {
@@ -293,13 +313,44 @@
         }
       ]
     },
+    "linear-algebra-norms-4": {
+      "code_fingerprint": "sha256:e531ac7d7e3acf29de3ef3c21a5c2e0ae495b1fa89efbdd5b4b8d51fdf408dbc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tf.Tensor(6.3944273, shape=(), dtype=float32) tf.Tensor(6.394427, shape=(), dtype=float32)\ntf.Tensor(True, shape=(), dtype=bool)\n"
+        }
+      ]
+    },
     "linear-algebra-norms-3": {
-      "code_fingerprint": "sha256:b34983f22eb1a405cbf77bbabc0fd7911bb5c971e6dd53ef37a53b8fb9962217",
+      "code_fingerprint": "sha256:a0340e44d4ce5d4ce3d6f17bd9752f1b8a05ab1e98654d1c3490b3ca71eda71b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "<tf.Tensor: shape=(), dtype=float32, numpy=6.0>"
+        }
+      ]
+    },
+    "linear-algebra-eigenvalues-1": {
+      "code_fingerprint": "sha256:8c6a5558ed219420dc23cad44fbedd8893838d4b385cd9bd5dc6478ddae791ef",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(3,), dtype=float32, numpy=array([-2.2627726, -0.5984748,  8.861248 ], dtype=float32)>"
+        }
+      ]
+    },
+    "linear-algebra-eigenvalues-2": {
+      "code_fingerprint": "sha256:51bec207eceb0ea9bdbbc90f751ce02380208ed98e8cec11ca1f737b9a815ccb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=8.861247062683105>"
         }
       ]
     }

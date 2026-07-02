@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, 0.49771028757095337)"
+          "text": "(0.5, 0.49771034717559814)"
         }
       ]
     },
@@ -100,7 +100,7 @@
       ]
     },
     "information-theory-coding": {
-      "code_fingerprint": "sha256:0d1857132c98d2a28d35f5bc14d2b6d71091e1491d9ea0070e5798dee6448b2f",
+      "code_fingerprint": "sha256:6e6d3d454a8c20dd2109d57db1fd04b060de10c759daf647f3d82ff49212a485",
       "kind": "text",
       "outputs": [
         {
@@ -110,8 +110,19 @@
         }
       ]
     },
+    "mdl-information-theory-from-symbol-codes-to-arithmetic-coding": {
+      "code_fingerprint": "sha256:af7bee00d7dcd78390df99d7553a62db80886917dcc8792ed20b0da991f6ecab",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final width = 3.874205e-02, prod of probs = 3.874205e-02\ntotal surprisal = 4.69 bits\narithmetic code: 6 bits, symbol-by-symbol Shannon code: 13 bits\n"
+        }
+      ]
+    },
     "information-theory-perplexity": {
-      "code_fingerprint": "sha256:407c2953651fea83156d1d728dbbe2080186404c86f0ca6e130a27fe723a1d97",
+      "code_fingerprint": "sha256:fac51e55d922a6679346606cf41d7debda6892179409662a14eb03223cae2dbc",
       "kind": "text",
       "outputs": [
         {
@@ -122,24 +133,24 @@
       ]
     },
     "information-theory-label-smoothing": {
-      "code_fingerprint": "sha256:ab2a0a823ceb1d923b18bfc01c1b3f5376b9f0eff58013f5eca95b170a533fcb",
+      "code_fingerprint": "sha256:9582d1ddd5f2ecc771c9687ffaec036bd16c5a4454414136f5ea7ce365919575",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "optimal logit gap = ln(91) = 4.5109 nats\nCE at q* = H(p_eps) = 0.5003 nats\nCE at the overconfident q = 0.9004 nats\n"
+          "text": "optimal logit gap = ln(91) = 4.5109\nCE at q* = H(p_eps) = 0.5003 nats\nCE at the overconfident q = 0.9004 nats\n"
         }
       ]
     },
     "information-theory-distillation": {
-      "code_fingerprint": "sha256:a8ec66a9d219645ba1744817d6324374da9af3fb079da90ec584a1aaeb4405da",
+      "code_fingerprint": "sha256:57cd42c808e1063d7211719db16d4fa07b09b0f3500653e2376039b585a31933",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T= 1.0  |autograd - closed| = 6.0e-08  T^2 grad = [-0.462, 0.441, 0.022]\nT= 2.0  |autograd - closed| = 1.9e-09  T^2 grad = [-0.672, 0.549, 0.123]\nT= 5.0  |autograd - closed| = 5.6e-09  T^2 grad = [-0.741, 0.478, 0.263]\nT=10.0  |autograd - closed| = 3.3e-09  T^2 grad = [-0.719, 0.413, 0.306]\n"
+          "text": "T= 1.0  |autograd - closed| = 6.0e-08  T^2 grad = [-0.462, 0.441, 0.022]\nT= 2.0  |autograd - closed| = 3.0e-08  T^2 grad = [-0.672, 0.549, 0.123]\nT= 5.0  |autograd - closed| = 6.5e-09  T^2 grad = [-0.741, 0.478, 0.263]\nT=10.0  |autograd - closed| = 9.3e-10  T^2 grad = [-0.719, 0.413, 0.306]\n"
         }
       ]
     }

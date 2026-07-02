@@ -34,8 +34,19 @@
         }
       ]
     },
+    "mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches": {
+      "code_fingerprint": "sha256:d7bd8d77d39fb4b1efca933421dfb58401f0cb517389ff94fe8e92667b8565c1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sweep of R:  min = 1.381967, max = 3.618033\neigvalsh:    [1.381966 3.618034]\n"
+        }
+      ]
+    },
     "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:fcaa060bab2fad15fe5da604470b3cbc92dbb7d073871c5a7d37a1d1da8ac447",
+      "code_fingerprint": "sha256:c02d1ab3a1b9199d229188632fb3cb61bfa2daa8281009698acbb2db8c192777",
       "kind": "text",
       "outputs": [
         {
@@ -45,7 +56,7 @@
       ]
     },
     "eigendecomposition-power-iteration": {
-      "code_fingerprint": "sha256:cb7f4f9347f36958c02e4e1f6e2d3c8b3eb525abf121540e41f6b2f04ce3e7d7",
+      "code_fingerprint": "sha256:4184d0026f7f48ae2e28ec40fef54ab138806c5dbc0c4ad5d3389049a326fea9",
       "kind": "text",
       "outputs": [
         {
@@ -56,7 +67,7 @@
       ]
     },
     "eigendecomposition-complex-rotation": {
-      "code_fingerprint": "sha256:087e968e46aaae52ca7081e86fcda4d4f45c131a22b091e490ec975b9f581e5c",
+      "code_fingerprint": "sha256:69d582d2cf0ec8ac7a9106161a1420734c97233ab97fe63f3d74451664f71c3a",
       "kind": "text",
       "outputs": [
         {

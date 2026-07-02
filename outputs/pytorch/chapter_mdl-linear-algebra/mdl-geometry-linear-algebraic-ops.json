@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(1.7982e-07), tensor(1.4531e-07))"
+          "text": "(tensor(2.4148e-07), tensor(2.1312e-07))"
         }
       ]
     },
@@ -51,8 +51,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
-          "bytes": 26105,
-          "sha256": "sha256:91f16d912a5f9883aacac551f7b9e86bd8091872cbd0d3a2c1d0a96155bd8db6"
+          "bytes": 26257,
+          "sha256": "sha256:05054c69f43e3a448cac7d6338c329094d0298656874f61bbc287a7e91dd39a9"
         }
       ]
     },
@@ -74,8 +74,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
-          "bytes": 39558,
-          "sha256": "sha256:357b2210ca3c6ea947b4b1be7d1429d38072be0017af70692ddefdea602e480c"
+          "bytes": 39601,
+          "sha256": "sha256:51284f1dc94bd35e4e2f1229b6694ecd4632962f6954f96c3b4f10c6ebd325ee"
         }
       ]
     },

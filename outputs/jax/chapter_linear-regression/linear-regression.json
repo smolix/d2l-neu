@@ -13,48 +13,59 @@
       "kind": "text",
       "outputs": []
     },
+    "linear-regression-loss-function": {
+      "code_fingerprint": "sha256:e1dc575640eb948fda5bdd1dd9354ece10f0900d467b1f298417719c87c98c9e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true w: 2.00, squared loss: 22.88, MAE: 2.02\n"
+        }
+      ]
+    },
     "linear-regression-vectorization-for-speed-1": {
-      "code_fingerprint": "sha256:8b26a7ad643c2a780a9f64f44bccfcfe45e6d26cbee4e90d09be2f8c333e3b57",
+      "code_fingerprint": "sha256:5c8f4a6644974a377b1c170f266303a710ce637e83f32fae1f1945f418b77348",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-vectorization-for-speed-2": {
-      "code_fingerprint": "sha256:b0309f845934263b3a226053090bf9fcaa751ae54aec42d9c73f2b5cd5603f3f",
+      "code_fingerprint": "sha256:81c1c939d043e916a7e51c0f56358c1715004d73db18366712f91d819dd434c4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.27880 sec\n"
+          "text": "1.49363 sec\n"
         }
       ]
     },
     "linear-regression-vectorization-for-speed-3": {
-      "code_fingerprint": "sha256:c1d7eb6d1a4c1f638e7824a5d2d858dc91d396d0e6f47cbd9c6b851f0efea9cc",
+      "code_fingerprint": "sha256:2389fdd2336fc0a77189b0281f0e4ebcf357d28860ce8c2b281f625bafea413d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.03721 sec\n"
+          "text": "0.04767 sec\n"
         }
       ]
     },
     "linear-regression-the-normal-distribution-and-squared-loss-1": {
-      "code_fingerprint": "sha256:fc6144db8c97858bd9eed60b78619a499daf2b842485a3395aa4f987512313f6",
+      "code_fingerprint": "sha256:d12ec4532059ca7420268108775aa88bc094313052cc16ba8840509bcbc63715",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-the-normal-distribution-and-squared-loss-2": {
-      "code_fingerprint": "sha256:2ca483b647767736f252e9a9a6321a89cb0f34c69cca394cc67921bb8b9625ec",
+      "code_fingerprint": "sha256:af342d962e2187ae5678cac4f36ebd3d553a33630d34e36e17c5c8338b4fff55",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression/linear-regression-the-normal-distribution-and-squared-loss-2-1.svg",
-          "bytes": 28697,
-          "sha256": "sha256:b63082561c07fdf6949e679736bd8e8fe56ec7c2f766c4edabdc4816a5f862ca"
+          "bytes": 28701,
+          "sha256": "sha256:5e40fd5ff394c191a48d1c298e081dc714f02a6679c6164b20bf92f7e28cb75a"
         }
       ]
     }

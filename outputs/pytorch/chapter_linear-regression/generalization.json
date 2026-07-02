@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "underfitting (degree 1) : train   1.6698   test       1.7318\njust right   (degree 3) : train   0.0136   test       0.0129\noverfitting   (degree 19): train   0.0000   test 49270853259149.2422\n"
+          "text": "underfitting (degree 1) : train   1.6698   test       1.7318\njust right   (degree 3) : train   0.0136   test       0.0129\noverfitting   (degree 19): train   0.0000   test 49271508224071.6328\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "generalization/generalization-polynomial-curve-fitting-5-1.svg",
-          "bytes": 22244,
-          "sha256": "sha256:69178ecb504c2730f455e87602e18448722465818b8ea4e4c0a9bc61b23b559c"
+          "bytes": 22201,
+          "sha256": "sha256:d14feec96c4b73c61e267a4b605537dcd58077464fcc03656e924b1d873cd8bb"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "mime": "image/svg+xml",
           "asset": "generalization/generalization-bias-variance-decomposition-1.svg",
           "bytes": 26809,
-          "sha256": "sha256:7d406fcf7784fef2430535f6577abcd17ec5e3eb37dea702c315aa0103a11beb"
+          "sha256": "sha256:3bae3bb7516295ac629cd1c3dbeb07e4474159c2fd9474229424f9c66c6ebf71"
         }
       ]
     }

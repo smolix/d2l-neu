@@ -79,7 +79,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-0.9087898 ,  0.43258238,  0.59156615,  0.871347  ],\n       [ 0.12654582, -0.6433282 ,  1.8325384 , -0.4667397 ],\n       [ 0.1691002 , -0.02985547,  0.70718807, -0.12260677]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-0.45493633, -0.707064  , -0.74068046,  1.1111392 ],\n       [-0.4961137 , -0.9368363 , -1.1782228 ,  1.3358557 ],\n       [-0.49195594,  1.8028847 , -1.1246605 , -0.04886059]],\n      dtype=float32)>"
         }
       ]
     },
@@ -193,8 +193,19 @@
         }
       ]
     },
+    "ndarray-broadcasting-3": {
+      "code_fingerprint": "sha256:0f8c79f6bcc20cfb2cbeebc9c9ee3e1b21dff4c9664ec0f0c01a8268745f5c8d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{{function_node __wrapped__AddV2_device_/job:localhost/replica:0/task:0/device:GPU:0}} required broadcastable shapes [Op:AddV2] name: \n"
+        }
+      ]
+    },
     "ndarray-saving-memory-1": {
-      "code_fingerprint": "sha256:60b76f3a1caada9018ce132d57f427c148d6facc7588b3aef82adafbe9e365f6",
+      "code_fingerprint": "sha256:79ba0cd4431c10b98ddc0029419bdac74eb5430982037f780799ac13a6731898",
       "kind": "text",
       "outputs": [
         {
@@ -204,18 +215,18 @@
       ]
     },
     "ndarray-saving-memory-2": {
-      "code_fingerprint": "sha256:0e30d7dbb806d81c80f70cf6cb2cfe58a0beec9a6bc04b6d3c8dc853eff2f500",
+      "code_fingerprint": "sha256:8a3c53c98e0f57ef762a550ea1cb75001cdb68b83138bef290888b4b4c2f9386",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "id(Z): 137854872065936\nid(Z): 137854872065936\n"
+          "text": "id(Z): 130502359621008\nid(Z): 130502359621008\n"
         }
       ]
     },
     "ndarray-conversion-to-other-python-objects-1": {
-      "code_fingerprint": "sha256:be33514f0f694d6fd7c507f089dc8b6a4a8ddabe0ed391395e16ee0dfe16b48b",
+      "code_fingerprint": "sha256:decff1f148fda3f9893aee027c92ec2ad1cef80bba2e851bc49d4bd021eb94c1",
       "kind": "text",
       "outputs": [
         {
@@ -225,7 +236,7 @@
       ]
     },
     "ndarray-conversion-to-other-python-objects-2": {
-      "code_fingerprint": "sha256:cb3e6faf591eb7bf0705fa25fecdbf9e0cf02239145cbce23c8f422baf1eedc2",
+      "code_fingerprint": "sha256:0a32bcccca1efdb85e88cba0facd5508756c95ed408ad04ab687d92eba028108",
       "kind": "text",
       "outputs": [
         {

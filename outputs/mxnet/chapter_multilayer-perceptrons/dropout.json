@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  0.  0.  0.  8. 10. 12. 14.]\n [ 0.  0.  0.  0. 24. 26.  0. 30.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  0.  4.  6.  8.  0. 12. 14.]\n [16.  0.  0.  0.  0. 26. 28. 30.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
         }
       ]
     },
@@ -35,33 +35,33 @@
       "outputs": []
     },
     "dropout-training": {
-      "code_fingerprint": "sha256:d5a08d7fb2cc59b6c53e0752c9cf0a30729c653363e335919f8d7706113135fe",
+      "code_fingerprint": "sha256:bd6e78f24b1867b28c5e0958c6f331abad242df9af052254377938e1dddcbc1e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 25478,
-          "sha256": "sha256:2683eda1f5d6ac9b0971d5cb05455d9b076c81ab88783194b3d27d8211cd2c70"
+          "bytes": 24811,
+          "sha256": "sha256:08dc14d846808d407c0c80b21796fe4ee2cfc7c554aec1095e44e6ec5eff7b7e"
         }
       ]
     },
     "dropout-concise-implementation-1": {
-      "code_fingerprint": "sha256:08e1eb7c18282084e4a524fc7ddbf85e04742dba9de18025ca708cbd09f51271",
+      "code_fingerprint": "sha256:ec1b0dd4d97919430a6f4852eee2310a4fb8419d83bba4169af1f8ab3b01ae2b",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:1b3556db621551d0e202954deec448a1fa471bfdde05e2477458ddafe8621a63",
+      "code_fingerprint": "sha256:200c8dedb8ce61ac5ee5eadff8ffff694e095b48839d23b4e216995c3386cd41",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 25446,
-          "sha256": "sha256:311e120fef7f2985adab816b37df43f6c0b5a6b293a4b0dd5d00a6530820a88f"
+          "bytes": 24822,
+          "sha256": "sha256:88318fb90526fe030b95c93a06769be9ffb32c9f9be445f46f5a9c2c8dc275bf"
         }
       ]
     }

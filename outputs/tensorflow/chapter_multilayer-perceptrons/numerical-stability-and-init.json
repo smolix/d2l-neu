@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
           "bytes": 26183,
-          "sha256": "sha256:0029128234f11405524669cbb3885552993089585bf02b93ff9fd703e077b39f"
+          "sha256": "sha256:63237e996840739d46e1bee5ba6936c2febf0173ddfb4678206070a2aac8aea7"
         }
       ]
     },
@@ -33,7 +33,20 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix \n tf.Tensor(\n[[-0.2472323  -0.5988878  -1.3080173  -1.3680477 ]\n [ 0.04075836  0.6996974   0.03040765 -0.7082342 ]\n [-2.1579754  -0.35644835 -1.0910858  -0.30963823]\n [-0.3798702   0.35276482 -0.3737892  -0.9594264 ]], shape=(4, 4), dtype=float32)\nafter multiplying 100 matrices\n [[ 6.7073088e+24 -4.9107147e+25 -2.9786244e+25 -1.4060288e+25]\n [ 3.0177380e+24 -2.2094186e+25 -1.3401362e+25 -6.3259725e+24]\n [-4.9767384e+23  3.6436888e+24  2.2101017e+24  1.0432553e+24]\n [ 3.7874596e+24 -2.7729658e+25 -1.6819593e+25 -7.9395132e+24]]\n"
+          "text": "a single matrix \n tf.Tensor(\n[[-2.0755253   0.87567675  0.09326653 -0.27065107]\n [-0.21735886  0.6871366   1.1099226   1.5805717 ]\n [ 1.5484748  -0.8293626   1.2326373  -0.08366401]\n [ 3.4490376   0.25219828 -0.19609202  1.1942483 ]], shape=(4, 4), dtype=float32)\nafter multiplying 100 matrices\n [[-9.0544296e+21  1.7612310e+21 -2.3976129e+21  5.8932720e+21]\n [ 5.6978040e+20 -1.0986955e+20  1.5249500e+20 -3.7407919e+20]\n [ 3.6834838e+22 -7.1665347e+21  9.7512243e+21 -2.3969486e+22]\n [ 1.7339501e+22 -3.3730492e+21  4.5910972e+21 -1.1284987e+22]]\n"
+        }
+      ]
+    },
+    "numerical-stability-and-init-depth-sweep": {
+      "code_fingerprint": "sha256:2fbf7f7ba89acc4d93d35a36ba348a2413745df3d551d0049dedf1f3bbb737da",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
+          "bytes": 30998,
+          "sha256": "sha256:0817d9009adfc6a00a3278a033e1b2dd87866807d51fa72254919bf083491269"
         }
       ]
     }

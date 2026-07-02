@@ -29,28 +29,19 @@
         }
       ]
     },
-    "calculus-visualization-utilities-1": {
-      "code_fingerprint": "sha256:22c7d83d9f9e22ef435fc25c77e93896adae6c0f69dc690e394d5d7efa4eff79",
+    "calculus-derivatives-and-differentiation-3": {
+      "code_fingerprint": "sha256:776f334d2ce541f222f8dfdbd6ecdfc39178c64647bb11990e56c467014498a4",
       "kind": "text",
-      "outputs": []
-    },
-    "calculus-visualization-utilities-2": {
-      "code_fingerprint": "sha256:40f5d21cf7c1cb2e7b2fc71e1e67d3ea670a688407558e6f81cd6be0d065f4d9",
-      "kind": "text",
-      "outputs": []
-    },
-    "calculus-visualization-utilities-3": {
-      "code_fingerprint": "sha256:9f76c6d941686a061c1f9001160509a40c793fa42c830d57172b5231a3a28fe4",
-      "kind": "text",
-      "outputs": []
-    },
-    "calculus-visualization-utilities-4": {
-      "code_fingerprint": "sha256:1d858db8fc44f028eeb48330f70d800dd97c7447e656135e16a661736f15d578",
-      "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "h=1e-06, numerical limit=2.00000\nh=1e-07, numerical limit=2.00000\nh=1e-08, numerical limit=2.00000\nh=1e-09, numerical limit=2.00000\nh=1e-10, numerical limit=2.00000\nh=1e-11, numerical limit=2.00000\nh=1e-12, numerical limit=2.00018\nh=1e-13, numerical limit=1.99840\nh=1e-14, numerical limit=1.99840\nh=1e-15, numerical limit=2.22045\nh=1e-16, numerical limit=0.00000\n"
+        }
+      ]
     },
     "calculus-visualization-utilities-5": {
-      "code_fingerprint": "sha256:217cc03f91b17417ea9f95fb99087d10d68592be0a65d002c78e1f8d999aee54",
+      "code_fingerprint": "sha256:033b3f719973f65ddbb89966eccab4ed044ea7653c9ad96a7ffe0f450e62f6b1",
       "kind": "asset",
       "outputs": [
         {
@@ -58,9 +49,29 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-visualization-utilities-5-1.svg",
           "bytes": 18530,
-          "sha256": "sha256:59034eff0f9e8e82306bc697aad1f296d53933b75780077b30d1cf2cb8290baa"
+          "sha256": "sha256:adc877da4a426509fa461ec47fa4e611f231ba1f4174144c13b0cb17230c21ee"
         }
       ]
+    },
+    "calculus-visualization-utilities-1": {
+      "code_fingerprint": "sha256:812ff8d76b1fd5517bb5ef47703306261ea8b3d523e9316e03afbe72f89c8e3e",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-visualization-utilities-2": {
+      "code_fingerprint": "sha256:4a3606207fe9ab2c9ad0e79825bc9d32f2ef9274f196fd6679525a14a0c32a70",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-visualization-utilities-3": {
+      "code_fingerprint": "sha256:1d246312782c9a3493d8d3b455b4d4c132019476f4aed261a84a9e43003bcde0",
+      "kind": "text",
+      "outputs": []
+    },
+    "calculus-visualization-utilities-4": {
+      "code_fingerprint": "sha256:56e7cbb3a72bea0068e5063c734d86c43189dbd46be06584b2a72c08a7434719",
+      "kind": "text",
+      "outputs": []
     }
   }
 }

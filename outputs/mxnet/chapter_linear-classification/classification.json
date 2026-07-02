@@ -32,6 +32,16 @@
       "code_fingerprint": "sha256:fdb7a4ade24c0b853217a3cb8efd1a7e24930f5d4b6e6d45f18a16932114d41a",
       "kind": "text",
       "outputs": []
+    },
+    "classification-beyond-accuracy": {
+      "code_fingerprint": "sha256:5f735cc45566297e22721130d34cb17775be4a133c7596d6a0e29a91ba39c801",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(0.99, 0.0)"
+        }
+      ]
     }
   }
 }

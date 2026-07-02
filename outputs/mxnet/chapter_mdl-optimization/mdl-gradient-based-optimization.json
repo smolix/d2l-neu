@@ -46,8 +46,19 @@
         }
       ]
     },
+    "gradient-based-optimization-edge-of-stability": {
+      "code_fingerprint": "sha256:e7725d840301a6bc4ce0a24aae9d37215e4855c73746401be72945ad1d2cec63",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        eta = 0.40 (2/eta = 5.0)   eta = 0.25 (2/eta = 8.0)\n    k      loss    sharpness         loss    sharpness\n     0    0.5097      3.32         0.5097      3.32\n  4000    0.0124      4.94         0.0104      8.02\n  8000    0.0008      4.97         0.0021      7.96\n 12000    0.0007      5.00         0.0007      7.97\n 16000    0.0005      5.00         0.0004      7.97\n 20000    0.0004      5.00         0.0003      7.97\n"
+        }
+      ]
+    },
     "gradient-based-optimization-contraction": {
-      "code_fingerprint": "sha256:3020e147a8bb5b545d82d9ec252e93559f2e436b0e93f6227d388bf23ea4ddc6",
+      "code_fingerprint": "sha256:f0e30b807f16fb89b15e731a5c3ef37615617e0040f6bd6e696477cce23708b2",
       "kind": "text",
       "outputs": [
         {
@@ -58,23 +69,18 @@
       ]
     },
     "gradient-based-optimization-momentum": {
-      "code_fingerprint": "sha256:9c8e0ea0009892dd99d08c508928d6bdd7e5f84bf6c7d0ad4b102f55bba07311",
+      "code_fingerprint": "sha256:981b875cabcd08319121d8f0a58bacdbaa801f56187c13f45cb08185aaa1c6b4",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa      GD   heavy ball   Nesterov     GD/kappa   HB/sqrt(kappa)\n   10      69        27         43          6.9         8.5\n  100     691        93        155          6.9         9.3\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 1000    6908       315        508          6.9        10.0\n"
+          "text": "kappa      GD   heavy ball   Nesterov     GD/kappa   HB/sqrt(kappa)\n   10      69        27         43          6.9         8.5\n  100     691        93        155          6.9         9.3\n 1000    6908       315        508          6.9        10.0\n"
         }
       ]
     },
     "gradient-based-optimization-sgd-variance": {
-      "code_fingerprint": "sha256:9d0ab8790ca69ba528be93cf1d31f84a518af04d779bf3862e7e6e42c3eb2b41",
+      "code_fingerprint": "sha256:bb2abcb333bae4534a8a153a8ce5d6d538a8f413a4a7bba1b6afa0878ee990ae",
       "kind": "text",
       "outputs": [
         {
@@ -85,7 +91,7 @@
       ]
     },
     "gradient-based-optimization-sgd-schedule": {
-      "code_fingerprint": "sha256:5d88ce3892af6aa876b70413cfae44daccc9b754f39fe690a7b254ac19bbb371",
+      "code_fingerprint": "sha256:1eb1822e92150f8aab0dc1a6995c04f42275cbad612c078d84deb4da44406a57",
       "kind": "mixed",
       "outputs": [
         {
@@ -98,12 +104,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
           "bytes": 100456,
-          "sha256": "sha256:13d4fb0c9854e3fb6204933709df2247c4496cb9bd9a29f99c8e685455664992"
+          "sha256": "sha256:5936d752979f64827443c07d349eda7a7bbdfc50b4d38cf59a4d6b2633131b9a"
         }
       ]
     },
     "gradient-based-optimization-newton": {
-      "code_fingerprint": "sha256:291ce3820c4bd32f81ea652b10f9a78b5a69919eae921c4de3352c20d9f11b0e",
+      "code_fingerprint": "sha256:20e704db96968dc5d278e48b856598313deab0c9418caf2c9aa8af2ab90c8bd8",
       "kind": "text",
       "outputs": [
         {

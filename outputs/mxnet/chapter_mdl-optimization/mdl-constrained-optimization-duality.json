@@ -24,8 +24,19 @@
         }
       ]
     },
+    "constrained-weight-decay": {
+      "code_fingerprint": "sha256:e770e2dbe140fd8aa25ad1a31990cb2676694f32ab8570299338e18f599af7de",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10       0.4460         9.23e-17             0.1000\n   1.00       0.4235         9.64e-17             1.0000\n  10.00       0.2840         5.55e-17            10.0000\n"
+        }
+      ]
+    },
     "constrained-svm-dual": {
-      "code_fingerprint": "sha256:d8f19a5ef66ad42c8deb97598e525d6d0c952ebded324baad2cd9ba8190cf758",
+      "code_fingerprint": "sha256:116144376ee6df145ad798cf69cb2533fa9c810e7dd1a8c2fc66d921707de752",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +47,7 @@
       ]
     },
     "constrained-water-filling": {
-      "code_fingerprint": "sha256:070ef898471b5e9dda5eafff2298725d84a2e73b5c545103670670c9b27e0146",
+      "code_fingerprint": "sha256:6276f2df8ea330b59947824ad4af0d0066ab9ce9c3d94e3fbd0f09495f98cb80",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +58,7 @@
       ]
     },
     "constrained-duality-gap": {
-      "code_fingerprint": "sha256:a92f227ec6fcc31232faa2c2a718207d98e56ba65d4008e72036c2bca52261a0",
+      "code_fingerprint": "sha256:0e76dad402806b6d94dfee0a0b6f1f0d3eee40b6a9e7619e67d7f9f4f3e2c213",
       "kind": "mixed",
       "outputs": [
         {
@@ -60,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/constrained-duality-gap-1.svg",
           "bytes": 26638,
-          "sha256": "sha256:bb7b11ec8116704674a64462f19e39eb36ba42fc786bacf7d3033d6d005a1f5c"
+          "sha256": "sha256:cd7799c0c8bdda7bcd62e4f83c3996de62048cbac526f027ff6e08ac59970c42"
         }
       ]
     }

@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
-          "bytes": 20952,
-          "sha256": "sha256:49df78ecbe92dda0ef7cb22d27a314b4718706d8b2d1b74722ec17b84673f461"
+          "bytes": 20953,
+          "sha256": "sha256:67d65f77105aeecc46d96d819bd5bab6dcd0b709a1602381c1eb3535b3fe716f"
         }
       ]
     },
@@ -36,8 +36,21 @@
         }
       ]
     },
+    "mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works": {
+      "code_fingerprint": "sha256:b6f5129c02878cc7476df868190b5b6ed7624dc807dc6402081c98dff9c9b1b2",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
+          "bytes": 30558,
+          "sha256": "sha256:bcf38499c03046a4dfea49b3daf96082fb0f9184a6ad1ec40e50b5a3f0fd7f49"
+        }
+      ]
+    },
     "maximum-likelihood-fisher-information": {
-      "code_fingerprint": "sha256:8e40fbfdd37c56ae06dc415de4a7f4fa690b805c63013419cb0dce6cea50991f",
+      "code_fingerprint": "sha256:7f77b14490ea78b787714c1d5160cb5915e37be943554ce779585946ce666f53",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +60,7 @@
       ]
     },
     "maximum-likelihood-em-gmm": {
-      "code_fingerprint": "sha256:20267b6f608335fa0d8aa4b6c6cd505c66b71520e6b674d2f2781f265824026b",
+      "code_fingerprint": "sha256:5c8fae20fdeb846e12e4bb542f1f1cac2f482a7476b975c7273996f6c416fe85",
       "kind": "text",
       "outputs": [
         {

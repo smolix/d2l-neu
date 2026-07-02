@@ -24,8 +24,19 @@
         }
       ]
     },
+    "mdl-multivariable-calculus-directional-derivatives-1": {
+      "code_fingerprint": "sha256:600460e3ba7e49741ba84c17097ce2df68694c7bed8f8d68199d6be291eb94dd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "autograd gradient: [0.33333334 0.6666667 ]\n"
+        }
+      ]
+    },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:7fa5c21ec44e9d89bbf4b87c184e7075fe3ac41f5852705fdaa713a7c8815180",
+      "code_fingerprint": "sha256:4ba3fe5dc5957b414fb0b9aec6b9041f7dabd7056bc0e71075721ccb882ee06a",
       "kind": "asset",
       "outputs": [
         {
@@ -33,51 +44,62 @@
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
           "bytes": 13743,
-          "sha256": "sha256:108af6cdf0c03ddf03dbc7e87f2b493eb9db79e28a079ad5390b22e51ca73f2e"
+          "sha256": "sha256:54cb5a8e7ec2464d117329022134a0deef7233f6490a6f52843b446a60acf369"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:d36f5d7ed3f1fabed7da3bf4afe5c25b980e90dfe196588a4c4d4625def5ae73",
+      "code_fingerprint": "sha256:fd3acaba0cc4331d2c2c19bfb6a05c26bc1947a63adb535db2f8972200165151",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\n"
+          "text": "f at 1, 1, -2, 1 is 26896\ndf/dw at 1, 1, -2, 1 is 73472\n"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:98d153292eb807bc70ff7b0204b9c86285ba1fbd55ab33f061014eaff8590272",
+      "code_fingerprint": "sha256:1f208b3764067f80a85c7ada373e9a1b67882394c55b834e3096a69c1dd9257a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "f at -1, 0, -2, 1 is 1024\ndf/dw at -1, 0, -2, 1 is -4096\ndf/dx at -1, 0, -2, 1 is -4096\ndf/dy at -1, 0, -2, 1 is -4096\ndf/dz at -1, 0, -2, 1 is -4096\n"
+          "text": "f at 1, 1, -2, 1 is 26896\ndf/dw at 1, 1, -2, 1 is 73472\ndf/dx at 1, 1, -2, 1 is 73472\ndf/dy at 1, 1, -2, 1 is -68224\ndf/dz at 1, 1, -2, 1 is -68224\n"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:6148b4c907d3d8987d70e1f3d804674c04f4701ac4b262ff5f5172c6550aed2a",
+      "code_fingerprint": "sha256:7dfab6f9550d8944f5030ae9cb9ab0d56d63873219a58e375952460d8a02b966",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "df/dw at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dx at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dy at [-1.], [0.], [-2.], [1.] is [-4096.]\ndf/dz at [-1.], [0.], [-2.], [1.] is [-4096.]\n"
+          "text": "df/dw at [1.], [1.], [-2.], [1.] is [73472.]\ndf/dx at [1.], [1.], [-2.], [1.] is [73472.]\ndf/dy at [1.], [1.], [-2.], [1.] is [-68224.]\ndf/dz at [1.], [1.], [-2.], [1.] is [-68224.]\n"
         }
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:58370cf7817b3a1f8b8d562e40526240b92adbee2bcf0ab741895a2b275390b5",
+      "code_fingerprint": "sha256:4d325357536012dcbf7d32e475b66c9ce39a1dcfbc2c4095e82f836d5af6874c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "step 0.00: f = -0.367879, quadratic = -0.367879, gap = 0.000000\nstep 0.05: f = -0.384315, quadratic = -0.384434, gap = 0.000119\nstep 0.10: f = -0.396388, quadratic = -0.397310, gap = 0.000921\nstep 0.30: f = -0.391929, quadratic = -0.412025, gap = 0.020096\n"
+        }
+      ]
+    },
+    "mdl-multivariable-calculus-the-second-derivative-test": {
+      "code_fingerprint": "sha256:d4958a0006c9d9041495c85e9a808789f5798a86adce4f504c43d0ad994df4f7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "at (-0.7071, 0): eigenvalues +0.858, +1.716 -> minimum\nat (+0.7071, 0): eigenvalues -1.716, -0.858 -> maximum\n"
         }
       ]
     }

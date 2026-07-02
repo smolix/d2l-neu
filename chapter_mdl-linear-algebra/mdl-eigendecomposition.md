@@ -1352,17 +1352,24 @@ three are unchanged by a change of basis.
 ::: {.slide title="When does an eigenbasis exist?"}
 [The objects]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Diagonalizability is about *counting* eigenvectors. For each $\lambda$,
 
-$$1 \le \underbrace{\dim(\text{eigenspace})}_{\text{geometric}} \le \underbrace{\text{root multiplicity}}_{\text{algebraic}}.$$
+$$1 \le \underbrace{\dim(\text{eigenspace})}_{\text{geometric}} \le \underbrace{\text{root multiplicity}}_{\text{algebraic}},$$
 
-. . .
+and an eigenbasis exists **iff** these agree for every $\lambda$
+(*$n$ distinct eigenvalues* guarantee it).
 
-An eigenbasis exists **iff** these are equal for every $\lambda$.
-*$n$ distinct eigenvalues* guarantee it. The shear
-$\bigl[\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\bigr]$ fails: $\lambda=1$
-has algebraic multiplicity $2$ but only a $1$-D eigenspace, so it is
-**defective**, not diagonalizable.
+The shear $\bigl[\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\bigr]$ fails:
+$\lambda=1$ counts double, but the $x$-axis is the **only** line the map
+carries to itself. **Defective**: there is no second eigendirection to find.
+:::
+
+::: {.col .fig .big}
+![Every horizontal layer slides sideways; only the $x$-axis keeps its direction.](../img/mdl-la-defective-shear.svg)
+:::
+:::
 :::
 
 ::: {.slide}
@@ -1444,6 +1451,13 @@ with the extremes hit at $\mathbf{w}_1$ and $\mathbf{w}_n$.
 
 . . .
 
+Sweep a unit vector once around the circle and watch: the extremes of $R$
+land on `eigvalsh` to the grid's resolution, at exactly the eigenvector angles:
+
+@!mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches
+
+. . .
+
 So $\lambda_{\max}$ and $\lambda_{\min}$ are the largest and smallest
 stretches. Their ratio $\kappa=\lambda_{\max}/\lambda_{\min}$ is the
 **condition number**, what makes a steep-and-flat bowl slow to descend.
@@ -1516,6 +1530,31 @@ $\max_i|\lambda_i|$ to ten decimal places:
 @eigendecomposition-power-iteration
 :::
 
+::: {.slide title="Power iteration runs the web"}
+[Dynamics]{.kicker}
+
+**PageRank** is a dominant eigenvector. The fraction of time a random surfer
+spends on each page is the stationary $\boldsymbol\pi$ with
+$\mathbf{P}\boldsymbol\pi = \boldsymbol\pi$, computed by power iteration:
+forming $\mathbf{P}$ at web scale is unthinkable, multiplying by it is cheap.
+
+. . .
+
+The real web has dangling pages and disconnected pockets, so PageRank iterates
+the **damped** matrix
+
+$$\alpha\,\mathbf{P} + (1-\alpha)\,\tfrac1n\mathbf{1}\mathbf{1}^\top,
+\qquad \alpha \approx 0.85,$$
+
+a surfer who teleports to a random page with probability $0.15$.
+
+::: {.d2l-note .rule}
+Damping makes every entry positive, so Perron--Frobenius applies *by
+construction*, and it guarantees the gap $|\lambda_2| \le \alpha$, so power
+iteration converges fast.
+:::
+:::
+
 ::: {.slide title="Complex eigenvalues are rotations"}
 [Dynamics]{.kicker}
 
@@ -1530,6 +1569,28 @@ $e^{\pm i\theta}$, modulus $1$ (length preserved), argument $\pm\theta$
 A real matrix's complex eigenvalues come in pairs $re^{\pm i\theta}$: scale
 by $r$, rotate by $\theta$. That is why power iteration can *spin* instead
 of settling.
+:::
+:::
+
+::: {.slide title="Pure noise has a spectrum too"}
+[Random matrices]{.kicker}
+
+Form the sample covariance of **pure noise**: $n$ samples of $d$ independent
+unit-variance coordinates, true covariance $\mathbf{I}$. Its eigenvalues do
+*not* sit near $1$; they spread deterministically over the
+**Marchenko--Pastur bulk**
+
+$$\bigl[\,(1-\sqrt\gamma)^2,\ (1+\sqrt\gamma)^2\,\bigr], \qquad \gamma = d/n,$$
+
+which for $d = n/4$ already spans $[0.25,\ 2.25]$, from noise alone.
+
+. . .
+
+::: {.d2l-note .rule}
+The bulk is the **null hypothesis** of spectral data analysis: an eigenvalue
+inside it is indistinguishable from sampling noise; only eigenvalues that
+escape *above* the edge testify to structure. That is the principled answer to
+"how many PCA components should I keep?"
 :::
 :::
 
@@ -1575,7 +1636,7 @@ clipping, and LSTM/GRU gating.
 - The **sign** of $\lambda$ decides positive definiteness; the **spread**
   decides conditioning.
 - **Gershgorin** localizes $\lambda$ cheaply; **power iteration** finds the
-  dominant one.
+  dominant one, which is how PageRank is computed.
 - The **spectral radius** $\rho$ governs stability, from RNN gradients to
   weight initialization.
 :::

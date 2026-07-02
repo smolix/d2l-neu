@@ -1052,7 +1052,13 @@ the true value of a small step:
 
 . . .
 
-They agree to several digits, as a first-order approximation should.
+They agree to about three decimals, and the gap of $1.8\times10^{-4}$ is itself the lesson: a first-order model discards terms of order $\|\boldsymbol{\epsilon}\|^2 = 10^{-3}$ (the Hessian quadratic, coming up). Shrink the step tenfold and the gap shrinks a hundredfold.
+
+. . .
+
+Autograd seconds the hand gradient:
+
+@!mdl-multivariable-calculus-directional-derivatives-1
 :::
 
 ::: {.slide title="Every direction at once"}
@@ -1150,6 +1156,8 @@ $-5, 0, -32$; the plot confirms the minimum at $x=2$.
 ::: {.slide title="Optimizing under a constraint"}
 [Geometry]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Minimize $f$ subject to $g(\mathbf{x}) = c$. At the optimum no move *along*
 the constraint can lower $f$, so $\nabla f$ is normal to $\{g=c\}$, and so
 is $\nabla g$. Two normals to one surface are parallel:
@@ -1157,8 +1165,14 @@ is $\nabla g$. Two normals to one surface are parallel:
 $$\nabla f(\mathbf{x}^\star) = \lambda\,\nabla g(\mathbf{x}^\star).$$
 
 ::: {.d2l-note}
-The same gradient geometry, one turn further: $\lambda$ is the **Lagrange
-multiplier**, the seed of the KKT conditions and duality.
+The level set of $f$ *kisses* the constraint at the optimum: $\lambda$ is the
+**Lagrange multiplier**, the seed of the KKT conditions and duality.
+:::
+:::
+
+::: {.col .fig}
+![At the optimum the level set kisses the constraint and the gradients align; at the non-optimal point $\nabla f$ keeps a component along the constraint, so sliding still improves $f$.](../img/mdl-cal-lagrange-tangency.svg)
+:::
 :::
 :::
 
@@ -1227,6 +1241,10 @@ Push an input forward through the graph and the single-step partials multiply ou
 Walk the graph from the output **backward**, keeping $\partial f$ in every *numerator*: compute $\tfrac{\partial f}{\partial u}, \tfrac{\partial f}{\partial v}$ once, reuse them, and **all** four input derivatives fall out in a single sweep. This *is* backpropagation.
 
 @!multivariable-calculus-the-backpropagation-algorithm-2
+
+. . .
+
+Two sanity checks sit in the printout: $\partial f/\partial w = \partial f/\partial x$ and $\partial f/\partial y = \partial f/\partial z$, as they must ($f$ reaches its inputs only through $w+x$ and $y+z$), yet the two pairs differ in size *and* sign, so the sweep genuinely tells the paths apart.
 :::
 
 ::: {.slide title="What the framework runs"}
@@ -1310,6 +1328,18 @@ through the **definiteness** of $\mathbf{H}$, read off its eigenvalues:
 $\mathbf{H}\succ0$ → **minimum** (bowl). $\mathbf{H}\prec0$ → **maximum**.
 Mixed signs → **saddle**. A zero eigenvalue → second order is silent.
 :::
+:::
+
+::: {.slide title="The test, run as a program"}
+[Hessian]{.kicker}
+
+The surface $f(x,y) = x\,e^{-x^2-y^2}$ has exactly two critical points, $(\pm 1/\sqrt{2},\, 0)$. Assemble each Hessian from symmetric second differences, read off the $2\times2$ eigenvalues, announce the verdict:
+
+@!mdl-multivariable-calculus-the-second-derivative-test
+
+. . .
+
+Differentiate twice, extract eigenvalues, read the signs: all positive is a minimum, all negative a maximum, and a saddle would announce itself with one of each.
 :::
 
 ::: {.slide title="Why saddles, not bad minima"}

@@ -1142,6 +1142,31 @@ the mean of the exponential, and the move behind score matching's
 Hyvärinen identity.
 :::
 
+::: {.slide title="Area comes with a sign"}
+[The integral]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Two independent sign rules govern $\int_a^b f$:
+
+- where $f<0$, area counts **negative**: $\int_0^1 (-1)\,dx = -1$
+- reversing the limits negates: $\int_b^a f = -\int_a^b f$
+
+Each flip contributes one minus sign, and two cancel:
+$\int_0^{-1}(-1)\,dx = +1$.
+
+::: {.d2l-note}
+The same signed bookkeeping the determinant did for transformed areas,
+and exactly what makes change of variables come out right.
+:::
+:::
+
+::: {.col .fig}
+![Lobes above the axis count positive, the lobe below counts negative; reversing the limits traverses the same area backwards and negates the total.](../img/mdl-cal-signed-area.svg)
+:::
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [02]{.dnum}
@@ -1168,6 +1193,70 @@ With the right $u$ this collapses hard integrals to trivial ones.
 
 ::: {.col .fig}
 ![](../img/mdl-cal-rect-trans.svg)
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Multiple integrals]{.dtitle}
+
+[double integrals, Fubini, the Jacobian, and the Gaussian]{.dsub}
+:::
+:::
+
+::: {.slide title="Multiple integrals: a volume under a surface"}
+[Double integrals]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+For $f(x,y)$ on a box, $\int_U f\,d\mathbf{x}$ is the volume between
+the surface and the base plane. Archimedes' recipe survives: tile
+the base with $\epsilon\times\epsilon$ squares, stand a box on each,
+and total the volumes.
+
+Our running example is the bell $e^{-x^2-y^2}$ over $[-2,2]^2$.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-cal-bell-surface
+:::
+:::
+:::
+
+::: {.slide title="The box volume, numerically"}
+[Double integrals]{.kicker}
+
+Total the boxes on a fine grid over $[-2,2]^2$. The exact value
+hides the **error function** $\operatorname{erf}$, the Gaussian's
+antiderivative, which has no elementary formula:
+
+@!integral-box-volume
+
+::: {.d2l-note}
+Over the whole plane this volume becomes exactly $\pi$. Both facts
+fall out of the machinery below.
+:::
+:::
+
+::: {.slide title="Fubini: sum in any order"}
+[Fubini]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+A grid sum totals in **any order**. Summing columns-first and
+passing to the limit splits the double integral into iterated
+single ones:
+
+$$\int_U f\,dx\,dy = \int\!\!\left(\int f\,dx\right)dy = \int\!\!\left(\int f\,dy\right)dx.$$
+
+(It needs $f$ absolutely integrable, the rule in machine learning.)
+:::
+
+::: {.col .fig}
+![](../img/mdl-cal-sum-order.svg)
 :::
 :::
 :::
@@ -1199,72 +1288,8 @@ $-\log|\det D\boldsymbol{\phi}|$) is the engine behind
 :::
 :::
 
-::: {.slide}
-::: {.divider}
-[03]{.dnum}
-
-[Higher dimensions]{.dtitle}
-
-[Fubini, and the Gaussian integral]{.dsub}
-:::
-:::
-
-::: {.slide title="Multiple integrals: a volume under a surface"}
-[Fubini]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-For $f(x,y)$ on a box, $\int_U f\,d\mathbf{x}$ is the volume between
-the surface and the base plane. Archimedes' recipe survives: tile
-the base with $\epsilon\times\epsilon$ squares, stand a box on each,
-and total the volumes.
-
-Our running example is the bell $e^{-x^2-y^2}$ over $[-2,2]^2$.
-:::
-
-::: {.col .fig .big}
-@fig:mdl-cal-bell-surface
-:::
-:::
-:::
-
-::: {.slide title="Fubini: sum in any order"}
-[Fubini]{.kicker}
-
-::: {.cols .vc}
-::: {.col}
-A grid sum totals in **any order**. Summing columns-first and
-passing to the limit splits the double integral into iterated
-single ones:
-
-$$\int_U f\,dx\,dy = \int\!\!\left(\int f\,dx\right)dy = \int\!\!\left(\int f\,dy\right)dx.$$
-
-(It needs $f$ absolutely integrable, the rule in machine learning.)
-:::
-
-::: {.col .fig}
-![](../img/mdl-cal-sum-order.svg)
-:::
-:::
-:::
-
-::: {.slide title="The box volume, numerically"}
-[Fubini]{.kicker}
-
-Total the boxes on a fine grid over $[-2,2]^2$. The exact value
-hides the **error function** $\operatorname{erf}$, the Gaussian's
-antiderivative, which has no elementary formula:
-
-@!integral-box-volume
-
-::: {.d2l-note}
-Over the whole plane this volume becomes exactly $\pi$. Both facts
-fall out of the change of variables next.
-:::
-:::
-
 ::: {.slide title="The Gaussian integral"}
-[Fubini]{.kicker}
+[The payoff]{.kicker}
 
 The one-dimensional $\int_{-\infty}^\infty e^{-x^2}\,dx$ has no
 elementary antiderivative. Go *up* a dimension: square it and let
@@ -1310,7 +1335,8 @@ integrates to $1$, and symmetry sends its mean to $0$.
 ::: {.col}
 With no closed form, **Monte Carlo** estimates an expectation by
 sampling, $\mathbb{E}[g(X)] \approx \tfrac1n\sum_i g(x_i)$, at rate
-$1/\sqrt n$ *in every dimension*.
+$1/\sqrt n$ *in every dimension* (the constant, the standard
+deviation of $g(X)$, may grow with $d$; the *exponent* never does).
 
 A grid to resolution $\epsilon$ in $d$ dimensions costs
 $N=\epsilon^{-d}$ points and decays only as $N^{-2/d}$: the exponent
@@ -1321,6 +1347,29 @@ only practical choice.
 ::: {.col .fig .big}
 @!integral-monte-carlo
 :::
+:::
+:::
+
+::: {.slide title="Differentiating under the integral"}
+[Probability]{.kicker}
+
+Training through an expectation means swapping $\nabla_{\boldsymbol\theta}$ and
+$\int$; the plain swap is what shows the score $\nabla_{\boldsymbol\theta}\log
+p_{\boldsymbol\theta}$ has mean zero, the identity at the heart of policy
+gradients. When the *limits* move too, the **Leibniz rule** keeps the books:
+
+$$\frac{d}{d\theta}\!\int_{a(\theta)}^{b(\theta)}\! f(x,\theta)\,dx
+= \int_{a(\theta)}^{b(\theta)}\!\frac{\partial f}{\partial\theta}\,dx
++ f(b(\theta),\theta)\,b'(\theta) - f(a(\theta),\theta)\,a'(\theta).$$
+
+. . .
+
+Each moving endpoint sweeps area in or out at the rate it moves, weighted by the
+integrand's value there.
+
+::: {.d2l-note .warn}
+A density supported on $[0,\theta]$ is the classic trap: drop the boundary term
+and you get a confidently wrong gradient.
 :::
 :::
 

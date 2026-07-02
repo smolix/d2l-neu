@@ -996,9 +996,21 @@ This is gradient descent with $\eta$ replaced by the curvature-adapted $1/f''(x_
 :::
 
 ::: {.col .fig}
-![The best quadratic at the base point.](../img/mdl-cal-taylor-quadratic.svg){width=74%}
+![The tangent matches value and slope; the best parabola also matches curvature, hugging the curve over a visibly wider window.](../img/mdl-cal-best-parabola.svg){width=98%}
 :::
 :::
+:::
+
+::: {.slide title="Watch the digits double"}
+[Curvature]{.kicker}
+
+On $f(x) = \tfrac14 x^4 - x$, Newton's method solves $f'(x) = x^3 - 1 = 0$ from $x_0 = 2$. Read the error column's exponents: $10^{-2} \to 10^{-4} \to 10^{-8}$.
+
+@mdl-single-variable-calculus-newton-s-method
+
+. . .
+
+Each step roughly **squares** the previous error. Gradient descent shrinks the error by the same fixed factor every step, gaining a fixed number of digits; Newton *doubles* them.
 :::
 
 ::: {.slide title="Taylor series: the best degree-$n$ polynomial"}
@@ -1083,13 +1095,25 @@ The one-sided quotients of $|x|$ at $0$ never agree: slope $+1$ from the right, 
 That gap *is* the corner: the two-sided derivative exists only when the one-sided slopes coincide.
 :::
 
+::: {.slide title="The chain rule, caught red-handed"}
+[Nonsmooth]{.kicker}
+
+At each kink, autograd returns *one fixed element* of the subdifferential ($\mathrm{ReLU}'(0) = 0$) and chains it through. But $g(x) = \mathrm{ReLU}(x) - \mathrm{ReLU}(-x)$ **is** the identity, whose only correct slope at $0$ is $1$. Run it:
+
+@mdl-single-variable-calculus-why-sgd-shrugs
+
+. . .
+
+Every framework dutifully reports slope $0$ for the identity function: the chained convention $0 + 0$ is not a subgradient of $g$ at $0$ at all, only an element of a *conservative field*.
+:::
+
 ::: {.slide title="Why SGD shrugs"}
 [Nonsmooth]{.kicker}
 
-At each kink, autograd just returns *one fixed element* of the subdifferential (all four frameworks report $\mathrm{ReLU}'(0) = 0$) and lets the chain rule carry it through.
+The failure we just watched lives only **at** the kink, and the kinks form a **measure-zero set**.
 
 ::: {.d2l-note}
-Chained through a composition, that choice can fail to be a subgradient *at the kink*. But the kinks form a **measure-zero set**, and between random init, minibatch noise, and float jitter, training essentially never lands exactly on one, so every step it actually takes is the honest derivative of a locally smooth function.
+Between random initialization, minibatch noise, and float jitter, stochastic training essentially never evaluates a derivative exactly at a corner. Every step it actually takes uses the honest derivative of a locally smooth function, which is why the per-kink convention never hurts in practice.
 :::
 :::
 

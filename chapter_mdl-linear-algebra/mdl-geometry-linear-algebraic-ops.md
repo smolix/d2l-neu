@@ -1986,6 +1986,29 @@ residual); the **SVD** scales the same idea to any matrix.
 :::
 :::
 
+::: {.slide title="Projection onto a subspace"}
+[Vectors]{.kicker}
+
+The same formula, one matrix heavier: stack an **orthonormal** basis of a
+subspace $S$ as the columns of $\mathbf{Q}$ (so $\mathbf{Q}^\top\mathbf{Q} =
+\mathbf{I}$), and $\mathbf{P} = \mathbf{Q}\mathbf{Q}^\top$ drops any vector
+onto $S$.
+
+::: {.d2l-note .rule}
+$\mathbf{P}\mathbf{x}$ is the unique **closest point** of $S$; the residual
+$\mathbf{x} - \mathbf{P}\mathbf{x}$ is orthogonal to *all* of $S$; and
+$\mathbf{P}^2 = \mathbf{P}$: projecting twice changes nothing.
+:::
+
+. . .
+
+`qr` manufactures the orthonormal basis. Both claims check to roundoff on a
+random 3-dimensional subspace of $\mathbb{R}^5$, and residual-orthogonality
+*is* least squares: the optimal fit's error is orthogonal to every feature.
+
+@mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace
+:::
+
 ::: {.slide title="Span, basis, dimension"}
 [Vectors]{.kicker}
 
@@ -2056,6 +2079,30 @@ $0$ is unlikely to be an accident, which is **why** cosine similarity works.
 ::: {.col .fig}
 ![](../img/mdl-la-cosine-highd.svg)
 :::
+:::
+:::
+
+::: {.slide title="Why attention divides by √d"}
+[High dimensions]{.kicker}
+
+Attention compares one query against thousands of keys by dot product, and
+near-orthogonality is its operating environment: the many unrelated keys score
+near zero, so the few that share structure with the query stand out against a
+quiet background.
+
+. . .
+
+The mysterious $\sqrt{d}$ falls out of our variance result. With entries of
+typical size $1$, $\|\mathbf{q}\| \approx \|\mathbf{k}\| \approx \sqrt{d}$
+while $\operatorname{sd}(\cos\theta) = 1/\sqrt{d}$, so
+
+$$\operatorname{sd}(\mathbf{q}\cdot\mathbf{k})
+\approx \sqrt{d}\cdot\sqrt{d}\cdot\tfrac{1}{\sqrt{d}} = \sqrt{d}.$$
+
+::: {.d2l-note .rule}
+$\mathbf{Q}\mathbf{K}^\top/\sqrt{d}$ is **standardization**: dividing the raw
+scores by their standard deviation keeps them $O(1)$, so the softmax stays in
+its responsive range instead of saturating.
 :::
 :::
 
@@ -2168,6 +2215,30 @@ two matrices **composes** their maps.
 :::
 :::
 
+::: {.slide title="What a matrix destroys"}
+[Linear maps]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$\mathbf{B} = \bigl[\begin{smallmatrix}2&-1\\4&-2\end{smallmatrix}\bigr]$ has
+dependent columns, $\mathbf{b}_1 + 2\,\mathbf{b}_2 = \mathbf{0}$. The whole
+plane lands on one line (the **column space**), and the direction $(1,2)^\top$
+is crushed to the origin (the **null space**). Once inputs collide, no inverse
+can tell them apart.
+
+::: {.d2l-note .rule}
+**Rank--nullity.** $\operatorname{rank}\mathbf{A} + \dim\ker\mathbf{A} = n$:
+of the $n$ directions coming in, what a matrix does not kill, it keeps.
+$\mathbf{B}$ balances the books as $1 + 1 = 2$.
+:::
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-la-null-collapse.svg)
+:::
+:::
+:::
+
 ::: {.slide title="Orthogonal matrices: the rigid motions"}
 [Linear maps]{.kicker}
 
@@ -2217,6 +2288,9 @@ For a square matrix: $\det\mathbf{A} = 0$ $\iff$ the columns are linearly
 dependent $\iff$ $\mathbf{A}$ is **not** invertible.
 :::
 
+Our collapsing $\mathbf{B}$ scores $2\cdot(-2) - (-1)\cdot 4 = 0$, exactly as
+it must.
+
 . . .
 
 When invertible, $\mathbf{A}^{-1}$ undoes the map; the $2\times2$ formula checks out, multiplying back to the identity:
@@ -2255,16 +2329,18 @@ matrix–vector call recovers our worked $\mathbf{A}\mathbf{v} = [0, -5]^\top$):
 ::: {.cols}
 ::: {.col}
 - A vector is a **point or a direction**; the **dot product** gives angles.
-- **Cauchy–Schwarz** makes the angle well-defined; **projection** splits a
-  vector into parallel + orthogonal parts.
-- In high dimensions, random directions are **nearly orthogonal**, which is
-  why cosine similarity works.
+- **Cauchy–Schwarz** makes the angle well-defined; **projection**
+  ($\mathbf{P}=\mathbf{Q}\mathbf{Q}^\top$ for a subspace) leaves an orthogonal
+  residual: the geometry of least squares.
+- In high dimensions, random directions are **nearly orthogonal**: why cosine
+  similarity works and why attention divides by $\sqrt{d}$.
 :::
 
 ::: {.col}
 - A **hyperplane** is the decision boundary of every linear classifier.
-- A **matrix** skews, rotates, and scales; the **determinant** is its volume
-  scale, zero exactly when it collapses space.
+- A **matrix** skews, rotates, and scales; **rank--nullity** counts what
+  survives; the **determinant** is its volume scale, zero exactly when it
+  collapses space.
 - **Einstein notation** writes every product as one index pattern.
 :::
 :::

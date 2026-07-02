@@ -1433,6 +1433,12 @@ softmax + cross-entropy, w.r.t. the logits $=\mathbf p-\mathbf y$
 :::
 
 No table needed: the least-squares gradient is the rank-one outer product a linear layer returns in backprop.
+
+. . .
+
+Derive, then verify: autograd audits the first two at a random point:
+
+@!mdl-matrix-calculus-autodiff-a-few-key-identities-derived-not-tabulated-1
 :::
 
 ::: {.slide title="The cancellation that fuses softmax with cross-entropy"}
@@ -1515,7 +1521,7 @@ Reverse mode multiplies *left-to-right*, carrying a **vector–Jacobian product*
 A scalar loss is a single-row Jacobian ($m=1$), so **one** backward sweep yields the *entire* gradient.
 
 ::: {.d2l-note .rule}
-Gradient of a scalar at a small constant multiple of one forward pass ($2$--$4\times$), *independent of $n$*. This is the cheap-gradient principle.
+Gradient of a scalar at a small constant multiple of one forward pass ($2$--$4\times$ in practice, provably $\le 5$ for arithmetic circuits: Baur--Strassen). *Independent of $n$*: the cheap-gradient principle.
 :::
 :::
 
@@ -1523,6 +1529,16 @@ Gradient of a scalar at a small constant multiple of one forward pass ($2$--$4\t
 ![](../img/mdl-cal-fwd-vs-rev.svg){width=100%}
 :::
 :::
+:::
+
+::: {.slide title="One row or one column per pass"}
+[Reverse mode]{.kicker}
+
+The cost rule, drawn as shapes. A pass buys one **row** (reverse, a VJP) or one **column** (forward, a JVP); the cheap mode is the one whose unit matches your Jacobian's *short* side.
+
+![](../img/mdl-cal-jacobian-shapes.svg){width=88% fig-align="center"}
+
+A scalar loss is one row: one VJP, one backward pass. The full $m\times n$ matrix costs $\min(m,n)$ passes either way, which is why it is never formed.
 :::
 
 ::: {.slide title="The tape: a diamond, not a chain"}
@@ -1553,6 +1569,18 @@ One forward pass records the tape; one backward pass yields both partials, match
 @matrix-calculus-autodiff-tape-check@pytorch
 :::
 
+::: {.slide title="The asymmetry, measured: 200 passes vs 1"}
+[Reverse mode]{.kicker}
+
+With both engines on the table, the cost claim stops being an assertion. Take a scalar function of $n = 200$ inputs: forward mode assembles the gradient one input direction per pass; the tape runs *one* backward sweep.
+
+@!mdl-matrix-calculus-autodiff-the-cost-asymmetry-measured
+
+. . .
+
+Identical gradients, a factor-$n$ gap in work. Nothing is special about $200$: replace it by the $10^8$ parameters of a modern network and this measured ratio *is* the factor of millions, the entire reason no framework trains in forward mode.
+:::
+
 ::: {.slide title="Never form the Jacobian"}
 [Reverse mode]{.kicker}
 
@@ -1562,7 +1590,48 @@ A dense $m\times n$ Jacobian costs $\min(m,n)$ passes and $\Theta(mn)$ storage; 
 If you are assembling a Jacobian, you have probably written down a matrix you could have multiplied through. Frameworks expose `jvp` / `vjp`; you **compose** them.
 :::
 
-One order up, the **Hessian–vector product** $\mathbf H\mathbf v$ comes from *forward-over-reverse*: curvature in a direction without ever forming $\mathbf H$, which is what makes Newton and CG scale.
+One order up, the **Hessian–vector product** $\mathbf H\mathbf v$ is the directional derivative of the gradient map: curvature in a direction without ever forming $\mathbf H$.
+:::
+
+::: {.slide title="Curvature for the price of a gradient"}
+[Reverse mode]{.kicker}
+
+Differentiate the gradient *once, in one direction*. For $L(\mathbf x) = \tfrac12\mathbf x^\top\mathbf A\mathbf x$ the Hessian is $\mathbf A$ itself, so the right answer is known in advance, and no $2\times2$ matrix of second derivatives is ever assembled:
+
+@mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up
+
+. . .
+
+Cost: a small constant multiple of *one gradient*, independent of $n$. This is what makes Newton and conjugate-gradient methods, and curvature diagnostics, tractable at scale.
+:::
+
+::: {.slide title="Differentiating through an equation"}
+[Reverse mode]{.kicker}
+
+Some outputs are defined *implicitly*: $\mathbf x^\star(\boldsymbol\theta)$ solves $\mathbf g(\mathbf x^\star, \boldsymbol\theta) = \mathbf 0$ (a fixed point, an equilibrium, an inner argmin). No need to tape the solver.
+
+::: {.d2l-note .rule}
+**Implicit function theorem.** Differentiating the identity $\mathbf g(\mathbf x^\star(\boldsymbol\theta), \boldsymbol\theta) \equiv \mathbf 0$ gives
+$\;\frac{\partial\mathbf x^\star}{\partial\boldsymbol\theta} = -\bigl(\frac{\partial\mathbf g}{\partial\mathbf x}\bigr)^{-1}\frac{\partial\mathbf g}{\partial\boldsymbol\theta}$, both Jacobians *at the solution only*.
+:::
+
+. . .
+
+One linear solve per gradient, however many iterations the solver ran. Checked on a $2\times2$ Newton solve, against a finite difference of the solver's output:
+
+@!mdl-matrix-calculus-autodiff-differentiating-through-equations
+
+The *equation* carries the derivative, not the algorithm that solved it: the seed of the adjoint method, deep equilibrium models, and bilevel optimization.
+:::
+
+::: {.slide title="The price of the tape, and buying it back"}
+[Reverse mode]{.kicker}
+
+Reverse mode must keep every forward intermediate alive until the backward sweep consumes it: $O(L)$ activation memory, often the binding constraint on batch size and depth.
+
+![](../img/mdl-cal-checkpointing.svg){width=92% fig-align="center"}
+
+**Checkpointing** stores only every $\sqrt{L}$-th activation and recomputes each segment when the sweep reaches it: $O(\sqrt{L})$ memory for roughly one extra forward pass.
 :::
 
 ::: {.slide title="Recap"}
@@ -1577,8 +1646,8 @@ One order up, the **Hessian–vector product** $\mathbf H\mathbf v$ comes from *
 
 ::: {.col}
 - **Forward mode** (dual numbers, JVP): one *column* per pass, cheap when tall.
-- **Reverse mode** (the tape, VJP): one *row* per pass, cheap when wide.
-- A loss is maximally wide, so **backprop is reverse-mode AD**: the full gradient at $2$–$4\times$ one forward pass, paid for in stored activations.
+- **Reverse mode** (the tape, VJP): one *row* per pass, cheap when wide. A loss is maximally wide, so **backprop is reverse-mode AD**, paid for in stored activations (checkpointing buys them back).
+- **Compose, never assemble:** $\mathbf H\mathbf v$ by differentiating the gradient; implicit outputs by one linear solve.
 :::
 :::
 

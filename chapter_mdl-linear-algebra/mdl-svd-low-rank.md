@@ -1249,6 +1249,25 @@ eigenvalues of $\mathbf{A}^\top\mathbf{A}$.
 @svd-verify
 :::
 
+::: {.slide title="A ranked sum of rank-one pieces"}
+[The factorization]{.kicker}
+
+Column by column, $\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$
+unrolls into **dyads**, heaviest first:
+
+$$\mathbf{A} = \sum_{i=1}^{r} \sigma_i\,\mathbf{u}_i\mathbf{v}_i^\top.$$
+
+. . .
+
+In Einstein notation that sum is the index pattern `'i,mi,in->mn'`, and the
+one-liner rebuilds the matrix exactly:
+
+@mdl-svd-low-rank-rotate-scale-rotate
+
+This *ranked list of rank-one ingredients* is what low-rank approximation
+truncates: keep the heavy terms, drop the light ones.
+:::
+
 ::: {.slide title="Rank & the four fundamental subspaces"}
 [The factorization]{.kicker}
 
@@ -1414,6 +1433,24 @@ $\mathbf{U}\mathbf{V}^\top$ of the momentum (Newton--Schulz, matmuls only).
 :::
 :::
 
+::: {.slide title="Muon: singular values marched to 1"}
+[Applications]{.kicker}
+
+Newton--Schulz, $\mathbf{X}\leftarrow\tfrac12(3\mathbf{X}-\mathbf{X}\mathbf{X}^\top\mathbf{X})$,
+applies the odd cubic $p(\sigma)=\tfrac12(3\sigma-\sigma^3)$ to every singular
+value while leaving $\mathbf{U}$ and $\mathbf{V}$ untouched; Frobenius
+normalization first puts every $\sigma$ inside the cubic's basin of attraction
+of $1$. Watch the spectrum march:
+
+@!mdl-svd-low-rank-the-svd-in-modern-deep-learning-1
+
+. . .
+
+Every $\sigma_i \to 1$ (the smallest is the straggler, exactly the regime
+Muon's tuned coefficients accelerate) and the iterate lands on the polar
+factor $\mathbf{U}\mathbf{V}^\top$: matmuls only, no SVD ever computed.
+:::
+
 ::: {.slide title="Effective rank, measured"}
 [Applications]{.kicker}
 
@@ -1422,6 +1459,12 @@ decays, so the diagnostic is worth running. Here rank 18 of 256 holds
 95% of the spectral energy, a LoRA at 10.5% of the parameters:
 
 @svd-weight-spectrum
+
+::: {.d2l-note}
+The yardstick is the **Marchenko--Pastur bulk** of the previous section:
+*trained* weight spectra are heavy-tailed far beyond that noise baseline, and
+the escapees are the learned correlation.
+:::
 :::
 
 ::: {.slide title="Recap"}

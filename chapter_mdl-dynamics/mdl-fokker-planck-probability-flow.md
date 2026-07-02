@@ -1167,7 +1167,7 @@ The Lagrangian view follows one realization; the Eulerian view tracks the
 time-marginal $p_t(\mathbf x)$, which averages over all noise and is therefore
 **reproducible**. A hundred thousand OU walkers land on the analytic Gaussians:
 
-@fokker-planck-cloud-marginals
+@!fokker-planck-cloud-marginals
 :::
 
 ::: {.slide title="Three facts from vector calculus"}
@@ -1204,6 +1204,13 @@ onto $p_t$:
 ::: {.d2l-note .rule}
 $$\partial_t p_t = -\nabla\cdot(\mathbf f\,p_t) + \tfrac12 g(t)^2\,\Delta p_t.$$
 :::
+
+. . .
+
+For $\mathbf f = -\nabla V$ this PDE is itself a *gradient flow*: steepest
+descent of the free energy $\int pV + \tfrac12 g^2\!\int p\log p$ in the
+**Wasserstein geometry** (Jordan–Kinderlehrer–Otto) — the same transport
+geometry that powers flow matching.
 :::
 
 ::: {.slide title="Drift transports, diffusion smooths"}
@@ -1265,7 +1272,7 @@ log-density rule.
 
 Because $\nabla p = p\,\nabla\log p$,
 
-$$\tfrac12 g^2\,\Delta p = \nabla\cdot\!\bigl(p\cdot \mathbf{+}\tfrac12 g^2\,\nabla\log p\bigr).$$
+$$\tfrac12 g^2\,\Delta p = \nabla\cdot\!\bigl(p\,\bigl[+\tfrac12 g^2\,\nabla\log p\bigr]\bigr).$$
 
 . . .
 
@@ -1296,7 +1303,7 @@ Same marginals, different choreography — SDE paths cross and rattle, ODE
 trajectories glide and never cross. The clouds are statistically
 indistinguishable ($\mathrm{KS} < 0.009$):
 
-@fokker-planck-pf-ode-overlay
+@!fokker-planck-pf-ode-overlay
 :::
 
 ::: {.slide}
@@ -1364,20 +1371,25 @@ A Bayesian Euler step shows why: the marginal $p_t$ acts as a prior that bends
 each reversed step toward where the data was.
 :::
 
-::: {.slide title="The factor of two"}
+::: {.slide title="The factor of two, drawn"}
 [Time reversal]{.kicker}
 
-One family covers both samplers,
+One dial covers every sampler:
 $\mathbf b_\lambda = \mathbf f - \tfrac{1+\lambda^2}{2}g^2\nabla\log p_t$ with
-noise $\lambda g$, all sharing the marginals $p_t$.
+noise $\lambda g$, all sharing the marginals $p_t$. More injected noise, more
+drift correction — the factor slides from $\tfrac12 g^2$ ($\lambda=0$, the
+PF-ODE) to $g^2$ ($\lambda=1$, Anderson):
 
-::: {.d2l-note}
-$\lambda=0$ is the PF-ODE (undo smoothing once); $\lambda=1$ is Anderson
-(undo, **and** pre-compensate the noise it re-injects). Swap the true score
-for a network and this loop is a diffusion model:
+![](../img/mdl-dyn-lambda-family.svg){width=94%}
 :::
 
-@fokker-planck-reverse-sde
+::: {.slide title="Noise back into data"}
+[Generation]{.kicker}
+
+Zero training: the closed-form mixture score re-grows both modes from noise —
+swap in a trained network and this loop **is** a diffusion model:
+
+@!fokker-planck-reverse-sde
 :::
 
 ::: {.slide title="Recap"}

@@ -1470,8 +1470,9 @@ uniform distribution.
 
 ::: {.d2l-note .rule}
 *Proof.* $H = \mathbb{E}[\log\tfrac{1}{p}] \le \log\mathbb{E}[\tfrac1p]
-= \log k$ by Jensen on the concave $\log$; equality iff $1/p$ is constant.
-$\blacksquare$
+= \log m \le \log k$, where $m$ counts the outcomes with $p_i>0$ — Jensen on
+the *strictly* concave $\log$. Equality forces $1/p$ constant **and** $m=k$:
+the uniform law, exactly. $\blacksquare$
 :::
 :::
 
@@ -1509,8 +1510,12 @@ $D_{\mathrm{KL}}(P\|Q) \ge 0$, with equality **iff** $P=Q$.
 :::
 
 *Proof.* $D_{\mathrm{KL}} = \mathbb{E}_P[-\log\tfrac{q}{p}]
-\ge -\log\mathbb{E}_P[\tfrac{q}{p}] = -\log\sum_x q(x) = 0$ by Jensen on the
-convex $-\log$. $\blacksquare$ Every bound in this chapter is a corollary.
+\ge -\log\mathbb{E}_P[\tfrac{q}{p}] = -\log Q(\mathrm{supp}\,P) \ge 0$ —
+Jensen on the *strictly* convex $-\log$; the sum collects at most all of $Q$'s
+mass, never more. Equality needs $q/p$ constant **and**
+$Q(\mathrm{supp}\,P)=1$, i.e. $P=Q$. $\blacksquare$
+
+Every bound in this chapter is a corollary.
 :::
 
 ::: {.slide title="Cross-entropy = floor + waste"}
@@ -1564,13 +1569,34 @@ distribution onto the model family. One loss, three readings.
 :::
 :::
 
+::: {.slide title="Honesty is the unique optimum"}
+[Proper scoring rules]{.kicker}
+
+A scoring rule $S(\mathbf q, y)$ is **strictly proper** if reporting the truth
+$\mathbf p$ is the *unique* minimizer of the expected penalty. The log score
+$S = -\log q_y$ qualifies — its expected penalty is exactly
+
+$$\mathrm{CE}(\mathbf p,\mathbf q) = H(\mathbf p) + D_{\mathrm{KL}}(\mathbf p\|\mathbf q),$$
+
+which Gibbs minimizes uniquely at $\mathbf q = \mathbf p$.
+
+. . .
+
+::: {.d2l-note}
+Strict propriety is why cross-entropy *incentivizes calibration*: hedging or
+overconfidence leaves expected loss on the table. The Brier score
+$\sum_j (q_j - \mathbf 1[j{=}y])^2$ is also strictly proper — same optimum,
+bounded penalty on confident errors.
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [03]{.dnum}
 
 [The coding view]{.dtitle}
 
-[Kraft, Shannon's code, and why KL is *extra bits*]{.dsub}
+[Kraft, Shannon, arithmetic coding — why KL is *extra bits*]{.dsub}
 :::
 :::
 
@@ -1603,6 +1629,42 @@ code $Q$ overspends by exactly $D_{\mathrm{KL}}$:
 ::: {.d2l-note .rule}
 $H$ is the floor, $\mathrm{CE}$ is the bill, and $D_{\mathrm{KL}}$ is — quite
 literally — the wasted bits.
+:::
+:::
+
+::: {.slide title="Arithmetic coding pays the ceiling once"}
+[Beyond symbol codes]{.kicker}
+
+Shannon's $\lceil\log_2(1/p)\rceil$ rounds up to a whole bit on *every*
+symbol — a $p=0.9$ symbol carries $0.15$ bits yet costs $1$. Arithmetic coding
+runs the Kraft picture in reverse: narrow one interval per message, to width
+$w = \prod_i q(x_i \mid x_{<i})$, and name it in
+$\lceil\log_2(1/w)\rceil + 1$ bits:
+
+@!mdl-information-theory-from-symbol-codes-to-arithmetic-coding
+
+$4.69$ bits of surprisal: the arithmetic code spends $6$; the symbol-by-symbol
+code, $13$.
+:::
+
+::: {.slide title="A language model is a compressor"}
+[Prediction = compression]{.kicker}
+
+Nothing required i.i.d.: *any* next-symbol model $q(\cdot\mid x_{<i})$ drives
+the coder. A document's cross-entropy $\times$ its length **is** its compressed
+size, to within two bits — an LLM plus an arithmetic coder out-compresses gzip
+(Delétang et al., 2023).
+
+. . .
+
+The floor is the source's **entropy rate**
+$H_{\mathrm{rate}} = \lim_n H(X_n \mid X_{<n})$ — about $1$ bit/character for
+English (Shannon, 1951), far below the $4.75$ of random letters.
+
+::: {.d2l-note}
+The scaling laws, read in this lens: held-out CE falls as a *power law* in
+compute — the approach to the entropy-rate floor is not just guaranteed by
+Gibbs, it is empirically **predictable**.
 :::
 :::
 
@@ -1673,8 +1735,9 @@ Pick the target distribution; Gibbs picks the optimum and guarantees the floor.
 
 ::: {.col}
 - Kraft + Shannon make it literal: KL is the extra bits of a wrong code.
+- Arithmetic coding sits *on* the surprisal floor: prediction is compression.
 - Perplexity $= \exp(\mathrm{CE})$, a base-free branching factor.
-- Label smoothing and distillation are corollaries of Gibbs.
+- Label smoothing, distillation, proper scoring: corollaries of Gibbs.
 :::
 :::
 

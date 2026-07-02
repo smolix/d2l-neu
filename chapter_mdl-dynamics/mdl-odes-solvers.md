@@ -1539,7 +1539,7 @@ $e^{\lambda_i t}$ — exactly the §22 eigendecomposition at work.
 Power series, eigendecomposition, and the Euler limit $(I+tA/n)^n$ all agree,
 and the norm decays exactly as the theory predicts:
 
-@odes-solvers-matrix-exponential
+@!odes-solvers-matrix-exponential
 :::
 
 ::: {.slide title="The stability dictionary"}
@@ -1571,7 +1571,7 @@ gives the same verdict (Hartman–Grobman).
 
 [Numerical solvers]{.dtitle}
 
-[Euler, Runge–Kutta, stiffness]{.dsub}
+[Euler, Runge–Kutta, stiffness — and gradient descent]{.dsub}
 :::
 :::
 
@@ -1594,8 +1594,7 @@ RK4 samples four slopes ($k_1$ at the start, two at the midpoint, one at the
 end) and Simpson-weights them $\tfrac16(k_1+2k_2+2k_3+k_4)$ — global order
 $4$, so halving $h$ cuts error by $16$.
 
-@odes-solvers-euler-rk4-order
-
+@!odes-solvers-euler-rk4-order
 The measured slopes are $1.0$ (Euler) and $4.0$ (RK4), matching theory.
 :::
 
@@ -1607,6 +1606,60 @@ fast dead mode then forces a tiny step. **Backward** Euler is stable for every
 $h$ (A-stable) at the cost of one solve per step:
 
 @odes-solvers-stiffness-sweep
+:::
+
+::: {.slide title="The stability picture"}
+[Solvers]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+In the complex plane of $z = h\lambda$:
+
+- forward Euler decays only inside the disc $|1+z| < 1$;
+- RK4's lobes stretch to $\approx -2.79$ on the real axis;
+- backward Euler is stable everywhere *but* a disc — the entire left
+  half-plane, which is **A-stability**.
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-dyn-stability-regions.svg)
+:::
+:::
+:::
+
+::: {.slide title="Gradient descent is a solver"}
+[Training as dynamics]{.kicker}
+
+Gradient descent with learning rate $\eta$ is forward Euler on the **gradient
+flow** $\dot{\mathbf x} = -\nabla L(\mathbf x)$; near a minimum with Hessian
+$H$ it linearizes onto the test equation:
+
+$$\dot{\boldsymbol\delta} = -H\boldsymbol\delta
+\;\;\xrightarrow{\ \text{Euler},\ h=\eta\ }\;\;
+\boldsymbol\delta_{k+1} = (I-\eta H)\,\boldsymbol\delta_k
+\;\;\Longrightarrow\;\;
+\eta < \frac{2}{\lambda_{\max}(H)}.$$
+
+. . .
+
+::: {.d2l-note .rule}
+A diverging learning rate is a solver instability; an ill-conditioned Hessian
+is a **stiff** gradient flow. Momentum is one derivative up: heavy-ball
+discretizes $m\ddot{\mathbf x}+\gamma\dot{\mathbf x}=-\nabla L$.
+:::
+:::
+
+::: {.slide title="The verdict flips at the predicted threshold"}
+[Training as dynamics]{.kicker}
+
+On a quadratic with $\lambda_{\max}=10$ the predicted flip is $\eta = 0.2$ —
+and it lands there to the third decimal, while the slow mode ($\lambda=1$)
+converges contentedly at every rate shown:
+
+@!mdl-odes-solvers-gradient-descent-is-a-solver
+
+The divergence is manufactured entirely by the loss surface's own fast dead
+mode.
 :::
 
 ::: {.slide}
@@ -1636,8 +1689,7 @@ $\dot{\mathbf x}=\mathbf f_\theta(\mathbf x,t)$,
 $\mathbf x(T)=\mathbf x_0+\int_0^T\mathbf f_\theta\,dt$. A 1-hidden-layer net
 learns a circle→ellipse flow:
 
-@odes-solvers-neural-ode-train
-
+@!odes-solvers-neural-ode-train
 ::: {.d2l-note}
 Lipschitz $\mathbf f_\theta$ → the map is invertible by Picard–Lindelöf:
 invertibility is **inherited, not engineered**.
@@ -1653,8 +1705,7 @@ $$\dot{\mathbf a} = -\Bigl(\tfrac{\partial\mathbf f}{\partial\mathbf x}\Bigr)^{\
 \qquad \frac{\partial L}{\partial\theta} = \int_0^T
 \Bigl(\tfrac{\partial\mathbf f}{\partial\theta}\Bigr)^{\!\top}\mathbf a\,dt.$$
 
-@odes-solvers-adjoint-check
-
+@!odes-solvers-adjoint-check
 ::: {.d2l-note .rule}
 Discretizing the adjoint ODE **is** the backprop recursion — but with $O(1)$
 memory instead of storing every step.
@@ -1674,7 +1725,7 @@ $$\frac{d}{dt}\log p_t(\mathbf x(t)) = -\operatorname{tr}\Bigl(\tfrac{\partial\m
 Hutchinson's estimator $\operatorname{tr}(M)=\mathbb E[\boldsymbol\epsilon^\top M\boldsymbol\epsilon]$
 turns that into one vector–Jacobian product (the FFJORD trick):
 
-@odes-solvers-cnf-trace
+@!odes-solvers-cnf-trace
 :::
 
 ::: {.slide title="Recap"}
@@ -1685,6 +1736,7 @@ turns that into one vector–Jacobian product (the FFJORD trick):
 - An IVP is a velocity field; Picard–Lindelöf gives a unique, invertible flow under a Lipschitz bound.
 - Linear systems: $e^{At}=Ve^{\Lambda t}V^{-1}$; eigenvalues set decay, growth, and rotation.
 - Euler is $O(h)$, RK4 is $O(h^4)$; stiffness forces implicit steps.
+- GD $=$ Euler on the gradient flow: $\eta < 2/\lambda_{\max}$ is a stability bound.
 :::
 
 ::: {.col}

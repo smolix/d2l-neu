@@ -1996,12 +1996,22 @@ mean** — used once for scores, once for velocities.
 ::: {.slide title="Denoising score matching & Tweedie"}
 [Denoising]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Perturb $\tilde{\mathbf x}=\mathbf x+\sigma\boldsymbol\epsilon$; the
-conditional score is closed-form $-\boldsymbol\epsilon/\sigma$. Regressing on
-it (Vincent) recovers the marginal score, and rearranging gives Tweedie:
+conditional score is closed-form $-\boldsymbol\epsilon/\sigma$, and regressing
+on it (Vincent) recovers the marginal score. Rearranged, that is **Tweedie**:
 
 $$\mathbb E[\mathbf x\mid\tilde{\mathbf x}]
-= \tilde{\mathbf x} + \sigma^2\,\nabla\log p_\sigma(\tilde{\mathbf x}).$$
+= \tilde{\mathbf x} + \sigma^2\,\nabla\log p_\sigma(\tilde{\mathbf x})$$
+
+— one step up the score lands exactly on the posterior mean.
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-dyn-tweedie.svg)
+:::
+:::
 
 ::: {.d2l-note}
 Estimating the score and optimal denoising are the **same function**.
@@ -2014,7 +2024,7 @@ Estimating the score and optimal denoising are the **same function**.
 A tiny MLP trained by denoising score matching matches the analytic score,
 landing on the irreducible loss floor:
 
-@score-matching-diffusion-flow-dsm-train
+@!score-matching-diffusion-flow-dsm-train
 :::
 
 ::: {.slide}
@@ -2035,6 +2045,10 @@ but blurs. The fix: a noise-conditional score $\mathbf s_\theta(\mathbf x,t)$
 trained along a forward SDE (VE or VP), then a reverse pass to generate:
 
 ![](../img/mdl-dyn-forward-reverse.svg){width=82%}
+
+A weighting $\lambda(t)$ allocates effort across noise levels: $\lambda = g^2$
+makes the loss a likelihood bound; DDPM's $1-\bar\alpha_t$ trades that for
+sample quality.
 :::
 
 ::: {.slide title="Two clocks"}
@@ -2053,7 +2067,7 @@ noise→data and samples forward. To compare, substitute $t\to 1-t$:
 2. Exact marginal $\mathbf x_t=\sqrt{\bar\alpha_t}\,\mathbf x_0+\sqrt{1-\bar\alpha_t}\,\boldsymbol\epsilon$, $\bar\alpha_t=\prod_s(1-\beta_s)$.
 3. The simple $\|\boldsymbol\epsilon-\boldsymbol\epsilon_\theta\|^2$ loss is denoising score matching, reweighted by $\lambda(t)=1-\bar\alpha_t$.
 
-@score-matching-diffusion-flow-ddpm-marginal
+@!score-matching-diffusion-flow-ddpm-marginal
 :::
 
 ::: {.slide title="Langevin: stationary but slow"}
@@ -2070,19 +2084,61 @@ noise, or use predictor–corrector.
 :::
 :::
 
-::: {.slide title="DDIM and guidance"}
+::: {.slide title="DDIM: slide along your own curve"}
 [Sampling]{.kicker}
 
-**DDIM** predicts $\hat{\mathbf x}_0$ from $\boldsymbol\epsilon_\theta$ and
-re-uses it — deterministic, big steps, same network ($\eta$ interpolates back
-to DDPM). **Guidance** is Bayes on scores:
+::: {.cols .vc}
+::: {.col}
+Invert the marginal for
+$\hat{\mathbf x}_0 = \bigl(\mathbf x_t - \sqrt{1-\bar\alpha_t}\,\boldsymbol\epsilon_\theta\bigr)/\sqrt{\bar\alpha_t}$,
+then **re-use** the predicted noise instead of resampling:
 
-$$\nabla\log p_t(\mathbf x\mid y) = \nabla\log p_t(\mathbf x) + \nabla\log p_t(y\mid\mathbf x),
-\quad \tilde{\mathbf s} = (1-\gamma)\mathbf s_\varnothing + \gamma\,\mathbf s_y.$$
+$$\mathbf x_{t-1} = \sqrt{\bar\alpha_{t-1}}\,\hat{\mathbf x}_0
++ \sqrt{1-\bar\alpha_{t-1}}\,\boldsymbol\epsilon_\theta.$$
+
+Each sample slides deterministically along its own curve — strides can skip
+levels.
+:::
+
+::: {.col .fig .big}
+![](../img/mdl-dyn-ddim-strides.svg)
+:::
+:::
+:::
+
+::: {.slide title="Ten strides for a thousand staggers"}
+[Sampling]{.kicker}
+
+On the closed-form mixture (no learning in the loop), ten strides land every
+sample in the same mode as the thousand-step reference; by fifty the terminal
+laws are statistically indistinguishable:
+
+@!mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed
+
+Same network, $\eta$ interpolates back to DDPM — DDIM is the PF-ODE's bespoke
+integrator, exact for Gaussian marginals.
+:::
+
+::: {.slide title="Guidance is Bayes on scores"}
+[Guidance]{.kicker}
+
+$$\nabla\log p_t(\mathbf x\mid y) = \nabla\log p_t(\mathbf x) + \nabla\log p_t(y\mid\mathbf x).$$
+
+**Classifier-free guidance** trains one network with label dropout and
+extrapolates *through* the conditional:
+$\tilde{\mathbf s} = (1-\gamma)\,\mathbf s_\varnothing + \gamma\,\mathbf s_y$.
+
+. . .
+
+Measured on the closed-form mixture: $\gamma=1$ reproduces the honest
+conditional (mean $0.966$ vs the analytic $0.970$); at $\gamma=3, 10$ there is
+no more mass to move, so the mode *distorts* — drifting to $1.04$, then
+$1.07$, and narrowing.
 
 ::: {.d2l-note}
-$\gamma>1$ tilts toward $y$ — effective, but no longer a consistent noised
-marginal.
+For $\gamma>1$ the tilt $p_t(\mathbf x)\,p_t(y\mid\mathbf x)^\gamma$ is the
+noised marginal of **no** clean distribution — a useful controlled distortion,
+not a consistent diffusion.
 :::
 :::
 
@@ -2092,7 +2148,7 @@ marginal.
 
 [Flow matching]{.dtitle}
 
-[prescribe the path, regress the velocity]{.dsub}
+[prescribe the path, regress the velocity, translate the wardrobe]{.dsub}
 :::
 :::
 
@@ -2120,6 +2176,44 @@ $\mathbf u_t(\mathbf x\mid\mathbf z)$; its conditional mean is the marginal
 velocity. $\blacksquare$ Identical structure to Vincent's theorem.
 :::
 
+::: {.slide title="Score, noise, velocity: one function"}
+[The dictionary]{.kicker}
+
+On a Gaussian path
+$\mathbf x_t = \alpha_t\,\mathbf x_1 + \sigma_t\,\boldsymbol\epsilon$, the
+marginal velocity and the marginal score determine each other:
+
+$$\mathbf u_t(\mathbf x) = \frac{\dot\alpha_t}{\alpha_t}\,\mathbf x
+- \Bigl(\sigma_t\dot\sigma_t - \sigma_t^2\,\frac{\dot\alpha_t}{\alpha_t}\Bigr)
+\nabla\log p_t(\mathbf x)$$
+
+— both are affine in the one posterior mean
+$\hat{\mathbf x}_1 = \mathbb E[\mathbf x_1\mid\mathbf x_t]$ (Tweedie again):
+
+@!mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function
+
+Route one never mentions a score; route two never mentions a velocity.
+:::
+
+::: {.slide title="One posterior mean, many wardrobes"}
+[Parameterizations]{.kicker}
+
+Every target a practitioner meets is a $t$-dependent affine re-dressing of the
+score $\mathbf s = \nabla\log p_t$:
+
+| network predicts | in terms of $\mathbf s$ | scaling |
+|:--|:--|:--|
+| noise $\hat{\boldsymbol\epsilon}$ | $-\sigma_t\,\mathbf s$ | unit-scale near data (DDPM) |
+| clean $\hat{\mathbf x}_1$ | $(\mathbf x + \sigma_t^2\,\mathbf s)/\alpha_t$ | Tweedie; weak near noise |
+| $v$-prediction $\alpha_t\boldsymbol\epsilon - \sigma_t\mathbf x_1$ | affine in $\mathbf s$ | $O(1)$ at *both* ends |
+
+::: {.d2l-note}
+The invariant clock is the log-SNR $\lambda_t = \log(\alpha_t^2/\sigma_t^2)$:
+schedules covering the same $\lambda$ range are *re-clockings of the same
+model* — EDM's $\sigma(t)=t$ is exactly such a re-clocking.
+:::
+:::
+
 ::: {.slide title="Rectified flow: straight paths"}
 [Flow matching]{.kicker}
 
@@ -2138,6 +2232,20 @@ A small MLP trained by the rectified-flow loss, then Euler-integrated, sharpens
 the crescents as step count grows:
 
 @score-matching-diffusion-flow-cfm-panels
+:::
+
+::: {.slide title="One reflow round, measured"}
+[Reflow]{.kicker}
+
+Integrate the trained ODE once, keep the couplings
+$(\mathbf z, \hat{\mathbf x}_1(\mathbf z))$, and retrain the same architecture
+on those pairs — which now almost never cross:
+
+@!mdl-score-matching-diffusion-flow-one-reflow-round-measured
+
+**One** Euler step scores $0.016$ — within noise of the original's $32$-step
+quality, $40\times$ better than its one-step $0.676$. The loss floor collapses
+too: the coupling's posterior variance is gone.
 :::
 
 ::: {.slide}
@@ -2174,7 +2282,7 @@ orders of magnitude at equal cost — Heun at $20$ steps beats Euler at $40$:
 
 . . .
 
-@score-matching-diffusion-flow-euler-vs-heun
+@!score-matching-diffusion-flow-euler-vs-heun
 :::
 
 ::: {.slide title="One template, many names"}
@@ -2185,7 +2293,8 @@ conditional regression target, and a numerical integrator**.
 
 ::: {.d2l-note .rule}
 DDPM, score-SDE, PF-ODE, DDIM, and flow matching differ only in the path, the
-loss reweighting, and whether the sampler injects noise.
+loss reweighting, and whether the sampler injects noise — the *stochastic
+interpolants* framework writes the whole family in one formalism.
 :::
 :::
 
@@ -2201,7 +2310,10 @@ loss reweighting, and whether the sampler injects noise.
 
 ::: {.col}
 - Flow matching prescribes the path; CFM = FM by the same regression lemma.
-- Rectified flow uses straight conditionals; Benamou–Brenier: straight = least energy.
+- Score, noise, $\hat{\mathbf x}_1$, velocity: one posterior mean in different
+  clothes, on the log-SNR clock.
+- Straight = least energy (Benamou–Brenier); one reflow round makes 1 step
+  match 32.
 - One thread: an intractable marginal average **is** a tractable conditional expectation, and regression finds it.
 :::
 :::

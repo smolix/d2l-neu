@@ -1386,6 +1386,12 @@ $f(1)=0$.
 :::
 
 Convexity of $f$ is *exactly* what buys non-negativity.
+
+. . .
+
+One more Jensen buys **data processing**: pushing $P$ and $Q$ through any
+channel $K$ only loses distinguishability — $D_f(PK\,\|\,QK) \le D_f(P\|Q)$,
+for every $f$ at once.
 :::
 
 ::: {.slide title="A gallery of generators"}
@@ -1400,8 +1406,10 @@ One curve $f$ per divergence:
 - Hellinger: $(\sqrt u-1)^2$
 - total variation: $\tfrac12|u-1|$
 - Jensen–Shannon (symmetric)
+- $\alpha$-family: a dial from reverse to forward KL; its log-transform is
+  **Rényi's** $D_\alpha$
 
-Near $P=Q$ they all agree, $\propto f''(1)\,\chi^2$; they differ only far apart.
+Near $P=Q$ all agree, $\propto f''(1)\,\chi^2$; they differ only far apart.
 :::
 
 ::: {.col .fig}
@@ -1486,8 +1494,9 @@ for the mass it drops:
 
 ::: {.cols .vc}
 ::: {.col}
-$\mathrm{TV}(P,Q) = \sup_A|P(A)-Q(A)| = \tfrac12\|p-q\|_1$ — the best advantage
-of any single-sample test.
+$\mathrm{TV}(P,Q) = \sup_A|P(A)-Q(A)| = \tfrac12\|p-q\|_1$. Hand a tester one
+sample: the best test succeeds with probability $\tfrac12(1+\mathrm{TV})$ — in
+the cryptographers' convention, an *advantage* of exactly $\mathrm{TV}$.
 
 Pinsker: $\mathrm{TV} \le \sqrt{D_{\mathrm{KL}}/2}$, so a small KL silences
 *every* test at once.
@@ -1548,10 +1557,15 @@ The CDF formula and a 36-variable transport LP agree to ten digits:
 
 @!divergences-distances-w1
 
-. . .
+Beyond one dimension no such formula exists — and the LP has $n^2$ variables.
+:::
 
-Entropic regularization (Sinkhorn) trades exactness for GPU-friendly speed,
-converging to the LP as $\varepsilon\to 0$:
+::: {.slide title="Sinkhorn anneals the haze"}
+[Entropic OT]{.kicker}
+
+Sinkhorn's row/column rescalings solve the $-\varepsilon H(\gamma)$-regularized
+plan on a GPU. At $\varepsilon=1$ a haze overpays ($1.77$ vs $1.70$); shrinking
+$\varepsilon$ anneals onto the LP's never-crossing staircase:
 
 @!divergences-distances-sinkhorn
 :::
@@ -1622,14 +1636,15 @@ failure modes.
 
 ::: {.cols}
 ::: {.col}
-- f-divergence $= \mathbb{E}_Q[f(p/q)]$; one Jensen proof gives $D_f \ge 0$.
+- f-divergence $= \mathbb{E}_Q[f(p/q)]$; Jensen gives $D_f \ge 0$ *and* its DPI.
+- The $\alpha$/Rényi dial sweeps reverse $\to$ forward KL.
 - Fenchel duality turns any $f$ into a critic game — the f-GAN; GAN is the JS case.
 - Forward KL covers modes; reverse KL hugs one.
 :::
 
 ::: {.col}
-- TV is the strongest single-sample test; Pinsker bounds it by $\sqrt{\mathrm{KL}/2}$.
-- $W_1$ stays smooth on disjoint supports (WGAN); $W_1=\int|F_P-F_Q|$ in 1-D.
+- TV is the best single-sample advantage; Pinsker bounds it by $\sqrt{\mathrm{KL}/2}$.
+- $W_1$ stays smooth on disjoint supports (WGAN); Sinkhorn anneals onto the LP.
 - The score drops $Z$; the Fisher/Stein row powers diffusion and SVGD.
 :::
 :::

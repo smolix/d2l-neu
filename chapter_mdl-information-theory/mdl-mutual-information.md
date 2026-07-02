@@ -1579,7 +1579,9 @@ term. $\blacksquare$
 @!mutual-information-dpi-check
 
 ::: {.d2l-note}
-No layer can *create* label information; invertible maps lose nothing.
+No layer can *create* label information; invertible maps lose nothing. But
+conditioning is not processing: $Z = X \oplus Y$ turns two independent bits
+into $I(X;Y\mid Z) = \ln 2$.
 :::
 :::
 
@@ -1605,6 +1607,19 @@ every coordinate warping at once.
 There is no free lunch: a finite sample cannot certify arbitrarily large
 dependence.
 :::
+:::
+
+::: {.slide title="Better estimators, same story"}
+[KSG]{.kicker}
+
+Kraskov's $k$-NN estimator replaces bins with adaptive neighborhood radii —
+no bins, no bandwidth — and $2{,}000$ samples land within hundredths of a nat
+of the closed form:
+
+@!mdl-mutual-information-the-curse-of-estimation
+
+The constants improve; the curse does not. By the time $X$ and $Y$ are images,
+neighbor distances concentrate and KSG is as lost as the histogram.
 :::
 
 ::: {.slide title="A ceiling at log N"}
@@ -1634,9 +1649,11 @@ A batch of 256 certifies at most $\ln 256 \approx 5.5$ nats.
 
 ::: {.cols .vc}
 ::: {.col}
-- **Barber–Agakov**: a decoder, $I \ge H(X)+\mathbb{E}[\log q(x\mid y)]$.
+- **Barber–Agakov**: a decoder, $I \ge H(X)+\mathbb{E}[\log q(x\mid y)]$ —
+  low variance, biased down by the decoder's gap.
 - **Donsker–Varadhan / MINE**: $I \ge \mathbb{E}_{P}[T] - \log\mathbb{E}_{Q}[e^T]$.
-- **NWJ**: the same with $e^{-1}\mathbb{E}_Q[e^T]$ — unbiased for the bound.
+- **NWJ**: the same with $e^{-1}\mathbb{E}_Q[e^T]$ — unbiased for the bound,
+  but the $e^T$ tails stay heavy.
 
 All bound below; all are maximized, not measured.
 :::
@@ -1650,8 +1667,10 @@ All bound below; all are maximized, not measured.
 ::: {.slide title="Bias against variance"}
 [The spectrum]{.kicker}
 
-With *exact* critics on a known-MI pair: DV/NWJ are unbiased but their variance
-explodes past $\log N$; InfoNCE is rock-steady but saturates at the ceiling:
+With *exact* critics on a known-MI pair: past $\log N$, NWJ's batch-to-batch
+spread explodes (unbiased for its bound, heavy tails); DV's log-of-average adds
+bias on top of the blow-up; InfoNCE is rock-steady but saturates at the
+ceiling:
 
 @!mutual-information-perfect-critic-bounds
 
@@ -1663,13 +1682,14 @@ You pick your poison — bias or variance.
 
 ::: {.cols .vc}
 ::: {.col}
-Pick the positive among $N-1$ negatives — a categorical cross-entropy. For
-any critic,
+Pick the positive among $N-1$ negatives: $\mathcal L_{\mathrm{NCE}}$ is a plain
+softmax cross-entropy, and the estimator is the ceiling minus the loss. For any
+critic,
 
-$$I(X;Y) \ge \log N - \mathcal L_{\mathrm{NCE}},$$
+$$I(X;Y) \ge \hat I_{\mathrm{NCE}} = \log N - \mathcal L_{\mathrm{NCE}} \le \log N,$$
 
-capped at $\log N$, optimal critic $f^\star = \mathrm{pmi}+c$. This is the loss
-of CPC, SimCLR, and CLIP.
+with optimal critic $f^\star = \mathrm{pmi}+c$. This is the loss of CPC,
+SimCLR, and CLIP.
 :::
 
 ::: {.col .fig}
@@ -1685,6 +1705,12 @@ A small MLP critic at $\rho=0.99$ ($I\approx1.96$ nats): at $N=2$ the bound
 cannot clear $\ln 2$; widen the batch and it climbs toward the truth:
 
 @!mutual-information-infonce-train
+
+. . .
+
+In SimCLR and CLIP the critic is a scaled cosine,
+$f = \mathrm{sim}(z_x,z_y)/\tau$ — the *temperature* is distillation's knob
+again, concentrating the loss on the hardest negatives.
 :::
 
 ::: {.slide}
@@ -1721,8 +1747,8 @@ low error *impossible*:
 
 @mutual-information-fano
 
-5% error on 1000 classes demands $6.36$ nats, which a sample of $N>579$ could
-even certify. The ceiling and the floor meet.
+5% error on 1000 classes demands $6.36$ nats — and *certifying* that much MI
+needs batches of $N > e^{6.36} \approx 581$. The ceiling and the floor meet.
 :::
 
 ::: {.slide title="Read MI objectives honestly"}
@@ -1749,8 +1775,10 @@ artifact for $\tanh$ nets). Read MI as a training signal, not a readout.
 :::
 
 ::: {.col}
-- Distribution-free lower bounds are capped near $\log N$ — batch is resolution.
-- InfoNCE $=$ classification: the loss of CPC, SimCLR, CLIP.
+- Histograms and KSG die in high dimension; distribution-free bounds are
+  capped near $\log N$ — batch is resolution.
+- InfoNCE $=$ classification: $\hat I_{\mathrm{NCE}} = \log N - \mathcal L$,
+  the loss of CPC, SimCLR, CLIP.
 - IB compresses with a purpose; Fano floors the error; read MI as a signal.
 :::
 :::

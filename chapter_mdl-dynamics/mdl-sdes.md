@@ -1081,13 +1081,16 @@ Brownian motion, Itô's calculus, and the SDE<br>**the forward process of every 
 
 ::: {.cols .vc}
 ::: {.col}
-A deterministic flow is invertible — it cannot smoothly turn data into pure
-Gaussian noise. Add a random kick:
+No *fixed* map can forget every dataset: a data-independent bijection sends
+distinct laws to distinct endpoints, so no single deterministic flow carries
+**every** $p_{\text{data}}$ to the same $\mathcal N(\mathbf 0, \sigma^2 I)$.
+Noise does it before any learning:
 
 $$d\mathbf X = \underbrace{\mathbf f(\mathbf X,t)\,dt}_{\text{drift}}
 + \underbrace{g(t)\,d\mathbf W}_{\text{diffusion}}.$$
 
-Goal: carry $p_{\text{data}}$ to $\mathcal N(\mathbf 0, \sigma^2 I)$.
+(A *learned* flow sends one **given** $p_{\text{data}}$ there — that is
+exactly flow matching, §27.4.)
 :::
 
 ::: {.col .fig}
@@ -1227,14 +1230,25 @@ Euler:
 @sdes-euler-maruyama
 :::
 
-::: {.slide title="Strong vs weak convergence"}
+::: {.slide title="Paths stray; laws agree"}
 [Convergence]{.kicker}
 
-**Strong** error (same Brownian path) is $O(\sqrt{\Delta t})$ in general,
-$O(\Delta t)$ for additive noise. **Weak** error (matching marginals) is
-$O(\Delta t)$ always — and weak is what diffusion models need.
+**Strong** error tracks one path against a fine reference driven by the *same*
+increments; **weak** error compares only the terminal *laws*. The coarse path
+visibly strays while the histograms already coincide — and marginals are all a
+diffusion model needs:
 
-@sdes-em-strong-order
+![](../img/mdl-dyn-strong-weak.svg){width=94%}
+:::
+
+::: {.slide title="The measured orders"}
+[Convergence]{.kicker}
+
+Strong order is $\tfrac12$ in general but $1$ for **additive** noise — the
+omitted Milstein term carries $\partial_x g$, which vanishes. Weak order is
+$1$ regardless:
+
+@!sdes-em-strong-order
 
 Measured slopes: additive OU $\approx 1$, multiplicative GBM $\approx 0.5$.
 :::
@@ -1286,7 +1300,7 @@ $$X_\infty \sim \mathcal N\!\bigl(0,\ \sigma^2/(2\theta)\bigr),$$
 with relaxation time $1/\theta$. The path cloud and its endpoint histogram
 confirm it:
 
-@sdes-ou-cloud
+@!sdes-ou-cloud
 :::
 
 ::: {.slide title="Variance-preserving = DDPM's forward marginal"}

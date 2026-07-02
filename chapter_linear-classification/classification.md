@@ -39,7 +39,7 @@ import optax
 ## The `Classifier` Class
 
 :begin_tab:`pytorch, mxnet, tensorflow`
-We define the `Classifier` class below. In the `validation_step` we report both the loss value and the classification accuracy on a validation batch. We draw an update for every `num_val_batches` batches. This has the benefit of generating the averaged loss and accuracy on the whole validation data. These average numbers are not exactly correct if the last batch contains fewer examples, but we ignore this minor difference to keep the code simple.
+We define the `Classifier` class below. In the `validation_step` we report both the loss value and the classification accuracy on a validation batch. The plotting machinery records one point per batch, and since all validation batches (except possibly the last) contain the same number of examples, the average of the plotted per-batch values equals the loss and accuracy over the whole validation set. That average is off only when the final batch is smaller, a minor discrepancy we ignore to keep the code simple.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -51,7 +51,7 @@ only needs to run the forward pass once.
 :end_tab:
 
 :begin_tab:`jax`
-We define the `Classifier` class below. In the `validation_step` we report both the loss value and the classification accuracy on a validation batch. We draw an update for every `num_val_batches` batches. This has the benefit of generating the averaged loss and accuracy on the whole validation data. These average numbers are not exactly correct if the last batch contains fewer examples, but we ignore this minor difference to keep the code simple.
+We define the `Classifier` class below. In the `validation_step` we report both the loss value and the classification accuracy on a validation batch. The plotting machinery records one point per batch, and since all validation batches (except possibly the last) contain the same number of examples, the average of the plotted per-batch values equals the loss and accuracy over the whole validation set. That average is off only when the final batch is smaller, a minor discrepancy we ignore to keep the code simple.
 
 We also redefine the `training_step` method for JAX since all models that will
 subclass `Classifier` later will have a loss that returns auxiliary data.
@@ -97,7 +97,7 @@ class Classifier(d2l.Module):  #@save
                   train=False)
 ```
 
-By default we use a stochastic gradient descent optimizer operating on minibatches, just as we did in the context of linear regression. `configure_optimizers` is a hook: `Trainer` calls it once at the start of training (see :numref:`sec_oo-design`), and it returns the optimizer object that `Trainer` then uses to update the parameters after each backward pass. We install the default here, on `d2l.Module` itself, so that no individual subclass has to repeat it. A subclass is free to override the method to switch optimizers (later chapters do exactly that), but plain SGD is the right default for the models in this chapter.
+By default we use a stochastic gradient descent optimizer operating on minibatches, just as we did in the context of linear regression. `configure_optimizers` is a hook: `Trainer` calls it once at the start of training (see :numref:`sec_oo-design`), and it returns the optimizer object that `Trainer` then uses to update the parameters after each backward pass. We install the default here, on `d2l.Module` itself rather than on `Classifier`, because there is nothing classification-specific about minibatch SGD: regression models use exactly the same default, so the right home for it is the class they all share, and no individual subclass has to repeat it. A subclass is free to override the method to switch optimizers (later chapters do exactly that), but plain SGD is the right default for the models in this chapter.
 
 ```{.python .input #classification-the-classifier-class-2}
 %%tab mxnet
@@ -225,9 +225,29 @@ def parameters(self):
         params.keys()) else self.get_scratch_params()
 ```
 
+## Beyond Accuracy
+
+Accuracy treats every example, and every kind of mistake, as equally important. Once classes are *imbalanced*, that assumption fails in a way that can make accuracy actively misleading. Consider screening for a disease that affects 1% of the population. A "classifier" that ignores its input and always predicts *healthy* is right 99% of the time, so its accuracy is 0.99, and it is also perfectly useless: it finds not a single sick patient. The computation is short enough to do in four lines:
+
+```{.python .input #classification-beyond-accuracy}
+n, sick = 100_000, 1_000            # 1% of the population carries the disease
+tp, fp, fn = 0, 0, sick             # "always predict healthy" never fires
+accuracy = 1 - (fp + fn) / n
+recall = tp / sick                  # fraction of sick patients found
+accuracy, recall
+```
+
+The numbers that expose the failure come from breaking the counts down by what was predicted and what was true. For a binary problem there are four cases, which we arrange in a $2\times2$ table: *true positives* (TP, predicted positive, was positive), *false positives* (FP, predicted positive, was negative), *false negatives* (FN, predicted negative, was positive), and *true negatives* (TN). Two ratios summarize the two failure modes:
+
+$$\textrm{precision} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FP}}, \qquad \textrm{recall} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FN}}.$$
+
+Precision asks: of the examples we *flagged*, how many were real? Recall asks: of the real positives, how many did we *find*? The always-healthy classifier above has recall $0$ (and its precision is undefined, since it never flags anyone), which tells the true story that the 99% accuracy conceals. When a single summary number is needed, the *F1 score*, the harmonic mean $2\,\textrm{PR}/(\textrm{P}+\textrm{R})$ of precision and recall, is the conventional compromise, high only when both are.
+
+For $q$ classes the same bookkeeping becomes a $q \times q$ *confusion matrix*: entry $(i, j)$ counts the examples of true class $j$ that the model predicted as class $i$, so the diagonal holds the correct decisions and every off-diagonal cell isolates one specific kind of error. The confusion matrix is the classification diagnostic; a single accuracy number is just the (weighted) trace of it. We will meet it twice more in this chapter: in :numref:`sec_softmax_scratch` we compute one for our trained Fashion-MNIST classifier to see *which* classes it confuses, and in :numref:`sec_environment-and-distribution-shift` the very same matrix becomes the key computational object for correcting label shift.
+
 ## Summary
 
-The `Classifier` class adds two things to `d2l.Module`: an overridden `validation_step` that logs *both* the loss and the accuracy, and a default `configure_optimizers` that returns a minibatch SGD optimizer. Because of this, every classification model in the rest of the book can subclass `Classifier` and supply only its `forward` pass (and a custom `loss`, where the default cross-entropy will not do), inheriting the whole training and evaluation loop. Accuracy itself is the fraction of examples whose predicted class, the $\arg\max$ of the score vector, matches the true label. It is a discrete metric and so cannot serve as a training objective, but it is almost always the number reported in benchmarks and the one the reader should watch alongside the loss.
+The `Classifier` class adds two things to `d2l.Module`: an overridden `validation_step` that logs *both* the loss and the accuracy, and a default `configure_optimizers` that returns a minibatch SGD optimizer. Because of this, every classification model in the rest of the book can subclass `Classifier` and supply only its `forward` pass (and a custom `loss`, where the default cross-entropy will not do), inheriting the whole training and evaluation loop. Accuracy itself is the fraction of examples whose predicted class, the $\arg\max$ of the score vector, matches the true label. It is a discrete metric and so cannot serve as a training objective, but it is almost always the number reported in benchmarks and the one the reader should watch alongside the loss. On imbalanced problems, however, accuracy alone can badly mislead; precision, recall, and the confusion matrix break the errors down by kind, and the confusion matrix in particular will return twice more in this chapter.
 
 
 ## Exercises
@@ -237,6 +257,8 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
 1. Given a multiclass classification loss, denoting by $l(y,y')$ the penalty of estimating $y'$ when we see $y$ and given a probability $p(y \mid x)$, formulate the rule for an optimal selection of $y'$. Hint: express the expected loss, using $l$ and $p(y \mid x)$.
 1. Suppose two classifiers $A$ and $B$ both achieve 90% accuracy on a ten-class test set, but on the examples they get right, $A$ assigns probability $0.91$ on average to the correct class while $B$ assigns only $0.51$. (i) Compute the average cross-entropy loss each incurs on those examples. (ii) Which classifier would you trust more in a safety-critical setting, and why does accuracy alone fail to separate them? (iii) Construct a simple monotone rescaling of the scores (a temperature) that sharpens $B$'s probabilities without changing any of its $\arg\max$ decisions, and argue why its accuracy is therefore unchanged.
 1. Generalize `accuracy` to *top-$k$ accuracy*, which counts a prediction as correct when the true class is among the $k$ highest-scoring classes. (i) Modify the four-line implementation to take a `k` argument (hint: replace the single `argmax` with the indices of the $k$ largest scores). (ii) On a $q$-class problem, what is top-$q$ accuracy always equal to, and why? (iii) Why is top-5 accuracy a standard companion to top-1 on benchmarks with many fine-grained classes?
+1. In the disease-screening example, suppose we care much more about missing a sick patient than about a false alarm. (i) Modify the cross-entropy loss so that each class $j$ carries a weight $w_j$, multiplying the loss of every example of true class $j$; this is a one-line change to `loss`. (ii) Show that this weighted loss is exactly the weighted empirical risk minimization objective :eqref:`eq_weighted-empirical-risk-min` of :numref:`sec_environment-and-distribution-shift` with weights $\beta_i = w_{y_i}$, and explain why upweighting the rare class shifts the learned decision boundary toward higher recall. (iii) Give a second, data-side intervention with the same effect (hint: sampling).
+1. A binary classifier's score can be thresholded at any $\tau \in (0, 1)$, not just $\frac{1}{2}$: predict positive whenever $\hat{y}_1 > \tau$. Sweep $\tau$ from $1$ down to $0$ for a classifier of your choice (for instance a two-class subset of Fashion-MNIST, such as sneaker versus sandal, once you have trained the model of :numref:`sec_softmax_scratch`). (i) Compute the true-positive rate (recall) and the false-positive rate at each $\tau$ and plot one against the other; this curve is called the *receiver operating characteristic* (ROC). (ii) What do the endpoints $\tau=1$ and $\tau=0$ correspond to? (iii) Argue that a classifier whose scores are a random permutation of the data traces the diagonal in expectation, and that the area under the curve is therefore a threshold-free summary of ranking quality.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/6808)

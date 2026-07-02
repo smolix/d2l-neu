@@ -202,7 +202,9 @@ $$
 $$
 
 The first term, $\log \sum_k \exp(o_k)$, is the *log-sum-exp* function, a
-smooth upper bound on $\max_k o_k$; the second equality is the only safe way
+smooth upper bound on $\max_k o_k$ (you proved this, including the fact that
+the gap never exceeds $\log q$, in :numref:`sec_softmax`, exercise 6); the
+second equality is the only safe way
 to evaluate it, since every exponent $o_k - \bar{o} \leq 0$. This is precisely
 what the built-in cross-entropy loss computes when handed raw logits: it never
 forms the softmax probabilities at all, so neither $\exp$ of a large number nor
@@ -213,6 +215,17 @@ $\partial_{o_j}\ell = \mathrm{softmax}(\mathbf{o})_j - y_j$ derived in
 the explicit softmax of :numref:`sec_softmax_scratch` only for *reading off*
 predicted probabilities at inference time; for the loss we pass logits and let
 the fused operation do the rest.
+
+The "smooth max" picture is worth three lines of code: for two classes with
+logits $(x, 0)$ the loss's first term is $\mathrm{lse}(x, 0) = \log(1 + e^x)$,
+which hugs $\max(x, 0)$ from above, with the gap largest at the tie $x = 0$,
+where it equals $\log 2 \approx 0.69$, our bound $\log q$ for $q = 2$:
+
+```{.python .input #softmax-regression-concise-lse-vs-max}
+x = d2l.arange(-4.0, 4.0, 0.01)
+lse, mx = d2l.log(1 + d2l.exp(x)), (x + d2l.abs(x)) / 2
+d2l.plot(x, [lse, mx, lse - mx], 'x', legend=['lse(x, 0)', 'max(x, 0)', 'gap'])
+```
 
 ```{.python .input #softmax-regression-concise-softmax-revisited}
 %%tab pytorch

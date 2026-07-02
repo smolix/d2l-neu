@@ -122,9 +122,7 @@ data = FashionMNIST(resize=(32, 32))
 len(data.train[0]), len(data.val[0])
 ```
 
-We instantiated the dataset with `resize=(32, 32)`, so each image is delivered as a single-channel tensor of spatial size $32 \times 32$. There is one subtlety worth pinning down now: where the channel axis lives. PyTorch and MXNet use the *channel-first* convention $c \times h \times w$ ($c$ color channels, then height and width); TensorFlow and JAX use *channel-last* $h \times w \times c$. The `get_dataloader` method below produces the right layout for each framework, so the rest of this chapter never has to think about it; we confirm the per-image shape once the loader is in place, below.
-
-A single grayscale image, so $c = 1$. Most modern photographs have $c = 3$ channels (red, green, blue); hyperspectral sensors such as HyMap record over 100.
+We instantiated the dataset with `resize=(32, 32)`, so each image is delivered as a single-channel tensor of spatial size $32 \times 32$. There is one subtlety worth pinning down now: where the channel axis lives. PyTorch and MXNet use the *channel-first* convention $c \times h \times w$ ($c$ color channels, then height and width); TensorFlow and JAX use *channel-last* $h \times w \times c$. The `get_dataloader` method below produces the right layout for each framework, so the rest of this chapter never has to think about it; we confirm the per-image shape once the loader is in place, below. Here $c = 1$ since the images are grayscale; most photographs have $c = 3$ channels (red, green, blue), and hyperspectral sensors such as HyMap record over 100.
 
 
 
@@ -215,14 +213,14 @@ X, y = next(iter(data.train_dataloader()))
 X[0].shape  # channel-last: (height, width, channels)
 ```
 
-To see how this works, let's load a minibatch of images by invoking the `train_dataloader` method. It contains 64 images.
+Here is the same batch again, now at batch granularity: the first axis is the batch dimension (64 images per step by default), followed by the per-image shape we just confirmed, and the labels arrive as a matching vector of 64 integers.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-2}
 X, y = next(iter(data.train_dataloader()))
 print(X.shape, X.dtype, y.shape, y.dtype)
 ```
 
-Let us time one full pass through the training set. The exact number (a few seconds on a CPU-only machine for PyTorch, under a second once the TF/JAX pipeline is compiled) matters less than the comparison: a single forward and backward pass over a minibatch typically takes 10 to 100 times longer than the corresponding I/O, so the loader is not the bottleneck. If loading *were* slower than training, you would overlap I/O with compute via prefetching (`prefetch_factor` in PyTorch, `.prefetch()` in `tf.data`) or raise `num_workers`.
+Let us time one full pass through the training set. The exact number (a few seconds on a CPU-only machine for PyTorch, under a second once the TF/JAX pipeline is compiled) matters less than the comparison: for the convolutional networks of the coming chapters, a single forward and backward pass over a minibatch typically takes 10 to 100 times longer than the corresponding I/O, so the loader is not the bottleneck. (For the tiny linear models of *this* chapter the gap is much smaller; try the first exercise below.) If loading *were* slower than training, you would overlap I/O with compute via prefetching (`prefetch_factor` in PyTorch, `.prefetch()` in `tf.data`) or raise `num_workers`.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-3}
 tic = time.time()

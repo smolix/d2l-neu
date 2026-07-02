@@ -1,3 +1,8 @@
+```{.python .input}
+%load_ext d2lbook.tab
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
+```
+
 # Generalization in Classification
 
 :label:`chap_classification_generalization`
@@ -229,6 +234,66 @@ of asymptotic analysis for giving
 us ballpark figures even if they are not
 guarantees we can take to court.
 
+All of the above is pencil-and-paper reasoning,
+but it is also one short simulation away from being visible.
+Fix a classifier whose true error is $\epsilon(f) = 0.1$
+and draw many hypothetical test sets:
+each per-example indicator is a Bernoulli$(0.1)$ coin,
+so a size-$n$ test set produces an estimate
+$\epsilon_\mathcal{D}(f) \sim \mathrm{Binomial}(n, 0.1)/n$.
+
+```{.python .input #generalization-classification-the-test-set-1}
+%%tab pytorch
+%matplotlib inline
+import numpy as np
+from d2l import torch as d2l
+```
+
+```{.python .input #generalization-classification-the-test-set-1}
+%%tab tensorflow
+%matplotlib inline
+import numpy as np
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #generalization-classification-the-test-set-1}
+%%tab jax
+%matplotlib inline
+import numpy as np
+from d2l import jax as d2l
+```
+
+```{.python .input #generalization-classification-the-test-set-1}
+%%tab mxnet
+%matplotlib inline
+import numpy as np
+from d2l import mxnet as d2l
+```
+
+We simulate 1000 such test sets at each size $n$, record the empirical spread
+(standard deviation) of the resulting error estimates, and compare it with the
+two envelopes derived above: the CLT prediction
+$\sqrt{\epsilon(1-\epsilon)/n}$ and the 95% Hoeffding radius
+$\sqrt{\log(2/0.05)/(2n)}$.
+
+```{.python .input #generalization-classification-the-test-set-2}
+rng = np.random.default_rng(0)
+eps, trials = 0.1, 1000
+ns = np.array([100, 300, 1000, 3000, 10000])
+spread = np.array([(rng.binomial(n, eps, trials) / n).std() for n in ns])
+clt = np.sqrt(eps * (1 - eps) / ns)           # CLT standard deviation
+hoeff = np.sqrt(np.log(2 / 0.05) / (2 * ns))  # 95% Hoeffding radius
+d2l.plot(ns, [spread, clt, hoeff], 'test set size n', 'spread of the estimate',
+         legend=['simulated sd', 'CLT sd', 'Hoeffding 95% radius'],
+         xscale='log', yscale='log')
+```
+
+On log--log axes all three curves are parallel lines of slope $-\frac{1}{2}$:
+the $\sqrt{n}$ law in the flesh. The simulated spread sits right on top of the
+CLT prediction, while the Hoeffding envelope runs above both by a constant
+factor, which is the price of a guarantee that holds at every finite $n$
+rather than only asymptotically.
+
 ## Test Set Reuse
 
 In some sense, you are now set up to succeed
@@ -331,6 +396,30 @@ When running a series of benchmark challenges,
 it is often good practice to maintain
 several test sets so that after each round,
 the old test set can be demoted to a validation set.
+
+How bad can it get? A simulation makes the false-discovery half of the problem
+concrete in its purest form. Take one binary test set of $n = 1000$ examples
+and evaluate $k$ "classifiers" that ignore the inputs entirely and guess
+labels uniformly at random, so that every one of them has true accuracy
+exactly $0.5$. We track the best test accuracy seen so far as $k$ grows:
+
+```{.python .input #generalization-classification-test-set-reuse-1}
+n, k = 1000, 10000
+labels = rng.integers(0, 2, n)                 # one fixed test set
+guesses = rng.integers(0, 2, (k, n))           # k random-guess classifiers
+best = np.maximum.accumulate((guesses == labels).mean(axis=1))
+d2l.plot(np.arange(1, k + 1), best, 'number of models evaluated',
+         'best test accuracy so far', xscale='log')
+```
+
+The best apparent accuracy climbs steadily, exceeding $0.56$ after ten
+thousand tries, even though *nothing was learned*: the models are coin flips,
+and the climb (which grows like $\sqrt{\log(k)/(2n)}$, by the same Hoeffding
+bound applied to $k$ events at once) is pure selection. Whenever you pick the
+best of many models by their score on one shared test set, some of the
+apparent improvement is exactly this effect; and an adaptive modeler, who
+steers each new model *toward* what scored well before, can climb faster
+still.
 
 
 
@@ -489,6 +578,15 @@ of three points in general position,
 but no line can realize the XOR labeling of four points,
 so the VC dimension of two-dimensional linear classifiers
 is exactly $3$ (matching $d+1$ with $d=2$).
+The general statement holds in both directions, and neither is deep.
+For the lower bound, the $d+1$ points
+$\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$
+can be shattered by weights that are simply *read off* the desired labels;
+exercise 5 walks you through it.
+For the upper bound, *no* set of $d+2$ points can be shattered:
+by Radon's theorem :cite:`Radon.1921`, any $d+2$ points in $\mathbb{R}^d$
+can be partitioned into two subsets whose convex hulls intersect,
+and no halfspace can put two intersecting hulls on opposite sides.
 
 ![A linear classifier in two dimensions shatters any 3 points in general position (all $2^3$ labelings are realizable by a halfplane) but cannot shatter 4 points (the XOR labeling, with one class on each diagonal, has no linear separator). Hence the VC dimension of lines in the plane is 3.](../img/mdl-clf-shattering.svg)
 :label:`fig_mdl-clf-shattering`
@@ -560,6 +658,11 @@ at $\mathcal{O}(1/\sqrt{n})$ rates.
 Following the revolutionary discovery of VC dimension,
 numerous alternative complexity measures have been proposed,
 each facilitating an analogous generalization guarantee.
+One such measure, *Rademacher complexity*, is developed in full
+in :numref:`sec_mdl-concentration-generalization`,
+which also reproduces from scratch (as *double descent*)
+the surprisingly benign behavior of overparametrized models
+that we are about to describe.
 See :citet:`boucheron2005theory` for a detailed discussion
 of several advanced ways of measuring function complexity.
 Unfortunately, while these complexity measures
@@ -593,6 +696,21 @@ in :numref:`sec_generalization_deep`.
    regardless of your true error?
 1. What is the VC dimension of the class of fifth-order polynomials?
 1. What is the VC dimension of axis-aligned rectangles on two-dimensional data?
+1. Prove the lower bound VC $\geq d+1$ for linear classifiers
+   $f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$ on $\mathbb{R}^d$
+   by shattering the $d+1$ points $\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$
+   (the origin and the standard unit vectors). Given any desired labels
+   $\sigma_0, \sigma_1, \ldots, \sigma_d \in \{\pm 1\}$, set $b = \sigma_0 / 2$
+   and read the weights off the labels as $w_i = \sigma_i - b$. Verify that
+   $f(\mathbf{0}) = \sigma_0$ and $f(\mathbf{e}_i) = \sigma_i$ for every $i$.
+   Combined with the Radon argument in the text for the upper bound, this
+   proves VC $= d+1$ exactly.
+1. In :numref:`fig_mdl-clf-shattering` the three shattered points are in
+   *general position* (not collinear). Show that three collinear points can
+   *not* be shattered by halfplanes: which labeling is unrealizable? Explain
+   why this does not contradict the VC dimension of lines in the plane being
+   $3$. (Hint: the VC dimension asks whether *some* set of a given size can be
+   shattered, not whether *every* set can.)
 
 [Discussions](https://d2l.discourse.group/t/6829)
 

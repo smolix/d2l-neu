@@ -1,3 +1,8 @@
+```{.python .input}
+%load_ext d2lbook.tab
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
+```
+
 # Environment and Distribution Shift
 :label:`sec_environment-and-distribution-shift`
 
@@ -284,7 +289,7 @@ Below are some typical cases.
 * We build a spam filter. It works well at detecting all spam that we have seen so far. But then the spammers wise up and craft new messages that look unlike anything we have seen before.
 * We build a product recommendation system. It works throughout the winter but then continues to recommend Santa hats long after Christmas.
 
-### More Anecdotes
+### Further Failure Modes
 
 * We build a face detector. It works well on all benchmarks. Unfortunately it fails on test data---the offending examples are close-ups where the face fills the entire image (no such data was in the training set).
 * We build a web search engine for the US market and want to deploy it in the UK.
@@ -340,6 +345,7 @@ $$
 \int\int l(f(\mathbf{x}), y) q(y \mid \mathbf{x})q(\mathbf{x})\frac{p(\mathbf{x})}{q(\mathbf{x})} \;d\mathbf{x}dy.
 \end{aligned}
 $$
+:eqlabel:`eq_covariate-shift-identity`
 
 In other words, we need to reweigh each data example
 by the ratio of the
@@ -432,6 +438,14 @@ for correcting covariate shift:
 Clipping the weights at a ceiling $c$ trades a little bias for much lower variance:
 when source and target barely overlap, a handful of examples acquire enormous weights
 $\beta_i$ that would otherwise dominate, and destabilize, the weighted objective.
+:numref:`fig_mdl-clf-density-ratio` shows the geometry of the whole construction:
+where the target density $p$ exceeds the source density $q$,
+the ratio $\beta = p/q$ grows, and it grows *exponentially* fast
+out in the tail where the source has almost no mass,
+which is exactly where the clip takes over.
+
+![Importance weights for covariate shift. Training data comes from the source density $q$ (left curve) but the risk we care about weights points by the target density $p$ (right curve). The correction weight $\beta(x) = p(x)/q(x)$ is near zero where only the source has mass, crosses $1$ where the densities agree, and explodes where the target outweighs a vanishing source; clipping $\beta$ at a ceiling $c$ (dashed) caps the variance contributed by those rare, enormously weighted examples.](../img/mdl-clf-density-ratio.svg)
+:label:`fig_mdl-clf-density-ratio`
 
 Note that the above algorithm relies on a crucial assumption.
 For this scheme to work, we need that each data example
@@ -439,6 +453,77 @@ in the target (e.g., test time) distribution
 had nonzero probability of occurring at training time.
 If we find a point where $p(\mathbf{x}) > 0$ but $q(\mathbf{x}) = 0$,
 then the corresponding importance weight should be infinity.
+
+#### Covariate Shift Correction in Code
+
+The entire pipeline, from discriminator to reweighted training, fits in a
+few lines, so let us watch it work. We make the shift two-dimensional so that
+it is drastic but visible: source inputs are Gaussian around the origin,
+target inputs are the same Gaussian shifted to be centered at $(2, 0)$, and both share
+one labeling rule (covariate shift by construction). The label depends on
+$\mathbf{x}$ through a *curved* boundary, so a linear classifier is
+misspecified and it matters *where* it spends its capacity. The only trainer
+we need is logistic regression by gradient descent, with an optional
+per-example weight:
+
+```{.python .input #environment-and-distribution-shift-covariate-shift-correction-1}
+import numpy as np
+
+rng = np.random.default_rng(0)
+n = 1000
+X_src = rng.normal(0.0, 1.0, (n, 2))            # source q: centered at (0, 0)
+X_tgt = rng.normal(0.0, 1.0, (n, 2)) + [2, 0]   # target p: centered at (2, 0)
+label = lambda X: (X[:, 1] > 0.5 * X[:, 0]**2 - 1).astype(float)
+y_src, y_tgt = label(X_src), label(X_tgt)
+
+def fit_logreg(X, y, weights=None, lr=0.1, steps=2000):
+    w, b = np.zeros(X.shape[1]), 0.0
+    v = np.ones(len(y)) if weights is None else weights / weights.mean()
+    for _ in range(steps):
+        g = v * (1 / (1 + np.exp(-(X @ w + b))) - y)   # weighted residual
+        w -= lr * X.T @ g / len(y)
+        b -= lr * g.mean()
+    return w, b
+```
+
+Step one of the algorithm: pool the source inputs (labeled $z=0$) with the
+*unlabeled* target inputs ($z=1$) and train the domain discriminator $h$. For
+two unit Gaussians the true log-density-ratio is exactly linear,
+$\log (p(\mathbf{x})/q(\mathbf{x})) = 2x_1 - 2$, so we can check the learned $h$
+against the truth, and the weights are $\beta_i = \exp(h(\mathbf{x}_i))$:
+
+```{.python .input #environment-and-distribution-shift-covariate-shift-correction-2}
+w_h, b_h = fit_logreg(np.concatenate([X_src, X_tgt]),
+                      np.concatenate([np.zeros(n), np.ones(n)]))
+beta = np.exp(X_src @ w_h + b_h)
+print(f'learned h(x) = {w_h[0]:.2f} x1 {w_h[1]:+.2f} x2 {b_h:+.2f} '
+      f'(true log-ratio: 2 x1 - 2)')
+print(f'beta on source data: mean {beta.mean():.2f}, max {beta.max():.1f}')
+```
+
+Step two: train the actual classifier three ways, on the same source data
+with the same labels, and evaluate each on the *target* domain, which is the
+one we care about:
+
+```{.python .input #environment-and-distribution-shift-covariate-shift-correction-3}
+acc = lambda wb, X, y: ((X @ wb[0] + wb[1] > 0) == (y > 0.5)).mean()
+for name, wts in [('unweighted', None), ('weighted', beta),
+                  ('clipped, c=5', np.minimum(beta, 5))]:
+    wb = fit_logreg(X_src, y_src, wts)
+    print(f'{name:12s}  target accuracy: {acc(wb, X_tgt, y_tgt):.3f}'
+          f'   (source accuracy: {acc(wb, X_src, y_src):.3f})')
+```
+
+The unweighted model is fitted where the *source* data lives, so on the
+target domain it is no better than a coin flip; reweighting by $\beta$ lifts
+target accuracy above 90%, at the price of a worse fit on the now-discounted
+source region, exactly the trade the identity
+:eqref:`eq_covariate-shift-identity` prescribes. Note also the clipped run:
+the largest raw weight here is over 50, so a handful of the thousand source
+points carry much of the objective, and capping $\beta$ at $c=5$ reduces that
+variance without giving up the correction (here it even helps a little).
+Exercises 3 and 4 let you probe when this pipeline fails, most instructively
+when the supports stop overlapping.
 
 
 
@@ -487,15 +572,13 @@ while the labels are often simpler objects like categories.
 To estimate the target label distribution,
 we first take our reasonably good off-the-shelf classifier
 (typically trained on the training data)
-and compute its "confusion" matrix using the validation set
+and compute its confusion matrix $\mathbf{C}$ on the validation set
 (also from the training distribution).
-The *confusion matrix*, $\mathbf{C}$, is simply a $k \times k$ matrix,
-where each column corresponds to the label category (ground truth)
-and each row corresponds to our model's predicted category.
-Each cell's value $c_{ij}$ is the fraction of validation examples
-with true label $j$ for which our model predicted $i$,
-so that each column $j$ sums to $1$
-(an empirical estimate of $P(\hat{y}=i \mid y=j)$).
+Recall the $k \times k$ confusion matrix of :numref:`sec_classification`,
+column-normalized exactly as we computed it in :numref:`sec_softmax_scratch`:
+entry $c_{ij}$ is the fraction of validation examples of true class $j$
+that the model predicted as class $i$, so each column sums to $1$
+and estimates $P(\hat{y}=i \mid y=j)$.
 
 Now, we cannot calculate the confusion matrix
 on the target data directly
@@ -673,14 +756,40 @@ so covariate, label, and concept shift are now everyday operational realities
 rather than corner cases. Curated benchmarks such as WILDS
 :cite:`Koh.Sagawa.Marklund.ea.2021` collect real-world shifts (across hospitals,
 cameras, countries, and time) and show that models with strong in-distribution
-accuracy can still degrade sharply out of distribution. For deeper, methods-level
+accuracy can still degrade sharply out of distribution.
+
+The modern benchmarks also organize shifts along an axis *orthogonal* to our
+mechanism taxonomy: what does the test set contain relative to training? In
+*domain generalization*, test data comes from domains never seen in training;
+in WILDS's Camelyon17 task, for instance, a tumor classifier trained on
+pathology slides from a few hospitals must work on slides from a *new*
+hospital, whose staining and imaging quirks it has never encountered. In
+*subpopulation shift*, the test domains all appeared in training but in
+different proportions, so what matters is *worst-group* rather than average
+performance; in the CivilComments task, a toxicity classifier's average
+accuracy conceals much larger error rates on comments mentioning particular
+demographic groups. Either axis can combine with any of our three mechanisms,
+and the empirical lesson of such benchmarks is sobering: methods (including
+importance weighting) that shine on one shift frequently fail to transfer to
+another, so measuring on the shift you actually face beats trusting any
+single fix.
+
+One further distinction is worth pinning down, because the terms are often
+conflated: *out-of-distribution (OOD) detection* is not shift correction.
+Detection asks whether a given input is so unlike the training distribution
+that the model should abstain and *reject* it; correction assumes the target
+distribution is here to stay and *reweights* or adapts the model to serve it.
+A deployed system typically needs both, a guardrail for inputs it cannot
+handle, and a correction for the drift in those it can.
+
+For deeper, methods-level
 treatments of the corrections sketched here, see the references on the chapter's
 cover page.
 
 ## Exercises
 
 1. If you change the behavior of a search engine, how might users respond? How might advertisers respond? Explain why this is an instance of the feedback loop described for the loan/footwear example at the start of the section.
-1. Starting from the risk under the target distribution $p(\mathbf{x}, y)$, derive the covariate-shift reweighting identity :eqref:`eq_weighted-empirical-risk-min`, and state precisely the assumption on the supports of $p(\mathbf{x})$ and $q(\mathbf{x})$ under which the importance weights $\beta_i=p(\mathbf{x}_i)/q(\mathbf{x}_i)$ are finite.
+1. Starting from the risk under the target distribution $p(\mathbf{x}, y)$, derive the covariate-shift reweighting identity :eqref:`eq_covariate-shift-identity` (whose sample version is the weighted objective :eqref:`eq_weighted-empirical-risk-min`), and state precisely the assumption on the supports of $p(\mathbf{x})$ and $q(\mathbf{x})$ under which the importance weights $\beta_i=p(\mathbf{x}_i)/q(\mathbf{x}_i)$ are finite.
 1. Implement a covariate shift detector. Take any labeled dataset and create a shifted copy of the features (e.g., add Gaussian noise, or subsample by thresholding one feature). Train a logistic-regression classifier to distinguish "original" from "shifted" inputs and report its accuracy. Relate the accuracy to how detectable the shift is, and to the classifier-as-shift-detector idea in :numref:`subsec_covariate-shift-correction`. *Hint: if the classifier cannot beat chance, the two distributions are indistinguishable from these features.*
 1. Implement a covariate shift corrector. Using the classifier from the previous exercise, compute weights $\beta_i=\exp(h(\mathbf{x}_i))$, retrain your downstream model with weighted empirical risk minimization :eqref:`eq_weighted-empirical-risk-min`, and compare its target-domain accuracy with and without reweighting. What happens to the variance of the $\beta_i$ as the shift grows, and how does clipping $\beta_i\leftarrow\min(\beta_i,c)$ help?
 1. You have a $k$-class classifier and its validation confusion matrix $\mathbf{C}$. Show that the linear system $\mathbf{C}\, p(\mathbf{y})=\mu(\hat{\mathbf{y}})$ follows from the law of total probability under the label-shift assumption, and explain why $\mathbf{C}$ must be invertible for the estimate $p(\mathbf{y})=\mathbf{C}^{-1}\mu(\hat{\mathbf{y}})$ to be usable.

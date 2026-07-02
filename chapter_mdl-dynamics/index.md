@@ -51,6 +51,7 @@ models, the following are the canonical places to go deeper.
 - [Elucidating the Design Space of Diffusion-Based Generative Models — Karras et al. (NeurIPS 2022)](https://arxiv.org/abs/2206.00364) — factors diffusion into orthogonal choices of schedule, preconditioning, parameterization, and sampler (Heun), and tunes each; the reference on making samplers fast.
 - [Flow Matching for Generative Modeling — Lipman et al. (2022)](https://arxiv.org/abs/2210.02747) — simulation-free training of continuous flows by regressing conditional vector fields.
 - [Flow Straight and Fast: Rectified Flow — Liu, Gong & Liu (2022)](https://arxiv.org/abs/2209.03003) — learns near-straight transport paths for fast, few-step sampling.
+- [A Mathematical Perspective on Transformers — Geshkovski, Letrouit, Polyanskiy & Rigollet (2023)](https://arxiv.org/abs/2312.10794) — reads self-attention as an interacting particle system: tokens are particles on the sphere evolving under attention, and the theory characterizes their clustering in the long-time limit — this chapter's lens applied to transformers themselves.
 
 **Blogs and visual explainers**
 

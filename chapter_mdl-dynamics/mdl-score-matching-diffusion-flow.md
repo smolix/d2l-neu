@@ -1853,6 +1853,17 @@ $\gamma_t \equiv 0$. Exercise 8 walks the construction.
   few steps, and likelihoods; SDE for diversity and error-correction; solver
   order (Heun, EDM) and path straightness set the step budget.
 
+The dynamical lens of this chapter does not stop at generative models. Read a
+transformer layer by layer and it, too, is a discretized dynamics: layer
+normalization keeps each token on a sphere, and self-attention is an
+interaction that pulls every token toward a weighted average of the others.
+:citet:`Geshkovski.Letrouit.Polyanskiy.ea.2023` make this precise ---
+attention is an *interacting particle system* whose continuous-time flow
+provably drives the tokens to cluster as $t \to \infty$. The vocabulary you
+now own --- vector fields, flows, marginals evolving in time, long-run
+behavior --- is exactly what that emerging theory uses to ask what a deep
+stack of attention layers computes.
+
 ## Exercises
 
 1. Derive the conditional score

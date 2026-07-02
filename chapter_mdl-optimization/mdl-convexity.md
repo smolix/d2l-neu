@@ -796,7 +796,11 @@ log-sum-exp plus an affine function --- convex. Softmax regression
 (:numref:`sec_softmax`) composes it with the affine map
 $\mathbf{z} = W\mathbf{x} + \mathbf{b}$, so the loss is convex in the weights
 (rule 2): the last layer of a classifier is always a convex problem, whatever
-the features feeding it. The Hessian formula also predicts one *zero*
+the features feeding it. The same softmax machinery is also the core of
+attention --- a head's weights are exactly this map applied to scaled
+query--key scores (:numref:`sec_attention-scoring-functions`), with the same
+Jacobian $\mathrm{diag}(\mathbf{s}) - \mathbf{s}\mathbf{s}^\top$ appearing in
+its backward pass. The Hessian formula also predicts one *zero*
 eigenvalue, in the direction $\mathbf{1}$: a variance $\mathrm{Var}(v_I)$
 vanishes when $v$ is constant, which is the shift invariance
 $\mathrm{lse}(\mathbf{x} + c\mathbf{1}) = \mathrm{lse}(\mathbf{x}) + c$ --- the

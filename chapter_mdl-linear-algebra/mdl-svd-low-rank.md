@@ -859,7 +859,9 @@ add. The hypothesis that fine-tuning updates are *intrinsically low
 rank* is what makes this work.
 
 ![The LoRA architecture for one layer. The pretrained $\mathbf{W}$ (all $mn = 16.8$M parameters for $m=n=4096$) stays frozen; a parallel bypass first compresses the input to $r=8$ dimensions with $\mathbf{A}$ and then expands back with $\mathbf{B}$, so only $r(m+n) \approx 65.5$K parameters --- about $0.39\%$ --- are trained. The two branches add: $\mathbf{h} = \mathbf{W}\mathbf{x} + \mathbf{B}\mathbf{A}\mathbf{x}$. After training, $\mathbf{B}\mathbf{A}$ can be merged into $\mathbf{W}$, so deployment costs nothing extra.](../img/mdl-la-lora.svg)
-:label:`fig_mdl-la-lora` Note what Eckart--Young does and does not say here:
+:label:`fig_mdl-la-lora`
+
+Note what Eckart--Young does and does not say here:
 LoRA *learns* $\mathbf{B}$ and $\mathbf{A}$ by gradient descent rather than
 truncating a known matrix, so the theorem promises nothing about the learned
 adapter itself. What it quantifies is the *ceiling*: if the update that full

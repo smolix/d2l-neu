@@ -67,53 +67,6 @@ def _entropy_venn(ax, *, cx, r, overlap, fill_overlap=True):
     return left_c, right_c
 
 
-# =========================================================================== #
-# Mutual information as an entropy area-decomposition (§5.1 / §5.3.1).         #
-# =========================================================================== #
-
-def fig_mutual_information():
-    """The canonical entropy "Venn": two overlapping discs whose union is the
-    joint entropy H(X,Y), whose lens is the mutual information I(X;Y), and whose
-    crescents are the conditional entropies H(X|Y) and H(Y|X).
-
-    This regenerates the legacy hand-drawn ``mutual-information.svg`` in the
-    house style (output id ``mdl-it-mutual-information``)."""
-    fig, ax = plt.subplots(figsize=(6.4, 3.8))
-
-    r = 1.55
-    cx = 0.78
-    left_c, right_c = _entropy_venn(ax, cx=cx, r=r, overlap=2 * (r - cx))
-
-    # Outer "circle name" labels, set above each disc.
-    fl.vlabel(ax, (left_c[0] - 0.15, r + 0.28), r"entropy $H(X)$", color=BLUE,
-            fontsize=11.5)
-    fl.vlabel(ax, (right_c[0] + 0.15, r + 0.28), r"entropy $H(Y)$", color=GREEN,
-            fontsize=11.5)
-
-    # Left crescent: conditional entropy H(X|Y).
-    fl.vlabel(ax, (-cx - 0.62, 0.42), "conditional", color="black", fontsize=10)
-    fl.vlabel(ax, (-cx - 0.62, 0.14), "entropy", color="black", fontsize=10)
-    fl.vlabel(ax, (-cx - 0.62, -0.40), r"$H(X\mid Y)$", color=BLUE, fontsize=11)
-
-    # Right crescent: conditional entropy H(Y|X).
-    fl.vlabel(ax, (cx + 0.62, 0.42), "conditional", color="black", fontsize=10)
-    fl.vlabel(ax, (cx + 0.62, 0.14), "entropy", color="black", fontsize=10)
-    fl.vlabel(ax, (cx + 0.62, -0.40), r"$H(Y\mid X)$", color=GREEN, fontsize=11)
-
-    # Centre lens: mutual information I(X;Y).
-    fl.vlabel(ax, (0.0, 0.42), "mutual", color="black", fontsize=10)
-    fl.vlabel(ax, (0.0, 0.14), "information", color="black", fontsize=10)
-    fl.vlabel(ax, (0.0, -0.40), r"$I(X;Y)$", color=ORANGE, fontsize=11)
-
-    # Union = joint entropy, labelled below.
-    fl.vlabel(ax, (0.0, -r - 0.30), r"joint entropy $H(X,Y)$", color="black",
-            fontsize=11.5)
-
-    fl.clean_axes(ax, lim=((-cx - r - 0.55, cx + r + 0.55), (-r - 0.55, r + 0.55)),
-                hide=True)
-    fl.save(fig, "mdl-it-mutual-information")
-
-
 def fig_mi_overlap():
     """Extend the entropy Venn with the additive area accounting made explicit:
     the same two discs, but annotated with the three equivalent expressions for
@@ -896,7 +849,6 @@ FIGURES = [
     fig_code_length_decomposition,  # mdl-it-code-length-bars
     fig_kraft_tree,              # mdl-it-kraft-tree
     # sec_mdl-mutual-information
-    fig_mutual_information,      # mdl-it-mutual-information (legacy regenerated)
     fig_mi_overlap,              # mdl-it-mi-overlap
     fig_mi_variational_bounds,   # mdl-it-mi-variational-bounds
     fig_infonce_pos_neg,         # mdl-it-infonce-pos-neg

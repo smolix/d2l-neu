@@ -375,7 +375,7 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 		fi; \
 		echo "Building slides manifest (TOC button + landing page)..."; \
 		python3 tools/build_slides_index.py; \
-		$(CURDIR)/$(QUARTO) render --to html; \
+		"$(CURDIR)/$(QUARTO)" render --to html; \
 		python3 tools/fix_crossref_numbers.py .; \
 		python3 tools/add_cfasync.py _book; \
 		if [ -d _slides ] && [ -f _slides/index.html ]; then \
@@ -416,14 +416,14 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 # which meant a forced .generated rebuild would re-do this no-op too.
 _notebooks/%/.symlinks:
 	@mkdir -p _notebooks/$* data
-	@[ -e _notebooks/$*/img ] || ln -s ../../img _notebooks/$*/img
-	@if [ -L _notebooks/$*/data ]; then :; \
-	elif [ -d _notebooks/$*/data ]; then \
-		cp -rn _notebooks/$*/data/. data/ 2>/dev/null || true; \
-		rm -rf _notebooks/$*/data; \
-		ln -s $$(pwd)/data _notebooks/$*/data; \
+	@[ -e "_notebooks/$*/img" ] || ln -s ../../img "_notebooks/$*/img"
+	@if [ -L "_notebooks/$*/data" ]; then :; \
+	elif [ -d "_notebooks/$*/data" ]; then \
+		cp -rn "_notebooks/$*/data/." data/ 2>/dev/null || true; \
+		rm -rf "_notebooks/$*/data"; \
+		ln -s "$$(pwd)/data" "_notebooks/$*/data"; \
 	else \
-		ln -s $$(pwd)/data _notebooks/$*/data; \
+		ln -s "$$(pwd)/data" "_notebooks/$*/data"; \
 	fi
 	@touch $@
 

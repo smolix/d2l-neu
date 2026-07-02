@@ -1005,7 +1005,9 @@ projection's threshold $\tau$, which is the same KKT phenomenon wearing a
 different objective.
 
 ![Water-filling, drawn with the same noise floors and budget as the cell below. Complementary slackness in a picture: pouring $P = 3$ units of power into basins with floors at the noise levels $n_i$ fills the three quiet channels to the common level $w = 1/\mu \approx 1.43$, allocating $p_i^\star = w - n_i$ to each, while the two channels whose floors sit above the waterline stay dry with $p_i^\star = 0$.](../img/mdl-opt-water-filling.svg)
-:label:`fig_mdl-opt-water-filling` The
+:label:`fig_mdl-opt-water-filling`
+
+The
 shadow-price proposition gives the multiplier its engineering meaning:
 $\mu^\star = 1/w$ is the marginal rate bought by the *next* watt of power,
 which the cell checks by re-solving at $P \pm 10^{-4}$.

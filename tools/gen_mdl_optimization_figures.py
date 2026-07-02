@@ -92,6 +92,76 @@ def fig_gd_bowl_vs_valley():
     save(fig, "mdl-opt-gd-bowl-vs-valley")
 
 
+def fig_eta_tent():
+    """The per-mode contraction factors |1 - eta*lambda| as functions of
+    lambda (sec_mdl-gradient-based-optimization, The Quadratic Model): the
+    "tent" whose vertex sits at lambda = 1/eta.  Two step sizes on the
+    spectrum {1, 10} of the section's running example:
+
+    - eta = 0.1: vertex at the stiff mode (its factor is exactly 0) but the
+      slow mode contracts only by 0.9 -- the greedy choice;
+    - eta* = 2/11: the two endpoint factors are *equal* at
+      (kappa-1)/(kappa+1) = 9/11, which is the optimal-step proof drawn.
+
+    The convergence factor rho(eta) is the higher of the two endpoint dots;
+    dashed line at height 1 marks the stability boundary.
+    """
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+
+    lmin, lmax = 1.0, 10.0
+    lam = np.linspace(0.0, 11.6, 400)
+    etas = [(0.1, BLUE, r"$\eta=0.1$"),
+            (2.0 / (lmin + lmax), GREEN, r"$\eta^\star=2/(\lambda_{\min}+\lambda_{\max})$")]
+
+    ax.axhline(1.0, color=GRAY, lw=1.2, ls=(0, (5, 3)))
+    ax.text(10.75, 1.07, "instability: $|1-\\eta\\lambda|=1$", color=GRAY,
+            fontsize=9, ha="right", va="bottom")
+
+    for eta, col, lab in etas:
+        ax.plot(lam, np.abs(1 - eta * lam), color=col, lw=2.0, zorder=3)
+        for l0 in (lmin, lmax):                # the two extreme modes
+            ax.plot(l0, abs(1 - eta * l0), "o", color=col, ms=6.5, zorder=5)
+
+    # eigenvalue gridlines
+    for l0, lab in ((lmin, r"$\lambda_{\min}$"), (lmax, r"$\lambda_{\max}$")):
+        ax.plot([l0, l0], [0, 1.12], color=GRAY, lw=0.9, ls=(0, (2, 3)),
+                zorder=1)
+        ax.text(l0, -0.06, lab, color="black", fontsize=10, ha="center",
+                va="top")
+
+    # the balanced level of the optimal step
+    rho = (lmax - lmin) / (lmax + lmin)
+    ax.plot([lmin, lmax], [rho, rho], color=GREEN, lw=1.0, ls=(0, (2, 3)),
+            zorder=2)
+    ax.annotate(r"$\rho(\eta^\star)=\frac{\kappa-1}{\kappa+1}=\frac{9}{11}$"
+                "\nboth endpoints equal",
+                xy=(8.3, rho), xytext=(6.9, 0.60), color=GREEN, fontsize=9.5,
+                ha="center", va="top",
+                arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.9))
+
+    # the greedy eta = 0.1: stiff mode dead, slow mode rules
+    ax.annotate(r"stiff mode killed: $|1-0.1\cdot10|=0$",
+                xy=(10.0, 0.015), xytext=(11.6, 0.30), color=BLUE, fontsize=9,
+                ha="right", va="center",
+                arrowprops=dict(arrowstyle="-", color=BLUE, lw=0.9))
+    ax.annotate(r"...but the slow mode barely moves: $0.9$",
+                xy=(1.0, 0.9), xytext=(4.6, 0.97), color=BLUE, fontsize=9,
+                ha="left", va="center",
+                arrowprops=dict(arrowstyle="-", color=BLUE, lw=0.9))
+    ax.text(2.55, 0.37, r"$\eta^\star=\frac{2}{\lambda_{\min}+\lambda_{\max}}$",
+            color=GREEN, fontsize=10, ha="center", va="center")
+    ax.text(11.5, -0.06, r"$\lambda$", color="black", fontsize=11,
+            ha="right", va="top")
+    ax.text(-0.25, 1.12, r"$|1-\eta\lambda|$", color="black", fontsize=10.5,
+            ha="left", va="bottom")
+
+    # baseline
+    ax.plot([0, 11.6], [0, 0], color="black", lw=1.0)
+    fl.clean_axes(ax, lim=((-0.35, 11.75), (-0.28, 1.30)), hide=True,
+                  equal=False)
+    fl.save(fig, "mdl-opt-eta-tent")
+
+
 def fig_momentum_damping():
     """Heavy-ball momentum as a damped oscillator (sec_mdl-gradient-based-
     optimization, Momentum and Acceleration): three real heavy-ball runs on the
@@ -375,6 +445,43 @@ def fig_convex_vs_nonconvex_set():
     fl.clean_axes(axc, lim=((-1.4, 2.2), (-1.4, 2.2)), hide=True)
 
     fl.save(fig, "mdl-opt-convex-vs-nonconvex-set")
+
+
+def fig_subgradient_fan():
+    """The subgradient fan (sec_mdl-convexity, The Subgradient): at the kink
+    of f(x) = |x| the gradient does not exist, but every slope g in [-1, 1]
+    tucks the supporting line g*x under the graph -- the subdifferential is a
+    whole interval, drawn as a fan of supporting lines through the origin.
+    The zero-slope member is highlighted: 0 in partial f(0) is the optimality
+    certificate that makes the corner a provable minimum without a gradient.
+    """
+    fig, ax = plt.subplots(figsize=(6.4, 4.2))
+
+    xs = np.linspace(-2.1, 2.1, 300)
+    ax.plot(xs, np.abs(xs), color=BLUE, lw=2.4, zorder=4)
+
+    span = np.array([-1.75, 1.75])
+    for g in (-1.0, -2.0 / 3, -1.0 / 3, 1.0 / 3, 2.0 / 3, 1.0):
+        ax.plot(span, g * span, color=GREEN, lw=1.2, alpha=0.55, zorder=2)
+    # the zero-slope supporting line: the optimality certificate
+    ax.plot(span, 0.0 * span, color=ORANGE, lw=2.0, zorder=3)
+
+    ax.plot(0, 0, "o", color="black", ms=6.5, zorder=6)
+    ax.annotate(r"$\partial|x|(0)=[-1,\,1]$: every slope"
+                "\n" r"$g\in[-1,1]$ supports the graph",
+                xy=(0.9, -0.6), xytext=(0.0, -1.62), color=GREEN,
+                fontsize=9.5, ha="center", va="center",
+                arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.9))
+    ax.text(1.92, 0.10, r"$0\in\partial f(0)$:" "\nthe corner is a minimum,"
+            "\nno gradient required",
+            color=ORANGE, fontsize=9.5, ha="left", va="bottom")
+    ax.text(-1.3, 2.05, r"$f(x)=|x|$", color=BLUE, fontsize=11, ha="center",
+            va="center")
+
+    fl.axis_cross(ax, (-2.25, 2.6), (-1.9, 2.2))
+    fl.clean_axes(ax, lim=((-2.25, 3.55), (-1.95, 2.25)), hide=True,
+                  equal=False)
+    fl.save(fig, "mdl-opt-subgradient-fan")
 
 
 def fig_local_equals_global():
@@ -730,6 +837,67 @@ def fig_primal_dual_gap():
     fl.save(fig, "mdl-opt-primal-dual-gap")
 
 
+def fig_water_filling():
+    """The water-filling picture (sec_mdl-constrained-optimization-duality,
+    Worked Duals): each channel is a basin whose floor sits at its noise level
+    n_i; pouring in the power budget P fills the quiet channels to a common
+    water level w, and channels whose floor is above the waterline stay dry.
+
+    Honest numbers: uses the *same* noise floors and budget as the
+    #constrained-water-filling cell (n = [0.1, 0.4, 0.8, 1.6, 2.5], P = 3)
+    and finds the level by the same bisection, so the figure's w ~ 1.4333 and
+    allocations match the cell's printout digit for digit.
+    """
+    fig, ax = plt.subplots(figsize=(7.2, 4.0))
+
+    noise = np.array([0.1, 0.4, 0.8, 1.6, 2.5])
+    P = 3.0
+    lo, hi = noise.min(), noise.min() + P
+    for _ in range(60):                       # the cell's bisection, verbatim
+        mid = 0.5 * (lo + hi)
+        lo, hi = (mid, hi) if np.maximum(0, mid - noise).sum() < P else (lo, mid)
+    w = 0.5 * (lo + hi)                       # ~ 1.4333
+
+    width, gap = 0.84, 0.16
+    for i, n in enumerate(noise):
+        x = i + gap / 2
+        # basin floor: solid gray block up to the noise level n_i
+        ax.add_patch(plt.Rectangle((x, 0), width, n, facecolor=GRAY,
+                                   alpha=0.45, lw=0))
+        ax.plot([x, x + width], [n, n], color=GRAY, lw=1.6)
+        if n < w:                             # water fills up to the level
+            ax.add_patch(plt.Rectangle((x, n), width, w - n, facecolor=BLUE,
+                                       alpha=0.28, lw=0))
+        else:                                 # floor above the waterline
+            ax.text(i + 0.5, n + 0.13, "dry", color=GRAY, fontsize=9,
+                    ha="center", va="bottom")
+        ax.text(i + 0.5, -0.13, rf"$n_{{{i + 1}}}={n}$", color="black",
+                fontsize=9, ha="center", va="top")
+
+    # the common water level, dashed across the whole tank
+    ax.plot([0.0, len(noise)], [w, w], color=ORANGE, lw=1.7, ls=(0, (5, 3)),
+            zorder=4)
+    ax.text(len(noise) + 0.08, w,
+            r"water level $w=1/\mu\approx1.43$", color=ORANGE, fontsize=10,
+            ha="left", va="center")
+
+    # one allocation called out: p_2* = w - n_2 on the second basin
+    xi = 1 + 0.5
+    ax.annotate("", xy=(xi, w - 0.015), xytext=(xi, noise[1] + 0.015),
+                arrowprops=dict(arrowstyle="<->", color=BLUE, lw=1.4))
+    ax.text(xi + 0.14, 0.5 * (w + noise[1]), r"$p_2^\star=w-n_2$",
+            color=BLUE, fontsize=9.5, ha="left", va="center")
+
+    # baseline
+    ax.plot([0.0, len(noise)], [0.0, 0.0], color="black", lw=1.2)
+    ax.text(2.5, -0.42, "channels, floors at the noise levels $n_i$",
+            color=GRAY, fontsize=9.5, ha="center", va="top")
+
+    fl.clean_axes(ax, lim=((-0.15, 7.3), (-0.75, 2.95)), hide=True,
+                  equal=False)
+    fl.save(fig, "mdl-opt-water-filling")
+
+
 # =========================================================================== #
 # 3.4 Numerical Stability and Conditioning                                    #
 # =========================================================================== #
@@ -896,16 +1064,19 @@ def fig_conditioning_ellipse():
 FIGURES = [
     # 3.1 gradient-based optimization
     fig_gd_bowl_vs_valley,
+    fig_eta_tent,
     fig_momentum_damping,
     fig_sgd_noise_ball,
     # 3.2 convexity
     fig_chord_above_graph,
     fig_convex_vs_nonconvex_set,
+    fig_subgradient_fan,
     fig_local_equals_global,
     # 3.3 constrained optimization and duality
     fig_lagrange_tangency,
     fig_kkt_active_set,
     fig_primal_dual_gap,
+    fig_water_filling,
     # 3.4 numerical stability and conditioning
     fig_fp_number_line,
     fig_conditioning_ellipse,

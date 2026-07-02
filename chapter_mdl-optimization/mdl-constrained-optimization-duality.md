@@ -27,8 +27,8 @@ We lean on :numref:`sec_mdl-multivariable_calculus` (gradients, level sets, and
 the tangency teaser we are about to grow), :numref:`sec_mdl-gradient-based-optimization`
 (stationarity and the descent lemma), and :numref:`sec_mdl-convexity` (convex
 sets and functions --- required for KKT sufficiency and strong duality). The
-standard reference is :citet:`Boyd.Vandenberghe.2004`, chapter 5; Nocedal &
-Wright's *Numerical Optimization* (2006) gives the numerical view. The code in
+standard reference is :citet:`Boyd.Vandenberghe.2004`, chapter 5;
+:citet:`Nocedal.Wright.2006` gives the numerical view. The code in
 this section is deliberately framework-free --- plain NumPy --- because every
 algorithm is a handful of lines; we load the per-framework `d2l` module once for
 plotting.
@@ -244,7 +244,7 @@ $$
 :eqlabel:`eq_mdl-opt-lagrangian`
 
 and the first-order optimality conditions are the four
-**Karush--Kuhn--Tucker (KKT) conditions** (Karush 1939; Kuhn & Tucker 1951):
+**Karush--Kuhn--Tucker (KKT) conditions** :cite:`Karush.1939,Kuhn.Tucker.1951`:
 
 $$
 \begin{aligned}
@@ -284,8 +284,8 @@ How strong are these conditions? In general they are **necessary**: at any local
 minimum satisfying a constraint qualification (the standard one, *LICQ*, asks
 the active constraints' gradients to be linearly independent --- the inequality
 analogue of $\nabla g \neq \mathbf{0}$ above), multipliers satisfying
-:eqref:`eq_mdl-opt-kkt` exist; see Nocedal & Wright (2006), chapter 12, for the
-proof. They are not sufficient: a non-convex problem can have KKT points that
+:eqref:`eq_mdl-opt-kkt` exist; see :citet:`Nocedal.Wright.2006`, chapter 12,
+for the proof. They are not sufficient: a non-convex problem can have KKT points that
 are saddles or maxima (Exercise 3). Under convexity, however, the implication
 reverses, with a proof short enough to be memorable.
 
@@ -462,9 +462,10 @@ $\tau$-equation is continuous, piecewise linear, and strictly decreasing where
 positive, so the threshold is unique and found by sorting: with
 $u_1 \ge \cdots \ge u_n$ the sorted entries of $\mathbf{y}$, the active set is a
 top-$k$ prefix, and $\tau = (\sum_{j \le k} u_j - 1)/k$ for the largest $k$
-keeping $u_k > \tau$ --- an $O(n \log n)$ algorithm (Held, Wolfe & Crowder 1974;
-Duchi et al. 2008). This map, applied to scores instead of a softmax, is exactly
-*sparsemax* (Martins & Astudillo 2016): unlike softmax it produces genuinely
+keeping $u_k > \tau$ --- an $O(n \log n)$ algorithm
+:cite:`Held.Wolfe.Crowder.1974,Duchi.Shalev-Shwartz.Singer.ea.2008`. This map,
+applied to scores instead of a softmax, is exactly *sparsemax*
+:cite:`Martins.Astudillo.2016`: unlike softmax it produces genuinely
 sparse attention weights, with complementary slackness deciding which entries
 are zeroed. The cell below implements the sort-and-threshold projection,
 reconstructs all the multipliers, and checks every KKT residual numerically ---
@@ -495,7 +496,7 @@ print('f(x*) =', f'{0.5 * ((x - y)**2).sum():.6f}',
 ```
 
 The stationarity, complementary-slackness, and dual-feasibility residuals all
-sit at machine precision, and three of the six coordinates came back exactly
+sit at machine precision, and two of the six coordinates came back exactly
 zero --- the active sign constraints, each carrying a strictly positive
 multiplier. KKT did not just certify the answer; its case analysis *was* the
 algorithm.
@@ -597,7 +598,7 @@ non-convex problems the region can be dented, every supporting line passes
 :numref:`fig_mdl-opt-primal-dual-gap` shows both situations, and we will compute
 a dented example exactly at the end of this section.
 
-![Primal values, dual values, and the gap. The dual function is concave and sits below $p^\star$ everywhere by weak duality; primal feasible values sit above $p^\star$. For a convex problem satisfying Slater's condition the dual maximum touches $p^\star$ from below: strong duality. For a non-convex problem the dual can top out strictly below $p^\star$, leaving a duality gap.](../img/mdl-opt-primal-dual-gap.svg)
+![The supporting-line geometry of duality. Every $x$ maps to the pair $(g(x), f_0(x))$ of constraint and objective value; the shaded region $G$ collects them. Evaluating the dual at $\lambda$ lowers a line of slope $-\lambda$ until it supports $G$ from below, and its height over $g = 0$ is the dual value. (a) For a convex problem with Slater's condition the best line is tangent at $(0, p^\star)$: strong duality. (b) For this section's non-convex example the region is dented; every supporting line passes under the dent, and the best certifies only $d^\star < p^\star$ --- a visible duality gap.](../img/mdl-opt-primal-dual-gap.svg)
 :label:`fig_mdl-opt-primal-dual-gap`
 
 Why care, beyond elegance? Three practical reasons. First, *the dual may be the
@@ -615,6 +616,94 @@ $\min f(\mathbf{x})$ s.t. $A\mathbf{x} \preceq \mathbf{b}$ one finds
 $g(\boldsymbol{\lambda}) = -\mathbf{b}^\top\boldsymbol{\lambda} - f^*(-A^\top\boldsymbol{\lambda})$
 with $f^*$ the conjugate of :numref:`subsec_mdl-convex-conjugate` --- so tables
 of conjugates are tables of duals.
+
+### Duality as a Saddle Point
+
+Strong duality has an equivalent formulation worth internalizing, because it
+is the shape of several modern training objectives. Notice first that the
+primal problem itself is a sup-inf statement in disguise: for any $\mathbf{x}$,
+
+$$
+\sup_{\boldsymbol{\lambda} \succeq 0,\, \boldsymbol{\nu}} \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, \boldsymbol{\nu})
+= \begin{cases} f(\mathbf{x}) & \textrm{if } \mathbf{x} \textrm{ is feasible}, \\ +\infty & \textrm{otherwise}, \end{cases}
+$$
+
+since any violated constraint lets the corresponding multiplier drive the
+supremum to $+\infty$, while for feasible $\mathbf{x}$ the best the multipliers
+can do is vanish on every slack constraint. So
+$p^\star = \inf_{\mathbf{x}} \sup_{\boldsymbol{\lambda} \succeq 0, \boldsymbol{\nu}} \mathcal{L}$
+and, by definition,
+$d^\star = \sup_{\boldsymbol{\lambda} \succeq 0, \boldsymbol{\nu}} \inf_{\mathbf{x}} \mathcal{L}$:
+weak duality is the universal inequality $\sup \inf \le \inf \sup$ (playing
+second is an advantage), and strong duality says that for this particular game
+*the order of play does not matter*. The certificate of that indifference is a
+saddle point.
+
+**Proposition (strong duality is a saddle point).** *Suppose strong duality
+holds for :eqref:`eq_mdl-opt-standard-problem` with both optima attained, at a
+primal optimum $\mathbf{x}^\star$ and a dual optimum
+$(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$. Then
+$(\mathbf{x}^\star, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$ is a*
+**saddle point** *of the Lagrangian: for all $\mathbf{x}$ and all
+$\boldsymbol{\lambda} \succeq 0$, $\boldsymbol{\nu}$,*
+
+$$
+\mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}, \boldsymbol{\nu})
+\;\le\; \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)
+\;\le\; \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star).
+$$
+:eqlabel:`eq_mdl-opt-saddle-point`
+
+*Conversely, any saddle point of $\mathcal{L}$ over
+$\mathbf{x} \times (\boldsymbol{\lambda} \succeq 0, \boldsymbol{\nu})$ closes
+the duality gap, with saddle value $p^\star = d^\star$.*
+
+**Proof.** Chain together what we have already proved:
+
+$$
+d^\star
+= g(\boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)
+= \inf_{\mathbf{x}} \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)
+\;\le\; \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)
+\;\le\; f(\mathbf{x}^\star)
+= p^\star,
+$$
+
+where the last inequality holds because $\lambda_i^\star \ge 0$ and
+$g_i(\mathbf{x}^\star) \le 0$ make every added term nonpositive. Strong duality
+squeezes the whole chain to equality. Equality in the first inequality says
+$\mathbf{x}^\star$ minimizes
+$\mathcal{L}(\cdot, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$ ---
+the right half of :eqref:`eq_mdl-opt-saddle-point`. Equality in the second
+forces $\sum_i \lambda_i^\star g_i(\mathbf{x}^\star) = 0$ (complementary
+slackness, re-derived), whence for any $\boldsymbol{\lambda} \succeq 0$ and
+$\boldsymbol{\nu}$,
+$\mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}, \boldsymbol{\nu})
+= f(\mathbf{x}^\star) + \sum_i \lambda_i g_i(\mathbf{x}^\star)
+\le f(\mathbf{x}^\star)
+= \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)$
+--- the left half. For the converse, a saddle point gives
+
+$$
+\inf_{\mathbf{x}} \sup_{\boldsymbol{\lambda} \succeq 0,\, \boldsymbol{\nu}} \mathcal{L}
+\;\le\; \sup_{\boldsymbol{\lambda} \succeq 0,\, \boldsymbol{\nu}} \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}, \boldsymbol{\nu})
+= \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)
+= \inf_{\mathbf{x}} \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}^\star, \boldsymbol{\nu}^\star)
+\;\le\; \sup_{\boldsymbol{\lambda} \succeq 0,\, \boldsymbol{\nu}} \inf_{\mathbf{x}} \mathcal{L},
+$$
+
+i.e. $p^\star \le d^\star$; weak duality supplies the reverse inequality.
+$\blacksquare$
+
+The saddle-point reading is the bridge from this section to a family of
+*minimax* training objectives: generative adversarial networks and adversarial
+training are $\min_{\boldsymbol{\theta}} \max_{\boldsymbol{\phi}}$ problems in
+exactly this mold, and the question of whether the order of play matters ---
+whether a duality gap separates $\min\max$ from $\max\min$ --- is the question
+of whether a saddle point exists at all. It is also the geometry behind
+**primal--dual methods**, which descend in $\mathbf{x}$ and ascend in
+$\boldsymbol{\lambda}$ simultaneously, converging (for convex problems) to the
+saddle rather than to a minimum.
 
 ### Multipliers Are Shadow Prices
 
@@ -670,6 +759,84 @@ ball projection, $\lambda^\star = \|\mathbf{x}_0\|/r - 1$ prices the radius; in
 the hyperplane example, $-\nu^\star$ priced the offset $b$; and in the
 water-filling problem below, the equality multiplier is *literally* the
 marginal value of transmit power, which we will verify by finite differences.
+
+### Weight Decay Is a Constraint
+:label:`subsec_mdl-weight-decay-duality`
+
+The most consequential shadow price in deep learning is one you set every day.
+Weight decay (:numref:`sec_weight_decay`) adds a penalty to the training loss,
+
+$$
+\min_{\mathbf{w}}\; L(\mathbf{w}) + \lambda \|\mathbf{w}\|^2 ,
+$$
+
+and this section's machinery says exactly what that penalty *is*: the
+Lagrangian of a norm **constraint**,
+
+$$
+\min_{\mathbf{w}}\; L(\mathbf{w}) \quad \textrm{subject to} \quad \|\mathbf{w}\|^2 \le r^2 .
+$$
+
+Compare stationarity conditions. The penalized problem asks
+$\nabla L(\mathbf{w}) + 2\lambda \mathbf{w} = \mathbf{0}$; the constrained
+problem's KKT stationarity, with multiplier $\lambda \ge 0$ on
+$g(\mathbf{w}) = \|\mathbf{w}\|^2 - r^2$, asks
+$\nabla L(\mathbf{w}) + 2\lambda \mathbf{w} = \mathbf{0}$ --- the *same
+equation*, with the weight-decay coefficient playing the multiplier's role.
+For **convex** $L$ the correspondence is exact in both directions: the
+minimizer $\mathbf{w}_\lambda$ of the penalized problem is the solution of the
+constrained problem with budget $r = \|\mathbf{w}_\lambda\|$ (it is feasible,
+and KKT sufficiency certifies it), and conversely any active budget $r$ has a
+multiplier $\lambda^\star(r)$ whose penalized problem returns the same point.
+Sweeping $\lambda$ and sweeping $r$ trace the *same* regularization path, just
+parameterized differently, and the shadow-price proposition gives the exchange
+rate: $\lambda^\star = -\partial p^\star / \partial (r^2)$, the marginal loss
+reduction the next unit of squared-norm budget would buy. When the weight
+budget is slack --- the unregularized minimizer already satisfies
+$\|\mathbf{w}\| \le r$ --- complementary slackness prices it at
+$\lambda^\star = 0$: decay that binds nothing costs nothing.
+
+Two honest caveats. First, for the *non-convex* losses of deep networks the
+correspondence is local and heuristic, not exact: a stationary point of the
+penalized problem is a KKT point of the matching constrained problem, but
+without convexity KKT points need not be global minima and the two problems'
+solution sets need not coincide --- the same gap that separated $p^\star$ from
+$d^\star$ in the example below can separate the two formulations. Second, the
+statistical reading is a third face of the same coin:
+:numref:`sec_mdl-maximum_likelihood` derives the penalty
+$\lambda\|\mathbf{w}\|^2$ as the log of a Gaussian prior --- MAP estimation
+--- so one and the same $\lambda$ is simultaneously a Lagrange multiplier, a
+price on model complexity, and a prior belief about scale. The cell below
+verifies the equivalence numerically on ridge regression
+($L(\mathbf{w}) = \|A\mathbf{w} - \mathbf{b}\|^2$, convex, so the theorem
+applies in full): for each $\lambda$ it solves the penalized problem in closed
+form, hands the resulting norm to the *constrained* problem as the budget $r$,
+solves that by projected gradient descent onto the $r$-ball, and recovers the
+multiplier from the KKT stationarity residual:
+
+```{.python .input #constrained-weight-decay}
+rng = np.random.default_rng(3)
+A, b = rng.normal(size=(30, 5)), rng.normal(size=30)
+grad = lambda w: 2 * A.T @ (A @ w - b)           # gradient of L = |Aw - b|^2
+step = 1.0 / (2 * np.linalg.eigvalsh(A.T @ A).max())
+print(' lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier')
+for lam in [0.1, 1.0, 10.0]:
+    w_pen = np.linalg.solve(A.T @ A + lam * np.eye(5), A.T @ b)  # penalty form
+    r = np.linalg.norm(w_pen)                    # its norm becomes the budget
+    w = np.zeros(5)                              # constraint form: PGD, radius r
+    for _ in range(5000):
+        w -= step * grad(w)
+        w *= min(1.0, r / np.linalg.norm(w))     # project onto the r-ball
+    lam_rec = -(w @ grad(w)) / (2 * r * r)       # KKT: grad L + 2*lam*w = 0
+    print(f'{lam:7.2f}  {r:11.4f}  {np.linalg.norm(w - w_pen):15.2e}  '
+          f'{lam_rec:17.4f}')
+```
+
+Three different decay strengths, and in every row the constrained solution
+matches the penalized one to $10^{-16}$ while the multiplier recovered from
+the constrained problem's own KKT residual reproduces $\lambda$ to four
+decimals. Penalty and constraint are one problem wearing two parameterizations
+--- and the multiplier is the dictionary between them.
 
 ## Worked Duals: SVM, Water-Filling, and a Visible Gap
 :label:`subsec_mdl-worked-duals`
@@ -789,7 +956,9 @@ four points sit at margins $1.29$--$2.43$ with $\alpha_i = 0$. The solution is
 exact enough to recognize:
 $\mathbf{w}^\star = (\tfrac47, \tfrac47)$, $b^\star = -\tfrac37$, with
 $p^\star = d^\star = \tfrac{41}{98} \approx 0.418367$ and a primal--dual gap at
-$10^{-16}$ --- far inside the $10^{-4}$ we asked for. As a bonus, the printout
+$10^{-16}$: five thousand fixed-step projected-ascent iterations, and the gap
+--- the certificate of optimality duality hands us for free --- has closed to
+machine precision. As a bonus, the printout
 verifies an identity you will prove in Exercise 6:
 $\sum_i \alpha_i^\star = \|\tilde{\mathbf{w}}^\star\|^2$ at the optimum, which
 is why the dual and primal values coincide line for line.
@@ -825,13 +994,18 @@ p_i^\star = \max(w - n_i,\, 0),
 \qquad \textrm{with } w \textrm{ set by } \sum_i \max(w - n_i,\, 0) = P.
 $$
 
-This is the **water-filling** solution. Picture each channel as a basin whose
-floor sits at height $n_i$ and pour in $P$ units of water: it settles at a
-common level $w$, filling the deep (quiet) channels most, and never reaching
-basins whose floor is above the waterline. The level is the unique root of a
-continuous, nondecreasing, piecewise-linear function of $w$, so *bisection*
-finds it --- note the structural rhyme with the simplex projection's threshold
-$\tau$, which is the same KKT phenomenon wearing a different objective. The
+This is the **water-filling** solution, and it earns its name honestly:
+picture each channel as a basin whose floor sits at height $n_i$ and pour in
+$P$ units of water. As :numref:`fig_mdl-opt-water-filling` shows, the water
+settles at a common level $w$, filling the deep (quiet) channels most, and
+never reaching basins whose floor is above the waterline. The level is the
+unique root of a continuous, nondecreasing, piecewise-linear function of $w$,
+so *bisection* finds it --- note the structural rhyme with the simplex
+projection's threshold $\tau$, which is the same KKT phenomenon wearing a
+different objective.
+
+![Water-filling, drawn with the same noise floors and budget as the cell below. Complementary slackness in a picture: pouring $P = 3$ units of power into basins with floors at the noise levels $n_i$ fills the three quiet channels to the common level $w = 1/\mu \approx 1.43$, allocating $p_i^\star = w - n_i$ to each, while the two channels whose floors sit above the waterline stay dry with $p_i^\star = 0$.](../img/mdl-opt-water-filling.svg)
+:label:`fig_mdl-opt-water-filling` The
 shadow-price proposition gives the multiplier its engineering meaning:
 $\mu^\star = 1/w$ is the marginal rate bought by the *next* watt of power,
 which the cell checks by re-solving at $P \pm 10^{-4}$.
@@ -961,6 +1135,14 @@ exact work.
   holds: dual points are certificates. **Slater's condition** (convexity plus a
   strictly feasible point) closes the gap; without convexity a gap can survive
   even with strictly feasible points.
+* Strong duality is the same statement as a **saddle point** of the
+  Lagrangian --- $\inf \sup = \sup \inf$, the order of play does not matter
+  --- which is the geometry behind primal--dual methods and minimax
+  objectives such as GANs and adversarial training. **Weight decay** is the
+  flagship application of the multiplier dictionary: the penalty
+  $\lambda\|\mathbf{w}\|^2$ and the constraint $\|\mathbf{w}\|^2 \le r^2$
+  share one KKT stationarity equation --- exactly interchangeable for convex
+  losses, locally and heuristically for deep networks.
 * Multipliers are **shadow prices**: $\lambda_i^\star = -\partial p^\star/\partial u_i$
   measures what relaxing constraint $i$ is worth --- exactly $1/w$ in
   water-filling, and the reason slack constraints cost nothing.

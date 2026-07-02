@@ -46,8 +46,19 @@
         }
       ]
     },
+    "gradient-based-optimization-edge-of-stability": {
+      "code_fingerprint": "sha256:a9ff9e9cb92e31a21d8ff3516c72e724c79f8fb0850b02ee9ca8eb19386545a0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        eta = 0.40 (2/eta = 5.0)   eta = 0.25 (2/eta = 8.0)\n    k      loss    sharpness         loss    sharpness\n     0    0.5097      3.32         0.5097      3.32\n  4000    0.0122      5.06         0.0109      7.71\n  8000    0.0008      5.03         0.0021      8.04\n 12000    0.0007      5.00         0.0007      8.03\n 16000    0.0005      5.00         0.0004      8.03\n 20000    0.0004      5.00         0.0003      8.03\n"
+        }
+      ]
+    },
     "gradient-based-optimization-contraction": {
-      "code_fingerprint": "sha256:61c360d44ccc74636cc0ace726a27921de3bc4c0d90bb4737a8139fb025cb9e3",
+      "code_fingerprint": "sha256:148e3c949ede24429664233894ab71e003efc98f0f4897daf6ca5c17a7af868a",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +69,7 @@
       ]
     },
     "gradient-based-optimization-momentum": {
-      "code_fingerprint": "sha256:7a3fea35e68441b735eec0dbfc4c16283bb7dd37396ecd3b35d0b941227d07d3",
+      "code_fingerprint": "sha256:2d1ebea915c441838a72c1981a4792fb84cb22067a4d7e189e29b07ffc8b38bf",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +80,7 @@
       ]
     },
     "gradient-based-optimization-sgd-variance": {
-      "code_fingerprint": "sha256:304bc09e2a5eb36dc0bbb2fac2219cff59423d38ba89c72b25d1bce38a84aad8",
+      "code_fingerprint": "sha256:2858794495fe2261cb4c757dae464bde5c230ca775aa113c7dd8d515a2b87735",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +91,7 @@
       ]
     },
     "gradient-based-optimization-sgd-schedule": {
-      "code_fingerprint": "sha256:a55e7cad79b674d0135354f4ae0dbeca4f96709dfb8b23c4a28f5862769ea567",
+      "code_fingerprint": "sha256:54bb35518156d8932e523910afed7d188bb0b162ac85d48c033ba57de962190e",
       "kind": "mixed",
       "outputs": [
         {
@@ -93,12 +104,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
           "bytes": 100458,
-          "sha256": "sha256:333bfc90c7e9764870477639a10b005289783a0b516da211b538d6e502348c26"
+          "sha256": "sha256:9a3b12760ec9b55b9b3f6359b8c281105081c3b121789135d4ba1e108f2ba84a"
         }
       ]
     },
     "gradient-based-optimization-newton": {
-      "code_fingerprint": "sha256:fe4b3d56721b9a264bc1dbf23b4fc4c6601feea78147fa28fe022b211f384d6c",
+      "code_fingerprint": "sha256:c2806d13a21d22ac32491833740d0da6573d8e737ffb7d1490ead80a12718052",
       "kind": "text",
       "outputs": [
         {

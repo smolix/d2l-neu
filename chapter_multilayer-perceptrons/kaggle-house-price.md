@@ -230,6 +230,12 @@ According to one-hot encoding,
 if the original value of "MSZoning" is "RL",
 then "MSZoning_RL" is 1 and "MSZoning_RM" is 0.
 The `pandas` package does this automatically for us.
+Note that we build the one-hot encoding on the concatenated train and test
+features. This does not contradict the leakage warning above: taking the
+*schema* (which categories exist, and hence which columns to create) from the
+test set is fine, since deployment reveals feature values anyway; it is
+*statistics* computed on test rows, like the means and standard deviations
+above, that would bias our evaluation.
 
 ```{.python .input #kaggle-house-price-data-preprocessing-2  n=32}
 @d2l.add_to_class(KaggleHouse)
@@ -339,6 +345,9 @@ so we can safely omit it here owing to the simplicity of our problem.
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-1}
 def k_fold_data(data, k):
     rets = []
+    # Integer division: if k does not divide n, the n mod k leftover rows
+    # end up in every training split and no validation fold. Harmless here
+    # (1460 = 5 x 292 exactly), but partition indices before reusing this.
     fold_size = data.train.shape[0] // k
     for j in range(k):
         idx = list(range(j * fold_size, (j+1) * fold_size))
@@ -370,10 +379,10 @@ def k_fold(trainer, data, k, model_fn):
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 %%tab mxnet, tensorflow
-def k_fold(trainer, data, k, lr):
+def k_fold(trainer, data, k, model_fn):
     val_loss, models = [], []
     for i, data_fold in enumerate(k_fold_data(data, k)):
-        model = d2l.LinearRegression(lr)
+        model = model_fn()
         model.board.yscale='log'
         if i != 0: model.board.display = False
         trainer.fit(model, data_fold)
@@ -385,10 +394,10 @@ def k_fold(trainer, data, k, lr):
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 %%tab jax
-def k_fold(trainer, data, k, lr):
+def k_fold(trainer, data, k, model_fn):
     val_loss, models = [], []
     for i, data_fold in enumerate(k_fold_data(data, k)):
-        model = d2l.LinearRegression(lr)
+        model = model_fn()
         model.board.yscale='log'
         if i != 0: model.board.display = False
         trainer.fit(model, data_fold)
@@ -445,8 +454,9 @@ linear_models = k_fold(trainer, data, k=5,
 
 ```{.python .input #kaggle-house-price-model-selection-linear}
 %%tab mxnet, tensorflow, jax
-trainer = d2l.Trainer(max_epochs=10)
-models = k_fold(trainer, data, k=5, lr=0.01)
+trainer = d2l.Trainer(max_epochs=100)
+models = k_fold(trainer, data, k=5,
+                model_fn=lambda: d2l.LinearRegression(lr=0.03))
 ```
 
 Can a small neural network do better? Now that we have weight decay
@@ -485,13 +495,13 @@ trainer = d2l.Trainer(max_epochs=100)
 models = k_fold(trainer, data, k=5, model_fn=lambda: KaggleMLP(lr=0.03))
 ```
 
-On this run the small MLP edges out the (now competently trained) linear
-baseline: both land near a cross-validated log error of $0.03$, with the MLP
-a hair lower. The lesson is deliberately undramatic. A nonlinear model helps
-a little here, but only once it is small enough and regularized enough to
-survive a dataset of barely a thousand rows; the bulk of the gain over a
-careless $0.18$ baseline came simply from training *either* model to
-convergence. And as the caveat above promised, a gradient-boosted tree
+The small MLP lands in a dead heat with the (now competently trained) linear
+baseline: both reach a cross-validated log error near $0.03$, and which of
+the two is a hair ahead varies from run to run. The lesson is deliberately
+undramatic. A nonlinear model buys very little here, and it survives at all
+only because it is small enough and regularized enough for a dataset of
+barely a thousand rows; the bulk of the gain over a careless $0.18$ baseline
+came simply from training *either* model to convergence. And as the caveat above promised, a gradient-boosted tree
 ensemble would still be the stronger tabular choice. The exercises invite you
 to try one and see.
 
@@ -518,6 +528,19 @@ we average in log space before exponentiating:
 the mean of the log-predictions is the ensemble
 consistent with the metric
 (in price space it amounts to a geometric mean).
+
+Be clear-eyed about what this *fold ensembling* is, though. Each of the $K$
+models saw only $(K-1)/K$ of the training data, and the "average validation
+log mse" we computed above estimates the error of a *single* such model — not
+of the ensemble we are about to submit, whose error the cross-validation
+score does not measure. The canonical alternative is to *refit* one model on
+all of the training data using the hyperparameters that cross-validation
+selected, so that the submitted model is a fresh draw of exactly the thing we
+scored. Fold ensembling is standard Kaggle practice: it is free (the $K$
+models are already trained) and the averaging usually buys a small variance
+reduction, so it tends to edge out the refit. But the refit is the cleaner
+experiment, and the choice between them is worth making consciously.
+
 Saving the predictions in a csv file
 will simplify uploading the results to Kaggle.
 The following code will generate a file called `submission.csv`.

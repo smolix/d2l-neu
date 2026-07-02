@@ -125,6 +125,14 @@ By design, the expectation remains unchanged,
 since $E[h'] = p \cdot 0 + (1-p) \cdot \frac{h}{1-p} = h$.
 This is why we divide by $1-p$ and by no other constant:
 it is the unique factor that restores the original expected value.
+This scheme, with the rescaling applied during *training*, is known as
+*inverted dropout*, and it is what every modern framework implements. The
+original formulation :cite:`Srivastava.Hinton.Krizhevsky.ea.2014` left
+activations untouched during training and instead multiplied the weights by
+$1-p$ at *test* time. The two are equivalent in expectation, but inverting
+moves all of the bookkeeping into training, so the inference code never has
+to change — which is exactly why a `Dropout` layer can be a no-op in
+evaluation mode.
 
 ```{.python .input #dropout}
 %%tab mxnet
@@ -177,15 +185,10 @@ one element of $h_1, \ldots, h_5$.
 ![MLP before and after dropout.](../img/dropout2.svg)
 :label:`fig_dropout2`
 
-Typically, we disable dropout at test time.
-Given a trained model and a new example,
-we do not drop out any nodes
-and thus do not need to normalize.
-However, there are some exceptions:
-some researchers use dropout at test time as a heuristic
-for estimating the *uncertainty* of neural network predictions:
-if the predictions agree across many different dropout outputs,
-then we might say that the network is more confident.
+Typically, we disable dropout at test time,
+running the full network with no masking and no rescaling.
+(One notable exception, keeping dropout *on* at test time to estimate
+prediction uncertainty, is explored in exercise 5.)
 
 ## Implementation from Scratch
 
@@ -237,17 +240,10 @@ def dropout_layer(X, dropout):
 ```{.python .input #dropout-implementation-from-scratch-1}
 %%tab jax
 def dropout_layer(X, dropout, key=d2l.get_key()):
-    # Note: `key` is bound at function-definition time (mutable default
-    # pattern), so this educational from-scratch dropout uses one fixed
-    # key for all calls — i.e. the dropout mask is identical on every
-    # call, which is *not* what real training wants. That keeps the
-    # function JIT-traceable — calling `d2l.get_key()` at call time would
-    # mutate `d2l._master_key` and leak a tracer when invoked inside a
-    # JIT'd loss. Real per-step dropout instead threads a *fresh* key for
-    # each call, e.g. derive one deterministically with
-    # `jax.random.fold_in(key, step)`, or — better — let Flax's
-    # `nn.Dropout` handle it, which pulls a new key per step via
-    # `rngs={"dropout": ...}`.
+    # `key` is bound once, at definition time, so this educational dropout
+    # reuses one fixed mask on every call (keeping it JIT-traceable). Real
+    # training needs a fresh key per step; Flax's `nn.Dropout` handles that
+    # via `rngs={'dropout': ...}` — see the note after the concise model.
     assert 0 <= dropout <= 1
     if dropout == 1: return jnp.zeros_like(X)
     mask = jax.random.uniform(key, X.shape) > dropout
@@ -395,10 +391,13 @@ class DropoutMLPScratch(d2l.Classifier):
 ### Training
 
 The following is similar to the training of MLPs described previously.
+Following the convention above, we drop out
+the layer closer to the input more gently
+($p = 0.2$) than the deeper one ($p = 0.5$).
 
 ```{.python .input #dropout-training}
 hparams = {'num_outputs':10, 'num_hiddens_1':256, 'num_hiddens_2':256,
-           'dropout_1':0.5, 'dropout_2':0.5, 'lr':0.1}
+           'dropout_1':0.2, 'dropout_2':0.5, 'lr':0.1}
 model = DropoutMLPScratch(**hparams)
 data = d2l.FashionMNIST(batch_size=256)
 trainer = d2l.Trainer(max_epochs=30)
@@ -541,8 +540,12 @@ the predictions of all $2^n$ of them :cite:`Srivastava.Hinton.Krizhevsky.ea.2014
 A word on currency. Dropout was transformative for the fully connected vision
 networks of the mid-2010s, but its role has narrowed since. Convolutional
 networks typically replace it with batch normalization (see
-:numref:`sec_batch_norm`), which supplies similar noise-driven regularization,
-and large transformer-based language models use it lightly (rates around 0.0 to
+:numref:`sec_batch_norm`), which supplies similar noise-driven regularization.
+The two also combine poorly: batch normalization's running statistics,
+accumulated while dropout perturbs the activations' variance during training,
+mismatch the variance it sees at evaluation time, so placing dropout before a
+batch-normalization layer tends to hurt :cite:`Li.Chen.Hu.ea.2019`.
+Large transformer-based language models use dropout lightly (rates around 0.0 to
 0.1) or not at all in their core layers, reserving it mostly for final
 classifier heads. It nonetheless remains a cheap, reliable regularizer that
 combines well with weight decay and data augmentation, and it is the conceptual

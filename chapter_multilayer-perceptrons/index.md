@@ -75,6 +75,8 @@ All are freely accessible online except where noted.
 
 - [TensorFlow Playground — Smilkov & Carter](https://playground.tensorflow.org/) — free, zero-install; tune depth, width, activation, and regularization and watch a decision boundary train in real time, the fastest way to build hidden-layer intuition.
 - [Backpropagation, Intuitions — Stanford CS231n](https://cs231n.github.io/optimization-2/) — free; the gate/computational-graph view with worked numerical examples, the perfect concrete complement to this chapter's backprop derivation.
+- [micrograd — Andrej Karpathy](https://github.com/karpathy/micrograd) — free; a ~100-line scalar autograd engine plus a [video walkthrough](https://www.youtube.com/watch?v=VMj-3S1tku0) that builds it from scratch, the best way to internalize the backprop section (and the blueprint for its capstone exercise).
+- [Yes you should understand backprop — Andrej Karpathy](https://karpathy.medium.com/yes-you-should-understand-backprop-e2f06810dcbe) — free; a short argument, with real failure cases (saturated sigmoids, dead ReLUs, exploding clips), for why treating backprop as a leaky abstraction bites practitioners.
 - [Double Descent — MLU-Explain](https://mlu-explain.github.io/double-descent/) — free, interactive; animates the interpolation threshold and second descent, the best visual companion to the modern-generalization section.
 - [KAN: Kolmogorov–Arnold Networks — Liu et al. (2024)](https://arxiv.org/abs/2404.19756) — free; a recent alternative that places learnable activations on edges rather than fixed activations on nodes, useful context for where the MLP sits among modern parameterizations.
 

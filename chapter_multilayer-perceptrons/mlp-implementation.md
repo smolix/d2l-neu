@@ -56,7 +56,7 @@ with one hidden layer and 256 hidden units
 (:numref:`fig_mdl-mlp-arch`).
 Both the number of layers and their width are adjustable
 (they are considered hyperparameters).
-Typically, we choose the layer widths to be divisible by larger powers of 2.
+Typically, we choose each layer width to be a multiple of a large power of 2.
 This improves computational efficiency because the matrix-multiplication kernels
 on modern hardware (CPUs and GPUs) are tuned for operand dimensions that align
 to SIMD vector widths and tensor-core tile sizes.
@@ -208,6 +208,10 @@ trainer = d2l.Trainer(max_epochs=30)
 trainer.fit(model, data)
 ```
 
+You should see the validation accuracy settle around $0.87$ — a real, if
+modest, improvement over the $\approx 0.83$ that softmax regression reached
+on the same data, bought by the hidden layer and its ReLU.
+
 ## Concise Implementation
 
 As you might expect, by relying on the high-level APIs, we can implement MLPs even more concisely.
@@ -297,6 +301,11 @@ as when we implemented softmax regression.
 This modularity enables us to separate
 matters concerning the model architecture
 from orthogonal considerations.
+Note that while the two versions compute the same *architecture*, they do not
+start from the same *parameters*: the scratch model draws its weights from
+$\mathcal{N}(0, 0.01^2)$, whereas the concise version uses the framework's
+fan-in-scaled default initializer (:numref:`sec_numerical_stability`), so
+their training trajectories, and final accuracies, can differ slightly.
 
 ```{.python .input #mlp-implementation-training-2}
 model = MLP(num_outputs=10, num_hiddens=256, lr=0.1)
@@ -321,7 +330,7 @@ Answering them turns this small working model into a reliable building block.
 ## Exercises
 
 1. Change the number of hidden units `num_hiddens` and plot how its number affects the accuracy of the model. What is the best value of this hyperparameter?
-1. Try adding a hidden layer to see how it affects the results.
+1. Try adding a hidden layer to see how it affects the results. In particular, add one to the *from-scratch* model while keeping its $\sigma = 0.01$ Gaussian initialization: you may find that the deeper network trains *worse*. Why that happens, and what to do about it, is the subject of :numref:`sec_numerical_stability`.
 1. Why is it a bad idea to insert a hidden layer with a single neuron? What could go wrong?
 1. How does changing the learning rate alter your results? With all other parameters fixed, which learning rate gives you the best results? How does this relate to the number of epochs?
 1. Let's optimize over all hyperparameters jointly, i.e., learning rate, number of epochs, number of hidden layers, and number of hidden units per layer.

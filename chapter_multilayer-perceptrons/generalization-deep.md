@@ -208,6 +208,21 @@ double-descent curve in twenty-five lines---is developed
 in :numref:`sec_mdl-concentration-generalization`;
 we return below to *why* gradient descent prefers such solutions.
 
+Model size, moreover, is only one of three knobs that trace out this curve.
+:citet:`nakkiran2021deep` document *model-wise* double descent (grow the
+network, the flavor above and the one the appendix analyzes), *epoch-wise*
+double descent (fix the network and train longer: test error falls, rises as
+the model begins to interpolate noise, then falls again), and *sample-wise*
+double descent, the genuinely shocking one: adding training examples can
+*hurt* test performance, because more data moves the interpolation threshold
+and can push a fixed model back into the high-variance spike. All three are
+organized by a single axis that Nakkiran et al. call *effective model
+complexity* — roughly, how many examples the full training procedure (model,
+optimizer, *and* budget) can fit perfectly — with the error peaking wherever
+that quantity crosses the dataset size. This chapter only names the
+phenomena; the appendix proves the model-wise case, and the exercises below
+let you produce the epoch-wise one yourself.
+
 ## Inspiration from Nonparametrics
 
 Approaching deep learning for the first time,
@@ -382,6 +397,11 @@ stochastic gradient descent does not pick one at random.
 Starting from a small initialization,
 it is biased toward solutions with small norm and "flat" minima,
 which tend to generalize.
+Flatness can even be optimized for directly:
+*sharpness-aware minimization* (SAM) minimizes the worst-case loss within a
+small ball around the current weights rather than the loss itself, and this
+one-line change to the update rule improves generalization across
+architectures :cite:`Foret.Kleiner.Mobahi.ea.2021`.
 This is not merely empirical.
 For linearly separable data,
 gradient descent on the logistic loss provably converges
@@ -399,6 +419,14 @@ and only much later, after many further steps of training,
 suddenly generalize,
 a reminder that optimization *dynamics*, not just architecture,
 govern generalization :cite:`Power.Burda.Edwards.ea.2022`.
+:numref:`fig_grokking` shows the signature:
+training accuracy saturates almost immediately,
+while validation accuracy sits at chance for orders of magnitude more steps
+before snapping to near-perfect,
+long after any conventional early-stopping rule would have given up.
+
+![The grokking phenomenon, schematically, after :citet:`Power.Burda.Edwards.ea.2022`: on a small algorithmic task, training accuracy (gray) saturates within a few hundred steps, while validation accuracy (blue) lingers near chance for several further orders of magnitude of training before rising sharply. Between *memorization* and *generalization* (dashed markers) the network interpolates its training set yet has not found the generalizing solution; continued optimization, not additional capacity or data, is what eventually finds it.](../img/mdl-mlp-grokking.svg)
+:label:`fig_grokking`
 
 Notably, deep learning researchers have also built
 on techniques first popularized
@@ -447,6 +475,8 @@ despite the concerted efforts of many brilliant researchers.
 1. How do researchers typically determine the stopping criterion?
 1. What important factor seems to differentiate cases when early stopping leads to big improvements in generalization?
 1. Beyond generalization, describe another benefit of early stopping.
+1. *Epoch-wise double descent.* Take the MLP of :numref:`sec_mlp-implementation` on Fashion-MNIST, randomly relabel 15% of the training examples, and train far past convergence (several hundred epochs), recording test error after every epoch. Plot test error against the epoch count on a log axis. Do you observe a second descent after the initial overfitting rise? How does the curve change with the label-noise fraction, and how does the epoch of the peak relate to when the model starts fitting the noisy labels? What does this imply for choosing an early-stopping patience?
+1. (*) *Grokking.* Reproduce the setup of :citet:`Power.Burda.Edwards.ea.2022`: train a small network (they use a two-layer transformer, but a wide MLP on one-hot pairs also works) to predict $c = (a + b) \bmod 97$ from the pair $(a, b)$, using a random 50% of all pairs for training, with weight decay, for $10^5$ or more steps. Plot training and validation accuracy against the logarithm of the step count, and compare with :numref:`fig_grokking`. How does the delay before generalization change with the training fraction and with the weight-decay strength?
 
 [Discussions](https://d2l.discourse.group/t/7473)
 

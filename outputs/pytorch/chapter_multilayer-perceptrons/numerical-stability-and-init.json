@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
-          "bytes": 26193,
-          "sha256": "sha256:71a0cb905dada0f4f2666d2204b856535bf27088e76932e8218bc1447a85eab8"
+          "bytes": 26187,
+          "sha256": "sha256:aeeb2a82523e0c349e429f09897f344fce011fdfde16199d405fbe4e7b98d993"
         }
       ]
     },
@@ -33,7 +33,20 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix \n tensor([[ 0.1444, -0.4962, -0.2421,  0.0793],\n        [-0.1901, -0.1980,  0.6846,  0.3040],\n        [ 0.2179,  1.2258, -2.4922,  0.8218],\n        [-2.9356,  1.4208,  0.7456, -1.2150]])\nafter multiplying 100 matrices\n tensor([[ 1.9075e+24,  1.0354e+25,  6.4936e+24, -9.5598e+24],\n        [-1.8419e+24, -9.9981e+24, -6.2701e+24,  9.2309e+24],\n        [-1.4346e+24, -7.7875e+24, -4.8838e+24,  7.1899e+24],\n        [-1.5788e+25, -8.5701e+25, -5.3746e+25,  7.9125e+25]])\n"
+          "text": "a single matrix \n tensor([[-0.0577, -0.4662, -0.3684,  0.8909],\n        [-1.0802, -0.5189,  0.8753,  0.5083],\n        [ 2.4085,  0.0341, -0.3920, -0.3687],\n        [ 1.0427, -0.2463, -1.0095,  0.1697]])\nafter multiplying 100 matrices\n tensor([[ 2.9602e+22, -6.9955e+23, -4.9493e+23,  7.5369e+23],\n        [-4.0803e+22,  9.6427e+23,  6.8222e+23, -1.0389e+24],\n        [ 5.6660e+22, -1.3391e+24, -9.4737e+23,  1.4427e+24],\n        [ 6.4834e+22, -1.5321e+24, -1.0840e+24,  1.6507e+24]])\n"
+        }
+      ]
+    },
+    "numerical-stability-and-init-depth-sweep": {
+      "code_fingerprint": "sha256:8c41f1e56a2963e6a1e695d6df26ec910e537323b0af1a87a39cf5087379708a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
+          "bytes": 31014,
+          "sha256": "sha256:74fd7eb1792cb21fa1aa1688b9c75c0e16356e77214058e691b03c2405f5d47c"
         }
       ]
     }

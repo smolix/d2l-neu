@@ -313,6 +313,9 @@ weights here, but the whole point of the rest of this book is that
 optimization can *discover* such representations from data. The XOR fix
 generalizes: stack nonlinear hidden layers and the network can carve the
 input space into arbitrarily intricate regions.
+To watch that discovery happen live, try the XOR and spiral datasets at the
+[TensorFlow Playground](https://playground.tensorflow.org/), varying the
+number of hidden units and layers as you go.
 
 ### Universal Approximators
 
@@ -329,6 +332,63 @@ non-constant activation, and :citet:`Leshno.Lin.Pinkus.ea.1993` extended it to
 any activation that is not a polynomial — a form that also covers the unbounded
 ReLU. The conclusion therefore does not hinge on which of ReLU, sigmoid, or tanh
 we pick.
+
+To see why such a theorem should be *plausible*, set the citations aside and
+consider a one-hidden-layer ReLU network on the real line. Each hidden unit
+contributes $a_k \operatorname{ReLU}(w_k x + b_k)$ to the output: a *hinge*,
+flat on one side of the joint at $x = -b_k/w_k$ and linear on the other. The
+network's output is a sum of $D$ such hinges, so it is a continuous piecewise
+linear function whose slope can change only at a joint: with $D$ hidden units it
+has at most $D$ joints and hence at most $D+1$ linear pieces. Seen this way,
+approximating a continuous function is no more mysterious than approximating a
+curve with a polyline: place enough joints in the right locations and pick the
+right slopes, and the error shrinks as finely as we please
+(:numref:`fig_mdl-mlp-uat-hinges`). The exponential-width caveat below is
+visible here too: a very wiggly target needs a joint for every wiggle, one
+hidden unit apiece.
+
+![Universal approximation, one hinge at a time. Left: each of the three hidden units contributes a single hinge $a_k \operatorname{ReLU}(x - t_k)$ whose joint $t_k$ is marked on the horizontal axis. Right: adding the hinges to a base line yields a piecewise linear function with $D+1 = 4$ pieces (blue) that tracks the smooth target (gray); the shaded band is the approximation error, which shrinks as more joints are added.](../img/mdl-mlp-uat-hinges.svg)
+:label:`fig_mdl-mlp-uat-hinges`
+
+Width, however, buys pieces only *linearly*: one extra unit, one extra joint.
+Depth is different. A second hidden layer applies its hinges not to $x$ but to
+the piecewise linear output of the first layer, and composing with a hinge
+*folds the graph*: every existing piece that crosses the new joint is split in
+two. Each added layer can therefore roughly *double* the number of linear
+pieces, so $k$ layers of width $D$ can produce on the order of
+$(D+1)\,2^{k-1}$ pieces, where matching that count with a single hidden layer
+would require exponentially many units. This multiplicative-versus-additive gap
+is the essence of why depth pays. Both claims are easy to check numerically:
+below we evaluate randomly initialized ReLU MLPs on a dense one-dimensional
+grid, detect where the slope changes, and count the linear pieces.
+
+```{.python .input #mlp-region-count}
+%%tab pytorch
+def count_pieces(width, depth, n=100001):
+    x = torch.linspace(-4, 4, n, dtype=torch.float64).reshape(-1, 1)
+    h = x
+    for _ in range(depth):
+        h = torch.relu(h @ torch.randn(h.shape[1], width, dtype=torch.float64)
+                       + torch.randn(width, dtype=torch.float64))
+    y = (h @ torch.randn(width, 1, dtype=torch.float64)).squeeze()
+    slope = torch.diff(y)                     # slope of y on each grid interval
+    tol = 1e-8 * slope.abs().max() + 1e-12 * y.abs().max()
+    change = torch.diff(slope).abs() > tol    # a joint: the slope jumps
+    new = change & ~torch.cat([torch.tensor([False]), change[:-1]])
+    return int(new.sum()) + 1                 # pieces = 1 + number of joints
+for depth in (1, 2, 3):
+    mean = [round(sum(count_pieces(w, depth) for _ in range(20)) / 20, 1)
+            for w in (2, 4, 8, 16)]
+    print(f'depth {depth}: mean pieces = {mean},  D+1 = {[3, 5, 9, 17]}')
+```
+
+The first row confirms the counting argument: with one hidden layer of width
+$D$, the piece count never exceeds $D+1$ (and typically comes close to it).
+The later rows show depth at work: at each width, adding a layer *multiplies*
+the average piece count rather than adding a constant to it. Random weights
+fold far less aggressively than the best hand-crafted ones, which can multiply
+the count by a factor of up to $D+1$ per layer :cite:`Telgarsky.2016`, but the
+multiplicative advantage of depth over width is already unmistakable.
 
 It is tempting to read this as "one hidden layer is all you ever need," but the
 theorem is more modest than it sounds, and three caveats matter
@@ -349,8 +409,9 @@ even in infinite-dimensional spaces :cite:`Kimeldorf.Wahba.1971,Scholkopf.Herbri
 And crucially, where a shallow network would need exponential width, a *deep* one
 can often represent the same function far more compactly, trading width for depth
 :cite:`Montufar.Pascanu.Cho.ea.2014,Telgarsky.2016`. This is one reason practitioners reach for depth
-rather than sheer width. We will touch upon more rigorous arguments in subsequent
-chapters.
+rather than sheer width. The folding picture sketched above is the heart of
+these depth-separation results; exercise 6 asks you to turn it into an
+argument.
 
 
 ## Activation Functions

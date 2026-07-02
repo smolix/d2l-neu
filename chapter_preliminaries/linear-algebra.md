@@ -1435,20 +1435,20 @@ To recap:
 ::: {.cover}
 [Dive into Deep Learning · §2.3]{.kicker}
 
-The vocabulary every later chapter assumes<br>**vectors, matrices, reductions, products, norms**.
+Every model in this book compiles down to a short list of operations<br>**vectors · matrices · products · norms · eigenvalues**.
 :::
 :::
 
-::: {.slide title="The building blocks"}
+::: {.slide title="Five ideas carry every later chapter"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Scalars · vectors · matrices · tensors** — ranks 0, 1, 2, *n*.
-- **Arithmetic** — element-wise, with broadcasting.
-- **Reductions** — `sum`, `mean`, along chosen axes.
+- **Objects** — scalars, vectors, matrices, tensors: ranks $0, 1, 2, n$.
+- **Arithmetic** — element-wise, plus scalar broadcasting.
+- **Reductions** — `sum` and `mean`, along chosen axes.
 - **Products** — dot, matrix–vector, matrix–matrix.
-- **Norms** — measures of size.
+- **Norms & eigenvalues** — how big, and which directions survive.
 
 ::: {.d2l-note}
 **Rank** = number of axes; **shape** = size per axis.
@@ -1467,32 +1467,25 @@ The vocabulary every later chapter assumes<br>**vectors, matrices, reductions, p
 
 [The objects]{.dtitle}
 
-[scalars, vectors, matrices, tensors]{.dsub}
+[scalars, vectors, matrices, tensors — and one flip]{.dsub}
 :::
 :::
 
-::: {.slide title="Scalars"}
-[The objects]{.kicker}
-
-A **scalar** is a rank-0 tensor — a single number. Ordinary arithmetic
-carries over unchanged:
-
-@linear-algebra-scalars
-:::
-
-::: {.slide title="Vectors"}
+::: {.slide title="A vector is numbers with a geometry"}
 [The objects]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A **vector** is a rank-1 tensor — an ordered list of numbers, i.e. a
-point (or arrow) in space:
+A **scalar** is a rank-0 tensor — one number. Stack $n$ of them and you
+get a **vector**: a data record *and* an arrow in $\mathbb{R}^n$, with a
+length and a direction:
 
 @linear-algebra-vectors-1
 
-Index a single element with `[i]`:
-
-@linear-algebra-vectors-2
+::: {.d2l-note}
+Both readings matter: a row of a dataset is a vector — and so is the
+direction a training step moves the weights.
+:::
 :::
 
 ::: {.col .fig .big}
@@ -1501,30 +1494,30 @@ Index a single element with `[i]`:
 :::
 :::
 
-::: {.slide title="Length and shape"}
+::: {.slide title="`.shape` answers the first question about any tensor"}
 [The objects]{.kicker}
 
-`len(x)` is a vector's element count:
+`len` counts a vector's elements:
 
 @linear-algebra-vectors-3
 
 . . .
 
-For any rank, `.shape` lists the size of **every** axis:
+`.shape` works at **every** rank — one size per axis:
 
 @linear-algebra-vectors-4
 :::
 
-::: {.slide title="Matrices & the transpose"}
+::: {.slide title="The transpose flips a matrix across its diagonal"}
 [The objects]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A **matrix** is a rank-2 tensor — *m* rows × *n* columns:
+A **matrix** is a rank-2 tensor — $m$ rows $\times$ $n$ columns:
 
 @linear-algebra-matrices-1
 
-The **transpose** swaps rows and columns ($\mathbf{A}^\top$):
+$\mathbf{A}^\top$ swaps the roles of rows and columns:
 
 @linear-algebra-matrices-2
 :::
@@ -1535,19 +1528,19 @@ The **transpose** swaps rows and columns ($\mathbf{A}^\top$):
 :::
 :::
 
-::: {.slide title="Symmetric matrices"}
+::: {.slide title="Symmetric matrices are their own transpose"}
 [The objects]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A matrix is **symmetric** when it equals its own transpose,
-$\mathbf{A} = \mathbf{A}^\top$:
+$\mathbf{A} = \mathbf{A}^\top$ — the flip changes nothing, and code can
+check it in one line:
 
 @linear-algebra-matrices-3
 
 ::: {.d2l-note}
-Covariance and Gram matrices are symmetric — a structure many methods
-exploit.
+Covariance and Gram matrices are symmetric — structure that many methods
+(and this deck's finale) exploit.
 :::
 :::
 
@@ -1557,13 +1550,13 @@ exploit.
 :::
 :::
 
-::: {.slide title="Higher-rank tensors"}
+::: {.slide title="Rank *n* is just *n* axes"}
 [The objects]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
-Stack matrices and the naming continues — a rank-*n* tensor has *n* axes.
-A batch of images is rank-4 (`N×C×H×W` in PyTorch, `N×H×W×C` in TF):
+Stack matrices and the naming continues. A batch of images is rank-4
+(`N×C×H×W` in PyTorch, `N×H×W×C` in TF):
 
 @-linear-algebra-tensors
 :::
@@ -1580,14 +1573,14 @@ A batch of images is rank-4 (`N×C×H×W` in PyTorch, `N×H×W×C` in TF):
 
 [Arithmetic & reduction]{.dtitle}
 
-[element-wise ops, sums, means, axes]{.dsub}
+[element-wise ops · sums that drop or keep axes]{.dsub}
 :::
 :::
 
-::: {.slide title="Element-wise arithmetic"}
+::: {.slide title="Same shapes combine element-wise"}
 [Arithmetic]{.kicker}
 
-Two tensors of the same shape combine **element-wise**:
+Two tensors of one shape combine entry by entry:
 
 @linear-algebra-basic-properties-of-tensor-arithmetic-1
 
@@ -1599,36 +1592,35 @@ $\mathbf{A} \odot \mathbf{B}$:
 @linear-algebra-basic-properties-of-tensor-arithmetic-2
 :::
 
-::: {.slide title="Scalar–tensor arithmetic"}
+::: {.slide title="A scalar broadcasts to every element"}
 [Arithmetic]{.kicker}
 
-A scalar **broadcasts** across every element:
+Adding or multiplying by a scalar touches each entry and leaves the
+shape alone:
 
 @linear-algebra-basic-properties-of-tensor-arithmetic-3
 :::
 
-::: {.slide title="Reductions: sum"}
+::: {.slide title="A reduction folds many numbers into one"}
 [Reduction]{.kicker}
 
-A **reduction** folds many values into fewer. `sum()` over everything
-gives a scalar:
+`sum()` with no arguments collapses everything to a scalar:
 
 @linear-algebra-reduction-1
 
 . . .
 
-Same call, any rank — it folds across **all** axes by default:
+`mean()` is the same fold, divided by the count:
 
-@linear-algebra-reduction-2
+@linear-algebra-reduction-6
 :::
 
-::: {.slide title="Reducing along an axis"}
+::: {.slide title="`axis=` chooses which dimension disappears"}
 [Reduction]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Pass `axis=` to collapse just one dimension; the output **loses** that
-axis:
+The output **loses** exactly the axis you name:
 
 @linear-algebra-reduction-3
 
@@ -1645,37 +1637,18 @@ axis:
 :::
 :::
 
-::: {.slide title="Mean"}
+::: {.slide title="`keepdims`: reduce, but stay broadcastable"}
 [Reduction]{.kicker}
 
-The **mean** is `sum / count` — available directly as `mean()`, and it
-reduces along an axis just like `sum`:
-
-@linear-algebra-reduction-6
-:::
-
-::: {.slide title="Non-reducing sum (`keepdims`)"}
-[Reduction]{.kicker}
-
-`keepdims=True` keeps the reduced axis at size 1, so the result still
-**broadcasts** against the original:
+`keepdims=True` keeps the folded axis at size 1:
 
 @linear-algebra-non-reduction-sum-1
 
 . . .
 
-…which lets you normalize each row by its own sum:
+…so one broadcast division normalizes every row to sum to $1$:
 
 @linear-algebra-non-reduction-sum-2
-:::
-
-::: {.slide title="Cumulative sum"}
-[Reduction]{.kicker}
-
-`cumsum` keeps the axis and reports a **running total** — a prefix sum,
-not a reduction:
-
-@linear-algebra-non-reduction-sum-3
 :::
 
 ::: {.slide}
@@ -1684,22 +1657,24 @@ not a reduction:
 
 [Products]{.dtitle}
 
-[dot, matrix–vector, matrix–matrix]{.dsub}
+[one idea at three sizes: dot · matrix–vector · matrix–matrix]{.dsub}
 :::
 :::
 
-::: {.slide title="Dot product"}
+::: {.slide title="The dot product multiplies, then sums"}
 [Products]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-The **dot product** multiplies element-wise, then sums:
+$\mathbf{x}^\top\mathbf{y} = \sum_i x_i y_i$ — multiply matching
+entries, add them up:
 
 @linear-algebra-dot-products-1
 
-Equivalently, `dot(x, y)` or `sum(x * y)`:
-
-@linear-algebra-dot-products-2
+::: {.d2l-note}
+With nonnegative weights summing to $1$, the dot product is a
+**weighted average**.
+:::
 :::
 
 ::: {.col .fig .big}
@@ -1708,15 +1683,44 @@ Equivalently, `dot(x, y)` or `sum(x * y)`:
 :::
 :::
 
-::: {.slide title="Matrix–vector products"}
+::: {.slide title="Normalized, the dot product is cos θ"}
+[Products · geometry]{.kicker}
+
+$$\cos\theta = \frac{\mathbf{x}^\top\mathbf{y}}{\|\mathbf{x}\|\,\|\mathbf{y}\|}.$$
+
+![](../img/mdl-prelim-cosine.svg)
+
+$+1$ aligned · $0$ perpendicular · $-1$ opposed: the dot product is
+deep learning's favorite **similarity measure**.
+:::
+
+::: {.slide title="Cauchy–Schwarz keeps the ratio in [−1, 1]"}
+[Products · geometry]{.kicker}
+
+Why can $\cos\theta$ never escape $[-1, 1]$? That is the
+**Cauchy–Schwarz inequality**
+$|\mathbf{x}^\top\mathbf{y}| \le \|\mathbf{x}\|\,\|\mathbf{y}\|$
+(proved in §22.1). One random pair checks both facts at once:
+
+@linear-algebra-dot-products-3
+
+An angle in $[0, \pi]$, and the inequality holds — on every draw.
+:::
+
+::: {.slide title="Ax takes one dot product per row"}
 [Products]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$\mathbf{A}\mathbf{x}$ is **one dot product per row** of $\mathbf{A}$ —
-the core of a fully-connected layer (much more on that later):
+$(\mathbf{A}\mathbf{x})_i = \mathbf{a}^\top_i \mathbf{x}$, so a
+$2\times3$ matrix maps a length-3 vector to a length-2 vector:
 
 @linear-algebra-matrix-vector-products
+
+::: {.d2l-note}
+Every fully-connected layer computes exactly this (plus a
+nonlinearity) — much more on that later.
+:::
 :::
 
 ::: {.col .fig}
@@ -1725,13 +1729,25 @@ the core of a fully-connected layer (much more on that later):
 :::
 :::
 
-::: {.slide title="Matrix–matrix products"}
+::: {.slide title="Matrices move vectors — here, a 90° turn"}
+[Products]{.kicker}
+
+Multiplication by $\mathbf{A} \in \mathbb{R}^{m\times n}$ is a **linear
+map** $\mathbb{R}^n \to \mathbb{R}^m$. The rotation matrix
+$\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}$
+turns the plane by $\theta$; at $\theta = 90°$ it sends
+$\mathbf{e}_1 \mapsto \mathbf{e}_2$ and $\mathbf{e}_2 \mapsto -\mathbf{e}_1$:
+
+@linear-algebra-matrix-vector-products-2
+:::
+
+::: {.slide title="AB stitches m×n dot products into a matrix"}
 [Products]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$\mathbf{A}\mathbf{B}$ stitches $m \times n$ row-by-column dot products
-into one matrix:
+Entry $c_{ij}$ is row $i$ of $\mathbf{A}$ dotted with column $j$ of
+$\mathbf{B}$:
 
 @linear-algebra-matrix-matrix-multiplication
 :::
@@ -1746,30 +1762,27 @@ into one matrix:
 ::: {.divider}
 [04]{.dnum}
 
-[Norms]{.dtitle}
+[Norms & eigenvalues]{.dtitle}
 
-[measuring the size of vectors & matrices]{.dsub}
+[how long is a vector — and which directions a matrix keeps]{.dsub}
 :::
 :::
 
-::: {.slide title="Vector norms: ℓ₂ and ℓ₁"}
+::: {.slide title="Two rulers: ℓ₂ walks straight, ℓ₁ walks the grid"}
 [Norms]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-The **$\ell_2$** norm is Euclidean length — the workhorse of
-optimization:
+For $\mathbf{u} = [3, -4]$ the Euclidean ruler reads $5$; the taxicab
+ruler reads $7$:
 
 @linear-algebra-norms-1
-
-The **$\ell_1$** norm sums absolute values; it is less sensitive to
-outliers:
 
 @linear-algebra-norms-2
 
 ::: {.d2l-note .rule}
-$\|\mathbf{x}\|_2 = \sqrt{\textstyle\sum_i x_i^2}$,
-$\quad \|\mathbf{x}\|_1 = \textstyle\sum_i |x_i|$.
+$\|\mathbf{x}\|_2 = \sqrt{\textstyle\sum_i x_i^2}, \qquad
+\|\mathbf{x}\|_1 = \textstyle\sum_i |x_i|.$
 :::
 :::
 
@@ -1779,39 +1792,79 @@ $\quad \|\mathbf{x}\|_1 = \textstyle\sum_i |x_i|$.
 :::
 :::
 
-::: {.slide title="Frobenius norm"}
+::: {.slide title="The three norm axioms are checkable facts"}
 [Norms]{.kicker}
 
-For matrices, the **Frobenius** norm is the $\ell_2$ of all entries
-flattened — $\|\mathbf{X}\|_\text{F} = \sqrt{\sum_{i,j} x_{ij}^2}$:
+Homogeneity $\|\alpha\mathbf{x}\| = |\alpha|\,\|\mathbf{x}\|$ and the
+triangle inequality
+$\|\mathbf{x}+\mathbf{y}\| \le \|\mathbf{x}\|+\|\mathbf{y}\|$, holding on
+random vectors:
 
-@linear-algebra-norms-3
+@linear-algebra-norms-4
+
+. . .
+
+::: {.d2l-note}
+For $\ell_2$, the triangle inequality **is** Cauchy–Schwarz in disguise:
+expand $\|\mathbf{u}+\mathbf{v}\|^2$ and bound the cross term (§22.1).
+:::
 :::
 
-::: {.slide title="Eigenvalues: a first look"}
+::: {.slide title="Frobenius measures a matrix as one long vector"}
 [Norms]{.kicker}
+
+$\|\mathbf{X}\|_\textrm{F} = \sqrt{\sum_{i,j} x_{ij}^2}$ — the $\ell_2$
+norm of the flattened matrix. For the all-ones $4\times9$:
+$\sqrt{36} = 6$:
+
+@linear-algebra-norms-3
+
+::: {.d2l-note}
+The *spectral* norm — how much $\mathbf{X}$ can stretch a vector — needs
+the singular value decomposition; it arrives in §22.3.
+:::
+:::
+
+::: {.slide title="Eigenvectors: the directions a matrix does not turn"}
+[Eigenvalues]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Norms ask how much a matrix can **stretch**; eigenvectors are directions
-it does not **turn** at all:
+$$\mathbf{A}\mathbf{v} = \lambda\mathbf{v}.$$
 
-$$\mathbf{A}\mathbf{v} = \lambda \mathbf{v}.$$
-
-@linear-algebra-eigenvalues-1
+Along an eigenvector, the matrix acts like a **scalar**: stretch
+($|\lambda|>1$), shrink ($|\lambda|<1$), flip ($\lambda<0$) — never
+turn.
 :::
 
 ::: {.col}
-Repeated multiplication amplifies (or damps) by $\max_i|\lambda_i|$ per
-step — watch the norm-growth factor converge to it:
+The symmetric matrix from the transpose slide has three real
+eigenvalues:
+
+@linear-algebra-eigenvalues-1
+
+Keep $8.8612$ in mind.
+:::
+:::
+:::
+
+::: {.slide title="Ten blind multiplications find 8.8612"}
+[Eigenvalues · payoff]{.kicker}
+
+Multiply a random vector by $\mathbf{S}$ ten times and measure how much
+the norm grows per step:
 
 @linear-algebra-eigenvalues-2
 
-::: {.d2l-note}
-Deep nets multiply by many matrices in a row; this amplify-or-damp
-effect returns in :numref:`sec_numerical_stability`.
-:::
-:::
+The growth factor converges to $\max_i |\lambda_i| = 8.8612$: whatever
+vector you start from, the largest eigenvalue soon runs the show.
+
+. . .
+
+::: {.d2l-note .rule}
+Deep networks multiply by dozens of matrices in a row. Whether signals
+and gradients **explode or vanish** is this experiment at scale — the
+analysis returns in §5.4.
 :::
 :::
 
@@ -1820,20 +1873,26 @@ effect returns in :numref:`sec_numerical_stability`.
 
 ::: {.cols}
 ::: {.col}
-- **Ranks 0–*n*:** scalar, vector, matrix, tensor.
-- **Element-wise** ops + scalar broadcasting; **Hadamard** `*`.
-- **Reductions:** `sum`, `mean`, with `axis=` and `keepdims=`.
+- **Objects:** ranks $0$–$n$; the transpose; symmetry.
+- **Element-wise** ops + scalar broadcasting; Hadamard $\odot$.
+- **Reductions:** `sum`/`mean` with `axis=`; `keepdims=` stays
+  broadcastable.
+- **Dot product** $\sum_i x_i y_i$; normalized it is $\cos\theta$
+  (Cauchy–Schwarz).
 :::
 
 ::: {.col}
-- **Products:** `dot`, matrix–vector, matrix–matrix (`@`).
-- **Norms:** $\ell_2$, $\ell_1$, Frobenius.
-- **Eigenvectors** are scaled, never rotated: $\mathbf{A}\mathbf{v} = \lambda\mathbf{v}$.
-- Geometry — arrows, angles, lengths — underlies all of it.
+- $\mathbf{A}\mathbf{x}$: one dot product per row — the layer
+  primitive; $\mathbf{A}\mathbf{B}$: $m \times n$ of them.
+- **Norms:** $\ell_2 = 5$ and $\ell_1 = 7$ for $[3,-4]$; Frobenius for
+  matrices; three axioms, all checkable.
+- **Eigenvectors** are scaled, never turned — and $\max|\lambda| =
+  8.8612$ dominated repeated multiplication.
 :::
 :::
 
 ::: {.d2l-note}
-Almost every computation in this book compiles down to this short list.
+Next, calculus (§2.4): every gradient there is built from these
+products. The full linear-algebra story continues in §22.
 :::
 :::

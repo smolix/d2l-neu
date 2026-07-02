@@ -542,17 +542,20 @@ How a loss changes when we nudge a parameter<br>**limits · derivatives · gradi
 :::
 :::
 
-::: {.slide title="Calculus for optimization"}
+::: {.slide title="Optimization asks one question: which way is downhill?"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Training a model = **minimizing a loss**. Calculus tells us which way to step.
+Training a model = **minimizing a loss**. Calculus answers the only
+question an optimizer ever asks:
 
-- The **derivative** measures slope — how fast the loss moves when we nudge a parameter.
-- The **gradient** $\nabla_\theta L$ stacks one partial derivative per parameter.
-- Optimizers walk **downhill**, along $-\nabla_\theta L$.
-- The **chain rule** differentiates a network's nested functions — the engine of backprop.
+- The **derivative**: how fast the loss moves when one parameter is
+  nudged.
+- The **gradient** $\nabla_\theta L$: one slope per parameter, stacked.
+- Optimizers step along $-\nabla_\theta L$ — downhill.
+- The **chain rule** differentiates nested functions — the engine of
+  backprop.
 :::
 
 ::: {.col .fig}
@@ -567,7 +570,7 @@ Training a model = **minimizing a loss**. Calculus tells us which way to step.
 
 [Derivatives]{.dtitle}
 
-[limits, slopes, and the tangent line]{.dsub}
+[limits, slopes, and where floating point gives out]{.dsub}
 :::
 :::
 
@@ -581,7 +584,8 @@ the polygon splits into $n$ triangles whose areas sum to
 
 $$n \cdot \tfrac{1}{2}\bigl(\tfrac{2\pi r}{n}\bigr)\, r = \pi r^2.$$
 
-Taking $n \to \infty$ is a **limit** — the idea at the root of all calculus.
+Taking $n \to \infty$ is a **limit** — the idea at the root of all
+calculus.
 :::
 
 ::: {.col .fig .big}
@@ -590,18 +594,19 @@ Taking $n \to \infty$ is a **limit** — the idea at the root of all calculus.
 :::
 :::
 
-::: {.slide title="The derivative, by definition"}
+::: {.slide title="As h → 0, the secant pivots into the tangent"}
 [Derivatives]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-The **derivative** of $f$ at $x$ is the limit of the difference quotient:
+The **derivative** of $f$ at $x$ is the limit of the difference
+quotient:
 
 $$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}.$$
 
-Geometrically, $\tfrac{f(x+h)-f(x)}{h}$ is the slope of the **secant**
-through two points. As $h \to 0$ the secant pivots into the **tangent**
-— and its slope *is* $f'(x)$.
+$\tfrac{f(x+h)-f(x)}{h}$ is the slope of the **secant** through two
+points; as $h \to 0$ it pivots into the **tangent** — whose slope *is*
+$f'(x)$.
 :::
 
 ::: {.col .fig}
@@ -610,42 +615,49 @@ through two points. As $h \to 0$ the secant pivots into the **tangent**
 :::
 :::
 
-::: {.slide title="A concrete example"}
+::: {.slide title="One function by hand: f′(1) = 2"}
 [Derivatives]{.kicker}
 
-Let $u = f(x) = 3x^2 - 4x$. The rules below give $f'(x) = 6x - 4$, so
-$f'(1) = 2$:
+Let $u = f(x) = 3x^2 - 4x$. The rules (two slides ahead) give
+$f'(x) = 6x - 4$, so $f'(1) = 2$ — the number the next two experiments
+must reproduce:
 
 @-calculus-derivatives-and-differentiation-1
-
-::: {.d2l-note}
-We'll verify this numerically, then see it as a slope — and from the
-next chapter on, let **autograd** do it for us.
-:::
 :::
 
-::: {.slide title="Verifying numerically"}
+::: {.slide title="The quotient marches to 2 — one digit per decade"}
 [Derivatives]{.kicker}
 
-At $x = 1$, the difference quotient should approach $f'(1) = 2$ as
-$h \to 0$:
+At $x = 1$, shrink $h$ tenfold per row and watch the difference quotient
+close in on $f'(1) = 2$:
 
 @calculus-derivatives-and-differentiation-2
 
-. . .
-
-It does. Push $h$ far smaller and floating-point **cancellation**
-eventually corrupts the quotient — a reason **autograd** (next chapter)
-computes derivatives analytically instead.
+Each decade of $h$ buys one more correct digit: $2.3$, $2.03$,
+$2.003$, …
 :::
 
-::: {.slide title="Function and tangent line"}
+::: {.slide title="Push h too far and the arithmetic collapses"}
+[Derivatives · a warning]{.kicker}
+
+Smaller is *not* always better: $f(1+h)$ and $f(1)$ become nearly equal
+floats, and their difference dies by **cancellation**:
+
+@!calculus-derivatives-and-differentiation-3
+
+Error creeps back in at $h=10^{-12}$; at $10^{-16}$, when $1+h$ rounds
+to exactly $1$, the quotient collapses to $0$ — a key reason
+**autograd** (§2.5) differentiates *analytically*.
+:::
+
+::: {.slide title="The picture: tangent of slope 2 at x = 1"}
 [Derivatives]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Plotting $u = f(x)$ with its tangent $y = 2x - 3$ at $x = 1$ makes it
-visual: the tangent's slope **is** $f'(1) = 2$.
+Plotting $u = f(x)$ with the line $y = 2x - 3$ makes the number
+geometric: the tangent touches at $(1, -1)$ and its slope **is**
+$f'(1) = 2$.
 
 ::: {.d2l-note}
 The d2l package wraps a few matplotlib helpers — `set_figsize`, `plot`,
@@ -659,7 +671,7 @@ The d2l package wraps a few matplotlib helpers — `set_figsize`, `plot`,
 :::
 :::
 
-::: {.slide title="Rules of differentiation"}
+::: {.slide title="A handful of rules replaces the limit"}
 [Derivatives]{.kicker}
 
 ::: {.cols}
@@ -686,7 +698,8 @@ Quotient: $\left(\dfrac{f}{g}\right)' = \dfrac{g f' - f g'}{g^2}$
 :::
 :::
 
-Apply them to $3x^2 - 4x$ and you recover $6x - 4$ — matching the limit.
+Apply them to $3x^2 - 4x$: the derivative is $6x - 4$ — exactly what the
+limit experiment measured.
 :::
 
 ::: {.slide}
@@ -699,14 +712,14 @@ Apply them to $3x^2 - 4x$ and you recover $6x - 4$ — matching the limit.
 :::
 :::
 
-::: {.slide title="Functions of many variables"}
+::: {.slide title="A partial derivative slices the surface"}
 [Gradients]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 For $y = f(x_1, \ldots, x_n)$, the **partial derivative**
-$\dfrac{\partial y}{\partial x_i}$ treats every other variable as a
-constant and differentiates in one direction:
+$\dfrac{\partial y}{\partial x_i}$ freezes every other variable and
+differentiates along one axis:
 
 $$\frac{\partial y}{\partial x_i} = \lim_{h \to 0}
 \frac{f(\ldots, x_i + h, \ldots) - f(\ldots, x_i, \ldots)}{h}.$$
@@ -720,21 +733,22 @@ It is the slope of a **1-D slice** through the surface.
 :::
 :::
 
-::: {.slide title="The gradient"}
+::: {.slide title="The gradient points uphill — fastest"}
 [Gradients]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Stack all $n$ partials into one vector — the **gradient**:
+Stack all $n$ partials into the **gradient**
+$\nabla f = [\partial_{x_1} f, \ldots, \partial_{x_n} f]^\top$.
 
-$$\nabla_{\mathbf{x}} f = \left[\frac{\partial f}{\partial x_1}, \ldots,
-\frac{\partial f}{\partial x_n}\right]^\top.$$
-
-It points in the direction of **steepest ascent**, perpendicular to the
-level sets.
+Along a unit direction $\mathbf{u}$, the rate of change is the dot
+product $\nabla f^\top \mathbf{u}$ — by §2.3's cosine formula, largest
+when $\mathbf{u}$ aligns with $\nabla f$. So the gradient is the
+direction of **steepest ascent** (proof via Cauchy–Schwarz, §23.2).
 
 ::: {.d2l-note}
-$-\nabla f$ points downhill — the direction every optimizer follows.
+$-\nabla f$ points downhill — the direction every optimizer in this
+book follows.
 :::
 :::
 
@@ -744,11 +758,12 @@ $-\nabla f$ points downhill — the direction every optimizer follows.
 :::
 :::
 
-::: {.slide title="Gradient identities"}
+::: {.slide title="Gradient identities: calculus done by linear algebra"}
 [Gradients]{.kicker}
 
-A few vector rules recur constantly — and they are exactly the §2.3
-linear-algebra operations:
+A few vector rules recur constantly — each is a §2.3 operation
+($\nabla_{\mathbf{x}}\,\mathbf{A}\mathbf{x} = \mathbf{A}^\top$ is the
+transpose of the Jacobian; derivations in §23.3):
 
 ::: {.cols}
 ::: {.col}
@@ -769,9 +784,6 @@ $\nabla_{\mathbf{X}}\, \|\mathbf{X}\|_\textrm{F}^2 = 2\mathbf{X}$
 :::
 :::
 :::
-
-Gradients are built from matrix–vector products — calculus and linear
-algebra meet here.
 :::
 
 ::: {.slide}
@@ -780,17 +792,16 @@ algebra meet here.
 
 [The chain rule]{.dtitle}
 
-[differentiating compositions]{.dsub}
+[differentiating compositions — and meeting backprop]{.dsub}
 :::
 :::
 
-::: {.slide title="The chain rule"}
+::: {.slide title="The chain rule multiplies along the path"}
 [Chain rule]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Deep networks are functions of functions of functions. The **chain
-rule** differentiates them by multiplying along the path. For
+Deep networks are functions of functions of functions. For
 $y = f(g(x))$ with $u = g(x)$:
 
 $$\frac{dy}{dx} = \frac{dy}{du}\,\frac{du}{dx}.$$
@@ -805,23 +816,24 @@ Evaluate **forward** ($x \to u \to y$); accumulate derivatives
 :::
 :::
 
-::: {.slide title="From chain rule to backprop"}
-[Chain rule]{.kicker}
+::: {.slide title="The multivariate chain rule is a matrix–vector product"}
+[Chain rule · payoff]{.kicker}
 
-With many variables $u_1, \ldots, u_m$, each depending on
-$x_1, \ldots, x_n$, the chain rule becomes a **vector–matrix product**:
+With $m$ intermediates $u_j$, each depending on $n$ inputs $x_i$, the
+sums $\partial y/\partial x_i = \sum_j A_{ij}\, \partial y/\partial u_j$
+assemble into
 
 $$\nabla_{\mathbf{x}} y = \mathbf{A}\, \nabla_{\mathbf{u}} y,
-\qquad \mathbf{A} = \left[\frac{\partial u_j}{\partial x_i}\right] \in \mathbb{R}^{n \times m}\ \text{(the transpose of the Jacobian } \partial\mathbf{u}/\partial\mathbf{x}\text{).}$$
+\qquad A_{ij} = \frac{\partial u_j}{\partial x_i}\
+\text{(the transpose of the Jacobian, §23.3).}$$
 
 ::: {.d2l-note}
-A network's gradient is a chain of such products. Traversed **forward**
-it evaluates the function; traversed **backward** it computes gradients
-— this backward pass is **backpropagation**, formalized in a later
-chapter.
+A network's gradient is a **chain of such products** — traversed
+forward it evaluates the function, traversed backward it computes every
+gradient. That backward pass is **backpropagation** (§5.3).
 :::
 
-This is a core reason linear algebra is the backbone of deep learning.
+This is why linear algebra is the backbone of deep learning.
 :::
 
 ::: {.slide title="Recap"}
@@ -829,15 +841,19 @@ This is a core reason linear algebra is the backbone of deep learning.
 
 ::: {.cols}
 ::: {.col}
-- **Derivative** = limit of the difference quotient = slope of the tangent.
-- **Partial derivatives** give one slope per input; the **gradient** bundles them into a vector.
-- $-\nabla f$ points downhill — every optimizer follows it.
+- **Derivative** = limit of the difference quotient = tangent slope;
+  the quotient earns a digit per decade of $h$ — then cancellation
+  destroys it.
+- **Partials** slice; the **gradient** stacks them and points uphill
+  ($-\nabla f$ downhill).
 :::
 
 ::: {.col}
-- The **chain rule** differentiates compositions by multiplying along the path.
-- Multivariate, that is a **vector–matrix product** — the link to linear algebra and the heart of backprop.
-- Next: **autograd** computes all of this for us, automatically.
+- **Identities:** $\nabla \mathbf{A}\mathbf{x} = \mathbf{A}^\top$,
+  $\nabla \|\mathbf{x}\|^2 = 2\mathbf{x}$, … — all matvecs.
+- The **chain rule** multiplies along the path; multivariate, it *is* a
+  matrix–vector product — the heart of backprop.
+- Next: **autograd** (§2.5) runs all of this for us, analytically.
 :::
 :::
 

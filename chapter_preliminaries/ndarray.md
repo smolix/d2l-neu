@@ -1009,7 +1009,7 @@ Storing & transforming data with **tensors**<br>The *n*-dimensional arrays that 
 :::
 :::
 
-::: {.slide title="Other ways to build tensors"}
+::: {.slide title="randn breaks symmetry; lists pin exact values"}
 [Getting Started]{.kicker}
 
 ::: {.cols}
@@ -1178,7 +1178,7 @@ A slice on the left assigns to a **whole region** at once:
 :::
 :::
 
-::: {.slide title="Elementwise arithmetic & functions"}
+::: {.slide title="Elementwise ops: matching shapes, entry by entry"}
 [Operations]{.kicker}
 
 ::: {.cols}
@@ -1221,7 +1221,7 @@ Every *other* axis must already match.
 :::
 :::
 
-::: {.slide title="Comparisons & reductions"}
+::: {.slide title="Comparisons build masks; reductions collapse"}
 [Operations]{.kicker}
 
 ::: {.cols}
@@ -1244,7 +1244,7 @@ reduce just one.
 :::
 :::
 
-::: {.slide title="Broadcasting: combining mismatched shapes"}
+::: {.slide title="Broadcasting stretches size-1 axes — for free"}
 [Operations · the exception]{.kicker}
 
 ::: {.cols .vc}
@@ -1268,6 +1268,21 @@ Compatible only if each axis is **equal** or **1**.
 ::: {.col .narrow}
 @fig:ndarray-broadcasting
 :::
+:::
+:::
+
+::: {.slide title="…or it refuses: no size-1 axis, no guess"}
+[Operations · the exception]{.kicker}
+
+Line up $(3, 2)$ and $(2, 3)$ from the right: $2$ vs $3$ and $3$ vs $2$ —
+no pair matches, neither member is $1$, so the framework raises rather
+than guessing:
+
+@ndarray-broadcasting-3
+
+::: {.d2l-note .rule}
+Broadcasting aligns shapes **from the right**; each axis pair must be
+**equal or 1**. Meet this error here, not deep inside a training loop.
 :::
 :::
 
@@ -1407,7 +1422,7 @@ A size-1 tensor unwraps to a Python scalar with `.item()`:
 
 ::: {.col}
 - **Elementwise** math, **comparisons** (masks), **reductions**, `cat`.
-- **Broadcasting** stretches size-1 axes to combine shapes.
+- **Broadcasting** stretches size-1 axes — and refuses anything else.
 - **Save memory** with in-place ops (`X[:] = …`, `+=`) — or, in JAX,
   `jit` buffer donation.
 - **Interop:** tensor ↔ NumPy, `.item()` for scalars.

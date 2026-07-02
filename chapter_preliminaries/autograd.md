@@ -904,7 +904,7 @@ From the chain rule to **backpropagation**<br>the engine that differentiates a w
 :::
 :::
 
-::: {.slide title="Why automatic differentiation"}
+::: {.slide title="Record the forward pass; replay it in reverse"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -936,14 +936,14 @@ pass over this graph.
 :::
 :::
 
-::: {.slide title="A worked example"}
+::: {.slide title="A function with a known answer: ∇y = 4x"}
 [Mechanics]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 Differentiate $y = 2\,\mathbf{x}^\top\mathbf{x}$ w.r.t. the vector
 $\mathbf{x}$. The analytic answer, $\nabla_\mathbf{x} y = 4\mathbf{x}$,
-is our sanity check.
+is our sanity check — autograd must reproduce it exactly.
 
 @autograd-a-simple-function-1
 :::
@@ -954,19 +954,19 @@ is our sanity check.
 :::
 :::
 
-::: {.slide title="Record, then run forward" except="jax"}
+::: {.slide title="Track x, and the graph builds itself" except="jax"}
 [Mechanics]{.kicker}
 
 First tell the framework to **track** `x` (reserve a slot for its
-gradient), then run the forward pass — `y` is now built on a recorded
-graph:
+gradient), then run the forward pass — `y` is now the root of a
+recorded graph:
 
 @autograd-a-simple-function-2
 
 @autograd-a-simple-function-3
 :::
 
-::: {.slide title="No setup — just differentiate" only="jax"}
+::: {.slide title="No setup — grad transforms the function" only="jax"}
 [Mechanics]{.kicker}
 
 JAX is **functional**: there is nothing to attach. You write the
@@ -976,18 +976,19 @@ pass is an ordinary call:
 @autograd-a-simple-function-3
 :::
 
-::: {.slide title="The backward pass"}
+::: {.slide title="One backward call returns the whole gradient"}
 [Mechanics]{.kicker}
 
-One call sweeps the graph in reverse and returns the gradient — which
-matches the analytic $4\mathbf{x}$:
+One call sweeps the graph in reverse — and the result equals the
+promised $4\mathbf{x}$, at every coordinate:
 
 @autograd-a-simple-function-4
 
 @autograd-a-simple-function-5
 
 ::: {.d2l-note}
-That reverse sweep **is** the §2.4 chain rule, run from output to input.
+That reverse sweep **is** the §2.4 chain rule, run from output to
+input.
 :::
 :::
 
@@ -997,7 +998,7 @@ That reverse sweep **is** the §2.4 chain rule, run from output to input.
 
 [Working with gradients]{.dtitle}
 
-[accumulation · non-scalar · detaching · inference]{.dsub}
+[accumulation · non-scalar outputs · detaching · inference]{.dsub}
 :::
 :::
 
@@ -1023,24 +1024,24 @@ no buffer to reset:
 @autograd-a-simple-function-6
 :::
 
-::: {.slide title="Non-scalar outputs"}
+::: {.slide title="Vector outputs: differentiate their sum"}
 [Gradients]{.kicker}
 
 Gradients are defined for a **scalar** loss. For a vector `y`, the
-engine differentiates the **sum** of its components (a
-vector–Jacobian product) — exactly what a per-example batch loss needs:
+engine differentiates the **sum** of its components (a vector–Jacobian
+product) — exactly what a per-example batch loss needs:
 
 @autograd-backward-for-non-scalar-variables
 :::
 
-::: {.slide title="Detaching from the graph"}
+::: {.slide title="detach freezes a value: ∂z/∂x = u, not 3x²"}
 [Gradients]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 Sometimes a value should count as a **constant** — gradients must not
 flow through it. `detach` (or `stop_gradient`) severs the graph above
-it, so here $\partial z/\partial x = u$, **not** $3x^2$:
+it, so $z = u \cdot x$ differentiates to $u$, **not** to $3x^2$:
 
 @autograd-detaching-computation-1
 :::
@@ -1051,12 +1052,12 @@ it, so here $\partial z/\partial x = u$, **not** $3x^2$:
 :::
 :::
 
-::: {.slide title="Turning tracking off"}
+::: {.slide title="Inference skips the bookkeeping"}
 [Gradients]{.kicker}
 
 When we only need the value — prediction, evaluation, manual updates —
-we skip the bookkeeping entirely. This is the default mode for
-inference throughout the book:
+we turn recording off and pay nothing for it. This is the default mode
+for inference throughout the book:
 
 @autograd-turning-off-gradient-tracking-1
 :::
@@ -1067,18 +1068,18 @@ inference throughout the book:
 
 [Dynamic graphs]{.dtitle}
 
-[the graph is built at runtime]{.dsub}
+[the graph is whatever actually ran]{.dsub}
 :::
 :::
 
-::: {.slide title="Gradients through control flow"}
+::: {.slide title="The graph records what actually ran"}
 [Dynamic graphs]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Autograd ignores Python `if`s and `while`s — it records whichever ops
-*actually ran*. This function's loop count and branch both depend on
-its input:
+Autograd never sees your `if`s and `while`s — it records whichever ops
+*executed*. This function's loop count and branch both depend on its
+input:
 
 @autograd-gradients-and-python-control-flow-1
 :::
@@ -1089,31 +1090,32 @@ its input:
 :::
 :::
 
-::: {.slide title="…and it just works"}
+::: {.slide title="Branch or loop, the gradient is exact: f(a)/a"}
 [Dynamic graphs]{.kicker}
 
-Each call realizes a concrete graph that `backward` can walk. Here
-`f(a)` is linear in `a` along whichever branch ran, so the gradient
-must equal $f(a)/a$ — and it does:
+Each call realizes a concrete graph that `backward` can walk. Whichever
+branch ran, `f` scaled its input by some constant — so $f(a) = k\,a$
+and the gradient must equal $f(a)/a$. It does:
 
 @autograd-gradients-and-python-control-flow-2
 
 @autograd-gradients-and-python-control-flow-3
 :::
 
-::: {.slide title="Forward vs reverse mode"}
-[Wrap-up]{.kicker}
+::: {.slide title="Reverse mode: the whole gradient for one extra pass"}
+[Beyond · payoff]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Autodiff can sweep the graph either way. **Reverse mode** (backprop)
-gets the gradient of one scalar w.r.t. *all* inputs in a single pass —
-exactly the deep-learning case. **Forward mode** wins the opposite
-regime (few inputs, many outputs).
+A counting argument settles which way to sweep. With $n$ inputs and $m$
+outputs, the full derivative matrix costs $m$ **reverse** sweeps or $n$
+**forward** sweeps — each sweep priced at roughly one function
+evaluation.
 
-::: {.d2l-note}
-A scalar loss over millions of parameters ⇒ reverse mode.
-:::
+A training loss has $m = 1$ and $n$ in the millions: **one** reverse
+sweep delivers every parameter's gradient — for the cost of about one
+extra forward pass. Forward mode wins the opposite regime (few inputs,
+many outputs) and Hessian–vector products.
 :::
 
 ::: {.col .fig .big}
@@ -1122,12 +1124,13 @@ A scalar loss over millions of parameters ⇒ reverse mode.
 :::
 :::
 
-::: {.slide title="Higher-order derivatives" except="mxnet"}
-[Wrap-up]{.kicker}
+::: {.slide title="Differentiate the derivative: f″(2) = 12" except="mxnet"}
+[Beyond]{.kicker}
 
-Because the gradient is itself a function on the graph, we can
-differentiate *it* — second derivatives, Hessian–vector products. For
-$f(x)=x^3$: $f'(2)=12$, $f''(2)=12$.
+The gradient is itself a function on the graph, so we can differentiate
+*it*. For $f(x) = x^3$ at $x = 2$: $f'(2) = 3x^2 = 12$ and
+$f''(2) = 6x = 12$ — the same number, by coincidence, and autograd nails
+both:
 
 @autograd-higher-order-derivatives-1
 :::
@@ -1137,19 +1140,21 @@ $f(x)=x^3$: $f'(2)=12$, $f''(2)=12$.
 
 ::: {.cols}
 ::: {.col}
-- **Record** the forward pass; **sweep backward** for the gradient — the chain rule, automated.
-- Reverse mode returns $\nabla$ w.r.t. every input in one pass.
-- `detach` / no-grad to keep values out of the graph.
+- **Record** forward, **sweep** backward: the chain rule, automated —
+  and verified against $4\mathbf{x}$.
+- One reverse sweep = the whole gradient ($m{=}1$, $n$ in millions).
+- `detach` / no-grad keep values out of the graph.
 :::
 
 ::: {.col}
 - Mind per-framework gradient handling (PyTorch accumulates).
-- The graph is built **at runtime** — control flow is fine.
-- Next: we build on this for every optimizer in the book.
+- The graph is built **at runtime** — control flow costs nothing.
+- Higher-order derivatives: differentiate the gradient again.
 :::
 :::
 
 ::: {.d2l-note}
-Backpropagation gets the full treatment in the backpropagation chapter.
+Backpropagation through real networks gets its full treatment in §5.3;
+forward vs. reverse mode is derived in §23.3.
 :::
 :::

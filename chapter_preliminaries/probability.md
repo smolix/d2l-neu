@@ -1382,20 +1382,20 @@ Reasoning under uncertainty<br>**sampling · distributions · Bayes · expectati
 ::: {.slide title="A coin of unknown bias"}
 [Estimating from data]{.kicker}
 
-We find a coin and want $P(\text{heads})$ — but nobody tells us its value.
-The plan: **toss it many times and count**.
+We find a coin and want $P(\text{heads})$ — but nobody tells us its
+value. The plan: **toss it many times and count**.
 
-A single batch of 100 tosses with `random.random()` already lands **near**
-50/50 — but never exactly, because sampling has variance:
+A single batch of 100 tosses with `random.random()` already lands
+**near** 50/50 — but never exactly, because sampling has variance:
 
 @probability-a-simple-example-tossing-coins-1
 :::
 
-::: {.slide title="Sampling from a distribution"}
+::: {.slide title="Multinomial draws 100 tosses in one call"}
 [Estimating from data]{.kicker}
 
 A cleaner tool: a `Multinomial` over `{heads, tails}` with probabilities
-`[0.5, 0.5]` returns the **count vector** for 100 tosses in one call:
+`[0.5, 0.5]` returns the **count vector** directly:
 
 @probability-a-simple-example-tossing-coins-2
 
@@ -1416,12 +1416,12 @@ $\tfrac{1}{2}$:
 @probability-a-simple-example-tossing-coins-4
 
 ::: {.d2l-note}
-The **law of large numbers**: as the number of trials $n \to \infty$, the
-empirical frequency converges to the true probability.
+The **law of large numbers**: as the number of trials $n \to \infty$,
+the empirical frequency converges to the true probability.
 :::
 :::
 
-::: {.slide title="How fast does it converge?"}
+::: {.slide title="The estimate locks on — at a 1/√n crawl"}
 [Estimating from data]{.kicker}
 
 ::: {.cols .vc}
@@ -1434,8 +1434,8 @@ $0.5$:
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-The error shrinks like $1/\sqrt{n}$ — to **halve** it you need **4×** the
-data.
+The error shrinks like $1/\sqrt{n}$ — to **halve** it you need
+**4×** the data.
 :::
 
 A first glimpse of the real question of statistics: not just *what* we
@@ -1444,7 +1444,7 @@ estimate, but *how sure* we are.
 :::
 :::
 
-::: {.slide title="Watch the 1/√n law emerge"}
+::: {.slide title="The 1/√n law, measured: slope −½"}
 [Estimating from data]{.kicker}
 
 ::: {.cols .vc}
@@ -1454,9 +1454,9 @@ independent tosses gives
 
 $$\textrm{Var}[\hat{p}] = \frac{p(1-p)}{n}.$$
 
-Estimating $p$ from 1000 batches of $n$ tosses each, the standard
-deviation of the estimates hugs the predicted $0.5/\sqrt{n}$ line —
-slope $-\tfrac12$ on log–log axes.
+Estimating $p$ from 1000 batches at each $n$, the standard deviation of
+the estimates hugs the predicted $0.5/\sqrt{n}$ line — **slope
+$-\tfrac12$** on log–log axes.
 :::
 
 ::: {.col .fig .big}
@@ -1475,21 +1475,22 @@ slope $-\tfrac12$ on log–log axes.
 :::
 :::
 
-::: {.slide title="Sample space, events, three axioms"}
+::: {.slide title="Three axioms generate every rule"}
 [Formal treatment]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Every outcome lives in a **sample space** $\mathcal{S}$; an **event** is a
-subset. A probability assigns each event a number in $[0,1]$ obeying three
-rules (Kolmogorov):
+Every outcome lives in a **sample space** $\mathcal{S}$; an **event** is
+a subset. A probability assigns each event a number in $[0,1]$ obeying
+three rules (Kolmogorov):
 
 - $P(\mathcal{A}) \ge 0$;
 - $P(\mathcal{S}) = 1$;
 - disjoint events **add**.
 
 ::: {.d2l-note .rule}
-Everything else follows, e.g. $P(\mathcal{A}\cup\mathcal{B}) =
+Everything else follows — e.g. inclusion–exclusion:
+$P(\mathcal{A}\cup\mathcal{B}) =
 P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
 :::
 :::
@@ -1500,18 +1501,19 @@ P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
 :::
 :::
 
-::: {.slide title="Random variables: mass vs. density"}
+::: {.slide title="Mass sits on points; density needs intervals"}
 [Formal treatment]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A **random variable** maps outcomes to values. Discrete ones (a die) place
-**mass** on points; continuous ones (a height) spread **density** along
-the line.
+A **random variable** maps outcomes to values. Discrete ones (a die)
+place **mass** on points; continuous ones (a height) spread **density**
+along the line.
 
 ::: {.d2l-note}
-For a continuous variable an *exact* value has probability **zero** — only
-intervals carry probability, obtained by **integrating** the density.
+For a continuous variable an *exact* value has probability **zero** —
+only intervals carry probability, obtained by **integrating** the
+density.
 :::
 :::
 
@@ -1554,7 +1556,7 @@ sums to 1.
 :::
 :::
 
-::: {.slide title="Bayes' theorem: reversing the conditioning"}
+::: {.slide title="Bayes' theorem reverses the conditioning"}
 [Multiple variables]{.kicker}
 
 Write the joint two ways, $P(A,B) = P(B\mid A)\,P(A) = P(A\mid B)\,P(B)$,
@@ -1578,10 +1580,10 @@ $\;P(H \mid E) \propto P(E \mid H)\,P(H)$.
 
 ::: {.cols .vc}
 ::: {.col}
-Independence, $A \perp B$, means $P(A,B) = P(A)\,P(B)$. But **conditioning
-changes dependence**: a common cause links two variables until you
-condition on it; a collider (common effect) makes independent causes
-dependent once you do — *explaining away*.
+Independence, $A \perp B$, means $P(A,B) = P(A)\,P(B)$. But
+**conditioning changes dependence**: a common cause links two variables
+until you condition on it; a collider (common effect) makes independent
+causes dependent once you do — *explaining away*.
 :::
 
 ::: {.col .fig .big}
@@ -1600,11 +1602,11 @@ dependent once you do — *explaining away*.
 :::
 :::
 
-::: {.slide title="A worrying diagnosis"}
+::: {.slide title="A test that never misses — and still misleads"}
 [Worked example]{.kicker}
 
-A test **never misses** true HIV but has a **1% false-positive** rate, and
-the disease is **rare**:
+The test catches **every** true HIV case but has a **1% false-positive**
+rate, and the disease is **rare**:
 
 $$\begin{aligned}
 P(D{=}1 \mid H{=}1) &= 1.00 \\
@@ -1616,13 +1618,13 @@ We want the posterior $P(H{=}1 \mid D{=}1)$. Intuition says "almost
 certainly sick" — but Bayes disagrees. Let us count.
 :::
 
-::: {.slide title="Why a positive test is usually a false alarm"}
+::: {.slide title="Of ~115 positives, only 15 are real"}
 [Worked example]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Among 10,000 people only ~15 truly have HIV — but ~100 healthy people also
-test positive. Of **~115 positives, only 15 are real**:
+Among 10,000 people only ~15 truly have HIV — but ~100 healthy people
+also test positive:
 
 $$P(H{=}1 \mid D{=}1) \approx \tfrac{15}{115} \approx 13\%.$$
 
@@ -1635,17 +1637,16 @@ The **base rate** dominates a rare-disease test.
 :::
 :::
 
-::: {.slide title="Evidence accumulates"}
+::: {.slide title="A second positive: 0.15% → 13% → 83%"}
 [Worked example]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A *second*, independent positive test multiplies the evidence. Applying
-Bayes again drives the posterior from the 0.15% prior to 13%, then to
-**83%**.
+A *second*, independent positive test multiplies the evidence: applying
+Bayes again drives the posterior from the $0.15\%$ prior to $13\%$,
+then to $83\%$ — exactly $0.8307$.
 
-Simulating ten million patients confirms it by brute force (exact
-posterior: $0.8307$):
+Ten million simulated patients land on the same number:
 
 @!probability-worked-example-hiv-testing-1
 :::
@@ -1673,9 +1674,9 @@ posterior: $0.8307$):
 ::: {.col}
 $$E[X] = \sum_x x\,P(X{=}x).$$
 
-It is the **balance point** of the distribution. For an investment paying
-$0$, $2\times$, or $10\times$ with probabilities $0.5, 0.4, 0.1$, the
-expected return is $1.8\times$.
+It is the **balance point** of the distribution. For an investment
+paying $0$, $2\times$, or $10\times$ with probabilities $0.5, 0.4, 0.1$,
+the expected return is $1.8\times$.
 :::
 
 ::: {.col .fig .big}
@@ -1684,7 +1685,7 @@ expected return is $1.8\times$.
 :::
 :::
 
-::: {.slide title="Variance: spread is risk"}
+::: {.slide title="Variance: same mean, different risk"}
 [Summaries]{.kicker}
 
 ::: {.cols .vc}
@@ -1702,13 +1703,15 @@ original units.
 :::
 :::
 
-::: {.slide title="Covariance: do two variables move together?"}
+::: {.slide title="Covariance: the sign, not the size, is the story"}
 [Summaries]{.kicker}
 
 Covariance is the expected product of the two centered variables; its
-**sign** tells the story. Stacked over a vector, it becomes the
-**covariance matrix** $\boldsymbol{\Sigma}$ — symmetric, and a workhorse
-of the chapters ahead:
+**sign** says whether they move together (magnitude is scale-dependent —
+rescale by the standard deviations to get the *correlation*). Stacked
+over a vector, it becomes the **covariance matrix**
+$\boldsymbol{\Sigma}$ — symmetric, and a workhorse of the chapters
+ahead:
 
 @fig:probability-covariance
 :::
@@ -1728,9 +1731,10 @@ of the chapters ahead:
 
 ::: {.cols .vc}
 ::: {.col}
-**Aleatoric** uncertainty is intrinsic randomness — the next fair-coin flip
-stays 50/50 no matter how much data you gather. **Epistemic** uncertainty
-is about *unknown parameters*, and it **shrinks** as data accumulates.
+**Aleatoric** uncertainty is intrinsic randomness — the next fair-coin
+flip stays 50/50 no matter how much data you gather. **Epistemic**
+uncertainty is about *unknown parameters*, and it **shrinks** as data
+accumulates.
 :::
 
 ::: {.col .fig .big}
@@ -1749,8 +1753,9 @@ nonnegative variable lands far out. **Markov:**
 $$P(X \ge a) \le \frac{E[X]}{a}.$$
 
 ::: {.d2l-note .rule}
-Apply it to $(X-\mu)^2$ to get **Chebyshev**; **Hoeffding** and
-**Bernstein** sharpen it for sums.
+Apply it to $(X-\mu)^2$ to get **Chebyshev**; sharper bounds
+(Hoeffding, Bernstein) and their consequences for generalization are
+developed in §25.5.
 :::
 :::
 
@@ -1765,19 +1770,21 @@ Apply it to $(X-\mu)^2$ to get **Chebyshev**; **Hoeffding** and
 
 ::: {.cols}
 ::: {.col}
-- **Sample → count → estimate**; the LLN converges at $1/\sqrt{n}$.
-- **Axioms** generate every rule; events combine by inclusion–exclusion.
+- **Sample → count → estimate**; the LLN converges at $1/\sqrt{n}$
+  (slope $-\tfrac12$, measured).
+- **Axioms** generate every rule; events combine by
+  inclusion–exclusion.
 - The **joint** yields marginals (sum) and conditionals (renormalize).
-- **Bayes** reverses conditioning: posterior $\propto$ likelihood $\times$
-  prior.
+- **Bayes** reverses conditioning: posterior $\propto$ likelihood
+  $\times$ prior.
 :::
 
 ::: {.col}
-- **Base rates** make a rare-disease positive usually a false alarm;
-  evidence compounds.
+- **Base rates** rule rare-disease tests: $13\%$ after one positive,
+  $0.8307$ after two.
 - **Expectation / variance / covariance** summarize a distribution.
-- **Tail bounds** guarantee concentration even when the distribution is
-  unknown.
+- **Tail bounds** (Markov → Chebyshev) guarantee concentration even
+  when the distribution is unknown.
 :::
 :::
 :::

@@ -209,3 +209,98 @@ and the loop above is how you run that check.
 :begin_tab:`jax`
 [Discussions](https://d2l.discourse.group/t/17972)
 :end_tab:
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §2.7]{.kicker}
+
+APIs change; the skill of looking things up doesn't<br>**discover · inspect · read · verify**.
+:::
+:::
+
+::: {.slide title="You cannot memorize an API — loop instead"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+No book covers a whole framework, and the libraries keep changing under
+us. The durable skill is a four-move loop, run without leaving the
+notebook, repeated until the call does what you want.
+
+::: {.d2l-note}
+The official docs remain the source of truth — bookmark your
+framework's reference and tutorial pages.
+:::
+:::
+
+::: {.col .fig .big}
+@fig:lookup-api-discovery-loop
+:::
+:::
+:::
+
+::: {.slide title="dir discovers what exists"}
+[Discover]{.kicker}
+
+Know roughly *where* a tool should live, but not its name? `dir` lists a
+module's contents — the names alone sketch what is on offer:
+
+@lookup-api-functions-and-classes-in-a-module
+
+Skip the `_`-prefixed internals. In a notebook, `module.` + `Tab` gives
+the same list, filtered as you type — usually the fastest way to turn up
+a name.
+:::
+
+::: {.slide title="help reads the signature; ?? reads the source"}
+[Inspect · read]{.kicker}
+
+`help(...)` prints the docstring: arguments, defaults, return value,
+often an example —
+
+@-lookup-api-specific-functions-and-classes-1
+
+. . .
+
+::: {.d2l-note}
+In Jupyter, `ones?` opens the docstring in a side pane, and `ones??`
+shows the **source code** — the final word when a docstring is terse or
+ambiguous.
+:::
+:::
+
+::: {.slide title="A tiny run settles it"}
+[Verify]{.kicker}
+
+Docstrings drift out of date; a running call does not lie:
+
+@lookup-api-specific-functions-and-classes-2
+
+Exactly the promised shape and values. This
+**discover → inspect → read → verify** loop outlives every function in
+this book.
+:::
+
+::: {.slide title="Coding assistants join the loop — not replace it"}
+[Assistants]{.kicker}
+
+An assistant usually produces a plausible function and a working call in
+seconds. Treat the suggestion like a knowledgeable colleague's tip: an
+excellent starting point, worth a two-line check before you build on it.
+
+::: {.d2l-note .rule}
+Glance at the signature (`help` / `?`), then run a small example. A
+suggestion that survives both is one you can rely on.
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+- **Discover** with `dir` (or `Tab`-completion).
+- **Inspect** with `help` / `?`; **read** the source with `??`.
+- **Verify** with a tiny run — the fastest truth available.
+- Assistant answers enter the same loop before you rely on them.
+:::

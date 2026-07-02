@@ -19,7 +19,9 @@
 set -euo pipefail
 cd "$(cd "$(dirname "$0")/.." && pwd)"
 
-[[ -f .env ]] && source .env
+# `set -a` so bare `KEY=value` lines in .env are exported to the aws subprocess
+# (else "Unable to locate credentials"); .env uses no `export` prefixes.
+[[ -f .env ]] && { set -a; source .env; set +a; }
 : "${R2_ACCOUNT_ID:?Error: R2_ACCOUNT_ID not set (need .env)}"
 
 BUCKET="staging-d2l"

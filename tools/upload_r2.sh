@@ -30,8 +30,14 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 if [[ -f "$PROJECT_DIR/.env" ]]; then
+    # `set -a` so the bare `KEY=value` lines in .env are *exported*, not just
+    # set as shell vars — otherwise the `aws` subprocess can't see
+    # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY and dies with "Unable to locate
+    # credentials". (.env intentionally uses bare assignments, no `export`.)
+    set -a
     # shellcheck disable=SC1091
     source "$PROJECT_DIR/.env"
+    set +a
 fi
 
 BUCKET="staging-d2l"

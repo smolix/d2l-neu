@@ -830,7 +830,7 @@ $n\approx 18{,}500$ vs. the asymptotic $10{,}000$. Guarantees that hold for
 :::
 :::
 
-::: {.slide title="The √n law, simulated"}
+::: {.slide title="The √n law, simulated" only="pytorch"}
 [The Test Set · convergence]{.kicker}
 
 ::: {.cols .vc}
@@ -849,6 +849,26 @@ every finite $n$.
 ::: {.col .fig .big}
 @!generalization-classification-the-test-set-2
 :::
+:::
+:::
+
+::: {.slide title="The √n law, simulated" except="pytorch"}
+[The Test Set · convergence]{.kicker}
+
+Fix a classifier with true error $0.1$ and draw 1000 hypothetical test sets
+at each size $n \in \{100, \ldots, 10{,}000\}$: each per-example indicator is
+a Bernoulli$(0.1)$ coin, so the estimate is $\mathrm{Binomial}(n, 0.1)/n$.
+
+. . .
+
+On log–log axes the measured spread, the CLT prediction
+$\sqrt{\epsilon(1-\epsilon)/n}$, and the 95% Hoeffding radius
+$\sqrt{\log(2/0.05)/(2n)}$ are three **parallel lines of slope
+$-\tfrac{1}{2}$**: the $\sqrt{n}$ law in the flesh.
+
+::: {.d2l-note}
+The simulated spread sits **on** the CLT line; the Hoeffding envelope runs
+a constant factor above it — the price of a guarantee at every finite $n$.
 :::
 :::
 
@@ -901,7 +921,7 @@ the modeler, it is no longer a true test set.
 :::
 :::
 
-::: {.slide title="Nothing learned, score climbs anyway"}
+::: {.slide title="Nothing learned, score climbs anyway" only="pytorch"}
 [Test-Set Reuse]{.kicker}
 
 ::: {.cols .vc}
@@ -920,6 +940,26 @@ improvement this way.
 ::: {.col .fig .big}
 @!generalization-classification-test-set-reuse-1
 :::
+:::
+:::
+
+::: {.slide title="Nothing learned, score climbs anyway" except="pytorch"}
+[Test-Set Reuse]{.kicker}
+
+Evaluate $k$ **coin-flip** classifiers — true accuracy exactly $0.5$,
+*nothing* learned — on one shared test set of $n = 1000$ and track the best
+score seen so far as $k$ grows.
+
+. . .
+
+The best apparent accuracy climbs steadily, exceeding **0.56** after ten
+thousand tries, by pure selection: the best of many lucky coin flips.
+
+::: {.d2l-note .warn}
+The climb grows like $\sqrt{\log(k)/(2n)}$ — Hoeffding over $k$ events at
+once. Best-of-many on a shared test set *always* buys some of its
+improvement this way, and an adaptive modeler, steering each model toward
+what scored well before, climbs faster still.
 :::
 :::
 
@@ -1005,25 +1045,32 @@ the **XOR** labeling of **4**.
 ![All $2^3=8$ labelings of 3 points are linearly separable (left); the XOR labeling of 4 points is not (right). So plane lines shatter 3 points but not 4.](../img/mdl-clf-shattering.svg){width=82%}
 :::
 
-::: {.slide title="VC dimension and the VC bound"}
+::: {.slide title="VC of linear models: d+1, and neither direction is deep"}
 [Learning Theory · the bound]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 The **VC dimension** is the largest set a class can shatter. Lines in the
-plane: $3$. Linear models in $d$ dimensions: $d+1$.
+plane: $3$. Linear models in $d$ dimensions: $d+1$ — *exactly*.
 
-Vapnik and Chervonenkis bound the gap by VC dimension and sample size:
-
-$$\epsilon(f_\mathcal{S}) - \epsilon_\mathcal{S}(f_\mathcal{S}) < c\sqrt{(\mathrm{VC}-\log\delta)/n}$$
-
-with probability $\ge 1-\delta$.
+- **Lower bound:** the points $\{\mathbf{0}, \mathbf{e}_1, \ldots,
+  \mathbf{e}_d\}$ are shattered by weights *read off* the desired labels
+  (exercise 5).
+- **Upper bound:** by **Radon's theorem** any $d+2$ points split into two
+  subsets with intersecting convex hulls — and no halfspace separates
+  intersecting hulls.
 :::
 
 ::: {.col .narrow}
+Vapnik–Chervonenkis then bound the gap *uniformly* over the class:
+
+$$\epsilon(f_\mathcal{S}) - \epsilon_\mathcal{S}(f_\mathcal{S}) < c\sqrt{\tfrac{\mathrm{VC}-\log\delta}{n}}$$
+
+with probability $\ge 1-\delta$.
+
 ::: {.d2l-note}
-Fix the class and $\delta$: the gap shrinks at the familiar
-$\mathcal{O}(1/\sqrt{n})$ rate, now *uniformly* over the whole class.
+Fix the class and $\delta$: the familiar $\mathcal{O}(1/\sqrt{n})$ rate,
+now for the *learned* model.
 :::
 :::
 :::
@@ -1041,8 +1088,9 @@ generalizes well on real data, and often *better* as it gets larger and
 deeper. Classical complexity measures do not explain this.
 :::
 
-The mystery of deep-network generalization returns in
-:numref:`sec_generalization_deep`.
+The modern road — **Rademacher complexity**, and the double-descent behavior
+of overparametrized models reproduced from scratch — is developed in §25.5;
+the deep-learning story resumes in §5.5.
 :::
 
 ::: {.slide title="Recap"}
@@ -1061,10 +1109,11 @@ The mystery of deep-network generalization returns in
 ::: {.col}
 - **Learning theory** seeks *a-priori* guarantees via **uniform convergence**
   over a class $\mathcal{F}$.
-- **VC dimension** = largest shatterable set ($d+1$ for linear); it bounds the
-  gap, again at $\mathcal{O}(1/\sqrt{n})$.
-- **Deep nets** defy these bounds, generalizing despite huge capacity, a
-  puzzle we revisit later.
+- **VC dimension** = largest shatterable set; for linear models exactly
+  $d+1$ (labels read off / Radon); it bounds the gap at
+  $\mathcal{O}(1/\sqrt{n})$.
+- **Deep nets** defy these bounds, generalizing despite huge capacity —
+  the puzzle of §5.5, with the modern tools in §25.5.
 :::
 :::
 :::

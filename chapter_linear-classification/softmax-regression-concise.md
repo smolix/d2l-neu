@@ -423,8 +423,10 @@ Softmax exponentiates the logits: $\hat y_j = \exp(o_j) / \sum_k \exp(o_k)$.
 
 . . .
 
-In float32, $\exp$ **overflows to $\infty$** once its argument passes
-$\approx 88$, and **underflows to $0$** below $\approx -88$.
+Float32 spans roughly $10^{-38}$ to $10^{38}$: $\exp$ **overflows to
+$\infty$** once its argument passes $\approx +88$, and past $\approx -88$ it
+**gradually underflows** through the subnormals, hitting exactly $0$ near
+$-104$.
 
 . . .
 
@@ -489,6 +491,45 @@ Its gradient stays clean:
 $\partial_{o_j}\ell = \mathrm{softmax}(\mathbf{o})_j - y_j$, with no
 clamp to perturb it.
 :::
+:::
+:::
+
+::: {.slide title="The soft max hugs the hard max — gap at most log 2" only="pytorch"}
+[Numerical stability · measured]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+For two classes with logits $(x, 0)$ the loss's first term is
+$\mathrm{lse}(x, 0) = \log(1 + e^x)$. Plot it against $\max(x, 0)$:
+
+::: {.d2l-note .rule}
+The gap peaks at the **tie** $x = 0$, where it equals
+$\log 2 \approx 0.69$ --- the bound $\log q$ you proved in §4.1
+(exercise 6), here at $q = 2$. Away from the tie, soft and hard max are
+indistinguishable.
+:::
+:::
+
+::: {.col .fig .big}
+@!softmax-regression-concise-lse-vs-max
+:::
+:::
+:::
+
+::: {.slide title="The soft max hugs the hard max — gap at most log 2" except="pytorch"}
+[Numerical stability · the bound]{.kicker}
+
+For two classes with logits $(x, 0)$ the loss's first term is
+$\mathrm{lse}(x, 0) = \log(1 + e^x)$, a smooth curve hugging
+$\max(x, 0)$ from above:
+
+$$\max_k o_k \;\le\; \mathrm{lse}(\mathbf{o}) \;\le\; \max_k o_k + \log q.$$
+
+::: {.d2l-note .rule}
+The gap peaks at the **tie** $x = 0$, where it equals
+$\log 2 \approx 0.69$ --- the bound $\log q$ you proved in §4.1
+(exercise 6), here at $q = 2$. Away from the tie, soft and hard max are
+indistinguishable.
 :::
 :::
 
@@ -602,7 +643,10 @@ the *correct* loss instead of a clamped one.
 - That built-in is the **log-sum-exp** rewrite
   $\ell = \bar{o} + \log\sum_k e^{o_k-\bar{o}} - o_y$ — not a naive
   `softmax → log → NLL`.
-- It is fewer lines **and** the numerically correct one.
+- lse is a **smooth max**: within $\log q$ of $\max_k o_k$, gap largest
+  ($\log 2$ for $q{=}2$) exactly at the tie.
+- Fewer lines **and** numerically correct: float32's $\pm 88$ (and $-104$)
+  cliffs never come into play.
 :::
 :::
 :::

@@ -561,7 +561,7 @@ the item with the largest score is the most likely one to be chosen :cite:`Bradl
 ::: {.cover}
 [Dive into Deep Learning · §4.1]{.kicker}
 
-From scores to probabilities to a loss<br>**one-hot labels · the softmax · cross-entropy**.
+From scores to probabilities to a loss<br>**one-hot labels · the softmax · linear decision boundaries · cross-entropy**.
 :::
 :::
 
@@ -675,6 +675,41 @@ $$\operatorname*{argmax}_j \hat{y}_j = \operatorname*{argmax}_j o_j.$$
 So to *predict* a class we never need to compute the softmax; we read off the biggest logit. The softmax matters for the **loss**, not the decision.
 :::
 
+::: {.slide title="Temperature: one dial from argmax to uniform"}
+[The Softmax · Boltzmann's dial]{.kicker}
+
+Boltzmann weighted energy states by $\exp(-E/kT)$; for us, replace
+$\mathrm{softmax}(\mathbf{o})$ by $\mathrm{softmax}(\mathbf{o}/T)$. The same
+three scores, at three temperatures:
+
+![Cooling ($T=0.25$) piles the mass on the top class; $T=1$ is plain softmax; heating ($T=4$) approaches uniform. Same scores $\mathbf{o}=(1.0, 2.2, 0.3)$, same ordering, in every panel.](../img/mdl-clf-temperature.svg){width=88%}
+
+::: {.d2l-note .rule}
+$1/T$ scales every logit alike, so the **ranking never changes**: only the
+confidence does. Hold this dial; it returns at the end of the section.
+:::
+:::
+
+::: {.slide title="The softmax *is* an argmax — plus the right noise"}
+[The Softmax · origins]{.kicker}
+
+Another route to probabilities: perturb each score and report the winner,
+$y = \operatorname*{argmax}_i\,(o_i + \epsilon_i)$.
+
+. . .
+
+- **Gaussian** noise gives the (multinomial) **probit** model (Fechner, 1860)
+  --- appealing, but no closed form and a harder optimization.
+- **Gumbel** noise gives *exactly* $\mathrm{softmax}(\mathbf{o})$ --- the
+  *Gumbel-max trick* (exercise 9), and scaling the noise by $T$ samples from
+  $\mathrm{softmax}(\mathbf{o}/T)$.
+
+::: {.d2l-note}
+So the softmax is not just a squashing convenience: it is a **smoothed
+argmax**, with temperature the amount of smoothing.
+:::
+:::
+
 ::: {.slide title="Only differences of logits matter"}
 [The Softmax · invariance]{.kicker}
 
@@ -697,6 +732,20 @@ $$\hat{y}_1 = \frac{\exp(o_1)}{\exp(o_1)+\exp(o_2)} = \frac{1}{1 + \exp(-o)} = \
 . . .
 
 Binary **logistic regression** is just softmax regression with the redundant logit removed: the same model, one class folded away.
+:::
+
+::: {.slide title="The decision boundaries are straight lines — always"}
+[The Softmax · geometry]{.kicker}
+
+The predicted class is $\operatorname{argmax}_j o_j$ with each $o_j$ affine, so class $j$ wins where finitely many linear inequalities $o_j \ge o_k$ hold: a **convex polyhedron** per class.
+
+![Left: three convex regions, straight boundaries at the ties $o_i = o_j$. Right: two classes --- parallel level lines of $\sigma(o)$, perpendicular to $\mathbf{w}$.](../img/mdl-clf-decision-regions.svg){width=100%}
+
+::: {.d2l-note .warn}
+The softmax's nonlinearity lives in the **probabilities**, never in the
+**boundaries**. Those stay linear --- a ceiling we will hit, measurably, when
+we train this model on images (§4.4).
+:::
 :::
 
 ::: {.slide}
@@ -765,18 +814,18 @@ Our loss **is** $H(\mathbf{y}, \hat{\mathbf{y}})$.
 So minimizing it does two equivalent things: it **maximizes likelihood** and it **minimizes the wasted bits** between prediction and truth, a duality worth remembering whenever cross-entropy appears.
 :::
 
-::: {.slide title="Probabilities, but not *calibrated*"}
+::: {.slide title="Confidence is not calibrated probability"}
 [Loss · a modern caveat]{.kicker}
 
-The softmax outputs *look* like probabilities, but a network trained to minimize cross-entropy is generally **not calibrated**: a reported confidence of $0.9$ does not mean it is right $90\%$ of the time. Modern deep nets are systematically **overconfident** (Guo et al., 2017).
+The loss keeps rewarding confidence even after the decision is right, nudging $0.51 \to 0.99$. So do not read the outputs at face value: a cross-entropy-trained network is generally **not calibrated** --- a reported $0.9$ does not mean right $90\%$ of the time. Modern deep nets are systematically **overconfident** (Guo et al., 2017).
 
 . . .
 
 ::: {.d2l-note .rule}
-**Temperature scaling** divides the logits by a single learned $T > 0$ before the softmax, exactly the Boltzmann temperature from earlier.
+The fix is the dial we already hold: **temperature scaling** divides the logits by one learned $T > 0$ before the softmax --- Boltzmann's $T$, relearned post hoc.
 :::
 
-Because $1/T$ scales every logit by the same factor, it preserves their order: the predicted class (the $\arg\max$) is **untouched** while the confidences sharpen ($T<1$) or soften ($T>1$).
+Because $1/T$ scales every logit alike, the ranking --- hence the $\arg\max$, hence the **accuracy** --- is untouched; only the confidences sharpen ($T<1$) or soften ($T>1$). Exercise 8 develops this.
 :::
 
 ::: {.slide}
@@ -814,14 +863,14 @@ Both branches read the **same** scores.
 ::: {.cols}
 ::: {.col}
 - **One-hot** labels live in probability space; a **linear layer** emits one logit per class.
-- **Softmax** $\hat{y}_i \propto \exp(o_i)$ squishes logits to a distribution; it preserves the ranking and depends only on logit **differences**.
-- Two classes recover the **logistic sigmoid**.
+- **Softmax** $\hat{y}_i \propto \exp(o_i)$ is a *smoothed argmax* (Gumbel noise makes that exact); temperature $T$ dials argmax $\leftrightarrow$ uniform without changing the ranking.
+- Only logit **differences** matter; two classes recover the **sigmoid**; decision boundaries are **straight lines**, always.
 :::
 
 ::: {.col}
 - **Cross-entropy** $= -\log \hat{y}_{\text{true}}$ is the negative log-likelihood, equivalently a code length.
 - Its gradient is the **residual** $\hat{\mathbf{y}} - \mathbf{y}$: convex, cheap, shared by all exponential families.
-- The **same logits** train the model (softmax + loss) and evaluate it (argmax + accuracy).
+- Confidence $\neq$ **calibrated** probability; temperature scaling recalibrates without touching accuracy.
 :::
 :::
 :::

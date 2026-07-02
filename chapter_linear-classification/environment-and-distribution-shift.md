@@ -1004,23 +1004,73 @@ $$\frac{P(z{=}1\mid\mathbf{x})}{P(z{=}{-}1\mid\mathbf{x})} = \frac{p(\mathbf{x})
 . . .
 
 With a logistic model $P(z{=}1\mid\mathbf{x})=\sigma(h(\mathbf{x}))$ this collapses to $\beta_i = \exp(h(\mathbf{x}_i))$. We need only **unlabeled** target features $\mathbf{x}\sim p$.
+:::
 
-. . .
+::: {.slide title="Where the weights explode — and why we clip"}
+[Covariate shift correction · geometry]{.kicker}
+
+![Training data comes from the source $q$ (left curve); the risk we care about weights points by the target $p$ (right curve). The weight $\beta = p/q$ is near zero where only the source has mass, crosses $1$ where the densities agree, and explodes out in the tail where the source has almost nothing; the dashed line clips it at a ceiling $c$.](../img/mdl-clf-density-ratio.svg){width=88%}
 
 ::: {.d2l-note .rule}
-**Clip** $\beta_i\leftarrow\min(\exp(h(\mathbf{x}_i)), c)$. When the domains barely overlap, a few examples grab enormous weights, a little bias for much less variance.
+**Clip** $\beta_i \leftarrow \min(\exp(h(\mathbf{x}_i)), c)$: where the
+domains barely overlap, a few examples grab enormous weights and dominate
+the objective — a little bias buys much less variance. If $p > 0$ where
+$q = 0$, the true weight is *infinite*: no reweighting can conjure data
+that was never sampled.
 :::
 :::
 
-::: {.slide title="The whole pipeline, watched working"}
-[Covariate shift correction]{.kicker}
+::: {.slide title="The discriminator recovers the truth" only="pytorch"}
+[Covariate shift correction · watch it work]{.kicker}
 
-A 2-D demo: source Gaussian at the origin, target shifted to $(2,0)$, one curved labeling rule. The discriminator recovers the true log-ratio $2x_1 - 2$, and reweighted training pays off *on the target*:
+A 2-D rig: source Gaussian at the origin, target the same Gaussian shifted
+to $(2, 0)$, one shared *curved* labeling rule --- covariate shift by
+construction, with a known answer: the true log-ratio is $2x_1 - 2$. Pool
+the inputs, train the domain classifier $h$:
+
+@!environment-and-distribution-shift-covariate-shift-correction-2
+
+::: {.d2l-note}
+Learned: $2.06\,x_1 + 0.09\,x_2 - 2.03$. The discriminator *is* the density
+ratio --- and note the $\beta$ tail: one source point already carries weight
+$56$.
+:::
+:::
+
+::: {.slide title="Reweighting turns a coin flip into 0.93" only="pytorch"}
+[Covariate shift correction · the verdict]{.kicker}
+
+Train the actual classifier three ways on the *same* labeled source data;
+evaluate on the **target**, the domain we care about:
 
 @!environment-and-distribution-shift-covariate-shift-correction-3
 
-::: {.d2l-note}
-Unweighted: fitted where the **source** lives — a coin flip on the target. Weighted: target accuracy above 90%, bought by a worse fit on the discounted source region. Clipping at $c=5$ tames the handful of $\beta > 50$ weights without giving up the correction.
+::: {.d2l-note .rule}
+Unweighted fits where the *source* lives: **0.502** on the target, a coin
+flip. Reweighting: **0.933**, bought by a worse fit on the discounted
+source region --- exactly the trade the identity prescribes. Clipping at
+$c=5$ tames the $\beta > 50$ outliers and even helps: **0.945**.
+:::
+:::
+
+::: {.slide title="Watch it work: 0.502 → 0.933 → 0.945" except="pytorch"}
+[Covariate shift correction · the verdict]{.kicker}
+
+A 2-D rig: source Gaussian at the origin, target shifted to $(2, 0)$, one
+shared curved labeling rule --- so the true log-ratio is known: $2x_1 - 2$.
+
+. . .
+
+- The logistic discriminator recovers $2.06\,x_1 + 0.09\,x_2 - 2.03$: the
+  density ratio, learned from unlabeled inputs alone.
+- Target accuracy, three ways: **unweighted 0.502** (a coin flip --- the
+  model fit where the *source* lives), **weighted 0.933**, **clipped at
+  $c{=}5$: 0.945**.
+
+::: {.d2l-note .rule}
+Reweighting pays on the target by discounting the source region --- exactly
+the trade the identity prescribes; the clip tames raw weights that reach
+$\beta > 50$ and even helps.
 :::
 :::
 
@@ -1031,7 +1081,7 @@ Here $P(y)$ shifts while $P(\mathbf{x}\mid y)$ is fixed, so the weights are labe
 
 . . .
 
-Take an off-the-shelf classifier, measure its $k\times k$ **confusion matrix** $\mathbf{C}$ on a source validation set, and the **average prediction** $\mu(\hat{\mathbf{y}})$ on the (unlabeled) target. They are linked by total probability:
+Take an off-the-shelf classifier, measure its $k\times k$ **confusion matrix** $\mathbf{C}$ on a source validation set (the very matrix we computed for Fashion-MNIST in §4.4, column-normalized), and the **average prediction** $\mu(\hat{\mathbf{y}})$ on the (unlabeled) target. They are linked by total probability:
 
 $$\mathbf{C}\, p(\mathbf{y}) = \mu(\hat{\mathbf{y}}) \quad\Longrightarrow\quad p(\mathbf{y}) = \mathbf{C}^{-1}\mu(\hat{\mathbf{y}}).$$
 
@@ -1095,6 +1145,40 @@ Deploying a model is rarely *just* prediction, it **automates decisions** about 
 Watch for feedback loops, cost-sensitive errors, and whether you are solving the right problem at all.
 :::
 
+::: {.slide title="Shift in the foundation-model era"}
+[The modern picture]{.kicker}
+
+Benchmarks like **WILDS** collect *real* shifts (hospitals, cameras,
+countries, time) along an axis **orthogonal** to our mechanism taxonomy:
+
+::: {.cols}
+::: {.col}
+::: {.d2l-note}
+**Domain generalization:** test domains never seen in training. *Camelyon17*:
+a tumor classifier trained on a few hospitals' slides must survive a **new
+hospital's** staining quirks.
+:::
+:::
+
+::: {.col}
+::: {.d2l-note}
+**Subpopulation shift:** same domains, new proportions — what matters is
+**worst-group** accuracy. *CivilComments*: average toxicity accuracy conceals
+much larger errors on some demographic groups.
+:::
+:::
+:::
+
+. . .
+
+::: {.d2l-note .warn}
+**OOD detection ≠ shift correction.** Detection *rejects* inputs the model
+cannot handle; correction *reweights* for a target that is here to stay. A
+deployed system needs both — and fixes that shine on one shift routinely
+fail on another, so measure on the shift you actually face.
+:::
+:::
+
 ::: {.slide title="Summary"}
 [Wrap-up]{.kicker}
 
@@ -1105,8 +1189,8 @@ Watch for feedback loops, cost-sensitive errors, and whether you are solving the
 :::
 
 ::: {.col}
-- **Correct** covariate shift by reweighting with $\beta_i=p(\mathbf{x}_i)/q(\mathbf{x}_i)$, estimated by a source-vs-target classifier; label shift by inverting the confusion matrix.
-- **Beware the environment:** it may remember your actions and feed them back. Keep monitoring live systems.
+- **Correct** covariate shift by reweighting with $\beta_i=p(\mathbf{x}_i)/q(\mathbf{x}_i)$, estimated by a source-vs-target classifier (demo: target accuracy $0.502 \to 0.933$, clipped $0.945$); label shift by inverting the confusion matrix.
+- **Beware the environment:** it may remember your actions and feed them back. Measure on the shift you actually face (WILDS), and keep monitoring live systems.
 :::
 :::
 :::

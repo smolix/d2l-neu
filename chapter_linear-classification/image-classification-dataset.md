@@ -335,14 +335,17 @@ The Image Classification Dataset<br>**Fashion-MNIST**, the workhorse we will cla
 :::
 :::
 
-::: {.slide title="Why a new benchmark?"}
+::: {.slide title="MNIST is solved; Fashion-MNIST is not"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **MNIST** (handwritten digits) is solved: even simple models exceed 95% (a *linear* one already tops 90%), so models are hard to tell apart.
-- We want data where a weak model is **clearly outpaced** by a richer one.
-- **Fashion-MNIST**: a drop-in replacement with the same shape and API but harder clothing classes ($28\times28$ grayscale, 10 classes, 60 k / 10 k).
+- On **MNIST**, even simple models exceed 95% and a *linear* one tops 90%: models are hard to tell apart.
+- **Fashion-MNIST**: a drop-in replacement, same shape and API, but harder clothing classes ($28\times28$ grayscale, 10 classes, 60 k / 10 k).
+
+::: {.d2l-note}
+Here a linear model caps out near **82%** (§4.4) --- headroom the deeper models of later chapters will spend.
+:::
 :::
 
 ::: {.col .fig .big}
@@ -439,7 +442,8 @@ Pull one batch and read its shapes off directly:
 @image-classification-dataset-reading-a-minibatch-2
 
 ::: {.d2l-note}
-64 images, one grayscale channel, $32\times32$ pixels, plus 64 integer labels. A full pass over the training set is I/O-cheap (a second or two), so loading is **not** the training bottleneck.
+64 images, one grayscale channel, $32\times32$ pixels, plus 64 integer
+labels arriving as a matching vector.
 :::
 :::
 
@@ -451,7 +455,38 @@ Pull one batch and read its shapes off directly:
 @-image-classification-dataset-reading-a-minibatch-2
 
 ::: {.d2l-note}
-`(64, 1, 32, 32) float32` images and `(64,) int32` labels: 64 channel-first images plus their labels. A full pass over the training set is I/O-cheap, so loading is **not** the training bottleneck.
+`(64, 1, 32, 32) float32` images and `(64,) int32` labels: 64 channel-first
+images plus a matching vector of integer labels.
+:::
+:::
+
+::: {.slide title="Loading is not the bottleneck — measure it" except="mxnet"}
+[Minibatches · timing]{.kicker}
+
+Time one full pass over all 60,000 training images:
+
+@image-classification-dataset-reading-a-minibatch-3
+
+::: {.d2l-note .rule}
+Seconds, not minutes. For the ConvNets of later chapters, one forward +
+backward pass costs **10--100×** the corresponding I/O, so a well-built
+loader keeps data off the critical path. If it ever *were* the bottleneck:
+prefetch and raise `num_workers`.
+:::
+:::
+
+::: {.slide title="Loading is not the bottleneck — measure it" only="mxnet"}
+[Minibatches · timing]{.kicker}
+
+Time one full pass over all 60,000 training images:
+
+@-image-classification-dataset-reading-a-minibatch-3
+
+::: {.d2l-note .rule}
+About **4.4 seconds** on a CPU --- seconds, not minutes. For the ConvNets of
+later chapters, one forward + backward pass costs **10--100×** the
+corresponding I/O, so a well-built loader keeps data off the critical path.
+If it ever *were* the bottleneck: prefetch and raise `num_workers`.
 :::
 :::
 
@@ -484,7 +519,8 @@ A `visualize` method tiles one validation batch, each image captioned with its c
 
 ::: {.col}
 - **Channel axis** differs: PyTorch/MXNet $c\times h\times w$, TensorFlow/JAX $h\times w\times c$ (the loader hides it).
-- Always **look at your data**; loading stays off the training critical path.
+- Always **look at your data**; a full loading pass costs seconds, so I/O stays off the training critical path.
+- Next: a linear classifier on this data --- and its **~82% ceiling** (§4.4).
 :::
 :::
 :::

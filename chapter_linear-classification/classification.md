@@ -282,7 +282,7 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
 ::: {.cover}
 [Dive into Deep Learning · §4.3]{.kicker}
 
-The base **classification** model<br>One forward pass, read two ways: a *loss* to train on and an *accuracy* to report.
+The base **classification** model<br>One forward pass, read two ways: a *loss* to train on, an *accuracy* to report --- and what to do when accuracy lies.
 :::
 :::
 
@@ -447,6 +447,91 @@ diagnostic about optimization and calibration, **not a bug**.
 :::
 :::
 
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Beyond Accuracy]{.dtitle}
+
+[when the headline number lies]{.dsub}
+:::
+:::
+
+::: {.slide title="99% accurate, perfectly useless" only="pytorch"}
+[Beyond Accuracy]{.kicker}
+
+Screen for a disease carried by **1%** of the population. A "classifier"
+that ignores its input and always says *healthy* is right 99% of the time
+--- and finds **not one** sick patient:
+
+@classification-beyond-accuracy
+
+::: {.d2l-note .warn}
+Accuracy **0.99**, recall **0.0**. Accuracy weights every example equally,
+so under class imbalance it can award a near-perfect score to a model that
+never does its job.
+:::
+:::
+
+::: {.slide title="99% accurate, perfectly useless" except="pytorch"}
+[Beyond Accuracy]{.kicker}
+
+Screen for a disease carried by **1%** of the population. A "classifier"
+that ignores its input and always says *healthy* scores
+
+$$\textrm{accuracy} = 1 - \frac{\textrm{FP} + \textrm{FN}}{n}
+ = 1 - \frac{0 + 1{,}000}{100{,}000} = \mathbf{0.99},
+\qquad
+\textrm{recall} = \frac{\textrm{TP}}{\textrm{sick}} = \frac{0}{1{,}000} = \mathbf{0.0}.$$
+
+::: {.d2l-note .warn}
+Accuracy **0.99**, recall **0.0**: it finds not one sick patient. Accuracy
+weights every example equally, so under class imbalance it can award a
+near-perfect score to a model that never does its job.
+:::
+:::
+
+::: {.slide title="Precision and recall name the two failure modes"}
+[Beyond Accuracy]{.kicker}
+
+Break the counts down by *predicted* $\times$ *true*: TP, FP, FN, TN. Two
+ratios summarize the two ways to fail:
+
+$$\textrm{precision} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FP}}
+\qquad\qquad
+\textrm{recall} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FN}}$$
+
+. . .
+
+**Precision:** of those we *flagged*, how many were real?
+**Recall:** of the real positives, how many did we *find*?
+The always-healthy screener has recall $0$ (precision undefined --- it never flags).
+
+::: {.d2l-note}
+One number when you must: the **F1 score** $2PR/(P{+}R)$, high only when
+*both* are.
+:::
+:::
+
+::: {.slide title="The confusion matrix: every error, itemized"}
+[Beyond Accuracy]{.kicker}
+
+For $q$ classes the same bookkeeping becomes a $q \times q$ **confusion
+matrix**: entry $(i, j)$ counts true class $j$ predicted as class $i$.
+
+. . .
+
+- The **diagonal** holds the correct decisions; accuracy is just its
+  (weighted) trace --- one number where the matrix keeps $q^2$.
+- Every **off-diagonal cell** isolates one specific kind of error.
+
+::: {.d2l-note .rule}
+This object returns twice: in §4.4 we compute one for our Fashion-MNIST
+model and read *which* classes it confuses; in §4.7 the very same matrix is
+**inverted** to correct label shift.
+:::
+:::
+
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
@@ -456,13 +541,16 @@ diagnostic about optimization and calibration, **not a bug**.
   and a default **SGD** optimizer.
 - A new model supplies only `forward` (and a custom `loss`), inheriting
   the whole loop.
+- **Accuracy** = fraction whose $\arg\max$ matches the label:
+  `argmax → == y → mean`. Discrete, so we **train on the loss**.
 :::
 
 ::: {.col}
-- **Accuracy** = fraction whose $\arg\max$ matches the label:
-  `argmax → == y → mean`.
-- Discrete, so we **train on the loss** and **watch accuracy** beside
-  it.
+- Under **imbalance** accuracy can lie: always-healthy scores **0.99**
+  with recall **0.0**.
+- **Precision / recall** split the failure modes; **F1** compresses them.
+- The **confusion matrix** itemizes all $q^2$ outcomes --- computed in
+  §4.4, inverted in §4.7.
 :::
 :::
 :::

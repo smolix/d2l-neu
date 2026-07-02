@@ -694,8 +694,8 @@ to 1**, exactly what a probability distribution over classes requires:
 @softmax-regression-scratch-the-softmax-3
 :::
 
-::: {.slide title="Why it is only a teaching version"}
-[The Softmax]{.kicker}
+::: {.slide title="One logit of 1000, and the answer is NaN"}
+[The Softmax · the failure, live]{.kicker}
 
 Watch the warning bite. A single logit of $1000$ sends $\exp$ to infinity
 in float32, the ratio is $\infty/\infty$, and the whole row turns to `NaN`.
@@ -705,8 +705,9 @@ on the identical input:
 @softmax-regression-scratch-the-softmax-overflow
 
 ::: {.d2l-note .warn}
-One `NaN` poisons every downstream gradient. The stable fix, fusing softmax
-and log via log-sum-exp, arrives in §4.5.
+One `NaN` poisons every downstream gradient. Hold this failure: §4.5 derives
+the fix (fuse softmax and log via **log-sum-exp**) and shows the frameworks
+already ship it.
 :::
 :::
 
@@ -783,6 +784,12 @@ Take the negative log of each selected probability, then average. A tiny
 clip keeps the log finite when a probability underflows to 0:
 
 @softmax-regression-scratch-the-cross-entropy-loss-2
+
+::: {.d2l-note .warn}
+The clip is a **band-aid**: it stops $\log 0$ but silently kills the
+gradient on any clamped entry, and the naive softmax upstream can still
+overflow. The cure is §4.5's fused loss.
+:::
 :::
 
 ::: {.slide title="Register it as the loss"}
@@ -832,7 +839,7 @@ each captioned `true / predicted`:
 @softmax-regression-scratch-prediction-2
 :::
 
-::: {.slide title="How accurate, overall?" only="pytorch"}
+::: {.slide title="82% — and that number is a ceiling" only="pytorch"}
 [Prediction]{.kicker}
 
 Sweep the whole validation set and average the per-example correct flags:
@@ -840,22 +847,37 @@ Sweep the whole validation set and average the per-example correct flags:
 @softmax-regression-scratch-prediction-accuracy
 
 ::: {.d2l-note}
-About **83%**, and that is the *ceiling* of a linear model on
-Fashion-MNIST, not a tuning problem. The next slide shows why.
+Roughly **82--83%** run to run --- and that is the *ceiling* of a linear
+model on Fashion-MNIST, not a tuning problem. The next slide shows where
+the missing 18% lives.
 :::
 :::
 
-::: {.slide title="Where the errors live: the confusion matrix"}
+::: {.slide title="82% — and that number is a ceiling" except="pytorch"}
 [Prediction]{.kicker}
+
+Sweep the whole validation set and average the per-example correct flags
+returned by `accuracy(..., averaged=False)`: the overall test accuracy
+lands at roughly **82--83%**, matching the validation curve above.
+
+::: {.d2l-note}
+That is the *ceiling* of a linear model on Fashion-MNIST, not a tuning
+problem. The next slide shows where the missing 18% lives.
+:::
+:::
+
+::: {.slide title="The errors form two blocks, not a blur" only="pytorch"}
+[Prediction · the confusion matrix]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Accumulate a $10\times 10$ count matrix over the validation set and
-normalize each column:
+Accumulate a $10\times 10$ count matrix over the validation set (§4.3's
+confusion matrix) and normalize each column:
 
-- Upper-body garments (t-shirt, pullover, dress, coat, **shirt**) trade
-  errors almost exclusively among themselves.
-- Footwear forms a second, smaller cluster.
+- **Upper-body garments** (t-shirt, pullover, dress, coat, **shirt**)
+  trade errors almost exclusively among themselves --- the shirt column
+  is the most polluted of all.
+- **Footwear** (sandal, sneaker, ankle boot) forms a second cluster.
 - Trousers and bags are nearly pure diagonal: silhouette suffices.
 
 ::: {.d2l-note}
@@ -870,18 +892,38 @@ that can only **weigh pixels linearly**.
 :::
 :::
 
+::: {.slide title="The errors form two blocks, not a blur" except="pytorch"}
+[Prediction · the confusion matrix]{.kicker}
+
+Accumulate a $10\times 10$ count matrix over the validation set (§4.3's
+confusion matrix), normalize each column, and the misses turn out to be
+anything but uniform:
+
+- **Upper-body garments** (t-shirt, pullover, dress, coat, **shirt**) trade
+  errors almost exclusively among themselves --- the shirt column is the
+  most polluted of all, leaking into t-shirt, pullover, and coat.
+- **Footwear** (sandal, sneaker, ankle boot) forms a second, smaller cluster.
+- Trousers and bags are nearly pure diagonal: silhouette suffices.
+
+::: {.d2l-note}
+Same outline, same mass distribution → indistinguishable to a model that
+can only **weigh pixels linearly**.
+:::
+:::
+
 ::: {.slide title="Why a linear model caps out"}
 [The ceiling]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A linear classifier draws **straight** decision boundaries. In pixel
-space shirts and pullovers overlap, and no hyperplane separates them.
+A linear classifier draws **straight** decision boundaries --- the §4.1
+picture, now with a price tag. In pixel space shirts and pullovers
+overlap, and no hyperplane separates them.
 
 The capacity of lines is finite: in the plane a line shatters any 3
-points but **never** the 4-point XOR pattern (we make this precise in
-:numref:`chap_classification_generalization`). A single hidden layer
-(Chapter 5) bends the boundary and pushes past 83%.
+points but **never** the 4-point XOR pattern (§4.6 makes this precise).
+A single hidden layer (Chapter 5) bends the boundary and pushes past the
+ceiling.
 :::
 
 ::: {.col .fig}
@@ -905,10 +947,11 @@ points but **never** the 4-point XOR pattern (we make this precise in
 ::: {.col}
 - **Training** reuses the regression `Trainer`; `Classifier` adds
   accuracy reporting for free.
-- **~83%** is the linear ceiling on Fashion-MNIST; richer models just
-  replace the forward pass.
-- The naive softmax is numerically fragile; production code fuses
-  softmax and log (§4.5).
+- **82--83%** is the linear ceiling on Fashion-MNIST; the confusion matrix
+  shows the errors in two blocks (upper-body garments, footwear) --- exactly
+  where silhouette fails.
+- `exp(1000)` = `NaN`: the naive softmax is fragile, the clip a band-aid;
+  §4.5 derives the real fix.
 :::
 :::
 :::

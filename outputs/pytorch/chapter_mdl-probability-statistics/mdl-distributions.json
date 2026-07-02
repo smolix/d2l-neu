@@ -14,13 +14,13 @@
       "outputs": []
     },
     "distributions-bernoulli": {
-      "code_fingerprint": "sha256:d089f41e9996201c42201b24466c01c36a9a15a226b0fadecfcfe66e1c0ba507",
+      "code_fingerprint": "sha256:f22ccc581fc612667785976b83daac25d80b865e09ee0f9cdc8a01fefc5c27ed",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pmf  P(0), P(1) = (0.7, 0.3)\nsample mean = 0.2222222238779068  (≈ p)\n"
+          "text": "pmf  P(0), P(1) = (0.7, 0.3)\nmean of 10,000 draws = 0.295199990272522  (≈ p)\n"
         },
         {
           "type": "execute_result",
@@ -29,7 +29,7 @@
       ]
     },
     "distributions-categorical": {
-      "code_fingerprint": "sha256:8d5d2d9c556cf92273d98926f982a3da91ab45d2409a68faff1f240f70dd22a8",
+      "code_fingerprint": "sha256:e8991d2641648fd4ab62a8b9b17d2c49acae44e149d893cd3e9b22ea14f93a29",
       "kind": "text",
       "outputs": [
         {
@@ -40,7 +40,7 @@
       ]
     },
     "distributions-discrete-uniform": {
-      "code_fingerprint": "sha256:618a8533698a67c9eab6f436266f673888c962bbc824e5f002f1ba02fd5bf7f8",
+      "code_fingerprint": "sha256:25d57b42b2af828413cbf2a33d9ba4a238a124681cfb826425d6ca05bbe4d03a",
       "kind": "text",
       "outputs": [
         {
@@ -51,7 +51,7 @@
       ]
     },
     "distributions-binomial": {
-      "code_fingerprint": "sha256:8ba0efca2a487cfee55ff2d3467b86de8df542cea5498c3c9c702e162673f84e",
+      "code_fingerprint": "sha256:601767ed85eb71452c72fe81f530c5c5796eb89860db9519a39addf60005f5ca",
       "kind": "text",
       "outputs": [
         {
@@ -66,7 +66,7 @@
       ]
     },
     "distributions-poisson": {
-      "code_fingerprint": "sha256:d473da7cb4ec31cf220a89bcb85a959d565ff4f0414cacf2f8fda08b0a5b0e8c",
+      "code_fingerprint": "sha256:b39df6f202bd095d74a8bd0e4a4db901f946374ae241ec945ec4adb8ee7d2e5f",
       "kind": "text",
       "outputs": [
         {
@@ -81,7 +81,7 @@
       ]
     },
     "distributions-binomial-to-poisson": {
-      "code_fingerprint": "sha256:36922bdf34713800b328826dc3504de40966bd344e62838cd3bef09ef10d20fe",
+      "code_fingerprint": "sha256:dab91bfcaeb5a6ac27384bf3a501a0e0088212819b56455a70efb4a43a83015a",
       "kind": "asset",
       "outputs": [
         {
@@ -89,12 +89,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:9c6be6adaeadf78f3ce0b2e8a9cd458c8b6666cbbec60971915c030cd7681f49"
+          "sha256": "sha256:dc832cd022ec33e8765a369b9e4d6db65abd9f03f9fc79d82c5d221a55eeb03f"
         }
       ]
     },
     "distributions-continuous-uniform": {
-      "code_fingerprint": "sha256:e04e10f8657aa7f2f49ec01b075cc68ad2afd5399987e8be32a6dc9d4c6c2e9c",
+      "code_fingerprint": "sha256:c80a02d2310f468a959048abe01ff721c7d06f7a447d5c4fd0ed2538fe88dedd",
       "kind": "text",
       "outputs": [
         {
@@ -105,7 +105,7 @@
       ]
     },
     "distributions-exponential": {
-      "code_fingerprint": "sha256:25ef5734c40f8adc2cbe57063bdf3f691e0211aa290c853a3522e42afcb1b48d",
+      "code_fingerprint": "sha256:c4e67f14e8ea11b6ed854d4a88b508cb8f87372dd93c95dfe5d44f6cdabfeac0",
       "kind": "text",
       "outputs": [
         {
@@ -115,8 +115,21 @@
         }
       ]
     },
+    "mdl-distributions-gaussian-1": {
+      "code_fingerprint": "sha256:50bdef0b5c6ed2b1e318deb007b0191fe0691852036f77e39d5bae2100569535",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
+          "bytes": 29086,
+          "sha256": "sha256:4ea159a28f007b723ff6156d5618a409e8a69dd685e77a2e007e47f96700f37b"
+        }
+      ]
+    },
     "distributions-gaussian": {
-      "code_fingerprint": "sha256:0ccf67b5afc90611b0c29f3a812e0f6f39cfd91697265714e1faaf93556a0d9d",
+      "code_fingerprint": "sha256:3aebd98b14fbb122bd670fe71e51315345859917b4e2eeb1453af256777fb59c",
       "kind": "text",
       "outputs": [
         {
@@ -131,7 +144,7 @@
       ]
     },
     "distributions-laplace": {
-      "code_fingerprint": "sha256:cff73efc0b0da1fbee966ebeeae2df919e548d06cb663d39ff8862d5ce76029d",
+      "code_fingerprint": "sha256:7a45cb2f4594e64506381c708a40cb50f138b15b3fb70c18a733eaa31c077a07",
       "kind": "text",
       "outputs": [
         {
@@ -142,7 +155,7 @@
       ]
     },
     "distributions-mvn": {
-      "code_fingerprint": "sha256:1f9482ad9c26bbd4e6b8d9b8e72580fd57941e5d552aef99a006017508ac2cc1",
+      "code_fingerprint": "sha256:16e9cfaebfdd82d09b9943e05b3f333deaaff7ec213af5c0a84c129762e8333e",
       "kind": "text",
       "outputs": [
         {
@@ -152,24 +165,30 @@
         }
       ]
     },
+    "mdl-distributions-multivariate-gaussian-1": {
+      "code_fingerprint": "sha256:d033c8a071f693a4df24bf205ce2605cc97b60c0d39997f8bab7ddeddc83ab3d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d =   3:  ||x||/sqrt(d) = 0.920 ± 0.378,   mean |cos(x,y)| = 0.497\nd =  30:  ||x||/sqrt(d) = 0.992 ± 0.127,   mean |cos(x,y)| = 0.145\nd = 300:  ||x||/sqrt(d) = 1.000 ± 0.039,   mean |cos(x,y)| = 0.046\n"
+        }
+      ]
+    },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:1a7e85d26970d6e06ac64b0c7e9528eeb7b18ca98ebdda598004880ecc97ea1b",
+      "code_fingerprint": "sha256:65cdce7b693528cabd4dd8c6f5c4fbf3488bfee1ebc84ccc9bd464a198310137",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "/var/folders/9c/qyn117295pgd7503chdsk_000000gn/T/ipykernel_18039/2036575739.py:5: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:837.)\n  print('sigmoid(eta) = E[x] = p =', round(float(torch.sigmoid(eta)), 6))\n"
         }
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:cb3f1e5edfd8cc8637d41ce80d4b52a09651c7112204d7adf5eac55b9f0fc553",
+      "code_fingerprint": "sha256:d54b1cce335f69d534cebde4030581f4070d761be065bdac9e7a2a8ce437382e",
       "kind": "text",
       "outputs": [
         {

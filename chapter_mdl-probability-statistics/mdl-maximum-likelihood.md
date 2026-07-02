@@ -71,7 +71,12 @@ $$
 
 (When $\boldsymbol{\theta}$ is continuous, $P(\boldsymbol{\theta}\mid X)$ is a
 *density*, and "most probable" means the *mode* of that density---a subtlety
-that will matter when we discuss MAP estimation in :numref:`subsec_mdl-map`.)
+that will matter when we discuss MAP estimation in :numref:`subsec_mdl-map`.
+Strictly speaking, then, :eqref:`eq_mdl-max_like` as written is the *posterior
+mode*---the MAP objective of that section; the next paragraph identifies the
+condition, a flat prior, under which it reduces to the likelihood alone, and it
+is that reduced form---not the posterior mode in general---that names this
+section.)
 
 This looks like it requires a prior, and Bayes' rule makes the dependence
 explicit:
@@ -308,6 +313,16 @@ for iter in range(100):
 # Check output
 theta, n_H / (n_H + n_T)
 ```
+
+One hyperparameter deserves a wary eye before moving on: the learning rate
+$10^{-9}$ looks absurd, and it works only because this loss is a *sum* over
+nearly nine million flips, so its gradient carries that factor of $n$. Shrink
+$n_H$ and $n_T$ a thousandfold and the same learning rate barely moves
+$\theta$; scale them up and the update diverges. Averaging the loss over
+examples instead of summing---as the minibatch losses in this book do---removes
+the coupling and returns sensible learning rates to sensible magnitudes. The
+lesson generalizes: a learning rate is always tuned *to a loss scale*, and
+silently changing one without the other is a classic way to break training.
 
 Beyond numerical stability, the log gives gradients a clean additive form. The
 product rule applied to $\prod_i p(x_i\mid\boldsymbol{\theta})$ produces $n$
@@ -552,9 +567,37 @@ the limit: it is **asymptotically efficient**---asymptotically, the best estimat
 there is. The qualifier matters. At finite $n$ the MLE is generally only
 *asymptotically* unbiased, not exactly unbiased---the maximum-likelihood estimate
 of a Gaussian's variance divides the sum of squares by $n$ rather than $n-1$ and
-so systematically underestimates $\sigma^2$, the biased estimator worked out in
-:numref:`sec_mdl-statistics`. Maximum likelihood is optimal *in the limit*, not a
-guarantee of unbiasedness at every sample size.
+so systematically underestimates $\sigma^2$. :numref:`sec_mdl-statistics` works
+out exactly this bias---identifying the $n$-divided estimator as the Gaussian
+MLE---when it derives the $n-1$ correction. Maximum likelihood is optimal *in
+the limit*, not a guarantee of unbiasedness at every sample size.
+
+**Watching the theorem happen.** Asymptotic normality is the section's central
+limit theorem, and like the CLT proper it can be watched. The cell below returns
+to the coin: it draws $20{,}000$ independent datasets of $n=400$ flips with true
+bias $\theta^\star=0.7$, computes the MLE $\hat\theta=n_H/n$ on each, and
+histograms the rescaled errors $\sqrt n\,(\hat\theta-\theta^\star)$ against the
+Gaussian that :eqref:`eq_mdl-asymptotic-normality` names. For the coin the
+Fisher information works out below to $I(\theta)=1/(\theta(1-\theta))$, so the
+predicted limit is $\mathcal N\bigl(0,\ \theta^\star(1-\theta^\star)\bigr)$ with
+variance $0.21$---and the histogram does not merely look bell-shaped, it lands
+on that *particular* Gaussian, center, width, and height. (One numerical nicety:
+$\hat\theta$ lives on the lattice $k/n$, so we offset the bin edges by half a
+lattice step to keep the discrete values off the edges.)
+
+```{.python .input #mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works}
+rng = onp.random.default_rng(0)
+theta_star, n, reps = 0.7, 400, 20000
+flips = rng.random((reps, n)) < theta_star             # 20,000 datasets at once
+z = onp.sqrt(n) * (flips.mean(axis=1) - theta_star)    # sqrt(n)(theta_hat - theta*)
+sigma2 = theta_star * (1 - theta_star)                 # = 1 / I(theta*)
+hist, edges = onp.histogram(z, bins=40, range=(-2.025, 1.975), density=True)
+x = onp.arange(-2, 2, 0.01)
+d2l.plot(x, [onp.interp(x, (edges[:-1] + edges[1:]) / 2, hist),
+             onp.exp(-x**2 / (2 * sigma2)) / onp.sqrt(2 * onp.pi * sigma2)],
+         xlabel='sqrt(n) * (theta_hat - theta*)', ylabel='density',
+         legend=['20,000 replications', 'N(0, theta*(1-theta*))'])
+```
 
 ### Fisher Information and the Score
 
@@ -1106,12 +1149,13 @@ taken up in detail there.
    Fisher information is $I(\mu)=1/\sigma^2$. Conclude that the sample-mean MLE
    over $n$ observations has variance $\sigma^2/n$, attaining the Cramér--Rao
    bound :eqref:`eq_mdl-cramer-rao` exactly. (*Hint:* use :eqref:`eq_mdl-fisher`.)
-9. Simulate the asymptotic normality :eqref:`eq_mdl-asymptotic-normality` of the
-   coin's MLE: fix $\theta^\star = 0.3$, run many independent experiments of
-   $n = 200$ flips each, and for each compute $\hat\theta = n_H/n$. Plot a
-   histogram of $\sqrt{n}\,(\hat\theta - \theta^\star)$ and overlay the density
-   of $\mathcal{N}\big(0,\ \theta^\star(1-\theta^\star)\big)$. How good is the
-   match? Repeat with $n = 10$ and explain what you see.
+9. Extend the asymptotic-normality demonstration in the text. First rerun it
+   with $n = 10$ in place of $400$: how many distinct values can $\hat\theta$
+   take, and what does the "histogram" become? Then restore $n = 400$ but move
+   $\theta^\star$ to $0.95$ and compare the match to the predicted Gaussian.
+   Explain why convergence is slower near the boundary, considering both the
+   skew of the binomial there and the shrinking variance
+   $\theta^\star(1-\theta^\star)$.
 10. Derive the GMM M-step for the means: holding the responsibilities $r_{ik}$
     fixed, show that maximizing the expected complete-data log-likelihood
     $\sum_i \sum_k r_{ik}\big[\log \pi_k + \log \mathcal{N}(x_i;\,\mu_k,\sigma_k^2)\big]$

@@ -20,7 +20,7 @@ This is the punchline worth keeping in view, and :numref:`fig_mdl-prob-family-tr
 draws it: the distributions are nodes, the construction and limit relationships
 are arrows, and the whole picture sits inside the exponential-family envelope.
 
-![The distribution family. Solid arrows *construct*: Bernoulli is the seed; summing $n$ copies gives the Binomial; the many-and-rare limit ($n\to\infty$, $np\to\lambda$) gives the Poisson; the many-and-ordinary limit (the central limit theorem) gives the Gaussian; the Categorical generalizes Bernoulli to $K$ outcomes and the Multinomial counts $n$ of them. Dashed arrows attach each likelihood to its *conjugate prior*: the Beta to the Bernoulli and Binomial, the Gamma to the Poisson, and the Dirichlet to the Categorical and Multinomial. Every node---the conjugate priors included---lies inside the exponential-family envelope.](../img/mdl-prob-family-tree.svg)
+![The distribution family. Solid arrows *construct*: Bernoulli is the seed; summing $n$ copies gives the Binomial; the many-and-rare limit ($n\to\infty$, $np\to\lambda$) gives the Poisson, whose waiting time between events is the Exponential; the many-and-ordinary limit (the central limit theorem) gives the Gaussian; the Categorical generalizes Bernoulli to $K$ outcomes and the Multinomial counts $n$ of them. Dashed arrows attach each likelihood to its *conjugate prior*: the Beta to the Bernoulli and Binomial, the Gamma to the Poisson, and the Dirichlet to the Categorical and Multinomial. Every node---the conjugate priors included---lies inside the exponential-family envelope.](../img/mdl-prob-family-tree.svg)
 :label:`fig_mdl-prob-family-tree`
 
 For each distribution we keep to a tight template: its mass or density function,
@@ -119,8 +119,9 @@ coin) and vanishes at $p\in\{0,1\}$ (a certain outcome carries no randomness).
 rng = np.random.default_rng(0)
 p = 0.3
 sample = 1 * (rng.random((3, 3)) < p)          # 1 with prob p, else 0
+big = 1 * (rng.random(10000) < p)              # large sample for the mean
 print('pmf  P(0), P(1) =', (1 - p, p))
-print('sample mean =', float(sample.mean()), ' (≈ p)')
+print('mean of 10,000 draws =', float(big.mean()), ' (≈ p)')
 sample
 ```
 
@@ -129,8 +130,9 @@ sample
 torch.manual_seed(0)
 p = 0.3
 sample = (torch.rand(3, 3) < p).float()        # 1 with prob p, else 0
+big = (torch.rand(10000) < p).float()          # large sample for the mean
 print('pmf  P(0), P(1) =', (1 - p, p))
-print('sample mean =', float(sample.mean()), ' (≈ p)')
+print('mean of 10,000 draws =', float(big.mean()), ' (≈ p)')
 sample
 ```
 
@@ -139,17 +141,20 @@ sample
 tf.random.set_seed(0)
 p = 0.3
 sample = tf.cast(tf.random.uniform((3, 3)) < p, tf.float32)
+big = tf.cast(tf.random.uniform((10000,)) < p, tf.float32)  # large sample
 print('pmf  P(0), P(1) =', (1 - p, p))
-print('sample mean =', float(tf.reduce_mean(sample)), ' (≈ p)')
+print('mean of 10,000 draws =', float(tf.reduce_mean(big)), ' (≈ p)')
 sample
 ```
 
 ```{.python .input #distributions-bernoulli}
 #@tab jax
 p = 0.3
-sample = jax.random.bernoulli(jax.random.PRNGKey(0), p, (3, 3)).astype(jnp.float32)
+key1, key2 = jax.random.split(jax.random.PRNGKey(0))
+sample = jax.random.bernoulli(key1, p, (3, 3)).astype(jnp.float32)
+big = jax.random.bernoulli(key2, p, (10000,)).astype(jnp.float32)  # large sample
 print('pmf  P(0), P(1) =', (1 - p, p))
-print('sample mean =', float(sample.mean()), ' (≈ p)')
+print('mean of 10,000 draws =', float(big.mean()), ' (≈ p)')
 sample
 ```
 
@@ -467,8 +472,8 @@ jax.random.poisson(jax.random.PRNGKey(0), lam, (3, 3))  # sample event counts
 is visible. The cell below overlays the pmf of $\mathrm{Binomial}(n,\lambda/n)$ for
 growing $n$ on its $\mathrm{Poisson}(\lambda)$ limit, building every pmf by the
 same successive-ratio trick we used for the binomial (for the Poisson the ratio is
-simply $P(X=k+1)/P(X=k)=\lambda/(k+1)$). Already at $n=20$ the curves nearly agree,
-and at $n=100$ they coincide to plotting accuracy.
+simply $P(X=k+1)/P(X=k)=\lambda/(k+1)$). Already at $n=20$ the curves are visibly
+closing in on each other, and at $n=100$ they coincide to plotting accuracy.
 
 ```{.python .input #distributions-binomial-to-poisson}
 lam, ks = 4.0, np.arange(15)
@@ -590,9 +595,12 @@ $$
 \sigma_X^2 = \frac{2}{\lambda^2}-\frac1{\lambda^2} = \frac1{\lambda^2}.
 $$
 
-The teaching cell samples by *inverse transform*: if $U\sim U(0,1)$ then
-$X=-\tfrac1\lambda\log U\sim\mathrm{Exp}(\lambda)$, since inverting
-$F(x)=1-e^{-\lambda x}$ gives exactly this map.
+The teaching cell samples by the *inverse-transform* proposition of
+:numref:`sec_mdl-random_variables`---this is the closed-form case promised
+there. Inverting $F(x)=1-e^{-\lambda x}$ gives
+$F^{-1}(q)=-\tfrac1\lambda\log(1-q)$, and since $1-U$ is again uniform when
+$U\sim U(0,1)$, the sampler simplifies to
+$X=-\tfrac1\lambda\log U\sim\mathrm{Exp}(\lambda)$.
 
 ```{.python .input #distributions-exponential}
 #@tab mxnet
@@ -660,6 +668,30 @@ Nothing about coin flips was special: the CLT holds for *any* independent,
 identically distributed summands with *finite variance* (no higher moments
 needed)---which is why the conditions are so easy to meet and the Gaussian is
 everywhere.
+
+**Watching universality happen.** Like the Poisson limit, this claim is
+checkable in a few lines. The cell below starts from about the least Gaussian
+summand available---a $U(0,1)$ draw, flat with hard edges and no tails---forms
+sums of $n$ of them, standardizes each sum by its mean $n/2$ and standard
+deviation $\sqrt{n/12}$, and overlays the resulting histograms on the standard
+normal density. At $n=1$ we see the uniform's own plateau; at $n=2$ the
+triangular hat; by $n=8$ the curve is already hard to distinguish from the
+Gaussian, and at $n=32$ the two coincide to plotting accuracy. Nothing in the
+code knows about the Gaussian---the bell is manufactured by the summation
+itself, which is exactly the universality the CLT asserts.
+
+```{.python .input #mdl-distributions-gaussian-1}
+rng = np.random.default_rng(0)
+ns, x = (1, 2, 8, 32), np.arange(-4, 4, 0.01)
+curves = []
+for n in ns:                                   # standardized sums of n uniforms
+    s = (rng.random((100000, n)).sum(1) - n / 2) / np.sqrt(n / 12)
+    hist, edges = np.histogram(s, bins=80, range=(-4, 4), density=True)
+    curves.append(np.interp(x, (edges[:-1] + edges[1:]) / 2, hist))
+curves.append(np.exp(-x**2 / 2) / np.sqrt(2 * np.pi))     # N(0, 1) density
+d2l.plot(x, curves, xlabel='standardized sum', ylabel='density',
+         legend=[f'n = {n}' for n in ns] + ['N(0, 1)'])
+```
 
 **The normalizer, via the polar trick.** Why the constant $1/\sqrt{2\pi\sigma^2}$?
 Take $\mu=0,\sigma=1$; we need $\int_{-\infty}^\infty e^{-x^2/2}\,dx=\sqrt{2\pi}$.
@@ -923,6 +955,42 @@ print('empirical covariance:\n', np.asarray(emp).round(2))
 print('eigenvalues (≈ 1, 3):', np.asarray(vals).round(2))  # Sigma eigenvalues 1 and 3
 ```
 
+**Probability in high dimension.** One more Gaussian fact matters enormously in
+deep learning and defies low-dimensional intuition. For
+$\mathbf x\sim\mathcal N(\mathbf 0,\mathbf I_d)$ the squared norm
+$\|\mathbf x\|^2=\sum_{i=1}^d x_i^2$ is a sum of $d$ independent terms with mean
+$1$, so $\mathbb E\,\|\mathbf x\|^2=d$, and---by the same averaging that makes
+sample means reliable---the sum concentrates near $d$: virtually all the mass
+of a high-dimensional Gaussian lives in a *thin shell* of radius
+$\approx\sqrt d$, far from the origin where the density is pointwise largest.
+Likewise two independent draws $\mathbf x,\mathbf y$ are *nearly orthogonal*:
+their cosine has mean $0$ and standard deviation $\approx1/\sqrt d$---the
+concentration-of-angles proposition of
+:numref:`sec_mdl-geometry-linear-algebraic-ops` in probabilistic clothing
+:cite:`Vershynin.2018`. Both facts are load-bearing in practice:
+weight-initialization schemes scale by $1/\sqrt{d}$ precisely so that
+$\|\mathbf W\mathbf x\|$ stays comparable to $\|\mathbf x\|$ layer after layer;
+cosine similarity between embeddings is informative because unrelated
+high-dimensional vectors sit near cosine $0$ by default; and nearest-neighbor
+search loses contrast because the distances between random points all
+concentrate around one common value. The check below watches both
+concentrations set in as $d$ grows.
+
+```{.python .input #mdl-distributions-multivariate-gaussian-1}
+rng = np.random.default_rng(0)
+for d in (3, 30, 300):
+    x, y = rng.standard_normal((2, 1000, d))
+    nx = np.linalg.norm(x, axis=1)
+    cos = (x * y).sum(1) / (nx * np.linalg.norm(y, axis=1))
+    print(f'd = {d:3d}:  ||x||/sqrt(d) = {(nx / np.sqrt(d)).mean():.3f}'
+          f' ± {(nx / np.sqrt(d)).std():.3f},   mean |cos(x,y)| = {np.abs(cos).mean():.3f}')
+```
+
+The norm ratio locks onto $1$ with a spread shrinking like $1/\sqrt{2d}$, and
+the typical cosine collapses toward $0$ at the promised $1/\sqrt d$ rate: in
+high dimension, Gaussian geometry is a thin shell of mutually near-orthogonal
+directions.
+
 ## The Exponential Family
 
 Here is the unifying punchline. Nearly every distribution above---Bernoulli,
@@ -980,11 +1048,17 @@ Membership has edges worth knowing. The conspicuous absentees from the list abov
 are the two *uniforms*: when the endpoints are unknown parameters, the support of
 $U(a,b)$ (and likewise of $U(n)$) moves with those parameters, whereas every member
 of :eqref:`eq_mdl-exp_family` has the fixed, parameter-free support of its base
-measure $h$---the classic counterexample. Heavy-tailed laws such as the Cauchy and
-Student-$t$ live outside the family too, and for them the exclusion has teeth: they
-admit no finite-dimensional conjugate prior, and their negative log-likelihoods are
-not convex in the parameters---both conveniences are exponential-family privileges,
-as the rest of this section shows.
+measure $h$---the classic counterexample. Heavy-tailed laws live outside the
+family too, for a different reason. The *Student-$t$* takes two lines to define:
+draw a random precision $1/\sigma^2$ from a Gamma distribution, then a Gaussian
+with that precision---averaging the Gaussian over its random scale fattens the
+$e^{-x^2}$ tails into polynomial ones (the Cauchy of
+:numref:`sec_mdl-random_variables` is its one-degree-of-freedom extreme). Their
+support is all of $\mathbb R$, fixed, yet the mixing destroys the exponential
+form: no finite-dimensional sufficient statistic exists. For them the exclusion
+has teeth: they admit no finite-dimensional conjugate prior, and their negative
+log-likelihoods are not convex in the parameters---both conveniences are
+exponential-family privileges, as the rest of this section shows.
 
 ### Where the Form Comes From: Maximum Entropy
 
@@ -1071,7 +1145,7 @@ eta = torch.tensor(0.7, requires_grad=True)      # natural parameter (logit)
 A = torch.log1p(torch.exp(eta))                  # Bernoulli log-partition (softplus)
 A.backward()                                     # autograd: dA/deta
 print('dA/deta      =', round(float(eta.grad), 6))
-print('sigmoid(eta) = E[x] = p =', round(float(torch.sigmoid(eta)), 6))
+print('sigmoid(eta) = E[x] = p =', round(float(torch.sigmoid(eta).detach()), 6))
 ```
 
 ```{.python .input #distributions-exp-family}
@@ -1177,7 +1251,13 @@ print('posterior mean  =', round(post_alpha / (post_alpha + post_beta), 4))
 ```
 
 The posterior mean sits between the prior's $0.5$ and the data's $0.7$, exactly as
-the pseudo-count sum predicts.
+the pseudo-count sum predicts. :numref:`fig_mdl-prob-beta-posterior` shows the
+same mechanism at work over a longer run of data: the flat $\mathrm{Beta}(1,1)$
+prior sharpens into a posterior that piles up on the true bias, its width
+shrinking like $1/\sqrt n$ as the real counts swamp the phantom ones.
+
+![Bayesian updating as sharpening. Starting from the flat $\mathrm{Beta}(1,1)$ prior (left), observing $9$ heads in $13$ flips of a coin with true bias $\theta^\ast=0.7$ (dashed line) gives the $\mathrm{Beta}(10,5)$ posterior (middle); after $130$ flips the $\mathrm{Beta}(91,41)$ posterior has piled up tightly around $\theta^\ast$ (right). Each update just adds the observed heads and tails to the pseudo-counts, and the posterior standard deviation shrinks like $1/\sqrt{n}$.](../img/mdl-prob-beta-posterior.svg)
+:label:`fig_mdl-prob-beta-posterior`
 
 ### The Rest of the Tier, and the General Fact
 
@@ -1189,7 +1269,12 @@ The other discrete laws have their own conjugate partners, built the same way.
   counts $x_1,\dots,x_n$ updates it to $\mathrm{Gamma}\bigl(\alpha+\sum_i x_i,\ \beta+n\bigr)$---pseudo-events over a pseudo-window. Averaging the Poisson over this Gamma
   uncertainty in its rate yields the *negative binomial*: a random rate inflates the
   variance above the mean, which is exactly the over-dispersion that flags a
-  too-simple Poisson model.
+  too-simple Poisson model. The Gamma is more than a prior, though: it is a
+  waiting-time law in its own right. With integer shape $\alpha=k$,
+  $\mathrm{Gamma}(k,\beta)$ is the waiting time to the *$k$-th* event of a
+  Poisson process---the sum of $k$ independent $\mathrm{Exp}(\beta)$
+  waits---extending the exponential's arrow in the family tree just as the
+  binomial extends the Bernoulli's.
 * **Dirichlet--Multinomial.** The **Dirichlet** distribution
   $\mathrm{Dir}(\mathbf p\mid\boldsymbol\alpha)\propto\prod_k p_k^{\alpha_k-1}$ is the
   multivariate Beta, a density over probability vectors on the simplex; it is

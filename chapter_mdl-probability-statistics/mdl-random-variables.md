@@ -267,11 +267,34 @@ picture.
 
 The inverse $F^{-1}$, which maps a probability level $q\in(0,1)$ back to the
 value $x$ with $F(x)=q$, is called the *quantile function*---its values at
-$q=0.25,0.5,0.75$ are the quartiles, the middle one the median. The relationship
-$F'=p$ underwrites *inverse-transform sampling*---if $U$ is uniform on $[0,1]$
-then $F^{-1}(U)$ has c.d.f. $F$---which is how libraries turn uniform noise into
-samples from any one-dimensional distribution. We return to it when we meet the
-named distributions in :numref:`sec_mdl-distributions`.
+$q=0.25,0.5,0.75$ are the quartiles, the middle one the median. The quantile
+function is also a *sampler*, by an argument short enough to give in full.
+
+**Proposition (inverse-transform sampling).** *Let $F$ be a continuous, strictly
+increasing c.d.f. and let $U$ be uniform on $[0,1]$. Then $X=F^{-1}(U)$ has
+c.d.f. exactly $F$.*
+
+**Proof.** Because $F$ is increasing, the events $F^{-1}(U)\le x$ and
+$U\le F(x)$ are the same event, and the uniform assigns every subinterval of
+$[0,1]$ its length:
+
+$$
+P\bigl(F^{-1}(U)\le x\bigr) = P\bigl(U\le F(x)\bigr) = F(x). \quad\blacksquare
+$$
+
+:numref:`fig_mdl-prob-inverse-transform` is the picture: feed the uniform level
+$U$ into the *vertical* axis of the c.d.f. and reflect it through the curve down
+to the horizontal axis. Because the curve is steep where the density is high, a
+uniformly spread set of levels lands its reflections densely exactly there---the
+c.d.f.'s slope, which is the density by :eqref:`eq_mdl-cdf_deriv`, does the
+shaping. This one-line proposition is how libraries turn raw uniform noise into
+samples from any one-dimensional distribution: generate $U$, look up
+$F^{-1}(U)$. We put it to work when we meet the named distributions in
+:numref:`sec_mdl-distributions`, where inverting the exponential's c.d.f. gives
+that distribution's standard sampler in closed form.
+
+![Inverse-transform sampling. Uniform levels $U$ on the vertical axis (left) reflect through the c.d.f. $F$ down to values $x=F^{-1}(U)$ on the horizontal axis. Where $F$ is steep---that is, where the density $p=F'$ is large---a uniform spread of levels is compressed into a dense cluster of samples, so the histogram of reflected points reproduces $p$.](../img/mdl-prob-inverse-transform.svg)
+:label:`fig_mdl-prob-inverse-transform`
 
 ## Summarizing a Distribution
 
@@ -501,7 +524,8 @@ $$
 Every property proved above---linearity, the affine rule, Markov and
 Chebyshev---carries over unchanged, since each rested only on linearity and
 positivity of the averaging operation.
-For the uniform density $p(x)=1$ on $[0,1]$ (zero elsewhere),
+For the uniform density on the unit interval---$p(x)=1$ on $[0,1]$, zero
+elsewhere, the law the next section names $U(0,1)$---
 $\mu_X=\int_0^1 x\,dx=\tfrac12$ and $\sigma_X^2=\int_0^1
 x^2\,dx-\tfrac14=\tfrac13-\tfrac14=\tfrac1{12}$, both elementary integrals.
 
@@ -624,7 +648,7 @@ $$
 For each fixed $y$ this is a genuine density in $x$: it is non-negative, and
 dividing the joint by exactly $p_Y(y)=\int p_{X,Y}(x,y)\,dx$ is precisely what makes
 it integrate to one. Geometrically it is a horizontal slice of the joint surface
-at height $y$, renormalized to unit area, as :numref:`fig_mdl-conditional-slice`
+at height $y$, renormalized to unit area, as :numref:`fig_mdl-prob-conditional-slice`
 shows: cut the joint density along $y=y_0$, then rescale that profile so its area
 is one. Rearranging :eqref:`eq_mdl-cond_density`
 gives the **chain rule** $p_{X,Y}(x,y)=p_{X\mid Y}(x\mid y)\,p_Y(y)$, and writing it
@@ -653,14 +677,14 @@ As a worked example, take the joint $p_{X,Y}(x,y)=4xy$ on the unit square
 $[0,1]^2$ (it integrates to one). The marginal is $p_Y(y)=\int_0^1 4xy\,dx=2y$, so
 $p_{X\mid Y}(x\mid y)=4xy/2y=2x$ --- *independent of $y$*. The conditional never
 changes as $y$ varies, so by the proposition $X\perp Y$. This is exactly the
-visual test of :numref:`fig_mdl-conditional-slice`: independence is the case where
+visual test of :numref:`fig_mdl-prob-conditional-slice`: independence is the case where
 the renormalized slice $p(x\mid y_0)$ has the *same shape* at every height $y_0$,
 since the joint factors and the $y$-factor cancels in the renormalization. A joint
 that does not factor this way --- say one supported on the triangle $x\le y$ --- has
 a conditional whose support and shape shift with $y$, the signature of dependence.
 
 ![Reading off a conditional density. Left: the contours of a joint density $p_{X,Y}(x,y)$ with one horizontal slice at $y=y_0$ highlighted. Right: that slice, $x\mapsto p_{X,Y}(x,y_0)$, renormalized to unit area to give the conditional density $p(x\mid y_0)$ of :eqref:`eq_mdl-cond_density`. When the joint factors, every slice has the same shape after renormalization, regardless of $y_0$, which is precisely independence; when it does not, the slice shape drifts with $y_0$.](../img/mdl-prob-conditional-slice.svg)
-:label:`fig_mdl-conditional-slice`
+:label:`fig_mdl-prob-conditional-slice`
 
 Independence is a strong, all-of-the-distribution statement. It is strictly
 stronger than being *uncorrelated* (zero covariance), which constrains only the

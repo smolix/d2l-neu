@@ -254,8 +254,8 @@ book:
         - chapter_mdl-probability-statistics/mdl-random-variables.qmd
         - chapter_mdl-probability-statistics/mdl-distributions.qmd
         - chapter_mdl-probability-statistics/mdl-maximum-likelihood.qmd
-        - chapter_mdl-probability-statistics/mdl-naive-bayes.qmd
         - chapter_mdl-probability-statistics/mdl-statistics.qmd
+        - chapter_mdl-probability-statistics/mdl-naive-bayes.qmd
         - chapter_mdl-information-theory/index.qmd
         - chapter_mdl-information-theory/mdl-information-theory.qmd
         - chapter_mdl-information-theory/mdl-divergences-distances.qmd

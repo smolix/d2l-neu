@@ -79,7 +79,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 1.2596, -1.0028, -0.2930, -0.4451],\n        [ 2.1115,  0.6321, -1.8434, -1.0147],\n        [-0.4847,  2.8804,  0.2142, -1.0072]])"
+          "text": "tensor([[-0.3246,  0.6906, -0.9304,  1.8310],\n        [ 0.9006, -1.3571,  0.5973, -0.5943],\n        [ 0.7989, -1.0810, -0.1431,  0.2505]])"
         }
       ]
     },
@@ -193,8 +193,19 @@
         }
       ]
     },
+    "ndarray-broadcasting-3": {
+      "code_fingerprint": "sha256:4ca7fb3f53b3dad1bba6ba0e2e2feb3252404bf2336e2532ac6a509625ab5c9d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "The size of tensor a (2) must match the size of tensor b (3) at non-singleton dimension 1\n"
+        }
+      ]
+    },
     "ndarray-saving-memory-1": {
-      "code_fingerprint": "sha256:e726d030e89dbbe0ae12e2f7b1ef721d29fbc7462230f7f1eb5da400ef8c3c8c",
+      "code_fingerprint": "sha256:442ea6f1824fe4d5729e683676f504b134300c721fdb37a7354904b7bea7fb78",
       "kind": "text",
       "outputs": [
         {
@@ -204,18 +215,18 @@
       ]
     },
     "ndarray-saving-memory-2": {
-      "code_fingerprint": "sha256:ac0e9dd19f93514421101860228f4f02cb31ce5e08102d7b35bd684a9a429fcd",
+      "code_fingerprint": "sha256:bf6b469552405edd240a33c91aee2779ce22683b8aff3655b794139f93c8ecae",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "id(Z): 135723957454160\nid(Z): 135723957454160\n"
+          "text": "id(Z): 4577159008\nid(Z): 4577159008\n"
         }
       ]
     },
     "ndarray-saving-memory-3": {
-      "code_fingerprint": "sha256:cd47421f19c683ae72c5babc83f01bd9137b86ceebb5a81b12feca89092f4888",
+      "code_fingerprint": "sha256:1592678d5632f59d89b8b99b805dad2a81d59c475927df288f4863213b0ccb65",
       "kind": "text",
       "outputs": [
         {
@@ -225,7 +236,7 @@
       ]
     },
     "ndarray-conversion-to-other-python-objects-1": {
-      "code_fingerprint": "sha256:3db402a31b42b8ec50dae3ac6430c31acc8c7ef0f3dbe5d5d4f7931e84bc9d2f",
+      "code_fingerprint": "sha256:9fe9f6dd29f1cd415ad332d28d9d25665262e191b562fa9b2aaa15b22ced5c35",
       "kind": "text",
       "outputs": [
         {
@@ -235,7 +246,7 @@
       ]
     },
     "ndarray-conversion-to-other-python-objects-2": {
-      "code_fingerprint": "sha256:80a5faaaa9d72090a0bdfa2a39b92d9746b3c9edbdb74b1881d5d437bad2220e",
+      "code_fingerprint": "sha256:1dbde1634e9c61c3efc32d24dc936d847c470cf65ea39ef73f6055ae3983bd9f",
       "kind": "text",
       "outputs": [
         {

@@ -352,10 +352,68 @@ to the true underlying probabilities.
 The mathematical formulation of this phenomenon
 is called the *law of large numbers*
 and the *central limit theorem*
+(developed in :numref:`sec_mdl-distributions`)
 tells us that in many situations,
 as the sample size $n$ grows,
 these errors should go down
 at a rate of $(1/\sqrt{n})$ :cite:`Wasserman.2013`.
+
+Where does the rate come from? Each toss is a random variable
+taking value $1$ (heads) with probability $p$ and $0$ otherwise,
+so its variance is $E[X_i^2] - E[X_i]^2 = p - p^2 = p(1-p)$
+(we formally introduce variances later in this section).
+Our estimate averages $n$ independent tosses,
+and variances of independent variables add,
+while scaling a variable by $1/n$ scales its variance by $1/n^2$; hence
+
+$$\textrm{Var}[\hat{p}] = \frac{p(1-p)}{n},$$
+
+and the typical error (the standard deviation)
+is $\sqrt{p(1-p)/n}$, which shrinks as $1/\sqrt{n}$.
+Rather than taking this on faith, we can watch the law emerge:
+below we estimate $p$ from 1000 independent batches
+of $n$ tosses each, for growing $n$,
+and plot the standard deviation of the estimates on log--log axes.
+It hugs the predicted $0.5/\sqrt{n}$ line,
+a straight line of slope $-\frac{1}{2}$.
+
+```{.python .input #probability-a-simple-example-tossing-coins-6}
+%%tab mxnet
+ns = [10, 100, 1000, 10000]
+stds = [float((np.random.uniform(size=(1000, n)) < 0.5)
+              .astype(np.float32).mean(axis=1).std()) for n in ns]
+d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'n', 'std of estimate',
+         legend=['empirical', '0.5/sqrt(n)'], xscale='log', yscale='log')
+```
+
+```{.python .input #probability-a-simple-example-tossing-coins-6}
+%%tab pytorch
+ns = [10, 100, 1000, 10000]
+stds = [float((torch.rand(1000, n) < 0.5).float().mean(dim=1).std())
+        for n in ns]
+d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'n', 'std of estimate',
+         legend=['empirical', '0.5/sqrt(n)'], xscale='log', yscale='log')
+```
+
+```{.python .input #probability-a-simple-example-tossing-coins-6}
+%%tab tensorflow
+ns = [10, 100, 1000, 10000]
+stds = [float(tf.math.reduce_std(tf.reduce_mean(
+    tf.cast(tf.random.uniform((1000, n)) < 0.5, tf.float32), axis=1)))
+    for n in ns]
+d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'n', 'std of estimate',
+         legend=['empirical', '0.5/sqrt(n)'], xscale='log', yscale='log')
+```
+
+```{.python .input #probability-a-simple-example-tossing-coins-6}
+%%tab jax
+ns = [10, 100, 1000, 10000]
+stds = [float((jax.random.uniform(d2l.get_key(), (1000, n)) < 0.5)
+              .astype(jnp.float32).mean(axis=1).std()) for n in ns]
+d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'n', 'std of estimate',
+         legend=['empirical', '0.5/sqrt(n)'], xscale='log', yscale='log')
+```
+
 Let's get some more intuition by studying
 how our estimate evolves as we grow
 the number of tosses from 1 to 10,000.
@@ -462,7 +520,9 @@ If we had already tested many coins
 manufactured at the same plant,
 how might we incorporate this information?
 
-##  A More Formal Treatment
+## The Formal Language
+
+### A More Formal Treatment
 
 We have already gotten pretty far: posing
 a probabilistic model,
@@ -522,13 +582,24 @@ Consequently, the probability of any event $\mathcal{A}$
 is $P(\mathcal{A} \cap \mathcal{A}') = 0$.
 Informally, this tells us that impossible events
 have zero probability of occurring.
+The axioms also tell us how to handle events that *overlap*.
+Writing $\mathcal{A} \cup \mathcal{B}$ as the disjoint union
+of $\mathcal{A}$ and $\mathcal{B} \setminus \mathcal{A}$,
+and noting that $P(\mathcal{B} \setminus \mathcal{A})
+= P(\mathcal{B}) - P(\mathcal{A} \cap \mathcal{B})$,
+we obtain the *inclusion--exclusion* rule
+
+$$P(\mathcal{A} \cup \mathcal{B}) = P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A} \cap \mathcal{B}).$$
+
+Summing the two probabilities counts the overlap twice,
+so we subtract it once (:numref:`fig_prob_venn`).
 
 ![Events are subsets of a sample space $\mathcal{S}$, and the axioms give the *inclusion–exclusion* rule for their union.](../img/probability-venn.svg)
 :label:`fig_prob_venn`
 
 
 
-## Random Variables
+### Random Variables
 
 When we spoke about events like the roll of a die
 coming up odds or the first coin toss coming up heads,
@@ -585,28 +656,20 @@ Note that there is a subtle difference
 between *discrete* random variables,
 like flips of a coin or tosses of a die,
 and *continuous* ones,
-like the weight and the height of a person
-sampled at random from the population.
-In this case we seldom really care about
-someone's exact height.
-Moreover, if we took precise enough measurements,
-we would find that no two people on the planet
-have the exact same height.
-In fact, with fine enough measurements,
-you would never have the same height
-when you wake up and when you go to sleep.
-There is little point in asking about
-the exact probability that someone
-is 1.801392782910287192 meters tall.
-Instead, we typically care more about being able to say
-whether someone's height falls into a given interval,
+like the height of a person sampled at random from the population.
+With fine enough measurements, no two people share an exact height,
+so there is little point in asking for the probability
+that someone is 1.801392782910287192 meters tall---it is zero.
+The useful question is whether a height falls into an *interval*,
 say between 1.79 and 1.81 meters.
-In these cases we work with probability *densities*.
-The height of exactly 1.80 meters
-has no probability, but nonzero density.
-To work out the probability assigned to an interval,
-we must take an *integral* of the density
-over that interval.
+In these cases we work with probability *densities*:
+an exact value has no probability but nonzero density,
+and the probability assigned to an interval
+is the *integral* of the density over that interval
+(:numref:`fig_prob_density`).
+
+![Discrete random variables place probability *mass* on individual values; continuous ones spread a *density*, and probabilities arise by integrating it over intervals.](../img/probability-density.svg)
+:label:`fig_prob_density`
 
 ## Multiple Random Variables
 
@@ -915,6 +978,55 @@ it still significantly improved our estimate.
 ![Each conditionally independent positive test multiplies the evidence, driving the posterior $P(H=1)$ from a 0.15% prior to 13% and then to 83%.](../img/probability-bayes-update.svg)
 :label:`fig_prob_update`
 
+Since we posed a complete generative model,
+we can also check the whole calculation by brute force:
+simulate ten million patients,
+apply both tests to each,
+and look at the fraction of HIV cases
+among those with two positive results.
+This is the natural-frequencies picture of
+:numref:`fig_prob_natural_freq` made executable,
+and the empirical frequency should land close
+to the exact posterior of $0.8307$.
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab mxnet
+n = 10000000
+H = np.random.uniform(size=n) < 0.0015
+D1 = np.random.uniform(size=n) < np.where(H, 1.00, 0.01)
+D2 = np.random.uniform(size=n) < np.where(H, 0.98, 0.03)
+both = np.logical_and(D1, D2).astype(np.float32)
+(H.astype(np.float32) * both).sum() / both.sum()  # Exact value: 0.8307
+```
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab pytorch
+n = 10000000
+H = torch.rand(n) < 0.0015
+D1 = torch.rand(n) < torch.where(H, 1.00, 0.01)
+D2 = torch.rand(n) < torch.where(H, 0.98, 0.03)
+H[D1 & D2].float().mean()  # Exact value: 0.8307
+```
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab tensorflow
+n = 10000000
+H = tf.random.uniform((n,)) < 0.0015
+D1 = tf.random.uniform((n,)) < tf.where(H, 1.00, 0.01)
+D2 = tf.random.uniform((n,)) < tf.where(H, 0.98, 0.03)
+tf.reduce_mean(tf.cast(tf.boolean_mask(H, D1 & D2), tf.float32))  # Exact value: 0.8307
+```
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab jax
+k1, k2, k3 = jax.random.split(d2l.get_key(), 3)
+n = 10000000
+H = jax.random.uniform(k1, (n,)) < 0.0015
+D1 = jax.random.uniform(k2, (n,)) < jnp.where(H, 1.00, 0.01)
+D2 = jax.random.uniform(k3, (n,)) < jnp.where(H, 0.98, 0.03)
+H[D1 & D2].astype(jnp.float32).mean()  # Exact value: 0.8307
+```
+
 The assumption of both tests being conditionally independent of each other
 was crucial for our ability to generate a more accurate estimate.
 Take the extreme case where we run the same test twice.
@@ -957,7 +1069,7 @@ of the random variable $X$ is defined as
 
 $$E[X] = E_{x \sim P}[x] = \sum_{x} x P(X = x).$$
 
-Likewise, for densities we obtain $E[X] = \int x \;dp(x)$.
+Likewise, for densities we obtain $E[X] = \int x \, p(x) \;dx$.
 Sometimes we are interested in the expected value
 of some function of $x$.
 We can calculate these expectations as
@@ -1068,7 +1180,42 @@ The scale-free measure of the strength of association is the *correlation*
 $\rho_{ij} = \Sigma_{ij}/(\sigma_i \sigma_j)$,
 which always lies in $[-1, 1]$.
 
+### From Means to Tail Bounds
 
+Knowing an expectation already constrains
+how often a random variable can be large.
+*Markov's inequality* states that for a *nonnegative*
+random variable $X$ and any threshold $a > 0$,
+
+$$P(X \geq a) \leq \frac{E[X]}{a}.$$
+
+The proof takes one line.
+Since $X \geq 0$, discarding the outcomes below the threshold
+can only decrease the expectation, so
+$E[X] \geq E[X \cdot \mathbf{1}_{X \geq a}] \geq a \, E[\mathbf{1}_{X \geq a}] = a \, P(X \geq a)$;
+dividing by $a$ gives the claim.
+Remarkably, nothing about the distribution of $X$ was used:
+the bound is *distribution-free* (:numref:`fig_prob_markov`).
+
+![Markov's inequality: for a nonnegative random variable, the probability of exceeding a threshold $a$ is at most the mean divided by $a$---no matter what the distribution looks like.](../img/probability-markov.svg)
+:label:`fig_prob_markov`
+
+The payoff comes from choosing $X$ cleverly.
+Applying Markov's inequality to the nonnegative variable
+$(X - \mu)^2$, whose expectation is precisely
+the variance $\sigma^2$, yields *Chebyshev's inequality*:
+for any $k > 0$,
+
+$$P(|X - \mu| \geq k \sigma) = P\left((X - \mu)^2 \geq k^2 \sigma^2\right) \leq \frac{\sigma^2}{k^2 \sigma^2} = \frac{1}{k^2}.$$
+
+For instance, draws from *any* distribution with mean $\mu$
+and variance $\sigma^2$ land within
+$k = \sqrt{2}$ standard deviations of $\mu$
+with probability at least 50%.
+Sharper bounds---Chernoff's and Hoeffding's---and
+what such concentration results say about generalization
+in machine learning are developed in
+:numref:`sec_mdl-concentration-generalization`.
 
 ## Discussion
 
@@ -1137,15 +1284,13 @@ namely expectations and variances.
 While there are many more than just linear and quadratic
 expectations for a probability distribution,
 these two already provide a good deal of knowledge
-about the possible behavior of the distribution.
-For instance, [Chebyshev's inequality](https://en.wikipedia.org/wiki/Chebyshev%27s_inequality)
-states that $P(|X - \mu| \geq k \sigma) \leq 1/k^2$,
-where $\mu$ is the expectation, $\sigma^2$ is the variance of the distribution,
-and $k > 1$ is a confidence parameter of our choosing.
-It tells us that draws from a distribution lie
-with at least 50% probability
-within a $[-\sqrt{2} \sigma, \sqrt{2} \sigma]$
-interval centered on the expectation.
+about the possible behavior of the distribution:
+we used them to derive our first tail bounds,
+Markov's and Chebyshev's inequalities,
+which hold for *every* distribution.
+Their sharper cousins, and the connection between
+concentration and generalization, await in
+:numref:`sec_mdl-concentration-generalization`.
 
 This section is only a preview of the probability and statistics
 we will use.

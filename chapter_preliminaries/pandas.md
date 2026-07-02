@@ -22,8 +22,15 @@ not a substitute for a proper
 [tutorial](https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html),
 but enough to load, clean, and encode a tabular dataset,
 and to understand *why* each step matters.
+:numref:`fig_pandas_pipeline` previews the whole path
+we walk in this section.
 
-## Reading the Dataset
+![The preprocessing pipeline: a raw file is loaded into a DataFrame, cleaned and encoded, and finally converted into the tensors a model consumes.](../img/pandas-pipeline.svg)
+:label:`fig_pandas_pipeline`
+
+## Load and Inspect
+
+### Reading the Dataset
 
 Comma-separated values (CSV) files are ubiquitous
 for storing tabular (spreadsheet-like) data.
@@ -68,7 +75,7 @@ with a special `NaN` (*not a number*) marker.
 These are *missing values*, and dealing with them
 is one of the central chores of data preprocessing.
 
-## Knowing Your Data
+### Knowing Your Data
 
 Before transforming anything, look at it.
 A few one-liners save hours of debugging downstream.
@@ -94,7 +101,7 @@ The three numeric columns live on wildly different scales —
 rooms in the single digits, area in the thousands,
 price in the hundred-thousands. Keep that in mind; it returns below.
 
-## Separating Inputs and Targets
+### Separating Inputs and Targets
 
 In supervised learning we predict a *target* from a set of *inputs*.
 The first step is to split the columns accordingly so that we only
@@ -108,7 +115,9 @@ inputs, targets = data.iloc[:, :3], data.iloc[:, 3]
 inputs
 ```
 
-## Handling Missing Values
+## Clean and Encode
+
+### Handling Missing Values
 
 Missing values are unavoidable in real datasets, and how we handle them
 can change what a model learns — so it is worth doing deliberately.
@@ -151,7 +160,7 @@ inputs
 `NumRooms` and `Area` are now filled with their column means;
 `RoofType`'s missing entries remain, to be handled by encoding.
 
-## Encoding Categorical Features
+### Encoding Categorical Features
 
 Models consume numbers, so the `RoofType` strings must be encoded.
 The standard choice for a *nominal* category (one with no inherent
@@ -167,7 +176,8 @@ inputs = pd.get_dummies(inputs, dummy_na=True, dtype=float)
 inputs
 ```
 
-`RoofType` has become three columns (`Slate`, `Tile`, and `nan`); the
+`RoofType` has become three columns (`RoofType_Slate`, `RoofType_Tile`,
+and `RoofType_nan`); the
 already-imputed numerical columns pass through untouched. Every column is
 now numeric.
 
@@ -176,9 +186,12 @@ distinct values, or an identifier unique to each row — explodes the
 feature count and is rarely useful. Such columns call for embeddings,
 which we meet in later chapters.
 
-## Numerical Features
+## Scale and Convert
 
-Every entry is now numeric and complete, but the continuous columns
+### Numerical Features
+
+Every entry is now numeric and complete, but — as promised when
+`describe` first surfaced it — the continuous columns
 still span very different scales (`NumRooms` ≈ 3, `Area` ≈ 1700). Left
 as-is, the large-magnitude feature dominates distances and gradients,
 making optimization ill-conditioned. The standard fix is
@@ -198,10 +211,11 @@ A subtlety to flag now and revisit later: the statistics used to impute
 deviation) must be computed on the **training** data only, then reused
 for validation and test data. Computing them over the whole dataset
 leaks information about the test set into training and inflates your
-reported performance. We return to training/validation/test splits in a
-later chapter.
+reported performance. We return to training/validation/test splits in
+:numref:`sec_generalization_basics` and practice leak-free preprocessing
+on a real dataset in :numref:`sec_kaggle_house`.
 
-## Conversion to Tensor Format
+### Conversion to Tensor Format
 
 Now that `inputs` and `targets` are entirely numeric, we can load them
 into tensors (recall :numref:`sec_ndarray`). Pandas hands off to NumPy

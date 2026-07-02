@@ -4,6 +4,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Documentation
+:label:`sec_lookup_api`
 
 No matter how much of a framework's API we cover here,
 there will always be functions, classes, and arguments
@@ -25,6 +26,13 @@ for the framework you use:
 | JAX | [jax.readthedocs.io](https://jax.readthedocs.io/en/latest/) | [JAX tutorials](https://jax.readthedocs.io/en/latest/tutorials.html) |
 | TensorFlow | [tensorflow.org/api_docs](https://www.tensorflow.org/api_docs) | [tensorflow.org/tutorials](https://www.tensorflow.org/tutorials) |
 | MXNet | [API reference](https://mxnet.apache.org/versions/1.9.1/api) | [tutorials](https://mxnet.apache.org/versions/1.9.1/api/python/docs/tutorials/) |
+
+One caveat: the MXNet links above document version 1.9.1
+(the last release with hosted documentation),
+which foregrounds the legacy `mx.nd` interface,
+whereas this book uses the NumPy-style `np`/`npx` API of MXNet 2.
+For MXNet specifics, the in-notebook loop below
+is often the more reliable reference.
 
 For most day-to-day questions, though, you do not need to leave your
 notebook. Four moves, repeated until the call behaves, cover almost

@@ -101,6 +101,13 @@ the ratio between a perturbation $h$
 and the change in the function value 
 $f(x + h) - f(x)$ converges to 
 as we shrink its size to zero.
+Geometrically, the difference quotient is the slope of the *secant* line
+through the points $(x, f(x))$ and $(x+h, f(x+h))$;
+as $h \rightarrow 0$, the secant pivots into the *tangent* line at $x$,
+whose slope is the derivative (:numref:`fig_calc_secant_tangent`).
+
+![As $h \to 0$, the secant line through $P$ and $Q$ pivots into the tangent line at $P$: the derivative is the slope of the tangent.](../img/calculus-secant-tangent.svg)
+:label:`fig_calc_secant_tangent`
 
 When $f'(x)$ exists, $f$ is said 
 to be *differentiable* at $x$;
@@ -159,6 +166,32 @@ for h in 10.0**np.arange(-1, -6, -1):
     print(f'h={h:.5f}, numerical limit={(f(1+h)-f(1))/h:.5f}')
 ```
 
+It is tempting to conclude that smaller $h$ is always better.
+Not so: in floating-point arithmetic,
+$f(x+h)$ and $f(x)$ become *nearly equal* numbers as $h$ shrinks,
+so their difference loses most of its significant digits
+to *cancellation*---and dividing by the tiny $h$
+amplifies whatever rounding noise remains.
+Continuing the sweep to much smaller $h$
+shows the approximation degrading and then failing outright:
+the error creeps into ever-higher digits, and once $h$ is so small
+that $1 + h$ rounds to exactly $1$,
+the quotient collapses to zero.
+
+```{.python .input #calculus-derivatives-and-differentiation-3}
+for exp in range(-6, -17, -1):
+    h = 10.0 ** exp
+    print(f'h={h:.0e}, numerical limit={(f(1+h)-f(1))/h:.5f}')
+```
+
+The numerical limit is thus caught between two error sources:
+truncation error (from $h$ being too large)
+and cancellation (from $h$ being too small).
+This is one important reason why the automatic differentiation
+introduced in the next section computes derivatives
+*analytically*, by applying differentiation rules,
+rather than by finite differences.
+
 There are several equivalent notational conventions for derivatives.
 Given $y = f(x)$, the following expressions are equivalent:
 
@@ -185,96 +218,24 @@ $$\frac{d}{dx} [3 x^2 - 4x] = 3 \frac{d}{dx} x^2 - 4 \frac{d}{dx} x = 6x - 4.$$
 
 Plugging in $x = 1$ shows that, indeed, 
 the derivative equals $2$ at this location. 
+We state these derivatives and rules without proof for now;
+each follows from the limit definition,
+as shown in :numref:`sec_mdl-single_variable_calculus`,
+which also collects a longer table of common derivatives.
 Note that derivatives tell us 
 the *slope* of a function 
-at a particular location.  
+at a particular location.
 
-## Visualization Utilities
-
-We can visualize the slopes of functions using the `matplotlib` library.
-We need to define a few functions. 
-As its name indicates, `use_svg_display` 
-tells `matplotlib` to output graphics 
-in SVG format for crisper images. 
-The comment `#@save` is a special modifier 
-that allows us to save any function, 
-class, or other code block to the `d2l` package 
-so that we can invoke it later 
-without repeating the code, 
-e.g., via `d2l.use_svg_display()`.
-
-```{.python .input #calculus-visualization-utilities-1}
-def use_svg_display():  #@save
-    """Use the svg format to display a plot in Jupyter."""
-    backend_inline.set_matplotlib_formats('svg')
-```
-
-Conveniently, we can set figure sizes with `set_figsize`. 
-Since the import statement `from matplotlib import pyplot as plt` 
-was marked via `#@save` in the `d2l` package, we can call `d2l.plt`.
-
-```{.python .input #calculus-visualization-utilities-2}
-def set_figsize(figsize=(3.5, 2.5)):  #@save
-    """Set the figure size for matplotlib."""
-    use_svg_display()
-    d2l.plt.rcParams['figure.figsize'] = figsize
-```
-
-The `set_axes` function can associate axes
-with properties, including labels, ranges,
-and scales.
-
-```{.python .input #calculus-visualization-utilities-3}
-#@save
-def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
-    """Set the axes for matplotlib."""
-    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
-    axes.set_xscale(xscale), axes.set_yscale(yscale)
-    axes.set_xlim(xlim),     axes.set_ylim(ylim)
-    if legend:
-        axes.legend(legend)
-    axes.grid()
-```
-
-With these three functions, we can define a `plot` function 
-to overlay multiple curves. 
-Much of the code here is just ensuring 
-that the sizes and shapes of inputs match.
-
-```{.python .input #calculus-visualization-utilities-4}
-#@save
-def plot(X, Y=None, xlabel=None, ylabel=None, legend=[], xlim=None,
-         ylim=None, xscale='linear', yscale='linear',
-         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None):
-    """Plot data points."""
-
-    def has_one_axis(X):  # True if X (tensor or list) has 1 axis
-        return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
-                and not hasattr(X[0], "__len__"))
-    
-    if has_one_axis(X): X = [X]
-    if Y is None:
-        X, Y = [[]] * len(X), X
-    elif has_one_axis(Y):
-        Y = [Y]
-    if len(X) != len(Y):
-        X = X * len(Y)
-        
-    set_figsize(figsize)
-    if axes is None:
-        axes = d2l.plt.gca()
-    axes.cla()
-    for x, y, fmt in zip(X, Y, fmts):
-        axes.plot(x,y,fmt) if len(x) else axes.plot(y,fmt)
-    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
-```
-
-Now we can plot the function $u = f(x)$ and its tangent line $y = 2x - 3$ at $x=1$,
+We can make that slope visible by plotting the function
+$u = f(x)$ together with its tangent line $y = 2x - 3$ at $x=1$,
 where the coefficient $2$ is the slope of the tangent line.
+We use `d2l.plot`, one of a handful of matplotlib helpers
+that we define at the end of this section
+and reuse throughout the book.
 
 ```{.python .input #calculus-visualization-utilities-5}
 x = np.arange(0, 3, 0.1)
-plot(x, [f(x), 2 * x - 3], 'x', 'f(x)', legend=['f(x)', 'Tangent line (x=1)'])
+d2l.plot(x, [f(x), 2 * x - 3], 'x', 'f(x)', legend=['f(x)', 'Tangent line (x=1)'])
 ```
 
 ## Partial Derivatives and Gradients
@@ -327,18 +288,44 @@ $\nabla_{\mathbf{x}} f(\mathbf{x})$
 is typically replaced 
 by $\nabla f(\mathbf{x})$.
 
-Geometrically, the gradient has a crucial interpretation:
+What if we move away from $\mathbf{x}$
+in an arbitrary unit direction $\mathbf{u}$,
+rather than along a coordinate axis?
+The rate of change of $f$ along $\mathbf{u}$,
+called the *directional derivative*,
+is the dot product $\nabla f(\mathbf{x})^\top \mathbf{u}$.
+By the cosine formula for dot products
+from :numref:`sec_linear-algebra`,
+this is largest when $\mathbf{u}$ aligns with the gradient.
+
+Hence the gradient has a crucial geometric interpretation:
 it points in the direction of *steepest ascent* of $f$,
-i.e., the direction in which the function grows fastest.
+i.e., the direction in which the function grows fastest
+(a claim proved via the Cauchy--Schwarz inequality
+in :numref:`sec_mdl-multivariable_calculus`).
 To *decrease* $f$ as quickly as possible
 we therefore take a small step in the opposite direction,
 along the *negative* gradient $-\nabla f(\mathbf{x})$.
 This is the entire idea behind *gradient descent*:
 every optimizer in this book repeatedly nudges the parameters
 a little way along $-\nabla f$ in order to reduce the loss.
+:numref:`fig_calc_gradient_field` shows the picture to keep in mind:
+gradients are perpendicular to the level sets of $f$
+and point uphill, so $-\nabla f$ points downhill.
+
+![Level sets of a function with its gradient field: $\nabla f$ is perpendicular to the contours and points uphill, so $-\nabla f$ is the direction of steepest descent.](../img/calculus-gradient-field.svg)
+:label:`fig_calc_gradient_field`
 
 The following rules come in handy 
 for differentiating multivariate functions.
+The first involves a *vector-valued* function
+$\mathbf{u} = \mathbf{A}\mathbf{x}$:
+here we collect the partial derivatives
+$\partial u_j / \partial x_i$ into a matrix,
+and by convention we write
+$\nabla_{\mathbf{x}} \mathbf{A} \mathbf{x} = \mathbf{A}^\top$
+(the transpose of the *Jacobian*,
+developed in :numref:`sec_mdl-matrix-calculus-autodiff`).
 
 * For all $\mathbf{A} \in \mathbb{R}^{m \times n}$ we have $\nabla_{\mathbf{x}} \mathbf{A} \mathbf{x} = \mathbf{A}^\top$ and $\nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{A}  = \mathbf{A}$.
 * For square matrices $\mathbf{A} \in \mathbb{R}^{n \times n}$ we have that $\nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{A} \mathbf{x}  = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}$ and in particular
@@ -346,6 +333,8 @@ $\nabla_{\mathbf{x}} \|\mathbf{x} \|^2 = \nabla_{\mathbf{x}} \mathbf{x}^\top \ma
 
 Similarly, for any matrix $\mathbf{X}$, 
 we have $\nabla_{\mathbf{X}} \|\mathbf{X} \|_\textrm{F}^2 = 2\mathbf{X}$. 
+These identities (and many more) are derived, not merely stated,
+in :numref:`sec_mdl-matrix-calculus-autodiff`.
 
 
 
@@ -392,7 +381,75 @@ This is one of the key reasons why linear algebra
 is such an integral building block 
 in building deep learning systems. 
 
+### Plotting Utilities for This Book
 
+Earlier we plotted a function and its tangent line with `d2l.plot`.
+Here is the small set of matplotlib helpers behind it,
+which the book reuses whenever it draws a curve.
+The `#@save` comment is a special modifier that stores a function,
+class, or code block in the `d2l` package,
+so that later sections can invoke it
+(e.g., as `d2l.plot`) without repeating the code.
+`use_svg_display` requests crisp SVG output,
+`set_figsize` sets the figure size,
+and `set_axes` configures labels, ranges, and scales.
+You do not need to study these---skim and move on.
+
+```{.python .input #calculus-visualization-utilities-1}
+def use_svg_display():  #@save
+    """Use the svg format to display a plot in Jupyter."""
+    backend_inline.set_matplotlib_formats('svg')
+```
+
+```{.python .input #calculus-visualization-utilities-2}
+def set_figsize(figsize=(3.5, 2.5)):  #@save
+    """Set the figure size for matplotlib."""
+    use_svg_display()
+    d2l.plt.rcParams['figure.figsize'] = figsize
+```
+
+```{.python .input #calculus-visualization-utilities-3}
+#@save
+def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
+    """Set the axes for matplotlib."""
+    axes.set_xlabel(xlabel), axes.set_ylabel(ylabel)
+    axes.set_xscale(xscale), axes.set_yscale(yscale)
+    axes.set_xlim(xlim),     axes.set_ylim(ylim)
+    if legend:
+        axes.legend(legend)
+    axes.grid()
+```
+
+Finally, `plot` overlays multiple curves;
+most of its body just aligns the shapes of its inputs.
+
+```{.python .input #calculus-visualization-utilities-4}
+#@save
+def plot(X, Y=None, xlabel=None, ylabel=None, legend=[], xlim=None,
+         ylim=None, xscale='linear', yscale='linear',
+         fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None):
+    """Plot data points."""
+
+    def has_one_axis(X):  # True if X (tensor or list) has 1 axis
+        return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
+                and not hasattr(X[0], "__len__"))
+    
+    if has_one_axis(X): X = [X]
+    if Y is None:
+        X, Y = [[]] * len(X), X
+    elif has_one_axis(Y):
+        Y = [Y]
+    if len(X) != len(Y):
+        X = X * len(Y)
+        
+    set_figsize(figsize)
+    if axes is None:
+        axes = d2l.plt.gca()
+    axes.cla()
+    for x, y, fmt in zip(X, Y, fmts):
+        axes.plot(x,y,fmt) if len(x) else axes.plot(y,fmt)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
+```
 
 ## Discussion
 

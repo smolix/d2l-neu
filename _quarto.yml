@@ -247,6 +247,7 @@ book:
         - chapter_mdl-calculus/mdl-integral-calculus.qmd
         - chapter_mdl-optimization/index.qmd
         - chapter_mdl-optimization/mdl-gradient-based-optimization.qmd
+        - chapter_mdl-optimization/mdl-adaptive-stochastic-methods.qmd
         - chapter_mdl-optimization/mdl-convexity.qmd
         - chapter_mdl-optimization/mdl-constrained-optimization-duality.qmd
         - chapter_mdl-optimization/mdl-numerical-stability-conditioning.qmd
@@ -255,6 +256,7 @@ book:
         - chapter_mdl-probability-statistics/mdl-distributions.qmd
         - chapter_mdl-probability-statistics/mdl-maximum-likelihood.qmd
         - chapter_mdl-probability-statistics/mdl-statistics.qmd
+        - chapter_mdl-probability-statistics/mdl-concentration-generalization.qmd
         - chapter_mdl-probability-statistics/mdl-naive-bayes.qmd
         - chapter_mdl-information-theory/index.qmd
         - chapter_mdl-information-theory/mdl-information-theory.qmd

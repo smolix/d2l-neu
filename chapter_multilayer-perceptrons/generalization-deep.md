@@ -165,9 +165,10 @@ traditional complexity-based generalization bounds,
 e.g., those based on the VC dimension
 or Rademacher complexity of a hypothesis class,
 cannot explain why neural networks generalize.
-(We develop the mechanics of these classical bounds,
-including VC dimension and Rademacher complexity,
-in :numref:`chap_classification_generalization`.)
+(:numref:`chap_classification_generalization` introduces these ideas;
+the mechanics of the classical bounds---concentration of measure,
+uniform convergence, and Rademacher complexity, with proofs---are
+developed in :numref:`sec_mdl-concentration-generalization`.)
 
 ### Double Descent
 
@@ -178,11 +179,10 @@ and then rises (we begin overfitting),
 with a sweet spot in between
 (recall :numref:`fig_capacity_vs_error` from :numref:`sec_generalization_basics`).
 Deep networks do not obey this.
-As we keep adding capacity past the point
-where the model can exactly fit the training set,
-the so-called *interpolation threshold*,
-where the number of parameters is roughly the number of training examples,
-the test error first spikes sharply at the threshold
+As we keep adding capacity past the *interpolation threshold*---the
+point where the model can exactly fit the training set,
+roughly where the parameter count matches the number of training
+examples---the test error first spikes sharply
 and then *descends a second time*,
 often dropping below the classical sweet spot.
 This non-monotone, two-valley shape is called *double descent*
@@ -195,20 +195,18 @@ but also as we train for more epochs or add more data
 :label:`fig_double_descent`
 
 Why should bigger be better past the point of perfectly fitting the data?
-The interpolation threshold is where a model has *just barely* enough
-capacity to fit the training set: it is forced into a single,
-often jagged, high-variance solution.
-Past the threshold there are *many* parameter settings
-that interpolate the data,
-and the training procedure, gradient descent from a small initialization,
-selects among them,
-favouring smooth, small-norm solutions that happen to generalize.
-The phenomenon thus reframes "more capacity"
-not as "more overfitting" but as
+In brief: at the threshold the model has *just barely* enough capacity,
+so it is forced into a single, often jagged, high-variance interpolant;
+past it there are *many* parameter settings that interpolate the data,
+and the training procedure selects a smooth, small-norm one
+that happens to generalize---"more capacity" becomes
 "more room for the optimizer to find a simple interpolant."
-It is the cleanest single picture of why the classical complexity
-intuition fails for deep networks,
-and we return below to *why* gradient descent prefers such solutions.
+The mathematics of this mechanism---why the spike sits exactly at the
+threshold, why the *norm* of the solution rather than its parameter
+count is the capacity that matters, and a reproduction of the entire
+double-descent curve in twenty-five lines---is developed
+in :numref:`sec_mdl-concentration-generalization`;
+we return below to *why* gradient descent prefers such solutions.
 
 ## Inspiration from Nonparametrics
 

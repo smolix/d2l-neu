@@ -202,7 +202,8 @@ i.e., how the relationship between $\epsilon_\mathcal{D}$ and $\epsilon$
 evolves as our sample size goes to infinity.
 Fortunately, because our random variable is bounded,
 we can obtain valid finite sample bounds
-by applying an inequality due to Hoeffding (1963):
+by applying an inequality due to Hoeffding (1963),
+proved in :numref:`sec_mdl-concentration-generalization`:
 
 $$P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \geq t\right) < 2\exp\left( - 2n t^2 \right).$$
 

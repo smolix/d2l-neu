@@ -967,7 +967,9 @@ Likewise two independent draws $\mathbf x,\mathbf y$ are *nearly orthogonal*:
 their cosine has mean $0$ and standard deviation $\approx1/\sqrt d$---the
 concentration-of-angles proposition of
 :numref:`sec_mdl-geometry-linear-algebraic-ops` in probabilistic clothing
-:cite:`Vershynin.2018`. Both facts are load-bearing in practice:
+:cite:`Vershynin.2018`---and both get their full quantitative treatment, with
+exponential tail bounds, in :numref:`sec_mdl-concentration-generalization`.
+Both facts are load-bearing in practice:
 weight-initialization schemes scale by $1/\sqrt{d}$ precisely so that
 $\|\mathbf W\mathbf x\|$ stays comparable to $\|\mathbf x\|$ layer after layer;
 cosine similarity between embeddings is informative because unrelated

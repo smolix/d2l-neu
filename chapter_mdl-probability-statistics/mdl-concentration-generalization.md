@@ -1070,3 +1070,477 @@ predicts a given network's test error from first principles remains open.
    which bound is doing the same job, and where do the two analyses differ?
 
 [Discussions](https://d2l.discourse.group/t/concentration-and-generalization)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §25.5]{.kicker}
+
+Why averages can be trusted, and when learners cannot<br>**exponential tails · high dimension · uniform convergence · double descent**.
+:::
+:::
+
+::: {.slide title="Polynomial tails are not enough"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Everything so far decays polynomially: Chebyshev caps a sample mean's
+miss probability at $\sigma^2/(nt^2)$ — certifying $10^{-6}$ costs a
+*million* times the data of certifying $10^0$. The truth for bounded
+data is **exponential** in $n$, and this section proves it.
+
+The stakes: the main book bounded test-set error with Hoeffding's
+inequality *on faith* (§4.6). Here we pay the debt — then follow the
+same machinery into high dimension and out to generalization itself.
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-chebyshev
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[From Chebyshev to Chernoff]{.dtitle}
+
+[one trick: Markov's inequality, after an exponential]{.dsub}
+:::
+:::
+
+::: {.slide title="The Chernoff method sees every moment at once"}
+[Chernoff]{.kicker}
+
+Chebyshev sees only the second moment; a tail decaying like $e^{-ct^2}$
+must see them all. The MGF $M(\lambda)=E[e^{\lambda X}]$ packages every
+moment, and Markov applied to $e^{\lambda X}$ (a monotone transform)
+converts a bound on it into a tail:
+
+$$P(X \ge t) \;\le\; \inf_{\lambda>0}\; e^{-\lambda t}\, M(\lambda).$$
+
+. . .
+
+::: {.d2l-note .rule}
+The power move: for a **sum** of independent terms the MGF *factors*, so
+the exponent grows linearly in $n$ — optimizing $\lambda$ turns that into
+exponential decay. Everything in this section is this display plus a good
+MGF bound.
+:::
+:::
+
+::: {.slide title="Hoeffding's lemma: bounded ⇒ sub-Gaussian"}
+[Hoeffding]{.kicker}
+
+For centered $X \in [a,b]$:
+$\;E[e^{\lambda X}] \le \exp\bigl(\lambda^2(b-a)^2/8\bigr)$ — an MGF *no
+worse than a Gaussian's* with $\sigma = (b-a)/2$.
+
+. . .
+
+*Proof idea.* $\psi(\lambda) = \log E[e^{\lambda X}]$ has
+$\psi(0)=\psi'(0)=0$, and $\psi''(\lambda)$ is the variance of $X$ under
+an exponentially **tilted** distribution — still supported in $[a,b]$, so
+$\psi'' \le (b-a)^2/4$ everywhere. Taylor with remainder gives
+$\psi(\lambda) \le \lambda^2(b-a)^2/8$. $\blacksquare$
+
+::: {.d2l-note}
+The one-line fact doing the work: any variable supported in $[a,b]$ has
+variance at most $\bigl(\tfrac{b-a}{2}\bigr)^2$.
+:::
+:::
+
+::: {.slide title="Hoeffding's inequality, in four lines"}
+[Hoeffding]{.kicker}
+
+Independent $X_i \in [a,b]$, $\bar X$ their average:
+
+$$P\bigl(|\bar X - E[\bar X]| \ge t\bigr)
+\;\le\; 2\exp\!\left(-\frac{2nt^2}{(b-a)^2}\right).$$
+
+. . .
+
+*Proof.* Chernoff + independence (MGFs multiply) + the lemma give
+exponent $-\lambda n t + n\lambda^2(b-a)^2/8$ — a parabola in $\lambda$,
+minimized at $\lambda = 4t/(b-a)^2$ with value $-2nt^2/(b-a)^2$. The
+other tail by symmetry; union bound supplies the $2$. $\blacksquare$
+
+::: {.d2l-note .rule}
+No Gaussianity, no variance estimate, no asymptotics — only boundedness
+and independence, at **every finite $n$**.
+:::
+:::
+
+::: {.slide title="The Chapter 4 debt, paid"}
+[Hoeffding]{.kicker}
+
+Inverted, Hoeffding is a *finite-sample confidence interval*: with
+probability $1-\delta$,
+
+$$|\bar X - E[\bar X]| \;\le\; (b-a)\sqrt{\frac{\log(2/\delta)}{2n}}.$$
+
+. . .
+
+§4.6 demanded a test-set error estimate within $t=0.01$ at
+$\delta = 0.05$ and quoted "roughly 18,500 examples." Solve
+$2e^{-2nt^2} \le \delta$:
+
+$$n = \frac{\log(2/\delta)}{2t^2} \approx 18{,}445.$$
+
+A citation is now a theorem — and unlike the Gaussian interval of §25.4,
+its coverage is a guarantee at every $n$, not an asymptote.
+:::
+
+::: {.slide title="Names for the well-behaved: sub-Gaussian and friends"}
+[The zoo]{.kicker}
+
+$X$ is **sub-Gaussian** with proxy $\sigma^2$ if
+$E[e^{\lambda(X-EX)}] \le e^{\lambda^2\sigma^2/2}$ — Chernoff then gives
+$P(|X-EX| \ge t) \le 2e^{-t^2/(2\sigma^2)}$. Three families:
+Gaussians (proxy $\sigma^2$, exactly), bounded variables (proxy
+$(b-a)^2/4$, the lemma), random signs (proxy $1$).
+
+. . .
+
+::: {.d2l-note}
+*Squares* of Gaussians — hence squared norms — are only
+**sub-exponential**: Gaussian rate for small deviations, $e^{-ct}$ for
+large. **Bernstein's inequality** covers them and spends the *true*
+variance where Hoeffding must budget for the worst case.
+:::
+:::
+
+::: {.slide title="The tail race: rates always beat constants" layout="tight"}
+[Measured — the fair coin's exact tail vs. both bounds]{.kicker}
+
+@!mdl-concentration-generalization-the-tail-race-in-code
+
+By $n=1000$ Chebyshev is off by **seven orders of magnitude**; by
+$n=5000$, forty.
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Probability in high dimension]{.dtitle}
+
+[thin shells and orthogonal-by-default directions]{.dsub}
+:::
+:::
+
+::: {.slide title="A high-dimensional Gaussian is a thin shell"}
+[Geometry]{.kicker}
+
+$\|\mathbf x\|^2$ is a sum of $d$ mean-$1$ terms — a sample-mean problem
+with sub-exponential summands, and the Bernstein-flavored Chernoff gives
+
+$$P\!\left(\Bigl|\tfrac{\|\mathbf x\|}{\sqrt d} - 1\Bigr| \ge \varepsilon\right)
+\;\le\; 2\,e^{-d\varepsilon^2/8}.$$
+
+. . .
+
+The density peaks at the origin, but shell volume grows like $r^{d-1}$:
+the fight is settled at $r \approx \sqrt d$, and the shell's thickness is
+$O(1)$ — *independent of $d$*.
+
+::: {.d2l-note}
+At $d=784$ a typical draw has norm within a few percent of $28$; a draw
+below norm $14$ is rarer than $2e^{-24}$. **The mode is not the mass.**
+:::
+:::
+
+::: {.slide title="Random directions are orthogonal by default"}
+[Geometry]{.kicker}
+
+For a unit $\mathbf u$, the inner product
+$\langle\mathbf x,\mathbf u\rangle = \sum_i u_i x_i$ is *Hoeffding
+again* (ranges $|u_i|$, $\sum u_i^2 = 1$):
+
+$$P\bigl(|\langle\mathbf x,\mathbf u\rangle| \ge s\bigr) \le 2e^{-s^2/2},$$
+
+so the cosine is $O(1/\sqrt d)$ with exponentially high probability.
+
+. . .
+
+::: {.d2l-note .rule}
+Among $n$ points there are $< n^2$ pairs, and a **union bound** flattens
+*every* pairwise distance into a $(1\pm\varepsilon)$ band once
+$d \gtrsim \tfrac{8}{\varepsilon^2}\log\tfrac{2n^2}{\delta}$ — dimension
+only logarithmic in $n$. File the move away: one tail $\to$ many objects,
+at log cost. It is how learning bounds are built.
+:::
+:::
+
+::: {.slide title="Measuring the shell"}
+[Measured]{.kicker}
+
+What *fraction* of the mass sits in the $\pm10\%$ shell, and what happens
+to nearest-neighbor contrast:
+
+@!mdl-concentration-generalization-measuring-the-shell
+
+$d=2$ really is a fuzzy ball (under $15\%$ in the shell, contrast $29$);
+at $d=2000$ **not one of ten thousand draws** left the shell and the
+farthest of $200$ points is only $8\%$ farther than the nearest.
+
+::: {.d2l-note}
+Why $1/\sqrt d$ initialization holds *for essentially every draw*, why
+cosine similarity is informative, why latent interpolation follows the
+sphere — and why real embeddings must have structure to be searchable.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Uniform convergence]{.dtitle}
+
+[the function chosen after the data]{.dsub}
+:::
+:::
+
+::: {.slide title="The function chosen after the data"}
+[The pivot]{.kicker}
+
+Hoeffding certifies **one fixed function**: choose $f$, *then* draw the
+sample. A test set works precisely because it respects this order.
+
+. . .
+
+A *learner* violates it by construction: it searches $\mathcal F$ and
+returns the $\hat f$ that looks best *on the sample it saw* — a minimum
+of fluctuating quantities, selected exactly where the fluctuation
+flatters. The quantity that must concentrate is the worst case,
+
+$$\sup_{f\in\mathcal F}\;\bigl|\hat R(f) - R(f)\bigr|.$$
+
+::: {.d2l-note .warn}
+Test-set **reuse** is the same trap in different clothes: an analyst who
+tries many models on one test set *is* a learner over the class of models
+tried.
+:::
+:::
+
+::: {.slide title="log |F| is the price of choice"}
+[Finite classes]{.kicker}
+
+For finite $\mathcal F$, Hoeffding + a union bound over $|\mathcal F|$
+bad events: with probability $1-\delta$, simultaneously for every $f$,
+
+$$\bigl|\hat R(f) - R(f)\bigr|
+\;\le\; \sqrt{\frac{\log(2|\mathcal F|/\delta)}{2n}}.$$
+
+. . .
+
+Each bit of selection freedom costs one bit's worth of sample — but under
+the square root: $2{,}000$ hyperparameter configs on a $10{,}000$-point
+validation set move the guarantee only from $0.014$ to $0.023$. A million
+*adaptive* leaderboard submissions quietly triple it.
+:::
+
+::: {.slide title="Rademacher complexity: correlate with coin flips"}
+[Infinite classes]{.kicker}
+
+Real classes are infinite, so ask a question a learner can act on: how
+well can $\mathcal F$ correlate with **pure noise**?
+
+$$\widehat{\mathfrak R}_S(\mathcal F)
+= E_{\boldsymbol\varepsilon}\Bigl[\sup_{f\in\mathcal F}
+\tfrac1n\textstyle\sum_i \varepsilon_i f(\mathbf x_i)\Bigr],
+\qquad
+R(f) \le \hat R(f) + 2\,\mathfrak R_n(\mathcal F)
++ \sqrt{\tfrac{\log(1/\delta)}{2n}}.$$
+
+A class that can chase coin flips can chase the noise in real labels; one
+that cannot has trustworthy empirical risks.
+
+::: {.d2l-note}
+The factor $2$ is **symmetrization**: a ghost sample plus the swap trick
+conjures the random signs out of a statement that contains none;
+McDiarmid lifts it to high probability.
+:::
+:::
+
+::: {.slide title="The linear class: capacity is Br/√n"}
+[The punchline]{.kicker}
+
+For $\mathcal F = \{\mathbf x \mapsto \langle\mathbf w,\mathbf x\rangle :
+\|\mathbf w\| \le B\}$ on data with $\|\mathbf x_i\| \le r$, the supremum
+is Cauchy--Schwarz in closed form, and independent signs kill the cross
+terms:
+
+$$\widehat{\mathfrak R}_S
+= \frac Bn\,E\Bigl\|\sum_i \varepsilon_i \mathbf x_i\Bigr\|
+\;\le\; \frac{B\,r}{\sqrt n}.$$
+
+. . .
+
+::: {.d2l-note .rule}
+Look at what is **absent**: the dimension $d$. A million features and ten
+features have the same capacity if the norms match. **Norm, not parameter
+count, controls capacity** — the theory behind weight decay, and the key
+to double descent below.
+:::
+:::
+
+::: {.slide title="Coin flips in code"}
+[Measured]{.kicker}
+
+Monte-Carlo Rademacher complexity of the unit-norm linear class — and
+the Zhang phenomenon in miniature, an interpolating class fed
+$2{,}000$ sets of coin flips:
+
+@!mdl-concentration-generalization-coin-flips-in-code
+
+The bound $0.1414$ is within $2\%$ of the truth. The interpolating class
+scores correlation $1.0000$ on *every* flip set — and its own printout
+prices the damage: the smallest linear class containing those fits has
+$Br/\sqrt n \approx 1.41 > 1$. Vacuous, as it must be.
+:::
+
+::: {.slide title="Why the bounds go vacuous — and what survives"}
+[Honesty]{.kicker}
+
+Zhang et al. trained standard architectures to zero training error on
+**randomly shuffled labels**: the class "this architecture, trained by
+SGD" correlates perfectly with coin flips, so its Rademacher complexity
+is $\approx 1$ and the bound certifies nothing.
+
+. . .
+
+File it correctly: a fact about *these bounds* — uniform convergence over
+the entire representable class — not about the framework. The same
+network generalizes on real labels, so what needs explaining is the
+**reached solution**, not the reachable set.
+
+::: {.d2l-note}
+Capacity is not what the class *has* but what the data *forces it to
+spend* — the next act makes that exact in a model small enough to solve.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Interpolation and double descent]{.dtitle}
+
+[past the threshold, the norm takes over]{.dsub}
+:::
+:::
+
+::: {.slide title="The U-curve assumes you cannot fit"}
+[Double descent]{.kicker}
+
+Bias–variance and uniform convergence both tacitly assume the model
+*cannot* fit the training data perfectly. Modern practice lives on the
+other side: past the **interpolation threshold** $p = n$, empirical risk
+is identically zero for every model in sight — and the observed test
+error *falls again* as capacity grows.
+
+. . .
+
+The smallest model that shows it: **random-features regression** —
+$\phi(\mathbf x) = \mathrm{ReLU}(\mathbf V\mathbf x)$ with $\mathbf V$
+random and frozen, head fit by the pseudoinverse: least squares below the
+threshold, the **minimum-norm interpolant** above it.
+:::
+
+::: {.slide title="The peak is a conditioning event, not a mystery"}
+[Double descent]{.kicker}
+
+At $p = n$ the feature matrix is square and almost never *well*
+invertible: interpolation divides the labels' noise by a tiny
+$\sigma_{\min}$, the norm explodes, the test error spikes.
+
+. . .
+
+Beyond it, nested features give an exact monotonicity — any interpolant
+at $p$ pads with a zero to one at $p+1$, so
+
+$$\bigl\|\mathbf w^{(p+1)}_{\min}\bigr\| \;\le\; \bigl\|\mathbf w^{(p)}_{\min}\bigr\| :$$
+
+**more features let the minimum-norm interpolant get smaller.** Recall
+$Br/\sqrt n$: the capacity that matters is the norm, so effective
+capacity *falls* as $p$ grows. The second descent is classical theory
+applied to the right complexity measure.
+:::
+
+::: {.slide title="Double descent in twenty-five lines" layout="tight"}
+[Measured — forty noisy points, ReLU random features, swept through p = n]{.kicker}
+
+@!mdl-concentration-generalization-double-descent-in-twenty-five-lines
+:::
+
+::: {.slide title="Only the norm can tell them apart"}
+[Double descent]{.kicker}
+
+Read the sweep's numbers against the mechanism: at $p = n = 40$ the
+train error hits $10^{-28}$ — exact interpolation — and the test error
+erupts to **33.6**, fifty times the classical minimum, with
+$\|\mathbf w\| = 18.5$. Then the norm falls monotonically to $0.39$ and
+the test error follows it down to **0.060** at $p=400$: *ten times
+better than the best underparameterized model*, from a model that fits
+noisy data exactly.
+
+. . .
+
+Past the threshold the train error is an identical $0$ everywhere: no
+empirical-risk criterion distinguishes the spiky $p=42$ model from the
+excellent $p=400$ one. The norm does — exactly as the Rademacher
+calculation predicts.
+:::
+
+::: {.slide title="Benign overfitting: when fitting noise is free"}
+[Double descent]{.kicker}
+
+The $p=400$ model reproduces every *corrupted* label exactly, yet tests
+best. The min-norm solution splits across the spectrum: a few strong
+singular directions carry the *signal*, and minimizing the norm spreads
+the interpolated *noise* across the many weak directions, where it
+barely contaminates new predictions.
+
+. . .
+
+Implicit regularization without a regularizer: overfitting is **benign**
+when the spectrum offers a few strong directions for the signal and a
+large reservoir of weak ones to absorb the noise.
+
+::: {.d2l-note}
+Made exact for linear regression (two effective ranks of the covariance);
+for deep networks — where the features are *learned* and reshape the
+spectrum — the theory is instructive but open.
+:::
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Chernoff:** Markov on $e^{\lambda X}$; independent sums factor the
+  MGF → exponential tails.
+- **Hoeffding:** $2e^{-2nt^2/(b-a)^2}$ pays §4.6's 18,500-example debt at
+  every finite $n$.
+- **High dimension:** thin shells, orthogonal-by-default directions.
+:::
+
+::: {.col}
+- **Choice has a price:** $\log|\mathcal F|$, then Rademacher; the linear
+  class costs $Br/\sqrt n$ — **norm, not parameter count**.
+- On interpolating classes the bounds are honestly **vacuous** (Zhang).
+- **Double descent:** a $\sigma_{\min}$ spike, then the min-norm
+  interpolant's norm falls — overfitting can be benign.
+:::
+:::
+
+::: {.d2l-note}
+One inequality, compounded: Hoeffding certifies the test set, the union
+bound prices the choice, and the norm is what generalization charges for.
+:::
+:::

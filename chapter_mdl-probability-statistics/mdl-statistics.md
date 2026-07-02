@@ -622,7 +622,7 @@ The two intervals answer different questions and do not overlap, a direct conseq
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §25.5]{.kicker}
+[Dive into Deep Learning · §25.4]{.kicker}
 
 Estimators, hypothesis tests, and confidence intervals<br>**statistics for practitioners**.
 :::
@@ -674,14 +674,20 @@ is it centered on the truth?
 ::: {.slide title="Bias and variance"}
 [Estimators]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 $$\operatorname{Bias}(\hat\theta_n) = \mathbb E[\hat\theta_n] - \theta,
-\qquad
+\quad
 \operatorname{Var}(\hat\theta_n) = \mathbb E\bigl[(\hat\theta_n - \mathbb E[\hat\theta_n])^2\bigr].$$
 
 Bias is a systematic offset (it does **not** wash out with more data);
 variance is measured against the estimator's own center, not the truth.
+:::
 
+::: {.col .fig}
 @fig:mdl-prob-sampling-distribution
+:::
+:::
 :::
 
 ::: {.slide title="Consistency and efficiency"}
@@ -806,14 +812,20 @@ $\alpha$ = significance (false positive); $1-\beta$ = power.
 ::: {.slide title="Significance and power"}
 [Testing]{.kicker}
 
-Fix $\alpha$ (often $0.05$) and target power (often $0.8$). The sample size
-to detect an effect scales as $n\propto 1/\delta^2$:
-
-@fig:mdl-prob-power
+::: {.cols .vc}
+::: {.col}
+Fix $\alpha$ (often $0.05$) and target power (often $0.8$). The sample
+size to detect an effect scales as $n\propto 1/\delta^2$.
 
 ::: {.d2l-note}
-A $0.01$ improvement needs tens of thousands of test examples to confirm —
-why marginal benchmark gains are fragile.
+A $0.01$ improvement needs tens of thousands of test examples to
+confirm — why marginal benchmark gains are fragile.
+:::
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-power
+:::
 :::
 :::
 
@@ -835,27 +847,35 @@ $P(H_0\mid\text{data})$.
 ::: {.slide title="The rejection region"}
 [Testing]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 $p = P_{H_0}\bigl(|T| \ge |t_{\text{obs}}|\bigr)$; land in the tails of
-total mass $\alpha$ and reject:
-
-@fig:mdl-prob-significance
+total mass $\alpha$ and reject.
 
 ::: {.d2l-note}
-Run $m$ tests and $P(\ge 1\text{ false win}) = 1-(1-\alpha)^m$. Bonferroni
-tests at $\alpha/m$; at ML scale, control the false-discovery rate.
+Run $m$ tests and $P(\ge 1\text{ false win}) = 1-(1-\alpha)^m$.
+Bonferroni tests at $\alpha/m$; at ML scale, control the
+false-discovery rate.
 :::
 :::
 
-::: {.slide title="A worked test: two models"}
+::: {.col .fig}
+@fig:mdl-prob-significance
+:::
+:::
+:::
+
+::: {.slide title="A worked test: two models" layout="tight"}
 [Testing]{.kicker}
 
-Under $H_0$ the labels are exchangeable, so **shuffle** them, recompute the
-accuracy gap, and repeat. The p-value is the fraction of shuffles at least
-as extreme:
+Is model B better, or lucky? Under $H_0$ the labels are exchangeable:
+**shuffle** them, recompute the gap, repeat $10{,}000$ times — the
+histogram *is* the null distribution, no Gaussian assumed:
 
-@statistics-permutation-test
+@!statistics-permutation-test
 
-The $0.73\%$ gap is real here — but only just, with $20$ seeds.
+The observed $0.73\%$ gap sits in the far tail: $p\approx 0.02$, real —
+but only just, with $20$ seeds.
 :::
 
 ::: {.slide}
@@ -871,14 +891,22 @@ The $0.73\%$ gap is real here — but only just, with $20$ seeds.
 ::: {.slide title="What a confidence interval is"}
 [Intervals]{.kicker}
 
-A random interval $C_n$ with $P_\theta(C_n \ni \theta)\ge 1-\alpha$ for all
-$\theta$. The **interval** is random; $\theta$ is fixed.
-
-. . .
+::: {.cols .vc}
+::: {.col}
+A random interval $C_n$ with $P_\theta(C_n \ni \theta)\ge 1-\alpha$ for
+all $\theta$. The **interval** is random; $\theta$ is fixed.
 
 Correct reading: across many repetitions, $95\%$ of the constructed
-intervals trap $\theta$ — *not* that this one does with probability $0.95$
-(that is a Bayesian credible interval, which needs a prior).
+intervals trap $\theta$ — *not* that this one does with probability
+$0.95$ (that is a Bayesian credible interval, which needs a prior).
+Nothing about a single interval announces whether it is one of the
+lucky ones.
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-coverage
+:::
+:::
 :::
 
 ::: {.slide title="The Gaussian interval"}
@@ -898,17 +926,61 @@ error bar.
 :::
 :::
 
+::: {.slide title="Auditing the 95%"}
+[Intervals]{.kicker}
+
+"Roughly $95\%$ of the time" is the Neyman guarantee, and it is checkable:
+one thousand fresh datasets, one interval each, count the hits:
+
+@!mdl-statistics-a-gaussian-example-1
+
+. . .
+
+The honest target is in fact $\approx 947$, not $950$: at $n=100$ the
+exact $t$-quantile is a touch wider than $1.96$. This count is the
+coverage picture rendered as a number — the *only* sense in which any
+interval is ever "$95\%$ sure."
+:::
+
+::: {.slide title="Error bars propagate through functions"}
+[Intervals]{.kicker}
+
+Reporting $g(\hat\theta)$ instead of $\hat\theta$? First-order Taylor
+says the fluctuation scales by the local slope — the **delta method**:
+
+$$\operatorname{se}\bigl(g(\hat\theta)\bigr) \;\approx\;
+\bigl|g'(\hat\theta)\bigr|\;\operatorname{se}(\hat\theta).$$
+
+. . .
+
+Accuracy $\hat p = 0.90$ on $n=1000$ examples has
+$\operatorname{se} \approx 0.0095$; reported as log-odds, the slope
+$1/(\hat p(1-\hat p)) \approx 11.1$ stretches the error bar to
+$\approx 0.105$.
+
+::: {.d2l-note}
+A gradient replaces $g'$ for vector parameters — and when no derivative
+is convenient, the bootstrap (next) sidesteps the calculus entirely.
+:::
+:::
+
 ::: {.slide title="The bootstrap: any statistic, no formula"}
 [Intervals]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Substitute the empirical distribution for the unknown one: resample $n$
-points **with replacement**, recompute the statistic, repeat:
-
-@fig:mdl-prob-bootstrap
+points **with replacement**, recompute the statistic, repeat.
 
 ::: {.d2l-note .rule}
 Works for the median, AUC, accuracy, BLEU — anywhere no closed-form
 standard error exists.
+:::
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-bootstrap
+:::
 :::
 :::
 
@@ -917,14 +989,14 @@ standard error exists.
 
 The bootstrap SE and a percentile interval for a skewed sample's median:
 
-@statistics-bootstrap
+@!statistics-bootstrap
 
 . . .
 
 The mean's Gaussian interval lands elsewhere — same data, different
 statistic, different answer:
 
-@statistics-bootstrap-contrast
+@!statistics-bootstrap-contrast
 :::
 
 ::: {.slide title="Recap"}

@@ -1420,7 +1420,7 @@ attention weights, with complementary slackness choosing the zeros.
 @!constrained-simplex-projection
 
 ::: {.d2l-note}
-Three coordinates came back **exactly zero**, the active sign constraints;
+Two coordinates came back **exactly zero**, the active sign constraints;
 every KKT residual sits at machine precision.
 :::
 :::
@@ -1483,32 +1483,48 @@ Relax constraint $i$ by a unit and the optimum improves by $\lambda_i^\star$.
 Slack constraints cost nothing; only binding ones command a price.
 :::
 
+::: {.slide title="Strong duality is a saddle point"}
+[Duality]{.kicker}
+
+The primal is $\inf_{\mathbf{x}} \sup_{\boldsymbol{\lambda} \succeq 0} \mathcal{L}$
+in disguise (a violated constraint lets its multiplier blow the sup to
+$+\infty$); the dual plays the same game in the other order. Weak duality
+is the universal $\sup\inf \le \inf\sup$ --- *playing second is an
+advantage* --- and strong duality says the order of play does not matter:
+
+$$\mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda})
+\;\le\; \mathcal{L}(\mathbf{x}^\star, \boldsymbol{\lambda}^\star)
+\;\le\; \mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}^\star).$$
+
+. . .
+
+::: {.d2l-note}
+This is the shape of **minimax training**: GANs and adversarial training
+are $\min_{\boldsymbol{\theta}}\max_{\boldsymbol{\phi}}$ problems, and
+"does a saddle point exist?" is exactly "is there a duality gap?".
+Primal--dual methods descend in $\mathbf{x}$, ascend in
+$\boldsymbol{\lambda}$, and converge to the saddle.
+:::
+:::
+
 ::: {.slide title="Weight decay is a norm constraint"}
 [Duality at work]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 The two faces of $\ell_2$ regularization are one Lagrangian apart:
 
 $$\underbrace{\min_{\mathbf{w}}\, L(\mathbf{w}) + \lambda\|\mathbf{w}\|^2}_{\text{penalty}}
 \;\Longleftrightarrow\;
-\underbrace{\min_{\mathbf{w}}\, L(\mathbf{w}) \;\text{s.t.}\; \|\mathbf{w}\|^2 \le r^2}_{\text{constraint}}.$$
+\underbrace{\min_{\mathbf{w}}\, L(\mathbf{w}) \;\text{s.t.}\; \|\mathbf{w}\|^2 \le r^2}_{\text{constraint}}$$
 
-The penalty weight $\lambda$ **is** the multiplier of the norm
-constraint, so the shadow price reads $\lambda = -\partial p^\star/\partial r^2$:
-$\lambda$ prices the weight budget. Sweeping $\lambda$ traces the
-regularization path, and each $\lambda$ matches some radius $r$.
+--- same stationarity equation, $\lambda$ playing the multiplier:
+$\lambda = -\partial p^\star/\partial(r^2)$ prices the weight budget.
+Verified on ridge regression, where the theorem is exact:
+
+@!constrained-weight-decay
 
 ::: {.d2l-note}
-This is **weight decay** (§3.7), seen from the constraint side. The
-$\ell_1$ ball's *corner* meets the contours on an axis, so lasso zeros
-coordinates where ridge only shrinks them.
-:::
-:::
-
-::: {.col .fig}
-![Squared-loss contours meeting the $\ell_2$ ball tangentially off-axis (ridge, shrinks) and the $\ell_1$ diamond at a corner (lasso, sparsifies).](../img/mdl-linreg-ridge-geometry.svg){width=100%}
-:::
+One number, three readings: **weight decay** (§3.7), a norm budget's
+shadow price, and a Gaussian prior (§25.3).
 :::
 :::
 
@@ -1535,18 +1551,19 @@ support vectors. Primal meets dual at $10^{-16}$: strong duality, observed.
 
 ::: {.cols .vc}
 ::: {.col}
-Allocate power across noisy channels. KKT pours power until every wet
-channel reaches a **common level** $w$, leaving high-noise channels dry:
+Allocate power $P$ across noisy channels. KKT pours until every wet
+channel reaches a **common level** $w$ --- complementary slackness keeps
+high-noise channels dry:
 
 $$p_i^\star = \max(w - n_i,\, 0),
 \qquad \textstyle\sum_i \max(w - n_i, 0) = P.$$
 
-Bisection on $w$ finds it. The multiplier $\mu = 1/w$ is the marginal
-value of power, measured here by finite differences.
+The multiplier $\mu = 1/w$ is *literally* the marginal value of power ---
+the run below confirms it by finite differences, $0.697674$ both ways.
 :::
 
-::: {.col .fig}
-@!constrained-water-filling
+::: {.col .fig .big}
+@fig:mdl-opt-water-filling
 :::
 :::
 :::

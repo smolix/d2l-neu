@@ -1264,7 +1264,7 @@ gradient into a per-example sum (so SGD works):
 
 $$\ell(\boldsymbol\theta) = -\sum_{i=1}^n \log p(x_i\mid\boldsymbol\theta).$$
 
-@maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood
+@!maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood
 :::
 
 ::: {.slide}
@@ -1296,15 +1296,21 @@ minimizing cross-entropy to the data**.
 ::: {.slide title="MLE is a KL projection"}
 [KL geometry]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Cross-entropy splits into an irreducible floor plus a gap:
 
 $$\operatorname{CE}(\hat p_{\text{data}}, p_{\boldsymbol\theta})
 = H(\hat p_{\text{data}}) + D_{\mathrm{KL}}\bigl(\hat p_{\text{data}}\,\|\,p_{\boldsymbol\theta}\bigr).$$
 
-@fig:mdl-prob-mle-kl
-
 Training removes only the KL term, so the MLE is the model **closest in
 KL** to the empirical distribution.
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-mle-kl
+:::
+:::
 :::
 
 ::: {.slide title="Gaussian NLL = mean squared error"}
@@ -1362,6 +1368,22 @@ vectors — many weight settings express the same function.
 :::
 :::
 
+::: {.slide title="Asymptotic normality, watched"}
+[Estimator theory]{.kicker}
+
+Consistency says *where* $\hat{\boldsymbol\theta}$ lands; the sharper
+statement is *how tightly*:
+$\sqrt{n}\,(\hat{\boldsymbol\theta}-\boldsymbol\theta^\star)
+\xrightarrow{d} \mathcal N(\mathbf 0,\, I(\boldsymbol\theta^\star)^{-1})$.
+Twenty thousand coin datasets ($n=400$, $\theta^\star=0.7$), rescaled:
+
+@!mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works
+
+The histogram does not merely look bell-shaped — it lands on the
+*particular* Gaussian the theorem names, $\mathcal N(0,\,0.21)$: center,
+width, and height. Halving the error costs four times the data.
+:::
+
 ::: {.slide title="Fisher information"}
 [Curvature = information]{.kicker}
 
@@ -1395,7 +1417,7 @@ $$\operatorname{Var}(\tilde\theta) \ge \frac{1}{n\,I(\theta)}, \qquad
 
 A simulation lands right on the floor:
 
-@maximum-likelihood-fisher-information
+@!maximum-likelihood-fisher-information
 :::
 
 ::: {.slide}
@@ -1411,6 +1433,8 @@ A simulation lands right on the floor:
 ::: {.slide title="A Gaussian prior is weight decay"}
 [MAP]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Keep the prior; its negative log is a penalty on the NLL. A
 $\mathcal N(\mathbf 0,\tau^2 I)$ prior contributes
 $\tfrac{1}{2\tau^2}\|\boldsymbol\theta\|_2^2$:
@@ -1420,11 +1444,15 @@ $$\hat{\boldsymbol\theta}_{\text{MAP}} =
 -\textstyle\sum_i\log p(x_i\mid\boldsymbol\theta) +
 \tfrac{1}{2\tau^2}\|\boldsymbol\theta\|_2^2\Bigr].$$
 
-@fig:mdl-prob-map-prior
-
 ::: {.d2l-note}
-With Gaussian data this is **ridge regression**, $\lambda=\sigma^2/\tau^2$;
-a Laplace prior gives $\ell_1$ / sparsity.
+With Gaussian data this is **ridge regression**,
+$\lambda=\sigma^2/\tau^2$; a Laplace prior gives $\ell_1$ / sparsity.
+:::
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-map-prior
+:::
 :::
 :::
 
@@ -1469,15 +1497,21 @@ use that easy problem as a stepping stone.
 ::: {.slide title="The evidence lower bound"}
 [ELBO]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 For any $q(z)$, Jensen gives a lower bound whose gap is a KL:
 
 $$\log p(x;\boldsymbol\theta) =
 \underbrace{\mathbb E_q[\log p(x,z;\boldsymbol\theta)] + H(q)}_{\mathcal L(q,\boldsymbol\theta)}
-+ D_{\mathrm{KL}}\bigl(q(z)\,\|\,p(z\mid x;\boldsymbol\theta)\bigr).$$
-
-@fig:mdl-prob-elbo
++ D_{\mathrm{KL}}\bigl(q\,\|\,p(z\mid x)\bigr).$$
 
 The bound is tight exactly when $q$ is the posterior $p(z\mid x)$.
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-elbo
+:::
+:::
 :::
 
 ::: {.slide title="EM: coordinate ascent on the ELBO"}
@@ -1487,7 +1521,7 @@ The bound is tight exactly when $q$ is the posterior $p(z\mid x)$.
 **M-step** maximizes the expected complete-data log-likelihood. Each step
 raises the evidence, so it never decreases:
 
-@maximum-likelihood-em-gmm
+@!maximum-likelihood-em-gmm
 
 ::: {.d2l-note .rule}
 The same bound VAEs and diffusion models are trained on — EM is its

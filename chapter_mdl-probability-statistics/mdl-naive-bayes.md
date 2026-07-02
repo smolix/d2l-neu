@@ -304,9 +304,9 @@ The verdict is emphatic. On average the model claims $98.6\%$ confidence while d
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §25.4]{.kicker}
+[Dive into Deep Learning · §25.6]{.kicker}
 
-The simplest probabilistic classifier<br>**count, smooth, and argmax**.
+The chapter's capstone: everything it built, spent on one working system<br>**count, smooth, argmax — then audit it**.
 :::
 :::
 
@@ -320,8 +320,9 @@ Estimating that table directly is hopeless: $2^d$ feature patterns —
 $2^{784}$ for MNIST, more than atoms in the universe.
 
 ::: {.d2l-note}
-The fix: model how each class **generates** features, then flip with
-Bayes.
+The plan: **maximum likelihood** (§25.3) fits a generative model by
+counting; Bayes flips it into a classifier; the **statistics** of §25.4
+then judge the result — error bar, failure map, calibration.
 :::
 :::
 
@@ -360,7 +361,7 @@ discriminative wins given enough data.
 :::
 
 ::: {.col .fig}
-![](../img/mdl-prob-naive-genvdisc.svg){width=100%}
+@fig:mdl-prob-naive-genvdisc
 :::
 :::
 :::
@@ -393,13 +394,19 @@ the curse of dimensionality broken by fiat.
 ::: {.slide title="The graphical model"}
 [Independence]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 The label fans out to every feature; **no** edges run between features —
-the right panel shows the dependence we throw away:
-
-![](../img/mdl-prob-naive-independence.svg){width=78%}
+the right panel shows the dependence we throw away.
 
 The assumption is false (pixels are correlated), but the classifier only
 needs the **argmax** right, not calibrated probabilities.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-prob-naive-independence
+:::
+:::
 :::
 
 ::: {.slide}
@@ -451,16 +458,14 @@ regression — only the way it fits the weights differs.
 [Counting]{.kicker}
 
 Both ingredients are counts: the class prior $\hat p(y)=n_y/n$ and the
-per-pixel firing rate, Laplace-smoothed so a never-seen pixel cannot send
-a log-score to $-\infty$:
-
-$$\hat p(x_i=1\mid y) = \frac{n_{iy}+1}{n_y+2}.$$
+per-pixel firing rate, Laplace-smoothed as
+$\hat p(x_i{=}1\mid y) = \tfrac{n_{iy}+1}{n_y+2}$ so a never-seen pixel
+cannot send a log-score to $-\infty$:
 
 @naive-bayes-train
 
 ::: {.d2l-note}
-The $+1/+2$ is the posterior mean under a $\text{Beta}(1,1)$ prior — a
-prior acting as a regularizer.
+The $+1/+2$ is a $\text{Beta}(1,1)$ prior acting as a regularizer.
 :::
 :::
 
@@ -499,9 +504,10 @@ co-occurrence.
 ::: {.slide title="Classify and evaluate"}
 [MNIST]{.kicker}
 
-Sum the log-likelihoods, take the argmax:
+Sum the log-likelihoods, take the argmax — and measure what the *raw*
+products would have done:
 
-@naive-bayes-predict
+@!naive-bayes-predict
 
 ::: {.d2l-note .rule}
 **84.27%** — far above $10\%$ chance, far below modern nets ($<1\%$
@@ -522,6 +528,60 @@ denominator) instead of presence/absence.
 :::
 :::
 
+::: {.slide}
+::: {.divider}
+[05]{.dnum}
+
+[Held to the chapter's standards]{.dtitle}
+
+[error bar · failure map · calibration]{.dsub}
+:::
+:::
+
+::: {.slide title="How precise is 84.27%?"}
+[The audit]{.kicker}
+
+An accuracy is an *estimate* from $10{,}000$ random test examples, so it
+carries a standard error — and §25.4's bootstrap delivers it exactly as
+promised: resample the test set, recompute, read off the spread:
+
+@!mdl-naive-bayes-calibration-1
+
+The honest report is $84.3\% \pm 0.7$: any competitor inside
+$(0.835,\ 0.850)$ is **indistinguishable** from this model on this test
+set.
+:::
+
+::: {.slide title="The failure map" layout="tight"}
+[The audit — a confusion matrix localizes the missing 16%]{.kicker}
+
+@!mdl-naive-bayes-calibration-2
+
+The worst failures — $4\to9$, $5\to3$, $8\to3$ — are the pairs whose
+learned *templates* overlap most: their difference lives in the
+**joint** behavior of neighboring pixels, invisible to marginals.
+:::
+
+::: {.slide title="The confidence cannot be trusted"}
+[The audit]{.kicker}
+
+Normalized scores are a genuine posterior — is it honest? Bin test
+examples by claimed confidence and compare with achieved accuracy:
+
+@!mdl-naive-bayes-calibration-3
+
+Mean claim $98.6\%$, delivery $84.3\%$; the top bin asserts near-certainty
+and is right $89.9\%$ of the time.
+
+::: {.d2l-note .warn}
+Each of $784$ correlated pixels contributes its evidence *as if
+independent*, so it is counted many times over — score gaps balloon to
+hundreds of nats and the softmax saturates. Modern nets are overconfident
+in the same direction, merely less flamboyantly: run this reliability
+check on any probabilities you intend to consume.
+:::
+:::
+
 ::: {.slide title="Recap"}
 [Wrap-up]{.kicker}
 
@@ -529,13 +589,18 @@ denominator) instead of presence/absence.
 ::: {.col}
 - Bayes' rule + conditional independence = naive Bayes.
 - Breaks the curse of dimensionality: $\mathcal O(d)$ not $\mathcal O(2^d)$ parameters.
-- Training is one counting pass; smooth, then predict in log space.
+- Training is one counting pass; smooth (a $\text{Beta}$ prior), predict in log space.
+- The log-space score is affine → a **linear** classifier, like softmax.
 :::
 
 ::: {.col}
-- The log-space score is affine → a **linear** classifier, like softmax.
-- Laplace smoothing = a $\text{Beta}$ prior.
-- Great where features are near-independent (text); weak on images — the textbook generative-vs-discriminative lesson.
+- Great where features are near-independent (text); weak on images — the generative-vs-discriminative lesson.
+- Audited with the chapter's own tools: $84.3\%\pm0.7$ (bootstrap), failures where templates overlap (confusion), confidence wildly inflated (calibration).
 :::
+:::
+
+::: {.d2l-note}
+The capstone habit: never ship an accuracy without its error bar, its
+failure map, and a calibration check.
 :::
 :::

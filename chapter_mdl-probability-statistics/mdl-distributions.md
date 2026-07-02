@@ -1492,7 +1492,7 @@ and independence hand us the moments with no algebra:
 $$\mu = \sum_i \mathbb E[X_i] = np, \qquad
 \sigma^2 = \sum_i \operatorname{Var}(X_i) = np(1-p).$$
 
-@distributions-binomial
+@!distributions-binomial
 :::
 
 ::: {.slide title="Poisson: the many-rare limit"}
@@ -1503,7 +1503,7 @@ Take $\text{Binomial}(n,\lambda/n)$ and send $n\to\infty$:
 $$\binom{n}{k}\Bigl(\tfrac{\lambda}{n}\Bigr)^k\Bigl(1-\tfrac{\lambda}{n}\Bigr)^{n-k}
 \longrightarrow \frac{\lambda^k e^{-\lambda}}{k!}.$$
 
-@distributions-binomial-to-poisson
+@!distributions-binomial-to-poisson
 
 ::: {.d2l-note}
 Mean $=$ variance $=\lambda$ is the Poisson fingerprint —
@@ -1557,19 +1557,19 @@ Poisson, and the source of $X=-\log U/\lambda$ sampling.
 :::
 :::
 
-::: {.slide title="Gaussian: the CLT limit"}
+::: {.slide title="Gaussian: the CLT limit" layout="tight"}
 [Continuous]{.kicker}
 
-Standardized sums of *any* iid finite-variance terms converge to it:
+Standardized sums of *any* iid finite-variance terms converge to the
+Gaussian. Watch universality happen, starting from the least Gaussian
+summand available — the flat, hard-edged uniform:
 
-$$p(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\exp\!\Bigl(-\frac{(x-\mu)^2}{2\sigma^2}\Bigr).$$
+@!mdl-distributions-gaussian-1
 
-@distributions-gaussian
-
-::: {.d2l-note}
-It is also the **maximum-entropy** law for a fixed mean and variance —
-the least-committal choice consistent with those two numbers.
-:::
+$n=1$ is a plateau, $n=2$ a triangle; by $n=32$ the sum coincides with
+$\mathcal N(0,1)$ to plotting accuracy. Nothing in the code knows about
+the Gaussian — **summation manufactures it**. (It is also the
+maximum-entropy law for fixed mean and variance.)
 :::
 
 ::: {.slide title="The normalizer: a polar trick"}
@@ -1612,7 +1612,7 @@ Contours are ellipsoids: axes along the **eigenvectors** of
 $\boldsymbol\Sigma$, half-lengths $\propto\sqrt{\lambda_i}$. Isotropy =
 spheres = independent coordinates.
 
-@distributions-mvn
+@!distributions-mvn
 :::
 
 ::: {.col .fig}
@@ -1639,6 +1639,24 @@ covariance is the entire engine of Gaussian-process regression.
 :::
 :::
 
+::: {.slide title="In high dimension, the Gaussian is a thin shell"}
+[Continuous]{.kicker}
+
+$\|\mathbf x\|^2$ sums $d$ independent mean-$1$ terms, so it concentrates
+near $d$: the mass lives in a shell of radius $\approx\sqrt d$, *far from
+the origin where the density is pointwise largest* — and two independent
+draws are nearly orthogonal, cosine $\sim 1/\sqrt d$:
+
+@!mdl-distributions-multivariate-gaussian-1
+
+::: {.d2l-note}
+Load-bearing facts: $1/\sqrt d$ **initialization** keeps
+$\|\mathbf{Wx}\|\approx\|\mathbf x\|$; cosine similarity is informative
+*because* unrelated vectors sit near $0$; nearest-neighbor contrast
+fades. Exponential tail bounds: §25.5.
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [03]{.dnum}
@@ -1661,8 +1679,10 @@ $A=\operatorname{softplus}$), Poisson ($\eta=\log\lambda$), and Gaussian
 all fit.
 
 ::: {.d2l-note}
-The uniforms, Cauchy, and Student-$t$ stay outside — their support moves
-with the parameters.
+Two exclusions, two reasons: the **uniforms** stay outside because their
+support moves with the parameters; **Cauchy and Student-$t$** because no
+finite-dimensional sufficient statistic exists — which costs them a
+conjugate prior and a convex NLL, both exponential-family privileges.
 :::
 :::
 
@@ -1708,16 +1728,24 @@ Bernoulli:
 ::: {.slide title="Beta–Bernoulli: pseudo-counts"}
 [Priors]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 A $\text{Beta}(\alpha,\beta)$ prior times a Bernoulli likelihood with $x$
 heads in $n$ flips gives a $\text{Beta}(\alpha+x,\beta+n-x)$ posterior —
 $\alpha,\beta$ act as **phantom** heads and tails:
 
 $$\mathbb E[\theta\mid X] = \frac{\alpha+x}{\alpha+\beta+n}.$$
 
-@distributions-conjugate
+@!distributions-conjugate
 
 ::: {.d2l-note}
 $\alpha=\beta=1$ recovers Laplace's rule of succession $(x+1)/(n+2)$.
+:::
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-beta-posterior
+:::
 :::
 :::
 

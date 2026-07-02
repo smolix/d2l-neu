@@ -1150,39 +1150,55 @@ P\bigl(X\in(a,b]\bigr) = \int_a^b p(x)\,dx.$$
 A Riemann sum over a two-bump mixture confirms the total mass is $1$ and
 recovers $P(-2 < X \le 3)$ from the density alone:
 
-@random-variables-density-to-probability
+@!random-variables-density-to-probability
 :::
 
 ::: {.slide title="The c.d.f. and the FTC"}
 [The c.d.f.]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 The cumulative distribution accumulates the density,
 $F(x) = \int_{-\infty}^x p = P(X \le x)$, rising monotonically from $0$
-to $1$.
+to $1$. The same number two ways: the area under $p$ over $(a,b]$ equals
+the rise $F(b)-F(a)$.
 
 ::: {.d2l-note .rule}
 **Proposition.** If $p$ is continuous, $F'(x) = p(x)$ — the density is
 the *slope* of the c.d.f. (fundamental theorem of calculus).
 :::
-
-The same number two ways: the area under $p$ over $(a,b]$ equals the rise
-$F(b)-F(a)$.
-
-@fig:mdl-prob-pdf-cdf
 :::
 
-::: {.slide title="The c.d.f. unifies and samples"}
+::: {.col .fig}
+@fig:mdl-prob-pdf-cdf
+:::
+:::
+:::
+
+::: {.slide title="The quantile function is a sampler"}
 [The c.d.f.]{.kicker}
 
-One object covers every kind of variable: a **staircase** for discrete
-mass, a smooth curve for continuous density, and anything in between for
-mixtures.
+::: {.cols .vc}
+::: {.col}
+The c.d.f. covers every kind of variable (staircase, smooth curve,
+mixture), and its inverse $F^{-1}(q)$ — the **quantile function** — turns
+uniform noise into samples from *any* distribution:
 
-. . .
+::: {.d2l-note .rule}
+**Proposition (inverse transform).** If $U\sim\mathrm{Uniform}[0,1]$,
+then $X = F^{-1}(U)$ has c.d.f. $F$.
+*Proof.* $\{F^{-1}(U)\le x\} = \{U \le F(x)\}$, and the uniform gives
+that event probability $F(x)$. $\blacksquare$
+:::
 
-Its inverse $F^{-1}(q)$ is the $q$-th **quantile**, and gives free
-sampling: if $U\sim\text{Uniform}[0,1]$ then $F^{-1}(U)$ has c.d.f. $F$
-(*inverse-transform sampling*).
+Where $F$ is steep — where the density is large — uniform levels land
+densely: the slope does the shaping.
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-inverse-transform
+:::
+:::
 :::
 
 ::: {.slide}
@@ -1251,30 +1267,42 @@ and file sizes alike.
 ::: {.slide title="Chebyshev: σ is a yardstick"}
 [Tail bounds]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Standard deviation measures distance in *universal* units:
 
 $$P\bigl(|X-\mu_X| \ge \alpha\,\sigma_X\bigr) \le \frac{1}{\alpha^2}.$$
 
 *Proof.* Apply Markov to $Z = (X-\mu_X)^2$ with $a = \alpha^2\sigma_X^2$.
-$\blacksquare$ The bound is **sharp** — the three-atom example attains
-equality at $p=\tfrac18$:
+$\blacksquare$
 
+The bound is **sharp** — the three-atom example attains equality at
+$p=\tfrac18$.
+:::
+
+::: {.col .fig}
 @fig:mdl-prob-chebyshev
+:::
+:::
 :::
 
 ::: {.slide title="When moments fail: Cauchy"}
 [Counterexample]{.kicker}
 
-For $p(x) = \dfrac{1}{\pi(1+x^2)}$ the mean is an undefined
-$\infty-\infty$ and the variance integral diverges like $\log R$.
-Partial sums of $\mathbb E[X^2]$ blow up rather than settle:
+For $p(x) = \dfrac{1}{\pi(1+x^2)}$ both summaries fail, at two speeds.
+The variance integrand tends to $\tfrac1\pi$, so
+$\int_{-R}^{R} x^2 p\,dx = \tfrac{2}{\pi}(R - \arctan R)$ grows
+**linearly** — watch it multiply by ten per decade:
 
-@random-variables-cauchy-diverges
+@!random-variables-cauchy-diverges
 
-::: {.d2l-note}
-Symmetry is not enough — *absolute* integrability is what a finite mean
-requires. Heavy tails break the usual toolbox.
-:::
+. . .
+
+The mean fails more subtly: the odd integrand tempts "$0$ by symmetry,"
+but a mean needs $\int |x|\,p\,dx < \infty$, and *that* integral
+diverges like $\tfrac{1}{\pi}\log(1+R^2)$ — a meaningless
+$\infty - \infty$, not merely infinite. Absolute integrability, not
+symmetry, is what a finite mean requires.
 :::
 
 ::: {.slide}
@@ -1290,15 +1318,21 @@ requires. Heavy tails break the usual toolbox.
 ::: {.slide title="Joint and marginal densities"}
 [Several variables]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 A joint density $p(x,y)\ge 0$ integrates to $1$ over the plane.
 **Marginalize** by integrating out the variable you do not care about:
 
 $$p_X(x) = \int_{-\infty}^{\infty} p_{X,Y}(x,y)\,dy.$$
 
-Integrate the joint up a vertical strip at $x$ to get the marginal height
-there:
+Integrate the joint up a vertical strip at $x$ to get the marginal
+height there.
+:::
 
+::: {.col .fig}
 @fig:mdl-prob-marginal
+:::
+:::
 :::
 
 ::: {.slide title="Conditioning and independence"}
@@ -1342,24 +1376,32 @@ latent-variable model.
 ::: {.slide title="Covariance"}
 [Co-variation]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 $\operatorname{Cov}(X,Y) = \mathbb E[XY] - \mathbb E[X]\,\mathbb E[Y]$
 measures *linear* co-variation, in mixed units:
 
 $$\operatorname{Var}(X+Y) = \operatorname{Var}(X) + \operatorname{Var}(Y)
 + 2\operatorname{Cov}(X,Y).$$
 
-@fig:mdl-prob-covariance
-
 ::: {.d2l-note}
 Zero covariance is **weaker** than independence: with $Y$ uniform on
-$\{-2,\dots,2\}$ and $X=Y^2$, covariance is $0$ yet $X$ is a function of
-$Y$.
+$\{-2,\dots,2\}$ and $X=Y^2$, covariance is $0$ yet $X$ is a function
+of $Y$.
+:::
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-covariance
+:::
 :::
 :::
 
 ::: {.slide title="Correlation is a cosine"}
 [Co-variation]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Normalize covariance to kill the units:
 $\rho = \operatorname{Cov}(X,Y)/(\sigma_X\sigma_Y) \in [-1,1]$.
 
@@ -1368,12 +1410,14 @@ quadratic in $t$; its discriminant gives
 $\operatorname{Cov}^2 \le \operatorname{Var}(X)\operatorname{Var}(Y)$,
 with equality iff $Y = aX+b$. $\blacksquare$
 
-. . .
-
 So $\rho = \cos\theta$ between centered variables — Cauchy–Schwarz in
-probabilistic dress:
+probabilistic dress.
+:::
 
+::: {.col .fig}
 @fig:mdl-prob-correlation
+:::
+:::
 :::
 
 ::: {.slide title="The covariance matrix → PCA"}
@@ -1410,19 +1454,17 @@ and just sums one $-\log|\det J_g|$ per layer.
 :::
 :::
 
-::: {.slide title="Change of variables, verified"}
+::: {.slide title="Change of variables, verified" layout="tight"}
 [Pushforward]{.kicker}
 
 For $X\sim\mathcal N(0,1)$ and $Y = e^X$, the formula gives the log-normal
-$p_Y(y) = \tfrac{1}{y\sqrt{2\pi}}\exp\!\bigl(-\tfrac12(\log y)^2\bigr)$.
-A histogram of $e^X$ matches it exactly:
+$p_Y(y) = \tfrac{1}{y\sqrt{2\pi}}\exp\!\bigl(-\tfrac12(\log y)^2\bigr)$,
+and a histogram of $e^X$ matches it exactly:
 
-@random-variables-change-of-variables
+@!random-variables-change-of-variables
 
-::: {.d2l-note}
 The naive guess $p_X(\log y)$ peaks at $y=1$; the Jacobian correction
 moves the true peak to $y=e^{-1}$.
-:::
 :::
 
 ::: {.slide title="Recap"}

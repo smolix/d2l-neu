@@ -939,3 +939,439 @@ ball as an invariant measure --- is developed properly with the SDE machinery
 of :numref:`chap_mdl-dynamics`.
 
 [Discussions](https://d2l.discourse.group/t/adaptive-stochastic-methods)
+
+<!-- slides -->
+
+::: {.slide}
+::: {.cover}
+[Dive into Deep Learning · §24.2]{.kicker}
+
+From the theory to the default optimizer<br>**SGD without convexity · AdaGrad to AdamW · schedules, warmup, and the preconditioning ladder**.
+:::
+:::
+
+::: {.slide title="Two questions the theory left open"}
+[Motivation]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Every modern network trains with AdamW, warmup, and a decaying schedule
+--- not the plain gradient descent we analyzed. Two gaps to close:
+
+- The one guarantee deep nets keep was proved for the **exact** gradient;
+  training uses noisy minibatch estimates. *What survives?*
+- The whole $\kappa$ story chained a **single** $\eta$ to the stiffest
+  mode. *What if every coordinate had its own?*
+
+::: {.d2l-note}
+Every optimizer below is under ten lines of NumPy, written by hand:
+there is no magic in any of them.
+:::
+:::
+
+::: {.col .fig}
+@fig:mdl-opt-per-coordinate
+:::
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[01]{.dnum}
+
+[SGD without convexity]{.dtitle}
+
+[the descent lemma survives noise --- taxed]{.dsub}
+:::
+:::
+
+::: {.slide title="The descent lemma pays a noise tax"}
+[Ghadimi--Lan]{.kicker}
+
+Feed an unbiased gradient with variance $\sigma^2$ through the quadratic
+ceiling and take expectations at the right moment:
+
+$$\mathbb{E}\left[f(\mathbf{x}_{k+1}) \mid \mathbf{x}_k\right]
+\;\le\; f(\mathbf{x}_k) - \eta\bigl(1 - \tfrac{L\eta}{2}\bigr)\,\|\nabla f(\mathbf{x}_k)\|^2
++ \tfrac{L\eta^2\sigma^2}{2}.$$
+
+The old ledger, one new line item: a **noise tax** paid every step,
+gradient large or not.
+
+. . .
+
+Telescoping (Ghadimi--Lan, 2013) and balancing the two terms with
+$\eta \propto 1/\sqrt{K}$:
+
+$$\mathbb{E}\bigl[\|\nabla f(\mathbf{x}_R)\|^2\bigr]
+\;\le\; \frac{2L\Delta}{K} + 2\sigma\sqrt{\frac{2L\Delta}{K}},
+\qquad R \sim \mathrm{Uniform}\{0, \ldots, K-1\}.$$
+:::
+
+::: {.slide title="The price of noise is a square root"}
+[Ghadimi--Lan]{.kicker}
+
+At $\sigma = 0$ the deterministic $O(1/K)$ returns; with noise the
+$K^{-1/2}$ term rules --- $10\times$ smaller gradients cost $100\times$
+the budget. Measured on a nonconvex toy, $20$ seeds per budget:
+
+@!adaptive-stochastic-methods-ghadimi-lan
+
+::: {.d2l-note}
+The guarantee is for a **randomly selected** iterate: with noisy
+evaluations you can never *identify* the best one, and the min-so-far
+column (slope $-1.23$) is exactly the luck you cannot bank on.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[02]{.dnum}
+
+[Per-coordinate step sizes]{.dtitle}
+
+[AdaGrad → RMSProp → Adam]{.dsub}
+:::
+:::
+
+::: {.slide title="One number, doing a matrix's job"}
+[The thesis]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+On a diagonal quadratic, per-coordinate steps $\eta_i = 1/\lambda_i$
+solve the problem in **one step**: a diagonal Newton's method, and
+$\kappa$ simply disappears.
+
+The zig-zag is not a fact about the loss --- it is a fact about using
+one number where $n$ are called for. Adaptive methods estimate those
+$n$ numbers *from the gradients themselves*.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-opt-per-coordinate
+:::
+:::
+:::
+
+::: {.slide title="AdaGrad: steepest descent in a learned metric"}
+[The family]{.kicker}
+
+$$\mathbf{s}_t = \mathbf{s}_{t-1} + \mathbf{g}_t^2,
+\qquad
+\mathbf{x}_{t+1} = \mathbf{x}_t - \frac{\eta}{\sqrt{\mathbf{s}_t} + \epsilon}\,\mathbf{g}_t.$$
+
+Two derivations, one rule: steepest descent in the metric
+$\mathrm{diag}(\sqrt{\mathbf{s}_t})$ --- a coordinate is expensive in
+proportion to the evidence its gradients have been large --- and the
+regret-optimal step for **sparse** features: a rare word's step decays
+with *its own* activity, not wall-clock time.
+
+. . .
+
+::: {.d2l-note .warn}
+$\mathbf{s}_t$ never forgets, so steps decay like $\eta/(\sigma\sqrt{t})$
+--- Robbins--Monro hard-wired in. On nonconvex terrain the method stalls,
+not because it arrived but because it remembers too much. **RMSProp**
+forgets on purpose: an EMA with memory $\approx 1/(1-\beta_2)$ steps.
+:::
+:::
+
+::: {.slide title="Bias correction is a two-line theorem"}
+[The family]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Unroll $\mathbf{v}_t = (1-\beta_2)\sum_{s\le t} \beta_2^{\,t-s}\mathbf{g}_s^2$
+and take expectations under a stationary scale $\bar{\mathbf{g}^2}$:
+
+$$\mathbb{E}[\mathbf{v}_t] = \left(1 - \beta_2^{\,t}\right)\bar{\mathbf{g}^2}$$
+
+by the geometric series. Dividing by $1-\beta_2^t$ is *exactly* unbiased
+at every $t$ --- the correction cancels the zero initialization
+identically, no approximation.
+
+::: {.d2l-note}
+The transient is not small: the raw ratio mis-scales early steps by
+$(1-\beta_1^t)/\sqrt{1-\beta_2^t}$ --- $3.16$ at $t=1$, peaking above
+$6\times$ near $t=12$.
+:::
+:::
+
+::: {.col .fig}
+@fig:mdl-opt-bias-correction
+:::
+:::
+:::
+
+::: {.slide title="Adam is three ideas stacked"}
+[The family]{.kicker}
+
+$$\mathbf{m}_t = \beta_1\mathbf{m}_{t-1} + (1-\beta_1)\,\mathbf{g}_t,
+\quad
+\mathbf{v}_t = \beta_2\mathbf{v}_{t-1} + (1-\beta_2)\,\mathbf{g}_t^2,
+\quad
+\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,\frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}$$
+
+RMSProp's per-coordinate scale, momentum's averaged direction, and the
+exact startup correction for both ($\hat{\mathbf{m}}_t$,
+$\hat{\mathbf{v}}_t$).
+
+. . .
+
+::: {.d2l-note .rule}
+Near a diagonal quadratic minimum, $\sqrt{\hat{v}_i} \approx |g_i| =
+\lambda_i|x_i|$: the effective step $\eta/(\lambda_i|x_i|)$ is the
+diagonal-Newton rescaling, reconstructed from first-order information
+alone.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[03]{.dnum}
+
+[Adam on trial]{.dtitle}
+
+[a convex counterexample, and the valley won back]{.dsub}
+:::
+:::
+
+::: {.slide title="A convex problem built to defeat Adam"}
+[The counterexample]{.kicker}
+
+Reddi--Kale--Kumar (2018): on $x \in [-1,1]$, cycle the convex losses
+
+$$f_t(x) = \begin{cases} C\,x, & t \bmod 3 = 1,\\ -x, & \textrm{otherwise,}\end{cases} \qquad C > 2,$$
+
+whose gradients sum to $C - 2 > 0$ per period, so the best point is
+$x^\star = -1$.
+
+. . .
+
+::: {.d2l-note .warn}
+The mechanism in one sentence: **the effective step on the informative
+gradient shrinks faster than its information accrues.** The rare $+C$
+lands in $\mathbf{v}$ *quadratically* and throttles its own step by
+$\approx C$; then $\beta_2$ forgets, and the two $-1$ steps run at full
+size --- the wrong way. Signal is throttled by its own magnitude; noise
+is not.
+:::
+:::
+
+::: {.slide title="Adam converges to the worst point"}
+[The counterexample]{.kicker}
+
+Running the construction at $C = 4$, against AMSGrad and projected SGD
+with the same $1/\sqrt{t}$ decay:
+
+@!adaptive-stochastic-methods-reddi
+
+**AMSGrad**'s one-line fix --- replace $\hat{\mathbf{v}}_t$ by the running
+maximum --- makes per-coordinate steps nonincreasing, so the large
+gradient is never forgotten.
+
+::: {.d2l-note}
+The theorem settled what kind of guarantee Adam has: **none, even
+convex**, without modification. Practice keeps Adam anyway --- real noise
+usually breaks up consistently-informative rare gradients.
+:::
+:::
+
+::: {.slide title="What adaptivity buys: the valley, revisited"}
+[The payoff]{.kicker}
+
+The $\kappa = 10^3$ quadratic of §24.1, optimally tuned GD versus
+hand-rolled Adam:
+
+@!adaptive-stochastic-methods-adam-vs-gd
+
+From the first iteration Adam's per-coordinate steps sit in the ratio
+$10^{-2} : 10^{-5}$ --- the eigenvalue ratio, reconstructed from gradient
+magnitudes with no Hessian. **GD $6160$, Adam $344$.**
+
+::: {.d2l-note .warn}
+The honest counterpoint: $\sqrt{\hat{\mathbf{v}}}$ conflates curvature
+with noise, the diagonal misses every off-axis correlation (rotate the
+quadratic $45°$ and the magic fades), and Reddi steers it adversarially.
+A well-chosen point on the cost--fidelity curve, not its endpoint.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[04]{.dnum}
+
+[Decoupled weight decay]{.dtitle}
+
+[whose $\lambda$ is it, anyway?]{.dsub}
+:::
+:::
+
+::: {.slide title="Weight decay through Adam is not weight decay"}
+[AdamW]{.kicker}
+
+Under SGD, "penalize the loss" and "shrink the weights" are the *same
+update*. Under Adam the penalty gradient rides through the
+preconditioner, and the shrinkage on coordinate $i$ becomes
+
+$$\underbrace{\frac{\eta\,\lambda}{\sqrt{\hat{v}_{t,i}} + \epsilon}\; w_{t,i}}_{\ell_2\ \textrm{through Adam}}
+\qquad \textrm{versus} \qquad
+\underbrace{\eta\,\lambda\, w_{t,i}}_{\textrm{decoupled}}.$$
+
+. . .
+
+::: {.d2l-note .warn}
+The regularization strength is no longer a constant of the problem:
+noisy-gradient weights are barely decayed, quiet ones are decayed hard.
+Whatever $\lambda$ *meant* --- the Gaussian prior of MAP (§25.3), the
+norm budget it prices (§24.4) --- assumed one $\lambda$ for all
+coordinates. Adam's preconditioner quietly repeals it.
+:::
+:::
+
+::: {.slide title="AdamW: one λ, one meaning"}
+[AdamW]{.kicker}
+
+Decouple: the loss gradient goes through the preconditioner, the decay
+does not. Two pure-noise weights at scales $\sigma = (10, 0.1)$, where
+decay is the only systematic force:
+
+@!adaptive-stochastic-methods-adamw
+
+Coupled decay gave the two weights effective rates $100\times$ apart ---
+a disparity nobody chose; AdamW shrinks both by the uniform
+$(1-\eta\lambda)^T$, within $2\%$ of prediction.
+
+::: {.d2l-note}
+In `torch.optim`, `AdamW` is this update and `Adam(weight_decay=...)` is
+the coupled one --- the flag names **two different regularizers**.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[05]{.dnum}
+
+[Schedules and warmup]{.dtitle}
+
+[what decay buys, and why ramps come first]{.dsub}
+:::
+:::
+
+::: {.slide title="The schedule zoo, at equal budget"}
+[Schedules]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+The mathematics a schedule negotiates was already proved: a constant
+step parks on a **noise floor** $\propto \eta$; Robbins--Monro decay
+reaches the optimum; beyond convexity *no theorem ranks decay shapes*.
+
+- **cosine**: one knob, no kinks, a long gentle tail
+- **WSD**: hold the plateau, pay the floor down in a final decay ---
+  checkpoints stay re-decayable to any budget
+:::
+
+::: {.col .fig .big}
+@fig:mdl-opt-schedule-zoo
+:::
+:::
+:::
+
+::: {.slide title="All of WSD's gain arrives in the decay phase"}
+[Schedules]{.kicker}
+
+On the noisy quadratic --- the miniature where the floor is exact ---
+at $80\%$ of budget and at the end:
+
+@!adaptive-stochastic-methods-schedules
+
+WSD sits *on the constant's floor* at $80\%$ (same trajectory, to every
+digit), then $400$ decay steps drop it $17\times$: the loss-curve cliff
+of WSD runs, reproduced by a one-line quadratic. Cosine's longer tail
+wins this pure-quadratic endgame; WSD's case lives off the toy, in
+re-decayable checkpoints and time spent at large steps.
+:::
+
+::: {.slide title="Warmup: never trust an estimated preconditioner cold"}
+[Warmup]{.kicker}
+
+For adaptive methods warmup is close to structural, and both reasons are
+this chapter's instruments:
+
+- At $t = 1$, $\hat{\mathbf{v}}_1 = \mathbf{g}_1^2$: the rescaling is
+  estimated from **one sample**, and the first step is
+  $\mathrm{sign}(\mathbf{g}_1)$ --- full-magnitude movement on every
+  coordinate, noise included. Bias correction makes it *unbiased*, not
+  *accurate*; only $\sim 1/(1-\beta_2)$ steps of data fix the variance.
+- The **edge of stability** (§24.1): sharpness equilibrates onto $2/\eta$,
+  but that takes time --- a full-size $\eta$ at initialization violates a
+  ceiling the landscape has not yet adapted to.
+
+::: {.d2l-note}
+Ramp $\eta$ while the preconditioner earns its confidence and the
+curvature meets its step size. Every large run converged on this
+independently.
+:::
+:::
+
+::: {.slide}
+::: {.divider}
+[06]{.dnum}
+
+[Beyond diagonals]{.dtitle}
+
+[the preconditioning ladder]{.dsub}
+:::
+:::
+
+::: {.slide title="Every optimizer answers one question"}
+[The ladder]{.kicker}
+
+*Which matrix $B_t$ multiplies the gradient?* GD says $I$; Newton says
+$(\nabla^2 f)^{-1}$ at $O(d^3)$; Adam says a diagonal at $O(d)$. The
+rungs between exploit one structural fact: parameters come in **matrices**.
+
+::: {.d2l-note .rule}
+diagonal (**Adam**) → Kronecker-factored Fisher (**K-FAC**, natural
+gradient) → two-sided full-matrix roots (**Shampoo**) → spectral
+whitening by polar factor (**Muon**) → full Newton (unreachable)
+:::
+
+. . .
+
+K-FAC's whole trick in one display --- a curvature matrix with $(mn)^2$
+entries, preconditioned by two small inverses:
+
+$$(A \otimes G)^{-1}\,\mathrm{vec}(V) \;=\; \mathrm{vec}\left(G^{-1}\, V\, A^{-1}\right).$$
+:::
+
+::: {.slide title="Recap"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Ghadimi--Lan:** the descent lemma survives noise, taxed; the price
+  of stochasticity is $K^{-1/2}$.
+- **AdaGrad** is steepest descent in a learned metric; **Adam** adds an
+  EMA, momentum, and an *exactly* unbiased startup correction.
+- **Reddi:** Adam can converge to the worst point of a convex problem;
+  AMSGrad's running max restores the guarantee.
+:::
+
+::: {.col}
+- What adaptivity buys: the $1000\times$ eigenvalue ratio from gradients
+  alone --- GD $6160$, Adam $344$.
+- **AdamW** decouples decay from the preconditioner: one $\lambda$, one
+  meaning.
+- **Schedules** trade the noise floor against the transient; **warmup**
+  shields a cold preconditioner; beyond the diagonal, the ladder.
+:::
+:::
+
+::: {.d2l-note}
+Getting the geometry right, per coordinate, per layer, per scale, is the
+through-line of the modern optimizer toolbox.
+:::
+:::

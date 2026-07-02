@@ -1348,16 +1348,18 @@ $\ell_1$ and the hinge have kinks, so no gradient exists there. A
 
 $$f(\mathbf{y}) \ge f(\mathbf{x}) + \mathbf{g}^\top(\mathbf{y}-\mathbf{x}).$$
 
-At a corner the slopes *fan out*: $\partial|x|(0) = [-1, 1]$. Optimality
-survives verbatim: $\mathbf{x}^\star$ is a minimizer iff
-$\mathbf{0} \in \partial f(\mathbf{x}^\star)$.
-:::
+At a corner the slopes *fan out*: $\partial|x|(0) = [-1, 1]$, and the
+zero-slope member is an optimality certificate --- $\mathbf{x}^\star$
+minimizes $f$ iff $\mathbf{0} \in \partial f(\mathbf{x}^\star)$.
 
-::: {.col .narrow}
 ::: {.d2l-note .rule}
 Subgradients carry Jensen, local-equals-global, and descent through
 ReLU-style kinks.
 :::
+:::
+
+::: {.col .fig}
+@fig:mdl-opt-subgradient-fan
 :::
 :::
 :::
@@ -1481,6 +1483,21 @@ iterations than two. The deep reason first-order methods scale.
 :::
 :::
 
+::: {.slide title="State, prove, measure"}
+[The payoff]{.kicker}
+
+Gradient descent at $\eta = 1/L$ on the least-squares toy, with $\mu$ and
+$L$ read off the eigenvalues of $X^\top X$:
+
+@!convexity-rate-check
+
+The bound holds at every step --- and the measured $0.4406$ is no
+accident: the slow mode's *distance* contracts by exactly $1-\mu/L$, and
+the value gap, quadratic in distance, contracts by its square,
+$(1-\mu/L)^2 = 0.4406$. Tight for what it bounds; faster on any
+particular function.
+:::
+
 ::: {.slide}
 ::: {.divider}
 [05]{.dnum}
@@ -1544,6 +1561,26 @@ Carlo, and the predicted flat direction:
 Every eigenvalue is nonnegative down to one numerical zero, and 200k
 one-hot draws reproduce the analytic Hessian: it really is a covariance
 you can sample from.
+:::
+
+::: {.slide title="The prox is the piece that knows about the kink"}
+[Recognizing convexity]{.kicker}
+
+$\mathrm{prox}_f(\mathbf{z})$ moves toward lower $f$ but pays
+quadratically for straying from $\mathbf{z}$ --- a projection,
+generalized from sets to functions. For $\lambda|x|$ the subgradient
+criterion solves it in closed form: **soft-thresholding**,
+
+$$\mathrm{prox}_{\lambda|\cdot|}(z) = \mathrm{sign}(z)\,\max(|z| - \lambda,\, 0),$$
+
+and alternating a gradient step on the smooth part with a prox on the
+kink is **ISTA**, which keeps gradient descent's $O(1/k)$ rate:
+
+@!convexity-prox-ista
+
+Five of eight coordinates are *exactly* zero --- snapped there by the
+$\max$, which no smooth gradient step can do. This is how $\ell_1$
+sparsifies where $\ell_2$ only shrinks.
 :::
 
 ::: {.slide}

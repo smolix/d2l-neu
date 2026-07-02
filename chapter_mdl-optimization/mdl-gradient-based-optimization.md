@@ -1335,6 +1335,45 @@ and wins ($\rho=0.818$); at $\eta=0.2$ the stiff mode bounces forever;
 one tick past, it explodes.
 :::
 
+::: {.slide title="Real networks train at the ceiling"}
+[Quadratics]{.kicker}
+
+The classical advice: measure $L$, pick $\eta < 2/L$. Measured on a real
+(tiny) network, the causality runs *backwards* --- same init, two step
+sizes, sharpness $\lambda_{\max}(\nabla^2 f)$ tracked exactly:
+
+@!gradient-based-optimization-edge-of-stability
+
+Training *raises* the sharpness until it reaches $2/\eta$ --- $5.00$ for
+$\eta=0.4$, $8.03$ for $\eta=0.25$ --- then hovers there while the loss
+keeps falling, non-monotonically. The **edge of stability**: you pick
+$\eta$, the curvature adapts to your choice.
+:::
+
+::: {.slide title="The best step levels the tent"}
+[Quadratics]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Each step size draws a tent $|1-\eta\lambda|$ with vertex at
+$\lambda = 1/\eta$; the rate is the taller endpoint over
+$[\lambda_{\min}, \lambda_{\max}]$. The best tent levels its endpoints:
+
+$$\eta^\star = \frac{2}{\lambda_{\min}+\lambda_{\max}},
+\qquad \rho(\eta^\star) = \frac{\kappa-1}{\kappa+1}.$$
+
+Lowering either endpoint would raise the other.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-opt-eta-tent
+:::
+:::
+
+Run it and the tuned iteration contracts by $0.818182$ --- to six digits,
+at *every* step. The law is an identity, not an estimate.
+:::
+
 ::: {.slide title="The valley picture"}
 [Quadratics]{.kicker}
 
@@ -1373,7 +1412,7 @@ $\;f-f^\star = O(1/k)$ (global values)
 ::: {.col}
 ::: {.d2l-note .rule}
 **+ $\mu$-strongly convex**
-$\;\|\mathbf{x}_k-\mathbf{x}^\star\|^2 \le (1-\tfrac{1}{\kappa})^k$
+$\;f(\mathbf{x}_k)-f^\star \le (1-\tfrac{1}{\kappa})^k\,(f(\mathbf{x}_0)-f^\star)$
 
 linear, $O(\kappa\log\tfrac1\varepsilon)$ steps
 :::
@@ -1411,7 +1450,7 @@ returns fastest.
 :::
 :::
 
-::: {.slide title="Inertia buys the $\sqrt{\kappa}$ law"}
+::: {.slide title="Inertia turns $\kappa$ into $\sqrt\kappa$"}
 [Acceleration]{.kicker}
 
 Tuned heavy ball contracts every mode at
@@ -1419,7 +1458,7 @@ $(\sqrt{\kappa}-1)/(\sqrt{\kappa}+1)$; Nesterov's look-ahead makes
 $\sqrt{\kappa}$ a theorem beyond quadratics, and these rates are
 *optimal* for first-order methods. Race all three to $10^{-6}$:
 
-@gradient-based-optimization-momentum
+@!gradient-based-optimization-momentum
 
 GD's count is linear in $\kappa$ ($6{,}908$ at $\kappa=1000$); heavy ball
 grows like $\sqrt{\kappa}$ ($315$, a $22\times$ speedup). At one gradient

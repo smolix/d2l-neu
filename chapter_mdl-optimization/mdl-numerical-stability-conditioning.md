@@ -1126,8 +1126,6 @@ reference remains :citet:`Higham.2002`.
 
 <!-- slides -->
 
-# Numerical Stability and Conditioning
-
 ::: {.slide}
 ::: {.cover}
 [Dive into Deep Learning · §24.5]{.kicker}
@@ -1211,6 +1209,45 @@ the implicit leading $1$, which fills no gap.
 :::
 :::
 
+::: {.slide title="fp8: the ladder's bottom rung" only="pytorch"}
+[Floating point]{.kicker}
+
+Since 2022 hardware pushes one rung lower, in two flavors with a clean
+division of labor --- **E4M3** keeps digits ($\varepsilon = 0.125$, about
+one decimal) for weights and activations; **E5M2** trades a mantissa bit
+for fp16's full range, for gradients:
+
+@!numerical-stability-conditioning-fp8
+
+::: {.d2l-note .warn}
+At $\varepsilon_{\text{mach}} = 0.125$ there is no slack left: fp8
+training pairs *every tensor* with a scale factor. Per-tensor scaling is
+a precondition, not an optimization.
+:::
+:::
+
+::: {.slide title="fp8: the ladder's bottom rung" except="pytorch"}
+[Floating point]{.kicker}
+
+Since 2022 hardware pushes one rung lower, in two flavors with a clean
+division of labor:
+
+::: {.d2l-note .rule}
+**E4M3** keeps digits: $\varepsilon = 0.125$ (about one decimal),
+max $= 448$ --- for weights and activations.
+**E5M2** trades a mantissa bit for fp16's full range: max $= 57344$,
+smallest normal $6.1\times10^{-5}$, at $\varepsilon = 0.25$ --- for
+gradients, which need range.
+:::
+
+::: {.d2l-note .warn}
+At $\varepsilon_{\text{mach}} = 0.125$ there is no slack left: fp8
+training pairs *every tensor* with a scale factor. Per-tensor scaling is
+a precondition, not an optimization. (The `ml_dtypes` package provides
+both formats for NumPy, JAX, and TensorFlow.)
+:::
+:::
+
 ::: {.slide title="Where the cliffs are"}
 [Floating point]{.kicker}
 
@@ -1220,9 +1257,47 @@ Because $e^x$ turns additive scale into multiplicative scale, a modest
 @!numerical-stability-conditioning-spacing
 
 ::: {.d2l-note .warn}
-fp16 gradients below $6\times10^{-5}$ vanish, so mixed precision scales
-the loss before the backward pass. **Loss scaling is underflow
-management**, nothing more.
+fp16 gradients below $6\times10^{-5}$ vanish; updates of relative size
+below $\varepsilon_{\text{mach}}/2$ round to *no update at all*. Both
+cliffs bite mixed-precision training --- next slide.
+:::
+:::
+
+::: {.slide title="Both fp16 failure modes, both rescues, one cell" only="pytorch"}
+[Floating point]{.kicker}
+
+A true gradient of $10^{-8}$ underflows fp16's backward pass to $0.0$;
+scaling the *loss* by $2^{14}$ shifts the whole chain into representable
+territory. A healthy update of relative size $10^{-4}$ is swallowed by
+round-to-nearest; an fp32 master copy accepts it:
+
+@!numerical-stability-conditioning-loss-scaling
+
+::: {.d2l-note .rule}
+**Loss scaling is underflow management; master weights are rounding
+management.** This is precisely what `torch.amp`'s `GradScaler` plus
+fp32 master weights automate --- and what bfloat16's fp32-sized exponent
+was designed to make unnecessary.
+:::
+:::
+
+::: {.slide title="Both fp16 failure modes, both rescues" except="pytorch"}
+[Floating point]{.kicker}
+
+The two cliffs, and their two escapes, in mixed-precision training:
+
+- A true gradient of $10^{-8}$ **underflows** an fp16 backward pass to an
+  exact $0.0$; multiplying the *loss* by $2^{14}$ before differentiating
+  (and unscaling after) shifts the whole gradient chain into representable
+  territory and recovers $1.000\times10^{-8}$.
+- A healthy update of relative size $10^{-4}$ is **swallowed whole** by
+  round-to-nearest in fp16 ($w - \eta g = w$ exactly); an fp32 master copy
+  of the weights accepts it without complaint.
+
+::: {.d2l-note .rule}
+**Loss scaling is underflow management; master weights are rounding
+management** --- what every framework's mixed-precision utility automates,
+and what bfloat16's fp32-sized exponent was designed to make unnecessary.
 :::
 :::
 
@@ -1406,6 +1481,27 @@ The naive answer is pure amplified noise; here it even comes out
 **negative** ($-256$), a variance below zero, its sign hostage to the
 summation order. This is what `BatchNorm` avoids with running moments.
 :::
+:::
+
+::: {.slide title="Summation order is an algorithm"}
+[Cancellation]{.kicker}
+
+The naive variance's noise changed *sign* between NumPy builds. That is
+not a bug in NumPy; it is summation error. Adding $n$ floats left to
+right commits one rounding per addition, worst case $\approx n\,u$; the
+repairs reorganize the additions, not the bits:
+
+::: {.d2l-note .rule}
+**left-to-right** $O(n\,u)$ · **pairwise** (sum halves recursively)
+$O(u \log n)$ --- what NumPy's `sum` does, blocking and all ·
+**Kahan** (carry each rounding in a second accumulator) $O(u)$,
+independent of $n$
+:::
+
+. . .
+
+Welford composes with either: the pairwise merge rule is exactly how
+running moments are combined across devices.
 :::
 
 ::: {.slide}

@@ -856,7 +856,7 @@ d2l.set_figsize((6, 2.5))
 for g, xs in samples.items():
     d2l.plt.hist(xs, bins=80, density=True, histtype='step',
                  label=f'gamma = {g:g}')
-d2l.plt.xlabel('x'), d2l.plt.ylabel('density'), d2l.plt.legend()
+d2l.plt.xlabel('x'), d2l.plt.ylabel('density'), d2l.plt.legend();
 ```
 
 The printout is the tilt, measured. At $\gamma = 1$ the sampler reproduces the

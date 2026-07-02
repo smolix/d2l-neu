@@ -1130,7 +1130,7 @@ reference remains :citet:`Higham.2002`.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §24.4]{.kicker}
+[Dive into Deep Learning · §24.5]{.kicker}
 
 Why the math is right but the loss is `NaN`<br>**floating point · stable softmax · cancellation · conditioning**.
 :::

@@ -1210,7 +1210,7 @@ all stand on results proved here.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §24.2]{.kicker}
+[Dive into Deep Learning · §24.3]{.kicker}
 
 The line between "gradient descent provably works" and "we hope"<br>**convex sets · three lenses · Jensen · global rates · what deep nets break**.
 :::

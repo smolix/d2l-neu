@@ -299,6 +299,192 @@ def fig_sgd_noise_ball():
 
 
 # =========================================================================== #
+# Stochastic and Adaptive Methods (sec_mdl-adaptive-stochastic-methods)       #
+# =========================================================================== #
+
+def fig_per_coordinate():
+    """The adaptive-methods thesis drawn (sec_mdl-adaptive-stochastic-methods,
+    Per-Coordinate Step Sizes): the same elongated quadratic
+    f(x, y) = 1/2 (x^2 + 20 y^2) from the same start, under
+
+    (a) gradient descent with one global step size near the stability ceiling
+        (eta = 0.097, 26 steps -- the exact run of fig_gd_bowl_vs_valley's
+        right panel): the stiff axis oscillates, the slow axis crawls;
+    (b) Adam's per-coordinate normalization (beta_1 = 0 to isolate the
+        rescaling from momentum, alpha = 0.12, 40 steps): both coordinates
+        move at comparable speed and the path curves smoothly into the
+        minimum -- the valley is effectively rounded.
+
+    Both trajectories are honest runs of the stated updates.
+    """
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 4.2))
+
+    lam = np.array([1.0, 20.0])
+    g = np.linspace(-1.7, 1.7, 220)
+    X, Y = np.meshgrid(g, g)
+    Z = 0.5 * (lam[0] * X**2 + lam[1] * Y**2)
+    x0 = np.array([-1.4, 1.0])
+
+    for ax in (axa, axb):
+        ax.contour(X, Y, Z, levels=14, colors=[LIGHT], linewidths=0.9)
+        ax.plot(0, 0, "*", color=GREEN, ms=13, zorder=5)
+
+    # (a) gradient descent, one global eta near 2/lambda_max.
+    x, path = x0.copy(), [x0.copy()]
+    for _ in range(26):
+        x = x - 0.097 * lam * x
+        path.append(x.copy())
+    path = np.array(path)
+    axa.plot(path[:, 0], path[:, 1], "-o", color=ORANGE, ms=3.5, lw=1.6,
+             zorder=4)
+    axa.set_title(r"(a) one global $\eta$: zig-zag")
+
+    # (b) Adam's per-coordinate rescaling (beta_1 = 0, bias-corrected v).
+    x, m, v = x0.copy(), np.zeros(2), np.zeros(2)
+    path = [x0.copy()]
+    for k in range(1, 41):
+        gr = lam * x
+        v = 0.999 * v + 0.001 * gr * gr
+        x = x - 0.12 * gr / (np.sqrt(v / (1 - 0.999**k)) + 1e-8)
+        path.append(x.copy())
+    path = np.array(path)
+    axb.plot(path[:, 0], path[:, 1], "-o", color=BLUE, ms=3.5, lw=1.6,
+             zorder=4)
+    axb.set_title(r"(b) per-coordinate steps (Adam): rounded")
+    # annotate the equal-speed opening segment.
+    axb.annotate("equal speed on\nboth coordinates",
+                 xy=(-0.85, 0.47), xytext=(-0.05, 1.05), color=BLUE,
+                 fontsize=9, ha="center", va="center",
+                 arrowprops=dict(arrowstyle="-", color=BLUE, lw=0.9))
+
+    for ax in (axa, axb):
+        fl.clean_axes(ax, lim=((-1.7, 1.7), (-1.7, 1.7)), hide=True)
+    fl.save(fig, "mdl-opt-per-coordinate")
+
+
+def fig_schedule_zoo():
+    """The schedule zoo (sec_mdl-adaptive-stochastic-methods, Schedules and
+    Warmup): eta_t over a fixed budget K for the four shapes the section
+    discusses -- constant, c/k decay, cosine, and warmup-stable-decay (WSD) --
+    all beginning with the same linear warmup over the first 5% of the budget.
+    A dashed gray line marks the noise-floor reading: fixed-step SGD parks on
+    a floor proportional to eta, so the constant schedule keeps paying it while
+    the decaying schedules pay it down; WSD does all of that paying in its
+    final decay phase.
+    """
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+
+    K, eta0 = 1000.0, 1.0
+    w = 0.05 * K                               # shared linear warmup
+    t = np.linspace(0.0, K, 1001)
+
+    def with_warmup(body):
+        return np.where(t < w, eta0 * t / w, body)
+
+    constant = with_warmup(np.full_like(t, eta0))
+    inv_k = with_warmup(eta0 / (1 + np.maximum(t - w, 0) / 60.0))
+    cosine = with_warmup(0.5 * eta0 * (1 + np.cos(
+        np.pi * np.maximum(t - w, 0) / (K - w))))
+    wsd = with_warmup(np.where(t < 0.8 * K, eta0,
+                               eta0 * (K - t) / (0.2 * K)))
+
+    for y, col, lab, ls in [
+            (constant, GRAY, "constant", (0, (5, 3))),
+            (inv_k, GREEN, r"$c/k$", "-"),
+            (cosine, BLUE, "cosine", "-"),
+            (wsd, ORANGE, "WSD", "-")]:
+        ax.plot(t, y, color=col, lw=2.0, ls=ls, zorder=3)
+
+    ax.text(430, 1.045, "constant: noise floor $\\propto\\eta$ forever",
+            color=GRAY, fontsize=9, ha="center", va="bottom")
+    ax.annotate("$c/k$: reaches the optimum,\nif $c$ is large enough",
+                xy=(210, float(inv_k[210])), xytext=(345, 0.47), color=GREEN,
+                fontsize=9, ha="center", va="center",
+                arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.9))
+    ax.annotate("cosine: long tail\nof small steps",
+                xy=(700, cosine[700]), xytext=(555, 0.62), color=BLUE,
+                fontsize=9, ha="center", va="center",
+                arrowprops=dict(arrowstyle="-", color=BLUE, lw=0.9))
+    ax.annotate("WSD: hold the plateau,\nthen pay the ball down",
+                xy=(880, wsd[880]), xytext=(870, 0.80), color=ORANGE,
+                fontsize=9, ha="center", va="center",
+                arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.9))
+    ax.annotate("warmup", xy=(w, 0.55), xytext=(150, 0.42), color="black",
+                fontsize=9, ha="center", va="center",
+                arrowprops=dict(arrowstyle="-", color="black", lw=0.8))
+
+    ax.plot([0, K], [0, 0], color="black", lw=1.0)
+    ax.text(K, -0.07, r"$t$", fontsize=11, ha="right", va="top")
+    ax.text(8, 1.10, r"$\eta_t$", fontsize=10.5, ha="left", va="bottom")
+    fl.clean_axes(ax, lim=((-25.0, 1030.0), (-0.16, 1.24)), hide=True,
+                  equal=False)
+    fl.save(fig, "mdl-opt-schedule-zoo")
+
+
+def fig_bias_correction():
+    """Adam's startup transient and its exact cancellation
+    (sec_mdl-adaptive-stochastic-methods, Adam): analytic curves, no sampling.
+
+    (a) Under a stationary gradient scale, E[v_t] = (1 - beta_2^t) E[g^2]: the
+        zero-initialized average carries only the plotted fraction of the true
+        scale (63% at t = 1000 for beta_2 = 0.999); dividing by 1 - beta_2^t
+        restores 1 exactly at every t.
+    (b) The mis-scaling of the *raw* ratio m_t / sqrt(v_t): the factor
+        (1 - beta_1^t) / sqrt(1 - beta_2^t) is 3.16 at t = 1, peaks near 6.6
+        around t ~ 12 (the numerator saturates in ~10 steps, the denominator
+        needs ~1000), and only decays to 1 over ~1/(1-beta_2) steps --
+        uncorrected Adam takes its largest steps early, on its worst
+        information.  Log-t axis so both the peak and the slow decay show.
+    """
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 3.6))
+
+    t = np.arange(1, 5001)
+    b1, b2 = 0.9, 0.999
+
+    axa.axhline(1.0, color=GREEN, lw=2.0, zorder=3)
+    axa.plot(t, 1 - b2**t, color=ORANGE, lw=2.0, zorder=3)
+    axa.plot([1000, 1000], [0, 1 - b2**1000], color=GRAY, lw=0.9,
+             ls=(0, (2, 3)))
+    axa.annotate(r"$\mathbb{E}[v_t]/\overline{g^2} = 1-\beta_2^t$"
+                 "\n(63% at $t=1000$)",
+                 xy=(1000, 1 - b2**1000), xytext=(2500, 0.42), color=ORANGE,
+                 fontsize=9, ha="center", va="center",
+                 arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.9))
+    axa.text(2500, 1.05, r"corrected: $\hat{v}_t = v_t/(1-\beta_2^t)$",
+             color=GREEN, fontsize=9, ha="center", va="bottom")
+    axa.set_title("(a) the startup deficit, cancelled exactly")
+    axa.set_xlabel(r"$t$")
+    fl.clean_axes(axa, lim=((-100.0, 5100.0), (-0.06, 1.3)), hide=False,
+                  equal=False)
+
+    ratio = (1 - b1**t) / np.sqrt(1 - b2**t)
+    tpk = int(t[np.argmax(ratio)])
+    axb.axhline(1.0, color=GREEN, lw=1.2, ls=(0, (5, 3)), zorder=2)
+    axb.plot(t, ratio, color=ORANGE, lw=2.0, zorder=3)
+    axb.set_xscale("log")
+    axb.plot(1, ratio[0], "o", color=ORANGE, ms=6, zorder=4)
+    axb.plot(tpk, ratio.max(), "o", color=ORANGE, ms=6, zorder=4)
+    axb.annotate(r"$3.16\times$ at $t=1$",
+                 xy=(1, ratio[0]), xytext=(2.3, 1.75), color=ORANGE,
+                 fontsize=9, ha="left", va="center",
+                 arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.9))
+    axb.annotate(rf"peak ${ratio.max():.1f}\times$ at $t={tpk}$",
+                 xy=(tpk, ratio.max()), xytext=(90, 6.4), color=ORANGE,
+                 fontsize=9, ha="left", va="center",
+                 arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.9))
+    axb.text(700, 1.15, "properly scaled: 1", color=GREEN, fontsize=9,
+             ha="center", va="bottom")
+    axb.set_title(r"(b) raw-step inflation $(1-\beta_1^t)/\sqrt{1-\beta_2^t}$")
+    axb.set_xlabel(r"$t$")
+    axb.set_xlim(0.85, 5500.0)
+    axb.set_ylim(0.0, 7.2)
+    axb.set_aspect("auto")
+
+    fig.subplots_adjust(wspace=0.22)
+    fl.save(fig, "mdl-opt-bias-correction")
+
+
+# =========================================================================== #
 # 3.2 Convex Sets and Convex Functions                                        #
 # =========================================================================== #
 
@@ -1067,6 +1253,10 @@ FIGURES = [
     fig_eta_tent,
     fig_momentum_damping,
     fig_sgd_noise_ball,
+    # stochastic and adaptive methods
+    fig_per_coordinate,
+    fig_schedule_zoo,
+    fig_bias_correction,
     # 3.2 convexity
     fig_chord_above_graph,
     fig_convex_vs_nonconvex_set,

@@ -1225,7 +1225,7 @@ rates), and its conditioning consequences continue in
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §24.3]{.kicker}
+[Dive into Deep Learning · §24.4]{.kicker}
 
 Reading a constrained problem and its dual<br>**Lagrange multipliers · KKT · projections · duality**.
 :::

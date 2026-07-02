@@ -956,7 +956,9 @@ section's terms: at initialization the gradient noise is at its largest and,
 per the edge-of-stability picture of :numref:`subsec_mdl-quadratic-model`,
 the network has not yet adapted its curvature to the target step size, so
 ramping $\eta$ gives the sharpness time to equilibrate instead of tripping
-the stability ceiling in the first hundred steps.
+the stability ceiling in the first hundred steps. Schedules and warmup get
+their full mathematical treatment in
+:numref:`sec_mdl-adaptive-stochastic-methods`.
 
 ### Coda: Why Not Newton?
 :label:`subsec_mdl-why-not-newton`
@@ -1036,7 +1038,11 @@ its momentum matrix --- the SVD-flavored step analyzed in
 them exploiting the fact that a network's parameters come in *matrices*, not
 one long vector. First-order methods with curvature surrogates, fed by
 minibatch gradients: that is the compromise this section has been deriving,
-and it is what every framework ships.
+and it is what every framework ships. The mathematics of this whole family
+--- AdaGrad's diagonal metric, Adam's bias correction and its convex
+counterexample, decoupled weight decay, and the preconditioning ladder up
+through K-FAC, Shampoo, and Muon --- is the subject of
+:numref:`sec_mdl-adaptive-stochastic-methods`.
 
 ## Summary
 

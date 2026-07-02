@@ -1049,6 +1049,7 @@ print('moduli (should be 1):', np.round(np.abs(np.linalg.eigvals(R)), 4))
 ```
 
 ## Spectral Radius, Stability, and Deep Networks
+:label:`subsec_mdl-spectral-radius`
 
 We now see exactly what we hoped for. The quantity controlling whether iterated
 multiplication grows or shrinks a vector is the *spectral radius*

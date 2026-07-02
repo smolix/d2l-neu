@@ -811,26 +811,26 @@ curb overfitting, the first of many regularizers we will meet.
 ::: {.cover}
 [Dive into Deep Learning · §3.4]{.kicker}
 
-Linear regression **from scratch**<br>Building a model, a loss, an optimizer, and a training loop with nothing but tensors and autograd.
+Built by hand once, demystified for good<br>**model · loss · optimizer · training loop --- nothing but tensors and autograd**.
+:::
 :::
 
-Model, loss, optimizer, training loop — built by hand once, demystified for good.
-:::
-
-::: {.slide title="Four parts, one object graph"}
+::: {.slide title="We know the answer before we start"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A trainable model is four pieces that fit together:
+Four pieces, built by hand today: a **model** (`w`, `b`, `forward`), a
+**loss**, an **optimizer**, and the **training loop** driving them ---
+each slotted into the `Module` / `Trainer` / `DataModule` scaffold of
+§3.2.
 
-1. a **model** holding parameters `w`, `b` and a `forward`,
-2. a **loss** scoring its predictions,
-3. an **optimizer** that nudges the parameters,
-4. a **training loop** that drives all three over the data.
-
-::: {.d2l-note}
-We slot them into the `Module` / `Trainer` / `DataModule` classes from :numref:`sec_oo-design`, so each piece has one obvious home.
+::: {.d2l-note .rule}
+Because we manufactured the data (§3.3, noise $\sigma = 0.01$), a
+*correct* implementation has nowhere to hide. It must deliver **two
+numbers**: a loss landing on the noise floor
+$\sigma^2/2 = 5\times10^{-5}$, and parameters returning to
+$\mathbf{w}^* = [2, -3.4]$, $b^* = 4.2$. Keep score.
 :::
 :::
 
@@ -858,11 +858,10 @@ We need parameters before we can optimize them. Draw `w` from a tiny Gaussian, s
 @linear-regression-scratch-defining-the-model-1
 
 ::: {.d2l-note}
-`requires_grad=True` (or the framework's equivalent) tells autograd to track `w` and `b` so their gradients can flow back from the loss.
-:::
-
-::: {.d2l-note}
-For a single linear layer **any** small init works (exercise 1); breaking symmetry only matters once we stack layers — :numref:`sec_numerical_stability`.
+`requires_grad=True` (or the framework's equivalent) is the crucial
+flag: it tells autograd to track `w` and `b` so gradients can flow back
+from the loss. For a single linear layer **any** small init works
+(exercise 1); symmetry breaking only matters once we stack layers.
 :::
 :::
 
@@ -970,7 +969,7 @@ A `tf.Variable` is updated in place with `assign_sub`. The same rule $\theta \le
 @linear-regression-scratch-defining-the-optimization-algorithm-2
 :::
 
-::: {.slide title="Minibatch SGD as an Optax transform" only="jax"}
+::: {.slide title="Minibatch SGD as an Optax transform" only="jax" layout="code"}
 [Optimizer · JAX]{.kicker}
 
 Optax expresses an optimizer as two pure functions, `init` (empty state) and `update` (gradients to the increment $-\eta\,\mathbf{g}$), wrapped in a `GradientTransformation`:
@@ -1013,37 +1012,43 @@ So the run is repeatable, we seed the global RNG before building the model. The 
 @-linear-regression-scratch-training-seed
 :::
 
-::: {.slide title="Run it: loss falls to the noise floor"}
-[Training]{.kicker}
+::: {.slide title="First promise kept: the loss lands on the noise floor"}
+[Training · payoff]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-We instantiate the model, the synthetic dataset from :numref:`sec_synthetic-regression-data`, and a `Trainer`, then fit for ten epochs at learning rate `0.03`:
+Model, synthetic dataset, `Trainer`; ten epochs at learning rate `0.03`:
 
 @-linear-regression-scratch-training-3
 
 The `fit` call drives the four-step loop over every minibatch and plots both losses live.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @!linear-regression-scratch-training-3
 
-::: {.d2l-note}
-Train and validation loss fall together and flatten near $\sigma^2/2$, with **no gap**: a 2-D linear model on 1000 points has no room to overfit.
+::: {.d2l-note .rule}
+Both curves flatten at $\approx 5\times10^{-5}$ --- **exactly** the
+$\sigma^2/2$ we promised, so the residual error is the noise we injected,
+not a bug. And validation tracks training with **no gap**: 2 parameters
+on 1000 points has no room to overfit (§3.6).
 :::
 :::
 :::
 :::
 
-::: {.slide title="Did it recover the true parameters?"}
-[Training]{.kicker}
+::: {.slide title="Second promise kept: the truth, recovered"}
+[Training · payoff]{.kicker}
 
-We synthesized the data, so we know the true $\mathbf{w}=[2,-3.4]$ and $b=4.2$. Compare them with what training learned:
+We synthesized the data, so we know the truth: $\mathbf{w}^*=[2,-3.4]$, $b^*=4.2$. The verdict:
 
 @linear-regression-scratch-training-4
 
 ::: {.d2l-note}
-Off by less than $10^{-3}$. Exact recovery needs linearly independent features; in practice we care about accurate *prediction*, not recovering the truth.
+Off by a few $10^{-4}$ at most. Exact recovery needs linearly
+independent features and is *not* the everyday goal --- deep models have
+many equally good parameter settings, and we care about accurate
+**prediction** --- but on a problem with one right answer, our loop found it.
 :::
 :::
 
@@ -1053,12 +1058,13 @@ Off by less than $10^{-3}$. Exact recovery needs linearly independent features; 
 ::: {.cols}
 ::: {.col}
 - A `Module` for linear regression is just `__init__`, `forward`, `loss`, `configure_optimizers`.
-- The **loss** is mean squared error; the **optimizer** is a ten-line minibatch SGD.
+- The **gradient is the error-weighted input**, $(\hat{y}-y)\,\mathbf{x}$ --- what `backward` deposits and SGD consumes.
+- The **optimizer** is a ten-line minibatch SGD.
 :::
 
 ::: {.col}
-- Training is one **four-step loop** (zero, forward, backward, update) run over minibatches.
-- Synthetic data let us confirm SGD **recovered the ground-truth** $\mathbf{w}, b$.
+- Training is one **four-step loop**: zero, forward, backward, update --- in that order.
+- Both promises kept: loss on the $5\times10^{-5}$ noise floor, $\mathbf{w}, b$ recovered to $\sim10^{-4}$.
 :::
 :::
 

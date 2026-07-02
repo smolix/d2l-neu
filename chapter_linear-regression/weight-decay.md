@@ -770,7 +770,7 @@ Different sets of parameters can have different update behaviors within the same
 ::: {.cover}
 [Dive into Deep Learning · §3.7]{.kicker}
 
-Taming overfitting by **shrinking the weights**<br>Weight decay, the $\ell_2$ penalty, and why a smaller weight vector means a simpler model.
+Taming overfitting by shrinking the weights<br>**the $\ell_2$ penalty · the geometry · the spectral why · the Bayesian reading**.
 :::
 :::
 
@@ -861,15 +861,7 @@ Usually the **bias is left undecayed**.
 :::
 :::
 
-::: {.slide title="Setup"}
-[From Scratch]{.kicker}
-
-One import cell brings in the framework and the d2l helpers used throughout:
-
-@weight-decay
-:::
-
-::: {.slide title="A regression rigged to overfit"}
+::: {.slide title="A regression rigged to overfit" layout="tight"}
 [From Scratch]{.kicker}
 
 ::: {.cols .vc}
@@ -881,7 +873,8 @@ A tiny linear signal in **200 inputs** plus faint noise, $y = 0.05 + \sum_i 0.01
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-**20** examples for **200** parameters: 10× more knobs than data. Overfitting is guaranteed.
+**20** examples for **200** parameters: 10× more knobs than data.
+Overfitting is guaranteed --- by design, so the rescue is unmistakable.
 :::
 :::
 :::
@@ -909,26 +902,28 @@ Nothing else changes: same linear model, same squared loss. The penalty rides al
 :::
 :::
 
-::: {.slide title="$\lambda = 0$: the model overfits"}
-[From Scratch · no decay]{.kicker}
+::: {.slide title="$\lambda = 0$: the overfit, on display" layout="tight"}
+[From Scratch · the overfit]{.kicker}
 
 @weight-decay-training-without-regularization
 
-Training loss plunges, validation loss stalls, weight norm large: a textbook overfit.
+Training loss plunges; validation loss never follows --- and the printed
+$\|\mathbf{w}\|^2$ shows the price of that perfect memory. A textbook overfit.
 :::
 
-::: {.slide title="$\lambda = 3$: generalization wins"}
-[From Scratch · with decay]{.kicker}
+::: {.slide title="$\lambda = 3$: the rescue" layout="tight"}
+[From Scratch · the rescue]{.kicker}
 
 @weight-decay-using-weight-decay
 
-Training loss is now *higher*, but validation loss drops and the weight norm shrinks by an order of magnitude. That gap closing is the payoff.
+Training loss is *higher* --- we forbade memorization --- but validation
+loss finally falls, with $\|\mathbf{w}\|^2$ an order of magnitude smaller.
 :::
 
-::: {.slide title="Why shrinkage helps: the spectral view"}
-[From Scratch · why it works]{.kicker}
+::: {.slide title="Why shrinkage helps: damp the directions the data cannot see" only="pytorch" layout="tight"}
+[From Scratch · the why]{.kicker}
 
-Ridge keeps a closed form, and the SVD $\mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^\top$ shows exactly *what* shrinks: the response along the $j$-th principal direction is damped by
+Via the SVD $\mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^\top$, ridge damps the response along the $j$-th principal direction by
 
 $$\frac{d_j^2}{d_j^2 + \tilde{\lambda}}
 \qquad\Rightarrow\qquad
@@ -939,7 +934,31 @@ On our $20\times 200$ dataset:
 @!weight-decay-why-shrinkage-helps-the-spectral-view
 
 ::: {.d2l-note .rule}
-Strong directions pass through nearly untouched; weakly-constrained directions — the ones a noise-chasing fit exploits — are suppressed hardest. $\textrm{df}(\tilde\lambda)$ is the complexity dial made literal.
+Twenty examples pin down at most **20** of 200 directions; the rescue
+$\lambda = 3$ prices the model at $\textrm{df} = 15.1$ effective
+parameters, hitting the weakest directions --- the ones a noise-chasing
+fit exploits --- hardest. The **continuous complexity dial**, made literal.
+:::
+:::
+
+::: {.slide title="Why shrinkage helps: damp the directions the data cannot see" except="pytorch"}
+[From Scratch · the why]{.kicker}
+
+Ridge keeps a closed form, and the SVD $\mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^\top$ shows exactly *what* shrinks: the response along the $j$-th principal direction is damped by
+
+$$\frac{d_j^2}{d_j^2 + \tilde{\lambda}}
+\qquad\Rightarrow\qquad
+\textrm{df}(\tilde{\lambda}) = \sum_j \frac{d_j^2}{d_j^2 + \tilde{\lambda}}.$$
+
+Strong directions ($d_j$ large) pass through nearly untouched; weakly
+constrained ones are suppressed hardest --- exactly the directions a
+noise-chasing fit exploits.
+
+::: {.d2l-note .rule}
+Twenty examples pin down at most **20** of 200 directions
+($\textrm{df}(0) = 20$); the rescue $\lambda = 3$ prices the model at
+$\textrm{df} \approx 15$ effective parameters. The **continuous
+complexity dial**, made literal.
 :::
 :::
 
@@ -1040,15 +1059,11 @@ $$\mathbf{w}\sim\mathcal{N}(\mathbf{0},\lambda^{-1}\mathbf{I})
   \;\Rightarrow\;
   -\log p(\mathbf{w}) = \tfrac{\lambda}{2}\|\mathbf{w}\|^2 + \textrm{const}.$$
 
-. . .
-
 Add it to the Gaussian-noise NLL from §3.1:
 
 $$\underbrace{-\log p(\mathbf{y}\mid\mathbf{X},\mathbf{w})}_{\textrm{MLE: }\,\frac{1}{2\sigma^2}\sum(\hat{y}-y)^2}
   \;\; \underbrace{-\log p(\mathbf{w})}_{=\,\frac{\lambda}{2}\|\mathbf{w}\|^2}
   \;\Rightarrow\; \textrm{MAP} = \textrm{ridge}.$$
-
-. . .
 
 ::: {.d2l-note .rule}
 **MAP = MLE + a prior.** §3.1 got squared loss from Gaussian *noise*; weight decay adds a Gaussian *prior* on $\mathbf{w}$, with $\lambda$ the prior precision.
@@ -1066,13 +1081,13 @@ $$\underbrace{-\log p(\mathbf{y}\mid\mathbf{X},\mathbf{w})}_{\textrm{MLE: }\,\fr
 
 ::: {.cols}
 ::: {.col}
-- **Weight decay** = original loss $+\ \tfrac{\lambda}{2}\|\mathbf{w}\|_2^2$.
-- Per step it **shrinks** the weights by $1 - \eta\lambda$ before the data update.
-- $\lambda$ is a continuous complexity dial; tune it on a **validation set**.
+- **Weight decay** = original loss $+\ \tfrac{\lambda}{2}\|\mathbf{w}\|_2^2$; per step it **shrinks** the weights by $1 - \eta\lambda$ before the data update.
+- **Geometry:** ridge shrinks (round ball), lasso selects (pointed diamond).
+- **Spectral view:** each direction damped by $d_j^2/(d_j^2+\tilde\lambda)$; the 200-knob model ran at $\textrm{df} \approx 15$ effective parameters --- a continuous dial, tuned on a **validation set**.
 :::
 
 ::: {.col}
-- **Geometry:** ridge shrinks (round ball), lasso selects (pointed diamond).
+- The $20{\times}200$ rig: $\lambda=0$ memorizes; $\lambda=3$ trades training error for a falling validation loss.
 - Frameworks expose decay in the **optimizer** (or layer / gradient transform).
 - Same idea scales up: **AdamW** for big models, a Gaussian **prior** in disguise.
 :::

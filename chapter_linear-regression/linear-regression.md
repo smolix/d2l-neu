@@ -918,7 +918,7 @@ and ultimately, evaluation on previously unseen data.
 ::: {.cover}
 [Dive into Deep Learning · §3.1]{.kicker}
 
-Linear Regression<br>The straight line through the data, and the recipe that fits everything after it.
+The straight line through the data<br>**and the recipe behind every loss function after it**.
 :::
 :::
 
@@ -928,11 +928,14 @@ Linear Regression<br>The straight line through the data, and the recipe that fit
 ::: {.cols .vc}
 ::: {.col}
 - Collect house sales: each has an **area**, an **age**, a **price**.
-- Bigger houses cost more, not exactly but **on average**.
-- *Regression* draws the line and turns it into a **prediction**.
+- Bigger houses cost more --- not exactly, but **on average**.
+- *Regression* draws the line and turns it into a **prediction** for a
+  house nobody has seen.
 
 ::: {.d2l-note}
-Features $\mathbf{x}$, label $y$. We want $E[Y \mid \mathbf{x}]$.
+Features $\mathbf{x}$, label $y$; we model $E[Y \mid \mathbf{x}]$. Two
+things are missing: a measure of *how wrong* we are, and a way to
+*improve*. This section supplies both.
 :::
 :::
 
@@ -948,63 +951,110 @@ Features $\mathbf{x}$, label $y$. We want $E[Y \mid \mathbf{x}]$.
 
 [The Model]{.dtitle}
 
-[a weighted sum, a loss, and how to minimize it]{.dsub}
+[a dot product, a loss, and two ways to minimize]{.dsub}
 :::
 :::
 
-::: {.slide title="The linear model"}
+::: {.slide title="The whole model is one dot product"}
 [The Model]{.kicker}
 
 Stack $d$ features into $\mathbf{x}\in\mathbb{R}^d$ and weights into
-$\mathbf{w}\in\mathbb{R}^d$. The prediction is one **dot product** plus a bias:
+$\mathbf{w}\in\mathbb{R}^d$:
 
 $$\hat{y} = w_1 x_1 + \cdots + w_d x_d + b = \mathbf{w}^\top \mathbf{x} + b.$$
 
 . . .
 
-For a whole dataset, the design matrix $\mathbf{X}\in\mathbb{R}^{n\times d}$
-holds one example per row, and all predictions come at once:
+For the whole dataset at once, the design matrix
+$\mathbf{X}\in\mathbb{R}^{n\times d}$ holds one example per row:
 
 $$\hat{\mathbf{y}} = \mathbf{X}\mathbf{w} + b.$$
 
 ::: {.d2l-note}
-The bias $b$ lets the line miss the origin: an **affine**, not merely linear, map.
+The bias $b$ lets the line miss the origin: an **affine**, not merely
+linear, map. Learning = choosing $(\mathbf{w}, b)$.
 :::
 :::
 
-::: {.slide title="How wrong are we? Squared loss"}
+::: {.slide title="Squared loss charges each miss by its square"}
 [The Model]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Penalize each gap between prediction and target by its **square**:
+Average the per-example penalties
+$\tfrac12\bigl(\hat{y}^{(i)} - y^{(i)}\bigr)^2$:
 
 $$L(\mathbf{w}, b)
   = \frac{1}{n} \sum_{i=1}^{n}
     \tfrac{1}{2}\bigl(\hat{y}^{(i)} - y^{(i)}\bigr)^2.$$
 
-Large errors hurt **quadratically**. The loss is **convex** in
-$(\mathbf{w}, b)$, so every local minimum is the global one.
+$L$ is **convex** in $(\mathbf{w}, b)$, so every local minimum is the
+global one --- rare luxury, enjoy it while it lasts.
 :::
 
 ::: {.col .fig}
-![Each vertical gap is a residual; squared loss sums their squares.](../img/fit-linreg.svg){width=82%}
+![Each vertical gap is a residual; the loss sums their squares.](../img/fit-linreg.svg){width=82%}
+
+::: {.d2l-note .warn}
+Large errors hurt *quadratically*: strong incentive to avoid big
+misses --- and outsized sensitivity to anomalous points.
+:::
 :::
 :::
 :::
 
-::: {.slide title="Two ways to fit"}
+::: {.slide title="One corrupted label puts the square on trial" only="pytorch"}
+[The Model · the trial]{.kicker}
+
+Twenty points sit exactly on $y = 2x$; we corrupt a single label to
+$10000$ and fit the slope twice --- squared loss vs. **mean absolute
+error**:
+
+@linear-regression-loss-function
+
+. . .
+
+::: {.d2l-note .warn}
+The verdict: one bad point in twenty drags the squared-loss slope to
+$22.88$ --- an order of magnitude from the truth --- while the MAE fit
+barely moves ($2.02$). Hold this exhibit: the probabilistic view below
+explains *both* behaviors.
+:::
+:::
+
+::: {.slide title="One corrupted label puts the square on trial" except="pytorch"}
+[The Model · the trial]{.kicker}
+
+Twenty points sit exactly on $y = 2x$; we corrupt a single label to
+$10000$ and fit the slope twice --- squared loss vs. **mean absolute
+error**:
+
+@-linear-regression-loss-function
+
+. . .
+
+::: {.d2l-note .warn}
+The verdict: one bad point in twenty drags the squared-loss slope an
+order of magnitude from the true $2.0$, while the MAE fit barely moves.
+Hold this exhibit: the probabilistic view below explains *both*
+behaviors.
+:::
+:::
+
+::: {.slide title="Two ways to reach the minimum"}
 [The Model]{.kicker}
 
 **Closed form**, by setting the gradient to zero:
 
 $$\mathbf{w}^* = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}.$$
 
-Exact, but it needs a matrix inverse and works **only** for linear models.
+Exact --- but it needs a matrix inverse, and it exists **only** for
+linear models with squared loss.
 
 . . .
 
-**Minibatch SGD**, the iterative recipe we reuse for every model after this:
+**Minibatch SGD**, the iterative recipe reused by every model in this
+book:
 
 $$(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) -
   \frac{\eta}{|\mathcal{B}|}
@@ -1016,13 +1066,13 @@ $$(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) -
 
 ::: {.cols .vc}
 ::: {.col}
-As $\mathbf{w}$ varies, $\mathbf{X}\mathbf{w}$ sweeps the **column space**
-of $\mathbf{X}$. The best fit is the point in that subspace **closest** to
-$\mathbf{y}$: the orthogonal **projection**.
+As $\mathbf{w}$ varies, $\mathbf{X}\mathbf{w}$ sweeps the **column
+space** of $\mathbf{X}$. The best fit is the point of that subspace
+**closest** to $\mathbf{y}$: the orthogonal **projection**.
 
-The leftover residual $\mathbf{y}-\mathbf{X}\mathbf{w}^*$ is **perpendicular**
-to every feature column, which is exactly
-$\mathbf{X}^\top(\mathbf{X}\mathbf{w}^*-\mathbf{y})=\mathbf{0}$.
+The residual $\mathbf{y}-\mathbf{X}\mathbf{w}^*$ is what is left over,
+and it must be **perpendicular** to every feature column --- exactly the
+normal equation $\mathbf{X}^\top(\mathbf{X}\mathbf{w}^*-\mathbf{y})=\mathbf{0}$.
 :::
 
 ::: {.col .fig .big}
@@ -1035,15 +1085,17 @@ $\mathbf{X}^\top(\mathbf{X}\mathbf{w}^*-\mathbf{y})=\mathbf{0}$.
 [The Model]{.kicker}
 
 - **Initialize** $\mathbf{w}, b$ at random.
-- **Sample** a minibatch $\mathcal{B}$ of examples ($|\mathcal{B}|$ between 32 and 256).
+- **Sample** a minibatch $\mathcal{B}$ (size 32--256: a full batch is
+  slow, a single point is noisy).
 - **Average** the per-example gradients on $\mathcal{B}$.
 - **Step** a small distance $\eta$ (the *learning rate*) downhill.
 
 . . .
 
 ::: {.d2l-note .rule}
-A full batch is accurate but slow; a single point is noisy. A **minibatch** is the
-practical middle, and the work is one matrix multiply, not a Python loop.
+With a constant $\eta$, SGD never lands on the minimizer: it hovers in a
+**noise ball** whose squared radius scales with $\eta$. Shrinking $\eta$
+shrinks the ball --- the reason learning-rate *schedules* exist (§24.2).
 :::
 :::
 
@@ -1053,42 +1105,31 @@ practical middle, and the work is one matrix multiply, not a Python loop.
 
 [Vectorization]{.dtitle}
 
-[why we never write the inner loop in Python]{.dsub}
+[why the inner loop never lives in Python]{.dsub}
 :::
 :::
 
-::: {.slide title="Two ways to add two vectors"}
-[Vectorization]{.kicker}
-
-Start with two 1000-element vectors of ones, and add them two ways:
-**one element at a time**, or with a single call to `+`.
-
-@linear-regression-vectorization-for-speed-1
-
-::: {.d2l-note}
-The math is identical. Only the *number of trips* into the Python interpreter differs.
-:::
-:::
-
-::: {.slide title="Loop versus one library call"}
+::: {.slide title="A thousand interpreter trips, or one kernel call" layout="tight"}
 [Vectorization]{.kicker}
 
 ::: {.cols}
 ::: {.col}
-A Python loop dispatches $n$ separate tensor ops, one per element:
+Add two 1000-element vectors **one coordinate at a time** --- each `+`
+is a separate trip through the Python interpreter:
 
 @linear-regression-vectorization-for-speed-2
 :::
 
 ::: {.col}
-The overloaded `+` hands the whole array to one compiled kernel:
+Or hand the whole array to **one compiled kernel**:
 
 @linear-regression-vectorization-for-speed-3
 :::
 :::
 
 ::: {.d2l-note .rule}
-The printed times tell the story: the single library call beats the loop by orders of magnitude. Push inner loops into the library, never Python.
+Identical math, orders-of-magnitude different cost --- and the gap *grows*
+with vector length. Push inner loops into the library, never Python.
 :::
 :::
 
@@ -1096,49 +1137,25 @@ The printed times tell the story: the single library call beats the loop by orde
 ::: {.divider}
 [03]{.dnum}
 
-[Loss Meets Probability]{.dtitle}
+[Where Losses Come From]{.dtitle}
 
-[where squared error comes from]{.dsub}
+[squared error is a probabilistic assumption in disguise]{.dsub}
 :::
 :::
 
-::: {.slide title="Why squared loss? Gaussian noise"}
-[Loss Meets Probability]{.kicker}
-
-Assume each label is the linear prediction plus fixed-variance noise:
-
-$$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon,
-  \quad \epsilon \sim \mathcal{N}(0, \sigma^2)
-  \;\Rightarrow\;
-  P(y\mid\mathbf{x}) = \tfrac{1}{\sqrt{2\pi\sigma^2}}
-    \exp\!\Bigl(-\tfrac{(y-\hat{y})^2}{2\sigma^2}\Bigr).$$
-
-. . .
-
-The negative log-likelihood of the whole dataset is then
-
-$$-\log P(\mathbf{y}\mid\mathbf{X})
-  = \textrm{const} + \frac{1}{2\sigma^2}\sum_i \bigl(y^{(i)}-\hat{y}^{(i)}\bigr)^2.$$
-
-. . .
-
-The constant and $\sigma$ drop out, so **maximum likelihood under Gaussian noise** *is* minimizing squared error.
-
-::: {.d2l-note .rule}
-The template: match the loss to the noise model. §3.7 adds a *prior* on $\mathbf{w}$ to this same likelihood and recovers weight decay.
-:::
-:::
-
-::: {.slide title="The normal density"}
-[Loss Meets Probability]{.kicker}
+::: {.slide title="Assume the errors are Gaussian"}
+[Where losses come from]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-The bell curve we are assuming for the errors:
+Model each label as the linear prediction plus bell-curve noise:
 
-@linear-regression-the-normal-distribution-and-squared-loss-1
+$$y = \mathbf{w}^\top \mathbf{x} + b + \epsilon,
+  \qquad \epsilon \sim \mathcal{N}(0, \sigma^2).$$
 
-Shifting the **mean** slides it; growing the **variance** flattens it.
+Shifting the **mean** slides the bell; growing the **variance** flattens
+it. Note how fast the tails die: under a Gaussian, a huge error is
+essentially *impossible*.
 :::
 
 ::: {.col .fig}
@@ -1147,25 +1164,53 @@ Shifting the **mean** slides it; growing the **variance** flattens it.
 :::
 :::
 
-::: {.slide title="A menu of losses"}
-[Loss Meets Probability]{.kicker}
+::: {.slide title="Maximum likelihood turns the assumption into the loss"}
+[Where losses come from]{.kicker}
+
+The Gaussian assumption prices every $y$:
+$P(y\mid\mathbf{x}) = \tfrac{1}{\sqrt{2\pi\sigma^2}}
+    \exp\!\bigl(-\tfrac{(y-\hat{y})^2}{2\sigma^2}\bigr)$.
+Maximize the likelihood of the dataset = minimize its negative log:
+
+$$-\log P(\mathbf{y}\mid\mathbf{X})
+  = \textrm{const} + \frac{1}{2\sigma^2}\sum_i \bigl(y^{(i)}-\hat{y}^{(i)}\bigr)^2.$$
+
+. . .
+
+The constant and $\sigma$ drop out: **maximum likelihood under Gaussian
+noise *is* squared error.** The square was never arbitrary --- it is the
+Gaussian's $(\cdot)^2$, inherited.
+
+::: {.d2l-note .rule}
+This also explains the trial: squared loss trusted the Gaussian's thin
+tails, so a $10000$ where $12$ was expected read as *impossible* --- and
+hijacked the fit.
+:::
+:::
+
+::: {.slide title="The recipe: match the loss to the noise model"}
+[Where losses come from · payoff]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
-The recipe generalizes: **pick the noise model, minimize its NLL.**
+**Choose a noise model, minimize its negative log-likelihood.**
 
 - Gaussian → squared error
 - Laplace → **absolute error**
-- log-Gaussian → squared error on $\log y$
-- Poisson → $\lambda - k\log\lambda$
+- Gaussian on $\log y$ → log-price regression
+- Poisson → $\lambda - k\log\lambda$ (counts)
 
-One corrupted label out of twenty:
-
-@!linear-regression-loss-function
+Laplace's heavy tails *expect* the occasional wild point and penalize it
+only linearly --- the robust MAE fit from the trial.
 :::
 
 ::: {.col .fig}
-![Laplace tails carry far more mass than Gaussian tails, so the loss they induce penalizes a large residual only linearly.](../img/mdl-linreg-loss-menu.svg){width=100%}
+![Left: Laplace tails carry far more mass than Gaussian tails of equal variance. Right: the penalties each induces, with Huber between them.](../img/mdl-linreg-loss-menu.svg){width=94%}
+
+::: {.d2l-note .rule}
+§3.7 adds a *prior* to this likelihood → weight decay; the next chapter
+runs the recipe on categorical noise → softmax.
+:::
 :::
 :::
 :::
@@ -1176,19 +1221,20 @@ One corrupted label out of twenty:
 
 [A Neural Network]{.dtitle}
 
-[linear regression as the simplest net]{.dsub}
+[one neuron, and a name to be careful with]{.dsub}
 :::
 :::
 
-::: {.slide title="Linear regression as one neuron"}
+::: {.slide title="Linear regression is a one-neuron network"}
 [A Neural Network]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 Wire every input $x_1,\ldots,x_d$ **directly** to a single output $o_1$.
 
-The output is the same weighted sum $\sum_i w_i x_i + b$, so linear regression
-is a **single-layer, fully connected** network: $d$ inputs, one computed neuron.
+The output is the same weighted sum $\sum_i w_i x_i + b$, so linear
+regression is a **single-layer, fully connected** network: $d$ inputs,
+one computed neuron --- the atom that deep networks stack.
 :::
 
 ::: {.col .fig .big}
@@ -1197,17 +1243,19 @@ is a **single-layer, fully connected** network: $d$ inputs, one computed neuron.
 :::
 :::
 
-::: {.slide title="The biological analogy"}
+::: {.slide title="Inspiration, not blueprint"}
 [A Neural Network]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-The cartoon that inspired the name: dendrites collect inputs $x_i$, weighted by
-synaptic strengths $w_i$; the nucleus sums them; the axon carries the result on.
+The cartoon that inspired the name: dendrites collect inputs $x_i$,
+weighted by synaptic strengths $w_i$; the nucleus sums them; the axon
+carries the result on.
 
 ::: {.d2l-note .warn}
-Inspiration, not blueprint: planes were inspired by birds, but aeronautics is
-not ornithology.
+Planes were inspired by birds, but aeronautics is not ornithology:
+today's deep learning draws at least as much on mathematics, statistics,
+and computer science as on the brain.
 :::
 :::
 
@@ -1222,16 +1270,19 @@ not ornithology.
 
 ::: {.cols}
 ::: {.col}
-- **Model:** $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$, an affine map.
-- **Loss:** mean squared error, convex with one global optimum.
-- **Closed form** is an orthogonal **projection** onto the column space.
+- **Model:** $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$ --- one dot
+  product per prediction.
+- **Loss:** mean squared error; convex, one global optimum.
+- **Closed form** = orthogonal projection; **minibatch SGD** = the
+  workhorse, hovering in an $\eta$-sized noise ball.
 :::
 
 ::: {.col}
-- **Minibatch SGD** is the recipe we reuse for everything ahead.
-- **Vectorize**: one kernel call, never a Python inner loop.
-- Squared loss **is** Gaussian maximum likelihood, the template for matching
-  losses to noise models.
+- **Vectorize:** one kernel call, never a Python inner loop.
+- **The trial:** one bad label in twenty, slope $22.88$ vs. $2.02$ ---
+  the square's thin-tailed trust, exposed.
+- **The recipe:** squared loss *is* Gaussian maximum likelihood; swap
+  the noise model, get the right loss.
 :::
 :::
 :::

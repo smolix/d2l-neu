@@ -749,7 +749,7 @@ this degree of modularity pays dividends throughout the book in terms of concise
 ::: {.cover}
 [Dive into Deep Learning · §3.2]{.kicker}
 
-Object-oriented design for **implementation**<br>Write the training loop *once*; let every new model and dataset be a *subclass*.
+Write the training loop *once*<br>**let every new model and dataset be a subclass · Module · DataModule · Trainer**.
 :::
 :::
 
@@ -760,8 +760,6 @@ Object-oriented design for **implementation**<br>Write the training loop *once*;
 ::: {.col}
 Almost every model in this book runs the **same loop**: load a batch,
 forward, compute loss, update, repeat.
-
-. . .
 
 Rewrite that loop per model and one tweak (gradient clipping, an LR
 schedule) means touching *every* chapter. Instead, factor it into three
@@ -836,16 +834,18 @@ as attributes automatically:
 . . .
 
 One `save_hyperparameters()` call and `self.a`, `self.b` exist; an
-`ignore=` list opts arguments out. (Full implementation in
-:numref:`sec_utils`.)
+`ignore=` list opts arguments out. (Full implementation in the
+Utilities appendix.)
 :::
 
-::: {.slide title="`ProgressBoard`: watch the loss fall, live"}
+::: {.slide title="`ProgressBoard`: the loss curve, animated"}
 [Utilities]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-`draw(x, y, label)` adds a point and the curve animates as training runs; `every_n` thins noisy series by averaging neighbours:
+`draw(x, y, label)` records a point and the curve grows as training
+runs; `every_n` thins a noisy series by plotting the average of the last
+$n$ values:
 
 @-oo-design-utilities-7
 :::
@@ -854,24 +854,50 @@ One `save_hyperparameters()` call and `self.a`, `self.b` exist; an
 @!oo-design-utilities-7
 :::
 :::
+
+::: {.d2l-note}
+Why `draw` merely *schedules* the point --- and `flush()` waits for the
+queue --- is the next slide's story.
+:::
 :::
 
-::: {.slide title="Why `draw` is asynchronous"}
-[Utilities]{.kicker}
+::: {.slide title="Watching the loss live should be impossible"}
+[Utilities · the deep beat]{.kicker}
 
-The reason previews a theme of the whole book. Frameworks get their
-speed by **compiling** the step (`torch.compile`, `jax.jit`,
-`tf.function`, `hybridize`) and running the device *ahead* of Python.
+Frameworks earn their speed by **compiling** the training step
+(`torch.compile`, `jax.jit`, `tf.function`, `hybridize`) and letting the
+device run **ahead** of Python. That imposes two rules:
+
+- A compiled step must be **pure** --- a `print` or plot inside it cannot
+  be traced, and forces slow op-by-op execution.
+- The instant Python asks for a concrete number, it must **block** until
+  the device catches up --- stalling the very pipeline we built.
 
 . . .
 
-A `print` or plot inside that step breaks the trace; asking for a number
-*blocks* until the device catches up.
+::: {.d2l-note .warn}
+So every naïve "plot the loss each batch" either breaks the compiled
+graph or drains the device pipeline. Real-time monitoring and efficiency
+seem to be at war.
+:::
+:::
+
+::: {.slide title="Resolution: queue now, render elsewhere"}
+[Utilities · the deep beat]{.kicker}
+
+`ProgressBoard` decouples the two: `draw` hands the value to a **queue**
+and returns at once; a background thread does the device-to-host copy
+and the slow matplotlib rendering at its own pace --- dropping points if
+it falls behind, since a live curve needs only a few updates per second.
+
+. . .
+
+The training loop stays compiled, the device stays busy, and the loss
+still falls before your eyes.
 
 ::: {.d2l-note .rule}
-So `draw` only **queues** the point and returns at once; a background
-thread does the device-to-host copy and the slow rendering. Keep the hot
-path pure and compiled; push logging off to the side.
+The pattern to remember, book-wide: **keep the hot path pure and
+compiled; push logging, plotting, and checkpointing off to the side.**
 :::
 :::
 
@@ -885,7 +911,7 @@ path pure and compiled; push logging off to the side.
 :::
 :::
 
-::: {.slide title="`Module`: the model" except="jax"}
+::: {.slide title="`Module`: the model, its loss, its optimizer" except="jax"}
 [Base classes]{.kicker}
 
 ::: {.cols .vc}
@@ -909,7 +935,7 @@ runs `forward`.
 :::
 :::
 
-::: {.slide title="`Module`: the model" only="jax"}
+::: {.slide title="`Module`: the same contract, written functionally" only="jax"}
 [Base classes]{.kicker}
 
 ::: {.cols .vc}
@@ -1020,8 +1046,9 @@ self.state = TrainState.create(
 :::
 
 ::: {.col}
-- `ProgressBoard` plots the loss live, **asynchronously**: the
-  compile-and-stay-busy theme that recurs all book.
+- `ProgressBoard` plots the loss live yet never blocks: **keep the hot
+  path pure and compiled; push logging off to the side** --- a theme that
+  recurs all book.
 - **Watch the framing:** JAX is functional (a dataclass `Module`,
   parameters and a `TrainState` threaded through `fit`).
 :::

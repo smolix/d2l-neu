@@ -484,7 +484,7 @@ Dimensionality and storage for networks are automatically inferred
 ::: {.cover}
 [Dive into Deep Learning · §3.5]{.kicker}
 
-Linear regression, the **concise** way<br>The same model as before, rebuilt from a framework's batteries-included layers, losses, and optimizers.
+The same model, the concise way<br>**batteries-included layers, losses, and optimizers replace the hand-rolled parts**.
 :::
 :::
 
@@ -525,21 +525,23 @@ tested. We swap each one for its built-in counterpart:
 :::
 :::
 
-::: {.slide title="Linear regression is one neuron"}
+::: {.slide title="The layer already is the model"}
 [The Model]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A fully connected layer with **one output**: every input feature wires
-straight to a single scalar, exactly the picture of linear regression.
+What we hand-rolled as `w`, `b`, and a matrix--vector product, every
+framework ships as a **fully connected layer**: each input wired to the
+one output --- exactly the picture of linear regression.
 
-The same import line we always start from:
-
-@linear-regression-concise-concise-implementation-of-linear-regression
+::: {.d2l-note}
+The layer owns its parameters. We no longer allocate them, initialize
+them, or even know their shapes ahead of time.
+:::
 :::
 
 ::: {.col .fig .big}
-![](../img/singleneuron.svg)
+![One fully connected layer with a single output is linear regression.](../img/singleneuron.svg)
 :::
 :::
 :::
@@ -675,7 +677,7 @@ by swapping one line.
 
 ::: {.cols .vc}
 ::: {.col}
-Our `Trainer`, `Module`, and `DataModule` from :numref:`sec_oo-design`
+Our `Trainer`, `Module`, and `DataModule` from §3.2
 don't care that the model is now a built-in layer.
 
 The training loop is **identical** to the from-scratch version.
@@ -687,19 +689,30 @@ The training loop is **identical** to the from-scratch version.
 :::
 :::
 
-::: {.slide title="Fit on the synthetic data"}
+::: {.slide title="Fit: same data, same curve, a fraction of the code"}
 [Training]{.kicker}
 
-Same data, same ten epochs, same `fit` call. The loss curve converges
-just as before:
+::: {.cols .vc}
+::: {.col}
+Same synthetic data, same ten epochs, same `fit` call as §3.4:
 
-@linear-regression-concise-training-1
+@-linear-regression-concise-training-1
+
+Nothing about the *training run* can tell the two implementations apart
+--- only the amount of code we wrote changed.
 :::
 
-::: {.slide title="Recover the learned parameters" except="jax"}
-[Training]{.kicker}
+::: {.col .fig}
+@!linear-regression-concise-training-1
+:::
+:::
+:::
 
-Reach into the layer for its weight and bias:
+::: {.slide title="The parameters moved house" except="jax"}
+[Training · payoff]{.kicker}
+
+They no longer hang off our class as `self.w`, `self.b`; they live
+**inside** the layer, so `get_w_b` reaches through `net`:
 
 @linear-regression-concise-training-2
 
@@ -708,16 +721,17 @@ Reach into the layer for its weight and bias:
 @linear-regression-concise-training-3
 
 ::: {.d2l-note}
-Errors are order $10^{-4}$: the layer recovered the true `w`, `b` we
-generated the data from.
+Same verdict as §3.4: the true $\mathbf{w}^* = [2,-3.4]$, $b^* = 4.2$
+recovered to a few $10^{-4}$. The built-in pieces really do compute the
+same thing our hand-rolled ones did.
 :::
 :::
 
-::: {.slide title="Recover the learned parameters" only="jax"}
-[Training]{.kicker}
+::: {.slide title="The parameters moved house" only="jax" layout="tight"}
+[Training · payoff]{.kicker}
 
-Parameters live in the training **state**, not the model, so we pass it
-in to read `kernel` and `bias`:
+In JAX they live in the training **state**, not the model at all, so
+`get_w_b` takes `state` and reads `kernel` and `bias`:
 
 @linear-regression-concise-training-2
 
@@ -726,8 +740,9 @@ in to read `kernel` and `bias`:
 @linear-regression-concise-training-3
 
 ::: {.d2l-note}
-Errors are order $10^{-4}$: the layer recovered the true `w`, `b` we
-generated the data from.
+Same verdict as §3.4: the true $\mathbf{w}^* = [2,-3.4]$, $b^* = 4.2$
+recovered to a few $10^{-4}$. The built-in pieces really do compute the
+same thing our hand-rolled ones did.
 :::
 :::
 

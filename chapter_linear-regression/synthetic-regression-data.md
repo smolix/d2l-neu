@@ -434,7 +434,7 @@ we use from here on.
 ::: {.cover}
 [Dive into Deep Learning · §3.3]{.kicker}
 
-Synthetic regression **data**<br>Build a dataset whose answer you already know, so a failed fit can only be the *algorithm's* fault.
+Build a dataset whose answer you already know<br>**so a failed fit can only be the algorithm's fault**.
 :::
 :::
 
@@ -503,8 +503,7 @@ independent $\mathbf{X}$ and $\boldsymbol{\epsilon}$ draws (same `key` in
 ::: {.slide title="Fix the ground truth, then peek"}
 [Generating the data]{.kicker}
 
-Instantiate with the true $\mathbf{w}^*=[2,-3.4]^\top$, $b^*=4.2$, the
-numbers we will try to recover later:
+Instantiate with the true $\mathbf{w}^*=[2,-3.4]^\top$, $b^*=4.2$:
 
 @synthetic-regression-data-generating-the-dataset-2
 
@@ -513,6 +512,11 @@ numbers we will try to recover later:
 Each feature row is a vector in $\mathbb{R}^2$; each label is a scalar:
 
 @synthetic-regression-data-generating-the-dataset-3
+
+::: {.d2l-note .rule}
+Memorize $[2, -3.4]$ and $4.2$: the next two sections train models whose
+*only* pass mark is giving these numbers back.
+:::
 :::
 
 ::: {.slide}
@@ -528,14 +532,17 @@ Each feature row is a vector in $\mathbb{R}^2$; each label is a scalar:
 ::: {.slide title="A minibatch sampler, by hand"}
 [Reading the data]{.kicker}
 
-Roll the minibatch loader ourselves: permute the indices, then `yield` `batch_size` rows at a time (one batch is $32\times2$ features, $32\times1$ labels).
+Roll the minibatch loader ourselves: shuffle the indices --- afresh on
+every training pass --- then `yield` `batch_size` rows at a time (one
+batch is $32\times2$ features, $32\times1$ labels).
 
 @synthetic-regression-data-reading-the-dataset-1
 
 . . .
 
 ::: {.d2l-note .warn}
-Transparent, but it loads everything in memory, loops in Python, and never prefetches.
+Transparent, but it pays three ways: all data in memory, single-threaded
+Python, and no prefetching to overlap loading with compute.
 :::
 :::
 
@@ -612,8 +619,8 @@ batch. We lose 8 examples per epoch, here negligible.
 
 ::: {.cols}
 ::: {.col}
-- **Synthetic data** fixes $\mathbf{w}^*,b^*$ up front, so you can check
-  recovery later, the first test for any new method.
+- **Synthetic data** fixes the answer up front --- $\mathbf{w}^*=[2,-3.4]$,
+  $b^*=4.2$ --- so a failed fit can only be the algorithm's fault.
 - A `DataModule` packages *where batches come from*, reusable across
   models.
 :::

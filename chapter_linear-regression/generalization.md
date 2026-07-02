@@ -650,26 +650,29 @@ We leave you with a few rules of thumb:
 ::: {.cover}
 [Dive into Deep Learning · §3.6]{.kicker}
 
-Generalization<br>Why fitting the training data is **not** the goal, and how to tell memorizing apart from learning.
+Fitting the training data is not the goal<br>**telling memorization apart from learning · the U-curve · model selection**.
 :::
 :::
 
 ::: {.slide title="Two students, one exam"}
-[Why this matters]{.kicker}
+[The parable]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
-- **Ellie** memorizes every past answer: 100% on seen questions, lost on new ones.
-- **Irene** spots the pattern: a steady 90%, seen or unseen.
+Two students prepare from the same stack of past exams.
 
-We want predictions on *tomorrow's* data, not yesterday's.
-:::
+- **Extraordinary Ellie** memorizes every answer: **100%** on any
+  question she has seen --- and frozen by one she has not.
+- **Inductive Irene** can barely memorize, but picks up patterns: a
+  steady **90%**, seen or unseen.
 
-::: {.col .narrow}
-::: {.d2l-note}
-The goal is a **pattern that generalizes**, not a lookup table of the training set.
-:::
-:::
+. . .
+
+If the exam recycles old questions, Ellie wins. If it is fresh, Irene
+does. **Every trained model is one of these two students** --- and the
+training error alone cannot tell you which.
+
+::: {.d2l-note .rule}
+This section builds the instruments that can: held-out data, the
+generalization gap, and the bias--variance trade-off.
 :::
 :::
 
@@ -783,10 +786,13 @@ Low training error alone never certifies low generalization error, on its own it
 :::
 :::
 
-::: {.slide title="Polynomial fitting is linear regression"}
+::: {.slide title="Polynomial fitting is linear regression in disguise"}
 [The Demo]{.kicker}
 
-Predict $\hat y = \sum_{i=0}^d x^i w_i$: take the **powers of $x$** as features and it is plain least squares (higher degree = more capacity). A degree-3 target, just **20** training points so high degrees can overfit:
+Predict $\hat y = \sum_{i=0}^d x^i w_i$: take the **powers of $x$** as
+features and it is plain least squares --- with the degree $d$ as a
+capacity dial. The rig: a degree-3 target, and only **20** training
+points, so high degrees have room to misbehave:
 
 @-generalization-polynomial-curve-fitting-2
 :::
@@ -794,20 +800,27 @@ Predict $\hat y = \sum_{i=0}^d x^i w_i$: take the **powers of $x$** as features 
 ::: {.slide title="One fit per degree, scored on both splits"}
 [The Demo]{.kicker}
 
-Fit the first $d{+}1$ power columns by least squares; record the loss on train **and** on held-out test.
+Fit the first $d{+}1$ power columns by least squares; record the loss on train **and** on 100 held-out test points.
 
 @-generalization-polynomial-curve-fitting-3
+
+::: {.d2l-note}
+Three verdicts to predict before looking: degree 1 (too rigid), degree 3
+(the truth's own degree), degree 19 (one parameter per data point).
+:::
 :::
 
-::: {.slide title="Under, just right, over" only="pytorch"}
-[The Demo · result]{.kicker}
+::: {.slide title="Degree 19: train error zero, test error 5 × 10¹³" only="pytorch"}
+[The Demo · the verdict]{.kicker}
 
 @generalization-polynomial-curve-fitting-4
 
 . . .
 
 ::: {.d2l-note .warn}
-Degree 19 drives **training** error to zero while **test** error explodes past $10^{13}$, the signature of overfitting.
+Degree 19 fits the 20 points *essentially exactly* --- and pays with a
+test error of $5\times10^{13}$, **fifteen orders of magnitude** worse
+than degree 3. Zero training error certified nothing.
 :::
 :::
 
@@ -829,8 +842,8 @@ This is the bias–variance U-curve, now traced from real numbers rather than sk
 :::
 :::
 
-::: {.slide title="The U-curve, decomposed"}
-[The Demo · result]{.kicker}
+::: {.slide title="The U-curve, decomposed" only="pytorch"}
+[The Demo · payoff]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
@@ -858,7 +871,14 @@ exactly at the sweet spot.
 
 ::: {.cols .vc}
 ::: {.col}
-Sweep the degree from 1 to 19: training loss falls monotonically, while test loss dips to a sweet spot near the true degree 3, then explodes as surplus capacity fits noise.
+Sweep the degree from 1 to 19: training loss falls monotonically, while
+test loss dips to a sweet spot near the true degree 3, then explodes as
+surplus capacity fits noise.
+
+Redrawing the training noise 200 times and refitting decomposes that
+test error into its two parts: **bias²** collapses once the model class
+contains the truth; **variance** grows relentlessly with surplus
+capacity. Their sum bottoms out exactly at the sweet spot.
 :::
 
 ::: {.col .fig}
@@ -903,9 +923,17 @@ So split **three** ways: train, **validation** (for model selection), test (touc
 ::: {.cols .vc}
 ::: {.col}
 When data is too scarce to spare a validation set: split into $K$ folds, train on $K{-}1$, validate on the held-out one, rotate, and **average** the $K$ scores.
+
+::: {.d2l-note .rule}
+Choosing $K$ trades bias, variance, and compute: each fold trains on
+$(K{-}1)/K$ of the data, so the estimate is **pessimistically biased**
+(worst at small $K$); $K = n$ kills the bias but costs $n$ fits of
+nearly identical, correlated models. $K = 5$ or $10$ is the standard
+compromise.
+:::
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 ![Each of the K folds serves once as the validation set; average the K validation scores.](../img/mdl-mlp-kfold.svg){width=100%}
 :::
 :::
@@ -927,6 +955,11 @@ When data is too scarce to spare a validation set: split into $K$ folds, train o
 ::: {.cols .vc}
 ::: {.col}
 The classical U is only half the story for huge models. Once capacity is large enough to **interpolate** the data, pushing it further often makes test error **fall again**.
+
+::: {.d2l-note}
+§5.5 takes up the modern story; §25.5 reproduces this curve from
+scratch and explains the peak.
+:::
 :::
 
 ::: {.col .fig .big}
@@ -941,14 +974,16 @@ The classical U is only half the story for huge models. Once capacity is large e
 ::: {.cols}
 ::: {.col}
 - **Generalization**, not training fit, is the goal: mind the gap $R - R_\textrm{emp}$.
-- **Bias–variance:** test error is U-shaped in complexity; aim for the sweet spot.
-- **Complexity** = parameter count *and* the range of values they may take.
+- Zero training error certifies nothing: degree 19 fit 20 points exactly
+  and tested at $5\times10^{13}$.
+- **Bias–variance:** bias² falls, variance rises; their sum is the
+  U-curve, and we *computed* both.
 :::
 
 ::: {.col}
-- Select models with a **validation set** or **K-fold CV**, never the test set.
-- **More data** rarely hurts; let complexity grow with it.
-- All of this rests on **IID**, and huge models can defy the classical U via **double descent**.
+- Select models with a **validation set** or **K-fold CV** ($K=5$--$10$), never the test set.
+- **More data** rarely hurts; let complexity grow with it, not ahead of it.
+- All of this rests on **IID** --- and huge models can defy the classical U via **double descent**.
 :::
 :::
 :::

@@ -366,7 +366,7 @@ Answering them turns this small working model into a reliable building block.
 ::: {.cover}
 [Dive into Deep Learning · §5.2]{.kicker}
 
-Implementing a **multilayer perceptron**<br>One hidden layer, one nonlinearity, two ways to build it.
+Implementing a **multilayer perceptron**<br>One hidden layer, two ways to build it --- and a scoreboard: **$\approx 0.87$ where softmax regression managed $\approx 0.83$**.
 :::
 :::
 
@@ -382,9 +382,11 @@ by a **second affine layer** to 10 logits.
 - One hidden layer, one nonlinearity.
 - Same loss, loaders, and `Trainer` as softmax regression.
 
-::: {.d2l-note}
-That ReLU between the two affine maps is the *entire*
-difference from a linear classifier.
+::: {.d2l-note .rule}
+That ReLU between the two affine maps is the *entire* difference
+from a linear classifier — and softmax regression scored
+$\approx 0.83$ on this data. The hidden layer must beat that
+number, or it is 200k wasted parameters. Keep score.
 :::
 :::
 
@@ -429,14 +431,6 @@ chosen by hand, not learned.
 
 [parameters, ReLU, and forward by hand]{.dsub}
 :::
-:::
-
-::: {.slide title="Import the framework"}
-[From Scratch]{.kicker}
-
-One imports cell; everything else builds on `d2l`:
-
-@mlp-implementation-implementation-of-multilayer-perceptrons
 :::
 
 ::: {.slide title="Parameters: two weights, two biases"}
@@ -490,18 +484,18 @@ $$\mathbf{H} = \mathrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}),
 @mlp-implementation-model-2
 :::
 
-::: {.slide title="Train it"}
-[From Scratch]{.kicker}
+::: {.slide title="Promise kept: ≈0.87, four points over softmax"}
+[From Scratch · payoff]{.kicker}
 
 The loss, the loaders, and the `Trainer` are **unchanged**
 from softmax regression. Only the model class is new:
 
 @!mlp-implementation-training
 
-::: {.d2l-note}
-Validation accuracy climbs to $\approx 0.87$ over 30 epochs,
-a small but real gain over a linear classifier. The
-nonlinearity earns its keep.
+::: {.d2l-note .rule}
+Validation accuracy settles around $\approx 0.87$ over 30 epochs —
+a real, if modest, gain over softmax regression's $\approx 0.83$ on
+the same data, bought by one hidden layer and its ReLU.
 :::
 :::
 
@@ -590,18 +584,20 @@ $\mathcal{N}(0, 0.01^2)$), so trajectories differ slightly.
 [Where this goes]{.kicker}
 
 We have a working MLP. Making it *reliable* is the rest of
-this part:
+this chapter:
 
-- **Initialization:** choose $\sigma$ so signals neither
-  vanish nor explode through depth.
-- **Backprop:** how gradients flow through an arbitrary
+- **Backprop (§5.3):** how gradients flow through an arbitrary
   stack.
-- **Generalization:** why a flexible model does well on
+- **Initialization (§5.4):** choose $\sigma$ so signals neither
+  vanish nor explode through depth.
+- **Generalization (§5.5):** why a flexible model does well on
   unseen data at all.
-- **Regularization:** dropout, weight decay, and friends.
+- **Regularization (§5.6):** dropout, and friends.
 
 ::: {.d2l-note}
-Each question is the subject of one of the next sections.
+Each question gets its own section — and exercise 2 hands you the
+cliffhanger: add a second hidden layer while keeping
+$\sigma = 0.01$, and the deeper net trains *worse*. §5.4 explains.
 :::
 :::
 
@@ -624,8 +620,13 @@ Each question is the subject of one of the next sections.
   regression (modularity paying off).
 - Hyperparameters (depth, width, lr) live **outside** the
   model; the same loop trains any of them.
-- Beats a linear classifier on Fashion-MNIST: a first
-  taste of *depth helps*.
+- Scoreboard settled: **$\approx 0.87$ vs $\approx 0.83$** — the
+  first measured payoff of depth.
 :::
+:::
+
+::: {.d2l-note}
+Next (§5.3): open the black box — what `backward()` actually
+computes, by hand and then verified.
 :::
 :::

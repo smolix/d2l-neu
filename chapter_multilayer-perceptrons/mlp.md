@@ -790,7 +790,7 @@ remains the sensible default for the models we build next.
 ::: {.cover}
 [Dive into Deep Learning · §5.1]{.kicker}
 
-Multilayer Perceptrons<br>Stack affine layers with a **nonlinearity** between them, and the simplest deep network is born.
+Multilayer Perceptrons<br>**one kink between affine layers --- XOR untangled · any function, hinge by hinge · why depth beats width**.
 :::
 :::
 
@@ -799,18 +799,18 @@ Multilayer Perceptrons<br>Stack affine layers with a **nonlinearity** between th
 
 ::: {.cols .vc}
 ::: {.col}
-Softmax regression maps inputs to outputs through a *single*
-affine map. That forces **monotonic, line-shaped** decisions,
-too rigid for most things worth modelling:
+Softmax regression is a *single* affine map: **monotonic,
+line-shaped** decisions.
 
 - **Body temperature → risk** rises on *both* sides of 37°C.
 - **Cat vs dog**: pixel $(13,17)$ means nothing without its
   neighbours.
 - **XOR**: a line *provably* cannot separate it.
 
-::: {.d2l-note}
-We want a model that learns its *own* features, then puts a
-linear predictor on top.
+::: {.d2l-note .rule}
+The fix: learn the features, keep the linear predictor on top.
+Keep score — a two-unit net computing **XOR exactly**, and
+**depth multiplying** what width merely adds.
 :::
 :::
 
@@ -930,8 +930,8 @@ then **folds** the two label-1 corners onto the same point
 :::
 :::
 
-::: {.slide title="A hand-built two-unit network computes XOR" only="pytorch"}
-[Why nonlinearity matters · verify]{.kicker}
+::: {.slide title="First receipt: all four corners, exactly right" only="pytorch"}
+[XOR · verified]{.kicker}
 
 With $\mathbf{W}^{(1)} = \left(\begin{smallmatrix}1 & 1\\ 1 & 1\end{smallmatrix}\right)$,
 $\mathbf{b}^{(1)} = (0,\,{-1})$, $\mathbf{w}^{(2)} = (1,\,{-2})^\top$ and a ReLU, the
@@ -941,7 +941,31 @@ output column is exactly the XOR of the two inputs:
 
 ::: {.d2l-note}
 We *constructed* these weights; the rest of the book is about
-having optimization **discover** such representations.
+having optimization **discover** such representations. Watch that
+happen live on the XOR and spiral datasets at the *TensorFlow
+Playground* (playground.tensorflow.org).
+:::
+:::
+
+::: {.slide title="First receipt: all four corners, exactly right" except="pytorch"}
+[XOR · verified]{.kicker}
+
+With $\mathbf{W}^{(1)} = \left(\begin{smallmatrix}1 & 1\\ 1 & 1\end{smallmatrix}\right)$,
+$\mathbf{b}^{(1)} = (0,\,{-1})$, $\mathbf{w}^{(2)} = (1,\,{-2})^\top$ and a ReLU,
+pushing all four corners through by hand gives
+
+| $x_1$ | $x_2$ | $\mathbf{h} = \operatorname{ReLU}(\mathbf{x}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$ | $o = h_1 - 2h_2$ | XOR |
+|:---:|:---:|:---:|:---:|:---:|
+| 0 | 0 | $(0,\ 0)$ | $0$ | **0** ✓ |
+| 0 | 1 | $(1,\ 0)$ | $1$ | **1** ✓ |
+| 1 | 0 | $(1,\ 0)$ | $1$ | **1** ✓ |
+| 1 | 1 | $(2,\ 1)$ | $0$ | **0** ✓ |
+
+::: {.d2l-note}
+We *constructed* these weights; the rest of the book is about
+having optimization **discover** such representations. Watch that
+happen live on the XOR and spiral datasets at the *TensorFlow
+Playground* (playground.tensorflow.org).
 :::
 :::
 
@@ -981,15 +1005,32 @@ Each ReLU unit contributes a **hinge** $a_k\operatorname{ReLU}(x - t_k)$: with $
 ![Three hinges (left) sum to a 4-piece polyline that tracks the smooth target (right); the shaded band is the error.](../img/mdl-mlp-uat-hinges.svg){width=88%}
 :::
 
-::: {.slide title="Depth multiplies pieces; width only adds" only="pytorch"}
-[Expressive power]{.kicker}
+::: {.slide title="Second receipt: depth multiplies pieces, width only adds" only="pytorch"}
+[Expressive power · verified]{.kicker}
 
 Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the slope jumps, and count the linear pieces (mean over 20 draws, widths 2–16):
 
 @!mlp-region-count
 
 ::: {.d2l-note .rule}
-One layer of width $D$: at most $D+1$ pieces. Each extra layer **folds** the graph, roughly *multiplying* the count — the multiplicative-vs-additive gap that makes depth pay.
+One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count — the multiplicative-vs-additive gap that makes depth pay.
+:::
+:::
+
+::: {.slide title="Second receipt: depth multiplies pieces, width only adds" except="pytorch"}
+[Expressive power · verified]{.kicker}
+
+Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the slope jumps, and count the linear pieces (mean over 20 draws):
+
+| width $D$ | 2 | 4 | 8 | 16 |
+|:---|:---:|:---:|:---:|:---:|
+| bound $D+1$ | 3 | 5 | 9 | 17 |
+| depth 1 | 2.6 | 4.3 | 7.5 | 14.4 |
+| depth 2 | 3.5 | 7.0 | 13.9 | 27.4 |
+| depth 3 | 3.6 | 8.1 | 22.1 | 40.1 |
+
+::: {.d2l-note .rule}
+One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count — the multiplicative-vs-additive gap that makes depth pay.
 :::
 :::
 
@@ -1052,7 +1093,7 @@ alive.
 
 ::: {.cols .vc}
 ::: {.col}
-The derivative is a step: $0$ on the left, $1$ on the right:
+The derivative is a step: $0$ on the left, $1$ on the right — here computed by `GradientTape` rather than read off a formula:
 
 $$\operatorname{ReLU}'(x) = \mathbb{1}[x > 0].$$
 
@@ -1102,9 +1143,9 @@ $$\operatorname{sigmoid}'(x) = \operatorname{sigmoid}(x)\,(1 - \operatorname{sig
 
 ::: {.col .narrow}
 The gradient peaks at just $0.25$ and **vanishes** past
-$|x|\gtrsim 5$. Multiply $\le 0.25$ through ten layers and the
-signal shrinks by $\sim\!10^{-6}$: the **vanishing-gradient**
-problem ReLU fixed.
+$|x|\gtrsim 5$. Even at its best, ten stacked layers attenuate the
+backward signal by $0.25^{10} \approx 10^{-6}$: the
+**vanishing-gradient** problem ReLU fixed (the full story in §5.4).
 :::
 :::
 :::
@@ -1175,12 +1216,16 @@ logits into probabilities.
 :::
 
 ::: {.col}
-- One wide hidden layer is a **universal approximator**;
-  depth makes that power *parameter-efficient*.
+- One wide hidden layer is a **universal approximator** — one
+  hinge per unit, $\le D+1$ pieces; depth *multiplies* pieces
+  and makes that power parameter-efficient.
 - **ReLU** is the default; sigmoid and tanh survive in
   gates, outputs, and RNN cells.
-- Next: actually **training** MLPs, via the forward pass,
-  backprop, initialization, and regularization.
 :::
+:::
+
+::: {.d2l-note}
+Next (§5.2): build one and train it on Fashion-MNIST — from
+scratch, then in four framework lines.
 :::
 :::

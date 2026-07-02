@@ -486,7 +486,7 @@ despite the concerted efforts of many brilliant researchers.
 ::: {.cover}
 [Dive into Deep Learning · §5.5]{.kicker}
 
-Why over-parametrized networks **generalize**<br>**double descent · the interpolation regime · implicit bias**.
+Why over-parametrized networks **generalize**<br>**double descent · the optimizer as regularizer · grokking**.
 :::
 :::
 
@@ -500,9 +500,10 @@ is to find patterns that **predict well on unseen data**.
 
 - For deep networks, fitting is **easy**: they can interpolate almost
   any training set, even random labels.
-- So nearly every gain comes from **closing the generalization gap**, not
-  from reducing training error.
-- Yet *why* deep networks generalize remains a **major open question**.
+- So nearly every gain comes from **closing the generalization gap**.
+- Yet *why* remains a **major open question** — with two surprises
+  ahead: a **second descent**, and generalization **long after**
+  memorization.
 :::
 
 ::: {.col .fig .big}
@@ -617,11 +618,11 @@ the classical story predicts.
 ::: {.slide title="Why bigger is better past the threshold"}
 [Double descent]{.kicker}
 
-::: {.cols .vc}
-::: {.col}
 At the **interpolation threshold** the model has *just barely* enough
 capacity to fit the data, forcing a single, jagged, high-variance
 solution.
+
+. . .
 
 Past it, **many** parameter settings interpolate the data. Gradient
 descent from a small initialization selects among them, favoring
@@ -629,18 +630,32 @@ descent from a small initialization selects among them, favoring
 
 ::: {.d2l-note .rule}
 Reframe "more capacity" not as "more overfitting" but as **more room for
-the optimizer to find a simple interpolant**.
+the optimizer to find a simple interpolant**. The mathematics — why the
+spike sits exactly at the threshold, and the whole curve in 25 lines —
+is developed in the appendix (§25.5).
 :::
 :::
 
-::: {.col .narrow}
-Three knobs trace the same curve (Nakkiran et al. 2021):
+::: {.slide title="Three knobs trace the curve — one is shocking"}
+[Double descent]{.kicker}
 
-- **model-wise** — grow the network;
-- **epoch-wise** — train longer;
-- **sample-wise** — *more data can hurt*, by pushing a fixed model back
-  into the spike.
-:::
+Model size is only one of **three** ways to cross the threshold (Nakkiran
+et al., 2021):
+
+- **model-wise** — grow the network (the flavor above);
+- **epoch-wise** — fix the network, train longer: error falls, rises while
+  the model interpolates noise, then falls again;
+- **sample-wise** — the shocking one: **adding training examples can
+  *hurt***, because more data moves the threshold and can push a fixed
+  model back into the spike.
+
+. . .
+
+::: {.d2l-note}
+One axis organizes all three: **effective model complexity** — how many
+examples the full training procedure (model, optimizer, *and* budget) can
+fit perfectly. Error peaks wherever that crosses the dataset size.
+Exercise 6 has you produce the epoch-wise flavor yourself.
 :::
 :::
 
@@ -668,23 +683,27 @@ This is provable, not just empirical:
 ::: {.d2l-note .rule}
 On **separable** data, gradient descent on the logistic loss converges to
 the **maximum-margin** (minimum-norm) separator, with **no** explicit
-penalty.
+penalty (Soudry et al., 2018).
 :::
 
 So explicit tricks (weight decay, early stopping) **nudge** an
-already-benign bias rather than brute-forcing capacity down.
+already-benign bias rather than brute-forcing capacity down. Flatness can
+even be optimized *directly*: **SAM** minimizes the worst-case loss in a
+small ball around the weights — a one-line change to the update that
+improves generalization across architectures.
 :::
 
-::: {.slide title="Grokking: dynamics, not just architecture"}
-[Implicit bias]{.kicker}
+::: {.slide title="Grokking: generalization arrives 1000× late"}
+[Implicit bias · the second surprise]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
 On small algorithmic tasks, a network first **memorizes** the training
 set, with test accuracy flat near chance.
 
-Then, after **many more** steps at zero training loss, it **suddenly
-generalizes**: test accuracy jumps late.
+Then, after **orders of magnitude more** steps at zero training loss, it
+**suddenly generalizes** — long after any early-stopping rule would have
+given up.
 
 ::: {.d2l-note .warn}
 Same architecture, same data, same loss: only **time spent training**
@@ -705,8 +724,7 @@ generalization.
 ::: {.cols .vc}
 ::: {.col}
 Networks *have* parameters, yet often behave like **nonparametric**
-models, whose complexity grows with the data (think $k$-nearest
-neighbors, which **memorizes** and still generalizes).
+models, whose complexity grows with the data.
 
 As a randomly initialized MLP grows **infinitely wide**, it becomes
 equivalent to a **kernel method** for a fixed kernel:
@@ -718,7 +736,12 @@ induces.
 :::
 
 ::: {.col .narrow}
-Over-parametrized nets *interpolate* the data, so the nonparametric
+Memorization and generalization can coexist: **1-nearest-neighbor**
+memorizes everything, achieves zero training error — and still lands
+asymptotically within a **factor of two** of the optimal Bayes error
+(Cover & Hart, 1967).
+
+Over-parametrized nets likewise *interpolate*, so the nonparametric
 intuition is often the more reliable one.
 :::
 :::
@@ -806,7 +829,9 @@ is the next such tool.)
 :::
 
 ::: {.d2l-note}
-Why certain choices improve generalization remains, for the most part, a
-**massive open question**.
+Why certain choices improve generalization remains a **massive open
+question**. Try the surprises yourself: exercise 6 reproduces epoch-wise
+double descent; exercise 7, grokking on modular addition. Next (§5.6):
+dropout, regularization by structured noise.
 :::
 :::

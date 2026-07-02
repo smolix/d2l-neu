@@ -430,7 +430,7 @@ and training requires significantly more memory than prediction.
 ::: {.cover}
 [Dive into Deep Learning · §5.3]{.kicker}
 
-What `backward()` actually does<br>**forward propagation · computational graphs · backpropagation**.
+What `backward()` actually does<br>**the chain rule on a graph · every gradient by hand · autograd confirms each one**.
 :::
 :::
 
@@ -446,9 +446,10 @@ Training so far: a **forward pass** computes the loss, then one call to
 - **Backward**: walk the *same* graph in reverse, accumulating gradients by the **chain rule**.
 - One rule does it all, and it explains why training costs the memory it does.
 
-::: {.d2l-note}
-You can lean on autograd forever, but knowing *how* gradients flow is what
-separates a shallow understanding from a real one.
+::: {.d2l-note .rule}
+The promise: by the end we will have computed **all four gradients
+of a real network by hand** — and a six-line autograd script will
+print the same numbers, digit for digit.
 :::
 :::
 
@@ -550,6 +551,27 @@ The parameter gradients fall out along the way, each picking up its weight-decay
 $$\frac{\partial J}{\partial \mathbf{W}^{(2)}} = \frac{\partial J}{\partial \mathbf{o}}\,\mathbf{h}^\top + \lambda\mathbf{W}^{(2)},
 \qquad
 \frac{\partial J}{\partial \mathbf{W}^{(1)}} = \frac{\partial J}{\partial \mathbf{z}}\,\mathbf{x}^\top + \lambda\mathbf{W}^{(1)}.$$
+:::
+
+::: {.slide title="That + is a rule: gradients add at forks"}
+[Backpropagation]{.kicker}
+
+The "+" in $\partial J/\partial \mathbf{W}^{(2)}$ deserves a rule of its own.
+$\mathbf{W}^{(2)}$ reaches the objective along **two paths**, and the gradients
+arriving along each path **sum**:
+
+$$J \leftarrow L \leftarrow \mathbf{o} \leftarrow \mathbf{W}^{(2)}
+\;\;(\text{the prediction path}), \qquad
+J \leftarrow s \leftarrow \mathbf{W}^{(2)}
+\;\;(\text{the regularizer path}).$$
+
+. . .
+
+::: {.d2l-note .warn}
+Forgetting to **accumulate** at such forks — writing `=` where `+=` belongs —
+is among the most common bugs in hand-written backward passes. Every autograd
+engine accumulates for exactly this reason.
+:::
 :::
 
 ::: {.slide title="One move, everywhere"}
@@ -658,6 +680,56 @@ weights never update. This is the *dying ReLU* in one matrix.
 :::
 :::
 
+::: {.slide title="Now let the machine check our work" only="pytorch" layout="code"}
+[Worked Example · verified]{.kicker}
+
+Build the same tensors with `requires_grad`, run the forward pass, call
+`backward()` — the entire verification is a few lines:
+
+@-backprop-verify
+:::
+
+::: {.slide title="Promise kept: autograd repeats every number" only="pytorch"}
+[Worked Example · verified]{.kicker}
+
+The script prints its verdict on the hand derivation:
+
+@!backprop-verify
+
+$$L = 2.0,\quad
+\tfrac{\partial L}{\partial \mathbf{W}^{(2)}} = [0,\ {-4}],\quad
+\tfrac{\partial L}{\partial \mathbf{h}} = [-4,\ 2]^\top,\quad
+\tfrac{\partial L}{\partial \mathbf{z}} = [0,\ 2]^\top,\quad
+\tfrac{\partial L}{\partial \mathbf{W}^{(1)}} = \bigl[\begin{smallmatrix} 0 & 0\\ 2 & 4\end{smallmatrix}\bigr].$$
+
+::: {.d2l-note .rule}
+Every gradient matches, down to the zeroed row for the dead unit. (The $-0$
+is floating point's *signed zero* — $h_1 = 0$ times a negative upstream
+gradient; it compares equal to $0$.)
+:::
+:::
+
+::: {.slide title="Promise kept: autograd repeats every number" except="pytorch"}
+[Worked Example · verified]{.kicker}
+
+Rebuild the same tensors with gradient tracking, run the forward pass, call
+the framework's backward sweep, and the printout matches the hand derivation
+exactly:
+
+$$L = 2.0,\qquad
+\frac{\partial L}{\partial \mathbf{W}^{(2)}} = [0,\ {-4}],\qquad
+\frac{\partial L}{\partial \mathbf{h}} = [-4,\ 2]^\top,$$
+
+$$\frac{\partial L}{\partial \mathbf{z}} = [0,\ 2]^\top,\qquad
+\frac{\partial L}{\partial \mathbf{W}^{(1)}} =
+\begin{bmatrix} 0 & 0\\ 2 & 4\end{bmatrix}.$$
+
+::: {.d2l-note}
+Every gradient matches, down to the zeroed row for the dead unit — six lines
+of autograd, one hand derivation, no disagreements.
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [04]{.dnum}
@@ -682,8 +754,9 @@ cheap precisely when there are *many parameters* and *one scalar loss*: the
 deep-learning regime.
 :::
 
-We develop the mechanics, including when *forward mode* is preferable, in the
-autograd chapter.
+We developed the mechanics, including when *forward mode* is preferable, in
+§2.5; the full theory — both modes as Jacobian products, and the memory
+trade-offs they imply — lives in the calculus appendix.
 :::
 
 ::: {.slide title="Forward and backward depend on each other"}
@@ -721,14 +794,16 @@ errors.
 :::
 
 ::: {.col}
+- **Gradients add at forks**: a variable used twice collects both paths' gradients (`+=`, never `=`).
 - A **dead ReLU** zeros a gradient row: no signal, no learning.
-- This reverse sweep is **reverse-mode autodiff**, cheap for many-parameter, scalar-loss models.
+- Promise kept: autograd reproduced the hand derivation **digit for digit**.
 - Retaining intermediates is why **training is memory-hungry**.
 :::
 :::
 
 ::: {.d2l-note}
-`backward()` is this section, run automatically, and now you know what it
-computes.
+Capstone (exercise 6): build a miniature autograd engine — a scalar `Value`
+class with `+`, `*`, `relu` and a topological `backward()` — and re-derive
+today's example with it.
 :::
 :::

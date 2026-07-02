@@ -665,7 +665,8 @@ depend on them, and no single unit can dominate.
 
 A net with $n$ hidden units has $2^n$ possible masks, so
 $2^n$ thinned subnetworks, all **sharing one set of
-weights**.
+weights**. Today's model has two 256-unit layers:
+$2^{512} \approx 10^{154}$ subnetworks.
 
 . . .
 
@@ -674,9 +675,13 @@ weights**.
 - **Test:** run the full net with dropout off, which
   approximates *averaging* all $2^n$ subnetworks.
 
-Ensembles average away their members' idiosyncrasies, so
-we expect dropout to **reduce variance**. It is cheap
-model averaging.
+::: {.d2l-note}
+Cheap model averaging — ensembles average away their members'
+idiosyncrasies, so we expect **variance reduction**. The
+weight-scaling rule is *exact* only for a single linear layer;
+in deeper nets the full pass computes closer to a **geometric**
+mean of the subnetworks' predictions.
+:::
 :::
 
 ::: {.slide title="View 3: noise breaks co-adaptation"}
@@ -712,9 +717,11 @@ The factor $1/(1-p)$ is the *unique* constant that keeps
 $\mathbb{E}[h'] = p\cdot 0 + (1-p)\dfrac{h}{1-p} = h$.
 
 ::: {.d2l-note .rule}
-Unbiased by design, so test-time code needs no change.
-This is **inverted dropout**, the version every modern
-framework uses.
+Rescaling during *training* is **inverted dropout**, what every
+modern framework implements. The original 2014 formulation instead
+multiplied the weights by $1-p$ at *test* time — equivalent in
+expectation, but inverting moves all bookkeeping into training,
+which is exactly why a `Dropout` layer can be a **no-op in eval**.
 :::
 :::
 
@@ -726,12 +733,6 @@ framework uses.
 
 [mask, rescale, and drop in the forward pass]{.dsub}
 :::
-:::
-
-::: {.slide title="Setup"}
-[From Scratch]{.kicker}
-
-@dropout
 :::
 
 ::: {.slide title="A dropout layer in three lines"}
@@ -791,22 +792,25 @@ training only.
 :::
 :::
 
-::: {.slide title="The model: two hidden layers, dropout gated on training"}
+::: {.slide title="The model: two hidden layers, dropout gated on training" layout="code"}
 [From Scratch]{.kicker}
+
+`dropout_layer` slots into `forward` right after each hidden activation, guarded by the training flag so evaluation always runs the full, unmasked network:
 
 @dropout-defining-the-model
 :::
 
-::: {.slide title="Training it"}
-[From Scratch]{.kicker}
+::: {.slide title="The payoff: the train/val gap stays shut"}
+[From Scratch · payoff]{.kicker}
 
 Two 256-unit hidden layers, dropout $0.2$ after the first and $0.5$
-after the second (the convention in action), on Fashion-MNIST:
+after the second (the gentler-near-the-input convention in action),
+on Fashion-MNIST:
 
 @!dropout-training
 
-The train and validation curves track closely: the gap a
-plain MLP of this size would show is held in check.
+The train and validation curves track closely across 30 epochs: the
+gap a plain 256-256 MLP would open up is held in check.
 :::
 
 ::: {.slide}
@@ -859,10 +863,16 @@ the mid-2010s; its role has since narrowed.
 - **Transformers** use it lightly (rates $0.0$–$0.1$),
   often only on the **classifier head**.
 
-::: {.d2l-note}
-Still a cheap, reliable regularizer that combines well with
-weight decay and data augmentation, and the seed of a
-whole family of stochastic-regularization methods.
+::: {.d2l-note .warn}
+The two combine poorly: batch norm's running statistics, accumulated
+while dropout perturbs the activations' variance, mismatch what it
+sees at eval time — don't place dropout **before** a BN layer
+(Li et al., 2019).
+:::
+
+Still a cheap, reliable regularizer that combines well with weight
+decay and data augmentation — and the conceptual seed of a whole
+family of stochastic-regularization methods.
 :::
 :::
 
@@ -880,10 +890,17 @@ whole family of stochastic-regularization methods.
 
 ::: {.col}
 - Place it **after the activation**, before the next
-  linear layer; typical rates $0.1$–$0.5$.
+  linear layer; gentler near the input ($0.2$, then $0.5$ here).
 - Three views: a **thinned subnetwork** each step, an
   implicit **$2^n$ ensemble**, broken **co-adaptation**.
 - `nn.Dropout(p)` does it all and respects train/eval.
 :::
+:::
+
+::: {.d2l-note}
+Exercise 5 flips the switch: keep dropout **on** at test time,
+average 20 passes, and you get uncertainty estimates (MC dropout).
+Next (§5.7): everything in this chapter, deployed on a Kaggle
+competition.
 :::
 :::

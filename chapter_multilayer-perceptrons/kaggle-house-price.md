@@ -683,7 +683,7 @@ fine-tuning of pretrained models.
 ::: {.cover}
 [Dive into Deep Learning · §5.7]{.kicker}
 
-Predicting **house prices** on Kaggle<br>An end-to-end machine-learning pipeline: messy real data in, a scored prediction out.
+Predicting **house prices** on Kaggle<br>An end-to-end pipeline: messy data in, a scored prediction out --- **and the difference between a 0.18 baseline and a 0.03 one is nothing but training it properly**.
 :::
 :::
 
@@ -843,8 +843,10 @@ test statistics is **leakage** and flatters every later score.
 :::
 :::
 
-::: {.slide title="One method: impute, standardize, one-hot (79 → 331 columns)"}
+::: {.slide title="One method: impute, standardize, one-hot (79 → 331 columns)" layout="code"}
 [Preprocessing]{.kicker}
+
+All three transforms in one `preprocess` method. Note the mean and std computed on the first `n_train` rows **only**, and `dummy_na=True` giving missingness its own indicator column:
 
 @-kaggle-house-price-data-preprocessing-2
 :::
@@ -925,22 +927,30 @@ loop doubles as the hyperparameter search.
 :::
 :::
 
-::: {.slide title="K-fold in code"}
+::: {.slide title="K-fold in code" except="jax"}
 [Model selection]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Slice out fold $i$ for validation, keep the rest to train:
+Slice out fold $i$; the rest trains:
 
 @kaggle-house-price-k-fold-cross-validation-1
 :::
 
 ::: {.col}
-Fit a fresh model per fold, average the held-out losses:
+A fresh model per fold; average:
 
 @-kaggle-house-price-k-fold-cross-validation-2
 :::
 :::
+:::
+
+::: {.slide title="K-fold in code" only="jax" layout="code"}
+[Model selection]{.kicker}
+
+`k_fold_data` slices out fold $i$ as validation and trains on the rest. Then fit a fresh model per fold and average the held-out scores — in Flax the trained parameters live in `trainer.state`, not the frozen model, so each fold's params are captured for the ensemble:
+
+@-kaggle-house-price-k-fold-cross-validation-2
 :::
 
 ::: {.slide}
@@ -953,39 +963,37 @@ Fit a fresh model per fold, average the held-out losses:
 :::
 :::
 
-::: {.slide title="A baseline only counts if it is trained to convergence" only="pytorch"}
+::: {.slide title="The trap: an underfit baseline flatters everything" only="pytorch"}
 [Model selection]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Start with a linear model, a fast honest baseline, but train it **competently**: 100 epochs at lr 0.03, not the customary ten:
+Start with a linear model, a fast honest baseline — but train it **competently**: 100 epochs at lr 0.03, not the customary ten. Ten epochs of SGD on these features leaves it badly underfit, at a log error near **0.18**.
 
 @!kaggle-house-price-model-selection-linear
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Stopping at 10 epochs leaves it underfit (~0.18) and flatters every model compared against it.
+Same model, same data: **0.18 underfit vs 0.031 converged**. Every fancier model "beats" the 0.18 baseline; almost nothing beats the competent one. A baseline only counts if it is trained to convergence.
 :::
 :::
 :::
 :::
 
-::: {.slide title="A linear baseline to sanity-check the pipeline" except="pytorch"}
+::: {.slide title="A baseline only counts if trained to convergence" except="pytorch"}
 [Model selection]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Start with a linear model run through the same K-fold loop, a quick,
-honest baseline that confirms the pipeline works:
+Start with a linear model through the same K-fold loop — and train it **competently**: 100 epochs at learning rate 0.03, not the customary ten:
 
-@kaggle-house-price-model-selection-linear
+@-kaggle-house-price-model-selection-linear
 :::
 
 ::: {.col .narrow}
-::: {.d2l-note}
-At a brief 10 epochs it is still **underfit** (log error ~0.18); train
-it longer and the score drops sharply.
+::: {.d2l-note .warn}
+Ten epochs of SGD leaves this model badly **underfit**, near **0.18**; trained to convergence it reaches $\approx$ **0.031**. An underfit baseline flatters every model compared against it.
 :::
 :::
 :::
@@ -1012,14 +1020,26 @@ optimizer to attach weight decay.
 :::
 :::
 
-::: {.slide title="Same loop, only the model changes" only="pytorch"}
+::: {.slide title="The verdict: a dead heat near 0.03" only="pytorch"}
 [Model selection]{.kicker}
 
-Train the MLP with the **same** K-fold loop, learning rate, and epoch budget as the baseline:
+Same K-fold loop, learning rate, and epoch budget — only the model changes:
 
 @!kaggle-house-price-mlp-select
 
-The small MLP edges out the competent linear baseline (~0.028 vs ~0.032). The gain is deliberately modest: on small tabular data, gradient-boosted trees would still win.
+::: {.d2l-note .rule}
+**0.031 linear vs 0.032 MLP** — a dead heat; the leader varies run to run. The gain over a careless 0.18 came from training *either* model to convergence, not from the nonlinearity. Trees would still win here.
+:::
+:::
+
+::: {.slide title="The verdict: a dead heat near 0.03" except="pytorch"}
+[Model selection]{.kicker}
+
+The natural next step is a small MLP — one 32-unit ReLU hidden layer, dropout $0.1$, weight decay $10^{-4}$; anything bigger overfits 1460 rows. Run through the *same* K-fold loop, learning rate, and epoch budget (the PyTorch notebook carries the experiment), it lands in a **dead heat** with the competently trained linear baseline: about $0.032$ vs $0.031$.
+
+::: {.d2l-note .rule}
+The lesson is deliberately undramatic: the nonlinearity buys almost nothing here — the bulk of the gain over a careless 0.18 came from training *either* model to convergence. On small tabular data, gradient-boosted trees would still win.
+:::
 :::
 
 ::: {.slide title="Submit: ensemble the folds, write the CSV"}
@@ -1083,8 +1103,16 @@ images, text, audio. The pipeline is identical.
 ::: {.col}
 - **K-fold CV** gives a stable estimate on small data and drives HP
   search.
+- **A baseline counts only if trained competently**: 0.18 underfit
+  vs 0.03 converged, same model.
 - **Ensemble the folds in log space** (or refit), then submit.
 - The model is a few lines; **everything around it is the lesson**.
 :::
+:::
+
+::: {.d2l-note}
+That closes the MLP chapter. Next: the builder's guide — layers,
+blocks, parameters, and custom architectures, the engineering that
+scales these ideas up.
 :::
 :::

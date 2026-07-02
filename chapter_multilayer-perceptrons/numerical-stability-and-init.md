@@ -605,7 +605,7 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 ::: {.cover}
 [Dive into Deep Learning · §5.4]{.kicker}
 
-Numerical stability & **initialization**<br>Why deep nets once refused to train, and the variance rule that fixed them.
+Numerical stability & **initialization**<br>Why deep nets once refused to train --- **the problem, the diagnosis, the cure, and a fifty-layer proof**.
 :::
 :::
 
@@ -623,8 +623,12 @@ Three ideas made deep training routine:
 2. **Variance-preserving init** (Xavier, He).
 3. **Symmetry breaking** (random, never constant).
 
-::: {.d2l-note}
-Get init wrong and the gradient either **dies** at zero or **blows up** to NaN before learning starts.
+::: {.d2l-note .rule}
+Get init wrong and the gradient **dies** or **blows up** before
+learning starts. Keep score: ten sigmoid layers tax the gradient to
+$10^{-6}$; a hundred random matrices explode past $10^{24}$; and one
+closing plot shows $10^{80}$ vs $10^{-15}$ vs *flat* — naive, Xavier,
+He.
 :::
 :::
 
@@ -695,20 +699,16 @@ ReLU's derivative is exactly **1** wherever a unit is active, so it does not att
 :::
 :::
 
-::: {.slide title="Exploding: a product of random matrices" except="tensorflow"}
+::: {.slide title="Exploding: one hundred random matrices, entries past 10²⁴"}
 [Unstable Gradients · exploding]{.kicker}
 
-Multiply one hundred $\mathcal{N}(0,1)$ matrices ($\sigma^2 = 1$, each factor too large) and the entries run away to $\sim\!10^{24}$. A poorly scaled init does exactly this to the gradient.
+Multiply one hundred $\mathcal{N}(0,1)$ matrices — `for i in range(100): M = M @ randn(4, 4)` — exactly what a deep linear stack does to a gradient. Each factor is a little too large, and the product compounds:
 
-@numerical-stability-and-init-exploding-gradients
+@!numerical-stability-and-init-exploding-gradients
+
+::: {.d2l-note .warn}
+A poorly scaled initialization does *exactly this* to the gradient. No optimizer converges from here.
 :::
-
-::: {.slide title="Exploding: a product of random matrices" only="tensorflow"}
-[Unstable Gradients · exploding]{.kicker}
-
-Multiply one hundred $\mathcal{N}(0,1)$ matrices ($\sigma^2 = 1$, each factor too large) and the entries run away to $\sim\!10^{24}$. A poorly scaled init does exactly this to the gradient.
-
-@-numerical-stability-and-init-exploding-gradients
 :::
 
 ::: {.slide title="The three crashes you will actually see"}
@@ -807,21 +807,35 @@ Rule of thumb: **Xavier for $\tanh$/sigmoid, He for ReLU.** Both ship as named i
 :::
 :::
 
-::: {.slide title="Fifty layers, three scales, one plot"}
-[Initialization]{.kicker}
+::: {.slide title="The proof: 10⁸⁰ vs 10⁻¹⁵ vs flat" only="pytorch"}
+[Initialization · payoff]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
-Push a unit-scale signal through **50 ReLU layers** and track $E[(h^{(l)})^2]$:
+The whole section in one plot: push a unit-scale signal through **50 ReLU layers** and track $E[(h^{(l)})^2]$ under three weight scales:
 
-- $\mathcal{N}(0,1)$: **explodes** to $\sim\!10^{80}$.
-- **Xavier**: off by the rectifier's $\tfrac12$ per layer, *vanishes* like $2^{-l}$.
+- $\mathcal{N}(0,1)$: each layer gains $\approx n_\textrm{in}/2 = 50\times$; **explodes** to $\sim\!10^{80}$.
+- **Xavier**: off by the rectifier's $\tfrac12$ per layer; *vanishes* like $2^{-l}$ to $\sim\!10^{-15}$.
 - **He**: essentially **flat** across all fifty layers.
 :::
 
 ::: {.col .fig .big}
 @!numerical-stability-and-init-depth-sweep
 :::
+:::
+:::
+
+::: {.slide title="The proof: 10⁸⁰ vs 10⁻¹⁵ vs flat" except="pytorch"}
+[Initialization · payoff]{.kicker}
+
+The whole section in one experiment: push a unit-scale signal through **50 ReLU layers** of width 100 and track the second moment $E[(h^{(l)})^2]$ layer by layer, under three weight scales.
+
+- $\mathcal{N}(0,1)$: each layer gains $\approx n_\textrm{in}/2 = 50\times$, compounding to an astronomical $\sim\!10^{80}$ by layer 50 — the exploding regime.
+- **Xavier**: derived for *linear* layers, off by exactly the rectifier's $\tfrac12$ per layer, so the signal *vanishes* like $2^{-l}$, reaching $\sim\!10^{-15}$.
+- **He**: compensates for the rectifier and holds the scale essentially **flat** across all fifty layers.
+
+::: {.d2l-note .rule}
+Only the He-initialized stack delivers usable forward signals — and, by the symmetric backward argument, usable gradients. Run the sweep yourself in the notebook.
 :::
 :::
 
@@ -848,8 +862,14 @@ We return to both in the chapters on modern CNNs.
 
 ::: {.col}
 - **Fix the scale:** init weights so $\textrm{Var}$ is preserved, via **Xavier** ($\tanh$) and **He** (ReLU).
+- **Proof on 50 layers:** $10^{80}$ (naive) vs $10^{-15}$ (Xavier under ReLU) vs **flat** (He).
 - **Break the symmetry:** random init, never a constant.
 - **At scale:** normalization + residuals + careful init together reach 100+ layers.
 :::
+:::
+
+::: {.d2l-note}
+Next (§5.5): the model trains — but *why* does an over-parametrized
+network generalize at all?
 :::
 :::

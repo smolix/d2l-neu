@@ -244,8 +244,11 @@ local Lipschitz continuity can promise.
 
 For deep learning the theorem is a license. A neural field
 $\mathbf{f}_\theta$ built from linear maps and Lipschitz activations
-($\tanh$, ReLU, GELU) is Lipschitz on bounded sets, with constant controlled
-by the weight norms. So a Neural ODE (:numref:`sec_mdl-neural-odes`) is
+($\tanh$, ReLU, GELU) is *globally* Lipschitz --- a composition of globally
+Lipschitz maps is globally Lipschitz, with constant at most the product of
+the weight norms and the activations' Lipschitz constants --- which is
+exactly the global-$L$ hypothesis of the proposition above. So a Neural ODE
+(:numref:`sec_mdl-neural-odes`) is
 well-posed: through every input there is exactly one trajectory, distinct
 inputs can never collide (two trajectories meeting at time $t$ would be two
 solutions of the same final-value problem run backward), and the learned map
@@ -442,7 +445,7 @@ print('||e^{At} x0|| =', f'{np.linalg.norm(expAt_eig @ x0):.6f}',
       ' vs  e^{-t/2}||x0|| =', f'{np.exp(-0.5 * t) * np.linalg.norm(x0):.6f}')
 ```
 
-Thirty series terms already agree with the eigendecomposition formula to
+Twenty-nine series terms already agree with the eigendecomposition formula to
 machine precision, the compounded Euler product lands within $10^{-7}$, and
 the trajectory norm matches $e^{-t/2}\|\mathbf{x}_0\|$ to six digits --- the
 spectrum ($-0.5 \pm i$) told us the decay rate before we integrated anything.
@@ -537,7 +540,12 @@ which matches the true expansion
 $x(t+h) = x + h\dot{x} + \tfrac{h^2}{2}\ddot{x} + O(h^3)$ because
 $\ddot{x} = \tfrac{d}{dt} f(x(t)) = f' f$. The $h^2$ term is now *correct*
 instead of *absent*: local error $O(h^3)$, global order $2$, at the price of
-two field evaluations per step.
+two field evaluations per step. Its trapezoid twin, **Heun's method**, takes
+a full trial Euler step and averages the slopes at its two ends,
+$\mathbf{x}_{n+1} = \mathbf{x}_n + \tfrac{h}{2}\left[\mathbf{f}(\mathbf{x}_n) + \mathbf{f}\!\left(\mathbf{x}_n + h\,\mathbf{f}(\mathbf{x}_n)\right)\right]$
+--- same order $2$, same two evaluations --- and is the two-stage sampler of
+choice for the learned dynamics of
+:numref:`sec_mdl-score-matching-diffusion-flow`.
 
 Pushing the same idea to four probe slopes gives the workhorse of scientific
 computing, **classical Runge--Kutta (RK4)**:
@@ -616,9 +624,9 @@ d2l.plot(hs, [err_eu, err_rk, err_eu[-1] * (hs / hs[-1]),
 ```
 
 The fitted slopes land within a few percent of the theoretical orders $1$ and
-$4$, and the RK4 curve sits *six decades* below Euler at the smallest step ---
-same trajectory, same horizon, four times the work per step, a million times
-the accuracy.
+$4$, and the RK4 curve sits *nine decades* below Euler at the smallest step
+($3.6 \times 10^{-3}$ versus $5.0 \times 10^{-12}$) --- same trajectory, same
+horizon, four times the work per step, nearly a billion times the accuracy.
 
 ### Stiffness and Implicit Methods
 :label:`sec_mdl-stiffness-implicit`
@@ -652,10 +660,20 @@ Past the threshold, forward Euler does not just lose accuracy --- it
 *amplifies*: each step overshoots the origin and lands farther away on the
 other side, an oscillating divergence with growth factor $|1 - h\lambda|$. A
 method that decays on the test equation for every $h > 0$, as backward Euler
-does, is called **A-stable**. The price of implicitness is that each step
+does, is called **A-stable**. (Our $\lambda$ is real, but the full story
+lives in the complex plane: a decaying, rotating mode has complex $\lambda$
+with $\operatorname{Re}\lambda > 0$ in our sign convention, a method's
+**stability region** is the set of $z = -h\lambda$ for which its update
+decays, and A-stability proper demands that this region contain the entire
+left half-plane. :numref:`fig_mdl-dyn-stability-regions` draws the regions;
+the computation above is their slice along the real axis.) The price of
+implicitness is that each step
 *defines* $\mathbf{x}_{n+1}$ only implicitly: you must solve an equation per
 step --- a linear solve when $\mathbf{f}$ is linear, a few Newton iterations
 (:numref:`sec_mdl-multivariable_calculus`) otherwise.
+
+![Stability regions in the complex plane of $z = h\lambda$ for the test equation $\dot{y} = \lambda y$ (a decaying mode sits in the left half-plane; our real computation is the slice along the negative real axis). Forward Euler decays only inside the disc $\lvert 1 + z \rvert < 1$, whose real slice is $-2 < h\lambda < 0$; RK4 enlarges it to a lobed region reaching $\approx -2.79$ on the real axis; backward Euler is stable everywhere *except* the disc around $+1$ --- in particular on the entire left half-plane, which is A-stability.](../img/mdl-dyn-stability-regions.svg)
+:label:`fig_mdl-dyn-stability-regions`
 
 Why tolerate that price? **Stiffness.** A linear system is *stiff* when its
 eigenvalues are spread over wildly different scales --- say
@@ -697,6 +715,74 @@ every learned ODE in :numref:`sec_mdl-score-matching-diffusion-flow`: use
 explicit adaptive solvers by default, and reach for implicit methods when the
 dynamics are stiff --- when the step size that *stability* forces is far
 smaller than the one *accuracy* would need.
+
+### Gradient Descent Is a Solver
+:label:`sec_mdl-gd-as-solver`
+
+Everything above already governs the oldest dynamical system in deep
+learning: training itself. Descending a loss $L$ by infinitesimal steps is
+the **gradient flow**
+
+$$
+\dot{\mathbf{x}} = -\nabla L(\mathbf{x}),
+$$
+
+a vector field whose fixed points are exactly the critical points of $L$ and
+along whose trajectories the loss can only fall:
+$\tfrac{d}{dt} L(\mathbf{x}(t)) = \nabla L^\top \dot{\mathbf{x}} = -\|\nabla L\|^2 \le 0$.
+Gradient descent with learning rate $\eta$ is *forward Euler* on this flow
+--- $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\, \nabla L(\mathbf{x}_k)$ is
+:eqref:`eq_mdl-ode-euler-update` with $h = \eta$ --- so the solver theory of
+this section *is* optimization theory. In particular, near a minimum with
+Hessian $H$ the whole story linearizes, mode by eigenmode, onto the test
+equation:
+
+$$
+\dot{\mathbf{x}} = -\nabla L(\mathbf{x})
+\;\;\xrightarrow{\textrm{linearize}}\;\;
+\dot{\boldsymbol{\delta}} = -H\boldsymbol{\delta}
+\;\;\xrightarrow{\textrm{Euler}, \, h = \eta}\;\;
+\boldsymbol{\delta}_{k+1} = (I - \eta H)\,\boldsymbol{\delta}_k
+\;\;\xrightarrow{\textrm{stability}}\;\;
+\eta < \frac{2}{\lambda_{\max}(H)} .
+$$
+
+The solver bound $h < 2/\lambda$ is *literally* the learning-rate rule
+$\eta < 2/\lambda_{\max}(H)$ of the quadratic analysis in
+:numref:`sec_mdl-gradient-based-optimization`: a diverging learning rate is a
+solver instability, and an ill-conditioned Hessian is a *stiff* gradient flow
+--- the steep, already-converged curvature directions dictate the step budget
+that the shallow directions must then crawl under, which is the stiffness
+of the previous subsection wearing its optimization clothes. Momentum is the
+same story one derivative up: Polyak's heavy-ball update discretizes the
+second-order ODE
+$m\, \ddot{\mathbf{x}} + \gamma\, \dot{\mathbf{x}} = -\nabla L(\mathbf{x})$,
+a ball with inertia rolling through the loss landscape against friction
+$\gamma$; inertia averages recent gradients, which is why momentum
+accelerates along shallow consistent valleys and can ring across steep ones.
+We watch the Euler threshold appear, mirroring the stiffness sweep, on a
+quadratic with $\lambda_{\max} = 10$ --- predicted flip at
+$\eta = 2/10 = 0.2$.
+
+```{.python .input #mdl-odes-solvers-gradient-descent-is-a-solver}
+H = np.diag([10.0, 1.0])                       # curvatures: lambda_max = 10
+print('GD on this quadratic is stable iff eta < 2/lambda_max =', 2 / H[0, 0])
+print(f'{"eta":>8} {"|1-eta*lam_max|":>16} {"||x|| after 100 GD steps":>25}')
+for eta in [0.05, 0.15, 0.19, 0.201, 0.21, 0.25]:
+    x = np.array([1.0, 1.0])
+    for _ in range(100):
+        x = x - eta * (H @ x)                  # gradient descent = forward Euler
+    print(f'{eta:8.3f} {abs(1 - eta * H[0, 0]):16.2f} {np.linalg.norm(x):25.2e}')
+```
+
+The verdict flips exactly at the predicted threshold. At $\eta = 0.19$ the
+fast coordinate contracts by $|1 - 1.9| = 0.9$ per step and a hundred steps
+crush the iterate to $10^{-5}$; at $\eta = 0.201$ the factor is $-1.01$ and
+the same hundred steps have *grown* it, oscillating in sign, past its
+starting point; at $\eta = 0.25$ it has exploded seventeen orders of
+magnitude. Meanwhile the slow direction ($\lambda = 1$) was converging
+contentedly at every one of these rates --- the divergence is manufactured
+entirely by the loss surface's stiffest mode, its own "fast dead mode."
 
 ## Neural ODEs and the Adjoint Method
 :label:`sec_mdl-neural-odes`
@@ -997,7 +1083,12 @@ twist: instead of storing the forward states for the VJPs, you may
 memory $O(1)$ in the number of solver steps --- at the cost of extra compute
 and of numerical drift when the reversed dynamics are unstable (a strongly
 contracting forward flow is, run backward, strongly expanding; in that regime
-checkpointing or plain unrolling is the sturdier choice).
+checkpointing or plain unrolling is the sturdier choice). The literature
+names the two routes **discretize-then-optimize** --- differentiate the
+unrolled solver, exact for the program you actually ran --- versus
+**optimize-then-discretize** --- discretize the continuous adjoint,
+memory-free but only approximately the gradient of anything
+:cite:`Kidger.2022`; Exercise 7 probes exactly this fault line.
 
 Everything above is checkable on the linear ODE
 $\dot{\mathbf{x}} = A\mathbf{x}$, where every ingredient has a closed form:
@@ -1231,6 +1322,11 @@ integrated by exactly the solvers of this section.
   $\dot{x} = -\lambda x$ only for $h < 2/\lambda$, so a fast dead mode can
   dictate the step; **implicit (backward) Euler** is stable for every $h$, at
   the price of solving an equation per step.
+* **Gradient descent is forward Euler on the gradient flow**
+  $\dot{\mathbf{x}} = -\nabla L$: the solver stability bound becomes the
+  learning-rate rule $\eta < 2/\lambda_{\max}(H)$, ill-conditioning is
+  stiffness, and momentum discretizes the heavy-ball ODE
+  $m\ddot{\mathbf{x}} + \gamma\dot{\mathbf{x}} = -\nabla L$.
 * A **residual block is one Euler step**, a ResNet is a solver, and the
   continuous limit is a **Neural ODE**: a learned vector field whose flow is
   fit by differentiating through the solver. The **adjoint method**

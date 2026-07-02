@@ -997,6 +997,411 @@ def fig_time_conventions():
 
 
 # =========================================================================== #
+# §27.2  Strong vs weak convergence  ->  mdl-dyn-strong-weak                   #
+# =========================================================================== #
+
+def fig_strong_weak():
+    """Strong versus weak convergence of Euler-Maruyama on the OU process
+    dX = -X dt + dW, X0 = 1.5, T = 1 (the parameters of the strong-order
+    cell).  Left: ONE coarse path (16 steps) against the fine reference (4096
+    steps) driven by the SAME Brownian increments -- the pathwise (strong)
+    gap is visible.  Right: terminal histograms of 20,000 paths at both step
+    sizes on top of the analytic marginal -- the laws (weak view) already
+    agree.  Everything is computed from one seeded increment array."""
+    theta, sig, X0, T = 1.0, 1.0, 1.5, 1.0
+    n_fine, n_coarse = 4096, 16
+    rng = np.random.default_rng(21)
+
+    def em(x0, dW, tgrid):
+        X = np.empty(dW.shape[:-1] + (len(tgrid),))
+        X[..., 0] = x0
+        for k in range(len(tgrid) - 1):
+            h = tgrid[k + 1] - tgrid[k]
+            X[..., k + 1] = X[..., k] - theta * X[..., k] * h + sig * dW[..., k]
+        return X
+
+    # -- left: one path, two resolutions, same noise ------------------------ #
+    dW1 = np.sqrt(T / n_fine) * rng.standard_normal(n_fine)
+    tf_ = np.linspace(0, T, n_fine + 1)
+    tc = np.linspace(0, T, n_coarse + 1)
+    fine = em(X0, dW1, tf_)
+    coarse = em(X0, dW1.reshape(n_coarse, -1).sum(axis=1), tc)
+
+    fig, (axL, axR) = plt.subplots(
+        1, 2, figsize=(8.6, 3.7), gridspec_kw=dict(width_ratios=[1.35, 1.0]))
+    axL.plot(tf_, fine, color=BLUE, lw=1.3, zorder=3,
+             label=f"fine reference ({n_fine} steps)")
+    axL.plot(tc, coarse, color=ORANGE, lw=1.6, marker="o", ms=4, zorder=4,
+             label=f"coarse EM ({n_coarse} steps)")
+    # highlight the largest pathwise gap on the coarse grid
+    stride = n_fine // n_coarse
+    gaps = np.abs(coarse - fine[::stride])
+    j = int(gaps.argmax())
+    axL.plot([tc[j], tc[j]], [fine[j * stride], coarse[j]], color=GRAY,
+             lw=1.6, zorder=5)
+    axL.annotate("strong error:\npathwise gap,\nsame noise",
+                 xy=(tc[j], (fine[j * stride] + coarse[j]) / 2),
+                 xytext=(0.70, 1.10), color=GRAY, fontsize=9,
+                 ha="center", va="center",
+                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.0,
+                                 shrinkA=2, shrinkB=4))
+    axL.plot(0, X0, "o", color="black", ms=5, zorder=5)
+    axL.set_xlabel("$t$")
+    axL.set_ylabel("$X_t$")
+    axL.set_xlim(0, 1.02)
+    axL.legend(loc="lower left", fontsize=8.5)
+    axL.set_aspect("auto")
+    fl.clean_axes(axL, equal=False)
+
+    # -- right: terminal laws at both resolutions --------------------------- #
+    n_paths = 20000
+    dW = np.sqrt(T / n_fine) * rng.standard_normal((n_paths, n_fine))
+    xT_fine = em(np.full(n_paths, X0), dW, tf_)[:, -1]
+    xT_coarse = em(np.full(n_paths, X0),
+                   dW.reshape(n_paths, n_coarse, -1).sum(axis=2), tc)[:, -1]
+    axR.hist(xT_fine, bins=70, density=True, histtype="step", color=BLUE,
+             lw=1.5, zorder=3)
+    axR.hist(xT_coarse, bins=70, density=True, histtype="step", color=ORANGE,
+             lw=1.5, zorder=3)
+    m = X0 * np.exp(-theta * T)
+    v = sig ** 2 / (2 * theta) * (1 - np.exp(-2 * theta * T))
+    gx = np.linspace(-2.4, 3.2, 400)
+    axR.fill_between(gx, 0, _gauss(gx, m, v), color=GRAY, alpha=0.15, zorder=1)
+    axR.plot(gx, _gauss(gx, m, v), color="black", lw=1.0, zorder=2)
+    axR.text(m, 0.15, "weak view:\nthe laws already match", color=GRAY,
+             fontsize=9, ha="center", va="center", zorder=4)
+    axR.set_xlabel("$X_T$")
+    axR.set_ylabel("terminal density")
+    axR.set_xlim(-2.4, 3.2)
+    axR.set_aspect("auto")
+    fl.clean_axes(axR, equal=False)
+
+    fig.subplots_adjust(wspace=0.25, left=0.07, right=0.99, top=0.97,
+                        bottom=0.16)
+    fl.save(fig, "mdl-dyn-strong-weak")
+
+
+# =========================================================================== #
+# §27.3  The lambda-family of reverse dynamics  ->  mdl-dyn-lambda-family      #
+# =========================================================================== #
+
+def fig_lambda_family():
+    """The noise dial of the reverse-time family: from the same terminal
+    noise draws, integrate the reverse dynamics with drift
+    f - (1+lambda^2)/2 g^2 grad log p_t and noise lambda*g, for lambda = 0
+    (probability-flow ODE, smooth), 0.5, and 1 (Anderson's reverse SDE,
+    jagged), using the EXACT score of the OU-evolved bimodal mixture (theta=1,
+    sigma=sqrt(2), p0 = 1/2 N(-2, 0.25^2) + 1/2 N(2, 0.25^2) -- the section's
+    running example).  Left panel: a few trajectories per lambda.  Right
+    panel: the three 20k-particle terminal histograms overlaid on the
+    analytic p0 -- same marginals, different choreography."""
+    theta, sig = 1.0, np.sqrt(2.0)
+    pis = np.array([0.5, 0.5])
+    mus = np.array([-2.0, 2.0])
+    s2s = np.array([0.25 ** 2, 0.25 ** 2])
+    T, steps = 3.0, 600
+    dt = T / steps
+
+    def mixture_params(t):
+        m = mus * np.exp(-theta * t)
+        v = s2s * np.exp(-2 * theta * t) + sig ** 2 / (2 * theta) * (
+            1 - np.exp(-2 * theta * t))
+        return m, v
+
+    def score_t(x, t):
+        m, v = mixture_params(t)
+        logw = np.stack([np.log(pi) - 0.5 * np.log(2 * np.pi * vi)
+                         - (x - mi) ** 2 / (2 * vi)
+                         for pi, mi, vi in zip(pis, m, v)])
+        logw -= logw.max(axis=0)
+        w = np.exp(logw)
+        w /= w.sum(axis=0)
+        return (w * np.stack([-(x - mi) / vi
+                              for mi, vi in zip(m, v)])).sum(axis=0)
+
+    def reverse(x0, lam, rng):
+        """Integrate the reverse family from forward time T down to 0."""
+        X = [x0.copy()]
+        x = x0.copy()
+        for k in range(steps):
+            t = T - k * dt
+            drift = theta * x + 0.5 * (1 + lam ** 2) * sig ** 2 * score_t(x, t)
+            x = x + drift * dt \
+                + lam * sig * np.sqrt(dt) * rng.standard_normal(x.shape)
+            X.append(x.copy())
+        return np.array(X)
+
+    lams = (0.0, 0.5, 1.0)
+    cols = (BLUE, GREEN, ORANGE)
+    labs = (r"$\lambda=0$ (PF-ODE)", r"$\lambda=0.5$",
+            r"$\lambda=1$ (reverse SDE)")
+
+    fig, (axL, axR) = plt.subplots(
+        1, 2, figsize=(8.6, 3.9), gridspec_kw=dict(width_ratios=[1.6, 1.0]))
+
+    # -- left: a few trajectories per lambda from the SAME noise draws ------ #
+    rng = np.random.default_rng(1)
+    starts = rng.standard_normal(4)
+    ss = np.linspace(0.0, T, steps + 1)          # reverse clock s = T - t
+    for lam, c in zip(lams, cols):
+        P = reverse(starts, lam, np.random.default_rng(5))
+        for j in range(len(starts)):
+            axL.plot(ss, P[:, j], color=c, lw=1.1 if lam > 0 else 1.8,
+                     alpha=0.85, zorder=3 if lam == 0 else 2)
+    axL.plot(np.zeros(len(starts)), starts, "o", color="black", ms=4,
+             zorder=5)
+    axL.set_xlabel(r"reverse time $s = T - t$ (noise $\rightarrow$ data)")
+    axL.set_ylabel("$x$")
+    axL.set_xlim(0, T)
+    axL.set_ylim(-3.4, 3.4)
+    axL.set_aspect("auto")
+    fl.clean_axes(axL, equal=False)
+    for lam, c, lab, y in zip(lams, cols, labs, (2.55, -2.8, 3.0)):
+        axL.text(1.62, y, lab, color=c, fontsize=9, ha="center", va="center")
+
+    # -- right: terminal histograms of full clouds, one per lambda ---------- #
+    rng = np.random.default_rng(7)
+    z = rng.standard_normal(20000)
+    for lam, c, lab in zip(lams, cols, labs):
+        xT = reverse(z, lam, np.random.default_rng(11))[-1]
+        axR.hist(xT, bins=90, density=True, histtype="step", color=c,
+                 lw=1.5, zorder=3)
+    gx = np.linspace(-3.2, 3.2, 500)
+    m0, v0 = mixture_params(0.0)
+    p0 = sum(pi * _gauss(gx, mi, vi) for pi, mi, vi in zip(pis, m0, v0))
+    axR.fill_between(gx, 0, p0, color=GRAY, alpha=0.15, zorder=1)
+    axR.plot(gx, p0, color="black", lw=1.0, zorder=2)
+    axR.text(0.0, 0.62, "all three land\non the same $p_0$", color=GRAY,
+             fontsize=9, ha="center", va="center")
+    axR.set_xlabel("$x$")
+    axR.set_ylabel("terminal density")
+    axR.set_xlim(-3.2, 3.2)
+    axR.set_aspect("auto")
+    fl.clean_axes(axR, equal=False)
+
+    fig.subplots_adjust(wspace=0.24, left=0.075, right=0.99, top=0.97,
+                        bottom=0.16)
+    fl.save(fig, "mdl-dyn-lambda-family")
+
+
+# =========================================================================== #
+# §27.1  Stability regions in the complex h*lambda plane                       #
+#        ->  mdl-dyn-stability-regions                                         #
+# =========================================================================== #
+
+def fig_stability_regions():
+    """Stability regions of forward Euler, RK4, and backward Euler in the
+    complex z = h*lambda plane (test equation dy/dt = lambda y).  Each region
+    is computed from the actual amplification factor R(z): |1 + z| for forward
+    Euler, the degree-4 Taylor polynomial for RK4, |1 - z|^{-1} for backward
+    Euler -- contours of |R| = 1 on a grid, not sketched.  The real-axis
+    slice -2 < z < 0 (the text's h < 2/lambda bound) and RK4's real intercept
+    ~ -2.785 are marked."""
+    xs = np.linspace(-4.4, 2.8, 721)
+    ys = np.linspace(-3.4, 3.4, 681)
+    X, Y = np.meshgrid(xs, ys)
+    Z = X + 1j * Y
+
+    R_fe = np.abs(1 + Z)
+    R_rk4 = np.abs(1 + Z + Z ** 2 / 2 + Z ** 3 / 6 + Z ** 4 / 24)
+    R_be = np.abs(1 / (1 - Z))
+
+    fig, ax = plt.subplots(figsize=(7.0, 5.4))
+
+    # backward Euler: stable EVERYWHERE except the unit disc around +1 --
+    # shade its unstable disc so "everything else" reads as stable.
+    ax.contourf(X, Y, R_be, levels=[1.0, np.inf], colors=[ORANGE], alpha=0.18,
+                zorder=1)
+    ax.contour(X, Y, R_be, levels=[1.0], colors=[ORANGE], linewidths=1.8,
+               linestyles="--", zorder=3)
+
+    # RK4 region (contains the forward-Euler disc)
+    ax.contourf(X, Y, R_rk4, levels=[0.0, 1.0], colors=[GREEN], alpha=0.14,
+                zorder=1)
+    ax.contour(X, Y, R_rk4, levels=[1.0], colors=[GREEN], linewidths=1.8,
+               zorder=3)
+
+    # forward Euler disc |1 + z| < 1
+    ax.contourf(X, Y, R_fe, levels=[0.0, 1.0], colors=[BLUE], alpha=0.25,
+                zorder=2)
+    ax.contour(X, Y, R_fe, levels=[1.0], colors=[BLUE], linewidths=1.8,
+               zorder=3)
+
+    # axes through the origin; the imaginary axis bounds the left half-plane
+    ax.axhline(0.0, color=GRAY, lw=0.8, zorder=2)
+    ax.axvline(0.0, color="black", lw=1.1, zorder=2)
+
+    # the real-axis slice of the text: -2 < h lambda < 0, and RK4's intercept
+    ax.plot([-2.0, 0.0], [0.0, 0.0], color=BLUE, lw=3.2,
+            solid_capstyle="butt", zorder=4)
+    ax.plot(-2.0, 0.0, "|", color=BLUE, ms=11, mew=2.2, zorder=5)
+    ax.text(-1.0, 0.14, r"$-2 < h\lambda < 0$", color=BLUE, fontsize=9.5,
+            ha="center", va="bottom", zorder=6)
+    x_rk4 = -2.785293563405282          # real root of |R_rk4(z)| = 1
+    ax.plot(x_rk4, 0.0, "|", color=GREEN, ms=11, mew=2.2, zorder=5)
+    ax.text(-3.35, -0.35, r"$\approx -2.79$", color=GREEN,
+            fontsize=9.5, ha="center", va="top", zorder=6)
+
+    ax.text(-1.0, -1.25, "forward Euler", color=BLUE, fontsize=10.5,
+            ha="center", va="center", zorder=6)
+    ax.text(-1.75, 2.05, "RK4", color=GREEN, fontsize=10.5,
+            ha="center", va="center", zorder=6)
+    ax.text(1.02, 2.1, "backward Euler:\nunstable only here", color=ORANGE,
+            fontsize=9.5, ha="center", va="center", zorder=6)
+    ax.text(-4.25, 3.1, "left half-plane:\ntrue solution decays", color=GRAY,
+            fontsize=9, ha="left", va="center", zorder=6)
+
+    ax.set_xlabel(r"$\mathrm{Re}(h\lambda)$")
+    ax.set_ylabel(r"$\mathrm{Im}(h\lambda)$")
+    fl.clean_axes(ax, lim=((-4.4, 2.8), (-3.4, 3.4)), equal=True)
+    fl.save(fig, "mdl-dyn-stability-regions")
+
+
+# =========================================================================== #
+# §27.4  Tweedie's formula  ->  mdl-dyn-tweedie                                #
+# =========================================================================== #
+
+def fig_tweedie():
+    """Tweedie's formula on the section's smoothed mixture: a noisy point
+    x_tilde in the low-density valley, the exact (lopsided, bimodal) posterior
+    over its clean origin, and the single step up the score
+    x_tilde + sigma^2 * grad log p_sigma landing exactly on the posterior mean
+    x0_hat.  Every curve and every landing point is computed in closed form
+    (mixture 1/2 N(-2, 0.5^2) + 1/2 N(2, 0.5^2), noise sigma = 0.5 -- exactly
+    the DSM demo's numbers), not sketched."""
+    means, var0, sig2 = np.array([-2.0, 2.0]), 0.25, 0.25   # sigma = 0.5
+    vs = var0 + sig2                                        # smoothed comp var
+    xt = 0.8                                                # the noisy point
+
+    x = np.linspace(-4.0, 4.0, 801)
+    p_sigma = 0.5 * (_gauss(x, means[0], vs) + _gauss(x, means[1], vs))
+
+    # exact posterior p(x0 | x_tilde): reweighted product of Gaussians
+    logw = np.array([-(xt - m) ** 2 / (2 * vs) for m in means])
+    w = np.exp(logw - logw.max())
+    w = w / w.sum()
+    post_means = means + (var0 / vs) * (xt - means)
+    post_var = var0 * sig2 / vs
+    posterior = sum(wi * _gauss(x, mi, post_var)
+                    for wi, mi in zip(w, post_means))
+
+    # Tweedie: one step up the score of the smoothed density
+    score = float(4.0 * np.tanh(4.0 * xt) - 2.0 * xt)      # closed form, vs=0.5
+    x0_hat = xt + sig2 * score
+    assert abs(x0_hat - float(w @ post_means)) < 1e-12     # Tweedie = post mean
+
+    fig, ax = plt.subplots(figsize=(6.8, 4.0))
+    ax.plot(x, p_sigma, color=BLUE, lw=2.2, zorder=3)
+    ax.fill_between(x, 0, p_sigma, color=BLUE, alpha=0.10, zorder=1)
+    scale = 0.55 * p_sigma.max() / posterior.max()         # display rescale
+    ax.plot(x, scale * posterior, color=GREEN, lw=1.9, zorder=4)
+    ax.fill_between(x, 0, scale * posterior, color=GREEN, alpha=0.15, zorder=2)
+
+    # the noisy point, the arrow up the score, and the posterior mean
+    yarr = 0.055
+    ax.plot(xt, 0, "o", color=ORANGE, ms=8, zorder=6)
+    ax.plot(x0_hat, 0, "o", color=GREEN, ms=8, zorder=6)
+    ax.axvline(xt, color=ORANGE, lw=1.0, ls="--", alpha=0.6, zorder=2)
+    ax.axvline(x0_hat, color=GREEN, lw=1.0, ls="--", alpha=0.6, zorder=2)
+    fl.arrow(ax, (xt, yarr), (x0_hat, yarr), color=ORANGE, lw=2.4, mut=15)
+
+    ax.text(xt - 0.07, -0.016, r"$\tilde{x}$", color=ORANGE, fontsize=11,
+            ha="right", va="top")
+    ax.text(x0_hat + 0.07, -0.016, r"$\hat{x}_0$", color=GREEN, fontsize=11,
+            ha="left", va="top")
+    ax.text(xt - 0.18, yarr + 0.004,
+            r"$\sigma^2\,\nabla\log p_\sigma(\tilde{x})$", color=ORANGE,
+            fontsize=9.5, ha="right", va="center")
+    ax.text(-1.05, 0.255, r"$p_\sigma$", color=BLUE, fontsize=11,
+            ha="center", va="center")
+    ax.annotate(r"posterior $p(x\mid\tilde{x})$ (rescaled)",
+                xy=(post_means[1] - 0.28, scale * posterior.max() * 0.82),
+                xytext=(-3.6, 0.20), color=GREEN, fontsize=9.5,
+                ha="left", va="center",
+                arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.1,
+                                shrinkA=2, shrinkB=3), zorder=5)
+
+    ax.set_xlabel("$x$")
+    ax.set_ylabel("density")
+    ax.set_xlim(-4.0, 4.0)
+    ax.set_ylim(-0.045, 0.34)
+    ax.set_yticks([0.0, 0.1, 0.2, 0.3])
+    ax.set_aspect("auto")
+    fl.clean_axes(ax, equal=False)
+    fl.save(fig, "mdl-dyn-tweedie")
+
+
+# =========================================================================== #
+# §27.4  DDIM strides in the (t, x) plane  ->  mdl-dyn-ddim-strides            #
+# =========================================================================== #
+
+def fig_ddim_strides():
+    """The family of curves sqrt(abar_t) x0 + sqrt(1 - abar_t) eps in the
+    (t, x) plane under the actual DDPM linear-beta schedule (T = 1000):  each
+    clean-point/noise-draw pair owns one curve, gray verticals mark the fine
+    ancestral grid, and DDIM slides one highlighted sample along its own curve
+    through 10 big strides (dots), skipping the grid times in between."""
+    T = 1000
+    beta = np.linspace(1e-4, 0.02, T)
+    abar = np.cumprod(1.0 - beta)
+    tgrid = np.arange(1, T + 1) / T                      # curve parameter
+    ca, cb = np.sqrt(np.concatenate([[1.0], abar])), \
+        np.sqrt(np.concatenate([[0.0], 1.0 - abar]))
+    tt = np.concatenate([[0.0], tgrid])
+
+    rng = np.random.default_rng(3)
+    mt = 2.0 / np.sqrt(4.25)                             # standardized modes
+    x0s = mt * (2 * rng.integers(0, 2, 7) - 1) \
+        + np.sqrt(0.25 / 4.25) * rng.standard_normal(7)
+    eps = rng.standard_normal(7)
+
+    fig, ax = plt.subplots(figsize=(7.0, 4.2))
+
+    # the fine ancestral grid, as faint verticals (every 25th of 1000)
+    for tk in tt[25::25]:
+        ax.axvline(tk, color=LIGHT, lw=0.5, zorder=1)
+
+    # the curve family (gray), one curve highlighted (blue)
+    for k in range(1, 7):
+        ax.plot(tt, ca * x0s[k] + cb * eps[k], color=GRAY, lw=1.0,
+                alpha=0.55, zorder=2)
+    xb = ca * x0s[0] + cb * eps[0]
+    ax.plot(tt, xb, color=BLUE, lw=2.4, zorder=4)
+
+    # DDIM strides: 10 big deterministic steps along the highlighted curve
+    idx = np.linspace(T, 0, 11).round().astype(int)
+    ax.plot(tt[idx], xb[idx], "o", color=ORANGE, ms=6.5, zorder=5)
+    # direction of sampling: noise -> data (right to left)
+    i = 520
+    fl.arrow(ax, (tt[i], xb[i]), (tt[i - 14], xb[i - 14]), color=BLUE,
+             lw=0.0, mut=14)
+
+    ax.plot(np.zeros(7), x0s, "o", color=GREEN, ms=5, zorder=5)
+    ax.text(0.02, 2.35, "data end: $x_0$", color=GREEN, fontsize=9.5,
+            ha="left", va="center")
+    ax.text(0.98, 2.35, r"noise end: $\epsilon$", color=ORANGE, fontsize=9.5,
+            ha="right", va="center")
+    ax.annotate("one sample slides along\nits own curve, 10 strides",
+                xy=(tt[idx[3]], xb[idx[3]]), xytext=(0.42, -2.15),
+                color=ORANGE, fontsize=9.5, ha="center", va="center",
+                arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.1,
+                                shrinkA=2, shrinkB=5), zorder=6)
+    ax.text(0.375, 1.65, "skipped ancestral grid times", color=GRAY,
+            fontsize=9, ha="center", va="center")
+    ax.text(0.70, 2.0,
+            r"$x_t=\sqrt{\bar\alpha_t}\,x_0+\sqrt{1-\bar\alpha_t}\,\epsilon$",
+            color="black", fontsize=10.5, ha="center", va="center", zorder=6)
+
+    ax.set_xlabel(r"diffusion time $t/T$")
+    ax.set_ylabel("$x$")
+    ax.set_xlim(-0.02, 1.02)
+    ax.set_ylim(-2.6, 2.6)
+    ax.set_aspect("auto")
+    fl.clean_axes(ax, equal=False)
+    fl.save(fig, "mdl-dyn-ddim-strides")
+
+
+# =========================================================================== #
 # Driver                                                                      #
 # =========================================================================== #
 
@@ -1015,6 +1420,11 @@ FIGURES = [
     fig_noising_denoising,
     fig_fm_paths,
     fig_time_conventions,
+    fig_strong_weak,
+    fig_lambda_family,
+    fig_stability_regions,
+    fig_tweedie,
+    fig_ddim_strides,
 ]
 
 

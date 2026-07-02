@@ -34,8 +34,9 @@ Euler–Maruyama steps (:numref:`sec_mdl-euler-runge-kutta`,
 :numref:`sec_mdl-fisher-divergence`, optimal transport via
 :numref:`sec_mdl-optimal-transport`). The code is deliberately light: two tiny
 training loops — a one-dimensional score network in plain NumPy and a
-two-dimensional flow-matching model in each framework — plus closed-form
-simulations for everything else.
+two-dimensional flow-matching model in each framework, the latter retrained
+once more to measure reflow — plus closed-form simulations for everything
+else.
 
 ```{.python .input #score-matching-diffusion-flow-imports}
 #@tab mxnet
@@ -205,7 +206,7 @@ noise you just added." **Denoising score matching** (DSM) regresses on that:
 
 $$
 J_{\mathrm{DSM}}(\boldsymbol{\theta})
-= \tfrac{1}{2}\, \mathbb{E}_{\mathbf{x} \sim p,\ \tilde{\mathbf{x}} \sim p_\sigma(\cdot \mid \mathbf{x})}
+= \mathbb{E}_{\mathbf{x} \sim p,\ \tilde{\mathbf{x}} \sim p_\sigma(\cdot \mid \mathbf{x})}
 \left[\, \left\| \mathbf{s}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}})
 - \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x}) \right\|^2 \right].
 $$
@@ -243,13 +244,14 @@ expectations finite,*
 
 $$
 J_{\mathrm{DSM}}(\boldsymbol{\theta})
-= \tfrac{1}{2}\, \mathbb{E}_{\tilde{\mathbf{x}} \sim p_\sigma}
+= \mathbb{E}_{\tilde{\mathbf{x}} \sim p_\sigma}
 \left[\, \left\| \mathbf{s}_{\boldsymbol{\theta}}(\tilde{\mathbf{x}}) - \nabla \log p_\sigma(\tilde{\mathbf{x}}) \right\|^2 \right] + C,
 $$
 
 *with $C$ independent of $\boldsymbol{\theta}$: denoising score matching and
-explicit score matching on the noised marginal have the same gradients and the
-same minimizers.*
+explicit score matching on the noised marginal — the right-hand side is twice
+:eqref:`eq_mdl-esm-objective` with $p_\sigma$ in place of $p$ — have the same
+minimizers and, up to that overall factor of two, the same gradients.*
 
 **Proof.** Apply the lemma with $X = \tilde{\mathbf{x}}$ and
 $Y = \nabla_{\tilde{\mathbf{x}}} \log p_\sigma(\tilde{\mathbf{x}} \mid \mathbf{x})$.
@@ -280,16 +282,20 @@ sections early. Two corollaries are worth pausing on.
   $\mathbb{E}[(\mathbf{x} - \tilde{\mathbf{x}})/\sigma^2 \mid \tilde{\mathbf{x}}] = \nabla \log p_\sigma(\tilde{\mathbf{x}})$
   gives
   $\mathbb{E}[\mathbf{x} \mid \tilde{\mathbf{x}}] = \tilde{\mathbf{x}} + \sigma^2\, \nabla \log p_\sigma(\tilde{\mathbf{x}})$:
-  *the optimal denoiser is a step up the score.* Score estimation and denoising
+  *the optimal denoiser is a step up the score*
+  (:numref:`fig_mdl-dyn-tweedie`). Score estimation and denoising
   are not merely related; they are the same function.
 * **The loss does not go to zero.** By :eqref:`eq_mdl-regression-lemma` the DSM
   loss at the optimum equals
-  $\tfrac12 \mathbb{E}\|Y - \mathbf{m}(X)\|^2$, the average posterior variance
+  $\mathbb{E}\|Y - \mathbf{m}(X)\|^2$, the average posterior variance
   of the conditional score — many clean points $\mathbf{x}$ explain the same
   $\tilde{\mathbf{x}}$, and no network can resolve which one produced it. A
   large, plateauing training loss is *built into the objective*, a fact worth
   remembering the first time you train a diffusion model and the loss refuses
   to drop. We will see the same plateau in the flow-matching loss later.
+
+![Tweedie's formula. A noisy observation $\tilde{x}$ sits in the low-density valley of the smoothed mixture $p_\sigma$; the exact posterior over its clean origin is bimodal but lopsided, and the single step up the score, $\tilde{x} + \sigma^2 \nabla \log p_\sigma(\tilde{x})$, lands exactly on the posterior mean $\hat{x}_0$ — the optimal denoiser.](../img/mdl-dyn-tweedie.svg)
+:label:`fig_mdl-dyn-tweedie`
 
 ### A Score Network in One Dimension
 
@@ -345,7 +351,8 @@ d2l.plot(grid, [mixture_score(grid, 0.5), s_hat], 'x', 'score',
 
 The learned field tracks the analytic score across both modes and the
 low-density valley between them — within $0.2$ everywhere on $[-4, 4]$, on a
-curve whose values span $\pm 8$. And the printout verifies the regression
+curve whose values span $\pm 4$ (the smoothed score is
+$s(x) = 4\tanh(4x) - 2x$, extremal at the interval ends). And the printout verifies the regression
 lemma numerically: the final DSM loss ($\approx 2.04$) sits exactly at the
 irreducible floor $\mathbb{E}\|Y - \mathbf{m}(X)\|^2$ ($\approx 2.04$,
 estimated with the analytic score). The network has learned everything the
@@ -364,7 +371,8 @@ wrong (over-smoothed) density. The resolution
 :cite:`song2019generative,song2021score`: learn the score at *every* noise level
 along a forward process that flows the data into pure noise, by making the
 network noise-conditional, $\mathbf{s}_{\boldsymbol{\theta}}(\mathbf{x}, t)$
-(:numref:`fig_mdl-dyn-noising-denoising`).
+(:numref:`fig_mdl-dyn-noising-denoising` --- the two-dimensional companion of
+the one-dimensional density movie in :numref:`fig_mdl-dyn-forward-reverse`).
 :numref:`sec_mdl-sdes` gave us the two standard forward processes:
 
 * the **variance-exploding (VE)** SDE
@@ -397,7 +405,14 @@ with a weighting $\lambda(t) > 0$ that decides which noise levels the network
 should serve best. By Vincent's theorem, applied at each $t$ separately, the
 minimizer satisfies
 $\mathbf{s}_{\boldsymbol{\theta}}(\cdot, t) = \nabla \log p_t$ for every $t$
-that $\lambda$ touches. Generation is then exactly the program of
+that $\lambda$ touches. One choice of weighting is canonical: with
+$\lambda(t) = g(t)^2$, the squared diffusion coefficient of the forward SDE,
+the objective becomes (up to a constant) an upper bound on the model's
+negative log-likelihood, so score matching trains a maximum-likelihood
+generative model — the *likelihood weighting* of
+:cite:`Song.Durkan.Murray.ea.2021`; DDPM's implicit choice
+$\lambda(t) = 1 - \bar{\alpha}_t$, derived below, trades that bound away for
+sample quality. Generation is then exactly the program of
 :numref:`sec_mdl-time-reversal` and :numref:`sec_mdl-probability-flow-ode`:
 start from the known terminal Gaussian and integrate either the reverse-time
 SDE :cite:`Anderson.1982` or the probability-flow ODE, with
@@ -686,6 +701,61 @@ probability-flow ODE of the VP-SDE (:numref:`sec_mdl-probability-flow-ode`) —
 DDIM is that ODE's bespoke integrator, exact for Gaussian marginals, which is
 why it tolerates step sizes that would wreck a generic Euler scheme.
 
+![In the $(t, x)$ plane, every pair of a clean point $x_0$ and a noise draw $\epsilon$ traces its own curve $\sqrt{\bar{\alpha}_t}\, x_0 + \sqrt{1 - \bar{\alpha}_t}\, \epsilon$ from data (left) to noise (right), and at each time the curves' cross-section reproduces the marginal. DDIM slides each sample deterministically along its own curve: the marked strides skip the intermediate grid times (gray) that ancestral sampling would visit one by one.](../img/mdl-dyn-ddim-strides.svg)
+:label:`fig_mdl-dyn-ddim-strides`
+
+How much do the strides cost when the marginal is *not* a single Gaussian? Our
+standardized two-Gaussian mixture answers in closed form: its noised marginals,
+hence the exact noise prediction
+$\boldsymbol{\epsilon}_{\boldsymbol{\theta}} = -\sqrt{1 - \bar{\alpha}_t}\; \nabla \log p_t$,
+are available at every $t$, so we can run the DDIM update
+:eqref:`eq_mdl-ddim-update` with no learning in the loop — a thousand small
+staggers versus ten big strides from the same initial noise draws.
+
+```{.python .input #mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed}
+rng = np.random.default_rng(19)
+mt, vt = 2 / np.sqrt(4.25), 0.25 / 4.25       # standardized mixture parameters
+
+def ddim(z, K):                               # K deterministic DDIM strides
+    idx = np.linspace(999, 0, K + 1).round().astype(int)
+    xt = z.copy()
+    for t1, t2 in zip(idx[:-1], idx[1:]):
+        a1, a2 = alpha_bar[t1], alpha_bar[t2]
+        s = mixture_score(xt, a1 * vt + 1 - a1,
+                          (-np.sqrt(a1) * mt, np.sqrt(a1) * mt))
+        eps = -np.sqrt(1 - a1) * s            # exact noise prediction
+        x0_hat = (xt - np.sqrt(1 - a1) * eps) / np.sqrt(a1)
+        xt = np.sqrt(a2) * x0_hat + np.sqrt(1 - a2) * eps
+    return xt
+
+def ks(a, b):                                 # two-sample KS statistic
+    q = np.sort(np.concatenate([a, b]))
+    return np.abs(np.searchsorted(np.sort(a), q, 'right') / len(a)
+                  - np.searchsorted(np.sort(b), q, 'right') / len(b)).max()
+
+z = rng.standard_normal(8000)
+x_ref = ddim(z, 1000)                         # a thousand small staggers
+for K in (10, 50):
+    xK = ddim(z, K)
+    print(f'{K:3d} strides vs 1000: mean |gap| {np.abs(xK - x_ref).mean():.3f}, '
+          f'KS {ks(xK, x_ref):.3f}, mode fraction {(xK > 0).mean():.3f}')
+print(f'mode fraction at 1000 steps: {(x_ref > 0).mean():.3f}; '
+      f'5% KS threshold: {1.358 * np.sqrt(2 / 8000):.3f}')
+```
+
+Ten strides land every sample in the same mode as the thousand-step reference —
+the mode fraction is *identical* at every stride count, because the update is
+deterministic and, by the mixture's symmetry, no trajectory crosses the valley —
+and slip by only $0.08$ per sample on a scale where the modes sit at
+$\pm 0.97$. This is the exactness limit made visible: for a single Gaussian
+marginal every stride of :eqref:`eq_mdl-ddim-update` would be exact, but on a
+mixture the predicted noise is a posterior *mean* rather than the realization's
+own noise, so long strides bend slightly off the true curves. By fifty strides
+the terminal law is statistically indistinguishable from the thousand-step one
+(KS $0.018$ against the $5\%$ threshold $0.021$). Big strides do replace small
+staggers — with a small bill, paid in stride count, exactly where the marginal
+is least Gaussian.
+
 ### Guidance: Steering with Bayes' Rule
 
 Generation is rarely unconditional — we want *a picture of a cat*, not a
@@ -740,9 +810,9 @@ $$
 
 equivalently $(1 - \gamma)\, \mathbf{s}_\varnothing + \gamma\, \mathbf{s}_y$:
 $\gamma = 0$ ignores the label, $\gamma = 1$ samples the honest conditional,
-and the values used in practice ($\gamma \approx 5$–$15$ for text-to-image
-models) push *past* the conditional, in the score-space direction "more like
-$y$". Substituting the Bayes identity shows :eqref:`eq_mdl-cfg` is exactly the
+and the values used in practice ($\gamma \approx 3$–$10$ for text-to-image
+models, occasionally higher) push *past* the conditional, in the score-space
+direction "more like $y$". Substituting the Bayes identity shows :eqref:`eq_mdl-cfg` is exactly the
 classifier-guidance tilt with the implicit classifier
 $p_t(y \mid \mathbf{x}) = p_t(\mathbf{x} \mid y)\, p(y) / p_t(\mathbf{x})$ in
 the exponent's role. One honesty note: for $\gamma > 1$ the tilted object
@@ -753,6 +823,53 @@ fidelity-versus-diversity trade-off it buys is an engineering choice, not a
 theorem. In $\boldsymbol{\epsilon}$-parameterization, :eqref:`eq_mdl-cfg` is
 applied verbatim to $\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$, since the
 two differ by the $t$-dependent factor $-\sqrt{1 - \bar{\alpha}_t}$.
+
+Like everything else in this section, guidance can be watched in closed form.
+Label the two modes of our standardized mixture as classes, with $y$ naming the
+right mode: the class-conditional $p_t(\cdot \mid y)$ is a single moving
+Gaussian, the unconditional $p_t$ is the mixture, and both scores are exact —
+so the guided field :eqref:`eq_mdl-cfg` needs no network at all. The cell runs
+ancestral reverse sampling with it at $\gamma \in \{1, 3, 10\}$.
+
+```{.python .input #mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule}
+rng = np.random.default_rng(23)
+
+def cfg_sample(gamma, n=8000):                # ancestral chain, guided score
+    xt = rng.standard_normal(n)
+    for t in range(999, -1, -1):
+        a, b = alpha_bar[t], beta[t]
+        v = a * vt + 1 - a
+        s_uncond = mixture_score(xt, v, (-np.sqrt(a) * mt, np.sqrt(a) * mt))
+        s_cond = (np.sqrt(a) * mt - xt) / v   # class y = the right mode
+        s = (1 - gamma) * s_uncond + gamma * s_cond
+        xt = (xt + b * s) / np.sqrt(1 - b)
+        if t > 0:
+            xt = xt + np.sqrt(b) * rng.standard_normal(n)
+    return xt
+
+samples = {g: cfg_sample(g) for g in (1.0, 3.0, 10.0)}
+for g, xs in samples.items():
+    print(f'gamma = {g:4.1f}: mass right of 0: {(xs > 0).mean():.3f}, '
+          f'mean {xs.mean():.3f}, std {xs.std():.3f}')
+print(f'the honest conditional: mean {mt:.3f}, std {np.sqrt(vt):.3f}')
+d2l.set_figsize((6, 2.5))
+for g, xs in samples.items():
+    d2l.plt.hist(xs, bins=80, density=True, histtype='step',
+                 label=f'gamma = {g:g}')
+d2l.plt.xlabel('x'), d2l.plt.ylabel('density'), d2l.plt.legend()
+```
+
+The printout is the tilt, measured. At $\gamma = 1$ the sampler reproduces the
+honest conditional — mean $0.966$ against the analytic $0.970$, standard
+deviation $0.244$ against $0.243$, and *all* of the mass in the right mode,
+where the unconditional mixture would put only half of it. Pushing $\gamma$ to
+$3$ and $10$ has no more mass to reallocate, so it distorts the surviving mode
+instead: the mean slides from $0.97$ to $1.04$ to $1.07$, away from the class
+boundary — "more prototypically $y$" — while the histogram narrows slightly.
+That drifting, sharpening mode is the honesty note above made quantitative:
+for $\gamma > 1$ the samples track no noised marginal of any clean
+distribution; the tilt is its own object, more emphatic and less diverse than
+the class it names.
 
 ## Flow Matching and Rectified Flow
 :label:`sec_mdl-flow-matching`
@@ -868,6 +985,133 @@ of the conditional target: the CFM training loss plateaus well above zero even
 for a perfect model — at the average disagreement among the conditional
 velocities passing through each point.
 
+### Score, Noise, and Velocity Are One Function
+:label:`sec_mdl-score-velocity-dictionary`
+
+Diffusion trains a score; flow matching trains a velocity. For the Gaussian
+paths that dominate practice these are not two modeling decisions but one
+function wearing different clothes, and the whole wardrobe can be enumerated.
+Condition on a data point and take the Gaussian path
+
+$$
+\mathbf{x}_t = \alpha_t\, \mathbf{x}_1 + \sigma_t\, \boldsymbol{\epsilon},
+\qquad \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, I),
+$$
+
+with smooth schedules $(\alpha_t, \sigma_t)$ — on the flow-matching clock
+$(\alpha_0, \sigma_0) = (0, 1)$ and $(\alpha_1, \sigma_1) = (1, 0)$; on the
+diffusion clock, write $\mathbf{x}_0$ for the data point and swap the boundary
+conditions, and every formula below holds verbatim.
+
+**Proposition (score–velocity identity).** *For the Gaussian path above, at
+any $t$ with $\alpha_t, \sigma_t > 0$ and on $\{p_t > 0\}$, the marginal
+velocity :eqref:`eq_mdl-marginal-velocity` and the marginal score determine
+each other:*
+
+$$
+\mathbf{u}_t(\mathbf{x})
+= \frac{\dot{\alpha}_t}{\alpha_t}\, \mathbf{x}
+- \left( \sigma_t \dot{\sigma}_t - \sigma_t^2\, \frac{\dot{\alpha}_t}{\alpha_t} \right)
+\nabla \log p_t(\mathbf{x}).
+$$
+:eqlabel:`eq_mdl-score-velocity`
+
+**Proof.** Both sides are posterior expectations given
+$\mathbf{x}_t = \mathbf{x}$, and both are affine in the same one — write
+$\hat{\mathbf{x}}_1 = \mathbb{E}[\mathbf{x}_1 \mid \mathbf{x}_t = \mathbf{x}]$.
+Differentiating the path gives the conditional velocity
+$\dot{\mathbf{x}}_t = \dot{\alpha}_t \mathbf{x}_1 + \dot{\sigma}_t \boldsymbol{\epsilon}$
+with $\boldsymbol{\epsilon} = (\mathbf{x} - \alpha_t \mathbf{x}_1)/\sigma_t$,
+so taking the posterior mean in :eqref:`eq_mdl-marginal-velocity`,
+
+$$
+\mathbf{u}_t(\mathbf{x})
+= \frac{\dot{\sigma}_t}{\sigma_t}\, \mathbf{x}
++ \left( \dot{\alpha}_t - \alpha_t\, \frac{\dot{\sigma}_t}{\sigma_t} \right) \hat{\mathbf{x}}_1.
+$$
+
+Meanwhile Tweedie's formula for the kernel
+$\mathcal{N}(\alpha_t \mathbf{x}_1, \sigma_t^2 I)$ — the same computation as in
+Vincent's theorem — reads
+$\nabla \log p_t(\mathbf{x}) = (\alpha_t \hat{\mathbf{x}}_1 - \mathbf{x})/\sigma_t^2$,
+i.e.
+$\hat{\mathbf{x}}_1 = \left( \mathbf{x} + \sigma_t^2\, \nabla \log p_t(\mathbf{x}) \right)/\alpha_t$.
+Substitute this into the display and collect the $\mathbf{x}$ and
+$\nabla \log p_t$ terms: :eqref:`eq_mdl-score-velocity` falls out.
+$\blacksquare$
+
+The same posterior mean $\hat{\mathbf{x}}_1$ underlies every parameterization a
+practitioner meets, so the zoo is inter-convertible by $t$-dependent affine
+maps of one function:
+
+| Network predicts | Posterior meaning | From the score $\mathbf{s} = \nabla \log p_t$ |
+| :-- | :-- | :-- |
+| score $\mathbf{s}_{\boldsymbol{\theta}}$ | $\nabla \log p_t(\mathbf{x})$ | $\mathbf{s}$ |
+| noise $\hat{\boldsymbol{\epsilon}}$ | $\mathbb{E}[\boldsymbol{\epsilon} \mid \mathbf{x}_t = \mathbf{x}]$ | $-\sigma_t\, \mathbf{s}$ |
+| clean point $\hat{\mathbf{x}}_1$ | $\mathbb{E}[\mathbf{x}_1 \mid \mathbf{x}_t = \mathbf{x}]$ | $(\mathbf{x} + \sigma_t^2\, \mathbf{s})/\alpha_t$ (Tweedie) |
+| velocity $\mathbf{v}_{\boldsymbol{\theta}}$ | $\mathbb{E}[\dot{\mathbf{x}}_t \mid \mathbf{x}_t = \mathbf{x}]$ | the identity :eqref:`eq_mdl-score-velocity` |
+| $v$-prediction $\hat{\mathbf{v}}$ | $\mathbb{E}[\alpha_t \boldsymbol{\epsilon} - \sigma_t \mathbf{x}_1 \mid \mathbf{x}_t = \mathbf{x}]$ | $-\tfrac{\sigma_t}{\alpha_t}\, \mathbf{x} - \sigma_t\, \tfrac{\alpha_t^2 + \sigma_t^2}{\alpha_t}\, \mathbf{s}$ |
+
+Which clothes to train in is a conditioning question, not a modeling one. Near
+the data end ($\sigma_t \to 0$) the score blows up like $1/\sigma_t$ while
+$\boldsymbol{\epsilon}$ stays unit-scale, so $\hat{\boldsymbol{\epsilon}}$-prediction —
+DDPM's choice — hands the network a well-scaled regression target at exactly
+the low-noise levels where perceptual detail is decided. But near the noise end
+($\alpha_t \to 0$) recovering $\hat{\mathbf{x}}_1$ from
+$\hat{\boldsymbol{\epsilon}}$ divides by $\alpha_t$, so an
+$\hat{\boldsymbol{\epsilon}}$-network barely constrains the clean prediction
+there. The $v$-**prediction** target
+$\mathbf{v} = \alpha_t \boldsymbol{\epsilon} - \sigma_t \mathbf{x}_1$ is the
+blend that stays order-one at *both* ends, which is why distillation and many
+production systems train it :cite:`Salimans.Ho.2022`.
+
+One invariant clock underlies all the schedules. Define the **log
+signal-to-noise ratio** $\lambda_t = \log(\alpha_t^2 / \sigma_t^2)$ — not to be
+confused with the loss weighting $\lambda(t)$; the field's notation,
+regrettably, overloads the letter — which runs monotonically from data
+($\lambda = +\infty$) to noise. Every conversion factor in the dictionary, and
+the noised density itself after rescaling by $\alpha_t$, depends on $t$ only
+through $\lambda_t$: two schedules that traverse the same range of $\lambda$
+are *time reparameterizations of the same family of models*, differing only in
+how training effort and solver steps are spread over noise levels
+:cite:`Kingma.Salimans.Poole.ea.2021`. EDM's schedule $\sigma(t) = t$ with
+$\alpha_t \equiv 1$ :cite:`Karras.Aittala.Aila.ea.2022` is exactly such a
+re-clocking, chosen to make the sampler's job easy; we will meet its Heun
+sampler at the end of the section.
+
+The identity is checkable to machine precision with the section's own mixture:
+at a fixed $t$, compute the marginal velocity once from the posterior mean
+(route one — no score in sight) and once from the dictionary formula
+:eqref:`eq_mdl-score-velocity` with the analytic score (route two — no
+velocity in sight).
+
+```{.python .input #mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function}
+t = 0.6                                       # one fixed time, cosine schedule
+alpha, sigma = np.sin(np.pi * t / 2), np.cos(np.pi * t / 2)
+dalpha, dsigma = np.pi / 2 * sigma, -np.pi / 2 * alpha
+grid = np.linspace(-4.0, 4.0, 201)
+means, var0 = np.array([-2.0, 2.0]), 0.25     # the mixture of the DSM demo
+vart = alpha**2 * var0 + sigma**2             # noised component variance
+w = np.stack([np.exp(-(grid - alpha * m)**2 / (2 * vart)) for m in means])
+w /= w.sum(0)                                 # posterior mode responsibilities
+x1_hat = (w * np.stack([m + alpha * var0 / vart * (grid - alpha * m)
+                        for m in means])).sum(0)          # E[x_1 | x_t]
+u_posterior = dalpha * x1_hat + dsigma / sigma * (grid - alpha * x1_hat)
+score = (w * np.stack([(alpha * m - grid) / vart for m in means])).sum(0)
+u_dictionary = (dalpha / alpha) * grid \
+    - (sigma * dsigma - sigma**2 * dalpha / alpha) * score
+print(f'max |u_posterior - u_dictionary| on [-4, 4]: '
+      f'{np.abs(u_posterior - u_dictionary).max():.1e}')
+```
+
+The two routes agree to about $10^{-15}$ — machine precision — across both
+modes and the low-density valley. Nothing was fitted: the posterior route never
+mentions a score, the dictionary route never mentions a velocity, and they
+trace the same curve because both are affine in the one quantity
+$\hat{x}_1$ that the posterior knows. When a paper says its model "predicts
+noise" and a library says it "trains a velocity field", this cell is the
+translation between them.
+
 ### Rectified Flow and Straight Paths
 :label:`sec_mdl-rectified-flow`
 
@@ -970,9 +1214,10 @@ $\mathbf{v}_{\boldsymbol{\theta}} : \mathbb{R}^2 \times [0, 1] \to \mathbb{R}^2$
 as a $3 \to 64 \to 64 \to 2$ tanh MLP — trained for $4000$ Adam steps on the
 rectified-flow objective :eqref:`eq_mdl-rf-loss`. Each batch is literally the
 recipe: sample $\mathbf{x}_0$, $\mathbf{x}_1$, $t$; interpolate; regress on
-$\mathbf{x}_1 - \mathbf{x}_0$. This is the section's one real training loop,
-and it takes a few seconds on a CPU in every framework (the JAX tab compiles
-the whole loop into a single `lax.scan`).
+$\mathbf{x}_1 - \mathbf{x}_0$. This is the section's second training loop (the
+NumPy score network was the first), and it takes a few seconds on a CPU in
+every framework (the JAX tab compiles the whole loop into a single
+`lax.scan`).
 
 ```{.python .input #score-matching-diffusion-flow-cfm-train}
 #@tab mxnet
@@ -1153,6 +1398,199 @@ That a few Euler steps already work — where a comparable diffusion sampler
 would want dozens to hundreds — is the linear path keeping the learned flow
 only mildly curved. How mildly, and what it costs to be curved at all, is a
 question about optimal transport.
+
+### One Reflow Round, Measured
+
+Before leaving the trained model, we can put rectified flow's boldest claim —
+reflow straightens the learned paths — on the scale. Run the recipe of
+:numref:`sec_mdl-rectified-flow` literally: draw fresh noise $\mathbf{z}$,
+integrate the trained ODE for $32$ Euler steps to obtain the model's own
+endpoint $\hat{\mathbf{x}}_1(\mathbf{z})$, and retrain the *same architecture*
+on the coupled pairs $(\mathbf{z}, \hat{\mathbf{x}}_1(\mathbf{z}))$ in place of
+independent ones. If the new couplings rarely cross, the retrained flow should
+be nearly straight — and a nearly straight flow should sample well in *one*
+Euler step.
+
+```{.python .input #mdl-score-matching-diffusion-flow-one-reflow-round-measured}
+#@tab mxnet
+mxnp.random.seed(3)
+z = mxnp.random.normal(0, 1, (8192, 2))            # noise endpoints, kept
+x1_hat = z.copy()
+for k in range(32):                                # the model's own couplings
+    t = mxnp.full((8192, 1), k / 32)
+    x1_hat = x1_hat + (1.0 / 32) * net(mxnp.concatenate([x1_hat, t], axis=1))
+net2 = gluon.nn.Sequential()
+net2.add(gluon.nn.Dense(64, activation='tanh'),
+         gluon.nn.Dense(64, activation='tanh'),
+         gluon.nn.Dense(2))
+net2.initialize(init.Xavier())
+trainer2 = gluon.Trainer(net2.collect_params(), 'adam', {'learning_rate': 3e-3})
+for step in range(4001):
+    i = mxnp.random.randint(0, len(z), (256,))
+    x0, x1 = z[i], x1_hat[i]                       # the same pair, never re-paired
+    t = mxnp.random.uniform(0, 1, (256, 1))
+    xt = (1 - t) * x0 + t * x1
+    with autograd.record():
+        v = net2(mxnp.concatenate([xt, t], axis=1))
+        loss = ((v - (x1 - x0))**2).mean()
+    loss.backward()
+    trainer2.step(1)
+print(f'final reflow loss {float(loss):.3f}')
+
+def euler_sample2(n, steps, seed=2):
+    mxnp.random.seed(seed)
+    q = mxnp.random.normal(0, 1, (n, 2))
+    for k in range(steps):
+        t = mxnp.full((n, 1), k / steps)
+        q = q + (1.0 / steps) * net2(mxnp.concatenate([q, t], axis=1))
+    return q.asnumpy()
+
+for K in (1, 2, 32):
+    print(f'{K:2d} step(s): energy distance  '
+          f'CFM {energy_distance(euler_sample(2048, K), held_out):.3f}  ->  '
+          f'reflow {energy_distance(euler_sample2(2048, K), held_out):.3f}')
+```
+
+```{.python .input #mdl-score-matching-diffusion-flow-one-reflow-round-measured}
+#@tab pytorch
+g = torch.Generator().manual_seed(3)
+z = torch.randn(8192, 2, generator=g)              # noise endpoints, kept
+x1_hat = z.clone()
+for k in range(32):                                # the model's own couplings
+    t = torch.full((8192, 1), k / 32)
+    with torch.no_grad():
+        x1_hat = x1_hat + (1.0 / 32) * net(torch.cat([x1_hat, t], 1))
+net2 = nn.Sequential(nn.Linear(3, 64), nn.Tanh(), nn.Linear(64, 64), nn.Tanh(),
+                     nn.Linear(64, 2))
+opt2 = torch.optim.Adam(net2.parameters(), lr=3e-3)
+for step in range(4001):
+    i = torch.randint(0, len(z), (256,))
+    x0, x1 = z[i], x1_hat[i]                       # the same pair, never re-paired
+    t = torch.rand(256, 1)
+    xt = (1 - t) * x0 + t * x1
+    loss = ((net2(torch.cat([xt, t], 1)) - (x1 - x0))**2).mean()
+    opt2.zero_grad()
+    loss.backward()
+    opt2.step()
+print(f'final reflow loss {loss.item():.3f}')
+
+def euler_sample2(n, steps, seed=2):
+    g = torch.Generator().manual_seed(seed)
+    q = torch.randn(n, 2, generator=g)
+    for k in range(steps):
+        t = torch.full((n, 1), k / steps)
+        with torch.no_grad():
+            q = q + (1.0 / steps) * net2(torch.cat([q, t], 1))
+    return q.numpy()
+
+for K in (1, 2, 32):
+    print(f'{K:2d} step(s): energy distance  '
+          f'CFM {energy_distance(euler_sample(2048, K), held_out):.3f}  ->  '
+          f'reflow {energy_distance(euler_sample2(2048, K), held_out):.3f}')
+```
+
+```{.python .input #mdl-score-matching-diffusion-flow-one-reflow-round-measured}
+#@tab tensorflow
+tf.keras.utils.set_random_seed(3)
+z = tf.random.stateless_normal((8192, 2), [3, 0])  # noise endpoints, kept
+x1_hat = z
+for k in range(32):                                # the model's own couplings
+    t = tf.fill((8192, 1), tf.cast(k / 32, tf.float32))
+    x1_hat = x1_hat + (1.0 / 32) * net(tf.concat([x1_hat, t], 1))
+net2 = tf.keras.Sequential([tf.keras.layers.Dense(64, 'tanh'),
+                            tf.keras.layers.Dense(64, 'tanh'),
+                            tf.keras.layers.Dense(2)])
+opt2 = tf.keras.optimizers.Adam(3e-3)
+
+@tf.function
+def reflow_step():
+    i = tf.random.uniform((256,), 0, len(z), tf.int32)
+    x0, x1 = tf.gather(z, i), tf.gather(x1_hat, i) # the same pair, never re-paired
+    t = tf.random.uniform((256, 1))
+    xt = (1 - t) * x0 + t * x1
+    with tf.GradientTape() as tape:
+        v = net2(tf.concat([xt, t], 1))
+        loss = tf.reduce_mean((v - (x1 - x0))**2)
+    grads = tape.gradient(loss, net2.trainable_variables)
+    opt2.apply_gradients(zip(grads, net2.trainable_variables))
+    return loss
+
+for step in range(4001):
+    loss = reflow_step()
+print(f'final reflow loss {float(loss):.3f}')
+
+def euler_sample2(n, steps, seed=2):
+    q = tf.random.stateless_normal((n, 2), [seed, 0])
+    for k in range(steps):
+        t = tf.fill((n, 1), tf.cast(k / steps, tf.float32))
+        q = q + (1.0 / steps) * net2(tf.concat([q, t], 1))
+    return q.numpy()
+
+for K in (1, 2, 32):
+    print(f'{K:2d} step(s): energy distance  '
+          f'CFM {energy_distance(euler_sample(2048, K), held_out):.3f}  ->  '
+          f'reflow {energy_distance(euler_sample2(2048, K), held_out):.3f}')
+```
+
+```{.python .input #mdl-score-matching-diffusion-flow-one-reflow-round-measured}
+#@tab jax
+z = jax.random.normal(jax.random.key(3), (8192, 2))   # noise endpoints, kept
+x1_hat = z
+for k in range(32):                                # the model's own couplings
+    x1_hat = x1_hat + (1.0 / 32) * velocity(params, x1_hat,
+                                            jnp.full((8192, 1), k / 32))
+
+def reflow_loss(params2, key):
+    k1, k2 = jax.random.split(key)
+    i = jax.random.randint(k1, (256,), 0, len(z))
+    x0, x1 = z[i], x1_hat[i]                       # the same pair, never re-paired
+    t = jax.random.uniform(k2, (256, 1))
+    xt = (1 - t) * x0 + t * x1
+    v = mlp(params2, jnp.concatenate([xt, t], axis=1))
+    return ((v - (x1 - x0))**2).mean()
+
+params2 = init_mlp(jax.random.key(4))
+state2 = opt.init(params2)
+
+@jax.jit
+def retrain(params2, state2, key):
+    def step(carry, k):
+        params2, state2 = carry
+        loss, grads = jax.value_and_grad(reflow_loss)(params2, k)
+        updates, state2 = opt.update(grads, state2)
+        return (optax.apply_updates(params2, updates), state2), loss
+    return jax.lax.scan(step, (params2, state2), jax.random.split(key, 4000))
+
+(params2, state2), losses = retrain(params2, state2, jax.random.key(5))
+print(f'final reflow loss {losses[-1]:.3f}')
+
+def euler_sample2(n, steps, seed=2):
+    q = jax.random.normal(jax.random.key(seed), (n, 2))
+    for k in range(steps):
+        q = q + (1.0 / steps) * velocity(params2, q, jnp.full((n, 1), k / steps))
+    return np.asarray(q)
+
+for K in (1, 2, 32):
+    print(f'{K:2d} step(s): energy distance  '
+          f'CFM {energy_distance(euler_sample(2048, K), held_out):.3f}  ->  '
+          f'reflow {energy_distance(euler_sample2(2048, K), held_out):.3f}')
+```
+
+The collapse is total (PyTorch numbers; the other tabs agree up to Monte-Carlo
+and initialization noise): one Euler step of the reflowed model scores
+$0.016$ — within noise of the original model's $32$-step quality of $0.014$,
+and forty times better than the original one-step $0.676$. The training loss
+tells the same story from the other side: it falls to about $0.001$ instead of
+plateauing near $1.32$, because the model-generated coupling is essentially
+deterministic — almost no two segments cross, so the posterior variance that
+set the CFM floor is gone. Two honest caveats. Rectified flow's guarantee —
+marginals preserved, convex transport costs never increased, paths
+straightened — holds for exact velocities, and full straightness is a limit
+over rounds; what we measured is one finite round of an imperfectly trained
+model. And the retrained target is the model's $32$-step endpoint law, not the
+data law, so the first model's small bias is now baked in — invisible at
+two-moons scale, but the reason production reflow pipelines follow up with a
+fine-tune on real couplings.
 
 ## Optimal Transport and Straightness
 :label:`sec_mdl-ot-connection`
@@ -1373,6 +1811,15 @@ integrator from :numref:`sec_mdl-odes-solvers` or :numref:`sec_mdl-sdes`
 applied to dynamics in which the learned function is the only unknown — and
 the speed of that integrator is governed by the geometry (curvature, hence
 optimal transport) of the path the model chose to learn.
+
+The table's two halves — score rows sampled by reversing a stochastic process,
+velocity rows sampled by integrating a prescribed path — also admit a single
+umbrella: the **stochastic interpolants** of
+:citet:`Albergo.Boffi.VandenEijnden.2023` write
+$\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \beta_t \mathbf{x}_1 + \gamma_t \mathbf{w}$
+and recover every row by a choice of schedule, the diffusion rows with
+interior noise $\gamma_t > 0$ and the rectified-flow row with
+$\gamma_t \equiv 0$. Exercise 8 walks the construction.
 
 ## Summary
 

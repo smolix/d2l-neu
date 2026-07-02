@@ -43,9 +43,12 @@ models, the following are the canonical places to go deeper.
 **Foundational papers** (diffusion and flow matching)
 
 - [Neural Ordinary Differential Equations — Chen et al. (NeurIPS 2018)](https://arxiv.org/abs/1806.07366) — parameterizes a network's dynamics as an ODE and trains it with the adjoint method; the bridge from residual nets to continuous flows.
+- [On Neural Differential Equations — Patrick Kidger (2022)](https://arxiv.org/abs/2202.02435) — the book-length treatment of neural ODEs, CDEs, and SDEs, with the solver and adjoint (discretize-then-optimize vs. optimize-then-discretize) machinery laid out cleanly.
 - [Generative Modeling by Estimating Gradients of the Data Distribution — Song & Ermon (NeurIPS 2019)](https://arxiv.org/abs/1907.05600) — introduces score-based generation via denoising score matching and Langevin sampling.
 - [Denoising Diffusion Probabilistic Models — Ho, Jain & Abbeel (2020)](https://arxiv.org/abs/2006.11239) — the DDPM paper that made discrete-time diffusion practical and high-quality.
 - [Score-Based Generative Modeling through SDEs — Song et al. (ICLR 2021)](https://arxiv.org/abs/2011.13456) — unifies score matching and diffusion as forward/reverse SDEs and introduces the probability-flow ODE.
+- [Denoising Diffusion Implicit Models — Song, Meng & Ermon (ICLR 2021)](https://arxiv.org/abs/2010.02502) — the deterministic sampler that reuses a trained DDPM with an order of magnitude fewer steps, plus the dial that interpolates back to ancestral sampling.
+- [Elucidating the Design Space of Diffusion-Based Generative Models — Karras et al. (NeurIPS 2022)](https://arxiv.org/abs/2206.00364) — factors diffusion into orthogonal choices of schedule, preconditioning, parameterization, and sampler (Heun), and tunes each; the reference on making samplers fast.
 - [Flow Matching for Generative Modeling — Lipman et al. (2022)](https://arxiv.org/abs/2210.02747) — simulation-free training of continuous flows by regressing conditional vector fields.
 - [Flow Straight and Fast: Rectified Flow — Liu, Gong & Liu (2022)](https://arxiv.org/abs/2209.03003) — learns near-straight transport paths for fast, few-step sampling.
 

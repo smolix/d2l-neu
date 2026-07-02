@@ -16,16 +16,14 @@ will remain hospitalized before being discharged,
 then you are probably looking for a regression model.
 However, even within regression models,
 there are important distinctions.
-For instance, the price of a house
-will never be negative and changes might often be *relative* to its baseline price.
-As such, it might be more effective to regress
-on the logarithm of the price.
+For instance, the price of a house is never negative,
+and changes are often *relative* to its baseline,
+so it can pay to regress on the logarithm of the price.
 Likewise, the number of days a patient spends in hospital
-is a *discrete nonnegative* random variable.
-As such, least mean squares might not be an ideal approach either.
-This sort of time-to-event modeling
-comes with a host of other complications that are dealt with
-in a specialized subfield called *survival modeling*.
+is a *discrete nonnegative* random variable,
+for which least mean squares is not ideal either;
+such time-to-event analysis is the province
+of a specialized subfield called *survival modeling*.
 
 The point here is not to overwhelm you but just
 to let you know that there is a lot more to estimation
@@ -118,7 +116,9 @@ To address classification with linear models,
 we will need as many affine functions as we have outputs.
 Strictly speaking, we only need one fewer,
 since the final category has to be the difference
-between $1$ and the sum of the other categories,
+between $1$ and the sum of the other categories
+(indeed, as we will see shortly, only *differences*
+of scores end up mattering),
 but for reasons of symmetry
 we use a slightly redundant parametrization.
 Each output corresponds to its own affine function.
@@ -151,7 +151,7 @@ much better suited for mathematics and code.
 Note that we have gathered all of our weights into a $3 \times 4$ matrix and all biases
 $\mathbf{b} \in \mathbb{R}^3$ in a vector.
 
-### The Softmax
+## The Softmax Model
 :label:`subsec_softmax_operation`
 
 Assuming a suitable loss function,
@@ -175,17 +175,19 @@ when it comes to buying a mansion!
 As such, we need a mechanism to "squish" the outputs.
 
 There are many ways we might accomplish this goal.
-For instance, we could assume that the outputs
-$\mathbf{o}$ are corrupted versions of $\mathbf{y}$,
-where the corruption occurs by means of adding noise $\boldsymbol{\epsilon}$
-drawn from a normal distribution.
-In other words, $\mathbf{y} = \mathbf{o} + \boldsymbol{\epsilon}$,
-where $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$.
-This is the so-called [probit model](https://en.wikipedia.org/wiki/Probit_model),
+For instance, we could posit that the observed label
+arises from a *noisy argmax*:
+perturb each score by independent noise $\epsilon_i$
+and report the class with the largest perturbed score,
+$y = \operatorname*{argmax}_i \, (o_i + \epsilon_i)$.
+When the noise is Gaussian, $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$,
+this is the (multinomial) [probit model](https://en.wikipedia.org/wiki/Probit_model),
 first introduced by :citet:`Fechner.1860`.
 While appealing, it does not work quite as well
 nor lead to a particularly nice optimization problem,
 when compared to the softmax.
+(Remarkably, drawing the noise from a Gumbel distribution instead
+yields *exactly* the softmax probabilities that we are about to derive.)
 
 Another way to accomplish this goal
 (and to ensure nonnegativity) is to use
@@ -221,6 +223,30 @@ $$\hat{y}_1 = \frac{\exp(o_1)}{\exp(o_1) + \exp(o_2)} = \frac{1}{1 + \exp(-o)} =
 
 the *logistic sigmoid* $\sigma$. Binary logistic regression is thus softmax regression with the redundant logit removed. More generally, adding the same constant $c$ to every logit, $o_j \mapsto o_j + c$, multiplies both numerator and denominator of :eqref:`eq_softmax_y_and_o` by $\exp(c)$ and so leaves $\hat{\mathbf{y}}$ unchanged: only the *differences* of logits are identifiable. We may therefore pin one of them, say $o_q \equiv 0$, without changing any prediction, which is precisely the "one fewer" affine function we alluded to when motivating the linear model. This translation invariance returns in the exercises and underlies the numerically stable implementation.
 
+It is worth pausing to see what this model *looks like* as a classifier
+(:numref:`fig_mdl-clf-decision-regions`).
+Since the predicted class is $\operatorname{argmax}_j o_j$
+and each $o_j = \mathbf{w}_j^\top \mathbf{x} + b_j$ is affine,
+the region assigned to class $j$ is the set where finitely many
+linear inequalities $o_j \geq o_k$ hold: an intersection of halfspaces,
+hence a convex polyhedron.
+The plane is carved into $q$ convex regions
+whose boundaries are the straight lines $o_j = o_k$,
+all meeting where the top two scores tie.
+In the binary case the picture is even simpler:
+$\hat{y}_1 = \sigma(o)$ depends on $\mathbf{x}$
+only through $o = (\mathbf{w}_1 - \mathbf{w}_2)^\top \mathbf{x} + (b_1 - b_2)$,
+so the level sets of the predicted probability are parallel lines
+perpendicular to $\mathbf{w}_1 - \mathbf{w}_2$,
+with the decision boundary at $\hat{y}_1 = \frac{1}{2}$.
+Whatever nonlinearity the softmax adds happens
+in the *probabilities*, never in the *decision boundaries*:
+those stay linear, a limitation we will meet head-on
+when we train such a model on images.
+
+![Left: a three-class softmax regression model partitions the plane into three convex regions, one per class, whose linear boundaries (the ties $o_i = o_j$) meet at the point where all three scores are equal. Right: in the binary case the predicted probability $\sigma(o)$ depends only on the logit gap, so its level sets are parallel lines perpendicular to the weight vector $\mathbf{w}$, with the decision boundary at probability $\frac{1}{2}$.](../img/mdl-clf-decision-regions.svg)
+:label:`fig_mdl-clf-decision-regions`
+
 The idea of a softmax dates back to :citet:`Gibbs.1902`,
 who adapted ideas from physics.
 Dating even further back, Boltzmann,
@@ -241,6 +267,19 @@ Following Gibbs' idea, energy equates to error.
 Energy-based models :cite:`Ranzato.Boureau.Chopra.ea.2007`
 use this point of view when describing
 problems in deep learning.
+In our notation, temperature amounts to replacing
+$\mathrm{softmax}(\mathbf{o})$ by $\mathrm{softmax}(\mathbf{o}/T)$.
+:numref:`fig_mdl-clf-temperature` shows the effect on one
+fixed score vector: cooling ($T < 1$) sharpens the distribution
+toward a hard $\operatorname{argmax}$,
+heating ($T > 1$) flattens it toward uniform,
+and since $1/T$ scales every logit alike,
+the *ranking* of the classes never changes.
+We will put this dial to work at the end of the section
+and in the exercises.
+
+![Softmax probabilities of the same three scores $\mathbf{o} = (1.0, 2.2, 0.3)$ at three temperatures. Low temperature ($T = 0.25$) concentrates nearly all mass on the top-scoring class, $T = 1$ is the plain softmax, and high temperature ($T = 4$) approaches the uniform distribution; the ordering of the bars is identical in all three panels.](../img/mdl-clf-temperature.svg)
+:label:`fig_mdl-clf-temperature`
 
 ### Vectorization
 :label:`subsec_softmax_vectorization`
@@ -291,16 +330,6 @@ The softmax function gives us a vector $\hat{\mathbf{y}}$,
 which we can interpret as the (estimated) conditional probabilities
 of each class, given any input $\mathbf{x}$,
 such as $\hat{y}_1 = P(y=\textrm{cat} \mid \mathbf{x})$.
-These are probabilities by construction, but a word of caution: a model trained
-to minimize cross-entropy is generally *not* calibrated, so a reported
-confidence of $0.9$ does not mean the prediction is right $90\%$ of the time.
-Modern deep networks tend to be systematically overconfident
-([Guo, Pleiss, Sun and Weinberger, 2017](https://arxiv.org/abs/1706.04599)). A
-simple and effective remedy, *temperature scaling*, divides the logits by a
-single learned $T > 0$ before the softmax, which is exactly the temperature $T$
-of the Boltzmann distribution above; because it scales every logit by the same
-factor $1/T$ it preserves their order, leaving the predicted class (the
-$\operatorname{argmax}$) untouched while sharpening or softening the confidences.
 In the following we assume that for a dataset
 with features $\mathbf{X}$ the labels $\mathbf{Y}$
 are represented using a one-hot encoding label vector.
@@ -394,8 +423,9 @@ log-likelihood gradient is exactly this "prediction minus observation" residual,
 which makes the gradient cheap and the loss convex in $\mathbf{o}$.
 The second derivative tells the rest of the story; it is the covariance of
 $\mathrm{softmax}(\mathbf{o})$, so the Hessian of $g$ is positive semidefinite.
-We work this out in the exercises and revisit log-partition convexity in the
-optimization part.
+We work this out in the exercises and revisit log-partition convexity in
+:numref:`sec_mdl-convexity`, where the corresponding proposition is proved
+in full.
 
 Now consider the case where we observe not just a single outcome
 but an entire distribution over outcomes.
@@ -416,6 +446,22 @@ one of the most commonly used losses for classification problems.
 :label:`subsec_info_theory_basics`
 
 The name comes from information theory. The *entropy* $H[P] = \sum_j -P(j) \log P(j)$ is the expected *surprisal* $-\log P(j)$ of draws from $P$, which Shannon showed is the average number of nats you must spend to encode them when you know $P$ :cite:`Shannon.1948`. The *cross-entropy* $H(P, Q) = \sum_j -P(j) \log Q(j)$ is the cost when you instead encode the same draws under a wrong model $Q$, and it is minimized exactly when $Q = P$. Our loss :eqref:`eq_l_cross_entropy` is precisely $H(\mathbf{y}, \hat{\mathbf{y}})$, so minimizing it does two equivalent things: it maximizes the likelihood of the labels, and it minimizes the extra bits our predictions waste relative to the truth. This MLE-versus-code-length duality is worth keeping in mind whenever cross-entropy appears. We develop entropy, cross-entropy, and the Kullback--Leibler divergence, together with the coding argument behind the "bits" language, in :numref:`sec_mdl-information_theory`; the classic references are :citet:`Cover.Thomas.1999` and :citet:`mackay2003information`.
+
+**Confidence is not calibrated probability.**
+We have just seen that the loss keeps rewarding the model for pushing
+probability onto the correct class even after the decision is already right,
+so it is worth a word of caution about reading those probabilities at face
+value: a model trained to minimize cross-entropy is generally *not*
+calibrated, and a reported confidence of $0.9$ does not mean the prediction
+is right $90\%$ of the time. Modern deep networks tend to be systematically
+overconfident ([Guo, Pleiss, Sun and Weinberger, 2017](https://arxiv.org/abs/1706.04599)).
+A simple and effective remedy, *temperature scaling*, divides the logits by a
+single learned $T > 0$ before the softmax---exactly the temperature of the
+Boltzmann distribution in :numref:`fig_mdl-clf-temperature`. Because it
+scales every logit by the same factor $1/T$ it preserves their order, leaving
+the predicted class (the $\operatorname{argmax}$) and hence the accuracy
+untouched, while sharpening or softening the confidences. Exercise 8 develops
+this dial in detail.
 
 ## Summary and Discussion
 
@@ -493,7 +539,7 @@ the item with the largest score is the most likely one to be chosen :cite:`Bradl
     1. Construct an analogous softmin function.
     1. Extend this to more than two numbers.
 1. The function $g(\mathbf{x}) \stackrel{\textrm{def}}{=} \log \sum_i \exp x_i$ is sometimes also referred to as the [log-partition function](https://en.wikipedia.org/wiki/Partition_function_(mathematics)).
-    1. Prove that the function is convex. Hint: to do so, use the fact that the first derivative amounts to the probabilities from the softmax function and show that the second derivative is the variance.
+    1. Combine the two parts of exercise 1 (the second derivative of $g$ is the variance of the distribution $\mathrm{softmax}(\mathbf{x})$, hence nonnegative) to conclude that $g$ is convex.
     1. Show that $g$ is translation equivariant, i.e., $g(\mathbf{x} + b \mathbf{1}) = b + g(\mathbf{x})$.
     1. What happens if some of the coordinates $x_i$ are very large? What happens if they're all very small?
     1. Show that if we choose $b = \mathrm{max}_i x_i$ we end up with a numerically stable implementation.
@@ -502,6 +548,10 @@ the item with the largest score is the most likely one to be chosen :cite:`Bradl
     1. What happens if we let the temperature approach $0$?
     1. What happens if we let the temperature approach $\infty$?
     1. Argue that scaling all logits by $1/T$ cannot change the $\operatorname{argmax}$, hence not the accuracy, yet it does change the cross-entropy. Why does this make temperature scaling a useful tool for post-hoc calibration?
+1. The *noisy argmax* model of :numref:`subsec_softmax_operation` becomes exact for the right noise. Let $\gamma_1, \ldots, \gamma_q$ be i.i.d. draws from the standard [Gumbel distribution](https://en.wikipedia.org/wiki/Gumbel_distribution), whose CDF is $P(\gamma \leq z) = \exp(-\exp(-z))$.
+    1. Show that $P(o_k + \gamma_k \leq z) = \exp(-\exp(o_k)\exp(-z))$.
+    1. Show that $P\left(\operatorname{argmax}_i \, (o_i + \gamma_i) = k\right) = \mathrm{softmax}(\mathbf{o})_k$, i.e., the noisy argmax with Gumbel noise *is* the softmax (the *Gumbel-max trick*). Hint: condition on the value $z$ of $o_k + \gamma_k$, multiply the independent probabilities that every other $o_i + \gamma_i$ stays below $z$, and integrate; the substitution $u = \exp(-z)$ makes the integral elementary.
+    1. Conclude that scaling the noise, $\gamma_i \mapsto T\gamma_i$, samples from $\mathrm{softmax}(\mathbf{o}/T)$, connecting this exercise to the previous one.
 
 [Discussions](https://d2l.discourse.group/t/46)
 
@@ -511,7 +561,7 @@ the item with the largest score is the most likely one to be chosen :cite:`Bradl
 ::: {.cover}
 [Dive into Deep Learning · §4.1]{.kicker}
 
-From scores to probabilities to a loss<br>**one-hot labels · the softmax · cross-entropy**.
+From scores to probabilities to a loss<br>**one-hot labels · the softmax · linear decision boundaries · cross-entropy**.
 :::
 :::
 
@@ -625,6 +675,41 @@ $$\operatorname*{argmax}_j \hat{y}_j = \operatorname*{argmax}_j o_j.$$
 So to *predict* a class we never need to compute the softmax; we read off the biggest logit. The softmax matters for the **loss**, not the decision.
 :::
 
+::: {.slide title="Temperature: one dial from argmax to uniform"}
+[The Softmax · Boltzmann's dial]{.kicker}
+
+Boltzmann weighted energy states by $\exp(-E/kT)$; for us, replace
+$\mathrm{softmax}(\mathbf{o})$ by $\mathrm{softmax}(\mathbf{o}/T)$. The same
+three scores, at three temperatures:
+
+![Cooling ($T=0.25$) piles the mass on the top class; $T=1$ is plain softmax; heating ($T=4$) approaches uniform. Same scores $\mathbf{o}=(1.0, 2.2, 0.3)$, same ordering, in every panel.](../img/mdl-clf-temperature.svg){width=88%}
+
+::: {.d2l-note .rule}
+$1/T$ scales every logit alike, so the **ranking never changes**: only the
+confidence does. Hold this dial; it returns at the end of the section.
+:::
+:::
+
+::: {.slide title="The softmax *is* an argmax — plus the right noise"}
+[The Softmax · origins]{.kicker}
+
+Another route to probabilities: perturb each score and report the winner,
+$y = \operatorname*{argmax}_i\,(o_i + \epsilon_i)$.
+
+. . .
+
+- **Gaussian** noise gives the (multinomial) **probit** model (Fechner, 1860)
+  --- appealing, but no closed form and a harder optimization.
+- **Gumbel** noise gives *exactly* $\mathrm{softmax}(\mathbf{o})$ --- the
+  *Gumbel-max trick* (exercise 9), and scaling the noise by $T$ samples from
+  $\mathrm{softmax}(\mathbf{o}/T)$.
+
+::: {.d2l-note}
+So the softmax is not just a squashing convenience: it is a **smoothed
+argmax**, with temperature the amount of smoothing.
+:::
+:::
+
 ::: {.slide title="Only differences of logits matter"}
 [The Softmax · invariance]{.kicker}
 
@@ -647,6 +732,20 @@ $$\hat{y}_1 = \frac{\exp(o_1)}{\exp(o_1)+\exp(o_2)} = \frac{1}{1 + \exp(-o)} = \
 . . .
 
 Binary **logistic regression** is just softmax regression with the redundant logit removed: the same model, one class folded away.
+:::
+
+::: {.slide title="The decision boundaries are straight lines — always"}
+[The Softmax · geometry]{.kicker}
+
+The predicted class is $\operatorname{argmax}_j o_j$ with each $o_j$ affine, so class $j$ wins where finitely many linear inequalities $o_j \ge o_k$ hold: a **convex polyhedron** per class.
+
+![Left: three convex regions, straight boundaries at the ties $o_i = o_j$. Right: two classes --- parallel level lines of $\sigma(o)$, perpendicular to $\mathbf{w}$.](../img/mdl-clf-decision-regions.svg){width=100%}
+
+::: {.d2l-note .warn}
+The softmax's nonlinearity lives in the **probabilities**, never in the
+**boundaries**. Those stay linear --- a ceiling we will hit, measurably, when
+we train this model on images (§4.4).
+:::
 :::
 
 ::: {.slide}
@@ -700,7 +799,7 @@ The gradient is the **residual**, predicted probability minus observed label, ex
 
 ::: {.cols .vc}
 ::: {.col}
-**Entropy** $H[P] = \sum_j -P(j)\log P(j)$ is the average bits needed to encode draws from $P$. **Cross-entropy** $H(P, Q) = \sum_j -P(j)\log Q(j)$ is the cost of coding $P$'s draws with a wrong model $Q$.
+**Entropy** $H[P] = \sum_j -P(j)\log P(j)$ is the average number of **nats** needed to encode draws from $P$ (natural log throughout). **Cross-entropy** $H(P, Q) = \sum_j -P(j)\log Q(j)$ is the cost of coding $P$'s draws with a wrong model $Q$.
 :::
 
 ::: {.col .narrow}
@@ -715,18 +814,18 @@ Our loss **is** $H(\mathbf{y}, \hat{\mathbf{y}})$.
 So minimizing it does two equivalent things: it **maximizes likelihood** and it **minimizes the wasted bits** between prediction and truth, a duality worth remembering whenever cross-entropy appears.
 :::
 
-::: {.slide title="Probabilities, but not *calibrated*"}
+::: {.slide title="Confidence is not calibrated probability"}
 [Loss · a modern caveat]{.kicker}
 
-The softmax outputs *look* like probabilities, but a network trained to minimize cross-entropy is generally **not calibrated**: a reported confidence of $0.9$ does not mean it is right $90\%$ of the time. Modern deep nets are systematically **overconfident** (Guo et al., 2017).
+The loss keeps rewarding confidence even after the decision is right, nudging $0.51 \to 0.99$. So do not read the outputs at face value: a cross-entropy-trained network is generally **not calibrated** --- a reported $0.9$ does not mean right $90\%$ of the time. Modern deep nets are systematically **overconfident** (Guo et al., 2017).
 
 . . .
 
 ::: {.d2l-note .rule}
-**Temperature scaling** divides the logits by a single learned $T > 0$ before the softmax, exactly the Boltzmann temperature from earlier.
+The fix is the dial we already hold: **temperature scaling** divides the logits by one learned $T > 0$ before the softmax --- Boltzmann's $T$, relearned post hoc.
 :::
 
-Because $1/T$ scales every logit by the same factor, it preserves their order: the predicted class (the $\arg\max$) is **untouched** while the confidences sharpen ($T<1$) or soften ($T>1$).
+Because $1/T$ scales every logit alike, the ranking --- hence the $\arg\max$, hence the **accuracy** --- is untouched; only the confidences sharpen ($T<1$) or soften ($T>1$). Exercise 8 develops this.
 :::
 
 ::: {.slide}
@@ -764,14 +863,14 @@ Both branches read the **same** scores.
 ::: {.cols}
 ::: {.col}
 - **One-hot** labels live in probability space; a **linear layer** emits one logit per class.
-- **Softmax** $\hat{y}_i \propto \exp(o_i)$ squishes logits to a distribution; it preserves the ranking and depends only on logit **differences**.
-- Two classes recover the **logistic sigmoid**.
+- **Softmax** $\hat{y}_i \propto \exp(o_i)$ is a *smoothed argmax* (Gumbel noise makes that exact); temperature $T$ dials argmax $\leftrightarrow$ uniform without changing the ranking.
+- Only logit **differences** matter; two classes recover the **sigmoid**; decision boundaries are **straight lines**, always.
 :::
 
 ::: {.col}
 - **Cross-entropy** $= -\log \hat{y}_{\text{true}}$ is the negative log-likelihood, equivalently a code length.
 - Its gradient is the **residual** $\hat{\mathbf{y}} - \mathbf{y}$: convex, cheap, shared by all exponential families.
-- The **same logits** train the model (softmax + loss) and evaluate it (argmax + accuracy).
+- Confidence $\neq$ **calibrated** probability; temperature scaling recalibrates without touching accuracy.
 :::
 :::
 :::

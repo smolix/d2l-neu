@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/generalization-classification.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "generalization-classification-the-test-set-1": {
+      "code_fingerprint": "sha256:9f5af84aa5e641fc811917f6faa85ad0e28505687467cd62f180a55037bd1f6d",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-classification-the-test-set-2": {
+      "code_fingerprint": "sha256:8d6ea11688f85bb2465664b17dc29890d71ea91a78c2fe90c2281c905db59b38",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
+          "bytes": 34254,
+          "sha256": "sha256:aa76a86613a17fb01e9afa331d14758ac79c3aa8d6b7c67e00ec5806d70d8af6"
+        }
+      ]
+    },
+    "generalization-classification-test-set-reuse-1": {
+      "code_fingerprint": "sha256:170de1cb4fcf11d650d06e04ef490bd3887dad3e52dd0f3496a275e8290ff691",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
+          "bytes": 31658,
+          "sha256": "sha256:a5a55a40034d75baa0531128013445102762306487e447fcb40fda55a5354565"
+        }
+      ]
+    }
+  }
+}

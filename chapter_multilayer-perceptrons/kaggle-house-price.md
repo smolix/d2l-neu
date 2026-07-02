@@ -153,8 +153,12 @@ class KaggleHouse(d2l.DataModule):
 ```
 
 The training dataset includes 1460 examples,
-80 features, and one label, while the validation data
+80 features, and one label, while the Kaggle *test* set
 contains 1459 examples and 80 features.
+(We store the test features in the `val` attribute
+because the data module treats any unlabeled held-out split uniformly;
+do not confuse it with the validation folds
+that we will carve out of the training data for cross-validation below.)
 
 ```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-2  n=31}
 data = KaggleHouse(batch_size=64)
@@ -226,6 +230,12 @@ According to one-hot encoding,
 if the original value of "MSZoning" is "RL",
 then "MSZoning_RL" is 1 and "MSZoning_RM" is 0.
 The `pandas` package does this automatically for us.
+Note that we build the one-hot encoding on the concatenated train and test
+features. This does not contradict the leakage warning above: taking the
+*schema* (which categories exist, and hence which columns to create) from the
+test set is fine, since deployment reveals feature values anyway; it is
+*statistics* computed on test rows, like the means and standard deviations
+above, that would bias our evaluation.
 
 ```{.python .input #kaggle-house-price-data-preprocessing-2  n=32}
 @d2l.add_to_class(KaggleHouse)
@@ -335,6 +345,9 @@ so we can safely omit it here owing to the simplicity of our problem.
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-1}
 def k_fold_data(data, k):
     rets = []
+    # Integer division: if k does not divide n, the n mod k leftover rows
+    # end up in every training split and no validation fold. Harmless here
+    # (1460 = 5 x 292 exactly), but partition indices before reusing this.
     fold_size = data.train.shape[0] // k
     for j in range(k):
         idx = list(range(j * fold_size, (j+1) * fold_size))
@@ -366,10 +379,10 @@ def k_fold(trainer, data, k, model_fn):
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 %%tab mxnet, tensorflow
-def k_fold(trainer, data, k, lr):
+def k_fold(trainer, data, k, model_fn):
     val_loss, models = [], []
     for i, data_fold in enumerate(k_fold_data(data, k)):
-        model = d2l.LinearRegression(lr)
+        model = model_fn()
         model.board.yscale='log'
         if i != 0: model.board.display = False
         trainer.fit(model, data_fold)
@@ -381,10 +394,10 @@ def k_fold(trainer, data, k, lr):
 
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-2}
 %%tab jax
-def k_fold(trainer, data, k, lr):
+def k_fold(trainer, data, k, model_fn):
     val_loss, models = [], []
     for i, data_fold in enumerate(k_fold_data(data, k)):
-        model = d2l.LinearRegression(lr)
+        model = model_fn()
         model.board.yscale='log'
         if i != 0: model.board.display = False
         trainer.fit(model, data_fold)
@@ -441,8 +454,9 @@ linear_models = k_fold(trainer, data, k=5,
 
 ```{.python .input #kaggle-house-price-model-selection-linear}
 %%tab mxnet, tensorflow, jax
-trainer = d2l.Trainer(max_epochs=10)
-models = k_fold(trainer, data, k=5, lr=0.01)
+trainer = d2l.Trainer(max_epochs=100)
+models = k_fold(trainer, data, k=5,
+                model_fn=lambda: d2l.LinearRegression(lr=0.03))
 ```
 
 Can a small neural network do better? Now that we have weight decay
@@ -481,13 +495,13 @@ trainer = d2l.Trainer(max_epochs=100)
 models = k_fold(trainer, data, k=5, model_fn=lambda: KaggleMLP(lr=0.03))
 ```
 
-On this run the small MLP edges out the (now competently trained) linear
-baseline: both land near a cross-validated log error of $0.03$, with the MLP
-a hair lower. The lesson is deliberately undramatic. A nonlinear model helps
-a little here, but only once it is small enough and regularized enough to
-survive a dataset of barely a thousand rows; the bulk of the gain over a
-careless $0.18$ baseline came simply from training *either* model to
-convergence. And as the caveat above promised, a gradient-boosted tree
+The small MLP lands in a dead heat with the (now competently trained) linear
+baseline: both reach a cross-validated log error near $0.03$, and which of
+the two is a hair ahead varies from run to run. The lesson is deliberately
+undramatic. A nonlinear model buys very little here, and it survives at all
+only because it is small enough and regularized enough for a dataset of
+barely a thousand rows; the bulk of the gain over a careless $0.18$ baseline
+came simply from training *either* model to convergence. And as the caveat above promised, a gradient-boosted tree
 ensemble would still be the stronger tabular choice. The exercises invite you
 to try one and see.
 
@@ -508,18 +522,39 @@ we might
 calculate the average predictions 
 on the test set
 by all the $K$ models.
+Since the models predict *log*-prices and the competition scores
+root-mean-squared *log* error,
+we average in log space before exponentiating:
+the mean of the log-predictions is the ensemble
+consistent with the metric
+(in price space it amounts to a geometric mean).
+
+Be clear-eyed about what this *fold ensembling* is, though. Each of the $K$
+models saw only $(K-1)/K$ of the training data, and the "average validation
+log mse" we computed above estimates the error of a *single* such model — not
+of the ensemble we are about to submit, whose error the cross-validation
+score does not measure. The canonical alternative is to *refit* one model on
+all of the training data using the hyperparameters that cross-validation
+selected, so that the submitted model is a fresh draw of exactly the thing we
+scored. Fold ensembling is standard Kaggle practice: it is free (the $K$
+models are already trained) and the averaging usually buys a small variance
+reduction, so it tends to edge out the refit. But the refit is the cleaner
+experiment, and the choice between them is worth making consciously.
+
 Saving the predictions in a csv file
 will simplify uploading the results to Kaggle.
 The following code will generate a file called `submission.csv`.
 
 ```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab pytorch
+for model in models:
+    model.eval()  # already the case after Trainer.fit; explicit is safer
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
-# Each model predicts a log-price; exponentiate back to a price, then average
-# across the K folds. (Averaging in log space, then exponentiating, makes this
-# a geometric mean of the per-fold price predictions.)
-ensemble_preds = d2l.reduce_mean(d2l.exp(d2l.concat(preds, 1)), 1)
+# Each model predicts a log-price; average across the K folds in log space,
+# then exponentiate back to a price. This geometric mean of the per-fold
+# price predictions is the ensemble consistent with the RMSLE metric.
+ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
 submission.to_csv('submission.csv', index=False)
@@ -529,8 +564,9 @@ submission.to_csv('submission.csv', index=False)
 %%tab tensorflow
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
-# Taking exponentiation of predictions in the logarithm scale
-ensemble_preds = d2l.reduce_mean(d2l.exp(d2l.concat(preds, 1)), 1)
+# Average the K log-price predictions in log space, then exponentiate:
+# the RMSLE-consistent (geometric-mean) ensemble
+ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
 submission.to_csv('submission.csv', index=False)
@@ -541,8 +577,9 @@ submission.to_csv('submission.csv', index=False)
 preds = [model.apply({'params': params},
          d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model, params in models]
-# Taking exponentiation of predictions in the logarithm scale
-ensemble_preds = d2l.reduce_mean(d2l.exp(d2l.concat(preds, 1)), 1)
+# Average the K log-price predictions in log space, then exponentiate:
+# the RMSLE-consistent (geometric-mean) ensemble
+ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
 submission.to_csv('submission.csv', index=False)
@@ -552,8 +589,9 @@ submission.to_csv('submission.csv', index=False)
 %%tab mxnet
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
-# Taking exponentiation of predictions in the logarithm scale
-ensemble_preds = d2l.reduce_mean(d2l.exp(d2l.concat(preds, 1)), 1)
+# Average the K log-price predictions in log space, then exponentiate:
+# the RMSLE-consistent (geometric-mean) ensemble
+ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
 submission.to_csv('submission.csv', index=False)
@@ -645,7 +683,7 @@ fine-tuning of pretrained models.
 ::: {.cover}
 [Dive into Deep Learning · §5.7]{.kicker}
 
-Predicting **house prices** on Kaggle<br>An end-to-end machine-learning pipeline: messy real data in, a scored prediction out.
+Predicting **house prices** on Kaggle<br>An end-to-end pipeline: messy data in, a scored prediction out --- **and the difference between a 0.18 baseline and a 0.03 one is nothing but training it properly**.
 :::
 :::
 
@@ -805,8 +843,10 @@ test statistics is **leakage** and flatters every later score.
 :::
 :::
 
-::: {.slide title="One method: impute, standardize, one-hot (79 → 331 columns)"}
+::: {.slide title="One method: impute, standardize, one-hot (79 → 331 columns)" layout="code"}
 [Preprocessing]{.kicker}
+
+All three transforms in one `preprocess` method. Note the mean and std computed on the first `n_train` rows **only**, and `dummy_na=True` giving missingness its own indicator column:
 
 @-kaggle-house-price-data-preprocessing-2
 :::
@@ -887,22 +927,30 @@ loop doubles as the hyperparameter search.
 :::
 :::
 
-::: {.slide title="K-fold in code"}
+::: {.slide title="K-fold in code" except="jax"}
 [Model selection]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Slice out fold $i$ for validation, keep the rest to train:
+Slice out fold $i$; the rest trains:
 
 @kaggle-house-price-k-fold-cross-validation-1
 :::
 
 ::: {.col}
-Fit a fresh model per fold, average the held-out losses:
+A fresh model per fold; average:
 
 @-kaggle-house-price-k-fold-cross-validation-2
 :::
 :::
+:::
+
+::: {.slide title="K-fold in code" only="jax" layout="code"}
+[Model selection]{.kicker}
+
+`k_fold_data` slices out fold $i$ as validation and trains on the rest. Then fit a fresh model per fold and average the held-out scores — in Flax the trained parameters live in `trainer.state`, not the frozen model, so each fold's params are captured for the ensemble:
+
+@-kaggle-house-price-k-fold-cross-validation-2
 :::
 
 ::: {.slide}
@@ -915,39 +963,37 @@ Fit a fresh model per fold, average the held-out losses:
 :::
 :::
 
-::: {.slide title="A baseline only counts if it is trained to convergence" only="pytorch"}
+::: {.slide title="The trap: an underfit baseline flatters everything" only="pytorch"}
 [Model selection]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Start with a linear model, a fast honest baseline, but train it **competently**: 100 epochs at lr 0.03, not the customary ten:
+Start with a linear model, a fast honest baseline — but train it **competently**: 100 epochs at lr 0.03, not the customary ten. Ten epochs of SGD on these features leaves it badly underfit, at a log error near **0.18**.
 
 @!kaggle-house-price-model-selection-linear
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Stopping at 10 epochs leaves it underfit (~0.18) and flatters every model compared against it.
+Same model, same data: **0.18 underfit vs 0.031 converged**. Every fancier model "beats" the 0.18 baseline; almost nothing beats the competent one. A baseline only counts if it is trained to convergence.
 :::
 :::
 :::
 :::
 
-::: {.slide title="A linear baseline to sanity-check the pipeline" except="pytorch"}
+::: {.slide title="A baseline only counts if trained to convergence" except="pytorch"}
 [Model selection]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Start with a linear model run through the same K-fold loop, a quick,
-honest baseline that confirms the pipeline works:
+Start with a linear model through the same K-fold loop — and train it **competently**: 100 epochs at learning rate 0.03, not the customary ten:
 
-@kaggle-house-price-model-selection-linear
+@-kaggle-house-price-model-selection-linear
 :::
 
 ::: {.col .narrow}
-::: {.d2l-note}
-At a brief 10 epochs it is still **underfit** (log error ~0.18); train
-it longer and the score drops sharply.
+::: {.d2l-note .warn}
+Ten epochs of SGD leaves this model badly **underfit**, near **0.18**; trained to convergence it reaches $\approx$ **0.031**. An underfit baseline flatters every model compared against it.
 :::
 :::
 :::
@@ -974,14 +1020,26 @@ optimizer to attach weight decay.
 :::
 :::
 
-::: {.slide title="Same loop, only the model changes" only="pytorch"}
+::: {.slide title="The verdict: a dead heat near 0.03" only="pytorch"}
 [Model selection]{.kicker}
 
-Train the MLP with the **same** K-fold loop, learning rate, and epoch budget as the baseline:
+Same K-fold loop, learning rate, and epoch budget — only the model changes:
 
 @!kaggle-house-price-mlp-select
 
-The small MLP edges out the competent linear baseline (~0.028 vs ~0.032). The gain is deliberately modest: on small tabular data, gradient-boosted trees would still win.
+::: {.d2l-note .rule}
+**0.031 linear vs 0.032 MLP** — a dead heat; the leader varies run to run. The gain over a careless 0.18 came from training *either* model to convergence, not from the nonlinearity. Trees would still win here.
+:::
+:::
+
+::: {.slide title="The verdict: a dead heat near 0.03" except="pytorch"}
+[Model selection]{.kicker}
+
+The natural next step is a small MLP — one 32-unit ReLU hidden layer, dropout $0.1$, weight decay $10^{-4}$; anything bigger overfits 1460 rows. Run through the *same* K-fold loop, learning rate, and epoch budget (the PyTorch notebook carries the experiment), it lands in a **dead heat** with the competently trained linear baseline: about $0.032$ vs $0.031$.
+
+::: {.d2l-note .rule}
+The lesson is deliberately undramatic: the nonlinearity buys almost nothing here — the bulk of the gain over a careless 0.18 came from training *either* model to convergence. On small tabular data, gradient-boosted trees would still win.
+:::
 :::
 
 ::: {.slide title="Submit: ensemble the folds, write the CSV"}
@@ -989,14 +1047,20 @@ The small MLP edges out the competent linear baseline (~0.028 vs ~0.032). The ga
 
 ::: {.cols .vc}
 ::: {.col}
-Average the $K$ models' predictions (in price space), then write a
-Kaggle-format `submission.csv`:
+Average the $K$ log-price predictions, exponentiate, submit:
 
 @-kaggle-house-price-submitting-predictions-on-kaggle
 :::
 
 ::: {.col .fig}
-![Upload the CSV and Kaggle scores it instantly against the held-out half of the test set.](../img/kaggle-submit2.png){width=100%}
+![Upload the CSV and Kaggle scores it instantly.](../img/kaggle-submit2.png){width=80%}
+
+::: {.d2l-note}
+The log-space mean is the **RMSLE-consistent** (geometric-mean)
+ensemble. And note: the CV score measured a *single* fold model —
+refitting on all data is the cleaner alternative to this *fold
+ensembling*.
+:::
 :::
 :::
 :::
@@ -1013,7 +1077,8 @@ Kaggle-format `submission.csv`:
 :::
 
 ::: {.col}
-5. **Refit** with the chosen hyperparameters.
+5. **Ensemble the fold models** (log-space mean) — or refit on all data
+   with the chosen hyperparameters.
 6. **Submit** in the host's format.
 
 ::: {.d2l-note}
@@ -1038,8 +1103,16 @@ images, text, audio. The pipeline is identical.
 ::: {.col}
 - **K-fold CV** gives a stable estimate on small data and drives HP
   search.
-- **Refit** on the chosen settings, then submit.
+- **A baseline counts only if trained competently**: 0.18 underfit
+  vs 0.03 converged, same model.
+- **Ensemble the folds in log space** (or refit), then submit.
 - The model is a few lines; **everything around it is the lesson**.
 :::
+:::
+
+::: {.d2l-note}
+That closes the MLP chapter. Next: the builder's guide — layers,
+blocks, parameters, and custom architectures, the engineering that
+scales these ideas up.
 :::
 :::

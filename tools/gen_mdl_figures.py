@@ -496,6 +496,70 @@ def fig_determinant():
     save(fig, "mdl-la-determinant")
 
 
+def fig_null_collapse():
+    """(a) the input plane with a light grid, the null-space direction of
+    B = [[2,-1],[4,-2]] dashed, and three marked points (one on the null line);
+    (b) the image: the whole grid lands on the column-space line y = 2x, the
+    marked points land at their exact images, and the null-line point lands at
+    the origin.  All images computed by applying B."""
+    B = np.array([[2.0, -1.0], [4.0, -2.0]])
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.8, 4.4))
+
+    # sample inputs: x1, x2 generic; x3 on the null line span{(1, 2)}
+    pts = [np.array([1.0, 0.5]), np.array([-0.5, 1.0]), np.array([0.5, 1.0])]
+    marks = ["o", "s", "^"]
+    cols = [BLUE, ORANGE, GREEN]
+    labs_a = [r"$\mathbf{x}_1$", r"$\mathbf{x}_2$", r"$\mathbf{x}_3$"]
+    labs_b = [r"$\mathbf{B}\mathbf{x}_1$", r"$\mathbf{B}\mathbf{x}_2$",
+              r"$\mathbf{B}\mathbf{x}_3=\mathbf{0}$"]
+
+    # --- (a) input plane ---
+    axa.set_title("(a) input plane")
+    n = 2
+    for k in range(-n, n + 1):
+        axa.plot([k, k], [-n, n], color=LIGHT, lw=0.9)
+        axa.plot([-n, n], [k, k], color=LIGHT, lw=0.9)
+    axis_cross(axa, (-2.5, 2.5), (-2.5, 2.5))
+    # null-space line span{(1, 2)} (dashed): inputs sent to the origin
+    axa.plot([-1.15, 1.15], [-2.3, 2.3], "--", color=GRAY, lw=1.6)
+    rot = np.degrees(np.arctan2(2.0, 1.0))
+    axa.text(-0.78 - 0.42, -1.56 + 0.21, r"null space", color=GRAY,
+             fontsize=9.5, ha="center", va="center", rotation=rot,
+             rotation_mode="anchor")
+    offs_a = [(0.22, -0.18), (-0.30, 0.16), (0.34, 0.02)]
+    for p, m, c, lab, off in zip(pts, marks, cols, labs_a, offs_a):
+        axa.plot(*p, m, color=c, ms=8, zorder=5)
+        axa.text(p[0] + off[0], p[1] + off[1], lab, color=c, fontsize=10,
+                 ha="center", va="center")
+    clean_axes(axa, lim=((-2.5, 2.5), (-2.5, 2.5)), hide=True)
+
+    # --- (b) image plane: everything lands on the column space y = 2x ---
+    axb.set_title(r"(b) image under $\mathbf{B}$")
+    axis_cross(axb, (-5.4, 5.4), (-5.4, 5.4))
+    # column space = span of the columns = the line y = 2x
+    axb.plot([-2.55, 2.55], [-5.1, 5.1], color=LIGHT, lw=4.5,
+             solid_capstyle="round", zorder=1)
+    axb.text(-1.9 + 0.85, -3.8 - 0.42, r"column space", color=GRAY,
+             fontsize=9.5, ha="center", va="center", rotation=rot,
+             rotation_mode="anchor")
+    # the two columns of B, both along the line
+    b1 = B @ np.array([1.0, 0.0])   # (2, 4)
+    b2 = B @ np.array([0.0, 1.0])   # (-1, -2)
+    arrow(axb, (0, 0), b1, color=BLUE, lw=2.2)
+    arrow(axb, (0, 0), b2, color=ORANGE, lw=2.2)
+    vlabel(axb, (b1[0] + 0.55, b1[1] + 0.10), r"$\mathbf{b}_1$", color=BLUE)
+    vlabel(axb, (b2[0] - 0.55, b2[1] - 0.15), r"$\mathbf{b}_2$", color=ORANGE)
+    offs_b = [(0.95, -0.15), (-1.15, 0.35), (1.35, -0.45)]
+    for p, m, c, lab, off in zip(pts, marks, cols, labs_b, offs_b):
+        q = B @ p
+        axb.plot(*q, m, color=c, ms=8, zorder=5)
+        axb.text(q[0] + off[0], q[1] + off[1], lab, color=c, fontsize=10,
+                 ha="center", va="center")
+    clean_axes(axb, lim=((-5.4, 5.4), (-5.4, 5.4)), hide=True)
+
+    save(fig, "mdl-la-null-collapse")
+
+
 def fig_cosine_highd():
     """Histograms of cos(theta) between random unit-vector pairs for several
     dimensions; sharpens to a spike at 0.  Sample g ~ N(0, I), normalize."""
@@ -567,6 +631,59 @@ def fig_eig_ellipse():
         clean_axes(ax, lim=((-m, m), (-m, m)), hide=True)
         axis_cross(ax, (-m, m), (-m, m), color=GRAY, lw=0.8)
     save(fig, "mdl-la-eig-ellipse")
+
+
+def fig_defective_shear():
+    """The defective shear [[1,1],[0,1]] acting on a grid + unit square.  Every
+    horizontal layer slides right proportionally to its height; the x-axis is
+    the single surviving eigendirection (geometric multiplicity 1)."""
+    A = np.array([[1.0, 1.0], [0.0, 1.0]])
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.4, 3.9))
+
+    n = 3
+    ts = np.linspace(0, n, 200)
+    grid = list(range(n + 1))
+
+    def draw_grid(ax, M):
+        for k in grid:  # vertical lines x=k
+            pts = M @ np.vstack([np.full_like(ts, k), ts])
+            ax.plot(pts[0], pts[1], color=LIGHT, lw=1.0)
+        for k in grid:  # horizontal lines y=k
+            pts = M @ np.vstack([ts, np.full_like(ts, k)])
+            ax.plot(pts[0], pts[1], color=LIGHT, lw=1.0)
+
+    unit = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+
+    axa.set_title("(a) original grid")
+    draw_grid(axa, np.eye(2))
+    axa.add_patch(Polygon(unit, closed=True, facecolor=GREEN, alpha=0.18, lw=0))
+    # the eigendirection: the x-axis, drawn as a green ray
+    axa.plot([-0.35, 3.5], [0, 0], color=GREEN, lw=3.0, zorder=2,
+             solid_capstyle="round", alpha=0.85)
+    arrow(axa, (0, 0), (1, 0), color=BLUE, lw=2.2)
+    arrow(axa, (0, 0), (0, 1), color=ORANGE, lw=2.2)
+    vlabel(axa, (1.0, -0.34), r"$\mathbf{e}_1$", color=BLUE)
+    vlabel(axa, (-0.35, 1.0), r"$\mathbf{e}_2$", color=ORANGE)
+    clean_axes(axa, lim=((-0.7, 4.4), (-0.8, 3.6)), hide=True)
+
+    axb.set_title("(b) image under the shear")
+    draw_grid(axb, A)
+    axb.add_patch(Polygon((A @ unit.T).T, closed=True, facecolor=GREEN,
+                          alpha=0.18, lw=0))
+    axb.plot([-0.35, 6.5], [0, 0], color=GREEN, lw=3.0, zorder=2,
+             solid_capstyle="round", alpha=0.85)
+    a1 = A @ np.array([1.0, 0.0])   # (1, 0): unchanged
+    a2 = A @ np.array([0.0, 1.0])   # (1, 1): picked up a horizontal component
+    arrow(axb, (0, 0), a1, color=BLUE, lw=2.4)
+    arrow(axb, (0, 0), a2, color=ORANGE, lw=2.4)
+    vlabel(axb, (1.35, -0.38), r"$\mathbf{A}\mathbf{e}_1=\mathbf{e}_1$",
+           color=BLUE)
+    vlabel(axb, (1.15, 1.28), r"$\mathbf{A}\mathbf{e}_2$", color=ORANGE)
+    axb.text(4.9, 0.32, r"eigenspace of $\lambda=1$", color=GREEN,
+             fontsize=9.5, ha="center", va="center")
+    clean_axes(axb, lim=((-0.7, 6.8), (-0.8, 3.6)), hide=True)
+
+    save(fig, "mdl-la-defective-shear")
 
 
 def fig_psd():
@@ -905,6 +1022,64 @@ def fig_eckart_young():
     save(fig, "mdl-la-eckart-young")
 
 
+def fig_lora():
+    """LoRA schematic: frozen weight W beside a trainable low-rank bypass
+    B(m x r) @ A(r x n), outputs summed.  Dimensions/parameter counts use the
+    chapter's own 4096x4096, r=8 (0.39%) example."""
+    fig, ax = plt.subplots(figsize=(6.4, 4.8))
+
+    # input / output
+    ax.plot(5, 0.6, "o", color="black", ms=5)
+    ax.text(5.25, 0.6, r"$\mathbf{x}$", fontsize=12, ha="left", va="center")
+    ax.plot(5, 7.35, "o", color="black", ms=5)
+    ax.text(5.25, 7.35, r"$\mathbf{h}=\mathbf{W}\mathbf{x}+\mathbf{B}\mathbf{A}\mathbf{x}$",
+            fontsize=11, ha="left", va="center")
+
+    # frozen weight W (left branch)
+    ax.add_patch(Rectangle((1.6, 2.2), 2.4, 2.6, facecolor=BLUE, alpha=0.15,
+                           edgecolor=BLUE, lw=1.8))
+    ax.text(2.8, 3.75, r"$\mathbf{W}$", fontsize=15, ha="center", va="center",
+            color=BLUE)
+    ax.text(2.8, 3.05, "pretrained, frozen\n" + r"$4096\times4096$",
+            fontsize=8.5, ha="center", va="center", color=BLUE)
+    ax.text(2.8, 1.75, r"$mn=16.8$M params", fontsize=8.5, ha="center",
+            va="top", color=GRAY)
+
+    # low-rank bypass (right branch): A compresses to r, B expands back
+    ax.add_patch(Polygon([(6.1, 1.9), (8.3, 1.9), (7.55, 3.0), (6.85, 3.0)],
+                         closed=True, facecolor=ORANGE, alpha=0.18,
+                         edgecolor=ORANGE, lw=1.8))
+    ax.text(7.2, 2.35, r"$\mathbf{A}$  ($r\times n$)", fontsize=10,
+            ha="center", va="center", color=ORANGE)
+    ax.add_patch(Polygon([(6.85, 3.9), (7.55, 3.9), (8.3, 5.0), (6.1, 5.0)],
+                         closed=True, facecolor=ORANGE, alpha=0.18,
+                         edgecolor=ORANGE, lw=1.8))
+    ax.text(7.2, 4.55, r"$\mathbf{B}$  ($m\times r$)", fontsize=10,
+            ha="center", va="center", color=ORANGE)
+    arrow(ax, (7.2, 3.0), (7.2, 3.9), color=ORANGE, lw=1.8, mut=11)
+    ax.text(7.45, 3.45, r"$r=8$", fontsize=9, ha="left", va="center",
+            color=ORANGE)
+    ax.text(7.2, 5.55, "trainable:\n" + r"$r(m+n)\approx65.5$K  ($0.39\%$)",
+            fontsize=8.5, ha="center", va="bottom", color=GRAY)
+
+    # wiring
+    arrow(ax, (4.85, 0.75), (2.8, 2.15), color=GRAY, lw=1.6, mut=11)
+    arrow(ax, (5.15, 0.75), (7.2, 1.85), color=GRAY, lw=1.6, mut=11)
+    arrow(ax, (2.8, 4.85), (4.78, 6.15), color=GRAY, lw=1.6, mut=11)
+    arrow(ax, (7.2, 5.05), (5.22, 6.15), color=GRAY, lw=1.6, mut=11)
+    # summation node
+    ax.add_patch(plt.Circle((5, 6.3), 0.24, facecolor="white",
+                            edgecolor="black", lw=1.4, zorder=5))
+    ax.text(5, 6.3, "+", fontsize=13, ha="center", va="center", zorder=6)
+    arrow(ax, (5, 6.56), (5, 7.2), color=GRAY, lw=1.6, mut=11)
+
+    ax.set_xlim(0.6, 10.4)
+    ax.set_ylim(0.2, 7.9)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    save(fig, "mdl-la-lora")
+
+
 def fig_condition():
     """Two contour plots of f(x)=1/2 x^T A x: well-conditioned (near-circular,
     short GD path) and ill-conditioned (elongated valley, zig-zag GD path).
@@ -991,9 +1166,11 @@ FIGURES = [
     fig_hyperplane,
     fig_linear_map,
     fig_determinant,
+    fig_null_collapse,
     fig_cosine_highd,
     # eigendecomposition
     fig_eig_ellipse,
+    fig_defective_shear,
     fig_psd,
     fig_gershgorin,
     fig_power_iter,
@@ -1001,6 +1178,7 @@ FIGURES = [
     fig_svd_action,
     fig_svd_subspaces,
     fig_eckart_young,
+    fig_lora,
     fig_condition,
     fig_pca,
 ]

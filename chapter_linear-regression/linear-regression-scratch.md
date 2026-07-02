@@ -158,11 +158,14 @@ the gradient of our loss function,
 we ought to define the loss function first.
 Here we use the squared loss function
 in :eqref:`eq_mse`.
-In the implementation, we need to transform the true value `y`
-into the predicted value's shape `y_hat`.
-The result returned by the following method
-will also have the same shape as `y_hat`. 
-We also return the averaged loss value
+Our synthetic data loader already yields labels `y`
+with the same shape as the predictions `y_hat`
+(both are $(B, 1)$ column vectors for a batch of size $B$),
+so we can subtract them elementwise directly;
+the JAX tab reshapes `y` defensively,
+and exercise 5 asks what would go wrong
+if the two shapes did not match.
+We return the averaged loss value
 among all examples in the minibatch.
 
 ```{.python .input #linear-regression-scratch-defining-the-loss-function  n=9}
@@ -191,6 +194,24 @@ def loss(self, params, X, y, state):
     l = (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
     return d2l.reduce_mean(l)
 ```
+
+Before handing this loss to an optimizer, it is worth computing by hand the
+gradient that the optimizer will consume. For a single example, the loss is
+$\ell = \frac{1}{2}(\hat{y} - y)^2$ with $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$,
+and the chain rule gives
+
+$$\frac{\partial \ell}{\partial \mathbf{w}} = (\hat{y} - y)\, \mathbf{x} \qquad \textrm{and} \qquad \frac{\partial \ell}{\partial b} = \hat{y} - y.$$
+
+Differentiating the square produces the error $\hat{y} - y$, which is then
+multiplied by the derivative of $\hat{y}$ with respect to each parameter---
+$\mathbf{x}$ for the weights and $1$ for the bias. In words, *the gradient is
+the error-weighted input*: each weight $w_j$ will be nudged in proportion to
+how wrong the prediction was times how strongly $x_j$ contributed to it, and
+the bias simply soaks up the average error. Averaging these per-example
+gradients over a minibatch recovers exactly the closed-form update we wrote
+down in :eqref:`eq_linreg_batch_update`. This averaged gradient is precisely
+what the backward pass deposits in each parameter's gradient field, so when
+the `SGD` class below reads `param.grad`, you now know what it contains.
 
 ## Defining the Optimization Algorithm
 
@@ -378,8 +399,8 @@ covered in this book.
 In each *epoch*, we iterate through 
 the entire training dataset, 
 passing once through every example
-(assuming that the number of examples 
-is divisible by the batch size). 
+(up to a final partial batch when the number of examples 
+is not divisible by the batch size). 
 In each *iteration*, we grab a minibatch of training examples,
 and compute its loss through the model's `training_step` method. 
 Then we compute the gradients with respect to each parameter. 
@@ -392,11 +413,11 @@ In summary, we will execute the following loop:
     * Compute gradient $\mathbf{g} \leftarrow \partial_{(\mathbf{w},b)} \frac{1}{|\mathcal{B}|} \sum_{i \in \mathcal{B}} l(\mathbf{x}^{(i)}, y^{(i)}, \mathbf{w}, b)$
     * Update parameters $(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta \mathbf{g}$
  
-Recall that the synthetic regression dataset 
+Recall that the synthetic regression data module 
 that we generated in :numref:`sec_synthetic-regression-data` 
-does not provide a validation dataset. 
-In most cases, however, 
-we will want a validation dataset 
+holds out 1000 validation examples 
+alongside the training data. 
+We will almost always want such a validation dataset 
 to measure our model quality. 
 Here we pass the validation dataloader 
 once in each epoch to measure the model performance.
@@ -625,9 +646,30 @@ and the third reserved for the final evaluation.
 We elide these details for now and develop model selection, validation, and the
 train/validation/test split in :numref:`sec_generalization_basics`.
 
+So that repeated runs of this notebook produce identical numbers, we first fix
+the seed of the framework's random number generator, which governs both the
+parameter initialization and the shuffling of minibatches.
+
+:begin_tab:`jax`
+JAX needs no such call: its PRNG is *functional*, with no global state. The
+model is initialized from a fixed `PRNGKey` and the synthetic dataset defaults
+to `key=jax.random.PRNGKey(0)`---see exercise 4 of
+:numref:`sec_synthetic-regression-data`.
+:end_tab:
+
 ```{.python .input #linear-regression-scratch-training-seed}
 %%tab pytorch
 torch.manual_seed(1)
+```
+
+```{.python .input #linear-regression-scratch-training-seed}
+%%tab mxnet
+npx.random.seed(1)
+```
+
+```{.python .input #linear-regression-scratch-training-seed}
+%%tab tensorflow
+tf.random.set_seed(1)
 ```
 
 ```{.python .input #linear-regression-scratch-training-3  n=20}
@@ -690,6 +732,9 @@ stochastic gradient descent can often find remarkably good solutions,
 owing partly to the fact that, for deep networks,
 there exist many configurations of the parameters
 that lead to highly accurate prediction.
+Why the solutions that SGD finds among these many candidates
+also *generalize* so well is a deep question,
+taken up in :numref:`sec_generalization_deep`.
 
 
 ## Summary
@@ -766,26 +811,26 @@ curb overfitting, the first of many regularizers we will meet.
 ::: {.cover}
 [Dive into Deep Learning · §3.4]{.kicker}
 
-Linear regression **from scratch**<br>Building a model, a loss, an optimizer, and a training loop with nothing but tensors and autograd.
+Built by hand once, demystified for good<br>**model · loss · optimizer · training loop --- nothing but tensors and autograd**.
+:::
 :::
 
-The two-line `nn.Linear` + `MSELoss` of the next section hides four moving parts. We build every one of them by hand once, so that when we later customize a layer, a loss, or an optimizer, we know exactly what we are reaching into.
-:::
-
-::: {.slide title="Four parts, one object graph"}
+::: {.slide title="We know the answer before we start"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A trainable model is four pieces that fit together:
+Four pieces, built by hand today: a **model** (`w`, `b`, `forward`), a
+**loss**, an **optimizer**, and the **training loop** driving them ---
+each slotted into the `Module` / `Trainer` / `DataModule` scaffold of
+§3.2.
 
-1. a **model** holding parameters `w`, `b` and a `forward`,
-2. a **loss** scoring its predictions,
-3. an **optimizer** that nudges the parameters,
-4. a **training loop** that drives all three over the data.
-
-::: {.d2l-note}
-We slot them into the `Module` / `Trainer` / `DataModule` classes from :numref:`sec_oo-design`, so each piece has one obvious home.
+::: {.d2l-note .rule}
+Because we manufactured the data (§3.3, noise $\sigma = 0.01$), a
+*correct* implementation has nowhere to hide. It must deliver **two
+numbers**: a loss landing on the noise floor
+$\sigma^2/2 = 5\times10^{-5}$, and parameters returning to
+$\mathbf{w}^* = [2, -3.4]$, $b^* = 4.2$. Keep score.
 :::
 :::
 
@@ -808,12 +853,15 @@ We slot them into the `Module` / `Trainer` / `DataModule` classes from :numref:`
 ::: {.slide title="Parameters: small random w, zero b"}
 [The Model]{.kicker}
 
-We need parameters before we can optimize them. Draw `w` from a tiny Gaussian (to break symmetry), set `b` to zero:
+We need parameters before we can optimize them. Draw `w` from a tiny Gaussian, set `b` to zero:
 
 @linear-regression-scratch-defining-the-model-1
 
 ::: {.d2l-note}
-`requires_grad=True` (or the framework's equivalent) tells autograd to track `w` and `b` so their gradients can flow back from the loss.
+`requires_grad=True` (or the framework's equivalent) is the crucial
+flag: it tells autograd to track `w` and `b` so gradients can flow back
+from the loss. For a single linear layer **any** small init works
+(exercise 1); symmetry breaking only matters once we stack layers.
 :::
 :::
 
@@ -921,7 +969,7 @@ A `tf.Variable` is updated in place with `assign_sub`. The same rule $\theta \le
 @linear-regression-scratch-defining-the-optimization-algorithm-2
 :::
 
-::: {.slide title="Minibatch SGD as an Optax transform" only="jax"}
+::: {.slide title="Minibatch SGD as an Optax transform" only="jax" layout="code"}
 [Optimizer · JAX]{.kicker}
 
 Optax expresses an optimizer as two pure functions, `init` (empty state) and `update` (gradients to the increment $-\eta\,\mathbf{g}$), wrapped in a `GradientTransformation`:
@@ -964,37 +1012,43 @@ So the run is repeatable, we seed the global RNG before building the model. The 
 @-linear-regression-scratch-training-seed
 :::
 
-::: {.slide title="Run it: loss falls to the noise floor"}
-[Training]{.kicker}
+::: {.slide title="First promise kept: the loss lands on the noise floor"}
+[Training · payoff]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-We instantiate the model, the synthetic dataset from :numref:`sec_synthetic-regression-data`, and a `Trainer`, then fit for ten epochs at learning rate `0.03`:
+Model, synthetic dataset, `Trainer`; ten epochs at learning rate `0.03`:
 
 @-linear-regression-scratch-training-3
 
 The `fit` call drives the four-step loop over every minibatch and plots both losses live.
 :::
 
-::: {.col .fig .big}
+::: {.col .fig}
 @!linear-regression-scratch-training-3
 
-::: {.d2l-note}
-Train and validation loss fall together and flatten near $\sigma^2/2$, with **no gap**: a 2-D linear model on 1000 points has no room to overfit.
+::: {.d2l-note .rule}
+Both curves flatten at $\approx 5\times10^{-5}$ --- **exactly** the
+$\sigma^2/2$ we promised, so the residual error is the noise we injected,
+not a bug. And validation tracks training with **no gap**: 2 parameters
+on 1000 points has no room to overfit (§3.6).
 :::
 :::
 :::
 :::
 
-::: {.slide title="Did it recover the true parameters?"}
-[Training]{.kicker}
+::: {.slide title="Second promise kept: the truth, recovered"}
+[Training · payoff]{.kicker}
 
-We synthesized the data, so we know the true $\mathbf{w}=[2,-3.4]$ and $b=4.2$. Compare them with what training learned:
+We synthesized the data, so we know the truth: $\mathbf{w}^*=[2,-3.4]$, $b^*=4.2$. The verdict:
 
 @linear-regression-scratch-training-4
 
 ::: {.d2l-note}
-Off by less than $10^{-3}$. Exact recovery needs linearly independent features; in practice we care about accurate *prediction*, not recovering the truth.
+Off by a few $10^{-4}$ at most. Exact recovery needs linearly
+independent features and is *not* the everyday goal --- deep models have
+many equally good parameter settings, and we care about accurate
+**prediction** --- but on a problem with one right answer, our loop found it.
 :::
 :::
 
@@ -1004,12 +1058,13 @@ Off by less than $10^{-3}$. Exact recovery needs linearly independent features; 
 ::: {.cols}
 ::: {.col}
 - A `Module` for linear regression is just `__init__`, `forward`, `loss`, `configure_optimizers`.
-- The **loss** is mean squared error; the **optimizer** is a ten-line minibatch SGD.
+- The **gradient is the error-weighted input**, $(\hat{y}-y)\,\mathbf{x}$ --- what `backward` deposits and SGD consumes.
+- The **optimizer** is a ten-line minibatch SGD.
 :::
 
 ::: {.col}
-- Training is one **four-step loop** (zero, forward, backward, update) run over minibatches.
-- Synthetic data let us confirm SGD **recovered the ground-truth** $\mathbf{w}, b$.
+- Training is one **four-step loop**: zero, forward, backward, update --- in that order.
+- Both promises kept: loss on the $5\times10^{-5}$ noise floor, $\mathbf{w}, b$ recovered to $\sim10^{-4}$.
 :::
 :::
 

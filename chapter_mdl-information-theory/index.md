@@ -26,6 +26,7 @@ A short, curated reading list for information theory and divergences as they app
 - [Information Theory, Inference, and Learning Algorithms --- David MacKay](https://www.inference.org.uk/mackay/itila/) --- Free to read online; the rare book that treats information theory and machine learning as one subject, with a strong Bayesian and coding-theoretic flavor.
 - [Information Theory: From Coding to Learning --- Polyanskiy & Wu](https://www.cambridge.org/9781108832908) --- A modern graduate text deliberately oriented toward statistics and learning; the freely available [MIT 6.441 lecture notes](https://ocw.mit.edu/courses/6-441-information-theory-spring-2016/pages/lecture-notes/) are its precursor.
 - [Computational Optimal Transport --- Peyré & Cuturi](https://optimaltransport.github.io/book/) --- The standard reference on OT for data science; Wasserstein distances, entropic regularization, and Sinkhorn, with the full text on [arXiv](https://arxiv.org/abs/1803.00567).
+- [The Minimum Description Length Principle --- Peter Grünwald](https://mitpress.mit.edu/9780262072816/the-minimum-description-length-principle/) --- The definitive account of learning as data compression: two-part codes, universal coding, and why shorter descriptions generalize; the core ideas are also in his [freely available tutorial](https://arxiv.org/abs/math/0406077).
 
 **Courses and lecture notes**
 
@@ -41,6 +42,7 @@ A short, curated reading list for information theory and divergences as they app
 
 - [f-GAN: Training Generative Neural Samplers using Variational Divergence Minimization --- Nowozin et al.](https://arxiv.org/abs/1606.00709) --- Shows that any $f$-divergence yields a GAN-style objective via its variational (Fenchel) lower bound, unifying many adversarial losses.
 - [Wasserstein GAN --- Arjovsky et al.](https://arxiv.org/abs/1701.07875) --- Replaces JS divergence with the Earth-Mover (Wasserstein-1) distance, giving smoother gradients and meaningful loss curves when supports do not overlap.
+- [Language Modeling Is Compression --- Delétang et al.](https://arxiv.org/abs/2309.10668) --- Drives an arithmetic coder with an LLM's next-token probabilities and obtains a state-of-the-art general-purpose compressor, making "cross-entropy is a code length" literal at scale.
 - [Representation Learning with Contrastive Predictive Coding --- van den Oord et al.](https://arxiv.org/abs/1807.03748) --- Introduces the InfoNCE loss, framing contrastive self-supervision as maximizing a tractable lower bound on mutual information.
 - [The Information Bottleneck Method --- Tishby, Pereira & Bialek](https://arxiv.org/abs/physics/0004057) --- The original formulation: compress $X$ while preserving information about $Y$, generalizing rate--distortion theory.
 - [Deep Learning and the Information Bottleneck Principle --- Tishby & Zaslavsky](https://arxiv.org/abs/1503.02406) --- Recasts deep networks as a sequence of information bottlenecks, an influential (and debated) lens on representation and generalization.

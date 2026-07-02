@@ -32,6 +32,7 @@ the slope of the *secant* line through $(x, f(x))$ and $(x+\epsilon, f(x+\epsilo
 ```{.python .input #single-variable-calculus-imports}
 #@tab mxnet
 %matplotlib inline
+import math
 from d2l import mxnet as d2l
 from mxnet import autograd, np, npx
 npx.set_np()
@@ -40,6 +41,7 @@ npx.set_np()
 ```{.python .input #single-variable-calculus-imports}
 #@tab pytorch
 %matplotlib inline
+import math
 from d2l import torch as d2l
 import torch
 ```
@@ -47,6 +49,7 @@ import torch
 ```{.python .input #single-variable-calculus-imports}
 #@tab tensorflow
 %matplotlib inline
+import math
 from d2l import tensorflow as d2l
 import tensorflow as tf
 tf.pi = tf.acos(tf.zeros(1)).numpy() * 2  # Define pi in TensorFlow
@@ -55,6 +58,7 @@ tf.pi = tf.acos(tf.zeros(1)).numpy() * 2  # Define pi in TensorFlow
 ```{.python .input #single-variable-calculus-imports}
 #@tab jax
 %matplotlib inline
+import math
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
@@ -114,7 +118,7 @@ print(f"autograd: f'(4) = {t.gradient(y, x).numpy():.1f}")
 print(f"autograd: f'(4) = {jax.grad(f)(4.0):.1f}")
 ```
 
-A historical aside. In the first decades of neural-network research this very computation --- the *method of finite differences* --- was how people measured the effect of a weight on the loss: perturb the weight, re-run the network, watch the loss move. It costs two full evaluations of $L$ per weight, so with even a few thousand parameters it is thousands of forward passes for a single gradient. That bottleneck fell in 1986, when the *backpropagation algorithm* popularized by :citet:`Rumelhart.Hinton.Williams.ea.1988` showed how to get the effect of *all* weights at once, at a small constant multiple of the cost of one forward pass --- the *cheap-gradient principle* :cite:`Griewank.Walther.2008`. Backpropagation is the chain rule (below) run in reverse over the network.
+A historical aside. In the first decades of neural-network research this very computation --- the *method of finite differences* --- was how people measured the effect of a weight on the loss: perturb the weight, re-run the network, watch the loss move. It costs an extra evaluation of $L$ per weight --- or two, for the centered differences that halve the truncation error --- so with even a few thousand parameters it is thousands of forward passes for a single gradient. That bottleneck fell in 1986, when the *backpropagation algorithm* popularized by :citet:`Rumelhart.Hinton.Williams.ea.1988` showed how to get the effect of *all* weights at once, at a small constant multiple of the cost of one forward pass --- the *cheap-gradient principle* :cite:`Griewank.Walther.2008`. Backpropagation is the chain rule (below) run in reverse over the network.
 
 The slope is itself a function of $x$, so we name it. The **derivative** of $f$ is
 
@@ -159,7 +163,7 @@ As in :numref:`sec_calculus`, most derivatives reduce to a few core ones, repeat
 * **Derivative of sine.** $\frac{d}{dx}\sin(x) = \cos(x)$.
 * **Derivative of cosine.** $\frac{d}{dx}\cos(x) = -\sin(x)$.
 
-(That $e^x$ is its own derivative is the small-change identity in disguise: $e^{x+\epsilon} = e^x e^{\epsilon} \approx e^x(1 + \epsilon)$, so the coefficient of $\epsilon$ is $e^x$ itself.)
+(That $e^x$ is its own derivative is the small-change identity in disguise: $e^{x+\epsilon} = e^x e^{\epsilon} \approx e^x(1 + \epsilon)$, so the coefficient of $\epsilon$ is $e^x$ itself --- taking the first-order expansion $e^{\epsilon} \approx 1 + \epsilon$ as given, since that expansion *is* the table entry at $x = 0$; the aside is intuition for the entry, not an independent proof of it.)
 
 ### Four Rules from One Identity
 
@@ -352,7 +356,7 @@ $$
 x_{t+1} = x_t - \eta\,(2x_t) = (1 - 2\eta)\, x_t,
 $$
 
-a simple geometric recursion with closed form $x_t = (1-2\eta)^t x_0$. So the iterates converge to the minimum $x = 0$ exactly when $|1 - 2\eta| < 1$, i.e. for $0 < \eta < 1$ --- and this is the descent lemma made exact, since here $f'' \equiv 2$ so $L = 2$ and the safe range $\eta < 2/L = 1$ is precisely the convergence threshold. Within it, tiny $\eta$ creeps in monotonically, the optimal $\eta = 1/L = \tfrac12$ jumps to the minimum in one step, $\tfrac12 < \eta < 1$ overshoots and oscillates inward, and $\eta \ge 1$ diverges. The next code cell runs the recursion for a sweep of step sizes, prints where each lands after ten steps, and plots the five trajectories $x_t$.
+a simple geometric recursion with closed form $x_t = (1-2\eta)^t x_0$. So the iterates converge to the minimum $x = 0$ exactly when $|1 - 2\eta| < 1$, i.e. for $0 < \eta < 1$ --- and this is the descent lemma made exact, since here $f'' \equiv 2$ so $L = 2$ and the safe range $\eta < 2/L = 1$ is precisely the convergence threshold. Within it, tiny $\eta$ creeps in monotonically, the optimal $\eta = 1/L = \tfrac12$ jumps to the minimum in one step, $\tfrac12 < \eta < 1$ overshoots and oscillates inward, $\eta = 1$ oscillates forever between $\pm x_0$, and $\eta > 1$ diverges. The next code cell runs the recursion for a sweep of step sizes, prints where each lands after ten steps, and plots the five trajectories $x_t$.
 
 ```{.python .input #single-variable-calculus-gradient-descent}
 # Gradient descent on f(x) = x^2 from x0 = 1, for several step sizes
@@ -440,7 +444,10 @@ $$
 g(x) = \sin(x_0) + \cos(x_0)\,(x - x_0) - \tfrac{1}{2}\sin(x_0)\,(x-x_0)^2,
 $$
 
-a parabola that hugs the curve over a visibly wider window than the tangent lines we plotted above, because it captures curvature as well as slope --- a claim we will make quantitative, and verify in code, once the Taylor remainder is on the table. But first, the quadratic model pays an immediate dividend for optimization.
+a parabola that hugs the curve over a visibly wider window than the tangent lines we plotted above, because it captures curvature as well as slope; :numref:`fig_mdl-best-parabola` draws all three together. We will make the "wider window" claim quantitative, and verify it in code, once the Taylor remainder is on the table. But first, the quadratic model pays an immediate dividend for optimization.
+
+![The sine curve with its two local models at $x_0$: the tangent line matches value and slope, while the best parabola also matches curvature and visibly hugs the curve over a wider window before peeling away.](../img/mdl-cal-best-parabola.svg)
+:label:`fig_mdl-best-parabola`
 
 ### Newton's Method
 :label:`subsec_mdl-newton`
@@ -458,7 +465,19 @@ x_{t+1} = x_t - \frac{f'(x_t)}{f''(x_t)}.
 $$
 :eqlabel:`eq_mdl-newton`
 
-Read against the gradient-descent loop :eqref:`eq_mdl-gd-loop`, this is the same step with the hand-tuned $\eta$ replaced by the *curvature-adapted* step size $1/f''(x_t)$: sharp curvature prescribes caution, gentle curvature boldness. On $f(x) = x^2$ it sets $\eta = 1/f'' = \tfrac12$ --- exactly the one-shot optimal step we found by hand --- and started close enough to a minimum with $f'' > 0$ (and $f''$ itself smooth), the iteration converges *quadratically*, roughly doubling the number of correct digits per step. The price is the curvature itself: where $f''(x_t) \le 0$ the model's "minimum" is a maximum or does not exist and the raw step must be safeguarded, and in $n$ dimensions $f''$ becomes the Hessian matrix, so each step requires solving an $n \times n$ linear system. How this trade plays out at deep-learning scale --- and why first-order methods win there anyway --- is taken up in :numref:`sec_mdl-gradient-based-optimization`. Matching yet *more* derivatives with higher-degree polynomials is the Taylor series, to which we now turn.
+Read against the gradient-descent loop :eqref:`eq_mdl-gd-loop`, this is the same step with the hand-tuned $\eta$ replaced by the *curvature-adapted* step size $1/f''(x_t)$: sharp curvature prescribes caution, gentle curvature boldness. On $f(x) = x^2$ it sets $\eta = 1/f'' = \tfrac12$ --- exactly the one-shot optimal step we found by hand --- and started close enough to a minimum with $f'' > 0$ (and $f''$ itself smooth), the iteration converges *quadratically*, roughly doubling the number of correct digits per step. The price is the curvature itself: where $f''(x_t) \le 0$ the model's "minimum" is a maximum or does not exist and the raw step must be safeguarded, and in $n$ dimensions $f''$ becomes the Hessian matrix, so each step requires solving an $n \times n$ linear system. How this trade plays out at deep-learning scale --- and why first-order methods win there anyway --- is taken up in :numref:`sec_mdl-gradient-based-optimization`.
+
+The quadratic convergence is easy to watch. Take $f(x) = \tfrac14 x^4 - x$, whose stationarity condition $f'(x) = x^3 - 1 = 0$ has the root $x^* = 1$; the next cell iterates :eqref:`eq_mdl-newton` from $x_0 = 2$ and prints the error at each step.
+
+```{.python .input #mdl-single-variable-calculus-newton-s-method}
+# Newton's method on f(x) = x^4/4 - x: solve f'(x) = x^3 - 1 = 0, root x* = 1
+x = 2.0
+for t in range(6):
+    print(f't = {t}: x = {x:.12f}, error = {abs(x - 1):.1e}')
+    x = x - (x**3 - 1) / (3 * x**2)  # x - f'(x) / f''(x)
+```
+
+Read the error column's exponents: after a couple of settling-in steps they go $10^{-2} \to 10^{-4} \to 10^{-8}$ --- each step roughly *squares* the previous error, doubling the number of correct digits. Contrast the $\eta$-sweep above, where gradient descent shrinks the error by the same fixed factor $|1 - 2\eta|$ every step: geometric convergence gains a fixed number of digits per step, Newton doubles them. Matching yet *more* derivatives with higher-degree polynomials is the Taylor series, to which we now turn.
 
 ### Taylor Series
 
@@ -496,14 +515,13 @@ That rate is checkable, and checking it is the promised measurement of "how much
 ```{.python .input #single-variable-calculus-taylor-error-rate}
 # Max error of the degree-n Taylor polynomial of e^x on the window |x| <= h.
 # Lagrange predicts error ~ h^(n+1): halving h should divide it by 2^(n+1)
-E = 2.718281828459045  # e, so that e**x is plain float arithmetic
 def taylor_error(n, h, m=1000):
     coeffs = [1.0, 1.0, 1 / 2, 1 / 6]  # 1/k! for k = 0, ..., 3
     err = 0.0
     for i in range(-m, m + 1):
         x = h * i / m
-        err = max(err, abs(E**x - sum(coeffs[k] * x**k
-                                      for k in range(n + 1))))
+        err = max(err, abs(math.exp(x) - sum(coeffs[k] * x**k
+                                             for k in range(n + 1))))
     return err
 
 for n in [1, 2, 3]:
@@ -662,7 +680,45 @@ $$
 g(x) = \mathrm{ReLU}(x) - \mathrm{ReLU}(-x) = x \quad \textrm{for all } x,
 $$
 
-whose only correct slope at $0$ is $1$. The chain rule gives $g'(x) = \mathrm{ReLU}'(x) + \mathrm{ReLU}'(-x)$, which is indeed $1$ everywhere *except* at the kink, where the fixed convention makes it $0 + 0 = 0$ --- run it, and all four frameworks report slope $0$ for this $g$ at $x = 0$. What automatic differentiation computes at nonsmooth points is, in general, not a subgradient but an element of a *conservative field* :cite:`Bolte.Pauwels.2021` --- a relaxed gradient notion that agrees with the true derivative everywhere outside a measure-zero set, and for which convergence guarantees for SGD can still be proved.
+whose only correct slope at $0$ is $1$. The chain rule gives $g'(x) = \mathrm{ReLU}'(x) + \mathrm{ReLU}'(-x)$, which is indeed $1$ everywhere *except* at the kink, where the fixed convention makes it $0 + 0 = 0$. The next cell runs exactly this computation.
+
+```{.python .input #mdl-single-variable-calculus-why-sgd-shrugs}
+#@tab mxnet
+# g(x) = relu(x) - relu(-x) is the identity, so the true slope at 0 is 1
+x = np.array(0.0)
+x.attach_grad()
+with autograd.record():
+    g = npx.relu(x) - npx.relu(-x)
+g.backward()
+print(f"autograd: g'(0) = {float(x.grad):.1f}  (true slope: 1.0)")
+```
+
+```{.python .input #mdl-single-variable-calculus-why-sgd-shrugs}
+#@tab pytorch
+# g(x) = relu(x) - relu(-x) is the identity, so the true slope at 0 is 1
+x = torch.tensor(0.0, requires_grad=True)
+g = torch.relu(x) - torch.relu(-x)
+g.backward()
+print(f"autograd: g'(0) = {x.grad.item():.1f}  (true slope: 1.0)")
+```
+
+```{.python .input #mdl-single-variable-calculus-why-sgd-shrugs}
+#@tab tensorflow
+# g(x) = relu(x) - relu(-x) is the identity, so the true slope at 0 is 1
+x = tf.Variable(0.0)
+with tf.GradientTape() as t:
+    g = tf.nn.relu(x) - tf.nn.relu(-x)
+print(f"autograd: g'(0) = {t.gradient(g, x).numpy():.1f}  (true slope: 1.0)")
+```
+
+```{.python .input #mdl-single-variable-calculus-why-sgd-shrugs}
+#@tab jax
+# g(x) = relu(x) - relu(-x) is the identity, so the true slope at 0 is 1
+g = lambda x: jax.nn.relu(x) - jax.nn.relu(-x)
+print(f"autograd: g'(0) = {jax.grad(g)(0.0):.1f}  (true slope: 1.0)")
+```
+
+Every framework dutifully reports slope $0$ for a function that *is* the identity: the per-kink convention $\mathrm{ReLU}'(0) = 0$, chained, produces a number that is not a subgradient of $g$ at $0$ at all. What automatic differentiation computes at nonsmooth points is, in general, not a subgradient but an element of a *conservative field* :cite:`Bolte.Pauwels.2021` --- a relaxed gradient notion that agrees with the true derivative everywhere outside a measure-zero set (that a Lipschitz function even *has* a true derivative outside a measure-zero set is Rademacher's theorem), and for which convergence guarantees for SGD can still be proved.
 
 That measure-zero set is the entire reason SGD shrugs: a randomly drawn point lands in it with probability zero. Between random initialization, minibatch noise, and floating-point jitter, stochastic training essentially never evaluates a derivative exactly at a corner, so at every step it actually takes, the framework's answer is the honest derivative of a locally smooth function. The convex-analysis machinery is developed further in :numref:`sec_gd`; the lesson here is that the local-linear program survives at corners not because the fixed per-kink choice is always meaningful, but because training never asks the question exactly at the kink.
 
@@ -940,9 +996,21 @@ This is gradient descent with $\eta$ replaced by the curvature-adapted $1/f''(x_
 :::
 
 ::: {.col .fig}
-![The best quadratic at the base point.](../img/mdl-cal-taylor-quadratic.svg){width=74%}
+![The tangent matches value and slope; the best parabola also matches curvature, hugging the curve over a visibly wider window.](../img/mdl-cal-best-parabola.svg){width=98%}
 :::
 :::
+:::
+
+::: {.slide title="Watch the digits double"}
+[Curvature]{.kicker}
+
+On $f(x) = \tfrac14 x^4 - x$, Newton's method solves $f'(x) = x^3 - 1 = 0$ from $x_0 = 2$. Read the error column's exponents: $10^{-2} \to 10^{-4} \to 10^{-8}$.
+
+@mdl-single-variable-calculus-newton-s-method
+
+. . .
+
+Each step roughly **squares** the previous error. Gradient descent shrinks the error by the same fixed factor every step, gaining a fixed number of digits; Newton *doubles* them.
 :::
 
 ::: {.slide title="Taylor series: the best degree-$n$ polynomial"}
@@ -1027,13 +1095,25 @@ The one-sided quotients of $|x|$ at $0$ never agree: slope $+1$ from the right, 
 That gap *is* the corner: the two-sided derivative exists only when the one-sided slopes coincide.
 :::
 
+::: {.slide title="The chain rule, caught red-handed"}
+[Nonsmooth]{.kicker}
+
+At each kink, autograd returns *one fixed element* of the subdifferential ($\mathrm{ReLU}'(0) = 0$) and chains it through. But $g(x) = \mathrm{ReLU}(x) - \mathrm{ReLU}(-x)$ **is** the identity, whose only correct slope at $0$ is $1$. Run it:
+
+@mdl-single-variable-calculus-why-sgd-shrugs
+
+. . .
+
+Every framework dutifully reports slope $0$ for the identity function: the chained convention $0 + 0$ is not a subgradient of $g$ at $0$ at all, only an element of a *conservative field*.
+:::
+
 ::: {.slide title="Why SGD shrugs"}
 [Nonsmooth]{.kicker}
 
-At each kink, autograd just returns *one fixed element* of the subdifferential (all four frameworks report $\mathrm{ReLU}'(0) = 0$) and lets the chain rule carry it through.
+The failure we just watched lives only **at** the kink, and the kinks form a **measure-zero set**.
 
 ::: {.d2l-note}
-Chained through a composition, that choice can fail to be a subgradient *at the kink*. But the kinks form a **measure-zero set**, and between random init, minibatch noise, and float jitter, training essentially never lands exactly on one, so every step it actually takes is the honest derivative of a locally smooth function.
+Between random initialization, minibatch noise, and float jitter, stochastic training essentially never evaluates a derivative exactly at a corner. Every step it actually takes uses the honest derivative of a locally smooth function, which is why the per-kink convention never hurts in practice.
 :::
 :::
 

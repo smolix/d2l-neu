@@ -270,8 +270,9 @@ the honest theorem about training neural networks: gradient descent reliably
 finds points where the gradient is *small*. What it does not promise is that
 such a point is a *minimum*, let alone a global one --- it could be a saddle or
 a flat shelf. Upgrading "stationary" to "globally optimal" is precisely what
-convexity buys, and the two theorems that do so are stated at the end of the
-next section and proved in :numref:`sec_mdl-convexity`.
+convexity buys, and the two theorems that do so are stated at the end of
+:numref:`subsec_mdl-quadratic-model` and proved in
+:numref:`sec_mdl-convexity`.
 
 ### Backtracking Line Search
 
@@ -433,6 +434,61 @@ $2/L$ ceiling is real, but on deep networks it behaves less like a fence you
 must stay behind and more like an attractor the optimization equilibrates
 onto: you pick $\eta$, and the network adapts its curvature to your choice.
 
+That claim is checkable in a few dozen lines, and it is worth checking,
+because it sounds implausible. The cell trains a tiny two-layer $\tanh$
+network ($25$ parameters, hand-written backprop) on a small regression task
+by full-batch gradient descent --- twice, from the *same* initialization,
+with two different step sizes --- and tracks the sharpness
+$\lambda_{\max}(\nabla^2 f)$, computed exactly by differencing the gradient,
+against each run's ceiling $2/\eta$:
+
+```{.python .input #gradient-based-optimization-edge-of-stability}
+Xr = np.linspace(-2.0, 2.0, 16)
+Yr = np.sin(3 * Xr)                            # tiny regression task
+m = 8                                          # 2-layer tanh net, 25 parameters
+p0 = 0.5 * np.random.default_rng(0).standard_normal(3 * m + 1)
+
+def loss_grad(p):                              # loss and hand-written backprop
+    W1, b1, W2, b2 = p[:m], p[m:2*m], p[2*m:3*m], p[3*m]
+    H = np.tanh(np.outer(Xr, W1) + b1)
+    r = H @ W2 + b2 - Yr
+    dout = r / len(Xr)
+    dH = np.outer(dout, W2) * (1 - H**2)
+    return 0.5 * (r**2).mean(), np.concatenate(
+        [Xr @ dH, dH.sum(0), H.T @ dout, [dout.sum()]])
+
+def sharpness(p, eps=1e-4):                    # lambda_max of the Hessian,
+    Hm = np.array([(loss_grad(p + eps * e)[1] - loss_grad(p - eps * e)[1])
+                   / (2 * eps) for e in np.eye(len(p))])
+    return np.linalg.eigvalsh(0.5 * (Hm + Hm.T)).max()
+
+runs = []
+for eta in (0.40, 0.25):
+    p, rows = p0.copy(), []
+    for k in range(20001):
+        L, g = loss_grad(p)
+        if k % 4000 == 0:
+            rows.append((L, sharpness(p)))
+        p = p - eta * g
+    runs.append(rows)
+print('        eta = 0.40 (2/eta = 5.0)   eta = 0.25 (2/eta = 8.0)')
+print('    k      loss    sharpness         loss    sharpness')
+for i, ((L1, s1), (L2, s2)) in enumerate(zip(*runs)):
+    print(f'{4000 * i:6d}   {L1:7.4f}   {s1:7.2f}        {L2:7.4f}   {s2:7.2f}')
+```
+
+Both runs start at sharpness $3.32$, comfortably inside both ceilings ---
+and neither stays there. Training *raises* the sharpness until it reaches
+the ceiling of whichever step size was chosen --- $5.00$ for $\eta = 0.4$,
+$8.03$ for $\eta = 0.25$ --- and then it hovers, pinned, for the remaining
+fifteen thousand steps while the loss falls by two orders of magnitude.
+(Falls non-monotonically: in the hovering regime nearly half of all steps
+momentarily *increase* the loss, exactly the behavior the quadratic model
+brands divergent.) Same initialization, same data, same architecture; the
+only thing that changed between the columns is $\eta$ --- and the curvature
+followed it. On this toy, "measure $L$, then pick $\eta < 2/L$" has the
+story backwards.
+
 ### The Optimal Step and the $(\kappa-1)/(\kappa+1)$ Law
 
 Within the stable range, which fixed $\eta$ is fastest? The sweep already
@@ -461,6 +517,14 @@ $1 - \eta\lambda_{\min} = \eta\lambda_{\max} - 1$, giving
 $\eta^\star = 2/(\lambda_{\min} + \lambda_{\max})$ and
 $\rho(\eta^\star) = (\lambda_{\max} - \lambda_{\min})/(\lambda_{\max} + \lambda_{\min}) = (\kappa-1)/(\kappa+1)$.
 $\blacksquare$
+
+:numref:`fig_mdl-opt-eta-tent` is this proof drawn on the running example:
+each step size is a "tent" $|1 - \eta\lambda|$ with vertex at $\lambda = 1/\eta$,
+the rate is the taller of the tent's two values over the extreme eigenvalues,
+and the best tent is the one whose endpoints are level.
+
+![The optimal-step proof in one picture: the per-mode contraction factors $|1-\eta\lambda|$ form a tent with vertex at $\lambda = 1/\eta$, and the convergence factor $\rho(\eta)$ is the larger of its values at the extreme eigenvalues $\lambda_{\min} = 1$, $\lambda_{\max} = 10$. The greedy $\eta = 0.1$ annihilates the stiff mode but leaves the slow mode contracting at only $0.9$; the optimal $\eta^\star = 2/(\lambda_{\min} + \lambda_{\max})$ equalizes the two endpoint factors at $(\kappa-1)/(\kappa+1) = 9/11$ --- lowering either endpoint would raise the other.](../img/mdl-opt-eta-tent.svg)
+:label:`fig_mdl-opt-eta-tent`
 
 When $\kappa = 1$ (a perfectly round bowl) the rate is $0$: one step solves
 the problem. As $\kappa$ grows, $(\kappa-1)/(\kappa+1) \approx 1 - 2/\kappa$,
@@ -531,9 +595,16 @@ in addition $f$ is $\mu$-strongly convex, then with $\eta = 1/L$ and
 $\kappa = L/\mu$,*
 
 $$
-\|\mathbf{x}_k - \mathbf{x}^\star\|^2 \;\le\; \left(1 - \tfrac{1}{\kappa}\right)^k \|\mathbf{x}_0 - \mathbf{x}^\star\|^2.
+f(\mathbf{x}_k) - f(\mathbf{x}^\star) \;\le\; \left(1 - \tfrac{1}{\kappa}\right)^k \big(f(\mathbf{x}_0) - f(\mathbf{x}^\star)\big).
 $$
 :eqlabel:`eq_mdl-opt-gd-rate-strongly-convex`
+
+(An iterate-distance version follows at the cost of one factor of $\kappa$:
+strong convexity and smoothness wedge $f - f^\star$ between
+$\tfrac{\mu}{2}\|\mathbf{x} - \mathbf{x}^\star\|^2$ and
+$\tfrac{L}{2}\|\mathbf{x} - \mathbf{x}^\star\|^2$, so
+$\|\mathbf{x}_k - \mathbf{x}^\star\|^2 \le \kappa \left(1 - \tfrac1\kappa\right)^k \|\mathbf{x}_0 - \mathbf{x}^\star\|^2$
+--- the same geometric rate, measured on the iterates.)
 
 The hierarchy is worth memorizing. *Smooth only*: gradients vanish at rate
 $O(1/k)$ in squared norm :eqref:`eq_mdl-opt-stationarity-rate` --- stationarity,
@@ -642,8 +713,12 @@ converges linearly with factor $1 - 1/\sqrt{\kappa}$
 **optimal**: Nesterov's lower-bound construction shows *no* method that forms
 its iterates from gradients and their linear combinations can beat
 $O(1/k^2)$, or beat $\sqrt{\kappa}$ dependence, on the worst case over this
-problem class :cite:`Nesterov.2018`. Acceleration is not a trick; it is the
-speed limit of first-order optimization. The cell races all three methods to a
+problem class :cite:`Nesterov.2018`. (One piece of fine print: the worst-case
+function is built in a dimension that grows with the horizon, $n \gtrsim 2k$,
+so the bound governs the first $\sim n/2$ iterations; run long enough in a
+*fixed* dimension and methods can beat it asymptotically. At deep learning's
+parameter counts the fine print is vacuous.) Acceleration is not a trick; it
+is the speed limit of first-order optimization. The cell races all three methods to a
 $10^{-6}$ relative error as $\kappa$ grows.
 
 ```{.python .input #gradient-based-optimization-momentum}
@@ -683,7 +758,7 @@ guarantee that extends to every smooth convex function. All three methods cost
 why some form of it is on by default in every deep learning optimizer
 (:numref:`sec_momentum`).
 
-## Stochastic Gradients
+## Stochastic Gradients --- and Why Not Newton
 :label:`subsec_mdl-stochastic-gradients`
 
 ### The Cost of Exactness
@@ -827,7 +902,12 @@ $$
 The schedule $\eta_k \propto 1/k$ satisfies both, and with it strongly convex
 SGD attains $\mathbb{E}[f(\mathbf{w}_k)] - f^\star = O(1/k)$; without strong
 convexity, averaged SGD attains $O(1/\sqrt{k})$
-:cite:`Bottou.2010,Goodfellow.Bengio.Courville.2016`. Compare the
+:cite:`Bottou.2010,Goodfellow.Bengio.Courville.2016`. A classical trap hides
+in the constant: with $\eta_k = c/k$ the $O(1/k)$ guarantee requires $c$
+large enough relative to the curvature, $c > 1/(2\mu)$ --- choose $c$ too
+small and the rate silently degrades to $O(k^{-2\mu c})$, arbitrarily slower
+than advertised, one reason practical schedules decay more gently than $1/k$
+:cite:`Bottou.Curtis.Nocedal.2018`. Compare the
 deterministic linear rate :eqref:`eq_mdl-opt-gd-rate-strongly-convex`: noise does
 not just change constants, it changes the *rate class*, from geometric to
 polynomial. The cell shows both regimes on the logistic toy: fixed steps
@@ -870,7 +950,15 @@ ball, is at $5.7 \times 10^{-4}$ after the same $4000$ steps and still
 descending as a power law --- the straight line on the log-log plot. Modern
 schedules (step decay, cosine, warmup; :numref:`sec_sgd` and
 :numref:`sec_minibatch_sgd`) are engineered refinements of exactly this
-tradeoff, tuned for losses that are neither convex nor stationary.
+tradeoff, tuned for losses that are neither convex nor stationary. **Warmup**
+--- starting $\eta$ small and ramping it up --- reads naturally in this
+section's terms: at initialization the gradient noise is at its largest and,
+per the edge-of-stability picture of :numref:`subsec_mdl-quadratic-model`,
+the network has not yet adapted its curvature to the target step size, so
+ramping $\eta$ gives the sharpness time to equilibrate instead of tripping
+the stability ceiling in the first hundred steps. Schedules and warmup get
+their full mathematical treatment in
+:numref:`sec_mdl-adaptive-stochastic-methods`.
 
 ### Coda: Why Not Newton?
 :label:`subsec_mdl-why-not-newton`
@@ -938,10 +1026,23 @@ unless safeguarded. What survives at scale is Newton's idea on a budget:
 differences with $O(d)$ memory :cite:`Liu.Nocedal.1989`, and the adaptive
 family --- AdaGrad, RMSProp, Adam :cite:`Kingma.Ba.2014` --- maintains a
 *diagonal* preconditioner, a per-coordinate learning rate that is the cheapest
-possible shadow of $(\nabla^2 f)^{-1}$ (:numref:`sec_adam`). First-order
-methods with curvature surrogates, fed by minibatch gradients: that is the
-compromise this section has been deriving, and it is what every framework
-ships.
+possible shadow of $(\nabla^2 f)^{-1}$ (:numref:`sec_adam`). Between the
+diagonal and the full matrix sits a middle ground that 2020s practice has
+made mainstream: **K-FAC** approximates the curvature (through the Fisher
+information) by a Kronecker product of small per-layer factors
+:cite:`Martens.Grosse.2015`, **Shampoo** preconditions each weight matrix on
+both sides by root-inverse factor matrices :cite:`Gupta.Koren.Singer.2018`,
+and **Muon** orthogonalizes each layer's update through the polar factor of
+its momentum matrix --- the SVD-flavored step analyzed in
+:numref:`sec_mdl-svd-low-rank` :cite:`Jordan.Jin.Boza.ea.2024` --- all of
+them exploiting the fact that a network's parameters come in *matrices*, not
+one long vector. First-order methods with curvature surrogates, fed by
+minibatch gradients: that is the compromise this section has been deriving,
+and it is what every framework ships. The mathematics of this whole family
+--- AdaGrad's diagonal metric, Adam's bias correction and its convex
+counterexample, decoupled weight decay, and the preconditioning ladder up
+through K-FAC, Shampoo, and Muon --- is the subject of
+:numref:`sec_mdl-adaptive-stochastic-methods`.
 
 ## Summary
 
@@ -1045,7 +1146,10 @@ ships.
    the minimum-norm interpolator $\mathbf{w}^\dagger = X^\top (X X^\top)^{-1} \mathbf{y}$;
    and conclude that gradient descent converges to it. Moral: when minimizers
    are plentiful, the *optimizer* --- not the loss --- chooses among them, a
-   theme that returns for deep networks in :numref:`sec_mdl-convexity`.
+   theme that returns for deep networks in :numref:`sec_mdl-convexity`. (This
+   exercise is deliberately pencil-and-paper; its numerical companion ---
+   watching the iterates land on $\mathbf{w}^\dagger$ --- is Exercise 8 of
+   :numref:`sec_mdl-convexity`.)
 
 ## Discussions
 
@@ -1231,6 +1335,45 @@ and wins ($\rho=0.818$); at $\eta=0.2$ the stiff mode bounces forever;
 one tick past, it explodes.
 :::
 
+::: {.slide title="Real networks train at the ceiling"}
+[Quadratics]{.kicker}
+
+The classical advice: measure $L$, pick $\eta < 2/L$. Measured on a real
+(tiny) network, the causality runs *backwards* --- same init, two step
+sizes, sharpness $\lambda_{\max}(\nabla^2 f)$ tracked exactly:
+
+@!gradient-based-optimization-edge-of-stability
+
+Training *raises* the sharpness until it reaches $2/\eta$ --- $5.00$ for
+$\eta=0.4$, $8.03$ for $\eta=0.25$ --- then hovers there while the loss
+keeps falling, non-monotonically. The **edge of stability**: you pick
+$\eta$, the curvature adapts to your choice.
+:::
+
+::: {.slide title="The best step levels the tent"}
+[Quadratics]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Each step size draws a tent $|1-\eta\lambda|$ with vertex at
+$\lambda = 1/\eta$; the rate is the taller endpoint over
+$[\lambda_{\min}, \lambda_{\max}]$. The best tent levels its endpoints:
+
+$$\eta^\star = \frac{2}{\lambda_{\min}+\lambda_{\max}},
+\qquad \rho(\eta^\star) = \frac{\kappa-1}{\kappa+1}.$$
+
+Lowering either endpoint would raise the other.
+:::
+
+::: {.col .fig .big}
+@fig:mdl-opt-eta-tent
+:::
+:::
+
+Run it and the tuned iteration contracts by $0.818182$ --- to six digits,
+at *every* step. The law is an identity, not an estimate.
+:::
+
 ::: {.slide title="The valley picture"}
 [Quadratics]{.kicker}
 
@@ -1269,7 +1412,7 @@ $\;f-f^\star = O(1/k)$ (global values)
 ::: {.col}
 ::: {.d2l-note .rule}
 **+ $\mu$-strongly convex**
-$\;\|\mathbf{x}_k-\mathbf{x}^\star\|^2 \le (1-\tfrac{1}{\kappa})^k$
+$\;f(\mathbf{x}_k)-f^\star \le (1-\tfrac{1}{\kappa})^k\,(f(\mathbf{x}_0)-f^\star)$
 
 linear, $O(\kappa\log\tfrac1\varepsilon)$ steps
 :::
@@ -1307,7 +1450,7 @@ returns fastest.
 :::
 :::
 
-::: {.slide title="Inertia buys the $\sqrt{\kappa}$ law"}
+::: {.slide title="Inertia turns $\kappa$ into $\sqrt\kappa$"}
 [Acceleration]{.kicker}
 
 Tuned heavy ball contracts every mode at
@@ -1315,7 +1458,7 @@ $(\sqrt{\kappa}-1)/(\sqrt{\kappa}+1)$; Nesterov's look-ahead makes
 $\sqrt{\kappa}$ a theorem beyond quadratics, and these rates are
 *optimal* for first-order methods. Race all three to $10^{-6}$:
 
-@gradient-based-optimization-momentum
+@!gradient-based-optimization-momentum
 
 GD's count is linear in $\kappa$ ($6{,}908$ at $\kappa=1000$); heavy ball
 grows like $\sqrt{\kappa}$ ($315$, a $22\times$ speedup). At one gradient

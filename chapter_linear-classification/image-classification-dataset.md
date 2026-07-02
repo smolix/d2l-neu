@@ -8,7 +8,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 
 
-One widely used benchmark for image classification is [MNIST](https://en.wikipedia.org/wiki/MNIST_database) :cite:`LeCun.Bottou.Bengio.ea.1998`, a dataset of 70,000 handwritten-digit images ($28 \times 28$ pixels, 10 classes). MNIST shaped a generation of machine learning research, but today even simple linear models exceed 95% accuracy, so differences between strong and weak models are hard to see. To compare models meaningfully we need a dataset where a linear baseline is clearly outpaced by a richer one.
+One widely used benchmark for image classification is [MNIST](https://en.wikipedia.org/wiki/MNIST_database) :cite:`LeCun.Bottou.Bengio.ea.1998`, a dataset of 70,000 handwritten-digit images ($28 \times 28$ pixels, 10 classes). MNIST shaped a generation of machine learning research, but today even simple models exceed 95% accuracy (and a linear classifier already tops 90%), so differences between strong and weak models are hard to see. To compare models meaningfully we need a dataset where a linear baseline is clearly outpaced by a richer one.
 
 We therefore use **Fashion-MNIST** :cite:`Xiao.Rasul.Vollgraf.2017`, a drop-in replacement released in 2017. It has exactly the same structure (60,000 training and 10,000 test images of $28 \times 28$ grayscale pixels, in 10 classes) but the classes are clothing categories (t-shirt, trouser, pullover, and so on) that are harder to tell apart, which makes accuracy differences between models clearly visible. For large-scale experiments the standard benchmark is ImageNet :cite:`Deng.Dong.Socher.ea.2009` (1.2 million images, 1000 classes), but it is too large to keep our examples interactive; Fashion-MNIST teaches the same lessons at a fraction of the compute cost.
 
@@ -122,9 +122,7 @@ data = FashionMNIST(resize=(32, 32))
 len(data.train[0]), len(data.val[0])
 ```
 
-We instantiated the dataset with `resize=(32, 32)`, so each image is delivered as a single-channel tensor of spatial size $32 \times 32$. There is one subtlety worth pinning down now: where the channel axis lives. PyTorch and MXNet use the *channel-first* convention $c \times h \times w$ ($c$ color channels, then height and width); TensorFlow and JAX use *channel-last* $h \times w \times c$. The `get_dataloader` method below produces the right layout for each framework, so the rest of this chapter never has to think about it; we confirm the per-image shape once the loader is in place, below.
-
-A single grayscale image, so $c = 1$. Most modern photographs have $c = 3$ channels (red, green, blue); hyperspectral sensors such as HyMap record over 100.
+We instantiated the dataset with `resize=(32, 32)`, so each image is delivered as a single-channel tensor of spatial size $32 \times 32$. There is one subtlety worth pinning down now: where the channel axis lives. PyTorch and MXNet use the *channel-first* convention $c \times h \times w$ ($c$ color channels, then height and width); TensorFlow and JAX use *channel-last* $h \times w \times c$. The `get_dataloader` method below produces the right layout for each framework, so the rest of this chapter never has to think about it; we confirm the per-image shape once the loader is in place, below. Here $c = 1$ since the images are grayscale; most photographs have $c = 3$ channels (red, green, blue), and hyperspectral sensors such as HyMap record over 100.
 
 
 
@@ -215,14 +213,14 @@ X, y = next(iter(data.train_dataloader()))
 X[0].shape  # channel-last: (height, width, channels)
 ```
 
-To see how this works, let's load a minibatch of images by invoking the `train_dataloader` method. It contains 64 images.
+Here is the same batch again, now at batch granularity: the first axis is the batch dimension (64 images per step by default), followed by the per-image shape we just confirmed, and the labels arrive as a matching vector of 64 integers.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-2}
 X, y = next(iter(data.train_dataloader()))
 print(X.shape, X.dtype, y.shape, y.dtype)
 ```
 
-Let us time one full pass through the training set. The exact number (a few seconds on a CPU-only machine for PyTorch, under a second once the TF/JAX pipeline is compiled) matters less than the comparison: a single forward and backward pass over a minibatch typically takes 10 to 100 times longer than the corresponding I/O, so the loader is not the bottleneck. If loading *were* slower than training, you would overlap I/O with compute via prefetching (`prefetch_factor` in PyTorch, `.prefetch()` in `tf.data`) or raise `num_workers`.
+Let us time one full pass through the training set. The exact number (a few seconds on a CPU-only machine for PyTorch, under a second once the TF/JAX pipeline is compiled) matters less than the comparison: for the convolutional networks of the coming chapters, a single forward and backward pass over a minibatch typically takes 10 to 100 times longer than the corresponding I/O, so the loader is not the bottleneck. (For the tiny linear models of *this* chapter the gap is much smaller; try the first exercise below.) If loading *were* slower than training, you would overlap I/O with compute via prefetching (`prefetch_factor` in PyTorch, `.prefetch()` in `tf.data`) or raise `num_workers`.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-3}
 tic = time.time()
@@ -337,14 +335,17 @@ The Image Classification Dataset<br>**Fashion-MNIST**, the workhorse we will cla
 :::
 :::
 
-::: {.slide title="Why a new benchmark?"}
+::: {.slide title="MNIST is solved; Fashion-MNIST is not"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **MNIST** (handwritten digits) is solved: a *linear* model already tops 95%, so models are hard to tell apart.
-- We want data where a weak model is **clearly outpaced** by a richer one.
-- **Fashion-MNIST**: a drop-in replacement with the same shape and API but harder clothing classes ($28\times28$ grayscale, 10 classes, 60 k / 10 k).
+- On **MNIST**, even simple models exceed 95% and a *linear* one tops 90%: models are hard to tell apart.
+- **Fashion-MNIST**: a drop-in replacement, same shape and API, but harder clothing classes ($28\times28$ grayscale, 10 classes, 60 k / 10 k).
+
+::: {.d2l-note}
+Here a linear model caps out near **82%** (§4.4) --- headroom the deeper models of later chapters will spend.
+:::
 :::
 
 ::: {.col .fig .big}
@@ -441,7 +442,8 @@ Pull one batch and read its shapes off directly:
 @image-classification-dataset-reading-a-minibatch-2
 
 ::: {.d2l-note}
-64 images, one grayscale channel, $32\times32$ pixels, plus 64 integer labels. A full pass over the training set is I/O-cheap (a second or two), so loading is **not** the training bottleneck.
+64 images, one grayscale channel, $32\times32$ pixels, plus 64 integer
+labels arriving as a matching vector.
 :::
 :::
 
@@ -453,7 +455,38 @@ Pull one batch and read its shapes off directly:
 @-image-classification-dataset-reading-a-minibatch-2
 
 ::: {.d2l-note}
-`(64, 1, 32, 32) float32` images and `(64,) int32` labels: 64 channel-first images plus their labels. A full pass over the training set is I/O-cheap, so loading is **not** the training bottleneck.
+`(64, 1, 32, 32) float32` images and `(64,) int32` labels: 64 channel-first
+images plus a matching vector of integer labels.
+:::
+:::
+
+::: {.slide title="Loading is not the bottleneck — measure it" except="mxnet"}
+[Minibatches · timing]{.kicker}
+
+Time one full pass over all 60,000 training images:
+
+@image-classification-dataset-reading-a-minibatch-3
+
+::: {.d2l-note .rule}
+Seconds, not minutes. For the ConvNets of later chapters, one forward +
+backward pass costs **10--100×** the corresponding I/O, so a well-built
+loader keeps data off the critical path. If it ever *were* the bottleneck:
+prefetch and raise `num_workers`.
+:::
+:::
+
+::: {.slide title="Loading is not the bottleneck — measure it" only="mxnet"}
+[Minibatches · timing]{.kicker}
+
+Time one full pass over all 60,000 training images:
+
+@-image-classification-dataset-reading-a-minibatch-3
+
+::: {.d2l-note .rule}
+About **4.4 seconds** on a CPU --- seconds, not minutes. For the ConvNets of
+later chapters, one forward + backward pass costs **10--100×** the
+corresponding I/O, so a well-built loader keeps data off the critical path.
+If it ever *were* the bottleneck: prefetch and raise `num_workers`.
 :::
 :::
 
@@ -486,7 +519,8 @@ A `visualize` method tiles one validation batch, each image captioned with its c
 
 ::: {.col}
 - **Channel axis** differs: PyTorch/MXNet $c\times h\times w$, TensorFlow/JAX $h\times w\times c$ (the loader hides it).
-- Always **look at your data**; loading stays off the training critical path.
+- Always **look at your data**; a full loading pass costs seconds, so I/O stays off the training critical path.
+- Next: a linear classifier on this data --- and its **~82% ceiling** (§4.4).
 :::
 :::
 :::

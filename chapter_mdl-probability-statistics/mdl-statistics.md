@@ -86,9 +86,9 @@ $$
 P\bigl(|\hat\theta_n-\theta|>\varepsilon\bigr)\to 0 \quad\textrm{for every } \varepsilon>0 .
 $$
 
-Consistency is the formal content of the slogan "more data gets us arbitrarily close to the truth." Its prototype is the *law of large numbers* (LLN), which says exactly this for the sample mean: as $n\to\infty$ the average $\bar x$ converges in probability to the population mean. A clean sufficient condition for consistency in general is that *both* the bias and the variance tend to zero, since then the whole sampling distribution collapses onto $\theta$; we will see this happen explicitly for the sample mean below. (The two limits are independent: an estimator can be asymptotically unbiased yet inconsistent if its variance does not vanish, and vice versa.)
+Consistency is the formal content of the slogan "more data gets us arbitrarily close to the truth." Its prototype is the *law of large numbers* (LLN), which says exactly this for the sample mean: as $n\to\infty$ the average $\bar x$ converges in probability to the population mean. We have also already proved a headline instance: :numref:`sec_mdl-maximum_likelihood` established consistency for the maximum-likelihood estimator under its regularity hypotheses. A clean sufficient condition for consistency in general is that *both* the bias and the variance tend to zero, since then the whole sampling distribution collapses onto $\theta$; we will see this happen explicitly for the sample mean below. (The two limits are independent: an estimator can be asymptotically unbiased yet inconsistent if its variance does not vanish, and vice versa.)
 
-Finally, among *unbiased* estimators we prefer the one that fluctuates least, and we call it *efficient*: efficiency ranks unbiased estimators by their variance, the smaller the better. There is a hard floor here---the Cramér--Rao bound puts a lower limit on the variance of any unbiased estimator---and an estimator that attains it is as good as unbiased estimation can be. We will not need the bound itself, only the idea it formalizes: once unbiasedness is secured, the remaining game is to minimize variance, which is exactly the second half of the decomposition we turn to next.
+Finally, among *unbiased* estimators we prefer the one that fluctuates least, and we call it *efficient*: efficiency ranks unbiased estimators by their variance, the smaller the better. There is a hard floor here, and we have met it too: the Cramér--Rao bound of :numref:`sec_mdl-maximum_likelihood` caps the variance of any unbiased estimator at $1/(n\,I(\theta))$, the inverse Fisher information, and the coin-flip simulation there watched the maximum-likelihood estimator land right on that floor. An estimator attaining the bound is as good as unbiased estimation can be---the precise sense in which the MLE is asymptotically efficient. What this section takes from the bound is the game it formalizes: once unbiasedness is secured, the remaining contest is variance, which is exactly the second half of the decomposition we turn to next.
 
 ## The Bias-Variance Decomposition
 
@@ -129,13 +129,13 @@ $$
 
 What remains is $\operatorname{Var}(\hat\theta_n)+\operatorname{Bias}(\hat\theta_n)^2$. $\blacksquare$
 
-The vanishing cross term is the whole story: because the deviation from the center has mean zero, the systematic part and the fluctuating part of the error never interfere, and the squared error splits cleanly into the two pieces of :numref:`fig_mdl-sampling-distribution`. One immediate payoff is the consistency criterion promised above: if both $\operatorname{Bias}(\hat\theta_n)\to0$ and $\operatorname{Var}(\hat\theta_n)\to0$, then :eqref:`eq_mdl-bias-variance` forces $\operatorname{MSE}(\hat\theta_n)\to0$, which implies $\hat\theta_n\xrightarrow{P}\theta$: applying Markov's inequality :eqref:`eq_mdl-markov` from :numref:`sec_mdl-random_variables` to the nonnegative random variable $(\hat\theta_n-\theta)^2$ gives $P(|\hat\theta_n-\theta|>\varepsilon) \le \operatorname{MSE}(\hat\theta_n)/\varepsilon^2 \to 0$. (Chebyshev's inequality is the same bound centered at the mean; since $\hat\theta_n$ may be biased, we aim it at $\theta$ directly. The bound is also quantitative---the miss probability decays at least as fast as the MSE---and sharper, exponentially decaying rates come from concentration inequalities when the data are bounded or sub-Gaussian.)
+The vanishing cross term is the whole story: because the deviation from the center has mean zero, the systematic part and the fluctuating part of the error never interfere, and the squared error splits cleanly into the two pieces of :numref:`fig_mdl-sampling-distribution`. One immediate payoff is the consistency criterion promised above: if both $\operatorname{Bias}(\hat\theta_n)\to0$ and $\operatorname{Var}(\hat\theta_n)\to0$, then :eqref:`eq_mdl-bias-variance` forces $\operatorname{MSE}(\hat\theta_n)\to0$, which implies $\hat\theta_n\xrightarrow{P}\theta$: applying Markov's inequality :eqref:`eq_mdl-markov` from :numref:`sec_mdl-random_variables` to the nonnegative random variable $(\hat\theta_n-\theta)^2$ gives $P(|\hat\theta_n-\theta|>\varepsilon) \le \operatorname{MSE}(\hat\theta_n)/\varepsilon^2 \to 0$. (Chebyshev's inequality is the same bound centered at the mean; since $\hat\theta_n$ may be biased, we aim it at $\theta$ directly. The bound is also quantitative---the miss probability decays at least as fast as the MSE---and sharper, exponentially decaying rates come from the concentration inequalities of :numref:`sec_mdl-concentration-generalization` when the data are bounded or sub-Gaussian.)
 
 ### The Trade-off and Generalization
 
 Identity :eqref:`eq_mdl-bias-variance` is more than bookkeeping; it explains the central tension of model fitting. Read $\hat\theta_n$ as a *fitted model* and $\theta$ as the function we wish it had learned. A model too simple to capture the signal---a straight line for a curved relationship---has large bias: it misses systematically no matter how much data we feed it. A model too flexible chases the noise in the particular training set, so it has large variance: a fresh dataset would fit it to a wildly different shape. These are the familiar failures of *underfitting* (high bias) and *overfitting* (high variance) from :numref:`sec_generalization_basics`.
 
-As we dial up model complexity, the squared bias falls while the variance rises, and their sum traces a U with a minimum at the sweet spot, shown in :numref:`fig_mdl-bias-variance-u-curve`. For prediction the accounting acquires one more term: the expected test error is $\operatorname{Bias}^2 + \operatorname{Var} + \sigma^2$, where $\sigma^2$ is the *irreducible noise* in the labels that no model, however good, can remove. Since that floor is a constant, it shifts the U upward without moving its sweet spot, and the decomposition and the generalization U-curve are essentially the same picture. This also explains *why regularization helps*: techniques like weight decay deliberately add a little bias in exchange for a large reduction in variance, sliding leftward on the curve to a lower total error. One caveat is in order for deep learning: heavily overparameterized models need not obey the textbook U---past the point where a model can interpolate its training data, test error often *descends again* as capacity grows, the *double descent* phenomenon :cite:`Belkin.Hsu.Ma.ea.2019`---which is why :numref:`sec_generalization_basics` cautions that larger architectures with more parameters can generalize *better*. The decomposition itself remains exactly true; what breaks down is the intuition that variance must keep rising with parameter count.
+As we dial up model complexity, the squared bias falls while the variance rises, and their sum traces a U with a minimum at the sweet spot, shown in :numref:`fig_mdl-bias-variance-u-curve`. For prediction the accounting acquires one more term: the expected test error is $\operatorname{Bias}^2 + \operatorname{Var} + \sigma^2$, where $\sigma^2$ is the *irreducible noise* in the labels that no model, however good, can remove. Since that floor is a constant, it shifts the U upward without moving its sweet spot, and the decomposition and the generalization U-curve are essentially the same picture. This also explains *why regularization helps*: techniques like weight decay deliberately add a little bias in exchange for a large reduction in variance, sliding leftward on the curve to a lower total error. (Heavily overparameterized deep networks can defy this textbook U; the decomposition remains exactly true, and :numref:`sec_mdl-concentration-generalization` tells that story---and reproduces its double-descent curve from scratch.)
 
 ![As model complexity grows, squared bias falls and variance rises; their sum, the MSE (test error), is a U-curve with a minimum at the sweet spot.](../img/mdl-prob-bias-variance-u-curve.svg)
 :label:`fig_mdl-bias-variance-u-curve`
@@ -257,7 +257,7 @@ $$
 s_0^2 = \frac1n\sum_{i=1}^n (x_i-\bar x)^2 .
 $$
 
-This is *biased*: it systematically underestimates $\sigma^2$, because the deviations are measured from $\bar x$---the point that *minimizes* the sum of squared deviations for this particular sample---rather than from the unknown true mean $\mu$. The fix is to divide by $n-1$ instead of $n$, and the factor is exactly what unbiasedness requires.
+This is *biased*: it systematically underestimates $\sigma^2$, because the deviations are measured from $\bar x$---the point that *minimizes* the sum of squared deviations for this particular sample---rather than from the unknown true mean $\mu$. The $n$-divided estimator is no straw man, either: $s_0^2$ *is* the maximum-likelihood estimator of a Gaussian's variance, so the bias computed here is precisely the finite-sample bias of the MLE that :numref:`sec_mdl-maximum_likelihood` promised when it called maximum likelihood only *asymptotically* unbiased. The fix is to divide by $n-1$ instead of $n$, and the factor is exactly what unbiasedness requires.
 
 **Proposition (unbiased sample variance).** *For i.i.d. samples with variance $\sigma^2$,*
 
@@ -359,7 +359,14 @@ $$
 
 is the probability the test *detects* a real effect. A test with $\alpha=0.05$ but power $0.2$ rejects a true null only $5\%$ of the time yet still misses $80\%$ of genuine effects---underpowered, and worthless for confirming improvements. A common target is $1-\beta=0.8$.
 
-Power is what determines how much data we need. The probability of detecting an effect grows with both the *effect size* (how false $H_0$ really is) and the sample size, and for the standard tests the required $n$ scales like $1/(\textrm{effect size})^2$. As an indicative one-sample two-sided $z$-test at $\alpha=0.05$ and power $0.8$: testing $H_0\!:\mu=0$ on unit-variance Gaussian data whose true mean is $1$ (a large effect) needs only about $8$ samples, whereas the same test against a true mean of $0.01$ (a tiny effect) needs on the order of $80{,}000$. This is why marginal benchmark gains demand enormous test sets to confirm. :numref:`fig_mdl-power` traces the whole family of *power curves*: for each effect size $\delta$, the probability of detection climbs from $\alpha$ (a false-positive rate is all a test delivers at $\delta=0$) toward $1$ as $n$ grows, crossing the conventional target $0.8$ at a sample size proportional to $1/\delta^2$.
+Power is what determines how much data we need. The probability of detecting an effect grows with both the *effect size* (how false $H_0$ really is) and the sample size, and for the standard tests the required $n$ scales like $1/(\textrm{effect size})^2$. As an indicative one-sample two-sided $z$-test at $\alpha=0.05$ and power $0.8$: testing $H_0\!:\mu=0$ on unit-variance Gaussian data whose true mean is $1$ (a large effect) needs only about $8$ samples, whereas the same test against a true mean of $0.01$ (a tiny effect) needs on the order of $80{,}000$. The working formula behind both numbers deserves display: to detect a standardized effect of size $\delta$ at level $\alpha$ with power $1-\beta$, the $z$-test needs (up to the negligible far tail)
+
+$$
+n \;=\; \frac{\bigl(z_{1-\alpha/2} + z_{1-\beta}\bigr)^{2}}{\delta^{2}},
+$$
+:eqlabel:`eq_mdl-power-sample-size`
+
+where $z_q$ denotes the standard-normal quantile. At $\alpha=0.05$ and power $0.8$ we have $z_{0.975}\approx1.960$ and $z_{0.8}\approx0.842$, so $n\approx(2.80)^2/\delta^2 = 7.85/\delta^2$: the promised $8$ samples at $\delta=1$, and $78{,}489$ at $\delta=0.01$---the $1/\delta^2$ law with its constant filled in, and the formula behind exercise 6. This is why marginal benchmark gains demand enormous test sets to confirm. :numref:`fig_mdl-power` traces the whole family of *power curves*: for each effect size $\delta$, the probability of detection climbs from $\alpha$ (a false-positive rate is all a test delivers at $\delta=0$) toward $1$ as $n$ grows, crossing the conventional target $0.8$ at a sample size proportional to $1/\delta^2$.
 
 ![Power of the one-sample two-sided $z$-test at $\alpha=0.05$ as a function of the sample size $n$, one curve per effect size $\delta$. Every curve starts near $\alpha$ and climbs toward $1$; the dashed line marks the conventional target $0.8$, reached at a sample size that scales like $1/\delta^2$---about $8$ samples for $\delta=1$ but nearly $80{,}000$ for $\delta=0.01$.](../img/mdl-prob-power.svg)
 :label:`fig_mdl-power`
@@ -411,9 +418,16 @@ for b in range(B):
 p_value = (1 + (onp.abs(gaps) >= abs(observed)).sum()) / (B + 1)  # two-sided
 print(f'observed gap        = {observed:.4f}')
 print(f'permutation p-value = {p_value:.4f}')
+
+d2l.set_figsize()
+d2l.plt.hist(gaps, bins=50, color='#1f77b4', alpha=0.8)
+d2l.plt.axvline(observed, color='#ff7f0e', lw=2)      # the observed gap
+d2l.plt.axvline(-observed, color='#ff7f0e', lw=2, ls='--')
+d2l.plt.xlabel('gap under label shuffling')
+d2l.plt.ylabel('count');
 ```
 
-The observed gap is $0.0073$---model B looks better by about three quarters of an accuracy point---and only about $2\%$ of label shuffles produce a gap that large, so $p \approx 0.02 \le \alpha = 0.05$ and we reject $H_0$: the improvement is unlikely to be a fluke. Note how close the call is, though. A *real* $0.8\%$ improvement, measured over twenty seeds, only just clears the bar---the power discussion above in action; with five seeds (a common budget) the same gap would usually go undetected. The permutation test assumes no Gaussian shape and works for any statistic we care to compute on the two groups; the same resample-and-recompute idea returns in the bootstrap below.
+The observed gap is $0.0073$---model B looks better by about three quarters of an accuracy point---and only about $2\%$ of label shuffles produce a gap that large, so $p \approx 0.02 \le \alpha = 0.05$ and we reject $H_0$: the improvement is unlikely to be a fluke. The histogram is the null distribution we manufactured, and it makes the verdict visual: the shuffled gaps pile up in a bell around zero---no Gaussian assumption put it there; that is the CLT acting on averages of shuffled labels---while the observed gap (solid line) sits far out in the right tail, with only a sliver of the null mass beyond the two lines that the two-sided test counts. Note how close the call is, though. A *real* $0.8\%$ improvement, measured over twenty seeds, only just clears the bar---the power discussion above in action; with five seeds (a common budget) the same gap would usually go undetected. The permutation test assumes no Gaussian shape and works for any statistic we care to compute on the two groups; the same resample-and-recompute idea returns in the bootstrap below. One refinement matters in practice: when the comparison is *paired*---models A and B trained and evaluated on the *same* seeds---the exchangeable objects are not the $40$ pooled numbers but the per-seed *differences*, and the right test permutes by flipping the sign of each difference at random (a paired, or sign-flip, permutation test), which respects the pairing and typically gains power.
 
 ## Confidence Intervals
 
@@ -430,7 +444,10 @@ $$
 
 where $1-\alpha$ is the *confidence level* or *coverage*. We write $C_n \ni \theta$ rather than $\theta \in C_n$ to stress where the randomness lives: $\theta$ is a *fixed* unknown, and it is the *interval* $C_n$ that is random, redrawn with every dataset.
 
-This makes the correct interpretation subtle, and it is worth getting right. A $95\%$ confidence interval does *not* mean "the true $\theta$ lies in this particular interval with probability $95\%$"---that particular interval is already drawn, and $\theta$ either is or is not inside it. The right reading is *about the procedure*: if we generated many intervals this way, $95\%$ of them would contain $\theta$. The guarantee is on the long-run hit rate of the recipe, not on any single interval. This frequentist guarantee should not be confused with the Bayesian *credible interval*, which treats $\theta$ itself as random with a prior---the machinery behind MAP estimation in :numref:`sec_mdl-maximum_likelihood`---and therefore *can* assert "$\theta$ lies in this particular interval with probability $95\%$," at the price of that probability depending on the chosen prior.
+This makes the correct interpretation subtle, and it is worth getting right. A $95\%$ confidence interval does *not* mean "the true $\theta$ lies in this particular interval with probability $95\%$"---that particular interval is already drawn, and $\theta$ either is or is not inside it. The right reading is *about the procedure*: if we generated many intervals this way, $95\%$ of them would contain $\theta$. The guarantee is on the long-run hit rate of the recipe, not on any single interval. :numref:`fig_mdl-prob-coverage` draws the reading literally: one hundred intervals from one hundred independent datasets, almost all trapping the fixed truth, a handful missing---and nothing about any single interval announces which kind it is. This frequentist guarantee should not be confused with the Bayesian *credible interval*, which treats $\theta$ itself as random with a prior---the machinery behind MAP estimation in :numref:`sec_mdl-maximum_likelihood`---and therefore *can* assert "$\theta$ lies in this particular interval with probability $95\%$," at the price of that probability depending on the chosen prior. For the Beta posterior of :numref:`sec_mdl-distributions`, for instance, a $95\%$ credible interval for a coin's bias is read directly off the posterior's quantiles---the $2.5\%$ and $97.5\%$ quantiles of $\mathrm{Beta}(\alpha+x,\ \beta+n-x)$---with no sampling-distribution argument needed.
+
+![One hundred $95\%$ confidence intervals, each computed from its own independent dataset, plotted against the fixed true mean (dashed line). Most intervals trap the truth; the orange ones miss. The $95\%$ guarantee is a statement about this long-run hit rate of the recipe---not about any single interval, and a given interval carries no marker of whether it is one of the lucky ones.](../img/mdl-prob-coverage.svg)
+:label:`fig_mdl-prob-coverage`
 
 ### A Gaussian Example
 
@@ -495,6 +512,30 @@ se = jnp.std(samples, ddof=1) / jnp.sqrt(N)  # ddof=1: unbiased sigma_hat
 
 The interval is narrow and brackets the true mean $0$, as it should roughly $95\%$ of the time. The same $1/\sqrt n$ scaling shows up everywhere uncertainty is reported---error bars on a learning curve, the spread of accuracies across random seeds---and :eqref:`eq_mdl-gauss_confidence` is the formula behind them.
 
+"Roughly $95\%$ of the time" is not a figure of speech---it is the Neyman guarantee :eqref:`eq_mdl-confidence`, and we can audit it. The cell below repeats the whole recipe one thousand times: draw a fresh dataset, build the interval :eqref:`eq_mdl-gauss_confidence`, and check whether it traps the true mean. The hit count should land near $950$.
+
+```{.python .input #mdl-statistics-a-gaussian-example-1}
+rng = onp.random.default_rng(0)
+mu, n, trials = 0.0, 100, 1000
+data = rng.normal(mu, 1.0, (trials, n))           # one row = one fresh dataset
+mu_hat = data.mean(axis=1)
+se = data.std(axis=1, ddof=1) / onp.sqrt(n)
+hits = (onp.abs(mu_hat - mu) <= 1.96 * se)        # interval traps the truth?
+print(f'{hits.sum()} of {trials} intervals contain the true mean '
+      f'(expected about {0.95 * trials:.0f})')
+```
+
+The hit count lands within sampling noise of its target---and the target is in fact $\approx947$ rather than $950$: at $n=100$ the exact $t$-quantile is a touch wider than $1.96$, the finite-$n$ effect noted above, so the recipe's true coverage here is $94.7\%$. This is the coverage-strip picture of :numref:`fig_mdl-prob-coverage` rendered as a count, and it is the only sense in which any confidence interval is ever "$95\%$ sure."
+
+**Propagating error bars: the delta method.** Often the number we report is not $\hat\theta$ itself but a smooth function of it---the log-odds of an accuracy, the ratio of two losses, a percentage change. A first-order Taylor expansion, $g(\hat\theta)\approx g(\theta)+g'(\theta)\,(\hat\theta-\theta)$, says the fluctuation of $g(\hat\theta)$ is the fluctuation of $\hat\theta$ scaled by the local slope, so standard errors propagate as
+
+$$
+\operatorname{se}\bigl(g(\hat\theta)\bigr) \;\approx\; \bigl|g'(\hat\theta)\bigr|\,\operatorname{se}(\hat\theta),
+$$
+:eqlabel:`eq_mdl-delta-method`
+
+the *delta method*. For instance, an accuracy of $\hat p=0.90$ measured on $n=1{,}000$ test examples has $\operatorname{se}(\hat p)=\sqrt{\hat p(1-\hat p)/n}\approx 0.0095$; reporting the log-odds $g(\hat p)=\log\frac{\hat p}{1-\hat p}$ instead, the slope $g'(\hat p)=1/(\hat p(1-\hat p))\approx 11.1$ stretches the error bar to $\approx 0.105$ on the log-odds scale. The same rule with a gradient in place of $g'$ handles vector parameters, and when no derivative is convenient the bootstrap below sidesteps the calculus entirely.
+
 ### The Bootstrap
 
 The Gaussian interval :eqref:`eq_mdl-gauss_confidence` rests on a lucky accident: the sample mean has a known sampling distribution, so its standard error has a closed form, $\hat\sigma_n/\sqrt n$. Most quantities a practitioner actually cares about enjoy no such luck. What is the standard error of a *median*, a *correlation*, a model's *test accuracy*, its *AUC* or *BLEU* score? These are complicated functions of the data with no textbook sampling distribution, and writing down their standard error analytically ranges from painful to impossible.
@@ -538,12 +579,12 @@ ci_gauss = (mu_hat - 1.96 * se_mean, mu_hat + 1.96 * se_mean)
 print(f'Gaussian 95% CI (mean) = ({ci_gauss[0]:.3f}, {ci_gauss[1]:.3f})')
 ```
 
-The two intervals answer different questions and do not overlap, a direct consequence of the skew. The percentile interval for the median is also slightly *asymmetric* about $\hat\theta$---it inherits the shape of the resampling distribution rather than forcing the symmetric $\pm 1.96\,\widehat{\operatorname{se}}$ of a Gaussian. This is exactly why the bootstrap is indispensable in machine learning: error bars on a held-out accuracy, an AUC, or a BLEU score have no closed-form standard error, but resampling the test set delivers one in a few lines :cite:`Efron.Hastie.2016`.
+The two intervals answer different questions and do not overlap, a direct consequence of the skew. The percentile interval for the median is also slightly *asymmetric* about $\hat\theta$---it inherits the shape of the resampling distribution rather than forcing the symmetric $\pm 1.96\,\widehat{\operatorname{se}}$ of a Gaussian. This is exactly why the bootstrap is indispensable in machine learning: error bars on a held-out accuracy, an AUC, or a BLEU score have no closed-form standard error, but resampling the test set delivers one in a few lines :cite:`Efron.Hastie.2016`---:numref:`sec_mdl-naive_bayes` does exactly this, putting a bootstrap error bar on its MNIST classifier's test accuracy.
 
 ## Summary
 
 * An *estimator* $\hat\theta_n$ is a function of the data; being random, it has a *sampling distribution* whose center and spread are summarized by *bias* $\mathbb{E}[\hat\theta_n]-\theta$ and *variance*. *Consistency* ($\hat\theta_n\xrightarrow{P}\theta$) follows when both shrink with $n$; *efficiency* ranks unbiased estimators by their variance.
-* The *bias-variance decomposition* $\operatorname{MSE}(\hat\theta_n)=\operatorname{Bias}(\hat\theta_n)^2+\operatorname{Var}(\hat\theta_n)$ splits the error cleanly because, after centering at $\mathbb{E}[\hat\theta_n]$, the cross term vanishes. This is the same U-curve as the under/overfitting trade-off (expected test error adds an irreducible noise floor $\sigma^2$), and it explains why regularization trades bias for variance---though past the interpolation threshold, overparameterized models can break the U (*double descent*).
+* The *bias-variance decomposition* $\operatorname{MSE}(\hat\theta_n)=\operatorname{Bias}(\hat\theta_n)^2+\operatorname{Var}(\hat\theta_n)$ splits the error cleanly because, after centering at $\mathbb{E}[\hat\theta_n]$, the cross term vanishes. This is the same U-curve as the under/overfitting trade-off (expected test error adds an irreducible noise floor $\sigma^2$), and it explains why regularization trades bias for variance.
 * The unbiased sample variance divides by $n-1$, not $n$: estimating the mean from the same data costs one degree of freedom, and the $1/(n-1)$ factor corrects the resulting bias exactly.
 * *Hypothesis testing* weighs evidence against a null $H_0$ via a test statistic and its $p$-value $P_{H_0}(\textrm{data this extreme})$; we control the type I error rate $\alpha$ and want high power $1-\beta$. A $p$-value is not $P(H_0\mid\textrm{data})$. A *permutation test* manufactures the null distribution by shuffling group labels, with no Gaussian assumptions; under many tests, control the family-wise error rate (Bonferroni) or the false discovery rate (Benjamini--Hochberg).
 * A *confidence interval* contains $\theta$ with probability $\ge 1-\alpha$ over repeated datasets; the Gaussian interval $\hat\mu_n \pm 1.96\,\hat\sigma_n/\sqrt n$, licensed by the *central limit theorem*, has half-width shrinking like $1/\sqrt n$.
@@ -581,7 +622,7 @@ The two intervals answer different questions and do not overlap, a direct conseq
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §25.5]{.kicker}
+[Dive into Deep Learning · §25.4]{.kicker}
 
 Estimators, hypothesis tests, and confidence intervals<br>**statistics for practitioners**.
 :::
@@ -633,14 +674,20 @@ is it centered on the truth?
 ::: {.slide title="Bias and variance"}
 [Estimators]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 $$\operatorname{Bias}(\hat\theta_n) = \mathbb E[\hat\theta_n] - \theta,
-\qquad
+\quad
 \operatorname{Var}(\hat\theta_n) = \mathbb E\bigl[(\hat\theta_n - \mathbb E[\hat\theta_n])^2\bigr].$$
 
 Bias is a systematic offset (it does **not** wash out with more data);
 variance is measured against the estimator's own center, not the truth.
+:::
 
+::: {.col .fig}
 @fig:mdl-prob-sampling-distribution
+:::
+:::
 :::
 
 ::: {.slide title="Consistency and efficiency"}
@@ -765,14 +812,20 @@ $\alpha$ = significance (false positive); $1-\beta$ = power.
 ::: {.slide title="Significance and power"}
 [Testing]{.kicker}
 
-Fix $\alpha$ (often $0.05$) and target power (often $0.8$). The sample size
-to detect an effect scales as $n\propto 1/\delta^2$:
-
-@fig:mdl-prob-power
+::: {.cols .vc}
+::: {.col}
+Fix $\alpha$ (often $0.05$) and target power (often $0.8$). The sample
+size to detect an effect scales as $n\propto 1/\delta^2$.
 
 ::: {.d2l-note}
-A $0.01$ improvement needs tens of thousands of test examples to confirm —
-why marginal benchmark gains are fragile.
+A $0.01$ improvement needs tens of thousands of test examples to
+confirm — why marginal benchmark gains are fragile.
+:::
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-power
+:::
 :::
 :::
 
@@ -794,27 +847,35 @@ $P(H_0\mid\text{data})$.
 ::: {.slide title="The rejection region"}
 [Testing]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 $p = P_{H_0}\bigl(|T| \ge |t_{\text{obs}}|\bigr)$; land in the tails of
-total mass $\alpha$ and reject:
-
-@fig:mdl-prob-significance
+total mass $\alpha$ and reject.
 
 ::: {.d2l-note}
-Run $m$ tests and $P(\ge 1\text{ false win}) = 1-(1-\alpha)^m$. Bonferroni
-tests at $\alpha/m$; at ML scale, control the false-discovery rate.
+Run $m$ tests and $P(\ge 1\text{ false win}) = 1-(1-\alpha)^m$.
+Bonferroni tests at $\alpha/m$; at ML scale, control the
+false-discovery rate.
 :::
 :::
 
-::: {.slide title="A worked test: two models"}
+::: {.col .fig}
+@fig:mdl-prob-significance
+:::
+:::
+:::
+
+::: {.slide title="A worked test: two models" layout="tight"}
 [Testing]{.kicker}
 
-Under $H_0$ the labels are exchangeable, so **shuffle** them, recompute the
-accuracy gap, and repeat. The p-value is the fraction of shuffles at least
-as extreme:
+Is model B better, or lucky? Under $H_0$ the labels are exchangeable:
+**shuffle** them, recompute the gap, repeat $10{,}000$ times — the
+histogram *is* the null distribution, no Gaussian assumed:
 
-@statistics-permutation-test
+@!statistics-permutation-test
 
-The $0.73\%$ gap is real here — but only just, with $20$ seeds.
+The observed $0.73\%$ gap sits in the far tail: $p\approx 0.02$, real —
+but only just, with $20$ seeds.
 :::
 
 ::: {.slide}
@@ -830,14 +891,22 @@ The $0.73\%$ gap is real here — but only just, with $20$ seeds.
 ::: {.slide title="What a confidence interval is"}
 [Intervals]{.kicker}
 
-A random interval $C_n$ with $P_\theta(C_n \ni \theta)\ge 1-\alpha$ for all
-$\theta$. The **interval** is random; $\theta$ is fixed.
-
-. . .
+::: {.cols .vc}
+::: {.col}
+A random interval $C_n$ with $P_\theta(C_n \ni \theta)\ge 1-\alpha$ for
+all $\theta$. The **interval** is random; $\theta$ is fixed.
 
 Correct reading: across many repetitions, $95\%$ of the constructed
-intervals trap $\theta$ — *not* that this one does with probability $0.95$
-(that is a Bayesian credible interval, which needs a prior).
+intervals trap $\theta$ — *not* that this one does with probability
+$0.95$ (that is a Bayesian credible interval, which needs a prior).
+Nothing about a single interval announces whether it is one of the
+lucky ones.
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-coverage
+:::
+:::
 :::
 
 ::: {.slide title="The Gaussian interval"}
@@ -857,17 +926,61 @@ error bar.
 :::
 :::
 
+::: {.slide title="Auditing the 95%"}
+[Intervals]{.kicker}
+
+"Roughly $95\%$ of the time" is the Neyman guarantee, and it is checkable:
+one thousand fresh datasets, one interval each, count the hits:
+
+@!mdl-statistics-a-gaussian-example-1
+
+. . .
+
+The honest target is in fact $\approx 947$, not $950$: at $n=100$ the
+exact $t$-quantile is a touch wider than $1.96$. This count is the
+coverage picture rendered as a number — the *only* sense in which any
+interval is ever "$95\%$ sure."
+:::
+
+::: {.slide title="Error bars propagate through functions"}
+[Intervals]{.kicker}
+
+Reporting $g(\hat\theta)$ instead of $\hat\theta$? First-order Taylor
+says the fluctuation scales by the local slope — the **delta method**:
+
+$$\operatorname{se}\bigl(g(\hat\theta)\bigr) \;\approx\;
+\bigl|g'(\hat\theta)\bigr|\;\operatorname{se}(\hat\theta).$$
+
+. . .
+
+Accuracy $\hat p = 0.90$ on $n=1000$ examples has
+$\operatorname{se} \approx 0.0095$; reported as log-odds, the slope
+$1/(\hat p(1-\hat p)) \approx 11.1$ stretches the error bar to
+$\approx 0.105$.
+
+::: {.d2l-note}
+A gradient replaces $g'$ for vector parameters — and when no derivative
+is convenient, the bootstrap (next) sidesteps the calculus entirely.
+:::
+:::
+
 ::: {.slide title="The bootstrap: any statistic, no formula"}
 [Intervals]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Substitute the empirical distribution for the unknown one: resample $n$
-points **with replacement**, recompute the statistic, repeat:
-
-@fig:mdl-prob-bootstrap
+points **with replacement**, recompute the statistic, repeat.
 
 ::: {.d2l-note .rule}
 Works for the median, AUC, accuracy, BLEU — anywhere no closed-form
 standard error exists.
+:::
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-bootstrap
+:::
 :::
 :::
 
@@ -876,14 +989,14 @@ standard error exists.
 
 The bootstrap SE and a percentile interval for a skewed sample's median:
 
-@statistics-bootstrap
+@!statistics-bootstrap
 
 . . .
 
 The mean's Gaussian interval lands elsewhere — same data, different
 statistic, different answer:
 
-@statistics-bootstrap-contrast
+@!statistics-bootstrap-contrast
 :::
 
 ::: {.slide title="Recap"}

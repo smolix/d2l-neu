@@ -982,6 +982,237 @@ def fig_tape_dag():
     fl.save(fig, "mdl-cal-tape-dag")
 
 
+def fig_best_parabola():
+    """The best local quadratic beats the tangent line.  For $f=\\sin$ at the
+    base point $x_0$, the tangent matches value and slope; the osculating
+    parabola $g(x)=\\sin x_0+\\cos x_0\\,(x-x_0)-\\frac12\\sin x_0\\,(x-x_0)^2$
+    also matches curvature and visibly hugs the curve over a wider window.
+    All three curves are the genuine Taylor truncations of $\\sin$."""
+    x0 = 0.9
+    s0, c0 = np.sin(x0), np.cos(x0)
+    f = np.sin
+    tangent = lambda t: s0 + c0 * (t - x0)
+    parab = lambda t: s0 + c0 * (t - x0) - 0.5 * s0 * (t - x0) ** 2
+    xs = np.linspace(x0 - 2.1, x0 + 2.3, 500)
+
+    fig, ax = plt.subplots(figsize=(6.2, 4.2))
+    ax.axhline(0, color=GRAY, lw=0.8, zorder=1)
+    ax.plot(xs, f(xs), color=BLUE, lw=2.6, zorder=4, label=r"$f(x)=\sin x$")
+    ax.plot(xs, tangent(xs), "--", color=GRAY, lw=1.8, zorder=2,
+            label="tangent (matches value, slope)")
+    ax.plot(xs, parab(xs), "--", color=ORANGE, lw=2.0, zorder=3,
+            label="best parabola (matches curvature too)")
+    ax.plot([x0], [s0], "o", color="black", ms=5, zorder=6)
+    ax.text(x0 + 0.06, s0 - 0.13, r"$x_0$", fontsize=12, ha="left", va="top")
+    ax.set_xlim(xs[0], xs[-1]); ax.set_ylim(-1.65, 1.9)
+    ax.set_xticks([]); ax.set_yticks([])
+    ax.legend(loc="lower left", fontsize=9, frameon=False)
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-cal-best-parabola")
+
+
+def fig_lagrange_tangency():
+    """Lagrange multipliers as tangency.  Contours of $f(x,y)=x^2+y^2$ (gray
+    circles) against the constraint $g(x,y)=xy=1$ (blue hyperbola).  At the
+    constrained optimum $(1,1)$ the level set of $f$ *kisses* the constraint and
+    the two gradients align ($\\nabla f=(2,2)$, $\\nabla g=(1,1)$: parallel).  At
+    a non-optimal feasible point the gradients disagree, so $\\nabla f$ has a
+    component along the constraint and sliding along it still improves $f$.
+    All arrows are the true gradients, normalized to display length."""
+    fig, ax = plt.subplots(figsize=(5.6, 5.2))
+    th = np.linspace(0, 2 * np.pi, 300)
+    # contours of f: circles; the sqrt(2)-circle is the one through the optimum
+    for rad, lw in [(0.8, 1.0), (np.sqrt(2.0), 1.6), (1.9, 1.0), (2.5, 1.0)]:
+        col = ORANGE if abs(rad - np.sqrt(2.0)) < 1e-9 else GRAY
+        ax.plot(rad * np.cos(th), rad * np.sin(th), color=col,
+                lw=lw, zorder=2, alpha=0.9 if col is ORANGE else 0.8)
+    # the constraint xy = 1 (first-quadrant branch)
+    cx = np.linspace(0.34, 3.1, 300)
+    ax.plot(cx, 1.0 / cx, color=BLUE, lw=2.4, zorder=3)
+    ax.text(0.62, 2.55, r"$g(x,y)=c$", color=BLUE, fontsize=11, ha="left")
+
+    def grads(px, py, scale=0.62):
+        gf = np.array([2 * px, 2 * py])          # true gradient of f
+        gg = np.array([py, px])                  # true gradient of g = xy
+        for g, col, lab, off in [(gf, ORANGE, r"$\nabla f$", (0.10, 0.16)),
+                                 (gg, GREEN, r"$\nabla g$", (0.16, -0.14))]:
+            u = g / np.linalg.norm(g) * scale
+            fl.arrow(ax, (px, py), (px + u[0], py + u[1]), color=col,
+                     lw=2.0, mut=12)
+            ax.text(px + u[0] + off[0], py + u[1] + off[1], lab, color=col,
+                    fontsize=10.5, ha="center", va="center")
+        ax.plot([px], [py], "o", color="black", ms=5, zorder=6)
+
+    # optimum (1,1): gradients parallel -- one arrow drawn slightly shorter so
+    # both are visible along the same ray
+    px, py = 1.0, 1.0
+    gfu = np.array([1.0, 1.0]) / np.sqrt(2.0)
+    fl.arrow(ax, (px, py), (px + 0.95 * gfu[0], py + 0.95 * gfu[1]),
+             color=ORANGE, lw=2.2, mut=13)
+    fl.arrow(ax, (px, py), (px + 0.55 * gfu[0], py + 0.55 * gfu[1]),
+             color=GREEN, lw=2.2, mut=11)
+    ax.plot([px], [py], "o", color="black", ms=5, zorder=6)
+    ax.text(1.86, 1.62, r"$\nabla f\parallel\nabla g$", fontsize=11,
+            ha="left", color=ORANGE)
+    ax.text(0.98, 0.78, r"optimum", fontsize=10, ha="center", va="top")
+
+    # a non-optimal feasible point: gradients visibly misaligned
+    grads(2.2, 1.0 / 2.2)
+    ax.text(2.2, 0.10, "not optimal:\ngradients disagree", fontsize=9,
+            ha="center", va="top", color=GRAY)
+
+    ax.set_aspect("equal")
+    ax.set_xlim(-0.4, 3.4); ax.set_ylim(-0.4, 3.0)
+    ax.set_xticks([]); ax.set_yticks([])
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-cal-lagrange-tangency")
+
+
+def fig_jacobian_shapes():
+    """The shape of the Jacobian dictates the cheap mode.  Three glyphs: a wide
+    $1\\times n$ row (a scalar loss; one VJP pass), a tall $m\\times 1$ column
+    (one input; one JVP pass), and a full $m\\times n$ matrix, which costs
+    $\\min(m,n)$ passes either way.  The pass counts under each glyph are the
+    entire forward-vs-reverse cost model."""
+    fig, ax = plt.subplots(figsize=(9.6, 3.4))
+    cell = 0.34
+
+    def grid(x0, y0, rows, cols, color):
+        for i in range(rows):
+            for j in range(cols):
+                ax.add_patch(Rectangle((x0 + j * cell, y0 - (i + 1) * cell),
+                                       cell, cell, facecolor=color,
+                                       edgecolor="black", lw=0.7, zorder=3,
+                                       alpha=0.55))
+
+    n, m = 8, 5
+    top = 2.15
+    # wide row: 1 x n  (reverse mode, one VJP)
+    grid(0.0, top - 0.7, 1, n, ORANGE)
+    ax.text(0.5 * n * cell, top + 0.06, r"$1\times n$ (scalar loss)",
+            ha="center", fontsize=10.5)
+    ax.text(0.5 * n * cell, top - 1.35,
+            "one VJP\n= 1 backward pass", ha="center", va="top", fontsize=10,
+            color=ORANGE)
+    # tall column: m x 1  (forward mode, one JVP)
+    x1 = 4.2
+    grid(x1, top, m, 1, GREEN)
+    ax.text(x1 + 0.5 * cell, top + 0.06, r"$m\times 1$", ha="center",
+            fontsize=10.5)
+    ax.text(x1 + 0.5 * cell, top - m * cell - 0.25,
+            "one JVP\n= 1 forward pass", ha="center", va="top", fontsize=10,
+            color=GREEN)
+    # full matrix: m x n
+    x2 = 6.4
+    grid(x2, top, m, n, BLUE)
+    ax.text(x2 + 0.5 * n * cell, top + 0.06, r"$m\times n$ (full Jacobian)",
+            ha="center", fontsize=10.5)
+    ax.text(x2 + 0.5 * n * cell, top - m * cell - 0.25,
+            r"$\min(m,n)$ passes" + "\n(rows by VJP or columns by JVP)",
+            ha="center", va="top", fontsize=10, color=BLUE)
+
+    ax.set_xlim(-0.4, 9.6); ax.set_ylim(-0.9, 2.6)
+    ax.set_aspect("equal"); ax.axis("off")
+    fl.save(fig, "mdl-cal-jacobian-shapes")
+
+
+def fig_checkpointing():
+    """Gradient checkpointing as a timeline.  Top track: plain reverse mode
+    stores every one of the $L$ forward activations until the backward sweep
+    consumes them ($O(L)$ memory).  Bottom track: checkpointing keeps only every
+    $\\sqrt L$-th activation and, when the backward sweep reaches a segment,
+    recomputes that segment forward from its checkpoint ($O(\\sqrt L)$ memory,
+    about one extra forward pass in time)."""
+    L, K = 16, 4                                  # depth and checkpoint spacing
+    cell, gap = 0.5, 0.06
+    fig, ax = plt.subplots(figsize=(9.8, 3.6))
+
+    def track(y, kept, label):
+        for i in range(L):
+            filled = kept(i)
+            ax.add_patch(Rectangle((i * (cell + gap), y), cell, cell,
+                                   facecolor=BLUE if filled else "white",
+                                   alpha=0.55 if filled else 1.0,
+                                   edgecolor="black", lw=0.8, zorder=3))
+        ax.text(-0.25, y + cell / 2, label, ha="right", va="center",
+                fontsize=10.5)
+
+    width = L * (cell + gap) - gap
+    y_top, y_bot = 2.15, 0.75
+    track(y_top, lambda i: True,
+          "store all $L$\nactivations")
+    track(y_bot, lambda i: i % K == 0,
+          "store $\\sqrt{L}$\ncheckpoints")
+
+    # forward / backward sweep arrows above the top track
+    fl.arrow(ax, (0.0, y_top + cell + 0.32), (width, y_top + cell + 0.32),
+             color=GRAY, lw=1.6, mut=12)
+    ax.text(width / 2, y_top + cell + 0.42, "forward pass (layers $1$ to $L$)",
+            ha="center", va="bottom", fontsize=10, color=GRAY)
+
+    # the recomputed segment on the bottom track: backward has reached layer 16,
+    # so the segment after the last checkpoint is recomputed forward
+    seg0 = 12 * (cell + gap)
+    fl.arrow(ax, (seg0 + cell / 2, y_bot - 0.28),
+             (width - cell / 2 + 0.15, y_bot - 0.28), color=ORANGE, lw=2.0,
+             mut=12)
+    ax.text((seg0 + width) / 2, y_bot - 0.40,
+            "recompute segment forward\nfrom its checkpoint, then sweep it",
+            ha="center", va="top", fontsize=9.5, color=ORANGE)
+    fl.arrow(ax, (width, y_bot + cell + 0.30), (seg0, y_bot + cell + 0.30),
+             color=GRAY, lw=1.6, ls="-", mut=12)
+    ax.text((seg0 + width) / 2, y_bot + cell + 0.40, "backward sweep",
+            ha="center", va="bottom", fontsize=10, color=GRAY)
+
+    # memory annotations on the right
+    ax.text(width + 0.35, y_top + cell / 2, r"$O(L)$ memory", fontsize=11,
+            va="center", color=BLUE)
+    ax.text(width + 0.35, y_bot + cell / 2,
+            r"$O(\sqrt{L})$ memory," + "\n~1 extra forward pass", fontsize=11,
+            va="center", color=BLUE)
+
+    ax.set_xlim(-2.1, width + 3.1); ax.set_ylim(-0.75, 3.45)
+    ax.set_aspect("equal"); ax.axis("off")
+    fl.save(fig, "mdl-cal-checkpointing")
+
+
+def fig_signed_area():
+    """Signed area: one curve crossing the axis, with the lobes where $f>0$
+    counted positive (blue) and the lobe where $f<0$ counted negative (orange),
+    plus the direction arrow that reversing the limits negates the total.  The
+    curve and the shaded lobes are computed, not sketched."""
+    f = lambda t: np.sin(1.4 * t) * np.exp(-0.12 * t)
+    a, b = 0.25, 6.4
+    xs = np.linspace(-0.2, 7.0, 700)
+    span = np.linspace(a, b, 700)
+
+    fig, ax = plt.subplots(figsize=(7.0, 3.9))
+    ax.axhline(0, color=GRAY, lw=0.9, zorder=1)
+    ax.plot(xs, f(xs), color=BLUE, lw=2.4, zorder=4)
+    pos, neg = f(span) >= 0, f(span) < 0
+    ax.fill_between(span, 0, f(span), where=pos, color=BLUE, alpha=0.25, lw=0)
+    ax.fill_between(span, 0, f(span), where=neg, color=ORANGE, alpha=0.30, lw=0)
+    ax.text(1.15, 0.34, r"$+$", fontsize=17, ha="center", color=BLUE)
+    ax.text(3.45, -0.30, r"$-$", fontsize=17, ha="center", color=ORANGE)
+    ax.text(5.65, 0.22, r"$+$", fontsize=17, ha="center", color=BLUE)
+    for x, lab in [(a, "$a$"), (b, "$b$")]:
+        ax.plot([x, x], [0, f(x)], ":", color=GRAY, lw=1.0, zorder=2)
+        ax.plot([x], [0], "o", color="black", ms=4, zorder=5)
+        ax.text(x, -0.09, lab, ha="center", va="top", fontsize=12)
+    # direction arrows under the axis (below the curve's lowest dip):
+    # integrating a->b, and the reversed b->a, which negates the total
+    fl.arrow(ax, (a, -1.02), (b, -1.02), color=GRAY, lw=1.6, mut=12)
+    ax.text(0.30, -1.02, r"$\int_a^b f$", ha="right", va="center",
+            fontsize=11, color=GRAY)
+    fl.arrow(ax, (b, -1.52), (a, -1.52), color=ORANGE, lw=1.6, mut=12)
+    ax.text(6.55, -1.52, r"$\int_b^a f = -\int_a^b f$", ha="left",
+            va="center", fontsize=11, color=ORANGE)
+    ax.set_xlim(-1.1, 9.4); ax.set_ylim(-1.95, 1.12)
+    ax.set_xticks([]); ax.set_yticks([])
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-cal-signed-area")
+
+
 # =========================================================================== #
 # Driver                                                                      #
 # =========================================================================== #
@@ -998,9 +1229,11 @@ FIGURES = [
     fig_relu_corner,
     fig_mvt,
     fig_smooth_not_analytic,
+    fig_best_parabola,
     # integral calculus
     fig_riemann,
     fig_sub_area,
+    fig_signed_area,
     fig_rect_trans,
     fig_bell_surface,
     fig_sum_order,
@@ -1011,10 +1244,13 @@ FIGURES = [
     fig_gradient_field,
     fig_taylor_quadratic,
     fig_tangent_plane,
+    fig_lagrange_tangency,
     # matrix calculus & autodiff
     fig_jacobian_ellipse,
     fig_fwd_vs_rev,
     fig_tape_dag,
+    fig_jacobian_shapes,
+    fig_checkpointing,
 ]
 
 

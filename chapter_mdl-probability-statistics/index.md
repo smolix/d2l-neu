@@ -6,7 +6,11 @@ continuous probability the rest of deep learning relies on---densities,
 expectations, and how they transform under a map---catalogues the distributions
 whose negative log-likelihoods are exactly our loss functions, derives
 maximum-likelihood and MAP estimation (and the priors that become regularizers),
-and closes with the statistics needed to tell a real improvement from noise.
+builds the statistics needed to tell a real improvement from noise, proves the
+concentration inequalities that make finite samples trustworthy---following them
+to uniform convergence, Rademacher complexity, and double descent---and caps it
+all with naive Bayes: a working classifier, fit by counting and then audited
+with the chapter's own tools.
 
 ```toc
 :maxdepth: 2
@@ -14,8 +18,9 @@ and closes with the statistics needed to tell a real improvement from noise.
 mdl-random-variables
 mdl-distributions
 mdl-maximum-likelihood
-mdl-naive-bayes
 mdl-statistics
+mdl-concentration-generalization
+mdl-naive-bayes
 ```
 
 ## Resources and Further Reading
@@ -34,6 +39,8 @@ hypothesis testing. We favor free and official sources.
 - [Mathematics for Machine Learning --- Deisenroth, Faisal & Ong](https://mml-book.github.io/): Chapter 6, "Probability and Distribution," is a clean self-contained refresher pitched exactly at ML readers; full PDF is free.
 - [Information Theory, Inference, and Learning Algorithms --- MacKay](https://www.inference.org.uk/itila/book.html): connects probability and inference to information theory and coding; the full text is free to read online.
 - [Bayesian Data Analysis --- Gelman et al.](https://sites.stat.columbia.edu/gelman/book/): the standard reference for priors, posteriors, and practical Bayesian workflow once MAP and naive Bayes whet the appetite; third edition free as PDF.
+- [High-Dimensional Probability --- Vershynin](https://www.math.uci.edu/~rvershyn/papers/HDP-book/HDP-book.html): where concentration inequalities, sub-Gaussian variables, and the strange geometry of high dimensions (norm concentration, near-orthogonality) get their systematic treatment; the free PDF is the standard modern reference.
+- [Computer Age Statistical Inference --- Efron & Hastie](https://hastie.su.domains/CASI/): the bootstrap, large-scale testing, and the frequentist-Bayesian interplay told by two of the field's architects---the natural sequel to this chapter's statistics; free PDF from the authors.
 
 **Courses and video lectures**
 

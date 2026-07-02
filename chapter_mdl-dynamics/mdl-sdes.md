@@ -78,10 +78,18 @@ p_0 = p_{\textrm{data}} \;\longrightarrow\; p_T \approx \mathcal{N}(\mathbf{0}, 
 $$
 
 so that at generation time we always know what to sample as a starting point,
-no matter what the data looked like. A deterministic squish (say, contracting
-everything toward the origin) cannot do this job well: it piles all the
-probability mass near one point, and inverting it amounts to undoing a
-near-singular map. Adding *noise* instead forgets the data smoothly --- the
+no matter what the data looked like. Deterministic flows cannot do this job
+*universally*: a fixed, data-independent bijection transports two distinct
+initial laws to two distinct endpoints, so no single deterministic map can
+send *every* data distribution to the *same* Gaussian --- short of contracting
+everything toward one point, which piles all the probability mass into a
+near-singular corner that inversion cannot undo. (Hold the fine print for
+later: a *learned, data-dependent* deterministic flow carries one *given*
+$p_{\textrm{data}}$ to the Gaussian perfectly well --- that is exactly what
+flow matching will build in :numref:`sec_mdl-flow-matching` --- but such a
+map must be discovered by training. The forward half of a diffusion model has
+to work *before* any learning, for whatever data arrives.) Adding *noise*
+instead forgets the data smoothly --- the
 distribution at every intermediate time is a blurred version of the data,
 full-dimensional and well behaved --- and, remarkably, the process can be run
 in reverse *on average* once we know the score of those blurred distributions
@@ -526,7 +534,7 @@ the envelope saturates as the process forgets its start.
 :numref:`sec_mdl-fokker-planck-probability-flow` turns this picture into an
 equation for $p_t$ itself.
 
-![Many sample paths of the SDE $dX=-\theta X\,dt+\sigma\,dW$ simulated by Euler--Maruyama from a single start $X_0$. The thin blue curves are the jittery individual paths; their mean follows the deterministic drift $X_0 e^{-\theta t}$ (green), and the spreading ensemble is captured by the analytic $\pm 2$-standard-deviation time-marginal envelope (orange), whose half-width $2\sqrt{(\sigma^2/2\theta)(1-e^{-2\theta t})}$ saturates as the process reaches its stationary distribution.](../img/mdl-dyn-sde-paths.svg)
+![Many sample paths of the SDE $dX=-\theta X\,dt+\sigma\,dW$ simulated by Euler--Maruyama from the single start $X_0 = 2$. The thin blue curves are the jittery individual paths; their mean follows the deterministic drift $X_0 e^{-\theta t}$ (green), and the spreading ensemble is captured by the analytic $\pm 2$-standard-deviation time-marginal envelope (orange), whose half-width $2\sqrt{(\sigma^2/2\theta)(1-e^{-2\theta t})}$ saturates as the process reaches its stationary distribution.](../img/mdl-dyn-sde-paths.svg)
 :label:`fig_mdl-dyn-sde-paths`
 
 ### The Euler--Maruyama Scheme
@@ -583,8 +591,12 @@ simulated trajectory follow the true trajectory driven by that noise? The
 for smooth test functions $\varphi$, measures distributional accuracy: do the
 *marginals* come out right, even if individual paths wander? Weak is the one
 diffusion models care about --- samples are drawn from marginals, and nobody
-asks a generated image to track a particular noise path. The classical rates
-:cite:`Kloeden.Platen.1992` are:
+asks a generated image to track a particular noise path.
+:numref:`fig_mdl-dyn-strong-weak` shows the two notions side by side. The
+classical rates :cite:`Kloeden.Platen.1992` are:
+
+![Strong versus weak convergence of Euler--Maruyama on the OU process. Left: one coarse path ($16$ steps, orange) against a fine reference ($4096$ steps, blue) driven by the *same* Brownian increments --- the strong error is this pathwise gap, visible to the eye. Right: terminal histograms of $20{,}000$ paths at the two step sizes lie on top of each other and on the analytic marginal (black): the *laws* already agree to $O(\Delta t)$ where individual paths still stray. Diffusion models need only the right-hand agreement.](../img/mdl-dyn-strong-weak.svg)
+:label:`fig_mdl-dyn-strong-weak`
 
 **Proposition (strong order of Euler--Maruyama).** *Under Lipschitz and
 linear-growth conditions on $f$ and $g$, Euler--Maruyama has strong order
@@ -851,10 +863,16 @@ d2l.plt.show()
 ```
 
 The histogram lies on the analytic density, with empirical variance $0.4095$
-against $\sigma^2\!/(2\theta) = 0.405$. (The leftover half-percent is the EM
-discretization bias --- weak order $1$ at $\Delta t = 5 \times 10^{-3}$ ---
-not statistics.) Mean reversion has converted a point mass into a fixed
-Gaussian; run longer and nothing more happens.
+against $\sigma^2\!/(2\theta) = 0.405$. (Decompose the leftover half-percent
+honestly. EM's weak-order-$1$ bias is computable exactly here: the variance
+recursion of `#sdes-em-weak-order` has fixed point
+$\sigma^2 \Delta t / \left(1 - (1 - \theta \Delta t)^2\right) = 0.4060$ at
+$\Delta t = 5 \times 10^{-3}$, so discretization explains only $+0.001$ of
+the $+0.0045$ gap. The Monte-Carlo standard error of a $10{,}000$-sample
+variance is $\approx 0.006$ --- the rest, indeed most, of the gap is
+statistics, sitting on top of a small deterministic bias.) Mean reversion has
+converted a point mass into a fixed Gaussian; run longer and nothing more
+happens.
 
 ### The Variance-Preserving Normalization
 
@@ -926,8 +944,10 @@ for s in [0.0, 0.25, 1.0, 3.0]:
 
 The variance column reads $1.000$, $1.003$, $1.007$, $1.014$ --- pinned at
 $1$ up to EM bias --- while the fourth moment marches from $1.000$ through
-$2.286$ (analytic $2.264$) to $3.00$: the distribution has become Gaussian,
-the variance never moved. Time-dependent noise schedules are a cosmetic
+$2.286$ (analytic $2.264$) to $3.06$ against the Gaussian $3$, within one
+Monte-Carlo standard error ($\approx 0.04$ for a fourth moment on
+$50{,}000$ paths): the distribution has become Gaussian, the variance never
+moved. Time-dependent noise schedules are a cosmetic
 generalization: the **VP-SDE** of score-based diffusion
 :cite:`song2021score`,
 
@@ -1061,13 +1081,16 @@ Brownian motion, Itô's calculus, and the SDE<br>**the forward process of every 
 
 ::: {.cols .vc}
 ::: {.col}
-A deterministic flow is invertible — it cannot smoothly turn data into pure
-Gaussian noise. Add a random kick:
+No *fixed* map can forget every dataset: a data-independent bijection sends
+distinct laws to distinct endpoints, so no single deterministic flow carries
+**every** $p_{\text{data}}$ to the same $\mathcal N(\mathbf 0, \sigma^2 I)$.
+Noise does it before any learning:
 
 $$d\mathbf X = \underbrace{\mathbf f(\mathbf X,t)\,dt}_{\text{drift}}
 + \underbrace{g(t)\,d\mathbf W}_{\text{diffusion}}.$$
 
-Goal: carry $p_{\text{data}}$ to $\mathcal N(\mathbf 0, \sigma^2 I)$.
+(A *learned* flow sends one **given** $p_{\text{data}}$ there — that is
+exactly flow matching, §27.4.)
 :::
 
 ::: {.col .fig}
@@ -1207,14 +1230,25 @@ Euler:
 @sdes-euler-maruyama
 :::
 
-::: {.slide title="Strong vs weak convergence"}
+::: {.slide title="Paths stray; laws agree"}
 [Convergence]{.kicker}
 
-**Strong** error (same Brownian path) is $O(\sqrt{\Delta t})$ in general,
-$O(\Delta t)$ for additive noise. **Weak** error (matching marginals) is
-$O(\Delta t)$ always — and weak is what diffusion models need.
+**Strong** error tracks one path against a fine reference driven by the *same*
+increments; **weak** error compares only the terminal *laws*. The coarse path
+visibly strays while the histograms already coincide — and marginals are all a
+diffusion model needs:
 
-@sdes-em-strong-order
+![](../img/mdl-dyn-strong-weak.svg){width=94%}
+:::
+
+::: {.slide title="The measured orders"}
+[Convergence]{.kicker}
+
+Strong order is $\tfrac12$ in general but $1$ for **additive** noise — the
+omitted Milstein term carries $\partial_x g$, which vanishes. Weak order is
+$1$ regardless:
+
+@!sdes-em-strong-order
 
 Measured slopes: additive OU $\approx 1$, multiplicative GBM $\approx 0.5$.
 :::
@@ -1266,7 +1300,7 @@ $$X_\infty \sim \mathcal N\!\bigl(0,\ \sigma^2/(2\theta)\bigr),$$
 with relaxation time $1/\theta$. The path cloud and its endpoint histogram
 confirm it:
 
-@sdes-ou-cloud
+@!sdes-ou-cloud
 :::
 
 ::: {.slide title="Variance-preserving = DDPM's forward marginal"}

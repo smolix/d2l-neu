@@ -1,3 +1,8 @@
+```{.python .input}
+%load_ext d2lbook.tab
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
+```
+
 # Generalization in Classification
 
 :label:`chap_classification_generalization`
@@ -142,8 +147,10 @@ should approach the true error $\epsilon(f)$
 at a rate of $\mathcal{O}(1/\sqrt{n})$.
 Thus, to estimate our test error twice as precisely,
 we must collect four times as large a test set.
-To reduce our test error by a factor of one hundred,
+To shrink the uncertainty in our estimate a hundredfold,
 we must collect ten thousand times as large a test set.
+(Note that more test data never reduces the error itself,
+only our uncertainty about its value.)
 In general, such a rate of $\mathcal{O}(1/\sqrt{n})$
 is often the best we can hope for in statistics.
 
@@ -202,7 +209,8 @@ i.e., how the relationship between $\epsilon_\mathcal{D}$ and $\epsilon$
 evolves as our sample size goes to infinity.
 Fortunately, because our random variable is bounded,
 we can obtain valid finite sample bounds
-by applying an inequality due to Hoeffding (1963):
+by applying an inequality due to Hoeffding (1963),
+proved in :numref:`sec_mdl-concentration-generalization`:
 
 $$P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \geq t\right) < 2\exp\left( - 2n t^2 \right).$$
 
@@ -225,6 +233,66 @@ reflecting the general usefulness
 of asymptotic analysis for giving
 us ballpark figures even if they are not
 guarantees we can take to court.
+
+All of the above is pencil-and-paper reasoning,
+but it is also one short simulation away from being visible.
+Fix a classifier whose true error is $\epsilon(f) = 0.1$
+and draw many hypothetical test sets:
+each per-example indicator is a Bernoulli$(0.1)$ coin,
+so a size-$n$ test set produces an estimate
+$\epsilon_\mathcal{D}(f) \sim \mathrm{Binomial}(n, 0.1)/n$.
+
+```{.python .input #generalization-classification-the-test-set-1}
+%%tab pytorch
+%matplotlib inline
+import numpy as np
+from d2l import torch as d2l
+```
+
+```{.python .input #generalization-classification-the-test-set-1}
+%%tab tensorflow
+%matplotlib inline
+import numpy as np
+from d2l import tensorflow as d2l
+```
+
+```{.python .input #generalization-classification-the-test-set-1}
+%%tab jax
+%matplotlib inline
+import numpy as np
+from d2l import jax as d2l
+```
+
+```{.python .input #generalization-classification-the-test-set-1}
+%%tab mxnet
+%matplotlib inline
+import numpy as np
+from d2l import mxnet as d2l
+```
+
+We simulate 1000 such test sets at each size $n$, record the empirical spread
+(standard deviation) of the resulting error estimates, and compare it with the
+two envelopes derived above: the CLT prediction
+$\sqrt{\epsilon(1-\epsilon)/n}$ and the 95% Hoeffding radius
+$\sqrt{\log(2/0.05)/(2n)}$.
+
+```{.python .input #generalization-classification-the-test-set-2}
+rng = np.random.default_rng(0)
+eps, trials = 0.1, 1000
+ns = np.array([100, 300, 1000, 3000, 10000])
+spread = np.array([(rng.binomial(n, eps, trials) / n).std() for n in ns])
+clt = np.sqrt(eps * (1 - eps) / ns)           # CLT standard deviation
+hoeff = np.sqrt(np.log(2 / 0.05) / (2 * ns))  # 95% Hoeffding radius
+d2l.plot(ns, [spread, clt, hoeff], 'test set size n', 'spread of the estimate',
+         legend=['simulated sd', 'CLT sd', 'Hoeffding 95% radius'],
+         xscale='log', yscale='log')
+```
+
+On log--log axes all three curves are parallel lines of slope $-\frac{1}{2}$:
+the $\sqrt{n}$ law in the flesh. The simulated spread sits right on top of the
+CLT prediction, while the Hoeffding envelope runs above both by a constant
+factor, which is the price of a guarantee that holds at every finite $n$
+rather than only asymptotically.
 
 ## Test Set Reuse
 
@@ -328,6 +396,30 @@ When running a series of benchmark challenges,
 it is often good practice to maintain
 several test sets so that after each round,
 the old test set can be demoted to a validation set.
+
+How bad can it get? A simulation makes the false-discovery half of the problem
+concrete in its purest form. Take one binary test set of $n = 1000$ examples
+and evaluate $k$ "classifiers" that ignore the inputs entirely and guess
+labels uniformly at random, so that every one of them has true accuracy
+exactly $0.5$. We track the best test accuracy seen so far as $k$ grows:
+
+```{.python .input #generalization-classification-test-set-reuse-1}
+n, k = 1000, 10000
+labels = rng.integers(0, 2, n)                 # one fixed test set
+guesses = rng.integers(0, 2, (k, n))           # k random-guess classifiers
+best = np.maximum.accumulate((guesses == labels).mean(axis=1))
+d2l.plot(np.arange(1, k + 1), best, 'number of models evaluated',
+         'best test accuracy so far', xscale='log')
+```
+
+The best apparent accuracy climbs steadily, exceeding $0.56$ after ten
+thousand tries, even though *nothing was learned*: the models are coin flips,
+and the climb (which grows like $\sqrt{\log(k)/(2n)}$, by the same Hoeffding
+bound applied to $k$ events at once) is pure selection. Whenever you pick the
+best of many models by their score on one shared test set, some of the
+apparent improvement is exactly this effect; and an adaptive modeler, who
+steers each new model *toward* what scored well before, can climb faster
+still.
 
 
 
@@ -486,6 +578,15 @@ of three points in general position,
 but no line can realize the XOR labeling of four points,
 so the VC dimension of two-dimensional linear classifiers
 is exactly $3$ (matching $d+1$ with $d=2$).
+The general statement holds in both directions, and neither is deep.
+For the lower bound, the $d+1$ points
+$\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$
+can be shattered by weights that are simply *read off* the desired labels;
+exercise 5 walks you through it.
+For the upper bound, *no* set of $d+2$ points can be shattered:
+by Radon's theorem :cite:`Radon.1921`, any $d+2$ points in $\mathbb{R}^d$
+can be partitioned into two subsets whose convex hulls intersect,
+and no halfspace can put two intersecting hulls on opposite sides.
 
 ![A linear classifier in two dimensions shatters any 3 points in general position (all $2^3$ labelings are realizable by a halfplane) but cannot shatter 4 points (the XOR labeling, with one class on each diagonal, has no linear separator). Hence the VC dimension of lines in the plane is 3.](../img/mdl-clf-shattering.svg)
 :label:`fig_mdl-clf-shattering`
@@ -557,6 +658,11 @@ at $\mathcal{O}(1/\sqrt{n})$ rates.
 Following the revolutionary discovery of VC dimension,
 numerous alternative complexity measures have been proposed,
 each facilitating an analogous generalization guarantee.
+One such measure, *Rademacher complexity*, is developed in full
+in :numref:`sec_mdl-concentration-generalization`,
+which also reproduces from scratch (as *double descent*)
+the surprisingly benign behavior of overparametrized models
+that we are about to describe.
 See :citet:`boucheron2005theory` for a detailed discussion
 of several advanced ways of measuring function complexity.
 Unfortunately, while these complexity measures
@@ -590,6 +696,21 @@ in :numref:`sec_generalization_deep`.
    regardless of your true error?
 1. What is the VC dimension of the class of fifth-order polynomials?
 1. What is the VC dimension of axis-aligned rectangles on two-dimensional data?
+1. Prove the lower bound VC $\geq d+1$ for linear classifiers
+   $f(\mathbf{x}) = \operatorname{sign}(\mathbf{w}^\top \mathbf{x} + b)$ on $\mathbb{R}^d$
+   by shattering the $d+1$ points $\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$
+   (the origin and the standard unit vectors). Given any desired labels
+   $\sigma_0, \sigma_1, \ldots, \sigma_d \in \{\pm 1\}$, set $b = \sigma_0 / 2$
+   and read the weights off the labels as $w_i = \sigma_i - b$. Verify that
+   $f(\mathbf{0}) = \sigma_0$ and $f(\mathbf{e}_i) = \sigma_i$ for every $i$.
+   Combined with the Radon argument in the text for the upper bound, this
+   proves VC $= d+1$ exactly.
+1. In :numref:`fig_mdl-clf-shattering` the three shattered points are in
+   *general position* (not collinear). Show that three collinear points can
+   *not* be shattered by halfplanes: which labeling is unrealizable? Explain
+   why this does not contradict the VC dimension of lines in the plane being
+   $3$. (Hint: the VC dimension asks whether *some* set of a given size can be
+   shattered, not whether *every* set can.)
 
 [Discussions](https://d2l.discourse.group/t/6829)
 
@@ -597,7 +718,7 @@ in :numref:`sec_generalization_deep`.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · Linear Classification]{.kicker}
+[Dive into Deep Learning · §4.6]{.kicker}
 
 **Generalization** in Classification<br>How much should you trust a test score, and can we ever guarantee generalization *before* we see the data?
 :::
@@ -709,6 +830,48 @@ $n\approx 18{,}500$ vs. the asymptotic $10{,}000$. Guarantees that hold for
 :::
 :::
 
+::: {.slide title="The √n law, simulated" only="pytorch"}
+[The Test Set · convergence]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+Fix a classifier with true error $0.1$ and draw 1000 hypothetical test
+sets at each size $n$: the spread of the estimates marches down the
+predicted $-\tfrac12$ slope on log–log axes.
+
+::: {.d2l-note}
+The simulated spread sits **on** the CLT line; the Hoeffding envelope
+runs parallel above it — the constant-factor price of a guarantee at
+every finite $n$.
+:::
+:::
+
+::: {.col .fig .big}
+@!generalization-classification-the-test-set-2
+:::
+:::
+:::
+
+::: {.slide title="The √n law, simulated" except="pytorch"}
+[The Test Set · convergence]{.kicker}
+
+Fix a classifier with true error $0.1$ and draw 1000 hypothetical test sets
+at each size $n \in \{100, \ldots, 10{,}000\}$: each per-example indicator is
+a Bernoulli$(0.1)$ coin, so the estimate is $\mathrm{Binomial}(n, 0.1)/n$.
+
+. . .
+
+On log–log axes the measured spread, the CLT prediction
+$\sqrt{\epsilon(1-\epsilon)/n}$, and the 95% Hoeffding radius
+$\sqrt{\log(2/0.05)/(2n)}$ are three **parallel lines of slope
+$-\tfrac{1}{2}$**: the $\sqrt{n}$ law in the flesh.
+
+::: {.d2l-note}
+The simulated spread sits **on** the CLT line; the Hoeffding envelope runs
+a constant factor above it — the price of a guarantee at every finite $n$.
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [02]{.dnum}
@@ -755,6 +918,48 @@ by chance. This is multiple hypothesis testing.
 score, so the choice depends on the test set. Once that information leaks to
 the modeler, it is no longer a true test set.
 :::
+:::
+:::
+
+::: {.slide title="Nothing learned, score climbs anyway" only="pytorch"}
+[Test-Set Reuse]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+Evaluate $k$ **coin-flip** classifiers (true accuracy exactly $0.5$) on
+one shared test set of $n = 1000$ and track the best score so far:
+past $0.56$ after ten thousand tries, by pure selection.
+
+::: {.d2l-note .warn}
+The climb grows like $\sqrt{\log(k)/(2n)}$ — Hoeffding over $k$ events
+at once. Best-of-many on a shared test set *always* buys some of its
+improvement this way.
+:::
+:::
+
+::: {.col .fig .big}
+@!generalization-classification-test-set-reuse-1
+:::
+:::
+:::
+
+::: {.slide title="Nothing learned, score climbs anyway" except="pytorch"}
+[Test-Set Reuse]{.kicker}
+
+Evaluate $k$ **coin-flip** classifiers — true accuracy exactly $0.5$,
+*nothing* learned — on one shared test set of $n = 1000$ and track the best
+score seen so far as $k$ grows.
+
+. . .
+
+The best apparent accuracy climbs steadily, exceeding **0.56** after ten
+thousand tries, by pure selection: the best of many lucky coin flips.
+
+::: {.d2l-note .warn}
+The climb grows like $\sqrt{\log(k)/(2n)}$ — Hoeffding over $k$ events at
+once. Best-of-many on a shared test set *always* buys some of its
+improvement this way, and an adaptive modeler, steering each model toward
+what scored well before, climbs faster still.
 :::
 :::
 
@@ -840,25 +1045,32 @@ the **XOR** labeling of **4**.
 ![All $2^3=8$ labelings of 3 points are linearly separable (left); the XOR labeling of 4 points is not (right). So plane lines shatter 3 points but not 4.](../img/mdl-clf-shattering.svg){width=82%}
 :::
 
-::: {.slide title="VC dimension and the VC bound"}
+::: {.slide title="VC of linear models: d+1, and neither direction is deep"}
 [Learning Theory · the bound]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
 The **VC dimension** is the largest set a class can shatter. Lines in the
-plane: $3$. Linear models in $d$ dimensions: $d+1$.
+plane: $3$. Linear models in $d$ dimensions: $d+1$ — *exactly*.
 
-Vapnik and Chervonenkis bound the gap by VC dimension and sample size:
-
-$$\epsilon(f_\mathcal{S}) - \epsilon_\mathcal{S}(f_\mathcal{S}) < c\sqrt{(\mathrm{VC}-\log\delta)/n}$$
-
-with probability $\ge 1-\delta$.
+- **Lower bound:** the points $\{\mathbf{0}, \mathbf{e}_1, \ldots,
+  \mathbf{e}_d\}$ are shattered by weights *read off* the desired labels
+  (exercise 5).
+- **Upper bound:** by **Radon's theorem** any $d+2$ points split into two
+  subsets with intersecting convex hulls — and no halfspace separates
+  intersecting hulls.
 :::
 
 ::: {.col .narrow}
+Vapnik–Chervonenkis then bound the gap *uniformly* over the class:
+
+$$\epsilon(f_\mathcal{S}) - \epsilon_\mathcal{S}(f_\mathcal{S}) < c\sqrt{\tfrac{\mathrm{VC}-\log\delta}{n}}$$
+
+with probability $\ge 1-\delta$.
+
 ::: {.d2l-note}
-Fix the class and $\delta$: the gap shrinks at the familiar
-$\mathcal{O}(1/\sqrt{n})$ rate, now *uniformly* over the whole class.
+Fix the class and $\delta$: the familiar $\mathcal{O}(1/\sqrt{n})$ rate,
+now for the *learned* model.
 :::
 :::
 :::
@@ -876,8 +1088,9 @@ generalizes well on real data, and often *better* as it gets larger and
 deeper. Classical complexity measures do not explain this.
 :::
 
-The mystery of deep-network generalization returns in
-:numref:`sec_generalization_deep`.
+The modern road — **Rademacher complexity**, and the double-descent behavior
+of overparametrized models reproduced from scratch — is developed in §25.5;
+the deep-learning story resumes in §5.5.
 :::
 
 ::: {.slide title="Recap"}
@@ -896,10 +1109,11 @@ The mystery of deep-network generalization returns in
 ::: {.col}
 - **Learning theory** seeks *a-priori* guarantees via **uniform convergence**
   over a class $\mathcal{F}$.
-- **VC dimension** = largest shatterable set ($d+1$ for linear); it bounds the
-  gap, again at $\mathcal{O}(1/\sqrt{n})$.
-- **Deep nets** defy these bounds, generalizing despite huge capacity, a
-  puzzle we revisit later.
+- **VC dimension** = largest shatterable set; for linear models exactly
+  $d+1$ (labels read off / Radon); it bounds the gap at
+  $\mathcal{O}(1/\sqrt{n})$.
+- **Deep nets** defy these bounds, generalizing despite huge capacity —
+  the puzzle of §5.5, with the modern tools in §25.5.
 :::
 :::
 :::

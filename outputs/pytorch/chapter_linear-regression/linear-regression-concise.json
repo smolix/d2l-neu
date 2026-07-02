@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 19009,
-          "sha256": "sha256:e0f716abee6e1ee50a4af786411b28302bc1e5695a5e179e3f4657bc5e386ab3"
+          "bytes": 19004,
+          "sha256": "sha256:5d5395833bf69dd87bef650ab8474adfc1fd7c8c6ec84ecbc15552848df84ebc"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: tensor([-0.0001, -0.0002])\nerror in estimating b: tensor([-0.0004])\n"
+          "text": "error in estimating w: tensor([ 0.0005, -0.0003])\nerror in estimating b: tensor([-0.0005])\n"
         }
       ]
     }

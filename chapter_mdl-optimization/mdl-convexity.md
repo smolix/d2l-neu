@@ -307,7 +307,8 @@ and the set of all subgradients at $\mathbf{x}$ is written
 $\partial f(\mathbf{x})$. For convex $f$ this set is nonempty at every interior
 point of the domain --- some supporting line always fits under the graph ---
 and where $f$ is differentiable it collapses to the singleton
-$\{\nabla f(\mathbf{x})\}$. At a corner it fans out: for $f(x) = |x|$ at the
+$\{\nabla f(\mathbf{x})\}$. At a corner it fans out
+(:numref:`fig_mdl-opt-subgradient-fan`): for $f(x) = |x|$ at the
 origin, every slope $g \in [-1, 1]$ tucks the line $g\,x$ under the V, so
 $\partial f(0) = [-1, 1]$; for the hinge $\max(0, 1 - z)$ at $z = 1$,
 $\partial f(1) = [-1, 0]$. The optimality criterion survives verbatim:
@@ -317,6 +318,9 @@ minimized at its corner, where no gradient exists but the zero slope fits under
 the graph. Subgradients make everything in this section --- Jensen's inequality,
 local-equals-global, descent methods --- go through for ReLU-style kinks, and
 they will quietly power the cleanest proof below.
+
+![At the kink of $f(x) = |x|$ the gradient does not exist, but the subgradient fans out into a set: every slope $g \in \left(-1, 1\right)$ tucks a supporting line under the V, and the two extreme slopes $\pm 1$ lie along the branches themselves, so $\partial f(0)$ is the whole interval from $-1$ to $1$. The zero-slope member (orange) is the optimality certificate $0 \in \partial f(0)$: the corner is a provable minimum, no gradient required.](../img/mdl-opt-subgradient-fan.svg)
+:label:`fig_mdl-opt-subgradient-fan`
 
 ### Checking the Lenses Numerically
 
@@ -371,7 +375,9 @@ is the single most-used inequality in this book's probabilistic chapters.
 
 **Proposition (Jensen's inequality).** *Let $f$ be convex and let $X$ be a
 random vector taking values in $f$'s domain, with $\mathbb{E}[X]$ finite and in
-the domain's interior. Then*
+the domain's interior, and read $\mathbb{E}[f(X)]$ as an extended real number
+(the value $+\infty$ is allowed, and makes the inequality trivially true).
+Then*
 
 $$
 f\left(\mathbb{E}[X]\right) \;\le\; \mathbb{E}\left[f(X)\right].
@@ -461,7 +467,7 @@ print(f'AM >= GM in all trials: {bool((am >= gm).all())},'
 p = rng.dirichlet(np.ones(10), size=1000)      # 1000 random distribution pairs
 q = rng.dirichlet(np.ones(10), size=1000)
 print(f'min KL(p||q) = {(p * np.log(p / q)).sum(axis=1).min():.4f} >= 0,'
-      f'  max |KL(p||p)| = {np.abs((p * np.log(p / p)).sum(axis=1)).max():.1f}')
+      f'  max |KL(p||p)| = {np.abs((p * np.log(p / p)).sum(axis=1)).max():.1e}')
 ```
 
 With $X \sim \mathcal{N}(0, 1)$ and the convex $f(x) = e^x$, a million samples
@@ -471,8 +477,9 @@ $\sqrt{e} \approx 1.6487$ and $1$, a Jensen gap of $0.65$ that no amount of
 sampling will close, because it is geometry, not noise. AM $\ge$ GM holds in
 all $10^5$ random draws (smallest ratio $1.0002$), and across a thousand random
 pairs of distributions on ten symbols the smallest KL divergence is $0.1331$,
-comfortably nonnegative, while $D_{\mathrm{KL}}(p\,\|\,p) = 0$ exactly --- the
-equality case.
+comfortably nonnegative, while $D_{\mathrm{KL}}(p\,\|\,p)$ prints as
+`0.0e+00` --- exactly zero, not merely small, the equality case certifying
+itself at machine resolution.
 
 ## Why Convexity Matters
 :label:`subsec_mdl-why-convexity-matters`
@@ -673,6 +680,35 @@ one observation for the final act of this section: the second half of the proof
 never used convexity at all. It consumed only the inequality
 :eqref:`eq_mdl-opt-pl` --- a fact we will exploit when convexity itself is gone.
 
+These two rates are the payoff of the whole theory, so they should not escape
+the pattern every other proposition in this section obeys: state, prove,
+*measure*. The cell runs gradient descent at $\eta = 1/L$ on the least-squares
+toy of the `#convexity-three-lenses` cell --- strongly convex, with $\mu$ and
+$L$ read off the eigenvalues of $X^\top X$ --- and prints the per-step
+contraction of $f - f^\star$ next to the theorem's promise:
+
+```{.python .input #convexity-rate-check}
+mu, L = np.linalg.eigvalsh(X.T @ X)[[0, -1]]   # curvature floor and ceiling
+w_star = np.linalg.solve(X.T @ X, X.T @ y)     # the unique minimizer
+w, gaps = np.zeros(2), []
+for _ in range(25):                            # gradient descent at eta = 1/L
+    w -= grad(w) / L
+    gaps.append(f(w) - f(w_star))
+r = np.array(gaps[1:]) / np.array(gaps[:-1])
+print(f'mu = {mu:.4f}, L = {L:.4f}:  the theorem promises '
+      f'contraction <= 1 - mu/L = {1 - mu / L:.4f}')
+print('measured per-step contraction of f - f*:', r[::6].round(4))
+print(f'worst step: {r.max():.4f}  (the bound holds at every step)')
+```
+
+The measured contraction is $0.4406$ at every step, safely inside the promised
+$1 - \mu/L = 0.6637$ --- and the gap between the two is itself informative. On
+a pure quadratic the slow mode's *distance* to the optimum contracts by
+exactly $1 - \mu/L$ per step, and the value gap, being quadratic in the
+distance, contracts by its square: $(1 - \mu/L)^2 = 0.4406$, precisely the
+printed figure. The theorem's rate is tight for the quantity it bounds and the
+class it covers; on any particular function you may go faster, never slower.
+
 ## Recognizing Convexity and Its Limits
 :label:`subsec_mdl-recognizing-convexity`
 
@@ -760,7 +796,11 @@ log-sum-exp plus an affine function --- convex. Softmax regression
 (:numref:`sec_softmax`) composes it with the affine map
 $\mathbf{z} = W\mathbf{x} + \mathbf{b}$, so the loss is convex in the weights
 (rule 2): the last layer of a classifier is always a convex problem, whatever
-the features feeding it. The Hessian formula also predicts one *zero*
+the features feeding it. The same softmax machinery is also the core of
+attention --- a head's weights are exactly this map applied to scaled
+query--key scores (:numref:`sec_attention-scoring-functions`), with the same
+Jacobian $\mathrm{diag}(\mathbf{s}) - \mathbf{s}\mathbf{s}^\top$ appearing in
+its backward pass. The Hessian formula also predicts one *zero*
 eigenvalue, in the direction $\mathbf{1}$: a variance $\mathrm{Var}(v_I)$
 vanishes when $v$ is constant, which is the shift invariance
 $\mathrm{lse}(\mathbf{x} + c\mathbf{1}) = \mathrm{lse}(\mathbf{x}) + c$ --- the
@@ -808,11 +848,15 @@ $\mathbf{y}$, how high can one be pushed while staying below the graph of $f$?
 (It records the negative of that intercept.) The conjugate thus encodes $f$ by
 its supporting lines instead of its values --- and for closed convex $f$ the
 encoding is lossless: $f^{**} = f$ (:citet:`Boyd.Vandenberghe.2004`, section
-3.3). Two properties cost nothing. First, $f^*$ is *always* convex, whatever
+3.3). For non-convex $f$ the double transform returns not $f$ but the largest
+closed convex function below it --- the **convex envelope** --- which is why
+conjugacy is the engine of convex *relaxations*: $f^{**}$ is the tightest
+convex stand-in for $f$ that any method restricted to supporting lines can
+see. Two properties cost nothing. First, $f^*$ is *always* convex, whatever
 $f$ is: for fixed $\mathbf{x}$ the expression
 $\mathbf{y}^\top\mathbf{x} - f(\mathbf{x})$ is affine in $\mathbf{y}$, and rule
 3 says a supremum of affine functions is convex --- the same one-line argument
-that made the dual function of
+that, in the next section, makes the dual function of
 :numref:`subsec_mdl-lagrangian-duality` concave, and no coincidence: for
 linearly constrained problems the dual function *is* a conjugate in disguise.
 Second, the definition rearranges into the **Fenchel--Young inequality**,
@@ -865,6 +909,98 @@ for the variational representations of divergences --- Donsker--Varadhan and the
 $f$-GAN duals in :numref:`sec_mdl-divergences-distances` are this same
 conjugate trick applied to KL and its relatives.
 
+### Proximal Operators
+:label:`subsec_mdl-proximal-operators`
+
+The conjugate encodes a convex function by its supporting lines; one last
+construction turns convex functions into *algorithm components*, and it
+unifies two things this chapter otherwise treats separately --- gradient steps
+and projections. The **proximal operator** of a convex $f$ is
+
+$$
+\mathrm{prox}_{f}(\mathbf{z}) \;=\; \mathop{\mathrm{argmin}}_{\mathbf{x}}\; \left( f(\mathbf{x}) + \tfrac12\, \|\mathbf{x} - \mathbf{z}\|^2 \right),
+$$
+:eqlabel:`eq_mdl-opt-prox`
+
+well defined because the objective is $1$-strongly convex --- the uniqueness
+proposition above guarantees exactly one minimizer. Read it as a negotiated
+step: move toward lower $f$, but pay quadratically for straying from
+$\mathbf{z}$. Two special cases calibrate the definition. If $f = 0$, the prox
+is the identity. If $f$ is the *indicator* of a convex set $C$ --- zero on
+$C$, $+\infty$ outside --- then minimizing forces $\mathbf{x} \in C$ and the
+prox is the nearest feasible point:
+$\mathrm{prox}_f = \Pi_C$, the projection operator of
+:numref:`subsec_mdl-projected-gd`. Proximal operators are projections,
+generalized from sets to functions.
+
+The example that matters for sparsity is $f(x) = \lambda |x|$ (the operator
+acts coordinate-wise on $\lambda\|\cdot\|_1$, so one dimension suffices). The
+objective $\lambda|x| + \tfrac12 (x - z)^2$ has a kink at $0$, and the
+subgradient optimality criterion $0 \in \partial(\cdot)$ from
+:numref:`subsec_mdl-three-lenses` dispatches it in three lines: if the
+minimizer $x \neq 0$, stationarity reads $\lambda\,\mathrm{sign}(x) + x - z = 0$,
+i.e. $x = z - \lambda\,\mathrm{sign}(z)$, consistent only when $|z| > \lambda$;
+if $x = 0$, the criterion asks $z \in [-\lambda, \lambda]$; and the two cases
+splice into one formula,
+
+$$
+\mathrm{prox}_{\lambda|\cdot|}(z) \;=\; \mathrm{sign}(z)\, \max\left(|z| - \lambda,\, 0\right)
+$$
+:eqlabel:`eq_mdl-opt-soft-threshold`
+
+--- **soft-thresholding**, the same solution Exercise 3 derives from the
+subdifferential, now recognized as a prox. Inputs smaller than $\lambda$ are
+snapped to *exactly* zero; larger ones are shrunk by $\lambda$. This is the
+mechanism by which $\ell_1$ regularization produces genuinely sparse weights
+where $\ell_2$ only shrinks them.
+
+The algorithmic payoff is one line long. For a composite objective
+$g(\mathbf{x}) + h(\mathbf{x})$ with $g$ smooth and $h$ convex but kinked ---
+the lasso, with $g$ the least-squares term and $h = \lambda\|\cdot\|_1$, is
+the prototype --- alternate a gradient step on the smooth part with a prox on
+the kinked part:
+
+$$
+\mathbf{x}_{k+1} = \mathrm{prox}_{\eta h}\left(\mathbf{x}_k - \eta\, \nabla g(\mathbf{x}_k)\right).
+$$
+
+This is **ISTA**, the proximal-gradient method: it converges at the same
+$O(1/k)$ rate as plain gradient descent, kink notwithstanding, and it contains
+the projected gradient descent of
+:numref:`sec_mdl-constrained-optimization-duality` as the special case where
+$h$ is an indicator. The cell verifies :eqref:`eq_mdl-opt-soft-threshold`
+against brute-force minimization, then runs twenty ISTA steps on a tiny lasso
+and watches exact zeros appear:
+
+```{.python .input #convexity-prox-ista}
+lam = 0.7
+prox = lambda z, t: np.sign(z) * np.maximum(np.abs(z) - t, 0.0)
+zs = np.linspace(-3.0, 3.0, 13)
+grid = np.linspace(-5.0, 5.0, 200001)          # brute-force argmin on a grid
+brute = np.array([grid[np.argmin(lam * np.abs(grid) + 0.5 * (grid - z)**2)]
+                  for z in zs])
+print('max |prox - brute-force argmin| =',
+      f'{np.abs(prox(zs, lam) - brute).max():.1e}')
+rng = np.random.default_rng(5)                 # a tiny lasso problem
+A = rng.normal(size=(30, 8))
+b = A @ np.array([2.0, 0, 0, -1.5, 0, 0, 0, 1.0]) + 0.05 * rng.normal(size=30)
+eta = 1.0 / np.linalg.eigvalsh(A.T @ A).max()
+w = np.zeros(8)
+for _ in range(20):                            # ISTA: gradient step, then prox
+    w = prox(w - eta * A.T @ (A @ w - b), eta * lam)
+print('w after 20 ISTA steps:', w.round(3))
+print('exact zeros:', int((w == 0).sum()), 'of 8 coordinates')
+```
+
+The closed form matches the brute-force minimizer to grid resolution, and
+after twenty proximal-gradient steps five of the eight coordinates are
+*exactly* zero --- not small: zero, snapped there by the $\max$ in
+:eqref:`eq_mdl-opt-soft-threshold` --- while the three nonzero coordinates sit
+near the planted values $(2.0, -1.5, 1.0)$. No amount of plain gradient
+descent can produce an exact zero (a smooth step lands wherever the arithmetic
+falls); the prox is the piece of the algorithm that *knows about the kink*,
+and one application per step is all sparsity costs.
+
 ### Reality Check: Deep Networks Are Non-Convex
 
 Now for the honest part. The convexity calculus had one missing rule ---
@@ -890,13 +1026,16 @@ the inequality :eqref:`eq_mdl-opt-pl`, known as the
 introduced it independently in 1963):
 
 $$
+f \textrm{ is } L\textrm{-smooth} \;\;\textrm{and}\;\;
 \frac12\, \|\nabla f(\mathbf{x})\|^2 \;\ge\; \mu \left( f(\mathbf{x}) - f^\star \right)
-\quad \textrm{for all } \mathbf{x}
+\;\;\textrm{for all } \mathbf{x}
 \qquad \Longrightarrow \qquad
 \textrm{GD converges linearly to } f^\star,
 $$
 
-with no convexity required :cite:`Karimi.Nutini.Schmidt.2016`. PL says the
+with no convexity required :cite:`Karimi.Nutini.Schmidt.2016` (smoothness
+stays in the hypothesis --- it is what powers the descent lemma half of the
+argument). PL says the
 gradient cannot be small unless the *value* is nearly optimal --- flat spots
 exist only at the bottom. Strong convexity implies PL (that was the first half
 of the proof), but the converse fails: PL functions can have multiple minima,
@@ -931,9 +1070,9 @@ $0.25$ is no mystery: near the minimum $f$ looks like $\tfrac12 f''(0) x^2$ with
 $f''(0) = 8$, each step scales $x$ by $1 - 8/16 = \tfrac12$, and the gap is
 quadratic in $x$.) Conditions of PL type are one current explanation for why
 heavily over-parameterized networks train so reliably: near interpolation, wide
-networks have been argued to satisfy local PL-style inequalities, so first-order
-methods converge fast to global *training-loss* minima even though the landscape
-is nothing like convex.
+networks have been argued to satisfy local PL-style inequalities
+:cite:`Liu.Zhu.Belkin.2022`, so first-order methods converge fast to global
+*training-loss* minima even though the landscape is nothing like convex.
 
 Non-convexity has one more consequence the convex theory never had to face:
 *which* global minimum you reach is up for grabs, and the optimizer itself does
@@ -943,7 +1082,8 @@ underdetermined least squares: started from $\mathbf{w}_0 = \mathbf{0}$, every
 gradient $X^\top(X\mathbf{w} - \mathbf{y})$ lies in the row space of $X$, so
 the iterates never leave it, and the limit is the *minimum-norm* interpolant
 --- the same solution the pseudoinverse computes
-(:numref:`sec_mdl-svd-low-rank`; Exercise 8 has you prove and verify it). For
+(:numref:`sec_mdl-svd-low-rank`; Exercise 8 has you verify it, and Exercise 9
+of :numref:`sec_mdl-gradient-based-optimization` has you derive it). For
 logistic regression on separable data, gradient descent's direction converges
 to the maximum-margin separator :cite:`Soudry.Hoffer.Nacson.ea.2018` --- the
 SVM solution of :numref:`sec_mdl-constrained-optimization-duality`, never asked
@@ -986,7 +1126,10 @@ curvature and conditioning.
   cross-entropy without touching a Hessian; log-sum-exp is convex because its
   Hessian **is the softmax covariance**, and its conjugate is negative entropy
   --- the identity behind softmax-as-maximum-entropy and the variational duals
-  of chapter 26.
+  of :numref:`chap_mdl-information-theory`. **Proximal operators** generalize
+  projections from sets to functions; soft-thresholding is the prox of
+  $\lambda|\cdot|$, and one prox per step (ISTA) optimizes kinked composite
+  losses at gradient descent's rate.
 * Deep networks are **non-convex by construction** (permutation symmetry makes
   the minimizer set non-convex), but the **PL condition** preserves linear
   convergence without convexity, and gradient descent's **implicit bias**
@@ -1024,25 +1167,29 @@ curvature and conditioning.
    $\|\mathbf{x}_t - \mathbf{x}^\star\|$ is nonincreasing. Verify this
    numerically for gradient descent on
    $f(\mathbf{w}) = \tfrac12\|X\mathbf{w} - \mathbf{y}\|^2$ (reuse the data of
-   the `#convexity-three-lenses` cell), and then verify the linear rate
-   :eqref:`eq_mdl-opt-rate-strong`: measure the empirical contraction factor of
-   $f(\mathbf{x}_k) - f^\star$ and compare it with $1 - \mu/L$ computed from
-   the eigenvalues of $X^\top X$.
+   the `#convexity-three-lenses` cell). The `#convexity-rate-check` cell
+   measured the value-gap contraction at $\eta = 1/L$ and found exactly
+   $(1 - \mu/L)^2$; predict what the contraction becomes at the more
+   aggressive $\eta = 2/(\mu + L)$ of
+   :numref:`sec_mdl-gradient-based-optimization`, then verify by modifying
+   the cell.
 7. Show that the Polyak--Łojasiewicz condition :eqref:`eq_mdl-opt-pl` implies
    every stationary point is a global minimizer, and that strong convexity
    implies PL (reproduce the proof). Then show PL does *not* imply convexity by
    verifying the PL inequality for $f(x) = x^2 + 3\sin^2 x$ analytically on a
    neighborhood of $0$ --- or numerically on $[-5, 5]$, as the
    `#convexity-pl-rate` cell did.
-8. **Implicit bias.** Let $X \in \mathbb{R}^{m \times n}$ with $m < n$ and let
-   $X\mathbf{w} = \mathbf{y}$ have infinitely many solutions. (a) Show that
-   gradient descent on $\tfrac12\|X\mathbf{w} - \mathbf{y}\|^2$ started at
-   $\mathbf{w}_0 = \mathbf{0}$ keeps every iterate in the row space of $X$.
-   (b) Show that the row space contains exactly one interpolant, and that it is
-   the minimum-$\ell_2$-norm solution $X^+\mathbf{y}$. (c) Verify numerically
-   with a random $4 \times 10$ system: compare the GD limit against
-   `np.linalg.pinv`, and against GD started from a nonzero $\mathbf{w}_0$.
-   What changes, and why?
+8. **Implicit bias, verified.** Exercise 9 of
+   :numref:`sec_mdl-gradient-based-optimization` derives, on paper, that
+   gradient descent on the underdetermined least-squares loss
+   $\tfrac12\|X\mathbf{w} - \mathbf{y}\|^2$ started at
+   $\mathbf{w}_0 = \mathbf{0}$ stays in the row space of $X$ and converges to
+   the minimum-$\ell_2$-norm interpolant $X^+\mathbf{y}$. This exercise is the
+   laboratory half: with a random $4 \times 10$ system, (a) compare the GD
+   limit against `np.linalg.pinv`; (b) track the component of the iterates
+   *orthogonal* to the row space and confirm it stays at exactly zero;
+   (c) restart GD from a nonzero $\mathbf{w}_0$ with a component off the row
+   space. What changes in the limit, and why?
 
 ## Discussions
 
@@ -1067,7 +1214,7 @@ all stand on results proved here.
 
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §24.2]{.kicker}
+[Dive into Deep Learning · §24.3]{.kicker}
 
 The line between "gradient descent provably works" and "we hope"<br>**convex sets · three lenses · Jensen · global rates · what deep nets break**.
 :::
@@ -1201,16 +1348,18 @@ $\ell_1$ and the hinge have kinks, so no gradient exists there. A
 
 $$f(\mathbf{y}) \ge f(\mathbf{x}) + \mathbf{g}^\top(\mathbf{y}-\mathbf{x}).$$
 
-At a corner the slopes *fan out*: $\partial|x|(0) = [-1, 1]$. Optimality
-survives verbatim: $\mathbf{x}^\star$ is a minimizer iff
-$\mathbf{0} \in \partial f(\mathbf{x}^\star)$.
-:::
+At a corner the slopes *fan out*: $\partial|x|(0) = [-1, 1]$, and the
+zero-slope member is an optimality certificate --- $\mathbf{x}^\star$
+minimizes $f$ iff $\mathbf{0} \in \partial f(\mathbf{x}^\star)$.
 
-::: {.col .narrow}
 ::: {.d2l-note .rule}
 Subgradients carry Jensen, local-equals-global, and descent through
 ReLU-style kinks.
 :::
+:::
+
+::: {.col .fig}
+@fig:mdl-opt-subgradient-fan
 :::
 :::
 :::
@@ -1334,6 +1483,21 @@ iterations than two. The deep reason first-order methods scale.
 :::
 :::
 
+::: {.slide title="State, prove, measure"}
+[The payoff]{.kicker}
+
+Gradient descent at $\eta = 1/L$ on the least-squares toy, with $\mu$ and
+$L$ read off the eigenvalues of $X^\top X$:
+
+@!convexity-rate-check
+
+The bound holds at every step --- and the measured $0.4406$ is no
+accident: the slow mode's *distance* contracts by exactly $1-\mu/L$, and
+the value gap, quadratic in distance, contracts by its square,
+$(1-\mu/L)^2 = 0.4406$. Tight for what it bounds; faster on any
+particular function.
+:::
+
 ::: {.slide}
 ::: {.divider}
 [05]{.dnum}
@@ -1397,6 +1561,26 @@ Carlo, and the predicted flat direction:
 Every eigenvalue is nonnegative down to one numerical zero, and 200k
 one-hot draws reproduce the analytic Hessian: it really is a covariance
 you can sample from.
+:::
+
+::: {.slide title="The prox is the piece that knows about the kink"}
+[Recognizing convexity]{.kicker}
+
+$\mathrm{prox}_f(\mathbf{z})$ moves toward lower $f$ but pays
+quadratically for straying from $\mathbf{z}$ --- a projection,
+generalized from sets to functions. For $\lambda|x|$ the subgradient
+criterion solves it in closed form: **soft-thresholding**,
+
+$$\mathrm{prox}_{\lambda|\cdot|}(z) = \mathrm{sign}(z)\,\max(|z| - \lambda,\, 0),$$
+
+and alternating a gradient step on the smooth part with a prox on the
+kink is **ISTA**, which keeps gradient descent's $O(1/k)$ rate:
+
+@!convexity-prox-ista
+
+Five of eight coordinates are *exactly* zero --- snapped there by the
+$\max$, which no smooth gradient step can do. This is how $\ell_1$
+sparsifies where $\ell_2$ only shrinks.
 :::
 
 ::: {.slide}

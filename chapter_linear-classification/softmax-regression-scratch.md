@@ -47,13 +47,10 @@ from functools import partial
 
 Let's begin with the most important part:
 the mapping from scalars to probabilities.
-For a refresher, recall the operation of the sum operator
-along specific dimensions in a tensor,
-as discussed in :numref:`subsec_lin-alg-reduction`
-and :numref:`subsec_lin-alg-non-reduction`.
-Given a matrix `X` we can sum over all elements (by default) or only
-over elements in the same axis.
-The `axis` variable lets us compute row and column sums:
+Softmax normalizes each *row* of a matrix, so we will need per-row sums;
+recall from :numref:`subsec_lin-alg-reduction` and
+:numref:`subsec_lin-alg-non-reduction` how `axis` selects the dimension
+a sum collapses and `keepdims` preserves it for broadcasting:
 
 ```{.python .input #softmax-regression-scratch-the-softmax-1}
 X = d2l.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
@@ -437,7 +434,33 @@ for X_i, y_i in data.val_dataloader():
 print(f'Test accuracy: {torch.cat(correct).mean():.3f}')
 ```
 
-The overall test accuracy is approximately 83%, consistent with the training
+```{.python .input #softmax-regression-scratch-prediction-accuracy}
+%%tab mxnet
+correct = []
+for X_i, y_i in data.val_dataloader():
+    correct.append(model.accuracy(model(X_i), y_i, averaged=False))
+print(f'Test accuracy: {float(np.concatenate(correct).mean()):.3f}')
+```
+
+```{.python .input #softmax-regression-scratch-prediction-accuracy}
+%%tab tensorflow
+correct = []
+for X_i, y_i in data.val_dataloader():
+    correct.append(model.accuracy(model(X_i), y_i, averaged=False))
+print(f'Test accuracy: {float(tf.reduce_mean(tf.concat(correct, 0))):.3f}')
+```
+
+```{.python .input #softmax-regression-scratch-prediction-accuracy}
+%%tab jax
+correct = []
+for X_i, y_i in data.val_dataloader():
+    correct.append(model.accuracy(trainer.state.params, (X_i,), y_i,
+                                  trainer.state, False))
+print(f'Test accuracy: {float(jnp.concatenate(correct).mean()):.3f}')
+```
+
+The overall test accuracy comes out at roughly 82--83% (the exact value
+varies a little from run to run), consistent with the training
 curve: the ceiling of a linear model on Fashion-MNIST. We are more interested in
 the images we label *incorrectly*. We visualize them by
 comparing their actual labels
@@ -453,6 +476,74 @@ labels = [a+'\n'+b for a, b in zip(
 data.visualize([X, y], labels=labels)
 ```
 
+The gallery shows *which* images fail; to see *how* they fail in aggregate we
+compute the confusion matrix introduced in :numref:`sec_classification`. We
+accumulate a $10\times10$ matrix of counts over the validation set, with entry
+$(i, j)$ counting how often true class $j$ was predicted as class $i$, and then
+normalize each column so that column $j$ shows the distribution of predictions
+for class $j$ (classes are indexed in the order of `text_labels`: t-shirt,
+trouser, pullover, dress, coat, sandal, shirt, sneaker, bag, ankle boot).
+
+```{.python .input #softmax-regression-scratch-prediction-confusion}
+%%tab pytorch
+C = torch.zeros(10, 10)
+for X_i, y_i in data.val_dataloader():
+    with torch.no_grad():
+        preds_i = model(X_i).argmax(axis=1)
+    C += torch.bincount(10 * preds_i + y_i, minlength=100).reshape(10, 10)
+C /= C.sum(axis=0, keepdims=True)              # column j: true class j
+d2l.show_heatmaps(C.reshape(1, 1, 10, 10), xlabel='true class',
+                  ylabel='predicted class', figsize=(3.5, 3.5), cmap='Blues')
+```
+
+```{.python .input #softmax-regression-scratch-prediction-confusion}
+%%tab mxnet
+C = np.zeros((10, 10))
+for X_i, y_i in data.val_dataloader():
+    preds_i = model(X_i).argmax(axis=1).asnumpy()
+    for i, j in zip(preds_i, y_i.asnumpy()):
+        C[int(i), int(j)] += 1
+C /= C.sum(axis=0, keepdims=True)              # column j: true class j
+d2l.show_heatmaps(C.reshape(1, 1, 10, 10), xlabel='true class',
+                  ylabel='predicted class', figsize=(3.5, 3.5), cmap='Blues')
+```
+
+```{.python .input #softmax-regression-scratch-prediction-confusion}
+%%tab tensorflow
+C = tf.zeros((10, 10), dtype=tf.int32)
+for X_i, y_i in data.val_dataloader():
+    preds_i = tf.cast(d2l.argmax(model(X_i), axis=1), y_i.dtype)
+    C += tf.transpose(tf.math.confusion_matrix(y_i, preds_i, num_classes=10))
+C = tf.cast(C, tf.float32)
+C /= tf.reduce_sum(C, axis=0, keepdims=True)   # column j: true class j
+d2l.show_heatmaps(tf.reshape(C, (1, 1, 10, 10)), xlabel='true class',
+                  ylabel='predicted class', figsize=(3.5, 3.5), cmap='Blues')
+```
+
+```{.python .input #softmax-regression-scratch-prediction-confusion}
+%%tab jax
+C = jnp.zeros((10, 10))
+for X_i, y_i in data.val_dataloader():
+    preds_i = d2l.argmax(
+        model.apply({'params': trainer.state.params}, X_i), axis=1)
+    C += jnp.bincount(10 * preds_i + y_i, length=100).reshape(10, 10)
+C /= C.sum(axis=0, keepdims=True)              # column j: true class j
+d2l.show_heatmaps(C.reshape(1, 1, 10, 10), xlabel='true class',
+                  ylabel='predicted class', figsize=(3.5, 3.5), cmap='Blues')
+```
+
+The errors are anything but uniform: they form two blocks. Upper-body garments
+(t-shirt, pullover, dress, coat, shirt: columns 0, 2, 3, 4, 6) are traded
+almost exclusively among themselves, with the *shirt* column the most polluted
+of all as it leaks into t-shirt, pullover, and coat; and footwear (sandal,
+sneaker, ankle boot: columns 5, 7, 9) forms a second, smaller cluster.
+Meanwhile trousers and bags are nearly pure diagonal: their overall silhouette
+is unmistakable even to a linear model. This is the summary's claim made
+visible, since to a classifier that can only weigh pixels linearly, two
+garments with the same outline and mass distribution, like a shirt and a
+pullover, are close to indistinguishable, while classes that differ in
+silhouette are easy.
+
 ## Summary and Discussion
 
 In this section we built softmax regression entirely from scratch: the softmax
@@ -462,11 +553,11 @@ you have seen these five moving parts separately, the one-liner in
 :numref:`sec_softmax_concise` is not magic but notation.
 
 **What the training curve tells you.** After 10 epochs with minibatch SGD the
-model converges to roughly 83% validation accuracy. That ceiling is not a
+model converges to roughly 82--83% validation accuracy. That ceiling is not a
 hyperparameter problem; it is the limit of linear separability on Fashion-MNIST.
 The ten classes are not linearly separable in pixel space (shirts and pullovers
-look nearly identical to a linear model). The misclassification visualization at
-the end of the section makes this concrete. Replacing the flat linear layer with
+look nearly identical to a linear model). The misclassification gallery and the
+confusion matrix at the end of the section make this concrete. Replacing the flat linear layer with
 even a single hidden layer (Chapter 5) pushes past it.
 
 **Why the clip is only a band-aid.** Our `cross_entropy` clips the softmax output
@@ -494,6 +585,7 @@ built-in cross-entropy when you are not explicitly studying the internals.
 1. Experiment with the hyperparameters of the code in this section. In particular:
     1. Plot how the validation loss changes as you change the learning rate.
     1. Do the validation and training loss change as you change the minibatch size? How large or small do you need to go before you see an effect?
+1. The diagonal of the (column-normalized) confusion matrix is the *per-class accuracy*. Read it off the matrix computed above. Which class is hardest, and which pairs of classes account for most of the errors? Why would a *linear* model struggle on exactly those pairs, and why should replacing it with a model that can respond to localized shape cues (a collar, a heel) help?
 
 
 :begin_tab:`mxnet`
@@ -602,8 +694,8 @@ to 1**, exactly what a probability distribution over classes requires:
 @softmax-regression-scratch-the-softmax-3
 :::
 
-::: {.slide title="Why it is only a teaching version"}
-[The Softmax]{.kicker}
+::: {.slide title="One logit of 1000, and the answer is NaN"}
+[The Softmax · the failure, live]{.kicker}
 
 Watch the warning bite. A single logit of $1000$ sends $\exp$ to infinity
 in float32, the ratio is $\infty/\infty$, and the whole row turns to `NaN`.
@@ -613,8 +705,9 @@ on the identical input:
 @softmax-regression-scratch-the-softmax-overflow
 
 ::: {.d2l-note .warn}
-One `NaN` poisons every downstream gradient. The stable fix, fusing softmax
-and log via log-sum-exp, arrives in §4.5.
+One `NaN` poisons every downstream gradient. Hold this failure: §4.5 derives
+the fix (fuse softmax and log via **log-sum-exp**) and shows the frameworks
+already ship it.
 :::
 :::
 
@@ -691,6 +784,12 @@ Take the negative log of each selected probability, then average. A tiny
 clip keeps the log finite when a probability underflows to 0:
 
 @softmax-regression-scratch-the-cross-entropy-loss-2
+
+::: {.d2l-note .warn}
+The clip is a **band-aid**: it stops $\log 0$ but silently kills the
+gradient on any clamped entry, and the naive softmax upstream can still
+overflow. The cure is §4.5's fused loss.
+:::
 :::
 
 ::: {.slide title="Register it as the loss"}
@@ -740,7 +839,7 @@ each captioned `true / predicted`:
 @softmax-regression-scratch-prediction-2
 :::
 
-::: {.slide title="How accurate, overall?" only="pytorch"}
+::: {.slide title="82% — and that number is a ceiling" only="pytorch"}
 [Prediction]{.kicker}
 
 Sweep the whole validation set and average the per-example correct flags:
@@ -748,8 +847,67 @@ Sweep the whole validation set and average the per-example correct flags:
 @softmax-regression-scratch-prediction-accuracy
 
 ::: {.d2l-note}
-About **83%**, and that is the *ceiling* of a linear model on
-Fashion-MNIST, not a tuning problem. The next slide shows why.
+Roughly **82--83%** run to run --- and that is the *ceiling* of a linear
+model on Fashion-MNIST, not a tuning problem. The next slide shows where
+the missing 18% lives.
+:::
+:::
+
+::: {.slide title="82% — and that number is a ceiling" except="pytorch"}
+[Prediction]{.kicker}
+
+Sweep the whole validation set and average the per-example correct flags
+returned by `accuracy(..., averaged=False)`: the overall test accuracy
+lands at roughly **82--83%**, matching the validation curve above.
+
+::: {.d2l-note}
+That is the *ceiling* of a linear model on Fashion-MNIST, not a tuning
+problem. The next slide shows where the missing 18% lives.
+:::
+:::
+
+::: {.slide title="The errors form two blocks, not a blur" only="pytorch"}
+[Prediction · the confusion matrix]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+Accumulate a $10\times 10$ count matrix over the validation set (§4.3's
+confusion matrix) and normalize each column:
+
+- **Upper-body garments** (t-shirt, pullover, dress, coat, **shirt**)
+  trade errors almost exclusively among themselves --- the shirt column
+  is the most polluted of all.
+- **Footwear** (sandal, sneaker, ankle boot) forms a second cluster.
+- Trousers and bags are nearly pure diagonal: silhouette suffices.
+
+::: {.d2l-note}
+Same outline, same mass distribution → indistinguishable to a model
+that can only **weigh pixels linearly**.
+:::
+:::
+
+::: {.col .fig}
+@!softmax-regression-scratch-prediction-confusion
+:::
+:::
+:::
+
+::: {.slide title="The errors form two blocks, not a blur" except="pytorch"}
+[Prediction · the confusion matrix]{.kicker}
+
+Accumulate a $10\times 10$ count matrix over the validation set (§4.3's
+confusion matrix), normalize each column, and the misses turn out to be
+anything but uniform:
+
+- **Upper-body garments** (t-shirt, pullover, dress, coat, **shirt**) trade
+  errors almost exclusively among themselves --- the shirt column is the
+  most polluted of all, leaking into t-shirt, pullover, and coat.
+- **Footwear** (sandal, sneaker, ankle boot) forms a second, smaller cluster.
+- Trousers and bags are nearly pure diagonal: silhouette suffices.
+
+::: {.d2l-note}
+Same outline, same mass distribution → indistinguishable to a model that
+can only **weigh pixels linearly**.
 :::
 :::
 
@@ -758,12 +916,14 @@ Fashion-MNIST, not a tuning problem. The next slide shows why.
 
 ::: {.cols .vc}
 ::: {.col}
-A linear classifier draws **straight** decision boundaries. In pixel
-space shirts and pullovers overlap, and no hyperplane separates them.
+A linear classifier draws **straight** decision boundaries --- the §4.1
+picture, now with a price tag. In pixel space shirts and pullovers
+overlap, and no hyperplane separates them.
 
 The capacity of lines is finite: in the plane a line shatters any 3
-points but **never** the 4-point XOR pattern. A single hidden layer
-(Chapter 5) bends the boundary and pushes past 83%.
+points but **never** the 4-point XOR pattern (§4.6 makes this precise).
+A single hidden layer (Chapter 5) bends the boundary and pushes past the
+ceiling.
 :::
 
 ::: {.col .fig}
@@ -787,10 +947,11 @@ points but **never** the 4-point XOR pattern. A single hidden layer
 ::: {.col}
 - **Training** reuses the regression `Trainer`; `Classifier` adds
   accuracy reporting for free.
-- **~83%** is the linear ceiling on Fashion-MNIST; richer models just
-  replace the forward pass.
-- The naive softmax is numerically fragile; production code fuses
-  softmax and log (§4.5).
+- **82--83%** is the linear ceiling on Fashion-MNIST; the confusion matrix
+  shows the errors in two blocks (upper-body garments, footwear) --- exactly
+  where silhouette fails.
+- `exp(1000)` = `NaN`: the naive softmax is fragile, the clip a band-aid;
+  §4.5 derives the real fix.
 :::
 :::
 :::

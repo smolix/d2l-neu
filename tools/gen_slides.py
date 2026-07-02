@@ -70,8 +70,8 @@ class SourceCell:
 
 _FENCE_OPEN_RE = re.compile(r'^```(.*)$')
 _FENCE_CLOSE_RE = re.compile(r'^```\s*$')
-_SLIDE_OPEN_RE = re.compile(r'^:{3,}\s*\{\.slide(?:\s+([^}]*))?\}\s*$')
-_SUBSLIDE_OPEN_RE = re.compile(r'^:{3,}\s*\{\.subslide(?:\s+([^}]*))?\}\s*$')
+_SLIDE_OPEN_RE = re.compile(r'^:{3,}\s*\{\.slide(?:\s+((?:[^{}\"]|\"[^\"]*\")*))?\}\s*$')
+_SUBSLIDE_OPEN_RE = re.compile(r'^:{3,}\s*\{\.subslide(?:\s+((?:[^{}\"]|\"[^\"]*\")*))?\}\s*$')
 _DIV_OPEN_RE = re.compile(r'^:{3,}\s*\{')
 _DIV_CLOSE_RE = re.compile(r'^:{3,}\s*$')
 # Placeholder forms (each on its own line):

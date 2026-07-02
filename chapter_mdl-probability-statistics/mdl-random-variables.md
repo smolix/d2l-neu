@@ -267,11 +267,34 @@ picture.
 
 The inverse $F^{-1}$, which maps a probability level $q\in(0,1)$ back to the
 value $x$ with $F(x)=q$, is called the *quantile function*---its values at
-$q=0.25,0.5,0.75$ are the quartiles, the middle one the median. The relationship
-$F'=p$ underwrites *inverse-transform sampling*---if $U$ is uniform on $[0,1]$
-then $F^{-1}(U)$ has c.d.f. $F$---which is how libraries turn uniform noise into
-samples from any one-dimensional distribution. We return to it when we meet the
-named distributions in :numref:`sec_mdl-distributions`.
+$q=0.25,0.5,0.75$ are the quartiles, the middle one the median. The quantile
+function is also a *sampler*, by an argument short enough to give in full.
+
+**Proposition (inverse-transform sampling).** *Let $F$ be a continuous, strictly
+increasing c.d.f. and let $U$ be uniform on $[0,1]$. Then $X=F^{-1}(U)$ has
+c.d.f. exactly $F$.*
+
+**Proof.** Because $F$ is increasing, the events $F^{-1}(U)\le x$ and
+$U\le F(x)$ are the same event, and the uniform assigns every subinterval of
+$[0,1]$ its length:
+
+$$
+P\bigl(F^{-1}(U)\le x\bigr) = P\bigl(U\le F(x)\bigr) = F(x). \quad\blacksquare
+$$
+
+:numref:`fig_mdl-prob-inverse-transform` is the picture: feed the uniform level
+$U$ into the *vertical* axis of the c.d.f. and reflect it through the curve down
+to the horizontal axis. Because the curve is steep where the density is high, a
+uniformly spread set of levels lands its reflections densely exactly there---the
+c.d.f.'s slope, which is the density by :eqref:`eq_mdl-cdf_deriv`, does the
+shaping. This one-line proposition is how libraries turn raw uniform noise into
+samples from any one-dimensional distribution: generate $U$, look up
+$F^{-1}(U)$. We put it to work when we meet the named distributions in
+:numref:`sec_mdl-distributions`, where inverting the exponential's c.d.f. gives
+that distribution's standard sampler in closed form.
+
+![Inverse-transform sampling. Uniform levels $U$ on the vertical axis (left) reflect through the c.d.f. $F$ down to values $x=F^{-1}(U)$ on the horizontal axis. Where $F$ is steep---that is, where the density $p=F'$ is large---a uniform spread of levels is compressed into a dense cluster of samples, so the histogram of reflected points reproduces $p$.](../img/mdl-prob-inverse-transform.svg)
+:label:`fig_mdl-prob-inverse-transform`
 
 ## Summarizing a Distribution
 
@@ -501,7 +524,8 @@ $$
 Every property proved above---linearity, the affine rule, Markov and
 Chebyshev---carries over unchanged, since each rested only on linearity and
 positivity of the averaging operation.
-For the uniform density $p(x)=1$ on $[0,1]$ (zero elsewhere),
+For the uniform density on the unit interval---$p(x)=1$ on $[0,1]$, zero
+elsewhere, the law the next section names $U(0,1)$---
 $\mu_X=\int_0^1 x\,dx=\tfrac12$ and $\sigma_X^2=\int_0^1
 x^2\,dx-\tfrac14=\tfrac13-\tfrac14=\tfrac1{12}$, both elementary integrals.
 
@@ -624,7 +648,7 @@ $$
 For each fixed $y$ this is a genuine density in $x$: it is non-negative, and
 dividing the joint by exactly $p_Y(y)=\int p_{X,Y}(x,y)\,dx$ is precisely what makes
 it integrate to one. Geometrically it is a horizontal slice of the joint surface
-at height $y$, renormalized to unit area, as :numref:`fig_mdl-conditional-slice`
+at height $y$, renormalized to unit area, as :numref:`fig_mdl-prob-conditional-slice`
 shows: cut the joint density along $y=y_0$, then rescale that profile so its area
 is one. Rearranging :eqref:`eq_mdl-cond_density`
 gives the **chain rule** $p_{X,Y}(x,y)=p_{X\mid Y}(x\mid y)\,p_Y(y)$, and writing it
@@ -653,14 +677,14 @@ As a worked example, take the joint $p_{X,Y}(x,y)=4xy$ on the unit square
 $[0,1]^2$ (it integrates to one). The marginal is $p_Y(y)=\int_0^1 4xy\,dx=2y$, so
 $p_{X\mid Y}(x\mid y)=4xy/2y=2x$ --- *independent of $y$*. The conditional never
 changes as $y$ varies, so by the proposition $X\perp Y$. This is exactly the
-visual test of :numref:`fig_mdl-conditional-slice`: independence is the case where
+visual test of :numref:`fig_mdl-prob-conditional-slice`: independence is the case where
 the renormalized slice $p(x\mid y_0)$ has the *same shape* at every height $y_0$,
 since the joint factors and the $y$-factor cancels in the renormalization. A joint
 that does not factor this way --- say one supported on the triangle $x\le y$ --- has
 a conditional whose support and shape shift with $y$, the signature of dependence.
 
 ![Reading off a conditional density. Left: the contours of a joint density $p_{X,Y}(x,y)$ with one horizontal slice at $y=y_0$ highlighted. Right: that slice, $x\mapsto p_{X,Y}(x,y_0)$, renormalized to unit area to give the conditional density $p(x\mid y_0)$ of :eqref:`eq_mdl-cond_density`. When the joint factors, every slice has the same shape after renormalization, regardless of $y_0$, which is precisely independence; when it does not, the slice shape drifts with $y_0$.](../img/mdl-prob-conditional-slice.svg)
-:label:`fig_mdl-conditional-slice`
+:label:`fig_mdl-prob-conditional-slice`
 
 Independence is a strong, all-of-the-distribution statement. It is strictly
 stronger than being *uncorrelated* (zero covariance), which constrains only the
@@ -1126,39 +1150,55 @@ P\bigl(X\in(a,b]\bigr) = \int_a^b p(x)\,dx.$$
 A Riemann sum over a two-bump mixture confirms the total mass is $1$ and
 recovers $P(-2 < X \le 3)$ from the density alone:
 
-@random-variables-density-to-probability
+@!random-variables-density-to-probability
 :::
 
 ::: {.slide title="The c.d.f. and the FTC"}
 [The c.d.f.]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 The cumulative distribution accumulates the density,
 $F(x) = \int_{-\infty}^x p = P(X \le x)$, rising monotonically from $0$
-to $1$.
+to $1$. The same number two ways: the area under $p$ over $(a,b]$ equals
+the rise $F(b)-F(a)$.
 
 ::: {.d2l-note .rule}
 **Proposition.** If $p$ is continuous, $F'(x) = p(x)$ — the density is
 the *slope* of the c.d.f. (fundamental theorem of calculus).
 :::
-
-The same number two ways: the area under $p$ over $(a,b]$ equals the rise
-$F(b)-F(a)$.
-
-@fig:mdl-prob-pdf-cdf
 :::
 
-::: {.slide title="The c.d.f. unifies and samples"}
+::: {.col .fig}
+@fig:mdl-prob-pdf-cdf
+:::
+:::
+:::
+
+::: {.slide title="The quantile function is a sampler"}
 [The c.d.f.]{.kicker}
 
-One object covers every kind of variable: a **staircase** for discrete
-mass, a smooth curve for continuous density, and anything in between for
-mixtures.
+::: {.cols .vc}
+::: {.col}
+The c.d.f. covers every kind of variable (staircase, smooth curve,
+mixture), and its inverse $F^{-1}(q)$ — the **quantile function** — turns
+uniform noise into samples from *any* distribution:
 
-. . .
+::: {.d2l-note .rule}
+**Proposition (inverse transform).** If $U\sim\mathrm{Uniform}[0,1]$,
+then $X = F^{-1}(U)$ has c.d.f. $F$.
+*Proof.* $\{F^{-1}(U)\le x\} = \{U \le F(x)\}$, and the uniform gives
+that event probability $F(x)$. $\blacksquare$
+:::
 
-Its inverse $F^{-1}(q)$ is the $q$-th **quantile**, and gives free
-sampling: if $U\sim\text{Uniform}[0,1]$ then $F^{-1}(U)$ has c.d.f. $F$
-(*inverse-transform sampling*).
+Where $F$ is steep — where the density is large — uniform levels land
+densely: the slope does the shaping.
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-inverse-transform
+:::
+:::
 :::
 
 ::: {.slide}
@@ -1227,30 +1267,42 @@ and file sizes alike.
 ::: {.slide title="Chebyshev: σ is a yardstick"}
 [Tail bounds]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Standard deviation measures distance in *universal* units:
 
 $$P\bigl(|X-\mu_X| \ge \alpha\,\sigma_X\bigr) \le \frac{1}{\alpha^2}.$$
 
 *Proof.* Apply Markov to $Z = (X-\mu_X)^2$ with $a = \alpha^2\sigma_X^2$.
-$\blacksquare$ The bound is **sharp** — the three-atom example attains
-equality at $p=\tfrac18$:
+$\blacksquare$
 
+The bound is **sharp** — the three-atom example attains equality at
+$p=\tfrac18$.
+:::
+
+::: {.col .fig}
 @fig:mdl-prob-chebyshev
+:::
+:::
 :::
 
 ::: {.slide title="When moments fail: Cauchy"}
 [Counterexample]{.kicker}
 
-For $p(x) = \dfrac{1}{\pi(1+x^2)}$ the mean is an undefined
-$\infty-\infty$ and the variance integral diverges like $\log R$.
-Partial sums of $\mathbb E[X^2]$ blow up rather than settle:
+For $p(x) = \dfrac{1}{\pi(1+x^2)}$ both summaries fail, at two speeds.
+The variance integrand tends to $\tfrac1\pi$, so
+$\int_{-R}^{R} x^2 p\,dx = \tfrac{2}{\pi}(R - \arctan R)$ grows
+**linearly** — watch it multiply by ten per decade:
 
-@random-variables-cauchy-diverges
+@!random-variables-cauchy-diverges
 
-::: {.d2l-note}
-Symmetry is not enough — *absolute* integrability is what a finite mean
-requires. Heavy tails break the usual toolbox.
-:::
+. . .
+
+The mean fails more subtly: the odd integrand tempts "$0$ by symmetry,"
+but a mean needs $\int |x|\,p\,dx < \infty$, and *that* integral
+diverges like $\tfrac{1}{\pi}\log(1+R^2)$ — a meaningless
+$\infty - \infty$, not merely infinite. Absolute integrability, not
+symmetry, is what a finite mean requires.
 :::
 
 ::: {.slide}
@@ -1266,15 +1318,21 @@ requires. Heavy tails break the usual toolbox.
 ::: {.slide title="Joint and marginal densities"}
 [Several variables]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 A joint density $p(x,y)\ge 0$ integrates to $1$ over the plane.
 **Marginalize** by integrating out the variable you do not care about:
 
 $$p_X(x) = \int_{-\infty}^{\infty} p_{X,Y}(x,y)\,dy.$$
 
-Integrate the joint up a vertical strip at $x$ to get the marginal height
-there:
+Integrate the joint up a vertical strip at $x$ to get the marginal
+height there.
+:::
 
+::: {.col .fig}
 @fig:mdl-prob-marginal
+:::
+:::
 :::
 
 ::: {.slide title="Conditioning and independence"}
@@ -1318,24 +1376,32 @@ latent-variable model.
 ::: {.slide title="Covariance"}
 [Co-variation]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 $\operatorname{Cov}(X,Y) = \mathbb E[XY] - \mathbb E[X]\,\mathbb E[Y]$
 measures *linear* co-variation, in mixed units:
 
 $$\operatorname{Var}(X+Y) = \operatorname{Var}(X) + \operatorname{Var}(Y)
 + 2\operatorname{Cov}(X,Y).$$
 
-@fig:mdl-prob-covariance
-
 ::: {.d2l-note}
 Zero covariance is **weaker** than independence: with $Y$ uniform on
-$\{-2,\dots,2\}$ and $X=Y^2$, covariance is $0$ yet $X$ is a function of
-$Y$.
+$\{-2,\dots,2\}$ and $X=Y^2$, covariance is $0$ yet $X$ is a function
+of $Y$.
+:::
+:::
+
+::: {.col .fig}
+@fig:mdl-prob-covariance
+:::
 :::
 :::
 
 ::: {.slide title="Correlation is a cosine"}
 [Co-variation]{.kicker}
 
+::: {.cols .vc}
+::: {.col}
 Normalize covariance to kill the units:
 $\rho = \operatorname{Cov}(X,Y)/(\sigma_X\sigma_Y) \in [-1,1]$.
 
@@ -1344,12 +1410,14 @@ quadratic in $t$; its discriminant gives
 $\operatorname{Cov}^2 \le \operatorname{Var}(X)\operatorname{Var}(Y)$,
 with equality iff $Y = aX+b$. $\blacksquare$
 
-. . .
-
 So $\rho = \cos\theta$ between centered variables — Cauchy–Schwarz in
-probabilistic dress:
+probabilistic dress.
+:::
 
+::: {.col .fig}
 @fig:mdl-prob-correlation
+:::
+:::
 :::
 
 ::: {.slide title="The covariance matrix → PCA"}
@@ -1386,19 +1454,17 @@ and just sums one $-\log|\det J_g|$ per layer.
 :::
 :::
 
-::: {.slide title="Change of variables, verified"}
+::: {.slide title="Change of variables, verified" layout="tight"}
 [Pushforward]{.kicker}
 
 For $X\sim\mathcal N(0,1)$ and $Y = e^X$, the formula gives the log-normal
-$p_Y(y) = \tfrac{1}{y\sqrt{2\pi}}\exp\!\bigl(-\tfrac12(\log y)^2\bigr)$.
-A histogram of $e^X$ matches it exactly:
+$p_Y(y) = \tfrac{1}{y\sqrt{2\pi}}\exp\!\bigl(-\tfrac12(\log y)^2\bigr)$,
+and a histogram of $e^X$ matches it exactly:
 
-@random-variables-change-of-variables
+@!random-variables-change-of-variables
 
-::: {.d2l-note}
 The naive guess $p_X(\log y)$ peaks at $y=1$; the Jacobian correction
 moves the true peak to $y=e^{-1}$.
-:::
 :::
 
 ::: {.slide title="Recap"}

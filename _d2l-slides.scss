@@ -286,6 +286,20 @@ $code-block-padding:     0.45em 0.7em;
   }
 }
 
+// Compact spacing for slides whose injected output pairs a plot with a
+// long text table (e.g. the double-descent sweep): tighter margins and a
+// slightly lower text-output cap so plot + table + title fit 720px.
+.reveal section.slide-tight {
+  h2 { margin-bottom: 0.25em; }
+  p { margin: 0.35em 0; }
+  .cell-output {
+    max-height: 22vh;
+    overflow: auto;
+  }
+  .cell-output-display { margin: 0.25em 0; }
+  .cell-output-display img, .cell-output-display svg { max-height: 42vh; }
+}
+
 // ── Top navigation bar — mirrors the book's chrome ───────
 // 280px white box on the left holds the d2l logo (matches the book's
 // `.sidebar-header`); blue bar on the right has the same nav links as

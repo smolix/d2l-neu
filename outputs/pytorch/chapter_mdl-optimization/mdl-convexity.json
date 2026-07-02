@@ -25,18 +25,18 @@
       ]
     },
     "convexity-jensen-mc": {
-      "code_fingerprint": "sha256:74d4ae8f562bb8ac7e2d551f74cb0d0f4250903dcdbf0abe7169216cb2cc1ff5",
+      "code_fingerprint": "sha256:dcf96be9038dd478990f7cb78ae6349f325165dc0fabca4044af66e5bfab3d14",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "E[exp(X)] = 1.6466  vs  exp(E[X]) = 0.9998  (theory: sqrt(e) = 1.6487 vs 1)\nAM >= GM in all trials: True,  smallest AM/GM ratio = 1.0002\nmin KL(p||q) = 0.1331 >= 0,  max |KL(p||p)| = 0.0\n"
+          "text": "E[exp(X)] = 1.6466  vs  exp(E[X]) = 0.9998  (theory: sqrt(e) = 1.6487 vs 1)\nAM >= GM in all trials: True,  smallest AM/GM ratio = 1.0002\nmin KL(p||q) = 0.1331 >= 0,  max |KL(p||p)| = 0.0e+00\n"
         }
       ]
     },
     "convexity-basins": {
-      "code_fingerprint": "sha256:3485f237ed0a8df80978806e7f060a153c99432225050396f46a34c4207862ce",
+      "code_fingerprint": "sha256:04a020e0ed271a6a9897dba756a49bdf8e1b53d8e176c1a5189118f5d8956949",
       "kind": "text",
       "outputs": [
         {
@@ -46,8 +46,19 @@
         }
       ]
     },
+    "convexity-rate-check": {
+      "code_fingerprint": "sha256:8c93daeda9d831fbb6aab15a692e97da3b49629a08ae317b9d8e9a2487768dec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mu = 6.2730, L = 18.6557:  the theorem promises contraction <= 1 - mu/L = 0.6637\nmeasured per-step contraction of f - f*: [0.4406 0.4406 0.4406 0.4406]\nworst step: 0.4406  (the bound holds at every step)\n"
+        }
+      ]
+    },
     "convexity-lse-hessian": {
-      "code_fingerprint": "sha256:4f2d64186d69a44897daaf814af28df6a3e98c87b4195a8cc446436de6d2e99c",
+      "code_fingerprint": "sha256:4af768238bd7689501a66643211f685b38a6270dfe139d174c346fd3ff7a1dfa",
       "kind": "text",
       "outputs": [
         {
@@ -57,8 +68,19 @@
         }
       ]
     },
+    "convexity-prox-ista": {
+      "code_fingerprint": "sha256:90b9357df54daa8748c2ba3be255947a1659448a5146088e70bdc3f64888abc0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |prox - brute-force argmin| = 8.9e-16\nw after 20 ISTA steps: [ 1.964  0.     0.    -1.462  0.     0.     0.     0.963]\nexact zeros: 5 of 8 coordinates\n"
+        }
+      ]
+    },
     "convexity-pl-rate": {
-      "code_fingerprint": "sha256:7451f142e1cb4e38a53fad78b63bf2de819f5f3b2192143587df1c0187ce2bdd",
+      "code_fingerprint": "sha256:1b7c8dd37507267d2ba96cf80db638004df32e48b35fef0c9f3fd06a0b65f079",
       "kind": "text",
       "outputs": [
         {

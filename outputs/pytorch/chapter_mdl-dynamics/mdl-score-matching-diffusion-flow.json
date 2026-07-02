@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
           "bytes": 24746,
-          "sha256": "sha256:5b4249e6c34218c0d32231b67e905d0d7b2f40183b5d79bbbca0287856e695b9"
+          "sha256": "sha256:a3fcae41e4ab22807d24063795ca0b24195672927d6a98093fbaee7d4ba7256b"
         }
       ]
     },
@@ -58,8 +58,48 @@
         }
       ]
     },
+    "mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed": {
+      "code_fingerprint": "sha256:20f16c50c62ac32c3f0583e3caafccb4497097faf66ae4f6251f467ac1cc2625",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 10 strides vs 1000: mean |gap| 0.083, KS 0.080, mode fraction 0.495\n 50 strides vs 1000: mean |gap| 0.015, KS 0.018, mode fraction 0.495\nmode fraction at 1000 steps: 0.495; 5% KS threshold: 0.021\n"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule": {
+      "code_fingerprint": "sha256:04205237c982312174af641efa09353c0362f19453534b3cddbb64bcbd5d4411",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gamma =  1.0: mass right of 0: 1.000, mean 0.966, std 0.244\ngamma =  3.0: mass right of 0: 1.000, mean 1.035, std 0.236\ngamma = 10.0: mass right of 0: 1.000, mean 1.072, std 0.234\nthe honest conditional: mean 0.970, std 0.243\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
+          "bytes": 30656,
+          "sha256": "sha256:e4bad010ca89fb15b6813de62f67af9e8560cebb36ce4e3f32b5eeb60a3e3e8f"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function": {
+      "code_fingerprint": "sha256:01f6c7a683b5af285a7ffe3ab2eb0ceebdd446989c4e903acc1bf7d4409aed48",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |u_posterior - u_dictionary| on [-4, 4]: 3.1e-15\n"
+        }
+      ]
+    },
     "score-matching-diffusion-flow-two-moons": {
-      "code_fingerprint": "sha256:fbf4b1388b6c1fee09ecb4970c1f6c0bc4b6e049125c53e5e1a5678ea0bfb964",
+      "code_fingerprint": "sha256:aaa97bf14ec2884070e1d1323a9bf50b4aca073205fc4d2937a927ceaee2120b",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +110,7 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-train": {
-      "code_fingerprint": "sha256:a6544b017c5382ab2477f027d4740d00cda469c0a6672964a6c1e1800097d5e5",
+      "code_fingerprint": "sha256:1207920d4bfdb196bb4611257731088e21dbb964e7ebb4b90846ff5dcd9fa150",
       "kind": "text",
       "outputs": [
         {
@@ -101,12 +141,12 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-sample": {
-      "code_fingerprint": "sha256:a5dd605170d585ce16232692655a9b3fb290660c0c95c466639424db8596a7ff",
+      "code_fingerprint": "sha256:e4dc0555b9f9ae6d84241766d6e83565eefd65665737bae18f30e458dedea2d1",
       "kind": "text",
       "outputs": []
     },
     "score-matching-diffusion-flow-cfm-panels": {
-      "code_fingerprint": "sha256:3d4a8bbadebb4246ac2d53da4e116f6251c3cd9dd58c4927d62e9a09af838f92",
+      "code_fingerprint": "sha256:343348387df83b7e90778e9307711cb489372dd88367a612b74297aeb6e4f48f",
       "kind": "asset",
       "outputs": [
         {
@@ -114,12 +154,38 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
           "bytes": 1114636,
-          "sha256": "sha256:f13ce75ba30647098fd7bf844c6b1ceb6cf066fb8b11074b9660940e33636268"
+          "sha256": "sha256:d49ca38c07d267d0d06d03dfa2fa533d13c9d4eb9f76d76a8823945fd2040902"
+        }
+      ]
+    },
+    "mdl-score-matching-diffusion-flow-one-reflow-round-measured": {
+      "code_fingerprint": "sha256:e14a9d5415e22ad617558813f9a20879f890c453af17a682b73364e5c0d8d115",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final reflow loss 0.001\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 1 step(s): energy distance  CFM 0.676  ->  reflow 0.016\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 2 step(s): energy distance  CFM 0.163  ->  reflow 0.015\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "32 step(s): energy distance  CFM 0.014  ->  reflow 0.016\n"
         }
       ]
     },
     "score-matching-diffusion-flow-steps-quality": {
-      "code_fingerprint": "sha256:5a9e86611763e5f524923203fa2f4fbbe3d9e15c53c0eab15efda7cf072c793f",
+      "code_fingerprint": "sha256:d0e649b149a64682586b692d6c56b310c8a344f076d4aa8e8e619186ee13e70f",
       "kind": "mixed",
       "outputs": [
         {
@@ -132,12 +198,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
           "bytes": 21837,
-          "sha256": "sha256:4462292fe80f5afd36e7b2db2191e05d6d2781a9d26f551d29403e66220d390a"
+          "sha256": "sha256:7c942b3ba33afd509bec3ccdae69ea2a008339332fd5fadf65c3695b7f976eae"
         }
       ]
     },
     "score-matching-diffusion-flow-euler-vs-heun": {
-      "code_fingerprint": "sha256:84da7a99510c25dd5155747fd77b36c993bc924f751bc7928bd95bd5ca193ff5",
+      "code_fingerprint": "sha256:dbc7b18712941e7a0f7eab260a9910ff75f1f35d1e302befeb466a5f3907e2ea",
       "kind": "text",
       "outputs": [
         {

@@ -313,6 +313,9 @@ weights here, but the whole point of the rest of this book is that
 optimization can *discover* such representations from data. The XOR fix
 generalizes: stack nonlinear hidden layers and the network can carve the
 input space into arbitrarily intricate regions.
+To watch that discovery happen live, try the XOR and spiral datasets at the
+[TensorFlow Playground](https://playground.tensorflow.org/), varying the
+number of hidden units and layers as you go.
 
 ### Universal Approximators
 
@@ -324,9 +327,68 @@ continuous function on a bounded domain to arbitrary accuracy. This was proven
 in several settings: :citet:`Cybenko.1989` did it for sigmoid activations,
 :citet:`micchelli1984interpolation` for radial basis function networks (single
 hidden layer, in the context of reproducing kernel Hilbert spaces), and the
-result was soon generalized to essentially *any* sensible activation, that is,
-any bounded, non-constant function (Hornik, 1991). The conclusion does not hinge
-on which of ReLU, sigmoid, or tanh we pick.
+result was soon generalized: :citet:`Hornik.1991` covered every bounded,
+non-constant activation, and :citet:`Leshno.Lin.Pinkus.ea.1993` extended it to
+any activation that is not a polynomial — a form that also covers the unbounded
+ReLU. The conclusion therefore does not hinge on which of ReLU, sigmoid, or tanh
+we pick.
+
+To see why such a theorem should be *plausible*, set the citations aside and
+consider a one-hidden-layer ReLU network on the real line. Each hidden unit
+contributes $a_k \operatorname{ReLU}(w_k x + b_k)$ to the output: a *hinge*,
+flat on one side of the joint at $x = -b_k/w_k$ and linear on the other. The
+network's output is a sum of $D$ such hinges, so it is a continuous piecewise
+linear function whose slope can change only at a joint: with $D$ hidden units it
+has at most $D$ joints and hence at most $D+1$ linear pieces. Seen this way,
+approximating a continuous function is no more mysterious than approximating a
+curve with a polyline: place enough joints in the right locations and pick the
+right slopes, and the error shrinks as finely as we please
+(:numref:`fig_mdl-mlp-uat-hinges`). The exponential-width caveat below is
+visible here too: a very wiggly target needs a joint for every wiggle, one
+hidden unit apiece.
+
+![Universal approximation, one hinge at a time. Left: each of the three hidden units contributes a single hinge $a_k \operatorname{ReLU}(x - t_k)$ whose joint $t_k$ is marked on the horizontal axis. Right: adding the hinges to a base line yields a piecewise linear function with $D+1 = 4$ pieces (blue) that tracks the smooth target (gray); the shaded band is the approximation error, which shrinks as more joints are added.](../img/mdl-mlp-uat-hinges.svg)
+:label:`fig_mdl-mlp-uat-hinges`
+
+Width, however, buys pieces only *linearly*: one extra unit, one extra joint.
+Depth is different. A second hidden layer applies its hinges not to $x$ but to
+the piecewise linear output of the first layer, and composing with a hinge
+*folds the graph*: every existing piece that crosses the new joint is split in
+two. Each added layer can therefore roughly *double* the number of linear
+pieces, so $k$ layers of width $D$ can produce on the order of
+$(D+1)\,2^{k-1}$ pieces, where matching that count with a single hidden layer
+would require exponentially many units. This multiplicative-versus-additive gap
+is the essence of why depth pays. Both claims are easy to check numerically:
+below we evaluate randomly initialized ReLU MLPs on a dense one-dimensional
+grid, detect where the slope changes, and count the linear pieces.
+
+```{.python .input #mlp-region-count}
+%%tab pytorch
+def count_pieces(width, depth, n=100001):
+    x = torch.linspace(-4, 4, n, dtype=torch.float64).reshape(-1, 1)
+    h = x
+    for _ in range(depth):
+        h = torch.relu(h @ torch.randn(h.shape[1], width, dtype=torch.float64)
+                       + torch.randn(width, dtype=torch.float64))
+    y = (h @ torch.randn(width, 1, dtype=torch.float64)).squeeze()
+    slope = torch.diff(y)                     # slope of y on each grid interval
+    tol = 1e-8 * slope.abs().max() + 1e-12 * y.abs().max()
+    change = torch.diff(slope).abs() > tol    # a joint: the slope jumps
+    new = change & ~torch.cat([torch.tensor([False]), change[:-1]])
+    return int(new.sum()) + 1                 # pieces = 1 + number of joints
+for depth in (1, 2, 3):
+    mean = [round(sum(count_pieces(w, depth) for _ in range(20)) / 20, 1)
+            for w in (2, 4, 8, 16)]
+    print(f'depth {depth}: mean pieces = {mean},  D+1 = {[3, 5, 9, 17]}')
+```
+
+The first row confirms the counting argument: with one hidden layer of width
+$D$, the piece count never exceeds $D+1$ (and typically comes close to it).
+The later rows show depth at work: at each width, adding a layer *multiplies*
+the average piece count rather than adding a constant to it. Random weights
+fold far less aggressively than the best hand-crafted ones, which can multiply
+the count by a factor of up to $D+1$ per layer :cite:`Telgarsky.2016`, but the
+multiplicative advantage of depth over width is already unmistakable.
 
 It is tempting to read this as "one hidden layer is all you ever need," but the
 theorem is more modest than it sounds, and three caveats matter
@@ -346,9 +408,10 @@ fit better, for instance kernel methods can solve regression problems *exactly*,
 even in infinite-dimensional spaces :cite:`Kimeldorf.Wahba.1971,Scholkopf.Herbrich.Smola.2001`.
 And crucially, where a shallow network would need exponential width, a *deep* one
 can often represent the same function far more compactly, trading width for depth
-:cite:`Simonyan.Zisserman.2014`. This is one reason practitioners reach for depth
-rather than sheer width. We will touch upon more rigorous arguments in subsequent
-chapters.
+:cite:`Montufar.Pascanu.Cho.ea.2014,Telgarsky.2016`. This is one reason practitioners reach for depth
+rather than sheer width. The folding picture sketched above is the heart of
+these depth-separation results; exercise 6 asks you to turn it into an
+argument.
 
 
 ## Activation Functions
@@ -415,9 +478,12 @@ Note that the ReLU function is not differentiable
 when the input takes value precisely equal to 0.
 In these cases, we default to the left-hand-side
 derivative and say that the derivative is 0 when the input is 0.
-We can get away with this because
-the input may never actually be zero (mathematicians would
-say that it is nondifferentiable on a set of measure zero).
+We can get away with this because,
+although exact zeros do occur in floating-point arithmetic
+(zero-initialized biases, or a ReLU feeding a ReLU),
+the choice of subgradient at that single point does not matter
+(mathematicians would
+say that the function is nondifferentiable only on a set of measure zero).
 There is an old adage that if subtle boundary conditions matter,
 we are probably doing (*real*) mathematics, not engineering.
 That conventional wisdom may apply here, or at least, the fact that
@@ -724,7 +790,7 @@ remains the sensible default for the models we build next.
 ::: {.cover}
 [Dive into Deep Learning · §5.1]{.kicker}
 
-Multilayer Perceptrons<br>Stack affine layers with a **nonlinearity** between them, and the simplest deep network is born.
+Multilayer Perceptrons<br>**one kink between affine layers --- XOR untangled · any function, hinge by hinge · why depth beats width**.
 :::
 :::
 
@@ -733,18 +799,18 @@ Multilayer Perceptrons<br>Stack affine layers with a **nonlinearity** between th
 
 ::: {.cols .vc}
 ::: {.col}
-Softmax regression maps inputs to outputs through a *single*
-affine map. That forces **monotonic, line-shaped** decisions,
-too rigid for most things worth modelling:
+Softmax regression is a *single* affine map: **monotonic,
+line-shaped** decisions.
 
 - **Body temperature → risk** rises on *both* sides of 37°C.
 - **Cat vs dog**: pixel $(13,17)$ means nothing without its
   neighbours.
 - **XOR**: a line *provably* cannot separate it.
 
-::: {.d2l-note}
-We want a model that learns its *own* features, then puts a
-linear predictor on top.
+::: {.d2l-note .rule}
+The fix: learn the features, keep the linear predictor on top.
+Keep score — a two-unit net computing **XOR exactly**, and
+**depth multiplying** what width merely adds.
 :::
 :::
 
@@ -864,8 +930,8 @@ then **folds** the two label-1 corners onto the same point
 :::
 :::
 
-::: {.slide title="A hand-built two-unit network computes XOR" only="pytorch"}
-[Why nonlinearity matters · verify]{.kicker}
+::: {.slide title="First receipt: all four corners, exactly right" only="pytorch"}
+[XOR · verified]{.kicker}
 
 With $\mathbf{W}^{(1)} = \left(\begin{smallmatrix}1 & 1\\ 1 & 1\end{smallmatrix}\right)$,
 $\mathbf{b}^{(1)} = (0,\,{-1})$, $\mathbf{w}^{(2)} = (1,\,{-2})^\top$ and a ReLU, the
@@ -875,7 +941,31 @@ output column is exactly the XOR of the two inputs:
 
 ::: {.d2l-note}
 We *constructed* these weights; the rest of the book is about
-having optimization **discover** such representations.
+having optimization **discover** such representations. Watch that
+happen live on the XOR and spiral datasets at the *TensorFlow
+Playground* (playground.tensorflow.org).
+:::
+:::
+
+::: {.slide title="First receipt: all four corners, exactly right" except="pytorch"}
+[XOR · verified]{.kicker}
+
+With $\mathbf{W}^{(1)} = \left(\begin{smallmatrix}1 & 1\\ 1 & 1\end{smallmatrix}\right)$,
+$\mathbf{b}^{(1)} = (0,\,{-1})$, $\mathbf{w}^{(2)} = (1,\,{-2})^\top$ and a ReLU,
+pushing all four corners through by hand gives
+
+| $x_1$ | $x_2$ | $\mathbf{h} = \operatorname{ReLU}(\mathbf{x}\mathbf{W}^{(1)} + \mathbf{b}^{(1)})$ | $o = h_1 - 2h_2$ | XOR |
+|:---:|:---:|:---:|:---:|:---:|
+| 0 | 0 | $(0,\ 0)$ | $0$ | **0** ✓ |
+| 0 | 1 | $(1,\ 0)$ | $1$ | **1** ✓ |
+| 1 | 0 | $(1,\ 0)$ | $1$ | **1** ✓ |
+| 1 | 1 | $(2,\ 1)$ | $0$ | **0** ✓ |
+
+::: {.d2l-note}
+We *constructed* these weights; the rest of the book is about
+having optimization **discover** such representations. Watch that
+happen live on the XOR and spiral datasets at the *TensorFlow
+Playground* (playground.tensorflow.org).
 :::
 :::
 
@@ -885,9 +975,10 @@ having optimization **discover** such representations.
 ::: {.cols .vc}
 ::: {.col}
 **Universal approximation theorem.** A single hidden layer
-with enough units and *any* sane $\sigma$ can approximate any
-continuous function on a bounded domain, to arbitrary
-accuracy (Cybenko 1989; Hornik 1991).
+with enough units can approximate any continuous function on
+a bounded domain, to arbitrary accuracy — for any
+non-polynomial $\sigma$, ReLU included (Cybenko 1989;
+Leshno et al. 1993).
 :::
 
 ::: {.col .narrow}
@@ -904,6 +995,43 @@ generalizes.
 This is why we reach for **depth**: a deep net often
 represents the same function far more compactly than a shallow
 one would, trading width for layers.
+:::
+
+::: {.slide title="Why it is plausible: one hinge at a time"}
+[Expressive power]{.kicker}
+
+Each ReLU unit contributes a **hinge** $a_k\operatorname{ReLU}(x - t_k)$: with $D$ units the output is piecewise linear with at most $D+1$ pieces. Approximating a curve is then just fitting a **polyline** — more joints, less error.
+
+![Three hinges (left) sum to a 4-piece polyline that tracks the smooth target (right); the shaded band is the error.](../img/mdl-mlp-uat-hinges.svg){width=88%}
+:::
+
+::: {.slide title="Second receipt: depth multiplies pieces, width only adds" only="pytorch"}
+[Expressive power · verified]{.kicker}
+
+Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the slope jumps, and count the linear pieces (mean over 20 draws, widths 2–16):
+
+@!mlp-region-count
+
+::: {.d2l-note .rule}
+One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count — the multiplicative-vs-additive gap that makes depth pay.
+:::
+:::
+
+::: {.slide title="Second receipt: depth multiplies pieces, width only adds" except="pytorch"}
+[Expressive power · verified]{.kicker}
+
+Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the slope jumps, and count the linear pieces (mean over 20 draws):
+
+| width $D$ | 2 | 4 | 8 | 16 |
+|:---|:---:|:---:|:---:|:---:|
+| bound $D+1$ | 3 | 5 | 9 | 17 |
+| depth 1 | 2.6 | 4.3 | 7.5 | 14.4 |
+| depth 2 | 3.5 | 7.0 | 13.9 | 27.4 |
+| depth 3 | 3.6 | 8.1 | 22.1 | 40.1 |
+
+::: {.d2l-note .rule}
+One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count — the multiplicative-vs-additive gap that makes depth pay.
+:::
 :::
 
 ::: {.slide}
@@ -965,7 +1093,7 @@ alive.
 
 ::: {.cols .vc}
 ::: {.col}
-The derivative is a step: $0$ on the left, $1$ on the right:
+The derivative is a step: $0$ on the left, $1$ on the right — here computed by `GradientTape` rather than read off a formula:
 
 $$\operatorname{ReLU}'(x) = \mathbb{1}[x > 0].$$
 
@@ -1015,9 +1143,9 @@ $$\operatorname{sigmoid}'(x) = \operatorname{sigmoid}(x)\,(1 - \operatorname{sig
 
 ::: {.col .narrow}
 The gradient peaks at just $0.25$ and **vanishes** past
-$|x|\gtrsim 5$. Multiply $\le 0.25$ through ten layers and the
-signal shrinks by $\sim\!10^{-6}$: the **vanishing-gradient**
-problem ReLU fixed.
+$|x|\gtrsim 5$. Even at its best, ten stacked layers attenuate the
+backward signal by $0.25^{10} \approx 10^{-6}$: the
+**vanishing-gradient** problem ReLU fixed (the full story in §5.4).
 :::
 :::
 :::
@@ -1088,12 +1216,16 @@ logits into probabilities.
 :::
 
 ::: {.col}
-- One wide hidden layer is a **universal approximator**;
-  depth makes that power *parameter-efficient*.
+- One wide hidden layer is a **universal approximator** — one
+  hinge per unit, $\le D+1$ pieces; depth *multiplies* pieces
+  and makes that power parameter-efficient.
 - **ReLU** is the default; sigmoid and tanh survive in
   gates, outputs, and RNN cells.
-- Next: actually **training** MLPs, via the forward pass,
-  backprop, initialization, and regularization.
 :::
+:::
+
+::: {.d2l-note}
+Next (§5.2): build one and train it on Fashion-MNIST — from
+scratch, then in four framework lines.
 :::
 :::

@@ -138,7 +138,199 @@ def fig_loss_accuracy():
     fl.save(fig, "mdl-clf-loss-accuracy")
 
 
-FIGURES = [fig_loss_accuracy]
+def fig_decision_regions():
+    """What a (multiclass) linear classifier's decision LOOKS like. Left: a
+    3-class softmax regression partitions the plane into three convex
+    polyhedral regions --- the argmax of three affine score functions --- whose
+    straight pairwise boundaries (the ties o_i = o_j) meet at the single point
+    where all three scores are equal. Right: the binary special case. The
+    predicted probability sigma(o) depends on x only through the affine logit
+    gap o = w.x + b, so its level sets are parallel lines perpendicular to w,
+    with the decision boundary at probability 1/2. Regions/boundaries are
+    computed exactly from the affine scores, not sketched."""
+    # --- three concrete affine score functions (generic, no symmetry) ---
+    W = np.array([[0.30, 1.00],      # class 1
+                  [-1.00, -0.55],    # class 2
+                  [0.95, -0.60]])    # class 3
+    b = np.array([0.15, -0.10, -0.05])
+    lim = 3.0
+
+    # the point where all three scores tie: (w1-w2).x = b2-b1, (w1-w3).x = b3-b1
+    A = np.array([W[0] - W[1], W[0] - W[2]])
+    p0 = np.linalg.solve(A, np.array([b[1] - b[0], b[2] - b[0]]))
+    print(f"  triple point (all scores equal): {np.round(p0, 3).tolist()}")
+
+    fig, (axl, axr) = plt.subplots(1, 2, figsize=(9.8, 4.4))
+
+    # ---------------- LEFT: 3-class argmax regions ----------------
+    n = 601
+    gx = np.linspace(-lim, lim, n)
+    X, Y = np.meshgrid(gx, gx)
+    scores = np.einsum("kd,dij->kij", W, np.stack([X, Y])) + b[:, None, None]
+    region = np.argmax(scores, axis=0)
+    from matplotlib.colors import ListedColormap
+    axl.contourf(X, Y, region, levels=[-0.5, 0.5, 1.5, 2.5],
+                 cmap=ListedColormap([BLUE, ORANGE, GREEN]), alpha=0.14)
+
+    # exact pairwise boundary rays out of the triple point: on the tie o_i=o_j,
+    # keep the half where the third class is NOT maximal.
+    pairs = [(0, 1, 2), (0, 2, 1), (1, 2, 0)]
+    for i, j, k in pairs:
+        d = W[i] - W[j]
+        t = np.array([-d[1], d[0]])
+        t = t / np.linalg.norm(t)
+        probe = p0 + 1e-3 * t
+        if (W[k] @ probe + b[k]) > (W[i] @ probe + b[i]):
+            t = -t
+        far = p0 + t * 2.5 * lim
+        axl.plot([p0[0], far[0]], [p0[1], far[1]], color=GRAY, lw=1.8)
+    axl.plot(*p0, "o", ms=6, color="black", zorder=5)
+    axl.annotate(r"$o_1 = o_2 = o_3$", p0, xytext=(p0[0] - 2.0, p0[1] - 1.1),
+                 fontsize=9.5, color="black",
+                 arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.9))
+
+    # label each region at a representative interior point
+    for cls, col, pos in [(0, BLUE, (0.15, 2.1)), (1, ORANGE, (-2.2, 0.2)),
+                          (2, GREEN, (2.0, -1.4))]:
+        axl.text(*pos, f"class {cls + 1}", ha="center", va="center",
+                 fontsize=11.5, fontweight="bold", color=col)
+        axl.text(pos[0], pos[1] - 0.42,
+                 rf"$o_{cls + 1} \geq o_j\ \forall j$",
+                 ha="center", va="center", fontsize=9, color=col)
+    fl.clean_axes(axl, lim=((-lim, lim), (-lim, lim)))
+    axl.set_xticks([]), axl.set_yticks([])
+    axl.set_xlabel(r"$x_1$"), axl.set_ylabel(r"$x_2$")
+    axl.set_title("three classes: convex regions, linear boundaries")
+
+    # ---------------- RIGHT: binary sigma level sets ----------------
+    w2, b2 = np.array([1.3, 0.9]), 0.0
+    wn = w2 / np.linalg.norm(w2)
+    tang = np.array([-wn[1], wn[0]])
+    sigma_levels = [0.1, 0.3, 0.5, 0.7, 0.9]
+    for s in sigma_levels:
+        o = np.log(s / (1 - s))                     # logit: w.x + b = o
+        c = (o - b2) / np.linalg.norm(w2)           # signed distance along w
+        pt = c * wn
+        far1, far2 = pt + tang * 3 * lim, pt - tang * 3 * lim
+        main = abs(s - 0.5) < 1e-9
+        axr.plot([far1[0], far2[0]], [far1[1], far2[1]],
+                 color=BLUE if main else GRAY, lw=2.4 if main else 1.2,
+                 ls="-" if main else (0, (5, 3)))
+        rot = np.degrees(np.arctan2(tang[1], tang[0]))
+        rot = rot - 180 if rot > 90 else (rot + 180 if rot <= -90 else rot)
+        lbl_pos = pt + tang * (-2.0) + wn * 0.16
+        axr.text(*lbl_pos, rf"$\hat y = {s}$", fontsize=8.5, color="black",
+                 ha="center", va="center", rotation=rot)
+    # weight vector from a point on the decision boundary
+    base = ((np.log(1) - b2) / np.linalg.norm(w2)) * wn + tang * 1.15
+    fl.arrow(axr, base, base + wn * 1.1, color=ORANGE, lw=2.2)
+    axr.text(*(base + wn * 1.1 + np.array([0.28, 0.05])), r"$\mathbf{w}$",
+             fontsize=12, color=ORANGE, ha="center", va="center")
+    axr.text(-1.55, 1.9, r"$\hat y > \frac{1}{2}$", fontsize=11, color=BLUE,
+             ha="center")
+    axr.text(1.55, -2.1, r"$\hat y < \frac{1}{2}$", fontsize=11, color=GRAY,
+             ha="center")
+    fl.clean_axes(axr, lim=((-lim, lim), (-lim, lim)))
+    axr.set_xticks([]), axr.set_yticks([])
+    axr.set_xlabel(r"$x_1$"), axr.set_ylabel(r"$x_2$")
+    axr.set_title(r"two classes: level sets of $\hat y = \sigma(o)$")
+
+    fig.subplots_adjust(wspace=0.18)
+    fl.save(fig, "mdl-clf-decision-regions")
+
+
+def fig_temperature():
+    """One 3-class score vector pushed through softmax(o / T) at three
+    temperatures. Cooling (T < 1) sharpens toward the hard argmax, T = 1 is
+    the plain softmax, heating (T > 1) flattens toward uniform --- and the
+    ORDER of the bars never changes, since 1/T scales all logits alike. Uses
+    the same logits (1.0, 2.2, 0.3) as the loss/accuracy figure, so the middle
+    panel repeats numbers the reader has already seen. All bar heights are the
+    exact computed softmax values."""
+    o = np.array([1.0, 2.2, 0.3])
+    temps = [0.25, 1.0, 4.0]
+    fig, axes = plt.subplots(1, 3, figsize=(9.6, 3.0), sharey=True)
+    for ax, T in zip(axes, temps):
+        z = o / T
+        p = np.exp(z - z.max())
+        p = p / p.sum()
+        print(f"  T = {T:>4}: softmax(o/T) = {np.round(p, 3).tolist()}")
+        bars = ax.bar([1, 2, 3], p, width=0.62, color=[BLUE, ORANGE, GREEN],
+                      alpha=0.85)
+        for x, v in zip([1, 2, 3], p):
+            ax.text(x, v + 0.03, f"{v:.2f}", ha="center", va="bottom",
+                    fontsize=9)
+        ax.set_ylim(0, 1.12)
+        ax.set_xticks([1, 2, 3])
+        ax.set_xticklabels([r"$\hat y_1$", r"$\hat y_2$", r"$\hat y_3$"])
+        title = {0.25: r"$T = 0.25$ (sharpened)", 1.0: r"$T = 1$ (softmax)",
+                 4.0: r"$T = 4$ (flattened)"}[T]
+        ax.set_title(title)
+    axes[0].set_ylabel(r"$\mathrm{softmax}(\mathbf{o}/T)$")
+    fig.suptitle(r"the same scores $\mathbf{o} = (1.0,\ 2.2,\ 0.3)$ at three temperatures",
+                 y=1.04, fontsize=12)
+    fig.subplots_adjust(wspace=0.10)
+    fl.save(fig, "mdl-clf-temperature")
+
+
+def fig_density_ratio():
+    """The geometry of importance weighting under covariate shift. One panel:
+    the source density q (where the training data lives), the target density p
+    (where the risk puts its weight), and the importance weight
+    beta(x) = p(x)/q(x), which is ~0 where only the source has mass, crosses 1
+    where the densities agree, and explodes exponentially where the target
+    outweighs a vanishing source. A dashed line shows the clipped weight
+    min(beta, c): a little bias for much less variance. All curves are the
+    exact computed densities/ratio for two unit-variance Gaussians."""
+    x = np.linspace(-3.5, 6.0, 601)
+    mu_q, mu_p = 0.0, 2.5
+    q = np.exp(-0.5 * (x - mu_q) ** 2) / np.sqrt(2 * np.pi)
+    p = np.exp(-0.5 * (x - mu_p) ** 2) / np.sqrt(2 * np.pi)
+    beta = p / q                       # = exp(2.5 x - 3.125) here
+    c = 5.0
+    # beta = 1 exactly where the two densities cross
+    x_eq = (mu_p**2 - mu_q**2) / (2 * (mu_p - mu_q))
+    x_clip = (np.log(c) + (mu_p**2 - mu_q**2) / 2) / (mu_p - mu_q)
+    print(f"  beta = 1 at x = {x_eq:.3f};  beta = c = {c} at x = {x_clip:.3f}")
+
+    fig, ax = plt.subplots(figsize=(7.6, 4.0))
+    ax.plot(x, q, color=BLUE, lw=2.2)
+    ax.fill_between(x, 0, q, color=BLUE, alpha=0.10)
+    ax.plot(x, p, color=GREEN, lw=2.2)
+    ax.fill_between(x, 0, p, color=GREEN, alpha=0.10)
+    ax.text(mu_q, 0.415, r"source $q(x)$" + "\n(training data)", ha="center",
+            fontsize=10, color=BLUE)
+    ax.text(mu_p, 0.415, r"target $p(x)$" + "\n(deployment)", ha="center",
+            fontsize=10, color=GREEN)
+    ax.set_xlabel(r"$x$")
+    ax.set_ylabel("density")
+    ax.set_xlim(x[0], x[-1])
+    ax.set_ylim(0, 0.50)
+
+    # the weight on a twin axis (its scale is different in kind)
+    ax2 = ax.twinx()
+    ax2.plot(x, beta, color=ORANGE, lw=2.4)
+    ax2.plot(x, np.minimum(beta, c), color=ORANGE, lw=2.0, ls=(0, (5, 3)))
+    ax2.axhline(1.0, color=GRAY, lw=0.9, ls=":")
+    ax2.plot([x_eq], [1.0], "o", ms=5, color=GRAY)
+    ax2.text(x_eq - 0.35, 1.35, r"$\beta = 1$", fontsize=9.5, color="black",
+             ha="center")
+    ax2.text(4.45, 6.6, r"$\beta(x) = \dfrac{p(x)}{q(x)}$", fontsize=12,
+             color=ORANGE, ha="center")
+    ax2.text(4.7, 4.35, r"clipped $\min(\beta, c)$", fontsize=9.5,
+             color=ORANGE, ha="center", style="italic")
+    ax2.set_ylim(0, 8)
+    ax2.set_ylabel(r"importance weight $\beta$", color=ORANGE)
+    ax2.tick_params(axis="y", colors=ORANGE)
+    ax2.spines["right"].set_visible(True)
+    ax2.spines["right"].set_color(ORANGE)
+    ax2.spines["top"].set_visible(False)
+
+    fl.save(fig, "mdl-clf-density-ratio")
+
+
+FIGURES = [fig_loss_accuracy, fig_decision_regions, fig_temperature,
+           fig_density_ratio]
 
 
 def main():

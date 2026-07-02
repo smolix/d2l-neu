@@ -94,46 +94,20 @@ With two axes, a tensor is called a *matrix*.
 With $k > 2$ axes, we drop the specialized names
 and just refer to the object as a $k^\textrm{th}$-*order tensor*.
 
-:begin_tab:`mxnet`
-MXNet provides a variety of functions 
-for creating new tensors 
-prepopulated with values. 
+Each framework provides a variety of functions
+for creating new tensors
+prepopulated with values.
 For example, by invoking `arange(n)`,
 we can create a vector of evenly spaced values,
-starting at 0 (included) 
+starting at 0 (included)
 and ending at `n` (not included).
 By default, the interval size is $1$.
-Unless otherwise specified, 
-new tensors are stored in main memory 
+Unless otherwise specified,
+new tensors are stored in main memory
 and designated for CPU-based computation.
-:end_tab:
-
-:begin_tab:`pytorch`
-PyTorch provides a variety of functions 
-for creating new tensors 
-prepopulated with values. 
-For example, by invoking `arange(n)`,
-we can create a vector of evenly spaced values,
-starting at 0 (included) 
-and ending at `n` (not included).
-By default, the interval size is $1$.
-Unless otherwise specified, 
-new tensors are stored in main memory 
-and designated for CPU-based computation.
-:end_tab:
 
 :begin_tab:`tensorflow`
-TensorFlow provides a variety of functions 
-for creating new tensors 
-prepopulated with values. 
-For example, by invoking `range(n)`,
-we can create a vector of evenly spaced values,
-starting at 0 (included) 
-and ending at `n` (not included).
-By default, the interval size is $1$.
-Unless otherwise specified, 
-new tensors are stored in main memory 
-and designated for CPU-based computation.
+In TensorFlow, this function is named `range` rather than `arange`.
 :end_tab:
 
 ```{.python .input #ndarray-getting-started-2}
@@ -156,7 +130,7 @@ x
 
 ```{.python .input #ndarray-getting-started-2}
 %%tab jax
-x = jnp.arange(12)
+x = jnp.arange(12, dtype=jnp.float32)
 x
 ```
 
@@ -233,7 +207,10 @@ This new tensor retains all elements
 but reconfigures them into a matrix.
 Notice that the elements of our vector
 are laid out one row at a time and thus
-`x[3] == X[0, 3]`.
+`x[3] == X[0, 3]`, as :numref:`fig_ndarray_reshape` illustrates.
+
+![Reshaping re-wraps the same 12 elements, laid out one row at a time; no data moves.](../img/ndarray-reshape.svg)
+:label:`fig_ndarray_reshape`
 
 ```{.python .input #ndarray-getting-started-5}
 %%tab mxnet, pytorch, jax
@@ -392,7 +369,7 @@ by indexing (starting with 0).
 To access an element based on its position
 relative to the end of the list,
 we can use negative indexing.
-Finally, we can access whole ranges of indices 
+We can also access whole ranges of indices 
 via slicing (e.g., `X[start:stop]`), 
 where the returned value includes 
 the first index (`start`) *but not the last* (`stop`).
@@ -662,6 +639,12 @@ from the *right* and compare them axis by axis: two axes are compatible when
 they are equal or when one of them is $1$ (a missing leading axis counts as
 $1$). The size-$1$ axis is then *stretched* to match the other. If any pair
 of axes is incompatible, the operation raises an error rather than guessing.
+:numref:`fig_ndarray_broadcasting` shows the mechanism at work on the example
+that follows: each size-$1$ axis is stretched (by virtually copying its
+entries) until both operands share the shape $3\times2$.
+
+![Broadcasting stretches the size-1 axes: a $3\times1$ column and a $1\times2$ row each expand to $3\times2$ before the elementwise addition.](../img/ndarray-broadcasting.svg)
+:label:`fig_ndarray_broadcasting`
 
 ```{.python .input #ndarray-broadcasting-1}
 %%tab mxnet
@@ -703,11 +686,49 @@ before adding them elementwise.
 a + b
 ```
 
+What happens when the shapes are *not* compatible? Lining up $(3, 2)$ and
+$(2, 3)$ from the right pairs $2$ with $3$ and $3$ with $2$: neither axis pair
+matches and neither member is $1$, so the framework refuses rather than
+guessing. Seeing the error once now can save you from hunting for it in a
+larger program later.
+
+```{.python .input #ndarray-broadcasting-3}
+%%tab mxnet
+try:
+    np.ones((3, 2)) + np.ones((2, 3))
+except Exception as e:
+    print(e)
+```
+
+```{.python .input #ndarray-broadcasting-3}
+%%tab pytorch
+try:
+    torch.ones((3, 2)) + torch.ones((2, 3))
+except Exception as e:
+    print(e)
+```
+
+```{.python .input #ndarray-broadcasting-3}
+%%tab tensorflow
+try:
+    tf.ones((3, 2)) + tf.ones((2, 3))
+except Exception as e:
+    print(e)
+```
+
+```{.python .input #ndarray-broadcasting-3}
+%%tab jax
+try:
+    jnp.ones((3, 2)) + jnp.ones((2, 3))
+except Exception as e:
+    print(e)
+```
+
 ## Saving Memory
 
 Running operations can cause new memory to be
 allocated to host results.
-For example, if we write `Y = X + Y`,
+For example, if we write `Y = Y + X`,
 we dereference the tensor that `Y` used to point to
 and instead point `Y` at the newly allocated memory.
 We can demonstrate this issue with Python's `id()` function,
@@ -896,7 +917,7 @@ a = jnp.array(3.5)
 a, a.item(), float(a), int(a)
 ```
 
-## Summary
+## Discussion
 
 The tensor class is the main interface for storing and manipulating data in deep learning libraries.
 Tensors provide a variety of functionalities including construction routines; indexing and slicing; basic mathematics operations; broadcasting; memory-efficient assignment; and conversion to and from other Python objects.
@@ -988,7 +1009,7 @@ Storing & transforming data with **tensors**<br>The *n*-dimensional arrays that 
 :::
 :::
 
-::: {.slide title="Other ways to build tensors"}
+::: {.slide title="randn breaks symmetry; lists pin exact values"}
 [Getting Started]{.kicker}
 
 ::: {.cols}
@@ -1157,7 +1178,7 @@ A slice on the left assigns to a **whole region** at once:
 :::
 :::
 
-::: {.slide title="Elementwise arithmetic & functions"}
+::: {.slide title="Elementwise ops: matching shapes, entry by entry"}
 [Operations]{.kicker}
 
 ::: {.cols}
@@ -1200,7 +1221,7 @@ Every *other* axis must already match.
 :::
 :::
 
-::: {.slide title="Comparisons & reductions"}
+::: {.slide title="Comparisons build masks; reductions collapse"}
 [Operations]{.kicker}
 
 ::: {.cols}
@@ -1223,7 +1244,7 @@ reduce just one.
 :::
 :::
 
-::: {.slide title="Broadcasting: combining mismatched shapes"}
+::: {.slide title="Broadcasting stretches size-1 axes — for free"}
 [Operations · the exception]{.kicker}
 
 ::: {.cols .vc}
@@ -1247,6 +1268,21 @@ Compatible only if each axis is **equal** or **1**.
 ::: {.col .narrow}
 @fig:ndarray-broadcasting
 :::
+:::
+:::
+
+::: {.slide title="…or it refuses: no size-1 axis, no guess"}
+[Operations · the exception]{.kicker}
+
+Line up $(3, 2)$ and $(2, 3)$ from the right: $2$ vs $3$ and $3$ vs $2$ —
+no pair matches, neither member is $1$, so the framework raises rather
+than guessing:
+
+@ndarray-broadcasting-3
+
+::: {.d2l-note .rule}
+Broadcasting aligns shapes **from the right**; each axis pair must be
+**equal or 1**. Meet this error here, not deep inside a training loop.
 :::
 :::
 
@@ -1386,7 +1422,7 @@ A size-1 tensor unwraps to a Python scalar with `.item()`:
 
 ::: {.col}
 - **Elementwise** math, **comparisons** (masks), **reductions**, `cat`.
-- **Broadcasting** stretches size-1 axes to combine shapes.
+- **Broadcasting** stretches size-1 axes — and refuses anything else.
 - **Save memory** with in-place ops (`X[:] = …`, `+=`) — or, in JAX,
   `jit` buffer donation.
 - **Interop:** tensor ↔ NumPy, `.item()` for scalars.

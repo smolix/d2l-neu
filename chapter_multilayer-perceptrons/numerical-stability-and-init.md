@@ -69,7 +69,7 @@ $$\partial_{\mathbf{W}^{(l)}} \mathbf{o} = \underbrace{\partial_{\mathbf{h}^{(L-
 In other words, this gradient is
 the product of $L-l$ matrices
 $\mathbf{M}^{(L)} \cdots \mathbf{M}^{(l+1)}$
-and the gradient vector $\mathbf{v}^{(l)}$.
+and the gradient operator $\mathbf{v}^{(l)}$.
 Thus we are susceptible to the same
 problems of numerical underflow that often crop up
 when multiplying together too many probabilities.
@@ -78,9 +78,15 @@ switch into log-space, i.e., shifting
 pressure from the mantissa to the exponent
 of the numerical representation.
 Unfortunately, our problem above is more serious:
-initially the matrices $\mathbf{M}^{(l)}$ may have a wide variety of eigenvalues.
-They might be small or large, and
-their product might be *very large* or *very small*.
+each Jacobian $\mathbf{M}^{(l)}$ can stretch or shrink the vectors it acts on
+by widely varying factors (its *singular values* — for the rectangular
+Jacobians that arise when layer widths differ, these are the right notion of
+"how much the matrix scales things").
+A per-layer factor of $\rho$ compounds to $\rho^{\,L-l}$ across the product,
+so factors even modestly different from $1$
+make the overall gradient *very large* or *very small* geometrically fast;
+the spectral-radius account of such iterated products is developed
+in :numref:`subsec_mdl-spectral-radius`.
 
 The risks posed by unstable gradients
 go beyond numerical representation.
@@ -151,10 +157,15 @@ d2l.plot(x, [y, grad_sigmoid(x)],
 
 As you can see, the sigmoid's gradient vanishes
 both when its inputs are large and when they are small.
-Moreover, when backpropagating through many layers,
-unless we are in the Goldilocks zone, where
-the inputs to many of the sigmoids are close to zero,
-the gradients of the overall product may vanish.
+Moreover, the sigmoid's derivative *never exceeds* $0.25$
+(its peak, attained at zero),
+so even in the Goldilocks zone,
+where the inputs to many of the sigmoids are close to zero,
+each layer attenuates the backward signal by at least a factor of four:
+after only ten sigmoid layers the gradient has shrunk
+by $0.25^{10} \approx 10^{-6}$.
+Away from that zone the situation is far worse,
+and the gradients of the overall product vanish outright.
 When our network boasts many layers,
 unless we are careful, the gradient
 will likely be cut off at some layer.
@@ -323,6 +334,10 @@ Here we used $E[w_{ij}^2] = \textrm{Var}[w_{ij}] = \sigma^2$,
 which holds because the weights have zero mean
 ($\textrm{Var}[w] = E[w^2] - E[w]^2 = E[w^2]$),
 and likewise $E[x_j^2] = \gamma^2$.
+In the second line, expanding the square of the sum also produces cross terms
+$E[w_{ij} w_{ik} x_j x_k]$ for $j \neq k$;
+these vanish because the weights are independent of each other
+(and of the inputs) and have zero mean.
 
 One way to keep the variance fixed
 is to set $n_\textrm{in} \sigma^2 = 1$.
@@ -374,18 +389,29 @@ turns out to work well in practice.
 
 The Xavier analysis above assumed a layer *without nonlinearities*.
 The argument breaks in a specific, fixable way once we insert a ReLU.
-Recall that $\textrm{ReLU}(z) = \max(0, z)$ zeroes every negative pre-activation.
+First, note what the variance computation above actually consumed:
+because the weights have zero mean, $E[o_i] = 0$ no matter what the inputs are,
+and $\textrm{Var}[o_i] = n_\textrm{in} \sigma^2 E[x_j^2]$ depends on the inputs
+only through their *second moment* $E[x_j^2]$.
+So the quantity we must track through the nonlinearity is the second moment.
+Recall that $\textrm{ReLU}(z) = \max(0, z)$ zeroes every negative pre-activation
+and passes every positive one through unchanged.
 If the pre-activations are symmetric about zero,
 as they are when the weights have zero mean,
-then ReLU discards, in expectation, *half* of them,
-and for the surviving half it passes the value through unchanged.
-Its effect on the variance of a zero-mean, symmetric signal
-is therefore to **halve** it: $\textrm{Var}[\textrm{ReLU}(z)] = \tfrac{1}{2}\textrm{Var}[z]$.
+then $\textrm{ReLU}(z)^2$ equals $z^2$ on the positive half of the distribution
+and equals $0$ on the negative half,
+so the rectifier **halves the second moment**:
+$E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$.
+(Its effect on the *variance* is messier, because $\textrm{ReLU}(z)$
+is no longer zero-mean; see exercise 3.)
 
-Propagating this through the same forward computation as before,
+Propagating this halved second moment through
+the same forward computation as before,
 the variance of the layer output is now
 $\textrm{Var}[o_i] = \tfrac{1}{2} n_\textrm{in} \sigma^2 \gamma^2$,
-with the extra factor of $\tfrac{1}{2}$ coming from the rectifier.
+where $\gamma^2$ now denotes the variance of the pre-activations
+feeding the ReLU, and
+the extra factor of $\tfrac{1}{2}$ comes from the rectifier.
 To keep the variance fixed across layers
 we must compensate by *doubling* the weight variance:
 
@@ -398,10 +424,116 @@ Because Xavier and He differ only by this factor of two
 and by which fan size they key on, they are easy to confuse;
 the rule of thumb is **Xavier for $\tanh$ and sigmoid, He for ReLU**.
 Most frameworks ship both as named initializers
-(e.g., PyTorch's `kaiming_normal_`, in fact the default for `nn.Linear`),
+(e.g., PyTorch's `kaiming_normal_` and `kaiming_uniform_` —
+a variant of the latter is the default for `nn.Linear`),
 and we return to invoking them through the parameter-initialization API
 in :numref:`chap_computation`.
 
+
+### Watching the Variance Propagate
+
+The 100-matrix product above showed the *explosion* half of the story. Now
+that we have the fix in hand, we can demonstrate the whole thesis of this
+section in one plot: push a unit-scale signal through $50$ ReLU layers of
+width $100$ and track the second moment $E[(h^{(l)})^2]$ of the activations
+(the quantity the He argument preserves) layer by layer, under three weight
+scales: the naive $\mathcal{N}(0,1)$, Xavier, and He. To avoid floating-point
+overflow along the way, we renormalize the activations after each layer and
+accumulate the per-layer gains instead; because ReLU is positively
+homogeneous ($\operatorname{ReLU}(a\mathbf{x}) = a\operatorname{ReLU}(\mathbf{x})$
+for $a > 0$), this rescaling is exact, not an approximation.
+
+```{.python .input #numerical-stability-and-init-depth-sweep}
+%%tab pytorch
+depth, width = 50, 100
+scales = {'N(0, 1)': 1.0, 'Xavier': (2 / (width + width)) ** 0.5,
+          'He': (2 / width) ** 0.5}
+curves = []
+for scale in scales.values():
+    h, m, curve = torch.randn(1000, width), 1.0, []
+    for _ in range(depth):
+        h = torch.relu(h @ (scale * torch.randn(width, width)))
+        gain = float((h ** 2).mean())  # this layer's factor on E[h^2]
+        m *= gain
+        curve.append(m)
+        h = h / gain ** 0.5  # renormalize: exact, since ReLU is homogeneous
+    curves.append(curve)
+d2l.plot(list(range(1, depth + 1)), curves, 'layer', 'second moment of h',
+         legend=list(scales), yscale='log')
+```
+
+```{.python .input #numerical-stability-and-init-depth-sweep}
+%%tab mxnet
+depth, width = 50, 100
+scales = {'N(0, 1)': 1.0, 'Xavier': (2 / (width + width)) ** 0.5,
+          'He': (2 / width) ** 0.5}
+curves = []
+for scale in scales.values():
+    h, m, curve = np.random.normal(size=(1000, width)), 1.0, []
+    for _ in range(depth):
+        h = npx.relu(np.dot(h, scale * np.random.normal(
+            size=(width, width))))
+        gain = float((h ** 2).mean())  # this layer's factor on E[h^2]
+        m *= gain
+        curve.append(m)
+        h = h / gain ** 0.5  # renormalize: exact, since ReLU is homogeneous
+    curves.append(curve)
+d2l.plot(list(range(1, depth + 1)), curves, 'layer', 'second moment of h',
+         legend=list(scales), yscale='log')
+```
+
+```{.python .input #numerical-stability-and-init-depth-sweep}
+%%tab tensorflow
+depth, width = 50, 100
+scales = {'N(0, 1)': 1.0, 'Xavier': (2 / (width + width)) ** 0.5,
+          'He': (2 / width) ** 0.5}
+curves = []
+for scale in scales.values():
+    h, m, curve = tf.random.normal((1000, width)), 1.0, []
+    for _ in range(depth):
+        h = tf.nn.relu(tf.matmul(h, scale * tf.random.normal(
+            (width, width))))
+        gain = float(tf.reduce_mean(h ** 2))  # factor on E[h^2]
+        m *= gain
+        curve.append(m)
+        h = h / gain ** 0.5  # renormalize: exact, since ReLU is homogeneous
+    curves.append(curve)
+d2l.plot(list(range(1, depth + 1)), curves, 'layer', 'second moment of h',
+         legend=list(scales), yscale='log')
+```
+
+```{.python .input #numerical-stability-and-init-depth-sweep}
+%%tab jax
+depth, width = 50, 100
+scales = {'N(0, 1)': 1.0, 'Xavier': (2 / (width + width)) ** 0.5,
+          'He': (2 / width) ** 0.5}
+curves = []
+for scale in scales.values():
+    h, m, curve = jax.random.normal(d2l.get_key(), (1000, width)), 1.0, []
+    for _ in range(depth):
+        h = jax.nn.relu(h @ (scale * jax.random.normal(
+            d2l.get_key(), (width, width))))
+        gain = float((h ** 2).mean())  # this layer's factor on E[h^2]
+        m *= gain
+        curve.append(m)
+        h = h / gain ** 0.5  # renormalize: exact, since ReLU is homogeneous
+    curves.append(curve)
+d2l.plot(list(range(1, depth + 1)), curves, 'layer', 'second moment of h',
+         legend=list(scales), yscale='log')
+```
+
+The plot tells the entire story at a glance. Under $\mathcal{N}(0,1)$ weights
+each layer multiplies the signal's scale by roughly $n_\textrm{in}/2 = 50$, and
+fifty layers compound that to an astronomical $\sim\!10^{80}$: the exploding
+regime. Xavier, derived for *linear* layers, is off by exactly the rectifier's
+factor of $\tfrac{1}{2}$ per layer, so the signal *vanishes* like $2^{-l}$,
+reaching $\sim\!10^{-15}$ by the bottom of the stack. He initialization
+compensates for the rectifier and holds the signal's scale essentially flat
+across all fifty layers (the slight downward drift is a finite-width
+fluctuation effect, not a bias in the rule). Only the He-initialized network
+delivers usable forward signals, and by the symmetric backward argument,
+usable gradients. Exercise 4 asks you to repeat the sweep with the
+nonlinearity removed, where Xavier is the scheme that stays flat.
 
 ### Beyond
 
@@ -438,15 +570,15 @@ Vanishing and exploding gradients are common issues in deep networks. Great care
 Initialization heuristics are needed to ensure that the initial gradients are neither too large nor too small.
 Random initialization is key to ensuring that symmetry is broken before optimization.
 Xavier initialization keeps the variance of activations and gradients roughly constant across layers by scaling weights according to the number of inputs and outputs.
-For ReLU networks, He initialization scales the weight variance to $2/n_\textrm{in}$ to compensate for the rectifier halving the activation variance.
+For ReLU networks, He initialization scales the weight variance to $2/n_\textrm{in}$ to compensate for the rectifier halving the activations' second moment.
 ReLU activation functions mitigate the vanishing gradient problem. This can accelerate convergence.
 
 ## Exercises
 
 1. Can you design other cases where a neural network might exhibit symmetry that needs breaking, besides the permutation symmetry in an MLP's layers?
 1. Can we initialize all weight parameters in linear regression or in softmax regression to the same value?
-1. The Xavier derivation assumed a linear layer. Repeat it for a layer followed by a ReLU: show that, for zero-mean symmetric pre-activations, $\textrm{Var}[\textrm{ReLU}(z)] = \tfrac{1}{2}\textrm{Var}[z]$, and conclude that preserving forward variance requires $\sigma^2 = 2/n_\textrm{in}$ (He initialization). Where does the factor of two come from intuitively?
-1. Initialize a deep stack of linear layers (say 50 layers, width 100) three ways, with weights $\sim\mathcal{N}(0,1)$, Xavier, and He, feed in a unit-variance input, and plot $\textrm{Var}[\mathbf{h}^{(\ell)}]$ as a function of depth $\ell$. Which scheme keeps the variance flat? Now insert a ReLU after each layer and repeat. Do your observations match the theory?
+1. The Xavier derivation assumed a linear layer. Repeat it for a layer followed by a ReLU: show that, for zero-mean symmetric pre-activations $z$, $E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$, and conclude that preserving forward variance requires $\sigma^2 = 2/n_\textrm{in}$ (He initialization). Where does the factor of two come from intuitively? Why is the analogous statement for variances false? For $z \sim \mathcal{N}(0, \tau^2)$, compute $\textrm{Var}[\textrm{ReLU}(z)]$ explicitly and show that it equals $\left(\tfrac{1}{2} - \tfrac{1}{2\pi}\right)\tau^2$, not $\tfrac{1}{2}\tau^2$.
+1. Rerun this section's depth-sweep experiment with the ReLU removed, i.e., for a purely *linear* stack of 50 layers of width 100 under the same three schemes. Which scheme keeps the signal's scale flat now, and why does the winner change relative to the ReLU sweep? What does this predict for activations that are approximately linear around zero, such as tanh?
 1. Look up analytic bounds on the eigenvalues of the product of two matrices. What does this tell you about ensuring that gradients are well conditioned?
 1. If we know that some terms diverge, can we fix this after the fact? Look at the paper on layerwise adaptive rate scaling  for inspiration :cite:`You.Gitman.Ginsburg.2017`.
 
@@ -473,7 +605,7 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 ::: {.cover}
 [Dive into Deep Learning · §5.4]{.kicker}
 
-Numerical stability & **initialization**<br>Why deep nets once refused to train, and the variance rule that fixed them.
+Numerical stability & **initialization**<br>Why deep nets once refused to train --- **the problem, the diagnosis, the cure, and a fifty-layer proof**.
 :::
 :::
 
@@ -491,8 +623,12 @@ Three ideas made deep training routine:
 2. **Variance-preserving init** (Xavier, He).
 3. **Symmetry breaking** (random, never constant).
 
-::: {.d2l-note}
-Get init wrong and the gradient either **dies** at zero or **blows up** to NaN before learning starts.
+::: {.d2l-note .rule}
+Get init wrong and the gradient **dies** or **blows up** before
+learning starts. Keep score: ten sigmoid layers tax the gradient to
+$10^{-6}$; a hundred random matrices explode past $10^{24}$; and one
+closing plot shows $10^{80}$ vs $10^{-15}$ vs *flat* — naive, Xavier,
+He.
 :::
 :::
 
@@ -563,20 +699,16 @@ ReLU's derivative is exactly **1** wherever a unit is active, so it does not att
 :::
 :::
 
-::: {.slide title="Exploding: a product of random matrices" except="tensorflow"}
+::: {.slide title="Exploding: one hundred random matrices, entries past 10²⁴"}
 [Unstable Gradients · exploding]{.kicker}
 
-Multiply one hundred $\mathcal{N}(0,1)$ matrices ($\sigma^2 = 1$, each factor too large) and the entries run away to $\sim\!10^{24}$. A poorly scaled init does exactly this to the gradient.
+Multiply one hundred $\mathcal{N}(0,1)$ matrices — `for i in range(100): M = M @ randn(4, 4)` — exactly what a deep linear stack does to a gradient. Each factor is a little too large, and the product compounds:
 
-@numerical-stability-and-init-exploding-gradients
+@!numerical-stability-and-init-exploding-gradients
+
+::: {.d2l-note .warn}
+A poorly scaled initialization does *exactly this* to the gradient. No optimizer converges from here.
 :::
-
-::: {.slide title="Exploding: a product of random matrices" only="tensorflow"}
-[Unstable Gradients · exploding]{.kicker}
-
-Multiply one hundred $\mathcal{N}(0,1)$ matrices ($\sigma^2 = 1$, each factor too large) and the entries run away to $\sim\!10^{24}$. A poorly scaled init does exactly this to the gradient.
-
-@-numerical-stability-and-init-exploding-gradients
 :::
 
 ::: {.slide title="The three crashes you will actually see"}
@@ -667,11 +799,43 @@ $$\sigma^2 = \frac{2}{n_\textrm{in}}.$$
 
 ::: {.col .narrow}
 ::: {.d2l-note}
-ReLU zeroes half a symmetric signal, **halving** its variance, so He **doubles** the weight variance to compensate.
+ReLU zeroes half a symmetric signal, **halving its second moment** ($E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$), so He **doubles** the weight variance to compensate.
 :::
 
-Rule of thumb: **Xavier for $\tanh$/sigmoid, He for ReLU.** Both ship as framework defaults.
+Rule of thumb: **Xavier for $\tanh$/sigmoid, He for ReLU.** Both ship as named initializers in every framework.
 :::
+:::
+:::
+
+::: {.slide title="The proof: 10⁸⁰ vs 10⁻¹⁵ vs flat" only="pytorch"}
+[Initialization · payoff]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+The whole section in one plot: push a unit-scale signal through **50 ReLU layers** and track $E[(h^{(l)})^2]$ under three weight scales:
+
+- $\mathcal{N}(0,1)$: each layer gains $\approx n_\textrm{in}/2 = 50\times$; **explodes** to $\sim\!10^{80}$.
+- **Xavier**: off by the rectifier's $\tfrac12$ per layer; *vanishes* like $2^{-l}$ to $\sim\!10^{-15}$.
+- **He**: essentially **flat** across all fifty layers.
+:::
+
+::: {.col .fig .big}
+@!numerical-stability-and-init-depth-sweep
+:::
+:::
+:::
+
+::: {.slide title="The proof: 10⁸⁰ vs 10⁻¹⁵ vs flat" except="pytorch"}
+[Initialization · payoff]{.kicker}
+
+The whole section in one experiment: push a unit-scale signal through **50 ReLU layers** of width 100 and track the second moment $E[(h^{(l)})^2]$ layer by layer, under three weight scales.
+
+- $\mathcal{N}(0,1)$: each layer gains $\approx n_\textrm{in}/2 = 50\times$, compounding to an astronomical $\sim\!10^{80}$ by layer 50 — the exploding regime.
+- **Xavier**: derived for *linear* layers, off by exactly the rectifier's $\tfrac12$ per layer, so the signal *vanishes* like $2^{-l}$, reaching $\sim\!10^{-15}$.
+- **He**: compensates for the rectifier and holds the scale essentially **flat** across all fifty layers.
+
+::: {.d2l-note .rule}
+Only the He-initialized stack delivers usable forward signals — and, by the symmetric backward argument, usable gradients. Run the sweep yourself in the notebook.
 :::
 :::
 
@@ -698,8 +862,14 @@ We return to both in the chapters on modern CNNs.
 
 ::: {.col}
 - **Fix the scale:** init weights so $\textrm{Var}$ is preserved, via **Xavier** ($\tanh$) and **He** (ReLU).
+- **Proof on 50 layers:** $10^{80}$ (naive) vs $10^{-15}$ (Xavier under ReLU) vs **flat** (He).
 - **Break the symmetry:** random init, never a constant.
 - **At scale:** normalization + residuals + careful init together reach 100+ layers.
 :::
+:::
+
+::: {.d2l-note}
+Next (§5.5): the model trains — but *why* does an over-parametrized
+network generalize at all?
 :::
 :::

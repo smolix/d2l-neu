@@ -44,6 +44,7 @@ If you want to go deeper, the following—from refreshers on single-variable cal
 **Automatic differentiation**
 
 - [Automatic Differentiation in Machine Learning: a Survey — Baydin, Pearlmutter, Radul & Siskind](https://www.jmlr.org/papers/volume18/17-468/17-468.pdf) — the standard survey (JMLR, 2018); read it to understand why AD is neither symbolic nor numerical differentiation.
+- [The Art of Differentiating Computer Programs — Naumann](https://epubs.siam.org/doi/book/10.1137/1.9781611972078) — SIAM's introduction to algorithmic differentiation from the compiler's point of view, by the author of the NP-completeness result for optimal Jacobian accumulation cited in this chapter.
 - [The Autodiff Cookbook — JAX documentation](https://docs.jax.dev/en/latest/notebooks/autodiff_cookbook.html) — `grad`, JVPs/VJPs, Jacobians, and Hessian-vector products with runnable examples.
 - [Autodidax: JAX core from scratch — JAX documentation](https://docs.jax.dev/en/latest/autodidax.html) — builds forward- and reverse-mode autodiff (and `jit`/`vmap`) from the ground up, demystifying what a modern AD system actually does.
 - [A Gentle Introduction to torch.autograd — PyTorch documentation](https://docs.pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html) — how PyTorch records a dynamic computational graph and replays it in reverse to compute gradients via `.backward()`.

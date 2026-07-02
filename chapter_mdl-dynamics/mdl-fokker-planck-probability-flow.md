@@ -394,6 +394,22 @@ of $\partial_t p$ --- at $t = 0.5$, a residual of $5 \times 10^{-6}$ against a
 left-hand side of size $0.54$ --- pure finite-difference truncation error. The
 cloud's density movie really does obey :eqref:`eq_mdl-dyn-fokker-planck`.
 
+One further reading of :eqref:`eq_mdl-dyn-fokker-planck` deserves a mention,
+because it foreshadows what is coming. For a drift
+$\mathbf{f} = -\nabla V$ and constant $g$, the Fokker--Planck equation is a
+*gradient flow* --- not in $\mathbb{R}^d$ but in the space of densities: it is
+the steepest-descent dynamics of the free energy
+$\mathcal{F}(p) = \int p\, V\, d\mathbf{x} + \tfrac12 g^2 \int p \log p\; d\mathbf{x}$
+(potential energy plus negative entropy), with "steepest" measured in the
+Wasserstein geometry of optimal transport
+(:numref:`sec_mdl-optimal-transport`). This is the
+Jordan--Kinderlehrer--Otto theorem :cite:`Jordan.Kinderlehrer.Otto.1998`; we
+will not use it, but it explains why the same transport mathematics keeps
+resurfacing --- the continuity equation below, and the Benamou--Brenier
+kinetic-energy principle that
+:numref:`sec_mdl-score-matching-diffusion-flow` builds on, are two more
+appearances of the one geometry.
+
 ## The Continuity Equation and the Probability-Flow ODE
 :label:`sec_mdl-continuity-equation`
 
@@ -544,9 +560,11 @@ $\partial_t q = -\nabla \cdot (q \mathbf{v}_t)$ --- a *linear* transport PDE
 in $q$. By the previous proposition, $p_t$ solves the same PDE, and both start
 from the same initial density $q_0 = p_0$. A linear transport equation with a
 smooth velocity field determines its solution uniquely --- run the
-characteristics $\dot{\mathbf{x}} = \mathbf{v}_t(\mathbf{x})$, which cover
-space bijectively, and the density everywhere is pinned down by change of
-variables along them. Hence $q_t = p_t$. $\blacksquare$
+characteristics $\dot{\mathbf{x}} = \mathbf{v}_t(\mathbf{x})$, which for a
+locally Lipschitz velocity field cover space bijectively
+(:numref:`sec_mdl-ode-existence-uniqueness`), and the density everywhere is
+pinned down by change of variables along them. Hence $q_t = p_t$.
+$\blacksquare$
 
 Three remarks, each load-bearing.
 
@@ -582,7 +600,7 @@ miracle of OU is that the mixture stays a mixture in closed form: each
 component's mean and variance follows :eqref:`eq_mdl-dyn-ou-marginal`, so
 $p_t$, and hence its score, is available analytically at every time. (We
 implement the score with the numerically stable softmax trick; the formula
-itself is derived in :numref:`sec_mdl-score-function`.)
+itself is derived below, in the score-function section.)
 
 ```{.python .input #fokker-planck-mixture-setup}
 pis = np.array([0.5, 0.5])              # data density p0: bimodal mixture
@@ -850,7 +868,11 @@ $$
 Read it off: stepping *backward* is again a Gaussian kick of variance
 $g^2 \tau$ --- a diffusion --- whose drift is the forward drift *corrected by
 the full $g^2$ times the score*. The marginal $p_t$ acts as a Bayesian prior
-that bends the reversed step toward where the data density actually was.
+that bends the reversed step toward where the data density actually was. (One
+bookkeeping remark for the careful reader: we evaluated $\mathbf{f}$ and the
+score at the landing point $\mathbf{y}$ rather than at $\mathbf{x}$; since the
+step itself is of size $\sqrt{\tau}$, switching evaluation points perturbs the
+mean only at order $\tau^{3/2}$ --- invisible at the order $\tau$ we keep.)
 
 ### Anderson's Theorem
 
@@ -917,10 +939,15 @@ $-\tfrac12 g^2 \nabla \log p_t$ pre-compensates the smoothing that the
 reverse-time noise will re-inflict. Anderson's $\lambda = 1$ pays both
 charges; the dial in between trades off sampler stochasticity at fixed
 marginals, a freedom that diffusion-model samplers exploit deliberately
-(:numref:`sec_mdl-score-matching-diffusion-flow`). Rigorously, Anderson's
-result is a statement about the full reverse-time *process* (filtrations,
-reverse Brownian motions and all), not just its marginals --- for that, see
-:citet:`Anderson.1982`.
+(:numref:`sec_mdl-score-matching-diffusion-flow`).
+:numref:`fig_mdl-dyn-lambda-family` shows the dial in action: three values of
+$\lambda$, three choreographies, one terminal histogram. Rigorously,
+Anderson's result is a statement about the full reverse-time *process*
+(filtrations, reverse Brownian motions and all), not just its marginals ---
+for that, see :citet:`Anderson.1982`.
+
+![One dial, one density movie. Left: reverse-time trajectories from the same terminal noise draws, integrated with the exact mixture score under the drift $\mathbf{f} - \tfrac{1+\lambda^2}{2} g^2 \nabla \log p_t$ and noise $\lambda g$: the probability-flow ODE $\lambda = 0$ glides, $\lambda = 0.5$ rattles gently, Anderson's reverse SDE $\lambda = 1$ is jagged --- more injected noise demands more drift correction, the factor sliding from $\tfrac12 g^2$ up to $g^2$ so the extra smoothing is pre-compensated. Right: after the full reverse pass, all three clouds land in the same terminal histogram, the bimodal data density $p_0$. Marginals fixed, choreography free.](../img/mdl-dyn-lambda-family.svg)
+:label:`fig_mdl-dyn-lambda-family`
 
 Note what :eqref:`eq_mdl-dyn-reverse-sde` asks of us. The forward drift
 $\mathbf{f}$ and schedule $g$: chosen by us. The terminal distribution
@@ -928,7 +955,8 @@ $p_T$: by design, approximately a known Gaussian (the whole point of noising).
 The score $\nabla \log p_t$: the *single* unknown, the same one the
 probability-flow ODE needed. One function to learn, two samplers for free.
 :numref:`fig_mdl-dyn-forward-reverse` shows the pair of processes as density
-movies.
+movies --- the one-dimensional rendition of the two-dimensional cloud story
+that :numref:`fig_mdl-dyn-noising-denoising` tells in the next section.
 
 ![The forward and reverse diffusion processes on a density. Top row (left to right): the forward noising SDE turns a structured bimodal data density $p_0$ into a single Gaussian $p_T$ across a few time slices, each panel an exact variance-preserving (OU) marginal of the mixture. Bottom row (right to left): the reverse process, driven by the score $\nabla\log p_t$, runs the same marginals backward to recover the data density from noise. Forward is fixed by design; reverse needs only the learned score.](../img/mdl-dyn-forward-reverse.svg)
 :label:`fig_mdl-dyn-forward-reverse`
@@ -1025,6 +1053,20 @@ the business of :numref:`sec_mdl-score-matching-diffusion-flow`.
   $\lambda$-family interpolates at fixed marginals. The score is the only
   unknown in all of them.
 
+This section is the load-bearing wall between the SDE machinery of
+:numref:`sec_mdl-sdes` and the learning algorithms of
+:numref:`sec_mdl-score-matching-diffusion-flow`. Everything a diffusion model
+does at inference time --- deterministic DDIM-style sampling, stochastic
+ancestral sampling, exact likelihood evaluation --- is one of this section's
+three objects: the probability-flow ODE, the reverse SDE, and the likelihood
+integral :eqref:`eq_mdl-dyn-pf-likelihood`. The lone unknown in all three is
+the score, whose normalizer-invariance (the Fisher-divergence story of
+:numref:`sec_mdl-fisher-divergence`) is what makes it the natural target for
+learning. Within this part, the vector-calculus identities taught here are
+also exactly what the continuity-equation view of flow matching reuses, and
+the continuity equation itself is the bridge back to continuous normalizing
+flows (:numref:`sec_mdl-continuous-normalizing-flows`).
+
 ## Exercises
 
 1. **Stationary distribution from scratch.** Set $\partial_t p = 0$ in the OU
@@ -1075,23 +1117,9 @@ the business of :numref:`sec_mdl-score-matching-diffusion-flow`.
    keeping the noise --- describe what the recovered density looks like and
    explain why, using the $\lambda$-family with mismatched drift and noise.
 
-## Discussions
-
-This section is the load-bearing wall between the SDE machinery of
-:numref:`sec_mdl-sdes` and the learning algorithms of
-:numref:`sec_mdl-score-matching-diffusion-flow`. Everything a diffusion model
-does at inference time --- deterministic DDIM-style sampling, stochastic
-ancestral sampling, exact likelihood evaluation --- is one of this section's
-three objects: the probability-flow ODE, the reverse SDE, and the likelihood
-integral :eqref:`eq_mdl-dyn-pf-likelihood`. The lone unknown in all three is
-the score, whose normalizer-invariance (the Fisher-divergence story of
-:numref:`sec_mdl-fisher-divergence`) is what makes it the natural target for
-learning. Within this part, the vector-calculus identities taught here are
-also exactly what the continuity-equation view of flow matching reuses, and
-the continuity equation itself is the bridge back to continuous normalizing
-flows (:numref:`sec_mdl-continuous-normalizing-flows`).
-
+:begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/)
+:end_tab:
 
 <!-- slides -->
 
@@ -1139,7 +1167,7 @@ The Lagrangian view follows one realization; the Eulerian view tracks the
 time-marginal $p_t(\mathbf x)$, which averages over all noise and is therefore
 **reproducible**. A hundred thousand OU walkers land on the analytic Gaussians:
 
-@fokker-planck-cloud-marginals
+@!fokker-planck-cloud-marginals
 :::
 
 ::: {.slide title="Three facts from vector calculus"}
@@ -1176,6 +1204,13 @@ onto $p_t$:
 ::: {.d2l-note .rule}
 $$\partial_t p_t = -\nabla\cdot(\mathbf f\,p_t) + \tfrac12 g(t)^2\,\Delta p_t.$$
 :::
+
+. . .
+
+For $\mathbf f = -\nabla V$ this PDE is itself a *gradient flow*: steepest
+descent of the free energy $\int pV + \tfrac12 g^2\!\int p\log p$ in the
+**Wasserstein geometry** (Jordan–Kinderlehrer–Otto) — the same transport
+geometry that powers flow matching.
 :::
 
 ::: {.slide title="Drift transports, diffusion smooths"}
@@ -1237,7 +1272,7 @@ log-density rule.
 
 Because $\nabla p = p\,\nabla\log p$,
 
-$$\tfrac12 g^2\,\Delta p = \nabla\cdot\!\bigl(p\cdot \mathbf{+}\tfrac12 g^2\,\nabla\log p\bigr).$$
+$$\tfrac12 g^2\,\Delta p = \nabla\cdot\!\bigl(p\,\bigl[+\tfrac12 g^2\,\nabla\log p\bigr]\bigr).$$
 
 . . .
 
@@ -1268,7 +1303,7 @@ Same marginals, different choreography — SDE paths cross and rattle, ODE
 trajectories glide and never cross. The clouds are statistically
 indistinguishable ($\mathrm{KS} < 0.009$):
 
-@fokker-planck-pf-ode-overlay
+@!fokker-planck-pf-ode-overlay
 :::
 
 ::: {.slide}
@@ -1336,20 +1371,25 @@ A Bayesian Euler step shows why: the marginal $p_t$ acts as a prior that bends
 each reversed step toward where the data was.
 :::
 
-::: {.slide title="The factor of two"}
+::: {.slide title="The factor of two, drawn"}
 [Time reversal]{.kicker}
 
-One family covers both samplers,
+One dial covers every sampler:
 $\mathbf b_\lambda = \mathbf f - \tfrac{1+\lambda^2}{2}g^2\nabla\log p_t$ with
-noise $\lambda g$, all sharing the marginals $p_t$.
+noise $\lambda g$, all sharing the marginals $p_t$. More injected noise, more
+drift correction — the factor slides from $\tfrac12 g^2$ ($\lambda=0$, the
+PF-ODE) to $g^2$ ($\lambda=1$, Anderson):
 
-::: {.d2l-note}
-$\lambda=0$ is the PF-ODE (undo smoothing once); $\lambda=1$ is Anderson
-(undo, **and** pre-compensate the noise it re-injects). Swap the true score
-for a network and this loop is a diffusion model:
+![](../img/mdl-dyn-lambda-family.svg){width=94%}
 :::
 
-@fokker-planck-reverse-sde
+::: {.slide title="Noise back into data"}
+[Generation]{.kicker}
+
+Zero training: the closed-form mixture score re-grows both modes from noise —
+swap in a trained network and this loop **is** a diffusion model:
+
+@!fokker-planck-reverse-sde
 :::
 
 ::: {.slide title="Recap"}

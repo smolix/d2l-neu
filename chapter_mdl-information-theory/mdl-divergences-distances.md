@@ -28,8 +28,12 @@ respect to the data, the object on which all of
 that reads off, for each modern generative objective, which divergence it
 secretly minimizes.
 
-As in :numref:`sec_mdl-information_theory`, **all information quantities are in
-nats** (natural logarithms); bits are a fixed $\ln 2$ rescaling. We import each
+As in :numref:`sec_mdl-information_theory`, **every logarithmic quantity is in
+nats** (natural logarithms); bits are a fixed $\ln 2$ rescaling. Not every
+divergence carries units, though: KL, reverse KL, and Jensen--Shannon are in
+nats, but total variation, $\chi^2$, and squared Hellinger contain no logarithm
+and are dimensionless, and transport distances carry the units of the sample
+space itself. We import each
 framework once; everything below this cell is plain NumPy and SciPy and runs
 identically under all four frameworks.
 
@@ -85,9 +89,14 @@ useful divergence in machine learning fails both. The KL divergence of
 :numref:`sec_mdl-information_theory` is asymmetric---for
 $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(0, 4)$ the closed form
 :eqref:`eq_mdl-gaussian_kl` gives $D_{\textrm{KL}}(P\|Q) \approx 0.318$ nats
-but $D_{\textrm{KL}}(Q\|P) \approx 0.807$ nats---and a function asymmetric in
-its arguments cannot satisfy a triangle inequality in any useful sense. The
-asymmetry is not a defect: we will see in
+but $D_{\textrm{KL}}(Q\|P) \approx 0.807$ nats. And KL fails the triangle
+inequality too---not *because* it is asymmetric (asymmetric functions can
+perfectly well satisfy a directed triangle inequality; such *quasimetrics*
+include one-way travel times), but because it scales like a *squared*
+distance: for unit Gaussians centered at $0$, $1$, and $2$, the same closed
+form gives $D_{\textrm{KL}} = \tfrac{1}{2}$ for each adjacent pair but $2$
+for the outer pair, and $2 > \tfrac{1}{2} + \tfrac{1}{2}$ in either argument
+order. The asymmetry is not a defect: we will see in
 :numref:`sec_mdl-fwd-vs-rev-kl` that the *direction* of KL is a modeling
 decision with dramatic consequences. Still, some divergences *are* genuine
 metrics---total variation, the Hellinger distance, and the Wasserstein
@@ -173,6 +182,7 @@ in :numref:`fig_mdl-f-div-generators`.
 | squared Hellinger $H^2$ | $(\sqrt{u} - 1)^2$ | yes | $H$ is a metric |
 | total variation | $\tfrac{1}{2}\lvert u - 1 \rvert$ | yes | yes |
 | Jensen--Shannon | $\tfrac{u}{2} \log u - \tfrac{u+1}{2} \log \tfrac{u+1}{2}$ | yes | $\sqrt{\textrm{JS}}$ is a metric |
+| $\alpha$-divergence ($\alpha \neq 0, 1$) | $\dfrac{u^\alpha - 1}{\alpha(\alpha - 1)}$ | no | no |
 
 ![Six generators on the same axes. Every curve is convex and touches zero at the no-discrepancy point of the density ratio, but they penalize over- and under-representation very differently: the KL generator grows slowly for small ratios and superlinearly for large ones, the reverse-KL generator diverges as the ratio approaches zero, the chi-squared generator is the symmetric parabola, and the total-variation generator grows only linearly.](../img/mdl-it-f-div-generators.svg)
 :label:`fig_mdl-f-div-generators`
@@ -206,6 +216,43 @@ $\log 2$, so it provides no gradient. Expanding :eqref:`eq_mdl-js-def` in
 terms of the ratio $u = p/q$ produces the generator in the table (Exercise 1
 checks a similar unwinding).
 
+The table's last row is a *family within the family*. For each
+$\alpha \neq 0, 1$ the generator $f_\alpha(u) = (u^\alpha - 1)/(\alpha(\alpha-1))$
+is convex with $f_\alpha(1) = 0$, and the two directions of KL are its limits:
+$f_\alpha \to u \log u$ (forward KL) as $\alpha \to 1$ and $f_\alpha \to -\log u$
+(reverse KL) as $\alpha \to 0$, while $\alpha = \tfrac{1}{2}$ gives twice the
+squared Hellinger. Closely related---and the form that appears in
+applications---is the **Rényi divergence** :cite:`Renyi.1961`,
+
+$$
+D_\alpha(P\|Q) = \frac{1}{\alpha - 1}
+\log \sum_x p(x)^\alpha\, q(x)^{1-\alpha}.
+$$
+:eqlabel:`eq_mdl-renyi-def`
+
+The outer logarithm breaks the template, so Rényi is *not* an f-divergence.
+But it is a monotone increasing function of one: the sum inside is
+$E_Q[(p/q)^\alpha] = 1 + \alpha(\alpha - 1)\, D_{f_\alpha}(P\|Q)$, and
+$t \mapsto \frac{1}{\alpha-1}\log\big(1 + \alpha(\alpha-1)\,t\big)$ is
+increasing for $\alpha > 0$---so non-negativity and the data-processing
+inequality (:numref:`sec_mdl-tv-pinsker`) transfer verbatim. The parameter
+$\alpha$ is a dial that sweeps the mode-covering/mode-seeking axis of
+:numref:`sec_mdl-fwd-vs-rev-kl` continuously: $\alpha \to 1$ recovers forward
+KL; the skew identity
+$D_\alpha(P\|Q) = \frac{\alpha}{1-\alpha} D_{1-\alpha}(Q\|P)$ shows small
+$\alpha$ turning into the reverse direction; $\alpha \to \infty$ gives
+$\log \sup_x (p/q)$, the worst-case over-representation; and $\alpha = \tfrac{1}{2}$
+gives $-2\log\sum_x \sqrt{p\,q}$, a rescaled logarithm of the Bhattacharyya
+coefficient, so it sits a monotone transform away from Hellinger. Two places
+the dial earns its keep in deep learning: *Rényi variational inference*
+replaces the ELBO's reverse KL with $D_\alpha$ and tunes how aggressively the
+posterior approximation drops modes :cite:`Li.Turner.2016`, and *Rényi
+differential privacy* :cite:`Mironov.2017` is the accounting currency of
+DP-SGD, because $D_\alpha$ adds exactly across independent compositions where
+the $(\epsilon, \delta)$ bookkeeping only bounds. For the full atlas of the
+family---limits, orderings, and the fact that $D_\alpha$ is nondecreasing in
+$\alpha$---see :citet:`Van-Erven.Harremoes.2014`.
+
 The whole gallery is six lines of code. We evaluate every divergence on the
 same pair of categorical distributions used in
 :numref:`sec_mdl-information_theory`, $P = (0.6, 0.3, 0.1)$ and
@@ -213,7 +260,7 @@ $Q = (0.2, 0.5, 0.3)$, in both argument orders.
 
 ```{.python .input #divergences-distances-f-table}
 def f_divergence(f, p, q):
-    """D_f(P||Q) = sum_x q(x) f(p(x)/q(x)), in nats."""
+    """D_f(P||Q) = sum_x q(x) f(p(x)/q(x)); nats for KL/JS, else unitless."""
     return np.sum(q * f(p / q))
 
 generators = {
@@ -260,9 +307,12 @@ $$
 a multiple of the $\chi^2$ divergence: $f''(1) = 1$ for KL and reverse KL,
 $2$ for $\chi^2$, $\tfrac{1}{2}$ for $H^2$, $\tfrac{1}{4}$ for JS. Near
 equality all roads are the same road---this shared local quadratic is the
-Fisher-information geometry that underlies natural-gradient methods---and the
-families only disagree about *distant* distributions, which is precisely the
-regime early in training.
+Fisher-information geometry that underlies natural-gradient methods: for a
+parametric family $q_{\boldsymbol{\theta}}$, the quadratic's Hessian in
+$\boldsymbol{\theta}$ is $f''(1)$ times the Fisher information matrix that
+:numref:`sec_mdl-maximum_likelihood` develops as the curvature of the
+log-likelihood---and the families only disagree about *distant*
+distributions, which is precisely the regime early in training.
 
 ## Duality: The Variational View
 
@@ -352,8 +402,13 @@ problems of :numref:`sec_mdl-optimal-transport`.
 Let's verify the proposition where we can see everything: on the categorical
 pair from before, with the $\chi^2$ generator $f(u) = (u-1)^2$. Its conjugate
 is $f^*(t) = t + t^2/4$ and the optimal critic is $T^\star = 2(p/q - 1)$
-(Exercise 2 derives both). On three outcomes a critic is just a vector of
-three numbers.
+(Exercise 2 derives both). One fine point: $t + t^2/4$ is the conjugate taken
+over all $u \in \mathbb{R}$; over the generator's true domain $u \in (0, \infty)$
+the supremum flattens to $f^*(t) = -1$ for $t \leq -2$. Using the larger
+$\mathbb{R}$-conjugate is safe---a bigger $f^*$ only *lowers* the bound
+:eqref:`eq_mdl-f-gan-bound`---and costs nothing at the optimum, where
+$T^\star = 2(p/q - 1) > -2$ automatically. On three outcomes a critic is just
+a vector of three numbers.
 
 ```{.python .input #divergences-distances-f-gan-bound}
 chi_sq = generators['chi^2']            # f(u) = (u - 1)^2
@@ -549,9 +604,13 @@ The same argument bounds $Q(A) - P(A)$ by the same quantity. $\blacksquare$
 :numref:`fig_mdl-tv-area` shows the picture: TV is half the total area where
 the two densities disagree, and the optimal distinguishing event is simply
 "the region where $P$ is the better explanation". This gives TV its
-operational meaning: the best achievable advantage over random guessing of
-*any* test that sees one sample and must say which distribution produced it
-is exactly $\textrm{TV}(P, Q)$.
+operational meaning. Hand a tester one sample, drawn from $P$ or $Q$ with
+equal probability, and ask which distribution produced it: the best possible
+test (guess $P$ exactly on $A^\star$) succeeds with probability
+$\tfrac{1}{2}\big(1 + \textrm{TV}(P, Q)\big)$---an excess of
+$\textrm{TV}/2$ over coin-flipping, which cryptographers double and call the
+*advantage*, so that under their convention the best achievable advantage is
+exactly $\textrm{TV}(P, Q)$.
 
 ![Two densities and the region where they disagree. The total variation distance is half the shaded area, and the event that attains the supremum is the set where the first density exceeds the second: betting on P exactly there is the best possible single-sample test.](../img/mdl-it-tv-area.svg)
 :label:`fig_mdl-tv-area`
@@ -597,9 +656,29 @@ $$
 which rearranges to :eqref:`eq_mdl-pinsker`. $\blacksquare$
 
 The merging step---coarsening the outcome space cannot increase an
-f-divergence---is a special case of the *data-processing inequality*, which
-:numref:`sec_mdl-mutual-information` states and proves in its proper
-generality. Note also what Pinsker does *not* say: it has no useful converse.
+f-divergence---deserves to be stated in its own right, because the proof
+above already contains it in full generality.
+
+**Remark (data-processing for f-divergences).** *Passing $P$ and $Q$ through
+any channel $K$---any deterministic or random map from $x$ to $y$, with
+output distributions $(pK)(y) = \sum_x K(y \mid x)\, p(x)$ and likewise
+$qK$---can only lose distinguishability:*
+
+$$
+D_f(PK \,\|\, QK) \;\leq\; D_f(P\|Q).
+$$
+
+**Proof.** Since $\sum_y K(y \mid x) = 1$,
+$D_f(P\|Q) = \sum_y \sum_x K(y \mid x)\, q(x)\, f\big(p(x)/q(x)\big)$. For
+each fixed $y$, Jensen's inequality with weights proportional to
+$K(y \mid x)\, q(x)$, applied at the points $p(x)/q(x)$, moves $f$ outside
+the inner sum and leaves exactly the $y$-th term of $D_f(PK\|QK)$; summing
+over $y$ finishes. $\blacksquare$
+
+Merging outcomes is the deterministic special case used above, and the
+data-processing inequality for *mutual information*, which
+:numref:`sec_mdl-mutual-information` states and proves, is the same
+principle in its most famous costume. Note also what Pinsker does *not* say: it has no useful converse.
 TV is bounded by $1$ while KL is unbounded, so the bound goes slack for
 distant pairs (two unit-variance Gaussians $50$ apart have
 $\textrm{TV} \approx 1$ but KL $= 1250$ nats), and small TV does *not* imply
@@ -709,8 +788,9 @@ Two samples from the same standard Gaussian give
 $\textrm{MMD}^2 \approx 0.0005$---noise around zero, and the unbiased
 estimator is even allowed to go slightly negative---while shifting one
 sample's mean by half a standard deviation produces $\approx 0.059$, two
-orders of magnitude larger and close to the population value
-$\approx 0.047$ that Exercise 7 derives in closed form. This
+orders of magnitude larger and consistent---up to sampling noise at
+$n = 250$---with the population value $\approx 0.047$ that Exercise 8
+derives in closed form. This
 sample-only, optimization-free property is why MMD powers kernel two-sample
 tests and adversary-free generative training (MMD-GANs and generative moment
 matching :cite:`Li.Swersky.Zemel.2015`): the "critic" is the whole RKHS ball
@@ -833,7 +913,7 @@ Geometrically, $W_1$ is the *area between the two CDFs* (the shaded region of
 of vertically gives the equivalent quantile form
 $W_1 = \int_0^1 |F_P^{-1}(u) - F_Q^{-1}(u)|\, du$, which for two equal-size
 empirical samples is just the mean absolute difference of their *sorted*
-values (Exercise 6). Let's verify :eqref:`eq_mdl-w1-cdf` against the primal
+values (Exercise 7). Let's verify :eqref:`eq_mdl-w1-cdf` against the primal
 :eqref:`eq_mdl-w1-primal`, solved exactly as a linear program over transport
 plans (the plan $\gamma$ is a matrix with row sums $p$ and column sums $q$,
 compare :numref:`subsec_mdl-lagrangian-duality`).
@@ -884,15 +964,27 @@ def sinkhorn(p, q, C, eps, iters=5000):
     plan = u[:, None] * K * v[None, :]
     return plan, np.sum(plan * C)
 
-for eps in (1.0, 0.1, 0.02):
+fig, axes = d2l.plt.subplots(1, 3, figsize=(9, 2.8))
+axes[0].set_ylabel('source $i$')
+for ax, eps in zip(axes, (1.0, 0.1, 0.02)):
     plan, cost = sinkhorn(p_w, q_w, C, eps)
     print(f'epsilon = {eps:4.2f}: entropic cost = {cost:.4f}'
           f'   (unregularized LP: {res.fun:.4f})')
+    ax.imshow(plan, cmap='Blues', origin='lower')
+    ax.set_title(f'$\\gamma$ at $\\varepsilon = {eps}$')
+    ax.set_xlabel('destination $j$')
 ```
 
 At $\varepsilon = 1$ the blurred plan overpays ($1.77$ vs. $1.70$); by
-$\varepsilon = 0.1$ the entropic cost matches the LP to four decimals. One
-relative is worth naming: with squared cost $\|x - y\|^2$ in
+$\varepsilon = 0.1$ the entropic cost matches the LP to four decimals. The
+heatmaps show why. At $\varepsilon = 1$ entropy dominates and the plan is a
+haze: every source hedges its mass across many destinations, close to the
+independent coupling $p\, q^\top$, so parcels take detours and the cost runs
+high. Shrinking $\varepsilon$ anneals the haze away---the plan sharpens
+toward a vertex of the transport polytope, and at $\varepsilon = 0.02$ only
+a thin monotone staircase of routes survives, the never-crossing assignment
+that one-dimensional optimal transport always produces and the LP finds
+exactly. One relative is worth naming: with squared cost $\|x - y\|^2$ in
 :eqref:`eq_mdl-w1-primal` one obtains the Wasserstein-2 distance, whose
 dynamical (Benamou--Brenier) formulation as a minimum-kinetic-energy flow is
 the natural language for diffusion models and flow matching---we develop it
@@ -973,7 +1065,7 @@ equal-variance Gaussians the scores differ by the constant
 $(\mu_2 - \mu_1)/\sigma^2$, so
 $D_{\textrm{F}} = (\mu_1 - \mu_2)^2 / (2\sigma^4)$---compare KL's
 $(\mu_1 - \mu_2)^2/(2\sigma^2)$ from :eqref:`eq_mdl-gaussian_kl`; the general
-unequal-variance form is Exercise 8. Let's verify the mixture score formula,
+unequal-variance form is Exercise 9. Let's verify the mixture score formula,
 the normalizer-blindness, and the Gaussian closed form numerically.
 
 ```{.python .input #divergences-distances-score}
@@ -1132,7 +1224,9 @@ the IPM, before a single parameter is trained.
   not a metric; TV, Hellinger, and Wasserstein are metrics.
 * f-divergences $D_f(P\|Q) = E_Q[f(p/q)]$ unify KL, reverse KL, $\chi^2$,
   Hellinger, TV, and Jensen--Shannon; non-negativity is Jensen's inequality,
-  and near $P = Q$ all smooth members agree up to the factor $f''(1)$.
+  and near $P = Q$ all smooth members agree up to the factor $f''(1)$. The
+  Rényi/$\alpha$ family sweeps between the two KL directions with a single
+  knob and powers $\alpha$-VI and differential-privacy accounting.
 * Fenchel duality turns any f-divergence into an adversarial game,
   $D_f = \sup_T \{ E_P[T] - E_Q[f^*(T)] \}$, estimable from samples; the
   original GAN is the Jensen--Shannon case, and an undertrained critic
@@ -1162,10 +1256,14 @@ the IPM, before a single parameter is trained.
    define the same divergence, and use this freedom to find a generator for
    reverse KL that is non-negative everywhere.
 2. Derive the convex conjugate $f^*(t) = t + t^2/4$ of the $\chi^2$
-   generator $f(u) = (u - 1)^2$ (over $u \in \mathbb{R}$), write the
-   explicit f-GAN objective :eqref:`eq_mdl-f-gan-bound` for it, and verify
-   that the critic $T^\star = f'(p/q) = 2(p/q - 1)$ attains the bound with
-   equality.
+   generator $f(u) = (u - 1)^2$ over $u \in \mathbb{R}$, then redo the
+   computation over the generator's true domain $u \in (0, \infty)$ and show
+   that the supremum is $t + t^2/4$ for $t \geq -2$ but $-1$ for $t \leq -2$.
+   Explain why plugging the (larger) $\mathbb{R}$-conjugate into
+   :eqref:`eq_mdl-f-gan-bound` still yields a valid lower bound, merely a
+   weaker one for critics that dip below $-2$. Finally, write the explicit
+   f-GAN objective for this generator and verify that the critic
+   $T^\star = f'(p/q) = 2(p/q - 1)$ attains the bound with equality.
 3. Two point masses at distance $d$: show that $D_{\textrm{KL}}$, TV, and JS
    are constant in $d$ (for $d \neq 0$) while $W_1 = |d|$. What does this
    imply about the gradient each objective supplies to a generator whose
@@ -1180,20 +1278,39 @@ the IPM, before a single parameter is trained.
    conclude that the ratio $\textrm{TV}/\sqrt{D_{\textrm{KL}}/2}$ tends to
    $1$, matching the experiment. Why is the bound loose for two
    unit-variance Gaussians with distant means?
-6. From :eqref:`eq_mdl-w1-cdf`, derive the quantile form
+6. Hellinger and total variation control each other. With the squared
+   Hellinger divergence of the gallery,
+   $H^2(P, Q) = \sum_x \big(\sqrt{p(x)} - \sqrt{q(x)}\big)^2$, and
+   $H = \sqrt{H^2}$ the Hellinger distance, prove the two-sided bound
+
+   $$
+   \tfrac{1}{2}\, H^2(P, Q) \;\leq\; \textrm{TV}(P, Q)
+   \;\leq\; H(P, Q)\, \sqrt{ 1 - \tfrac{1}{4} H^2(P, Q) }.
+   $$
+
+   (Hint: write $|p - q| = |\sqrt{p} - \sqrt{q}|\,(\sqrt{p} + \sqrt{q})$.
+   The lower bound is $\sqrt{p} + \sqrt{q} \geq |\sqrt{p} - \sqrt{q}|$; the
+   upper bound is Cauchy--Schwarz together with
+   $\sum_x (\sqrt{p} + \sqrt{q})^2 = 4 - H^2$.) Then verify both
+   inequalities numerically over $10{,}000$ random Dirichlet pairs on five
+   outcomes, in the style of the Pinsker experiment, and record how close
+   each side comes to equality. Unlike Pinsker, this sandwich is two-sided:
+   Hellinger and TV agree about which sequences of distributions converge,
+   whereas KL can be infinite at arbitrarily small TV.
+7. From :eqref:`eq_mdl-w1-cdf`, derive the quantile form
    $W_1 = \int_0^1 |F_P^{-1}(u) - F_Q^{-1}(u)|\, du$, and show that for two
    empirical distributions on samples $x_1, \ldots, x_n$ and
    $y_1, \ldots, y_n$ it equals $\tfrac{1}{n}\sum_i |x_{(i)} - y_{(i)}|$,
    the mean absolute difference of sorted values. Verify numerically against
    the linear program on a small example.
-7. For $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(\delta, 1)$ with the RBF
+8. For $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(\delta, 1)$ with the RBF
    kernel of bandwidth $\ell = 1$, use the Gaussian integral
    $E[e^{-Z^2/2}] = (1 + s^2)^{-1/2} e^{-m^2/(2(1+s^2))}$ for
    $Z \sim \mathcal{N}(m, s^2)$ to derive
    $\textrm{MMD}^2 = \tfrac{2}{\sqrt{3}}\big(1 - e^{-\delta^2/6}\big)$.
    Evaluate it at $\delta = 0.5$ and compare with the estimate from the code
    cell.
-8. Compute the Fisher divergence between $\mathcal{N}(\mu_1, \sigma_1^2)$
+9. Compute the Fisher divergence between $\mathcal{N}(\mu_1, \sigma_1^2)$
    and $\mathcal{N}(\mu_2, \sigma_2^2)$ in closed form (the score difference
    is affine in $x$, so only Gaussian first and second moments are needed),
    and check it reduces to $(\mu_1 - \mu_2)^2/(2\sigma^4)$ for equal
@@ -1269,6 +1386,12 @@ $f(1)=0$.
 :::
 
 Convexity of $f$ is *exactly* what buys non-negativity.
+
+. . .
+
+One more Jensen buys **data processing**: pushing $P$ and $Q$ through any
+channel $K$ only loses distinguishability — $D_f(PK\,\|\,QK) \le D_f(P\|Q)$,
+for every $f$ at once.
 :::
 
 ::: {.slide title="A gallery of generators"}
@@ -1283,8 +1406,10 @@ One curve $f$ per divergence:
 - Hellinger: $(\sqrt u-1)^2$
 - total variation: $\tfrac12|u-1|$
 - Jensen–Shannon (symmetric)
+- $\alpha$-family: a dial from reverse to forward KL; its log-transform is
+  **Rényi's** $D_\alpha$
 
-Near $P=Q$ they all agree, $\propto f''(1)\,\chi^2$; they differ only far apart.
+Near $P=Q$ all agree, $\propto f''(1)\,\chi^2$; they differ only far apart.
 :::
 
 ::: {.col .fig}
@@ -1369,8 +1494,9 @@ for the mass it drops:
 
 ::: {.cols .vc}
 ::: {.col}
-$\mathrm{TV}(P,Q) = \sup_A|P(A)-Q(A)| = \tfrac12\|p-q\|_1$ — the best advantage
-of any single-sample test.
+$\mathrm{TV}(P,Q) = \sup_A|P(A)-Q(A)| = \tfrac12\|p-q\|_1$. Hand a tester one
+sample: the best test succeeds with probability $\tfrac12(1+\mathrm{TV})$ — in
+the cryptographers' convention, an *advantage* of exactly $\mathrm{TV}$.
 
 Pinsker: $\mathrm{TV} \le \sqrt{D_{\mathrm{KL}}/2}$, so a small KL silences
 *every* test at once.
@@ -1431,10 +1557,15 @@ The CDF formula and a 36-variable transport LP agree to ten digits:
 
 @!divergences-distances-w1
 
-. . .
+Beyond one dimension no such formula exists — and the LP has $n^2$ variables.
+:::
 
-Entropic regularization (Sinkhorn) trades exactness for GPU-friendly speed,
-converging to the LP as $\varepsilon\to 0$:
+::: {.slide title="Sinkhorn anneals the haze"}
+[Entropic OT]{.kicker}
+
+Sinkhorn's row/column rescalings solve the $-\varepsilon H(\gamma)$-regularized
+plan on a GPU. At $\varepsilon=1$ a haze overpays ($1.77$ vs $1.70$); shrinking
+$\varepsilon$ anneals onto the LP's never-crossing staircase:
 
 @!divergences-distances-sinkhorn
 :::
@@ -1505,14 +1636,15 @@ failure modes.
 
 ::: {.cols}
 ::: {.col}
-- f-divergence $= \mathbb{E}_Q[f(p/q)]$; one Jensen proof gives $D_f \ge 0$.
+- f-divergence $= \mathbb{E}_Q[f(p/q)]$; Jensen gives $D_f \ge 0$ *and* its DPI.
+- The $\alpha$/Rényi dial sweeps reverse $\to$ forward KL.
 - Fenchel duality turns any $f$ into a critic game — the f-GAN; GAN is the JS case.
 - Forward KL covers modes; reverse KL hugs one.
 :::
 
 ::: {.col}
-- TV is the strongest single-sample test; Pinsker bounds it by $\sqrt{\mathrm{KL}/2}$.
-- $W_1$ stays smooth on disjoint supports (WGAN); $W_1=\int|F_P-F_Q|$ in 1-D.
+- TV is the best single-sample advantage; Pinsker bounds it by $\sqrt{\mathrm{KL}/2}$.
+- $W_1$ stays smooth on disjoint supports (WGAN); Sinkhorn anneals onto the LP.
 - The score drops $Z$; the Fisher/Stein row powers diffusion and SVGD.
 :::
 :::

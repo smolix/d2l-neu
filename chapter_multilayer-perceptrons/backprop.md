@@ -1,3 +1,8 @@
+```{.python .input}
+%load_ext d2lbook.tab
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
+```
+
 # Forward Propagation, Backward Propagation, and Computational Graphs
 :label:`sec_backprop`
 
@@ -34,6 +39,11 @@ To start, we focus our exposition on
 a one-hidden-layer MLP
 with weight decay ($\ell_2$ regularization, introduced in :numref:`sec_weight_decay`).
 
+```{.python .input #backprop-forward-propagation-backward-propagation-and-computational-graphs}
+%%tab pytorch
+import torch
+```
+
 ## Forward Propagation
 
 *Forward propagation* (or *forward pass*) refers to the calculation and storage
@@ -50,6 +60,10 @@ you must "pay the cost to be the boss".
 For the sake of simplicity, let's assume
 that the input example is $\mathbf{x}\in \mathbb{R}^d$
 and that our hidden layer does not include a bias term.
+Note a switch of convention: :numref:`sec_mlp` processed a minibatch of *rows*
+via $\mathbf{X}\mathbf{W}$, whereas here we track a single example as a *column*
+vector acted on from the left, $\mathbf{W}\mathbf{x}$, so every weight matrix in
+this section is transposed relative to its counterpart there.
 Here the intermediate variable is:
 
 $$\mathbf{z}= \mathbf{W}^{(1)} \mathbf{x},$$
@@ -148,7 +162,9 @@ For vectors, this is straightforward:
 it is simply matrix--matrix multiplication.
 For higher dimensional tensors,
 we use the appropriate counterpart.
-The operator $\textrm{prod}$ hides all the notational overhead.
+The operator $\textrm{prod}$ hides all the notational overhead;
+what it computes is made precise as *vector--Jacobian products*
+in :numref:`sec_mdl-matrix-calculus-autodiff`.
 
 Recall that
 the parameters of the simple network with one hidden layer,
@@ -197,6 +213,16 @@ Using the chain rule yields:
 
 $$\frac{\partial J}{\partial \mathbf{W}^{(2)}}= \textrm{prod}\left(\frac{\partial J}{\partial \mathbf{o}}, \frac{\partial \mathbf{o}}{\partial \mathbf{W}^{(2)}}\right) + \textrm{prod}\left(\frac{\partial J}{\partial s}, \frac{\partial s}{\partial \mathbf{W}^{(2)}}\right)= \frac{\partial J}{\partial \mathbf{o}} \mathbf{h}^\top + \lambda \mathbf{W}^{(2)}.$$
 :eqlabel:`eq_backprop-J-h`
+
+The "+" in :eqref:`eq_backprop-J-h` deserves a rule of its own:
+**when a variable reaches the output along several paths, its gradient is the
+*sum* of the gradients arriving along each path.**
+Here $\mathbf{W}^{(2)}$ affects $J$ twice, through the prediction path
+$J \leftarrow L \leftarrow \mathbf{o} \leftarrow \mathbf{W}^{(2)}$ and through
+the regularizer path $J \leftarrow s \leftarrow \mathbf{W}^{(2)}$, and the two
+contributions add. Forgetting to *accumulate* at such forks (overwriting
+instead of adding) is among the most common bugs in hand-written backward
+passes.
 
 To obtain the gradient with respect to $\mathbf{W}^{(1)}$
 we need to continue backpropagation
@@ -291,7 +317,29 @@ $\partial L/\partial \mathbf{W}^{(1)}$ feeding the dead unit is entirely zero:
 no gradient means no learning signal, the concrete face of the "dying ReLU" we
 met in :numref:`sec_mlp`. You can confirm every number here in a few lines with
 automatic differentiation (:numref:`sec_autograd`); doing so is a good way to
-convince yourself the framework is running exactly this computation.
+convince yourself the framework is running exactly this computation. Let's do
+exactly that: build the same tensors, run the forward pass, call `backward()`,
+and compare against the gradients we just derived by hand.
+
+```{.python .input #backprop-verify}
+%%tab pytorch
+x, y = torch.tensor([1., 2.]), 0
+W1 = torch.tensor([[1., -1.], [0., 1.]], requires_grad=True)
+W2 = torch.tensor([[2., -1.]], requires_grad=True)
+z = W1 @ x
+h = torch.relu(z)
+o = W2 @ h
+for v in (z, h): v.retain_grad()  # keep gradients of non-leaf tensors
+L = ((o - y) ** 2).sum() / 2
+L.backward()
+print(f'L = {L.item()}, dL/dW2 = {W2.grad}, dL/dh = {h.grad}')
+print(f'dL/dz = {z.grad}, dL/dW1 =\n{W1.grad}')
+```
+
+Every printed gradient matches the hand computation, down to the zeroed-out
+row for the dead unit. (The $-0$ in $\partial L/\partial \mathbf{W}^{(2)}$ is
+floating point's *signed zero*, an artifact of multiplying $h_1 = 0$ by the
+negative upstream gradient; it compares equal to $0$.)
 
 ![The worked example as a computational graph, with $\lambda=0$. The forward pass (black) carries values from the input $\mathbf{x}$ to the loss $L$; backpropagation (blue) walks the same graph in reverse, multiplying each node's local derivative to accumulate the gradients $\partial L/\partial\mathbf{W}^{(2)}$ and $\partial L/\partial\mathbf{W}^{(1)}$. The dead first ReLU unit ($z_1=-1$) zeros the gradient flowing into the top row of $\mathbf{W}^{(1)}$.](../img/mdl-mlp-backprop-graph.svg)
 :label:`fig_mdl-mlp-backprop-graph`
@@ -306,7 +354,10 @@ accumulate the gradient with respect to every parameter in a *single* pass. This
 output-to-input sweep is *reverse-mode* automatic differentiation, and it is cheap
 exactly when there are many parameters and one scalar loss, the deep learning
 regime. We use it throughout the book and developed its mechanics, including when
-the opposite *forward mode* is preferable, in :numref:`sec_autograd`.
+the opposite *forward mode* is preferable, in :numref:`sec_autograd`; the full
+theory, with both modes expressed as Jacobian products and the memory
+trade-offs they imply, is developed in
+:numref:`sec_mdl-matrix-calculus-autodiff`.
 
 ## Training Neural Networks
 
@@ -365,6 +416,11 @@ and training requires significantly more memory than prediction.
 1. Assume that the computational graph is too large for your GPU.
     1. Can you partition it over more than one GPU?
     1. What are the advantages and disadvantages over training on a smaller minibatch?
+1. Build a miniature autograd engine and use it to re-derive this section's worked example.
+    1. Write a scalar `Value` class that records, for each result, its inputs and the operation that produced it (the computational graph), supporting `+`, `*`, and `relu`. (*Hint:* implement `__add__` and `__mul__` so that each returns a new `Value` holding references to its parents and a small function that propagates the gradient one step.)
+    1. Implement `backward()`: topologically sort the graph, seed the output's gradient with $1$, and sweep the nodes in reverse order, letting each node pass its gradient to its parents. Make sure gradients *accumulate* (`+=`, not `=`) when a value is used more than once — the fork rule from :eqref:`eq_backprop-J-h`.
+    1. Reproduce the worked example with your engine (unroll the matrix products into scalars) and check all four gradients.
+    1. For a chain of three inputs feeding three outputs feeding one loss, the sum-over-paths view of the chain rule enumerates $3 \times 3 = 9$ paths, yet your engine touches each edge only once. Show that reverse mode computes $(\alpha+\beta+\gamma)(\delta+\epsilon+\zeta)$ instead of expanding all nine products, and explain why this factoring is exactly what makes backpropagation affordable.
 
 [Discussions](https://d2l.discourse.group/t/102)
 
@@ -374,7 +430,7 @@ and training requires significantly more memory than prediction.
 ::: {.cover}
 [Dive into Deep Learning · §5.3]{.kicker}
 
-What `backward()` actually does<br>**forward propagation · computational graphs · backpropagation**.
+What `backward()` actually does<br>**the chain rule on a graph · every gradient by hand · autograd confirms each one**.
 :::
 :::
 
@@ -390,9 +446,10 @@ Training so far: a **forward pass** computes the loss, then one call to
 - **Backward**: walk the *same* graph in reverse, accumulating gradients by the **chain rule**.
 - One rule does it all, and it explains why training costs the memory it does.
 
-::: {.d2l-note}
-You can lean on autograd forever, but knowing *how* gradients flow is what
-separates a shallow understanding from a real one.
+::: {.d2l-note .rule}
+The promise: by the end we will have computed **all four gradients
+of a real network by hand** — and a six-line autograd script will
+print the same numbers, digit for digit.
 :::
 :::
 
@@ -494,6 +551,27 @@ The parameter gradients fall out along the way, each picking up its weight-decay
 $$\frac{\partial J}{\partial \mathbf{W}^{(2)}} = \frac{\partial J}{\partial \mathbf{o}}\,\mathbf{h}^\top + \lambda\mathbf{W}^{(2)},
 \qquad
 \frac{\partial J}{\partial \mathbf{W}^{(1)}} = \frac{\partial J}{\partial \mathbf{z}}\,\mathbf{x}^\top + \lambda\mathbf{W}^{(1)}.$$
+:::
+
+::: {.slide title="That + is a rule: gradients add at forks"}
+[Backpropagation]{.kicker}
+
+The "+" in $\partial J/\partial \mathbf{W}^{(2)}$ deserves a rule of its own.
+$\mathbf{W}^{(2)}$ reaches the objective along **two paths**, and the gradients
+arriving along each path **sum**:
+
+$$J \leftarrow L \leftarrow \mathbf{o} \leftarrow \mathbf{W}^{(2)}
+\;\;(\text{the prediction path}), \qquad
+J \leftarrow s \leftarrow \mathbf{W}^{(2)}
+\;\;(\text{the regularizer path}).$$
+
+. . .
+
+::: {.d2l-note .warn}
+Forgetting to **accumulate** at such forks — writing `=` where `+=` belongs —
+is among the most common bugs in hand-written backward passes. Every autograd
+engine accumulates for exactly this reason.
+:::
 :::
 
 ::: {.slide title="One move, everywhere"}
@@ -602,6 +680,56 @@ weights never update. This is the *dying ReLU* in one matrix.
 :::
 :::
 
+::: {.slide title="Now let the machine check our work" only="pytorch" layout="code"}
+[Worked Example · verified]{.kicker}
+
+Build the same tensors with `requires_grad`, run the forward pass, call
+`backward()` — the entire verification is a few lines:
+
+@-backprop-verify
+:::
+
+::: {.slide title="Promise kept: autograd repeats every number" only="pytorch"}
+[Worked Example · verified]{.kicker}
+
+The script prints its verdict on the hand derivation:
+
+@!backprop-verify
+
+$$L = 2.0,\quad
+\tfrac{\partial L}{\partial \mathbf{W}^{(2)}} = [0,\ {-4}],\quad
+\tfrac{\partial L}{\partial \mathbf{h}} = [-4,\ 2]^\top,\quad
+\tfrac{\partial L}{\partial \mathbf{z}} = [0,\ 2]^\top,\quad
+\tfrac{\partial L}{\partial \mathbf{W}^{(1)}} = \bigl[\begin{smallmatrix} 0 & 0\\ 2 & 4\end{smallmatrix}\bigr].$$
+
+::: {.d2l-note .rule}
+Every gradient matches, down to the zeroed row for the dead unit. (The $-0$
+is floating point's *signed zero* — $h_1 = 0$ times a negative upstream
+gradient; it compares equal to $0$.)
+:::
+:::
+
+::: {.slide title="Promise kept: autograd repeats every number" except="pytorch"}
+[Worked Example · verified]{.kicker}
+
+Rebuild the same tensors with gradient tracking, run the forward pass, call
+the framework's backward sweep, and the printout matches the hand derivation
+exactly:
+
+$$L = 2.0,\qquad
+\frac{\partial L}{\partial \mathbf{W}^{(2)}} = [0,\ {-4}],\qquad
+\frac{\partial L}{\partial \mathbf{h}} = [-4,\ 2]^\top,$$
+
+$$\frac{\partial L}{\partial \mathbf{z}} = [0,\ 2]^\top,\qquad
+\frac{\partial L}{\partial \mathbf{W}^{(1)}} =
+\begin{bmatrix} 0 & 0\\ 2 & 4\end{bmatrix}.$$
+
+::: {.d2l-note}
+Every gradient matches, down to the zeroed row for the dead unit — six lines
+of autograd, one hand derivation, no disagreements.
+:::
+:::
+
 ::: {.slide}
 ::: {.divider}
 [04]{.dnum}
@@ -626,8 +754,9 @@ cheap precisely when there are *many parameters* and *one scalar loss*: the
 deep-learning regime.
 :::
 
-We develop the mechanics, including when *forward mode* is preferable, in the
-autograd chapter.
+We developed the mechanics, including when *forward mode* is preferable, in
+§2.5; the full theory — both modes as Jacobian products, and the memory
+trade-offs they imply — lives in the calculus appendix.
 :::
 
 ::: {.slide title="Forward and backward depend on each other"}
@@ -665,14 +794,16 @@ errors.
 :::
 
 ::: {.col}
+- **Gradients add at forks**: a variable used twice collects both paths' gradients (`+=`, never `=`).
 - A **dead ReLU** zeros a gradient row: no signal, no learning.
-- This reverse sweep is **reverse-mode autodiff**, cheap for many-parameter, scalar-loss models.
+- Promise kept: autograd reproduced the hand derivation **digit for digit**.
 - Retaining intermediates is why **training is memory-hungry**.
 :::
 :::
 
 ::: {.d2l-note}
-`backward()` is this section, run automatically, and now you know what it
-computes.
+Capstone (exercise 6): build a miniature autograd engine — a scalar `Value`
+class with `+`, `*`, `relu` and a topological `backward()` — and re-derive
+today's example with it.
 :::
 :::

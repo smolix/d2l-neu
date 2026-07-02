@@ -37,11 +37,17 @@ import tensorflow as tf
 
 ```{.python .input #linear-algebra}
 %%tab jax
+import jax
 from jax import numpy as jnp
 ```
 
-## Scalars
+## The Objects
 
+Linear algebra deals in a small cast of objects---scalars, vectors,
+matrices, and higher-order tensors. We introduce each in turn, together
+with its notation and its realization in code.
+
+### Scalars
 
 Most everyday mathematics
 consists of manipulating
@@ -110,7 +116,7 @@ y = jnp.array(2.0)
 x + y, x * y, x / y, x**y
 ```
 
-## Vectors
+### Vectors
 
 For current purposes, you can think of a vector as a fixed-length array of scalars.
 As with their code counterparts,
@@ -213,7 +219,7 @@ the array's *rank* or `ndim`; take care not to confuse this with the
 independent rows or columns.)
 
 
-## Matrices
+### Matrices
 
 Just as scalars are $0^{\textrm{th}}$-order tensors
 and vectors are $1^{\textrm{st}}$-order tensors,
@@ -332,7 +338,7 @@ and columns correspond to distinct attributes.
 
 
 
-## Tensors
+### Tensors
 
 While you can go far in your machine learning journey
 with only scalars, vectors, and matrices,
@@ -387,7 +393,13 @@ tf.reshape(tf.range(24), (2, 3, 4))
 jnp.arange(24).reshape(2, 3, 4)
 ```
 
-## Basic Properties of Tensor Arithmetic
+## Arithmetic and Reductions
+
+With the objects in hand, we turn to what we can do with them:
+elementwise arithmetic, and *reductions* that summarize a tensor
+along one or more of its axes.
+
+### Basic Properties of Tensor Arithmetic
 
 Scalars, vectors, matrices,
 and higher-order tensors
@@ -478,7 +490,7 @@ X = jnp.arange(24).reshape(2, 3, 4)
 a + X, (a * X).shape
 ```
 
-## Reduction
+### Reduction
 :label:`subsec_lin-alg-reduction`
 
 Often, we wish to calculate the sum of a tensor's elements.
@@ -606,7 +618,7 @@ A.mean(axis=0), A.sum(axis=0) / A.shape[0]
 tf.reduce_mean(A, axis=0), tf.reduce_sum(A, axis=0) / A.shape[0]
 ```
 
-## Non-Reduction Sum
+### Non-Reduction Sum
 :label:`subsec_lin-alg-non-reduction`
 
 Sometimes it can be useful to keep the number of axes unchanged
@@ -647,19 +659,29 @@ A.cumsum(axis=0)
 tf.cumsum(A, axis=0)
 ```
 
-## Dot Products
+## Products
 
 So far, we have only performed elementwise operations, sums, and averages.
 And if this was all we could do, linear algebra
 would not deserve its own section.
-Fortunately, this is where things get more interesting.
+Fortunately, this is where things get more interesting:
+products that mix elements across positions---the dot product,
+the matrix--vector product, and matrix--matrix multiplication.
+
+### Dot Products
+
 One of the most fundamental operations is the dot product.
 Given two vectors $\mathbf{x}, \mathbf{y} \in \mathbb{R}^d$,
 their *dot product* $\mathbf{x}^\top \mathbf{y}$ (also known as *inner product*, $\langle \mathbf{x}, \mathbf{y}  \rangle$)
 is a sum over the products of the elements at the same position:
 $\mathbf{x}^\top \mathbf{y} = \sum_{i=1}^{d} x_i y_i$.
+As :numref:`fig_la_dot` shows, this one number admits two readings:
+algebraically it is elementwise-multiply-then-sum,
+and geometrically it measures how much the two vectors point
+in the same direction.
 
-
+![The dot product: algebraically, multiply matching entries and sum; geometrically, $\mathbf{a} \cdot \mathbf{b} = \|\mathbf{a}\| \|\mathbf{b}\| \cos\theta$ measures alignment.](../img/linear-algebra-dot.svg)
+:label:`fig_la_dot`
 
 ```{.python .input #linear-algebra-dot-products-1}
 %%tab mxnet
@@ -716,14 +738,63 @@ the weighted sum of the values in $\mathbf{x}$
 according to the weights $\mathbf{w}$
 could be expressed as the dot product $\mathbf{x}^\top \mathbf{w}$.
 When the weights are nonnegative
-and sum to $1$, i.e., $\left(\sum_{i=1}^{n} {w_i} = 1\right)$,
+and sum to $1$, i.e., $\sum_{i=1}^{n} w_i = 1$,
 the dot product expresses a *weighted average*.
-After normalizing two vectors to have unit length,
-the dot products express the cosine of the angle between them.
-Later in this section, we will formally introduce this notion of *length*.
+
+The geometric reading deserves to be made precise.
+For any two nonzero vectors, the angle $\theta$ between them satisfies
+
+$$
+\cos\theta = \frac{\mathbf{x}^\top \mathbf{y}}{\|\mathbf{x}\| \|\mathbf{y}\|},
+$$
+
+where $\|\mathbf{x}\|$ denotes the *length* (norm) of $\mathbf{x}$,
+formally introduced later in this section.
+In particular, after normalizing two vectors to have unit length,
+their dot product *is* the cosine of the angle between them:
+it equals $1$ when they point the same way, $0$ when they are
+perpendicular, and $-1$ when they point in opposite directions
+(:numref:`fig_la_cosine`).
+Why is this ratio always in $[-1, 1]$?
+That is the *Cauchy--Schwarz inequality*
+$|\mathbf{x}^\top \mathbf{y}| \leq \|\mathbf{x}\| \|\mathbf{y}\|$,
+proved in :numref:`sec_mdl-geometry-linear-algebraic-ops`.
+We can verify both facts numerically---here on one random pair,
+though any draw will do:
+
+![Two unit vectors at angle $\theta$: their dot product equals $\cos\theta$, ranging from $1$ (aligned) through $0$ (perpendicular) to $-1$ (opposed).](../img/mdl-prelim-cosine.svg)
+:label:`fig_la_cosine`
+
+```{.python .input #linear-algebra-dot-products-3}
+%%tab mxnet
+u, v = np.random.normal(size=8), np.random.normal(size=8)
+cos_theta = np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
+np.arccos(cos_theta), np.abs(np.dot(u, v)) <= np.linalg.norm(u) * np.linalg.norm(v)
+```
+
+```{.python .input #linear-algebra-dot-products-3}
+%%tab pytorch
+u, v = torch.randn(8), torch.randn(8)
+cos_theta = torch.dot(u, v) / (torch.norm(u) * torch.norm(v))
+torch.acos(cos_theta), torch.abs(torch.dot(u, v)) <= torch.norm(u) * torch.norm(v)
+```
+
+```{.python .input #linear-algebra-dot-products-3}
+%%tab tensorflow
+u, v = tf.random.normal((8,)), tf.random.normal((8,))
+cos_theta = tf.tensordot(u, v, axes=1) / (tf.norm(u) * tf.norm(v))
+tf.acos(cos_theta), tf.abs(tf.tensordot(u, v, axes=1)) <= tf.norm(u) * tf.norm(v)
+```
+
+```{.python .input #linear-algebra-dot-products-3}
+%%tab jax
+u, v = jax.random.normal(jax.random.PRNGKey(0), (2, 8))
+cos_theta = jnp.dot(u, v) / (jnp.linalg.norm(u) * jnp.linalg.norm(v))
+jnp.arccos(cos_theta), jnp.abs(jnp.dot(u, v)) <= jnp.linalg.norm(u) * jnp.linalg.norm(v)
+```
 
 
-## Matrix--Vector Products
+### Matrix--Vector Products
 
 Now that we know how to calculate dot products,
 we can begin to understand the *product*
@@ -765,13 +836,50 @@ $$
 \end{bmatrix}.
 $$
 
+:numref:`fig_la_matvec` traces the computation on a small example:
+each output entry is the dot product of one row of $\mathbf{A}$
+with $\mathbf{x}$.
+
+![The matrix--vector product $\mathbf{A}\mathbf{x}$: one dot product per row of $\mathbf{A}$, so a $2\times3$ matrix maps a length-3 vector to a length-2 vector.](../img/linear-algebra-matvec.svg)
+:label:`fig_la_matvec`
+
 We can think of multiplication with a matrix
 $\mathbf{A}\in \mathbb{R}^{m \times n}$
 as a linear transformation that maps vectors
 from $\mathbb{R}^{n}$ to $\mathbb{R}^{m}$.
 These transformations are remarkably useful.
 For example, we can represent rotations
-as multiplications by certain square matrices.
+as multiplications by certain square matrices:
+multiplying by
+$\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}$
+rotates any vector in the plane by the angle $\theta$.
+For $\theta = 90°$ the matrix is particularly simple,
+and we can watch it turn one axis unit vector into the other:
+
+```{.python .input #linear-algebra-matrix-vector-products-2}
+%%tab mxnet
+R = np.array([[0.0, -1.0], [1.0, 0.0]])  # Rotation by 90 degrees
+np.dot(R, np.array([1.0, 0.0])), np.dot(R, np.array([0.0, 1.0]))
+```
+
+```{.python .input #linear-algebra-matrix-vector-products-2}
+%%tab pytorch
+R = torch.tensor([[0.0, -1.0], [1.0, 0.0]])  # Rotation by 90 degrees
+R @ torch.tensor([1.0, 0.0]), R @ torch.tensor([0.0, 1.0])
+```
+
+```{.python .input #linear-algebra-matrix-vector-products-2}
+%%tab tensorflow
+R = tf.constant([[0.0, -1.0], [1.0, 0.0]])  # Rotation by 90 degrees
+tf.linalg.matvec(R, tf.constant([1.0, 0.0])), tf.linalg.matvec(R, tf.constant([0.0, 1.0]))
+```
+
+```{.python .input #linear-algebra-matrix-vector-products-2}
+%%tab jax
+R = jnp.array([[0.0, -1.0], [1.0, 0.0]])  # Rotation by 90 degrees
+jnp.matmul(R, jnp.array([1.0, 0.0])), jnp.matmul(R, jnp.array([0.0, 1.0]))
+```
+
 Matrix--vector products also describe
 the key calculation involved in computing
 the outputs of each layer in a neural network
@@ -828,7 +936,7 @@ A.shape, x.shape, tf.linalg.matvec(A, x)
 A.shape, x.shape, jnp.matmul(A, x)
 ```
 
-## Matrix--Matrix Multiplication
+### Matrix--Matrix Multiplication
 
 Once you have gotten the hang of dot products and matrix--vector products,
 then *matrix--matrix multiplication* should be straightforward.
@@ -900,6 +1008,13 @@ as performing $m$ matrix--vector products
 or $m \times n$ dot products
 and stitching the results together
 to form an $n \times m$ matrix.
+:numref:`fig_la_matmul` locates one such dot product:
+entry $c_{ij}$ sits at the intersection
+of row $i$ of $\mathbf{A}$ and column $j$ of $\mathbf{B}$.
+
+![Matrix--matrix multiplication: each entry $c_{ij}$ of $\mathbf{C} = \mathbf{AB}$ is the dot product of row $i$ of $\mathbf{A}$ with column $j$ of $\mathbf{B}$.](../img/linear-algebra-matmul.svg)
+:label:`fig_la_matmul`
+
 In the following snippet,
 we perform matrix multiplication on `A` and `B`.
 Here, `A` is a matrix with two rows and three columns,
@@ -999,6 +1114,13 @@ the absolute values of a vector's elements:
 
 $$\|\mathbf{x}\|_1 = \sum_{i=1}^n \left|x_i \right|.$$
 
+:numref:`fig_la_norms` contrasts the two on a single vector:
+the $\ell_2$ norm is the straight-line distance to the origin,
+while the $\ell_1$ norm is the distance walked along the grid.
+
+![Two notions of length for the same vector: the $\ell_2$ norm measures straight-line (Euclidean) distance, while the $\ell_1$ norm measures distance along the grid (Manhattan).](../img/linear-algebra-norms.svg)
+:label:`fig_la_norms`
+
 Compared to the $\ell_2$ norm, it is less sensitive to outliers.
 To compute the $\ell_1$ norm,
 we compose the absolute value
@@ -1029,13 +1151,58 @@ of the more general $\ell_p$ *norms*:
 
 $$\|\mathbf{x}\|_p = \left(\sum_{i=1}^n \left|x_i \right|^p \right)^{1/p}.$$
 
+The three axioms are not abstract demands;
+each can be watched holding in code.
+Here we check homogeneity and the triangle inequality
+for the $\ell_2$ norm on random vectors:
+
+```{.python .input #linear-algebra-norms-4}
+%%tab mxnet
+u, v, alpha = np.random.normal(size=6), np.random.normal(size=6), -2.5
+print(np.linalg.norm(alpha * u), abs(alpha) * np.linalg.norm(u))
+print(np.linalg.norm(u + v) <= np.linalg.norm(u) + np.linalg.norm(v))
+```
+
+```{.python .input #linear-algebra-norms-4}
+%%tab pytorch
+u, v, alpha = torch.randn(6), torch.randn(6), -2.5
+print(torch.norm(alpha * u), abs(alpha) * torch.norm(u))
+print(torch.norm(u + v) <= torch.norm(u) + torch.norm(v))
+```
+
+```{.python .input #linear-algebra-norms-4}
+%%tab tensorflow
+u, v, alpha = tf.random.normal((6,)), tf.random.normal((6,)), -2.5
+print(tf.norm(alpha * u), abs(alpha) * tf.norm(u))
+print(tf.norm(u + v) <= tf.norm(u) + tf.norm(v))
+```
+
+```{.python .input #linear-algebra-norms-4}
+%%tab jax
+u, v = jax.random.normal(jax.random.PRNGKey(1), (2, 6))
+alpha = -2.5
+print(jnp.linalg.norm(alpha * u), abs(alpha) * jnp.linalg.norm(u))
+print(jnp.linalg.norm(u + v) <= jnp.linalg.norm(u) + jnp.linalg.norm(v))
+```
+
+For the $\ell_2$ norm, the triangle inequality is
+the Cauchy--Schwarz inequality in disguise:
+expanding $\|\mathbf{u} + \mathbf{v}\|_2^2
+= \|\mathbf{u}\|_2^2 + 2\mathbf{u}^\top\mathbf{v} + \|\mathbf{v}\|_2^2$
+and bounding $\mathbf{u}^\top\mathbf{v}$
+by $\|\mathbf{u}\|_2 \|\mathbf{v}\|_2$
+yields exactly the triangle inequality
+(see :numref:`sec_mdl-geometry-linear-algebraic-ops`).
+
 In the case of matrices, matters are more complicated.
 After all, matrices can be viewed both as collections of individual entries
 *and* as objects that operate on vectors and transform them into other vectors.
 For instance, we can ask by how much longer
 the matrix--vector product $\mathbf{X} \mathbf{v}$
 could be relative to $\mathbf{v}$.
-This line of thought leads to what is called the *spectral* norm.
+This line of thought leads to what is called the *spectral* norm,
+whose full development---it equals the largest *singular value*
+of the matrix---appears in :numref:`sec_mdl-svd-low-rank`.
 For now, we introduce the *Frobenius norm*,
 which is much easier to compute and defined as
 the square root of the sum of the squares
@@ -1083,30 +1250,119 @@ These distances, which constitute
 the objectives of deep learning algorithms,
 are often expressed as norms.
 
+### Eigenvalues: A First Look
+
+Norms ask how much a matrix can stretch a vector.
+A complementary question is whether there are directions
+that a square matrix does not turn at all.
+A nonzero vector $\mathbf{v}$ is an *eigenvector*
+of a square matrix $\mathbf{A}$, with associated *eigenvalue* $\lambda$, if
+
+$$\mathbf{A}\mathbf{v} = \lambda \mathbf{v}.$$
+
+Along such a direction, multiplying by $\mathbf{A}$
+reduces to multiplying by the scalar $\lambda$:
+the vector is stretched (if $|\lambda| > 1$),
+shrunk (if $|\lambda| < 1$), or flipped (if $\lambda < 0$),
+but never rotated.
+Every framework can compute eigenvalues directly.
+Here we apply this to the symmetric matrix we met
+when discussing transposes;
+symmetric matrices are especially pleasant
+because all of their eigenvalues are real:
+
+```{.python .input #linear-algebra-eigenvalues-1}
+%%tab mxnet
+S = np.array([[1.0, 2, 3], [2, 0, 4], [3, 4, 5]])
+np.linalg.eigvalsh(S)  # Eigenvalues of a symmetric matrix are real
+```
+
+```{.python .input #linear-algebra-eigenvalues-1}
+%%tab pytorch
+S = torch.tensor([[1.0, 2, 3], [2, 0, 4], [3, 4, 5]])
+torch.linalg.eigvalsh(S)  # Eigenvalues of a symmetric matrix are real
+```
+
+```{.python .input #linear-algebra-eigenvalues-1}
+%%tab tensorflow
+S = tf.constant([[1.0, 2, 3], [2, 0, 4], [3, 4, 5]])
+tf.linalg.eigvalsh(S)  # Eigenvalues of a symmetric matrix are real
+```
+
+```{.python .input #linear-algebra-eigenvalues-1}
+%%tab jax
+S = jnp.array([[1.0, 2, 3], [2, 0, 4], [3, 4, 5]])
+jnp.linalg.eigvalsh(S)  # Eigenvalues of a symmetric matrix are real
+```
+
+Eigenvalues answer the stretching question exactly
+for symmetric matrices: the spectral norm of a symmetric matrix
+equals the largest absolute eigenvalue $\max_i |\lambda_i|$
+(we state this without proof; see :numref:`sec_mdl-eigendecompositions`).
+They also govern what happens under *repeated* multiplication.
+Applying $\mathbf{A}$ to an eigenvector $k$ times multiplies it
+by $\lambda^k$, which explodes when $|\lambda| > 1$
+and vanishes when $|\lambda| < 1$---and a generic vector,
+being a mixture of eigenvector components,
+is soon dominated by the component
+with the largest absolute eigenvalue.
+We can watch this happen: the factor by which the norm grows
+per multiplication approaches $\max_i |\lambda_i|$.
+
+```{.python .input #linear-algebra-eigenvalues-2}
+%%tab mxnet
+v = np.random.normal(size=3)
+for _ in range(10):
+    prev, v = v, np.dot(S, v)
+np.linalg.norm(v) / np.linalg.norm(prev)
+```
+
+```{.python .input #linear-algebra-eigenvalues-2}
+%%tab pytorch
+v = torch.randn(3)
+for _ in range(10):
+    prev, v = v, S @ v
+torch.norm(v) / torch.norm(prev)
+```
+
+```{.python .input #linear-algebra-eigenvalues-2}
+%%tab tensorflow
+v = tf.random.normal((3,))
+for _ in range(10):
+    prev, v = v, tf.linalg.matvec(S, v)
+tf.norm(v) / tf.norm(prev)
+```
+
+```{.python .input #linear-algebra-eigenvalues-2}
+%%tab jax
+v = jax.random.normal(jax.random.PRNGKey(2), (3,))
+for _ in range(10):
+    prev, v = v, jnp.matmul(S, v)
+jnp.linalg.norm(v) / jnp.linalg.norm(prev)
+```
+
+This amplify-or-damp behavior is not a curiosity:
+deep networks multiply by many matrices in succession,
+and whether signals (and gradients) explode or vanish
+is governed by exactly this effect,
+as we will see when we analyze numerical stability
+in :numref:`sec_numerical_stability`.
+The full story---eigendecompositions, their computation,
+and their uses---is developed in :numref:`sec_mdl-eigendecompositions`.
+
 
 ## Discussion
 
 In this section, we have reviewed all the linear algebra
 that you will need to understand
 a significant chunk of modern deep learning.
-There is a lot more to linear algebra, though,
-and much of it is useful for machine learning.
-For example, matrices can be decomposed into factors,
-and these decompositions can reveal
-low-dimensional structure in real-world datasets.
-There are entire subfields of machine learning
-that focus on using matrix decompositions
-and their generalizations to high-order tensors
-to discover structure in datasets
-and solve prediction problems.
-But this book focuses on deep learning.
-And we believe you will be more inclined
-to learn more mathematics
-once you have gotten your hands dirty
-applying machine learning to real datasets.
-So while we reserve the right
-to introduce more mathematics later on,
-we wrap up this section here.
+There is a lot more to it: matrix decompositions, for example,
+reveal low-dimensional structure in real-world datasets
+and power entire subfields of machine learning.
+But the best time to learn more mathematics
+is once you have gotten your hands dirty
+applying machine learning to real data,
+so we wrap up here.
 
 If you are eager to learn more linear algebra,
 start with :numref:`chap_mdl-linear-algebra`,
@@ -1132,8 +1388,14 @@ To recap:
 * Norms capture various notions of the magnitude of a vector (or matrix),
   and are commonly applied to the difference of two vectors
   to measure their distance apart.
-* Common vector norms include the $\ell_1$ and $\ell_2$ norms,
-   and common matrix norms include the *spectral* and *Frobenius* norms.
+* Common vector norms include the $\ell_1$ and $\ell_2$ norms.
+  For matrices, we introduced the *Frobenius* norm
+  and previewed the *spectral* norm,
+  which is developed in :numref:`sec_mdl-svd-low-rank`.
+* A square matrix scales its eigenvectors without rotating them:
+  $\mathbf{A}\mathbf{v} = \lambda \mathbf{v}$.
+  The largest absolute eigenvalue governs how repeated
+  multiplication amplifies or damps a vector.
 
 
 ## Exercises
@@ -1173,20 +1435,20 @@ To recap:
 ::: {.cover}
 [Dive into Deep Learning · §2.3]{.kicker}
 
-The vocabulary every later chapter assumes<br>**vectors, matrices, reductions, products, norms**.
+Every model in this book compiles down to a short list of operations<br>**vectors · matrices · products · norms · eigenvalues**.
 :::
 :::
 
-::: {.slide title="The building blocks"}
+::: {.slide title="Five ideas carry every later chapter"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-- **Scalars · vectors · matrices · tensors** — ranks 0, 1, 2, *n*.
-- **Arithmetic** — element-wise, with broadcasting.
-- **Reductions** — `sum`, `mean`, along chosen axes.
+- **Objects** — scalars, vectors, matrices, tensors: ranks $0, 1, 2, n$.
+- **Arithmetic** — element-wise, plus scalar broadcasting.
+- **Reductions** — `sum` and `mean`, along chosen axes.
 - **Products** — dot, matrix–vector, matrix–matrix.
-- **Norms** — measures of size.
+- **Norms & eigenvalues** — how big, and which directions survive.
 
 ::: {.d2l-note}
 **Rank** = number of axes; **shape** = size per axis.
@@ -1205,32 +1467,25 @@ The vocabulary every later chapter assumes<br>**vectors, matrices, reductions, p
 
 [The objects]{.dtitle}
 
-[scalars, vectors, matrices, tensors]{.dsub}
+[scalars, vectors, matrices, tensors — and one flip]{.dsub}
 :::
 :::
 
-::: {.slide title="Scalars"}
-[The objects]{.kicker}
-
-A **scalar** is a rank-0 tensor — a single number. Ordinary arithmetic
-carries over unchanged:
-
-@linear-algebra-scalars
-:::
-
-::: {.slide title="Vectors"}
+::: {.slide title="A vector is numbers with a geometry"}
 [The objects]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A **vector** is a rank-1 tensor — an ordered list of numbers, i.e. a
-point (or arrow) in space:
+A **scalar** is a rank-0 tensor — one number. Stack $n$ of them and you
+get a **vector**: a data record *and* an arrow in $\mathbb{R}^n$, with a
+length and a direction:
 
 @linear-algebra-vectors-1
 
-Index a single element with `[i]`:
-
-@linear-algebra-vectors-2
+::: {.d2l-note}
+Both readings matter: a row of a dataset is a vector — and so is the
+direction a training step moves the weights.
+:::
 :::
 
 ::: {.col .fig .big}
@@ -1239,30 +1494,30 @@ Index a single element with `[i]`:
 :::
 :::
 
-::: {.slide title="Length and shape"}
+::: {.slide title="`.shape` answers the first question about any tensor"}
 [The objects]{.kicker}
 
-`len(x)` is a vector's element count:
+`len` counts a vector's elements:
 
 @linear-algebra-vectors-3
 
 . . .
 
-For any rank, `.shape` lists the size of **every** axis:
+`.shape` works at **every** rank — one size per axis:
 
 @linear-algebra-vectors-4
 :::
 
-::: {.slide title="Matrices & the transpose"}
+::: {.slide title="The transpose flips a matrix across its diagonal"}
 [The objects]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A **matrix** is a rank-2 tensor — *m* rows × *n* columns:
+A **matrix** is a rank-2 tensor — $m$ rows $\times$ $n$ columns:
 
 @linear-algebra-matrices-1
 
-The **transpose** swaps rows and columns ($\mathbf{A}^\top$):
+$\mathbf{A}^\top$ swaps the roles of rows and columns:
 
 @linear-algebra-matrices-2
 :::
@@ -1273,19 +1528,19 @@ The **transpose** swaps rows and columns ($\mathbf{A}^\top$):
 :::
 :::
 
-::: {.slide title="Symmetric matrices"}
+::: {.slide title="Symmetric matrices are their own transpose"}
 [The objects]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A matrix is **symmetric** when it equals its own transpose,
-$\mathbf{A} = \mathbf{A}^\top$:
+$\mathbf{A} = \mathbf{A}^\top$ — the flip changes nothing, and code can
+check it in one line:
 
 @linear-algebra-matrices-3
 
 ::: {.d2l-note}
-Covariance and Gram matrices are symmetric — a structure many methods
-exploit.
+Covariance and Gram matrices are symmetric — structure that many methods
+(and this deck's finale) exploit.
 :::
 :::
 
@@ -1295,13 +1550,13 @@ exploit.
 :::
 :::
 
-::: {.slide title="Higher-rank tensors"}
+::: {.slide title="Rank *n* is just *n* axes"}
 [The objects]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
-Stack matrices and the naming continues — a rank-*n* tensor has *n* axes.
-A batch of images is rank-4 (`N×C×H×W` in PyTorch, `N×H×W×C` in TF):
+Stack matrices and the naming continues. A batch of images is rank-4
+(`N×C×H×W` in PyTorch, `N×H×W×C` in TF):
 
 @-linear-algebra-tensors
 :::
@@ -1318,14 +1573,14 @@ A batch of images is rank-4 (`N×C×H×W` in PyTorch, `N×H×W×C` in TF):
 
 [Arithmetic & reduction]{.dtitle}
 
-[element-wise ops, sums, means, axes]{.dsub}
+[element-wise ops · sums that drop or keep axes]{.dsub}
 :::
 :::
 
-::: {.slide title="Element-wise arithmetic"}
+::: {.slide title="Same shapes combine element-wise"}
 [Arithmetic]{.kicker}
 
-Two tensors of the same shape combine **element-wise**:
+Two tensors of one shape combine entry by entry:
 
 @linear-algebra-basic-properties-of-tensor-arithmetic-1
 
@@ -1337,36 +1592,35 @@ $\mathbf{A} \odot \mathbf{B}$:
 @linear-algebra-basic-properties-of-tensor-arithmetic-2
 :::
 
-::: {.slide title="Scalar–tensor arithmetic"}
+::: {.slide title="A scalar broadcasts to every element"}
 [Arithmetic]{.kicker}
 
-A scalar **broadcasts** across every element:
+Adding or multiplying by a scalar touches each entry and leaves the
+shape alone:
 
 @linear-algebra-basic-properties-of-tensor-arithmetic-3
 :::
 
-::: {.slide title="Reductions: sum"}
+::: {.slide title="A reduction folds many numbers into one"}
 [Reduction]{.kicker}
 
-A **reduction** folds many values into fewer. `sum()` over everything
-gives a scalar:
+`sum()` with no arguments collapses everything to a scalar:
 
 @linear-algebra-reduction-1
 
 . . .
 
-Same call, any rank — it folds across **all** axes by default:
+`mean()` is the same fold, divided by the count:
 
-@linear-algebra-reduction-2
+@linear-algebra-reduction-6
 :::
 
-::: {.slide title="Reducing along an axis"}
+::: {.slide title="`axis=` chooses which dimension disappears"}
 [Reduction]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Pass `axis=` to collapse just one dimension; the output **loses** that
-axis:
+The output **loses** exactly the axis you name:
 
 @linear-algebra-reduction-3
 
@@ -1383,37 +1637,18 @@ axis:
 :::
 :::
 
-::: {.slide title="Mean"}
+::: {.slide title="`keepdims`: reduce, but stay broadcastable"}
 [Reduction]{.kicker}
 
-The **mean** is `sum / count` — available directly as `mean()`, and it
-reduces along an axis just like `sum`:
-
-@linear-algebra-reduction-6
-:::
-
-::: {.slide title="Non-reducing sum (`keepdims`)"}
-[Reduction]{.kicker}
-
-`keepdims=True` keeps the reduced axis at size 1, so the result still
-**broadcasts** against the original:
+`keepdims=True` keeps the folded axis at size 1:
 
 @linear-algebra-non-reduction-sum-1
 
 . . .
 
-…which lets you normalize each row by its own sum:
+…so one broadcast division normalizes every row to sum to $1$:
 
 @linear-algebra-non-reduction-sum-2
-:::
-
-::: {.slide title="Cumulative sum"}
-[Reduction]{.kicker}
-
-`cumsum` keeps the axis and reports a **running total** — a prefix sum,
-not a reduction:
-
-@linear-algebra-non-reduction-sum-3
 :::
 
 ::: {.slide}
@@ -1422,22 +1657,24 @@ not a reduction:
 
 [Products]{.dtitle}
 
-[dot, matrix–vector, matrix–matrix]{.dsub}
+[one idea at three sizes: dot · matrix–vector · matrix–matrix]{.dsub}
 :::
 :::
 
-::: {.slide title="Dot product"}
+::: {.slide title="The dot product multiplies, then sums"}
 [Products]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-The **dot product** multiplies element-wise, then sums:
+$\mathbf{x}^\top\mathbf{y} = \sum_i x_i y_i$ — multiply matching
+entries, add them up:
 
 @linear-algebra-dot-products-1
 
-Equivalently, `dot(x, y)` or `sum(x * y)`:
-
-@linear-algebra-dot-products-2
+::: {.d2l-note}
+With nonnegative weights summing to $1$, the dot product is a
+**weighted average**.
+:::
 :::
 
 ::: {.col .fig .big}
@@ -1446,15 +1683,44 @@ Equivalently, `dot(x, y)` or `sum(x * y)`:
 :::
 :::
 
-::: {.slide title="Matrix–vector products"}
+::: {.slide title="Normalized, the dot product is cos θ"}
+[Products · geometry]{.kicker}
+
+$$\cos\theta = \frac{\mathbf{x}^\top\mathbf{y}}{\|\mathbf{x}\|\,\|\mathbf{y}\|}.$$
+
+![](../img/mdl-prelim-cosine.svg)
+
+$+1$ aligned · $0$ perpendicular · $-1$ opposed: the dot product is
+deep learning's favorite **similarity measure**.
+:::
+
+::: {.slide title="Cauchy–Schwarz keeps the ratio in [−1, 1]"}
+[Products · geometry]{.kicker}
+
+Why can $\cos\theta$ never escape $[-1, 1]$? That is the
+**Cauchy–Schwarz inequality**
+$|\mathbf{x}^\top\mathbf{y}| \le \|\mathbf{x}\|\,\|\mathbf{y}\|$
+(proved in §22.1). One random pair checks both facts at once:
+
+@linear-algebra-dot-products-3
+
+An angle in $[0, \pi]$, and the inequality holds — on every draw.
+:::
+
+::: {.slide title="Ax takes one dot product per row"}
 [Products]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$\mathbf{A}\mathbf{x}$ is **one dot product per row** of $\mathbf{A}$ —
-the core of a fully-connected layer (much more on that later):
+$(\mathbf{A}\mathbf{x})_i = \mathbf{a}^\top_i \mathbf{x}$, so a
+$2\times3$ matrix maps a length-3 vector to a length-2 vector:
 
 @linear-algebra-matrix-vector-products
+
+::: {.d2l-note}
+Every fully-connected layer computes exactly this (plus a
+nonlinearity) — much more on that later.
+:::
 :::
 
 ::: {.col .fig}
@@ -1463,13 +1729,25 @@ the core of a fully-connected layer (much more on that later):
 :::
 :::
 
-::: {.slide title="Matrix–matrix products"}
+::: {.slide title="Matrices move vectors — here, a 90° turn"}
+[Products]{.kicker}
+
+Multiplication by $\mathbf{A} \in \mathbb{R}^{m\times n}$ is a **linear
+map** $\mathbb{R}^n \to \mathbb{R}^m$. The rotation matrix
+$\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}$
+turns the plane by $\theta$; at $\theta = 90°$ it sends
+$\mathbf{e}_1 \mapsto \mathbf{e}_2$ and $\mathbf{e}_2 \mapsto -\mathbf{e}_1$:
+
+@linear-algebra-matrix-vector-products-2
+:::
+
+::: {.slide title="AB stitches m×n dot products into a matrix"}
 [Products]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-$\mathbf{A}\mathbf{B}$ stitches $m \times n$ row-by-column dot products
-into one matrix:
+Entry $c_{ij}$ is row $i$ of $\mathbf{A}$ dotted with column $j$ of
+$\mathbf{B}$:
 
 @linear-algebra-matrix-matrix-multiplication
 :::
@@ -1484,30 +1762,27 @@ into one matrix:
 ::: {.divider}
 [04]{.dnum}
 
-[Norms]{.dtitle}
+[Norms & eigenvalues]{.dtitle}
 
-[measuring the size of vectors & matrices]{.dsub}
+[how long is a vector — and which directions a matrix keeps]{.dsub}
 :::
 :::
 
-::: {.slide title="Vector norms: ℓ₂ and ℓ₁"}
+::: {.slide title="Two rulers: ℓ₂ walks straight, ℓ₁ walks the grid"}
 [Norms]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-The **$\ell_2$** norm is Euclidean length — the workhorse of
-optimization:
+For $\mathbf{u} = [3, -4]$ the Euclidean ruler reads $5$; the taxicab
+ruler reads $7$:
 
 @linear-algebra-norms-1
-
-The **$\ell_1$** norm sums absolute values; it is less sensitive to
-outliers:
 
 @linear-algebra-norms-2
 
 ::: {.d2l-note .rule}
-$\|\mathbf{x}\|_2 = \sqrt{\textstyle\sum_i x_i^2}$,
-$\quad \|\mathbf{x}\|_1 = \textstyle\sum_i |x_i|$.
+$\|\mathbf{x}\|_2 = \sqrt{\textstyle\sum_i x_i^2}, \qquad
+\|\mathbf{x}\|_1 = \textstyle\sum_i |x_i|.$
 :::
 :::
 
@@ -1517,13 +1792,80 @@ $\quad \|\mathbf{x}\|_1 = \textstyle\sum_i |x_i|$.
 :::
 :::
 
-::: {.slide title="Frobenius norm"}
+::: {.slide title="The three norm axioms are checkable facts"}
 [Norms]{.kicker}
 
-For matrices, the **Frobenius** norm is the $\ell_2$ of all entries
-flattened — $\|\mathbf{X}\|_\text{F} = \sqrt{\sum_{i,j} x_{ij}^2}$:
+Homogeneity $\|\alpha\mathbf{x}\| = |\alpha|\,\|\mathbf{x}\|$ and the
+triangle inequality
+$\|\mathbf{x}+\mathbf{y}\| \le \|\mathbf{x}\|+\|\mathbf{y}\|$, holding on
+random vectors:
+
+@linear-algebra-norms-4
+
+. . .
+
+::: {.d2l-note}
+For $\ell_2$, the triangle inequality **is** Cauchy–Schwarz in disguise:
+expand $\|\mathbf{u}+\mathbf{v}\|^2$ and bound the cross term (§22.1).
+:::
+:::
+
+::: {.slide title="Frobenius measures a matrix as one long vector"}
+[Norms]{.kicker}
+
+$\|\mathbf{X}\|_\textrm{F} = \sqrt{\sum_{i,j} x_{ij}^2}$ — the $\ell_2$
+norm of the flattened matrix. For the all-ones $4\times9$:
+$\sqrt{36} = 6$:
 
 @linear-algebra-norms-3
+
+::: {.d2l-note}
+The *spectral* norm — how much $\mathbf{X}$ can stretch a vector — needs
+the singular value decomposition; it arrives in §22.3.
+:::
+:::
+
+::: {.slide title="Eigenvectors: the directions a matrix does not turn"}
+[Eigenvalues]{.kicker}
+
+::: {.cols .vc}
+::: {.col}
+$$\mathbf{A}\mathbf{v} = \lambda\mathbf{v}.$$
+
+Along an eigenvector, the matrix acts like a **scalar**: stretch
+($|\lambda|>1$), shrink ($|\lambda|<1$), flip ($\lambda<0$) — never
+turn.
+:::
+
+::: {.col}
+The symmetric matrix from the transpose slide has three real
+eigenvalues:
+
+@linear-algebra-eigenvalues-1
+
+Keep $8.8612$ in mind.
+:::
+:::
+:::
+
+::: {.slide title="Ten blind multiplications find 8.8612"}
+[Eigenvalues · payoff]{.kicker}
+
+Multiply a random vector by $\mathbf{S}$ ten times and measure how much
+the norm grows per step:
+
+@linear-algebra-eigenvalues-2
+
+The growth factor converges to $\max_i |\lambda_i| = 8.8612$: whatever
+vector you start from, the largest eigenvalue soon runs the show.
+
+. . .
+
+::: {.d2l-note .rule}
+Deep networks multiply by dozens of matrices in a row. Whether signals
+and gradients **explode or vanish** is this experiment at scale — the
+analysis returns in §5.4.
+:::
 :::
 
 ::: {.slide title="Recap"}
@@ -1531,19 +1873,26 @@ flattened — $\|\mathbf{X}\|_\text{F} = \sqrt{\sum_{i,j} x_{ij}^2}$:
 
 ::: {.cols}
 ::: {.col}
-- **Ranks 0–*n*:** scalar, vector, matrix, tensor.
-- **Element-wise** ops + scalar broadcasting; **Hadamard** `*`.
-- **Reductions:** `sum`, `mean`, with `axis=` and `keepdims=`.
+- **Objects:** ranks $0$–$n$; the transpose; symmetry.
+- **Element-wise** ops + scalar broadcasting; Hadamard $\odot$.
+- **Reductions:** `sum`/`mean` with `axis=`; `keepdims=` stays
+  broadcastable.
+- **Dot product** $\sum_i x_i y_i$; normalized it is $\cos\theta$
+  (Cauchy–Schwarz).
 :::
 
 ::: {.col}
-- **Products:** `dot`, matrix–vector, matrix–matrix (`@`).
-- **Norms:** $\ell_2$, $\ell_1$, Frobenius.
-- Geometry — arrows, angles, lengths — underlies all of it.
+- $\mathbf{A}\mathbf{x}$: one dot product per row — the layer
+  primitive; $\mathbf{A}\mathbf{B}$: $m \times n$ of them.
+- **Norms:** $\ell_2 = 5$ and $\ell_1 = 7$ for $[3,-4]$; Frobenius for
+  matrices; three axioms, all checkable.
+- **Eigenvectors** are scaled, never turned — and $\max|\lambda| =
+  8.8612$ dominated repeated multiplication.
 :::
 :::
 
 ::: {.d2l-note}
-Almost every computation in this book compiles down to this short list.
+Next, calculus (§2.4): every gradient there is built from these
+products. The full linear-algebra story continues in §22.
 :::
 :::

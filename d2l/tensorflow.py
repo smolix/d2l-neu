@@ -437,8 +437,8 @@ class SyntheticRegressionData(d2l.DataModule):
         self.save_hyperparameters()
         n = num_train + num_val
         self.X = tf.random.normal((n, w.shape[0]))
-        noise = tf.random.normal((n, 1)) * noise
-        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
+        eps = tf.random.normal((n, 1)) * noise
+        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + eps
 
     def get_dataloader(self, train):
         i = slice(0, self.num_train) if train else slice(self.num_train, None)

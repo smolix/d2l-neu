@@ -352,10 +352,68 @@ to the true underlying probabilities.
 The mathematical formulation of this phenomenon
 is called the *law of large numbers*
 and the *central limit theorem*
+(developed in :numref:`sec_mdl-distributions`)
 tells us that in many situations,
 as the sample size $n$ grows,
 these errors should go down
 at a rate of $(1/\sqrt{n})$ :cite:`Wasserman.2013`.
+
+Where does the rate come from? Each toss is a random variable
+taking value $1$ (heads) with probability $p$ and $0$ otherwise,
+so its variance is $E[X_i^2] - E[X_i]^2 = p - p^2 = p(1-p)$
+(we formally introduce variances later in this section).
+Our estimate averages $n$ independent tosses,
+and variances of independent variables add,
+while scaling a variable by $1/n$ scales its variance by $1/n^2$; hence
+
+$$\textrm{Var}[\hat{p}] = \frac{p(1-p)}{n},$$
+
+and the typical error (the standard deviation)
+is $\sqrt{p(1-p)/n}$, which shrinks as $1/\sqrt{n}$.
+Rather than taking this on faith, we can watch the law emerge:
+below we estimate $p$ from 1000 independent batches
+of $n$ tosses each, for growing $n$,
+and plot the standard deviation of the estimates on log--log axes.
+It hugs the predicted $0.5/\sqrt{n}$ line,
+a straight line of slope $-\frac{1}{2}$.
+
+```{.python .input #probability-a-simple-example-tossing-coins-6}
+%%tab mxnet
+ns = [10, 100, 1000, 10000]
+stds = [float((np.random.uniform(size=(1000, n)) < 0.5)
+              .astype(np.float32).mean(axis=1).std()) for n in ns]
+d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'n', 'std of estimate',
+         legend=['empirical', '0.5/sqrt(n)'], xscale='log', yscale='log')
+```
+
+```{.python .input #probability-a-simple-example-tossing-coins-6}
+%%tab pytorch
+ns = [10, 100, 1000, 10000]
+stds = [float((torch.rand(1000, n) < 0.5).float().mean(dim=1).std())
+        for n in ns]
+d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'n', 'std of estimate',
+         legend=['empirical', '0.5/sqrt(n)'], xscale='log', yscale='log')
+```
+
+```{.python .input #probability-a-simple-example-tossing-coins-6}
+%%tab tensorflow
+ns = [10, 100, 1000, 10000]
+stds = [float(tf.math.reduce_std(tf.reduce_mean(
+    tf.cast(tf.random.uniform((1000, n)) < 0.5, tf.float32), axis=1)))
+    for n in ns]
+d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'n', 'std of estimate',
+         legend=['empirical', '0.5/sqrt(n)'], xscale='log', yscale='log')
+```
+
+```{.python .input #probability-a-simple-example-tossing-coins-6}
+%%tab jax
+ns = [10, 100, 1000, 10000]
+stds = [float((jax.random.uniform(d2l.get_key(), (1000, n)) < 0.5)
+              .astype(jnp.float32).mean(axis=1).std()) for n in ns]
+d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'n', 'std of estimate',
+         legend=['empirical', '0.5/sqrt(n)'], xscale='log', yscale='log')
+```
+
 Let's get some more intuition by studying
 how our estimate evolves as we grow
 the number of tosses from 1 to 10,000.
@@ -462,7 +520,9 @@ If we had already tested many coins
 manufactured at the same plant,
 how might we incorporate this information?
 
-##  A More Formal Treatment
+## The Formal Language
+
+### A More Formal Treatment
 
 We have already gotten pretty far: posing
 a probabilistic model,
@@ -522,13 +582,24 @@ Consequently, the probability of any event $\mathcal{A}$
 is $P(\mathcal{A} \cap \mathcal{A}') = 0$.
 Informally, this tells us that impossible events
 have zero probability of occurring.
+The axioms also tell us how to handle events that *overlap*.
+Writing $\mathcal{A} \cup \mathcal{B}$ as the disjoint union
+of $\mathcal{A}$ and $\mathcal{B} \setminus \mathcal{A}$,
+and noting that $P(\mathcal{B} \setminus \mathcal{A})
+= P(\mathcal{B}) - P(\mathcal{A} \cap \mathcal{B})$,
+we obtain the *inclusion--exclusion* rule
+
+$$P(\mathcal{A} \cup \mathcal{B}) = P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A} \cap \mathcal{B}).$$
+
+Summing the two probabilities counts the overlap twice,
+so we subtract it once (:numref:`fig_prob_venn`).
 
 ![Events are subsets of a sample space $\mathcal{S}$, and the axioms give the *inclusion–exclusion* rule for their union.](../img/probability-venn.svg)
 :label:`fig_prob_venn`
 
 
 
-## Random Variables
+### Random Variables
 
 When we spoke about events like the roll of a die
 coming up odds or the first coin toss coming up heads,
@@ -585,28 +656,20 @@ Note that there is a subtle difference
 between *discrete* random variables,
 like flips of a coin or tosses of a die,
 and *continuous* ones,
-like the weight and the height of a person
-sampled at random from the population.
-In this case we seldom really care about
-someone's exact height.
-Moreover, if we took precise enough measurements,
-we would find that no two people on the planet
-have the exact same height.
-In fact, with fine enough measurements,
-you would never have the same height
-when you wake up and when you go to sleep.
-There is little point in asking about
-the exact probability that someone
-is 1.801392782910287192 meters tall.
-Instead, we typically care more about being able to say
-whether someone's height falls into a given interval,
+like the height of a person sampled at random from the population.
+With fine enough measurements, no two people share an exact height,
+so there is little point in asking for the probability
+that someone is 1.801392782910287192 meters tall---it is zero.
+The useful question is whether a height falls into an *interval*,
 say between 1.79 and 1.81 meters.
-In these cases we work with probability *densities*.
-The height of exactly 1.80 meters
-has no probability, but nonzero density.
-To work out the probability assigned to an interval,
-we must take an *integral* of the density
-over that interval.
+In these cases we work with probability *densities*:
+an exact value has no probability but nonzero density,
+and the probability assigned to an interval
+is the *integral* of the density over that interval
+(:numref:`fig_prob_density`).
+
+![Discrete random variables place probability *mass* on individual values; continuous ones spread a *density*, and probabilities arise by integrating it over intervals.](../img/probability-density.svg)
+:label:`fig_prob_density`
 
 ## Multiple Random Variables
 
@@ -915,6 +978,55 @@ it still significantly improved our estimate.
 ![Each conditionally independent positive test multiplies the evidence, driving the posterior $P(H=1)$ from a 0.15% prior to 13% and then to 83%.](../img/probability-bayes-update.svg)
 :label:`fig_prob_update`
 
+Since we posed a complete generative model,
+we can also check the whole calculation by brute force:
+simulate ten million patients,
+apply both tests to each,
+and look at the fraction of HIV cases
+among those with two positive results.
+This is the natural-frequencies picture of
+:numref:`fig_prob_natural_freq` made executable,
+and the empirical frequency should land close
+to the exact posterior of $0.8307$.
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab mxnet
+n = 10000000
+H = np.random.uniform(size=n) < 0.0015
+D1 = np.random.uniform(size=n) < np.where(H, 1.00, 0.01)
+D2 = np.random.uniform(size=n) < np.where(H, 0.98, 0.03)
+both = np.logical_and(D1, D2).astype(np.float32)
+(H.astype(np.float32) * both).sum() / both.sum()  # Exact value: 0.8307
+```
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab pytorch
+n = 10000000
+H = torch.rand(n) < 0.0015
+D1 = torch.rand(n) < torch.where(H, 1.00, 0.01)
+D2 = torch.rand(n) < torch.where(H, 0.98, 0.03)
+H[D1 & D2].float().mean()  # Exact value: 0.8307
+```
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab tensorflow
+n = 10000000
+H = tf.random.uniform((n,)) < 0.0015
+D1 = tf.random.uniform((n,)) < tf.where(H, 1.00, 0.01)
+D2 = tf.random.uniform((n,)) < tf.where(H, 0.98, 0.03)
+tf.reduce_mean(tf.cast(tf.boolean_mask(H, D1 & D2), tf.float32))  # Exact value: 0.8307
+```
+
+```{.python .input #probability-worked-example-hiv-testing-1}
+%%tab jax
+k1, k2, k3 = jax.random.split(d2l.get_key(), 3)
+n = 10000000
+H = jax.random.uniform(k1, (n,)) < 0.0015
+D1 = jax.random.uniform(k2, (n,)) < jnp.where(H, 1.00, 0.01)
+D2 = jax.random.uniform(k3, (n,)) < jnp.where(H, 0.98, 0.03)
+H[D1 & D2].astype(jnp.float32).mean()  # Exact value: 0.8307
+```
+
 The assumption of both tests being conditionally independent of each other
 was crucial for our ability to generate a more accurate estimate.
 Take the extreme case where we run the same test twice.
@@ -957,7 +1069,7 @@ of the random variable $X$ is defined as
 
 $$E[X] = E_{x \sim P}[x] = \sum_{x} x P(X = x).$$
 
-Likewise, for densities we obtain $E[X] = \int x \;dp(x)$.
+Likewise, for densities we obtain $E[X] = \int x \, p(x) \;dx$.
 Sometimes we are interested in the expected value
 of some function of $x$.
 We can calculate these expectations as
@@ -1060,12 +1172,50 @@ $$\mathbf{v}^\top \boldsymbol{\Sigma} \mathbf{v} = E_{\mathbf{x} \sim P}\left[\m
 As such, $\boldsymbol{\Sigma}$ allows us to compute the variance
 for any linear function of $\mathbf{x}$
 by a simple matrix multiplication.
-The off-diagonal elements tell us how correlated the coordinates are:
-a value of 0 means no correlation,
-while a larger positive value
-means that they are more strongly correlated.
+The off-diagonal elements tell us how the coordinates vary together:
+a value of 0 means no correlation.
+Beware, though, that the magnitude of a covariance is scale-dependent:
+it changes whenever we change the units in which a coordinate is measured.
+The scale-free measure of the strength of association is the *correlation*
+$\rho_{ij} = \Sigma_{ij}/(\sigma_i \sigma_j)$,
+which always lies in $[-1, 1]$.
 
+### From Means to Tail Bounds
 
+Knowing an expectation already constrains
+how often a random variable can be large.
+*Markov's inequality* states that for a *nonnegative*
+random variable $X$ and any threshold $a > 0$,
+
+$$P(X \geq a) \leq \frac{E[X]}{a}.$$
+
+The proof takes one line.
+Since $X \geq 0$, discarding the outcomes below the threshold
+can only decrease the expectation, so
+$E[X] \geq E[X \cdot \mathbf{1}_{X \geq a}] \geq a \, E[\mathbf{1}_{X \geq a}] = a \, P(X \geq a)$;
+dividing by $a$ gives the claim.
+Remarkably, nothing about the distribution of $X$ was used:
+the bound is *distribution-free* (:numref:`fig_prob_markov`).
+
+![Markov's inequality: for a nonnegative random variable, the probability of exceeding a threshold $a$ is at most the mean divided by $a$---no matter what the distribution looks like.](../img/probability-markov.svg)
+:label:`fig_prob_markov`
+
+The payoff comes from choosing $X$ cleverly.
+Applying Markov's inequality to the nonnegative variable
+$(X - \mu)^2$, whose expectation is precisely
+the variance $\sigma^2$, yields *Chebyshev's inequality*:
+for any $k > 0$,
+
+$$P(|X - \mu| \geq k \sigma) = P\left((X - \mu)^2 \geq k^2 \sigma^2\right) \leq \frac{\sigma^2}{k^2 \sigma^2} = \frac{1}{k^2}.$$
+
+For instance, draws from *any* distribution with mean $\mu$
+and variance $\sigma^2$ land within
+$k = \sqrt{2}$ standard deviations of $\mu$
+with probability at least 50%.
+Sharper bounds---Chernoff's and Hoeffding's---and
+what such concentration results say about generalization
+in machine learning are developed in
+:numref:`sec_mdl-concentration-generalization`.
 
 ## Discussion
 
@@ -1134,15 +1284,13 @@ namely expectations and variances.
 While there are many more than just linear and quadratic
 expectations for a probability distribution,
 these two already provide a good deal of knowledge
-about the possible behavior of the distribution.
-For instance, [Chebyshev's inequality](https://en.wikipedia.org/wiki/Chebyshev%27s_inequality)
-states that $P(|X - \mu| \geq k \sigma) \leq 1/k^2$,
-where $\mu$ is the expectation, $\sigma^2$ is the variance of the distribution,
-and $k > 1$ is a confidence parameter of our choosing.
-It tells us that draws from a distribution lie
-with at least 50% probability
-within a $[-\sqrt{2} \sigma, \sqrt{2} \sigma]$
-interval centered on the expectation.
+about the possible behavior of the distribution:
+we used them to derive our first tail bounds,
+Markov's and Chebyshev's inequalities,
+which hold for *every* distribution.
+Their sharper cousins, and the connection between
+concentration and generalization, await in
+:numref:`sec_mdl-concentration-generalization`.
 
 This section is only a preview of the probability and statistics
 we will use.
@@ -1234,20 +1382,20 @@ Reasoning under uncertainty<br>**sampling · distributions · Bayes · expectati
 ::: {.slide title="A coin of unknown bias"}
 [Estimating from data]{.kicker}
 
-We find a coin and want $P(\text{heads})$ — but nobody tells us its value.
-The plan: **toss it many times and count**.
+We find a coin and want $P(\text{heads})$ — but nobody tells us its
+value. The plan: **toss it many times and count**.
 
-A single batch of 100 tosses with `random.random()` already lands **near**
-50/50 — but never exactly, because sampling has variance:
+A single batch of 100 tosses with `random.random()` already lands
+**near** 50/50 — but never exactly, because sampling has variance:
 
 @probability-a-simple-example-tossing-coins-1
 :::
 
-::: {.slide title="Sampling from a distribution"}
+::: {.slide title="Multinomial draws 100 tosses in one call"}
 [Estimating from data]{.kicker}
 
 A cleaner tool: a `Multinomial` over `{heads, tails}` with probabilities
-`[0.5, 0.5]` returns the **count vector** for 100 tosses in one call:
+`[0.5, 0.5]` returns the **count vector** directly:
 
 @probability-a-simple-example-tossing-coins-2
 
@@ -1268,12 +1416,12 @@ $\tfrac{1}{2}$:
 @probability-a-simple-example-tossing-coins-4
 
 ::: {.d2l-note}
-The **law of large numbers**: as the number of trials $n \to \infty$, the
-empirical frequency converges to the true probability.
+The **law of large numbers**: as the number of trials $n \to \infty$,
+the empirical frequency converges to the true probability.
 :::
 :::
 
-::: {.slide title="How fast does it converge?"}
+::: {.slide title="The estimate locks on — at a 1/√n crawl"}
 [Estimating from data]{.kicker}
 
 ::: {.cols .vc}
@@ -1286,12 +1434,33 @@ $0.5$:
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-The error shrinks like $1/\sqrt{n}$ — to **halve** it you need **4×** the
-data.
+The error shrinks like $1/\sqrt{n}$ — to **halve** it you need
+**4×** the data.
 :::
 
 A first glimpse of the real question of statistics: not just *what* we
 estimate, but *how sure* we are.
+:::
+:::
+:::
+
+::: {.slide title="The 1/√n law, measured: slope −½"}
+[Estimating from data]{.kicker}
+
+::: {.cols .vc}
+::: {.col .narrow}
+Why $1/\sqrt{n}$? Each toss has variance $p(1-p)$; averaging $n$
+independent tosses gives
+
+$$\textrm{Var}[\hat{p}] = \frac{p(1-p)}{n}.$$
+
+Estimating $p$ from 1000 batches at each $n$, the standard deviation of
+the estimates hugs the predicted $0.5/\sqrt{n}$ line — **slope
+$-\tfrac12$** on log–log axes.
+:::
+
+::: {.col .fig .big}
+@!probability-a-simple-example-tossing-coins-6
 :::
 :::
 :::
@@ -1306,21 +1475,22 @@ estimate, but *how sure* we are.
 :::
 :::
 
-::: {.slide title="Sample space, events, three axioms"}
+::: {.slide title="Three axioms generate every rule"}
 [Formal treatment]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Every outcome lives in a **sample space** $\mathcal{S}$; an **event** is a
-subset. A probability assigns each event a number in $[0,1]$ obeying three
-rules (Kolmogorov):
+Every outcome lives in a **sample space** $\mathcal{S}$; an **event** is
+a subset. A probability assigns each event a number in $[0,1]$ obeying
+three rules (Kolmogorov):
 
 - $P(\mathcal{A}) \ge 0$;
 - $P(\mathcal{S}) = 1$;
 - disjoint events **add**.
 
 ::: {.d2l-note .rule}
-Everything else follows, e.g. $P(\mathcal{A}\cup\mathcal{B}) =
+Everything else follows — e.g. inclusion–exclusion:
+$P(\mathcal{A}\cup\mathcal{B}) =
 P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
 :::
 :::
@@ -1331,18 +1501,19 @@ P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
 :::
 :::
 
-::: {.slide title="Random variables: mass vs. density"}
+::: {.slide title="Mass sits on points; density needs intervals"}
 [Formal treatment]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A **random variable** maps outcomes to values. Discrete ones (a die) place
-**mass** on points; continuous ones (a height) spread **density** along
-the line.
+A **random variable** maps outcomes to values. Discrete ones (a die)
+place **mass** on points; continuous ones (a height) spread **density**
+along the line.
 
 ::: {.d2l-note}
-For a continuous variable an *exact* value has probability **zero** — only
-intervals carry probability, obtained by **integrating** the density.
+For a continuous variable an *exact* value has probability **zero** —
+only intervals carry probability, obtained by **integrating** the
+density.
 :::
 :::
 
@@ -1385,7 +1556,7 @@ sums to 1.
 :::
 :::
 
-::: {.slide title="Bayes' theorem: reversing the conditioning"}
+::: {.slide title="Bayes' theorem reverses the conditioning"}
 [Multiple variables]{.kicker}
 
 Write the joint two ways, $P(A,B) = P(B\mid A)\,P(A) = P(A\mid B)\,P(B)$,
@@ -1409,10 +1580,10 @@ $\;P(H \mid E) \propto P(E \mid H)\,P(H)$.
 
 ::: {.cols .vc}
 ::: {.col}
-Independence, $A \perp B$, means $P(A,B) = P(A)\,P(B)$. But **conditioning
-changes dependence**: a common cause links two variables until you
-condition on it; a collider (common effect) makes independent causes
-dependent once you do — *explaining away*.
+Independence, $A \perp B$, means $P(A,B) = P(A)\,P(B)$. But
+**conditioning changes dependence**: a common cause links two variables
+until you condition on it; a collider (common effect) makes independent
+causes dependent once you do — *explaining away*.
 :::
 
 ::: {.col .fig .big}
@@ -1431,11 +1602,11 @@ dependent once you do — *explaining away*.
 :::
 :::
 
-::: {.slide title="A worrying diagnosis"}
+::: {.slide title="A test that never misses — and still misleads"}
 [Worked example]{.kicker}
 
-A test **never misses** true HIV but has a **1% false-positive** rate, and
-the disease is **rare**:
+The test catches **every** true HIV case but has a **1% false-positive**
+rate, and the disease is **rare**:
 
 $$\begin{aligned}
 P(D{=}1 \mid H{=}1) &= 1.00 \\
@@ -1447,13 +1618,13 @@ We want the posterior $P(H{=}1 \mid D{=}1)$. Intuition says "almost
 certainly sick" — but Bayes disagrees. Let us count.
 :::
 
-::: {.slide title="Why a positive test is usually a false alarm"}
+::: {.slide title="Of ~115 positives, only 15 are real"}
 [Worked example]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-Among 10,000 people only ~15 truly have HIV — but ~100 healthy people also
-test positive. Of **~115 positives, only 15 are real**:
+Among 10,000 people only ~15 truly have HIV — but ~100 healthy people
+also test positive:
 
 $$P(H{=}1 \mid D{=}1) \approx \tfrac{15}{115} \approx 13\%.$$
 
@@ -1466,14 +1637,18 @@ The **base rate** dominates a rare-disease test.
 :::
 :::
 
-::: {.slide title="Evidence accumulates"}
+::: {.slide title="A second positive: 0.15% → 13% → 83%"}
 [Worked example]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A *second*, independent positive test multiplies the evidence. Applying
-Bayes again drives the posterior from the 0.15% prior to 13%, then to
-**83%**:
+A *second*, independent positive test multiplies the evidence: applying
+Bayes again drives the posterior from the $0.15\%$ prior to $13\%$,
+then to $83\%$ — exactly $0.8307$.
+
+Ten million simulated patients land on the same number:
+
+@!probability-worked-example-hiv-testing-1
 :::
 
 ::: {.col .fig .big}
@@ -1499,9 +1674,9 @@ Bayes again drives the posterior from the 0.15% prior to 13%, then to
 ::: {.col}
 $$E[X] = \sum_x x\,P(X{=}x).$$
 
-It is the **balance point** of the distribution. For an investment paying
-$0$, $2\times$, or $10\times$ with probabilities $0.5, 0.4, 0.1$, the
-expected return is $1.8\times$.
+It is the **balance point** of the distribution. For an investment
+paying $0$, $2\times$, or $10\times$ with probabilities $0.5, 0.4, 0.1$,
+the expected return is $1.8\times$.
 :::
 
 ::: {.col .fig .big}
@@ -1510,7 +1685,7 @@ expected return is $1.8\times$.
 :::
 :::
 
-::: {.slide title="Variance: spread is risk"}
+::: {.slide title="Variance: same mean, different risk"}
 [Summaries]{.kicker}
 
 ::: {.cols .vc}
@@ -1528,13 +1703,15 @@ original units.
 :::
 :::
 
-::: {.slide title="Covariance: do two variables move together?"}
+::: {.slide title="Covariance: the sign, not the size, is the story"}
 [Summaries]{.kicker}
 
 Covariance is the expected product of the two centered variables; its
-**sign** tells the story. Stacked over a vector, it becomes the
-**covariance matrix** $\boldsymbol{\Sigma}$ — symmetric, and a workhorse
-of the chapters ahead:
+**sign** says whether they move together (magnitude is scale-dependent —
+rescale by the standard deviations to get the *correlation*). Stacked
+over a vector, it becomes the **covariance matrix**
+$\boldsymbol{\Sigma}$ — symmetric, and a workhorse of the chapters
+ahead:
 
 @fig:probability-covariance
 :::
@@ -1554,9 +1731,10 @@ of the chapters ahead:
 
 ::: {.cols .vc}
 ::: {.col}
-**Aleatoric** uncertainty is intrinsic randomness — the next fair-coin flip
-stays 50/50 no matter how much data you gather. **Epistemic** uncertainty
-is about *unknown parameters*, and it **shrinks** as data accumulates.
+**Aleatoric** uncertainty is intrinsic randomness — the next fair-coin
+flip stays 50/50 no matter how much data you gather. **Epistemic**
+uncertainty is about *unknown parameters*, and it **shrinks** as data
+accumulates.
 :::
 
 ::: {.col .fig .big}
@@ -1575,8 +1753,9 @@ nonnegative variable lands far out. **Markov:**
 $$P(X \ge a) \le \frac{E[X]}{a}.$$
 
 ::: {.d2l-note .rule}
-Apply it to $(X-\mu)^2$ to get **Chebyshev**; **Hoeffding** and
-**Bernstein** sharpen it for sums.
+Apply it to $(X-\mu)^2$ to get **Chebyshev**; sharper bounds
+(Hoeffding, Bernstein) and their consequences for generalization are
+developed in §25.5.
 :::
 :::
 
@@ -1591,19 +1770,21 @@ Apply it to $(X-\mu)^2$ to get **Chebyshev**; **Hoeffding** and
 
 ::: {.cols}
 ::: {.col}
-- **Sample → count → estimate**; the LLN converges at $1/\sqrt{n}$.
-- **Axioms** generate every rule; events combine by inclusion–exclusion.
+- **Sample → count → estimate**; the LLN converges at $1/\sqrt{n}$
+  (slope $-\tfrac12$, measured).
+- **Axioms** generate every rule; events combine by
+  inclusion–exclusion.
 - The **joint** yields marginals (sum) and conditionals (renormalize).
-- **Bayes** reverses conditioning: posterior $\propto$ likelihood $\times$
-  prior.
+- **Bayes** reverses conditioning: posterior $\propto$ likelihood
+  $\times$ prior.
 :::
 
 ::: {.col}
-- **Base rates** make a rare-disease positive usually a false alarm;
-  evidence compounds.
+- **Base rates** rule rare-disease tests: $13\%$ after one positive,
+  $0.8307$ after two.
 - **Expectation / variance / covariance** summarize a distribution.
-- **Tail bounds** guarantee concentration even when the distribution is
-  unknown.
+- **Tail bounds** (Markov → Chebyshev) guarantee concentration even
+  when the distribution is unknown.
 :::
 :::
 :::

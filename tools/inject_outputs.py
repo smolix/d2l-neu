@@ -504,6 +504,12 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
         # Text output
         if otype == 'stream':
             text = ''.join(out.get('text', []))
+            # Slides: drop stderr streams that are Python warnings wholesale
+            # (path line, message line, and source-context line together) —
+            # the per-line filters in clean_text_output only catch the first.
+            if (mode == 'slides' and out.get('name') == 'stderr'
+                    and re.search(r'\b[A-Za-z]*Warning:', text)):
+                continue
         elif 'text/plain' in data:
             plain = data['text/plain']
             text = plain if isinstance(plain, str) else ''.join(plain)

@@ -40,19 +40,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.009237665683031082\n"
+          "text": "L2 norm of w: 0.008630745112895966\n"
         },
         {
           "type": "stream",
           "name": "stderr",
-          "text": "/var/folders/9c/qyn117295pgd7503chdsk_000000gn/T/ipykernel_99649/1135735378.py:8: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:837.)\n  print('L2 norm of w:', float(l2_penalty(model.w)))\n"
+          "text": "/var/folders/9c/qyn117295pgd7503chdsk_000000gn/T/ipykernel_45132/1135735378.py:8: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:837.)\n  print('L2 norm of w:', float(l2_penalty(model.w)))\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 23684,
-          "sha256": "sha256:3ed4e5fb279a27bb6e63137e6c4096c65a07de5b5373e34f34087f08eef95fa9"
+          "bytes": 22825,
+          "sha256": "sha256:ff00010ed3cd74ee6c896db1a49ce505c70b61feaddb8b364fdbe3dfe7e326d9"
         }
       ]
     },
@@ -63,37 +63,48 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0003676383930724114\n"
+          "text": "L2 norm of w: 0.000452822248917073\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 22118,
-          "sha256": "sha256:32b8b5fabf586afafd26c309028be34f7c18412ba02b09fb82cb5227efe06500"
+          "bytes": 21421,
+          "sha256": "sha256:547e40eb5c677beb7be9c1e860b17bee1b7816bd1f62273decb4173be97d65ff"
+        }
+      ]
+    },
+    "weight-decay-why-shrinkage-helps-the-spectral-view": {
+      "code_fingerprint": "sha256:c535601bbaa659077f90b0a3098b472c456405ea51d5eb4e87c7a29f36e066b4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lambda= 0  df= 20.0  strongest 1.00  weakest 1.00\nlambda= 3  df= 15.1  strongest 0.84  weakest 0.62\nlambda=30  df=  4.9  strongest 0.35  weakest 0.14\n"
         }
       ]
     },
     "weight-decay-concise-implementation-1": {
-      "code_fingerprint": "sha256:0584a20482ac30b8c9e46022c369754949185ea74af42c594cb9173b655e00c4",
+      "code_fingerprint": "sha256:09e5b29503bd115d9e261cc589559fdbe9667e081d61da1dc7dfa02cc3bd811f",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-concise-implementation-2": {
-      "code_fingerprint": "sha256:508896a2ba97dafc4577ae146f40c3695f3c89b637c9b7c9a25e1237b9bb071d",
+      "code_fingerprint": "sha256:3c6517cde11f9b9bdfa16ca9fc1b3a797b45764c0c9e338ca6e100e1885a37e5",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0006117779412306845\n"
+          "text": "L2 norm of w: 0.0008161024888977408\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 27256,
-          "sha256": "sha256:8b3d7f0ac4aa4ed23e3817b48ee8348cbd0587f471c3a4d15b24fe43e4a8ee5b"
+          "bytes": 28028,
+          "sha256": "sha256:8e6ae5f977b535cfe27fe2a2c52e4a26a4026483976e7cf06e0db2ba0e4a9b17"
         }
       ]
     }

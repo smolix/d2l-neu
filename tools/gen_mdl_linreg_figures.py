@@ -144,7 +144,61 @@ def fig_oo_classes():
     fl.save(fig, "mdl-linreg-oo-classes")
 
 
-FIGURES = [fig_ridge_geometry, fig_oo_classes]
+def fig_loss_menu():
+    """Companion to the "menu of losses" recipe (Section 3.1).  Left: Gaussian
+    vs. Laplace noise densities with *matched variance* (sigma = 1 vs. scale
+    b = 1/sqrt(2)), with a log-scale inset exposing the tails -- a residual at
+    r = 4 is orders of magnitude less surprising under the Laplace model.
+    Right: the per-residual penalty each noise model induces via its negative
+    log-likelihood -- squared error r^2/2, absolute error |r|, and the Huber
+    compromise between them."""
+    r = np.linspace(-5, 5, 1001)
+    gauss = np.exp(-0.5 * r**2) / np.sqrt(2 * np.pi)           # N(0, 1)
+    b = 1 / np.sqrt(2)                                          # Var = 2 b^2 = 1
+    laplace = np.exp(-np.abs(r) / b) / (2 * b)
+
+    delta = 1.0                                                 # Huber threshold
+    sq = 0.5 * r**2
+    abs_ = np.abs(r)
+    huber = np.where(np.abs(r) <= delta, 0.5 * r**2,
+                     delta * (np.abs(r) - 0.5 * delta))
+
+    fig, axes = plt.subplots(1, 2, figsize=(8.8, 3.6))
+
+    ax = axes[0]
+    ax.plot(r, gauss, color=BLUE, label="Gaussian")
+    ax.plot(r, laplace, color=ORANGE, label="Laplace")
+    ax.set_xlabel(r"noise $\epsilon$")
+    ax.set_ylabel(r"$p(\epsilon)$")
+    ax.set_title("(a) noise densities, equal variance", fontsize=11)
+    ax.legend(loc="upper left")
+    ax.set_xlim(-5, 5)
+    ax.set_ylim(0, 0.75)
+    axins = ax.inset_axes([0.66, 0.44, 0.32, 0.50])
+    axins.plot(r, gauss, color=BLUE, lw=1.4)
+    axins.plot(r, laplace, color=ORANGE, lw=1.4)
+    axins.set_yscale("log")
+    axins.set_xlim(0, 5)
+    axins.set_ylim(1e-6, 1)
+    axins.tick_params(labelsize=7, length=2, pad=1)
+    axins.set_title("log scale", fontsize=8, pad=2)
+
+    ax = axes[1]
+    ax.plot(r, sq, color=BLUE, label=r"squared $\frac{1}{2}r^2$")
+    ax.plot(r, abs_, color=ORANGE, label=r"absolute $|r|$")
+    ax.plot(r, huber, color=GREEN, label=r"Huber ($\delta=1$)")
+    ax.set_xlabel(r"residual $r = \hat{y} - y$")
+    ax.set_ylabel("penalty")
+    ax.set_title("(b) per-residual penalties", fontsize=11)
+    ax.legend(loc="upper center")
+    ax.set_xlim(-4, 4)
+    ax.set_ylim(0, 6)
+
+    fig.subplots_adjust(wspace=0.25)
+    fl.save(fig, "mdl-linreg-loss-menu")
+
+
+FIGURES = [fig_ridge_geometry, fig_oo_classes, fig_loss_menu]
 
 
 def main():

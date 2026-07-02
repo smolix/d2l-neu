@@ -494,6 +494,55 @@ def fig_pdf_cdf():
     fl.save(fig, "mdl-prob-pdf-cdf")
 
 
+def fig_inverse_transform():
+    """Inverse-transform sampling as a picture.  The c.d.f. of the two-bump
+    mixture density (the section's running shape); evenly spread levels U on
+    the vertical axis reflect through the curve down to x = F^{-1}(U) on the
+    horizontal axis.  Where F is steep (density high) the reflected points
+    cluster densely; one level's path is highlighted with arrows.  The curve
+    and every reflected point are computed from the real c.d.f."""
+    x = np.linspace(-5, 7, 600)
+    p = _twobump(x)
+    F = np.cumsum(p) * (x[1] - x[0]); F /= F[-1]
+    U = np.linspace(0.05, 0.95, 16)                  # evenly spread levels
+    xs = np.interp(U, F, x)                          # x = F^{-1}(U)
+
+    fig, ax = plt.subplots(figsize=(6.8, 4.2))
+    ax.plot(x, F, color=ORANGE, lw=2.4, zorder=3)
+    for u, xv in zip(U, xs):
+        ax.plot([-5, xv], [u, u], color=GRAY, lw=0.7, ls=":", zorder=1)
+        ax.plot([xv, xv], [0, u], color=GRAY, lw=0.7, ls=":", zorder=1)
+    ax.plot(np.full_like(U, -5), U, "o", color=BLUE, ms=4, zorder=4,
+            clip_on=False)
+    ax.plot(xs, np.zeros_like(xs), "o", color=BLUE, ms=4, zorder=4,
+            clip_on=False)
+
+    # highlight one level's path with arrows: in along u0, then down to x0
+    k = 11
+    u0, x0 = U[k], xs[k]
+    fl.arrow(ax, (-5, u0), (x0, u0), color=BLUE, lw=1.6, mut=12)
+    fl.arrow(ax, (x0, u0), (x0, 0.015), color=BLUE, lw=1.6, mut=12)
+    ax.text(-4.75, u0 + 0.03, r"$U$", color=BLUE, fontsize=13, ha="left",
+            va="bottom")
+    ax.text(x0 + 0.15, 0.045, r"$x=F^{-1}(U)$", color=BLUE, fontsize=12,
+            ha="left", va="bottom")
+    ax.text(5.4, np.interp(5.4, x, F) - 0.06, r"c.d.f. $F$", color=ORANGE,
+            fontsize=12, ha="left", va="top")
+    # point at the steep stretch where reflected samples pile up
+    ax.annotate("steep $F$ = high density:\nsamples cluster here",
+                xy=(-1.15, 0.02), xytext=(1.9, 0.22), color=GRAY, fontsize=10,
+                ha="left", va="center",
+                arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.1))
+
+    ax.set_xlim(-5, 7); ax.set_ylim(0, 1.0)
+    ax.set_yticks([0, 1])
+    ax.set_xticks([])
+    ax.set_xlabel(r"$x$", fontsize=12)
+    ax.set_ylabel("probability level", fontsize=11)
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-prob-inverse-transform")
+
+
 def fig_chebyshev():
     """Three-atom p.m.f. at {-2,0,2} with masses {p,1-2p,p}: the Chebyshev
     event |X-mu| >= alpha*sigma has half-width 4*sqrt(2p).  For p>1/8 the
@@ -587,16 +636,18 @@ def _box(ax, xy, w, h, label, fc=LIGHT):
 def fig_family_tree():
     """Relationship map of the common distributions inside an exponential-family
     envelope.  Solid arrows *construct* or take limits (Bernoulli -> Binomial ->
-    {Poisson, Gaussian}; Bernoulli -> Categorical -> Multinomial); dashed green
-    arrows mark the *conjugate prior* of each likelihood family (Beta for
-    Bernoulli/Binomial, Gamma for Poisson, Dirichlet for Categorical/Multinomial)."""
-    fig, ax = plt.subplots(figsize=(7.8, 5.4))
-    ax.add_patch(Rectangle((-0.35, -1.75), 8.7, 7.15, facecolor=LIGHT, alpha=0.16,
+    {Poisson, Gaussian}; Poisson -> Exponential as the waiting time between its
+    events; Bernoulli -> Categorical -> Multinomial); dashed green arrows mark
+    the *conjugate prior* of each likelihood family (Beta for Bernoulli/Binomial,
+    Gamma for Poisson, Dirichlet for Categorical/Multinomial)."""
+    fig, ax = plt.subplots(figsize=(10.2, 5.4))
+    ax.add_patch(Rectangle((-0.35, -1.75), 12.0, 7.15, facecolor=LIGHT, alpha=0.16,
                            edgecolor=GRAY, lw=1.2, ls="--", zorder=1))
     ax.text(0.05, 5.25, "exponential family", ha="left", va="top", color=GRAY,
             fontsize=9, style="italic")
     w, h = 1.95, 0.66
     boxes = {"Bernoulli": (0.0, 1.5), "Binomial": (3.0, 2.6), "Poisson": (6.3, 2.9),
+             "Exponential": (9.3, 2.9),
              "Gaussian": (6.3, 1.5), "Categorical": (3.0, 0.3),
              "Multinomial": (6.3, 0.3)}
     priors = {"Beta": (2.6, 4.4), "Gamma": (6.3, 4.4), "Dirichlet": (6.3, -1.4)}
@@ -605,6 +656,7 @@ def fig_family_tree():
     arrows = [("Bernoulli", "Binomial", r"sum of $n$"),
               ("Binomial", "Poisson", r"$n\to\infty,\ np\to\lambda$"),
               ("Binomial", "Gaussian", r"CLT"),
+              ("Poisson", "Exponential", "waiting time"),
               ("Bernoulli", "Categorical", r"$K$ outcomes"),
               ("Categorical", "Multinomial", r"sum of $n$")]
     for s, t, lab in arrows:
@@ -612,8 +664,14 @@ def fig_family_tree():
         fl.arrow(ax, c0 + (c1 - c0) * 0.17, c1 - (c1 - c0) * 0.17, color=GRAY,
                  lw=1.4, mut=11)
         mid = (c0 + c1) / 2
-        ax.text(mid[0], mid[1] + 0.14, lab, ha="center", va="bottom",
-                fontsize=7.0, color=GRAY)
+        if lab == "waiting time":
+            # narrow gap between the Poisson and Exponential boxes: put the
+            # label just above the box tops, centered on the visible gap
+            ax.text((boxes[s][0] + w + boxes[t][0]) / 2, boxes[t][1] + h + 0.10,
+                    lab, ha="center", va="bottom", fontsize=7.0, color=GRAY)
+        else:
+            ax.text(mid[0], mid[1] + 0.14, lab, ha="center", va="bottom",
+                    fontsize=7.0, color=GRAY)
     # dashed conjugate-prior arrows (prior -> its likelihood families)
     for s, t in [("Beta", "Bernoulli"), ("Beta", "Binomial"),
                  ("Gamma", "Poisson"), ("Dirichlet", "Categorical"),
@@ -628,9 +686,48 @@ def fig_family_tree():
         _box(ax, (x, y), w, h, k, fc=("#dbe6f3" if k == "Gaussian" else LIGHT))
     for k, (x, y) in priors.items():
         _box(ax, (x, y), w, h, k, fc="#e7f3e7")        # light green for priors
-    ax.set_xlim(-0.5, 8.6); ax.set_ylim(-2.1, 5.6)
+    ax.set_xlim(-0.5, 11.9); ax.set_ylim(-2.1, 5.6)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-prob-family-tree")
+
+
+def fig_beta_posterior():
+    """Bayesian updating as sharpening.  Three panels of the Beta density over a
+    coin's bias: the flat Beta(1,1) prior; the Beta(10,5) posterior after
+    observing 9 heads in 13 flips; and the Beta(91,41) posterior after 90 heads
+    in 130 flips.  The true bias theta* = 0.7 is the dashed line; the exact Beta
+    densities (via lgamma, no scipy) visibly pile up on it, their width
+    shrinking like 1/sqrt(n)."""
+    from math import lgamma
+
+    def beta_pdf(p, a, b):
+        logB = lgamma(a) + lgamma(b) - lgamma(a + b)
+        return np.exp((a - 1) * np.log(p) + (b - 1) * np.log(1 - p) - logB)
+
+    p = np.linspace(1e-4, 1 - 1e-4, 600)
+    theta = 0.7
+    panels = [(1, 1, "prior"),
+              (10, 5, "9 H in 13 flips"),
+              (91, 41, "90 H in 130 flips")]
+    ymax = beta_pdf(p, 91, 41).max() * 1.12
+
+    fig, axes = plt.subplots(1, 3, figsize=(10.0, 3.1), sharex=True)
+    for ax, (a, b, sub) in zip(axes, panels):
+        y = beta_pdf(p, a, b)
+        ax.plot(p, y, color=BLUE, lw=2.2)
+        ax.fill_between(p, 0, y, color=BLUE, alpha=0.15, lw=0)
+        ax.axvline(theta, color=ORANGE, lw=1.6, ls="--")
+        ax.set_title(rf"$\mathrm{{Beta}}({a},{b})$", fontsize=11.5)
+        ax.text(0.03, ymax * 0.93, sub, color=GRAY, fontsize=10, ha="left",
+                va="top")
+        ax.set_xlim(0, 1); ax.set_ylim(0, ymax)
+        ax.set_xticks([0, theta, 1.0])
+        ax.set_xticklabels(["$0$", r"$\theta^{\ast}$", "$1$"], fontsize=11)
+        ax.set_yticks([])
+        ax.set_xlabel(r"$p$", fontsize=12)
+        ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    axes[0].set_ylabel("density", fontsize=11)
+    fl.save(fig, "mdl-prob-beta-posterior")
 
 
 def fig_discrete_pmfs():
@@ -1037,6 +1134,48 @@ def fig_elbo():
 
 
 # =========================================================================== #
+# STATISTICS: the coverage strip                                              #
+# =========================================================================== #
+
+def fig_coverage_strip():
+    """The frequentist reading of a confidence interval, drawn literally.  One
+    hundred independent datasets of n = 30 draws from N(0,1); for each we build
+    the 95% interval mu_hat +/- 1.96 s/sqrt(n) and plot it as a vertical bar
+    against the fixed true mean (dashed line).  Real intervals from a seeded
+    simulation: the misses (orange, counted in the corner label) are the ~5% the
+    guarantee licenses, and nothing about a single bar reveals which kind it is."""
+    rng = np.random.default_rng(3)
+    mu, n, m = 0.0, 30, 100
+    data = rng.normal(mu, 1.0, (m, n))
+    mu_hat = data.mean(axis=1)
+    se = data.std(axis=1, ddof=1) / np.sqrt(n)
+    lo, hi = mu_hat - 1.96 * se, mu_hat + 1.96 * se
+    miss = (lo > mu) | (hi < mu)
+
+    fig, ax = plt.subplots(figsize=(9.2, 3.4))
+    for i in range(m):
+        col = ORANGE if miss[i] else BLUE
+        ax.plot([i, i], [lo[i], hi[i]], color=col,
+                lw=1.9 if miss[i] else 1.1,
+                alpha=1.0 if miss[i] else 0.55, zorder=4 if miss[i] else 2)
+        ax.plot([i], [mu_hat[i]], "o", color=col, ms=2.4,
+                zorder=5 if miss[i] else 3)
+    ax.axhline(mu, color=GRAY, lw=1.2, ls="--", zorder=1)
+    ax.text(m - 0.5, mu + 0.045, r"true $\mu$", color=GRAY, fontsize=10,
+            ha="right", va="bottom")
+    ax.text(0.01, 0.04, f"{int(miss.sum())} of {m} intervals miss",
+            color=ORANGE, fontsize=10, ha="left", va="bottom",
+            transform=ax.transAxes)
+    ax.set_xlim(-1.5, m + 0.5)
+    ax.set_xlabel("dataset (each yields one interval)", fontsize=11)
+    ax.set_ylabel(r"95% CI for $\mu$", fontsize=11)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-prob-coverage")
+
+
+# =========================================================================== #
 # STATISTICS: the bootstrap                                                   #
 # =========================================================================== #
 
@@ -1091,11 +1230,13 @@ FIGURES = [
     fig_conditional_slice,
     fig_pdf_area,
     fig_pdf_cdf,
+    fig_inverse_transform,
     fig_chebyshev,
     fig_covariance,
     fig_correlation,
     # distributions
     fig_family_tree,
+    fig_beta_posterior,
     fig_discrete_pmfs,
     fig_continuous_pdfs,
     fig_mvn_contours,
@@ -1113,6 +1254,7 @@ FIGURES = [
     fig_bias_variance_u_curve,
     fig_sampling_distribution,
     fig_type_i_ii_matrix,
+    fig_coverage_strip,
     fig_bootstrap,
 ]
 

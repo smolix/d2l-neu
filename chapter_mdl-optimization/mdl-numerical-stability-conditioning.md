@@ -31,7 +31,8 @@ preconditioning in disguise. The standard references are
 everything else; :citet:`Goodfellow.Bengio.Courville.2016` (chapter 4) gives
 the deep-learning framing. Most code in this section is deliberately plain
 NumPy --- these phenomena belong to the arithmetic, not to any framework ---
-with one pointed exception: the cross-entropy cell, where the four frameworks
+with pointed exceptions where the framework machinery *is* the phenomenon: the
+mixed-precision cells and the cross-entropy cell, where the four frameworks
 genuinely behave differently.
 
 ```{.python .input #numerical-stability-conditioning-imports}
@@ -187,6 +188,38 @@ bfloat16's epsilon is $2^{-7}$, not $2^{-8}$; the eighth mantissa bit people
 sometimes count is the *implicit* leading $1$ in
 :eqref:`eq_mdl-opt-float-format`, which contributes precision to no gap.
 
+Since 2022, hardware has pushed the same ladder one rung lower, to **fp8**,
+standardized in two flavors :cite:`Micikevicius.Stosic.Burgess.ea.2022`.
+**E4M3** ($p = 3$) keeps what resolution it can ---
+$\varepsilon_{\text{mach}} = 2^{-3} = 0.125$, roughly *one* decimal digit ---
+inside a range that tops out at $448$; **E5M2** ($p = 2$) sacrifices another
+mantissa bit to buy fp16's full exponent range (maximum $57344$, smallest
+normal $6.1 \times 10^{-5}$). The division of labor is visible in the numbers:
+E4M3 holds weights and activations, which need digits; E5M2 holds gradients,
+which need range. And at $\varepsilon_{\text{mach}} = 0.125$ there is no slack
+left in the format, so fp8 training pairs every tensor with a *scale factor*
+that recenters its values on the representable window --- per-tensor scaling
+is not an optimization but a precondition. The bargains stay the bargains:
+every halving of the bit budget is paid for in digits, in range, or in
+bookkeeping.
+
+```{.python .input #numerical-stability-conditioning-fp8}
+#@tab pytorch
+for dt in [torch.float8_e4m3fn, torch.float8_e5m2]:
+    fi = torch.finfo(dt)
+    print(f'{str(dt)[6:]:>13}  eps = {fi.eps:5}  '
+          f'smallest normal = {fi.smallest_normal:12}  max = {fi.max:7}')
+```
+
+:begin_tab:`pytorch`
+The printout confirms the two bargains digit for digit: three mantissa bits
+buy E4M3 an epsilon of $0.125$ and a maximum of $448$; giving one of them up
+buys E5M2 a maximum of $57344$ and fp16's smallest normal,
+$6.1 \times 10^{-5}$, at the price of $\varepsilon_{\text{mach}} = 0.25$.
+(Outside PyTorch, the `ml_dtypes` package provides the same two formats for
+NumPy, JAX, and TensorFlow.)
+:end_tab:
+
 Two quick experiments make $\varepsilon_{\text{mach}}$ tangible: adding half
 an epsilon to $1$ vanishes without a trace, and the absolute gap between
 neighbors is a million times larger at $2^{20}$ than at $1$:
@@ -231,7 +264,46 @@ weight update. The reason a master copy of the weights is kept in fp32 is
 :eqref:`eq_mdl-opt-rounding-model` again: a weight update of relative size
 below $\varepsilon_{\text{mach}}/2$ rounds to *no update at all*, and at
 $\varepsilon_{\text{mach}} = 2^{-7}$ that threshold is hit by perfectly
-healthy learning rates.
+healthy learning rates. (A third escape, increasingly common in fp8 and
+integer training, is **stochastic rounding**: round up or down at random with
+probabilities proportional to proximity, so the *expected* stored value is
+exact --- updates too small to survive round-to-nearest still make progress
+on average.)
+
+Both fp16 failure modes --- and both rescues --- fit in one cell. A gradient
+whose true value is $10^{-8}$ underflows to zero during an fp16 backward
+pass, and multiplying the *loss* by $2^{14}$ before differentiating shifts
+the whole gradient chain into representable territory; a perfectly healthy
+update of relative size $10^{-4}$ is swallowed whole by round-to-nearest in
+fp16, and an fp32 master copy of the weights accepts it without complaint:
+
+```{.python .input #numerical-stability-conditioning-loss-scaling}
+#@tab pytorch
+def fp16_grad(scale=1.0):
+    w = torch.tensor(1.0, dtype=torch.float16, requires_grad=True)
+    a = torch.tensor(1e-4, dtype=torch.float16)
+    ((w * a) * a * scale).backward()    # true d/dw = a^2 = 1e-8 < 6e-8
+    return w.grad.item() / scale        # unscale outside fp16
+print('fp16 gradient, no scaling      :', fp16_grad())
+print('fp16 gradient, loss scale 2^14 :', f'{fp16_grad(2.0**14):.3e}')
+
+w, lr = torch.ones((), dtype=torch.float16), 0.01
+g = torch.tensor(0.01, dtype=torch.float16)     # a healthy fp16 gradient
+print('fp16 step w - lr*g leaves w unchanged :', bool(w - lr * g == w))
+print('fp32 master copy takes the step       :',
+      f'{float(w.float() - lr * g.float()):.6f}')
+```
+
+:begin_tab:`pytorch`
+The unscaled backward pass reports a gradient of exactly $0.0$ --- the
+product $10^{-4} \times 10^{-4}$ fell below fp16's smallest subnormal,
+$6 \times 10^{-8}$ --- while the loss-scaled route recovers
+$1.000 \times 10^{-8}$. In the second half, $w - \eta g$ with
+$\eta g = 10^{-4}$ *is* $w$ in fp16 (the update is smaller than half the
+gap between $1$ and its fp16 neighbor), but the fp32 master copy lands on
+$0.999900$ as it should. This is precisely what `torch.amp`'s `GradScaler`
+plus fp32 master weights automate.
+:end_tab:
 
 ## Making Softmax and Cross-Entropy Safe
 :label:`subsec_mdl-stable-softmax`
@@ -245,39 +317,46 @@ $$
 \mathrm{softmax}(\mathbf{z})_i = \frac{e^{z_i}}{\sum_{j=1}^n e^{z_j}}
 $$
 
-exponentiates its logits, so by the previous subsection it overflows fp32 the
-moment any logit exceeds $88.72$ --- the numerator becomes `inf`, the ratio
-becomes `inf/inf = NaN`, and the model dies even though the *probabilities*
-it was computing are perfectly tame numbers in $[0, 1]$. The failure is
-entirely an artifact of the route, and the fix exploits a symmetry of the
-destination.
-
-**Proposition (softmax is shift-invariant).** *For every
-$\mathbf{z} \in \mathbb{R}^n$ and every $c \in \mathbb{R}$,*
+exponentiates its logits, and the table above says exactly where that goes
+wrong: fp32 overflows the moment any logit exceeds $88.72$, fp16 already at
+$11.09$ --- the numerator becomes `inf`, the ratio becomes `inf/inf = NaN`,
+and the model dies even though the *probabilities* it was computing are
+perfectly tame numbers in $[0, 1]$. The failure is entirely an artifact of
+the route. You have met the repair before:
+:numref:`subsec_softmax-implementation-revisited` derived it when the fused
+cross-entropy loss was introduced, and we will not re-derive it here.
+Factoring the positive constant $e^{-c}$ out of numerator and denominator
+shows that softmax is *shift-invariant*,
 
 $$
-\mathrm{softmax}(\mathbf{z} - c\mathbf{1}) = \mathrm{softmax}(\mathbf{z}).
+\mathrm{softmax}(\mathbf{z} - c\mathbf{1}) = \mathrm{softmax}(\mathbf{z})
+\qquad \textrm{for every } c \in \mathbb{R},
 $$
 :eqlabel:`eq_mdl-opt-softmax-shift`
 
-**Proof.** Componentwise,
+and the same factoring, applied under the logarithm of the denominator,
+rewrites the **log-sum-exp** $\mathrm{lse}(\mathbf{z}) = \log \sum_j e^{z_j}$
+exactly, for any shift $c$:
 
 $$
-\frac{e^{z_i - c}}{\sum_j e^{z_j - c}}
-= \frac{e^{-c}\, e^{z_i}}{e^{-c} \sum_j e^{z_j}}
-= \frac{e^{z_i}}{\sum_j e^{z_j}},
+\mathrm{lse}(\mathbf{z}) = c + \log \sum_{j=1}^n e^{z_j - c} .
 $$
+:eqlabel:`eq_mdl-opt-stable-lse`
 
-since the common factor $e^{-c} > 0$ cancels. $\blacksquare$
-
-So we may shift the logits by *any* constant before exponentiating, and one
-choice is perfect: $c = \max_i z_i$. After the shift every exponent is at most
-$0$, so every $e^{z_i - c}$ lies in $(0, 1]$ --- no overflow, ever --- and the
-largest term equals exactly $1$, so the denominator lies in $[1, n]$ and can
-neither overflow nor underflow to $0$. The cell below watches the naive route
-produce `NaN` on logits that the shifted route handles without breaking a
-sweat --- and checks that where both routes work, they agree to the last bit,
-exactly as :eqref:`eq_mdl-opt-softmax-shift` promises:
+What that earlier derivation took on faith --- and what this section can now
+certify, floating-point model in hand --- is *why the shifted route is safe
+as arithmetic*, not merely equal as algebra. Take $c = \max_i z_i$. Every
+exponent is then at most $0$, so every $e^{z_i - c}$ lies in $(0, 1]$:
+overflow is impossible at any logit scale, in any format. The largest term
+equals exactly $1$, so the denominator --- the sum in
+:eqref:`eq_mdl-opt-stable-lse` --- lies in $[1, n]$: it can neither overflow
+nor underflow to $0$, so its logarithm is finite and its reciprocal exists.
+These are interval guarantees, not asymptotic hopes; the only number the
+shifted route ever exposes to the cliffs is $c$ itself, a single logit that
+was already representable. The cell below watches the naive route produce
+`NaN` on logits that the shifted route handles without breaking a sweat ---
+and checks that where both routes work, they agree to the last bit, exactly
+as :eqref:`eq_mdl-opt-softmax-shift` promises:
 
 ```{.python .input #numerical-stability-conditioning-stable-softmax}
 def softmax_naive(z):
@@ -303,41 +382,27 @@ returns three `NaN`s. Every framework's `softmax` does this max-subtraction
 internally; the trap is re-implementing it yourself, which is why the rule of
 thumb is *never exponentiate a raw logit*.
 
-### The Log-Sum-Exp Trick
+### The Log-Sum-Exp Sandwich
 
-The denominator of softmax has a logarithm important enough to earn its own
-operator: the **log-sum-exp**
+The log-sum-exp deserves more attention than the supporting role it just
+played: it is the normalizer of every exponential-family model, the partition
+function of energy-based models, and (as we prove in a moment) the backbone
+of cross-entropy. Beyond making it safe, the shift in
+:eqref:`eq_mdl-opt-stable-lse` makes it *legible*, pinning lse between two
+bounds tight enough to reason with --- the one piece of the story the earlier
+derivation had no need for:
 
-$$
-\mathrm{lse}(\mathbf{z}) = \log \sum_{j=1}^n e^{z_j},
-$$
-
-which shows up as the normalizer of every exponential-family model, the
-partition function of energy-based models, and (as we prove in a moment) the
-backbone of cross-entropy. It inherits softmax's overflow problem and the same
-shift repairs it --- this time as an *identity* rather than an invariance.
-
-**Proposition (the shifted log-sum-exp is exact and safe).** *For every
-$\mathbf{z} \in \mathbb{R}^n$ and every $c \in \mathbb{R}$,*
-
-$$
-\mathrm{lse}(\mathbf{z}) = c + \log \sum_{j=1}^n e^{z_j - c} .
-$$
-:eqlabel:`eq_mdl-opt-stable-lse`
-
-*With the choice $c = \max_j z_j$ the sum lies in $[1, n]$, so the right-hand
-side can neither overflow nor take $\log 0$; moreover*
+**Proposition (log-sum-exp sandwich).** *For every
+$\mathbf{z} \in \mathbb{R}^n$,*
 
 $$
 \max_j z_j \;\le\; \mathrm{lse}(\mathbf{z}) \;\le\; \max_j z_j + \log n .
 $$
 
-**Proof.** Factoring, $\sum_j e^{z_j} = e^{c} \sum_j e^{z_j - c}$; take
-logarithms of both sides to get :eqref:`eq_mdl-opt-stable-lse` --- an exact
-rewriting, valid for any $c$. With $c = \max_j z_j$, every term
-$e^{z_j - c} \le 1$ and the maximizing term equals $1$, so the sum lies in
-$[1, n]$ and its logarithm in $[0, \log n]$; adding $c$ gives the sandwich.
-$\blacksquare$
+**Proof.** Put $c = \max_j z_j$ in :eqref:`eq_mdl-opt-stable-lse`. Every
+term $e^{z_j - c} \le 1$ and the maximizing term equals $1$, so the sum lies
+in $[1, n]$ and its logarithm in $[0, \log n]$; adding $c$ gives both
+inequalities. $\blacksquare$
 
 The sandwich says lse is a *soft maximum* --- within $\log n$ of the true max
 --- which is also the intuition for why it is convex
@@ -390,11 +455,13 @@ $$
 :eqlabel:`eq_mdl-opt-ce-from-logits`
 
 computable *directly from the logits* with one stable lse and one
-subtraction. This is what every framework's "from logits" loss does, and it is
-why those APIs exist. The alternative --- compute probabilities first, then
-take the log --- forces the loss through the representable range of
-probabilities: a true-class probability below about $10^{-45}$ underflows
-fp32 to exactly $0$, and the loss becomes $\infty$. The cell below pits the
+subtraction. This is what every framework's "from logits" loss does --- the
+fused implementation of :numref:`subsec_softmax-implementation-revisited` ---
+and it is why those APIs exist. The alternative --- compute probabilities
+first, then take the log --- forces the loss through the representable range
+of probabilities: a true-class probability below about $10^{-45}$ (the
+smallest fp32 subnormal is $\approx 1.4 \times 10^{-45}$) underflows fp32 to
+exactly $0$, and the loss becomes $\infty$. The cell below pits the
 two routes against each other on a two-class problem where the label is the
 *unlikely* class, with logit gap $t$, so the true loss is
 $\log(1 + e^{t}) \approx t$. This is the one computation in this section
@@ -633,6 +700,22 @@ significant digits on every build. This recursion (and its batch-merging
 generalization, which you will derive in the exercises) is how framework
 `BatchNorm` layers and streaming-statistics utilities track running moments:
 one pass, bounded memory, no cancellation.
+
+That build-dependence deserves its own name, because it is not specific to
+variances. Summing $n$ floats one after another commits one
+$(1 + \delta)$ factor per addition, and the worst case compounds to a
+relative error of about $n u$ --- at $n = 10^{5}$ in the cell above, some
+$10^{5}$ units of roundoff feeding the cancellation. The standard repairs
+reorganize the *additions* rather than adding bits: **pairwise summation**
+recursively sums halves, so each term passes through only $\log_2 n$
+additions and the error growth drops to $O(u \log n)$ --- this is what NumPy
+does inside `sum`, and its build-dependent blocking is exactly why the naive
+formula's noise changed sign between builds --- while **Kahan (compensated)
+summation** carries each addition's rounding error explicitly in a second
+accumulator and drives the growth to $O(u)$, independent of $n$
+:cite:`Higham.2002`. Welford composes with either: the pairwise merge rule
+you will derive in Exercise 4 is precisely Welford in pairwise form, and it
+is how running moments are combined across devices.
 
 ## Conditioning: One Number, Two Consequences
 :label:`subsec_mdl-conditioning-revisited`
@@ -922,7 +1005,7 @@ d2l.plot(lams, [kappas, iters.astype(float)], 'lambda', None,
 The two curves fall together across four orders of magnitude of $\lambda$ ---
 from $\kappa \approx 5000$ and roughly $29{,}000$ iterations at
 $\lambda = 10^{-4}$ down to $\kappa = 2$ and a dozen iterations at
-$\lambda = 1$ --- and the printed ratio sits between $5.9$ and $6.3$
+$\lambda = 1$ --- and the printed ratio sits between $5.89$ and $6.25$
 throughout: iteration count is a constant multiple of $\kappa$, the constant
 being about $\tfrac12 \ln(1/\textrm{tol}) \approx 6.9$ predicted by the
 $(\kappa - 1)/(\kappa + 1)$ contraction (slightly less here because a random
@@ -944,7 +1027,8 @@ accelerating your optimizer the whole time.
   two, and overflow/underflow cliffs ($e^x$ dies at $x \approx 88.7$ in fp32,
   $x \approx 11.1$ in fp16). Mixed precision is engineering around these
   cliffs: loss scaling fights fp16 underflow; bfloat16 trades mantissa for
-  fp32's exponent range.
+  fp32's exponent range; fp8 (E4M3/E5M2) pushes the same two bargains one
+  rung lower and makes per-tensor scaling mandatory.
 * Softmax is shift-invariant, so subtract the max before exponentiating;
   log-sum-exp with the same shift is an exact identity that never overflows;
   cross-entropy should be computed from logits as
@@ -1028,7 +1112,13 @@ log-sum-exp power every softmax and attention layer; log-space arithmetic is
 what makes naive Bayes (:numref:`sec_mdl-naive_bayes`) and probabilistic
 inference generally feasible; the from-logits cross-entropy is the computation
 :numref:`sec_mdl-information_theory` analyzes; and Welford-style running
-moments live inside batch normalization. For the full theory --- error
+moments live inside batch normalization. One neighboring story is told
+elsewhere: the *depth* dimension of numerical stability --- vanishing and
+exploding gradients as the conditioning of Jacobian products through many
+layers, and the initialization schemes that tame them --- is the subject of
+:numref:`sec_numerical_stability` in the main text, and
+:numref:`chap_mdl-dynamics` takes up the continuous-time view of how such
+errors and noise propagate through training. For the full theory --- error
 analysis of every algorithm in this book's linear-algebra substrate --- the
 reference remains :citet:`Higham.2002`.
 
@@ -1036,11 +1126,9 @@ reference remains :citet:`Higham.2002`.
 
 <!-- slides -->
 
-# Numerical Stability and Conditioning
-
 ::: {.slide}
 ::: {.cover}
-[Dive into Deep Learning · §24.4]{.kicker}
+[Dive into Deep Learning · §24.5]{.kicker}
 
 Why the math is right but the loss is `NaN`<br>**floating point · stable softmax · cancellation · conditioning**.
 :::
@@ -1121,6 +1209,45 @@ the implicit leading $1$, which fills no gap.
 :::
 :::
 
+::: {.slide title="fp8: the ladder's bottom rung" only="pytorch"}
+[Floating point]{.kicker}
+
+Since 2022 hardware pushes one rung lower, in two flavors with a clean
+division of labor --- **E4M3** keeps digits ($\varepsilon = 0.125$, about
+one decimal) for weights and activations; **E5M2** trades a mantissa bit
+for fp16's full range, for gradients:
+
+@!numerical-stability-conditioning-fp8
+
+::: {.d2l-note .warn}
+At $\varepsilon_{\text{mach}} = 0.125$ there is no slack left: fp8
+training pairs *every tensor* with a scale factor. Per-tensor scaling is
+a precondition, not an optimization.
+:::
+:::
+
+::: {.slide title="fp8: the ladder's bottom rung" except="pytorch"}
+[Floating point]{.kicker}
+
+Since 2022 hardware pushes one rung lower, in two flavors with a clean
+division of labor:
+
+::: {.d2l-note .rule}
+**E4M3** keeps digits: $\varepsilon = 0.125$ (about one decimal),
+max $= 448$ --- for weights and activations.
+**E5M2** trades a mantissa bit for fp16's full range: max $= 57344$,
+smallest normal $6.1\times10^{-5}$, at $\varepsilon = 0.25$ --- for
+gradients, which need range.
+:::
+
+::: {.d2l-note .warn}
+At $\varepsilon_{\text{mach}} = 0.125$ there is no slack left: fp8
+training pairs *every tensor* with a scale factor. Per-tensor scaling is
+a precondition, not an optimization. (The `ml_dtypes` package provides
+both formats for NumPy, JAX, and TensorFlow.)
+:::
+:::
+
 ::: {.slide title="Where the cliffs are"}
 [Floating point]{.kicker}
 
@@ -1130,9 +1257,47 @@ Because $e^x$ turns additive scale into multiplicative scale, a modest
 @!numerical-stability-conditioning-spacing
 
 ::: {.d2l-note .warn}
-fp16 gradients below $6\times10^{-5}$ vanish, so mixed precision scales
-the loss before the backward pass. **Loss scaling is underflow
-management**, nothing more.
+fp16 gradients below $6\times10^{-5}$ vanish; updates of relative size
+below $\varepsilon_{\text{mach}}/2$ round to *no update at all*. Both
+cliffs bite mixed-precision training --- next slide.
+:::
+:::
+
+::: {.slide title="Both fp16 failure modes, both rescues, one cell" only="pytorch"}
+[Floating point]{.kicker}
+
+A true gradient of $10^{-8}$ underflows fp16's backward pass to $0.0$;
+scaling the *loss* by $2^{14}$ shifts the whole chain into representable
+territory. A healthy update of relative size $10^{-4}$ is swallowed by
+round-to-nearest; an fp32 master copy accepts it:
+
+@!numerical-stability-conditioning-loss-scaling
+
+::: {.d2l-note .rule}
+**Loss scaling is underflow management; master weights are rounding
+management.** This is precisely what `torch.amp`'s `GradScaler` plus
+fp32 master weights automate --- and what bfloat16's fp32-sized exponent
+was designed to make unnecessary.
+:::
+:::
+
+::: {.slide title="Both fp16 failure modes, both rescues" except="pytorch"}
+[Floating point]{.kicker}
+
+The two cliffs, and their two escapes, in mixed-precision training:
+
+- A true gradient of $10^{-8}$ **underflows** an fp16 backward pass to an
+  exact $0.0$; multiplying the *loss* by $2^{14}$ before differentiating
+  (and unscaling after) shifts the whole gradient chain into representable
+  territory and recovers $1.000\times10^{-8}$.
+- A healthy update of relative size $10^{-4}$ is **swallowed whole** by
+  round-to-nearest in fp16 ($w - \eta g = w$ exactly); an fp32 master copy
+  of the weights accepts it without complaint.
+
+::: {.d2l-note .rule}
+**Loss scaling is underflow management; master weights are rounding
+management** --- what every framework's mixed-precision utility automates,
+and what bfloat16's fp32-sized exponent was designed to make unnecessary.
 :::
 :::
 
@@ -1316,6 +1481,27 @@ The naive answer is pure amplified noise; here it even comes out
 **negative** ($-256$), a variance below zero, its sign hostage to the
 summation order. This is what `BatchNorm` avoids with running moments.
 :::
+:::
+
+::: {.slide title="Summation order is an algorithm"}
+[Cancellation]{.kicker}
+
+The naive variance's noise changed *sign* between NumPy builds. That is
+not a bug in NumPy; it is summation error. Adding $n$ floats left to
+right commits one rounding per addition, worst case $\approx n\,u$; the
+repairs reorganize the additions, not the bits:
+
+::: {.d2l-note .rule}
+**left-to-right** $O(n\,u)$ · **pairwise** (sum halves recursively)
+$O(u \log n)$ --- what NumPy's `sum` does, blocking and all ·
+**Kahan** (carry each rounding in a second accumulator) $O(u)$,
+independent of $n$
+:::
+
+. . .
+
+Welford composes with either: the pairwise merge rule is exactly how
+running moments are combined across devices.
 :::
 
 ::: {.slide}

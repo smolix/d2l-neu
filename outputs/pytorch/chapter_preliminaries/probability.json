@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [35, 65]\n"
+          "text": "heads, tails:  [45, 55]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([52., 48.])"
+          "text": "tensor([47., 53.])"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.5000, 0.5000])"
+          "text": "tensor([0.4800, 0.5200])"
         }
       ]
     },
@@ -50,20 +50,43 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.5043, 0.4957])"
+          "text": "tensor([0.5011, 0.4989])"
+        }
+      ]
+    },
+    "probability-a-simple-example-tossing-coins-6": {
+      "code_fingerprint": "sha256:c3fade966c621df670d5e38d2a18c2b0643e2c12178c0a6a86333be48bde5418",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
+          "bytes": 30160,
+          "sha256": "sha256:006a76b3242b5665ed0b706efbab3fb04dce18b219e8496edca95b71847790a5"
         }
       ]
     },
     "probability-a-simple-example-tossing-coins-5": {
-      "code_fingerprint": "sha256:f6571f9078828351a38609c6a01c3fcf93167f5a32eb2a61f4be2f704c77b26c",
+      "code_fingerprint": "sha256:15bef12561daf0470a657d7e03aaf4f01c3c087f6df10e453df3d6581f3ee9d7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 107424,
-          "sha256": "sha256:473cf7a6fd3f0196c3a87bd260302c48a550f43b51e0e29e0e99f9b8b6e5dd50"
+          "bytes": 105604,
+          "sha256": "sha256:efaa299bee1b9704a0bcf4fd0eae8700e67536266a7501ca5edc89f28130e3c9"
+        }
+      ]
+    },
+    "probability-worked-example-hiv-testing-1": {
+      "code_fingerprint": "sha256:95204a1a1568e86f48ae0008bb2794994011ff1df96f80f657e9a7b1c884e38f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(0.8314)"
         }
       ]
     }

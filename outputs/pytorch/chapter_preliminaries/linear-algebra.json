@@ -253,8 +253,28 @@
         }
       ]
     },
+    "linear-algebra-dot-products-3": {
+      "code_fingerprint": "sha256:a31c05d0e6e262dc68ed97de9863d6fd1276b6823d413d70d4bbe1b8a3a3f564",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(1.7672), tensor(True))"
+        }
+      ]
+    },
+    "linear-algebra-matrix-vector-products-2": {
+      "code_fingerprint": "sha256:f0c2d1a09f500402164c69f925d4c1c97895cd557c212cf116abba0b107dc462",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([0., 1.]), tensor([-1.,  0.]))"
+        }
+      ]
+    },
     "linear-algebra-matrix-vector-products": {
-      "code_fingerprint": "sha256:073a5c537ff10d9978266c1915b497b45c6dffc91d37d7b0b3711a548a4688ad",
+      "code_fingerprint": "sha256:9fa3d0853a973003fab32a54389d34b2292cb2becbb0eb58eebf53d120b84565",
       "kind": "text",
       "outputs": [
         {
@@ -264,7 +284,7 @@
       ]
     },
     "linear-algebra-matrix-matrix-multiplication": {
-      "code_fingerprint": "sha256:3adfd293b310a2d14b42897e0a3bbdf51adc22cdf7b317691306e2cc85b8d7ff",
+      "code_fingerprint": "sha256:2e089e2b82d63a30387830ba5561a1ca26d13c630a119ad87840b5b361fb0d25",
       "kind": "text",
       "outputs": [
         {
@@ -274,7 +294,7 @@
       ]
     },
     "linear-algebra-norms-1": {
-      "code_fingerprint": "sha256:d78493a48da7f4106a0aada5a4544396e58865ff1d596f409fa7a83a3f8d796e",
+      "code_fingerprint": "sha256:ef4f1ab26e689d121a1ad54c93c1d5c206ce21af78793610babc33c201cb136e",
       "kind": "text",
       "outputs": [
         {
@@ -284,7 +304,7 @@
       ]
     },
     "linear-algebra-norms-2": {
-      "code_fingerprint": "sha256:0abb8e8de3a04af61f40c7abd2f4dd2d5f2e65dc5fc01d172800f224906eddfc",
+      "code_fingerprint": "sha256:3284f94956ab8c3a5ca9401d1a4706b202f737119ffc87b6e280189baf849194",
       "kind": "text",
       "outputs": [
         {
@@ -293,13 +313,44 @@
         }
       ]
     },
+    "linear-algebra-norms-4": {
+      "code_fingerprint": "sha256:87363f7e16413bfa9d7aa6d943bb5f58e310b56449c10d470bec5595b4640b97",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tensor(6.7247) tensor(6.7247)\ntensor(True)\n"
+        }
+      ]
+    },
     "linear-algebra-norms-3": {
-      "code_fingerprint": "sha256:1fcf2ebb9f2940b58231525a4f1000c289b23ed306d5d61b9cc0e205524d1981",
+      "code_fingerprint": "sha256:c20546ae6e05e973437b0af36f8bf45963685e4e4f92d56bd28af0f5ae310a84",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "tensor(6.)"
+        }
+      ]
+    },
+    "linear-algebra-eigenvalues-1": {
+      "code_fingerprint": "sha256:5aab3e927478eca283e847fa4f20a7b5a99cf01bc3f43e7de06eb4edaf6b240f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([-2.2628, -0.5985,  8.8612])"
+        }
+      ]
+    },
+    "linear-algebra-eigenvalues-2": {
+      "code_fingerprint": "sha256:0acd2591f85aa90da07dc99d759e57eb2efec2e2acbdb171fc9b34b8f48a5fe4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(8.8612)"
         }
       ]
     }

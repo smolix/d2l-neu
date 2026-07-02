@@ -58,16 +58,6 @@ The hand-rolled weight vector $\mathbf{w}$ and bias $b$ are replaced by a single
 and our explicit parameter-update loop is replaced by an *optimizer* object.
 The next three subsections walk through these substitutions one by one, and the
 training loop afterwards stays exactly as it was.
-
-When we implemented linear regression from scratch
-in :numref:`sec_linear_scratch`,
-we defined our model parameters explicitly
-and coded up the calculations to produce output
-using basic linear algebra operations.
-You *should* know how to do this.
-But once your models get more complex,
-and once you have to do this nearly every day,
-you will be glad of the assistance.
 The situation is similar to coding up your own blog from scratch.
 Doing it once or twice is rewarding and instructive,
 but you would be a lousy web developer
@@ -247,6 +237,11 @@ def loss(self, params, X, y, state):
     return d2l.reduce_mean(jnp.square(y_hat - y))
 ```
 
+A small stylistic note: we construct the loss object inside `loss` on every
+call. That is a harmless shortcut here---these objects are stateless and cheap
+to build---but constructing it once in `__init__` is the cleaner pattern for
+losses that carry configuration or state.
+
 ## Defining the Optimization Algorithm
 
 :begin_tab:`mxnet`
@@ -346,9 +341,11 @@ compare the model parameters learned
 by training on finite data
 and the actual parameters
 that generated our dataset.
-To access parameters,
-we access the weights and bias
-of the layer that we need.
+This is where the concise version differs conceptually from the scratch one:
+the parameters no longer hang off our class as `self.w` and `self.b` but live
+*inside* the layer object, so `get_w_b` has to reach through `net` to find
+them (in JAX they live in the training `state` rather than in the model at
+all, which is why the JAX `get_w_b` takes `state` as an argument).
 As in our implementation from scratch,
 note that our estimated parameters
 are close to their true counterparts.
@@ -456,6 +453,7 @@ Dimensionality and storage for networks are automatically inferred
 1. Review the framework documentation to see which loss functions are provided. In particular,
    replace the squared loss with Huber's robust loss function. That is, use the loss function
    $$l(y,y') = \begin{cases}|y-y'| -\frac{\sigma}{2} & \textrm{ if } |y-y'| > \sigma \\ \frac{1}{2 \sigma} (y-y')^2 & \textrm{ otherwise}\end{cases}$$
+   Rerun the outlier demonstration of :numref:`subsec_linear-regression-loss-function` (one corrupted label) with it: does Huber's loss recover the robust estimate, the least-squares one, or something in between? (Compare the penalty curves in :numref:`fig_linreg-loss-menu`.)
 1. How do you access the gradient of the weights of the model?
 1. What is the effect on the solution if you change the learning rate and the number of epochs? Does it keep on improving?
 1. How does the solution change as you vary the amount of data generated?
@@ -486,7 +484,7 @@ Dimensionality and storage for networks are automatically inferred
 ::: {.cover}
 [Dive into Deep Learning · §3.5]{.kicker}
 
-Linear regression, the **concise** way<br>The same model as before, rebuilt from a framework's batteries-included layers, losses, and optimizers.
+The same model, the concise way<br>**batteries-included layers, losses, and optimizers replace the hand-rolled parts**.
 :::
 :::
 
@@ -527,21 +525,23 @@ tested. We swap each one for its built-in counterpart:
 :::
 :::
 
-::: {.slide title="Linear regression is one neuron"}
+::: {.slide title="The layer already is the model"}
 [The Model]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-A fully connected layer with **one output**: every input feature wires
-straight to a single scalar, exactly the picture of linear regression.
+What we hand-rolled as `w`, `b`, and a matrix--vector product, every
+framework ships as a **fully connected layer**: each input wired to the
+one output --- exactly the picture of linear regression.
 
-The same import line we always start from:
-
-@linear-regression-concise-concise-implementation-of-linear-regression
+::: {.d2l-note}
+The layer owns its parameters. We no longer allocate them, initialize
+them, or even know their shapes ahead of time.
+:::
 :::
 
 ::: {.col .fig .big}
-![](../img/singleneuron.svg)
+![One fully connected layer with a single output is linear regression.](../img/singleneuron.svg)
 :::
 :::
 :::
@@ -677,7 +677,7 @@ by swapping one line.
 
 ::: {.cols .vc}
 ::: {.col}
-Our `Trainer`, `Module`, and `DataModule` from :numref:`sec_oo-design`
+Our `Trainer`, `Module`, and `DataModule` from §3.2
 don't care that the model is now a built-in layer.
 
 The training loop is **identical** to the from-scratch version.
@@ -689,19 +689,30 @@ The training loop is **identical** to the from-scratch version.
 :::
 :::
 
-::: {.slide title="Fit on the synthetic data"}
+::: {.slide title="Fit: same data, same curve, a fraction of the code"}
 [Training]{.kicker}
 
-Same data, same ten epochs, same `fit` call. The loss curve converges
-just as before:
+::: {.cols .vc}
+::: {.col}
+Same synthetic data, same ten epochs, same `fit` call as §3.4:
 
-@linear-regression-concise-training-1
+@-linear-regression-concise-training-1
+
+Nothing about the *training run* can tell the two implementations apart
+--- only the amount of code we wrote changed.
 :::
 
-::: {.slide title="Recover the learned parameters" except="jax"}
-[Training]{.kicker}
+::: {.col .fig}
+@!linear-regression-concise-training-1
+:::
+:::
+:::
 
-Reach into the layer for its weight and bias:
+::: {.slide title="The parameters moved house" except="jax"}
+[Training · payoff]{.kicker}
+
+They no longer hang off our class as `self.w`, `self.b`; they live
+**inside** the layer, so `get_w_b` reaches through `net`:
 
 @linear-regression-concise-training-2
 
@@ -710,16 +721,17 @@ Reach into the layer for its weight and bias:
 @linear-regression-concise-training-3
 
 ::: {.d2l-note}
-Errors are order $10^{-4}$: the layer recovered the true `w`, `b` we
-generated the data from.
+Same verdict as §3.4: the true $\mathbf{w}^* = [2,-3.4]$, $b^* = 4.2$
+recovered to a few $10^{-4}$. The built-in pieces really do compute the
+same thing our hand-rolled ones did.
 :::
 :::
 
-::: {.slide title="Recover the learned parameters" only="jax"}
-[Training]{.kicker}
+::: {.slide title="The parameters moved house" only="jax" layout="tight"}
+[Training · payoff]{.kicker}
 
-Parameters live in the training **state**, not the model, so we pass it
-in to read `kernel` and `bias`:
+In JAX they live in the training **state**, not the model at all, so
+`get_w_b` takes `state` and reads `kernel` and `bias`:
 
 @linear-regression-concise-training-2
 
@@ -728,8 +740,9 @@ in to read `kernel` and `bias`:
 @linear-regression-concise-training-3
 
 ::: {.d2l-note}
-Errors are order $10^{-4}$: the layer recovered the true `w`, `b` we
-generated the data from.
+Same verdict as §3.4: the true $\mathbf{w}^* = [2,-3.4]$, $b^* = 4.2$
+recovered to a few $10^{-4}$. The built-in pieces really do compute the
+same thing our hand-rolled ones did.
 :::
 :::
 

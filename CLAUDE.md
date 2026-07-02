@@ -299,9 +299,13 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   single part of 6 numbered chapters under `chapter_mdl-*` — **22** Linear
   Algebra, **23** Calculus, **24** Optimization, **25** Probability & Statistical
   Learning, **26** Information Theory, **27** Dynamics (Tools for Deep Learning is
-  now **28**) — with `mdl-`-prefixed labels. LA, Calculus, and Probability &
-  Statistics are written to the bar; Optimization, Information Theory, and
-  Dynamics are still detailed ToCs + reading lists (to be completed on the site).
+  now **28**) — with `mdl-`-prefixed labels. All six chapters are now fully
+  written; the appendix gained two new sections (`mdl-adaptive-stochastic-methods`
+  = §24.2, `mdl-concentration-generalization` = §25.5) and ch. 25 was reordered
+  (naive Bayes moved last, §25.6). The branch `math-appendix-polish` carries a
+  full review-driven quality pass over all six chapters with pytorch-only
+  recaptured outputs; the tf/jax/mxnet stores for the edited files still need
+  re-execution on the GPU box.
   The legacy `chapter_appendix-mathematics-for-deep-learning/` has been
   **retired** — removed from `_quarto.yml` + `CHAPTER_NUMBERING` and its source
   + committed outputs deleted. Numbering lives in `CHAPTER_NUMBERING`

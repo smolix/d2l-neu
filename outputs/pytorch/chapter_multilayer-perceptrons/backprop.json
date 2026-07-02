@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "source": "chapter_multilayer-perceptrons/backprop.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "backprop-forward-propagation-backward-propagation-and-computational-graphs": {
+      "code_fingerprint": "sha256:d6403383c1958a4e14d264d7ec10f947af38dd58f7978489bc2258d1c3868266",
+      "kind": "text",
+      "outputs": []
+    },
+    "backprop-verify": {
+      "code_fingerprint": "sha256:dbbafb726caf47b2f7b81a78b1fef613e47e40604946c8df0de74d6c0b63127b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "L = 2.0, dL/dW2 = tensor([[-0., -4.]]), dL/dh = tensor([-4.,  2.])\ndL/dz = tensor([0., 2.]), dL/dW1 =\ntensor([[0., 0.],\n        [2., 4.]])\n"
+        }
+      ]
+    }
+  }
+}

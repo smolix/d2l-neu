@@ -104,8 +104,26 @@ def _stale(nb: Path, stamp: Path) -> bool:
     return False
 
 
-def build_worklist(frameworks, force_all=False):
-    """Items in framework-grouped order (framework outer, relpath inner)."""
+def parse_files(spec):
+    """Parse a whitespace/comma-separated list of source paths into a set of
+    (chapter, stem) pairs. Accepts `chapter_x/foo.md`, `chapter_x/foo.ipynb`,
+    or `chapter_x/foo`. Returns None ('all') for an empty/None spec."""
+    if not spec:
+        return None
+    pairs = set()
+    for tok in spec.replace(",", " ").split():
+        p = Path(tok)
+        chapter = p.parent.name or None
+        pairs.add((chapter, p.stem))
+    return pairs or None
+
+
+def build_worklist(frameworks, force_all=False, files=None):
+    """Items in framework-grouped order (framework outer, relpath inner).
+
+    `files` (a set of (chapter, stem) from parse_files) restricts the worklist to
+    a subset of source notebooks — used by `make refresh-stale` to re-execute
+    only the audit-stale set in parallel instead of the whole book."""
     items = []
     for fw in frameworks:                       # framework is the OUTER ordering
         root = NOTEBOOKS_DIR / fw
@@ -115,6 +133,8 @@ def build_worklist(frameworks, force_all=False):
             if ".ipynb_checkpoints" in nb.parts:
                 continue
             rel = str(nb.relative_to(root))
+            if files is not None and (nb.parent.name, nb.stem) not in files:
+                continue
             stamp = nb.with_suffix(".executed")
             if not force_all and not _stale(nb, stamp):
                 continue
@@ -319,9 +339,13 @@ def main():
     ap.add_argument("--frameworks", default=",".join(FRAMEWORKS))
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--force-all", action="store_true")
+    ap.add_argument("--files", default=None,
+                    help="whitespace/comma-separated subset of source paths "
+                         "(chapter_x/foo.md) to run; default: all stale notebooks")
     args = ap.parse_args()
     fws = [f for f in args.frameworks.split(",") if f.strip()]
-    items = build_worklist(fws, force_all=args.force_all)
+    items = build_worklist(fws, force_all=args.force_all,
+                           files=parse_files(args.files))
     if not items:
         print("scheduler: nothing to run (all stamps fresh)", flush=True)
         return 0

@@ -269,6 +269,7 @@ shared-dataset notebooks. This path is unchanged and self-contained.
 | `D2L_GPU_SLOTS_PER` | detected | per-GPU slot capacities, e.g. `3,3,3,3` |
 | `D2L_CPU_SLOTS` | detected | CPU slots |
 | `--frameworks a,b` | all four | restrict to a subset (`run-notebooks-<fw>` passes one) |
+| `--files "a.md b.md"` | all | restrict to a subset of source notebooks (whitespace/comma-separated `chapter_x/foo.md`); `make refresh-stale` passes the audit-stale set here for a parallel re-run |
 | `--force-all` | off | ignore stamp freshness, run everything |
 | `--dry-run` | off | simulate dispatch (no execution); checks per-GPU invariants |
 
@@ -279,6 +280,7 @@ make run-all-notebooks                     # everything, autodetected
 make run-notebooks-jax                      # one framework
 GPU_MIB_PER_SLOT=15360 make run-all-notebooks   # 15 GiB/slot (fewer, bigger slots)
 python tools/notebook_scheduler.py --dry-run --force-all   # plan + invariant check
+python tools/notebook_scheduler.py --files "chapter_preliminaries/ndarray.md"  # one notebook, all fw
 ```
 
 ---

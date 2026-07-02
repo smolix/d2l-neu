@@ -215,23 +215,33 @@ verify-outputs-fresh:
 	@python3 tools/audit_outputs.py --verify-fresh
 
 # Re-execute only what the audit reports stale, then re-capture those files.
-refresh-stale:
+# Execution goes through the unified scheduler (parallel GPU/CPU dispatch),
+# NOT a serial per-notebook `make -B` loop — the old loop ran one notebook at a
+# time with the GPU pool mostly idle. The scheduler is filtered to the stale set
+# (`--files`) and, crucially, is NOT forced: a notebook that is stale-in-store
+# but already executed (its .ipynb up to date, only never captured) is skipped
+# by the scheduler and picked up by the single capture pass below — so this is a
+# fast capture-only path when nothing actually needs a GPU re-run. `notebooks`
+# is a prereq so .ipynb reflect current source before staleness is judged (the
+# regen is mtime-conservative — unchanged notebooks are not re-executed).
+refresh-stale: notebooks
+	@mkdir -p $(LOGDIR)
 	@stale="$$(python3 tools/audit_outputs.py --stale)"; \
 	if [ -z "$$stale" ]; then echo "Nothing stale — store is fresh."; exit 0; fi; \
-	echo "Stale (will re-execute + capture):"; echo "$$stale" | sed 's/^/  /'; \
-	for f in $$stale; do \
-		ch=$$(dirname $$f); st=$$(basename $$f .md); \
-		for fw in $(FRAMEWORKS); do \
-			nb="_notebooks/$$fw/$$ch/$$st.ipynb"; \
-			[ -f "$$nb" ] && $(MAKE) -B "_notebooks/$$fw/$$ch/$$st.executed" || true; \
-		done; \
-		$(MAKE) capture-outputs FILES="$$f"; \
-	done
+	echo "Stale (will re-execute if needed, then capture):"; echo "$$stale" | sed 's/^/  /'; \
+	$(SCHED_ENV) python3 tools/notebook_scheduler.py --files "$$stale" \
+		2>&1 | tee -a $(LOGDIR)/scheduler-$(TS).log; rc=$$?; \
+	$(MAKE) capture-outputs FILES="$$(echo $$stale)"; \
+	exit $$rc
 
+# Fast recovery render: refresh stale outputs, then rebuild the artifacts with
+# the SAME RAM-aware parallel fleet as `rebuild-book-artifacts` (RENDER_JOBS
+# frameworks at once, each quarto capped to RENDER_V8_HEAP_MIB). The old form ran
+# `$(MAKE) slides` with no -j, rendering the four frameworks one after another.
 render-fresh: refresh-stale
-	$(MAKE) slides
+	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) slides
 	$(MAKE) html
-	$(MAKE) -j4 pdfs
+	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) pdfs
 
 # Grouped target (GNU Make 4.3+ `&:`): one invocation produces all four
 # d2l/<fw>.py files plus the d2l/.built stamp. build_lib.py is content-

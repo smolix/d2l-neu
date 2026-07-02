@@ -355,6 +355,25 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
   `render-fresh` when you're on the GPU box and want a one-shot "make it
   current and render."
 
+  Both phases run in **parallel**, not serially:
+  - `refresh-stale` feeds the audit-stale set to the unified scheduler
+    (`notebook_scheduler.py --files <stale>`) for full GPU/CPU-slot parallel
+    dispatch, then re-captures the whole set in one pass. It is *not* forced:
+    a notebook that is stale-in-store but already executed (its `.ipynb` up to
+    date, merely never captured — e.g. right after a `make all` whose
+    `run-all-notebooks` executed but did not bless the store) is **skipped by
+    the scheduler and picked up by the single capture pass** — so recovery after
+    a full execution is a fast capture-only path, no wasted GPU re-run. (The
+    earlier implementation looped `make -B …executed` one notebook at a time
+    with the GPU pool idle, then captured per file.)
+  - `render-fresh` then rebuilds slides and PDFs with the same RAM-aware fleet as
+    `rebuild-book-artifacts` (`$(MAKE) -j$(RENDER_JOBS)` under `RENDER_V8_ENV`),
+    rather than a bare serial `make slides`.
+
+  Typical recovery when `make all` executed cleanly but left the store unblessed
+  (so the `--verify-fresh` html gate fails): just `make render-fresh` — the
+  scheduler sees the stamps are fresh, skips execution, captures, and re-renders.
+
 This is the contract that lets us keep deterministic small outputs inline safely:
 they are kept correct by construction.
 
@@ -511,8 +530,8 @@ Make want to execute a notebook.
 | `capture-outputs [FILES=…]` | Distill `_notebooks/` → `outputs/`; extract assets; recompute fingerprints. The bless step. |
 | `audit-outputs` | Report stale notebooks/cells + integrity (dangling/orphaned ids). Non-zero exit on integrity failure. |
 | `verify-outputs-fresh` | Render prerequisite: hard-fail on any stale **inline** output; warn on stale assets. |
-| `refresh-stale` | `audit-outputs` → re-execute only stale notebooks → `capture-outputs`. (Needs framework venvs.) |
-| `render-fresh` | `refresh-stale` then `html`/`slides`/`pdf`. (Needs framework venvs.) |
+| `refresh-stale` | `audit-outputs` → re-execute only the stale set **in parallel** (`notebook_scheduler.py --files`; unforced, so already-executed-but-uncaptured notebooks skip straight to capture) → one `capture-outputs`. (Needs framework venvs.) |
+| `render-fresh` | `refresh-stale` then **parallel** `slides`/`pdf` (`-j$(RENDER_JOBS)` under `RENDER_V8_ENV`) + `html`. (Needs framework venvs.) |
 
 `run-notebooks-*`, the `.executed` stamps, `.generated`, `notebooks-*`, `lib`,
 and `.d` dep files are **unchanged** — execution works exactly as today; capture

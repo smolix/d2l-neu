@@ -111,7 +111,7 @@ class HyperParameters:  #@save
         raise NotImplementedError
 ```
 
-We defer its implementation into :numref:`sec_utils`. To use it, we define our class that inherits from `HyperParameters` and calls `save_hyperparameters` in the `__init__` method.
+The stub above fixes the *interface*; :numref:`sec_utils` fills in the implementation on this same class, which is why saving even a `NotImplementedError` body with `#@save` is worthwhile. To use it, we define our class that inherits from `HyperParameters` and calls `save_hyperparameters` in the `__init__` method.
 
 ```{.python .input #oo-design-utilities-5}
 # Call the fully implemented HyperParameters class saved in d2l
@@ -126,7 +126,7 @@ b = B(a=1, b=2, c=3)
 
 The final utility allows us to plot experiment progress interactively while it is going on. In deference to the much more powerful (and complex) [TensorBoard](https://www.tensorflow.org/tensorboard) we name it `ProgressBoard`. The  implementation is deferred to :numref:`sec_utils`. For now, let's simply see it in action.
 
-The `draw` method records a point `(x, y)` to be shown in the figure, with `label` specified in the legend. The optional `every_n` smooths the line by only showing $1/n$ points in the figure; their values are averaged from the $n$ neighbor points. As we explain just below, `draw` is *asynchronous*: it merely schedules the point and returns immediately, so that plotting never slows down training.
+The `draw` method records a point `(x, y)` to be shown in the figure, with `label` specified in the legend. The optional `every_n` smooths the line: it shows one point per $n$ calls to `draw`, plotting the average of the last $n$ recorded values. As we explain just below, `draw` is *asynchronous*: it merely schedules the point and returns immediately, so that plotting never slows down training.
 
 ```{.python .input #oo-design-utilities-6}
 class ProgressBoard(d2l.HyperParameters):  #@save
@@ -181,6 +181,11 @@ board.flush()  # wait for the queued points, then render the final figure
 
 The `Module` class is the base class of all models we will implement. At the very least we need three methods. The first, `__init__`, stores the learnable parameters, the `training_step` method accepts a data batch to return the loss value, and finally, `configure_optimizers` returns the optimization method, or a list of them, that is used to update the learnable parameters. Optionally we can define `validation_step` to report the evaluation measures.
 Sometimes we put the code for computing the output into a separate `forward` method to make it more reusable.
+The gnarliest few lines below live in `plot`: they convert the trainer's batch
+counter into a *fractional epoch* for the x-coordinate, so that the training
+loss (recorded several times per epoch) and the validation loss (recorded once
+per epoch) can share a single x-axis, with `every_n` chosen so each curve shows
+a fixed number of points per epoch.
 
 :begin_tab:`jax`
 With the introduction of [dataclasses](https://docs.python.org/3/library/dataclasses.html)
@@ -506,7 +511,7 @@ class DataModule(d2l.HyperParameters):  #@save
 :label:`oo-design-training`
 
 :begin_tab:`pytorch, mxnet, tensorflow`
-The `Trainer` class trains the learnable parameters in the `Module` class with data specified in `DataModule`. The key method is `fit`, which accepts two arguments: `model`, an instance of `Module`, and `data`, an instance of `DataModule`. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here and will be implemented in later chapters.
+The `Trainer` class trains the learnable parameters in the `Module` class with data specified in `DataModule`. The key method is `fit`, which accepts two arguments: `model`, an instance of `Module`, and `data`, an instance of `DataModule`. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here; it is implemented just two sections later, in :numref:`sec_linear_scratch`, so the abstraction gap closes almost immediately.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -522,7 +527,7 @@ in :numref:`sec_linear_scratch`.
 :end_tab:
 
 :begin_tab:`jax`
-The `Trainer` class trains the learnable parameters `params` with data specified in `DataModule`. The key method is `fit`, which accepts three arguments: `model`, an instance of `Module`, `data`, an instance of `DataModule`, and `key`, a JAX `PRNGKeyArray`. We make the `key` argument optional here to simplify the interface, but it is recommended to always pass and initialize the model parameters with a root key in JAX and Flax. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here and will be implemented in later chapters.
+The `Trainer` class trains the learnable parameters `params` with data specified in `DataModule`. The key method is `fit`, which accepts three arguments: `model`, an instance of `Module`, `data`, an instance of `DataModule`, and `key`, a JAX `PRNGKeyArray`. We make the `key` argument optional here to simplify the interface, but it is recommended to always pass and initialize the model parameters with a root key in JAX and Flax. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here; it is implemented just two sections later, in :numref:`sec_linear_scratch`, so the abstraction gap closes almost immediately.
 :end_tab:
 
 ```{.python .input #oo-design-training}

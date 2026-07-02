@@ -507,8 +507,8 @@ class SyntheticRegressionData(d2l.DataModule):
         n = num_train + num_val
         key1, key2 = jax.random.split(key)
         self.X = jax.random.normal(key1, (n, w.shape[0]))
-        noise = jax.random.normal(key2, (n, 1)) * noise
-        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
+        eps = jax.random.normal(key2, (n, 1)) * noise
+        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + eps
 
     def get_dataloader(self, train):
         i = slice(0, self.num_train) if train else slice(self.num_train, None)

@@ -228,6 +228,64 @@ lead to even larger contributions to the loss,
 due to its quadratic form
 (this quadraticity can be a double-edged sword; while it encourages the model to avoid large errors
 it can also lead to excessive sensitivity to anomalous data).
+That sensitivity is easy to see in action. Below we place twenty points
+exactly on the line $y = 2x$, corrupt a single label, and fit a line through
+the origin twice: minimizing squared error (closed form) and minimizing the
+*mean absolute error* $\frac{1}{n}\sum_i |\hat{y}^{(i)} - y^{(i)}|$
+(by subgradient descent, since the absolute value is not differentiable at zero).
+
+```{.python .input #linear-regression-loss-function}
+%%tab pytorch
+x = np.arange(1.0, 21.0)
+y = 2 * x
+y[5] = 10000                                   # corrupt a single label
+w_sq = (x * y).sum() / (x * x).sum()           # closed-form squared-loss fit
+w_mae = 0.0                                    # subgradient descent on MAE
+for _ in range(2000):
+    w_mae -= 0.002 * (np.sign(w_mae * x - y) * x).mean()
+print(f'true w: 2.00, squared loss: {float(w_sq):.2f}, MAE: {float(w_mae):.2f}')
+```
+
+```{.python .input #linear-regression-loss-function}
+%%tab tensorflow
+x = np.arange(1.0, 21.0)
+y = 2 * x
+y[5] = 10000                                   # corrupt a single label
+w_sq = (x * y).sum() / (x * x).sum()           # closed-form squared-loss fit
+w_mae = 0.0                                    # subgradient descent on MAE
+for _ in range(2000):
+    w_mae -= 0.002 * (np.sign(w_mae * x - y) * x).mean()
+print(f'true w: 2.00, squared loss: {float(w_sq):.2f}, MAE: {float(w_mae):.2f}')
+```
+
+```{.python .input #linear-regression-loss-function}
+%%tab mxnet
+x = np.arange(1.0, 21.0)
+y = 2 * x
+y[5] = 10000                                   # corrupt a single label
+w_sq = (x * y).sum() / (x * x).sum()           # closed-form squared-loss fit
+w_mae = 0.0                                    # subgradient descent on MAE
+for _ in range(2000):
+    w_mae -= 0.002 * float((np.sign(w_mae * x - y) * x).mean())
+print(f'true w: 2.00, squared loss: {float(w_sq):.2f}, MAE: {w_mae:.2f}')
+```
+
+```{.python .input #linear-regression-loss-function}
+%%tab jax
+x = jnp.arange(1.0, 21.0)
+y = 2 * x
+y = y.at[5].set(10000)                         # corrupt a single label
+w_sq = (x * y).sum() / (x * x).sum()           # closed-form squared-loss fit
+w_mae = 0.0                                    # subgradient descent on MAE
+for _ in range(2000):
+    w_mae -= 0.002 * (jnp.sign(w_mae * x - y) * x).mean()
+print(f'true w: 2.00, squared loss: {float(w_sq):.2f}, MAE: {float(w_mae):.2f}')
+```
+
+One bad label drags the squared-loss estimate an order of magnitude away from
+the truth, while the absolute-error fit barely moves. We return to this
+trade-off between losses at the end of the chapter's probabilistic treatment,
+and the exercises explore it further.
 To measure the quality of a model on the entire dataset of $n$ examples,
 we simply average (or, up to a rescaling of the learning rate, sum)
 the losses on the training set:
@@ -250,10 +308,13 @@ analytically by applying a simple formula as follows.
 First, we can subsume the bias $b$ into the parameter $\mathbf{w}$
 by appending a column to the design matrix consisting of all 1s.
 Then our prediction problem is to minimize $\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2$.
-As long as the design matrix $\mathbf{X}$ has full rank
+The loss $\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2$ is a *convex*
+function of $\mathbf{w}$, so every local minimum is the global one;
+as long as the design matrix $\mathbf{X}$ has full rank
 (no feature is linearly dependent on the others),
-then there will be just one critical point on the loss surface
+it is *strictly* convex, there is just one critical point on the loss surface,
 and it corresponds to the minimum of the loss over the entire domain.
+This is why finding a single critical point suffices.
 Taking the derivative of the loss with respect to $\mathbf{w}$
 and setting it equal to zero yields:
 
@@ -389,6 +450,15 @@ Note that even if our function is truly linear and noiseless,
 these parameters will not be the exact minimizers of the loss, nor even deterministic.
 Although the algorithm converges slowly towards the minimizers
 it typically will not find them exactly in a finite number of steps.
+In fact, this vague statement has a precise form: with a constant learning
+rate, minibatch SGD does not settle on the minimizer at all but hovers in a
+*noise ball* around it, whose squared radius scales like $\eta$ times the
+gradient noise---shrinking the learning rate shrinks the ball, which is why
+learning-rate *schedules* matter.
+Why gradient descent converges, at what rate, and how the learning rate and
+its schedule interact with gradient noise are worked out in
+:numref:`sec_mdl-gradient-based-optimization` and
+:numref:`sec_mdl-adaptive-stochastic-methods`.
 Moreover, the minibatches $\mathcal{B}$
 used for updating the parameters are chosen at random.
 This breaks determinism.
@@ -529,6 +599,8 @@ is given as
 $$p(x) = \frac{1}{\sqrt{2 \pi \sigma^2}} \exp\left(-\frac{1}{2 \sigma^2} (x - \mu)^2\right).$$
 
 Below we define a function to compute the normal distribution.
+Since we are merely plotting a density---no gradients, no GPU---plain NumPy
+suffices in the PyTorch and TensorFlow tabs.
 
 ```{.python .input #linear-regression-the-normal-distribution-and-squared-loss-1}
 %%tab pytorch
@@ -658,6 +730,36 @@ Fortunately, the solution does not depend on $\sigma$ either.
 It follows that minimizing the mean squared error
 is equivalent to the maximum likelihood estimation
 of a linear model under the assumption of additive Gaussian noise.
+
+### A Menu of Losses
+:label:`subsec_linreg-loss-menu`
+
+The derivation we just completed is worth restating as a *recipe*, because it
+generalizes far beyond the Gaussian case: **choose a noise model
+$p(y \mid \mathbf{x})$ that fits how your labels are actually generated, then
+minimize its negative log-likelihood**. Gaussian noise $\Rightarrow$ squared
+error is only the first row of a menu; whenever the Gaussian assumption is
+wrong for your data, the same recipe hands you the right loss:
+
+| Output type | Noise model | Loss (negative log-likelihood) |
+|:--|:--|:--|
+| real-valued, well-behaved noise | Gaussian | squared error (this section) |
+| real-valued, outliers or heavy tails | Laplace | absolute error (exercise 5) |
+| positive, multiplicative fluctuations (prices) | Gaussian on $\log y$ | squared error on $\log y$ (exercise 7) |
+| counts (sales, arrivals) | Poisson | $\lambda(\mathbf{x}) - k \log \lambda(\mathbf{x})$ (exercise 8) |
+
+:numref:`fig_linreg-loss-menu` shows why the first two rows differ: the
+Laplace density places far more mass in its tails than a Gaussian of equal
+variance, so a large residual is *unsurprising* under the Laplace model and
+its loss penalizes it only linearly---exactly the robustness we observed in
+the outlier demonstration above. Each of these losses is explored in the
+exercises; the recipe also extends to *heteroscedastic* regression, where the
+noise level itself depends on the input and we predict $\sigma(\mathbf{x})$
+alongside the mean. We will lean on this recipe again when we derive the loss
+for classification in the next chapter.
+
+![Matching the loss to the noise model. Left: Gaussian and Laplace densities with equal variance; the log-scale inset shows the Laplace tails carrying far more probability. Right: the per-residual penalties each induces, together with the Huber compromise.](../img/mdl-linreg-loss-menu.svg)
+:label:`fig_linreg-loss-menu`
 
 
 ## Linear Regression as a Neural Network

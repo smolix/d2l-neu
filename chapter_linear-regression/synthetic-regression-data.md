@@ -77,7 +77,7 @@ a *ground truth* linear function,
 corrupting them via additive noise $\boldsymbol{\epsilon}$, 
 drawn independently and identically for each example:
 
-$$\mathbf{y}= \mathbf{X} \mathbf{w} + b + \boldsymbol{\epsilon}.$$
+$$\mathbf{y}= \mathbf{X} \mathbf{w}^* + b^* + \boldsymbol{\epsilon}.$$
 
 For convenience we assume that $\boldsymbol{\epsilon}$ is drawn 
 from a normal distribution with mean $\mu= 0$ 
@@ -113,8 +113,8 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
         self.save_hyperparameters()
         n = num_train + num_val
         self.X = tf.random.normal((n, w.shape[0]))
-        noise = tf.random.normal((n, 1)) * noise
-        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
+        eps = tf.random.normal((n, 1)) * noise
+        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + eps
 ```
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-1}
@@ -131,8 +131,8 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
         n = num_train + num_val
         key1, key2 = jax.random.split(key)
         self.X = jax.random.normal(key1, (n, w.shape[0]))
-        noise = jax.random.normal(key2, (n, 1)) * noise
-        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
+        eps = jax.random.normal(key2, (n, 1)) * noise
+        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + eps
 ```
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-1}
@@ -145,18 +145,18 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
         self.save_hyperparameters()
         n = num_train + num_val
         self.X = d2l.randn(n, len(w))
-        noise = d2l.randn(n, 1) * noise
-        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + noise
+        eps = d2l.randn(n, 1) * noise
+        self.y = d2l.matmul(self.X, d2l.reshape(w, (-1, 1))) + b + eps
 ```
 
-Below, we set the true parameters to $\mathbf{w} = [2, -3.4]^\top$ and $b = 4.2$.
+Below, we set the true parameters to $\mathbf{w}^* = [2, -3.4]^\top$ and $b^* = 4.2$.
 Later, we can check our estimated parameters against these *ground truth* values.
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-2}
 data = SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 ```
 
-Each row in `features` consists of a vector in $\mathbb{R}^2$ and each row in `labels` is a scalar. Let's have a look at the first entry.
+Each row of `data.X` is a feature vector in $\mathbb{R}^2$ and each row of `data.y` is a scalar label. Let's have a look at the first entry.
 
 ```{.python .input #synthetic-regression-data-generating-the-dataset-3}
 print('features:', data.X[0],'\nlabel:', data.y[0])
@@ -352,6 +352,10 @@ len(data.train_dataloader())
 With 1000 training examples and a batch size of 32, we expect
 $\lceil 1000 / 32 \rceil = 32$ batches: 31 full ones and a final
 partial batch of 8 examples.
+Note also that the built-in training loader *reshuffles* the examples at
+the start of every epoch, just as our hand-rolled loader drew a fresh
+random order on each call; exercise 8 of :numref:`sec_linear_scratch`
+asks why this reshuffling matters.
 
 :begin_tab:`jax`
 You may notice that the JAX loader reports 31 batches rather than 32.
@@ -384,7 +388,7 @@ we use from here on.
 
 ## Exercises
 
-1. What will happen if the number of examples cannot be divided by the batch size. How would you change this behavior by specifying a different argument by using the framework's API?
+1. When the number of examples is not divisible by the batch size, the loaders above keep the final partial batch (except in JAX, whose `drop_remainder=train` behavior is explained in the callout above). What does PyTorch's `drop_last` argument (and its TensorFlow counterpart, `batch(..., drop_remainder=...)`) do, and when would you want to enable it even outside JAX?
 1. Suppose that we want to generate a huge dataset, where both the size of the parameter vector `w` and the number of examples `num_examples` are large.
     1. What happens if we cannot hold all data in memory?
     1. How would you shuffle the data if it is held on disk? Your task is to design an *efficient* algorithm that does not require too many random reads or writes. Hint: [pseudorandom permutation generators](https://en.wikipedia.org/wiki/Pseudorandom_permutation) allow you to design a reshuffle without the need to store the permutation table explicitly :cite:`Naor.Reingold.1999`. 

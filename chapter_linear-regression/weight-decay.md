@@ -84,11 +84,10 @@ import optax
 Rather than directly manipulating the number of parameters,
 *weight decay* operates by restricting the values 
 that the parameters can take.
-More commonly called $\ell_2$ regularization
-outside of deep learning circles
-when optimized by minibatch stochastic gradient descent,
-weight decay might be the most widely used technique
-for regularizing parametric machine learning models.
+Outside of deep learning circles the technique is better known as
+$\ell_2$ *regularization*---the two coincide when optimizing by minibatch
+SGD, a point we return to below---and it might be the most widely used
+technique for regularizing parametric machine learning models.
 The technique is motivated by the basic intuition
 that among all functions $f$,
 the function $f = 0$
@@ -196,6 +195,11 @@ contact is generically *tangential*, so every coordinate shrinks but none
 vanishes; for the $\ell_1$ diamond it typically lands on a *corner*, setting some
 coordinates exactly to zero. This is the geometric reason lasso performs feature
 selection while ridge does not.
+We assert the penalty$\,\Leftrightarrow\,$constraint equivalence here;
+:numref:`sec_mdl-constrained-optimization-duality` derives it via Lagrange
+duality---$\lambda$ is exactly the multiplier attached to the constraint
+$\|\mathbf{w}\| \le t$---and computes the $\lambda \leftrightarrow t$
+correspondence numerically on ridge regression.
 
 ![Weight decay as a constraint. The elliptical contours of the training loss $L(\mathbf{w})$, centred on the unconstrained optimum $\hat{\mathbf{w}}$, grow until they meet the constraint region at the regularized solution $\mathbf{w}^\star$. Left: the $\ell_2$ ball is met *tangentially*, shrinking both coordinates. Right: the $\ell_1$ diamond is met at a *corner*, forcing $w_2$ to exactly zero---the sparsity that distinguishes lasso from ridge.](../img/mdl-linreg-ridge-geometry.svg)
 :label:`fig_ridge_geometry`
@@ -233,19 +237,41 @@ optimizer's per-coordinate second-moment estimates and no longer acts as uniform
 weight shrinkage. *Decoupling* the decay from the loss gradient---shrinking every
 weight by a fixed fraction at each step---restores the intended behavior; this is
 the decoupled-weight-decay variant AdamW, introduced by
-:citet:`Loshchilov.Hutter.2019` and now a default optimizer for large models. We
-take up optimizers in detail in :numref:`sec_adam`.
+:citet:`Loshchilov.Hutter.2019` and now a default optimizer for large models.
+The mechanism---including the per-coordinate shrinkage formula and a code
+demonstration racing the coupled and decoupled variants---is worked out in
+:numref:`subsec_mdl-decoupled-weight-decay`, and we take up optimizers in
+detail in :numref:`sec_adam`.
 
-Finally, weight decay has a clean probabilistic reading. Recall from
+Finally, weight decay has a clean probabilistic reading, and the derivation is
+short enough to do on the spot. Recall from
 :numref:`subsec_normal_distribution_and_squared_loss` that minimizing the squared
-loss is maximum likelihood estimation under Gaussian observation noise. Adding the
-penalty $\frac{\lambda}{2}\|\mathbf{w}\|^2$ amounts to placing an isotropic
-Gaussian *prior* $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \lambda^{-1}\mathbf{I})$
-on the weights and returning the *maximum a posteriori* (MAP) estimate; the
-regularization constant $\lambda$ plays the role of the prior precision, so a
-larger $\lambda$ encodes a stronger prior belief that the weights are small. This
-recovers the classical *ridge regression* estimator---a correspondence you will
-make precise in the exercises.
+loss is maximum likelihood estimation under Gaussian observation noise. Now place
+an isotropic Gaussian *prior* $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \tau^2\mathbf{I})$
+on the weights and ask instead for the weights that maximize the *posterior*
+$p(\mathbf{w} \mid \mathbf{X}, \mathbf{y}) \propto p(\mathbf{y} \mid \mathbf{X}, \mathbf{w})\, p(\mathbf{w})$---the
+*maximum a posteriori* (MAP) estimate. Taking negative logarithms, the prior
+contributes
+
+$$-\log p(\mathbf{w}) = \frac{1}{2\tau^2} \|\mathbf{w}\|^2 + \textrm{const},$$
+
+so the MAP objective is the Gaussian negative log-likelihood of
+:numref:`subsec_normal_distribution_and_squared_loss` plus a quadratic penalty:
+
+$$-\log p(\mathbf{w} \mid \mathbf{X}, \mathbf{y}) = \frac{1}{2\sigma^2} \sum_{i=1}^n \left(y^{(i)} - \mathbf{w}^\top \mathbf{x}^{(i)} - b\right)^2 + \frac{1}{2\tau^2} \|\mathbf{w}\|^2 + \textrm{const}.$$
+
+In short, *MAP estimation is maximum likelihood plus a prior*, and the objective
+above is exactly of our weight-decay form. The regularization constant $\lambda$
+is thereby *proportional to* the prior precision $1/\tau^2$: a tighter prior
+(smaller $\tau$) means stronger shrinkage. The exact constant of proportionality
+involves the noise variance $\sigma^2$ and the sample size $n$, because the loss
+$L$ above is an *average* while the log-posterior is a *sum*; exercise 6 asks you
+to make the correspondence precise. :numref:`fig_wd-map-prior` shows the
+tug-of-war: the prior's quadratic bowl pulls the maximum-likelihood estimate back
+toward the origin. This recovers the classical *ridge regression* estimator.
+
+![The MAP reading of weight decay is a tug-of-war between data and prior. The negative log-likelihood (blue) is minimized at the MLE; adding the Gaussian prior's quadratic bowl (orange, dashed) yields the MAP objective (green), whose minimum is pulled from the MLE toward the prior mean---for weight decay, the origin. A tighter prior (smaller $\tau$) pulls harder.](../img/mdl-prob-map-prior.svg)
+:label:`fig_wd-map-prior`
 
 ## High-Dimensional Linear Regression
 
@@ -452,6 +478,96 @@ we expect from regularization.
 train_scratch(3)
 ```
 
+### Why Shrinkage Helps: The Spectral View
+:label:`subsec_wd-shrinkage`
+
+The geometry of :numref:`fig_ridge_geometry` says that the penalty pulls
+$\hat{\mathbf{w}}$ toward the origin, but not *which parts* of
+$\hat{\mathbf{w}}$ are pulled hardest. For linear regression we can say
+exactly. Adding the penalty keeps the problem quadratic, so it retains a
+closed-form solution: minimizing
+$\frac{1}{2}\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2 + \frac{\tilde{\lambda}}{2}\|\mathbf{w}\|^2$
+gives
+
+$$\mathbf{w}^*_{\tilde{\lambda}} = (\mathbf{X}^\top \mathbf{X} + \tilde{\lambda} \mathbf{I})^{-1} \mathbf{X}^\top \mathbf{y},$$
+
+which is well defined for every $\tilde{\lambda} > 0$ even when
+$\mathbf{X}^\top \mathbf{X}$ is singular---this is the estimator promised in
+exercise 4.5 of :numref:`sec_linear_regression`. (Because the loss $L$ of this
+section *averages* over the $n$ examples while the objective above sums, the two
+conventions are related by $\tilde{\lambda} = n\lambda$.)
+
+To see what this estimator does, substitute the singular value decomposition
+$\mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^\top$
+(:numref:`sec_mdl-svd-low-rank`). A short calculation shows that the ridge
+prediction is
+
+$$\mathbf{X}\mathbf{w}^*_{\tilde{\lambda}} = \sum_j \mathbf{u}_j\, \frac{d_j^2}{d_j^2 + \tilde{\lambda}}\, \mathbf{u}_j^\top \mathbf{y},$$
+
+whereas ordinary least squares gives $\sum_j \mathbf{u}_j \mathbf{u}_j^\top \mathbf{y}$,
+the orthogonal projection from :numref:`sec_linear_regression`. Ridge therefore
+*shrinks* the response along the $j$-th principal direction of the data by the
+factor $d_j^2 / (d_j^2 + \tilde{\lambda})$. Directions with large singular value
+$d_j$---strongly represented in the data---pass through almost untouched, while
+directions with small $d_j$, where a little noise in $\mathbf{y}$ produces a wild
+swing in $\mathbf{w}$, are suppressed hardest. This is the quantitative reason
+shrinkage tames overfitting: it damps precisely the directions that the data
+constrains least, the ones a noise-chasing fit exploits. Summing the
+per-direction factors yields the *effective degrees of freedom*
+
+$$\textrm{df}(\tilde{\lambda}) = \sum_j \frac{d_j^2}{d_j^2 + \tilde{\lambda}},$$
+
+which slides continuously from $\textrm{rank}(\mathbf{X})$ at
+$\tilde{\lambda} = 0$ toward $0$ as $\tilde{\lambda} \to \infty$---the
+"continuous complexity dial" from the start of this section, made literal.
+Let's compute these quantities on the very dataset we just trained on.
+
+```{.python .input #weight-decay-why-shrinkage-helps-the-spectral-view}
+%%tab pytorch
+d = torch.linalg.svdvals(data.X[:data.num_train])
+for lam in (0, 3, 30):
+    shrink = d**2 / (d**2 + data.num_train * lam)
+    print(f'lambda={lam:2d}  df={float(d2l.reduce_sum(shrink)):5.1f}  '
+          f'strongest {float(shrink[0]):.2f}  weakest {float(shrink[-1]):.2f}')
+```
+
+```{.python .input #weight-decay-why-shrinkage-helps-the-spectral-view}
+%%tab tensorflow
+d = tf.linalg.svd(data.X[:data.num_train], compute_uv=False)
+for lam in (0, 3, 30):
+    shrink = d**2 / (d**2 + data.num_train * lam)
+    print(f'lambda={lam:2d}  df={float(d2l.reduce_sum(shrink)):5.1f}  '
+          f'strongest {float(shrink[0]):.2f}  weakest {float(shrink[-1]):.2f}')
+```
+
+```{.python .input #weight-decay-why-shrinkage-helps-the-spectral-view}
+%%tab jax
+d = jnp.linalg.svd(data.X[:data.num_train], compute_uv=False)
+for lam in (0, 3, 30):
+    shrink = d**2 / (d**2 + data.num_train * lam)
+    print(f'lambda={lam:2d}  df={float(d2l.reduce_sum(shrink)):5.1f}  '
+          f'strongest {float(shrink[0]):.2f}  weakest {float(shrink[-1]):.2f}')
+```
+
+```{.python .input #weight-decay-why-shrinkage-helps-the-spectral-view}
+%%tab mxnet
+_, d, _ = np.linalg.svd(data.X[:data.num_train])
+for lam in (0, 3, 30):
+    shrink = d**2 / (d**2 + data.num_train * lam)
+    print(f'lambda={lam:2d}  df={float(d2l.reduce_sum(shrink)):5.1f}  '
+          f'strongest {float(shrink[0]):.2f}  weakest {float(shrink[-1]):.2f}')
+```
+
+Two things stand out. First, even *without* regularization, 20 training
+examples can pin down at most 20 directions of the 200-dimensional weight
+space: $\textrm{rank}(\mathbf{X}) = 20$, so $\textrm{df}(0) = 20$ and the
+remaining 180 directions are entirely unconstrained---no wonder the
+unregularized fit overfits. Second, at the $\lambda = 3$ that rescued the
+validation loss above, every shrinkage factor drops below one, the weakest
+directions are damped most, and $\textrm{df}(\lambda)$ falls well below 20: the
+regularized model behaves like one with far fewer parameters than its nominal
+200, which is exactly the continuous capacity control we advertised.
+
 ## Concise Implementation
 
 Because weight decay is ubiquitous
@@ -625,12 +741,12 @@ Different sets of parameters can have different update behaviors within the same
 
 ## Exercises
 
-1. Experiment with the value of $\lambda$ in the estimation problem in this section. Plot training and validation loss as a function of $\lambda$. What do you observe?
+1. Experiment with the value of $\lambda$ in the estimation problem in this section. Plot training and validation loss as a function of $\lambda$. What do you observe? Hint: expect a U-shaped validation curve, with $\lambda$ (equivalently, $\textrm{df}(\lambda)$) playing the role of the complexity dial---compare :numref:`fig_mdl-bias-variance-u-curve`.
 1. Use a validation set to find the optimal value of $\lambda$. Is it really the optimal value? Does this matter?
 1. What would the update equations look like if instead of $\|\mathbf{w}\|^2$ we used $\sum_i |w_i|$ as our penalty of choice ($\ell_1$ regularization)?
 1. We know that $\|\mathbf{w}\|^2 = \mathbf{w}^\top \mathbf{w}$. Can you find a similar equation for matrices (see the Frobenius norm in :numref:`subsec_lin-algebra-norms`)?
 1. Review the relationship between training error and generalization error. In addition to weight decay, increased training, and the use of a model of suitable complexity, what other ways might help us deal with overfitting?
-1. In Bayesian statistics we use the product of prior and likelihood to arrive at a posterior via $P(w \mid x) \propto P(x \mid w) P(w)$. How can you identify $P(w)$ with regularization?
+1. Make the MAP correspondence of :numref:`fig_wd-map-prior` precise. Starting from the posterior $P(\mathbf{w} \mid \mathbf{X}, \mathbf{y}) \propto P(\mathbf{y} \mid \mathbf{X}, \mathbf{w}) P(\mathbf{w})$ with noise variance $\sigma^2$ and prior $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \tau^2 \mathbf{I})$, show that minimizing the negative log-posterior is equivalent to minimizing the *averaged* loss $L(\mathbf{w}, b) + \frac{\lambda}{2}\|\mathbf{w}\|^2$ of this section with $\lambda = \sigma^2 / (n \tau^2)$. Which prior standard deviation $\tau$ corresponds to the $\lambda = 3$ used in the experiments above?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/98)

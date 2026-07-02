@@ -158,11 +158,14 @@ the gradient of our loss function,
 we ought to define the loss function first.
 Here we use the squared loss function
 in :eqref:`eq_mse`.
-In the implementation, we need to transform the true value `y`
-into the predicted value's shape `y_hat`.
-The result returned by the following method
-will also have the same shape as `y_hat`. 
-We also return the averaged loss value
+Our synthetic data loader already yields labels `y`
+with the same shape as the predictions `y_hat`
+(both are $(B, 1)$ column vectors for a batch of size $B$),
+so we can subtract them elementwise directly;
+the JAX tab reshapes `y` defensively,
+and exercise 5 asks what would go wrong
+if the two shapes did not match.
+We return the averaged loss value
 among all examples in the minibatch.
 
 ```{.python .input #linear-regression-scratch-defining-the-loss-function  n=9}
@@ -191,6 +194,24 @@ def loss(self, params, X, y, state):
     l = (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
     return d2l.reduce_mean(l)
 ```
+
+Before handing this loss to an optimizer, it is worth computing by hand the
+gradient that the optimizer will consume. For a single example, the loss is
+$\ell = \frac{1}{2}(\hat{y} - y)^2$ with $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$,
+and the chain rule gives
+
+$$\frac{\partial \ell}{\partial \mathbf{w}} = (\hat{y} - y)\, \mathbf{x} \qquad \textrm{and} \qquad \frac{\partial \ell}{\partial b} = \hat{y} - y.$$
+
+Differentiating the square produces the error $\hat{y} - y$, which is then
+multiplied by the derivative of $\hat{y}$ with respect to each parameter---
+$\mathbf{x}$ for the weights and $1$ for the bias. In words, *the gradient is
+the error-weighted input*: each weight $w_j$ will be nudged in proportion to
+how wrong the prediction was times how strongly $x_j$ contributed to it, and
+the bias simply soaks up the average error. Averaging these per-example
+gradients over a minibatch recovers exactly the closed-form update we wrote
+down in :eqref:`eq_linreg_batch_update`. This averaged gradient is precisely
+what the backward pass deposits in each parameter's gradient field, so when
+the `SGD` class below reads `param.grad`, you now know what it contains.
 
 ## Defining the Optimization Algorithm
 
@@ -625,9 +646,30 @@ and the third reserved for the final evaluation.
 We elide these details for now and develop model selection, validation, and the
 train/validation/test split in :numref:`sec_generalization_basics`.
 
+So that repeated runs of this notebook produce identical numbers, we first fix
+the seed of the framework's random number generator, which governs both the
+parameter initialization and the shuffling of minibatches.
+
+:begin_tab:`jax`
+JAX needs no such call: its PRNG is *functional*, with no global state. The
+model is initialized from a fixed `PRNGKey` and the synthetic dataset defaults
+to `key=jax.random.PRNGKey(0)`---see exercise 4 of
+:numref:`sec_synthetic-regression-data`.
+:end_tab:
+
 ```{.python .input #linear-regression-scratch-training-seed}
 %%tab pytorch
 torch.manual_seed(1)
+```
+
+```{.python .input #linear-regression-scratch-training-seed}
+%%tab mxnet
+npx.random.seed(1)
+```
+
+```{.python .input #linear-regression-scratch-training-seed}
+%%tab tensorflow
+tf.random.set_seed(1)
 ```
 
 ```{.python .input #linear-regression-scratch-training-3  n=20}
@@ -690,6 +732,9 @@ stochastic gradient descent can often find remarkably good solutions,
 owing partly to the fact that, for deep networks,
 there exist many configurations of the parameters
 that lead to highly accurate prediction.
+Why the solutions that SGD finds among these many candidates
+also *generalize* so well is a deep question,
+taken up in :numref:`sec_generalization_deep`.
 
 
 ## Summary

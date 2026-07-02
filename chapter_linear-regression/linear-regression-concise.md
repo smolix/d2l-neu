@@ -58,16 +58,6 @@ The hand-rolled weight vector $\mathbf{w}$ and bias $b$ are replaced by a single
 and our explicit parameter-update loop is replaced by an *optimizer* object.
 The next three subsections walk through these substitutions one by one, and the
 training loop afterwards stays exactly as it was.
-
-When we implemented linear regression from scratch
-in :numref:`sec_linear_scratch`,
-we defined our model parameters explicitly
-and coded up the calculations to produce output
-using basic linear algebra operations.
-You *should* know how to do this.
-But once your models get more complex,
-and once you have to do this nearly every day,
-you will be glad of the assistance.
 The situation is similar to coding up your own blog from scratch.
 Doing it once or twice is rewarding and instructive,
 but you would be a lousy web developer
@@ -247,6 +237,11 @@ def loss(self, params, X, y, state):
     return d2l.reduce_mean(jnp.square(y_hat - y))
 ```
 
+A small stylistic note: we construct the loss object inside `loss` on every
+call. That is a harmless shortcut here---these objects are stateless and cheap
+to build---but constructing it once in `__init__` is the cleaner pattern for
+losses that carry configuration or state.
+
 ## Defining the Optimization Algorithm
 
 :begin_tab:`mxnet`
@@ -346,9 +341,11 @@ compare the model parameters learned
 by training on finite data
 and the actual parameters
 that generated our dataset.
-To access parameters,
-we access the weights and bias
-of the layer that we need.
+This is where the concise version differs conceptually from the scratch one:
+the parameters no longer hang off our class as `self.w` and `self.b` but live
+*inside* the layer object, so `get_w_b` has to reach through `net` to find
+them (in JAX they live in the training `state` rather than in the model at
+all, which is why the JAX `get_w_b` takes `state` as an argument).
 As in our implementation from scratch,
 note that our estimated parameters
 are close to their true counterparts.
@@ -456,6 +453,7 @@ Dimensionality and storage for networks are automatically inferred
 1. Review the framework documentation to see which loss functions are provided. In particular,
    replace the squared loss with Huber's robust loss function. That is, use the loss function
    $$l(y,y') = \begin{cases}|y-y'| -\frac{\sigma}{2} & \textrm{ if } |y-y'| > \sigma \\ \frac{1}{2 \sigma} (y-y')^2 & \textrm{ otherwise}\end{cases}$$
+   Rerun the outlier demonstration of :numref:`subsec_linear-regression-loss-function` (one corrupted label) with it: does Huber's loss recover the robust estimate, the least-squares one, or something in between? (Compare the penalty curves in :numref:`fig_linreg-loss-menu`.)
 1. How do you access the gradient of the weights of the model?
 1. What is the effect on the solution if you change the learning rate and the number of epochs? Does it keep on improving?
 1. How does the solution change as you vary the amount of data generated?

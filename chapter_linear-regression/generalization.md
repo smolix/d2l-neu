@@ -142,7 +142,7 @@ You can think of the generalization error as
 what you would see  if you applied your model
 to an infinite stream of additional data examples
 drawn from the same underlying data distribution.
-Formally the training error is expressed as a *sum* (with the same notation as :numref:`sec_linear_regression`):
+Formally the training error is expressed as an *average* over the finite training sample (with the same notation as :numref:`sec_linear_regression`):
 
 $$R_\textrm{emp}[\mathbf{X}, \mathbf{y}, f] = \frac{1}{n} \sum_{i=1}^n l(\mathbf{x}^{(i)}, y^{(i)}, f(\mathbf{x}^{(i)})),$$
 :eqlabel:`eq_empirical-risk-min`
@@ -150,7 +150,7 @@ $$R_\textrm{emp}[\mathbf{X}, \mathbf{y}, f] = \frac{1}{n} \sum_{i=1}^n l(\mathbf
 
 while the generalization error (also called the *risk*) is expressed as an integral:
 
-$$R[p, f] = E_{(\mathbf{x}, y) \sim P} [l(\mathbf{x}, y, f(\mathbf{x}))] = \int \int l(\mathbf{x}, y, f(\mathbf{x})) p(\mathbf{x}, y) \;d\mathbf{x} dy.$$
+$$R[P, f] = E_{(\mathbf{x}, y) \sim P} [l(\mathbf{x}, y, f(\mathbf{x}))] = \int \int l(\mathbf{x}, y, f(\mathbf{x})) p(\mathbf{x}, y) \;d\mathbf{x} dy.$$
 :eqlabel:`eq_true-risk`
 
 Problematically, we can never calculate
@@ -168,8 +168,8 @@ that was used for calculating the empirical training error
 but to a test set $\mathbf{X}', \mathbf{y}'$.
 
 
-Crucially, when we evaluate our classifier on the test set,
-we are working with a *fixed* classifier
+Crucially, when we evaluate our model on the test set,
+we are working with a *fixed* model
 (it does not depend on the sample of the test set),
 and thus estimating its error
 is simply the problem of mean estimation.
@@ -193,7 +193,8 @@ the training and generalization errors tend to be close.
 However, when we work with
 more complex models and/or fewer examples,
 we expect the training error to go down
-but the generalization gap to grow.
+but the *generalization gap*---the difference $R - R_\textrm{emp}$
+between the generalization error and the training error---to grow.
 This should not be surprising.
 Imagine a model class so expressive that
 for any dataset of $n$ examples,
@@ -283,7 +284,9 @@ training error to zero), pushing capacity even higher often makes test error
 *fall again* rather than rise---the *double descent* phenomenon
 :cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`. We take up this modern story, and
 why the classical complexity intuition breaks down, in
-:numref:`sec_generalization_deep`.
+:numref:`sec_generalization_deep`; for a quantitative treatment that
+reproduces the double-descent curve from scratch, see
+:numref:`sec_mdl-concentration-generalization`.
 
 ## Underfitting or Overfitting?
 
@@ -296,7 +299,7 @@ If the model is unable to reduce the training error,
 that could mean that our model is too simple
 (i.e., insufficiently expressive)
 to capture the pattern that we are trying to model.
-Moreover, since the *generalization gap* ($R - R_\textrm{emp}$)
+Moreover, since the generalization gap ($R - R_\textrm{emp}$)
 between our training and generalization errors is small,
 we have reason to believe that we could get away with a more complex model.
 This phenomenon is known as *underfitting*.
@@ -354,7 +357,7 @@ can fit the training set perfectly.
 We compare the relationship between polynomial degree (model complexity)
 and both underfitting and overfitting in :numref:`fig_capacity_vs_error`.
 
-![Influence of model complexity on underfitting and overfitting.](../img/capacity-vs-error.svg)
+![Influence of model complexity on underfitting and overfitting: as complexity grows, squared bias falls while variance rises, and the test error they sum to traces a U.](../img/mdl-prob-bias-variance-u-curve.svg)
 :label:`fig_capacity_vs_error`
 
 To see this concretely, let us generate data from a known cubic and fit
@@ -446,6 +449,38 @@ d2l.plot(degrees, [mse[:, 0], mse[:, 1]], xlabel='polynomial degree',
          ylabel='loss', legend=['train', 'test'], yscale='log')
 ```
 
+So far we have *named* bias and variance; this experiment has everything we
+need to *compute* them. Because we know the noiseless target
+$f(x) = 5 + 1.2 x - 3.4 x^2 + 5.6 x^3$, we can redraw the training noise many
+times, refit the degree-$d$ polynomial on each draw, and ask two questions on
+the held-out inputs: how far is the *average* fit from the truth
+(squared bias), and how much does the fit *fluctuate* across draws (variance)?
+
+```{.python .input #generalization-bias-variance-decomposition}
+f = poly @ true_w                        # noiseless target on all inputs
+bias2, var = [], []
+for d in range(1, 15):
+    preds = []
+    for _ in range(200):                 # 200 fresh draws of training noise
+        y_tr = f[:n_train] + np.random.normal(scale=0.1, size=n_train)
+        w, *_ = np.linalg.lstsq(poly[:n_train, :d+1], y_tr, rcond=None)
+        preds.append(poly[n_train:, :d+1] @ w)
+    preds = np.stack(preds)
+    bias2.append(((preds.mean(0) - f[n_train:]) ** 2).mean())
+    var.append(preds.var(0).mean())
+d2l.plot(list(range(1, 15)), [bias2, var, np.array(bias2) + np.array(var)],
+         xlabel='polynomial degree', ylabel='error', yscale='log',
+         legend=['bias^2', 'variance', 'bias^2 + variance'])
+```
+
+The U-curve now *visibly decomposes*. Squared bias dominates for degrees below
+3 and collapses to essentially zero the moment the model class contains the
+truth; variance is tiny at first but grows relentlessly with surplus capacity,
+exploding as the polynomial gains the freedom to chase each draw's noise. Their
+sum---which, up to the irreducible noise floor $\sigma^2 = 0.01$, is the
+expected test error---is lowest exactly where the two failure modes trade off,
+at degree 3. This is a numerical instance of the decomposition proved in
+:numref:`sec_mdl-statistics`.
 
 ### Dataset Size
 
@@ -544,7 +579,23 @@ each time training on $K-1$ subsets and validating
 on a different subset (the one not used for training in that round).
 Finally, the training and validation errors are estimated
 by averaging over the results from the $K$ experiments.
+The procedure is illustrated in :numref:`fig_kfold_cv`.
 
+![In $K$-fold cross-validation, each of the $K$ folds serves once as the validation set (orange) while the model trains on the remaining folds (blue); the final estimate averages the $K$ validation scores.](../img/mdl-mlp-kfold.svg)
+:label:`fig_kfold_cv`
+
+How should we choose $K$? The choice trades off bias, variance, and compute.
+Each fold's model is trained on only $(K-1)/K$ of the data, so it is slightly
+*worse* than the model we will finally train on everything; the cross-validation
+estimate is therefore *pessimistically biased*, and more so for small $K$.
+Taking $K = n$ (*leave-one-out* cross-validation) all but eliminates this bias,
+but at a steep price: it requires $n$ model fits, and the $n$ training sets
+are nearly identical, so the fold errors are highly correlated and their
+average retains high variance.
+The standard compromise, $K = 5$ or $K = 10$, keeps the bias modest, averages
+over reasonably distinct training sets, and costs only $5$--$10$ fits---which is
+why these values dominate practice.
+(Exercises 4 and 5 ask you to reason through the cost and the bias.)
 
 
 ## Summary

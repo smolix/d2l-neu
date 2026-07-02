@@ -153,8 +153,12 @@ class KaggleHouse(d2l.DataModule):
 ```
 
 The training dataset includes 1460 examples,
-80 features, and one label, while the validation data
+80 features, and one label, while the Kaggle *test* set
 contains 1459 examples and 80 features.
+(We store the test features in the `val` attribute
+because the data module treats any unlabeled held-out split uniformly;
+do not confuse it with the validation folds
+that we will carve out of the training data for cross-validation below.)
 
 ```{.python .input #kaggle-house-price-accessing-and-reading-the-dataset-2  n=31}
 data = KaggleHouse(batch_size=64)
@@ -508,18 +512,26 @@ we might
 calculate the average predictions 
 on the test set
 by all the $K$ models.
+Since the models predict *log*-prices and the competition scores
+root-mean-squared *log* error,
+we average in log space before exponentiating:
+the mean of the log-predictions is the ensemble
+consistent with the metric
+(in price space it amounts to a geometric mean).
 Saving the predictions in a csv file
 will simplify uploading the results to Kaggle.
 The following code will generate a file called `submission.csv`.
 
 ```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab pytorch
+for model in models:
+    model.eval()  # already the case after Trainer.fit; explicit is safer
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
-# Each model predicts a log-price; exponentiate back to a price, then average
-# across the K folds. (Averaging in log space, then exponentiating, makes this
-# a geometric mean of the per-fold price predictions.)
-ensemble_preds = d2l.reduce_mean(d2l.exp(d2l.concat(preds, 1)), 1)
+# Each model predicts a log-price; average across the K folds in log space,
+# then exponentiate back to a price. This geometric mean of the per-fold
+# price predictions is the ensemble consistent with the RMSLE metric.
+ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
 submission.to_csv('submission.csv', index=False)
@@ -529,8 +541,9 @@ submission.to_csv('submission.csv', index=False)
 %%tab tensorflow
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
-# Taking exponentiation of predictions in the logarithm scale
-ensemble_preds = d2l.reduce_mean(d2l.exp(d2l.concat(preds, 1)), 1)
+# Average the K log-price predictions in log space, then exponentiate:
+# the RMSLE-consistent (geometric-mean) ensemble
+ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
 submission.to_csv('submission.csv', index=False)
@@ -541,8 +554,9 @@ submission.to_csv('submission.csv', index=False)
 preds = [model.apply({'params': params},
          d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model, params in models]
-# Taking exponentiation of predictions in the logarithm scale
-ensemble_preds = d2l.reduce_mean(d2l.exp(d2l.concat(preds, 1)), 1)
+# Average the K log-price predictions in log space, then exponentiate:
+# the RMSLE-consistent (geometric-mean) ensemble
+ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
 submission.to_csv('submission.csv', index=False)
@@ -552,8 +566,9 @@ submission.to_csv('submission.csv', index=False)
 %%tab mxnet
 preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
          for model in models]
-# Taking exponentiation of predictions in the logarithm scale
-ensemble_preds = d2l.reduce_mean(d2l.exp(d2l.concat(preds, 1)), 1)
+# Average the K log-price predictions in log space, then exponentiate:
+# the RMSLE-consistent (geometric-mean) ensemble
+ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
 submission.to_csv('submission.csv', index=False)

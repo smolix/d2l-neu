@@ -378,8 +378,8 @@ covered in this book.
 In each *epoch*, we iterate through 
 the entire training dataset, 
 passing once through every example
-(assuming that the number of examples 
-is divisible by the batch size). 
+(up to a final partial batch when the number of examples 
+is not divisible by the batch size). 
 In each *iteration*, we grab a minibatch of training examples,
 and compute its loss through the model's `training_step` method. 
 Then we compute the gradients with respect to each parameter. 
@@ -392,11 +392,11 @@ In summary, we will execute the following loop:
     * Compute gradient $\mathbf{g} \leftarrow \partial_{(\mathbf{w},b)} \frac{1}{|\mathcal{B}|} \sum_{i \in \mathcal{B}} l(\mathbf{x}^{(i)}, y^{(i)}, \mathbf{w}, b)$
     * Update parameters $(\mathbf{w}, b) \leftarrow (\mathbf{w}, b) - \eta \mathbf{g}$
  
-Recall that the synthetic regression dataset 
+Recall that the synthetic regression data module 
 that we generated in :numref:`sec_synthetic-regression-data` 
-does not provide a validation dataset. 
-In most cases, however, 
-we will want a validation dataset 
+holds out 1000 validation examples 
+alongside the training data. 
+We will almost always want such a validation dataset 
 to measure our model quality. 
 Here we pass the validation dataloader 
 once in each epoch to measure the model performance.

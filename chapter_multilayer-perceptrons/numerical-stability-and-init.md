@@ -374,18 +374,29 @@ turns out to work well in practice.
 
 The Xavier analysis above assumed a layer *without nonlinearities*.
 The argument breaks in a specific, fixable way once we insert a ReLU.
-Recall that $\textrm{ReLU}(z) = \max(0, z)$ zeroes every negative pre-activation.
+First, note what the variance computation above actually consumed:
+because the weights have zero mean, $E[o_i] = 0$ no matter what the inputs are,
+and $\textrm{Var}[o_i] = n_\textrm{in} \sigma^2 E[x_j^2]$ depends on the inputs
+only through their *second moment* $E[x_j^2]$.
+So the quantity we must track through the nonlinearity is the second moment.
+Recall that $\textrm{ReLU}(z) = \max(0, z)$ zeroes every negative pre-activation
+and passes every positive one through unchanged.
 If the pre-activations are symmetric about zero,
 as they are when the weights have zero mean,
-then ReLU discards, in expectation, *half* of them,
-and for the surviving half it passes the value through unchanged.
-Its effect on the variance of a zero-mean, symmetric signal
-is therefore to **halve** it: $\textrm{Var}[\textrm{ReLU}(z)] = \tfrac{1}{2}\textrm{Var}[z]$.
+then $\textrm{ReLU}(z)^2$ equals $z^2$ on the positive half of the distribution
+and equals $0$ on the negative half,
+so the rectifier **halves the second moment**:
+$E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$.
+(Its effect on the *variance* is messier, because $\textrm{ReLU}(z)$
+is no longer zero-mean; see exercise 3.)
 
-Propagating this through the same forward computation as before,
+Propagating this halved second moment through
+the same forward computation as before,
 the variance of the layer output is now
 $\textrm{Var}[o_i] = \tfrac{1}{2} n_\textrm{in} \sigma^2 \gamma^2$,
-with the extra factor of $\tfrac{1}{2}$ coming from the rectifier.
+where $\gamma^2$ now denotes the variance of the pre-activations
+feeding the ReLU, and
+the extra factor of $\tfrac{1}{2}$ comes from the rectifier.
 To keep the variance fixed across layers
 we must compensate by *doubling* the weight variance:
 
@@ -398,7 +409,8 @@ Because Xavier and He differ only by this factor of two
 and by which fan size they key on, they are easy to confuse;
 the rule of thumb is **Xavier for $\tanh$ and sigmoid, He for ReLU**.
 Most frameworks ship both as named initializers
-(e.g., PyTorch's `kaiming_normal_`, in fact the default for `nn.Linear`),
+(e.g., PyTorch's `kaiming_normal_` and `kaiming_uniform_` —
+a variant of the latter is the default for `nn.Linear`),
 and we return to invoking them through the parameter-initialization API
 in :numref:`chap_computation`.
 
@@ -438,14 +450,14 @@ Vanishing and exploding gradients are common issues in deep networks. Great care
 Initialization heuristics are needed to ensure that the initial gradients are neither too large nor too small.
 Random initialization is key to ensuring that symmetry is broken before optimization.
 Xavier initialization keeps the variance of activations and gradients roughly constant across layers by scaling weights according to the number of inputs and outputs.
-For ReLU networks, He initialization scales the weight variance to $2/n_\textrm{in}$ to compensate for the rectifier halving the activation variance.
+For ReLU networks, He initialization scales the weight variance to $2/n_\textrm{in}$ to compensate for the rectifier halving the activations' second moment.
 ReLU activation functions mitigate the vanishing gradient problem. This can accelerate convergence.
 
 ## Exercises
 
 1. Can you design other cases where a neural network might exhibit symmetry that needs breaking, besides the permutation symmetry in an MLP's layers?
 1. Can we initialize all weight parameters in linear regression or in softmax regression to the same value?
-1. The Xavier derivation assumed a linear layer. Repeat it for a layer followed by a ReLU: show that, for zero-mean symmetric pre-activations, $\textrm{Var}[\textrm{ReLU}(z)] = \tfrac{1}{2}\textrm{Var}[z]$, and conclude that preserving forward variance requires $\sigma^2 = 2/n_\textrm{in}$ (He initialization). Where does the factor of two come from intuitively?
+1. The Xavier derivation assumed a linear layer. Repeat it for a layer followed by a ReLU: show that, for zero-mean symmetric pre-activations $z$, $E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$, and conclude that preserving forward variance requires $\sigma^2 = 2/n_\textrm{in}$ (He initialization). Where does the factor of two come from intuitively? Why is the analogous statement for variances false? For $z \sim \mathcal{N}(0, \tau^2)$, compute $\textrm{Var}[\textrm{ReLU}(z)]$ explicitly and show that it equals $\left(\tfrac{1}{2} - \tfrac{1}{2\pi}\right)\tau^2$, not $\tfrac{1}{2}\tau^2$.
 1. Initialize a deep stack of linear layers (say 50 layers, width 100) three ways, with weights $\sim\mathcal{N}(0,1)$, Xavier, and He, feed in a unit-variance input, and plot $\textrm{Var}[\mathbf{h}^{(\ell)}]$ as a function of depth $\ell$. Which scheme keeps the variance flat? Now insert a ReLU after each layer and repeat. Do your observations match the theory?
 1. Look up analytic bounds on the eigenvalues of the product of two matrices. What does this tell you about ensuring that gradients are well conditioned?
 1. If we know that some terms diverge, can we fix this after the fact? Look at the paper on layerwise adaptive rate scaling  for inspiration :cite:`You.Gitman.Ginsburg.2017`.

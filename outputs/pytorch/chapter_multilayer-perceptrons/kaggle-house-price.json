@@ -25,6 +25,16 @@
         {
           "type": "stream",
           "name": "stdout",
+          "text": "Downloading ../data/kaggle_house_pred_train.csv from http://d2l-data.s3-accelerate.amazonaws.com/kaggle_house_pred_train.csv...\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Downloading ../data/kaggle_house_pred_test.csv from http://d2l-data.s3-accelerate.amazonaws.com/kaggle_house_pred_test.csv...\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
           "text": "(1460, 81)\n(1459, 80)\n"
         }
       ]
@@ -77,14 +87,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "average validation log mse = 0.032460025548934936\n"
+          "text": "average validation log mse = 0.03126147150993347\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-linear-1.svg",
-          "bytes": 31698,
-          "sha256": "sha256:2847aff57e6954590778981cdba71644727f9b426e301009dd6c04e5af76e102"
+          "bytes": 31856,
+          "sha256": "sha256:6f141c880ef50e1a6e1031b60410b517a02dfa0f93244d4e15064f986cc7cd15"
         }
       ]
     },
@@ -100,19 +110,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "average validation log mse = 0.028130745626986024\n"
+          "text": "average validation log mse = 0.023798075206577778\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-mlp-select-1.svg",
-          "bytes": 33854,
-          "sha256": "sha256:ebc952d64c5ae91b9a04287b89c6bdc4bffae0eb7206a3b3c03d68a3c92479bf"
+          "bytes": 32709,
+          "sha256": "sha256:ec0e820486741167ab5521fdca0690fa80122c2e7ebca39b3d227b0fb8f46d8e"
         }
       ]
     },
     "kaggle-house-price-submitting-predictions-on-kaggle": {
-      "code_fingerprint": "sha256:87e67ac2d95741f7ade79c71eb7992af74ae86c024999b40f7b3d0ef9646f18e",
+      "code_fingerprint": "sha256:d3947ea7a3b1cc2c9a9a23516211bbff34a2d611a645350c771901bd1e8d7e2d",
       "kind": "text",
       "outputs": []
     }

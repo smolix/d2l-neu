@@ -240,8 +240,14 @@ When $k=1$, this algorithm is called $1$-nearest neighbors,
 and the algorithm will always achieve a training error of zero.
 That however, does not mean that the algorithm will not generalize.
 In fact, it turns out that under some mild conditions,
-the 1-nearest neighbor algorithm is consistent
-(eventually converging to the optimal predictor).
+the error of the $1$-nearest neighbor rule
+comes within a factor of two of the optimal (Bayes) error
+as the dataset grows :cite:`Cover.Hart.1967`,
+and it is optimal in the noiseless case
+where the Bayes error is zero.
+(Full consistency — convergence to the optimal predictor —
+requires $k$-nearest neighbors with $k \to \infty$
+while $k/n \to 0$.)
 
 
 Note that $1$-nearest neighbor requires that we specify
@@ -250,7 +256,7 @@ that we specify some vector-valued basis function $\phi(\mathbf{x})$
 for featurizing our data.
 For any choice of the distance metric,
 we will achieve zero training error
-and eventually reach an optimal predictor,
+and eventually approach this near-optimal limiting behavior,
 but different distance metrics $d$
 encode different inductive biases
 and with a finite amount of available data

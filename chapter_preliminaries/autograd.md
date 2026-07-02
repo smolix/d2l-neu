@@ -399,7 +399,7 @@ x.grad  # Equals the gradient of y = sum(x * x)
 %%tab pytorch
 x.grad.zero_()
 y = x * x
-y.backward(gradient=torch.ones(len(y)))  # Faster: y.sum().backward()
+y.backward(gradient=torch.ones(len(y)))  # Equivalently: y.sum().backward()
 x.grad
 ```
 

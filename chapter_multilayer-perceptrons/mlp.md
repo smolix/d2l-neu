@@ -324,9 +324,11 @@ continuous function on a bounded domain to arbitrary accuracy. This was proven
 in several settings: :citet:`Cybenko.1989` did it for sigmoid activations,
 :citet:`micchelli1984interpolation` for radial basis function networks (single
 hidden layer, in the context of reproducing kernel Hilbert spaces), and the
-result was soon generalized to essentially *any* sensible activation, that is,
-any bounded, non-constant function (Hornik, 1991). The conclusion does not hinge
-on which of ReLU, sigmoid, or tanh we pick.
+result was soon generalized: :citet:`Hornik.1991` covered every bounded,
+non-constant activation, and :citet:`Leshno.Lin.Pinkus.ea.1993` extended it to
+any activation that is not a polynomial — a form that also covers the unbounded
+ReLU. The conclusion therefore does not hinge on which of ReLU, sigmoid, or tanh
+we pick.
 
 It is tempting to read this as "one hidden layer is all you ever need," but the
 theorem is more modest than it sounds, and three caveats matter
@@ -346,7 +348,7 @@ fit better, for instance kernel methods can solve regression problems *exactly*,
 even in infinite-dimensional spaces :cite:`Kimeldorf.Wahba.1971,Scholkopf.Herbrich.Smola.2001`.
 And crucially, where a shallow network would need exponential width, a *deep* one
 can often represent the same function far more compactly, trading width for depth
-:cite:`Simonyan.Zisserman.2014`. This is one reason practitioners reach for depth
+:cite:`Montufar.Pascanu.Cho.ea.2014,Telgarsky.2016`. This is one reason practitioners reach for depth
 rather than sheer width. We will touch upon more rigorous arguments in subsequent
 chapters.
 
@@ -415,9 +417,12 @@ Note that the ReLU function is not differentiable
 when the input takes value precisely equal to 0.
 In these cases, we default to the left-hand-side
 derivative and say that the derivative is 0 when the input is 0.
-We can get away with this because
-the input may never actually be zero (mathematicians would
-say that it is nondifferentiable on a set of measure zero).
+We can get away with this because,
+although exact zeros do occur in floating-point arithmetic
+(zero-initialized biases, or a ReLU feeding a ReLU),
+the choice of subgradient at that single point does not matter
+(mathematicians would
+say that the function is nondifferentiable only on a set of measure zero).
 There is an old adage that if subtle boundary conditions matter,
 we are probably doing (*real*) mathematics, not engineering.
 That conventional wisdom may apply here, or at least, the fact that

@@ -1060,10 +1060,13 @@ $$\mathbf{v}^\top \boldsymbol{\Sigma} \mathbf{v} = E_{\mathbf{x} \sim P}\left[\m
 As such, $\boldsymbol{\Sigma}$ allows us to compute the variance
 for any linear function of $\mathbf{x}$
 by a simple matrix multiplication.
-The off-diagonal elements tell us how correlated the coordinates are:
-a value of 0 means no correlation,
-while a larger positive value
-means that they are more strongly correlated.
+The off-diagonal elements tell us how the coordinates vary together:
+a value of 0 means no correlation.
+Beware, though, that the magnitude of a covariance is scale-dependent:
+it changes whenever we change the units in which a coordinate is measured.
+The scale-free measure of the strength of association is the *correlation*
+$\rho_{ij} = \Sigma_{ij}/(\sigma_i \sigma_j)$,
+which always lies in $[-1, 1]$.
 
 
 

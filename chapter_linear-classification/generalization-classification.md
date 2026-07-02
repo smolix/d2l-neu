@@ -142,8 +142,10 @@ should approach the true error $\epsilon(f)$
 at a rate of $\mathcal{O}(1/\sqrt{n})$.
 Thus, to estimate our test error twice as precisely,
 we must collect four times as large a test set.
-To reduce our test error by a factor of one hundred,
+To shrink the uncertainty in our estimate a hundredfold,
 we must collect ten thousand times as large a test set.
+(Note that more test data never reduces the error itself,
+only our uncertainty about its value.)
 In general, such a rate of $\mathcal{O}(1/\sqrt{n})$
 is often the best we can hope for in statistics.
 

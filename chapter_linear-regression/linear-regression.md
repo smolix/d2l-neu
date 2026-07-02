@@ -229,7 +229,7 @@ due to its quadratic form
 (this quadraticity can be a double-edged sword; while it encourages the model to avoid large errors
 it can also lead to excessive sensitivity to anomalous data).
 To measure the quality of a model on the entire dataset of $n$ examples,
-we simply average (or equivalently, sum)
+we simply average (or, up to a rescaling of the learning rate, sum)
 the losses on the training set:
 
 $$L(\mathbf{w}, b) =\frac{1}{n}\sum_{i=1}^n l^{(i)}(\mathbf{w}, b) =\frac{1}{n} \sum_{i=1}^n \frac{1}{2}\left(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\right)^2.$$
@@ -783,7 +783,7 @@ and ultimately, evaluation on previously unseen data.
     1. What is the expected value of the design matrix $\mathbf{X}^\top \mathbf{X}$ in this case?
     1. What happens with stochastic gradient descent when $\mathbf{X}^\top \mathbf{X}$ does not have full rank?
     1. The standard remedy for a (near-)singular $\mathbf{X}^\top \mathbf{X}$ is to add $\lambda \mathbf{I}$ before inverting. Relate this to the $\ell_2$ penalty introduced in :numref:`sec_weight_decay`, and show that the resulting estimator $\mathbf{w}^* = (\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$ is well defined for every $\lambda>0$.
-1. Assume that the noise model governing the additive noise $\epsilon$ is the exponential distribution. That is, $p(\epsilon) = \frac{1}{2} \exp(-|\epsilon|)$.
+1. Assume that the noise model governing the additive noise $\epsilon$ is the Laplace distribution (see :numref:`sec_mdl-distributions`). That is, $p(\epsilon) = \frac{1}{2} \exp(-|\epsilon|)$.
     1. Write out the negative log-likelihood of the data under the model $-\log P(\mathbf y \mid \mathbf X)$.
     1. Can you find a closed form solution?
     1. Suggest a minibatch stochastic gradient descent algorithm to solve this problem. What could possibly go wrong (hint: what happens near the stationary point as we keep on updating the parameters)? Can you fix this?

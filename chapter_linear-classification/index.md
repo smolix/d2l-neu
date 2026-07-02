@@ -42,6 +42,6 @@ The classical machine-learning texts listed in the previous chapter (**Linear Ne
 
 **Books**
 
-- [Dataset Shift in Machine Learning — Quiñonero-Candela, Sugiyama, Schwaighofer & Lawrence (eds.), MIT Press](https://mitpress.mit.edu/9780262545877/dataset-shift-in-machine-learning/) — the standard reference on the distribution-shift problems (covariate, label, and concept shift) discussed in the final section (open-access edition; page bot-blocked, noted).
-- [Machine Learning in Non-Stationary Environments: Introduction to Covariate Shift Adaptation — Sugiyama & Kawanabe, MIT Press](https://mitpress.mit.edu/9780262017091/machine-learning-in-non-stationary-environments/) — a focused, in-depth treatment of covariate shift and importance-weighted adaptation (paywalled, noted).
+- [Dataset Shift in Machine Learning — Quiñonero-Candela, Sugiyama, Schwaighofer & Lawrence (eds.), MIT Press](https://mitpress.mit.edu/9780262545877/dataset-shift-in-machine-learning/) — the standard reference on the distribution-shift problems (covariate, label, and concept shift) discussed in the final section (an open-access edition is available from MIT Press).
+- [Machine Learning in Non-Stationary Environments: Introduction to Covariate Shift Adaptation — Sugiyama & Kawanabe, MIT Press](https://mitpress.mit.edu/9780262017091/machine-learning-in-non-stationary-environments/) — a focused, in-depth treatment of covariate shift and importance-weighted adaptation (print edition; not open access).
 

@@ -520,8 +520,10 @@ $$\mathbf{C} p(\mathbf{y}) = \mu(\hat{\mathbf{y}}),$$
 
 because as an estimate $\sum_{j=1}^k c_{ij} p(y_j) = \mu(\hat{y}_i)$ holds for all $1 \leq i \leq k$,
 where $p(y_j)$ is the $j^\textrm{th}$ element of the $k$-dimensional label distribution vector $p(\mathbf{y})$.
-If our classifier is sufficiently accurate to begin with,
-then the confusion matrix $\mathbf{C}$ will be invertible,
+If our classifier is accurate enough that $\mathbf{C}$
+is diagonally dominant (each class is predicted correctly
+more often than it is mistaken for any collection of others),
+then $\mathbf{C}$ will be invertible,
 and we get a solution $p(\mathbf{y}) = \mathbf{C}^{-1} \mu(\hat{\mathbf{y}})$.
 This confusion-matrix estimator goes back to :citet:`Saerens.Latinne.Decaestecker.2002`;
 :citet:`Lipton.Wang.Smola.2018` showed that, treating the trained classifier as a

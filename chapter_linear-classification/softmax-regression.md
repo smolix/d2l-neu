@@ -175,17 +175,19 @@ when it comes to buying a mansion!
 As such, we need a mechanism to "squish" the outputs.
 
 There are many ways we might accomplish this goal.
-For instance, we could assume that the outputs
-$\mathbf{o}$ are corrupted versions of $\mathbf{y}$,
-where the corruption occurs by means of adding noise $\boldsymbol{\epsilon}$
-drawn from a normal distribution.
-In other words, $\mathbf{y} = \mathbf{o} + \boldsymbol{\epsilon}$,
-where $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$.
-This is the so-called [probit model](https://en.wikipedia.org/wiki/Probit_model),
+For instance, we could posit that the observed label
+arises from a *noisy argmax*:
+perturb each score by independent noise $\epsilon_i$
+and report the class with the largest perturbed score,
+$y = \operatorname*{argmax}_i \, (o_i + \epsilon_i)$.
+When the noise is Gaussian, $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$,
+this is the (multinomial) [probit model](https://en.wikipedia.org/wiki/Probit_model),
 first introduced by :citet:`Fechner.1860`.
 While appealing, it does not work quite as well
 nor lead to a particularly nice optimization problem,
 when compared to the softmax.
+(Remarkably, drawing the noise from a Gumbel distribution instead
+yields *exactly* the softmax probabilities that we are about to derive.)
 
 Another way to accomplish this goal
 (and to ensure nonnegativity) is to use

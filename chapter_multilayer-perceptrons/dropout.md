@@ -81,6 +81,10 @@ so the gradient update nudges the shared weights
 in a direction that helps that particular thinned network.
 Running the full network at test time then approximates
 *averaging* the predictions of all $2^n$ subnetworks.
+(The weight-scaling rule that justifies this is exact only for a
+single linear layer; in deeper networks the test-time forward pass
+computes something closer to a *geometric* mean
+of the subnetworks' predictions.)
 From this angle dropout is cheap model averaging,
 which is exactly why we expect it to reduce variance:
 ensembles average away the idiosyncrasies of their members.

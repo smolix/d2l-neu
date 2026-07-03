@@ -37,6 +37,16 @@ book:
             href: /pdf/Dive-into-Deep-Learning-tensorflow.pdf
           - text: MXNet
             href: /pdf/Dive-into-Deep-Learning-mxnet.pdf
+      - text: Notebooks
+        menu:
+          - text: PyTorch
+            href: /notebooks/d2l-pytorch.zip
+          - text: JAX
+            href: /notebooks/d2l-jax.zip
+          - text: TensorFlow
+            href: /notebooks/d2l-tensorflow.zip
+          - text: MXNet
+            href: /notebooks/d2l-mxnet.zip
   sidebar:
     logo: static/logo-with-text.png
   chapters:

@@ -798,6 +798,22 @@ slides-%: _slides/%/.built
 # CPU-only after the slide refactor — parallel-safe across frameworks.
 slides: $(addprefix slides-,$(FRAMEWORKS))
 
+# ── Downloadable notebook zips (per framework) ────────────
+# A first-class build output, linked from the navbar "Notebooks" menu: one
+# d2l-<fw>.zip of that framework's executed notebooks. CPU-only / GPU-free, like
+# PDFs and slides — the *code* comes from the generated _notebooks/ tree and the
+# *outputs* are injected from the committed store (tools/build_notebook_zips.py),
+# so it never needs a framework venv. Deterministic (fixed zip timestamps) so an
+# unchanged build re-produces byte-identical zips and the R2 sync skips them.
+NOTEBOOK_ZIP_DIR := _book/notebooks
+.PHONY: notebook-zips
+notebook-zips: notebooks
+	@mkdir -p $(LOGDIR) $(NOTEBOOK_ZIP_DIR)
+	@echo "=== Building per-framework notebook zips → $(NOTEBOOK_ZIP_DIR)/ ==="
+	python3 tools/build_notebook_zips.py --out-dir $(NOTEBOOK_ZIP_DIR) \
+		$(if $(FRAMEWORKS_FILTER),--frameworks $(FRAMEWORKS_FILTER)) \
+		2>&1 | tee $(LOGDIR)/notebook-zips-$(TS).log
+
 # ── Aggregate targets ─────────────────────────────────────
 
 # Full pipeline: generate → execute → rebuild with outputs
@@ -828,6 +844,9 @@ rebuild-book-artifacts:
 	@# single-project render anyway (V8 abort rc=133). See detect_resources.py.
 	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) slides
 	$(MAKE) html
+	@# Notebook download bundles — after html so quarto's render can't wipe
+	@# _book/notebooks/; CPU-only, injects outputs from the committed store.
+	$(MAKE) notebook-zips
 	@# Clear stale render-scratch PDFs so the parallel PDF render can't
 	@# skip-then-read a corrupt one (Quarto convert_svg, main.lua:7348). This
 	@# makes `make all` self-sufficient without a preceding `make clean`.

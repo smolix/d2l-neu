@@ -29,6 +29,7 @@ FRAMEWORKS = ['pytorch', 'tensorflow', 'jax', 'mxnet']
 _IMG_EXTS = ('.svg', '.png', '.jpg', '.jpeg', '.gif')
 _LFS_SIG = b'version https://git-lfs.github.com/spec/v1'
 MIN_PDF_BYTES = 1_000_000   # a real per-framework book PDF is tens of MB
+MIN_ZIP_BYTES = 500_000     # a real per-framework notebook zip is several MB
 
 
 def pointer_images(root: Path):
@@ -109,6 +110,28 @@ def main():
                               f'but NOT rendered (e.g. {ex})')
             else:
                 print(f'  ✓ {fw}: {len(want)} slide decks rendered')
+
+    # 5. Notebook download zips (only assert if the tree was built at all)
+    if (book / 'notebooks').is_dir():
+        import zipfile
+        for fw in FRAMEWORKS:
+            z = book / 'notebooks' / f'd2l-{fw}.zip'
+            if not z.is_file():
+                errors.append(f'missing notebook zip {z}')
+            elif z.stat().st_size < MIN_ZIP_BYTES:
+                errors.append(f'notebook zip {z} is only {z.stat().st_size} bytes '
+                              f'(< {MIN_ZIP_BYTES}) — likely empty/truncated')
+            elif not zipfile.is_zipfile(z):
+                errors.append(f'notebook zip {z} is not a valid zip archive')
+            else:
+                n = sum(1 for e in zipfile.ZipFile(z).namelist()
+                        if e.endswith('.ipynb'))
+                if n == 0:
+                    errors.append(f'notebook zip {z} contains no .ipynb files')
+                else:
+                    print(f'  ✓ {fw}: notebook zip ({n} notebooks)')
+    else:
+        print(f'  note: {book}/notebooks absent — skipping notebook-zip check')
 
     if errors:
         print('\nFAIL (check-all-artifacts):', file=sys.stderr)

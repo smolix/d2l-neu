@@ -571,7 +571,7 @@ request. Those run through the aggregate targets:
 | `make all` | `lib` → `notebooks` → `run-all-notebooks` → `rebuild-book-artifacts`. The full pipeline; ~3 h on the 4×4090 box. | **Yes** (all 4 fw) |
 | `make all-quick` | `lib` → `notebooks` → `rebuild-book-artifacts`. Regenerate + render from the **committed** `outputs/`; no execution. | No |
 | `make rebuild-book-artifacts` | `slides` → `html` → `notebook-zips` → `-j4 pdfs` → `check-all-artifacts`. Renders everything from `outputs/`. | No |
-| `make notebook-zips` | One `d2l-<fw>.zip` of that framework's **executed** notebooks per framework → `_book/notebooks/`. Code from generated `_notebooks/`, outputs injected from the committed store (`tools/build_notebook_zips.py`); CPU-only, deterministic. Linked from the navbar **Notebooks** menu (`/notebooks/d2l-<fw>.zip`). | No |
+| `make notebook-zips` | One `d2l-<fw>.zip` of that framework's **executed** notebooks per framework → `_book/notebooks/` (~23 MB each). Code from generated `_notebooks/`, outputs injected from the committed store, plus the referenced `../img/` figure subset bundled under `d2l-<fw>/img/` so the download is self-contained (`tools/build_notebook_zips.py`); CPU-only, deterministic. Linked from the navbar **Notebooks** menu (`/notebooks/d2l-<fw>.zip`). | No |
 | `make check-all-artifacts` | Asserts `_book/index.html`, `_slides/index.html`, `_book/slides/index.html` exist, per-fw PDFs, slide coverage, and per-fw notebook zips. | No |
 | `make clean` | Wipe build products (`_book _pdf _notebooks _slides`, generated `.qmd`, `d2l/.built`, stamps). **Keeps** `./data/`, `logs/`, `.upload-manifest-*.txt`. | — |
 | `make veryclean` | `clean` **plus** wipe `./data/` (datasets), `logs/`, upload manifests — forces dataset re-download. | — |

@@ -11,12 +11,14 @@ seam `inject_outputs.py` uses for html/slides/pdf.
 
 For each framework it writes:
 
-    <out-dir>/d2l-<fw>.zip        →  d2l-<fw>/<chapter>/<stem>.ipynb  (+ README.md)
+    <out-dir>/d2l-<fw>.zip        →  d2l-<fw>/<chapter>/<stem>.ipynb
+                                     d2l-<fw>/img/…                     (+ README.md)
 
-Only computed cell outputs (plots, printed values) are embedded — those live in
-the notebook. Illustrative figures included via `![](../img/…svg)` are NOT
-bundled (img/ is ~118 MB); they render on the website. Notebooks import the
-`d2l` package (`pip install d2l`), exactly like the d2l.ai downloads.
+Computed cell outputs (plots, printed values) live inline in the notebook; the
+illustrative figures a notebook pulls in via `![](../img/…)` are bundled under
+`d2l-<fw>/img/` — only the subset that framework actually references, not all of
+img/ (~118 MB) — so `../img/…` resolves and the download is self-contained.
+Notebooks import the `d2l` package (`pip install d2l`), like the d2l.ai downloads.
 
 The zip is a deterministic function of the notebooks + store: fixed entry
 timestamps and sorted order, so an unchanged build re-produces a byte-identical
@@ -30,6 +32,7 @@ Usage:
 
 import argparse
 import json
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -43,11 +46,17 @@ FRAMEWORKS = ['pytorch', 'tensorflow', 'jax', 'mxnet']
 # byte-identical → the content-hash R2 sync doesn't re-upload it.
 _ZIP_DATE = (1980, 1, 1, 0, 0, 0)
 
+# Illustrative figures a notebook pulls in with `![](../img/…)`. A notebook lives
+# at d2l-<fw>/<chapter>/<stem>.ipynb, so `../img/` resolves to d2l-<fw>/img/ —
+# bundling the referenced files there makes the download self-contained.
+_IMGREF = re.compile(r'\.\./img/([\w./-]+\.(?:svg|png|jpg|jpeg|gif))')
+
 _README = """\
 # Dive into Deep Learning — {fw} notebooks
 
 These are the executed {fw} notebooks from the book, with computed cell outputs
-(plots, printed values) included.
+(plots, printed values) included. The `img/` folder holds the illustrative
+figures the notebooks reference, so the download is self-contained.
 
 ## Running them
 
@@ -56,9 +65,6 @@ These are the executed {fw} notebooks from the book, with computed cell outputs
 then open any notebook with Jupyter. Notebooks import the backend as, e.g.:
 
     from d2l import {mod} as d2l
-
-Schematic/illustrative figures referenced as `../img/*.svg` are not bundled and
-render on the website; every *computed* output is embedded here.
 """
 
 _MOD = {'pytorch': 'torch', 'tensorflow': 'tensorflow', 'jax': 'jax',
@@ -107,8 +113,8 @@ def inject_notebook(nb, store_ids):
     return nb
 
 
-def build_zip(repo_root, notebooks_dir, store_dir, fw, out_dir):
-    """Write <out-dir>/d2l-<fw>.zip. Returns (n_notebooks, n_with_outputs, bytes)."""
+def build_zip(repo_root, notebooks_dir, store_dir, img_dir, fw, out_dir):
+    """Write <out-dir>/d2l-<fw>.zip. Returns a stats dict."""
     fw_root = notebooks_dir / fw
     nbs = sorted(p for p in fw_root.rglob('*.ipynb')
                  if '.ipynb_checkpoints' not in p.parts)
@@ -116,16 +122,19 @@ def build_zip(repo_root, notebooks_dir, store_dir, fw, out_dir):
     zip_path = out_dir / f'd2l-{fw}.zip'
 
     n_nb = n_out = 0
+    img_refs = set()  # relpaths under img/ that this framework's notebooks use
     top = f'd2l-{fw}'
     # Deterministic: sorted entries, fixed timestamps, fixed compression.
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED,
                          compresslevel=9) as z:
         readme = _README.format(fw=fw, mod=_MOD[fw])
-        _writestr(z, f'{top}/README.md', readme)
+        _write(z, f'{top}/README.md', readme.encode('utf-8'))
         for nb_path in nbs:
             chapter = nb_path.parent.name
             stem = nb_path.stem
-            nb = json.loads(nb_path.read_bytes())
+            raw = nb_path.read_bytes()
+            img_refs.update(_IMGREF.findall(raw.decode('utf-8', 'replace')))
+            nb = json.loads(raw)
             res = index_store_by_id(store_dir, fw, chapter, stem)
             store_ids = res[0] if res else {}
             inject_notebook(nb, store_ids)
@@ -133,17 +142,33 @@ def build_zip(repo_root, notebooks_dir, store_dir, fw, out_dir):
             if any(c.get('outputs') for c in _code_cells(nb)):
                 n_out += 1
             text = json.dumps(nb, indent=1, ensure_ascii=False) + '\n'
-            _writestr(z, f'{top}/{chapter}/{stem}.ipynb', text)
+            _write(z, f'{top}/{chapter}/{stem}.ipynb', text.encode('utf-8'))
             n_nb += 1
-    return n_nb, n_out, zip_path.stat().st_size
+
+        # Bundle the referenced illustrative figures so `../img/…` resolves
+        # inside the extracted tree. Sorted → deterministic; missing files are
+        # reported, not fatal.
+        n_img = img_bytes = missing = 0
+        for rel in sorted(img_refs):
+            src = img_dir / rel
+            if not src.is_file():
+                missing += 1
+                continue
+            _write(z, f'{top}/img/{rel}', src.read_bytes())
+            n_img += 1
+            img_bytes += src.stat().st_size
+
+    return {'notebooks': n_nb, 'with_outputs': n_out, 'images': n_img,
+            'img_bytes': img_bytes, 'img_missing': missing,
+            'zip_bytes': zip_path.stat().st_size}
 
 
-def _writestr(z, arcname, text):
-    """Add a text entry with a fixed timestamp (deterministic archive)."""
+def _write(z, arcname, data: bytes):
+    """Add an entry with a fixed timestamp (deterministic archive)."""
     info = zipfile.ZipInfo(arcname, date_time=_ZIP_DATE)
     info.compress_type = zipfile.ZIP_DEFLATED
     info.external_attr = 0o644 << 16  # regular file, rw-r--r--
-    z.writestr(info, text.encode('utf-8'))
+    z.writestr(info, data)
 
 
 def main():
@@ -152,6 +177,7 @@ def main():
     ap.add_argument('--project-dir', default='.')
     ap.add_argument('--notebooks-dir', default='_notebooks')
     ap.add_argument('--store-dir', default='outputs')
+    ap.add_argument('--img-dir', default='img')
     ap.add_argument('--out-dir', default='_book/notebooks')
     ap.add_argument('--frameworks', default=','.join(FRAMEWORKS))
     args = ap.parse_args()
@@ -159,6 +185,7 @@ def main():
     repo_root = Path(args.project_dir).resolve()
     notebooks_dir = repo_root / args.notebooks_dir
     store_dir = repo_root / args.store_dir
+    img_dir = repo_root / args.img_dir
     out_dir = repo_root / args.out_dir
     frameworks = [f.strip() for f in args.frameworks.split(',') if f.strip()]
 
@@ -174,10 +201,12 @@ def main():
             print(f'  {fw}: no generated notebooks — run `make notebooks` (skipped)',
                   file=sys.stderr)
             continue
-        n_nb, n_out, size = build_zip(repo_root, notebooks_dir, store_dir, fw, out_dir)
+        s = build_zip(repo_root, notebooks_dir, store_dir, img_dir, fw, out_dir)
         total += 1
-        print(f'  d2l-{fw}.zip: {n_nb} notebooks ({n_out} with outputs), '
-              f'{size / MB:.1f} MB')
+        miss = f', {s["img_missing"]} img MISSING' if s['img_missing'] else ''
+        print(f'  d2l-{fw}.zip: {s["notebooks"]} notebooks '
+              f'({s["with_outputs"]} with outputs) + {s["images"]} images '
+              f'({s["img_bytes"] / MB:.1f} MB raw){miss} → {s["zip_bytes"] / MB:.1f} MB')
     if total == 0:
         print('  (nothing built — check --frameworks / that notebooks are generated)',
               file=sys.stderr)

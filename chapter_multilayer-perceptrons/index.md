@@ -36,7 +36,7 @@ dropout
 kaggle-house-price
 ```
 
-## Resources and Further Reading
+## Resources and Further Reading {.unnumbered}
 
 The references below develop the multilayer perceptron and the core mechanics of
 training deep networks that this chapter introduces: hidden layers and activation

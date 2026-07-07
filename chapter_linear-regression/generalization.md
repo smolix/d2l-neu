@@ -51,7 +51,7 @@ already diagnosed diseases
 for previously seen patients,
 but rather previously undiagnosed
 ailments in previously unseen patients.
-This problem---how to discover patterns that *generalize*---is
+This problem (how to discover patterns that *generalize*) is
 the fundamental problem of machine learning,
 and arguably of all of statistics.
 We might cast this problem as just one slice
@@ -118,8 +118,7 @@ we assume that the training data and the test data
 are drawn *independently* from *identical* distributions.
 This is commonly called the *IID assumption*.
 While this assumption is strong,
-it is worth noting that, absent any such assumption,
-we would be dead in the water.
+absent any such assumption we would be dead in the water.
 Why should we believe that training data
 sampled from distribution $P(X,Y)$
 should tell us how to make predictions on
@@ -193,8 +192,8 @@ the training and generalization errors tend to be close.
 However, when we work with
 more complex models and/or fewer examples,
 we expect the training error to go down
-but the *generalization gap*---the difference $R - R_\textrm{emp}$
-between the generalization error and the training error---to grow.
+but the *generalization gap* (the difference $R - R_\textrm{emp}$
+between the generalization error and the training error) to grow.
 This should not be surprising.
 Imagine a model class so expressive that
 for any dataset of $n$ examples,
@@ -211,11 +210,13 @@ we cannot conclude, based on fitting the training data alone,
 that our model has discovered any generalizable pattern :cite:`vapnik1994measuring`.
 On the other hand, if our model class
 was not capable of fitting arbitrary labels,
-then it must have discovered a pattern.
+then low training error is evidence that it has captured a real pattern,
+provided the sample is large relative to the class's capacity
+(:numref:`sec_mdl-concentration-generalization`).
 Learning-theoretic ideas about model complexity
 derived some inspiration from the ideas
 of Karl Popper, an influential philosopher of science,
-who formalized the criterion of falsifiability.
+who formalized the criterion of falsifiability :cite:`popper2005logic`.
 According to Popper, a theory
 that can explain any and all observations
 is not a scientific theory at all!
@@ -229,12 +230,13 @@ with those observations that we *in fact* make.
 
 Now what precisely constitutes an appropriate
 notion of model complexity is a complex matter.
-The classical way to make the trade-off precise is the *bias--variance
+The classical way to make the trade-off precise is the *bias-variance
 decomposition*: a model too simple to capture the signal makes a systematic error
 (high *bias*, i.e., underfitting), while a model flexible enough to chase the
 noise in a particular training set varies wildly from one dataset to the next
-(high *variance*, i.e., overfitting). Their sum traces the U-shaped curve of
-:numref:`fig_capacity_vs_error`, and we derive the decomposition formally in
+(high *variance*, i.e., overfitting). Their sum, plus an irreducible noise floor
+$\sigma^2$, is the expected test error, which traces the U-shaped curve of
+:numref:`fig_capacity_vs_error`; we derive the decomposition formally in
 :numref:`sec_mdl-statistics`.
 Often, models with more parameters
 are able to fit a greater number
@@ -252,7 +254,7 @@ would be more complex.
 We will revisit this idea in the next section,
 when we introduce *weight decay*,
 your first practical regularization technique.
-Notably, it can be difficult to compare
+It can be difficult to compare
 complexity among members of substantially different model classes
 (say, decision trees vs. neural networks).
 
@@ -277,11 +279,12 @@ after the fact.
 Error on the holdout data, i.e., validation set,
 is called the *validation error*.
 
-This classical "more capacity means more overfitting" picture is, however,
+This classical picture, in which more *capacity* (the richness of the model
+class) means more overfitting, is, however,
 *incomplete* for the heavily overparametrized models at the heart of modern deep
 learning. Once a model is large enough to *interpolate* its training data (drive
 training error to zero), pushing capacity even higher often makes test error
-*fall again* rather than rise---the *double descent* phenomenon
+*fall again* rather than rise: the *double descent* phenomenon
 :cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`. We take up this modern story, and
 why the classical complexity intuition breaks down, in
 :numref:`sec_generalization_deep`; for a quantitative treatment that
@@ -299,7 +302,7 @@ If the model is unable to reduce the training error,
 that could mean that our model is too simple
 (i.e., insufficiently expressive)
 to capture the pattern that we are trying to model.
-Moreover, since the generalization gap ($R - R_\textrm{emp}$)
+Moreover, since the generalization gap
 between our training and generalization errors is small,
 we have reason to believe that we could get away with a more complex model.
 This phenomenon is known as *underfitting*.
@@ -357,7 +360,7 @@ can fit the training set perfectly.
 We compare the relationship between polynomial degree (model complexity)
 and both underfitting and overfitting in :numref:`fig_capacity_vs_error`.
 
-![Influence of model complexity on underfitting and overfitting: as complexity grows, squared bias falls while variance rises, and the test error they sum to traces a U.](../img/mdl-prob-bias-variance-u-curve.svg)
+![Influence of model complexity on underfitting and overfitting: as complexity grows, squared bias falls while variance rises, and their sum (plus an irreducible noise floor) is the expected test error, which traces a U.](../img/mdl-prob-bias-variance-u-curve.svg)
 :label:`fig_capacity_vs_error`
 
 To see this concretely, let us generate data from a known cubic and fit
@@ -477,8 +480,8 @@ The U-curve now *visibly decomposes*. Squared bias dominates for degrees below
 3 and collapses to essentially zero the moment the model class contains the
 truth; variance is tiny at first but grows relentlessly with surplus capacity,
 exploding as the polynomial gains the freedom to chase each draw's noise. Their
-sum---which, up to the irreducible noise floor $\sigma^2 = 0.01$, is the
-expected test error---is lowest exactly where the two failure modes trade off,
+sum (which, up to the irreducible noise floor $\sigma^2 = 0.01$, is the
+expected test error) is lowest exactly where the two failure modes trade off,
 at degree 3. This is a numerical instance of the decomposition proved in
 :numref:`sec_mdl-statistics`.
 
@@ -493,7 +496,7 @@ the more likely (and more severely)
 we are to encounter overfitting.
 As we increase the amount of training data,
 the generalization error typically decreases.
-Moreover, in general, more data never hurts.
+Moreover, in general, more data rarely hurts.
 For a fixed task and data distribution,
 model complexity should not increase
 more rapidly than the amount of data.
@@ -548,7 +551,7 @@ real-world test data is seldom discarded after just one use.
 We can seldom afford a new test set for each round of experiments.
 In fact, recycling benchmark data for decades
 can have a significant impact on the
-development of algorithms---as documented when researchers rebuilt fresh test
+development of algorithms, as documented when researchers rebuilt fresh test
 sets for long-standing benchmarks and watched accuracy drop
 :cite:`Recht.Roelofs.Schmidt.ea.2019`. This effect is visible, e.g., for
 [image classification](https://paperswithcode.com/sota/image-classification-on-imagenet)
@@ -591,10 +594,11 @@ estimate is therefore *pessimistically biased*, and more so for small $K$.
 Taking $K = n$ (*leave-one-out* cross-validation) all but eliminates this bias,
 but at a steep price: it requires $n$ model fits, and the $n$ training sets
 are nearly identical, so the fold errors are highly correlated and their
-average retains high variance.
+average tends to have higher variance; in fact no general unbiased estimator
+of the cross-validation variance exists :cite:`Bengio.Grandvalet.2004`.
 The standard compromise, $K = 5$ or $K = 10$, keeps the bias modest, averages
-over reasonably distinct training sets, and costs only $5$--$10$ fits---which is
-why these values dominate practice.
+over reasonably distinct training sets, and costs only $5$--$10$ fits, which is
+why these values dominate practice :cite:`Kohavi.1995`.
 (Exercises 4 and 5 ask you to reason through the cost and the bias.)
 
 
@@ -660,19 +664,19 @@ Fitting the training data is not the goal<br>**telling memorization apart from l
 Two students prepare from the same stack of past exams.
 
 - **Extraordinary Ellie** memorizes every answer: **100%** on any
-  question she has seen --- and frozen by one she has not.
+  question she has seen, and frozen by one she has not.
 - **Inductive Irene** can barely memorize, but picks up patterns: a
   steady **90%**, seen or unseen.
 
 . . .
 
 If the exam recycles old questions, Ellie wins. If it is fresh, Irene
-does. **Every trained model is one of these two students** --- and the
+does. **Every trained model is one of these two students**, and the
 training error alone cannot tell you which.
 
 ::: {.d2l-note .rule}
 This section builds the instruments that can: held-out data, the
-generalization gap, and the bias--variance trade-off.
+generalization gap, and the bias-variance trade-off.
 :::
 :::
 
@@ -722,11 +726,11 @@ Drop IID, let the distribution shift from $P$ to $Q$, and without a further assu
 
 [Model Complexity]{.dtitle}
 
-[the bias–variance trade-off and the U-curve]{.dsub}
+[the bias-variance trade-off and the U-curve]{.dsub}
 :::
 :::
 
-::: {.slide title="The bias–variance trade-off"}
+::: {.slide title="The bias-variance trade-off"}
 [Model Complexity]{.kicker}
 
 ::: {.cols .vc}
@@ -734,11 +738,11 @@ Drop IID, let the distribution shift from $P$ to $Q$, and without a further assu
 - Too **simple** → misses the signal: high **bias** (underfitting).
 - Too **flexible** → chases the noise: high **variance** (overfitting).
 
-Test error is their sum, and it bottoms out at a **sweet spot**.
+Their sum, plus an irreducible noise floor, is the test error, which bottoms out at a **sweet spot**.
 :::
 
 ::: {.col .fig .big}
-![Bias falls and variance rises with complexity; the test error they sum to is U-shaped.](../img/mdl-prob-bias-variance-u-curve.svg){width=100%}
+![Bias falls and variance rises with complexity; their sum, plus an irreducible noise floor, is the U-shaped test error.](../img/mdl-prob-bias-variance-u-curve.svg){width=100%}
 :::
 :::
 :::
@@ -790,7 +794,7 @@ Low training error alone never certifies low generalization error, on its own it
 [The Demo]{.kicker}
 
 Predict $\hat y = \sum_{i=0}^d x^i w_i$: take the **powers of $x$** as
-features and it is plain least squares --- with the degree $d$ as a
+features and it is plain least squares, with the degree $d$ as a
 capacity dial. The rig: a degree-3 target, and only **20** training
 points, so high degrees have room to misbehave:
 
@@ -818,7 +822,7 @@ Three verdicts to predict before looking: degree 1 (too rigid), degree 3
 . . .
 
 ::: {.d2l-note .warn}
-Degree 19 fits the 20 points *essentially exactly* --- and pays with a
+Degree 19 fits the 20 points *essentially exactly*, and pays with a
 test error of $5\times10^{13}$, **fifteen orders of magnitude** worse
 than degree 3. Zero training error certified nothing.
 :::
@@ -836,7 +840,7 @@ Train loss falls monotonically. Test loss dips to the sweet spot near degree 3, 
 
 ::: {.col .narrow}
 ::: {.d2l-note}
-This is the bias–variance U-curve, now traced from real numbers rather than sketched.
+This is the bias-variance U-curve, now traced from real numbers rather than sketched.
 :::
 :::
 :::
@@ -850,8 +854,8 @@ This is the bias–variance U-curve, now traced from real numbers rather than sk
 We know the noiseless target, so we can *compute* bias and variance:
 redraw the training noise 200 times, refit each degree, and measure
 
-- **bias²** — how far the *average* fit is from the truth;
-- **variance** — how much the fit *fluctuates* across draws.
+- **bias²**: how far the *average* fit is from the truth;
+- **variance**: how much the fit *fluctuates* across draws.
 
 ::: {.d2l-note .rule}
 Bias collapses once the model class contains the truth (degree 3);
@@ -976,14 +980,14 @@ scratch and explains the peak.
 - **Generalization**, not training fit, is the goal: mind the gap $R - R_\textrm{emp}$.
 - Zero training error certifies nothing: degree 19 fit 20 points exactly
   and tested at $5\times10^{13}$.
-- **Bias–variance:** bias² falls, variance rises; their sum is the
-  U-curve, and we *computed* both.
+- **Bias-variance:** bias² falls, variance rises; their sum (plus a noise
+  floor) is the test-error U-curve, and we *computed* both.
 :::
 
 ::: {.col}
 - Select models with a **validation set** or **K-fold CV** ($K=5$--$10$), never the test set.
 - **More data** rarely hurts; let complexity grow with it, not ahead of it.
-- All of this rests on **IID** --- and huge models can defy the classical U via **double descent**.
+- All of this rests on **IID**, and huge models can defy the classical U via **double descent**.
 :::
 :::
 :::

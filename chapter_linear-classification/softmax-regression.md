@@ -186,7 +186,7 @@ first introduced by :citet:`Fechner.1860`.
 While appealing, it does not work quite as well
 nor lead to a particularly nice optimization problem,
 when compared to the softmax.
-(Remarkably, drawing the noise from a Gumbel distribution instead
+(Drawing the noise from a Gumbel distribution instead
 yields *exactly* the softmax probabilities that we are about to derive.)
 
 Another way to accomplish this goal
@@ -205,7 +205,7 @@ gives us the *softmax* function:
 $$\hat{\mathbf{y}} = \mathrm{softmax}(\mathbf{o}) \quad \textrm{where}\quad \hat{y}_i = \frac{\exp(o_i)}{\sum_j \exp(o_j)}.$$
 :eqlabel:`eq_softmax_y_and_o`
 
-Note that the largest coordinate of $\mathbf{o}$
+Note that the largest coordinate of the raw scores $\mathbf{o}$, also called the *logits*,
 corresponds to the most likely class according to $\hat{\mathbf{y}}$.
 Moreover, because the softmax operation
 preserves the ordering among its arguments,
@@ -223,7 +223,7 @@ $$\hat{y}_1 = \frac{\exp(o_1)}{\exp(o_1) + \exp(o_2)} = \frac{1}{1 + \exp(-o)} =
 
 the *logistic sigmoid* $\sigma$. Binary logistic regression is thus softmax regression with the redundant logit removed. More generally, adding the same constant $c$ to every logit, $o_j \mapsto o_j + c$, multiplies both numerator and denominator of :eqref:`eq_softmax_y_and_o` by $\exp(c)$ and so leaves $\hat{\mathbf{y}}$ unchanged: only the *differences* of logits are identifiable. We may therefore pin one of them, say $o_q \equiv 0$, without changing any prediction, which is precisely the "one fewer" affine function we alluded to when motivating the linear model. This translation invariance returns in the exercises and underlies the numerically stable implementation.
 
-It is worth pausing to see what this model *looks like* as a classifier
+This model has a simple geometry as a classifier
 (:numref:`fig_mdl-clf-decision-regions`).
 Since the predicted class is $\operatorname{argmax}_j o_j$
 and each $o_j = \mathbf{w}_j^\top \mathbf{x} + b_j$ is affine,
@@ -231,8 +231,8 @@ the region assigned to class $j$ is the set where finitely many
 linear inequalities $o_j \geq o_k$ hold: an intersection of halfspaces,
 hence a convex polyhedron.
 The plane is carved into $q$ convex regions
-whose boundaries are the straight lines $o_j = o_k$,
-all meeting where the top two scores tie.
+whose boundaries are the tie lines $o_j = o_k$;
+these lines all meet at the single point where every score is equal.
 In the binary case the picture is even simpler:
 $\hat{y}_1 = \sigma(o)$ depends on $\mathbf{x}$
 only through $o = (\mathbf{w}_1 - \mathbf{w}_2)^\top \mathbf{x} + (b_1 - b_2)$,
@@ -386,7 +386,7 @@ would incur infinite loss ($-\log 0 = \infty$).
 
 Since the softmax function
 and the corresponding cross-entropy loss are so common,
-it is worth understanding a bit better how they are computed.
+let us look more closely at how they are computed.
 Plugging :eqref:`eq_softmax_y_and_o` into the definition of the loss
 in :eqref:`eq_l_cross_entropy`
 and using the definition of the softmax we obtain
@@ -401,7 +401,7 @@ l(\mathbf{y}, \hat{\mathbf{y}}) &=  - \sum_{j=1}^q y_j \log \frac{\exp(o_j)}{\su
 $$
 
 using $\sum_j y_j = 1$ in the last step and writing
-$g(\mathbf{o}) = \log \sum_k \exp(o_k)$ for the *log-partition function*. This is the recurring shape of an exponential-family negative log-likelihood: a convex log-partition term minus a linear data term. The derivative is now immediate, because the softmax *is* the gradient of the log-partition function,
+$g(\mathbf{o}) = \log \sum_k \exp(o_k)$ for the *log-partition function*. This is the recurring shape of an *exponential-family* negative log-likelihood, one whose log-likelihood is a convex log-partition term minus a linear term in the natural parameters $\mathbf{o}$. The derivative is now immediate, because the softmax *is* the gradient of the log-partition function,
 
 $$
 \partial_{o_j} g(\mathbf{o}) = \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)} = \mathrm{softmax}(\mathbf{o})_j,
@@ -427,8 +427,8 @@ We work this out in the exercises and revisit log-partition convexity in
 :numref:`sec_mdl-convexity`, where the corresponding proposition is proved
 in full.
 
-Now consider the case where we observe not just a single outcome
-but an entire distribution over outcomes.
+Now consider the case where we observe an entire distribution over outcomes
+rather than a single outcome.
 We can use the same representation as before for the label $\mathbf{y}$.
 The only difference is that rather
 than a vector containing only binary entries,
@@ -439,24 +439,24 @@ in :eqref:`eq_l_cross_entropy`
 still works well,
 just that the interpretation is slightly more general.
 It is the expected value of the loss for a distribution over labels.
-This loss is called the *cross-entropy loss* and it is
-one of the most commonly used losses for classification problems.
+This loss is called the *cross-entropy loss*,
+a commonly used loss for classification problems.
 
 #### Why "cross-entropy"?
 :label:`subsec_info_theory_basics`
 
-The name comes from information theory. The *entropy* $H[P] = \sum_j -P(j) \log P(j)$ is the expected *surprisal* $-\log P(j)$ of draws from $P$, which Shannon showed is the average number of nats you must spend to encode them when you know $P$ :cite:`Shannon.1948`. The *cross-entropy* $H(P, Q) = \sum_j -P(j) \log Q(j)$ is the cost when you instead encode the same draws under a wrong model $Q$, and it is minimized exactly when $Q = P$. Our loss :eqref:`eq_l_cross_entropy` is precisely $H(\mathbf{y}, \hat{\mathbf{y}})$, so minimizing it does two equivalent things: it maximizes the likelihood of the labels, and it minimizes the extra bits our predictions waste relative to the truth. This MLE-versus-code-length duality is worth keeping in mind whenever cross-entropy appears. We develop entropy, cross-entropy, and the Kullback--Leibler divergence, together with the coding argument behind the "bits" language, in :numref:`sec_mdl-information_theory`; the classic references are :citet:`Cover.Thomas.1999` and :citet:`mackay2003information`.
+The name comes from information theory. The *entropy* $H[P] = \sum_j -P(j) \log P(j)$ is the expected *surprisal* $-\log P(j)$ of draws from $P$, which Shannon showed is the average number of *nats* (natural-log units) you must spend to encode them when you know $P$ :cite:`Shannon.1948`. The *cross-entropy* $H(P, Q) = \sum_j -P(j) \log Q(j)$ is the cost when you instead encode the same draws under a wrong model $Q$, and it is minimized exactly when $Q = P$. Our loss :eqref:`eq_l_cross_entropy` is precisely $H(\mathbf{y}, \hat{\mathbf{y}})$, so minimizing it does two equivalent things: it maximizes the likelihood of the labels, and it minimizes the extra bits our predictions waste relative to the truth. We develop entropy, cross-entropy, and the Kullback--Leibler divergence, together with the coding argument behind the "bits" language, in :numref:`sec_mdl-information_theory`; the classic references are :citet:`Cover.Thomas.1999` and :citet:`mackay2003information`.
 
 **Confidence is not calibrated probability.**
 We have just seen that the loss keeps rewarding the model for pushing
 probability onto the correct class even after the decision is already right,
-so it is worth a word of caution about reading those probabilities at face
+so those probabilities should not be read at face
 value: a model trained to minimize cross-entropy is generally *not*
 calibrated, and a reported confidence of $0.9$ does not mean the prediction
 is right $90\%$ of the time. Modern deep networks tend to be systematically
-overconfident ([Guo, Pleiss, Sun and Weinberger, 2017](https://arxiv.org/abs/1706.04599)).
+overconfident :cite:`Guo.Pleiss.Sun.Weinberger.2017`.
 A simple and effective remedy, *temperature scaling*, divides the logits by a
-single learned $T > 0$ before the softmax---exactly the temperature of the
+single learned $T > 0$ before the softmax, exactly the temperature of the
 Boltzmann distribution in :numref:`fig_mdl-clf-temperature`. Because it
 scales every logit by the same factor $1/T$ it preserves their order, leaving
 the predicted class (the $\operatorname{argmax}$) and hence the accuracy
@@ -479,14 +479,12 @@ behaves very similarly
 to the derivative of squared error;
 namely by taking the difference between
 the expected behavior and its prediction.
-Along the way we encountered exciting connections
+Along the way we encountered connections
 to statistical physics (the Boltzmann distribution behind the softmax) and to
 information theory (cross-entropy as a code length), the latter taken up in
 :numref:`sec_mdl-information_theory`.
 
-While this is enough to get you on your way,
-and hopefully enough to whet your appetite,
-we have barely scratched the surface here.
+This is enough to get you started.
 Among other things, we skipped over computational considerations.
 Specifically, for any fully connected layer with $d$ inputs and $q$ outputs,
 the parametrization and computational cost is $\mathcal{O}(dq)$,
@@ -690,7 +688,7 @@ confidence does. Hold this dial; it returns at the end of the section.
 :::
 :::
 
-::: {.slide title="The softmax *is* an argmax — plus the right noise"}
+::: {.slide title="The softmax *is* an argmax, plus the right noise"}
 [The Softmax · origins]{.kicker}
 
 Another route to probabilities: perturb each score and report the winner,
@@ -698,14 +696,14 @@ $y = \operatorname*{argmax}_i\,(o_i + \epsilon_i)$.
 
 . . .
 
-- **Gaussian** noise gives the (multinomial) **probit** model (Fechner, 1860)
-  --- appealing, but no closed form and a harder optimization.
-- **Gumbel** noise gives *exactly* $\mathrm{softmax}(\mathbf{o})$ --- the
+- **Gaussian** noise gives the (multinomial) **probit** model (Fechner, 1860):
+  appealing, but no closed form and a harder optimization.
+- **Gumbel** noise gives *exactly* $\mathrm{softmax}(\mathbf{o})$, the
   *Gumbel-max trick* (exercise 9), and scaling the noise by $T$ samples from
   $\mathrm{softmax}(\mathbf{o}/T)$.
 
 ::: {.d2l-note}
-So the softmax is not just a squashing convenience: it is a **smoothed
+So the softmax is a **smoothed
 argmax**, with temperature the amount of smoothing.
 :::
 :::
@@ -734,16 +732,16 @@ $$\hat{y}_1 = \frac{\exp(o_1)}{\exp(o_1)+\exp(o_2)} = \frac{1}{1 + \exp(-o)} = \
 Binary **logistic regression** is just softmax regression with the redundant logit removed: the same model, one class folded away.
 :::
 
-::: {.slide title="The decision boundaries are straight lines — always"}
+::: {.slide title="The decision boundaries are always straight lines"}
 [The Softmax · geometry]{.kicker}
 
 The predicted class is $\operatorname{argmax}_j o_j$ with each $o_j$ affine, so class $j$ wins where finitely many linear inequalities $o_j \ge o_k$ hold: a **convex polyhedron** per class.
 
-![Left: three convex regions, straight boundaries at the ties $o_i = o_j$. Right: two classes --- parallel level lines of $\sigma(o)$, perpendicular to $\mathbf{w}$.](../img/mdl-clf-decision-regions.svg){width=100%}
+![Left: three convex regions, straight boundaries at the ties $o_i = o_j$. Right: two classes, parallel level lines of $\sigma(o)$, perpendicular to $\mathbf{w}$.](../img/mdl-clf-decision-regions.svg){width=100%}
 
 ::: {.d2l-note .warn}
 The softmax's nonlinearity lives in the **probabilities**, never in the
-**boundaries**. Those stay linear --- a ceiling we will hit, measurably, when
+**boundaries**. Those stay linear, a ceiling we will hit, measurably, when
 we train this model on images (§4.4).
 :::
 :::
@@ -782,7 +780,7 @@ $$l(\mathbf{y}, \hat{\mathbf{y}}) = -\sum_{j=1}^q y_j \log \hat{y}_j = -\log \ha
 It is $\ge 0$, and $0$ only with certainty on the right class, which finite logits can never quite reach. Predict the truth with high confidence and the loss is small; predict it with near-zero probability and the loss blows up.
 :::
 
-::: {.slide title="A clean gradient: prediction minus truth"}
+::: {.slide title="The gradient: prediction minus truth"}
 [Loss · the payoff]{.kicker}
 
 Substitute the softmax into the loss and it collapses to a log-partition term minus a linear term, $l = g(\mathbf{o}) - \mathbf{y}^\top\mathbf{o}$ with $g(\mathbf{o}) = \log\sum_k \exp(o_k)$. Differentiate:
@@ -811,21 +809,21 @@ Our loss **is** $H(\mathbf{y}, \hat{\mathbf{y}})$.
 
 . . .
 
-So minimizing it does two equivalent things: it **maximizes likelihood** and it **minimizes the wasted bits** between prediction and truth, a duality worth remembering whenever cross-entropy appears.
+So minimizing it does two equivalent things: it **maximizes likelihood** and it **minimizes the wasted bits** between prediction and truth.
 :::
 
 ::: {.slide title="Confidence is not calibrated probability"}
 [Loss · a modern caveat]{.kicker}
 
-The loss keeps rewarding confidence even after the decision is right, nudging $0.51 \to 0.99$. So do not read the outputs at face value: a cross-entropy-trained network is generally **not calibrated** --- a reported $0.9$ does not mean right $90\%$ of the time. Modern deep nets are systematically **overconfident** (Guo et al., 2017).
+The loss keeps rewarding confidence even after the decision is right, nudging $0.51 \to 0.99$. So do not read the outputs at face value: a cross-entropy-trained network is generally **not calibrated**: a reported $0.9$ does not mean right $90\%$ of the time. Modern deep nets are systematically **overconfident** :cite:`Guo.Pleiss.Sun.Weinberger.2017`.
 
 . . .
 
 ::: {.d2l-note .rule}
-The fix is the dial we already hold: **temperature scaling** divides the logits by one learned $T > 0$ before the softmax --- Boltzmann's $T$, relearned post hoc.
+The fix is the dial we already hold: **temperature scaling** divides the logits by one learned $T > 0$ before the softmax: Boltzmann's $T$, relearned post hoc.
 :::
 
-Because $1/T$ scales every logit alike, the ranking --- hence the $\arg\max$, hence the **accuracy** --- is untouched; only the confidences sharpen ($T<1$) or soften ($T>1$). Exercise 8 develops this.
+Because $1/T$ scales every logit alike, the ranking (hence the $\arg\max$, hence the **accuracy**) is untouched; only the confidences sharpen ($T<1$) or soften ($T>1$). Exercise 8 develops this.
 :::
 
 ::: {.slide}

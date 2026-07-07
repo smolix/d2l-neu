@@ -15,7 +15,7 @@ When it came time to calculate the gradients,
 we just invoked the backpropagation function provided by the deep learning framework.
 
 The automatic calculation of gradients
-profoundly simplifies
+simplifies
 the implementation of deep learning algorithms.
 Before automatic differentiation,
 even small changes to complicated models required
@@ -136,7 +136,7 @@ are primarily rightward and upward.
 the gradient of neural network parameters.
 In short, the method traverses the network in reverse order,
 from the output to the input layer,
-according to the *chain rule* from calculus.
+according to the *chain rule* from calculus (:numref:`chap_mdl-calculus`).
 The algorithm stores any intermediate variables
 (partial derivatives)
 required while calculating the gradient
@@ -214,9 +214,9 @@ Using the chain rule yields:
 $$\frac{\partial J}{\partial \mathbf{W}^{(2)}}= \textrm{prod}\left(\frac{\partial J}{\partial \mathbf{o}}, \frac{\partial \mathbf{o}}{\partial \mathbf{W}^{(2)}}\right) + \textrm{prod}\left(\frac{\partial J}{\partial s}, \frac{\partial s}{\partial \mathbf{W}^{(2)}}\right)= \frac{\partial J}{\partial \mathbf{o}} \mathbf{h}^\top + \lambda \mathbf{W}^{(2)}.$$
 :eqlabel:`eq_backprop-J-h`
 
-The "+" in :eqref:`eq_backprop-J-h` deserves a rule of its own:
-**when a variable reaches the output along several paths, its gradient is the
-*sum* of the gradients arriving along each path.**
+The "+" in :eqref:`eq_backprop-J-h` encodes a general rule:
+when a variable reaches the output along several paths, its gradient is the
+**sum** of the gradients arriving along each path.
 Here $\mathbf{W}^{(2)}$ affects $J$ twice, through the prediction path
 $J \leftarrow L \leftarrow \mathbf{o} \leftarrow \mathbf{W}^{(2)}$ and through
 the regularizer path $J \leftarrow s \leftarrow \mathbf{W}^{(2)}$, and the two
@@ -315,11 +315,11 @@ $$\frac{\partial L}{\partial \mathbf{W}^{(1)}} = \frac{\partial L}{\partial \mat
 forward in black and backward in blue. Notice that the row of
 $\partial L/\partial \mathbf{W}^{(1)}$ feeding the dead unit is entirely zero:
 no gradient means no learning signal, the concrete face of the "dying ReLU" we
-met in :numref:`sec_mlp`. You can confirm every number here in a few lines with
-automatic differentiation (:numref:`sec_autograd`); doing so is a good way to
-convince yourself the framework is running exactly this computation. Let's do
-exactly that: build the same tensors, run the forward pass, call `backward()`,
-and compare against the gradients we just derived by hand.
+met in :numref:`sec_mlp`. You can confirm every number here in a few lines of
+automatic differentiation (:numref:`sec_autograd`): rebuild the same tensors
+with gradient tracking, run the forward pass, sweep back through the graph, and
+compare against the gradients we just derived by hand. The PyTorch cell below
+does exactly this.
 
 ```{.python .input #backprop-verify}
 %%tab pytorch
@@ -347,7 +347,7 @@ negative upstream gradient; it compares equal to $0$.)
 ### From the Chain Rule to Autograd
 
 What we have just done by hand is precisely what a deep learning framework does
-when you call `backward()`: it records the computational graph during the forward
+when you ask it for gradients: it records the computational graph during the forward
 pass, seeds a gradient of $1$ at the scalar objective, and sweeps the graph in
 reverse, multiplying the local derivative at each node (our $\textrm{prod}$) to
 accumulate the gradient with respect to every parameter in a *single* pass. This
@@ -418,7 +418,7 @@ and training requires significantly more memory than prediction.
     1. What are the advantages and disadvantages over training on a smaller minibatch?
 1. Build a miniature autograd engine and use it to re-derive this section's worked example.
     1. Write a scalar `Value` class that records, for each result, its inputs and the operation that produced it (the computational graph), supporting `+`, `*`, and `relu`. (*Hint:* implement `__add__` and `__mul__` so that each returns a new `Value` holding references to its parents and a small function that propagates the gradient one step.)
-    1. Implement `backward()`: topologically sort the graph, seed the output's gradient with $1$, and sweep the nodes in reverse order, letting each node pass its gradient to its parents. Make sure gradients *accumulate* (`+=`, not `=`) when a value is used more than once — the fork rule from :eqref:`eq_backprop-J-h`.
+    1. Implement `backward()`: topologically sort the graph, seed the output's gradient with $1$, and sweep the nodes in reverse order, letting each node pass its gradient to its parents. Make sure gradients *accumulate* (`+=`, not `=`) when a value is used more than once (the fork rule from :eqref:`eq_backprop-J-h`).
     1. Reproduce the worked example with your engine (unroll the matrix products into scalars) and check all four gradients.
     1. For a chain of three inputs feeding three outputs feeding one loss, the sum-over-paths view of the chain rule enumerates $3 \times 3 = 9$ paths, yet your engine touches each edge only once. Show that reverse mode computes $(\alpha+\beta+\gamma)(\delta+\epsilon+\zeta)$ instead of expanding all nine products, and explain why this factoring is exactly what makes backpropagation affordable.
 
@@ -447,8 +447,8 @@ Training so far: a **forward pass** computes the loss, then one call to
 - One rule does it all, and it explains why training costs the memory it does.
 
 ::: {.d2l-note .rule}
-The promise: by the end we will have computed **all four gradients
-of a real network by hand** — and a six-line autograd script will
+By the end we will have computed **all four gradients
+of a real network by hand**, and a six-line autograd script will
 print the same numbers, digit for digit.
 :::
 :::
@@ -556,7 +556,7 @@ $$\frac{\partial J}{\partial \mathbf{W}^{(2)}} = \frac{\partial J}{\partial \mat
 ::: {.slide title="That + is a rule: gradients add at forks"}
 [Backpropagation]{.kicker}
 
-The "+" in $\partial J/\partial \mathbf{W}^{(2)}$ deserves a rule of its own.
+The "+" in $\partial J/\partial \mathbf{W}^{(2)}$ encodes a general rule:
 $\mathbf{W}^{(2)}$ reaches the objective along **two paths**, and the gradients
 arriving along each path **sum**:
 
@@ -568,7 +568,7 @@ J \leftarrow s \leftarrow \mathbf{W}^{(2)}
 . . .
 
 ::: {.d2l-note .warn}
-Forgetting to **accumulate** at such forks — writing `=` where `+=` belongs —
+Forgetting to **accumulate** at such forks (writing `=` where `+=` belongs)
 is among the most common bugs in hand-written backward passes. Every autograd
 engine accumulates for exactly this reason.
 :::
@@ -684,12 +684,12 @@ weights never update. This is the *dying ReLU* in one matrix.
 [Worked Example · verified]{.kicker}
 
 Build the same tensors with `requires_grad`, run the forward pass, call
-`backward()` — the entire verification is a few lines:
+`backward()`. The entire verification is a few lines:
 
 @-backprop-verify
 :::
 
-::: {.slide title="Promise kept: autograd repeats every number" only="pytorch"}
+::: {.slide title="Autograd repeats every number" only="pytorch"}
 [Worked Example · verified]{.kicker}
 
 The script prints its verdict on the hand derivation:
@@ -704,12 +704,12 @@ $$L = 2.0,\quad
 
 ::: {.d2l-note .rule}
 Every gradient matches, down to the zeroed row for the dead unit. (The $-0$
-is floating point's *signed zero* — $h_1 = 0$ times a negative upstream
+is floating point's *signed zero*, $h_1 = 0$ times a negative upstream
 gradient; it compares equal to $0$.)
 :::
 :::
 
-::: {.slide title="Promise kept: autograd repeats every number" except="pytorch"}
+::: {.slide title="Autograd repeats every number" except="pytorch"}
 [Worked Example · verified]{.kicker}
 
 Rebuild the same tensors with gradient tracking, run the forward pass, call
@@ -725,7 +725,7 @@ $$\frac{\partial L}{\partial \mathbf{z}} = [0,\ 2]^\top,\qquad
 \begin{bmatrix} 0 & 0\\ 2 & 4\end{bmatrix}.$$
 
 ::: {.d2l-note}
-Every gradient matches, down to the zeroed row for the dead unit — six lines
+Every gradient matches, down to the zeroed row for the dead unit: six lines
 of autograd, one hand derivation, no disagreements.
 :::
 :::
@@ -755,8 +755,8 @@ deep-learning regime.
 :::
 
 We developed the mechanics, including when *forward mode* is preferable, in
-§2.5; the full theory — both modes as Jacobian products, and the memory
-trade-offs they imply — lives in the calculus appendix.
+§2.5; the full theory (both modes as Jacobian products, and the memory
+trade-offs they imply) lives in the calculus appendix.
 :::
 
 ::: {.slide title="Forward and backward depend on each other"}
@@ -796,14 +796,14 @@ errors.
 ::: {.col}
 - **Gradients add at forks**: a variable used twice collects both paths' gradients (`+=`, never `=`).
 - A **dead ReLU** zeros a gradient row: no signal, no learning.
-- Promise kept: autograd reproduced the hand derivation **digit for digit**.
+- Autograd reproduced the hand derivation **digit for digit**.
 - Retaining intermediates is why **training is memory-hungry**.
 :::
 :::
 
 ::: {.d2l-note}
-Capstone (exercise 6): build a miniature autograd engine — a scalar `Value`
-class with `+`, `*`, `relu` and a topological `backward()` — and re-derive
+Capstone (exercise 6): build a miniature autograd engine (a scalar `Value`
+class with `+`, `*`, `relu` and a topological `backward()`) and re-derive
 today's example with it.
 :::
 :::

@@ -18,10 +18,10 @@ all three explanations remain on the table at once.
 If we know the data-generating process exactly
 (the true weights $\mathbf{w}^*$, the true bias $b^*$,
 and the noise distribution),
-then any failure to recover those parameters
-is an algorithm or implementation failure, full stop:
-the data is provably learnable, because we built it that way.
-This is what makes synthetic datasets the indispensable first test
+then any *systematic* failure to recover them
+(beyond the irreducible noise) points to the algorithm
+or implementation.
+This is why synthetic datasets are the first test
 for any new learning method.
 We confirm that it solves a problem with a known answer
 before we ever hand it a real one.
@@ -249,9 +249,8 @@ print('X shape:', X.shape, '\ny shape:', y.shape)
 
 Iterating over `data.train_dataloader()` yields distinct minibatches
 until the dataset is exhausted (try it).
-This hand-rolled loader is worth writing once,
-because it shows exactly what happens under the hood,
-but it pays for that transparency in three ways:
+Writing the loader by hand makes every step explicit,
+but it costs us in three ways:
 all of the data must fit in memory, the iteration is single-threaded
 Python looping over indices, and there is no prefetching to overlap
 data loading with computation on the previous batch.
@@ -365,15 +364,15 @@ We do this so that every training minibatch has an identical shape,
 which keeps a `@jax.jit`-compiled training step from being recompiled
 for the differently sized last batch (a recompilation that can cost
 minutes per epoch on larger datasets). The price is that we drop a
-handful of examples each epoch, which is negligible here. The other
-three frameworks keep the partial batch and so report 32.
+handful of examples each epoch, which is negligible here. A loader that
+keeps the partial batch would report 32.
 :end_tab:
 
 ## Summary
 
-Synthetic data closes the loop on learning: because we fixed
-$\mathbf{w}^*$ and $b^*$ ourselves, we can check after training whether
-the recovered parameters agree with the truth, which makes such datasets
+Synthetic data lets us check the recovered parameters against the truth
+we fixed: because we chose $\mathbf{w}^*$ and $b^*$ ourselves, we can see
+after training whether the estimates agree, which makes such datasets
 the first place to validate any new algorithm.
 The `SyntheticRegressionData` class introduced here packages this
 data-generating process as a `DataModule` subclass, separating *where
@@ -388,20 +387,18 @@ we use from here on.
 
 ## Exercises
 
-1. When the number of examples is not divisible by the batch size, the loaders above keep the final partial batch (except in JAX, whose `drop_remainder=train` behavior is explained in the callout above). What does PyTorch's `drop_last` argument (and its TensorFlow counterpart, `batch(..., drop_remainder=...)`) do, and when would you want to enable it even outside JAX?
+1. When the number of examples is not divisible by the batch size, the loaders above keep the final partial batch. What does PyTorch's `drop_last` argument (and its TensorFlow counterpart, `batch(..., drop_remainder=...)`) do, and when would you want to enable it?
 1. Suppose that we want to generate a huge dataset, where both the size of the parameter vector `w` and the number of examples `num_examples` are large.
     1. What happens if we cannot hold all data in memory?
     1. How would you shuffle the data if it is held on disk? Your task is to design an *efficient* algorithm that does not require too many random reads or writes. Hint: [pseudorandom permutation generators](https://en.wikipedia.org/wiki/Pseudorandom_permutation) allow you to design a reshuffle without the need to store the permutation table explicitly :cite:`Naor.Reingold.1999`. 
 1. Implement a data generator that produces new data on the fly, every time the iterator is called. 
-1. **(Reproducibility across frameworks.)** How would you design a random data
-   generator that produces the *same* dataset every time it is called? In PyTorch
-   and TensorFlow a single global call (`torch.manual_seed` or
-   `tf.random.set_seed`) suffices. JAX takes a different stance: its PRNG is
-   *functional*, with no global state, so randomness is threaded through an
-   explicit `key`. Explain why passing `key=jax.random.PRNGKey(42)` to
-   `SyntheticRegressionData` already makes the JAX version reproducible, and why
-   re-using the *same* key for both $\mathbf{X}$ and $\boldsymbol{\epsilon}$
-   (instead of splitting it) would be a bug.
+1. **(Reproducibility.)** How would you design a random data generator that
+   produces the *same* dataset every time it is called? Libraries differ here:
+   some expose a single global seed, while others thread an explicit random
+   state through every draw. For the threaded style, explain why fixing that
+   state up front makes the result reproducible, and why re-using the *same*
+   state for both $\mathbf{X}$ and $\boldsymbol{\epsilon}$ (rather than
+   advancing it between the two draws) would be a bug.
 1. **(Signal-to-noise and recovery.)** Vary the noise standard deviation `noise`
    over $\{0.001, 0.01, 0.1, 0.5, 1.0\}$. After fitting a linear model on each
    dataset (using the code from :numref:`sec_linear_scratch` or
@@ -532,8 +529,8 @@ Memorize $[2, -3.4]$ and $4.2$: the next two sections train models whose
 ::: {.slide title="A minibatch sampler, by hand"}
 [Reading the data]{.kicker}
 
-Roll the minibatch loader ourselves: shuffle the indices --- afresh on
-every training pass --- then `yield` `batch_size` rows at a time (one
+Roll the minibatch loader ourselves: shuffle the indices (afresh on
+every training pass), then `yield` `batch_size` rows at a time (one
 batch is $32\times2$ features, $32\times1$ labels).
 
 @synthetic-regression-data-reading-the-dataset-1
@@ -541,7 +538,7 @@ batch is $32\times2$ features, $32\times1$ labels).
 . . .
 
 ::: {.d2l-note .warn}
-Transparent, but it pays three ways: all data in memory, single-threaded
+Transparent, but it costs three ways: all data in memory, single-threaded
 Python, and no prefetching to overlap loading with compute.
 :::
 :::
@@ -604,13 +601,12 @@ The caller sees an identical protocol, one minibatch at a time:
 . . .
 
 JAX reports **31**, not 32: `drop_remainder=True` discards the partial
-last batch so every minibatch has one shape...
+last batch, so every `@jax.jit` step sees one shape.
 
 @synthetic-regression-data-concise-implementation-of-the-data-loader-4
 
 ::: {.d2l-note .rule}
-...which keeps a `@jax.jit` step from recompiling for a smaller last
-batch. We lose 8 examples per epoch, here negligible.
+We lose 8 examples per epoch, here negligible.
 :::
 :::
 
@@ -619,8 +615,8 @@ batch. We lose 8 examples per epoch, here negligible.
 
 ::: {.cols}
 ::: {.col}
-- **Synthetic data** fixes the answer up front --- $\mathbf{w}^*=[2,-3.4]$,
-  $b^*=4.2$ --- so a failed fit can only be the algorithm's fault.
+- **Synthetic data** fixes the answer up front ($\mathbf{w}^*=[2,-3.4]$,
+  $b^*=4.2$), so a failed fit can only be the algorithm's fault.
 - A `DataModule` packages *where batches come from*, reusable across
   models.
 :::
@@ -628,8 +624,8 @@ batch. We lose 8 examples per epoch, here negligible.
 ::: {.col}
 - **Hand-rolled vs. built-in** loader: one protocol; the framework
   version shuffles, prefetches, parallelizes.
-- **Watch the framing:** JAX threads a PRNG `key` and drops the partial
-  batch ($31$ vs. $32$).
+- **Watch the last batch:** a loader either keeps the partial final
+  minibatch or drops it ($32$ vs. $31$ batches here).
 :::
 :::
 :::

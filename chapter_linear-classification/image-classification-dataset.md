@@ -191,8 +191,9 @@ def get_dataloader(self, train):
                             tf.cast(y, dtype='int32'))
     resize_fn = lambda X, y: (tf.image.resize_with_pad(X, *self.resize), y)
     shuffle_buf = len(data[0]) if train else 1
-    # `drop_remainder=train` for the same reason as the TF tab — JAX
-    # also retraces a `@jax.jit`'d step function per unique input shape.
+    # `drop_remainder=train` keeps every training minibatch the same
+    # shape, so JAX does not retrace the `@jax.jit`'d step function for
+    # a smaller last batch.
     return tfds.as_numpy(
         tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
             shuffle_buf).batch(self.batch_size,
@@ -231,15 +232,7 @@ f'{time.time() - tic:.2f} sec'
 
 ## Visualization
 
-We will often be using the Fashion-MNIST dataset. A convenience function `show_images` lays out a list of images in a grid with optional per-image titles. The `d2l` library provides `show_images`; the cell below declares its interface.
-
-```{.python .input #image-classification-dataset-visualization-1}
-def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
-    """Plot a list of images."""
-    # Full implementation lives in the d2l library (d2l/torch.py et al.).
-    # This stub declares the interface; the rendered notebook uses the library version.
-    raise NotImplementedError
-```
+We will often be using the Fashion-MNIST dataset. The `d2l` library provides a convenience function `show_images` that lays out a list of images in a grid with optional per-image titles.
 
 Let's put it to good use. In general, it is a good idea to visualize and inspect data that you are training on. 
 Humans are very good at spotting oddities, so visualization is a cheap safeguard against errors in the design of experiments. Here are the images and their corresponding labels (in text)

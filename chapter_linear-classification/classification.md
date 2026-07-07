@@ -155,7 +155,7 @@ Averaging the 0/1 entries yields the fraction correct (or, with `averaged=False`
 %%tab pytorch, mxnet, tensorflow
 @d2l.add_to_class(Classifier)  #@save
 def accuracy(self, Y_hat, Y, averaged=True):
-    """Compute the number of correct predictions."""
+    """Compute the fraction of correct predictions."""
     Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
     preds = d2l.astype(d2l.argmax(Y_hat, axis=1), Y.dtype)
     compare = d2l.astype(preds == d2l.reshape(Y, (-1,)), d2l.float32)
@@ -177,7 +177,7 @@ mean over the 0/1 hits.
 @d2l.add_to_class(Classifier)  #@save
 @partial(jax.jit, static_argnums=(0, 5))
 def accuracy(self, params, X, Y, state, averaged=True):
-    """Compute the number of correct predictions."""
+    """Compute the fraction of correct predictions."""
     Y_hat = state.apply_fn({'params': params,
                             'batch_stats': state.batch_stats},  # BatchNorm Only
                            *X)

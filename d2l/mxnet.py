@@ -282,9 +282,9 @@ class Module(d2l.nn_Module, d2l.HyperParameters):
                 self.plot_valid_per_epoch
         # MXNet's engine is NOT safe for GPU->host transfers issued from a
         # foreign thread (under load it corrupts the CUDA context -> error 999).
-        # So, unlike the other frameworks, resolve the value on THIS (main)
-        # thread and enqueue the host scalar; the board's drawing thread then
-        # does only matplotlib, never an MXNet GPU op.
+        # So resolve the value on THIS (main) thread and enqueue the host
+        # scalar; the board's drawing thread then does only matplotlib,
+        # never an MXNet GPU op.
         self.board.draw(x, d2l.numpy(value), (
             'train_' if train else 'val_') + key, every_n=int(n))
     def training_step(self, batch):
@@ -541,7 +541,7 @@ class Classifier(d2l.Module):
         self.plot('acc', self.accuracy(y_hat, batch[-1]), train=False)
 
     def accuracy(self, Y_hat, Y, averaged=True):
-        """Compute the number of correct predictions.
+        """Compute the fraction of correct predictions.
 
         Defined in :numref:`sec_classification`"""
         Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))

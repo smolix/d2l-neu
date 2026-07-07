@@ -381,8 +381,7 @@ class DataModule(d2l.HyperParameters):
         # any dataloading functionality. `drop_remainder=train` keeps every
         # *training* minibatch the same shape, so a `@jax.jit`'d step
         # function compiles once per epoch instead of recompiling for the
-        # smaller last batch (a common source of multi-minute slowdowns on
-        # NLP datasets where the last batch is a different shape every time).
+        # smaller last batch.
         shuffle_buffer = tensors[0].shape[0] if train else 1
         return tfds.as_numpy(
             tf.data.Dataset.from_tensor_slices(tensors).shuffle(
@@ -625,8 +624,9 @@ class FashionMNIST(d2l.DataModule):
                                 tf.cast(y, dtype='int32'))
         resize_fn = lambda X, y: (tf.image.resize_with_pad(X, *self.resize), y)
         shuffle_buf = len(data[0]) if train else 1
-        # `drop_remainder=train` for the same reason as the TF tab — JAX
-        # also retraces a `@jax.jit`'d step function per unique input shape.
+        # `drop_remainder=train` keeps every training minibatch the same
+        # shape, so JAX does not retrace the `@jax.jit`'d step function for
+        # a smaller last batch.
         return tfds.as_numpy(
             tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
                 shuffle_buf).batch(self.batch_size,
@@ -661,7 +661,7 @@ class Classifier(d2l.Module):
 
     @partial(jax.jit, static_argnums=(0, 5))
     def accuracy(self, params, X, Y, state, averaged=True):
-        """Compute the number of correct predictions.
+        """Compute the fraction of correct predictions.
 
         Defined in :numref:`sec_classification`"""
         Y_hat = state.apply_fn({'params': params,

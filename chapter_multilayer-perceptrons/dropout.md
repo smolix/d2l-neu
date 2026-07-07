@@ -246,7 +246,7 @@ def dropout_layer(X, dropout, key=d2l.get_key()):
     # `key` is bound once, at definition time, so this educational dropout
     # reuses one fixed mask on every call (keeping it JIT-traceable). Real
     # training needs a fresh key per step; Flax's `nn.Dropout` handles that
-    # via `rngs={'dropout': ...}` — see the note after the concise model.
+    # via `rngs={'dropout': ...}`. See the note after the concise model.
     assert 0 <= dropout <= 1
     if dropout == 1: return jnp.zeros_like(X)
     mask = jax.random.uniform(key, X.shape) > dropout

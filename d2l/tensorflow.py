@@ -551,7 +551,7 @@ class Classifier(d2l.Module):
         self.plot('acc', self.accuracy(y_hat, batch[-1]), train=False)
 
     def accuracy(self, Y_hat, Y, averaged=True):
-        """Compute the number of correct predictions.
+        """Compute the fraction of correct predictions.
 
         Defined in :numref:`sec_classification`"""
         Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))

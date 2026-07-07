@@ -306,8 +306,7 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
     # any dataloading functionality. `drop_remainder=train` keeps every
     # *training* minibatch the same shape, so a `@jax.jit`'d step
     # function compiles once per epoch instead of recompiling for the
-    # smaller last batch (a common source of multi-minute slowdowns on
-    # NLP datasets where the last batch is a different shape every time).
+    # smaller last batch.
     shuffle_buffer = tensors[0].shape[0] if train else 1
     return tfds.as_numpy(
         tf.data.Dataset.from_tensor_slices(tensors).shuffle(

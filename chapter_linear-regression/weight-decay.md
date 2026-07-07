@@ -82,11 +82,12 @@ import optax
 ## Norms and Weight Decay
 
 Rather than directly manipulating the number of parameters,
-*weight decay* operates by restricting the values 
+*weight decay* :cite:`Hanson.Pratt.1988,Krogh.Hertz.1992` operates by
+restricting the values 
 that the parameters can take.
 Outside of deep learning circles the technique is better known as
-$\ell_2$ *regularization*---the two coincide when optimizing by minibatch
-SGD, a point we return to below---and it might be the most widely used
+$\ell_2$ *regularization* (the two coincide when optimizing by minibatch
+SGD, a point we return to below), and it might be the most widely used
 technique for regularizing parametric machine learning models.
 The technique is motivated by the basic intuition
 that among all functions $f$,
@@ -165,10 +166,10 @@ in the first place and not, say, the $\ell_1$ norm.
 In fact, other choices are valid and
 popular throughout statistics.
 While $\ell_2$-regularized linear models constitute
-the classic *ridge regression* algorithm,
+the classic *ridge regression* algorithm :cite:`Hoerl.Kennard.1970`,
 $\ell_1$-regularized linear regression
 is a similarly fundamental method in statistics, 
-popularly known as *lasso regression*.
+popularly known as *lasso regression* :cite:`Tibshirani.1996`.
 One reason to work with the $\ell_2$ norm
 is that it places an outsize penalty
 on large components of the weight vector.
@@ -197,11 +198,11 @@ coordinates exactly to zero. This is the geometric reason lasso performs feature
 selection while ridge does not.
 We assert the penalty$\,\Leftrightarrow\,$constraint equivalence here;
 :numref:`sec_mdl-constrained-optimization-duality` derives it via Lagrange
-duality---$\lambda$ is exactly the multiplier attached to the constraint
-$\|\mathbf{w}\| \le t$---and computes the $\lambda \leftrightarrow t$
+duality ($\lambda$ is exactly the multiplier attached to the constraint
+$\|\mathbf{w}\| \le t$) and computes the $\lambda \leftrightarrow t$
 correspondence numerically on ridge regression.
 
-![Weight decay as a constraint. The elliptical contours of the training loss $L(\mathbf{w})$, centred on the unconstrained optimum $\hat{\mathbf{w}}$, grow until they meet the constraint region at the regularized solution $\mathbf{w}^\star$. Left: the $\ell_2$ ball is met *tangentially*, shrinking both coordinates. Right: the $\ell_1$ diamond is met at a *corner*, forcing $w_2$ to exactly zero---the sparsity that distinguishes lasso from ridge.](../img/mdl-linreg-ridge-geometry.svg)
+![Weight decay as a constraint. The elliptical contours of the training loss $L(\mathbf{w})$, centred on the unconstrained optimum $\hat{\mathbf{w}}$, grow until they meet the constraint region at the regularized solution $\mathbf{w}^\star$. Left: the $\ell_2$ ball is met *tangentially*, shrinking both coordinates. Right: the $\ell_1$ diamond is met at a *corner*, forcing $w_2$ to exactly zero: the sparsity that distinguishes lasso from ridge.](../img/mdl-linreg-ridge-geometry.svg)
 :label:`fig_ridge_geometry`
 
 Using the same notation in :eqref:`eq_linreg_batch_update`,
@@ -234,22 +235,21 @@ $\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss and applying the shrink-and-upda
 rule above are one and the same. This equivalence is special to SGD: for adaptive
 optimizers such as Adam, a penalty placed inside the loss is rescaled by the
 optimizer's per-coordinate second-moment estimates and no longer acts as uniform
-weight shrinkage. *Decoupling* the decay from the loss gradient---shrinking every
-weight by a fixed fraction at each step---restores the intended behavior; this is
+weight shrinkage. *Decoupling* the decay from the loss gradient (shrinking every
+weight by a fixed fraction at each step) restores the intended behavior; this is
 the decoupled-weight-decay variant AdamW, introduced by
 :citet:`Loshchilov.Hutter.2019` and now a default optimizer for large models.
-The mechanism---including the per-coordinate shrinkage formula and a code
-demonstration racing the coupled and decoupled variants---is worked out in
+The mechanism (including the per-coordinate shrinkage formula and a code
+demonstration racing the coupled and decoupled variants) is worked out in
 :numref:`subsec_mdl-decoupled-weight-decay`, and we take up optimizers in
 detail in :numref:`sec_adam`.
 
-Finally, weight decay has a clean probabilistic reading, and the derivation is
-short enough to do on the spot. Recall from
+Finally, weight decay also has a probabilistic reading. Recall from
 :numref:`subsec_normal_distribution_and_squared_loss` that minimizing the squared
 loss is maximum likelihood estimation under Gaussian observation noise. Now place
 an isotropic Gaussian *prior* $\mathbf{w} \sim \mathcal{N}(\mathbf{0}, \tau^2\mathbf{I})$
 on the weights and ask instead for the weights that maximize the *posterior*
-$p(\mathbf{w} \mid \mathbf{X}, \mathbf{y}) \propto p(\mathbf{y} \mid \mathbf{X}, \mathbf{w})\, p(\mathbf{w})$---the
+$p(\mathbf{w} \mid \mathbf{X}, \mathbf{y}) \propto p(\mathbf{y} \mid \mathbf{X}, \mathbf{w})\, p(\mathbf{w})$, the
 *maximum a posteriori* (MAP) estimate. Taking negative logarithms, the prior
 contributes
 
@@ -266,11 +266,11 @@ is thereby *proportional to* the prior precision $1/\tau^2$: a tighter prior
 (smaller $\tau$) means stronger shrinkage. The exact constant of proportionality
 involves the noise variance $\sigma^2$ and the sample size $n$, because the loss
 $L$ above is an *average* while the log-posterior is a *sum*; exercise 6 asks you
-to make the correspondence precise. :numref:`fig_wd-map-prior` shows the
-tug-of-war: the prior's quadratic bowl pulls the maximum-likelihood estimate back
+to make the correspondence precise. :numref:`fig_wd-map-prior` illustrates this:
+the prior's quadratic bowl pulls the maximum-likelihood estimate back
 toward the origin. This recovers the classical *ridge regression* estimator.
 
-![The MAP reading of weight decay is a tug-of-war between data and prior. The negative log-likelihood (blue) is minimized at the MLE; adding the Gaussian prior's quadratic bowl (orange, dashed) yields the MAP objective (green), whose minimum is pulled from the MLE toward the prior mean---for weight decay, the origin. A tighter prior (smaller $\tau$) pulls harder.](../img/mdl-prob-map-prior.svg)
+![The MAP reading of weight decay is a tug-of-war between data and prior. The negative log-likelihood (blue) is minimized at the MLE; adding the Gaussian prior's quadratic bowl (orange, dashed) yields the MAP objective (green), whose minimum is pulled from the MLE toward the prior mean, which for weight decay is the origin. A tighter prior (smaller $\tau$) pulls harder.](../img/mdl-prob-map-prior.svg)
 :label:`fig_wd-map-prior`
 
 ## High-Dimensional Linear Regression
@@ -460,7 +460,7 @@ We now run this code with `lambd = 0`,
 disabling weight decay.
 Note that we overfit badly,
 decreasing the training error but not the
-validation error---a textbook case of overfitting.
+validation error, a textbook case of overfitting.
 
 ```{.python .input #weight-decay-training-without-regularization}
 train_scratch(0)
@@ -485,14 +485,15 @@ The geometry of :numref:`fig_ridge_geometry` says that the penalty pulls
 $\hat{\mathbf{w}}$ toward the origin, but not *which parts* of
 $\hat{\mathbf{w}}$ are pulled hardest. For linear regression we can say
 exactly. Adding the penalty keeps the problem quadratic, so it retains a
-closed-form solution: minimizing
+closed-form solution (dropping the unpenalized intercept, which centering
+absorbs): minimizing
 $\frac{1}{2}\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2 + \frac{\tilde{\lambda}}{2}\|\mathbf{w}\|^2$
 gives
 
 $$\mathbf{w}^*_{\tilde{\lambda}} = (\mathbf{X}^\top \mathbf{X} + \tilde{\lambda} \mathbf{I})^{-1} \mathbf{X}^\top \mathbf{y},$$
 
 which is well defined for every $\tilde{\lambda} > 0$ even when
-$\mathbf{X}^\top \mathbf{X}$ is singular---this is the estimator promised in
+$\mathbf{X}^\top \mathbf{X}$ is singular; this is the estimator promised in
 exercise 4.5 of :numref:`sec_linear_regression`. (Because the loss $L$ of this
 section *averages* over the $n$ examples while the objective above sums, the two
 conventions are related by $\tilde{\lambda} = n\lambda$.)
@@ -508,7 +509,7 @@ whereas ordinary least squares gives $\sum_j \mathbf{u}_j \mathbf{u}_j^\top \mat
 the orthogonal projection from :numref:`sec_linear_regression`. Ridge therefore
 *shrinks* the response along the $j$-th principal direction of the data by the
 factor $d_j^2 / (d_j^2 + \tilde{\lambda})$. Directions with large singular value
-$d_j$---strongly represented in the data---pass through almost untouched, while
+$d_j$ (strongly represented in the data) pass through almost untouched, while
 directions with small $d_j$, where a little noise in $\mathbf{y}$ produces a wild
 swing in $\mathbf{w}$, are suppressed hardest. This is the quantitative reason
 shrinkage tames overfitting: it damps precisely the directions that the data
@@ -518,7 +519,7 @@ per-direction factors yields the *effective degrees of freedom*
 $$\textrm{df}(\tilde{\lambda}) = \sum_j \frac{d_j^2}{d_j^2 + \tilde{\lambda}},$$
 
 which slides continuously from $\textrm{rank}(\mathbf{X})$ at
-$\tilde{\lambda} = 0$ toward $0$ as $\tilde{\lambda} \to \infty$---the
+$\tilde{\lambda} = 0$ toward $0$ as $\tilde{\lambda} \to \infty$, the
 "continuous complexity dial" from the start of this section, made literal.
 Let's compute these quantities on the very dataset we just trained on.
 
@@ -561,18 +562,19 @@ for lam in (0, 3, 30):
 Two things stand out. First, even *without* regularization, 20 training
 examples can pin down at most 20 directions of the 200-dimensional weight
 space: $\textrm{rank}(\mathbf{X}) = 20$, so $\textrm{df}(0) = 20$ and the
-remaining 180 directions are entirely unconstrained---no wonder the
-unregularized fit overfits. Second, at the $\lambda = 3$ that rescued the
+remaining 180 directions are entirely unconstrained: no wonder the
+unregularized fit overfits. Second, at the $\lambda = 3$ that lowered the
 validation loss above, every shrinkage factor drops below one, the weakest
 directions are damped most, and $\textrm{df}(\lambda)$ falls well below 20: the
 regularized model behaves like one with far fewer parameters than its nominal
-200, which is exactly the continuous capacity control we advertised.
+200, which is exactly the continuous capacity control weight decay provides
+(:numref:`sec_generalization_basics`).
 
 ## Concise Implementation
 
 Because weight decay is ubiquitous
 in neural network optimization,
-the deep learning framework makes it especially convenient,
+deep learning frameworks make it especially convenient,
 integrating weight decay into the optimization algorithm itself
 for easy use in combination with any loss function.
 Moreover, this integration serves a computational benefit,
@@ -681,10 +683,10 @@ class WeightDecay(d2l.LinearRegression):
 
 This version runs faster and is easier to implement than the from-scratch code,
 benefits that grow more pronounced on larger problems and as this work becomes
-routine. One subtlety is worth flagging: a framework's `weight_decay` adds the
+routine. One subtlety: a framework's `weight_decay` adds the
 term $\lambda\mathbf{w}$ to the *gradient*, whereas our from-scratch penalty added
 $\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the *loss*. When the loss omits the
-$\frac{1}{2}$ factor---as PyTorch's `nn.MSELoss` does---the two correspond to
+$\frac{1}{2}$ factor (as PyTorch's `nn.MSELoss` does), the two correspond to
 slightly different effective values of $\lambda$, so the converged
 $\|\mathbf{w}\|^2$ need not match the from-scratch value exactly, even though the
 regularizing effect is the same.
@@ -728,7 +730,7 @@ print('L2 norm of w:', float(l2_penalty(model.get_w_b()[0])))
 So far we have measured complexity through the norm of a *linear* function's
 weights. The same principle extends to the nonlinear functions a deep network
 computes: in practice we simply apply weight decay to the parameters of every
-layer---a simple, effective heuristic we adopt throughout the book.
+layer, a simple, effective heuristic we adopt throughout the book.
 
 ## Summary
 
@@ -741,7 +743,7 @@ Different sets of parameters can have different update behaviors within the same
 
 ## Exercises
 
-1. Experiment with the value of $\lambda$ in the estimation problem in this section. Plot training and validation loss as a function of $\lambda$. What do you observe? Hint: expect a U-shaped validation curve, with $\lambda$ (equivalently, $\textrm{df}(\lambda)$) playing the role of the complexity dial---compare :numref:`fig_mdl-bias-variance-u-curve`.
+1. Experiment with the value of $\lambda$ in the estimation problem in this section. Plot training and validation loss as a function of $\lambda$. What do you observe? Hint: expect a U-shaped validation curve, with $\lambda$ (equivalently, $\textrm{df}(\lambda)$) playing the role of the complexity dial (compare :numref:`fig_mdl-bias-variance-u-curve`).
 1. Use a validation set to find the optimal value of $\lambda$. Is it really the optimal value? Does this matter?
 1. What would the update equations look like if instead of $\|\mathbf{w}\|^2$ we used $\sum_i |w_i|$ as our penalty of choice ($\ell_1$ regularization)?
 1. We know that $\|\mathbf{w}\|^2 = \mathbf{w}^\top \mathbf{w}$. Can you find a similar equation for matrices (see the Frobenius norm in :numref:`subsec_lin-algebra-norms`)?
@@ -874,7 +876,7 @@ A tiny linear signal in **200 inputs** plus faint noise, $y = 0.05 + \sum_i 0.01
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
 **20** examples for **200** parameters: 10× more knobs than data.
-Overfitting is guaranteed --- by design, so the rescue is unmistakable.
+Overfitting is guaranteed by design, so its remedy is unmistakable.
 :::
 :::
 :::
@@ -907,7 +909,7 @@ Nothing else changes: same linear model, same squared loss. The penalty rides al
 
 @weight-decay-training-without-regularization
 
-Training loss plunges; validation loss never follows --- and the printed
+Training loss plunges; validation loss never follows, and the printed
 $\|\mathbf{w}\|^2$ shows the price of that perfect memory. A textbook overfit.
 :::
 
@@ -916,7 +918,7 @@ $\|\mathbf{w}\|^2$ shows the price of that perfect memory. A textbook overfit.
 
 @weight-decay-using-weight-decay
 
-Training loss is *higher* --- we forbade memorization --- but validation
+Training loss is *higher* (we forbade memorization) but validation
 loss finally falls, with $\|\mathbf{w}\|^2$ an order of magnitude smaller.
 :::
 
@@ -934,10 +936,9 @@ On our $20\times 200$ dataset:
 @!weight-decay-why-shrinkage-helps-the-spectral-view
 
 ::: {.d2l-note .rule}
-Twenty examples pin down at most **20** of 200 directions; the rescue
-$\lambda = 3$ prices the model at $\textrm{df} = 15.1$ effective
-parameters, hitting the weakest directions --- the ones a noise-chasing
-fit exploits --- hardest. The **continuous complexity dial**, made literal.
+Twenty examples pin down at most **20** of 200 directions; $\lambda = 3$
+prices the model at $\textrm{df} = 15.1$ effective parameters, hitting
+the weakest directions hardest.
 :::
 :::
 
@@ -950,15 +951,13 @@ $$\frac{d_j^2}{d_j^2 + \tilde{\lambda}}
 \qquad\Rightarrow\qquad
 \textrm{df}(\tilde{\lambda}) = \sum_j \frac{d_j^2}{d_j^2 + \tilde{\lambda}}.$$
 
-Strong directions ($d_j$ large) pass through nearly untouched; weakly
-constrained ones are suppressed hardest --- exactly the directions a
-noise-chasing fit exploits.
+Strong directions ($d_j$ large) pass through nearly untouched; the weakly
+constrained ones are suppressed hardest.
 
 ::: {.d2l-note .rule}
 Twenty examples pin down at most **20** of 200 directions
-($\textrm{df}(0) = 20$); the rescue $\lambda = 3$ prices the model at
-$\textrm{df} \approx 15$ effective parameters. The **continuous
-complexity dial**, made literal.
+($\textrm{df}(0) = 20$); $\lambda = 3$ prices the model at
+$\textrm{df} \approx 15$ effective parameters.
 :::
 :::
 
@@ -1083,7 +1082,7 @@ $$\underbrace{-\log p(\mathbf{y}\mid\mathbf{X},\mathbf{w})}_{\textrm{MLE: }\,\fr
 ::: {.col}
 - **Weight decay** = original loss $+\ \tfrac{\lambda}{2}\|\mathbf{w}\|_2^2$; per step it **shrinks** the weights by $1 - \eta\lambda$ before the data update.
 - **Geometry:** ridge shrinks (round ball), lasso selects (pointed diamond).
-- **Spectral view:** each direction damped by $d_j^2/(d_j^2+\tilde\lambda)$; the 200-knob model ran at $\textrm{df} \approx 15$ effective parameters --- a continuous dial, tuned on a **validation set**.
+- **Spectral view:** each direction damped by $d_j^2/(d_j^2+\tilde\lambda)$; the 200-knob model ran at $\textrm{df} \approx 15$ effective parameters, a continuous dial tuned on a **validation set**.
 :::
 
 ::: {.col}

@@ -18,8 +18,8 @@ The data is fairly generic and does not exhibit exotic structure
 that might require specialized models (as audio or video might).
 This dataset, collected by :citet:`De-Cock.2011`,
 covers house prices in Ames, Iowa from the period 2006--2010.
-It was assembled as a modern, larger alternative to the small
-end-of-century teaching datasets that preceded it, boasting both more
+It was assembled as a modern, larger alternative to the small classic
+teaching datasets (e.g. Boston Housing) that preceded it, with more
 examples and more features.
 
 
@@ -80,7 +80,7 @@ fostering both collaboration and competition.
 While leaderboard chasing often spirals out of control,
 with researchers focusing myopically on preprocessing steps
 rather than asking fundamental questions,
-there is also tremendous value in the objectivity of a platform
+there is also value in the objectivity of a platform
 that facilitates direct quantitative comparisons
 among competing approaches as well as code sharing
 so that everyone can learn what did and did not work.
@@ -176,11 +176,8 @@ print(data.raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
 ```
 
 We can see that in each example, the first feature is the identifier.
-This helps the model determine each training example.
-While this is convenient, it does not carry
-any information for prediction purposes.
-Hence, we will remove it from the dataset
-before feeding the data into the model.
+This lets us identify each record; it carries no predictive information,
+so we drop it from the dataset before feeding the data into the model.
 Furthermore, given a wide variety of data types,
 we will need to preprocess the data before we can start modeling.
 
@@ -200,7 +197,7 @@ By the definition of mean and variance, the rescaled feature has
 $E\!\left[\frac{x-\mu}{\sigma}\right] = 0$ and
 $\mathrm{Var}\!\left[\frac{x-\mu}{\sigma}\right] = 1$,
 so every column now lives on the same zero-mean, unit-variance scale.
-Crucially, we compute $\mu$ and $\sigma$ from the *training* set only and
+We compute $\mu$ and $\sigma$ from the *training* set only and
 apply the very same transformation to the test set. Using statistics that
 include the test data would let information about the test distribution
 seep into our preprocessing, optimistically biasing every evaluation we
@@ -273,7 +270,7 @@ data.train.shape
 
 ## Error Measure
 
-Before choosing a model, we need to decide what "good" means: the loss we train against and the metric we are scored on. Whatever model we fit, getting it to beat random guessing is a first sanity check that there is meaningful signal in the data and no data-processing bug, and the first working model becomes a baseline that tells us how much room fancier models have to improve. So the choice of error measure comes first.
+Before choosing a model, we need to decide what "good" means: the loss we train against and the metric we are scored on. So the choice of error measure comes first.
 
 With house prices, as with stock prices,
 we care about relative quantities
@@ -422,28 +419,25 @@ However, if we try an unreasonably large number of options
 we might find that our validation
 performance is no longer representative of the true error.
 
-One honest caveat before we run the numbers. On *structured tabular data*
+One caveat before we run the numbers. On *structured tabular data*
 like this dataset, gradient-boosted tree ensembles (XGBoost and LightGBM)
 typically outperform deep networks, including MLPs
-:cite:`Grinsztajn.Oyallon.Varoquaux.2022,Shwartz-Ziv.Armon.2022`, and the
-public leaderboard for this competition reflects that: the top submissions
-are almost always tree-based, with neural networks some distance behind. This
+:cite:`Grinsztajn.Oyallon.Varoquaux.2022,Shwartz-Ziv.Armon.2022`. This
 does not diminish what we learn here, since the preprocessing pipeline,
 log-RMSE loss, and $K$-fold cross-validation apply to *any* model class.
-But it does set honest expectations about where neural networks shine
+But it does set expectations about where neural networks shine
 (images, text, audio, and sequences) and where they currently do not
 (small-to-medium tabular data).
 
-We start with a linear model. It is a fast, honest baseline that
-sanity-checks the pipeline. One subtlety is easy to get wrong and worth
-stating plainly: a baseline is only meaningful if it is *trained
-competently*. Plain minibatch SGD on these standardized features needs more
-than a handful of passes to converge, so we give the linear model a healthy
-$100$ epochs at learning rate $0.03$ (a larger rate diverges on the
-log-price target). Trained this way the linear model already reaches a
-cross-validated log error well under $0.05$; stopping at the customary ten
-epochs would instead leave it badly underfit (closer to $0.18$), which would
-flatter every model we compared against it.
+We start with a linear model. It is a fast baseline that
+sanity-checks the pipeline. One subtlety is easy to get wrong: a baseline
+is only meaningful if it is *trained competently*. Plain minibatch SGD on
+these standardized features needs more than a handful of passes to converge,
+so we give the linear model a healthy $100$ epochs at learning rate $0.03$
+(a larger rate diverges on the log-price target). Trained this way the
+linear model already reaches a cross-validated log error well under $0.05$;
+stopping at the customary ten epochs would instead leave it badly underfit,
+which would flatter every model we compared against it.
 
 ```{.python .input #kaggle-house-price-model-selection-linear}
 %%tab pytorch
@@ -459,6 +453,7 @@ models = k_fold(trainer, data, k=5,
                 model_fn=lambda: d2l.LinearRegression(lr=0.03))
 ```
 
+:begin_tab:`pytorch`
 Can a small neural network do better? Now that we have weight decay
 (:numref:`sec_weight_decay`), dropout (:numref:`sec_dropout`), and sensible
 initialization (:numref:`sec_numerical_stability`) in hand, we can try the
@@ -471,6 +466,7 @@ straight into SGD. A wider net or aggressive dropout (the $0.5$ that is
 common on large datasets) simply overfits or fails to train on data this
 small. We reuse the squared-error loss from `LinearRegression` and only
 override the optimizer to attach weight decay.
+:end_tab:
 
 ```{.python .input #kaggle-house-price-mlp-model}
 %%tab pytorch
@@ -486,8 +482,10 @@ class KaggleMLP(d2l.LinearRegression):
                                weight_decay=self.weight_decay)
 ```
 
+:begin_tab:`pytorch`
 We train it with the *same* $K$-fold loop, learning rate, and epoch budget
 as the linear baseline, so the only thing that changes is the model.
+:end_tab:
 
 ```{.python .input #kaggle-house-price-mlp-select}
 %%tab pytorch
@@ -495,15 +493,17 @@ trainer = d2l.Trainer(max_epochs=100)
 models = k_fold(trainer, data, k=5, model_fn=lambda: KaggleMLP(lr=0.03))
 ```
 
-The small MLP lands in a dead heat with the (now competently trained) linear
-baseline: both reach a cross-validated log error near $0.03$, and which of
-the two is a hair ahead varies from run to run. The lesson is deliberately
-undramatic. A nonlinear model buys very little here, and it survives at all
-only because it is small enough and regularized enough for a dataset of
-barely a thousand rows; the bulk of the gain over a careless $0.18$ baseline
-came simply from training *either* model to convergence. And as the caveat above promised, a gradient-boosted tree
-ensemble would still be the stronger tabular choice. The exercises invite you
-to try one and see.
+:begin_tab:`pytorch`
+The small MLP edges out the (now competently trained) linear baseline: the
+linear model reaches a cross-validated log error of about $0.034$ and the
+MLP about $0.028$, so the nonlinearity buys a modest but real gain. The
+lesson is still deliberately undramatic. The MLP survives at all only
+because it is small enough and regularized enough for a dataset of barely a
+thousand rows, and the bulk of the improvement over a careless, underfit
+baseline came simply from training *either* model to convergence. As the
+caveat above noted, a gradient-boosted tree ensemble would still be the
+stronger tabular choice. The exercises invite you to try one and see.
+:end_tab:
 
 Notice that sometimes the number of training errors
 for a set of hyperparameters can be very low,
@@ -529,17 +529,17 @@ the mean of the log-predictions is the ensemble
 consistent with the metric
 (in price space it amounts to a geometric mean).
 
-Be clear-eyed about what this *fold ensembling* is, though. Each of the $K$
+Note what this *fold ensembling* is, though. Each of the $K$
 models saw only $(K-1)/K$ of the training data, and the "average validation
-log mse" we computed above estimates the error of a *single* such model — not
+log mse" we computed above estimates the error of a *single* such model, not
 of the ensemble we are about to submit, whose error the cross-validation
 score does not measure. The canonical alternative is to *refit* one model on
 all of the training data using the hyperparameters that cross-validation
 selected, so that the submitted model is a fresh draw of exactly the thing we
 scored. Fold ensembling is standard Kaggle practice: it is free (the $K$
 models are already trained) and the averaging usually buys a small variance
-reduction, so it tends to edge out the refit. But the refit is the cleaner
-experiment, and the choice between them is worth making consciously.
+reduction, so it tends to edge out the refit. But the refit is the more
+direct experiment, and you should choose between them deliberately.
 
 Saving the predictions in a csv file
 will simplify uploading the results to Kaggle.
@@ -630,17 +630,15 @@ $K$-fold cross-validation is the right tool when training data is limited
 estimate of generalization error, and that same loop doubles as the
 infrastructure for hyperparameter search.
 
-Two caveats belong in any honest account of this pipeline. First, none of it
-is specific to neural networks. The same preprocessing, loss design, and
+Two caveats belong in any account of this pipeline. First, none of it is
+specific to neural networks: the same preprocessing, loss design, and
 cross-validation loop work with any model class, including the
 gradient-boosted tree ensembles (XGBoost, LightGBM) that routinely beat deep
 networks on medium-sized tabular data
-:cite:`Grinsztajn.Oyallon.Varoquaux.2022,Shwartz-Ziv.Armon.2022`. On images,
-text, and audio the balance tips the other way, which is where the rest of
-this book lives. Second, model capacity matters: adding hidden layers, tuning
-the dropout rate, and searching over learning rate and weight decay can
-improve substantially on the baseline shown here, which is exactly what the
-exercises ask you to do.
+:cite:`Grinsztajn.Oyallon.Varoquaux.2022,Shwartz-Ziv.Armon.2022`. Second,
+model capacity matters: adding hidden layers, tuning the dropout rate, and
+searching over learning rate and weight decay can improve substantially on
+the baseline shown here, which is exactly what the exercises ask you to do.
 
 Looking ahead, the moves we made here recur throughout supervised learning.
 Feature scaling and imputation reappear in nearly every tabular pipeline, and
@@ -683,7 +681,7 @@ fine-tuning of pretrained models.
 ::: {.cover}
 [Dive into Deep Learning · §5.7]{.kicker}
 
-Predicting **house prices** on Kaggle<br>An end-to-end pipeline: messy data in, a scored prediction out --- **and the difference between a 0.18 baseline and a 0.03 one is nothing but training it properly**.
+Predicting **house prices** on Kaggle<br>An end-to-end pipeline: messy data in, a scored prediction out. **The difference between an underfit baseline and a converged one is nothing but training it properly.**
 :::
 :::
 
@@ -734,8 +732,8 @@ train locally, upload predictions, get scored on a held-out slice of
 the test set.
 
 ::: {.d2l-note}
-A **public/private** split on the test labels keeps everyone honest
-about overfitting the leaderboard.
+A **public/private** split on the test labels stops competitors from
+overfitting the leaderboard.
 :::
 :::
 
@@ -948,7 +946,7 @@ A fresh model per fold; average:
 ::: {.slide title="K-fold in code" only="jax" layout="code"}
 [Model selection]{.kicker}
 
-`k_fold_data` slices out fold $i$ as validation and trains on the rest. Then fit a fresh model per fold and average the held-out scores — in Flax the trained parameters live in `trainer.state`, not the frozen model, so each fold's params are captured for the ensemble:
+`k_fold_data` slices out fold $i$ as validation and trains on the rest. Then fit a fresh model per fold and average the held-out scores; in Flax the trained parameters live in `trainer.state`, not the frozen model, so each fold's params are captured for the ensemble:
 
 @-kaggle-house-price-k-fold-cross-validation-2
 :::
@@ -968,14 +966,14 @@ A fresh model per fold; average:
 
 ::: {.cols .vc}
 ::: {.col}
-Start with a linear model, a fast honest baseline — but train it **competently**: 100 epochs at lr 0.03, not the customary ten. Ten epochs of SGD on these features leaves it badly underfit, at a log error near **0.18**.
+Start with a linear model, a fast baseline, but train it **competently**: 100 epochs at lr 0.03, not the customary ten. Ten epochs of SGD on these features leaves it badly underfit.
 
 @!kaggle-house-price-model-selection-linear
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Same model, same data: **0.18 underfit vs 0.031 converged**. Every fancier model "beats" the 0.18 baseline; almost nothing beats the competent one. A baseline only counts if it is trained to convergence.
+Same model, same data: badly underfit vs **0.034** converged. Every fancier model "beats" the underfit baseline; almost nothing beats the competent one. A baseline only counts if it is trained to convergence.
 :::
 :::
 :::
@@ -986,14 +984,14 @@ Same model, same data: **0.18 underfit vs 0.031 converged**. Every fancier model
 
 ::: {.cols .vc}
 ::: {.col}
-Start with a linear model through the same K-fold loop — and train it **competently**: 100 epochs at learning rate 0.03, not the customary ten:
+Start with a linear model through the same K-fold loop, and train it **competently**: 100 epochs at learning rate 0.03, not the customary ten:
 
 @-kaggle-house-price-model-selection-linear
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Ten epochs of SGD leaves this model badly **underfit**, near **0.18**; trained to convergence it reaches $\approx$ **0.031**. An underfit baseline flatters every model compared against it.
+Ten epochs of SGD leaves this model badly **underfit**; trained to convergence it reaches $\approx$ **0.034**. An underfit baseline flatters every model compared against it.
 :::
 :::
 :::
@@ -1020,25 +1018,25 @@ optimizer to attach weight decay.
 :::
 :::
 
-::: {.slide title="The verdict: a dead heat near 0.03" only="pytorch"}
+::: {.slide title="The verdict: the MLP edges ahead" only="pytorch"}
 [Model selection]{.kicker}
 
-Same K-fold loop, learning rate, and epoch budget — only the model changes:
+Same K-fold loop, learning rate, and epoch budget, only the model changes:
 
 @!kaggle-house-price-mlp-select
 
 ::: {.d2l-note .rule}
-**0.031 linear vs 0.032 MLP** — a dead heat; the leader varies run to run. The gain over a careless 0.18 came from training *either* model to convergence, not from the nonlinearity. Trees would still win here.
+**0.034 linear vs 0.028 MLP**: the nonlinearity buys a modest but real gain. The bulk of the improvement over a careless, underfit baseline came from training *either* model to convergence. Trees would still win here.
 :::
 :::
 
-::: {.slide title="The verdict: a dead heat near 0.03" except="pytorch"}
+::: {.slide title="The verdict: the MLP edges ahead" except="pytorch"}
 [Model selection]{.kicker}
 
-The natural next step is a small MLP — one 32-unit ReLU hidden layer, dropout $0.1$, weight decay $10^{-4}$; anything bigger overfits 1460 rows. Run through the *same* K-fold loop, learning rate, and epoch budget (the PyTorch notebook carries the experiment), it lands in a **dead heat** with the competently trained linear baseline: about $0.032$ vs $0.031$.
+The natural next step is a small MLP: one 32-unit ReLU hidden layer, dropout $0.1$, weight decay $10^{-4}$; anything bigger overfits 1460 rows. Run through the *same* K-fold loop, learning rate, and epoch budget, it edges out the competently trained linear baseline: about $0.028$ vs $0.034$.
 
 ::: {.d2l-note .rule}
-The lesson is deliberately undramatic: the nonlinearity buys almost nothing here — the bulk of the gain over a careless 0.18 came from training *either* model to convergence. On small tabular data, gradient-boosted trees would still win.
+The lesson is deliberately undramatic: the nonlinearity buys only a modest gain here, and the bulk of the improvement over a careless, underfit baseline came from training *either* model to convergence. On small tabular data, gradient-boosted trees would still win.
 :::
 :::
 
@@ -1057,8 +1055,8 @@ Average the $K$ log-price predictions, exponentiate, submit:
 
 ::: {.d2l-note}
 The log-space mean is the **RMSLE-consistent** (geometric-mean)
-ensemble. And note: the CV score measured a *single* fold model —
-refitting on all data is the cleaner alternative to this *fold
+ensemble. And note: the CV score measured a *single* fold model;
+refitting on all data is the more direct alternative to this *fold
 ensembling*.
 :::
 :::
@@ -1077,7 +1075,7 @@ ensembling*.
 :::
 
 ::: {.col}
-5. **Ensemble the fold models** (log-space mean) — or refit on all data
+5. **Ensemble the fold models** (log-space mean), or refit on all data
    with the chosen hyperparameters.
 6. **Submit** in the host's format.
 
@@ -1103,15 +1101,15 @@ images, text, audio. The pipeline is identical.
 ::: {.col}
 - **K-fold CV** gives a stable estimate on small data and drives HP
   search.
-- **A baseline counts only if trained competently**: 0.18 underfit
-  vs 0.03 converged, same model.
+- **A baseline counts only if trained competently**: underfit
+  vs converged, same model.
 - **Ensemble the folds in log space** (or refit), then submit.
 - The model is a few lines; **everything around it is the lesson**.
 :::
 :::
 
 ::: {.d2l-note}
-That closes the MLP chapter. Next: the builder's guide — layers,
+That closes the MLP chapter. Next: the builder's guide, covering layers,
 blocks, parameters, and custom architectures, the engineering that
 scales these ideas up.
 :::

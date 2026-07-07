@@ -71,7 +71,7 @@ the dropout technique itself has proved enduring,
 and various forms of dropout are implemented
 in most deep learning libraries.
 
-A third, perhaps more illuminating, perspective is due to
+A third perspective, closer to why dropout works, is due to
 :citet:`Srivastava.Hinton.Krizhevsky.ea.2014` themselves.
 A network with $n$ hidden units has $2^n$ possible dropout masks,
 each defining a *thinned* subnetwork that shares its weights
@@ -86,8 +86,11 @@ single linear layer; in deeper networks the test-time forward pass
 computes something closer to a *geometric* mean
 of the subnetworks' predictions.)
 From this angle dropout is cheap model averaging,
-which is exactly why we expect it to reduce variance:
+which motivates why it tends to reduce variance:
 ensembles average away the idiosyncrasies of their members.
+The analogy is loose rather than literal, though: the $2^n$
+subnetworks share a single set of weights and are trained jointly,
+not fit independently the way the members of a bagging ensemble are.
 
 
 The key challenge is how to inject this noise.
@@ -131,7 +134,7 @@ original formulation :cite:`Srivastava.Hinton.Krizhevsky.ea.2014` left
 activations untouched during training and instead multiplied the weights by
 $1-p$ at *test* time. The two are equivalent in expectation, but inverting
 moves all of the bookkeeping into training, so the inference code never has
-to change — which is exactly why a `Dropout` layer can be a no-op in
+to change, which is exactly why a `Dropout` layer can be a no-op in
 evaluation mode.
 
 ```{.python .input #dropout}
@@ -529,8 +532,10 @@ matches training without any change to the test-time code. Dropout is *off at
 test time*: the full network runs, with no masking and no rescaling.
 
 Three complementary views explain why dropout helps. The first is *noise
-injection*: zeroing activations at random is, following Bishop, equivalent to
-Tikhonov regularization on the learned function, which favors smoothness. The
+injection*: zeroing activations at random injects noise, and by analogy with
+Bishop's input-noise result this favors a smoother learned function (the exact
+equivalence is proved only for additive input noise, not multiplicative
+dropout). The
 second is *anti-co-adaptation*: because no hidden unit can count on any specific
 partner being present, each unit is pushed to learn broadly useful features. The
 third is the *implicit ensemble*: every training step trains a different thinned
@@ -560,7 +565,7 @@ seed for a family of stochastic-regularization methods.
 1. Why is dropout not typically used at test time?
 1. *Monte Carlo dropout.* At test time, instead of disabling dropout, keep it on and run $T = 20$ forward passes per example, then average the softmax outputs. Compare the resulting accuracy and the calibration (predicted confidence versus actual accuracy) against the standard single-pass evaluation. How does this procedure relate to ensemble methods? (See :citet:`Gal.Ghahramani.2016`.)
 1. Using the model in this section as an example, compare the effects of using dropout and weight decay. What happens when dropout and weight decay are used at the same time? Are the results additive? Are there diminished returns (or worse)? Do they cancel each other out?
-1. What happens if we apply dropout to the individual weights of the weight matrix rather than the activations? (This variant is known as *DropConnect*.) Implement it and compare it against standard dropout on Fashion-MNIST, holding the architecture and training budget fixed.
+1. What happens if we apply dropout to the individual weights of the weight matrix rather than the activations? (This variant is known as *DropConnect* :cite:`Wan.Zeiler.Zhang.LeCun.Fung.2013`.) Implement it and compare it against standard dropout on Fashion-MNIST, holding the architecture and training budget fixed.
 1. Invent another technique for injecting random noise at each layer that differs from both dropout and DropConnect, for example adding Gaussian noise to the activations. For a fixed architecture and training budget, can you develop a method that matches or outperforms dropout on Fashion-MNIST?
 
 :begin_tab:`mxnet`
@@ -614,7 +619,7 @@ model from leaning too hard on the training set.
 ::: {.slide title="Dropout: damage the network on purpose"}
 [The idea]{.kicker}
 
-Srivastava, Hinton et al. (2014) gave a strikingly simple
+Srivastava, Hinton et al. (2014) gave a simple
 recipe:
 
 > *Each training step, set each hidden unit to zero
@@ -624,8 +629,8 @@ recipe:
 . . .
 
 Counterintuitive (we actively cripple the network
-mid-training), yet it is one of the most reliable
-regularizers ever found, and it still ships in modern
+mid-training), yet it is among the most reliable
+regularizers we have, and it still ships in modern
 Transformers.
 :::
 
@@ -676,7 +681,7 @@ $2^{512} \approx 10^{154}$ subnetworks.
   approximates *averaging* all $2^n$ subnetworks.
 
 ::: {.d2l-note}
-Cheap model averaging — ensembles average away their members'
+Cheap model averaging: ensembles average away their members'
 idiosyncrasies, so we expect **variance reduction**. The
 weight-scaling rule is *exact* only for a single linear layer;
 in deeper nets the full pass computes closer to a **geometric**
@@ -692,10 +697,11 @@ present, each is pushed to learn a feature that is useful
 on its own:
 
 - **Anti-co-adaptation:** robust, redundant features
-  instead of brittle conspiracies of neurons.
-- **Smoothness:** Bishop (1995) showed that injecting
-  noise is equivalent to Tikhonov ($\ell_2$) regularization
-  *on the learned function*.
+  instead of features that only work in specific combinations.
+- **Smoothness:** Bishop (1995) showed that *input*-noise
+  injection is equivalent to a smoothness (Tikhonov) penalty
+  on the learned function; dropout is the same idea moved
+  inside the network.
 
 ::: {.d2l-note}
 Three lenses, one mechanism: structured noise during
@@ -719,7 +725,7 @@ $\mathbb{E}[h'] = p\cdot 0 + (1-p)\dfrac{h}{1-p} = h$.
 ::: {.d2l-note .rule}
 Rescaling during *training* is **inverted dropout**, what every
 modern framework implements. The original 2014 formulation instead
-multiplied the weights by $1-p$ at *test* time — equivalent in
+multiplied the weights by $1-p$ at *test* time, equivalent in
 expectation, but inverting moves all bookkeeping into training,
 which is exactly why a `Dropout` layer can be a **no-op in eval**.
 :::
@@ -866,14 +872,13 @@ the mid-2010s; its role has since narrowed.
 ::: {.d2l-note .warn}
 The two combine poorly: batch norm's running statistics, accumulated
 while dropout perturbs the activations' variance, mismatch what it
-sees at eval time — don't place dropout **before** a BN layer
+sees at eval time: don't place dropout **before** a BN layer
 (Li et al., 2019).
 :::
 
 Still a cheap, reliable regularizer that combines well with weight
-decay and data augmentation — and the conceptual seed of a whole
+decay and data augmentation, and the conceptual seed of a whole
 family of stochastic-regularization methods.
-:::
 :::
 
 ::: {.slide title="Summary"}

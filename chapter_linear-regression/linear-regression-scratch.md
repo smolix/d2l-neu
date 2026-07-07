@@ -162,8 +162,7 @@ Our synthetic data loader already yields labels `y`
 with the same shape as the predictions `y_hat`
 (both are $(B, 1)$ column vectors for a batch of size $B$),
 so we can subtract them elementwise directly;
-the JAX tab reshapes `y` defensively,
-and exercise 5 asks what would go wrong
+exercise 5 asks what would go wrong
 if the two shapes did not match.
 We return the averaged loss value
 among all examples in the minibatch.
@@ -177,13 +176,11 @@ def loss(self, y_hat, y):
 ```
 
 :begin_tab:`jax`
-JAX/Flax models are stateless — parameters are not stored on
+JAX/Flax models are stateless: parameters are not stored on
 the module. The loss takes the parameter pytree `params` plus
 the model state explicitly and runs the forward pass via
 `state.apply_fn`, returning the loss for `jax.grad` to
-differentiate. The other frameworks can take the already-
-computed `y_hat` directly because the model carries its
-parameters internally.
+differentiate.
 :end_tab:
 
 ```{.python .input #linear-regression-scratch-defining-the-loss-function  n=10}
@@ -195,7 +192,7 @@ def loss(self, params, X, y, state):
     return d2l.reduce_mean(l)
 ```
 
-Before handing this loss to an optimizer, it is worth computing by hand the
+Before handing this loss to an optimizer, compute by hand the
 gradient that the optimizer will consume. For a single example, the loss is
 $\ell = \frac{1}{2}(\hat{y} - y)^2$ with $\hat{y} = \mathbf{w}^\top \mathbf{x} + b$,
 and the chain rule gives
@@ -203,7 +200,7 @@ and the chain rule gives
 $$\frac{\partial \ell}{\partial \mathbf{w}} = (\hat{y} - y)\, \mathbf{x} \qquad \textrm{and} \qquad \frac{\partial \ell}{\partial b} = \hat{y} - y.$$
 
 Differentiating the square produces the error $\hat{y} - y$, which is then
-multiplied by the derivative of $\hat{y}$ with respect to each parameter---
+multiplied by the derivative of $\hat{y}$ with respect to each parameter:
 $\mathbf{x}$ for the weights and $1$ for the bias. In words, *the gradient is
 the error-weighted input*: each weight $w_j$ will be nudged in proportion to
 how wrong the prediction was times how strongly $x_j$ contributed to it, and
@@ -340,22 +337,19 @@ class SGD(d2l.HyperParameters):  #@save
         return optax.GradientTransformation(self.init, self.update)
 ```
 
-Each optimization step has four parts, and their order matters. **(1) Zero the
-gradients:** autograd *accumulates* gradients by default (:numref:`sec_autograd`),
-so the gradient left over from the previous minibatch must be cleared first.
-**(2) Forward pass and loss**, computed with the gradient machinery recording.
-**(3) Backward pass**, which fills each parameter's gradient with
-$\partial L/\partial \theta$ averaged over the minibatch. **(4) Update:** subtract
-$\eta$ times the gradient from each parameter, *in place*. This last step must run
-*outside* the gradient graph---so that the update itself is not differentiated and
-does not extend the graph---which is why it sits under a no-tracking guard
-(PyTorch's `torch.no_grad()`; the other frameworks express the same idea through
-their `GradientTape`, `autograd.record()`, or functional value-and-gradient, as
-the notes above describe). Forget step (1) and stale gradients leak from one batch
-into the next; forget the guard in step (4) and the update either errors or
-silently grows the graph. Strip away the bookkeeping and training a neural network
-is exactly this four-step loop, run on minibatch after minibatch---which is what
-`fit_epoch` implements below.
+Every optimization step is built from the same moves: a forward pass and loss, a
+backward pass that fills each parameter's gradient with $\partial L/\partial
+\theta$ averaged over the minibatch, and an update that subtracts $\eta$ times the
+gradient from each parameter, *in place*. Two invariants govern their order. First,
+if the backward pass *accumulates* into whatever gradient is already stored
+(:numref:`sec_autograd`), those buffers must be cleared before it runs, or a
+leftover gradient from the previous minibatch contaminates this one. Second, the
+update must run last and *outside* the gradient graph, so that the subtraction is
+not itself differentiated and does not extend the graph; this is why it sits under
+a no-tracking guard. Miss the clearing and stale gradients leak from one batch into
+the next; miss the guard and the update either errors or silently grows the graph.
+Strip away the bookkeeping and training a neural network is exactly this loop, run
+on minibatch after minibatch, which is what `fit_epoch` implements below.
 
 We next define the `configure_optimizers` method, which returns an instance of the `SGD` class.
 
@@ -392,7 +386,7 @@ def configure_optimizers(self):
 Now that we have all of the parts in place
 (parameters, loss function, model, and optimizer),
 we are ready to implement the main training loop.
-It is crucial that you understand this code fully
+You will want to understand this code fully,
 since you will employ similar training loops
 for every other deep learning model
 covered in this book.
@@ -449,34 +443,30 @@ we run one forward pass
 to let Keras create the layer weights,
 since `tf.function` needs all variables
 to exist at trace time.
-This graph-compilation step is specific to the TensorFlow tab
-(PyTorch and MXNet run this from-scratch loop eagerly;
-JAX gets the same effect from `jax.jit` in later chapters).
-At the tiny scale of this example the wall-clock difference is modest —
-the pattern earns its keep once models and batches grow.
+The graph-compilation cost is paid once per trace; its benefit over running the
+same operations one at a time from Python grows with model and batch size.
 :end_tab:
 
 :begin_tab:`jax`
-The JAX implementation looks longer than its PyTorch counterpart because
-JAX is purely functional: there is no implicit `self`-attached state,
-so each step must explicitly take in and return the optimizer state,
-dropout RNG, and (optionally) batch-statistics. PyTorch's `optim.step()`
-mutates parameters in place, but JAX's `state.apply_gradients(grads=…)`
-returns a *new* state object, which we then thread back through the
+Because JAX is purely functional there is no implicit `self`-attached state,
+so each step must explicitly take in and return the optimizer state, the
+dropout RNG, and (optionally) batch statistics (the latter two are only
+exercised by later chapters). `state.apply_gradients(grads=…)` does not mutate
+in place; it returns a *new* state object, which we then thread back through the
 loop. This explicit plumbing is what the extra lines below are doing.
 
-JAX shares the same "compile, then dispatch" cost model as TensorFlow:
-executing optax updates and `state.replace` calls one at a time in Python
-is far slower than doing them as a single compiled kernel. We therefore
-wrap the optimizer step and the bookkeeping
+Running the optax update and the `state.replace` bookkeeping one operation at a
+time from Python pays a dispatch cost on every call; compiling the whole step
+into one kernel removes it. We therefore wrap the optimizer step and the
+bookkeeping
 (`state.apply_gradients`, `state.replace(dropout_rng=…, batch_stats=…)`)
 in two small `@jax.jit` functions, `_trainer_update` and
 `_trainer_update_with_bn`, and call the appropriate one per batch.
-The forward + gradient computation is already inside `self.model.loss`
+The forward and gradient computation is already inside `self.model.loss`
 (itself `@jax.jit`-decorated), so the entire per-batch work consists of
 two JIT-ed calls with no Python-side optax dispatch. Because the hand-rolled
 `SGD.init` below returns a proper `EmptyState()` pytree, even that optimizer
-is JIT-traceable, so we always take the compiled path (no eager fallback).
+is JIT-traceable, so we always take the compiled path.
 :end_tab:
 
 ```{.python .input #linear-regression-scratch-training-1  n=15}
@@ -653,7 +643,7 @@ parameter initialization and the shuffling of minibatches.
 :begin_tab:`jax`
 JAX needs no such call: its PRNG is *functional*, with no global state. The
 model is initialized from a fixed `PRNGKey` and the synthetic dataset defaults
-to `key=jax.random.PRNGKey(0)`---see exercise 4 of
+to `key=jax.random.PRNGKey(0)`; see exercise 4 of
 :numref:`sec_synthetic-regression-data`.
 :end_tab:
 
@@ -682,7 +672,7 @@ trainer.fit(model, data)
 The `fit` call above produces a live plot of the training and validation loss
 against the epoch. Both curves fall together and flatten near the irreducible
 noise floor (with $\sigma = 0.01$ the per-example squared loss bottoms out around
-$\sigma^2/2 \approx 5\times 10^{-5}$). Crucially, the validation curve tracks the
+$\sigma^2/2 \approx 5\times 10^{-5}$). The validation curve tracks the
 training curve with **no gap**: a two-dimensional linear model fit on 1000
 examples has no capacity to overfit. We return to the train/validation gap, and
 what to do when it opens, in :numref:`sec_generalization_basics`.
@@ -728,7 +718,7 @@ with recovering true underlying parameters,
 but rather with parameters 
 that lead to highly accurate prediction :cite:`Vapnik.1992`.
 Fortunately, even on difficult optimization problems,
-stochastic gradient descent can often find remarkably good solutions,
+stochastic gradient descent can often find good solutions,
 owing partly to the fact that, for deep networks,
 there exist many configurations of the parameters
 that lead to highly accurate prediction.
@@ -759,7 +749,7 @@ The hand-rolled SGD above is the simplest member of a large family: momentum,
 AdaGrad, RMSProp, and Adam all replace that single update line, and learning-rate
 schedules anneal $\eta$ over the course of training; these are developed in
 :numref:`chap_optimization`. The squared loss, likewise, is a modelling
-choice---in :numref:`sec_weight_decay` we add a penalty on $\|\mathbf{w}\|$ to
+choice; in :numref:`sec_weight_decay` we add a penalty on $\|\mathbf{w}\|$ to
 curb overfitting, the first of many regularizers we will meet.
 
 
@@ -811,7 +801,7 @@ curb overfitting, the first of many regularizers we will meet.
 ::: {.cover}
 [Dive into Deep Learning · §3.4]{.kicker}
 
-Built by hand once, demystified for good<br>**model · loss · optimizer · training loop --- nothing but tensors and autograd**.
+Built by hand once, demystified for good<br>**model · loss · optimizer · training loop: nothing but tensors and autograd**.
 :::
 :::
 
@@ -821,16 +811,16 @@ Built by hand once, demystified for good<br>**model · loss · optimizer · trai
 ::: {.cols .vc}
 ::: {.col}
 Four pieces, built by hand today: a **model** (`w`, `b`, `forward`), a
-**loss**, an **optimizer**, and the **training loop** driving them ---
+**loss**, an **optimizer**, and the **training loop** driving them,
 each slotted into the `Module` / `Trainer` / `DataModule` scaffold of
 §3.2.
 
 ::: {.d2l-note .rule}
-Because we manufactured the data (§3.3, noise $\sigma = 0.01$), a
-*correct* implementation has nowhere to hide. It must deliver **two
+Because we manufactured the data (§3.3, noise $\sigma = 0.01$), we can check a
+*correct* implementation against known targets. It must deliver **two
 numbers**: a loss landing on the noise floor
 $\sigma^2/2 = 5\times10^{-5}$, and parameters returning to
-$\mathbf{w}^* = [2, -3.4]$, $b^* = 4.2$. Keep score.
+$\mathbf{w}^* = [2, -3.4]$, $b^* = 4.2$.
 :::
 :::
 
@@ -858,8 +848,8 @@ We need parameters before we can optimize them. Draw `w` from a tiny Gaussian, s
 @linear-regression-scratch-defining-the-model-1
 
 ::: {.d2l-note}
-`requires_grad=True` (or the framework's equivalent) is the crucial
-flag: it tells autograd to track `w` and `b` so gradients can flow back
+`requires_grad=True` (or the framework's equivalent) is the flag that
+matters: it tells autograd to track `w` and `b` so gradients can flow back
 from the loss. For a single linear layer **any** small init works
 (exercise 1); symmetry breaking only matters once we stack layers.
 :::
@@ -992,15 +982,15 @@ Optax expresses an optimizer as two pure functions, `init` (empty state) and `up
 
 Strip away the bookkeeping and every step of training is the same four moves on a minibatch:
 
-1. **Zero** the gradients (autograd *accumulates* them).
-2. **Forward + loss**, with the gradient machinery recording.
+1. **Forward + loss**, with the gradient machinery recording.
+2. **Clear** the old gradients before the backward pass writes new ones.
 3. **Backward** to fill each parameter's gradient.
 4. **Update** the parameters, *outside* the gradient graph.
 
 . . .
 
 ::: {.d2l-note .warn}
-Skip step 1 and stale gradients leak between batches; drop the no-grad guard in step 4 and the update itself gets differentiated.
+Clear before the backward pass, or stale gradients leak between batches; keep the update outside the graph, or it gets differentiated.
 :::
 :::
 
@@ -1012,7 +1002,7 @@ So the run is repeatable, we seed the global RNG before building the model. The 
 @-linear-regression-scratch-training-seed
 :::
 
-::: {.slide title="First promise kept: the loss lands on the noise floor"}
+::: {.slide title="The loss lands on the noise floor"}
 [Training · payoff]{.kicker}
 
 ::: {.cols .vc}
@@ -1028,8 +1018,8 @@ The `fit` call drives the four-step loop over every minibatch and plots both los
 @!linear-regression-scratch-training-3
 
 ::: {.d2l-note .rule}
-Both curves flatten at $\approx 5\times10^{-5}$ --- **exactly** the
-$\sigma^2/2$ we promised, so the residual error is the noise we injected,
+Both curves flatten at $\approx 5\times10^{-5}$, **exactly** the
+$\sigma^2/2$ we predicted, so the residual error is the noise we injected,
 not a bug. And validation tracks training with **no gap**: 2 parameters
 on 1000 points has no room to overfit (§3.6).
 :::
@@ -1037,18 +1027,18 @@ on 1000 points has no room to overfit (§3.6).
 :::
 :::
 
-::: {.slide title="Second promise kept: the truth, recovered"}
+::: {.slide title="The truth, recovered"}
 [Training · payoff]{.kicker}
 
-We synthesized the data, so we know the truth: $\mathbf{w}^*=[2,-3.4]$, $b^*=4.2$. The verdict:
+We synthesized the data, so we know the truth: $\mathbf{w}^*=[2,-3.4]$, $b^*=4.2$. The result:
 
 @linear-regression-scratch-training-4
 
 ::: {.d2l-note}
 Off by a few $10^{-4}$ at most. Exact recovery needs linearly
-independent features and is *not* the everyday goal --- deep models have
+independent features and is *not* the everyday goal (deep models have
 many equally good parameter settings, and we care about accurate
-**prediction** --- but on a problem with one right answer, our loop found it.
+**prediction**), but on a problem with one right answer, our loop found it.
 :::
 :::
 
@@ -1058,13 +1048,13 @@ many equally good parameter settings, and we care about accurate
 ::: {.cols}
 ::: {.col}
 - A `Module` for linear regression is just `__init__`, `forward`, `loss`, `configure_optimizers`.
-- The **gradient is the error-weighted input**, $(\hat{y}-y)\,\mathbf{x}$ --- what `backward` deposits and SGD consumes.
+- The **gradient is the error-weighted input**, $(\hat{y}-y)\,\mathbf{x}$, what `backward` deposits and SGD consumes.
 - The **optimizer** is a ten-line minibatch SGD.
 :::
 
 ::: {.col}
-- Training is one **four-step loop**: zero, forward, backward, update --- in that order.
-- Both promises kept: loss on the $5\times10^{-5}$ noise floor, $\mathbf{w}, b$ recovered to $\sim10^{-4}$.
+- Training is one loop per minibatch: forward and loss, clear the old gradients before backward, then update outside the graph.
+- Both targets met: loss on the $5\times10^{-5}$ noise floor, $\mathbf{w}, b$ recovered to $\sim10^{-4}$.
 :::
 :::
 

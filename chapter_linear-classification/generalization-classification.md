@@ -49,15 +49,15 @@ of statistical learning theory.
 It turns out that we often can guarantee generalization *a priori*:
 for many models,
 and for any desired upper bound
-on the generalization gap $\epsilon$,
+on the generalization gap $t$,
 we can often determine some required number of samples $n$
 such that if our training set contains at least $n$
 samples, our empirical error will lie
-within $\epsilon$ of the true error,
+within $t$ of the true error,
 *for any data generating distribution*.
 Unfortunately, it also turns out
 that while these sorts of guarantees provide
-a profound set of intellectual building blocks,
+a set of intellectual building blocks,
 they are of limited practical utility
 to the deep learning practitioner.
 In short, these guarantees suggest
@@ -67,7 +67,7 @@ requires an absurd number of examples
 (perhaps trillions or more),
 even when we find that, on the tasks we care about,
 deep neural networks typically generalize
-remarkably well with far fewer examples (thousands).
+well with far fewer examples (thousands).
 Thus deep learning practitioners often forgo
 *a priori* guarantees altogether,
 instead employing methods
@@ -169,8 +169,6 @@ is actually the true error rate $\epsilon(f)$.
 The variance $\sigma^2$ of a Bernoulli
 depends on its parameter (here, $\epsilon(f)$)
 according to the expression $\epsilon(f)(1-\epsilon(f))$.
-While $\epsilon(f)$ is initially unknown,
-we know that it cannot be greater than $1$.
 A little investigation of this function
 reveals that our variance is highest
 when the true error rate is close to $0.5$
@@ -209,7 +207,7 @@ i.e., how the relationship between $\epsilon_\mathcal{D}$ and $\epsilon$
 evolves as our sample size goes to infinity.
 Fortunately, because our random variable is bounded,
 we can obtain valid finite sample bounds
-by applying an inequality due to Hoeffding (1963),
+by applying an inequality due to :citet:`Hoeffding.1963`,
 proved in :numref:`sec_mdl-concentration-generalization`:
 
 $$P\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \geq t\right) < 2\exp\left( - 2n t^2 \right).$$
@@ -289,9 +287,12 @@ d2l.plot(ns, [spread, clt, hoeff], 'test set size n', 'spread of the estimate',
 ```
 
 On log--log axes all three curves are parallel lines of slope $-\frac{1}{2}$:
-the $\sqrt{n}$ law in the flesh. The simulated spread sits right on top of the
-CLT prediction, while the Hoeffding envelope runs above both by a constant
-factor, which is the price of a guarantee that holds at every finite $n$
+the $\sqrt{n}$ law made visible. The simulated spread sits right on top of the
+CLT prediction, but the two envelopes are not measured on the same footing:
+the CLT curve is one standard deviation, while the Hoeffding curve is a
+two-sided 95% radius. Converting the CLT curve to its own 95% radius
+($1.96\sigma$) closes most of the gap; the Hoeffding radius still runs about
+$2.3\times$ above it, which is the price of a bound valid at every finite $n$
 rather than only asymptotically.
 
 ## Test Set Reuse
@@ -330,8 +331,8 @@ However, that night you wake up at 3am
 with a brilliant idea for a new modeling approach.
 The next day, you code up your new model,
 tune its hyperparameters on the validation set
-and not only are you getting your new model $f_2$ to work
-but its error rate appears to be much lower than $f_1$'s.
+and get your new model $f_2$ working;
+its error rate appears to be much lower than $f_1$'s.
 However, the thrill of discovery suddenly fades
 as you prepare for the final evaluation.
 You do not have a test set!
@@ -374,7 +375,7 @@ rested on the assumption that the classifier
 was chosen absent any contact with the test set
 and thus we could view the test set
 as drawn randomly from the underlying population.
-Here, not only are you testing multiple functions,
+Here you are testing multiple functions, and
 the subsequent function $f_2$ was chosen
 after you observed the test set performance of $f_1$.
 Once information from the test set has leaked to the modeler,
@@ -429,7 +430,7 @@ still.
 
 Put simply, *test sets are all that we really have*,
 and yet this fact seems strangely unsatisfying.
-First, we seldom possess a *true test set*---unless
+First, we seldom possess a *true test set*: unless
 we are the ones creating the dataset,
 someone else has probably already evaluated
 their own classifier on our ostensible "test set".
@@ -524,7 +525,7 @@ on the underlying population.
 
 In a sense the class of memorizers is too flexible.
 No such uniform convergence result could possibly hold.
-On the other hand, a fixed classifier is useless---it
+On the other hand, a fixed classifier is useless: it
 generalizes perfectly, but fits neither
 the training data nor the test data.
 The central question of learning
@@ -539,7 +540,7 @@ mathematical analysis to quantify
 where a model sits along this spectrum,
 and to provide the associated guarantees.
 
-In a series of seminal papers,
+In a series of papers,
 Vapnik and Chervonenkis extended
 the theory on the convergence
 of relative frequencies
@@ -565,19 +566,19 @@ only on the scale of the loss that can be incurred.
 One use of the bound might be to plug in desired
 values of $\delta$ and $\alpha$
 to determine how many samples to collect.
-The VC dimension quantifies the largest
-number of data points for which we can assign
-any arbitrary (binary) labeling
-and for each find some model $f$ in the class
-that agrees with that labeling.
+A class *shatters* a set of points if, for every possible $\pm$ labeling
+of them, some model $f$ in the class agrees with that labeling.
+The VC dimension is the largest number of points the class can shatter.
 For example, linear models on $d$-dimensional inputs
 have VC dimension $d+1$.
 As :numref:`fig_mdl-clf-shattering` illustrates,
 a line in the plane can realize *every* labeling
 of three points in general position,
-but no line can realize the XOR labeling of four points,
-so the VC dimension of two-dimensional linear classifiers
-is exactly $3$ (matching $d+1$ with $d=2$).
+while no line can realize the XOR labeling of four points,
+which already shows that lines cannot shatter *these* four points;
+the general upper bound, and hence a VC dimension of exactly $3$
+for two-dimensional linear classifiers (matching $d+1$ with $d=2$),
+comes from Radon's theorem below.
 The general statement holds in both directions, and neither is deep.
 For the lower bound, the $d+1$ points
 $\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$
@@ -619,8 +620,8 @@ We can provide approximate confidence intervals
 based on exact asymptotic distributions
 or valid finite sample confidence intervals
 based on (more conservative) finite sample guarantees.
-Indeed test set evaluation is the bedrock
-of modern machine learning research.
+Test set evaluation is central
+to modern machine learning research.
 However, test sets are seldom true test sets
 (used by multiple researchers again and again).
 Once the same test set is used
@@ -655,7 +656,7 @@ are (simultaneously) guaranteed
 to be close to their true errors,
 and guaranteed to grow even closer
 at $\mathcal{O}(1/\sqrt{n})$ rates.
-Following the revolutionary discovery of VC dimension,
+Following the discovery of VC dimension,
 numerous alternative complexity measures have been proposed,
 each facilitating an analogous generalization guarantee.
 One such measure, *Rademacher complexity*, is developed in full
@@ -813,7 +814,7 @@ $0.01$ improvement can be a real result.
 :::
 :::
 
-::: {.slide title="Asymptotics vs. an honest finite-sample bound"}
+::: {.slide title="Asymptotics vs. a bound valid at every finite n"}
 [The Test Set · finite samples]{.kicker}
 
 The $\sqrt{n}$ law is asymptotic. Because the loss is bounded, **Hoeffding's
@@ -824,7 +825,7 @@ $$P\!\left(|\epsilon_\mathcal{D}(f) - \epsilon(f)| \geq t\right) < 2\exp\!\left(
 . . .
 
 ::: {.d2l-note}
-Same target ($\pm 0.01$ at 95%), honest finite-sample answer:
+Same target ($\pm 0.01$ at 95%), finite-sample answer valid at every $n$:
 $n\approx 18{,}500$ vs. the asymptotic $10{,}000$. Guarantees that hold for
 *every* $n$ are a bit more conservative, but in the same ballpark.
 :::
@@ -841,7 +842,7 @@ predicted $-\tfrac12$ slope on log–log axes.
 
 ::: {.d2l-note}
 The simulated spread sits **on** the CLT line; the Hoeffding envelope
-runs parallel above it — the constant-factor price of a guarantee at
+runs parallel above it, the constant-factor price of a guarantee at
 every finite $n$.
 :::
 :::
@@ -868,7 +869,7 @@ $-\tfrac{1}{2}$**: the $\sqrt{n}$ law in the flesh.
 
 ::: {.d2l-note}
 The simulated spread sits **on** the CLT line; the Hoeffding envelope runs
-a constant factor above it — the price of a guarantee at every finite $n$.
+a constant factor above it, the price of a guarantee at every finite $n$.
 :::
 :::
 
@@ -887,11 +888,11 @@ a constant factor above it — the price of a guarantee at every finite $n$.
 
 ::: {.cols .vc}
 ::: {.col}
-You evaluate model $f_1$ once, by the book, and report a clean confidence
+You evaluate model $f_1$ once, by the book, and report a confidence
 interval. That night you dream up $f_2$, tune it, and it *looks* better.
 
 Now you reach for the final evaluation, and realize: you **no longer have a
-test set**. The data is still on disk, but it is no longer pristine.
+test set**. The data is still on disk, but it is no longer unseen.
 :::
 
 ::: {.col .narrow}
@@ -931,7 +932,7 @@ one shared test set of $n = 1000$ and track the best score so far:
 past $0.56$ after ten thousand tries, by pure selection.
 
 ::: {.d2l-note .warn}
-The climb grows like $\sqrt{\log(k)/(2n)}$ — Hoeffding over $k$ events
+The climb grows like $\sqrt{\log(k)/(2n)}$, Hoeffding over $k$ events
 at once. Best-of-many on a shared test set *always* buys some of its
 improvement this way.
 :::
@@ -946,8 +947,8 @@ improvement this way.
 ::: {.slide title="Nothing learned, score climbs anyway" except="pytorch"}
 [Test-Set Reuse]{.kicker}
 
-Evaluate $k$ **coin-flip** classifiers — true accuracy exactly $0.5$,
-*nothing* learned — on one shared test set of $n = 1000$ and track the best
+Evaluate $k$ **coin-flip** classifiers (true accuracy exactly $0.5$,
+*nothing* learned) on one shared test set of $n = 1000$ and track the best
 score seen so far as $k$ grows.
 
 . . .
@@ -956,7 +957,7 @@ The best apparent accuracy climbs steadily, exceeding **0.56** after ten
 thousand tries, by pure selection: the best of many lucky coin flips.
 
 ::: {.d2l-note .warn}
-The climb grows like $\sqrt{\log(k)/(2n)}$ — Hoeffding over $k$ events at
+The climb grows like $\sqrt{\log(k)/(2n)}$, Hoeffding over $k$ events at
 once. Best-of-many on a shared test set *always* buys some of its
 improvement this way, and an adaptive modeler, steering each model toward
 what scored well before, climbs faster still.
@@ -966,8 +967,8 @@ what scored well before, climbs faster still.
 ::: {.slide title="Treat a test set as a scarce resource"}
 [Test-Set Reuse · in practice]{.kicker}
 
-The worst-case theory is bleak, but real life is usually kinder. Hygiene
-that keeps you honest:
+The worst-case theory is bleak, but real life is usually kinder. In
+practice:
 
 ::: {.d2l-note .rule}
 - Curate a **real** test set; consult it as **rarely** as possible.
@@ -1051,13 +1052,13 @@ the **XOR** labeling of **4**.
 ::: {.cols .vc}
 ::: {.col}
 The **VC dimension** is the largest set a class can shatter. Lines in the
-plane: $3$. Linear models in $d$ dimensions: $d+1$ — *exactly*.
+plane: $3$. Linear models in $d$ dimensions: $d+1$, *exactly*.
 
 - **Lower bound:** the points $\{\mathbf{0}, \mathbf{e}_1, \ldots,
   \mathbf{e}_d\}$ are shattered by weights *read off* the desired labels
   (exercise 5).
 - **Upper bound:** by **Radon's theorem** any $d+2$ points split into two
-  subsets with intersecting convex hulls — and no halfspace separates
+  subsets with intersecting convex hulls, and no halfspace separates
   intersecting hulls.
 :::
 
@@ -1079,7 +1080,7 @@ now for the *learned* model.
 ::: {.slide title="Why this breaks for deep networks"}
 [Learning Theory · the paradox]{.kicker}
 
-VC bounds are gorgeous theory, but for deep nets they are essentially
+VC bounds are exact for linear models, but for deep nets they are essentially
 **vacuous**: they demand absurd sample counts (perhaps trillions).
 
 ::: {.d2l-note .warn}
@@ -1088,8 +1089,8 @@ generalizes well on real data, and often *better* as it gets larger and
 deeper. Classical complexity measures do not explain this.
 :::
 
-The modern road — **Rademacher complexity**, and the double-descent behavior
-of overparametrized models reproduced from scratch — is developed in §25.5;
+The modern road, **Rademacher complexity** and the double-descent behavior
+of overparametrized models reproduced from scratch, is developed in §25.5;
 the deep-learning story resumes in §5.5.
 :::
 
@@ -1100,7 +1101,7 @@ the deep-learning story resumes in §5.5.
 ::: {.col}
 - **Test set** = an unbiased estimate of the true error; it converges at
   $\mathcal{O}(1/\sqrt{n})$. About **10k** points give $\pm 0.01$ at 95%.
-- **Asymptotic vs finite:** Hoeffding is honest at any $n$, and a little more
+- **Asymptotic vs finite:** Hoeffding is valid at any $n$, and a little more
   conservative (~18.5k).
 - **Reuse decays it:** false discovery + adaptive overfitting. Treat a test
   set as scarce.
@@ -1112,7 +1113,7 @@ the deep-learning story resumes in §5.5.
 - **VC dimension** = largest shatterable set; for linear models exactly
   $d+1$ (labels read off / Radon); it bounds the gap at
   $\mathcal{O}(1/\sqrt{n})$.
-- **Deep nets** defy these bounds, generalizing despite huge capacity —
+- **Deep nets** defy these bounds, generalizing despite huge capacity:
   the puzzle of §5.5, with the modern tools in §25.5.
 :::
 :::

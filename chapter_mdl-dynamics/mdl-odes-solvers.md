@@ -1,39 +1,33 @@
 # Ordinary Differential Equations and Numerical Solvers
 :label:`sec_mdl-odes-solvers`
 
-Every continuous-time generative model --- Neural ODEs, continuous normalizing
-flows, and the deterministic samplers of diffusion and flow matching --- is an
-**ordinary differential equation that you integrate**. This section builds the
-mathematics of that integration from the ground up: what a vector field is,
-when a trajectory exists and is unique, how eigenvalues decide stability, and
-how numerical solvers trade step size for accuracy. The payoff is a set of
-conceptual unifications that the rest of this chapter leans on: *a residual
-block is one Euler step*, *backpropagation through an ODE is reverse-mode
-automatic differentiation*, and *the log-det-Jacobian of a normalizing flow
-becomes a trace integral*. The stochastic counterpart of the Euler method
+Every continuous-time generative model, from Neural ODEs and continuous
+normalizing flows to the deterministic samplers of diffusion and flow
+matching, is an **ordinary differential equation that you integrate**. An ODE
+is a *velocity rule*: at every point of space (and time) it tells you which
+way to move and how fast. A solution is the path you trace by always
+following the local arrow; a numerical solver is a recipe for following
+arrows in finite steps; a deep residual network *is* such a recipe, with its
+layers as the steps; and a density transported by the flow changes at a rate
+read off the field's Jacobian. This section builds the mathematics behind
+that picture: what a vector field is, when a trajectory exists and is unique,
+how eigenvalues decide stability, and how numerical solvers trade step size
+for accuracy. The stochastic counterpart of the Euler method
 arrives in :numref:`sec_mdl-euler-maruyama`, the probability-flow ODE that
 turns a diffusion model into a deterministic flow in
 :numref:`sec_mdl-fokker-planck-probability-flow`, and the solvers studied here
 set the step-count/quality tradeoff of every sampler in
 :numref:`sec_mdl-score-matching-diffusion-flow`.
 
-One idea organizes everything. An ODE is a *velocity rule*: at every point of
-space (and time) it tells you which way to move and how fast. A solution is
-the path you trace by always following the local arrow; a numerical solver is
-a recipe for following arrows in finite steps; a deep residual network *is*
-such a recipe, with its layers as the steps; and a density transported by the
-flow changes at a rate read off the field's Jacobian. Theory, numerics, and
-architecture are one picture.
-
 We lean on :numref:`sec_mdl-eigendecompositions` (eigenvalues and
-eigenvectors --- that section promised the matrix exponential, and we build it
-here), :numref:`sec_mdl-multivariable_calculus` (Jacobians, Taylor expansion),
+eigenvectors; that section already defined the matrix exponential, and here
+we prove its properties), :numref:`sec_mdl-multivariable_calculus` (Jacobians,
+Taylor expansion),
 :numref:`sec_mdl-matrix-calculus-autodiff` (reverse-mode AD as vector--Jacobian
 products), :numref:`sec_mdl-integral_calculus` (the integrals being
 approximated), and :numref:`sec_mdl-random_variables` (the change-of-variables
-formula for densities). The numerical demonstrations are deliberately
-framework-free --- plain NumPy, because every solver is a handful of lines ---
-until we *train* a Neural ODE, which we do once in each framework.
+formula for densities). The numerical demonstrations are plain NumPy, because
+every solver is a handful of lines, until we *train* a Neural ODE below.
 
 ```{.python .input #odes-solvers-imports}
 #@tab mxnet
@@ -87,7 +81,7 @@ where $\mathbf{x}(t) \in \mathbb{R}^d$ is the state, the dot is the time
 derivative, and $\mathbf{f} : \mathbb{R}^d \times \mathbb{R} \to \mathbb{R}^d$
 is a **vector field**: a function that attaches an arrow to every point. A
 **trajectory** (or *integral curve*) is a differentiable path whose tangent
-matches the field everywhere --- at each instant, the particle moves with
+matches the field everywhere: at each instant, the particle moves with
 exactly the velocity the field prescribes at its current location. When
 $\mathbf{f}$ does not depend on $t$ we call the system **autonomous**; the
 arrows are frozen and only the particle moves. :numref:`fig_mdl-dyn-ode-field`
@@ -107,7 +101,7 @@ $$
 
 which trades the derivative for an accumulation of velocities. This form does
 real work twice over: it is the fixed-point equation behind the existence
-theorem below, and it is what every numerical solver approximates --- Euler's
+theorem below, and it is what every numerical solver approximates; Euler's
 method is the left-endpoint Riemann sum of this very integral.
 
 Two scalar warm-ups anchor the notation. For $\dot{x} = -x$, the rule "move
@@ -136,12 +130,12 @@ $$
 \Phi_{t+s} = \Phi_t \circ \Phi_s .
 $$
 
-Flowing for $s$ seconds and then $t$ more is the same as flowing for $t+s$ ---
+Flowing for $s$ seconds and then $t$ more is the same as flowing for $t+s$,
 which holds precisely because the field is frozen in time, so the second leg
 starts from $\Phi_s(\mathbf{x}_0)$ and follows the *same* rule. Taking
 $s = -t$ shows $\Phi_t \circ \Phi_{-t} = \mathrm{id}$: *the flow map is a
 bijection, and its inverse is the flow of the reversed clock*. This
-one-line observation is the seed of every invertible generative flow --- push
+one-line observation is the seed of every invertible generative flow: push
 noise forward through a learned field to get data, run the same field backward
 to get the noise (and, as we will see in
 :numref:`sec_mdl-continuous-normalizing-flows`, the exact likelihood) back.
@@ -151,9 +145,9 @@ and are unique, which is where we turn next.
 ### Existence and Uniqueness
 :label:`sec_mdl-ode-existence-uniqueness`
 
-Before trusting "follow the arrows," we need to know that exactly one path
-follows them. The right hypothesis is that the field does not change too
-abruptly from point to point.
+Before building on this, we need to know that exactly one trajectory passes
+through each starting point. The right hypothesis is that the field does not
+change too abruptly from point to point.
 
 **Proposition (Picard--Lindelöf).** *Let
 $\mathbf{f}(\mathbf{x}, t)$ be continuous in $t$ and Lipschitz in
@@ -165,7 +159,8 @@ $$
 $$
 
 *Then the initial-value problem :eqref:`eq_mdl-ode-ivp` has exactly one
-solution on $[0, T]$, for every $\mathbf{x}_0$ and every $T$.*
+solution on $[0, T]$, for every $\mathbf{x}_0$ and every $T$*
+:cite:`Coddington.Levinson.1955`.
 
 **Proof sketch (the integral operator is a contraction).** A path
 $\boldsymbol{\varphi}$ solves :eqref:`eq_mdl-ode-ivp` iff it is a fixed point
@@ -185,14 +180,18 @@ $$
 $$
 
 so once $\delta < 1/L$ the operator $P$ shrinks the distance between any two
-paths by a fixed factor: it is a *contraction*, and a contraction has exactly
-one fixed point (iterate $P$ from anywhere; the iterates form a Cauchy
-sequence, and two distinct fixed points would have to be strictly closer to
-each other than they are). That settles $[0, \delta]$; restart at
-$t = \delta$ and repeat to cover all of $[0, T]$. $\blacksquare$
+paths by a fixed factor: it is a *contraction*, and by the Banach fixed-point
+theorem a contraction on a complete space has exactly one fixed point
+(iterate $P$ from anywhere; the iterates form a Cauchy sequence, and two
+distinct fixed points would have to be strictly closer to each other than
+they are). Completeness is what turns the Cauchy sequence into a solution:
+the space $C([0, \delta])$ of continuous paths under the sup norm is
+complete, so the iterates converge uniformly to a continuous fixed point.
+That settles $[0, \delta]$; restart at $t = \delta$ and repeat to cover all
+of $[0, T]$.
 
-Iterating $P$ from the constant path is **Picard iteration**, and it is worth
-doing once by hand. For $\dot{x} = x$, $x_0 = 1$: starting from
+Iterating $P$ from the constant path is **Picard iteration**; here it is once
+by hand. For $\dot{x} = x$, $x_0 = 1$: starting from
 $\varphi_0 \equiv 1$,
 
 $$
@@ -204,11 +203,11 @@ $$
 \;\;\ldots
 $$
 
---- the partial sums of $e^t$. The contraction *constructs* the exponential,
-one Taylor term per sweep through the integral.
+These are the partial sums of $e^t$: the contraction *constructs* the
+exponential, one Taylor term per sweep through the integral.
 
-Both hypotheses earn their keep, and the two standard counterexamples are
-worth carrying in your pocket. **Uniqueness fails without Lipschitz.** The
+Both hypotheses are necessary, and two standard counterexamples show what
+each one rules out. **Uniqueness fails without Lipschitz.** The
 field $\dot{x} = \sqrt{|x|}$ has slope $\to \infty$ near $x = 0$ (no finite
 $L$ works there), and through $x_0 = 0$ it threads *infinitely many*
 solutions: $x(t) \equiv 0$ is one, and for every waiting time $c \ge 0$,
@@ -221,12 +220,12 @@ x_c(t) =
 \end{cases}
 $$
 
-is another --- sit at the origin for $c$ seconds, then leak away (check:
+is another: sit at the origin for $c$ seconds, then leak away (check:
 $\dot{x}_c = (t-c)/2 = \sqrt{x_c}$ for $t > c$). The solutions form a *fan*
-leaving the origin, one blade per departure time, and "follow the arrows" is
-genuinely ambiguous (:numref:`fig_mdl-dyn-uniqueness-fan`).
+leaving the origin, one blade per departure time, and the initial-value
+problem is genuinely ambiguous (:numref:`fig_mdl-dyn-uniqueness-fan`).
 
-![Solutions of $\dot{x} = \sqrt{|x|}$ through $x(0) = 0$: the rest solution $x \equiv 0$ plus one parabolic blade $x_c(t) = (t-c)^2/4$ for each departure time $c$. The slope of $\sqrt{|x|}$ is unbounded at the origin --- the Lipschitz hypothesis fails there, and with it uniqueness: every blade is a legitimate way to follow the arrows.](../img/mdl-dyn-uniqueness-fan.svg)
+![Solutions of $\dot{x} = \sqrt{|x|}$ through $x(0) = 0$: the rest solution $x \equiv 0$ plus one parabolic blade $x_c(t) = (t-c)^2/4$ for each departure time $c$. The slope of $\sqrt{|x|}$ is unbounded at the origin, so the Lipschitz hypothesis fails there, and with it uniqueness: every blade is a legitimate solution.](../img/mdl-dyn-uniqueness-fan.svg)
 :label:`fig_mdl-dyn-uniqueness-fan`
 
 **Global existence fails without a growth bound.** The
@@ -239,21 +238,21 @@ $$
 
 which escapes to infinity at the finite time $t = 1/x_0$: the faster you grow,
 the faster you grow, and superlinear feedback compounds to a singularity. The
-solution exists only *locally* --- on $[0, 1/x_0)$ --- which is all that
+solution exists only *locally*, on $[0, 1/x_0)$, which is all that
 local Lipschitz continuity can promise.
 
 For deep learning the theorem is a license. A neural field
 $\mathbf{f}_\theta$ built from linear maps and Lipschitz activations
-($\tanh$, ReLU, GELU) is *globally* Lipschitz --- a composition of globally
+($\tanh$, ReLU, GELU) is *globally* Lipschitz (a composition of globally
 Lipschitz maps is globally Lipschitz, with constant at most the product of
-the weight norms and the activations' Lipschitz constants --- which is
+the weight norms and the activations' Lipschitz constants), which is
 exactly the global-$L$ hypothesis of the proposition above. So a Neural ODE
 (:numref:`sec_mdl-neural-odes`) is
 well-posed: through every input there is exactly one trajectory, distinct
 inputs can never collide (two trajectories meeting at time $t$ would be two
 solutions of the same final-value problem run backward), and the learned map
-$\Phi_T$ is automatically a bijection. Invertibility is not an architectural
-constraint to be engineered in --- it is a theorem you inherit.
+$\Phi_T$ is automatically a bijection. Invertibility comes free, as a
+theorem.
 
 ## Linear ODEs and Stability
 :label:`sec_mdl-linear-odes-stability`
@@ -348,19 +347,19 @@ mode by mode gives the dictionary every dynamical argument in this chapter
 uses:
 
 * $\operatorname{Re}\lambda_i < 0$ for all $i$: every mode decays, and
-  $\mathbf{x}(t) \to \mathbf{0}$ from every start --- the origin is
+  $\mathbf{x}(t) \to \mathbf{0}$ from every start: the origin is
   **asymptotically stable**, with decay rate set by the slowest mode,
   $\max_i \operatorname{Re}\lambda_i$.
 * $\operatorname{Re}\lambda_i > 0$ for some $i$: that mode grows
-  exponentially, and almost every trajectory escapes --- **unstable**.
+  exponentially, and almost every trajectory escapes: **unstable**.
 * $\operatorname{Im}\lambda_i \neq 0$: the conjugate pair contributes
-  $e^{a t}(\cos bt, \sin bt)$ terms --- **rotation**, decaying or growing
+  $e^{a t}(\cos bt, \sin bt)$ terms: **rotation**, decaying or growing
   with the sign of $a$.
 
 In two dimensions the dictionary is a portrait gallery
 (:numref:`fig_mdl-dyn-phase-portraits`). The saddle deserves a
 note: with real eigenvalues of opposite signs, trajectories approach along the
-stable eigendirection and escape along the unstable one --- the generic fate
+stable eigendirection and escape along the unstable one, the generic fate
 of an "unstable equilibrium." The stable spiral is the field of
 :numref:`fig_mdl-dyn-ode-field` ($\lambda = -0.5 \pm i$: rotate while
 decaying); the center is our rotation warm-up.
@@ -377,8 +376,8 @@ decaying); the center is our rotation warm-up.
 ![The portrait gallery of planar linear systems. Top row: stable node (real eigenvalues, both negative), unstable node (both positive), saddle (opposite signs). Bottom row: stable spiral (complex pair, $a < 0$), unstable spiral ($a > 0$), center (purely imaginary). Arrows show the field, curves a few trajectories; the real part decides growth or decay, the imaginary part rotation.](../img/mdl-dyn-phase-portraits.svg)
 :label:`fig_mdl-dyn-phase-portraits`
 
-(When $A$ is defective --- not diagonalizable,
-:numref:`sec_mdl-eigendecompositions` --- the modes pick up polynomial factors
+(When $A$ is defective, i.e. not diagonalizable
+(:numref:`sec_mdl-eigendecompositions`), the modes pick up polynomial factors
 $t^k e^{\lambda t}$, but polynomials never beat exponentials, so the
 stability verdict still depends only on the signs of
 $\operatorname{Re}\lambda_i$.)
@@ -387,7 +386,7 @@ $\operatorname{Re}\lambda_i$.)
 
 Nonlinear fields inherit all of this *locally*. A **fixed point** of an
 autonomous system is a state $\mathbf{x}^\star$ with
-$\mathbf{f}(\mathbf{x}^\star) = \mathbf{0}$ --- the particle parked there
+$\mathbf{f}(\mathbf{x}^\star) = \mathbf{0}$: the particle parked there
 never moves. For a small displacement
 $\boldsymbol{\delta}(t) = \mathbf{x}(t) - \mathbf{x}^\star$, Taylor expansion
 (:numref:`sec_mdl-multivariable_calculus`) gives
@@ -404,12 +403,13 @@ so near the fixed point the dynamics are the linear system
 $\dot{\boldsymbol{\delta}} = J \boldsymbol{\delta}$, and the eigenvalues of
 the *Jacobian at the fixed point* decide local stability by the same
 dictionary. (This is rigorous whenever no eigenvalue sits exactly on the
-imaginary axis --- the Hartman--Grobman theorem; on the axis, the neglected
+imaginary axis, by the Hartman--Grobman theorem
+:cite:`Hartman.1960,Grobman.1959`; on the axis, the neglected
 quadratic terms get a vote.) The damped pendulum
 $\ddot{\theta} = -\sin\theta - \gamma\dot{\theta}$, written as a first-order
 system in $(\theta, \dot{\theta})$, has Jacobian eigenvalues with negative
-real part at the hanging rest point $(0, 0)$ --- a stable spiral, the
-ring-down of a released pendulum --- and a saddle at the inverted balance
+real part at the hanging rest point $(0, 0)$ (a stable spiral, the
+ring-down of a released pendulum) and a saddle at the inverted balance
 $(\pi, 0)$, which is why you can stand a pencil on its tip only along a
 measure-zero set of initial conditions. The same computation, applied to a
 trained network's dynamics or to the mean of the Ornstein--Uhlenbeck process
@@ -418,11 +418,11 @@ the contracting mode $\dot{x} = -\theta x$), is the working stability tool of
 this whole chapter.
 
 Let us compute all of this. The cell builds $e^{At}$ for the spiral field of
-:numref:`fig_mdl-dyn-ode-field` three independent ways --- the
+:numref:`fig_mdl-dyn-ode-field` three independent ways (the
 eigendecomposition formula :eqref:`eq_mdl-ode-matrix-exp-eig`, the truncated
 series :eqref:`eq_mdl-ode-matrix-exp-series`, and the compounding limit
-$(I + tA/n)^n$, which is forward Euler in disguise and a preview of the next
-section --- and checks the stability dictionary's prediction that
+$(I + tA/n)^n$, forward Euler in disguise and a preview of the next
+section) and checks the stability dictionary's prediction that
 $\|\mathbf{x}(t)\|$ decays exactly like $e^{-t/2}$ (the rotation part of this
 particular $A$ is norm-preserving).
 
@@ -447,7 +447,7 @@ print('||e^{At} x0|| =', f'{np.linalg.norm(expAt_eig @ x0):.6f}',
 
 Twenty-nine series terms already agree with the eigendecomposition formula to
 machine precision, the compounded Euler product lands within $10^{-7}$, and
-the trajectory norm matches $e^{-t/2}\|\mathbf{x}_0\|$ to six digits --- the
+the trajectory norm matches $e^{-t/2}\|\mathbf{x}_0\|$ to six digits: the
 spectrum ($-0.5 \pm i$) told us the decay rate before we integrated anything.
 
 ## Numerical Solvers: From Euler to Runge--Kutta
@@ -465,8 +465,8 @@ $$
 $$
 :eqlabel:`eq_mdl-ode-euler-update`
 
---- take the arrow under your feet, follow it for time $h$, look again.
-Equivalently, it is the Taylor expansion of the true solution truncated after
+Take the arrow under your feet, follow it for time $h$, look again.
+Equivalently, the update is the Taylor expansion of the true solution truncated after
 the linear term, and the truncation error of one step is the first term
 dropped: if $\|\ddot{\mathbf{x}}(t)\| \le M$ along the solution, then
 
@@ -478,9 +478,9 @@ $$
 
 A per-step error of $O(h^2)$ does not mean a final error of $O(h^2)$: to
 reach a fixed horizon $T$ you take $n = T/h$ steps, and the per-step errors
-*accumulate* --- worse, each step also inherits and possibly amplifies the
+*accumulate*; worse, each step also inherits and possibly amplifies the
 error already made. One order of $h$ is lost to the accumulation, and the
-bookkeeping is short enough to do honestly.
+bookkeeping is short enough to do in full.
 
 **Proposition (Euler converges at order 1).** *Let $\mathbf{f}$ be
 $L$-Lipschitz in $\mathbf{x}$, and let the solution of
@@ -515,7 +515,7 @@ $$
 
 using $(1 + hL)^n \le e^{nhL} \le e^{LT}$. $\blacksquare$
 
-The structure of the bound is worth reading twice, because it recurs for
+The structure of the bound recurs for
 every solver: a *local* error of order $h^{p+1}$ per step becomes a *global*
 error of order $h^p$ after $T/h$ steps, inflated by a stability factor
 $e^{LT}$ that prices how strongly the dynamics can amplify old mistakes. We
@@ -543,12 +543,12 @@ instead of *absent*: local error $O(h^3)$, global order $2$, at the price of
 two field evaluations per step. Its trapezoid twin, **Heun's method**, takes
 a full trial Euler step and averages the slopes at its two ends,
 $\mathbf{x}_{n+1} = \mathbf{x}_n + \tfrac{h}{2}\left[\mathbf{f}(\mathbf{x}_n) + \mathbf{f}\!\left(\mathbf{x}_n + h\,\mathbf{f}(\mathbf{x}_n)\right)\right]$
---- same order $2$, same two evaluations --- and is the two-stage sampler of
+(same order $2$, same two evaluations), and is the two-stage sampler of
 choice for the learned dynamics of
 :numref:`sec_mdl-score-matching-diffusion-flow`.
 
-Pushing the same idea to four probe slopes gives the workhorse of scientific
-computing, **classical Runge--Kutta (RK4)**:
+Pushing the same idea to four probe slopes gives the standard general-purpose
+method of scientific computing, **classical Runge--Kutta (RK4)**:
 
 $$
 \begin{aligned}
@@ -561,29 +561,34 @@ $$
 $$
 :eqlabel:`eq_mdl-ode-rk4-update`
 
-The weights $\tfrac16(1, 2, 2, 1)$ are Simpson's rule applied to the probe
-slopes --- begin, middle (twice), end --- and they are chosen so that the
+The weights $\tfrac16(1, 2, 2, 1)$ are Simpson's rule (the quadrature rule
+$\int_a^b g \approx \tfrac{b-a}{6}\bigl(g(a) + 4g(\tfrac{a+b}{2}) + g(b)\bigr)$)
+applied to the probe slopes at the beginning, middle (twice), and end of the
+step, and they are chosen so that the
 update's Taylor expansion matches the true solution's through the $h^4$ term.
 
-**Proposition (RK4 converges at order 4).** *For $\mathbf{f}$ smooth, the
+**Proposition (RK4 converges at order 4).** *For $\mathbf{f}$ four times
+continuously differentiable ($C^4$), the
 RK4 iterates :eqref:`eq_mdl-ode-rk4-update` have local truncation error
 $O(h^5)$ and global error $O(h^4)$ on a fixed interval $[0, T]$.*
 
-The proof is the same accumulation argument as for Euler, fed with a
-five-term Taylor match whose verification is a famous exercise in patience;
+The proof is the same accumulation argument as for Euler, fed with a long but
+mechanical five-term Taylor match;
 see :citet:`Hairer.Norsett.Wanner.1993`, the standard reference, for the
 general order theory. What matters for practice is the scaling: *halving $h$
 cuts RK4's error by a factor of 16*, so a method of order $p$ delivers error
-$\varepsilon$ at cost proportional to $\varepsilon^{-1/p}$ field evaluations
---- the difference between $10^6$ steps and $30$ steps for the same accuracy.
+$\varepsilon$ at cost proportional to $\varepsilon^{-1/p}$ field evaluations,
+the difference between $10^6$ steps and $30$ steps for the same accuracy.
 This is why solver *order* is the headline spec, and why few-step samplers
-for diffusion models (:numref:`sec_mdl-score-matching-diffusion-flow`) obsess
-over higher-order integrators. (Production solvers add one more trick:
-*embedded* pairs such as Dormand--Prince `RK45` compute two orders at once,
-use the gap as a free error estimate, and adapt $h$ on the fly --- shrinking
-it where the field bends fast, stretching it where nothing happens.)
+for diffusion models (:numref:`sec_mdl-score-matching-diffusion-flow`) rely
+on higher-order integrators. Production solvers add one more trick:
+*embedded* pairs such as Dormand--Prince `RK45` compute two orders at once
+and use the gap between them as a free error estimate
+:cite:`Dormand.Prince.1980`. That estimate drives an adaptive step size,
+shrinking $h$ where the field bends fast and stretching it where nothing
+happens.
 
-Both claims --- slope $1$ and slope $4$ --- are measurable. We integrate the
+Both claims, slope $1$ and slope $4$, are measurable. We integrate the
 spiral field to $T = 2$, where we know the exact answer from
 `#odes-solvers-matrix-exponential`, and sweep the step size across five
 octaves. On log--log axes, $\textrm{error} \approx C h^p$ is a line of slope
@@ -624,17 +629,18 @@ d2l.plot(hs, [err_eu, err_rk, err_eu[-1] * (hs / hs[-1]),
 ```
 
 The fitted slopes land within a few percent of the theoretical orders $1$ and
-$4$, and the RK4 curve sits *nine decades* below Euler at the smallest step
-($3.6 \times 10^{-3}$ versus $5.0 \times 10^{-12}$) --- same trajectory, same
-horizon, four times the work per step, nearly a billion times the accuracy.
+$4$, and the RK4 curve sits *nearly nine decades* below Euler at the smallest
+step ($3.6 \times 10^{-3}$ versus $5.0 \times 10^{-12}$): same trajectory,
+same horizon, four times the work per step, nearly a billion times the
+accuracy.
 
 ### Stiffness and Implicit Methods
 :label:`sec_mdl-stiffness-implicit`
 
-Order is not the whole story. Accuracy says how well you track the solution;
-**stability** asks whether your errors quietly die out or compound into an
-explosion --- and for *explicit* methods like Euler and RK4, stability puts a
-hard ceiling on the step size. The phenomenon is already visible in one
+Order does not decide everything. Accuracy says how well you track the
+solution; **stability** asks whether your errors quietly die out or compound
+into an explosion, and for *explicit* methods like Euler and RK4, stability
+puts a hard ceiling on the step size. The phenomenon is already visible in one
 dimension.
 
 **Proposition (stability of Euler on the test equation).** *On
@@ -656,37 +662,41 @@ the left inequality is the binding one: $h\lambda < 2$. Backward Euler:
 $x_{n+1} = x_n - h\lambda x_{n+1}$, so $x_{n+1} = x_n / (1 + h\lambda)$, and
 $0 < (1 + h\lambda)^{-1} < 1$ for all $h > 0$. $\blacksquare$
 
-Past the threshold, forward Euler does not just lose accuracy --- it
-*amplifies*: each step overshoots the origin and lands farther away on the
+Past the threshold, forward Euler *amplifies*: each step overshoots the
+origin and lands farther away on the
 other side, an oscillating divergence with growth factor $|1 - h\lambda|$. A
 method that decays on the test equation for every $h > 0$, as backward Euler
-does, is called **A-stable**. (Our $\lambda$ is real, but the full story
-lives in the complex plane: a decaying, rotating mode has complex $\lambda$
-with $\operatorname{Re}\lambda > 0$ in our sign convention, a method's
-**stability region** is the set of $z = -h\lambda$ for which its update
+does, is called **A-stable** :cite:`Dahlquist.1963`. (Our $\lambda$ is real,
+but the full picture lives in the complex plane. Write the test equation as
+$\dot{y} = \lambda y$ with complex $\lambda$, so that a decaying, rotating
+mode has $\operatorname{Re}\lambda < 0$; a method's
+**stability region** is the set of $z = h\lambda$ for which its update
 decays, and A-stability proper demands that this region contain the entire
 left half-plane. :numref:`fig_mdl-dyn-stability-regions` draws the regions;
-the computation above is their slice along the real axis.) The price of
+the computation above, $z = -h\lambda$ with $\lambda > 0$, is their slice
+along the negative real axis.) The price of
 implicitness is that each step
 *defines* $\mathbf{x}_{n+1}$ only implicitly: you must solve an equation per
-step --- a linear solve when $\mathbf{f}$ is linear, a few Newton iterations
+step, a linear solve when $\mathbf{f}$ is linear and a few Newton iterations
 (:numref:`sec_mdl-multivariable_calculus`) otherwise.
 
-![Stability regions in the complex plane of $z = h\lambda$ for the test equation $\dot{y} = \lambda y$ (a decaying mode sits in the left half-plane; our real computation is the slice along the negative real axis). Forward Euler decays only inside the disc $\lvert 1 + z \rvert < 1$, whose real slice is $-2 < h\lambda < 0$; RK4 enlarges it to a lobed region reaching $\approx -2.79$ on the real axis; backward Euler is stable everywhere *except* the disc around $+1$ --- in particular on the entire left half-plane, which is A-stability.](../img/mdl-dyn-stability-regions.svg)
+![Stability regions in the complex plane of $z = h\lambda$ for the test equation $\dot{y} = \lambda y$ (a decaying mode sits in the left half-plane; our real computation is the slice along the negative real axis). Forward Euler decays only inside the disc $\lvert 1 + z \rvert < 1$, whose real slice is $-2 < h\lambda < 0$; RK4 enlarges it to a lobed region reaching $\approx -2.79$ on the real axis; backward Euler is stable everywhere *except* the disc around $+1$, in particular on the entire left half-plane, which is A-stability.](../img/mdl-dyn-stability-regions.svg)
 :label:`fig_mdl-dyn-stability-regions`
 
-Why tolerate that price? **Stiffness.** A linear system is *stiff* when its
-eigenvalues are spread over wildly different scales --- say
-$\lambda_{\textrm{fast}} = 50$ and $\lambda_{\textrm{slow}} = 1$. The fast
-mode dies almost immediately, and what is left to track is the slow,
+Why tolerate that price? **Stiffness.** A system is *stiff* when the step
+size that *stability* forces on an explicit method is far smaller than the
+one *accuracy* would need. The standard linear source is eigenvalues spread
+over wildly different scales, say eigenvalues $-50$ and $-1$, i.e. decay
+rates $\lambda_{\textrm{fast}} = 50$ and $\lambda_{\textrm{slow}} = 1$. The
+fast mode dies almost immediately, and what is left to track is the slow,
 smooth mode, for which a large step would be perfectly *accurate*. But
 forward Euler's *stability* constraint $h < 2/\lambda_{\textrm{fast}}$ is set
-by the fastest eigenvalue --- including modes that decayed away long ago and
+by the fastest decay rate, including modes that died long ago and
 contribute nothing to the answer. The dead mode governs your budget: that is
 stiffness. An implicit method deletes the constraint and lets the step size
 follow the physics you actually care about. The sweep below shows the
 forward-Euler threshold appear exactly at $h = 2/\lambda = 0.04$, backward
-Euler decaying serenely at every step size, and the two-scale system blowing
+Euler decaying at every step size, and the two-scale system blowing
 up in the fast component that had already decayed to $10^{-22}$.
 
 ```{.python .input #odes-solvers-stiffness-sweep}
@@ -708,13 +718,14 @@ print('stiff system, forward Euler with h=0.05: x(T) =', x_stiff.round(2),
 
 Note what backward Euler's unconditional stability does and does not buy: at
 $h = 0.1$ it returns $1.65 \times 10^{-8}$ where the truth is
-$1.93 \times 10^{-22}$ --- *stable* (it decays, and further steps decay
-further) but not *accurate*. Stability keeps you solvent; only a small step
-or a higher order makes you right. The practical doctrine, which carries to
-every learned ODE in :numref:`sec_mdl-score-matching-diffusion-flow`: use
+$1.93 \times 10^{-22}$: *stable* (it decays, and further steps decay
+further) but not *accurate*. Stability prevents the explosion; only a small
+step or a higher order makes you right. The practical doctrine, which carries
+to every learned ODE in :numref:`sec_mdl-score-matching-diffusion-flow`: use
 explicit adaptive solvers by default, and reach for implicit methods when the
-dynamics are stiff --- when the step size that *stability* forces is far
-smaller than the one *accuracy* would need.
+dynamics are stiff. For a nonlinear or learned field, stiff means that the
+Jacobian's eigenvalues along the trajectory are spread over widely different
+scales.
 
 ### Gradient Descent Is a Solver
 :label:`sec_mdl-gd-as-solver`
@@ -731,11 +742,14 @@ a vector field whose fixed points are exactly the critical points of $L$ and
 along whose trajectories the loss can only fall:
 $\tfrac{d}{dt} L(\mathbf{x}(t)) = \nabla L^\top \dot{\mathbf{x}} = -\|\nabla L\|^2 \le 0$.
 Gradient descent with learning rate $\eta$ is *forward Euler* on this flow
---- $\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\, \nabla L(\mathbf{x}_k)$ is
-:eqref:`eq_mdl-ode-euler-update` with $h = \eta$ --- so the solver theory of
-this section *is* optimization theory. In particular, near a minimum with
-Hessian $H$ the whole story linearizes, mode by eigenmode, onto the test
-equation:
+($\mathbf{x}_{k+1} = \mathbf{x}_k - \eta\, \nabla L(\mathbf{x}_k)$ is
+:eqref:`eq_mdl-ode-euler-update` with $h = \eta$), so the solver theory of
+this section *is* optimization theory.
+:numref:`sec_mdl-gradient-based-optimization` derived the learning-rate
+ceiling $\eta < 2/\lambda_{\max}(H)$ from the quadratic analysis and ran
+essentially the experiment below; what is new here is the reading. Near a
+minimum with Hessian $H$ the dynamics linearize, mode by eigenmode, onto the
+test equation:
 
 $$
 \dot{\mathbf{x}} = -\nabla L(\mathbf{x})
@@ -747,21 +761,16 @@ $$
 \eta < \frac{2}{\lambda_{\max}(H)} .
 $$
 
-The solver bound $h < 2/\lambda$ is *literally* the learning-rate rule
-$\eta < 2/\lambda_{\max}(H)$ of the quadratic analysis in
-:numref:`sec_mdl-gradient-based-optimization`: a diverging learning rate is a
-solver instability, and an ill-conditioned Hessian is a *stiff* gradient flow
---- the steep, already-converged curvature directions dictate the step budget
-that the shallow directions must then crawl under, which is the stiffness
-of the previous subsection wearing its optimization clothes. Momentum is the
-same story one derivative up: Polyak's heavy-ball update discretizes the
-second-order ODE
-$m\, \ddot{\mathbf{x}} + \gamma\, \dot{\mathbf{x}} = -\nabla L(\mathbf{x})$,
-a ball with inertia rolling through the loss landscape against friction
-$\gamma$; inertia averages recent gradients, which is why momentum
-accelerates along shallow consistent valleys and can ring across steep ones.
-We watch the Euler threshold appear, mirroring the stiffness sweep, on a
-quadratic with $\lambda_{\max} = 10$ --- predicted flip at
+The solver bound $h < 2/\lambda$ *is* the learning-rate ceiling: a diverging
+learning rate is a solver instability, and an ill-conditioned Hessian is a
+*stiff* gradient flow, with the steep, already-converged curvature directions
+setting the stability limit under which the shallow directions must then
+crawl. Momentum, Polyak's heavy-ball update, discretizes the second-order ODE
+$m\, \ddot{\mathbf{x}} + \gamma\, \dot{\mathbf{x}} = -\nabla L(\mathbf{x})$
+analyzed in :numref:`sec_mdl-gradient-based-optimization`
+:cite:`Polyak.1964`. We rerun that section's experiment, read now as the
+twin of the stiffness sweep, on a
+quadratic with $\lambda_{\max} = 10$: predicted flip at
 $\eta = 2/10 = 0.2$.
 
 ```{.python .input #mdl-odes-solvers-gradient-descent-is-a-solver}
@@ -781,7 +790,7 @@ crush the iterate to $10^{-5}$; at $\eta = 0.201$ the factor is $-1.01$ and
 the same hundred steps have *grown* it, oscillating in sign, past its
 starting point; at $\eta = 0.25$ it has exploded seventeen orders of
 magnitude. Meanwhile the slow direction ($\lambda = 1$) was converging
-contentedly at every one of these rates --- the divergence is manufactured
+at every one of these rates: the divergence is manufactured
 entirely by the loss surface's stiffest mode, its own "fast dead mode."
 
 ## Neural ODEs and the Adjoint Method
@@ -806,17 +815,19 @@ $h = 1$.*
 :eqref:`eq_mdl-ode-euler-update`; the two updates are the same formula.
 $\blacksquare$
 
-![Left: a stack of residual blocks, each adding the learned branch $\mathbf{f}_\theta(\mathbf{x}_l)$ to an identity skip. Right: the same update read as numerical integration --- forward-Euler steps of size $h = 1$ tracking the smooth flow of the field $\mathbf{f}_\theta$. Depth is integration time.](../img/mdl-dyn-resnet-as-euler.svg)
+![Left: a stack of residual blocks, each adding the learned branch $\mathbf{f}_\theta(\mathbf{x}_l)$ to an identity skip. Right: the same update read as numerical integration, forward-Euler steps of size $h = 1$ tracking the smooth flow of the field $\mathbf{f}_\theta$. Depth is integration time.](../img/mdl-dyn-resnet-as-euler.svg)
 :label:`fig_mdl-dyn-resnet-as-euler`
 
 A trivial identification (:numref:`fig_mdl-dyn-resnet-as-euler`) with non-trivial consequences. Read in one
-direction: a ResNet with $N$ blocks is a *solver* --- it integrates a vector
+direction: a ResNet with $N$ blocks is a *solver*; it integrates a vector
 field for $N$ unit steps of time, and "depth" is a discretization of a
-continuous deformation of the representation. Read in the other direction:
+continuous deformation of the representation :cite:`E.2017`. Read in the
+other direction:
 shrink the step while adding blocks, $\mathbf{x}_{l+1} = \mathbf{x}_l +
 \tfrac{1}{N}\mathbf{f}_\theta(\mathbf{x}_l)$, and by the Euler convergence
-proposition the network's output approaches the *exact* flow map
-$\Phi_1(\mathbf{x}_0)$ of the field --- the error of the "infinitely deep"
+proposition (for smooth activations, so that the field is $C^1$) the
+network's output approaches the *exact* flow map
+$\Phi_1(\mathbf{x}_0)$ of the field; the error of the "infinitely deep"
 limit is the $O(h)$ of :numref:`sec_mdl-euler-runge-kutta` with $h = 1/N$.
 That limit object is the **Neural ODE**
 :cite:`Chen.Rubanova.Bettencourt.ea.2018`:
@@ -829,7 +840,7 @@ $$
 
 Layers became integration time; the architecture became a single learned
 vector field plus a choice of solver; and everything this section proved now
-applies to the model itself --- a Lipschitz $\mathbf{f}_\theta$ makes the
+applies to the model itself: a Lipschitz $\mathbf{f}_\theta$ makes the
 input--output map well-posed and invertible
 (:numref:`sec_mdl-ode-existence-uniqueness`), and a fancier solver (RK4, an
 adaptive method) is a drop-in upgrade that changes compute, not parameters.
@@ -837,21 +848,21 @@ adaptive method) is a drop-in upgrade that changes compute, not parameters.
 ### Training Through the Solver
 
 How do you fit $\theta$? The direct route is **discretize, then
-differentiate**: unroll a fixed solver --- say $N$ Euler steps --- into the
+differentiate**: unroll a fixed solver, say $N$ Euler steps, into the
 computation graph, compute the loss on $\mathbf{x}_N$, and let ordinary
 backpropagation flow through the unrolled steps. The "network" this builds is
 literally a ResNet with $N$ blocks that share the same weights $\theta$, so
-nothing new is needed: every framework can already train it.
+ordinary automatic differentiation already trains it.
 
-Let us do exactly that, once in each framework, on a task small enough to
+Let us do exactly that, on a task small enough to
 watch: learn a planar field $\mathbf{f}_\theta$ (one hidden layer, $32$ tanh
 units) whose time-$1$ flow carries the unit circle onto a shifted, squashed
-ellipse --- $64$ paired points, mean-squared loss on the endpoints, $10$
-unrolled Euler steps of size $h = 0.1$. The flow deforms *all* of
+ellipse. We use $64$ paired points, mean-squared loss on the endpoints, $10$
+unrolled Euler steps of size $h = 0.1$, and Adam
+(:numref:`sec_mdl-adaptive-stochastic-methods`) as the optimizer. The flow
+deforms *all* of
 $\mathbb{R}^2$ smoothly and invertibly; we supervise it only at the $64$
-points. (In JAX the unrolled loop is a `jax.lax.fori_loop` inside a single
-`jit`-compiled Adam step; in the other frameworks it is a plain Python loop
-under the autograd recorder.)
+points.
 
 ```{.python .input #odes-solvers-neural-ode-train}
 #@tab pytorch
@@ -981,30 +992,32 @@ print(f'mean endpoint error: {float(err):.4f}')
 ```
 
 A few hundred full-batch Adam iterations drive the loss to $\sim 10^{-5}$ and
-the mean endpoint error to $\sim 10^{-3}$ in every framework: one tiny vector
+the mean endpoint error to $\sim 10^{-3}$: one tiny vector
 field, integrated by ten shared-weight "residual blocks," learns to carry a
 circle onto a displaced ellipse. And because the model is a flow, you get for
 free what no plain MLP gives you: integrate the *same* field backward
 (negate it, or run time from $1$ to $0$) and the ellipse returns to the
-circle --- invertibility by construction, courtesy of Picard--Lindelöf.
+circle: invertibility by construction, courtesy of Picard--Lindelöf.
 
 ### The Adjoint Method: Backpropagation in Continuous Time
 :label:`sec_mdl-adjoint-method`
 
 Differentiating through the unrolled solver works, but it stores every
-intermediate state --- for an adaptive solver taking thousands of internal
+intermediate state; for an adaptive solver taking thousands of internal
 steps, that is a lot of tape. The **adjoint method** computes the same
 gradients by integrating a *second* ODE backward in time, storing essentially
 nothing. It is the continuous-time limit of backpropagation, and its central
 object, the **adjoint state**
-$\mathbf{a}(t) = \partial L / \partial \mathbf{x}(t)$ --- "how would the loss
-change if the trajectory were nudged at time $t$?" --- is the continuous
+$\mathbf{a}(t) = \partial L / \partial \mathbf{x}(t)$ ("how would the loss
+change if the trajectory were nudged at time $t$?"), is the continuous
 analogue of the backprop delta of
 :numref:`sec_mdl-matrix-calculus-autodiff`.
 
-**Proposition (the adjoint equations).** *Let $\mathbf{x}(t)$ solve
+**Proposition (the adjoint equations).** *Let $\mathbf{f}$ be continuously
+differentiable in $\mathbf{x}$ and $\theta$, let $\mathbf{x}(t)$ solve
 $\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, \theta, t)$ on $[0, T]$ from fixed
-$\mathbf{x}(0)$, and let $L = \ell(\mathbf{x}(T))$ be a loss on the endpoint.
+$\mathbf{x}(0)$, and let $L = \ell(\mathbf{x}(T))$ be a differentiable loss
+on the endpoint.
 Then the adjoint state satisfies the linear ODE*
 
 $$
@@ -1026,7 +1039,9 @@ $$
 $(\mathbf{x}(t), \theta, t)$* :cite:`Chen.Rubanova.Bettencourt.ea.2018`.
 
 **Proof (variational).** Perturb the parameters by an infinitesimal
-$\delta\theta$ and ask how the trajectory responds. The perturbation
+$\delta\theta$ and ask how the trajectory responds. Because $\mathbf{f}$ is
+$C^1$, the flow is differentiable in $\theta$ and the first-order expansion
+below is rigorous: the perturbation
 $\delta\mathbf{x}(t)$ obeys the *linearization* of the dynamics (differentiate
 the ODE in $\theta$ and use the chain rule):
 
@@ -1040,7 +1055,7 @@ $$
 
 Now let $\mathbf{a}(t)$ be defined by the backward ODE
 :eqref:`eq_mdl-ode-adjoint` and watch the pairing
-$\mathbf{a}^\top \delta\mathbf{x}$ evolve --- the derivative telescopes by
+$\mathbf{a}^\top \delta\mathbf{x}$ evolve; the derivative telescopes by
 design:
 
 $$
@@ -1052,7 +1067,7 @@ $$
 = \mathbf{a}^\top \frac{\partial \mathbf{f}}{\partial \theta}\,\delta\theta .
 $$
 
-The state-coupling terms cancel exactly --- that cancellation is *why* the
+The state-coupling terms cancel exactly; that cancellation is *why* the
 adjoint ODE has the form it has. Integrate from $0$ to $T$, using
 $\delta\mathbf{x}(0) = \mathbf{0}$ on the left endpoint:
 
@@ -1066,8 +1081,14 @@ the first-order change of the loss; the right side is linear in
 $\delta\theta$ with coefficient :eqref:`eq_mdl-ode-adjoint-grad`. (The same
 telescoping, stopped at an intermediate time $s$, shows
 $\delta L = \mathbf{a}(s)^\top \delta\mathbf{x}(s)$ for a nudge injected at
-time $s$ --- so the solution of :eqref:`eq_mdl-ode-adjoint` really is
+time $s$, so the solution of :eqref:`eq_mdl-ode-adjoint` really is
 $\partial L/\partial \mathbf{x}(s)$, earning its name.) $\blacksquare$
+
+One caveat connects back to :numref:`sec_mdl-ode-existence-uniqueness`: the
+existence theorem tolerates ReLU fields, but the adjoint equations as stated
+need a $C^1$ field. A ReLU field is differentiable only piecewise; in
+practice autograd differentiates the unrolled solver piece by piece, and
+smooth activations (tanh, GELU) remove the issue entirely.
 
 Look at what the backward ODE *computes per step*:
 $-\mathbf{a}^\top \partial\mathbf{f}/\partial\mathbf{x}$ is a
@@ -1080,14 +1101,14 @@ from optimal control :cite:`Pontryagin.Boltyanskii.Gamkrelidze.ea.1962`
 straight to `loss.backward()`. The continuous formulation adds one practical
 twist: instead of storing the forward states for the VJPs, you may
 *re-integrate* $\mathbf{x}(t)$ backward alongside $\mathbf{a}(t)$, making
-memory $O(1)$ in the number of solver steps --- at the cost of extra compute
+memory $O(1)$ in the number of solver steps, at the cost of extra compute
 and of numerical drift when the reversed dynamics are unstable (a strongly
 contracting forward flow is, run backward, strongly expanding; in that regime
 checkpointing or plain unrolling is the sturdier choice). The literature
-names the two routes **discretize-then-optimize** --- differentiate the
-unrolled solver, exact for the program you actually ran --- versus
-**optimize-then-discretize** --- discretize the continuous adjoint,
-memory-free but only approximately the gradient of anything
+names the two routes **discretize-then-optimize** (differentiate the
+unrolled solver, exact for the program you actually ran) versus
+**optimize-then-discretize** (discretize the continuous adjoint,
+memory-free but only approximately the gradient of anything)
 :cite:`Kidger.2022`; Exercise 7 probes exactly this fault line.
 
 Everything above is checkable on the linear ODE
@@ -1100,7 +1121,7 @@ entries of $A$ itself, $\partial\mathbf{f}/\partial A$ turns
 :eqref:`eq_mdl-ode-adjoint-grad` into
 $\partial L/\partial A = \int_0^T \mathbf{a}(t)\,\mathbf{x}(t)^\top dt$. The
 cell computes the gradient three ways: hand-written reverse mode through the
-unrolled Euler solver (the discrete adjoint --- exactly what your framework's
+unrolled Euler solver (the discrete adjoint: exactly what reverse-mode
 autograd builds, written out in six lines), central finite differences on the
 same unrolled program, and the continuous adjoint integral by quadrature.
 
@@ -1143,11 +1164,11 @@ for n_steps in [100, 1000, 10000]:
     print(f'n = {n_steps:6d} Euler steps: |discrete - continuous adjoint| = {gap:.1e}')
 ```
 
-The discrete adjoint matches finite differences to $10^{-10}$ --- it *is* the
-exact gradient of the unrolled program --- and as the solver is refined the
+The discrete adjoint matches finite differences to $10^{-10}$ (it *is* the
+exact gradient of the unrolled program), and as the solver is refined the
 discrete gradient converges to the continuous adjoint integral at exactly the
 solver's order, $O(h)$: ten times the steps, one-tenth the gap. Backprop
-through a solver and the adjoint method are not two algorithms but one, seen
+through a solver and the adjoint method are one algorithm, seen
 at two resolutions.
 
 ## Continuous Normalizing Flows
@@ -1166,7 +1187,7 @@ $$
 $$
 
 and a normalizing flow built from $K$ layers pays one log-det-Jacobian per
-layer --- the $O(d^3)$ determinant being the reason discrete flows constrain
+layer; the $O(d^3)$ determinant is the reason discrete flows constrain
 their layers to triangular or low-rank Jacobians. In continuous time the
 formula *simplifies*: over one infinitesimal step the flow map is
 near-identity, and the determinant of a near-identity matrix is governed by
@@ -1181,8 +1202,10 @@ $O(h)$, so contributes $O(h^2)$. The identity permutation contributes
 $\prod_i (1 + h J_{ii}) = 1 + h \sum_i J_{ii} + O(h^2)$. $\blacksquare$
 
 **Proposition (instantaneous change of variables).** *Let
-$\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, t)$ with $\mathbf{x}(0) \sim p_0$,
-and let $p_t$ denote the density of $\mathbf{x}(t)$. Then along each
+$\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, t)$ with $\mathbf{f}$ continuously
+differentiable and $\mathbf{x}(0) \sim p_0$ for a differentiable density
+$p_0$, and let $p_t$ denote the density of $\mathbf{x}(t)$, which then exists
+and is differentiable along trajectories. Then along each
 trajectory* :cite:`Chen.Rubanova.Bettencourt.ea.2018`
 
 $$
@@ -1195,7 +1218,9 @@ $$
 $\Phi_h(\mathbf{x}) = \mathbf{x} + h\,\mathbf{f}(\mathbf{x}, t) + O(h^2)$,
 whose Jacobian is $I + h J + O(h^2)$ with
 $J = \partial\mathbf{f}/\partial\mathbf{x}$. Apply the discrete
-change-of-variables formula to this one map and expand with the Lemma:
+change-of-variables formula to this one map and expand with the Lemma, which
+tolerates the perturbed argument: replacing $J$ by $J + O(h)$ changes
+$\det(I + hJ)$ only at order $h^2$. Thus:
 
 $$
 \log p_{t+h}(\mathbf{x}(t+h))
@@ -1207,7 +1232,7 @@ using $\log(1 + u) = u + O(u^2)$ (for small $h$ the determinant is positive,
 so the absolute value is moot). Subtract, divide by $h$, and let
 $h \to 0$. $\blacksquare$
 
-The trace of the Jacobian is the **divergence** of the field --- the local
+The trace of the Jacobian is the **divergence** of the field: the local
 expansion rate of volume. Where the field spreads ($\operatorname{tr} J > 0$),
 the cloud of samples dilutes and the log-density along each trajectory falls;
 where it compresses, probability concentrates. Integrating
@@ -1223,7 +1248,7 @@ $$
 This is the engine of the **continuous normalizing flow** (CNF): augment the
 state with a running log-density, integrate $(\mathbf{x}, \log p)$ together
 with one ODE solver call, and you have an *exact* likelihood for an
-unconstrained architecture --- no triangular Jacobians required.
+unconstrained architecture, with no triangular Jacobians required.
 
 ### The Hutchinson Trace Estimator
 
@@ -1237,7 +1262,7 @@ $M \in \mathbb{R}^{d \times d}$ and any random
 $\boldsymbol{\epsilon} \in \mathbb{R}^d$ with
 $\mathbb{E}[\boldsymbol{\epsilon}] = \mathbf{0}$ and
 $\mathbb{E}[\boldsymbol{\epsilon}\boldsymbol{\epsilon}^\top] = I$ (Gaussian
-or Rademacher),*
+or Rademacher, i.e. uniform $\pm 1$ entries),*
 
 $$
 \operatorname{tr}(M) = \mathbb{E}\!\left[\boldsymbol{\epsilon}^\top M \boldsymbol{\epsilon}\right].
@@ -1251,9 +1276,9 @@ $$
 linearity (which lets it commute with the expectation). $\blacksquare$
 
 The point is *what the estimator touches*: $\boldsymbol{\epsilon}^\top J$ is
-a single vector--Jacobian product --- one reverse-mode pass through
+a single vector--Jacobian product, one reverse-mode pass through
 $\mathbf{f}$, cost $O(d)$, no Jacobian ever materialized
-(:numref:`sec_mdl-matrix-calculus-autodiff`) --- followed by a dot product.
+(:numref:`sec_mdl-matrix-calculus-autodiff`), followed by a dot product.
 An unbiased stochastic log-likelihood at the price of one extra backward
 pass is what makes CNFs scale; this is precisely the FFJORD recipe
 :cite:`Grathwohl.Chen.Bettencourt.ea.2018`.
@@ -1263,10 +1288,10 @@ $\dot{\mathbf{x}} = A\mathbf{x}$ has constant Jacobian $A$, so
 :eqref:`eq_mdl-ode-cnf-likelihood` says the log-density along every
 trajectory falls at the constant rate $\operatorname{tr}(A)$:
 $\log p_t(\mathbf{x}(t)) = \log p_0(\mathbf{x}_0) - t \operatorname{tr}(A)$.
-The cell flows standard-normal samples through the spiral field --- where the
+The cell flows standard-normal samples through the spiral field, where the
 time-$t$ density is the Gaussian
-$\mathcal{N}(\mathbf{0},\, e^{At} e^{A^\top t})$, computable in closed form
---- and compares; then it verifies the Hutchinson estimator on a random
+$\mathcal{N}(\mathbf{0},\, e^{At} e^{A^\top t})$, computable in closed form,
+and compares; then it verifies the Hutchinson estimator on a random
 $6 \times 6$ matrix.
 
 ```{.python .input #odes-solvers-cnf-trace}
@@ -1289,24 +1314,24 @@ print(f'Hutchinson: tr(J) = {np.trace(J):.4f},  estimate = {est.mean():.4f}'
       f' +- {est.std() / np.sqrt(len(est)):.4f}')
 ```
 
-The two log-density computations agree digit for digit --- the trace integral
-*is* the log-det-Jacobian, evaluated the cheap way --- and the Hutchinson
-estimate brackets the true trace within its standard error. One more
-identity and the circle closes: :eqref:`eq_mdl-ode-instant-cov` is the
+The two log-density computations agree digit for digit (the trace integral
+*is* the log-det-Jacobian, evaluated the cheap way), and the Hutchinson
+estimate brackets the true trace within its standard error. Finally,
+:eqref:`eq_mdl-ode-instant-cov` is the
 trajectory-wise form of the *continuity equation* governing how a whole
-density field is transported, which is where
-:numref:`sec_mdl-fokker-planck-probability-flow` picks up the story and turns
+density field is transported;
+:numref:`sec_mdl-fokker-planck-probability-flow` starts there and turns
 a diffusion's noisy paths into a deterministic probability-flow ODE
 integrated by exactly the solvers of this section.
 
 ## Summary
 
 * An ODE $\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, t)$ is a velocity field;
-  a solution follows the arrows, and the flow map $\Phi_t$ moves all of space
-  at once, composing as $\Phi_{t+s} = \Phi_t \circ \Phi_s$.
+  a solution is everywhere tangent to it, and the flow map $\Phi_t$ moves all
+  of space at once, composing as $\Phi_{t+s} = \Phi_t \circ \Phi_s$.
 * **Picard--Lindelöf**: a Lipschitz field has exactly one trajectory through
   each point (the Picard integral operator is a contraction), making flow
-  maps bijections --- the well-posedness behind invertible generative flows.
+  maps bijections, the well-posedness behind invertible generative flows.
   Without Lipschitz, uniqueness fails ($\dot{x} = \sqrt{|x|}$, a fan of
   solutions); without a growth bound, solutions can blow up in finite time
   ($\dot{x} = x^2$).
@@ -1317,7 +1342,7 @@ integrated by exactly the solvers of this section.
   points inherit the verdict from the Jacobian's eigenvalues.
 * Explicit solvers march with global error $O(h^p)$: forward **Euler** has
   order $1$ (local $O(h^2)$ errors, $T/h$ of them, times an $e^{LT}$
-  stability factor), **RK4** order $4$ --- both slopes measurable on a
+  stability factor), **RK4** order $4$; both slopes are measurable on a
   log--log plot. **Stiffness**: forward Euler is stable on
   $\dot{x} = -\lambda x$ only for $h < 2/\lambda$, so a fast dead mode can
   dictate the step; **implicit (backward) Euler** is stable for every $h$, at
@@ -1331,13 +1356,13 @@ integrated by exactly the solvers of this section.
   continuous limit is a **Neural ODE**: a learned vector field whose flow is
   fit by differentiating through the solver. The **adjoint method**
   integrates $\dot{\mathbf{a}} = -(\partial\mathbf{f}/\partial\mathbf{x})^\top\mathbf{a}$
-  backward --- each step a VJP --- and is backpropagation in continuous time,
+  backward (each step a VJP) and is backpropagation in continuous time,
   with $O(1)$-memory and numerical-drift tradeoffs.
 * Densities transported by a flow obey the **instantaneous change of
   variables** $\tfrac{d}{dt}\log p_t = -\operatorname{tr}(\partial\mathbf{f}/\partial\mathbf{x})$:
   the log-det-Jacobian becomes a trace integral, estimated unbiasedly by
   **Hutchinson's** $\boldsymbol{\epsilon}^\top J \boldsymbol{\epsilon}$ trick
-  at the cost of one VJP --- the mathematics of continuous normalizing flows.
+  at the cost of one VJP: the mathematics of continuous normalizing flows.
 
 ## Exercises
 
@@ -1378,7 +1403,7 @@ integrated by exactly the solvers of this section.
    Identify the implied step size; explain what halving the solver step while
    doubling the step count corresponds to architecturally; and use
    :numref:`sec_mdl-ode-existence-uniqueness` to argue that the time-$T$ flow
-   of a Lipschitz $\mathbf{f}_\theta$ is invertible --- then explain why a
+   of a Lipschitz $\mathbf{f}_\theta$ is invertible; then explain why a
    *plain* (non-residual) layer $\mathbf{x} \mapsto \sigma(W\mathbf{x})$ has
    no such guarantee.
 7. Re-derive the adjoint equations :eqref:`eq_mdl-ode-adjoint` and
@@ -1478,7 +1503,7 @@ $$\Phi_0 = \mathrm{id}, \qquad \Phi_{t+s} = \Phi_t\circ\Phi_s, \qquad
 \Phi_t^{-1} = \Phi_{-t}.$$
 
 ::: {.d2l-note .rule}
-Invertibility is a **theorem**, not an architecture choice — the seed of
+Invertibility comes free as a **theorem**: the starting point of
 continuous normalizing flows.
 :::
 :::
@@ -1500,7 +1525,7 @@ existence + uniqueness, then patch intervals to cover $[0,T]$. $\blacksquare$
 ::: {.slide title="When uniqueness fails"}
 [Counterexamples]{.kicker}
 
-Drop the Lipschitz bound and solutions fan out — $\dot x=\sqrt{|x|}$ from
+Drop the Lipschitz bound and solutions fan out: $\dot x=\sqrt{|x|}$ from
 $x(0)=0$ can wait any time $c$ then leave as $(t-c)^2/4$:
 
 ![](../img/mdl-dyn-uniqueness-fan.svg){width=72%}
@@ -1530,7 +1555,7 @@ $$e^{At} = \sum_{k=0}^{\infty}\frac{(At)^k}{k!} = V e^{\Lambda t}V^{-1}.$$
 . . .
 
 The eigenbasis decouples the system into independent scalar modes
-$e^{\lambda_i t}$ — exactly the §22 eigendecomposition at work.
+$e^{\lambda_i t}$, exactly the §22 eigendecomposition at work.
 :::
 
 ::: {.slide title="Three ways to the same map"}
@@ -1557,7 +1582,7 @@ stability certificate.
 ::: {.slide title="Phase portraits"}
 [Linear systems]{.kicker}
 
-The eigenvalue signature names the picture — node, saddle, spiral, center:
+The eigenvalue signature names the picture (node, saddle, spiral, center):
 
 ![](../img/mdl-dyn-phase-portraits.svg){width=86%}
 
@@ -1571,7 +1596,7 @@ gives the same verdict (Hartman–Grobman).
 
 [Numerical solvers]{.dtitle}
 
-[Euler, Runge–Kutta, stiffness — and gradient descent]{.dsub}
+[Euler, Runge–Kutta, stiffness, and gradient descent]{.dsub}
 :::
 :::
 
@@ -1583,7 +1608,7 @@ $$\mathbf x_{n+1} = \mathbf x_n + h\,\mathbf f(\mathbf x_n,t_n).$$
 . . .
 
 Local error $O(h^2)$ per step; unrolling $N=T/h$ steps and summing a geometric
-series gives global error $O(h)$ — amplified by the stability factor
+series gives global error $O(h)$, amplified by the stability factor
 $e^{LT}$. The general rule: local $O(h^{p+1})$ → global $O(h^p)$.
 :::
 
@@ -1591,7 +1616,7 @@ $e^{LT}$. The general rule: local $O(h^{p+1})$ → global $O(h^p)$.
 [Solvers]{.kicker}
 
 RK4 samples four slopes ($k_1$ at the start, two at the midpoint, one at the
-end) and Simpson-weights them $\tfrac16(k_1+2k_2+2k_3+k_4)$ — global order
+end) and Simpson-weights them $\tfrac16(k_1+2k_2+2k_3+k_4)$: global order
 $4$, so halving $h$ cuts error by $16$.
 
 @!odes-solvers-euler-rk4-order
@@ -1617,8 +1642,8 @@ In the complex plane of $z = h\lambda$:
 
 - forward Euler decays only inside the disc $|1+z| < 1$;
 - RK4's lobes stretch to $\approx -2.79$ on the real axis;
-- backward Euler is stable everywhere *but* a disc — the entire left
-  half-plane, which is **A-stability**.
+- backward Euler is stable everywhere *but* a disc, in particular on the
+  entire left half-plane, which is **A-stability**.
 :::
 
 ::: {.col .fig .big}
@@ -1652,9 +1677,9 @@ discretizes $m\ddot{\mathbf x}+\gamma\dot{\mathbf x}=-\nabla L$.
 ::: {.slide title="The verdict flips at the predicted threshold"}
 [Training as dynamics]{.kicker}
 
-On a quadratic with $\lambda_{\max}=10$ the predicted flip is $\eta = 0.2$ —
-and it lands there to the third decimal, while the slow mode ($\lambda=1$)
-converges contentedly at every rate shown:
+On a quadratic with $\lambda_{\max}=10$ the predicted flip is $\eta = 0.2$:
+the sweep diverges already at $\eta = 0.201$, while the slow mode
+($\lambda=1$) converges at every rate shown:
 
 @!mdl-odes-solvers-gradient-descent-is-a-solver
 
@@ -1692,7 +1717,7 @@ learns a circle→ellipse flow:
 @!odes-solvers-neural-ode-train
 ::: {.d2l-note}
 Lipschitz $\mathbf f_\theta$ → the map is invertible by Picard–Lindelöf:
-invertibility is **inherited, not engineered**.
+invertibility comes **for free**.
 :::
 :::
 
@@ -1707,7 +1732,7 @@ $$\dot{\mathbf a} = -\Bigl(\tfrac{\partial\mathbf f}{\partial\mathbf x}\Bigr)^{\
 
 @!odes-solvers-adjoint-check
 ::: {.d2l-note .rule}
-Discretizing the adjoint ODE **is** the backprop recursion — but with $O(1)$
+Discretizing the adjoint ODE **is** the backprop recursion, but with $O(1)$
 memory instead of storing every step.
 :::
 :::
@@ -1747,7 +1772,7 @@ turns that into one vector–Jacobian product (the FFJORD trick):
 :::
 
 ::: {.d2l-note}
-Next: add **noise** to the velocity field — stochastic differential
+Next we add **noise** to the velocity field: stochastic differential
 equations.
 :::
 :::

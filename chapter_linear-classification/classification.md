@@ -97,7 +97,7 @@ class Classifier(d2l.Module):  #@save
                   train=False)
 ```
 
-By default we use a stochastic gradient descent optimizer operating on minibatches, just as we did in the context of linear regression. `configure_optimizers` is a hook: `Trainer` calls it once at the start of training (see :numref:`sec_oo-design`), and it returns the optimizer object that `Trainer` then uses to update the parameters after each backward pass. We install the default here, on `d2l.Module` itself rather than on `Classifier`, because there is nothing classification-specific about minibatch SGD: regression models use exactly the same default, so the right home for it is the class they all share, and no individual subclass has to repeat it. A subclass is free to override the method to switch optimizers (later chapters do exactly that), but plain SGD is the right default for the models in this chapter.
+By default we use a stochastic gradient descent optimizer operating on minibatches, just as we did in the context of linear regression. `configure_optimizers` is a hook: `Trainer` calls it once at the start of training (see :numref:`sec_oo-design`), and it returns the optimizer object that `Trainer` then uses to update the parameters after each backward pass. We install it on `d2l.Module` rather than `Classifier` because regression models use the same default; a subclass can still override it (later chapters do exactly that) to switch optimizers.
 
 ```{.python .input #classification-the-classifier-class-2}
 %%tab mxnet
@@ -132,9 +132,9 @@ def configure_optimizers(self):
 
 ## Accuracy
 
-Before we implement the accuracy metric, it is worth asking why a classifier needs *two* numbers at all. A single forward pass produces a vector of scores $\mathbf{o}\in\mathbb{R}^q$, one per class, and from there the picture forks into two branches that read the *same* scores for very different purposes (:numref:`fig_mdl-clf-loss-accuracy`). On the training branch we turn the scores into probabilities with the softmax and read off the cross-entropy loss. This loss is a smooth function of the parameters, so gradient descent can minimize it; and it keeps rewarding the model for putting more probability on the correct class even after the decision is already right, nudging a confidence of $0.51$ toward $0.99$. On the evaluation branch we take the $\arg\max$ of the scores to a single hard decision $\hat{y}$, compare it with the label, and count the hit. This is the accuracy: the fraction of correct decisions, the number practitioners and benchmarks ultimately care about, but a *discrete* quantity whose gradient is zero almost everywhere, since a tiny change to the scores almost never flips which entry is largest.
+Before we implement the accuracy metric, consider why a classifier needs *two* numbers at all. A single forward pass produces a vector of scores $\mathbf{o}\in\mathbb{R}^q$, one per class, and from there the picture forks into two branches that read the *same* scores for very different purposes (:numref:`fig_mdl-clf-loss-accuracy`). On the training branch we turn the scores into probabilities with the softmax and read off the cross-entropy loss. This loss is a smooth function of the parameters, so gradient descent can minimize it; and it keeps rewarding the model for putting more probability on the correct class even after the decision is already right, nudging a confidence of $0.51$ toward $0.99$. On the evaluation branch we take the $\arg\max$ of the scores to a single hard decision $\hat{y}$, compare it with the label, and count the hit. This is the accuracy: the fraction of correct decisions, the number practitioners and benchmarks ultimately care about, but a *discrete* quantity whose gradient is zero almost everywhere, since a tiny change to the scores almost never flips which entry is largest.
 
-So we report both, and for complementary reasons. Two models can reach identical accuracy while one is confidently right and the other barely so, and only the loss can tell them apart, which is why it, not accuracy, is what we optimize. Accuracy in turn measures the hard-decision quality that the loss only stands in for. When the two disagree (accuracy flat while the loss still drops, say) that is diagnostic information about optimization and calibration, not a bug.
+So we report both, and for complementary reasons. Two models can reach identical accuracy while one is confidently right and the other barely so, and only the loss can tell them apart, which is why it, not accuracy, is what we optimize. Accuracy in turn measures the hard-decision quality that the loss only stands in for. When the two disagree (accuracy flat while the loss still drops, say) that is diagnostic information about optimization and calibration (how well the predicted probabilities match empirical frequencies), not a bug.
 
 ![From model scores to a training loss and an evaluation accuracy. One forward pass produces the logits $\mathbf{o}$; the top branch softmaxes them into probabilities $\hat{\mathbf{y}}$ and reads off the differentiable cross-entropy loss that drives gradient descent, while the bottom branch takes the $\arg\max$ to a hard decision $\hat{y}$, compares it with the label $y$, and counts it for accuracy. The numbers shown are the exact softmax and cross-entropy of the logits $(1.0, 2.2, 0.3)$ for true class $y=1$.](../img/mdl-clf-loss-accuracy.svg)
 :label:`fig_mdl-clf-loss-accuracy`
@@ -147,9 +147,9 @@ we assume that the second dimension stores prediction scores for each class.
 We use `argmax` to obtain the predicted class by the index for the largest entry in each row.
 Then we compare the predicted class with the ground truth `y` elementwise.
 Since the equality operator `==` is sensitive to data types,
-we convert `y_hat`'s data type to match that of `y`.
+we cast the predicted classes (`preds`) to `y`'s dtype.
 The result is a tensor containing entries of 0 (false) and 1 (true).
-Taking the sum yields the number of correct predictions.
+Averaging the 0/1 entries yields the fraction correct (or, with `averaged=False`, the raw 0/1 vector).
 
 ```{.python .input #classification-accuracy-1  n=9}
 %%tab pytorch, mxnet, tensorflow
@@ -163,14 +163,13 @@ def accuracy(self, Y_hat, Y, averaged=True):
 ```
 
 :begin_tab:`jax`
-The JAX `accuracy` differs from the imperative version in a
-few places. It takes `params` and `state` instead of a
-precomputed `Y_hat` (Flax modules are stateless, so the
-forward pass needs both), reaches into `state.batch_stats` to
+The JAX `accuracy` takes `params` and `state` instead of a
+precomputed `Y_hat`, because Flax modules are stateless and the
+forward pass needs both. It reads `state.batch_stats` to
 support models with BatchNorm (a no-op for models without it),
-and is decorated with `@jax.jit` for compiled execution. The
-arithmetic that follows the forward pass is identical to the
-other frameworks.
+and is decorated with `@jax.jit` for compiled execution. After
+the forward pass it applies the same `argmax`, comparison, and
+mean over the 0/1 hits.
 :end_tab:
 
 ```{.python .input #classification-accuracy-1  n=9}
@@ -194,9 +193,8 @@ through Gluon's `Parameter` machinery, so it misses the bare `np.ndarray`
 attributes that the from-scratch implementations in this book use.
 We extend `d2l.Module` with a fallback `get_scratch_params` that
 walks attributes recursively, and a `parameters` method that returns
-Gluon's params when present and the scratch params otherwise. The
-other frameworks do not need this, since PyTorch's `nn.Module`, TensorFlow
-Keras, and JAX/Flax all expose parameters uniformly.
+Gluon's params when present and the scratch params otherwise. This
+fallback is specific to Gluon's parameter API.
 :end_tab:
 
 ```{.python .input #classification-accuracy-2  n=10}
@@ -227,7 +225,7 @@ def parameters(self):
 
 ## Beyond Accuracy
 
-Accuracy treats every example, and every kind of mistake, as equally important. Once classes are *imbalanced*, that assumption fails in a way that can make accuracy actively misleading. Consider screening for a disease that affects 1% of the population. A "classifier" that ignores its input and always predicts *healthy* is right 99% of the time, so its accuracy is 0.99, and it is also perfectly useless: it finds not a single sick patient. The computation is short enough to do in four lines:
+Accuracy treats every example, and every kind of mistake, as equally important. Once classes are *imbalanced*, that assumption fails in a way that can make accuracy actively misleading. Consider screening for a disease that affects 1% of the population. A "classifier" that ignores its input and always predicts *healthy* is right 99% of the time, so its accuracy is 0.99, and it is also perfectly useless: it finds not a single sick patient. The counts make this concrete:
 
 ```{.python .input #classification-beyond-accuracy}
 n, sick = 100_000, 1_000            # 1% of the population carries the disease
@@ -243,7 +241,7 @@ $$\textrm{precision} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FP}}, \qquad \te
 
 Precision asks: of the examples we *flagged*, how many were real? Recall asks: of the real positives, how many did we *find*? The always-healthy classifier above has recall $0$ (and its precision is undefined, since it never flags anyone), which tells the true story that the 99% accuracy conceals. When a single summary number is needed, the *F1 score*, the harmonic mean $2\,\textrm{PR}/(\textrm{P}+\textrm{R})$ of precision and recall, is the conventional compromise, high only when both are.
 
-For $q$ classes the same bookkeeping becomes a $q \times q$ *confusion matrix*: entry $(i, j)$ counts the examples of true class $j$ that the model predicted as class $i$, so the diagonal holds the correct decisions and every off-diagonal cell isolates one specific kind of error. The confusion matrix is the classification diagnostic; a single accuracy number is just the (weighted) trace of it. We will meet it twice more in this chapter: in :numref:`sec_softmax_scratch` we compute one for our trained Fashion-MNIST classifier to see *which* classes it confuses, and in :numref:`sec_environment-and-distribution-shift` the very same matrix becomes the key computational object for correcting label shift.
+For $q$ classes the same bookkeeping becomes a $q \times q$ *confusion matrix*: entry $(i, j)$ counts the examples of true class $j$ that the model predicted as class $i$, so the diagonal holds the correct decisions and every off-diagonal cell isolates one specific kind of error. The confusion matrix is the classification diagnostic; a single accuracy number is just the normalized trace (the fraction on the diagonal). We will meet it twice more in this chapter: in :numref:`sec_softmax_scratch` we compute one for our trained Fashion-MNIST classifier to see *which* classes it confuses, and in :numref:`sec_environment-and-distribution-shift` the very same matrix becomes the key computational object for correcting label shift.
 
 ## Summary
 
@@ -282,7 +280,7 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
 ::: {.cover}
 [Dive into Deep Learning · §4.3]{.kicker}
 
-The base **classification** model<br>One forward pass, read two ways: a *loss* to train on, an *accuracy* to report --- and what to do when accuracy lies.
+The base **classification** model<br>One forward pass, read two ways: a *loss* to train on, an *accuracy* to report, and what to do when accuracy lies.
 :::
 :::
 
@@ -407,7 +405,21 @@ directly.
 :::
 :::
 
-::: {.slide title="Accuracy in four lines"}
+::: {.slide title="Accuracy in four lines" except="jax"}
+[Scores, loss, decision]{.kicker}
+
+`argmax` along the class axis, compare with the label element-wise,
+average the 0/1 hits:
+
+@classification-accuracy-1
+
+::: {.d2l-note}
+The `astype` matches dtypes before `==`, since the comparison is
+type-sensitive.
+:::
+:::
+
+::: {.slide title="Accuracy in four lines" only="jax"}
 [Scores, loss, decision]{.kicker}
 
 `argmax` along the class axis, compare with the label element-wise,
@@ -418,7 +430,7 @@ average the 0/1 hits:
 ::: {.d2l-note}
 The `astype` matches dtypes before `==`, since the comparison is
 type-sensitive. JAX adds `@jax.jit` and runs the forward pass from
-`params`; the arithmetic is identical.
+`params`.
 :::
 :::
 
@@ -443,7 +455,8 @@ $0.99$, which is why it, not accuracy, is what we optimize.
 
 ::: {.d2l-note .rule}
 When the two disagree (accuracy flat while loss still drops) that is a
-diagnostic about optimization and calibration, **not a bug**.
+diagnostic about optimization and calibration (how well predicted
+probabilities match empirical frequencies), **not a bug**.
 :::
 :::
 
@@ -461,8 +474,8 @@ diagnostic about optimization and calibration, **not a bug**.
 [Beyond Accuracy]{.kicker}
 
 Screen for a disease carried by **1%** of the population. A "classifier"
-that ignores its input and always says *healthy* is right 99% of the time
---- and finds **not one** sick patient:
+that ignores its input and always says *healthy* is right 99% of the time,
+and finds **not one** sick patient:
 
 @classification-beyond-accuracy
 
@@ -505,7 +518,7 @@ $$\textrm{precision} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FP}}
 
 **Precision:** of those we *flagged*, how many were real?
 **Recall:** of the real positives, how many did we *find*?
-The always-healthy screener has recall $0$ (precision undefined --- it never flags).
+The always-healthy screener has recall $0$ (precision undefined: it never flags).
 
 ::: {.d2l-note}
 One number when you must: the **F1 score** $2PR/(P{+}R)$, high only when
@@ -522,7 +535,8 @@ matrix**: entry $(i, j)$ counts true class $j$ predicted as class $i$.
 . . .
 
 - The **diagonal** holds the correct decisions; accuracy is just its
-  (weighted) trace --- one number where the matrix keeps $q^2$.
+  normalized trace (the fraction on the diagonal), one number where the
+  matrix keeps $q^2$.
 - Every **off-diagonal cell** isolates one specific kind of error.
 
 ::: {.d2l-note .rule}
@@ -549,7 +563,7 @@ model and read *which* classes it confuses; in §4.7 the very same matrix is
 - Under **imbalance** accuracy can lie: always-healthy scores **0.99**
   with recall **0.0**.
 - **Precision / recall** split the failure modes; **F1** compresses them.
-- The **confusion matrix** itemizes all $q^2$ outcomes --- computed in
+- The **confusion matrix** itemizes all $q^2$ outcomes, computed in
   §4.4, inverted in §4.7.
 :::
 :::

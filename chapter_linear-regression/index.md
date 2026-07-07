@@ -13,7 +13,7 @@ Second, this class of shallow networks happens
 to comprise the set of linear models,
 which subsumes many classical methods of statistical prediction,
 including linear and softmax regression.
-Understanding these classical tools is pivotal
+Understanding these classical tools matters
 because they are widely used in many contexts
 and we will often need to use them as baselines
 when justifying the use of fancier architectures.
@@ -40,7 +40,7 @@ The references below develop the linear-model family this chapter introduces: th
 **Books**
 
 - [An Introduction to Statistical Learning (ISL) — James, Witten, Hastie & Tibshirani](https://www.statlearning.com/) — free PDF (R and Python editions); the gentlest rigorous treatment of regression, classification, and regularization, with worked labs.
-- [The Elements of Statistical Learning (ESL) — Hastie, Tibshirani & Friedman](https://hastie.su.domains/ElemStatLearn/) — free PDF; the comprehensive graduate companion to ISL, with deep coverage of shrinkage, the bias–variance tradeoff, and model selection.
+- [The Elements of Statistical Learning (ESL) — Hastie, Tibshirani & Friedman](https://hastie.su.domains/ElemStatLearn/) — free PDF; the graduate companion to ISL, with deep coverage of shrinkage, the bias–variance tradeoff, and model selection.
 - [Pattern Recognition and Machine Learning — Christopher Bishop](https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/) — free PDF from Microsoft Research; a probabilistic, Bayesian-flavoured account of linear models and regularization.
 - [Probabilistic Machine Learning: An Introduction — Kevin Murphy](https://probml.github.io/pml-book/book1.html) — free draft PDF; a modern, unifying probabilistic perspective spanning regression through deep learning.
 - [Understanding Deep Learning (UDL) — Simon Prince](https://udlbook.github.io/udlbook/) — free PDF; a figure-rich modern treatment whose loss-function chapter generalizes the "match the loss to the noise model" recipe of this chapter into a full menu.

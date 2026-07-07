@@ -22,7 +22,7 @@ mdl-fokker-planck-probability-flow
 mdl-score-matching-diffusion-flow
 ```
 
-## Resources and Further Reading
+## Resources and Further Reading {.unnumbered}
 
 If this chapter sparked an interest in the dynamics behind modern generative
 models, the following are the canonical places to go deeper.

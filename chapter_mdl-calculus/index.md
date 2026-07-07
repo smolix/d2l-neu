@@ -18,7 +18,7 @@ mdl-matrix-calculus-autodiff
 mdl-integral-calculus
 ```
 
-## Resources and Further Reading
+## Resources and Further Reading {.unnumbered}
 
 If you want to go deeper, the following are the canonical references we recommend, from refreshers on single-variable calculus to the matrix calculus and automatic-differentiation machinery behind backpropagation.
 

@@ -16,7 +16,7 @@ mdl-divergences-distances
 mdl-mutual-information
 ```
 
-## Resources and Further Reading
+## Resources and Further Reading {.unnumbered}
 
 A short, curated reading list for information theory and divergences as they appear in machine and deep learning: entropy and cross-entropy, the KL and broader $f$-divergences, mutual information, optimal transport, and the information bottleneck.
 

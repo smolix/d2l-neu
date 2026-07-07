@@ -850,6 +850,12 @@ def number_headings(text, chapter_number):
             title = m.group(2)
             level = len(hashes)
 
+            # Pandoc-style unnumbered headings (e.g. "## Resources {.unnumbered}")
+            # get no number and do not advance the section counters.
+            if re.search(r'\{[^}]*\.unnumbered[^}]*\}\s*$|\{\s*-\s*\}\s*$', title):
+                result.append(line)
+                continue
+
             if level == 1:
                 # Top-level heading: use chapter_number directly
                 sub_counters = {}

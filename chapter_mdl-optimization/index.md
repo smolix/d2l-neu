@@ -21,7 +21,7 @@ mdl-constrained-optimization-duality
 mdl-numerical-stability-conditioning
 ```
 
-## Resources and Further Reading
+## Resources and Further Reading {.unnumbered}
 
 A short, opinionated reading list for going deeper on optimization as it is used
 in machine learning: convexity, gradient and second-order methods, duality, and

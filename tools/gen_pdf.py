@@ -236,6 +236,11 @@ def main():
             asset_src = src / asset
         asset_dst = dst / asset
         if asset_dst.exists() or asset_dst.is_symlink():
+            # Refresh plain files (e.g. d2l.bib) when the project copy is newer;
+            # directories keep the cheap exists-skip.
+            if (asset_dst.is_file() and not asset_dst.is_symlink()
+                    and asset_src.stat().st_mtime > asset_dst.stat().st_mtime):
+                shutil.copy2(asset_src, asset_dst)
             continue
         if asset_src.is_dir():
             shutil.copytree(asset_src, asset_dst,

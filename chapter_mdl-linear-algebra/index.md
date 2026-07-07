@@ -17,7 +17,7 @@ mdl-eigendecomposition
 mdl-svd-low-rank
 ```
 
-## Resources and Further Reading
+## Resources and Further Reading {.unnumbered}
 
 The references below go deeper on the geometry, decompositions, and numerical machinery sketched in this chapter, with an emphasis on the linear algebra that actually shows up in machine and deep learning; most are freely accessible online.
 

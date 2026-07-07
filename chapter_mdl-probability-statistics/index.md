@@ -23,7 +23,7 @@ mdl-concentration-generalization
 mdl-naive-bayes
 ```
 
-## Resources and Further Reading
+## Resources and Further Reading {.unnumbered}
 
 A short, opinionated shelf for going deeper into the probability and statistical
 learning that underpins these chapters---random variables and distributions,

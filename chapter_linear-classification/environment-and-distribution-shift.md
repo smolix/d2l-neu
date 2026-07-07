@@ -60,7 +60,7 @@ Some of the solutions are simple
 (ask for the "right" data),
 some are technically difficult
 (implement a reinforcement learning system),
-and others require that we step outside the realm of
+and others require that we step outside
 statistical prediction altogether and
 grapple with difficult philosophical questions
 concerning the ethical application of algorithms.
@@ -78,7 +78,7 @@ some different distribution $p_T(\mathbf{x},y)$.
 Already, we must confront a sobering reality.
 Absent any assumptions on how $p_S$
 and $p_T$ relate to each other,
-learning a robust classifier is impossible.
+learning a classifier that works at test time is impossible.
 
 Consider a binary classification problem,
 where we wish to distinguish between dogs and cats.
@@ -90,7 +90,7 @@ but the labels are all flipped:
 $p_S(y \mid \mathbf{x}) = 1 - p_T(y \mid \mathbf{x})$.
 In other words, if God can suddenly decide
 that in the future all "cats" are now dogs
-and what we previously called "dogs" are now cats---without
+and what we previously called "dogs" are now cats, without
 any change in the distribution of inputs $p(\mathbf{x})$,
 then we cannot possibly distinguish this setting
 from one in which the distribution did not change at all.
@@ -168,7 +168,7 @@ which tend to be high-dimensional in deep learning.
 
 We may also encounter the related problem of *concept shift*,
 which arises when the very definitions of labels can change.
-This sounds weird---a *cat* is a *cat*, no?
+This sounds weird (a *cat* is a *cat*, no?).
 However, other categories are subject to changes in usage over time.
 Diagnostic criteria for mental illness,
 what passes for fashionable, and job titles,
@@ -194,7 +194,7 @@ either in a temporal or geographic sense.
 
 ## Examples of Distribution Shift
 
-Before delving into formalism and algorithms,
+Before turning to formalism and algorithms,
 we can discuss some concrete situations
 where covariate or concept shift might not be obvious.
 
@@ -245,7 +245,7 @@ In short, they wasted a significant sum of money.
 
 ### Self-Driving Cars
 
-Say a company wanted to leverage machine learning
+Say a company wanted to use machine learning
 for developing self-driving cars.
 One key component here is a roadside detector.
 Since real annotated data is expensive to get,
@@ -291,7 +291,7 @@ Below are some typical cases.
 
 ### Further Failure Modes
 
-* We build a face detector. It works well on all benchmarks. Unfortunately it fails on test data---the offending examples are close-ups where the face fills the entire image (no such data was in the training set).
+* We build a face detector. It works well on all benchmarks. Unfortunately it fails on test data: the offending examples are close-ups where the face fills the entire image (no such data was in the training set).
 * We build a web search engine for the US market and want to deploy it in the UK.
 * We train an image classifier by compiling a large dataset where each among a large set of classes is equally represented in the dataset, say 1000 categories, represented by 1000 images each. Then we deploy the system in the real world, where the actual label distribution of photographs is decidedly non-uniform.
 
@@ -314,10 +314,10 @@ The impatient reader could continue on to the next section
 as this material is not prerequisite to subsequent concepts.
 
 Recall from :numref:`subsec_empirical-risk-and-risk` the distinction
-between the *empirical risk* :eqref:`eq_empirical-risk-min` — the average
-loss on the training data — and the *risk*
-:eqref:`eq_true-risk` — the expected loss under the true data
-distribution $p(\mathbf{x}, y)$. In practice we cannot evaluate the risk
+between the *empirical risk* :eqref:`eq_empirical-risk-min` (the average
+loss on the training data) and the *risk*
+:eqref:`eq_true-risk` (the expected loss under the true data
+distribution $p(\mathbf{x}, y)$). In practice we cannot evaluate the risk
 directly and so we turn to *empirical risk minimization*, hoping that
 minimizing the empirical risk on the training set will approximately
 minimize the risk.
@@ -337,7 +337,8 @@ Fortunately,
 the dependency assumption means
 that the conditional distribution does not change: $p(y \mid \mathbf{x}) = q(y \mid \mathbf{x})$.
 If the source distribution $q(\mathbf{x})$ is "wrong",
-we can correct for that by using the following simple identity in the risk:
+we can correct for that by reweighting the risk with the following simple
+identity :cite:`Shimodaira.2000`:
 
 $$
 \begin{aligned}
@@ -366,13 +367,11 @@ $$\mathop{\mathrm{minimize}}_f \frac{1}{n} \sum_{i=1}^n \beta_i l(f(\mathbf{x}_i
 
 Alas, we do not know that ratio,
 so before we can do anything useful we need to estimate it.
-Many methods are available. One direct family matches the means of the
-reweighted source and the target features in a reproducing-kernel Hilbert
-space (*kernel mean matching*, closely related to the *maximum mean discrepancy*
-two-sample test :cite:`Gretton.Borgwardt.Rasch.ea.2012`), solving for the weights
-without ever estimating the densities $p(\mathbf{x})$ and $q(\mathbf{x})$ separately.
+Many methods estimate this ratio directly, matching moments of the reweighted
+source to the target without ever estimating $p$ and $q$ separately
+:cite:`Gretton.Borgwardt.Rasch.ea.2012`.
 Note that for any such approach, we need samples
-drawn from both distributions---the "true" $p$, e.g.,
+drawn from both distributions: the "true" $p$, e.g.,
 by access to test data, and the one used
 for generating the training set $q$ (the latter is trivially available).
 Note however, that we only need features $\mathbf{x} \sim p(\mathbf{x})$;
@@ -414,6 +413,9 @@ $$
 \beta_i = \frac{1/(1 + \exp(-h(\mathbf{x}_i)))}{\exp(-h(\mathbf{x}_i))/(1 + \exp(-h(\mathbf{x}_i)))} = \exp(h(\mathbf{x}_i)).
 $$
 
+(With unequal sample sizes $\exp(h)$ estimates $p/q$ only up to the constant
+$m/n$, which does not affect the weighted minimizer.)
+
 As a result, we need to solve two problems:
 the first, to distinguish between
 data drawn from both distributions,
@@ -447,7 +449,7 @@ which is exactly where the clip takes over.
 ![Importance weights for covariate shift. Training data comes from the source density $q$ (left curve) but the risk we care about weights points by the target density $p$ (right curve). The correction weight $\beta(x) = p(x)/q(x)$ is near zero where only the source has mass, crosses $1$ where the densities agree, and explodes where the target outweighs a vanishing source; clipping $\beta$ at a ceiling $c$ (dashed) caps the variance contributed by those rare, enormously weighted examples.](../img/mdl-clf-density-ratio.svg)
 :label:`fig_mdl-clf-density-ratio`
 
-Note that the above algorithm relies on a crucial assumption.
+Note that the above algorithm relies on one assumption.
 For this scheme to work, we need that each data example
 in the target (e.g., test time) distribution
 had nonzero probability of occurring at training time.
@@ -518,10 +520,10 @@ The unweighted model is fitted where the *source* data lives, so on the
 target domain it is no better than a coin flip; reweighting by $\beta$ lifts
 target accuracy above 90%, at the price of a worse fit on the now-discounted
 source region, exactly the trade the identity
-:eqref:`eq_covariate-shift-identity` prescribes. Note also the clipped run:
-the largest raw weight here is over 50, so a handful of the thousand source
-points carry much of the objective, and capping $\beta$ at $c=5$ reduces that
-variance without giving up the correction (here it even helps a little).
+:eqref:`eq_covariate-shift-identity` prescribes. The clipped run bears out the
+earlier warning: the largest raw weight here is over 50, so a handful of the
+thousand source points would otherwise dominate the objective, and capping
+$\beta$ at $c=5$ here even helps a little.
 Exercises 3 and 4 let you probe when this pipeline fails, most instructively
 when the supports stop overlapping.
 
@@ -591,12 +593,12 @@ where the $i^\textrm{th}$ element $\mu(\hat{y}_i)$
 is the fraction of the total predictions on the test set
 where our model predicted $i$.
 
-It turns out that under some mild conditions---if
+It turns out that under some mild conditions, namely that
 our classifier was reasonably accurate in the first place,
-and if the target data contains only categories
+that the target data contains only categories
 that we have seen before,
-and if the label shift assumption holds in the first place
-(the strongest assumption here)---we can estimate the test set label distribution
+and that the label shift assumption holds in the first place
+(the strongest assumption here), we can estimate the test set label distribution
 by solving a simple linear system
 
 $$\mathbf{C} p(\mathbf{y}) = \mu(\hat{\mathbf{y}}),$$
@@ -679,7 +681,7 @@ In the more general case of an environment with memory, we may encounter situati
 
 ### Considering the Environment
 
-One key distinction between the different situations above is that a strategy that might have worked throughout in the case of a stationary environment, might not work throughout in an environment that can adapt. For instance, an arbitrage opportunity discovered by a trader is likely to disappear once it is exploited. The speed and manner at which the environment changes determines to a large extent the type of algorithms that we can bring to bear. For instance, if we know that things may only change slowly, we can force any estimate to change only slowly, too. If we know that the environment might change instantaneously, but only very infrequently, we can make allowances for that. These types of knowledge are crucial for the aspiring data scientist in dealing with concept shift, i.e., when the problem that is being solved can change over time.
+One key distinction between the different situations above is that a strategy that might have worked throughout in the case of a stationary environment, might not work throughout in an environment that can adapt. For instance, an arbitrage opportunity discovered by a trader is likely to disappear once it is exploited. The speed and manner at which the environment changes determines to a large extent the type of algorithms that we can bring to bear. For instance, if we know that things may only change slowly, we can force any estimate to change only slowly, too. If we know that the environment might change instantaneously, but only very infrequently, we can make allowances for that. These types of knowledge are what let the aspiring data scientist deal with concept shift, i.e., when the problem that is being solved can change over time.
 
 
 
@@ -688,15 +690,14 @@ One key distinction between the different situations above is that a strategy th
 
 Finally, it is important to remember
 that when you deploy machine learning systems
-you are not merely optimizing a predictive model---you
+you are doing more than optimizing a predictive model: you
 are typically providing a tool that will
 be used to (partially or fully) automate decisions.
 These technical systems can impact the lives
 of individuals who are subject to the resulting decisions.
 The leap from considering predictions to making decisions
-raises not only new technical questions,
-but also a slew of ethical questions
-that must be carefully considered.
+raises new ethical questions alongside the technical ones,
+and these must be carefully considered.
 If we are deploying a medical diagnostic system,
 we need to know for which populations
 it may work and for which it may not.
@@ -749,42 +750,13 @@ The risk is the expectation of the loss over the entire population of data drawn
 Under the corresponding assumptions, covariate and label shift can be detected and corrected for at test time. Failure to account for this bias can become problematic at test time.
 In some cases, the environment may remember automated actions and respond in surprising ways. We must account for this possibility when building models and continue to monitor live systems, open to the possibility that our models and the environment will become entangled in unanticipated ways.
 
-Although the ideas above predate the current era of large pretrained models,
-distribution shift has only become more central since: a foundation model is
-deployed on domains, users, and time periods quite unlike its training corpus,
-so covariate, label, and concept shift are now everyday operational realities
-rather than corner cases. Curated benchmarks such as WILDS
-:cite:`Koh.Sagawa.Marklund.ea.2021` collect real-world shifts (across hospitals,
-cameras, countries, and time) and show that models with strong in-distribution
-accuracy can still degrade sharply out of distribution.
-
-The modern benchmarks also organize shifts along an axis *orthogonal* to our
-mechanism taxonomy: what does the test set contain relative to training? In
-*domain generalization*, test data comes from domains never seen in training;
-in WILDS's Camelyon17 task, for instance, a tumor classifier trained on
-pathology slides from a few hospitals must work on slides from a *new*
-hospital, whose staining and imaging quirks it has never encountered. In
-*subpopulation shift*, the test domains all appeared in training but in
-different proportions, so what matters is *worst-group* rather than average
-performance; in the CivilComments task, a toxicity classifier's average
-accuracy conceals much larger error rates on comments mentioning particular
-demographic groups. Either axis can combine with any of our three mechanisms,
-and the empirical lesson of such benchmarks is sobering: methods (including
-importance weighting) that shine on one shift frequently fail to transfer to
-another, so measuring on the shift you actually face beats trusting any
-single fix.
-
-One further distinction is worth pinning down, because the terms are often
-conflated: *out-of-distribution (OOD) detection* is not shift correction.
-Detection asks whether a given input is so unlike the training distribution
-that the model should abstain and *reject* it; correction assumes the target
-distribution is here to stay and *reweights* or adapts the model to serve it.
-A deployed system typically needs both, a guardrail for inputs it cannot
-handle, and a correction for the drift in those it can.
-
-For deeper, methods-level
-treatments of the corrections sketched here, see the references on the chapter's
-cover page.
+These ideas predate the current era of large pretrained models, but
+distribution shift has only become more central since, as a foundation model is
+routinely deployed on domains, users, and time periods unlike its training
+corpus. Curated benchmarks such as WILDS :cite:`Koh.Sagawa.Marklund.ea.2021`
+show that models with strong in-distribution accuracy can still degrade sharply
+out of distribution, and that a correction which helps on one shift often fails
+on another, so it pays to measure on the shift you actually face.
 
 ## Exercises
 
@@ -832,7 +804,7 @@ Training data is drawn from a **source** distribution $p_S(\mathbf{x}, y)$; at t
 . . .
 
 ::: {.d2l-note}
-**With no link between $p_S$ and $p_T$, robust learning is impossible.** Suppose the inputs are unchanged, $p_S(\mathbf{x})=p_T(\mathbf{x})$, but every label flips, $p_S(y\mid\mathbf{x})=1-p_T(y\mid\mathbf{x})$: "cats" become "dogs" overnight. No algorithm can tell this apart from no shift at all.
+**With no link between $p_S$ and $p_T$, learning cannot transfer.** Suppose the inputs are unchanged, $p_S(\mathbf{x})=p_T(\mathbf{x})$, but every label flips, $p_S(y\mid\mathbf{x})=1-p_T(y\mid\mathbf{x})$: "cats" become "dogs" overnight. No algorithm can tell this apart from no shift at all.
 :::
 
 The way out is **structure**: assume *how* the world may change, and that assumption buys us detection, sometimes correction.
@@ -1006,7 +978,7 @@ $$\frac{P(z{=}1\mid\mathbf{x})}{P(z{=}{-}1\mid\mathbf{x})} = \frac{p(\mathbf{x})
 With a logistic model $P(z{=}1\mid\mathbf{x})=\sigma(h(\mathbf{x}))$ this collapses to $\beta_i = \exp(h(\mathbf{x}_i))$. We need only **unlabeled** target features $\mathbf{x}\sim p$.
 :::
 
-::: {.slide title="Where the weights explode — and why we clip"}
+::: {.slide title="Where the weights explode, and why we clip"}
 [Covariate shift correction · geometry]{.kicker}
 
 ![Training data comes from the source $q$ (left curve); the risk we care about weights points by the target $p$ (right curve). The weight $\beta = p/q$ is near zero where only the source has mass, crosses $1$ where the densities agree, and explodes out in the tail where the source has almost nothing; the dashed line clips it at a ceiling $c$.](../img/mdl-clf-density-ratio.svg){width=88%}
@@ -1014,7 +986,7 @@ With a logistic model $P(z{=}1\mid\mathbf{x})=\sigma(h(\mathbf{x}))$ this collap
 ::: {.d2l-note .rule}
 **Clip** $\beta_i \leftarrow \min(\exp(h(\mathbf{x}_i)), c)$: where the
 domains barely overlap, a few examples grab enormous weights and dominate
-the objective — a little bias buys much less variance. If $p > 0$ where
+the objective, so a little bias buys much less variance. If $p > 0$ where
 $q = 0$, the true weight is *infinite*: no reweighting can conjure data
 that was never sampled.
 :::
@@ -1024,15 +996,15 @@ that was never sampled.
 [Covariate shift correction · watch it work]{.kicker}
 
 A 2-D rig: source Gaussian at the origin, target the same Gaussian shifted
-to $(2, 0)$, one shared *curved* labeling rule --- covariate shift by
-construction, with a known answer: the true log-ratio is $2x_1 - 2$. Pool
+to $(2, 0)$, one shared *curved* labeling rule (covariate shift by
+construction), with a known answer: the true log-ratio is $2x_1 - 2$. Pool
 the inputs, train the domain classifier $h$:
 
 @!environment-and-distribution-shift-covariate-shift-correction-2
 
 ::: {.d2l-note}
 Learned: $2.06\,x_1 + 0.09\,x_2 - 2.03$. The discriminator *is* the density
-ratio --- and note the $\beta$ tail: one source point already carries weight
+ratio, and note the $\beta$ tail: one source point already carries weight
 $56$.
 :::
 :::
@@ -1048,7 +1020,7 @@ evaluate on the **target**, the domain we care about:
 ::: {.d2l-note .rule}
 Unweighted fits where the *source* lives: **0.502** on the target, a coin
 flip. Reweighting: **0.933**, bought by a worse fit on the discounted
-source region --- exactly the trade the identity prescribes. Clipping at
+source region, exactly the trade the identity prescribes. Clipping at
 $c=5$ tames the $\beta > 50$ outliers and even helps: **0.945**.
 :::
 :::
@@ -1057,18 +1029,18 @@ $c=5$ tames the $\beta > 50$ outliers and even helps: **0.945**.
 [Covariate shift correction · the verdict]{.kicker}
 
 A 2-D rig: source Gaussian at the origin, target shifted to $(2, 0)$, one
-shared curved labeling rule --- so the true log-ratio is known: $2x_1 - 2$.
+shared curved labeling rule, so the true log-ratio is known: $2x_1 - 2$.
 
 . . .
 
 - The logistic discriminator recovers $2.06\,x_1 + 0.09\,x_2 - 2.03$: the
   density ratio, learned from unlabeled inputs alone.
-- Target accuracy, three ways: **unweighted 0.502** (a coin flip --- the
+- Target accuracy, three ways: **unweighted 0.502** (a coin flip, since the
   model fit where the *source* lives), **weighted 0.933**, **clipped at
   $c{=}5$: 0.945**.
 
 ::: {.d2l-note .rule}
-Reweighting pays on the target by discounting the source region --- exactly
+Reweighting pays on the target by discounting the source region, exactly
 the trade the identity prescribes; the clip tames raw weights that reach
 $\beta > 50$ and even helps.
 :::
@@ -1162,7 +1134,7 @@ hospital's** staining quirks.
 
 ::: {.col}
 ::: {.d2l-note}
-**Subpopulation shift:** same domains, new proportions — what matters is
+**Subpopulation shift:** same domains, new proportions, so what matters is
 **worst-group** accuracy. *CivilComments*: average toxicity accuracy conceals
 much larger errors on some demographic groups.
 :::
@@ -1174,7 +1146,7 @@ much larger errors on some demographic groups.
 ::: {.d2l-note .warn}
 **OOD detection ≠ shift correction.** Detection *rejects* inputs the model
 cannot handle; correction *reweights* for a target that is here to stay. A
-deployed system needs both — and fixes that shine on one shift routinely
+deployed system needs both, and fixes that shine on one shift routinely
 fail on another, so measure on the shift you actually face.
 :::
 :::

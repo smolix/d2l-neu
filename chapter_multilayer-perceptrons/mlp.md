@@ -94,7 +94,7 @@ in likelihood of repayment
 than an increase from \$1 million to \$1.05 million.
 One way to handle this might be to postprocess our outcome
 such that linearity becomes more plausible,
-by using the logistic map (and thus the logarithm of the probability of outcome).
+by passing the outcome through the logistic function (i.e., modeling the log-odds linearly).
 
 Note that we can easily come up with examples
 that violate monotonicity.
@@ -143,9 +143,8 @@ century :cite:`Fisher.1928`. For instance, decision trees
 in their most basic form use a sequence of binary decisions to
 decide upon class membership :cite:`quinlan2014c4`. Likewise, kernel
 methods have been used for many decades to model nonlinear dependencies
-:cite:`Aronszajn.1950`. This has found its way into
-nonparametric spline models :cite:`Wahba.1990` and kernel methods
-:cite:`Scholkopf.Smola.2002`. It is also something that the brain solves
+:cite:`Aronszajn.1950`, including nonparametric spline models
+:cite:`Wahba.1990`. It is also something that the brain solves
 quite naturally. After all, neurons feed into other neurons which,
 in turn, feed into other neurons again :cite:`Cajal.Azoulay.1894`.
 Consequently we have a sequence of relatively simple transformations.
@@ -232,8 +231,8 @@ we need one more key ingredient: a
 nonlinear *activation function* $\sigma$
 to be applied to each hidden unit
 following the affine transformation. For instance, a popular
-choice is the ReLU (rectified linear unit) activation function :cite:`Nair.Hinton.2010`
-$\sigma(x) = \mathrm{max}(0, x)$ operating on its arguments elementwise.
+choice is the ReLU (rectified linear unit) activation function :cite:`Nair.Hinton.2010`,
+operating on its arguments elementwise.
 The outputs of activation functions $\sigma(\cdot)$
 are called *activations*.
 In general, with activation functions in place,
@@ -252,8 +251,8 @@ $\sigma$ to apply to its inputs in a rowwise fashion,
 i.e., one example at a time.
 Note that we used the same notation for softmax
 when we denoted a rowwise operation in :numref:`subsec_softmax_vectorization`.
-Quite frequently the activation functions we use apply not merely rowwise but
-elementwise. That means that after computing the linear portion of the layer,
+Quite frequently the activation functions we use apply elementwise, a special
+case of rowwise. That means that after computing the linear portion of the layer,
 we can calculate each activation
 without looking at the values taken by the other hidden units.
 
@@ -312,24 +311,23 @@ The third column is exactly the XOR of the first two. We *constructed* the
 weights here, but the whole point of the rest of this book is that
 optimization can *discover* such representations from data. The XOR fix
 generalizes: stack nonlinear hidden layers and the network can carve the
-input space into arbitrarily intricate regions.
+input space into arbitrarily complicated regions.
 To watch that discovery happen live, try the XOR and spiral datasets at the
 [TensorFlow Playground](https://playground.tensorflow.org/), varying the
 number of hidden units and layers as you go.
 
 ### Universal Approximators
 
-We know that the brain is capable of very sophisticated statistical analysis. As such,
-it is worth asking, just *how powerful* a deep network could be. The reassuring answer is
-the *universal approximation theorem*. It says that even a single-hidden-layer
+How powerful is a deep network? The universal approximation theorem gives a
+sharp answer. It says that even a single-hidden-layer
 network, given enough hidden units and the right weights, can approximate any
 continuous function on a bounded domain to arbitrary accuracy. This was proven
 in several settings: :citet:`Cybenko.1989` did it for sigmoid activations,
-:citet:`micchelli1984interpolation` for radial basis function networks (single
-hidden layer, in the context of reproducing kernel Hilbert spaces), and the
+:citet:`micchelli1984interpolation` for radial basis function networks (a single
+hidden layer), and the
 result was soon generalized: :citet:`Hornik.1991` covered every bounded,
 non-constant activation, and :citet:`Leshno.Lin.Pinkus.ea.1993` extended it to
-any activation that is not a polynomial — a form that also covers the unbounded
+any activation that is not a polynomial, a form that also covers the unbounded
 ReLU. The conclusion therefore does not hinge on which of ReLU, sigmoid, or tanh
 we pick.
 
@@ -404,9 +402,9 @@ program that meets your specifications is the hard part.
 
 So the theorem tells us deep networks are expressive enough; it does not tell us
 they are the right tool, nor how to build them. For some problems other methods
-fit better, for instance kernel methods can solve regression problems *exactly*,
-even in infinite-dimensional spaces :cite:`Kimeldorf.Wahba.1971,Scholkopf.Herbrich.Smola.2001`.
-And crucially, where a shallow network would need exponential width, a *deep* one
+fit better (kernel methods, for instance, can solve regression problems exactly
+:cite:`Kimeldorf.Wahba.1971,Scholkopf.Herbrich.Smola.2001`). Where a shallow
+network would need exponential width, a *deep* one
 can often represent the same function far more compactly, trading width for depth
 :cite:`Montufar.Pascanu.Cho.ea.2014,Telgarsky.2016`. This is one reason practitioners reach for depth
 rather than sheer width. The folding picture sketched above is the heart of
@@ -417,7 +415,7 @@ argument.
 ## Activation Functions
 :label:`subsec_activation-functions`
 
-Activation functions are differentiable operators for transforming
+Activation functions are (almost everywhere) differentiable operators for transforming
 pre-activation signals to outputs, introducing nonlinearity into the network.
 Because activation functions are fundamental to deep learning,
 let's briefly survey some common ones.
@@ -481,13 +479,9 @@ derivative and say that the derivative is 0 when the input is 0.
 We can get away with this because,
 although exact zeros do occur in floating-point arithmetic
 (zero-initialized biases, or a ReLU feeding a ReLU),
-the choice of subgradient at that single point does not matter
+the slope (subgradient) we assign at that single kink does not matter
 (mathematicians would
 say that the function is nondifferentiable only on a set of measure zero).
-There is an old adage that if subtle boundary conditions matter,
-we are probably doing (*real*) mathematics, not engineering.
-That conventional wisdom may apply here, or at least, the fact that
-we are not performing constrained optimization :cite:`Mangasarian.1965,Rockafellar.1970`.
 We plot the derivative of the ReLU function below.
 
 ```{.python .input #mlp-relu-function-2}
@@ -575,7 +569,7 @@ with the fact that the sigmoid poses challenges for optimization
 :cite:`LeCun.Bottou.Orr.ea.1998` since its gradient vanishes for large positive *and* negative arguments.
 This can lead to plateaus that are difficult to escape from.
 Nonetheless sigmoids are important. In later chapters (e.g., :numref:`sec_lstm`) on recurrent neural networks,
-we will describe architectures that leverage sigmoid units
+we will describe architectures that use sigmoid units
 to control the flow of information across time.
 
 Below, we plot the sigmoid function.
@@ -657,7 +651,7 @@ transforming them into elements on the interval between $-1$ and $1$:
 
 $$\operatorname{tanh}(x) = \frac{1 - \exp(-2x)}{1 + \exp(-2x)}.$$
 
-We plot the tanh function below. Note that as input nears 0, the tanh function approaches a linear transformation. Although the shape of the function is similar to that of the sigmoid function, the tanh function exhibits point symmetry about the origin of the coordinate system :cite:`Kalman.Kwasny.1992`.
+We plot the tanh function below. Note that as input nears 0, the tanh function approaches a linear transformation. Although the shape of the function is similar to that of the sigmoid function, the tanh function exhibits point symmetry about the origin of the coordinate system.
 
 ```{.python .input #mlp-tanh-function-1}
 %%tab mxnet
@@ -741,7 +735,7 @@ The most common are *GELU* (Gaussian error linear unit), $x \Phi(x)$, where
 $\Phi$ is the standard Gaussian cumulative distribution function
 :cite:`Hendrycks.Gimpel.2016`, used in BERT and the GPT family; *Swish*,
 $x \operatorname{sigmoid}(\beta x)$ :cite:`Ramachandran.Zoph.Le.2017`; and
-*SwiGLU*, a gated variant that is the default feedforward nonlinearity in
+*SwiGLU* :cite:`Shazeer.2020`, a gated variant that is the default feedforward nonlinearity in
 recent large language models such as PaLM, LLaMA, and Mistral. For now, ReLU
 remains the sensible default for the models we build next.
 
@@ -790,7 +784,7 @@ remains the sensible default for the models we build next.
 ::: {.cover}
 [Dive into Deep Learning · §5.1]{.kicker}
 
-Multilayer Perceptrons<br>**one kink between affine layers --- XOR untangled · any function, hinge by hinge · why depth beats width**.
+Multilayer Perceptrons<br>**one kink between affine layers · XOR untangled · any function, hinge by hinge · why depth beats width**.
 :::
 :::
 
@@ -809,8 +803,8 @@ line-shaped** decisions.
 
 ::: {.d2l-note .rule}
 The fix: learn the features, keep the linear predictor on top.
-Keep score — a two-unit net computing **XOR exactly**, and
-**depth multiplying** what width merely adds.
+A two-unit net computes **XOR exactly**, and
+**depth multiplies** what width merely adds.
 :::
 :::
 
@@ -976,7 +970,7 @@ Playground* (playground.tensorflow.org).
 ::: {.col}
 **Universal approximation theorem.** A single hidden layer
 with enough units can approximate any continuous function on
-a bounded domain, to arbitrary accuracy — for any
+a bounded domain, to arbitrary accuracy, for any
 non-polynomial $\sigma$, ReLU included (Cybenko 1989;
 Leshno et al. 1993).
 :::
@@ -1000,7 +994,7 @@ one would, trading width for layers.
 ::: {.slide title="Why it is plausible: one hinge at a time"}
 [Expressive power]{.kicker}
 
-Each ReLU unit contributes a **hinge** $a_k\operatorname{ReLU}(x - t_k)$: with $D$ units the output is piecewise linear with at most $D+1$ pieces. Approximating a curve is then just fitting a **polyline** — more joints, less error.
+Each ReLU unit contributes a **hinge** $a_k\operatorname{ReLU}(x - t_k)$: with $D$ units the output is piecewise linear with at most $D+1$ pieces. Approximating a curve is then just fitting a **polyline**: more joints, less error.
 
 ![Three hinges (left) sum to a 4-piece polyline that tracks the smooth target (right); the shaded band is the error.](../img/mdl-mlp-uat-hinges.svg){width=88%}
 :::
@@ -1013,7 +1007,7 @@ Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the sl
 @!mlp-region-count
 
 ::: {.d2l-note .rule}
-One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count — the multiplicative-vs-additive gap that makes depth pay.
+One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count, the multiplicative-vs-additive gap that makes depth pay.
 :::
 :::
 
@@ -1030,7 +1024,7 @@ Evaluate randomly initialized ReLU MLPs on a dense 1-D grid, detect where the sl
 | depth 3 | 3.6 | 8.1 | 22.1 | 40.1 |
 
 ::: {.d2l-note .rule}
-One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count — the multiplicative-vs-additive gap that makes depth pay.
+One layer of width $D$: at most $D+1$ pieces, as promised. Each extra layer **folds** the graph, roughly *multiplying* the count, the multiplicative-vs-additive gap that makes depth pay.
 :::
 :::
 
@@ -1065,7 +1059,7 @@ Keep the positive part, zero the rest. Why it won:
 :::
 :::
 
-::: {.slide title="ReLU's gradient: a clean on/off switch" except="tensorflow"}
+::: {.slide title="ReLU's gradient: an on/off step" except="tensorflow"}
 [Activations]{.kicker}
 
 ::: {.cols .vc}
@@ -1088,12 +1082,12 @@ alive.
 :::
 :::
 
-::: {.slide title="ReLU's gradient: a clean on/off switch" only="tensorflow"}
+::: {.slide title="ReLU's gradient: an on/off step" only="tensorflow"}
 [Activations]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-The derivative is a step: $0$ on the left, $1$ on the right — here computed by `GradientTape` rather than read off a formula:
+The derivative is a step: $0$ on the left, $1$ on the right, here computed by `GradientTape` rather than read off a formula:
 
 $$\operatorname{ReLU}'(x) = \mathbb{1}[x > 0].$$
 
@@ -1216,7 +1210,7 @@ logits into probabilities.
 :::
 
 ::: {.col}
-- One wide hidden layer is a **universal approximator** — one
+- One wide hidden layer is a **universal approximator**: one
   hinge per unit, $\le D+1$ pieces; depth *multiplies* pieces
   and makes that power parameter-efficient.
 - **ReLU** is the default; sigmoid and tanh survive in
@@ -1225,7 +1219,7 @@ logits into probabilities.
 :::
 
 ::: {.d2l-note}
-Next (§5.2): build one and train it on Fashion-MNIST — from
-scratch, then in four framework lines.
+Next (§5.2): build one and train it on Fashion-MNIST, from
+scratch, then in a few high-level API lines.
 :::
 :::

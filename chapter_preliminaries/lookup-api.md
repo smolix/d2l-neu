@@ -8,7 +8,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 
 No matter how much of a framework's API we cover here,
 there will always be functions, classes, and arguments
-we never reach---and the libraries keep changing under us.
+we never reach, and the libraries keep changing under us.
 So rather than try to memorize the API,
 the durable skill is getting good at *looking things up*:
 finding what exists, reading how it works,
@@ -16,23 +16,38 @@ and confirming that it does what you think.
 This short section lays out a small, repeatable loop for exactly that,
 using tools built into Python and your notebook.
 
-The official documentation is always the source of truth,
-and it is worth bookmarking the reference and tutorial pages
-for the framework you use:
+The official documentation is always the source of truth;
+bookmark the reference and tutorial pages for the framework you use.
 
-| Framework | API reference | Tutorials |
-|:--|:--|:--|
-| PyTorch | [pytorch.org/docs](https://pytorch.org/docs/stable/index.html) | [pytorch.org/tutorials](https://pytorch.org/tutorials/beginner/basics/intro.html) |
-| JAX | [jax.readthedocs.io](https://jax.readthedocs.io/en/latest/) | [JAX tutorials](https://jax.readthedocs.io/en/latest/tutorials.html) |
-| TensorFlow | [tensorflow.org/api_docs](https://www.tensorflow.org/api_docs) | [tensorflow.org/tutorials](https://www.tensorflow.org/tutorials) |
-| MXNet | [API reference](https://mxnet.apache.org/versions/1.9.1/api) | [tutorials](https://mxnet.apache.org/versions/1.9.1/api/python/docs/tutorials/) |
-
-One caveat: the MXNet links above document version 1.9.1
+:begin_tab:`mxnet`
+For MXNet these are the
+[API reference](https://mxnet.apache.org/versions/1.9.1/api) and the
+[tutorials](https://mxnet.apache.org/versions/1.9.1/api/python/docs/tutorials/).
+One caveat: these pages document version 1.9.1
 (the last release with hosted documentation),
 which foregrounds the legacy `mx.nd` interface,
 whereas this book uses the NumPy-style `np`/`npx` API of MXNet 2.
 For MXNet specifics, the in-notebook loop below
 is often the more reliable reference.
+:end_tab:
+
+:begin_tab:`pytorch`
+For PyTorch these are the
+[API reference](https://pytorch.org/docs/stable/index.html) and the
+[tutorials](https://pytorch.org/tutorials/beginner/basics/intro.html).
+:end_tab:
+
+:begin_tab:`tensorflow`
+For TensorFlow these are the
+[API reference](https://www.tensorflow.org/api_docs) and the
+[tutorials](https://www.tensorflow.org/tutorials).
+:end_tab:
+
+:begin_tab:`jax`
+For JAX these are the
+[API reference](https://jax.readthedocs.io/en/latest/) and the
+[tutorials](https://jax.readthedocs.io/en/latest/tutorials.html).
+:end_tab:
 
 For most day-to-day questions, though, you do not need to leave your
 notebook. Four moves, repeated until the call behaves, cover almost
@@ -41,7 +56,7 @@ everything.
 ![Four moves, repeated until the call does what you want: **discover** the names that exist, **inspect** a candidate's signature, **read** the docs or source when you need the *why*, and **verify** with a quick run.](../img/lookup-api-discovery-loop.svg)
 :label:`fig_lookup_loop`
 
-The examples below use each framework's standard import:
+The examples below start from the standard import:
 
 ```{.python .input #lookup-api-documentation}
 %%tab mxnet
@@ -67,7 +82,8 @@ import jax
 
 When you know roughly *where* a tool should live but not what it is called,
 the `dir` function lists everything defined in a module.
-For instance, to see what is on offer for generating random numbers:
+For instance, to see what is on offer for random sampling
+(we print the first twenty names):
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab mxnet
@@ -92,13 +108,37 @@ print([name for name in dir(jax.random) if not name.startswith('_')][:20])
 
 We can usually ignore names that begin and end with `__`
 (Python's special objects) or that start with a single `_`
-(internal helpers). The remaining names already hint at what the module
-offers---here, routines for sampling from the uniform distribution
-(`uniform`), the normal distribution (`normal`),
-and the multinomial distribution (`multinomial`).
+(internal helpers). The remaining names already hint
+at what the module offers.
+
+:begin_tab:`mxnet`
+Here almost every name is a sampler: draws from classical distributions
+(`beta`, `gamma`, `multinomial`, `normal`, ...) alongside NumPy-style
+conveniences such as `rand`, `randint`, and `randn`.
+:end_tab:
+
+:begin_tab:`pytorch`
+Here the names are distribution *classes* such as `Bernoulli`,
+`Categorical`, and `Gamma`; each can be instantiated and then sampled
+from. The `Transform` entries build new distributions by transforming
+existing ones.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Here we can spot samplers such as `gamma`, `normal`, and `poisson`,
+next to utilities like `Generator` and `set_seed` that manage the
+random state.
+:end_tab:
+
+:begin_tab:`jax`
+Here the names are samplers (`bernoulli`, `beta`, `cauchy`,
+`exponential`, `gamma`, ...) plus `PRNGKey`, which creates the explicit
+random key that every JAX sampler takes.
+:end_tab:
+
 In a notebook you can get the same list interactively, filtered as you
-type, by writing the module name followed by a dot and pressing `Tab`---
-usually the fastest way to turn up a name.
+type, by writing the module name followed by a dot and pressing `Tab`;
+this is usually the fastest way to turn up a name.
 
 ## Reading the Signature: `help`, `?`, and `??`
 
@@ -169,14 +209,11 @@ long after the specific functions in this book have changed.
 
 Coding assistants are often the quickest route to a first answer:
 ask "how do I sample from a normal distribution in this framework?"
-and you will usually get a function and a working call in seconds---and
-they keep getting better at it.
-Treat a suggestion the way you would a knowledgeable colleague's:
-an excellent starting point, well worth a quick check before you build on it.
-The same two habits do the checking and cost almost nothing---glance at the
-signature with `help` or `?`, and run a small example.
-A suggestion that survives both is one you can rely on,
-and the loop above is how you run that check.
+and you will usually get a function and a working call in seconds.
+Treat the suggestion the way you would a knowledgeable colleague's tip:
+a good starting point that still goes through the loop above.
+Glance at the signature with `help` or `?`, run a small example,
+and rely on the suggestion once it survives both.
 
 ## Exercises
 
@@ -220,7 +257,7 @@ APIs change; the skill of looking things up doesn't<br>**discover · inspect · 
 :::
 :::
 
-::: {.slide title="You cannot memorize an API — loop instead"}
+::: {.slide title="You cannot memorize an API, so loop instead"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -230,7 +267,7 @@ us. The durable skill is a four-move loop, run without leaving the
 notebook, repeated until the call does what you want.
 
 ::: {.d2l-note}
-The official docs remain the source of truth — bookmark your
+The official docs remain the source of truth: bookmark your
 framework's reference and tutorial pages.
 :::
 :::
@@ -245,12 +282,12 @@ framework's reference and tutorial pages.
 [Discover]{.kicker}
 
 Know roughly *where* a tool should live, but not its name? `dir` lists a
-module's contents — the names alone sketch what is on offer:
+module's contents; the names alone sketch what is on offer:
 
 @lookup-api-functions-and-classes-in-a-module
 
 Skip the `_`-prefixed internals. In a notebook, `module.` + `Tab` gives
-the same list, filtered as you type — usually the fastest way to turn up
+the same list, filtered as you type, usually the fastest way to turn up
 a name.
 :::
 
@@ -258,7 +295,7 @@ a name.
 [Inspect · read]{.kicker}
 
 `help(...)` prints the docstring: arguments, defaults, return value,
-often an example —
+often an example.
 
 @-lookup-api-specific-functions-and-classes-1
 
@@ -266,7 +303,7 @@ often an example —
 
 ::: {.d2l-note}
 In Jupyter, `ones?` opens the docstring in a side pane, and `ones??`
-shows the **source code** — the final word when a docstring is terse or
+shows the **source code**: the final word when a docstring is terse or
 ambiguous.
 :::
 :::
@@ -283,12 +320,12 @@ Exactly the promised shape and values. This
 this book.
 :::
 
-::: {.slide title="Coding assistants join the loop — not replace it"}
+::: {.slide title="Coding assistants enter the same loop"}
 [Assistants]{.kicker}
 
 An assistant usually produces a plausible function and a working call in
-seconds. Treat the suggestion like a knowledgeable colleague's tip: an
-excellent starting point, worth a two-line check before you build on it.
+seconds. Treat the suggestion like a knowledgeable colleague's tip: a
+good starting point that still gets a two-line check before you build on it.
 
 ::: {.d2l-note .rule}
 Glance at the signature (`help` / `?`), then run a small example. A
@@ -301,6 +338,6 @@ suggestion that survives both is one you can rely on.
 
 - **Discover** with `dir` (or `Tab`-completion).
 - **Inspect** with `help` / `?`; **read** the source with `??`.
-- **Verify** with a tiny run — the fastest truth available.
+- **Verify** with a tiny run.
 - Assistant answers enter the same loop before you rely on them.
 :::

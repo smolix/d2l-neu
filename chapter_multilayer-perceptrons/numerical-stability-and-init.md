@@ -79,13 +79,13 @@ pressure from the mantissa to the exponent
 of the numerical representation.
 Unfortunately, our problem above is more serious:
 each Jacobian $\mathbf{M}^{(l)}$ can stretch or shrink the vectors it acts on
-by widely varying factors (its *singular values* — for the rectangular
+by widely varying factors (its *singular values*: for the rectangular
 Jacobians that arise when layer widths differ, these are the right notion of
 "how much the matrix scales things").
 A per-layer factor of $\rho$ compounds to $\rho^{\,L-l}$ across the product,
 so factors even modestly different from $1$
 make the overall gradient *very large* or *very small* geometrically fast;
-the spectral-radius account of such iterated products is developed
+the growth rate of such a product's singular values is developed
 in :numref:`subsec_mdl-spectral-radius`.
 
 The risks posed by unstable gradients
@@ -166,10 +166,10 @@ after only ten sigmoid layers the gradient has shrunk
 by $0.25^{10} \approx 10^{-6}$.
 Away from that zone the situation is far worse,
 and the gradients of the overall product vanish outright.
-When our network boasts many layers,
+When our network has many layers,
 unless we are careful, the gradient
 will likely be cut off at some layer.
-Indeed, this problem used to plague deep network training.
+Indeed, this problem used to plague deep network training :cite:`bengio1994learning`.
 Consequently, ReLUs, which are more stable
 (but less neurally plausible),
 have emerged as the default choice for practitioners.
@@ -281,10 +281,10 @@ In the previous sections, e.g., in :numref:`sec_linear_concise`,
 we initialized weights by drawing them from a normal distribution
 with a small, fixed standard deviation.
 If we do not specify an initialization method at all,
-every framework falls back to a default scheme,
-and those defaults are *not* arbitrary:
-each samples from a distribution whose spread is tied to the layer's fan-in
-(a Xavier- or He-like rule of exactly the kind we derive below).
+the library falls back to a default scheme
+that samples from a distribution whose spread is tied to the layer's fan-in
+(the number of inputs $n_\textrm{in}$),
+a Xavier- or He-like rule of exactly the kind we derive below.
 These defaults work well for moderately sized networks.
 They become unreliable, however, as depth grows.
 The variance analysis that follows explains both *why* they work
@@ -351,7 +351,7 @@ Keeping the *backward* signal's variance fixed
 therefore requires $n_\textrm{out} \sigma^2 = 1$,
 where $n_\textrm{out}$ is the number of outputs of this layer.
 This leaves us in a dilemma:
-we cannot possibly satisfy both conditions simultaneously.
+we cannot satisfy both conditions simultaneously unless $n_\textrm{in}=n_\textrm{out}$.
 Instead, we simply try to satisfy:
 
 $$
@@ -403,7 +403,7 @@ and equals $0$ on the negative half,
 so the rectifier **halves the second moment**:
 $E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$.
 (Its effect on the *variance* is messier, because $\textrm{ReLU}(z)$
-is no longer zero-mean; see exercise 3.)
+is no longer zero-mean, as the exercises explore.)
 
 Propagating this halved second moment through
 the same forward computation as before,
@@ -423,9 +423,8 @@ this chapter uses throughout.
 Because Xavier and He differ only by this factor of two
 and by which fan size they key on, they are easy to confuse;
 the rule of thumb is **Xavier for $\tanh$ and sigmoid, He for ReLU**.
-Most frameworks ship both as named initializers
-(e.g., PyTorch's `kaiming_normal_` and `kaiming_uniform_` —
-a variant of the latter is the default for `nn.Linear`),
+Most libraries ship both as named initializers,
+with a He-uniform variant a common default for linear layers,
 and we return to invoking them through the parameter-initialization API
 in :numref:`chap_computation`.
 
@@ -433,8 +432,8 @@ in :numref:`chap_computation`.
 ### Watching the Variance Propagate
 
 The 100-matrix product above showed the *explosion* half of the story. Now
-that we have the fix in hand, we can demonstrate the whole thesis of this
-section in one plot: push a unit-scale signal through $50$ ReLU layers of
+that we have the fix in hand, one plot shows all three regimes at once:
+push a unit-scale signal through $50$ ReLU layers of
 width $100$ and track the second moment $E[(h^{(l)})^2]$ of the activations
 (the quantity the He argument preserves) layer by layer, under three weight
 scales: the naive $\mathcal{N}(0,1)$, Xavier, and He. To avoid floating-point
@@ -522,7 +521,7 @@ d2l.plot(list(range(1, depth + 1)), curves, 'layer', 'second moment of h',
          legend=list(scales), yscale='log')
 ```
 
-The plot tells the entire story at a glance. Under $\mathcal{N}(0,1)$ weights
+The plot shows all three regimes at once. Under $\mathcal{N}(0,1)$ weights
 each layer multiplies the signal's scale by roughly $n_\textrm{in}/2 = 50$, and
 fifty layers compound that to an astronomical $\sim\!10^{80}$: the exploding
 regime. Xavier, derived for *linear* layers, is off by exactly the rectifier's
@@ -532,7 +531,7 @@ compensates for the rectifier and holds the signal's scale essentially flat
 across all fifty layers (the slight downward drift is a finite-width
 fluctuation effect, not a bias in the rule). Only the He-initialized network
 delivers usable forward signals, and by the symmetric backward argument,
-usable gradients. Exercise 4 asks you to repeat the sweep with the
+usable gradients. The exercises ask you to repeat the sweep with the
 nonlinearity removed, where Xavier is the scheme that stays flat.
 
 ### Beyond
@@ -556,12 +555,8 @@ largely remove this burden from initialization
 by re-centering activations during training;
 we cover them in later chapters.
 
-If the topic interests you we suggest
-a deep dive into this module's offerings,
-reading the papers that proposed and analyzed each heuristic,
-and then exploring the latest publications on the topic.
-Perhaps you will stumble across or even invent
-a clever idea and contribute an implementation to deep learning frameworks.
+If the topic interests you, read the papers that proposed and analyzed each
+heuristic and the more recent work that builds on them.
 
 
 ## Summary
@@ -605,7 +600,7 @@ ReLU activation functions mitigate the vanishing gradient problem. This can acce
 ::: {.cover}
 [Dive into Deep Learning · §5.4]{.kicker}
 
-Numerical stability & **initialization**<br>Why deep nets once refused to train --- **the problem, the diagnosis, the cure, and a fifty-layer proof**.
+Numerical stability & **initialization**<br>Why deep nets once refused to train: **the problem, the diagnosis, and the cure**.
 :::
 :::
 
@@ -627,8 +622,8 @@ Three ideas made deep training routine:
 Get init wrong and the gradient **dies** or **blows up** before
 learning starts. Keep score: ten sigmoid layers tax the gradient to
 $10^{-6}$; a hundred random matrices explode past $10^{24}$; and one
-closing plot shows $10^{80}$ vs $10^{-15}$ vs *flat* — naive, Xavier,
-He.
+closing plot shows $10^{80}$ vs $10^{-15}$ vs *flat* (naive, Xavier,
+He).
 :::
 :::
 
@@ -702,7 +697,7 @@ ReLU's derivative is exactly **1** wherever a unit is active, so it does not att
 ::: {.slide title="Exploding: one hundred random matrices, entries past 10²⁴"}
 [Unstable Gradients · exploding]{.kicker}
 
-Multiply one hundred $\mathcal{N}(0,1)$ matrices — `for i in range(100): M = M @ randn(4, 4)` — exactly what a deep linear stack does to a gradient. Each factor is a little too large, and the product compounds:
+Multiply one hundred $\mathcal{N}(0,1)$ matrices (`for i in range(100): M = M @ randn(4, 4)`), exactly what a deep linear stack does to a gradient. Each factor is a little too large, and the product compounds:
 
 @!numerical-stability-and-init-exploding-gradients
 
@@ -802,17 +797,17 @@ $$\sigma^2 = \frac{2}{n_\textrm{in}}.$$
 ReLU zeroes half a symmetric signal, **halving its second moment** ($E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$), so He **doubles** the weight variance to compensate.
 :::
 
-Rule of thumb: **Xavier for $\tanh$/sigmoid, He for ReLU.** Both ship as named initializers in every framework.
+Rule of thumb: **Xavier for $\tanh$/sigmoid, He for ReLU.** Both ship as named initializers in most libraries.
 :::
 :::
 :::
 
-::: {.slide title="The proof: 10⁸⁰ vs 10⁻¹⁵ vs flat" only="pytorch"}
+::: {.slide title="The demonstration: 10⁸⁰ vs 10⁻¹⁵ vs flat" only="pytorch"}
 [Initialization · payoff]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
-The whole section in one plot: push a unit-scale signal through **50 ReLU layers** and track $E[(h^{(l)})^2]$ under three weight scales:
+All three regimes in one plot: push a unit-scale signal through **50 ReLU layers** and track $E[(h^{(l)})^2]$ under three weight scales:
 
 - $\mathcal{N}(0,1)$: each layer gains $\approx n_\textrm{in}/2 = 50\times$; **explodes** to $\sim\!10^{80}$.
 - **Xavier**: off by the rectifier's $\tfrac12$ per layer; *vanishes* like $2^{-l}$ to $\sim\!10^{-15}$.
@@ -825,17 +820,17 @@ The whole section in one plot: push a unit-scale signal through **50 ReLU layers
 :::
 :::
 
-::: {.slide title="The proof: 10⁸⁰ vs 10⁻¹⁵ vs flat" except="pytorch"}
+::: {.slide title="The demonstration: 10⁸⁰ vs 10⁻¹⁵ vs flat" except="pytorch"}
 [Initialization · payoff]{.kicker}
 
-The whole section in one experiment: push a unit-scale signal through **50 ReLU layers** of width 100 and track the second moment $E[(h^{(l)})^2]$ layer by layer, under three weight scales.
+All three regimes in one experiment: push a unit-scale signal through **50 ReLU layers** of width 100 and track the second moment $E[(h^{(l)})^2]$ layer by layer, under three weight scales.
 
-- $\mathcal{N}(0,1)$: each layer gains $\approx n_\textrm{in}/2 = 50\times$, compounding to an astronomical $\sim\!10^{80}$ by layer 50 — the exploding regime.
+- $\mathcal{N}(0,1)$: each layer gains $\approx n_\textrm{in}/2 = 50\times$, compounding to an astronomical $\sim\!10^{80}$ by layer 50, the exploding regime.
 - **Xavier**: derived for *linear* layers, off by exactly the rectifier's $\tfrac12$ per layer, so the signal *vanishes* like $2^{-l}$, reaching $\sim\!10^{-15}$.
 - **He**: compensates for the rectifier and holds the scale essentially **flat** across all fifty layers.
 
 ::: {.d2l-note .rule}
-Only the He-initialized stack delivers usable forward signals — and, by the symmetric backward argument, usable gradients. Run the sweep yourself in the notebook.
+Only the He-initialized stack delivers usable forward signals and, by the symmetric backward argument, usable gradients. Run the sweep yourself in the notebook.
 :::
 :::
 
@@ -862,14 +857,14 @@ We return to both in the chapters on modern CNNs.
 
 ::: {.col}
 - **Fix the scale:** init weights so $\textrm{Var}$ is preserved, via **Xavier** ($\tanh$) and **He** (ReLU).
-- **Proof on 50 layers:** $10^{80}$ (naive) vs $10^{-15}$ (Xavier under ReLU) vs **flat** (He).
+- **50-layer experiment:** $10^{80}$ (naive) vs $10^{-15}$ (Xavier under ReLU) vs **flat** (He).
 - **Break the symmetry:** random init, never a constant.
 - **At scale:** normalization + residuals + careful init together reach 100+ layers.
 :::
 :::
 
 ::: {.d2l-note}
-Next (§5.5): the model trains — but *why* does an over-parametrized
+Next (§5.5): the model trains, but *why* does an over-parametrized
 network generalize at all?
 :::
 :::

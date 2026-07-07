@@ -719,9 +719,9 @@ differentiation alone.)
 
 **Maximum entropy.** Among all distributions with a given mean and variance, the
 Gaussian has the largest entropy: it is the *most noncommittal* choice consistent
-with knowing only those two numbers. We take this fact as given
-:cite:`Cover.Thomas.1999` (entropy itself is developed in
-:numref:`sec_mdl-information_theory`) and place it in context when we meet the
+with knowing only those two numbers :cite:`Cover.Thomas.1999`. We prove this in
+:numref:`subsec_mdl-gaussian-max-entropy` as a short consequence of Gibbs'
+inequality, and place it in context when we meet the
 exponential family below.
 
 **Where it arises.** As the CLT limit it models aggregate noise; it is the noise
@@ -1117,7 +1117,7 @@ this section shows.
 ### Where the Form Comes From: Maximum Entropy
 
 The exponential form is exactly what *maximizing
-entropy* produces. The two maximum-entropy facts we granted earlier
+entropy* produces. The two maximum-entropy facts cited earlier
 :cite:`Cover.Thomas.1999` are the same
 statement seen twice: the discrete uniform is the maximum-entropy distribution on a
 finite set when we fix *nothing* but the support, and the Gaussian is the

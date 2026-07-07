@@ -143,24 +143,23 @@ class ProgressBoard(d2l.HyperParameters):  #@save
 
 Why does `draw` go to the trouble of *scheduling* work instead of plotting
 right away? The answer previews a theme that runs through the entire book.
-Modern frameworks get their speed by *compiling* the training computation---PyTorch
-with `torch.compile`, JAX with `jax.jit`, TensorFlow with `tf.function`, MXNet
-with `hybridize`---into a graph that runs on the accelerator with little Python in
-the loop. Compilation imposes two rules we must respect. First, a compiled step has
-to be *pure*: a `print` or a plotting call inside it cannot be traced, and forces
-the framework back onto slow, op-by-op execution. Second, the accelerator runs
-*asynchronously*, ahead of Python; the instant we ask for a concrete number---to
-print or plot it---Python must *block* until the device catches up, stalling the
-very pipeline we worked to speed up.
+Modern frameworks get their speed by *compiling* the training computation into a
+graph that runs on the accelerator with little Python in the loop. Compilation
+imposes two rules we must respect. First, a compiled step has to be *pure*: a
+`print` or a plotting call inside it cannot be captured by the compiler, forcing a
+fallback to slower eager execution. Second, the accelerator runs *asynchronously*,
+ahead of Python; the instant we ask for a concrete number (to print or plot it),
+Python must *block* until the device catches up, stalling the very pipeline we
+worked to speed up.
 
 Real-time monitoring therefore seems to be at odds with efficiency. `ProgressBoard`
 resolves the tension by *decoupling* the two: `draw` hands the value to a queue and
 returns at once, while a background thread performs the device-to-host transfer and
-the (comparatively slow) rendering at its own pace---and simply drops points if it
-falls behind, since a live loss curve needs no more than a few updates per second.
-The training loop stays compiled and the device stays busy, yet we still watch the
-loss go down as it happens. It is a pattern worth remembering: *keep the hot path
-pure and compiled, and push logging, plotting, and checkpointing off to the side.*
+the (comparatively slow) rendering at its own pace, dropping points if it falls
+behind, since a live loss curve needs no more than a few updates per second. The
+training loop stays compiled and the device stays busy, yet we still watch the loss
+go down as it happens. The pattern is general: keep the hot path pure and compiled,
+and push logging, plotting, and checkpointing off to the side.
 
 In the following example, we draw `sin` and `cos` with different smoothness. If you
 run this code block interactively, you will see the lines grow in animation. Because
@@ -181,7 +180,7 @@ board.flush()  # wait for the queued points, then render the final figure
 
 The `Module` class is the base class of all models we will implement. At the very least we need three methods. The first, `__init__`, stores the learnable parameters, the `training_step` method accepts a data batch to return the loss value, and finally, `configure_optimizers` returns the optimization method, or a list of them, that is used to update the learnable parameters. Optionally we can define `validation_step` to report the evaluation measures.
 Sometimes we put the code for computing the output into a separate `forward` method to make it more reusable.
-The gnarliest few lines below live in `plot`: they convert the trainer's batch
+The `plot` method converts the trainer's batch
 counter into a *fractional epoch* for the x-coordinate, so that the training
 loss (recorded several times per epoch) and the validation loss (recorded once
 per epoch) can share a single x-axis, with `every_n` chosen so each curve shows
@@ -421,7 +420,7 @@ It provides convenient features for handling neural networks. For example, if we
 
 :begin_tab:`tensorflow`
 You may notice that `Module` is a subclass of `tf.keras.Model`, the base class of neural networks in TensorFlow.
-It provides convenient features for handling neural networks. For example, it invokes the `call` method in the built-in `__call__` method. Here we redirect `call` to the `forward` method, saving its arguments as a class attribute. We do this to make our code more similar to other framework implementations.
+It provides convenient features for handling neural networks. For example, it invokes the `call` method in the built-in `__call__` method. Here we redirect `call` to the `forward` method, saving its arguments as a class attribute, consistent with the `forward` convention used elsewhere in the book.
 Note that in `__init__` we remove the `loss` instance attribute
 that Keras 3 sets to `None`,
 since it would shadow the `loss` method
@@ -431,7 +430,7 @@ defined by our subclasses.
 :begin_tab:`jax`
 You may notice that `Module` is a subclass of `linen.Module`, the base class of neural networks in Flax.
 It provides convenient features for handling neural networks. For example, it handles the model parameters, provides the `nn.compact` decorator to simplify code, invokes the `__call__` method among other things.
-Here we also redirect `__call__` to the `forward` method. We do this to make our code more similar to other framework implementations.
+Here we also redirect `__call__` to the `forward` method, consistent with the `forward` convention used elsewhere in the book.
 :end_tab:
 
 ##  Data
@@ -511,7 +510,7 @@ class DataModule(d2l.HyperParameters):  #@save
 :label:`oo-design-training`
 
 :begin_tab:`pytorch, mxnet, tensorflow`
-The `Trainer` class trains the learnable parameters in the `Module` class with data specified in `DataModule`. The key method is `fit`, which accepts two arguments: `model`, an instance of `Module`, and `data`, an instance of `DataModule`. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here; it is implemented just two sections later, in :numref:`sec_linear_scratch`, so the abstraction gap closes almost immediately.
+The `Trainer` class trains the learnable parameters in the `Module` class with data specified in `DataModule`. The key method is `fit`, which accepts two arguments: `model`, an instance of `Module`, and `data`, an instance of `DataModule`. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here; it is implemented just two sections later, in :numref:`sec_linear_scratch`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -527,7 +526,7 @@ in :numref:`sec_linear_scratch`.
 :end_tab:
 
 :begin_tab:`jax`
-The `Trainer` class trains the learnable parameters `params` with data specified in `DataModule`. The key method is `fit`, which accepts three arguments: `model`, an instance of `Module`, `data`, an instance of `DataModule`, and `key`, a JAX `PRNGKeyArray`. We make the `key` argument optional here to simplify the interface, but it is recommended to always pass and initialize the model parameters with a root key in JAX and Flax. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here; it is implemented just two sections later, in :numref:`sec_linear_scratch`, so the abstraction gap closes almost immediately.
+The `Trainer` class trains the learnable parameters `params` with data specified in `DataModule`. The key method is `fit`, which accepts three arguments: `model`, an instance of `Module`, `data`, an instance of `DataModule`, and `key`, a JAX `PRNGKeyArray`. We make the `key` argument optional here to simplify the interface, but it is recommended to always pass and initialize the model parameters with a root key in JAX and Flax. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here; it is implemented just two sections later, in :numref:`sec_linear_scratch`.
 :end_tab:
 
 ```{.python .input #oo-design-training}
@@ -703,9 +702,8 @@ class Trainer(d2l.HyperParameters):  #@save
 
 ## Summary
 
-To highlight the object-oriented design
-for our future deep learning implementation,
-the above classes simply show how their objects 
+The classes above sketch the object-oriented design
+for our deep learning implementations: how their objects
 store data and interact with each other.
 We will keep enriching implementations of these classes,
 such as via `@add_to_class`,
@@ -714,8 +712,7 @@ Moreover,
 these fully implemented classes
 are saved in the [D2L library](https://github.com/d2l-ai/d2l-en/tree/master/d2l),
 a *lightweight toolkit* that makes structured modeling for deep learning easy. 
-In particular, it facilitates reusing many components between projects without changing much at all. For instance, we can replace just the optimizer, just the model, just the dataset, etc.;
-this degree of modularity pays dividends throughout the book in terms of conciseness and simplicity (this is why we added it) and it can do the same for your own projects. 
+In particular, it facilitates reusing many components between projects without changing much at all. This modularity keeps implementations concise: you can swap just the optimizer, the model, or the dataset, and it can do the same for your own projects. 
 
 
 ## Exercises
@@ -856,22 +853,22 @@ $n$ values:
 :::
 
 ::: {.d2l-note}
-Why `draw` merely *schedules* the point --- and `flush()` waits for the
-queue --- is the next slide's story.
+Why `draw` merely *schedules* the point (and `flush()` waits for the
+queue) is the point of the next slide.
 :::
 :::
 
 ::: {.slide title="Watching the loss live should be impossible"}
-[Utilities · the deep beat]{.kicker}
+[Utilities · compilation & async]{.kicker}
 
-Frameworks earn their speed by **compiling** the training step
-(`torch.compile`, `jax.jit`, `tf.function`, `hybridize`) and letting the
-device run **ahead** of Python. That imposes two rules:
+Frameworks earn their speed by **compiling** the training step into a
+graph and letting the device run **ahead** of Python. That imposes two
+rules:
 
-- A compiled step must be **pure** --- a `print` or plot inside it cannot
-  be traced, and forces slow op-by-op execution.
+- A compiled step must be **pure**: a `print` or plot inside it cannot
+  be captured by the compiler, forcing a fallback to slower eager execution.
 - The instant Python asks for a concrete number, it must **block** until
-  the device catches up --- stalling the very pipeline we built.
+  the device catches up, stalling the very pipeline we built.
 
 . . .
 
@@ -883,11 +880,11 @@ seem to be at war.
 :::
 
 ::: {.slide title="Resolution: queue now, render elsewhere"}
-[Utilities · the deep beat]{.kicker}
+[Utilities · compilation & async]{.kicker}
 
 `ProgressBoard` decouples the two: `draw` hands the value to a **queue**
 and returns at once; a background thread does the device-to-host copy
-and the slow matplotlib rendering at its own pace --- dropping points if
+and the slow matplotlib rendering at its own pace, dropping points if
 it falls behind, since a live curve needs only a few updates per second.
 
 . . .
@@ -923,9 +920,8 @@ Every model subclasses `Module` and supplies three things:
 - **`configure_optimizers`**: the optimizer to use.
 
 ::: {.d2l-note}
-`Module` extends the framework's own net base (`nn.Module`,
-`nn.Block`, `tf.keras.Model`), so an instance is callable: `model(X)`
-runs `forward`.
+`Module` extends the framework's own neural-network base class, so an
+instance is callable: `model(X)` runs `forward`.
 :::
 :::
 
@@ -1033,7 +1029,7 @@ self.state = TrainState.create(
 :::
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Recap" except="jax"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}
@@ -1047,7 +1043,27 @@ self.state = TrainState.create(
 
 ::: {.col}
 - `ProgressBoard` plots the loss live yet never blocks: **keep the hot
-  path pure and compiled; push logging off to the side** --- a theme that
+  path pure and compiled; push logging off to the side**, a theme that
+  recurs all book.
+:::
+:::
+:::
+
+::: {.slide title="Recap" only="jax"}
+[Wrap-up]{.kicker}
+
+::: {.cols}
+::: {.col}
+- **Three classes** scaffold every model: `Module` (the model),
+  `DataModule` (the data), `Trainer` (the loop).
+- New model or dataset = a **subclass**; the loop is written once.
+- `add_to_class` splits a class across notebook cells;
+  `HyperParameters` kills `__init__` boilerplate.
+:::
+
+::: {.col}
+- `ProgressBoard` plots the loss live yet never blocks: **keep the hot
+  path pure and compiled; push logging off to the side**, a theme that
   recurs all book.
 - **Watch the framing:** JAX is functional (a dataclass `Module`,
   parameters and a `TrainState` threaded through `fit`).

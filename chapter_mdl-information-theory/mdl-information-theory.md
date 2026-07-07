@@ -3,30 +3,29 @@
 
 Nearly every model in this book is trained by minimizing a cross-entropy. The
 number your training loop prints is therefore a quantity from *information
-theory*, the field Claude Shannon created in a single 1948 paper
-:cite:`Shannon.1948`, and information theory is what tells you what that number
-*means*: it is a code length. Entropy is the irreducible floor---the cost of
-the data's own randomness; cross-entropy is what your model actually pays; and
-the gap between them, the Kullback--Leibler divergence, is the waste you can
-train away. This section builds those three quantities and the one inequality
-(Gibbs') that relates them, grounds the "extra bits" language in an actual
-coding argument (the Kraft inequality and the Shannon code), explains why
-language models report *perplexity*, and closes with two modern training tricks
----label smoothing and knowledge distillation---that are one-line consequences
-of the same machinery.
+theory*, the field Claude Shannon created in a single paper published in two
+parts in 1948 :cite:`Shannon.1948`, and information theory is what tells you
+what that number *means*: it is a code length. Entropy is the irreducible
+floor, the cost of the data's own randomness; cross-entropy is what your model
+actually pays; and the gap between them, the Kullback--Leibler divergence, is
+the waste you can train away. This section builds those three quantities and
+the one inequality (Gibbs') that relates them, grounds the "extra bits"
+language in an actual coding argument (the Kraft inequality and the Shannon
+code), explains why language models report *perplexity*, and closes with two
+modern training tricks, label smoothing and knowledge distillation, that are
+one-line consequences of the same machinery.
 
-A note on units before we start. The logarithm base is a pure choice of unit:
-base $2$ gives *bits*, base $e$ gives *nats*. **We work in nats throughout**,
-matching deep-learning practice---every framework's `log` is natural, so the
-loss your training loop prints is already in nats. The one place where base
-$2$ is genuinely natural is coding with binary symbols, and we flag it
-explicitly when we get there. Since $\log_2 x = \ln x / \ln 2$, converting is a
-fixed rescaling: $1\textrm{ bit} = \ln 2 \approx 0.693$ nats and $1\textrm{
-nat} = 1/\ln 2 \approx 1.443$ bits. No argmin in this section---and no trained
-model---changes if you switch.
+The logarithm base is a pure choice of unit: base $2$ gives *bits*, base $e$
+gives *nats*. **We work in nats throughout**, matching deep-learning practice:
+the library `log` is natural, so the loss your training loop prints is already
+in nats. The one place where base $2$ is genuinely natural is coding with
+binary symbols, and we flag it explicitly when we get there. Since
+$\log_2 x = \ln x / \ln 2$, converting is a fixed rescaling:
+$1\textrm{ bit} = \ln 2 \approx 0.693$ nats and
+$1\textrm{ nat} = 1/\ln 2 \approx 1.443$ bits. No argmin in this section, and
+no trained model, changes if you switch.
 
-We import each framework once, up front; everything below uses only these
-names.
+We import everything we need once, up front.
 
 ```{.python .input #information-theory-imports}
 #@tab mxnet
@@ -61,44 +60,32 @@ import optax
 
 ### Surprise and Self-Information
 
-What should a numerical measure of "information" even be? Consider a thought
-experiment. A friend shuffles a deck of cards, flips some over, and reports
-what they see; we try to assess how much each report tells us.
-
-First they flip a card and say, "I see a card." This tells us nothing---we
-were already certain of it---so whatever our measure is, this statement should
-score zero. Next: "I see a heart." Four equally likely suits were possible, so
-this is mildly informative. Then: "It is the three of spades." Now one of $52$
-equally likely outcomes has been pinned down---more information. Finally they
-read off the order of the entire shuffled deck: one outcome out of $52!$, a
-huge amount of information.
-
-The pattern is that information tracks *surprise*: the less probable the
-event, the more we learn from observing it. Shannon turned this into a
-definition. The *self-information* of an event $x$ with probability $p(x)$ is
+What should a numerical measure of "information" even be? A friend shuffles a
+deck of cards, flips some over, and reports what they see. "I see a card"
+tells us nothing (we were already certain of it) and should score zero. "I
+see a heart" narrows four equally likely suits to one: mildly informative.
+"It is the three of spades" pins down one of $52$ equally likely outcomes:
+more. Reading off the order of the entire shuffled deck selects one outcome
+out of $52!$: a huge amount of information. Information tracks *surprise*:
+the less probable the event, the more we learn from observing it. Shannon
+turned this into a definition. The *self-information* of an event $x$ with
+probability $p(x)$ is
 
 $$
 I(x) = -\log p(x),
 $$
 
-measured in nats for the natural logarithm. The four card reports above carry
+measured in nats for the natural logarithm. The four card reports carry
 $-\ln 1 = 0$, $\ln 4 \approx 1.39$, $\ln 52 \approx 3.95$, and
-$\ln 52! \approx 156.4$ nats respectively. The function $-\log p$ is the
-unique choice (up to the base, i.e., the unit) satisfying the properties we
-implicitly demanded: certain events carry zero information, rarer events carry
-more, and independent events add---$I$ of a joint outcome with probability
-$p_1 p_2$ is $I(p_1) + I(p_2)$, which forces a logarithm
-(:citet:`Csiszar.2008` gives the formal axiomatics; Exercise 5 walks
-through the argument).
-
-**Bits, a sidebar.** Take the logarithm base $2$ instead and the unit is the
-*bit*: the information in one fair coin flip, or equivalently one binary
-digit, since a uniformly random length-$n$ bit string such as "0010" has
-probability $2^{-n}$ and self-information $-\log_2 2^{-n} = n$ bits. In bits
-the card-deck reports carry $0$, $2$, $\log_2 52 \approx 5.70$, and
-$\log_2 52! \approx 225.6$ bits---the classic numbers. Bits will return when
-we talk about actual binary codes in the coding view below; everywhere else we
-stay in nats.
+$\ln 52! \approx 156.4$ nats respectively; in bits (base $2$, the unit of one
+fair coin flip) they carry the classic numbers $0$, $2$,
+$\log_2 52 \approx 5.70$, and $\log_2 52! \approx 225.6$. The function
+$-\log p$ is the unique choice (up to the base, i.e., the unit) satisfying
+the properties we implicitly demanded: certain events carry zero information,
+rarer events carry more, and independent events add, so that $I$ of a joint
+outcome with probability $p_1 p_2$ is $I(p_1) + I(p_2)$, which forces a
+logarithm (:citet:`Csiszar.2008` gives the formal axiomatics; Exercise 5
+walks through the argument).
 
 ![Self-information $I(x) = -\log p(x)$ in nats as a function of the probability $p$. Certain events ($p = 1$) carry zero information, the fair coin ($p = \tfrac{1}{2}$) carries $\ln 2 \approx 0.693$ nats, and the curve diverges as $p \to 0$: rare means surprising.](../img/mdl-it-self-info-curve.svg)
 :label:`fig_mdl-self-info-curve`
@@ -147,8 +134,8 @@ $6$ bits: it takes six fair-coin flips to have probability $1/64$).
 
 ### Shannon Entropy
 
-Self-information scores a single outcome. To score a *random variable*---a
-whole distribution of outcomes---we average. For $X \sim P$ with probability
+Self-information scores a single outcome. To score a *random variable*, a
+whole distribution of outcomes, we average. For $X \sim P$ with probability
 mass function (p.m.f.) or probability density function (p.d.f.) $p(x)$, the
 *entropy* (or *Shannon entropy*) of $X$ is the expected self-information,
 
@@ -156,40 +143,47 @@ $$H(X) = - E_{x \sim P} [\log p(x)].$$
 :eqlabel:`eq_mdl-ent_def`
 
 For discrete $X$ this reads $H(X) = -\sum_i p_i \log p_i$ with
-$p_i = P(X = x_i)$; for continuous $X$ the sum becomes an integral,
-$H(X) = -\int p(x) \log p(x)\,dx$, called the *differential entropy*. Each
-term weighs the surprise $-\log p(x)$ of an outcome by how often it occurs, so
-entropy is the *average surprise* of observing $X$: a distribution
-concentrated on one value never surprises us ($H = 0$), while a spread-out
-distribution surprises us constantly. Why exactly this form? The logarithm is
-forced by additivity over independent observations, the minus sign makes the
-measure positive and decreasing in probability, and the expectation is the
-only consistent way to aggregate outcome-level surprise into a single number
-for the distribution---this is the content of the axiomatic characterizations
-mentioned above.
+$p_i = P(X = x_i)$. Each term weighs the surprise $-\log p(x)$ of an outcome
+by how often it occurs, so entropy is the *average surprise* of observing
+$X$: a distribution concentrated on one value never surprises us ($H = 0$),
+while a spread-out distribution surprises us constantly. Why exactly this
+form? The logarithm is forced by additivity over independent observations,
+the minus sign makes the measure positive and decreasing in probability, and
+the expectation is the only consistent way to aggregate outcome-level
+surprise into a single number for the distribution; this is the content of
+the axiomatic characterizations mentioned above.
 
-A word of caution about the continuous case. Differential entropy is *not*
-the limit of the discrete entropy, and it is *not coordinate-invariant*: under
-an invertible change of variables $y = g(x)$ it shifts by
-$E[\log|\det \partial g/\partial x|]$, so it can even be *negative* (e.g., a
-narrow Gaussian with $\sigma < 1/\sqrt{2\pi e}$). What survives a change of
-variables is anything built from the *ratio* of two densities: both densities
-pick up the same Jacobian factor, which cancels in $p(x)/q(x)$, so the KL
-divergence defined below is exactly invariant. Cross-entropy sits in between.
-It contains a single lone logarithm, $-E_P[\log q]$, so it inherits the same
-Jacobian shift as entropy---but that shift depends only on the truth $P$ and
-the map $g$, never on the model $Q$, so it moves *every* candidate model's
-loss by the same constant. Reparameterize your data and all the cross-entropy
-values change, but their differences, their gradients in $Q$, and the argmin
-do not. That is the precise sense in which objectives that *compare*
-distributions are safe under reparameterization while raw differential
-entropy is not.
+For continuous $X$ with density $p$ the sum becomes an integral, and the
+result is called the *differential entropy*,
+
+$$
+h(X) = -\int p(x) \log p(x) \,dx.
+$$
+:eqlabel:`eq_mdl-diff-ent-def`
+
+We write lowercase $h$ for differential entropy throughout, to keep it
+distinct from the discrete $H$; the two behave differently in ways that
+matter. Differential entropy is *not* the limit of the discrete entropy, and
+it is *not coordinate-invariant*: under an invertible change of variables
+$y = g(x)$ it shifts by $E[\log|\det \partial g/\partial x|]$, so $h$ can
+even be *negative* (e.g., a narrow Gaussian with $\sigma < 1/\sqrt{2\pi e}$).
+What survives a change of variables is anything built from the *ratio* of two
+densities: both densities pick up the same Jacobian factor, which cancels in
+$p(x)/q(x)$, so the KL divergence defined below is exactly invariant.
+Cross-entropy sits in between. It contains a single lone logarithm,
+$-E_P[\log q]$, so it inherits the same Jacobian shift as entropy, but that
+shift depends only on the truth $P$ and the map $g$, never on the model $Q$,
+so it moves *every* candidate model's loss by the same constant.
+Reparameterize your data and all the cross-entropy values change, but their
+differences, their gradients in $Q$, and the argmin do not. That is the
+precise sense in which objectives that *compare* distributions are safe under
+reparameterization while raw differential entropy is not.
 
 In code, entropy needs one piece of care: the convention $0 \log 0 = 0$ (an
 outcome of probability zero contributes nothing). Where $p(x) = 0$ the term
 $-p \log p$ has limiting value $0$, but the direct floating-point expression
 `0 * -inf` evaluates to `nan`, so we sum with `nansum`, which drops those
-terms---exactly the convention we want.
+terms: exactly the convention we want.
 
 ```{.python .input #information-theory-definition}
 #@tab mxnet
@@ -239,7 +233,7 @@ entropy(jnp.array([0.1, 0.5, 0.1, 0.3]))
 
 The distribution $(0.1, 0.5, 0.1, 0.3)$ has entropy $\approx 1.168$ nats:
 less than the $\ln 4 \approx 1.386$ nats of a uniform distribution on four
-outcomes, because the mass is unevenly spread. That comparison is no accident.
+outcomes, because the mass is unevenly spread.
 
 ### Entropy Is Maximized by the Uniform Distribution
 
@@ -277,23 +271,23 @@ Together: $p_i = 1/k$ for all $i$. $\blacksquare$
 
 For continuous $X$ the analogous statements need constraints to be true at all
 (on a bounded interval the uniform density again maximizes differential
-entropy; under a variance constraint the Gaussian does---see
-:numref:`sec_mdl-distributions`).
+entropy; under a variance constraint the Gaussian does, as we prove in
+:numref:`subsec_mdl-gaussian-max-entropy`).
 
-The cleanest picture of the proposition is the coin. A Bernoulli variable with
-heads-probability $p$ has the *binary entropy*
-$H(p) = -p \log p - (1-p)\log(1-p)$, plotted in
+Consider the coin. A Bernoulli variable with heads-probability $p$ has the
+*binary entropy* $H(p) = -p \log p - (1-p)\log(1-p)$ (overloading $H$: the
+argument here is a parameter, not a random variable), plotted in
 :numref:`fig_mdl-bernoulli-entropy`: zero at the deterministic endpoints
 $p \in \{0, 1\}$, concave in between, and maximal at the fair coin
 $p = \tfrac{1}{2}$, where it equals $\ln 2 \approx 0.693$ nats ($= 1$ bit,
 consistent with the $\log k$ bound for $k = 2$). A biased coin with $p = 0.1$
-manages only $H(0.1) \approx 0.325$ nats---you are rarely surprised by a coin
+manages only $H(0.1) \approx 0.325$ nats: you are rarely surprised by a coin
 that almost always lands tails.
 
 ![The binary entropy $H(p) = -p \log p - (1-p) \log (1-p)$ in nats, concave and symmetric about $p = \tfrac{1}{2}$, where it peaks at $\ln 2 \approx 0.693$ nats. At the deterministic endpoints $p = 0$ and $p = 1$ the outcome carries no surprise and the entropy vanishes.](../img/mdl-it-bernoulli-entropy.svg)
 :label:`fig_mdl-bernoulli-entropy`
 
-Entropy also extends from one random variable to several---the joint entropy
+Entropy also extends from one random variable to several: the joint entropy
 $H(X, Y)$, the conditional entropy $H(Y \mid X)$, and the *mutual information*
 $I(X; Y)$ that measures what $X$ and $Y$ share. Those quantities power
 contrastive and self-supervised learning, and we develop them in their own
@@ -306,7 +300,8 @@ section, :numref:`sec_mdl-mutual-information`.
 In :numref:`sec_linear-algebra` we measured distances between points with
 norms. We now want a notion of "distance" between *distributions*: how badly
 does a model $Q$ misrepresent a truth $P$? Information theory's answer is the
-*Kullback--Leibler (KL) divergence*, also called *relative entropy*. Given a
+*Kullback--Leibler (KL) divergence*, also called *relative entropy*
+:cite:`Kullback.Leibler.1951`. Given a
 random variable $X \sim P$ with p.d.f. or p.m.f. $p(x)$, and a second
 distribution $Q$ with p.d.f. or p.m.f. $q(x)$ that we use to approximate $P$,
 
@@ -317,24 +312,24 @@ The term inside the expectation, $\log p(x) - \log q(x)$, is the difference of
 two surprises: how surprised $Q$ is by the outcome $x$, minus how surprised
 $P$ is. It is positive where $Q$ underestimates ($q(x) < p(x)$: $Q$ is *more*
 surprised than it should be) and negative where $Q$ overestimates. KL averages
-this *relative surprise* over outcomes drawn from the truth $P$---note the
+this *relative surprise* over outcomes drawn from the truth $P$. Note the
 asymmetry baked into the definition: $P$ supplies both the samples and the
 numerator. In general $D_{\textrm{KL}}(P\|Q) \neq D_{\textrm{KL}}(Q\|P)$, and
 the gap can be dramatic (we exhibit it numerically below); the consequences of
 *which* direction you optimize are taken up in
 :numref:`sec_mdl-divergences-distances`. One more edge case to keep in mind:
-if some outcome has $p(x) > 0$ but $q(x) = 0$---the model declares impossible
-something that actually happens---then $D_{\textrm{KL}}(P\|Q) = \infty$.
+if some outcome has $p(x) > 0$ but $q(x) = 0$ (the model declares impossible
+something that actually happens), then $D_{\textrm{KL}}(P\|Q) = \infty$.
 
 Here is the discrete case in code, for `p` and `q` given as probability
 vectors over the same finite outcome set. KL divergence is non-negative on
 its own (Gibbs' inequality, next), so we do **not** wrap the result in
-`abs()`---doing so would teach the false idea that KL needs an absolute value
+`abs()`; doing so would teach the false idea that KL needs an absolute value
 to stay non-negative. The `nansum` is deliberate: where $p(x) = 0$ the direct
 floating-point expression for $0 \cdot \log(0/q)$ yields `nan`,
 which `nansum` drops to encode $0 \log 0 = 0$; the *other* edge case,
 $p(x) > 0$ with $q(x) = 0$, instead yields $+\infty$ (not `nan`), which
-`nansum` keeps---so the code correctly returns $+\infty$ for that divergence.
+`nansum` keeps, so the code correctly returns $+\infty$ for that divergence.
 
 ```{.python .input #information-theory-definition-2}
 #@tab mxnet
@@ -367,9 +362,10 @@ def kl_divergence(p, q):
 
 ### Gibbs' Inequality
 
-The single most important fact about the KL divergence is that it cannot be
-negative. Everything else in this section---cross-entropy as a sound loss, the
-optimality of code lengths, the label-smoothing optimum---follows from it.
+The KL divergence cannot be negative, an observation going back to Gibbs
+:cite:`Gibbs.1902`. Everything else in this section (cross-entropy as a sound
+loss, the optimality of code lengths, the label-smoothing optimum) follows
+from it.
 
 **Proposition (Gibbs' inequality).** *For any distributions $P$ and $Q$ on
 the same space,*
@@ -395,7 +391,8 @@ $$
 The expectation runs only over the support of $P$, where the $p(x)$ factors
 cancel, and what remains is the $Q$-mass of that support: a number
 $Q(\textrm{supp}\,P) \leq 1$, whose negative log is therefore $\geq 0$ (the
-same computation runs with integrals in the continuous case). For equality
+same computation runs with integrals for densities, with the same convention
+at $q = 0$). For equality
 throughout, both inequalities must be tight: because $-\log$ is *strictly*
 convex, the first is an equality only when the ratio $q(x)/p(x)$ is constant
 $P$-almost surely, and the second requires $Q(\textrm{supp}\,P) = 1$, i.e.,
@@ -403,10 +400,64 @@ $Q$ puts no mass outside $P$'s support. Summing $q(x) = c\,p(x)$ over the
 support then gives $c = 1$, i.e., $P = Q$.
 $\blacksquare$
 
+### Maximum Entropy and the Gaussian
+:label:`subsec_mdl-gaussian-max-entropy`
+
+Gibbs' inequality has an immediate consequence for continuous distributions:
+among all densities with a given mean and variance, the Gaussian is the
+hardest to predict. :numref:`sec_mdl-distributions` granted this fact; here
+is the proof.
+
+**Proposition (Gaussian maximum entropy).** *Among all densities $p$ on
+$\mathbb{R}$ with mean $\mu$ and variance $\sigma^2$,*
+
+$$
+h(P) \leq \tfrac{1}{2}\log(2\pi e \sigma^2) = h(\mathcal{N}(\mu, \sigma^2)),
+$$
+:eqlabel:`eq_mdl-gaussian-max-entropy`
+
+*with equality if and only if $P = \mathcal{N}(\mu, \sigma^2)$.*
+
+**Proof.** Let $\varphi(x) = (2\pi\sigma^2)^{-1/2}
+e^{-(x-\mu)^2/(2\sigma^2)}$ be the Gaussian density. The key observation is
+that $-\log \varphi(x) = \tfrac{1}{2}\log(2\pi\sigma^2) +
+\tfrac{(x-\mu)^2}{2\sigma^2}$ is a quadratic in $x$, so its expectation under
+*any* density $p$ with mean $\mu$ and variance $\sigma^2$ depends on $p$ only
+through those two moments:
+
+$$
+-E_P[\log \varphi(x)]
+= \tfrac{1}{2}\log(2\pi\sigma^2) + \frac{E_P\big[(x-\mu)^2\big]}{2\sigma^2}
+= \tfrac{1}{2}\log(2\pi\sigma^2) + \tfrac{1}{2}
+= \tfrac{1}{2}\log(2\pi e \sigma^2).
+$$
+
+Taking $P = \mathcal{N}(\mu, \sigma^2)$ itself, this computes the Gaussian's
+own differential entropy en route:
+$h(\mathcal{N}(\mu, \sigma^2)) = \tfrac{1}{2}\log(2\pi e \sigma^2)$, the
+closed form quoted whenever a Gaussian entropy is needed (for instance in
+:numref:`sec_mdl-mutual-information`). Now apply Gibbs' inequality, which
+holds for densities as noted above, with $Q = \mathcal{N}(\mu, \sigma^2)$.
+Because $E_P[\log \varphi]$ is finite, the divergence splits:
+
+$$
+0 \leq D_{\textrm{KL}}\big(P \,\|\, \mathcal{N}(\mu, \sigma^2)\big)
+= E_P[\log p(x)] - E_P[\log \varphi(x)]
+= -h(P) + \tfrac{1}{2}\log(2\pi e \sigma^2).
+$$
+
+Rearranging gives :eqref:`eq_mdl-gaussian-max-entropy`. Equality holds
+exactly when the divergence vanishes, which by Gibbs' equality case means
+$P = \mathcal{N}(\mu, \sigma^2)$. $\blacksquare$
+
+The bound works because the Gaussian's log-density is a polynomial in exactly
+the quantities being constrained, the first two moments, so the cross term
+$-E_P[\log \varphi]$ is the same for every competitor $P$.
+
 ### Gaussians, in Closed Form
 
 The `kl_divergence` above works on *discrete* probability vectors. For
-*continuous* distributions the cleanest worked example is the KL divergence
+*continuous* distributions the standard worked example is the KL divergence
 between two univariate Gaussians, which has a closed form. For
 $P = \mathcal{N}(\mu_1, \sigma_1^2)$ and $Q = \mathcal{N}(\mu_2, \sigma_2^2)$,
 
@@ -416,8 +467,8 @@ D_{\textrm{KL}}\!\left(\mathcal{N}(\mu_1,\sigma_1^2) \,\big\|\, \mathcal{N}(\mu_
 $$
 :eqlabel:`eq_mdl-gaussian_kl`
 
-These logs are natural logs, so the result is in nats. Two things are worth
-reading off :eqref:`eq_mdl-gaussian_kl` directly. First, it is non-negative
+These logs are natural logs, so the result is in nats. Read two things off
+:eqref:`eq_mdl-gaussian_kl` directly. First, it is non-negative
 and zero exactly when $\mu_1=\mu_2$ and $\sigma_1=\sigma_2$ (i.e., $P=Q$),
 just as Gibbs' inequality demands. Second, it is *not symmetric*: swapping the
 roles of $P$ and $Q$ changes the value, because the variance ratio and the
@@ -426,7 +477,7 @@ Exercise 4.)
 
 Let's verify the formula against a direct Monte-Carlo estimate of
 $D_{\textrm{KL}}(P\|Q) = E_{x\sim P}[\log p(x) - \log q(x)]$. (Note: no
-`abs()` anywhere---the divergence comes out non-negative on its own.)
+`abs()` anywhere; the divergence comes out non-negative on its own.)
 
 ```{.python .input #information-theory-example-1}
 #@tab mxnet
@@ -520,7 +571,7 @@ closed_form, monte_carlo
 Now make the asymmetry explicit. Compare $D_{\textrm{KL}}(P\|Q)$ with
 $D_{\textrm{KL}}(Q\|P)$ when the two Gaussians have *different variances*, say
 $P=\mathcal{N}(0,1)$ and $Q=\mathcal{N}(0,4)$ (i.e., $\sigma_2=2$). The two
-numbers differ ($\approx 0.318$ vs. $\approx 0.807$ nats)---KL is a
+numbers differ ($\approx 0.318$ vs. $\approx 0.807$ nats): KL is a
 divergence, not a distance.
 
 ```{.python .input #information-theory-example-3}
@@ -539,14 +590,15 @@ the truth $P$ by the model's surprise,
 $$\textrm{CE}(P, Q) = - E_{x \sim P} [\log q(x)].$$
 :eqlabel:`eq_mdl-ce_def`
 
-Adding and subtracting $H(P)$ inside the expectation splits the model's
-surprise into the truth's own surprise plus the relative surprise---that is,
+Adding and subtracting $H(P)$ inside the expectation (legitimate whenever
+$H(P)$ is finite) splits the model's surprise into the truth's own surprise
+plus the relative surprise:
 
 $$\textrm{CE} (P, Q) = H(P) + D_{\textrm{KL}}(P\|Q).$$
 :eqlabel:`eq_mdl-ce_decomp`
 
-This single identity, combined with Gibbs' inequality, gives a clean chain
-that explains why cross-entropy is *the* loss to minimize:
+This single identity, combined with Gibbs' inequality, gives the chain that
+explains why cross-entropy is *the* loss to minimize:
 
 $$
 \underbrace{D_{\textrm{KL}}(P\|Q) \ge 0}_{\textrm{Gibbs}}
@@ -558,13 +610,13 @@ $$
 Entropy $H(P)$ is the irreducible floor; cross-entropy is what you actually
 pay; and the gap $\textrm{CE}(P,Q) - H(P) = D_{\textrm{KL}}(P\|Q)$ is the
 waste. Minimizing cross-entropy in $Q$ therefore drives $Q \to P$ and squeezes
-the waste to zero---which is the same thing as minimizing KL, since $H(P)$
-does not depend on $Q$. (The "floor / payment / waste" language is more than a
-metaphor: in the coding view below, all three quantities become literal code
-lengths.) :numref:`fig_mdl-code-length-bars` draws the decomposition to scale
+the waste to zero, which is the same thing as minimizing KL, since $H(P)$
+does not depend on $Q$. (In the coding view below, floor, payment, and waste
+all become exact code lengths.)
+:numref:`fig_mdl-code-length-bars` draws the decomposition to scale
 for a four-outcome distribution we will code by hand in that coding view.
 
-![The decomposition :eqref:`eq_mdl-ce_decomp` as code lengths, for the truth $P = (\tfrac{1}{2}, \tfrac{1}{4}, \tfrac{1}{8}, \tfrac{1}{8})$ and a uniform model $Q$. A code matched to the truth pays exactly the entropy floor $H(P) = 1.75$ bits per symbol; a code built for $Q$ pays the cross-entropy $\textrm{CE}(P, Q) = 2.0$ bits, and the stacked increment is the KL divergence $D_{\textrm{KL}}(P\|Q) = 0.25$ bits of pure waste. Minimizing cross-entropy in $Q$ can only shrink the orange block---the blue floor is the data's own randomness.](../img/mdl-it-code-length-bars.svg)
+![The decomposition :eqref:`eq_mdl-ce_decomp` as code lengths, for the truth $P = (\tfrac{1}{2}, \tfrac{1}{4}, \tfrac{1}{8}, \tfrac{1}{8})$ and a uniform model $Q$. A code matched to the truth pays exactly the entropy floor $H(P) = 1.75$ bits per symbol; a code built for $Q$ pays the cross-entropy $\textrm{CE}(P, Q) = 2.0$ bits, and the stacked increment is the KL divergence $D_{\textrm{KL}}(P\|Q) = 0.25$ bits of pure waste. Minimizing cross-entropy in $Q$ can only shrink the orange block; the blue floor is the data's own randomness.](../img/mdl-it-code-length-bars.svg)
 :label:`fig_mdl-code-length-bars`
 
 Let's verify the decomposition :eqref:`eq_mdl-ce_decomp` numerically on two
@@ -634,7 +686,7 @@ $$
 = -\frac{1}{n} \sum_{i=1}^n \log \hat{y}_{i, y_i},
 $$
 
-in nats, exactly what every framework's classification loss computes.
+in nats, exactly what the built-in classification loss computes.
 
 ```{.python .input #information-theory-formal-definition-1}
 #@tab mxnet
@@ -705,18 +757,17 @@ preds = jnp.array([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
 cross_entropy(preds, labels)
 ```
 
-The frameworks' built-in losses compute the same number. One subtlety is worth
-spelling out, because the built-ins typically expect *logits* $\mathbf{z}$
+The built-in loss computes the same number. One subtlety: the built-ins
+typically expect *logits* $\mathbf{z}$
 rather than probabilities, applying softmax internally. Feeding
 $\mathbf{z} = \log \mathbf{q}$ for an already-normalized $\mathbf{q}$ is
 legitimate because softmax inverts the log exactly there:
 $\mathrm{softmax}(\log \mathbf{q})_j = e^{\log q_j} / \sum_i e^{\log q_i}
 = q_j / \sum_i q_i = q_j$. (More generally, softmax is invariant to adding a
 constant to all logits, and $\log$ of a normalized vector is one valid logit
-vector among many.) PyTorch's `NLLLoss` skips the subtlety by taking
-log-probabilities directly; TensorFlow's loss accepts probabilities with
-`from_logits=False`; `optax` wants logits, so we hand it $\log$-probabilities;
-MXNet's metric consumes probabilities.
+vector among many.) The built-in loss consumes probabilities,
+log-probabilities, or logits, depending on the library; the code comments say
+which.
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab mxnet
@@ -749,34 +800,35 @@ optax.softmax_cross_entropy_with_integer_labels(
     jnp.log(preds), labels).mean()
 ```
 
-The loss also has a decision-theoretic pedigree worth making explicit. A
+The loss also has a decision-theoretic pedigree. A
 *scoring rule* assigns a penalty $S(\mathbf{q}, y)$ for having reported the
 probability vector $\mathbf{q}$ when class $y$ then occurs. The rule is
-*proper* if honesty is optimal---if, when the truth is $\mathbf{p}$, the
+*proper* if honesty is optimal, i.e., if, when the truth is $\mathbf{p}$, the
 expected penalty $E_{y \sim \mathbf{p}}[S(\mathbf{q}, y)]$ is minimized by
-reporting $\mathbf{q} = \mathbf{p}$---and *strictly proper* if honesty is the
+reporting $\mathbf{q} = \mathbf{p}$, and *strictly proper* if honesty is the
 *unique* optimum. The cross-entropy loss is the *log score*
 $S(\mathbf{q}, y) = -\log q_y$, and it is strictly proper: its expected
 penalty is exactly
 $\textrm{CE}(\mathbf{p}, \mathbf{q}) = H(\mathbf{p}) +
 D_{\textrm{KL}}(\mathbf{p} \| \mathbf{q})$, which Gibbs' inequality minimizes
 uniquely at $\mathbf{q} = \mathbf{p}$. Strict propriety of the log score *is*
-Gibbs' inequality in different clothes (Exercise 6 asks you to write out the
+Gibbs' inequality restated (Exercise 6 asks you to write out the
 argument).
 
 Why insist on *strict* propriety? Because it means the loss rewards more than
 the right argmax: any systematic distortion of the reported
-probabilities---overconfidence, hedging---leaves expected loss on the table,
+probabilities (overconfidence, hedging) leaves expected loss on the table,
 so a cross-entropy-trained classifier is *incentivized* to output the true
 conditional probabilities $p(y \mid \mathbf{x})$ themselves. That is the
-principled reason such classifiers can be calibrated at all; when
+principled reason such classifiers can be *calibrated* (predicted
+probabilities matching observed frequencies) at all; when
 miscalibration shows up in practice, the objective is not the culprit (the
 overconfidence that label smoothing combats below is a pathology of the
 one-hot *target*, not of the score). Nor is the log score the only strictly
 proper rule: the *Brier score*
 $S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}[j = y])^2$ penalizes the whole
 vector by squared error, and its expected penalty exceeds the honest
-reporter's by $\|\mathbf{q} - \mathbf{p}\|^2$---a squared-distance waste term
+reporter's by $\|\mathbf{q} - \mathbf{p}\|^2$: a squared-distance waste term
 in place of the KL-flavored one. Different strictly proper rules disagree
 about how severely to punish which mistakes (the log score's penalty diverges
 on confident errors; the Brier score's stays bounded), but they agree about
@@ -789,16 +841,16 @@ any i.i.d. dataset *is* the cross-entropy from the empirical distribution
 $\hat p_{\textrm{data}}$ to the model, so maximizing likelihood, minimizing
 cross-entropy, and minimizing
 $D_{\textrm{KL}}(\hat p_{\textrm{data}} \| p_{\boldsymbol{\theta}})$ are one
-and the same optimization---for binary labels, multiclass labels, and
+and the same optimization, for binary labels, multiclass labels, and
 densities alike. We will not re-derive it here; this section's contribution is
 the *interpretation* of that loss as a code length, which we build next.
 
 ## The Coding View and Perplexity
 
 We have repeatedly promised that entropy is a "floor" and KL the "extra"
-cost. This subsection makes those words literal: they are statements about
+cost. Those words are statements about
 compressing data with binary codes, and the proofs are short enough to give in
-full. Binary codes speak base $2$, so bits briefly take the stage; divide by
+full. Binary codes speak base $2$, so this subsection works in bits; divide by
 $\ln 2$ (i.e., reinterpret every $\log$ below) and every statement holds in
 nats verbatim.
 
@@ -808,9 +860,10 @@ Suppose we must transmit a stream of symbols drawn i.i.d. from a distribution
 $P$ over $k$ outcomes, encoding each outcome $x_i$ as a binary string
 (*codeword*) of length $l_i$. So that the receiver can split the stream back
 into codewords without separators, we require the code to be *prefix-free*: no
-codeword is a prefix of another (like telephone numbers---once a dialed string
+codeword is a prefix of another (like telephone numbers: once a dialed string
 matches a number, no longer number starts the same way). Short codewords are
-precious, and the next proposition says exactly how precious.
+precious, and the next proposition :cite:`Kraft.1949` says exactly how
+precious.
 
 **Proposition (Kraft inequality).** *A prefix-free binary code with codeword
 lengths $l_1, \ldots, l_k$ exists if and only if*
@@ -831,11 +884,16 @@ of length $2^{-l_i}$ left to right; each starts at a multiple of $2^{-l_i}$,
 hence is a dyadic interval, and its binary address is a valid codeword.
 $\blacksquare$
 
-![A prefix-free binary code as a tree, for lengths $1, 2, 3, 3$: each codeword is a root-to-leaf path (left edge $= 0$, right edge $= 1$), and prefix-freeness says every codeword ends at a leaf---no codeword continues through another. A leaf at depth $\ell$ is the tree view of a dyadic interval of length $2^{-\ell}$ in the proof, and here the Kraft budget is spent exactly: $2^{-1} + 2^{-2} + 2^{-3} + 2^{-3} = 1$.](../img/mdl-it-kraft-tree.svg)
+The same inequality constrains every *uniquely decodable* code (one whose
+concatenations parse unambiguously even without prefix-freeness), so
+restricting to prefix-free codes costs nothing in code length
+:cite:`McMillan.1956`.
+
+![A prefix-free binary code as a tree, for lengths $1, 2, 3, 3$: each codeword is a root-to-leaf path (left edge $= 0$, right edge $= 1$), and prefix-freeness says every codeword ends at a leaf: no codeword continues through another. A leaf at depth $\ell$ is the tree view of a dyadic interval of length $2^{-\ell}$ in the proof, and here the Kraft budget is spent exactly: $2^{-1} + 2^{-2} + 2^{-3} + 2^{-3} = 1$.](../img/mdl-it-kraft-tree.svg)
 :label:`fig_mdl-kraft-tree`
 
 :numref:`fig_mdl-kraft-tree` redraws the proof's intervals as a binary
-tree---the picture to keep. The Kraft inequality turns code design into a budget
+tree, the picture to keep. The Kraft inequality turns code design into a budget
 problem: each symbol buys "address space" $2^{-l_i}$ out of a total budget of
 $1$, and shorter codewords cost exponentially more. The optimal spend follows
 immediately.
@@ -856,7 +914,9 @@ E[l] = \sum_i p_i l_i
 \geq H_2(P),
 $$
 
-since the KL term is non-negative by Gibbs and $-\log_2 Z \geq 0$. For the
+since the KL term is non-negative by Gibbs and $-\log_2 Z \geq 0$ (the
+superscript $(2)$ marks base-$2$ logs, here and in $\textrm{CE}_2$ below).
+For the
 upper bound, the Shannon lengths satisfy
 $2^{-l_i} = 2^{-\lceil \log_2(1/p_i)\rceil} \leq p_i$, so they pass Kraft's
 test ($\sum_i 2^{-l_i} \leq \sum_i p_i = 1$) and a prefix code with these
@@ -864,7 +924,7 @@ lengths exists; and $l_i < \log_2(1/p_i) + 1$ gives
 $E[l] < H_2(P) + 1$. $\blacksquare$
 
 So entropy is, within one bit, *the* price of communicating draws from
-$P$---this is (the source-coding half of) Shannon's theorem, and the
+$P$: this is (the source-coding half of) Shannon's theorem, and the
 one-bit slack can be driven to zero by coding long blocks of symbols at once
 :cite:`Cover.Thomas.1999`. Moreover, look at where the KL divergence appeared
 in the proof: if you build your code from the *wrong* distribution $Q$
@@ -902,7 +962,7 @@ print(f'E[l] = {avg_len} bits = H(P) = {h_bits} bits: no waste')
 print(f'uniform codebook: {avg_len_q} bits = H + KL = {h_bits + kl_bits} bits')
 ```
 
-A possible Shannon code here is $0,\, 10,\, 110,\, 111$---exactly the tree of
+A possible Shannon code here is $0,\, 10,\, 110,\, 111$, exactly the tree of
 :numref:`fig_mdl-kraft-tree`; check that it is prefix-free and that its
 lengths $1, 2, 3, 3$ are the ones computed above.
 
@@ -911,13 +971,14 @@ lengths $1, 2, 3, 3$ are the ones computed above.
 The Shannon code is optimal only up to that "$+1$", and the leak is real: the
 ceiling in $l_i = \lceil \log_2(1/p_i) \rceil$ rounds a fraction of a bit up
 to a whole bit, once per symbol. For a skewed source the rounding dominates
-the bill. A symbol of probability $0.9$ carries only
+the expected length. A symbol of probability $0.9$ carries only
 $-\log_2 0.9 \approx 0.15$ bits of surprisal, yet no binary codeword is
 shorter than one bit, so a symbol-by-symbol code overpays more than sixfold
 on the most common symbol it ever transmits.
 
 The fix is to stop coding symbols and code the *whole message*. *Arithmetic
-coding* runs the Kraft proof's dyadic-interval picture in reverse. Maintain a
+coding* :cite:`Rissanen.1976,Witten.Neal.Cleary.1987` runs the Kraft proof's
+dyadic-interval picture in reverse. Maintain a
 current interval, initially $[0, 1)$. To encode the next symbol, partition
 the current interval into one slice per possible symbol, with lengths
 proportional to the model's conditional probabilities, and shrink to the
@@ -933,8 +994,10 @@ each symbol in turn by watching which slice the transmitted number falls
 into. All that remains is to *name* a point of the final interval in binary,
 and the dyadic intervals of the Kraft proof do it: any interval of width $w$
 contains a dyadic interval of length $2^{-l}$ with
-$l = \lceil \log_2(1/w) \rceil + 1$, and that dyadic interval's binary
-address is the codeword. The total length is therefore
+$l = \lceil \log_2(1/w) \rceil + 1$, because $2^{-l} \leq w/2$, so some
+multiple of $2^{-l}$ falls in the interval's left half and the dyadic
+interval of length $2^{-l}$ starting there fits inside; that dyadic
+interval's binary address is the codeword. The total length is therefore
 
 $$
 l \;<\; \sum_{i=1}^N \log_2 \frac{1}{q(x_i \mid x_{<i})} + 2,
@@ -942,8 +1005,8 @@ $$
 
 the message's total surprisal under the model plus at most two bits: the
 ceiling is paid once per *message*, not once per symbol. A ten-line
-demonstration---interval narrowing on a skewed source, then the two bit
-counts---makes the gap vivid.
+demonstration (interval narrowing on a skewed source, then the two bit
+counts) makes the gap vivid.
 
 ```{.python .input #mdl-information-theory-from-symbol-codes-to-arithmetic-coding}
 msg = 'aaaaaaaaba'                    # nine a's, one b
@@ -980,13 +1043,13 @@ the surprisal floor.
 Notice what the construction never required: the model need not be i.i.d.
 Any conditional next-symbol distribution $q(\cdot \mid x_{<i})$ works,
 because encoder and decoder both condition on the already-processed prefix.
-An autoregressive language model is exactly such a $q$---so a language model
+An autoregressive language model is exactly such a $q$, so a language model
 *is* a lossless compressor, with no further engineering: its per-token
 cross-entropy on a document, times the token count (divided by $\ln 2$ for
 bits), *is* the compressed file size, to within two bits.
-:citet:`Deletang.Ruoss.Duquenne.ea.2023` take this literally, driving an
+:citet:`Deletang.Ruoss.Duquenne.ea.2023` do exactly this, driving an
 arithmetic coder with an LLM's next-token probabilities and compressing text
-better than gzip---and the point runs both ways: training a model to
+better than gzip. The point runs both ways: training a model to
 minimize cross-entropy just *is* training it to compress, the precise sense
 in which prediction and compression are the same problem.
 
@@ -1000,13 +1063,14 @@ H_{\textrm{rate}} = \lim_{n \to \infty} \frac{1}{n} H(X_1, \ldots, X_n)
 $$
 :eqlabel:`eq_mdl-entropy_rate`
 
-is the per-symbol generalization of entropy: the two limits exist and agree
-(the second is the average surprisal of the next symbol given unlimited
-context; conditional entropy is developed in
+is the per-symbol generalization of entropy. That the two limits exist and
+agree for stationary sources is a theorem we grant :cite:`Cover.Thomas.1999`;
+the second limit is the average surprisal of the next symbol given unlimited
+context (conditional entropy is developed in
 :numref:`sec_mdl-mutual-information`), and $H_{\textrm{rate}}$ is the floor
 on the expected code length per symbol of any lossless code, just as $H$ was
-for i.i.d. symbols. Dependence lowers the floor---conditioning reduces
-entropy---so a source with memory compresses better than its letter
+for i.i.d. symbols. Dependence lowers the floor (conditioning reduces
+entropy), so a source with memory compresses better than its letter
 frequencies suggest: Shannon estimated the entropy rate of printed English at
 roughly one bit per character :cite:`Shannon.1951`, far below the
 $\log_2 27 \approx 4.75$ bits of uniformly random letters and spaces.
@@ -1017,7 +1081,8 @@ Language models are evaluated by exactly the quantity this section has been
 studying: the per-token cross-entropy of held-out text,
 $\textrm{CE} = -\tfrac{1}{N}\sum_{i=1}^N \log q(x_i \mid x_{<i})$ nats, where
 $q$ is the model's predicted next-token distribution. The community
-exponentiates it and calls the result *perplexity*:
+exponentiates it and calls the result *perplexity*
+:cite:`Jelinek.Mercer.Bahl.ea.1977`:
 
 $$
 \textrm{PPL} = \exp(\textrm{CE})
@@ -1030,11 +1095,12 @@ actually came next. Exponentiating buys an interpretation: a model that is
 uniformly undecided among $V$ tokens at every step has
 $\textrm{CE} = \ln V$ and hence $\textrm{PPL} = V$, so a perplexity of,
 say, $20$ means the model is, on average, as uncertain as if it were choosing
-uniformly among $20$ tokens---an *effective branching factor*. A perfect model
-of a deterministic sequence has perplexity $1$, and Gibbs' inequality puts the
-floor at $\textrm{PPL} \geq e^{H}$, where $H$ is the entropy rate
-:eqref:`eq_mdl-entropy_rate` of the language itself---the per-token cost of
-its irreducible randomness. Because $\textrm{PPL} = b^{\textrm{CE}_b}$ for *any* log base $b$,
+uniformly among $20$ tokens: an *effective branching factor*. A perfect model
+of a deterministic sequence has perplexity $1$, and the floor is
+$\textrm{PPL} \geq e^{H}$, where $H$ is the entropy rate
+:eqref:`eq_mdl-entropy_rate` of the language itself, the per-token cost of
+its irreducible randomness (Gibbs applied to each next-token prediction,
+averaged, plus the entropy-rate limit granted above). Because $\textrm{PPL} = b^{\textrm{CE}_b}$ for *any* log base $b$,
 perplexity is also the rare information-theoretic quantity with no unit
 ambiguity: nats and bits give the same number (Exercise 7).
 
@@ -1051,7 +1117,7 @@ print(f'mean NLL = {mean_nll:.4f} nats, perplexity = {math.exp(mean_nll):.2f}')
 
 A mean of $\approx 1.84$ nats per token corresponds to a perplexity of
 $\approx 6.3$: this model is as confused as a uniform choice among six or so
-tokens. Note how the geometric mean punishes confident mistakes---the single
+tokens. Note how the geometric mean punishes confident mistakes: the single
 $0.05$ contributes $3.0$ nats, as much as several good predictions
 combined. When you encounter perplexity as the headline metric in
 :numref:`sec_language-model` and the Transformer chapters, it is this number.
@@ -1062,20 +1128,19 @@ dataset size, and training compute, smoothly across many orders of magnitude
 :cite:`kaplan2020scaling`, with exponents stable enough that one can budget
 compute against a target loss in advance :cite:`hoffmann2022training`. Read
 through this section's lens, the scaling laws say that the approach to the
-language's entropy rate---the floor :eqref:`eq_mdl-entropy_rate` that no
-model can beat---is not just guaranteed in the limit by Gibbs but empirically
+language's entropy rate (the floor :eqref:`eq_mdl-entropy_rate` that no
+model can beat) is empirically
 *predictable*: each constant multiple of compute removes a roughly constant
 fraction of the remaining excess over the floor. One caution when comparing
 reported numbers: per-token quantities depend on what a token is, so
 perplexities are comparable only between models that share a tokenizer.
-To compare across tokenizers, convert to bits per character---the
+To compare across tokenizers, convert to bits per character, the
 compression rate of the previous subsection, which is tokenizer-free.
 
 ## Modern Uses
 
-The identities of this section are not museum pieces; they are working parts
-of modern training pipelines. We close with two of them---and the punchline
-that both are corollaries of Gibbs' inequality.
+Two modern training techniques follow directly from these identities; both
+are corollaries of Gibbs' inequality.
 
 ### Label Smoothing
 
@@ -1116,7 +1181,7 @@ z_y - z_j = \log\frac{1 - \epsilon + \epsilon/k}{\epsilon/k}
 $$
 
 between the true class and each other class. For $k = 10$ classes and
-$\epsilon = 0.1$ the gap is $\ln 91 \approx 4.51$---a concrete, attainable
+$\epsilon = 0.1$ the gap is $\ln 91 \approx 4.51$, a concrete, attainable
 target instead of a runaway one. (A logit difference is a log-odds ratio, so
 we leave it unitless rather than calling it nats.) The loss at the optimum
 is the (nonzero) entropy $H(\mathbf{p}^\epsilon)$, which is why a
@@ -1141,14 +1206,14 @@ print(f'CE at the overconfident q = {ce_conf:.4f} nats')
 ```
 
 The overconfident prediction (logit gap $10$) is *worse* under the smoothed
-target than the calibrated one---label smoothing literally penalizes the
+target than the calibrated one: label smoothing penalizes the very
 behavior that one-hot targets demand.
 
 ### Knowledge Distillation
 
 *Knowledge distillation* :cite:`Hinton.Vinyals.Dean.2015` trains a small
-*student* network to imitate a large *teacher*, transferring not just the
-teacher's argmax but its full distribution over wrong answers (a "2" that
+*student* network to imitate a large *teacher*, transferring the teacher's
+full distribution over wrong answers rather than its argmax alone (a "2" that
 looks somewhat like a "7" is valuable information). Because a trained
 teacher's softmax is nearly one-hot, both distributions are first *softened*
 with a temperature $T$:
@@ -1261,11 +1326,14 @@ for T in (1.0, 2.0, 5.0, 10.0):
 ```
 
 The closed form matches autograd to floating-point precision at every
-temperature, and while the raw gradient decays like $1/T^2$, the $T^2$-scaled
-gradient settles toward the constant limit
+temperature. The raw gradient decays like $1/T^2$, while the $T^2$-scaled
+gradient stays order-one: its $T \to \infty$ limit is
 $\tfrac{1}{k}\big((\mathbf{z}^{\textrm{stu}} - \bar z^{\textrm{stu}}) -
 (\mathbf{z}^{\textrm{tea}} - \bar z^{\textrm{tea}})\big) = (-0.667, 0.333,
-0.333)$ here---the scale-matching the $T^2$ factor was designed for. As
+0.333)$ here, but the convergence is $O(1/T)$ and still visibly incomplete in
+the table: the $T = 10$ row reads $(-0.719, 0.413, 0.306)$, and the first
+component even overshoots its limit on the way. The scale-matching, which is
+what the $T^2$ factor was designed for, holds regardless. As
 $T \to 1$ the loss reduces to the ordinary KL (and, with a one-hot teacher,
 to the ordinary cross-entropy loss), recovering standard training as a special
 case.
@@ -1274,14 +1342,14 @@ case.
 
 Stepping back: maximum likelihood *is* cross-entropy minimization *is*
 KL-projection of the empirical distribution onto the model family
-(:numref:`subsec_mdl-nll-crossentropy`)---and this section has now equipped
+(:numref:`subsec_mdl-nll-crossentropy`), and this section has now equipped
 that one principle with its operational meaning (code length and waste), its
 evaluation metric (perplexity), and two of its modern refinements (smoothed
 targets and distilled teachers). The story continues in two directions: KL is
 just one member of a whole family of divergences, each inducing a different
 generative-modeling objective (:numref:`sec_mdl-divergences-distances`), and
 applying KL to a joint distribution versus the product of its marginals yields
-mutual information, the engine of contrastive representation learning
+mutual information, the quantity behind contrastive representation learning
 (:numref:`sec_mdl-mutual-information`).
 
 ## Summary
@@ -1291,24 +1359,24 @@ mutual information, the engine of contrastive representation learning
   distribution. We measure both in nats (natural log); bits differ by a
   factor of $\ln 2$.
 * On $k$ outcomes, $0 \leq H(P) \leq \log k$, with the maximum exactly at the
-  uniform distribution (Jensen). Differential entropy of continuous variables
-  is *not* coordinate-invariant and can be negative---one reason deep learning
-  prefers relative quantities.
+  uniform distribution (Jensen). Differential entropy $h$ of continuous
+  variables is *not* coordinate-invariant and can be negative, one reason deep
+  learning prefers relative quantities; under fixed mean and variance it is
+  maximized by the Gaussian (:numref:`subsec_mdl-gaussian-max-entropy`).
 * The KL divergence $D_{\textrm{KL}}(P\|Q) = E_{x\sim P}[\log p(x)/q(x)]$ is
   asymmetric and, by Gibbs' inequality, non-negative with equality iff
   $P = Q$.
 * Cross-entropy decomposes as
-  $\textrm{CE}(P, Q) = H(P) + D_{\textrm{KL}}(P\|Q)$: an irreducible floor
-  plus removable waste. Minimizing it in $Q$ is minimizing KL, and on
-  empirical data it is maximum likelihood
+  $\textrm{CE}(P, Q) = H(P) + D_{\textrm{KL}}(P\|Q)$. Minimizing it in $Q$ is
+  minimizing KL, and on empirical data it is maximum likelihood
   (:numref:`subsec_mdl-nll-crossentropy`).
 * As a scoring rule, the cross-entropy loss (the log score) is *strictly
   proper*: reporting the true conditional probabilities is the unique
   optimum, which is why cross-entropy-trained classifiers can be calibrated
   in principle.
-* The coding view makes this literal: entropy is the optimal expected code
-  length (Kraft inequality + Shannon code), cross-entropy is the cost of
-  coding with the wrong distribution, and KL is the extra bits wasted.
+* In the coding view, entropy is the optimal expected code length (Kraft
+  inequality + Shannon code) and KL is the extra bits per symbol from coding
+  with the wrong distribution.
 * Arithmetic coding removes the symbol code's per-symbol rounding: a whole
   message costs its total surprisal plus at most two bits, so an
   autoregressive model is a lossless compressor and its cross-entropy times
@@ -1409,9 +1477,9 @@ The number your loss prints is a code length<br>**entropy, cross-entropy, and KL
 The scalar your training loop reports is a *code length* in nats (Shannon,
 1948). It splits into three pieces:
 
-- **entropy** $H(P)$ — the irreducible floor,
-- **cross-entropy** $\mathrm{CE}(P,Q)$ — what the model pays,
-- **KL** $D_{\mathrm{KL}}(P\|Q)$ — the waste you train away.
+- **entropy** $H(P)$: the irreducible floor,
+- **cross-entropy** $\mathrm{CE}(P,Q)$: what the model pays,
+- **KL** $D_{\mathrm{KL}}(P\|Q)$: the waste you train away.
 :::
 
 ::: {.col .fig}
@@ -1436,7 +1504,7 @@ The scalar your training loop reports is a *code length* in nats (Shannon,
 ::: {.cols .vc}
 ::: {.col}
 $I(x) = -\log p(x)$ is the *only* measure that is zero for a certain event,
-decreasing in $p$, and additive over independent events — and additivity is
+decreasing in $p$, and additive over independent events; additivity is
 exactly what forces a logarithm.
 
 The fair coin carries $\ln 2 \approx 0.693$ nats; a one-in-a-million event,
@@ -1453,7 +1521,7 @@ $\approx 13.8$.
 [Entropy]{.kicker}
 
 $H(P) = \mathbb{E}_P[-\log p] = -\sum_x p(x)\log p(x)$, with the convention
-$0\log 0 = 0$ — the expected length of the *best possible* code for $P$:
+$0\log 0 = 0$; it is the expected length of the *best possible* code for $P$:
 
 @information-theory-definition
 
@@ -1470,8 +1538,8 @@ uniform distribution.
 
 ::: {.d2l-note .rule}
 *Proof.* $H = \mathbb{E}[\log\tfrac{1}{p}] \le \log\mathbb{E}[\tfrac1p]
-= \log m \le \log k$, where $m$ counts the outcomes with $p_i>0$ — Jensen on
-the *strictly* concave $\log$. Equality forces $1/p$ constant **and** $m=k$:
+= \log m \le \log k$, where $m$ counts the outcomes with $p_i>0$, by Jensen
+on the *strictly* concave $\log$. Equality forces $1/p$ constant **and** $m=k$:
 the uniform law, exactly. $\blacksquare$
 :::
 :::
@@ -1488,21 +1556,21 @@ the uniform law, exactly. $\blacksquare$
 
 [Cross-entropy and KL]{.dtitle}
 
-[the gap you train away — Gibbs' inequality]{.dsub}
+[the gap you train away: Gibbs' inequality]{.dsub}
 :::
 :::
 
 ::: {.slide title="KL divergence: the price of the wrong model"}
 [Relative entropy]{.kicker}
 
-$D_{\mathrm{KL}}(P\|Q) = \mathbb{E}_{x\sim P}\bigl[\log p(x)/q(x)\bigr]$ — the
+$D_{\mathrm{KL}}(P\|Q) = \mathbb{E}_{x\sim P}\bigl[\log p(x)/q(x)\bigr]$: the
 extra nats from coding $P$'s data with $Q$'s code. Asymmetric, and $+\infty$
 where $q(x)=0$ but $p(x)>0$:
 
 @information-theory-definition-2
 :::
 
-::: {.slide title="Gibbs' inequality — the engine"}
+::: {.slide title="Gibbs' inequality"}
 [The one fact]{.kicker}
 
 ::: {.d2l-note .rule}
@@ -1510,7 +1578,7 @@ $D_{\mathrm{KL}}(P\|Q) \ge 0$, with equality **iff** $P=Q$.
 :::
 
 *Proof.* $D_{\mathrm{KL}} = \mathbb{E}_P[-\log\tfrac{q}{p}]
-\ge -\log\mathbb{E}_P[\tfrac{q}{p}] = -\log Q(\mathrm{supp}\,P) \ge 0$ —
+\ge -\log\mathbb{E}_P[\tfrac{q}{p}] = -\log Q(\mathrm{supp}\,P) \ge 0$, by
 Jensen on the *strictly* convex $-\log$; the sum collects at most all of $Q$'s
 mass, never more. Equality needs $q/p$ constant **and**
 $Q(\mathrm{supp}\,P)=1$, i.e. $P=Q$. $\blacksquare$
@@ -1522,7 +1590,7 @@ Every bound in this chapter is a corollary.
 [The decomposition]{.kicker}
 
 $\mathrm{CE}(P,Q) = -\mathbb{E}_P[\log q] = H(P) + D_{\mathrm{KL}}(P\|Q)$, so
-Gibbs gives $\mathrm{CE} \ge H(P)$ — minimizing CE in $Q$ *is* minimizing KL:
+Gibbs gives $\mathrm{CE} \ge H(P)$, and minimizing CE in $Q$ *is* minimizing KL:
 
 @information-theory-kl-categorical
 
@@ -1540,7 +1608,7 @@ matches Monte Carlo:
 
 . . .
 
-Swapping the arguments changes the number — $0.318$ vs $0.807$ nats:
+Swapping the arguments changes the number, $0.318$ vs $0.807$ nats:
 
 @information-theory-example-3
 :::
@@ -1548,7 +1616,7 @@ Swapping the arguments changes the number — $0.318$ vs $0.807$ nats:
 ::: {.slide title="Cross-entropy is the classification loss"}
 [Maximum likelihood]{.kicker}
 
-A one-hot target collapses CE to $-\log\hat y_{\text{true}}$ — the model's
+A one-hot target collapses CE to $-\log\hat y_{\text{true}}$, the model's
 surprise at the correct class, averaged over the batch:
 
 @information-theory-formal-definition-2
@@ -1556,7 +1624,7 @@ surprise at the correct class, averaged over the batch:
 This is exactly the negative log-likelihood.
 :::
 
-::: {.slide title="The same number every framework prints"}
+::: {.slide title="The same number the built-in loss prints"}
 [One principle]{.kicker}
 
 Hand-rolled cross-entropy equals the built-in loss to the digit:
@@ -1574,7 +1642,7 @@ distribution onto the model family. One loss, three readings.
 
 A scoring rule $S(\mathbf q, y)$ is **strictly proper** if reporting the truth
 $\mathbf p$ is the *unique* minimizer of the expected penalty. The log score
-$S = -\log q_y$ qualifies — its expected penalty is exactly
+$S = -\log q_y$ qualifies: its expected penalty is exactly
 
 $$\mathrm{CE}(\mathbf p,\mathbf q) = H(\mathbf p) + D_{\mathrm{KL}}(\mathbf p\|\mathbf q),$$
 
@@ -1585,8 +1653,8 @@ which Gibbs minimizes uniquely at $\mathbf q = \mathbf p$.
 ::: {.d2l-note}
 Strict propriety is why cross-entropy *incentivizes calibration*: hedging or
 overconfidence leaves expected loss on the table. The Brier score
-$\sum_j (q_j - \mathbf 1[j{=}y])^2$ is also strictly proper — same optimum,
-bounded penalty on confident errors.
+$\sum_j (q_j - \mathbf 1[j{=}y])^2$ is also strictly proper, with the same
+optimum and a bounded penalty on confident errors.
 :::
 :::
 
@@ -1596,7 +1664,7 @@ bounded penalty on confident errors.
 
 [The coding view]{.dtitle}
 
-[Kraft, Shannon, arithmetic coding — why KL is *extra bits*]{.dsub}
+[Kraft, Shannon, arithmetic coding: why KL is *extra bits*]{.dsub}
 :::
 :::
 
@@ -1606,7 +1674,7 @@ bounded penalty on confident errors.
 ::: {.cols .vc}
 ::: {.col}
 A prefix-free binary code with lengths $\ell_i$ exists **iff**
-$\sum_i 2^{-\ell_i} \le 1$ — each codeword claims a dyadic interval, and
+$\sum_i 2^{-\ell_i} \le 1$: each codeword claims a dyadic interval, and
 prefix-free means the intervals are disjoint.
 
 Shannon picks $\ell_i = \lceil\log_2 \tfrac{1}{p_i}\rceil$.
@@ -1627,8 +1695,8 @@ code $Q$ overspends by exactly $D_{\mathrm{KL}}$:
 @!information-theory-coding
 
 ::: {.d2l-note .rule}
-$H$ is the floor, $\mathrm{CE}$ is the bill, and $D_{\mathrm{KL}}$ is — quite
-literally — the wasted bits.
+$H$ is the floor, $\mathrm{CE}$ is the bill, and $D_{\mathrm{KL}}$ is the
+wasted bits.
 :::
 :::
 
@@ -1636,7 +1704,7 @@ literally — the wasted bits.
 [Beyond symbol codes]{.kicker}
 
 Shannon's $\lceil\log_2(1/p)\rceil$ rounds up to a whole bit on *every*
-symbol — a $p=0.9$ symbol carries $0.15$ bits yet costs $1$. Arithmetic coding
+symbol: a $p=0.9$ symbol carries $0.15$ bits yet costs $1$. Arithmetic coding
 runs the Kraft picture in reverse: narrow one interval per message, to width
 $w = \prod_i q(x_i \mid x_{<i})$, and name it in
 $\lceil\log_2(1/w)\rceil + 1$ bits:
@@ -1652,26 +1720,26 @@ code, $13$.
 
 Nothing required i.i.d.: *any* next-symbol model $q(\cdot\mid x_{<i})$ drives
 the coder. A document's cross-entropy $\times$ its length **is** its compressed
-size, to within two bits — an LLM plus an arithmetic coder out-compresses gzip
+size, to within two bits; an LLM plus an arithmetic coder out-compresses gzip
 (Delétang et al., 2023).
 
 . . .
 
 The floor is the source's **entropy rate**
-$H_{\mathrm{rate}} = \lim_n H(X_n \mid X_{<n})$ — about $1$ bit/character for
+$H_{\mathrm{rate}} = \lim_n H(X_n \mid X_{<n})$: about $1$ bit/character for
 English (Shannon, 1951), far below the $4.75$ of random letters.
 
 ::: {.d2l-note}
 The scaling laws, read in this lens: held-out CE falls as a *power law* in
-compute — the approach to the entropy-rate floor is not just guaranteed by
-Gibbs, it is empirically **predictable**.
+compute, so the approach to the entropy-rate floor is empirically
+**predictable**.
 :::
 :::
 
 ::: {.slide title="Perplexity: an effective branching factor"}
 [Language models]{.kicker}
 
-$\mathrm{PPL} = \exp(\mathrm{CE})$ — the inverse geometric-mean probability, the
+$\mathrm{PPL} = \exp(\mathrm{CE})$: the inverse geometric-mean probability, the
 number of equally-likely choices the model is as confused among:
 
 @information-theory-perplexity
@@ -1729,12 +1797,12 @@ Pick the target distribution; Gibbs picks the optimum and guarantees the floor.
 ::: {.cols}
 ::: {.col}
 - Self-information $-\log p$; entropy $H$ averages it and tops out at $\log k$ (uniform).
-- KL $\ge 0$ (Gibbs, one line of Jensen) underwrites everything.
-- $\mathrm{CE} = H + \mathrm{KL}$: floor plus waste; minimizing it is maximum likelihood.
+- KL $\ge 0$ (Gibbs, one line of Jensen); everything else follows from it.
+- $\mathrm{CE} = H + \mathrm{KL}$; minimizing it is maximum likelihood.
 :::
 
 ::: {.col}
-- Kraft + Shannon make it literal: KL is the extra bits of a wrong code.
+- Kraft + Shannon: KL is the extra bits of a wrong code.
 - Arithmetic coding sits *on* the surprisal floor: prediction is compression.
 - Perplexity $= \exp(\mathrm{CE})$, a base-free branching factor.
 - Label smoothing, distillation, proper scoring: corollaries of Gibbs.

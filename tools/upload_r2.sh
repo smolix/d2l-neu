@@ -142,6 +142,7 @@ upload_one() {
         *.css)  ct="text/css; charset=utf-8" ;;
         *.js)   ct="application/javascript; charset=utf-8" ;;
         *.json) ct="application/json; charset=utf-8" ;;
+        *.zip)  ct="application/zip" ;;   # per-framework notebook bundles
         *)      ct="" ;;
     esac
     local args=(--endpoint-url "$R2_ENDPOINT" --region auto)
@@ -212,13 +213,20 @@ if [[ "$MODE" == "full" ]]; then
         --content-type "application/json; charset=utf-8" \
         --exclude "*" --include "*.json" --exclude "*/.quarto/*" \
         $DRY_RUN
-    # Pass 5: rest
+    # Pass 5: notebook bundles (per-framework .zip under notebooks/)
+    aws s3 sync "$BOOK_DIR" "s3://${BUCKET}/" \
+        "${S3_ARGS[@]}" \
+        --content-type "application/zip" \
+        --exclude "*" --include "*.zip" --exclude "*/.quarto/*" \
+        $DRY_RUN
+    # Pass 6: rest
     DEL_FLAG=""
     $DELETE && DEL_FLAG="--delete"
     aws s3 sync "$BOOK_DIR" "s3://${BUCKET}/" \
         "${S3_ARGS[@]}" \
         --exclude "*.html" --exclude "*.css" \
-        --exclude "*.js" --exclude "*.json" --exclude "*/.quarto/*" \
+        --exclude "*.js" --exclude "*.json" --exclude "*.zip" \
+        --exclude "*/.quarto/*" \
         $DRY_RUN $DEL_FLAG
 
     if $DELETE; then

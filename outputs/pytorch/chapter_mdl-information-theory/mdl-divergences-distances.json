@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37614,
-          "sha256": "sha256:09680a05f0fa25bf74e14eea0ee6a33611bd85cd58e169a94b1eabb221ce0db0"
+          "sha256": "sha256:9825b78df38aeb66be6bcee6c737c4be69ed6f91d8f7cb84d63cd04aeb0765ef"
         }
       ]
     },
@@ -60,7 +60,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max TV / sqrt(KL/2) over 10,000 random pairs: 0.9926\ncoins 1/2 vs 1/2+0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2+0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2+0.001: TV / sqrt(KL/2) = 0.999999\n"
+          "text": "max TV / sqrt(KL/2) over 10,000 random pairs: 0.9926"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\ncoins 1/2 vs 1/2+0.1: TV / sqrt(KL/2) = 0.989881\ncoins 1/2 vs 1/2+0.01: TV / sqrt(KL/2) = 0.999900\ncoins 1/2 vs 1/2+0.001: TV / sqrt(KL/2) = 0.999999\n"
         }
       ]
     },
@@ -99,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
-          "bytes": 35917,
-          "sha256": "sha256:b25774cf7d2a6589e404f2104d681086d62fc9387b4191a2a8b4e870694f41d3"
+          "bytes": 35725,
+          "sha256": "sha256:750f2ed980a7b82c16269d8129e1fe5576eff21246e3b6bce6503b985259bf4b"
         }
       ]
     },
@@ -123,6 +128,17 @@
           "type": "stream",
           "name": "stdout",
           "text": "E[ f'(Z) - Z f(Z) ] for f(x) = x^3: +0.0020\nE[ f'(Z) - Z f(Z) ] for f(x) = sin x: +0.0005\n"
+        }
+      ]
+    },
+    "divergences-distances-ksd": {
+      "code_fingerprint": "sha256:beaf150835ef018c4dc8cf7af5b61581c151690a3aaed0ae893229eb2bac1d05",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KSD^2 vs the true model  N(0,1): +0.00019\nKSD^2 vs the wrong model N(1,1): +0.64425\n"
         }
       ]
     }

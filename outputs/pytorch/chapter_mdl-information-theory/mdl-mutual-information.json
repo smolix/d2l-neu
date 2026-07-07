@@ -9,12 +9,12 @@
   },
   "cells": {
     "mutual-information-imports": {
-      "code_fingerprint": "sha256:c89b0d283bc9582384829e4a60dea9ab562d35824a2d8d0420e2aa9cf5a3bb24",
+      "code_fingerprint": "sha256:12c9cf1c4a676facc77e7ab8b03f15d0329cbea8ec6e8c755a97a1284de39104",
       "kind": "text",
       "outputs": []
     },
     "mutual-information-joint-conditional": {
-      "code_fingerprint": "sha256:e58f4403b25b6482076ef6bda6b88eaed7e3c33918945dd484f9155e016d1a05",
+      "code_fingerprint": "sha256:584dfb1cce8938d5da58280b5f24dc16f13da6d6c15e0822e226ba616517c6cf",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "mutual-information-discrete-joint": {
-      "code_fingerprint": "sha256:d39aa8312e083784665e9758f46a1e7a9f910a6e90e8f4298f7d321eb2df4038",
+      "code_fingerprint": "sha256:1d46232f23069307f72106e76edb6966220e25f85d8bd8a9c91a9e1d6123e5d8",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "mutual-information-gaussian-binned": {
-      "code_fingerprint": "sha256:0d90f9df8940e57652de32918bd7cd6d7d5022a495926104e93fe121486b9e3f",
+      "code_fingerprint": "sha256:fc7fb10df4a706cedff5499a7b689f7aae4ff51236815a4f21622b478700e860",
       "kind": "mixed",
       "outputs": [
         {
@@ -49,12 +49,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:a8dde75790e6e332855678d949c3966f227188e78fd90f2eea79b7d0d3f77340"
+          "sha256": "sha256:489f8ad7e74516d7a0dfb399821b2501be38d77249cbb65535be918797c1694b"
         }
       ]
     },
     "mutual-information-pmi-corpus": {
-      "code_fingerprint": "sha256:8c941f311bb89349f9d1c68e8fa2076de6ea3b96d3f1aaa5c584286c6f7d4aa3",
+      "code_fingerprint": "sha256:7e97860907eef4f6612d150de3a6e20600f15a9ee94878bc833450b4535e159d",
       "kind": "text",
       "outputs": [
         {
@@ -65,18 +65,23 @@
       ]
     },
     "mutual-information-nonlinear-correlation": {
-      "code_fingerprint": "sha256:29234c6c3911407bbd3e9b0d4c73874a23298139cf2a7d13dd011e3690a6b4df",
+      "code_fingerprint": "sha256:6e03333438ed0e6f247f72414706a66a3df956e315be6808108ff5879fb13da2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sample correlation rho = -0.0028\nbinned MI estimate     = 0.9814 nats\nafter x -> 2x + 3      = 0.9814 nats\n"
+          "text": "sample correlation rho = -0.0028\nbinned MI estimate     = 0.9814 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "after x -> 2x + 3      = 0.9814 nats\n"
         }
       ]
     },
     "mutual-information-dpi-check": {
-      "code_fingerprint": "sha256:e4093a60f476976f5b4449b6076934fce4d15d215170f47b6403e20147d4573d",
+      "code_fingerprint": "sha256:d3aac9527ee0f72c84f86aab0a6d33d7fcdb7b1559a798c5f2f7b2076c64f33c",
       "kind": "text",
       "outputs": [
         {
@@ -87,18 +92,13 @@
       ]
     },
     "mdl-mutual-information-the-curse-of-estimation": {
-      "code_fingerprint": "sha256:afd0480639f8b1014dd6adfc5015511449b4afd03772b9644304550e3d986ed2",
+      "code_fingerprint": "sha256:896510d74b2187723fc79f93614caf588693e0fda2439093feb4dc94b64363d9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 1, rho = 0.5: KSG = 0.121, closed form = 0.144 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "d = 1, rho = 0.7: KSG = 0.335, closed form = 0.337 nats\n"
+          "text": "d = 1, rho = 0.5: KSG = 0.121, closed form = 0.144 nats\nd = 1, rho = 0.7: KSG = 0.335, closed form = 0.337 nats\n"
         },
         {
           "type": "stream",
@@ -123,7 +123,7 @@
       ]
     },
     "mutual-information-log-n-ceiling": {
-      "code_fingerprint": "sha256:b7b6c3d95a75d92a1d9794f5996c8c1d051d58f7f495f3ba84c2585176e1e3a0",
+      "code_fingerprint": "sha256:3ba2a12b9abcdb89559c8694f641fbbb35068264808e21b028ee742026ca3b3d",
       "kind": "asset",
       "outputs": [
         {
@@ -131,44 +131,39 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:fa22ea9dbfed7f350ffb587d7d456e9987d6585e42c1e909ef4894643222ec63"
+          "sha256": "sha256:adbb237837972efecefce993f099fa759f55b6a892619d922856c484ddf59817"
         }
       ]
     },
     "mutual-information-perfect-critic-bounds": {
-      "code_fingerprint": "sha256:eac8bfc6bbc363c3699392d3969f514acd4b100d4aa54624e731bf0f38cad1a9",
+      "code_fingerprint": "sha256:da73e06243a247c91a7022e27f55755a4fb493033416c278f18384419fedecd5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n"
+          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
+          "text": "  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
         }
       ]
     },
     "mutual-information-infonce-train": {
-      "code_fingerprint": "sha256:76b2cf42b850fae52386306882675a00e0ce31a1b94326a678f9a6b32e58465e",
+      "code_fingerprint": "sha256:4e0ffb8f03e4f83ed67567c9ea409565dad9188e3c53afc6864ee9b6be01440c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =    2: ln N = 0.693, InfoNCE bound = 0.570 nats\nN =    8: ln N = 2.079, InfoNCE bound = 1.407 nats\nN =   32: ln N = 3.466, InfoNCE bound = 1.762 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "N =  128: ln N = 4.852, InfoNCE bound = 1.888 nats\ntrue I(X;Y) = 1.959 nats\n"
+          "text": "N =    2: ln N = 0.693, InfoNCE bound = 0.570 nats\nN =    8: ln N = 2.079, InfoNCE bound = 1.407 nats\nN =   32: ln N = 3.466, InfoNCE bound = 1.762 nats\nN =  128: ln N = 4.852, InfoNCE bound = 1.888 nats\ntrue I(X;Y) = 1.959 nats\n"
         }
       ]
     },
     "mutual-information-ib-plane": {
-      "code_fingerprint": "sha256:54de7ca00d4cb128bd761cb243b97219d9bf0fbeb3b84cc70fb4a4f854efbc95",
+      "code_fingerprint": "sha256:b46a69455ecc5735f4e16f5dfaaf1d9ba6c0b3561fe835dc2b5d512372c4008d",
       "kind": "mixed",
       "outputs": [
         {
@@ -181,12 +176,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:9fb5227a750343d971693f2a6878b1800b99a651b331bf8bb16fd9a19e58b886"
+          "sha256": "sha256:682a22e70cab30818f196133847719a938d8bcd0778e440a3e79cff4231b21eb"
         }
       ]
     },
     "mutual-information-fano": {
-      "code_fingerprint": "sha256:ea403118948e15ea18311f7c0a1bb16ddf34cbed4b7784923ab4b3904c89ffff",
+      "code_fingerprint": "sha256:446b8a8f7b700d6986d7cb2f38e0722d35402481de5343ef4f4f76d41dcfb738",
       "kind": "text",
       "outputs": [
         {

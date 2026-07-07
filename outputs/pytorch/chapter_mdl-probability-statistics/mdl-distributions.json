@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:b47f67fb7b5fabafca70e1208403db0cd15616408e001f4f459b03dd8f9cd3a9"
+          "sha256": "sha256:35ad03ae6614588443e08d38aa5178be593a5157ccef5f83b446319b425f4fbf"
         }
       ]
     },
@@ -124,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:faad99a13036a6157e2194ad8ab7af7a2dd97395e3926257e26f76dc4a20af53"
+          "sha256": "sha256:bc6c7fdcfafe16af378b2025316a43105991ffbebe29c59625533440ff6dd484"
         }
       ]
     },
@@ -161,12 +161,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "empirical covariance:\n [[2.   1.  ]\n [1.   2.01]]\neigenvalues (≈ 1, 3): [1.01 3.  ]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Cholesky-recipe covariance:\n [[2.04 1.04]\n [1.04 2.05]]\n"
+          "text": "empirical covariance:\n [[2.   1.  ]\n [1.   2.01]]\neigenvalues (≈ 1, 3): [1.01 3.  ]\nCholesky-recipe covariance:\n [[2.04 1.04]\n [1.04 2.05]]\n"
         }
       ]
     },

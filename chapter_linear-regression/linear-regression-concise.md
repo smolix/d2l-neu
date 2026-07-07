@@ -56,8 +56,6 @@ Each component from :numref:`sec_linear_scratch` has a direct counterpart here.
 The hand-rolled weight vector $\mathbf{w}$ and bias $b$ are replaced by a single
 *layer*; our manual squared-error computation is replaced by a built-in *loss*;
 and our explicit parameter-update loop is replaced by an *optimizer* object.
-The next three subsections walk through these substitutions one by one, and the
-training loop afterwards stays exactly as it was.
 The situation is similar to coding up your own blog from scratch.
 Doing it once or twice is rewarding and instructive,
 but you would be a lousy web developer
@@ -79,7 +77,7 @@ by means of a matrix--vector multiplication.
 In Gluon, the fully connected layer is defined in the `Dense` class.
 Since we only want to generate a single scalar output,
 we set that number to 1.
-It is worth noting that, for convenience,
+For convenience,
 Gluon does not require us to specify
 the input shape for each layer.
 Hence we do not need to tell Gluon
@@ -109,7 +107,7 @@ whenever we can.
 In Keras, the fully connected layer is defined in the `Dense` class.
 Since we only want to generate a single scalar output,
 we set that number to 1.
-It is worth noting that, for convenience,
+For convenience,
 Keras does not require us to specify
 the input shape for each layer.
 We do not need to tell Keras
@@ -191,7 +189,7 @@ For speed and convenience, we forgo implementing our own
 and choose the built-in `loss.L2Loss` instead.
 Because the `loss` that it returns is
 the squared error for each example,
-we use `mean`to average the loss across over the minibatch.
+we use `mean` to average the loss over the minibatch.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -236,11 +234,6 @@ def loss(self, params, X, y, state):
     y_hat = state.apply_fn({'params': params}, *X)
     return d2l.reduce_mean(jnp.square(y_hat - y))
 ```
-
-A small stylistic note: we construct the loss object inside `loss` on every
-call. That is a harmless shortcut here---these objects are stateless and cheap
-to build---but constructing it once in `__init__` is the cleaner pattern for
-losses that carry configuration or state.
 
 ## Defining the Optimization Algorithm
 
@@ -343,9 +336,7 @@ and the actual parameters
 that generated our dataset.
 This is where the concise version differs conceptually from the scratch one:
 the parameters no longer hang off our class as `self.w` and `self.b` but live
-*inside* the layer object, so `get_w_b` has to reach through `net` to find
-them (in JAX they live in the training `state` rather than in the model at
-all, which is why the JAX `get_w_b` takes `state` as an argument).
+*inside* the layer object, so `get_w_b` reaches through `net` to find them.
 As in our implementation from scratch,
 note that our estimated parameters
 are close to their true counterparts.
@@ -532,7 +523,7 @@ tested. We swap each one for its built-in counterpart:
 ::: {.col}
 What we hand-rolled as `w`, `b`, and a matrix--vector product, every
 framework ships as a **fully connected layer**: each input wired to the
-one output --- exactly the picture of linear regression.
+one output: exactly the picture of linear regression.
 
 ::: {.d2l-note}
 The layer owns its parameters. We no longer allocate them, initialize
@@ -698,8 +689,8 @@ Same synthetic data, same ten epochs, same `fit` call as §3.4:
 
 @-linear-regression-concise-training-1
 
-Nothing about the *training run* can tell the two implementations apart
---- only the amount of code we wrote changed.
+Nothing about the *training run* can tell the two implementations apart:
+only the amount of code we wrote changed.
 :::
 
 ::: {.col .fig}
@@ -708,7 +699,7 @@ Nothing about the *training run* can tell the two implementations apart
 :::
 :::
 
-::: {.slide title="The parameters moved house" except="jax"}
+::: {.slide title="Where the parameters live now" except="jax"}
 [Training · payoff]{.kicker}
 
 They no longer hang off our class as `self.w`, `self.b`; they live
@@ -727,7 +718,7 @@ same thing our hand-rolled ones did.
 :::
 :::
 
-::: {.slide title="The parameters moved house" only="jax" layout="tight"}
+::: {.slide title="Where the parameters live now" only="jax" layout="tight"}
 [Training · payoff]{.kicker}
 
 In JAX they live in the training **state**, not the model at all, so

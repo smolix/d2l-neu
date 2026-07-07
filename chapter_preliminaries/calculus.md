@@ -97,10 +97,9 @@ to the value of an expression
 as a specified variable 
 approaches a particular value.
 This limit tells us what 
-the ratio between a perturbation $h$
-and the change in the function value 
-$f(x + h) - f(x)$ converges to 
-as we shrink its size to zero.
+the ratio between the change in the function value 
+$f(x + h) - f(x)$ and the perturbation $h$ 
+converges to as we shrink $h$ to zero.
 Geometrically, the difference quotient is the slope of the *secant* line
 through the points $(x, f(x))$ and $(x+h, f(x+h))$;
 as $h \rightarrow 0$, the secant pivots into the *tangent* line at $x$,
@@ -116,11 +115,10 @@ on a set, e.g., the interval $[a,b]$,
 we say that $f$ is differentiable on this set.
 Not all functions are differentiable,
 including many that we wish to optimize,
-such as accuracy and the area under the
-receiver operating characteristic (AUC).
-However, because computing the derivative of the loss 
-is a crucial step in nearly all 
-algorithms for training deep neural networks,
+such as classification accuracy.
+However, because nearly every algorithm 
+for training deep neural networks 
+must compute the derivative of the loss,
 we often optimize a differentiable *surrogate* instead.
 
 
@@ -170,7 +168,7 @@ It is tempting to conclude that smaller $h$ is always better.
 Not so: in floating-point arithmetic,
 $f(x+h)$ and $f(x)$ become *nearly equal* numbers as $h$ shrinks,
 so their difference loses most of its significant digits
-to *cancellation*---and dividing by the tiny $h$
+to *cancellation*, and dividing by the tiny $h$
 amplifies whatever rounding noise remains.
 Continuing the sweep to much smaller $h$
 shows the approximation degrading and then failing outright:
@@ -188,7 +186,7 @@ The numerical limit is thus caught between two error sources:
 truncation error (from $h$ being too large)
 and cancellation (from $h$ being too small).
 This is one important reason why the automatic differentiation
-introduced in the next section computes derivatives
+introduced in :numref:`sec_autograd` computes derivatives
 *analytically*, by applying differentiation rules,
 rather than by finite differences.
 
@@ -204,8 +202,7 @@ $$\begin{aligned} \frac{d}{dx} C & = 0 && \textrm{for any constant $C$} \\ \frac
 
 Functions composed from differentiable functions 
 are often themselves differentiable.
-The following rules come in handy 
-for working with compositions 
+The following rules cover compositions 
 of any differentiable functions 
 $f$ and $g$, and constant $C$.
 
@@ -244,7 +241,7 @@ d2l.plot(x, [f(x), 2 * x - 3], 'x', 'f(x)', legend=['f(x)', 'Tangent line (x=1)'
 Thus far, we have been differentiating
 functions of just one variable.
 In deep learning, we also need to work
-with functions of *many* variables---typically functions that take
+with functions of *many* variables, typically functions that take
 the vectors and matrices from :numref:`sec_linear-algebra`
 as their inputs.
 We briefly introduce notions of the derivative
@@ -291,14 +288,16 @@ by $\nabla f(\mathbf{x})$.
 What if we move away from $\mathbf{x}$
 in an arbitrary unit direction $\mathbf{u}$,
 rather than along a coordinate axis?
-The rate of change of $f$ along $\mathbf{u}$,
-called the *directional derivative*,
-is the dot product $\nabla f(\mathbf{x})^\top \mathbf{u}$.
+The rate of change of $f$ along $\mathbf{u}$
+is called the *directional derivative*;
+for differentiable $f$ it equals the dot product
+$\nabla f(\mathbf{x})^\top \mathbf{u}$,
+an identity shown in :numref:`sec_mdl-multivariable_calculus`.
 By the cosine formula for dot products
 from :numref:`sec_linear-algebra`,
 this is largest when $\mathbf{u}$ aligns with the gradient.
 
-Hence the gradient has a crucial geometric interpretation:
+Hence the gradient has a geometric interpretation:
 it points in the direction of *steepest ascent* of $f$,
 i.e., the direction in which the function grows fastest
 (a claim proved via the Cauchy--Schwarz inequality
@@ -310,14 +309,15 @@ This is the entire idea behind *gradient descent*:
 every optimizer in this book repeatedly nudges the parameters
 a little way along $-\nabla f$ in order to reduce the loss.
 :numref:`fig_calc_gradient_field` shows the picture to keep in mind:
-gradients are perpendicular to the level sets of $f$
+gradients are perpendicular to the *level sets* of $f$
+(the curves along which $f$ is constant)
 and point uphill, so $-\nabla f$ points downhill.
 
 ![Level sets of a function with its gradient field: $\nabla f$ is perpendicular to the contours and points uphill, so $-\nabla f$ is the direction of steepest descent.](../img/calculus-gradient-field.svg)
 :label:`fig_calc_gradient_field`
 
-The following rules come in handy 
-for differentiating multivariate functions.
+The following rules for differentiating 
+multivariate functions recur throughout the book.
 The first involves a *vector-valued* function
 $\mathbf{u} = \mathbf{A}\mathbf{x}$:
 here we collect the partial derivatives
@@ -327,13 +327,13 @@ $\nabla_{\mathbf{x}} \mathbf{A} \mathbf{x} = \mathbf{A}^\top$
 (the transpose of the *Jacobian*,
 developed in :numref:`sec_mdl-matrix-calculus-autodiff`).
 
-* For all $\mathbf{A} \in \mathbb{R}^{m \times n}$ we have $\nabla_{\mathbf{x}} \mathbf{A} \mathbf{x} = \mathbf{A}^\top$ and $\nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{A}  = \mathbf{A}$.
+* For $\mathbf{A} \in \mathbb{R}^{m \times n}$ we have $\nabla_{\mathbf{x}} \mathbf{A} \mathbf{x} = \mathbf{A}^\top$; for $\mathbf{A} \in \mathbb{R}^{n \times m}$ we have $\nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{A}  = \mathbf{A}$.
 * For square matrices $\mathbf{A} \in \mathbb{R}^{n \times n}$ we have that $\nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{A} \mathbf{x}  = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}$ and in particular
 $\nabla_{\mathbf{x}} \|\mathbf{x} \|^2 = \nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{x} = 2\mathbf{x}$.
 
 Similarly, for any matrix $\mathbf{X}$, 
 we have $\nabla_{\mathbf{X}} \|\mathbf{X} \|_\textrm{F}^2 = 2\mathbf{X}$. 
-These identities (and many more) are derived, not merely stated,
+These identities (and many more) are derived
 in :numref:`sec_mdl-matrix-calculus-autodiff`.
 
 
@@ -377,9 +377,8 @@ $(\nabla_{\mathbf{x}} y)_i = \sum_{j} A_{ij} (\nabla_{\mathbf{u}} y)_j$,
 which is exactly the matrix--vector product on the right.
 Thus, evaluating the gradient requires 
 computing a matrix--vector product. 
-This is one of the key reasons why linear algebra 
-is such an integral building block 
-in building deep learning systems. 
+This is one reason why linear algebra 
+is a prerequisite for deep learning. 
 
 ### Plotting Utilities for This Book
 
@@ -393,7 +392,7 @@ so that later sections can invoke it
 `use_svg_display` requests crisp SVG output,
 `set_figsize` sets the figure size,
 and `set_axes` configures labels, ranges, and scales.
-You do not need to study these---skim and move on.
+You do not need to study these; skim and move on.
 
 ```{.python .input #calculus-visualization-utilities-1}
 def use_svg_display():  #@save
@@ -453,8 +452,7 @@ def plot(X, Y=None, xlabel=None, ylabel=None, legend=[], xlim=None,
 
 ## Discussion
 
-While we have just scratched the surface of a deep topic,
-a number of concepts already come into focus.
+Three ideas from this section recur throughout the book.
 First, and most important for what follows:
 from the viewpoint of optimization,
 the gradient tells us how to move the parameters of a model
@@ -462,7 +460,7 @@ in order to lower the loss.
 Because $-\nabla f$ points in the direction of steepest *descent*,
 each step of the optimization algorithms used throughout this book
 amounts to evaluating the gradient
-and nudging the parameters a little way along it.
+and taking a short step along $-\nabla f$.
 Second, the composition rules for differentiation
 can be applied routinely, enabling
 us to compute gradients *automatically*;
@@ -471,18 +469,15 @@ we can focus our cognitive powers elsewhere.
 Third, computing the derivatives of vector-valued functions 
 requires us to multiply matrices as we trace 
 the dependency graph of variables from output to input. 
-This graph is traversed in a *forward* direction 
-when we evaluate a function 
-and in a *backward* direction
-when we compute gradients. 
-Later chapters will formally introduce backpropagation,
-a computational procedure for applying the chain rule.
+Applying the chain rule backward through that graph
+is *backpropagation*, automated in :numref:`sec_autograd`
+and developed in :numref:`sec_backprop`.
 
 This section deliberately previews only the calculus we need
 to train models.
-For a thorough development---single- and multivariable calculus,
+For a thorough development (single- and multivariable calculus,
 the integral, and the matrix calculus behind automatic
-differentiation---see :numref:`chap_mdl-calculus`;
+differentiation), see :numref:`chap_mdl-calculus`;
 :citet:`Deisenroth.Faisal.Ong.2020` give a complementary treatment
 aimed at machine learning.
 
@@ -553,9 +548,8 @@ question an optimizer ever asks:
 - The **derivative**: how fast the loss moves when one parameter is
   nudged.
 - The **gradient** $\nabla_\theta L$: one slope per parameter, stacked.
-- Optimizers step along $-\nabla_\theta L$ — downhill.
-- The **chain rule** differentiates nested functions — the engine of
-  backprop.
+- Optimizers step along $-\nabla_\theta L$: downhill.
+- The **chain rule** differentiates nested functions.
 :::
 
 ::: {.col .fig}
@@ -584,7 +578,7 @@ the polygon splits into $n$ triangles whose areas sum to
 
 $$n \cdot \tfrac{1}{2}\bigl(\tfrac{2\pi r}{n}\bigr)\, r = \pi r^2.$$
 
-Taking $n \to \infty$ is a **limit** — the idea at the root of all
+Taking $n \to \infty$ is a **limit**, the idea at the root of all
 calculus.
 :::
 
@@ -605,7 +599,7 @@ quotient:
 $$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}.$$
 
 $\tfrac{f(x+h)-f(x)}{h}$ is the slope of the **secant** through two
-points; as $h \to 0$ it pivots into the **tangent** — whose slope *is*
+points; as $h \to 0$ it pivots into the **tangent**, whose slope *is*
 $f'(x)$.
 :::
 
@@ -619,13 +613,13 @@ $f'(x)$.
 [Derivatives]{.kicker}
 
 Let $u = f(x) = 3x^2 - 4x$. The rules (two slides ahead) give
-$f'(x) = 6x - 4$, so $f'(1) = 2$ — the number the next two experiments
+$f'(x) = 6x - 4$, so $f'(1) = 2$, the number the next two experiments
 must reproduce:
 
 @-calculus-derivatives-and-differentiation-1
 :::
 
-::: {.slide title="The quotient marches to 2 — one digit per decade"}
+::: {.slide title="The quotient approaches 2, one digit per decade"}
 [Derivatives]{.kicker}
 
 At $x = 1$, shrink $h$ tenfold per row and watch the difference quotient
@@ -633,20 +627,20 @@ close in on $f'(1) = 2$:
 
 @calculus-derivatives-and-differentiation-2
 
-Each decade of $h$ buys one more correct digit: $2.3$, $2.03$,
-$2.003$, …
+Successive rows give $2.3$, $2.03$, $2.003$, …
 :::
 
-::: {.slide title="Push h too far and the arithmetic collapses"}
+::: {.slide title="Push h too far and the approximation fails"}
 [Derivatives · a warning]{.kicker}
 
 Smaller is *not* always better: $f(1+h)$ and $f(1)$ become nearly equal
-floats, and their difference dies by **cancellation**:
+floats, and their difference loses its leading digits to
+**cancellation**:
 
 @!calculus-derivatives-and-differentiation-3
 
 Error creeps back in at $h=10^{-12}$; at $10^{-16}$, when $1+h$ rounds
-to exactly $1$, the quotient collapses to $0$ — a key reason
+to exactly $1$, the quotient collapses to $0$. This is a key reason
 **autograd** (§2.5) differentiates *analytically*.
 :::
 
@@ -660,8 +654,8 @@ geometric: the tangent touches at $(1, -1)$ and its slope **is**
 $f'(1) = 2$.
 
 ::: {.d2l-note}
-The d2l package wraps a few matplotlib helpers — `set_figsize`, `plot`,
-`set_axes` — reused throughout the book.
+The d2l package wraps a few matplotlib helpers (`set_figsize`, `plot`,
+`set_axes`) reused throughout the book.
 :::
 :::
 
@@ -698,7 +692,7 @@ Quotient: $\left(\dfrac{f}{g}\right)' = \dfrac{g f' - f g'}{g^2}$
 :::
 :::
 
-Apply them to $3x^2 - 4x$: the derivative is $6x - 4$ — exactly what the
+Apply them to $3x^2 - 4x$: the derivative is $6x - 4$, exactly what the
 limit experiment measured.
 :::
 
@@ -733,7 +727,7 @@ It is the slope of a **1-D slice** through the surface.
 :::
 :::
 
-::: {.slide title="The gradient points uphill — fastest"}
+::: {.slide title="The gradient points in the direction of steepest ascent"}
 [Gradients]{.kicker}
 
 ::: {.cols .vc}
@@ -742,12 +736,12 @@ Stack all $n$ partials into the **gradient**
 $\nabla f = [\partial_{x_1} f, \ldots, \partial_{x_n} f]^\top$.
 
 Along a unit direction $\mathbf{u}$, the rate of change is the dot
-product $\nabla f^\top \mathbf{u}$ — by §2.3's cosine formula, largest
-when $\mathbf{u}$ aligns with $\nabla f$. So the gradient is the
+product $\nabla f^\top \mathbf{u}$; by §2.3's cosine formula this is
+largest when $\mathbf{u}$ aligns with $\nabla f$. So the gradient is the
 direction of **steepest ascent** (proof via Cauchy–Schwarz, §23.2).
 
 ::: {.d2l-note}
-$-\nabla f$ points downhill — the direction every optimizer in this
+$-\nabla f$ points downhill, the direction every optimizer in this
 book follows.
 :::
 :::
@@ -761,7 +755,7 @@ book follows.
 ::: {.slide title="Gradient identities: calculus done by linear algebra"}
 [Gradients]{.kicker}
 
-A few vector rules recur constantly — each is a §2.3 operation
+A few vector rules recur constantly; each is a §2.3 operation
 ($\nabla_{\mathbf{x}}\,\mathbf{A}\mathbf{x} = \mathbf{A}^\top$ is the
 transpose of the Jacobian; derivations in §23.3):
 
@@ -792,7 +786,7 @@ $\nabla_{\mathbf{X}}\, \|\mathbf{X}\|_\textrm{F}^2 = 2\mathbf{X}$
 
 [The chain rule]{.dtitle}
 
-[differentiating compositions — and meeting backprop]{.dsub}
+[differentiating compositions, and a first look at backprop]{.dsub}
 :::
 :::
 
@@ -828,12 +822,12 @@ $$\nabla_{\mathbf{x}} y = \mathbf{A}\, \nabla_{\mathbf{u}} y,
 \text{(the transpose of the Jacobian, §23.3).}$$
 
 ::: {.d2l-note}
-A network's gradient is a **chain of such products** — traversed
+A network's gradient is a **chain of such products**: traversed
 forward it evaluates the function, traversed backward it computes every
 gradient. That backward pass is **backpropagation** (§5.3).
 :::
 
-This is why linear algebra is the backbone of deep learning.
+This is why linear algebra is a prerequisite for deep learning.
 :::
 
 ::: {.slide title="Recap"}
@@ -842,17 +836,17 @@ This is why linear algebra is the backbone of deep learning.
 ::: {.cols}
 ::: {.col}
 - **Derivative** = limit of the difference quotient = tangent slope;
-  the quotient earns a digit per decade of $h$ — then cancellation
-  destroys it.
+  the numerical estimate improves as $h$ shrinks, until cancellation
+  takes over.
 - **Partials** slice; the **gradient** stacks them and points uphill
   ($-\nabla f$ downhill).
 :::
 
 ::: {.col}
 - **Identities:** $\nabla \mathbf{A}\mathbf{x} = \mathbf{A}^\top$,
-  $\nabla \|\mathbf{x}\|^2 = 2\mathbf{x}$, … — all matvecs.
+  $\nabla \|\mathbf{x}\|^2 = 2\mathbf{x}$, …, all plain linear algebra.
 - The **chain rule** multiplies along the path; multivariate, it *is* a
-  matrix–vector product — the heart of backprop.
+  matrix–vector product, the heart of backprop.
 - Next: **autograd** (§2.5) runs all of this for us, analytically.
 :::
 :::

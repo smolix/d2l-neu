@@ -28,7 +28,7 @@ environment-and-distribution-shift
 
 ## Resources and Further Reading {.unnumbered}
 
-The classical machine-learning texts listed in the previous chapter (**Linear Neural Networks for Regression**) cover classification just as thoroughly, so we do not repeat them here; the references below focus on what is specific to the classification setting—softmax regression and cross-entropy, calibration, and the distribution shift introduced at the end of this chapter. All are freely accessible online except where noted.
+The classical machine-learning texts listed in the previous chapter (**Linear Neural Networks for Regression**) cover classification equally well, so we do not repeat them here; the references below focus on what is specific to the classification setting: softmax regression and cross-entropy, calibration, and the distribution shift introduced at the end of this chapter. All are freely accessible online except where noted.
 
 **Tutorials and notes**
 

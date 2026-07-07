@@ -19,15 +19,17 @@ with $n$-dimensional arrays,
 which we also call *tensors*.
 If you already know the NumPy 
 scientific computing package :cite:`Harris.Millman.Walt.ea.2020`, 
-this will be a breeze.
+much of this will look familiar.
 For all modern deep learning frameworks,
 the *tensor class* (`ndarray` in MXNet, 
-`Tensor` in PyTorch and TensorFlow) 
+`Tensor` in PyTorch and TensorFlow,
+`jax.Array` in JAX) 
 resembles NumPy's `ndarray`,
-with a few killer features added.
+with two additions.
 First, the tensor class
-supports automatic differentiation.
-Second, it leverages GPUs
+supports automatic differentiation
+(:numref:`sec_autograd`).
+Second, it uses GPUs
 to accelerate numerical computation,
 whereas NumPy only runs on CPUs.
 These properties make neural networks
@@ -46,7 +48,7 @@ To start, we import the `np` (`numpy`) and
 Here, the `np` module includes 
 functions supported by NumPy,
 while the `npx` module contains a set of extensions
-developed to empower deep learning 
+that support deep learning 
 within a NumPy-like environment.
 When using tensors, we almost always 
 invoke the `set_np` function:
@@ -63,6 +65,12 @@ Note that the package name is `torch`.
 To start, we import `tensorflow`. 
 For brevity, practitioners 
 often assign the alias `tf`.
+:end_tab:
+
+:begin_tab:`jax`
+To start, we import `jax` and its
+NumPy-like numerical interface `jax.numpy`,
+conventionally aliased as `jnp`.
 :end_tab:
 
 ```{.python .input #ndarray-getting-started-1}
@@ -94,8 +102,7 @@ With two axes, a tensor is called a *matrix*.
 With $k > 2$ axes, we drop the specialized names
 and just refer to the object as a $k^\textrm{th}$-*order tensor*.
 
-Each framework provides a variety of functions
-for creating new tensors
+Several functions create new tensors
 prepopulated with values.
 For example, by invoking `arange(n)`,
 we can create a vector of evenly spaced values,
@@ -135,17 +142,38 @@ x
 ```
 
 The `dtype` (data type) of a tensor determines how its elements are stored.
-Integer ranges like `arange` default to an integer type, but deep learning
-is done almost entirely in *floating point*, and by convention in
-**32-bit** floating point (`float32`): it halves the memory and bandwidth of
+Deep learning is done almost entirely in *floating point*, and by convention
+in **32-bit** floating point (`float32`): it halves the memory and bandwidth of
 `float64` while providing far more than enough precision for gradient-based
-learning, and it is what GPU hardware is optimized for. That is why several
-cells in this section request `dtype=...` explicitly. You can inspect a
-tensor's type via its `dtype` attribute and convert between types by casting
-(e.g., with `astype`, `.float()`, or `tf.cast`). A related concern is
-numerical *stability*: in finite precision, naive computations can overflow
-or underflow, which is why later sections compute quantities such as the
-softmax and cross-entropy with stabilized formulas (:numref:`sec_softmax`).
+learning, and it is what GPU hardware is optimized for. You can inspect a
+tensor's type via its `dtype` attribute. In finite precision, naive
+computations can overflow or underflow, which is why later sections compute
+quantities such as the softmax and cross-entropy with stabilized formulas
+(:numref:`sec_softmax`).
+
+:begin_tab:`mxnet`
+MXNet's `np.arange` already defaults to `float32`,
+so the cell above needs no explicit `dtype`.
+To cast between types, use `astype`.
+:end_tab:
+
+:begin_tab:`pytorch`
+Integer ranges like `arange` default to an integer type,
+which is why the cell above requests `dtype=torch.float32` explicitly.
+To cast between types, use `.to` (or shortcuts such as `.float()`).
+:end_tab:
+
+:begin_tab:`tensorflow`
+Integer ranges like `range` default to an integer type,
+which is why the cell above requests `dtype=tf.float32` explicitly.
+To cast between types, use `tf.cast`.
+:end_tab:
+
+:begin_tab:`jax`
+Integer ranges like `arange` default to an integer type,
+which is why the cell above requests `dtype=jnp.float32` explicitly.
+To cast between types, use `astype`.
+:end_tab:
 
 :begin_tab:`mxnet`
 Each of these values is called
@@ -169,6 +197,14 @@ an *element* of the tensor.
 The tensor `x` contains 12 elements.
 We can inspect the total number of elements 
 in a tensor via the `size` function.
+:end_tab:
+
+:begin_tab:`jax`
+Each of these values is called
+an *element* of the tensor.
+The tensor `x` contains 12 elements.
+We can inspect the total number of elements 
+in a tensor via its `size` attribute.
 :end_tab:
 
 ```{.python .input #ndarray-getting-started-3}
@@ -238,9 +274,8 @@ In our case, instead of calling `x.reshape(3, 4)`,
 we could have equivalently called `x.reshape(-1, 4)` or `x.reshape(3, -1)`.
 
 Reshaping does not move any data: the returned tensor typically *shares
-storage* with the original---only the metadata describing the shape
-changes---so writing into one can affect the other. We return to this
-subtlety in the discussion of saving memory below.
+storage* with the original (only the metadata describing the shape
+changes), so writing into one can affect the other.
 
 Practitioners often need to work with tensors
 initialized to contain all 0s or 1s.
@@ -328,10 +363,27 @@ jax.random.normal(jax.random.PRNGKey(0), (3, 4))
 Random sampling raises the question of *reproducibility*. Calling a sampler
 repeatedly gives different draws, which is usually what we want, but for
 debugging or for figures that should not change between runs we fix a *seed*.
-PyTorch, TensorFlow, and MXNet keep a global generator that
-`torch.manual_seed` / `tf.random.set_seed` / `np.random.seed` reset; JAX
-takes the opposite, more explicit stance, threading a *key* through every
-draw (the same key always yields the same sample), as the JAX cell above shows.
+
+:begin_tab:`mxnet`
+MXNet keeps a global generator that `np.random.seed` resets:
+after seeding, the sequence of draws is repeatable.
+:end_tab:
+
+:begin_tab:`pytorch`
+PyTorch keeps a global generator that `torch.manual_seed` resets:
+after seeding, the sequence of draws is repeatable.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow keeps a global generator that `tf.random.set_seed` resets:
+after seeding, the sequence of draws is repeatable.
+:end_tab:
+
+:begin_tab:`jax`
+JAX takes a more explicit stance: instead of a hidden global generator,
+every draw threads a *key* through the sampler, and the same key always
+yields the same sample, as the cell above shows.
+:end_tab:
 
 Finally, we can construct tensors by
 supplying the exact values for each element
@@ -592,11 +644,13 @@ jnp.concatenate((X, Y), axis=0), jnp.concatenate((X, Y), axis=1)
 ```
 
 Sometimes, we want to 
-construct a binary tensor via *logical statements*.
+construct a boolean tensor via *logical statements*.
 Take `X == Y` as an example.
 For each position `i, j`, if `X[i, j]` and `Y[i, j]` are equal, 
-then the corresponding entry in the result takes value `1`,
-otherwise it takes value `0`.
+then the corresponding entry in the result is `True`,
+otherwise it is `False`.
+(Booleans behave as 1 and 0 in arithmetic, so summing
+such a mask counts the positions where the two tensors agree.)
 
 ```{.python .input #ndarray-operations-4}
 X == Y
@@ -625,23 +679,17 @@ even when shapes differ,
 we can still perform elementwise binary operations
 by invoking the *broadcasting mechanism*
 (a convention inherited from NumPy).
-Broadcasting works according to 
-the following two-step procedure:
-(i) expand one or both arrays
-by copying elements along axes with length 1
-so that after this transformation,
-the two tensors have the same shape;
-(ii) perform an elementwise operation
-on the resulting arrays.
 
-Broadcasting is not magic; it follows a simple rule. Line the two shapes up
+Broadcasting follows a simple rule. Line the two shapes up
 from the *right* and compare them axis by axis: two axes are compatible when
 they are equal or when one of them is $1$ (a missing leading axis counts as
-$1$). The size-$1$ axis is then *stretched* to match the other. If any pair
+$1$). The size-$1$ axis is then *stretched* to match the other, by virtually
+copying its entries, and the elementwise operation is applied to the
+resulting arrays. If any pair
 of axes is incompatible, the operation raises an error rather than guessing.
 :numref:`fig_ndarray_broadcasting` shows the mechanism at work on the example
-that follows: each size-$1$ axis is stretched (by virtually copying its
-entries) until both operands share the shape $3\times2$.
+that follows: each size-$1$ axis is stretched until both operands share the
+shape $3\times2$.
 
 ![Broadcasting stretches the size-1 axes: a $3\times1$ column and a $1\times2$ row each expand to $3\times2$ before the elementwise addition.](../img/ndarray-broadcasting.svg)
 :label:`fig_ndarray_broadcasting`
@@ -689,8 +737,7 @@ a + b
 What happens when the shapes are *not* compatible? Lining up $(3, 2)$ and
 $(2, 3)$ from the right pairs $2$ with $3$ and $3$ with $2$: neither axis pair
 matches and neither member is $1$, so the framework refuses rather than
-guessing. Seeing the error once now can save you from hunting for it in a
-larger program later.
+guessing.
 
 ```{.python .input #ndarray-broadcasting-3}
 %%tab mxnet
@@ -750,7 +797,7 @@ This might be undesirable for two reasons.
 First, we do not want to run around
 allocating memory unnecessarily all the time.
 In machine learning, we often have
-hundreds of megabytes of parameters
+gigabytes of parameters
 and update all of them multiple times per second.
 Whenever possible, we want to perform these updates *in place*.
 Second, we might point at the 
@@ -769,6 +816,9 @@ To illustrate this concept,
 we overwrite the values of tensor `Z`,
 after initializing it, using `zeros_like`,
 to have the same shape as `Y`.
+Slice assignment writes through to `Z`'s existing buffer,
+the same storage sharing we saw with `reshape`,
+now working in our favor.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -847,11 +897,11 @@ id(X_new) == id(X)
 Converting to a NumPy tensor (`ndarray`), or vice versa, is easy.
 The converted result does not share memory.
 This minor inconvenience is actually quite important:
-when you perform operations on the CPU or on GPUs,
-you do not want to halt computation, waiting to see
-whether the NumPy package of Python 
-might want to be doing something else
-with the same chunk of memory.
+the framework may execute operations asynchronously,
+possibly on a GPU, while NumPy works on a buffer in host memory.
+If the two shared that buffer, each side would have to
+synchronize with the other before reading or writing it;
+copying removes the coordination.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -860,6 +910,14 @@ The torch tensor and NumPy array
 will share their underlying memory, 
 and changing one through an in-place operation 
 will also change the other.
+:end_tab:
+
+:begin_tab:`jax`
+Converting to a NumPy tensor (`ndarray`), or vice versa, is easy:
+`jax.device_get` copies a JAX array to the host as a NumPy array,
+and `jax.device_put` transfers it back.
+The converted result does not share memory,
+since a JAX array may live on an accelerator.
 :end_tab:
 
 ```{.python .input #ndarray-conversion-to-other-python-objects-1}
@@ -964,7 +1022,7 @@ Storing & transforming data with **tensors**<br>The *n*-dimensional arrays that 
 ::: {.cols .vc}
 ::: {.col}
 - An ***n*-dimensional array** of numbers<br>generalizes the NumPy `ndarray`.
-- Runs on **GPUs / accelerators**, not just the CPU.
+- Runs on **GPUs** and other accelerators.
 - Records operations for **automatic differentiation**.
 
 ::: {.d2l-note}
@@ -1038,12 +1096,12 @@ a tensor by hand.
 
 ::: {.cols .vc}
 ::: {.col}
-Same elements, a new shape — `numel` is preserved:
+Same elements in a new shape; `numel` is preserved:
 
 @ndarray-getting-started-5
 
 ::: {.d2l-note}
-No copy — only the **stride metadata** changes. Use `-1` to infer an
+Usually no copy: only the **shape metadata** changes. Use `-1` to infer an
 axis: `x.reshape(3, -1)`.
 :::
 :::
@@ -1239,12 +1297,12 @@ Reductions collapse axes<br>no `dim=` gives a scalar:
 :::
 
 ::: {.d2l-note}
-`==, <, >` build masks; `sum, mean, max` collapse axes — add `dim=` to
+`==, <, >` build masks; `sum, mean, max` collapse axes; add `dim=` to
 reduce just one.
 :::
 :::
 
-::: {.slide title="Broadcasting stretches size-1 axes — for free"}
+::: {.slide title="Broadcasting stretches size-1 axes for free"}
 [Operations · the exception]{.kicker}
 
 ::: {.cols .vc}
@@ -1257,7 +1315,7 @@ gives a $3\times2$:
 @ndarray-broadcasting-2
 
 ::: {.d2l-note .rule}
-Any axis of size **1** stretches to match the other tensor — no copy.
+Any axis of size **1** stretches to match the other tensor, without a copy.
 :::
 
 ::: {.d2l-note .warn}
@@ -1274,15 +1332,15 @@ Compatible only if each axis is **equal** or **1**.
 ::: {.slide title="…or it refuses: no size-1 axis, no guess"}
 [Operations · the exception]{.kicker}
 
-Line up $(3, 2)$ and $(2, 3)$ from the right: $2$ vs $3$ and $3$ vs $2$ —
-no pair matches, neither member is $1$, so the framework raises rather
-than guessing:
+Line up $(3, 2)$ and $(2, 3)$ from the right, pairing $2$ with $3$ and
+$3$ with $2$: no pair matches, neither member is $1$, so the framework
+raises rather than guessing:
 
 @ndarray-broadcasting-3
 
 ::: {.d2l-note .rule}
 Broadcasting aligns shapes **from the right**; each axis pair must be
-**equal or 1**. Meet this error here, not deep inside a training loop.
+**equal or 1**.
 :::
 :::
 
@@ -1314,7 +1372,7 @@ is gigabytes and updated many times per second:
 
 ::: {.cols .vc}
 ::: {.col}
-Write into pre-allocated storage with<br>`Z[:] = ...` — the address holds:
+Write into pre-allocated storage with<br>`Z[:] = ...`; the address holds:
 
 @ndarray-saving-memory-2
 
@@ -1334,7 +1392,7 @@ If `X` isn't needed afterward, `X += Y` is cheapest:
 
 ::: {.cols .vc}
 ::: {.col}
-A `Variable.assign` writes in place — its `id` is unchanged:
+A `Variable.assign` writes in place; its `id` is unchanged:
 
 @ndarray-saving-memory-2
 :::
@@ -1350,14 +1408,14 @@ A `Variable.assign` writes in place — its `id` is unchanged:
 
 ::: {.cols .vc}
 ::: {.col}
-JAX has **no in-place write** — a functional update returns a *new*
+JAX has **no in-place write**; a functional update returns a *new*
 array, so `id` changes:
 
 @ndarray-saving-memory-3
 
 ::: {.d2l-note .rule}
-Wrap in `jit` with `donate_argnums`: XLA fuses the update and **donates**
-the input buffer, recovering the in-place benefit.
+Under `jit`, XLA fuses such updates and **reuses** buffers, recovering
+the in-place benefit.
 :::
 :::
 
@@ -1397,7 +1455,7 @@ Convert to / from a NumPy `ndarray`:
 @ndarray-conversion-to-other-python-objects-1
 
 ::: {.d2l-note .warn}
-The result is a **copy** — host/device arrays don't share storage here.
+The result is a **copy**; host/device arrays don't share storage here.
 :::
 :::
 
@@ -1417,14 +1475,14 @@ A size-1 tensor unwraps to a Python scalar with `.item()`:
 - **Tensor** = *n*-d array; the core data structure (GPU + autodiff).
 - **Create:** `arange, zeros, ones, randn, tensor([…])`.
 - **Inspect / restructure:** `.shape`, `.numel()`, `reshape`.
-- **Index / slice** to read *and* write — negatives, ranges, regions.
+- **Index / slice** to read *and* write: negatives, ranges, regions.
 :::
 
 ::: {.col}
 - **Elementwise** math, **comparisons** (masks), **reductions**, `cat`.
-- **Broadcasting** stretches size-1 axes — and refuses anything else.
-- **Save memory** with in-place ops (`X[:] = …`, `+=`) — or, in JAX,
-  `jit` buffer donation.
+- **Broadcasting** stretches size-1 axes and refuses anything else.
+- **Save memory** with in-place ops (`X[:] = …`, `+=`), or in JAX via
+  `jit` buffer reuse.
 - **Interop:** tensor ↔ NumPy, `.item()` for scalars.
 :::
 :::

@@ -56,10 +56,8 @@ with one hidden layer and 256 hidden units
 (:numref:`fig_mdl-mlp-arch`).
 Both the number of layers and their width are adjustable
 (they are considered hyperparameters).
-Typically, we choose each layer width to be a multiple of a large power of 2.
-This improves computational efficiency because the matrix-multiplication kernels
-on modern hardware (CPUs and GPUs) are tuned for operand dimensions that align
-to SIMD vector widths and tensor-core tile sizes.
+Typically, we choose each layer width to be a power of 2, which is efficient
+for hardware memory addressing.
 
 ![The two-layer MLP of this section: a batched input is flattened to 784 features, mapped by an affine layer to a 256-dimensional hidden representation, passed through a ReLU, then mapped by a second affine layer to 10 logits.](../img/mdl-mlp-arch.svg)
 :label:`fig_mdl-mlp-arch`
@@ -186,7 +184,7 @@ Since we are disregarding spatial structure,
 we `reshape` each two-dimensional image into
 a flat vector of length  `num_inputs`.
 Finally, we implement our model
-with just a few lines of code. Since we use the framework built-in autograd this is all that it takes.
+with just a few lines of code. Since autograd handles the backward pass, this is all that it takes.
 
 ```{.python .input #mlp-implementation-model-2}
 @d2l.add_to_class(MLPScratch)
@@ -208,9 +206,10 @@ trainer = d2l.Trainer(max_epochs=30)
 trainer.fit(model, data)
 ```
 
-You should see the validation accuracy settle around $0.87$ — a real, if
-modest, improvement over the $\approx 0.83$ that softmax regression reached
-on the same data, bought by the hidden layer and its ReLU.
+You should see the validation accuracy settle at typically around $0.87$, a
+modest improvement over the softmax regression baseline of
+:numref:`sec_softmax_scratch` on the same data, bought by the hidden layer and
+its ReLU.
 
 ## Concise Implementation
 
@@ -303,9 +302,10 @@ matters concerning the model architecture
 from orthogonal considerations.
 Note that while the two versions compute the same *architecture*, they do not
 start from the same *parameters*: the scratch model draws its weights from
-$\mathcal{N}(0, 0.01^2)$, whereas the concise version uses the framework's
-fan-in-scaled default initializer (:numref:`sec_numerical_stability`), so
-their training trajectories, and final accuracies, can differ slightly.
+$\mathcal{N}(0, 0.01^2)$, whereas the concise version uses the library's
+default initializer, which scales with layer size
+(:numref:`sec_numerical_stability`), so their training trajectories, and final
+accuracies, can differ slightly.
 
 ```{.python .input #mlp-implementation-training-2}
 model = MLP(num_outputs=10, num_hiddens=256, lr=0.1)
@@ -314,9 +314,9 @@ trainer.fit(model, data)
 
 ## Summary
 
-We have now built and trained a working multilayer perceptron, a network with a hidden layer and a nonlinearity, in both a from-scratch and a concise form. The from-scratch version makes the new ingredients concrete: two weight matrices, two bias vectors, a hand-rolled ReLU, and a two-step forward computation. The concise version shows that `nn.Sequential` absorbs all of that bookkeeping into a four-element stack. The training loop, the loss function, and the data loader are unchanged from softmax regression, a first sign that the modular design pays off.
+We have now built and trained a working multilayer perceptron, a network with a hidden layer and a nonlinearity, in both a from-scratch and a concise form. The from-scratch version makes the new ingredients concrete: two weight matrices, two bias vectors, a hand-rolled ReLU, and a two-step forward computation. The concise version shows that `nn.Sequential` collapses all of that into a four-element stack. The training loop, the loss function, and the data loader are unchanged from softmax regression, a benefit of the modular design.
 
-The from-scratch version also exposes why we reach for the high-level API: naming and tracking parameters by hand quickly becomes awkward. Imagine inserting another layer between layers 42 and 43; we would be stuck renaming or improvising a "layer 42b". Hand-rolled forward passes are also harder for the framework to optimize. `nn.Sequential` removes both problems at once.
+The from-scratch version also exposes why we reach for the high-level API: naming and tracking parameters by hand quickly becomes awkward. Imagine inserting another layer between layers 42 and 43; we would be stuck renaming or improvising a "layer 42b". `nn.Sequential` removes both problems at once.
 
 Three questions remain open, and each is the subject of one of the next sections:
 
@@ -366,7 +366,7 @@ Answering them turns this small working model into a reliable building block.
 ::: {.cover}
 [Dive into Deep Learning · §5.2]{.kicker}
 
-Implementing a **multilayer perceptron**<br>One hidden layer, two ways to build it --- and a scoreboard: **$\approx 0.87$ where softmax regression managed $\approx 0.83$**.
+Implementing a **multilayer perceptron**<br>One hidden layer, two ways to build it, reaching **$\approx 0.87$** validation accuracy.
 :::
 :::
 
@@ -383,10 +383,9 @@ by a **second affine layer** to 10 logits.
 - Same loss, loaders, and `Trainer` as softmax regression.
 
 ::: {.d2l-note .rule}
-That ReLU between the two affine maps is the *entire* difference
-from a linear classifier — and softmax regression scored
-$\approx 0.83$ on this data. The hidden layer must beat that
-number, or it is 200k wasted parameters. Keep score.
+That ReLU between the two affine maps, together with the hidden
+layer, is the *entire* difference from a linear classifier like
+softmax regression.
 :::
 :::
 
@@ -406,8 +405,8 @@ hidden units, giving $\approx 200\text{k}$ parameters.
 
 - **Width 256:** big enough to fit the data, small enough
   to train in seconds.
-- **A power of 2** because matmul kernels are tuned for
-  SIMD/tensor-core tile sizes (nothing breaks at 250).
+- **A power of 2** because matmul kernels run more efficiently
+  at those widths (nothing breaks at 250).
 - **One hidden layer** suffices here; spatial structure
   waits for convolutions.
 
@@ -484,8 +483,8 @@ $$\mathbf{H} = \mathrm{ReLU}(\mathbf{X}\mathbf{W}^{(1)} + \mathbf{b}^{(1)}),
 @mlp-implementation-model-2
 :::
 
-::: {.slide title="Promise kept: ≈0.87, four points over softmax"}
-[From Scratch · payoff]{.kicker}
+::: {.slide title="Result: ≈0.87 validation accuracy"}
+[From Scratch]{.kicker}
 
 The loss, the loaders, and the `Trainer` are **unchanged**
 from softmax regression. Only the model class is new:
@@ -493,9 +492,9 @@ from softmax regression. Only the model class is new:
 @!mlp-implementation-training
 
 ::: {.d2l-note .rule}
-Validation accuracy settles around $\approx 0.87$ over 30 epochs —
-a real, if modest, gain over softmax regression's $\approx 0.83$ on
-the same data, bought by one hidden layer and its ReLU.
+Validation accuracy typically settles around $\approx 0.87$ over 30 epochs,
+a modest gain over the softmax regression baseline on the same data,
+bought by one hidden layer and its ReLU.
 :::
 :::
 
@@ -505,7 +504,7 @@ the same data, bought by one hidden layer and its ReLU.
 
 [Concise]{.dtitle}
 
-[let the framework keep the books]{.dsub}
+[let the framework hold the parameters]{.dsub}
 :::
 :::
 
@@ -595,7 +594,7 @@ this chapter:
 - **Regularization (§5.6):** dropout, and friends.
 
 ::: {.d2l-note}
-Each question gets its own section — and exercise 2 hands you the
+Each question gets its own section, and exercise 2 hands you the
 cliffhanger: add a second hidden layer while keeping
 $\sigma = 0.01$, and the deeper net trains *worse*. §5.4 explains.
 :::
@@ -610,8 +609,8 @@ $\sigma = 0.01$, and the deeper net trains *worse*. §5.4 explains.
   a **nonlinearity** between affine maps.
 - **From scratch:** four parameter tensors, a hand-rolled
   ReLU, a two-line forward. Concrete, but tedious to ship.
-- **Concise:** declare the layer stack; the framework owns
-  the parameters and the forward pass.
+- **Concise:** declare the layer stack; `Sequential` holds
+  the parameters and defines the forward pass.
 :::
 
 ::: {.col}
@@ -620,13 +619,13 @@ $\sigma = 0.01$, and the deeper net trains *worse*. §5.4 explains.
   regression (modularity paying off).
 - Hyperparameters (depth, width, lr) live **outside** the
   model; the same loop trains any of them.
-- Scoreboard settled: **$\approx 0.87$ vs $\approx 0.83$** — the
-  first measured payoff of depth.
+- Validation accuracy settles around **$\approx 0.87$**, a modest
+  gain from the hidden layer and its ReLU.
 :::
 :::
 
 ::: {.d2l-note}
-Next (§5.3): open the black box — what `backward()` actually
+Next (§5.3): open the black box, what `backward()` actually
 computes, by hand and then verified.
 :::
 :::

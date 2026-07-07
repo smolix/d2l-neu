@@ -209,14 +209,14 @@ to evaluate it, since every exponent $o_k - \bar{o} \leq 0$. This is precisely
 what the built-in cross-entropy loss computes when handed raw logits: it never
 forms the softmax probabilities at all, so neither $\exp$ of a large number nor
 $\log$ of a zero ever occurs. Because the fused loss differentiates this exact
-expression, its gradient is the clean
+expression, its gradient is exactly
 $\partial_{o_j}\ell = \mathrm{softmax}(\mathbf{o})_j - y_j$ derived in
 :numref:`subsec_softmax_and_derivatives`, with no clamp to perturb it. We keep
 the explicit softmax of :numref:`sec_softmax_scratch` only for *reading off*
 predicted probabilities at inference time; for the loss we pass logits and let
 the fused operation do the rest.
 
-The "smooth max" picture is worth three lines of code: for two classes with
+For two classes with
 logits $(x, 0)$ the loss's first term is $\mathrm{lse}(x, 0) = \log(1 + e^x)$,
 which hugs $\max(x, 0)$ from above, with the gap largest at the tie $x = 0$,
 where it equals $\log 2 \approx 0.69$, our bound $\log q$ for $q = 2$:
@@ -277,16 +277,12 @@ def loss(self, params, X, Y, state, averaged=True):
     return (fn(Y_hat, Y).mean(), {}) if averaged else (fn(Y_hat, Y), {})
 ```
 
-Each framework exposes this fused loss under a slightly different name, but
-all four take **logits**, not probabilities: passing softmax outputs would
-apply the softmax twice. PyTorch's `F.cross_entropy` consumes logits by
-definition; TensorFlow uses `SparseCategoricalCrossentropy(from_logits=True)`;
-JAX/Optax provides `softmax_cross_entropy_with_integer_labels`; and MXNet's
-`SoftmaxCrossEntropyLoss` (with its default `from_logits=False`) applies the
-stable softmax internally. Correspondingly, the model's `forward` returns raw
-logits and contains **no** softmax: the loss owns that step. We defined this
-`loss` on the base `Classifier` (note the `#@save`), so every classifier in
-the rest of the book inherits the numerically stable version.
+The built-in fused loss (named differently in each library) takes **logits**,
+not probabilities: passing softmax outputs would apply the softmax twice.
+Correspondingly, the model's `forward` returns raw logits and contains **no**
+softmax: the loss owns that step. We defined this `loss` on the base
+`Classifier` (note the `#@save`), so every classifier in the rest of the book
+inherits the numerically stable version.
 
 ## Training
 
@@ -309,9 +305,9 @@ same solution as the from-scratch version of :numref:`sec_softmax_scratch`
 High-level APIs are very convenient at hiding from their user potentially dangerous aspects, such as numerical stability. Moreover, they allow users to design models concisely with very few lines of code. This is both a blessing and a curse. The obvious benefit is that it makes things highly accessible, even to engineers who never took a single class of statistics in their life (in fact, they are part of the target audience of the book). But hiding the sharp edges also comes with a price: a disincentive to add new and different components on your own, since there is little muscle memory for doing it. Moreover, it makes it more difficult to *fix* things whenever the protective padding of
 a framework fails to cover all the corner cases entirely. Again, this is due to lack of familiarity.
 
-As such, we strongly urge you to review *both* the bare bones and the elegant versions of many of the implementations that follow. While we emphasize ease of understanding, the implementations are nonetheless usually quite performant (convolutions are the big exception here). It is our intention to allow you to build on these when you invent something new that no framework can give you.
+As such, we strongly urge you to review *both* the bare bones and the concise versions of many of the implementations that follow. While we emphasize ease of understanding, the implementations are nonetheless usually quite performant (convolutions are the big exception here). It is our intention to allow you to build on these when you invent something new that no framework can give you.
 
-The fused cross-entropy loss in this section is a case in point: it is not merely fewer lines than the from-scratch version, it is the *correct* implementation, the one you should reach for rather than hand-roll, because it computes the log-sum-exp directly and never materializes an unstable softmax.
+The fused cross-entropy loss in this section is the implementation to reach for: it computes the log-sum-exp directly and never materializes an unstable softmax.
 
 
 ## Exercises
@@ -361,7 +357,7 @@ of it with two built-ins:
 - one **cross-entropy** call that takes raw scores.
 
 ::: {.d2l-note}
-The convenience hides one thing worth understanding: the loss is
+The convenience hides one thing: the loss is
 not the naive `softmax → log → NLL`. It is the *stable* rewrite.
 :::
 :::
@@ -438,7 +434,7 @@ the fused loss below never forms that ratio.
 :::
 :::
 
-::: {.slide title="Fix, step 1 — shift by the max"}
+::: {.slide title="Fix, step 1: shift by the max"}
 [Numerical stability]{.kicker}
 
 Softmax is **unchanged** if we subtract the same constant from every
@@ -451,10 +447,10 @@ $$\hat y_j =
 . . .
 
 Now every exponent $o_j - \bar{o} \le 0$, so each $\exp$ lands in
-$(0, 1]$ — **no overflow**. The denominator sits in $[1, q]$.
+$(0, 1]$: **no overflow**. The denominator sits in $[1, q]$.
 :::
 
-::: {.slide title="Fix, step 2 — never form the softmax"}
+::: {.slide title="Fix, step 2: never form the softmax"}
 [Numerical stability]{.kicker}
 
 Underflow could still bite if we then took $\log$ of a near-zero
@@ -482,19 +478,19 @@ $$\ell(y, \mathbf{o}) =
 
 ::: {.cols}
 ::: {.col}
-$\log\sum_k\exp(o_k)$ is a **smooth upper bound on $\max_k o_k$** — the
+$\log\sum_k\exp(o_k)$ is a **smooth upper bound on $\max_k o_k$**, the
 "soft max" the function is named for.
 :::
 
 ::: {.col}
-Its gradient stays clean:
+Its gradient is
 $\partial_{o_j}\ell = \mathrm{softmax}(\mathbf{o})_j - y_j$, with no
 clamp to perturb it.
 :::
 :::
 :::
 
-::: {.slide title="The soft max hugs the hard max — gap at most log 2" only="pytorch"}
+::: {.slide title="The soft max hugs the hard max: gap at most log 2" only="pytorch"}
 [Numerical stability · measured]{.kicker}
 
 ::: {.cols .vc}
@@ -504,7 +500,7 @@ $\mathrm{lse}(x, 0) = \log(1 + e^x)$. Plot it against $\max(x, 0)$:
 
 ::: {.d2l-note .rule}
 The gap peaks at the **tie** $x = 0$, where it equals
-$\log 2 \approx 0.69$ --- the bound $\log q$ you proved in §4.1
+$\log 2 \approx 0.69$, the bound $\log q$ you proved in §4.1
 (exercise 6), here at $q = 2$. Away from the tie, soft and hard max are
 indistinguishable.
 :::
@@ -516,7 +512,7 @@ indistinguishable.
 :::
 :::
 
-::: {.slide title="The soft max hugs the hard max — gap at most log 2" except="pytorch"}
+::: {.slide title="The soft max hugs the hard max: gap at most log 2" except="pytorch"}
 [Numerical stability · the bound]{.kicker}
 
 For two classes with logits $(x, 0)$ the loss's first term is
@@ -527,7 +523,7 @@ $$\max_k o_k \;\le\; \mathrm{lse}(\mathbf{o}) \;\le\; \max_k o_k + \log q.$$
 
 ::: {.d2l-note .rule}
 The gap peaks at the **tie** $x = 0$, where it equals
-$\log 2 \approx 0.69$ --- the bound $\log q$ you proved in §4.1
+$\log 2 \approx 0.69$, the bound $\log q$ you proved in §4.1
 (exercise 6), here at $q = 2$. Away from the tie, soft and hard max are
 indistinguishable.
 :::
@@ -546,7 +542,7 @@ indistinguishable.
 ::: {.slide title="Hand the loss the logits" only="pytorch"}
 [The fused loss]{.kicker}
 
-PyTorch's `F.cross_entropy` consumes **logits** by definition — it
+PyTorch's `F.cross_entropy` consumes **logits** by definition: it
 computes the stable log-sum-exp internally. We attach it to the base
 `Classifier`, so every classifier in the book inherits it:
 
@@ -557,7 +553,7 @@ computes the stable log-sum-exp internally. We attach it to the base
 [The fused loss]{.kicker}
 
 `SparseCategoricalCrossentropy(from_logits=True)` is the switch that
-says "these are scores, not probabilities" — so Keras does the stable
+says "these are scores, not probabilities", so Keras does the stable
 log-sum-exp instead of assuming a softmax already ran:
 
 @softmax-regression-concise-softmax-revisited
@@ -577,24 +573,18 @@ labels and fuses the stable softmax with the cross-entropy:
 [The fused loss]{.kicker}
 
 MXNet's `SoftmaxCrossEntropyLoss` (default `from_logits=False`) applies
-the *stable* softmax internally, then the cross-entropy — so we still
+the *stable* softmax internally, then the cross-entropy, so we still
 pass raw logits, never probabilities:
 
 @softmax-regression-concise-softmax-revisited
 :::
 
-::: {.slide title="Every framework, one rule"}
+::: {.slide title="One rule for the fused loss"}
 [The fused loss]{.kicker}
 
-The names differ; the contract does not. **All four take logits, not
-probabilities** — passing softmax outputs would softmax twice.
-
-| Framework | Fused loss |
-|---|---|
-| PyTorch | `F.cross_entropy` |
-| TensorFlow | `SparseCategoricalCrossentropy(from_logits=True)` |
-| JAX / Optax | `softmax_cross_entropy_with_integer_labels` |
-| MXNet | `SoftmaxCrossEntropyLoss` |
+The name differs by library; the contract does not. **The built-in fused
+loss takes logits, not probabilities**: passing softmax outputs would
+softmax twice.
 
 Defined once on `Classifier` (note the `#@save`): the whole book
 inherits the stable loss.
@@ -622,7 +612,7 @@ Same Fashion-MNIST, same 10 epochs, same `Trainer`:
 
 ::: {.col .narrow}
 Converges to the **same ~83–84%** validation accuracy as the
-from-scratch model of §4.4 — now in a handful of lines, and with
+from-scratch model of §4.4, now in a handful of lines, and with
 the *correct* loss instead of a clamped one.
 :::
 :::
@@ -641,7 +631,7 @@ the *correct* loss instead of a clamped one.
 
 ::: {.col}
 - That built-in is the **log-sum-exp** rewrite
-  $\ell = \bar{o} + \log\sum_k e^{o_k-\bar{o}} - o_y$ — not a naive
+  $\ell = \bar{o} + \log\sum_k e^{o_k-\bar{o}} - o_y$, not a naive
   `softmax → log → NLL`.
 - lse is a **smooth max**: within $\log q$ of $\max_k o_k$, gap largest
   ($\log 2$ for $q{=}2$) exactly at the tie.

@@ -24,7 +24,7 @@ leads the resulting models to generalize beyond the training set.
 
 
 On the bright side, it turns out that deep neural networks
-trained by stochastic gradient descent generalize remarkably well
+trained by stochastic gradient descent generalize well
 across myriad prediction problems, spanning computer vision;
 natural language processing; time series data; recommender systems;
 electronic health records; protein folding;
@@ -75,7 +75,7 @@ of the state of research and practice.
 
 ## Revisiting Overfitting and Regularization
 
-According to the "no free lunch" theorem of :citet:`wolpert1995no`,
+According to the "no free lunch" theorem of :citet:`Wolpert.1996`,
 any learning algorithm generalizes better on some data distributions
 and worse on others.
 Thus, given a finite training set,
@@ -96,7 +96,7 @@ and (ii) estimate the *generalization error*
 (the true error on the underlying population)
 by evaluating the model on holdout data.
 The difference between our fit on the training data
-and our fit on the test data is called the *generalization gap* and when this is large,
+and our fit on the test data is called the *generalization gap* (:numref:`sec_generalization_basics`) and when this is large,
 we say that our models *overfit* to the training data.
 In extreme cases of overfitting,
 we might exactly fit the training data,
@@ -105,7 +105,7 @@ And in the classical view,
 the interpretation is that our models are too complex,
 requiring that we either shrink the number of features,
 the number of nonzero parameters learned,
-or the size of the parameters as quantified.
+or the size of the parameters as quantified by their norm.
 Recall the plot of model complexity compared with loss
 (:numref:`fig_capacity_vs_error`)
 from :numref:`sec_generalization_basics`.
@@ -166,29 +166,29 @@ e.g., those based on the VC dimension
 or Rademacher complexity of a hypothesis class,
 cannot explain why neural networks generalize.
 (:numref:`chap_classification_generalization` introduces these ideas;
-the mechanics of the classical bounds---concentration of measure,
-uniform convergence, and Rademacher complexity, with proofs---are
+the mechanics of the classical bounds (concentration of measure,
+uniform convergence, and Rademacher complexity, with proofs) are
 developed in :numref:`sec_mdl-concentration-generalization`.)
 
 ### Double Descent
 
-The most striking of these phenomena deserves its own picture.
+Double descent is the sharpest of these departures from classical theory.
 Classical theory predicts a *U-shaped* test-error curve:
 as we add capacity, error first falls (we stop underfitting)
 and then rises (we begin overfitting),
 with a sweet spot in between
 (recall :numref:`fig_capacity_vs_error` from :numref:`sec_generalization_basics`).
 Deep networks do not obey this.
-As we keep adding capacity past the *interpolation threshold*---the
+As we keep adding capacity past the *interpolation threshold* (the
 point where the model can exactly fit the training set,
 roughly where the parameter count matches the number of training
-examples---the test error first spikes sharply
+examples), the test error first spikes sharply
 and then *descends a second time*,
 often dropping below the classical sweet spot.
 This non-monotone, two-valley shape is called *double descent*
 :cite:`Belkin.Hsu.Ma.ea.2019`,
-and it has been observed not only as we grow the model
-but also as we train for more epochs or add more data
+and it appears when we grow the model, when we train for more epochs,
+and when we add more data
 :cite:`nakkiran2021deep` (:numref:`fig_double_descent`).
 
 ![Classical bias--variance theory predicts the U-shaped curve on the left: test error falls, then rises as capacity grows, with a sweet spot in between. Deep networks follow it only up to the *interpolation threshold*, where the model can just fit the training set (here $\#$parameters $\approx \#$examples) and the test error spikes. Beyond it lies the *over-parametrized regime*, where adding still more capacity makes the test error *descend a second time*, often below the classical optimum. The training error (gray) falls monotonically to zero at the threshold and stays there.](../img/mdl-mlp-double-descent.svg)
@@ -199,12 +199,12 @@ In brief: at the threshold the model has *just barely* enough capacity,
 so it is forced into a single, often jagged, high-variance interpolant;
 past it there are *many* parameter settings that interpolate the data,
 and the training procedure selects a smooth, small-norm one
-that happens to generalize---"more capacity" becomes
+that happens to generalize: "more capacity" becomes
 "more room for the optimizer to find a simple interpolant."
-The mathematics of this mechanism---why the spike sits exactly at the
+The mathematics of this mechanism (why the spike sits exactly at the
 threshold, why the *norm* of the solution rather than its parameter
 count is the capacity that matters, and a reproduction of the entire
-double-descent curve in twenty-five lines---is developed
+double-descent curve in twenty-five lines) is developed
 in :numref:`sec_mdl-concentration-generalization`;
 we return below to *why* gradient descent prefers such solutions.
 
@@ -213,12 +213,12 @@ Model size, moreover, is only one of three knobs that trace out this curve.
 network, the flavor above and the one the appendix analyzes), *epoch-wise*
 double descent (fix the network and train longer: test error falls, rises as
 the model begins to interpolate noise, then falls again), and *sample-wise*
-double descent, the genuinely shocking one: adding training examples can
+double descent: adding training examples can
 *hurt* test performance, because more data moves the interpolation threshold
 and can push a fixed model back into the high-variance spike. All three are
 organized by a single axis that Nakkiran et al. call *effective model
-complexity* — roughly, how many examples the full training procedure (model,
-optimizer, *and* budget) can fit perfectly — with the error peaking wherever
+complexity*, roughly how many examples the full training procedure (model,
+optimizer, *and* budget) can fit perfectly. The error peaks wherever
 that quantity crosses the dataset size. This chapter only names the
 phenomena; the appendix proves the model-wise case, and the exercises below
 let you produce the epoch-wise one yourself.
@@ -260,7 +260,7 @@ comes within a factor of two of the optimal (Bayes) error
 as the dataset grows :cite:`Cover.Hart.1967`,
 and it is optimal in the noiseless case
 where the Bayes error is zero.
-(Full consistency — convergence to the optimal predictor —
+(Full consistency, convergence to the optimal predictor,
 requires $k$-nearest neighbors with $k \to \infty$
 while $k/n \to 0$.)
 
@@ -309,15 +309,15 @@ While deep neural networks are capable of fitting arbitrary labels,
 even when labels are assigned incorrectly or randomly
 :cite:`zhang2021understanding`,
 this capability only emerges over many iterations of training.
-A new line of work :cite:`Rolnick.Veit.Belongie.Shavit.2017`
-has revealed that in the setting of label noise,
+A line of work :cite:`Arpit.Jastrzebski.Ballas.ea.2017,Rolnick.Veit.Belongie.Shavit.2017`
+has shown that in the setting of label noise,
 neural networks tend to fit cleanly labeled data first
 and only subsequently to interpolate the mislabeled data.
-Moreover, it has been established that this phenomenon
-translates directly into a guarantee on generalization:
-whenever a model has fitted the cleanly labeled data
-but not randomly labeled examples included in the training set,
-it has in fact generalized :cite:`Garg.Balakrishnan.Kolter.Lipton.2021`.
+Moreover, this phenomenon can be turned into a generalization *bound*:
+if a model fits the clean examples
+but not deliberately mislabeled ones added to the training set,
+one can *certify* (with high probability) that its population error
+is small :cite:`Garg.Balakrishnan.Kolter.Lipton.2021`.
 
 Together these findings help to motivate *early stopping*,
 a classic technique for regularizing deep neural networks.
@@ -396,13 +396,9 @@ Among the many parameter settings that interpolate the training data,
 stochastic gradient descent does not pick one at random.
 Starting from a small initialization,
 it is biased toward solutions with small norm and "flat" minima,
-which tend to generalize.
-Flatness can even be optimized for directly:
-*sharpness-aware minimization* (SAM) minimizes the worst-case loss within a
-small ball around the current weights rather than the loss itself, and this
-one-line change to the update rule improves generalization across
-architectures :cite:`Foret.Kleiner.Mobahi.ea.2021`.
-This is not merely empirical.
+which tend to generalize (flatness can even be optimized directly,
+e.g., *sharpness-aware minimization* :cite:`Foret.Kleiner.Mobahi.ea.2021`).
+A theorem backs this up.
 For linearly separable data,
 gradient descent on the logistic loss provably converges
 to the *maximum-margin* (minimum-norm) separator,
@@ -413,12 +409,12 @@ instead find simple, generalizing solutions,
 and why the interventions above (weight decay, early stopping)
 help by *nudging* an already-benign bias
 rather than by brute-force capacity control.
-A striking illustration is *grokking*:
+*Grokking* illustrates this:
 on small algorithmic tasks, networks first memorize the training set
 and only much later, after many further steps of training,
 suddenly generalize,
-a reminder that optimization *dynamics*, not just architecture,
-govern generalization :cite:`Power.Burda.Edwards.ea.2022`.
+a reminder that optimization *dynamics* govern generalization
+as much as architecture :cite:`Power.Burda.Edwards.ea.2022`.
 :numref:`fig_grokking` shows the signature:
 training accuracy saturates almost immediately,
 while validation accuracy sits at chance for orders of magnitude more steps
@@ -501,7 +497,7 @@ is to find patterns that **predict well on unseen data**.
 - For deep networks, fitting is **easy**: they can interpolate almost
   any training set, even random labels.
 - So nearly every gain comes from **closing the generalization gap**.
-- Yet *why* remains a **major open question** — with two surprises
+- Yet *why* remains a **major open question**, with two surprises
   ahead: a **second descent**, and generalization **long after**
   memorization.
 :::
@@ -629,30 +625,30 @@ descent from a small initialization selects among them, favoring
 **smooth, small-norm** solutions that generalize.
 
 ::: {.d2l-note .rule}
-Reframe "more capacity" not as "more overfitting" but as **more room for
-the optimizer to find a simple interpolant**. The mathematics — why the
-spike sits exactly at the threshold, and the whole curve in 25 lines —
-is developed in the appendix (§25.5).
+Read "more capacity" as **more room for the optimizer to find a simple
+interpolant**. The mathematics (why the spike sits exactly at the
+threshold, and the whole curve in 25 lines) is developed in the appendix
+(§25.5).
 :::
 :::
 
-::: {.slide title="Three knobs trace the curve — one is shocking"}
+::: {.slide title="Three knobs trace the curve"}
 [Double descent]{.kicker}
 
 Model size is only one of **three** ways to cross the threshold (Nakkiran
 et al., 2021):
 
-- **model-wise** — grow the network (the flavor above);
-- **epoch-wise** — fix the network, train longer: error falls, rises while
+- **model-wise**: grow the network (the flavor above);
+- **epoch-wise**: fix the network, train longer: error falls, rises while
   the model interpolates noise, then falls again;
-- **sample-wise** — the shocking one: **adding training examples can
+- **sample-wise**: **adding training examples can
   *hurt***, because more data moves the threshold and can push a fixed
   model back into the spike.
 
 . . .
 
 ::: {.d2l-note}
-One axis organizes all three: **effective model complexity** — how many
+One axis organizes all three: **effective model complexity**, how many
 examples the full training procedure (model, optimizer, *and* budget) can
 fit perfectly. Error peaks wherever that crosses the dataset size.
 Exercise 6 has you produce the epoch-wise flavor yourself.
@@ -678,7 +674,7 @@ minima.
 
 . . .
 
-This is provable, not just empirical:
+A theorem underlies it:
 
 ::: {.d2l-note .rule}
 On **separable** data, gradient descent on the logistic loss converges to
@@ -689,11 +685,11 @@ penalty (Soudry et al., 2018).
 So explicit tricks (weight decay, early stopping) **nudge** an
 already-benign bias rather than brute-forcing capacity down. Flatness can
 even be optimized *directly*: **SAM** minimizes the worst-case loss in a
-small ball around the weights — a one-line change to the update that
+small ball around the weights, a one-line change to the update that
 improves generalization across architectures.
 :::
 
-::: {.slide title="Grokking: generalization arrives 1000× late"}
+::: {.slide title="Grokking: generalization arrives orders of magnitude later"}
 [Implicit bias · the second surprise]{.kicker}
 
 ::: {.cols .vc}
@@ -702,7 +698,7 @@ On small algorithmic tasks, a network first **memorizes** the training
 set, with test accuracy flat near chance.
 
 Then, after **orders of magnitude more** steps at zero training loss, it
-**suddenly generalizes** — long after any early-stopping rule would have
+**suddenly generalizes**, long after any early-stopping rule would have
 given up.
 
 ::: {.d2l-note .warn}
@@ -737,7 +733,7 @@ induces.
 
 ::: {.col .narrow}
 Memorization and generalization can coexist: **1-nearest-neighbor**
-memorizes everything, achieves zero training error — and still lands
+memorizes everything, achieves zero training error, and still lands
 asymptotically within a **factor of two** of the optimal Bayes error
 (Cover & Hart, 1967).
 
@@ -765,8 +761,8 @@ intuition is often the more reliable one.
 With label noise, networks fit the **cleanly labeled** examples first and
 only later interpolate the **mislabeled** ones.
 
-Stop while the clean data is fit but the noise is not, and you have
-provably **generalized**.
+Stop while the clean data is fit but the noise is not, and you can
+**certify** generalization (with high probability).
 
 ::: {.d2l-note}
 **Patience criterion:** monitor validation error each epoch; stop when it

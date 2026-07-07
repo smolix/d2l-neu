@@ -16,9 +16,9 @@ we might attempt to predict
 the most likely value of the target.
 Or we might predict the value with the smallest
 expected distance from the target.
-And sometimes we wish not only
-to predict a specific value
-but to *quantify our uncertainty*.
+And sometimes we wish
+to *quantify our uncertainty*
+about the prediction itself.
 For example, given some features
 describing a patient,
 we might want to know *how likely* they are
@@ -70,9 +70,6 @@ that generated the data.
 Whenever we analyze a dataset, hunting for patterns
 that we hope might characterize a broader population,
 we are employing statistical thinking.
-Many courses, majors, theses, careers, departments,
-companies, and institutions have been devoted
-to the study of probability and statistics.
 While this section only scratches the surface,
 we will provide the foundation
 that you need to begin building models.
@@ -154,7 +151,8 @@ Here the event of interest is $\textrm{heads}$
 and we denote the corresponding probability $P(\textrm{heads})$.
 A probability of $1$ indicates absolute certainty
 (imagine a trick coin where both sides were heads)
-and a probability of $0$ indicates impossibility
+and, for discrete outcomes like these,
+a probability of $0$ indicates impossibility
 (e.g., if both sides were tails).
 The frequencies $n_\textrm{h}/n$ and $n_\textrm{t}/n$ are not probabilities
 but rather *statistics*.
@@ -227,7 +225,7 @@ setting the first argument
 to the number of draws
 and the second as a list of probabilities
 associated with each of the possible outcomes.
-To simulate ten tosses of a fair coin,
+To simulate 100 tosses of a fair coin,
 we assign probability vector `[0.5, 0.5]`,
 interpreting index 0 as heads
 and index 1 as tails.
@@ -271,11 +269,9 @@ counts
 Each time you run this sampling process,
 you will receive a new random value
 that may differ from the previous outcome.
-If instead you need *reproducible* draws---to debug,
-or so that a figure looks the same on every run---seed
-the generator first (`torch.manual_seed`, `np.random.seed`, or,
-in JAX, by passing an explicit `key`, as introduced
-in :numref:`sec_ndarray`).
+If instead you need *reproducible* draws
+(to debug, or so that a figure looks the same on every run),
+seed the generator first (see :numref:`sec_ndarray`).
 Dividing by the number of tosses
 gives us the *frequency*
 of each outcome in our data.
@@ -350,27 +346,30 @@ as the number of repetitions grows,
 our estimates are guaranteed to converge
 to the true underlying probabilities.
 The mathematical formulation of this phenomenon
-is called the *law of large numbers*
-and the *central limit theorem*
+is called the *law of large numbers*,
+stated and proved in :numref:`sec_mdl-statistics`.
+The *central limit theorem*
 (developed in :numref:`sec_mdl-distributions`)
-tells us that in many situations,
+tells us the rate: in many situations,
 as the sample size $n$ grows,
-these errors should go down
+the error of our estimate should go down
 at a rate of $(1/\sqrt{n})$ :cite:`Wasserman.2013`.
 
 Where does the rate come from? Each toss is a random variable
 taking value $1$ (heads) with probability $p$ and $0$ otherwise,
 so its variance is $E[X_i^2] - E[X_i]^2 = p - p^2 = p(1-p)$
 (we formally introduce variances later in this section).
-Our estimate averages $n$ independent tosses,
-and variances of independent variables add,
+Our estimate averages $n$ *independent* tosses
+(no toss influences any other),
+and variances of independent variables add
+(a fact proved in :numref:`sec_mdl-random_variables`),
 while scaling a variable by $1/n$ scales its variance by $1/n^2$; hence
 
 $$\textrm{Var}[\hat{p}] = \frac{p(1-p)}{n},$$
 
 and the typical error (the standard deviation)
 is $\sqrt{p(1-p)/n}$, which shrinks as $1/\sqrt{n}$.
-Rather than taking this on faith, we can watch the law emerge:
+Rather than taking this on faith, we can check it empirically:
 below we estimate $p$ from 1000 independent batches
 of $n$ tosses each, for growing $n$,
 and plot the standard deviation of the estimates on log--log axes.
@@ -414,9 +413,10 @@ d2l.plot(ns, [stds, [0.5 / n ** 0.5 for n in ns]], 'n', 'std of estimate',
          legend=['empirical', '0.5/sqrt(n)'], xscale='log', yscale='log')
 ```
 
-Let's get some more intuition by studying
-how our estimate evolves as we grow
-the number of tosses from 1 to 10,000.
+The log--log plot compresses the whole convergence into four points.
+We can also watch it unfold toss by toss,
+following a single estimate as the number of tosses
+grows from 1 to 10,000.
 
 ```{.python .input #probability-a-simple-example-tossing-coins-5}
 %%tab pytorch
@@ -558,11 +558,11 @@ then $\mathcal{A}$ did not occur
 but $\mathcal{B}$ did.
 
 
-A *probability* function maps events
-onto real values ${P: \mathcal{A} \subseteq \mathcal{S} \rightarrow [0,1]}$.
-The probability, denoted $P(\mathcal{A})$, of an event $\mathcal{A}$
-in the given sample space $\mathcal{S}$,
-has the following properties:
+A *probability* function assigns each event
+$\mathcal{A} \subseteq \mathcal{S}$
+a real number $P(\mathcal{A}) \in [0,1]$,
+called the probability of $\mathcal{A}$,
+with the following properties:
 
 * The probability of any event $\mathcal{A}$ is a nonnegative real number, i.e., $P(\mathcal{A}) \geq 0$;
 * The probability of the entire sample space is $1$, i.e., $P(\mathcal{S}) = 1$;
@@ -643,7 +643,7 @@ as shorthand for a statement that holds
 for all of the values the random variables can take.
 For instance, the equation $P(X,Y) = P(X) P(Y)$
 is shorthand for "$P(X=i \textrm{ and } Y=j) = P(X=i)P(Y=j)$
-for all $i,j$"---although, as we will see when we discuss
+for all $i,j$", although, as we will see when we discuss
 *independence*, that particular equation holds only in special cases.
 Other times, we abuse notation by writing
 $P(v)$ when the random variable is clear from the context.
@@ -659,7 +659,8 @@ and *continuous* ones,
 like the height of a person sampled at random from the population.
 With fine enough measurements, no two people share an exact height,
 so there is little point in asking for the probability
-that someone is 1.801392782910287192 meters tall---it is zero.
+that someone is 1.801392782910287192 meters tall:
+it is zero, even though such a height is perfectly possible.
 The useful question is whether a height falls into an *interval*,
 say between 1.79 and 1.81 meters.
 In these cases we work with probability *densities*:
@@ -667,6 +668,9 @@ an exact value has no probability but nonzero density,
 and the probability assigned to an interval
 is the *integral* of the density over that interval
 (:numref:`fig_prob_density`).
+Continuous random variables, and the sense in which
+possible events can have probability zero,
+are developed in :numref:`sec_mdl-random_variables`.
 
 ![Discrete random variables place probability *mass* on individual values; continuous ones spread a *density*, and probabilities arise by integrating it over intervals.](../img/probability-density.svg)
 :label:`fig_prob_density`
@@ -729,7 +733,7 @@ $$P(A=a, B=b) \leq P(A=a) \textrm{ and } P(A=a, B=b) \leq P(B = b),$$
 
 since for $A=a$ and $B=b$ to happen,
 $A=a$ has to happen *and* $B=b$ also has to happen.
-Interestingly, the joint probability
+The joint probability
 tells us all that we can know about these
 random variables in a probabilistic sense,
 and can be used to derive many other
@@ -742,8 +746,7 @@ $P(A=a) = \sum_v P(A=a, B=v)$.
 
 
 The ratio $\frac{P(A=a, B=b)}{P(A=a)} \leq 1$
-turns out to be extremely important.
-It is called the *conditional probability*,
+is called the *conditional probability*
 and is denoted via the "$\mid$" symbol:
 
 $$P(B=b \mid A=a) = P(A=a,B=b)/P(A=a).$$
@@ -772,7 +775,7 @@ $P(\mathcal{B} \cup \mathcal{B}' \mid A = a) = P(\mathcal{B} \mid A = a) + P(\ma
 
 
 Using the definition of conditional probabilities,
-we can derive the famous result called *Bayes' theorem*.
+we can derive the famous result called *Bayes' theorem* :cite:`Bayes.1763`.
 By construction, we have that $P(A, B) = P(B\mid A) P(A)$
 and $P(A, B) = P(A\mid B) P(B)$.
 Combining both equations yields
@@ -780,12 +783,11 @@ $P(B\mid A) P(A) = P(A\mid B) P(B)$ and hence
 
 $$P(A \mid B) = \frac{P(B\mid A) P(A)}{P(B)}.$$
 
-This simple equation has profound implications because
-it allows us to reverse the order of conditioning.
-If we know how to estimate $P(B\mid A)$, $P(A)$, and $P(B)$,
+This equation reverses the order of conditioning:
+if we know how to estimate $P(B\mid A)$, $P(A)$, and $P(B)$,
 then we can estimate $P(A\mid B)$.
-We often find it easier to estimate one term directly
-but not the other and Bayes' theorem can come to the rescue here.
+We often find it easier to estimate one of these terms directly
+but not the other, and Bayes' theorem supplies the missing direction.
 For instance, if we know the prevalence of symptoms for a given disease,
 and the overall prevalences of the disease and symptoms, respectively,
 we can determine how likely someone is
@@ -859,13 +861,13 @@ Note that because conditional probabilities are proper probabilities,
 the concepts of independence and dependence also apply to them.
 Two random variables $A$ and $B$ are *conditionally independent*
 given a third variable $C$ if and only if $P(A, B \mid C) = P(A \mid C)P(B \mid C)$.
-Interestingly, two variables can be independent in general
+Two variables can be independent in general
 but become dependent when conditioning on a third.
 This often occurs when the two random variables $A$ and $B$
 correspond to causes of some third variable $C$.
 For example, broken bones and lung cancer might be independent
 in the general population but if we condition on being in the hospital
-then we might find that broken bones are negatively correlated with lung cancer.
+then we might find that broken bones are negatively *correlated* (defined below) with lung cancer.
 That is because the broken bone *explains away* why some person is in the hospital
 and thus lowers the probability that they are hospitalized because of having lung cancer.
 
@@ -878,7 +880,7 @@ Shoe size and reading level are highly correlated
 among elementary school students,
 but this correlation disappears if we condition on age.
 
-![Conditioning can both destroy and create dependence. A *common cause* makes $A$ and $B$ dependent until we condition on $C$; a *collider* (common effect) makes independent causes dependent once $C$ is observed — *explaining away*.](../img/probability-explaining-away.svg)
+![Conditioning can both destroy and create dependence. A *common cause* makes $A$ and $B$ dependent until we condition on $C$; a *collider* (common effect) makes independent causes dependent once $C$ is observed: *explaining away*.](../img/probability-explaining-away.svg)
 :label:`fig_prob_explaining_away`
 
 
@@ -888,8 +890,7 @@ but this correlation disappears if we condition on age.
 
 Let's put our skills to the test.
 Assume that a doctor administers an HIV test to a patient.
-This test is fairly accurate and fails only with 1% probability
-if the patient is healthy but reported as diseased,
+This test is fairly accurate: it has a 1% false-positive rate,
 i.e., healthy patients test positive in 1% of cases.
 Moreover, it never fails to detect HIV if the patient actually has it.
 We use $D_1 \in \{0, 1\}$ to indicate the diagnosis
@@ -927,7 +928,7 @@ In other words, there is only a 13.06% chance
 that the patient actually has HIV,
 despite the test being pretty accurate.
 
-![The same result in *natural frequencies*. Because the disease is rare, the few true positives are swamped by false positives — of roughly 115 positive tests, only 15 are real, so $P(H=1 \mid D_1=1) \approx 13\%$.](../img/probability-natural-frequencies.svg)
+![The same result in *natural frequencies*. Because the disease is rare, the few true positives are swamped by false positives: of roughly 115 positive tests, only 15 are real, so $P(H=1 \mid D_1=1) \approx 13\%$.](../img/probability-natural-frequencies.svg)
 :label:`fig_prob_natural_freq`
 
 As we can see, probability can be counterintuitive.
@@ -1027,23 +1028,21 @@ D2 = jax.random.uniform(k3, (n,)) < jnp.where(H, 0.98, 0.03)
 H[D1 & D2].astype(jnp.float32).mean()  # Exact value: 0.8307
 ```
 
-The assumption of both tests being conditionally independent of each other
-was crucial for our ability to generate a more accurate estimate.
+The estimate improved only because the two tests
+are conditionally independent of each other.
 Take the extreme case where we run the same test twice.
 In this situation we would expect the same outcome both times,
 hence no additional insight is gained from running the same test again.
-The astute reader might have noticed that the diagnosis behaved
-like a classifier hiding in plain sight
-where our ability to decide whether a patient is healthy
+Notice that the diagnosis behaved like a classifier:
+our ability to decide whether a patient is healthy
 increases as we obtain more features (test outcomes).
 
 
 ## Expectations
 
-Often, making decisions requires not just looking
-at the probabilities assigned to individual events
-but composing them together into useful aggregates
-that can provide us with guidance.
+Often, making decisions requires composing
+the probabilities assigned to individual events
+into useful aggregates.
 For example, when random variables take continuous scalar values,
 we often care about knowing what value to expect *on average*.
 This quantity is formally called an *expectation*.
@@ -1107,9 +1106,8 @@ you might be best off keeping the money in the bank.
 For financial decisions,
 we might also want to measure
 how *risky* an investment is.
-Here, we care not just about the expected value
-but how much the actual values tend to *vary*
-relative to this value.
+Here, what matters is how much the actual values
+tend to *vary* around the expected value.
 Note that we cannot just take
 the expectation of the difference
 between the actual and expected values.
@@ -1146,9 +1144,9 @@ we can now compute the variance of the investment.
 It is given by $0.5 \cdot 0 + 0.4 \cdot 2^2 + 0.1 \cdot 10^2 - 1.8^2 = 8.36$.
 For all intents and purposes this is a risky investment.
 Note that by mathematical convention mean and variance
-are often referenced as $\mu$ and $\sigma^2$.
-This is particularly the case whenever we use it
-to parametrize a Gaussian distribution.
+are often referenced as $\mu$ and $\sigma^2$,
+especially when they parametrize
+a Gaussian distribution (:numref:`sec_mdl-distributions`).
 
 In the same way as we introduced expectations
 and variance for *scalar* random variables,
@@ -1167,7 +1165,7 @@ An easy way to see its effect is to consider some vector $\mathbf{v}$
 of the same size as $\mathbf{x}$.
 It follows that
 
-$$\mathbf{v}^\top \boldsymbol{\Sigma} \mathbf{v} = E_{\mathbf{x} \sim P}\left[\mathbf{v}^\top(\mathbf{x} - \boldsymbol{\mu}) (\mathbf{x} - \boldsymbol{\mu})^\top \mathbf{v}\right] = \textrm{Var}_{x \sim P}[\mathbf{v}^\top \mathbf{x}].$$
+$$\mathbf{v}^\top \boldsymbol{\Sigma} \mathbf{v} = E_{\mathbf{x} \sim P}\left[\mathbf{v}^\top(\mathbf{x} - \boldsymbol{\mu}) (\mathbf{x} - \boldsymbol{\mu})^\top \mathbf{v}\right] = \textrm{Var}_{\mathbf{x} \sim P}[\mathbf{v}^\top \mathbf{x}].$$
 
 As such, $\boldsymbol{\Sigma}$ allows us to compute the variance
 for any linear function of $\mathbf{x}$
@@ -1194,10 +1192,10 @@ Since $X \geq 0$, discarding the outcomes below the threshold
 can only decrease the expectation, so
 $E[X] \geq E[X \cdot \mathbf{1}_{X \geq a}] \geq a \, E[\mathbf{1}_{X \geq a}] = a \, P(X \geq a)$;
 dividing by $a$ gives the claim.
-Remarkably, nothing about the distribution of $X$ was used:
+Nothing about the distribution of $X$ was used:
 the bound is *distribution-free* (:numref:`fig_prob_markov`).
 
-![Markov's inequality: for a nonnegative random variable, the probability of exceeding a threshold $a$ is at most the mean divided by $a$---no matter what the distribution looks like.](../img/probability-markov.svg)
+![Markov's inequality: for a nonnegative random variable, the probability of exceeding a threshold $a$ is at most the mean divided by $a$, no matter what the distribution looks like.](../img/probability-markov.svg)
 :label:`fig_prob_markov`
 
 The payoff comes from choosing $X$ cleverly.
@@ -1212,7 +1210,10 @@ For instance, draws from *any* distribution with mean $\mu$
 and variance $\sigma^2$ land within
 $k = \sqrt{2}$ standard deviations of $\mu$
 with probability at least 50%.
-Sharper bounds---Chernoff's and Hoeffding's---and
+Both inequalities are stated formally, with attribution
+and a discussion of when they are tight,
+in :numref:`sec_mdl-random_variables`.
+Sharper bounds (Chernoff's and Hoeffding's) and
 what such concentration results say about generalization
 in machine learning are developed in
 :numref:`sec_mdl-concentration-generalization`.
@@ -1243,7 +1244,7 @@ we will never be more or less than 50% certain
 that the next toss will come up heads.
 These terms come from mechanical modeling,
 (see e.g., :citet:`Der-Kiureghian.Ditlevsen.2009` for a review on this aspect of [uncertainty quantification](https://en.wikipedia.org/wiki/Uncertainty_quantification)).
-It is worth noting, however, that these terms constitute a slight abuse of language.
+These terms are, however, a slight abuse of language.
 The term *epistemic* refers to anything concerning *knowledge*
 and thus, in the philosophical sense, all uncertainty is epistemic.
 
@@ -1267,7 +1268,7 @@ For an empirical review of this fact for large-scale language models, see :citet
 
 We also sharpened our language and tools for statistical modeling.
 In the process of that we learned about conditional probabilities
-and about one of the most important equations in statistics---Bayes' theorem.
+and about Bayes' theorem.
 It is an effective tool for decoupling information conveyed by data
 through a likelihood term $P(B \mid A)$ that addresses
 how well observations $B$ match a choice of parameters $A$,
@@ -1294,11 +1295,11 @@ concentration and generalization, await in
 
 This section is only a preview of the probability and statistics
 we will use.
-:numref:`chap_mdl-probability-statistics` develops it in full---common
+:numref:`chap_mdl-probability-statistics` develops it in full: common
 distributions such as the Bernoulli and Gaussian
 (:numref:`sec_mdl-distributions`), maximum likelihood estimation
 (:numref:`sec_mdl-maximum_likelihood`), and the elements of statistics
-that turn data into estimates---while
+that turn data into estimates.
 :numref:`chap_mdl-information-theory` introduces entropy and the
 divergences between distributions.
 For a thorough yet accessible reference, see :citet:`Wasserman.2013`.
@@ -1356,7 +1357,7 @@ Reasoning under uncertainty<br>**sampling · distributions · Bayes · expectati
 ::: {.slide title="Machine learning is inference under uncertainty"}
 [Motivation]{.kicker}
 
-- A model rarely returns one answer — it returns a **distribution** over
+- A model rarely returns one answer: it returns a **distribution** over
   answers.
 - Training **maximizes likelihood**; most losses are negative
   log-likelihoods.
@@ -1382,11 +1383,11 @@ Reasoning under uncertainty<br>**sampling · distributions · Bayes · expectati
 ::: {.slide title="A coin of unknown bias"}
 [Estimating from data]{.kicker}
 
-We find a coin and want $P(\text{heads})$ — but nobody tells us its
+We find a coin and want $P(\text{heads})$, but nobody tells us its
 value. The plan: **toss it many times and count**.
 
 A single batch of 100 tosses with `random.random()` already lands
-**near** 50/50 — but never exactly, because sampling has variance:
+**near** 50/50, but never exactly, because sampling has variance:
 
 @probability-a-simple-example-tossing-coins-1
 :::
@@ -1401,7 +1402,7 @@ A cleaner tool: a `Multinomial` over `{heads, tails}` with probabilities
 
 . . .
 
-Dividing by the number of tosses gives **empirical frequencies** — our
+Dividing by the number of tosses gives **empirical frequencies**, our
 estimates of $P(\text{heads})$ and $P(\text{tails})$:
 
 @probability-a-simple-example-tossing-coins-3
@@ -1421,25 +1422,25 @@ the empirical frequency converges to the true probability.
 :::
 :::
 
-::: {.slide title="The estimate locks on — at a 1/√n crawl"}
+::: {.slide title="The estimate converges at a 1/√n rate"}
 [Estimating from data]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-The running estimate vs. sample count zig-zags inward and locks onto
-$0.5$:
+The running estimate settles toward $0.5$ as the sample count
+grows:
 
 @!probability-a-simple-example-tossing-coins-5
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-The error shrinks like $1/\sqrt{n}$ — to **halve** it you need
+The error shrinks like $1/\sqrt{n}$: to **halve** it you need
 **4×** the data.
 :::
 
-A first glimpse of the real question of statistics: not just *what* we
-estimate, but *how sure* we are.
+A first glimpse of the real question of statistics: *how sure* we are
+of what we estimate.
 :::
 :::
 :::
@@ -1455,8 +1456,8 @@ independent tosses gives
 $$\textrm{Var}[\hat{p}] = \frac{p(1-p)}{n}.$$
 
 Estimating $p$ from 1000 batches at each $n$, the standard deviation of
-the estimates hugs the predicted $0.5/\sqrt{n}$ line — **slope
-$-\tfrac12$** on log–log axes.
+the estimates follows the predicted $0.5/\sqrt{n}$ line: **slope
+$-\tfrac12$** on log--log axes.
 :::
 
 ::: {.col .fig .big}
@@ -1489,7 +1490,7 @@ three rules (Kolmogorov):
 - disjoint events **add**.
 
 ::: {.d2l-note .rule}
-Everything else follows — e.g. inclusion–exclusion:
+Everything else follows, e.g. inclusion–exclusion:
 $P(\mathcal{A}\cup\mathcal{B}) =
 P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
 :::
@@ -1511,7 +1512,7 @@ place **mass** on points; continuous ones (a height) spread **density**
 along the line.
 
 ::: {.d2l-note}
-For a continuous variable an *exact* value has probability **zero** —
+For a continuous variable an *exact* value has probability **zero**:
 only intervals carry probability, obtained by **integrating** the
 density.
 :::
@@ -1529,7 +1530,7 @@ density.
 
 [Joint, marginal, conditional]{.dtitle}
 
-[how two variables relate — and Bayes' theorem]{.dsub}
+[how two variables relate, and Bayes' theorem]{.dsub}
 :::
 :::
 
@@ -1566,7 +1567,7 @@ $$P(A \mid B) = \frac{P(B \mid A)\,P(A)}{P(B)}.$$
 
 . . .
 
-This **flips** a hard direction into an easy one — inferring a cause $A$
+This **flips** a hard direction into an easy one: inferring a cause $A$
 from an effect $B$ when only $P(B \mid A)$ is known.
 
 ::: {.d2l-note .rule}
@@ -1575,7 +1576,7 @@ $\;P(H \mid E) \propto P(E \mid H)\,P(H)$.
 :::
 :::
 
-::: {.slide title="Independence — and explaining away"}
+::: {.slide title="Independence, and explaining away"}
 [Multiple variables]{.kicker}
 
 ::: {.cols .vc}
@@ -1583,7 +1584,7 @@ $\;P(H \mid E) \propto P(E \mid H)\,P(H)$.
 Independence, $A \perp B$, means $P(A,B) = P(A)\,P(B)$. But
 **conditioning changes dependence**: a common cause links two variables
 until you condition on it; a collider (common effect) makes independent
-causes dependent once you do — *explaining away*.
+causes dependent once you do: *explaining away*.
 :::
 
 ::: {.col .fig .big}
@@ -1602,7 +1603,7 @@ causes dependent once you do — *explaining away*.
 :::
 :::
 
-::: {.slide title="A test that never misses — and still misleads"}
+::: {.slide title="A test that never misses can still mislead"}
 [Worked example]{.kicker}
 
 The test catches **every** true HIV case but has a **1% false-positive**
@@ -1615,7 +1616,7 @@ P(D{=}1 \mid H{=}0) &= 0.01 \\
 \end{aligned}$$
 
 We want the posterior $P(H{=}1 \mid D{=}1)$. Intuition says "almost
-certainly sick" — but Bayes disagrees. Let us count.
+certainly sick", but Bayes disagrees. Let us count.
 :::
 
 ::: {.slide title="Of ~115 positives, only 15 are real"}
@@ -1623,7 +1624,7 @@ certainly sick" — but Bayes disagrees. Let us count.
 
 ::: {.cols .vc}
 ::: {.col}
-Among 10,000 people only ~15 truly have HIV — but ~100 healthy people
+Among 10,000 people only ~15 truly have HIV, but ~100 healthy people
 also test positive:
 
 $$P(H{=}1 \mid D{=}1) \approx \tfrac{15}{115} \approx 13\%.$$
@@ -1644,9 +1645,10 @@ The **base rate** dominates a rare-disease test.
 ::: {.col}
 A *second*, independent positive test multiplies the evidence: applying
 Bayes again drives the posterior from the $0.15\%$ prior to $13\%$,
-then to $83\%$ — exactly $0.8307$.
+then to $83\%$.
 
-Ten million simulated patients land on the same number:
+A simulation of ten million patients lands within a fraction of a
+percent of the exact $0.8307$:
 
 @!probability-worked-example-hiv-testing-1
 :::
@@ -1703,15 +1705,15 @@ original units.
 :::
 :::
 
-::: {.slide title="Covariance: the sign, not the size, is the story"}
+::: {.slide title="Covariance: the sign says how they move"}
 [Summaries]{.kicker}
 
 Covariance is the expected product of the two centered variables; its
-**sign** says whether they move together (magnitude is scale-dependent —
+**sign** says whether they move together (magnitude is scale-dependent;
 rescale by the standard deviations to get the *correlation*). Stacked
 over a vector, it becomes the **covariance matrix**
-$\boldsymbol{\Sigma}$ — symmetric, and a workhorse of the chapters
-ahead:
+$\boldsymbol{\Sigma}$, which is symmetric and used throughout the
+chapters ahead:
 
 @fig:probability-covariance
 :::
@@ -1731,7 +1733,7 @@ ahead:
 
 ::: {.cols .vc}
 ::: {.col}
-**Aleatoric** uncertainty is intrinsic randomness — the next fair-coin
+**Aleatoric** uncertainty is intrinsic randomness: the next fair-coin
 flip stays 50/50 no matter how much data you gather. **Epistemic**
 uncertainty is about *unknown parameters*, and it **shrinks** as data
 accumulates.

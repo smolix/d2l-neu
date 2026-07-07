@@ -62,7 +62,7 @@ d2l.use_svg_display()
 
 ## Loading the Dataset
 
-Since the Fashion-MNIST dataset is so useful, all major frameworks provide preprocessed versions of it. We can download and read it into memory using built-in framework utilities.
+The library provides a preprocessed version of Fashion-MNIST that we can download and read into memory.
 
 ```{.python .input #image-classification-dataset-loading-the-dataset-1}
 %%tab mxnet
@@ -122,7 +122,7 @@ data = FashionMNIST(resize=(32, 32))
 len(data.train[0]), len(data.val[0])
 ```
 
-We instantiated the dataset with `resize=(32, 32)`, so each image is delivered as a single-channel tensor of spatial size $32 \times 32$. There is one subtlety worth pinning down now: where the channel axis lives. PyTorch and MXNet use the *channel-first* convention $c \times h \times w$ ($c$ color channels, then height and width); TensorFlow and JAX use *channel-last* $h \times w \times c$. The `get_dataloader` method below produces the right layout for each framework, so the rest of this chapter never has to think about it; we confirm the per-image shape once the loader is in place, below. Here $c = 1$ since the images are grayscale; most photographs have $c = 3$ channels (red, green, blue), and hyperspectral sensors such as HyMap record over 100.
+We instantiated the dataset with `resize=(32, 32)`, so each image is delivered as a single-channel tensor of spatial size $32 \times 32$. One subtlety matters here: where the channel axis lives. There are two conventions, *channel-first* $c \times h \times w$ ($c$ color channels, then height and width) and *channel-last* $h \times w \times c$. The `get_dataloader` method below produces the appropriate layout; we confirm the per-image shape once the loader is in place, below. Here $c = 1$ since the images are grayscale; most photographs have $c = 3$ channels (red, green, blue).
 
 
 
@@ -220,7 +220,7 @@ X, y = next(iter(data.train_dataloader()))
 print(X.shape, X.dtype, y.shape, y.dtype)
 ```
 
-Let us time one full pass through the training set. The exact number (a few seconds on a CPU-only machine for PyTorch, under a second once the TF/JAX pipeline is compiled) matters less than the comparison: for the convolutional networks of the coming chapters, a single forward and backward pass over a minibatch typically takes 10 to 100 times longer than the corresponding I/O, so the loader is not the bottleneck. (For the tiny linear models of *this* chapter the gap is much smaller; try the first exercise below.) If loading *were* slower than training, you would overlap I/O with compute via prefetching (`prefetch_factor` in PyTorch, `.prefetch()` in `tf.data`) or raise `num_workers`.
+Let us time one full pass through the training set. A single pass takes seconds, not minutes; loading is not the bottleneck. For the convolutional networks of the coming chapters, a single forward and backward pass over a minibatch takes far longer than the corresponding I/O. (For the tiny linear models of *this* chapter the gap is much smaller; try the first exercise below.) If loading *were* slower than training, you would overlap I/O with compute via prefetching or raise the number of loader workers.
 
 ```{.python .input #image-classification-dataset-reading-a-minibatch-3}
 tic = time.time()
@@ -231,7 +231,7 @@ f'{time.time() - tic:.2f} sec'
 
 ## Visualization
 
-We will often be using the Fashion-MNIST dataset. A convenience function `show_images` lays out a list of images in a grid with optional per-image titles. The `d2l` library provides it; here we show only its interface. The full implementation (matplotlib grid layout) lives in the library source, so the cell below is a stub: knowing how to call it is what matters for our purposes.
+We will often be using the Fashion-MNIST dataset. A convenience function `show_images` lays out a list of images in a grid with optional per-image titles. The `d2l` library provides `show_images`; the cell below declares its interface.
 
 ```{.python .input #image-classification-dataset-visualization-1}
 def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
@@ -242,7 +242,7 @@ def show_images(imgs, num_rows, num_cols, titles=None, scale=1.5):  #@save
 ```
 
 Let's put it to good use. In general, it is a good idea to visualize and inspect data that you are training on. 
-Humans are very good at spotting oddities and because of that, visualization serves as an additional safeguard against mistakes and errors in the design of experiments. Here are the images and their corresponding labels (in text)
+Humans are very good at spotting oddities, so visualization is a cheap safeguard against errors in the design of experiments. Here are the images and their corresponding labels (in text)
 for the first few examples in the training dataset.
 
 ```{.python .input #image-classification-dataset-visualization-2}
@@ -298,7 +298,7 @@ We are now ready to work with the Fashion-MNIST dataset in the sections that fol
 
 ## Summary
 
-We now have a slightly more realistic dataset to use for classification. Fashion-MNIST is an apparel classification dataset consisting of images representing 10 categories. We will use this dataset in subsequent sections and chapters to evaluate various network designs, from a simple linear model to advanced residual networks. As we commonly do with images, we read them as a tensor of shape (batch size, number of channels, height, width). For now, we only have one channel as the images are grayscale (the visualization above uses a false color palette for improved visibility). A well-implemented data iterator keeps this loading off the critical path, so that training speed is set by the model rather than by I/O.
+We now have a slightly more realistic dataset to use for classification. Fashion-MNIST is an apparel classification dataset consisting of images representing 10 categories. We will use this dataset in subsequent sections and chapters to evaluate various network designs, from a simple linear model to advanced residual networks. As we commonly do with images, we read them as a tensor of shape (batch size, number of channels, height, width). For now, we only have one channel as the images are grayscale (the visualization above uses a false color palette for improved visibility). A well-implemented data iterator keeps loading fast, so that training speed is set by the model rather than by I/O.
 
 
 ## Exercises
@@ -329,7 +329,7 @@ We now have a slightly more realistic dataset to use for classification. Fashion
 ::: {.cover}
 [Dive into Deep Learning · §4.2]{.kicker}
 
-The Image Classification Dataset<br>**Fashion-MNIST**, the workhorse we will classify for the rest of this chapter.
+The Image Classification Dataset<br>**Fashion-MNIST**, the dataset we will classify for the rest of this chapter.
 
 @!image-classification-dataset-visualization-2
 :::
@@ -344,7 +344,7 @@ The Image Classification Dataset<br>**Fashion-MNIST**, the workhorse we will cla
 - **Fashion-MNIST**: a drop-in replacement, same shape and API, but harder clothing classes ($28\times28$ grayscale, 10 classes, 60 k / 10 k).
 
 ::: {.d2l-note}
-Here a linear model caps out near **82%** (§4.4) --- headroom the deeper models of later chapters will spend.
+Here a linear model caps out near **82%** (§4.4): headroom the deeper models of later chapters will spend.
 :::
 :::
 
@@ -404,7 +404,7 @@ TensorFlow and JAX store images **channel-last**, $h \times w \times c$, with th
 @image-classification-dataset-loading-the-dataset-3
 
 ::: {.d2l-note .rule}
-Same image, axes reordered to `(32, 32, 1)`. `get_dataloader` hands each framework its native layout, so later chapters never think about it.
+Same image, axes reordered to `(32, 32, 1)`: one grayscale channel at the end.
 :::
 :::
 
@@ -460,7 +460,7 @@ images plus a matching vector of integer labels.
 :::
 :::
 
-::: {.slide title="Loading is not the bottleneck — measure it" except="mxnet"}
+::: {.slide title="Loading is not the bottleneck: measure it" except="mxnet"}
 [Minibatches · timing]{.kicker}
 
 Time one full pass over all 60,000 training images:
@@ -475,7 +475,7 @@ prefetch and raise `num_workers`.
 :::
 :::
 
-::: {.slide title="Loading is not the bottleneck — measure it" only="mxnet"}
+::: {.slide title="Loading is not the bottleneck: measure it" only="mxnet"}
 [Minibatches · timing]{.kicker}
 
 Time one full pass over all 60,000 training images:
@@ -483,10 +483,10 @@ Time one full pass over all 60,000 training images:
 @-image-classification-dataset-reading-a-minibatch-3
 
 ::: {.d2l-note .rule}
-About **4.4 seconds** on a CPU --- seconds, not minutes. For the ConvNets of
-later chapters, one forward + backward pass costs **10--100×** the
-corresponding I/O, so a well-built loader keeps data off the critical path.
-If it ever *were* the bottleneck: prefetch and raise `num_workers`.
+Seconds, not minutes. For the ConvNets of later chapters, one forward +
+backward pass costs **10--100×** the corresponding I/O, so a well-built
+loader keeps data off the critical path. If it ever *were* the bottleneck:
+prefetch and raise `num_workers`.
 :::
 :::
 
@@ -519,8 +519,8 @@ A `visualize` method tiles one validation batch, each image captioned with its c
 
 ::: {.col}
 - **Channel axis** differs: PyTorch/MXNet $c\times h\times w$, TensorFlow/JAX $h\times w\times c$ (the loader hides it).
-- Always **look at your data**; a full loading pass costs seconds, so I/O stays off the training critical path.
-- Next: a linear classifier on this data --- and its **~82% ceiling** (§4.4).
+- Always **look at your data**; a full loading pass costs seconds, so training speed is set by the model, not I/O.
+- Next: a linear classifier on this data, and its **~82% ceiling** (§4.4).
 :::
 :::
 :::

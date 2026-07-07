@@ -19,7 +19,7 @@ When we train such high-capacity models we run the risk of overfitting. Thus, we
 revisit regularization and generalization
 for deep networks.
 Throughout, we aim
-to give you a firm grasp not just of the concepts but also of the practice of using deep networks.
+to give you a firm grasp of both the concepts and the practice of using deep networks.
 At the end of this chapter, we apply what we have introduced so far to a real case: house price
 prediction. We punt matters relating to the computational performance, scalability, and efficiency
 of our models to subsequent chapters.
@@ -49,22 +49,22 @@ All are freely accessible online except where noted.
 **Books**
 
 - [Deep Learning — Goodfellow, Bengio & Courville](https://www.deeplearningbook.org/) — free HTML; Chapter 6 (Deep Feedforward Networks) is the canonical reference for hidden units, activation functions, the universal approximation theorem, and backpropagation as reverse-mode differentiation; Chapter 7 covers dropout and regularization.
-- [Neural Networks and Deep Learning — Michael Nielsen](http://neuralnetworksanddeeplearning.com/) — free online; Chapter 2 derives the four equations of backpropagation from first principles with unusual clarity, the best companion to this chapter's backprop section.
+- [Neural Networks and Deep Learning — Michael Nielsen](http://neuralnetworksanddeeplearning.com/) — free online; Chapter 2 derives the four equations of backpropagation from first principles with unusual clarity, a strong companion to this chapter's backprop section.
 - [Understanding Deep Learning — Simon J. D. Prince](https://udlbook.github.io/udlbook/) — free PDF; a modern (2023), figure-rich treatment whose early chapters on shallow and deep networks, initialization, and training map directly onto this chapter.
-- [Deep Learning: Foundations and Concepts — Bishop & Bishop](https://www.bishopbook.com/) — free online edition; a comprehensive, probabilistically-flavoured (2024) account of MLPs, backpropagation, initialization, and regularization.
+- [Deep Learning: Foundations and Concepts — Bishop & Bishop](https://www.bishopbook.com/) — free online edition; a probabilistically-flavoured (2024) account of MLPs, backpropagation, initialization, and regularization.
 
 **Courses and video lectures**
 
 - [CMU 11-785 Introduction to Deep Learning — Bhiksha Raj et al.](https://deeplearning.cs.cmu.edu/) — free slides and recordings; devotes multiple lectures to the perceptron, universal approximation, and backpropagation at exactly this chapter's depth.
-- [Stanford CS231n: Deep Learning for Computer Vision](https://cs231n.github.io/) — free course notes; the "Neural Networks" and "Backpropagation, Intuitions" modules are the most-cited online treatment of the computational-graph view of backprop and the activation-function comparison.
+- [Stanford CS231n: Deep Learning for Computer Vision](https://cs231n.github.io/) — free course notes; the "Neural Networks" and "Backpropagation, Intuitions" modules are one of the most widely cited online treatments of the computational-graph view of backprop and the activation-function comparison.
 - [MIT 6.S191: Introduction to Deep Learning — Amini & Amini](https://introtodeeplearning.com/) — free, updated annually; the opening lectures build the MLP and training loop from scratch with polished visuals.
-- [NYU Deep Learning — LeCun & Canziani](https://atcold.github.io/NYU-DLSP21/) — free notebooks and videos; gradient descent, backpropagation, and training taught by two of the field's founders.
+- [NYU Deep Learning — LeCun & Canziani](https://atcold.github.io/NYU-DLSP21/) — free notebooks and videos; gradient descent, backpropagation, and training taught by Yann LeCun, a founder of the field, and Alfredo Canziani.
 
 **Foundational papers**
 
 - [Learning Representations by Back-propagating Errors — Rumelhart, Hinton & Williams (1986), *Nature*](https://www.nature.com/articles/323533a0) — the paper that brought backpropagation and learned hidden representations to a broad audience (paywalled, noted; widely reproduced online).
 - [Approximation by Superpositions of a Sigmoidal Function — Cybenko (1989)](https://doi.org/10.1007/BF02551274) — the first proof of the universal approximation theorem for single-hidden-layer sigmoid networks (paywalled, noted).
-- [Approximation Capabilities of Multilayer Feedforward Networks — Hornik (1991)](https://doi.org/10.1016/0893-6080(91)90009-T) — extends universal approximation to essentially any non-polynomial activation (paywalled, noted).
+- [Approximation Capabilities of Multilayer Feedforward Networks — Hornik (1991)](https://doi.org/10.1016/0893-6080(91)90009-T) — extends universal approximation to arbitrary bounded, nonconstant activations (the non-polynomial characterization is :citet:`Leshno.Lin.Pinkus.ea.1993`; paywalled, noted).
 - [Understanding the Difficulty of Training Deep Feedforward Networks — Glorot & Bengio (2010)](https://proceedings.mlr.press/v9/glorot10a.html) — free PDF; derives Xavier/Glorot initialization from variance preservation and explains sigmoid-saturation vanishing gradients, the backbone of this chapter's initialization section.
 - [Delving Deep into Rectifiers — He, Zhang, Ren & Sun (2015)](https://arxiv.org/abs/1502.01852) — free; derives He/Kaiming initialization, the current default for ReLU networks.
 - [Rectified Linear Units Improve Restricted Boltzmann Machines — Nair & Hinton (2010)](https://www.cs.toronto.edu/~hinton/absps/reluICML.pdf) — free; the systematic case for ReLU as a hidden-unit nonlinearity.
@@ -73,10 +73,10 @@ All are freely accessible online except where noted.
 
 **Tutorials, notes, and interactive**
 
-- [TensorFlow Playground — Smilkov & Carter](https://playground.tensorflow.org/) — free, zero-install; tune depth, width, activation, and regularization and watch a decision boundary train in real time, the fastest way to build hidden-layer intuition.
-- [Backpropagation, Intuitions — Stanford CS231n](https://cs231n.github.io/optimization-2/) — free; the gate/computational-graph view with worked numerical examples, the perfect concrete complement to this chapter's backprop derivation.
-- [micrograd — Andrej Karpathy](https://github.com/karpathy/micrograd) — free; a ~100-line scalar autograd engine plus a [video walkthrough](https://www.youtube.com/watch?v=VMj-3S1tku0) that builds it from scratch, the best way to internalize the backprop section (and the blueprint for its capstone exercise).
+- [TensorFlow Playground — Smilkov & Carter](https://playground.tensorflow.org/) — free, zero-install; tune depth, width, activation, and regularization and watch a decision boundary train in real time, a hands-on way to build hidden-layer intuition.
+- [Backpropagation, Intuitions — Stanford CS231n](https://cs231n.github.io/optimization-2/) — free; the gate/computational-graph view with worked numerical examples, a concrete complement to this chapter's backprop derivation.
+- [micrograd — Andrej Karpathy](https://github.com/karpathy/micrograd) — free; a ~100-line scalar autograd engine plus a [video walkthrough](https://www.youtube.com/watch?v=VMj-3S1tku0) that builds it from scratch, a good way to internalize the backprop section (and the blueprint for its capstone exercise).
 - [Yes you should understand backprop — Andrej Karpathy](https://karpathy.medium.com/yes-you-should-understand-backprop-e2f06810dcbe) — free; a short argument, with real failure cases (saturated sigmoids, dead ReLUs, exploding clips), for why treating backprop as a leaky abstraction bites practitioners.
-- [Double Descent — MLU-Explain](https://mlu-explain.github.io/double-descent/) — free, interactive; animates the interpolation threshold and second descent, the best visual companion to the modern-generalization section.
+- [Double Descent — MLU-Explain](https://mlu-explain.github.io/double-descent/) — free, interactive; animates the interpolation threshold and second descent, a clear visual companion to the modern-generalization section.
 - [KAN: Kolmogorov–Arnold Networks — Liu et al. (2024)](https://arxiv.org/abs/2404.19756) — free; a recent alternative that places learnable activations on edges rather than fixed activations on nodes, useful context for where the MLP sits among modern parameterizations.
 

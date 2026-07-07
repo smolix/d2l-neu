@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 24764,
-          "sha256": "sha256:f25396e724e9625afd35f24267e76743fa32c9eb54230f54dc74bcb5243f8694"
+          "bytes": 24741,
+          "sha256": "sha256:86dd2fc0f4b6c6d852ceb2d1fc64e2a4cdf87b9df6ac1158c6bd53976395096b"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24238,
-          "sha256": "sha256:8524f0f7ee453038539b0a108f23e165d540ab0401601b1b6ff1f0e59989096b"
+          "bytes": 24132,
+          "sha256": "sha256:331d2495eb4ac8e6b1580ff7adb06457178bdfa26f8d06fef819d077a03e2576"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has a moment and why no'"
+          "text": "'it has so incer and the ti'"
         }
       ]
     }

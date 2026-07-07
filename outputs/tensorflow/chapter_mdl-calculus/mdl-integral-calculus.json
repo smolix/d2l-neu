@@ -47,18 +47,18 @@
       ]
     },
     "integral-box-volume": {
-      "code_fingerprint": "sha256:dfec13c0075a72802ec02be77a2710fbd8e07e99b2206440b1658004a61596bb",
+      "code_fingerprint": "sha256:bc61402f000d027907f60212f67097559c637aa1a9054839d5fcc6e0d4ad0ff3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Riemann volume over the box [-2, 2]^2 : 3.11227\nexact: pi*erf(2)^2 = 3.11227 over the box;  pi = 3.14159 over the plane\n"
+          "text": "Riemann volume over the box [-2, 2]^2 : 3.11227\nexact volume  pi * erf(2)^2           : 3.11227\n"
         }
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:c6b60ed8ea71597b572f5754b994b426c25ed301ad72cbfa2c8d793593b5955e",
+      "code_fingerprint": "sha256:435643a94b9d5f2dafb1b5c7c6f5d04e18b8de92c59b010c9479adb7b1a2fc94",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "integral-density": {
-      "code_fingerprint": "sha256:f8b1b1502a5dad297d3d6e96e2a45d6d72793368b531df69017f6bd0e5b51264",
+      "code_fingerprint": "sha256:9ffe2e260b029e91e38950fd8753cc7268180bc772377fe4cc606c6e454bcc65",
       "kind": "text",
       "outputs": [
         {
@@ -80,20 +80,20 @@
       ]
     },
     "integral-monte-carlo": {
-      "code_fingerprint": "sha256:645fca12fdb9be1101ee881bd72e60cb2132df0a81354e5804ff397e1c831f07",
+      "code_fingerprint": "sha256:4234de101d86a8f7ecc2a094dc982d2a2d6e8484f0aa970096bbdc10521943f2",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=10      Monte Carlo=0.87741  error=1.3e-01\nn=100     Monte Carlo=0.73200  error=1.5e-02\nn=1000    Monte Carlo=0.74470  error=2.1e-03\nn=10000   Monte Carlo=0.74809  error=1.3e-03\nn=100000  Monte Carlo=0.74682  error=3.1e-06\nmidpoint quadrature  =0.74682\n"
+          "text": "n=10      Monte Carlo=0.87741  error=1.3e-01\nn=100     Monte Carlo=0.75454  error=7.7e-03\nn=1000    Monte Carlo=0.74619  error=6.3e-04\nn=10000   Monte Carlo=0.74833  error=1.5e-03\nn=100000  Monte Carlo=0.74719  error=3.7e-04\nmidpoint quadrature  =0.74682\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
-          "bytes": 43736,
-          "sha256": "sha256:65979a954dc2629a6ccbe2d6c4f1932b4745bdd764f6a60b6d7d606899160482"
+          "bytes": 44497,
+          "sha256": "sha256:b87a33db0551408e326be01bed3e0174142990ab2a750ad24daf423ab39dcda1"
         }
       ]
     }

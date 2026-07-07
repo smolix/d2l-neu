@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:15ca0776681b22d64ed921d885fbf2362148585ccef091b44f708cb3cee2e260"
+          "sha256": "sha256:a8edac99ec11728ae2b8863a3f0ba059ebd5d36611824e04d4e462ffd98bf73b"
         }
       ]
     },
@@ -100,7 +100,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean (a+b)/2   = 2.0   sample mean: 1.999\nvar (b-a)^2/12 = 0.333  sample var : 0.334\n"
+          "text": "mean (a+b)/2   = 2.0   sample mean: 1.999\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "var (b-a)^2/12 = 0.333  sample var : 0.334\n"
         }
       ]
     },
@@ -124,7 +129,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:5874d150f52edcb9ccdf6cf4069789dc517e4818eb71686ba295e399659b5f7c"
+          "sha256": "sha256:5a459216bdf6ae272bad4ff519fe8fb8da28599ea38c28af246ce2dfb019be95"
         }
       ]
     },
@@ -155,18 +160,18 @@
       ]
     },
     "distributions-mvn": {
-      "code_fingerprint": "sha256:5b868a07220744f1a6afb31a8309a1ef27f8f14f4768e91c1591cdfdcc6733d6",
+      "code_fingerprint": "sha256:52e9a02abdcd26b778785b738206954618ee80723a568684d58cca621b8c0329",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "empirical covariance:\n [[1.96 1.03]\n [1.03 2.06]]\neigenvalues (≈ 1, 3): [0.98 3.04]\n"
+          "text": "empirical covariance:\n [[1.96 1.03]\n [1.03 2.06]]\neigenvalues (≈ 1, 3): [0.98 3.04]\nCholesky-recipe covariance:\n [[1.93 0.97]\n [0.97 2.  ]]\n"
         }
       ]
     },
     "mdl-distributions-multivariate-gaussian-1": {
-      "code_fingerprint": "sha256:7a3ab0124826b345cc9def38415a53ca49e7fa9142070543e47b73b0659b945a",
+      "code_fingerprint": "sha256:a79212962c7b7a0ffe7ea4727d1ffbb6dbb27de7109649f0c6e10466da726626",
       "kind": "text",
       "outputs": [
         {
@@ -177,7 +182,7 @@
       ]
     },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:5d564c05de291817e569cba91424e185e11e16781352a0de8ac2cb9fdd531890",
+      "code_fingerprint": "sha256:df2a6d22320d57e1bbad69fcd311ce65b29be29daf15c8a2cf5d90a8d6cab4f1",
       "kind": "text",
       "outputs": [
         {
@@ -188,7 +193,7 @@
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:ddf8c3b667a8d520f37d140d798d79860f154af2779debb0306d45ece2b61d37",
+      "code_fingerprint": "sha256:e8e4cfecc9790dae3dbba251b5c0efa319d43cef870b68350229eadeb9ac4d5b",
       "kind": "text",
       "outputs": [
         {

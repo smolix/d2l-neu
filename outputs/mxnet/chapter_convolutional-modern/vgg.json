@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:2510ce4b53f8326764f12ef931483006478a88a371ced69912c0e2274df77091",
+    "d2l_lib_fingerprint": "sha256:b4f1f388ce1e296ff2e627db9d5b0ac9b46fee1a98c3253673d4a847347a69f1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vgg/vgg-training-1.svg",
-          "bytes": 20979,
-          "sha256": "sha256:ecb7efc13ea9e7c4582b0ac8e8184257943caf8f57f4c8916ad22b141abc817e"
+          "bytes": 20978,
+          "sha256": "sha256:6e9a30ecea1ecb67be03fd006324a837166d607fea58d3f213828e1ae62d0591"
         }
       ]
     }

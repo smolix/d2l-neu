@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:b7bffc5433a90518d1489ab9a9a4dc8cfc5a46ee3b7a1ed118988da5e326b793",
+    "d2l_lib_fingerprint": "sha256:35e4c1b2eed0071cd094ae43af95c4f0573cea51e23ea7aab52db30abacf0ccf",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -63,7 +63,7 @@
           "mime": "image/svg+xml",
           "asset": "googlenet/googlenet-training-1.svg",
           "bytes": 20956,
-          "sha256": "sha256:c8d7c366ad4bb00e6561559416b331e3e6289e8725505af326b8e4e4d76e06c1"
+          "sha256": "sha256:d1ba1b297a4654f79bf1fe79c85360908fb0df1c57f7339134cbc23cda1b64f9"
         }
       ]
     }

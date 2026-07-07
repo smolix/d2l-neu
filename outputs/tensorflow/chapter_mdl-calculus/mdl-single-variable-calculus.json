@@ -43,8 +43,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
-          "bytes": 15844,
-          "sha256": "sha256:b57dae33fb6ba9658c5615e5e09bb840327a5b84b18abc668c1a8f2eddffbbbd"
+          "bytes": 15838,
+          "sha256": "sha256:9331d19aaa0ab5923914b2ea7595f6f355dfced68a4c3402d5f552c4fc720d2c"
         }
       ]
     },
@@ -62,7 +62,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25211,
-          "sha256": "sha256:b172ebab19f5f8201382bd8ca7c7e16e897715d125b37fdcc93fc0bd5313580a"
+          "sha256": "sha256:a0ee8969b8047cb3caf95869c9a3716a05234c9e3ee30cbb697948e7c1afed80"
         }
       ]
     },
@@ -96,24 +96,24 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
-          "bytes": 28561,
-          "sha256": "sha256:c462d06ae2b6e543afa4c7be62e144fa79953ef2d3a1302babaa401ded5d64e8"
+          "bytes": 28558,
+          "sha256": "sha256:d0f5b195da8b7558a5f3b3f18cd2be2bd4fffabc4f3bdd441425d271909e5173"
         }
       ]
     },
     "single-variable-calculus-one-sided": {
-      "code_fingerprint": "sha256:8287a4e93d60d3bffd4c88aaaa604f4df9ece91a11f80a4ee2e4dca97ae3e565",
+      "code_fingerprint": "sha256:1bc77efed4485fac653cb3786729dff34c2c13ca06d3bcaec15cfa8da9080841",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epsilon = 0.10000 -> left = -1.0, right = +1.0\nepsilon = 0.00100 -> left = -1.0, right = +1.0\nepsilon = 0.00010 -> left = -1.0, right = +1.0\nepsilon = 0.00001 -> left = -1.0, right = +1.0\n"
+          "text": "right quotient: +1.0, left quotient: -1.0\nd|x|/dx at 0: autograd returns 0.0\nReLU' at 0: autograd returns 0.0\n"
         }
       ]
     },
     "mdl-single-variable-calculus-why-sgd-shrugs": {
-      "code_fingerprint": "sha256:ef7e3d10064ca5c62a16fcf91d6bdf534cd30540cd6a214096e15c9e16b9b725",
+      "code_fingerprint": "sha256:fdc32af3e241341c0e1c34f0bdaa3c3b0e7a35c87c6928ca6890eca8eaaef7c1",
       "kind": "text",
       "outputs": [
         {

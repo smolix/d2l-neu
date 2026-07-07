@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:b7bffc5433a90518d1489ab9a9a4dc8cfc5a46ee3b7a1ed118988da5e326b793",
+    "d2l_lib_fingerprint": "sha256:35e4c1b2eed0071cd094ae43af95c4f0573cea51e23ea7aab52db30abacf0ccf",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,8 +66,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "densenet/densenet-training-1.svg",
-          "bytes": 21013,
-          "sha256": "sha256:5359e7d8353fab2da5e0efbb5632e66bb015227be59273612dc2da962d344bc7"
+          "bytes": 21014,
+          "sha256": "sha256:337387d73fef599b3543a61b7c5dabea2520a6000df574a581e37733588ae6ad"
         }
       ]
     }

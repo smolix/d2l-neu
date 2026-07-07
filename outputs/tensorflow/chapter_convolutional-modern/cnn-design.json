@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7f02e3dd42548c984416340cdfff67c34b5b691b6af48bd941677fdf17a34da0",
+    "d2l_lib_fingerprint": "sha256:ea422dc40d5f4df0ae6d77083ee4b4a7f96540580c4c42e29bf1ccbc7eb6ccc8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 21636,
-          "sha256": "sha256:e3410a6506dd28700574e74e5daa8d7168259999ce2ae5643566f854bf1cd9d3"
+          "bytes": 20439,
+          "sha256": "sha256:4ef00f6a18ea85b1cf7627dc9708e7e673679bf1e4351ad9909b3d2d99b4fd04"
         }
       ]
     }

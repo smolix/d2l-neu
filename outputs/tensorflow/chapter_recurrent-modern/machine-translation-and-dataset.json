@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "machine-translation-and-dataset/machine-translation-and-dataset-tokenization-4-1.svg",
           "bytes": 25569,
-          "sha256": "sha256:567321b67b9820f276981a6f2705cb6bc90a85f187da3144360efc8580c336d0"
+          "sha256": "sha256:b04228adba928508f598cb27fdbfd6db10b291c6f01427e08ec5f491a29700f1"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: tf.Tensor(\n[[  9  85   3   2   1   1   1   1   1]\n [117   5   2   1   1   1   1   1   1]\n [  8  57   3   2   1   1   1   1   1]], shape=(3, 9), dtype=int32)\ndecoder input: tf.Tensor(\n[[  2   8  17 185   4   3   1   1   1]\n [  2 101   5   3   1   1   1   1   1]\n [  2 132  16  30  81   4   3   1   1]], shape=(3, 9), dtype=int32)\nsource len excluding pad: tf.Tensor([4 3 4], shape=(3,), dtype=int32)\nlabel: tf.Tensor(\n[[  8  17 185   4   3   1   1   1   1]\n [101   5   3   1   1   1   1   1   1]\n [132  16  30  81   4   3   1   1   1]], shape=(3, 9), dtype=int32)\n"
+          "text": "source: tf.Tensor(\n[[40 81  3  2  1  1  1  1  1]\n [ 4 51 74  3  2  1  1  1  1]\n [67  7  3  2  1  1  1  1  1]], shape=(3, 9), dtype=int32)\ndecoder input: tf.Tensor(\n[[ 2  0  4  3  1  1  1  1  1]\n [ 2  6 49  7 18  0  4  3  1]\n [ 2 78 29  5  3  1  1  1  1]], shape=(3, 9), dtype=int32)\nsource len excluding pad: tf.Tensor([4 5 4], shape=(3,), dtype=int32)\nlabel: tf.Tensor(\n[[ 0  4  3  1  1  1  1  1  1]\n [ 6 49  7 18  0  4  3  1  1]\n [78 29  5  3  1  1  1  1  1]], shape=(3, 9), dtype=int32)\n"
         }
       ]
     },

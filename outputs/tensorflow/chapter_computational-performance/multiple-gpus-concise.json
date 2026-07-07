@@ -101,7 +101,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.92, 111.5 sec total on ['/device:GPU:0']\n"
+          "text": "test acc: 0.92, 113.3 sec total on ['/device:GPU:0']\n"
         }
       ]
     },
@@ -122,7 +122,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.91, 90.2 sec total on ['/device:GPU:0', '/device:GPU:1']\n"
+          "text": "test acc: 0.91, 165.3 sec total on ['/device:GPU:0', '/device:GPU:1']\n"
         }
       ]
     }

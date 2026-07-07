@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:429619fb560a68cec1e790b659f26397f6a3368e7f3c9d46ff2c9a53d0dd51e5",
+    "d2l_lib_fingerprint": "sha256:19bdfe92fd009ce4dc4a1e84e444b728b7c7d7f65565d8fa15ced6788cc4360c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "machine-translation-and-dataset/machine-translation-and-dataset-tokenization-4-1.svg",
           "bytes": 25569,
-          "sha256": "sha256:f1d512e7828bc198db8c2e0ec9f5c07b337034b4a10961bccd866f941f5d7c28"
+          "sha256": "sha256:128ab449af45c8c7978300d382fd4ad40609a669efb6918dad281b38491a16f7"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[16 18  3  2  1  1  1  1  1]\n [80  9  3  2  1  1  1  1  1]\n [ 9 85  3  2  1  1  1  1  1]]\ndecoder input: [[  2  13  43  65 150   4   3   1   1]\n [  2   0  16   8   4   3   1   1   1]\n [  2   8   0   4   3   1   1   1   1]]\nsource len excluding pad: [4 4 4]\nlabel: [[ 13  43  65 150   4   3   1   1   1]\n [  0  16   8   4   3   1   1   1   1]\n [  8   0   4   3   1   1   1   1   1]]\n"
+          "text": "source: [[  4   0   3   2   1   1   1   1   1]\n [137   0   3   2   1   1   1   1   1]\n [ 43  85  10   2   1   1   1   1   1]]\ndecoder input: [[  2   6   0   4   3   1   1   1   1]\n [  2  16  53 146   5   3   1   1   1]\n [  2  25  17 185   9   3   1   1   1]]\nsource len excluding pad: [4 4 4]\nlabel: [[  6   0   4   3   1   1   1   1   1]\n [ 16  53 146   5   3   1   1   1   1]\n [ 25  17 185   9   3   1   1   1   1]]\n"
         }
       ]
     },

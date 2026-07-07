@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40562,
-          "sha256": "sha256:062c74771355406ec20a883f7d591e5e93b445f7e73d50932d615472136321cb"
+          "bytes": 40386,
+          "sha256": "sha256:acd28193b16c08390cf92c24e1b8410f28918ce9707935744f8b4daf10568390"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 17934,
-          "sha256": "sha256:3fb70a672f4a18c0d65b6b21d02a1a6f23a6f1cae9c065eabc135d5b90061a97"
+          "bytes": 19545,
+          "sha256": "sha256:a3db3b293f60bbf49dea5b8e778914d74e76bc9353aea417f9f8833920d24cf1"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 69226,
-          "sha256": "sha256:5907f8b1fca10cd7c34064d4e9cb9609db5174c89ba840d6874c6102cc1acdab"
+          "bytes": 66946,
+          "sha256": "sha256:79f85733c7397c41489165ddcb4f03955a0214cc5b7f7c389ef504a75e2f6d08"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 45761,
-          "sha256": "sha256:195876c8fd2d077cbd782c880ced00fbfc9bc35580fabf566b5c2a188fda8729"
+          "bytes": 43644,
+          "sha256": "sha256:a8d0a78c866e84a13cedbee074fa3f33eeb433479ffa561aa051fcfec3b188e4"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 106176,
-          "sha256": "sha256:f605160743d71546995324d21035a26a6818f105e51a57ded306ea89d086e00d"
+          "bytes": 102983,
+          "sha256": "sha256:f93a289c17610bacdaa8083b383bdaa36bb8e89ef9990d95f6f3a75ce34b93b8"
         }
       ]
     }

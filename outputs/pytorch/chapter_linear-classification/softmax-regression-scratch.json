@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:764b067eec78490468c50613a7af8c7a11695618e3c932b607240da4ce8ed28a",
+    "d2l_lib_fingerprint": "sha256:2333adb50202a19545edc1eba48e5723dd8709f4868f0f2a03c51d16d483e3ce",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -44,7 +44,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([[0.2268, 0.1372, 0.1509, 0.2645, 0.2207],\n         [0.2283, 0.1606, 0.1701, 0.3069, 0.1341]]),\n tensor([1., 1.]))"
+          "text": "(tensor([[0.2740, 0.3100, 0.1219, 0.1194, 0.1747],\n         [0.1785, 0.1937, 0.2122, 0.1497, 0.2660]]),\n tensor([1.0000, 1.0000]))"
         }
       ]
     },
@@ -92,7 +92,7 @@
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
           "bytes": 22393,
-          "sha256": "sha256:a4940a160e9026515733f12018498ead25e27488660e076e0e7804b9c317fff7"
+          "sha256": "sha256:be2b2c4695118cfc0dcdd6ad287903515580c5cda3101b5ef48f15a4b3b68df1"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Test accuracy: 0.831\n"
+          "text": "Test accuracy: 0.813\n"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 51361,
-          "sha256": "sha256:c74275d3d0d028508d11b3f1a6f2d3bdd830929cfecf2de994b1349598ce7910"
+          "bytes": 49797,
+          "sha256": "sha256:bdd74312ad7f9ccf32ade4edc5e9f22eb029ba0b57a1194d87a2fd803078ff09"
         }
       ]
     },
@@ -138,8 +138,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21526,
-          "sha256": "sha256:d9b89e1e141a07cf108d3bd65d04f090b66b35ce9c034b3f7e51a8f1f5b1bdf0"
+          "bytes": 21505,
+          "sha256": "sha256:1f67318a0dde1ad54aa2f3d4bb54eeda1fd8605c5c322c279ca11b4f84da2f9a"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:2510ce4b53f8326764f12ef931483006478a88a371ced69912c0e2274df77091",
+    "d2l_lib_fingerprint": "sha256:b4f1f388ce1e296ff2e627db9d5b0ac9b46fee1a98c3253673d4a847347a69f1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "nin/nin-training-1.svg",
-          "bytes": 20970,
-          "sha256": "sha256:1fc43cb2b493eab9c3e77dc1ee191cf3bbd73898ba47855a3404c70d0395f8d0"
+          "bytes": 20987,
+          "sha256": "sha256:f748cd0e30cb547bec64b81f23d5a4b02cb7e945ef8f384cf8a8404be2fac8e0"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:58c0740c64f1245097d417b24009a3bdfc4fa79c1dc4e1faa6e82ecc9f1f8deb",
+    "d2l_lib_fingerprint": "sha256:e0abd13333e18f1fcdbd4172883c6eb7d3c4d28f2cb570f512e15630027e6e0f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -44,7 +44,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\n array([[0.13688901, 0.17987698, 0.30691373, 0.23386692, 0.14245334],\n        [0.19054545, 0.2360777 , 0.24561857, 0.11155616, 0.21620211]],\n       dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([1., 1.], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\n array([[0.28281426, 0.13827075, 0.14685889, 0.20051093, 0.23154514],\n        [0.14600419, 0.23331453, 0.24146582, 0.115127  , 0.26408842]],\n       dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.99999994, 1.        ], dtype=float32)>)"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22393,
-          "sha256": "sha256:07087e19f9a4b69ec8e2135ab5dd83323296534afd000588890ce0aa2df16ff6"
+          "bytes": 22394,
+          "sha256": "sha256:e3b8d548970c8e0f14dbc6dd9af8bc22ae91def9cda492c69a828e1cf6ad05c3"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Test accuracy: 0.835\n"
+          "text": "Test accuracy: 0.832\n"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 50898,
-          "sha256": "sha256:4771cdf93f62630ae75bb2c5c3a0dd0d95a2d1a945e025d3b0c3206fa7c09976"
+          "bytes": 49428,
+          "sha256": "sha256:4cde4fe88828667f09f683435ed8973662cfea6556ad614614fd866f0a668431"
         }
       ]
     },
@@ -138,8 +138,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21516,
-          "sha256": "sha256:ff945387e79efce12568eb5e06cacf17f0fc23c54e536d89aa968a9a90c461d6"
+          "bytes": 21538,
+          "sha256": "sha256:9bbe6d333c3e9149736bc4b32009d1a04199fcf719fa372a3ccd858fc48c8ccd"
         }
       ]
     }

@@ -24,12 +24,12 @@
       "outputs": []
     },
     "classification-accuracy-1": {
-      "code_fingerprint": "sha256:b56d9134f3c72c34ef114a7b8a013e241f9ac63e0fad71bb8d75cc7ebb35d5c6",
+      "code_fingerprint": "sha256:7e317ef9327921b2c38c9719fde23a9436da9e241c85a2006fde8523fdeac5d5",
       "kind": "text",
       "outputs": []
     },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:346c27111a0edb51ad5422bc35c4e35ea28f213adbdc85161431b8c6d9956955",
+      "code_fingerprint": "sha256:73132d62e080af8e8826f67451cfa3a43007771b4be28ab3a4ccc9a99473e6d8",
       "kind": "text",
       "outputs": [
         {

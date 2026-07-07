@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:e14f7f27cfe1c26b61a8a455fd6ce164c3c22c351b611672a57c9c9ab7575a24",
+    "d2l_lib_fingerprint": "sha256:28cecefa99548a4a2f30ff6a46009e2932e17f5b076e43a2a10bce30be90ffdd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "nin/nin-training-1.svg",
-          "bytes": 20959,
-          "sha256": "sha256:d2f2fd80f373ae9d40d0bf8cab8ab511b14cf19ab70d04ca9acb015a0dc1f291"
+          "bytes": 20970,
+          "sha256": "sha256:7cd2a8e6c98014a509a73d8b739df0926bd80572c17f91452a5bf3184d0135c9"
         }
       ]
     }

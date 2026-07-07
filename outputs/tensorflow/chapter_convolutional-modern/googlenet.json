@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:1230848dce367f6d6186b8277234581980ac179576ba5f431a4929f8ddf61981",
+    "d2l_lib_fingerprint": "sha256:61edd828e15930d136b21d11861a7067a5161176f40e005a431b22553be16230",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -55,12 +55,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 24, 24, 64)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential output shape:\t (1, 12, 12, 192)\n"
+          "text": "Sequential output shape:\t (1, 24, 24, 64)\nSequential output shape:\t (1, 12, 12, 192)\n"
         },
         {
           "type": "stream",
@@ -87,8 +82,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "googlenet/googlenet-training-1.svg",
-          "bytes": 20960,
-          "sha256": "sha256:e1dfd7d92d3517801aa5c8ed43930f5549a301f5b0b60cb23181c131a5b8dd7c"
+          "bytes": 20956,
+          "sha256": "sha256:db3771893bcd62de84b1473278c803fd26d1d39235006959fb0f39de1d8d47e2"
         }
       ]
     }

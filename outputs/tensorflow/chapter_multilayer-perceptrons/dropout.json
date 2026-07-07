@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:506b16ed30ae592b92c516ea9605c9494154622b0825d79ef47c0ae55ed14c95",
+    "d2l_lib_fingerprint": "sha256:9547468ca0d05d32af8650d8a92406adb3194303ce5115f5c26affbe2efd23dd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\ndropout_p = 0.5: tf.Tensor(\n[[ 0.  0.  0.  6.  8. 10. 12. 14.]\n [ 0.  0.  0.  0. 24.  0. 28.  0.]], shape=(2, 8), dtype=float32)\ndropout_p = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
+          "text": "dropout_p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\ndropout_p = 0.5: tf.Tensor(\n[[ 0.  2.  4.  0.  0.  0. 12. 14.]\n [ 0. 18. 20. 22.  0.  0.  0. 30.]], shape=(2, 8), dtype=float32)\ndropout_p = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
         }
       ]
     },
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 24340,
-          "sha256": "sha256:dc1ac7c628dfc8397d0bef9bc3b7a80a34e4f01218312e1875b711c819605288"
+          "bytes": 24341,
+          "sha256": "sha256:5104efbcd432cea1fa250a810ad64d8604993b336d8d0a00cc0b22e030549ad4"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 24339,
-          "sha256": "sha256:c2b3b3810fd17e597417c2ad34385d8fb99cd51fedc65ca543edbca68bdf065e"
+          "bytes": 24344,
+          "sha256": "sha256:16cf53cfabd40e82da87a80c36cbd71d0870531016ba0f240ad0b34186e1c427"
         }
       ]
     }

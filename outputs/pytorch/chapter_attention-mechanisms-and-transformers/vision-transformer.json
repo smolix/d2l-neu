@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2faa3658bf575adb0814ee95d92d08804518de64a00ed17ed2a6dec6e5fc4d3b",
+    "d2l_lib_fingerprint": "sha256:ff9253880946a63ba79bdd5a22be2b481d96d1514a136f2523618b0845ec2468",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,8 +51,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-training-1.svg",
-          "bytes": 21622,
-          "sha256": "sha256:ac2f59dc12d71a654072772cc1339707486bc66db39fcb6fa0bf5a52da0f2ea8"
+          "bytes": 21505,
+          "sha256": "sha256:b2cae12b365b326f63c22c8e58a73fa6c7c9fbc716ab6b77e06437d593d774e5"
         }
       ]
     }

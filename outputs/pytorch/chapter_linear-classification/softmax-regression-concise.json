@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:9cf23561aadd82fc12d5772dfb925f3fc20cb0d46dc389b53215fa85c6fc1e88",
+    "d2l_lib_fingerprint": "sha256:c375fbc246d4f6b266121f3383be0a133c69bb861f3122d5868f6b014b9e2d64",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-lse-vs-max-1.svg",
           "bytes": 20608,
-          "sha256": "sha256:e99619ca9d526115d269f8c59dad3e4c6c543eba4845faf164b9b2ed6dc2dd79"
+          "sha256": "sha256:e0b9bb670ddc23b51cc316f2a526da177fca160eaae8bd7f492212a79e809d41"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
-          "bytes": 22395,
-          "sha256": "sha256:27db9b16db4b822bd7e12e498a3e8e2082b8d2ddbd8821799544a75b8b2f478d"
+          "bytes": 22397,
+          "sha256": "sha256:07d8bcd1f215718118e53955dd469376147ea4b496691d4f8d51ffacda4bebb2"
         }
       ]
     }

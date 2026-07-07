@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:b9fbc89871322bb05f29ffc6dc2399fb03d845298dfce4bde659b490168fc5d6",
+    "d2l_lib_fingerprint": "sha256:7324de9d9d399caf6e0283ea380f44e1f5a9e70056e73236bf70ad017e66c930",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 24252,
-          "sha256": "sha256:5a5d6da70ba4b1e40f230b7d0a57dfc836cbab35a7ea5f6a95666032b6aa374c"
+          "bytes": 23963,
+          "sha256": "sha256:d6e1f8abf8d1ff81fb6ac5fec1b22c3825c40becddce0afa754e8f0eade75a70"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.3, 'time traveller the paid the thing '\n"
+          "text": "perplexity 7.3, 'time traveller of the the the the '\n"
         }
       ]
     }

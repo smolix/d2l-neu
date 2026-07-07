@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:5255e0efdcc5eeba0c8c55300c1bf9eee6ff4927ff6b79970653bb42ea72f5d5",
+    "d2l_lib_fingerprint": "sha256:606fd0374810c36d2eff1e1db69d4319bdd5eceead185ebc472c24e61923f596",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 21013,
-          "sha256": "sha256:aaeedadd7fb1aea5821bf6ff3a8e2950f6ae38b93ab604d517e38fd94e7d28ec"
+          "bytes": 21646,
+          "sha256": "sha256:cc69c0c3e5f9d5f56933e950ef88b07a7bc55daa4cb72ddfce18ee578819287f"
         }
       ]
     }

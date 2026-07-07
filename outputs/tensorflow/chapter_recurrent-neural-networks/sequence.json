@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40562,
-          "sha256": "sha256:4ab9533298e11d359fd5842ca5b36b8a683eb3fa970af70373e5664e200f11d3"
+          "bytes": 40301,
+          "sha256": "sha256:4933806cbccfabf007b58c916d6da4cc726403cbc2114e06da95697f251ab999"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 19948,
-          "sha256": "sha256:457d8582e742619136cfdbb67abc28c19a919b901b6e3d428aaaf170b1f83248"
+          "bytes": 19942,
+          "sha256": "sha256:24d39be67e4a2e8016c4b1852da8e14149809530c484de19708655a82eaa6c04"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 68443,
-          "sha256": "sha256:45b6da3263aee228da1fe6954f551fd2f578cc6b7dca5b2578de9e4c3007bc7f"
+          "bytes": 67822,
+          "sha256": "sha256:b265057d3018233fdaba339db51b355cad940179c6749e071a7658159501c6c3"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44913,
-          "sha256": "sha256:e2fee834909b6b672efbcef35706ad8f568f9e41b6ab209a8b5a78bf8f7716c5"
+          "bytes": 44528,
+          "sha256": "sha256:f76fe4bda06fa713e4dbf72f4043dba138db13fa6959a3f81bc4d8a6b3a75c77"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 106184,
-          "sha256": "sha256:a63da4bdd47ebba187aed164782363bd0dc4533e2418a0a5e4ccae783b51d68f"
+          "bytes": 105659,
+          "sha256": "sha256:0527d13f2911db138b488753d36539dfadf9c7132b336804d71f082ed331bf42"
         }
       ]
     }

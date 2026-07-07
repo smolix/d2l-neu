@@ -9,22 +9,22 @@
   },
   "cells": {
     "statistics-imports": {
-      "code_fingerprint": "sha256:230a5cc8a42e5a7330108a2bf54601e53f0efbe6bdc0fa969e3e963c4e17bf3f",
+      "code_fingerprint": "sha256:9d30f321dbb9fc4eac894cf5bf8afc93f41f3dfda6ff6973051d3e46bb7e3666",
       "kind": "text",
       "outputs": []
     },
     "statistics-estimator-metrics": {
-      "code_fingerprint": "sha256:8033194e11f5b7925200c090daf96dabf20232875e997ee468b9e6b82ac2fb62",
+      "code_fingerprint": "sha256:0f67fb2804aa6bcd4a5a6e26567fcb9e0d78cbafce5843ba5109909772e141e4",
       "kind": "text",
       "outputs": []
     },
     "statistics-sampling-distribution": {
-      "code_fingerprint": "sha256:f5ec7f499590ba67f55485fadf67c787f7d3b498b9e9eff219a8bc3efe97febb",
+      "code_fingerprint": "sha256:e2b44f112404208eeac049c597682c90b7e19a381399a0d0bd1c1987709c5e01",
       "kind": "text",
       "outputs": []
     },
     "statistics-verify-decomposition": {
-      "code_fingerprint": "sha256:77d5acc9a9ead41fd3d3e166f0a0633a284d75c46bbbfb0a0a7a40395b40d20e",
+      "code_fingerprint": "sha256:631dfd7e83648aef726b7d1c6d3fb4de79de24933b5ea32b902aa88687d63844",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +34,7 @@
       ]
     },
     "statistics-unbiased-variance": {
-      "code_fingerprint": "sha256:f05991fd1a7517d48d35ee3d4fad3088d826de739865e5faaddced7d5f6a46e6",
+      "code_fingerprint": "sha256:b2058a064d77465badf3c728aa991e4f99ad113f873acc89d578de9380724ac0",
       "kind": "text",
       "outputs": [
         {
@@ -45,7 +45,7 @@
       ]
     },
     "statistics-permutation-test": {
-      "code_fingerprint": "sha256:48f31959b139e563c366c8edb38847f642771748136111831c962fb123b4b5cf",
+      "code_fingerprint": "sha256:392dc341530ea13bfbe2b976df3607c42e303a2341261f12d987927fdcd25fd3",
       "kind": "mixed",
       "outputs": [
         {
@@ -58,12 +58,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/statistics-permutation-test-1.svg",
           "bytes": 32404,
-          "sha256": "sha256:a86b75e5d8aeb14e25049fd69a382af65029e6273aad10b75eb369191c1d2213"
+          "sha256": "sha256:593757edc8265f29699034ffae97d951003f61747cd4d9764bf072677d865800"
         }
       ]
     },
     "statistics-confidence-interval": {
-      "code_fingerprint": "sha256:2840d84f72f78af8d4ec1d26b913957146cdb46ffb22bb59934f51d08b25a5a7",
+      "code_fingerprint": "sha256:813ca35e22de295f0d18a5f0bbad5ed66f83cceb6b010e22a67391542fcb79b9",
       "kind": "text",
       "outputs": [
         {
@@ -73,7 +73,7 @@
       ]
     },
     "mdl-statistics-a-gaussian-example-1": {
-      "code_fingerprint": "sha256:ee0697b5d90989bbf5c764dcc4b3fe09e05ac629948cef6e539593901ff4bd93",
+      "code_fingerprint": "sha256:4cfd34a028da283557af8af534b114257bbbccaf5271710e8d522321746dffa5",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "statistics-bootstrap": {
-      "code_fingerprint": "sha256:c1465c436e3591891009ff11310b2c5dffbdaa47f9de8a250538a1c90d63d11c",
+      "code_fingerprint": "sha256:0d42060d79bb9544fcc342d9f833713e1f396e0f82f10306a49c004b0def7cc9",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +95,7 @@
       ]
     },
     "statistics-bootstrap-contrast": {
-      "code_fingerprint": "sha256:19bb62935d3169aeece24270e921e7ddc5ead046bc5c0c4cffe67ac8a6a733aa",
+      "code_fingerprint": "sha256:9c78587bac4308959d4a8fe4a1a26705e8069c02a65415db87b294e504c77856",
       "kind": "text",
       "outputs": [
         {

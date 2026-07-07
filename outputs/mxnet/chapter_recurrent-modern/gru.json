@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:f512be086336efe05de4e6052570dfd2c717d6720478e5cc4cf558c9effe5ea5",
+    "d2l_lib_fingerprint": "sha256:14419d1d0f739b4e2cde5e76c96e705dff711902378fc6cf82465971118c11ba",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20318,
-          "sha256": "sha256:050e83c99caab5ff36de175f87ebe84c65a8f24812cc0f5b0e91199a57836132"
+          "bytes": 20309,
+          "sha256": "sha256:f390a160b583d453fde7ba3dd78016ca87f1417bc5e588a49b2c7b9b0276fef2"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20315,
-          "sha256": "sha256:26b16e59e5d48d3b01a5292d6d5c03a390ed35e03483a8c2e0c2fb007f5d8a78"
+          "bytes": 20312,
+          "sha256": "sha256:e19ac7915211166544885998a1cc4cec990ae0d71a7b27383cdf885c5280cd2e"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has the time the the ti'"
+          "text": "'it has and and and and and'"
         }
       ]
     }

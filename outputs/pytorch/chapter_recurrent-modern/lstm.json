@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 19929,
-          "sha256": "sha256:a25e8674a58da05a718e6e1c6ee0f8455f14c842e48d836f695e29f4c2dc8e80"
+          "bytes": 19922,
+          "sha256": "sha256:2b9f76db4f45bffc3d224417fb4d1d734075dcc2fdd13fe06a2b9abb5e9c6b45"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 20306,
-          "sha256": "sha256:36c1a024686825053a9ce2bccbbf21f58d572f3313c99cc319f227c53836b394"
+          "bytes": 20301,
+          "sha256": "sha256:80e2c87aa1f28a83a067bea12392f9ae26cc1c07e448071d32fb589156947131"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has the time traveller '"
+          "text": "'it has of the time travell'"
         }
       ]
     }

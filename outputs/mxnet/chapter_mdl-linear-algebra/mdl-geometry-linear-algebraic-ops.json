@@ -8,18 +8,13 @@
     "max_inline_bytes": 0
   },
   "cells": {
-    "geometry-linear-algebraic-ops-geometry-of-vectors": {
-      "code_fingerprint": "sha256:97ebc02feeda38d3892c125899c942593add71e168b5fcfd0df6fe618f9b39d8",
-      "kind": "text",
-      "outputs": []
-    },
     "geometry-linear-algebraic-ops-imports": {
-      "code_fingerprint": "sha256:5bbc86382b0725d2a0ae1caa4917c546b8d4d5d8533a5e1198a620a8d2c4d010",
+      "code_fingerprint": "sha256:4fd79a1e7e7a097be89b7cdde2d2d1c630db1592d0062ce1dd3f4fb0d9f16592",
       "kind": "text",
       "outputs": []
     },
     "geometry-linear-algebraic-ops-dot-products-and-angles": {
-      "code_fingerprint": "sha256:460bfed79ca8e1e0300e56a6edbe5dbb93ebb9546a3e090866f007c8242d9bfd",
+      "code_fingerprint": "sha256:4d9eb82f0654ec57ba1eec46575492432b22fd97b29c0d17df99c0663c3ec4ee",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +24,7 @@
       ]
     },
     "mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace": {
-      "code_fingerprint": "sha256:00dfa4b6c8b49b9358465212c2ed23c2c303bd3c848e88d56d8ef1bc0e72e427",
+      "code_fingerprint": "sha256:16af20353519665040f83dd27d914ce6002fe3957f1c044cfd770b1ec887c219",
       "kind": "text",
       "outputs": [
         {
@@ -39,12 +34,12 @@
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-1": {
-      "code_fingerprint": "sha256:eac80021a2fe525e4ec98e6085882bc0c482634b6f1b8811dc1a2b80f10a29da",
+      "code_fingerprint": "sha256:636d5c3b6973da66589e9874850fde8dcc555faac22f113d96fce690c4ef757e",
       "kind": "text",
       "outputs": []
     },
     "geometry-linear-algebraic-ops-hyperplanes-2": {
-      "code_fingerprint": "sha256:57635c81f1a2cb92db336d1d079564845a98798b3e10cad6c04271709868d229",
+      "code_fingerprint": "sha256:7788187604ee57219f2e831292be754f288e38aef18a3a3d3531516f38f7dd1e",
       "kind": "asset",
       "outputs": [
         {
@@ -52,12 +47,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
           "bytes": 26305,
-          "sha256": "sha256:e158d71072cce0a2ac5e2ab2756ed603eec9810b287c85f80ce0a884ef85646f"
+          "sha256": "sha256:6ee91a8b66dce433dbb85919891ef3430e874fd4ab3a52e46a4d3cb115181395"
         }
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-4": {
-      "code_fingerprint": "sha256:755970532fbe6b1974f725512efb6658feae4cc413a9c4bf259e683db84bb5d3",
+      "code_fingerprint": "sha256:283038797963138016afe2329f939f5b92ba2d7307a4589a00e076cdb13ff644",
       "kind": "text",
       "outputs": [
         {
@@ -67,7 +62,7 @@
       ]
     },
     "geometry-linear-algebraic-ops-projection-histogram": {
-      "code_fingerprint": "sha256:1a9fd443a776aae6728b34d559e23de93ec2673e212cf8cb7b17a783cfeceeda",
+      "code_fingerprint": "sha256:4e60829c18a0aadafa31edad31a9f67c26b9d49a67cbe298b3098245c3d780da",
       "kind": "asset",
       "outputs": [
         {
@@ -75,12 +70,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
           "bytes": 37364,
-          "sha256": "sha256:f00614f49398f78ccd99a83336cbbdf697de3819059b16177d6036f9fff82966"
+          "sha256": "sha256:1b6a630079fffbd7e4a9960ca730b6455821452f4bd3f450b391d4a42111e6e2"
         }
       ]
     },
     "geometry-linear-algebraic-ops-invertibility": {
-      "code_fingerprint": "sha256:1a9a6774a74ea4e3f74161edb84f3b8ce6fe163c54e6dddf20b661a92e8bda70",
+      "code_fingerprint": "sha256:e56a42f08aa6b6416d2240a461a123a97a853260ff50b302128913b3288e4521",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +85,7 @@
       ]
     },
     "geometry-linear-algebraic-ops-determinant": {
-      "code_fingerprint": "sha256:40a37168eb9a410a8b3c766fd652ec521c44cbee2e20520e896a7c2aee02f46d",
+      "code_fingerprint": "sha256:bf734d422b34c2ce64be05e3648fd4a61a034303a8e5730a5f87eb891bc5fa49",
       "kind": "text",
       "outputs": [
         {
@@ -99,8 +94,18 @@
         }
       ]
     },
+    "mdl-geometry-linear-algebraic-ops-det-3x3": {
+      "code_fingerprint": "sha256:7b540eac5a4bf47447d7e539bcefce3c362bf2f08b449c13440961ea91de3f04",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array(8.), array(-8.), array(5.9999995))"
+        }
+      ]
+    },
     "geometry-linear-algebraic-ops-expressing-in-code-2": {
-      "code_fingerprint": "sha256:c9b73be47a364c35a0da54005e825b9741b2eca1be2c9cea2ec473568d99d4c9",
+      "code_fingerprint": "sha256:ed30a776730718eb1f59e65c1dbb2600d0a133b294a5bd50aad8277a3422d273",
       "kind": "text",
       "outputs": [
         {

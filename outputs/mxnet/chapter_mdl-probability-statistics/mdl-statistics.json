@@ -9,43 +9,43 @@
   },
   "cells": {
     "statistics-imports": {
-      "code_fingerprint": "sha256:cb69bcd0bf30df51f03d7c226ea86adb3d86eafcff850e55f48a96f073f7ca76",
+      "code_fingerprint": "sha256:c42e1a73164b6b6e9c5fc655eab70ee0bf3f34bb7b8cd8f471f50a18a3cacab5",
       "kind": "text",
       "outputs": []
     },
     "statistics-estimator-metrics": {
-      "code_fingerprint": "sha256:c29f7acb7d7d090995c01f7b25345e397ebd379d25fd3622a3e29c30d07f6742",
+      "code_fingerprint": "sha256:3e123aee5a0b0795b0dea398da2c01b515af5efdc513ef2791fb74fdee2658a5",
       "kind": "text",
       "outputs": []
     },
     "statistics-sampling-distribution": {
-      "code_fingerprint": "sha256:3490de3750bc7429c106a4f3e39ca2a68f257cc4b9c69b3405a2f8311b292ca2",
+      "code_fingerprint": "sha256:73999871db623750c85218a4cd2862b6a94ed7bf17552b2520b89320f7d6e02c",
       "kind": "text",
       "outputs": []
     },
     "statistics-verify-decomposition": {
-      "code_fingerprint": "sha256:7306ee821448c2e3f7e75bd503de3b41fba299a1541f7c6d1f7f45206cdb383e",
+      "code_fingerprint": "sha256:ee66ce6043312a47db714e7ac6b3ffba15d3a6569ad5c416ee99b800843fdb04",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(0.530451), array(0.53045094))"
+          "text": "(array(0.5217457), array(0.5217457))"
         }
       ]
     },
     "statistics-unbiased-variance": {
-      "code_fingerprint": "sha256:f9a340aab3c717b1e132275383ea7b92ea1389a4cab6703e1e9cafdf91838340",
+      "code_fingerprint": "sha256:ad0c8c0179544ab3f6a5a776437fbe06c0526e7cc36ab82c628441fdbb1ecd30",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance    = 4\nE[divide by n]   = 2.673  (biased)\nE[divide by n-1] = 4.009  (unbiased)\n"
+          "text": "true variance    = 4\nE[divide by n]   = 2.659  (biased)\nE[divide by n-1] = 3.989  (unbiased)\n"
         }
       ]
     },
     "statistics-permutation-test": {
-      "code_fingerprint": "sha256:156df3f8d3c439ac0dd1bae803e91cc443b6477c476a186c40ffd46b49506ea9",
+      "code_fingerprint": "sha256:1f4a5f19d714d2dadb47ba52ce73033db7b54af4e27692ea32c106e54e627972",
       "kind": "mixed",
       "outputs": [
         {
@@ -58,22 +58,22 @@
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/statistics-permutation-test-1.svg",
           "bytes": 32404,
-          "sha256": "sha256:83a8e306e5c2b9279841dfd490b6e6ca1bc908b3a8a09c9e5f3dd09ec5dbf684"
+          "sha256": "sha256:c16b9544ad6827ab4248a3459f1a368f74cd8e9ccc04917930e825ac5799649e"
         }
       ]
     },
     "statistics-confidence-interval": {
-      "code_fingerprint": "sha256:b72790000f5f4079585a87fcd251f108cf7b80c55fa9f940154bcc8ecdaefe32",
+      "code_fingerprint": "sha256:c059060aa926f493ca378f768b4e75c17498be77ce80573fa0b69f116d457abb",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(-0.12934424), array(-0.00537404))"
+          "text": "(array(-0.07224776), array(0.05038977))"
         }
       ]
     },
     "mdl-statistics-a-gaussian-example-1": {
-      "code_fingerprint": "sha256:fe19658b6645f6998f618d6e0d620f1e9c16daff60a6e6f0db93b9f028503385",
+      "code_fingerprint": "sha256:788dc1d9474d6ba83d24e0d1bb85d536e66b3156a803cbe6e1eb2e19c84cab08",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "statistics-bootstrap": {
-      "code_fingerprint": "sha256:7b47d45b7fb4f2f71cc1aadb109c30bcf2fb97db522f7752a50718c3f8bbff69",
+      "code_fingerprint": "sha256:64ffddf15eed21a380abff8b4f16ab635a1816fdb8050dc9d10bfa98f14537ed",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +95,7 @@
       ]
     },
     "statistics-bootstrap-contrast": {
-      "code_fingerprint": "sha256:85a26dc2ec0cc7ac3dfe7efb3d48ccf391c43a0a183f6e9720030586e29fea65",
+      "code_fingerprint": "sha256:e817e3f94ffb01c1a9e654712ec128bf0f7960079eaa34f91c0166ec98910d3f",
       "kind": "text",
       "outputs": [
         {

@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:2510ce4b53f8326764f12ef931483006478a88a371ced69912c0e2274df77091",
+    "d2l_lib_fingerprint": "sha256:b4f1f388ce1e296ff2e627db9d5b0ac9b46fee1a98c3253673d4a847347a69f1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 20515,
-          "sha256": "sha256:2d272c1ee3890209de7b44bc1fee336adcb14d671795e62a0f38a46c628ae1d6"
+          "bytes": 20508,
+          "sha256": "sha256:43fc051457697e3d0b770d62d5271eb13a3af7b5099f4166b464ee6d1351be2e"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([2.1563234, 1.7351713, 1.5495938, 1.760287 , 1.7381065, 2.211887 ], device=gpu(0)),\n array([ 0.6484286 ,  1.0366906 , -1.474589  ,  0.5469196 , -0.11096198,\n         1.529086  ], device=gpu(0)))"
+          "text": "(array([1.8855478, 1.8360708, 1.7644066, 1.6617348, 1.5540731, 2.224469 ], device=gpu(0)),\n array([ 0.44446212, -0.5122746 , -1.2265922 , -1.253648  , -1.3062524 ,\n         1.4334846 ], device=gpu(0)))"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 20514,
-          "sha256": "sha256:e9e50d832eb2b61985fc7878140b7bad7dff3b8dd67f52a42eacd4df8a3739a5"
+          "bytes": 20510,
+          "sha256": "sha256:7283183795eb45d83e48c4733c5ae1881bf3b53f7bd77fbaff94d10df026c2d2"
         }
       ]
     }

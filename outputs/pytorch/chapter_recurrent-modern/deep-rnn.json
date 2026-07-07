@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 24870,
-          "sha256": "sha256:f722273245793e6601db6683a15e647e6a055fa484fd171f988523b48ab3afd1"
+          "bytes": 24726,
+          "sha256": "sha256:63f963966308de11545d97dba9b227b0c698ffb898fa5435ef8f9e97e3d77a86"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24069,
-          "sha256": "sha256:bd60fad0a257e53567e18fd4b93b4fc5b0d44a2b73e35e20571c7ca2877b3a3e"
+          "bytes": 24183,
+          "sha256": "sha256:487d0a8c8be98cbedab4a519ffb69ea4dc80b1e89c1ceff6d704b279b5edaecc"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has i the time travelle'"
+          "text": "'it has a move the time tra'"
         }
       ]
     }

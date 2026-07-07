@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:1230848dce367f6d6186b8277234581980ac179576ba5f431a4929f8ddf61981",
+    "d2l_lib_fingerprint": "sha256:61edd828e15930d136b21d11861a7067a5161176f40e005a431b22553be16230",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,8 +66,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "densenet/densenet-training-1.svg",
-          "bytes": 19970,
-          "sha256": "sha256:838a7a1068905b69bf877d13a0e7cde93c3242e21caa624b08c164779d13b05a"
+          "bytes": 21489,
+          "sha256": "sha256:ef7a029be87c557b228c22b56b4c1a3f955b638e93b3ef1fe59e6c1da2c25ff2"
         }
       ]
     }

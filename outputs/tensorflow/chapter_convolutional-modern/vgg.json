@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:3695622f4804256d9724856274e8ee3b0168e931174c26049f28c80dc6daeee5",
+    "d2l_lib_fingerprint": "sha256:2618a5bb6a9caefaeaf7a775161621c7cf2ae8cdaae6f4baa145e7a96b183ff4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,12 +35,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 28, 28, 256)\nSequential output shape:\t (1, 14, 14, 512)\n"
+          "text": "Sequential output shape:\t (1, 28, 28, 256)\nSequential output shape:\t (1, 14, 14, 512)\nSequential output shape:\t (1, 7, 7, 512)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 7, 7, 512)\nSequential output shape:\t (1, 10)\n"
+          "text": "Sequential output shape:\t (1, 10)\n"
         }
       ]
     },
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vgg/vgg-training-1.svg",
-          "bytes": 20964,
-          "sha256": "sha256:b11661aa9c09ba396aaaa8c8b2bd02960b9de3d55fdc709cabe84fbeb5b317cd"
+          "bytes": 20969,
+          "sha256": "sha256:7f13a45eeed9604eb199d5c04c27bdc2c7bf119053f7ce477f7472f429d66c54"
         }
       ]
     }

@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
           "bytes": 24746,
-          "sha256": "sha256:8629ab16d6a881bc94bb95f3626528b656f19d10f1d4dd0bde2285f7531929be"
+          "sha256": "sha256:7b674297604c5d80404d20d2291306c07562c6183f2f0dfbdb5b17fe2d5ffd72"
         }
       ]
     },
@@ -75,25 +75,25 @@
       ]
     },
     "mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule": {
-      "code_fingerprint": "sha256:a0efb6640de933eed6099c6f4af8893ca657aacba7a35a52b1a0525772e36836",
+      "code_fingerprint": "sha256:16f8a44475d6766b9635bc92faaface5351257cf2c5abf6cda16151e5fdbd1fc",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gamma =  1.0: mass right of 0: 1.000, mean 0.966, std 0.244\ngamma =  3.0: mass right of 0: 1.000, mean 1.035, std 0.236\ngamma = 10.0: mass right of 0: 1.000, mean 1.072, std 0.234\nthe honest conditional: mean 0.970, std 0.243\n"
+          "text": "gamma =  1.0: mass right of 0: 1.000, mean 0.966, std 0.244\ngamma =  3.0: mass right of 0: 1.000, mean 1.035, std 0.236\ngamma = 10.0: mass right of 0: 1.000, mean 1.072, std 0.234\nexact conditional: mean 0.970, std 0.243\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
           "bytes": 30656,
-          "sha256": "sha256:9ba28ad17005dee5331eda4957a9af754cf6b8cbc7cd7d944b027e977e58b794"
+          "sha256": "sha256:e323c3c78e8a1fbc1eb18bc3e4e52914af97a846f1a7cf74ee3f36ee000cbe84"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function": {
-      "code_fingerprint": "sha256:26902466e9761cb47528371254f40b3eac4807a36f96be2a87d76fbcc5651c79",
+      "code_fingerprint": "sha256:b4fd24c2aba5f7a1eb2b49a5a7a8894b1b66b82784a518bd3c2bea26c912dc94",
       "kind": "text",
       "outputs": [
         {
@@ -104,7 +104,7 @@
       ]
     },
     "score-matching-diffusion-flow-two-moons": {
-      "code_fingerprint": "sha256:ebd420b7b72fe14bb843fd0fc334ad2377e2efdf28446f77e0013737bdf203fd",
+      "code_fingerprint": "sha256:fa20baf6c7a87990729d0d12fd28853425c805272ef9c9e4e291e303602936af",
       "kind": "text",
       "outputs": [
         {
@@ -115,13 +115,18 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-train": {
-      "code_fingerprint": "sha256:9f83e160d42ca8069424a0ad2ccf64e5f7c123e6b3946ac7946541f1c6628609",
+      "code_fingerprint": "sha256:a39e3ff6cdaa1da44e8a1bef1ade439d88bce474ee51eabe5578e63bd8480a56",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "step    0: CFM loss 2.125\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[14:40:39] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",
@@ -146,12 +151,12 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-sample": {
-      "code_fingerprint": "sha256:d24d50563d58b7e42f6cd4210ddb6dbe7a17d11bb12c9dfbc1c37cb529390a5d",
+      "code_fingerprint": "sha256:8e82692889a8be97ab125db167fbe5b35eea9227343763737d0925d7486f67f2",
       "kind": "text",
       "outputs": []
     },
     "score-matching-diffusion-flow-cfm-panels": {
-      "code_fingerprint": "sha256:9bde83209a288f33e77c14db186bb84b330db469270d113bf03ecea4874cedfc",
+      "code_fingerprint": "sha256:c71244ebbfaa4d49d0363a8f709856e42dc8a46c9073d723a76b4d95e88c2ade",
       "kind": "asset",
       "outputs": [
         {
@@ -159,12 +164,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
           "bytes": 1114875,
-          "sha256": "sha256:b25262e1bec1440b531edde4fe94cf0f670a792217a30db52ccc22100addbfd5"
+          "sha256": "sha256:81171fd5e0fc06a717f066b868cd037e38787e26d88f0d7a4e31f26842e71baa"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-one-reflow-round-measured": {
-      "code_fingerprint": "sha256:b8a9a4c1e233f2bd1b12d1e1bc3453db10b0f1ef83c5da228b997b71051cc323",
+      "code_fingerprint": "sha256:2a7ca3c69f63a143fcbee41881633b41acdfcfc9c15148e24c9ac9ce6f9a2ea5",
       "kind": "text",
       "outputs": [
         {
@@ -190,7 +195,7 @@
       ]
     },
     "score-matching-diffusion-flow-steps-quality": {
-      "code_fingerprint": "sha256:ee160cd73cb15b3add9af2241146b2af252e3f2cb1d001dcb737e9d5a9a39aad",
+      "code_fingerprint": "sha256:5c2e56dd1f5109f62e71c9932fb58cb07989ba8767e595f721bca8b9aecda196",
       "kind": "mixed",
       "outputs": [
         {
@@ -203,12 +208,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
           "bytes": 24637,
-          "sha256": "sha256:4307f6ec5211d0146a18c921a60ae44045087f1822b7ba9d7646e2fc387e9433"
+          "sha256": "sha256:b49785f2d19097b10b4061ba9877917da9be44b29156d5c7d9b0e1bcc8d84143"
         }
       ]
     },
     "score-matching-diffusion-flow-euler-vs-heun": {
-      "code_fingerprint": "sha256:8ba9ee7a520e3772551d60586b5d0bd488bddb1ab895826cce5f6d0162cd7bd3",
+      "code_fingerprint": "sha256:fd99e81e13a15baca3f30889c42adca372a30e35277500832dcebad370f7b41f",
       "kind": "text",
       "outputs": [
         {

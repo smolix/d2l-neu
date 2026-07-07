@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:f83bf7a81392866ccc6162a3ea64fe0a8f8fbd8e7f8f971a775ae9555c9a1038",
+    "d2l_lib_fingerprint": "sha256:20d3d5a4de9b0144dca0defbc6dffd20c3cc22d8f592c98c53595419182d1ab1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 21515,
-          "sha256": "sha256:7b8f0398a6568ee44be7d22c22e95ebea48c6307973709f048a8d629d073377d"
+          "bytes": 21510,
+          "sha256": "sha256:e951451d6d71e219c10244fa1052b2576b745b80020c5ba5d570ccd1ec90eaa1"
         }
       ]
     }

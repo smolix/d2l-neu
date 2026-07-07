@@ -46,19 +46,8 @@
         }
       ]
     },
-    "gradient-based-optimization-edge-of-stability": {
-      "code_fingerprint": "sha256:331235f97dea973ce42924f3165f60b167ba15843e1e70ba2bfc887696a90ed8",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "        eta = 0.40 (2/eta = 5.0)   eta = 0.25 (2/eta = 8.0)\n    k      loss    sharpness         loss    sharpness\n     0    0.5097      3.32         0.5097      3.32\n  4000    0.0124      4.94         0.0104      8.02\n  8000    0.0008      4.97         0.0021      7.96\n 12000    0.0007      5.00         0.0007      7.97\n 16000    0.0005      5.00         0.0004      7.97\n 20000    0.0004      5.00         0.0003      7.97\n"
-        }
-      ]
-    },
     "gradient-based-optimization-contraction": {
-      "code_fingerprint": "sha256:b5bb0789b41898ded481d2056336dfd3c2c2fe9d5586d33354736c88ab7aea72",
+      "code_fingerprint": "sha256:61b6833df391e65141187125285f5728c0cbcb8bde93b34f1b4fbf932638df83",
       "kind": "text",
       "outputs": [
         {
@@ -68,8 +57,19 @@
         }
       ]
     },
+    "gradient-based-optimization-edge-of-stability": {
+      "code_fingerprint": "sha256:9ec20f5341864307bd6b1b9be5fcedce56f00a8b30bf0327ae8a9ef50649788f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        eta = 0.40 (2/eta = 5.0)   eta = 0.25 (2/eta = 8.0)\n    k      loss    sharpness         loss    sharpness\n     0    0.5097      3.32         0.5097      3.32\n  4000    0.0124      4.94         0.0104      8.02\n  8000    0.0008      4.97         0.0021      7.96\n 12000    0.0007      5.00         0.0007      7.97\n 16000    0.0005      5.00         0.0004      7.97\n 20000    0.0004      5.00         0.0003      7.97\n"
+        }
+      ]
+    },
     "gradient-based-optimization-momentum": {
-      "code_fingerprint": "sha256:3252b2fbd40e3e0e1f451eced0f8bd5138e8ec56a25f9bfb97708dfd1835d6ef",
+      "code_fingerprint": "sha256:4bafdd1cddd6adb5792bf6c37084aca8df72d94a257d496e554f5427ec6f9e5d",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +80,7 @@
       ]
     },
     "gradient-based-optimization-sgd-variance": {
-      "code_fingerprint": "sha256:02a6868e52fa889221567d050228020b3000645e1c485153537036431818461e",
+      "code_fingerprint": "sha256:7338e31ce61617d86ac4a60eb1c3c0f8506fcdff2c37028e727a58082c889fd4",
       "kind": "text",
       "outputs": [
         {
@@ -91,7 +91,7 @@
       ]
     },
     "gradient-based-optimization-sgd-schedule": {
-      "code_fingerprint": "sha256:60327b01f34ae68be30911b0d9e97ed8574da680419e09e1e54fe3be601415c9",
+      "code_fingerprint": "sha256:865bd3e5c60885fa9f468806339b8cf5467c655125f295fc449c204d320b3cd6",
       "kind": "mixed",
       "outputs": [
         {
@@ -104,12 +104,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
           "bytes": 100456,
-          "sha256": "sha256:cd4b9acebe21245850608960d05eca49d429a2f3f0cf16cddf3abe888ff0dafa"
+          "sha256": "sha256:6efe7526874da42dff7abdd5db358051612d6a2783bd344a26a0423448a02292"
         }
       ]
     },
     "gradient-based-optimization-newton": {
-      "code_fingerprint": "sha256:97bb6657d100ec427574ac1eb0c7b230031f2af738f02e9552d4569413cbcefb",
+      "code_fingerprint": "sha256:86cc8611937e034fd4676b7821d733642d48638ed9d62007f3471a1ea540746e",
       "kind": "text",
       "outputs": [
         {

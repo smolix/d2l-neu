@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:e14f7f27cfe1c26b61a8a455fd6ce164c3c22c351b611672a57c9c9ab7575a24",
+    "d2l_lib_fingerprint": "sha256:28cecefa99548a4a2f30ff6a46009e2932e17f5b076e43a2a10bce30be90ffdd",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vgg/vgg-training-1.svg",
-          "bytes": 22054,
-          "sha256": "sha256:b5e4f8972c38819a07d6dce64fcba4e472a8b95bde0131fb711e67f575334c88"
+          "bytes": 22051,
+          "sha256": "sha256:f2fad218b69df624794aea76cc3fdb9cc5dc4af81fe83bc17eba3a5d10d8be64"
         }
       ]
     }

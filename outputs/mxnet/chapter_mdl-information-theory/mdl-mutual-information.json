@@ -9,12 +9,12 @@
   },
   "cells": {
     "mutual-information-imports": {
-      "code_fingerprint": "sha256:a1cd8c735db4300539b87b9ec823ec3c53514eec6f8c2cdd601df3929424fd65",
+      "code_fingerprint": "sha256:5f36c6919d492b342b5e652c5377955130675808999a957fe797360943c5bf2a",
       "kind": "text",
       "outputs": []
     },
     "mutual-information-joint-conditional": {
-      "code_fingerprint": "sha256:5e5851f24496960db4ae178d26cfc6a6d8c21a79d3053d042085d9ef6b3fe9a6",
+      "code_fingerprint": "sha256:0c67170af311573499e9e033dbdabb068d05528437fd6f97b31ddc728a431346",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "mutual-information-discrete-joint": {
-      "code_fingerprint": "sha256:1e1062980de19b20a18ab422ce0932b6fccc1aaf26f918988baefa34ba64c007",
+      "code_fingerprint": "sha256:379622d95c837c429cb2222ea99212431449acb019a0a647e22a860954c62f3f",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "mutual-information-gaussian-binned": {
-      "code_fingerprint": "sha256:c9238fdb67626974b2df90d4cbaa42a28f2c9bbdc8f1bf90e66de25101eeabc8",
+      "code_fingerprint": "sha256:8e607c4a743e6da6e2fd7e1329c5883deb5889dd431c6da7c9fb9a173a23f949",
       "kind": "mixed",
       "outputs": [
         {
@@ -49,12 +49,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:4f6e25260a9d99b80fd31ed0c60df2c0aa36c68b2412ef733b65e67be36cd210"
+          "sha256": "sha256:3a951d9390f76b37c61c5960a5add91a91554f1286b5aa5309fa2a81ace0315a"
         }
       ]
     },
     "mutual-information-pmi-corpus": {
-      "code_fingerprint": "sha256:97b6c5f4444c12d0677c55b61da93116590baa06fd510bcfa882499eebc55e61",
+      "code_fingerprint": "sha256:08370a14ac7028f5bc69c2fbc70bbf04cea337cc9c53bc1c75f2a61b036bea3f",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +65,7 @@
       ]
     },
     "mutual-information-nonlinear-correlation": {
-      "code_fingerprint": "sha256:8e04c9e374c79b6e15ad7dd82da93cbd45137a335c4dbf8c3c25cec6d113ec4b",
+      "code_fingerprint": "sha256:1adb7068f8e3a907644918ffcbdf22271b3eec19c6e4b6aeb929a3f4a937f5fb",
       "kind": "text",
       "outputs": [
         {
@@ -76,7 +76,7 @@
       ]
     },
     "mutual-information-dpi-check": {
-      "code_fingerprint": "sha256:727e1878a0feae6b52c980e7321829cfa4fd1a3a077e4960be8c2fce464f33f5",
+      "code_fingerprint": "sha256:46a2d45937a2efc9fab7f26685e451843ea90f004022048308fac3e7dd40e99c",
       "kind": "text",
       "outputs": [
         {
@@ -87,7 +87,7 @@
       ]
     },
     "mdl-mutual-information-the-curse-of-estimation": {
-      "code_fingerprint": "sha256:606fbadf9be1706a4f83001a6615cd49945aeb84c83e4da9aa9cd0f220c09f70",
+      "code_fingerprint": "sha256:6c472db44b22d6fecf5d08836fbb6506009daa8adf97fb1afd1c645c837e7340",
       "kind": "text",
       "outputs": [
         {
@@ -123,7 +123,7 @@
       ]
     },
     "mutual-information-log-n-ceiling": {
-      "code_fingerprint": "sha256:b70a0e7119ec807cf606cb47b2bf6a526e529b394aa43a4c8388252382797eed",
+      "code_fingerprint": "sha256:3ccbd1374b774b8f540df11bfe15374447c1fb019e3c0b3007439b55fc2bae81",
       "kind": "asset",
       "outputs": [
         {
@@ -131,18 +131,23 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:66170bf1343c42cee07e7675bc64b2c3a8e85c570d30c91a70b27149e547f23d"
+          "sha256": "sha256:852aea23a4f14c03e71cb9bfa6ef6e6207b4c915b30c2a2143309835393e8a41"
         }
       ]
     },
     "mutual-information-perfect-critic-bounds": {
-      "code_fingerprint": "sha256:aadfe7f01f8985759ea9aede500e9eb595735a6bb9ca6cac3be2f2c6de616f2d",
+      "code_fingerprint": "sha256:5eb565e8e67a8d43a31ba5fc9ed57d794bce5721d3ec518c98ee6f8518c48be5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n"
+          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n"
         },
         {
           "type": "stream",
@@ -152,9 +157,14 @@
       ]
     },
     "mutual-information-infonce-train": {
-      "code_fingerprint": "sha256:4aa5dc6aa670aa276121e9a4a68081bcd6a23d1b22d9a7aba71588aa37e58a7e",
+      "code_fingerprint": "sha256:2d80cbcb6aaddd4ab923fbb86d9228f8f55580f6630c178ca59f3ef916f85460",
       "kind": "text",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[14:41:06] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        },
         {
           "type": "stream",
           "name": "stdout",
@@ -173,7 +183,7 @@
       ]
     },
     "mutual-information-ib-plane": {
-      "code_fingerprint": "sha256:1521828c54e56fba67903609088d7bc713696839e6b341d5fdb457cc5f65e87d",
+      "code_fingerprint": "sha256:223fa2e4478e6ade99815340267bae3fca010ab1951cb4267805e6573389c2f3",
       "kind": "mixed",
       "outputs": [
         {
@@ -186,12 +196,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:fad26a9a217af4685c237f972136a5f62901a0fcee0950a3f9be8f5308504439"
+          "sha256": "sha256:d0d5ce03c52103fa43ea21094dda170a8a81f249eff46f99882fa29a197150da"
         }
       ]
     },
     "mutual-information-fano": {
-      "code_fingerprint": "sha256:2efcf5e6d31de9253e06bcdc192dc85182426ba3b0cb9b90ab648a9a34a00d3f",
+      "code_fingerprint": "sha256:d24d464b179df763b3ed5b285315579effd6038474acedd85bc46bb6ee6825bd",
       "kind": "text",
       "outputs": [
         {

@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:63e74663427628c967f1703254a32deadc87723e4d47af8a30adbb9914ec7448",
+    "d2l_lib_fingerprint": "sha256:0524a1b21ab22117245eab9e5391ee571de8aaf079fa01f6463823e778ee55ee",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.0278963 , -0.01928696]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.06300136, -0.03304517]], dtype=float32)>"
         }
       ]
     },
@@ -70,362 +70,217 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\r      1/Unknown \u001b[1m11s\u001b[0m 11s/step - accuracy: 0.5312 - loss: 1.2763"
+          "text": "\r      1/Unknown \u001b[1m10s\u001b[0m 10s/step - accuracy: 0.5469 - loss: 1.5597"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r      6/Unknown \u001b[1m12s\u001b[0m 10ms/step - accuracy: 0.5257 - loss: 1.2944"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     10/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5316 - loss: 1.3233"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     12/Unknown \u001b[1m12s\u001b[0m 10ms/step - accuracy: 0.5186 - loss: 1.2974"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     19/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5201 - loss: 1.2752"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     17/Unknown \u001b[1m12s\u001b[0m 10ms/step - accuracy: 0.5145 - loss: 1.2947"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     29/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5189 - loss: 1.2428"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     22/Unknown \u001b[1m12s\u001b[0m 10ms/step - accuracy: 0.5127 - loss: 1.2869"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     39/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5219 - loss: 1.2076"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     27/Unknown \u001b[1m12s\u001b[0m 10ms/step - accuracy: 0.5117 - loss: 1.2802"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     48/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5255 - loss: 1.1794"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     32/Unknown \u001b[1m12s\u001b[0m 10ms/step - accuracy: 0.5115 - loss: 1.2701"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     58/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5302 - loss: 1.1505"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     37/Unknown \u001b[1m12s\u001b[0m 10ms/step - accuracy: 0.5122 - loss: 1.2567"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     67/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5350 - loss: 1.1256"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     42/Unknown \u001b[1m12s\u001b[0m 10ms/step - accuracy: 0.5138 - loss: 1.2426"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     76/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5398 - loss: 1.1025"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     47/Unknown \u001b[1m12s\u001b[0m 10ms/step - accuracy: 0.5156 - loss: 1.2284"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     85/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5446 - loss: 1.0810"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     53/Unknown \u001b[1m12s\u001b[0m 10ms/step - accuracy: 0.5181 - loss: 1.2113"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     95/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5500 - loss: 1.0587"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     62/Unknown \u001b[1m12s\u001b[0m 10ms/step - accuracy: 0.5224 - loss: 1.1858"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    105/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5552 - loss: 1.0380"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     71/Unknown \u001b[1m12s\u001b[0m 9ms/step - accuracy: 0.5267 - loss: 1.1613 "
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    114/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5600 - loss: 1.0205"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     80/Unknown \u001b[1m12s\u001b[0m 9ms/step - accuracy: 0.5312 - loss: 1.1383"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    122/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5641 - loss: 1.0062"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     87/Unknown \u001b[1m12s\u001b[0m 9ms/step - accuracy: 0.5350 - loss: 1.1210"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    131/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5685 - loss: 0.9912"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     93/Unknown \u001b[1m12s\u001b[0m 9ms/step - accuracy: 0.5385 - loss: 1.1067"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    141/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5733 - loss: 0.9754"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r     98/Unknown \u001b[1m12s\u001b[0m 9ms/step - accuracy: 0.5414 - loss: 1.0953"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    151/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5779 - loss: 0.9607"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    103/Unknown \u001b[1m12s\u001b[0m 9ms/step - accuracy: 0.5443 - loss: 1.0841"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    161/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5823 - loss: 0.9470"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    109/Unknown \u001b[1m12s\u001b[0m 9ms/step - accuracy: 0.5477 - loss: 1.0713"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    170/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5862 - loss: 0.9353"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    114/Unknown \u001b[1m13s\u001b[0m 9ms/step - accuracy: 0.5504 - loss: 1.0611"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    180/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5903 - loss: 0.9230"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    119/Unknown \u001b[1m13s\u001b[0m 9ms/step - accuracy: 0.5532 - loss: 1.0511"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    190/Unknown \u001b[1m11s\u001b[0m 6ms/step - accuracy: 0.5944 - loss: 0.9114"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    124/Unknown \u001b[1m13s\u001b[0m 9ms/step - accuracy: 0.5560 - loss: 1.0415"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    200/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.5982 - loss: 0.9005"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    129/Unknown \u001b[1m13s\u001b[0m 9ms/step - accuracy: 0.5587 - loss: 1.0322"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    210/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6019 - loss: 0.8902"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    135/Unknown \u001b[1m13s\u001b[0m 9ms/step - accuracy: 0.5617 - loss: 1.0216"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    219/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6050 - loss: 0.8813"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    140/Unknown \u001b[1m13s\u001b[0m 9ms/step - accuracy: 0.5642 - loss: 1.0132"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    228/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6081 - loss: 0.8728"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    145/Unknown \u001b[1m13s\u001b[0m 9ms/step - accuracy: 0.5666 - loss: 1.0052"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    238/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6114 - loss: 0.8637"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    150/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5689 - loss: 0.9974"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    247/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6143 - loss: 0.8559"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    156/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5717 - loss: 0.9883"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    256/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6170 - loss: 0.8484"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    161/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5739 - loss: 0.9810"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    265/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6197 - loss: 0.8412"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    166/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5761 - loss: 0.9740"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    275/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6226 - loss: 0.8335"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    171/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5782 - loss: 0.9671"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    285/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6254 - loss: 0.8261"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    177/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5807 - loss: 0.9591"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    294/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6279 - loss: 0.8197"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    182/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5827 - loss: 0.9527"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    304/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6305 - loss: 0.8129"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    187/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5847 - loss: 0.9465"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    314/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6331 - loss: 0.8064"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    192/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5867 - loss: 0.9404"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    323/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6353 - loss: 0.8007"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    197/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5886 - loss: 0.9345"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    333/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6377 - loss: 0.7946"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    202/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5905 - loss: 0.9287"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    342/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6398 - loss: 0.7893"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    207/Unknown \u001b[1m13s\u001b[0m 10ms/step - accuracy: 0.5924 - loss: 0.9231"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    351/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6419 - loss: 0.7842"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    212/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.5942 - loss: 0.9177"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    360/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6438 - loss: 0.7793"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    217/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.5960 - loss: 0.9124"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    370/Unknown \u001b[1m12s\u001b[0m 6ms/step - accuracy: 0.6460 - loss: 0.7740"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    222/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.5978 - loss: 0.9072"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    379/Unknown \u001b[1m13s\u001b[0m 6ms/step - accuracy: 0.6478 - loss: 0.7694"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    227/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.5995 - loss: 0.9022"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    388/Unknown \u001b[1m13s\u001b[0m 6ms/step - accuracy: 0.6496 - loss: 0.7650"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    232/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6012 - loss: 0.8973"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    237/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6028 - loss: 0.8925"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    242/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6045 - loss: 0.8879"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    247/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6061 - loss: 0.8833"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    252/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6077 - loss: 0.8788"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    257/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6093 - loss: 0.8743"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    263/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6111 - loss: 0.8692"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    268/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6127 - loss: 0.8650"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    274/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6145 - loss: 0.8601"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    280/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6162 - loss: 0.8553"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    286/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6179 - loss: 0.8507"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    292/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6196 - loss: 0.8462"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    297/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6210 - loss: 0.8426"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    303/Unknown \u001b[1m14s\u001b[0m 10ms/step - accuracy: 0.6226 - loss: 0.8383"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    309/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6242 - loss: 0.8341"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    315/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6258 - loss: 0.8300"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    321/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6273 - loss: 0.8260"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    326/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6286 - loss: 0.8227"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    331/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6298 - loss: 0.8195"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    336/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6310 - loss: 0.8163"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    341/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6323 - loss: 0.8133"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    346/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6334 - loss: 0.8102"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    351/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6346 - loss: 0.8073"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    357/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6360 - loss: 0.8038"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    362/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6372 - loss: 0.8009"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    368/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6385 - loss: 0.7975"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    374/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6398 - loss: 0.7942"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    380/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6411 - loss: 0.7909"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    386/Unknown \u001b[1m15s\u001b[0m 10ms/step - accuracy: 0.6424 - loss: 0.7878"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    391/Unknown \u001b[1m23s\u001b[0m 29ms/step - accuracy: 0.6434 - loss: 0.7852"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r    391/Unknown \u001b[1m19s\u001b[0m 23ms/step - accuracy: 0.6502 - loss: 0.7635"
         },
         {
           "type": "stream",
@@ -435,7 +290,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m391/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m28s\u001b[0m 42ms/step - accuracy: 0.7248 - loss: 0.5831 - val_accuracy: 0.8280 - val_loss: 0.3796\n"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m391/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m24s\u001b[0m 34ms/step - accuracy: 0.7272 - loss: 0.5746 - val_accuracy: 0.8360 - val_loss: 0.3730\n"
         },
         {
           "type": "stream",
@@ -445,227 +300,222 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\r\u001b[1m  1/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1:26\u001b[0m 221ms/step - accuracy: 0.7031 - loss: 0.4765"
+          "text": "\r\u001b[1m  1/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m39s\u001b[0m 101ms/step - accuracy: 0.9219 - loss: 0.2419"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 10/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.7927 - loss: 0.4162    "
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 11/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 5ms/step - accuracy: 0.8703 - loss: 0.3385   "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 19/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8118 - loss: 0.3997"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 20/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8572 - loss: 0.3531"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 28/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8185 - loss: 0.3938"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 29/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8545 - loss: 0.3551"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 37/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8226 - loss: 0.3884"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 38/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8535 - loss: 0.3555"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 46/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8252 - loss: 0.3853"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 45/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8524 - loss: 0.3558"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 55/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8270 - loss: 0.3832"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 54/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8506 - loss: 0.3569"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 64/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8285 - loss: 0.3814"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 63/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8492 - loss: 0.3578"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 73/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8298 - loss: 0.3802"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 72/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8483 - loss: 0.3586"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 82/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8305 - loss: 0.3795"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 81/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8476 - loss: 0.3593"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 91/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8311 - loss: 0.3789"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 90/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8473 - loss: 0.3598"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m100/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8316 - loss: 0.3784"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m100/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8471 - loss: 0.3600"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m109/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8320 - loss: 0.3779"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m109/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8468 - loss: 0.3604"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m118/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8323 - loss: 0.3775"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m117/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8466 - loss: 0.3608"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m126/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8327 - loss: 0.3770"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m126/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8464 - loss: 0.3610"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m134/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8330 - loss: 0.3765"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m135/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8462 - loss: 0.3611"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m143/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8334 - loss: 0.3761"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m144/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8460 - loss: 0.3612"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m152/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8337 - loss: 0.3756"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m154/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8459 - loss: 0.3613"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m161/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8340 - loss: 0.3750"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m164/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8457 - loss: 0.3613"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m170/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8344 - loss: 0.3744"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m173/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8456 - loss: 0.3613"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m179/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8348 - loss: 0.3738"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m182/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8455 - loss: 0.3613"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m188/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8351 - loss: 0.3732"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m190/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8455 - loss: 0.3613"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m197/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8353 - loss: 0.3727"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m199/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8454 - loss: 0.3612"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m206/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8356 - loss: 0.3722"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m208/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8453 - loss: 0.3611"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m214/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8358 - loss: 0.3718"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m217/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8453 - loss: 0.3611"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m223/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8360 - loss: 0.3713"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m227/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8452 - loss: 0.3611"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m232/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8362 - loss: 0.3709"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m237/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8451 - loss: 0.3611"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m241/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8364 - loss: 0.3705"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m247/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8451 - loss: 0.3611"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m250/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8366 - loss: 0.3701"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m257/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8450 - loss: 0.3611"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m259/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8368 - loss: 0.3697"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m267/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8448 - loss: 0.3612"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m268/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8370 - loss: 0.3694"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m277/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8447 - loss: 0.3614"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m277/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8372 - loss: 0.3690"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m286/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8446 - loss: 0.3614"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m286/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8374 - loss: 0.3687"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m295/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8445 - loss: 0.3615"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m295/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8375 - loss: 0.3684"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m304/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8444 - loss: 0.3616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m304/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8377 - loss: 0.3681"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m314/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8443 - loss: 0.3616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m313/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8378 - loss: 0.3678"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m324/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8442 - loss: 0.3616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m322/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8380 - loss: 0.3675"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m333/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8442 - loss: 0.3616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m331/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8381 - loss: 0.3673"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m342/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8441 - loss: 0.3616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m340/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8382 - loss: 0.3671"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m351/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8440 - loss: 0.3616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m350/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8383 - loss: 0.3668"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m360/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8440 - loss: 0.3616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m359/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8384 - loss: 0.3667"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m370/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8439 - loss: 0.3616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m368/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8385 - loss: 0.3665"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m379/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8439 - loss: 0.3616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m377/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8386 - loss: 0.3664"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m388/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8438 - loss: 0.3616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m386/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8387 - loss: 0.3662"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m391/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m3s\u001b[0m 8ms/step - accuracy: 0.8434 - loss: 0.3590 - val_accuracy: 0.8549 - val_loss: 0.3360\n"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m391/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m3s\u001b[0m 8ms/step - accuracy: 0.8426 - loss: 0.3604 - val_accuracy: 0.8519 - val_loss: 0.3374\n"
         },
         {
           "type": "stream",
@@ -675,237 +525,222 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\r\u001b[1m  1/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m47s\u001b[0m 122ms/step - accuracy: 0.8906 - loss: 0.2884"
+          "text": "\r\u001b[1m  1/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1:26\u001b[0m 223ms/step - accuracy: 0.8906 - loss: 0.2756"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 10/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8686 - loss: 0.3175   "
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 10/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8815 - loss: 0.3079    "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 19/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8741 - loss: 0.3083"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 18/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8822 - loss: 0.2996"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 27/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8777 - loss: 0.3028"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 27/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8825 - loss: 0.2938"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 35/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8811 - loss: 0.2968"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 36/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8828 - loss: 0.2895"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 43/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8832 - loss: 0.2925"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 45/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8837 - loss: 0.2855"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 51/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8848 - loss: 0.2892"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 53/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8847 - loss: 0.2832"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 59/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8861 - loss: 0.2866"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 63/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8854 - loss: 0.2816"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 67/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.8868 - loss: 0.2848"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 72/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8858 - loss: 0.2803"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 75/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8874 - loss: 0.2832"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 82/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8862 - loss: 0.2790"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 84/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8877 - loss: 0.2819"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 91/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8867 - loss: 0.2779"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 93/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8880 - loss: 0.2809"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m100/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8871 - loss: 0.2768"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m102/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8883 - loss: 0.2799"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m109/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8875 - loss: 0.2759"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m111/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8886 - loss: 0.2791"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m118/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8876 - loss: 0.2753"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m120/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8889 - loss: 0.2784"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m127/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8876 - loss: 0.2751"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m129/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8892 - loss: 0.2777"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m136/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8876 - loss: 0.2748"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m138/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8894 - loss: 0.2771"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m145/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8877 - loss: 0.2745"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m147/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8898 - loss: 0.2764"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m154/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8878 - loss: 0.2742"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m156/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8902 - loss: 0.2757"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m163/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8878 - loss: 0.2740"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m165/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8905 - loss: 0.2751"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m172/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8879 - loss: 0.2737"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m174/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8907 - loss: 0.2745"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m180/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8879 - loss: 0.2736"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m183/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8910 - loss: 0.2739"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m188/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8879 - loss: 0.2734"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m192/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8912 - loss: 0.2734"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m198/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8879 - loss: 0.2732"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m202/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8913 - loss: 0.2729"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m207/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8879 - loss: 0.2730"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m209/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8915 - loss: 0.2725"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m215/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8879 - loss: 0.2727"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m219/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.8917 - loss: 0.2720"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m224/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8879 - loss: 0.2725"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m227/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8918 - loss: 0.2716"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m234/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8880 - loss: 0.2723"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m235/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8919 - loss: 0.2712"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m244/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8880 - loss: 0.2720"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m243/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8920 - loss: 0.2708"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m253/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8880 - loss: 0.2718"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m251/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8921 - loss: 0.2705"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m262/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8881 - loss: 0.2715"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m260/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8923 - loss: 0.2701"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m271/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8881 - loss: 0.2713"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m268/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8924 - loss: 0.2698"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m281/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8882 - loss: 0.2710"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m277/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8925 - loss: 0.2695"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m291/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8883 - loss: 0.2707"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m286/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8926 - loss: 0.2692"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m301/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8883 - loss: 0.2705"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m295/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8927 - loss: 0.2690"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m310/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8884 - loss: 0.2702"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m304/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8927 - loss: 0.2687"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m319/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8885 - loss: 0.2700"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m313/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8928 - loss: 0.2684"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m329/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8886 - loss: 0.2698"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m321/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8929 - loss: 0.2682"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m338/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8887 - loss: 0.2695"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m329/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8930 - loss: 0.2679"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m347/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8888 - loss: 0.2693"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m338/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8931 - loss: 0.2676"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m356/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8889 - loss: 0.2691"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m347/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8932 - loss: 0.2674"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m365/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8890 - loss: 0.2688"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m355/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8932 - loss: 0.2672"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m374/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8891 - loss: 0.2686"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m364/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8933 - loss: 0.2669"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m383/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8893 - loss: 0.2684"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m372/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8934 - loss: 0.2667"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m380/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8934 - loss: 0.2665"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m388/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.8935 - loss: 0.2663"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m391/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m3s\u001b[0m 8ms/step - accuracy: 0.8966 - loss: 0.2568 - val_accuracy: 0.8650 - val_loss: 0.3156\n"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m391/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m3s\u001b[0m 8ms/step - accuracy: 0.8936 - loss: 0.2584 - val_accuracy: 0.8697 - val_loss: 0.3080\n"
         },
         {
           "type": "stream",
@@ -915,222 +750,212 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\r\u001b[1m  1/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1:17\u001b[0m 198ms/step - accuracy: 0.9219 - loss: 0.1786"
+          "text": "\r\u001b[1m  1/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1:20\u001b[0m 206ms/step - accuracy: 1.0000 - loss: 0.1019"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 10/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9422 - loss: 0.1681    "
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 11/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 5ms/step - accuracy: 0.9649 - loss: 0.1346    "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 19/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9463 - loss: 0.1656"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 20/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9598 - loss: 0.1417"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 28/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9476 - loss: 0.1642"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 30/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9548 - loss: 0.1487"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 38/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9476 - loss: 0.1635"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 39/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9521 - loss: 0.1518"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 47/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9470 - loss: 0.1636"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 48/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9511 - loss: 0.1531"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 56/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9465 - loss: 0.1636"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 58/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9503 - loss: 0.1543"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 66/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9459 - loss: 0.1637"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 67/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9499 - loss: 0.1548"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 75/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9451 - loss: 0.1643"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 76/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9495 - loss: 0.1553"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 84/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9446 - loss: 0.1647"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 85/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9490 - loss: 0.1559"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 93/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9441 - loss: 0.1650"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 95/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9484 - loss: 0.1569"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m102/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9437 - loss: 0.1651"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m105/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9478 - loss: 0.1577"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m111/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9435 - loss: 0.1652"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m114/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9473 - loss: 0.1583"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m120/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9432 - loss: 0.1653"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m124/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9468 - loss: 0.1588"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m129/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9430 - loss: 0.1654"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m134/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9465 - loss: 0.1592"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m138/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9428 - loss: 0.1655"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m143/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9461 - loss: 0.1595"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m147/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9427 - loss: 0.1656"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m152/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9459 - loss: 0.1598"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m155/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9426 - loss: 0.1657"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m161/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9456 - loss: 0.1599"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m165/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9424 - loss: 0.1657"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m171/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9453 - loss: 0.1601"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m175/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9423 - loss: 0.1658"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m181/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9451 - loss: 0.1603"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m184/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9422 - loss: 0.1657"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m190/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9449 - loss: 0.1604"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m193/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9421 - loss: 0.1657"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m200/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9448 - loss: 0.1605"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m203/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9420 - loss: 0.1656"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m210/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9446 - loss: 0.1606"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m213/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9420 - loss: 0.1655"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m220/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9445 - loss: 0.1607"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m222/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9419 - loss: 0.1654"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m230/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9444 - loss: 0.1608"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m231/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9418 - loss: 0.1653"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m240/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9442 - loss: 0.1609"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m240/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9417 - loss: 0.1653"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m250/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9441 - loss: 0.1609"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m249/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9417 - loss: 0.1652"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m260/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9440 - loss: 0.1610"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m258/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9416 - loss: 0.1652"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m270/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9439 - loss: 0.1610"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m267/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9415 - loss: 0.1652"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m280/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9438 - loss: 0.1611"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m276/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9414 - loss: 0.1652"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m290/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9437 - loss: 0.1612"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m286/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9413 - loss: 0.1651"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m300/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9436 - loss: 0.1612"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m295/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9413 - loss: 0.1651"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m309/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9436 - loss: 0.1613"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m304/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9412 - loss: 0.1650"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m318/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9435 - loss: 0.1613"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m313/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9412 - loss: 0.1650"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m327/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9434 - loss: 0.1614"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m322/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9411 - loss: 0.1649"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m336/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9433 - loss: 0.1615"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m331/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9411 - loss: 0.1648"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m345/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9432 - loss: 0.1615"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m339/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9411 - loss: 0.1648"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m354/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9431 - loss: 0.1616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m348/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9410 - loss: 0.1647"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m364/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9430 - loss: 0.1616"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m358/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9410 - loss: 0.1647"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m373/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9430 - loss: 0.1617"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m367/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9409 - loss: 0.1646"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m383/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9428 - loss: 0.1618"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m376/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9409 - loss: 0.1645"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m384/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9409 - loss: 0.1645"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m391/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m3s\u001b[0m 8ms/step - accuracy: 0.9389 - loss: 0.1632 - val_accuracy: 0.8683 - val_loss: 0.3203\n"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m391/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m3s\u001b[0m 8ms/step - accuracy: 0.9384 - loss: 0.1653 - val_accuracy: 0.8433 - val_loss: 0.3920\n"
         },
         {
           "type": "stream",
@@ -1140,231 +965,216 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\r\u001b[1m  1/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1:25\u001b[0m 220ms/step - accuracy: 0.9531 - loss: 0.1071"
+          "text": "\r\u001b[1m  1/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1:20\u001b[0m 207ms/step - accuracy: 0.9688 - loss: 0.0868"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 10/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9655 - loss: 0.1128    "
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 11/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 5ms/step - accuracy: 0.9576 - loss: 0.1144    "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 19/391\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9663 - loss: 0.1087"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 21/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 5ms/step - accuracy: 0.9593 - loss: 0.1158"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 28/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9667 - loss: 0.1056"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 31/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 5ms/step - accuracy: 0.9604 - loss: 0.1141"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 37/391\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9669 - loss: 0.1039"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 41/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 5ms/step - accuracy: 0.9618 - loss: 0.1114"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 46/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m2s\u001b[0m 6ms/step - accuracy: 0.9672 - loss: 0.1023"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 51/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 5ms/step - accuracy: 0.9627 - loss: 0.1095"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 56/391\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9676 - loss: 0.1007"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 61/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 5ms/step - accuracy: 0.9634 - loss: 0.1079"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 66/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9676 - loss: 0.0999"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 70/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 5ms/step - accuracy: 0.9639 - loss: 0.1066"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 76/391\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9674 - loss: 0.0993"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 79/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 5ms/step - accuracy: 0.9644 - loss: 0.1054"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 86/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9675 - loss: 0.0987"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 88/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 5ms/step - accuracy: 0.9648 - loss: 0.1043"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 96/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9675 - loss: 0.0981"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m 97/391\u001b[0m \u001b[32m━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 5ms/step - accuracy: 0.9651 - loss: 0.1033"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m105/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9676 - loss: 0.0977"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m106/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9654 - loss: 0.1025"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m113/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9677 - loss: 0.0974"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m115/391\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9657 - loss: 0.1018"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m122/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9678 - loss: 0.0969"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m125/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9660 - loss: 0.1011"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m131/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9679 - loss: 0.0965"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m134/391\u001b[0m \u001b[32m━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9662 - loss: 0.1007"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m140/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9680 - loss: 0.0962"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m144/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9664 - loss: 0.1002"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m150/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9682 - loss: 0.0957"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m153/391\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9665 - loss: 0.0999"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m159/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9683 - loss: 0.0955"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m162/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9666 - loss: 0.0995"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m168/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9685 - loss: 0.0952"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m171/391\u001b[0m \u001b[32m━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9668 - loss: 0.0991"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m176/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9686 - loss: 0.0949"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m180/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9669 - loss: 0.0988"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m184/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9686 - loss: 0.0947"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m190/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9670 - loss: 0.0983"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m192/391\u001b[0m \u001b[32m━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9687 - loss: 0.0945"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m201/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 5ms/step - accuracy: 0.9671 - loss: 0.0979"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m200/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9688 - loss: 0.0944"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m211/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9673 - loss: 0.0975"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m208/391\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9688 - loss: 0.0942"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m221/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9674 - loss: 0.0971"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m216/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m1s\u001b[0m 6ms/step - accuracy: 0.9688 - loss: 0.0941"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m231/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9675 - loss: 0.0967"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m224/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9688 - loss: 0.0940"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m241/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9677 - loss: 0.0963"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m233/391\u001b[0m \u001b[32m━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9689 - loss: 0.0939"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m250/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9678 - loss: 0.0960"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m242/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9689 - loss: 0.0938"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m259/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9679 - loss: 0.0957"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m251/391\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9689 - loss: 0.0937"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m269/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9680 - loss: 0.0954"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m260/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9689 - loss: 0.0937"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m279/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9681 - loss: 0.0951"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m269/391\u001b[0m \u001b[32m━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9688 - loss: 0.0937"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m289/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9682 - loss: 0.0948"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m278/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9688 - loss: 0.0936"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m299/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9683 - loss: 0.0945"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m287/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9688 - loss: 0.0936"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m309/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9683 - loss: 0.0943"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m295/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9688 - loss: 0.0936"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m320/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9684 - loss: 0.0941"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m304/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9688 - loss: 0.0936"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m331/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9684 - loss: 0.0939"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m313/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9687 - loss: 0.0936"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m340/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9684 - loss: 0.0938"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m322/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9687 - loss: 0.0936"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m349/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9685 - loss: 0.0937"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m331/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9686 - loss: 0.0937"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m358/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9685 - loss: 0.0936"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m340/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9686 - loss: 0.0937"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m367/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9685 - loss: 0.0935"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m348/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9686 - loss: 0.0937"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m376/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9685 - loss: 0.0934"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m357/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9685 - loss: 0.0937"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m386/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 5ms/step - accuracy: 0.9685 - loss: 0.0934"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m366/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9685 - loss: 0.0937"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m374/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9685 - loss: 0.0938"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m383/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━\u001b[0m \u001b[1m0s\u001b[0m 6ms/step - accuracy: 0.9684 - loss: 0.0938"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m391/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m4s\u001b[0m 9ms/step - accuracy: 0.9671 - loss: 0.0943 - val_accuracy: 0.8534 - val_loss: 0.3997\n"
+          "text": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m391/391\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m3s\u001b[0m 8ms/step - accuracy: 0.9681 - loss: 0.0914 - val_accuracy: 0.8656 - val_loss: 0.3661\n"
         },
         {
           "type": "execute_result",
-          "text": "<keras.src.callbacks.history.History at 0x770959874950>"
+          "text": "<keras.src.callbacks.history.History at 0x765d90166960>"
         }
       ]
     },

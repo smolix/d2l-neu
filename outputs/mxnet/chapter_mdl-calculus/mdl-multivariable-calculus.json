@@ -25,18 +25,23 @@
       ]
     },
     "mdl-multivariable-calculus-directional-derivatives-1": {
-      "code_fingerprint": "sha256:34ff0da550fcbdad24b3b97bd351c41eb40ca725977a4fc7e601268f793d1d84",
+      "code_fingerprint": "sha256:54407e981ebd6d8e0a299b1c227641c19b9744f638a6ed742e2bf72b5b1da320",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "autograd gradient: [0.33333334 0.6666667 ]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[14:40:05] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:307f394562ec24de469e5bdfa1f2437eb6c1230f4aaea55951a2da4f162741b7",
+      "code_fingerprint": "sha256:f1e29f5295c4da34c7d3afdc9d58ef35294c58b25a4b9bc5525a5cdb26ebf22d",
       "kind": "asset",
       "outputs": [
         {
@@ -44,12 +49,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
           "bytes": 13741,
-          "sha256": "sha256:0729d7f82d570e9afe7211daa3a15c3c04874eeae64dc3d739b12fe310621b65"
+          "sha256": "sha256:9d9f779abd2c106916d3549f5131e07a01ff8316393556975cb274bfd20fb946"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:3614b0fffea3eb12fe83ca3ae6e0a71bcf8eea7b35c36a627f6fa56d7fb88965",
+      "code_fingerprint": "sha256:52a14ba88239020d3a954e365241e2903cf7ea38e6698b478c508bb672e2cb19",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +65,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:758f34928ec8ef2c2944445dec5058c4dc149b9aa15cf19b1702fd920afcd18f",
+      "code_fingerprint": "sha256:f92f335a42b5ed14f703e075e76cdbaaa1514c0af00721f99d5d94b1b1ab5c72",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +76,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:06fa11a07730c37d8b9af50ca34045d96d8e3fd46959355e8a2573aa13cdbb6d",
+      "code_fingerprint": "sha256:e824a32f3f982f3e6f7b49124b96a78c8710e14c0e3f1e2483c614b9c1eabeda",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +87,7 @@
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:d1afb85e876e5991db4bc91942c82a1c47d5de0ff3168e99702749e29032a2f2",
+      "code_fingerprint": "sha256:6fae1d3be33ade0db9d9e85583d9e611a114175438ab5c3ec211ddb4bd7f60ed",
       "kind": "text",
       "outputs": [
         {
@@ -93,7 +98,7 @@
       ]
     },
     "mdl-multivariable-calculus-the-second-derivative-test": {
-      "code_fingerprint": "sha256:84b4375edf0dddc97a0e262b9fcf53d0f2729fa63a1e7cc5e2afd833d5569917",
+      "code_fingerprint": "sha256:0b2b888487dfe30efdfe20e5330bb6b513c915653065e76ea1ea48152ee8e4fb",
       "kind": "text",
       "outputs": [
         {

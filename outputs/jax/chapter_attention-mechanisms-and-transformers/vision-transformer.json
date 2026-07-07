@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:93c1194b1e7d2793d2d3ef66403641ab79e550e708c3e07f9bb545f09af27ab2",
+    "d2l_lib_fingerprint": "sha256:cd52d798c186ac1fa99d4939904884264a26b8a091861f16ca0d7d1172f17f8b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,8 +51,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-training-1.svg",
-          "bytes": 22864,
-          "sha256": "sha256:d10837e1817534fbd03e82d3648830785255537eab6c79bb85e630e1d813038b"
+          "bytes": 21488,
+          "sha256": "sha256:4c6bdd13fc22c19461f4bd7cdcd50e770894cb0c388bea6880c061b1f0b5fd6a"
         }
       ]
     }

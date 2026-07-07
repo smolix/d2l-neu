@@ -32,6 +32,11 @@
           "type": "stream",
           "name": "stdout",
           "text": "autograd: f'(4) = 8.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[14:40:10] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },
@@ -44,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
           "bytes": 15837,
-          "sha256": "sha256:54c5ab07da078e18a49662f6082863eb64943e5309de4114ae2ef6296e0397b2"
+          "sha256": "sha256:5f75857a4e91e20661b8480ce58c0c197eff9c6641ae13f064efa1989b4aece2"
         }
       ]
     },
@@ -62,7 +67,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25211,
-          "sha256": "sha256:f8841ab02d4264f94449a5e607c3989565127478c2c7119b667fe4a4ed56c677"
+          "sha256": "sha256:ce59650044ff0eb53c86330a2a4c1ca15dfaf035d229b3df0459a34f06df510a"
         }
       ]
     },
@@ -97,23 +102,23 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
           "bytes": 28556,
-          "sha256": "sha256:ef035a58e2175d2e0b759b1627001c63c3dc3cc2d04860d35946107fed838b8e"
+          "sha256": "sha256:cbae2fbc4e0caf8d3565533e8322707d974a4ff9bcf376cf3f8b366b0695787e"
         }
       ]
     },
     "single-variable-calculus-one-sided": {
-      "code_fingerprint": "sha256:d0a16cdb35879b3b069cdab06f42a39eb42d7d6bc46c9989f148e837ebaf46cd",
+      "code_fingerprint": "sha256:d72e9283c2ba3a5480a92a2a40fcfbf6b39e1b765a7114a60b7ae075d2d4b4cb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epsilon = 0.10000 -> left = -1.0, right = +1.0\nepsilon = 0.00100 -> left = -1.0, right = +1.0\nepsilon = 0.00010 -> left = -1.0, right = +1.0\nepsilon = 0.00001 -> left = -1.0, right = +1.0\n"
+          "text": "right quotient: +1.0, left quotient: -1.0\nd|x|/dx at 0: autograd returns 0.0\nReLU' at 0: autograd returns 0.0\n"
         }
       ]
     },
     "mdl-single-variable-calculus-why-sgd-shrugs": {
-      "code_fingerprint": "sha256:3458a0395abfd8b296a9790899c0e2962233550b903ff053c7a7c58a007377b5",
+      "code_fingerprint": "sha256:7e2b3017d0c3a38441881b5360e4e53da9aa14a35778da7541af4359fba7c737",
       "kind": "text",
       "outputs": [
         {

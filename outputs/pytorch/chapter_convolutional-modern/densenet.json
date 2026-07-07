@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:2a6baee7edf2bb67e8ea7d1261994fec3095eb72a911d41686fd702b412d6234",
+    "d2l_lib_fingerprint": "sha256:6837bf0285adfce20f1f04d913a6cc12b4d5086855861b0c86ef111657927f6f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,8 +66,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "densenet/densenet-training-1.svg",
-          "bytes": 20508,
-          "sha256": "sha256:a0b767e6c336314f6f9d40522b3e3bb84778701bd486864c5ba08bc09b6f57f0"
+          "bytes": 20511,
+          "sha256": "sha256:e11a6ea2b3cb29ddc6c684ace6d19c03f69d13acffade53234f187efb65914e0"
         }
       ]
     }

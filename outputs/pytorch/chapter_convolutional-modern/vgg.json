@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:fcbad95973c6bc38f168effa4b494446d661dbff578af5fd96902671264cc374",
+    "d2l_lib_fingerprint": "sha256:08cb74c9562563c6168a4490ba36c53046177995dd4d548875637e398ecccd7b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vgg/vgg-training-1.svg",
-          "bytes": 20983,
-          "sha256": "sha256:9d0112bce204b6bcaeafc3972bee0e11e80c7cfc51de0aabb18ea3e9f5e95f34"
+          "bytes": 20986,
+          "sha256": "sha256:969c741f93381fbb66db6f46c8326f9b83812277bd624b20dfe004a78abaf00f"
         }
       ]
     }

@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:1df055eb4fcb79f59ecc4fb9db06219b4ea2c104fce4ca007cf08817049372b9"
+          "sha256": "sha256:bb01f52aa44772cd20ef3c613e782fa968f8c62643ab259733048872705dcbfe"
         }
       ]
     },
@@ -124,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:ca9c2dc8a7613993e8423662789239093cffb26ebb89f4147be5562cf3a6f5f6"
+          "sha256": "sha256:e16662ea5433385f90c9e6d25105d25e4f61f1ddeb428b89cca8e8739b4fdaf8"
         }
       ]
     },
@@ -160,18 +160,23 @@
       ]
     },
     "distributions-mvn": {
-      "code_fingerprint": "sha256:29187743c0bbe3e018d270b95a60171ffd8ac7a3cd55dc011ba50b4ac9f36b38",
+      "code_fingerprint": "sha256:2a888322a187d1443612f45cd55bade6f877486e7ea46f6e25f29e54e94eb4fb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "empirical covariance:\n [[2.03 1.02]\n [1.02 2.06]]\neigenvalues (≈ 1, 3): [1.03 3.06]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Cholesky-recipe covariance:\n [[1.98 0.99]\n [0.99 1.97]]\n"
         }
       ]
     },
     "mdl-distributions-multivariate-gaussian-1": {
-      "code_fingerprint": "sha256:50038444f6806419d41daa0a47ecfd959cee4fff2d87e5da48578ba4d0db7faa",
+      "code_fingerprint": "sha256:af0dcf50006716585893e3797b782ae4b46edfb5207b42775f891acb9450f48a",
       "kind": "text",
       "outputs": [
         {
@@ -182,7 +187,7 @@
       ]
     },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:bfeedd603144dc627223637c121708d2549e433c9a3494928d8cb643952d1d23",
+      "code_fingerprint": "sha256:d6066ef239c793ee395aec4d8eb005d6266b12b131b74901f3d53ce2782f59b1",
       "kind": "text",
       "outputs": [
         {
@@ -193,7 +198,7 @@
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:4d5f2256040c5a51d9c8e2a76f32b34825d24067bc56ece5b1239d52d9e4dfa6",
+      "code_fingerprint": "sha256:fb82efe8f59354f219858f9af9057636038a541b40fe77f4eef0d9afba61bee2",
       "kind": "text",
       "outputs": [
         {

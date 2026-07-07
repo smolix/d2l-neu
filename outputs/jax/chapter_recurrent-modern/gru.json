@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20065,
-          "sha256": "sha256:121b38429619f113f7031e740da35825069be08fd1b3896be83177d494ed8043"
+          "bytes": 20076,
+          "sha256": "sha256:9e3538f9f4df8d6377267792a2731a313500f8ced38806eda4d5759e1b09e963"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20441,
-          "sha256": "sha256:195d77c0d64cc88af5df46a8522596321b251b7af399d614258f04557a47be15"
+          "bytes": 20452,
+          "sha256": "sha256:7ff8ac38d2a3430cd95646d4f6cc7e22cc7985ba443f6347786c25d35d73493d"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has it and and and and '"
+          "text": "'it has it and the time tra'"
         }
       ]
     }

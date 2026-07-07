@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 19924,
-          "sha256": "sha256:0b5139612be83c0009421b6baf19b3635d5071d04ebf2079240f60a67a0e1f5f"
+          "bytes": 19933,
+          "sha256": "sha256:e5f27419565337b779cea2b810ba227fc6fd87c140a1fc7762534f55d8a1560b"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 20296,
-          "sha256": "sha256:22b5bfed6cace4cba39690251f3f91da34edb0ea56f22885bbdb846aeec2090a"
+          "bytes": 20305,
+          "sha256": "sha256:b980e0a6e1b0c7b546cc0f2e537605a0d8a0493e138f84b52746e08f170d9f25"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has have a soure the th'"
+          "text": "'it has the the mome the th'"
         }
       ]
     }

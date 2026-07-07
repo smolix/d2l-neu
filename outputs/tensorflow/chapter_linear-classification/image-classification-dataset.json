@@ -65,25 +65,20 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'0.15 sec'"
+          "text": "'0.73 sec'"
         }
       ]
     },
-    "image-classification-dataset-visualization-1": {
-      "code_fingerprint": "sha256:a95d4ede82a1132040587a5ec2d60f2ccce9e1ce678acc87edb657d6d89efe16",
-      "kind": "text",
-      "outputs": []
-    },
     "image-classification-dataset-visualization-2": {
-      "code_fingerprint": "sha256:f822348fa0758955896deb57f2662bb2203ecb0e76921e21fd287e0b552ca7d6",
+      "code_fingerprint": "sha256:e3c574bc832cca629fb9d2f9fca4798fe5020bb36ba573aca1e24b4f7c2afaa7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-visualization-2-1.svg",
-          "bytes": 48470,
-          "sha256": "sha256:1f649f40f194de25cbe053575acb97edb9dc15074b31cfe3d062d7184b5e014e"
+          "bytes": 49046,
+          "sha256": "sha256:3500503b7b4469bea5f5f409f7ee0f49d2046272378404522f852d68abdd04da"
         }
       ]
     }

@@ -20,12 +20,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eps=0.5    sum=0.680769  error=0.123950\neps=0.1    sum=0.783785  error=0.020934\n"
+          "text": "eps=0.5    sum=0.680769  error=0.123950\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eps=0.05   sum=0.794486  error=0.010233\neps=0.01   sum=0.802710  error=0.002009\n"
+          "text": "eps=0.1    sum=0.783785  error=0.020934\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eps=0.05   sum=0.794486  error=0.010233\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eps=0.01   sum=0.802710  error=0.002009\n"
         },
         {
           "type": "stream",
@@ -41,12 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |dF/dx - f|      : 8.761882781982422e-05\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Riemann F(2) vs G(2)-G(0): 0.8045188784599304 0.8047189712524414\n"
+          "text": "max |dF/dx - f|      : 8.761882781982422e-05\nRiemann F(2) vs G(2)-G(0): 0.8045188784599304 0.8047189712524414\n"
         }
       ]
     },
@@ -57,28 +62,38 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=1.0   left-Riemann sum=0.632437  exact 1-e^-b=0.632121\nb=2.0   left-Riemann sum=0.865097  exact 1-e^-b=0.864665\nb=5.0   left-Riemann sum=0.993759  exact 1-e^-b=0.993262\n"
+          "text": "b=1.0   left-Riemann sum=0.632437  exact 1-e^-b=0.632121\nb=2.0   left-Riemann sum=0.865097  exact 1-e^-b=0.864665\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=10.0  left-Riemann sum=1.000455  exact 1-e^-b=0.999955\nb=20.0  left-Riemann sum=1.000500  exact 1-e^-b=1.000000\n"
+          "text": "b=5.0   left-Riemann sum=0.993759  exact 1-e^-b=0.993262\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=10.0  left-Riemann sum=1.000455  exact 1-e^-b=0.999955\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=20.0  left-Riemann sum=1.000500  exact 1-e^-b=1.000000\n"
         }
       ]
     },
     "integral-box-volume": {
-      "code_fingerprint": "sha256:4e107b8122df1f63297b7b6163ca19801be8a9ef693074764f87c3d784fd527e",
+      "code_fingerprint": "sha256:bbfb19f38fba4bafc7e266d75a509e50e9627c0222f9a352368a354e9f31514c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Riemann volume over the box [-2, 2]^2 : 3.11227\nexact: pi*erf(2)^2 = 3.11227 over the box;  pi = 3.14159 over the plane\n"
+          "text": "Riemann volume over the box [-2, 2]^2 : 3.11227\nexact volume  pi * erf(2)^2           : 3.11227\n"
         }
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:00832b34c39db7455b46f3ac068fad0beda30ac66aea473a930c62cd916f25fa",
+      "code_fingerprint": "sha256:02656c5311d655ab1d2650a1f67eca112a86d0f28b63903fbf7d735bc8763c60",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +104,7 @@
       ]
     },
     "integral-density": {
-      "code_fingerprint": "sha256:64c6bc39ae2cb32e768bd764ae280000520b6030915a9735fee18e1cc2d4c5e8",
+      "code_fingerprint": "sha256:9cd47899f1dadcbfe910396c95284a127ba824b7993663474f89e216c286e568",
       "kind": "text",
       "outputs": [
         {
@@ -100,20 +115,20 @@
       ]
     },
     "integral-monte-carlo": {
-      "code_fingerprint": "sha256:9d37d272b2434fbc012d8969fc31ea2dda7f4aecc3e83fbb82c2fea537bc03e9",
+      "code_fingerprint": "sha256:30a5028e24f621e6c8944b70dae4a4abc7220786eebe71c78646bfd06ed6f9f0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=10      Monte Carlo=0.87741  error=1.3e-01\nn=100     Monte Carlo=0.73200  error=1.5e-02\nn=1000    Monte Carlo=0.74470  error=2.1e-03\nn=10000   Monte Carlo=0.74809  error=1.3e-03\nn=100000  Monte Carlo=0.74682  error=3.1e-06\nmidpoint quadrature  =0.74682\n"
+          "text": "n=10      Monte Carlo=0.87741  error=1.3e-01\nn=100     Monte Carlo=0.75454  error=7.7e-03\nn=1000    Monte Carlo=0.74619  error=6.3e-04\nn=10000   Monte Carlo=0.74833  error=1.5e-03\nn=100000  Monte Carlo=0.74719  error=3.7e-04\nmidpoint quadrature  =0.74682\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
-          "bytes": 43736,
-          "sha256": "sha256:8c642cd14c0eb5c3e4e49a44a41f22ec6e3e0fc6c703a6f41543303767303daf"
+          "bytes": 44497,
+          "sha256": "sha256:91f845396ee0e97559e9332a7a775fb97ac93d0787eacb5d26ac2a6c9c928af4"
         }
       ]
     }

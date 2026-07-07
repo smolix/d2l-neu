@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:639ce5d0a52ffca54ce6ea259b312056e06fa3b4b54666ad7f3a2d273818bb35",
+    "d2l_lib_fingerprint": "sha256:0ebaf2a593e9806035624614b7970d32aae283d436cabeafea6707d6635af734",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -88,7 +88,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-exploratory-language-statistics-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:f13aae55f0f2382a9c15d1171a57429711a7c5dc398ecbf7fb513c7b520ec6ce"
+          "sha256": "sha256:17a07a2490787e3017980dd43ba6bcc1ccdc0a972b290c361c1398ea4031d6e1"
         }
       ]
     },
@@ -121,7 +121,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-exploratory-language-statistics-5-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:27268c2c7cdaa6344299deec9156acf6a6cc59bcff8444853a957e02a8e659c8"
+          "sha256": "sha256:f7b27d29c8782b8c4a327a2bf8ad4ff8174294a2b5ada6bd1455457e4a2abd99"
         }
       ]
     }

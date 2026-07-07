@@ -43,8 +43,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
-          "bytes": 15836,
-          "sha256": "sha256:651b29e2dd8fee35c3514a5472bff194bb7dd793b7c487bc25ed79fa6f27c895"
+          "bytes": 15837,
+          "sha256": "sha256:f587554e9be60b971284aff1bca1c0f0c72f18703b9f435df9e5a0e4f5a67168"
         }
       ]
     },
@@ -62,7 +62,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25211,
-          "sha256": "sha256:3e177a3daf1ba82f5eb3cd25a4fe2684439617bccfaae50fb744fc90d139f223"
+          "sha256": "sha256:b9a06f4ec8763059e2ba064d7569cb99facc79f199b23961a54335398edbe7e2"
         }
       ]
     },
@@ -96,24 +96,29 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
-          "bytes": 28562,
-          "sha256": "sha256:d78c5cfe15210bd4af31a1d3c2001a4c1a2da0519bf242e7b4e9a0080f64f8be"
+          "bytes": 28558,
+          "sha256": "sha256:953be207850feb9d3473313108c4b895f0a216a031e2c7aa4617f2799348a743"
         }
       ]
     },
     "single-variable-calculus-one-sided": {
-      "code_fingerprint": "sha256:55d95107a5d08858979ef799bda1de998d30dcff21c15c8cfcfe0afae5f06efa",
+      "code_fingerprint": "sha256:1d7e50b249f43bb90886a2dbeae9640cc0fe93cbcac46f7f87c054c095e8bb72",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epsilon = 0.10000 -> left = -1.0, right = +1.0\nepsilon = 0.00100 -> left = -1.0, right = +1.0\nepsilon = 0.00010 -> left = -1.0, right = +1.0\nepsilon = 0.00001 -> left = -1.0, right = +1.0\n"
+          "text": "right quotient: +1.0, left quotient: -1.0\nd|x|/dx at 0: autograd returns 1.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ReLU' at 0: autograd returns 0.0\n"
         }
       ]
     },
     "mdl-single-variable-calculus-why-sgd-shrugs": {
-      "code_fingerprint": "sha256:4409fe57f899a53a4ec9c6d98f494d7d0f4d047e570f225bada9fbeb5ab74cef",
+      "code_fingerprint": "sha256:7ab98fedb0bc4d8b1da5a669b41c461c3b9018f6ed4dcd198c8a9109c4279a11",
       "kind": "text",
       "outputs": [
         {

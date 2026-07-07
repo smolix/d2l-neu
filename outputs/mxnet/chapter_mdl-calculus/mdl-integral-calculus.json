@@ -9,12 +9,12 @@
   },
   "cells": {
     "integral-imports": {
-      "code_fingerprint": "sha256:16e5e0b3bd44a35b7a0463115df804ee6360888eff5b7651352e4b3aefd88e74",
+      "code_fingerprint": "sha256:21c57393a05d9e0184e7bd2c26989a518921d50de550b9fb0c953dc3170e1bf7",
       "kind": "text",
       "outputs": []
     },
     "integral-riemann-converge": {
-      "code_fingerprint": "sha256:22d9eb2fc47890dbae77daf300097d884ef58b4ccceacbbb098be68048960ffb",
+      "code_fingerprint": "sha256:d1e16cd4c6099f915e43746da61272c2fdb8aa96713d39b96e7da835e88be50b",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "integral-ftc-check": {
-      "code_fingerprint": "sha256:4f98eb60bda48303fa2b9e87d25e2cc00d5cca33369f38a5db133a12a9b4919f",
+      "code_fingerprint": "sha256:5a70b91b182f0cf8db51dd81082fb713603709775d436f12fe793904e5f1ac5d",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "integral-improper": {
-      "code_fingerprint": "sha256:f7faab5f8b2f3dff98e1828acbfef31c535d4d7b282665d7ab56305390acf46d",
+      "code_fingerprint": "sha256:6f1f7c9835b4f486dfce5afd51432f853a4d9ed330c8f65bec642730f4bbf86d",
       "kind": "text",
       "outputs": [
         {
@@ -47,18 +47,18 @@
       ]
     },
     "integral-box-volume": {
-      "code_fingerprint": "sha256:43f5e2aa4fd4ff2343873354b2470cacfc7ad881bb1a824c483d79fd68ec566a",
+      "code_fingerprint": "sha256:29005c454f0dc5aded185e008e984ca3f0d02e216516a776761559b057ba30b8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Riemann volume over the box [-2, 2]^2 : 3.11227\nexact: pi*erf(2)^2 = 3.11227 over the box;  pi = 3.14159 over the plane\n"
+          "text": "Riemann volume over the box [-2, 2]^2 : 3.11227\nexact volume  pi * erf(2)^2           : 3.11227\n"
         }
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:9af8a409fa67580473f07fbf2952398254cca520c33a98e206da104b9e0586bf",
+      "code_fingerprint": "sha256:7e55184c3f4b0da9059a1c1eef6fd4b3ab07fb1f2ff781ba6d7955c4441f3b01",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "integral-density": {
-      "code_fingerprint": "sha256:6bd5dc200c3246c4510a7b3ac0e9a9e5cf1a934d6acb98707f7af15466055b40",
+      "code_fingerprint": "sha256:e70a656536ad95132fb91464ea62e3da4b1603d1a4d4169e1af18403ba929c68",
       "kind": "text",
       "outputs": [
         {
@@ -80,20 +80,20 @@
       ]
     },
     "integral-monte-carlo": {
-      "code_fingerprint": "sha256:ec8f622c4f8c0fb90bd6e98fb5cdc851f762fd3e2f7ee9e783e71af8361369a5",
+      "code_fingerprint": "sha256:e6807a1c7a383c2350e15f09886bac824bf35498d6ccc19b606ccd2f46c97a6a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=10      Monte Carlo=0.77087  error=2.4e-02\nn=100     Monte Carlo=0.76976  error=2.3e-02\nn=1000    Monte Carlo=0.75317  error=6.3e-03\nn=10000   Monte Carlo=0.74551  error=1.3e-03\nn=100000  Monte Carlo=0.74690  error=7.1e-05\nmidpoint quadrature  =0.74682\n"
+          "text": "n=10      Monte Carlo=0.77087  error=2.4e-02\nn=100     Monte Carlo=0.76334  error=1.7e-02\nn=1000    Monte Carlo=0.75395  error=7.1e-03\nn=10000   Monte Carlo=0.74625  error=5.7e-04\nn=100000  Monte Carlo=0.74693  error=1.0e-04\nmidpoint quadrature  =0.74682\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
-          "bytes": 43756,
-          "sha256": "sha256:b53aebd0137733b91c8066192f14a536c55ceba6d71b4cb22ee15c5a1c86130c"
+          "bytes": 43741,
+          "sha256": "sha256:b0dc323e9f6d907b0dfaa055992f2977a8364c4444e5371e969a7d2181f874fa"
         }
       ]
     }

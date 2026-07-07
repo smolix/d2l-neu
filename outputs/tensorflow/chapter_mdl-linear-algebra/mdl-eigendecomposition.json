@@ -23,8 +23,30 @@
         }
       ]
     },
+    "mdl-eigendecomposition-jordan-power": {
+      "code_fingerprint": "sha256:6959a206cd74188eb350fab6701a8c64b0bdd31cdf81a34bab9d7d7b2d0b5217",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =   1   ||J^n|| =    1.609   n * 0.99^(n-1) =    1.000\nn =  50   ||J^n|| =   30.568   n * 0.99^(n-1) =   30.556\nn = 100   ||J^n|| =   36.977   n * 0.99^(n-1) =   36.973\nn = 200   ||J^n|| =   27.067   n * 0.99^(n-1) =   27.067\nn = 800   ||J^n|| =    0.260   n * 0.99^(n-1) =    0.260\n"
+        }
+      ]
+    },
+    "eigendecomposition-complex-rotation": {
+      "code_fingerprint": "sha256:5c98b93a45edde0e5975c711715ceef2a3e8d8874b2e41cdc0a0190e450277ee",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues of R: [0.866+0.5j 0.866-0.5j]\nexpected e^{+/- i*theta}: [0.866+0.5j 0.866-0.5j]\nmoduli (should be 1): [1. 1.]\n"
+        }
+      ]
+    },
     "eigendecomposition-psd-gram": {
-      "code_fingerprint": "sha256:339c30a1aaab53e044aad9f20e7d5b98eb192e7730a46a687077e767f90da391",
+      "code_fingerprint": "sha256:606e179e57e7b9aba059cd3bedc3ca5c3d96fe30b8df87919d01d7df36779739",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +57,7 @@
       ]
     },
     "mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches": {
-      "code_fingerprint": "sha256:d7bd8d77d39fb4b1efca933421dfb58401f0cb517389ff94fe8e92667b8565c1",
+      "code_fingerprint": "sha256:305ff78197ffb4061dc3999faba377a1f1590a29d78cb08d3ad14e0710d9e62e",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +68,7 @@
       ]
     },
     "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:c02d1ab3a1b9199d229188632fb3cb61bfa2daa8281009698acbb2db8c192777",
+      "code_fingerprint": "sha256:7645ab66f347e60955247f50ca3cc39be9ed527afbb89caaf4b4238af1fabcea",
       "kind": "text",
       "outputs": [
         {
@@ -56,24 +78,13 @@
       ]
     },
     "eigendecomposition-power-iteration": {
-      "code_fingerprint": "sha256:4184d0026f7f48ae2e28ec40fef54ab138806c5dbc0c4ad5d3389049a326fea9",
+      "code_fingerprint": "sha256:6216b9595246218922c006f432ffe59925f142fffe6a4d51b085a2179d5b924f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "stabilized norm ratio = 1.9390711037   max|eigenvalue| = 1.9390711037\n"
-        }
-      ]
-    },
-    "eigendecomposition-complex-rotation": {
-      "code_fingerprint": "sha256:69d582d2cf0ec8ac7a9106161a1420734c97233ab97fe63f3d74451664f71c3a",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "eigenvalues of R: [0.866+0.5j 0.866-0.5j]\nexpected e^{+/- i*theta}: [0.866+0.5j 0.866-0.5j]\nmoduli (should be 1): [1. 1.]\n"
         }
       ]
     }

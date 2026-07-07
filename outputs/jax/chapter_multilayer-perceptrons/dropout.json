@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:b7bffc5433a90518d1489ab9a9a4dc8cfc5a46ee3b7a1ed118988da5e326b793",
+    "d2l_lib_fingerprint": "sha256:35e4c1b2eed0071cd094ae43af95c4f0573cea51e23ea7aab52db30abacf0ccf",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,12 +14,12 @@
       "outputs": []
     },
     "dropout-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:9050d569d7899873654561a3562f6934cfb4b7371909b1aa0dcec3275b48b53c",
+      "code_fingerprint": "sha256:1631f0932c863ec16455a0b81804646ae744478ed9a966743da228efb539dc35",
       "kind": "text",
       "outputs": []
     },
     "dropout-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:1e0fb0163eb2ca26363c14f10335d617377a0884ec9c2450a47dbb1e1dbf2c36",
+      "code_fingerprint": "sha256:6a2c52c1e8964820bea52e661895a6494508a5de20c5bea0e238f5fb89312417",
       "kind": "text",
       "outputs": [
         {
@@ -35,43 +35,43 @@
       ]
     },
     "dropout-defining-the-model": {
-      "code_fingerprint": "sha256:3363c9f139c5706fa46d92af10439d7ea6235143830271b4aa3149e65b0c95bb",
+      "code_fingerprint": "sha256:0665e7cb195afc6310b3db612300a1dd57ce05dff309b485cda63bb7cce11ef0",
       "kind": "text",
       "outputs": []
     },
     "dropout-training": {
-      "code_fingerprint": "sha256:40c594e9370a45c5a6841a49cbd9cfd9e8a3ec89c5a09d71a5f6c71ecd26e46e",
+      "code_fingerprint": "sha256:dd75b466ec49bfb31b968cc562502208a264e319fb3e942846d157f64d92131d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 24344,
-          "sha256": "sha256:b6426ed9726395f5a47eea22478f1a52e0fe45ffb0715e283cbd89f970578d32"
+          "bytes": 24342,
+          "sha256": "sha256:07c5b4385dfd2f4330719c89389fb7c43643e617a0f902d5ede757477606e78e"
         }
       ]
     },
     "dropout-concise-implementation-1": {
-      "code_fingerprint": "sha256:eff9fd81aee835d709623f8e23b4cb0ca9028c260c64706acc40438be19733ad",
+      "code_fingerprint": "sha256:3b7734b1461d3ac4058ba5310333a5f3442bcfcf0830195e960257a84569687a",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-2": {
-      "code_fingerprint": "sha256:9bb6f1b2522ac5619fa3ea362e699590a30b9a4a0e877f8deccf03c461677666",
+      "code_fingerprint": "sha256:735d915bcb0b5860050e9f266c869556eded7422556b2d34395276ba6a0b6240",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:53022efa5961cc16bb0d8fd88f8a4872e7f47c691eccf83af40a4deadd697f96",
+      "code_fingerprint": "sha256:c7521f7c8fa93f18cff41d5a560930d20b26e0abe9d649879067873d74559ba7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 24339,
-          "sha256": "sha256:001e9ebfdf8e4799a74c48c8a353ffe3229e310d868011d388345ca08d041fd3"
+          "bytes": 24336,
+          "sha256": "sha256:181f0abe6cb1b2eedeb422bedfbcab57c3e82ad9ac0ac61fe1ea370baaf7d289"
         }
       ]
     }

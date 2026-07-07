@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
           "bytes": 20951,
-          "sha256": "sha256:f1e51784194ae44e9d706d58b748a2214ecb993e7dc0cac2f05dab141926b6b0"
+          "sha256": "sha256:968a413d32d5344484c7e039cc7bb25adbda15ff9530d3cc83b37e801c062961"
         }
       ]
     },
@@ -30,6 +30,11 @@
       "code_fingerprint": "sha256:6fa7097e1f52a962b2b1b3e79b7645d3eb51ef90ff94a16cc1e21731d4f58e38",
       "kind": "text",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[14:41:31] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        },
         {
           "type": "execute_result",
           "text": "(array(0.9713101), 0.9713101437890875)"
@@ -45,12 +50,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
           "bytes": 30558,
-          "sha256": "sha256:3e85f4a18c2ee9476b672931020859a0ab912f41606274096b1808f0c4a24b9a"
+          "sha256": "sha256:9824690d3dda6ab2f2609a46f6acdd234b57db6e4fbaea6fefe5e8e9a8fafe0f"
         }
       ]
     },
     "maximum-likelihood-fisher-information": {
-      "code_fingerprint": "sha256:878aa686f0c6ef519fb591ebfd372d23f7ed9451595dfd490950ebabbe8de58a",
+      "code_fingerprint": "sha256:6b9a0edce4d89e8d2ebf6756dd9f8284080db389370598ac7c2ed60c961431e4",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +65,7 @@
       ]
     },
     "maximum-likelihood-em-gmm": {
-      "code_fingerprint": "sha256:5cadf8cd6f7ee09f528537fc8e35e4aa66d0cea5810f50300a38262494659b82",
+      "code_fingerprint": "sha256:4add433d45e3683570e024f7f7e50f3ab085b79c58d4e9ecc9e6f5eab8838629",
       "kind": "text",
       "outputs": [
         {

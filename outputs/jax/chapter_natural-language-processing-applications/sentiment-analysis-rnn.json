@@ -55,27 +55,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.694, train acc 0.504, test acc 0.503\n"
+          "text": "epoch 1, loss 0.696, train acc 0.499, test acc 0.500\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.687, train acc 0.517, test acc 0.503\n"
+          "text": "epoch 2, loss 0.685, train acc 0.512, test acc 0.509\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.504, train acc 0.739, test acc 0.796\n"
+          "text": "epoch 3, loss 0.596, train acc 0.644, test acc 0.749\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.285, train acc 0.886, test acc 0.811\n"
+          "text": "epoch 4, loss 0.407, train acc 0.836, test acc 0.760\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.196, train acc 0.926, test acc 0.814\n"
+          "text": "epoch 5, loss 0.314, train acc 0.881, test acc 0.780\n"
         }
       ]
     },
@@ -100,7 +100,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'negative'"
+          "text": "'positive'"
         }
       ]
     }

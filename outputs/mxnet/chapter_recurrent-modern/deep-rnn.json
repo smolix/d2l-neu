@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:1455679937a72d7bb177d9ab4d5abc6dccf4495e18efba31b69ed41443b49d8a",
+    "d2l_lib_fingerprint": "sha256:1aecceb84845774560fc4e6db4033c3f76b64516c80c1d280d31e639fda23cbb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 23755,
-          "sha256": "sha256:48a3af062ce4d4c049b59eeee8693b5adad2d073110e895c582bf84ee11310d9"
+          "bytes": 23737,
+          "sha256": "sha256:0c508cc7289c73571ee8ad972fe1746b15f0df2be2b91477e89071c61eb71975"
         }
       ]
     },
@@ -47,14 +47,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has i mome the time the'"
+          "text": "'it has in the the time the'"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24538,
-          "sha256": "sha256:6c54d603e77dd759a3ed4217fc7dddb39f69f0718598839f2970c1b60fecfd08"
+          "bytes": 24734,
+          "sha256": "sha256:0b927c0ac956b5646f8bef5027118827188d856e539db7806280558c3cc13444"
         }
       ]
     }

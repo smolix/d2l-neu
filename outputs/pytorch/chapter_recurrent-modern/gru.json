@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20309,
-          "sha256": "sha256:005cbcf1fc4d9904078650c4ef9477adc08d8ecde48cd80ce5ab266f5b2ab9d6"
+          "bytes": 20310,
+          "sha256": "sha256:6df1a38d8b871f96fc30a200e757c41bce1ed19cf5d49e636bb40ded228bb2ef"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20315,
-          "sha256": "sha256:7c78ebf4ea0d1f325b38f99772bdb7f0a2d47f3eac0a0bb73fb40acaa8f34cdf"
+          "bytes": 20306,
+          "sha256": "sha256:06b443883fb138e0b8593e85332d0e72f796a099928f1c5f18aafc78e398b8ea"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has of the time the pra'"
+          "text": "'it has i have a man the th'"
         }
       ]
     }

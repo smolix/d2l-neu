@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it hasypypypypypypypypypyp'"
+          "text": "'it has                    '"
         }
       ]
     },
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
-          "bytes": 23860,
-          "sha256": "sha256:e0b8da668b43211a0fc5604ef51dd686e4ba028a0a5c68ce01bba8f5fef2c4d8"
+          "bytes": 24009,
+          "sha256": "sha256:65858025d86329d9b77210c4723fc44d3a3bbfd2e8cbe932af6777d85de8fdb9"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.1, 'time traveller all has and and so '\n"
+          "text": "perplexity 7.2, 'time traveller and the proce the t'\n"
         }
       ]
     }

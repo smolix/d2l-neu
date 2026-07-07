@@ -5,21 +5,16 @@ The previous two sections built differentiation up from a single weight
 (:numref:`sec_mdl-single_variable_calculus`) to the gradient of a scalar loss over
 many weights (:numref:`sec_mdl-multivariable_calculus`). Real network layers,
 however, map *vectors to vectors*, and their parameters are *matrices*, so the
-natural object of study is the derivative of a vector-valued map---the
-*Jacobian*---and the natural question is why `loss.backward()` is cheap. This
-section answers both. Its punchline is that **backpropagation is reverse-mode
-automatic differentiation: a sequence of vector--Jacobian products**, and that the
-choice between forward- and reverse-mode AD is dictated entirely by the *shape* of
-the Jacobian you are after. Along the way we re-derive the handful of matrix
-identities that actually recur in deep learning, and we build---in a few dozen
-lines of Python---both flavours of automatic differentiation from scratch, so that
-the framework's autograd stops being magic.
+natural object of study is the derivative of a vector-valued map, the *Jacobian*,
+and the natural question is why `loss.backward()` is cheap. This section answers
+both: **backpropagation is reverse-mode automatic differentiation, a sequence of
+vector--Jacobian products**, and the choice between forward- and reverse-mode AD
+is dictated by the *shape* of the Jacobian you are after. Along the way we
+re-derive the handful of matrix identities that actually recur in deep learning,
+and we build both flavours of automatic differentiation from scratch in a few
+dozen lines of Python, so that the framework's autograd stops being magic.
 
-We load the per-framework library together with each framework's own autograd
-machinery. The two automatic-differentiation engines we build below are pure
-Python/NumPy and run under every framework; only the cells that *check* them---and
-our hand-derived identities---against the framework's autograd are written
-per-framework.
+We use the following imports throughout this section.
 
 ```{.python .input #matrix-calculus-autodiff-imports}
 #@tab mxnet
@@ -56,9 +51,9 @@ from jax import numpy as jnp
 :label:`subsec_mdl-jacobian`
 
 A layer $\mathbf f:\mathbb R^n\to\mathbb R^m$ does not have "a derivative" but a
-whole matrix of them. The single object that organizes them---and generalizes both
+whole matrix of them. The single object that organizes them, and generalizes both
 the slope of :numref:`sec_mdl-single_variable_calculus` and the gradient of
-:numref:`sec_mdl-multivariable_calculus` in one stroke---is the *Jacobian*.
+:numref:`sec_mdl-multivariable_calculus` in one stroke, is the *Jacobian*.
 
 ### The Jacobian as the Best Linear Approximation
 
@@ -75,7 +70,7 @@ $$
 
 i.e. the error of the linear model $\mathbf f(\mathbf x)+\mathbf J\boldsymbol\delta$
 shrinks *faster* than $\boldsymbol\delta$ itself as $\boldsymbol\delta\to\mathbf 0$.
-That matrix---if it exists---is unique, is called the *Jacobian*
+That matrix, if it exists, is unique, is called the *Jacobian*
 $\mathbf J_{\mathbf f}(\mathbf x)$, and its entries are exactly the partial
 derivatives:
 
@@ -94,28 +89,31 @@ partial-derivative formula is a consequence, not the definition.
 
 :numref:`fig_mdl-cal-jacobian-ellipse` makes the definition visible. Up close, a
 differentiable map *is* a linear map: a small circle of inputs around
-$\mathbf x_0$ lands on (very nearly) an ellipse---the image of that circle under
+$\mathbf x_0$ lands on (very nearly) an ellipse: the image of that circle under
 $\mathbf J(\mathbf x_0)$, exactly the picture from
 :numref:`sec_mdl-geometry-linear-algebraic-ops` of what a matrix does to the
-plane---and the leftover bend is the $o(\|\boldsymbol\delta\|)$ remainder, which
+plane. The leftover bend is the $o(\|\boldsymbol\delta\|)$ remainder, which
 vanishes faster than the circle shrinks.
 
 ![Up close, a differentiable map is a linear map. The nonlinear $\mathbf f(x,y)=(x+\sin y,\ y+x^2/2)$ carries a small circle and grid around $\mathbf x_0=(0.5,0.5)$ (left) into the output plane (right). The true image (blue) is nearly indistinguishable from the ellipse $\mathbf f(\mathbf x_0)+\mathbf J(\mathbf x_0)\,\boldsymbol\delta$ predicted by the Jacobian (orange); the small mismatch is the $o(\|\boldsymbol\delta\|)$ remainder and shrinks faster than the circle does.](../img/mdl-cal-jacobian-ellipse.svg)
 :label:`fig_mdl-cal-jacobian-ellipse`
 
-Two special cases recover everything we have already met. When $m=1$---a scalar
-field $f:\mathbb R^n\to\mathbb R$---the Jacobian is a *single row*, the *row*
+Two special cases recover everything we have already met. When $m=1$ (a scalar
+field $f:\mathbb R^n\to\mathbb R$) the Jacobian is a *single row*, the *row*
 gradient $\partial f/\partial\mathbf x = [\partial f/\partial x_1,\ldots,\partial
 f/\partial x_n]$, and :eqref:`eq_mdl-jacobian-linearization` is the first-order
 expansion $f(\mathbf x+\boldsymbol\delta)\approx f(\mathbf x)+\mathbf J\boldsymbol\delta$
 of :numref:`sec_mdl-multivariable_calculus`. And the Jacobian of the *gradient field*
 $\nabla f:\mathbb R^n\to\mathbb R^n$ is the Hessian
 $\mathbf H=\mathbf J_{\nabla f}$ of :eqref:`eq_mdl-hess_def`: differentiating once
-more turns the row gradient into the matrix of second partials. One construction,
-three familiar objects.
+more turns the row gradient into the matrix of second partials, where the entry
+$[\mathbf J_{\nabla f}]_{ij}=\partial^2 f/\partial x_j\partial x_i$ matches the
+$(i,j)$ Hessian entry because mixed partials commute (Clairaut's theorem, proved
+in :numref:`sec_mdl-multivariable_calculus`). One construction, three familiar
+objects.
 
 Let us pin this down on a concrete $\mathbb R^2\to\mathbb R^2$ map and check the
-linear approximation against a finite difference---the numerical signature of a
+linear approximation against a finite difference, the numerical signature of a
 correct derivative.
 
 ```{.python .input #matrix-calculus-autodiff-jacobian-finite-diff}
@@ -137,15 +135,14 @@ print('exact        :', exact.round(6))
 print('error / |delta|:', np.linalg.norm(exact - linear) / np.linalg.norm(delta))
 ```
 
-The error is tiny *relative to* $\|\boldsymbol\delta\|$---and shrinking it by a
+The error is tiny *relative to* $\|\boldsymbol\delta\|$, and shrinking it by a
 further factor of ten in $\boldsymbol\delta$ shrinks the error by a factor of a
 hundred, the $o(\|\boldsymbol\delta\|)$ signature of :eqref:`eq_mdl-jacobian-linearization`.
 
 ### The Chain Rule Is Jacobian Composition
 
-Here is the conceptual spine of the whole section. The multivariate chain rule of
-:numref:`sec_mdl-multivariable_calculus`---a sum over paths---is, in matrix form,
-nothing but *multiplication of Jacobians*.
+The multivariate chain rule of :numref:`sec_mdl-multivariable_calculus`, a sum
+over paths, is in matrix form the *multiplication of Jacobians*.
 
 **Proposition (chain rule).** *If $\mathbf f:\mathbb R^n\to\mathbb R^p$ is
 differentiable at $\mathbf x$ and $\mathbf g:\mathbb R^p\to\mathbb R^m$ is
@@ -174,7 +171,8 @@ $$
 $$
 
 because $\mathbf B$ applied to the $o(\|\boldsymbol\delta\|)$ remainder is again
-$o(\|\boldsymbol\delta\|)$, and $\|\boldsymbol\eta\|=O(\|\boldsymbol\delta\|)$ folds
+$o(\|\boldsymbol\delta\|)$, and $\|\boldsymbol\eta\|=O(\|\boldsymbol\delta\|)$
+(bounded by a constant multiple of $\|\boldsymbol\delta\|$) folds
 $\mathbf g$'s own remainder into $o(\|\boldsymbol\delta\|)$ as well. The
 coefficient of $\boldsymbol\delta$ is the best linear map, so by uniqueness it *is*
 the Jacobian of the composite: $\mathbf J_{\mathbf g\circ\mathbf f}=\mathbf B\mathbf A$.
@@ -200,11 +198,10 @@ each factor the local Jacobian of one layer. This is the same product-of-Jacobia
 that governs backpropagation through time in recurrent networks
 (:numref:`sec_mdl-eigendecompositions`).
 
-It is worth knowing what those factors actually look like, because two shapes
-dominate. A dense layer $\mathbf x\mapsto\mathbf W\mathbf x$ is its own best
+Two shapes dominate those factors. A dense layer $\mathbf x\mapsto\mathbf W\mathbf x$ is its own best
 linear approximation, so its Jacobian is just $\mathbf W$. An *elementwise*
 activation $\boldsymbol\varphi(\mathbf x)=(\varphi(x_1),\ldots,\varphi(x_n))$
-couples no pair of coordinates---output $i$ depends only on input $i$---so every
+couples no pair of coordinates (output $i$ depends only on input $i$), so every
 off-diagonal partial vanishes and its Jacobian is *diagonal*,
 $\mathbf J_{\boldsymbol\varphi}(\mathbf x)
 =\operatorname{diag}\bigl(\varphi'(x_1),\ldots,\varphi'(x_n)\bigr)$.
@@ -217,23 +214,21 @@ interleaved with cheap diagonal masks. That diagonal factor is the single most
 common Jacobian in a real network, and it is why an activation's backward pass
 costs only $O(n)$.
 
-And here is the observation that drives
-everything in the second half of this section: matrix multiplication is
+Matrix multiplication is
 *associative*, so we may evaluate :eqref:`eq_mdl-jacobian-product` in any order.
 Multiplying right-to-left propagates *inputs forward*; multiplying left-to-right
 propagates *sensitivities backward*. Those two parenthesizations are precisely
 forward-mode and reverse-mode automatic differentiation, and choosing between them
 is just choosing the cheaper way to multiply a chain of matrices. (They are the
 two *extreme* orderings; finding the cheapest ordering for a general computation
-graph---*optimal Jacobian accumulation*---is NP-complete :cite:`Naumann.2008`,
+graph (*optimal Jacobian accumulation*) is NP-complete :cite:`Naumann.2008`,
 so frameworks ship only the two ends; see :cite:`Baydin.Pearlmutter.Radul.ea.2018`
 for a survey.)
 
 ### Layout Conventions: Numerator vs Denominator
 
-One bookkeeping decision causes more stray transposes than anything else in matrix
-calculus, so we state it once, plainly. For a scalar field $f:\mathbb R^n\to\mathbb
-R$, do we write the derivative as a *row* (matching the Jacobian
+One bookkeeping decision needs settling before we derive anything. For a scalar
+field $f:\mathbb R^n\to\mathbb R$, do we write the derivative as a *row* (matching the Jacobian
 :eqref:`eq_mdl-jacobian-entries`) or as a *column* (matching the input vector
 $\mathbf x$)? Both are in use, and they are *transposes of each other*:
 
@@ -257,12 +252,12 @@ $$
 :eqlabel:`eq_mdl-grad-is-jacobian-transpose`
 
 **This book's convention.** We use **numerator layout for Jacobians** of genuine
-vector-valued maps (the theory is cleaner) and **denominator layout for
-gradients**, writing $\nabla_{\mathbf x} f$ for the column you feed an optimizer.
+vector-valued maps (the chain rule then composes without transposes) and
+**denominator layout for gradients**, writing $\nabla_{\mathbf x} f$ for the column you feed an optimizer.
 Whenever the two could be confused we make the shape explicit. With that settled,
 the identities in the next section are gradients, hence columns; if you ever land
 on an expression whose shape does not match its denominator, you have a missing
-transpose---use :eqref:`eq_mdl-grad-is-jacobian-transpose` to fix it. The Matrix
+transpose; use :eqref:`eq_mdl-grad-is-jacobian-transpose` to fix it. The Matrix
 Cookbook :cite:`Petersen.Pedersen.ea.2008` tabulates hundreds of such identities;
 the point of the next section is that you need to *memorize* almost none of them.
 
@@ -271,8 +266,7 @@ the point of the next section is that you need to *memorize* almost none of them
 
 A reference table of matrix-derivative identities is long and forgettable. In
 practice only a handful recur in deep learning, and each one yields to the same
-two-step recipe of Parr and Howard's primer
-([explained.ai/matrix-calculus](https://explained.ai/matrix-calculus/)):
+two-step recipe of Parr and Howard's primer :cite:`Parr.Howard.2018`:
 *differentiate one component with the ordinary scalar rules, then reassemble the
 components into a matrix expression.* A faster cross-check, due to the same source,
 is the **scalar-collapse heuristic**: a correct matrix identity must reduce to the
@@ -286,11 +280,12 @@ layout, :eqref:`eq_mdl-grad-is-jacobian-transpose`).
 $f(\mathbf x)=\mathbf a^\top\mathbf x=\sum_i a_i x_i$, the $k$-th partial keeps only
 the $i=k$ term, so $\partial f/\partial x_k = a_k$; stacking these gives
 $\nabla_{\mathbf x} f=\mathbf a$. The scalar shadow is $\frac{d}{dx}(ax)=a$, exactly
-the matrix answer with the transpose doing nothing---reassuring. The one thing to
+the matrix answer with the transpose doing nothing. The one thing to
 keep straight is *which* variable we differentiate by: it is $x_k$, not $a_k$.
 
 **The quadratic form $\nabla_{\mathbf x}\,\mathbf x^\top\mathbf A\mathbf x =
-(\mathbf A+\mathbf A^\top)\mathbf x$.** Write the form in Einstein notation as
+(\mathbf A+\mathbf A^\top)\mathbf x$.** Write the form in Einstein notation
+(:numref:`sec_mdl-geometry-linear-algebraic-ops`) as
 $\mathbf x^\top\mathbf A\mathbf x = x_i a_{ij} x_j$. The product rule on
 $\partial/\partial x_k$ hits both $x$'s,
 
@@ -392,12 +387,12 @@ $$
 $$
 :eqlabel:`eq_mdl-lstsq-grad`
 
-a rank-one *outer product* of the residual with the input---this is the gradient a
+a rank-one *outer product* of the residual with the input; this is the gradient a
 single linear layer hands back during backpropagation. The companion gradient with
 respect to the *input*, $\nabla_{\mathbf x}\|\mathbf W\mathbf x-\mathbf y\|^2
 =2\mathbf W^\top(\mathbf W\mathbf x-\mathbf y)$, follows identically; note the
-$\mathbf W^\top$. The same pattern---a residual hit by the transpose of whatever
-multiplies the variable---persists when everything becomes a matrix. For the
+$\mathbf W^\top$. The same pattern, a residual hit by the transpose of whatever
+multiplies the variable, persists when everything becomes a matrix. For the
 factorization loss $\|\mathbf X-\mathbf U\mathbf V\|_F^2=\sum_{ij}R_{ij}^2$ with
 residual $\mathbf R=\mathbf X-\mathbf U\mathbf V$, one entry of $\mathbf V$
 appears in $R_{ij}$ through $\partial R_{ij}/\partial V_{ab}
@@ -415,8 +410,8 @@ $$
 exactly the $\mathbf W^\top$-shaped answer the scalar-collapse heuristic predicts
 from $\frac{d}{dv}(x-uv)^2=-2u(x-uv)$.
 
-**The softmax--cross-entropy Jacobian.** The single most important derivative in a
-classifier is also the cleanest. Let $\mathbf p=\operatorname{softmax}(\mathbf z)$,
+**The softmax--cross-entropy Jacobian.** The derivative a classifier evaluates
+most often also has the simplest form. Let $\mathbf p=\operatorname{softmax}(\mathbf z)$,
 $p_i=e^{z_i}/\sum_k e^{z_k}$. Quotient rule on $\partial p_i/\partial z_j$ gives the
 two cases $p_i(1-p_i)$ when $i=j$ and $-p_i p_j$ when $i\neq j$, which combine into
 
@@ -430,7 +425,7 @@ $$
 Now compose with the cross-entropy loss $\ell=-\sum_i y_i\log p_i$ against a
 one-hot target $\mathbf y$. The chain rule :eqref:`eq_mdl-jacobian-chain` multiplies
 the loss's row gradient $\partial\ell/\partial\mathbf p$ by
-:eqref:`eq_mdl-softmax-jacobian`, and the algebra collapses spectacularly:
+:eqref:`eq_mdl-softmax-jacobian`, and the algebra collapses:
 
 $$
 \frac{\partial\ell}{\partial z_j}
@@ -440,10 +435,14 @@ $$
 $$
 
 using $\sum_i y_i=1$. The gradient of softmax--cross-entropy with respect to the
-*logits* is just $\mathbf p-\mathbf y$: predicted probability minus truth. The
-notorious softmax Jacobian cancels against the cross-entropy gradient, which is
-exactly why the two are always fused into one numerically stable primitive. Let us
-confirm both :eqref:`eq_mdl-softmax-jacobian` and the cancellation against a
+*logits* (the raw scores $\mathbf z$ that softmax turns into probabilities) is
+just $\mathbf p-\mathbf y$: predicted probability minus truth. The softmax
+Jacobian cancels against the cross-entropy gradient. Libraries also fuse the two
+into a single primitive for a numerical reason: computing $\log p_i$ from an
+already-evaluated softmax takes the logarithm of a value that may have underflowed
+to zero, whereas the fused primitive computes
+$\log p_i = z_i - \log\sum_k e^{z_k}$ directly through a stable log-sum-exp. Let
+us confirm both :eqref:`eq_mdl-softmax-jacobian` and the cancellation against a
 framework's autograd.
 
 ```{.python .input #matrix-calculus-autodiff-softmax-jacobian}
@@ -524,10 +523,10 @@ We now stop differentiating by hand. Automatic differentiation evaluates a funct
 derivative information alongside every value. It is neither symbolic differentiation
 (which manipulates formulas and explodes in size, as the swamp of repeated terms in
 :numref:`sec_mdl-multivariable_calculus` showed) nor numerical differentiation
-(finite differences, which trade off truncation against round-off error). It is a
-third thing: the chain rule, applied mechanically to the *program* that computes the
+(finite differences, which trade off truncation against round-off error). It is
+the chain rule, applied mechanically to the *program* that computes the
 function :cite:`Baydin.Pearlmutter.Radul.ea.2018`. *Forward mode* is the simplest
-incarnation, and the cleanest way to see it is through *dual numbers*.
+incarnation, and its algebra is that of *dual numbers*.
 
 ### Dual Numbers: an Algebra That Carries Derivatives
 
@@ -553,26 +552,30 @@ $$
 Stare at the $\varepsilon$ coefficient: $ad+bc$ is the *product rule*. This is no
 coincidence.
 
-**Proposition (dual numbers compute derivatives).** *For a differentiable $f$,
-evaluating its arithmetic on the dual number $x+1\cdot\varepsilon$ yields*
+**Proposition (dual numbers compute derivatives).** *For $f$ expressed as a
+composition of the primitives below (constants, the identity, sums, products, and
+elementary functions such as $\sin$ and $\exp$), each differentiable at the point
+where it is evaluated, evaluating that composition on the dual number
+$x+1\cdot\varepsilon$ yields*
 
 $$
 f(x + \varepsilon) = f(x) + f'(x)\,\varepsilon.
 $$
 :eqlabel:`eq_mdl-dual-eval`
 
-**Proof.** One point of order first: for a smooth elementary primitive such as
-$\sin$ or $\exp$, we *define* its action on a dual argument by
+**Proof.** One point of order first: for an elementary primitive such as
+$\sin$ or $\exp$, differentiable at the point where it is evaluated, we *define*
+its action on a dual argument by
 
 $$
 f(a + b\varepsilon) := f(a) + f'(a)\,b\,\varepsilon,
 $$
 
-which is exactly what the class methods below implement---so
+which is exactly what the class methods below implement, so
 :eqref:`eq_mdl-dual-eval` for a single primitive holds *by definition*, not by a
 Taylor expansion evaluated on a nilpotent argument. (The definition is not
 arbitrary: for polynomials the algebra alone forces it, since $\varepsilon^2=0$
-kills every higher-order term, and the smooth case adopts the same rule.) The
+kills every higher-order term, and the elementary functions adopt the same rule.) The
 substance of the proposition is that the property survives *assembly*. It holds
 for constants and the identity ($x+\varepsilon$ itself), and it is closed under
 the operations a program is built from. For a sum, $\varepsilon$-coefficients
@@ -580,9 +583,9 @@ add, matching $(f+g)'=f'+g'$. For a product, :eqref:`eq_mdl-dual-mul` gives
 coefficient $f'(x)g(x)+f(x)g'(x)$, the product rule. For a composition,
 substitute $g(x)+g'(x)\varepsilon$ into a primitive $f$: the definition above,
 read with $a = g(x)$ and $b = g'(x)$, returns
-$f(g(x))+f'(g(x))g'(x)\,\varepsilon$---the chain rule, and consistent with the
-sum and product cases. Since every elementary function is assembled from these,
-induction on the expression gives :eqref:`eq_mdl-dual-eval`. $\blacksquare$
+$f(g(x))+f'(g(x))g'(x)\,\varepsilon$: the chain rule, and consistent with the
+sum and product cases. Since $f$ is assembled from these primitives,
+induction on its expression gives :eqref:`eq_mdl-dual-eval`. $\blacksquare$
 
 So differentiation is *free*: run the ordinary computation in the dual-number
 algebra, set the input's $\varepsilon$-part to $1$ (the "seed"), and the output's
@@ -676,7 +679,7 @@ print('JVP matches analytic Jacobian:', np.allclose(J_fwd, J_exact))
 Each forward pass produced one column of $\mathbf J$ in its $\varepsilon$-slot, with
 no Jacobian ever materialized; the reverse-mode tape below is verified the same way,
 against a framework's autograd. So forward mode is cheap for *tall* Jacobians (many
-outputs, few inputs, $m\gg n$) and expensive when $n$ is large---exactly the wrong
+outputs, few inputs, $m\gg n$) and expensive when $n$ is large, exactly the wrong
 regime for a deep network, whose loss has a single scalar output and millions of
 inputs. For that we need the other parenthesization.
 
@@ -695,15 +698,14 @@ The asymmetry is decisive for deep learning. Consider a scalar loss $L:\mathbb
 R^n\to\mathbb R$ with $n$ parameters. Its Jacobian is a single row ($m=1$), so
 seeding the reverse pass with $\mathbf u=1$ at the output computes the *entire*
 gradient $\nabla L$ in **one** backward sweep. Forward mode, by contrast, would need
-$n$ passes---one per parameter direction---to assemble the same row. The cost rule
-is worth stating crisply:
+$n$ passes, one per parameter direction, to assemble the same row. The cost rule:
 
 * **Reverse mode** costs one pass per *output*: cheap for *wide* Jacobians
   ($m\ll n$). A scalar loss is the extreme wide case, so its full gradient costs a
   small constant multiple of one forward evaluation (typically $2$--$4\times$ in
-  practice; for arithmetic circuits the Baur--Strassen theorem pins the multiple
-  at no more than $5$ :cite:`Baur.Strassen.1983`), *independent of the number of
-  inputs $n$*.
+  practice; for arithmetic circuits, programs built from $+,-,\times,\div$, the
+  Baur--Strassen theorem pins the multiple at no more than $5$
+  :cite:`Baur.Strassen.1983`), *independent of the number of inputs $n$*.
 * **Forward mode** costs one pass per *input*: cheap for *tall* Jacobians
   ($m\gg n$).
 
@@ -711,33 +713,36 @@ is worth stating crisply:
 buys is one *row* (reverse) or one *column* (forward), so the cheap mode is the
 one whose unit matches your Jacobian's short side.
 
-![The shape of the Jacobian dictates the cheap mode. A scalar loss has a $1\times n$ Jacobian---one row, hence one VJP, one backward pass. A one-input map has an $m\times 1$ Jacobian---one column, one JVP, one forward pass. The full $m\times n$ matrix costs $\min(m,n)$ passes either way, which is why it is never formed.](../img/mdl-cal-jacobian-shapes.svg)
+![The shape of the Jacobian dictates the cheap mode. A scalar loss has a $1\times n$ Jacobian: one row, hence one VJP, one backward pass. A one-input map has an $m\times 1$ Jacobian: one column, one JVP, one forward pass. The full $m\times n$ matrix costs $\min(m,n)$ passes either way.](../img/mdl-cal-jacobian-shapes.svg)
 :label:`fig_mdl-cal-jacobian-shapes`
 
 A network has millions of parameters and one loss, so reverse mode wins by a factor
-of the parameter count---millions. We will *measure* this ratio with our own two
-engines once both are built. That single fact---the gradient of a scalar at a small constant multiple
-of one function evaluation, regardless of parameter count---is the *cheap-gradient
-principle* :cite:`Baur.Strassen.1983,Griewank.Walther.2008`, and it is the entire reason
-training deep networks is computationally feasible. **This is backpropagation**: the
-algorithm of
-:numref:`sec_mdl-multivariable_calculus`, where we insisted on "keeping
-$\partial f$ in the numerator", is reverse-mode AD, and the rule is now rigorous.
+of the parameter count: millions. We will count the passes with our own two
+engines once both are built. The gradient of a scalar at a small constant multiple
+of one function evaluation, regardless of parameter count, is the *cheap-gradient
+principle* :cite:`Baur.Strassen.1983,Griewank.Walther.2008`; it is what makes
+training deep networks computationally feasible. **This is backpropagation**
+:cite:`Linnainmaa.1970,Speelpenning.1980,Rumelhart.Hinton.Williams.ea.1988`: the
+algorithm of :numref:`sec_mdl-multivariable_calculus`, where we insisted on
+"keeping $\partial f$ in the numerator", is reverse-mode AD, and the rule is now
+rigorous.
 
 ### The Tape: Record Forward, Replay Backward
 
 Reverse mode cannot be done by a value-carrying algebra like dual numbers, because
 the multiplications run *opposite* to the program's execution: we need each
-operation's local Jacobian *after* the forward pass has finished. So we *record* the
-computation as it runs---the *Wengert list* or *tape* :cite:`Wengert.1964`---and
-then walk it backward. The forward pass builds a directed acyclic graph of
+operation's local Jacobian *after* the forward pass has finished. So we *record*
+the computation as it runs, and then walk the record backward. The record is
+called the *Wengert list* or *tape*, after the forward-mode paper
+:cite:`Wengert.1964` that introduced the list of elementary operations; running
+it *backward* is the later, reverse-mode idea :cite:`Linnainmaa.1970`. The forward pass builds a directed acyclic graph of
 elementary operations and stashes the values needed for each local derivative; the
 backward pass seeds the output *adjoint* (the running $\partial L/\partial\cdot$) and
 pushes it through each recorded operation's VJP, accumulating contributions where a
 value feeds several consumers. :numref:`fig_mdl-cal-fwd-vs-rev` contrasts the two
 sweeps.
 
-![Forward-mode versus reverse-mode automatic differentiation on a computation graph. Forward mode (top) propagates a Jacobian--vector product left to right, in lock-step with evaluation, computing one Jacobian column per pass. Reverse mode (bottom) records a tape on a forward pass, then propagates a vector--Jacobian product right to left, computing one Jacobian row---the full gradient of a scalar output---per pass.](../img/mdl-cal-fwd-vs-rev.svg)
+![Forward-mode versus reverse-mode automatic differentiation on a computation graph. Forward mode (top) propagates a Jacobian--vector product left to right, in lock-step with evaluation, computing one Jacobian column per pass. Reverse mode (bottom) records a tape on a forward pass, then propagates a vector--Jacobian product right to left, computing one Jacobian row (the full gradient of a scalar output) per pass.](../img/mdl-cal-fwd-vs-rev.svg)
 :label:`fig_mdl-cal-fwd-vs-rev`
 
 A tiny tape makes this concrete. We record each operation as a node holding its
@@ -789,15 +794,17 @@ def backprop(node):
 We differentiate an expression with the same diamond-reuse structure that made
 the backward sweep of :numref:`sec_mdl-multivariable_calculus` efficient, and
 check the tape's gradients against the framework's autograd. Take $g(u,v)=r^2$ with the shared
-intermediate $r=uv+u$---in code, `r = u*v + u` followed by `y = r*r`. One forward
+intermediate $r=uv+u$ (in code, `r = u*v + u` followed by `y = r*r`). One forward
 pass records the tape, one backward pass yields both partials. Its graph,
 :numref:`fig_mdl-cal-tape-dag`, is not a chain but a *diamond*: $u$ feeds both the
 product $uv$ and the sum $r$, and $r$ feeds *both* arguments of the final
 multiplication. This reuse is exactly why the backward pass must visit nodes in
-(reverse) topological order and *accumulate* adjoints with `+=` rather than
+reverse topological order (each node before the nodes it depends on, so that its
+adjoint is complete before it is pushed onward) and *accumulate* adjoints with
+`+=` rather than
 overwrite them: when the node $y=r\cdot r$ runs its backward step, it pushes the
 contribution $\bar y\,r$ into `r.grad` *twice*, once per argument, so the adjoint
-$\bar r = 2r\bar y$ arrives as a sum---a node's adjoint is the *sum* of the
+$\bar r = 2r\bar y$ arrives as a sum: a node's adjoint is the *sum* of the
 contributions along every outgoing edge, the chain rule's "sum over paths" made
 operational.
 
@@ -869,11 +876,11 @@ generalize it in three ways that do not change the principle: the nodes hold
 the $\mathbf x^\top$ in :eqref:`eq_mdl-lstsq-grad`) rather than a scalar multiply;
 the primitive set is large (every differentiable op ships a VJP rule); and the graph
 is built either eagerly (PyTorch's dynamic tape) or by tracing (JAX, TensorFlow).
-But the skeleton---record forward, seed the output adjoint, replay backward
-accumulating VJPs---is exactly what you wrote above and exactly what
+But the skeleton (record forward, seed the output adjoint, replay backward
+accumulating VJPs) is exactly what you wrote above and exactly what
 `loss.backward()` does.
 
-### The Cost Asymmetry, Measured
+### The Cost Asymmetry, Counted
 
 With both engines on the table, the cost claim that opened this half of the
 section stops being an assertion. Take a scalar function of $n=200$ inputs,
@@ -906,37 +913,45 @@ print(f'reverse mode : 1 backward sweep for all {n} partials')
 print(f'max |forward - reverse| over the gradient: {gap:.1e}')
 ```
 
-The two gradients agree to machine precision, but the work differs by a factor
-of exactly $n$: $200$ forward passes against one backward sweep. Nothing about
-the ratio is special to $200$---replace it by the $10^8$ parameters of a modern
-network and the measured factor *is* the "factor of millions" claimed above,
-which is why no framework computes training gradients in forward mode.
+The two gradients agree to machine precision, but the pass counts differ by a
+factor of $n$: $200$ forward passes against one backward sweep, which is the
+loop structure itself. Each forward-mode pass costs about one evaluation of $f$,
+and the tape's recorded forward pass plus backward sweep costs a small constant
+multiple of one, so the *work* ratio is $\Theta(n)$, i.e. proportional to $n$ up
+to a constant factor. Nothing about the ratio is special to $200$: replace it by
+the $10^8$ parameters of a modern network and this factor is the "factor of
+millions" claimed above, which is why no framework computes training gradients
+in forward mode.
 
 ### Never Form the Jacobian
 
-The two engines above expose exactly two products---the forward-mode JVP
-$\mathbf J\mathbf v$ and the reverse-mode VJP $\mathbf u^\top\mathbf J$---and every
+The two engines above expose exactly two products, the forward-mode JVP
+$\mathbf J\mathbf v$ and the reverse-mode VJP $\mathbf u^\top\mathbf J$, and every
 quantity a training loop needs is built by *composing* those, never by materializing
 $\mathbf J$. This is deliberate. Writing down a dense $m\times n$ Jacobian costs
 $\min(m,n)$ passes (one per column via JVP, or one per row via VJP) plus $\Theta(mn)$
-storage, while the thing you actually want---a gradient $\mathbf u^\top\mathbf J$, a
+storage, while the thing you actually want (a gradient $\mathbf u^\top\mathbf J$, a
 directional derivative $\mathbf J\mathbf v$, a sequence of these through a deep
-composition---costs a single pass and never holds more than a vector. Frameworks
-therefore offer `jvp`/`vjp` (or `jax.jvp`/`jax.vjp`) as the primitives and treat the
-full Jacobian as a rare, opt-in convenience. Even that convenience is built from the
-same parts: `jacrev` is a `vmap`-batched VJP over the $m$ output directions and
-`jacfwd` a batched JVP over the $n$ input directions, and composing them as
-`jacfwd(jacrev(f))` is the standard way to materialize a full Hessian when $n$ is
-small enough to afford one. The rule of thumb is blunt: if you find
+composition) costs a single pass and never holds more than a vector. Autograd
+systems therefore expose the JVP and the VJP as their primitives and treat the
+full Jacobian as a rare, opt-in convenience. Even that convenience is built from
+the same parts: a Jacobian, when one is truly needed, is assembled by batching
+VJPs over the $m$ output directions (rows) or JVPs over the $n$ input directions
+(columns), and a Hessian by the forward-over-reverse composition of the next
+subsection, when $n$ is small enough to afford one. If you find
 yourself assembling a Jacobian, you have almost certainly written down a matrix you
 could have multiplied through.
 
 ### Hessian-Vector Products: One Order Up
 
 The same "don't materialize the matrix" discipline pays off a second time, one
-derivative higher. Second-order optimizers (Newton, conjugate-gradient, Gauss--Newton)
-and curvature diagnostics never need the full Hessian $\mathbf H=\nabla^2 L$---an
-$n\times n$ object, hopeless to even store for $n$ in the millions. What they need is
+derivative higher. Second-order optimizers and curvature diagnostics never need
+the full Hessian $\mathbf H=\nabla^2 L$, an $n\times n$ object, hopeless to even
+store for $n$ in the millions. Newton's method, the *conjugate-gradient* (CG)
+method (an iterative linear-system solver that touches its matrix only through
+matrix-vector products), and *Gauss--Newton* (which approximates the Hessian by
+a product of first-derivative Jacobians) :cite:`Nocedal.Wright.2006`, see
+:numref:`chap_mdl-optimization`, all need only
 the **Hessian--vector product** $\mathbf H\mathbf v$: the action of curvature in a
 single direction, e.g. one matrix-vector multiply inside a CG iteration. Pearlmutter's
 trick :cite:`Pearlmutter.1994` obtains it *without forming $\mathbf H$* by composing
@@ -952,11 +967,11 @@ $$
 
 so we push the tangent $\mathbf v$ through the gradient computation in *forward over
 reverse*: a forward-mode JVP applied to the reverse-mode gradient. The cost is a small
-constant multiple of one gradient evaluation---curvature in a direction for roughly the
+constant multiple of one gradient evaluation: curvature in a direction for roughly the
 price of a single backward pass, *independent of $n$* :cite:`Baydin.Pearlmutter.Radul.ea.2018`.
 In terms of our toy engines, layering a `Dual` seed over the reverse-mode `Var`
 tape is exactly this forward-over-reverse construction. It is
-what makes the Newton and conjugate-gradient methods of :numref:`chap_mdl-optimization`
+what makes Newton and conjugate-gradient methods
 and the curvature analysis of :numref:`chap_mdl-dynamics` tractable at scale.
 
 The recipe is short enough to show whole. For the quadratic
@@ -964,8 +979,8 @@ $L(\mathbf x)=\tfrac12\mathbf x^\top\mathbf A\mathbf x$ with symmetric
 $\mathbf A$, the gradient is $\mathbf A\mathbf x$ and the Hessian is $\mathbf A$
 itself, so the correct answer is known in advance:
 $\mathbf H\mathbf v = \mathbf A\mathbf v$. No $2\times2$ matrix of second
-derivatives is ever assembled below---only the gradient map, differentiated once
-in the direction $\mathbf v$.
+derivatives is ever assembled below; only the gradient map appears, differentiated
+once in the direction $\mathbf v$.
 
 ```{.python .input #mdl-matrix-calculus-autodiff-hessian-vector-products-one-order-up}
 #@tab pytorch
@@ -1035,7 +1050,7 @@ through the analytic claim and contrasts forward-over-reverse with the
 
 Everything so far differentiated an *explicit* program: a chain of primitives we
 can record on a tape. But some of the most useful outputs in machine learning
-are defined *implicitly*, as the solution of an equation---the fixed point a
+are defined *implicitly*, as the solution of an equation: the fixed point a
 solver converges to, the equilibrium of a physical model, the argmin of an inner
 optimization. Suppose $\mathbf x^\star(\boldsymbol\theta)$ is defined by the
 condition
@@ -1044,10 +1059,11 @@ $$
 \mathbf g\bigl(\mathbf x^\star(\boldsymbol\theta),\,\boldsymbol\theta\bigr) = \mathbf 0,
 $$
 
-and we want $\partial\mathbf x^\star/\partial\boldsymbol\theta$---say, to train
+and we want $\partial\mathbf x^\star/\partial\boldsymbol\theta$, say to train
 $\boldsymbol\theta$ by gradient descent through the solver. Taping the solver's
 dozens of iterations works but is wasteful and fragile. The *implicit function
-theorem* says we never have to: if $\mathbf g$ is continuously differentiable
+theorem* :cite:`Rudin.1976`, which we use without proof, says we never have to:
+if $\mathbf g$ is continuously differentiable
 and the Jacobian $\partial\mathbf g/\partial\mathbf x$ is invertible at the
 solution, then $\mathbf x^\star(\boldsymbol\theta)$ is locally a differentiable
 function of $\boldsymbol\theta$, and differentiating the identity
@@ -1065,16 +1081,16 @@ $$
 
 Both Jacobians on the right are evaluated *at the solution only*: the gradient
 of an implicitly defined output costs one linear solve, no matter how many
-iterations the solver ran, and the "never form the Jacobian" discipline applies
-verbatim---a VJP $\mathbf u^\top\partial\mathbf x^\star/\partial\boldsymbol\theta$
+iterations the solver ran. The "never form the Jacobian" discipline applies
+verbatim: a VJP $\mathbf u^\top\partial\mathbf x^\star/\partial\boldsymbol\theta$
 needs only one linear solve against
 $(\partial\mathbf g/\partial\mathbf x)^\top$, which is exactly the *adjoint
 method* that :numref:`sec_mdl-odes-solvers` uses to backpropagate through ODE
-solvers. Deep equilibrium models make this the whole network, defining a layer's
-output as the fixed point $\mathbf x^\star=\mathbf f(\mathbf x^\star,\boldsymbol\theta)$
-and training it through :eqref:`eq_mdl-implicit-grad` alone; bilevel problems
-such as hyperparameter optimization differentiate an outer objective through the
-argmin of an inner one the same way, with $\mathbf g=\nabla_{\mathbf x}(\text{inner loss})$.
+solvers. Deep equilibrium models :cite:`Bai.Kolter.Koltun.2019` make this the
+whole network: a layer's output is the fixed point
+$\mathbf x^\star=\mathbf f(\mathbf x^\star,\boldsymbol\theta)$, trained through
+:eqref:`eq_mdl-implicit-grad` alone, and bilevel problems such as hyperparameter
+optimization differentiate through an inner argmin the same way.
 The next cell verifies :eqref:`eq_mdl-implicit-grad` on a $2\times2$ nonlinear
 system, against a finite difference of the solver's output.
 
@@ -1105,31 +1121,31 @@ print('finite-difference check   :', fd.round(8))
 The two vectors agree to the precision the finite difference allows. Note what
 the implicit route never touched: the twenty Newton iterations inside `solve`.
 Only the residual's two Jacobians at the converged point enter
-:eqref:`eq_mdl-implicit-grad`---the equation, not the algorithm that solved it,
+:eqref:`eq_mdl-implicit-grad`: the equation, not the algorithm that solved it,
 carries the derivative.
 
 ### The Memory Trade-off and Checkpointing
 
 One cost is now visible. Reverse mode must *store the forward intermediates* (the
 `value`s on the tape) until the backward pass consumes them, so its memory grows
-*linearly* with the length $L$ of the computation---whereas forward mode keeps only
+*linearly* with the length $L$ of the computation, whereas forward mode keeps only
 the current value and tangent. For a deep network this $O(L)$ activation memory is
 often the binding constraint on batch size and depth. *Gradient checkpointing*
 :cite:`Chen.Xu.Zhang.ea.2016` buys it back: store only $O(\sqrt L)$ of the
 intermediates and *recompute* the rest on the fly during the backward pass, turning
 $O(L)$ memory into $O(\sqrt L)$ at the cost of roughly one extra forward
-pass---:numref:`fig_mdl-cal-checkpointing` draws the schedule. The
+pass; :numref:`fig_mdl-cal-checkpointing` draws the schedule. The
 trade-off can be pushed much further: Griewank's *treeverse* algorithm
 :cite:`Griewank.1992` checkpoints recursively to reach $O(\log L)$ memory, at the
-price of $O(L\log L)$ recomputation---provably the optimal exchange rate between
-storage and recomputation. The full story of forward/reverse modes,
-mixed modes, and checkpointing is the subject of Griewank and Walther's monograph
-*Evaluating Derivatives* :cite:`Griewank.Walther.2008` and the survey
+price of $O(L\log L)$ recomputation, provably optimal among checkpointing
+schedules with the given snapshot budget. Forward and reverse modes,
+mixed modes, and checkpointing are treated in full in Griewank and Walther's
+monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the survey
 :cite:`Baydin.Pearlmutter.Radul.ea.2018`; the same reverse-mode tape returns as the
 *adjoint method* for differentiating through ODE solvers in
 :numref:`chap_mdl-dynamics`.
 
-![Gradient checkpointing as a timeline. Plain reverse mode (top) keeps all $L$ forward activations alive until the backward sweep consumes them. Checkpointing (bottom) stores only every $\sqrt{L}$-th activation; when the backward sweep reaches a segment, that segment is recomputed forward from its checkpoint and then swept---$O(\sqrt{L})$ memory for roughly one extra forward pass.](../img/mdl-cal-checkpointing.svg)
+![Gradient checkpointing as a timeline. Plain reverse mode (top) keeps all $L$ forward activations alive until the backward sweep consumes them. Checkpointing (bottom) stores only every $\sqrt{L}$-th activation; when the backward sweep reaches a segment, that segment is recomputed forward from its checkpoint and then swept: $O(\sqrt{L})$ memory for roughly one extra forward pass.](../img/mdl-cal-checkpointing.svg)
 :label:`fig_mdl-cal-checkpointing`
 
 ## Summary
@@ -1145,33 +1161,32 @@ mixed modes, and checkpointing is the subject of Griewank and Walther's monograp
   $\mathbf J_L\cdots\mathbf J_1$. Its *associativity* is the whole story of AD.
 * **Layout conventions** (numerator vs denominator) differ by a transpose; we use
   numerator layout for Jacobians and denominator (column) layout for gradients.
-* The recurring DL identities---$\nabla\,\mathbf a^\top\mathbf x=\mathbf a$,
+* The recurring DL identities all follow from differentiating one component and
+  reassembling, not from a table: $\nabla\,\mathbf a^\top\mathbf x=\mathbf a$,
   $\nabla\,\mathbf x^\top\mathbf A\mathbf x=(\mathbf A+\mathbf A^\top)\mathbf x$,
   the rank-one $\nabla_{\mathbf W}\|\mathbf W\mathbf x-\mathbf y\|^2=2(\mathbf W\mathbf x-\mathbf y)\mathbf x^\top$,
-  and the softmax--cross-entropy logit gradient $\mathbf p-\mathbf y$---all follow
-  from differentiating one component and reassembling, not from a table.
+  and the softmax--cross-entropy logit gradient $\mathbf p-\mathbf y$.
 * **Forward-mode AD** carries a derivative via *dual numbers* ($\varepsilon^2=0$);
   one pass computes a Jacobian--vector product (a Jacobian *column*), cheap for tall
   Jacobians.
 * **Reverse-mode AD** records a *tape* and replays it backward, computing a
   vector--Jacobian product (a Jacobian *row*) per pass. Because a loss is scalar,
-  **backpropagation is reverse-mode AD**: one backward sweep yields the gradient w.r.t.
-  every parameter at a small constant multiple of one forward evaluation (typically
-  $2$--$4\times$; at most $5$ for arithmetic circuits, by Baur--Strassen),
-  *independent of the number of inputs $n$*---at the price of storing
+  **backpropagation is reverse-mode AD**: one backward sweep yields the gradient
+  w.r.t. every parameter at a small constant multiple of one forward evaluation,
+  *independent of the number of inputs $n$*, at the price of storing
   the forward intermediates.
-* **Never form the Jacobian.** Frameworks expose `jvp` and `vjp` and you *compose*
-  them; a dense $m\times n$ Jacobian costs $\min(m,n)$ passes and is almost always
-  avoidable. One order up, the **Hessian--vector product** $\mathbf H\mathbf v$ comes
-  from *forward-over-reverse* (Pearlmutter's trick) at the cost of one extra
-  gradient---curvature without forming $\mathbf H$, which is what makes Newton/CG
-  methods scale. The $O(L)$ activation memory of the tape can be traded down to
+* **Never form the Jacobian.** Autograd exposes the JVP and the VJP and you
+  *compose* them; a dense $m\times n$ Jacobian costs $\min(m,n)$ passes and is
+  almost always avoidable. One order up, the **Hessian--vector product**
+  $\mathbf H\mathbf v$ comes from *forward-over-reverse* (Pearlmutter's trick) at
+  the cost of one extra gradient: curvature without forming $\mathbf H$, which is
+  what makes Newton/CG methods scale. The $O(L)$ activation memory of the tape can be traded down to
   $O(\sqrt L)$ by *gradient checkpointing* at roughly one extra forward pass.
 * **Implicitly defined outputs** need no tape through the solver: if
   $\mathbf g(\mathbf x^\star,\boldsymbol\theta)=\mathbf 0$, the implicit function
   theorem gives $\partial\mathbf x^\star/\partial\boldsymbol\theta
   =-(\partial\mathbf g/\partial\mathbf x)^{-1}\partial\mathbf g/\partial\boldsymbol\theta$
-  from the Jacobians at the solution alone---one linear solve per gradient, the
+  from the Jacobians at the solution alone: one linear solve per gradient, the
   seed of the adjoint method, deep equilibrium models, and bilevel optimization.
 
 ## Exercises
@@ -1199,9 +1214,9 @@ mixed modes, and checkpointing is the subject of Griewank and Walther's monograp
    with symmetric $\mathbf A$, show analytically that $\nabla L=\mathbf A\mathbf x$ and
    hence $\mathbf H\mathbf v=\mathbf A\mathbf v$. Then implement the forward-over-reverse
    recipe of :eqref:`eq_mdl-hvp` for a general scalar $L$ using a framework's
-   autograd---a forward-mode JVP pushed through the reverse-mode gradient: in PyTorch,
+   autograd (a forward-mode JVP pushed through the reverse-mode gradient: in PyTorch,
    `torch.func.jvp(torch.func.grad(L), (x,), (v,))`; in JAX,
-   `jax.jvp(jax.grad(L), (x,), (v,))`---and confirm it returns $\mathbf A\mathbf v$
+   `jax.jvp(jax.grad(L), (x,), (v,))`) and confirm it returns $\mathbf A\mathbf v$
    *without ever building the $n\times n$ matrix $\mathbf H$*. PyTorch's classic
    *double-backward* alternative (differentiate $\langle\nabla L,\mathbf v\rangle$
    once more, via `torch.autograd.grad(L, x, create_graph=True)`) computes the same
@@ -1217,8 +1232,10 @@ mixed modes, and checkpointing is the subject of Griewank and Walther's monograp
    $\tfrac{d}{dt}\det\mathbf A(t)=\det\mathbf A(t)\,
    \operatorname{tr}\bigl(\mathbf A(t)^{-1}\tfrac{d\mathbf A}{dt}\bigr)$. This
    identity is what makes the $\log|\det\mathbf J|$ term of the change-of-variables
-   formula for densities (:numref:`sec_mdl-random_variables`)---the workhorse of
-   normalizing flows---trainable by gradient descent. Verify it numerically by
+   formula for densities (:numref:`sec_mdl-random_variables`) trainable by
+   gradient descent; normalizing flows, generative models built from invertible
+   maps and trained on exactly this log-likelihood (:numref:`sec_mdl-flow-matching`),
+   depend on it. Verify it numerically by
    differentiating `logdet` of a random $3\times3$ matrix with a framework's
    autograd and comparing against $\mathbf A^{-\top}$.
 9. **Attention Jacobians.** In self-attention (:numref:`sec_attention-scoring-functions`),
@@ -1392,7 +1409,7 @@ Couples no coordinates, so $\mathbf J=\operatorname{diag}(\varphi')$.
 So $\mathbf J=\operatorname{diag}(\boldsymbol\varphi_L')\,\mathbf W_L\cdots\operatorname{diag}(\boldsymbol\varphi_1')\,\mathbf W_1$: weights interleaved with cheap diagonal masks. For ReLU that mask is just zeros and ones, which is why a backward pass through an activation costs $O(n)$.
 :::
 
-::: {.slide title="Associativity is the whole story"}
+::: {.slide title="Associativity: two brackets, two modes"}
 [Chain rule]{.kicker}
 
 Matrix multiplication is **associative**, so the chain $\mathbf J_L\cdots\mathbf J_1$ may be bracketed in any order:
@@ -1444,7 +1461,7 @@ Derive, then verify: autograd audits the first two at a random point:
 ::: {.slide title="The cancellation that fuses softmax with cross-entropy"}
 [Identities]{.kicker}
 
-The softmax Jacobian $\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$, composed with cross-entropy, collapses to $\mathbf p-\mathbf y$ whatever the Jacobian, which is why the two are fused into one stable primitive. Verify against autograd:
+The softmax Jacobian $\operatorname{diag}(\mathbf p)-\mathbf p\mathbf p^\top$, composed with cross-entropy, collapses to $\mathbf p-\mathbf y$ whatever the Jacobian; the fused softmax--cross-entropy primitive also avoids $\log$ of an underflowed probability via log-sum-exp. Verify against autograd:
 
 @matrix-calculus-autodiff-softmax-jacobian@pytorch
 :::
@@ -1521,7 +1538,7 @@ Reverse mode multiplies *left-to-right*, carrying a **vector–Jacobian product*
 A scalar loss is a single-row Jacobian ($m=1$), so **one** backward sweep yields the *entire* gradient.
 
 ::: {.d2l-note .rule}
-Gradient of a scalar at a small constant multiple of one forward pass ($2$--$4\times$ in practice, provably $\le 5$ for arithmetic circuits: Baur--Strassen). *Independent of $n$*: the cheap-gradient principle.
+Gradient of a scalar at a small constant multiple of one forward pass, *independent of $n$*: the cheap-gradient principle (Baur--Strassen).
 :::
 :::
 
@@ -1569,7 +1586,7 @@ One forward pass records the tape; one backward pass yields both partials, match
 @matrix-calculus-autodiff-tape-check@pytorch
 :::
 
-::: {.slide title="The asymmetry, measured: 200 passes vs 1"}
+::: {.slide title="The asymmetry, counted: 200 passes vs 1"}
 [Reverse mode]{.kicker}
 
 With both engines on the table, the cost claim stops being an assertion. Take a scalar function of $n = 200$ inputs: forward mode assembles the gradient one input direction per pass; the tape runs *one* backward sweep.
@@ -1578,7 +1595,7 @@ With both engines on the table, the cost claim stops being an assertion. Take a 
 
 . . .
 
-Identical gradients, a factor-$n$ gap in work. Nothing is special about $200$: replace it by the $10^8$ parameters of a modern network and this measured ratio *is* the factor of millions, the entire reason no framework trains in forward mode.
+Identical gradients, a factor-$n$ gap in pass counts; per-pass costs match to a small constant, so the work ratio is $\Theta(n)$. Replace $200$ by the $10^8$ parameters of a modern network: that factor is why no framework trains in forward mode.
 :::
 
 ::: {.slide title="Never form the Jacobian"}
@@ -1587,7 +1604,7 @@ Identical gradients, a factor-$n$ gap in work. Nothing is special about $200$: r
 A dense $m\times n$ Jacobian costs $\min(m,n)$ passes and $\Theta(mn)$ storage; what you *want* costs one pass and holds only a vector.
 
 ::: {.d2l-note .warn}
-If you are assembling a Jacobian, you have probably written down a matrix you could have multiplied through. Frameworks expose `jvp` / `vjp`; you **compose** them.
+If you are assembling a Jacobian, you have probably written down a matrix you could have multiplied through. Autograd exposes the JVP and the VJP; you **compose** them.
 :::
 
 One order up, the **Hessian–vector product** $\mathbf H\mathbf v$ is the directional derivative of the gradient map: curvature in a direction without ever forming $\mathbf H$.
@@ -1641,7 +1658,7 @@ Reverse mode must keep every forward intermediate alive until the backward sweep
 ::: {.col}
 - The **Jacobian** is the best local linear map; the gradient ($m=1$) and the Hessian are special cases.
 - The chain rule is **Jacobian composition**; a deep net is one long matrix product.
-- Its **associativity** is the entire story of autodiff.
+- Its **associativity** is what yields the two autodiff modes.
 :::
 
 ::: {.col}

@@ -9,12 +9,12 @@
   },
   "cells": {
     "mdl-concentration-generalization-concentration-and-generalization": {
-      "code_fingerprint": "sha256:b4929e4594283344358e7b6dd9624903edc18b8dfb2b05f12140509c73fcd6d5",
+      "code_fingerprint": "sha256:56f1c1a19fc20d74bad39d93dadec18122d5aebe94302a266506a1c3e3943a26",
       "kind": "text",
       "outputs": []
     },
     "mdl-concentration-generalization-the-tail-race-in-code": {
-      "code_fingerprint": "sha256:fc4c2d1c36a45caccdce90ab55bb756dcc468a4be82cb0a5ecdcba56822b2f68",
+      "code_fingerprint": "sha256:29dbdda1d450b4a980c2f10543e12c13ade151a6018b7d158ce10893c21de36a",
       "kind": "mixed",
       "outputs": [
         {
@@ -27,12 +27,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
           "bytes": 31472,
-          "sha256": "sha256:ea9fa95a39a6d6001246740a2b1c5e766c71ae581a640f1aee28d06db1b298e8"
+          "sha256": "sha256:62551b97696cf6f837bf3eb5802b6ea28371e5f4c0569f240f855c28f6c54c90"
         }
       ]
     },
     "mdl-concentration-generalization-measuring-the-shell": {
-      "code_fingerprint": "sha256:c2198603c8d168b437eb66a9223de5b7794f9967a35ea8943c1d68fa0156dd93",
+      "code_fingerprint": "sha256:a413aab47fb26d3858ca22a21cb713cbbd976e1c24106204e7f7025dcbeb7b84",
       "kind": "text",
       "outputs": [
         {
@@ -48,7 +48,7 @@
       ]
     },
     "mdl-concentration-generalization-coin-flips-in-code": {
-      "code_fingerprint": "sha256:cb848b73d150c05195bc8b5a50cc63dc15b99a2e6adfd67b9543fb2aa5051446",
+      "code_fingerprint": "sha256:2bcf9c2252509345089762730d1ca5dc129cf4882b3d4142da04ba39777728ec",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "mdl-concentration-generalization-double-descent-in-twenty-five-lines": {
-      "code_fingerprint": "sha256:27a446740dee25e97530eecd753dc1f223314f89bd34d70cddf1d9c868278925",
+      "code_fingerprint": "sha256:29b88e907a82a4c35ed24fb95e649ab26f0eae9693a1a304e3792aaa323b2136",
       "kind": "mixed",
       "outputs": [
         {
@@ -72,7 +72,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-double-descent-in-twenty-five-lines-1.svg",
           "bytes": 33075,
-          "sha256": "sha256:d8fbbeb14fefa012f61e193a45a87d83e319c217ff7608e563ae2af07d1c5471"
+          "sha256": "sha256:73378fc919cc4c0284e5599112f2b60e8ce40cf34c5a5b710802dc59bb62651a"
         }
       ]
     }

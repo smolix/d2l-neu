@@ -25,7 +25,7 @@
       ]
     },
     "mdl-multivariable-calculus-directional-derivatives-1": {
-      "code_fingerprint": "sha256:cf689dec92ab21159d697c78c08df805d537fa0f3067a8cba9ac5118ecdc3199",
+      "code_fingerprint": "sha256:8b5dc5a4065ba0c4147bfc9b013d30eaef45153d8658fda214e276651ff4e141",
       "kind": "text",
       "outputs": [
         {
@@ -36,20 +36,20 @@
       ]
     },
     "multivariable-calculus-a-note-on-mathematical-optimization": {
-      "code_fingerprint": "sha256:b076181b96bdd42a5b4feab810167d62a99ca134a5dc3119b5f7bdf3538a3113",
+      "code_fingerprint": "sha256:d8e0939572311b531aab03010fbc680d9d1b247f41f38a4d41c1850b0af0d717",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
-          "bytes": 13748,
-          "sha256": "sha256:cf5a88a4c96cb04e185e71117b5f188753546e6c20bcd383208ee7e443aeec78"
+          "bytes": 13741,
+          "sha256": "sha256:0926b35f62f57edbe514fd848e36f50f25cb57e04e404c8fe51bc10003930947"
         }
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-1": {
-      "code_fingerprint": "sha256:6bb6f53abce537bbab18346dc8df4d4d5edd7094d1e1502e404d3ec396a8c024",
+      "code_fingerprint": "sha256:ea99ca5479e2b7dfb1b046949b413282fd267322a9f73a829df0d4b14daebcc2",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +60,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-2": {
-      "code_fingerprint": "sha256:8b7fc0dda6f6abb3d62211e3e5be1051e35064faf2bce7211a08e3fa1a062f97",
+      "code_fingerprint": "sha256:5713cb2e15036d988171ed8811ae10334bd816083bdb79b21ac302fc5717ba7d",
       "kind": "text",
       "outputs": [
         {
@@ -71,7 +71,7 @@
       ]
     },
     "multivariable-calculus-the-backpropagation-algorithm-3": {
-      "code_fingerprint": "sha256:db2ed5f27ce5a5be9d4937e664c7a9399b6b8e011ce8fed6dfd69461d4f51ccf",
+      "code_fingerprint": "sha256:55eb3bb52ef93490bda05dbdba65c2ed81f644ab43bf78c9e22903ede8279e3f",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "multivariable-calculus-hessians": {
-      "code_fingerprint": "sha256:6c605b0f147d75601830e6d995a2022a679856f20cfd4bc53ed2384a725c9744",
+      "code_fingerprint": "sha256:72c4cd6b9df1aa780cb47a27c2e68828f77659130f53f4a28bf8ef9b6684cca0",
       "kind": "text",
       "outputs": [
         {
@@ -93,7 +93,7 @@
       ]
     },
     "mdl-multivariable-calculus-the-second-derivative-test": {
-      "code_fingerprint": "sha256:97f30a1cdd5a5939497b6668d8ff6f50b86f8b7e713dd52fe5a4819d24525802",
+      "code_fingerprint": "sha256:00c33a6038363c375486da106a6f9dd680d79bc7a62a81bbec3b15f9aa94bfe6",
       "kind": "text",
       "outputs": [
         {

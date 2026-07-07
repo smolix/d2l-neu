@@ -4,8 +4,8 @@
 The math can be right and your loss can still go to `NaN`. Every result in this
 chapter so far was proved over the real numbers; your GPU computes over a
 finite, gappy imitation of them. This section explains the floating-point
-failure modes that bite real training runs --- overflow, underflow, and
-catastrophic cancellation --- and the handful of two-line fixes that keep
+failure modes that bite real training runs (overflow, underflow, and
+catastrophic cancellation) and the handful of two-line fixes that keep
 softmax, cross-entropy, and ill-conditioned least squares alive:
 max-subtraction, log-space arithmetic, and ridge regularization. Two ideas
 organize everything. The first, due to numerical analysis and crystallized in
@@ -15,25 +15,24 @@ problems have wildly different answers?). The second is that the dividing line
 is a single number we have already met: the **condition number**
 $\kappa = \sigma_{\max}/\sigma_{\min}$ of :numref:`subsec_mdl-condition-number`,
 the same $\kappa$ that sets gradient descent's convergence rate in
-:numref:`sec_mdl-gradient-based-optimization` --- one number, two consequences.
+:numref:`sec_mdl-gradient-based-optimization`: one number, two consequences.
 The payoffs land downstream: the log-space trick rescues naive Bayes in
 :numref:`sec_mdl-naive_bayes` from underflow, and the stable cross-entropy here
 is the same computation analyzed in :numref:`sec_mdl-information_theory`.
 
 We proceed in four steps: what floating-point numbers are and where their
-cliffs lie; how to compute softmax, log-sum-exp, and cross-entropy without
-falling off those cliffs; why subtracting nearly equal numbers destroys digits
+cliffs lie; how to compute softmax, log-sum-exp, and cross-entropy safely;
+why subtracting nearly equal numbers destroys digits
 and how reformulation (not higher precision) repairs it; and finally
-conditioning --- backward versus forward error, the Hilbert-matrix horror
-story, why normal equations square the pain, and why ridge regularization is
-preconditioning in disguise. The standard references are
-:citet:`Goldberg.1991` for floating point and :citet:`Higham.2002` for
+conditioning: backward versus forward error, the Hilbert matrix,
+why normal equations square the pain, and how ridge regularization
+conditions the problem the way a preconditioner does. The standard references
+are :citet:`Goldberg.1991` for floating point and :citet:`Higham.2002` for
 everything else; :citet:`Goodfellow.Bengio.Courville.2016` (chapter 4) gives
-the deep-learning framing. Most code in this section is deliberately plain
-NumPy --- these phenomena belong to the arithmetic, not to any framework ---
-with pointed exceptions where the framework machinery *is* the phenomenon: the
-mixed-precision cells and the cross-entropy cell, where the four frameworks
-genuinely behave differently.
+the deep-learning framing. Most code in this section is plain NumPy, since
+these phenomena belong to the arithmetic rather than to any library; the
+exception is the cross-entropy experiment, where library behavior genuinely
+differs.
 
 ```{.python .input #numerical-stability-conditioning-imports}
 #@tab mxnet
@@ -86,15 +85,16 @@ $$
 :eqlabel:`eq_mdl-opt-float-format`
 
 a sign bit $s$, a *mantissa* (significand) with $p$ stored bits, and an
-integer exponent $e$ from a fixed range. The format is a brilliant compromise:
-the exponent gives enormous *range*, the mantissa gives fixed *relative*
+integer exponent $e$ from a fixed range. The exponent gives enormous *range*,
+the mantissa gives fixed *relative*
 precision, and between consecutive powers of two the representable values are
-evenly spaced --- so the spacing *doubles* every time the magnitude does.
+evenly spaced, so the spacing *doubles* every time the magnitude does.
 :numref:`fig_mdl-opt-fp-number-line` shows the resulting number line:
-representable values crowd near zero and thin out toward the overflow cliff,
+representable values crowd near zero and thin out toward the overflow
+threshold,
 while the *relative* gap between neighbors stays essentially constant.
 
-![Floating-point numbers on the real line. Representable values are dense near zero and sparse far out: the absolute gap between neighbors doubles at every power of two while the relative gap stays near $\varepsilon_{\text{mach}}$. Each format ends in an overflow cliff --- fp16 at $65504$, long before fp32 at about $3.4 \times 10^{38}$ --- and in an underflow region below its smallest normal number.](../img/mdl-opt-fp-number-line.svg)
+![Floating-point numbers on the real line. Representable values are dense near zero and sparse far out: the absolute gap between neighbors doubles at every power of two while the relative gap stays near $\varepsilon_{\text{mach}}$. Each format ends at an overflow threshold (fp16 at $65504$, long before fp32 at about $3.4 \times 10^{38}$) and in an underflow region below its smallest normal number.](../img/mdl-opt-fp-number-line.svg)
 :label:`fig_mdl-opt-fp-number-line`
 
 That constant relative gap has a name. **Machine epsilon**
@@ -110,14 +110,15 @@ $$
 
 and IEEE arithmetic guarantees the same for every single operation: the
 computed $x \oplus y$ equals $(x + y)(1 + \delta)$ with $|\delta| \le u$
-(:cite:`Goldberg.1991`). The quantity $u$ is the *unit roundoff*. Everything
+(:cite:`IEEE.754.2019,Goldberg.1991`). The quantity $u$ is the *unit
+roundoff*. Everything
 in this section is bookkeeping on these $(1+\delta)$ factors: one of them is
-harmless, and the games begin when millions of them interact --- or when a
+harmless; trouble starts when millions of them interact, or when a
 subtraction promotes one from relative to *catastrophic* (we get there in
 :numref:`subsec_mdl-catastrophic-cancellation`).
 
-Deep learning juggles three formats, and the table below --- printed by your
-framework, not transcribed from a spec --- is worth memorizing:
+Deep learning juggles three formats; the table below prints their parameters
+directly from the library:
 
 ```{.python .input #numerical-stability-conditioning-finfo}
 #@tab mxnet
@@ -174,15 +175,15 @@ print('bfloat16 eps equals 2^-7:',
 ```
 
 Read the three rows as three different bargains. **fp32** ($p = 23$ mantissa
-bits) has $\varepsilon_{\text{mach}} = 2^{-23} \approx 1.19 \times 10^{-7}$
---- about seven decimal digits --- with range up to
+bits) has $\varepsilon_{\text{mach}} = 2^{-23} \approx 1.19 \times 10^{-7}$,
+about seven decimal digits, with range up to
 $3.4 \times 10^{38}$. **fp16** ($p = 10$) keeps a respectable
 $\varepsilon_{\text{mach}} = 2^{-10} \approx 9.8 \times 10^{-4}$ but pays for
 it with a *tiny* exponent range: it overflows at $65504$ and its smallest
-normal number is about $6.1 \times 10^{-5}$, so both big activations and small
-gradients fall off its cliffs. **bfloat16** ($p = 7$) makes the opposite
+normal number is about $6.1 \times 10^{-5}$, so big activations overflow and
+small gradients underflow. **bfloat16** ($p = 7$) makes the opposite
 trade: it keeps fp32's full exponent range and sacrifices the mantissa,
-leaving $\varepsilon_{\text{mach}} = 2^{-7} = 0.0078$ --- between two and
+leaving $\varepsilon_{\text{mach}} = 2^{-7} = 0.0078$, between two and
 three decimal digits. The printout confirms the value that is easy to misquote:
 bfloat16's epsilon is $2^{-7}$, not $2^{-8}$; the eighth mantissa bit people
 sometimes count is the *implicit* leading $1$ in
@@ -190,18 +191,16 @@ sometimes count is the *implicit* leading $1$ in
 
 Since 2022, hardware has pushed the same ladder one rung lower, to **fp8**,
 standardized in two flavors :cite:`Micikevicius.Stosic.Burgess.ea.2022`.
-**E4M3** ($p = 3$) keeps what resolution it can ---
-$\varepsilon_{\text{mach}} = 2^{-3} = 0.125$, roughly *one* decimal digit ---
+**E4M3** ($p = 3$) keeps what resolution it can,
+$\varepsilon_{\text{mach}} = 2^{-3} = 0.125$ or roughly *one* decimal digit,
 inside a range that tops out at $448$; **E5M2** ($p = 2$) sacrifices another
 mantissa bit to buy fp16's full exponent range (maximum $57344$, smallest
 normal $6.1 \times 10^{-5}$). The division of labor is visible in the numbers:
 E4M3 holds weights and activations, which need digits; E5M2 holds gradients,
 which need range. And at $\varepsilon_{\text{mach}} = 0.125$ there is no slack
-left in the format, so fp8 training pairs every tensor with a *scale factor*
-that recenters its values on the representable window --- per-tensor scaling
-is not an optimization but a precondition. The bargains stay the bargains:
-every halving of the bit budget is paid for in digits, in range, or in
-bookkeeping.
+left in the format, so fp8 training must pair every tensor with a *scale
+factor* that recenters its values on the representable window. Every halving
+of the bit budget is paid for in digits, in range, or in bookkeeping.
 
 ```{.python .input #numerical-stability-conditioning-fp8}
 #@tab pytorch
@@ -212,12 +211,10 @@ for dt in [torch.float8_e4m3fn, torch.float8_e5m2]:
 ```
 
 :begin_tab:`pytorch`
-The printout confirms the two bargains digit for digit: three mantissa bits
+The printout confirms the trade digit for digit: three mantissa bits
 buy E4M3 an epsilon of $0.125$ and a maximum of $448$; giving one of them up
 buys E5M2 a maximum of $57344$ and fp16's smallest normal,
 $6.1 \times 10^{-5}$, at the price of $\varepsilon_{\text{mach}} = 0.25$.
-(Outside PyTorch, the `ml_dtypes` package provides the same two formats for
-NumPy, JAX, and TensorFlow.)
 :end_tab:
 
 Two quick experiments make $\varepsilon_{\text{mach}}$ tangible: adding half
@@ -240,12 +237,15 @@ for dt in [np.float16, np.float32]:
 
 ### Overflow, Underflow, and Mixed Precision
 
-The last two printed lines locate the cliffs that matter most in practice.
+The last two printed lines locate the thresholds that matter most in practice.
 Because $e^x$ turns additive scale into multiplicative scale, the overflow
-threshold of each format translates into a surprisingly small *logit*:
+threshold of each format translates into a modest *logit*:
 $e^x = \infty$ in fp32 once $x > \ln(3.4 \times 10^{38}) \approx 88.72$, and
-in fp16 once $x > \ln(65504) \approx 11.09$. A logit of $89$ --- nothing
-unusual for an unnormalized score late in training --- overflows fp32. At the
+in fp16 once $x > \ln(65504) \approx 11.09$. Logits near $88.7$ are rare in
+healthy training, so fp32 softmax overflow is uncommon in practice; fp16's
+threshold of $11.09$ sits well inside the range of ordinary unnormalized
+scores, and it is the one that bites, which is why the mixed-precision recipe
+below exists. At the
 other end, $e^{-x}$ *underflows*: below the smallest normal number the format
 degrades gracefully through *subnormal* numbers with fewer and fewer
 significant bits, and then hits exactly $0$, at which point a subsequent
@@ -255,26 +255,27 @@ This is the arithmetic behind **mixed-precision training**
 :cite:`Micikevicius.Narang.Alben.ea.2018`. In fp16, gradients routinely fall
 below $6 \times 10^{-5}$ and vanish, so the loss is multiplied by a scale
 factor before the backward pass (and the gradients divided after) purely to
-shift them into representable territory --- *loss scaling* is underflow
-management, nothing more. bfloat16 was designed to make that bookkeeping
+shift them into representable territory: *loss scaling* is purely underflow
+management. bfloat16 makes that bookkeeping
 unnecessary: with fp32's exponent range nothing reasonable overflows or
-underflows, and the price --- relative precision of only $2^{-7}$ --- is paid
+underflows, and the price, relative precision of only $2^{-7}$, is paid
 where deep learning is most tolerant, in the noise-dominated mantissa of each
 weight update. The reason a master copy of the weights is kept in fp32 is
 :eqref:`eq_mdl-opt-rounding-model` again: a weight update of relative size
 below $\varepsilon_{\text{mach}}/2$ rounds to *no update at all*, and at
 $\varepsilon_{\text{mach}} = 2^{-7}$ that threshold is hit by perfectly
-healthy learning rates. (A third escape, increasingly common in fp8 and
-integer training, is **stochastic rounding**: round up or down at random with
+healthy learning rates. A third escape, increasingly common in fp8 and
+integer training, is **stochastic rounding**
+:cite:`Gupta.Agrawal.Gopalakrishnan.ea.2015`: round up or down at random with
 probabilities proportional to proximity, so the *expected* stored value is
-exact --- updates too small to survive round-to-nearest still make progress
-on average.)
+exact and updates too small to survive round-to-nearest still make progress
+on average.
 
-Both fp16 failure modes --- and both rescues --- fit in one cell. A gradient
+Both fp16 failure modes, and both rescues, fit in one cell. A gradient
 whose true value is $10^{-8}$ underflows to zero during an fp16 backward
 pass, and multiplying the *loss* by $2^{14}$ before differentiating shifts
 the whole gradient chain into representable territory; a perfectly healthy
-update of relative size $10^{-4}$ is swallowed whole by round-to-nearest in
+update of relative size $10^{-4}$ is lost to round-to-nearest in
 fp16, and an fp32 master copy of the weights accepts it without complaint:
 
 ```{.python .input #numerical-stability-conditioning-loss-scaling}
@@ -295,9 +296,9 @@ print('fp32 master copy takes the step       :',
 ```
 
 :begin_tab:`pytorch`
-The unscaled backward pass reports a gradient of exactly $0.0$ --- the
+The unscaled backward pass reports a gradient of exactly $0.0$ (the
 product $10^{-4} \times 10^{-4}$ fell below fp16's smallest subnormal,
-$6 \times 10^{-8}$ --- while the loss-scaled route recovers
+$6 \times 10^{-8}$) while the loss-scaled route recovers
 $1.000 \times 10^{-8}$. In the second half, $w - \eta g$ with
 $\eta g = 10^{-4}$ *is* $w$ in fp16 (the update is smaller than half the
 gap between $1$ and its fp16 neighbor), but the fp32 master copy lands on
@@ -308,7 +309,7 @@ plus fp32 master weights automate.
 ## Making Softmax and Cross-Entropy Safe
 :label:`subsec_mdl-stable-softmax`
 
-### Softmax Overflows --- and the Shift That Fixes It
+### Softmax Overflows and the Shift That Fixes It
 
 The most common stability bug in machine learning is one line long. The
 softmax
@@ -319,7 +320,7 @@ $$
 
 exponentiates its logits, and the table above says exactly where that goes
 wrong: fp32 overflows the moment any logit exceeds $88.72$, fp16 already at
-$11.09$ --- the numerator becomes `inf`, the ratio becomes `inf/inf = NaN`,
+$11.09$: the numerator becomes `inf`, the ratio becomes `inf/inf = NaN`,
 and the model dies even though the *probabilities* it was computing are
 perfectly tame numbers in $[0, 1]$. The failure is entirely an artifact of
 the route. You have met the repair before:
@@ -343,20 +344,19 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-stable-lse`
 
-What that earlier derivation took on faith --- and what this section can now
-certify, floating-point model in hand --- is *why the shifted route is safe
-as arithmetic*, not merely equal as algebra. Take $c = \max_i z_i$. Every
-exponent is then at most $0$, so every $e^{z_i - c}$ lies in $(0, 1]$:
-overflow is impossible at any logit scale, in any format. The largest term
-equals exactly $1$, so the denominator --- the sum in
-:eqref:`eq_mdl-opt-stable-lse` --- lies in $[1, n]$: it can neither overflow
-nor underflow to $0$, so its logarithm is finite and its reciprocal exists.
-These are interval guarantees, not asymptotic hopes; the only number the
-shifted route ever exposes to the cliffs is $c$ itself, a single logit that
-was already representable. The cell below watches the naive route produce
-`NaN` on logits that the shifted route handles without breaking a sweat ---
-and checks that where both routes work, they agree to the last bit, exactly
-as :eqref:`eq_mdl-opt-softmax-shift` promises:
+:numref:`subsec_softmax-implementation-revisited` also gave the reason the
+shifted route is safe: with $c = \max_i z_i$ every exponent is at most $0$,
+so every $e^{z_i - c}$ lies in $(0, 1]$ and overflow is impossible at any
+logit scale, in any format; the largest term equals exactly $1$, so the
+denominator, the sum in :eqref:`eq_mdl-opt-stable-lse`, lies in $[1, n]$ and
+can neither overflow nor underflow to $0$, so its logarithm is finite and
+its reciprocal exists. What the floating-point model of this section adds is
+the quantification: the overflow thresholds ($88.72$ in fp32, $11.09$ in
+fp16) say exactly when the naive route dies, and the only number the shifted
+route ever exposes to the exponential is $c$ itself, a single logit that was
+already representable. The cell below watches the naive route produce `NaN`
+on logits that the shifted route handles, and checks whether, where both
+routes work, the two agree:
 
 ```{.python .input #numerical-stability-conditioning-stable-softmax}
 def softmax_naive(z):
@@ -376,21 +376,27 @@ print('naive and stable agree where both work:',
       bool((softmax_naive(z) == softmax_stable(z + 100.0)).all()))
 ```
 
-The shifted logits give back $(0.090, 0.245, 0.665)$ --- the same
-probabilities as the small logits, bit for bit --- while the naive route
-returns three `NaN`s. Every framework's `softmax` does this max-subtraction
-internally; the trap is re-implementing it yourself, which is why the rule of
-thumb is *never exponentiate a raw logit*.
+The shifted logits give back $(0.090, 0.245, 0.665)$, the same probabilities
+as the small logits, while the naive route returns three `NaN`s. Whether the
+two routes agree *bit for bit* is a subtler question:
+:eqref:`eq_mdl-opt-softmax-shift` promises equality of real numbers, and two
+different exp/sum/divide routes may round differently along the way. Here
+they agree to the last printed digit; the final check prints `True` on most
+builds, but under one NumPy build in our environments it prints `False`, the
+naive route's first entry differing by a single ulp ($0.09003058$ versus
+$0.09003057$). That one-bit discrepancy is the section's lesson in
+miniature: the identity constrains the real values, not the rounded ones.
+The library's `softmax` does this max-subtraction internally; the trap is
+re-implementing it yourself, which is why the rule of thumb is *never
+exponentiate a raw logit*.
 
 ### The Log-Sum-Exp Sandwich
 
-The log-sum-exp deserves more attention than the supporting role it just
-played: it is the normalizer of every exponential-family model, the partition
-function of energy-based models, and (as we prove in a moment) the backbone
-of cross-entropy. Beyond making it safe, the shift in
-:eqref:`eq_mdl-opt-stable-lse` makes it *legible*, pinning lse between two
-bounds tight enough to reason with --- the one piece of the story the earlier
-derivation had no need for:
+The log-sum-exp recurs far beyond softmax: it is the normalizer of every
+exponential-family model (:numref:`sec_mdl-distributions`) and, as we prove
+in a moment, the backbone of cross-entropy. Beyond making it safe, the shift
+in :eqref:`eq_mdl-opt-stable-lse` makes it *legible*, pinning lse between two
+bounds tight enough to reason with:
 
 **Proposition (log-sum-exp sandwich).** *For every
 $\mathbf{z} \in \mathbb{R}^n$,*
@@ -404,8 +410,8 @@ term $e^{z_j - c} \le 1$ and the maximizing term equals $1$, so the sum lies
 in $[1, n]$ and its logarithm in $[0, \log n]$; adding $c$ gives both
 inequalities. $\blacksquare$
 
-The sandwich says lse is a *soft maximum* --- within $\log n$ of the true max
---- which is also the intuition for why it is convex
+The sandwich says lse is a *soft maximum*, within $\log n$ of the true max,
+which is also the intuition for why it is convex
 (:numref:`sec_mdl-convexity`; its gradient is exactly the softmax, a fact you
 will prove in the exercises). Numerically, the identity gives us log-space
 arithmetic for free: the **log-softmax** is
@@ -415,9 +421,9 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-log-softmax`
 
-a *subtraction of two safe quantities* that never materializes a probability
---- so probabilities that would underflow to $0$ (and then explode under
-$\log$) simply never exist. Logits around $1000$ would overflow even float64;
+a *subtraction of two safe quantities* that never materializes a probability,
+so probabilities that would underflow to $0$ (and then explode under
+$\log$) never exist. Logits around $1000$ would overflow even float64;
 in log space they are effortless:
 
 ```{.python .input #numerical-stability-conditioning-logsumexp}
@@ -435,8 +441,8 @@ print('probabilities sum to 1  :', f'{np.exp(log_p).sum():.6f}')
 ```
 
 The naive route says `inf`; the stable route reports
-$\mathrm{lse} = 1002.4076$ --- snugly inside the sandwich
-$[1002, 1002 + \log 3]$ --- and the log-probabilities
+$\mathrm{lse} = 1002.4076$, snugly inside the sandwich
+$[1002, 1002 + \log 3]$, and the log-probabilities
 $(-2.408, -1.408, -0.408)$ exponentiate back to a distribution summing to
 $1.000013$: equal to $1$ up to the float32 spacing at magnitude $1000$,
 which is all one can ask of subtractions performed there. This identity is precisely how :numref:`sec_mdl-naive_bayes`
@@ -455,18 +461,19 @@ $$
 :eqlabel:`eq_mdl-opt-ce-from-logits`
 
 computable *directly from the logits* with one stable lse and one
-subtraction. This is what every framework's "from logits" loss does --- the
-fused implementation of :numref:`subsec_softmax-implementation-revisited` ---
-and it is why those APIs exist. The alternative --- compute probabilities
-first, then take the log --- forces the loss through the representable range
-of probabilities: a true-class probability below about $10^{-45}$ (the
+subtraction. This is what the library's "from logits" loss does (the
+fused implementation of :numref:`subsec_softmax-implementation-revisited`),
+and it is why those APIs exist. The alternative, computing probabilities
+first and then taking the log, forces the loss through the representable
+range of probabilities: a true-class probability below about $10^{-45}$ (the
 smallest fp32 subnormal is $\approx 1.4 \times 10^{-45}$) underflows fp32 to
 exactly $0$, and the loss becomes $\infty$. The cell below pits the
 two routes against each other on a two-class problem where the label is the
 *unlikely* class, with logit gap $t$, so the true loss is
 $\log(1 + e^{t}) \approx t$. This is the one computation in this section
-where the four frameworks behave genuinely differently, so it is worth
-running your tab and reading the matching paragraph below:
+where library behavior genuinely differs; the from-probabilities route fails
+in one of three ways, depending on the library: subnormal noise followed by
+`inf`, `inf` outright, or a silent clip. Run the cell and read on:
 
 ```{.python .input #numerical-stability-conditioning-cross-entropy}
 #@tab mxnet
@@ -515,59 +522,58 @@ for t in [20.0, 60.0, 103.0, 104.0]:
 ```
 
 :begin_tab:`mxnet`
-The from-logits column reads $20$, $60$, $103$, $104$ --- exact at every gap.
-The from-probabilities column matches until the probability $e^{-t}$ leaves
-float32's normal range: at gap $103$ it has fallen among the *subnormals*,
-where only a couple of significant bits survive, and the loss reads
-$103.2789$ --- wrong in the first decimal place with no warning --- and at
-gap $104$ the probability underflows to exactly $0$ and the loss is `inf`.
+The from-logits column reads $20$, $60$, $103$, $104$: exact at every gap.
+The from-probabilities column matches at gaps $20$ and $60$; at gap $103$,
+where $e^{-t}$ would survive only as a *subnormal* number, the softmax does
+not linger in the subnormal range and the probability underflows to exactly
+$0$, and at gap $104$ the underflow is unconditional, so the loss reads
+`inf` at both gaps.
 :end_tab:
 
 :begin_tab:`pytorch`
-The from-logits column reads $20$, $60$, $103$, $104$ --- exact at every gap.
+The from-logits column reads $20$, $60$, $103$, $104$: exact at every gap.
 The from-probabilities column matches until the probability $e^{-t}$ leaves
 float32's normal range: at gap $103$ it has fallen among the *subnormals*,
 where only a couple of significant bits survive, and the loss reads
-$103.2789$ --- wrong in the first decimal place with no warning --- and at
+$103.2789$, wrong in the first decimal place with no warning; at
 gap $104$ the probability underflows to exactly $0$ and the loss is `inf`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The from-logits column reads $20$, $60$, $103$, $104$ --- exact at every gap.
-The from-probabilities column is more insidious here than in any other
-framework: Keras clips probabilities to $[10^{-7},\, 1 - 10^{-7}]$ before
-taking the log, so every row reads $16.1181 = -\log 10^{-7}$. There is no
-`inf` and no `NaN` to alert you --- just a loss (and therefore a gradient)
-that silently stopped depending on the model the moment the true loss
-exceeded about $16$.
+The from-logits column reads $20$, $60$, $103$, $104$: exact at every gap.
+The from-probabilities column never produces an `inf` or a `NaN`, which
+makes its failure the hardest kind to notice: Keras clips probabilities to
+$[10^{-7},\, 1 - 10^{-7}]$ before taking the log, so every row reads
+$16.1181 = -\log 10^{-7}$, a loss (and therefore a gradient) that silently
+stopped depending on the model the moment the true loss exceeded about $16$.
 :end_tab:
 
 :begin_tab:`jax`
-The from-logits column reads $20$, $60$, $103$, $104$ --- exact at every gap.
-The from-probabilities column matches at gaps $20$ and $60$, but by gap
-$103$ the probability $e^{-t}$ has already underflowed to exactly $0$ under
-XLA (which, unlike NumPy, does not linger in the subnormal range here), and
-the loss is `inf` --- one gap *earlier* than the same experiment in PyTorch.
+The from-logits column reads $20$, $60$, $103$, $104$: exact at every gap.
+The from-probabilities column matches at gaps $20$ and $60$; at gap $103$,
+where $e^{-t}$ would survive only as a *subnormal* number, XLA does not
+linger in the subnormal range and the probability underflows to exactly $0$,
+and at gap $104$ the underflow is unconditional, so the loss reads `inf` at
+both gaps.
 :end_tab:
 
 The lesson generalizes far beyond this toy: losses, likelihoods, and
 posteriors should live in log space from birth, and the conversion to
-probabilities --- if it ever happens --- should be the *last* step, for human
+probabilities, if it ever happens, should be the *last* step, for human
 eyes only. :numref:`sec_mdl-information_theory` analyzes what cross-entropy
-*means*; :eqref:`eq_mdl-opt-ce-from-logits` is how it is *computed*, in every
-framework, every time.
+*means*; :eqref:`eq_mdl-opt-ce-from-logits` is how it is *computed*.
 
 ## Catastrophic Cancellation
 :label:`subsec_mdl-catastrophic-cancellation`
 
 ### Subtraction Annihilates Digits
 
-Overflow announces itself with `inf`; the subtler killer is silent.
-Subtracting two nearly equal numbers is *exact* --- no new rounding error is
-committed --- but it strips away the leading digits on which both numbers
+Overflow announces itself with `inf`; cancellation gives no signal at all.
+Subtracting two nearly equal numbers is *exact* (no new rounding error is
+committed) but it strips away the leading digits on which both numbers
 agreed, leaving only their trailing digits, which is exactly where each
 number's *previous* rounding errors live. If $a$ and $b$ are correct to
-relative error $u$, their difference is correct only to relative error about
+relative error $u$, their difference can carry relative error as large as
 
 $$
 \frac{|a| + |b|}{|a - b|}\; u,
@@ -578,8 +584,8 @@ an amplification factor that blows up precisely when $a \approx b$. The
 phenomenon is called **catastrophic cancellation**, and a two-line experiment
 shows both the disease and a cure. In float32, $1 + 10^{-8}$ rounds to
 exactly $1$ (the increment is below $\varepsilon_{\text{mach}}/2$), so the
-textbook expression $\log(1 + x)$ returns $0$ --- a $100\%$ relative error
---- while the library function `log1p`, which evaluates the *reformulated*
+textbook expression $\log(1 + x)$ returns $0$, a $100\%$ relative error,
+while the library function `log1p`, which evaluates the *reformulated*
 series around $0$, is exact. Likewise two floats agreeing to seven digits
 leave a difference made of pure noise:
 
@@ -596,14 +602,14 @@ print('amplification (|a|+|b|)/|a-b| ~', f'{(a + b) / abs(a - b):.1e}')
 The computed difference $2.384 \times 10^{-7}$ misses the true
 $3.0 \times 10^{-7}$ by twenty percent: with an amplification factor near
 $10^{7}$, float32's seven digits are gone in one subtraction. The catalogue
-of standard victims is short and worth knowing --- $\log(1+x)$ and $e^x - 1$
+of standard victims is short: $\log(1+x)$ and $e^x - 1$
 near $0$ (use `log1p` and `expm1`), $1 - \cos x$ near $0$ (use
 $2\sin^2(x/2)$), the quadratic formula near a double root, and finite
 differences with too small a step, which is exactly the trade-off we
 quantified in :numref:`sec_mdl-single_variable_calculus`. In every case the
 cure is the same: *reformulate so that the subtraction happens analytically*,
 where it costs nothing, rather than numerically, where it costs everything.
-Higher precision merely postpones the cliff; reformulation removes it
+Higher precision merely postpones the failure; reformulation removes it
 :cite:`Higham.2002`.
 
 ### Case Study: Variance in One Pass
@@ -619,11 +625,11 @@ beloved because it needs one pass over the data. As algebra it is flawless; as
 arithmetic it is a trap. For data with mean $\mu$ and standard deviation
 $\sigma \ll |\mu|$, both terms are about $\mu^2$ while their difference is
 $\sigma^2$, so :eqref:`eq_mdl-opt-cancellation-factor` predicts an error
-amplification of about $\mu^2/\sigma^2$ --- and with $\mu = 10^9$ and
+amplification of about $\mu^2/\sigma^2$, and with $\mu = 10^9$ and
 $\sigma = 1$ that is $10^{18}$: more than every digit float64 has. The naive
 formula can even return a *negative* variance.
 
-The repair is not float128 --- it is a reformulation due to
+The repair is a reformulation due to
 :citet:`Welford.1962` that keeps a running mean $m_k$ and a running sum of
 *centered* squares $M_k = \sum_{i \le k} (x_i - m_k)^2$, so no large numbers
 are ever subtracted:
@@ -635,9 +641,9 @@ M_k = M_{k-1} + (x_k - m_{k-1})(x_k - m_k).
 $$
 :eqlabel:`eq_mdl-opt-welford`
 
-Note the two different factors in the $M_k$ update --- the deviation from the
-*old* mean times the deviation from the *new* mean. That asymmetry is not a
-typo; it is exactly what makes the recursion exact:
+Note the two different factors in the $M_k$ update: the deviation from the
+*old* mean times the deviation from the *new* mean. That asymmetry is
+exactly what makes the recursion exact:
 
 **Proposition (Welford's recursion is exact).** *With $m_0 = M_0 = 0$, the
 recursions :eqref:`eq_mdl-opt-welford` satisfy, for every $k \ge 1$ and in
@@ -668,7 +674,7 @@ terms combine to $\frac{k-1}{k}\,\delta^2 = \delta \cdot \delta \frac{k-1}{k}
 $\blacksquare$
 
 Numerically, every quantity Welford touches is of size $\sigma$, not $\mu$,
-so the $\mu^2/\sigma^2$ amplification never materializes. The showdown ---
+so the $\mu^2/\sigma^2$ amplification never materializes. The test:
 $10^5$ samples with mean $10^9$ and true variance $1$, all in float64:
 
 ```{.python .input #numerical-stability-conditioning-welford}
@@ -690,52 +696,54 @@ print(f'Welford, one pass     : {welford:12.6f}')
 print(f'two-pass reference    : {two_pass:12.6f}')
 ```
 
-The naive formula reports a variance in the *hundreds* --- off by a factor of
+The naive formula reports a variance in the *hundreds*: off by a factor of
 several hundred, in *double* precision, on a statistic every analyst computes
 daily. The answer is pure amplified rounding noise, so even its sign depends
 on the summation order of your NumPy build: the same cell printed $384$ under
-one build and $-256$ --- a negative variance --- under another. Welford's
+one build and $-256$, a negative variance, under another. Welford's
 one-pass answer $1.000257$ agrees with the two-pass reference to eight
 significant digits on every build. This recursion (and its batch-merging
-generalization, which you will derive in the exercises) is how framework
-`BatchNorm` layers and streaming-statistics utilities track running moments:
-one pass, bounded memory, no cancellation.
+generalization, which you will derive in the exercises) is how `BatchNorm`
+layers (:numref:`sec_batch_norm`) and streaming-statistics utilities track
+running moments: one pass, bounded memory, no cancellation.
 
-That build-dependence deserves its own name, because it is not specific to
-variances. Summing $n$ floats one after another commits one
+The build-dependence is general, because it belongs to summation itself.
+Summing $n$ floats one after another commits one
 $(1 + \delta)$ factor per addition, and the worst case compounds to a
-relative error of about $n u$ --- at $n = 10^{5}$ in the cell above, some
-$10^{5}$ units of roundoff feeding the cancellation. The standard repairs
-reorganize the *additions* rather than adding bits: **pairwise summation**
+relative error of about $n u$ (at $n = 10^{5}$ in the cell above, some
+$10^{5}$ units of roundoff feeding the cancellation). **Pairwise summation**
 recursively sums halves, so each term passes through only $\log_2 n$
-additions and the error growth drops to $O(u \log n)$ --- this is what NumPy
-does inside `sum`, and its build-dependent blocking is exactly why the naive
-formula's noise changed sign between builds --- while **Kahan (compensated)
+additions and the error growth drops to $O(u \log n)$; this is what NumPy
+does inside `sum`, and its build-dependent blocking is why the naive
+formula's noise changed sign between builds. **Kahan (compensated)
 summation** carries each addition's rounding error explicitly in a second
 accumulator and drives the growth to $O(u)$, independent of $n$
-:cite:`Higham.2002`. Welford composes with either: the pairwise merge rule
-you will derive in Exercise 4 is precisely Welford in pairwise form, and it
-is how running moments are combined across devices.
+:cite:`Kahan.1965,Higham.2002`. Welford composes with either: the pairwise
+merge rule you will derive in Exercise 4 is precisely Welford in pairwise
+form, and it is how running moments are combined across devices.
 
-## Conditioning: One Number, Two Consequences
+## Conditioning
 :label:`subsec_mdl-conditioning-revisited`
 
 ### Backward and Forward Error
 
 So far the *algorithms* were at fault, and rewriting them fixed everything.
 The deeper half of numerical analysis begins with a different question: when a
-computed answer is wrong, is the algorithm to blame --- or the problem?
+computed answer is wrong, is the algorithm to blame, or the problem?
 :citet:`Higham.2002` makes the split precise with two definitions. The
 **forward error** is what you care about: the distance between the computed
 answer $\hat{\mathbf{x}}$ and the true answer $\mathbf{x}$. The **backward
 error** is what the algorithm should be judged by: the size of the smallest
 perturbation of the *inputs* for which $\hat{\mathbf{x}}$ would be exactly
-correct --- "you got the right answer to a nearby question; how nearby?" An
+correct: "you got the right answer to a nearby question; how nearby?" An
 algorithm with backward error at the rounding floor $u$ is called
 **backward stable**: it did everything that can be asked of finite-precision
 arithmetic, since merely *storing* the inputs already perturbs them by $u$.
-Gaussian elimination with pivoting (`np.linalg.solve`) and the SVD are
-backward stable; the naive variance formula is not.
+Gaussian elimination with pivoting (elimination with row swaps that keep the
+multipliers small; the algorithm inside `np.linalg.solve`) is backward
+stable in practice, though not in the worst case, where its growth factor
+can reach $2^{n-1}$ :cite:`Higham.2002`; the SVD is backward stable
+outright; the naive variance formula is neither.
 
 What converts a small backward error into a possibly-large forward error is a
 property of the *problem*, and for linear systems it is exactly the condition
@@ -786,42 +794,30 @@ $$
 $$
 
 A backward-stable solve in float64 carries about $16$ digits, so
-$\kappa = 10^{k}$ costs you $k$ of them --- and at $\kappa \approx 10^{16}$
+$\kappa = 10^{k}$ costs you $k$ of them, and at $\kappa \approx 10^{16}$
 the answer is pure noise even though the algorithm was flawless.
 
 ### The Condition Number of a Linear System
 
-The same $\kappa$ also governs sensitivity to errors in the right-hand side
---- the data, in a least-squares problem. The bound is proved (with the
-matching worst-case construction showing it is *tight*) in
-:numref:`subsec_mdl-condition-number`; since it is two lines, we restate it
-here in full.
+The same $\kappa$ also governs sensitivity to errors in the right-hand side,
+the data in a least-squares problem: if $\mathbf{A}\mathbf{x} = \mathbf{b}$
+and $\mathbf{A}(\mathbf{x} + \delta\mathbf{x}) = \mathbf{b} + \delta\mathbf{b}$,
+then $\|\delta\mathbf{x}\|/\|\mathbf{x}\| \le
+\kappa(\mathbf{A})\,\|\delta\mathbf{b}\|/\|\mathbf{b}\|$, the perturbation
+bound :eqref:`eq_mdl-condition-bound` proved (together with the worst-case
+construction showing it is tight) in :numref:`subsec_mdl-condition-number`.
 
-**Proposition (relative perturbation bound).** *Let $\mathbf{A}$ be
-invertible, $\mathbf{A}\mathbf{x} = \mathbf{b} \neq \mathbf{0}$, and
-$\mathbf{A}(\mathbf{x} + \delta\mathbf{x}) = \mathbf{b} + \delta\mathbf{b}$.
-Then*
-
-$$
-\frac{\|\delta\mathbf{x}\|}{\|\mathbf{x}\|}
-\;\le\; \kappa(\mathbf{A})\, \frac{\|\delta\mathbf{b}\|}{\|\mathbf{b}\|} .
-$$
-:eqlabel:`eq_mdl-opt-perturbation-bound`
-
-**Proof.** From $\mathbf{A}\,\delta\mathbf{x} = \delta\mathbf{b}$ we get
-$\|\delta\mathbf{x}\| \le \|\delta\mathbf{b}\|/\sigma_n$, and from
-$\mathbf{b} = \mathbf{A}\mathbf{x}$ we get
-$\|\mathbf{b}\| \le \sigma_1 \|\mathbf{x}\|$, i.e.
-$1/\|\mathbf{x}\| \le \sigma_1/\|\mathbf{b}\|$. Multiply the two
-inequalities. $\blacksquare$
-
-Time to watch $\kappa$ eat digits on the most famously ill-conditioned matrix
+Now we measure the digit loss on the most famously ill-conditioned matrix
 in the business: the **Hilbert matrix** $H_{ij} = 1/(i + j - 1)$, whose
-condition number grows *exponentially* with $n$. We solve
+condition number grows exponentially with $n$. We solve
 $\mathbf{H}\mathbf{x} = \mathbf{b}$ with the answer rigged to be
 $\mathbf{x} = \mathbf{1}$, and tabulate the forward error, the digits that
-survive, and --- the punchline --- the *backward* error
-$\|\mathbf{H}\hat{\mathbf{x}} - \mathbf{b}\| / (\|\mathbf{H}\|\,\|\hat{\mathbf{x}}\|)$:
+survive, and the *backward* error, computed as the scaled residual
+$\|\mathbf{H}\hat{\mathbf{x}} - \mathbf{b}\| / (\|\mathbf{H}\|\,\|\hat{\mathbf{x}}\|)$.
+That this residual ratio equals the smallest relative perturbation of
+$\mathbf{H}$ making $\hat{\mathbf{x}}$ exact is a classical theorem of
+Rigal--Gaches (see :cite:`Higham.2002`), which is what lets a single
+computable number stand in for the definition's minimization:
 
 ```{.python .input #numerical-stability-conditioning-hilbert}
 print(' n      kappa   log10 kappa   forward error  correct digits  backward error')
@@ -842,16 +838,16 @@ for n in [4, 6, 8, 10, 12]:
 Read the table row by row against the rule of thumb. At $n = 4$,
 $\log_{10}\kappa \approx 4.2$ and about $13$ digits survive of float64's
 $16$; by $n = 8$, $\log_{10}\kappa \approx 10.2$ and about $7$ survive; at
-$n = 12$, $\log_{10}\kappa \approx 16.2$ and barely one correct digit remains
---- the answer is essentially noise. (The trailing decimals of the error
+$n = 12$, $\log_{10}\kappa \approx 16.2$ and barely one correct digit remains:
+the answer is essentially noise. (The trailing decimals of the error
 column vary with your LAPACK build; the staircase does not.) Meanwhile the backward-error column never
 leaves the $10^{-16}$ floor: *the solver is blameless at every row*. Each
 $\hat{\mathbf{x}}$ exactly solves a system one part in $10^{16}$ away from
 the one we posed; the Hilbert matrix simply maps that invisible perturbation
 to a visible one, exactly as :eqref:`eq_mdl-opt-backward-forward` licenses it
 to. Geometrically, large $\kappa$ means the level sets of
-$\|\mathbf{A}\mathbf{x} - \mathbf{b}\|^2$ are extremely elongated ellipsoids
---- the same narrow valley, pictured in :numref:`fig_mdl-la-condition`, down
+$\|\mathbf{A}\mathbf{x} - \mathbf{b}\|^2$ are extremely elongated ellipsoids:
+the same narrow valley of :numref:`fig_mdl-la-condition`, down
 which gradient descent zig-zags. Sensitivity of the solve and slowness of the
 descent are *one geometric fact* viewed from two sides.
 
@@ -860,30 +856,27 @@ descent are *one geometric fact* viewed from two sides.
 Least squares offers a vivid demonstration that the *route* to a solution can
 ruin conditioning even when the destination is fine. The textbook route to
 $\min_{\mathbf{w}} \|\mathbf{A}\mathbf{w} - \mathbf{b}\|^2$ is the normal
-equations $\mathbf{A}^\top\mathbf{A}\,\mathbf{w} = \mathbf{A}^\top\mathbf{b}$
---- which replace a solve governed by $\kappa(\mathbf{A})$ with one governed
-by $\kappa(\mathbf{A}^\top\mathbf{A})$. That substitution is quadratically
-bad:
-
-**Proposition (normal equations square the condition number).** *For any
-matrix $\mathbf{A}$ with full column rank,*
+equations $\mathbf{A}^\top\mathbf{A}\,\mathbf{w} = \mathbf{A}^\top\mathbf{b}$,
+which replace a solve governed by $\kappa(\mathbf{A})$ with one governed
+by $\kappa(\mathbf{A}^\top\mathbf{A})$. Recall from
+:numref:`subsec_mdl-condition-number` that this substitution is quadratically
+bad: for any matrix $\mathbf{A}$ with full column rank,
 
 $$
-\kappa(\mathbf{A}^\top\mathbf{A}) = \kappa(\mathbf{A})^2 .
+\kappa(\mathbf{A}^\top\mathbf{A}) = \kappa(\mathbf{A})^2 ,
 $$
 :eqlabel:`eq_mdl-opt-kappa-squared`
 
-**Proof.** From the SVD $\mathbf{A} = \mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$
-we get $\mathbf{A}^\top\mathbf{A} = \mathbf{V}\boldsymbol{\Sigma}^2\mathbf{V}^\top$
-(:numref:`subsec_mdl-svd-via-ata`): a symmetric positive-definite matrix
-whose singular values are its eigenvalues $\sigma_i^2$. Hence
-$\kappa(\mathbf{A}^\top\mathbf{A}) = \sigma_1^2/\sigma_n^2 = \kappa(\mathbf{A})^2$.
-$\blacksquare$
-
-By the digits rule of thumb, the normal equations lose $2\log_{10}\kappa$
+since $\mathbf{A}^\top\mathbf{A} = \mathbf{V}\boldsymbol{\Sigma}^2\mathbf{V}^\top$
+(:numref:`subsec_mdl-svd-via-ata`) has singular values $\sigma_i^2$. What is
+new here is the measurement of the cost in digits. By the rule of thumb, the
+normal equations lose $2\log_{10}\kappa$
 digits where an SVD- or QR-based solve, which works on $\mathbf{A}$ directly,
-loses $\log_{10}\kappa$. With $\kappa(\mathbf{A}) = 10^5$ the predicted gap
-is five digits wide --- large enough to measure:
+loses $\log_{10}\kappa$ (QR factors $\mathbf{A} = \mathbf{Q}\mathbf{R}$ with
+$\mathbf{Q}$ orthonormal and $\mathbf{R}$ triangular, the factorization
+behind the `qr` demo of :numref:`sec_mdl-geometry-linear-algebraic-ops`).
+With $\kappa(\mathbf{A}) = 10^5$ the predicted gap
+is five digits wide, large enough to measure:
 
 ```{.python .input #numerical-stability-conditioning-normal-equations}
 rng = np.random.default_rng(1)
@@ -904,22 +897,26 @@ for name, w in [('normal equations', w_ne), ('SVD (lstsq)     ', w_svd)]:
           f'({-np.log10(err):.1f} correct digits)')
 ```
 
-The printout confirms both the proposition ($\kappa$ of
+The printout confirms both the identity ($\kappa$ of
 $\mathbf{A}^\top\mathbf{A}$ is $10^{10}$, the square of $10^{5}$) and its
 consequence: the normal equations recover about seven correct digits, the SVD
-route about thirteen. Same problem, same data, same float64 --- five to six
+route about thirteen. Same problem, same data, same float64: five to six
 digits of accuracy, right at the predicted $\log_{10}\kappa = 5$, forfeited
-to a bad route. This is why `lstsq` exists, why frameworks solve
+to a bad route. This is why `lstsq` exists, why numerical libraries solve
 least-squares subproblems by QR or SVD, and why
 :numref:`subsec_mdl-pseudoinverse` built the pseudoinverse from the SVD
 rather than from $(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top$.
 
-### Ridge Regularization Is Preconditioning
+### Ridge Regularization as Preconditioning
 
-When $\kappa(\mathbf{A})$ itself is the problem --- nearly collinear
-features, a rank-deficient design --- no choice of route saves the original
-problem. Ridge regularization changes the problem, and it changes it in
-exactly the right direction. Minimizing
+When $\kappa(\mathbf{A})$ itself is the problem (nearly collinear
+features, a rank-deficient design), no choice of route saves the original
+problem. A **preconditioner** transforms a problem to reduce its condition
+number without changing its solution; the per-coordinate rescalings of
+:numref:`sec_mdl-adaptive-stochastic-methods` apply the same idea inside an
+optimizer. Ridge regularization conditions the problem the way a
+preconditioner does, with one difference we return to below: it changes the
+problem, and it changes it in exactly the right direction. Minimizing
 $\|\mathbf{A}\mathbf{w} - \mathbf{b}\|^2 + \lambda \|\mathbf{w}\|^2$ yields
 
 $$
@@ -959,18 +956,18 @@ $$
 and as $\lambda \to \infty$ the ratio tends to $1$. $\blacksquare$
 
 Adding $\lambda\mathbf{I}$ lifts the floor of the spectrum while barely moving
-its ceiling: the elongated valley of the least-squares objective rounds out
-into a bowl, as :numref:`fig_mdl-opt-conditioning-ellipse` shows. And because
-$\kappa$ is *one number with two consequences*, this single shift pays twice.
-The solve in :eqref:`eq_mdl-opt-ridge-solution` becomes more accurate ---
-fewer digits lost, by the rule of thumb --- and gradient descent on the ridge
+its ceiling: the narrow valley we met above rounds out
+into a bowl, as :numref:`fig_mdl-opt-conditioning-ellipse` shows, and the
+single shift pays twice.
+The solve in :eqref:`eq_mdl-opt-ridge-solution` becomes more accurate
+(fewer digits lost, by the rule of thumb) and gradient descent on the ridge
 objective, whose contraction factor $(\kappa - 1)/(\kappa + 1)$ we derived in
 :numref:`sec_mdl-gradient-based-optimization`, becomes faster. The cell below
 measures both at once: for each $\lambda$ it computes
 :eqref:`eq_mdl-opt-ridge-kappa` and *runs* gradient descent to a fixed
 relative tolerance of $10^{-6}$, counting iterations.
 
-![Level sets of the least-squares objective before and after adding the ridge term $\lambda \|\mathbf{w}\|^2$. The penalty lifts every eigenvalue of $\mathbf{A}^\top\mathbf{A}$ by $\lambda$, rounding the elongated valley into a bowl: the condition number drops from $\sigma_1^2/\sigma_n^2$ toward $1$, so linear solves lose fewer digits and gradient descent takes fewer steps --- the same $\lambda$ buys both.](../img/mdl-opt-conditioning-ellipse.svg)
+![Level sets of the least-squares objective before and after adding the ridge term $\lambda \|\mathbf{w}\|^2$. The penalty lifts every eigenvalue of $\mathbf{A}^\top\mathbf{A}$ by $\lambda$, rounding the elongated valley into a bowl: the condition number drops from $\sigma_1^2/\sigma_n^2$ toward $1$, so linear solves lose fewer digits and gradient descent takes fewer steps.](../img/mdl-opt-conditioning-ellipse.svg)
 :label:`fig_mdl-opt-conditioning-ellipse`
 
 ```{.python .input #numerical-stability-conditioning-ridge}
@@ -1002,37 +999,37 @@ d2l.plot(lams, [kappas, iters.astype(float)], 'lambda', None,
          xscale='log', yscale='log')
 ```
 
-The two curves fall together across four orders of magnitude of $\lambda$ ---
+The two curves fall together across four orders of magnitude of $\lambda$,
 from $\kappa \approx 5000$ and roughly $29{,}000$ iterations at
 $\lambda = 10^{-4}$ down to $\kappa = 2$ and a dozen iterations at
-$\lambda = 1$ --- and the printed ratio sits between $5.89$ and $6.25$
+$\lambda = 1$, and the printed ratio sits between $5.89$ and $6.25$
 throughout: iteration count is a constant multiple of $\kappa$, the constant
 being about $\tfrac12 \ln(1/\textrm{tol}) \approx 6.9$ predicted by the
 $(\kappa - 1)/(\kappa + 1)$ contraction (slightly less here because a random
 initial error is not perfectly aligned with the slowest eigendirection).
-Regularization *is* preconditioning. Of course $\lambda$ is not free: it
-biases the solution, shrinking $\mathbf{w}_\lambda$ toward $\mathbf{0}$ ---
-and :numref:`sec_mdl-constrained-optimization-duality` showed the precise
-sense in which the penalty $\lambda\|\mathbf{w}\|^2$ is the Lagrangian price
-of a norm constraint. The practical reading of this section's last experiment
-is the cheerful one: the $\lambda$ you were going to add anyway, for
-statistical reasons, has been quietly stabilizing your arithmetic and
-accelerating your optimizer the whole time.
+Ridge thus conditions the problem exactly as a preconditioner would, with
+one difference: a true preconditioner leaves the minimizer unchanged, while
+ridge biases the solution, shrinking $\mathbf{w}_\lambda$ toward
+$\mathbf{0}$; :numref:`sec_mdl-constrained-optimization-duality` showed the
+precise sense in which the penalty $\lambda\|\mathbf{w}\|^2$ is the
+Lagrangian counterpart of a norm constraint. In practice, the $\lambda$ you
+were going to add anyway, for statistical reasons, has been quietly
+stabilizing your arithmetic and accelerating your optimizer the whole time.
 
 ## Summary
 
 * Floating point is scientific notation with a finite mantissa: relative
   precision $\varepsilon_{\text{mach}}$ ($2^{-23}$ for fp32, $2^{-10}$ for
   fp16, $2^{-7}$ for bfloat16), absolute gaps that double at every power of
-  two, and overflow/underflow cliffs ($e^x$ dies at $x \approx 88.7$ in fp32,
-  $x \approx 11.1$ in fp16). Mixed precision is engineering around these
-  cliffs: loss scaling fights fp16 underflow; bfloat16 trades mantissa for
-  fp32's exponent range; fp8 (E4M3/E5M2) pushes the same two bargains one
-  rung lower and makes per-tensor scaling mandatory.
+  two, and overflow/underflow thresholds ($e^x$ dies at $x \approx 88.7$ in
+  fp32, $x \approx 11.1$ in fp16). Mixed precision is engineering around
+  these limits: loss scaling fights fp16 underflow; bfloat16 trades mantissa
+  for fp32's exponent range; fp8 (E4M3/E5M2) tightens both budgets further
+  and makes per-tensor scaling mandatory.
 * Softmax is shift-invariant, so subtract the max before exponentiating;
   log-sum-exp with the same shift is an exact identity that never overflows;
   cross-entropy should be computed from logits as
-  $\mathrm{lse}(\mathbf{z}) - z_y$. Pass logits to your loss --- the
+  $\mathrm{lse}(\mathbf{z}) - z_y$. Pass logits to your loss; the
   from-probabilities route ends in `inf`, `NaN`, or (worse) a silently
   clipped gradient.
 * Catastrophic cancellation: subtracting nearly equal numbers amplifies
@@ -1047,11 +1044,11 @@ accelerating your optimizer the whole time.
   them: a backward-stable solve loses about $\log_{10}\kappa$ digits, as the
   Hilbert-matrix table showed digit for digit.
 * Normal equations square the condition number
-  ($\kappa(\mathbf{A}^\top\mathbf{A}) = \kappa(\mathbf{A})^2$ --- six digits
+  ($\kappa(\mathbf{A}^\top\mathbf{A}) = \kappa(\mathbf{A})^2$; six digits
   lost vs. the SVD route in our experiment); ridge regularization moves it
   the other way, $\kappa = (\sigma_1^2 + \lambda)/(\sigma_n^2 + \lambda)$,
-  monotonically improving both solve accuracy and the gradient-descent rate
-  --- one number, two consequences, and one knob that helps both.
+  monotonically improving both solve accuracy and the gradient-descent rate:
+  one number, two consequences, and one knob that helps both.
 
 ## Exercises
 
@@ -1068,20 +1065,19 @@ accelerating your optimizer the whole time.
 3. Prove that $\nabla\, \mathrm{lse}(\mathbf{z}) = \mathrm{softmax}(\mathbf{z})$
    and use :numref:`sec_mdl-convexity` to conclude that lse is convex.
    Then show that the cross-entropy :eqref:`eq_mdl-opt-ce-from-logits` has
-   gradient $\mathrm{softmax}(\mathbf{z}) - \mathbf{e}_y$ --- the cleanest
-   gradient in deep learning, and another reason to compute the loss from
-   logits.
+   gradient $\mathrm{softmax}(\mathbf{z}) - \mathbf{e}_y$, another reason to
+   compute the loss from logits.
 4. Construct a small dataset (three numbers suffice) for which the naive
    variance formula returns a strictly *negative* number in float64, and
    verify that Welford's recursion :eqref:`eq_mdl-opt-welford` gets it right.
    Then derive the *pairwise merge* rule: given $(m, M, k)$ for two disjoint
-   batches, express the combined statistics exactly --- this is how the
+   batches, express the combined statistics exactly; this is how the
    computation parallelizes across devices.
 5. Show that if $a$ and $b$ carry relative errors of size $u$, the relative
    error of the computed $a - b$ can be as large as
    $(|a| + |b|)\,u / |a - b|$, and that the subtraction itself adds no
-   rounding error when $a/2 \le b \le 2a$ (Sterbenz's lemma --- prove it for
-   floats with the same exponent).
+   rounding error when $a/2 \le b \le 2a$ (Sterbenz's lemma
+   :cite:`Sterbenz.1974`; prove it for floats with the same exponent).
 6. Rewrite each of the following to avoid cancellation, and check one of them
    numerically in float32: $\sqrt{x + 1} - \sqrt{x}$ for large $x$;
    $1 - \cos x$ for small $x$; the smaller root of $ax^2 + bx + c = 0$ when
@@ -1089,7 +1085,7 @@ accelerating your optimizer the whole time.
 7. For the Hilbert experiment, compute the backward error of each solve with
    respect to the right-hand side, $\|\mathbf{H}\hat{\mathbf{x}} - \mathbf{b}\|/\|\mathbf{b}\|$,
    and verify that the forward error is bounded by
-   :eqref:`eq_mdl-opt-perturbation-bound` applied to that perturbation. Where
+   :eqref:`eq_mdl-condition-bound` applied to that perturbation. Where
    in the table is the bound tightest?
 8. Let $\mathbf{A}$ have $\sigma_1 = 1$ and $\sigma_n = 10^{-3}$. Using
    :eqref:`eq_mdl-opt-ridge-kappa` and the GD contraction factor
@@ -1102,24 +1098,24 @@ accelerating your optimizer the whole time.
 
 ## Discussions
 
-This section closes the loop the chapter opened: the condition number that set
+The condition number that set
 gradient descent's speed in :numref:`sec_mdl-gradient-based-optimization` is
 the same number that sets a linear solve's accuracy, and ridge regularization
---- the Lagrangian twin of a norm constraint, per
-:numref:`sec_mdl-constrained-optimization-duality` --- improves both at once.
+(the Lagrangian twin of a norm constraint, per
+:numref:`sec_mdl-constrained-optimization-duality`) improves both at once.
 The stability toolkit travels well beyond this chapter: max-subtraction and
 log-sum-exp power every softmax and attention layer; log-space arithmetic is
 what makes naive Bayes (:numref:`sec_mdl-naive_bayes`) and probabilistic
 inference generally feasible; the from-logits cross-entropy is the computation
 :numref:`sec_mdl-information_theory` analyzes; and Welford-style running
 moments live inside batch normalization. One neighboring story is told
-elsewhere: the *depth* dimension of numerical stability --- vanishing and
+elsewhere: the *depth* dimension of numerical stability (vanishing and
 exploding gradients as the conditioning of Jacobian products through many
-layers, and the initialization schemes that tame them --- is the subject of
+layers, and the initialization schemes that tame them) is the subject of
 :numref:`sec_numerical_stability` in the main text, and
 :numref:`chap_mdl-dynamics` takes up the continuous-time view of how such
-errors and noise propagate through training. For the full theory --- error
-analysis of every algorithm in this book's linear-algebra substrate --- the
+errors and noise propagate through training. For the full theory, error
+analysis of every algorithm in this book's linear-algebra substrate, the
 reference remains :citet:`Higham.2002`.
 
 [Discussions](https://d2l.discourse.group/t/numerical-stability-and-conditioning)
@@ -1147,7 +1143,7 @@ split the blame:
 - Do nearby problems have wildly different answers? *(conditioning)*
 
 ::: {.d2l-note}
-The fixes are **reformulations**, not more bits: max-subtraction,
+The fixes are **reformulations**: max-subtraction,
 log-space, Welford, ridge.
 :::
 :::
@@ -1179,7 +1175,7 @@ $$x = (-1)^s\,(1.m_1\ldots m_p)_2\; 2^{e}.$$
 
 The exponent buys **range**; the mantissa fixes **relative** precision.
 Between powers of two the spacing is constant, so the *absolute* gap
-**doubles** at every power, and each format ends in an overflow cliff.
+**doubles** at every power, and each format ends at an overflow threshold.
 
 ::: {.d2l-note .rule}
 Machine epsilon $\varepsilon_{\text{mach}} = 2^{-p}$ is the gap from
@@ -1194,11 +1190,11 @@ $|\delta| \le \tfrac12 \varepsilon_{\text{mach}}$.
 :::
 :::
 
-::: {.slide title="Three formats, three bargains"}
+::: {.slide title="Three formats, three trade-offs"}
 [Floating point]{.kicker}
 
-Read each row as a different deal: fp32 spends bits on precision; fp16
-keeps precision but its tiny exponent range falls off both cliffs;
+Each row makes a different trade: fp32 spends bits on precision; fp16
+keeps precision but its tiny exponent range overflows and underflows early;
 **bfloat16** keeps fp32's range and sacrifices the mantissa.
 
 @!numerical-stability-conditioning-finfo
@@ -1209,11 +1205,11 @@ the implicit leading $1$, which fills no gap.
 :::
 :::
 
-::: {.slide title="fp8: the ladder's bottom rung" only="pytorch"}
+::: {.slide title="fp8: E4M3 and E5M2" only="pytorch"}
 [Floating point]{.kicker}
 
-Since 2022 hardware pushes one rung lower, in two flavors with a clean
-division of labor --- **E4M3** keeps digits ($\varepsilon = 0.125$, about
+Since 2022 hardware also offers **fp8**, in two flavors with a division of
+labor: **E4M3** keeps digits ($\varepsilon = 0.125$, about
 one decimal) for weights and activations; **E5M2** trades a mantissa bit
 for fp16's full range, for gradients:
 
@@ -1221,34 +1217,32 @@ for fp16's full range, for gradients:
 
 ::: {.d2l-note .warn}
 At $\varepsilon_{\text{mach}} = 0.125$ there is no slack left: fp8
-training pairs *every tensor* with a scale factor. Per-tensor scaling is
-a precondition, not an optimization.
+training must pair *every tensor* with a scale factor.
 :::
 :::
 
-::: {.slide title="fp8: the ladder's bottom rung" except="pytorch"}
+::: {.slide title="fp8: E4M3 and E5M2" except="pytorch"}
 [Floating point]{.kicker}
 
-Since 2022 hardware pushes one rung lower, in two flavors with a clean
-division of labor:
+Since 2022 hardware also offers **fp8**, in two flavors with a division of
+labor:
 
 ::: {.d2l-note .rule}
 **E4M3** keeps digits: $\varepsilon = 0.125$ (about one decimal),
-max $= 448$ --- for weights and activations.
+max $= 448$: for weights and activations.
 **E5M2** trades a mantissa bit for fp16's full range: max $= 57344$,
-smallest normal $6.1\times10^{-5}$, at $\varepsilon = 0.25$ --- for
+smallest normal $6.1\times10^{-5}$, at $\varepsilon = 0.25$: for
 gradients, which need range.
 :::
 
 ::: {.d2l-note .warn}
 At $\varepsilon_{\text{mach}} = 0.125$ there is no slack left: fp8
-training pairs *every tensor* with a scale factor. Per-tensor scaling is
-a precondition, not an optimization. (The `ml_dtypes` package provides
-both formats for NumPy, JAX, and TensorFlow.)
+training must pair *every tensor* with a scale factor. (The `ml_dtypes`
+package provides both formats.)
 :::
 :::
 
-::: {.slide title="Where the cliffs are"}
+::: {.slide title="Where the thresholds are"}
 [Floating point]{.kicker}
 
 Because $e^x$ turns additive scale into multiplicative scale, a modest
@@ -1259,7 +1253,7 @@ Because $e^x$ turns additive scale into multiplicative scale, a modest
 ::: {.d2l-note .warn}
 fp16 gradients below $6\times10^{-5}$ vanish; updates of relative size
 below $\varepsilon_{\text{mach}}/2$ round to *no update at all*. Both
-cliffs bite mixed-precision training --- next slide.
+limits bite mixed-precision training (next slide).
 :::
 :::
 
@@ -1268,7 +1262,7 @@ cliffs bite mixed-precision training --- next slide.
 
 A true gradient of $10^{-8}$ underflows fp16's backward pass to $0.0$;
 scaling the *loss* by $2^{14}$ shifts the whole chain into representable
-territory. A healthy update of relative size $10^{-4}$ is swallowed by
+territory. A healthy update of relative size $10^{-4}$ is lost to
 round-to-nearest; an fp32 master copy accepts it:
 
 @!numerical-stability-conditioning-loss-scaling
@@ -1276,28 +1270,28 @@ round-to-nearest; an fp32 master copy accepts it:
 ::: {.d2l-note .rule}
 **Loss scaling is underflow management; master weights are rounding
 management.** This is precisely what `torch.amp`'s `GradScaler` plus
-fp32 master weights automate --- and what bfloat16's fp32-sized exponent
-was designed to make unnecessary.
+fp32 master weights automate, and what bfloat16's fp32-sized exponent
+makes unnecessary.
 :::
 :::
 
 ::: {.slide title="Both fp16 failure modes, both rescues" except="pytorch"}
 [Floating point]{.kicker}
 
-The two cliffs, and their two escapes, in mixed-precision training:
+The two failure modes, and their two escapes, in mixed-precision training:
 
 - A true gradient of $10^{-8}$ **underflows** an fp16 backward pass to an
   exact $0.0$; multiplying the *loss* by $2^{14}$ before differentiating
   (and unscaling after) shifts the whole gradient chain into representable
   territory and recovers $1.000\times10^{-8}$.
-- A healthy update of relative size $10^{-4}$ is **swallowed whole** by
+- A healthy update of relative size $10^{-4}$ is **lost** to
   round-to-nearest in fp16 ($w - \eta g = w$ exactly); an fp32 master copy
   of the weights accepts it without complaint.
 
 ::: {.d2l-note .rule}
 **Loss scaling is underflow management; master weights are rounding
-management** --- what every framework's mixed-precision utility automates,
-and what bfloat16's fp32-sized exponent was designed to make unnecessary.
+management**: this is what the library's mixed-precision utilities
+automate, and what bfloat16's fp32-sized exponent makes unnecessary.
 :::
 :::
 
@@ -1331,8 +1325,8 @@ sits in $[1, n]$, and overflow is impossible.
 ::: {.slide title="Log-sum-exp: an exact, safe identity"}
 [Stable softmax]{.kicker}
 
-The softmax normalizer earns its own operator. The same shift turns it
-into an exact rewriting (not just an invariance):
+The softmax normalizer earns its own operator. The same shift rewrites it
+exactly:
 
 $$\mathrm{lse}(\mathbf{z}) = \log\textstyle\sum_j e^{z_j}
 = c + \log\textstyle\sum_j e^{z_j - c},
@@ -1357,58 +1351,76 @@ Cross-entropy is computable straight from logits with one stable lse:
 $$-\log\mathrm{softmax}(\mathbf{z})_y = \mathrm{lse}(\mathbf{z}) - z_y.$$
 
 The via-probabilities route forces the loss through the representable
-range of probabilities, and **fails differently in every framework**:
+range of probabilities and **fails in one of three ways**, depending on
+the library: subnormal noise before `inf`, `inf` outright, or a silent
+clip:
 
 @!numerical-stability-conditioning-cross-entropy
 :::
 
-::: {.slide title="Same cell, four different failures" only="pytorch,mxnet"}
+::: {.slide title="How the from-probabilities route fails" only="pytorch"}
 [Stable softmax]{.kicker}
 
 The label is the *unlikely* class, so the true loss is the logit gap.
 From logits it is exact at every gap; via probabilities it fails:
 
 ::: {.d2l-note .warn}
-**PyTorch / MXNet.** Matches until $e^{-t}$ falls among the subnormals:
+**PyTorch.** Matches until $e^{-t}$ falls among the subnormals:
 at gap $103$ the loss reads $103.2789$ (wrong in the first decimal, no
 warning), and at gap $104$ it underflows to `inf`.
 :::
 
 The lesson generalizes: losses and likelihoods should **live in log
-space from birth**; convert to probabilities last, for human eyes only.
+space from birth**; convert to probabilities last.
 :::
 
-::: {.slide title="Same cell, four different failures" only="jax"}
+::: {.slide title="How the from-probabilities route fails" only="mxnet"}
 [Stable softmax]{.kicker}
 
 The label is the *unlikely* class, so the true loss is the logit gap.
 From logits it is exact at every gap; via probabilities it fails:
 
 ::: {.d2l-note .warn}
-**JAX.** XLA does not linger in the subnormal range, so $e^{-t}$
-underflows to $0$ one gap *earlier* than PyTorch: the loss is already
-`inf` at gap $103$.
+**MXNet.** The softmax does not linger in the subnormal range: $e^{-t}$
+underflows to exactly $0$ already at gap $103$, and the loss reads
+`inf` at gaps $103$ and $104$.
 :::
 
 The lesson generalizes: losses and likelihoods should **live in log
-space from birth**; convert to probabilities last, for human eyes only.
+space from birth**; convert to probabilities last.
 :::
 
-::: {.slide title="Same cell, four different failures" only="tensorflow"}
+::: {.slide title="How the from-probabilities route fails" only="jax"}
 [Stable softmax]{.kicker}
 
 The label is the *unlikely* class, so the true loss is the logit gap.
 From logits it is exact at every gap; via probabilities it fails:
 
 ::: {.d2l-note .warn}
-**TensorFlow.** The most insidious: Keras clips probabilities to
+**JAX.** XLA does not linger in the subnormal range: $e^{-t}$
+underflows to exactly $0$ already at gap $103$, and the loss reads
+`inf` at gaps $103$ and $104$.
+:::
+
+The lesson generalizes: losses and likelihoods should **live in log
+space from birth**; convert to probabilities last.
+:::
+
+::: {.slide title="How the from-probabilities route fails" only="tensorflow"}
+[Stable softmax]{.kicker}
+
+The label is the *unlikely* class, so the true loss is the logit gap.
+From logits it is exact at every gap; via probabilities it fails:
+
+::: {.d2l-note .warn}
+**TensorFlow.** Keras clips probabilities to
 $[10^{-7}, 1{-}10^{-7}]$, so every row reads $16.1181 = -\log 10^{-7}$.
 No `inf`, no `NaN`: the gradient just silently stopped depending on
 the model.
 :::
 
 The lesson generalizes: losses and likelihoods should **live in log
-space from birth**; convert to probabilities last, for human eyes only.
+space from birth**; convert to probabilities last.
 :::
 
 ::: {.slide}
@@ -1417,7 +1429,7 @@ space from birth**; convert to probabilities last, for human eyes only.
 
 [Catastrophic cancellation]{.dtitle}
 
-[the silent killer: subtracting near-equal numbers]{.dsub}
+[subtracting near-equal numbers]{.dsub}
 :::
 :::
 
@@ -1487,13 +1499,13 @@ summation order. This is what `BatchNorm` avoids with running moments.
 [Cancellation]{.kicker}
 
 The naive variance's noise changed *sign* between NumPy builds. That is
-not a bug in NumPy; it is summation error. Adding $n$ floats left to
+summation error at work. Adding $n$ floats left to
 right commits one rounding per addition, worst case $\approx n\,u$; the
-repairs reorganize the additions, not the bits:
+repairs reorganize the additions:
 
 ::: {.d2l-note .rule}
 **left-to-right** $O(n\,u)$ · **pairwise** (sum halves recursively)
-$O(u \log n)$ --- what NumPy's `sum` does, blocking and all ·
+$O(u \log n)$ (what NumPy's `sum` does, blocking and all) ·
 **Kahan** (carry each rounding in a second accumulator) $O(u)$,
 independent of $n$
 :::
@@ -1510,7 +1522,7 @@ running moments are combined across devices.
 
 [Conditioning]{.dtitle}
 
-[one number, two consequences]{.dsub}
+[backward error, forward error, and κ]{.dsub}
 :::
 :::
 
@@ -1540,13 +1552,13 @@ costs you $k$.
 :::
 :::
 
-::: {.slide title="Hilbert matrices: κ eats digits"}
+::: {.slide title="Hilbert matrices: the rule of thumb, verified"}
 [Conditioning]{.kicker}
 
 $\kappa$ of the Hilbert matrix $H_{ij} = 1/(i{+}j{-}1)$ grows
 exponentially. Solving $\mathbf{H}\mathbf{x} = \mathbf{b}$ with
-$\mathbf{x} = \mathbf{1}$, watch the digits fall as the rule of thumb
-predicts:
+$\mathbf{x} = \mathbf{1}$, the surviving digits track the rule of thumb
+row by row:
 
 @!numerical-stability-conditioning-hilbert
 
@@ -1572,12 +1584,12 @@ an SVD/QR solve on $\mathbf{A}$ directly:
 @!numerical-stability-conditioning-normal-equations
 
 ::: {.d2l-note}
-This is why `lstsq` exists and frameworks solve least squares by QR or
-SVD, never by forming $\mathbf{A}^\top\mathbf{A}$.
+This is why `lstsq` exists and numerical libraries solve least squares
+by QR or SVD, never by forming $\mathbf{A}^\top\mathbf{A}$.
 :::
 :::
 
-::: {.slide title="Ridge regularization is preconditioning"}
+::: {.slide title="Ridge regularization as preconditioning"}
 [Conditioning]{.kicker}
 
 ::: {.cols .vc}
@@ -1585,9 +1597,10 @@ SVD, never by forming $\mathbf{A}^\top\mathbf{A}$.
 Adding $\lambda\|\mathbf{w}\|^2$ lifts every eigenvalue of
 $\mathbf{A}^\top\mathbf{A}$ by $\lambda$, so
 $\kappa = \tfrac{\sigma_1^2 + \lambda}{\sigma_n^2 + \lambda}\downarrow 1$:
-the valley rounds into a bowl. Because $\kappa$ is **one number with two
-consequences**, the same $\lambda$ pays twice, accurate solves *and* fast
-gradient descent.
+the valley rounds into a bowl, and the same $\lambda$ pays twice,
+accurate solves *and* fast gradient descent. Unlike a true
+preconditioner, ridge changes the minimizer: it shrinks
+$\mathbf{w}_\lambda$ toward $\mathbf{0}$.
 
 @!numerical-stability-conditioning-ridge
 :::
@@ -1604,7 +1617,8 @@ gradient descent.
 ::: {.cols}
 ::: {.col}
 - **Floating point:** relative precision $\varepsilon_{\text{mach}}$,
-  gaps that double, overflow cliffs ($e^x$ dies at $x\approx 88.7$ in fp32).
+  gaps that double, overflow thresholds ($e^x$ dies at $x\approx 88.7$ in
+  fp32).
 - **Stable softmax:** subtract the max; log-sum-exp is exact; compute
   cross-entropy from logits as $\mathrm{lse}(\mathbf{z}) - z_y$.
 :::
@@ -1617,7 +1631,8 @@ gradient descent.
 :::
 
 ::: {.d2l-note}
-$\kappa$: **one number, two consequences**, and ridge is the one knob
-that helps both. Reformulations, not more bits.
+$\kappa$ sets both solve accuracy and gradient-descent speed, and ridge
+is the one knob that helps both. The fixes throughout are
+reformulations rather than extra bits.
 :::
 :::

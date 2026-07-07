@@ -24,7 +24,7 @@ mdl-numerical-stability-conditioning
 ## Resources and Further Reading
 
 A short, opinionated reading list for going deeper on optimization as it is used
-in machine learning — convexity, gradient and second-order methods, duality, and
+in machine learning: convexity, gradient and second-order methods, duality, and
 numerics.
 
 **Books**

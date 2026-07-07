@@ -31,12 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10       0.4460         9.23e-17             0.1000\n   1.00       0.4235         9.64e-17             1.0000\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  10.00       0.2840         5.55e-17            10.0000\n"
+          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10       0.4460         6.44e-17             0.1000\n   1.00       0.4235         8.28e-17             1.0000\n  10.00       0.2840         4.29e-17            10.0000\n"
         }
       ]
     },
@@ -47,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "alpha* = [0.1309 0.0732 0.     0.     0.     0.2442 0.     0.3885]\nw* = [0.5714 0.5714]  b* = -0.4286  separates data: True\nmargins y_i (w^T x_i + b) = [1.     1.     2.1429 2.1429 1.2857 1.     2.4286 1.    ]\nKKT: comp. slack 3.0e-16 | worst primal feas. 7.8e-16\nprimal = 0.418367, dual = 0.418367, gap = 4.4e-16\n"
+          "text": "alpha* = [0.1309 0.0732 0.     0.     0.     0.2442 0.     0.3885]\nw* = [0.5714 0.5714]  b* = -0.4286  separates data: True\nmargins y_i (w^T x_i + b) = [1.     1.     2.1429 2.1429 1.2857 1.     2.4286 1.    ]\nKKT: comp. slack 3.0e-16 | worst primal feas. 7.8e-16\nprimal = 0.418367, dual = 0.418367, gap = 5.0e-16\n"
         }
       ]
     },
@@ -76,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/constrained-duality-gap-1.svg",
           "bytes": 26638,
-          "sha256": "sha256:501e607e2b532bbc0e8524baca4dbdf133752e981a4f0f77d9c250b02269953e"
+          "sha256": "sha256:58c246c989732b36f14bdbd2bbf181fe6618137a3c40102e5a6c068ecbe52e27"
         }
       ]
     }

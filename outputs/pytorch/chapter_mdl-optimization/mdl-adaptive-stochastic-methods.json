@@ -94,7 +94,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine         8.71e-03       1.58e-03\nWSD 80/20      9.53e-02       5.48e-03\n"
+          "text": "cosine         8.71e-03       1.58e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "WSD 80/20      9.53e-02       5.48e-03\n"
         }
       ]
     }

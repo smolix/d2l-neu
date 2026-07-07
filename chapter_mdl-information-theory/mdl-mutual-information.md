@@ -248,9 +248,11 @@ $$
 \qquad \det \Sigma = 1 - \rho^2.
 $$
 
-Recall from :numref:`sec_mdl-distributions` the differential entropies
-$h(X) = h(Y) = \tfrac{1}{2}\log(2\pi e)$ and
-$h(X, Y) = \tfrac{1}{2}\log\left((2\pi e)^2 \det\Sigma\right)$. The entropy
+For a standard Gaussian the differential entropy is
+$h(X) = h(Y) = \tfrac{1}{2}\log(2\pi e)$, and for the jointly Gaussian pair
+$h(X, Y) = \tfrac{1}{2}\log\left((2\pi e)^2 \det\Sigma\right)$; both follow
+from the Gaussian density by direct integration, a computation we take on
+faith here. The entropy
 identity (claim 1 above, equally valid for differential entropies since the
 chain-rule algebra never used discreteness) gives
 

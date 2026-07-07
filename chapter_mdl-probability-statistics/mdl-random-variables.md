@@ -1,7 +1,7 @@
 # Random Variables
 :label:`sec_mdl-random_variables`
 
-In :numref:`sec_prob` we worked with *discrete* random variables---those taking
+In :numref:`sec_prob` we worked with *discrete* random variables, those taking
 values in a finite set or the integers, where a probability *mass* sits on each
 outcome and we sum to get probabilities. Deep learning lives mostly in the
 *continuous* world: a pixel intensity, a network weight, a Gaussian noise sample
@@ -9,20 +9,13 @@ all range over a continuum, and there a single outcome carries zero probability.
 The fix is the *density*, met already in :numref:`sec_mdl-integral_calculus`:
 probability becomes *area under a curve*, so the natural operation is no longer
 summation but integration. This section builds the continuous theory we actually
-use---densities and their cumulative functions, the summary statistics (mean,
+use: densities and their cumulative functions, the summary statistics (mean,
 variance, standard deviation) that compress a distribution to a few numbers, and
-the joint/marginal/covariance machinery for several correlated variables---and at
+the joint/marginal/covariance machinery for several correlated variables. At
 every step the discrete sum and the continuous integral are *the same idea* seen
-through :numref:`sec_mdl-integral_calculus`. The recurring thread is the small
-identity :eqref:`eq_mdl-pdf_def`: *probability of a tiny interval $\approx$ its
-width times the density there.* Almost everything below is that statement
-integrated.
-
-We load the per-framework library so the few computational cells have `d2l` and
-the framework's tensor library in scope. The cells that follow *compute*
-results---recovering a probability from a density, watching a divergent variance
-refuse to settle, verifying a change of variables by simulation---rather than
-draw illustrations; the figures are pre-generated.
+through :numref:`sec_mdl-integral_calculus`, and almost everything below
+integrates the small identity :eqref:`eq_mdl-pdf_def`: *probability of a tiny
+interval $\approx$ its width times the density there.*
 
 ```{.python .input #random-variables-imports}
 #@tab mxnet
@@ -62,8 +55,8 @@ Continuous random variables are subtler than discrete ones, and the technical
 jump is exactly the jump from *summing a list* to *integrating a function*. We
 develop the theory in three steps: the density that replaces the mass function,
 the cumulative function that turns it back into a genuine probability, and the
-derivative relationship between them that is the fundamental theorem of calculus
-in probabilistic dress.
+derivative relationship between them, which is the fundamental theorem of
+calculus restated for probabilities.
 
 ### The Density Appears: A Thought Experiment
 
@@ -71,12 +64,12 @@ Throw a dart at a board and ask for the probability it lands *exactly*
 $2\,\textrm{cm}$ from the center. Measure to one digit, with bins for
 $0,1,2,\ldots\,\textrm{cm}$: of $100$ throws, perhaps $20$ land in the
 "$2\,\textrm{cm}$" bin, suggesting $20\%$. But that bin holds everything between
-$1.5$ and $2.5\,\textrm{cm}$---not what we asked. Measure finer, to bins of
+$1.5$ and $2.5\,\textrm{cm}$, not what we asked. Measure finer, to bins of
 $0.1\,\textrm{cm}$: now perhaps $3$ throws land in $[1.95,2.05]$, suggesting
 $3\%$. We have only pushed the problem one digit down.
 
 Abstract it. Knowing the first $k$ digits match $2.000\ldots$, the
-$(k{+}1)$-th digit is essentially a uniform draw from $\{0,\ldots,9\}$---no
+$(k{+}1)$-th digit is essentially a uniform draw from $\{0,\ldots,9\}$: no
 physical mechanism makes the micrometer count prefer a $7$ to a $3$. So each
 extra digit of accuracy shrinks the probability by a factor of $10$:
 
@@ -85,8 +78,8 @@ P(\textrm{distance is}\; 2.00\ldots \;\textrm{to}\; k \;\textrm{digits}) \approx
 $$
 
 Knowing $k$ digits pins the value to an interval of width $10^{-k}$. Writing
-$\epsilon$ for that width, the statement becomes $P(\text{within }\epsilon
-\text{ of }2)\approx \epsilon\cdot p$. Nothing privileged the point $2$: a good
+$\epsilon$ for that width, the statement becomes $P(X\text{ in an interval of
+width }\epsilon\text{ around }2)\approx \epsilon\cdot p$. Nothing privileged the point $2$: a good
 dart thrower is likelier to land near the center, so the constant depends on
 *where* we look. Calling it $p(x)$,
 
@@ -98,8 +91,8 @@ the relative likelihood of landing near $x$ versus elsewhere. It is the exact
 object introduced as a normalized non-negative function in
 :eqref:`eq_mdl-density`; here we see *where it comes from*.
 
-One consequence is immediate and worth stating, because it is where continuous
-probability first feels strange. Shrinking the interval to a single point
+One consequence is immediate, and it is where continuous probability first
+feels strange. Shrinking the interval to a single point
 ($\epsilon\to 0$) sends the right-hand side of :eqref:`eq_mdl-pdf_def` to zero,
 so for *any* fixed value $x$,
 
@@ -107,8 +100,19 @@ $$P(X = x) = 0.$$
 
 This resolves the dartboard paradox: the probability of landing *exactly*
 $2\,\textrm{cm}$ out is zero, even though the dart certainly lands *somewhere*.
-For a continuous variable only intervals---sets of positive length---carry
-probability, and we read those probabilities off the density by integrating.
+The size notion at work here deserves a name. A set has *measure zero* when,
+for every $\varepsilon>0$, it can be covered by a countable collection of
+intervals of total length at most $\varepsilon$: a single point fits inside one
+interval of length $\varepsilon$, and a countable set $\{x_1,x_2,\ldots\}$ fits
+inside intervals of lengths $\varepsilon/2,\varepsilon/4,\ldots$, which sum to
+$\varepsilon$. For a variable with a density, every measure-zero set carries
+zero probability: covering the set by intervals of total length $\delta$ caps
+its probability at the integral of $p$ over those intervals, which shrinks to
+zero with $\delta$ (immediately when $p$ is bounded, and with a little more
+care in general). A point carrying *positive* mass is called an *atom*, so a
+variable with a density has no atoms; sets of positive length, by contrast, can
+carry positive probability, and we read those probabilities off the density by
+integrating.
 
 ### Densities and Their Two Defining Properties
 
@@ -125,30 +129,24 @@ $$
 
 The middle expression is exactly the Riemann sum of :numref:`sec_mdl-integral_calculus`.
 Since $X$ must take *some* value, $P(X\in\mathbb{R})=1$, and we recover the
-normalization :eqref:`eq_mdl-density`,
-
-$$\int_{-\infty}^{\infty} p(x)\,dx = 1.$$
-:eqlabel:`eq_mdl-pdf_int_one`
-
+normalization $\int_{-\infty}^{\infty} p(x)\,dx = 1$ of :eqref:`eq_mdl-density`.
 The same slicing argument over a finite range gives the rule we actually use:
 *probability is area under the density*,
 
 $$P(X\in(a, b]) = \int_{a}^{b} p(x)\,dx.$$
 :eqlabel:`eq_mdl-pdf_int_int`
 
-These two properties---non-negativity and total area $1$---describe *exactly* the
+These two properties, non-negativity and total area $1$, describe *exactly* the
 space of densities. :numref:`fig_mdl-prob-pdf-area` shows the picture: the total
 shaded region has area $1$, and the probability of an interval is the area above
 it.
 
-![A probability density $p(x)$. The total area under the curve is $1$; the probability that $X$ lands in the interval from $a$ to $b$ is the area of the shaded slab above it, $\int_a^b p(x)\,dx$. The density itself is not a probability---it may exceed $1$---only its integral over an interval is.](../img/mdl-prob-pdf-area.svg)
+![A probability density $p(x)$. The total area under the curve is $1$; the probability that $X$ lands in the interval from $a$ to $b$ is the area of the shaded slab above it, $\int_a^b p(x)\,dx$. The density itself is not a probability (it may exceed $1$); only its integral over an interval is.](../img/mdl-prob-pdf-area.svg)
 :label:`fig_mdl-prob-pdf-area`
 
 We can confirm :eqref:`eq_mdl-pdf_int_int` numerically. Take the two-bump density
 $p(x)=0.2\,\mathcal N(x;3,1)+0.8\,\mathcal N(x;-1,1)$ and recover the probability
-of an interval by a Riemann sum---the discrete approximation of the integral,
-made flesh. This *computes* the density-to-probability link rather than merely
-drawing it.
+of an interval by a Riemann sum, the discrete approximation of the integral.
 
 ```{.python .input #random-variables-density-to-probability}
 #@tab mxnet
@@ -198,12 +196,12 @@ mask = (x > -2) & (x <= 3)
 print(f'P(-2 < X <= 3) : {float(jnp.sum(epsilon * p[mask])):.4f}')
 ```
 
-The total mass prints as $1.0000$, just as :eqref:`eq_mdl-pdf_int_one` demands
+The total mass prints as $1.0000$, just as :eqref:`eq_mdl-density` demands
 (the grid spans $[-8,8]$, wide enough that the truncated Gaussian tails hold
 mass under $10^{-7}$), and the interval integral returns a genuine probability
 in $[0,1]$: the printed $0.7725$ sits within $6\times10^{-4}$ of the exact value
 $0.7731$, the small bias of a left-endpoint Riemann sum at $\epsilon=0.01$. A
-catalogue of named densities---Gaussian, exponential, and the rest---waits in
+catalogue of named densities (Gaussian, exponential, and the rest) waits in
 :numref:`sec_mdl-distributions`; here we stay abstract.
 
 ### The Cumulative Distribution Function
@@ -211,8 +209,8 @@ catalogue of named densities---Gaussian, exponential, and the rest---waits in
 A density has one awkward feature: its *values* are not probabilities. A density
 can exceed $10$, as long as it does so only over an interval shorter than
 $1/10$. The remedy is the *cumulative distribution function* (c.d.f.), which by
-:eqref:`eq_mdl-pdf_int_int` accumulates the density up to $x$ and so *is* an
-honest probability:
+:eqref:`eq_mdl-pdf_int_int` accumulates the density up to $x$ and so *is* a
+probability:
 
 $$
 F(x) = \int_{-\infty}^{x} p(t)\,dt = P(X \le x).
@@ -221,7 +219,8 @@ $$
 
 Read off its properties directly: $F(x)\to 0$ as $x\to-\infty$ and $F(x)\to 1$ as
 $x\to+\infty$ (the total mass is $1$); $F$ is non-decreasing, since the integrand
-$p\ge 0$ only ever adds area; and $F$ is continuous when $X$ is continuous. The
+$p\ge 0$ only ever adds area; and since $X$ has a density, $F$ is an integral of
+it and hence continuous. The
 c.d.f. is also what lets discrete and continuous variables share one framework.
 For a discrete $X$ taking $0$ and $1$ with probability $\tfrac12$ each,
 
@@ -233,7 +232,7 @@ F(x) = \begin{cases}
 \end{cases}
 $$
 
-a *staircase* that jumps by the mass at each atom---so the same $F$ describes
+a *staircase* that jumps by the mass at each atom. The same $F$ thus describes
 continuous variables, discrete ones, and mixtures (flip a coin: heads, report a
 die roll; tails, a dart distance).
 
@@ -257,26 +256,30 @@ point where $p$ is continuous. $\blacksquare$
 
 So $p=F'$ and $F=\int p$ are two views of one object: the density is the
 *instantaneous rate* at which probability accumulates, and the c.d.f. is the
-*accumulated area*. :numref:`fig_mdl-prob-pdf-cdf` puts them side by side---the
+*accumulated area*. :numref:`fig_mdl-prob-pdf-cdf` puts them side by side (the
 shaded area $\int_a^b p$ on the left equals the vertical rise $F(b)-F(a)$ on the
-right---making :eqref:`eq_mdl-cdf_def` and :eqref:`eq_mdl-cdf_deriv` a single
+right), making :eqref:`eq_mdl-cdf_def` and :eqref:`eq_mdl-cdf_deriv` a single
 picture.
 
 ![Left: a density $p$ with the area over the interval from $a$ to $b$ shaded. Right: the matching c.d.f. $F(x)=\int_{-\infty}^x p$, an increasing curve from $0$ to $1$; the rise $F(b)-F(a)$ equals the shaded area on the left. The density is the slope of the c.d.f. $\left(F'=p\right)$ and the c.d.f. is the accumulated area under the density.](../img/mdl-prob-pdf-cdf.svg)
 :label:`fig_mdl-prob-pdf-cdf`
 
 The inverse $F^{-1}$, which maps a probability level $q\in(0,1)$ back to the
-value $x$ with $F(x)=q$, is called the *quantile function*---its values at
+value $x$ with $F(x)=q$, is called the *quantile function*; its values at
 $q=0.25,0.5,0.75$ are the quartiles, the middle one the median. The quantile
-function is also a *sampler*, by an argument short enough to give in full.
+function is also a *sampler*, by an argument short enough to give in full. The
+argument needs one ingredient: a variable $U$ *uniform on $[0,1]$*, the
+variable whose density is constant at $1$ there, so that $U$ assigns every
+subinterval of $[0,1]$ probability equal to its length
+(:numref:`sec_mdl-distributions` names this law $U(0,1)$).
 
 **Proposition (inverse-transform sampling).** *Let $F$ be a continuous, strictly
 increasing c.d.f. and let $U$ be uniform on $[0,1]$. Then $X=F^{-1}(U)$ has
 c.d.f. exactly $F$.*
 
 **Proof.** Because $F$ is increasing, the events $F^{-1}(U)\le x$ and
-$U\le F(x)$ are the same event, and the uniform assigns every subinterval of
-$[0,1]$ its length:
+$U\le F(x)$ are the same event, and the uniform assigns the latter probability
+$F(x)$, the length of the subinterval $[0,F(x)]$:
 
 $$
 P\bigl(F^{-1}(U)\le x\bigr) = P\bigl(U\le F(x)\bigr) = F(x). \quad\blacksquare
@@ -285,7 +288,7 @@ $$
 :numref:`fig_mdl-prob-inverse-transform` is the picture: feed the uniform level
 $U$ into the *vertical* axis of the c.d.f. and reflect it through the curve down
 to the horizontal axis. Because the curve is steep where the density is high, a
-uniformly spread set of levels lands its reflections densely exactly there---the
+uniformly spread set of levels lands its reflections densely exactly there: the
 c.d.f.'s slope, which is the density by :eqref:`eq_mdl-cdf_deriv`, does the
 shaping. This one-line proposition is how libraries turn raw uniform noise into
 samples from any one-dimensional distribution: generate $U$, look up
@@ -293,16 +296,24 @@ $F^{-1}(U)$. We put it to work when we meet the named distributions in
 :numref:`sec_mdl-distributions`, where inverting the exponential's c.d.f. gives
 that distribution's standard sampler in closed form.
 
-![Inverse-transform sampling. Uniform levels $U$ on the vertical axis (left) reflect through the c.d.f. $F$ down to values $x=F^{-1}(U)$ on the horizontal axis. Where $F$ is steep---that is, where the density $p=F'$ is large---a uniform spread of levels is compressed into a dense cluster of samples, so the histogram of reflected points reproduces $p$.](../img/mdl-prob-inverse-transform.svg)
+![Inverse-transform sampling. Uniform levels $U$ on the vertical axis (left) reflect through the c.d.f. $F$ down to values $x=F^{-1}(U)$ on the horizontal axis. Where $F$ is steep, that is, where the density $p=F'$ is large, a uniform spread of levels is compressed into a dense cluster of samples, so the histogram of reflected points reproduces $p$.](../img/mdl-prob-inverse-transform.svg)
 :label:`fig_mdl-prob-inverse-transform`
+
+Sampling is also how expectations are computed at scale: given independent
+draws $x_1,\ldots,x_n$ of $X$, the *Monte Carlo* estimate
+$\tfrac1n\sum_{i=1}^n g(x_i)$ approximates $E[g(X)]$, and its variance is
+$\textrm{Var}(g(X))/n$ (Exercise 6 carries out the computation), shrinking with
+every additional sample. The guarantee that the estimate converges to the
+expectation, the law of large numbers, is stated and proved in
+:numref:`sec_mdl-statistics`.
 
 ## Summarizing a Distribution
 
 A full distribution is often more than we can interpret at a glance. *Summary
 statistics* compress it to a few numbers: the *mean* says where the variable
 sits, the *variance* and *standard deviation* say how far it spreads. Each is an
-expectation---a density-weighted average, :eqref:`eq_mdl-expectation`---and each
-obeys clean algebra that we prove once and reuse everywhere.
+expectation (a density-weighted average, :eqref:`eq_mdl-expectation`), and each
+obeys algebra that we prove once and reuse everywhere.
 
 ### The Mean
 
@@ -314,15 +325,17 @@ $$\mu_X = E[X] = \sum_i x_i p_i,$$
 
 and in the continuum the sum becomes the density-weighted integral
 :eqref:`eq_mdl-expectation`, $\mu_X=\int x\,p(x)\,dx$, by the same
-slice-and-refine argument that produced :eqref:`eq_mdl-pdf_int_one`. The same
+slice-and-refine argument that produced the normalization
+:eqref:`eq_mdl-density`. The same
 weighting averages any *function* of $X$: $E[g(X)]=\sum_i g(x_i)\,p_i$ in the
-discrete case and $\int g(x)\,p(x)\,dx$ in the continuum---a rule so routinely
-used without comment (we invoke it below every time we average $X^2$ or a
+discrete case, while the continuous form $\int g(x)\,p(x)\,dx$ restates the
+second half of :eqref:`eq_mdl-expectation`. The rule is used so routinely
+without comment (we invoke it below every time we average $X^2$ or a
 squared deviation) that it is known as the *law of the unconscious
-statistician*. The mean tells us, with some caution, where the variable tends to
-sit.
+statistician*; what is new here is only the name and the discrete form. The
+mean tells us, with some caution, where the variable tends to sit.
 
-A running example will pay off through the whole section. Let $X$ take $a-2$ with
+A running example recurs through the whole section. Let $X$ take $a-2$ with
 probability $p$, $a+2$ with probability $p$, and $a$ with probability $1-2p$.
 Then
 
@@ -333,7 +346,7 @@ $$
 the center of symmetry, exactly as intuition demands.
 
 The two algebraic properties of the mean we lean on most are that it is
-*linear*---constants pull out and sums split. Both follow in one line from the
+*linear*: constants pull out and sums split. Both follow in one line from the
 definition.
 
 **Proposition (linearity of expectation).** *For random variables $X,Y$ and
@@ -349,14 +362,17 @@ $$
 **Proof.** Both are linearity of the sum (or integral) defining the expectation.
 For the scaling-and-shift, $E[aX+b]=\sum_i(ax_i+b)p_i = a\sum_i x_i p_i + b\sum_i
 p_i = a\,E[X]+b$, using $\sum_i p_i=1$. For the sum, write the expectation over
-the *joint* distribution of $(X,Y)$ and split the inner sum: $E[X+Y]=\sum_{i,j}
+the *joint* distribution of $(X,Y)$, with $p_{ij}$ the probability of the pair
+$(x_i,y_j)$ (the discrete joint of :numref:`sec_prob`; its continuous
+counterpart, the joint density, arrives later in this section), and split the
+inner sum: $E[X+Y]=\sum_{i,j}
 (x_i+y_j)p_{ij} = \sum_{i,j} x_i p_{ij} + \sum_{i,j} y_j p_{ij} = E[X]+E[Y]$, the
 last step recognizing the marginals $\sum_j p_{ij}=P(X=x_i)$. The continuous case
 replaces every sum by an integral verbatim. $\blacksquare$
 
 The second identity needs *no independence assumption*: expectations of sums
-always add, however entangled $X$ and $Y$ are. This is the workhorse behind
-nearly every expected-loss calculation in the book.
+always add, however entangled $X$ and $Y$ are. Expected-loss calculations
+throughout the book rest on this.
 
 The mean alone is not enough. A profit of $\$10\pm\$1$ per sale and one of
 $\$10\pm\$15$ share a mean but carry wildly different risk. We need a measure of
@@ -414,7 +430,7 @@ $$
 :eqlabel:`eq_mdl-var_affine`
 
 **Proof.** By linearity :eqref:`eq_mdl-exp_linear` the mean maps as
-$\mu_{aX+b}=a\mu_X+b$, so the deviation is $(aX+b)-\mu_{aX+b}=a(X-\mu_X)$---the
+$\mu_{aX+b}=a\mu_X+b$, so the deviation is $(aX+b)-\mu_{aX+b}=a(X-\mu_X)$; the
 shift $b$ cancels. Squaring and taking the expectation,
 
 $$
@@ -445,7 +461,7 @@ example $\sigma_X=2\sqrt{2p}$, back in units of stars.
 ### What the Standard Deviation Means: Markov and Chebyshev
 
 Does $\sigma_X$ have a concrete reading? Yes: it sets the scale over which $X$
-fluctuates, and a pair of inequalities---each with a one-line proof---makes this
+fluctuates, and a pair of inequalities, each with a one-line proof, makes this
 rigorous for *any* distribution. The first, *Markov's inequality*, turns
 knowledge of a bare mean into a tail bound: a non-negative variable cannot put
 much mass far above its mean.
@@ -464,11 +480,11 @@ $0\le X$. Taking expectations of both sides and using
 $E[\mathbf{1}_{X\ge a}]=P(X\ge a)$ gives $E[X]\ge a\,P(X\ge a)$. $\blacksquare$
 
 So at most a tenth of any non-negative population exceeds ten times its
-average---true of incomes, file sizes, and gradient norms alike, with no
+average: true of incomes, file sizes, and gradient norms alike, with no
 distributional assumption whatsoever. On its own the bound is crude, because it
 knows only the mean. Feeding it the *squared deviation* $(X-\mu_X)^2$, whose
-mean is by definition the variance, sharpens it into the yardstick statement we
-are after.
+mean is by definition the variance, sharpens it into the statement we are
+after, an inequality due to Bienaymé and to Chebyshev :cite:`Chebyshev.1867`.
 
 **Proposition (Chebyshev's inequality).** *For any $X$ with finite variance and
 any $\alpha>0$,*
@@ -483,8 +499,22 @@ $\{Z\ge\alpha^2\sigma_X^2\}$. Markov's inequality :eqref:`eq_mdl-markov` with
 $a=\alpha^2\sigma_X^2$ gives
 $P(|X-\mu_X|\ge\alpha\sigma_X) \le \sigma_X^2/(\alpha^2\sigma_X^2) = 1/\alpha^2$. $\blacksquare$
 
+**Corollary ($\varepsilon$-form).** *For any $X$ with finite variance and any
+$\varepsilon>0$,*
+
+$$
+P\bigl(|X-\mu_X| \ge \varepsilon\bigr) \le \frac{\textrm{Var}(X)}{\varepsilon^2}.
+$$
+
+Setting $\varepsilon=\alpha\sigma_X$ recovers :eqref:`eq_mdl-chebyshev` when
+$\sigma_X>0$; applying Markov's inequality to $(X-\mu_X)^2$ with
+$a=\varepsilon^2$ proves the corollary directly and covers the edge case
+$\sigma_X=0$, where $X$ equals its mean with probability one and the left-hand
+side is $0$. This is the form :numref:`sec_mdl-geometry-linear-algebraic-ops`
+invoked for the concentration of random angles.
+
 In words at $\alpha=10$: for *any* distribution at most $1\%$ of the mass lies
-ten or more standard deviations from the mean---at least $99\%$ lies strictly
+ten or more standard deviations from the mean; at least $99\%$ lies strictly
 within. The standard deviation is thus a universal yardstick for "how far is
 far."
 
@@ -492,18 +522,18 @@ The bound is *sharp*, and our running example shows exactly why no tighter
 constant is possible. With $\mu_X=a$ and $\sigma_X=2\sqrt{2p}$, Chebyshev at
 $\alpha=2$ promises $P\bigl(|X-a|\ge 4\sqrt{2p}\bigr)\le\tfrac14$: at most a
 quarter of the mass sits $4\sqrt{2p}$ or farther from the mean. The two outlying
-atoms $a\pm2$ sit at distance exactly $2$, and as $p$ shrinks the yardstick
+atoms $a\pm2$ sit at distance exactly $2$, and as $p$ shrinks the threshold
 $4\sqrt{2p}$ shrinks with it. :numref:`fig_mdl-prob-chebyshev` shows the three
-regimes. For $p>\tfrac18$ the yardstick exceeds $2$, no atom lies that far out,
-and the left-hand side is $0$---the bound holds with room to spare. At
-$p=\tfrac18$ the yardstick equals $2$ exactly (then $\sigma_X=1$, so $a\pm2$ are
+regimes. For $p>\tfrac18$ the threshold exceeds $2$, no atom lies that far out,
+and the left-hand side is $0$: the bound holds with room to spare. At
+$p=\tfrac18$ the threshold equals $2$ exactly (then $\sigma_X=1$, so $a\pm2$ are
 precisely two standard deviations from the mean): both outlying atoms count
 toward the event, the probability is $p+p=\tfrac14$, and the bound is attained
-with *equality*---no constant smaller than $1/\alpha^2$ could work for every
-distribution. For $p<\tfrac18$ the yardstick drops below $2$, both atoms lie
+with *equality*, so no constant smaller than $1/\alpha^2$ could work for every
+distribution. For $p<\tfrac18$ the threshold drops below $2$, both atoms lie
 beyond it, and their combined mass $2p<\tfrac14$ keeps the inequality satisfied.
 
-![Chebyshev's bound on the running three-atom example, masses drawn as vertical bars at $a-2,a,a+2$ with the yardstick distance $\alpha\sigma_X=4\sqrt{2p}$ for $\alpha=2$ marked as a horizontal bracket about the mean $a$. For $p>1/8$ no atom lies $\alpha\sigma_X$ or farther from $a$, so $P(|X-\mu_X|\ge\alpha\sigma_X)=0$; at $p=1/8$ the atoms $a\pm2$ sit at distance exactly $\alpha\sigma_X$ and carry combined mass $2p=1/4$, attaining the bound $1/\alpha^2$ with equality---the inequality is sharp; for $p<1/8$ they lie beyond the bracket, permitted since their mass $2p<1/4$.](../img/mdl-prob-chebyshev.svg)
+![Chebyshev's bound on the running three-atom example: masses drawn as vertical bars at $a-2,a,a+2$ with the threshold distance $\alpha\sigma_X=4\sqrt{2p}$ for $\alpha=2$ marked as a horizontal bracket about the mean $a$. The three panels show the regimes $p>1/8$, $p=1/8$ (where the bound is attained with equality), and $p<1/8$ that the text walks through.](../img/mdl-prob-chebyshev.svg)
 :label:`fig_mdl-prob-chebyshev`
 
 ### Means and Variances in the Continuum
@@ -521,11 +551,11 @@ $$
 $$
 :eqlabel:`eq_mdl-cont_mean_var`
 
-Every property proved above---linearity, the affine rule, Markov and
-Chebyshev---carries over unchanged, since each rested only on linearity and
+Every property proved above (linearity, the affine rule, Markov and
+Chebyshev) carries over unchanged, since each rested only on linearity and
 positivity of the averaging operation.
-For the uniform density on the unit interval---$p(x)=1$ on $[0,1]$, zero
-elsewhere, the law the next section names $U(0,1)$---
+For the uniform density $U(0,1)$ met at inverse-transform sampling ($p(x)=1$ on
+$[0,1]$, zero elsewhere),
 $\mu_X=\int_0^1 x\,dx=\tfrac12$ and $\sigma_X^2=\int_0^1
 x^2\,dx-\tfrac14=\tfrac13-\tfrac14=\tfrac1{12}$, both elementary integrals.
 
@@ -538,7 +568,7 @@ $\frac{x}{\pi(1+x^2)}$ is *odd* and tempts us to declare $0$ by symmetry, the me
 is defined only when $\int|x|p(x)\,dx<\infty$. Substituting $u=1+x^2$,
 $\int_0^\infty \frac{x}{\pi(1+x^2)}\,dx=\frac{1}{2\pi}\int_1^\infty
 \frac{du}{u}=+\infty$, and the left tail gives $-\infty$, so the mean is a
-meaningless $\infty-\infty$ whose value depends on how the limits are taken---a
+meaningless $\infty-\infty$ whose value depends on how the limits are taken, a
 *stronger* failure than "the mean is infinite." We can watch both integrals
 diverge numerically by extending the integration range and seeing the partial
 sums refuse to settle.
@@ -579,15 +609,17 @@ for R in [10, 100, 1000]:
     print(f'integral_-{R}^{R} x^2 p(x) dx = {float(jnp.sum(0.01*integrand)):.3f}')
 ```
 
-The "integral" grows without bound as the range widens---it does not converge, so
-the variance is infinite. Machine-learning models are usually set up to avoid such
-*heavy-tailed* variables, but they arise in modeling physical systems, so it is
-worth knowing they exist.
+The "integral" grows without bound as the range widens: it does not converge, so
+the variance is infinite. Distributions whose tails are fat enough that moments
+diverge are called *heavy-tailed*, and they are endemic inside machine learning:
+gradient-noise spectra, token frequencies, and the spectra of trained weight
+matrices all show heavy tails. :numref:`sec_mdl-concentration-generalization`
+classifies tails by how fast averages over them concentrate.
 
 ## Several Variables
 
 Machine learning rarely involves one variable in isolation. Pixels $R_{i,j}$ in
-an image, prices $P_t$ across time---nearby coordinates are correlated, and a
+an image, prices $P_t$ across time: nearby coordinates are correlated, and a
 model that ignores this under-performs (:numref:`sec_mdl-naive_bayes` analyzes
 exactly such a model). We need a language for *several*, possibly correlated,
 continuous variables, and the multiple integrals of :numref:`sec_mdl-integral_calculus`
@@ -608,7 +640,7 @@ For $n$ variables the joint density $p(\mathbf x)=p(x_1,\ldots,x_n)$ obeys the
 same non-negativity and unit-integral rules.
 
 Often we hold a joint density but want the distribution of *one* coordinate,
-ignoring the rest---its *marginal distribution*. Starting from
+ignoring the rest: its *marginal distribution*. Starting from
 $P(X\in[x,x+\epsilon])\approx\epsilon\,p_X(x)$ and noting $Y$ takes *some* value,
 we slice in $y$ as well:
 
@@ -626,10 +658,10 @@ p_X(x) = \int_{-\infty}^\infty p_{X, Y}(x, y)\,dy.
 $$
 :eqlabel:`eq_mdl-marginal`
 
-![A continuous joint density $p_{X,Y}(x,y)$ shown by its contours, with one vertical strip at $x$ highlighted. Integrating the joint density up that strip---over all $y$---gives the height of the marginal density $p_X(x)$ plotted along the $\mathit{x}$-axis below. Sweeping the strip across $x$ traces out the whole marginal.](../img/mdl-prob-marginal.svg)
+![A continuous joint density $p_{X,Y}(x,y)$ shown by its contours, with one vertical strip at $x$ highlighted. Integrating the joint density up that strip, over all $y$, gives the height of the marginal density $p_X(x)$ plotted along the $\mathit{x}$-axis below. Sweeping the strip across $x$ traces out the whole marginal.](../img/mdl-prob-marginal.svg)
 :label:`fig_mdl-prob-marginal`
 
-To marginalize, then, we *integrate out* the variables we do not care about---the
+To marginalize, then, we *integrate out* the variables we do not care about, the
 same operation introduced in :numref:`sec_mdl-integral_calculus`, here given its
 probabilistic meaning.
 
@@ -675,12 +707,12 @@ $p_{X,Y}(x,y)=p_{X\mid Y}(x\mid y)\,p_Y(y)=p_X(x)\,p_Y(y)$, which is (i). $\blac
 
 As a worked example, take the joint $p_{X,Y}(x,y)=4xy$ on the unit square
 $[0,1]^2$ (it integrates to one). The marginal is $p_Y(y)=\int_0^1 4xy\,dx=2y$, so
-$p_{X\mid Y}(x\mid y)=4xy/2y=2x$ --- *independent of $y$*. The conditional never
+$p_{X\mid Y}(x\mid y)=4xy/2y=2x$, *independent of $y$*. The conditional never
 changes as $y$ varies, so by the proposition $X\perp Y$. This is exactly the
 visual test of :numref:`fig_mdl-prob-conditional-slice`: independence is the case where
 the renormalized slice $p(x\mid y_0)$ has the *same shape* at every height $y_0$,
 since the joint factors and the $y$-factor cancels in the renormalization. A joint
-that does not factor this way --- say one supported on the triangle $x\le y$ --- has
+that does not factor this way (say one supported on the triangle $x\le y$) has
 a conditional whose support and shape shift with $y$, the signature of dependence.
 
 ![Reading off a conditional density. Left: the contours of a joint density $p_{X,Y}(x,y)$ with one horizontal slice at $y=y_0$ highlighted. Right: that slice, $x\mapsto p_{X,Y}(x,y_0)$, renormalized to unit area to give the conditional density $p(x\mid y_0)$ of :eqref:`eq_mdl-cond_density`. When the joint factors, every slice has the same shape after renormalization, regardless of $y_0$, which is precisely independence; when it does not, the slice shape drifts with $y_0$.](../img/mdl-prob-conditional-slice.svg)
@@ -706,11 +738,15 @@ $$
 
 the average value of $X$ *once $Y$ is known to be $y$*. As $y$ ranges it traces a
 function of $y$; feeding in the random $Y$ makes $E[X\mid Y]$ itself a random
-variable---a function of $Y$ alone. Two identities then say that conditioning can
+variable, a function of $Y$ alone. The variance gets a conditional version the
+same way: $\textrm{Var}(X\mid Y)=E[X^2\mid Y]-E[X\mid Y]^2$, the computational
+form :eqref:`eq_mdl-var_comp` applied within each slice. Two identities then say
+that conditioning can
 only *reorganize* the mean and spread of $X$, never conjure or destroy them.
 
-**Proposition (laws of total expectation and variance).** *For any $X,Y$ with
-finite variance,*
+**Proposition (laws of total expectation and variance).** *Let $X,Y$ be jointly
+continuous with finite variance (for discrete pairs, the same identities hold
+with every integral replaced by a sum). Then*
 
 $$
 E[X] = E\bigl[E[X\mid Y]\bigr],
@@ -730,8 +766,12 @@ E\bigl[E[X\mid Y]\bigr]
  = E[X].
 $$
 
-For the variance, apply the computational form :eqref:`eq_mdl-var_comp` *inside*
-each slice, $\textrm{Var}(X\mid Y)=E[X^2\mid Y]-E[X\mid Y]^2$, take the
+The set where $p_Y(y)=0$, on which the conditional density
+:eqref:`eq_mdl-cond_density` is undefined, contributes nothing to either
+integral: $Y$ lands in it with probability zero, and the joint density vanishes
+there as well (it integrates to $p_Y$ in $x$), so both sides ignore it.
+For the variance, apply the definition of $\textrm{Var}(X\mid Y)$ within
+each slice, take the
 expectation over $Y$, and add and subtract $E\bigl[E[X\mid Y]\bigr]^2=E[X]^2$:
 
 $$
@@ -744,11 +784,14 @@ $$
 which is $\textrm{Var}(X)$, using the tower property on $E[X^2]$ and on
 $E[X\mid Y]$. $\blacksquare$
 
-The variance law (**Eve's law**) has a memorable reading: the spread of $X$ splits
+The variance law (sometimes called **Eve's law**, after the E-V-V-E pattern of
+its right-hand side) has a memorable reading: the spread of $X$ splits
 into the *average spread within each $Y$-slice* plus the *spread of the
-slice-averages themselves*---unexplained variance plus explained variance, the
-decomposition behind the analysis of variance and behind every latent-variable
-model that explains data by a hidden cause. We use the tower property
+slice-averages themselves*, unexplained variance plus explained variance. That
+decomposition underlies the *analysis of variance* (ANOVA), the classical
+method that attributes the variation in data to competing explanatory factors,
+and it reappears in latent-variable models, models that explain observed data
+through an unobserved cause (:numref:`sec_mdl-latent-em-elbo`). We use the tower property
 :eqref:`eq_mdl-tower` repeatedly when an expectation is easier one slice at a
 time, most heavily in the maximum-likelihood estimator of
 :numref:`sec_mdl-maximum_likelihood` and the variational bounds of
@@ -770,7 +813,7 @@ variance formula :eqref:`eq_mdl-var_comp` (and indeed
 $\textrm{Cov}(X,X)=\textrm{Var}(X)$). The covariance is positive when $X$ and $Y$
 tend to be large together, negative when one is large as the other is small.
 
-A clean example makes this concrete. Let $X\in\{1,3\}$ and $Y\in\{-1,3\}$ with
+An example makes this concrete. Let $X\in\{1,3\}$ and $Y\in\{-1,3\}$ with
 
 $$
 \begin{aligned}
@@ -802,11 +845,11 @@ $$
 from negative through zero to positive: the cloud tilts down, rounds out, then
 tilts up. Its bottom row replays the *identical* draws with $Y$ restated in
 cents instead of dollars: every sample covariance inflates by a factor of $100$
-while no cloud changes shape. Covariance carries the units of its arguments ---
+while no cloud changes shape. Covariance carries the units of its arguments;
 only its sign is scale-free, a defect the correlation coefficient below will
 repair.
 
-![Top row: scatter clouds of $(X,Y)$ pairs with covariance tuned negative, zero, and positive (left to right), $Y$ in dollars --- negative covariance tilts the cloud down-right, zero leaves it round, positive tilts it up-right. Bottom row: the identical draws with $Y$ restated in cents. Every sample covariance is multiplied by $100$ while each panel's correlation $\rho$ (gray) is unchanged: the magnitude of covariance carries units, only its sign is scale-free.](../img/mdl-prob-covariance.svg)
+![Top row: scatter clouds of $(X,Y)$ pairs with covariance tuned negative, zero, and positive (left to right), $Y$ in dollars: negative covariance tilts the cloud down-right, zero leaves it round, positive tilts it up-right. Bottom row: the identical draws with $Y$ restated in cents. Every sample covariance is multiplied by $100$ while each panel's correlation $\rho$ (gray) is unchanged: the magnitude of covariance carries units, only its sign is scale-free.](../img/mdl-prob-covariance.svg)
 :label:`fig_mdl-prob-covariance`
 
 Two properties we use repeatedly: covariance is *linear in each argument*, with
@@ -841,7 +884,7 @@ earlier.
 
 ### Correlation
 
-Covariance inherits the *units* of $X$ times $Y$---inches $\times$ dollars---so
+Covariance inherits the *units* of $X$ times $Y$ (inches $\times$ dollars), so
 its magnitude is hard to read. Switching $Y$ from dollars to cents multiplies it
 by $100$. To get a unit-free measure, divide by something that also scales by
 $100$: the standard deviations. The *correlation coefficient* is
@@ -879,21 +922,26 @@ $$
 Dividing by $\sigma_X^2\sigma_Y^2$ gives $\rho^2\le 1$, which is the claim.
 Equality forces the discriminant to vanish, so the quadratic has a (repeated)
 root $t^\star$ with $\textrm{Var}(t^\star X+Y)=0$; a variable of zero variance is
-constant, so $t^\star X+Y=c$, i.e. $Y=-t^\star X+c$ is affine in $X$. $\blacksquare$
-
-The two extremes read off cleanly: $\rho=+1$ for a perfect increasing linear
-relationship and $\rho=-1$ for a perfect decreasing one. On the running discrete
-example $\sigma_X=1$, $\sigma_Y=2$, so
-$\rho=\frac{4p-2}{2}=2p-1$, sweeping cleanly from $-1$ to $+1$. And for *any*
-affine $Y=aX+b$, using $\sigma_{aX+b}=|a|\sigma_X$ and
-$\textrm{Cov}(X,aX+b)=a\,\textrm{Var}(X)$,
+constant, so $t^\star X+Y=c$, i.e. $Y=-t^\star X+c$ is affine in $X$.
+Conversely, suppose $Y=aX+b$; the nonzero-variance hypothesis forces $a\neq0$,
+since $a=0$ would make $Y$ constant. Using
+$\textrm{Cov}(X,aX+b)=a\,\textrm{Var}(X)$ (shifts drop out, scales pull
+through) and $\sigma_{aX+b}=|a|\sigma_X$,
 
 $$
-\rho(X, aX+b) = \frac{a\,\textrm{Var}(X)}{|a|\,\sigma_X^2} = \frac{a}{|a|} = \operatorname{sign}(a),
+\rho(X, aX+b) = \frac{a\,\textrm{Var}(X)}{\sigma_X\cdot|a|\,\sigma_X} = \frac{a}{|a|} = \operatorname{sign}(a),
 $$
 
-exactly $+1$ for $a>0$ and $-1$ for $a<0$, independent of the scale---correlation
+so equality holds. $\blacksquare$
+
+The two extremes thus read off: $\rho=+1$ for a perfect increasing linear
+relationship ($a>0$) and $\rho=-1$ for a perfect decreasing one ($a<0$),
+independent of the scale $|a|$: correlation
 measures direction and tightness of a linear relationship, never its slope.
+On the running discrete
+example $\sigma_X=1$, $\sigma_Y=2$, so
+$\rho=\frac{4p-2}{2}=2p-1$, sweeping from $-1$ to $+1$ as $p$ does from $0$
+to $1$.
 :numref:`fig_mdl-prob-correlation` shows clouds at correlation $-0.9$, $0$, and
 $0.9$; unlike the covariance clouds, the *spread* is comparable across panels and
 only the tilt changes.
@@ -901,51 +949,53 @@ only the tilt changes.
 ![Scatter clouds of $(X,Y)$ at correlation $-0.9$, $0$, and $0.9$ (left to right). Correlation rescales covariance to lie between $-1$ and $1$, so unlike raw covariance the comparison is unit-free: only the tilt, not the overall spread, changes across the panels.](../img/mdl-prob-correlation.svg)
 :label:`fig_mdl-prob-correlation`
 
-There is a satisfying geometric reading. Centering so $\mu_X=\mu_Y=0$ and writing
-out :eqref:`eq_mdl-cor_def`,
-
-$$
-\rho(X, Y) = \frac{\sum_{i, j} x_i y_j\,p_{ij}}{\sqrt{\sum_{i, j}x_i^2 p_{ij}}\,\sqrt{\sum_{i, j}y_j^2 p_{ij}}},
-$$
-
-which is precisely the cosine of the angle between two vectors with coordinates
-weighted by $p_{ij}$,
-
-$$
-\cos(\theta) = \frac{\mathbf{v}\cdot \mathbf{w}}{\|\mathbf{v}\|\,\|\mathbf{w}\|} = \frac{\sum_{i} v_i w_i}{\sqrt{\sum_{i}v_i^2}\,\sqrt{\sum_{i}w_i^2}}.
-$$
-
-If standard deviations are "lengths" and correlations are "cosines of angles,"
-the geometric intuition of :numref:`sec_mdl-geometry-linear-algebraic-ops`
-transfers wholesale to random variables: uncorrelated means orthogonal,
-$\rho=\pm1$ means parallel. This is the bridge between linear algebra and
-statistics that PCA and least squares both walk.
+There is also a geometric reading. Centering so $\mu_X=\mu_Y=0$, the
+correlation :eqref:`eq_mdl-cor_def` becomes $\sum_{i,j}x_iy_j\,p_{ij}$ divided
+by the two root-mean-squares, which is exactly the cosine formula of
+:numref:`sec_mdl-geometry-linear-algebraic-ops` with coordinates weighted by
+$p_{ij}$. If standard deviations are "lengths" and correlations are "cosines of
+angles," that section's geometric intuition transfers wholesale to random
+variables: uncorrelated means orthogonal, $\rho=\pm1$ means parallel.
 
 For $n$ variables we collect every pairwise covariance into a single
 **covariance matrix** $\boldsymbol\Sigma$ with entries
 $\Sigma_{ij}=\textrm{Cov}(X_i,X_j)$, so the diagonal holds the variances and the
-off-diagonal the cross-terms. It is symmetric ($\textrm{Cov}$ is) and positive
-semidefinite, since for any weights $\mathbf a$ the scalar
-$\mathbf a^\top\boldsymbol\Sigma\,\mathbf a=\textrm{Var}\bigl(\sum_i a_i
-X_i\bigr)\ge 0$ by the variance-of-a-sum rule :eqref:`eq_mdl-var_sum` (applied
-inductively to expand the $n$-term variance)---the
-$n$-variable face of $\textrm{Var}\ge 0$. The Gaussian $\mathcal
-N(\boldsymbol\mu,\boldsymbol\Sigma)$ is built from exactly this matrix, and
-because $\boldsymbol\Sigma$ is symmetric PSD the spectral theorem
-(:numref:`sec_mdl-eigendecompositions`) diagonalizes it: its density contours are
-ellipses whose axes point along the eigenvectors of $\boldsymbol\Sigma$ with
-half-lengths $\propto\sqrt{\lambda_i}$, the standard deviation along each
-principal direction. We draw and sample these contours when we meet the
-multivariate Gaussian in :numref:`sec_mdl-distributions`
-(:numref:`fig_mdl-prob-mvn-contours`); finding those principal axes *is* PCA.
+off-diagonal the cross-terms. It is symmetric because $\textrm{Cov}$ is. It is
+also positive semidefinite, by a two-line computation that generalizes the
+variance-of-a-sum rule :eqref:`eq_mdl-var_sum`: writing $\bar X_i=X_i-\mu_{X_i}$,
+the deviation of $\sum_i a_iX_i$ is $\sum_i a_i\bar X_i$, and expanding the
+square inside the expectation,
+
+$$
+\textrm{Var}\Bigl(\sum_i a_i X_i\Bigr)
+ = E\Bigl[\Bigl(\sum_i a_i \bar X_i\Bigr)^{\!2}\Bigr]
+ = \sum_{i,j} a_i a_j\,E[\bar X_i \bar X_j]
+ = \sum_{i,j} a_i a_j\,\Sigma_{ij}
+ = \mathbf a^\top \boldsymbol\Sigma\,\mathbf a .
+$$
+
+The left-hand side is a variance and hence non-negative, so
+$\mathbf a^\top\boldsymbol\Sigma\,\mathbf a\ge 0$ for every $\mathbf a$:
+positive semidefiniteness is the $n$-variable face of $\textrm{Var}\ge 0$.
+Because $\boldsymbol\Sigma$ is symmetric PSD, the spectral theorem
+(:numref:`sec_mdl-eigendecompositions`) diagonalizes it. The Gaussian $\mathcal
+N(\boldsymbol\mu,\boldsymbol\Sigma)$ is built from exactly this matrix: its
+density contours are ellipses whose axes point along the eigenvectors of
+$\boldsymbol\Sigma$ with half-lengths $\propto\sqrt{\lambda_i}$, the standard
+deviation along each principal direction, and we draw and sample these contours
+when we meet the multivariate Gaussian in :numref:`sec_mdl-distributions`
+(:numref:`fig_mdl-prob-mvn-contours`). Finding those principal axes *is*
+principal component analysis, PCA (:numref:`sec_mdl-svd-low-rank`), and the same
+deviations-as-vectors geometry underlies least squares
+:eqref:`eq_mdl-least-squares`.
 
 ### Change of Variables for Densities
 
 One last piece of machinery closes the section. When we push a random variable
 through a function $Y=g(X)$, its density is *not*
 simply $p_X\!\big(g^{-1}(y)\big)$: as the map stretches and compresses space the
-density must be re-scaled to keep its total mass at $1$. The re-scaling factor is
-no mystery---we already computed it. The integral change-of-variables theorem of
+density must be re-scaled to keep its total mass at $1$. We already computed
+the re-scaling factor. The integral change-of-variables theorem of
 :numref:`sec_mdl-integral_calculus`, $\int_{\boldsymbol\phi(U)}f(\mathbf
 x)\,d\mathbf x=\int_U f(\boldsymbol\phi(\mathbf x))\,|\det
 D\boldsymbol\phi(\mathbf x)|\,d\mathbf x$ :eqref:`eq_mdl-change_var_nd`, already
@@ -954,9 +1004,18 @@ Jacobian determinant. All a density does is read that theorem with $f=p$ and the
 constraint that the total integral stays $1$: *probability mass in equals
 probability mass out*.
 
-Take the one-dimensional case first, $g$ monotone so it has an inverse. The mass
+Take the one-dimensional case first, $g$ monotone so it has an inverse. The
+intuition is that the mass
 in a tiny interval must survive the map, $p_Y(y)\,|dy| = p_X(x)\,|dx|$ with
 $y=g(x)$; solving for the new density and writing $x=g^{-1}(y)$ gives the
+formula. A derivation needing no infinitesimals takes two lines with tools we
+already have. For increasing $g$ the events $\{g(X)\le y\}$ and
+$\{X\le g^{-1}(y)\}$ coincide, so the c.d.f.s satisfy
+$F_Y(y)=F_X\bigl(g^{-1}(y)\bigr)$; differentiating with the chain rule and
+:eqref:`eq_mdl-cdf_deriv` gives
+$p_Y(y)=p_X\bigl(g^{-1}(y)\bigr)\,\tfrac{dg^{-1}}{dy}(y)$, and for decreasing
+$g$ the event flips to $\{X\ge g^{-1}(y)\}$, producing a minus sign that the
+absolute value absorbs. Either way we obtain the
 **one-dimensional change-of-variables formula**
 
 $$
@@ -967,7 +1026,11 @@ $$
 The derivative factor is exactly the local stretch of the map: where $g$ spreads a
 small interval out, the density must drop to keep the area fixed. In several
 dimensions the scalar stretch $|dg^{-1}/dy|$ becomes the absolute Jacobian
-determinant of :eqref:`eq_mdl-change_var_nd`, and conservation of mass reads
+determinant, by instantiating :eqref:`eq_mdl-change_var_nd` with
+$\boldsymbol\phi=g^{-1}$ and $f=p_X$:
+$P(Y\in A)=P\bigl(X\in g^{-1}(A)\bigr)=\int_{g^{-1}(A)}p_X(\mathbf x)\,d\mathbf x
+=\int_A p_X\bigl(g^{-1}(\mathbf y)\bigr)\,\bigl|\det J_{g^{-1}}(\mathbf y)\bigr|\,d\mathbf y$,
+so the integrand on the right is the density of $Y$. Conservation of mass thus reads
 
 $$
 p_Y(\mathbf y) = p_X\!\big(g^{-1}(\mathbf y)\big)\,\big|\det J_{g^{-1}}(\mathbf y)\big|,
@@ -980,8 +1043,9 @@ $$
 The log form is the one that matters in practice: pushing data through an
 invertible network adds a single $-\log|\det J_g|$ term to the log-density, and
 because $\log|\det(J_2 J_1)| = \log|\det J_1| + \log|\det J_2|$ these terms simply
-*sum* along a composition of layers. That additivity is the entire mathematical
-engine behind **normalizing flows** (:numref:`sec_mdl-continuous-normalizing-flows`).
+*sum* along a composition of layers. That additivity is what makes
+**normalizing flows** :cite:`rezende2015variational` trainable at scale
+(:numref:`sec_mdl-continuous-normalizing-flows`).
 
 As a worked example, let $X\sim\mathcal N(0,1)$ and $Y=e^X$, so $g^{-1}(y)=\log y$
 and $|dg^{-1}/dy| = 1/y$ for $y>0$. Formula :eqref:`eq_mdl-cov_density_1d` gives the
@@ -994,7 +1058,7 @@ $$
 whose $1/y$ prefactor is precisely the change-of-variables correction. The
 prediction is directly checkable: sample $X\sim\mathcal N(0,1)$, push the
 samples through $e^X$, and a histogram of the results should trace out this
-density---$1/y$ correction and all.
+density, $1/y$ correction and all.
 
 ```{.python .input #random-variables-change-of-variables}
 # Push X ~ N(0, 1) through Y = e^X and compare a histogram of the samples
@@ -1011,33 +1075,34 @@ d2l.plot(mids, [hist, analytic], 'y', 'p(y)',
 
 The two curves coincide: the mass pushed forward through $e^x$ piles up exactly
 where :eqref:`eq_mdl-cov_density_1d` says it must, including the mode at
-$y=e^{-1}$ that the naive guess $p_X(\log y)$---which peaks at $y=1$---gets
+$y=e^{-1}$ that the naive guess $p_X(\log y)$ (which peaks at $y=1$) gets
 wrong. A linear map
 $\mathbf y = A\mathbf x$ illustrates the multivariate rule in one stroke: $J_g=A$ is
-constant, so the density is rescaled uniformly by $1/|\det A|$ --- stretch space by
+constant, so the density is rescaled uniformly by $1/|\det A|$; stretch space by
 $|\det A|$ and the density thins by the same factor.
 
 ## Summary
 
 * A continuous random variable is described by a *probability density* $p(x)\ge0$
-  with $\int p\,dx=1$ :eqref:`eq_mdl-pdf_int_one`; the density is not itself a
-  probability---only its integral over an interval is,
-  $P(X\in(a,b])=\int_a^b p$ :eqref:`eq_mdl-pdf_int_int`. Any single point has
-  probability zero.
+  with $\int p\,dx=1$ :eqref:`eq_mdl-density`; the density is not itself a
+  probability; only its integral over an interval is,
+  $P(X\in(a,b])=\int_a^b p$ :eqref:`eq_mdl-pdf_int_int`. Any single point, and
+  more generally any set of *measure zero* (coverable by intervals of
+  arbitrarily small total length), has probability zero.
 * The *cumulative distribution function* $F(x)=\int_{-\infty}^x p=P(X\le x)$ *is*
   a probability and unifies discrete, continuous, and mixed variables. Density and
   c.d.f. are derivative and integral of each other: $F'=p$
   :eqref:`eq_mdl-cdf_deriv`, the fundamental theorem of calculus.
 * The *mean* $\mu_X=E[X]$ locates the distribution and is *linear*
-  :eqref:`eq_mdl-exp_linear`---sums of expectations add with no independence
+  :eqref:`eq_mdl-exp_linear`: sums of expectations add with no independence
   needed. The *variance* $\textrm{Var}(X)=E[X^2]-\mu_X^2$
   :eqref:`eq_mdl-var_comp` measures spread, scales as
   $\textrm{Var}(aX+b)=a^2\textrm{Var}(X)$ :eqref:`eq_mdl-var_affine`, and its root
   is the *standard deviation*, back in the original units.
 * *Markov's inequality* :eqref:`eq_mdl-markov` caps the tail of a non-negative
   variable by its mean; applied to $(X-\mu_X)^2$ it yields *Chebyshev's
-  inequality* :eqref:`eq_mdl-chebyshev`, which reads $\sigma_X$ as a universal
-  yardstick: at most a $1/\alpha^2$ fraction of any distribution lies $\alpha$
+  inequality* :eqref:`eq_mdl-chebyshev`: at most a $1/\alpha^2$ fraction of any
+  distribution lies $\alpha$
   standard deviations or farther from the mean.
 * Several variables are handled by a *joint density*; *marginals* come from
   integrating out the unwanted variables :eqref:`eq_mdl-marginal`. *Covariance*
@@ -1048,17 +1113,17 @@ $|\det A|$ and the density thins by the same factor.
 * Pushing $X$ through an invertible map $g$ rescales its density by the local
   stretch of the map: $p_Y(y)=p_X(g^{-1}(y))\,|dg^{-1}/dy|$
   :eqref:`eq_mdl-cov_density_1d`, with the absolute Jacobian determinant taking
-  over in several dimensions :eqref:`eq_mdl-cov_density`---the log-det form that
+  over in several dimensions :eqref:`eq_mdl-cov_density`, the log-det form that
   powers normalizing flows.
 
 ## Exercises
 1. Suppose $X$ has density $p(x) = \frac{1}{x^2}$ for $x \ge 1$ and $p(x) = 0$ otherwise. Verify it is a density and compute $P(X > 2)$ and the c.d.f. $F(x)$.
 2. The Laplace distribution has density $p(x) = \tfrac12 e^{-|x|}$. Find its mean and standard deviation. (*Hint:* $\int_0^\infty xe^{-x}\,dx = 1$ and $\int_0^\infty x^2e^{-x}\,dx = 2$.)
 3. I claim a random variable with mean $1$ and standard deviation $2$ produced $25\%$ of samples above $9$. Use Chebyshev :eqref:`eq_mdl-chebyshev` to decide whether to believe me.
-4. Two variables $X,Y$ have joint density $p_{XY}(x, y) = 4xy$ on $[0,1]^2$ and $0$ otherwise. Find the marginals $p_X,p_Y$, the covariance $\textrm{Cov}(X,Y)$, and decide whether $X$ and $Y$ are independent.
+4. Two variables $X,Y$ have joint density $p_{XY}(x, y) = x+y$ on $[0,1]^2$ and $0$ otherwise. Verify that it integrates to one, find the marginals $p_X,p_Y$ and the covariance $\textrm{Cov}(X,Y)$, and decide whether $X$ and $Y$ are independent.
 5. Give a second proof of the affine variance rule $\textrm{Var}(aX+b)=a^2\textrm{Var}(X)$ :eqref:`eq_mdl-var_affine`, this time starting from the computational form $\textrm{Var}(aX+b)=E[(aX+b)^2]-E[aX+b]^2$ :eqref:`eq_mdl-var_comp`: expand both expectations with linearity :eqref:`eq_mdl-exp_linear` and watch the cross terms cancel. (The proof in the text instead worked with the deviation $a(X-\mu_X)$.)
 6. Using $\textrm{Var}(X+Y)=\textrm{Var}(X)+\textrm{Var}(Y)+2\textrm{Cov}(X,Y)$ :eqref:`eq_mdl-var_sum`, show that for independent identically distributed $X_1,\ldots,X_n$ with variance $\sigma^2$, the sample mean $\bar X=\tfrac1n\sum_i X_i$ has variance $\sigma^2/n$. (This is why averaging reduces noise.)
-7. Let $Y$ be uniform on $\{-2,-1,0,1,2\}$ and $X=Y^2$. Compute $\textrm{Cov}(X,Y)$ and confirm it is zero even though $X$ is a deterministic function of $Y$. Why does correlation miss this relationship?
+7. Let $X$ be uniform on $\{-1,0,1\}$ and $Y=|X|$. Compute $\textrm{Cov}(X,Y)$ and confirm it is zero even though $Y$ is a deterministic function of $X$. Why does correlation miss this relationship?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/415)
@@ -1093,11 +1158,11 @@ Densities, moments, and joint distributions<br>**the continuous language of deep
 ::: {.cols .vc}
 ::: {.col}
 Pixels, weights, activations, and noise are all continuous. A single
-exact outcome now has probability **zero** — probability lives in
+exact outcome now has probability **zero**: probability lives in
 *areas*, not points.
 
 - Density $p$, mean, variance, covariance, the matrix $\boldsymbol\Sigma$.
-- The toolkit behind SGD, VAEs, normalizing flows, and Bayesian inference.
+- The toolkit behind SGD, normalizing flows, and Bayesian inference.
 
 ::: {.d2l-note}
 The continuous analogue of discrete probability: same ideas, **integration
@@ -1132,7 +1197,7 @@ $$P\bigl(X \in [x, x+\epsilon]\bigr) \approx \epsilon\, p(x).$$
 
 . . .
 
-So $P(X = x) = 0$ for every fixed point, and $p(x)$ may exceed $1$ —
+So $P(X = x) = 0$ for every fixed point, and $p(x)$ may exceed $1$:
 a density is a *rate*, not a probability.
 :::
 
@@ -1164,7 +1229,7 @@ to $1$. The same number two ways: the area under $p$ over $(a,b]$ equals
 the rise $F(b)-F(a)$.
 
 ::: {.d2l-note .rule}
-**Proposition.** If $p$ is continuous, $F'(x) = p(x)$ — the density is
+**Proposition.** If $p$ is continuous, $F'(x) = p(x)$: the density is
 the *slope* of the c.d.f. (fundamental theorem of calculus).
 :::
 :::
@@ -1181,7 +1246,7 @@ the *slope* of the c.d.f. (fundamental theorem of calculus).
 ::: {.cols .vc}
 ::: {.col}
 The c.d.f. covers every kind of variable (staircase, smooth curve,
-mixture), and its inverse $F^{-1}(q)$ — the **quantile function** — turns
+mixture), and its inverse $F^{-1}(q)$, the **quantile function**, turns
 uniform noise into samples from *any* distribution:
 
 ::: {.d2l-note .rule}
@@ -1191,7 +1256,7 @@ then $X = F^{-1}(U)$ has c.d.f. $F$.
 that event probability $F(x)$. $\blacksquare$
 :::
 
-Where $F$ is steep — where the density is large — uniform levels land
+Where $F$ is steep (where the density is large), uniform levels land
 densely: the slope does the shaping.
 :::
 
@@ -1219,8 +1284,8 @@ $\mu_X = \mathbb E[X] = \int x\,p(x)\,dx$.
 
 ::: {.d2l-note .rule}
 **Proposition.** $\mathbb E[aX+b] = a\,\mathbb E[X] + b$ and
-$\mathbb E[X+Y] = \mathbb E[X] + \mathbb E[Y]$ — **no independence
-needed**.
+$\mathbb E[X+Y] = \mathbb E[X] + \mathbb E[Y]$ (**no independence
+needed**).
 :::
 
 The sum rule follows by splitting the joint expectation through the
@@ -1259,12 +1324,12 @@ $$P(X \ge a) \le \frac{\mathbb E[X]}{a}.$$
 and use $\mathbb E[\mathbf 1_{\{X\ge a\}}] = P(X\ge a)$. $\blacksquare$
 
 ::: {.d2l-note}
-No distributional assumption at all — it bounds gradient norms, incomes,
+No distributional assumption at all: it bounds gradient norms, incomes,
 and file sizes alike.
 :::
 :::
 
-::: {.slide title="Chebyshev: σ is a yardstick"}
+::: {.slide title="Chebyshev: σ sets the scale"}
 [Tail bounds]{.kicker}
 
 ::: {.cols .vc}
@@ -1276,7 +1341,7 @@ $$P\bigl(|X-\mu_X| \ge \alpha\,\sigma_X\bigr) \le \frac{1}{\alpha^2}.$$
 *Proof.* Apply Markov to $Z = (X-\mu_X)^2$ with $a = \alpha^2\sigma_X^2$.
 $\blacksquare$
 
-The bound is **sharp** — the three-atom example attains equality at
+The bound is **sharp**: the three-atom example attains equality at
 $p=\tfrac18$.
 :::
 
@@ -1292,7 +1357,7 @@ $p=\tfrac18$.
 For $p(x) = \dfrac{1}{\pi(1+x^2)}$ both summaries fail, at two speeds.
 The variance integrand tends to $\tfrac1\pi$, so
 $\int_{-R}^{R} x^2 p\,dx = \tfrac{2}{\pi}(R - \arctan R)$ grows
-**linearly** — watch it multiply by ten per decade:
+**linearly**, multiplying by ten per decade:
 
 @!random-variables-cauchy-diverges
 
@@ -1300,9 +1365,10 @@ $\int_{-R}^{R} x^2 p\,dx = \tfrac{2}{\pi}(R - \arctan R)$ grows
 
 The mean fails more subtly: the odd integrand tempts "$0$ by symmetry,"
 but a mean needs $\int |x|\,p\,dx < \infty$, and *that* integral
-diverges like $\tfrac{1}{\pi}\log(1+R^2)$ — a meaningless
-$\infty - \infty$, not merely infinite. Absolute integrability, not
-symmetry, is what a finite mean requires.
+diverges like $\tfrac{1}{\pi}\log(1+R^2)$. The mean is a meaningless
+$\infty - \infty$ whose value depends on how the limits are taken.
+Absolute integrability is what a finite mean requires; symmetry alone
+proves nothing.
 :::
 
 ::: {.slide}
@@ -1345,7 +1411,7 @@ Slice the joint at $Y=y$ and renormalize:
 $$p_{X\mid Y}(x\mid y) = \frac{p_{X,Y}(x,y)}{p_Y(y)}.$$
 
 Chain rule $p_{X,Y} = p_{X\mid Y}\,p_Y$ gives **Bayes' rule** for
-densities. $X \perp Y$ exactly when the joint factorizes — the slice
+densities. $X \perp Y$ exactly when the joint factorizes: the slice
 shape stops depending on $y$.
 :::
 
@@ -1369,8 +1435,8 @@ $\operatorname{Var}(X) = \mathbb E[\operatorname{Var}(X\mid Y)] +
 :::
 
 Total variance = **unexplained** (within-slice spread) +
-**explained** (spread of slice means) — the engine of ANOVA and every
-latent-variable model.
+**explained** (spread of slice means): the decomposition behind ANOVA
+and latent-variable models.
 :::
 
 ::: {.slide title="Covariance"}
@@ -1410,8 +1476,8 @@ quadratic in $t$; its discriminant gives
 $\operatorname{Cov}^2 \le \operatorname{Var}(X)\operatorname{Var}(Y)$,
 with equality iff $Y = aX+b$. $\blacksquare$
 
-So $\rho = \cos\theta$ between centered variables — Cauchy–Schwarz in
-probabilistic dress.
+So $\rho = \cos\theta$ between centered variables, by the same
+Cauchy–Schwarz argument.
 :::
 
 ::: {.col .fig}
@@ -1429,8 +1495,8 @@ $\mathbf a^\top\Sigma\,\mathbf a = \operatorname{Var}\bigl(\textstyle\sum_i a_i 
 
 ::: {.d2l-note .rule}
 Gaussian contours are ellipses whose axes are the **eigenvectors** of
-$\Sigma$ with half-lengths $\propto\sqrt{\lambda_i}$ — finding them is
-PCA (§22 spectral theorem in action).
+$\Sigma$ with half-lengths $\propto\sqrt{\lambda_i}$: finding them is
+PCA (the spectral theorem in action).
 :::
 :::
 
@@ -1474,8 +1540,8 @@ moves the true peak to $y=e^{-1}$.
 ::: {.col}
 - Density $p\ge 0$, $\int p = 1$; probability is area; $F'=p$ (FTC).
 - $\mathbb E$ is linear (no independence); $\operatorname{Var}=\mathbb E[X^2]-\mu^2$.
-- $\sigma$ is a Chebyshev yardstick: $P(|X-\mu|\ge\alpha\sigma)\le1/\alpha^2$, and it is sharp.
-- Cauchy: check integrability, not just symmetry.
+- Chebyshev: $P(|X-\mu|\ge\alpha\sigma)\le1/\alpha^2$ for any distribution, and it is sharp.
+- Cauchy: a finite mean needs $\int|x|\,p\,dx<\infty$; symmetry alone proves nothing.
 :::
 
 ::: {.col}
@@ -1487,7 +1553,7 @@ moves the true peak to $y=e^{-1}$.
 :::
 
 ::: {.d2l-note}
-Next: the **named distributions** — the specific shapes this machinery
+Next: the **named distributions**, the specific shapes this machinery
 describes.
 :::
 :::

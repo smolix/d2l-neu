@@ -19,14 +19,14 @@ mdl-svd-low-rank
 
 ## Resources and Further Reading
 
-The references below go deeper on the geometry, decompositions, and numerical machinery sketched in this chapter, with an emphasis on the linear algebra that actually shows up in machine and deep learning; all are freely accessible online except where noted.
+The references below go deeper on the geometry, decompositions, and numerical machinery sketched in this chapter, with an emphasis on the linear algebra that actually shows up in machine and deep learning; most are freely accessible online.
 
 **Books**
 
 - [Mathematics for Machine Learning — Deisenroth, Faisal & Ong](https://mml-book.github.io/) — free PDF; chapters 2 (Linear Algebra), 3 (Analytic Geometry), and 4 (Matrix Decompositions) are the most ML-aligned treatment of exactly this material.
 - [Introduction to Applied Linear Algebra: Vectors, Matrices, and Least Squares (VMLS) — Boyd & Vandenberghe](https://web.stanford.edu/~boyd/vmls/) — free PDF, slides, and code; an applications-first text built around least squares and data, ideal for building intuition before the abstraction.
 - [Linear Algebra and Learning from Data — Gilbert Strang](https://math.mit.edu/~gs/learningfromdata/) — the SVD-centric companion to MIT 18.065; written specifically around matrix methods for signal processing and deep learning. Of the two Strang books, read this one second: it assumes the foundations and matches this chapter's SVD and low-rank material most closely.
-- [Introduction to Linear Algebra, 6th ed. — Gilbert Strang](https://math.mit.edu/~gs/linearalgebra/ila6/indexila6.html) — the classic foundational text (sample chapters and problems online); the standard first pass on the four subspaces, eigenvalues, and the SVD, and the Strang book to start with.
+- [Introduction to Linear Algebra, 6th ed. — Gilbert Strang](https://math.mit.edu/~gs/linearalgebra/ila6/indexila6.html) — the classic foundational text (a commercial book; sample chapters and problems are online); the standard first pass on the four subspaces, eigenvalues, and the SVD, and the Strang book to start with.
 - [Linear Algebra Done Right, 4th ed. — Sheldon Axler](https://linear.axler.net/) — free, open-access; a rigorous, determinant-free path to eigenvalues and the spectral theorem for readers who want the proofs.
 - [Numerical Linear Algebra — Trefethen & Bau](https://people.maths.ox.ac.uk/trefethen/text.html) — the reference on conditioning, stability, QR, and how the SVD and eigendecomposition are actually computed in floating point.
 

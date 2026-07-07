@@ -11,13 +11,7 @@
     "integral-imports": {
       "code_fingerprint": "sha256:6719e2772e211cd908133061dabf83c6d44ed4216294f37e1016ca1c4be25ced",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "Matplotlib is building the font cache; this may take a moment.\n"
-        }
-      ]
+      "outputs": []
     },
     "integral-riemann-converge": {
       "code_fingerprint": "sha256:e580fd88b8f4125a1574cd4d14aacf2d719074185cd5969c67bf7f351c91a669",
@@ -53,18 +47,18 @@
       ]
     },
     "integral-box-volume": {
-      "code_fingerprint": "sha256:42ffab0277932d70f330764426b4fc3f60d29768e6438df76d7b1df6ad6e553c",
+      "code_fingerprint": "sha256:a7645e1a7c39d105daef4388d157ad8a129c42544ecd08e8b4625dc24764817e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Riemann volume over the box [-2, 2]^2 : 3.11227\nexact: pi*erf(2)^2 = 3.11227 over the box;  pi = 3.14159 over the plane\n"
+          "text": "Riemann volume over the box [-2, 2]^2 : 3.11227\nexact volume  pi * erf(2)^2           : 3.11227\n"
         }
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:71118ef8e6fd98bac9615f22e1e7c5e041bcd0bd6740795d8a07be55f3883434",
+      "code_fingerprint": "sha256:932bc183751d8aadd7a0e15cb5d0b1a08d74b8d0471ea3d05f0e222e14ef2038",
       "kind": "text",
       "outputs": [
         {
@@ -75,7 +69,7 @@
       ]
     },
     "integral-density": {
-      "code_fingerprint": "sha256:ea3150cef9477966f27e0ce884620ee31d99286958ceccbbf4dbfce9cabf8278",
+      "code_fingerprint": "sha256:ef2314d4b16a68d91f7645f4f82fb5b3052eafc8b9bc77f99622b089dcc7fb81",
       "kind": "text",
       "outputs": [
         {
@@ -86,20 +80,20 @@
       ]
     },
     "integral-monte-carlo": {
-      "code_fingerprint": "sha256:4ec65f348ce26c65e793c1cddc791d3e809dd78c8309e9b1f8d9756f322d3857",
+      "code_fingerprint": "sha256:cec7d75f321d198d7751f1cfac33cc0ea62719344d193cfd5d3d785e186ce0d9",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=10      Monte Carlo=0.87741  error=1.3e-01\nn=100     Monte Carlo=0.73200  error=1.5e-02\nn=1000    Monte Carlo=0.74470  error=2.1e-03\nn=10000   Monte Carlo=0.74809  error=1.3e-03\nn=100000  Monte Carlo=0.74682  error=3.1e-06\nmidpoint quadrature  =0.74682\n"
+          "text": "n=10      Monte Carlo=0.87741  error=1.3e-01\nn=100     Monte Carlo=0.75454  error=7.7e-03\nn=1000    Monte Carlo=0.74619  error=6.3e-04\nn=10000   Monte Carlo=0.74833  error=1.5e-03\nn=100000  Monte Carlo=0.74719  error=3.7e-04\nmidpoint quadrature  =0.74682\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
-          "bytes": 43736,
-          "sha256": "sha256:bea4044899e160b30acd7d6a00b23541d992e8187d09f73444226fa87bd04fb9"
+          "bytes": 44497,
+          "sha256": "sha256:dff2a43a44f04b9b4f0071a1ac1a9fd3a6eb2fa05f66dc6ea3353732c2813ff4"
         }
       ]
     }

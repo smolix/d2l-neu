@@ -20,7 +20,7 @@ mdl-integral-calculus
 
 ## Resources and Further Reading
 
-If you want to go deeper, the following—from refreshers on single-variable calculus to the matrix calculus and automatic-differentiation machinery behind backpropagation—are the canonical references we recommend.
+If you want to go deeper, the following are the canonical references we recommend, from refreshers on single-variable calculus to the matrix calculus and automatic-differentiation machinery behind backpropagation.
 
 **Books**
 

@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0000001192092896\none sample -> class 1\n"
+          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0\none sample -> class 1\n"
         }
       ]
     },
@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:7c0e42b61a79c21afc494ad040f3dbdfacd6ef231f0a7642931bf0aaf2b56e45"
+          "sha256": "sha256:b47f67fb7b5fabafca70e1208403db0cd15616408e001f4f459b03dd8f9cd3a9"
         }
       ]
     },
@@ -111,7 +111,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1/lambda = 2.0   sample mean = 2.0006930828094482\nvar 1/lambda^2 = 4.0  sample var = 4.040887832641602\n"
+          "text": "mean 1/lambda = 2.0   sample mean = 2.0006933212280273\nvar 1/lambda^2 = 4.0  sample var = 4.040887832641602\n"
         }
       ]
     },
@@ -124,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:671630c1ce9a51193ee5cf91980092112c986a65db273a10448cbfb13c3395bb"
+          "sha256": "sha256:faad99a13036a6157e2194ad8ab7af7a2dd97395e3926257e26f76dc4a20af53"
         }
       ]
     },
@@ -155,18 +155,23 @@
       ]
     },
     "distributions-mvn": {
-      "code_fingerprint": "sha256:16e9cfaebfdd82d09b9943e05b3f333deaaff7ec213af5c0a84c129762e8333e",
+      "code_fingerprint": "sha256:e3a49f3f5c05078cfdf74d788f70f42133073de327c703597323b5cce248522f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "empirical covariance:\n [[2.   1.  ]\n [1.   2.01]]\neigenvalues (≈ 1, 3): [1.01 3.  ]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Cholesky-recipe covariance:\n [[2.04 1.04]\n [1.04 2.05]]\n"
         }
       ]
     },
     "mdl-distributions-multivariate-gaussian-1": {
-      "code_fingerprint": "sha256:d033c8a071f693a4df24bf205ce2605cc97b60c0d39997f8bab7ddeddc83ab3d",
+      "code_fingerprint": "sha256:bac93e95630387bda1722edb48acffd748bd2f594dfe4a238330102fef10b997",
       "kind": "text",
       "outputs": [
         {
@@ -177,7 +182,7 @@
       ]
     },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:65cdce7b693528cabd4dd8c6f5c4fbf3488bfee1ebc84ccc9bd464a198310137",
+      "code_fingerprint": "sha256:495431f7fc696a09145cc459ecbbd54aea604c3e4e844d84ec2343d0e1256120",
       "kind": "text",
       "outputs": [
         {
@@ -188,7 +193,7 @@
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:d54b1cce335f69d534cebde4030581f4070d761be065bdac9e7a2a8ce437382e",
+      "code_fingerprint": "sha256:704ecc8e7cda946e4e319fefdb5da4573a8883d84dd299a37efa3dee718edfae",
       "kind": "text",
       "outputs": [
         {

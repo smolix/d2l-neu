@@ -9,43 +9,43 @@
   },
   "cells": {
     "statistics-imports": {
-      "code_fingerprint": "sha256:b49f3a3ea258cdd92c1492069748b735fee2f68fa14fdf528d3147a5bda448ef",
+      "code_fingerprint": "sha256:7027aa113d7a759e5d4a149a7140c3002b6ab07d0a56fdd8814b66ec50639911",
       "kind": "text",
       "outputs": []
     },
     "statistics-estimator-metrics": {
-      "code_fingerprint": "sha256:1419e9d050adec1ad1f7c0d734103b185a238ca3ecbb9c35fa282d489f55aba3",
+      "code_fingerprint": "sha256:25564bd5dc184ce1d4d11e7bb25116e449d13f26991ef82825ce3d375ffedbe1",
       "kind": "text",
       "outputs": []
     },
     "statistics-sampling-distribution": {
-      "code_fingerprint": "sha256:756c8cf118504b219408ea971316cdd2d35bf8879d0f91d9118d635b76b8a870",
+      "code_fingerprint": "sha256:e5a15f855b054cd986452212cd306fbe98da47fee9909bab081d4326b237508e",
       "kind": "text",
       "outputs": []
     },
     "statistics-verify-decomposition": {
-      "code_fingerprint": "sha256:c14bf00c1ac409120e6ffb0a67c9d71cee250d5a324dfa03dd6a1401e870220b",
+      "code_fingerprint": "sha256:449eb6758ef539b036a37e327e27803129fdeab63607f9155f5daca5d7f3f5a5",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(0.5317), tensor(0.5317))"
+          "text": "(tensor(0.5337), tensor(0.5337))"
         }
       ]
     },
     "statistics-unbiased-variance": {
-      "code_fingerprint": "sha256:eb1a7acbb529155e829a622abb02478eb005d39dc8348bfd51f466b5bef435f2",
+      "code_fingerprint": "sha256:37dcf615befc8b45865b9e2dfe3e2189ee9e67b6aa59cf69ef64e9d0b5f68971",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance    = 4\nE[divide by n]   = 2.666  (biased)\nE[divide by n-1] = 3.999  (unbiased)\n"
+          "text": "true variance    = 4\nE[divide by n]   = 2.664  (biased)\nE[divide by n-1] = 3.996  (unbiased)\n"
         }
       ]
     },
     "statistics-permutation-test": {
-      "code_fingerprint": "sha256:80031c13c10cb701ab23657ea9f80a80925f0bdbe572056dddeddcc949402de7",
+      "code_fingerprint": "sha256:abe8ba3b75e46585697544660a260e9f07a10bc1254206a7276a51cf073e33a0",
       "kind": "mixed",
       "outputs": [
         {
@@ -58,22 +58,22 @@
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/statistics-permutation-test-1.svg",
           "bytes": 32404,
-          "sha256": "sha256:37bbdc9bf2ce8866dc15b1591482e386153f3cd6f7f92333883780411347512d"
+          "sha256": "sha256:2c4d789a29e673472f40b361a70508cbb3969ede6c9c37fd0bd26b8ce41d6565"
         }
       ]
     },
     "statistics-confidence-interval": {
-      "code_fingerprint": "sha256:b1d60919a2f4902adbd7a35b591651fe8ae0a8c025fc83a86518146c1aea22cf",
+      "code_fingerprint": "sha256:303236a527717b6dc7280322cc660e4f044a919dbac025e9ed47f7238454ca31",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(-0.0927), tensor(0.0255))"
+          "text": "(tensor(-0.0350), tensor(0.0928))"
         }
       ]
     },
     "mdl-statistics-a-gaussian-example-1": {
-      "code_fingerprint": "sha256:cd32b21118b3f24054b1d36b15b79071da7c2d5061edf28de5836bfd68b5d4d5",
+      "code_fingerprint": "sha256:237c8276d1d606fe963419a98c9af9099ca22b2ca0d8e47355c18e0dd491292c",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "statistics-bootstrap": {
-      "code_fingerprint": "sha256:403626148b5a79439d27d3eb9113392dbe4a11095c2e75ccf02326ecfd4df6fb",
+      "code_fingerprint": "sha256:f64a6be450fb9b7c6684163d363242451acd7394ac3729206da9191de3531c92",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +95,7 @@
       ]
     },
     "statistics-bootstrap-contrast": {
-      "code_fingerprint": "sha256:ac2902dd88b95b50db90074ae2f73e92d73037b5648c9bd5011e96c750d04237",
+      "code_fingerprint": "sha256:9b0740682c7f4560f24968b757915763bbe2ceab8470274d96b174c3f0f8c0da",
       "kind": "text",
       "outputs": [
         {

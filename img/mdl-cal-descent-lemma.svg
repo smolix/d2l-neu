@@ -310,7 +310,7 @@ z
    </g>
    <g id="text_2">
     <!-- $x-f'(x)/L$  ($\eta=1/L$) -->
-    <g style="fill: #7f7f7f" transform="translate(105.696746 245.477462) scale(0.1 -0.1)">
+    <g style="fill: #7f7f7f" transform="translate(100.791746 246.257462) scale(0.11 -0.11)">
      <defs>
       <path id="Cmsy10-a1" d="M 653 1472 
 Q 600 1472 565 1512 
@@ -527,17 +527,17 @@ L 152.346746 126.220407
 " style="fill: none; stroke: #ff7f0e; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
    <g id="patch_6">
-    <path d="M 148.997932 38.768914 
-Q 132.638551 77.403433 149.929331 115.871049 
+    <path d="M 148.763882 39.023713 
+Q 132.691382 77.537028 149.92942 115.872191 
 " style="fill: none; stroke: #ff7f0e; stroke-linecap: round"/>
-    <path d="M 150.113613 111.402712 
-L 149.929331 115.871049 
-L 146.46523 113.042621 
+    <path d="M 150.131406 110.95699 
+L 149.92942 115.872191 
+L 146.118451 112.761481 
 " style="fill: none; stroke: #ff7f0e; stroke-linecap: round"/>
    </g>
    <g id="text_3">
     <!-- guaranteed drop $f'(x)^2/2L\approx 0.341$ -->
-    <g style="fill: #ff7f0e" transform="translate(71.054737 32.434759) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(62.814737 32.434759) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-67" d="M 2906 1791 
 Q 2906 2416 2648 2759 
@@ -1048,17 +1048,17 @@ L 152.346746 163.861123
 " style="fill: none; stroke: #1f77b4; stroke-width: 1.8; stroke-linecap: round"/>
    </g>
    <g id="patch_8">
-    <path d="M 118.696039 144.532004 
-Q 134.111508 144.876619 148.341604 150.6606 
+    <path d="M 118.69293 144.291006 
+Q 134.103376 144.878766 148.340591 150.661864 
 " style="fill: none; stroke: #1f77b4; stroke-linecap: round"/>
-    <path d="M 145.3891 147.301624 
-L 148.341604 150.6606 
-L 143.882921 151.007217 
+    <path d="M 145.091996 146.96773 
+L 148.340591 150.661864 
+L 143.436126 151.044259 
 " style="fill: none; stroke: #1f77b4; stroke-linecap: round"/>
    </g>
    <g id="text_4">
     <!-- actual drop -->
-    <g style="fill: #1f77b4" transform="translate(58.018109 152.956341) scale(0.1 -0.1)">
+    <g style="fill: #1f77b4" transform="translate(52.351077 153.232278) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-63" d="M 3122 3366 
 L 3122 2828 

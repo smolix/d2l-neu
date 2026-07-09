@@ -8924,7 +8924,7 @@ L 400.742813 240.048
    </g>
    <g id="text_16">
     <!-- infeasible -->
-    <g style="fill: #7f7f7f" transform="translate(202.838016 24.321176) scale(0.105 -0.105)">
+    <g style="fill: #7f7f7f" transform="translate(136.292331 67.750844) scale(0.13 -0.13)">
      <defs>
       <path id="DejaVuSans-69" d="M 603 3500 
 L 1178 3500 
@@ -9038,7 +9038,7 @@ L 400.742813 50.490186
    </g>
    <g id="text_17">
     <!-- DPI ceiling $I(X;Y) = -\frac{1}{2}\log(1-\rho^2) \approx 0.830$ -->
-    <g style="fill: #7f7f7f" transform="translate(213.245812 41.572974) scale(0.095 -0.095)">
+    <g style="fill: #7f7f7f" transform="translate(107.522813 40.547974) scale(0.12 -0.12)">
      <defs>
       <path id="DejaVuSans-44" d="M 1259 4147 
 L 1259 519 
@@ -9642,7 +9642,7 @@ z
    </g>
    <g id="text_18">
     <!-- $\beta = 1.5$ -->
-    <g style="fill: #ff7f0e" transform="translate(97.69423 182.85777) scale(0.09 -0.09)">
+    <g style="fill: #ff7f0e" transform="translate(97.69423 182.85777) scale(0.12 -0.12)">
      <defs>
       <path id="Cmmi10-af" d="M 172 -1241 
 Q 153 -1241 137 -1219 
@@ -9766,7 +9766,7 @@ z
    </g>
    <g id="text_19">
     <!-- $\beta = 2$ -->
-    <g style="fill: #ff7f0e" transform="translate(138.965387 136.57042) scale(0.09 -0.09)">
+    <g style="fill: #ff7f0e" transform="translate(138.965387 136.57042) scale(0.12 -0.12)">
      <use xlink:href="#Cmmi10-af" transform="translate(0 0.484375)"/>
      <use xlink:href="#Cmr10-3d" transform="translate(74.052734 0.484375)"/>
      <use xlink:href="#Cmr10-32" transform="translate(169.296875 0.484375)"/>
@@ -9774,7 +9774,7 @@ z
    </g>
    <g id="text_20">
     <!-- $\beta = 4$ -->
-    <g style="fill: #ff7f0e" transform="translate(204.380697 90.295945) scale(0.09 -0.09)">
+    <g style="fill: #ff7f0e" transform="translate(204.380697 90.295945) scale(0.12 -0.12)">
      <defs>
       <path id="Cmr10-34" d="M 178 1056 
 L 178 1281 
@@ -9811,7 +9811,7 @@ z
    </g>
    <g id="text_21">
     <!-- $\beta = 16$ -->
-    <g style="fill: #ff7f0e" transform="translate(299.978687 64.872512) scale(0.09 -0.09)">
+    <g style="fill: #ff7f0e" transform="translate(296.978687 79.872512) scale(0.12 -0.12)">
      <defs>
       <path id="Cmr10-36" d="M 1600 -141 
 Q 1203 -141 937 70 
@@ -9876,17 +9876,17 @@ z
     </g>
    </g>
    <g id="patch_5">
-    <path d="M 124.688504 216.817572 
-Q 85.11678 228.157364 46.834785 239.127567 
+    <path d="M 124.164079 219.586547 
+Q 84.863097 229.570934 46.862449 239.224973 
 " style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 51.011159 239.907247 
-L 46.834785 239.127567 
-L 49.964353 236.254276 
+    <path d="M 52.105613 240.369189 
+L 46.862449 239.224973 
+L 50.923721 235.716971 
 " style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_22">
     <!-- collapse for $\beta \leq 1/\rho^2 \approx 1.23$: -->
-    <g style="fill: #ff7f0e" transform="translate(109.094812 200.854214) scale(0.095 -0.095)">
+    <g style="fill: #ff7f0e" transform="translate(109.094812 200.151949) scale(0.12 -0.12)">
      <defs>
       <path id="DejaVuSans-6f" d="M 1959 3097 
 Q 1497 3097 1228 2736 
@@ -10036,7 +10036,7 @@ z
      <use xlink:href="#DejaVuSans-3a" transform="translate(1270.356406 0.109375)"/>
     </g>
     <!-- $I(X;Z) = I(Y;Z) = 0$ -->
-    <g style="fill: #ff7f0e" transform="translate(109.094812 211.891433) scale(0.095 -0.095)">
+    <g style="fill: #ff7f0e" transform="translate(109.094812 214.093699) scale(0.12 -0.12)">
      <use xlink:href="#Cmmi10-49"/>
      <use xlink:href="#Cmr10-28" transform="translate(43.896484 0)"/>
      <use xlink:href="#Cmmi10-58" transform="translate(82.714844 0)"/>
@@ -10102,15 +10102,28 @@ L 400.922034 51.686435
 " clip-path="url(#p33b198b6bb)" style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
    </g>
    <g id="legend_1">
+    <g id="patch_6">
+     <path d="M 316.369453 132.021109 
+L 394.092813 132.021109 
+Q 395.992813 132.021109 395.992813 130.121109 
+L 395.992813 117.126891 
+Q 395.992813 115.226891 394.092813 115.226891 
+L 316.369453 115.226891 
+Q 314.469453 115.226891 314.469453 117.126891 
+L 314.469453 130.121109 
+Q 314.469453 132.021109 316.369453 132.021109 
+z
+" style="fill: #ffffff; opacity: 0.9"/>
+    </g>
     <g id="line2d_16">
-     <path d="M 322.610156 122.957438 
-L 331.610156 122.957438 
-L 340.610156 122.957438 
+     <path d="M 318.269453 122.920406 
+L 327.769453 122.920406 
+L 337.269453 122.920406 
 " style="fill: none; stroke: #1f77b4; stroke-width: 2.4; stroke-linecap: square"/>
     </g>
     <g id="text_23">
      <!-- IB frontier -->
-     <g transform="translate(347.810156 126.107438) scale(0.09 -0.09)">
+     <g transform="translate(344.869453 126.245406) scale(0.095 -0.095)">
       <defs>
        <path id="DejaVuSans-42" d="M 1259 2228 
 L 1259 519 

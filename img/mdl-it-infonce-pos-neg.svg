@@ -70,7 +70,7 @@ L 164.177851 91.150107
    </g>
    <g id="text_1">
     <!-- anchor $x$ -->
-    <g style="fill: #1f77b4" transform="translate(22.546302 136.888003) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(21.458802 137.267925) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-61" d="M 2194 1759 
 Q 1497 1759 1228 1600 
@@ -278,7 +278,7 @@ z
    </g>
    <g id="text_2">
     <!-- positive $y^+ \sim p(y \mid x)$ -->
-    <g style="fill: #ff7f0e" transform="translate(119.670496 75.922173) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(117.232996 75.797173) scale(0.105 -0.105)">
      <defs>
       <path id="DejaVuSans-70" d="M 1159 525 
 L 1159 -1331 
@@ -653,7 +653,7 @@ z
    </g>
    <g id="text_3">
     <!-- negatives $y_2, \ldots, y_N \sim p(y)$ -->
-    <g style="fill: #7f7f7f" transform="translate(140.040331 190.815495) scale(0.1 -0.1)">
+    <g style="fill: #7f7f7f" transform="translate(137.030331 191.195495) scale(0.105 -0.105)">
      <defs>
       <path id="DejaVuSans-67" d="M 2906 1791 
 Q 2906 2416 2648 2759 
@@ -852,7 +852,7 @@ z
    </g>
    <g id="text_4">
     <!-- scores $f(x, y_j)$ -->
-    <g style="fill: #7f7f7f" transform="translate(76.433109 158.28319) scale(0.1 -0.1)">
+    <g style="fill: #7f7f7f" transform="translate(74.763109 158.65819) scale(0.105 -0.105)">
      <defs>
       <path id="Cmmi10-66" d="M 622 -1056 
 Q 741 -1147 909 -1147 
@@ -1937,7 +1937,7 @@ L 520.56 226.835297
    </g>
    <g id="text_20">
     <!-- $I(X;Y) \geq \log N - \mathcal{L}_{\mathrm{NCE}} \;(\leq \log N)$ -->
-    <g transform="translate(339.733884 30.541577) scale(0.105 -0.105)">
+    <g transform="translate(336.173884 30.666577) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-49" d="M 269 0 
 Q 206 0 206 84 

@@ -373,14 +373,14 @@ L 330.84 206.784
    </g>
    <g id="legend_1">
     <g id="line2d_9">
-     <path d="M 219.6 18.99 
-L 228.6 18.99 
-L 237.6 18.99 
+     <path d="M 194.88 21.61 
+L 205.88 21.61 
+L 216.88 21.61 
 " style="fill: none; stroke: #7f7f7f; stroke-width: 2; stroke-linecap: square"/>
     </g>
     <g id="text_6">
      <!-- Uniform on $[-2,2]$ -->
-     <g transform="translate(244.8 22.14) scale(0.09 -0.09)">
+     <g transform="translate(225.68 25.46) scale(0.11 -0.11)">
       <defs>
        <path id="DejaVuSans-55" d="M 556 4666 
 L 1191 4666 
@@ -637,14 +637,14 @@ z
      </g>
     </g>
     <g id="line2d_10">
-     <path d="M 219.6 32.76 
-L 228.6 32.76 
-L 237.6 32.76 
+     <path d="M 194.88 38.44 
+L 205.88 38.44 
+L 216.88 38.44 
 " style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_7">
      <!-- $\mathcal{N}(0,1)$ -->
-     <g transform="translate(244.8 35.91) scale(0.09 -0.09)">
+     <g transform="translate(225.68 42.29) scale(0.11 -0.11)">
       <defs>
        <path id="Cmsy10-4e" d="M -184 13 
 Q -184 131 -103 322 
@@ -808,14 +808,14 @@ z
      </g>
     </g>
     <g id="line2d_11">
-     <path d="M 219.6 46.35 
-L 228.6 46.35 
-L 237.6 46.35 
+     <path d="M 194.88 55.05 
+L 205.88 55.05 
+L 216.88 55.05 
 " style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_8">
      <!-- Laplace, var $1$ -->
-     <g transform="translate(244.8 49.5) scale(0.09 -0.09)">
+     <g transform="translate(225.68 58.9) scale(0.11 -0.11)">
       <defs>
        <path id="DejaVuSans-4c" d="M 628 4666 
 L 1259 4666 

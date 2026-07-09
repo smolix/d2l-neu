@@ -2193,15 +2193,28 @@ z
     </g>
    </g>
    <g id="legend_1">
+    <g id="patch_7">
+     <path d="M 46.948438 70.996953 
+L 231.457734 70.996953 
+Q 233.357734 70.996953 233.357734 69.096953 
+L 233.357734 13.85 
+Q 233.357734 11.95 231.457734 11.95 
+L 46.948438 11.95 
+Q 45.048438 11.95 45.048438 13.85 
+L 45.048438 69.096953 
+Q 45.048438 70.996953 46.948438 70.996953 
+z
+" style="fill: #ffffff; opacity: 0.9"/>
+    </g>
     <g id="line2d_18">
-     <path d="M 47.948438 18.333672 
-L 56.448438 18.333672 
-L 64.948438 18.333672 
+     <path d="M 48.848438 19.643516 
+L 58.348438 19.643516 
+L 67.848438 19.643516 
 " style="fill: none; stroke: #7f7f7f; stroke-width: 2; stroke-linecap: square"/>
     </g>
     <g id="text_18">
      <!-- true $I(X;Y)$ -->
-     <g transform="translate(71.748438 21.308672) scale(0.085 -0.085)">
+     <g transform="translate(75.448438 22.968516) scale(0.095 -0.095)">
       <use xlink:href="#DejaVuSans-74"/>
       <use xlink:href="#DejaVuSans-72" transform="translate(39.208984 0)"/>
       <use xlink:href="#DejaVuSans-75" transform="translate(80.322266 0)"/>
@@ -2216,14 +2229,14 @@ L 64.948438 18.333672
      </g>
     </g>
     <g id="line2d_19">
-     <path d="M 47.948438 31.168672 
-L 56.448438 31.168672 
-L 64.948438 31.168672 
+     <path d="M 48.848438 33.988516 
+L 58.348438 33.988516 
+L 67.848438 33.988516 
 " style="fill: none; stroke: #1f77b4; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_19">
      <!-- InfoNCE (low var., $\leq \log N$) -->
-     <g transform="translate(71.748438 34.143672) scale(0.085 -0.085)">
+     <g transform="translate(75.448438 37.313516) scale(0.095 -0.095)">
       <defs>
        <path id="DejaVuSans-49" d="M 628 4666 
 L 1259 4666 
@@ -2371,14 +2384,14 @@ z
      </g>
     </g>
     <g id="line2d_20">
-     <path d="M 47.948438 43.662344 
-L 56.448438 43.662344 
-L 64.948438 43.662344 
+     <path d="M 48.848438 47.952031 
+L 58.348438 47.952031 
+L 67.848438 47.952031 
 " style="fill: none; stroke: #2ca02c; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_20">
      <!-- Barber-Agakov (low var., biased) -->
-     <g transform="translate(71.748438 46.637344) scale(0.085 -0.085)">
+     <g transform="translate(75.448438 51.277031) scale(0.095 -0.095)">
       <defs>
        <path id="DejaVuSans-42" d="M 1259 2228 
 L 1259 519 
@@ -2519,14 +2532,14 @@ z
      </g>
     </g>
     <g id="line2d_21">
-     <path d="M 47.948438 56.13875 
-L 56.448438 56.13875 
-L 64.948438 56.13875 
+     <path d="M 48.848438 61.89625 
+L 58.348438 61.89625 
+L 67.848438 61.89625 
 " style="fill: none; stroke: #ff7f0e; stroke-width: 2.2; stroke-linecap: square"/>
     </g>
     <g id="text_21">
      <!-- NWJ / DV (MINE): high variance -->
-     <g transform="translate(71.748438 59.11375) scale(0.085 -0.085)">
+     <g transform="translate(75.448438 65.22125) scale(0.095 -0.095)">
       <defs>
        <path id="DejaVuSans-57" d="M 213 4666 
 L 850 4666 

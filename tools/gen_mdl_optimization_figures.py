@@ -66,7 +66,6 @@ def fig_gd_bowl_vs_valley():
         ax.plot(path[:, 0], path[:, 1], "-o", color=ORANGE, ms=3.5, lw=1.6,
                 zorder=4)
         ax.plot(0, 0, "*", color=GREEN, ms=13, zorder=5)
-        ax.set_title(title)
         clean_lim = ((-1.7, 1.7), (-1.7, 1.7))
         fl.clean_axes(ax, lim=clean_lim, hide=True)
         return path
@@ -85,8 +84,8 @@ def fig_gd_bowl_vs_valley():
     axb.annotate("", xy=(1.45, 0.0), xytext=(-1.45, 0.0),
                  arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.1,
                                  linestyle=(0, (4, 3))))
-    axb.text(1.05, 0.20, r"slow axis ($\lambda_{\min}$)", color=GRAY,
-             fontsize=9, ha="center", va="bottom")
+    axb.text(1.05, 0.09, r"slow axis ($\lambda_{\min}$)", color=GRAY,
+             fontsize=11, ha="center", va="bottom")
 
     save = fl.save
     save(fig, "mdl-opt-gd-bowl-vs-valley")
@@ -114,8 +113,10 @@ def fig_eta_tent():
             (2.0 / (lmin + lmax), GREEN, r"$\eta^\star=2/(\lambda_{\min}+\lambda_{\max})$")]
 
     ax.axhline(1.0, color=GRAY, lw=1.2, ls=(0, (5, 3)))
-    ax.text(10.75, 1.07, "instability: $|1-\\eta\\lambda|=1$", color=GRAY,
-            fontsize=9, ha="right", va="bottom")
+    # right-anchored just short of the lambda_max gridline (at 10) -- anchoring
+    # at the old x=10.75 straddled that gridline right through the "eta lambda".
+    ax.text(9.85, 1.07, "instability: $|1-\\eta\\lambda|=1$", color=GRAY,
+            fontsize=11, ha="right", va="bottom")
 
     for eta, col, lab in etas:
         ax.plot(lam, np.abs(1 - eta * lam), color=col, lw=2.0, zorder=3)
@@ -126,33 +127,48 @@ def fig_eta_tent():
     for l0, lab in ((lmin, r"$\lambda_{\min}$"), (lmax, r"$\lambda_{\max}$")):
         ax.plot([l0, l0], [0, 1.12], color=GRAY, lw=0.9, ls=(0, (2, 3)),
                 zorder=1)
-        ax.text(l0, -0.06, lab, color="black", fontsize=10, ha="center",
+        ax.text(l0, -0.06, lab, color="black", fontsize=11, ha="center",
                 va="top")
 
     # the balanced level of the optimal step
     rho = (lmax - lmin) / (lmax + lmin)
     ax.plot([lmin, lmax], [rho, rho], color=GREEN, lw=1.0, ls=(0, (2, 3)),
             zorder=2)
-    ax.annotate(r"$\rho(\eta^\star)=\frac{\kappa-1}{\kappa+1}=\frac{9}{11}$"
-                "\nboth endpoints equal",
-                xy=(8.3, rho), xytext=(6.9, 0.60), color=GREEN, fontsize=9.5,
-                ha="center", va="top",
-                arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.9))
+    # The two green formulas (the eta* definition and the resulting rho) live
+    # together in the one genuinely empty pocket of this figure: the dome
+    # bounded below by the higher of the blue/green curves and above by the
+    # rho dotted line, centered around lambda ~ 6.7 -- well clear of both
+    # curves and of the two vertical eigenvalue gridlines.
+    ax.text(6.7, 0.59,
+            r"$\eta^\star=\frac{2}{\lambda_{\min}+\lambda_{\max}}$"
+            "\n" r"$\rho(\eta^\star)=\frac{\kappa-1}{\kappa+1}=\frac{9}{11}$",
+            color=GREEN, fontsize=11, ha="center", va="center")
+    # "both endpoints equal" no longer shares that pocket (three stacked lines
+    # there pushed the top edge flush against the rho dotted line): it moves
+    # to the large empty triangle below the green descending arm, with a
+    # short leader that stays under the green curve the whole way and meets
+    # it exactly at the left dot -- so the leader only touches the curve at
+    # its own target, never crosses it.
+    ax.annotate("both endpoints equal", xy=(lmin, rho), xytext=(2.3, 0.15),
+                color=GREEN, fontsize=11, ha="left", va="bottom",
+                arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.8))
 
-    # the greedy eta = 0.1: stiff mode dead, slow mode rules
-    ax.annotate(r"stiff mode killed: $|1-0.1\cdot10|=0$",
-                xy=(10.0, 0.015), xytext=(11.6, 0.30), color=BLUE, fontsize=9,
-                ha="right", va="center",
+    # the greedy eta = 0.1: stiff mode dead, slow mode rules.  Placed in the
+    # clear pocket just right of lambda_max (the blue curve stays low there),
+    # so the label clears both the lambda_max gridline and the curve.
+    ax.annotate("stiff mode killed", xy=(10.05, 0.05), xytext=(10.2, 0.34),
+                color=BLUE, fontsize=11, ha="left", va="bottom",
                 arrowprops=dict(arrowstyle="-", color=BLUE, lw=0.9))
-    ax.annotate(r"...but the slow mode barely moves: $0.9$",
-                xy=(1.0, 0.9), xytext=(4.6, 0.97), color=BLUE, fontsize=9,
-                ha="left", va="center",
-                arrowprops=dict(arrowstyle="-", color=BLUE, lw=0.9))
-    ax.text(2.55, 0.37, r"$\eta^\star=\frac{2}{\lambda_{\min}+\lambda_{\max}}$",
-            color=GREEN, fontsize=10, ha="center", va="center")
-    ax.text(11.5, -0.06, r"$\lambda$", color="black", fontsize=11,
+    # shifted right of the lambda_min dot (to x=1.55, where the blue line has
+    # already dropped to ~0.845) and centered vertically at 0.92, splitting
+    # the difference evenly between the blue line/dot below and the eta=1
+    # instability dashed line above -- the old anchor (x=1.15) sat directly
+    # over the dot, leaving no headroom that cleared both lines at once.
+    ax.text(1.55, 0.92, r"slow mode barely moves: $0.9$", color=BLUE,
+            fontsize=11, ha="left", va="center")
+    ax.text(11.5, -0.06, r"$\lambda$", color="black", fontsize=12,
             ha="right", va="top")
-    ax.text(-0.25, 1.12, r"$|1-\eta\lambda|$", color="black", fontsize=10.5,
+    ax.text(-0.25, 1.12, r"$|1-\eta\lambda|$", color="black", fontsize=12,
             ha="left", va="bottom")
 
     # baseline
@@ -216,7 +232,7 @@ def fig_momentum_damping():
         ax.plot(p[:, 0], p[:, 1], "-o", color=col, ms=2.6, lw=1.1, zorder=4)
         ax.plot(*p[0], "o", color=col, ms=5.5, zorder=5)
         ax.plot(0, 0, "*", color="black", ms=12, zorder=6)
-        ax.set_title(lab, color=col, fontsize=10.5)
+        ax.set_title(lab, color=col, fontsize=12)
         fl.clean_axes(ax, lim=((-2.45, 2.45), (-1.35, 1.45)), hide=True)
 
     fig.subplots_adjust(wspace=0.06)
@@ -279,19 +295,19 @@ def fig_sgd_noise_ball():
                                 lw=1.3, linestyle=ls, zorder=6))
     ax.annotate(r"noise ball $\propto\sqrt{\eta}$",
                 xy=(r * np.cos(0.6), -r * np.sin(0.6)), xytext=(1.05, -1.25),
-                color=GRAY, fontsize=9.5, ha="left", va="center",
+                color=GRAY, fontsize=11, ha="left", va="center",
                 arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.9))
     ax.annotate(r"step $\eta/2$",
                 xy=(-(r / np.sqrt(2)) * np.cos(0.8),
                     -(r / np.sqrt(2)) * np.sin(0.8)), xytext=(-1.85, -1.25),
-                color=GRAY, fontsize=9.5, ha="center", va="center",
+                color=GRAY, fontsize=11, ha="center", va="center",
                 arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.9))
 
     # heading set just above the GD start point so the descending line stays
     # below it and never strikes through the text.
-    ax.text(-2.02, 1.70, "gradient descent", color=BLUE, fontsize=9.5,
+    ax.text(-2.02, 1.70, "gradient descent", color=BLUE, fontsize=11,
             ha="left", va="bottom")
-    ax.text(-0.45, 0.95, r"SGD, fixed $\eta$", color=ORANGE, fontsize=9.5,
+    ax.text(-0.45, 0.95, r"SGD, fixed $\eta$", color=ORANGE, fontsize=11,
             ha="left", va="bottom")
 
     fl.clean_axes(ax, lim=((-2.45, 2.3), (-1.7, 1.95)), hide=True)
@@ -337,7 +353,6 @@ def fig_per_coordinate():
     path = np.array(path)
     axa.plot(path[:, 0], path[:, 1], "-o", color=ORANGE, ms=3.5, lw=1.6,
              zorder=4)
-    axa.set_title(r"(a) one global $\eta$: zig-zag")
 
     # (b) Adam's per-coordinate rescaling (beta_1 = 0, bias-corrected v).
     x, m, v = x0.copy(), np.zeros(2), np.zeros(2)
@@ -350,11 +365,10 @@ def fig_per_coordinate():
     path = np.array(path)
     axb.plot(path[:, 0], path[:, 1], "-o", color=BLUE, ms=3.5, lw=1.6,
              zorder=4)
-    axb.set_title(r"(b) per-coordinate steps (Adam): rounded")
     # annotate the equal-speed opening segment.
     axb.annotate("equal speed on\nboth coordinates",
                  xy=(-0.85, 0.47), xytext=(-0.05, 1.05), color=BLUE,
-                 fontsize=9, ha="center", va="center",
+                 fontsize=11, ha="center", va="center",
                  arrowprops=dict(arrowstyle="-", color=BLUE, lw=0.9))
 
     for ax in (axa, axb):
@@ -396,26 +410,33 @@ def fig_schedule_zoo():
         ax.plot(t, y, color=col, lw=2.0, ls=ls, zorder=3)
 
     ax.text(430, 1.045, "constant: noise floor $\\propto\\eta$ forever",
-            color=GRAY, fontsize=9, ha="center", va="bottom")
+            color=GRAY, fontsize=11, ha="center", va="bottom")
+    # shifted left from x=345 -- at that anchor the "m" of "optimum," sat
+    # right on the descending blue cosine curve.
     ax.annotate("$c/k$: reaches the optimum,\nif $c$ is large enough",
-                xy=(210, float(inv_k[210])), xytext=(345, 0.47), color=GREEN,
-                fontsize=9, ha="center", va="center",
+                xy=(210, float(inv_k[210])), xytext=(300, 0.47), color=GREEN,
+                fontsize=11, ha="center", va="center",
                 arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.9))
+    # moved right/low, where the cosine curve has already dropped well below
+    # the label -- the earlier placement had the curve cut through "of".
     ax.annotate("cosine: long tail\nof small steps",
-                xy=(700, cosine[700]), xytext=(555, 0.62), color=BLUE,
-                fontsize=9, ha="center", va="center",
+                xy=(700, cosine[700]), xytext=(760, 0.40), color=BLUE,
+                fontsize=11, ha="center", va="center",
                 arrowprops=dict(arrowstyle="-", color=BLUE, lw=0.9))
+    # anchored over the flat plateau (well above the decay ramp) so the
+    # descending WSD line never cuts through the two-line label.
     ax.annotate("WSD: hold the plateau,\nthen pay the ball down",
-                xy=(880, wsd[880]), xytext=(870, 0.80), color=ORANGE,
-                fontsize=9, ha="center", va="center",
+                xy=(880, wsd[880]), xytext=(500, 0.88), color=ORANGE,
+                fontsize=11, ha="center", va="center",
                 arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.9))
-    ax.annotate("warmup", xy=(w, 0.55), xytext=(150, 0.42), color="black",
-                fontsize=9, ha="center", va="center",
+    # moved clear of the c/k annotation block to its right.
+    ax.annotate("warmup", xy=(w, 0.55), xytext=(95, 0.15), color="black",
+                fontsize=11, ha="center", va="center",
                 arrowprops=dict(arrowstyle="-", color="black", lw=0.8))
 
     ax.plot([0, K], [0, 0], color="black", lw=1.0)
-    ax.text(K, -0.07, r"$t$", fontsize=11, ha="right", va="top")
-    ax.text(8, 1.10, r"$\eta_t$", fontsize=10.5, ha="left", va="bottom")
+    ax.text(K, -0.07, r"$t$", fontsize=12, ha="right", va="top")
+    ax.text(8, 1.10, r"$\eta_t$", fontsize=12, ha="left", va="bottom")
     fl.clean_axes(ax, lim=((-25.0, 1030.0), (-0.16, 1.24)), hide=True,
                   equal=False)
     fl.save(fig, "mdl-opt-schedule-zoo")
@@ -448,11 +469,10 @@ def fig_bias_correction():
     axa.annotate(r"$\mathbb{E}[v_t]/\overline{g^2} = 1-\beta_2^t$"
                  "\n(63% at $t=1000$)",
                  xy=(1000, 1 - b2**1000), xytext=(2500, 0.42), color=ORANGE,
-                 fontsize=9, ha="center", va="center",
+                 fontsize=11, ha="center", va="center",
                  arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.9))
     axa.text(2500, 1.05, r"corrected: $\hat{v}_t = v_t/(1-\beta_2^t)$",
-             color=GREEN, fontsize=9, ha="center", va="bottom")
-    axa.set_title("(a) the startup deficit, cancelled exactly")
+             color=GREEN, fontsize=11, ha="center", va="bottom")
     axa.set_xlabel(r"$t$")
     fl.clean_axes(axa, lim=((-100.0, 5100.0), (-0.06, 1.3)), hide=False,
                   equal=False)
@@ -466,13 +486,13 @@ def fig_bias_correction():
     axb.plot(tpk, ratio.max(), "o", color=ORANGE, ms=6, zorder=4)
     axb.annotate(r"$3.16\times$ at $t=1$",
                  xy=(1, ratio[0]), xytext=(2.3, 1.75), color=ORANGE,
-                 fontsize=9, ha="left", va="center",
+                 fontsize=11, ha="left", va="center",
                  arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.9))
     axb.annotate(rf"peak ${ratio.max():.1f}\times$ at $t={tpk}$",
                  xy=(tpk, ratio.max()), xytext=(90, 6.4), color=ORANGE,
-                 fontsize=9, ha="left", va="center",
+                 fontsize=11, ha="left", va="center",
                  arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.9))
-    axb.text(700, 1.15, "properly scaled: 1", color=GREEN, fontsize=9,
+    axb.text(700, 1.15, "properly scaled: 1", color=GREEN, fontsize=11,
              ha="center", va="bottom")
     axb.set_title(r"(b) raw-step inflation $(1-\beta_1^t)/\sqrt{1-\beta_2^t}$")
     axb.set_xlabel(r"$t$")
@@ -504,7 +524,6 @@ def fig_chord_above_graph():
     xs = np.linspace(-3.2, 3.2, 400)
 
     # ----- (a) chord above the graph -----
-    axa.set_title("(a) chord lens")
     axa.plot(xs, f(xs), color=BLUE, lw=2.2, zorder=3)
     a, b = -2.4, 2.8
     pa, pb = np.array([a, f(a)]), np.array([b, f(b)])
@@ -518,20 +537,29 @@ def fig_chord_above_graph():
     axa.plot([xc, xc], [graph_y, chord_y], "--", color=GRAY, lw=1.4, zorder=2)
     axa.plot(xc, graph_y, "o", color=BLUE, ms=5, zorder=5)
     axa.plot(xc, chord_y, "o", color=ORANGE, ms=5, zorder=5)
-    fl.vlabel(axa, (a - 0.05, f(a) + 0.30), r"$\mathbf{x}$", color=BLUE,
+    # both dot labels pushed further out from the curve (dy 0.30->0.55 and
+    # 0.15->0.45) -- the old, tighter offsets left them sitting right on the
+    # steep parabola arms.  "y" also flips to right-anchored (text growing
+    # back toward the vertex, where the arm is shallower) instead of
+    # left-anchored into the steepening right arm.
+    fl.vlabel(axa, (a - 0.05, f(a) + 0.55), r"$\mathbf{x}$", color=BLUE,
               ha="right", fontsize=11)
-    fl.vlabel(axa, (b + 0.10, f(b) + 0.15), r"$\mathbf{y}$", color=BLUE,
-              ha="left", fontsize=11)
-    axa.text(xc - 0.15, chord_y + 0.55,
+    fl.vlabel(axa, (b - 0.05, f(b) + 0.45), r"$\mathbf{y}$", color=BLUE,
+              ha="right", fontsize=11)
+    # shifted well left of the y-axis and raised (was centered near x=-0.47,
+    # dy=0.55, straddling the vertical axis through "(1-theta)"; x=-1.4 at
+    # the same height still grazed the axis and the raised-but-not-shifted
+    # variants clipped the rising left arm of the parabola) -- x=-1.6,
+    # dy=0.85 clears both the axis on the right and the curve on the left.
+    axa.text(-1.6, chord_y + 0.85,
              r"$\theta f(\mathbf{x})+(1-\theta)f(\mathbf{y})$",
-             color=ORANGE, fontsize=9.5, ha="center", va="bottom")
+             color=ORANGE, fontsize=11, ha="center", va="bottom")
     axa.text(xc - 0.15, graph_y - 0.62, r"$f(\theta\mathbf{x}+(1-\theta)\mathbf{y})$",
-             color=BLUE, fontsize=9.5, ha="center", va="top")
-    fl.axis_cross(axa, (-3.6, 3.6), (-0.6, 3.0))
+             color=BLUE, fontsize=11, ha="center", va="top")
+    fl.axis_cross(axa, (-3.6, 3.6), (-0.6, 3.0), color="black")
     fl.clean_axes(axa, lim=((-3.6, 3.6), (-0.9, 3.0)), hide=True)
 
     # ----- (b) tangent below the graph -----
-    axb.set_title("(b) first-order lens")
     axb.plot(xs, f(xs), color=BLUE, lw=2.2, zorder=3)
     x0 = -1.4
     tang = f(x0) + fp(x0) * (xs - x0)
@@ -548,11 +576,13 @@ def fig_chord_above_graph():
               ha="left", fontsize=11)
     # label the tangent (global under-estimator) in the open band below the
     # x-axis; right-anchored so it clears the dashed gap line at y0 and never
-    # crosses the curve, the line, or the faint axes.
-    axb.text(1.3, -1.12,
+    # crosses the curve or the faint axes.  Anchor moved left from x=1.3 to
+    # x=0.5 -- at 1.3 the tangent line itself (which continues down-right
+    # through this band) cut through the trailing "(y-x)".
+    axb.text(0.5, -1.12,
              r"$f(\mathbf{x})+\nabla f(\mathbf{x})^\top(\mathbf{y}-\mathbf{x})$",
-             color=GREEN, fontsize=8.5, ha="right", va="center")
-    fl.axis_cross(axb, (-3.6, 3.6), (-0.6, 3.0))
+             color=GREEN, fontsize=11, ha="right", va="center")
+    fl.axis_cross(axb, (-3.6, 3.6), (-0.6, 3.0), color="black")
     fl.clean_axes(axb, lim=((-3.6, 3.6), (-1.6, 3.0)), hide=True)
 
     fl.save(fig, "mdl-opt-chord-above-graph")
@@ -569,7 +599,6 @@ def fig_convex_vs_nonconvex_set():
     fig, (axa, axb, axc) = plt.subplots(1, 3, figsize=(11.0, 3.7))
 
     # ----- (a) convex blob: a regular-ish convex polygon -----
-    axa.set_title("(a) convex")
     ang = np.linspace(0, 2 * np.pi, 9)[:-1]
     r = 1.0 + 0.12 * np.cos(3 * ang)        # gently lumpy but still convex
     blob = np.column_stack([r * np.cos(ang), r * np.sin(ang)])
@@ -585,7 +614,6 @@ def fig_convex_vs_nonconvex_set():
     fl.clean_axes(axa, lim=((-1.45, 1.45), (-1.35, 1.45)), hide=True)
 
     # ----- (b) non-convex crescent: chord exits the set -----
-    axb.set_title("(b) non-convex")
     t = np.linspace(0, 2 * np.pi, 200)
     outer = np.column_stack([np.cos(t), np.sin(t)])
     # crescent = big disc minus a shifted disc (boolean via polygon trick)
@@ -601,17 +629,22 @@ def fig_convex_vs_nonconvex_set():
     axb.plot([p2[0], q2[0]], [p2[1], q2[1]], color=BLUE, lw=2.0, zorder=3)
     axb.plot([p2[0], q2[0]], [p2[1], q2[1]], "o", color=BLUE, ms=5, zorder=4)
     axb.plot(0.15, 0.0, "x", color=BLUE, ms=9, mew=2.2, zorder=5)  # midpoint outside
-    axb.text(0.36, 0.0, "outside", color=BLUE, fontsize=8.5, ha="left",
+    axb.text(0.36, 0.0, "outside", color=BLUE, fontsize=11, ha="left",
              va="center")
-    fl.clean_axes(axb, lim=((-1.25, 1.45), (-1.25, 1.25)), hide=True)
+    # tightened to the crescent's actual footprint (x in [0, 1.65]) instead of
+    # the old symmetric box, which left a large dead margin on the left.
+    fl.clean_axes(axb, lim=((-0.2, 1.85), (-1.15, 1.15)), hide=True)
 
     # ----- (c) simplex + half-space -----
-    axc.set_title("(c) simplex, half-space")
     simplex = np.array([[0.0, 0.0], [1.7, 0.0], [0.0, 1.7]])
     axc.add_patch(plt.Polygon(simplex, closed=True, facecolor=GREEN, alpha=0.18,
                               edgecolor=GREEN, lw=2.0))
-    axc.text(0.52, 0.5, r"$\{\mathbf{p}\succeq0,\ \mathbf{1}^\top\mathbf{p}=1\}$",
-             color=GREEN, fontsize=8.5, ha="center", va="center")
+    # the label doesn't fit inside the (fairly small) triangle -- moved below
+    # it, with a short leader pointing back up into the interior.
+    axc.annotate(r"$\{\mathbf{p}\succeq0,\ \mathbf{1}^\top\mathbf{p}=1\}$",
+                 xy=(0.85, 0.22), xytext=(0.85, -0.45), color=GREEN,
+                 fontsize=11, ha="center", va="center",
+                 arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.9))
     # half-space a^T x <= b, shaded
     aa = np.array([1.0, 0.7])
     aa_n = aa / np.linalg.norm(aa)
@@ -626,8 +659,8 @@ def fig_convex_vs_nonconvex_set():
                               lw=0))
     axc.plot(seg[:, 0], seg[:, 1], "--", color=BLUE, lw=1.8)
     axc.text(-0.95, -0.95, r"$\mathbf{a}^\top\mathbf{x}\leq b$", color=BLUE,
-             fontsize=9, ha="center", va="center")
-    fl.axis_cross(axc, (-1.4, 2.2), (-1.4, 2.2))
+             fontsize=11, ha="center", va="center")
+    fl.axis_cross(axc, (-1.4, 2.2), (-1.4, 2.2), color="black")
     fl.clean_axes(axc, lim=((-1.4, 2.2), (-1.4, 2.2)), hide=True)
 
     fl.save(fig, "mdl-opt-convex-vs-nonconvex-set")
@@ -653,18 +686,28 @@ def fig_subgradient_fan():
     ax.plot(span, 0.0 * span, color=ORANGE, lw=2.0, zorder=3)
 
     ax.plot(0, 0, "o", color="black", ms=6.5, zorder=6)
-    ax.annotate(r"$\partial|x|(0)=[-1,\,1]$: every slope"
-                "\n" r"$g\in[-1,1]$ supports the graph",
-                xy=(0.9, -0.6), xytext=(0.0, -1.62), color=GREEN,
-                fontsize=9.5, ha="center", va="center",
+    # Centered on x=0 this two-line block straddled the y-axis (it runs right
+    # through the vertical arrow) no matter how it was nudged -- any text
+    # wide enough to read comfortably spans well past the axis, and every
+    # nearby off-axis spot still sits inside the fan's own footprint
+    # (x in [-1.75, 1.75]), so it clips one of the outer lines instead.
+    # Moved entirely outside that footprint, to the lower right (fontsize
+    # trimmed slightly, wrapped into 3 short lines, so it clears both the
+    # fan's right edge and the plot's right border) with a short leader back
+    # to the outermost (g=-1) line.
+    ax.annotate(r"$\partial|x|(0)=[-1,\,1]$:"
+                "\nevery slope $g\\in[-1,1]$"
+                "\nsupports the graph",
+                xy=(1.35, -1.35), xytext=(2.65, -1.1), color=GREEN,
+                fontsize=9, ha="center", va="center",
                 arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.9))
     ax.text(1.92, 0.10, r"$0\in\partial f(0)$:" "\nthe corner is a minimum,"
             "\nno gradient required",
-            color=ORANGE, fontsize=9.5, ha="left", va="bottom")
-    ax.text(-1.3, 2.05, r"$f(x)=|x|$", color=BLUE, fontsize=11, ha="center",
+            color=ORANGE, fontsize=11, ha="left", va="bottom")
+    ax.text(-1.3, 2.05, r"$f(x)=|x|$", color=BLUE, fontsize=12, ha="center",
             va="center")
 
-    fl.axis_cross(ax, (-2.25, 2.6), (-1.9, 2.2))
+    fl.axis_cross(ax, (-2.25, 2.6), (-1.9, 2.2), color="black")
     fl.clean_axes(ax, lim=((-2.25, 3.55), (-1.95, 2.25)), hide=True,
                   equal=False)
     fl.save(fig, "mdl-opt-subgradient-fan")
@@ -682,7 +725,6 @@ def fig_local_equals_global():
     fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 4.0))
 
     # ----- (a) convex bowl: every start -> the single global min -----
-    axa.set_title("(a) convex: local $=$ global")
     f = lambda t: 0.25 * t**2
     fp = lambda t: 0.5 * t
     xs = np.linspace(-3.4, 3.4, 400)
@@ -700,11 +742,12 @@ def fig_local_equals_global():
         p = gd1d(x0, fp, eta=0.7, steps=11)
         axa.plot(p, f(p), "-o", color=col, ms=3.2, lw=1.3, zorder=3)
     axa.plot(0, 0, "*", color="black", ms=14, zorder=5)
-    fl.axis_cross(axa, (-3.8, 3.8), (-0.5, 3.0))
-    fl.clean_axes(axa, lim=((-3.8, 3.8), (-0.7, 3.0)), hide=True)
+    fl.axis_cross(axa, (-3.4, 3.4), (-0.9, 3.0), color="black")
+    # matches panel (b)'s box exactly (same xlim/ylim) so the two panels
+    # share the same window size and scale.
+    fl.clean_axes(axa, lim=((-3.4, 3.4), (-1.1, 3.0)), hide=True)
 
     # ----- (b) non-convex: two basins + a saddle (a 1-D bumpy landscape) -----
-    axb.set_title("(b) non-convex: start matters")
     # a smooth double-well-plus landscape with two distinct minima and a hump
     g = lambda t: 0.12 * t**4 - 0.9 * t**2 + 0.35 * t + 1.3
     gp = lambda t: 0.48 * t**3 - 1.8 * t + 0.35
@@ -725,12 +768,12 @@ def fig_local_equals_global():
         axb.plot(m, g(m), "*", color="black", ms=12, zorder=5)
     for m in maxima:
         axb.plot(m, g(m), "o", color=GRAY, ms=7, zorder=5)
-        axb.text(m, g(m) + 0.22, "saddle", color=GRAY, fontsize=8.5,
+        axb.text(m, g(m) + 0.22, "saddle", color=GRAY, fontsize=11,
                  ha="center", va="bottom")
     axb.text(minima[0], g(minima[0]) - 0.30, "local min", color="black",
-             fontsize=8.5, ha="center", va="top")
+             fontsize=11, ha="center", va="top")
     axb.text(minima[-1], g(minima[-1]) - 0.30, "global min", color="black",
-             fontsize=8.5, ha="center", va="top")
+             fontsize=11, ha="center", va="top")
     fl.clean_axes(axb, lim=((-3.4, 3.4), (-1.1, 3.0)), hide=True)
     axb.axis("off")
 
@@ -774,13 +817,15 @@ def fig_lagrange_tangency():
     fl.arrow(ax, xstar, xstar + 0.60 * xstar, color=BLUE, lw=2.0)      # grad g
     fl.arrow(ax, xstar, xstar - 0.50 * xstar, color=ORANGE, lw=2.0)    # grad f
     fl.vlabel(ax, xstar + 0.74 * xstar + np.array([0.16, -0.10]),
-              r"$\nabla g$", color=BLUE, fontsize=10)
+              r"$\nabla g$", color=BLUE, fontsize=11)
     fl.vlabel(ax, xstar - 0.50 * xstar + np.array([-0.02, -0.20]),
-              r"$\nabla f$", color=ORANGE, fontsize=10)
-    # x* label set well to the lower-right of the optimum, in the open band
-    # between the constraint circle and the level sets -- clear of both the
-    # blue grad g (up-right) and the orange grad f (down-left) arrows.
-    fl.vlabel(ax, xstar + np.array([0.30, -0.24]), r"$\mathbf{x}^\star$",
+              r"$\nabla f$", color=ORANGE, fontsize=11)
+    # x* label moved right and up from the tangency point -- the old
+    # lower-right offset (0.30, -0.24) put it right on top of the tangent
+    # r=1 level-set circle (both circles meet exactly at x*, so anything
+    # close to it grazes one curve or the other).  (0.30, 0.40) clears the
+    # r=1 circle, the constraint circle, and the grad-g arrow all at once.
+    fl.vlabel(ax, xstar + np.array([0.30, 0.40]), r"$\mathbf{x}^\star$",
               color="black", fontsize=11)
 
     # ---- a non-optimal feasible point: grad f crosses the constraint ----
@@ -788,7 +833,7 @@ def fig_lagrange_tangency():
     df = (x0 - c) / np.linalg.norm(x0 - c)    # unit grad f at x0
     fl.arrow(ax, x0, x0 + 0.55 * df, color=ORANGE, lw=2.0)
     fl.vlabel(ax, x0 + 0.72 * df + np.array([0.0, 0.12]), r"$\nabla f$",
-              color=ORANGE, fontsize=10)
+              color=ORANGE, fontsize=11)
     # feasible descent: minus the tangential component of grad f (first-order
     # move along the constraint), drawn dashed
     tang = np.array([-x0[1], x0[0]])          # unit tangent at x0
@@ -796,12 +841,16 @@ def fig_lagrange_tangency():
     desc = 0.5 * desc / np.linalg.norm(desc)
     fl.arrow(ax, x0, x0 + desc, color=GREEN, lw=1.8, ls=(0, (4, 3)))
     fl.vlabel(ax, x0 + desc + np.array([0.04, 0.20]), "feasible\ndescent",
-              color=GREEN, fontsize=9)
+              color=GREEN, fontsize=11)
 
     ax.text(-0.55, -1.05, r"constraint $g(\mathbf{x})=0$", color=BLUE,
-            fontsize=10, ha="center", va="top")
-    ax.text(1.62, 2.12, r"level sets of $f$", color=ORANGE, fontsize=10,
-            ha="left", va="center")
+            fontsize=11, ha="center", va="top")
+    # anchored in the clear upper-left corner (outside every circle) with a
+    # short leader to one ring -- the previous unanchored placement sat right
+    # on top of the tangent (r=1) circle's crest.
+    ax.annotate(r"level sets of $f$", xy=(2.625, 2.225), xytext=(-1.85, 2.3),
+                color=ORANGE, fontsize=11, ha="left", va="center",
+                arrowprops=dict(arrowstyle="-", color=ORANGE, lw=0.8))
 
     fl.clean_axes(ax, lim=((-1.95, 2.75), (-1.45, 2.45)), hide=True)
     fl.save(fig, "mdl-opt-lagrange-tangency")
@@ -831,11 +880,19 @@ def fig_kkt_active_set():
              [xlim[0], e1y]], closed=True, facecolor=BLUE, alpha=0.12, lw=0))
         ax.plot([xlim[0], e2x], [e1y, e1y], color=BLUE, lw=2.0)   # g1 = 0
         ax.plot([e2x, e2x], [ylim[0], e1y], color=BLUE, lw=2.0)   # g2 = 0
-        ax.text(0.05, 0.18, "feasible", color=BLUE, fontsize=9.5,
+        # dropped from y=0.18 to y=0.0 -- in panel (a) the outermost (r=1.8)
+        # level-set circle swept down through the old spot.
+        ax.text(0.05, 0.0, "feasible", color=BLUE, fontsize=11,
                 ha="center", va="center")
-        ax.text(-0.62, 1.10, r"$g_1=0$", color=BLUE, fontsize=9.5, ha="left",
-                va="bottom")
-        ax.text(1.60, -0.38, r"$g_2=0$", color=BLUE, fontsize=9.5, ha="left",
+        # moved from just above the g1=0 line (y=1.10) to just below it
+        # (inside the feasible region): every on-the-line position in panel
+        # (a) is swept by the active edge's own grad-g1 arrow, which has to
+        # start on this line -- placing the label on the *other* side of the
+        # line avoids that arrow with no need to also fight the level-set
+        # circles for horizontal room.
+        ax.text(-0.62, 0.68, r"$g_1=0$", color=BLUE, fontsize=11, ha="left",
+                va="top")
+        ax.text(1.60, -0.38, r"$g_2=0$", color=BLUE, fontsize=11, ha="left",
                 va="center")
 
     def levels(ax, c, radii):
@@ -845,27 +902,41 @@ def fig_kkt_active_set():
         ax.plot(*c, "+", color=ORANGE, ms=8, mew=1.6, zorder=3)
 
     # ---- (a) one constraint active ----
-    axa.set_title("(a) one active constraint")
     region(axa)
     ca = np.array([0.4, 1.9])
     xs = np.array([ca[0], e1y])               # projection of ca on the region
     levels(axa, ca, [float(np.linalg.norm(ca - xs)), 1.35, 1.8])
     axa.plot(*xs, "o", color="black", ms=6.5, zorder=6)
-    fl.arrow(axa, xs, xs + np.array([0.0, -0.62]), color=ORANGE, lw=2.0)
-    axa.text(xs[0] + 0.10, xs[1] - 0.50,
-             r"$-\nabla f=\lambda_1\nabla g_1,\ \lambda_1>0$",
-             color=ORANGE, fontsize=9, ha="left", va="center")
+    # shortened from 0.62 to 0.35 -- at x=0.4 (dead center of the level-set
+    # circles) any arrow past ~0.4 long runs into the r=1.35 arc, whose
+    # minimum height sits at exactly y=1.9-1.35=0.55.
+    fl.arrow(axa, xs, xs + np.array([0.0, -0.35]), color=ORANGE, lw=2.0)
+    # moved well below all three level-set circles: each circle's minimum
+    # height is y = 1.9 - r, so anything below y=1.9-1.8=0.1 (with margin)
+    # clears all of them regardless of how wide the formula runs. Also
+    # wrapped onto two lines and dropped further (y=-0.20 -> -0.27) -- as
+    # one long line it ran past x=1.5 into the g2=0 boundary line, and its
+    # top edge grazed "feasible".
+    axa.text(0.15, -0.27,
+             r"$-\nabla f=\lambda_1\nabla g_1,$" "\n" r"$\lambda_1>0$",
+             color=ORANGE, fontsize=11, ha="left", va="center")
     fl.vlabel(axa, xs + np.array([-0.22, 0.14]), r"$\mathbf{x}^\star$",
               color="black", fontsize=11)
-    # outward normal of the active edge, shown a bit along the edge
-    fl.arrow(axa, (-0.30, e1y), (-0.30, e1y + 0.45), color=BLUE, lw=1.8)
-    fl.vlabel(axa, (-0.30, e1y + 0.62), r"$\nabla g_1$", color=BLUE,
-              fontsize=9.5)
-    axa.text(e2x + 0.13, 0.42, r"inactive: $\lambda_2=0$", color=GRAY,
-             fontsize=9, ha="left", va="center", rotation=90)
+    # outward normal of the active edge, shown a bit along the edge -- moved
+    # from x=-0.30 to x=-0.45 (any x in (-0.379, 0.4) has the r=0.9 circle's
+    # left branch crossing it somewhere in y in [1.0, 1.45]; -0.45 clears
+    # all three circles outright).
+    fl.arrow(axa, (-0.45, e1y), (-0.45, e1y + 0.45), color=BLUE, lw=1.8)
+    # label grows right from the arrow tip instead of being centered on it,
+    # so it doesn't reach back left into the r=0.9 circle.
+    axa.text(-0.40, e1y + 0.62, r"$\nabla g_1$", color=BLUE, fontsize=11,
+              ha="left", va="center")
+    # pushed further right of e2x -- at fontsize 11 the label's vertical run
+    # otherwise cuts across the r=1.35 level-set arc around its "lambda_2".
+    axa.text(e2x + 0.6, 0.42, r"inactive: $\lambda_2=0$", color=GRAY,
+             fontsize=11, ha="left", va="center", rotation=90)
 
     # ---- (b) corner: two constraints active ----
-    axb.set_title("(b) corner: two active constraints")
     region(axb)
     cb = np.array([2.3, 1.8])
     corner = np.array([e2x, e1y])             # projection of cb on the region
@@ -878,16 +949,22 @@ def fig_kkt_active_set():
     df = (cb - corner) / np.linalg.norm(cb - corner)   # -grad f direction
     fl.arrow(axb, corner, corner + 0.62 * df, color=ORANGE, lw=2.2)
     fl.vlabel(axb, corner + np.array([-0.05, 0.70]), r"$\nabla g_1$",
-              color=BLUE, fontsize=9.5, ha="right")
+              color=BLUE, fontsize=11, ha="right")
     fl.vlabel(axb, corner + np.array([0.72, -0.16]), r"$\nabla g_2$",
-              color=BLUE, fontsize=9.5)
+              color=BLUE, fontsize=11)
     axb.text(*(corner + 0.62 * df + np.array([0.07, 0.16])), r"$-\nabla f$",
-             color=ORANGE, fontsize=9.5, ha="left", va="center")
-    axb.text(corner[0] + 0.30, corner[1] - 0.40, "cone of\nnormals",
-             color=GRAY, fontsize=8.5, ha="center", va="center")
-    axb.annotate("", xy=(corner[0] + 0.30, corner[1] + 0.22),
-                 xytext=(corner[0] + 0.30, corner[1] - 0.22),
-                 arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.8))
+             color=ORANGE, fontsize=11, ha="left", va="center")
+    # The old spot (corner + (0.30, -0.40), with a short vertical leader
+    # up to the wedge) sat inside both the r=1.13 and r=1.55 level-set
+    # circles.  Those two circles are centered up at cb and their combined
+    # footprint covers essentially the whole area immediately around the
+    # corner and wedge, so no nearby spot clears them; the label moves well
+    # down and left into the open feasible region instead, with no leader
+    # (a straight one from here would have to cross the outermost, r=1.95,
+    # circle to reach back to the wedge -- the wedge's own shape next to it
+    # already carries the association).
+    axb.text(1.1, -0.05, "cone of\nnormals",
+             color=GRAY, fontsize=11, ha="center", va="center")
     fl.vlabel(axb, corner + np.array([-0.22, -0.16]), r"$\mathbf{x}^\star$",
               color="black", fontsize=11)
 
@@ -924,19 +1001,23 @@ def fig_primal_dual_gap():
     """
     fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 4.5))
 
-    def axis_labels(ax, xr, yr):
+    def axis_labels(ax, xr, yr, u_label_dx=0.0):
         """Faint origin cross with the two value-axis names tucked at the far
-        ends, clear of the curve and every annotation."""
-        fl.axis_cross(ax, xr, yr)
-        ax.text(xr[1], -0.04 * (yr[1] - yr[0]), "constraint value  $u$",
-                color=GRAY, fontsize=9.5, ha="right", va="top")
+        ends, clear of the curve and every annotation.  ``u_label_dx`` nudges
+        the "constraint value u" label further right (panel (a): the green
+        supporting line's segment is still visible down at that label's
+        height, and a plain right-anchor at xr[1] lets the line cut through
+        the text's left portion)."""
+        fl.axis_cross(ax, xr, yr, color="black")
+        ax.text(xr[1] + u_label_dx, -0.04 * (yr[1] - yr[0]),
+                "constraint value  $u$",
+                color="black", fontsize=11, ha="right", va="top")
         # objective-axis name set just right of the vertical axis at the top,
         # so it never collides with the curve in the upper-left.
         ax.text(0.04 * (xr[1] - xr[0]), yr[1], "objective value  $t$",
-                color=GRAY, fontsize=9.5, ha="left", va="top")
+                color="black", fontsize=11, ha="left", va="top")
 
     # =================== (a) convex: strong duality =================== #
-    axa.set_title("(a) convex $+$ Slater: strong duality")
     xr_a, yr_a = (-1.25, 1.85), (-1.45, 3.8)
     u = np.linspace(-0.95, 1.7, 340)
     boundary_a = (1 - u) ** 2
@@ -963,19 +1044,22 @@ def fig_primal_dual_gap():
     axa.text(0.16, p_star_a + 0.30, r"$d^\star=p^\star$", color="black",
              fontsize=11, ha="left", va="center")
     axa.text(-0.93, 1.62, r"feasible" "\n" r"slice $u\leq0$", color=ORANGE,
-             fontsize=9.5, ha="center", va="center")
-    axa.text(-0.62, 3.05, r"$G=\{(g(x),f_0(x))\}$", color=BLUE, fontsize=9.5,
+             fontsize=11, ha="center", va="center")
+    # moved to sit entirely right of the y-axis, above the d*=p* label --
+    # centered on the axis (x=-0.25) it straddled the vertical arrow, and at
+    # y=2.0 (even fully right-anchored) the curve's left branch reaches out
+    # to u=-0.41 there, closer to the axis than this text's left edge.
+    axa.text(0.08, 1.6, r"$G=\{(g(x),f_0(x))\}$", color=BLUE, fontsize=11,
              ha="left", va="center")
     # slope tag on the green line, well down-right where it sits clearly alone
     # below both the curve and the x-axis label.
     axa.text(1.02, line(1.02) + 0.07, r"slope $-\lambda^\star$", color=GREEN,
-             fontsize=9.5, ha="left", va="bottom", rotation=-31,
+             fontsize=11, ha="left", va="bottom", rotation=-31,
              rotation_mode="anchor")
-    axis_labels(axa, xr_a, yr_a)
+    axis_labels(axa, xr_a, yr_a, u_label_dx=0.45)
     fl.clean_axes(axa, lim=(xr_a, yr_a), hide=True, equal=False)
 
     # =============== (b) non-convex: a duality gap =============== #
-    axb.set_title("(b) non-convex: duality gap")
     xr_b, yr_b = (-0.92, 0.92), (-1.35, 0.72)
     u = np.linspace(-0.5, 0.5, 300)           # image of x in [0, 1]
     boundary_b = -(u + 0.5) ** 2
@@ -995,26 +1079,36 @@ def fig_primal_dual_gap():
     axb.plot(0, p_star_b, "o", color="black", ms=7, zorder=6)
     axb.plot(0, d_star_b, "o", color=GREEN, ms=7, zorder=6)
 
-    # the gap: a clean vertical double-arrow between p* and d* on the axis, with
-    # the two value labels pushed to opposite sides so nothing overlaps.  The
-    # gap arrow is offset a hair right of the axis and its label sits further
-    # right again, clear of both the arrow and the p*/d* dots.
-    xg = 0.045
-    axb.annotate("", xy=(xg, p_star_b - 0.012), xytext=(xg, d_star_b + 0.012),
+    # the gap: a clean vertical double-arrow between p* and d*, running
+    # exactly through u=0 -- same x as the p*/d* dots themselves.  (It used
+    # to be offset to x=0.045, a hair right of the dots: legible on its own,
+    # but next to the dots it visibly failed to line up with the two points
+    # it's supposed to be measuring.)
+    axb.annotate("", xy=(0.0, p_star_b - 0.012), xytext=(0.0, d_star_b + 0.012),
                  arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.4))
-    axb.text(0.10, 0.5 * (p_star_b + d_star_b), "duality gap", color=GRAY,
-             fontsize=9, ha="left", va="center")
+    # moved further left (was x=-0.06) -- at the midpoint height the green
+    # supporting line sits at u in [-0.17,-0.08], which the old anchor's
+    # span reached right into.
+    axb.text(-0.22, 0.5 * (p_star_b + d_star_b), "duality gap", color=GRAY,
+             fontsize=11, ha="right", va="center")
     axb.text(-0.045, p_star_b, r"$p^\star$", color="black", fontsize=11,
              ha="right", va="center")
     axb.text(-0.045, d_star_b, r"$d^\star$", color=GREEN, fontsize=11,
              ha="right", va="center")
 
-    axb.text(-0.5, 0.16, r"feasible slice $u\leq0$", color=ORANGE,
-             fontsize=10, ha="left", va="center")
-    axb.text(0.40, -0.42, r"dented $G$", color=BLUE, fontsize=9.5,
+    # raised above the green supporting line -- at the old height (0.16) the
+    # line's leftmost value in this x-range (0.4 at u=-0.9) cut through it.
+    axb.text(-0.85, 0.55, r"feasible slice $u\leq0$", color=ORANGE,
+             fontsize=11, ha="left", va="center")
+    # pushed further down and right along the curve, clear of both the
+    # "duality gap" label and the "slope" annotation it used to crowd.
+    axb.text(0.80, -1.18, r"dented $G$", color=BLUE, fontsize=11,
              ha="left", va="center")
-    axb.text(0.40, line(0.40) + 0.05, r"slope $-\lambda^\star$", color=GREEN,
-             fontsize=9.5, ha="left", va="bottom", rotation=-37,
+    # placed *below* the green line (va='top') at u=0.15: above the line is
+    # where the dented-G curve runs almost parallel and close alongside it,
+    # so any label above the line touches blue; below it is clear.
+    axb.text(0.15, line(0.15) - 0.05, r"slope $-\lambda^\star$", color=GREEN,
+             fontsize=11, ha="left", va="top", rotation=-37,
              rotation_mode="anchor")
     axis_labels(axb, xr_b, yr_b)
     fl.clean_axes(axb, lim=(xr_b, yr_b), hide=True, equal=False)
@@ -1055,16 +1149,16 @@ def fig_water_filling():
             ax.add_patch(plt.Rectangle((x, n), width, w - n, facecolor=BLUE,
                                        alpha=0.28, lw=0))
         else:                                 # floor above the waterline
-            ax.text(i + 0.5, n + 0.13, "dry", color=GRAY, fontsize=9,
+            ax.text(i + 0.5, n + 0.13, "dry", color=GRAY, fontsize=11,
                     ha="center", va="bottom")
         ax.text(i + 0.5, -0.13, rf"$n_{{{i + 1}}}={n}$", color="black",
-                fontsize=9, ha="center", va="top")
+                fontsize=11, ha="center", va="top")
 
     # the common water level, dashed across the whole tank
     ax.plot([0.0, len(noise)], [w, w], color=ORANGE, lw=1.7, ls=(0, (5, 3)),
             zorder=4)
     ax.text(len(noise) + 0.08, w,
-            r"water level $w=1/\mu\approx1.43$", color=ORANGE, fontsize=10,
+            r"water level $w=1/\mu\approx1.43$", color=ORANGE, fontsize=11,
             ha="left", va="center")
 
     # one allocation called out: p_2* = w - n_2 on the second basin
@@ -1072,12 +1166,12 @@ def fig_water_filling():
     ax.annotate("", xy=(xi, w - 0.015), xytext=(xi, noise[1] + 0.015),
                 arrowprops=dict(arrowstyle="<->", color=BLUE, lw=1.4))
     ax.text(xi + 0.14, 0.5 * (w + noise[1]), r"$p_2^\star=w-n_2$",
-            color=BLUE, fontsize=9.5, ha="left", va="center")
+            color=BLUE, fontsize=11, ha="left", va="center")
 
     # baseline
     ax.plot([0.0, len(noise)], [0.0, 0.0], color="black", lw=1.2)
     ax.text(2.5, -0.42, "channels, floors at the noise levels $n_i$",
-            color=GRAY, fontsize=9.5, ha="center", va="top")
+            color="black", fontsize=11, ha="center", va="top")
 
     fl.clean_axes(ax, lim=((-0.15, 7.3), (-0.75, 2.95)), hide=True,
                   equal=False)
@@ -1110,16 +1204,20 @@ def fig_fp_number_line():
     sub = (0.25 / 2**p) * np.arange(1, 2**p)  # subnormals
 
     ax.annotate("", xy=(7.05, 0), xytext=(-0.22, 0),
-                arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.1))
+                arrowprops=dict(arrowstyle="->", color="black", lw=1.1))
     for v in ticks:
         tall = v in (0.25, 0.5, 1.0, 2.0, 4.0)
         ax.plot([v, v], [-0.13 if tall else -0.08, 0.13 if tall else 0.08],
                 color=BLUE, lw=1.5 if tall else 1.1)
     for v in sub:
         ax.plot([v, v], [-0.08, 0.08], color=GRAY, lw=1.0, alpha=0.8)
-    ax.plot([0, 0], [-0.13, 0.13], color=GRAY, lw=1.5)
-    for v, lab in ((0, "0"), (0.25, "0.25"), (1, "1"), (2, "2"), (4, "4")):
-        ax.text(v, -0.24, lab, color="black", fontsize=9, ha="center",
+    ax.plot([0, 0], [-0.13, 0.13], color="black", lw=1.5)
+    # "0" and "0.25" sit only 0.25 apart -- at fontsize 11 center-aligned
+    # labels collide ("00.25"), so nudge them apart instead.
+    for v, lab, ha, dx in ((0, "0", "right", -0.02), (0.25, "0.25", "left", 0.02),
+                           (1, "1", "center", 0.0), (2, "2", "center", 0.0),
+                           (4, "4", "center", 0.0)):
+        ax.text(v + dx, -0.24, lab, color="black", fontsize=11, ha=ha,
                 va="top")
 
     # subnormal / underflow region below the smallest normal
@@ -1130,13 +1228,23 @@ def fig_fp_number_line():
     # one names the shaded subnormal band, the lower one marks the 0.25 boundary
     # as the smallest normal.  Both are left-anchored at x ~ 0 so neither runs
     # into the eps_mach marker over x = 1.
+    # relpos=(0, 0) pins the leader to the text's own bottom-left corner
+    # (near x=0.02); without it, matplotlib anchors from the *center* of
+    # this wide text box, which sent the leader diagonally across the
+    # "smallest normal" label below.
     ax.annotate("subnormals $\\to$ underflow to $0$", xy=(0.12, 0.17),
-                xytext=(0.02, 0.74), color=GRAY, fontsize=9, ha="left",
+                xytext=(0.02, 0.74), color=GRAY, fontsize=11, ha="left",
                 va="center",
-                arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.9))
-    ax.annotate("smallest normal", xy=(0.25, 0.155), xytext=(0.02, 0.48),
-                color=GRAY, fontsize=7.5, ha="left", va="center",
-                arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.8))
+                arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.9,
+                                 relpos=(0, 0)))
+    # xytext's x matches xy's x (0.25) -- with ha="left" and relpos=(0, 0)
+    # (leader pinned to the text's own bottom-left corner), that makes the
+    # leader run straight up to the smallest-normal tick instead of leaning
+    # in from the left as it did anchored at x=0.07.
+    ax.annotate("smallest normal", xy=(0.25, 0.155), xytext=(0.25, 0.48),
+                color=GRAY, fontsize=11, ha="left", va="center",
+                arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.8,
+                                 relpos=(0, 0)))
 
     # eps_mach: the gap from 1 to its right neighbor 1 + 2^-p.  The label sits
     # up and to the right of the little gap, joined by a short leader, so it
@@ -1144,21 +1252,26 @@ def fig_fp_number_line():
     eps = 2.0 ** -p
     ax.annotate("", xy=(1 + eps, 0.30), xytext=(1, 0.30),
                 arrowprops=dict(arrowstyle="<->", color="black", lw=1.1))
+    # pushed further right (was 1.55) -- at fontsize 11 "smallest normal"
+    # (now starting at 0.16) reaches almost that far and the two touched.
     ax.annotate(r"$\varepsilon_{\mathrm{mach}}$", xy=(1 + eps / 2, 0.32),
-                xytext=(1.55, 0.56), color="black", fontsize=10,
+                xytext=(1.95, 0.60), color="black", fontsize=11,
                 ha="left", va="center",
                 arrowprops=dict(arrowstyle="-", color="black", lw=0.7))
 
-    # gap doubling: matched double-arrows under one gap of each binade
+    # gap doubling: matched double-arrows under one gap of each binade.
+    # Dropped from -0.36 to -0.46 -- at fontsize 11 the tick-number labels
+    # (anchored at -0.24) now reach low enough to touch arrows at the old
+    # height.
     for lo in (1.0, 2.0):
-        ax.annotate("", xy=(lo + lo / 2**p, -0.36), xytext=(lo, -0.36),
+        ax.annotate("", xy=(lo + lo / 2**p, -0.46), xytext=(lo, -0.46),
                     arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.0))
-    ax.text(2.05, -0.52, "gap doubles", color=GRAY, fontsize=9, ha="center",
+    ax.text(2.05, -0.62, "gap doubles", color=GRAY, fontsize=11, ha="center",
             va="top")
 
     # axis break, then the overflow cliffs (schematic positions)
     for dx in (4.62, 4.74):
-        ax.plot([dx - 0.06, dx + 0.06], [-0.10, 0.10], color=GRAY, lw=1.2)
+        ax.plot([dx - 0.06, dx + 0.06], [-0.10, 0.10], color="black", lw=1.2)
     x16, x32 = 5.45, 6.5
     ax.add_patch(plt.Polygon([[x16, -0.16], [7.0, -0.16], [7.0, 0.16],
                               [x16, 0.16]], closed=True, facecolor=ORANGE,
@@ -1169,9 +1282,9 @@ def fig_fp_number_line():
     for x, lab in ((x16, "fp16 max:\n$65504$"),
                    (x32, "fp32 max:\n$\\approx3.4\\times10^{38}$")):
         ax.plot([x, x], [-0.30, 0.30], color=ORANGE, lw=1.5, ls=(0, (5, 3)))
-        ax.text(x, 0.38, lab, color=ORANGE, fontsize=8.5, ha="center",
+        ax.text(x, 0.38, lab, color=ORANGE, fontsize=11, ha="center",
                 va="bottom")
-    ax.text(6.22, -0.30, r"overflow $\to\infty$", color=ORANGE, fontsize=9,
+    ax.text(6.22, -0.30, r"overflow $\to\infty$", color=ORANGE, fontsize=11,
             ha="center", va="top")
 
     fl.clean_axes(ax, lim=((-0.3, 7.15), (-0.85, 0.95)), hide=True,
@@ -1189,42 +1302,63 @@ def fig_conditioning_ellipse():
     Green arrows mark the principal axes, labelled with the curvatures
     sigma_1^2 + lambda and sigma_n^2 + lambda that set kappa's ratio.
     """
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(7.4, 5.0))
+    # Rotated 90 degrees from the original layout: the slow/shallow axis
+    # (small eigenvalue, long semi-axis) now runs horizontal instead of
+    # vertical, so the panel is wide-and-short rather than narrow-and-tall.
+    # figsize and the xlim/ylim extents below are the old ylim/xlim swapped.
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.4, 3.5))
     s2 = np.array([1.0, 1.0 / 16.0])          # sigma_1^2, sigma_n^2
-    xlim, ylim = (-2.2, 2.2), (-3.25, 3.25)
-    gx = np.linspace(*xlim, 240)
-    gy = np.linspace(*ylim, 300)
+    xlim, ylim = (-3.25, 3.25), (-2.2, 2.2)
+    gx = np.linspace(*xlim, 300)
+    gy = np.linspace(*ylim, 240)
     X, Y = np.meshgrid(gx, gy)
-    x0 = np.array([-0.72, 2.8])
+    # start point with its two components swapped to match the rotated axes
+    x0 = np.array([2.8, -0.72])
 
-    def panel(ax, ridge, title, steps, axis_labels):
-        h = s2 + ridge                        # Hessian eigenvalues
-        Z = 0.5 * (h[0] * X**2 + h[1] * Y**2)
-        # levels chosen so the y-semi-axes are evenly spaced on screen
+    def panel(ax, ridge, title, steps, axis_labels, short_label_pos):
+        h = s2 + ridge                        # h[0] = sigma_1^2 (steep),
+                                               # h[1] = sigma_n^2 (shallow)
+        # x gets the shallow eigenvalue (long semi-axis, horizontal), y gets
+        # the steep one (short semi-axis, vertical) -- this is the 90-degree
+        # rotation relative to the original h[0]-on-x/h[1]-on-y layout.
+        hx, hy = h[1], h[0]
+        Z = 0.5 * (hx * X**2 + hy * Y**2)
+        # levels chosen so the x-semi-axes are evenly spaced on screen
         semis = np.array([0.55, 1.05, 1.55, 2.1, 2.65, 3.2])
-        ax.contour(X, Y, Z, levels=list(0.5 * h[1] * semis**2),
+        ax.contour(X, Y, Z, levels=list(0.5 * hx * semis**2),
                    colors=[LIGHT], linewidths=0.9)
-        # principal axes of the ellipse with y-semi-axis 2.1, labelled with
+        # principal axes of the ellipse with x-semi-axis 2.1, labelled with
         # the curvatures sigma^2 + lambda along each axis
-        c = 0.5 * h[1] * 2.1**2
-        ex, ey = np.sqrt(2 * c / h[0]), 2.1
+        c = 0.5 * hx * 2.1**2
+        ex, ey = 2.1, np.sqrt(2 * c / hy)
         fl.arrow(ax, (0, 0), (ex, 0), color=GREEN, lw=1.8)
         fl.arrow(ax, (0, 0), (0, ey), color=GREEN, lw=1.8)
-        ax.text(ex * 0.58, -0.30, axis_labels[0], color=GREEN, fontsize=9,
-                ha="center", va="top")
-        # the slow-axis (vertical) curvature label is set out to the right with
-        # a short leader, so the orange zig-zag -- which swings along the *fast*
-        # horizontal axis right across the vertical arrow -- never sits on it.
-        ax.annotate(axis_labels[1], xy=(0.0, ey * 0.62),
-                    xytext=(0.95, ey * 0.70), color=GREEN, fontsize=9,
-                    ha="left", va="center",
-                    arrowprops=dict(arrowstyle="-", color=GREEN, lw=0.7))
+        # The long horizontal axis (shallow eigenvalue): the GD path's own
+        # oscillation (in y, along the *steep* axis after rotation) has an
+        # envelope that shrinks in lockstep with x as the path converges, so
+        # its amplitude near the arrow is not small -- a label tucked right
+        # under the arrow at a fixed small offset (the old ex*0.58, -0.22)
+        # sat inside that envelope for panel (a)'s long 28-step path.  Placed
+        # well outside both the level-set ellipses and the path's envelope
+        # instead, scaled by this panel's own ex/ey so it clears in both
+        # panels despite their very different eccentricities.
+        ax.text(ex * 0.85, -1.6 * ey, axis_labels[1], color=GREEN,
+                fontsize=11, ha="center", va="top")
+        # The short vertical axis (steep eigenvalue): a diagonal leader from
+        # near the arrowhead out to open space crosses several level-set
+        # ellipses on the way (they fill almost the whole panel), so this is
+        # plain text with no leader, tucked into the one gap between two
+        # ellipse rings just above the arrowhead -- found per panel since it
+        # depends on this panel's own ey.
+        ax.text(*short_label_pos, axis_labels[0], color=GREEN, fontsize=11,
+                ha="left", va="center")
         # real GD at the optimal step for this Hessian
         eta = 2.0 / (h[0] + h[1])
+        h_rot = np.array([hx, hy])
         x = x0.copy()
         path = [x.copy()]
         for _ in range(steps):
-            x = x - eta * (h * x)
+            x = x - eta * (h_rot * x)
             path.append(x.copy())
         path = np.array(path)
         ax.plot(path[:, 0], path[:, 1], "-o", color=ORANGE, ms=3.2, lw=1.5,
@@ -1236,9 +1370,10 @@ def fig_conditioning_ellipse():
     kappa0 = s2[0] / s2[1]
     kappa1 = (s2[0] + 0.5) / (s2[1] + 0.5)
     panel(axa, 0.0, rf"(a) $\lambda=0$:  $\kappa={kappa0:.0f}$", 28,
-          (r"$\sigma_1^2$", r"$\sigma_n^2$"))
+          (r"$\sigma_1^2$", r"$\sigma_n^2$"), short_label_pos=(0.1, 0.92))
     panel(axb, 0.5, rf"(b) $\lambda=0.5$:  $\kappa\approx{kappa1:.1f}$", 12,
-          (r"$\sigma_1^2+\lambda$", r"$\sigma_n^2+\lambda$"))
+          (r"$\sigma_1^2+\lambda$", r"$\sigma_n^2+\lambda$"),
+          short_label_pos=(0.9, 2.05))
 
     fl.save(fig, "mdl-opt-conditioning-ellipse")
 

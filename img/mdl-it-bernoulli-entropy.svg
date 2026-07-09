@@ -1109,7 +1109,7 @@ L 356.102812 217.872
    </g>
    <g id="text_15">
     <!-- maximum uncertainty: $\ln 2 \approx 0.693$ nats -->
-    <g style="fill: #ff7f0e" transform="translate(109.042812 30.749687) scale(0.095 -0.095)">
+    <g style="fill: #ff7f0e" transform="translate(99.482812 30.539687) scale(0.105 -0.105)">
      <defs>
       <path id="DejaVuSans-6d" d="M 3328 2828 
 Q 3544 3216 3844 3400 
@@ -1600,17 +1600,17 @@ z
     </g>
    </g>
    <g id="patch_5">
-    <path d="M 119.206592 174.752858 
-Q 100.16015 156.244502 81.995703 138.593224 
+    <path d="M 121.256624 174.052241 
+Q 101.207163 155.867661 82.068663 138.509309 
 " style="fill: none; stroke: #2ca02c; stroke-width: 1.1; stroke-linecap: round"/>
-    <path d="M 83.396811 142.604071 
-L 81.995703 138.593224 
-L 86.045046 139.878845 
+    <path d="M 83.768849 142.88645 
+L 82.068663 138.509309 
+L 86.590488 139.775445 
 " style="fill: none; stroke: #2ca02c; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
    <g id="text_16">
     <!-- $H(0.1) \approx 0.325$ -->
-    <g style="fill: #2ca02c" transform="translate(97.705889 185.268) scale(0.095 -0.095)">
+    <g style="fill: #2ca02c" transform="translate(97.705889 185.268) scale(0.105 -0.105)">
      <defs>
       <path id="Cmr10-31" d="M 594 0 
 L 594 225 

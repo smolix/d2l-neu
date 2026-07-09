@@ -815,7 +815,7 @@ L 399.587969 251.136
    </g>
    <g id="text_16">
     <!-- slope $t$ -->
-    <g style="fill: #ff7f0e" transform="translate(328.475629 89.452266) rotate(-25) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(322.886373 93.272295) rotate(-25) scale(0.14 -0.14)">
      <defs>
       <path id="DejaVuSans-6c" d="M 603 4863 
 L 1178 4863 
@@ -898,17 +898,17 @@ z
     </g>
    </g>
    <g id="patch_5">
-    <path d="M 119.217037 228.670181 
-Q 81.814514 219.805466 45.717467 211.250159 
+    <path d="M 119.036314 226.789426 
+Q 81.731211 218.84326 45.73831 211.176598 
 " style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 49.31995 214.262154 
-L 45.717467 211.250159 
-L 50.288553 210.175369 
+    <path d="M 50.63211 215.081816 
+L 45.73831 211.176598 
+L 51.798764 209.604689 
 " style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_17">
     <!-- $-f^*(t) = -e^{\,t-1}$ -->
-    <g style="fill: #ff7f0e" transform="translate(116.272769 240.0564) scale(0.105 -0.105)">
+    <g style="fill: #ff7f0e" transform="translate(116.272769 241.1064) scale(0.14 -0.14)">
      <defs>
       <path id="Cmsy10-a1" d="M 653 1472 
 Q 600 1472 565 1512 
@@ -1059,7 +1059,7 @@ z
    </g>
    <g id="text_18">
     <!-- $f$ = sup of its tangents -->
-    <g style="fill: #1f77b4" transform="translate(61.514369 42.831848) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(61.514369 41.834731) scale(0.14 -0.14)">
      <defs>
       <path id="DejaVuSans-3d" d="M 678 2906 
 L 4684 2906 
@@ -1177,7 +1177,7 @@ z
      <use xlink:href="#DejaVuSans-73" transform="translate(1077.490234 0.015625)"/>
     </g>
     <!-- (Fenchel–Young) -->
-    <g style="fill: #1f77b4" transform="translate(61.514369 54.61088) scale(0.105 -0.105)">
+    <g style="fill: #1f77b4" transform="translate(61.514369 57.540106) scale(0.14 -0.14)">
      <defs>
       <path id="DejaVuSans-28" d="M 1984 4856 
 Q 1566 4138 1362 3434 
@@ -1348,15 +1348,28 @@ L 399.587969 15.500456
 " clip-path="url(#p117ce0d669)" style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
    </g>
    <g id="legend_1">
+    <g id="patch_6">
+     <path d="M 56.260369 96.774436 
+L 170.830369 96.774436 
+Q 172.730369 96.774436 172.730369 94.874436 
+L 172.730369 67.51592 
+Q 172.730369 65.61592 170.830369 65.61592 
+L 56.260369 65.61592 
+Q 54.360369 65.61592 54.360369 67.51592 
+L 54.360369 94.874436 
+Q 54.360369 96.774436 56.260369 96.774436 
+z
+" style="fill: #ffffff; opacity: 0.9"/>
+    </g>
     <g id="line2d_20">
-     <path d="M 57.710369 72.654514 
-L 66.710369 72.654514 
-L 75.710369 72.654514 
+     <path d="M 58.160369 73.309436 
+L 67.660369 73.309436 
+L 77.160369 73.309436 
 " style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
     </g>
     <g id="text_19">
      <!-- $f(u) = u\log u$ -->
-     <g transform="translate(82.910369 75.804514) scale(0.09 -0.09)">
+     <g transform="translate(84.760369 76.634436) scale(0.095 -0.095)">
       <defs>
        <path id="Cmr10-6c" d="M 197 0 
 L 197 225 
@@ -1488,14 +1501,14 @@ z
      </g>
     </g>
     <g id="line2d_21">
-     <path d="M 57.710369 86.244514 
-L 66.710369 86.244514 
-L 75.710369 86.244514 
+     <path d="M 58.160369 87.654436 
+L 67.660369 87.654436 
+L 77.160369 87.654436 
 " style="fill: none; stroke: #ff7f0e; stroke-width: 2; stroke-linecap: square"/>
     </g>
     <g id="text_20">
      <!-- tangent of slope $t$ -->
-     <g transform="translate(82.910369 89.394514) scale(0.09 -0.09)">
+     <g transform="translate(84.760369 90.979436) scale(0.095 -0.095)">
       <use xlink:href="#DejaVuSans-74" transform="translate(0 0.015625)"/>
       <use xlink:href="#DejaVuSans-61" transform="translate(39.208984 0.015625)"/>
       <use xlink:href="#DejaVuSans-6e" transform="translate(100.488281 0.015625)"/>

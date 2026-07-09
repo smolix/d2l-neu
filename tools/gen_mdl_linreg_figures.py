@@ -67,12 +67,11 @@ def fig_ridge_geometry():
           f"-> w2={w_lasso[1]:.3f} (sparse when ~0)")
 
     fig, axes = plt.subplots(1, 2, figsize=(8.8, 4.4))
-    specs = [
-        (r"(a) ridge: $\|\mathbf{w}\|_2 \leq t$", w_ridge, "circle"),
-        (r"(b) lasso: $\|\mathbf{w}\|_1 \leq t$", w_lasso, "diamond"),
-    ]
+    # the caption already names each panel ("Left: the l2 ball ... Right: the
+    # l1 diamond ..."), so no redundant per-panel "(a)/(b)" title is drawn
+    specs = [(w_ridge, "circle"), (w_lasso, "diamond")]
     m_x, m_y = (-1.7, 3.5), (-2.0, 2.2)
-    for ax, (title, wstar, shape) in zip(axes, specs):
+    for ax, (wstar, shape) in zip(axes, specs):
         if shape == "circle":
             ax.add_patch(Circle((0, 0), t, fc=BLUE, ec=BLUE, alpha=0.12, lw=1.8))
         else:
@@ -83,18 +82,17 @@ def fig_ridge_geometry():
             ax.plot(e[:, 0], e[:, 1], color=LIGHT, lw=1.1)
         e = contour(L(wstar[None])[0])            # the contour that just touches the region
         ax.plot(e[:, 0], e[:, 1], color=ORANGE, lw=1.7)
-        fl.axis_cross(ax, m_x, m_y, color=GRAY, lw=0.8)
+        fl.axis_cross(ax, m_x, m_y, color="black", lw=0.8)
         ax.plot(*bhat, "o", color=GRAY, ms=6)
         ax.text(bhat[0] + 0.08, bhat[1] + 0.30, r"$\hat{\mathbf{w}}$",
-                color=GRAY, ha="center", va="center", fontsize=11)
+                color=GRAY, ha="center", va="center", fontsize=13)
         ax.plot(*wstar, "o", color=ORANGE, ms=7)
         ax.text(wstar[0] + 0.12, wstar[1] - 0.42, r"$\mathbf{w}^\star$",
-                color=ORANGE, ha="center", va="center", fontsize=11)
-        ax.text(m_x[1], -0.26, r"$w_1$", color=GRAY, ha="center",
-                va="center", fontsize=10)
-        ax.text(0.26, m_y[1], r"$w_2$", color=GRAY, ha="center",
-                va="center", fontsize=10)
-        ax.set_title(title, fontsize=11)
+                color=ORANGE, ha="center", va="center", fontsize=13)
+        ax.text(m_x[1], -0.26, r"$w_1$", color="black", ha="center",
+                va="center", fontsize=12)
+        ax.text(0.26, m_y[1], r"$w_2$", color="black", ha="center",
+                va="center", fontsize=12)
         fl.clean_axes(ax, lim=(m_x, m_y), hide=True)
     fig.subplots_adjust(wspace=0.10)
     fl.save(fig, "mdl-linreg-ridge-geometry")
@@ -106,12 +104,12 @@ def fig_oo_classes():
     from matplotlib.patches import FancyBboxPatch
     fig, ax = plt.subplots(figsize=(9.6, 3.6))
     ax.set_xlim(0, 15)
-    ax.set_ylim(0, 5)
+    ax.set_ylim(0.45, 5.0)   # trimmed: no empty band below the caption note
     ax.set_aspect("equal")
     ax.axis("off")
 
     def classbox(cx, top, title, methods, color):
-        w, lh = 3.7, 0.46
+        w, lh = 4.3, 0.46   # wide enough that fontsize-11 method text clears the border
         h = 0.85 + lh * len(methods)
         x, y = cx - w / 2, top - h
         for fc, a in [(color, 0.10), ("none", 1.0)]:
@@ -124,7 +122,7 @@ def fig_oo_classes():
                 color=color, lw=1.0)
         for i, m in enumerate(methods):
             ax.text(cx, top - 1.04 - i * lh, m, ha="center", va="center",
-                    fontsize=10, family="monospace")
+                    fontsize=11, family="monospace")
         return dict(l=x, r=x + w, mid=y + h / 2)
 
     mod = classbox(2.3, 4.7, "Module",
@@ -140,7 +138,7 @@ def fig_oo_classes():
     ax.text(7.5, 1.05,
             "New models subclass Module; new datasets subclass DataModule,\n"
             "often extended cell by cell with @add_to_class.",
-            ha="center", va="center", fontsize=10)
+            ha="center", va="center", fontsize=12)
     fl.save(fig, "mdl-linreg-oo-classes")
 
 
@@ -165,13 +163,16 @@ def fig_loss_menu():
 
     fig, axes = plt.subplots(1, 2, figsize=(8.8, 3.6))
 
+    # the caption already names each panel ("Left: ... densities ... Right:
+    # the per-residual penalties ..."), so no redundant per-panel "(a)/(b)"
+    # title is drawn; the inset's "log scale" title stays -- it is the only
+    # place that tells the reader this small axes uses a different y-scale.
     ax = axes[0]
     ax.plot(r, gauss, color=BLUE, label="Gaussian")
     ax.plot(r, laplace, color=ORANGE, label="Laplace")
     ax.set_xlabel(r"noise $\epsilon$")
     ax.set_ylabel(r"$p(\epsilon)$")
-    ax.set_title("(a) noise densities, equal variance", fontsize=11)
-    ax.legend(loc="upper left")
+    ax.legend(loc="upper left", fontsize=11)
     ax.set_xlim(-5, 5)
     ax.set_ylim(0, 0.75)
     axins = ax.inset_axes([0.66, 0.44, 0.32, 0.50])
@@ -180,8 +181,8 @@ def fig_loss_menu():
     axins.set_yscale("log")
     axins.set_xlim(0, 5)
     axins.set_ylim(1e-6, 1)
-    axins.tick_params(labelsize=7, length=2, pad=1)
-    axins.set_title("log scale", fontsize=8, pad=2)
+    axins.tick_params(labelsize=9, length=2, pad=1)
+    axins.set_title("log scale", fontsize=10, pad=2)
 
     ax = axes[1]
     ax.plot(r, sq, color=BLUE, label=r"squared $\frac{1}{2}r^2$")
@@ -189,8 +190,7 @@ def fig_loss_menu():
     ax.plot(r, huber, color=GREEN, label=r"Huber ($\delta=1$)")
     ax.set_xlabel(r"residual $r = \hat{y} - y$")
     ax.set_ylabel("penalty")
-    ax.set_title("(b) per-residual penalties", fontsize=11)
-    ax.legend(loc="upper center")
+    ax.legend(loc="upper center", fontsize=11)
     ax.set_xlim(-4, 4)
     ax.set_ylim(0, 6)
 

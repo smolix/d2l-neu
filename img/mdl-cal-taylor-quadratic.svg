@@ -73,7 +73,7 @@ L 172.808688 246.940107
    </g>
    <g id="text_1">
     <!-- $x$ -->
-    <g transform="translate(76.286426 262.76531) scale(0.11 -0.11)">
+    <g transform="translate(82.212396 250.322469) scale(0.15 -0.15)">
      <defs>
       <path id="Cmmi10-78" d="M 500 184 
 Q 613 97 819 97 
@@ -150,7 +150,7 @@ L 172.808688 246.940107
    </g>
    <g id="text_2">
     <!-- $y$ -->
-    <g transform="translate(241.620731 245.62618) scale(0.11 -0.11)">
+    <g transform="translate(229.796394 235.312233) scale(0.15 -0.15)">
      <defs>
       <path id="Cmmi10-79" d="M 538 -916 
 Q 672 -1147 1006 -1147 
@@ -220,7 +220,7 @@ L 261.737607 66.973963
    </g>
    <g id="text_3">
     <!-- $z$ -->
-    <g transform="translate(298.067457 126.134366) scale(0.11 -0.11)">
+    <g transform="translate(280.847342 128.646098) scale(0.15 -0.15)">
      <defs>
       <path id="Cmmi10-7a" d="M 313 -72 
 Q 263 -72 263 -13 
@@ -14240,7 +14240,7 @@ L 133.129952 185.143776
    </g>
    <g id="text_4">
     <!-- $(-1,0)$ -->
-    <g transform="translate(116.600141 201.644017) scale(0.11 -0.11)">
+    <g transform="translate(112.085141 203.894017) scale(0.14 -0.14)">
      <defs>
       <path id="Cmr10-28" d="M 1984 -1588 
 Q 1628 -1306 1370 -942 

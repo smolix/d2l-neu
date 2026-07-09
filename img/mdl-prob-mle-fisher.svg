@@ -1225,7 +1225,7 @@ L 377.95875 226.835297
    </g>
    <g id="text_18">
     <!-- $(\hat\mu,\hat\sigma)$ -->
-    <g style="fill: #1f77b4" transform="translate(151.26349 187.28416) scale(0.1 -0.1)">
+    <g style="fill: #1f77b4" transform="translate(150.05849 219.37096) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-28" d="M 1984 -1588 
 Q 1628 -1306 1370 -942 
@@ -1313,17 +1313,17 @@ z
     </g>
    </g>
    <g id="patch_5">
-    <path d="M 261.859962 106.894083 
-Q 227.89456 128.90708 195.055024 150.190402 
+    <path d="M 164.731152 76.006256 
+Q 169.44662 109.376637 173.97437 141.418575 
 " style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 199.499443 149.693275 
-L 195.055024 150.190402 
-L 197.323974 146.33659 
+    <path d="M 175.537094 136.75404 
+L 173.97437 141.418575 
+L 171.180376 137.369675 
 " style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_19">
     <!-- $I(\hat\mu,\hat\sigma)^{-1}/n$ -->
-    <g style="fill: #ff7f0e" transform="translate(250.36149 101.30576) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(136.08849 69.27376) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-49" d="M 269 0 
 Q 206 0 206 84 

@@ -39,7 +39,7 @@ z
    <g id="line2d_1">
     <path d="M 7.2 205.2 
 L 330.84 205.2 
-" clip-path="url(#p7738b69759)" style="fill: none; stroke: #7f7f7f; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p7738b69759)" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: square"/>
    </g>
    <g id="matplotlib.axis_1">
     <g id="xtick_1">
@@ -183,14 +183,14 @@ z
    </g>
    <g id="legend_1">
     <g id="line2d_6">
-     <path d="M 108.045 20.97 
-L 117.045 20.97 
-L 126.045 20.97 
+     <path d="M 94.495 24.03 
+L 105.495 24.03 
+L 116.495 24.03 
 " style="fill: none; stroke: #1f77b4; stroke-width: 2.6; stroke-linecap: square"/>
     </g>
     <g id="text_2">
      <!-- $f(x)=e^{-1/x^2}$ -->
-     <g transform="translate(133.245 24.12) scale(0.09 -0.09)">
+     <g transform="translate(125.295 27.88) scale(0.11 -0.11)">
       <defs>
        <path id="Cmmi10-66" d="M 622 -1056 
 Q 741 -1147 909 -1147 
@@ -512,14 +512,14 @@ z
      </g>
     </g>
     <g id="line2d_7">
-     <path d="M 108.045 34.56 
-L 117.045 34.56 
-L 126.045 34.56 
+     <path d="M 94.495 40.64 
+L 105.495 40.64 
+L 116.495 40.64 
 " style="fill: none; stroke-dasharray: 7.4,3.2; stroke-dashoffset: 0; stroke: #ff7f0e; stroke-width: 2"/>
     </g>
     <g id="text_3">
      <!-- Taylor series at $0\ \equiv\ 0$ -->
-     <g transform="translate(133.245 37.71) scale(0.09 -0.09)">
+     <g transform="translate(125.295 44.49) scale(0.11 -0.11)">
       <defs>
        <path id="DejaVuSans-54" d="M -19 4666 
 L 3928 4666 

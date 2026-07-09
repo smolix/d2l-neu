@@ -66,12 +66,12 @@ def fig_cosine():
         else:
             arrow(ax, (0, 0), v, color=ORANGE, lw=2.2)
         vlabel(ax, (1.14, -0.16 if deg == 0 else 0.0), r"$\mathbf{u}$",
-               color=BLUE, ha="left")
+               color=BLUE, ha="left", fontsize=14)
         voff = v * 1.16
         if deg == 0:
             voff = np.array([1.14, 0.20])
         vlabel(ax, voff, r"$\mathbf{v}$", color=ORANGE,
-               ha="left" if v[0] >= 0 else "right")
+               ha="left" if v[0] >= 0 else "right", fontsize=14)
 
         # the angle arc + right-angle marker at 90 degrees
         if deg == 90:
@@ -79,10 +79,13 @@ def fig_cosine():
         elif deg > 0:
             ax.add_patch(Arc((0, 0), 0.66, 0.66, angle=0, theta1=0,
                              theta2=deg, color=GRAY, lw=1.2))
+            # on the true bisector, pushed out well past the arc so the
+            # label's clearance to BOTH bounding rays (u and v) stays large
+            # even for the narrower 60-degree wedge
             mid = np.deg2rad(deg / 2.0)
-            ax.text(0.47 * np.cos(mid), 0.47 * np.sin(mid),
+            ax.text(0.68 * np.cos(mid), 0.68 * np.sin(mid),
                     rf"${deg}^\circ$", color=GRAY,
-                    ha="center", va="center", fontsize=9)
+                    ha="center", va="center", fontsize=12)
 
         # annotation: the dot product IS the cosine
         val = f"{cos:.2f}".rstrip("0").rstrip(".")
@@ -90,9 +93,9 @@ def fig_cosine():
             val = "0"
         ax.set_title(
             rf"$\mathbf{{u}}^\top \mathbf{{v}} = \cos {deg}^\circ = {val}$",
-            fontsize=10, pad=8)
+            fontsize=13, pad=8)
 
-        clean_axes(ax, lim=((-1.35, 1.45), (-0.55, 1.3)), hide=True)
+        clean_axes(ax, lim=((-1.35, 1.45), (-0.32, 1.3)), hide=True)
 
     fig.subplots_adjust(wspace=0.25)
     save(fig, "mdl-prelim-cosine")

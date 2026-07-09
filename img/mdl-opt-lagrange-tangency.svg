@@ -221,7 +221,7 @@ L 179.188854 153.411551
    </g>
    <g id="text_1">
     <!-- $\nabla g$ -->
-    <g style="fill: #1f77b4" transform="translate(250.061617 117.217531) scale(0.1 -0.1)">
+    <g style="fill: #1f77b4" transform="translate(249.401617 117.491437) scale(0.11 -0.11)">
      <defs>
       <path id="Cmsy10-72" d="M 2503 -141 
 L 300 4300 
@@ -297,7 +297,7 @@ z
    </g>
    <g id="text_2">
     <!-- $\nabla f$ -->
-    <g style="fill: #ff7f0e" transform="translate(166.525319 177.339062) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(165.860319 177.612969) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-66" d="M 622 -1056 
 Q 741 -1147 909 -1147 
@@ -356,7 +356,7 @@ z
    </g>
    <g id="text_3">
     <!-- $\mathbf{x}^\star$ -->
-    <g transform="translate(216.87383 159.114461) scale(0.11 -0.11)">
+    <g transform="translate(216.87383 113.524674) scale(0.11 -0.11)">
      <defs>
       <path id="Cmb10-78" d="M 109 0 
 L 109 325 
@@ -420,7 +420,7 @@ L 60.388037 140.394365
    </g>
    <g id="text_4">
     <!-- $\nabla f$ -->
-    <g style="fill: #ff7f0e" transform="translate(34.965158 141.883025) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(34.300158 142.156931) scale(0.11 -0.11)">
      <use xlink:href="#Cmsy10-72" transform="translate(0 0.484375)"/>
      <use xlink:href="#Cmmi10-66" transform="translate(83.300781 0.484375)"/>
     </g>
@@ -436,7 +436,7 @@ L 111.683849 116.282112
    </g>
    <g id="text_5">
     <!-- feasible -->
-    <g style="fill: #2ca02c" transform="translate(99.700545 91.848436) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(95.79367 91.28053) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-66" d="M 2375 4863 
 L 2375 4384 
@@ -605,7 +605,7 @@ z
      <use xlink:href="#DejaVuSans-65" transform="translate(329.150391 0)"/>
     </g>
     <!-- descent -->
-    <g style="fill: #2ca02c" transform="translate(99.452342 101.926468) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(95.49031 103.598124) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-64" d="M 2906 2969 
 L 2906 4863 
@@ -706,7 +706,7 @@ z
    </g>
    <g id="text_6">
     <!-- constraint $g(\mathbf{x})=0$ -->
-    <g style="fill: #1f77b4" transform="translate(63.07766 264.119149) scale(0.1 -0.1)">
+    <g style="fill: #1f77b4" transform="translate(58.69266 264.879149) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-6f" d="M 1959 3097 
 Q 1497 3097 1228 2736 
@@ -869,9 +869,14 @@ z
      <use xlink:href="#Cmr10-30" transform="translate(826.230469 0.015625)"/>
     </g>
    </g>
+   <g id="patch_10">
+    <path d="M 93.563197 18.67598 
+Q 212.329835 20.932824 331.096472 23.189669 
+" style="fill: none; stroke: #ff7f0e; stroke-width: 0.8; stroke-linecap: round"/>
+   </g>
    <g id="text_7">
     <!-- level sets of $f$ -->
-    <g style="fill: #ff7f0e" transform="translate(261.505532 33.457234) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(14.323404 20.910106) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-76" d="M 191 3500 
 L 800 3500 

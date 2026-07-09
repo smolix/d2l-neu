@@ -129,10 +129,10 @@ def fig_loss_accuracy():
     # ---------- the one teaching line per branch ----------
     ax.text(11.55, y_top - 1.18,
             "differentiable\nused for gradient descent",
-            ha="center", va="center", fontsize=9, color=ORANGE, style="italic")
+            ha="center", va="center", fontsize=11, color=ORANGE, style="italic")
     ax.text(11.55, y_bot + 1.18,
             "discrete (zero gradient)\nused for benchmarks",
-            ha="center", va="center", fontsize=9, color=GREEN, style="italic")
+            ha="center", va="center", fontsize=11, color=GREEN, style="italic")
 
     fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01)
     fl.save(fig, "mdl-clf-loss-accuracy")
@@ -186,7 +186,7 @@ def fig_decision_regions():
         axl.plot([p0[0], far[0]], [p0[1], far[1]], color=GRAY, lw=1.8)
     axl.plot(*p0, "o", ms=6, color="black", zorder=5)
     axl.annotate(r"$o_1 = o_2 = o_3$", p0, xytext=(p0[0] - 2.0, p0[1] - 1.1),
-                 fontsize=9.5, color="black",
+                 fontsize=11, color="black",
                  arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.9))
 
     # label each region at a representative interior point
@@ -196,11 +196,12 @@ def fig_decision_regions():
                  fontsize=11.5, fontweight="bold", color=col)
         axl.text(pos[0], pos[1] - 0.42,
                  rf"$o_{cls + 1} \geq o_j\ \forall j$",
-                 ha="center", va="center", fontsize=9, color=col)
+                 ha="center", va="center", fontsize=11, color=col)
     fl.clean_axes(axl, lim=((-lim, lim), (-lim, lim)))
     axl.set_xticks([]), axl.set_yticks([])
     axl.set_xlabel(r"$x_1$"), axl.set_ylabel(r"$x_2$")
-    axl.set_title("three classes: convex regions, linear boundaries")
+    # no per-panel title: the caption's "Left: ... Right: ..." already names
+    # each panel, so a repeated in-figure heading would be redundant.
 
     # ---------------- RIGHT: binary sigma level sets ----------------
     w2, b2 = np.array([1.3, 0.9]), 0.0
@@ -219,21 +220,24 @@ def fig_decision_regions():
         rot = np.degrees(np.arctan2(tang[1], tang[0]))
         rot = rot - 180 if rot > 90 else (rot + 180 if rot <= -90 else rot)
         lbl_pos = pt + tang * (-2.0) + wn * 0.16
-        axr.text(*lbl_pos, rf"$\hat y = {s}$", fontsize=8.5, color="black",
+        axr.text(*lbl_pos, rf"$\hat y = {s}$", fontsize=11, color="black",
                  ha="center", va="center", rotation=rot)
     # weight vector from a point on the decision boundary
     base = ((np.log(1) - b2) / np.linalg.norm(w2)) * wn + tang * 1.15
     fl.arrow(axr, base, base + wn * 1.1, color=ORANGE, lw=2.2)
     axr.text(*(base + wn * 1.1 + np.array([0.28, 0.05])), r"$\mathbf{w}$",
              fontsize=12, color=ORANGE, ha="center", va="center")
-    axr.text(-1.55, 1.9, r"$\hat y > \frac{1}{2}$", fontsize=11, color=BLUE,
+    # region labels: placed strictly along +/- wn from the origin (the true
+    # high-/low-sigma sides for this w), in the empty corners beyond every
+    # level line, so neither the text nor the arrowhead ever crosses a line
+    axr.text(1.8, 2.4, r"$\hat y > \frac{1}{2}$", fontsize=11, color=BLUE,
              ha="center")
-    axr.text(1.55, -2.1, r"$\hat y < \frac{1}{2}$", fontsize=11, color=GRAY,
+    axr.text(-2.1, -2.3, r"$\hat y < \frac{1}{2}$", fontsize=11, color=GRAY,
              ha="center")
     fl.clean_axes(axr, lim=((-lim, lim), (-lim, lim)))
     axr.set_xticks([]), axr.set_yticks([])
     axr.set_xlabel(r"$x_1$"), axr.set_ylabel(r"$x_2$")
-    axr.set_title(r"two classes: level sets of $\hat y = \sigma(o)$")
+    # no per-panel title: the caption already names "Left: ... Right: ..."
 
     fig.subplots_adjust(wspace=0.18)
     fl.save(fig, "mdl-clf-decision-regions")
@@ -259,7 +263,7 @@ def fig_temperature():
                       alpha=0.85)
         for x, v in zip([1, 2, 3], p):
             ax.text(x, v + 0.03, f"{v:.2f}", ha="center", va="bottom",
-                    fontsize=9)
+                    fontsize=11)
         ax.set_ylim(0, 1.12)
         ax.set_xticks([1, 2, 3])
         ax.set_xticklabels([r"$\hat y_1$", r"$\hat y_2$", r"$\hat y_3$"])
@@ -267,8 +271,9 @@ def fig_temperature():
                  4.0: r"$T = 4$ (flattened)"}[T]
         ax.set_title(title)
     axes[0].set_ylabel(r"$\mathrm{softmax}(\mathbf{o}/T)$")
-    fig.suptitle(r"the same scores $\mathbf{o} = (1.0,\ 2.2,\ 0.3)$ at three temperatures",
-                 y=1.04, fontsize=12)
+    # no figure suptitle: the caption already states "the same three scores
+    # ... at three temperatures"; the per-panel T= titles stay since they are
+    # the only thing that identifies which panel is which.
     fig.subplots_adjust(wspace=0.10)
     fl.save(fig, "mdl-clf-temperature")
 
@@ -299,9 +304,12 @@ def fig_density_ratio():
     ax.plot(x, p, color=GREEN, lw=2.2)
     ax.fill_between(x, 0, p, color=GREEN, alpha=0.10)
     ax.text(mu_q, 0.415, r"source $q(x)$" + "\n(training data)", ha="center",
-            fontsize=10, color=BLUE)
-    ax.text(mu_p, 0.415, r"target $p(x)$" + "\n(deployment)", ha="center",
-            fontsize=10, color=GREEN)
+            fontsize=11, color=BLUE)
+    # shifted right of its peak: at mu_p the steep beta(x) curve (twin axis)
+    # passes straight through this text; by x=3.4 beta has already shot off
+    # the top of its own axis, so the label sits in clear space
+    ax.text(3.4, 0.415, r"target $p(x)$" + "\n(deployment)", ha="center",
+            fontsize=11, color=GREEN)
     ax.set_xlabel(r"$x$")
     ax.set_ylabel("density")
     ax.set_xlim(x[0], x[-1])
@@ -313,11 +321,11 @@ def fig_density_ratio():
     ax2.plot(x, np.minimum(beta, c), color=ORANGE, lw=2.0, ls=(0, (5, 3)))
     ax2.axhline(1.0, color=GRAY, lw=0.9, ls=":")
     ax2.plot([x_eq], [1.0], "o", ms=5, color=GRAY)
-    ax2.text(x_eq - 0.35, 1.35, r"$\beta = 1$", fontsize=9.5, color="black",
+    ax2.text(x_eq - 0.35, 1.35, r"$\beta = 1$", fontsize=11, color="black",
              ha="center")
-    ax2.text(4.45, 6.6, r"$\beta(x) = \dfrac{p(x)}{q(x)}$", fontsize=12,
+    ax2.text(5.05, 7.35, r"$\beta(x) = \dfrac{p(x)}{q(x)}$", fontsize=12,
              color=ORANGE, ha="center")
-    ax2.text(4.7, 4.35, r"clipped $\min(\beta, c)$", fontsize=9.5,
+    ax2.text(4.7, 4.35, r"clipped $\min(\beta, c)$", fontsize=11,
              color=ORANGE, ha="center", style="italic")
     ax2.set_ylim(0, 8)
     ax2.set_ylabel(r"importance weight $\beta$", color=ORANGE)

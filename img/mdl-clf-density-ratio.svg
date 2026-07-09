@@ -3265,7 +3265,7 @@ L 467.23875 232.379297
    </g>
    <g id="text_14">
     <!-- source $q(x)$ -->
-    <g style="fill: #1f77b4" transform="translate(172.09875 36.700372) scale(0.1 -0.1)">
+    <g style="fill: #1f77b4" transform="translate(169.36875 35.538559) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-6f" d="M 1959 3097 
 Q 1497 3097 1228 2736 
@@ -3450,7 +3450,7 @@ z
      <use xlink:href="#Cmr10-29" transform="translate(506.542969 0)"/>
     </g>
     <!-- (training data) -->
-    <g style="fill: #1f77b4" transform="translate(163.276094 48.318497) scale(0.1 -0.1)">
+    <g style="fill: #1f77b4" transform="translate(159.663828 48.318497) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-28" d="M 1984 4856 
 Q 1566 4138 1362 3434 
@@ -3565,7 +3565,7 @@ z
    </g>
    <g id="text_15">
     <!-- target $p(x)$ -->
-    <g style="fill: #2ca02c" transform="translate(284.84875 36.700372) scale(0.1 -0.1)">
+    <g style="fill: #2ca02c" transform="translate(322.40975 35.538559) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-70" d="M -159 -1241 
 Q -219 -1241 -219 -1159 
@@ -3635,7 +3635,7 @@ z
      <use xlink:href="#Cmr10-29" transform="translate(483.789062 0)"/>
     </g>
     <!-- (deployment) -->
-    <g style="fill: #2ca02c" transform="translate(277.188594 48.318497) scale(0.1 -0.1)">
+    <g style="fill: #2ca02c" transform="translate(313.983578 48.318497) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-70" d="M 1159 525 
 L 1159 -1331 
@@ -4139,7 +4139,7 @@ L 467.23875 232.379297
    </g>
    <g id="text_26">
     <!-- $\beta = 1$ -->
-    <g transform="translate(229.12475 194.957297) scale(0.095 -0.095)">
+    <g transform="translate(227.47475 194.957297) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-3d" d="M 481 850 
 Q 428 850 393 890 
@@ -4190,7 +4190,7 @@ z
    </g>
    <g id="text_27">
     <!-- $\beta(x) = \dfrac{p(x)}{q(x)}$ -->
-    <g style="fill: #ff7f0e" transform="translate(367.92675 49.427297) scale(0.12 -0.12)">
+    <g style="fill: #ff7f0e" transform="translate(394.71075 28.637297) scale(0.12 -0.12)">
      <use xlink:href="#Cmmi10-af" transform="translate(0 0.5)"/>
      <use xlink:href="#Cmr10-28" transform="translate(56.494141 0.5)"/>
      <use xlink:href="#Cmmi10-78" transform="translate(95.3125 0.5)"/>
@@ -4215,7 +4215,7 @@ z
    </g>
    <g id="text_28">
     <!-- clipped $\min(\beta, c)$ -->
-    <g style="fill: #ff7f0e" transform="translate(371.96675 111.797297) scale(0.095 -0.095)">
+    <g style="fill: #ff7f0e" transform="translate(366.08675 111.797297) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-Oblique-63" d="M 3431 3366 
 L 3316 2797 

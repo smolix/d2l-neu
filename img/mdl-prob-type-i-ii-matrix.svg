@@ -181,7 +181,7 @@ z
    </g>
    <g id="text_2">
     <!-- $1-\alpha$ -->
-    <g style="fill: #2ca02c" transform="translate(104.266 123.796175) scale(0.1 -0.1)">
+    <g style="fill: #2ca02c" transform="translate(105.401 123.520238) scale(0.09 -0.09)">
      <defs>
       <path id="Cmr10-31" d="M 594 0 
 L 594 225 
@@ -336,7 +336,7 @@ z
    </g>
    <g id="text_4">
     <!-- $\alpha$  (false positive) -->
-    <g style="fill: #ff7f0e" transform="translate(162.562667 123.7868) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(166.902667 123.5118) scale(0.09 -0.09)">
      <defs>
       <path id="DejaVuSans-20" transform="scale(0.015625)"/>
       <path id="DejaVuSans-28" d="M 1984 4856 
@@ -615,7 +615,7 @@ z
    </g>
    <g id="text_6">
     <!-- $\beta$  (false negative) -->
-    <g style="fill: #ff7f0e" transform="translate(70.316 214.133467) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(74.846 213.858467) scale(0.09 -0.09)">
      <defs>
       <path id="Cmmi10-af" d="M 172 -1241 
 Q 153 -1241 137 -1219 
@@ -765,7 +765,7 @@ z
    </g>
    <g id="text_8">
     <!-- power $1-\beta$ -->
-    <g style="fill: #2ca02c" transform="translate(177.912667 214.122529) scale(0.1 -0.1)">
+    <g style="fill: #2ca02c" transform="translate(180.717667 213.848623) scale(0.09 -0.09)">
      <defs>
       <path id="DejaVuSans-77" d="M 269 3500 
 L 844 3500 

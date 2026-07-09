@@ -39,7 +39,7 @@ z
    <g id="line2d_1">
     <path d="M 7.2 86.080104 
 L 397.8 86.080104 
-" clip-path="url(#pd40e7a8642)" style="fill: none; stroke: #7f7f7f; stroke-width: 0.9; stroke-linecap: square"/>
+" clip-path="url(#pd40e7a8642)" style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: square"/>
    </g>
    <g id="FillBetweenPolyCollection_1">
     <path d="M 57.42 62.644005 
@@ -1656,7 +1656,7 @@ L 279.611146 160.317342
    </g>
    <g id="text_6">
     <!-- $\int_a^b f$ -->
-    <g style="fill: #7f7f7f" transform="translate(38.6 162.372342) scale(0.11 -0.11)">
+    <g style="fill: #7f7f7f" transform="translate(21.86 162.372342) scale(0.11 -0.11)">
      <defs>
       <path id="Cmex10-5a" d="M 678 -13894 
 Q 838 -14053 1069 -14053 

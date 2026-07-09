@@ -1113,7 +1113,7 @@ L 356.102813 217.872
    </g>
    <g id="text_15">
     <!-- fair coin: $\ln 2 \approx 0.693$ -->
-    <g style="fill: #ff7f0e" transform="translate(198.374813 175.141686) scale(0.095 -0.095)">
+    <g style="fill: #ff7f0e" transform="translate(198.374813 174.933718) scale(0.105 -0.105)">
      <defs>
       <path id="DejaVuSans-66" d="M 2375 4863 
 L 2375 4384 
@@ -1526,17 +1526,17 @@ z
     </g>
    </g>
    <g id="patch_5">
-    <path d="M 291.540185 194.437356 
-Q 315.476332 205.727722 338.300169 216.493427 
+    <path d="M 323.90275 194.695855 
+Q 331.963387 205.481872 339.287811 215.282755 
 " style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: round"/>
-    <path d="M 335.673874 213.15388 
-L 338.300169 216.493427 
-L 334.052754 216.590735 
+    <path d="M 338.455738 210.661321 
+L 339.287811 215.282755 
+L 335.091419 213.175553 
 " style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
    <g id="text_16">
     <!-- certain: $I = 0$ -->
-    <g style="fill: #1f77b4" transform="translate(246.205812 189.611122) scale(0.095 -0.095)">
+    <g style="fill: #1f77b4" transform="translate(284.759813 188.911627) scale(0.105 -0.105)">
      <defs>
       <path id="DejaVuSans-65" d="M 3597 1894 
 L 3597 1613 
@@ -1579,17 +1579,17 @@ z
     </g>
    </g>
    <g id="patch_6">
-    <path d="M 85.567207 67.256941 
-Q 74.491897 70.039705 64.609351 72.522777 
+    <path d="M 81.231419 68.115192 
+Q 72.32201 70.458016 64.602003 72.488074 
 " style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: round"/>
-    <path d="M 68.976138 73.48775 
-L 64.609351 72.522777 
-L 68.001401 69.608331 
+    <path d="M 69.41683 73.496756 
+L 64.602003 72.488074 
+L 68.297844 69.241422 
 " style="fill: none; stroke: #1f77b4; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
    <g id="text_17">
     <!-- rare events carry -->
-    <g style="fill: #1f77b4" transform="translate(89.943438 52.523944) scale(0.1 -0.1)">
+    <g style="fill: #1f77b4" transform="translate(85.6475 51.404162) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-76" d="M 191 3500 
 L 800 3500 
@@ -1621,7 +1621,7 @@ z
      <use xlink:href="#DejaVuSans-79" transform="translate(800.003906 0)"/>
     </g>
     <!-- more information -->
-    <g style="fill: #1f77b4" transform="translate(89.5075 63.721756) scale(0.1 -0.1)">
+    <g style="fill: #1f77b4" transform="translate(85.167969 63.721756) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-6d" d="M 3328 2828 
 Q 3544 3216 3844 3400 

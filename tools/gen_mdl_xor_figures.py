@@ -60,7 +60,8 @@ def fig_xor():
     fig, (axa, axb) = plt.subplots(1, 2, figsize=(8.8, 4.2))
 
     # ---- (a) input space: not linearly separable ----------------------------
-    axa.set_title("(a) input space: no line works")
+    # the caption already says "Left: ... no line separates the two classes",
+    # so no redundant "(a)/(b)" title is drawn on either panel
     # two candidate separators, each of which gets one corner wrong: the point
     # is that the orange diagonal and the blue diagonal cannot be split at once
     xs = np.array([-0.4, 1.4])
@@ -68,11 +69,11 @@ def fig_xor():
     axa.plot(xs, 0.5 - xs + 1.0, "--", color=GRAY, lw=1.5, alpha=0.0)  # spacing
     axa.plot([-0.4, 1.4], [0.5, 0.5], "--", color=GRAY, lw=1.5)
     axa.text(1.95, 0.95, "two candidate\nlines, each\nmisclassifies\na corner",
-             color=GRAY, fontsize=8.0, ha="center", va="center")
+             color=GRAY, fontsize=12, ha="center", va="center")
     for (x1, x2), lab in zip(X, y):
-        axa.plot(x1, x2, "o", color=col[lab], ms=14, zorder=5)
+        axa.plot(x1, x2, "o", color=col[lab], ms=18, zorder=5)
         axa.text(x1, x2, "0" if lab == 0 else "1", color="white",
-                 fontsize=9.5, fontweight="bold", ha="center", va="center",
+                 fontsize=12, fontweight="bold", ha="center", va="center",
                  zorder=6)
     axa.set_xlabel("$x_1$"); axa.set_ylabel("$x_2$")
     axa.set_xticks([0, 1]); axa.set_yticks([0, 1])
@@ -82,29 +83,35 @@ def fig_xor():
     axa.spines["right"].set_visible(False)
 
     # ---- (b) hidden space: separable, with the two class-1 corners merged ----
-    axb.set_title(r"(b) hidden space $h=\mathrm{ReLU}(\mathbf{x}\mathbf{W}^{(1)}+\mathbf{b}^{(1)})$")
+    # the caption already gives the hidden-map formula, so no redundant title
     # the separating line  h1 - 2 h2 = 1/2  (the output neuron's decision)
     h1s = np.array([-0.4, 2.4])
     h2_line = (h1s - 0.5) / 2.0
     axb.fill_between(h1s, h2_line, 1.6, color=BLUE, alpha=0.07, lw=0)
     axb.fill_between(h1s, -0.6, h2_line, color=ORANGE, alpha=0.07, lw=0)
     axb.plot(h1s, h2_line, "--", color=GREEN, lw=1.6)
-    axb.text(1.74, 0.18, r"$h_1-2h_2=\frac{1}{2}$", color=GREEN, fontsize=9,
+    # sits on the upper (blue-side) stretch of the line, between the merged
+    # point and (1,1) -- clear of both corner labels and the (1,1) marker
+    axb.text(1.3, 0.75, r"$h_1-2h_2=\frac{1}{2}$", color=GREEN, fontsize=12,
              ha="center", va="center", rotation=np.degrees(np.arctan2(0.5, 1.0)),
              rotation_mode="anchor")
-    # plot hidden points; jitter only the LABELS of the two coincident corners
+    # plot hidden points; the two class-1 corners coincide at the same point,
+    # so draw ONE combined label for them instead of two stacked ones (which
+    # crowded into the sloped line at this font size)
     seen: dict[tuple[float, float], int] = {}
     for (h1, h2), lab, (x1, x2) in zip(H, y, X):
         key = (round(h1, 6), round(h2, 6))
         seen[key] = seen.get(key, 0) + 1
-        axb.plot(h1, h2, "o", color=col[lab], ms=13, zorder=5)
-        # name each hidden point by the input that produced it
-        dy = 0.20 if seen[key] == 1 else -0.30   # stagger the two merged labels
-        axb.text(h1 + 0.16, h2 + dy, f"$({x1:.0f},{x2:.0f})$", color=col[lab],
-                 fontsize=8.5, ha="left", va="center", zorder=6)
-    axb.annotate("two class-1 corners\nland on the same point",
-                 xy=(1.0, 0.0), xytext=(0.30, 0.95),
-                 fontsize=8.5, color=GRAY, ha="center", va="center",
+        axb.plot(h1, h2, "o", color=col[lab], ms=17, zorder=5)
+        if seen[key] == 1 and list(H.tolist()).count([h1, h2]) == 1:
+            # a point hit by only one input: label it normally
+            axb.text(h1 + 0.20, h2 + 0.26, f"$({x1:.0f},{x2:.0f})$", color=col[lab],
+                     fontsize=12, ha="left", va="center", zorder=6)
+    axb.text(1.0, -0.45, "$(0,1),(1,0)$", color=ORANGE, fontsize=12,
+             ha="center", va="center", zorder=6)
+    axb.annotate("both class-1\ncorners land\non one point",
+                 xy=(1.0, 0.0), xytext=(0.15, 1.25),
+                 fontsize=12, color=GRAY, ha="center", va="center",
                  arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.0))
     axb.set_xlabel("$h_1$"); axb.set_ylabel("$h_2$")
     axb.set_xticks([0, 1, 2]); axb.set_yticks([0, 1])

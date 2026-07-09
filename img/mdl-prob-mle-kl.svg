@@ -900,16 +900,16 @@ L 357 223.416
    </g>
    <g id="legend_1">
     <g id="patch_15">
-     <path d="M 185.555 21.31 
-L 202.555 21.31 
-L 202.555 15.36 
-L 185.555 15.36 
+     <path d="M 135.13 25.46 
+L 157.13 25.46 
+L 157.13 17.76 
+L 135.13 17.76 
 z
 " style="fill: #1f77b4; opacity: 0.85"/>
     </g>
     <g id="text_8">
      <!-- $H(\hat p)$  (irreducible floor) -->
-     <g transform="translate(209.355 21.31) scale(0.085 -0.085)">
+     <g transform="translate(165.93 25.46) scale(0.11 -0.11)">
       <defs>
        <path id="DejaVuSans-28" d="M 1984 4856 
 Q 1566 4138 1362 3434 
@@ -1069,16 +1069,16 @@ z
      </g>
     </g>
     <g id="patch_16">
-     <path d="M 185.555 34.145 
-L 202.555 34.145 
-L 202.555 28.195 
-L 185.555 28.195 
+     <path d="M 135.13 42.07 
+L 157.13 42.07 
+L 157.13 34.37 
+L 135.13 34.37 
 z
 " style="fill: #ff7f0e; opacity: 0.85"/>
     </g>
     <g id="text_9">
      <!-- $D_{\mathrm{KL}}(\hat p \,\Vert\, p_\theta)$  (removed by training) -->
-     <g transform="translate(209.355 34.145) scale(0.085 -0.085)">
+     <g transform="translate(165.93 42.07) scale(0.11 -0.11)">
       <defs>
        <path id="Cmmi10-44" d="M 313 0 
 Q 250 0 250 84 

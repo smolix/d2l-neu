@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="326.88pt" height="251.870312pt" viewBox="0 0 326.88 251.870312" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="327.688525pt" height="251.870312pt" viewBox="0 0 327.688525 251.870312" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -21,8 +21,8 @@
  <g id="figure_1">
   <g id="patch_1">
    <path d="M 0 251.870312 
-L 326.88 251.870312 
-L 326.88 0 
+L 327.688525 251.870312 
+L 327.688525 0 
 L 0 0 
 z
 " style="fill: #ffffff"/>
@@ -196,7 +196,7 @@ L 268.176053 -1
    </g>
    <g id="text_2">
     <!-- slope $f'(x)$ -->
-    <g style="fill: #ff7f0e" transform="translate(247.963279 69.072) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(258.208525 124.976) scale(0.12 -0.12)">
      <defs>
       <path id="DejaVuSans-73" d="M 2834 3397 
 L 2834 2853 
@@ -436,7 +436,7 @@ z
    </g>
    <g id="text_3">
     <!-- $(x,\,f(x))$ -->
-    <g transform="translate(123.333197 163.022) scale(0.09 -0.09)">
+    <g transform="translate(171.123934 165.272) scale(0.12 -0.12)">
      <defs>
       <path id="Cmmi10-3b" d="M 634 -1153 
 Q 634 -1125 659 -1100 

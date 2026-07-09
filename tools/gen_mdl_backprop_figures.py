@@ -48,7 +48,7 @@ def _fmt_vec(v):
     return "[" + ",\\ ".join(_num(x) for x in np.ravel(v)) + "]"
 
 
-def _matrix2x2(ax, cx, cy, M, color, fontsize=10.5):
+def _matrix2x2(ax, cx, cy, M, color, fontsize=12):
     """Draw a 2x2 matrix of numbers flanked by drawn square brackets, centred at
     (cx, cy).  mathtext has no matrix environment, so we lay it out by hand; this
     keeps the figure self-contained and crisp."""
@@ -122,7 +122,7 @@ def fig_backprop_graph():
         ax.text(cx, yc + 0.20, name, ha="center", va="center",
                 fontsize=13, color=color)
         ax.text(cx, yc - 0.27, value, ha="center", va="center",
-                fontsize=10.5, color=GRAY, usetex=False)
+                fontsize=12, color=GRAY, usetex=False)
         return dict(l=x0, r=x0 + bw, cx=cx)
 
     nx = node(centres[0], r"$\mathbf{x}$", f"${_fmt_vec(x)}$", GREEN)

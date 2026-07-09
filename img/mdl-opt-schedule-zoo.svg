@@ -151,7 +151,7 @@ L 397.535545 213.4368
    </g>
    <g id="text_1">
     <!-- constant: noise floor $\propto\eta$ forever -->
-    <g style="fill: #7f7f7f" transform="translate(107.9309 37.6524) scale(0.09 -0.09)">
+    <g style="fill: #7f7f7f" transform="translate(91.8109 37.2124) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-63" d="M 3122 3366 
 L 3122 2828 
@@ -527,13 +527,13 @@ z
     </g>
    </g>
    <g id="patch_2">
-    <path d="M 128.252595 147.934238 
-Q 113.313887 157.468269 98.375179 167.002301 
+    <path d="M 115.182148 150.37549 
+Q 106.660273 158.533607 98.138398 166.691724 
 " style="fill: none; stroke: #2ca02c; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_2">
     <!-- $c/k$: reaches the optimum, -->
-    <g style="fill: #2ca02c" transform="translate(88.881611 132.5124) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(58.584929 131.9004) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-63" d="M 750 763 
 Q 750 484 892 290 
@@ -775,7 +775,7 @@ z
      <use xlink:href="#DejaVuSans-2c" transform="translate(1284.130859 0.015625)"/>
     </g>
     <!-- if $c$ is large enough -->
-    <g style="fill: #2ca02c" transform="translate(105.576611 142.9704) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(78.989929 144.6824) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-67" d="M 2906 1791 
 Q 2906 2416 2648 2759 
@@ -835,13 +835,13 @@ z
     </g>
    </g>
    <g id="patch_3">
-    <path d="M 238.97519 123.239522 
-Q 260.487993 148.735716 282.000795 174.23191 
+    <path d="M 294.226268 161.952614 
+Q 289.379347 168.073009 284.532426 174.193405 
 " style="fill: none; stroke: #1f77b4; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_3">
     <!-- cosine: long tail -->
-    <g style="fill: #1f77b4" transform="translate(192.519281 107.762822) scale(0.09 -0.09)">
+    <g style="fill: #1f77b4" transform="translate(262.685608 143.785316) scale(0.11 -0.11)">
      <use xlink:href="#DejaVuSans-63"/>
      <use xlink:href="#DejaVuSans-6f" transform="translate(54.980469 0)"/>
      <use xlink:href="#DejaVuSans-73" transform="translate(116.162109 0)"/>
@@ -861,7 +861,7 @@ Q 260.487993 148.735716 282.000795 174.23191
      <use xlink:href="#DejaVuSans-6c" transform="translate(762.304688 0)"/>
     </g>
     <!-- of small steps -->
-    <g style="fill: #1f77b4" transform="translate(196.811156 117.840853) scale(0.09 -0.09)">
+    <g style="fill: #1f77b4" transform="translate(267.931233 156.102909) scale(0.11 -0.11)">
      <use xlink:href="#DejaVuSans-6f"/>
      <use xlink:href="#DejaVuSans-66" transform="translate(61.181641 0)"/>
      <use xlink:href="#DejaVuSans-20" transform="translate(96.386719 0)"/>
@@ -879,13 +879,13 @@ Q 260.487993 148.735716 282.000795 174.23191
     </g>
    </g>
    <g id="patch_4">
-    <path d="M 349.562096 93.767305 
-Q 350.586296 102.713634 351.610496 111.659962 
+    <path d="M 250.928903 81.170948 
+Q 300.430211 97.101152 349.931519 113.031357 
 " style="fill: none; stroke: #ff7f0e; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="text_4">
     <!-- WSD: hold the plateau, -->
-    <g style="fill: #ff7f0e" transform="translate(295.917464 77.825222) scale(0.09 -0.09)">
+    <g style="fill: #ff7f0e" transform="translate(143.435384 63.951716) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-57" d="M 213 4666 
 L 850 4666 
@@ -1004,7 +1004,7 @@ z
      <use xlink:href="#DejaVuSans-2c" transform="translate(1126.269531 0)"/>
     </g>
     <!-- then pay the ball down -->
-    <g style="fill: #ff7f0e" transform="translate(296.152308 87.903253) scale(0.09 -0.09)">
+    <g style="fill: #ff7f0e" transform="translate(143.722415 76.269309) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-79" d="M 2059 -325 
 Q 1816 -950 1584 -1140 
@@ -1091,13 +1091,13 @@ z
     </g>
    </g>
    <g id="patch_5">
-    <path d="M 60.914671 136.242259 
-Q 49.208391 129.595767 37.502111 122.949275 
+    <path d="M 50.513992 179.234305 
+Q 43.387437 151.567609 36.260883 123.900912 
 " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linecap: round"/>
    </g>
    <g id="text_5">
     <!-- warmup -->
-    <g transform="translate(55.541717 146.065837) scale(0.09 -0.09)">
+    <g transform="translate(30.530007 191.524113) scale(0.11 -0.11)">
      <use xlink:href="#DejaVuSans-77"/>
      <use xlink:href="#DejaVuSans-61" transform="translate(81.787109 0)"/>
      <use xlink:href="#DejaVuSans-72" transform="translate(143.066406 0)"/>
@@ -1108,7 +1108,7 @@ Q 49.208391 129.595767 37.502111 122.949275
    </g>
    <g id="text_6">
     <!-- $t$ -->
-    <g transform="translate(393.465545 233.437481) scale(0.11 -0.11)">
+    <g transform="translate(393.095545 234.197325) scale(0.12 -0.12)">
      <defs>
       <path id="Cmmi10-74" d="M 397 519 
 Q 397 613 416 697 
@@ -1153,7 +1153,7 @@ z
    </g>
    <g id="text_7">
     <!-- $\eta_t$ -->
-    <g transform="translate(19.7669 28.1748) scale(0.105 -0.105)">
+    <g transform="translate(19.7669 27.8448) scale(0.12 -0.12)">
      <use xlink:href="#Cmmi10-b4" transform="translate(0 0.8125)"/>
      <use xlink:href="#Cmmi10-74" transform="translate(49.609375 -16.19375) scale(0.7)"/>
     </g>

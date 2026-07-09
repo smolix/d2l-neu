@@ -2828,7 +2828,7 @@ L 211.758169 116.737695
    </g>
    <g id="text_21">
     <!-- fixed point -->
-    <g style="fill: #2ca02c" transform="translate(196.860469 135.72) scale(0.095 -0.095)">
+    <g style="fill: #2ca02c" transform="translate(196.860469 135.72) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-66" d="M 2375 4863 
 L 2375 4384 
@@ -3034,7 +3034,7 @@ z
    </g>
    <g id="text_22">
     <!-- $\mathbf{x}_0$ -->
-    <g style="fill: #1f77b4" transform="translate(310.350469 119.780312) scale(0.1 -0.1)">
+    <g style="fill: #1f77b4" transform="translate(309.607969 119.468359) scale(0.115 -0.115)">
      <defs>
       <path id="Cmb10-78" d="M 109 0 
 L 109 325 
@@ -3106,7 +3106,7 @@ z
    </g>
    <g id="text_23">
     <!-- $\mathbf{x}_0'$ -->
-    <g style="fill: #ff7f0e" transform="translate(146.640469 274.3) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(145.155469 274.675) scale(0.115 -0.115)">
      <defs>
       <path id="Cmsy10-30" d="M 225 347 
 Q 184 359 184 409 
@@ -3130,7 +3130,7 @@ z
    </g>
    <g id="text_24">
     <!-- $\dot{\mathbf{x}}=\mathbf{f}(\mathbf{x})$ -->
-    <g style="fill: #7f7f7f" transform="translate(57.000469 21.75) scale(0.11 -0.11)">
+    <g transform="translate(57.000469 21.75) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-5f" d="M 538 3928 
 Q 538 4069 644 4175 

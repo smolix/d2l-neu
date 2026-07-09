@@ -5635,7 +5635,7 @@ L 353.415005 195.13446
    </g>
    <g id="text_17">
     <!-- $\lambda=0$ (PF-ODE) -->
-    <g style="fill: #1f77b4" transform="translate(178.5365 38.114437) scale(0.09 -0.09)">
+    <g style="fill: #1f77b4" transform="translate(171.4965 38.666312) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-b8" d="M 325 109 
 Q 325 203 409 288 
@@ -5803,7 +5803,7 @@ z
    </g>
    <g id="text_18">
     <!-- $\lambda=0.5$ -->
-    <g style="fill: #2ca02c" transform="translate(196.7615 217.062496) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(193.7715 217.614371) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-3a" d="M 538 353 
 Q 538 497 644 600 
@@ -5880,7 +5880,7 @@ z
    </g>
    <g id="text_19">
     <!-- $\lambda=1$ (reverse SDE) -->
-    <g style="fill: #ff7f0e" transform="translate(167.6915 23.062732) scale(0.09 -0.09)">
+    <g style="fill: #ff7f0e" transform="translate(158.2415 23.614607) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-31" d="M 594 0 
 L 594 225 
@@ -7886,7 +7886,7 @@ L 603.680207 234.648
    </g>
    <g id="text_38">
     <!-- all three land -->
-    <g style="fill: #7f7f7f" transform="translate(481.663047 66.896542) scale(0.09 -0.09)">
+    <g style="fill: #7f7f7f" transform="translate(475.054766 66.328636) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-68" d="M 3513 2113 
 L 3513 0 
@@ -7924,7 +7924,7 @@ z
      <use xlink:href="#DejaVuSans-64" transform="translate(597.359375 0)"/>
     </g>
     <!-- on the same $p_0$ -->
-    <g style="fill: #7f7f7f" transform="translate(477.695313 76.974574) scale(0.09 -0.09)">
+    <g style="fill: #7f7f7f" transform="translate(470.205313 78.64623) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-70" d="M -159 -1241 
 Q -219 -1241 -219 -1159 

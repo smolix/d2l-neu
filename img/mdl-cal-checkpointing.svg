@@ -158,7 +158,7 @@ z
    </g>
    <g id="text_1">
     <!-- store all $L$ -->
-    <g transform="translate(26.028511 44.94062) scale(0.105 -0.105)">
+    <g transform="translate(23.508511 44.798643) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-73" d="M 2834 3397 
 L 2834 2853 
@@ -365,7 +365,7 @@ z
      <use xlink:href="#Cmmi10-4c" transform="translate(435.546875 0.015625)"/>
     </g>
     <!-- activations -->
-    <g transform="translate(21.475776 56.698323) scale(0.105 -0.105)">
+    <g transform="translate(18.738979 57.116237) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-63" d="M 3122 3366 
 L 3122 2828 
@@ -574,7 +574,7 @@ z
    </g>
    <g id="text_2">
     <!-- store $\sqrt{L}$ -->
-    <g transform="translate(30.333511 99.825774) scale(0.105 -0.105)">
+    <g transform="translate(28.018511 99.711845) scale(0.11 -0.11)">
      <defs>
       <path id="Cmex10-70" d="M 2713 -7425 
 L 1269 -4063 
@@ -610,7 +610,7 @@ z
 "/>
     </g>
     <!-- checkpoints -->
-    <g transform="translate(15.958354 111.583478) scale(0.105 -0.105)">
+    <g transform="translate(12.958823 112.029438) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-68" d="M 3513 2113 
 L 3513 0 
@@ -696,7 +696,7 @@ L 427.223912 28.21583
    </g>
    <g id="text_3">
     <!-- forward pass (layers $1$ to $L$) -->
-    <g style="fill: #7f7f7f" transform="translate(192.578511 19.837532) scale(0.1 -0.1)">
+    <g style="fill: #7f7f7f" transform="translate(185.713511 19.627532) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-66" d="M 2375 4863 
 L 2375 4384 
@@ -862,7 +862,7 @@ L 422.8984 125.173277
    </g>
    <g id="text_4">
     <!-- recompute segment forward -->
-    <g style="fill: #ff7f0e" transform="translate(323.749397 134.64575) scale(0.095 -0.095)">
+    <g style="fill: #ff7f0e" transform="translate(313.045725 135.785515) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-6d" d="M 3328 2828 
 Q 3544 3216 3844 3400 
@@ -978,7 +978,7 @@ z
      <use xlink:href="#DejaVuSans-64" transform="translate(1363.675781 0)"/>
     </g>
     <!-- from its checkpoint, then sweep it -->
-    <g style="fill: #ff7f0e" transform="translate(310.545882 145.283672) scale(0.095 -0.095)">
+    <g style="fill: #ff7f0e" transform="translate(297.757444 148.103109) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-2c" d="M 750 794 
 L 1409 794 
@@ -1037,7 +1037,7 @@ L 355.854727 78.48766
    </g>
    <g id="text_5">
     <!-- backward sweep -->
-    <g style="fill: #7f7f7f" transform="translate(349.751038 74.929674) scale(0.1 -0.1)">
+    <g style="fill: #7f7f7f" transform="translate(345.57221 74.721705) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-62" d="M 3116 1747 
 Q 3116 2381 2855 2742 

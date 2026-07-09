@@ -1749,7 +1749,7 @@ z
    </g>
    <g id="text_14">
     <!-- differentiable -->
-    <g style="fill: #ff7f0e" transform="translate(559.157344 137.196422) scale(0.09 -0.09)">
+    <g style="fill: #ff7f0e" transform="translate(552.454531 136.628516) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-Oblique-64" d="M 2675 525 
 Q 2444 222 2128 65 
@@ -2007,7 +2007,7 @@ z
      <use xlink:href="#DejaVuSans-Oblique-65" transform="translate(608.740234 0)"/>
     </g>
     <!-- used for gradient descent -->
-    <g style="fill: #ff7f0e" transform="translate(531.234844 147.274453) scale(0.09 -0.09)">
+    <g style="fill: #ff7f0e" transform="translate(518.327031 148.946109) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-Oblique-75" d="M 428 1388 
 L 838 3500 
@@ -2184,7 +2184,7 @@ z
    </g>
    <g id="text_15">
     <!-- discrete (zero gradient) -->
-    <g style="fill: #2ca02c" transform="translate(536.180625 174.492422) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(524.371875 173.924516) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-Oblique-28" d="M 2731 4856 
 Q 1903 3822 1495 2892 
@@ -2252,7 +2252,7 @@ z
      <use xlink:href="#DejaVuSans-Oblique-29" transform="translate(1141.845703 0)"/>
     </g>
     <!-- used for benchmarks -->
-    <g style="fill: #2ca02c" transform="translate(541.705781 184.570453) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(531.124844 186.242109) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-Oblique-68" d="M 3566 2113 
 L 3156 0 

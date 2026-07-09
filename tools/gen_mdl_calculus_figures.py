@@ -113,8 +113,8 @@ def _second_der_panels(name, sign):
         (f0, r"$f(x)$", BLUE),
     ]
     for ax, (y, title, col) in zip(axes, panels):
-        ax.axhline(0, color=GRAY, lw=0.8)
-        ax.axvline(0, color=GRAY, lw=0.8)
+        ax.axhline(0, color="black", lw=0.8)
+        ax.axvline(0, color="black", lw=0.8)
         ax.plot(x, y, color=col, lw=2.4)
         ax.set_title(title, fontsize=11)
         ax.set_xticks([]); ax.set_yticks([])
@@ -158,9 +158,10 @@ def fig_secant_to_tangent():
         ax.plot([x0 + eps], [f(x0 + eps)], "o", color=GRAY, ms=4, zorder=4)
     ax.plot(xs, y0 + df(x0) * (xs - x0), "--", color=ORANGE, lw=2.0, zorder=5)
     ax.plot([x0], [y0], "o", color="black", ms=5, zorder=6)
-    ax.text(2.05, y0 + df(x0) * 1.05 + 0.16, r"slope $f'(x)$", color=ORANGE,
-            ha="left", va="bottom", fontsize=10)
-    ax.text(x0, y0 - 0.16, r"$(x,\,f(x))$", ha="center", va="top", fontsize=9)
+    ax.text(2.15, 1.02, r"slope $f'(x)$", color=ORANGE,
+            ha="left", va="top", fontsize=12)
+    ax.text(x0 + 0.30, y0 - 0.16, r"$(x,\,f(x))$", ha="left", va="top",
+            fontsize=12)
     ax.set_xlim(-0.3, 2.75); ax.set_ylim(0.1, 1.9)
     ax.set_xticks([x0]); ax.set_xticklabels(["$x$"]); ax.set_yticks([])
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
@@ -181,14 +182,14 @@ def fig_gd_step():
     ax.plot([x1, x1], [-0.18, f(x1)], ":", color=GRAY, lw=1.0)
     fl.arrow(ax, (x0, -0.18), (x1, -0.18), color=GREEN, lw=2.0, mut=13)
     ax.text((x0 + x1) / 2, -0.42, r"$-\eta f'(x)$", ha="center", va="top",
-            color=GREEN, fontsize=10)
+            color=GREEN, fontsize=11)
     ax.plot([x0], [f(x0)], "o", color="black", ms=5, zorder=5)
     ax.plot([x1], [f(x1)], "o", color=GREEN, ms=5, zorder=5)
-    ax.text(x0 + 0.08, f(x0) + 0.04, r"$x$", ha="left", va="bottom")
+    ax.text(x0 + 0.22, f(x0) + 0.04, r"$x$", ha="left", va="bottom")
     ax.text(x1 - 0.08, f(x1) + 0.06, r"$x-\eta f'(x)$", ha="right", va="bottom",
-            color=GREEN, fontsize=9)
+            color=GREEN, fontsize=11)
     ax.annotate(r"drop $\approx \eta\,[f'(x)]^2$", xy=(x1, f(x1)),
-                xytext=(1.15, 1.95), fontsize=9.5, color=GRAY, ha="center",
+                xytext=(1.15, 1.95), fontsize=11, color=GRAY, ha="center",
                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.0,
                                 connectionstyle="arc3,rad=-0.3"))
     ax.set_xlim(-2.4, 2.4); ax.set_ylim(-0.65, 2.25)
@@ -225,19 +226,19 @@ def fig_descent_lemma():
     ax.plot([xp], [qp], "o", color=ORANGE, ms=5, zorder=6)
     ax.plot([xp], [fp], "o", color=BLUE, ms=5, zorder=6)
     ax.text(xp, -1.02, r"$x-f'(x)/L$  ($\eta=1/L$)", ha="center", va="top",
-            fontsize=10, color=GRAY)
+            fontsize=11, color=GRAY)
     # guaranteed drop: from the starting height down to the ceiling's minimum;
     # label lifted high and left so it never crowds the rising orange parabola
     fl.arrow(ax, (xp, y0), (xp, qp), color=ORANGE, lw=1.8, mut=12)
     ax.annotate(r"guaranteed drop $f'(x)^2/2L\approx 0.341$",
                 xy=(xp - 0.02, (y0 + qp) / 2), xytext=(-0.12, 1.42),
-                ha="center", fontsize=10, color=ORANGE,
+                ha="center", fontsize=11, color=ORANGE,
                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.0,
                                 connectionstyle="arc3,rad=0.25"))
     # the function, trapped below the ceiling, drops even further
     fl.arrow(ax, (xp, qp), (xp, fp), color=BLUE, lw=1.8, mut=12)
     ax.annotate("actual drop", xy=(xp - 0.02, (qp + fp) / 2),
-                xytext=(-0.34, 0.02), ha="right", va="center", fontsize=10,
+                xytext=(-0.34, 0.02), ha="right", va="center", fontsize=11,
                 color=BLUE,
                 arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.0,
                                 connectionstyle="arc3,rad=-0.2"))
@@ -256,25 +257,25 @@ def fig_relu_corner():
     fig, (axa, axb) = plt.subplots(1, 2, figsize=(9.0, 3.9))
 
     # left: |x|, subgradient fan sweeping [-1, 1]
-    axa.axhline(0, color=GRAY, lw=0.8, zorder=1)
+    axa.axhline(0, color="black", lw=0.8, zorder=1)
     for s in np.linspace(-1.0, 1.0, 9):
         axa.plot(xs, s * xs, "-", color=ORANGE, lw=1.0, alpha=0.5, zorder=2)
     axa.plot(xs, np.abs(xs), color=BLUE, lw=2.6, zorder=4)
     axa.plot([0], [0], "o", color="black", ms=6, zorder=5)
-    axa.text(1.45, 1.62, r"$|x|$", color=BLUE, fontsize=12, ha="center")
-    axa.set_title(r"$\partial|x|(0)=[-1,1]$", fontsize=11)
+    axa.text(0.0, 1.72, r"$|x|,\ \ \partial|x|(0)=[-1,1]$", color=BLUE,
+              fontsize=12, ha="center")
     axa.set_xlim(-2.0, 2.0); axa.set_ylim(-0.55, 2.0)
     axa.set_xticks([0]); axa.set_yticks([])
     axa.spines["top"].set_visible(False); axa.spines["right"].set_visible(False)
 
     # right: ReLU = max(0, x), subgradient fan sweeping [0, 1]
-    axb.axhline(0, color=GRAY, lw=0.8, zorder=1)
+    axb.axhline(0, color="black", lw=0.8, zorder=1)
     for s in np.linspace(0.0, 1.0, 6):
         axb.plot(xs, s * xs, "-", color=ORANGE, lw=1.0, alpha=0.5, zorder=2)
     axb.plot(xs, np.maximum(0.0, xs), color=BLUE, lw=2.6, zorder=4)
     axb.plot([0], [0], "o", color="black", ms=6, zorder=5)
-    axb.text(1.35, 1.62, r"$\mathrm{ReLU}(x)$", color=BLUE, fontsize=12, ha="center")
-    axb.set_title(r"$\partial\,\mathrm{ReLU}(0)=[0,1]$", fontsize=11)
+    axb.text(0.0, 1.72, r"$\mathrm{ReLU}(x),\ \ \partial(0)=[0,1]$", color=BLUE,
+              fontsize=12, ha="center")
     axb.set_xlim(-2.0, 2.0); axb.set_ylim(-0.55, 2.0)
     axb.set_xticks([0]); axb.set_yticks([])
     axb.spines["top"].set_visible(False); axb.spines["right"].set_visible(False)
@@ -300,14 +301,14 @@ def fig_mvt():
     xt = np.linspace(a - 0.05, b + 0.15, 200)
     ax.plot(xt, f(xi) + slope * (xt - xi), "--", color=ORANGE, lw=2.0, zorder=4)
     # endpoint dots, each labelled snug beside its own point (not adrift below)
-    for x, lab, dx in [(a, "$a$", -0.16), (b, "$b$", 0.18)]:
+    for x, lab, dx in [(a, "$a$", -0.30), (b, "$b$", 0.18)]:
         ax.plot([x], [f(x)], "o", color="black", ms=5, zorder=5)
         ax.text(x + dx, f(x) - 0.06, lab, ha="center", va="top", fontsize=12)
     ax.plot([xi], [f(xi)], "o", color=ORANGE, ms=6, zorder=6)
     ax.text(xi, f(xi) + 0.14, r"$\xi$", ha="center", va="bottom", color=ORANGE,
             fontsize=13)
     ax.text((a + b) / 2 + 0.25, f((a + b) / 2) - 0.62, "secant", color=GRAY,
-            fontsize=10, ha="center")
+            fontsize=12, ha="center")
     ax.set_xlim(a - 0.35, b + 0.65); ax.set_ylim(-0.18, 1.62)
     ax.set_xticks([]); ax.set_yticks([])
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
@@ -323,14 +324,14 @@ def fig_smooth_not_analytic():
         f = np.where(xs == 0, 0.0, np.exp(-1.0 / xs ** 2))
 
     fig, ax = plt.subplots(figsize=(5.8, 4.0))
-    ax.axhline(0, color=GRAY, lw=0.8, zorder=1)
+    ax.axhline(0, color="black", lw=0.8, zorder=1)
     ax.plot(xs, f, color=BLUE, lw=2.6, zorder=3, label=r"$f(x)=e^{-1/x^2}$")
     ax.plot(xs, np.zeros_like(xs), "--", color=ORANGE, lw=2.0, zorder=2,
             label=r"Taylor series at $0\ \equiv\ 0$")
     ax.plot([0], [0], "o", color="black", ms=5, zorder=4)
     ax.set_xlim(-1.5, 1.5); ax.set_ylim(-0.06, 0.5)
     ax.set_xticks([0]); ax.set_yticks([])
-    ax.legend(loc="upper center", fontsize=9, frameon=False)
+    ax.legend(loc="upper center", fontsize=11, frameon=False)
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     fl.save(fig, "mdl-cal-smooth-not-analytic")
 
@@ -383,7 +384,7 @@ def fig_sub_area():
         mask = (xs >= lo) & (xs <= hi)
         ax.fill_between(xs[mask], 0, g(xs[mask]), color=BLUE, alpha=0.22, lw=0)
         ax.set_title(title, fontsize=11)
-        ax.set_ylim(-0.02, 1.18)
+        ax.set_ylim(0, 1.18)
         ax.set_xlim(xs[0], xs[-1])
         ax.set_yticks([])
         ax.set_xticks([a, b]); ax.set_xticklabels(["$a$", "$b$"])
@@ -447,7 +448,6 @@ def fig_rect_trans():
                  arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.1))
     axa.text(x0 + eps / 2, base - 0.17, r"$\epsilon$", ha="center", va="top",
              color=GRAY, fontsize=12)
-    axa.set_title(r"width $\epsilon$ at $x$,  height $f(u(x))$", fontsize=12)
     axa.set_xlim(-0.55, 3.05); axa.set_ylim(-0.40, 0.92)
     axa.set_xticks([x0]); axa.set_xticklabels(["$x$"], fontsize=12)
     axa.set_yticks([]); axa.axis("off")
@@ -463,8 +463,6 @@ def fig_rect_trans():
                  arrowprops=dict(arrowstyle="<->", color=GRAY, lw=1.1))
     axb.text(y0 + weps / 2, base - 0.17, r"$\epsilon\,u'(x)$", ha="center",
              va="top", color=GRAY, fontsize=12)
-    axb.set_title(r"width $\epsilon\,\dfrac{du}{dx}$ at $y=u(x)$,  same height",
-                  fontsize=12)
     axb.set_xlim(-0.55, 3.05); axb.set_ylim(-0.40, 0.92)
     axb.set_xticks([y0]); axb.set_xticklabels(["$u(x)$"], fontsize=12)
     axb.set_yticks([]); axb.axis("off")
@@ -594,7 +592,6 @@ def fig_cov_jacobian():
     # --- (a) the 1-D analog: a segment of length eps stretched to eps*u' ---
     eps, du = 0.85, 1.85
     yb, yo = 1.55, 0.45                  # heights of the two segments
-    axa.set_title(r"1-D:  length $\times\ u'(x)$", fontsize=12)
     # a faint left rule the two segments both start from (the common origin)
     axa.plot([0, 0], [yo - 0.22, yb + 0.22], color=LIGHT, lw=1.2, zorder=1)
     axa.plot([0, eps], [yb, yb], color=BLUE, lw=7, solid_capstyle="butt",
@@ -610,7 +607,7 @@ def fig_cov_jacobian():
              color=BLUE, fontsize=12)
     axa.text(eps * du / 2, yo - 0.20, r"$\epsilon\,u'(x)$", ha="center",
              va="top", color=ORANGE, fontsize=12)
-    axa.set_xlim(-0.35, 1.75); axa.set_ylim(0.0, 2.05)
+    axa.set_xlim(-0.15, 1.65); axa.set_ylim(0.10, 1.90)
     axa.set_aspect("equal")
     axa.axis("off")
 
@@ -619,7 +616,6 @@ def fig_cov_jacobian():
     det = np.linalg.det(A)                    # 1.71
     unit = np.array([[0, 0], [1, 0], [1, 1], [0, 1]]).T
     img = A @ unit
-    axb.set_title(r"2-D:  area $\times\ |\det D\phi|$", fontsize=12)
     # original unit square (faint) with its area shaded
     axb.add_patch(Polygon(unit.T, closed=True, facecolor=BLUE, alpha=0.20,
                           edgecolor=BLUE, lw=1.6, zorder=2))
@@ -643,7 +639,7 @@ def fig_cov_jacobian():
              fontsize=11)
     axb.text(1.46, 0.92, rf"area $|\det D\phi|={abs(det):.2g}$",
              ha="center", va="center", color=ORANGE, fontsize=11)
-    axb.set_xlim(-0.35, 2.45); axb.set_ylim(-0.35, 2.45)
+    axb.set_xlim(-0.15, 2.35); axb.set_ylim(-0.15, 2.35)
     axb.set_aspect("equal")
     axb.axis("off")
 
@@ -740,7 +736,7 @@ def fig_gradient_field():
         fl.arrow(ax, (px, py), (px + 0.32 * g[0], py + 0.32 * g[1]),
                  color=ORANGE, lw=2.0, mut=12)
     ax.plot([0], [0], "o", color=BLUE, ms=7, zorder=4)     # the minimum
-    ax.text(0.12, -0.32, "min", color=BLUE, fontsize=9)
+    ax.text(0.12, -0.32, "min", color=BLUE, fontsize=11)
     ax.set_aspect("equal")
     ax.set_xlim(-2.6, 2.6); ax.set_ylim(-2.6, 2.6)
     ax.set_xticks([]); ax.set_yticks([])
@@ -776,9 +772,11 @@ def fig_taylor_quadratic():
                depthshade=False)
     ax.plot([x0, x0], [y0, y0], [f(x0, y0), f(x0, y0) - 0.42], color="black",
             lw=0.9, zorder=6)
-    ax.text(x0, y0, f(x0, y0) - 0.52, r"$(-1,0)$", fontsize=11, ha="center",
+    ax.text(x0, y0, f(x0, y0) - 0.52, r"$(-1,0)$", fontsize=14, ha="center",
             va="top", zorder=6)
-    ax.set_xlabel("$x$"); ax.set_ylabel("$y$"); ax.set_zlabel("$z$")
+    ax.set_xlabel("$x$", fontsize=15, labelpad=-6)
+    ax.set_ylabel("$y$", fontsize=15, labelpad=-6)
+    ax.set_zlabel("$z$", fontsize=15, labelpad=-6)
     ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
     ax.view_init(elev=22, azim=-58)
     fl.save(fig, "mdl-cal-taylor-quadratic")
@@ -823,7 +821,7 @@ def fig_tangent_plane():
     ax.quiver(x0, y0, zbase + 0.01, g[0], g[1], 0.0, color=ORANGE, lw=2.6,
               arrow_length_ratio=0.16, zorder=5)
     # label placed beyond the arrowhead, nudged off the shaft so they don't clash
-    ax.text(x0 + g[0] + 0.22, y0 + g[1] - 0.34, zbase, r"$\nabla f$",
+    ax.text(x0 + g[0] - 0.30, y0 + g[1] - 0.34, zbase, r"$\nabla f$",
             color=ORANGE, fontsize=13, ha="left", va="top", zorder=6)
     ax.set_xlabel("$x$"); ax.set_ylabel("$y$"); ax.set_zlabel("$z$")
     ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
@@ -864,7 +862,6 @@ def fig_jacobian_ellipse():
     axa.plot(circ[0], circ[1], color=BLUE, lw=2.2, zorder=3)
     axa.plot([x0], [y0], "o", color="black", ms=5, zorder=4)
     axa.text(x0 + 0.05, y0 + 0.05, r"$\mathbf{x}_0$", fontsize=11, zorder=4)
-    axa.set_title("input plane", fontsize=11)
     axa.set_xlim(x0 - hw - 0.1, x0 + hw + 0.1)
     axa.set_ylim(y0 - hw - 0.1, y0 + hw + 0.1)
     axa.set_aspect("equal")
@@ -883,8 +880,7 @@ def fig_jacobian_ellipse():
     axb.plot([fx0[0]], [fx0[1]], "o", color="black", ms=5, zorder=5)
     axb.text(1.52, 1.02, r"$\mathbf{f}$", color=BLUE, fontsize=12, zorder=5)
     axb.text(0.98, 0.02, r"$\mathbf{f}(\mathbf{x}_0)+\mathbf{J}\,\boldsymbol{\delta}$",
-             color=ORANGE, fontsize=10, ha="center", zorder=5)
-    axb.set_title("output plane", fontsize=11)
+             color=ORANGE, fontsize=11, ha="center", zorder=5)
     axb.set_aspect("equal")
     axb.axis("off")
 
@@ -897,9 +893,9 @@ def fig_fwd_vs_rev():
     reverse records a tape then propagates an adjoint (VJP) right-to-left to get
     the whole scalar-loss gradient in one pass."""
     chain, xpos = ["x", "a", "b", "L"], [0.0, 1.5, 3.0, 4.5]
-    fig, (axt, axb) = plt.subplots(2, 1, figsize=(6.6, 4.6))
+    fig, (axt, axb) = plt.subplots(2, 1, figsize=(6.6, 3.5))
 
-    def draw(ax, direction, dual_color, dual_label, title):
+    def draw(ax, direction, dual_color, dual_label):
         centers = [(xp, 0.0) for xp in xpos]
         for c0, c1 in zip(centers, centers[1:]):       # evaluation edges
             edge(ax, c0, c1)
@@ -910,20 +906,18 @@ def fig_fwd_vs_rev():
         rad = -0.3 if direction == "fwd" else 0.3
         for c0, c1 in zip(centers, centers[1:]):       # derivative propagation
             a, b = (c0, c1) if direction == "fwd" else (c1, c0)
-            ax.annotate("", xy=(b[0], b[1] + 0.58), xytext=(a[0], a[1] + 0.58),
+            ax.annotate("", xy=(b[0], b[1] + 0.40), xytext=(a[0], a[1] + 0.40),
                         arrowprops=dict(arrowstyle="->", color=dual_color,
                                         lw=1.7, connectionstyle=f"arc3,rad={rad}"))
-        ax.text(2.25, 1.02, dual_label, ha="center", color=dual_color, fontsize=9)
-        ax.set_title(title, fontsize=10.5, loc="left")
-        ax.set_xlim(-0.5, 5.0); ax.set_ylim(-0.7, 1.3)
+        ax.text(2.25, 0.82, dual_label, ha="center", color=dual_color, fontsize=11)
+        ax.set_xlim(-0.5, 5.0); ax.set_ylim(-0.55, 1.02)
         ax.set_aspect("equal"); ax.axis("off")
 
     draw(axt, "fwd", BLUE,
-         r"forward: tangent $\dot a = J\dot x$ (JVP), one input at a time",
-         "Forward mode")
+         r"forward: tangent $\dot a = J\dot x$ (JVP), one input at a time")
     draw(axb, "rev", ORANGE,
-         r"reverse: adjoint $\bar a = J^{\top}\bar L$ (VJP), one output at a time",
-         "Reverse mode (the tape = backprop)")
+         r"reverse: adjoint $\bar a = J^{\top}\bar L$ (VJP), one output at a time")
+    fig.subplots_adjust(hspace=0.05)
     fl.save(fig, "mdl-cal-fwd-vs-rev")
 
 
@@ -936,8 +930,10 @@ def fig_tape_dag():
     receives the contribution $\\bar y\\,r$ twice."""
     fig, ax = plt.subplots(figsize=(7.2, 3.2))
     hh = 0.3                                    # box half-height
-    pos = {"u": (0.0, 2.0), "v": (0.0, 0.4), "t": (2.3, 0.95),
-           "r": (4.4, 1.4), "y": (6.5, 1.4)}
+    # t sits at the vertical midpoint between u and v; r and y sit level with u,
+    # so the two "downstream" boxes read as a clean top row over the t/v pair.
+    pos = {"u": (0.0, 2.0), "v": (0.0, 0.4), "t": (2.3, 1.2),
+           "r": (4.4, 2.0), "y": (6.5, 2.0)}
     hw = {"u": 0.42, "v": 0.42, "t": 0.72, "r": 0.8, "y": 0.8}
 
     def box(k, label, color=LIGHT):
@@ -964,7 +960,7 @@ def fig_tape_dag():
     link(port("u", "SE"), port("t", "NW"))      # u -> t
     link(port("v", "NE"), port("t", "SW"))      # v -> t
     link(port("t", "NE"), port("r", "SW"))      # t -> r
-    link(port("u", "E"),  port("r", "NW"))      # u -> r  (skips over the low t box)
+    link(port("u", "E"),  port("r", "W"))       # u -> r  (level with u, over the t box)
     # r feeds BOTH arguments of y = r*r: two clean parallel edges (NE->NW, SE->SW)
     link(port("r", "NE"), port("y", "NW"))
     link(port("r", "SE"), port("y", "SW"))
@@ -973,10 +969,10 @@ def fig_tape_dag():
     box("t", r"$t=uv$", color=BLUE)
     box("r", r"$r=t+u$", color=BLUE)
     box("y", r"$y=r\cdot r$", color=ORANGE)
-    ax.text(0.0, 2.66, r"$u$ fans out (diamond)", color=GRAY, fontsize=8.5,
+    ax.text(0.0, 2.66, r"$u$ fans out (diamond)", color=GRAY, fontsize=11,
             ha="center")
-    ax.text(5.45, 0.52, r"$\bar r=\bar y\,r+\bar y\,r$  (+= twice)",
-            color=ORANGE, fontsize=8.5, ha="center")
+    ax.text(5.45, 1.12, r"$\bar r=\bar y\,r+\bar y\,r$  (+= twice)",
+            color=ORANGE, fontsize=11, ha="center")
     ax.set_xlim(-1.0, 7.6); ax.set_ylim(-0.1, 3.05)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-cal-tape-dag")
@@ -996,7 +992,7 @@ def fig_best_parabola():
     xs = np.linspace(x0 - 2.1, x0 + 2.3, 500)
 
     fig, ax = plt.subplots(figsize=(6.2, 4.2))
-    ax.axhline(0, color=GRAY, lw=0.8, zorder=1)
+    ax.axhline(0, color="black", lw=0.8, zorder=1)
     ax.plot(xs, f(xs), color=BLUE, lw=2.6, zorder=4, label=r"$f(x)=\sin x$")
     ax.plot(xs, tangent(xs), "--", color=GRAY, lw=1.8, zorder=2,
             label="tangent (matches value, slope)")
@@ -1006,7 +1002,7 @@ def fig_best_parabola():
     ax.text(x0 + 0.06, s0 - 0.13, r"$x_0$", fontsize=12, ha="left", va="top")
     ax.set_xlim(xs[0], xs[-1]); ax.set_ylim(-1.65, 1.9)
     ax.set_xticks([]); ax.set_yticks([])
-    ax.legend(loc="lower left", fontsize=9, frameon=False)
+    ax.legend(loc="lower right", fontsize=11, frameon=False)
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     fl.save(fig, "mdl-cal-best-parabola")
 
@@ -1054,11 +1050,11 @@ def fig_lagrange_tangency():
     ax.plot([px], [py], "o", color="black", ms=5, zorder=6)
     ax.text(1.86, 1.62, r"$\nabla f\parallel\nabla g$", fontsize=11,
             ha="left", color=ORANGE)
-    ax.text(0.98, 0.78, r"optimum", fontsize=10, ha="center", va="top")
+    ax.text(0.62, 0.50, r"optimum", fontsize=11, ha="right", va="top")
 
     # a non-optimal feasible point: gradients visibly misaligned
     grads(2.2, 1.0 / 2.2)
-    ax.text(2.2, 0.10, "not optimal:\ngradients disagree", fontsize=9,
+    ax.text(2.2, 0.10, "not optimal:\ngradients disagree", fontsize=11,
             ha="center", va="top", color=GRAY)
 
     ax.set_aspect("equal")
@@ -1090,28 +1086,28 @@ def fig_jacobian_shapes():
     # wide row: 1 x n  (reverse mode, one VJP)
     grid(0.0, top - 0.7, 1, n, ORANGE)
     ax.text(0.5 * n * cell, top + 0.06, r"$1\times n$ (scalar loss)",
-            ha="center", fontsize=10.5)
+            ha="center", fontsize=11)
     ax.text(0.5 * n * cell, top - 1.35,
-            "one VJP\n= 1 backward pass", ha="center", va="top", fontsize=10,
+            "one VJP\n= 1 backward pass", ha="center", va="top", fontsize=11,
             color=ORANGE)
     # tall column: m x 1  (forward mode, one JVP)
     x1 = 4.2
     grid(x1, top, m, 1, GREEN)
     ax.text(x1 + 0.5 * cell, top + 0.06, r"$m\times 1$", ha="center",
-            fontsize=10.5)
+            fontsize=11)
     ax.text(x1 + 0.5 * cell, top - m * cell - 0.25,
-            "one JVP\n= 1 forward pass", ha="center", va="top", fontsize=10,
+            "one JVP\n= 1 forward pass", ha="center", va="top", fontsize=11,
             color=GREEN)
     # full matrix: m x n
     x2 = 6.4
     grid(x2, top, m, n, BLUE)
     ax.text(x2 + 0.5 * n * cell, top + 0.06, r"$m\times n$ (full Jacobian)",
-            ha="center", fontsize=10.5)
+            ha="center", fontsize=11)
     ax.text(x2 + 0.5 * n * cell, top - m * cell - 0.25,
             r"$\min(m,n)$ passes" + "\n(rows by VJP or columns by JVP)",
-            ha="center", va="top", fontsize=10, color=BLUE)
+            ha="center", va="top", fontsize=11, color=BLUE)
 
-    ax.set_xlim(-0.4, 9.6); ax.set_ylim(-0.9, 2.6)
+    ax.set_xlim(-0.4, 9.6); ax.set_ylim(-0.65, 2.45)
     ax.set_aspect("equal"); ax.axis("off")
     fl.save(fig, "mdl-cal-jacobian-shapes")
 
@@ -1135,7 +1131,7 @@ def fig_checkpointing():
                                    alpha=0.55 if filled else 1.0,
                                    edgecolor="black", lw=0.8, zorder=3))
         ax.text(-0.25, y + cell / 2, label, ha="right", va="center",
-                fontsize=10.5)
+                fontsize=11)
 
     width = L * (cell + gap) - gap
     y_top, y_bot = 2.15, 0.75
@@ -1148,7 +1144,7 @@ def fig_checkpointing():
     fl.arrow(ax, (0.0, y_top + cell + 0.32), (width, y_top + cell + 0.32),
              color=GRAY, lw=1.6, mut=12)
     ax.text(width / 2, y_top + cell + 0.42, "forward pass (layers $1$ to $L$)",
-            ha="center", va="bottom", fontsize=10, color=GRAY)
+            ha="center", va="bottom", fontsize=11, color=GRAY)
 
     # the recomputed segment on the bottom track: backward has reached layer 16,
     # so the segment after the last checkpoint is recomputed forward
@@ -1158,11 +1154,11 @@ def fig_checkpointing():
              mut=12)
     ax.text((seg0 + width) / 2, y_bot - 0.40,
             "recompute segment forward\nfrom its checkpoint, then sweep it",
-            ha="center", va="top", fontsize=9.5, color=ORANGE)
+            ha="center", va="top", fontsize=11, color=ORANGE)
     fl.arrow(ax, (width, y_bot + cell + 0.30), (seg0, y_bot + cell + 0.30),
              color=GRAY, lw=1.6, ls="-", mut=12)
     ax.text((seg0 + width) / 2, y_bot + cell + 0.40, "backward sweep",
-            ha="center", va="bottom", fontsize=10, color=GRAY)
+            ha="center", va="bottom", fontsize=11, color=GRAY)
 
     # memory annotations on the right
     ax.text(width + 0.35, y_top + cell / 2, r"$O(L)$ memory", fontsize=11,
@@ -1187,7 +1183,7 @@ def fig_signed_area():
     span = np.linspace(a, b, 700)
 
     fig, ax = plt.subplots(figsize=(7.0, 3.9))
-    ax.axhline(0, color=GRAY, lw=0.9, zorder=1)
+    ax.axhline(0, color="black", lw=0.9, zorder=1)
     ax.plot(xs, f(xs), color=BLUE, lw=2.4, zorder=4)
     pos, neg = f(span) >= 0, f(span) < 0
     ax.fill_between(span, 0, f(span), where=pos, color=BLUE, alpha=0.25, lw=0)
@@ -1202,7 +1198,7 @@ def fig_signed_area():
     # direction arrows under the axis (below the curve's lowest dip):
     # integrating a->b, and the reversed b->a, which negates the total
     fl.arrow(ax, (a, -1.02), (b, -1.02), color=GRAY, lw=1.6, mut=12)
-    ax.text(0.30, -1.02, r"$\int_a^b f$", ha="right", va="center",
+    ax.text(-0.15, -1.02, r"$\int_a^b f$", ha="right", va="center",
             fontsize=11, color=GRAY)
     fl.arrow(ax, (b, -1.52), (a, -1.52), color=ORANGE, lw=1.6, mut=12)
     ax.text(6.55, -1.52, r"$\int_b^a f = -\int_a^b f$", ha="left",

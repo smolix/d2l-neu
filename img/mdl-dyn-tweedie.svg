@@ -4080,7 +4080,7 @@ z
    </g>
    <g id="text_18">
     <!-- $\sigma^2\,\nabla\log p_\sigma(\tilde{x})$ -->
-    <g style="fill: #ff7f0e" transform="translate(207.47035 171.906) scale(0.095 -0.095)">
+    <g style="fill: #ff7f0e" transform="translate(203.51525 151.62) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-be" d="M 1197 -72 
 Q 913 -72 692 64 
@@ -4410,7 +4410,7 @@ z
    </g>
    <g id="text_19">
     <!-- $p_\sigma$ -->
-    <g style="fill: #1f77b4" transform="translate(177.74225 59.195312) scale(0.11 -0.11)">
+    <g style="fill: #1f77b4" transform="translate(357.97625 59.195312) scale(0.11 -0.11)">
      <use xlink:href="#Cmmi10-70" transform="translate(0 0.8125)"/>
      <use xlink:href="#Cmmi10-be" transform="translate(50.292969 -16.19375) scale(0.7)"/>
     </g>
@@ -4483,17 +4483,17 @@ L 422.59875 203.04
 " clip-path="url(#pf159594eea)" style="fill: none; stroke: #2ca02c; stroke-width: 1.9; stroke-linecap: square"/>
    </g>
    <g id="patch_6">
-    <path d="M 152.858726 95.139988 
-Q 217.976958 112.071572 281.90493 128.693673 
+    <path d="M 133.709266 30.453169 
+Q 208.598806 79.286843 282.458176 127.448768 
 " style="fill: none; stroke: #2ca02c; stroke-width: 1.1; stroke-linecap: round"/>
-    <path d="M 278.705343 125.898563 
-L 281.90493 128.693673 
-L 277.74909 129.576277 
+    <path d="M 279.974186 123.202617 
+L 282.458176 127.448768 
+L 277.570861 126.888269 
 " style="fill: none; stroke: #2ca02c; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
    <g id="text_20">
     <!-- posterior $p(x\mid\tilde{x})$ (rescaled) -->
-    <g style="fill: #2ca02c" transform="translate(62.13075 90.2625) scale(0.095 -0.095)">
+    <g style="fill: #2ca02c" transform="translate(47.90175 24.61) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-70" d="M 1159 525 
 L 1159 -1331 

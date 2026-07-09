@@ -150,9 +150,8 @@ def fig_shattering():
         _draw_line(ax, wb, box)
         _draw_points(ax, P3, lab)
         fl.clean_axes(ax, lim=box, hide=True)
-    # one shared heading spanning the 2x4 block
-    fig.text(0.355, 0.965, r"$3$ points: all $2^3=8$ labellings are separable",
-             ha="center", va="top", fontsize=12)
+    # no shared heading: the caption already states "all 2^3=8 labelings are
+    # separable (left); the XOR labeling of 4 points is not (right)".
 
     # --- right: four points in XOR position, not shatterable ---
     axr = fig.add_subplot(gs[:, 5])
@@ -166,7 +165,8 @@ def fig_shattering():
                  (np.array([1.0, 0.0]), 0.0)]:
         _draw_line(axr, (w, b), big, color=LIGHT, lw=1.6)
     _draw_points(axr, P4, xor)
-    axr.set_title(r"$4$ points (XOR): no line separates", fontsize=12, pad=6)
+    # no per-panel title: the caption already names this panel ("the XOR
+    # labeling of 4 points is not [separable]")
     fl.clean_axes(axr, lim=big, hide=True)
 
     # small shared legend (drawn once, below the right panel)
@@ -174,7 +174,7 @@ def fig_shattering():
     axr.plot([], [], "s", mfc="white", mec=ORANGE, mew=2.0, ms=8,
              label=r"label $-1$")
     axr.legend(loc="lower center", bbox_to_anchor=(0.5, -0.10), ncol=2,
-               handletextpad=0.3, columnspacing=1.2, fontsize=9.5)
+               handletextpad=0.3, columnspacing=1.2, fontsize=11)
 
     fl.save(fig, "mdl-clf-shattering")
 

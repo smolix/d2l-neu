@@ -143,7 +143,7 @@ L 215.144068 190.419586
    </g>
    <g id="text_1">
     <!-- $-\eta f'(x)$ -->
-    <g style="fill: #2ca02c" transform="translate(223.459 219.172138) scale(0.1 -0.1)">
+    <g style="fill: #2ca02c" transform="translate(221.714 219.952138) scale(0.11 -0.11)">
      <defs>
       <path id="Cmsy10-a1" d="M 653 1472 
 Q 600 1472 565 1512 
@@ -383,13 +383,13 @@ z
    </g>
    <g id="text_2">
     <!-- $x$ -->
-    <g transform="translate(279.318 63.411102) scale(0.11 -0.11)">
+    <g transform="translate(288.432 63.411102) scale(0.11 -0.11)">
      <use xlink:href="#Cmmi10-78" transform="translate(0 0.8125)"/>
     </g>
    </g>
    <g id="text_3">
     <!-- $x-\eta f'(x)$ -->
-    <g style="fill: #2ca02c" transform="translate(162.81 154.73741) scale(0.09 -0.09)">
+    <g style="fill: #2ca02c" transform="translate(153.99 154.23741) scale(0.11 -0.11)">
      <use xlink:href="#Cmmi10-78" transform="translate(0 0.601562)"/>
      <use xlink:href="#Cmsy10-a1" transform="translate(74.638672 0.601562)"/>
      <use xlink:href="#Cmmi10-b4" transform="translate(169.882812 0.601562)"/>
@@ -401,17 +401,17 @@ z
     </g>
    </g>
    <g id="patch_6">
-    <path d="M 241.029282 36.442583 
-Q 259.683997 106.174747 209.846952 159.31121 
+    <path d="M 241.259115 36.827415 
+Q 259.516578 106.274509 209.848156 159.3067 
 " style="fill: none; stroke: #7f7f7f; stroke-linecap: round"/>
-    <path d="M 213.832367 157.83932 
-L 209.846952 159.31121 
-L 211.060688 155.239743 
+    <path d="M 214.461635 157.599125 
+L 209.848156 159.3067 
+L 211.250183 154.591372 
 " style="fill: none; stroke: #7f7f7f; stroke-linecap: round"/>
    </g>
    <g id="text_4">
     <!-- drop $\approx \eta\,[f'(x)]^2$ -->
-    <g style="fill: #7f7f7f" transform="translate(202.1575 30.14069) scale(0.095 -0.095)">
+    <g style="fill: #7f7f7f" transform="translate(196.45 30.14069) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-64" d="M 2906 2969 
 L 2906 4863 

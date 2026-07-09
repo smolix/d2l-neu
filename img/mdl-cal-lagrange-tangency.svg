@@ -740,7 +740,7 @@ z
    </g>
    <g id="text_3">
     <!-- optimum -->
-    <g transform="translate(98.187391 197.352543) scale(0.1 -0.1)">
+    <g transform="translate(41.593398 221.137229) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-6f" d="M 1959 3097 
 Q 1497 3097 1228 2736 
@@ -919,7 +919,7 @@ L 232.244713 173.963868
    </g>
    <g id="text_6">
     <!-- not optimal: -->
-    <g style="fill: #7f7f7f" transform="translate(193.670933 252.510173) scale(0.09 -0.09)">
+    <g style="fill: #7f7f7f" transform="translate(187.59734 254.02986) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-6e" d="M 3513 2113 
 L 3513 0 
@@ -1009,7 +1009,7 @@ z
      <use xlink:href="#DejaVuSans-3a" transform="translate(573.681641 0)"/>
     </g>
     <!-- gradients disagree -->
-    <g style="fill: #7f7f7f" transform="translate(178.919371 262.588204) scale(0.09 -0.09)">
+    <g style="fill: #7f7f7f" transform="translate(169.567652 266.347454) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-67" d="M 2906 1791 
 Q 2906 2416 2648 2759 

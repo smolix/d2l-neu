@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="429.64995pt" height="266.51625pt" viewBox="0 0 429.64995 266.51625" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="432.43995pt" height="266.51625pt" viewBox="0 0 432.43995 266.51625" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -21,8 +21,8 @@
  <g id="figure_1">
   <g id="patch_1">
    <path d="M -0 266.51625 
-L 429.64995 266.51625 
-L 429.64995 0 
+L 432.43995 266.51625 
+L 432.43995 0 
 L -0 0 
 z
 " style="fill: #ffffff"/>
@@ -2012,7 +2012,7 @@ L 400.27875 218.082301
    </g>
    <g id="text_16">
     <!-- $\rightarrow t$ -->
-    <g style="fill: #1f77b4" transform="translate(403.84995 56.112278) scale(0.1 -0.1)">
+    <g style="fill: #1f77b4" transform="translate(403.84995 56.526184) scale(0.115 -0.115)">
      <defs>
       <path id="Cmsy10-21" d="M 481 1472 
 Q 428 1472 393 1512 
@@ -2052,7 +2052,7 @@ z
    </g>
    <g id="text_17">
     <!-- $\rightarrow 0$ -->
-    <g style="fill: #7f7f7f" transform="translate(403.84995 221.639375) scale(0.1 -0.1)">
+    <g style="fill: #7f7f7f" transform="translate(403.84995 222.053281) scale(0.115 -0.115)">
      <defs>
       <path id="Cmr10-30" d="M 1600 -141 
 Q 816 -141 533 504 

@@ -62,7 +62,7 @@ def fig_mlp_arch():
         ax.text(cx, cy + 0.24, head, ha="center", va="center",
                 fontsize=13, fontweight="bold", color=color)
         ax.text(cx, cy - 0.34, sub, ha="center", va="center",
-                fontsize=9.5, color="black")
+                fontsize=12, color="black")
 
     # Three tensor states, top to bottom. Centers spaced 2.75 apart: tight
     # enough to read as one compact stack, with room for the arrow labels.
@@ -84,7 +84,7 @@ def fig_mlp_arch():
         y0 = ymid + gap * (len(labels) - 1) / 2
         for i, (txt, col, weight) in enumerate(labels):
             ax.text(cx + 0.45, y0 - i * gap, txt, ha="left", va="center",
-                    fontsize=10.5, color=col, fontweight=weight)
+                    fontsize=12, color=col, fontweight=weight)
 
     # X -> H : affine (784->256) then the nonlinearity.
     op_arrow(y_x, y_h, [
@@ -100,7 +100,7 @@ def fig_mlp_arch():
             f"{total:,} parameters "
             r"($\mathbf{W}^{(1)}, \mathbf{b}^{(1)}, "
             r"\mathbf{W}^{(2)}, \mathbf{b}^{(2)}$)",
-            ha="center", va="center", fontsize=9.5, color=GRAY)
+            ha="center", va="center", fontsize=12, color=GRAY)
     fl.save(fig, "mdl-mlp-arch")
 
 
@@ -150,10 +150,11 @@ def fig_uat_hinges():
                  clip_on=False)
         axl.annotate(rf"$t_{k+1}$", xy=(joints[k], 0),
                      xytext=(joints[k] - 0.02, 0.22), ha="center",
-                     va="bottom", fontsize=9.5, color=col)
-    axl.axhline(0, color=GRAY, lw=0.9)
-    axl.set_title("each unit: one hinge", fontsize=10.5)
-    axl.legend(fontsize=7.5, loc="lower left", frameon=False)
+                     va="bottom", fontsize=12, color=col)
+    axl.axhline(0, color="black", lw=0.9)
+    # the caption already says "Left: each ... contributes a single hinge",
+    # so no redundant title is drawn here
+    axl.legend(fontsize=11, loc="lower left", frameon=False)
     hmin = min(np.min(hk) for hk in hinges)
     hmax = max(np.max(hk) for hk in hinges)
     axl.set_ylim(hmin - 0.15, hmax + 0.55)
@@ -166,10 +167,9 @@ def fig_uat_hinges():
     for k, col in enumerate(colors):
         axr.plot([joints[k]], [0], "o", color=col, ms=5, zorder=5,
                  clip_on=False)
-    axr.axhline(0, color=GRAY, lw=0.9)
-    axr.set_title(r"width $D$  $\Rightarrow$  at most $D+1$ linear pieces",
-                  fontsize=10.5)
-    axr.legend(fontsize=7.5, loc="upper right", frameon=False)
+    axr.axhline(0, color="black", lw=0.9)
+    # the caption already states the "D+1 pieces" fact; no redundant title
+    axr.legend(fontsize=11, loc="upper right", frameon=False)
     axr.set_ylim(-0.12, 1.18)
 
     for ax in (axl, axr):
@@ -178,7 +178,7 @@ def fig_uat_hinges():
         ax.set_yticks([])
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        ax.set_xlabel("$x$", fontsize=10)
+        ax.set_xlabel("$x$", fontsize=12)
 
     fig.tight_layout()
     fl.save(fig, "mdl-mlp-uat-hinges")
@@ -215,41 +215,49 @@ def fig_grokking():
 
     # the long memorized-but-not-generalizing stretch, faintly shaded
     ax.axvspan(l_mem, l_gen, color=LIGHT, alpha=0.18, lw=0)
+    # markers stop at the plateau (101) rather than running the full height,
+    # so they never cross the "memorization"/"generalization" labels above
     for lx in (l_mem, l_gen):
-        ax.axvline(lx, color=GRAY, ls="--", lw=1.2, zorder=2)
+        ax.plot([lx, lx], [0, 101], color=GRAY, ls="--", lw=1.2, zorder=2)
 
     ax.plot(ls, 100 * train, color=GRAY, lw=2.2, zorder=3)
     ax.plot(ls, 100 * val, color=BLUE, lw=2.6, zorder=4)
 
     # curve labels on uncluttered stretches
-    ax.text(1.15, 78, "training accuracy", color=GRAY, fontsize=10,
+    ax.text(1.15, 78, "training accuracy", color=GRAY, fontsize=12,
             ha="center", va="bottom", rotation=52)
-    ax.text(3.55, 7, "validation accuracy", color=BLUE, fontsize=10,
-            ha="center", va="bottom")
+    # stacked so it's narrow enough to sit in the flat, near-zero stretch
+    # strictly between the memorization marker and where the curve starts
+    # climbing -- clear of the dashed line, the curves, and the annotation
+    ax.text(3.6, 8, "validation\naccuracy", color=BLUE, fontsize=12,
+            ha="center", va="bottom", linespacing=1.3)
 
-    # marker labels
-    ax.text(l_mem, 106, "memorization", color=GRAY, fontsize=9,
+    # marker labels, comfortably above the truncated dashed lines
+    ax.text(l_mem, 106, "memorization", color=GRAY, fontsize=12,
             ha="center", va="bottom")
-    ax.text(l_gen, 106, "generalization", color=GRAY, fontsize=9,
+    ax.text(l_gen, 106, "generalization", color=GRAY, fontsize=12,
             ha="center", va="bottom")
-    ax.text((l_mem + l_gen) / 2, 55,
-            "training set interpolated,\nyet no generalization\n"
-            "for ~3 decades of steps",
-            color=GRAY, fontsize=9, ha="center", va="center")
+    # narrow and short enough to clear BOTH the memorization marker (left)
+    # and the blue curve's rise (right, which reaches this text's y-band
+    # around x=4.6); the full story ("training set interpolated, yet no
+    # generalization") is already in the caption, so the in-figure callout
+    # keeps just the number that caption doesn't spell out as precisely
+    ax.text(3.85, 47.2, "~3 decades\nwith no\ngeneralization",
+            color=GRAY, fontsize=12, ha="center", va="center", linespacing=1.3)
 
     # chance level
     ax.axhline(100 * chance, color=LIGHT, lw=1.0, zorder=1)
-    ax.text(0.12, 100 * chance + 2, "chance", color=GRAY, fontsize=8.5,
+    ax.text(0.12, 100 * chance + 2, "chance", color=GRAY, fontsize=11,
             ha="left", va="bottom")
 
     ax.set_xlim(ls[0], ls[-1])
     ax.set_ylim(0, 115)
     ax.set_yticks([0, 50, 100])
-    ax.set_yticklabels(["0%", "50%", "100%"], fontsize=9)
+    ax.set_yticklabels(["0%", "50%", "100%"], fontsize=11)
     ax.set_xticks([0, 1, 2, 3, 4, 5, 6])
-    ax.set_xticklabels([rf"$10^{k}$" for k in range(7)], fontsize=9)
-    ax.set_xlabel("optimization steps (log scale)", fontsize=10.5)
-    ax.set_ylabel("accuracy", fontsize=10.5)
+    ax.set_xticklabels([rf"$10^{k}$" for k in range(7)], fontsize=11)
+    ax.set_xlabel("optimization steps (log scale)", fontsize=12)
+    ax.set_ylabel("accuracy", fontsize=12)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 

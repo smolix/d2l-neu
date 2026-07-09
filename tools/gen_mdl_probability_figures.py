@@ -68,12 +68,11 @@ def fig_marginal():
     axj.axvspan(x0 - 0.07, x0 + 0.07, color=ORANGE, alpha=0.30)
     axj.axvline(x0, color=ORANGE, lw=2.0)
     # label the strip from clear space to its right, with a leader onto it
-    axj.annotate(r"integrate up the strip:  $\int p\,dy$",
+    axj.annotate(r"integrate up the strip:  $\int p\,\mathrm{d}y$",
                  xy=(x0 + 0.07, 2.3), xytext=(x0 + 0.55, 2.85),
                  color=ORANGE, va="center", ha="left", fontsize=11,
                  arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.2))
     axj.set_ylabel(r"$y$", fontsize=12)
-    axj.set_title(r"joint density $p_{X,Y}(x,y)$", fontsize=12)
 
     # --- marginal density curve p_X(x) = integral over y ---
     axm.plot(xs, marg_x, color=BLUE, lw=2.4)
@@ -194,18 +193,21 @@ def fig_significance():
     for s in (-1, 1):
         ax.plot([s * zc, s * zc], [0, pdf(zc)], color=ORANGE, lw=1.4)
     ax.text(0, 0.16, r"accept $H_0$" "\n" r"$1-\alpha = 0.95$",
-            ha="center", va="center", color=BLUE, fontsize=10)
+            ha="center", va="center", color=BLUE, fontsize=11)
     ax.annotate(r"reject  ($\alpha/2$)", xy=(2.55, pdf(2.55)),
-                xytext=(3.0, 0.16), color=ORANGE, fontsize=9.5, ha="center",
+                xytext=(3.0, 0.16), color=ORANGE, fontsize=11, ha="center",
                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.2))
     ax.annotate(r"reject  ($\alpha/2$)", xy=(-2.55, pdf(2.55)),
-                xytext=(-3.0, 0.16), color=ORANGE, fontsize=9.5, ha="center",
+                xytext=(-3.0, 0.16), color=ORANGE, fontsize=11, ha="center",
                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.2))
     ax.text(zc, -0.012, r"$+z^\ast$", color=ORANGE, ha="center", va="top",
-            fontsize=9.5)
+            fontsize=11)
     ax.text(-zc, -0.012, r"$-z^\ast$", color=ORANGE, ha="center", va="top",
-            fontsize=9.5)
+            fontsize=11)
 
+    # integer ticks, but skip +/-2 (right where +/-z* already labels the axis)
+    # so the two labels don't stack on top of each other
+    ax.set_xticks([-4, -3, -1, 0, 1, 3, 4])
     ax.set_xlabel("test statistic (under $H_0$)")
     ax.set_ylabel("density")
     ax.set_ylim(0, 0.45)
@@ -239,27 +241,36 @@ def fig_power_curves():
     # one curve per effect size, a blue family from dark (delta=1) to light
     deltas = [1.0, 0.5, 0.1, 0.01]
     blues = ["#114e7c", BLUE, "#5b9bc9", "#9cc2dd"]
-    label_at = [3.0, 12.0, 300.0, 3.0e4]      # n where each curve label sits
-    for delta, col, ln in zip(deltas, blues, label_at):
+    label_at = [3.0, 17.0, 300.0, 3.0e4]      # n where each curve label sits
+    # each curve is still climbing steeply at its own label's n, so all but
+    # the widely-spaced delta=1 label need a much bigger vertical clearance;
+    # anchoring at the label's *right* edge (ha="right") also keeps the rest
+    # of the text over the curve's lower, already-cleared, left side
+    label_dy = [0.045, 0.16, 0.16, 0.16]
+    for delta, col, ln, dy in zip(deltas, blues, label_at, label_dy):
         pw = power(delta)
         ax.plot(n, pw, color=col, lw=2.2)
         lab = rf"$\delta={delta:g}$"
-        ax.text(ln, np.interp(ln, n, pw) + 0.045, lab, color=col,
-                fontsize=9, ha="center", va="bottom")
+        ax.text(ln, np.interp(ln, n, pw) + dy, lab, color=col,
+                fontsize=11, ha="right", va="bottom")
 
     # the conventional power target and the test's size alpha
     ax.axhline(0.8, color=GRAY, lw=1.1, ls="--")
-    ax.text(1.3, 0.825, "target $0.8$", color=GRAY, fontsize=9, va="bottom")
+    ax.text(1.3, 0.825, "target $0.8$", color=GRAY, fontsize=11, va="bottom")
     ax.axhline(0.05, color=GRAY, lw=1.0, ls=":")
-    ax.text(1.3, 0.075, r"$\alpha=0.05$", color=GRAY, fontsize=9, va="bottom")
+    ax.text(2.1, 0.075, r"$\alpha=0.05$", color=GRAY, fontsize=11, va="bottom")
 
-    # where the extreme curves cross the target (power is increasing in n)
-    for delta, col, lab, dx in ((1.0, blues[0], r"$n\approx 8$", 3.5),
-                                (0.01, blues[3], r"$n\approx 8\times 10^4$", 0.12)):
+    # where the extreme curves cross the target (power is increasing in n).
+    # n=8's own curve is nearly flat by n=8 (labelled straight above it); the
+    # n=8e4 curve is still steeply rising there, so that label is shifted well
+    # to its left (in log-n) where the curve is far below the label's height.
+    for delta, col, lab, lx, ly in ((1.0, blues[0], r"$n\approx 8$", 1.0, 0.95),
+                                    (0.01, blues[3], r"$n\approx 8\times 10^4$",
+                                     0.12, 0.71)):
         pw = power(delta)
         nstar = float(np.interp(0.8, pw, n))
         ax.plot([nstar], [0.8], "o", color=col, ms=6, zorder=6)
-        ax.text(nstar * dx, 0.71, lab, color=col, fontsize=9, ha="center")
+        ax.text(nstar * lx, ly, lab, color=col, fontsize=11, ha="center")
 
     ax.set_xscale("log")
     ax.set_xlim(1, 2e5)
@@ -352,18 +363,22 @@ def fig_sampling_distribution():
             ax.text(mu + 0.18, ymax * 1.12, r"$\mathbb{E}[\hat\theta]$",
                     color=ORANGE, ha="left", va="bottom", fontsize=12)
         else:
-            ax.text(theta, ymax * 1.12, r"$\theta$", color=GRAY, ha="center",
-                    va="bottom", fontsize=13)
+            # theta label sits off to the side of its own dashed line, not
+            # centered on top of it
+            ax.text(theta - 0.15, ymax * 1.12, r"$\theta$", color=GRAY,
+                    ha="right", va="bottom", fontsize=13)
             ax.text(mu, ymax * 1.06, r"$\mathbb{E}[\hat\theta]$", color=ORANGE,
                     ha="center", va="bottom", fontsize=12)
 
-        # bias = horizontal offset between theta and the center
+        # bias = horizontal offset between theta and the center; the label sits
+        # to the left of the arrow's left tip, at the arrow's own height, so it
+        # never crosses the arrow shaft.
         if abs(bias) > 1e-6:
             ay = ymax * 0.5
             ax.annotate("", xy=(mu, ay), xytext=(theta, ay),
                         arrowprops=dict(arrowstyle="<->", color=ORANGE, lw=1.3))
-            ax.text((theta + mu) / 2, ay * 1.12, "bias", color=ORANGE,
-                    ha="center", va="bottom", fontsize=11)
+            ax.text(min(theta, mu) - 0.14, ay, "bias", color=ORANGE,
+                    ha="right", va="center", fontsize=11)
 
         # spread = standard error, drawn as a +/- 1 SE bar low on the curve
         sy = ymax * 0.13
@@ -372,13 +387,19 @@ def fig_sampling_distribution():
         ax.text(mu, -ymax * 0.10, r"spread $=$ std. error",
                 color=BLUE, ha="center", va="top", fontsize=11)
 
-        ax.set_title(title, fontsize=12)
         ax.set_xlabel(r"$\hat\theta$", fontsize=13)
         ax.set_ylim(-ymax * 0.24, ymax * 1.34)
         ax.set_yticks([])
         ax.set_xticks([])
         ax.set_aspect("auto")
         fl.clean_axes(ax, equal=False)
+        # a density is nonnegative: pin the visible x-axis flush to y=0 (not to
+        # the bottom of the ylim, which would leave a white gap under the curve).
+        # Moving the spine also drags matplotlib's default xlabel placement up
+        # to hug it (colliding with the "spread" caption below), so re-pin the
+        # label itself, in axes-fraction coordinates, to the bottom margin.
+        ax.spines["bottom"].set_position(("data", 0))
+        ax.xaxis.set_label_coords(0.5, -0.09)
     axes[0].set_ylabel("density over datasets", fontsize=12)
     fl.save(fig, "mdl-prob-sampling-distribution")
 
@@ -406,7 +427,7 @@ def fig_type_i_ii_matrix():
         ax.text(cx + 0.5, cy + 0.60, title, ha="center", va="center",
                 fontsize=11, color=col, weight="bold")
         ax.text(cx + 0.5, cy + 0.34, sub, ha="center", va="center",
-                fontsize=10, color=col)
+                fontsize=9, color=col)
 
     # column headers (the decision)
     ax.text(0.5, 2.16, "fail to reject $H_0$", ha="center", va="center",
@@ -477,20 +498,25 @@ def fig_pdf_cdf():
     m = (x >= a) & (x <= b)
     axp.plot(x, p, color=BLUE, lw=2.2)
     axp.fill_between(x[m], 0, p[m], color=BLUE, alpha=0.32)
-    axp.set_title(r"density $p$", fontsize=10.5); axp.set_yticks([])
+    axp.set_yticks([])
     axp.set_xticks([a, b]); axp.set_xticklabels(["$a$", "$b$"])
     axc.plot(x, F, color=ORANGE, lw=2.2)
     axc.plot([a, a], [0, F[ia]], ":", color=GRAY, lw=1.0)
     axc.plot([b, b], [0, F[ib]], ":", color=GRAY, lw=1.0)
     axc.annotate("", xy=(b + 0.4, F[ib]), xytext=(b + 0.4, F[ia]),
                  arrowprops=dict(arrowstyle="<->", color=BLUE, lw=1.3))
-    axc.text(b + 0.6, (F[ia] + F[ib]) / 2, r"$F(b)-F(a)$", fontsize=8.5,
+    axc.text(b + 0.6, (F[ia] + F[ib]) / 2, r"$F(b)-F(a)$", fontsize=11,
              color=BLUE, va="center")
-    axc.set_title(r"c.d.f. $F$", fontsize=10.5); axc.set_yticks([0, 1])
+    axc.set_yticks([0, 1])
     axc.set_xticks([a, b]); axc.set_xticklabels(["$a$", "$b$"])
+    axp.set_ylim(0, None)
+    axc.set_ylim(0, None)
     for ax in (axp, axc):
         ax.set_xlim(-5, 7)
         ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+        # both curves are nonnegative starting at y=0: pin the x-axis flush
+        # there instead of leaving it at the autoscaled ylim floor.
+        ax.spines["bottom"].set_position(("data", 0))
     fl.save(fig, "mdl-prob-pdf-cdf")
 
 
@@ -528,9 +554,10 @@ def fig_inverse_transform():
             ha="left", va="bottom")
     ax.text(5.4, np.interp(5.4, x, F) - 0.06, r"c.d.f. $F$", color=ORANGE,
             fontsize=12, ha="left", va="top")
-    # point at the steep stretch where reflected samples pile up
+    # point at the steep stretch where reflected samples pile up; anchored in
+    # the clear lower-right pocket so the leader crosses no other label/line
     ax.annotate("steep $F$ = high density:\nsamples cluster here",
-                xy=(-1.15, 0.02), xytext=(1.9, 0.22), color=GRAY, fontsize=10,
+                xy=(-1.3, 0.10), xytext=(2.7, 0.62), color=GRAY, fontsize=11,
                 ha="left", va="center",
                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.1))
 
@@ -560,13 +587,15 @@ def fig_chebyshev():
         ax.plot([-2, 2], [p, p], "o", color=edge_col, ms=6, zorder=4)
         ax.plot([0], [1 - 2 * p], "o", color=BLUE, ms=6, zorder=4)
         hw = 4 * np.sqrt(2 * p)
-        ax.annotate("", xy=(hw, -0.12), xytext=(-hw, -0.12),
+        # the +/-2, 0 tick labels sit just under the axis; drop the arrow (and
+        # its caption) further down still so neither touches those digits.
+        ax.annotate("", xy=(hw, -0.20), xytext=(-hw, -0.20),
                     arrowprops=dict(arrowstyle="<->", color=ORANGE, lw=1.3))
-        ax.text(0, -0.19, rf"half-width ${hw:.2f}$", ha="center", va="top",
+        ax.text(0, -0.27, rf"half-width ${hw:.2f}$", ha="center", va="top",
                 color=ORANGE, fontsize=11)
-        ax.set_title(title, fontsize=12.5); ax.set_xlim(-3, 3); ax.set_ylim(-0.30, 1.02)
+        ax.set_xlim(-3, 3); ax.set_ylim(-0.38, 1.02)
         ax.set_xticks([-2, 0, 2]); ax.set_yticks([])
-        ax.tick_params(axis="x", labelsize=11)
+        ax.tick_params(axis="x", labelsize=11, pad=1.5)
         # pin the x-axis to y=0 so the atoms visibly stand on the baseline
         ax.spines["bottom"].set_position(("data", 0))
         for s in ("top", "right", "left"):
@@ -590,18 +619,20 @@ def fig_covariance():
             Ys = Y * scale
             cov = np.cov(X, Ys)[0, 1]          # sample covariance (units!)
             ax.scatter(X, Ys, s=10, color=BLUE, alpha=0.5)
-            ax.axhline(0, color=GRAY, lw=0.6); ax.axvline(0, color=GRAY, lw=0.6)
-            ax.set_title(rf"cov $\approx {cov:.2f}$", fontsize=10.5)
+            ax.axhline(0, color="black", lw=0.8); ax.axvline(0, color="black", lw=0.8)
+            ax.set_title(rf"cov $\approx {cov:.2f}$", fontsize=11)
             ax.text(0.04, 0.93, rf"$\rho \approx {rho:.2f}$", color=GRAY,
-                    fontsize=9, ha="left", va="top", transform=ax.transAxes)
+                    fontsize=11, ha="left", va="top", transform=ax.transAxes,
+                    bbox=dict(facecolor="white", edgecolor="none", alpha=0.85,
+                              pad=1.5), zorder=6)
             ax.set_xlim(-3.6, 3.6)
             ax.set_ylim(-4 * scale, 4 * scale)
             ax.set_yticks([-3 * scale, 0, 3 * scale])
             ax.set_xticks([])
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
-    axes[0, 0].set_ylabel(r"$Y$ in dollars", fontsize=10)
-    axes[1, 0].set_ylabel(r"same data, $Y$ in cents", fontsize=10)
+    axes[0, 0].set_ylabel(r"$Y$ in dollars", fontsize=11)
+    axes[1, 0].set_ylabel(r"same data, $Y$ in cents", fontsize=11)
     fl.save(fig, "mdl-prob-covariance")
 
 
@@ -615,8 +646,8 @@ def fig_correlation():
         X = rng.standard_normal(220)
         Y = r * X + np.sqrt(max(1 - r ** 2, 0.0)) * rng.standard_normal(220)
         ax.scatter(X, Y, s=10, color=ORANGE, alpha=0.5)
-        ax.axhline(0, color=GRAY, lw=0.6); ax.axvline(0, color=GRAY, lw=0.6)
-        ax.set_title(title, fontsize=10.5); ax.set_xlim(-3.6, 3.6); ax.set_ylim(-3.6, 3.6)
+        ax.axhline(0, color="black", lw=0.8); ax.axvline(0, color="black", lw=0.8)
+        ax.set_xlim(-3.6, 3.6); ax.set_ylim(-3.6, 3.6)
         ax.set_xticks([]); ax.set_yticks([])
         ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     fl.save(fig, "mdl-prob-correlation")
@@ -629,7 +660,7 @@ def _box(ax, xy, w, h, label, fc=LIGHT):
     x, y = xy
     ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02",
                                 facecolor=fc, edgecolor="black", lw=1.2, zorder=3))
-    ax.text(x + w / 2, y + h / 2, label, ha="center", va="center", fontsize=9,
+    ax.text(x + w / 2, y + h / 2, label, ha="center", va="center", fontsize=11,
             zorder=4)
 
 
@@ -641,10 +672,6 @@ def fig_family_tree():
     the *conjugate prior* of each likelihood family (Beta for Bernoulli/Binomial,
     Gamma for Poisson, Dirichlet for Categorical/Multinomial)."""
     fig, ax = plt.subplots(figsize=(10.2, 5.4))
-    ax.add_patch(Rectangle((-0.35, -1.75), 12.0, 7.15, facecolor=LIGHT, alpha=0.16,
-                           edgecolor=GRAY, lw=1.2, ls="--", zorder=1))
-    ax.text(0.05, 5.25, "exponential family", ha="left", va="top", color=GRAY,
-            fontsize=9, style="italic")
     w, h = 1.95, 0.66
     boxes = {"Bernoulli": (0.0, 1.5), "Binomial": (3.0, 2.6), "Poisson": (6.3, 2.9),
              "Exponential": (9.3, 2.9),
@@ -659,6 +686,18 @@ def fig_family_tree():
               ("Poisson", "Exponential", "waiting time"),
               ("Bernoulli", "Categorical", r"$K$ outcomes"),
               ("Categorical", "Multinomial", r"sum of $n$")]
+    # Bernoulli->Binomial and Bernoulli->Categorical both leave from the
+    # crowded Bernoulli corner, right where the Beta->Bernoulli conjugate-prior
+    # arrow also lands; hand-place these two in the open wedge *between* the
+    # two edges (below the former, above the latter) instead of the generic
+    # perpendicular offset, which collides with that traffic.
+    explicit_pos = {
+        ("Bernoulli", "Binomial"): (2.55, 1.98),
+        ("Bernoulli", "Categorical"): (3.3, 1.55),
+        # float above both box tops: centered on the arrow would bury the
+        # trailing lambda behind the Poisson box, so lift it clear.
+        ("Binomial", "Poisson"): (5.25, 3.9),
+    }
     for s, t, lab in arrows:
         c0, c1 = np.array(centers[s]), np.array(centers[t])
         fl.arrow(ax, c0 + (c1 - c0) * 0.17, c1 - (c1 - c0) * 0.17, color=GRAY,
@@ -668,10 +707,23 @@ def fig_family_tree():
             # narrow gap between the Poisson and Exponential boxes: put the
             # label just above the box tops, centered on the visible gap
             ax.text((boxes[s][0] + w + boxes[t][0]) / 2, boxes[t][1] + h + 0.10,
-                    lab, ha="center", va="bottom", fontsize=7.0, color=GRAY)
+                    lab, ha="center", va="bottom", fontsize=9.5, color="black")
+        elif (s, t) in explicit_pos:
+            lx, ly = explicit_pos[(s, t)]
+            ax.text(lx, ly, lab, ha="center", va="center", fontsize=9.5,
+                    color="black")
         else:
-            ax.text(mid[0], mid[1] + 0.14, lab, ha="center", va="bottom",
-                    fontsize=7.0, color=GRAY)
+            # offset perpendicular to the edge (not just vertically) so the
+            # label clears the line along its whole width, whatever the
+            # edge's slope; always to the "upper" side of the edge.
+            d = c1 - c0
+            perp = np.array([-d[1], d[0]])
+            perp = perp / np.linalg.norm(perp)
+            if perp[1] < 0:
+                perp = -perp
+            lab_pos = mid + perp * 0.30
+            ax.text(lab_pos[0], lab_pos[1], lab, ha="center", va="bottom",
+                    fontsize=9.5, color="black")
     # dashed conjugate-prior arrows (prior -> its likelihood families)
     for s, t in [("Beta", "Bernoulli"), ("Beta", "Binomial"),
                  ("Gamma", "Poisson"), ("Dirichlet", "Categorical"),
@@ -680,8 +732,6 @@ def fig_family_tree():
         d = c1 - c0
         ax.annotate("", xy=tuple(c1 - d * 0.30), xytext=tuple(c0 + d * 0.30),
                     arrowprops=dict(arrowstyle="->", color=GREEN, lw=1.5, ls="--"))
-    ax.text(-0.25, -1.55, "dashed: conjugate prior", color=GREEN, fontsize=8.5,
-            style="italic", va="center", ha="left")
     for k, (x, y) in boxes.items():
         _box(ax, (x, y), w, h, k, fc=("#dbe6f3" if k == "Gaussian" else LIGHT))
     for k, (x, y) in priors.items():
@@ -717,16 +767,18 @@ def fig_beta_posterior():
         ax.plot(p, y, color=BLUE, lw=2.2)
         ax.fill_between(p, 0, y, color=BLUE, alpha=0.15, lw=0)
         ax.axvline(theta, color=ORANGE, lw=1.6, ls="--")
-        ax.set_title(rf"$\mathrm{{Beta}}({a},{b})$", fontsize=11.5)
-        ax.text(0.03, ymax * 0.93, sub, color=GRAY, fontsize=10, ha="left",
+        # the longest caption ("90 H in 130 flips") is wide enough at this
+        # bigger font that starting at the old x=0.03 ran it into the
+        # theta* dashed line; start it right at the left spine instead.
+        ax.text(0.01, ymax * 0.93, sub, color=GRAY, fontsize=13, ha="left",
                 va="top")
         ax.set_xlim(0, 1); ax.set_ylim(0, ymax)
         ax.set_xticks([0, theta, 1.0])
-        ax.set_xticklabels(["$0$", r"$\theta^{\ast}$", "$1$"], fontsize=11)
+        ax.set_xticklabels(["$0$", r"$\theta^{\ast}$", "$1$"], fontsize=13)
         ax.set_yticks([])
-        ax.set_xlabel(r"$p$", fontsize=12)
+        ax.set_xlabel(r"$p$", fontsize=14)
         ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
-    axes[0].set_ylabel("density", fontsize=11)
+    axes[0].set_ylabel("density", fontsize=13)
     fl.save(fig, "mdl-prob-beta-posterior")
 
 
@@ -747,7 +799,7 @@ def fig_discrete_pmfs():
     for ax, (ks, ps, title) in zip(axes, series):
         ax.vlines(ks, 0, ps, color=BLUE, lw=2.2)
         ax.plot(ks, ps, "o", color=BLUE, ms=4)
-        ax.set_title(title, fontsize=10); ax.set_ylim(0, None); ax.set_yticks([])
+        ax.set_ylim(0, None); ax.set_yticks([])
         ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     fl.save(fig, "mdl-prob-discrete-pmfs")
 
@@ -764,7 +816,7 @@ def fig_continuous_pdfs():
     ax.plot(x, uni, color=GRAY, lw=2.0, label=r"Uniform on $[-2,2]$")
     ax.plot(x, gauss, color=BLUE, lw=2.2, label=r"$\mathcal{N}(0,1)$")
     ax.plot(x, lap, color=ORANGE, lw=2.2, label=r"Laplace, var $1$")
-    ax.legend(fontsize=9, loc="upper right"); ax.set_yticks([])
+    ax.legend(fontsize=11, loc="upper right"); ax.set_yticks([])
     ax.set_xlim(-5, 5); ax.set_ylim(0, None)
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     fl.save(fig, "mdl-prob-continuous-pdfs")
@@ -842,7 +894,6 @@ def fig_naive_independence():
             if lab == r"$\cdots$":
                 continue
             node(ax, (x, y_bot), lab)
-        ax.set_title(title, fontsize=11)
         ax.set_xlim(-3.1, 3.1)
         ax.set_ylim(-1.9, 2.5)
         ax.set_aspect("equal")
@@ -875,7 +926,7 @@ def fig_naive_independence():
                  [apex[1] - 0.16, apex[1] + 0.16],
                  color=ORANGE, lw=3.0, solid_capstyle="round", zorder=6)
     axR.text(0.0, -1.75, "edges among features struck out", ha="center",
-             va="bottom", color=ORANGE, fontsize=8.5)
+             va="bottom", color=ORANGE, fontsize=11)
 
     fl.save(fig, "mdl-prob-naive-independence")
 
@@ -919,8 +970,8 @@ def fig_naive_genvdisc():
     ytie = np.interp(xstar, x, y0)
     axg.axvline(xstar, color=GRAY, lw=1.2, ls="--")
     axg.annotate("decision\nflips here", xy=(xstar, ytie),
-                 xytext=(xstar + 1.05, ymax * 0.62), color=GRAY,
-                 fontsize=10, ha="left", va="center",
+                 xytext=(xstar + 1.0, ymax * 0.16), color=GRAY,
+                 fontsize=11, ha="left", va="center",
                  arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.1))
     axg.set_title("generative (naive Bayes)", fontsize=12)
     axg.set_xlabel(r"$x$", fontsize=13)
@@ -943,8 +994,8 @@ def fig_naive_genvdisc():
     axd.scatter(c0[:, 0], c0[:, 1], s=12, color=BLUE, alpha=0.45, lw=0)
     axd.scatter(c1[:, 0], c1[:, 1], s=12, color=ORANGE, alpha=0.45, lw=0)
     axd.plot(xx, yy, color="black", lw=2.0, zorder=4)
-    axd.text(0.0, -2.9, "no model of $p(x)$ — only the boundary",
-             color=GRAY, fontsize=10.5, ha="center", va="center")
+    axd.text(-1.5, -2.9, "no model of $p(x)$", color=GRAY, fontsize=11,
+             ha="center", va="center")
     axd.set_title("discriminative (softmax regression)", fontsize=12)
     axd.set_xlim(-3.2, 3.2); axd.set_ylim(-3.2, 3.2)
     axd.set_xticks([]); axd.set_yticks([])
@@ -979,16 +1030,17 @@ def fig_conditional_slice():
     axj.contourf(X, Y, joint, levels=12, cmap="Blues")
     axj.axhline(y0, color=ORANGE, lw=2.4)
     axj.text(3.2, y0 + 0.12, r"$y=y_0$", color=ORANGE, ha="right", va="bottom",
-             fontsize=10)
+             fontsize=11)
     axj.set_xlabel(r"$x$"); axj.set_ylabel(r"$y$")
-    axj.set_title(r"joint $p(x,y)$ with a slice", fontsize=10.5)
 
     axc.plot(xs, cond, color=ORANGE, lw=2.6)
     axc.fill_between(xs, 0, cond, color=ORANGE, alpha=0.18, lw=0)
     axc.set_xlabel(r"$x$"); axc.set_ylabel(r"$p(x \mid y_0)$")
-    axc.set_title("slice renormalized to unit area", fontsize=10.5)
     axc.set_yticks([])
+    axc.set_ylim(0, None)
     axc.spines["top"].set_visible(False); axc.spines["right"].set_visible(False)
+    # the conditional density is nonnegative: pin the x-axis flush to y=0
+    axc.spines["bottom"].set_position(("data", 0))
     fl.save(fig, "mdl-prob-conditional-slice")
 
 
@@ -1015,7 +1067,7 @@ def fig_mle_kl():
     ax.set_ylabel(r"cross-entropy  $H(\hat p,\, p_\theta)$")
     ax.set_xticks(steps)
     ax.set_yticks([])
-    ax.legend(loc="upper right", fontsize=8.5, frameon=False)
+    ax.legend(loc="upper right", fontsize=11, frameon=False)
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     fl.save(fig, "mdl-prob-mle-kl")
 
@@ -1045,18 +1097,24 @@ def fig_mle_fisher():
     ax.contour(M, S, nll, levels=levels[:1], colors=BLUE, linewidths=1.6)
     ax.contour(M, S, nll, levels=levels[1:], colors=GRAY, linewidths=1.0)
     ax.plot([mu_hat], [sig_hat], "o", color=BLUE, ms=7, zorder=6)
-    ax.text(mu_hat, sig_hat - 0.07, r"$(\hat\mu,\hat\sigma)$", color=BLUE,
-            ha="center", va="top", fontsize=10)
 
     # 1-sigma ellipse of the asymptotic covariance I^{-1}/n (I is diagonal)
     a = np.sqrt(sig_hat ** 2 / n)              # semi-axis along mu
     b = np.sqrt(sig_hat ** 2 / (2 * n))        # semi-axis along sigma
     ax.add_patch(Ellipse((mu_hat, sig_hat), 2 * a, 2 * b, fill=False,
                          edgecolor=ORANGE, lw=2.2, zorder=5))
+    # both labels sit in the clear annular gaps *between* consecutive contour
+    # rings (checked against the analytic NLL, not just eyeballed), so neither
+    # ever crosses a contour line.  The (mu_hat, sig_hat) label drops well
+    # below the ellipse into the band between the first and second gray
+    # rings; the information-matrix label sits directly above the ellipse in
+    # that same band.
+    ax.text(mu_hat, sig_hat - 0.30, r"$(\hat\mu,\hat\sigma)$", color=BLUE,
+            ha="center", va="center", fontsize=11)
     ax.annotate(r"$I(\hat\mu,\hat\sigma)^{-1}/n$",
-                xy=(mu_hat + a * 0.78, sig_hat + b * 0.66),
-                xytext=(mu_hat + 0.52, sig_hat + 0.42), color=ORANGE,
-                fontsize=10, ha="left",
+                xy=(mu_hat + a * 0.3, sig_hat + b * 0.95),
+                xytext=(mu_hat, sig_hat + 0.62), color=ORANGE,
+                fontsize=11, ha="center",
                 arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.2))
 
     ax.set_xlabel(r"$\mu$")
@@ -1098,10 +1156,10 @@ def fig_elbo():
     fig, ax = plt.subplots(figsize=(6.4, 4.0))
     ax.plot(th, evid, color=BLUE, lw=2.4)
     ax.plot(th, elbo, color=ORANGE, lw=2.2)
-    ax.text(2.45, evid[-1] + 0.06, r"$\log p(x;\theta)$", color=BLUE,
-            ha="right", va="bottom", fontsize=10)
+    ax.text(2.45, evid.max() + 0.16, r"$\log p(x;\theta)$", color=BLUE,
+            ha="right", va="bottom", fontsize=11)
     ax.text(2.45, elbo[-1] - 0.10, r"ELBO $\mathcal{L}(q,\theta)$",
-            color=ORANGE, ha="right", va="top", fontsize=10)
+            color=ORANGE, ha="right", va="top", fontsize=11)
 
     # the touch point at theta^(t) and the bound's peak at theta^(t+1)
     y_t = float(log_evidence(np.array([th_t]))[0])
@@ -1111,9 +1169,9 @@ def fig_elbo():
         ax.plot([tv, tv], [ymin, yv], color=GRAY, lw=1.1, ls="--", zorder=2)
         ax.plot([tv], [yv], "o", color=GRAY, ms=6, zorder=6)
     ax.text(th_t, ymin - 0.10, r"$\theta^{(t)}$", color=GRAY, ha="center",
-            va="top", fontsize=10)
+            va="top", fontsize=11)
     ax.text(th_next, ymin - 0.10, r"$\theta^{(t+1)}$", color=GRAY,
-            ha="center", va="top", fontsize=10)
+            ha="center", va="top", fontsize=11)
 
     # the gap between the curves at some other theta is the KL divergence
     th_g = 1.4
@@ -1121,9 +1179,10 @@ def fig_elbo():
     g_hi = float(np.interp(th_g, th, evid))
     ax.annotate("", xy=(th_g, g_hi), xytext=(th_g, g_lo),
                 arrowprops=dict(arrowstyle="<->", color=GREEN, lw=1.6))
-    ax.text(th_g - 0.12, (g_lo + g_hi) / 2,
-            r"gap $= D_{\mathrm{KL}}(q\,\Vert\,p(z\mid x;\theta))$",
-            color=GREEN, ha="right", va="center", fontsize=9)
+    # short label (the caption spells out "gap = KL divergence" in full) placed
+    # to the right of the arrow, clear of both curves at every theta it spans
+    ax.text(th_g + 0.15, (g_lo + g_hi) / 2, "gap\n(KL)",
+            color=GREEN, ha="left", va="center", fontsize=11)
 
     ax.set_xlabel(r"$\theta$")
     ax.set_ylabel("objective")
@@ -1161,11 +1220,15 @@ def fig_coverage_strip():
         ax.plot([i], [mu_hat[i]], "o", color=col, ms=2.4,
                 zorder=5 if miss[i] else 3)
     ax.axhline(mu, color=GRAY, lw=1.2, ls="--", zorder=1)
-    ax.text(m - 0.5, mu + 0.045, r"true $\mu$", color=GRAY, fontsize=10,
-            ha="right", va="bottom")
+    ax.text(m - 0.5, mu + 0.045, r"true $\mu$", color=GRAY, fontsize=11,
+            ha="right", va="bottom", zorder=6,
+            bbox=dict(facecolor="white", edgecolor="none", alpha=0.85,
+                      pad=1.5))
     ax.text(0.01, 0.04, f"{int(miss.sum())} of {m} intervals miss",
-            color=ORANGE, fontsize=10, ha="left", va="bottom",
-            transform=ax.transAxes)
+            color=ORANGE, fontsize=11, ha="left", va="bottom",
+            transform=ax.transAxes,
+            bbox=dict(facecolor="white", edgecolor="none", alpha=0.85,
+                      pad=1.5), zorder=6)
     ax.set_xlim(-1.5, m + 0.5)
     ax.set_xlabel("dataset (each yields one interval)", fontsize=11)
     ax.set_ylabel(r"95% CI for $\mu$", fontsize=11)
@@ -1204,7 +1267,7 @@ def fig_bootstrap():
     axs.text(cx, 3.62, "observed sample", color=BLUE, fontsize=10.5,
              ha="center", va="bottom")
     axs.text(cx, 2.25, "resamples (with replacement)", color=GRAY,
-             fontsize=10, ha="center", va="center")
+             fontsize=11, ha="center", va="center")
     axs.set_ylim(-0.4, 4.05); axs.set_yticks([])
     axs.set_xlabel("value", fontsize=12)
     for sp in ("top", "right", "left"):
@@ -1215,10 +1278,11 @@ def fig_bootstrap():
     axh.axvspan(lo, hi, color=ORANGE, alpha=0.20)
     for v in (lo, hi):
         axh.axvline(v, color=ORANGE, lw=1.8)
-    axh.set_title(r"bootstrap replicates $\hat\theta^{*}$", fontsize=12)
     axh.set_xlabel(r"$\hat\theta^{*}$  (median)", fontsize=12)
-    axh.text((lo + hi) / 2, axh.get_ylim()[1] * 0.94, r"central $95\%$",
-             color=ORANGE, ha="center", va="top", fontsize=11)
+    axh.text((lo + hi) / 2, axh.get_ylim()[1] * 0.98, r"central $95\%$",
+             color=ORANGE, ha="center", va="top", fontsize=11, zorder=6,
+             bbox=dict(facecolor="white", edgecolor="none", alpha=0.85,
+                       pad=1.5))
     axh.set_yticks([])
     axh.spines["top"].set_visible(False); axh.spines["right"].set_visible(False)
     fl.save(fig, "mdl-prob-bootstrap")

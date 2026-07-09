@@ -1003,17 +1003,17 @@ z
     </g>
    </g>
    <g id="patch_7">
-    <path d="M 267.990086 205.264792 
-Q 213.109054 221.749385 159.405872 237.880187 
+    <path d="M 319.538284 113.666195 
+Q 236.396761 166.388806 154.293853 218.4528 
 " style="fill: none; stroke: #7f7f7f; stroke-width: 1.1; stroke-linecap: round"/>
-    <path d="M 163.812132 238.644954 
-L 159.405872 237.880187 
-L 162.661442 234.814039 
+    <path d="M 159.187889 217.954387 
+L 154.293853 218.4528 
+L 156.831545 214.238524 
 " style="fill: none; stroke: #7f7f7f; stroke-width: 1.1; stroke-linecap: round"/>
    </g>
    <g id="text_8">
     <!-- steep $F$ = high density: -->
-    <g style="fill: #7f7f7f" transform="translate(252.750188 189.391831) scale(0.1 -0.1)">
+    <g style="fill: #7f7f7f" transform="translate(278.046187 95.96774) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-73" d="M 2834 3397 
 L 2834 2853 
@@ -1170,7 +1170,7 @@ z
      <use xlink:href="#DejaVuSans-3a" transform="translate(1137.744141 0.015625)"/>
     </g>
     <!-- samples cluster here -->
-    <g style="fill: #7f7f7f" transform="translate(252.750188 200.609956) scale(0.1 -0.1)">
+    <g style="fill: #7f7f7f" transform="translate(278.046187 108.307678) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-6d" d="M 3328 2828 
 Q 3544 3216 3844 3400 

@@ -13949,7 +13949,7 @@ L 300.498654 13.782536
    </g>
    <g id="text_17">
     <!-- $\mathbf{s}(\mathbf{x})=\nabla\log p(\mathbf{x})$ -->
-    <g transform="translate(48.350906 21.687) scale(0.11 -0.11)">
+    <g transform="translate(48.350906 23.937) scale(0.14 -0.14)">
      <defs>
       <path id="Cmb10-73" d="M 213 44 
 L 213 934 
@@ -14331,17 +14331,17 @@ z
     </g>
    </g>
    <g id="patch_5">
-    <path d="M 267.137455 202.509161 
-Q 249.376471 161.658898 232.150434 122.039013 
-" style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
-    <path d="M 231.92316 126.281459 
-L 232.150434 122.039013 
-L 235.408026 124.7663 
-" style="fill: none; stroke: #ff7f0e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 266.1919 200.334385 
+Q 248.904331 160.572977 232.240868 122.247011 
+" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
+    <path d="M 231.905938 128.499037 
+L 232.240868 122.247011 
+L 237.04153 126.26617 
+" style="fill: none; stroke: #000000; stroke-width: 1.4; stroke-linecap: round"/>
    </g>
    <g id="text_18">
     <!-- $\nabla\log p=\mathbf{0}$ -->
-    <g style="fill: #ff7f0e" transform="translate(249.951406 213.544109) scale(0.095 -0.095)">
+    <g transform="translate(240.073906 214.776687) scale(0.14 -0.14)">
      <defs>
       <path id="Cmr10-30" d="M 1600 -141 
 Q 816 -141 533 504 

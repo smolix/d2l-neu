@@ -236,7 +236,7 @@ z
    </g>
    <g id="text_2">
     <!-- $[1,\ 2]$ -->
-    <g style="fill: #7f7f7f" transform="translate(55.2774 121.20396) scale(0.105 -0.105)">
+    <g style="fill: #7f7f7f" transform="translate(53.5524 121.57896) scale(0.12 -0.12)">
      <defs>
       <path id="Cmr10-5b" d="M 756 -1600 
 L 756 4800 
@@ -380,7 +380,7 @@ z
    </g>
    <g id="text_4">
     <!-- $[-1,\ 2]$ -->
-    <g style="fill: #7f7f7f" transform="translate(185.07 121.20396) scale(0.105 -0.105)">
+    <g style="fill: #7f7f7f" transform="translate(182.76 121.57896) scale(0.12 -0.12)">
      <defs>
       <path id="Cmsy10-a1" d="M 653 1472 
 Q 600 1472 565 1512 
@@ -447,7 +447,7 @@ z
    </g>
    <g id="text_6">
     <!-- $[0,\ 2]$ -->
-    <g style="fill: #7f7f7f" transform="translate(305.589 121.20396) scale(0.105 -0.105)">
+    <g style="fill: #7f7f7f" transform="translate(303.864 121.57896) scale(0.12 -0.12)">
      <defs>
       <path id="Cmr10-30" d="M 1600 -141 
 Q 816 -141 533 504 
@@ -527,7 +527,7 @@ z
    </g>
    <g id="text_8">
     <!-- $-2$ -->
-    <g style="fill: #7f7f7f" transform="translate(427.368 121.476304) scale(0.105 -0.105)">
+    <g style="fill: #7f7f7f" transform="translate(426.408 121.89021) scale(0.12 -0.12)">
      <use xlink:href="#Cmsy10-a1" transform="translate(0 0.390625)"/>
      <use xlink:href="#Cmr10-32" transform="translate(77.685547 0.390625)"/>
     </g>
@@ -577,7 +577,7 @@ z
    </g>
    <g id="text_10">
     <!-- $2$ -->
-    <g style="fill: #7f7f7f" transform="translate(559.5294 121.476304) scale(0.105 -0.105)">
+    <g style="fill: #7f7f7f" transform="translate(559.1544 121.89021) scale(0.12 -0.12)">
      <use xlink:href="#Cmr10-32" transform="translate(0 0.390625)"/>
     </g>
    </g>

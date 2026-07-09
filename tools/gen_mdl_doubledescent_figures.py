@@ -114,35 +114,42 @@ def fig_double_descent():
             lw=1.0, alpha=0.6, zorder=1)
     ax.annotate("classical\nsweet spot", xy=(c_classical, e_classical),
                 xytext=(c_classical - 0.34, e_classical - 0.10),
-                ha="center", va="top", fontsize=9, color=BLUE,
+                ha="center", va="top", fontsize=11, color=BLUE,
                 arrowprops=dict(arrowstyle="->", color=BLUE, lw=1.0,
                                 connectionstyle="arc3,rad=0.3"))
 
-    # curve labels, placed on uncluttered stretches of each curve
-    xt = 0.30                                   # test label on the left U arm
-    ax.text(xt, test[np.argmin(np.abs(c - xt))] + 0.06, "test error",
-            color=BLUE, fontsize=10, ha="center", va="bottom")
-    xg = 0.10                                   # training label high on the gray arm
-    ax.text(xg, train[np.argmin(np.abs(c - xg))] + 0.05, "training error",
-            color=GRAY, fontsize=10, ha="left", va="bottom")
+    # curve labels, placed on uncluttered stretches of each curve.  Wrapped to
+    # two short lines (rather than one wide line) so each label's horizontal
+    # footprint stays in its own column and never runs into its neighbours.
+    xt = 0.62                   # on the flat shelf just left of the sweet spot,
+    ax.text(xt, test[np.argmin(np.abs(c - xt))] + 0.11, "test error",
+            color=BLUE, fontsize=11, ha="center", va="bottom")
+    xg = 0.08                                   # training label high on the gray arm,
+    # kept narrow (2 lines) and hugging the left edge, so it stays clear of
+    # the "interpolation threshold" / "classical regime" text further right
+    ax.text(xg, train[np.argmin(np.abs(c - xg))] + 0.05, "training\nerror",
+            color=GRAY, fontsize=11, ha="left", va="bottom")
 
-    # threshold label (placed just below the top spine, clear of the spike tip)
-    ax.text(thr, ymax * 0.92, "interpolation\nthreshold", color=GRAY,
-            fontsize=9, ha="center", va="top")
+    # threshold label: right-aligned just LEFT of the dashed marker line (not
+    # centred on it) and pushed up near the top spine, clear of the spike
+    # (whose peak reaches only ~0.6) and of the regime labels below it
+    ax.text(thr - 0.06, ymax * 0.97, "interpolation\nthreshold", color="black",
+            fontsize=11, ha="right", va="top")
 
     # regime labels: each sits in the empty wedge on its side of the threshold,
     # high enough to clear both curves (the low-left corner stays free for the
-    # "sweet spot" callout).
-    ax.text(0.74, ymax * 0.70, "classical\nregime", color=GRAY,
-            fontsize=9.5, ha="center", va="center")
-    ax.text((thr + c[-1]) / 2 + 0.20, ymax * 0.70, "over-parametrized\nregime",
-            color=GRAY, fontsize=9.5, ha="center", va="center")
+    # "sweet spot" callout) and low enough to clear the threshold label above.
+    # Generic annotations (not tied to a curve's color), so black for contrast.
+    ax.text(0.74, ymax * 0.66, "classical\nregime", color="black",
+            fontsize=11, ha="center", va="center")
+    ax.text((thr + c[-1]) / 2 + 0.20, ymax * 0.66, "over-parametrized\nregime",
+            color="black", fontsize=11, ha="center", va="center")
 
     # axes: schematic, so no numeric ticks; just the conceptual labels
-    ax.set_xlabel("model capacity  ($\\#$parameters)", fontsize=10.5)
-    ax.set_ylabel("error", fontsize=10.5)
+    ax.set_xlabel("model capacity  ($\\#$parameters)", fontsize=11)
+    ax.set_ylabel("error", fontsize=11)
     ax.set_xticks([thr])
-    ax.set_xticklabels([r"$\#$params $\approx\ \#$examples"], fontsize=8.5)
+    ax.set_xticklabels([r"$\#$params $\approx\ \#$examples"], fontsize=11)
     ax.set_yticks([])
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)

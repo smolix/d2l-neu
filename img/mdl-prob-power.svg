@@ -1177,7 +1177,7 @@ L 400.27875 223.416
    </g>
    <g id="text_12">
     <!-- $\delta=1$ -->
-    <g style="fill: #114e7c" transform="translate(65.941474 127.857584) scale(0.09 -0.09)">
+    <g style="fill: #114e7c" transform="translate(52.421474 127.441646) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-b1" d="M 1281 -97 
 Q 1059 -97 868 -14 
@@ -1271,7 +1271,7 @@ z
    </g>
    <g id="text_13">
     <!-- $\delta=0.5$ -->
-    <g style="fill: #1f77b4" transform="translate(103.036075 127.857471) scale(0.09 -0.09)">
+    <g style="fill: #1f77b4" transform="translate(94.701682 76.88436) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-30" d="M 1600 -141 
 Q 816 -141 533 504 
@@ -1378,7 +1378,7 @@ z
    </g>
    <g id="text_14">
     <!-- $\delta=0.1$ -->
-    <g style="fill: #5b9bc9" transform="translate(197.212553 127.857605) scale(0.09 -0.09)">
+    <g style="fill: #5b9bc9" transform="translate(178.687553 103.760868) scale(0.11 -0.11)">
      <use xlink:href="#Cmmi10-b1" transform="translate(0 0.703125)"/>
      <use xlink:href="#Cmr10-3d" transform="translate(61.943359 0.703125)"/>
      <use xlink:href="#Cmr10-30" transform="translate(157.1875 0.703125)"/>
@@ -1388,7 +1388,7 @@ z
    </g>
    <g id="text_15">
     <!-- $\delta=0.01$ -->
-    <g style="fill: #9cc2dd" transform="translate(329.698633 127.857626) scale(0.09 -0.09)">
+    <g style="fill: #9cc2dd" transform="translate(307.923633 103.760889) scale(0.11 -0.11)">
      <use xlink:href="#Cmmi10-b1" transform="translate(0 0.703125)"/>
      <use xlink:href="#Cmr10-3d" transform="translate(61.943359 0.703125)"/>
      <use xlink:href="#Cmr10-30" transform="translate(157.1875 0.703125)"/>
@@ -1399,7 +1399,7 @@ z
    </g>
    <g id="text_16">
     <!-- target $0.8$ -->
-    <g style="fill: #7f7f7f" transform="translate(50.83489 51.642) scale(0.09 -0.09)">
+    <g style="fill: #7f7f7f" transform="translate(50.83489 51.222) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-74" d="M 1172 4494 
 L 1172 3500 
@@ -1523,7 +1523,7 @@ z
    </g>
    <g id="text_17">
     <!-- $\alpha=0.05$ -->
-    <g style="fill: #7f7f7f" transform="translate(50.83489 206.100281) scale(0.09 -0.09)">
+    <g style="fill: #7f7f7f" transform="translate(64.866032 205.684344) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-ae" d="M 1288 -72 
 Q 984 -72 748 72 
@@ -1582,7 +1582,7 @@ z
    </g>
    <g id="text_18">
     <!-- $n\approx 8$ -->
-    <g style="fill: #114e7c" transform="translate(130.058932 77.2128) scale(0.09 -0.09)">
+    <g style="fill: #114e7c" transform="translate(91.176134 27.792) scale(0.11 -0.11)">
      <defs>
       <path id="Cmsy10-bc" d="M 447 359 
 Q 378 359 359 519 
@@ -1645,7 +1645,7 @@ z
    </g>
    <g id="text_19">
     <!-- $n\approx 8\times 10^4$ -->
-    <g style="fill: #9cc2dd" transform="translate(289.189438 77.2128) scale(0.09 -0.09)">
+    <g style="fill: #9cc2dd" transform="translate(284.369438 77.2128) scale(0.11 -0.11)">
      <defs>
       <path id="Cmsy10-a3" d="M 941 184 
 Q 941 234 972 275 

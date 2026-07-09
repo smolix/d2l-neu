@@ -174,6 +174,53 @@ shape on the **preliminaries** and **linear-neural-networks** chapters.
 - **One figure style per chapter.** Use a single consistent look (the
   generator's shared style). Do not mix hand-drawn SVGs, inline matplotlib, and
   generated plots in the same chapter — reproduce stragglers in the chosen style.
+- **Figure house style — the checklist every generated figure must pass.**
+  These rules are distilled from repeated review feedback; apply them to *every*
+  panel of *every* figure:
+  1. **Black coordinate axes and text labels.** Pass `color="black"` to
+     `axis_cross(...)`; recolor any grey `axhline`/`axvline` that acts as a
+     coordinate axis, and any grey *annotation text*, to black. This is about
+     axes and labels only — leave data curves, contours, and light reference
+     shapes (unit circles, faint grids) in their palette colours.
+  2. **Legible, consistent fonts.** In-figure math/labels ~13–16 pt; never leave
+     text tiny relative to the rest of the figure; match sizes within a figure.
+  3. **No text↔line intersections.** A label must not sit on a curve, arrowhead,
+     grid line, axis, or another label. Offset it *outward* from the thing it
+     names — radially past an ellipse-axis tip (the eigenvectors are the axes, so
+     radial is the true outward normal), or into the empty wedge where the shape
+     has narrowed; put a white `bbox` behind labels that fall over scatter/bars/
+     grids. This is the #1 recurring defect and you **cannot** get it right by
+     reading the code — see the render-and-review loop below.
+  4. **No dead whitespace.** Tighten `lim` so the content roughly fills the panel.
+  5. **Balanced pairs.** Paired/rowed panels must render at the same height. Same
+     scene → identical `lim`. Different scenes (e.g. a matrix mapping a square to
+     a tall sheared region) → keep equal aspect and either the same window *size*
+     (both square) or set `gridspec` `width_ratios` to match the `lim` spans so
+     the *scale* is shared. If the image genuinely won't fit at shared scale,
+     zoom the panel out to show it whole (not-to-scale is fine — the caption can
+     say so) rather than cropping off part of it.
+  6. **No redundant supercaptions.** Drop `ax.set_title`/`suptitle` when the book
+     caption already carries it (the "(a) …/(b) …" kind). *Keep* titles that are
+     functional and absent from the caption: a left→right process sequence
+     ("(1) input → (2) after Σ"), or per-panel quantitative labels ("rank 5,
+     err 0.08", "κ ≈ 2.7").
+  7. **3-D frames.** Keep matplotlib's default box + shaded panes; only blacken
+     the axis lines (hide the numeric ticks if noisy). Do not replace the box
+     with bare quiver arrows.
+- **ALWAYS render and visually inspect a figure before declaring it done — never
+  guess at label positions.** After editing a generator, regenerate and *look*:
+
+  ```bash
+  .venv-pytorch/bin/python tools/gen_mdl_<chapter>_figures.py   # writes img/mdl-<prefix>-*.svg
+  /opt/local/bin/rsvg-convert -z 2 img/mdl-<prefix>-<id>.svg -o /tmp/f.png   # then open /tmp/f.png
+  ```
+
+  Fix, regenerate, re-inspect until clean; when overcorrecting a position, look
+  again rather than assuming. For a whole chapter, tile the PNGs into grids
+  (`/opt/local/bin/montage *.png -tile 3x -geometry 460x340 -label '%f' grid.png`)
+  and scan them. Generators are **byte-idempotent** — the shared `save()` fixes
+  `svg.hashsalt` and nulls the SVG date — so never add timestamps or unseeded
+  `random`; a second run must produce identical SVGs.
 - **One imports cell.** Import each library exactly once, in a single
   per-framework imports cell near the top; never re-import inside later cells.
   Prefer d2l helpers (`d2l.plot`, `d2l.plt`, `d2l.set_figsize`, …) over raw

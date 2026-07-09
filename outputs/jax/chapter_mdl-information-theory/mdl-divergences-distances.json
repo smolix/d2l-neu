@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37614,
-          "sha256": "sha256:08c42a66fe0e55e5cd06779b4cd6f61eb7d974ca2c2faf00bb6ecc9ea0fa09f9"
+          "sha256": "sha256:5cd75d1b478f81e69d81064b7fe5eeb8cf19e6960ad18fbe1f2db06a962bf155"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
           "bytes": 35917,
-          "sha256": "sha256:ef2aa01d9dee540676b9bf49ee53d32ef79583ad280e44d227c33238256add76"
+          "sha256": "sha256:c04c24d3a34518a9f78265f9abc16ec519a1da0e1ea8e2382de8185e59de1aa7"
         }
       ]
     },
@@ -123,6 +123,22 @@
           "type": "stream",
           "name": "stdout",
           "text": "E[ f'(Z) - Z f(Z) ] for f(x) = x^3: +0.0020\nE[ f'(Z) - Z f(Z) ] for f(x) = sin x: +0.0005\n"
+        }
+      ]
+    },
+    "divergences-distances-ksd": {
+      "code_fingerprint": "sha256:77621cec977f9b0ed0aa74e97347fa6a7bcd12ab056b3a49ef9f0145a542d875",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KSD^2 vs the true model  N(0,1): +0.00019\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KSD^2 vs the wrong model N(1,1): +0.64425\n"
         }
       ]
     }

@@ -356,6 +356,19 @@ uses:
   $e^{a t}(\cos bt, \sin bt)$ terms: **rotation**, decaying or growing
   with the sign of $a$.
 
+The rotation entry is the eigenvalue--rotation dictionary of
+:numref:`subsec_mdl-complex-rotation` run in continuous time. On the invariant
+plane of a conjugate pair $a \pm ib$, the matrix $A$ acts as the block
+$\left(\begin{smallmatrix}a & -b\\ b & \phantom{-}a\end{smallmatrix}\right)$
+of :eqref:`eq_mdl-rotation-scaling-block`. Write it as $aI + bJ$ with
+$J = \left(\begin{smallmatrix}0 & -1\\ 1 & \phantom{-}0\end{smallmatrix}\right)$;
+since $J^2 = -I$, the exponential series splits into cosine and sine parts,
+$e^{(aI + bJ)t} = e^{at}(\cos bt \, I + \sin bt \, J)$, which is scaling by
+$e^{at}$ composed with rotation by $bt$. Where the *iterated* matrix of
+:numref:`subsec_mdl-complex-rotation` turned by a fixed angle $\theta$ per
+step, the *flow* turns at angular velocity $b$: this is the spiral, and it is
+exactly where the $e^{at}(\cos bt, \sin bt)$ terms above come from.
+
 In two dimensions the dictionary is a portrait gallery
 (:numref:`fig_mdl-dyn-phase-portraits`). The saddle deserves a
 note: with real eigenvalues of opposite signs, trajectories approach along the

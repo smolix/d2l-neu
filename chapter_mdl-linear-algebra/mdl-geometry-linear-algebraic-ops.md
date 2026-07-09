@@ -3,7 +3,7 @@
 
 In :numref:`sec_linear-algebra`, we encountered the basics of linear algebra
 and saw how it could be used to express common operations for transforming our data.
-Linear algebra is one of the key mathematical pillars
+Linear algebra is one of the pillars
 underlying much of the work that we do in deep learning
 and in machine learning more broadly.
 While :numref:`sec_linear-algebra` contained enough machinery
@@ -370,7 +370,7 @@ $\mathbf{w}$," and the planar argument for the dot-product formula reasoned
 inside the plane that two vectors span. These words (*span*, *subspace*,
 *basis*) are the organizing vocabulary of linear algebra, and the
 decompositions later in this chapter lean on them constantly, so let us pin
-them down while the geometry is fresh.
+them down. 
 
 Given vectors $\mathbf{v}_1, \ldots, \mathbf{v}_k$, their **span** is the set
 of everything reachable by scaling and adding them:
@@ -474,15 +474,18 @@ $\mathbf{x}$;*
 
 **Proof.** For (i), $\mathbf{P}\mathbf{x} = \mathbf{Q}(\mathbf{Q}^\top\mathbf{x})$
 is a linear combination of the columns of $\mathbf{Q}$, hence lies in $S$; and
-$\mathbf{Q}^\top(\mathbf{x} - \mathbf{P}\mathbf{x}) = \mathbf{Q}^\top\mathbf{x}
-- (\mathbf{Q}^\top\mathbf{Q})\mathbf{Q}^\top\mathbf{x} = \mathbf{0}$, so the
+$$\mathbf{Q}^\top(\mathbf{x} - \mathbf{P}\mathbf{x}) = \mathbf{Q}^\top\mathbf{x}
+- (\mathbf{Q}^\top\mathbf{Q})\mathbf{Q}^\top\mathbf{x} = \mathbf{0},$$ 
+so the
 residual is orthogonal to each $\mathbf{q}_i$ and therefore to everything they
 span. For (ii), take any $\mathbf{s} \in S$ and split $\mathbf{x} - \mathbf{s}
 = (\mathbf{x} - \mathbf{P}\mathbf{x}) + (\mathbf{P}\mathbf{x} - \mathbf{s})$:
 the second piece lies in $S$, the first is orthogonal to it, so Pythagoras
-:eqref:`eq_mdl-pythagoras` gives $\|\mathbf{x} - \mathbf{s}\|^2 = \|\mathbf{x}
+:eqref:`eq_mdl-pythagoras` gives 
+$$\|\mathbf{x} - \mathbf{s}\|^2 = \|\mathbf{x}
 - \mathbf{P}\mathbf{x}\|^2 + \|\mathbf{P}\mathbf{x} - \mathbf{s}\|^2 \ge
-\|\mathbf{x} - \mathbf{P}\mathbf{x}\|^2$, with equality exactly when
+\|\mathbf{x} - \mathbf{P}\mathbf{x}\|^2,$$ 
+with equality exactly when
 $\mathbf{s} = \mathbf{P}\mathbf{x}$. For (iii), $\mathbf{P}^2 =
 \mathbf{Q}(\mathbf{Q}^\top\mathbf{Q})\mathbf{Q}^\top = \mathbf{Q}\mathbf{Q}^\top
 = \mathbf{P}$, and symmetry is immediate from the form
@@ -572,7 +575,7 @@ r = x - P @ x              # residual
 
 Both numbers are zero up to floating-point roundoff: $\mathbf{P}$ really is
 idempotent, and the residual really is orthogonal to the whole subspace, just
-as the proposition demands, for a subspace nobody chose by hand.
+as the proposition demands.
 
 ## Similarity in High Dimensions
 
@@ -694,7 +697,7 @@ so the product lands at size $\sqrt{d}$.
 ## Hyperplanes and Decision Boundaries
 
 In addition to working with vectors, another key object
-that you must understand to go far in linear algebra
+that you must understand
 is the *hyperplane*, a generalization to higher dimensions
 of a line (two dimensions) or of a plane (three dimensions).
 In a $d$-dimensional vector space, a hyperplane has $d-1$ dimensions
@@ -762,7 +765,7 @@ offset from the origin by the signed distance $b/\|\mathbf{w}\|$.
 The two inequalities again define the two sides of the plane.
 
 While our ability to visualize runs out at this point,
-nothing stops us from doing this in tens, hundreds, or billions of dimensions.
+nothing stops us from doing this in tens, hundreds, or billions of dimensions (or even infinite dimensional spaces in the case of kernel methods).
 This occurs often when thinking about machine learned models.
 For instance, we can understand linear classification models
 like those from :numref:`sec_softmax`,
@@ -1038,7 +1041,7 @@ d2l.plt.legend()
 d2l.plt.show()
 ```
 
-This is the whole hyperplane story in one plot. Along the single direction
+This plot summarizes the key points of hyperplane classifiers. Along the single direction
 $\mathbf{w}$, the two classes form two well-separated humps, and the dashed
 threshold (the value of $\mathbf{w}\cdot\mathbf{x}$ at the midpoint of the
 two means) cuts between them; the tails that spill across it are exactly the
@@ -1073,9 +1076,9 @@ we multiply and see that
 
 $$
 \begin{aligned}
-\mathbf{A}\mathbf{v} & = \begin{bmatrix}a & b \\ c & d\end{bmatrix}\begin{bmatrix}x \\ y\end{bmatrix} \\
+\mathbf{A}\mathbf{v} & = \begin{bmatrix}a & b \\ c & d\end{bmatrix}\begin{bmatrix}x \\ y\end{bmatrix} 
 & = \begin{bmatrix}ax+by\\ cx+dy\end{bmatrix} \\
-& = x\begin{bmatrix}a \\ c\end{bmatrix} + y\begin{bmatrix}b \\d\end{bmatrix} \\
+& = x\begin{bmatrix}a \\ c\end{bmatrix} + y\begin{bmatrix}b \\d\end{bmatrix} 
 & = x\left\{\mathbf{A}\begin{bmatrix}1\\0\end{bmatrix}\right\} + y\left\{\mathbf{A}\begin{bmatrix}0\\1\end{bmatrix}\right\}.
 \end{aligned}
 $$
@@ -1348,7 +1351,7 @@ dimension exactly $n - k$. $\blacksquare$
 
 Read it as conservation of directions: of the $n$ directions coming in,
 $\dim\ker\mathbf{A}$ are destroyed and $\operatorname{rank}\mathbf{A}$
-survive. Our matrix $\mathbf{B}$ has $1 + 1 = 2$, one column-space direction
+survive. $\mathbf{B}$ has $1 + 1 = 2$, one column-space direction
 surviving and one null-space
 direction crushed, exactly as :numref:`fig_mdl-la-null-collapse` shows. The
 singular value decomposition will make this split visible, with orthonormal

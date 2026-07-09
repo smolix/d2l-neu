@@ -515,11 +515,72 @@ print('moduli (should be 1):', np.round(np.abs(np.linalg.eigvals(R)), 4))
 ```
 
 This is the general rule. Complex eigenvalues of a real matrix come in
-conjugate pairs $re^{\pm i\theta}$, and each pair encodes a *scale by $r$ and
-rotate by $\theta$*: the pair corresponds to a real $2\times2$
-rotation--scaling block
-$r\left(\begin{smallmatrix}\cos\theta & -\sin\theta\\ \sin\theta & \cos\theta\end{smallmatrix}\right)$
-acting on a two-dimensional invariant plane. Allowing these blocks alongside
+conjugate pairs $a\pm ib=re^{\pm i\theta}$, and each pair encodes a *scale by
+$r$ and rotate by $\theta$* on some two-dimensional invariant plane. But where
+is that plane, and how do we pass between the complex pair and the real
+rotation? The dictionary is a two-line computation. Let
+$\mathbf{A}\mathbf{w}=\lambda\mathbf{w}$ with $\lambda=a+ib$, $b\neq0$, and
+split the eigenvector into real and imaginary parts,
+$\mathbf{w}=\mathbf{u}+i\mathbf{v}$. Expanding
+$\mathbf{A}(\mathbf{u}+i\mathbf{v})=(a+ib)(\mathbf{u}+i\mathbf{v})$ and
+matching real and imaginary parts gives
+
+$$
+\mathbf{A}\mathbf{u} = a\mathbf{u} - b\mathbf{v},
+\qquad
+\mathbf{A}\mathbf{v} = b\mathbf{u} + a\mathbf{v}.
+$$
+
+Both images land back in $\textrm{span}\{\mathbf{u},\mathbf{v}\}$, so this span
+is the invariant plane. (It really is a plane: if $\mathbf{v}$ were a multiple
+of $\mathbf{u}$, then $\mathbf{u}$ would be a *real* eigenvector of
+$\mathbf{A}$, forcing its eigenvalue to be real and contradicting $b\neq0$.)
+Now collect the two identities into columns. With
+$\mathbf{P}=[\mathbf{v}\;\;\mathbf{u}]$, they say exactly that
+$\mathbf{A}\mathbf{P}=\mathbf{P}\left(\begin{smallmatrix}a & -b\\ b & \phantom{-}a\end{smallmatrix}\right)$,
+i.e.
+
+$$
+\mathbf{P}^{-1}\mathbf{A}\mathbf{P}
+= \begin{bmatrix} a & -b\\ b & \phantom{-}a \end{bmatrix}
+= \underbrace{\sqrt{a^2+b^2}}_{r}\,
+  \begin{bmatrix} \cos\theta & -\sin\theta\\ \sin\theta & \phantom{-}\cos\theta \end{bmatrix},
+\qquad \theta=\arg(a+ib).
+$$
+:eqlabel:`eq_mdl-rotation-scaling-block`
+
+In the basis $(\mathbf{v},\mathbf{u})$ of its invariant plane, $\mathbf{A}$
+*is* the rotation--scaling block: scale by the modulus, rotate by the
+argument. The dictionary reads just as easily right to left. Identify
+$(x,y)^\top\in\mathbb{R}^2$ with the complex number $x+iy$; then the block acts
+as $(x,y)^\top\mapsto(ax-by,\,bx+ay)^\top$, which is precisely multiplication
+by $a+ib$, and its eigenvalues are $a\pm ib$ with eigenvectors
+$(1,\mp i)^\top$. Complex pair and real block carry the same two numbers in
+different coordinates, polar $(r,\theta)$ versus Cartesian $(a,b)$. Two
+conventions to keep straight: choosing the conjugate eigenvalue $a-ib$ instead
+flips the sign of $b$, giving the same plane traversed in the opposite
+orientation; and replacing $\mathbf{w}$ by any nonzero complex multiple changes
+$\mathbf{P}$ but not the block, since the derivation used only
+$\mathbf{A}\mathbf{w}=\lambda\mathbf{w}$. So the block is well defined even
+though `eig` normalizes eigenvectors with an arbitrary phase. Let's verify the
+dictionary on a matrix with no visible rotation in it.
+
+```{.python .input #mdl-eigendecomposition-complex-eigenvalues-are-rotations-1}
+A = np.array([[0.5, -1.2], [0.9, 0.3]])
+lam, W = np.linalg.eig(A)
+k = np.argmax(lam.imag)                  # the eigenvalue a + ib with b > 0
+r, theta = np.abs(lam[k]), np.angle(lam[k])
+u, v = W[:, k].real, W[:, k].imag
+P = np.column_stack([v, u])              # basis (v, u) of the invariant plane
+print(f'lambda = {lam[k]:.4f}   r = {r:.4f}   theta = {theta:.4f}')
+print('P^-1 A P =\n', np.round(np.linalg.inv(P) @ A @ P, 4))
+print('r * R(theta) =\n', np.round(r * np.array(
+    [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]), 4))
+```
+
+Nothing about the entries of $\mathbf{A}$ advertises a rotation, yet in the
+basis read off from its eigenvector the map is exactly scale-by-$r$,
+rotate-by-$\theta$. Allowing such rotation--scaling blocks alongside
 the Jordan blocks of :numref:`subsec_mdl-jordan` gives the *real Jordan form*
 :cite:`Horn.Johnson.2012`, and with it a complete inventory of what a linear
 map can do over the reals: every square matrix decomposes into pure stretch
@@ -529,7 +590,11 @@ rotation--scaling planes (complex-conjugate pairs). The inventory also predicts
 how iterating a matrix can misbehave: a dominant rotating pair keeps the
 iterate spinning forever instead of settling on a direction, and a dominant
 defective block converges with a polynomial drag. Both reappear when we develop
-*power iteration* later in this section.
+*power iteration* later in this section. The dictionary itself returns in
+:numref:`sec_mdl-linear-odes-stability`, where it converts eigenvalues into the
+phase portraits of continuous-time flows $\dot{\mathbf{x}}=\mathbf{A}\mathbf{x}$:
+a complex pair $a\pm ib$ produces a spiral, with the real part $a$ setting
+growth or decay and the imaginary part $b$ the angular velocity.
 
 ## Symmetric Matrices and Positive Definiteness
 
@@ -1513,6 +1578,21 @@ $e^{\pm i\theta}$, modulus $1$ (length preserved), argument $\pm\theta$
 (the angle):
 
 @eigendecomposition-complex-rotation
+
+. . .
+
+The dictionary: split the eigenvector of $\lambda=a+ib$ as
+$\mathbf{w}=\mathbf{u}+i\mathbf{v}$. Then $\textrm{span}\{\mathbf{u},\mathbf{v}\}$
+is invariant, and with $\mathbf{P}=[\mathbf{v}\;\;\mathbf{u}]$,
+
+$$
+\mathbf{P}^{-1}\mathbf{A}\mathbf{P}
+= \left(\begin{smallmatrix} a & -b\\ b & \phantom{-}a \end{smallmatrix}\right)
+= r\left(\begin{smallmatrix} \cos\theta & -\sin\theta\\ \sin\theta & \phantom{-}\cos\theta \end{smallmatrix}\right).
+$$
+
+Right to left: the block is multiplication by $a+ib$ on
+$\mathbb{R}^2\cong\mathbb{C}$.
 
 ::: {.d2l-note}
 A real matrix's complex eigenvalues come in pairs $re^{\pm i\theta}$: scale

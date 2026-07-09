@@ -45,8 +45,19 @@
         }
       ]
     },
+    "mdl-eigendecomposition-complex-eigenvalues-are-rotations-1": {
+      "code_fingerprint": "sha256:e294d5d3cbc930df848ca60b4c8c731678a77fd83ebb7f3a3b8fd888699ed1fb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lambda = 0.4000+1.0344j   r = 1.1091   theta = 1.2018\nP^-1 A P =\n [[ 0.4    -1.0344]\n [ 1.0344  0.4   ]]\nr * R(theta) =\n [[ 0.4    -1.0344]\n [ 1.0344  0.4   ]]\n"
+        }
+      ]
+    },
     "eigendecomposition-psd-gram": {
-      "code_fingerprint": "sha256:879f7accb130e2589ce8f3237951af1282aa5b25bc89828fe13867b7b1f67b6e",
+      "code_fingerprint": "sha256:e515525924149aa832464dff587ae5ded1161ace79e62a28b48c2a6b4f0a8d79",
       "kind": "text",
       "outputs": [
         {
@@ -57,7 +68,7 @@
       ]
     },
     "mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches": {
-      "code_fingerprint": "sha256:32fd9d6cba588fdef9786ba7972bffd217c516884d091828d065e75a9bc2ae43",
+      "code_fingerprint": "sha256:831517921c01f20c5ba573deb03cd1e625a8ed4ca881d35439d679cd74c5add1",
       "kind": "text",
       "outputs": [
         {
@@ -68,7 +79,7 @@
       ]
     },
     "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:a382fa6d9dbdc503718e340ccf431d1b1797f9118b5799ca3aec3052ca38b791",
+      "code_fingerprint": "sha256:21411f26f6e950914bb89f6ce86dd5a8bbe727b776332d03141050da24d0e50d",
       "kind": "text",
       "outputs": [
         {
@@ -78,7 +89,7 @@
       ]
     },
     "eigendecomposition-power-iteration": {
-      "code_fingerprint": "sha256:f1b1d2a262c788b7ad65d7f4cf5de9aa93623389cffefada844b4a27b7b7ce65",
+      "code_fingerprint": "sha256:247f89b37e513e6dd38aa93d8dbd984d849472dbc011d489a793bf89a9608933",
       "kind": "text",
       "outputs": [
         {

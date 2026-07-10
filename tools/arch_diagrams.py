@@ -65,6 +65,10 @@ INSET_FILL = "#ECECEC"          # dashed inset panels
 GRAY_TEXT = "#6E6E6E"           # shape notes, stage labels, input anchor
 
 PILL_H = 26.0                   # pt — pill height (single-line)
+PILL_GAP = 15.0                 # pt — default vertical gap between spine ops
+PILL_STEP = PILL_H + PILL_GAP   # pt — default spine rhythm (center to center)
+LABEL_BAND = 34.0               # pt — panel headroom above the top op for the
+                                #      stage label (keeps label off the pills)
 PILL_FS = 11.5                  # pill labels
 CALLOUT_FS = 12.5               # margin callouts (bold)
 NOTE_FS = 10.0                  # shape notes / stage labels
@@ -217,13 +221,22 @@ class Diagram:
         self.ax.text(x, y, text.upper(), fontsize=NOTE_FS, color=GRAY_TEXT,
                      family=SANS, ha=ha, va="top", zorder=8)
 
-    def repeat(self, x, y, n_text, accent=ACCENT):
-        """Repeat multiplier at a block panel's lower-left: ``8 ×`` + brace.
-        ``(x, y)`` is the panel's lower-left corner; drawn just outside it."""
-        self.ax.text(x - 6, y + 4, "{", fontsize=30, color=accent,
-                     family=SANS, ha="right", va="bottom", zorder=8)
-        self.rich(x - 22, y + 16, [(n_text + " ", accent, True),
-                                   ("×", accent, True)],
+    def repeat(self, x, y0, y1, n_text, accent=ACCENT, depth=9.0):
+        """Repeat multiplier beside a block panel: a curly brace spanning the
+        panel's FULL height (y0..y1), cusp at x pointing left, with ``n ×`` to
+        its left at mid-height."""
+        ym = 0.5 * (y0 + y1)
+        xa = x + depth               # arm x (brace opens toward the panel)
+        verts = [(xa, y1),
+                 (x + depth * 0.15, y1), (xa, ym), (x, ym),
+                 (xa, ym), (x + depth * 0.15, y0), (xa, y0)]
+        codes = [MplPath.MOVETO,
+                 MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4,
+                 MplPath.CURVE4, MplPath.CURVE4, MplPath.CURVE4]
+        self.ax.add_patch(PathPatch(MplPath(verts, codes), facecolor="none",
+                                    edgecolor=accent, linewidth=1.8,
+                                    capstyle="round", zorder=8))
+        self.rich(x - 6, ym, [(n_text + " ", accent, True), ("×", accent, True)],
                   13, ha="right", va="center", zorder=8)
 
     # -- spine plumbing -------------------------------------------------------#
@@ -276,7 +289,8 @@ class Diagram:
 
     # -- annotation layer -----------------------------------------------------#
     def leader(self, p0, p1, zorder=5):
-        """Dotted leader line between two points."""
+        """Dotted leader line between two points.  Keep leaders axis-aligned
+        (horizontal or vertical) — pass points sharing an x or a y."""
         self.ax.plot([p0[0], p1[0]], [p0[1], p1[1]], zorder=zorder, **LEADER)
 
     def callout(self, x, y, lines, target=None, ha="left", fs=CALLOUT_FS,

@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/training-recipes.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:5e662fac5e9415d084b9a058d6245bbc8311595ec2b944f8b7faddb48678e1e4",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "training-recipes-training-recipes-matter": {
+      "code_fingerprint": "sha256:001df9aae5d47aca11c059827ac74f7d2a6f186957116da5e0eec659d647e06a",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-label-smoothing": {
+      "code_fingerprint": "sha256:f0f0ca0a7537121f3455626602d7208470aeb05241a7f876d2144e7bd7be8b4f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon=0.0: loss=0.0001\nepsilon=0.1: loss=0.6668\n"
+        }
+      ]
+    },
+    "training-recipes-cosine-schedules-with-warmup": {
+      "code_fingerprint": "sha256:864e0a57f2585bd522ca4db2d4e210634f3228275f56d5bdcd638f32dfdd6cd2",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "training-recipes/training-recipes-cosine-schedules-with-warmup-1.svg",
+          "bytes": 29157,
+          "sha256": "sha256:a9c1d432df1676c2427717c1a15c659cd622a97a2c641ddfccb6bc35d00484e4"
+        }
+      ]
+    },
+    "training-recipes-mixup-1": {
+      "code_fingerprint": "sha256:8b56b4ac0601f4d650d68b0e1e97c17a766163619353d61158c01205aa9872f3",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-mixup-2": {
+      "code_fingerprint": "sha256:3a1ca9ad97f4437bc3485cedff8ad8c5b97ee0adaf51d174b73b2ceb23f3e484",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lambda = 0.39\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "training-recipes/training-recipes-mixup-2-1.svg",
+          "bytes": 68695,
+          "sha256": "sha256:9d71a5da2437360aa926730e7f6f37065a71d4d0d134b7b657681f42ab91f13b"
+        }
+      ]
+    },
+    "training-recipes-stochastic-depth": {
+      "code_fingerprint": "sha256:ec51e5e9b710b9555118082c7372da311be86b8ddc9c0dbc30fd7f006b031fa5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fraction of samples with a dropped branch: 0.512\n"
+        }
+      ]
+    },
+    "training-recipes-averaging-weights": {
+      "code_fingerprint": "sha256:0515fc13ff7140fd5a0d2b9f014bbff1b56498d5988c81d730460316c5fc3b76",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/tmp/ipykernel_36411/1414125354.py:21: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)\n  raw.append(float(net.weight))\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "training-recipes/training-recipes-averaging-weights-1.svg",
+          "bytes": 27685,
+          "sha256": "sha256:f2ab38bdab58368c093cc372ef03c9b6db515c27938ce6e2c6dac8719b107746"
+        }
+      ]
+    },
+    "training-recipes-one-network-two-recipes-1": {
+      "code_fingerprint": "sha256:2a96ec8552ab095f3b03d33583b74cf859abd8c19dad35dc247eea04d8f4e719",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-one-network-two-recipes-2": {
+      "code_fingerprint": "sha256:8a001973523c832aa8abd8de21da50b5f927884506dd9b93ba99ab34a172a0bb",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-one-network-two-recipes-3": {
+      "code_fingerprint": "sha256:3b685ca373385753e19b95f983e98acd8edc431160266d5b04671c38ef8efddf",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-one-network-two-recipes-4": {
+      "code_fingerprint": "sha256:0f0a9edf976f47696607417fb01485d614ec1331a71d88021710f9a294fb4602",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.8995253443717957"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "training-recipes/training-recipes-one-network-two-recipes-4-1.svg",
+          "bytes": 24201,
+          "sha256": "sha256:0d8689d8f66471390105365d58fe5ac6b1ac0ef8a477050773c70c3aab9f6c62"
+        }
+      ]
+    },
+    "training-recipes-one-network-two-recipes-5": {
+      "code_fingerprint": "sha256:74a6bae44ac4f86b50e495b900c3942c7a2bc9ca917d2068fa869f3e27c93536",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.9139636158943176"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "training-recipes/training-recipes-one-network-two-recipes-5-1.svg",
+          "bytes": 24940,
+          "sha256": "sha256:34569334ef790430988540b01f37ad999f6197101f4d728e178789ff05d4236a"
+        }
+      ]
+    }
+  }
+}

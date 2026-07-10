@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/efficient-convnets.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:955dbeb2102f62b0eee0a410a973f898b9126437312eaa0bd5b922f7953162ae",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "efficient-convnets-imports": {
+      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "efficient-convnets-a-mini-mobilenet-1": {
+      "code_fingerprint": "sha256:580321867c18fb04c36db4e0982799df9a66bca62ec439e3a716a5d75dc66512",
+      "kind": "text",
+      "outputs": []
+    },
+    "efficient-convnets-a-mini-mobilenet-2": {
+      "code_fingerprint": "sha256:cca4af6554715fdb4c98341d754e74d038ccbf4c1a090db15a2b006f4cdc08d5",
+      "kind": "text",
+      "outputs": []
+    },
+    "efficient-convnets-a-mini-mobilenet-3": {
+      "code_fingerprint": "sha256:0a72023e7eefe51fedc2edc3e3b8daf71365458a0b07bbca5a329bf9431dd5d7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "542474"
+        }
+      ]
+    },
+    "efficient-convnets-the-repvgg-block": {
+      "code_fingerprint": "sha256:843bfae11cd0915ecd5931310db067dfae16e52d71bfa7e63e2cb9138d8d26e6",
+      "kind": "text",
+      "outputs": []
+    },
+    "efficient-convnets-fusing-the-branches-1": {
+      "code_fingerprint": "sha256:331b446e38f4076560108546791ae7916553dbc18741b642cb58e439710a22f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "efficient-convnets-fusing-the-branches-2": {
+      "code_fingerprint": "sha256:ab1fa9c30ca36fd8e73ca9a8a6e31d75363a22f021fc23b7c94a6e4b1daefef9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "2.384185791015625e-06"
+        }
+      ]
+    }
+  }
+}

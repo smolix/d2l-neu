@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/training-recipes.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:d51c567c5860ca68dd47f8e9f9e6c057fd5d96a5d0172e8ebe747bd68d8dc260",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "training-recipes-training-recipes-matter": {
+      "code_fingerprint": "sha256:4cc7329c63fcb8156647395ad96e1523f840eb65ab132ae2b35298c5b5c17f22",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-label-smoothing": {
+      "code_fingerprint": "sha256:fc6a0ce54fad516aed92d073e3973ce2075414912f0746092fb2008b638969e7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon=0.0: loss=0.0001\nepsilon=0.1: loss=0.6668\n"
+        }
+      ]
+    },
+    "training-recipes-cosine-schedules-with-warmup": {
+      "code_fingerprint": "sha256:715aebc6ee780ea848c39efdf207671e8f59a0087eac5510baf31e6c8a984755",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "training-recipes/training-recipes-cosine-schedules-with-warmup-1.svg",
+          "bytes": 29157,
+          "sha256": "sha256:1d90f2075f708a23b4b5039a6397af05c16de88e1210241b660437bcf2671b94"
+        }
+      ]
+    },
+    "training-recipes-mixup-1": {
+      "code_fingerprint": "sha256:59c89e64ce9e9467b83c24db85594edc37237a5abbbbe5368cde3ad8f6c2d97a",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-mixup-2": {
+      "code_fingerprint": "sha256:8840b4f0fef765d7390810f1de02ce936cc0d156d152a6281bc2ef426738a970",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[16:19:48] /home/smola/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n[16:19:48] /home/smola/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n[16:19:48] /home/smola/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n[16:19:48] /home/smola/mxnet/src/imperative/./../common/../common/utils.h:521: \nStorage type fallback detected:\noperator = stack\ninput storage types = [default, default, default, default, default, default, default, default, ]\noutput storage types = [default, ]\nparams = {}\ncontext.dev_mask = cpu\n WARNING:\nExecution of the operator above will fallback to the generic implementation (not utilizing kernels from oneDNN library) with default dense storage type. You are seeing this warning message because MXNET_ONEDNN_ENABLED flag is set to 0, in which case you can re-enable the default execution path by setting MXNET_ONEDNN_ENABLED back to 1, or the operator above is unable to process the given ndarrays with specified storage types, context and/or parameter, in which case temporary dense ndarrays are generated in order to execute the operator. The fallback does not affect the correctness of the programme. Using default storage type performance degradation might be observed. \nYou can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to 0 to suppress this warning.\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lambda = 0.53\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "training-recipes/training-recipes-mixup-2-1.svg",
+          "bytes": 67395,
+          "sha256": "sha256:f878ae108d6c9ece3a802364a475cf6eb34f41b89e58ced50f98de209ece9670"
+        }
+      ]
+    },
+    "training-recipes-stochastic-depth": {
+      "code_fingerprint": "sha256:c0ad28fbbb79593c3df13e2f89062a6b27f7848df5d79a999ff75655312f637d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fraction of samples with a dropped branch: 0.509\n"
+        }
+      ]
+    },
+    "training-recipes-one-network-two-recipes-6": {
+      "code_fingerprint": "sha256:7c6c280c7497ac81a196e6afb83af58c1ae79745e9f5f83076d67a640dd53168",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[0.0, 0.002, 0.001, 1e-06]"
+        }
+      ]
+    }
+  }
+}

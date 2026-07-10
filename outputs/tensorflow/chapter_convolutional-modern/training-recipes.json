@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/training-recipes.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:dd33c64a550d6bf0f9b4fe85073104b2258080ca85be65c467262f55a5dff414",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "training-recipes-training-recipes-matter": {
+      "code_fingerprint": "sha256:0f4fce1c3bb69607cb87d85165ad9f7e7ac500504ab63a4bc041dd71d42367ea",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-label-smoothing": {
+      "code_fingerprint": "sha256:43ebcaf93632d64e71ea9e60078c6eddba178d3cd9ffb56c178c9aa4a4221150",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon=0.0: loss=0.0001\nepsilon=0.1: loss=0.6668\n"
+        }
+      ]
+    },
+    "training-recipes-cosine-schedules-with-warmup": {
+      "code_fingerprint": "sha256:d7adf4ebc7e765368b7f1cc65e0a029a5416c279cd7d056b821281ddae1a4d1b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "training-recipes/training-recipes-cosine-schedules-with-warmup-1.svg",
+          "bytes": 29157,
+          "sha256": "sha256:6438865832c7d913a7a1af92188a1f0e37d35e4e58beac84a11aee338e6fff06"
+        }
+      ]
+    },
+    "training-recipes-mixup-1": {
+      "code_fingerprint": "sha256:2e024c496e0639f57a7a12193340119ad882b13745c725fc346d2264ca884c03",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-mixup-2": {
+      "code_fingerprint": "sha256:49933666d11677ef972c3bbaf83b12a5357c9c46a9257efda81e92c1ca20178e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lambda = 0.64\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "training-recipes/training-recipes-mixup-2-1.svg",
+          "bytes": 71411,
+          "sha256": "sha256:965fae09f50cc5dee6a6d1a4abd823afc135d4d244a2c248ff294df11116b033"
+        }
+      ]
+    },
+    "training-recipes-stochastic-depth": {
+      "code_fingerprint": "sha256:80e4d26d571a84175c07fae1c32dc8074683c90bceb7e7cb1857c577ea00c391",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fraction of samples with a dropped branch: 0.487\n"
+        }
+      ]
+    },
+    "training-recipes-one-network-two-recipes-6": {
+      "code_fingerprint": "sha256:d6f67a0ca71c233637b7f92fdd0e22c0a4f6c5758ac5e7f08f904ff187e45d5f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[0.0, 0.002, 0.001, 0.0]"
+        }
+      ]
+    }
+  }
+}

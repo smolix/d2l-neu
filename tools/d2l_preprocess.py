@@ -971,8 +971,9 @@ CHAPTER_NUMBERING = {
     'chapter_convolutional-modern/blocks.md': [8, 2],
     'chapter_convolutional-modern/batch-norm.md': [8, 3],
     'chapter_convolutional-modern/resnet.md': [8, 4],
-    # 8.5 training-recipes.md, 8.6 convnext.md, 8.7 efficient-convnets.md
-    # land next (convnet-rewrite Phase 2); numbers reserved.
+    'chapter_convolutional-modern/training-recipes.md': [8, 5],
+    # 8.6 convnext.md lands next (convnet-rewrite Phase 2); number reserved.
+    'chapter_convolutional-modern/efficient-convnets.md': [8, 7],
     'chapter_convolutional-modern/cnn-design.md': [8, 8],
     'chapter_recurrent-neural-networks/index.md': [9],
     'chapter_recurrent-neural-networks/sequence.md': [9, 1],

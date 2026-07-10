@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/training-recipes.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:1b03ed68cd2254e2c2898462bb357790cb6c4373e93ff9c4cf96025a219d380f",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "training-recipes-training-recipes-matter": {
+      "code_fingerprint": "sha256:ea70468d8bf6b210068fa35bdfa4c00a4e03ef431a56a1cc815eb1a48a87f8b7",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-label-smoothing": {
+      "code_fingerprint": "sha256:ad6da613c4d52254b0863d9875b1fbb8be3a5684d876d83931a1078c891eef71",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon=0.0: loss=0.0001\nepsilon=0.1: loss=0.6668\n"
+        }
+      ]
+    },
+    "training-recipes-cosine-schedules-with-warmup": {
+      "code_fingerprint": "sha256:339a1b327ad2f0601e3c5a52833a2d910e651b41680f7d9fe1079eb2e8910156",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "training-recipes/training-recipes-cosine-schedules-with-warmup-1.svg",
+          "bytes": 29157,
+          "sha256": "sha256:f5aeda2b0a814251d5a7e8d5cc3d90e91115cac3202f8dfb053dc77b9694679c"
+        }
+      ]
+    },
+    "training-recipes-mixup-1": {
+      "code_fingerprint": "sha256:83d158544c7f8f01bf09e91ed114e15e92d4025180ed3d506ca05de6831a95e4",
+      "kind": "text",
+      "outputs": []
+    },
+    "training-recipes-mixup-2": {
+      "code_fingerprint": "sha256:356c3be49aa81e0fe3b8096cdafb6c88a47defb3d1dbb62543c0f2db15b7640b",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "lambda = 0.41\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "training-recipes/training-recipes-mixup-2-1.svg",
+          "bytes": 65331,
+          "sha256": "sha256:5ed3fc8b02e43374b606436ec067eed0eebce890c0e71351af2623a6a331ca11"
+        }
+      ]
+    },
+    "training-recipes-one-network-two-recipes-6": {
+      "code_fingerprint": "sha256:c1579ed21ca2f403e798e2600393768a7fbf59961cb45cc8bbc159c922fe5d2c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[0.0, 0.002, 0.001, 0.0]"
+        }
+      ]
+    }
+  }
+}

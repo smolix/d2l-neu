@@ -24,12 +24,12 @@ LH = 12.5 * 1.25          # callout line height (must match callout())
 # --------------------------------------------------------------------------- #
 
 def fig_resnet_vs_convnext_block():
-    W, H = 800, 620
+    W, H = 800, 590
     d = Diagram(W, H)
 
-    y_in = 56                    # spine entry above the anchor (shared)
+    y_anchor = 30                # input-x anchor (shared)
     y0 = 116                     # first pill center (shared baseline)
-    y_out = H - 14               # output arrow tips (shared)
+    OUT_LEN = 32                 # short output arrow beyond the panel top
 
     def column(x, ops, pw, tint, label, novelty_idx=None, extra_after_plus=None):
         """One block panel: ops on a constant PILL_STEP rhythm, ⊕ one step
@@ -40,10 +40,11 @@ def fig_resnet_vs_convnext_block():
         top_edge = (y_top_el + (PILL_H / 2 if extra_after_plus else PLUS_R)
                     + LABEL_BAND)
         panel = (x - 97, y0 - PILL_H / 2 - 23, x + 97, top_edge)
+        y_out = top_edge + OUT_LEN
         d.container(*panel, fill=tint)
         d.stage_label(panel[0] + 14, panel[3] - 9, label)
 
-        d.arrow(x, y_in - 26, ys[0] - PILL_H / 2)
+        d.arrow(x, y_anchor + 14, ys[0] - PILL_H / 2)
         for i, (op, y) in enumerate(zip(ops, ys)):
             if i == novelty_idx:
                 pre, kw, post = op
@@ -62,7 +63,7 @@ def fig_resnet_vs_convnext_block():
             d.arrow(x, y_top_el + PILL_H / 2, y_out)
         else:
             d.arrow(x, y_plus + PLUS_R, y_out)
-        d.anchor(x, y_in - 38, "input x")
+        d.anchor(x, y_anchor, "input x")
         return ys, y_plus, panel
 
     # ----- left: ResNet-50 bottleneck (accent 2, amber) -------------------- #
@@ -73,7 +74,7 @@ def fig_resnet_vs_convnext_block():
     ys_l, y_plus_l, panel_l = column(xl, resnet_ops, pw_l, ACCENT2_TINT,
                                      "ResNet-50 bottleneck block",
                                      extra_after_plus="ReLU")
-    d.shape_note(xl - 66, y_in - 14, "(256, 56×56)", ha="right")
+    d.shape_note(xl - 14, 62, "(256, 56×56)", ha="right")
 
     # ----- right: ConvNeXt block (accent 1, blue) --------------------------- #
     xr, pw_r = 570, 122
@@ -81,7 +82,7 @@ def fig_resnet_vs_convnext_block():
                "1×1 Conv, 384", "GELU", "1×1 Conv, 96"]
     ys_r, y_plus_r, panel_r = column(xr, nxt_ops, pw_r, ACCENT_TINT,
                                      "ConvNeXt block", novelty_idx=0)
-    d.shape_note(xr + 66, y_in - 14, "(96, 56×56)", ha="left")
+    d.shape_note(xr + 14, 62, "(96, 56×56)", ha="left")
 
     # ----- callouts: horizontal leaders at the target pill's own height ----- #
     pl_edge = xl - pw_l / 2 - 4      # left pill edge
@@ -112,16 +113,15 @@ def fig_resnet_vs_convnext_block():
 # --------------------------------------------------------------------------- #
 
 def fig_inception_block():
-    W, H = 660, 420
+    W, H = 660, 400
     d = Diagram(W, H)
 
-    y_in = 58            # spine entry above the anchor
-    y_bus_lo = 120       # lower split bus
-    y_row1 = 152         # first pill row (one PILL_GAP above the bus + arrow)
+    y_in = 90            # spine entry above the anchor (short input line)
+    y_bus_lo = 122       # lower split bus
+    y_row1 = 154         # first pill row (one PILL_GAP above the bus + arrow)
     y_row2 = y_row1 + PILL_STEP + 9        # second pill row
     y_bus_hi = y_row2 + PILL_H / 2 + 19    # upper merge bus
     y_cat = y_bus_hi + 34                  # concat novelty box
-    y_out = 396          # output arrow tip (outside the panel)
 
     xc = W / 2
     bx = [130, 260, 400, 536]   # branch column x positions
@@ -129,6 +129,7 @@ def fig_inception_block():
 
     # block panel (the repeated unit) with LABEL_BAND above the concat box
     panel = (54, y_bus_lo - 24, W - 28, y_cat + PILL_H / 2 + LABEL_BAND)
+    y_out = panel[3] + 30        # short output arrow beyond the panel top
     d.container(*panel, fill=ACCENT_TINT)
     d.stage_label(panel[0] + 14, panel[3] - 9, "Inception block")
     d.repeat(panel[0] - 13, panel[1], panel[3], "9")
@@ -165,22 +166,24 @@ def fig_inception_block():
     d.novelty(xc, y_cat, "", "Concatenate", " channels")
     d.arrow(xc, y_cat + PILL_H / 2, y_out)
 
-    d.anchor(xc, y_in - 14, "input x")
-    d.shape_note(xc + 12, (y_in + y_bus_lo) / 2 + 4, "(192, 28×28)")
-    d.shape_note(xc + 12, y_out - 8, "(256, 28×28)")
+    d.anchor(xc, y_in - 16, "input x")
+    # size labels: outside the panel, offset clear of the spine
+    d.shape_note(xc + 14, (panel[1] + y_in - 16) / 2 + 6, "(192, 28×28)")
+    d.shape_note(xc + 14, y_out - 6, "(256, 28×28)")
 
-    # callouts at the bottom margin; straight VERTICAL leaders up to targets
-    d.callout(20, 30 + LH, [
+    # callouts at the bottom margin; straight VERTICAL leaders whose feet
+    # land on the callout text (leader x sits inside the text's span)
+    d.callout(132, 26 + LH, [
         [("1×1 convolutions shrink channels", INK, 1)],
         [("before the costly ", INK, 1), ("3×3", ACCENT, 1),
          (" and ", INK, 1), ("5×5", ACCENT, 1)],
-    ], target=(bx[1], y_row1 - PILL_H / 2 - 3),
-        leader_from=(bx[1], 30 + LH + 10), ha="left")
-    d.callout(W - 8, 30 + LH, [
+    ], target=(bx[1], y_bus_lo - 6),
+        leader_from=(bx[1], 26 + LH + 9), ha="left")
+    d.callout(bx[3] - 90, 26 + LH, [
         [("Four branches, four scales,", INK, 1)],
         [("one shared input", INK, 1)],
-    ], target=(bx[3] - 28, y_bus_lo - 2),
-        leader_from=(bx[3] - 28, 30 + LH + 10), ha="right")
+    ], target=(bx[3] - 28, y_bus_lo - 6),
+        leader_from=(bx[3] - 28, 26 + LH + 9), ha="left")
 
     save(d.fig, "arch-inception-block")
 

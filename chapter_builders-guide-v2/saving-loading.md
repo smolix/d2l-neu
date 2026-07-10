@@ -64,6 +64,19 @@ import tensorflow as tf
 from safetensors.tensorflow import load_file, save_file
 ```
 
+```{.python .input #saving-loading-saving-loading-and-pretrained-weights}
+%%tab mxnet
+import json
+import os
+import struct
+from collections import Counter
+from dataclasses import asdict, dataclass
+from mxnet import autograd, gluon, np, npx
+from mxnet.gluon import nn
+from safetensors.numpy import load_file, save_file
+npx.set_np()
+```
+
 ## State, Not Code
 
 :begin_tab:`pytorch`
@@ -87,6 +100,14 @@ The state of a network is a collection of named variables, the weights of
 fallback, on the dicts that hold them.
 :end_tab:
 
+:begin_tab:`mxnet`
+The state of a network is a dictionary from parameter names to arrays, the
+`collect_params` dictionary of :numref:`sec_parameters_v2`. Before we save a
+whole model, the warm-up is that `npx.save` and `npx.savez` work on any array
+and on named collections of them; `npx.load` hands a saved collection back as
+a dict.
+:end_tab:
+
 ```{.python .input #saving-loading-state-not-code-1}
 %%tab pytorch
 x = torch.arange(4)
@@ -106,6 +127,13 @@ jnp.load('tensors.npy', allow_pickle=True).item()
 x = tf.range(4)
 np.save('tensors.npy', {'x': x, 'y': tf.zeros(4)})
 np.load('tensors.npy', allow_pickle=True).item()
+```
+
+```{.python .input #saving-loading-state-not-code-1}
+%%tab mxnet
+x = np.arange(4)
+npx.savez('tensors-mx', x=x, y=np.zeros(4))
+npx.load('tensors-mx')
 ```
 
 :begin_tab:`pytorch`
@@ -128,6 +156,13 @@ tree (`mlp/hidden/kernel`, `mlp/output/bias`; Keras calls a weight matrix a
 `kernel`). Keras invents layer names like `dense_3` when you do not choose
 them, so we name the layers explicitly to keep the paths stable across
 instances. Here is the tree for a small MLP.
+:end_tab:
+
+:begin_tab:`mxnet`
+A model's state is one such dictionary, built for you: `collect_params` maps
+the dotted paths through the block tree (`hidden.weight`, `output.bias`) to
+the parameters, the running statistics of any BatchNorm layers included. Here
+is the tree for a small MLP.
 :end_tab:
 
 ```{.python .input #saving-loading-state-not-code-2}
@@ -181,6 +216,24 @@ Y = net(X)
 {v.path: tuple(v.shape) for v in net.weights}
 ```
 
+```{.python .input #saving-loading-state-not-code-2}
+%%tab mxnet
+class MLP(nn.Block):
+    def __init__(self):
+        super().__init__()
+        self.hidden = nn.Dense(256, activation='relu')
+        self.output = nn.Dense(10)
+
+    def forward(self, x):
+        return self.output(self.hidden(x))
+
+net = MLP()
+net.initialize()
+X = np.random.uniform(size=(2, 20))
+Y = net(X)
+{name: p.shape for name, p in net.collect_params().items()}
+```
+
 Nothing in this dictionary knows it came from a class called `MLP`. That is the
 point: the names and shapes are enough to refill any network built by the same
 code, and they carry no dependence on how that code happens to be written today.
@@ -217,6 +270,15 @@ into. For a file you wrote and never let out of your control this is harmless.
 For a file you downloaded it is a remote-code-execution vector: any object in
 the stream can name a callable for the loader to invoke, which is why NumPy
 refuses pickled contents by default (`allow_pickle=False`).
+:end_tab:
+
+:begin_tab:`mxnet`
+`npx.savez` writes MXNet's own array format: the saver accepts nothing but
+MXNet arrays, and the file holds only their names, dtypes, shapes, and raw
+bytes. There is no pickle stream and nothing to execute on load, so the
+warm-up file was already safe. The catch is reach rather than safety: hardly
+anything outside MXNet reads such a file, which matters once you hand weights
+to someone who does not run an archived framework.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -297,6 +359,15 @@ overwrites the values of the dict you pass it during that conversion, so give
 it a throwaway copy.
 :end_tab:
 
+:begin_tab:`mxnet`
+There is no `safetensors.mxnet` module; the archived framework never grew a
+native binding. That turns out to be the instructive case: because the format
+is just names, dtypes, and bytes, the `safetensors.numpy` binding plus a pair
+of dict comprehensions closes the gap, `.asnumpy()` on the way out and
+`np.array` on the way back. No framework-specific machinery is involved,
+which is the format's framework-neutrality made visible.
+:end_tab:
+
 ```{.python .input #saving-loading-safetensors-the-interchange-format-3}
 %%tab pytorch
 save_file(net.state_dict(), 'mlp.safetensors')
@@ -342,6 +413,16 @@ for v in clone.weights:
 tf.reduce_all(clone(X) == Y)
 ```
 
+```{.python .input #saving-loading-safetensors-the-interchange-format-3}
+%%tab mxnet
+state = {name: p.data().asnumpy() for name, p in net.collect_params().items()}
+save_file(state, 'mlp-mx.safetensors')
+restored = load_file('mlp-mx.safetensors')
+clone = MLP()
+clone.load_dict({name: np.array(v) for name, v in restored.items()})
+(clone(X) == Y).all()
+```
+
 Because the header is plain JSON at a known offset, you can read it without the
 library and see there is no magic to the format.
 
@@ -369,6 +450,14 @@ with open('mlp-tf.safetensors', 'rb') as f:
 header['mlp/hidden/kernel']
 ```
 
+```{.python .input #saving-loading-safetensors-the-interchange-format-4}
+%%tab mxnet
+with open('mlp-mx.safetensors', 'rb') as f:
+    n = struct.unpack('<Q', f.read(8))[0]   # header length, little-endian
+    header = json.loads(f.read(n))
+header['hidden.weight']
+```
+
 :begin_tab:`pytorch`
 `torch.save` keeps its place for your own scratch files and for the older code
 you will still meet. safetensors is what you use to hand a model to anyone else.
@@ -383,6 +472,13 @@ safetensors is what you use to hand a model to anyone else.
 `np.save` and Keras's own `.weights.h5` keep their place for your own scratch
 files and checkpoints. safetensors is what you use to hand a model to anyone
 else.
+:end_tab:
+
+:begin_tab:`mxnet`
+`save_parameters` keeps its place for your own scratch files and checkpoints.
+safetensors is what you use to hand a model to anyone else, and for an
+archived framework it is also the exit route: the file you just wrote loads
+into any of the other three frameworks in this book.
 :end_tab:
 
 ## Checkpointing a Training Run
@@ -433,6 +529,21 @@ half-written one. The config is plain Python rather than variables, so it
 travels in a JSON sidecar next to the checkpoint files.
 :end_tab:
 
+:begin_tab:`mxnet`
+In MXNet the bundle is three files rather than one. `save_parameters` covers
+the model; the optimizer state lives with the `gluon.Trainer`, whose
+`save_states` writes Adam's moments (though not per-parameter attributes such
+as `lr_mult`, which come from your code on rebuild), and writes them with
+pickle, so a trainer-states file deserves the same your-own-disk-only caution
+as any pickle. The step counter and config travel in a JSON sidecar. One
+compartment of :numref:`fig_bg_checkpoint_contents` stays empty: MXNet has no
+API to snapshot its random-number generators, only `npx.random.seed` to
+restart them, so a resumed run reseeds rather than continuing the old stream.
+We wrap the three writes in a helper that, as in the PyTorch tab, renames
+each file into place so a crash mid-write leaves the previous good checkpoint
+untouched rather than a half-written one.
+:end_tab:
+
 ```{.python .input #saving-loading-checkpointing-a-training-run-1}
 %%tab pytorch
 def save_checkpoint(path, model, optimizer, step, cfg=None):  #@save
@@ -459,6 +570,29 @@ def load_checkpoint(path, model, optimizer=None):  #@save
     if torch.cuda.is_available() and 'cuda_rng' in ckpt:
         torch.cuda.set_rng_state_all(ckpt['cuda_rng'])
     return ckpt
+```
+
+```{.python .input #saving-loading-checkpointing-a-training-run-1}
+%%tab mxnet
+def save_checkpoint(prefix, model, trainer, step, cfg=None):  #@save
+    """Atomically write a resumable checkpoint (.params/.states/.json)."""
+    meta = {'step': step}
+    if cfg is not None:
+        meta['cfg'] = asdict(cfg)
+    model.save_parameters(prefix + '.params.tmp')
+    trainer.save_states(prefix + '.states.tmp')
+    with open(prefix + '.json.tmp', 'w') as f:
+        json.dump(meta, f)
+    for ext in ('.params', '.states', '.json'):
+        os.replace(prefix + ext + '.tmp', prefix + ext)
+
+def load_checkpoint(prefix, model, trainer=None):  #@save
+    """Restore the state written by save_checkpoint; return the metadata."""
+    model.load_parameters(prefix + '.params')
+    if trainer is not None:
+        trainer.load_states(prefix + '.states')
+    with open(prefix + '.json') as f:
+        return json.load(f)
 ```
 
 Train a tiny regressor for a hundred steps and checkpoint it. The `Config`
@@ -577,6 +711,45 @@ with open('run-tf-cfg.json', 'w') as f:
 path, round(float(loss(target, net(data))), 4)
 ```
 
+```{.python .input #saving-loading-checkpointing-a-training-run-2}
+%%tab mxnet
+@dataclass
+class Config:
+    in_dim: int = 20
+    hidden: int = 64
+    lr: float = 0.05
+
+def build(cfg):
+    net = nn.Sequential()
+    net.add(nn.Dense(cfg.hidden, activation='relu'), nn.Dense(1))
+    net.initialize()
+    return net
+
+npx.random.seed(1)
+cfg = Config()
+data = np.random.normal(size=(256, cfg.in_dim))
+target = data @ np.random.normal(size=(cfg.in_dim, 1)) \
+    + 0.1 * np.random.normal(size=(256, 1))
+
+def loss(model):
+    return float(((model(data) - target) ** 2).mean())
+
+def step(model, trainer):
+    with autograd.record():
+        l = ((model(data) - target) ** 2).mean()
+    l.backward()
+    trainer.step(batch_size=1)      # the loss is already a mean
+    return float(l)
+
+net = build(cfg)
+trainer = gluon.Trainer(net.collect_params(), 'adam',
+                        {'learning_rate': cfg.lr})
+for _ in range(100):
+    step(net, trainer)
+save_checkpoint('run-mx', net, trainer, step=100, cfg=cfg)
+round(loss(net), 4)
+```
+
 The restore is exact. Corrupt every parameter, load the checkpoint back, and the
 loss returns to where it was.
 
@@ -594,6 +767,14 @@ then the layer, then its `kernel`) rather than by name, and it returns a status
 object. `assert_consumed()` on that status checks that every saved value found
 a variable and every variable found a value, turning a silent partial restore
 into a loud error.
+:end_tab:
+
+:begin_tab:`mxnet`
+Note the shape of the restore: `load_parameters` and `load_states` patch the
+model and trainer in place, matching parameters by the same dotted names the
+file stores. There is no template to fill and no status object to check;
+what checking you want, you write yourself, as the final section of this
+page does with its key-set diff.
 :end_tab:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-3}
@@ -624,6 +805,16 @@ for v in net.trainable_variables:
 before = float(loss(target, net(data)))
 ckpt.restore(path).assert_consumed()
 after = float(loss(target, net(data)))
+f'perturbed {before:.2f} -> restored {after:.4f}'
+```
+
+```{.python .input #saving-loading-checkpointing-a-training-run-3}
+%%tab mxnet
+for p in net.collect_params().values():
+    p.set_data(p.data() + 1.0)            # wreck the weights
+before = loss(net)
+load_checkpoint('run-mx', net, trainer)
+after = loss(net)
 f'perturbed {before:.2f} -> restored {after:.4f}'
 ```
 
@@ -696,6 +887,24 @@ print('full  optimizer:', full)
 print('fresh optimizer:', fresh)
 ```
 
+```{.python .input #saving-loading-checkpointing-a-training-run-4}
+%%tab mxnet
+net_full = build(cfg)
+trainer_full = gluon.Trainer(net_full.collect_params(), 'adam',
+                             {'learning_rate': cfg.lr})
+load_checkpoint('run-mx', net_full, trainer_full)   # weights + optimizer
+full = [round(step(net_full, trainer_full), 4) for _ in range(5)]
+
+net_fresh = build(cfg)
+load_checkpoint('run-mx', net_fresh, trainer=None)  # weights only
+trainer_fresh = gluon.Trainer(net_fresh.collect_params(), 'adam',
+                              {'learning_rate': cfg.lr})
+fresh = [round(step(net_fresh, trainer_fresh), 4) for _ in range(5)]
+
+print('full  optimizer:', full)
+print('fresh optimizer:', fresh)
+```
+
 The full-state run keeps descending; the weights-only run spikes and has to claw
 its way back. That transient is the cost of forgetting the optimizer, and it is
 why "just the weights" is not a resumable checkpoint.
@@ -724,6 +933,14 @@ restores are lazy, so a variable created later is filled from the file at
 creation time instead of everything materializing up front. Multi-host
 `tf.distribute` jobs build on the same machinery;
 :numref:`chap_performance` returns to it when models get that big.
+:end_tab:
+
+:begin_tab:`mxnet`
+For models too large to hold in memory, MXNet offers nothing comparable: a
+`.params` file loads whole, and the project was archived before sharded
+checkpoints and memory-mapped loading became routine. Models at that scale
+are where you leave the framework; :numref:`chap_performance` returns to the
+machinery the others provide.
 :end_tab:
 
 ## Loading Weights You Did Not Train
@@ -759,6 +976,17 @@ matching parameters the first time, and `include_top=False` drops the
 1000-class head so you can attach your own.
 :end_tab:
 
+:begin_tab:`mxnet`
+The most common reason to load parameters is that someone else produced them.
+You take a network trained on a large dataset and adapt it: keep the learned
+feature extractor, replace the final layer for your own labels.
+`gluon.model_zoo.vision` is the built-in zoo; `pretrained=True` downloads the
+matching parameters the first time. One caveat before you rely on it: the
+download comes from the archived project's file hosting, which still worked
+when this notebook last ran but carries no promise of staying up, so
+re-verify it before building anything on top.
+:end_tab:
+
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-1}
 %%tab pytorch
 net = resnet18(weights=ResNet18_Weights.DEFAULT)   # ~45 MB on first run
@@ -790,6 +1018,14 @@ net(tf.zeros((1, 160, 160, 3)))                 # build the new 10-class head
 net.layers[-1]
 ```
 
+```{.python .input #saving-loading-loading-weights-you-did-not-train-1}
+%%tab mxnet
+net = gluon.model_zoo.vision.resnet18_v2(pretrained=True)  # ~42 MB on first run
+net.output = nn.Dense(10, in_units=512)     # new 10-class head
+net.output.initialize()
+net.output
+```
+
 :begin_tab:`pytorch`
 A `state_dict` is an ordinary Python dict, so adapting one is ordinary dict
 surgery. We drop the pretrained 1000-class head (we just replaced it) and, to
@@ -813,6 +1049,16 @@ warning. To stage a mismatch, save the weights of a donor whose head has 101
 classes, our stand-in for a fine-tuned model someone else published, then load
 that file into the 10-class network. The cell records the warning so we can
 read it back as a report.
+:end_tab:
+
+:begin_tab:`mxnet`
+The partial-loading flags exist, but they report nothing: `allow_missing=True`
+skips parameters the file did not fill and `ignore_extra=True` skips file
+entries with no home in the model, both silently. So the report is yours to
+compute, the same hand-rolled key-set diff the jax tab writes. Stage a
+damaged file first: take the pretrained parameters, drop the head we just
+replaced and, to show what damage looks like, the deepest residual stage
+(`features.8`), and save what remains as a plain parameter dict.
 :end_tab:
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-2}
@@ -851,6 +1097,22 @@ print(report[0])
 print(report[2].split(' Target variable:')[0])
 ```
 
+```{.python .input #saving-loading-loading-weights-you-did-not-train-2}
+%%tab mxnet
+donor = gluon.model_zoo.vision.resnet18_v2(pretrained=True)
+file_params = {name: p.data() for name, p in donor.collect_params().items()
+               if not name.startswith(('output', 'features.8'))}
+npx.savez('resnet18-partial.params', **file_params)
+
+file_keys = set(npx.load('resnet18-partial.params'))
+model_keys = set(net.collect_params())
+net.load_parameters('resnet18-partial.params',
+                    allow_missing=True, ignore_extra=True)  # both skip silently
+print('missing by block:', dict(Counter('.'.join(k.split('.')[:2])
+                                        for k in sorted(model_keys - file_keys))))
+print('unexpected:', sorted(file_keys - model_keys))
+```
+
 :begin_tab:`pytorch`
 Read this report; do not discard it. `missing_keys` lists parameters the model
 has but the file did not fill. The two `fc` entries are expected: that head is
@@ -884,6 +1146,18 @@ legacy `.h5` files and *raises* on the native `.weights.h5` format;
 `skip_mismatch` is the current control.
 :end_tab:
 
+:begin_tab:`mxnet`
+Read the diff; nothing else will print it for you. The two `output` entries
+under *missing* are expected: that head is new and meant to start random. The
+21 `features.8` entries are a red flag, a whole residual stage the file
+failed to deliver; had this file been your only source, those layers would
+keep whatever values they started with and the features coming out of them
+would be nonsense. *Unexpected*, empty here, would list file entries with no
+home in the model, the usual sign of a renamed layer. The rule is the same as
+in the other frameworks, only stricter because the flags stay silent: name
+which keys you expect in each set and treat anything else as a bug.
+:end_tab:
+
 :begin_tab:`pytorch`
 With the backbone loaded, freeze it so training touches only the new head. Set
 `requires_grad = False` on the pretrained parameters (:numref:`sec_parameters_v2`)
@@ -903,6 +1177,14 @@ With the backbone loaded, freeze it so training touches only the new head. One
 attribute does it: setting `trainable = False` on the backbone removes its
 variables from `trainable_variables`, and as a Keras convenience also runs its
 BatchNorm layers in inference mode, which is what fine-tuning wants.
+:end_tab:
+
+:begin_tab:`mxnet`
+With the backbone loaded, freeze it so training touches only the new head.
+Gradients in gluon are controlled per parameter by `grad_req`: `'null'` tells
+autograd not to compute a gradient for that parameter at all (the running
+statistics of BatchNorm layers sit at `'null'` already), and `'write'`
+restores the default for the head.
 :end_tab:
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
@@ -939,6 +1221,19 @@ total = sum(int(tf.size(v)) for v in net.weights)
 f'{trainable} trainable of {total}'
 ```
 
+```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
+%%tab mxnet
+for p in net.collect_params().values():
+    p.grad_req = 'null'
+for p in net.output.collect_params().values():
+    p.grad_req = 'write'
+
+trainable = sum(p.data().size for p in net.collect_params().values()
+                if p.grad_req == 'write')
+total = sum(p.data().size for p in net.collect_params().values())
+f'{trainable} trainable of {total}'
+```
+
 :begin_tab:`pytorch`
 torchvision is one source; the Hugging Face Hub is the ecosystem-scale one, and
 it distributes its weights as safetensors, which closes the loop with the format
@@ -959,6 +1254,15 @@ one, and it distributes its weights as safetensors, which closes the loop with
 the format of the previous section. This section covers *how* to load and adapt
 pretrained weights; :numref:`sec_fine_tuning` covers when it helps and how far
 to unfreeze.
+:end_tab:
+
+:begin_tab:`mxnet`
+`gluon.model_zoo` is one source, frozen where the project stopped; the
+Hugging Face Hub is the ecosystem-scale one, and it distributes weights as
+safetensors, which for MXNet means the numpy bridge of the previous section
+is also your import path. This section covers *how* to load and adapt
+pretrained weights; :numref:`sec_fine_tuning` covers when it helps and how
+far to unfreeze.
 :end_tab:
 
 ## Summary
@@ -998,6 +1302,20 @@ resume restarts the optimizer's momentum from zero; a fresh optimizer must be
 built before the restore so Adam's moments have somewhere to land. Loading
 someone else's weights is `load_weights` with `skip_mismatch=True`, and the
 skip warning is a diagnostic to read rather than a message to silence.
+:end_tab:
+
+:begin_tab:`mxnet`
+A saved model is state, not code: a dictionary of dotted-path names to arrays
+that means something only once the code that built the network runs again.
+For your own files `save_parameters` is fine, and its format is pure array
+data with no pickle to execute; for files you share, safetensors reaches
+every framework, and the `safetensors.numpy` bridge is all MXNet needs to
+speak it. A resumable checkpoint is three files written atomically:
+parameters, trainer states (Adam's moments, stored with pickle, so keep such
+files your own), and a JSON sidecar with the step and config; the RNG stream
+cannot be snapshotted, only reseeded. Loading someone else's weights is dict
+surgery plus `allow_missing`/`ignore_extra`, and because those flags skip
+silently, the missing/unexpected key-set diff is yours to compute and read.
 :end_tab:
 
 ## Exercises

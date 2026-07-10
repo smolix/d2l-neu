@@ -38,6 +38,14 @@ import math
 import tensorflow as tf
 ```
 
+```{.python .input #init-initialization}
+%%tab mxnet
+import math
+from mxnet import init, np, npx
+from mxnet.gluon import nn
+npx.set_np()
+```
+
 ## Defaults and When to Override Them
 
 You can usually ignore initialization because the default is sensible.
@@ -75,6 +83,19 @@ starts at zero. A uniform distribution on $[-b, b]$ has standard deviation
 $b/\sqrt{3}$, so all three claims are cheap to check against a fresh layer:
 :end_tab:
 
+:begin_tab:`mxnet`
+Gluon separates construction from initialization: `nn.Dense(256)` carries no
+numbers until you call `initialize()`, and when the input width is left
+unspecified even that call only records your choice, with the draw deferred to
+the first forward pass (:numref:`sec_lazy_init`). What it draws is the legacy
+exception in the table below: every weight comes from $U(-0.07, 0.07)$
+regardless of the layer's shape, a fixed constant rather than a fan-aware
+bound, and the bias starts at zero. A uniform distribution on $[-b, b]$ has
+standard deviation $b/\sqrt{3}$, so all three claims are cheap to check
+against a fresh layer (passing `in_units` pins the input width, so nothing is
+deferred here):
+:end_tab:
+
 ```{.python .input #init-defaults-and-when-to-override-them}
 %%tab pytorch
 torch.manual_seed(0)
@@ -105,6 +126,18 @@ bound = math.sqrt(6 / (512 + 256))
 print(f'range [{w.min():.4f}, {w.max():.4f}], predicted bound {bound:.4f}')
 print(f'std {w.std():.4f}, predicted {bound / math.sqrt(3):.4f}')
 print(f'bias all zero: {bool((layer.bias.numpy() == 0).all())}')
+```
+
+```{.python .input #init-defaults-and-when-to-override-them}
+%%tab mxnet
+np.random.seed(0)
+layer = nn.Dense(256, in_units=512)
+layer.initialize()
+w = layer.weight.data()
+print(f'range [{float(w.min()):.4f}, {float(w.max()):.4f}], '
+      f'predicted bound 0.0700')
+print(f'std {float(w.std()):.4f}, predicted {0.07 / math.sqrt(3):.4f}')
+print(f'bias all zero: {bool((layer.bias.data() == 0).all())}')
 ```
 
 Other libraries make different but equally fan-aware choices, with one legacy
@@ -154,6 +187,22 @@ construction-time fine print to remember: fan-in and fan-out are read off
 the input shape when `build` runs.
 :end_tab:
 
+:begin_tab:`mxnet`
+When should you override? Here the first candidate is the default itself:
+$\pm 0.07$ was tuned for the hidden widths of an earlier era and ignores
+fan-in, so a layer much wider than those starts with too much variance, a
+much narrower one with too little, and either error compounds across depth by
+the analysis of :numref:`sec_numerical_stability`. Beyond that, the usual
+situations recur: a deep network without normalization layers, where variance
+compounds even when each layer is right (we demonstrate this below);
+reproducing a paper whose results depend on its initialization recipe; and
+architecture-specific corrections such as the residual scaling later in this
+section. The lazy fine print runs the other way from PyTorch's: with the
+input width unspecified, `initialize()` merely records which initializer to
+use, and the draw happens at the first forward pass, once the layer knows its
+fan-in.
+:end_tab:
+
 ## Applying Initializers
 
 :begin_tab:`pytorch`
@@ -192,6 +241,21 @@ already exists, rests on the fact that a kernel is a mutable variable:
 iterate over `model.layers`, decide by type what to do with each layer, and
 overwrite the kernels you select in place with `assign`. We show both,
 starting with constructor arguments.
+:end_tab:
+
+:begin_tab:`mxnet`
+To impose a scheme we hand an `Initializer` object to the model:
+`net.initialize(init=..., force_reinit=True)` walks every parameter of the
+block tree of :numref:`sec_model_construction_v2` and runs the initializer on
+it (`force_reinit` lifts the guard against silently clobbering a model that
+already has values). The object is a default, not a decree: a parameter
+constructed with its own initializer keeps it, and every `Dense` bias is
+constructed with `zeros`, which is why the normal draw below leaves the
+biases at zero. Dispatching by layer type, the pattern PyTorch users write,
+is possible (iterate over `net` and test `isinstance`), but Gluon's native
+unit of selection is the subtree: every block, and every individual
+parameter, has an `initialize` method of its own. We show both, starting with
+the whole net.
 :end_tab:
 
 ```{.python .input #init-applying-initializers-1}
@@ -236,6 +300,18 @@ net(X)
 net.layers[0].kernel[:, 0], net.layers[0].bias[0]
 ```
 
+```{.python .input #init-applying-initializers-1}
+%%tab mxnet
+net = nn.Sequential()
+net.add(nn.Dense(8, activation='relu'))
+net.add(nn.Dense(1))
+net.initialize(init=init.Normal(sigma=0.01))
+
+X = np.ones((2, 4))
+net(X)  # the input width was deferred, so the draw happens here
+net[0].weight.data()[0], net[0].bias.data()[0]
+```
+
 :begin_tab:`pytorch`
 The `isinstance` dispatch is what makes the pattern compose: one function can
 treat `nn.Linear`, `nn.Conv2d`, and `nn.Embedding` differently, and it
@@ -262,6 +338,15 @@ initialization (:numref:`subsec_xavier`), which Keras spells `GlorotUniform`
 after its author, and set the last to a constant, a poor idea for training by
 the symmetry argument of :numref:`sec_numerical_stability`, but it makes the
 mechanics visible:
+:end_tab:
+
+:begin_tab:`mxnet`
+Mixing schemes per block is `initialize` on the subtree: `net[0]` is a block
+and `net[0].weight` is a parameter, and both accept an initializer directly,
+with `force_reinit=True` because we are overwriting live values. Below we
+give the first layer Xavier initialization (:numref:`subsec_xavier`) and set
+the second to a constant, a poor idea for training by the symmetry argument
+of :numref:`sec_numerical_stability`, but it makes the mechanics visible:
 :end_tab:
 
 ```{.python .input #init-applying-initializers-2}
@@ -304,6 +389,13 @@ net(X)
 net.layers[0].kernel[:, 0], net.layers[2].kernel[:, 0]
 ```
 
+```{.python .input #init-applying-initializers-2}
+%%tab mxnet
+net[0].weight.initialize(init=init.Xavier(), force_reinit=True)
+net[1].initialize(init=init.Constant(42), force_reinit=True)
+net[0].weight.data()[0], net[1].weight.data()
+```
+
 :begin_tab:`pytorch`
 This ten-line pattern is the entire API. Later chapters wrap it into
 one-liners, `init_cnn` for convolutional networks and `init_seq2seq` for
@@ -329,6 +421,13 @@ place, which is what we want, since the parameter must remain the same
 variable the model tracks and any existing optimizer updates. The function
 repairs the constant-42 network from the previous cell; biases pass through
 untouched:
+:end_tab:
+
+:begin_tab:`mxnet`
+There is no second route to learn, because `force_reinit=True` already is the
+route for a model with live values: the two cells above re-initialized the
+same network three times. Whole net, block, or single parameter, the call is
+the same, and nothing else is needed.
 :end_tab:
 
 ```{.python .input #init-applying-initializers-3}
@@ -398,6 +497,16 @@ rescales it so the standard deviation lands on target despite the missing
 tails:
 :end_tab:
 
+:begin_tab:`mxnet`
+`mxnet.init` ships no truncated normal; the menu ends just before the scheme
+we want. The escape hatch is the one this section closes with: an initializer
+is a subclass of `init.Initializer` that fills an array inside its
+`_init_weight` method, so the missing entry costs a dozen lines. We draw
+normal values and redraw every entry that lands outside two standard
+deviations until none does, the same discard-and-redraw semantics as Keras,
+and keep the drawing function separate so it can double as the demonstration:
+:end_tab:
+
 ```{.python .input #init-truncated-normals}
 %%tab pytorch
 torch.manual_seed(0)
@@ -425,6 +534,33 @@ print(f'normal:    std {w.std():.4f}, max weight {abs(w).max():.4f}')
 init = tf.keras.initializers.TruncatedNormal(stddev=0.02, seed=0)
 w = init((1000, 1000)).numpy()
 print(f'truncated: std {w.std():.4f}, max weight {abs(w).max():.4f}')
+```
+
+```{.python .input #init-truncated-normals}
+%%tab mxnet
+def trunc_normal(sigma, shape):
+    w = np.random.normal(0, sigma, shape)
+    tails = np.abs(w) > 2 * sigma
+    while bool(tails.any()):
+        w = np.where(tails, np.random.normal(0, sigma, shape), w)
+        tails = np.abs(w) > 2 * sigma
+    return w
+
+class TruncatedNormal(init.Initializer):
+    def __init__(self, sigma=0.02):
+        super().__init__(sigma=sigma)
+        self.sigma = sigma
+
+    def _init_weight(self, name, arr):
+        arr[:] = trunc_normal(self.sigma, arr.shape)
+
+np.random.seed(0)
+w = np.random.normal(0, 0.02, (1000, 1000))
+print(f'normal:    std {float(w.std()):.4f}, '
+      f'max weight {float(np.abs(w).max()):.4f}')
+w = trunc_normal(0.02, (1000, 1000))
+print(f'truncated: std {float(w.std()):.4f}, '
+      f'max weight {float(np.abs(w).max()):.4f}')
 ```
 
 A million plain-normal draws produce entries near $5\sigma = 0.1$; the
@@ -519,6 +655,22 @@ class ResidualBlock(tf.keras.Model):
         return X + self.body(X)
 ```
 
+```{.python .input #init-watching-the-variance-compound-1}
+%%tab mxnet
+he = init.MSRAPrelu(factor_type='in', slope=0.0)
+
+class ResidualBlock(nn.Block):
+    def __init__(self, d, out_init=he):
+        super().__init__()
+        self.body = nn.Sequential()
+        self.body.add(nn.Dense(4 * d, activation='relu',
+                               weight_initializer=he))
+        self.body.add(nn.Dense(d, weight_initializer=out_init))
+
+    def forward(self, X):
+        return X + self.body(X)
+```
+
 :begin_tab:`pytorch`
 Every linear layer gets He initialization, appropriate for the ReLU inside
 the branch. Then a `named_parameters` loop, the same shape as nanoGPT's
@@ -547,6 +699,20 @@ alone means He again and zeroing is `'zeros'`, but scaling by $1/\sqrt{N}$
 has no menu entry, so we subclass `Initializer`: the instance stores the
 depth, and its `__call__` shrinks a fresh He draw, behind the same
 shape-and-dtype signature everything on the menu implements.
+:end_tab:
+
+:begin_tab:`mxnet`
+Every dense layer gets He initialization through its `weight_initializer`
+constructor argument, which sets the per-parameter initializer that
+`net.initialize()` respects. The menu entry is `init.MSRAPrelu`, named after
+the He et al. paper's lab: with `factor_type='in'` and `slope=0.0` (the PReLU
+slope, zero for a plain ReLU) it draws a Gaussian with variance
+$2/n_\textrm{in}$, exactly He normal. The treatment is a constructor argument
+as well: the block takes its output projection's initializer, so each of the
+three treatments is just a different initializer. Leaving it alone means He
+again and zeroing is `init.Zero()`, but scaling by $1/\sqrt{N}$ has no menu
+entry, so once more we subclass `Initializer`: the instance stores the depth,
+and its `_init_weight` shrinks a fresh He draw in place.
 :end_tab:
 
 ```{.python .input #init-watching-the-variance-compound-2}
@@ -602,6 +768,27 @@ def output_std(num_blocks, out_init):
     return float(tf.math.reduce_std(net(X)))
 ```
 
+```{.python .input #init-watching-the-variance-compound-2}
+%%tab mxnet
+class ScaledHe(init.Initializer):
+    def __init__(self, num_blocks):
+        super().__init__(num_blocks=num_blocks)
+        self.num_blocks = num_blocks
+
+    def _init_weight(self, name, arr):
+        he._init_weight(name, arr)
+        arr *= self.num_blocks ** -0.5
+
+def output_std(num_blocks, out_init):
+    np.random.seed(0)
+    net = nn.Sequential()
+    net.add(*[ResidualBlock(64, out_init=out_init(num_blocks))
+              for _ in range(num_blocks)])
+    net.initialize()  # deferred: the draws happen at the forward pass
+    X = np.random.normal(0, 1, (256, 64))
+    return float(net(X).std())
+```
+
 One forward pass on unit-variance inputs per depth and treatment:
 
 ```{.python .input #init-watching-the-variance-compound-3}
@@ -631,6 +818,17 @@ for n in (2, 8, 32):
 tweaks = {'default': lambda n: 'he_normal',
           'scaled': ScaledHe,
           'zero': lambda n: 'zeros'}
+print(f'{"N":>3}' + ''.join(f'{name:>10}' for name in tweaks))
+for n in (2, 8, 32):
+    stds = (output_std(n, tweak) for tweak in tweaks.values())
+    print(f'{n:>3}' + ''.join(f'{s:>10.3g}' for s in stds))
+```
+
+```{.python .input #init-watching-the-variance-compound-3}
+%%tab mxnet
+tweaks = {'default': lambda n: he,
+          'scaled': ScaledHe,
+          'zero': lambda n: init.Zero()}
 print(f'{"N":>3}' + ''.join(f'{name:>10}' for name in tweaks))
 for n in (2, 8, 32):
     stds = (output_std(n, tweak) for tweak in tweaks.values())
@@ -667,6 +865,13 @@ subclass `tf.keras.initializers.Initializer`, implement `__call__`, and every
 layer will accept an instance, so writing one is no harder than using one.
 :end_tab:
 
+:begin_tab:`mxnet`
+By now this is familiar: an initializer is a subclass of `init.Initializer`
+whose `_init_weight` method fills the array it is handed, in place, and this
+section has already written two (the truncated normal and the depth-scaled
+He). Writing one is no harder than using one.
+:end_tab:
+
 Suppose, to make the point vividly, we want weights distributed as
 
 $$
@@ -693,6 +898,11 @@ either sign with probability one quarter. Handing the function to
 :begin_tab:`tensorflow`
 Draw uniformly from $U(-10, 10)$, then zero every entry of magnitude below 5.
 Handing an instance to `kernel_initializer` makes it official:
+:end_tab:
+
+:begin_tab:`mxnet`
+Draw uniformly from $U(-10, 10)$, then zero every entry of magnitude below 5.
+Handing an instance to `net.initialize` makes it official:
 :end_tab:
 
 ```{.python .input #init-custom-initializers-1}
@@ -737,6 +947,21 @@ net(X)
 net.layers[0].kernel[:2]
 ```
 
+```{.python .input #init-custom-initializers-1}
+%%tab mxnet
+class MyInit(init.Initializer):
+    def _init_weight(self, name, data):
+        data[:] = np.random.uniform(-10, 10, data.shape)
+        data *= np.abs(data) >= 5
+
+net = nn.Sequential()
+net.add(nn.Dense(8, activation='relu'))
+net.add(nn.Dense(1))
+net.initialize(MyInit())
+net(X)
+net[0].weight.data()[:2]
+```
+
 :begin_tab:`pytorch`
 The `torch.no_grad()` block is required: parameters are leaf tensors that
 track gradients, and PyTorch rejects in-place arithmetic on them unless we
@@ -761,6 +986,14 @@ differentiation: TensorFlow records gradients on a `GradientTape`, and an
 assignment is a write to the variable's buffer, not an operation on the tape.
 The same door handles one-off surgery, such as offsetting a whole matrix or
 pinning a single entry, since slicing a variable composes with `assign`:
+:end_tab:
+
+:begin_tab:`mxnet`
+No guard is needed on the way in, because gradients are only recorded inside
+an `autograd.record()` block: outside one, indexed assignment is a plain
+array write. `weight.data()` hands back the array the parameter holds on the
+device, so the same door handles one-off surgery, such as offsetting a whole
+matrix or pinning a single entry:
 :end_tab:
 
 ```{.python .input #init-custom-initializers-2}
@@ -789,6 +1022,13 @@ w[0, 0].assign(42)
 w[0]
 ```
 
+```{.python .input #init-custom-initializers-2}
+%%tab mxnet
+net[0].weight.data()[:] += 1
+net[0].weight.data()[0, 0] = 42
+net[0].weight.data()[0]
+```
+
 :begin_tab:`pytorch`
 One caveat when building with lazy layers (:numref:`sec_lazy_init`): before
 the first forward pass their parameters are placeholders with no shape, so
@@ -809,6 +1049,15 @@ can never fire too early, but `assign` surgery needs a kernel to exist and
 must therefore follow the first call (or an explicit `build`). The cells
 above respected that order by running `net(X)` before touching
 `net.layers[0].kernel`.
+:end_tab:
+
+:begin_tab:`mxnet`
+The ordering caveat of the lazy world (:numref:`sec_lazy_init`) splits by
+route here too: `initialize` may run before shapes are known, since it only
+records which initializer to use and the draw waits for the first forward
+pass, but `weight.data()` raises a `DeferredInitializationError` until that
+pass has happened. The cells above respected the order by running `net(X)`
+before touching `net[0].weight.data()`.
 :end_tab:
 
 ## Summary
@@ -838,6 +1087,15 @@ mapping `(shape, dtype)` to a tensor, handed to a layer as
 written into each selected kernel by a `model.layers` walk and `assign`.
 :end_tab:
 
+:begin_tab:`mxnet`
+Gluon initializes parameters when you ask it to: `initialize()` records the
+plan, the first forward pass supplies the shapes, and the default draw,
+$U(-0.07, 0.07)$, is a legacy constant rather than a fan-aware rule, so
+override it more readily than elsewhere. The mechanism is one pattern: an
+`Initializer` object handed to `initialize` on the net, a block, or a single
+parameter, with `force_reinit=True` to overwrite live values.
+:end_tab:
+
 On top of Xavier and He,
 transformer-era code truncates normal tails to bound outliers, shrinks each
 residual output projection by $1/\sqrt{N}$ so the stream's variance stays
@@ -859,6 +1117,11 @@ Anything the menu lacks is an `Initializer` subclass with a few lines of
 `tf.random` code in its `__call__`.
 :end_tab:
 
+:begin_tab:`mxnet`
+Anything the menu lacks, truncation included, is an `init.Initializer`
+subclass with a few lines of array code in its `_init_weight`.
+:end_tab:
+
 ## Exercises
 
 1. Instrument the residual stack: record the standard deviation of the
@@ -873,8 +1136,8 @@ Anything the menu lacks is an `Initializer` subclass with a few lines of
    :numref:`sec_numerical_stability`.
 1. Write an initializer that fills each parameter from a dictionary keyed by
    parameter name (walk `net.named_parameters()` in PyTorch, `net.weights`
-   in TensorFlow, the flattened params tree in JAX). You have re-invented
-   part of checkpoint loading,
+   in TensorFlow, the flattened params tree in JAX, `net.collect_params()`
+   in MXNet). You have re-invented part of checkpoint loading,
    which :numref:`sec_read_write_v2` covers.
 1. For a normal distribution truncated at $\pm 2\sigma$: what fraction of
    draws does the clip discard, and by how much does it shrink the standard

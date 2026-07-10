@@ -39,6 +39,13 @@ from d2l import jax as d2l
 import tensorflow as tf
 ```
 
+```{.python .input #custom-layers-custom-layers-and-functions}
+%%tab mxnet
+from mxnet import autograd, gluon, init, np, npx
+from mxnet.gluon import nn
+npx.set_np()
+```
+
 ## Layers without Parameters
 
 :begin_tab:`pytorch`
@@ -62,6 +69,13 @@ The smallest custom layer has no state at all. `CenteredLayer` subtracts the
 mean from its input. To build it, we inherit from the base layer class and
 implement `call`, which Keras invokes through its own `__call__`; there is
 nothing to set up, so `__init__` only calls the parent constructor.
+:end_tab:
+
+:begin_tab:`mxnet`
+The smallest custom layer has no state at all. `CenteredLayer` subtracts the
+mean from its input. To build it, we inherit from the base block class and
+implement `forward`; there is nothing to set up, so `__init__` only calls the
+parent constructor.
 :end_tab:
 
 ```{.python .input #custom-layers-layers-without-parameters-1}
@@ -92,6 +106,16 @@ class CenteredLayer(tf.keras.layers.Layer):
         return X - tf.reduce_mean(X)
 ```
 
+```{.python .input #custom-layers-layers-without-parameters-1}
+%%tab mxnet
+class CenteredLayer(nn.Block):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, X):
+        return X - X.mean()
+```
+
 Feeding data through confirms that it does what it says.
 
 :begin_tab:`jax`
@@ -118,6 +142,12 @@ layer = CenteredLayer()
 layer(tf.constant([1.0, 2, 3, 4, 5]))
 ```
 
+```{.python .input #custom-layers-layers-without-parameters-2}
+%%tab mxnet
+layer = CenteredLayer()
+layer(np.array([1.0, 2, 3, 4, 5]))
+```
+
 Nothing distinguishes this class from a built-in layer. We can place it inside
 a `Sequential`, and the container neither knows nor cares that one of its
 children is user code. The output mean should be zero; because we are adding
@@ -128,6 +158,12 @@ which is roundoff, not a bug.
 `init_with_output` initializes the parameters (the `Dense` layer contributes
 some, ours contributes none) and returns the output in the same call;
 `d2l.get_key()` supplies the PRNG keys.
+:end_tab:
+
+:begin_tab:`mxnet`
+One gluon-specific step: parameter arrays are allocated lazily, so a network
+must run `initialize()` before its first call. Our layer contributes nothing
+to initialize, but the `Dense` beside it does.
 :end_tab:
 
 ```{.python .input #custom-layers-layers-without-parameters-3}
@@ -150,6 +186,15 @@ Y.mean()
 net = tf.keras.Sequential([tf.keras.layers.Dense(128), CenteredLayer()])
 Y = net(tf.random.uniform((4, 8)))
 tf.reduce_mean(Y)
+```
+
+```{.python .input #custom-layers-layers-without-parameters-3}
+%%tab mxnet
+net = nn.Sequential()
+net.add(nn.Dense(128), CenteredLayer())
+net.initialize()
+Y = net(np.random.uniform(size=(4, 8)))
+Y.mean()
 ```
 
 ## Layers with Parameters: RMSNorm
@@ -181,6 +226,18 @@ We could show the mechanics by re-implementing `Dense`, but that teaches
 nothing the built-in does not already do. Instead we implement *RMSNorm*
 :cite:`Zhang.Sennrich.2019`, the normalization used by most current large
 language models.
+:end_tab:
+
+:begin_tab:`mxnet`
+A layer with something to learn must create its own parameters, and assigning
+a `gluon.Parameter` to an attribute is what registers it
+(:numref:`sec_parameters_v2`). The parameter is declared with a name, a
+shape, and an initializer; its array is allocated only when `initialize()`
+runs, and the forward pass fetches the copy on the input's device with
+`.data(X.device)`. We could show the mechanics by re-implementing `nn.Dense`,
+but that teaches nothing the built-in does not already do. Instead we
+implement *RMSNorm* :cite:`Zhang.Sennrich.2019`, the normalization used by
+most current large language models.
 :end_tab:
 
 Layer normalization standardizes each input vector: subtract the mean, divide
@@ -241,6 +298,19 @@ class RMSNorm(tf.keras.layers.Layer):
         return self.gain * X * rms
 ```
 
+```{.python .input #custom-layers-layers-with-parameters-rmsnorm-1}
+%%tab mxnet
+class RMSNorm(nn.Block):
+    def __init__(self, d, eps=1e-6):
+        super().__init__()
+        self.gain = gluon.Parameter('gain', shape=(d,), init=init.One())
+        self.eps = eps
+
+    def forward(self, X):
+        rms = np.sqrt((X ** 2).mean(-1, keepdims=True) + self.eps)
+        return self.gain.data(X.device) * X / rms
+```
+
 Feeding it badly scaled data confirms the normalization: every output row has
 unit mean square, whatever the input scale was.
 
@@ -264,6 +334,14 @@ params = norm.init(d2l.get_key(), X)
 norm = RMSNorm()
 X = 100 * tf.random.normal((4, 8))
 tf.reduce_mean(norm(X) ** 2, axis=-1)
+```
+
+```{.python .input #custom-layers-layers-with-parameters-rmsnorm-2}
+%%tab mxnet
+norm = RMSNorm(8)
+norm.initialize()
+X = 100 * np.random.randn(4, 8)
+(norm(X) ** 2).mean(-1)
 ```
 
 ### The Composability Guarantee
@@ -291,6 +369,12 @@ First, the gain registered itself the moment `add_weight` ran inside `build`.
 Any optimizer handed `norm.trainable_variables` will find and update it.
 :end_tab:
 
+:begin_tab:`mxnet`
+First, the gain registered itself the moment we assigned it to an attribute:
+the block files every `gluon.Parameter` it is handed. A `Trainer` given
+`norm.collect_params()` will find and update it.
+:end_tab:
+
 ```{.python .input #custom-layers-the-composability-guarantee-1}
 %%tab pytorch
 list(norm.named_parameters())
@@ -304,6 +388,11 @@ params
 ```{.python .input #custom-layers-the-composability-guarantee-1}
 %%tab tensorflow
 norm.trainable_variables
+```
+
+```{.python .input #custom-layers-the-composability-guarantee-1}
+%%tab mxnet
+norm.collect_params()
 ```
 
 Second, the layer drops into a `Sequential` next to built-ins.
@@ -329,6 +418,14 @@ net = tf.keras.Sequential([tf.keras.layers.Dense(8), RMSNorm(),
 net(tf.random.normal((4, 20))).shape
 ```
 
+```{.python .input #custom-layers-the-composability-guarantee-2}
+%%tab mxnet
+net = nn.Sequential()
+net.add(nn.Dense(8), RMSNorm(8), nn.Dense(2))
+net.initialize()
+net(np.random.randn(4, 20)).shape
+```
+
 :begin_tab:`pytorch`
 Third, its state serializes with everything else. A state dict written by one
 instance loads into a fresh one, after which the two agree exactly (saving to
@@ -348,6 +445,14 @@ model's weights, gain included, as a list of arrays, and `set_weights` loads
 that list into a clone once a first call has built it; after the copy the two
 models agree exactly (saving to disk works the same way; see
 :numref:`sec_read_write_v2`).
+:end_tab:
+
+:begin_tab:`mxnet`
+Third, its state serializes with everything else. `save_parameters` writes
+every parameter, the gain included, to a file keyed by position in the block
+tree, and `load_parameters` reads that file into a fresh clone, filling in
+the deferred shapes as it goes; after the load the two models agree exactly
+(:numref:`sec_read_write_v2` covers the file formats).
 :end_tab:
 
 ```{.python .input #custom-layers-the-composability-guarantee-3}
@@ -376,6 +481,16 @@ clone.set_weights(net.get_weights())
 bool(tf.reduce_all(net(X) == clone(X)))
 ```
 
+```{.python .input #custom-layers-the-composability-guarantee-3}
+%%tab mxnet
+net.save_parameters('net.params')
+clone = nn.Sequential()
+clone.add(nn.Dense(8), RMSNorm(8), nn.Dense(2))
+clone.load_parameters('net.params')
+X = np.random.randn(4, 20)
+bool((net(X) == clone(X)).all())
+```
+
 :begin_tab:`pytorch`
 Fourth, it moves. `.to(device)` walks the module tree and carries every
 registered tensor along, the gain included. On a machine with a GPU the cell
@@ -402,6 +517,17 @@ through the proper channel, placement is handled for it, custom layer or
 built-in alike.
 :end_tab:
 
+:begin_tab:`mxnet`
+Fourth, it moves. Gluon settles device placement at initialization:
+`initialize(device=...)` puts every registered parameter, the gain included,
+on the device you name, and `reset_device` moves an initialized block later.
+The forward pass then fetches the copy living where the input does, which is
+what `self.gain.data(X.device)` was for. :numref:`sec_use_gpu_v2` exercises
+these moves on real hardware, so we leave this axis as prose here. The
+guarantee is the same: because the gain went through the proper channel,
+every placement and move includes it, custom layer or built-in alike.
+:end_tab:
+
 ```{.python .input #custom-layers-the-composability-guarantee-4}
 %%tab pytorch
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -423,10 +549,24 @@ native.
 
 ### Checking against the Built-in
 
+:begin_tab:`pytorch, jax, tensorflow`
 RMSNorm proved useful enough that the library now ships its own
 implementation. That gives us a referee. We copy a nontrivial gain into both
 implementations, so that agreement cannot be an accident of default values,
 and compare outputs.
+:end_tab:
+
+:begin_tab:`mxnet`
+RMSNorm proved useful enough that most libraries now ship their own
+implementation. Gluon, whose development stopped before RMSNorm spread, is
+the exception: it has `nn.LayerNorm` but no RMSNorm, so there is no referee
+to check our five-liner against. The general rule for custom layers, build
+one to understand it, then use the native implementation in production,
+therefore inverts on this tab: our class *is* the production implementation,
+and later chapters that need RMSNorm here hand-roll exactly these lines. The
+rule survives intact; it just resolves the other way when the library ships
+nothing to prefer.
+:end_tab:
 
 :begin_tab:`jax`
 Copying needs no special machinery here: a parameter tree is a plain
@@ -471,11 +611,13 @@ native.set_weights(ours.get_weights())
 bool(tf.experimental.numpy.allclose(ours(X), native(X)))
 ```
 
+:begin_tab:`pytorch, jax, tensorflow`
 They match to floating-point precision. This is the general rule for custom
 layers: build one to understand it, then use the native implementation in
 production. The native version may fuse the reduction and the scale into a
 single kernel, and it will be maintained as the library evolves. Later
 chapters follow the rule and use the native layer directly.
+:end_tab:
 
 ## Precomputed State: Buffers
 
@@ -516,6 +658,18 @@ fixed, so a trainable weight is wrong (the optimizer would update it) and a
 plain tensor attribute is wrong too (the weights list would omit it).
 BatchNorm's moving statistics are non-trainable weights by exactly this
 mechanism.
+:end_tab:
+
+:begin_tab:`mxnet`
+:numref:`sec_parameters_v2` introduced state that persists and travels with
+the model but receives no gradient. Gluon's channel is `gluon.Constant`, a
+`Parameter` subclass whose `grad_req` is fixed to `'null'`: autograd ignores
+it and no `Trainer` will update it, yet it initializes, saves, and moves with
+the rest of the block's parameters. A common case is a layer built around a
+precomputed table, for instance the causal mask that keeps attention scores
+from looking at future positions. The mask is fixed, so an ordinary parameter
+is wrong (the optimizer would update it) and a plain array attribute is wrong
+too (`save_parameters` would omit it and `reset_device` would skip it).
 :end_tab:
 
 ```{.python .input #custom-layers-precomputed-state-buffers-1}
@@ -563,6 +717,20 @@ class CausalMask(tf.keras.layers.Layer):
         return tf.where(self.mask[:T, :T], float('-inf'), scores)
 ```
 
+```{.python .input #custom-layers-precomputed-state-buffers-1}
+%%tab mxnet
+class CausalMask(nn.Block):
+    def __init__(self, max_len):
+        super().__init__()
+        # Precompute once for the longest sequence; slice per call
+        self.mask = gluon.Constant(np.triu(np.ones((max_len, max_len)), 1))
+
+    def forward(self, scores):
+        T = scores.shape[-1]
+        return np.where(self.mask.data()[:T, :T].astype(bool),
+                        -np.inf, scores)
+```
+
 :begin_tab:`pytorch`
 The layer masks the strict upper triangle, has no parameters for an optimizer
 to touch, and still lists the mask in its state dict.
@@ -577,6 +745,12 @@ for the optimizer, and still carries the mask in its variables.
 The layer masks the strict upper triangle, has an empty trainable-weights
 list for an optimizer to consult, and still carries the mask among its
 weights.
+:end_tab:
+
+:begin_tab:`mxnet`
+The layer masks the strict upper triangle, and its one entry in
+`collect_params` is a `Constant` with `grad_req` `'null'`, so a `Trainer`
+skips it while serialization and device moves still carry it.
 :end_tab:
 
 ```{.python .input #custom-layers-precomputed-state-buffers-2}
@@ -599,6 +773,14 @@ print(variables.get('params', {}), list(variables['buffers']))
 mask = CausalMask(max_len=8)
 print(mask(tf.zeros((3, 3))))
 print(mask.trainable_weights, [w.name for w in mask.weights])
+```
+
+```{.python .input #custom-layers-precomputed-state-buffers-2}
+%%tab mxnet
+mask = CausalMask(max_len=8)
+mask.initialize()
+print(mask(np.zeros((3, 3))))
+print(mask.collect_params())
 ```
 
 ## Custom Gradients
@@ -631,6 +813,16 @@ with tf.GradientTape() as tape:
 tape.gradient(y, w, unconnected_gradients=tf.UnconnectedGradients.ZERO)
 ```
 
+```{.python .input #custom-layers-custom-gradients-1}
+%%tab mxnet
+w = np.array([0.9, 1.4, 2.6])
+w.attach_grad()
+with autograd.record():
+    y = np.round(w).sum()
+y.backward()
+w.grad
+```
+
 :begin_tab:`tensorflow`
 TensorFlow declares rounding non-differentiable outright, so without the
 `unconnected_gradients` flag the tape reports the disconnection as `None`;
@@ -660,6 +852,12 @@ No automatic system can derive a lie for us, so we override the chain rule
 with `@tf.custom_gradient`, a decorator under which the function returns its
 backward rule alongside its output, the split :numref:`fig_bg_ste` draws
 explicitly.
+:end_tab:
+
+:begin_tab:`mxnet`
+No automatic system can derive a lie for us, so we override the chain rule
+with `autograd.Function`, supplying both directions ourselves as methods of a
+class, the split :numref:`fig_bg_ste` draws explicitly.
 :end_tab:
 
 ![The straight-through estimator, forward versus backward. Forward keeps the true staircase round(x), close to but not the same as the identity it approximates; backward substitutes a constant surrogate gradient of 1, the identity's own derivative, for the true gradient, which is zero almost everywhere and would stop all learning.](../img/bg-ste.svg)
@@ -704,6 +902,17 @@ def round_ste(X):
     return tf.round(X), grad
 ```
 
+```{.python .input #custom-layers-custom-gradients-2}
+%%tab mxnet
+class RoundSTE(autograd.Function):
+    def forward(self, X):
+        return np.round(X)
+
+    def backward(self, grad_output):
+        # Pretend forward was the identity: pass the gradient straight through
+        return grad_output
+```
+
 :begin_tab:`pytorch`
 Two rules govern the class. First, invoke it through `RoundSTE.apply(X)`,
 never by calling `forward` directly: `apply` is what inserts the operation
@@ -744,6 +953,17 @@ second result; TensorFlow raises a `TypeError` naming this requirement if it
 is missing.
 :end_tab:
 
+:begin_tab:`mxnet`
+Two rules govern the class. First, a `Function` instance is single-use: the
+library asserts that each instance is called exactly once, so create a fresh
+`RoundSTE()` at every application rather than reusing one, or the second call
+fails with an assertion naming this rule. Second, `backward` receives the
+loss gradient with respect to each output of `forward` and must return the
+gradient with respect to each input. Ours ignores the input values entirely;
+a backward that needs them must stash them in `forward` with
+`self.save_for_backward` and read them back from `self.saved_tensors`.
+:end_tab:
+
 A small example verifies that the gradient now flows. We multiply the rounded
 values by known weights, so we know what gradient to expect at `w`.
 
@@ -765,6 +985,14 @@ jax.grad(lambda w: (round_ste(w) * jnp.array([1.0, 2.0, 3.0])).sum())(w)
 with tf.GradientTape() as tape:
     y = tf.reduce_sum(round_ste(w) * tf.constant([1.0, 2.0, 3.0]))
 tape.gradient(y, w)
+```
+
+```{.python .input #custom-layers-custom-gradients-3}
+%%tab mxnet
+with autograd.record():
+    y = (RoundSTE()(w) * np.array([1.0, 2.0, 3.0])).sum()
+y.backward()
+w.grad
 ```
 
 The downstream gradient arrives at `w` untouched, as if the rounding were the
@@ -844,6 +1072,20 @@ Build custom implementations to understand them; prefer the native ones in
 production.
 :end_tab:
 
+:begin_tab:`mxnet`
+A custom layer is a block subclass: `forward` defines the computation,
+assigning a `gluon.Parameter` registers learnable state, and `gluon.Constant`
+registers persistent state that autograd and the `Trainer` ignore.
+Registration is what buys composability; a correctly written layer gets
+parameter tracking, container compatibility, serialization, and device
+movement for free, as we verified on RMSNorm axis by axis. When the chain
+rule itself must be overridden, as in the straight-through estimator,
+`autograd.Function` lets you supply `forward` and `backward` as a pair, one
+fresh instance per call. Build custom implementations to understand them;
+prefer the native ones in production, and where gluon ships none, as with
+RMSNorm, keep your own.
+:end_tab:
+
 ## Exercises
 
 :begin_tab:`pytorch`
@@ -906,6 +1148,31 @@ production.
    the gradient only where the input lay strictly inside the clamp range; the
    gradient closure must capture `X`. Compare its gradients with those of the
    native `tf.clip_by_value` for inputs inside, outside, and exactly on the
+   boundary. Which convention does the native operation use at the boundary?
+1. Write a layer that returns the leading half of the Fourier coefficients of
+   its input. It has no parameters, so nothing registers. What do you still
+   gain by wrapping the computation in a module instead of calling the
+   transform inline wherever you need it?
+:end_tab:
+
+:begin_tab:`mxnet`
+1. Add an optional learned bias to `RMSNorm` (a shift applied after the
+   scale, restoring part of what LayerNorm had). Verify that the file written
+   by `save_parameters` for a model containing it grows by the expected
+   entry, and observe what `load_parameters` does when handed a file saved
+   without the bias. Which of its `allow_missing` and `ignore_extra` flags
+   changes the outcome?
+1. Implement `Dropout` from scratch as a custom layer that zeroes each entry
+   with probability $p$ and rescales the survivors during training, but is
+   the identity during evaluation. Gluon has no `.train()`/`.eval()` switch;
+   the flag your `forward` consults is `autograd.is_training()`. What sets
+   that flag, and what does it imply for calling the layer outside
+   `autograd.record()`?
+1. Implement a clamp with a custom gradient: an `autograd.Function` whose
+   forward is `np.clip(X, lo, hi)` and whose backward passes the gradient
+   only where the input lay strictly inside the clamp range; `forward` must
+   stash `X` with `save_for_backward`. Compare its gradients with those of
+   the native `np.clip` for inputs inside, outside, and exactly on the
    boundary. Which convention does the native operation use at the boundary?
 1. Write a layer that returns the leading half of the Fourier coefficients of
    its input. It has no parameters, so nothing registers. What do you still

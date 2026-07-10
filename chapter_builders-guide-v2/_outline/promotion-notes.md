@@ -46,3 +46,26 @@
    variant per the framework-coverage review (see _outline/index.md for the
    full matrix and skip lists).
 7. **Slides**: no `<!-- slides -->` blocks yet; add during the slide pass.
+
+## Addenda from the MXNet pass (2026-07-09)
+
+- **`set_scratch_params_device` is RESTORED** (reversing the earlier drop):
+  `rnn-scratch.md`'s mxnet tab depends on it *indirectly* (bare-ndarray
+  params reach the GPU only via `Trainer.prepare_model` calling it; the
+  symbol-name grep missed this). The mxnet Module `#@save` and
+  `prepare_model` are carried byte-identical → zero mxnet shard churn at
+  promotion.
+- **All mxnet cells executed green on this Mac** under the hand-built
+  `.venv-mxnet` (2.0.0+cpu.macos.zombie.1), not just AST-checked. Caveats:
+  macOS needs `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` + fork
+  start-method for gluon DataLoader cells (GPU box is Linux/fork — no
+  issue); outputs must still be captured under the pinned Linux cu13 wheel.
+- **`make lib` imports**: the new `save_checkpoint`/`load_checkpoint`
+  `#@save`s (pytorch + mxnet tabs) reference `json`/`os`/`dataclasses.asdict`;
+  verify `d2l/torch.py` and `d2l/mxnet.py` headers gain those imports at the
+  first lib rebuild.
+- **model_zoo download re-verified working** (2026-07-09, archived S3
+  still serving resnet18_v2, ~42 MB).
+- **mxnet reduced-6.5 confirmations for the GPU box**: fp16 training cell
+  ran on CPU here (slow path); re-verify wall-clock sanity + the
+  `trainer._updaters` master-copy demo under the Linux wheel.

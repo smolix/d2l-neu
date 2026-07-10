@@ -36,6 +36,14 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 ```
 
+```{.python .input #parameters-state-memory-parameters-state-and-memory}
+%%tab mxnet
+import os
+from mxnet import autograd, gluon, np, npx
+from mxnet.gluon import nn
+npx.set_np()
+```
+
 ## Accessing Parameters
 :label:`subsec_param-access`
 
@@ -98,6 +106,25 @@ X = tf.random.normal((2, 20))
 net(X).shape
 ```
 
+```{.python .input #parameters-state-memory-accessing-parameters-1}
+%%tab mxnet
+class ResidualBlock(nn.Block):
+    def __init__(self, d):
+        super().__init__()
+        self.body = nn.Sequential()
+        self.body.add(nn.Dense(d, activation='relu'), nn.Dense(d))
+
+    def forward(self, X):
+        return X + self.body(X)
+
+np.random.seed(42)
+net = nn.Sequential()
+net.add(nn.Dense(64), ResidualBlock(64), ResidualBlock(64), nn.Dense(10))
+net.initialize()
+X = np.random.uniform(size=(2, 20))
+net(X).shape
+```
+
 :begin_tab:`pytorch`
 A model built from modules is a tree, and its parameters are the leaves. To
 reach one leaf, walk the tree: indexing into a `Sequential` selects a child,
@@ -123,6 +150,15 @@ its bias is a `Variable` the layer created through `add_weight`, announcing
 itself to Keras as trainable.
 :end_tab:
 
+:begin_tab:`mxnet`
+A model built from blocks is a tree, and its parameters are the leaves. To
+reach one leaf, walk the tree: indexing into a `Sequential` selects a child,
+attribute access selects within it. `net[3]` is the output layer; its bias is
+a `Parameter`, an object that announces itself to the block system as state,
+bundling the tensor with its gradient buffer; `.data()` returns the tensor,
+and `.shape` reads through to it.
+:end_tab:
+
 ```{.python .input #parameters-state-memory-accessing-parameters-2}
 %%tab pytorch
 type(net[3].bias), net[3].bias.shape
@@ -137,6 +173,11 @@ type(bias), bias.shape
 ```{.python .input #parameters-state-memory-accessing-parameters-2}
 %%tab tensorflow
 type(net.layers[3].bias), net.layers[3].bias.shape
+```
+
+```{.python .input #parameters-state-memory-accessing-parameters-2}
+%%tab mxnet
+type(net[3].bias), net[3].bias.shape
 ```
 
 The same path syntax reaches arbitrarily deep. The first linear layer inside
@@ -157,6 +198,11 @@ params['params']['layers_1']['body']['layers_0']['kernel'].shape
 net.layers[1].body.layers[0].kernel.shape
 ```
 
+```{.python .input #parameters-state-memory-accessing-parameters-3}
+%%tab mxnet
+net[1].body[0].weight.shape
+```
+
 :begin_tab:`pytorch`
 Each parameter also carries its gradient. We have not run backpropagation on
 this model yet, so there is nothing to see:
@@ -172,6 +218,13 @@ structure, one gradient leaf per parameter leaf:
 Gradients are not stored on variables. A `tf.GradientTape` records the
 forward pass, and its `gradient` method returns the gradients as a *second*
 list, parallel to the variables you differentiate with respect to:
+:end_tab:
+
+:begin_tab:`mxnet`
+The gradient is the second array a `Parameter` carries: `.data()` returns the
+value and `.grad()` its gradient buffer. gluon allocates the buffer alongside
+the data at initialization time, so before any backpropagation it simply
+holds zeros:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-accessing-parameters-4}
@@ -191,6 +244,11 @@ with tf.GradientTape() as tape:
     loss = tf.reduce_sum(net(X))
 grads = tape.gradient(loss, net.trainable_weights)
 len(grads) == len(net.trainable_weights)
+```
+
+```{.python .input #parameters-state-memory-accessing-parameters-4}
+%%tab mxnet
+net[3].bias.grad()
 ```
 
 :begin_tab:`pytorch`
@@ -214,6 +272,13 @@ The optimizer, weight decay, and checkpointing instead need *every* leaf, and
 variable per leaf, each carrying its path as its name.
 :end_tab:
 
+:begin_tab:`mxnet`
+Reaching parameters one path at a time is right for debugging a single layer.
+The optimizer, weight decay, and checkpointing instead need *every* leaf, and
+`collect_params()` provides exactly that: a traversal of the whole tree that
+returns a dictionary of every parameter keyed by its path.
+:end_tab:
+
 ```{.python .input #parameters-state-memory-accessing-parameters-5}
 %%tab pytorch
 [(name, p.shape) for name, p in net.named_parameters()]
@@ -228,6 +293,11 @@ leaves = jax.tree_util.tree_flatten_with_path(params)[0]
 ```{.python .input #parameters-state-memory-accessing-parameters-5}
 %%tab tensorflow
 [(v.path, v.shape) for v in net.weights]
+```
+
+```{.python .input #parameters-state-memory-accessing-parameters-5}
+%%tab mxnet
+[(name, p.shape) for name, p in net.collect_params().items()]
 ```
 
 :begin_tab:`pytorch`
@@ -264,6 +334,17 @@ give every variable a stable identity for saving and loading
 and so far the split is trivial:
 :end_tab:
 
+:begin_tab:`mxnet`
+Read one of the names closely. `1.body.0.weight` means: child `1` of `net`
+(the first residual block), its submodule `body`, that block's child `0`, and
+finally the leaf `weight`. Names are paths, so they survive any amount of
+nesting, and they are exactly the names `save_parameters` writes and
+`load_parameters` expects (:numref:`sec_read_write_v2`). Nor is there a
+separate list of trainable parameters: each `Parameter` carries a `grad_req`
+attribute that tells autograd whether to record a gradient for it, and so far
+every entry says `'write'`:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-accessing-parameters-6}
 %%tab pytorch
 list(net.state_dict()) == [name for name, _ in net.named_parameters()]
@@ -277,6 +358,12 @@ list(params)
 ```{.python .input #parameters-state-memory-accessing-parameters-6}
 %%tab tensorflow
 [v.path for v in net.weights] == [v.path for v in net.trainable_weights]
+```
+
+```{.python .input #parameters-state-memory-accessing-parameters-6}
+%%tab mxnet
+params = net.collect_params()
+[name for name, p in params.items() if p.grad_req == 'write'] == list(params)
 ```
 
 :begin_tab:`pytorch`
@@ -294,6 +381,12 @@ not always so.
 
 :begin_tab:`tensorflow`
 One tree, one naming scheme, and every consumer, whether optimizer,
+checkpoint, or debugger, walks it. The equality above holds for this model
+because all of its state happens to be trainable. That is not always so.
+:end_tab:
+
+:begin_tab:`mxnet`
+One dictionary, one naming scheme, and every consumer, whether optimizer,
 checkpoint, or debugger, walks it. The equality above holds for this model
 because all of its state happens to be trainable. That is not always so.
 :end_tab:
@@ -338,6 +431,18 @@ it a trainable weight if the optimizer should update it, a non-trainable
 weight if it must persist and travel with the model, and a plain Python
 attribute otherwise. Here is a layer that standardizes its inputs with
 statistics computed once, ahead of time, from a reference sample:
+:end_tab:
+
+:begin_tab:`mxnet`
+gluon needs no second mechanism for such tensors: a `Constant` *is* a
+`Parameter`, one whose `grad_req` is hardwired to `'null'`. Assigning one to
+an attribute registers it like any other parameter, so it appears in
+`collect_params()`, is saved with the model, and moves with it across
+devices; but autograd never records a gradient for it and the optimizer never
+touches it. The rule of thumb: make it a `Parameter` if the optimizer should
+update it, a `Constant` if it must persist and travel with the model, and a
+plain Python attribute otherwise. Here is a block that standardizes its
+inputs with statistics computed once, ahead of time, from a reference sample:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-1}
@@ -397,6 +502,25 @@ _ = whiten(sample[:2])   # build the Dense layer
 [v.path for v in whiten.weights]
 ```
 
+```{.python .input #parameters-state-memory-parameters-and-buffers-1}
+%%tab mxnet
+class Whitener(nn.Block):
+    def __init__(self, mean, std):
+        super().__init__()
+        self.mean = gluon.Constant(mean)
+        self.std = gluon.Constant(std)
+        self.out = nn.Dense(2)
+
+    def forward(self, X):
+        return self.out((X - self.mean.data()) / self.std.data())
+
+sample = np.random.normal(0, 1, (100, 4)) * np.arange(1., 5.)
+whiten = Whitener(sample.mean(axis=0), sample.std(axis=0))
+whiten.initialize()
+whiten(sample[:2])   # build the deferred Dense layer
+list(whiten.collect_params())
+```
+
 :begin_tab:`pytorch`
 The buffers appear in the state dict, so they are checkpointed alongside the
 weights. They do not appear among the parameters, so the optimizer never sees
@@ -417,6 +541,12 @@ differentiates and updates `trainable_weights`, and the two constants sit in
 the other half of the split:
 :end_tab:
 
+:begin_tab:`mxnet`
+The constants sit in the same dictionary as the weights, so they are
+checkpointed alongside them. What keeps the optimizer away is the `grad_req`
+on each entry:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-parameters-and-buffers-2}
 %%tab pytorch
 [name for name, _ in whiten.named_parameters()]
@@ -431,6 +561,11 @@ the other half of the split:
 %%tab tensorflow
 ([v.path for v in whiten.trainable_weights],
  [v.path for v in whiten.non_trainable_weights])
+```
+
+```{.python .input #parameters-state-memory-parameters-and-buffers-2}
+%%tab mxnet
+{name: p.grad_req for name, p in whiten.collect_params().items()}
 ```
 
 :begin_tab:`pytorch`
@@ -457,6 +592,15 @@ saved, and absent from every traversal. Attach one and the weights list does
 not grow:
 :end_tab:
 
+:begin_tab:`mxnet`
+Registration is what makes the block aware of a tensor, and assignment only
+registers `Parameter`s (a `Constant` is one) and child blocks. A raw array
+stored as a plain attribute is invisible: not saved, and not converted when
+the model moves. We can see this on the CPU by moving the block across
+*dtypes*, which uses the same machinery as moving across devices. The
+registered constant converts; the plain attribute is left behind:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-parameters-and-buffers-3}
 %%tab pytorch
 whiten.note = torch.zeros(4)   # plain attribute: invisible to the module
@@ -474,6 +618,13 @@ low['constants']['mean'].dtype, whiten.mean.dtype
 %%tab tensorflow
 whiten.note = tf.zeros(4)   # plain attribute: invisible to the layer
 [v.path.split('/')[-1] for v in whiten.weights]
+```
+
+```{.python .input #parameters-state-memory-parameters-and-buffers-3}
+%%tab mxnet
+whiten.note = np.zeros(4)   # plain attribute: invisible to the block
+whiten.cast('float64')
+whiten.mean.data().dtype, whiten.note.dtype
 ```
 
 :begin_tab:`pytorch`
@@ -501,6 +652,13 @@ that relocating existing state means rebuilding it. Each variable reports its
 placement:
 :end_tab:
 
+:begin_tab:`mxnet`
+The device version of the same fact is the classic bug: a model works on the
+CPU, then crashes after `reset_device(npx.gpu(0))` because an unregistered
+tensor stayed behind. On a machine with a GPU the following confirms that
+constants move with the block:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-parameters-and-buffers-4}
 %%tab pytorch
 if torch.cuda.is_available():
@@ -519,6 +677,16 @@ moved['constants']['mean'].device
 ```{.python .input #parameters-state-memory-parameters-and-buffers-4}
 %%tab tensorflow
 whiten.mean.value.device   # decided when the variable was created
+```
+
+```{.python .input #parameters-state-memory-parameters-and-buffers-4}
+%%tab mxnet
+if npx.num_gpus() > 0:
+    whiten.reset_device(npx.gpu(0))
+    print('constant lives on', whiten.mean.data().device)
+else:
+    print('no GPU here; on a CUDA machine, whiten.reset_device(npx.gpu(0)) '
+          'moves whiten.mean along with the parameters')
 ```
 
 ## Counting Parameters, Counting Bytes
@@ -566,6 +734,17 @@ print(f'{n} parameters: {(weights + grads + adam_state) / 2**20:.2f} MiB '
       'for weights + gradients + Adam state')
 ```
 
+```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-1}
+%%tab mxnet
+params = net.collect_params()
+n = sum(p.data().size for p in params.values())
+weights = sum(p.data().size * p.data().dtype.itemsize
+              for p in params.values())   # fp32: 4 bytes
+grads, adam_state = weights, 2 * weights
+print(f'{n} parameters: {(weights + grads + adam_state) / 2**20:.2f} MiB '
+      'for weights + gradients + Adam state')
+```
+
 The optimizer state is real memory, allocated tensor by tensor. After a
 single training step, Adam's two moments together hold exactly two extra
 copies of the model:
@@ -604,6 +783,26 @@ moments = sum(int(tf.size(v)) for v in adam.variables
 moments == 2 * n
 ```
 
+```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-2}
+%%tab mxnet
+trainer = gluon.Trainer(net.collect_params(), 'adam')
+with autograd.record():
+    loss = net(X).sum()
+loss.backward()
+trainer.step(batch_size=1)   # the updater allocates the moments here
+trainer.save_states('adam.states')
+state_bytes = os.path.getsize('adam.states')
+state_bytes, 8 * n
+```
+
+:begin_tab:`mxnet`
+gluon's `Trainer` owns this state and offers no public traversal of it: the
+updater inside creates, at each parameter's first update, two zero arrays
+shaped like the weight. What it does offer is `save_states`, which serializes
+exactly that state, so up to a sliver of packaging the file is Adam's two
+moments: 8 bytes per parameter, two extra copies of the model.
+:end_tab:
+
 For our little network the total is a third of a megabyte, which is why none
 of this mattered until now. Scale the same arithmetic to a 1-billion-parameter
 model and it dominates everything: 4 GB for the weights alone and 16 GB for
@@ -621,6 +820,14 @@ two moments); the ZeRO paper counts 16, keeping gradients in fp16
 not physics: both include the fp32 master copy and both include the moments.
 The invariant to remember is that Adam's state alone is 8 bytes per parameter
 in fp32, two full extra copies of your model, under every convention.
+
+:begin_tab:`mxnet`
+In gluon the fp32 master copy is one optimizer flag away: construct the
+`Trainer` with `optimizer_params={'multi_precision': True}` and, for every
+fp16 weight, the updater keeps an fp32 copy next to the two moments and
+applies updates to it. That is the master-weights term of the accounting
+above, 4 more bytes per parameter.
+:end_tab:
 
 ![Bytes per parameter under fp32 Adam training (top) versus a mixed-precision, ZeRO-style convention (bottom), drawn to the same width per byte. The two ledgers disagree on weights and gradients but agree, byte for byte, on the Adam moments m and v.](../img/bg-memory-ledger.svg)
 :label:`fig_bg_memory-ledger`
@@ -665,6 +872,14 @@ A miniature version shows the mechanics. Keras has no tying flag, so we say
 it in code: a small head layer that creates no variables of its own and
 instead multiplies by the transpose of the embedding table it is handed. One
 variable, two call sites:
+:end_tab:
+
+:begin_tab:`mxnet`
+A miniature version shows the mechanics. gluon stores a `Dense` weight as
+(outputs, inputs), so the head's weight has shape $(|V|, d)$: the embedding
+table's shape exactly, no transpose required. Tying is `share_parameters`,
+which re-points the head's `'weight'` slot at the embedding's `Parameter`,
+matched by name; it is aliasing, not copying:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-tied-parameters-1}
@@ -733,6 +948,26 @@ _ = lm(tokens)   # build
 [(v.path, tuple(v.shape)) for v in lm.weights]
 ```
 
+```{.python .input #parameters-state-memory-tied-parameters-1}
+%%tab mxnet
+class TinyLM(nn.Block):
+    def __init__(self, vocab_size, d):
+        super().__init__()
+        self.emb = nn.Embedding(vocab_size, d)
+        self.body = nn.Dense(d, flatten=False)
+        self.head = nn.Dense(vocab_size, use_bias=False, flatten=False)
+
+    def forward(self, tokens):
+        return self.head(npx.relu(self.body(self.emb(tokens))))
+
+lm = TinyLM(vocab_size=100, d=16)
+lm.initialize()
+lm.head.share_parameters(lm.emb.collect_params())   # one tensor, two roles
+tokens = np.random.randint(0, 100, (2, 8))
+lm(tokens)
+lm.head.weight is lm.emb.weight
+```
+
 :begin_tab:`pytorch`
 The module system understands the aliasing. Parameter traversal reports the
 shared tensor once, so the count below reflects the $|V| \times d$ saving and
@@ -750,6 +985,14 @@ Because the head created no variable, there is no aliasing bookkeeping to get
 right: the traversal reports the table once and no head matrix exists. The
 parameter count reflects the $|V| \times d$ saving, and the optimizer updates
 the table once per step:
+:end_tab:
+
+:begin_tab:`mxnet`
+The two blocks now hold one `Parameter` between them. `collect_params()`
+keeps *both* names pointing at it, so a naive sum over the dictionary would
+count the table twice; deduplicating by identity shows the $|V| \times d$
+saving. The `Trainer` deduplicates the same way internally and updates the
+table once per step:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-tied-parameters-2}
@@ -774,6 +1017,19 @@ _ = untied(tokens)
 (lm.count_params(), untied.count_params())
 ```
 
+```{.python .input #parameters-state-memory-tied-parameters-2}
+%%tab mxnet
+untied = TinyLM(vocab_size=100, d=16)   # no share_parameters: separate head
+untied.initialize()
+untied(tokens)
+
+def n_unique(net):
+    unique = {id(p): p for p in net.collect_params().values()}
+    return sum(p.data().size for p in unique.values())
+
+(n_unique(lm), n_unique(untied))
+```
+
 :begin_tab:`pytorch`
 The state dict, by contrast, keeps *both* names, `emb.weight` and
 `head.weight`, pointing at the same storage. That is deliberate: a checkpoint
@@ -795,11 +1051,23 @@ structure: the untied model carries one extra kernel, so loading one into the
 other is a mismatch to resolve explicitly, not a silent aliasing decision.
 :end_tab:
 
+:begin_tab:`mxnet`
+Keeping both names is deliberate: `save_parameters` writes the tensor under
+each name it appears under (pass `deduplicate=True` to store it once), so a
+checkpoint saved from a tied model loads into either a tied or an untied one.
+:end_tab:
+
 ```{.python .input #parameters-state-memory-tied-parameters-3}
 %%tab pytorch
 sd = lm.state_dict()
 (sd['emb.weight'].data_ptr() == sd['head.weight'].data_ptr(),
  [name for name, _ in lm.named_parameters()])
+```
+
+```{.python .input #parameters-state-memory-tied-parameters-3}
+%%tab mxnet
+cp = lm.collect_params()
+(cp['emb.weight'] is cp['head.weight'], list(cp))
 ```
 
 What about gradients? During backpropagation each use of the tensor
@@ -844,6 +1112,20 @@ g_emb = tf.convert_to_tensor(g_emb)   # densify the embedding-lookup gradient
 bool(tf.reduce_max(tf.abs(g_tied - (g_emb + tf.transpose(g_head)))) < 1e-5)
 ```
 
+```{.python .input #parameters-state-memory-tied-parameters-4}
+%%tab mxnet
+up = untied.collect_params()
+for name, p in lm.collect_params().items():
+    up[name].set_data(p.data())   # same values, separate tensors
+with autograd.record():
+    lm(tokens).sum().backward()
+with autograd.record():
+    untied(tokens).sum().backward()
+bool(np.abs(lm.emb.weight.grad()
+            - (untied.emb.weight.grad()
+               + untied.head.weight.grad())).max() < 1e-6)
+```
+
 ## Freezing Parameters
 
 :begin_tab:`pytorch`
@@ -877,6 +1159,18 @@ next `compile`. The manual steps below read the split live.) The typical
 pattern freezes a pretrained backbone and trains only a new head. On a fresh
 copy of our residual MLP, freezing everything but the output layer leaves 650
 of 18,634 parameters trainable:
+:end_tab:
+
+:begin_tab:`mxnet`
+Every fine-tuning recipe (:numref:`sec_fine_tuning`) rests on one primitive,
+and in gluon it is the switch we have already met: set a parameter's
+`grad_req` to `'null'` and backpropagation skips it, so the `Trainer` has
+nothing to apply and the weight stays put (gluon even frees the gradient
+buffer on the spot). It is the same mechanism that makes a `Constant`
+constant, applied at fine-tuning time, and `Block.setattr` flips it in bulk
+on any subtree. The typical pattern freezes a pretrained backbone and trains
+only a new head. On a fresh copy of our residual MLP, freezing everything but
+the output layer leaves 650 of 18,634 parameters trainable:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-1}
@@ -916,6 +1210,20 @@ for layer in finetune.layers[:-1]:
  finetune.count_params())
 ```
 
+```{.python .input #parameters-state-memory-freezing-parameters-1}
+%%tab mxnet
+finetune = nn.Sequential()
+finetune.add(nn.Dense(64), ResidualBlock(64),
+             ResidualBlock(64), nn.Dense(10))
+finetune.initialize()
+finetune(X)
+finetune[:-1].setattr('grad_req', 'null')
+
+(sum(p.data().size for p in finetune.collect_params().values()
+     if p.grad_req == 'write'),
+ sum(p.data().size for p in finetune.collect_params().values()))
+```
+
 :begin_tab:`pytorch`
 The optimizer should receive only the trainable parameters. One gradient step
 then moves the head and nothing else:
@@ -931,6 +1239,13 @@ others. One gradient step then moves the head and nothing else:
 The tape differentiates with respect to the variables you hand it, and
 `trainable_weights` is now exactly the head. One gradient step then moves the
 head and nothing else:
+:end_tab:
+
+:begin_tab:`mxnet`
+The `Trainer` can receive the whole dictionary: it reads each parameter's
+`grad_req` and skips the frozen ones, so the freeze lives on the model and
+every consumer respects it. One gradient step then moves the head and nothing
+else:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-2}
@@ -965,6 +1280,20 @@ head_opt.apply_gradients(zip(tape.gradient(loss, finetune.trainable_weights),
 [not bool(tf.reduce_all(b == v)) for b, v in zip(before, finetune.weights)]
 ```
 
+```{.python .input #parameters-state-memory-freezing-parameters-2}
+%%tab mxnet
+head_trainer = gluon.Trainer(finetune.collect_params(), 'sgd',
+                             {'learning_rate': 0.1})
+before = {name: p.data().copy()
+          for name, p in finetune.collect_params().items()}
+with autograd.record():
+    loss = finetune(X).sum()
+loss.backward()
+head_trainer.step(batch_size=1)
+{name: bool((p.data() != before[name]).any())
+ for name, p in finetune.collect_params().items()}
+```
+
 :begin_tab:`pytorch`
 Only the last two entries, the head's weight and bias, changed. Two pitfalls
 deserve a warning, because both fail silently.
@@ -981,6 +1310,12 @@ questions you can settle by inspection.
 Only the last two entries, the head's kernel and bias, changed. Two pitfalls
 deserve attention here: one about optimizer memory, and one about batch
 normalization, where Keras quietly protects you.
+:end_tab:
+
+:begin_tab:`mxnet`
+Only the two leaves under `3`, the head's weight and bias, changed. Two
+pitfalls deserve attention here: one about optimizer memory, and one about
+batch normalization.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -1009,6 +1344,16 @@ previous section was built over all of `net`'s parameters, so freezing
 allocated:
 :end_tab:
 
+:begin_tab:`mxnet`
+First, freezing does not reclaim optimizer state already allocated. The
+`Trainer`'s updater creates moments lazily, at each parameter's first update,
+which cuts both ways: a parameter frozen *before* the first step never gets
+moments at all, but the Adam instance from the previous section has already
+stepped once on `net`, so freezing `net`'s backbone now leaves its moments,
+8 bytes per frozen parameter, fully allocated. The serialized state has not
+shrunk by a byte:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-freezing-parameters-3}
 %%tab pytorch
 for p in net[:-1].parameters():
@@ -1031,6 +1376,13 @@ for layer in net.layers[:-1]:
     layer.trainable = False   # frozen, but Adam's moments remain allocated
 moments = sum(int(tf.size(v)) for v in adam.variables if v.ndim > 0)
 moments == 2 * n
+```
+
+```{.python .input #parameters-state-memory-freezing-parameters-3}
+%%tab mxnet
+net[:-1].setattr('grad_req', 'null')   # frozen, but Adam's moments remain
+trainer.save_states('adam.states')
+os.path.getsize('adam.states') == state_bytes
 ```
 
 :begin_tab:`pytorch`
@@ -1057,6 +1409,15 @@ anyway, since they never pass through the optimizer. Keras special-cases
 exactly this: setting `trainable = False` on a `BatchNormalization` layer
 also switches its forward pass to inference mode, so the statistics hold
 still even when the layer is called with `training=True`:
+:end_tab:
+
+:begin_tab:`mxnet`
+Second, freezing governs gradients only, and batch normalization carries
+state that no gradient ever touches. Its running mean and variance are
+themselves parameters with `grad_req='null'` hardwired, updated by the
+*forward pass* whenever it runs in training mode, which in gluon means inside
+an `autograd.record()` scope. Freeze a `BatchNorm` layer's scale and shift
+and its running mean keeps drifting anyway:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-4}
@@ -1089,6 +1450,21 @@ _ = bn(tf.random.normal((8, 4)) + 3, training=True)
 bool(tf.reduce_all(bn.moving_mean == before))
 ```
 
+```{.python .input #parameters-state-memory-freezing-parameters-4}
+%%tab mxnet
+bn = nn.BatchNorm()
+bn.initialize()
+bn(np.zeros((8, 4)))            # first call builds the deferred shapes
+bn.gamma.grad_req = 'null'
+bn.beta.grad_req = 'null'
+before = bn.running_mean.data().copy()
+x = np.random.normal(0, 1, (8, 4)) + 3
+x.attach_grad()                 # a leaf for autograd: every Parameter is frozen
+with autograd.record():
+    bn(x).sum().backward()      # train mode: stats update regardless
+bool((bn.running_mean.data() == before).all())
+```
+
 :begin_tab:`pytorch`
 `requires_grad` and `.eval()` are orthogonal switches: the first stops
 gradients, the second stops the behaviors tied to training mode, such as
@@ -1112,6 +1488,15 @@ first governs which variables receive updates, the second governs
 training-mode behaviors, and a frozen dropout layer still drops when called
 with `training=True`. To pin any other stateful layer during fine-tuning,
 set both.
+:end_tab:
+
+:begin_tab:`mxnet`
+`grad_req` and the recording scope are orthogonal switches: the first stops
+gradients, the second decides whether a forward pass runs in training mode,
+with everything that entails, batch statistics and dropout alike. To pin a
+BatchNorm layer during fine-tuning you need both: freeze its parameters *and*
+hold its statistics still, either by keeping it out of `record()` or by
+constructing it with `use_global_stats=True`.
 :end_tab:
 
 Freezing whole tensors is the bluntest form of partial training.
@@ -1140,6 +1525,13 @@ fine-tuning above, the swapped-in average sits measurably behind the last raw
 iterate of the moving head:
 :end_tab:
 
+:begin_tab:`mxnet`
+gluon has no built-in weight averaging, but with all state reachable through
+one dictionary it is a short loop: copy the trainable leaves once, then blend
+the new weights in after each step. Continuing the fine-tuning above, the
+average trails the moving head:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-freezing-parameters-5}
 %%tab jax
 ema = optax.ema(decay=0.9)
@@ -1165,6 +1557,22 @@ for _ in range(5):
 raw = tf.identity(finetune.layers[-1].bias)   # the last raw iterate
 ema_opt.finalize_variable_values(finetune.trainable_weights)   # swap in averages
 float(tf.reduce_max(tf.abs(finetune.layers[-1].bias - raw)))
+```
+
+```{.python .input #parameters-state-memory-freezing-parameters-5}
+%%tab mxnet
+ema = {name: p.data().copy()
+       for name, p in finetune.collect_params().items()
+       if p.grad_req == 'write'}
+for _ in range(5):
+    with autograd.record():
+        loss = finetune(X).sum()
+    loss.backward()
+    head_trainer.step(batch_size=1)
+    cp = finetune.collect_params()
+    for name in ema:   # weights in, average out
+        ema[name] = 0.9 * ema[name] + 0.1 * cp[name].data()
+float(np.abs(ema['3.bias'] - finetune[3].bias.data()).max())
 ```
 
 ## Summary
@@ -1213,6 +1621,22 @@ freezes a layer but reclaims no optimizer state already allocated;
 and `Adam(use_ema=True)` keeps a weight average as part of the optimizer.
 :end_tab:
 
+:begin_tab:`mxnet`
+A model's state is one dictionary of `Parameter`s keyed by path, returned by
+`collect_params()`, and every consumer, whether `Trainer`, checkpoint, or
+debugger, walks it. Each entry carries its own `grad_req` switch; a
+`Constant` is a `Parameter` with `grad_req='null'` hardwired, so persistent
+non-trained state and freezing are one mechanism. Training with Adam in fp32
+costs 16 bytes per parameter (4 weights, 4 gradients, 8 optimizer state)
+before activations, and the 8 bytes of Adam state per parameter survive every
+mixed-precision accounting convention (`multi_precision=True` adds the fp32
+master copy). `share_parameters` ties two layers to one `Parameter`: two
+names in the dictionary, one tensor, gradients summed over its uses, updated
+once per step. Setting `grad_req='null'` freezes a parameter and frees its
+gradient buffer, but reclaims no optimizer state already allocated and does
+not stop running-statistics updates in training mode.
+:end_tab:
+
 ## Exercises
 
 1. Write a helper that reports the byte cost of fp32 Adam training separately
@@ -1254,4 +1678,15 @@ and `Adam(use_ema=True)` keeps a weight average as part of the optimizer.
    alone. How many trainable parameters remain, and can the head still
    adapt? Explain what this teaches about the interaction between tying and
    freezing.
+:end_tab:
+
+:begin_tab:`mxnet`
+3. Round-trip the tied model through `save_parameters` and `load_parameters`
+   (:numref:`sec_read_write_v2`), once with `deduplicate=False` and once with
+   `deduplicate=True`. Compare the file sizes, and check which of the two
+   files loads into the untied twin. Where, if anywhere, is the tying
+   recorded?
+4. In the tied `TinyLM`, set `lm.emb.weight.grad_req = 'null'`. What happened
+   to the head, and how many trainable parameters remain? Explain what this
+   teaches about the interaction between tying and freezing.
 :end_tab:

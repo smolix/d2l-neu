@@ -236,9 +236,18 @@ def main():
             asset_src = src / asset
         asset_dst = dst / asset
         if asset_dst.exists() or asset_dst.is_symlink():
-            # Refresh plain files (e.g. d2l.bib) when the project copy is newer;
-            # directories keep the cheap exists-skip.
-            if (asset_dst.is_file() and not asset_dst.is_symlink()
+            if asset_dst.is_dir() and not asset_dst.is_symlink():
+                # Sync new/updated files individually — a one-time exists-skip
+                # left a chapter's newly-added figure permanently missing from
+                # every subsequent PDF build (XeLaTeX "File ... is missing").
+                for f in asset_src.rglob('*'):
+                    if f.is_dir() or f.suffix == '.pdf':
+                        continue
+                    out = asset_dst / f.relative_to(asset_src)
+                    if not out.exists() or f.stat().st_mtime > out.stat().st_mtime:
+                        out.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(f, out)
+            elif (asset_dst.is_file() and not asset_dst.is_symlink()
                     and asset_src.stat().st_mtime > asset_dst.stat().st_mtime):
                 shutil.copy2(asset_src, asset_dst)
             continue

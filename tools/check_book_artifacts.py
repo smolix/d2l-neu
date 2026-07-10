@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from d2l_preprocess import CHAPTER_NUMBERING
 from northstar_slides import has_slides
+from gen_slides import has_framework_code
 
 FRAMEWORKS = ['pytorch', 'tensorflow', 'jax', 'mxnet']
 _IMG_EXTS = ('.svg', '.png', '.jpg', '.jpeg', '.gif')
@@ -47,8 +48,11 @@ def pointer_images(root: Path):
 
 def expected_decks(source: Path, store: Path):
     """For each framework, the set of `chap/stem` decks the source defines for
-    it: the source file has a slides block AND that framework has a committed
-    output manifest (the same availability rule build_slides_index uses)."""
+    it: the source file has a slides block, that framework has a committed
+    output manifest, AND the source actually has fw-applicable code — the same
+    gate gen_slides.has_framework_code uses to decide whether to render at all.
+    A file that is e.g. pytorch-only still gets committed (empty) manifests
+    for the other frameworks, which used to make this over-expect a deck."""
     exp = {fw: set() for fw in FRAMEWORKS}
     for rel in CHAPTER_NUMBERING:
         relp = Path(rel)
@@ -57,8 +61,11 @@ def expected_decks(source: Path, store: Path):
         if not has_slides(source / rel):
             continue
         for fw in FRAMEWORKS:
-            if (store / fw / relp.parent.name / f'{relp.stem}.json').exists():
-                exp[fw].add(f'{relp.parent.name}/{relp.stem}')
+            if not (store / fw / relp.parent.name / f'{relp.stem}.json').exists():
+                continue
+            if not has_framework_code(source / rel, fw):
+                continue
+            exp[fw].add(f'{relp.parent.name}/{relp.stem}')
     return exp
 
 

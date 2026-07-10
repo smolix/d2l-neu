@@ -36,12 +36,37 @@ from safetensors.torch import load_file, save_file
 from d2l import torch as d2l
 ```
 
+```{.python .input #saving-loading-saving-loading-and-pretrained-weights}
+%%tab jax
+import json
+import os
+import struct
+from dataclasses import asdict, dataclass
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+from flax.training import train_state
+import optax
+import orbax.checkpoint as ocp
+from safetensors.flax import load_file, save_file
+from d2l import jax as d2l
+```
+
 ## State, Not Code
 
+:begin_tab:`pytorch`
 The state of a network is a dictionary from parameter names to tensors, the
 `state_dict` of :numref:`sec_parameters_v2`. Before we save a whole model, the
 warm-up is that the same `save`/`load` calls work on any tensors, and on the
 lists and dicts that hold them.
+:end_tab:
+
+:begin_tab:`jax`
+The state of a network is a tree of named arrays, the params pytree of
+:numref:`sec_parameters_v2`. Before we save a whole model, the warm-up is that
+`jnp.save` and `jnp.load` work on any array, and, through NumPy's pickle
+fallback, on the dicts that hold them.
+:end_tab:
 
 ```{.python .input #saving-loading-state-not-code-1}
 %%tab pytorch
@@ -50,9 +75,25 @@ torch.save({'x': x, 'y': torch.zeros(4)}, 'tensors.pt')
 torch.load('tensors.pt', weights_only=True)
 ```
 
+```{.python .input #saving-loading-state-not-code-1}
+%%tab jax
+x = jnp.arange(4)
+jnp.save('tensors.npy', {'x': x, 'y': jnp.zeros(4)})
+jnp.load('tensors.npy', allow_pickle=True).item()
+```
+
+:begin_tab:`pytorch`
 A model's `state_dict` is one such dictionary, built for you. The keys are the
 dotted paths through the module tree (`hidden.weight`, `output.bias`); the values
 are the tensors, buffers included. Here is the tree for a small MLP.
+:end_tab:
+
+:begin_tab:`jax`
+A model's params is one such structure, built for you by `init`: a nested
+dictionary whose leaves sit at paths through the module tree (`hidden.kernel`,
+`output.bias`; flax calls a weight matrix a `kernel`). Here is the tree for a
+small MLP.
+:end_tab:
 
 ```{.python .input #saving-loading-state-not-code-2}
 %%tab pytorch
@@ -71,21 +112,54 @@ Y = net(X)
 {name: tuple(t.shape) for name, t in net.state_dict().items()}
 ```
 
+```{.python .input #saving-loading-state-not-code-2}
+%%tab jax
+class MLP(nn.Module):
+    def setup(self):
+        self.hidden = nn.Dense(256)
+        self.output = nn.Dense(10)
+
+    def __call__(self, x):
+        return self.output(nn.relu(self.hidden(x)))
+
+net = MLP()
+X = jax.random.normal(d2l.get_key(), (2, 20))
+Y, variables = net.init_with_output(d2l.get_key(), X)
+params = variables['params']
+jax.tree_util.tree_map(lambda t: tuple(t.shape), params)
+```
+
 Nothing in this dictionary knows it came from a class called `MLP`. That is the
 point: the names and shapes are enough to refill any network built by the same
 code, and they carry no dependence on how that code happens to be written today.
 
 ## safetensors: the Interchange Format
 
+:begin_tab:`pytorch`
 `torch.save` writes its files with Python's `pickle`, which does not store data
 so much as a program that *reconstructs* data. Unpickling runs that program. For
 a file you wrote and never let out of your control this is harmless. For a file
 you downloaded it is a remote-code-execution vector: loading the weights can run
 whatever the author's pickle stream tells it to.
+:end_tab:
 
+:begin_tab:`jax`
+`jnp.save` writes NumPy's `.npy` format. For a single array that is pure data:
+a small header with the dtype and shape, then the raw bytes. The warm-up dict is
+another matter. NumPy can only store a dict by falling back to Python's
+`pickle`, which does not store data so much as a program that *reconstructs*
+data, and loading runs that program; that is what `allow_pickle=True` opted
+into. For a file you wrote and never let out of your control this is harmless.
+For a file you downloaded it is a remote-code-execution vector: any object in
+the stream can name a callable for the loader to invoke, which is why NumPy
+refuses pickled contents by default (`allow_pickle=False`).
+:end_tab:
+
+:begin_tab:`pytorch`
 The risk is easy to make concrete. An object's `__reduce__` method returns the
 callable and arguments that pickle will invoke on load. Point it at any function
 and that function runs when the file is read.
+:end_tab:
 
 ```{.python .input #saving-loading-safetensors-the-interchange-format-1}
 %%tab pytorch
@@ -97,9 +171,11 @@ torch.save(Tripwire(), 'tripwire.pt')
 _ = torch.load('tripwire.pt', weights_only=False)  # the payload runs here
 ```
 
+:begin_tab:`pytorch`
 Since version 2.6, PyTorch defaults `torch.load` to `weights_only=True`, which
 refuses any pickle opcode that is not a plain tensor. The same file is now
 rejected instead of executed.
+:end_tab:
 
 ```{.python .input #saving-loading-safetensors-the-interchange-format-2}
 %%tab pytorch
@@ -109,8 +185,18 @@ except Exception as e:
     print(type(e).__name__, str(e).splitlines()[0])
 ```
 
+:begin_tab:`pytorch`
 The allowlist behind `weights_only=True` is defense in depth, not a sandbox: it
-has itself had bypasses patched. safetensors removes the problem at the root by
+has itself had bypasses patched.
+:end_tab:
+
+:begin_tab:`jax`
+`allow_pickle=False` is a refusal, not a fix: it keeps the loader safe by
+declining to load the very files, dicts of named parameters, that model sharing
+needs.
+:end_tab:
+
+safetensors removes the problem at the root by
 having no program to run. As :numref:`fig_bg_safetensors_layout` lays out byte
 by byte, a safetensors file is an 8-byte little-endian integer giving the
 header length, then that many bytes of JSON naming each tensor's dtype, shape,
@@ -122,6 +208,13 @@ Save and reload the MLP's state through it and confirm the round trip is exact.
 ![The safetensors file as one horizontal byte strip: an 8-byte header length, a JSON header naming each tensor's dtype, shape, and byte offsets, and the raw tensor bytes packed back to back with no gaps, with two of the file's own data_offsets entries traced down to their exact span in the bar.](../img/bg-safetensors-layout.svg)
 :label:`fig_bg_safetensors_layout`
 
+:begin_tab:`jax`
+One mismatch to bridge first: safetensors stores a flat mapping from names to
+tensors, while flax parameters form a nested pytree. Two small helpers convert
+between the two, joining each leaf's path with dots on the way out and
+splitting it again on the way back.
+:end_tab:
+
 ```{.python .input #saving-loading-safetensors-the-interchange-format-3}
 %%tab pytorch
 save_file(net.state_dict(), 'mlp.safetensors')
@@ -130,6 +223,29 @@ clone(X)                                   # materialize the lazy layers first
 clone.load_state_dict(load_file('mlp.safetensors'))
 clone.eval()
 torch.equal(clone(X), Y)
+```
+
+```{.python .input #saving-loading-safetensors-the-interchange-format-3}
+%%tab jax
+def flatten(tree):
+    leaves = jax.tree_util.tree_flatten_with_path(tree)[0]
+    return {'.'.join(p.key for p in path): v for path, v in leaves}
+
+def unflatten(flat):
+    tree = {}
+    for name, value in flat.items():
+        *parents, leaf = name.split('.')
+        node = tree
+        for p in parents:
+            node = node.setdefault(p, {})
+        node[leaf] = value
+    return tree
+
+save_file(flatten(params), 'mlp-jax.safetensors')
+restored = unflatten(load_file('mlp-jax.safetensors'))
+exact = jax.tree_util.tree_all(
+    jax.tree_util.tree_map(jnp.array_equal, restored, params))
+exact, jnp.array_equal(net.apply({'params': restored}, X), Y)
 ```
 
 Because the header is plain JSON at a known offset, you can read it without the
@@ -143,8 +259,23 @@ with open('mlp.safetensors', 'rb') as f:
 header['hidden.weight']
 ```
 
+```{.python .input #saving-loading-safetensors-the-interchange-format-4}
+%%tab jax
+with open('mlp-jax.safetensors', 'rb') as f:
+    n = struct.unpack('<Q', f.read(8))[0]   # header length, little-endian
+    header = json.loads(f.read(n))
+header['hidden.kernel']
+```
+
+:begin_tab:`pytorch`
 `torch.save` keeps its place for your own scratch files and for the older code
 you will still meet. safetensors is what you use to hand a model to anyone else.
+:end_tab:
+
+:begin_tab:`jax`
+`jnp.save` keeps its place for your own scratch arrays and quick experiments.
+safetensors is what you use to hand a model to anyone else.
+:end_tab:
 
 ## Checkpointing a Training Run
 
@@ -161,11 +292,26 @@ five compartments with the exact thing it restores on resume.
 ![A checkpoint file's five compartments, each paired by an arrow with what it restores on resume: model state_dict with weights, optimizer state with momentum and second moments, RNG state with data order and dropout, step with schedule position, and config with architecture.](../img/bg-checkpoint-contents.svg)
 :label:`fig_bg_checkpoint_contents`
 
+:begin_tab:`pytorch`
 Two details separate a checkpoint from a corrupted file. First, keep the contents
 to tensors and primitives so the file loads under `weights_only=True`; a
 dataclass config goes in as a plain dict via `asdict`. Second, write atomically:
 save to a temporary path and `os.replace` it into place, so a crash mid-write
 leaves the previous good checkpoint untouched rather than a half-written one.
+:end_tab:
+
+:begin_tab:`jax`
+In JAX the bundle already has a name. A flax `TrainState` carries the
+parameters, the optax optimizer state, and the step counter as one pytree, and
+orbax, the JAX checkpointing library, saves and restores such pytrees whole: its
+`StandardCheckpointer` writes atomically by default, to a temporary directory
+renamed into place on success, so a crash mid-write leaves the previous good
+checkpoint untouched rather than a half-written one. Because these natives
+already cover the job, the jax tab defines no helper of its own; the calls below
+are the idiom as you would write it in any project. The config rides along as
+one more branch of the saved tree, and the PRNG key, which in JAX is explicit
+data rather than hidden global state, can too.
+:end_tab:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-1}
 %%tab pytorch
@@ -232,8 +378,55 @@ save_checkpoint('run.pt', net, opt, step=100, cfg=cfg)
 round(loss(net(data), target).item(), 4)
 ```
 
+```{.python .input #saving-loading-checkpointing-a-training-run-2}
+%%tab jax
+@dataclass
+class Config:
+    in_dim: int = 20
+    hidden: int = 64
+    lr: float = 0.05
+
+def build(cfg):
+    return nn.Sequential([nn.Dense(cfg.hidden), nn.relu, nn.Dense(1)])
+
+def fresh_state(cfg, model):
+    p = model.init(jax.random.PRNGKey(0), jnp.zeros((1, cfg.in_dim)))['params']
+    return train_state.TrainState.create(apply_fn=model.apply, params=p,
+                                         tx=optax.adam(cfg.lr))
+
+cfg = Config()
+model = build(cfg)
+data = jax.random.normal(d2l.get_key(), (256, cfg.in_dim))
+target = (data @ jax.random.normal(d2l.get_key(), (cfg.in_dim, 1))
+          + 0.1 * jax.random.normal(d2l.get_key(), (256, 1)))
+
+def loss(params):
+    return jnp.mean((model.apply({'params': params}, data) - target) ** 2)
+
+@jax.jit
+def step(state):
+    l, grads = jax.value_and_grad(loss)(state.params)
+    return state.apply_gradients(grads=grads), l
+
+state = fresh_state(cfg, model)
+for _ in range(100):
+    state, l = step(state)
+
+ckptr = ocp.StandardCheckpointer()
+ckptr.save(os.path.abspath('run-jax'),        # orbax wants an absolute path
+           {'state': state, 'cfg': asdict(cfg)}, force=True)
+int(state.step), round(float(loss(state.params)), 4)
+```
+
 The restore is exact. Corrupt every parameter, load the checkpoint back, and the
 loss returns to where it was.
+
+:begin_tab:`jax`
+Note the shape of the restore call: orbax fills a *template*, here a freshly
+built `TrainState` with the right structure, rather than mutating a model in
+place. That is the functional style throughout: a restore returns a new state,
+it does not patch an old one.
+:end_tab:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-3}
 %%tab pytorch
@@ -243,6 +436,16 @@ with torch.no_grad():
 before = loss(net(data), target).item()
 load_checkpoint('run.pt', net, opt)
 after = loss(net(data), target).item()
+f'perturbed {before:.2f} -> restored {after:.4f}'
+```
+
+```{.python .input #saving-loading-checkpointing-a-training-run-3}
+%%tab jax
+wrecked = jax.tree_util.tree_map(lambda p: p + 1.0, state.params)
+before = float(loss(wrecked))
+template = {'state': fresh_state(cfg, model), 'cfg': asdict(Config())}
+ckpt = ckptr.restore(os.path.abspath('run-jax'), template)
+after = float(loss(ckpt['state'].params))
 f'perturbed {before:.2f} -> restored {after:.4f}'
 ```
 
@@ -268,24 +471,68 @@ print('full  optimizer:', full)
 print('fresh optimizer:', fresh)
 ```
 
+```{.python .input #saving-loading-checkpointing-a-training-run-4}
+%%tab jax
+full = ckpt['state']                          # params + optimizer + step
+full_losses = []
+for _ in range(5):
+    full, l = step(full)
+    full_losses.append(round(float(l), 4))
+
+fresh = fresh_state(cfg, model).replace(params=ckpt['state'].params)
+fresh_losses = []
+for _ in range(5):
+    fresh, l = step(fresh)
+    fresh_losses.append(round(float(l), 4))
+
+print('full  optimizer:', full_losses)
+print('fresh optimizer:', fresh_losses)
+```
+
 The full-state run keeps descending; the weights-only run spikes and has to claw
 its way back. That transient is the cost of forgetting the optimizer, and it is
 why "just the weights" is not a resumable checkpoint.
 
+:begin_tab:`pytorch`
 For models too large to hold in memory, checkpoints are split across several
 files with an index, and `torch.load(..., mmap=True)` pages tensors off disk on
 demand instead of copying the whole file up front. Combined with meta-device
 construction and `load_state_dict(..., assign=True)`, this loads such a model
 without ever allocating its randomly-initialized weights;
 :numref:`chap_performance` returns to the machinery when models get that big.
+:end_tab:
+
+:begin_tab:`jax`
+For models too large to hold in memory, orbax already works at scale: a
+checkpoint is a directory of per-array files rather than one monolith, a restore
+can target a device sharding so each accelerator materializes only its own
+pieces, and multi-host jobs save and restore in parallel;
+:numref:`chap_performance` returns to the machinery when models get that big.
+:end_tab:
 
 ## Loading Weights You Did Not Train
 
+:begin_tab:`pytorch`
 The most common reason to load a `state_dict` is that someone else produced it.
 You take a network trained on a large dataset and adapt it: keep the learned
 feature extractor, replace the final layer for your own labels. The mechanics are
 `state_dict` manipulation. torchvision serves the weights through a `weights=`
 enum, which also downloads the matching parameters the first time.
+:end_tab:
+
+:begin_tab:`jax`
+The most common reason to load parameters is that someone else produced them.
+You take a network trained on a large dataset and adapt it: keep the learned
+feature extractor, replace the final layer for your own labels. JAX has no
+torchvision-style model zoo of its own; pretrained weights come from the
+ecosystem, above all the Hugging Face Hub, which distributes them as
+safetensors, the format of the previous section. What the framework gives you is
+the mechanics, and they are nothing new: the file is a flat dict, the model's
+parameters are a pytree, and adapting one to the other is surgery you write
+yourself. We reuse the MLP weights saved earlier as our stand-in for a
+downloaded file, and build a network that reuses the trunk but ends in a new
+two-class head.
+:end_tab:
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-1}
 %%tab pytorch
@@ -294,10 +541,34 @@ net.fc = nn.Linear(net.fc.in_features, 10)          # new 10-class head
 net.fc
 ```
 
+```{.python .input #saving-loading-loading-weights-you-did-not-train-1}
+%%tab jax
+class Classifier(nn.Module):
+    def setup(self):
+        self.hidden = nn.Dense(256)
+        self.head = nn.Dense(2)      # new 2-class head, new name
+
+    def __call__(self, x):
+        return self.head(nn.relu(self.hidden(x)))
+
+new_params = Classifier().init(d2l.get_key(), X)['params']
+jax.tree_util.tree_map(lambda t: tuple(t.shape), new_params)
+```
+
+:begin_tab:`pytorch`
 A `state_dict` is an ordinary Python dict, so adapting one is ordinary dict
 surgery. We drop the pretrained 1000-class head (we just replaced it) and, to
 show what a damaged file looks like, also drop one residual block. Loading with
 `strict=False` then returns a report of what did not line up instead of raising.
+:end_tab:
+
+:begin_tab:`jax`
+There is no `strict=False` to lean on: the merge is yours to write, and so is
+the report. Take from the file every entry whose name and shape match the new
+model, keep the fresh initialization for the rest, and compute the two key sets
+that say what happened: *missing*, parameters the model has but the file did not
+fill, and *unexpected*, file entries with no home in the model.
+:end_tab:
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-2}
 %%tab pytorch
@@ -310,6 +581,18 @@ print('missing by block:', dict(Counter(k.split('.')[0]
 print('unexpected:', report.unexpected_keys)
 ```
 
+```{.python .input #saving-loading-loading-weights-you-did-not-train-2}
+%%tab jax
+file_flat = load_file('mlp-jax.safetensors')
+new_flat = flatten(new_params)
+matched = {k: v for k, v in file_flat.items()
+           if k in new_flat and v.shape == new_flat[k].shape}
+merged = unflatten({**new_flat, **matched})
+print('missing:', sorted(set(new_flat) - set(matched)))
+print('unexpected:', sorted(set(file_flat) - set(new_flat)))
+```
+
+:begin_tab:`pytorch`
 Read this report; do not discard it. `missing_keys` lists parameters the model
 has but the file did not fill. The two `fc` entries are expected: that head is
 new and meant to start random. The `layer4` entries are a red flag, a whole block
@@ -318,10 +601,31 @@ incomplete and would produce nonsense features. `unexpected_keys`, empty here,
 would list names in the file with no home in the model, the usual sign of a
 renamed layer. The rule is to name which keys you expect to be missing and treat
 anything else as a bug.
+:end_tab:
 
+:begin_tab:`jax`
+Read both sets before trusting the merged tree. The two `head` entries under
+*missing* are expected: that layer is new and meant to start random. The two
+`output` entries under *unexpected* are the file's old head, stranded by the
+rename, and a renamed layer is what *unexpected* usually means in practice. The
+lesson is the same as with a built-in report, only stricter, because nothing
+prints it unless you do: name which keys you expect in each set and treat
+anything else as a bug.
+:end_tab:
+
+:begin_tab:`pytorch`
 With the backbone loaded, freeze it so training touches only the new head. Set
 `requires_grad = False` on the pretrained parameters (:numref:`sec_parameters_v2`)
 and leave the head trainable.
+:end_tab:
+
+:begin_tab:`jax`
+With the trunk loaded, freeze it so training touches only the new head.
+Parameters in JAX carry no `requires_grad` flag; they are plain arrays, and what
+trains is decided by the optimizer. Label each parameter subtree and give the
+frozen label a transform that zeroes its updates: gradients still flow, the
+optimizer discards them.
+:end_tab:
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
 %%tab pytorch
@@ -335,13 +639,37 @@ total = sum(p.numel() for p in net.parameters())
 f'{trainable} trainable of {total}'
 ```
 
+```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
+%%tab jax
+labels = jax.tree_util.tree_map_with_path(
+    lambda path, _: 'train' if path[0].key == 'head' else 'freeze', merged)
+tx = optax.multi_transform(
+    {'train': optax.adam(0.05), 'freeze': optax.set_to_zero()}, labels)
+
+sizes = flatten(jax.tree_util.tree_map(jnp.size, merged))
+flat_labels = flatten(labels)
+trainable = sum(int(s) for k, s in sizes.items() if flat_labels[k] == 'train')
+total = sum(int(s) for s in sizes.values())
+f'{trainable} trainable of {total}'
+```
+
+:begin_tab:`pytorch`
 torchvision is one source; the Hugging Face Hub is the ecosystem-scale one, and
 it distributes its weights as safetensors, which closes the loop with the format
 of the previous section. This section covers *how* to load and adapt pretrained
 weights; :numref:`sec_fine_tuning` covers when it helps and how far to unfreeze.
+:end_tab:
+
+:begin_tab:`jax`
+The Hugging Face Hub distributes JAX weights as safetensors, so the flat dict
+you just merged has the same shape as the artifact you will download in
+practice. This section covers *how* to load and adapt pretrained weights;
+:numref:`sec_fine_tuning` covers when it helps and how far to unfreeze.
+:end_tab:
 
 ## Summary
 
+:begin_tab:`pytorch`
 A saved model is state, not code: a `state_dict` of tensors that means something
 only once the code that built the network runs again. For your own files
 `torch.save` is fine; for files you share, safetensors stores the same tensors
@@ -351,19 +679,33 @@ config, written atomically, or a resume restarts the optimizer's momentum from
 zero. Loading someone else's weights is dict surgery plus `strict=False`, and the
 missing/unexpected report is a diagnostic to read rather than a warning to
 silence.
+:end_tab:
+
+:begin_tab:`jax`
+A saved model is state, not code: a pytree of named arrays that means something
+only once the code that built the network runs again. For your own files
+`jnp.save` is fine; for files you share, safetensors stores the same tensors
+behind a plain JSON header, with no pickle to execute, which is why hubs
+standardize on it. A resumable checkpoint is the `TrainState`: params, optimizer
+state, and step in one pytree that orbax saves atomically in a single call, or a
+resume restarts the optimizer's momentum from zero. Loading someone else's
+weights is pytree surgery, and the missing/unexpected sets you compute are a
+diagnostic to read rather than a formality to skip.
+:end_tab:
 
 ## Exercises
 
 1. Even if you never deploy to another machine, name two reasons to checkpoint.
-   Then delete the `os.replace` from `save_checkpoint` and write straight to
-   `path`; describe the failure a crash mid-write now causes, and why the atomic
-   version avoids it.
-1. Read the first 8 bytes of your `mlp.safetensors` as a little-endian integer,
-   as the header cell does. How large is the JSON header for the MLP, and how
-   does it grow if you double the hidden width?
-1. Save the MLP's `state_dict` cast to `bfloat16` and load it back into a
+   Then consider the atomic write: if the checkpoint were written straight to its
+   final path (delete the `os.replace` from `save_checkpoint`, or the
+   rename-into-place that orbax performs), describe the failure a crash mid-write
+   now causes, and why the atomic version avoids it.
+1. Read the first 8 bytes of the safetensors file you wrote for the MLP as a
+   little-endian integer, as the header cell does. How large is the JSON header
+   for the MLP, and how does it grow if you double the hidden width?
+1. Save the MLP's parameters cast to `bfloat16` and load them back into a
    `float32` model (:numref:`sec_numerics_v2`). What is lost? Is that acceptable
    for inference? For resuming training?
 1. Take two checkpoints of the regressor 50 steps apart, average their weight
-   tensors into a third `state_dict`, and evaluate it. The result previews weight
-   averaging.
+   tensors into a third set of parameters, and evaluate it. The result previews
+   weight averaging.

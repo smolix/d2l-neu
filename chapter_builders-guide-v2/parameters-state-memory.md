@@ -2,11 +2,11 @@
 :label:`sec_parameters_v2`
 
 Almost everything we do to a model other than calling it operates on its
-*state*: the optimizer updates it, a checkpoint serializes it, `.to(device)`
-moves it, fine-tuning trains part of it, and the answer to "will this model
-fit on my GPU?" is a few lines of arithmetic over it. So far that state has
-been handled for us; `nn.Linear` created the tensors and the training loop
-updated them. This section opens the box: how to reach any tensor in a model,
+*state*: the optimizer updates it, a checkpoint serializes it, device
+placement moves it, fine-tuning trains part of it, and the answer to "will
+this model fit on my GPU?" is a few lines of arithmetic over it. So far that
+state has been handled for us; the layers created the tensors and the
+training loop updated them. This section opens the box: how to reach any tensor in a model,
 which tensors are trained and which merely travel with the model, what they
 all cost in bytes, and how to share or freeze them.
 
@@ -19,6 +19,14 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 %%tab pytorch
 import torch
 from torch import nn
+```
+
+```{.python .input #parameters-state-memory-parameters-state-and-memory}
+%%tab jax
+import jax
+from jax import numpy as jnp
+from flax import linen as nn
+import optax
 ```
 
 ## Accessing Parameters
@@ -45,15 +53,51 @@ X = torch.randn(2, 20)
 net(X).shape
 ```
 
+```{.python .input #parameters-state-memory-accessing-parameters-1}
+%%tab jax
+class ResidualBlock(nn.Module):
+    d: int
+
+    def setup(self):
+        self.body = nn.Sequential([nn.Dense(self.d), nn.relu,
+                                   nn.Dense(self.d)])
+
+    def __call__(self, X):
+        return X + self.body(X)
+
+net = nn.Sequential([nn.Dense(64), ResidualBlock(64),
+                     ResidualBlock(64), nn.Dense(10)])
+X = jax.random.normal(jax.random.key(0), (2, 20))
+params = net.init(jax.random.key(42), X)
+net.apply(params, X).shape
+```
+
+:begin_tab:`pytorch`
 A model built from modules is a tree, and its parameters are the leaves. To
 reach one leaf, walk the tree: indexing into a `Sequential` selects a child,
 attribute access selects within it. `net[3]` is the output layer; its bias is
 an `nn.Parameter`, a tensor that announces itself to the module system as
 trainable.
+:end_tab:
+
+:begin_tab:`jax`
+A model built from modules is a tree, and its parameters are the leaves, but
+in Flax the tree lives apart from the model: `init` returned it as `params`,
+a nested dictionary (a *pytree*) that mirrors the module structure. To reach
+one leaf, index along the path. `params['params']['layers_3']` is the output
+layer's subtree; its `'bias'` is a plain array. Nothing on the array marks it
+trainable; sitting under the `'params'` collection is what does.
+:end_tab:
 
 ```{.python .input #parameters-state-memory-accessing-parameters-2}
 %%tab pytorch
 type(net[3].bias), net[3].bias.shape
+```
+
+```{.python .input #parameters-state-memory-accessing-parameters-2}
+%%tab jax
+bias = params['params']['layers_3']['bias']
+type(bias), bias.shape
 ```
 
 The same path syntax reaches arbitrarily deep. The first linear layer inside
@@ -64,39 +108,100 @@ the first residual block sits three levels down:
 net[1].body[0].weight.shape
 ```
 
+```{.python .input #parameters-state-memory-accessing-parameters-3}
+%%tab jax
+params['params']['layers_1']['body']['layers_0']['kernel'].shape
+```
+
+:begin_tab:`pytorch`
 Each parameter also carries its gradient. We have not run backpropagation on
 this model yet, so there is nothing to see:
+:end_tab:
+
+:begin_tab:`jax`
+Gradients are not stored on parameters. A parameter is a plain array, and
+`jax.grad` returns the gradients as a *second* pytree of exactly the same
+structure, one gradient leaf per parameter leaf:
+:end_tab:
 
 ```{.python .input #parameters-state-memory-accessing-parameters-4}
 %%tab pytorch
 net[3].weight.grad is None
 ```
 
+```{.python .input #parameters-state-memory-accessing-parameters-4}
+%%tab jax
+grads = jax.grad(lambda p: net.apply(p, X).sum())(params)
+jax.tree_util.tree_structure(grads) == jax.tree_util.tree_structure(params)
+```
+
+:begin_tab:`pytorch`
 Reaching parameters one path at a time is right for debugging a single layer.
 The optimizer, weight decay, and checkpointing instead need *every* leaf, and
 `named_parameters()` provides exactly that: a traversal of the whole tree that
 yields each parameter with its path as the name.
+:end_tab:
+
+:begin_tab:`jax`
+Reaching parameters one path at a time is right for debugging a single layer.
+The optimizer, weight decay, and checkpointing instead need *every* leaf, and
+`jax.tree_util` provides the traversal: `tree_flatten_with_path` walks the
+whole tree and yields each leaf together with the key path that reaches it.
+:end_tab:
 
 ```{.python .input #parameters-state-memory-accessing-parameters-5}
 %%tab pytorch
 [(name, p.shape) for name, p in net.named_parameters()]
 ```
 
+```{.python .input #parameters-state-memory-accessing-parameters-5}
+%%tab jax
+leaves = jax.tree_util.tree_flatten_with_path(params)[0]
+[(jax.tree_util.keystr(path), leaf.shape) for path, leaf in leaves]
+```
+
+:begin_tab:`pytorch`
 Read one of the names closely. `1.body.0.weight` means: child
 `1` of `net` (the first residual block), its submodule `body`, that module's
 child `0`, and finally the leaf `weight`. Names are paths, so they survive any
 amount of nesting, and they are exactly the keys of the model's `state_dict`,
 the name-to-tensor mapping used for saving and loading
 (:numref:`sec_read_write_v2`):
+:end_tab:
+
+:begin_tab:`jax`
+Read one of the paths closely.
+`['params']['layers_1']['body']['layers_0']['kernel']` means: the `'params'`
+collection, child `'layers_1'` of `net`
+(the first residual block), its submodule `'body'`, that module's child
+`'layers_0'`, and finally the leaf `'kernel'`. Names are paths, so they
+survive any amount of nesting, and there is no second naming scheme for
+saving and loading: this pytree is itself the object a checkpoint serializes
+(:numref:`sec_read_write_v2`). So far its top level holds a single entry:
+:end_tab:
 
 ```{.python .input #parameters-state-memory-accessing-parameters-6}
 %%tab pytorch
 list(net.state_dict()) == [name for name, _ in net.named_parameters()]
 ```
 
+```{.python .input #parameters-state-memory-accessing-parameters-6}
+%%tab jax
+list(params)
+```
+
+:begin_tab:`pytorch`
 One tree, one naming scheme, and every consumer, whether optimizer,
 checkpoint, or debugger, walks it. The equality above holds for this model
 because all of its state happens to be trainable. That is not always so.
+:end_tab:
+
+:begin_tab:`jax`
+One tree, one naming scheme, and every consumer, whether optimizer,
+checkpoint, or debugger, walks it. The dictionary has the single collection
+`'params'` because all of this model's state happens to be trainable. That is
+not always so.
+:end_tab:
 
 ## Parameters and Buffers
 
@@ -109,11 +214,25 @@ to the GPU with it, but the optimizer has no business touching them. Later
 chapters add more examples: causal attention masks, precomputed positional
 tables, and the key--value cache of a language model at generation time.
 
+:begin_tab:`pytorch`
 PyTorch calls such tensors *buffers*, registered with `register_buffer`. The
 rule of thumb: make it a *parameter* if the optimizer should update it, a
 *buffer* if it must persist and travel with the model, and a plain Python
 attribute otherwise. Here is a module that standardizes its inputs with
 statistics computed once, ahead of time, from a reference sample:
+:end_tab:
+
+:begin_tab:`jax`
+Flax sorts state into named *variable collections*, and `'params'` is simply
+the collection the optimizer trains. Persistent, non-trained state goes into
+other collections: `nn.BatchNorm` keeps its running statistics in one named
+`'batch_stats'`, and `self.variable(collection, name, init_fn)` creates an
+entry in any collection you choose. The rule of thumb: put it in `'params'`
+if the optimizer should update it, in another collection if it must persist
+and travel with the model, and leave it as a plain attribute otherwise. Here
+is a module that standardizes its inputs with statistics computed once, ahead
+of time, from a reference sample:
+:end_tab:
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-1}
 %%tab pytorch
@@ -132,20 +251,63 @@ whiten = Whitener(sample.mean(0), sample.std(0))
 list(whiten.state_dict())
 ```
 
+```{.python .input #parameters-state-memory-parameters-and-buffers-1}
+%%tab jax
+class Whitener(nn.Module):
+    mean: jax.Array
+    std: jax.Array
+
+    @nn.compact
+    def __call__(self, X):
+        mean = self.variable('constants', 'mean', lambda: self.mean)
+        std = self.variable('constants', 'std', lambda: self.std)
+        return nn.Dense(2)((X - mean.value) / std.value)
+
+sample = jax.random.normal(jax.random.key(1), (100, 4)) * jnp.arange(1., 5.)
+whiten = Whitener(sample.mean(0), sample.std(0))
+variables = whiten.init(jax.random.key(2), sample[:2])
+jax.tree_util.tree_map(lambda x: x.shape, variables)
+```
+
+:begin_tab:`pytorch`
 The buffers appear in the state dict, so they are checkpointed alongside the
 weights. They do not appear among the parameters, so the optimizer never sees
 them:
+:end_tab:
+
+:begin_tab:`jax`
+Both collections come back from `init` in one variables dictionary, so they
+are checkpointed together. The split is what keeps the optimizer away from
+the statistics: a training loop hands it `variables['params']` and nothing
+else.
+:end_tab:
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-2}
 %%tab pytorch
 [name for name, _ in whiten.named_parameters()]
 ```
 
+```{.python .input #parameters-state-memory-parameters-and-buffers-2}
+%%tab jax
+{col: list(tree) for col, tree in variables.items()}
+```
+
+:begin_tab:`pytorch`
 Registration is what makes the module system aware of a tensor. A tensor
 stored as a plain attribute is invisible to it: not saved, and not converted
 when the model moves. We can see this on the CPU by moving the module across
 *dtypes*, which uses the same machinery as moving across devices. The
 registered buffer converts; the plain attribute is left behind:
+:end_tab:
+
+:begin_tab:`jax`
+Membership in the variables dictionary is what makes a value state. The
+`'mean'` we stored in `'constants'` is in the tree; the constructor argument
+`whiten.mean` it was copied from lives on the module object, invisible to
+every tree operation: not saved, not cast, not moved. We can see this on the
+CPU by converting the state across *dtypes* with `tree_map`. The collections
+convert; the module attribute is left behind:
+:end_tab:
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-3}
 %%tab pytorch
@@ -154,10 +316,26 @@ whiten.to(torch.float64)
 whiten.mean.dtype, whiten.note.dtype
 ```
 
+```{.python .input #parameters-state-memory-parameters-and-buffers-3}
+%%tab jax
+low = jax.tree_util.tree_map(lambda x: x.astype(jnp.float16), variables)
+low['constants']['mean'].dtype, whiten.mean.dtype
+```
+
+:begin_tab:`pytorch`
 The device version of the same fact is the classic bug: a model works on the
 CPU, then crashes after `.to('cuda')` because an unregistered tensor stayed
 behind. On a machine with a GPU the following confirms that buffers move with
 the module:
+:end_tab:
+
+:begin_tab:`jax`
+Device placement follows the same rule: `jax.device_put` moves a whole
+pytree, `'params'` and `'constants'` alike, and because the module object
+holds no state of its own, nothing can stay behind. The same line works on
+any host; on a machine with an accelerator, `jax.devices()[0]` is a GPU or
+TPU:
+:end_tab:
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-4}
 %%tab pytorch
@@ -166,6 +344,12 @@ if torch.cuda.is_available():
 else:
     print('no GPU here; on a CUDA machine, whiten.to("cuda") '
           'moves whiten.mean along with the parameters')
+```
+
+```{.python .input #parameters-state-memory-parameters-and-buffers-4}
+%%tab jax
+moved = jax.device_put(variables, jax.devices()[0])
+moved['constants']['mean'].device
 ```
 
 ## Counting Parameters, Counting Bytes
@@ -193,6 +377,16 @@ print(f'{n} parameters: {(weights + grads + adam_state) / 2**20:.2f} MiB '
       'for weights + gradients + Adam state')
 ```
 
+```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-1}
+%%tab jax
+leaves = jax.tree_util.tree_leaves(params)
+n = sum(x.size for x in leaves)
+weights = sum(x.size * x.dtype.itemsize for x in leaves)   # fp32: 4 bytes
+grads, adam_state = weights, 2 * weights
+print(f'{n} parameters: {(weights + grads + adam_state) / 2**20:.2f} MiB '
+      'for weights + gradients + Adam state')
+```
+
 The optimizer state is real memory, allocated tensor by tensor. After a
 single training step, Adam's two moments together hold exactly two extra
 copies of the model:
@@ -205,6 +399,17 @@ adam.step()
 moments = sum(t.numel() for s in adam.state.values()
               for t in s.values() if torch.is_tensor(t) and t.ndim > 0)
 moments == 2 * n
+```
+
+```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-2}
+%%tab jax
+adam = optax.adam(1e-3)
+opt_state = adam.init(params)   # optax allocates the moments here, up front
+grads = jax.grad(lambda p: net.apply(p, X).sum())(params)
+updates, opt_state = adam.update(grads, opt_state, params)
+params = optax.apply_updates(params, updates)
+mu, nu = opt_state[0].mu, opt_state[0].nu
+sum(x.size for t in (mu, nu) for x in jax.tree_util.tree_leaves(t)) == 2 * n
 ```
 
 For our little network the total is a third of a megabyte, which is why none
@@ -249,8 +454,19 @@ about 38.6 million of the model's 124 million parameters, roughly 31%.
 :label:`fig_bg_weight-tying`
 
 :numref:`fig_bg_weight-tying` sketches the picture behind the two call sites.
+
+:begin_tab:`pytorch`
 A miniature version shows the mechanics. Tying is one assignment, and it is
 aliasing, not copying:
+:end_tab:
+
+:begin_tab:`jax`
+A miniature version shows the mechanics. There is no assignment to alias:
+`nn.Embed` provides `attend`, which multiplies a hidden state by the
+transpose of the embedding table, exactly the output projection. Calling it
+reuses the module's one kernel, so the tying is visible in the pytree itself:
+no head matrix exists.
+:end_tab:
 
 ```{.python .input #parameters-state-memory-tied-parameters-1}
 %%tab pytorch
@@ -270,9 +486,38 @@ lm = TinyLM(vocab_size=100, d=16)
 lm.head.weight is lm.emb.weight
 ```
 
+```{.python .input #parameters-state-memory-tied-parameters-1}
+%%tab jax
+class TinyLM(nn.Module):
+    vocab_size: int
+    d: int
+    tied: bool = True
+
+    @nn.compact
+    def __call__(self, tokens):
+        emb = nn.Embed(self.vocab_size, self.d)
+        h = nn.relu(nn.Dense(self.d)(emb(tokens)))
+        if self.tied:
+            return emb.attend(h)   # the embedding table, used as the head
+        return nn.Dense(self.vocab_size, use_bias=False)(h)
+
+lm = TinyLM(vocab_size=100, d=16)
+tokens = jax.random.randint(jax.random.key(1), (2, 8), 0, 100)
+params_lm = lm.init(jax.random.key(2), tokens)
+jax.tree_util.tree_map(lambda x: x.shape, params_lm)
+```
+
+:begin_tab:`pytorch`
 The module system understands the aliasing. Parameter traversal reports the
 shared tensor once, so the count below reflects the $|V| \times d$ saving and
 the optimizer updates the tensor once per step:
+:end_tab:
+
+:begin_tab:`jax`
+There is no aliasing bookkeeping to get right, because the pytree contains
+the table once. The parameter count reflects the $|V| \times d$ saving, and
+whatever optimizer walks the tree updates the table once per step:
+:end_tab:
 
 ```{.python .input #parameters-state-memory-tied-parameters-2}
 %%tab pytorch
@@ -281,9 +526,27 @@ untied = TinyLM(vocab_size=100, d=16, tied=False)
  sum(p.numel() for p in untied.parameters()))
 ```
 
+```{.python .input #parameters-state-memory-tied-parameters-2}
+%%tab jax
+untied = TinyLM(vocab_size=100, d=16, tied=False)
+params_untied = untied.init(jax.random.key(2), tokens)
+(sum(x.size for x in jax.tree_util.tree_leaves(params_lm)),
+ sum(x.size for x in jax.tree_util.tree_leaves(params_untied)))
+```
+
+:begin_tab:`pytorch`
 The state dict, by contrast, keeps *both* names, `emb.weight` and
 `head.weight`, pointing at the same storage. That is deliberate: a checkpoint
 saved from a tied model then loads into either a tied or an untied one.
+:end_tab:
+
+:begin_tab:`jax`
+A checkpoint of the tied model stores the table once, because the checkpoint
+*is* the pytree. The flip side is that tied and untied checkpoints differ in
+structure: the tied one has no `Dense_1` entry, so loading it into an untied
+module is a structural mismatch to resolve explicitly, not a silent aliasing
+decision.
+:end_tab:
 
 ```{.python .input #parameters-state-memory-tied-parameters-3}
 %%tab pytorch
@@ -293,10 +556,10 @@ sd = lm.state_dict()
 ```
 
 What about gradients? During backpropagation each use of the tensor
-contributes a gradient, and the contributions accumulate into the single
-shared `.grad`. We can verify this against the untied twin: load the tied
-model's values into it, run the same backward pass through both, and the tied
-gradient equals the *sum* of the untied model's two gradients.
+contributes a gradient, and the contributions accumulate into the gradient of
+the single shared tensor. We can verify this against the untied twin: load
+the tied model's values into it, run the same backward pass through both, and
+the tied gradient equals the *sum* of the untied model's two gradients.
 
 ```{.python .input #parameters-state-memory-tied-parameters-4}
 %%tab pytorch
@@ -308,14 +571,40 @@ torch.allclose(lm.emb.weight.grad,
                untied.emb.weight.grad + untied.head.weight.grad)
 ```
 
+```{.python .input #parameters-state-memory-tied-parameters-4}
+%%tab jax
+tied = params_lm['params']
+same_values = {'params': {**tied,   # tied values, head kernel materialized
+                          'Dense_1': {'kernel': tied['Embed_0']['embedding'].T}}}
+g_tied = jax.grad(lambda p: lm.apply(p, tokens).sum())(params_lm)
+g_untied = jax.grad(lambda p: untied.apply(p, tokens).sum())(same_values)
+jnp.allclose(g_tied['params']['Embed_0']['embedding'],
+             g_untied['params']['Embed_0']['embedding']
+             + g_untied['params']['Dense_1']['kernel'].T)
+```
+
 ## Freezing Parameters
 
+:begin_tab:`pytorch`
 Every fine-tuning recipe (:numref:`sec_fine_tuning`) rests on one primitive:
 setting `requires_grad = False` on a parameter excludes it from
 backpropagation, so the optimizer has nothing to apply and the weight stays
 put. The typical pattern freezes a pretrained backbone and trains only a new
 head. On a fresh copy of our residual MLP, freezing everything but the output
 layer leaves 650 of 18,634 parameters trainable:
+:end_tab:
+
+:begin_tab:`jax`
+Every fine-tuning recipe (:numref:`sec_fine_tuning`) rests on one primitive,
+and in JAX it lives in the optimizer: a parameter is a plain array with no
+flag to set, so a leaf is frozen exactly when no update reaches it.
+`optax.multi_transform` routes each leaf to a transformation chosen by a
+label, and `optax.set_to_zero()` is the transformation that freezes, turning
+every gradient it handles into a zero update. The typical pattern freezes a
+pretrained backbone and trains only a new head. On a fresh copy of our
+residual MLP, labeling everything but the output layer `'freeze'` leaves 650
+of 18,634 parameters trainable:
+:end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-1}
 %%tab pytorch
@@ -328,8 +617,30 @@ for p in finetune[:-1].parameters():
  sum(p.numel() for p in finetune.parameters()))
 ```
 
+```{.python .input #parameters-state-memory-freezing-parameters-1}
+%%tab jax
+finetune = nn.Sequential([nn.Dense(64), ResidualBlock(64),
+                          ResidualBlock(64), nn.Dense(10)])
+ft_params = finetune.init(jax.random.key(3), X)
+labels = jax.tree_util.tree_map_with_path(
+    lambda path, x: 'train' if path[1].key == 'layers_3' else 'freeze',
+    ft_params)
+n_train = sum(x.size for x, l in zip(jax.tree_util.tree_leaves(ft_params),
+                                     jax.tree_util.tree_leaves(labels))
+              if l == 'train')
+(n_train, sum(x.size for x in jax.tree_util.tree_leaves(ft_params)))
+```
+
+:begin_tab:`pytorch`
 The optimizer should receive only the trainable parameters. One gradient step
 then moves the head and nothing else:
+:end_tab:
+
+:begin_tab:`jax`
+The optimizer receives the whole tree plus the labels, and the partition does
+the rest: Adam applies to the leaves labeled `'train'`, `set_to_zero` to the
+others. One gradient step then moves the head and nothing else:
+:end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-2}
 %%tab pytorch
@@ -341,15 +652,45 @@ head_opt.step()
 [not torch.equal(b, p) for b, p in zip(before, finetune.parameters())]
 ```
 
+```{.python .input #parameters-state-memory-freezing-parameters-2}
+%%tab jax
+tx = optax.multi_transform(
+    {'train': optax.adam(0.1), 'freeze': optax.set_to_zero()}, labels)
+opt_state = tx.init(ft_params)
+grads = jax.grad(lambda p: finetune.apply(p, X).sum())(ft_params)
+updates, opt_state = tx.update(grads, opt_state, ft_params)
+stepped = optax.apply_updates(ft_params, updates)
+jax.tree_util.tree_map(lambda a, b: bool((a != b).any()), ft_params, stepped)
+```
+
+:begin_tab:`pytorch`
 Only the last two entries, the head's weight and bias, changed. Two pitfalls
 deserve a warning, because both fail silently.
+:end_tab:
 
+:begin_tab:`jax`
+Only the two leaves under `layers_3`, the head's kernel and bias, changed.
+Freezing traditionally carries two silent pitfalls, one about optimizer
+memory and one about batch normalization; with explicit state, both become
+questions you can settle by inspection.
+:end_tab:
+
+:begin_tab:`pytorch`
 First, freezing does not reclaim optimizer memory. Passing only the trainable
 parameters, as above, matters: an optimizer built over *all* parameters keeps
 its state for every parameter that ever received a gradient. The Adam
 instance from the previous section already stepped once on `net`, so freezing
 `net`'s backbone now leaves its moments, 8 bytes per frozen parameter, fully
 allocated:
+:end_tab:
+
+:begin_tab:`jax`
+First, optimizer memory. Does `multi_transform` still allocate Adam's
+moments, 8 bytes per parameter, for leaves it will never update? No:
+internally it masks each group's parameters before the inner transformation
+sees them, replacing frozen leaves with empty placeholders, so `opt_state`
+holds moments for the 650 trainable parameters only:
+:end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-3}
 %%tab pytorch
@@ -360,10 +701,28 @@ moments = sum(t.numel() for s in adam.state.values()
 moments == 2 * n
 ```
 
+```{.python .input #parameters-state-memory-freezing-parameters-3}
+%%tab jax
+moments = sum(x.size for x in jax.tree_util.tree_leaves(opt_state)
+              if x.ndim > 0)   # ndim 0 excludes Adam's step counter
+moments == 2 * n_train
+```
+
+:begin_tab:`pytorch`
 Second, freezing governs parameters only, and batch normalization carries
 state that is not a parameter. Its running statistics are buffers, updated by
 the *forward pass* whenever the layer is in training mode. Freeze a BatchNorm
 layer's weight and bias and its running mean keeps drifting anyway:
+:end_tab:
+
+:begin_tab:`jax`
+Second, freezing governs `'params'` only, and batch normalization carries
+state in a different collection. `nn.BatchNorm` keeps its running statistics
+in `'batch_stats'`, recomputed by any application whose caller passes
+`mutable=['batch_stats']`, which is exactly what a training step does. Label
+the layer's scale and bias `'freeze'` and the statistics keep drifting
+anyway, because they never pass through the optimizer at all:
+:end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-4}
 %%tab pytorch
@@ -375,10 +734,31 @@ bn(torch.randn(8, 4) + 3)          # train mode: stats update regardless
 torch.allclose(bn.running_mean, before)
 ```
 
+```{.python .input #parameters-state-memory-freezing-parameters-4}
+%%tab jax
+bn = nn.BatchNorm(use_running_average=False, momentum=0.9)
+stats = bn.init(jax.random.key(4), jnp.zeros((8, 4)))
+before = stats['batch_stats']['mean']
+_, updated = bn.apply(stats, jax.random.normal(jax.random.key(5), (8, 4)) + 3,
+                      mutable=['batch_stats'])
+bool(jnp.allclose(updated['batch_stats']['mean'], before))
+```
+
+:begin_tab:`pytorch`
 `requires_grad` and `.eval()` are orthogonal switches: the first stops
 gradients, the second stops the behaviors tied to training mode, such as
 running-statistics updates and dropout. To pin a BatchNorm layer during
 fine-tuning you need both.
+:end_tab:
+
+:begin_tab:`jax`
+The optimizer labels and `use_running_average` are orthogonal switches: the
+first stops updates to `'params'`, the second stops the forward pass from
+computing fresh batch statistics (without a `mutable` request, Flax raises an
+error rather than mutating silently). To pin a BatchNorm layer during
+fine-tuning you need both: freeze its leaves *and* apply it with
+`use_running_average=True`.
+:end_tab:
 
 Freezing whole tensors is the bluntest form of partial training.
 Parameter-efficient methods instead add small trainable low-rank corrections
@@ -390,8 +770,29 @@ the raw final iterate. Like BatchNorm statistics, the average is state the
 optimizer never touches, updated outside backpropagation; we will use it when
 we train generative models.
 
+:begin_tab:`jax`
+In optax the average is one more piece of explicit state. `optax.ema` is a
+transformation like any other: feed it the weights after each step, in place
+of gradients, and its state carries their debiased moving average. Continuing
+the fine-tuning loop above, the average trails the moving head:
+:end_tab:
+
+```{.python .input #parameters-state-memory-freezing-parameters-5}
+%%tab jax
+ema = optax.ema(decay=0.9)
+w, ema_state = stepped, ema.init(stepped)
+for _ in range(5):
+    grads = jax.grad(lambda p: finetune.apply(p, X).sum())(w)
+    updates, opt_state = tx.update(grads, opt_state, w)
+    w = optax.apply_updates(w, updates)
+    avg, ema_state = ema.update(w, ema_state)   # weights in, average out
+float(jnp.abs(avg['params']['layers_3']['bias']
+              - w['params']['layers_3']['bias']).max())
+```
+
 ## Summary
 
+:begin_tab:`pytorch`
 A model's state is one named tree of tensors. `named_parameters()` walks the
 trainable leaves; the `state_dict` adds buffers, tensors that persist and
 move with the model but receive no gradients, such as BatchNorm running
@@ -402,20 +803,50 @@ Assigning one parameter to two modules ties them: one entry in
 `named_parameters()`, gradients summed over its uses. Setting
 `requires_grad = False` freezes a parameter, but reclaims no optimizer state
 already allocated and does not stop buffer updates in training mode.
+:end_tab:
+
+:begin_tab:`jax`
+A model's state is one pytree of named collections. `'params'` holds the
+trainable leaves, reached by key paths and traversed with `jax.tree_util`;
+other collections such as `'batch_stats'` hold state that persists and moves
+with the model but receives no gradients, and the whole dictionary is what a
+checkpoint saves. Training with Adam in fp32 costs 16 bytes per parameter
+(4 weights, 4 gradients, 8 optimizer state) before activations, and the
+8 bytes of Adam state per parameter survive every mixed-precision accounting
+convention. `nn.Embed.attend` ties the embedding and the output head
+structurally: one leaf in the tree, gradients summed over its uses. Freezing
+is an optimizer-side partition, `optax.multi_transform` with `set_to_zero`;
+it allocates no state for frozen leaves, but it does not stop `'batch_stats'`
+updates in a training step.
+:end_tab:
 
 ## Exercises
 
 1. Write a helper that reports the byte cost of fp32 Adam training separately
-   for each top-level child of `net` (use `net.named_children()`). Which block
+   for each top-level block of `net`. Which block
    dominates, and would that still hold if the residual blocks were 10 times
    wider?
-1. BatchNorm's running mean and variance are buffers. Suppose you re-registered
-   them as parameters so that the optimizer updates them. What goes wrong
-   during training, and why does gradient descent on a running average not
-   compute the same thing as the forward-pass update rule it replaces?
-1. Tie two layers as in `TinyLM`, then copy the model with
+1. BatchNorm's running mean and variance are non-trained state. Suppose you
+   made them trainable parameters so that the optimizer updates them. What
+   goes wrong during training, and why does gradient descent on a running
+   average not compute the same thing as the forward-pass update rule it
+   replaces?
+
+:begin_tab:`pytorch`
+3. Tie two layers as in `TinyLM`, then copy the model with
    `copy.deepcopy`. Is the copy still tied? Check with `is`, and explain how a
    copy operation can preserve aliasing.
-1. Freeze `lm.emb.weight` in the tied `TinyLM` but leave `lm.head` alone. How
+4. Freeze `lm.emb.weight` in the tied `TinyLM` but leave `lm.head` alone. How
    many trainable parameters remain? Explain what this teaches about the
    interaction between tying and freezing.
+:end_tab:
+
+:begin_tab:`jax`
+3. Round-trip the tied model's `params_lm` through serialization
+   (:numref:`sec_read_write_v2`) and reload it. Where, if anywhere, is the
+   tying recorded? Explain why tying in Flax is a property of the module code
+   rather than of the checkpoint.
+4. In the tied `TinyLM`, try to freeze the embedding while training the head
+   using `optax.multi_transform` labels. What choices do you have, and what
+   does this teach about the interaction between tying and freezing?
+:end_tab:

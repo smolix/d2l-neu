@@ -40,12 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 48, 48, 32)\nBatchNormalization output shape:\t (1, 48, 48, 32)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Activation output shape:\t (1, 48, 48, 32)\n"
+          "text": "Conv2D output shape:\t (1, 48, 48, 32)\nBatchNormalization output shape:\t (1, 48, 48, 32)\nActivation output shape:\t (1, 48, 48, 32)\n"
         },
         {
           "type": "stream",
@@ -59,16 +54,26 @@
         }
       ]
     },
+    "cnn-design-squeeze-and-excitation-gates": {
+      "code_fingerprint": "sha256:23fa2bb1267c8657749a3c75b9e0103695892e9e8dd2e693e80ba15e52030a44",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 16, 16, 32])"
+        }
+      ]
+    },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:198d2cd97e34ea3b1598b6b29bf938dc1876b908b6f172e0440f0da43d4b3a0c",
+      "code_fingerprint": "sha256:5cb47a4a22389bfaeb91aec04728dc84c10dba6a5556896eb51bf00fa6e7ea8a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 20439,
-          "sha256": "sha256:4ef00f6a18ea85b1cf7627dc9708e7e673679bf1e4351ad9909b3d2d99b4fd04"
+          "bytes": 21486,
+          "sha256": "sha256:a57f62839825f832d12c86455cc6833dc706dbe240c7b0c9f81bede978464c74"
         }
       ]
     }

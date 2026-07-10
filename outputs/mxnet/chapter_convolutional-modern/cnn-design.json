@@ -44,16 +44,26 @@
         }
       ]
     },
+    "cnn-design-squeeze-and-excitation-gates": {
+      "code_fingerprint": "sha256:59018e8cb8328728d2fde994867daf931c9ffbedd740d9c67d7573198add056a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 32, 16, 16)"
+        }
+      ]
+    },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:565b54aff0008999672b0120c9a1814c5263608a192169560d11dda5ae01bee5",
+      "code_fingerprint": "sha256:1248f061d999f86a2d250f024ac7d8ae54d49586be5217a1c1bde2c65c3d8760",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 20517,
-          "sha256": "sha256:ae42455a1b7c53692f9e5c6fae654b17c48411ca2fbd397b1d771f2e64dd09e9"
+          "bytes": 20518,
+          "sha256": "sha256:dc4cbbfdea3496c20a5af9b8f3099ef1af4b22bd39619ea788e54815baf5b782"
         }
       ]
     }

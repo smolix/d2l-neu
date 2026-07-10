@@ -9,32 +9,32 @@
   },
   "cells": {
     "cnn-design-designing-convolutional-network-architectures": {
-      "code_fingerprint": "sha256:9934b4b846713858c4558f5dd6524cbbc9399030ef3d716c69674226700fe1de",
+      "code_fingerprint": "sha256:0b1653a63242762a0ccbb54d3b2d1029a4ca08012ce8b7fb33fea866f2717480",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-1": {
-      "code_fingerprint": "sha256:b628663d773a3a351ae76a651695c49cd79eb91b6af4c8f3ae0135d47b68ff48",
+      "code_fingerprint": "sha256:1af0fd77662e25aadf11bb352d48f5a2b6022a40a4849f870eb44b64e3a1292c",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-2": {
-      "code_fingerprint": "sha256:18fca8fff6b5afda46d12680c7469bacad490368a5ee61426f98ab90ba795277",
+      "code_fingerprint": "sha256:6c7ddfeb6af03678307db0d94402f70f294df1cc5bbf66d17b2e0924c268dbbc",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-3": {
-      "code_fingerprint": "sha256:a2f1070710ed06b6e8bff7c7006ff1112f5ffb2aab07643190a5d84954f72cba",
+      "code_fingerprint": "sha256:72c6000074e052d61978aad72d8ae9906bcdbc554976e208b1297374c71f05ca",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:4b916c95123de6467832fb89957326283b1054a8ae4b3ea3e543d7412cc44743",
+      "code_fingerprint": "sha256:d87bfd34839f4f36b5e32eaa888fc05cab09ba5fc04b002f63ead6d806b721e3",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:72ba47152524fa09ecf63aee505cd5b49156011d64deda480b062d3769e7ef2b",
+      "code_fingerprint": "sha256:fb0a34738a38c9bcf6bf0aae1d73a924028c37b42253b53620f045aa3b823f21",
       "kind": "text",
       "outputs": [
         {
@@ -44,16 +44,26 @@
         }
       ]
     },
+    "cnn-design-squeeze-and-excitation-gates": {
+      "code_fingerprint": "sha256:6ab849fa9572289b4250823b4b4be0532c0914cf87ed4a8893286d5f678d5b05",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 16, 16, 32)"
+        }
+      ]
+    },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:fe2661291db6a2f4fe6a3410499478a932791445fe301b99fd8d32efd562ef78",
+      "code_fingerprint": "sha256:87001aad388efefaa8cb802366a32670fea2fc3640e2969eed22852f0b946510",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 21646,
-          "sha256": "sha256:cc69c0c3e5f9d5f56933e950ef88b07a7bc55daa4cb72ddfce18ee578819287f"
+          "bytes": 21015,
+          "sha256": "sha256:3ca4545cef493cd797ace8d48be362278b3153b5679f70091861674fddc72353"
         }
       ]
     }

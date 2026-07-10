@@ -447,11 +447,251 @@ def fig_nin():
     save(d.fig, "arch-nin")
 
 
+# --------------------------------------------------------------------------- #
+# 8.4: ResNet residual block — identity vs projection shortcut.               #
+# --------------------------------------------------------------------------- #
+
+def _residual_column(d, x, ops, pw, tint, label, y0, shortcut_pill=None):
+    """Residual block column: ops on the spine, skip from below the first
+    pill into a ⊕ one step above the last pill; ``shortcut_pill`` (str) puts
+    an op on the skip path (projection variant).  Returns (ys, y_plus)."""
+    ys = [y0 + i * PILL_STEP for i in range(len(ops))]
+    y_plus = ys[-1] + PILL_STEP
+    y_relu = y_plus + PILL_STEP
+    x_out = x + (126 if shortcut_pill else 88)
+    panel = (x - pw / 2 - 22, y0 - PILL_H / 2 - 23,
+             x_out + (56 if shortcut_pill else 22),
+             y_relu + PILL_H / 2 + LABEL_BAND)
+    d.container(*panel, fill=tint)
+    d.stage_label(panel[0] + 14, panel[3] - 9, label)
+
+    y_anchor = panel[1] - 36
+    d.arrow(x, y_anchor + 14, ys[0] - PILL_H / 2)
+    for i, (op, y) in enumerate(zip(ops, ys)):
+        d.pill(x, y, op, w=pw)
+        if i < len(ops) - 1:
+            d.arrow(x, y + PILL_H / 2, ys[i + 1] - PILL_H / 2)
+    d.arrow(x, ys[-1] + PILL_H / 2, y_plus - PLUS_R)
+
+    y_branch = y0 - PILL_H / 2 - 11
+    if shortcut_pill:
+        y_mid = 0.5 * (y_branch + y_plus)
+        d.line([(x, y_branch), (x_out, y_branch),
+                (x_out, y_mid - PILL_H / 2)])
+        d.pill(x_out, y_mid, shortcut_pill, w=None)
+        d.line([(x_out, y_mid + PILL_H / 2), (x_out, y_plus)])
+        d.op_circle(x, y_plus)
+        d.ax.annotate(
+            "", xy=(x + PLUS_R, y_plus), xytext=(x_out, y_plus),
+            arrowprops=dict(arrowstyle="-|>,head_width=0.32,head_length=0.55",
+                            color=INK, lw=1.2, shrinkA=0, shrinkB=0,
+                            mutation_scale=11), zorder=3)
+    else:
+        d.skip(x, y_branch, y_plus, x_out)
+
+    d.arrow(x, y_plus + PLUS_R, y_relu - PILL_H / 2)
+    d.pill(x, y_relu, "ReLU", w=pw)
+    d.arrow(x, y_relu + PILL_H / 2, panel[3] + 30)
+    d.anchor(x, y_anchor, "input x")
+    return ys, y_plus
+
+
+def fig_resnet_block():
+    W, H = 980, 480
+    d = Diagram(W, H)
+    y0 = 116
+    ops = ["3×3 Conv, BatchNorm", "ReLU", "3×3 Conv, BatchNorm"]
+
+    xl, pw = 230, 138
+    ys_l, y_plus_l = _residual_column(
+        d, xl, ops, pw, ACCENT_TINT, "Identity shortcut", y0)
+    xr = 560
+    ys_r, y_plus_r = _residual_column(
+        d, xr, ops, pw, ACCENT_TINT, "Projection shortcut", y0,
+        shortcut_pill="1×1 Conv")
+
+    d.callout(8, y_plus_l + LH, [
+        [("The new wiring:", INK, 1)],
+        [("output is ", INK, 1), ("x + f(x)", ACCENT, 1), (",", INK, 1)],
+        [("so f learns a correction", INK, 1)],
+    ], target=(xl - PLUS_R - 4, y_plus_l), leader_from=(196, y_plus_l),
+        ha="left")
+    y_mid = 0.5 * ((y0 - PILL_H / 2 - 11) + y_plus_r)
+    d.callout(W - 2, y_mid + LH / 2, [
+        [("A ", INK, 1), ("1×1", ACCENT, 1), (" conv matches shape", INK, 1)],
+        [("when channels or stride change", INK, 1)],
+    ], target=(xr + 126 + 47, y_mid), leader_from=(W - 216, y_mid),
+        ha="right")
+
+    save(d.fig, "arch-resnet-block")
+
+
+# --------------------------------------------------------------------------- #
+# 8.4: ResNeXt block — grouped bottleneck.                                    #
+# --------------------------------------------------------------------------- #
+
+def fig_resnext_block():
+    W, H = 620, 520
+    d = Diagram(W, H)
+    y0 = 116
+    x, pw = 300, 168
+
+    ops = ["1×1 Conv, 128", "BatchNorm, ReLU",
+           ("3×3 Conv, 128, ", "32 groups", ""),
+           "BatchNorm, ReLU", "1×1 Conv, 256", "BatchNorm"]
+    ys = [y0 + i * PILL_STEP for i in range(len(ops))]
+    y_plus = ys[-1] + PILL_STEP
+    y_relu = y_plus + PILL_STEP
+    panel = (x - pw / 2 - 22, y0 - PILL_H / 2 - 23, x + 118,
+             y_relu + PILL_H / 2 + LABEL_BAND)
+    d.container(*panel, fill=ACCENT_TINT)
+    d.stage_label(panel[0] + 14, panel[3] - 9, "ResNeXt block")
+
+    y_anchor = panel[1] - 36
+    d.arrow(x, y_anchor + 14, ys[0] - PILL_H / 2)
+    for i, (op, y) in enumerate(zip(ops, ys)):
+        if i == 2:
+            pre, kw, post = op
+            d.novelty(x, y, pre, kw, post, w=pw + 22)
+        else:
+            d.pill(x, y, op, w=pw)
+        if i < len(ops) - 1:
+            d.arrow(x, y + PILL_H / 2, ys[i + 1] - PILL_H / 2)
+    d.arrow(x, ys[-1] + PILL_H / 2, y_plus - PLUS_R)
+    d.skip(x, y0 - PILL_H / 2 - 11, y_plus, x + 104)
+    d.arrow(x, y_plus + PLUS_R, y_relu - PILL_H / 2)
+    d.pill(x, y_relu, "ReLU", w=pw)
+    d.arrow(x, y_relu + PILL_H / 2, panel[3] + 30)
+    d.anchor(x, y_anchor, "input x")
+    d.shape_note(x - 90, y_anchor + 26, "(256, h×w)", ha="right")
+
+    d.callout(8, ys[2] + LH / 2, [
+        [("32", ACCENT, 1), (" parallel paths", INK, 1)],
+        [("for the price of one", INK, 1)],
+    ], target=(x - pw / 2 - 15, ys[2]), leader_from=(126, ys[2]), ha="left")
+
+    save(d.fig, "arch-resnext-block")
+
+
+# --------------------------------------------------------------------------- #
+# 8.4: DenseNet dense block — concatenation instead of addition.              #
+# --------------------------------------------------------------------------- #
+
+def fig_densenet_block():
+    W, H = 700, 420
+    d = Diagram(W, H)
+    x = 400
+    y0 = 116
+    pw = 196
+
+    ys = [y0 + i * PILL_STEP for i in range(4)]     # conv1, cat1, conv2, cat2
+    x_l = x - pw / 2 - 58                            # skip rail on the left
+
+    panel = (x_l - 22, y0 - PILL_H / 2 - 23, x + pw / 2 + 22,
+             ys[-1] + PILL_H / 2 + LABEL_BAND)
+    d.container(*panel, fill=ACCENT_TINT)
+    d.stage_label(panel[0] + 14, panel[3] - 9, "Dense block (growth rate 32)")
+
+    y_anchor = panel[1] - 36
+    d.arrow(x, y_anchor + 14, ys[0] - PILL_H / 2)
+    d.pill(x, ys[0], "BatchNorm, ReLU, 3×3 Conv, 32", w=pw)
+    d.arrow(x, ys[0] + PILL_H / 2, ys[1] - PILL_H / 2)
+    d.novelty(x, ys[1], "", "Concat", " channels", w=136)
+    d.arrow(x, ys[1] + PILL_H / 2, ys[2] - PILL_H / 2)
+    d.pill(x, ys[2], "BatchNorm, ReLU, 3×3 Conv, 32", w=pw)
+    d.arrow(x, ys[2] + PILL_H / 2, ys[3] - PILL_H / 2)
+    d.pill(x, ys[3], "Concat channels", w=136)
+    d.arrow(x, ys[3] + PILL_H / 2, panel[3] + 30)
+    d.anchor(x, y_anchor, "input x")
+
+    def cat_skip(y_from, y_to, w_cat):
+        d.line([(x, y_from), (x_l, y_from), (x_l, y_to)])
+        d.ax.annotate(
+            "", xy=(x - w_cat / 2, y_to), xytext=(x_l, y_to),
+            arrowprops=dict(arrowstyle="-|>,head_width=0.32,head_length=0.55",
+                            color=INK, lw=1.2, shrinkA=0, shrinkB=0,
+                            mutation_scale=11), zorder=3)
+
+    cat_skip(y0 - PILL_H / 2 - 11, ys[1], 136)
+    cat_skip(0.5 * (ys[1] + ys[2]) + 1, ys[3], 136)
+
+    # channel growth beside the spine
+    d.shape_note(x + 14, y_anchor + 26, "(64, h×w)")
+    d.shape_note(x + pw / 2 + 10, 0.5 * (ys[1] + ys[2]), "(96, h×w)")
+    d.shape_note(x + 14, panel[3] + 18, "(128, h×w)")
+
+    d.callout(8, ys[1] + LH, [
+        [("Inputs are appended,", INK, 1)],
+        [("never overwritten: every", INK, 1)],
+        [("later layer sees ", INK, 1), ("all", ACCENT, 1),
+         (" features", INK, 1)],
+    ], target=(x_l - 4, ys[1]), leader_from=(162, ys[1]), ha="left")
+
+    save(d.fig, "arch-densenet-block")
+
+
+# --------------------------------------------------------------------------- #
+# 8.4: ResNet-18 full model (stage containers, shapes as in the book's        #
+# 96×96 Fashion-MNIST training run).                                          #
+# --------------------------------------------------------------------------- #
+
+def fig_resnet18():
+    W, H = 680, 800
+    d = Diagram(W, H)
+    x, pw = 250, 150
+    y0 = 116
+
+    groups = [
+        {"ops": ["7×7 Conv, 64, s2", "BatchNorm, ReLU", "3×3 MaxPool, s2"]},
+        {"ops": ["Residual block, 64"], "tint": True, "repeat": "2",
+         "label": "Stage 1"},
+        {"ops": ["Residual block, 128"], "tint": True, "repeat": "2",
+         "label": "Stage 2"},
+        {"ops": ["Residual block, 256"], "tint": True, "repeat": "2",
+         "label": "Stage 3"},
+        {"ops": ["Residual block, 512"], "tint": True, "repeat": "2",
+         "label": "Stage 4"},
+        {"ops": ["Global AvgPool", "Dense 10"]},
+    ]
+    y_out, outer, lay = _blocked_column(
+        d, x, groups, pw, y0, "ResNet-18", anchor_text="96×96 image")
+
+    # shapes at the stage boundaries (right of the inter-group arrows)
+    xs = x + pw / 2 + BLOCK_PAD + 8
+    def between(a, b):
+        return 0.5 * (lay[a][3] + lay[b][1][0] - PILL_H / 2)
+    d.shape_note(xs, between(0, 1) - 4, "(64, 24×24)")
+    d.shape_note(xs, between(1, 2) - 4, "(64, 24×24)")
+    d.shape_note(xs, between(2, 3) - 4, "(128, 12×12)")
+    d.shape_note(xs, between(3, 4) - 4, "(256, 6×6)")
+    d.shape_note(xs, between(4, 5) - 4, "(512, 3×3)")
+
+    y_s3 = 0.5 * (lay[3][2] + lay[3][3])
+    d.callout(W - 8, y_s3 + LH / 2, [
+        [("Each stage halves the resolution", INK, 1)],
+        [("and doubles the channels", INK, 1)],
+    ], target=(x + pw / 2 + BLOCK_PAD + 4, y_s3),
+        leader_from=(W - 208, y_s3), ha="right")
+    y_s1 = 0.5 * (lay[1][2] + lay[1][3])
+    d.callout(W - 8, y_s1 + LH / 2, [
+        [("First block of stages 2–4", INK, 1)],
+        [("uses the ", INK, 1), ("projection", ACCENT, 1),
+         (" variant, s2", INK, 1)],
+    ], target=(x + pw / 2 + BLOCK_PAD + 4, y_s1),
+        leader_from=(W - 190, y_s1), ha="right")
+
+    save(d.fig, "arch-resnet18")
+
+
 if __name__ == "__main__":
     fig_resnet_vs_convnext_block()
     fig_inception_block()
     fig_alexnet()
     fig_vgg()
     fig_nin()
+    fig_resnet_block()
+    fig_resnext_block()
+    fig_densenet_block()
+    fig_resnet18()
     from arch_diagrams import WRITTEN
     print("\n".join(WRITTEN))

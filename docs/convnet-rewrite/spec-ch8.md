@@ -56,6 +56,8 @@ latency, small data, or dense prediction dominate — and this chapter brings
 the reader to that 2026 state of the art. Fix the "It is only recently that
 Transformers have begun to displace" phrasing. Drop the ShiftNet namedrop;
 keep MobileNet/RegNet/ConvNeXt mentions, now with real sections to point to.
+Append the `Resources and Further Reading` section — curated content in
+`spec-leading-pages.md`.
 
 ### 8.1 `alexnet.md` — compress
 

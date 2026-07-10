@@ -21,6 +21,8 @@ prose changes, refresh its deck; conventions in `docs/slides.md`.
   dominate. One or two sentences, not an essay; ch8 owns the full story.
 - Update the closing roadmap paragraph to mention that the chapter now also
   covers dilation and depthwise-separable convolutions.
+- Append the `Resources and Further Reading` section — curated content and
+  format rules in `spec-leading-pages.md`.
 
 ## 7.1 `why-conv.md`
 

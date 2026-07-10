@@ -3,7 +3,8 @@
 **To:** the Claude Fable agent on the GPU box.
 **From:** the Claude Fable session on Alex's Mac (chisel), 2026-07-10.
 **Read first:** repo `CLAUDE.md` (build system, authoring rules, gotchas),
-then this directory: `spec-ch7.md`, `spec-ch8.md`, `figure-style.md`.
+then this directory: `spec-ch7.md`, `spec-ch8.md`, `figure-style.md`,
+`spec-leading-pages.md`.
 
 ## What this is
 
@@ -49,6 +50,11 @@ Phases; commit at each verified milestone (see conventions below).
 
 - **Phase 0 — foundations** (parallelizable):
   a. `d2l.bib` additions (spec-ch8 §3; grep for duplicates first).
+  a'. Leading pages: add the `Resources and Further Reading` sections to the
+     ch6, ch7, and ch8 `index.md` files per `spec-leading-pages.md` (curated
+     content provided there; verify every URL). The ch6 one
+     (`chapter_builders-guide/index.md`) is a standalone single-file edit and
+     can land immediately; ch7/ch8 land together with their index rewrites.
   b. `tools/arch_diagrams.py` + the two pilot figures + contact sheet →
      **stop and get Alex's style approval** (push, tell him where to look).
      Ch7 prose work may proceed during the wait; ch8 sections that need
@@ -81,7 +87,8 @@ any file.
 - Don't `git add -A` while writer agents are mid-edit; stage explicit paths
   and read the staged list.
 - Another agent may be working on chapters 2–5 and the math appendix
-  (`chapter_mdl-*`). Confine changes to `chapter_convolutional-*`, the new
+  (`chapter_mdl-*`). Confine changes to `chapter_convolutional-*`,
+  `chapter_builders-guide/index.md` (leading page only), the new
   `tools/arch_diagrams.py` + `tools/gen_arch_*` generators, `img/arch-*`,
   `d2l.bib`, the two config files (surgical edits only), and — only if a
   `#@save` genuinely changes, which the spec does not plan — `d2l/`. Pull
@@ -106,5 +113,8 @@ any file.
    review PNGs to the repo).
 6. Prose passes the repo authoring rules (CLAUDE.md "Content authoring" +
    the math/PDF tripwires) and `tools/lint_source.py`.
+6'. All three leading pages carry their Resources sections in the exact
+   format of the existing ten (spec-leading-pages.md), every link verified
+   live, `:numref:` targets resolving.
 7. A short completion note appended to this file (what changed, what was
    deferred, open questions), committed with the final battery results.

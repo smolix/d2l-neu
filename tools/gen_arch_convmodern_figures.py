@@ -13,7 +13,7 @@ repeat braces span their full panel.
 from arch_diagrams import (
     Diagram, save,
     ACCENT, ACCENT_TINT, ACCENT2, ACCENT2_TINT, INK, CONTAINER_FILL,
-    PILL_H, PILL_STEP, LABEL_BAND, PLUS_R,
+    GRAY_TEXT, PILL_H, PILL_STEP, LABEL_BAND, PLUS_R,
 )
 
 LH = 12.5 * 1.25          # callout line height (must match callout())
@@ -683,6 +683,225 @@ def fig_resnet18():
     save(d.fig, "arch-resnet18")
 
 
+# --------------------------------------------------------------------------- #
+# 8.6: ConvNeXt-T full model.                                                 #
+# --------------------------------------------------------------------------- #
+
+def fig_convnext():
+    W, H = 700, 940
+    d = Diagram(W, H)
+    x, pw = 260, 168
+    y0 = 116
+
+    groups = [
+        {"ops": [("", "Patchify", " 4×4 Conv, 96, s4"), "LayerNorm"]},
+        {"ops": ["ConvNeXt block, 96"], "tint": True, "repeat": "3",
+         "label": "Stage 1"},
+        {"ops": ["LN, 2×2 Conv, 192, s2"]},
+        {"ops": ["ConvNeXt block, 192"], "tint": True, "repeat": "3",
+         "label": "Stage 2"},
+        {"ops": ["LN, 2×2 Conv, 384, s2"]},
+        {"ops": ["ConvNeXt block, 384"], "tint": True, "repeat": "9",
+         "label": "Stage 3"},
+        {"ops": ["LN, 2×2 Conv, 768, s2"]},
+        {"ops": ["ConvNeXt block, 768"], "tint": True, "repeat": "3",
+         "label": "Stage 4"},
+        {"ops": ["Global AvgPool", "LayerNorm", "Dense 1000"]},
+    ]
+    y_out, outer, lay = _blocked_column(
+        d, x, groups, pw, y0, "ConvNeXt-T",
+        anchor_text="224×224×3 image", novelty_at=(0, 0))
+
+    xs = x + pw / 2 + BLOCK_PAD + 8
+    def between(a, b):
+        return 0.5 * (lay[a][3] + lay[b][1][0] - PILL_H / 2)
+    d.shape_note(xs, between(0, 1) - 4, "(96, 56×56)")
+    d.shape_note(xs, between(2, 3) - 4, "(192, 28×28)")
+    d.shape_note(xs, between(4, 5) - 4, "(384, 14×14)")
+    d.shape_note(xs, between(6, 7) - 4, "(768, 7×7)")
+
+    y_s3 = 0.5 * (lay[5][2] + lay[5][3])
+    d.callout(W - 8, y_s3 + LH / 2, [
+        [("Stage ratio ", INK, 1), ("3:3:9:3", ACCENT, 1), (":", INK, 1)],
+        [("deepest where maps are small", INK, 1)],
+    ], target=(x + pw / 2 + BLOCK_PAD + 4, y_s3),
+        leader_from=(W - 200, y_s3), ha="right")
+    y_ds = lay[2][1][0]
+    d.callout(W - 8, y_ds + LH / 2, [
+        [("No pooling anywhere:", INK, 1)],
+        [("a strided conv downsamples", INK, 1)],
+    ], target=(x + pw / 2 + 4, y_ds), leader_from=(W - 186, y_ds),
+        ha="right")
+
+    save(d.fig, "arch-convnext")
+
+
+# --------------------------------------------------------------------------- #
+# 8.7: depthwise-separable block.                                             #
+# --------------------------------------------------------------------------- #
+
+def fig_dws_block():
+    W, H = 640, 440
+    d = Diagram(W, H)
+    x, pw = 250, 172
+    y0 = 116
+
+    ops = [("3×3 ", "Depthwise", " Conv, c"), "BatchNorm, ReLU",
+           "1×1 Conv, c′", "BatchNorm, ReLU"]
+    ys = [y0 + i * PILL_STEP for i in range(len(ops))]
+    panel = (x - pw / 2 - 22, y0 - PILL_H / 2 - 23, x + pw / 2 + 22,
+             ys[-1] + PILL_H / 2 + LABEL_BAND)
+    d.container(*panel, fill=ACCENT_TINT)
+    d.stage_label(panel[0] + 14, panel[3] - 9, "Depthwise-separable block")
+
+    y_anchor = panel[1] - 36
+    d.arrow(x, y_anchor + 14, ys[0] - PILL_H / 2)
+    for i, (op, y) in enumerate(zip(ops, ys)):
+        if i == 0:
+            pre, kw, post = op
+            d.novelty(x, y, pre, kw, post, w=pw + 14)
+        else:
+            d.pill(x, y, op, w=pw)
+        if i < len(ops) - 1:
+            d.arrow(x, y + PILL_H / 2, ys[i + 1] - PILL_H / 2)
+    d.arrow(x, ys[-1] + PILL_H / 2, panel[3] + 30)
+    d.anchor(x, y_anchor, "input x")
+    d.shape_note(x - 96, y_anchor + 26, "(c, h×w)", ha="right")
+    d.shape_note(x + 14, panel[3] + 18, "(c′, h×w)")
+
+    d.callout(W - 8, ys[0] + LH / 2, [
+        [("Spatial filtering,", INK, 1)],
+        [("one channel at a time", INK, 1)],
+    ], target=(x + (pw + 14) / 2 + 4, ys[0]), leader_from=(W - 156, ys[0]),
+        ha="right")
+    d.callout(W - 8, ys[2] + LH / 2, [
+        [("Channel mixing,", INK, 1)],
+        [("one position at a time", INK, 1)],
+    ], target=(x + pw / 2 + 4, ys[2]), leader_from=(W - 158, ys[2]),
+        ha="right")
+    d.callout(8, ys[1] + LH / 2, [
+        [("Together: ", INK, 1), ("1/c′ + 1/9", ACCENT, 1)],
+        [("of a dense 3×3 conv", INK, 1)],
+    ], target=(x - pw / 2 - 4, ys[1]), leader_from=(136, ys[1]), ha="left")
+
+    save(d.fig, "arch-dws-block")
+
+
+# --------------------------------------------------------------------------- #
+# 8.7: RepVGG structural re-parameterization (train-time vs inference).       #
+# --------------------------------------------------------------------------- #
+
+def fig_repvgg_reparam():
+    W, H = 760, 480
+    d = Diagram(W, H)
+    y0 = 116
+
+    # ----- left: train-time three-branch block ----------------------------- #
+    xl = 240
+    bx = [110, 240, 370]
+    pw_b = 116
+    y_row = y0 + PILL_STEP / 2          # branch pills (single row, centered)
+    y_plus = y0 + 3 * PILL_STEP
+    y_relu = y_plus + PILL_STEP
+    y_bus_lo = y0 - PILL_H / 2 - 11
+
+    panel = (bx[0] - pw_b / 2 - 18, y_bus_lo - 13, bx[2] + pw_b / 2 + 18,
+             y_relu + PILL_H / 2 + LABEL_BAND)
+    d.container(*panel, fill=ACCENT_TINT)
+    d.stage_label(panel[0] + 14, panel[3] - 9, "Train time")
+
+    y_anchor = panel[1] - 36
+    d.line([(xl, y_anchor + 14, ), (xl, y_bus_lo)])
+    d.line([(bx[0], y_bus_lo), (bx[2], y_bus_lo)])
+    for xb, lab in zip(bx, ["3×3 Conv + BN", "1×1 Conv + BN",
+                            "BatchNorm (identity)"]):
+        d.arrow(xb, y_bus_lo, y_row - PILL_H / 2)
+        d.pill(xb, y_row, lab, w=pw_b)
+        d.line([(xb, y_row + PILL_H / 2), (xb, y_plus - 34)])
+    d.line([(bx[0], y_plus - 34), (bx[2], y_plus - 34)])
+    d.arrow(xl, y_plus - 34, y_plus - PLUS_R)
+    d.op_circle(xl, y_plus)
+    d.arrow(xl, y_plus + PLUS_R, y_relu - PILL_H / 2)
+    d.pill(xl, y_relu, "ReLU", w=pw_b)
+    d.arrow(xl, y_relu + PILL_H / 2, panel[3] + 30)
+    d.anchor(xl, y_anchor, "input x")
+
+    # ----- fuse arrow ------------------------------------------------------- #
+    xm = 490
+    d.ax.annotate(
+        "", xy=(xm + 55, y_plus - 20), xytext=(xm - 35, y_plus - 20),
+        arrowprops=dict(arrowstyle="-|>,head_width=0.42,head_length=0.7",
+                        color=INK, lw=1.8, shrinkA=0, shrinkB=0,
+                        mutation_scale=13), zorder=6)
+    d.rich(xm + 10, y_plus + 2, [("fuse", INK, True)], 12.5, ha="center")
+    d.rich(xm + 10, y_plus - 40, [("weight algebra only,", GRAY_TEXT, False)],
+           10, ha="center", italic=True)
+    d.rich(xm + 10, y_plus - 54, [("identical outputs", GRAY_TEXT, False)],
+           10, ha="center", italic=True)
+
+    # ----- right: inference-time single conv (same rhythm/baseline) --------- #
+    xr = 650
+    panel_r = (xr - pw_b / 2 - 22, y_bus_lo - 13, xr + pw_b / 2 + 22,
+               y_relu + PILL_H / 2 + LABEL_BAND)
+    d.container(*panel_r, fill=ACCENT_TINT)
+    d.stage_label(panel_r[0] + 14, panel_r[3] - 9, "Inference")
+    d.arrow(xr, y_anchor + 14, y_row + PILL_STEP - PILL_H / 2)
+    d.novelty(xr, y_row + PILL_STEP, "", "3×3 Conv", " (fused)", w=pw_b + 8)
+    d.arrow(xr, y_row + PILL_STEP + PILL_H / 2, y_relu - PILL_H / 2)
+    d.pill(xr, y_relu, "ReLU", w=pw_b)
+    d.arrow(xr, y_relu + PILL_H / 2, panel_r[3] + 30)
+    d.anchor(xr, y_anchor, "input x")
+
+    save(d.fig, "arch-repvgg-reparam")
+
+
+# --------------------------------------------------------------------------- #
+# 8.8: AnyNet design space (symbolic stem/body/head).                         #
+# --------------------------------------------------------------------------- #
+
+def fig_anynet():
+    W, H = 680, 760
+    d = Diagram(W, H)
+    x, pw = 260, 170
+    y0 = 116
+
+    groups = [
+        {"ops": ["3×3 Conv, w₀, s2"]},
+        {"ops": ["Residual bottleneck, w₁"], "tint": True, "repeat": "d₁",
+         "label": "Stage 1"},
+        {"ops": ["Residual bottleneck, w₂"], "tint": True, "repeat": "d₂",
+         "label": "Stage 2"},
+        {"ops": ["Residual bottleneck, w₃"], "tint": True, "repeat": "d₃",
+         "label": "Stage 3"},
+        {"ops": ["Residual bottleneck, w₄"], "tint": True, "repeat": "d₄",
+         "label": "Stage 4"},
+        {"ops": ["Global AvgPool", "Dense n"]},
+    ]
+    y_out, outer, lay = _blocked_column(
+        d, x, groups, pw, y0, "AnyNet design space",
+        anchor_text="r×r image")
+
+    xs = x + pw / 2 + BLOCK_PAD + 8
+    def between(a, b):
+        return 0.5 * (lay[a][3] + lay[b][1][0] - PILL_H / 2)
+    d.shape_note(xs, between(0, 1) - 4, "(w₀, r/2 × r/2)")
+    d.shape_note(xs, between(1, 2) - 4, "(w₁, r/4 × r/4)")
+    d.shape_note(xs, between(2, 3) - 4, "(w₂, r/8 × r/8)")
+    d.shape_note(xs, between(3, 4) - 4, "(w₃, r/16 × r/16)")
+    d.shape_note(xs, between(4, 5) - 4, "(w₄, r/32 × r/32)")
+
+    y_s2 = 0.5 * (lay[2][2] + lay[2][3])
+    d.callout(W - 8, y_s2 + LH / 2, [
+        [("The knobs: per-stage depth ", INK, 1), ("d", ACCENT, 1),
+         (",", INK, 1)],
+        [("width ", INK, 1), ("w", ACCENT, 1),
+         (", and the block shape", INK, 1)],
+    ], target=(x + pw / 2 + BLOCK_PAD + 4, y_s2),
+        leader_from=(W - 246, y_s2), ha="right")
+
+    save(d.fig, "arch-anynet")
+
+
 if __name__ == "__main__":
     fig_resnet_vs_convnext_block()
     fig_inception_block()
@@ -693,5 +912,9 @@ if __name__ == "__main__":
     fig_resnext_block()
     fig_densenet_block()
     fig_resnet18()
+    fig_convnext()
+    fig_dws_block()
+    fig_repvgg_reparam()
+    fig_anynet()
     from arch_diagrams import WRITTEN
     print("\n".join(WRITTEN))

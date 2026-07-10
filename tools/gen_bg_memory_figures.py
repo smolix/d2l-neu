@@ -91,10 +91,12 @@ def fig_copyto():
     result = tensor_box(ax, gpu1["cx"], gpu1["b"] + 0.65, r"$Y+Z$", GREEN,
                          w=1.9)
 
-    # the copy: X (GPU 0) -> Z (GPU 1), crossing the device boundary above Y
+    # the copy: X (GPU 0) -> Z (GPU 1), crossing the device boundary above Y;
+    # its label sits centred ABOVE both device boxes, clear of every box
     fl.arrow(ax, (X["r"], X["cy"]), (Z["l"], Z["cy"]), color=BLUE, lw=2.2)
-    fl.vlabel(ax, ((X["r"] + Z["l"]) / 2, X["cy"] + 0.40),
-              r"$Z = X.\mathrm{to}(\mathrm{gpu}(1))$", color=BLUE, fontsize=12)
+    fl.vlabel(ax, (6.45, 5.05),
+              r"$Z = X.\mathrm{to}(\mathrm{gpu}(1))$", color=BLUE,
+              fontsize=12.5)
 
     # the compute, entirely inside GPU 1: Y + Z
     fl.arrow(ax, (Y["cx"], Y["b"]), (result["l"] + 0.30, result["t"]),

@@ -91,7 +91,7 @@ def fig_module_tree():
     blocks = [box(ax, bx, 3.85, 2.6, 0.8, GREEN, "block", fontsize=12.5)
               for bx in block_xs]
 
-    layer_offsets = [-0.82, 0.0, 0.82]
+    layer_offsets = [-0.98, 0.0, 0.98]
     layer_rows = []
     for bx in block_xs:
         row = [box(ax, bx + off, 1.5, 0.72, 0.52, BLUE, "layer", fontsize=10)
@@ -136,16 +136,22 @@ def fig_residual_block():
     ax.text((x_split + x_join) / 2, y_main - 0.32, "identity",
             ha="center", va="top", fontsize=12, color=ORANGE)
 
-    # body box, above the main line (wide enough that the operator chain
-    # never spills past the rounded border)
-    body = box(ax, 4.55, 3.35, 4.6, 1.05, BLUE, "body",
-               r"Linear $\to$ ReLU $\to$ Linear", fontsize=13.5, subsize=11.5)
+    # the body path, above the main line: its three layers drawn as separate
+    # boxes (Linear -> ReLU -> Linear) chained by arrows
+    y_body = 3.35
+    lin1 = box(ax, 2.75, y_body, 1.40, 0.85, BLUE, "Linear", fontsize=12.5)
+    relu = box(ax, 4.55, y_body, 1.10, 0.85, GREEN, "ReLU", fontsize=12.5)
+    lin2 = box(ax, 6.35, y_body, 1.40, 0.85, BLUE, "Linear", fontsize=12.5)
+    fl.arrow(ax, lin1["right"], relu["left"], color=BLUE, lw=2.0, mut=13)
+    fl.arrow(ax, relu["right"], lin2["left"], color=BLUE, lw=2.0, mut=13)
+    ax.text(4.55, y_body + 0.72, "body", ha="center", va="center",
+            fontsize=12.5, color=BLUE, fontweight="bold")
 
-    # curved arrows: split -> body (left), body -> join (right)
-    ax.add_patch(FancyArrowPatch((x_split, y_main), body["left"],
+    # curved arrows: split -> first Linear, last Linear -> join
+    ax.add_patch(FancyArrowPatch((x_split, y_main), lin1["left"],
                  connectionstyle="arc3,rad=-0.30", arrowstyle="-|>",
                  mutation_scale=16, color=BLUE, lw=2.2, zorder=3))
-    ax.add_patch(FancyArrowPatch(body["right"], (x_join, y_main),
+    ax.add_patch(FancyArrowPatch(lin2["right"], (x_join, y_main),
                  connectionstyle="arc3,rad=-0.30", arrowstyle="-|>",
                  mutation_scale=16, color=BLUE, lw=2.2, zorder=3))
 
@@ -195,10 +201,10 @@ def fig_weight_tying():
     ax.text(mx, my - 0.34, r"$|V|\times d$", ha="center", va="center",
             fontsize=13, color="black", zorder=4)
 
-    emb = box(ax, 1.75, 5.15, 2.7, 1.05, GREEN, "embedding",
+    emb = box(ax, 1.75, 5.15, 3.1, 1.05, GREEN, "embedding",
               "token id $\\to$ row of $\\mathbf{W}$", fontsize=13.5,
               subsize=11)
-    head = box(ax, 8.25, 5.15, 2.7, 1.05, ORANGE, "output head",
+    head = box(ax, 8.25, 5.15, 3.1, 1.05, ORANGE, "output head",
                r"logits $=h\,\mathbf{W}^\top$", fontsize=13.5, subsize=11)
 
     # both arrows point INTO the matrix: one tensor, two call sites.  Straight

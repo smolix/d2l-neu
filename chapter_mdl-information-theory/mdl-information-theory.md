@@ -31,7 +31,6 @@ We import everything we need once, up front.
 #@tab mxnet
 import math
 from mxnet import autograd, np, npx
-from mxnet.gluon.metric import CrossEntropy
 from mxnet.ndarray import nansum
 npx.set_np()
 ```
@@ -686,7 +685,12 @@ $$
 = -\frac{1}{n} \sum_{i=1}^n \log \hat{y}_{i, y_i},
 $$
 
-in nats, exactly what the built-in classification loss computes.
+in nats, the mathematical quantity a built-in classification loss computes.
+
+This display is the definition. Training code should supply logits to a
+from-logits loss, which performs the log-softmax without first rounding small
+probabilities to zero; :numref:`subsec_mdl-stable-softmax` derives that
+implementation.
 
 ```{.python .input #information-theory-formal-definition-1}
 #@tab mxnet
@@ -757,47 +761,42 @@ preds = jnp.array([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
 cross_entropy(preds, labels)
 ```
 
-The built-in loss computes the same number. One subtlety: the built-ins
-typically expect *logits* $\mathbf{z}$
-rather than probabilities, applying softmax internally. Feeding
-$\mathbf{z} = \log \mathbf{q}$ for an already-normalized $\mathbf{q}$ is
-legitimate because softmax inverts the log exactly there:
+The built-in loss computes the same number from *logits* $\mathbf{z}$,
+applying log-softmax internally. We construct $\mathbf{z}=\log\mathbf{q}$
+only because the small example above starts from normalized probabilities;
+in a model, $\mathbf{z}$ is the raw output of the final layer. Softmax inverts
+the log for a normalized $\mathbf{q}$:
 $\mathrm{softmax}(\log \mathbf{q})_j = e^{\log q_j} / \sum_i e^{\log q_i}
 = q_j / \sum_i q_i = q_j$. (More generally, softmax is invariant to adding a
 constant to all logits, and $\log$ of a normalized vector is one valid logit
-vector among many.) The built-in loss consumes probabilities,
-log-probabilities, or logits, depending on the library; the code comments say
-which.
+vector among many.) Passing probabilities to a loss intended for logits
+applies softmax twice; applying `log` to a computed softmax can underflow.
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab mxnet
-nll_loss = CrossEntropy()  # operates on predicted probabilities directly
-nll_loss.update([labels], [preds])
-nll_loss.get()
+logits = np.log(preds)
+log_probs = npx.log_softmax(logits, axis=1)
+-log_probs[np.arange(len(labels)), labels].mean()
 ```
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab pytorch
-# `NLLLoss` consumes log-probabilities; `nn.CrossEntropyLoss` would instead
-# take logits and apply log-softmax itself.
-nll_loss = torch.nn.NLLLoss()
-nll_loss(torch.log(preds), labels)
+logits = torch.log(preds)
+torch.nn.CrossEntropyLoss()(logits, labels)
 ```
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab tensorflow
-# With `from_logits=False` the loss consumes probabilities directly --
-# no softmax round-trip needed.
-loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-loss_fn(labels, preds).numpy()
+logits = tf.math.log(preds)
+loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+loss_fn(labels, logits).numpy()
 ```
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab jax
-# optax expects logits; log-probabilities are valid logits because
-# softmax(log q) = q for a normalized q.
+logits = jnp.log(preds)
 optax.softmax_cross_entropy_with_integer_labels(
-    jnp.log(preds), labels).mean()
+    logits, labels).mean()
 ```
 
 The loss also has a decision-theoretic pedigree. A
@@ -815,17 +814,13 @@ uniquely at $\mathbf{q} = \mathbf{p}$. Strict propriety of the log score *is*
 Gibbs' inequality restated (Exercise 6 asks you to write out the
 argument).
 
-Why insist on *strict* propriety? Because it means the loss rewards more than
-the right argmax: any systematic distortion of the reported
-probabilities (overconfidence, hedging) leaves expected loss on the table,
-so a cross-entropy-trained classifier is *incentivized* to output the true
-conditional probabilities $p(y \mid \mathbf{x})$ themselves. That is the
-principled reason such classifiers can be *calibrated* (predicted
-probabilities matching observed frequencies) at all; when
-miscalibration shows up in practice, the objective is not the culprit (the
-overconfidence that label smoothing combats below is a pathology of the
-one-hot *target*, not of the score). Nor is the log score the only strictly
-proper rule: the *Brier score*
+Why insist on *strict* propriety? At population risk, over a model class that
+can represent the true conditional distribution, the log score is minimized
+by $p(y \mid \mathbf{x})$ itself. That is the basis for calibration
+(predicted probabilities matching observed frequencies). Finite data, a
+restricted model class, regularization, imperfect optimization, and
+distribution shift can still produce miscalibration. Nor is the log score the
+only strictly proper rule: the *Brier score*
 $S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}[j = y])^2$ penalizes the whole
 vector by squared error, and its expected penalty exceeds the honest
 reporter's by $\|\mathbf{q} - \mathbf{p}\|^2$: a squared-distance waste term
@@ -1043,15 +1038,15 @@ the surprisal floor.
 Notice what the construction never required: the model need not be i.i.d.
 Any conditional next-symbol distribution $q(\cdot \mid x_{<i})$ works,
 because encoder and decoder both condition on the already-processed prefix.
-An autoregressive language model is exactly such a $q$, so a language model
-*is* a lossless compressor, with no further engineering: its per-token
-cross-entropy on a document, times the token count (divided by $\ln 2$ for
-bits), *is* the compressed file size, to within two bits.
-:citet:`Deletang.Ruoss.Duquenne.ea.2023` do exactly this, driving an
-arithmetic coder with an LLM's next-token probabilities and compressing text
-better than gzip. The point runs both ways: training a model to
-minimize cross-entropy just *is* training it to compress, the precise sense
-in which prediction and compression are the same problem.
+An autoregressive language model therefore supplies the probability model for
+a lossless arithmetic coder. If encoder and decoder share the tokenizer,
+model, and finite-precision probability implementation, the ideal code length
+for a document is its total surprisal plus fewer than two bits. Its token
+cross-entropy times the token count estimates that model code length; a file
+format also carries framing and does not include the cost of distributing the
+model. :citet:`Deletang.Ruoss.Duquenne.ea.2023` drive an arithmetic coder with
+an LLM's next-token probabilities and compress text better than gzip. Thus
+minimizing cross-entropy improves the code length available to such a coder.
 
 How well can any compressor do on a real source such as English text? For a
 *stationary* source $X_1, X_2, \ldots$ (one whose statistics do not drift
@@ -1371,17 +1366,18 @@ mutual information, the quantity behind contrastive representation learning
   minimizing KL, and on empirical data it is maximum likelihood
   (:numref:`subsec_mdl-nll-crossentropy`).
 * As a scoring rule, the cross-entropy loss (the log score) is *strictly
-  proper*: reporting the true conditional probabilities is the unique
-  optimum, which is why cross-entropy-trained classifiers can be calibrated
-  in principle.
+  proper*: at population risk, a model class containing the truth is uniquely
+  minimized by the true conditional probabilities. Finite data, restricted
+  models, and distribution shift can still produce miscalibration.
 * In the coding view, entropy is the optimal expected code length (Kraft
   inequality + Shannon code) and KL is the extra bits per symbol from coding
   with the wrong distribution.
-* Arithmetic coding removes the symbol code's per-symbol rounding: a whole
-  message costs its total surprisal plus at most two bits, so an
-  autoregressive model is a lossless compressor and its cross-entropy times
-  the token count is a compressed file size. The entropy rate is the
-  per-symbol floor for any such code.
+* Arithmetic coding removes the symbol code's per-symbol rounding: with a
+  shared model and coder, a whole message costs its total surprisal plus at
+  most two bits. An autoregressive model supplies the probabilities for that
+  lossless code; its cross-entropy times the token count is the model code
+  length before file-format overhead. The entropy rate is the per-symbol floor
+  for any such code.
 * Perplexity $\textrm{PPL} = \exp(\textrm{CE})$ is the exponentiated
   per-token cross-entropy of a language model: an effective branching factor,
   independent of the log base. Empirically it falls as a power law in
@@ -1651,8 +1647,9 @@ which Gibbs minimizes uniquely at $\mathbf q = \mathbf p$.
 . . .
 
 ::: {.d2l-note}
-Strict propriety is why cross-entropy *incentivizes calibration*: hedging or
-overconfidence leaves expected loss on the table. The Brier score
+At population risk, strict propriety makes the true conditional distribution
+the unique optimum. Finite data, a restricted model class, or distribution
+shift can still leave a classifier miscalibrated. The Brier score
 $\sum_j (q_j - \mathbf 1[j{=}y])^2$ is also strictly proper, with the same
 optimum and a bounded penalty on confident errors.
 :::
@@ -1719,9 +1716,10 @@ code, $13$.
 [Prediction = compression]{.kicker}
 
 Nothing required i.i.d.: *any* next-symbol model $q(\cdot\mid x_{<i})$ drives
-the coder. A document's cross-entropy $\times$ its length **is** its compressed
-size, to within two bits; an LLM plus an arithmetic coder out-compresses gzip
-(Delétang et al., 2023).
+the coder. With a shared tokenizer, model, and finite-precision coder, a
+document's total surprisal costs fewer than two extra bits; file framing and
+model distribution are separate costs. An LLM plus an arithmetic coder
+out-compresses gzip (Delétang et al., 2023).
 
 . . .
 

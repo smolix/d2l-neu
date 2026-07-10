@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, np.float32(0.50125206))"
+          "text": "(0.5, np.float32(0.4999236))"
         }
       ]
     },
@@ -90,7 +90,7 @@
       ]
     },
     "information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification": {
-      "code_fingerprint": "sha256:0fecb2e0b05ac9aa4fc5957666e19836cc6c100b820d2a58f1b1108eff644fa8",
+      "code_fingerprint": "sha256:86e0ea066fe9054a42b72033b1f68b235c95a26f10f3acee4575e99b6eaf20b4",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "information-theory-coding": {
-      "code_fingerprint": "sha256:3403ff7ac9a40e87c8c4504758ac0a99a3c3f6ec876516b2036fed7e432c965b",
+      "code_fingerprint": "sha256:0687ad0407e51299ca6caec3d76a85d9e4321fe4f57dfb4bc87a82e25af3eb5c",
       "kind": "text",
       "outputs": [
         {
@@ -111,7 +111,7 @@
       ]
     },
     "mdl-information-theory-from-symbol-codes-to-arithmetic-coding": {
-      "code_fingerprint": "sha256:4d723a3f316f92174210a5a175ec80cd12a0afd429abe3804ae5e1c33c6a0800",
+      "code_fingerprint": "sha256:978e4450cb9a0e6d36d1734eda5bceb66be77b0b421cad612a609cb0cd646fa5",
       "kind": "text",
       "outputs": [
         {
@@ -122,7 +122,7 @@
       ]
     },
     "information-theory-perplexity": {
-      "code_fingerprint": "sha256:dcc6e1cc96b024290f12a17275d8e781149919b43a3e7e59902c736361d19105",
+      "code_fingerprint": "sha256:c5ac86233b882eb8fb742c7538dbda8bb15fe96cd970575e90bcb3151a3e4935",
       "kind": "text",
       "outputs": [
         {
@@ -133,7 +133,7 @@
       ]
     },
     "information-theory-label-smoothing": {
-      "code_fingerprint": "sha256:83f6ed46f475912f632b7db5b3316b57fa53ced647f8ebcf8857caef6cfdb3db",
+      "code_fingerprint": "sha256:6a717d79332e8b819bfbd89ec5503a0d8da7dd8478292b9a8bfc8a9d387a4771",
       "kind": "text",
       "outputs": [
         {
@@ -144,13 +144,13 @@
       ]
     },
     "information-theory-distillation": {
-      "code_fingerprint": "sha256:379a3d4e17d317231490ba0a2ba7865d6d52f92550eba975a83842573aefdb57",
+      "code_fingerprint": "sha256:874396bb18a5f09af58bb7dcb5b004b1877e167622690a2445bc737574be3632",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T= 1.0  |autograd - closed| = 0.0e+00  T^2 grad = [-0.462, 0.441, 0.022]\nT= 2.0  |autograd - closed| = 1.5e-08  T^2 grad = [-0.672, 0.549, 0.123]\nT= 5.0  |autograd - closed| = 1.9e-09  T^2 grad = [-0.741, 0.478, 0.263]\nT=10.0  |autograd - closed| = 1.2e-09  T^2 grad = [-0.719, 0.413, 0.306]\n"
+          "text": "T= 1.0  |autograd - closed| = 0.0e+00  T^2 grad = [-0.462, 0.441, 0.022]\nT= 2.0  |autograd - closed| = 1.5e-08  T^2 grad = [-0.672, 0.549, 0.123]\nT= 5.0  |autograd - closed| = 2.8e-09  T^2 grad = [-0.741, 0.478, 0.263]\nT=10.0  |autograd - closed| = 1.2e-09  T^2 grad = [-0.719, 0.413, 0.306]\n"
         }
       ]
     }

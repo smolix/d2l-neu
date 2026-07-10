@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, 0.5002250075340271)"
+          "text": "(0.5, 0.5004388689994812)"
         }
       ]
     },
@@ -90,7 +90,7 @@
       ]
     },
     "information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification": {
-      "code_fingerprint": "sha256:6fc74224439be6f22dcfd1ba652e092295657447896214926d133aab6eb60de9",
+      "code_fingerprint": "sha256:6c16c9f47c23b9b16134a480eb87c4d203fbb67cf885f2f4c438b0aed708fa7f",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "information-theory-coding": {
-      "code_fingerprint": "sha256:3aec82ee14e84385a59d9780ba77e25c3958a46d0f103e35aa6eec87bba0aedd",
+      "code_fingerprint": "sha256:039c8c9c475cf8f1767f7ffe0edc0cfba61686be86005258b42e606bd341a7f7",
       "kind": "text",
       "outputs": [
         {
@@ -111,7 +111,7 @@
       ]
     },
     "mdl-information-theory-from-symbol-codes-to-arithmetic-coding": {
-      "code_fingerprint": "sha256:2a0c08c94b274fe2a15be70854d9dd6d049ae270342218dac0883dc091f21358",
+      "code_fingerprint": "sha256:0f60d2a7d51757992a769fa5c85203ce67a80b0987539a11b0135a6d3b959cf5",
       "kind": "text",
       "outputs": [
         {
@@ -122,7 +122,7 @@
       ]
     },
     "information-theory-perplexity": {
-      "code_fingerprint": "sha256:cd94e455c606f0b9717c6aca79f1f4823851708181823aee89d7f06922986668",
+      "code_fingerprint": "sha256:f5a5d7d10926d9998afbf84b1017cd846a189c9fc4e6a151c0b5244bc3b104c3",
       "kind": "text",
       "outputs": [
         {
@@ -133,7 +133,7 @@
       ]
     },
     "information-theory-label-smoothing": {
-      "code_fingerprint": "sha256:87fe0b0b8806c44dbd3206c5caf0572b51a83d54bf0fac138b6eee277a0f8f22",
+      "code_fingerprint": "sha256:0bc375e902f3f41153f2ced8e4f5055f5ab47b70947aab952a26836d0b39cf24",
       "kind": "text",
       "outputs": [
         {
@@ -144,7 +144,7 @@
       ]
     },
     "information-theory-distillation": {
-      "code_fingerprint": "sha256:34908943fb0a48befbc46096bbb4dff25e8b9862c2ad385498902637941ca612",
+      "code_fingerprint": "sha256:a53a7b62933187165159651a7f1a594dc8fb970d43a3299b721efbfc0305dce5",
       "kind": "text",
       "outputs": [
         {

@@ -135,10 +135,10 @@ def to_bf16(x):
     bits = (bits + 0x7FFF + ((bits >> 16) & 1)) & 0xFFFF0000
     return bits.astype(np.uint32).view(np.float32)
 
-eps_bf16 = float(to_bf16(1.0 + 2.0**-7) - 1.0)   # emulated: mxnet has no bf16
+eps_bf16 = (to_bf16(1.0 + 2.0**-7) - 1.0).item()  # emulated: mxnet has no bf16
 print(f'{"bfloat16":>10} {eps_bf16:12.3e}   (exponent range = float32)')
 print('bfloat16 eps equals 2^-7:', eps_bf16 == 2.0**-7,
-      ' and 1 + 2^-8 rounds back to 1:', float(to_bf16(1.0 + 2.0**-8)) == 1.0)
+      ' and 1 + 2^-8 rounds back to 1:', to_bf16(1.0 + 2.0**-8).item() == 1.0)
 ```
 
 ```{.python .input #numerical-stability-conditioning-finfo}

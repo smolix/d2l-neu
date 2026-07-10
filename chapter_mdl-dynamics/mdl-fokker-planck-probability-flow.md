@@ -585,9 +585,8 @@ by uniqueness (:numref:`sec_mdl-odes-solvers`), can never cross another
 one. The two processes transport the same crowd in entirely different
 ways.
 
-Second, the ODE makes diffusion models *invertible* and their likelihood
-*exact*. A deterministic flow is eligible for the along-trajectory identity of
-the previous subsection, so integrating it from $0$ to $T$,
+Second, the ODE is invertible under the hypotheses above and has an exact
+along-trajectory likelihood identity. Integrating it from $0$ to $T$ gives
 
 $$
 \log p_0(\mathbf{x}(0)) = \log p_T(\mathbf{x}(T)) + \int_0^T \nabla \cdot \mathbf{v}_t(\mathbf{x}(t))\; dt,
@@ -596,8 +595,11 @@ $$
 
 which is the instantaneous change of variables of
 :numref:`sec_mdl-continuous-normalizing-flows` applied to the
-probability-flow field: this is exactly how diffusion models report exact
-log-likelihoods :cite:`song2021score`.
+probability-flow field. With the exact score, exact divergence, and exact ODE
+integration, it evaluates the model likelihood exactly. A learned score,
+Hutchinson trace estimate, or numerical solver introduces approximation;
+this is the route used to estimate diffusion-model likelihoods
+:cite:`song2021score`.
 
 Third, look at :eqref:`eq_mdl-dyn-pf-ode`. We chose $\mathbf{f}$, we chose
 $g$. The *only* quantity in the probability-flow velocity that we do not know
@@ -1302,7 +1304,8 @@ $$\frac{d\mathbf x}{dt} = \mathbf f(\mathbf x,t) - \tfrac12 g(t)^2\,\nabla\log p
 
 ::: {.d2l-note .rule}
 This ODE has the **same time-marginals** as the SDE, by uniqueness of the
-linear transport PDE. It is smooth, invertible, and exactly likelihood-able.
+linear transport PDE. With the exact score and divergence, it is smooth,
+invertible, and has an exact likelihood identity.
 :::
 :::
 
@@ -1409,7 +1412,8 @@ swap in a trained network and this loop **is** a diffusion model:
 ::: {.col}
 - Fokker–Planck, $\partial_t p = -\nabla\cdot(\mathbf f p)+\tfrac12 g^2\Delta p$: drift transports, diffusion smooths.
 - Transport identity (plus sign!) makes it a continuity equation.
-- PF-ODE: same marginals as the SDE, deterministic, exactly likelihood-able.
+- PF-ODE: same marginals as the SDE, deterministic, exact likelihood identity
+  for the exact score and divergence.
 :::
 
 ::: {.col}

@@ -9,12 +9,12 @@
   },
   "cells": {
     "information-theory-imports": {
-      "code_fingerprint": "sha256:a73b476df428a9b2e6cc201bd81cf01518b8334d3fdfbffccd5d110e058be3c4",
+      "code_fingerprint": "sha256:41f5a1cd18499e548e8963fdec77f80197735f28e60512d8286f1a247209d3c6",
       "kind": "text",
       "outputs": []
     },
     "information-theory-self-information": {
-      "code_fingerprint": "sha256:ec6bd1f8322957c3004ea529707dc24792699b56c5c1716943a2e6c79a047157",
+      "code_fingerprint": "sha256:2081ea328f31ac768f83cc3d125092b707beb71d7d1ff24e5f253c95a7e9c021",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "information-theory-definition": {
-      "code_fingerprint": "sha256:445a4042deef7f398ed059122660fd839891aeebfdcdcb0922b842bc0c00e384",
+      "code_fingerprint": "sha256:cd772004ad13fc4c62977a832cf33eefaa533f3586021bc37b0bbc011c585910",
       "kind": "text",
       "outputs": [
         {
@@ -34,27 +34,27 @@
       ]
     },
     "information-theory-definition-2": {
-      "code_fingerprint": "sha256:140654f8bafdb0d4f7d2d2b020ecfeeaa6d4f0b318e8f0f9b871a361c9f0bd5a",
+      "code_fingerprint": "sha256:9bc38a5a72e23aebe7483ea897a787ca181703ed3f8c6fc0aa5ddd5f7b656e73",
       "kind": "text",
       "outputs": []
     },
     "information-theory-example-1": {
-      "code_fingerprint": "sha256:13043962e43bde083510417b322e3be252c28014c5a656796e6bbd079910dcbb",
+      "code_fingerprint": "sha256:ee8fc23b47140a72273da356a1017d44e4934204e5fc671bb2c3e66e1e4b72cc",
       "kind": "text",
       "outputs": []
     },
     "information-theory-example-2": {
-      "code_fingerprint": "sha256:4b0656ec844a4e36bf87f7890ed761772f27bb1f5026426a1a2a540846fba654",
+      "code_fingerprint": "sha256:41679a130f441c979d262bcf2f2b5ced5f54967d33d8e8b4ac9cd2130f19cbdb",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, array(0.49874008))"
+          "text": "(0.5, array(0.4992108))"
         }
       ]
     },
     "information-theory-example-3": {
-      "code_fingerprint": "sha256:089ed5dd299fda88bcf4da657135ec7a8296fc269ad88af4a2bf91f3ada4ea01",
+      "code_fingerprint": "sha256:1c8b3280906e461fbd511ff73ed5d6e8d0bee5366b9bfe5674c20e64d0770a6e",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +64,7 @@
       ]
     },
     "information-theory-kl-categorical": {
-      "code_fingerprint": "sha256:f454f9152ad95147c7187268e4e6327b8f9b70af80a19c0ef0a919c23e64768f",
+      "code_fingerprint": "sha256:aee252e81c9a937ac2d3b2db2d853a41b5df776235b6c2adb0d441948b77bf0e",
       "kind": "text",
       "outputs": [
         {
@@ -75,12 +75,12 @@
       ]
     },
     "information-theory-formal-definition-1": {
-      "code_fingerprint": "sha256:a00cd0cb0f4893b4328bcca8cb6276d1810622451752186d0ca420a12647b012",
+      "code_fingerprint": "sha256:898fa077769e9ad0b53f57142b4dcad8ebb950c7e4e2541b9f82531c9171c45b",
       "kind": "text",
       "outputs": []
     },
     "information-theory-formal-definition-2": {
-      "code_fingerprint": "sha256:5e0b4835c25b52125b7e14c749bf2d8c77277934f7187691f93d519b98434dde",
+      "code_fingerprint": "sha256:69cc56521279cc4107a83ab80440cd9a56cb6fbf93394597a4ad9a0b01a7bbf4",
       "kind": "text",
       "outputs": [
         {
@@ -90,17 +90,17 @@
       ]
     },
     "information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification": {
-      "code_fingerprint": "sha256:f95a64aff3b072f470c70f01e4175111ee4a79cf927b846bca830baa138f9c5f",
+      "code_fingerprint": "sha256:bee52d1798587b5893f718b2a20fc73eaac22af64a6fabb34a0d6163d164b7be",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "('cross-entropy', 0.9485599994659424)"
+          "text": "array(0.94856)"
         }
       ]
     },
     "information-theory-coding": {
-      "code_fingerprint": "sha256:06bdd4e99cc37ae59ba5172d054e74263615373a70cc8edc57769dea4f1f033e",
+      "code_fingerprint": "sha256:d6177f79b492c9f0243002f13af5795ad40b7f02c4381985ce01f353a0480f7c",
       "kind": "text",
       "outputs": [
         {
@@ -111,7 +111,7 @@
       ]
     },
     "mdl-information-theory-from-symbol-codes-to-arithmetic-coding": {
-      "code_fingerprint": "sha256:41368f8f5e3affacc368c69805c0592ed18d988b6bce4400b075b7f7b65994ad",
+      "code_fingerprint": "sha256:2c041bc4daae15fae0eb4acad0c0f504dcb0dc5d569addc1146bd5d26495dad7",
       "kind": "text",
       "outputs": [
         {
@@ -122,7 +122,7 @@
       ]
     },
     "information-theory-perplexity": {
-      "code_fingerprint": "sha256:9fed8cd5a2f515610ea4012dc61225c565b530c02f838bd8334ebabcdd4784c3",
+      "code_fingerprint": "sha256:ca492f006cf011196e8b4438cc2451fb65f286f38be3b5d851afa45946ce8fa8",
       "kind": "text",
       "outputs": [
         {
@@ -133,7 +133,7 @@
       ]
     },
     "information-theory-label-smoothing": {
-      "code_fingerprint": "sha256:115b339ccd55795719129e1c30d411f8f949af3bd05c9b5391d3b174f9954a00",
+      "code_fingerprint": "sha256:53e74f4bb913a55aa2f765e80a4f52c984001bd5239aac0edc628aab909a62ac",
       "kind": "text",
       "outputs": [
         {
@@ -144,13 +144,13 @@
       ]
     },
     "information-theory-distillation": {
-      "code_fingerprint": "sha256:3d6bda6a9ba44a4f484d17a5978098f35e941bf57b789d1a11a171ce77149d01",
+      "code_fingerprint": "sha256:0b7f85cc35475aca96fea22f529cebfe7f922a664d6139ba403e67d003e72631",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T= 1.0  |autograd - closed| = 0.0e+00  T^2 grad = [-0.462, 0.441, 0.022]\nT= 2.0  |autograd - closed| = 3.0e-08  T^2 grad = [-0.672, 0.549, 0.123]\nT= 5.0  |autograd - closed| = 2.8e-09  T^2 grad = [-0.741, 0.478, 0.263]\nT=10.0  |autograd - closed| = 9.3e-10  T^2 grad = [-0.719, 0.413, 0.306]\n"
+          "text": "T= 1.0  |autograd - closed| = 3.0e-08  T^2 grad = [-0.462, 0.441, 0.022]\nT= 2.0  |autograd - closed| = 1.5e-08  T^2 grad = [-0.672, 0.549, 0.123]\nT= 5.0  |autograd - closed| = 3.7e-09  T^2 grad = [-0.741, 0.478, 0.263]\nT=10.0  |autograd - closed| = 1.4e-09  T^2 grad = [-0.719, 0.413, 0.306]\n"
         }
       ]
     }

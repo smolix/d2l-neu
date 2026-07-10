@@ -1253,8 +1253,12 @@ The derivative of the softplus is the sigmoid, and it lands exactly on the
 Bernoulli mean $p$. This is no coincidence: the sigmoid and softmax links that
 deep-learning classifiers use are *precisely* the maps from natural parameters to
 means in the Bernoulli and categorical families, and the convexity of $A$ is why
-their losses are well behaved. The exponential family is the structural reason
-the standard losses of deep learning behave as well as they do
+their negative log-likelihoods are convex in the natural parameters. If those
+parameters are affine functions of fixed features, this gives a convex
+optimization problem. A neural network makes the natural parameters nonlinear
+functions of its weights, so the same loss is not generally convex in the
+weights. The exponential family still supplies the likelihood and the link
+functions used by standard deep-learning losses
 :cite:`Bishop.2006,Koller.Friedman.2009`.
 
 ## Conjugate Priors
@@ -1445,8 +1449,9 @@ object whose mean and covariance the table states.
   maximum-entropy family (entropy taken relative to the base measure $h$) for a
   fixed set of expected sufficient statistics. Its
   log-partition $A$ generates moments: $\nabla A(\boldsymbol\eta)=\mathbb E[T(\mathbf x)]$,
-  and $A$ is convex, which is exactly why exponential-family maximum likelihood (the
-  basis of the standard deep-learning losses) is a convex problem.
+  and $A$ is convex. Thus its negative log-likelihood is convex in the natural
+  parameters; with an affine parameter map this yields a convex generalized
+  linear model, whereas a neural-network parameterization remains nonconvex.
 * Every exponential-family likelihood has a **conjugate prior**: the **Beta** for the
   Bernoulli/binomial, the **Gamma** for the Poisson, the **Dirichlet** for the
   categorical/multinomial. Bayesian updating then just adds the data's sufficient
@@ -1797,9 +1802,11 @@ all fit.
 
 ::: {.d2l-note}
 Two exclusions, two reasons: the **uniforms** stay outside because their
-support moves with the parameters; **Cauchy and Student-$t$** because no
-finite-dimensional sufficient statistic exists, which costs them a
-conjugate prior and a convex NLL, both exponential-family privileges.
+support moves with the parameters; **Cauchy and Student-$t$** do not admit a
+fixed finite-dimensional sufficient statistic for their usual unknown
+location-and-scale families. They therefore lack the standard
+finite-dimensional conjugate update, and their negative log-likelihoods are
+not generally convex.
 :::
 :::
 
@@ -1899,8 +1906,8 @@ $(\boldsymbol\nu,\kappa)$.
 :::
 
 ::: {.col}
-- The exponential family unifies them; $\nabla A=\mathbb E[T]$, $A$ convex → convex MLE losses.
-- Each member has a conjugate prior (Beta / Gamma / Dirichlet): Bayesian updating is just adding counts.
+- The exponential family unifies them; $\nabla A=\mathbb E[T]$, and its NLL is convex in natural parameters.
+- The usual conjugate families (Beta / Gamma / Dirichlet) update by adding sufficient statistics.
 - The named shapes are the vocabulary; maximum likelihood is the grammar (next).
 :::
 :::

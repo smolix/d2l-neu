@@ -308,6 +308,75 @@ class Diagram:
 
 
 # --------------------------------------------------------------------------- #
+# Grid primitives for MECHANICS diagrams (the conv-pad.svg family: white     #
+# grids, light-blue shaded cells, thin black strokes, black labels).  These  #
+# deliberately do NOT use the gallery accent colors.                         #
+# --------------------------------------------------------------------------- #
+
+FAMILY_BLUE = "#B2D9FF"     # the family's shaded-cell blue (from conv-pad.svg)
+GRID_LW = 1.2
+GRID_FS = 11.0              # in-cell values and grid titles
+
+
+class MechDiagram(Diagram):
+    """Canvas for mechanics figures; adds the grid family's primitives."""
+
+    def grid(self, x, y, rows, cols, cell=20.0, shaded=(), dashed=False,
+             values=None, title=None, zorder=4):
+        """Family grid with lower-left corner at (x, y).  ``shaded`` holds
+        (row, col) pairs, row 0 at the TOP (reading order).  ``values`` maps
+        (row, col) -> str.  Returns (width, height)."""
+        from matplotlib.patches import Rectangle
+        shaded = set(shaded)
+        style = dict(edgecolor=INK, linewidth=GRID_LW)
+        if dashed:
+            style["linestyle"] = (0, (2.0, 2.0))
+        for r in range(rows):
+            for c in range(cols):
+                cx, cy = x + c * cell, y + (rows - 1 - r) * cell
+                self.ax.add_patch(Rectangle(
+                    (cx, cy), cell, cell, zorder=zorder,
+                    facecolor=FAMILY_BLUE if (r, c) in shaded else "white",
+                    **style))
+                if values and (r, c) in values:
+                    self.ax.text(cx + cell / 2, cy + cell / 2, values[(r, c)],
+                                 fontsize=GRID_FS, color=INK, family=SANS,
+                                 ha="center", va="center", zorder=zorder + 1)
+        if title:
+            self.ax.text(x + cols * cell / 2, y + rows * cell + 10, title,
+                         fontsize=GRID_FS, color=INK, family=SANS,
+                         ha="center", va="bottom", zorder=zorder + 1)
+        return cols * cell, rows * cell
+
+    def grid_stack(self, x, y, n, rows, cols, cell=20.0, offset=7.0,
+                   shaded_front=(), shade_backs=False, title=None, zorder=4):
+        """A stack of ``n`` channel grids, drawn back-to-front with the front
+        grid's lower-left at (x, y); deeper channels offset up-right (the
+        conv-multi-in.svg convention).  ``shaded_front`` shades cells of the
+        FRONT grid only; ``shade_backs`` shades every cell of the back grids
+        (for kernels that are active through the whole depth).
+        Returns (total_width, total_height)."""
+        allc = {(r, c) for r in range(rows) for c in range(cols)}
+        for i in range(n - 1, 0, -1):
+            self.grid(x + i * offset, y + i * offset, rows, cols, cell,
+                      shaded=allc if shade_backs else (),
+                      zorder=zorder - 2 * i)
+        self.grid(x, y, rows, cols, cell, shaded=shaded_front, zorder=zorder)
+        tw = cols * cell + (n - 1) * offset
+        th = rows * cell + (n - 1) * offset
+        if title:
+            self.ax.text(x + tw / 2, y + th + 10, title,
+                         fontsize=GRID_FS, color=INK, family=SANS,
+                         ha="center", va="bottom", zorder=zorder + 1)
+        return tw, th
+
+    def op(self, x, y, symbol, fs=17.0):
+        """Family operator (*, =, +) between panels, centered at (x, y)."""
+        self.ax.text(x, y, symbol, fontsize=fs, color=INK, family=SANS,
+                     fontweight="bold", ha="center", va="center", zorder=8)
+
+
+# --------------------------------------------------------------------------- #
 # Spine layout helper: evenly spaced node y-positions.                        #
 # --------------------------------------------------------------------------- #
 

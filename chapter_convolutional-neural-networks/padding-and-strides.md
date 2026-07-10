@@ -16,9 +16,10 @@ the output shape will be $(n_\textrm{h}-k_\textrm{h}+1) \times (n_\textrm{w}-k_\
 we can only shift the convolution kernel so far until it runs out
 of pixels to apply the convolution to. 
 
-In the following we will explore a number of techniques, 
-including padding and strided convolutions,
-that offer more control over the size of the output. 
+In the following we will explore a number of techniques,
+including padding, strided convolutions, and dilation,
+that offer more control over the size of the output
+and over the area of the input that each output element sees. 
 As motivation, note that since kernels generally
 have width and height greater than $1$,
 after applying many successive convolutions,
@@ -344,13 +345,106 @@ conv2d = nn.Conv(1, kernel_size=(3, 5), padding=(0, 1), strides=(3, 4))
 comp_conv2d(conv2d, X).shape
 ```
 
+## Dilation
+:label:`sec_dilation`
+
+Padding and stride change where the kernel is applied. A third modification
+changes the kernel's footprint itself: a *dilated convolution*
+:cite:`yu2016dilated` places the kernel taps $d$ pixels apart
+instead of at adjacent positions,
+where $d$ is called the *dilation* (or *dilation rate*).
+A $k_\textrm{h} \times k_\textrm{w}$ kernel with dilation $d$
+still has $k_\textrm{h} k_\textrm{w}$ weights,
+but along each axis the taps now span a window of
+
+$$k' = k + (k-1)(d-1) = d(k-1)+1$$
+
+pixels, the *effective kernel size*.
+Setting $d=1$ recovers the ordinary convolution.
+:numref:`fig_conv_dilation` shows a $3 \times 3$ kernel at dilations 1 and 2:
+at dilation 2 the nine taps spread over a $5 \times 5$ footprint,
+skipping every other pixel,
+while the cost of applying the kernel is unchanged.
+
+![A 3×3 kernel at dilation 1 and dilation 2: the nine taps spread over a 5×5 footprint while the cost stays fixed.](../img/arch-conv-dilation.svg)
+:label:`fig_conv_dilation`
+
+For output shapes, a dilated kernel behaves exactly like a dense kernel
+of its effective size. Substituting $k'$ into the strided formula above
+gives the general form covering padding, stride, and dilation at once:
+
+$$\lfloor(n_\textrm{h}-d_\textrm{h}(k_\textrm{h}-1)+p_\textrm{h}+s_\textrm{h}-1)/s_\textrm{h}\rfloor \times \lfloor(n_\textrm{w}-d_\textrm{w}(k_\textrm{w}-1)+p_\textrm{w}+s_\textrm{w}-1)/s_\textrm{w}\rfloor.$$
+
+With $d_\textrm{h}=d_\textrm{w}=1$ this reduces to the strided formula,
+and with unit stride and no padding to the $(n-k+1)$ rule we started from.
+
+The point of dilation is receptive-field growth on a budget.
+In the receptive-field formula :eqref:`eq_receptive_field`,
+each layer contributes $k'_i - 1 = d_i(k_i - 1)$ at stride 1,
+so doubling the dilation at every layer,
+$d_i = 1, 2, 4, \ldots, 2^{L-1}$ for $3 \times 3$ kernels,
+yields a receptive field of side $2^{L+1}-1$:
+it grows exponentially with depth
+while every layer costs the same nine multiplications per output.
+The alternative route to a large receptive field, striding,
+pays for it by shrinking the output.
+This makes dilation the standard tool for *dense prediction* tasks
+such as semantic segmentation,
+where every pixel needs wide context
+but the output must keep the input's resolution;
+we will meet it again in the fully convolutional networks
+of :numref:`sec_fcn`.
+
+Let's verify the effective-size claim numerically:
+on our $8 \times 8$ input,
+a $3 \times 3$ kernel at dilation 2
+produces the same $4 \times 4$ output
+as a dense $5 \times 5$ kernel.
+
+```{.python .input #padding-and-strides-dilation}
+%%tab mxnet
+# Dilation 2 gives the 3x3 kernel a 5x5 footprint, so both convolutions
+# shrink the 8x8 input to 4x4
+conv2d = nn.Conv2D(1, kernel_size=3, dilation=2)
+conv5 = nn.Conv2D(1, kernel_size=5)
+comp_conv2d(conv2d, X).shape, comp_conv2d(conv5, X).shape
+```
+
+```{.python .input #padding-and-strides-dilation}
+%%tab pytorch
+# Dilation 2 gives the 3x3 kernel a 5x5 footprint, so both convolutions
+# shrink the 8x8 input to 4x4
+conv2d = nn.LazyConv2d(1, kernel_size=3, dilation=2)
+conv5 = nn.LazyConv2d(1, kernel_size=5)
+comp_conv2d(conv2d, X).shape, comp_conv2d(conv5, X).shape
+```
+
+```{.python .input #padding-and-strides-dilation}
+%%tab tensorflow
+# Dilation 2 gives the 3x3 kernel a 5x5 footprint, so both convolutions
+# shrink the 8x8 input to 4x4
+conv2d = tf.keras.layers.Conv2D(1, kernel_size=3, padding='valid',
+                                dilation_rate=2)
+conv5 = tf.keras.layers.Conv2D(1, kernel_size=5, padding='valid')
+comp_conv2d(conv2d, X).shape, comp_conv2d(conv5, X).shape
+```
+
+```{.python .input #padding-and-strides-dilation}
+%%tab jax
+# Dilation 2 gives the 3x3 kernel a 5x5 footprint, so both convolutions
+# shrink the 8x8 input to 4x4
+conv2d = nn.Conv(1, kernel_size=(3, 3), padding='VALID', kernel_dilation=2)
+conv5 = nn.Conv(1, kernel_size=(5, 5), padding='VALID')
+comp_conv2d(conv2d, X).shape, comp_conv2d(conv5, X).shape
+```
+
 ## Summary and Discussion
 
 Padding can increase the height and width of the output. This is often used to give the output the same height and width as the input to avoid undesirable shrinkage of the output. Moreover, it ensures that all pixels are used equally frequently. Typically we pick symmetric padding on both sides of the input height and width. In this case we refer to $(p_\textrm{h}, p_\textrm{w})$ padding. Most commonly we set $p_\textrm{h} = p_\textrm{w}$, in which case we simply state that we choose padding $p$. 
 
-A similar convention applies to strides. When the vertical stride $s_\textrm{h}$ and horizontal stride $s_\textrm{w}$ match, we simply talk about stride $s$. The stride can reduce the resolution of the output, for example reducing the height and width of the output to only $1/n$ of the height and width of the input for $n > 1$. By default, the padding is 0 and the stride is 1. 
+A similar convention applies to strides. When the vertical stride $s_\textrm{h}$ and horizontal stride $s_\textrm{w}$ match, we simply talk about stride $s$. The stride can reduce the resolution of the output, for example reducing the height and width of the output to only $1/n$ of the height and width of the input for $n > 1$. The same shorthand covers dilation: when $d_\textrm{h} = d_\textrm{w}$ we speak of dilation $d$. Dilation widens the window each output sees without adding weights or reducing resolution, which is what dense prediction needs. By default, the padding is 0 and the stride and dilation are 1.
 
-So far all padding that we discussed simply extended images with zeros. This has significant computational benefit since it is trivial to accomplish. Moreover, operators can be engineered to take advantage of this padding implicitly without the need to allocate additional memory. At the same time, it allows CNNs to encode implicit position information within an image, simply by learning where the "whitespace" is. There are many alternatives to zero-padding. :citet:`Alsallakh.Kokhlikyan.Miglani.ea.2020` provided an extensive overview of those (albeit without a clear case for when to use nonzero paddings unless artifacts occur). 
+So far all padding that we discussed simply extended images with zeros. This is cheap, and operators can be engineered to handle it implicitly without allocating a larger tensor, but it is not a neutral choice: zero padding is a *boundary condition*, an assertion that the world outside the image is black. Filters whose window overlaps the border therefore see systematically different inputs from filters in the interior, and the resulting artifacts propagate deep into the feature maps :cite:`Alsallakh.Kokhlikyan.Miglani.ea.2020`. Padding also leaks absolute position: convolution itself cannot tell where in the image it is, but a unit near the border can infer its location from how much zero "whitespace" it sees, and trained CNNs do exploit this signal. Alternatives such as reflect padding (mirroring the border rows and columns) or replicate padding (repeating them) remove the artificial black frame; in practice they are reached for when border artifacts become visible, for example in image generation.
 
 
 ## Exercises
@@ -361,7 +455,8 @@ So far all padding that we discussed simply extended images with zeros. This has
 1. Implement mirror padding, i.e., padding where the border values are simply mirrored to extend tensors. 
 1. What are the computational benefits of a stride larger than 1?
 1. What might be statistical benefits of a stride larger than 1?
-1. How would you implement a stride of $\frac{1}{2}$? What does it correspond to? When would this be useful?
+1. How would you implement a stride of $\frac{1}{2}$? What does it correspond to? When would this be useful? Compare your answer with the transposed convolutions of :numref:`sec_transposed_conv`.
+1. A network stacks four $3 \times 3$ convolutions with stride 1 and dilations $1, 2, 4, 8$. Use :eqref:`eq_receptive_field` with each kernel replaced by its effective size to compute the receptive field of one output element. Which pixels inside that field does the output actually depend on? When does this *gridding* effect become a problem, and how would you choose a dilation schedule that avoids it?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/67)
@@ -501,6 +596,20 @@ The output formula above predicts the shape; the code just
 confirms it.
 :::
 
+::: {.slide title="Dilation: nine weights, a wider view"}
+A **dilated** convolution spaces the kernel taps $d$ pixels
+apart. Effective kernel size $k + (k-1)(d-1)$: a 3×3 kernel at
+dilation 2 samples a 5×5 window at unchanged cost.
+
+![A 3×3 kernel at dilation 1 and dilation 2.](../img/arch-conv-dilation.svg){width=80%}
+
+@padding-and-strides-dilation
+
+Doubling $d$ at every layer grows the receptive field
+**exponentially** with depth. Standard tool in dense prediction
+(FCN, DeepLab), where the output must keep full resolution.
+:::
+
 ::: {.slide title="Three patterns to remember"}
 Most production CNNs are built from these three:
 
@@ -522,7 +631,10 @@ downsample layer. *Patchify*: ViT turns 224×224 into a
   preserve shape ("SAME"). Odd kernels make this symmetric.
 - **Stride $s$** skips positions — $s = 2$ is the standard
   downsampler; large $s$ patchifies.
-- One formula covers both:
-  $$\text{out} = \Big\lfloor \frac{n - k + p}{s} \Big\rfloor + 1.$$
+- **Dilation $d$** spreads the taps: effective kernel
+  $k + (k-1)(d-1)$, exponential receptive-field growth at
+  fixed cost.
+- One formula covers all three:
+  $$\text{out} = \Big\lfloor \frac{n - d(k-1) - 1 + p}{s} \Big\rfloor + 1.$$
 - Pad and stride per-axis; height and width are independent.
 :::

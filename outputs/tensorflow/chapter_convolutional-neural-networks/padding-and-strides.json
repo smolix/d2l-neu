@@ -52,6 +52,16 @@
           "text": "TensorShape([2, 2])"
         }
       ]
+    },
+    "padding-and-strides-dilation": {
+      "code_fingerprint": "sha256:db7ff75aba488c1228e272b390f253bb83fb7f07979c2c3facb08532bea475e8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(TensorShape([4, 4]), TensorShape([4, 4]))"
+        }
+      ]
     }
   }
 }

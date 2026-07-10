@@ -52,6 +52,16 @@
           "text": "torch.Size([2, 2])"
         }
       ]
+    },
+    "padding-and-strides-dilation": {
+      "code_fingerprint": "sha256:b35cfcc1c3cb535f0b53eb7fe80fe8d6799ec6d77f00b09e2b9c210add71ff12",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.Size([4, 4]), torch.Size([4, 4]))"
+        }
+      ]
     }
   }
 }

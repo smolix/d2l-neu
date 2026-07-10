@@ -52,6 +52,16 @@
           "text": "(2, 2)"
         }
       ]
+    },
+    "padding-and-strides-dilation": {
+      "code_fingerprint": "sha256:9fa04f2dacadaef94b85a8b022aa7c26db52ce1d7f45f7ae18cb075ebdc31aa8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "((4, 4), (4, 4))"
+        }
+      ]
     }
   }
 }

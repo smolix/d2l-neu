@@ -233,9 +233,11 @@ hence a convex polyhedron that may be empty. Pairwise ties
 $o_j=o_k$ lie on hyperplanes, although only the portions adjacent to two
 winning regions are decision boundaries. The three-class example in
 :numref:`fig_mdl-clf-decision-regions` has one point where all three scores
-are equal. Such a common intersection is not guaranteed for other parameter
-choices, and with more than three classes in the plane it is generically
-impossible.
+are equal. With three classes such a common point is in fact the generic
+case: the three tie hyperplanes $o_1=o_2$, $o_2=o_3$, $o_1=o_3$ are linearly
+dependent, so in the plane they meet in a single point unless two of them are
+parallel. With more than three classes in the plane, however, a common
+intersection is generically impossible.
 In the binary case the picture is even simpler:
 $\hat{y}_1 = \sigma(o)$ depends on $\mathbf{x}$
 only through $o = (\mathbf{w}_1 - \mathbf{w}_2)^\top \mathbf{x} + (b_1 - b_2)$,

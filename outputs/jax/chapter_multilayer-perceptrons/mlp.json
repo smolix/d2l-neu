@@ -16,12 +16,33 @@
     "mlp-xor": {
       "code_fingerprint": "sha256:08aad4834307d6d42e9ff48c3a356d23a0f112731796dcf9edf2dfdebdd9e34a",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[0., 0., 0.],\n       [0., 1., 1.],\n       [1., 0., 1.],\n       [1., 1., 0.]])"
+        }
+      ]
     },
     "mlp-region-count": {
       "code_fingerprint": "sha256:97b7d7a55b2e4655a8ccbb87c71bcf5d5a86286f49e7012e4588cda8869ecb14",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "depth 1: mean pieces = [2.8, 4.5, 7.8, 14.3],  D+1 = [3, 5, 9, 17]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "depth 2: mean pieces = [3.2, 7.5, 14.2, 27.8],  D+1 = [3, 5, 9, 17]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "depth 3: mean pieces = [3.0, 8.9, 19.5, 39.5],  D+1 = [3, 5, 9, 17]\n"
+        }
+      ]
     },
     "mlp-relu-function-1": {
       "code_fingerprint": "sha256:128aeb8ac57c9fd2d222366fb675707b062796bfb83bedbe0f72b8a96e7e0981",
@@ -32,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
           "bytes": 16908,
-          "sha256": "sha256:259609fad586c421426704aaaea7c0fb62f8fa85f127357d650d7dae25b4629e"
+          "sha256": "sha256:2208233e453a1e595dde2b536cb9b193b93dadd36d2c1bd19ced9cf73f33f4c9"
         }
       ]
     },
@@ -45,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
           "bytes": 21200,
-          "sha256": "sha256:18e2a6ded8e85f24f021c0dde6fa2513c176750f04d8080bc939fc761af7cbdf"
+          "sha256": "sha256:792384a5e1731aaa06d8145430060aa4e12e3d936c704bfb64c746db03c3ab80"
         }
       ]
     },
@@ -58,7 +79,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
           "bytes": 21781,
-          "sha256": "sha256:e3ba8f824f4cad95fe486acf92404cc6f851a9a6ef6b8db3221096e3b3b3b435"
+          "sha256": "sha256:5b4358167f31ad546e23c5e27e527dcc83f80cda781489e93d2d5782db5a52e3"
         }
       ]
     },
@@ -71,7 +92,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
           "bytes": 24512,
-          "sha256": "sha256:1c7a6dab83d5cbe750464a7d7df3505682ad5eca6c750f43fbc3bcfa4fd9cad9"
+          "sha256": "sha256:2767112429cffa0673c29e0261b61fabbca91c26ca2dced07741eae4516dde58"
         }
       ]
     },
@@ -84,7 +105,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
           "bytes": 20169,
-          "sha256": "sha256:1a14fed4b15eacc58efc5e63519ef2ae0c40f50755847a15850257184ae25e0c"
+          "sha256": "sha256:406f6c432960fc7827b1a599c813c96c037eb07d45393d0472826f520ccf72c1"
         }
       ]
     },
@@ -97,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
           "bytes": 22667,
-          "sha256": "sha256:d6b1960ee02d718bf498d2abf74049aae715d628ce6c7ae3b8871020e45d94eb"
+          "sha256": "sha256:f256ac44f3397a756079c2fdbd7cfe6ff407e22188eee31d45cbb4bd63803bb4"
         }
       ]
     }

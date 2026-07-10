@@ -676,7 +676,7 @@ structure distinguishes bandits from ordinary supervised online learning.
 In control problems, an action changes the system state and therefore affects
 later observations. A coffee-boiler controller, for example, sees a temperature
 that depends on its earlier heating decisions; a PID
-(proportional--integral--derivative) controller is one standard approach.
+(proportional-integral-derivative) controller is one standard approach.
 Likewise, recommendations shown to a user can change what the user reads next.
 Sequential dynamics distinguish control from ordinary online prediction.
 

@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/custom-layers.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "custom-layers-custom-layers-and-functions": {
+      "code_fingerprint": "sha256:ad5bf18dabbe6c4104fcf0a1d9aaf07612b3993eeeb7f91ee116902147a38060",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-without-parameters-1": {
+      "code_fingerprint": "sha256:92c26db667c650526a76355af20ef1756b464ff59c1f056de6e5ed2c6549f6d9",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-without-parameters-2": {
+      "code_fingerprint": "sha256:71dd12ad7480008753c5031b8d990414c34fd3b3b00efac6605c92f5b198d50d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([-2., -1.,  0.,  1.,  2.], dtype=float32)"
+        }
+      ]
+    },
+    "custom-layers-layers-without-parameters-3": {
+      "code_fingerprint": "sha256:ab1b8d68c36e49abccf583f2dcf6a7b77ad3d3e7492678a788bf4ee9c022ec3f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(0., dtype=float32)"
+        }
+      ]
+    },
+    "custom-layers-layers-with-parameters-rmsnorm-1": {
+      "code_fingerprint": "sha256:44c8ac9f5aaf1e5d49525ec5361836835d662dcf5c1599ce772e0a582b76f03a",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-with-parameters-rmsnorm-2": {
+      "code_fingerprint": "sha256:cd0e5973e053abc9b663c0ad2c8e74c8f3c6d221f52fa720191abd1d75b86f3a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([1.        , 1.0000001 , 1.        , 0.99999994], dtype=float32)"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-1": {
+      "code_fingerprint": "sha256:659b3c2ab7454e6cf1aceafaa628c3c14549945473001e85a2fadc5b3ebae4b7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'params': {'gain': Array([1., 1., 1., 1., 1., 1., 1., 1.], dtype=float32)}}"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-2": {
+      "code_fingerprint": "sha256:c75f38736778159eec230913d15908cc5ccf5417774aa7df109223ae021a02b9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(4, 2)"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-3": {
+      "code_fingerprint": "sha256:c44ac6649a93ccdd6596c27cfc7ed6200c1e3a5875bffd1de1dfc97faedde415",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-4": {
+      "code_fingerprint": "sha256:3598f9652f952347a38e98241cfdef79a9c93262daa0a3eeaaa648dc1e7a583d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(CpuDevice(id=0), CpuDevice(id=0))"
+        }
+      ]
+    },
+    "custom-layers-checking-against-the-built-in": {
+      "code_fingerprint": "sha256:37cdb6d3ef8b1bb7986556800951496da14caa8fa2da32a51a03d105f1fb75ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "custom-layers-precomputed-state-buffers-1": {
+      "code_fingerprint": "sha256:4008f5ffdf9f584016a12cb9dbf156396a17e57d6d328c6490b7396657095feb",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-precomputed-state-buffers-2": {
+      "code_fingerprint": "sha256:3c372d7fea1ced54cad6dd73c4706ec77af7467c2326f81491258e23fbbd3b22",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[  0. -inf -inf]\n [  0.   0. -inf]\n [  0.   0.   0.]]\n{} ['mask']\n"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-1": {
+      "code_fingerprint": "sha256:c39fed67ba24f1d30ac9dcb9e75efa3d84dd5b0f00010cd690afc20661ff5a4d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([0., 0., 0.], dtype=float32)"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-2": {
+      "code_fingerprint": "sha256:2616d6904626e709268adbd3aa8db94d047c59ac25b3bdad6dbbbc38c4c5d071",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-custom-gradients-3": {
+      "code_fingerprint": "sha256:a2ff328fc9c325c6fd50fa4ee3291aa4332cbae92aa54807e7ee9f753249de5e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([1., 2., 3.], dtype=float32)"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-4": {
+      "code_fingerprint": "sha256:03fc4a83ff7548ff1c71d4890a479e5191b7f56e38bcf8fd6f426c319e9e5a10",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(True, True)"
+        }
+      ]
+    }
+  }
+}

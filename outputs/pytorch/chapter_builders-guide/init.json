@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/init.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "init-initialization": {
+      "code_fingerprint": "sha256:4486cdf3f7cc7e79b17c26fe938b989a56d86a33545411bc04a270d2cb774a0d",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-defaults-and-when-to-override-them": {
+      "code_fingerprint": "sha256:7c888482c61fec658076372b5d26462c03af2830e411e48e333a36205e76c981",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "range [-0.0442, 0.0442], predicted bound 0.0442\nstd 0.0255, predicted 0.0255\n"
+        }
+      ]
+    },
+    "init-applying-initializers-1": {
+      "code_fingerprint": "sha256:f1377699a781c212d50c86c10a6256122abdc2b2d335080d04181f78c8687636",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([ 1.3090e-02,  7.2679e-03, -8.8525e-05,  9.0255e-03]), tensor(0.))"
+        }
+      ]
+    },
+    "init-applying-initializers-2": {
+      "code_fingerprint": "sha256:c5bcf86e3662cb8bf2f88fef783329a658ef573734af8de665959cb0b7e74102",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor([ 0.6055, -0.2622, -0.1840,  0.2908]),\n tensor([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
+        }
+      ]
+    },
+    "init-truncated-normals": {
+      "code_fingerprint": "sha256:1c3f888f2fcf0877c52ea8457a6aa7c81b58f9413fd3bef69174fd5ded6f9740",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "normal:    std 0.0200, max weight 0.0952\ntruncated: std 0.0176, max weight 0.0400\n"
+        }
+      ]
+    },
+    "init-watching-the-variance-compound-1": {
+      "code_fingerprint": "sha256:eca29f464380b031e4d98073d590eee67919c2108fbcc720c511e6f35ab15a99",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-watching-the-variance-compound-2": {
+      "code_fingerprint": "sha256:9343320778a6eba0a2041dd7f66647ec960ffea8a1a10411d07d89b4471ee137",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-watching-the-variance-compound-3": {
+      "code_fingerprint": "sha256:3f14df74ecdb8f447e7f1e4b56450f3716a5e927b0b6099326c5507ecec05b78",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  N   default    scaled      zero\n  2      2.81      1.91         1\n  8      83.5      2.38         1\n 32  6.37e+07      2.63         1\n"
+        }
+      ]
+    },
+    "init-custom-initializers-1": {
+      "code_fingerprint": "sha256:0ec3e152444613cdc0868b76886065767a7d56e4b64ee8136ad3cb5f12fd109a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[-0.0000, -0.0000, -8.7540,  0.0000],\n        [ 0.0000, -6.8736,  0.0000, -0.0000]], grad_fn=<SliceBackward0>)"
+        }
+      ]
+    },
+    "init-custom-initializers-2": {
+      "code_fingerprint": "sha256:b8aeb6b54a29a85723a1599469b45033a34a96fc677b825084da9561e808d7a5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([42.0000,  1.0000, -7.7540,  1.0000], grad_fn=<SelectBackward0>)"
+        }
+      ]
+    }
+  }
+}

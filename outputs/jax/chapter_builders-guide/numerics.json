@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/numerics.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:8bbe14be88220e3d642456035daac614bc6544558073316c2dc0575493498cbb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "numerics-numerics-dtypes-and-mixed-precision": {
+      "code_fingerprint": "sha256:dad610e982e0ab8eefe6c6bd0be85254467535d1fba0bc7cf53dcc23a305cb04",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerics-the-dtype-zoo-1": {
+      "code_fingerprint": "sha256:a01cd5dd5a434852d4fc0433837fa462db0f3917f110e0a6d47379987c79a6b6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array(inf, dtype=float16), Array(90112, dtype=bfloat16))"
+        }
+      ]
+    },
+    "numerics-the-dtype-zoo-2": {
+      "code_fingerprint": "sha256:316e18b5e7a5b4d616e7150d40edc9e41cdbf23976a8dd596eaaa752f9d2411a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "float32    max  3.403e+38  tiny 1.175e-38  eps 1.192e-07\nbfloat16   max  3.390e+38  tiny 1.175e-38  eps 7.812e-03\nfloat16    max  6.550e+04  tiny 6.104e-05  eps 9.766e-04\n"
+        }
+      ]
+    },
+    "numerics-tf32-what-happens-to-fp32-matrix-multiplication": {
+      "code_fingerprint": "sha256:ef16b083051c76d21fce2b8b6d7cc5f68216bb01de0463b1033b2247b5cdacca",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "None\ntensorfloat32\n"
+        }
+      ]
+    },
+    "numerics-dtype-rules-promotion-parameters-and-casts-1": {
+      "code_fingerprint": "sha256:785d4e4204da50abf5f454f70a671f7f92091fa305194017918285daf721b8bf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(dtype('float32'), dtype('float16'), dtype('float16'))"
+        }
+      ]
+    },
+    "numerics-dtype-rules-promotion-parameters-and-casts-2": {
+      "code_fingerprint": "sha256:4e784f2a9f2643d38dcb9a737e9fe44102a3fedf4fa8fcd59acd57f5d15565c0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "814120"
+        }
+      ]
+    },
+    "numerics-dtype-rules-promotion-parameters-and-casts-3": {
+      "code_fingerprint": "sha256:ca52beb17709264eff97409d6a37660221533f023607e095c27452bb02bb7f48",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "float32 407060\nbfloat16\n"
+        }
+      ]
+    },
+    "numerics-mixed-precision-training-1": {
+      "code_fingerprint": "sha256:119227604a3f742bd1432b9bc719a087a6657cf4b5d2474ba0262db7c91a59a8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(dtype(bfloat16), dtype('float32'))"
+        }
+      ]
+    },
+    "numerics-mixed-precision-training-2": {
+      "code_fingerprint": "sha256:01ea29a052e4d9afa78d92eb4014c5436fc8eca97ffe7da16563483042c4252d",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerics-mixed-precision-training-3": {
+      "code_fingerprint": "sha256:13fe9918364342cf4efd7da08a79cf33e80e609d53cea2cbb1dbcbfac3f22bb9",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerics-mixed-precision-training-4": {
+      "code_fingerprint": "sha256:65728b2a090a9ba9fa8fbef0cd46d8c3dba7f2f4a35a276bd15389adac2b0f19",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final loss: fp32 0.746, bf16 compute 0.745\n"
+        }
+      ]
+    },
+    "numerics-loss-scaling-for-fp16-1": {
+      "code_fingerprint": "sha256:ddeb684618427c78cac8b6a52712fd8070142ebccedea97d357c636f2f11559d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array(0., dtype=float16), Array(0.000655, dtype=float16))"
+        }
+      ]
+    },
+    "numerics-when-numerics-bite-1": {
+      "code_fingerprint": "sha256:8369b370e677afb9ac8018f17bf350626362af4e86e9e900c0bc553a2b78502e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array(inf, dtype=float16), Array(nan, dtype=float16))"
+        }
+      ]
+    },
+    "numerics-when-numerics-bite-2": {
+      "code_fingerprint": "sha256:214c04a309fbb4d2451bfb1e9e07ae78dcf6c11523dfe917c39bdc55cb041ac4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array(inf, dtype=float16), Array(12.41, dtype=float16))"
+        }
+      ]
+    },
+    "numerics-when-numerics-bite-3": {
+      "code_fingerprint": "sha256:c3ac510ebb55d2c83e911a8f06603f7e28afdcd092c16462dea23cd16ca31549",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array(1.001e+04, dtype=float16), Array(10004.044, dtype=float32))"
+        }
+      ]
+    }
+  }
+}

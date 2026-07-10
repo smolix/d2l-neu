@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/custom-layers.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "custom-layers-custom-layers-and-functions": {
+      "code_fingerprint": "sha256:24deb91fb1d5533a42ffac9b58906bc780b7aa5ce04ab2c35e7192dd92276f00",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-without-parameters-1": {
+      "code_fingerprint": "sha256:e1305d4f4881ba194e005dcd8d9e1d3c93488f3e5acfa4c4c3005d1d0010258d",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-without-parameters-2": {
+      "code_fingerprint": "sha256:a7ddcd07281cc6c76642fa4fd1bfb321b79dc0e508c3dab8c256411fa384588f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([-2., -1.,  0.,  1.,  2.])"
+        }
+      ]
+    },
+    "custom-layers-layers-without-parameters-3": {
+      "code_fingerprint": "sha256:d0e9158ed4bcc958609d343891fb498295511d074b62b860ac492acb7105a9d0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(3.7253e-09, grad_fn=<MeanBackward0>)"
+        }
+      ]
+    },
+    "custom-layers-layers-with-parameters-rmsnorm-1": {
+      "code_fingerprint": "sha256:b3317145f514516eea48fa7ad5ec002896ae8ced0d295dd07d7a7d4724a454c7",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-with-parameters-rmsnorm-2": {
+      "code_fingerprint": "sha256:96eac7be4ec48abf88865d07a561e2898de35f3713c588baf6d686843102559d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([1.0000, 1.0000, 1.0000, 1.0000], grad_fn=<MeanBackward1>)"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-1": {
+      "code_fingerprint": "sha256:3eb56a11fa123c9079197aca41480cebd2fe0abcc3baa860ebe3ac4b910a55f2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[('gain',\n  Parameter containing:\n  tensor([1., 1., 1., 1., 1., 1., 1., 1.], requires_grad=True))]"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-2": {
+      "code_fingerprint": "sha256:aafce3375673e4d9493ca27008761d4441fefa68b657cd0e3fc00ad46f081664",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([4, 2])"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-3": {
+      "code_fingerprint": "sha256:928e0e2c2a5f4d01d7afbd7d260f670fc21b0f4742c5a16ac7a9ad418a0fd6ff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-4": {
+      "code_fingerprint": "sha256:e7433bd806de0152636bcafce9ae550be2a3eb8906b336ac461f308a1f635bf6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(device(type='cpu'), device(type='cpu'))"
+        }
+      ]
+    },
+    "custom-layers-checking-against-the-built-in": {
+      "code_fingerprint": "sha256:36fe49d83aeb4a0969eb57a7d05e84ffa73d425e2810114f4bd1bb79d0567558",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "custom-layers-precomputed-state-buffers-1": {
+      "code_fingerprint": "sha256:feec662e45b66289876ac2bf4fdcd03fae2bfaca8db9ff50f3ba89dc121e0c0a",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-precomputed-state-buffers-2": {
+      "code_fingerprint": "sha256:6ef28e9ee7b56252a86e0007c85bd808bfd2875ffc6d346da30685e440ae783f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tensor([[0., -inf, -inf],\n        [0., 0., -inf],\n        [0., 0., 0.]])\n[] ['mask']\n"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-1": {
+      "code_fingerprint": "sha256:612b06926b7d9a6a09135d1971110f01b9dfcfbb0cb85f5259b4af59f430c67c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([0., 0., 0.])"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-2": {
+      "code_fingerprint": "sha256:2f98026bc27b181b19f7aedb7d01d39991b12584f69f39b538893186ee02fa02",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-custom-gradients-3": {
+      "code_fingerprint": "sha256:4ea7a12b05056b2e3176c6c2740eb941b0285f4d7be55bda6fce685e99de36c5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([1., 2., 3.])"
+        }
+      ]
+    }
+  }
+}

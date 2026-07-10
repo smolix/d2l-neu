@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/reproducibility-inspection.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "reproducibility-inspection-reproducibility-and-inspection": {
+      "code_fingerprint": "sha256:26e16ea8b6067067336399528fa3e634c2a6eeb41efa53952046c46e94f03158",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-seeds-and-randomness": {
+      "code_fingerprint": "sha256:83c187d824d9aeffd62cfd98583849a5acb25658ea2cb75f217ee6b6a71acc56",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-generator-objects": {
+      "code_fingerprint": "sha256:0e47de2cd0f61a7e6f9fb5359eda72949b542e003f39d994974179f498581483",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-determinism-and-its-price-1": {
+      "code_fingerprint": "sha256:2268060f87647492a77455f3bbaae20f2c2b977943a7dac8bc68f5f723682196",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-hooks-looking-inside": {
+      "code_fingerprint": "sha256:e1cfb949168793dd3ee5048f2ed1de9c330adb8695a83a3f5b59cdd44545181a",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-capturing-activation-statistics": {
+      "code_fingerprint": "sha256:f251f7f705093c867212256d47c4aba865f8afc60a63e233c4baa1a639f76d71",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-a-nan-finder": {
+      "code_fingerprint": "sha256:c995d35a899652d47558eb750f6d32889479e7a036fe3a0c9bf8aaa09d4fe749",
+      "kind": "text",
+      "outputs": []
+    }
+  }
+}

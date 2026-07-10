@@ -8,13 +8,13 @@
     "max_inline_bytes": 0
   },
   "cells": {
-    "model-construction-layers-and-modules-1": {
-      "code_fingerprint": "sha256:c3b617502bedddfb22f51258d1adf6da3684ea9a262a2011706048e6ccb5677b",
+    "model-construction-modules-and-model-construction": {
+      "code_fingerprint": "sha256:d1f5daf245e5a6cad65b33e2ef53a054ddaf11c520297862bb2b81d4f0aa161f",
       "kind": "text",
       "outputs": []
     },
-    "model-construction-layers-and-modules-2": {
-      "code_fingerprint": "sha256:41c363f3a21202b323d452410bf169bed41c51beda1262181da88c2092d0b835",
+    "model-construction-the-module-abstraction-1": {
+      "code_fingerprint": "sha256:395db41f01c689b47821ecee5584b2fc84812f8c929bb914de4791e1680c91ea",
       "kind": "text",
       "outputs": [
         {
@@ -23,13 +23,23 @@
         }
       ]
     },
-    "model-construction-a-custom-module-1": {
-      "code_fingerprint": "sha256:21a54221c2c7ab48a3743f52d944fed70ce9e9ddaffd0be30319247b11057ca5",
+    "model-construction-the-module-abstraction-2": {
+      "code_fingerprint": "sha256:f80746f4ce78892f9fc582ffb3152067c79cc729358f6592e6d7478985855e26",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Sequential(\n  (0): Dense(20 -> 256, Activation(relu))\n  (1): Dense(256 -> 10, linear)\n)"
+        }
+      ]
+    },
+    "model-construction-the-module-abstraction-3": {
+      "code_fingerprint": "sha256:45a4571a2134024b7d7a66854e5972bb8dc35097fbd99b3bfb506cea98961a68",
       "kind": "text",
       "outputs": []
     },
-    "model-construction-a-custom-module-2": {
-      "code_fingerprint": "sha256:4751e4b335c1ac041b0aaebaa93987418f65f971bc182ec4a51675d5338bf6c0",
+    "model-construction-the-module-abstraction-4": {
+      "code_fingerprint": "sha256:ca069b6df67cd0228414aeaf0d24a5c72c5f2f24e739c3d782857ef943c75502",
       "kind": "text",
       "outputs": [
         {
@@ -38,13 +48,13 @@
         }
       ]
     },
-    "model-construction-the-sequential-module-1": {
-      "code_fingerprint": "sha256:570de79b12da7cb461ab2377230b574f61de063192417b373ebf78919047d63a",
+    "model-construction-sequential-and-friends-containers-1": {
+      "code_fingerprint": "sha256:1cdccba385d2cbcc734acec401339a4dda9a163c84f30c89c34fe5eff2d2a042",
       "kind": "text",
       "outputs": []
     },
-    "model-construction-the-sequential-module-2": {
-      "code_fingerprint": "sha256:2bf022ad6d9972fd4ad3672fad8229eefb642050969186e91dd86543937de06d",
+    "model-construction-sequential-and-friends-containers-2": {
+      "code_fingerprint": "sha256:4e13fee44e74f187e677a4308697291f4d338ab1a54cdf83196f61b4055def55",
       "kind": "text",
       "outputs": [
         {
@@ -53,28 +63,119 @@
         }
       ]
     },
-    "model-construction-executing-code-in-the-forward-propagation-method-1": {
-      "code_fingerprint": "sha256:5d22ff9a1e879bc5caa6f5bd1ed7ab7351629b38e361b48f3f8e1d89f0aa8e6b",
-      "kind": "text",
-      "outputs": []
-    },
-    "model-construction-executing-code-in-the-forward-propagation-method-2": {
-      "code_fingerprint": "sha256:e7f21925f61c5eacaa4599998ef8a6efc5e7e076bf48ded83784a30a26c8d00c",
+    "model-construction-sequential-and-friends-containers-3": {
+      "code_fingerprint": "sha256:9e7cf65faa02ed6bde774e8a018c36cf2ed256ffa002975ade7bcdd3b2985550",
       "kind": "text",
       "outputs": [
         {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/var/folders/9c/qyn117295pgd7503chdsk_000000gn/T/ipykernel_1613/1272845916.py:14: UserWarning: \"PlainListMLP.layers\" is an unregistered container with Blocks. Note that Blocks inside the list, tuple or dict will not be registered automatically. Make sure to register them using register_child() or switching to nn.Sequential/nn.HybridSequential instead. \n  net(X).shape, len(net.collect_params())\n"
+        },
+        {
           "type": "execute_result",
-          "text": "array(0.6689396)"
+          "text": "((2, 10), 0)"
         }
       ]
     },
-    "model-construction-executing-code-in-the-forward-propagation-method-3": {
-      "code_fingerprint": "sha256:28d000884c81c0c34268d4dd453fa6d70acc2e4b354b37ed4ce19386c0d94026",
+    "model-construction-sequential-and-friends-containers-4": {
+      "code_fingerprint": "sha256:f6a0a126e2a9fe43d4b0412682069ec3f5c55255c215e10a75fb8af7a6d116b2",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(0.8222387)"
+          "text": "((2, 10), 7946)"
+        }
+      ]
+    },
+    "model-construction-forward-is-just-python-1": {
+      "code_fingerprint": "sha256:44e861923f89d462b0ea86a5f33776b59cdc862d7615b556d90d58bcbee03d8a",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-forward-is-just-python-2": {
+      "code_fingerprint": "sha256:67931af52e02ddfd3622d6ceab4e07592ec4e5c7b96838886ff6aed1defbde4a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 24)"
+        }
+      ]
+    },
+    "model-construction-forward-is-just-python-3": {
+      "code_fingerprint": "sha256:849f8648204a5ecf81042e6f8fc7e5cda7499e2a138e74bbbb40a8fe31764b1e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(False, ['body.0.weight', 'body.0.bias'])"
+        }
+      ]
+    },
+    "model-construction-lazy-initialization-shapes-from-data-1": {
+      "code_fingerprint": "sha256:fd2ba47320716f1bd39dd69513c940f5c931ca927208b2f2dd8b864a4e50343f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'0.weight': Parameter (shape=(256, -1), dtype=float32),\n '0.bias': Parameter (shape=(256,), dtype=float32),\n '1.weight': Parameter (shape=(10, -1), dtype=float32),\n '1.bias': Parameter (shape=(10,), dtype=float32)}"
+        }
+      ]
+    },
+    "model-construction-lazy-initialization-shapes-from-data-2": {
+      "code_fingerprint": "sha256:f52d69313a18c5911db26e812a205cddb37856c7bdc2c9d006684e61d069d97b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'0.weight': Parameter (shape=(256, 20), dtype=float32),\n '0.bias': Parameter (shape=(256,), dtype=float32),\n '1.weight': Parameter (shape=(10, 256), dtype=float32),\n '1.bias': Parameter (shape=(10,), dtype=float32)}"
+        }
+      ]
+    },
+    "model-construction-lazy-initialization-shapes-from-data-4": {
+      "code_fingerprint": "sha256:11e34c6165e7a65338a49113a41eb0e3c266823d21a37725e27ba79e21e15f7f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(256, 20)"
+        }
+      ]
+    },
+    "model-construction-building-from-a-config-1": {
+      "code_fingerprint": "sha256:fce740c76b097b985a906927591adf27c99f985694cfba2bb09a59c5525215e5",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-building-from-a-config-2": {
+      "code_fingerprint": "sha256:9e1395959ef8fb4b4026d1149f6fa3fcc478215f496ae6924560bc5046a34f32",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Sequential(\n  (0): Dense(784 -> 256, linear)\n  (1): ResidualBlock(\n    (body): Sequential(\n      (0): Dense(-1 -> 256, Activation(relu))\n      (1): Dense(-1 -> 256, linear)\n    )\n  )\n  (2): ResidualBlock(\n    (body): Sequential(\n      (0): Dense(-1 -> 256, Activation(relu))\n      (1): Dense(-1 -> 256, linear)\n    )\n  )\n  (3): ResidualBlock(\n    (body): Sequential(\n      (0): Dense(-1 -> 256, Activation(relu))\n      (1): Dense(-1 -> 256, linear)\n    )\n  )\n  (4): ResidualBlock(\n    (body): Sequential(\n      (0): Dense(-1 -> 256, Activation(relu))\n      (1): Dense(-1 -> 256, linear)\n    )\n  )\n  (5): Dense(256 -> 10, linear)\n)"
+        }
+      ]
+    },
+    "model-construction-building-from-a-config-3": {
+      "code_fingerprint": "sha256:27840a7c44675c64c80ce125b3dd7c00cbb120a3b19da572db64b2f8d07011a0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 10)"
+        }
+      ]
+    },
+    "model-construction-building-from-a-config-4": {
+      "code_fingerprint": "sha256:cd537decc7006a402593bfd5b34d10a7fb201cf90a993b14bc6c8c1e6a71de53",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d_hidden=256, num_blocks=4: 729,866 parameters\nd_hidden=512, num_blocks=8: 4,609,546 parameters\n"
         }
       ]
     }

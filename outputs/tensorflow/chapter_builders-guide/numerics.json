@@ -1,0 +1,156 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/numerics.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:ccc885e55ea4d33b4d4b93f1bf023fc92ad6263127aeadb5d57ef23392868e93",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "numerics-numerics-dtypes-and-mixed-precision": {
+      "code_fingerprint": "sha256:c3c77aa15494099e4e0b940a5fbd18378aade64d4f862981fe66a3ef8e80b70e",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerics-the-dtype-zoo-1": {
+      "code_fingerprint": "sha256:71ca5ab1f8082c8e4f3a2747a2d321171ba15fd82af7874f12c9be41cc5f6c1e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float16, numpy=inf>,\n <tf.Tensor: shape=(), dtype=bfloat16, numpy=90112.0>)"
+        }
+      ]
+    },
+    "numerics-the-dtype-zoo-2": {
+      "code_fingerprint": "sha256:426f0d7f82394261318d5437d23e60cbe851f70c7a6992150a0a432afc6e3b9e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "float32    max  3.403e+38  tiny 1.175e-38  eps 1.192e-07\nbfloat16   max  3.390e+38  tiny 1.175e-38  eps 7.812e-03\nfloat16    max  6.550e+04  tiny 6.104e-05  eps 9.766e-04\n"
+        }
+      ]
+    },
+    "numerics-tf32-what-happens-to-fp32-matrix-multiplication": {
+      "code_fingerprint": "sha256:b659dd50006dacd434b02eac39aa4361a3fa7b04e53060a77ddabd3c200e58bf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "True\nFalse\n"
+        }
+      ]
+    },
+    "numerics-dtype-rules-promotion-parameters-and-casts-1": {
+      "code_fingerprint": "sha256:aa70ade044a585d59484c4f626ed699be8a02c2edb48d6cc947a86eb15186778",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cannot compute AddV2 as input #1(zero-based) was expected to be a half tensor but is a float tensor [Op:AddV2] name: \n"
+        },
+        {
+          "type": "execute_result",
+          "text": "tf.float16"
+        }
+      ]
+    },
+    "numerics-dtype-rules-promotion-parameters-and-casts-2": {
+      "code_fingerprint": "sha256:a595cb153b292e51a25dbe7d6372d8ded7a1673270053fa3d7b94d55c1d8527c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "814120"
+        }
+      ]
+    },
+    "numerics-dtype-rules-promotion-parameters-and-casts-3": {
+      "code_fingerprint": "sha256:3e92e8624cbea890e501a17a2a6135ad17b658577c706e21d59616239b3a54a7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "<dtype: 'bfloat16'> 407060\n"
+        }
+      ]
+    },
+    "numerics-mixed-precision-training-1": {
+      "code_fingerprint": "sha256:8ce45155266d5124dff12cb01a7143f68c8eec146234e3fb5a1d2e8bff0aa5e3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tf.bfloat16, 'float32')"
+        }
+      ]
+    },
+    "numerics-mixed-precision-training-2": {
+      "code_fingerprint": "sha256:33112ad8923022375a7971513051536e4041ae92691495816dd4939f8791c87f",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerics-mixed-precision-training-3": {
+      "code_fingerprint": "sha256:a6f52373c21a31222f8867a7151910b0a7ae318619391ce3c47907bcce4f0914",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerics-mixed-precision-training-4": {
+      "code_fingerprint": "sha256:ca3decece0fe25c283c638203425c0727b0d1a3d4d2f8a34e0153dbf7c4cc06f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final loss: fp32 0.711, mixed_bfloat16 0.711\n"
+        }
+      ]
+    },
+    "numerics-loss-scaling-for-fp16-1": {
+      "code_fingerprint": "sha256:7ab92fed3b031a1ddbfd6dc9fc303e6a4deb4e0f65c1a16b1199361fe4bd5b75",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float16, numpy=0.0>,\n <tf.Tensor: shape=(), dtype=float16, numpy=0.0006551742553710938>)"
+        }
+      ]
+    },
+    "numerics-when-numerics-bite-1": {
+      "code_fingerprint": "sha256:228b7502f2cbd5acd9dfce25af775045913d5a61afa854699c4914faf0270839",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float16, numpy=inf>,\n <tf.Tensor: shape=(), dtype=float16, numpy=nan>)"
+        }
+      ]
+    },
+    "numerics-when-numerics-bite-2": {
+      "code_fingerprint": "sha256:62dcbf216d089c29c33c5819eb04d8b63391a20d5b288880b5eb6c7dc8178914",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float16, numpy=inf>,\n <tf.Tensor: shape=(), dtype=float16, numpy=12.40625>)"
+        }
+      ]
+    },
+    "numerics-when-numerics-bite-3": {
+      "code_fingerprint": "sha256:29dc6cf6ace5ca002807f0de50c753f772ba15d7278638921f810b1f54405f18",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float16, numpy=4.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=9780.2080078125>,\n <tf.Tensor: shape=(), dtype=float64, numpy=10004.043579101562>)"
+        }
+      ]
+    }
+  }
+}

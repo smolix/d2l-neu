@@ -1,0 +1,146 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/saving-loading.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "saving-loading-saving-loading-and-pretrained-weights": {
+      "code_fingerprint": "sha256:6063c6c46d5226c8850d4ec9b7ed830d44f27169a26d053b55a0576c43e80ca0",
+      "kind": "text",
+      "outputs": []
+    },
+    "saving-loading-state-not-code-1": {
+      "code_fingerprint": "sha256:065762dfc10185a2772c8d75c4c7d8e1e45ef53deab5e36d89675c6d8b412963",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'x': tensor([0, 1, 2, 3]), 'y': tensor([0., 0., 0., 0.])}"
+        }
+      ]
+    },
+    "saving-loading-state-not-code-2": {
+      "code_fingerprint": "sha256:96b49a27505eaeb5f5f91ddfc41f2200a55ff9c5149f5da0b1cc32d8fd8c2741",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'hidden.weight': (256, 20),\n 'hidden.bias': (256,),\n 'output.weight': (10, 256),\n 'output.bias': (10,)}"
+        }
+      ]
+    },
+    "saving-loading-safetensors-the-interchange-format-1": {
+      "code_fingerprint": "sha256:14ab27a1b89ed15d05226b8574f66cb787f03a5c42fe3f1e3ba953add6a808fe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "*** payload executed while loading ***\n"
+        }
+      ]
+    },
+    "saving-loading-safetensors-the-interchange-format-2": {
+      "code_fingerprint": "sha256:e37ba6fa56c8274c931df1ecafa94bd984f136b064172eae5374afe3b913bb2c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "UnpicklingError Weights only load failed. This file can still be loaded, to do so you have two options, \u001b[1mdo those steps only if you trust the source of the checkpoint\u001b[0m. \n"
+        }
+      ]
+    },
+    "saving-loading-safetensors-the-interchange-format-3": {
+      "code_fingerprint": "sha256:69ffa875157ee56e0fc3a02e95efc9fbe1d1bfa6783ac58d0d14aeb40ead7f85",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "saving-loading-safetensors-the-interchange-format-4": {
+      "code_fingerprint": "sha256:a3c82728d30fd645a1fd86157cf3937aca977fc91b72369b799dea0c8849fb3e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'dtype': 'F32', 'shape': [256, 20], 'data_offsets': [1024, 21504]}"
+        }
+      ]
+    },
+    "saving-loading-checkpointing-a-training-run-1": {
+      "code_fingerprint": "sha256:9bf90027466353461e7e8aa8f90b6b44887add5ca0146b652e008249d5a67be3",
+      "kind": "text",
+      "outputs": []
+    },
+    "saving-loading-checkpointing-a-training-run-2": {
+      "code_fingerprint": "sha256:02554eeee63680909cbb5c29c9f243eda0c98985244f24b4c788be413bd16ce7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.0016"
+        }
+      ]
+    },
+    "saving-loading-checkpointing-a-training-run-3": {
+      "code_fingerprint": "sha256:4777e08b45791abf09ade2ed9b8d46cd46f969d869aea15e9932a307e781482b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'perturbed 47291.83 -> restored 0.0016'"
+        }
+      ]
+    },
+    "saving-loading-checkpointing-a-training-run-4": {
+      "code_fingerprint": "sha256:8aa10533086392e4edf6fdf069fa7f78ee8015969f8dafee2356510154bfd093",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "full  optimizer: [0.0016, 0.0016, 0.0015, 0.0015, 0.0015]\nfresh optimizer: [0.0016, 3.8324, 0.2922, 1.0421, 1.845]\n"
+        }
+      ]
+    },
+    "saving-loading-loading-weights-you-did-not-train-1": {
+      "code_fingerprint": "sha256:ce3f12285e6671237df28cf20e08372302aebbf42399ff60b605f438dfdd6ac2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Linear(in_features=512, out_features=10, bias=True)"
+        }
+      ]
+    },
+    "saving-loading-loading-weights-you-did-not-train-2": {
+      "code_fingerprint": "sha256:3d0342518224de5c9eaed21ae2787eaff68dd529fc35ff6966d70283f241c02e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "missing by block: {'layer4': 25, 'fc': 2}\nunexpected: []\n"
+        }
+      ]
+    },
+    "saving-loading-loading-weights-you-did-not-train-3": {
+      "code_fingerprint": "sha256:8e0c1929da39189aa4fafbb9f0e59e6495d9a49b3f6636ca840cb73cb4199ba1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'5130 trainable of 11181642'"
+        }
+      ]
+    }
+  }
+}

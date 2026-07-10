@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/init.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "init-initialization": {
+      "code_fingerprint": "sha256:d5576281663b61cade0871a2222c05f0e4901273f26e4207c8c09d9e6bc18c16",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-defaults-and-when-to-override-them": {
+      "code_fingerprint": "sha256:1d43ed50973848d9c4834e3affae81f2f9e6ef8e0eec75fb011d8f81175ab348",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "range [-0.0884, 0.0884], predicted bound 0.0884\nstd 0.0511, predicted 0.0510\nbias all zero: True\n"
+        }
+      ]
+    },
+    "init-applying-initializers-1": {
+      "code_fingerprint": "sha256:b6f19bf31449fa3c794d7c802457c820ca37e8142fd583cc5c7f2f20f093dbc5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(4,), dtype=float32, numpy=array([ 0.01419753,  0.01572837, -0.02287325, -0.00140878], dtype=float32)>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.0>)"
+        }
+      ]
+    },
+    "init-applying-initializers-2": {
+      "code_fingerprint": "sha256:f48599c2806a0e541a06f0fcc15d9377eee514afa28560ffe0cabaeb258d38a6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(4,), dtype=float32, numpy=array([ 0.22517478, -0.18920076,  0.62674755,  0.11356837], dtype=float32)>,\n <tf.Tensor: shape=(8,), dtype=float32, numpy=array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32)>)"
+        }
+      ]
+    },
+    "init-applying-initializers-3": {
+      "code_fingerprint": "sha256:a850c6551d295870a66a2be18454b22aace4dcb7a97ffab6d9f0809d1c879e86",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(3, 1), dtype=float32, numpy=\narray([[ 0.6180687 ],\n       [-0.06535196],\n       [ 0.16377491]], dtype=float32)>"
+        }
+      ]
+    },
+    "init-truncated-normals": {
+      "code_fingerprint": "sha256:f708e0e02de09ec2a7db9b56dc1080f6b13c67aad5f800a08f73672935da6b0a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "normal:    std 0.0200, max weight 0.1046\ntruncated: std 0.0176, max weight 0.0400\n"
+        }
+      ]
+    },
+    "init-watching-the-variance-compound-1": {
+      "code_fingerprint": "sha256:7fdc3c17a9500922089d64f22ed9390d49b4aa216fbc5a0a08db6d6b5f808de5",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-watching-the-variance-compound-2": {
+      "code_fingerprint": "sha256:1b07e15034d941d3980cc4a016ccc0a9b9bd87d04f118ff1330864ca4bf7fcbc",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-watching-the-variance-compound-3": {
+      "code_fingerprint": "sha256:0b6c784c794b02cd5f646322ae376e1aff4d6375f291ae228574434207d2e7ce",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  N   default    scaled      zero\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  2      3.24      1.91         1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  8      99.5      2.18         1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 32  7.56e+07      2.86         1\n"
+        }
+      ]
+    },
+    "init-custom-initializers-1": {
+      "code_fingerprint": "sha256:4d30ae5f10943c640144a1ef74f968fd65bd3bd92ca6c31c8b90d364c38159a3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 8), dtype=float32, numpy=\narray([[-0.      , -5.868671,  0.      ,  0.      , -0.      ,  6.156559,\n        -0.      ,  9.962585],\n       [ 0.      , -7.492528,  0.      ,  0.      ,  0.      , -0.      ,\n        -0.      ,  0.      ]], dtype=float32)>"
+        }
+      ]
+    },
+    "init-custom-initializers-2": {
+      "code_fingerprint": "sha256:95218eaec327e09902ed1cac7bb04863c34fc49a13fbab798ccca6df0a5add41",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(8,), dtype=float32, numpy=\narray([42.      , -4.868671,  1.      ,  1.      ,  1.      ,  7.156559,\n        1.      , 10.962585], dtype=float32)>"
+        }
+      ]
+    }
+  }
+}

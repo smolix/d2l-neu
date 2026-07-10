@@ -1,53 +1,46 @@
 # Builders' Guide
-:label:`chap_computation`
+:label:`chap_computation_v2`
 
-Alongside giant datasets and powerful hardware,
-great software tools have played an indispensable role
-in the rapid progress of deep learning.
-Starting with the pathbreaking Theano library released in 2007,
-flexible open-source tools have enabled researchers
-to rapidly prototype models, avoiding repetitive work
-when recycling standard components
-while still maintaining the ability to make low-level modifications.
-Over time, deep learning's libraries have evolved
-to offer increasingly coarse abstractions.
-Just as semiconductor designers went from specifying transistors
-to logical circuits to writing code,
-neural networks researchers have moved from thinking about
-the behavior of individual artificial neurons
-to conceiving of networks in terms of whole layers,
-and now often design architectures with far coarser *blocks* in mind.
+Alongside giant datasets and powerful hardware, great software tools have
+played an indispensable role in the rapid progress of deep learning. Deep
+learning libraries let us recycle standard components while retaining the
+ability to modify anything, and over time their abstractions have grown
+coarser: from individual neurons, to layers, to the multi-layer *blocks* from
+which today's models are assembled.
 
+So far we called upon these libraries without asking how they work. We built
+models from layers, initialized and trained them, and treated everything
+between `net(X)` and the loss as machinery. This chapter opens the machinery.
+In 2016 that meant learning to build, initialize, and save a small model
+trained from scratch in 32-bit arithmetic on one device. Those skills remain,
+and this chapter teaches them, but the working assumptions around them have
+changed: a model is now assembled from a configuration object, measured in
+gigabytes, run in reduced precision, checkpointed together with its optimizer
+state, and as often as not initialized from someone else's weights rather than
+from a random number generator.
 
-So far, we have introduced some basic machine learning concepts,
-ramping up to fully-functional deep learning models.
-In the last chapter,
-we implemented each component of an MLP from scratch
-and even showed how to leverage high-level APIs
-to roll out the same models effortlessly.
-To get you that far that fast, we *called upon* the libraries,
-but skipped over more advanced details about *how they work*.
-In this chapter, we will peel back the curtain,
-digging deeper into the key components of deep learning computation,
-namely model construction, parameter access and initialization,
-designing custom layers and blocks, reading and writing models to disk,
-and leveraging GPUs to achieve dramatic speedups.
-These insights will move you from *end user* to *power user*,
-giving you the tools needed to reap the benefits
-of a mature deep learning library while retaining the flexibility
-to implement more complex models, including those you invent yourself!
-While this chapter does not introduce any new models or datasets,
-the advanced modeling chapters that follow rely heavily on these techniques.
+Accordingly, we proceed in eight steps. We start with how models are built
+from modules and configs (:numref:`sec_model_construction_v2`), what a model's
+state is and what it costs in memory (:numref:`sec_parameters_v2`), how that
+state is initialized (:numref:`sec_init_v2`), and how to write layers the
+library does not provide (:numref:`sec_custom_layers_v2`). We then turn to the
+numeric formats models compute in (:numref:`sec_numerics_v2`), how state is
+saved, restored, and adopted from pretrained models
+(:numref:`sec_read_write_v2`), how tensors and models live on GPUs and in GPU
+memory (:numref:`sec_use_gpu_v2`), and finally how to make runs repeatable and
+inspect a model from the outside (:numref:`sec_repro_v2`). The chapter
+introduces no new models or datasets; the advanced modeling chapters that
+follow rely on these techniques throughout.
 
 ```toc
 :maxdepth: 2
 
 model-construction
-parameters
-init-param
-lazy-init
-custom-layer
-read-write
-use-gpu
+parameters-state-memory
+init
+custom-layers
+numerics
+saving-loading
+gpus-devices-memory
+reproducibility-inspection
 ```
-

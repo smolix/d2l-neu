@@ -1,0 +1,196 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/gpus-devices-memory.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:c007514687a526dff2bb1a16eff32e04967fdfa3d42793bb19b689df96e0d869",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "gpus-devices-memory-gpus-devices-and-memory": {
+      "code_fingerprint": "sha256:82bf8f23aba7a286c56a97cf35eee5cdb50d11c2b6304dd42342a54f7c2db359",
+      "kind": "text",
+      "outputs": []
+    },
+    "gpus-devices-memory-devices-1": {
+      "code_fingerprint": "sha256:d6b8e2fa651362f60287ad3ca13640d7c575775fc659f851b9a671a3c274a689",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x11deee180>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x11dfe27c0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x11dcd4dc0>)"
+        }
+      ]
+    },
+    "gpus-devices-memory-devices-2": {
+      "code_fingerprint": "sha256:76285b84c5c2453c0545039984bf35442908007833f4760daa7c17a5fde78de1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0"
+        }
+      ]
+    },
+    "gpus-devices-memory-devices-3": {
+      "code_fingerprint": "sha256:2ee3310fb7cac3d2bb8ffb73b47938552e680d2d6b530c65575f5226f39b9d5c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x11e382c80>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x11e382d40>,\n [])"
+        }
+      ]
+    },
+    "gpus-devices-memory-tensors-models-and-devices-1": {
+      "code_fingerprint": "sha256:0e16e1728dbb8b2afaa80ace851ab169e95d1c3b0371fff486463577661a5e28",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'/job:localhost/replica:0/task:0/device:CPU:0'"
+        }
+      ]
+    },
+    "gpus-devices-memory-tensors-models-and-devices-2": {
+      "code_fingerprint": "sha256:909db4ba509cc034e213478e0049760f024f5088531757c6ba9a023be8cbabef",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1., 1., 1.],\n       [1., 1., 1.]], dtype=float32)>"
+        }
+      ]
+    },
+    "gpus-devices-memory-tensors-models-and-devices-3": {
+      "code_fingerprint": "sha256:4e17b9f7b178f4ccbeb6b8619748e3324b223f8ed37cd9992871f61136edf2dc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.40522766, 0.70122445, 0.91714406],\n       [0.50275874, 0.11668611, 0.66227865]], dtype=float32)>"
+        }
+      ]
+    },
+    "gpus-devices-memory-copying-between-devices-1": {
+      "code_fingerprint": "sha256:ca84723a79618a833b397f900ae885fc6f3b099bcbf5755c93f3ceb86a53f3ef",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tf.Tensor(\n[[1. 1. 1.]\n [1. 1. 1.]], shape=(2, 3), dtype=float32)\ntf.Tensor(\n[[1. 1. 1.]\n [1. 1. 1.]], shape=(2, 3), dtype=float32)\n"
+        }
+      ]
+    },
+    "gpus-devices-memory-copying-between-devices-2": {
+      "code_fingerprint": "sha256:74f5f3f610ef6e09dcc49d4c8b27cf83ef985745a47f5190e967ad77f77a21c2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.4052277, 1.7012244, 1.9171441],\n       [1.5027587, 1.1166861, 1.6622787]], dtype=float32)>"
+        }
+      ]
+    },
+    "gpus-devices-memory-models-on-a-device-1": {
+      "code_fingerprint": "sha256:06e0b688597c10106fce7dad6fbf5d71f2aedbe87f1cf16220296b65a293a715",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[1.2341757],\n       [1.2341757]], dtype=float32)>"
+        }
+      ]
+    },
+    "gpus-devices-memory-models-on-a-device-2": {
+      "code_fingerprint": "sha256:9075fb4f63d6204f136c25fa071c4eb9bc683b106986c3c514771b02526ab77e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'/job:localhost/replica:0/task:0/device:CPU:0'"
+        }
+      ]
+    },
+    "gpus-devices-memory-gpu-memory": {
+      "code_fingerprint": "sha256:e8a2641074b518f79b78250cf67301df712365fa105396603e80b77a0532fe58",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "No GPU: get_memory_info() tracks only GPU and TPU allocators.\n"
+        }
+      ]
+    },
+    "gpus-devices-memory-what-fills-memory-during-training": {
+      "code_fingerprint": "sha256:8d143eb724b6591e55738a8ebf593a701d4dc676e1c42bd9883d226121871ce1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "No GPU: run this cell on a GPU to see the four plateaus.\n"
+        }
+      ]
+    },
+    "gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1": {
+      "code_fingerprint": "sha256:4a61d1b728a37891d124350da2eae8d48360860b11331433a0328459e3b07dda",
+      "kind": "text",
+      "outputs": []
+    },
+    "gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-2": {
+      "code_fingerprint": "sha256:a8399d91074ef48672fca1f53710d3285a69b3e318339a76b7534f3db6531f51",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "checkpointed gradients match the ordinary ones\n"
+        }
+      ]
+    },
+    "gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-3": {
+      "code_fingerprint": "sha256:55ec84a2decdb5297e257de32dbaecb3720c129df40ccf157f1ab6457809569b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "No GPU: peak-memory comparison needs a GPU.\n"
+        }
+      ]
+    },
+    "gpus-devices-memory-don-t-break-the-pipeline-1": {
+      "code_fingerprint": "sha256:f80136f548cd3e7b5db09f50a0775970ad2a94149995380019eff16e029043c9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "No GPU: TensorFlow executes CPU ops synchronously.\n"
+        }
+      ]
+    },
+    "gpus-devices-memory-the-trainer-now-with-devices-1": {
+      "code_fingerprint": "sha256:4ca28a9b62967656f2c09940112e31b744be7871ef885845b48b97baa6acffef",
+      "kind": "text",
+      "outputs": []
+    },
+    "gpus-devices-memory-the-trainer-now-with-devices-2": {
+      "code_fingerprint": "sha256:9856d45103de192d6dc062f3565ace5ea20f372c1e2a666b55b22fdde0c95bc9",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
+          "bytes": 20107,
+          "sha256": "sha256:4be873e5be58e4c0e5f03d1ecc83282bc60fe8e8c9267ff442e03c7c89b37039"
+        }
+      ]
+    }
+  }
+}

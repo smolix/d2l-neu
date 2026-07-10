@@ -8,13 +8,13 @@
     "max_inline_bytes": 0
   },
   "cells": {
-    "model-construction-layers-and-modules-1": {
-      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+    "model-construction-modules-and-model-construction": {
+      "code_fingerprint": "sha256:9095d63d13a774722c4bbdfa90cc6d4857c259393ef4a9f1f0fb8b1a3769cab0",
       "kind": "text",
       "outputs": []
     },
-    "model-construction-layers-and-modules-2": {
-      "code_fingerprint": "sha256:83bfecd0fd720b913d01bdb73909c3722d3de70adda1871b0209ac9f30dab39c",
+    "model-construction-the-module-abstraction-1": {
+      "code_fingerprint": "sha256:13ad700fe21a1528b05c74cbce8c01746bc96f6e8ae95d037ebc27f2e6c1399e",
       "kind": "text",
       "outputs": [
         {
@@ -23,13 +23,23 @@
         }
       ]
     },
-    "model-construction-a-custom-module-1": {
-      "code_fingerprint": "sha256:b6d86fb2cffd6b002e1ec602a6c3e7fef39f10ebabb202766c595f3d6491aea5",
+    "model-construction-the-module-abstraction-2": {
+      "code_fingerprint": "sha256:945a089f6c0f348f894302f3328e577bb68ea6d769a384fe7c6f072489e52a39",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[<Dense name=dense, built=True>, <Dense name=dense_1, built=True>]"
+        }
+      ]
+    },
+    "model-construction-the-module-abstraction-3": {
+      "code_fingerprint": "sha256:469ac305ae0c367c2fdcd262adbea9fc71ceadf00c8dfee479c19433179975e0",
       "kind": "text",
       "outputs": []
     },
-    "model-construction-a-custom-module-2": {
-      "code_fingerprint": "sha256:363d3041d33f479c4f0fe9e33a1542b4a95324a744df1606af739fa637e196ef",
+    "model-construction-the-module-abstraction-4": {
+      "code_fingerprint": "sha256:eec71f69ea12e74210b27d72b38668f26020b9d7ab8bfd5545bef189f2a7902a",
       "kind": "text",
       "outputs": [
         {
@@ -38,13 +48,13 @@
         }
       ]
     },
-    "model-construction-the-sequential-module-1": {
-      "code_fingerprint": "sha256:f5b4c754d9d457b031afb3cdb1ce2fabe31daa275f864c9bbb1e0de9ea3baed8",
+    "model-construction-sequential-and-friends-containers-1": {
+      "code_fingerprint": "sha256:3938ebb03eb382734fcbb421e5b4cdbe15b0a27994d40614d64de47c75c4d835",
       "kind": "text",
       "outputs": []
     },
-    "model-construction-the-sequential-module-2": {
-      "code_fingerprint": "sha256:45d092c315719db089fe403f68249db3189c71cc0f078f89952b894075b4f2ab",
+    "model-construction-sequential-and-friends-containers-2": {
+      "code_fingerprint": "sha256:949ec2f73928852e2093ae420799ff43a0d52a1e74405963e8f6089c4d979c2f",
       "kind": "text",
       "outputs": [
         {
@@ -53,28 +63,131 @@
         }
       ]
     },
-    "model-construction-executing-code-in-the-forward-propagation-method-1": {
-      "code_fingerprint": "sha256:dbc21da0d5ffe1ac0007f0f40676c94e0baf28ff48af1af282bad3d154f1a664",
-      "kind": "text",
-      "outputs": []
-    },
-    "model-construction-executing-code-in-the-forward-propagation-method-2": {
-      "code_fingerprint": "sha256:f18d8c1d53481467bdca3c69df1afb9703e9f0878a4789d116de80e435a1dfd2",
+    "model-construction-sequential-and-friends-containers-3": {
+      "code_fingerprint": "sha256:e7dc10d451fd60d8a29a0ed10d4543f9c25704775fd87c92764216176c179236",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.9816030263900757>"
+          "text": "(TensorShape([2, 10]), 7946)"
         }
       ]
     },
-    "model-construction-executing-code-in-the-forward-propagation-method-3": {
-      "code_fingerprint": "sha256:7fc2d69727fca9433700b8b444c7a2fe9d664f5c2ef74856d7beb02263b0bfbf",
+    "model-construction-sequential-and-friends-containers-4": {
+      "code_fingerprint": "sha256:027b047e884bf1cd667a0c1d6bb88312189521db47b7f0d27228415e4630a78e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "You cannot add new elements of state (variables or sub-layers) to a layer that is already built. All state must be created in the `__init__()` method or in the `build()` method.\n"
+        }
+      ]
+    },
+    "model-construction-forward-is-just-python-1": {
+      "code_fingerprint": "sha256:988e50fa9a076ced2bdc8da8c0ddfd0afd51d1a577b86f31bf8ce1b77c55acbf",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-forward-is-just-python-2": {
+      "code_fingerprint": "sha256:76ff40026a6c15a3ae3ef215ed3d246b427e1a83120bbc9970787f2f50ac949e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.8818148970603943>"
+          "text": "TensorShape([2, 24])"
+        }
+      ]
+    },
+    "model-construction-forward-is-just-python-3": {
+      "code_fingerprint": "sha256:c30f82077621daa082ab8f3c546e6b154c8f894ef1f4e9b603a754753e0a913a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(False,\n ['scaled_residual/sequential_2/dense_11/kernel',\n  'scaled_residual/sequential_2/dense_11/bias'])"
+        }
+      ]
+    },
+    "model-construction-lazy-initialization-shapes-from-data-1": {
+      "code_fingerprint": "sha256:3406ef800b7706ab4aed484ddb5e21fb1326fffe65b0043b688a6d8698b9116d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[]"
+        }
+      ]
+    },
+    "model-construction-lazy-initialization-shapes-from-data-2": {
+      "code_fingerprint": "sha256:55f6fd61351bda9edec16d6bb8e02761d6758ef01421f386cbac5e45bcc79802",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[TensorShape([20, 256]),\n TensorShape([256]),\n TensorShape([256, 10]),\n TensorShape([10])]"
+        }
+      ]
+    },
+    "model-construction-lazy-initialization-shapes-from-data-4": {
+      "code_fingerprint": "sha256:62b109c950fd4623cd707f5c9fc5bf627942c5d31e081f5d4c552ad63f98d9b1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([20, 256])"
+        }
+      ]
+    },
+    "model-construction-building-from-a-config-1": {
+      "code_fingerprint": "sha256:80c8a955a21f623fb24376c7865704c6562896471aa4086302520c6f3ad1f551",
+      "kind": "text",
+      "outputs": []
+    },
+    "model-construction-building-from-a-config-2": {
+      "code_fingerprint": "sha256:694874c33f31e0bc7c86a40c49a1e774be3c9c07deb32a1fb5ba2d90d8e7a24b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "display_data",
+          "text": "\u001b[1mModel: \"sequential_9\"\u001b[0m\n"
+        },
+        {
+          "type": "display_data",
+          "text": "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓\n┃\u001b[1m \u001b[0m\u001b[1mLayer (type)                   \u001b[0m\u001b[1m \u001b[0m┃\u001b[1m \u001b[0m\u001b[1mOutput Shape          \u001b[0m\u001b[1m \u001b[0m┃\u001b[1m \u001b[0m\u001b[1m      Param #\u001b[0m\u001b[1m \u001b[0m┃\n┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩\n│ dense_25 (\u001b[38;5;33mDense\u001b[0m)                │ (\u001b[38;5;45mNone\u001b[0m, \u001b[38;5;34m256\u001b[0m)            │       \u001b[38;5;34m200,960\u001b[0m │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ residual_block_1                │ (\u001b[38;5;45mNone\u001b[0m, \u001b[38;5;34m256\u001b[0m)            │       \u001b[38;5;34m131,584\u001b[0m │\n│ (\u001b[38;5;33mResidualBlock\u001b[0m)                 │                        │               │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ residual_block_2                │ (\u001b[38;5;45mNone\u001b[0m, \u001b[38;5;34m256\u001b[0m)            │       \u001b[38;5;34m131,584\u001b[0m │\n│ (\u001b[38;5;33mResidualBlock\u001b[0m)                 │                        │               │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ residual_block_3                │ (\u001b[38;5;45mNone\u001b[0m, \u001b[38;5;34m256\u001b[0m)            │       \u001b[38;5;34m131,584\u001b[0m │\n│ (\u001b[38;5;33mResidualBlock\u001b[0m)                 │                        │               │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ residual_block_4                │ (\u001b[38;5;45mNone\u001b[0m, \u001b[38;5;34m256\u001b[0m)            │       \u001b[38;5;34m131,584\u001b[0m │\n│ (\u001b[38;5;33mResidualBlock\u001b[0m)                 │                        │               │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ dense_26 (\u001b[38;5;33mDense\u001b[0m)                │ (\u001b[38;5;45mNone\u001b[0m, \u001b[38;5;34m10\u001b[0m)             │         \u001b[38;5;34m2,570\u001b[0m │\n└─────────────────────────────────┴────────────────────────┴───────────────┘\n"
+        },
+        {
+          "type": "display_data",
+          "text": "\u001b[1m Total params: \u001b[0m\u001b[38;5;34m729,866\u001b[0m (2.78 MB)\n"
+        },
+        {
+          "type": "display_data",
+          "text": "\u001b[1m Trainable params: \u001b[0m\u001b[38;5;34m729,866\u001b[0m (2.78 MB)\n"
+        },
+        {
+          "type": "display_data",
+          "text": "\u001b[1m Non-trainable params: \u001b[0m\u001b[38;5;34m0\u001b[0m (0.00 B)\n"
+        }
+      ]
+    },
+    "model-construction-building-from-a-config-3": {
+      "code_fingerprint": "sha256:e2f208db59d019d4b1efd162db53c40ba3c75b7db336bb3b46ad23855ff49db0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([2, 10])"
+        }
+      ]
+    },
+    "model-construction-building-from-a-config-4": {
+      "code_fingerprint": "sha256:2c04718e06e82b208db755a54906c6583136abbed57ec3ab650f30f775c7cf1d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d_hidden=256, num_blocks=4: 729,866 parameters\nd_hidden=512, num_blocks=8: 4,609,546 parameters\n"
         }
       ]
     }

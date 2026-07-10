@@ -1,0 +1,219 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/parameters-state-memory.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "parameters-state-memory-parameters-state-and-memory": {
+      "code_fingerprint": "sha256:24deb91fb1d5533a42ffac9b58906bc780b7aa5ce04ab2c35e7192dd92276f00",
+      "kind": "text",
+      "outputs": []
+    },
+    "parameters-state-memory-accessing-parameters-1": {
+      "code_fingerprint": "sha256:a2ddd7e31d6fcb39fe3fb1cf66ffe03b09b208315f4ab278db8766a0c3822952",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([2, 10])"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-2": {
+      "code_fingerprint": "sha256:abd595987bd6149b32bbf592218d66ddec25debcb6f602d4d4d8542371a0b7eb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.nn.parameter.Parameter, torch.Size([10]))"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-3": {
+      "code_fingerprint": "sha256:3c2e11e811357954e51fb393e4d71e83dcde70cdccec44f259871220cf8d055e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([64, 64])"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-4": {
+      "code_fingerprint": "sha256:6c0825b4bbe8979ffb27dd710e86b9f55550daf98dff956b6692426678d58d84",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-5": {
+      "code_fingerprint": "sha256:c6d263b2772edfbe389ff178ed9b5c7eacd3cf0f9a2b8a75bdbff6b0de8bf026",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[('0.weight', torch.Size([64, 20])),\n ('0.bias', torch.Size([64])),\n ('1.body.0.weight', torch.Size([64, 64])),\n ('1.body.0.bias', torch.Size([64])),\n ('1.body.2.weight', torch.Size([64, 64])),\n ('1.body.2.bias', torch.Size([64])),\n ('2.body.0.weight', torch.Size([64, 64])),\n ('2.body.0.bias', torch.Size([64])),\n ('2.body.2.weight', torch.Size([64, 64])),\n ('2.body.2.bias', torch.Size([64])),\n ('3.weight', torch.Size([10, 64])),\n ('3.bias', torch.Size([10]))]"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-6": {
+      "code_fingerprint": "sha256:c35ce92c8c259ea0997c093adf3323237bc43185fc9c55d21ab43016c0994d5b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-1": {
+      "code_fingerprint": "sha256:965004cbd27f908f041fa7ce90ba6787bf5436c813f2abd8ab4459468454c3c3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "['mean', 'std', 'out.weight', 'out.bias']"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-2": {
+      "code_fingerprint": "sha256:34e46ebbb961467eb3d348e7807260c8d4c59fef338eacea07e91df8dac27797",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "['out.weight', 'out.bias']"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-3": {
+      "code_fingerprint": "sha256:5e901b574bdd25e9f294c9457b076d0a1a99037bda9e1fb1646061b86ef538fb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.float64, torch.float32)"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-4": {
+      "code_fingerprint": "sha256:e71977047e00a449af44415431def129550bd0842cef04bef29e9e354cf7e742",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "no GPU here; on a CUDA machine, whiten.to(\"cuda\") moves whiten.mean along with the parameters\n"
+        }
+      ]
+    },
+    "parameters-state-memory-counting-parameters-counting-bytes-1": {
+      "code_fingerprint": "sha256:1042e8548768cce68e0f4b0153823bdd039dd2a77970ccdea7c567922e3f05df",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "18634 parameters: 0.28 MiB for weights + gradients + Adam state\n"
+        }
+      ]
+    },
+    "parameters-state-memory-counting-parameters-counting-bytes-2": {
+      "code_fingerprint": "sha256:51e4b968625650b6fff0ea73065e3a5337b5e72a2cff2fa07cfdfed550772adf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-tied-parameters-1": {
+      "code_fingerprint": "sha256:b66b2612bfce19f95504cb7a423aa119c1e5f1fdf5e8dbd68e9ebfd2984c9be9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-tied-parameters-2": {
+      "code_fingerprint": "sha256:f7a4f1be8ec08b323e516d38746d2c3f5b828a72ae243ec66cb75e0cbd2388e2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(1872, 3472)"
+        }
+      ]
+    },
+    "parameters-state-memory-tied-parameters-3": {
+      "code_fingerprint": "sha256:0a6707ed7cc7d6a80b21673f53eebbecefba2a1cc62c3deec7aca03e85b41c07",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(True, ['emb.weight', 'body.weight', 'body.bias'])"
+        }
+      ]
+    },
+    "parameters-state-memory-tied-parameters-4": {
+      "code_fingerprint": "sha256:1754fd896120f9131671153c73f3eb1d5fde0eb973d92edfecd19477c27c3962",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-1": {
+      "code_fingerprint": "sha256:093a5a72b919b77df5b9b10f0d05d9e94b4a792fb27717ed7efb23767d16c1af",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(650, 18634)"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-2": {
+      "code_fingerprint": "sha256:74bd319d1580baef4b241906bd112e605b082d2eb5ef92d74df82e2a48af6fc7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[False,\n False,\n False,\n False,\n False,\n False,\n False,\n False,\n False,\n False,\n True,\n True]"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-3": {
+      "code_fingerprint": "sha256:910499472a69b8d91349a96e961119c76e61855ea85f850ded8c2269de067350",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-4": {
+      "code_fingerprint": "sha256:50d7efcc309d15e78c7565eb62ee348f451fa6987b2a3d5603e5437436eb0d69",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "False"
+        }
+      ]
+    }
+  }
+}

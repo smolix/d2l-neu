@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/saving-loading.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "saving-loading-saving-loading-and-pretrained-weights": {
+      "code_fingerprint": "sha256:e7a8bfbfa85bb75e1c6948378efb55882e935b0d0d032eef72b14387faf0449b",
+      "kind": "text",
+      "outputs": []
+    },
+    "saving-loading-state-not-code-1": {
+      "code_fingerprint": "sha256:947ad0f26c52f9f5bb683bdca34702b7ac45ad48bfa327694b2f562b7a04d70e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'x': <tf.Tensor: shape=(4,), dtype=int32, numpy=array([0, 1, 2, 3], dtype=int32)>,\n 'y': <tf.Tensor: shape=(4,), dtype=float32, numpy=array([0., 0., 0., 0.], dtype=float32)>}"
+        }
+      ]
+    },
+    "saving-loading-state-not-code-2": {
+      "code_fingerprint": "sha256:abd82d0aa269fbd0895c7d8bad99e0dcffc47725c9bac5b879a023479bc0ab77",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'mlp/hidden/kernel': (20, 256),\n 'mlp/hidden/bias': (256,),\n 'mlp/output/kernel': (256, 10),\n 'mlp/output/bias': (10,)}"
+        }
+      ]
+    },
+    "saving-loading-safetensors-the-interchange-format-3": {
+      "code_fingerprint": "sha256:25c33c7789201c92e660a3ccefbb2631084355320ed39907ef8b52082ed5aea4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=bool, numpy=True>"
+        }
+      ]
+    },
+    "saving-loading-safetensors-the-interchange-format-4": {
+      "code_fingerprint": "sha256:25328ba4438744e7755719ba376d52ac28958cf884e7c25442bd60815e49a809",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'dtype': 'F32', 'shape': [20, 256], 'data_offsets': [1024, 21504]}"
+        }
+      ]
+    },
+    "saving-loading-checkpointing-a-training-run-2": {
+      "code_fingerprint": "sha256:8af2eb7ca9ea9fbcc6ed9a529e431f21de5582c621ca3c9a82c8168d69596077",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "('run-tf-1', 0.0023)"
+        }
+      ]
+    },
+    "saving-loading-checkpointing-a-training-run-3": {
+      "code_fingerprint": "sha256:adfdbbfe7ccc24b0a854321ad52f286709e9ed0f8f761a689b16bfe13f551f75",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'perturbed 53411.32 -> restored 0.0023'"
+        }
+      ]
+    },
+    "saving-loading-checkpointing-a-training-run-4": {
+      "code_fingerprint": "sha256:9a4e834daf0aa3d72f823aa332c56112adb35f5b5d383557ac472f700f740318",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "full  optimizer: [0.0023, 0.0023, 0.0022, 0.0021, 0.0021]\nfresh optimizer: [0.0023, 1.8695, 0.4719, 0.8538, 0.7056]\n"
+        }
+      ]
+    },
+    "saving-loading-loading-weights-you-did-not-train-1": {
+      "code_fingerprint": "sha256:65389f3e69579c39a96bd46fbd0a6dc56a4f438793e8232802e744c2a3fe655f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<Dense name=head, built=True>"
+        }
+      ]
+    },
+    "saving-loading-loading-weights-you-did-not-train-2": {
+      "code_fingerprint": "sha256:40d9b9a89d544253f672cec3edd178f241aeb9ebdf434991ca33aee8f3ff269e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "A total of 1 objects could not be loaded. Example error message for object <Dense name=head, built=True>:\nThe shape of the target variable and the shape of the target value in `variable.assign(value)` must match. variable.shape=(1280, 10), Received: value.shape=(1280, 101).\n"
+        }
+      ]
+    },
+    "saving-loading-loading-weights-you-did-not-train-3": {
+      "code_fingerprint": "sha256:b3b2d498562cb95715cb65e670bd5b54c2894b713499204cf87d6c5e6fcd00d9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'12810 trainable of 2270794'"
+        }
+      ]
+    }
+  }
+}

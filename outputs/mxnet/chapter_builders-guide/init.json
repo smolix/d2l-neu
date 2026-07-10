@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/init.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "init-initialization": {
+      "code_fingerprint": "sha256:d053c8d4da16599a0d46f7681229e61fc507dc04cf37ec97fe170791514efe8b",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-defaults-and-when-to-override-them": {
+      "code_fingerprint": "sha256:2ad463b69a50964ae27378cb248f2eb9b2c0af17725cc0cc755431db3c19fab7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "range [-0.0700, 0.0700], predicted bound 0.0700\nstd 0.0404, predicted 0.0404\nbias all zero: True\n"
+        }
+      ]
+    },
+    "init-applying-initializers-1": {
+      "code_fingerprint": "sha256:3d8ecec4b98ef1fad2162bef92f5620cdf05ccbf777b2bfc70078a14f3431a9d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array([ 0.00765541,  0.00490368,  0.00680209, -0.00184343]), array(0.))"
+        }
+      ]
+    },
+    "init-applying-initializers-2": {
+      "code_fingerprint": "sha256:7fa75ba94d2fa87d67779173ee63e899e88b77fb565857ab5651f0d77578cccc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array([ 0.3715366 , -0.47844273, -0.4485028 , -0.5750185 ]),\n array([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
+        }
+      ]
+    },
+    "init-truncated-normals": {
+      "code_fingerprint": "sha256:51e343479e562c540fe6b08a54d300616dd78027935f775d1769d4e56fe04fbe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "normal:    std 0.0200, max weight 0.0919\ntruncated: std 0.0176, max weight 0.0400\n"
+        }
+      ]
+    },
+    "init-watching-the-variance-compound-1": {
+      "code_fingerprint": "sha256:2d3ff094a43b8795fb5f0338ff12520eb39a6bc514eef1474ec072dc9ed7c4a6",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-watching-the-variance-compound-2": {
+      "code_fingerprint": "sha256:736d23c28e385acfb7845022a3e1bdd58314f21ff470e964cdfd2931a097529f",
+      "kind": "text",
+      "outputs": []
+    },
+    "init-watching-the-variance-compound-3": {
+      "code_fingerprint": "sha256:d2351a69768393301a5499811197a831d94d2f1d57d57be1381cb9a7593c8fd8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  N   default    scaled      zero\n  2       3.1      2.06     0.997\n  8        70      2.24     0.997\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 32  3.48e+07      2.45     0.997\n"
+        }
+      ]
+    },
+    "init-custom-initializers-1": {
+      "code_fingerprint": "sha256:886008506fba84fb874dfb355de6723f11ac5b8ac9991a00dd011d512428f0f8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[ 9.935756 , -0.       ,  0.       , -7.146276 ],\n       [-0.       , -0.       , -5.6079783, -6.314646 ]])"
+        }
+      ]
+    },
+    "init-custom-initializers-2": {
+      "code_fingerprint": "sha256:8e3be665b0e7dd655fd59160ca443b8b412cf28eeee58e7b338ddc72a3d98f5e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([42.      ,  1.      ,  1.      , -6.146276])"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/numerics.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:dcb5e387ac80ff5e04379e213a8454150ef71c72ce4e404f952ad70f99567691",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "numerics-numerics-dtypes-and-mixed-precision": {
+      "code_fingerprint": "sha256:658c9e6e84766535054b91d93d16416818091b90e45e1f8dc4f232d5e806f479",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerics-the-dtype-zoo-1": {
+      "code_fingerprint": "sha256:7cc547a6218b0b117c0ad33caf409c69715d6c5a427e6935962ac250a55fce82",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(inf, dtype=torch.float16), tensor(90112., dtype=torch.bfloat16))"
+        }
+      ]
+    },
+    "numerics-the-dtype-zoo-2": {
+      "code_fingerprint": "sha256:1754fcfcdedb15c95fbb1d89bfcfd153e982e1e5509234f15cb48002d3b96449",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "torch.float32   max  3.403e+38  tiny 1.175e-38  eps 1.192e-07\ntorch.bfloat16  max  3.390e+38  tiny 1.175e-38  eps 7.812e-03\ntorch.float16   max  6.550e+04  tiny 6.104e-05  eps 9.766e-04\n"
+        }
+      ]
+    },
+    "numerics-tf32-what-happens-to-fp32-matrix-multiplication": {
+      "code_fingerprint": "sha256:a700a33baf456f995b905b03a003a1efa67578e1611ed52ff16ea8feadc0684e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "highest\nhigh True\n"
+        }
+      ]
+    },
+    "numerics-dtype-rules-promotion-parameters-and-casts-1": {
+      "code_fingerprint": "sha256:808a69e82fe3b9512481a88482b9bb12ede5997d43a8cf990f5ea57b628ea3bd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.float32, torch.float16, torch.float16)"
+        }
+      ]
+    },
+    "numerics-dtype-rules-promotion-parameters-and-casts-2": {
+      "code_fingerprint": "sha256:49c6d9aa19c71f0f0ce3a4bb921bd80ad062d9215827c646c0c5bb7eb494ef95",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "814120"
+        }
+      ]
+    },
+    "numerics-dtype-rules-promotion-parameters-and-casts-3": {
+      "code_fingerprint": "sha256:773a157c7d9da7e4bc3e3799841cb39e91a610506566940eb563830ac92311ae",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mat1 and mat2 must have the same dtype, but got Float and BFloat16\ntorch.bfloat16 407060\n"
+        }
+      ]
+    },
+    "numerics-mixed-precision-training-1": {
+      "code_fingerprint": "sha256:fb868a1da9e608854ebbc3eafa76c126a13044183fd29b7f39a774d65a8b0833",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(torch.bfloat16, torch.float32)"
+        }
+      ]
+    },
+    "numerics-mixed-precision-training-2": {
+      "code_fingerprint": "sha256:ed085471da3a12b7082a42eebb80c9cb094c528c1ba335096e82e7d657f97a1d",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerics-mixed-precision-training-3": {
+      "code_fingerprint": "sha256:1515aaa98caf61cec6d6fe916538c2b1f7729fbdfd526bf34e1cdf1802a8d8e6",
+      "kind": "text",
+      "outputs": []
+    },
+    "numerics-mixed-precision-training-4": {
+      "code_fingerprint": "sha256:ef0f2b35b1bb3940c3a27fa13640700696ff4c9d2742e6c8afe698c7839e0923",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final loss: fp32 0.815, bf16 autocast 0.815\n"
+        }
+      ]
+    },
+    "numerics-loss-scaling-for-fp16-1": {
+      "code_fingerprint": "sha256:8d6e0a9cf447ded5771328448d656221d406eb73e844f6735ed905a152548711",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(0., dtype=torch.float16), tensor(0.0007, dtype=torch.float16))"
+        }
+      ]
+    },
+    "numerics-loss-scaling-for-fp16-2": {
+      "code_fingerprint": "sha256:6487275987823f6ffafa24808fce37c76aac17d9ecc2e01f44b9b2a9fa57ac5d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss 1.388, loss scale 65536\n"
+        }
+      ]
+    },
+    "numerics-when-numerics-bite-1": {
+      "code_fingerprint": "sha256:1c739807d34219bbaef75ba82235433e40117ed8a83b7017640e877bacdedce3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(inf, dtype=torch.float16), tensor(nan, dtype=torch.float16))"
+        }
+      ]
+    },
+    "numerics-when-numerics-bite-2": {
+      "code_fingerprint": "sha256:6865e1880060abf28dfe3931ae4d5d64ec0a3208210e0558d839f00a92991f5b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(inf, dtype=torch.float16), tensor(12.4062, dtype=torch.float16))"
+        }
+      ]
+    },
+    "numerics-when-numerics-bite-3": {
+      "code_fingerprint": "sha256:bd9cdd9ae640ef603cb47c81870c336f56c6f57787245d57a96f2eb100353918",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(9784., dtype=torch.float16), tensor(10004.0439))"
+        }
+      ]
+    }
+  }
+}

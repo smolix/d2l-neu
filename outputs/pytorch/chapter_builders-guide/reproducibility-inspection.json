@@ -1,0 +1,110 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/reproducibility-inspection.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "reproducibility-inspection-reproducibility-and-inspection": {
+      "code_fingerprint": "sha256:d52c13f518351695a774b08414e69610387e5ebb28f319f2303253cfeadc46d2",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-seeds-and-randomness": {
+      "code_fingerprint": "sha256:0d23345e4971592417eb6769a112519ba41b2db7e833cff80dee3f33b81b06c0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "same seed, identical loss and weights: True True\ndifferent seed: 0.8643209338188171 vs 0.9312678575515747\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-generator-objects": {
+      "code_fingerprint": "sha256:43a3717c42251855a1b5c8b7dfb8495c397071ad78449db2cc64ad01f317b19c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "True tensor([2, 6, 1, 8, 4, 5, 0, 9, 3, 7])\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-dataloader-workers-1": {
+      "code_fingerprint": "sha256:dd4d3e691e7e1c1da88bddb7c793f288d3966d6f7203555466489d56ddcca0f8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "worker 0: [684 559 629]\nworker 1: [684 559 629]\nworker 2: [684 559 629]\nworker 3: [684 559 629]\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-dataloader-workers-2": {
+      "code_fingerprint": "sha256:7ae0db2e43aec8a174e29c9570e51f1981f087ff09754e1ed5071800bdb85707",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[5, 3, 1, 7], [2, 6, 4, 0]]\n[[5, 3, 1, 7], [2, 6, 4, 0]]\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-determinism-and-its-price-1": {
+      "code_fingerprint": "sha256:8e87e387dd87859f79d90274d789412210c554bd84fde8757f521fd5250de677",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tensor(True) 0.0\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-determinism-and-its-price-2": {
+      "code_fingerprint": "sha256:3f288ab464a3be21ca0c0dedec631e527cac7968a2e6366773d71e1d02bcc800",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "CPU run: every kernel used above is already deterministic; on CUDA, ops lacking a deterministic kernel raise RuntimeError\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-hooks-looking-inside": {
+      "code_fingerprint": "sha256:3e17213f34e598f35459e3664377ade2796a7e78c1a2496a1cac28791df9b62e",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-capturing-activation-statistics": {
+      "code_fingerprint": "sha256:73b09b986ea27f831c2cf08d7d6432be28b95b047c16b7750a62bc77133e8529",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Linear          std 0.60\nResidualBlock   std 0.62\nResidualBlock   std 0.66\nResidualBlock   std 0.68\nResidualBlock   std 0.69\nResidualBlock   std 0.72\nResidualBlock   std 0.74\nResidualBlock   std 0.77\nResidualBlock   std 0.78\nLinear          std 0.48\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-a-nan-finder": {
+      "code_fingerprint": "sha256:55653d5d8e59743366f5ba829ebdd480fc5ac3a0c5270d552aa513d47dcbc170",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first non-finite output in 3.body.0\n"
+        }
+      ]
+    }
+  }
+}

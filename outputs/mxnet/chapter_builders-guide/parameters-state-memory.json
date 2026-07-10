@@ -1,0 +1,229 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/parameters-state-memory.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "parameters-state-memory-parameters-state-and-memory": {
+      "code_fingerprint": "sha256:4a897e3e0f08329d9c9c391d13746cf799eb5dc33f45538fa3b0c0a22a7055c3",
+      "kind": "text",
+      "outputs": []
+    },
+    "parameters-state-memory-accessing-parameters-1": {
+      "code_fingerprint": "sha256:50f192067b73b67b59c158409fb98e67c757ce819d3af15da997384cb8ac9842",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 10)"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-2": {
+      "code_fingerprint": "sha256:98282943977fe72eedc133a4b4c47a54633d02b1956ac84d2c7945887702c5b1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(mxnet.gluon.parameter.Parameter, (10,))"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-3": {
+      "code_fingerprint": "sha256:9a07162967db350015ed44ae26f424594a324fc2ffce5a40a3f8c4ac0596f31a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(64, 64)"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-4": {
+      "code_fingerprint": "sha256:cce43fc39292761316844a78c725a498f0a1b9ba2ea6a61d3b9bff6a0e79732c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-5": {
+      "code_fingerprint": "sha256:ba3bfb8b8dc1c2a11e58837220059ce00c284a44d38539407dc79460ce1509a6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[('0.weight', (64, 20)),\n ('0.bias', (64,)),\n ('1.body.0.weight', (64, 64)),\n ('1.body.0.bias', (64,)),\n ('1.body.1.weight', (64, 64)),\n ('1.body.1.bias', (64,)),\n ('2.body.0.weight', (64, 64)),\n ('2.body.0.bias', (64,)),\n ('2.body.1.weight', (64, 64)),\n ('2.body.1.bias', (64,)),\n ('3.weight', (10, 64)),\n ('3.bias', (10,))]"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-6": {
+      "code_fingerprint": "sha256:78a2c5ec71a3989193f9a56af8bffc9d68a519d216952691bc61c89ae25b9dd8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-1": {
+      "code_fingerprint": "sha256:57a7361e60784441954880c669d8987afeee4805f26bdfdc05ad1bdfb0a2379a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "['mean', 'std', 'out.weight', 'out.bias']"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-2": {
+      "code_fingerprint": "sha256:ae28236823e7e01a48831a1b173644d06fb1cc2fd6ee97f24ef884fba5493d10",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'mean': 'null', 'std': 'null', 'out.weight': 'write', 'out.bias': 'write'}"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-3": {
+      "code_fingerprint": "sha256:c16c812ca5c2a01105bb9722a29a083eeae320f3087b692ae44a8803d344f50f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(dtype('float64'), dtype('float32'))"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-4": {
+      "code_fingerprint": "sha256:51c5b4ac002747b6e6118f95d69a17084311d37c9cc970d48b81b029e00d6489",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "no GPU here; on a CUDA machine, whiten.reset_device(npx.gpu(0)) moves whiten.mean along with the parameters\n"
+        }
+      ]
+    },
+    "parameters-state-memory-counting-parameters-counting-bytes-1": {
+      "code_fingerprint": "sha256:300c8025ee0c4c5c13b6e78fea5ee4e7d6743fb79d85de693f3eaa2194c6b8e7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "18634 parameters: 0.28 MiB for weights + gradients + Adam state\n"
+        }
+      ]
+    },
+    "parameters-state-memory-counting-parameters-counting-bytes-2": {
+      "code_fingerprint": "sha256:5a301fad653058b935cbb0738d8fbf835aecf621fd5a5034e97ddc271ca88cc8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(151114, 149072)"
+        }
+      ]
+    },
+    "parameters-state-memory-tied-parameters-1": {
+      "code_fingerprint": "sha256:6e6f31afacca0a2b89b603c971bb764bc6e9dc4df03a1ca10dcc84577859b5ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-tied-parameters-2": {
+      "code_fingerprint": "sha256:012de4d24078ceb29ec5255eb9fc249fcf24ea6e7f1cb99363e57cf8a4022185",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(1872, 3472)"
+        }
+      ]
+    },
+    "parameters-state-memory-tied-parameters-3": {
+      "code_fingerprint": "sha256:9981759caa812e80327c3444a7843b257d83ccc4d4eaa6ce146b0fde651096e6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(True, ['emb.weight', 'body.weight', 'body.bias', 'head.weight'])"
+        }
+      ]
+    },
+    "parameters-state-memory-tied-parameters-4": {
+      "code_fingerprint": "sha256:f3cb01a11059c2a41abd790712f80990f2288ae6aea8e8860fc5ef7e0eee5f85",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-1": {
+      "code_fingerprint": "sha256:408af94bb59bed8ba4ab1aa3ee6efa297090cfcd0b444ca8cf80e1e747a5d447",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(650, 18634)"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-2": {
+      "code_fingerprint": "sha256:f8372165976b78060bf0913917672f265196a9936b40ca8c8f47f32baaa33eeb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'0.weight': False,\n '0.bias': False,\n '1.body.0.weight': False,\n '1.body.0.bias': False,\n '1.body.1.weight': False,\n '1.body.1.bias': False,\n '2.body.0.weight': False,\n '2.body.0.bias': False,\n '2.body.1.weight': False,\n '2.body.1.bias': False,\n '3.weight': True,\n '3.bias': True}"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-3": {
+      "code_fingerprint": "sha256:1f0c341ce41b1c12d379b91f37488970291f006cb2c90251082d5d32b0b3afb0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-4": {
+      "code_fingerprint": "sha256:daad1da0bd783227fee17ff4729968193cf905948565823d337b4d8c868392fe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "False"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-5": {
+      "code_fingerprint": "sha256:791ff85304110d58e83b7d3968df1058fbac04ec336b96eb7b2e0640fb835764",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.7371180653572083"
+        }
+      ]
+    }
+  }
+}

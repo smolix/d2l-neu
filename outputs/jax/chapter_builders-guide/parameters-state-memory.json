@@ -1,0 +1,218 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/parameters-state-memory.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "parameters-state-memory-parameters-state-and-memory": {
+      "code_fingerprint": "sha256:0106ad28ecdb6947ddebe9f3f33bf9ec6a1ad176f22bae21cc4cd393073f0b3a",
+      "kind": "text",
+      "outputs": []
+    },
+    "parameters-state-memory-accessing-parameters-1": {
+      "code_fingerprint": "sha256:0d790d79dd2da357186666c0e11b03edad39aa10ae3bf7f444a85db622c145f6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(2, 10)"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-2": {
+      "code_fingerprint": "sha256:508bc5a0ad0b397b57839d17b626a06f8b35d9059f5d49d01d0f965e27bd7450",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(jaxlib._jax.ArrayImpl, (10,))"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-3": {
+      "code_fingerprint": "sha256:3681d426c7d2ce56d3c205057e9be689ce9c26e32303aa9fdc56ce35f699c256",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(64, 64)"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-4": {
+      "code_fingerprint": "sha256:812902f9b15d1ded365d57c05ba72d3db62783673c8f5ac6b79fa41a2b90e804",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-5": {
+      "code_fingerprint": "sha256:7295c36fa223ef7fbd4ee9fc4e1199605b52b4e6e04c1d6de7daa5bd4721d481",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[(\"['params']['layers_0']['bias']\", (64,)),\n (\"['params']['layers_0']['kernel']\", (20, 64)),\n (\"['params']['layers_1']['body']['layers_0']['bias']\", (64,)),\n (\"['params']['layers_1']['body']['layers_0']['kernel']\", (64, 64)),\n (\"['params']['layers_1']['body']['layers_2']['bias']\", (64,)),\n (\"['params']['layers_1']['body']['layers_2']['kernel']\", (64, 64)),\n (\"['params']['layers_2']['body']['layers_0']['bias']\", (64,)),\n (\"['params']['layers_2']['body']['layers_0']['kernel']\", (64, 64)),\n (\"['params']['layers_2']['body']['layers_2']['bias']\", (64,)),\n (\"['params']['layers_2']['body']['layers_2']['kernel']\", (64, 64)),\n (\"['params']['layers_3']['bias']\", (10,)),\n (\"['params']['layers_3']['kernel']\", (64, 10))]"
+        }
+      ]
+    },
+    "parameters-state-memory-accessing-parameters-6": {
+      "code_fingerprint": "sha256:14203cd8351902c205cd4717f8100f20216945cddac1acdad5c4521c8150cc8c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "['params']"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-1": {
+      "code_fingerprint": "sha256:73a6f09ae0816c13cc2175d4a82d93ba17ac0ac11b1b160e17deb8498bd57bdb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'constants': {'mean': (4,), 'std': (4,)},\n 'params': {'Dense_0': {'bias': (2,), 'kernel': (4, 2)}}}"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-2": {
+      "code_fingerprint": "sha256:ca9d3468b462e0833f1aeb4d4639e48615e5afc145eba953f897524b60deca15",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'constants': ['mean', 'std'], 'params': ['Dense_0']}"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-3": {
+      "code_fingerprint": "sha256:9489e8e80df68cc98d49c1fd8d04954d7a64304ae177f7e2fd0f28ae325b4cea",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(dtype('float16'), dtype('float32'))"
+        }
+      ]
+    },
+    "parameters-state-memory-parameters-and-buffers-4": {
+      "code_fingerprint": "sha256:3ce8a2a1e2323a59af980bd35e7ed068c19aad419aa411c6843f033ae62693b5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "CpuDevice(id=0)"
+        }
+      ]
+    },
+    "parameters-state-memory-counting-parameters-counting-bytes-1": {
+      "code_fingerprint": "sha256:2fa246a9b5986bc54f2b8664823a77b0f7a96c8ed974552c189ee476ccaa4578",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "18634 parameters: 0.28 MiB for weights + gradients + Adam state\n"
+        }
+      ]
+    },
+    "parameters-state-memory-counting-parameters-counting-bytes-2": {
+      "code_fingerprint": "sha256:56e2864ee03ac87251cee8103145df2458438f7d032b3d79d7629ab5f524308a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-tied-parameters-1": {
+      "code_fingerprint": "sha256:549df97158c892be9d1a0d3bbe1c6ff8bf13ee4b07e0fed79ba7e90354018b8e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'params': {'Dense_0': {'bias': (16,), 'kernel': (16, 16)},\n  'Embed_0': {'embedding': (100, 16)}}}"
+        }
+      ]
+    },
+    "parameters-state-memory-tied-parameters-2": {
+      "code_fingerprint": "sha256:4d91263079ac07ffee5b796a7d92a59e2b90de35b62ed037b0b7fde2793232a2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(1872, 3472)"
+        }
+      ]
+    },
+    "parameters-state-memory-tied-parameters-4": {
+      "code_fingerprint": "sha256:63ec1d1ee4ea2c2a552ebe66c9e74062e5dccb742a4fed2367cb39f60707470a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(True, dtype=bool)"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-1": {
+      "code_fingerprint": "sha256:985b51d6e51f58324de3a67937d48191dc71a9f9099002f78b7269cd1ccf997a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(650, 18634)"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-2": {
+      "code_fingerprint": "sha256:06c500430decc824711def068c512873dbc3c8faeb1964b1220316289663efd6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'params': {'layers_0': {'bias': False, 'kernel': False},\n  'layers_1': {'body': {'layers_0': {'bias': False, 'kernel': False},\n    'layers_2': {'bias': False, 'kernel': False}}},\n  'layers_2': {'body': {'layers_0': {'bias': False, 'kernel': False},\n    'layers_2': {'bias': False, 'kernel': False}}},\n  'layers_3': {'bias': True, 'kernel': True}}}"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-3": {
+      "code_fingerprint": "sha256:002f5f752607777d04cf7c7b188dd20f91d15e8a708bccce44597e606b69ddd9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-4": {
+      "code_fingerprint": "sha256:250e6e53c9dd7661b5158c82030fda5b4ee4b7bedc06405b8ab9901efaf0b685",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "False"
+        }
+      ]
+    },
+    "parameters-state-memory-freezing-parameters-5": {
+      "code_fingerprint": "sha256:f27732dd6232bf58a548f824ca566b1dc7a8eaf538c57bba14174b4c6d442bf1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.1790274679660797"
+        }
+      ]
+    }
+  }
+}

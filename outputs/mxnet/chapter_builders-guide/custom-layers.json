@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/custom-layers.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "custom-layers-custom-layers-and-functions": {
+      "code_fingerprint": "sha256:26e16ea8b6067067336399528fa3e634c2a6eeb41efa53952046c46e94f03158",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-without-parameters-1": {
+      "code_fingerprint": "sha256:7a84b1c9826fcb9e2c5da24836a6fb63f45f12c129541b4dd7da02423b376d2d",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-without-parameters-2": {
+      "code_fingerprint": "sha256:b61ef8aed404be5825415e4948631c8a465d2c76079330d4b6f60345683edd88",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([-2., -1.,  0.,  1.,  2.])"
+        }
+      ]
+    },
+    "custom-layers-layers-without-parameters-3": {
+      "code_fingerprint": "sha256:327a1ef0df5057b19c2d08c95e033fc07a474fcd3f92fbd961cb2aafa53566e3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array(5.9208105e-10)"
+        }
+      ]
+    },
+    "custom-layers-layers-with-parameters-rmsnorm-1": {
+      "code_fingerprint": "sha256:08339fac8ca821dfa5c37de123ddd0d12ee489cee97db4aab7a388fcb6b217d9",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-with-parameters-rmsnorm-2": {
+      "code_fingerprint": "sha256:36182e08330d83e91366ac986ebb9d2aa137dfe165635967892643469efc0468",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([1.        , 1.        , 0.99999994, 0.9999999 ])"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-1": {
+      "code_fingerprint": "sha256:d3f70c00ff4c609ec87f7360d943132d0d7b760b950844d38bccf0c3b820ad31",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'gain': Parameter (shape=(8,), dtype=<class 'numpy.float32'>)}"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-2": {
+      "code_fingerprint": "sha256:9f75f675369ab23af3f9a560e6b283593a852240a3b75bf77145336dc69f3b4c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(4, 2)"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-3": {
+      "code_fingerprint": "sha256:f377e7c9cfaa0e117ec027747856ffbc400f9ed58441214d15f68df7ac5fa4a4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "custom-layers-precomputed-state-buffers-1": {
+      "code_fingerprint": "sha256:becdcded4f6c3e1a291df0b6025303f696af53691b5eefd0566553d095def1f3",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-precomputed-state-buffers-2": {
+      "code_fingerprint": "sha256:db9139e4e2befa9a328cba700fe6ae70be1836d5afa36cebafd441dba8d11b44",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[  0. -inf -inf]\n [  0.   0. -inf]\n [  0.   0.   0.]]\n{'mask': Constant (shape=(8, 8), dtype=float32)}\n"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-1": {
+      "code_fingerprint": "sha256:78c446d61b23ad4fece61a0dc77bbb3c66b56f261e4c67b5db533cf49c1e954c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([0., 0., 0.])"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-2": {
+      "code_fingerprint": "sha256:6f5fe0bf30a43086a863d5806293afd97df227359700a779745f1ed243b3f737",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-custom-gradients-3": {
+      "code_fingerprint": "sha256:e1722ca53b3806ab017e8aeeafa2ef8f1db5dfa8db6b9df2044996e2cc8f6a9d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([1., 2., 3.])"
+        }
+      ]
+    }
+  }
+}

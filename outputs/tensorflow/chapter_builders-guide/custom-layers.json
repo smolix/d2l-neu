@@ -1,0 +1,138 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/custom-layers.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "custom-layers-custom-layers-and-functions": {
+      "code_fingerprint": "sha256:3a284b120549cf2219628077ae10c8bc39e961eab7f54391572340dc06d88e11",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-without-parameters-1": {
+      "code_fingerprint": "sha256:8f3bc03bf3cd0276f1a65d4fe442d9f736f7ea0c1c7e28705db5aafc63f30026",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-without-parameters-2": {
+      "code_fingerprint": "sha256:0e44c42439a4f8568c10828f65b162383b1a353403f96cdd4226d7b9ba202a52",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(5,), dtype=float32, numpy=array([-2., -1.,  0.,  1.,  2.], dtype=float32)>"
+        }
+      ]
+    },
+    "custom-layers-layers-without-parameters-3": {
+      "code_fingerprint": "sha256:2722d6c24ba1ee569c0f435bda4bd3ff1935abeab760ce09e5c1456f7b7c541d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.0>"
+        }
+      ]
+    },
+    "custom-layers-layers-with-parameters-rmsnorm-1": {
+      "code_fingerprint": "sha256:1c7532614ac73658b720cc9cd43f2d8bf65549f9f39135328f2c2d057a602366",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-layers-with-parameters-rmsnorm-2": {
+      "code_fingerprint": "sha256:b691afff417026af70b3eeb9f5121626431019edd42b40a03bf4d29555bf21ab",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([0.99999994, 0.9999998 , 0.99999994, 0.99999976], dtype=float32)>"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-1": {
+      "code_fingerprint": "sha256:0b8febbdf766f9f6145f359749609aae1f230456ef6bfcaf29aaf34307adbeba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[<Variable path=rms_norm/gain, shape=(8,), dtype=float32, value=[1. 1. 1. 1. 1. 1. 1. 1.]>]"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-2": {
+      "code_fingerprint": "sha256:f891ac9cb87e3b1fd5f86297f9cbd8f1ab7160085132004da93b1d232d40ebe2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([4, 2])"
+        }
+      ]
+    },
+    "custom-layers-the-composability-guarantee-3": {
+      "code_fingerprint": "sha256:532c228f9e7c6b69b457b0309b16d1a5da0d493d14cf92f6dde58949bc0eea53",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "custom-layers-checking-against-the-built-in": {
+      "code_fingerprint": "sha256:44c56cf46efbe01c09c74db83fec695646c7d383d7b8d87a3f47369552f4dff5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
+    },
+    "custom-layers-precomputed-state-buffers-1": {
+      "code_fingerprint": "sha256:4a1e583dfa536b718cc3b190ebebd26ab5019755c842328104331195e98eb2dc",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-precomputed-state-buffers-2": {
+      "code_fingerprint": "sha256:e6f15aa4380ed641e48568d5a6583e13788e7671a0dcb06bc607c23bb44ffb55",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tf.Tensor(\n[[  0. -inf -inf]\n [  0.   0. -inf]\n [  0.   0.   0.]], shape=(3, 3), dtype=float32)\n[] ['mask']\n"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-1": {
+      "code_fingerprint": "sha256:1d611ae3fcdc11e8e20bae80cfc17989e66eeae0c09eacabb3d5f33a33fe4408",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(3,), dtype=float32, numpy=array([0., 0., 0.], dtype=float32)>"
+        }
+      ]
+    },
+    "custom-layers-custom-gradients-2": {
+      "code_fingerprint": "sha256:664b0063c3a64785bc01b008a0774fa4a9a5a2742d7a9624a20cb02716896e6d",
+      "kind": "text",
+      "outputs": []
+    },
+    "custom-layers-custom-gradients-3": {
+      "code_fingerprint": "sha256:7a6849dc0f21f20395375ed236743f71a6eaeaf24f8e4625f9629d4c81ac4cb1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<tf.Tensor: shape=(3,), dtype=float32, numpy=array([1., 2., 3.], dtype=float32)>"
+        }
+      ]
+    }
+  }
+}

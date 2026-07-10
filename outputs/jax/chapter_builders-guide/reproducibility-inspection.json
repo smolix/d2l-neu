@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/reproducibility-inspection.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "reproducibility-inspection-reproducibility-and-inspection": {
+      "code_fingerprint": "sha256:0106ad28ecdb6947ddebe9f3f33bf9ec6a1ad176f22bae21cc4cd393073f0b3a",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-seeds-and-randomness": {
+      "code_fingerprint": "sha256:888159ca2b9625dec70ded99495bfcfe2e26905aeeb6a21db9eb41fabb8cc87c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "same seed, identical loss and weights: True True\ndifferent seed: 1.0155185 vs 0.77519643\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-generator-objects": {
+      "code_fingerprint": "sha256:5872b69b3e7b2268b97d73df93505e4064ce9975ccec012d00f9b3be9b1b8aec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "True [1 3 9 5 0 2 6 7 4 8]\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-determinism-and-its-price-1": {
+      "code_fingerprint": "sha256:b29949c15a506b0e09b26ee2b7c812a3cbea4f3ea65999016005fc55d78a431a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "False -0.000152587890625\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-hooks-looking-inside": {
+      "code_fingerprint": "sha256:e16104170f5f28219f535fc8385157d163ada15e74a4622576409cc3c52d013b",
+      "kind": "text",
+      "outputs": []
+    },
+    "reproducibility-inspection-capturing-activation-statistics": {
+      "code_fingerprint": "sha256:58859b469b19d58fb4f10913413ef05368eb7a3bf7f5aab3d2b3d13996a2c676",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Dense           std 1.00\nResidualBlock   std 1.24\nResidualBlock   std 1.46\nResidualBlock   std 1.80\nResidualBlock   std 2.26\nResidualBlock   std 2.82\nResidualBlock   std 3.56\nResidualBlock   std 4.69\nResidualBlock   std 6.01\nDense           std 6.56\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-a-nan-finder": {
+      "code_fingerprint": "sha256:c18f71c04dbf3edefd7ff5e2a670d9915c1a4b9837a3b9648f29baf4290df599",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first non-finite output in ['layers_3']['body']['layers_0']\n"
+        }
+      ]
+    },
+    "reproducibility-inspection-backward-hooks-and-beyond": {
+      "code_fingerprint": "sha256:bb93dab7859b5b9a24b9daf0122d26238f72f59cd737eae6e24539c5ba41f7fb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{'bias': Array(5.7538013, dtype=float32), 'kernel': Array(34.760754, dtype=float32)}\n"
+        }
+      ]
+    }
+  }
+}

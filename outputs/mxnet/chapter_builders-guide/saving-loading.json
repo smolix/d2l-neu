@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "source": "chapter_builders-guide/saving-loading.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "saving-loading-saving-loading-and-pretrained-weights": {
+      "code_fingerprint": "sha256:25699b1695cc5482c31d3787e37dca1be2b56cd8c0a880e0a9070dd19ffe2efb",
+      "kind": "text",
+      "outputs": []
+    },
+    "saving-loading-state-not-code-1": {
+      "code_fingerprint": "sha256:a69b169a7bca683ab960a01635c658b785cd51c5adef1dbbbba6965d128c4acb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'x': array([0., 1., 2., 3.]), 'y': array([0., 0., 0., 0.])}"
+        }
+      ]
+    },
+    "saving-loading-state-not-code-2": {
+      "code_fingerprint": "sha256:7b8d6ceffaf632b45e81dbaa51f4a6103708101de07a92caec694c12450161c3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'hidden.weight': (256, 20),\n 'hidden.bias': (256,),\n 'output.weight': (10, 256),\n 'output.bias': (10,)}"
+        }
+      ]
+    },
+    "saving-loading-safetensors-the-interchange-format-3": {
+      "code_fingerprint": "sha256:b95751aa52d1073e5cea17ff176afa53fcd5af51b733d0506a9c706880ecd693",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array(True)"
+        }
+      ]
+    },
+    "saving-loading-safetensors-the-interchange-format-4": {
+      "code_fingerprint": "sha256:9181c1ec79e1458128c68bd80c7cd4a2ca9299eb0afdbf981b981cadb42477a8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'dtype': 'F32', 'shape': [256, 20], 'data_offsets': [1024, 21504]}"
+        }
+      ]
+    },
+    "saving-loading-checkpointing-a-training-run-1": {
+      "code_fingerprint": "sha256:d069529b1abd172e38c62dd03429183ac30a07ed604d1e21f919dfb69efd9ebf",
+      "kind": "text",
+      "outputs": []
+    },
+    "saving-loading-checkpointing-a-training-run-2": {
+      "code_fingerprint": "sha256:1b313a386a2e07fe511f4020aff1b2c6039f3218e0776235a0752c92079d3064",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.0019"
+        }
+      ]
+    },
+    "saving-loading-checkpointing-a-training-run-3": {
+      "code_fingerprint": "sha256:093443b2a7a5cadc59ae8690b7d0335e42b08cc2af1fbd1d2ea2d8df7b9ee50f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'perturbed 49462.30 -> restored 0.0019'"
+        }
+      ]
+    },
+    "saving-loading-checkpointing-a-training-run-4": {
+      "code_fingerprint": "sha256:3d087141e74a99b1638a102727bbc97474925d9ff322902463c9474a373ebae1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "full  optimizer: [0.0019, 0.0018, 0.0018, 0.0017, 0.0017]\nfresh optimizer: [0.0019, 2.0522, 0.4283, 0.8559, 0.7335]\n"
+        }
+      ]
+    },
+    "saving-loading-loading-weights-you-did-not-train-1": {
+      "code_fingerprint": "sha256:485fc0fcaed5d00a4f9e8278893cf02e9647525a272e87dbf77f3247edc60f99",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Dense(512 -> 10, linear)"
+        }
+      ]
+    },
+    "saving-loading-loading-weights-you-did-not-train-2": {
+      "code_fingerprint": "sha256:68e0a7648e21c36b87237c233d2a56791c82d0b185d3c4a01dfb70c97b3d0489",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "missing by block: {'features.8': 21, 'output.bias': 1, 'output.weight': 1}\nunexpected: []\n"
+        }
+      ]
+    },
+    "saving-loading-loading-weights-you-did-not-train-3": {
+      "code_fingerprint": "sha256:162040c3bb2ae2a0ab7513a052f19213ac58a3d99d68562a5f3100b5ec7dda42",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'5130 trainable of 11187926'"
+        }
+      ]
+    }
+  }
+}

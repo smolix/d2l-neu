@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [57, 43]\n"
+          "text": "heads, tails:  [53, 47]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([42., 58.])"
+          "text": "tensor([51., 49.])"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.5100, 0.4900])"
+          "text": "tensor([0.4700, 0.5300])"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.4990, 0.5010])"
+          "text": "tensor([0.5138, 0.4862])"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 30139,
-          "sha256": "sha256:da79322fd05373a4dceb2f96b9d7164892ffe1471903d0ead270597e6e4e2686"
+          "bytes": 30168,
+          "sha256": "sha256:4f7f265a2dddb415e4398d048f0a6e11131fdb3928d32ee8999d741c0a472367"
         }
       ]
     },
@@ -75,18 +75,18 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 109300,
-          "sha256": "sha256:5cea666e539d9945b5cbe5a04fd6367fc5ed350ed5f7123359291b963457aeaf"
+          "bytes": 107395,
+          "sha256": "sha256:ee9edb68d45b1f39354c847a18230a256c90b38c5189d2c65a744c59f2b8d5ad"
         }
       ]
     },
     "probability-worked-example-hiv-testing-1": {
-      "code_fingerprint": "sha256:95204a1a1568e86f48ae0008bb2794994011ff1df96f80f657e9a7b1c884e38f",
+      "code_fingerprint": "sha256:3e90854a00e30cf095db4d134b4d11889b1054445e20d5039d23c399156fe3d9",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(0.8365)"
+          "text": "tensor(0.8183)"
         }
       ]
     }

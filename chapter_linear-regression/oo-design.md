@@ -107,7 +107,7 @@ The second one is a utility class that saves all arguments in a class's `__init_
 ```{.python .input #oo-design-utilities-4}
 class HyperParameters:  #@save
     """The base class of hyperparameters."""
-    def save_hyperparameters(self, ignore=[]):
+    def save_hyperparameters(self, ignore=None):
         raise NotImplementedError
 ```
 
@@ -526,7 +526,7 @@ in :numref:`sec_linear_scratch`.
 :end_tab:
 
 :begin_tab:`jax`
-The `Trainer` class trains the learnable parameters `params` with data specified in `DataModule`. The key method is `fit`, which accepts three arguments: `model`, an instance of `Module`, `data`, an instance of `DataModule`, and `key`, a JAX `PRNGKeyArray`. We make the `key` argument optional here to simplify the interface, but it is recommended to always pass and initialize the model parameters with a root key in JAX and Flax. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here; it is implemented just two sections later, in :numref:`sec_linear_scratch`.
+The `Trainer` class trains the learnable parameters `params` with data specified in `DataModule`. The key method is `fit`, which accepts three arguments: `model`, an instance of `Module`, `data`, an instance of `DataModule`, and `key`, a typed JAX random key stored in a `jax.Array`. We make the `key` argument optional here to simplify the interface, but production JAX code should pass an explicit root key and split or thread it through every stochastic operation. It iterates over the entire dataset `max_epochs` times to train the model. Note that `fit_epoch` is left abstract here; it is implemented just two sections later, in :numref:`sec_linear_scratch`.
 :end_tab:
 
 ```{.python .input #oo-design-training}

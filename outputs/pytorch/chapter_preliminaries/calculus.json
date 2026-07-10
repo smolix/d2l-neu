@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "calculus/calculus-visualization-utilities-5-1.svg",
           "bytes": 18533,
-          "sha256": "sha256:cad27c998b8d7a1860670c88b620a33a66a9093372bf54542fc5bdc6a0dc282a"
+          "sha256": "sha256:cb18945f6d3ab51172260d6e36822dedfd99be0c008b525bcd6806fa80c6bc3f"
         }
       ]
     },
@@ -69,7 +69,7 @@
       "outputs": []
     },
     "calculus-visualization-utilities-4": {
-      "code_fingerprint": "sha256:f9118f50ebc98a050020bc4dfb59407e3a02b0e460399dc92eaae22b3c086b64",
+      "code_fingerprint": "sha256:f0eccf4fc25d824e8a278c08ecd1bc432fac2e70ed9e6df7adb9a6a97be30399",
       "kind": "text",
       "outputs": []
     }

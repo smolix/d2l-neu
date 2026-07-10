@@ -79,7 +79,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-0.45493633, -0.707064  , -0.74068046,  1.1111392 ],\n       [-0.4961137 , -0.9368363 , -1.1782228 ,  1.3358557 ],\n       [-0.49195594,  1.8028847 , -1.1246605 , -0.04886059]],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 4), dtype=float32, numpy=\narray([[-0.9827047 ,  1.9438802 ,  0.87669337, -1.0198627 ],\n       [ 0.5459698 ,  0.42891753,  1.867814  ,  0.03621399],\n       [ 0.2551993 ,  0.29380924,  2.4170086 , -0.6459354 ]],\n      dtype=float32)>"
         }
       ]
     },
@@ -129,7 +129,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(12,), dtype=float32, numpy=\narray([1.0000000e+00, 2.7182817e+00, 7.3890562e+00, 2.0085537e+01,\n       5.4598148e+01, 1.4841316e+02, 4.0342880e+02, 1.0966332e+03,\n       2.9809580e+03, 8.1030840e+03, 2.2026467e+04, 5.9874145e+04],\n      dtype=float32)>"
+          "text": "<tf.Tensor: shape=(12,), dtype=float32, numpy=\narray([1.0000000e+00, 2.7182817e+00, 7.3890562e+00, 2.0085537e+01,\n       5.4598148e+01, 1.4841316e+02, 4.0342877e+02, 1.0966332e+03,\n       2.9809578e+03, 8.1030835e+03, 2.2026465e+04, 5.9874141e+04],\n      dtype=float32)>"
         }
       ]
     },
@@ -200,7 +200,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "{{function_node __wrapped__AddV2_device_/job:localhost/replica:0/task:0/device:GPU:0}} required broadcastable shapes [Op:AddV2] name: \n"
+          "text": "{{function_node __wrapped__AddV2_device_/job:localhost/replica:0/task:0/device:CPU:0}} Incompatible shapes: [3,2] vs. [2,3] [Op:AddV2] name: \n"
         }
       ]
     },
@@ -221,7 +221,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "id(Z): 130502359621008\nid(Z): 130502359621008\n"
+          "text": "id(Z): 4837730560\nid(Z): 4837730560\n"
         }
       ]
     },

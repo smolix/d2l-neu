@@ -9,85 +9,116 @@
   },
   "cells": {
     "mlp-multilayer-perceptrons": {
-      "code_fingerprint": "sha256:34037c1cf9b98e77ef1c550b9070a5cd75455c061bb73623592958827189205c",
+      "code_fingerprint": "sha256:8f4be28d5cc50c9d892d86e1b3cbb5cae0582c0d54d338eb2843efcda02c839f",
       "kind": "text",
       "outputs": []
     },
+    "mlp-xor": {
+      "code_fingerprint": "sha256:6b9069f202a1fa4bcd0efd26c3b819d951984f3a5aa7bdcd1870138b46a82d7d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[0., 0., 0.],\n       [0., 1., 1.],\n       [1., 0., 1.],\n       [1., 1., 0.]])"
+        }
+      ]
+    },
+    "mlp-region-count": {
+      "code_fingerprint": "sha256:31c9346420c1fea154bbf9d1b7808a9b92f7cfb6e1e423eb907aef172190aeff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "depth 1: mean pieces = [2.8, 4.5, 7.8, 14.3],  D+1 = [3, 5, 9, 17]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "depth 2: mean pieces = [3.2, 7.5, 14.2, 27.8],  D+1 = [3, 5, 9, 17]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "depth 3: mean pieces = [3.0, 8.9, 19.5, 39.5],  D+1 = [3, 5, 9, 17]\n"
+        }
+      ]
+    },
     "mlp-relu-function-1": {
-      "code_fingerprint": "sha256:5a64af075856b8b7e98c28372766d9d5c55ee34080d9ffb7d8132a3c158ea40f",
+      "code_fingerprint": "sha256:3104ed64c44b5a0034bedbf34760f14cdc6666ce2cba4e7575a0a9da3511908f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
-          "bytes": 16908,
-          "sha256": "sha256:2d065274af867aa703649d07eb273af1358182f7abe0efd5bcf08a1cd7807e89"
+          "bytes": 16913,
+          "sha256": "sha256:5a65655ec930ce704f8f10db6638aa39b35d03f3ae946cdcc53403369929bf5a"
         }
       ]
     },
     "mlp-relu-function-2": {
-      "code_fingerprint": "sha256:f08e70cabcf04f5eafdaf355ca91e39383148b1b0b234a3489a9d07fd368ba15",
+      "code_fingerprint": "sha256:9e33d840eb5d88c3215c54d8ed788410108b3af535d349de456262d2e337be71",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
-          "bytes": 21200,
-          "sha256": "sha256:ec98aab10b43ad023a1bab544b52f6be37d323a769aac5dcb9fd9eee0150e169"
+          "bytes": 21209,
+          "sha256": "sha256:60a1acb2ebf48d4c60b5d2a2425f5411c82f560074100bb45ba425366db457c4"
         }
       ]
     },
     "mlp-sigmoid-function-1": {
-      "code_fingerprint": "sha256:cd0d49d4a6f5d5a34dfff8508e5ae9dda63385a1e0e1d7131647560cb08d2039",
+      "code_fingerprint": "sha256:93e3824a82bed8010d895da620f7887e13aca20e36a0689a3de819a00e492fb1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
-          "bytes": 21780,
-          "sha256": "sha256:b75be05157be801e95adb6ccf0828c704ec7eaf3e7aa4a0f3ca09181355c0e1f"
+          "bytes": 21792,
+          "sha256": "sha256:23037bf8eeba61165f7546e5f1306e0363392aafdffdb1dd94aafe74f59216e9"
         }
       ]
     },
     "mlp-sigmoid-function-2": {
-      "code_fingerprint": "sha256:9b1201106df52e125a76d92e0cf6b4da78897c0e21ae327a1cd8b42fb9fa4515",
+      "code_fingerprint": "sha256:cf53b6a52ae54f89cc5b6f308d149597106753f796eac9f0e7710877954557a1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
-          "bytes": 24513,
-          "sha256": "sha256:eba2cd8dc01cd6d312d70314fbf5f9995533c234530ecafa3d5a9a0e3a8a81fc"
+          "bytes": 24522,
+          "sha256": "sha256:daa59b5319f9c2630791ed97582608312a270c7bef9b341c0ce87117b5c3e00f"
         }
       ]
     },
     "mlp-tanh-function-1": {
-      "code_fingerprint": "sha256:e3975c8aab0dfbbb4c0ed04f8378b65d989deb191791d65e8379c0864106066c",
+      "code_fingerprint": "sha256:7428acd8a2b7ce18e0afd54a92a7aaafba9d76d0afb5a1bbabf5c88ef38bbc6f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
-          "bytes": 20163,
-          "sha256": "sha256:67f09a11a76c1458c2df664d6622ae5515377a85e94e913be210284f43be77a4"
+          "bytes": 20176,
+          "sha256": "sha256:7a4999349c24e5bd447018e17eb949963a579251871da97b4764ce76fdff898b"
         }
       ]
     },
     "mlp-tanh-function-2": {
-      "code_fingerprint": "sha256:6b1ec77354b43cc7c4a1a49908851daa88c0b372416869a47d840b4c7485a00b",
+      "code_fingerprint": "sha256:24c6fe95d012d064e13f595058b0b8b6cf660d96f7c735b0bea8b65e325d41e9",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
-          "bytes": 22666,
-          "sha256": "sha256:11ee4f265fb2b2b92d2ea75cec3dc8d65a88d76e64c9ee55558eef49f071e114"
+          "bytes": 22751,
+          "sha256": "sha256:d4c8765d3bdbb8405effb1933dd103f2f0369ac60bcaef677e552801ab9e6a62"
         }
       ]
     }

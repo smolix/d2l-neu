@@ -191,11 +191,11 @@ These two penalties are easiest to compare geometrically. For a corresponding
 budget $t$, minimizing $L(\mathbf{w}) + \frac{\lambda}{2}\|\mathbf{w}\|^2$ is
 equivalent to minimizing $L(\mathbf{w})$ subject to $\|\mathbf{w}\| \le t$, and
 the regularized solution is the first point at which a loss contour meets the
-constraint region (:numref:`fig_ridge_geometry`). For the $\ell_2$ ball this
-contact is generically *tangential*, so every coordinate shrinks but none
-vanishes; for the $\ell_1$ diamond it typically lands on a *corner*, setting some
-coordinates exactly to zero. This is the geometric reason lasso performs feature
-selection while ridge does not.
+constraint region (:numref:`fig_ridge_geometry`). A smooth $\ell_2$ boundary
+usually shrinks coordinates without making them exactly zero. The corners and
+faces of the $\ell_1$ ball make exact zeros much more common, although sparsity
+is not guaranteed for every loss and dataset. This geometry explains why lasso
+can perform feature selection while ridge usually does not.
 We assert the penalty$\,\Leftrightarrow\,$constraint equivalence here;
 :numref:`sec_mdl-constrained-optimization-duality` derives it via Lagrange
 duality ($\lambda$ is exactly the multiplier attached to the constraint
@@ -330,7 +330,7 @@ class Data(d2l.DataModule):
     def __init__(self, num_train, num_val, num_inputs, batch_size):
         self.save_hyperparameters()                
         n = num_train + num_val 
-        key_X, key_noise = jax.random.split(jax.random.PRNGKey(0))
+        key_X, key_noise = jax.random.split(jax.random.key(0))
         self.X = jax.random.normal(key_X, (n, num_inputs))
         noise = jax.random.normal(key_noise, (n, 1)) * 0.01
         w, b = d2l.ones((num_inputs, 1)) * 0.01, 0.05
@@ -414,7 +414,7 @@ def train_scratch(lambd):
     model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.01)
     model.board.yscale='log'
     trainer.fit(model, data)
-    print('L2 norm of w:', float(l2_penalty(model.w)))
+    print('L2 norm of w:', float(l2_penalty(model.w).detach()))
 ```
 
 ```{.python .input #weight-decay-defining-the-model-2}
@@ -559,11 +559,13 @@ for lam in (0, 3, 30):
           f'strongest {float(shrink[0]):.2f}  weakest {float(shrink[-1]):.2f}')
 ```
 
-Two things stand out. First, even *without* regularization, 20 training
-examples can pin down at most 20 directions of the 200-dimensional weight
-space: $\textrm{rank}(\mathbf{X}) = 20$, so $\textrm{df}(0) = 20$ and the
-remaining 180 directions are entirely unconstrained: no wonder the
-unregularized fit overfits. Second, at the $\lambda = 3$ that lowered the
+Two things stand out. First, 20 training examples constrain at most 20
+directions of the 200-dimensional weight space:
+$\textrm{rank}(\mathbf{X}) = 20$, so $\textrm{df}(0) = 20$. Gradient descent
+from zero remains in the row space of $\mathbf{X}$ and does not invent
+components in the 180-dimensional nullspace. Overfitting instead comes from
+matching noise along the data-supported directions, especially those with
+small singular values. Second, at the $\lambda = 3$ that lowered the
 validation loss above, every shrinkage factor drops below one, the weakest
 directions are damped most, and $\textrm{df}(\lambda)$ falls well below 20: the
 regularized model behaves like one with far fewer parameters than its nominal
@@ -697,7 +699,7 @@ model = WeightDecay(wd=3, lr=0.01)
 model.board.yscale='log'
 trainer.fit(model, data)
 
-print('L2 norm of w:', float(l2_penalty(model.get_w_b()[0])))
+print('L2 norm of w:', float(l2_penalty(model.get_w_b()[0]).detach()))
 ```
 
 ```{.python .input #weight-decay-concise-implementation-2}

@@ -28,6 +28,7 @@ with which this book is primarily concerned.
 %matplotlib inline
 from d2l import mxnet as d2l
 from mxnet import autograd, np, npx
+import numpy as onp
 npx.set_np()
 ```
 
@@ -36,6 +37,7 @@ npx.set_np()
 %matplotlib inline
 from d2l import torch as d2l
 import torch
+import numpy as onp
 ```
 
 ```{.python .input #mlp-multilayer-perceptrons}
@@ -43,6 +45,7 @@ import torch
 %matplotlib inline
 from d2l import tensorflow as d2l
 import tensorflow as tf
+import numpy as onp
 ```
 
 ```{.python .input #mlp-multilayer-perceptrons}
@@ -52,6 +55,7 @@ from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
 from jax import grad, vmap
+import numpy as onp
 ```
 
 ## Hidden Layers
@@ -297,14 +301,13 @@ at $(1,0)$, after which a single line separates the classes. Let's verify
 that this hand-built network computes XOR exactly on all four inputs.
 
 ```{.python .input #mlp-xor}
-%%tab pytorch
-X = torch.tensor([[0., 0.], [0., 1.], [1., 0.], [1., 1.]])
-W1 = torch.tensor([[1., 1.], [1., 1.]])
-b1 = torch.tensor([0., -1.])
-w2 = torch.tensor([[1.], [-2.]])
-H = torch.relu(X @ W1 + b1)          # hidden features, ReLU applied elementwise
-O = (H @ w2).squeeze()               # output neuron (pre-threshold)
-torch.stack([X[:, 0], X[:, 1], (O > 0.5).float()], dim=1)  # x1, x2, prediction
+X = onp.array([[0., 0.], [0., 1.], [1., 0.], [1., 1.]])
+W1 = onp.array([[1., 1.], [1., 1.]])
+b1 = onp.array([0., -1.])
+w2 = onp.array([[1.], [-2.]])
+H = onp.maximum(X @ W1 + b1, 0)
+O = (H @ w2).squeeze()
+onp.column_stack([X, (O > 0.5).astype(float)])
 ```
 
 The third column is exactly the XOR of the first two. We *constructed* the
@@ -361,32 +364,33 @@ below we evaluate randomly initialized ReLU MLPs on a dense one-dimensional
 grid, detect where the slope changes, and count the linear pieces.
 
 ```{.python .input #mlp-region-count}
-%%tab pytorch
-def count_pieces(width, depth, n=100001):
-    x = torch.linspace(-4, 4, n, dtype=torch.float64).reshape(-1, 1)
+def count_pieces(width, depth, rng, n=100001):
+    x = onp.linspace(-4, 4, n).reshape(-1, 1)
     h = x
     for _ in range(depth):
-        h = torch.relu(h @ torch.randn(h.shape[1], width, dtype=torch.float64)
-                       + torch.randn(width, dtype=torch.float64))
-    y = (h @ torch.randn(width, 1, dtype=torch.float64)).squeeze()
-    slope = torch.diff(y)                     # slope of y on each grid interval
-    tol = 1e-8 * slope.abs().max() + 1e-12 * y.abs().max()
-    change = torch.diff(slope).abs() > tol    # a joint: the slope jumps
-    new = change & ~torch.cat([torch.tensor([False]), change[:-1]])
-    return int(new.sum()) + 1                 # pieces = 1 + number of joints
+        h = onp.maximum(h @ rng.standard_normal((h.shape[1], width))
+                        + rng.standard_normal(width), 0)
+    y = (h @ rng.standard_normal((width, 1))).squeeze()
+    slope = onp.diff(y)
+    tol = 1e-8 * onp.abs(slope).max() + 1e-12 * onp.abs(y).max()
+    change = onp.abs(onp.diff(slope)) > tol
+    new = change & ~onp.concatenate([[False], change[:-1]])
+    return int(new.sum()) + 1
+rng = onp.random.default_rng(0)
 for depth in (1, 2, 3):
-    mean = [round(sum(count_pieces(w, depth) for _ in range(20)) / 20, 1)
+    mean = [round(sum(count_pieces(w, depth, rng) for _ in range(20)) / 20, 1)
             for w in (2, 4, 8, 16)]
     print(f'depth {depth}: mean pieces = {mean},  D+1 = {[3, 5, 9, 17]}')
 ```
 
 The first row confirms the counting argument: with one hidden layer of width
 $D$, the piece count never exceeds $D+1$ (and typically comes close to it).
-The later rows show depth at work: at each width, adding a layer *multiplies*
-the average piece count rather than adding a constant to it. Random weights
-fold far less aggressively than the best hand-crafted ones, which can multiply
-the count by a factor of up to $D+1$ per layer :cite:`Telgarsky.2016`, but the
-multiplicative advantage of depth over width is already unmistakable.
+The later rows show what happened for these seeded random networks: at each
+width, adding a layer increased the average piece count by a factor rather than
+by a fixed amount. This experiment does not establish a maximal count. Random
+weights fold less aggressively than hand-constructed networks used in depth
+separation results :cite:`Telgarsky.2016`; those constructions, rather than the
+sample averages above, establish the expressivity claim.
 
 It is tempting to read this as "one hidden layer is all you ever need," but the
 theorem is more modest than it sounds, and three caveats matter
@@ -474,14 +478,11 @@ and when the input is positive,
 the derivative of the ReLU function is 1.
 Note that the ReLU function is not differentiable
 when the input takes value precisely equal to 0.
-In these cases, we default to the left-hand-side
-derivative and say that the derivative is 0 when the input is 0.
-We can get away with this because,
-although exact zeros do occur in floating-point arithmetic
-(zero-initialized biases, or a ReLU feeding a ReLU),
-the slope (subgradient) we assign at that single kink does not matter
-(mathematicians would
-say that the function is nondifferentiable only on a set of measure zero).
+The libraries used here return a derivative of 0 at the origin, one valid
+subgradient convention. For continuously distributed preactivations the choice
+affects a probability-zero event. Exact zeros do occur in computation, for
+example from zero-initialized biases or a preceding ReLU, and in such degenerate
+cases the convention can change whether a unit begins to move.
 We plot the derivative of the ReLU function below.
 
 ```{.python .input #mlp-relu-function-2}
@@ -733,7 +734,7 @@ of the innovations that helped the resurgence of deep learning in the early
 meet newer ones once we reach the Transformer architectures later in the book.
 The most common are *GELU* (Gaussian error linear unit), $x \Phi(x)$, where
 $\Phi$ is the standard Gaussian cumulative distribution function
-:cite:`Hendrycks.Gimpel.2016`, used in BERT and the GPT family; *Swish*,
+:cite:`Hendrycks.Gimpel.2016`, used in BERT and GPT-2-style models; *Swish*,
 $x \operatorname{sigmoid}(\beta x)$ :cite:`Ramachandran.Zoph.Le.2017`; and
 *SwiGLU* :cite:`Shazeer.2020`, a gated variant that is the default feedforward nonlinearity in
 recent large language models such as PaLM, LLaMA, and Mistral. For now, ReLU
@@ -1184,15 +1185,17 @@ like sigmoid's.
 |---|---|---|---|
 | **ReLU** | $[0, \infty)$ | left only (can die) | default hidden layer |
 | **LeakyReLU / PReLU** | $\mathbb{R}$ | no | when ReLU dies |
-| **GELU** $\,x\Phi(x)$ | $\approx\mathbb{R}$ | barely | Transformers, LLMs |
+| **GELU** $\,x\Phi(x)$ | $\approx\mathbb{R}$ | barely | BERT, GPT-2-style Transformers |
+| **SiLU / SwiGLU** | $\mathbb{R}$ | barely | many recent language models |
 | **Sigmoid** | $(0, 1)$ | both ends | gates, binary output |
 | **Tanh** | $(-1, 1)$ | both ends | RNN cells |
 | **Softmax** | simplex | one end | multiclass output |
 
 ::: {.d2l-note}
-Reach for **ReLU** in hidden layers, **GELU** to mimic modern
-Transformers, and **sigmoid / softmax** at the output to turn
-logits into probabilities.
+Use **ReLU** as a simple hidden-layer baseline. Transformer families differ:
+some use **GELU**, while many recent language models use gated **SiLU/SwiGLU**
+blocks. Use **sigmoid / softmax** at outputs when the model calls for
+probabilities.
 :::
 :::
 

@@ -325,16 +325,22 @@ $$\begin{aligned}
     \mathbf{X}^\top \mathbf{y} = \mathbf{X}^\top \mathbf{X} \mathbf{w}.
 \end{aligned}$$
 
-Solving for $\mathbf{w}$ provides us with the optimal solution
-for the optimization problem.
-Note that this solution 
+If the columns of $\mathbf{X}$ are linearly independent, solving the normal
+equations gives the unique minimizer
 
 $$\mathbf{w}^* = (\mathbf X^\top \mathbf X)^{-1}\mathbf X^\top \mathbf{y}$$
 
-will only be unique
-when the matrix $\mathbf X^\top \mathbf X$ is invertible,
-i.e., when the columns of the design matrix
-are linearly independent :cite:`Golub.Van-Loan.1996`.
+because $\mathbf X^\top \mathbf X$ is then invertible
+:cite:`Golub.Van-Loan.1996`. If $\mathbf{X}$ is rank deficient, minimizers still
+exist but are not unique; the Moore--Penrose pseudoinverse selects the
+minimum-norm solution $\mathbf{w}^*=\mathbf{X}^{\dagger}\mathbf{y}$.
+
+The inverse formula is useful for analysis, not as a numerical recipe. Forming
+$\mathbf{X}^\top\mathbf{X}$ squares the condition number, and explicitly
+computing an inverse adds avoidable error and work. Numerical programs should
+solve the least-squares problem directly with a library routine such as
+`lstsq`, which can use a QR or singular value decomposition. The mathematics
+appendix develops these factorizations and the pseudoinverse.
 
 This solution has a geometric reading. As $\mathbf{w}$ varies, the vector
 of predictions $\mathbf{X}\mathbf{w}$ ranges over the *column space* of
@@ -463,10 +469,9 @@ Moreover, the minibatches $\mathcal{B}$
 used for updating the parameters are chosen at random.
 This breaks determinism.
 
-Linear regression happens to be a learning problem
-with a global minimum
-(whenever $\mathbf{X}$ is full rank, or equivalently,
-whenever $\mathbf{X}^\top \mathbf{X}$ is invertible).
+Linear least squares always has a global minimizer because its loss is a
+convex quadratic bounded below. Full column rank, equivalently an invertible
+$\mathbf{X}^\top\mathbf{X}$, makes that minimizer unique.
 However, the loss surfaces for deep networks contain many saddle points and minima.
 Fortunately, we typically do not care about finding
 an exact set of parameters but merely any set of parameters
@@ -877,8 +882,9 @@ and ultimately, evaluation on previously unseen data.
     1. What if we change the loss from $\sum_i (x_i - b)^2$ to $\sum_i |x_i-b|$? Can you find the optimal solution for $b$?
 1. Prove that the affine functions that can be expressed by $\mathbf{x}^\top \mathbf{w} + b$ are equivalent to linear functions on $(\mathbf{x}, 1)$.
 1. Assume that you want to find quadratic functions of $\mathbf{x}$, i.e., $f(\mathbf{x}) = b + \sum_i w_i x_i + \sum_{j \leq i} w_{ij} x_{i} x_{j}$. How would you formulate this in a deep network?
-1. Recall that one of the conditions for the linear regression problem to be solvable was that the design matrix $\mathbf{X}^\top \mathbf{X}$ has full rank.
-    1. What happens if this is not the case?
+1. Recall that full column rank makes the linear-regression minimizer unique. Suppose instead that $\mathbf{X}^\top \mathbf{X}$ is singular.
+    1. Show that a minimizer still exists and characterize the set of minimizers.
+    1. Which minimizer does the Moore--Penrose pseudoinverse select?
     1. How could you fix it? What happens if you add a small amount of coordinate-wise independent Gaussian noise to all entries of $\mathbf{X}$?
     1. What is the expected value of the design matrix $\mathbf{X}^\top \mathbf{X}$ in this case?
     1. What happens with stochastic gradient descent when $\mathbf{X}^\top \mathbf{X}$ does not have full rank?

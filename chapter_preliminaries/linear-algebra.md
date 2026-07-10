@@ -787,7 +787,7 @@ tf.acos(cos_theta), tf.abs(tf.tensordot(u, v, axes=1)) <= tf.norm(u) * tf.norm(v
 
 ```{.python .input #linear-algebra-dot-products-3}
 %%tab jax
-u, v = jax.random.normal(jax.random.PRNGKey(0), (2, 8))
+u, v = jax.random.normal(jax.random.key(0), (2, 8))
 cos_theta = jnp.dot(u, v) / (jnp.linalg.norm(u) * jnp.linalg.norm(v))
 jnp.arccos(cos_theta), jnp.abs(jnp.dot(u, v)) <= jnp.linalg.norm(u) * jnp.linalg.norm(v)
 ```
@@ -1179,7 +1179,7 @@ print(tf.norm(u + v) <= tf.norm(u) + tf.norm(v))
 
 ```{.python .input #linear-algebra-norms-4}
 %%tab jax
-u, v = jax.random.normal(jax.random.PRNGKey(1), (2, 6))
+u, v = jax.random.normal(jax.random.key(1), (2, 6))
 alpha = -2.5
 print(jnp.linalg.norm(alpha * u), abs(alpha) * jnp.linalg.norm(u))
 print(jnp.linalg.norm(u + v) <= jnp.linalg.norm(u) + jnp.linalg.norm(v))
@@ -1335,7 +1335,7 @@ tf.norm(v) / tf.norm(prev)
 
 ```{.python .input #linear-algebra-eigenvalues-2}
 %%tab jax
-v = jax.random.normal(jax.random.PRNGKey(2), (3,))
+v = jax.random.normal(jax.random.key(2), (3,))
 for _ in range(10):
     prev, v = v, jnp.matmul(S, v)
 jnp.linalg.norm(v) / jnp.linalg.norm(prev)
@@ -1382,8 +1382,10 @@ To recap:
   By contrast, dot products, matrix--vector products, and matrix--matrix products
   are not elementwise operations and in general return objects
   having shapes that are different from the operands.
-* Compared to Hadamard products, matrix--matrix products
-  take considerably longer to compute (cubic rather than quadratic time).
+* Compared with a Hadamard product of two $n \times n$ matrices, which costs
+  $O(n^2)$ arithmetic operations, the standard algorithm for their matrix
+  product costs $O(n^3)$. For rectangular shapes $(m,n)(n,k)$, its cost is
+  $O(mnk)$.
 * Norms capture various notions of the magnitude of a vector (or matrix),
   and are commonly applied to the difference of two vectors
   to measure their distance apart.

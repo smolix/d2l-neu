@@ -230,8 +230,9 @@ with those observations that we *in fact* make.
 
 Now what precisely constitutes an appropriate
 notion of model complexity is a complex matter.
-The classical way to make the trade-off precise is the *bias-variance
-decomposition*: a model too simple to capture the signal makes a systematic error
+For squared-error regression, with expectation taken over repeated training
+sets drawn by the same process, the classical *bias-variance decomposition*
+makes the trade-off precise: a model too simple to capture the signal makes a systematic error
 (high *bias*, i.e., underfitting), while a model flexible enough to chase the
 noise in a particular training set varies wildly from one dataset to the next
 (high *variance*, i.e., overfitting). Their sum, plus an irreducible noise floor
@@ -495,8 +496,10 @@ we have in the training dataset,
 the more likely (and more severely)
 we are to encounter overfitting.
 As we increase the amount of training data,
-the generalization error typically decreases.
-Moreover, in general, more data rarely hurts.
+the generalization error typically decreases when the learning procedure and
+data distribution are held fixed. This is a tendency, not a monotonic law:
+unstable procedures and interpolation thresholds can produce temporary
+increases, including the sample-wise double descent discussed later.
 For a fixed task and data distribution,
 model complexity should not increase
 more rapidly than the amount of data.
@@ -588,9 +591,11 @@ The procedure is illustrated in :numref:`fig_kfold_cv`.
 :label:`fig_kfold_cv`
 
 How should we choose $K$? The choice trades off bias, variance, and compute.
-Each fold's model is trained on only $(K-1)/K$ of the data, so it is slightly
-*worse* than the model we will finally train on everything; the cross-validation
-estimate is therefore *pessimistically biased*, and more so for small $K$.
+Each fold's model is trained on only $(K-1)/K$ of the data. If the learning
+curve improves monotonically with sample size, its error is higher than that
+of the model finally trained on all the data, making the cross-validation
+estimate pessimistic. This conclusion is not guaranteed for unstable or
+non-monotone learning procedures.
 Taking $K = n$ (*leave-one-out* cross-validation) all but eliminates this bias,
 but at a steep price: it requires $n$ model fits, and the $n$ training sets
 are nearly identical, so the fold errors are highly correlated and their
@@ -617,7 +622,7 @@ We leave you with a few rules of thumb:
 1. Use validation sets (or $K$*-fold cross-validation*) for model selection;
 1. More complex models often require more data;
 1. Relevant notions of complexity include both the number of parameters and the range of values that they are allowed to take;
-1. Keeping all else equal, more data almost always leads to better generalization;
+1. Keeping the learning procedure and data distribution fixed, more data usually improves generalization, but the curve need not be monotone;
 1. This entire talk of generalization is all predicated on the IID assumption. If we relax this assumption, allowing for distributions to shift between the train and testing periods, then we cannot say anything about generalization absent a further (perhaps milder) assumption.
 
 
@@ -930,10 +935,10 @@ When data is too scarce to spare a validation set: split into $K$ folds, train o
 
 ::: {.d2l-note .rule}
 Choosing $K$ trades bias, variance, and compute: each fold trains on
-$(K{-}1)/K$ of the data, so the estimate is **pessimistically biased**
-(worst at small $K$); $K = n$ kills the bias but costs $n$ fits of
-nearly identical, correlated models. $K = 5$ or $10$ is the standard
-compromise.
+$(K{-}1)/K$ of the data. If performance improves monotonically with more
+data, the estimate is **pessimistic** relative to the final full-data fit.
+Larger $K$ narrows that gap but costs more fits and uses nearly identical,
+correlated training sets. $K = 5$ or $10$ is a common compromise.
 :::
 :::
 

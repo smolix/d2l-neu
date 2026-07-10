@@ -133,9 +133,9 @@ is simply the classic problem of mean estimation,
 which you may recall from :numref:`sec_prob`.
 
 An important classical result from probability theory
-called the *central limit theorem* guarantees
-that whenever we possess $n$ random samples $a_1, ..., a_n$
-drawn from any distribution with mean $\mu$ and standard deviation $\sigma$,
+called the *central limit theorem* guarantees, under its standard conditions,
+that for independent, identically distributed samples $a_1, ..., a_n$
+with finite mean $\mu$ and finite standard deviation $\sigma$,
 then, as the number of samples $n$ approaches infinity,
 the sample average $\hat{\mu}$ approximately
 tends towards a normal distribution centered

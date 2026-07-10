@@ -543,7 +543,10 @@ $\mathcal{S} = \{\textrm{heads}, \textrm{tails}\}$.
 For a single die, $\mathcal{S} = \{1, 2, 3, 4, 5, 6\}$.
 When flipping two coins, possible outcomes are
 $\{(\textrm{heads}, \textrm{heads}), (\textrm{heads}, \textrm{tails}), (\textrm{tails}, \textrm{heads}),  (\textrm{tails}, \textrm{tails})\}$.
-*Events* are subsets of the sample space.
+For the finite and countable examples in this chapter, *events* are subsets
+of the sample space. On continuous sample spaces, probabilities are assigned
+to a specified collection of *measurable* subsets; the measure-theoretic
+construction is developed in the mathematics appendix.
 For instance, the event "the first coin toss comes up heads"
 corresponds to the set $\{(\textrm{heads}, \textrm{heads}), (\textrm{heads}, \textrm{tails})\}$.
 Whenever the outcome $z$ of a random experiment satisfies
@@ -558,8 +561,8 @@ then $\mathcal{A}$ did not occur
 but $\mathcal{B}$ did.
 
 
-A *probability* function assigns each event
-$\mathcal{A} \subseteq \mathcal{S}$
+A *probability* function assigns each measurable event
+$\mathcal{A}$
 a real number $P(\mathcal{A}) \in [0,1]$,
 called the probability of $\mathcal{A}$,
 with the following properties:
@@ -745,7 +748,8 @@ that the random variable $B$ can take:
 $P(A=a) = \sum_v P(A=a, B=v)$.
 
 
-The ratio $\frac{P(A=a, B=b)}{P(A=a)} \leq 1$
+Provided that $P(A=a)>0$, the ratio
+$\frac{P(A=a, B=b)}{P(A=a)} \leq 1$
 is called the *conditional probability*
 and is denoted via the "$\mid$" symbol:
 
@@ -980,8 +984,8 @@ it still significantly improved our estimate.
 :label:`fig_prob_update`
 
 Since we posed a complete generative model,
-we can also check the whole calculation by brute force:
-simulate ten million patients,
+we can also check the calculation by simulation:
+simulate two million patients,
 apply both tests to each,
 and look at the fraction of HIV cases
 among those with two positive results.
@@ -992,7 +996,7 @@ to the exact posterior of $0.8307$.
 
 ```{.python .input #probability-worked-example-hiv-testing-1}
 %%tab mxnet
-n = 10000000
+n = 2000000
 H = np.random.uniform(size=n) < 0.0015
 D1 = np.random.uniform(size=n) < np.where(H, 1.00, 0.01)
 D2 = np.random.uniform(size=n) < np.where(H, 0.98, 0.03)
@@ -1002,7 +1006,7 @@ both = np.logical_and(D1, D2).astype(np.float32)
 
 ```{.python .input #probability-worked-example-hiv-testing-1}
 %%tab pytorch
-n = 10000000
+n = 2000000
 H = torch.rand(n) < 0.0015
 D1 = torch.rand(n) < torch.where(H, 1.00, 0.01)
 D2 = torch.rand(n) < torch.where(H, 0.98, 0.03)
@@ -1011,7 +1015,7 @@ H[D1 & D2].float().mean()  # Exact value: 0.8307
 
 ```{.python .input #probability-worked-example-hiv-testing-1}
 %%tab tensorflow
-n = 10000000
+n = 2000000
 H = tf.random.uniform((n,)) < 0.0015
 D1 = tf.random.uniform((n,)) < tf.where(H, 1.00, 0.01)
 D2 = tf.random.uniform((n,)) < tf.where(H, 0.98, 0.03)
@@ -1021,18 +1025,25 @@ tf.reduce_mean(tf.cast(tf.boolean_mask(H, D1 & D2), tf.float32))  # Exact value:
 ```{.python .input #probability-worked-example-hiv-testing-1}
 %%tab jax
 k1, k2, k3 = jax.random.split(d2l.get_key(), 3)
-n = 10000000
+n = 2000000
 H = jax.random.uniform(k1, (n,)) < 0.0015
 D1 = jax.random.uniform(k2, (n,)) < jnp.where(H, 1.00, 0.01)
 D2 = jax.random.uniform(k3, (n,)) < jnp.where(H, 0.98, 0.03)
 H[D1 & D2].astype(jnp.float32).mean()  # Exact value: 0.8307
 ```
 
-The estimate improved only because the two tests
-are conditionally independent of each other.
-Take the extreme case where we run the same test twice.
-In this situation we would expect the same outcome both times,
-hence no additional insight is gained from running the same test again.
+Only patients with two positive tests enter this empirical fraction. Two
+million simulated patients produce about 3500 such cases, so the conditional
+proportion has Monte Carlo standard error approximately
+$\sqrt{0.8307(1-0.8307)/3500}\approx 0.0063$. The simulation is therefore a
+coarse check; the analytic value above is the accurate answer.
+
+Conditional independence allowed us to multiply the two tests' likelihoods
+in the calculation above. It is not required for a second test to provide new
+information: dependent test outcomes can still change the posterior, but then
+their joint conditional distribution must be modeled directly. At the other
+extreme, running an identical deterministic test twice reveals nothing beyond
+the first result.
 Notice that the diagnosis behaved like a classifier:
 our ability to decide whether a patient is healthy
 increases as we obtain more features (test outcomes).
@@ -1077,21 +1088,12 @@ $$E_{x \sim P}[f(x)] = \sum_x f(x) P(x) \textrm{ and } E_{x \sim P}[f(x)] = \int
 
 for discrete probabilities and densities, respectively.
 Returning to the investment example from above,
-$f$ might be the *utility* (happiness)
-associated with the return.
-Behavioral economists have long noted
-that people associate greater disutility
-with losing money than the utility gained
-from earning one dollar relative to their baseline.
-Moreover, the value of money tends to be sub-linear.
-Possessing 100k dollars versus zero dollars
-can make the difference between paying the rent,
-eating well, and enjoying quality healthcare
-versus suffering through homelessness.
-On the other hand, the gains due to possessing
-200k versus 100k are less dramatic.
-Reasoning like this motivates the cliché
-that "the utility of money is logarithmic".
+$f$ might be a *utility* function associated with the return. Utility need not
+be linear in money. For example, a risk-averse decision maker may model utility
+as an increasing concave function, so that an additional dollar changes utility
+less at higher wealth. A logarithm is one possible model for positive wealth,
+not a universal psychological law. Loss aversion is a separate hypothesis and
+is not assumed in the calculation below.
 
 
 If  the utility associated with a total loss were $-1$,
@@ -1482,7 +1484,7 @@ $-\tfrac12$** on log--log axes.
 ::: {.cols .vc}
 ::: {.col}
 Every outcome lives in a **sample space** $\mathcal{S}$; an **event** is
-a subset. A probability assigns each event a number in $[0,1]$ obeying
+a measurable subset. A probability assigns each event a number in $[0,1]$ obeying
 three rules (Kolmogorov):
 
 - $P(\mathcal{A}) \ge 0$;
@@ -1647,8 +1649,8 @@ A *second*, independent positive test multiplies the evidence: applying
 Bayes again drives the posterior from the $0.15\%$ prior to $13\%$,
 then to $83\%$.
 
-A simulation of ten million patients lands within a fraction of a
-percent of the exact $0.8307$:
+A simulation of two million patients gives a coarse check of the exact
+$0.8307$; its Monte Carlo standard error is about $0.006$:
 
 @!probability-worked-example-hiv-testing-1
 :::

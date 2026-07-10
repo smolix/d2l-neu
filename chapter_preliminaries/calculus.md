@@ -305,9 +305,10 @@ in :numref:`sec_mdl-multivariable_calculus`).
 To *decrease* $f$ as quickly as possible
 we therefore take a small step in the opposite direction,
 along the *negative* gradient $-\nabla f(\mathbf{x})$.
-This is the entire idea behind *gradient descent*:
-every optimizer in this book repeatedly nudges the parameters
-a little way along $-\nabla f$ in order to reduce the loss.
+This is the idea behind *gradient descent*, which takes a small step along
+$-\nabla f$. Later optimizers modify this direction using momentum,
+coordinatewise scaling, or curvature information, but the gradient remains
+the local signal from which their updates are constructed.
 :numref:`fig_calc_gradient_field` shows the picture to keep in mind:
 gradients are perpendicular to the *level sets* of $f$
 (the curves along which $f$ is constant)
@@ -424,10 +425,11 @@ most of its body just aligns the shapes of its inputs.
 
 ```{.python .input #calculus-visualization-utilities-4}
 #@save
-def plot(X, Y=None, xlabel=None, ylabel=None, legend=[], xlim=None,
+def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
          ylim=None, xscale='linear', yscale='linear',
          fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None):
     """Plot data points."""
+    legend = [] if legend is None else legend
 
     def has_one_axis(X):  # True if X (tensor or list) has 1 axis
         return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
@@ -741,8 +743,7 @@ largest when $\mathbf{u}$ aligns with $\nabla f$. So the gradient is the
 direction of **steepest ascent** (proof via Cauchy–Schwarz, §23.2).
 
 ::: {.d2l-note}
-$-\nabla f$ points downhill, the direction every optimizer in this
-book follows.
+$-\nabla f$ points downhill, which gives the gradient-descent direction.
 :::
 :::
 

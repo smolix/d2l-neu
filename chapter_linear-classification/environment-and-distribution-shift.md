@@ -664,20 +664,34 @@ $$\begin{aligned}&\textrm{model } f_t \longrightarrow \textrm{data }  \mathbf{x}
 
 ### Bandits
 
-*Bandits* are a special case of the problem above. While in most learning problems we have a continuously parametrized function $f$ where we want to learn its parameters (e.g., a deep network), in a *bandit* problem we only have a finite number of arms that we can pull, i.e., a finite number of actions that we can take. It is not very surprising that for this simpler problem stronger theoretical guarantees in terms of optimality can be obtained. We list it mainly since this problem is often (confusingly) treated as if it were a distinct learning setting.
+A *bandit* problem supplies only partial feedback: after choosing an action, the
+learner observes the reward for that action rather than labels or rewards for
+all alternatives. The classical multi-armed bandit has finitely many actions;
+contextual and continuous-action variants are also common. This feedback
+structure distinguishes bandits from ordinary supervised online learning.
 
 
 ### Control
 
-In many cases the environment remembers what we did. Not necessarily in an adversarial manner but it will just remember and the response will depend on what happened before. For instance, a coffee boiler controller will observe different temperatures depending on whether it was heating the boiler previously. PID (proportional-integral-derivative) controller algorithms are a popular choice there.
-Likewise, a user's behavior on a news site will depend on what we showed them previously (e.g., they will read most news only once). Many such algorithms form a model of the environment in which they act so as to make their decisions appear less random.
+In control problems, an action changes the system state and therefore affects
+later observations. A coffee-boiler controller, for example, sees a temperature
+that depends on its earlier heating decisions; a PID
+(proportional--integral--derivative) controller is one standard approach.
+Likewise, recommendations shown to a user can change what the user reads next.
+Sequential dynamics distinguish control from ordinary online prediction.
 
 
 
 
 ### Reinforcement Learning
 
-In the more general case of an environment with memory, we may encounter situations where the environment is trying to cooperate with us (cooperative games, in particular for non-zero-sum games), or others where the environment will try to win. Chess, Go, Backgammon, or StarCraft are some of the cases in *reinforcement learning*. Likewise, we might want to build a good controller for autonomous cars. Other cars are likely to respond to the autonomous car's driving style in nontrivial ways, e.g., trying to avoid it, trying to cause an accident, or trying to cooperate with it.
+*Reinforcement learning* studies sequential decisions in which actions affect
+future states and rewards may be delayed. It includes single-agent control as
+well as cooperative and competitive multiagent problems. Chess, Go, and
+StarCraft are multiagent examples; autonomous driving is a control problem in
+which other road users also respond to the vehicle's actions. Partial
+observability, delayed credit, and exploration are separate difficulties that
+may occur in these settings.
 
 ### Considering the Environment
 
@@ -688,11 +702,8 @@ One key distinction between the different situations above is that a strategy th
 
 ## Fairness, Accountability, and Transparency in Machine Learning
 
-Finally, it is important to remember
-that when you deploy machine learning systems
-you are doing more than optimizing a predictive model: you
-are typically providing a tool that will
-be used to (partially or fully) automate decisions.
+Deploying a machine learning system often turns predictions into decisions
+that affect people.
 These technical systems can impact the lives
 of individuals who are subject to the resulting decisions.
 The leap from considering predictions to making decisions
@@ -710,12 +721,13 @@ we will find that *accuracy* is seldom the right measure.
 For instance, when translating predictions into actions,
 we will often want to take into account
 the potential cost sensitivity of erring in various ways.
-If one way of misclassifying an image
-could be perceived as a racial sleight of hand,
-while misclassification to a different category
-would be harmless, then we might want to adjust
-our thresholds accordingly, accounting for societal values
-in designing the decision-making protocol.
+The cost of an error can differ across decisions and populations. Thresholds
+should therefore be chosen from an explicit loss model and evaluated separately
+for affected groups. Threshold adjustment alone does not establish fairness:
+different fairness criteria can conflict, and the labels, data-collection
+process, and decision policy may themselves create harm. This section only
+identifies the problem; a later treatment develops the definitions and their
+limitations.
 We also want to be careful about
 how prediction systems can lead to feedback loops.
 For example, consider predictive policing systems,
@@ -747,7 +759,12 @@ that you might encounter in a career in machine learning.
 In many cases training and test sets do not come from the same distribution. This is called distribution shift.
 The risk is the expectation of the loss over the entire population of data drawn from their true distribution. However, this entire population is usually unavailable. Empirical risk is an average loss over the training data to approximate the risk. In practice, we perform empirical risk minimization.
 
-Under the corresponding assumptions, covariate and label shift can be detected and corrected for at test time. Failure to account for this bias can become problematic at test time.
+Under covariate- or label-shift assumptions, unlabeled target data can support
+specific reweighting corrections. A change in the input marginal may be
+detectable without labels, but the claim that $P(y\mid\mathbf{x})$ or
+$P(\mathbf{x}\mid y)$ stayed fixed is not generally identifiable from those
+data alone. Corrections therefore depend on an assumption that must be defended
+from domain knowledge and checked when target labels become available.
 In some cases, the environment may remember automated actions and respond in surprising ways. We must account for this possibility when building models and continue to monitor live systems, open to the possibility that our models and the environment will become entangled in unanticipated ways.
 
 These ideas predate the current era of large pretrained models, but
@@ -866,7 +883,9 @@ Now the **definition** of a label drifts: $P(y\mid\mathbf{x})$ changes because w
 What people call a *soft drink* depends on **where you ask** ("soda", "pop", "coke").
 
 ::: {.d2l-note}
-Diagnostic criteria, fashion, and job titles all drift this way, usually **slowly**, across time or geography, which is what makes it correctable.
+Diagnostic criteria, fashion, and job titles can drift this way across time or
+geography. Gradual drift can sometimes be tracked with fresh labeled data;
+abrupt changes require faster detection and may require a new model.
 :::
 :::
 
@@ -1059,7 +1078,9 @@ $$\mathbf{C}\, p(\mathbf{y}) = \mu(\hat{\mathbf{y}}) \quad\Longrightarrow\quad p
 
 . . .
 
-If $\mathbf{C}$ is **diagonally dominant** (each class predicted correctly more often than any single confusion), it is invertible and this recovers the target label mix; then form $\beta_i$ and reweight.
+The system requires a **nonsingular** $\mathbf{C}$. Strict diagonal dominance
+(each diagonal entry exceeds the sum of the other entries in its row) is one
+sufficient condition; then form $\beta_i$ and reweight.
 :::
 
 ::: {.slide title="Concept shift: just keep up"}
@@ -1069,7 +1090,8 @@ When the labels are redefined, there is no clever reweighting, the old answers a
 
 . . .
 
-But genuine concept shift is almost always **gradual** (ads, news, a slowly degrading camera lens). So we do the obvious thing:
+When concept shift is gradual, as in changing ads or news, fresh labeled data
+can reveal the moving target. One practical response is:
 
 ::: {.d2l-note}
 Keep the current weights and **take a few update steps on fresh data**, rather than retraining from scratch. Let the model track the moving target.

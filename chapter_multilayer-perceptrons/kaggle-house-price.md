@@ -176,8 +176,11 @@ print(data.raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
 ```
 
 We can see that in each example, the first feature is the identifier.
-This lets us identify each record; it carries no predictive information,
-so we drop it from the dataset before feeding the data into the model.
+This lets us identify each record. We drop it here because the competition
+defines it as a row identifier rather than a measured house attribute.
+Identifiers are not harmless in every dataset: they can encode collection
+order, source, or time, so their semantics should be checked rather than
+discarded by rule.
 Furthermore, given a wide variety of data types,
 we will need to preprocess the data before we can start modeling.
 
@@ -227,41 +230,43 @@ According to one-hot encoding,
 if the original value of "MSZoning" is "RL",
 then "MSZoning_RL" is 1 and "MSZoning_RM" is 0.
 The `pandas` package does this automatically for us.
-Note that we build the one-hot encoding on the concatenated train and test
-features. This does not contradict the leakage warning above: taking the
-*schema* (which categories exist, and hence which columns to create) from the
-test set is fine, since deployment reveals feature values anyway; it is
-*statistics* computed on test rows, like the means and standard deviations
-above, that would bias our evaluation.
+We also fit the categorical vocabulary on the training rows only. At
+validation or deployment time, a category unseen during fitting maps to all
+zeros for that feature's known indicators. Building the vocabulary from an
+unlabeled test batch is a transductive competition technique; it is unsuitable
+when future categories are unavailable during training.
 
 ```{.python .input #kaggle-house-price-data-preprocessing-2  n=32}
 @d2l.add_to_class(KaggleHouse)
 def preprocess(self):
-    # Remove the ID and label columns
+    self.train, self.val = fit_preprocess(self.raw_train, self.raw_val)
+
+def fit_preprocess(train_raw, other_raw):
+    """Fit preprocessing on train_raw and apply it to both dataframes."""
     label = 'SalePrice'
-    features = pd.concat(
-        (self.raw_train.drop(columns=['Id', label]),
-         self.raw_val.drop(columns=['Id'])))
-    # Standardize numerical columns using training-set statistics only
-    # (to avoid leaking test-set information into the normalization).
-    numeric_features = features.select_dtypes(include='number').columns
-    n_train = self.raw_train.shape[0]
-    train_mean = features[numeric_features].iloc[:n_train].mean()
-    train_std = features[numeric_features].iloc[:n_train].std()
-    features[numeric_features] = (
-        features[numeric_features] - train_mean) / train_std
-    # Replace NAN numerical features by 0
-    features[numeric_features] = features[numeric_features].fillna(0)
-    # Replace discrete features by one-hot encoding
-    features = pd.get_dummies(features, dummy_na=True)
-    # Save preprocessed features
-    self.train = features[:n_train].copy()
-    self.train[label] = self.raw_train[label]
-    self.val = features[n_train:].copy()
+    train_X = train_raw.drop(columns=['Id', label])
+    other_X = other_raw.drop(columns=['Id', label], errors='ignore')
+    numeric = train_X.select_dtypes(include='number').columns
+    train_X[numeric] = train_X[numeric].astype(float)
+    other_X[numeric] = other_X[numeric].astype(float)
+    mean, std = train_X[numeric].mean(), train_X[numeric].std()
+    std = std.mask(std == 0, 1)
+    train_X.loc[:, numeric] = (train_X[numeric] - mean) / std
+    other_X.loc[:, numeric] = (other_X[numeric] - mean) / std
+    train_X.loc[:, numeric] = train_X[numeric].fillna(0)
+    other_X.loc[:, numeric] = other_X[numeric].fillna(0)
+    train_X = pd.get_dummies(train_X, dummy_na=True)
+    other_X = pd.get_dummies(other_X, dummy_na=True)
+    other_X = other_X.reindex(columns=train_X.columns, fill_value=0)
+    train_X[label] = train_raw[label].values
+    if label in other_raw:
+        other_X[label] = other_raw[label].values
+    return train_X, other_X
 ```
 
-You can see that this conversion increases
-the number of features from 79 to 331 (excluding ID and label columns).
+You can see that this conversion expands the 79 raw predictors into several
+hundred numeric columns; the exact count is determined by the categories
+observed in the training data.
 
 ```{.python .input #kaggle-house-price-data-preprocessing-3  n=33}
 data.preprocess()
@@ -319,7 +324,7 @@ with model selection.
 We will put this to good use to select the model design
 and to adjust the hyperparameters.
 The idea is shown in :numref:`fig_kfold`: we partition the data into $K$
-equal folds and run $K$ training rounds. In round $i$, fold $i$ is held out
+folds whose sizes differ by at most one and run $K$ training rounds. In round $i$, fold $i$ is held out
 for validation and the model is trained on the remaining $K-1$ folds; our
 generalization estimate is the average of the $K$ validation scores. With
 only about $1500$ training examples here, this reuse of the data gives a far
@@ -342,15 +347,20 @@ so we can safely omit it here owing to the simplicity of our problem.
 ```{.python .input #kaggle-house-price-k-fold-cross-validation-1}
 def k_fold_data(data, k):
     rets = []
-    # Integer division: if k does not divide n, the n mod k leftover rows
-    # end up in every training split and no validation fold. Harmless here
-    # (1460 = 5 x 292 exactly), but partition indices before reusing this.
-    fold_size = data.train.shape[0] // k
+    indices = data.raw_train.sample(frac=1, random_state=0).index.tolist()
+    base, remainder = divmod(len(indices), k)
+    start = 0
     for j in range(k):
-        idx = list(range(j * fold_size, (j+1) * fold_size))
-        rets.append(KaggleHouse(data.batch_size,
-                                data.train.drop(index=idx),
-                                data.train.iloc[idx]))
+        stop = start + base + (j < remainder)
+        val_idx = indices[start:stop]
+        raw_train = data.raw_train.drop(index=val_idx)
+        raw_val = data.raw_train.loc[val_idx]
+        train, val = fit_preprocess(raw_train, raw_val)
+        _, test = fit_preprocess(raw_train, data.raw_val)
+        fold = KaggleHouse(data.batch_size, train, val)
+        fold.test = test
+        rets.append(fold)
+        start = stop
     return rets
 ```
 
@@ -369,7 +379,7 @@ def k_fold(trainer, data, k, model_fn):
         if i != 0: model.board.display = False
         trainer.fit(model, data_fold)
         val_loss.append(float(model.board.data['val_loss'][-1].y))
-        models.append(model)
+        models.append((model, data_fold.test))
     print(f'average validation log mse = {sum(val_loss)/len(val_loss)}')
     return models
 ```
@@ -384,7 +394,7 @@ def k_fold(trainer, data, k, model_fn):
         if i != 0: model.board.display = False
         trainer.fit(model, data_fold)
         val_loss.append(float(model.board.data['val_loss'][-1].y))
-        models.append(model)
+        models.append((model, data_fold.test))
     print(f'average validation log mse = {sum(val_loss)/len(val_loss)}')
     return models
 ```
@@ -401,7 +411,7 @@ def k_fold(trainer, data, k, model_fn):
         val_loss.append(float(model.board.data['val_loss'][-1].y))
         # In JAX/Flax, params live in trainer.state, not the (frozen) model.
         # Capture each fold's trained params so the ensemble can use them.
-        models.append((model, trainer.state.params))
+        models.append((model, trainer.state.params, data_fold.test))
     print(f'average validation log mse = {sum(val_loss)/len(val_loss)}')
     return models
 ```
@@ -458,7 +468,7 @@ Can a small neural network do better? Now that we have weight decay
 (:numref:`sec_weight_decay`), dropout (:numref:`sec_dropout`), and sensible
 initialization (:numref:`sec_numerical_stability`) in hand, we can try the
 simplest possible upgrade: a single hidden layer with a ReLU
-nonlinearity. The dataset is tiny (about $1460$ rows, $331$ features after
+nonlinearity. The dataset is tiny (about $1460$ rows and several hundred features after
 one-hot encoding), so capacity is the enemy. We therefore keep the network
 *small* and lean on regularization: a modest $32$-unit hidden layer, a light
 dropout of $0.1$, and a small amount of $L_2$ weight decay ($10^{-4}$) added
@@ -547,13 +557,12 @@ The following code will generate a file called `submission.csv`.
 
 ```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab pytorch
-for model in models:
+for model, _ in models:
     model.eval()  # already the case after Trainer.fit; explicit is safer
-preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
-         for model in models]
+preds = [model(d2l.tensor(test.values.astype(float), dtype=d2l.float32))
+         for model, test in models]
 # Each model predicts a log-price; average across the K folds in log space,
-# then exponentiate back to a price. This geometric mean of the per-fold
-# price predictions is the ensemble consistent with the RMSLE metric.
+# then exponentiate back to a price.
 ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
@@ -562,10 +571,9 @@ submission.to_csv('submission.csv', index=False)
 
 ```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab tensorflow
-preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
-         for model in models]
-# Average the K log-price predictions in log space, then exponentiate:
-# the RMSLE-consistent (geometric-mean) ensemble
+preds = [model(d2l.tensor(test.values.astype(float), dtype=d2l.float32))
+         for model, test in models]
+# Average the K log-price predictions in log space, then exponentiate.
 ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
@@ -575,10 +583,9 @@ submission.to_csv('submission.csv', index=False)
 ```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab jax
 preds = [model.apply({'params': params},
-         d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
-         for model, params in models]
-# Average the K log-price predictions in log space, then exponentiate:
-# the RMSLE-consistent (geometric-mean) ensemble
+         d2l.tensor(test.values.astype(float), dtype=d2l.float32))
+         for model, params, test in models]
+# Average the K log-price predictions in log space, then exponentiate.
 ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
@@ -587,10 +594,9 @@ submission.to_csv('submission.csv', index=False)
 
 ```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab mxnet
-preds = [model(d2l.tensor(data.val.values.astype(float), dtype=d2l.float32))
-         for model in models]
-# Average the K log-price predictions in log space, then exponentiate:
-# the RMSLE-consistent (geometric-mean) ensemble
+preds = [model(d2l.tensor(test.values.astype(float), dtype=d2l.float32))
+         for model, test in models]
+# Average the K log-price predictions in log space, then exponentiate.
 ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
                            'SalePrice':d2l.numpy(ensemble_preds)})
@@ -625,10 +631,11 @@ problem into one where a $10\%$ error on a $\$100{,}000$ house and on a
 $\$1{,}000{,}000$ house are penalized equally, which is what we actually care
 about.
 
-$K$-fold cross-validation is the right tool when training data is limited
-(about $1500$ examples here): it spends $K$ training runs to buy a stable
-estimate of generalization error, and that same loop doubles as the
-infrastructure for hyperparameter search.
+$K$-fold cross-validation is useful for limited IID data such as this dataset:
+it spends $K$ training runs to reduce dependence on one validation split, and
+the same loop supports hyperparameter search. Random folds are invalid when
+rows are grouped, ordered in time, spatially dependent, or otherwise linked;
+those settings require a split that preserves the dependence structure.
 
 Two caveats belong in any account of this pipeline. First, none of it is
 specific to neural networks: the same preprocessing, loss design, and
@@ -657,7 +664,7 @@ fine-tuning of pretrained models.
 1. Improve the score by improving the model (e.g., layers, weight decay, and dropout).
 1. What happens if we do not standardize the continuous numerical features as we have done in this section?
 1. Swap the linear model for a gradient-boosted tree model (for example scikit-learn's `GradientBoostingRegressor`, or XGBoost or LightGBM if installed), trained on the same preprocessed features. How does its cross-validated log-RMSE compare? Why might tree ensembles have an edge on data like this?
-1. Revisit the preprocessing choices. How does median imputation compare to mean imputation? What changes if you encode high-cardinality categorical features with target encoding or a learned embedding instead of one-hot vectors?
+1. Revisit the preprocessing choices. How does median imputation compare to mean imputation? What changes if you encode high-cardinality categorical features with target encoding or a learned embedding instead of one-hot vectors? Target encoding uses labels, so implement it out of fold: for each training row, its encoded value must be computed without that row or its validation fold.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/106)
@@ -841,10 +848,12 @@ test statistics is **leakage** and flatters every later score.
 :::
 :::
 
-::: {.slide title="One method: impute, standardize, one-hot (79 → 331 columns)" layout="code"}
+::: {.slide title="One method: impute, standardize, one-hot" layout="code"}
 [Preprocessing]{.kicker}
 
-All three transforms in one `preprocess` method. Note the mean and std computed on the first `n_train` rows **only**, and `dummy_na=True` giving missingness its own indicator column:
+Fit means, standard deviations, and the categorical vocabulary on the
+training rows, then apply that state to held-out rows. During cross-validation,
+"training rows" means the $K-1$ folds, not the complete labeled dataset:
 
 @-kaggle-house-price-data-preprocessing-2
 :::
@@ -915,7 +924,8 @@ folds; train $K$ times, each time holding out a different fold;
 
 ::: {.d2l-note}
 Costs $K\times$ the compute, buys a far steadier estimate, and the same
-loop doubles as the hyperparameter search.
+loop supports hyperparameter search. Fit preprocessing anew inside each
+training fold; otherwise the held-out fold leaks into the model pipeline.
 :::
 :::
 
@@ -1054,8 +1064,9 @@ Average the $K$ log-price predictions, exponentiate, submit:
 ![Upload the CSV and Kaggle scores it instantly.](../img/kaggle-submit2.png){width=80%}
 
 ::: {.d2l-note}
-The log-space mean is the **RMSLE-consistent** (geometric-mean)
-ensemble. And note: the CV score measured a *single* fold model;
+The log-space mean averages predictions in the space where RMSLE measures
+error; exponentiating makes it a geometric mean in price space. This does not
+guarantee an improvement. The CV score measured a *single* fold model;
 refitting on all data is the more direct alternative to this *fold
 ensembling*.
 :::
@@ -1069,7 +1080,7 @@ ensembling*.
 ::: {.cols}
 ::: {.col}
 1. **Download** the train and test data.
-2. **Preprocess**: impute, standardize, one-hot (stats fit on train).
+2. **Preprocess**: impute, standardize, one-hot (all state fit on train).
 3. **Match the loss** to the scoring metric.
 4. **K-fold CV** for a generalization estimate and HP search.
 :::
@@ -1099,8 +1110,8 @@ images, text, audio. The pipeline is identical.
 :::
 
 ::: {.col}
-- **K-fold CV** gives a stable estimate on small data and drives HP
-  search.
+- **K-fold CV** reduces split dependence on small IID data and drives HP
+  search; fit preprocessing within every fold.
 - **A baseline counts only if trained competently**: underfit
   vs converged, same model.
 - **Ensemble the folds in log space** (or refit), then submit.

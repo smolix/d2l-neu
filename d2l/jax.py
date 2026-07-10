@@ -112,12 +112,13 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
         axes.legend(legend)
     axes.grid()
 
-def plot(X, Y=None, xlabel=None, ylabel=None, legend=[], xlim=None,
+def plot(X, Y=None, xlabel=None, ylabel=None, legend=None, xlim=None,
          ylim=None, xscale='linear', yscale='linear',
          fmts=('-', 'm--', 'g-.', 'r:'), figsize=(3.5, 2.5), axes=None):
     """Plot data points.
 
     Defined in :numref:`sec_calculus`"""
+    legend = [] if legend is None else legend
 
     def has_one_axis(X):  # True if X (tensor or list) has 1 axis
         return (hasattr(X, "ndim") and X.ndim == 1 or isinstance(X, list)
@@ -153,10 +154,11 @@ class HyperParameters:
 
     Defined in :numref:`sec_oo-design`"""
 
-    def save_hyperparameters(self, ignore=[]):
+    def save_hyperparameters(self, ignore=None):
         """Save function arguments into class attributes.
 
         Defined in :numref:`sec_utils`"""
+        ignore = [] if ignore is None else ignore
         frame = inspect.currentframe().f_back
         _, _, _, local_vars = inspect.getargvalues(frame)
         self.hparams = {k:v for k, v in local_vars.items()
@@ -500,9 +502,8 @@ class SyntheticRegressionData(d2l.DataModule):
                  batch_size=32, key=None):
         super().__init__()
         self.save_hyperparameters()
-        # Resolve the key at call time (the None idiom) rather than baking a
-        # fixed PRNGKey into the signature; default stays deterministic.
-        key = jax.random.PRNGKey(0) if key is None else key
+        # Resolve the key at call time rather than reusing a key in the signature.
+        key = jax.random.key(0) if key is None else key
         n = num_train + num_val
         key1, key2 = jax.random.split(key)
         self.X = jax.random.normal(key1, (n, w.shape[0]))

@@ -641,9 +641,10 @@ the seed of the framework's random number generator, which governs both the
 parameter initialization and the shuffling of minibatches.
 
 :begin_tab:`jax`
-JAX needs no such call: its PRNG is *functional*, with no global state. The
-model is initialized from a fixed `PRNGKey` and the synthetic dataset defaults
-to `key=jax.random.PRNGKey(0)`; see exercise 4 of
+JAX needs no such call: its PRNG is *functional*, with no implicit global
+state. The model and dataset receive explicit typed keys; the synthetic dataset
+defaults to `key=jax.random.key(0)`. Reusing a key repeats the same random draw,
+so stochastic programs should split and thread keys explicitly; see exercise 4 of
 :numref:`sec_synthetic-regression-data`.
 :end_tab:
 

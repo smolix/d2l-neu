@@ -125,9 +125,8 @@ class SyntheticRegressionData(d2l.DataModule):  #@save
                  batch_size=32, key=None):
         super().__init__()
         self.save_hyperparameters()
-        # Resolve the key at call time (the None idiom) rather than baking a
-        # fixed PRNGKey into the signature; default stays deterministic.
-        key = jax.random.PRNGKey(0) if key is None else key
+        # Resolve the key at call time rather than reusing a key in the signature.
+        key = jax.random.key(0) if key is None else key
         n = num_train + num_val
         key1, key2 = jax.random.split(key)
         self.X = jax.random.normal(key1, (n, w.shape[0]))

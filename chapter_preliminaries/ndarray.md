@@ -142,11 +142,11 @@ x
 ```
 
 The `dtype` (data type) of a tensor determines how its elements are stored.
-Deep learning is done almost entirely in *floating point*, and by convention
-in **32-bit** floating point (`float32`): it halves the memory and bandwidth of
-`float64` while providing far more than enough precision for gradient-based
-learning, and it is what GPU hardware is optimized for. You can inspect a
-tensor's type via its `dtype` attribute. In finite precision, naive
+We use **32-bit** floating point (`float32`) as the default throughout these
+chapters. Training systems also use lower-precision floating-point formats,
+often together with higher-precision accumulation. Chapter 6 develops those
+formats and their numerical tradeoffs. You can inspect a tensor's type via its
+`dtype` attribute. In finite precision, naive
 computations can overflow or underflow, which is why later sections compute
 quantities such as the softmax and cross-entropy with stabilized formulas
 (:numref:`sec_softmax`).
@@ -245,7 +245,7 @@ Notice that the elements of our vector
 are laid out one row at a time and thus
 `x[3] == X[0, 3]`, as :numref:`fig_ndarray_reshape` illustrates.
 
-![Reshaping re-wraps the same 12 elements, laid out one row at a time; no data moves.](../img/ndarray-reshape.svg)
+![Reshaping arranges the same 12 values into three rows without changing their order.](../img/ndarray-reshape.svg)
 :label:`fig_ndarray_reshape`
 
 ```{.python .input #ndarray-getting-started-5}
@@ -273,9 +273,11 @@ that should be inferred automatically.
 In our case, instead of calling `x.reshape(3, 4)`,
 we could have equivalently called `x.reshape(-1, 4)` or `x.reshape(3, -1)`.
 
-Reshaping does not move any data: the returned tensor typically *shares
-storage* with the original (only the metadata describing the shape
-changes), so writing into one can affect the other.
+For a contiguous tensor such as `x`, a framework can implement `reshape` by
+changing only shape metadata. More generally, `reshape` may return either a
+view that shares storage or a copy, depending on the layout and framework.
+Code should therefore not rely on storage sharing unless it explicitly asks
+for a view and satisfies that operation's layout requirements.
 
 Practitioners often need to work with tensors
 initialized to contain all 0s or 1s.
@@ -357,7 +359,7 @@ tf.random.normal(shape=[3, 4])
 # Any call of a random function in JAX requires a key to be
 # specified, feeding the same key to a random function will
 # always result in the same sample being generated
-jax.random.normal(jax.random.PRNGKey(0), (3, 4))
+jax.random.normal(jax.random.key(0), (3, 4))
 ```
 
 Random sampling raises the question of *reproducibility*. Calling a sampler
@@ -778,14 +780,14 @@ allocated to host results.
 For example, if we write `Y = Y + X`,
 we dereference the tensor that `Y` used to point to
 and instead point `Y` at the newly allocated memory.
-We can demonstrate this issue with Python's `id()` function,
-which gives us the exact address 
-of the referenced object in memory.
+We can demonstrate the rebinding with Python's `id()` function,
+which identifies a Python object for the duration of its lifetime.
 Note that after we run `Y = Y + X`,
-`id(Y)` points to a different location.
+`id(Y)` changes.
 That is because Python first evaluates `Y + X`,
 allocating new memory for the result 
-and then points `Y` to this new location in memory.
+and then binds `Y` to the new tensor object. This test says nothing about the
+address of the tensor's underlying storage.
 
 ```{.python .input #ndarray-saving-memory-1}
 before = id(Y)
@@ -799,7 +801,10 @@ allocating memory unnecessarily all the time.
 In machine learning, we often have
 gigabytes of parameters
 and update all of them multiple times per second.
-Whenever possible, we want to perform these updates *in place*.
+In frameworks that support mutation, in-place updates can avoid these
+allocations. They must be used with care because automatic differentiation
+may need an earlier value to compute a gradient; functional and compiled
+systems may instead reuse buffers internally without exposing mutation.
 Second, we might point at the 
 same parameters from multiple variables.
 If we do not update in place, 
@@ -988,7 +993,7 @@ Tensors provide a variety of functionalities including construction routines; in
 1. Create the vector `x = arange(24)` and reshape it into a $(2, 3, 4)$ tensor using `-1` for one of the components. Which component does the framework infer, and why is at most one `-1` allowed?
 1. Build a $(3, 4)$ tensor and predict, *before running*, the shape of its sum along `axis=0`, along `axis=1`, and with `keepdims=True`. Then check each prediction against the code.
 1. Try to add two tensors whose shapes are *not* broadcast-compatible, for example shapes $(3, 2)$ and $(2, 3)$. What error do you get? Use the alignment rule from the broadcasting section to explain it, then find a reshape of one operand that makes the addition valid.
-1. Recall the saving-memory discussion. Verify with `id()` that `X[:] = X + Y` (or `X += Y`) reuses `X`'s memory while `X = X + Y` allocates a fresh tensor. Why does this distinction matter when training a model with millions of parameters?
+1. Recall the saving-memory discussion. Use `id()` to verify that `X[:] = X + Y` (or `X += Y`) keeps the same Python tensor object while `X = X + Y` binds `X` to a new object. Why does object identity alone not prove that the underlying storage was reused? Consult your framework's storage or buffer API and test storage identity where such an API exists.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/26)
@@ -1363,7 +1368,7 @@ is gigabytes and updated many times per second:
 @ndarray-saving-memory-1
 
 ::: {.d2l-note}
-`id(Y)` changed → `Y` now points at a brand-new buffer.
+`id(Y)` changed: `Y` is now bound to a new tensor object.
 :::
 :::
 

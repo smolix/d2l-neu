@@ -14,28 +14,28 @@
       "outputs": []
     },
     "dropout-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:431861d8520ce3f6ccadf3aa3100071d266ec8a16c76c1ded6c3c312603c2830",
+      "code_fingerprint": "sha256:fb78a58da4d0ad62f2779f295b906e8082de148147991975639480e37c3e28d1",
       "kind": "text",
       "outputs": []
     },
     "dropout-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:0ff339c9acfbf1baa4052dd582ad3357156bf3911f7d20512fa7f1cc955a6504",
+      "code_fingerprint": "sha256:88192192d517adb7a890059312f999479839dcf1d98aa13432f8da12f757d5d1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\ndropout_p = 0.5: tf.Tensor(\n[[ 0.  2.  4.  0.  0.  0. 12. 14.]\n [ 0. 18. 20. 22.  0.  0.  0. 30.]], shape=(2, 8), dtype=float32)\ndropout_p = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
+          "text": "dropout_p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\ndropout_p = 0.5: tf.Tensor(\n[[ 0.  2.  0.  6.  0. 10.  0.  0.]\n [16.  0.  0.  0.  0. 26. 28. 30.]], shape=(2, 8), dtype=float32)\ndropout_p = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
         }
       ]
     },
     "dropout-defining-the-model": {
-      "code_fingerprint": "sha256:5b131f8b0cd73a110274a97b9a9be930ec45de1fc23cd6d61c2ba94eaaf3a01a",
+      "code_fingerprint": "sha256:5c9667f4b341f79a66b72e5f719756cb2a8fb15a3728fbc06946de1858cb117c",
       "kind": "text",
       "outputs": []
     },
     "dropout-training": {
-      "code_fingerprint": "sha256:8d5008bb8bc0ee55ae53689af565b969de68f9d81075a21b7ca88134ada13c6f",
+      "code_fingerprint": "sha256:6911875ceabaf725c322f2dddb6c546b4b6b46c9f75c225a70b357ce0d45c54c",
       "kind": "asset",
       "outputs": [
         {
@@ -43,25 +43,25 @@
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
           "bytes": 24341,
-          "sha256": "sha256:5104efbcd432cea1fa250a810ad64d8604993b336d8d0a00cc0b22e030549ad4"
+          "sha256": "sha256:e875852045b05e34c97e00747eec407e2c1c87aadd1b89568b3ae8e801246ec1"
         }
       ]
     },
     "dropout-concise-implementation-1": {
-      "code_fingerprint": "sha256:1b6d96d5c1d21041d91b795ed1d31d7db0e6eaee93eba5cc7b240f9f89da3856",
+      "code_fingerprint": "sha256:f8947a9796f5456b939a2b816779c7c6b1d0d7c90da3493b9bea11b5d36b6817",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:27767cd579b856e4a0a3c6dc2ab124386464c5c53f7c7f02f4e3a550bfe22b6b",
+      "code_fingerprint": "sha256:ae0f7236b3d2588c0907fd4e1e37d166f7deb59d24d74b98fc2a5f346c66a997",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 24344,
-          "sha256": "sha256:16cf53cfabd40e82da87a80c36cbd71d0870531016ba0f240ad0b34186e1c427"
+          "bytes": 24338,
+          "sha256": "sha256:a6626f431bc3c710e9aa646be82cb2302c9cf53e4961fe2793844ec6fefe25fb"
         }
       ]
     }

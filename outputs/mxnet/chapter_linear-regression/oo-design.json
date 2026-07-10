@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:c17831c71cdd8eefd6866b6e987fe263b6840a01e85cdfb1d597fff30623394b",
+    "d2l_lib_fingerprint": "sha256:458557626249f8ff2a4b651f5ef5559f9469fe9c986b4eef03d41ff4dc7353d2",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,12 +35,12 @@
       ]
     },
     "oo-design-utilities-4": {
-      "code_fingerprint": "sha256:c129234de799b55196f8be40f31c1a144bb25ac86fd36dbd2f7c479c2f2e10f0",
+      "code_fingerprint": "sha256:c4f3d19a10936c1700e67c453d2b754ad5897e7cf3bf4e8bbf27c88ee2403627",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-5": {
-      "code_fingerprint": "sha256:49b26ec58a67132d407d7a7170e08e4a42ad47a8853b4dba6ddbafc274fa1a4a",
+      "code_fingerprint": "sha256:16f05ff0895194d4a75d62199e0c4266b571668cc5a1d028bd2f3f9a38781ca4",
       "kind": "text",
       "outputs": [
         {
@@ -51,12 +51,12 @@
       ]
     },
     "oo-design-utilities-6": {
-      "code_fingerprint": "sha256:eb17708bb01c91028ed317a11d9d42f1fc2a114773dedc13363f2ba87d3f9f10",
+      "code_fingerprint": "sha256:00c4a9452cd604600f20d448f0efed4fe925bc5e438efdcaa0e155e455d1d6cc",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-7": {
-      "code_fingerprint": "sha256:73db5f14553acd348cad9a26cffec0876ae371ed748229508cc041c88b8255cf",
+      "code_fingerprint": "sha256:2a5f07a40f1b55126b073f2c164f7396a90235f30a86bb5b198f77f7517e98ea",
       "kind": "asset",
       "outputs": [
         {
@@ -64,22 +64,22 @@
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-utilities-7-1.svg",
           "bytes": 17183,
-          "sha256": "sha256:97214176e83bbeffc1ed9b9dfff15cd0abcbda2b92c65ec636afc9aee346e373"
+          "sha256": "sha256:0428368f8e0bb750ab94db4b8e64402a42c4a34e9067b95a4a989576caeab5ea"
         }
       ]
     },
     "oo-design-models": {
-      "code_fingerprint": "sha256:9a7dcacb106e78044ab2584aefb187d61eb91e80801021977e1fd0c4ad569ad6",
+      "code_fingerprint": "sha256:9dfa0d097fd6c859d276b7d201ecd199c932823d1a39bd60ce0529750f220590",
       "kind": "text",
       "outputs": []
     },
     "oo-design-data": {
-      "code_fingerprint": "sha256:b3d19a3dd9d151146f5bf33404ec7b5b81871744885da0bff0f808e3484781ff",
+      "code_fingerprint": "sha256:60f56163f609f5e6c6e4fa3ba0c00fc365c9d8ebffe04f7baeb0f56024aaba19",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training": {
-      "code_fingerprint": "sha256:7d162414b9ac02601c1196af247e3599b68296672bd14cc4e273e34db5cdb8b0",
+      "code_fingerprint": "sha256:91c576c5b93938650de8b326a528e25b8d60fc4f52c4d811c6068b1c701f4eff",
       "kind": "text",
       "outputs": []
     }

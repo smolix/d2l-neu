@@ -229,10 +229,13 @@ Since the predicted class is $\operatorname{argmax}_j o_j$
 and each $o_j = \mathbf{w}_j^\top \mathbf{x} + b_j$ is affine,
 the region assigned to class $j$ is the set where finitely many
 linear inequalities $o_j \geq o_k$ hold: an intersection of halfspaces,
-hence a convex polyhedron.
-The plane is carved into $q$ convex regions
-whose boundaries are the tie lines $o_j = o_k$;
-these lines all meet at the single point where every score is equal.
+hence a convex polyhedron that may be empty. Pairwise ties
+$o_j=o_k$ lie on hyperplanes, although only the portions adjacent to two
+winning regions are decision boundaries. The three-class example in
+:numref:`fig_mdl-clf-decision-regions` has one point where all three scores
+are equal. Such a common intersection is not guaranteed for other parameter
+choices, and with more than three classes in the plane it is generically
+impossible.
 In the binary case the picture is even simpler:
 $\hat{y}_1 = \sigma(o)$ depends on $\mathbf{x}$
 only through $o = (\mathbf{w}_1 - \mathbf{w}_2)^\top \mathbf{x} + (b_1 - b_2)$,

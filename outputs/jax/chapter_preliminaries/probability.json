@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [46, 54]\n"
+          "text": "heads, tails:  [49, 51]\n"
         }
       ]
     },
@@ -63,7 +63,7 @@
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
           "bytes": 30162,
-          "sha256": "sha256:51de8ebd0df809d53a1dca476c80ec4471dfd1614b5f2a1ad643c5628061ce3d"
+          "sha256": "sha256:8435892b70ee3f5daa440d5da86f32e23bb79fe823bdfcdfd131d9378ffcf42a"
         }
       ]
     },
@@ -76,17 +76,17 @@
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
           "bytes": 108867,
-          "sha256": "sha256:06bda33fbe9f80afa28422998b063bc943aaae19c564d343d8358a8fb2148345"
+          "sha256": "sha256:af30d521aecac0ba1ff82c96cd6dd672a1050012e555c43c834004a8213b023f"
         }
       ]
     },
     "probability-worked-example-hiv-testing-1": {
-      "code_fingerprint": "sha256:cc20964d9e20a779bc51726658c5af37f6f2bed3c5dd3dd6e5609f97567df5cb",
+      "code_fingerprint": "sha256:545a1d86b2dd818d103ac1c22d302754a00d2077772bc5ce473d1cce2cae3e19",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(0.8222727, dtype=float32)"
+          "text": "Array(0.82513815, dtype=float32)"
         }
       ]
     }

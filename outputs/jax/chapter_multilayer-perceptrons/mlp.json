@@ -9,12 +9,43 @@
   },
   "cells": {
     "mlp-multilayer-perceptrons": {
-      "code_fingerprint": "sha256:883b0b706c9858bad6fdd53194cb0ac0cd8ae1371762abd66038277c1c96fecc",
+      "code_fingerprint": "sha256:8680914d52d5596bb2e13cb5f17524ad0d15a1589d7ebc524dfad61c155cc1e0",
       "kind": "text",
       "outputs": []
     },
+    "mlp-xor": {
+      "code_fingerprint": "sha256:08aad4834307d6d42e9ff48c3a356d23a0f112731796dcf9edf2dfdebdd9e34a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "array([[0., 0., 0.],\n       [0., 1., 1.],\n       [1., 0., 1.],\n       [1., 1., 0.]])"
+        }
+      ]
+    },
+    "mlp-region-count": {
+      "code_fingerprint": "sha256:97b7d7a55b2e4655a8ccbb87c71bcf5d5a86286f49e7012e4588cda8869ecb14",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "depth 1: mean pieces = [2.8, 4.5, 7.8, 14.3],  D+1 = [3, 5, 9, 17]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "depth 2: mean pieces = [3.2, 7.5, 14.2, 27.8],  D+1 = [3, 5, 9, 17]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "depth 3: mean pieces = [3.0, 8.9, 19.5, 39.5],  D+1 = [3, 5, 9, 17]\n"
+        }
+      ]
+    },
     "mlp-relu-function-1": {
-      "code_fingerprint": "sha256:7adb25270c4aa2f9a66a74cfff4fea99a218bfd48b6ab7d577854f23e662edc2",
+      "code_fingerprint": "sha256:128aeb8ac57c9fd2d222366fb675707b062796bfb83bedbe0f72b8a96e7e0981",
       "kind": "asset",
       "outputs": [
         {
@@ -22,12 +53,12 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
           "bytes": 16908,
-          "sha256": "sha256:236bf22f2fbca3e49279278483fdadcb04f96e2e3a3cca0a0fa59467a152932e"
+          "sha256": "sha256:0d5c1dc5bb738fa5d09fb5c454d4f3a368001155bf5b035e71df2ba06fd60732"
         }
       ]
     },
     "mlp-relu-function-2": {
-      "code_fingerprint": "sha256:7e5a9dc9b1b9a4b952265a07a0aff26f195ec520793efe72b49b556937f8d513",
+      "code_fingerprint": "sha256:0569ab168ed193d6bea97acd26a4ffbafc0f97beb22b382efb39d550b95f7aff",
       "kind": "asset",
       "outputs": [
         {
@@ -35,12 +66,12 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
           "bytes": 21200,
-          "sha256": "sha256:dfa0d7bdba4da05a66176e02db7f346c462860197952441930677ec79987a79f"
+          "sha256": "sha256:262d0bc678f7fc1499c1870fa5c500b3057a53ee809e275be07f34960d56dd8a"
         }
       ]
     },
     "mlp-sigmoid-function-1": {
-      "code_fingerprint": "sha256:8eea7b5413851e36e5cbf0886f6fd760b9d856a3b652ec63b0d76f4ccce85a37",
+      "code_fingerprint": "sha256:b9b7a61ceba1fef518e82fe237e3602ea639c04e04e9d07e71c1e4df1f39b2b5",
       "kind": "asset",
       "outputs": [
         {
@@ -48,12 +79,12 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
           "bytes": 21781,
-          "sha256": "sha256:ddafc06a672c05cd947c980c1214a14fed781b06cf97ee7029c5b0a6e73ac80e"
+          "sha256": "sha256:1e1d455e9e10dd81ace7b5e7f2b32f373be16fdb2deb6fceaceface627f27d3d"
         }
       ]
     },
     "mlp-sigmoid-function-2": {
-      "code_fingerprint": "sha256:4f33f25b179b3474b91e1b9f91906f2570b76fe859a11b57f9e46a5af40b205c",
+      "code_fingerprint": "sha256:369133e3b608e5eefa1db444efd67b29aefc4b42d199bf3c3ea60cf8f7aedc6b",
       "kind": "asset",
       "outputs": [
         {
@@ -61,12 +92,12 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
           "bytes": 24512,
-          "sha256": "sha256:cfda1bd3f6b3920d138a361cb56101bae6d0097077d6bc2e476da936b4663869"
+          "sha256": "sha256:e9a2a365661124392d1846ad807e46c6607d2921254d6387403bba4580b155a8"
         }
       ]
     },
     "mlp-tanh-function-1": {
-      "code_fingerprint": "sha256:efedab49390cd7e4ceeb6feb9c90985092e4446fc5faae2f8a629b0fb68331aa",
+      "code_fingerprint": "sha256:91d06a834d4c36594d49935bd39f403dfc91e98ce662464939548a5ae9d3c467",
       "kind": "asset",
       "outputs": [
         {
@@ -74,12 +105,12 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
           "bytes": 20169,
-          "sha256": "sha256:896ff1c59e099f8bad57e5d73a10c030e215e75bfe2960dcedb1047cc966ec7f"
+          "sha256": "sha256:05a35912b8a152fdc26ce15008d40b0407b66098a5ecc3952eb4b5780f2bf607"
         }
       ]
     },
     "mlp-tanh-function-2": {
-      "code_fingerprint": "sha256:aa25da733f18bd6bc36a0a06d6aa6f5d50909ad82421ec29c9b820aa901fc18f",
+      "code_fingerprint": "sha256:38b58c3a16aff24e372979e8ed7184715cd9d96502383fb9cbd82a493d66ca8f",
       "kind": "asset",
       "outputs": [
         {
@@ -87,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
           "bytes": 22667,
-          "sha256": "sha256:58a2eabefeb0d887c19bea041fbab3701e87b03fba1ddae1956fd602a835fc84"
+          "sha256": "sha256:fb26d88f4ddd4ce31d5e5e1e0161e2112eb6d05e620d97823796612ba04190af"
         }
       ]
     }

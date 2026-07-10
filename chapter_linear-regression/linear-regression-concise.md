@@ -127,10 +127,6 @@ class LinearRegression(d2l.Module):  #@save
         super().__init__()
         self.save_hyperparameters()
         self.net = nn.LazyLinear(1)
-        # NOTE: net is lazy, so weight/bias are uninitialized here; .data is
-        # required (a bare .normal_/.fill_ raises on an uninitialized param).
-        self.net.weight.data.normal_(0, 0.01)
-        self.net.bias.data.fill_(0)
 ```
 
 ```{.python .input #linear-regression-concise-defining-the-model-1}
@@ -185,8 +181,8 @@ def forward(self, X):
 
 :begin_tab:`mxnet`
 The `loss` module defines many useful loss functions.
-For speed and convenience, we forgo implementing our own
-and choose the built-in `loss.L2Loss` instead.
+We choose the built-in `loss.L2Loss` rather than maintaining another
+implementation.
 Because the `loss` that it returns is
 the squared error for each example,
 we use `mean` to average the loss over the minibatch.
@@ -195,7 +191,9 @@ we use `mean` to average the loss over the minibatch.
 :begin_tab:`pytorch`
 The `MSELoss` class computes the mean squared error (without the $1/2$ factor in :eqref:`eq_mse`).
 By default, `MSELoss` returns the average loss over examples.
-It is faster (and easier to use) than implementing our own.
+Using the library primitive also gives us its tested reduction and
+automatic-differentiation behavior; performance should be measured rather
+than assumed.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -323,6 +321,20 @@ in :numref:`sec_linear_scratch`,
 to train our model.
 
 ```{.python .input #linear-regression-concise-training-1}
+%%tab pytorch
+model = LinearRegression(lr=0.03)
+data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
+# Materialize lazy parameters before replacing their default initialization.
+model(data.X[:1])
+with torch.no_grad():
+    model.net.weight.normal_(0, 0.01)
+    model.net.bias.fill_(0)
+trainer = d2l.Trainer(max_epochs=10)
+trainer.fit(model, data)
+```
+
+```{.python .input #linear-regression-concise-training-1}
+%%tab mxnet, tensorflow, jax
 model = LinearRegression(lr=0.03)
 data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 trainer = d2l.Trainer(max_epochs=10)
@@ -421,10 +433,11 @@ before they have been instantiated (and initialized).
 :begin_tab:`pytorch`
 In PyTorch, the `data` module provides tools for data processing,
 the `nn` module defines a large number of neural network layers and common loss functions.
-We can initialize the parameters by replacing their values
-with methods ending with `_`.
 Because we used `nn.LazyLinear`, the input dimensions are inferred automatically
-on the first forward pass, so we never have to specify them by hand.
+on the first forward pass. Before that pass, the layer contains
+`UninitializedParameter` placeholders: writing to them does not initialize the
+eventual weights. The training cell therefore makes a one-example dry run and
+then initializes the materialized parameters inside `torch.no_grad()`.
 This lazy shape inference pays off in deeper networks (convolutional layers,
 variable-length sequences), where computing the input size of each layer by hand
 would be tedious and error-prone.
@@ -541,8 +554,8 @@ them, or even know their shapes ahead of time.
 [The Model]{.kicker}
 
 `LazyLinear(1)` is the whole model. The **lazy** variant defers the
-input dimension until the first forward pass, so we never compute it
-by hand:
+input dimension until the first forward pass. Initialize its parameters only
+after that first pass:
 
 @linear-regression-concise-defining-the-model-1
 

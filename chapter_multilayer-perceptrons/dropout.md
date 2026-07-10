@@ -30,9 +30,9 @@ For instance, when we classify images,
 we would expect that adding some random noise
 to the pixels should be mostly harmless.
 
-:citet:`Bishop.1995` formalized
-this idea when he proved that training with input noise
-is equivalent to Tikhonov regularization.
+:citet:`Bishop.1995` formalized this idea for small additive input noise under
+a sum-of-squares loss, where the expected noisy objective is approximated by
+a generalized Tikhonov regularizer.
 This work drew a clear mathematical connection
 between the requirement that a function be smooth (and thus simple),
 and the requirement that it be resilient
@@ -226,7 +226,7 @@ def dropout_layer(X, dropout):
 def dropout_layer(X, dropout):
     assert 0 <= dropout <= 1
     if dropout == 1: return torch.zeros_like(X)
-    mask = (torch.rand(X.shape) > dropout).float()
+    mask = (torch.rand_like(X) > dropout).to(X.dtype)
     return mask * X / (1.0 - dropout)
 ```
 
@@ -237,20 +237,16 @@ def dropout_layer(X, dropout):
     if dropout == 1: return tf.zeros_like(X)
     mask = tf.random.uniform(
         shape=tf.shape(X), minval=0, maxval=1) < 1 - dropout
-    return tf.cast(mask, dtype=tf.float32) * X / (1.0 - dropout)
+    return tf.cast(mask, dtype=X.dtype) * X / (1.0 - dropout)
 ```
 
 ```{.python .input #dropout-implementation-from-scratch-1}
 %%tab jax
-def dropout_layer(X, dropout, key=d2l.get_key()):
-    # `key` is bound once, at definition time, so this educational dropout
-    # reuses one fixed mask on every call (keeping it JIT-traceable). Real
-    # training needs a fresh key per step; Flax's `nn.Dropout` handles that
-    # via `rngs={'dropout': ...}`. See the note after the concise model.
+def dropout_layer(X, dropout, key):
     assert 0 <= dropout <= 1
     if dropout == 1: return jnp.zeros_like(X)
     mask = jax.random.uniform(key, X.shape) > dropout
-    return jnp.asarray(mask, dtype=jnp.float32) * X / (1.0 - dropout)
+    return jnp.asarray(mask, dtype=X.dtype) * X / (1.0 - dropout)
 ```
 
 We can test out the `dropout_layer` function on a few examples.
@@ -277,9 +273,10 @@ print('dropout_p = 1:', dropout_layer(X, 1))
 ```{.python .input #dropout-implementation-from-scratch-2}
 %%tab jax
 X = jnp.arange(16, dtype=jnp.float32).reshape(2, 8)
-print('dropout_p = 0:', dropout_layer(X, 0))
-print('dropout_p = 0.5:', dropout_layer(X, 0.5))
-print('dropout_p = 1:', dropout_layer(X, 1))
+keys = jax.random.split(d2l.get_key(), 3)
+print('dropout_p = 0:', dropout_layer(X, 0, keys[0]))
+print('dropout_p = 0.5:', dropout_layer(X, 0.5, keys[1]))
+print('dropout_p = 1:', dropout_layer(X, 1, keys[2]))
 ```
 
 ```{.python .input #dropout-implementation-from-scratch-2}
@@ -384,10 +381,12 @@ class DropoutMLPScratch(d2l.Classifier):
     def forward(self, X):
         H1 = self.relu(self.lin1(X.reshape(X.shape[0], -1)))
         if self.training:
-            H1 = dropout_layer(H1, self.dropout_1)
+            H1 = dropout_layer(H1, self.dropout_1,
+                               self.make_rng('dropout'))
         H2 = self.relu(self.lin2(H1))
         if self.training:
-            H2 = dropout_layer(H2, self.dropout_2)
+            H2 = dropout_layer(H2, self.dropout_2,
+                               self.make_rng('dropout'))
         return self.lin3(H2)
 ```
 
@@ -399,6 +398,20 @@ the layer closer to the input more gently
 ($p = 0.2$) than the deeper one ($p = 0.5$).
 
 ```{.python .input #dropout-training}
+%%tab mxnet
+hparams = {'num_outputs':10, 'num_hiddens_1':256, 'num_hiddens_2':256,
+           'dropout_1':0.2, 'dropout_2':0.5, 'lr':0.1}
+model = DropoutMLPScratch(**hparams)
+data = d2l.FashionMNIST(batch_size=256)
+# macOS uses multiprocessing spawn; this transformed MXNet dataset contains
+# weak references that cannot be pickled for worker processes.
+data.num_workers = 0
+trainer = d2l.Trainer(max_epochs=30)
+trainer.fit(model, data)
+```
+
+```{.python .input #dropout-training}
+%%tab pytorch, tensorflow, jax
 hparams = {'num_outputs':10, 'num_hiddens_1':256, 'num_hiddens_2':256,
            'dropout_1':0.2, 'dropout_2':0.5, 'lr':0.1}
 model = DropoutMLPScratch(**hparams)
@@ -527,9 +540,10 @@ trainer.fit(model, data)
 
 *Inverted dropout* replaces each hidden activation $h$ with a random variable
 $h'$ that is zero with probability $p$ and $h/(1-p)$ otherwise. The rescaling by
-$1/(1-p)$ keeps $E[h'] = h$, so the network's expected behavior at test time
-matches training without any change to the test-time code. Dropout is *off at
-test time*: the full network runs, with no masking and no rescaling.
+$1/(1-p)$ keeps $E[h'\mid h] = h$. This is a layerwise statement; after
+nonlinear downstream layers, the expected network output under dropout need
+not equal the output of the full network. Dropout is *off at test time*: the
+full network runs, with no masking and no rescaling.
 
 Three complementary views explain why dropout helps. The first is *noise
 injection*: zeroing activations at random injects noise, and by analogy with

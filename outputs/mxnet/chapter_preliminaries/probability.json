@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [56, 44]\n"
+          "text": "heads, tails:  [50, 50]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([44, 56], dtype=int64)"
+          "text": "array([41, 59], dtype=int64)"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.45, 0.55])"
+          "text": "array([0.51, 0.49])"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.5024, 0.4976])"
+          "text": "array([0.5005, 0.4995])"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 30156,
-          "sha256": "sha256:f9340afa1d8c25349881f08d64e739371971130ffd76fdd1cc30e9f3aff20095"
+          "bytes": 30162,
+          "sha256": "sha256:23a0bba324b34b4e77f5b9e6e4346e6c7ba540b036520a294558c8a164ed8ade"
         }
       ]
     },
@@ -75,18 +75,18 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 108525,
-          "sha256": "sha256:2e72785c234748ddd9be6eb3586bfcfaca5c6a5d8e0667d610eee5bfc960970a"
+          "bytes": 105315,
+          "sha256": "sha256:d54466d0cb1d029dcae0db7bac6041c69818cb556739a78622b8903a57b8c877"
         }
       ]
     },
     "probability-worked-example-hiv-testing-1": {
-      "code_fingerprint": "sha256:cab85d9f884fbc81ab58938fc8e4606d61d93547a6495e53e54f5613c063a595",
+      "code_fingerprint": "sha256:d2f1765c3ec553978356c75c834fedf4fad40304398f9430c685f9314548ce15",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(0.8314307)"
+          "text": "array(0.8256484)"
         }
       ]
     }

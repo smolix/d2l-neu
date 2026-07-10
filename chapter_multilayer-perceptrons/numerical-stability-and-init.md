@@ -281,11 +281,12 @@ In the previous sections, e.g., in :numref:`sec_linear_concise`,
 we initialized weights by drawing them from a normal distribution
 with a small, fixed standard deviation.
 If we do not specify an initialization method at all,
-the library falls back to a default scheme
-that samples from a distribution whose spread is tied to the layer's fan-in
-(the number of inputs $n_\textrm{in}$),
-a Xavier- or He-like rule of exactly the kind we derive below.
-These defaults work well for moderately sized networks.
+the library falls back to its own default scheme. These defaults differ across
+libraries and layer types: some scale with fan-in, while others use a fixed
+range. They are conveniences rather than a portable mathematical guarantee.
+For an experiment whose initialization matters, choose a named initializer
+explicitly and record its parameters.
+Defaults often work well for moderately sized networks.
 They become unreliable, however, as depth grows.
 The variance analysis that follows explains both *why* they work
 and *where* they break, and what to reach for instead.
@@ -389,15 +390,15 @@ turns out to work well in practice.
 
 The Xavier analysis above assumed a layer *without nonlinearities*.
 The argument breaks in a specific, fixable way once we insert a ReLU.
-First, note what the variance computation above actually consumed:
-because the weights have zero mean, $E[o_i] = 0$ no matter what the inputs are,
-and $\textrm{Var}[o_i] = n_\textrm{in} \sigma^2 E[x_j^2]$ depends on the inputs
-only through their *second moment* $E[x_j^2]$.
+First, note what the variance computation above actually consumed. With
+independent zero-mean weights, $E[o_i] = 0$, and
+$E[o_i^2] = n_\textrm{in} \sigma^2 E[x_j^2]$ depends on the inputs only
+through their *second moment* $E[x_j^2]$.
 So the quantity we must track through the nonlinearity is the second moment.
 Recall that $\textrm{ReLU}(z) = \max(0, z)$ zeroes every negative pre-activation
 and passes every positive one through unchanged.
-If the pre-activations are symmetric about zero,
-as they are when the weights have zero mean,
+If the pre-activations are symmetric about zero, as they are when the weights
+have a symmetric distribution independent of the inputs,
 then $\textrm{ReLU}(z)^2$ equals $z^2$ on the positive half of the distribution
 and equals $0$ on the negative half,
 so the rectifier **halves the second moment**:
@@ -405,14 +406,11 @@ $E[\textrm{ReLU}(z)^2] = \tfrac{1}{2}E[z^2]$.
 (Its effect on the *variance* is messier, because $\textrm{ReLU}(z)$
 is no longer zero-mean, as the exercises explore.)
 
-Propagating this halved second moment through
-the same forward computation as before,
-the variance of the layer output is now
-$\textrm{Var}[o_i] = \tfrac{1}{2} n_\textrm{in} \sigma^2 \gamma^2$,
-where $\gamma^2$ now denotes the variance of the pre-activations
-feeding the ReLU, and
-the extra factor of $\tfrac{1}{2}$ comes from the rectifier.
-To keep the variance fixed across layers
+Let $q=E[h_j^2]$ be the second moment entering a linear layer. Its
+preactivation has second moment $n_\textrm{in}\sigma^2q$, and the following
+ReLU produces
+$q' = \tfrac{1}{2}n_\textrm{in}\sigma^2q$ under the symmetry and independence
+assumptions above. To keep this second moment fixed across layers
 we must compensate by *doubling* the weight variance:
 
 $$\sigma^2 = \frac{2}{n_\textrm{in}}.$$
@@ -424,7 +422,6 @@ Because Xavier and He differ only by this factor of two
 and by which fan size they key on, they are easy to confuse;
 the rule of thumb is **Xavier for $\tanh$ and sigmoid, He for ReLU**.
 Most libraries ship both as named initializers,
-with a He-uniform variant a common default for linear layers,
 and we return to invoking them through the parameter-initialization API
 in :numref:`chap_computation`.
 
@@ -530,8 +527,10 @@ reaching $\sim\!10^{-15}$ by the bottom of the stack. He initialization
 compensates for the rectifier and holds the signal's scale essentially flat
 across all fifty layers (the slight downward drift is a finite-width
 fluctuation effect, not a bias in the rule). Only the He-initialized network
-delivers usable forward signals, and by the symmetric backward argument,
-usable gradients. The exercises ask you to repeat the sweep with the
+delivers usable forward signals. A related backward calculation gives the
+same scaling under additional mean-field independence assumptions; it is an
+initialization approximation, not an exact statement about gradients during
+training. The exercises ask you to repeat the sweep with the
 nonlinearity removed, where Xavier is the scheme that stays flat.
 
 ### Beyond
@@ -830,7 +829,9 @@ All three regimes in one experiment: push a unit-scale signal through **50 ReLU 
 - **He**: compensates for the rectifier and holds the scale essentially **flat** across all fifty layers.
 
 ::: {.d2l-note .rule}
-Only the He-initialized stack delivers usable forward signals and, by the symmetric backward argument, usable gradients. Run the sweep yourself in the notebook.
+Only the He-initialized stack delivers usable forward signals here. A backward
+variance calculation gives the same scale under mean-field independence
+assumptions. Run the sweep yourself in the notebook.
 :::
 :::
 

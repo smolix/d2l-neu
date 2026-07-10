@@ -705,7 +705,7 @@ d_grad
 ```{.python .input #autograd-gradients-and-python-control-flow-2}
 %%tab jax
 from jax import random
-a = random.normal(random.PRNGKey(1), ())
+a = random.normal(random.key(1), ())
 d = f(a)
 d_grad = grad(f)(a)
 ```

@@ -303,9 +303,9 @@ from orthogonal considerations.
 Note that while the two versions compute the same *architecture*, they do not
 start from the same *parameters*: the scratch model draws its weights from
 $\mathcal{N}(0, 0.01^2)$, whereas the concise version uses the library's
-default initializer, which scales with layer size
-(:numref:`sec_numerical_stability`), so their training trajectories, and final
-accuracies, can differ slightly.
+default initializer. Defaults differ across libraries and layer types, so the
+two versions need not start at comparable scales. Their training trajectories
+and final accuracies can therefore differ.
 
 ```{.python .input #mlp-implementation-training-2}
 model = MLP(num_outputs=10, num_hiddens=256, lr=0.1)
@@ -341,7 +341,7 @@ Answering them turns this small working model into a reliable building block.
 1. Measure the speed of tensor--matrix multiplications for well-aligned and misaligned matrices. For instance, test for matrices with dimension 1024, 1025, 1026, 1028, and 1032.
     1. How does this change between GPUs and CPUs?
     1. Determine the memory bus width of your CPU and GPU.
-1. Try out different activation functions. Which one works best on Fashion-MNIST? Compare at least ReLU, tanh, sigmoid, and GELU (`torch.nn.functional.gelu` in PyTorch, `jax.nn.gelu` in JAX). (*Hint:* for sigmoid and tanh you may need to retune the learning rate.) GELU is the default in modern transformer architectures; can you see why from how it behaves on this task?
+1. Try out different activation functions. Which one works best on Fashion-MNIST? Compare at least ReLU, tanh, sigmoid, and GELU (`torch.nn.functional.gelu` in PyTorch, `jax.nn.gelu` in JAX). (*Hint:* for sigmoid and tanh you may need to retune the learning rate.) GELU is used in BERT and GPT-2-style Transformers, while many recent language models use gated SiLU/SwiGLU blocks. Does this small image task provide enough evidence to choose among them for a Transformer?
 1. Compare the effect of three initialization scales on training: (a) small Gaussian noise with $\sigma = 0.001$; (b) the value used in this section, $\sigma = 0.01$; (c) large Gaussian noise with $\sigma = 0.1$. Plot the training and validation curves for each. Why does $\sigma$ matter? (*Hint:* consider what happens to the activations on the very first forward pass.) The principled answer is developed in :numref:`sec_numerical_stability`.
 
 :begin_tab:`mxnet`

@@ -4,7 +4,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Reproducibility and Inspection
-:label:`sec_repro_v2`
+:label:`sec_repro`
 
 Run yesterday's experiment again and the loss curve comes out different.
 Is this morning's change an improvement, or a lucky seed? Answering that
@@ -47,7 +47,7 @@ npx.set_np()
 ## Seeds and Randomness
 
 Randomness enters a training run in more places than you might list on a
-first try: initialization draws every weight (:numref:`sec_init_v2`),
+first try: initialization draws every weight (:numref:`sec_init_param`),
 dropout samples a fresh mask at each step
 :cite:`Srivastava.Hinton.Krizhevsky.ea.2014`, the data loader shuffles
 examples differently in every epoch, augmentations sample crops and flips,
@@ -472,7 +472,7 @@ the entire toolkit.
 
 Seeding fixes which numbers the program draws. It does not fix how the
 arithmetic evaluates. Floating-point addition is not associative
-(:numref:`sec_numerics_v2`), so summing the same numbers in a different
+(:numref:`sec_numerics`), so summing the same numbers in a different
 order gives a different answer:
 
 ```{.python .input #reproducibility-inspection-determinism-and-its-price-1}
@@ -610,14 +610,14 @@ reproducibility a *debugging* tool, the setting that lets you bisect
 exactly where two runs diverge. The *scientific* goal is statistical
 reproducibility: the same conclusions across seeds, reported as a mean and
 spread over several runs rather than one fortunate curve. The distinction
-mirrors :numref:`sec_numerics_v2`: changing dtype changes results in the
+mirrors :numref:`sec_numerics`: changing dtype changes results in the
 last bits by design, and an experimental claim that survives neither a new
 seed nor bfloat16 was never a result.
 
 ## Hooks: Looking Inside
 
 :begin_tab:`pytorch`
-In :numref:`sec_model_construction_v2` we noted that `net(X)` does not call
+In :numref:`sec_model_construction` we noted that `net(X)` does not call
 `forward` directly: it calls `__call__`, which wraps `forward` with extra
 machinery. Hooks are that machinery, exposed. Calling
 `module.register_forward_hook(f)` arranges for `f(module, inputs, output)`
@@ -660,7 +660,7 @@ the gap unless the model was built to leave one.
 :end_tab:
 
 :begin_tab:`mxnet`
-In :numref:`sec_model_construction_v2` we noted that `net(X)` does not
+In :numref:`sec_model_construction` we noted that `net(X)` does not
 call `forward` directly: it calls `__call__`, which wraps `forward` with
 extra machinery. Hooks are that machinery, exposed. Calling
 `block.register_forward_hook(f)` arranges for `f(block, inputs, output)`
@@ -681,7 +681,7 @@ cannot modify the output).
 :label:`fig_bg_hooks`
 
 We reuse the residual stack of
-:numref:`sec_model_construction_v2`, rebuilt compactly:
+:numref:`sec_model_construction`, rebuilt compactly:
 
 ```{.python .input #reproducibility-inspection-hooks-looking-inside}
 %%tab pytorch
@@ -757,7 +757,7 @@ net.initialize(init.Xavier())  # variance-preserving, as in the init chapter
 
 ### Capturing Activation Statistics
 
-The initialization experiments of :numref:`sec_init_v2` measured the
+The initialization experiments of :numref:`sec_init_param` measured the
 standard deviation of activations at every depth. The same measurement
 takes a few lines on an unmodified model:
 
@@ -813,7 +813,7 @@ for name, std in stats:
 
 The residual stream's spread grows block by block, since each block adds
 its body's output on top of the stream, exactly the depth effect that
-motivated the scaled initializations of :numref:`sec_init_v2`, measured
+motivated the scaled initializations of :numref:`sec_init_param`, measured
 here without touching the model.
 
 :begin_tab:`pytorch`

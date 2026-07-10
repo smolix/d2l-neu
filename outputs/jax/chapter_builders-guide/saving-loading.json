@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 48980.00 -> restored 0.0013'"
+          "text": "'perturbed 48972.93 -> restored 0.0013'"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "full  optimizer: [0.0013, 0.0013, 0.0012, 0.0012, 0.0012]\nfresh optimizer: [0.0013, 1.5104, 0.4427, 0.6193, 0.3339]\n"
+          "text": "full  optimizer: [0.0013, 0.0013, 0.0012, 0.0012, 0.0012]\nfresh optimizer: [0.0013, 1.4763, 0.4244, 0.6804, 0.3325]\n"
         }
       ]
     },

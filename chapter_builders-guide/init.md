@@ -4,7 +4,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Initialization
-:label:`sec_init_v2`
+:label:`sec_init_param`
 
 Every parameter in a network has a value before training starts: a fully
 connected layer mapping 512 inputs to 256 outputs brings a $256 \times 512$
@@ -207,7 +207,7 @@ fan-in.
 
 :begin_tab:`pytorch`
 To impose a scheme we do not touch layers one at a time. `net.apply(fn)` walks
-the module tree of :numref:`sec_model_construction_v2` and calls `fn` on every
+the module tree of :numref:`sec_model_construction` and calls `fn` on every
 submodule, children first. The function inspects each module's type and
 decides what, if anything, to do with it. The routines in `torch.nn.init`
 follow PyTorch's convention that a trailing underscore means *in place*:
@@ -246,7 +246,7 @@ starting with constructor arguments.
 :begin_tab:`mxnet`
 To impose a scheme we hand an `Initializer` object to the model:
 `net.initialize(init=..., force_reinit=True)` walks every parameter of the
-block tree of :numref:`sec_model_construction_v2` and runs the initializer on
+block tree of :numref:`sec_model_construction` and runs the initializer on
 it (`force_reinit` lifts the guard against silently clobbering a model that
 already has values). The object is a default, not a decree: a parameter
 constructed with its own initializer keeps it, and every `Dense` bias is
@@ -469,7 +469,7 @@ harmless for one draw and a near-certainty at scale: among the $10^8$ weights
 of a BERT-sized model, dozens land beyond five standard deviations. A single
 outsized weight can dominate a unit's output at initialization, and it wastes
 dynamic range once the model is cast to low precision
-(:numref:`sec_numerics_v2`). The BERT and ViT lineage therefore samples from a
+(:numref:`sec_numerics`). The BERT and ViT lineage therefore samples from a
 normal distribution *truncated* at two standard deviations: the same scale,
 with a hard bound on every entry.
 
@@ -612,7 +612,7 @@ in ResNet blocks and for policy heads in reinforcement learning.
 ### Watching the Variance Compound
 
 Claims about variance at depth are cheap to test. We reuse a compact residual
-block (it repeats the one from :numref:`sec_model_construction_v2`) and stack
+block (it repeats the one from :numref:`sec_model_construction`) and stack
 it $N$ deep:
 
 ```{.python .input #init-watching-the-variance-compound-1}
@@ -1126,7 +1126,7 @@ subclass with a few lines of array code in its `_init_weight`.
 
 1. Instrument the residual stack: record the standard deviation of the
    activation after every block (run the stack one block at a time, or
-   capture per-block activations with the tools of :numref:`sec_repro_v2`)
+   capture per-block activations with the tools of :numref:`sec_repro`)
    for the default and scaled treatments at $N=32$, and plot it against
    depth. Which curve matches the geometric-growth prediction?
 1. Zero-initialize *all* layers of every block instead of just the output
@@ -1138,7 +1138,7 @@ subclass with a few lines of array code in its `_init_weight`.
    parameter name (walk `net.named_parameters()` in PyTorch, `net.weights`
    in TensorFlow, the flattened params tree in JAX, `net.collect_params()`
    in MXNet). You have re-invented part of checkpoint loading,
-   which :numref:`sec_read_write_v2` covers.
+   which :numref:`sec_read_write` covers.
 1. For a normal distribution truncated at $\pm 2\sigma$: what fraction of
    draws does the clip discard, and by how much does it shrink the standard
    deviation? Verify both numbers against the printed output of the truncation

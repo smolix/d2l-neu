@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-concentration-generalization.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdl-concentration-generalization-concentration-and-generalization": {
+      "code_fingerprint": "sha256:8272ef71bd0e33cd51225224496ed6121cdf32a41851bb8402539667d144c722",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdl-concentration-generalization-the-tail-race-in-code": {
+      "code_fingerprint": "sha256:fc7784a25efdd7418255af3ad0c44b9eef56bbe29dcc0da4eef1becc2c2d7287",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     n      exact  Chebyshev  Hoeffding\n    10   7.54e-01   2.50e+00   1.64e+00\n   100   5.69e-02   2.50e-01   2.71e-01\n  1000   2.73e-10   2.50e-02   4.12e-09\n  5000   1.30e-45   5.00e-03   7.44e-44\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
+          "bytes": 31472,
+          "sha256": "sha256:e8d16ea38ecf2cc2071620cfa740a7a02b4f195cf51c17efe76250898ddfd74c"
+        }
+      ]
+    },
+    "mdl-concentration-generalization-measuring-the-shell": {
+      "code_fingerprint": "sha256:24d64e07491b0826e9c0223e45d19cc25d75ababf63ad7dd9efdc906b3d70712",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d=    2:  mass within (1±0.1)·sqrt(d):  14.8%,   NN contrast (d_max-d_min)/d_min = 29.440\nd=   20:  mass within (1±0.1)·sqrt(d):  47.6%,   NN contrast (d_max-d_min)/d_min =  1.234\nd=  200:  mass within (1±0.1)·sqrt(d):  95.4%,   NN contrast (d_max-d_min)/d_min =  0.239\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d= 2000:  mass within (1±0.1)·sqrt(d): 100.0%,   NN contrast (d_max-d_min)/d_min =  0.079\n"
+        }
+      ]
+    },
+    "mdl-concentration-generalization-coin-flips-in-code": {
+      "code_fingerprint": "sha256:e876ce2dc594cee6d467c20f33d77668904b56f0a8c04f23ad2b347de71cf31e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Monte-Carlo Rademacher complexity  = 0.1390\nbound B*r/sqrt(n)                  = 0.1414\ncorrelation of min-norm fits with coin flips = 1.0000\nnorm it costs: mean ||w|| = 1.00;  implied capacity bound B*r/sqrt(n) = 1.41\n"
+        }
+      ]
+    },
+    "mdl-concentration-generalization-double-descent-in-twenty-five-lines": {
+      "code_fingerprint": "sha256:d6495e6f9e2d8200e40149322c990000fd80d41a662d06f3864caf32634e287d",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "p=  2  test MSE=   1.0378  train MSE= 8.67e-01  ||w||=   0.32\np=  5  test MSE=   0.9627  train MSE= 7.70e-01  ||w||=   0.77\np= 10  test MSE=   0.7728  train MSE= 4.64e-01  ||w||=   1.68\np= 15  test MSE=   0.6782  train MSE= 2.81e-01  ||w||=   1.97\np= 20  test MSE=   0.7156  train MSE= 1.54e-01  ||w||=   2.15\np= 25  test MSE=   0.6905  train MSE= 8.10e-02  ||w||=   2.37\np= 30  test MSE=   0.6893  train MSE= 4.32e-02  ||w||=   2.70\np= 35  test MSE=   1.5061  train MSE= 1.32e-02  ||w||=   3.75\np= 38  test MSE=   2.1205  train MSE= 5.00e-03  ||w||=   4.61\np= 40  test MSE=  33.6376  train MSE= 1.00e-28  ||w||=  18.52\np= 42  test MSE=   1.9858  train MSE= 1.15e-29  ||w||=   4.96\np= 45  test MSE=   1.1249  train MSE= 7.16e-30  ||w||=   3.64\np= 50  test MSE=   0.6466  train MSE= 7.35e-30  ||w||=   2.42\np= 60  test MSE=   0.3507  train MSE= 5.36e-30  ||w||=   1.70\np= 80  test MSE=   0.1824  train MSE= 5.72e-30  ||w||=   1.18\np=120  test MSE=   0.1121  train MSE= 7.99e-30  ||w||=   0.83\np=200  test MSE=   0.0796  train MSE= 9.07e-30  ||w||=   0.59\np=400  test MSE=   0.0604  train MSE= 7.00e-30  ||w||=   0.39\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-concentration-generalization/mdl-concentration-generalization-double-descent-in-twenty-five-lines-1.svg",
+          "bytes": 33075,
+          "sha256": "sha256:028f98903ccda85d8c3d47647989cd6939878b4635ef73fd2264011098f21f56"
+        }
+      ]
+    }
+  }
+}

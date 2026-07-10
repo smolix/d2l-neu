@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(5.9208105e-10)"
+          "text": "array(-3.592504e-11)"
         }
       ]
     },
@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([1.        , 1.        , 0.99999994, 0.9999999 ])"
+          "text": "array([1.0000001, 1.0000001, 1.0000001, 1.       ])"
         }
       ]
     },

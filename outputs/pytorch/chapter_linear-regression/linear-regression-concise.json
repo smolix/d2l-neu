@@ -35,16 +35,8 @@
     },
     "linear-regression-concise-training-1": {
       "code_fingerprint": "sha256:9f1ff50314d6e4d6f6d4d26e40fa1cbbeae3909fb211aeff3dbe708c19e45fae",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 19004,
-          "sha256": "sha256:c8c30210bd0848181649f130a373180c532651c72be024df148752f7a8122962"
-        }
-      ]
+      "kind": "text",
+      "outputs": []
     },
     "linear-regression-concise-training-2": {
       "code_fingerprint": "sha256:b3ff5aae57b59e183c33cc8d30fe3e2a5ead308e2b39da602da2ffd6063e2d46",
@@ -58,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: tensor([ 0.0008, -0.0007])\nerror in estimating b: tensor([0.0002])\n"
+          "text": "error in estimating w: tensor([-3.3617e-05, -1.6928e-05])\nerror in estimating b: tensor([0.0004])\n"
         }
       ]
     }

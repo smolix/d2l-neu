@@ -22,7 +22,9 @@ d2l = sys.modules[__name__]
 import inspect
 import collections
 from collections import defaultdict
+from dataclasses import asdict
 from IPython import display
+import json
 import math
 from matplotlib import pyplot as plt
 from matplotlib_inline import backend_inline
@@ -580,6 +582,30 @@ class SoftmaxRegression(d2l.Classifier):
         self.net.initialize()
     def forward(self, X):
         return self.net(X)
+
+def save_checkpoint(prefix, model, trainer, step, cfg=None):
+    """Atomically write a resumable checkpoint (.params/.states/.json).
+
+    Defined in :numref:`sec_read_write`"""
+    meta = {'step': step}
+    if cfg is not None:
+        meta['cfg'] = asdict(cfg)
+    model.save_parameters(prefix + '.params.tmp')
+    trainer.save_states(prefix + '.states.tmp')
+    with open(prefix + '.json.tmp', 'w') as f:
+        json.dump(meta, f)
+    for ext in ('.params', '.states', '.json'):
+        os.replace(prefix + ext + '.tmp', prefix + ext)
+
+def load_checkpoint(prefix, model, trainer=None):
+    """Restore the state written by save_checkpoint; return the metadata.
+
+    Defined in :numref:`sec_read_write`"""
+    model.load_parameters(prefix + '.params')
+    if trainer is not None:
+        trainer.load_states(prefix + '.states')
+    with open(prefix + '.json') as f:
+        return json.load(f)
 
 def cpu():
     """Get the CPU device.

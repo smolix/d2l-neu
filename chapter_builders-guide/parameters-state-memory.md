@@ -1,5 +1,5 @@
 # Parameters, State, and Memory
-:label:`sec_parameters_v2`
+:label:`sec_parameters`
 
 Almost everything we do to a model other than calling it operates on its
 *state*: the optimizer updates it, a checkpoint serializes it, device
@@ -47,7 +47,7 @@ npx.set_np()
 ## Accessing Parameters
 :label:`subsec_param-access`
 
-Our specimen is the residual MLP of :numref:`sec_model_construction_v2`,
+Our specimen is the residual MLP of :numref:`sec_model_construction`,
 redefined here so this section stands on its own: an input layer, a stack of
 residual blocks, and an output head.
 
@@ -306,7 +306,7 @@ Read one of the names closely. `1.body.0.weight` means: child
 child `0`, and finally the leaf `weight`. Names are paths, so they survive any
 amount of nesting, and they are exactly the keys of the model's `state_dict`,
 the name-to-tensor mapping used for saving and loading
-(:numref:`sec_read_write_v2`):
+(:numref:`sec_read_write`):
 :end_tab:
 
 :begin_tab:`jax`
@@ -317,7 +317,7 @@ collection, child `'layers_1'` of `net`
 `'layers_0'`, and finally the leaf `'kernel'`. Names are paths, so they
 survive any amount of nesting, and there is no second naming scheme for
 saving and loading: this pytree is itself the object a checkpoint serializes
-(:numref:`sec_read_write_v2`). So far its top level holds a single entry:
+(:numref:`sec_read_write`). So far its top level holds a single entry:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -330,7 +330,7 @@ construction: a default derived from the class, plus a counter that keeps
 names unique across the program (this is the third `Sequential` created, hence
 `sequential_2`). Names are paths, so they survive any amount of nesting and
 give every variable a stable identity for saving and loading
-(:numref:`sec_read_write_v2`). Keras splits the same list by trainability,
+(:numref:`sec_read_write`). Keras splits the same list by trainability,
 and so far the split is trivial:
 :end_tab:
 
@@ -339,7 +339,7 @@ Read one of the names closely. `1.body.0.weight` means: child `1` of `net`
 (the first residual block), its submodule `body`, that block's child `0`, and
 finally the leaf `weight`. Names are paths, so they survive any amount of
 nesting, and they are exactly the names `save_parameters` writes and
-`load_parameters` expects (:numref:`sec_read_write_v2`). Nor is there a
+`load_parameters` expects (:numref:`sec_read_write`). Nor is there a
 separate list of trainable parameters: each `Parameter` carries a `grad_req`
 attribute that tells autograd whether to record a gradient for it, and so far
 every entry says `'write'`:
@@ -809,7 +809,7 @@ model and it dominates everything: 4 GB for the weights alone and 16 GB for
 weights, gradients, and Adam state, before storing a single activation. The
 memory that constrains model design is mostly this bookkeeping, and the
 remaining term, the activations saved for the backward pass, depends on batch
-size and is treated in :numref:`sec_use_gpu_v2`.
+size and is treated in :numref:`sec_use_gpu`.
 
 Large models train in mixed precision :cite:`Micikevicius.Narang.Alben.ea.2018`,
 computing in fp16 or bf16 while Adam keeps fp32 master weights, and here
@@ -1660,7 +1660,7 @@ not stop running-statistics updates in training mode.
 
 :begin_tab:`jax`
 3. Round-trip the tied model's `params_lm` through serialization
-   (:numref:`sec_read_write_v2`) and reload it. Where, if anywhere, is the
+   (:numref:`sec_read_write`) and reload it. Where, if anywhere, is the
    tying recorded? Explain why tying in Flax is a property of the module code
    rather than of the checkpoint.
 4. In the tied `TinyLM`, try to freeze the embedding while training the head
@@ -1670,7 +1670,7 @@ not stop running-statistics updates in training mode.
 
 :begin_tab:`tensorflow`
 3. Round-trip the tied model's weights through `get_weights` and
-   `set_weights` (or a checkpoint, :numref:`sec_read_write_v2`) into a second
+   `set_weights` (or a checkpoint, :numref:`sec_read_write`) into a second
    tied instance, then into an untied one. Where, if anywhere, is the tying
    recorded? Explain why tying in Keras is a property of the layer code
    rather than of the checkpoint.
@@ -1682,7 +1682,7 @@ not stop running-statistics updates in training mode.
 
 :begin_tab:`mxnet`
 3. Round-trip the tied model through `save_parameters` and `load_parameters`
-   (:numref:`sec_read_write_v2`), once with `deduplicate=False` and once with
+   (:numref:`sec_read_write`), once with `deduplicate=False` and once with
    `deduplicate=True`. Compare the file sizes, and check which of the two
    files loads into the untied twin. Where, if anywhere, is the tying
    recorded?

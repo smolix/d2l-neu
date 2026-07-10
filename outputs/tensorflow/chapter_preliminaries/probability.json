@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [46, 54]\n"
+          "text": "heads, tails:  [49, 51]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([47., 53.], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([50., 50.], dtype=float32)>"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.61, 0.39], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.48, 0.52], dtype=float32)>"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.5036, 0.4964], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.5033, 0.4967], dtype=float32)>"
         }
       ]
     },
@@ -63,7 +63,7 @@
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
           "bytes": 30166,
-          "sha256": "sha256:e9ebe32a8ff05fa430b608fd75182c9f7169cb71a4d96f7f73431ed9601f7c2f"
+          "sha256": "sha256:71ad13a9a840430ddbe9b87efec7b7677e657fa5a79b7c9a4ec62f8a1359d187"
         }
       ]
     },
@@ -75,20 +75,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 107106,
-          "sha256": "sha256:ee95abd833d199d8bb6626259f6cdd9ffe719bf5275ef37960f2ab69254a9947"
+          "bytes": 109302,
+          "sha256": "sha256:9854cf0c791a414e3e2c6e3a65960b5d3c867fecda40aa7127669f40f03ac780"
         }
       ]
     },
     "probability-worked-example-hiv-testing-1": {
       "code_fingerprint": "sha256:de432efbd380c0b358acd1e89a7f6aac4cf5132b7691e6419ca55674337c42bc",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.8223949074745178>"
-        }
-      ]
+      "outputs": []
     }
   }
 }

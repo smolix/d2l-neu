@@ -109,7 +109,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'/job:localhost/replica:0/task:0/device:CPU:0'"
+          "text": "'/job:localhost/replica:0/task:0/device:GPU:0'"
         }
       ]
     },

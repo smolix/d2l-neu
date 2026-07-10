@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(0., dtype=float32)"
+          "text": "Array(-5.5879354e-09, dtype=float32)"
         }
       ]
     },
@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([1.        , 1.0000001 , 1.        , 0.99999994], dtype=float32)"
+          "text": "Array([1.0000001, 1.0000001, 1.0000001, 1.0000001], dtype=float32)"
         }
       ]
     },
@@ -89,7 +89,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(CpuDevice(id=0), CpuDevice(id=0))"
+          "text": "(CudaDevice(id=0), CudaDevice(id=0))"
         }
       ]
     },

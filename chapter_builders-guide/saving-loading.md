@@ -4,7 +4,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Saving, Loading, and Pretrained Weights
-:label:`sec_read_write_v2`
+:label:`sec_read_write`
 
 A trained network is two separate things kept in two separate places. The
 *code* is the class you wrote: its layers, its `forward` pass, the config that
@@ -17,7 +17,7 @@ empty network, then pour the saved state into it.
 
 This split explains most of what follows. It is why a checkpoint cannot
 resurrect a model on its own, why the config object from
-:numref:`sec_model_construction_v2` belongs *inside* the checkpoint, and why the
+:numref:`sec_model_construction` belongs *inside* the checkpoint, and why the
 format that stores the state matters once you start sharing files with people who
 do not have your code.
 
@@ -81,28 +81,28 @@ npx.set_np()
 
 :begin_tab:`pytorch`
 The state of a network is a dictionary from parameter names to tensors, the
-`state_dict` of :numref:`sec_parameters_v2`. Before we save a whole model, the
+`state_dict` of :numref:`sec_parameters`. Before we save a whole model, the
 warm-up is that the same `save`/`load` calls work on any tensors, and on the
 lists and dicts that hold them.
 :end_tab:
 
 :begin_tab:`jax`
 The state of a network is a tree of named arrays, the params pytree of
-:numref:`sec_parameters_v2`. Before we save a whole model, the warm-up is that
+:numref:`sec_parameters`. Before we save a whole model, the warm-up is that
 `jnp.save` and `jnp.load` work on any array, and, through NumPy's pickle
 fallback, on the dicts that hold them.
 :end_tab:
 
 :begin_tab:`tensorflow`
 The state of a network is a collection of named variables, the weights of
-:numref:`sec_parameters_v2`. Before we save a whole model, the warm-up is that
+:numref:`sec_parameters`. Before we save a whole model, the warm-up is that
 `np.save` and `np.load` work on any tensor, and, through NumPy's pickle
 fallback, on the dicts that hold them.
 :end_tab:
 
 :begin_tab:`mxnet`
 The state of a network is a dictionary from parameter names to arrays, the
-`collect_params` dictionary of :numref:`sec_parameters_v2`. Before we save a
+`collect_params` dictionary of :numref:`sec_parameters`. Before we save a
 whole model, the warm-up is that `npx.save` and `npx.savez` work on any array
 and on named collections of them; `npx.load` hands a saved collection back as
 a dict.
@@ -485,7 +485,7 @@ into any of the other three frameworks in this book.
 
 A checkpoint you can resume from holds more than weights. Resuming means picking
 up the optimizer where it stopped, and Adam's state is the running first and
-second moments of the gradients from :numref:`sec_parameters_v2`. Drop them and
+second moments of the gradients from :numref:`sec_parameters`. Drop them and
 the optimizer restarts its momentum from zero, so the first steps after a resume
 no longer behave like a continuation. A full checkpoint therefore bundles the
 model state, the optimizer state, the RNG state (so data shuffling and dropout
@@ -1160,7 +1160,7 @@ which keys you expect in each set and treat anything else as a bug.
 
 :begin_tab:`pytorch`
 With the backbone loaded, freeze it so training touches only the new head. Set
-`requires_grad = False` on the pretrained parameters (:numref:`sec_parameters_v2`)
+`requires_grad = False` on the pretrained parameters (:numref:`sec_parameters`)
 and leave the head trainable.
 :end_tab:
 
@@ -1330,7 +1330,7 @@ silently, the missing/unexpected key-set diff is yours to compute and read.
    little-endian integer, as the header cell does. How large is the JSON header
    for the MLP, and how does it grow if you double the hidden width?
 1. Save the MLP's parameters cast to `bfloat16` and load them back into a
-   `float32` model (:numref:`sec_numerics_v2`). What is lost? Is that acceptable
+   `float32` model (:numref:`sec_numerics`). What is lost? Is that acceptable
    for inference? For resuming training?
 1. Take two checkpoints of the regressor 50 steps apart, average their weight
    tensors into a third set of parameters, and evaluate it. The result previews

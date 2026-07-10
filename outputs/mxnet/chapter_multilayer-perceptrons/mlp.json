@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
-          "bytes": 16913,
-          "sha256": "sha256:1eb9ae98544241fe3bc434e8bf6572a07e79b1f06436cdccdd776f0d8fadb5f2"
+          "bytes": 16908,
+          "sha256": "sha256:a8fe40601d9272587a6e2ec2bdda19b604dc89e54460b901dc1e78fe29dbdd19"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
-          "bytes": 21209,
-          "sha256": "sha256:234a247a9828007b8112077b8e7b8a116e8e0e556fab601dfd5a5dff5da4b5ba"
+          "bytes": 21200,
+          "sha256": "sha256:ae161fb1271f70eab56df7fa8cceb8ecb94190996f0ea71b741496cbed42d9f3"
         }
       ]
     },
@@ -78,8 +78,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
-          "bytes": 21794,
-          "sha256": "sha256:ba1d2f2761bd3fbd0882ba4765c0d5ce72ba089b6308ea8c3b610d1140c8d81d"
+          "bytes": 21782,
+          "sha256": "sha256:a680692fccbbd0281aa46b393a5e3be4d0c2017b2a4316fbf2e39fdb8b3498bd"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
-          "bytes": 24523,
-          "sha256": "sha256:879184f304b188ef565d7dc8f737dc4b2b1d8eea88f39045c318536b7b4a736c"
+          "bytes": 24514,
+          "sha256": "sha256:b37c9a8409156a3bb135468e051e8325fe06055ff1d6d8e39f74fe35e01ed202"
         }
       ]
     },
@@ -104,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
-          "bytes": 20170,
-          "sha256": "sha256:8bdfc72b9f70472f9f353f269d0c533af6d85be26d9f59c03596b9580875d172"
+          "bytes": 20176,
+          "sha256": "sha256:68d4b4b49d171fa8873f52b824dc599711a82fc56ca9bcf1a13cbc6446fcab8f"
         }
       ]
     },
@@ -117,8 +117,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
-          "bytes": 22745,
-          "sha256": "sha256:3328d4733bf7fec146a8a5fb2b167e39882b24b7349d5fc94150d8ef5a9a5a95"
+          "bytes": 22737,
+          "sha256": "sha256:59e440dffef2b2f405528ecc4f816c2b3a9198be0a5fc49fde9052361e17db59"
         }
       ]
     }

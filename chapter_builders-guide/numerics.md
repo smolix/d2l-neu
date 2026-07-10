@@ -1,5 +1,5 @@
 # Numerics: Dtypes and Mixed Precision
-:label:`sec_numerics_v2`
+:label:`sec_numerics`
 
 Every tensor carries three attributes: a shape, a device, and a *dtype*, the
 numeric format of its entries. So far we have left the dtype at its default,
@@ -237,7 +237,7 @@ Individual operations accept the same choice per call, as in
 `jnp.dot(A, B, precision='float32')`. On the CPU this notebook runs on there
 are no tensor cores and every setting computes plain fp32, which is why the
 cell above changes nothing but the config value; the distinction takes effect
-on the GPUs of :numref:`sec_use_gpu_v2`. For training, tf32 is generally safe
+on the GPUs of :numref:`sec_use_gpu`. For training, tf32 is generally safe
 (products still accumulate in fp32); ask for `'float32'` when doing
 ill-conditioned linear algebra or reproducing results bit for bit.
 :end_tab:
@@ -250,7 +250,7 @@ the fast path unless you say otherwise. The switch is global, not scoped: a
 numerically delicate block disables it, computes, and restores it, as the
 cell does. On the CPU this notebook runs on there are no tensor cores and
 the flag changes nothing beyond its own value; the distinction takes effect
-on the GPUs of :numref:`sec_use_gpu_v2`. For training, the default is
+on the GPUs of :numref:`sec_use_gpu`. For training, the default is
 generally safe (products still accumulate in fp32); disable it for
 ill-conditioned linear algebra or when reproducing results bit for bit.
 :end_tab:
@@ -389,7 +389,7 @@ Module parameters play by a stricter rule: layers do not promote, they demand
 a matching input dtype and raise otherwise. To change a model's dtype you cast
 the whole module; `net.to(dtype)` (or the shorthand `net.bfloat16()`) converts
 every parameter and buffer in place. The byte accounting of
-:numref:`sec_parameters_v2` composes with dtype through `element_size()`:
+:numref:`sec_parameters` composes with dtype through `element_size()`:
 :end_tab:
 
 :begin_tab:`jax`
@@ -399,7 +399,7 @@ format `init` creates parameters in (default fp32), and `dtype`, the format
 the forward pass computes in (default `None`, which promotes parameters and
 inputs to a common type, the same rule as above). Since the parameters
 themselves are a plain pytree of arrays, "casting the model" is one
-`tree.map`. The byte accounting of :numref:`sec_parameters_v2` composes with
+`tree.map`. The byte accounting of :numref:`sec_parameters` composes with
 dtype through `itemsize`:
 :end_tab:
 
@@ -409,7 +409,7 @@ carries a `variable_dtype`, the format its weights are stored in, and a
 `compute_dtype`, the format its forward pass runs in, both fp32 by default.
 The constructor argument `dtype='bfloat16'` sets the pair at once, so
 "casting the model" is a construction-time choice rather than an in-place
-conversion. The byte accounting of :numref:`sec_parameters_v2` composes with
+conversion. The byte accounting of :numref:`sec_parameters` composes with
 dtype through the dtype's size in bytes:
 :end_tab:
 
@@ -418,7 +418,7 @@ Parameters bring a second rule: Gluon operators demand that input and weight
 dtypes agree (type inference unifies them and errors on a mismatch), so to
 change a model's dtype you cast the whole block. `net.cast('float16')`
 converts every parameter recursively, children included; inputs you cast
-yourself. The byte accounting of :numref:`sec_parameters_v2` composes with
+yourself. The byte accounting of :numref:`sec_parameters` composes with
 dtype through the parameter array's `itemsize`:
 :end_tab:
 
@@ -861,10 +861,10 @@ the same rate to the same place. On a CPU that is all this buys; the
 wall-clock payoff appears on GPUs, where 16-bit matrix multiplications run on
 tensor cores at a multiple of fp32 throughput and activations occupy half the
 memory, typically a 2 to 3 times end-to-end speedup for models dominated by
-matmuls (we turn to GPUs in :numref:`sec_use_gpu_v2`). Note what mixed
+matmuls (we turn to GPUs in :numref:`sec_use_gpu`). Note what mixed
 precision does *not* buy: the master weights and any Adam state remain fp32,
 so the parameter and optimizer terms in the memory arithmetic of
-:numref:`sec_parameters_v2` do not shrink. The savings are in activations
+:numref:`sec_parameters` do not shrink. The savings are in activations
 and speed.
 
 :begin_tab:`mxnet`
@@ -1222,7 +1222,7 @@ scroll past.
 Finally, do not expect bitwise equality across
 numeric configurations: tf32 versus fp32, or mixed precision on versus off,
 differ in the last bits by design. What reproducibility you can demand, and
-how to get it, is the subject of :numref:`sec_repro_v2`.
+how to get it, is the subject of :numref:`sec_repro`.
 
 ## Summary
 
@@ -1277,7 +1277,7 @@ family, and accumulate long sums in fp32.
 
 ## Exercises
 
-1. Redo the memory arithmetic of :numref:`sec_parameters_v2` for
+1. Redo the memory arithmetic of :numref:`sec_parameters` for
    mixed-precision training with Adam: fp32 master weights, fp32 gradients,
    two fp32 moment estimates, and bf16 activations. Which term dominates now,
    and how does the total compare with all-fp32 training?
@@ -1293,6 +1293,6 @@ family, and accumulate long sums in fp32.
    the name `e4m3fn`, including why its `max` is 448 rather than the value
    the exponent bits alone would suggest.
 1. Under autocast, normalization layers run in fp32. To see why, take the
-   `RMSNorm` layer of :numref:`sec_custom_layers_v2`, feed it inputs with a
+   `RMSNorm` layer of :numref:`sec_custom_layer`, feed it inputs with a
    standard deviation of about 100, and force the computation to fp16. Which
    intermediate quantity fails first?

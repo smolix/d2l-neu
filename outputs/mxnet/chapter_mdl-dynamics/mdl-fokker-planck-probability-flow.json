@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-cloud-marginals-1.svg",
           "bytes": 71874,
-          "sha256": "sha256:665ab32d4df95051961a1f1fde3e3ddd29eae1ea0d3c584daf9c993254534d16"
+          "sha256": "sha256:48e5d348b367448e78298109a7e00a8776933f59b76a9cfa06f664f1f8f83cb6"
         }
       ]
     },
@@ -71,19 +71,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
+          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\nt=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-pf-ode-overlay-1.svg",
           "bytes": 245349,
-          "sha256": "sha256:92715fc52903bd603aaaa1dd9fd6d8d6122f5c4258c5df6ec432d86bcf08b3c8"
+          "sha256": "sha256:7a046c15dcc4f0336dc6e87c9c43b0f254e28fa488773b0e69bcf57c0d7f62c5"
         }
       ]
     },
@@ -101,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-mixture-score-1.svg",
           "bytes": 25825,
-          "sha256": "sha256:721947192cb59e0d593fb1c84b02b5ddf2344fda56684d8fd7369290d124438f"
+          "sha256": "sha256:b93fe122c7e6a97c2395e12115e28294c7f0df1de8ec90fe33f54cbc51a3b578"
         }
       ]
     },
@@ -124,7 +119,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-reverse-sde-1.svg",
           "bytes": 43149,
-          "sha256": "sha256:fa4e304cde64c210c966e1d974da695bce2d130a5a4e1085b2dd12ee8da9c336"
+          "sha256": "sha256:cd559b879d044aac6e0ddc4d03dc8a79fe85c415c4c2dd6c98febb848ee696a5"
         }
       ]
     }

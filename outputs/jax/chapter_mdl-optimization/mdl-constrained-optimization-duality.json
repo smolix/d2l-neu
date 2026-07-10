@@ -36,7 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   1.00       0.4235         9.64e-17             1.0000\n  10.00       0.2840         5.55e-17            10.0000\n"
+          "text": "   1.00       0.4235         9.64e-17             1.0000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  10.00       0.2840         5.55e-17            10.0000\n"
         }
       ]
     },
@@ -76,7 +81,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/constrained-duality-gap-1.svg",
           "bytes": 26638,
-          "sha256": "sha256:98401e05a14ee83f303d581da178cde3aff3d06e3a6ebfbcbd086e18ecbc1570"
+          "sha256": "sha256:8b039ced50300aea0edbf8fa5da5c15d1efddf1ff0fe8b29f2627e753887ab92"
         }
       ]
     }

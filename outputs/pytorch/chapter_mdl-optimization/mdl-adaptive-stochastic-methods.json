@@ -20,7 +20,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    K    eta_K     E|grad(x_R)|^2   min-so-far\n  125   0.0447      2.134e-01      9.385e-03\n  500   0.0224      8.485e-02      1.398e-03\n"
+          "text": "    K    eta_K     E|grad(x_R)|^2   min-so-far\n  125   0.0447      2.134e-01      9.385e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  500   0.0224      8.485e-02      1.398e-03\n"
         },
         {
           "type": "stream",
@@ -52,7 +57,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
+          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
         },
         {
           "type": "stream",

@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0"
+          "text": "2"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(device(type='cpu'), device(type='cpu'), [])"
+          "text": "(device(type='cuda', index=0),\n device(type='cpu'),\n [device(type='cuda', index=0), device(type='cuda', index=1)])"
         }
       ]
     },
@@ -59,7 +59,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1., 1., 1.],\n        [1., 1., 1.]])"
+          "text": "tensor([[1., 1., 1.],\n        [1., 1., 1.]], device='cuda:0')"
         }
       ]
     },
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.0295, 0.6539, 0.9221],\n        [0.6815, 0.5522, 0.3348]])"
+          "text": "tensor([[0.7822, 0.0811, 0.0168],\n        [0.6584, 0.8761, 0.5624]], device='cuda:1')"
         }
       ]
     },
@@ -80,7 +80,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor([[1., 1., 1.],\n        [1., 1., 1.]])\ntensor([[1., 1., 1.],\n        [1., 1., 1.]])\n"
+          "text": "tensor([[1., 1., 1.],\n        [1., 1., 1.]], device='cuda:0')\ntensor([[1., 1., 1.],\n        [1., 1., 1.]], device='cuda:1')\n"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1.0295, 1.6539, 1.9221],\n        [1.6815, 1.5522, 1.3348]])"
+          "text": "tensor([[1.7822, 1.0811, 1.0168],\n        [1.6584, 1.8761, 1.5624]], device='cuda:1')"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-0.1078],\n        [-0.1078]], grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[0.4733],\n        [0.4733]], device='cuda:0', grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -120,7 +120,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "device(type='cpu')"
+          "text": "device(type='cuda', index=0)"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "No CUDA device: both counters read 0 on the CPU.\n"
+          "text": "after creating big:  1032.1 MiB allocated,  1046.0 MiB reserved\nafter deleting it :     8.1 MiB allocated,  1046.0 MiB reserved\n"
         }
       ]
     },
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "No CUDA device: run this cell on a GPU to see the four plateaus.\n"
+          "text": "weights              168.4 MiB\n+ activations        361.5 MiB\n+ gradients          321.7 MiB\n+ optimizer state    610.1 MiB\n"
         }
       ]
     },
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "No CUDA device: peak-memory comparison needs a GPU.\n"
+          "text": "checkpointing=False  peak   2358 MiB, 0.06 sec\ncheckpointing=True   peak   1407 MiB, 0.05 sec\n"
         }
       ]
     },
@@ -180,7 +180,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "No CUDA device: CPU operations run synchronously.\n"
+          "text": "time to queue 32 matrix products: 0.0011 sec\ntime until they all finished:     0.0767 sec\n"
         }
       ]
     },
@@ -191,7 +191,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "No CUDA device: host-to-device copies do not arise.\n"
+          "text": "pageable copy:              0.543 ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pinned, non-blocking copy:  0.369 ms\n"
         }
       ]
     },
@@ -208,8 +213,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 21287,
-          "sha256": "sha256:e7f640ce95058fa3903581e72321e5caa27b17ef18f3951d5aa462b1f62618c5"
+          "bytes": 21806,
+          "sha256": "sha256:7dc7cf96ff15daa9f579df1aef079c662e0c9165bd15de277cb4236946e93307"
         }
       ]
     }

@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0"
+          "text": "2"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(CpuDevice(id=0), CpuDevice(id=0), [])"
+          "text": "(CudaDevice(id=0), CpuDevice(id=0), [CudaDevice(id=0), CudaDevice(id=1)])"
         }
       ]
     },
@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "CpuDevice(id=0)"
+          "text": "CudaDevice(id=0)"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[0.4314504],\n       [0.4314504]], dtype=float32)"
+          "text": "Array([[0.4314505],\n       [0.4314505]], dtype=float32)"
         }
       ]
     },
@@ -120,7 +120,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'params': {'layers_0': {'bias': CpuDevice(id=0), 'kernel': CpuDevice(id=0)}}}"
+          "text": "{'params': {'layers_0': {'bias': CudaDevice(id=0),\n   'kernel': CudaDevice(id=0)}}}"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "No GPU: memory_stats() returns None on the CPU backend.\n"
+          "text": "after creating big:  1024.0 MiB in use,  1024.0 MiB peak\nafter deleting it :     0.0 MiB in use,  1024.0 MiB peak\n"
         }
       ]
     },
@@ -142,7 +142,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "No GPU: run this cell on a GPU to see the terms arrive.\n"
+          "text": "weights                 160.2 MiB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "+ gradients             304.4 MiB\n+ optimizer state       624.8 MiB\npeak with activations  1236.7 MiB\n"
         }
       ]
     },
@@ -169,7 +174,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "No GPU: peak-memory comparison needs a GPU.\n"
+          "text": "checkpointing=True   peak   1505 MiB, 0.03 sec\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "checkpointing=False  peak   2433 MiB, 0.03 sec\n"
         }
       ]
     },
@@ -180,12 +190,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0003 sec\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "time until they all finished:     0.9639 sec\n"
+          "text": "time to queue 32 matrix products: 0.0033 sec\ntime until they all finished:     0.0073 sec\n"
         }
       ]
     },
@@ -202,8 +207,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 22485,
-          "sha256": "sha256:871d3389eda0d9726f8a5d9cbff7b68d7cdb4f5b99b6f6918bf9e8024a8382d7"
+          "bytes": 21160,
+          "sha256": "sha256:5708e7ebbd683999ca42577be39a072796d069bdc9114b0efe39d9de88dfe7d2"
         }
       ]
     }

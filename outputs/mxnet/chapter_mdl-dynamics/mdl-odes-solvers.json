@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 29488,
-          "sha256": "sha256:05e37b02558a50e1366d17cf571329f4a233858947ef31f8c40773e10b961a68"
+          "sha256": "sha256:595d9d83d730b9557d5d85eb31ab882bd39547ac18de31ad2225423b9d5d3de7"
         }
       ]
     },
@@ -75,6 +75,11 @@
         },
         {
           "type": "stream",
+          "name": "stderr",
+          "text": "[14:40:21] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        },
+        {
+          "type": "stream",
           "name": "stdout",
           "text": "iter 100  loss 0.00003\n"
         },
@@ -107,12 +112,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "n =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
         }
       ]
     },
@@ -123,7 +123,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\nHutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
+          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Hutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
         }
       ]
     }

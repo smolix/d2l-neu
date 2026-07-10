@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive,  logits z      : [0.09003057 0.24472848 0.66524094]\nnaive,  logits z + 100: [nan nan nan]\nstable, logits z + 100: [0.09003057 0.24472848 0.66524094]\nnaive and stable agree where both work: True\n"
+          "text": "naive,  logits z      : [0.09003058 0.24472846 0.66524094]\nnaive,  logits z + 100: [nan nan nan]\nstable, logits z + 100: [0.09003057 0.24472846 0.66524094]\nnaive and stable agree where both work: False\n"
         }
       ]
     },
@@ -119,7 +119,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " n      kappa   log10 kappa   forward error  correct digits  backward error\n 4    1.6e+04       4.2         3.1e-14         13.5         0.0e+00\n 6    1.5e+07       7.2         1.3e-10          9.9         4.0e-17\n 8    1.5e+10      10.2         8.3e-08          7.1         1.2e-16\n10    1.6e+13      13.2         3.8e-04          3.4         1.1e-16\n12    1.7e+16      16.2         1.0e-01          1.0         9.1e-17\n"
+          "text": " n      kappa   log10 kappa   forward error  correct digits  backward error\n 4    1.6e+04       4.2         4.1e-14         13.4         0.0e+00\n 6    1.5e+07       7.2         1.4e-10          9.8         1.3e-16\n 8    1.5e+10      10.2         6.1e-08          7.2         5.7e-17\n10    1.6e+13      13.2         8.7e-05          4.1         1.0e-16\n12    1.8e+16      16.2         3.2e-01          0.5         9.8e-17\n"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "kappa(A) = 1.0e+05   kappa(A^T A) = 1.0e+10\nnormal equations: relative error 2.2e-07  (6.7 correct digits)\nSVD (lstsq)     : relative error 1.0e-13  (13.0 correct digits)\n"
+          "text": "kappa(A) = 1.0e+05   kappa(A^T A) = 1.0e+10\nnormal equations: relative error 7.7e-08  (7.1 correct digits)\nSVD (lstsq)     : relative error 5.5e-14  (13.3 correct digits)\n"
         }
       ]
     },
@@ -148,7 +148,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/numerical-stability-conditioning-ridge-1.svg",
           "bytes": 40773,
-          "sha256": "sha256:9a3164d175e4524373b805ae154f4c21fda1ef458f55eeaf320497a801136cad"
+          "sha256": "sha256:d16cb323a9b924c5a920f72d45a91cb6c617f4ffa746ca6d0a05ff428071c2ea"
         }
       ]
     }

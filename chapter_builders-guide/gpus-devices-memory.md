@@ -4,7 +4,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # GPUs, Devices, and Memory
-:label:`sec_use_gpu_v2`
+:label:`sec_use_gpu`
 
 So far every tensor in this book has lived in main memory and every computation
 has run on the CPU. Training at any interesting scale runs on an accelerator,
@@ -653,7 +653,7 @@ optimizer, so that the optimizer's state is created alongside the parameters
 it updates. And when `forward` needs a fresh tensor, create it on the input's
 device (`torch.zeros(n, device=X.device)`) rather than on the default CPU;
 non-parameter state that should follow the model belongs in a buffer
-(:numref:`sec_parameters_v2`), which `.to(device)` moves along with everything
+(:numref:`sec_parameters`), which `.to(device)` moves along with everything
 else.
 :end_tab:
 
@@ -865,7 +865,7 @@ it we might read the driver's counters before the allocation has happened.
 
 ### What Fills Memory During Training
 
-In :numref:`sec_parameters_v2` we did the bookkeeping on paper: a model with
+In :numref:`sec_parameters` we did the bookkeeping on paper: a model with
 $N$ parameters costs $4N$ bytes for float32 weights, another $4N$ for their
 gradients, and $8N$ for Adam's two moment estimates, roughly $16N$ before any
 data arrives. The remaining term, the *activations*, is different in kind:
@@ -1048,7 +1048,7 @@ more compute per step; the reward is that activation memory drops from "every
 layer" to "one segment at a time", as sketched in :numref:`fig_bg_activation_checkpoint`.
 The trade pays off exactly where deep learning spends most of its time: deep
 stacks of identical blocks, such as the residual stack we assembled in
-:numref:`sec_model_construction_v2` and every Transformer you will meet later.
+:numref:`sec_model_construction` and every Transformer you will meet later.
 We rebuild a compact version of that block here.
 
 ![Standard backpropagation stores every activation (top); checkpointing keeps only segment-boundary activations and recomputes the rest during the backward pass (bottom), trading roughly 1.3x compute for O(sqrt(N)) instead of O(N) activation memory.](../img/bg-activation-checkpoint.svg)
@@ -1056,7 +1056,7 @@ We rebuild a compact version of that block here.
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1}
 %%tab pytorch
-class ResidualBlock(nn.Module):  # As in :numref:`sec_model_construction_v2`
+class ResidualBlock(nn.Module):  # As in :numref:`sec_model_construction`
     def __init__(self, num_hiddens):
         super().__init__()
         self.body = nn.Sequential(
@@ -1075,7 +1075,7 @@ def run_stack(blocks, X, use_checkpoint=False):
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1}
 %%tab jax
-class ResidualBlock(nn.Module):  # As in :numref:`sec_model_construction_v2`
+class ResidualBlock(nn.Module):  # As in :numref:`sec_model_construction`
     num_hiddens: int
 
     @nn.compact
@@ -1093,7 +1093,7 @@ def run_stack(block, params_list, X, use_checkpoint=False):
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1}
 %%tab tensorflow
-class ResidualBlock(tf.keras.Model):  # As in :numref:`sec_model_construction_v2`
+class ResidualBlock(tf.keras.Model):  # As in :numref:`sec_model_construction`
     def __init__(self, num_hiddens):
         super().__init__()
         self.body = tf.keras.Sequential(
@@ -1683,7 +1683,7 @@ from the next chapter onward relies on this fallback, which is how one
 codebase serves both the laptop you are reading on and a GPU server. As a
 capstone we train a classifier built from residual blocks on Fashion-MNIST;
 since the checkpointing comparison above has no MXNet variant, we define the
-Gluon rendition of :numref:`sec_model_construction_v2`'s block here. The
+Gluon rendition of :numref:`sec_model_construction`'s block here. The
 `Trainer` re-assigns the parameters once, moves each batch, and the memory
 budget of the run follows the accounting from above.
 :end_tab:
@@ -1761,7 +1761,7 @@ trainer.fit(ResMLPClassifier(), d2l.FashionMNIST(batch_size=256))
 
 ```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-3}
 %%tab mxnet
-class ResidualBlock(nn.Block):  # As in :numref:`sec_model_construction_v2`
+class ResidualBlock(nn.Block):  # As in :numref:`sec_model_construction`
     def __init__(self, num_hiddens):
         super().__init__()
         self.body = nn.Sequential()

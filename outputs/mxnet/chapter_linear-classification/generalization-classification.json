@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/generalization-classification.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "generalization-classification-the-test-set-1": {
+      "code_fingerprint": "sha256:73f9013c1a7e633a5d27c5f219049068ddf9afbd2721ae233100e550154443eb",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-classification-the-test-set-2": {
+      "code_fingerprint": "sha256:e55a59f2a75b6540cfc694297bc48ff6f7760742a6fd1e4fd9fd2644563f8269",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
+          "bytes": 34254,
+          "sha256": "sha256:baa30ce8620164ff5cafae9b0f5c6fbacc4046e36347624e3052e5f5e0d7d593"
+        }
+      ]
+    },
+    "generalization-classification-test-set-reuse-1": {
+      "code_fingerprint": "sha256:321895e5a974ceb6f668a69ee4c88540b3e7206b3b0fb18e7a15811dc8dcb559",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
+          "bytes": 31658,
+          "sha256": "sha256:7e4e5d3b1124a72ff6cb22035db7444fd98d664cdfe122e655c4166ecf7cad2a"
+        }
+      ]
+    }
+  }
+}

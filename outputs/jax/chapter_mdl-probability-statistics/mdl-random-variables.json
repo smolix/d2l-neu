@@ -20,7 +20,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass     : 1.0000\nP(-2 < X <= 3) : 0.7725\n"
+          "text": "total mass     : 1.0000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "P(-2 < X <= 3) : 0.7725\n"
         }
       ]
     },
@@ -31,12 +36,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\n"
+          "text": "integral_-10^10 x^2 p(x) dx = 5.430\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_-1000^1000 x^2 p(x) dx = 635.621\n"
+          "text": "integral_-100^100 x^2 p(x) dx = 62.668\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "integral_-1000^1000 x^2 p(x) dx = 635.620\n"
         }
       ]
     },
@@ -49,7 +59,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
           "bytes": 27212,
-          "sha256": "sha256:158625b9874843e256ce563cee3aa15e2acf254b8f9b32bbe25bb2724cc09f9e"
+          "sha256": "sha256:700e1fc5189481d13b913d8c9ac942c8cbd9fbd961e9c20437829149c9e28b04"
         }
       ]
     }

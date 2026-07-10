@@ -48,6 +48,11 @@
       "kind": "text",
       "outputs": [
         {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[14:42:54] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+        },
+        {
           "type": "execute_result",
           "text": "array([ 0.,  4.,  8., 12.])"
         }

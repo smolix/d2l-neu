@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(3.7253e-09, grad_fn=<MeanBackward0>)"
+          "text": "tensor(-5.5879e-09, grad_fn=<MeanBackward0>)"
         }
       ]
     },
@@ -89,7 +89,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(device(type='cpu'), device(type='cpu'))"
+          "text": "(device(type='cuda', index=0), device(type='cuda', index=0))"
         }
       ]
     },

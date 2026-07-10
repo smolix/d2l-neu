@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\ndropout_p = 0.5: tf.Tensor(\n[[ 0.  2.  0.  6.  0. 10.  0.  0.]\n [16.  0.  0.  0.  0. 26. 28. 30.]], shape=(2, 8), dtype=float32)\ndropout_p = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
+          "text": "dropout_p = 0: tf.Tensor(\n[[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]], shape=(2, 8), dtype=float32)\ndropout_p = 0.5: tf.Tensor(\n[[ 0.  2.  4.  0.  0.  0. 12. 14.]\n [ 0. 18. 20. 22.  0.  0.  0. 30.]], shape=(2, 8), dtype=float32)\ndropout_p = 1: tf.Tensor(\n[[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]], shape=(2, 8), dtype=float32)\n"
         }
       ]
     },
@@ -43,7 +43,7 @@
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
           "bytes": 24341,
-          "sha256": "sha256:e875852045b05e34c97e00747eec407e2c1c87aadd1b89568b3ae8e801246ec1"
+          "sha256": "sha256:5104efbcd432cea1fa250a810ad64d8604993b336d8d0a00cc0b22e030549ad4"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 24338,
-          "sha256": "sha256:a6626f431bc3c710e9aa646be82cb2302c9cf53e4961fe2793844ec6fefe25fb"
+          "bytes": 24344,
+          "sha256": "sha256:16cf53cfabd40e82da87a80c36cbd71d0870531016ba0f240ad0b34186e1c427"
         }
       ]
     }

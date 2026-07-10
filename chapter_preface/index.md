@@ -346,7 +346,9 @@ the following dependencies:
 import inspect
 import collections
 from collections import defaultdict
+from dataclasses import asdict
 from IPython import display
+import json
 import math
 from matplotlib import pyplot as plt
 from matplotlib_inline import backend_inline

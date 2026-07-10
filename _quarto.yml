@@ -97,12 +97,13 @@ book:
       chapters:
         - chapter_builders-guide/index.qmd
         - chapter_builders-guide/model-construction.qmd
-        - chapter_builders-guide/parameters.qmd
-        - chapter_builders-guide/init-param.qmd
-        - chapter_builders-guide/lazy-init.qmd
-        - chapter_builders-guide/custom-layer.qmd
-        - chapter_builders-guide/read-write.qmd
-        - chapter_builders-guide/use-gpu.qmd
+        - chapter_builders-guide/parameters-state-memory.qmd
+        - chapter_builders-guide/init.qmd
+        - chapter_builders-guide/custom-layers.qmd
+        - chapter_builders-guide/numerics.qmd
+        - chapter_builders-guide/saving-loading.qmd
+        - chapter_builders-guide/gpus-devices-memory.qmd
+        - chapter_builders-guide/reproducibility-inspection.qmd
     - part: "Convolutional Neural Networks"
       chapters:
         - chapter_convolutional-neural-networks/index.qmd

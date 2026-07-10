@@ -103,12 +103,19 @@
     },
     "numerics-mixed-precision-training-4": {
       "code_fingerprint": "sha256:ca3decece0fe25c283c638203425c0727b0d1a3d4d2f8a34e0153dbf7c4cc06f",
-      "kind": "text",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "final loss: fp32 0.711, mixed_bfloat16 0.711\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
+          "bytes": 28516,
+          "sha256": "sha256:100d0e361635228fefaa526330e996703b999bb63ffb707e6315f64440f009dd"
         }
       ]
     },
@@ -148,7 +155,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float16, numpy=4.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=9780.2080078125>,\n <tf.Tensor: shape=(), dtype=float64, numpy=10004.043579101562>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float16, numpy=8192.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=10004.041015625>,\n <tf.Tensor: shape=(), dtype=float64, numpy=10004.043579101562>)"
         }
       ]
     }

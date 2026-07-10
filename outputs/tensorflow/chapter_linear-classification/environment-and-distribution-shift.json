@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/environment-and-distribution-shift.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "environment-and-distribution-shift-covariate-shift-correction-1": {
+      "code_fingerprint": "sha256:4cc9ca6c7855731bd7195b3799facd31e7ba05697c94c282c9e7822046856e78",
+      "kind": "text",
+      "outputs": []
+    },
+    "environment-and-distribution-shift-covariate-shift-correction-2": {
+      "code_fingerprint": "sha256:1b85952b8685e5f0cc54d769ac4d89a0c8e66c8d9efd03127b39c0f8966c2b26",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "learned h(x) = 2.06 x1 +0.09 x2 -2.03 (true log-ratio: 2 x1 - 2)\nbeta on source data: mean 0.86, max 56.2\n"
+        }
+      ]
+    },
+    "environment-and-distribution-shift-covariate-shift-correction-3": {
+      "code_fingerprint": "sha256:96c2b3b1802f760ae2d3f32b84d745df96adba453abbc1d1fcd11dc9be2daeba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "unweighted    target accuracy: 0.502   (source accuracy: 0.860)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "weighted      target accuracy: 0.933   (source accuracy: 0.795)\nclipped, c=5  target accuracy: 0.945   (source accuracy: 0.817)\n"
+        }
+      ]
+    }
+  }
+}

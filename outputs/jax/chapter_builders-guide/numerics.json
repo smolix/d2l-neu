@@ -72,7 +72,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "float32 407060\nbfloat16\n"
+          "text": "float32 407060\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bfloat16\n"
         }
       ]
     },
@@ -98,12 +103,19 @@
     },
     "numerics-mixed-precision-training-4": {
       "code_fingerprint": "sha256:65728b2a090a9ba9fa8fbef0cd46d8c3dba7f2f4a35a276bd15389adac2b0f19",
-      "kind": "text",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "final loss: fp32 0.746, bf16 compute 0.745\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
+          "bytes": 26840,
+          "sha256": "sha256:1eabd3ae8fe53b099aa9218fb4721b74bea3e8694154022ea0fd38803c8c10ca"
         }
       ]
     },

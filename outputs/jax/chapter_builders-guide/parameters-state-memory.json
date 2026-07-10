@@ -109,7 +109,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "CpuDevice(id=0)"
+          "text": "CudaDevice(id=0)"
         }
       ]
     },
@@ -210,7 +210,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.1790274679660797"
+          "text": "0.17902737855911255"
         }
       ]
     }

@@ -79,7 +79,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-1.4650432 ,  0.4318025 , -1.093085  ,  0.10054684],\n       [ 0.59793055,  0.76740956,  0.0809262 ,  0.14775072],\n       [-0.37800053, -0.6095994 ,  0.20482317,  0.41867107]])"
+          "text": "array([[ 2.026063  , -0.35973537, -0.69483787, -0.5083227 ],\n       [-0.7769199 , -0.07672969,  1.0520196 , -1.0405602 ],\n       [ 0.4549062 ,  0.25027046,  0.8004312 ,  1.6838533 ]])"
         }
       ]
     },
@@ -129,7 +129,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([1.0000000e+00, 2.7182817e+00, 7.3890562e+00, 2.0085537e+01,\n       5.4598148e+01, 1.4841316e+02, 4.0342880e+02, 1.0966332e+03,\n       2.9809580e+03, 8.1030840e+03, 2.2026465e+04, 5.9874141e+04])"
+          "text": "array([1.0000000e+00, 2.7182820e+00, 7.3890557e+00, 2.0085537e+01,\n       5.4598145e+01, 1.4841315e+02, 4.0342877e+02, 1.0966331e+03,\n       2.9809583e+03, 8.1030840e+03, 2.2026467e+04, 5.9874137e+04])"
         }
       ]
     },
@@ -200,7 +200,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Traceback (most recent call last):\n  File \"/Users/smola/Repositories/github/mxnet/src/operator/numpy/./../tensor/elemwise_binary_broadcast_op.h\", line 69\nMXNetError: Check failed: l == 1 || r == 1: operands could not be broadcast together with shapes [3,2] [2,3]\n"
+          "text": "Traceback (most recent call last):\n  File \"/home/smola/mxnet/src/operator/numpy/./../tensor/elemwise_binary_broadcast_op.h\", line 69\nMXNetError: Check failed: l == 1 || r == 1: operands could not be broadcast together with shapes [3,2] [2,3]\n"
         }
       ]
     },
@@ -221,7 +221,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "id(Z): 4847881024\nid(Z): 4847881024\n"
+          "text": "id(Z): 125592928875168\nid(Z): 125592928875168\n"
         }
       ]
     },

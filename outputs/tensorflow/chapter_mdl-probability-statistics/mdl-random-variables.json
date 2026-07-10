@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\nintegral_-1000^1000 x^2 p(x) dx = 635.621\n"
+          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\nintegral_-1000^1000 x^2 p(x) dx = 635.620\n"
         }
       ]
     },
@@ -44,7 +44,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
           "bytes": 27212,
-          "sha256": "sha256:c4ea17a6fbca78c3db6eb4f5a15aa82ddeca7337e7533b623761af8a1894b3a7"
+          "sha256": "sha256:a24d75070afc4d680e3f1b138193b3a038908a9e15988288a5205dd3e0695eb5"
         }
       ]
     }

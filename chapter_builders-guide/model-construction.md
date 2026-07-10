@@ -4,7 +4,7 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Modules and Model Construction
-:label:`sec_model_construction_v2`
+:label:`sec_model_construction`
 
 The networks we have trained so far were small enough to write down layer by
 layer. The networks ahead are not: a ResNet chains more than a hundred
@@ -20,14 +20,14 @@ inputs to outputs. The definition is deliberately recursive. A fully connected
 layer is a module (parameters, no children). A residual block is a module (no
 parameters of its own, a few child layers). A hundred-layer network is a module
 whose children are blocks whose children are layers. Every model is therefore a
-*tree* of modules, as sketched in :numref:`fig_blocks_v2`, and almost everything
+*tree* of modules, as sketched in :numref:`fig_blocks`, and almost everything
 this chapter does to a model, listing its parameters
-(:numref:`sec_parameters_v2`), moving it to a GPU (:numref:`sec_use_gpu_v2`),
-saving it to disk (:numref:`sec_read_write_v2`), is implemented as a walk over
+(:numref:`sec_parameters`), moving it to a GPU (:numref:`sec_use_gpu`),
+saving it to disk (:numref:`sec_read_write`), is implemented as a walk over
 that tree.
 
 ![Layers compose into blocks and blocks compose into models: every model is a tree of modules.](../img/bg-module-tree.svg)
-:label:`fig_blocks_v2`
+:label:`fig_blocks`
 
 ```{.python .input #model-construction-modules-and-model-construction}
 %%tab pytorch
@@ -353,7 +353,7 @@ derives gradients from whatever `forward` computes.
 Note also that we invoke the model as `net(X)`, never `net.forward(X)`.
 Calling a module runs `nn.Module.__call__`, which calls `forward` *and* any
 hooks registered on the module. That gap between call and forward is where
-model-inspection tooling attaches; we use it in :numref:`sec_repro_v2`.
+model-inspection tooling attaches; we use it in :numref:`sec_repro`.
 :end_tab:
 
 :begin_tab:`jax`
@@ -362,7 +362,7 @@ Note also that we never call `__call__` directly on a bare module:
 `__call__`. That gap between `apply` and `__call__` is where model-inspection
 tooling attaches; `apply` can, for instance, be asked to record every
 submodule's output (`capture_intermediates`), which we use in
-:numref:`sec_repro_v2`.
+:numref:`sec_repro`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -377,7 +377,7 @@ between `__call__` and `call` in mind explains most of what follows.
 Note also that we invoke the model as `net(X)`, never `net.forward(X)`.
 Calling a block runs `Block.__call__`, which calls `forward` *and* any hooks
 registered on the block. That gap between call and forward is where
-model-inspection tooling attaches; we use it in :numref:`sec_repro_v2`.
+model-inspection tooling attaches; we use it in :numref:`sec_repro`.
 :end_tab:
 
 ## Sequential and Friends: Containers
@@ -1033,7 +1033,7 @@ Storing it as a plain attribute has a cost we did not want, though: as the
 output shows, it is missing from `state_dict()` as well, so it will not be
 saved with the model, and `.to(device)` will not move it. Some state is not a
 parameter but must still travel with the model; the registered home for such
-state is a *buffer*, introduced in :numref:`sec_parameters_v2`.
+state is a *buffer*, introduced in :numref:`sec_parameters`.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1044,7 +1044,7 @@ architecture itself, and constructing `ScaledResidual(24, alpha=0.5)`
 reproduces it exactly. What fields cannot express is non-parameter state that
 *changes* during the forward pass, such as running statistics; Flax gives such
 state an explicit home in a separate variable collection, introduced in
-:numref:`sec_parameters_v2`.
+:numref:`sec_parameters`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1055,7 +1055,7 @@ cost we did not want, though: not being a variable, it is invisible to weight
 checkpointing as well, so it will not be saved with the model. Some state is
 not a parameter but must still travel with the model; the registered home for
 such state is a non-trainable `tf.Variable`, introduced in
-:numref:`sec_parameters_v2`.
+:numref:`sec_parameters`.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -1066,7 +1066,7 @@ not want, though: invisible to the parameter walk, it will not be saved by
 `save_parameters`, and it will not move to a GPU with the rest of the block.
 Some state is not a parameter but must still travel with the model; the
 registered home for such state is a constant parameter (`gluon.Constant`),
-introduced in :numref:`sec_parameters_v2`.
+introduced in :numref:`sec_parameters`.
 :end_tab:
 
 :begin_tab:`jax`
@@ -1239,7 +1239,7 @@ must happen after a *dry run* on a representative batch. A related subtlety:
 the random initialization now happens at first call rather than at
 construction, so any random numbers your program draws in between shift the
 generator's state, and a fixed seed can yield different weights than the
-explicitly shaped version of the same model (:numref:`sec_repro_v2` returns to
+explicitly shaped version of the same model (:numref:`sec_repro` returns to
 seeding). Other libraries make the dry run explicit rather than implicit: a
 Flax module in JAX has no lazy mode at all, and its parameters exist only
 after a mandatory `init(key, dummy_input)` call performs the same shape
@@ -1255,7 +1255,7 @@ transforming them, starts from its return value. The ordering mistakes that
 implicit lazy initialization invites cannot arise. Randomness is equally
 explicit: which weights `init` produces depends on the PRNG key we pass it
 and on nothing else, not on how many random numbers the program happened to
-draw beforehand (:numref:`sec_repro_v2` returns to seeding).
+draw beforehand (:numref:`sec_repro` returns to seeding).
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1268,7 +1268,7 @@ through the model without any data (`None` marks the batch dimension). Two
 consequences of build-time allocation are worth remembering. Initialization
 happens at build rather than at construction, so under a fixed seed the
 weights you get depend on how many random numbers the program drew before the
-model was built (:numref:`sec_repro_v2` returns to seeding). And, as the
+model was built (:numref:`sec_repro` returns to seeding). And, as the
 containers lesson showed, building is also the moment the model's structure
 locks.
 :end_tab:
@@ -1281,7 +1281,7 @@ after a *dry run* on a representative batch. A related subtlety: the random
 draw now happens at first call rather than at `initialize()`, so any random
 numbers your program draws in between shift the generator's state, and a
 fixed seed can yield different weights than an explicitly shaped version of
-the same model (:numref:`sec_repro_v2` returns to seeding). Other libraries
+the same model (:numref:`sec_repro` returns to seeding). Other libraries
 retrofitted this behavior; Gluon was designed around it, which is why
 `initialize()` is a separate, explicit step rather than something the
 constructor does.
@@ -1409,28 +1409,28 @@ The dry run inside `apply_init` turned every lazy layer into a real one, after
 which `init_xavier` could match on `nn.Linear` and rewrite its weights. Which
 initializer to apply, and why Xavier's variance rule
 (:numref:`subsec_xavier`) is a sensible default, is the subject of
-:numref:`sec_init_v2`.
+:numref:`sec_init_param`.
 :end_tab:
 
 :begin_tab:`jax`
 `apply_init` materialized every shape and, for the first kernel, drew the
 initial values from the Xavier initializer, all in the same call. Which
 initializer to use, and why Xavier's variance rule (:numref:`subsec_xavier`)
-is a sensible default, is the subject of :numref:`sec_init_v2`.
+is a sensible default, is the subject of :numref:`sec_init_param`.
 :end_tab:
 
 :begin_tab:`tensorflow`
 `build` materialized every shape and drew the first kernel's initial values
 from the Xavier initializer, without a batch of data in sight. Which
 initializer to use, and why Xavier's variance rule (:numref:`subsec_xavier`)
-is a sensible default, is the subject of :numref:`sec_init_v2`.
+is a sensible default, is the subject of :numref:`sec_init_param`.
 :end_tab:
 
 :begin_tab:`mxnet`
 The dry run materialized every shape and drew the first weight's initial
 values from the Xavier initializer that `initialize` had recorded. Which
 initializer to use, and why Xavier's variance rule (:numref:`subsec_xavier`)
-is a sensible default, is the subject of :numref:`sec_init_v2`.
+is a sensible default, is the subject of :numref:`sec_init_param`.
 :end_tab:
 
 ## Building from a Config
@@ -1640,7 +1640,7 @@ for cfg in (MLPConfig(), MLPConfig(d_hidden=512, num_blocks=8)):
 
 :begin_tab:`pytorch`
 Because `build` is deterministic in `cfg`, the config is all you need to
-reconstruct the module tree later; :numref:`sec_read_write_v2` saves it
+reconstruct the module tree later; :numref:`sec_read_write` saves it
 alongside the weights so that loading a checkpoint starts by rebuilding the
 exact same model. A config of widths and depths feeding a loop that stacks
 identical residual blocks is, minus attention, the exact shape of every
@@ -1649,7 +1649,7 @@ Transformer implementation you will read.
 
 :begin_tab:`jax`
 Because the module is a dataclass, its fields are all you need to reconstruct
-the module tree later; :numref:`sec_read_write_v2` saves them alongside the
+the module tree later; :numref:`sec_read_write` saves them alongside the
 parameters so that loading a checkpoint starts by rebuilding the exact same
 model. A handful of width and depth fields feeding a loop that stacks
 identical residual blocks is, minus attention, the exact shape of every
@@ -1658,7 +1658,7 @@ Transformer implementation you will read.
 
 :begin_tab:`tensorflow`
 Because `build` is deterministic in `cfg`, the config is all you need to
-reconstruct the module tree later; :numref:`sec_read_write_v2` saves it
+reconstruct the module tree later; :numref:`sec_read_write` saves it
 alongside the weights so that loading a checkpoint starts by rebuilding the
 exact same model. Keras bakes the same idea into every layer: `get_config()`
 returns the constructor arguments needed to re-create the object, and that is
@@ -1669,7 +1669,7 @@ exact shape of every Transformer implementation you will read.
 
 :begin_tab:`mxnet`
 Because `build` is deterministic in `cfg`, the config is all you need to
-reconstruct the module tree later; :numref:`sec_read_write_v2` saves it
+reconstruct the module tree later; :numref:`sec_read_write` saves it
 alongside the weights so that loading a checkpoint starts by rebuilding the
 exact same model. A config of widths and depths feeding a loop that stacks
 identical residual blocks is, minus attention, the exact shape of every

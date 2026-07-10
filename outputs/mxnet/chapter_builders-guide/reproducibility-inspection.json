@@ -16,17 +16,35 @@
     "reproducibility-inspection-seeds-and-randomness": {
       "code_fingerprint": "sha256:83c187d824d9aeffd62cfd98583849a5acb25658ea2cb75f217ee6b6a71acc56",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "same seed, identical loss and weights: True True\ndifferent seed: 1.2009189128875732 vs 0.9397940039634705\n"
+        }
+      ]
     },
     "reproducibility-inspection-generator-objects": {
       "code_fingerprint": "sha256:0e47de2cd0f61a7e6f9fb5359eda72949b542e003f39d994974179f498581483",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "True [9. 1. 4. 5. 8. 7. 6. 2. 3. 0.]\n"
+        }
+      ]
     },
     "reproducibility-inspection-determinism-and-its-price-1": {
       "code_fingerprint": "sha256:2268060f87647492a77455f3bbaae20f2c2b977943a7dac8bc68f5f723682196",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "True 0.0\n"
+        }
+      ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
       "code_fingerprint": "sha256:e1cfb949168793dd3ee5048f2ed1de9c330adb8695a83a3f5b59cdd44545181a",
@@ -36,7 +54,13 @@
     "reproducibility-inspection-capturing-activation-statistics": {
       "code_fingerprint": "sha256:f251f7f705093c867212256d47c4aba865f8afc60a63e233c4baa1a639f76d71",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Dense           std 0.68\nResidualBlock   std 0.83\nResidualBlock   std 1.03\nResidualBlock   std 1.21\nResidualBlock   std 1.46\nResidualBlock   std 1.83\nResidualBlock   std 2.28\nResidualBlock   std 2.75\nResidualBlock   std 3.43\nDense           std 4.41\n"
+        }
+      ]
     },
     "reproducibility-inspection-a-nan-finder": {
       "code_fingerprint": "sha256:c995d35a899652d47558eb750f6d32889479e7a036fe3a0c9bf8aaa09d4fe749",

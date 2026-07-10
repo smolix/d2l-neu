@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "same seed, identical loss and weights: True True\ndifferent seed: 0.8643209338188171 vs 0.9312678575515747\n"
+          "text": "same seed, identical loss and weights: True True\ndifferent seed: 0.8643209338188171 vs 0.9312677383422852\n"
         }
       ]
     },
@@ -64,20 +64,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor(True) 0.0\n"
+          "text": "tensor(False) -0.000244140625\n"
         }
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-2": {
       "code_fingerprint": "sha256:3f288ab464a3be21ca0c0dedec631e527cac7968a2e6366773d71e1d02bcc800",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "CPU run: every kernel used above is already deterministic; on CUDA, ops lacking a deterministic kernel raise RuntimeError\n"
-        }
-      ]
+      "outputs": []
     },
     "reproducibility-inspection-hooks-looking-inside": {
       "code_fingerprint": "sha256:3e17213f34e598f35459e3664377ade2796a7e78c1a2496a1cac28791df9b62e",

@@ -23,7 +23,9 @@ d2l = sys.modules[__name__]
 import inspect
 import collections
 from collections import defaultdict
+from dataclasses import asdict
 from IPython import display
+import json
 import math
 from matplotlib import pyplot as plt
 from matplotlib_inline import backend_inline
@@ -562,6 +564,35 @@ class SoftmaxRegression(d2l.Classifier):
 
     def forward(self, X):
         return self.net(X)
+
+def save_checkpoint(path, model, optimizer, step, cfg=None):
+    """Atomically write a resumable training checkpoint.
+
+    Defined in :numref:`sec_read_write`"""
+    ckpt = {'model': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'step': step,
+            'cpu_rng': torch.get_rng_state()}
+    if cfg is not None:
+        ckpt['cfg'] = asdict(cfg)
+    if torch.cuda.is_available():
+        ckpt['cuda_rng'] = torch.cuda.get_rng_state_all()
+    tmp = path + '.tmp'
+    torch.save(ckpt, tmp)
+    os.replace(tmp, path)
+
+def load_checkpoint(path, model, optimizer=None):
+    """Restore the state written by save_checkpoint; return the raw dict.
+
+    Defined in :numref:`sec_read_write`"""
+    ckpt = torch.load(path, weights_only=True)
+    model.load_state_dict(ckpt['model'])
+    if optimizer is not None:
+        optimizer.load_state_dict(ckpt['optimizer'])
+    torch.set_rng_state(ckpt['cpu_rng'])
+    if torch.cuda.is_available() and 'cuda_rng' in ckpt:
+        torch.cuda.set_rng_state_all(ckpt['cuda_rng'])
+    return ckpt
 
 def cpu():
     """Get the CPU device.

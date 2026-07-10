@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([ 0.00765541,  0.00490368,  0.00680209, -0.00184343]), array(0.))"
+          "text": "(array([ 0.00490368,  0.00765541, -0.00184343,  0.00680209]), array(0.))"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([ 0.3715366 , -0.47844273, -0.4485028 , -0.5750185 ]),\n array([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
+          "text": "(array([ 0.37153655, -0.47844273, -0.4485028 , -0.5750185 ]),\n array([[42., 42., 42., 42., 42., 42., 42., 42.]]))"
         }
       ]
     },
@@ -51,7 +51,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.0919\ntruncated: std 0.0176, max weight 0.0400\n"
+          "text": "normal:    std 0.0200, max weight 0.0919\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "truncated: std 0.0176, max weight 0.0400\n"
         }
       ]
     },
@@ -72,12 +77,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  N   default    scaled      zero\n  2       3.1      2.06     0.997\n  8        70      2.24     0.997\n"
+          "text": "  N   default    scaled      zero\n  2      2.94      1.99     0.997\n  8        85      2.49     0.997\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 32  3.48e+07      2.45     0.997\n"
+          "text": " 32  4.75e+07      2.65     0.997\n"
         }
       ]
     },
@@ -87,7 +92,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 9.935756 , -0.       ,  0.       , -7.146276 ],\n       [-0.       , -0.       , -5.6079783, -6.314646 ]])"
+          "text": "array([[ 9.935757 , -0.       ,  0.       , -7.146276 ],\n       [-0.       , -0.       , -5.6079783, -6.314646 ]])"
         }
       ]
     },

@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "same seed, identical loss and weights: True True\ndifferent seed: 1.0155185 vs 0.77519643\n"
+          "text": "same seed, identical loss and weights: True True\ndifferent seed: 1.0155029 vs 0.77521855\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "False -0.000152587890625\n"
+          "text": "False -6.103515625e-05\n"
         }
       ]
     },
@@ -58,7 +58,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense           std 1.00\nResidualBlock   std 1.24\nResidualBlock   std 1.46\nResidualBlock   std 1.80\nResidualBlock   std 2.26\nResidualBlock   std 2.82\nResidualBlock   std 3.56\nResidualBlock   std 4.69\nResidualBlock   std 6.01\nDense           std 6.56\n"
+          "text": "Dense           std 1.00\nResidualBlock   std 1.24\nResidualBlock   std 1.46\nResidualBlock   std 1.80\nResidualBlock   std 2.26\nResidualBlock   std 2.82\nResidualBlock   std 3.56\nResidualBlock   std 4.69\nResidualBlock   std 6.01\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Dense           std 6.56\n"
         }
       ]
     },
@@ -80,7 +85,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "{'bias': Array(5.7538013, dtype=float32), 'kernel': Array(34.760754, dtype=float32)}\n"
+          "text": "{'bias': Array(5.7519174, dtype=float32), 'kernel': Array(34.747364, dtype=float32)}\n"
         }
       ]
     }

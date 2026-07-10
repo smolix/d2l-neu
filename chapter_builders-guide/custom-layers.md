@@ -4,14 +4,14 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
 # Custom Layers and Functions
-:label:`sec_custom_layers_v2`
+:label:`sec_custom_layer`
 
 The library ships over a hundred layers, yet every one of them started life as
 code somebody wrote because the layer they needed did not exist. Sooner or
 later you will be in the same position: a new normalization, an unusual
 residual block, an operation with no gradient. This section shows what to do.
 A custom layer is a subclass of the module class from
-:numref:`sec_model_construction_v2` with a forward method, and if you
+:numref:`sec_model_construction` with a forward method, and if you
 register its state properly you inherit everything a built-in layer gets:
 parameter tracking, serialization, and device movement, with no extra code. We
 build up from a stateless five-liner to RMSNorm, the normalization inside most
@@ -201,7 +201,7 @@ Y.mean()
 
 :begin_tab:`pytorch`
 A layer with something to learn must create its own parameters, and wrapping a
-tensor in `nn.Parameter` is what registers them (:numref:`sec_parameters_v2`).
+tensor in `nn.Parameter` is what registers them (:numref:`sec_parameters`).
 We could show the mechanics by re-implementing `nn.Linear`, but that teaches
 nothing the built-in does not already do. Instead we implement *RMSNorm*
 :cite:`Zhang.Sennrich.2019`, the normalization used by most current large
@@ -211,7 +211,7 @@ language models, in the same five lines.
 :begin_tab:`jax`
 A layer with something to learn must create its own parameters, and
 `self.param` is what registers them in the variable tree
-(:numref:`sec_parameters_v2`). We could show the mechanics by re-implementing
+(:numref:`sec_parameters`). We could show the mechanics by re-implementing
 `nn.Dense`, but that teaches nothing the built-in does not already do. Instead
 we implement *RMSNorm* :cite:`Zhang.Sennrich.2019`, the normalization used by
 most current large language models, in the same handful of lines.
@@ -219,7 +219,7 @@ most current large language models, in the same handful of lines.
 
 :begin_tab:`tensorflow`
 A layer with something to learn must create its own parameters, and
-`add_weight` is what registers them (:numref:`sec_parameters_v2`). Keras
+`add_weight` is what registers them (:numref:`sec_parameters`). Keras
 splits creation off into a `build` method that runs on the first call, once
 the input shape is known, so the layer need not be told its width in advance.
 We could show the mechanics by re-implementing `Dense`, but that teaches
@@ -231,7 +231,7 @@ language models.
 :begin_tab:`mxnet`
 A layer with something to learn must create its own parameters, and assigning
 a `gluon.Parameter` to an attribute is what registers it
-(:numref:`sec_parameters_v2`). The parameter is declared with a name, a
+(:numref:`sec_parameters`). The parameter is declared with a name, a
 shape, and an initializer; its array is allocated only when `initialize()`
 runs, and the forward pass fetches the copy on the input's device with
 `.data(X.device)`. We could show the mechanics by re-implementing `nn.Dense`,
@@ -429,14 +429,14 @@ net(np.random.randn(4, 20)).shape
 :begin_tab:`pytorch`
 Third, its state serializes with everything else. A state dict written by one
 instance loads into a fresh one, after which the two agree exactly (saving to
-disk works the same way; see :numref:`sec_read_write_v2`).
+disk works the same way; see :numref:`sec_read_write`).
 :end_tab:
 
 :begin_tab:`jax`
 Third, its state serializes with everything else. `flax.serialization` turns
 the variable tree into bytes and back; restoring those bytes into a freshly
 initialized tree makes the two models agree exactly (saving to disk works the
-same way; see :numref:`sec_read_write_v2`).
+same way; see :numref:`sec_read_write`).
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -444,7 +444,7 @@ Third, its state serializes with everything else. `get_weights` returns the
 model's weights, gain included, as a list of arrays, and `set_weights` loads
 that list into a clone once a first call has built it; after the copy the two
 models agree exactly (saving to disk works the same way; see
-:numref:`sec_read_write_v2`).
+:numref:`sec_read_write`).
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -452,7 +452,7 @@ Third, its state serializes with everything else. `save_parameters` writes
 every parameter, the gain included, to a file keyed by position in the block
 tree, and `load_parameters` reads that file into a fresh clone, filling in
 the deferred shapes as it goes; after the load the two models agree exactly
-(:numref:`sec_read_write_v2` covers the file formats).
+(:numref:`sec_read_write` covers the file formats).
 :end_tab:
 
 ```{.python .input #custom-layers-the-composability-guarantee-3}
@@ -511,7 +511,7 @@ Fourth, it moves, though TensorFlow settles this axis at creation rather than
 on demand. There is no move-the-model call: `add_weight` places the gain on
 the best available device the moment it runs (the GPU if one is visible), and
 operations execute where their inputs live; a `tf.device` scope at
-construction time overrides the default (:numref:`sec_use_gpu_v2`). So there
+construction time overrides the default (:numref:`sec_use_gpu`). So there
 is nothing to run here. The guarantee is the same: because the gain went
 through the proper channel, placement is handled for it, custom layer or
 built-in alike.
@@ -522,7 +522,7 @@ Fourth, it moves. Gluon settles device placement at initialization:
 `initialize(device=...)` puts every registered parameter, the gain included,
 on the device you name, and `reset_device` moves an initialized block later.
 The forward pass then fetches the copy living where the input does, which is
-what `self.gain.data(X.device)` was for. :numref:`sec_use_gpu_v2` exercises
+what `self.gain.data(X.device)` was for. :numref:`sec_use_gpu` exercises
 these moves on real hardware, so we leave this axis as prose here. The
 guarantee is the same: because the gain went through the proper channel,
 every placement and move includes it, custom layer or built-in alike.
@@ -622,7 +622,7 @@ chapters follow the rule and use the native layer directly.
 ## Precomputed State: Buffers
 
 :begin_tab:`pytorch`
-:numref:`sec_parameters_v2` introduced buffers as the third kind of module
+:numref:`sec_parameters` introduced buffers as the third kind of module
 state: tensors that persist and travel with the model but receive no
 gradient. Custom layers are where you create them. A common case is a layer
 built around a precomputed table, for instance the causal mask that keeps
@@ -633,7 +633,7 @@ wrong too (`.to(device)` would skip it and the state dict would omit it).
 :end_tab:
 
 :begin_tab:`jax`
-:numref:`sec_parameters_v2` introduced state that persists and travels with
+:numref:`sec_parameters` introduced state that persists and travels with
 the model but receives no gradient. Flax files every variable under a named
 *collection*: `self.param` writes to the `params` collection, the one that
 gets differentiated and optimized, and `self.variable(collection, name,
@@ -647,7 +647,7 @@ collection by exactly this mechanism.
 :end_tab:
 
 :begin_tab:`tensorflow`
-:numref:`sec_parameters_v2` introduced state that persists and travels with
+:numref:`sec_parameters` introduced state that persists and travels with
 the model but receives no gradient. In Keras the channel is the `trainable`
 flag: `add_weight(trainable=False)` creates a variable no optimizer will
 touch that still counts among the layer's weights, so it serializes through
@@ -661,7 +661,7 @@ mechanism.
 :end_tab:
 
 :begin_tab:`mxnet`
-:numref:`sec_parameters_v2` introduced state that persists and travels with
+:numref:`sec_parameters` introduced state that persists and travels with
 the model but receives no gradient. Gluon's channel is `gluon.Constant`, a
 `Parameter` subclass whose `grad_req` is fixed to `'null'`: autograd ignores
 it and no `Trainer` will update it, yet it initializes, saves, and moves with

@@ -110,7 +110,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "no GPU here; on a CUDA machine, whiten.reset_device(npx.gpu(0)) moves whiten.mean along with the parameters\n"
+          "text": "constant lives on gpu(0)\n"
         }
       ]
     },

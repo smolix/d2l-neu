@@ -102,7 +102,7 @@ Resolution order in `notebook_resource`:
 
 ```python
 MULTI_GPU_NOTEBOOKS = {            # data-parallel: need 2 GPUs
-    "chapter_builders-guide/use-gpu.ipynb",
+    "chapter_builders-guide/gpus-devices-memory.ipynb",
     "chapter_computational-performance/multiple-gpus.ipynb",
     "chapter_computational-performance/multiple-gpus-concise.ipynb",
     "chapter_computational-performance/auto-parallelism.ipynb",

@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-cloud-marginals-1.svg",
           "bytes": 71874,
-          "sha256": "sha256:fc20e52e9b80bee91507cd27f17ec590c4e6931fe0f23743e710de2aee8a594a"
+          "sha256": "sha256:3fbe15766e43ef946d2e5ab1fd323e8b7616d0e7b491aec8a6e3c2c970c72cc2"
         }
       ]
     },
@@ -71,14 +71,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\nt=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
+          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-pf-ode-overlay-1.svg",
           "bytes": 245349,
-          "sha256": "sha256:272fc78e65b5bd302e316da7a6a4e29ab4aaa2e453ebf7c4f72f4c143d88d29d"
+          "sha256": "sha256:503223c3a78e39117fdf4809efa9ec5a17dca63acb20a9ce899e924799677cfa"
         }
       ]
     },
@@ -96,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-mixture-score-1.svg",
           "bytes": 25825,
-          "sha256": "sha256:a70e311f3d05426564d53c38776e1c68da2e87230368a6dab91ebd981bef9c77"
+          "sha256": "sha256:51bdedd0e57bdb2f22ee460863dba9d815124199b7cb30d3cebdc71c829a4265"
         }
       ]
     },
@@ -119,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-reverse-sde-1.svg",
           "bytes": 43149,
-          "sha256": "sha256:f7930ec017068087190424d5e5ab979b5e8c206676538492eb6b6417fd08b84c"
+          "sha256": "sha256:b2c8fc3063ec8cf4bda2b549f94489c14631da34176027263d58533d4f64325e"
         }
       ]
     }

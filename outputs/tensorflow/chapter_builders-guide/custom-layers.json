@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.0>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=-1.6298145055770874e-09>"
         }
       ]
     },
@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([0.99999994, 0.9999998 , 0.99999994, 0.99999976], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(4,), dtype=float32, numpy=array([0.9999998, 1.       , 1.0000001, 1.       ], dtype=float32)>"
         }
       ]
     },

@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "same seed, identical loss and weights: True True\ndifferent seed: 1.094804286956787 vs 1.024289608001709\n"
+          "text": "same seed, identical loss and weights: True False\ndifferent seed: 1.0948162078857422 vs 1.0243310928344727\n"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "False -0.0003662109375\n"
+          "text": "False -0.000152587890625\n"
         }
       ]
     },
@@ -102,7 +102,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "{'sequential_5/dense_11/kernel': 13.872913360595703, 'sequential_5/dense_11/bias': 2.826284170150757}\n"
+          "text": "{'sequential_5/dense_11/kernel': 13.867950439453125, 'sequential_5/dense_11/bias': 2.8245253562927246}\n"
         }
       ]
     }

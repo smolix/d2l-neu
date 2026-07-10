@@ -87,12 +87,19 @@
     },
     "numerics-mixed-precision-training-4": {
       "code_fingerprint": "sha256:1d72310181671176fa88fbe8ebdfa4a570327bf1b055099091f2e4d9e34bcfcf",
-      "kind": "text",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "final loss: fp32 0.655, fp16 multi_precision 0.655\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
+          "bytes": 27259,
+          "sha256": "sha256:26ecbd1c308b760dc648fdb906480d9016370b73f303d8c69006fc9991ebc20d"
         }
       ]
     },

@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "source": "chapter_linear-classification/generalization-classification.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "generalization-classification-the-test-set-1": {
+      "code_fingerprint": "sha256:07bd85aea8f65a87ddf6c8ea4805bcb663772c501cdd5ad80031100aef2fec38",
+      "kind": "text",
+      "outputs": []
+    },
+    "generalization-classification-the-test-set-2": {
+      "code_fingerprint": "sha256:0166992623858f18ea49c4384ac79d68c587b53fc3e5dd480fa376d7b8b9cb9c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
+          "bytes": 34254,
+          "sha256": "sha256:2150c0f8ee3da963bfef472966272dbab051f77093f7dd0e58a351fd51a94f9c"
+        }
+      ]
+    },
+    "generalization-classification-test-set-reuse-1": {
+      "code_fingerprint": "sha256:bd39094d6dc3909e499e9913d9ecb8a74bac4dc10f3e1f75770ad0abe8de918d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
+          "bytes": 31658,
+          "sha256": "sha256:8aec0cc2eed033b82a0cd7d0ffd8f8709f73c9e4d758f631cc1f67c3b4a2c09c"
+        }
+      ]
+    }
+  }
+}

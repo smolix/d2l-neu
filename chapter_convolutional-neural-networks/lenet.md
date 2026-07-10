@@ -372,9 +372,21 @@ with d2l.try_gpu():
 
 ## Summary
 
-We have made significant progress in this chapter. We moved from the MLPs of the 1980s to the CNNs of the 1990s and early 2000s. The architectures proposed, e.g., in the form of LeNet-5 remain meaningful, even to this day. It is worth comparing the error rates on Fashion-MNIST achievable with LeNet-5 both to the very best possible with MLPs (:numref:`sec_mlp-implementation`) and those with significantly more advanced architectures such as ResNet (:numref:`sec_resnet`). LeNet is much more similar to the latter than to the former. One of the primary differences, as we shall see, is that greater amounts of computation enabled significantly more complex architectures.
+We have made significant progress in this chapter. We moved from the MLPs of the 1980s to the CNNs of the 1990s and early 2000s. The architectures proposed, e.g., in the form of LeNet-5 remain meaningful, even to this day. Compare the error rates on Fashion-MNIST achievable with LeNet-5 both to the very best possible with MLPs (:numref:`sec_mlp-implementation`) and to those of significantly more advanced architectures such as ResNet (:numref:`sec_resnet`). LeNet is much more similar to the latter than to the former. One of the primary differences, as we shall see, is that greater amounts of computation enabled significantly more complex architectures.
 
-A second difference is the relative ease with which we were able to implement LeNet. What used to be an engineering challenge worth months of C++ and assembly code, engineering to improve SN (Simulateur Neuristique), an early Lisp-based deep learning tool :cite:`Bottou.Le-Cun.1988`, and finally experimentation with models can now be accomplished in minutes. It is this incredible productivity boost that has democratized deep learning model development tremendously. In the next chapter, we will journey down this rabbit hole to see where it takes us.
+A second difference is the relative ease with which we were able to implement LeNet. What used to be an engineering challenge worth months of C++ and assembly code, engineering to improve SN (Simulateur Neuristique), an early Lisp-based deep learning tool :cite:`Bottou.Le-Cun.1988`, and finally experimentation with models can now be accomplished in minutes. It is this incredible productivity boost that has democratized deep learning model development tremendously.
+
+A third way to read LeNet is as a checklist of what thirty years of progress replaced. The skeleton, a convolutional encoder feeding a small classification head, is the one part that has not changed. Every component inside it has:
+
+| LeNet (1998) | Modern (2020s) | What the change buys |
+|:--|:--|:--|
+| sigmoid activation | ReLU or GELU | gradients that survive depth instead of saturating |
+| average pooling | max-pooling or strided convolution | keeps the strongest local response rather than diluting it |
+| no normalization | batch or layer normalization | stable activation scales, so much deeper stacks train |
+| dense head on flattened features | global average pooling plus one linear layer | removes most of the parameters (the $400 \times 120$ block here) |
+| Xavier initialization | He initialization | variance matched to ReLU rather than to sigmoid |
+
+Each row except the last is a section of :numref:`chap_modern_cnn`: ReLU and max-pooling arrive with AlexNet (:numref:`sec_alexnet`), the global-average-pooling head with NiN (:numref:`sec_nin`), batch normalization in :numref:`sec_batch_norm`, and strided-convolution downsampling with ResNet (:numref:`sec_resnet`). He initialization you have already met in :numref:`sec_init_param`; it exists because of the switch to ReLU. The next chapter walks through this table row by row while keeping LeNet's skeleton fixed.
 
 ## Exercises
 
@@ -412,13 +424,13 @@ A second difference is the relative ease with which we were able to implement Le
 ::: {.slide title="LeNet sets the CNN template"}
 **LeNet-5** (Yann LeCun et al., 1989; productionized 1998)
 was the first convolutional neural network at production
-scale — handwritten digits on U.S. bank checks. Some ATMs
+scale: handwritten digits on U.S. bank checks. Some ATMs
 *still* run derivatives of the original C++ today.
 
 It defined the architectural template every later CNN
 refines: a **convolutional encoder** (spatial dims shrink,
 channels grow) feeding a **dense head**. ResNet,
-EfficientNet, ViT — same skeleton, different components.
+EfficientNet, ViT: same skeleton, different components.
 :::
 
 ::: {.slide title="LeNet-5 architecture"}
@@ -436,19 +448,19 @@ Two conv→sigmoid→avgpool blocks, three FC layers, 10 logits.
 :::
 
 ::: {.slide title="Compressed view"}
-Same network, vertical schematic — the textbook version:
+Same network, vertical schematic (the textbook version):
 
 ![Compact LeNet-5 schematic.](../img/lenet-vert.svg){width=44%}
 :::
 
 ::: {.slide title="Two takeaways"}
-- **Pyramid shape** — spatial halves at each pool;
+- **Pyramid shape:** spatial halves at each pool;
   channels roughly double. Every successor architecture
   preserves this.
-- **The bottleneck is the flatten** — `400 × 120 = 48000`
+- **The bottleneck is the flatten:** `400 × 120 = 48000`
   weights from conv block to first dense layer. Modern
   CNNs replace the dense stack with *global average
-  pooling* — much cheaper.
+  pooling*, which is much cheaper.
 :::
 
 ::: {.slide title="Implementation setup"}
@@ -475,18 +487,18 @@ is wired correctly:
 
 @lenet-3
 
-Confirms 28→28→14→10→5→flatten→120→84→10 — exactly the
+Confirms 28→28→14→10→5→flatten→120→84→10: exactly the
 pyramid in the diagram.
 :::
 
 ::: {.slide title="Training on Fashion-MNIST"}
 Cross-entropy loss + SGD + 10 epochs. Same `Trainer` API
-as every previous chapter — only the model changes:
+as every previous chapter; only the model changes:
 
 @lenet-training
 
 LeNet's convolutional inductive bias clearly beats the
-dense MLP from the previous chapter on the same data —
+dense MLP from the previous chapter on the same data,
 even with 1990s components (sigmoid, average pooling).
 :::
 
@@ -498,22 +510,22 @@ LeNet's 1998 architecture vs. modern best practice:
 | sigmoid activation | ReLU / GELU |
 | average pooling | max pool / strided conv |
 | no normalization | BatchNorm / LayerNorm |
+| dense head | global average pool + 1 linear |
 | Xavier init | He init |
 | 5 layers, ~60k params | 50+ layers, millions of params |
-| dense head | global average pool + 1 linear |
 
-Each substitution is the subject of a section in the next
-chapter (Modern CNNs). The skeleton — *conv encoder + head*
-— is unchanged.
+Each substitution is a section of the next chapter, Modern
+CNNs (He init we met in the builder's guide). The skeleton,
+*conv encoder + head*, is unchanged.
 :::
 
 ::: {.slide title="Recap"}
 - LeNet-5 = first CNN that worked at production scale.
 - Architectural template: conv encoder (spatial ↓, channels ↑)
   → flatten → dense head.
-- Same template scales up to ResNet, EfficientNet, ViT —
+- Same template scales up to ResNet, EfficientNet, ViT:
   the modern variants change *components*, not the shape.
-- Beats MLPs on the same data — convolutional inductive bias
+- Beats MLPs on the same data: convolutional inductive bias
   is a real win.
 - The next chapter swaps every component for its modern
   equivalent and goes much deeper.

@@ -12,11 +12,13 @@ repeat braces span their full panel.
 
 from arch_diagrams import (
     Diagram, save,
-    ACCENT, ACCENT_TINT, ACCENT2, ACCENT2_TINT, INK,
+    ACCENT, ACCENT_TINT, ACCENT2, ACCENT2_TINT, INK, CONTAINER_FILL,
     PILL_H, PILL_STEP, LABEL_BAND, PLUS_R,
 )
 
 LH = 12.5 * 1.25          # callout line height (must match callout())
+BLOCK_PAD = 12            # inner block container padding around its pills
+BLOCK_GAP = 14            # vertical gap between stacked inner blocks
 
 
 # --------------------------------------------------------------------------- #
@@ -188,8 +190,268 @@ def fig_inception_block():
     save(d.fig, "arch-inception-block")
 
 
+def _blocked_column(d, x, groups, pw, y0, outer_label, anchor_text="input x",
+                    novelty_at=None, stage_labels=False):
+    """A full-model column: one spine of pills, some grouped into
+    accent-tinted inner block containers, all nested in a gray outer network
+    container.  ``groups`` = [{'ops': [...], 'tint': bool, 'repeat': str,
+    'label': str}].  Arrows run pill-to-pill, crossing block edges (the
+    gallery convention).  ``novelty_at`` = (group_idx, op_idx).
+    Returns (y_out, outer_panel, layouts)."""
+    layouts = []
+    y = y0
+    for g in groups:
+        pad = BLOCK_PAD if g.get("tint") else 0
+        extra_top = 16 if (g.get("tint") and g.get("label")) else 0
+        first = y + pad + PILL_H / 2
+        ys = [first + i * PILL_STEP for i in range(len(g["ops"]))]
+        top = ys[-1] + PILL_H / 2 + pad + extra_top
+        layouts.append((g, ys, y, top))
+        y = top + 26                      # inter-group arrow gap
+    inner_top = layouts[-1][3]
+    outer = (x - pw / 2 - BLOCK_PAD - 16, y0 - 20,
+             x + pw / 2 + BLOCK_PAD + 16, inner_top + LABEL_BAND)
+    d.container(*outer, fill=CONTAINER_FILL, zorder=1)
+    d.stage_label(outer[0] + 14, outer[3] - 9, outer_label)
+
+    for gi, (g, ys, bot, top) in enumerate(layouts):
+        if g.get("tint"):
+            d.container(x - pw / 2 - BLOCK_PAD, bot,
+                        x + pw / 2 + BLOCK_PAD, top,
+                        fill=ACCENT_TINT, round_=12, zorder=2)
+            if g.get("repeat"):
+                d.repeat(x - pw / 2 - BLOCK_PAD - 12, bot, top, g["repeat"])
+            if g.get("label"):
+                d.stage_label(x - pw / 2 - BLOCK_PAD + 10, top - 5, g["label"])
+        for i, (op, yy) in enumerate(zip(g["ops"], ys)):
+            if novelty_at == (gi, i):
+                pre, kw, post = op
+                d.novelty(x, yy, pre, kw, post, w=pw + 10)
+            else:
+                d.pill(x, yy, op, w=pw)
+        # arrows: within the group, then into the next group's first pill
+        for i in range(len(ys) - 1):
+            d.arrow(x, ys[i] + PILL_H / 2, ys[i + 1] - PILL_H / 2)
+        if gi < len(layouts) - 1:
+            d.arrow(x, ys[-1] + PILL_H / 2,
+                    layouts[gi + 1][1][0] - PILL_H / 2)
+
+    y_out = outer[3] + 30
+    d.arrow(x, layouts[-1][1][-1] + PILL_H / 2, y_out)
+    y_anchor = y0 - 20 - 36
+    d.arrow(x, y_anchor + 14, layouts[0][1][0] - PILL_H / 2)
+    d.anchor(x, y_anchor, anchor_text)
+    return y_out, outer, layouts
+
+
+# --------------------------------------------------------------------------- #
+# 8.1: LeNet-5 vs AlexNet (two-column comparison, activations folded into     #
+# the layer pills; the story is scale + ReLU + dropout).                      #
+# --------------------------------------------------------------------------- #
+
+def _plain_column(d, x, ops, pw, tint, label, y0, novelty_idx=None,
+                  anchor_text="input x", shape_in=None, shape_notes=()):
+    """A straight spine of ops (no skip): panel, pills, arrows, anchor.
+    ``shape_notes`` = [(index, text)] drawn beside the arrow ABOVE op index."""
+    ys = [y0 + i * PILL_STEP for i in range(len(ops))]
+    top_edge = ys[-1] + PILL_H / 2 + LABEL_BAND
+    panel = (x - pw / 2 - 22, y0 - PILL_H / 2 - 20, x + pw / 2 + 22, top_edge)
+    y_out = top_edge + 30
+    d.container(*panel, fill=tint)
+    d.stage_label(panel[0] + 14, panel[3] - 9, label)
+
+    y_anchor = y0 - PILL_H / 2 - 20 - 36
+    d.arrow(x, y_anchor + 14, ys[0] - PILL_H / 2)
+    for i, (op, y) in enumerate(zip(ops, ys)):
+        if i == novelty_idx:
+            pre, kw, post = op
+            d.novelty(x, y, pre, kw, post, w=pw + 14)
+        else:
+            d.pill(x, y, op, w=pw)
+        if i < len(ops) - 1:
+            d.arrow(x, y + PILL_H / 2, ys[i + 1] - PILL_H / 2)
+    d.arrow(x, ys[-1] + PILL_H / 2, y_out)
+    d.anchor(x, y_anchor, anchor_text)
+    if shape_in:
+        d.shape_note(x + 14, y_anchor + 26, shape_in)
+    for idx, text in shape_notes:
+        d.shape_note(x + pw / 2 + 8,
+                     0.5 * (ys[idx - 1] + ys[idx]) if idx else ys[0],
+                     text)
+    return ys, panel, y_out
+
+
+def fig_alexnet():
+    W, H = 860, 760
+    d = Diagram(W, H)
+    y0 = 116
+
+    lenet_ops = ["5×5 Conv, 6, pad 2, sigmoid", "2×2 AvgPool, s2",
+                 "5×5 Conv, 16, sigmoid", "2×2 AvgPool, s2",
+                 "Flatten",
+                 "Dense 120, sigmoid", "Dense 84, sigmoid", "Dense 10"]
+    xl, pw_l = 200, 168
+    ys_l, panel_l, _ = _plain_column(
+        d, xl, lenet_ops, pw_l, ACCENT2_TINT, "LeNet-5 (1998)", y0,
+        anchor_text="28×28 image")
+
+    alex_ops = [("", "11×11", " Conv, 96, s4, ReLU"),
+                "3×3 MaxPool, s2",
+                "5×5 Conv, 256, pad 2, ReLU", "3×3 MaxPool, s2",
+                "3×3 Conv, 384, ReLU", "3×3 Conv, 384, ReLU",
+                "3×3 Conv, 256, ReLU", "3×3 MaxPool, s2",
+                "Flatten",
+                "Dense 4096, ReLU", "Dropout 0.5",
+                "Dense 4096, ReLU", "Dropout 0.5",
+                "Dense 1000"]
+    xr, pw_r = 560, 178
+    ys_r, panel_r, _ = _plain_column(
+        d, xr, alex_ops, pw_r, ACCENT_TINT, "AlexNet (2012)", y0,
+        novelty_idx=0, anchor_text="224×224×3 image")
+
+    # callouts (horizontal leaders at target height)
+    pr_edge = xr + pw_r / 2 + 4
+    d.callout(W - 8, ys_r[9] + LH / 2, [
+        [("A ", INK, 1), ("4096", ACCENT, 1), ("-wide head,", INK, 1)],
+        [("kept in check by dropout", INK, 1)],
+    ], target=(pr_edge, ys_r[9]), leader_from=(W - 154, ys_r[9]), ha="right")
+    d.callout(W - 8, ys_r[4] + LH / 2, [
+        [("ReLU everywhere:", INK, 1)],
+        [("no saturating sigmoids", INK, 1)],
+    ], target=(pr_edge, ys_r[4]), leader_from=(W - 138, ys_r[4]), ha="right")
+    # whole-network capacity note in the empty space above the short column;
+    # vertical leader down onto the LeNet panel top
+    y_note = panel_l[3] + 96
+    d.callout(60, y_note, [
+        [("~60k", ACCENT2, 1), (" parameters;", INK, 1)],
+        [("AlexNet has ", INK, 1), ("~60M", ACCENT, 1)],
+    ], target=(120, panel_l[3] + 4), leader_from=(120, y_note - 2 * LH + 6),
+        ha="left")
+
+    save(d.fig, "arch-alexnet")
+
+
+# --------------------------------------------------------------------------- #
+# 8.2: AlexNet vs VGG-11 — blocks as the unit of design.                      #
+# --------------------------------------------------------------------------- #
+
+def fig_vgg():
+    W, H = 900, 1170
+    d = Diagram(W, H)
+    y0 = 116
+
+    # left: AlexNet as one unstructured run of ops (no inner blocks)
+    alex_ops = ["11×11 Conv, 96, s4, ReLU", "3×3 MaxPool, s2",
+                "5×5 Conv, 256, pad 2, ReLU", "3×3 MaxPool, s2",
+                "3×3 Conv, 384, ReLU", "3×3 Conv, 384, ReLU",
+                "3×3 Conv, 256, ReLU", "3×3 MaxPool, s2",
+                "Flatten",
+                "Dense 4096, ReLU", "Dropout 0.5",
+                "Dense 4096, ReLU", "Dropout 0.5", "Dense 1000"]
+    xl, pw_l = 210, 178
+    _, panel_l, _ = _blocked_column(
+        d, xl, [{"ops": alex_ops}], pw_l, y0, "AlexNet: 14 hand-set layers",
+        anchor_text="224×224×3 image")
+
+    # right: VGG-11 as five repeated blocks + head
+    def vgg_block(c, n):
+        return {"ops": [f"3×3 Conv, {c}, ReLU"] * n + ["2×2 MaxPool, s2"],
+                "tint": True, "repeat": None}
+
+    groups = [vgg_block(64, 1), vgg_block(128, 1), vgg_block(256, 2),
+              vgg_block(512, 2), vgg_block(512, 2),
+              {"ops": ["Flatten", "Dense 4096, ReLU", "Dropout 0.5",
+                       "Dense 4096, ReLU", "Dropout 0.5", "Dense 1000"]}]
+    groups[0]["ops"][0] = ("", "3×3", " Conv, 64, ReLU")   # novelty
+    xr, pw_r = 600, 150
+    _, panel_r, lay = _blocked_column(
+        d, xr, groups, pw_r, y0, "VGG-11: five blocks, one pattern",
+        anchor_text="224×224×3 image", novelty_at=(0, 0))
+
+    # callouts (horizontal, at target height)
+    blk3_mid = 0.5 * (lay[2][2] + lay[2][3])
+    d.callout(W - 8, blk3_mid + LH / 2, [
+        [("The unit of design", INK, 1)],
+        [("is the ", INK, 1), ("block", ACCENT, 1),
+         (", not the layer", INK, 1)],
+    ], target=(xr + pw_r / 2 + BLOCK_PAD + 4, blk3_mid),
+        leader_from=(W - 168, blk3_mid), ha="right")
+    y_conv2 = lay[3][1][0]
+    d.callout(W - 8, y_conv2 + LH / 2, [
+        [("Two stacked ", INK, 1), ("3×3", ACCENT, 1), (" convs", INK, 1)],
+        [("see 5×5, with fewer weights", INK, 1)],
+    ], target=(xr + pw_r / 2 + BLOCK_PAD + 4, y_conv2),
+        leader_from=(W - 180, y_conv2), ha="right")
+    # capacity note above the shorter AlexNet column
+    y_note = panel_l[3] + 96
+    d.callout(60, y_note, [
+        [("Deeper and narrower wins:", INK, 1)],
+        [("VGG-11 has ", INK, 1), ("8", ACCENT, 1),
+         (" conv layers to AlexNet's ", INK, 1), ("5", ACCENT2, 1)],
+    ], target=(140, panel_l[3] + 4), leader_from=(140, y_note - 2 * LH + 6),
+        ha="left")
+
+    save(d.fig, "arch-vgg")
+
+
+# --------------------------------------------------------------------------- #
+# 8.2: NiN — the head question: dense layers vs 1×1 convs + global pooling.   #
+# --------------------------------------------------------------------------- #
+
+def fig_nin():
+    W, H = 920, 500
+    d = Diagram(W, H)
+    y0 = 116
+
+    # left: the VGG-style dense head
+    xl, pw_l = 260, 140
+    head_ops = ["Flatten", "Dense 4096, ReLU", "Dropout 0.5",
+                "Dense 4096, ReLU", "Dropout 0.5", "Dense 1000"]
+    _, panel_l, lay_l = _blocked_column(
+        d, xl, [{"ops": head_ops}], pw_l, y0, "VGG head",
+        anchor_text="(512, 7×7) features")
+
+    # right: the NiN head — last NiN block + global average pooling
+    xr, pw_r = 615, 150
+    groups = [{"ops": ["3×3 Conv, 10, ReLU", "1×1 Conv, 10, ReLU",
+                       "1×1 Conv, 10, ReLU"],
+               "tint": True, "label": "NiN block"},
+              {"ops": [("", "Global AvgPool", ""), "Flatten"]}]
+    _, panel_r, lay_r = _blocked_column(
+        d, xr, groups, pw_r, y0, "NiN head",
+        anchor_text="(384, 5×5) features", novelty_at=(1, 0))
+
+    # shape notes on the inner side of the NiN spine (the middle gap is empty)
+    d.shape_note(xr - pw_r / 2 - 10,
+                 0.5 * (lay_r[0][3] + lay_r[1][1][0] - PILL_H / 2) + 1,
+                 "(10, 5×5)", ha="right")
+    d.shape_note(xr - pw_r / 2 - 10,
+                 0.5 * (lay_r[1][1][0] + lay_r[1][1][1]),
+                 "(10, 1×1)", ha="right")
+
+    # callouts
+    y_dense = lay_l[0][1][1]
+    d.callout(8, y_dense + LH, [
+        [("Over ", INK, 1), ("90%", ACCENT2, 1)],
+        [("of VGG-11's weights", INK, 1)],
+        [("live in this head", INK, 1)],
+    ], target=(xl - pw_l / 2 - 4, y_dense), leader_from=(148, y_dense),
+        ha="left")
+    y_gap = lay_r[1][1][0]
+    d.callout(W - 8, y_gap + LH / 2, [
+        [("No parameters at all:", INK, 1)],
+        [("one channel per class", INK, 1)],
+    ], target=(xr + (pw_r + 10) / 2 + 4, y_gap), leader_from=(W - 172, y_gap),
+        ha="right")
+
+    save(d.fig, "arch-nin")
+
+
 if __name__ == "__main__":
     fig_resnet_vs_convnext_block()
     fig_inception_block()
+    fig_alexnet()
+    fig_vgg()
+    fig_nin()
     from arch_diagrams import WRITTEN
     print("\n".join(WRITTEN))

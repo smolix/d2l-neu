@@ -89,6 +89,7 @@ run = [
     "jupyter",
     "nbconvert",
     "ipykernel",
+    "safetensors",
 ]
 # Build extra: tools needed to render HTML/PDF from .qmd sources.
 # `quarto-cli` installs the Quarto CLI into the venv's bin/.

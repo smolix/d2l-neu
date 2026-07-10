@@ -1,6 +1,10 @@
 # Architecture-diagram style guide ("gallery style")
 
-Status: **approved direction, pending pilot review** (see §5). Applies to the
+Status: **pilot APPROVED by Alex 2026-07-10** (v3 pilots: constant PILL_STEP
+rhythm, LABEL_BAND headroom, axis-aligned leaders whose feet land on their
+callout text, size labels outside panels, short input/output lines,
+full-height repeat braces — all now encoded in `tools/arch_diagrams.py`
+constants and conventions). Applies to the
 convnet chapter rewrite (chapters 7–8) and, going forward, to all *network
 architecture / dataflow* diagrams in the book.
 

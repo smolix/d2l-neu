@@ -62,6 +62,16 @@
       "code_fingerprint": "sha256:f51245ab4e5f03b6603568a91123478998bd93118e423b46ffae341d017eb988",
       "kind": "text",
       "outputs": []
+    },
+    "channels-grouped-depthwise-and-depthwise-separable-convolutions": {
+      "code_fingerprint": "sha256:67aeb23fca78c0a872122cdb3ca932a82bad9c0e73a7ab98e2cae032edb66e72",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(147456, 17536, 8.408759124087592)"
+        }
+      ]
     }
   }
 }

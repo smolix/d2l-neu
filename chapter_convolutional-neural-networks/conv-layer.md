@@ -25,6 +25,7 @@ npx.set_np()
 from d2l import torch as d2l
 import torch
 from torch import nn
+from torch.nn import functional as F
 ```
 
 ```{.python .input #conv-layer-convolutions-for-images}
@@ -454,7 +455,7 @@ d2l.reshape(conv2d.get_weights()[0], (1, 2))
 params['params']['kernel'].reshape((1, 2))
 ```
 
-Indeed, the learned kernel tensor is remarkably close
+Indeed, the learned kernel tensor is close
 to the kernel tensor `K` we defined earlier.
 
 ## Cross-Correlation and Convolution
@@ -468,7 +469,7 @@ as defined in :eqref:`eq_2d-conv-discrete`
 instead of cross-correlations?
 In order to obtain the output of the strict *convolution* operation, we only need to flip the two-dimensional kernel tensor both horizontally and vertically, and then perform the *cross-correlation* operation with the input tensor.
 
-It is noteworthy that since kernels are learned from data in deep learning,
+Since kernels are learned from data in deep learning,
 the outputs of convolutional layers remain unaffected
 no matter such layers
 perform
@@ -497,6 +498,68 @@ Furthermore,
 we use the term *element* to refer to
 an entry (or component) of any tensor representing a layer representation or a convolution kernel.
 
+
+## Convolution as Matrix Multiplication
+
+Every output element in :numref:`fig_correlation` is a dot product:
+the kernel, flattened into a vector of length $k_\textrm{h} k_\textrm{w}$,
+multiplied with the input patch under the window, flattened the same way.
+If we extract each patch the sliding window visits,
+flatten it into a row, and stack the rows,
+we obtain a matrix with one row per output position.
+The entire cross-correlation then collapses into a single product
+of this patch matrix with the flattened kernel.
+The rearrangement is called *im2col*
+(it turns image patches into the columns, here rows, of a matrix).
+
+This rewriting is how convolutions actually run on modern hardware.
+GPUs and other accelerators are built around
+fast dense matrix multiplication,
+and deep learning libraries execute convolutions
+by reducing them to matrix products,
+either by materializing the patch matrix
+or by forming it implicitly, tile by tile.
+The explicit form costs memory:
+each input element is duplicated in up to $k_\textrm{h} k_\textrm{w}$ rows.
+Let's build the patch matrix for the input and kernel
+of :numref:`fig_correlation`
+and check that the matrix product reproduces `corr2d`.
+
+```{.python .input #conv-layer-convolution-as-matrix-multiplication-1}
+X = d2l.tensor([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]])
+K = d2l.tensor([[0.0, 1.0], [2.0, 3.0]])
+h, w = K.shape
+p_h, p_w = X.shape[0] - h + 1, X.shape[1] - w + 1
+patches = d2l.stack([d2l.reshape(X[i:i + h, j:j + w], (-1,))
+                     for i in range(p_h) for j in range(p_w)])
+Y_mat = d2l.reshape(d2l.matmul(patches, d2l.reshape(K, (-1, 1))), (p_h, p_w))
+Y_mat, d2l.reduce_sum(d2l.abs(Y_mat - corr2d(X, K)))
+```
+
+The sum of absolute differences is zero:
+the one matrix product and the sliding-window loop
+compute the same output.
+
+:begin_tab:`pytorch`
+PyTorch exposes this rearrangement directly:
+`F.unfold` extracts the patch matrix
+(transposed, and with batch and channel dimensions),
+so any convolution can be written as unfold,
+matrix multiplication, and reshape.
+:end_tab:
+
+```{.python .input #conv-layer-convolution-as-matrix-multiplication-2}
+%%tab pytorch
+X_batch = d2l.reshape(X, (1, 1, 3, 3))
+patches_unfold = F.unfold(X_batch, kernel_size=(2, 2))[0].T
+torch.allclose(patches_unfold, patches)
+```
+
+The same idea also works in the opposite direction:
+instead of unfolding the input,
+we can unroll the kernel into a sparse, banded matrix
+that multiplies the flattened image.
+The exercises explore this view.
 
 ## Feature Map and Receptive Field
 
@@ -540,25 +603,63 @@ needs a larger receptive field
 to detect input features over a broader area,
 we can build a deeper network.
 
+This layer-by-layer counting has a closed form.
+Consider a stack of $L$ convolutional layers
+in which layer $i$ has a $k_i \times k_i$ kernel and stride $s_i$
+(padding affects only which outputs exist,
+not how far each one sees).
+One step at the input of layer $i$
+corresponds to $\prod_{j=1}^{i-1} s_j$ steps at the original input,
+since every earlier layer with stride $s_j$
+multiplies the step size by $s_j$.
+Layer $i$'s kernel spans $k_i - 1$ steps of its own input,
+so it widens the receptive field by
+$(k_i - 1) \prod_{j=1}^{i-1} s_j$ input pixels.
+Starting from a single pixel and summing over layers,
+an element at the top of the stack
+has a receptive field of side length
+
+$$
+r = 1 + \sum_{i=1}^{L} \left( k_i - 1 \right) \prod_{j=1}^{i-1} s_j,
+$$
+:eqlabel:`eq_receptive_field`
+
+where the empty product for $i = 1$ equals $1$.
+
+The most common case is $L$ stacked $3 \times 3$ layers with stride $1$:
+each layer adds $2$,
+so the stack sees $(2L + 1) \times (2L + 1)$ input pixels.
+Two such layers cover $5 \times 5$, three cover $7 \times 7$.
+This is why deep stacks of small kernels can replace single large ones:
+three $3 \times 3$ layers match the receptive field
+of one $7 \times 7$ layer with fewer parameters
+($27$ weights instead of $49$ per input--output channel pair)
+and three nonlinearities instead of one.
+Strides enter through the product:
+after a stride-$2$ layer (or a pooling step, :numref:`sec_pooling`),
+every later kernel counts double,
+so downsampling makes the receptive field grow geometrically with depth.
+We will use :eqref:`eq_receptive_field` repeatedly
+when we analyze modern architectures in :numref:`chap_modern_cnn`.
 
 Receptive fields derive their name from neurophysiology.
-A series of experiments on a range of animals using different stimuli
-:cite:`Hubel.Wiesel.1959,Hubel.Wiesel.1962,Hubel.Wiesel.1968` explored the response of what is called the visual
-cortex on said stimuli. By and large they found that lower levels respond to edges and related
-shapes. Later on, :citet:`Field.1987` illustrated this effect on natural
-images with, what can only be called, convolutional kernels.
-We reprint a key figure in :numref:`field_visual` to illustrate the striking similarities.
+Experiments recording from the visual cortex of several animal species
+:cite:`Hubel.Wiesel.1959,Hubel.Wiesel.1962,Hubel.Wiesel.1968`
+found that its lower levels respond to edges and related shapes.
+Later, :citet:`Field.1987` modeled these responses on natural images
+with what are, in effect, convolutional kernels.
+We reprint a key figure in :numref:`field_visual`.
 
 ![Figure and caption taken from :citet:`Field.1987`: An example of coding with six different channels. (Left) Examples of the six types of sensor associated with each channel. (Right) Convolution of the image in (Middle) with the six sensors shown in (Left). The response of the individual sensors is determined by sampling these filtered images at a distance proportional to the size of the sensor (shown with dots). This diagram shows the response of only the even symmetric sensors.](../img/field-visual.png)
 :label:`field_visual`
 
-As it turns out, this relation even holds for the features computed by deeper layers of networks trained on image classification tasks, as demonstrated in, for example, :citet:`Kuzovkin.Vicente.Petton.ea.2018`. Suffice it to say, convolutions have proven to be an incredibly powerful tool for computer vision, both in biology and in code. As such, it is not surprising (in hindsight) that they heralded the recent success in deep learning.
+The correspondence extends to features computed by deeper layers of networks trained on image classification :cite:`Kuzovkin.Vicente.Petton.ea.2018`.
 
 ## Summary
 
 The core computation required for a convolutional layer is a cross-correlation operation. We saw that a simple nested for-loop is all that is required to compute its value. If we have multiple input and multiple output channels, we are  performing a matrix--matrix operation between channels. As can be seen, the computation is straightforward and, most importantly, highly *local*. This affords significant hardware optimization and many recent results in computer vision are only possible because of that. After all, it means that chip designers can invest in fast computation rather than memory when it comes to optimizing for convolutions. While this may not lead to optimal designs for other applications, it does open the door to ubiquitous and affordable computer vision.
 
-In terms of convolutions themselves, they can be used for many purposes, for example detecting edges and lines, blurring images, or sharpening them. Most importantly, it is not necessary that the statistician (or engineer) invents suitable filters. Instead, we can simply *learn* them from data. This replaces feature engineering heuristics by evidence-based statistics. Lastly, and quite delightfully, these filters are not just advantageous for building deep networks but they also correspond to receptive fields and feature maps in the brain. This gives us confidence that we are on the right track.
+In terms of convolutions themselves, they can be used for many purposes, for example detecting edges and lines, blurring images, or sharpening them. Most importantly, it is not necessary that the statistician (or engineer) invents suitable filters. Instead, we can simply *learn* them from data. This replaces feature engineering heuristics by evidence-based statistics. Lastly, these learned filters correspond to receptive fields and feature maps in the brain. This gives us confidence that we are on the right track.
 
 ## Exercises
 
@@ -706,20 +807,43 @@ The rest of the chapter is built on this idea — let
 gradient descent discover what filters the data needs.
 :::
 
+::: {.slide title="Convolution as matrix multiplication"}
+Every output element is a dot product: flattened patch
+times flattened kernel. Stack all the patches as rows of
+a matrix and the whole convolution becomes **one matmul**
+(the *im2col* trick):
+
+@conv-layer-convolution-as-matrix-multiplication-1
+
+This is why convolutions run fast on hardware built for
+dense matrix multiplication.
+:::
+
+::: {.slide title="im2col in production" only="pytorch"}
+`F.unfold` extracts the same patch matrix (transposed,
+with batch and channel dimensions added):
+
+@conv-layer-convolution-as-matrix-multiplication-2
+
+Convolution = unfold, matmul, reshape.
+:::
+
 ::: {.slide title="Receptive field: stacking deepens reach"}
 The **receptive field** of an output cell = the set of
 input positions that can affect it.
 
 - A 2×2 kernel: receptive field = 2×2 pixels.
 - Two stacked 2×2 layers: each output cell sees 3×3 input.
-- Stack $L$ layers of 3×3: $\approx (2L + 1) \times (2L + 1)$.
+- $L$ layers, kernel $k_i$, stride $s_i$:
+  $r = 1 + \sum_{i=1}^{L} (k_i - 1) \prod_{j<i} s_j$.
+- Stack $L$ layers of 3×3, stride 1: $(2L + 1) \times (2L + 1)$.
 
 Local kernels + depth = global reach without the
 parameter cost of large kernels.
 :::
 
 ::: {.slide title="Trained filters look biological"}
-![Hubel & Wiesel-style filters in the visual cortex. Trained CNN filters look strikingly similar.](../img/field-visual.png){width=82%}
+![Hubel & Wiesel-style filters in the visual cortex. Trained CNN filters develop similar shapes.](../img/field-visual.png){width=82%}
 :::
 
 ::: {.slide title="Recap"}

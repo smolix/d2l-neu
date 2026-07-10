@@ -88,6 +88,16 @@
           "text": "Array([[ 0.98807997, -0.9888774 ]], dtype=float32)"
         }
       ]
+    },
+    "conv-layer-convolution-as-matrix-multiplication-1": {
+      "code_fingerprint": "sha256:d5b823c9fcfe3ab22fbb64d75c4d132b025ee1a324dc331b6723dc1791f5356f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array([[19., 25.],\n        [37., 43.]], dtype=float32),\n Array(0., dtype=float32))"
+        }
+      ]
     }
   }
 }

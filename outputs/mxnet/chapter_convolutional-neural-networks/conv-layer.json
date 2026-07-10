@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 5.354\nepoch 4, loss 0.900\nepoch 6, loss 0.152\nepoch 8, loss 0.026\nepoch 10, loss 0.004\n"
+          "text": "epoch 2, loss 4.979\nepoch 4, loss 0.842\nepoch 6, loss 0.144\nepoch 8, loss 0.025\nepoch 10, loss 0.005\n"
         }
       ]
     },
@@ -85,7 +85,17 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 0.98960274, -0.98635036]])"
+          "text": "array([[ 0.98546904, -0.9913927 ]])"
+        }
+      ]
+    },
+    "conv-layer-convolution-as-matrix-multiplication-1": {
+      "code_fingerprint": "sha256:cd6d73f5902c2206c7525c9b9fd6240927bc530473d8bbf6f78f91d9b3bc600f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(array([[19., 25.],\n        [37., 43.]]),\n array(0.))"
         }
       ]
     }

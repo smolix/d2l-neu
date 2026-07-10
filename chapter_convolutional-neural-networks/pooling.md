@@ -376,9 +376,11 @@ output vertically yields the same output as the other implementations.
 
 ## Summary
 
-Pooling is an exceedingly simple operation. It does exactly what its name indicates, aggregate results over a window of values. All convolution semantics, such as strides and padding apply in the same way as they did previously. Note that pooling is indifferent to channels, i.e., it leaves the number of channels unchanged and it applies to each channel separately. Lastly, of the two popular pooling choices, max-pooling is preferable to average pooling, as it confers some degree of invariance to output. A popular choice is to pick a pooling window size of $2 \times 2$ to quarter the spatial resolution of output. 
+Pooling is a simple operation: it replaces each window of values with a single summary, the maximum or the mean. The stride and padding semantics of convolutions carry over unchanged, and pooling applies to each channel separately, so the number of channels is preserved. There are no parameters to learn. Of the two classical choices, max-pooling is usually preferred to average pooling, and a $2 \times 2$ window with stride 2, which quarters the number of spatial locations, is the most common configuration.
 
-Note that there are many more ways of reducing resolution beyond pooling. For instance, in stochastic pooling :cite:`Zeiler.Fergus.2013` and fractional max-pooling :cite:`Graham.2014` aggregation is combined with randomization. This can slightly improve the accuracy in some cases. Lastly, as we will see later with the attention mechanism, there are more refined ways of aggregating over outputs, e.g., by using the alignment between a query and representation vectors. 
+Be aware, though, that pooling is no longer how most downsampling happens. Modern convolutional networks reduce resolution mainly with *strided convolutions*: a convolution with stride 2 halves the resolution just as a pooling layer would, but it learns its aggregation weights rather than fixing them to max or mean. ResNet (:numref:`sec_resnet`) and its successors follow this pattern. Pooling survives in two roles. *Global average pooling*, introduced with the network-in-network architecture (:numref:`sec_nin`) :cite:`Lin.Chen.Yan.2013`, averages each channel over all spatial positions; it turns the final feature map into one number per channel and has replaced the large fully connected layers of early CNNs as the default classifier head. Max-pooling persists in some network stems (ResNet opens with one) and in detection models that merge feature maps across scales.
+
+One caveat applies to every stride-2 downsampler, pooled or convolutional: subsampling a signal without first removing its high spatial frequencies can *alias*, so that shifting the input by a single pixel changes the output noticeably; applying a small low-pass (blur) filter before subsampling restores much of the lost shift-invariance :cite:`zhang2019making`. Beyond these mainstays there are randomized variants such as stochastic pooling :cite:`Zeiler.Fergus.2013` and fractional max-pooling :cite:`Graham.2014`, and the attention mechanisms of :numref:`chap_attention-and-transformers` aggregate by learned alignment between a query and representation vectors rather than by spatial location.
 
 
 ## Exercises
@@ -393,6 +395,9 @@ Note that there are many more ways of reducing resolution beyond pooling. For in
 1. Why do you expect max-pooling and average pooling to work differently?
 1. Do we need a separate minimum pooling layer? Can you replace it with another operation?
 1. We could use the softmax operation for pooling. Why might it not be so popular?
+1. Naive stride-2 downsampling keeps every second entry of its input. Apply it to the one-dimensional signals $(1, 0, 1, 0, 1, 0)$ and $(0, 1, 0, 1, 0, 1)$, i.e., the same pattern shifted by one position. 
+    1. Compare the two outputs. Why is this behavior called *aliasing*, and which input frequencies can a stride-2 subsampler represent faithfully?
+    1. Blur-pool counteracts aliasing by applying a small averaging filter before subsampling. Work out what blur-pool with a two-tap box filter $(\tfrac{1}{2}, \tfrac{1}{2})$ computes on the two signals above. Which pooling operation from this section does it coincide with?
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/71)
@@ -537,6 +542,7 @@ output channel). Pooling does **not**:
 - Provides small translation invariance — output
   unchanged under sub-window shifts.
 - Per-channel — no channel mixing.
-- Modern nets mix pooling with strided convs and end
-  with global average pool.
+- Modern nets downsample mostly with strided convs;
+  pooling survives as global average pooling at the
+  head, plus a max-pool in some stems.
 :::

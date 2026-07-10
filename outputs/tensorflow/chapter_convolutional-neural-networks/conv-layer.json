@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 13.953\nepoch 4, loss 2.615\nepoch 6, loss 0.551\nepoch 8, loss 0.138\nepoch 10, loss 0.042\n"
+          "text": "epoch 2, loss 21.895\nepoch 4, loss 7.704\nepoch 6, loss 2.952\nepoch 8, loss 1.166\nepoch 10, loss 0.465\n"
         }
       ]
     },
@@ -85,7 +85,17 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9629493 , -0.99980855]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9181014, -1.0584217]], dtype=float32)>"
+        }
+      ]
+    },
+    "conv-layer-convolution-as-matrix-multiplication-1": {
+      "code_fingerprint": "sha256:73822112c04b5897df62a1a021ea06ad78b6cd38df3c7d784031b007be83f7ee",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(2, 2), dtype=float32, numpy=\n array([[19., 25.],\n        [37., 43.]], dtype=float32)>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.0>)"
         }
       ]
     }

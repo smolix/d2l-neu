@@ -946,9 +946,17 @@ git add outputs/ && git commit -m "outputs: full capture of green build"
 git push                                            # gh/HTTPS; LFS blobs ride the same remote
 
 # ── render (could be a different, CPU-only machine) & publish ──
-make html && make -j4 slides && make -j4 pdfs
-tools/upload_r2.sh
+make html && make -j4 slides && make -j4 pdfs && make notebook-zips
+tools/upload_r2.sh          # add --delete to purge bucket objects gone locally
 ```
+
+Note `make notebook-zips`: `quarto render` (`make html`) wipes `_book/`, which
+also removes the downloadable `notebooks/d2l-<fw>.zip` bundles. The upload
+script rebuilds missing zips from the store when `_notebooks/` is present, but
+building them explicitly keeps the publish step deterministic. `--delete`
+diffs a *live bucket listing* against `_book/` (not the upload manifest), so
+it removes orphans from any earlier upload or layout change; a run without
+`--delete` loses nothing for a later `--delete` run.
 
 #### B. Rebuild just one notebook  *(GPU box, only that framework's venv — cheap)*
 
@@ -1015,7 +1023,7 @@ independent), so a layout change never needs a notebook to run.
 | A `#@save` library symbol | `make lib` → `make audit-outputs` (names the blast radius) → re-execute those → `make capture-outputs` | Yes (affected fw) |
 | Rebuilt a framework wheel (e.g. MXNet) | bump version → `make audit-outputs` (whole fw shows stale via `framework_version`) → `make run-notebooks-<fw>` → `make capture-outputs` | Yes |
 | New chapter / new cells | `make notebooks-<fw>` → execute → `make capture-outputs` → `make audit-outputs` (confirms ids resolve) | Yes |
-| Just want to publish current outputs to R2 | `make html && make -j4 slides && make -j4 pdfs` → `tools/upload_r2.sh` | No |
+| Just want to publish current outputs to R2 | `make html && make -j4 slides && make -j4 pdfs && make notebook-zips` → `tools/upload_r2.sh` | No |
 
 ---
 

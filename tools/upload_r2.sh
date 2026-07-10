@@ -14,8 +14,12 @@
 #   ./tools/upload_r2.sh              # incremental sync of _book/
 #   ./tools/upload_r2.sh --dry-run    # preview without uploading or
 #                                     # touching the manifest
-#   ./tools/upload_r2.sh --delete     # also remove bucket files that
-#                                     # no longer exist locally
+#   ./tools/upload_r2.sh --delete     # also remove bucket objects that
+#                                     # no longer exist locally. Diffs a live
+#                                     # bucket listing against _book/ (NOT the
+#                                     # manifest), so it removes orphans from
+#                                     # any earlier upload, layout change, or
+#                                     # sync run that skipped deletion.
 #   ./tools/upload_r2.sh --full       # ignore manifest, re-upload all
 #   ./tools/upload_r2.sh --no-stage-slides
 #                                     # do not refresh _book/slides from _slides
@@ -93,6 +97,23 @@ if $STAGE_SLIDES && [[ -d _slides ]]; then
         -exec perl -i -pe 's|src="\.\./img/|src="../../../img/|g' {} +
 fi
 
+# The notebook zips live in _book/notebooks/, but `quarto render` (make html)
+# wipes _book/, so a render-then-upload without `make notebook-zips` would
+# publish a tree missing the zips — and --delete would then remove them from
+# the bucket (this happened on 2026-07-10). Rebuild them from the committed
+# store when absent; CPU-only and fast, but it needs the generated
+# _notebooks/ tree (make notebooks).
+if [[ ! -f "$BOOK_DIR/notebooks/d2l-pytorch.zip" ]]; then
+    if [[ -d _notebooks ]]; then
+        echo "Notebook zips missing from $BOOK_DIR/notebooks/ — rebuilding from the store..."
+        mkdir -p "$BOOK_DIR/notebooks"
+        python3 tools/build_notebook_zips.py --out-dir "$BOOK_DIR/notebooks"
+    else
+        echo "WARNING: $BOOK_DIR/notebooks/ has no zips and _notebooks/ is absent;" >&2
+        echo "         run 'make notebook-zips' or the bucket's zips will go stale/deleted." >&2
+    fi
+fi
+
 ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 # R2 only accepts its own region names (wnam/enam/.../auto); pin `auto` so the
 # upload is independent of the ambient ~/.aws/config default region.
@@ -167,6 +188,39 @@ delete_one() {
 
 export -f upload_one delete_one
 
+# ── Delete bucket objects that do not exist locally ────────
+# Diffs a LIVE bucket listing against the freshly hashed local tree. Never
+# trust the manifest for deletion: a sync run without --delete rewrites the
+# manifest to the local set, permanently forgetting pending removals, and
+# objects from older uploads/layouts predate the manifest entirely (a
+# 2026-07-10 audit found 6,747 such orphans, including a stray deno cache).
+delete_orphans() {
+    echo "Listing bucket for orphan check..."
+    aws s3 ls "s3://${BUCKET}/" "${S3_ARGS[@]}" --recursive \
+        | awk '{$1=$2=$3=""; sub(/^ +/, ""); print}' \
+        | LC_ALL=C sort > "$WORK_DIR/bucket-paths.txt"
+    awk '{p=substr($0, 67); sub("^\\./", "", p); print p}' "$NEW_MANIFEST" \
+        | LC_ALL=C sort > "$WORK_DIR/local-paths.txt"
+    LC_ALL=C comm -23 "$WORK_DIR/bucket-paths.txt" "$WORK_DIR/local-paths.txt" \
+        > "$WORK_DIR/orphans.txt"
+    local n
+    n=$(wc -l < "$WORK_DIR/orphans.txt")
+    if [[ $n -eq 0 ]]; then
+        echo "  No orphaned bucket objects."
+        return
+    fi
+    if [[ -n "${DRY_RUN:-}" ]]; then
+        echo "  (dry run) would delete $n orphaned object(s):"
+        sed 's/^/    /' "$WORK_DIR/orphans.txt" | head -40
+        [[ $n -gt 40 ]] && echo "    ... ($((n - 40)) more)"
+        return
+    fi
+    echo "  Removing $n orphaned object(s) from bucket with $UPLOAD_JOBS worker(s)..."
+    # shellcheck disable=SC2016
+    tr '\n' '\0' < "$WORK_DIR/orphans.txt" | xargs -0 -P "$UPLOAD_JOBS" -I{} \
+        bash -c 'delete_one "$1"' _ {}
+}
+
 upload_changed() {
     local list=$1
     local count
@@ -220,19 +274,17 @@ if [[ "$MODE" == "full" ]]; then
         --exclude "*" --include "*.zip" --exclude "*/.quarto/*" \
         $DRY_RUN
     # Pass 6: rest
-    DEL_FLAG=""
-    $DELETE && DEL_FLAG="--delete"
     aws s3 sync "$BOOK_DIR" "s3://${BUCKET}/" \
         "${S3_ARGS[@]}" \
         --exclude "*.html" --exclude "*.css" \
         --exclude "*.js" --exclude "*.json" --exclude "*.zip" \
         --exclude "*/.quarto/*" \
-        $DRY_RUN $DEL_FLAG
+        $DRY_RUN
 
     if $DELETE; then
-        echo "Removing bucket .quarto cache objects..."
-        aws s3 rm "s3://${BUCKET}/" "${S3_ARGS[@]}" --recursive \
-            --exclude "*" --include "*/.quarto/*" $DRY_RUN
+        # Covers .quarto cache objects too: the local hash walk prunes them,
+        # so any in the bucket show up as orphans.
+        delete_orphans
     fi
 else
     # ── Incremental sync ────────────────────────────────────
@@ -261,20 +313,14 @@ else
 
     upload_changed "$WORK_DIR/changed.txt"
 
-    if $DELETE && [[ $REMOVED -gt 0 ]]; then
-        echo "  Removing $REMOVED file(s) from bucket with $UPLOAD_JOBS worker(s)..."
-        # shellcheck disable=SC2016
-        tr '\n' '\0' < "$WORK_DIR/removed.txt" | xargs -0 -P "$UPLOAD_JOBS" -I{} \
-            bash -c 'delete_one "$1"' _ {}
-        echo "  Removing bucket .quarto cache objects..."
-        aws s3 rm "s3://${BUCKET}/" "${S3_ARGS[@]}" --recursive \
-            --exclude "*" --include "*/.quarto/*" $DRY_RUN
+    if $DELETE; then
+        # Diff against the live bucket, not removed.txt: the manifest cannot
+        # see objects that predate it or removals a previous no-delete run
+        # already forgot. Covers .quarto cache objects too.
+        delete_orphans
     elif [[ $REMOVED -gt 0 ]]; then
-        echo "  ($REMOVED file(s) gone locally — pass --delete to remove)"
-    elif $DELETE; then
-        echo "  Removing bucket .quarto cache objects..."
-        aws s3 rm "s3://${BUCKET}/" "${S3_ARGS[@]}" --recursive \
-            --exclude "*" --include "*/.quarto/*" $DRY_RUN
+        echo "  ($REMOVED file(s) gone locally — pass --delete to remove;"
+        echo "   --delete diffs the live bucket, so skipping now loses nothing)"
     fi
 fi
 

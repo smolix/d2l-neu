@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/blocks.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:08cb74c9562563c6168a4490ba36c53046177995dd4d548875637e398ecccd7b",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "blocks-imports": {
+      "code_fingerprint": "sha256:ffe09c69b917a587ef626c3266fc7658416b3f7f63de5a6fb461a830e305d10e",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-blocks": {
+      "code_fingerprint": "sha256:8da0fb7b611726c133a89ed8092d56b84258b57e1779bef6be7e8fec5870c59e",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-network-1": {
+      "code_fingerprint": "sha256:d8bdd049b49b3fa0fb6068ef890fd38cda8437501b4fea16492114d1e8788012",
+      "kind": "text",
+      "outputs": []
+    },
+    "vgg-vgg-network-2": {
+      "code_fingerprint": "sha256:2d7a6499683fb3f4d1a180537af811b6e1f9b213a5590178164e867c8645c322",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t torch.Size([1, 64, 112, 112])\nSequential output shape:\t torch.Size([1, 128, 56, 56])\nSequential output shape:\t torch.Size([1, 256, 28, 28])\nSequential output shape:\t torch.Size([1, 512, 14, 14])\nSequential output shape:\t torch.Size([1, 512, 7, 7])\nFlatten output shape:\t torch.Size([1, 25088])\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Linear output shape:\t torch.Size([1, 4096])\nReLU output shape:\t torch.Size([1, 4096])\nDropout output shape:\t torch.Size([1, 4096])\nLinear output shape:\t torch.Size([1, 4096])\nReLU output shape:\t torch.Size([1, 4096])\nDropout output shape:\t torch.Size([1, 4096])\nLinear output shape:\t torch.Size([1, 10])\n"
+        }
+      ]
+    },
+    "vgg-training": {
+      "code_fingerprint": "sha256:e858e9312b0220b23e6fada05ba9dbebc447367b883a01a8f8b926ca46b7b7ac",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "blocks/vgg-training-1.svg",
+          "bytes": 20984,
+          "sha256": "sha256:764b689aae89aa3ff494be452da2ded003ac62dcb12454476f9fa82bd9cf2bc9"
+        }
+      ]
+    },
+    "nin-nin-blocks": {
+      "code_fingerprint": "sha256:4aba6d933cce0448fe10bb5b77cf19a0d8d1b0ef2b12c3461388e67b32cec300",
+      "kind": "text",
+      "outputs": []
+    },
+    "nin-nin-model-1": {
+      "code_fingerprint": "sha256:cc18e6bb58fb91ec6103fe76c11a78819ec3bc3f8632fb4ffc1a0332b3386c3b",
+      "kind": "text",
+      "outputs": []
+    },
+    "nin-nin-model-2": {
+      "code_fingerprint": "sha256:d95bb8bf7515c76a3d37c814e8149f00cec777feaebcd54e7b9ef150e14ac092",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t torch.Size([1, 96, 54, 54])\nMaxPool2d output shape:\t torch.Size([1, 96, 26, 26])\nSequential output shape:\t torch.Size([1, 256, 26, 26])\nMaxPool2d output shape:\t torch.Size([1, 256, 12, 12])\nSequential output shape:\t torch.Size([1, 384, 12, 12])\nMaxPool2d output shape:\t torch.Size([1, 384, 5, 5])\nDropout output shape:\t torch.Size([1, 384, 5, 5])\nSequential output shape:\t torch.Size([1, 10, 5, 5])\nAdaptiveAvgPool2d output shape:\t torch.Size([1, 10, 1, 1])\nFlatten output shape:\t torch.Size([1, 10])\n"
+        }
+      ]
+    },
+    "nin-training": {
+      "code_fingerprint": "sha256:12b807d61607d528d30584cd124e7bbabdc568988ff2475954403ea6cb01512a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "blocks/nin-training-1.svg",
+          "bytes": 20979,
+          "sha256": "sha256:8dc274d5573637a11545d7216de167f9c3389af09d18a358deda1581ec89041f"
+        }
+      ]
+    },
+    "googlenet-inception-blocks": {
+      "code_fingerprint": "sha256:f02ef5cb9ecb0b9f4ebc43bd724ffd56d18ddde1bacc773c088fd2af90e4c887",
+      "kind": "text",
+      "outputs": []
+    },
+    "blocks-stem-body-and-head-1": {
+      "code_fingerprint": "sha256:82ade5554fb40efc177339907b10f0edbf6c6e425b155f6344d1f7da4c20a140",
+      "kind": "text",
+      "outputs": []
+    },
+    "blocks-stem-body-and-head-2": {
+      "code_fingerprint": "sha256:dc42396615e594907e65713ec85d2fcad0f0b01edfd083a8a25fe5173ddab7f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "googlenet-googlenet-model-7": {
+      "code_fingerprint": "sha256:55f99cef9e14caae04f4ffeeb4681c374ea349176f3de81de2f9304cc79a6cf1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t torch.Size([1, 192, 12, 12])\nSequential output shape:\t torch.Size([1, 480, 12, 12])\nMaxPool2d output shape:\t torch.Size([1, 480, 6, 6])\nSequential output shape:\t torch.Size([1, 832, 6, 6])\nMaxPool2d output shape:\t torch.Size([1, 832, 3, 3])\nSequential output shape:\t torch.Size([1, 1024, 3, 3])\nSequential output shape:\t torch.Size([1, 10])\n"
+        }
+      ]
+    }
+  }
+}

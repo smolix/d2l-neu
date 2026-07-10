@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 19973,
-          "sha256": "sha256:a1fd02686dbce2d8b216d699fbad0b2c5817b5562a319ad73131008842696047"
+          "bytes": 19975,
+          "sha256": "sha256:565511e133b60d80e697b4e855b9383292c3baa035d94c505bb7aaeb5e8b32e6"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([3.2231665, 2.0654073, 3.8294168, 3.112597 , 1.0758175, 3.1460116],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([ 1.9550914 ,  0.7494741 , -2.2604616 ,  0.25024015,  1.2932363 ,\n        -3.3863773 ], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([4.2472105 , 3.2799544 , 0.7709051 , 0.35971802, 1.829114  ,\n        2.8016973 ], dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([-2.3102775 ,  1.9322157 , -0.67051166,  0.28217468,  2.3411067 ,\n         2.9735913 ], dtype=float32)>)"
         }
       ]
     },
@@ -64,8 +64,18 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 19968,
-          "sha256": "sha256:73c0eb259bb7dce3295fa8a821f5cca8c2a691742a4a16f10c01657d44b50ec1"
+          "bytes": 19977,
+          "sha256": "sha256:af849b6b0f6bc370e5c7dad14699b0768bb2d579e5bd297bfa884730f518e962"
+        }
+      ]
+    },
+    "batch-norm-group-normalization": {
+      "code_fingerprint": "sha256:0d989d6a2db87ef2da36bad496fd10f588263cfff9c38d0863515b03251d1cf3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.9802322387695312e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9989885091781616>,\n True)"
         }
       ]
     }

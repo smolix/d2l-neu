@@ -78,7 +78,7 @@
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
           "bytes": 21055,
-          "sha256": "sha256:d40295e8e8f554d406368ea66ae2f6d19d4bf25d1ca09408b4ffc71122b63da3"
+          "sha256": "sha256:8074ae0e030f9ae0cfd78cc5778e7065e20ceb3e6afcfd745354df3c0aa12fb3"
         }
       ]
     },
@@ -94,6 +94,41 @@
         {
           "type": "execute_result",
           "text": "(4, 32, 96, 96)"
+        }
+      ]
+    },
+    "densenet-dense-blocks-1": {
+      "code_fingerprint": "sha256:87033b30ec07e3f6de72c878da613596044a2bd36b8a0c3f6fb150641ee9dc7b",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-dense-blocks-2": {
+      "code_fingerprint": "sha256:cb9fe0be94579da5fc652ae9870bffa55f80105baf70bc844d3483a39382e145",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-dense-blocks-3": {
+      "code_fingerprint": "sha256:c7d3aafb5f8724e2d6427baba096b5edd7968bcd0464598015324f0291b132d6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(4, 23, 8, 8)"
+        }
+      ]
+    },
+    "densenet-transition-layers-1": {
+      "code_fingerprint": "sha256:5b58911990084b40b41d641e28ffc4941f7ae44ae9021d5f28348103fca70b80",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-transition-layers-2": {
+      "code_fingerprint": "sha256:cecc244793ca8806e862f9d34e4164951180ba146f918c04278fa959aafb9d3f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(4, 10, 4, 4)"
         }
       ]
     }

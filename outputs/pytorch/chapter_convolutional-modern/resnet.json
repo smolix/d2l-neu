@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 21054,
-          "sha256": "sha256:be1c9b2e865598acf1a7a08fdb33eaf0837662e9c1c312a87a4b8563a545fbf4"
+          "bytes": 21027,
+          "sha256": "sha256:ef15eea3e087b5f92ad1f3dbb1b34e22a84b742e3a3a2e527867a735a103e425"
         }
       ]
     },
@@ -94,6 +94,41 @@
         {
           "type": "execute_result",
           "text": "torch.Size([4, 32, 96, 96])"
+        }
+      ]
+    },
+    "densenet-dense-blocks-1": {
+      "code_fingerprint": "sha256:13e59f18f3d595de4fbbf5fde3982c3a9ac6a49d24de369690eb0e0138c42721",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-dense-blocks-2": {
+      "code_fingerprint": "sha256:1f802813d2e50446a7d2de1cc944296c4012c1de32ebec6d5e092f7d63d06b57",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-dense-blocks-3": {
+      "code_fingerprint": "sha256:871a903f921d75d26c36ddc0f790b8314b08fe3f517309f48fc356ca7298a880",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([4, 23, 8, 8])"
+        }
+      ]
+    },
+    "densenet-transition-layers-1": {
+      "code_fingerprint": "sha256:84a308e78867f07582a45df3b2610e7e6f6b7e91a192c31f81ad8b27068b4b5e",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-transition-layers-2": {
+      "code_fingerprint": "sha256:135a732d4116a6725bd6b20f3f161044e9f3f7c9dd1726940f51e9978a91733b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "torch.Size([4, 10, 4, 4])"
         }
       ]
     }

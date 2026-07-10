@@ -65,7 +65,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv2D output shape:\t (1, 48, 48, 64)\nBatchNormalization output shape:\t (1, 48, 48, 64)\nActivation output shape:\t (1, 48, 48, 64)\nMaxPooling2D output shape:\t (1, 24, 24, 64)\nSequential output shape:\t (1, 24, 24, 64)\n"
+          "text": "Conv2D output shape:\t (1, 48, 48, 64)\nBatchNormalization output shape:\t (1, 48, 48, 64)\nActivation output shape:\t (1, 48, 48, 64)\nMaxPooling2D output shape:\t (1, 24, 24, 64)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 24, 24, 64)\n"
         },
         {
           "type": "stream",
@@ -92,8 +97,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 21022,
-          "sha256": "sha256:cf229f278b1ebfd24d8c6daeb8b2d190bb183abdb90b0e00a59c298eb6eaf732"
+          "bytes": 21527,
+          "sha256": "sha256:75f05b9837ac8859206119d0b9c47987110436624ebc2d3a8acedc89d9520ba0"
         }
       ]
     },
@@ -109,6 +114,41 @@
         {
           "type": "execute_result",
           "text": "TensorShape([4, 96, 96, 32])"
+        }
+      ]
+    },
+    "densenet-dense-blocks-1": {
+      "code_fingerprint": "sha256:a7188bbd8e92b661bd314126aa9aa781196df2ad776509249e5f1009c2f3b1e1",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-dense-blocks-2": {
+      "code_fingerprint": "sha256:fc7a4360bac0edc8036b61b66f9f3bee597560b076f22cdb56f8ce16f4f8b986",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-dense-blocks-3": {
+      "code_fingerprint": "sha256:7690860bd9d24def67b8dbb882a365662dca5bd2f50e31d7d0d4217e5a46f52d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([4, 8, 8, 23])"
+        }
+      ]
+    },
+    "densenet-transition-layers-1": {
+      "code_fingerprint": "sha256:9fe879487d7944ed98600087419be30907b85b18c52f70d7218e125506096d11",
+      "kind": "text",
+      "outputs": []
+    },
+    "densenet-transition-layers-2": {
+      "code_fingerprint": "sha256:85d38993a8f59bd8a23ec572bf007cac81f3c681af1542bb876c5999037d6434",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "TensorShape([4, 4, 4, 10])"
         }
       ]
     }

@@ -37,7 +37,7 @@
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
           "bytes": 19994,
-          "sha256": "sha256:215c445a2390f773e38de34887a999455080b2e26198752308e948c567cc189e"
+          "sha256": "sha256:a1ce772059488b1999df3462bcf3bf2e22bdeaef54fc2c07d3f454940a9b74a6"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([1.5922, 2.2349, 1.4700, 1.8952, 1.7180, 1.6928], device='cuda:0',\n        grad_fn=<ViewBackward0>),\n tensor([-0.0420,  1.6936, -0.6245,  1.0713,  1.4226, -0.6719], device='cuda:0',\n        grad_fn=<ViewBackward0>))"
+          "text": "(tensor([1.5672, 1.8430, 1.7753, 2.4751, 1.7008, 1.8198], device='cuda:0',\n        grad_fn=<ViewBackward0>),\n tensor([ 0.7083,  0.5270,  0.0608,  1.6737,  0.0839, -1.1449], device='cuda:0',\n        grad_fn=<ViewBackward0>))"
         }
       ]
     },
@@ -64,8 +64,18 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 19995,
-          "sha256": "sha256:4b6bd03e44d77743c7d8e00170ac9e52051b598b7614cb5d1cc04ded63d3cd9f"
+          "bytes": 19996,
+          "sha256": "sha256:bccde141e11df98d2f8129762cd508a9243fea10bb0b9269997992b3e6539842"
+        }
+      ]
+    },
+    "batch-norm-group-normalization": {
+      "code_fingerprint": "sha256:596c8d234a7e540a7a2ef8c9cc144251f93fdb25ca2c5f0634ac418a1ea58c0e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(tensor(2.9802e-08, grad_fn=<MaxBackward1>),\n tensor(1.0000, grad_fn=<MeanBackward0>),\n True)"
         }
       ]
     }

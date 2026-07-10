@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Batch Normalization
+# Normalization Layers
 :label:`sec_batch_norm`
 
 Training deep neural networks is difficult.
@@ -13,6 +13,8 @@ that consistently accelerates the convergence of deep networks :cite:`Ioffe.Szeg
 Together with residual blocks---covered later in :numref:`sec_resnet`---batch normalization
 has made it possible for practitioners to routinely train networks with over 100 layers.
 A secondary (serendipitous) benefit of batch normalization lies in its inherent regularization.
+Batch statistics are not the only option, though: we also cover layer normalization
+and group normalization, close cousins that normalize each example on its own.
 
 ```{.python .input #batch-norm-batch-normalization}
 %%tab mxnet
@@ -874,6 +876,128 @@ with d2l.try_gpu():
     trainer.fit(model, data)
 ```
 
+## Beyond Batch Normalization
+:label:`subsec_beyond_bn`
+
+Batch normalization is unusual among the layers in this book: its output for one
+example depends on the other examples in the minibatch. That coupling is where
+the regularizing noise comes from, and it is also where the practical trouble
+comes from. Two problems recur.
+
+The first is *minibatch coupling*. The estimates $\hat{\boldsymbol{\mu}}_\mathcal{B}$
+and $\hat{\boldsymbol{\sigma}}_\mathcal{B}$ stand and fall with the batch size:
+we saw above that a fully connected layer learns nothing at batch size 1
+and that moderate minibatches in the 50--100 range work best.
+This bites hardest in dense prediction. Object detection and semantic
+segmentation train on high-resolution images, so memory often limits the batch
+to one or two images per device, exactly where batch statistics are noisiest.
+
+The second is the *train/serve discrepancy*. As discussed above, the layer
+applies minibatch statistics during training but moving averages at prediction
+time, so the network computes two different functions depending on the mode.
+Whenever the moving averages summarize the served data poorly, for instance
+after fine-tuning on a new domain or when a bug freezes them, accuracy drops in
+ways that are hard to trace back to a normalization layer.
+
+### Group Normalization
+
+*Group normalization* :cite:`wu2018groupnorm` removes the batch from the
+statistics. It divides the $c$ channels into $G$ groups of $c/G$ channels and
+standardizes each example separately over each group, i.e., over
+$(c/G) \cdot p \cdot q$ elements, again followed by a per-channel scale
+$\boldsymbol{\gamma}$ and shift $\boldsymbol{\beta}$ as in :eqref:`eq_batchnorm`.
+Setting $G=1$ normalizes each example over all channels and positions at once;
+setting $G=c$ normalizes every channel separately (a variant known as
+*instance normalization*). Intermediate group counts such as $G=32$ tend to
+work best: enough elements per group for stable statistics, without forcing
+unrelated channels to share them.
+
+Because no other example enters the statistics, group normalization computes
+the same function at batch size 1 as at batch size 32, and the same function
+during training as at prediction time; there are no moving averages to
+maintain. The code below checks both claims: after group normalization, every
+(example, group) pair has mean 0 and variance 1, and normalizing an example
+alone gives the same output as normalizing it inside a batch.
+
+```{.python .input #batch-norm-group-normalization}
+%%tab pytorch
+X = torch.randn(32, 16, 8, 8)
+gn = nn.GroupNorm(4, 16)  # 4 groups of 4 channels each
+Y = gn(X)
+G = Y.reshape(32, 4, -1)  # Collect each (example, group) pair's elements
+(G.mean(dim=2).abs().max(), G.var(dim=2, unbiased=False).mean(),
+ torch.allclose(gn(X[:1]), Y[:1], atol=1e-6))
+```
+
+```{.python .input #batch-norm-group-normalization}
+%%tab mxnet
+X = np.random.normal(size=(32, 16, 8, 8))
+gn = nn.GroupNorm(num_groups=4)  # 4 groups of 4 channels each
+gn.initialize()
+Y = gn(X)
+G = Y.reshape(32, 4, -1)  # Collect each (example, group) pair's elements
+(np.abs(G.mean(axis=2)).max(), G.var(axis=2).mean(),
+ bool(np.abs(gn(X[:1]) - Y[:1]).max() < 1e-5))
+```
+
+```{.python .input #batch-norm-group-normalization}
+%%tab tensorflow
+X = tf.random.normal((32, 8, 8, 16))  # Channels last, as Keras expects
+gn = tf.keras.layers.GroupNormalization(groups=4)  # Groups the last axis
+Y = gn(X)
+# Collect each (example, group) pair's elements
+G = tf.reshape(tf.transpose(Y, (0, 3, 1, 2)), (32, 4, -1))
+(tf.reduce_max(tf.abs(tf.reduce_mean(G, axis=2))),
+ tf.reduce_mean(tf.math.reduce_variance(G, axis=2)),
+ bool(tf.reduce_all(tf.abs(gn(X[:1]) - Y[:1]) < 1e-5)))
+```
+
+```{.python .input #batch-norm-group-normalization}
+%%tab jax
+X = jax.random.normal(jax.random.PRNGKey(0), (32, 8, 8, 16))  # Channels last
+gn = nn.GroupNorm(num_groups=4)  # 4 groups of 4 channels each
+params = gn.init(jax.random.PRNGKey(1), X)
+Y = gn.apply(params, X)
+# Collect each (example, group) pair's elements
+G = jnp.transpose(Y, (0, 3, 1, 2)).reshape(32, 4, -1)
+(jnp.abs(G.mean(axis=2)).max(), G.var(axis=2).mean(),
+ jnp.allclose(gn.apply(params, X[:1]), Y[:1], atol=1e-6))
+```
+
+The trade-off runs in the other direction too: with large batches, batch
+normalization averages over more elements and keeps a small accuracy edge on
+ImageNet classification, but as the batch shrinks below roughly eight examples
+per device its accuracy degrades quickly while group normalization is
+unaffected :cite:`wu2018groupnorm`. Group normalization is therefore the
+default in detection and segmentation heads and in diffusion U-Nets, settings
+where large per-device batches are unaffordable.
+
+### Layer Normalization in Convolutional Networks
+
+Layer normalization from :numref:`subsec_layer-normalization-in-bn` is the
+other batch-free option, and modern convolutional networks use it in a specific
+form: at every spatial position, normalize the $c$ channel values at that
+position, just as a transformer normalizes each token's embedding. This
+per-position, channels-last layer normalization is the choice made by ConvNeXt,
+a convolutional architecture we will meet later in this chapter: it replaces
+every batch normalization in a ResNet-style network with layer normalization,
+uses fewer normalization layers overall, and loses no accuracy in the process.
+<!-- TODO(ch8): numref sec_convnext when 8.6 lands -->
+
+### Normalizer-Free Networks
+
+One can push further and ask whether deep networks need normalization layers at
+all. Normalizer-free networks (NFNets) :cite:`brock2021nfnet` answer no:
+combining *weight standardization* (standardizing each convolution's weights
+rather than its activations) with *adaptive gradient clipping* (clipping a
+unit's gradient when its norm grows large relative to the corresponding weight
+norm) trains ResNet-style networks that held the ImageNet state of the art at
+publication, with no normalization anywhere. Dropping batch normalization
+eliminates minibatch coupling and the train/serve discrepancy in one stroke,
+and it removes the cost of computing batch statistics on large activations. We
+return to normalizer-free networks when we discuss scaling up convolutional
+networks in :numref:`sec_cnn-design`.
+
 ## Discussion
 
 Intuitively, batch normalization is thought
@@ -1060,6 +1184,32 @@ switch automatically:
 . . .
 
 @batch-norm-concise-implementation-2
+:::
+
+::: {.slide title="The two real problems"}
+BatchNorm couples examples through the batch statistics:
+
+- **Minibatch coupling**: the estimates degrade as batches shrink.
+  Detection / segmentation train at 1--2 images per device.
+- **Train/serve discrepancy**: minibatch statistics in training,
+  moving averages at prediction. One layer, two functions.
+
+. . .
+
+**GroupNorm** (Wu & He, 2018): standardize each example within
+groups of channels. No batch in the statistics: batch size 1
+works, and training equals serving.
+:::
+
+::: {.slide title="GroupNorm in code"}
+Per-(example, group) mean 0 / variance 1, at **any** batch size:
+
+@batch-norm-group-normalization
+
+. . .
+
+The default in detection / segmentation heads and diffusion
+U-Nets, where per-device batches are small.
 :::
 
 ::: {.slide title="Recap"}

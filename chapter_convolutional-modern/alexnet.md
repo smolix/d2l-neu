@@ -3,66 +3,42 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Deep Convolutional Neural Networks (AlexNet)
+# The ImageNet Moment: AlexNet
 :label:`sec_alexnet`
 
 
-Although CNNs were well known
-in the computer vision and machine learning communities
+Although CNNs were well known in computer vision and machine learning
 following the introduction of LeNet :cite:`LeCun.Jackel.Bottou.ea.1995`,
-they did not immediately dominate the field.
-Although LeNet achieved good results on early small datasets,
-the performance and feasibility of training CNNs
-on larger, more realistic datasets had yet to be established.
-In fact, for much of the intervening time between the early 1990s
-and the watershed results of 2012 :cite:`Krizhevsky.Sutskever.Hinton.2012`,
-neural networks were often surpassed by other machine learning methods,
-such as kernel methods :cite:`Scholkopf.Smola.2002`, ensemble methods :cite:`Freund.Schapire.ea.1996`,
+they did not immediately dominate the field. For much of the time between
+the early 1990s and the watershed results of 2012
+:cite:`Krizhevsky.Sutskever.Hinton.2012`, neural networks were often
+outperformed by other methods, such as kernel methods :cite:`Scholkopf.Smola.2002`,
+ensemble methods :cite:`Freund.Schapire.ea.1996`,
 and structured estimation :cite:`Taskar.Guestrin.Koller.2004`.
 
-For computer vision, this comparison is perhaps not entirely accurate.
-That is, although the inputs to convolutional networks
-consist of raw or lightly-processed (e.g., by centering) pixel values, practitioners would never feed raw pixels into traditional models.
-Instead, typical computer vision pipelines
-consisted of manually engineering feature extraction pipelines, such as SIFT :cite:`Lowe.2004`, SURF :cite:`Bay.Tuytelaars.Van-Gool.2006`, and bags of visual words :cite:`Sivic.Zisserman.2003`.
-Rather than *learning* the features, the features were *crafted*.
-Most of the progress came from having more clever ideas for feature extraction on the one hand and deep insight into geometry :cite:`Hartley.Zisserman.2000` on the other. The learning algorithm was often considered an afterthought.
+For computer vision, this comparison is not entirely fair, because
+practitioners never fed raw pixels into traditional models. A typical
+pipeline preprocessed the images with hand-crafted feature extractors such as
+SIFT (the scale-invariant feature transform) :cite:`Lowe.2004`,
+SURF (speeded up robust features) :cite:`Bay.Tuytelaars.Van-Gool.2006`,
+or bags of visual words :cite:`Sivic.Zisserman.2003`, and only then trained
+a linear model or kernel method on the result. The features were *crafted*
+rather than *learned*: progress came from cleverer features and from deep
+insight into geometry :cite:`Hartley.Zisserman.2000`, and researchers
+believed, justifiably, that a slightly bigger or cleaner dataset or a
+slightly improved feature-extraction pipeline mattered far more to the final
+accuracy than the choice of classifier. The learning algorithm was an
+afterthought.
 
-Although some neural network accelerators were available in the 1990s,
-they were not yet sufficiently powerful to make
-deep multichannel, multilayer CNNs
-with a large number of parameters. For instance, NVIDIA's GeForce 256 from 1999
-was able to process at most 480 million floating-point operations, such as additions and multiplications, per second (MFLOPS), without any meaningful
-programming framework for operations beyond games. Today's accelerators are able to perform in excess of 1000 TFLOPs per device.
-Moreover, datasets were still relatively small: OCR on 60,000 low-resolution $28 \times 28$ pixel images was considered a highly challenging task.
-Added to these obstacles, key tricks for training neural networks
-including parameter initialization heuristics :cite:`Glorot.Bengio.2010`,
-clever variants of stochastic gradient descent :cite:`Kingma.Ba.2014`,
-non-squashing activation functions :cite:`Nair.Hinton.2010`,
-and effective regularization techniques :cite:`Srivastava.Hinton.Krizhevsky.ea.2014` were still missing.
-
-Thus, rather than training *end-to-end* (pixel to classification) systems,
-classical pipelines looked more like this:
-
-1. Obtain an interesting dataset. In the early days, these datasets required expensive sensors. For instance, the [Apple QuickTake 100](https://en.wikipedia.org/wiki/Apple_QuickTake) of 1994 sported a whopping 0.3 megapixel (VGA) resolution, capable of storing up to 8 images, all for the price of \$1000.
-1. Preprocess the dataset with hand-crafted features based on some knowledge of optics, geometry, other analytic tools, and occasionally on the serendipitous discoveries by lucky graduate students.
-1. Feed the data through a standard set of feature extractors such as the SIFT (scale-invariant feature transform) :cite:`Lowe.2004`, the SURF (speeded up robust features) :cite:`Bay.Tuytelaars.Van-Gool.2006`, or any number of other hand-tuned pipelines. OpenCV still provides SIFT extractors to this day!
-1. Dump the resulting representations into your favorite classifier, likely a linear model or kernel method, to train a classifier.
-
-If you spoke to machine learning researchers,
-they would reply that machine learning was both important and beautiful.
-Elegant theories proved the properties of various classifiers :cite:`boucheron2005theory` and convex
-optimization :cite:`Boyd.Vandenberghe.2004` had become the mainstay for obtaining them.
-The field of machine learning was thriving, rigorous, and eminently useful. However,
-if you spoke to a computer vision researcher,
-you would hear a very different story.
-The dirty truth of image recognition, they would tell you,
-is that features, geometry :cite:`Hartley.Zisserman.2000,hartley2009global`, and engineering,
-rather than novel learning algorithms, drove progress.
-Computer vision researchers justifiably believed
-that a slightly bigger or cleaner dataset
-or a slightly improved feature-extraction pipeline
-mattered far more to the final accuracy than any learning algorithm.
+Neural networks also faced real obstacles. The accelerators of the 1990s
+could not power deep multichannel, multilayer CNNs with many parameters,
+and datasets were small: OCR on 60,000 low-resolution $28 \times 28$ pixel
+images was considered a highly challenging task. Key tricks for training
+neural networks were still missing, too, including parameter initialization
+heuristics :cite:`Glorot.Bengio.2010`, clever variants of stochastic gradient
+descent :cite:`Kingma.Ba.2014`, non-squashing activation functions
+:cite:`Nair.Hinton.2010`, and effective regularization
+:cite:`Srivastava.Hinton.Krizhevsky.ea.2014`.
 
 ```{.python .input #alexnet-deep-convolutional-neural-networks-alexnet  n=2}
 %%tab mxnet
@@ -95,165 +71,95 @@ from jax import numpy as jnp
 
 ## Representation Learning
 
-Another way to cast the state of affairs is that
-the most important part of the pipeline was the representation.
-And up until 2012 the representation was calculated mostly mechanically.
-In fact, engineering a new set of feature functions, improving results, and writing up the method
-all featured prominently in papers.
-SIFT :cite:`Lowe.2004`,
-SURF :cite:`Bay.Tuytelaars.Van-Gool.2006`,
-HOG (histograms of oriented gradient) :cite:`Dalal.Triggs.2005`,
-bags of visual words :cite:`Sivic.Zisserman.2003`,
-and similar feature extractors ruled the roost.
+Put differently, the most important part of the classical pipeline was the
+representation, and up until 2012 it was calculated mostly mechanically:
+SIFT, SURF, HOG (histograms of oriented gradient) :cite:`Dalal.Triggs.2005`,
+and bags of visual words ruled the roost.
 
-Another group of researchers,
-including Yann LeCun, Geoff Hinton, Yoshua Bengio,
-Andrew Ng, Shun-ichi Amari, and Juergen Schmidhuber,
-had different plans.
-They believed that features themselves ought to be learned.
-Moreover, they believed that to be reasonably complex,
-the features ought to be hierarchically composed
-with multiple jointly learned layers, each with learnable parameters.
-In the case of an image, the lowest layers might come
-to detect edges, colors, and textures, by analogy with how the visual system in animals
-processes its input. In particular, the automatic design of visual features such as those obtained
-by sparse coding :cite:`olshausen1996emergence` remained an open challenge until the advent of modern CNNs.
-It was not until :citet:`Dean.Corrado.Monga.ea.2012,le2013building` that the idea of generating features
-from image data automatically gained significant traction.
+Another group of researchers, including Yann LeCun, Geoff Hinton, Yoshua
+Bengio, Andrew Ng, Shun-ichi Amari, and Juergen Schmidhuber, believed instead
+that features themselves ought to be learned, hierarchically composed from
+multiple jointly learned layers. The automatic design of visual features,
+such as those obtained by sparse coding :cite:`olshausen1996emergence`,
+remained an open challenge until
+:citet:`Dean.Corrado.Monga.ea.2012,le2013building` and the advent of modern
+CNNs.
 
 The first modern CNN :cite:`Krizhevsky.Sutskever.Hinton.2012`, named
-*AlexNet* after one of its inventors, Alex Krizhevsky, is largely an evolutionary improvement
-over LeNet. It achieved excellent performance in the 2012 ImageNet challenge.
+*AlexNet* after one of its inventors, Alex Krizhevsky, is largely an
+evolutionary improvement over LeNet. It won the 2012 ImageNet challenge and
+vindicated the bet on learning: in its lowest layers, the network learned
+feature extractors that resembled the traditional filters, as
+:numref:`fig_filters` shows. Higher layers build upon these representations
+to capture larger structures, like eyes, noses, and blades of grass, and yet
+higher layers whole objects, like people, airplanes, and dogs. Ultimately,
+the final hidden state is a compact representation of the image in which the
+different categories are easily separated.
 
 ![Image filters learned by the first layer of AlexNet. Reproduction courtesy of :citet:`Krizhevsky.Sutskever.Hinton.2012`.](../img/filters.png)
 :width:`400px`
 :label:`fig_filters`
 
-Interestingly, in the lowest layers of the network,
-the model learned feature extractors that resembled some traditional filters.
-:numref:`fig_filters`
-shows lower-level image descriptors.
-Higher layers in the network might build upon these representations
-to represent larger structures, like eyes, noses, blades of grass, and so on.
-Even higher layers might represent whole objects
-like people, airplanes, dogs, or frisbees.
-Ultimately, the final hidden state learns a compact representation
-of the image that summarizes its contents
-such that data belonging to different categories can be easily separated.
-
-AlexNet (2012) and its precursor LeNet (1995) share many architectural elements. This begs the question: why did it take so long?
-A key difference was that, over the previous two decades, the amount of data and the computing power available had increased significantly. As such AlexNet was much larger: it was trained on much more data, and on much faster GPUs compared to the CPUs available in 1995.
+AlexNet (2012) and its precursor LeNet (1995) share many architectural
+elements, which raises the question of why it took so long. The decisive
+difference is that, over the intervening two decades, the amount of data and
+the computing power available had each grown by orders of magnitude.
 
 ### Missing Ingredient: Data
 
-Deep models with many layers require large amounts of data
-in order to enter the regime
-where they significantly outperform traditional methods
-based on convex optimizations (e.g., linear and kernel methods).
-However, given the limited storage capacity of computers,
-the relative expense of (imaging) sensors,
-and the comparatively tighter research budgets in the 1990s,
-most research relied on tiny datasets.
-Numerous papers relied on the UCI collection of datasets,
-many of which contained only hundreds or (a few) thousands of images
-captured in low resolution and often with an artificially clean background.
+Deep models with many layers require large amounts of data in order to enter
+the regime where they significantly outperform traditional methods based on
+convex optimization. However, given the limited storage, the expense of
+imaging sensors, and the tighter research budgets of the 1990s, most research
+relied on tiny datasets of hundreds or a few thousand low-resolution images,
+such as those in the UCI collection.
 
-In 2009, the ImageNet dataset was released :cite:`Deng.Dong.Socher.ea.2009`,
-challenging researchers to learn models from 1 million examples,
-1000 each from 1000 distinct categories of objects. The categories themselves
-were based on the most popular noun nodes in WordNet :cite:`Miller.1995`.
-The ImageNet team used Google Image Search to prefilter large candidate sets
-for each category and employed
-the Amazon Mechanical Turk crowdsourcing pipeline
-to confirm for each image whether it belonged to the associated category.
-This scale was unprecedented, exceeding others by over an order of magnitude
-(e.g., CIFAR-100 has 60,000 images). Another aspect was that the images were at
-relatively high resolution of $224 \times 224$ pixels, unlike the 80 million-sized
-TinyImages dataset :cite:`Torralba.Fergus.Freeman.2008`, consisting of $32 \times 32$ pixel thumbnails.
-This allowed for the formation of higher-level features.
-The associated competition, dubbed the ImageNet Large Scale Visual Recognition
-Challenge :cite:`russakovsky2015imagenet`,
-pushed computer vision and machine learning research forward,
-challenging researchers to identify which models performed best
-at a greater scale than academics had previously considered. The largest vision datasets, such as LAION-5B
-:cite:`schuhmann2022laion` contain billions of images with additional metadata.
+The ImageNet dataset, released in 2009 :cite:`Deng.Dong.Socher.ea.2009`,
+changed this. It challenged researchers to learn models from 1 million
+examples, 1000 each from 1000 distinct categories drawn from the most popular
+noun nodes in WordNet :cite:`Miller.1995`, prefiltered by web image search
+and verified by Amazon Mechanical Turk workers. The scale exceeded earlier
+datasets by over an order of magnitude, and the images came at a relatively
+high resolution of $224 \times 224$ pixels, unlike the $32 \times 32$ pixel
+thumbnails of the 80-million-image TinyImages dataset
+:cite:`Torralba.Fergus.Freeman.2008`, which allowed higher-level features to
+form. The associated competition, the ImageNet Large Scale Visual Recognition
+Challenge :cite:`russakovsky2015imagenet`, pushed computer vision and machine
+learning research to a scale that academics had not previously considered.
 
 ### Missing Ingredient: Hardware
 
-Deep learning models are voracious consumers of compute cycles.
-Training can take hundreds of epochs, and each iteration
-requires passing data through many layers of computationally expensive
-linear algebra operations.
-This is one of the main reasons why in the 1990s and early 2000s,
-simple algorithms based on the more-efficiently optimized
-convex objectives were preferred.
+Deep learning models are also voracious consumers of compute cycles: training
+can take hundreds of epochs, and each iteration passes data through many
+layers of expensive linear algebra operations. *Graphics processing units*
+(GPUs) changed the economics. These chips had been developed to accelerate
+computer graphics, in particular high-throughput $4 \times 4$ matrix--vector
+products, math very similar to that of convolutional layers, and around that
+time NVIDIA and ATI had begun optimizing them for general computing
+:cite:`Fernando.2004`, marketing them as *general-purpose GPUs* (GPGPUs).
+Where a CPU core runs at a high clock frequency and spends most of its chip
+area on the machinery of general control flow (branch predictors, deep
+pipelines, speculative execution, large caches), a GPU packs thousands of
+much simpler cores onto one chip. This wins on power, since consumption grows
+roughly quadratically with clock frequency: for the budget of one CPU core
+running at four times the speed, 16 GPU cores at $\frac{1}{4}$ the speed
+deliver $16 \times \frac{1}{4} = 4$ times the throughput. GPUs also have far
+wider memory buses, which matters because many deep learning operations are
+limited by memory bandwidth. The effect compounded quickly: between 1999,
+when NVIDIA's GeForce 256 processed roughly 480 million floating-point
+operations per second with no programming framework beyond graphics APIs, and
+2012, consumer GPU throughput grew by roughly three orders of magnitude, and
+it has kept growing by roughly another order of magnitude every five years
+since.
 
-*Graphical processing units* (GPUs) proved to be a game changer
-in making deep learning feasible.
-These chips had earlier been developed for accelerating
-graphics processing to benefit computer games.
-In particular, they were optimized for high throughput $4 \times 4$
-matrix--vector products, which are needed for many computer graphics tasks.
-Fortunately, the math is strikingly similar
-to that required for calculating convolutional layers.
-Around that time, NVIDIA and ATI had begun optimizing GPUs
-for general computing operations :cite:`Fernando.2004`,
-going as far as to market them as *general-purpose GPUs* (GPGPUs).
-
-To provide some intuition, consider the cores of a modern microprocessor
-(CPU).
-Each of the cores is fairly powerful running at a high clock frequency
-and sporting large caches (up to several megabytes of L3).
-Each core is well-suited to executing a wide range of instructions,
-with branch predictors, a deep pipeline, specialized execution units,
-speculative execution,
-and many other bells and whistles
-that enable it to run a large variety of programs with sophisticated control flow.
-This apparent strength, however, is also its Achilles heel:
-general-purpose cores are very expensive to build. They excel at general-purpose
-code with lots of control flow.
-This requires lots of chip area, not just for the
-actual ALU (arithmetic logical unit) where computation happens, but also for
-all the aforementioned bells and whistles, plus
-memory interfaces, caching logic between cores,
-high-speed interconnects, and so on. CPUs are
-comparatively bad at any single task when compared with dedicated hardware.
-Modern laptops have 4--8 cores,
-and even high-end servers rarely exceed 64 cores per socket,
-simply because it is not cost-effective.
-
-By comparison, GPUs can consist of thousands of small processing elements (NVIDIA's latest Ampere chips have up to 6912 CUDA cores), often grouped into larger groups (NVIDIA calls them warps).
-The details differ somewhat between NVIDIA, AMD, ARM and other chip vendors. While each core is relatively weak,
-running at about 1GHz clock frequency,
-it is the total number of such cores that makes GPUs orders of magnitude faster than CPUs.
-For instance, NVIDIA's recent Ampere A100 GPU offers over 300 TFLOPs per chip for specialized 16-bit precision (BFLOAT16) matrix-matrix multiplications, and up to 20 TFLOPs for more general-purpose floating point operations (FP32).
-At the same time, floating point performance of CPUs rarely exceeds 1 TFLOPs. For instance, Amazon's Graviton 3  reaches 2 TFLOPs peak performance for 16-bit precision operations, a number similar to the GPU performance of Apple's M1 processor.
-
-There are many reasons why GPUs are much faster than CPUs in terms of FLOPs.
-First, power consumption tends to grow *quadratically* with clock frequency.
-Hence, for the power budget of a CPU core that runs four times faster (a typical number),
-you can use 16 GPU cores at $\frac{1}{4}$ the speed,
-which yields $16 \times \frac{1}{4} = 4$ times the performance.
-Second, GPU cores are much simpler
-(in fact, for a long time they were not even *able*
-to execute general-purpose code),
-which makes them more energy efficient. For instance, (i) they tend not to support speculative evaluation, (ii) it typically is not possible to program each processing element individually, and (iii) the caches per core tend to be much smaller.
-Last, many operations in deep learning require high memory bandwidth.
-Again, GPUs shine here with buses that are at least 10 times as wide as many CPUs.
-
-Back to 2012. A major breakthrough came
-when Alex Krizhevsky and Ilya Sutskever
-implemented a deep CNN
-that could run on GPUs.
-They realized that the computational bottlenecks in CNNs,
-convolutions and matrix multiplications,
-are all operations that could be parallelized in hardware.
-Using two NVIDIA GTX 580s with 3GB of memory, either of which was capable of 1.5 TFLOPs (still a challenge for most CPUs a decade later),
-they implemented fast convolutions.
-The [cuda-convnet](https://code.google.com/archive/p/cuda-convnet/) code
-was good enough that for several years
-it was the industry standard and powered
-the first couple of years of the deep learning boom.
+This was the situation in 2012 when Alex Krizhevsky and Ilya Sutskever
+implemented a deep CNN that could run on GPUs. They realized that the
+computational bottlenecks in CNNs, convolutions and matrix multiplications,
+are precisely the operations that GPUs parallelize well. Using two NVIDIA GTX
+580s with 3 GB of memory each, they implemented fast convolutions. The
+[cuda-convnet](https://code.google.com/archive/p/cuda-convnet/) code was good
+enough that for several years it was the industry standard and powered the
+first couple of years of the deep learning boom.
 
 ## AlexNet
 
@@ -261,23 +167,24 @@ AlexNet, which employed an 8-layer CNN,
 won the ImageNet Large Scale Visual Recognition Challenge 2012
 by a large margin :cite:`Russakovsky.Deng.Huang.ea.2013`.
 This network showed, for the first time,
-that the features obtained by learning can transcend manually-designed features, breaking the previous paradigm in computer vision.
+that the features obtained by learning can transcend manually designed features, breaking the previous paradigm in computer vision.
 
-The architectures of AlexNet and LeNet are strikingly similar,
+The architectures of AlexNet and LeNet are closely related,
 as :numref:`fig_alexnet` illustrates.
 Note that we provide a slightly streamlined version of AlexNet
 removing some of the design quirks that were needed in 2012
 to make the model fit on two small GPUs.
 
-![From LeNet (left) to AlexNet (right).](../img/alexnet.svg)
+![LeNet (left) and AlexNet (right) side by side. Both consist of convolutional stages followed by a fully connected head; AlexNet is deeper and wider and replaces sigmoid activations with ReLU.](../img/arch-alexnet.svg)
 :label:`fig_alexnet`
 
-There are also significant differences between AlexNet and LeNet.
+There are also key differences.
 First, AlexNet is much deeper than the comparatively small LeNet-5.
 AlexNet consists of eight layers: five convolutional layers,
 two fully connected hidden layers, and one fully connected output layer.
 Second, AlexNet used the ReLU instead of the sigmoid
-as its activation function. Let's delve into the details below.
+as its activation function.
+Let's look at the details.
 
 ### Architecture
 
@@ -294,21 +201,28 @@ with a window shape of $3\times3$ and a stride of 2.
 Moreover, AlexNet has ten times more convolution channels than LeNet.
 
 After the final convolutional layer, there are two huge fully connected layers
-with 4096 outputs.
-These layers require nearly 1GB model parameters.
+with 4096 outputs each.
+Together they account for almost all of the model's parameters
+(over 160 MB in single precision).
 Because of the limited memory in early GPUs,
 the original AlexNet used a dual data stream design,
 so that each of their two GPUs could be responsible
 for storing and computing only its half of the model.
-Fortunately, GPU memory is comparatively abundant now,
-so we rarely need to break up models across GPUs these days
-(our version of the AlexNet model deviates
-from the original paper in this aspect).
+GPU memory is rarely that scarce anymore,
+so our version of the model dispenses with the split.
 
 ### Activation Functions
 
-Furthermore, AlexNet changed the sigmoid activation function to a simpler ReLU activation function. On the one hand, the computation of the ReLU activation function is simpler. For example, it does not have the exponentiation operation found in the sigmoid activation function.
-On the other hand, the ReLU activation function makes model training easier when using different parameter initialization methods. This is because, when the output of the sigmoid activation function is very close to 0 or 1, the gradient of these regions is almost 0, so that backpropagation cannot continue to update some of the model parameters. By contrast, the gradient of the ReLU activation function in the positive interval is always 1 (:numref:`subsec_activation-functions`). Therefore, if the model parameters are not properly initialized, the sigmoid function may obtain a gradient of almost 0 when inputs are saturated (very large or very small), meaning that the model cannot be effectively trained.
+AlexNet also changed the sigmoid activation function
+to the simpler ReLU activation function.
+This makes the computation cheaper,
+since the ReLU has no exponentiation operation,
+and, more importantly, it makes training easier:
+when the output of the sigmoid is very close to 0 or 1,
+its gradient is almost 0,
+so poorly initialized parameters may stop receiving updates,
+whereas the gradient of the ReLU in the positive interval
+is always 1 (:numref:`subsec_activation-functions`).
 
 ### Capacity Control and Preprocessing
 
@@ -318,8 +232,14 @@ while LeNet only uses weight decay.
 To augment the data even further, the training loop of AlexNet
 added a great deal of image augmentation,
 such as flipping, clipping, and color changes.
-This makes the model more robust and the larger sample size effectively reduces overfitting.
-See :citet:`Buslaev.Iglovikov.Khvedchenya.ea.2020` for an in-depth review of such preprocessing steps.
+This exposes the model to many more variants of each image
+and thereby reduces overfitting;
+see :citet:`Buslaev.Iglovikov.Khvedchenya.ea.2020` for an in-depth
+review of such preprocessing steps.
+Augmentation and its descendants have since grown into a central part
+of how convolutional networks are trained,
+and we return to them later in this chapter.
+<!-- TODO(ch8): :numref:`sec_training_recipes` when it lands -->
 
 ```{.python .input #alexnet-capacity-control-and-preprocessing-1  n=5}
 %%tab pytorch
@@ -484,11 +404,11 @@ with d2l.try_gpu():
 
 ## Discussion
 
-AlexNet's structure bears a striking resemblance to LeNet, with a number of critical improvements, both for accuracy (dropout) and for ease of training (ReLU). What is equally striking is the amount of progress that has been made in terms of deep learning tooling. What was several months of work in 2012 can now be accomplished in a dozen lines of code using any modern framework.
+AlexNet's structure bears a close resemblance to LeNet, with a number of critical improvements, both for accuracy (dropout) and for ease of training (ReLU). Equally consequential is the progress in deep learning tooling: what was several months of work in 2012 can now be accomplished in a dozen lines of code using any modern framework.
 
 Reviewing the architecture, we see that AlexNet has an Achilles heel when it comes to efficiency: the last two hidden layers require matrices of size $6400 \times 4096$ and $4096 \times 4096$, respectively. This corresponds to 164 MB of memory and 81 MFLOPs of computation, both of which are a nontrivial outlay, especially on smaller devices, such as mobile phones. This is one of the reasons why AlexNet has been surpassed by much more effective architectures that we will cover in the following sections. Nonetheless, it is a key step from shallow to deep networks that are used nowadays. Note that even though the number of parameters exceeds by far the amount of training data in our experiments (the last two layers have more than 40 million parameters, trained on a dataset of 60 thousand images), there is hardly any overfitting: training and validation loss are virtually identical throughout training. This is due to the improved regularization, such as dropout, inherent in modern deep network designs.
 
-Although it seems that there are only a few more lines in AlexNet's implementation than in LeNet's, it took the academic community many years to embrace this conceptual change and take advantage of its excellent experimental results. This was also due to the lack of efficient computational tools. At the time neither DistBelief :cite:`Dean.Corrado.Monga.ea.2012` nor Caffe :cite:`Jia.Shelhamer.Donahue.ea.2014` existed, and Theano :cite:`Bergstra.Breuleux.Bastien.ea.2010` still lacked many distinguishing features. It was the availability of TensorFlow :cite:`Abadi.Barham.Chen.ea.2016` that dramatically changed the situation.
+Although it seems that there are only a few more lines in AlexNet's implementation than in LeNet's, it took the academic community many years to embrace this conceptual change and take advantage of its excellent experimental results. This was also due to the lack of efficient computational tools. At the time neither DistBelief :cite:`Dean.Corrado.Monga.ea.2012` nor Caffe :cite:`Jia.Shelhamer.Donahue.ea.2014` existed, and Theano :cite:`Bergstra.Breuleux.Bastien.ea.2010`, the first widely used automatic-differentiation framework, still lacked many features its successors would bring. It was the maturation of such frameworks, from Theano to TensorFlow :cite:`Abadi.Barham.Chen.ea.2016` and later PyTorch :cite:`Paszke.Gross.Massa.ea.2019` and JAX :cite:`Frostig.Johnson.Leary.2018`, that turned implementing a new architecture from an engineering project into routine work.
 
 ## Exercises
 
@@ -524,29 +444,48 @@ Although it seems that there are only a few more lines in AlexNet's implementati
 
 <!-- slides -->
 
-::: {.slide title="AlexNet: scale changes vision"}
-**AlexNet** (Krizhevsky, Sutskever, Hinton — 2012) is what
-made deep learning *the* approach to vision. Won ImageNet
-by a huge margin and started the modern era.
+::: {.slide title="Before 2012: features were crafted"}
+Classical vision pipelines never fed raw pixels to a classifier:
 
-![AlexNet alongside the LeNet from a decade earlier.](../img/alexnet.svg){width=70%}
+- hand-engineered extractors (**SIFT**, **SURF**, bags of visual
+  words) computed the representation;
+- a linear model or kernel method handled the final classification.
+
+Progress meant inventing better *features*, not better *learning*.
 :::
 
-::: {.slide title="What changed from LeNet"}
-- **Bigger** — 8 layers, 60 M parameters, larger first-layer
-  filters (11×11), deeper feature stack.
-- **ReLU** activations (no more saturating sigmoids).
-- **Dropout** in the dense head for regularization.
-- **GPUs**, **ImageNet** (1.2 M images), and
-  **augmentation** — the missing ingredients.
+::: {.slide title="The bet: learn the representation"}
+LeCun, Hinton, Bengio, Ng, Amari, Schmidhuber: features should be
+*learned*, hierarchically, layer by layer.
 
-The architecture itself is straightforward; what changed
-was the *scale*.
+AlexNet's first layer learned filters that resemble the hand-crafted
+ones:
+
+![First-layer filters learned by AlexNet.](../img/filters.png){width=45%}
+:::
+
+::: {.slide title="What changed: data and compute"}
+- **ImageNet** (2009): 1.2 M labeled images, 1000 classes,
+  224×224 resolution.
+- **GPUs**: from 1999 to 2012, throughput grew by roughly three
+  orders of magnitude.
+- Plus the missing training tricks: **ReLU**, **dropout**,
+  augmentation, better initialization.
+
+AlexNet (Krizhevsky, Sutskever, Hinton, 2012) put them together and
+won ILSVRC 2012 by a large margin.
+:::
+
+::: {.slide title="From LeNet to AlexNet"}
+Same design, scaled up: convolutional stages, then a fully connected
+head.
+
+![LeNet and AlexNet side by side.](../img/arch-alexnet.svg){width=55%}
 :::
 
 ::: {.slide title="The architecture in code"}
-Five conv layers (11×11 → 5×5 → three 3×3) + max-pool,
-then three FC layers down to 1000 classes:
+Five conv layers (11×11 → 5×5 → three 3×3) with max-pooling, then two
+4096-wide dense layers with dropout:
 
 @alexnet-deep-convolutional-neural-networks-alexnet
 
@@ -554,30 +493,23 @@ then three FC layers down to 1000 classes:
 :::
 
 ::: {.slide title="Shape inspection"}
-Walk a single 1×1×224×224 image through and print each block's
-output shape — the feature pyramid going from `224×224×1` down to
-`6×6×256`:
+Walk a single 224×224 image through the network and print each
+block's output shape, from 224×224 down to 6×6 at 256 channels:
 
 @alexnet-capacity-control-and-preprocessing-2
 :::
 
 ::: {.slide title="Training on Fashion-MNIST"}
-For demonstration, upsample the 28×28 Fashion-MNIST images to the
-224×224 input AlexNet expects, then train at lr=0.01:
+Upsample the 28×28 Fashion-MNIST images to the 224×224 input AlexNet
+expects, then train with a smaller learning rate than LeNet:
 
 @alexnet-training
-
-Trains slowly even on a GPU — AlexNet has ~10× the parameters of
-LeNet. The architecture's lasting contribution: it proved that
-**bigger is better** when paired with enough data and compute.
 :::
 
 ::: {.slide title="Recap"}
-- AlexNet = LeNet's recipe at **8× the depth**, **massive
-  parameter count**, **ReLU**, **Dropout**, **GPU training**, on
-  **ImageNet**.
-- Validates the "deeper, bigger, more data" formula that drives
-  the field for the next decade.
-- The next handful of architectures (VGG, GoogLeNet, ResNet) are
-  systematic refinements of this template.
+- AlexNet is LeNet's recipe at scale: 8 layers, ~60 M parameters,
+  **ReLU**, **dropout**, GPU training, ImageNet.
+- Learned features displaced a decade of hand-crafted pipelines.
+- Its huge dense head is costly; the architectures in the next
+  sections trim it away step by step.
 :::

@@ -3,7 +3,7 @@
 tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 ```
 
-# Residual Networks (ResNet) and ResNeXt
+# Residual Networks: ResNet, ResNeXt, and DenseNet
 :label:`sec_resnet`
 
 As we design ever deeper networks it becomes imperative to understand how adding layers can increase the complexity and expressiveness of the network.
@@ -242,7 +242,7 @@ class Residual(nn.Module):  #@save
 
 This code generates two types of networks: one where we add the input directly to the output before applying the ReLU nonlinearity whenever `use_1x1conv=False` and the stride is `1`; and one where we adjust channels and resolution by means of a $1 \times 1$ convolution before adding, which the block enables automatically whenever `use_1x1conv=True` or the stride is not `1`. :numref:`fig_resnet_block` illustrates this.
 
-![ResNet block with and without $1 \times 1$ convolution, which transforms the input into the desired shape for the addition operation.](../img/resnet-block.svg)
+![The two ResNet block variants side by side: with an identity skip when input and output shapes match (left), and with a $1 \times 1$ convolution on the skip path that adjusts channels and resolution so the addition is well defined (right).](../img/arch-resnet-block.svg)
 :label:`fig_resnet_block`
 
 Now let's look at a situation where the input and output are of the same shape, where $1 \times 1$ convolution is not needed.
@@ -482,7 +482,7 @@ def create_net(self):
 There are four convolutional layers in each module (excluding the $1\times 1$ convolutional layer). Together with the first $7\times 7$ convolutional layer and the final fully connected layer, there are 18 layers in total. Therefore, this model is commonly known as ResNet-18.
 By configuring different numbers of channels and residual blocks in the module, we can create different ResNet models, such as the deeper 152-layer ResNet-152. Although the main architecture of ResNet is similar to that of GoogLeNet, ResNet's structure is simpler and easier to modify. All these factors have resulted in the rapid and widespread use of ResNet. :numref:`fig_resnet18` depicts the full ResNet-18.
 
-![The ResNet-18 architecture.](../img/resnet18-90.svg)
+![The full ResNet-18: a $7\times 7$ convolutional stem, four stages of two residual blocks each, where the first block of stages 2--4 halves the resolution and doubles the channels, and a global average pooling head.](../img/arch-resnet18.svg)
 :label:`fig_resnet18`
 
 Before training ResNet, let's observe how the input shape changes across different modules in ResNet. As in all the previous architectures, the resolution decreases while the number of channels increases up until the point where a global average pooling layer aggregates all features.
@@ -566,7 +566,7 @@ Different from the smorgasbord of transformations in Inception,
 ResNeXt adopts the *same* transformation in all branches,
 thus minimizing the need for manual tuning of each branch. 
 
-![The ResNeXt block. The use of grouped convolution with $\mathit{g}$ groups is $\mathit{g}$ times faster than a dense convolution. It is a bottleneck residual block when the number of intermediate channels $\mathit{b}$ is less than $\mathit{c}$.](../img/resnext-block.svg)
+![The ResNeXt block: a grouped $3 \times 3$ convolution with $\mathit{g}$ groups, sandwiched between two $1 \times 1$ convolutions that mix information across groups. Grouped convolution is $\mathit{g}$ times faster than a dense convolution; the block is a bottleneck residual block when the number of intermediate channels $\mathit{b}$ is less than $\mathit{c}$.](../img/arch-resnext-block.svg)
 :label:`fig_resnext_block`
 
 Breaking up a convolution from $c_\textrm{i}$ to $c_\textrm{o}$ channels into one of $g$ groups of size $c_\textrm{i}/g$ generating $g$ outputs of size $c_\textrm{o}/g$ is called, quite fittingly, a *grouped convolution*. The computational cost (proportionally) is reduced from $\mathcal{O}(c_\textrm{i} \cdot c_\textrm{o})$ to $\mathcal{O}(g \cdot (c_\textrm{i}/g) \cdot (c_\textrm{o}/g)) = \mathcal{O}(c_\textrm{i} \cdot c_\textrm{o} / g)$, i.e., it is $g$ times faster. Even better, the number of parameters needed to generate the output is also reduced from a $c_\textrm{i} \times c_\textrm{o}$ matrix to $g$ smaller matrices of size $(c_\textrm{i}/g) \times (c_\textrm{o}/g)$, again a $g$ times reduction. In what follows we assume that both $c_\textrm{i}$ and $c_\textrm{o}$ are divisible by $g$. 
@@ -575,7 +575,7 @@ The only challenge in this design is that no information is exchanged between th
 :numref:`fig_resnext_block` amends this in two ways: the grouped convolution with a $3 \times 3$ kernel is sandwiched in between two $1 \times 1$ convolutions. The second one serves double duty in changing the number of channels back. The benefit is that we only pay the $\mathcal{O}(c \cdot b)$ cost for $1 \times 1$ kernels and can make do with an $\mathcal{O}(b^2 / g)$ cost for $3 \times 3$ kernels. Similar to the residual block implementation in
 :numref:`subsec_residual-blks`, the residual connection is replaced (thus generalized) by a $1 \times 1$ convolution.
 
-The right-hand figure in :numref:`fig_resnext_block` provides a much more concise summary of the resulting network block. It will also play a major role in the design of generic modern CNNs in :numref:`sec_cnn-design`. Note that the idea of grouped convolutions dates back to the implementation of AlexNet :cite:`Krizhevsky.Sutskever.Hinton.2012`. When distributing the network across two GPUs with limited memory, the implementation treated each GPU as its own channel with no ill effects. 
+The block in :numref:`fig_resnext_block` will also play a major role in the design of generic modern CNNs in :numref:`sec_cnn-design`. Note that the idea of grouped convolutions dates back to the implementation of AlexNet :cite:`Krizhevsky.Sutskever.Hinton.2012`. When distributing the network across two GPUs with limited memory, the implementation treated each GPU as its own channel with no ill effects. 
 
 The following implementation of the `ResNeXtBlock` class takes as argument `groups` ($g$), with 
 `bot_channels` ($b$) intermediate (bottleneck) channels. Lastly, when we need to reduce the height and width of the representation, we add a stride of $2$ by setting `use_1x1conv=True, strides=2`.
@@ -748,6 +748,267 @@ X = jnp.zeros((4, 96, 96, 32))
 blk.init_with_output(d2l.get_key(), X)[0].shape
 ```
 
+## Concatenation instead of Addition: DenseNet
+:label:`sec_densenet`
+
+The residual block computes $f(\mathbf{x}) = \mathbf{x} + g(\mathbf{x})$, splitting a function into the identity plus a correction, much as a Taylor expansion splits a function into a leading term plus higher-order refinements. What if we want to keep more than two terms, without forcing them to share a sum? *DenseNet* (dense convolutional network) :cite:`Huang.Liu.Van-Der-Maaten.ea.2017` answers by *concatenating* a layer's output onto its input along the channel dimension, so every layer receives the feature maps of all layers that precede it. Applying an increasingly complex sequence of functions thus maps $\mathbf{x}$ to
+
+$$
+\mathbf{x} \to \left[
+\mathbf{x},
+f_1(\mathbf{x}),
+f_2\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right)\right]\right), f_3\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right), f_2\left(\left[\mathbf{x}, f_1\left(\mathbf{x}\right)\right]\right)\right]\right), \ldots\right],
+$$
+
+where $[\cdot, \cdot]$ denotes concatenation. The name reflects the resulting dependency graph: the last layer of such a chain is densely connected to all its predecessors. :numref:`fig_densenet_block` contrasts the two designs.
+
+![A residual block (left) adds its input back to the output, keeping the number of channels fixed. A DenseNet block (right) concatenates each convolution's output onto its input, so the number of channels grows with every layer while all earlier features remain directly accessible.](../img/arch-densenet-block.svg)
+:label:`fig_densenet_block`
+
+A DenseNet consists of *dense blocks*, which define how outputs are concatenated, alternating with *transition layers*, which shrink the accumulated channels back down. Each convolution inside a dense block uses the "batch normalization, activation, and convolution" pre-activation ordering explored in the exercises below.
+
+```{.python .input #densenet-dense-blocks-1}
+%%tab mxnet
+def conv_block(num_channels):
+    blk = nn.Sequential()
+    blk.add(nn.BatchNorm(),
+            nn.Activation('relu'),
+            nn.Conv2D(num_channels, kernel_size=3, padding=1))
+    return blk
+```
+
+```{.python .input #densenet-dense-blocks-1}
+%%tab pytorch
+def conv_block(num_channels):
+    return nn.Sequential(
+        nn.LazyBatchNorm2d(), nn.ReLU(),
+        nn.LazyConv2d(num_channels, kernel_size=3, padding=1))
+```
+
+```{.python .input #densenet-dense-blocks-1}
+%%tab tensorflow
+class ConvBlock(tf.keras.layers.Layer):
+    def __init__(self, num_channels):
+        super(ConvBlock, self).__init__()
+        self.bn = tf.keras.layers.BatchNormalization()
+        self.relu = tf.keras.layers.ReLU()
+        self.conv = tf.keras.layers.Conv2D(
+            filters=num_channels, kernel_size=(3, 3), padding='same')
+
+        self.listLayers = [self.bn, self.relu, self.conv]
+
+    def call(self, x):
+        y = x
+        for layer in self.listLayers:
+            y = layer(y)
+        return y
+```
+
+```{.python .input #densenet-dense-blocks-1}
+%%tab jax
+class ConvBlock(nn.Module):
+    num_channels: int
+    training: bool = True
+
+    @nn.compact
+    def __call__(self, X):
+        Y = nn.relu(nn.BatchNorm(not self.training)(X))
+        Y = nn.Conv(self.num_channels, kernel_size=(3, 3), padding=(1, 1))(Y)
+        return Y
+```
+
+A *dense block* consists of multiple convolution blocks, each using the same number of output channels. In the forward propagation, however, we concatenate the input and output of each convolution block on the channel dimension. Lazy evaluation allows us to adjust the dimensionality automatically.
+
+```{.python .input #densenet-dense-blocks-2}
+%%tab mxnet
+class DenseBlock(nn.Block):
+    def __init__(self, num_convs, num_channels):
+        super().__init__()
+        self.net = nn.Sequential()
+        for _ in range(num_convs):
+            self.net.add(conv_block(num_channels))
+
+    def forward(self, X):
+        for blk in self.net:
+            Y = blk(X)
+            # Concatenate input and output of each block along the channels
+            X = np.concatenate((X, Y), axis=1)
+        return X
+```
+
+```{.python .input #densenet-dense-blocks-2}
+%%tab pytorch
+class DenseBlock(nn.Module):
+    def __init__(self, num_convs, num_channels):
+        super(DenseBlock, self).__init__()
+        layer = []
+        for i in range(num_convs):
+            layer.append(conv_block(num_channels))
+        self.net = nn.Sequential(*layer)
+
+    def forward(self, X):
+        for blk in self.net:
+            Y = blk(X)
+            # Concatenate input and output of each block along the channels
+            X = torch.cat((X, Y), dim=1)
+        return X
+```
+
+```{.python .input #densenet-dense-blocks-2}
+%%tab tensorflow
+class DenseBlock(tf.keras.layers.Layer):
+    def __init__(self, num_convs, num_channels):
+        super(DenseBlock, self).__init__()
+        self.listLayers = []
+        for _ in range(num_convs):
+            self.listLayers.append(ConvBlock(num_channels))
+
+    def call(self, x):
+        for layer in self.listLayers:
+            y = layer(x)
+            # Concatenate input and output of each block along the channels
+            x = tf.keras.layers.concatenate([x, y], axis=-1)
+        return x
+```
+
+```{.python .input #densenet-dense-blocks-2}
+%%tab jax
+class DenseBlock(nn.Module):
+    num_convs: int
+    num_channels: int
+    training: bool = True
+
+    def setup(self):
+        self.layers = [ConvBlock(self.num_channels, self.training)
+                       for _ in range(self.num_convs)]
+
+    def __call__(self, X):
+        for layer in self.layers:
+            Y = layer(X)
+            # Concatenate input and output of each block along the channels
+            X = jnp.concatenate((X, Y), axis=-1)
+        return X
+```
+
+In the following example,
+we define a `DenseBlock` instance with two convolution blocks of 10 output channels.
+When using an input with three channels, we will get an output with  $3 + 10 + 10=23$ channels. The number of convolution block channels controls the growth in the number of output channels relative to the number of input channels. This is also referred to as the *growth rate*.
+
+```{.python .input #densenet-dense-blocks-3}
+%%tab pytorch
+blk = DenseBlock(2, 10)
+X = torch.randn(4, 3, 8, 8)
+Y = blk(X)
+Y.shape
+```
+
+```{.python .input #densenet-dense-blocks-3}
+%%tab mxnet
+blk = DenseBlock(2, 10)
+X = np.random.uniform(size=(4, 3, 8, 8))
+blk.initialize()
+Y = blk(X)
+Y.shape
+```
+
+```{.python .input #densenet-dense-blocks-3}
+%%tab tensorflow
+blk = DenseBlock(2, 10)
+X = tf.random.uniform((4, 8, 8, 3))
+Y = blk(X)
+Y.shape
+```
+
+```{.python .input #densenet-dense-blocks-3}
+%%tab jax
+blk = DenseBlock(2, 10)
+X = jnp.zeros((4, 8, 8, 3))
+Y = blk.init_with_output(d2l.get_key(), X)[0]
+Y.shape
+```
+
+Since each dense block increases the number of channels, stacking many of them without correction would produce an excessively wide model. A *transition layer* reduces the number of channels by a $1\times 1$ convolution and halves the height and width via average pooling with a stride of 2.
+
+```{.python .input #densenet-transition-layers-1}
+%%tab mxnet
+def transition_block(num_channels):
+    blk = nn.Sequential()
+    blk.add(nn.BatchNorm(), nn.Activation('relu'),
+            nn.Conv2D(num_channels, kernel_size=1),
+            nn.AvgPool2D(pool_size=2, strides=2))
+    return blk
+```
+
+```{.python .input #densenet-transition-layers-1}
+%%tab pytorch
+def transition_block(num_channels):
+    return nn.Sequential(
+        nn.LazyBatchNorm2d(), nn.ReLU(),
+        nn.LazyConv2d(num_channels, kernel_size=1),
+        nn.AvgPool2d(kernel_size=2, stride=2))
+```
+
+```{.python .input #densenet-transition-layers-1}
+%%tab tensorflow
+class TransitionBlock(tf.keras.layers.Layer):
+    def __init__(self, num_channels, **kwargs):
+        super(TransitionBlock, self).__init__(**kwargs)
+        self.batch_norm = tf.keras.layers.BatchNormalization()
+        self.relu = tf.keras.layers.ReLU()
+        self.conv = tf.keras.layers.Conv2D(num_channels, kernel_size=1)
+        self.avg_pool = tf.keras.layers.AvgPool2D(pool_size=2, strides=2)
+
+    def call(self, x):
+        x = self.batch_norm(x)
+        x = self.relu(x)
+        x = self.conv(x)
+        return self.avg_pool(x)
+```
+
+```{.python .input #densenet-transition-layers-1}
+%%tab jax
+class TransitionBlock(nn.Module):
+    num_channels: int
+    training: bool = True
+
+    @nn.compact
+    def __call__(self, X):
+        X = nn.BatchNorm(not self.training)(X)
+        X = nn.relu(X)
+        X = nn.Conv(self.num_channels, kernel_size=(1, 1))(X)
+        X = nn.avg_pool(X, window_shape=(2, 2), strides=(2, 2))
+        return X
+```
+
+Apply a transition layer with 10 channels to the output of the dense block in the previous example.  This reduces the number of output channels to 10, and halves the height and width.
+
+```{.python .input #densenet-transition-layers-2}
+%%tab mxnet
+blk = transition_block(10)
+blk.initialize()
+blk(Y).shape
+```
+
+```{.python .input #densenet-transition-layers-2}
+%%tab pytorch
+blk = transition_block(10)
+blk(Y).shape
+```
+
+```{.python .input #densenet-transition-layers-2}
+%%tab tensorflow
+blk = TransitionBlock(10)
+blk(Y).shape
+```
+
+```{.python .input #densenet-transition-layers-2}
+%%tab jax
+blk = TransitionBlock(10)
+blk.init_with_output(d2l.get_key(), Y)[0].shape
+```
+
+A full DenseNet alternates four dense blocks with transition layers, mirroring the four-stage layout of ResNet-18; assembling and training one is a straightforward variation on the ResNet code above. Feature reuse makes DenseNet parameter-efficient: it reached ResNet-level ImageNet accuracy with fewer parameters. Concatenation carries a cost that addition does not, however. Every layer's output must be kept in memory so that all later layers in the block can read it, so activation memory grows quadratically with depth inside a dense block, and mitigating this requires implementations that trade recomputation for memory :cite:`pleiss2017memory`. That memory bill is the main reason addition, not concatenation, won at scale: the architectures of the following sections, and the transformers of later chapters, all aggregate layers by residual sums.
+
 ## Summary and Discussion
 
 Nested function classes are desirable since they allow us to obtain strictly *more powerful* rather than also subtly *different* function classes when adding capacity. One way of accomplishing this is by letting additional layers to simply pass through the input to the output. Residual connections allow for this. As a consequence, this changes the inductive bias from simple functions being of the form $f(\mathbf{x}) = 0$ to simple functions looking like $f(\mathbf{x}) = \mathbf{x}$. 
@@ -760,7 +1021,7 @@ bypassing paths with gating units were introduced
 to effectively train highway networks with over 100 layers
 :cite:`srivastava2015highway`.
 Using identity functions as bypassing paths,
-ResNet performed remarkably well
+ResNet performed well
 on multiple computer vision tasks.
 Residual connections had a major influence on the design of subsequent deep neural networks, of either convolutional or sequential nature.
 As we will introduce later,
@@ -768,6 +1029,10 @@ the Transformer architecture :cite:`Vaswani.Shazeer.Parmar.ea.2017`
 adopts residual connections (together with other design choices) and is pervasive
 in areas as diverse as
 language, vision, speech, and reinforcement learning.
+Every transformer block in a large language model, and every block of the
+denoising networks behind diffusion models, is a residual block. By parameter
+count, most residual blocks in the world now live outside convolutional
+networks.
 
 ResNeXt is an example for how the design of convolutional neural networks has evolved over time: by being more frugal with computation and trading it off against the size of the activations (number of channels), it allows for faster and more accurate networks at lower cost. An alternative way of viewing grouped convolutions is to think of a block-diagonal matrix for the convolutional weights. Note that there are quite a few such "tricks" that lead to more efficient networks. For instance, ShiftNet :cite:`wu2018shift` mimics the effects of a $3 \times 3$ convolution, simply by adding shifted activations to the channels, offering increased function complexity, this time without any computational cost. 
 
@@ -779,8 +1044,10 @@ A common feature of the designs we have discussed so far is that the network des
 1. What are the major differences between the Inception block in :numref:`fig_inception` and the residual block? How do they compare in terms of computation, accuracy, and the classes of functions they can describe?
 1. Refer to Table 1 in the ResNet paper :cite:`He.Zhang.Ren.ea.2016` to implement different variants of the network. 
 1. For deeper networks, ResNet introduces a "bottleneck" architecture to reduce model complexity. Try to implement it.
-1. In subsequent versions of ResNet, the authors changed the "convolution, batch normalization, and activation" structure to the "batch normalization, activation, and convolution" structure. Make this improvement yourself. See Figure 1 in :citet:`He.Zhang.Ren.ea.2016*1` for details.
+1. In subsequent versions of ResNet, the authors changed the "convolution, batch normalization, and activation" structure to the "batch normalization, activation, and convolution" structure. Make this improvement yourself. See Figure 1 in :citet:`He.Zhang.Ren.ea.2016*1` for details. This ordering is essentially what ConvNeXt adopts. <!-- TODO(ch8): numref sec_convnext when 8.6 lands -->
 1. Why can't we just increase the complexity of functions without bound, even if the function classes are nested?
+1. One of the advantages claimed in the DenseNet paper :cite:`Huang.Liu.Van-Der-Maaten.ea.2017` is that its models have fewer parameters than comparable ResNets. Why is this the case? Consider which computations a concatenated feature saves relative to recomputing it.
+1. For a dense block whose $k$ convolutions each emit $g$ channels (the growth rate) on an input with $c$ channels, how many channels does the $i$-th convolution consume? Sum these to compare the activation memory of the dense block with that of $k$ residual blocks of constant width $c$, and relate your answer to the memory-efficient implementations of :citet:`pleiss2017memory`.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/85)
@@ -808,13 +1075,13 @@ $$\mathbf{y} = f(\mathbf{x}) + \mathbf{x}.$$
 
 The function only needs to learn the *residual* relative
 to identity. Identity is always representable, so adding
-more layers can't hurt — 18 → 152 layers genuinely improves
+more layers can't hurt: 18 → 152 layers genuinely improves
 accuracy. Gradients flow through the skip at full strength,
 so deep nets train as easily as shallow ones.
 :::
 
 ::: {.slide title="Residual block"}
-![Plain block (left) vs residual block (right). Skip-add carries the input around the conv stack.](../img/resnet-block.svg){width=78%}
+![The two block variants: identity skip when shapes match, 1×1 projection on the skip path when channels or resolution change.](../img/arch-resnet-block.svg){width=78%}
 :::
 
 ::: {.slide title="Block in code"}
@@ -842,7 +1109,7 @@ Halve spatial dims and double channels (transition between stages):
 Stages of N residual blocks, with downsampling at the start
 of each stage:
 
-![ResNet-18: four stages of two residual blocks each, plus stem and head.](../img/resnet18-90.svg){width=66%}
+![ResNet-18: four stages of two residual blocks each, plus stem and head.](../img/arch-resnet18.svg){width=66%}
 :::
 
 ::: {.slide title="ResNet stem"}
@@ -867,7 +1134,7 @@ spatial map and the final linear layer predicts classes.
 :::
 
 ::: {.slide title="ResNet-18 assembly"}
-Four stages × 2 residual blocks each — same template
+Four stages × 2 residual blocks each; the same template
 defines ResNet-34/50/101/152:
 
 @resnet-resnet-model-4
@@ -885,8 +1152,8 @@ into the same `Trainer` used by earlier CNNs.
 
 ::: {.slide title="ResNeXt: width via cardinality"}
 A cleaner variant: each block has **multiple parallel paths**
-(cardinality $C$) instead of one wide one — same parameter
-budget, better accuracy:
+(cardinality $C$) instead of one wide one, with the same parameter
+budget and better accuracy:
 
 @resnet-resnext-1
 :::
@@ -899,13 +1166,48 @@ information mix before and after the grouped work.
 @resnet-resnext-2
 :::
 
+::: {.slide title="DenseNet: concatenate instead of add"}
+**DenseNet** (Huang et al., 2017) keeps more than two Taylor terms:
+instead of *adding* a layer's output to its input, **concatenate**
+them along the channel dimension.
+
+$$\mathbf{x}_\ell = f_\ell\bigl(\left[\mathbf{x}_0, \mathbf{x}_1, \ldots, \mathbf{x}_{\ell-1}\right]\bigr).$$
+
+![Addition keeps channels fixed; concatenation grows them, and every layer sees all earlier features.](../img/arch-densenet-block.svg){width=62%}
+:::
+
+::: {.slide title="Dense blocks in code"}
+A conv block (BN → ReLU → 3×3 conv) is the unit; a dense block
+stacks them, concatenating each output onto the running input:
+
+@densenet-dense-blocks-1
+
+@densenet-dense-blocks-2
+:::
+
+::: {.slide title="Transition layers, and why addition won"}
+Each dense block grows channels by `num_convs * num_channels`; a
+transition layer (1×1 conv + 2×2 avg-pool) shrinks them back:
+
+@densenet-transition-layers-1
+
+. . .
+
+Feature reuse makes DenseNet parameter-efficient, but every
+concatenated map must stay in memory for later layers. That memory
+bill is why **addition** won at scale.
+:::
+
 ::: {.slide title="Recap"}
-- Residual connection: $\mathbf{y} = f(\mathbf{x}) + \mathbf{x}$
-  — guarantees identity is always representable.
+- Residual connection: $\mathbf{y} = f(\mathbf{x}) + \mathbf{x}$,
+  which guarantees identity is always representable.
 - Trains networks **arbitrarily deep** (152, 1000+) without
   optimization pathologies.
-- The "residual block" + "stage" template is universal — used in
-  vision (ResNet, ResNeXt, DenseNet), language (Transformers, all
+- ResNeXt adds cardinality: grouped 3×3 conv between 1×1 mixers.
+- DenseNet **concatenates** instead of adds: maximal feature reuse,
+  fewer parameters, but a memory bill that addition avoids.
+- The "residual block" + "stage" template is universal: used in
+  vision (ResNet, ResNeXt), language (Transformers, all
   use residual + LayerNorm), and beyond.
 - ResNet-50 is the default ImageNet backbone for transfer
   learning even a decade later.

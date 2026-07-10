@@ -115,12 +115,9 @@ book:
         - chapter_convolutional-neural-networks/lenet.qmd
         - chapter_convolutional-modern/index.qmd
         - chapter_convolutional-modern/alexnet.qmd
-        - chapter_convolutional-modern/vgg.qmd
-        - chapter_convolutional-modern/nin.qmd
-        - chapter_convolutional-modern/googlenet.qmd
+        - chapter_convolutional-modern/blocks.qmd
         - chapter_convolutional-modern/batch-norm.qmd
         - chapter_convolutional-modern/resnet.qmd
-        - chapter_convolutional-modern/densenet.qmd
         - chapter_convolutional-modern/cnn-design.qmd
     - part: "Recurrent Neural Networks"
       chapters:

@@ -119,7 +119,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=8192.0>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=6553600.0>"
         }
       ]
     },

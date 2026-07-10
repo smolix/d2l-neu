@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "machine-translation-and-dataset/machine-translation-and-dataset-tokenization-4-1.svg",
           "bytes": 25569,
-          "sha256": "sha256:5d43919d91ae6969fade5a1ffab0b77c3873f3bada7d29ebd87f91f017c579e6"
+          "sha256": "sha256:d251a37d63cfc44558c660600d17521826f04b385fbec84c49a996c33e109c33"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: tensor([[  4,  98,   3,   2,   1,   1,   1,   1,   1],\n        [ 63,  20,   3,   2,   1,   1,   1,   1,   1],\n        [143,   9,   3,   2,   1,   1,   1,   1,   1]], dtype=torch.int32)\ndecoder input: tensor([[ 2, 10,  0,  4,  3,  1,  1,  1,  1],\n        [ 2,  0,  5,  3,  1,  1,  1,  1,  1],\n        [ 2, 87,  8,  4,  3,  1,  1,  1,  1]], dtype=torch.int32)\nsource len excluding pad: tensor([4, 4, 4], dtype=torch.int32)\nlabel: tensor([[10,  0,  4,  3,  1,  1,  1,  1,  1],\n        [ 0,  5,  3,  1,  1,  1,  1,  1,  1],\n        [87,  8,  4,  3,  1,  1,  1,  1,  1]], dtype=torch.int32)\n"
+          "text": "source: tensor([[ 80,  11,   3,   2,   1,   1,   1,   1,   1],\n        [ 12,  35,   5,   2,   1,   1,   1,   1,   1],\n        [ 15, 176,   3,   2,   1,   1,   1,   1,   1]], dtype=torch.int32)\ndecoder input: tensor([[  2,   0,   5,   3,   1,   1,   1,   1,   1],\n        [  2, 126,   5,   3,   1,   1,   1,   1,   1],\n        [  2,  37, 192,   5,   3,   1,   1,   1,   1]], dtype=torch.int32)\nsource len excluding pad: tensor([4, 4, 4], dtype=torch.int32)\nlabel: tensor([[  0,   5,   3,   1,   1,   1,   1,   1,   1],\n        [126,   5,   3,   1,   1,   1,   1,   1,   1],\n        [ 37, 192,   5,   3,   1,   1,   1,   1,   1]], dtype=torch.int32)\n"
         }
       ]
     },

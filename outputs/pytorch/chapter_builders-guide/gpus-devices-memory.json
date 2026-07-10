@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.7822, 0.0811, 0.0168],\n        [0.6584, 0.8761, 0.5624]], device='cuda:1')"
+          "text": "tensor([[0.2891, 0.3048, 0.8022],\n        [0.2967, 0.7306, 0.6506]], device='cuda:1')"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1.7822, 1.0811, 1.0168],\n        [1.6584, 1.8761, 1.5624]], device='cuda:1')"
+          "text": "tensor([[1.2891, 1.3048, 1.8022],\n        [1.2967, 1.7306, 1.6506]], device='cuda:1')"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.4733],\n        [0.4733]], device='cuda:0', grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[0.4722],\n        [0.4722]], device='cuda:0', grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  peak   2358 MiB, 0.06 sec\ncheckpointing=True   peak   1407 MiB, 0.05 sec\n"
+          "text": "checkpointing=False  peak   2358 MiB, 0.04 sec\ncheckpointing=True   peak   1407 MiB, 0.05 sec\n"
         }
       ]
     },
@@ -180,7 +180,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0011 sec\ntime until they all finished:     0.0767 sec\n"
+          "text": "time to queue 32 matrix products: 0.0011 sec\ntime until they all finished:     0.0751 sec\n"
         }
       ]
     },
@@ -191,12 +191,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable copy:              0.543 ms\n"
+          "text": "pageable copy:              0.631 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pinned, non-blocking copy:  0.369 ms\n"
+          "text": "pinned, non-blocking copy:  0.370 ms\n"
         }
       ]
     },
@@ -214,7 +214,7 @@
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
           "bytes": 21806,
-          "sha256": "sha256:7dc7cf96ff15daa9f579df1aef079c662e0c9165bd15de277cb4236946e93307"
+          "sha256": "sha256:f4206c38526100fe755d0078885ffe5f901bd39846a278d6d9ac7dc111033aec"
         }
       ]
     }

@@ -108,14 +108,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final loss: fp32 0.711, mixed_bfloat16 0.711\n"
+          "text": "final loss: fp32 0.712, mixed_bfloat16 0.711\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 28516,
-          "sha256": "sha256:100d0e361635228fefaa526330e996703b999bb63ffb707e6315f64440f009dd"
+          "bytes": 28517,
+          "sha256": "sha256:bdd1093f996e06a027826129f0835034839f3966ea05192a9a3d494dbefd38ba"
         }
       ]
     },

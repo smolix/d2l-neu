@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
           "bytes": 31472,
-          "sha256": "sha256:73d5ef2adc96721ed70f4031b248603cf890eceaebcc219830107b8fe7100cc3"
+          "sha256": "sha256:2c95798fac35bcfab04919192730f883b68429e642e11634c8f4f4535534e967"
         }
       ]
     },
@@ -72,7 +72,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-double-descent-in-twenty-five-lines-1.svg",
           "bytes": 33075,
-          "sha256": "sha256:abd312424d19608b1abb80512a0d36594186b67bdb955ba6535fd6bb34a5a21b"
+          "sha256": "sha256:ec40ff1652057a8ce77090e9969f9b6a411811fdf11bd9548008b1caaea37703"
         }
       ]
     }

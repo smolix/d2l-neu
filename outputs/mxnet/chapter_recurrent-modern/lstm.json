@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 19930,
-          "sha256": "sha256:b60a3bff4fed5a30a5ef22a061469b4706daf39c219af67c832e3bc0b3f60b44"
+          "bytes": 19926,
+          "sha256": "sha256:32f2bf4e4182e6d62ca6836d9cde08bdb04b837ec07235392ef2c40efb1eb10b"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 19938,
-          "sha256": "sha256:81c0f6576ae4eff064ad5db4dc4132ec904768e05cbee876899aabd05f1f1878"
+          "bytes": 19939,
+          "sha256": "sha256:5889e7f33ae3b69167e794e46705fcaecd858e919bed73c9aa4150e9f1999d1e"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has a dimension and the'"
+          "text": "'it has of the time the pec'"
         }
       ]
     }

@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[14:40:05] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[18:22:04] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },
@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
           "bytes": 13741,
-          "sha256": "sha256:9d9f779abd2c106916d3549f5131e07a01ff8316393556975cb274bfd20fb946"
+          "sha256": "sha256:4aafd27e6a7458b3e8ce2e6e6e047a4da0c1609ee16dc807387b2c64d67a26b8"
         }
       ]
     },

@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it haskh<unk>xbbn<unk>ksubublctvlw'"
+          "text": "'it haskctesbcxyckezesbjelw'"
         }
       ]
     },
@@ -41,8 +41,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
-          "bytes": 24287,
-          "sha256": "sha256:7c3a9a1ad2ad7476e5fc87cbc9aba16a876c742fcfbba21b71facdf746bec33d"
+          "bytes": 24107,
+          "sha256": "sha256:6fff0015b009e0085b8166598d1da55f45ea79722870e890ec9b5a66e06455ec"
         }
       ]
     },
@@ -53,7 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.4, 'time traveller and the the the the'\n"
+          "text": "perplexity 7.0, 'time traveller and and and and and'\n"
         }
       ]
     }

@@ -51,8 +51,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-training-1.svg",
-          "bytes": 21505,
-          "sha256": "sha256:b2cae12b365b326f63c22c8e58a73fa6c7c9fbc716ab6b77e06437d593d774e5"
+          "bytes": 21507,
+          "sha256": "sha256:19c0f9cf0e724848ef4acabd55878c6915f17d6d110104772b0ca13d3d5a77fa"
         }
       ]
     }

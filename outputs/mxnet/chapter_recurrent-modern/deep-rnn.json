@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 23737,
-          "sha256": "sha256:0c508cc7289c73571ee8ad972fe1746b15f0df2be2b91477e89071c61eb71975"
+          "bytes": 23740,
+          "sha256": "sha256:da260dce533b6612633485b41bcbdab13e70297b568b9d14cbb3ba6605d75c73"
         }
       ]
     },
@@ -47,14 +47,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has in the the time the'"
+          "text": "'it has the time the time t'"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24734,
-          "sha256": "sha256:0b927c0ac956b5646f8bef5027118827188d856e539db7806280558c3cc13444"
+          "bytes": 24690,
+          "sha256": "sha256:248cf0629ebff0b4432be8349b581be7cd00cc8dce5e88bc477974b02477d743"
         }
       ]
     }

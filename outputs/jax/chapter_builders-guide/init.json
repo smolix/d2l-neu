@@ -97,7 +97,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2      3.18      2.06     0.993\n  8      79.6      2.26     0.993\n"
+          "text": "  2      3.18      2.06     0.993\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  8      79.6      2.26     0.993\n"
         },
         {
           "type": "stream",

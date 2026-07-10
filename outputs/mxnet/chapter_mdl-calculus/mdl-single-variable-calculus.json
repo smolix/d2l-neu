@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[14:40:10] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[18:22:09] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },
@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
           "bytes": 15837,
-          "sha256": "sha256:5f75857a4e91e20661b8480ce58c0c197eff9c6641ae13f064efa1989b4aece2"
+          "sha256": "sha256:109bcb31e3eff9dac3bb121fd0e0b00c4747a3c720f90262981ef430abb20284"
         }
       ]
     },
@@ -67,7 +67,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25211,
-          "sha256": "sha256:ce59650044ff0eb53c86330a2a4c1ca15dfaf035d229b3df0459a34f06df510a"
+          "sha256": "sha256:8cea04ef9ed24f22cba15cb07c1ff5451a81a024b812abd669fd87ad4fa9f167"
         }
       ]
     },
@@ -102,7 +102,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
           "bytes": 28556,
-          "sha256": "sha256:cbae2fbc4e0caf8d3565533e8322707d974a4ff9bcf376cf3f8b366b0695787e"
+          "sha256": "sha256:a503bc391b4988f2e95a6959a823eb6617517fd8f74dec3254dc740a2665643b"
         }
       ]
     },

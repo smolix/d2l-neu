@@ -92,7 +92,12 @@
     "information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification": {
       "code_fingerprint": "sha256:48e548b6e8fe79c24ed5baf0eb35254c066d8d2170ae81662f7e058e6f026c35",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(0.94856, dtype=float32)"
+        }
+      ]
     },
     "information-theory-coding": {
       "code_fingerprint": "sha256:ebab7e1bb842efbd88463b7fa7176f72751782895b0660922de39037fa61230a",

@@ -70,7 +70,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "/tmp/ipykernel_1828/1272845916.py:14: UserWarning: \"PlainListMLP.layers\" is an unregistered container with Blocks. Note that Blocks inside the list, tuple or dict will not be registered automatically. Make sure to register them using register_child() or switching to nn.Sequential/nn.HybridSequential instead. \n  net(X).shape, len(net.collect_params())\n"
+          "text": "/tmp/ipykernel_61726/1272845916.py:14: UserWarning: \"PlainListMLP.layers\" is an unregistered container with Blocks. Note that Blocks inside the list, tuple or dict will not be registered automatically. Make sure to register them using register_child() or switching to nn.Sequential/nn.HybridSequential instead. \n  net(X).shape, len(net.collect_params())\n"
         },
         {
           "type": "execute_result",

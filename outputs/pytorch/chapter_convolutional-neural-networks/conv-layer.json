@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 7.480\nepoch 4, loss 1.389\nepoch 6, loss 0.288\nepoch 8, loss 0.071\nepoch 10, loss 0.021\n"
+          "text": "epoch 2, loss 6.151\nepoch 4, loss 1.886\nepoch 6, loss 0.666\nepoch 8, loss 0.255\nepoch 10, loss 0.101\n"
         }
       ]
     },
@@ -85,7 +85,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[ 0.9734, -0.9992]])"
+          "text": "tensor([[ 1.0241, -0.9590]])"
         }
       ]
     },

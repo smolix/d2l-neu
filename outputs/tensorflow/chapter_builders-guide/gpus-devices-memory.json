@@ -19,7 +19,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7de31e3d8d00>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7de31e0618c0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7de31e705800>)"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7802a4bdbcc0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7802a4bfc080>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7802a4bfc240>)"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7de31e086540>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7de31e0862c0>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x7de31e086280>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x7de31e086240>])"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x7802a4bfeb80>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7802a4bfe940>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x7802a4bfec00>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x7802a4bfe8c0>])"
         }
       ]
     },
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.769251  , 0.42366874, 0.41379285],\n       [0.14518178, 0.64342177, 0.5818496 ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.15166676, 0.7514187 , 0.9500793 ],\n       [0.8426902 , 0.826668  , 0.39176226]], dtype=float32)>"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.769251 , 1.4236687, 1.4137928],\n       [1.1451818, 1.6434218, 1.5818496]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.1516668, 1.7514187, 1.9500793],\n       [1.8426902, 1.826668 , 1.3917623]], dtype=float32)>"
         }
       ]
     },
@@ -100,7 +100,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[-1.8046412],\n       [-1.8046412]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[-0.6125666],\n       [-0.6125666]], dtype=float32)>"
         }
       ]
     },
@@ -142,7 +142,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ optimizer state    640.9 MiB\n"
+          "text": "+ optimizer state    640.8 MiB\n"
         }
       ]
     },
@@ -169,7 +169,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  peak   2469 MiB, 0.09 sec\ncheckpointing=True   peak   1549 MiB, 0.09 sec\n"
+          "text": "checkpointing=False  peak   2429 MiB, 0.09 sec\ncheckpointing=True   peak   1489 MiB, 0.09 sec\n"
         }
       ]
     },
@@ -197,8 +197,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 20107,
-          "sha256": "sha256:4dbb2e5bec492079775c24f1a13ea1bb809722c0c18fc3e50fbbcc298a674293"
+          "bytes": 20108,
+          "sha256": "sha256:98cf6b10aa6a44109c2fc75b2979b9ce7c8f75056d2c143b45164b827d10fbba"
         }
       ]
     }

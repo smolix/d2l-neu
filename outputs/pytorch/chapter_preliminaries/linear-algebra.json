@@ -259,7 +259,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor(1.1622), tensor(True))"
+          "text": "(tensor(1.9164), tensor(True))"
         }
       ]
     },
@@ -320,7 +320,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tensor(5.3149) tensor(5.3149)\ntensor(True)\n"
+          "text": "tensor(2.8166) tensor(2.8166)\ntensor(True)\n"
         }
       ]
     },

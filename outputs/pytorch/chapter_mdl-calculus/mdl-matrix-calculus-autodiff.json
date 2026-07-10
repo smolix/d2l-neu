@@ -107,12 +107,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward-over-reverse Hv:"
+          "text": "forward-over-reverse Hv: "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " tensor([3.5000, 2.0000])\nA v                    : tensor([3.5000, 2.0000])\n"
+          "text": "tensor([3.5000, 2.0000])\nA v                    : tensor([3.5000, 2.0000])\n"
         }
       ]
     },

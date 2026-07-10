@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:bb01f52aa44772cd20ef3c613e782fa968f8c62643ab259733048872705dcbfe"
+          "sha256": "sha256:35eb8afaa96909448c21b2ee9b39fa4e7eaa75827731778b5c4920722fdbb52c"
         }
       ]
     },
@@ -124,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:e16662ea5433385f90c9e6d25105d25e4f61f1ddeb428b89cca8e8739b4fdaf8"
+          "sha256": "sha256:98bf15377b8509c003ad225331dfc5c58df18ba728af4767d5f9ef2759ef8c0a"
         }
       ]
     },
@@ -193,7 +193,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
+          "text": "dA/deta      = 0.668188\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigmoid(eta) = E[x] = p = 0.668188\n"
         }
       ]
     },

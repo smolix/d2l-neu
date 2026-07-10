@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 29488,
-          "sha256": "sha256:84086671215071ccf09fa18cbe4e577dfbeedb39a720b49cd9739927303bb87d"
+          "sha256": "sha256:bfc5acece5ae36159a5221a3e24dc963585de4c1983346e0d8b1b714a21d4abb"
         }
       ]
     },
@@ -71,12 +71,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter   0  loss 1.53440\niter 100  loss 0.00004\niter 200  loss 0.00000\n"
+          "text": "iter   0  loss 1.29514\niter 100  loss 0.00005\niter 200  loss 0.00001\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter 300  loss 0.00000\niter 400  loss 0.00000\nmean endpoint error: 0.0014\n"
+          "text": "iter 300  loss 0.00000\niter 400  loss 0.00000\nmean endpoint error: 0.0011\n"
         }
       ]
     },
@@ -87,12 +87,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "discrete adjoint vs finite differences: 1.2e-10\nn =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
+          "text": "discrete adjoint vs finite differences: 1.2e-10\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
         }
       ]
     },
@@ -103,7 +103,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\nHutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
+          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Hutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
         }
       ]
     }

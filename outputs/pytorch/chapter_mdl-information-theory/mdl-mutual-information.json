@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:601388835d80f2d7c6268fe6745cf74195268e0d957c03556dcad8a1c07230ed"
+          "sha256": "sha256:45c2ae56a34afa3d721c945d6f3b7fa7678259f86d6dd7c757fc94244ac59ff3"
         }
       ]
     },
@@ -93,12 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 1, rho = 0.5: KSG = 0.121, closed form = 0.144 nats\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "d = 1, rho = 0.7: KSG = 0.335, closed form = 0.337 nats\n"
+          "text": "d = 1, rho = 0.5: KSG = 0.121, closed form = 0.144 nats\nd = 1, rho = 0.7: KSG = 0.335, closed form = 0.337 nats\n"
         },
         {
           "type": "stream",
@@ -131,7 +126,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:4d626d7b454ca86aa384ec2af0d635b12066730dfa85ada22670db3459ef78e0"
+          "sha256": "sha256:cde0ecfd1163e823ad9d0be95a18d41220c14c21cc320c3366474a8e518107e6"
         }
       ]
     },
@@ -181,7 +176,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:e28b077ead284f3d5806fb6c1e30a24c763553ea872e930b39649fc020720032"
+          "sha256": "sha256:468fffecb2891c286db6ca90031f9771daada78bf91bd9328c215194b277c0e1"
         }
       ]
     },

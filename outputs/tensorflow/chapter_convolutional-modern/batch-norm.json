@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 19975,
-          "sha256": "sha256:565511e133b60d80e697b4e855b9383292c3baa035d94c505bb7aaeb5e8b32e6"
+          "bytes": 19976,
+          "sha256": "sha256:897348f13eed494b5e5e8c7fa6c38a1f545d2a10584f7625ff74276b251bcece"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([4.2472105 , 3.2799544 , 0.7709051 , 0.35971802, 1.829114  ,\n        2.8016973 ], dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([-2.3102775 ,  1.9322157 , -0.67051166,  0.28217468,  2.3411067 ,\n         2.9735913 ], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([2.50478  , 2.132476 , 3.31272  , 3.6142602, 3.2083244, 3.4327197],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([ 0.12195671,  1.8091393 , -3.4991102 , -2.118213  , -1.997389  ,\n         1.8012662 ], dtype=float32)>)"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 19977,
-          "sha256": "sha256:af849b6b0f6bc370e5c7dad14699b0768bb2d579e5bd297bfa884730f518e962"
+          "bytes": 19978,
+          "sha256": "sha256:94257d591578dcd5d6c9986fdaf1399c406442910577b190f8b21d89b1a4b024"
         }
       ]
     },
@@ -75,7 +75,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.9802322387695312e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9989885091781616>,\n True)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.9802322387695312e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.998993992805481>,\n True)"
         }
       ]
     }

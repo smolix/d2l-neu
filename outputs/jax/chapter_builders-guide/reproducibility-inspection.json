@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "same seed, identical loss and weights: True True\ndifferent seed: 1.0155029 vs 0.77521855\n"
+          "text": "same seed, identical loss and weights: True True\ndifferent seed: 1.015503 vs 0.77521855\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "False -6.103515625e-05\n"
+          "text": "False 0.000213623046875\n"
         }
       ]
     },

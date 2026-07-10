@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 20041,
-          "sha256": "sha256:1b368c88307d5e8bbc824d4ce661783597713f990062b567fa136f46bbf38d53"
+          "bytes": 20059,
+          "sha256": "sha256:b2e599a5158e29990dea4617e969ab98347b22419952f77a23491b8fc9d262b2"
         }
       ]
     },
@@ -50,7 +50,7 @@
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
           "bytes": 20440,
-          "sha256": "sha256:6a20fdc3bf86a4c8f23ca59e83d0e9938d9c7c820f961f18e8294816f024a308"
+          "sha256": "sha256:19004d4048ad6d475fbeb657cd47d3cf0a53ed14238471a6e379e8ac4a334739"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has a mace and the time'"
+          "text": "'it has a meally the the th'"
         }
       ]
     }

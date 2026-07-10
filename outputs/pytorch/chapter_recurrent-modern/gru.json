@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20310,
-          "sha256": "sha256:6df1a38d8b871f96fc30a200e757c41bce1ed19cf5d49e636bb40ded228bb2ef"
+          "bytes": 20297,
+          "sha256": "sha256:2c00c64868f8b84dab95517ccfc8ba32cb61d457dd37d014b5b4923100a1dc02"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20306,
-          "sha256": "sha256:06b443883fb138e0b8593e85332d0e72f796a099928f1c5f18aafc78e398b8ea"
+          "bytes": 20305,
+          "sha256": "sha256:c01593d7c82060fb8ca76f2d879faa4697c376ddcb430e75451e4ede696bd193"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has i have a man the th'"
+          "text": "'it has i whoun the persong'"
         }
       ]
     }

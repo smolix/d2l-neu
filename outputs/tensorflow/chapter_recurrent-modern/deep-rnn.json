@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 24741,
-          "sha256": "sha256:86dd2fc0f4b6c6d852ceb2d1fc64e2a4cdf87b9df6ac1158c6bd53976395096b"
+          "bytes": 24827,
+          "sha256": "sha256:ac06e112926c0be8d4c15c7e52f066dc2b66ebdf8ef5b44ea5574d5bbccee333"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24132,
-          "sha256": "sha256:331d2495eb4ac8e6b1580ff7adb06457178bdfa26f8d06fef819d077a03e2576"
+          "bytes": 24055,
+          "sha256": "sha256:c12a7b772f58a874f91dea5e78b6c85c60bef481fc9028052a3bf1757b4ef50e"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has so incer and the ti'"
+          "text": "'it has of the prover of th'"
         }
       ]
     }

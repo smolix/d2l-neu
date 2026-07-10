@@ -20,14 +20,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 1.842 sec/epoch\n"
+          "text": "loss: 0.243, 2.046 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adadelta/adadelta-implementation-2-1.svg",
-          "bytes": 18775,
-          "sha256": "sha256:8cc610cb590ad31b7c11ccb31ca83735c177472faf5cff9b60bc02385d25ec22"
+          "bytes": 18771,
+          "sha256": "sha256:788945cef489a016c957a0761bb4b943d7dc7a8a7adbb1744f4fdf407cb235c9"
         }
       ]
     },
@@ -38,14 +38,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.309, 0.912 sec/epoch\n"
+          "text": "loss: 0.301, 0.739 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adadelta/adadelta-implementation-3-1.svg",
-          "bytes": 18582,
-          "sha256": "sha256:4a23574d98e271648d57927ef36926aaa39dd30a218cc2e81b1a00a6944550b3"
+          "bytes": 18604,
+          "sha256": "sha256:7967dbd2e5df229a1d6b93a0e201f3a9aeaef89b4eab3b94fe7762735ecbb01d"
         }
       ]
     }

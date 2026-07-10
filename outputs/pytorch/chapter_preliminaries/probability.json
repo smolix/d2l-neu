@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [53, 47]\n"
+          "text": "heads, tails:  [47, 53]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([50., 50.])"
+          "text": "tensor([48., 52.])"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.4700, 0.5300])"
+          "text": "tensor([0.5400, 0.4600])"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.5012, 0.4988])"
+          "text": "tensor([0.5080, 0.4920])"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 30167,
-          "sha256": "sha256:c872e67afac0e9ca9681496520a5907cf2186bf13b8f903fa302dbb9eaf94c15"
+          "bytes": 30140,
+          "sha256": "sha256:8e998cc5339e53bd7f1a92b3c816b5c58218c2459b5db0651e595474c62bf808"
         }
       ]
     },
@@ -75,15 +75,20 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 109015,
-          "sha256": "sha256:6696dd770d5c8fab34d9eb636a1ee83ed675db3e8011a17690f23f69bf1cc5ad"
+          "bytes": 106060,
+          "sha256": "sha256:58392095100ea66441795fd1e3298d1c779319b4300c90c055a6896e2f32ddd3"
         }
       ]
     },
     "probability-worked-example-hiv-testing-1": {
       "code_fingerprint": "sha256:3e90854a00e30cf095db4d134b4d11889b1054445e20d5039d23c399156fe3d9",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor(0.8383)"
+        }
+      ]
     }
   }
 }

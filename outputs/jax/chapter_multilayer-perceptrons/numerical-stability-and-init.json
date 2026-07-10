@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
           "bytes": 26188,
-          "sha256": "sha256:b695b7284d1bc4fd4a9e139a526cf56ac518faa7f556ed4e8cdc1ff1cd0efc08"
+          "sha256": "sha256:a11458d0bd16848f2add290d4eaefba3d0237c16eb061b8f6f0868076817ce50"
         }
       ]
     },
@@ -46,7 +46,7 @@
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
           "bytes": 31003,
-          "sha256": "sha256:2c54c333b3db12b57802ee2516f10c1a730cdc8f0a66aecc01041d47569fb734"
+          "sha256": "sha256:17634251aefc977a95bdee118a47ddf9db953099f4416025430498fe0a5a677f"
         }
       ]
     }

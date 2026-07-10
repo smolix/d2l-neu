@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "convexity/convexity-convex-functions-1.svg",
           "bytes": 28642,
-          "sha256": "sha256:23e8f3966f02a72a6af1aecc29c76e2e125928ddceaa3f00a1d65a59d01189f6"
+          "sha256": "sha256:96d6c72e2b36a5e733c7bebedf4eefd41188029b98414773ffe1486c451f742f"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "mime": "image/svg+xml",
           "asset": "convexity/convexity-local-minima-are-global-minima-1.svg",
           "bytes": 14568,
-          "sha256": "sha256:20334cd19fd4d27b21017fe09c467d8458c680c92015fb01782c73c56d4d488e"
+          "sha256": "sha256:ca471636d57a459e2ceddfaf832f0661c129935484b5cca2187dac98f17f21b8"
         }
       ]
     }

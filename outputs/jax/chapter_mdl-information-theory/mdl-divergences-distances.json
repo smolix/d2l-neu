@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37614,
-          "sha256": "sha256:5cd75d1b478f81e69d81064b7fe5eeb8cf19e6960ad18fbe1f2db06a962bf155"
+          "sha256": "sha256:3cb65a415e20b795c9115fa5247a6f6008657b0a880eeaefea301a266ef3dee1"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
           "bytes": 35917,
-          "sha256": "sha256:c04c24d3a34518a9f78265f9abc16ec519a1da0e1ea8e2382de8185e59de1aa7"
+          "sha256": "sha256:0411ce879b51919a16a48e4ecce891a9775a43065f58273a6ca5065f07131cf1"
         }
       ]
     },

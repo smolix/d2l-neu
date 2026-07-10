@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-pooling/attention-pooling-kernels-and-data-2-1.svg",
           "bytes": 34844,
-          "sha256": "sha256:cfbc9f30f4451b246fe11640a40b74131b5c83a1685140bed82e7c0d823277f2"
+          "sha256": "sha256:d7ef129ce21acff3b6920baeae55a9991998c136bfdb85371b9a3a02bc5e7bcc"
         }
       ]
     },
@@ -54,8 +54,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-pooling/attention-pooling-attention-pooling-via-nadaraya-watson-regression-3-1.svg",
-          "bytes": 70003,
-          "sha256": "sha256:d9b19480bbc52f4b7ac60564f1ac28a6ba158dab16df30a875db213e2f08bdef"
+          "bytes": 69871,
+          "sha256": "sha256:377afc24cf5d692552acd7436a53f026601b46b3ac091086546af60fc9ddde54"
         }
       ]
     },
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-pooling/attention-pooling-attention-pooling-via-nadaraya-watson-regression-4-1.svg",
-          "bytes": 43056,
-          "sha256": "sha256:80a2677b2473449d42e62f461402069e1ef707b1668b713e23ccc2ff112575c4"
+          "bytes": 40189,
+          "sha256": "sha256:fd44abaa02a983d136c3723d3249bdf0070b762f4d95a63a5ac19418a874fd05"
         }
       ]
     },
@@ -80,8 +80,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-pooling/attention-pooling-adapting-attention-pooling-1-1.svg",
-          "bytes": 66773,
-          "sha256": "sha256:4003253d969b55f22199cc0a50a2b7630a9aa64e9267c7a8a6a8734f77869a72"
+          "bytes": 66649,
+          "sha256": "sha256:9e92e20f10789929d82bdbb5b2230f54ac953a86b8d0cef1223cda56f4e60d72"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-pooling/attention-pooling-adapting-attention-pooling-2-1.svg",
-          "bytes": 44266,
-          "sha256": "sha256:88a3e96167bd6d9c94670f4b1049f530df6928da1b868296b470663f96c8b595"
+          "bytes": 42254,
+          "sha256": "sha256:5e4ab0b38ee6e02d3beeeba62afc416228507396eeb1e048571838ff293f7ed9"
         }
       ]
     }

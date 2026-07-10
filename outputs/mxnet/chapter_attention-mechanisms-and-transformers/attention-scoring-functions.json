@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[[0.69492614, 0.30507386, 0.        , 0.        ],\n        [0.61507887, 0.38492116, 0.        , 0.        ]],\n\n       [[0.36378646, 0.18666245, 0.44955114, 0.        ],\n        [0.27091157, 0.48433262, 0.24475576, 0.        ]]])"
+          "text": "array([[[0.52142644, 0.4785736 , 0.        , 0.        ],\n        [0.5252397 , 0.4747603 , 0.        , 0.        ]],\n\n       [[0.37533018, 0.3040842 , 0.32058558, 0.        ],\n        [0.3273354 , 0.4050588 , 0.2676058 , 0.        ]]])"
         }
       ]
     },
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.3005257 , 0.42329025, 0.27618405, 0.        ]],\n\n       [[0.62980616, 0.37019384, 0.        , 0.        ],\n        [0.20384759, 0.20222521, 0.3329098 , 0.26101735]]])"
+          "text": "array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.2637721 , 0.36130184, 0.37492615, 0.        ]],\n\n       [[0.37960425, 0.6203958 , 0.        , 0.        ],\n        [0.2737989 , 0.30542076, 0.17244773, 0.24833253]]])"
         }
       ]
     },
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-scaled-dot-product-attention-3-1.svg",
-          "bytes": 14801,
-          "sha256": "sha256:8b8b196ef6f88a4671a89372084a05580cda984702b2da69781e04270a984432"
+          "bytes": 14798,
+          "sha256": "sha256:cd3cd689080ff948f25074935ca5fefa580ec5a38143b6584ecdbae1a9581e27"
         }
       ]
     },
@@ -84,8 +84,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-additive-attention-3-1.svg",
-          "bytes": 13569,
-          "sha256": "sha256:fb1f456e7bfc0983630aa4c9586447edb302ee8db3a16643010ac4f6a1f1c64d"
+          "bytes": 13573,
+          "sha256": "sha256:7d0dcba8998b543cc2bddd50e081f9c5856bbd72c3a5277d4a65be379a809263"
         }
       ]
     }

@@ -20,14 +20,14 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[14:41:56] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[18:24:27] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
           "bytes": 26183,
-          "sha256": "sha256:32a6342b12f105c19f020df638466c684ee6f89533f5a5250ed5d54c72a8f58a"
+          "sha256": "sha256:200df957f0c9f40b11de7b36a7e48abd9cf99eae9434d6f042fdb5232dffcc55"
         }
       ]
     },
@@ -38,7 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix [[-1.7708229e-01 -7.8802787e-02 -4.6771463e-02  1.4166690e+00]\n [-9.4221926e-01  9.9446505e-01  5.0918663e-01  5.8863086e-01]\n [-1.3140404e-01  1.5438317e+00 -1.3963919e-04  6.7218769e-01]\n [ 1.7616076e+00 -6.5151119e-01  3.7661582e-02  2.1160674e+00]]\nafter multiplying 100 matrices [[ 4.1444946e+24 -3.8051935e+24 -2.3770373e+25  3.0374063e+25]\n [-9.7340925e+23  8.9371859e+23  5.5829002e+24 -7.1338961e+24]\n [-3.2230079e+24  2.9591474e+24  1.8485270e+25 -2.3620698e+25]\n [ 5.4262452e+24 -4.9820200e+24 -3.1121730e+25  3.9767721e+25]]\n"
+          "text": "a single matrix [[-0.82028663  0.4533543  -1.3597094  -0.9222279 ]\n [-0.34579977 -0.5362944   0.4928569   1.776772  ]\n [-0.07274235  1.2331216   0.75037336 -0.14095202]\n [-0.03898155 -0.8268373   0.865656    0.5910763 ]]\nafter multiplying 100 matrices [[ 1.2790744e+21 -3.2981265e+21  5.7265780e+21  1.4735136e+22]\n [ 5.8869735e+22 -1.5179710e+23  2.6356722e+23  6.7818835e+23]\n [ 8.5981975e+21 -2.2170678e+22  3.8495216e+22  9.9052612e+22]\n [ 9.0775399e+20 -2.3406675e+21  4.0641291e+21  1.0457469e+22]]\n"
         }
       ]
     },
@@ -50,8 +50,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31004,
-          "sha256": "sha256:25cb91436d16a6b29e64960daacab561677a2f5c80d32e0b4f3d2425641ca046"
+          "bytes": 32948,
+          "sha256": "sha256:6035c0a10ce8e8495f99cc6094de102983b9e1cfaa0b8f823eb9b374d11c44b0"
         }
       ]
     }

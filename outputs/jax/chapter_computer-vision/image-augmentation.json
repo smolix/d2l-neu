@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-common-image-augmentation-methods-1-1.svg",
           "bytes": 123026,
-          "sha256": "sha256:a3064b4c716ec35ae6fd8a9a08d2db87448247e64e23f287e2a8eb94ea441fcd"
+          "sha256": "sha256:fded001261f01fc0d6e6b3bfa0856ad23ea1544d0912776f58b0703338eed232"
         }
       ]
     },
@@ -39,8 +39,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-flipping-and-cropping-1-1.svg",
-          "bytes": 196804,
-          "sha256": "sha256:882b51eb2a7c06b80d3a6caa30c97731de0b9c6d2eb5d817ad0722b4791bbb9f"
+          "bytes": 196836,
+          "sha256": "sha256:d22f141de729fd0bbea66632e5392efd7c8ef479e7134d14ebf1025e0f368503"
         }
       ]
     },
@@ -52,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-flipping-and-cropping-2-1.svg",
-          "bytes": 196340,
-          "sha256": "sha256:4af26fc4f06c3fe52c07463203d899e8571f6525c636078c3c9d337569c83355"
+          "bytes": 196488,
+          "sha256": "sha256:46b48bdf4c605a56354f1b5920d1a50d610663af21a6cfbaec38980aa26bfdd1"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-flipping-and-cropping-3-1.svg",
-          "bytes": 230864,
-          "sha256": "sha256:0b734dd82611a3dda2331f0604321731829882741a219a24cc615c5409e6eb42"
+          "bytes": 233960,
+          "sha256": "sha256:63eead82af623108e195535b76f91c4e89391a9e2666675a9ad551edc3149731"
         }
       ]
     },
@@ -78,8 +78,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-changing-colors-1-1.svg",
-          "bytes": 125468,
-          "sha256": "sha256:01f870f8381f6298a350a8af2cfb15b99076b2945217d7d1b7621edc5d039115"
+          "bytes": 169408,
+          "sha256": "sha256:6838873518a4dcf0800ef0b3196f487614faa8fe7d7c0389ec29ff143c939f9c"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-changing-colors-2-1.svg",
-          "bytes": 197372,
-          "sha256": "sha256:fe176284a456b52320f395b2b5284e9765e8312c6ac94aec9c98f24d1d9f4a0d"
+          "bytes": 197800,
+          "sha256": "sha256:f9db453a62ec6fcce60e62976b208974578f2b33db17a3e7001a0245f3cb2ae5"
         }
       ]
     },
@@ -104,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-changing-colors-3-1.svg",
-          "bytes": 156788,
-          "sha256": "sha256:c1af694c6e9a913fb7e6bde9528e633ca8554aeee41560413d5b7ba59db72bbc"
+          "bytes": 164184,
+          "sha256": "sha256:4825300e8b37637cd6ed47434d017d514fc889a70040afc2aa303bd9c6161433"
         }
       ]
     },
@@ -117,8 +117,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-combining-multiple-image-augmentation-methods-1.svg",
-          "bytes": 190832,
-          "sha256": "sha256:729cbb1be4e5c70ef2a09bffd66fbacec0f45dbfb850447245ce7d17fb5c1526"
+          "bytes": 180560,
+          "sha256": "sha256:c71fbb0ae37f263f6619393a9cb5c95c1655ddf87b65c4cb2fdf23d085065e7f"
         }
       ]
     },
@@ -136,7 +136,7 @@
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-training-with-image-augmentation-1-1.svg",
           "bytes": 278185,
-          "sha256": "sha256:9ff360687368ad963bfa6fdd1c34016e1606e528a61b63f97ec53c4fe01d64a6"
+          "sha256": "sha256:761355cbabe8e6fd53ba9307461ad6a80232cf5eaf6cff436c4ffc7580fe9573"
         }
       ]
     },
@@ -172,14 +172,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.149, train acc 0.949, test acc 0.830\n4669.9 examples/sec\n"
+          "text": "loss 0.162, train acc 0.945, test acc 0.832\n6789.0 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "image-augmentation/image-augmentation-multi-gpu-training-4-1.svg",
-          "bytes": 25493,
-          "sha256": "sha256:73413fe7818cb6759e9998f1f19ed53d80dc78a1261727da146b2dda196c6f90"
+          "bytes": 25489,
+          "sha256": "sha256:ea4d244c4656996c3a236dc779076cee1fd409454a337025930d6a205c16e6c2"
         }
       ]
     }

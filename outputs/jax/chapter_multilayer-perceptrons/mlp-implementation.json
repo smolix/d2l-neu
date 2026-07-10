@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 24818,
-          "sha256": "sha256:602fb293ea6397f53e3524e68764049439569c89b808b8320bfc42649bbde22e"
+          "bytes": 24821,
+          "sha256": "sha256:8defa5dba5f5568a18add05f3f78bb4c64a0318ece2d9b1af9cbc54c211a4c95"
         }
       ]
     },
@@ -54,8 +54,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-2-1.svg",
-          "bytes": 23825,
-          "sha256": "sha256:4fffec41e652dd31531897ff2d42af8766bb99c55ead93c6c537aab2ce3c758a"
+          "bytes": 23811,
+          "sha256": "sha256:60bd4e3fdc86dc891628bea9cd70fae88d51f6c4e79323a805be7a272df66275"
         }
       ]
     }

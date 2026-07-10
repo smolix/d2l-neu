@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 19922,
-          "sha256": "sha256:2b9f76db4f45bffc3d224417fb4d1d734075dcc2fdd13fe06a2b9abb5e9c6b45"
+          "bytes": 19928,
+          "sha256": "sha256:715aaf1bf058d58d3d067b6b14444895c593f86551d1f263978ad845fcdfca4b"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 20301,
-          "sha256": "sha256:80e2c87aa1f28a83a067bea12392f9ae26cc1c07e448071d32fb589156947131"
+          "bytes": 20300,
+          "sha256": "sha256:84e30a44a45f730c6edcdab6e7ac3f7d3bdccaf1f4f6e9614b2d4d11bccfb4c4"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has of the time travell'"
+          "text": "'it has on the think have a'"
         }
       ]
     }

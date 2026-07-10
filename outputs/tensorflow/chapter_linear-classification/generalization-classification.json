@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
           "bytes": 34254,
-          "sha256": "sha256:2150c0f8ee3da963bfef472966272dbab051f77093f7dd0e58a351fd51a94f9c"
+          "sha256": "sha256:acaa72a1feb1c74c13b6eed57811190ed9683de2c7c67e888c1425e2bddb918f"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
           "bytes": 31658,
-          "sha256": "sha256:8aec0cc2eed033b82a0cd7d0ffd8f8709f73c9e4d758f631cc1f67c3b4a2c09c"
+          "sha256": "sha256:828d9a25e60423b4fc4e80069adc962f7effccd7a48c3e37f6b1d9107c9d30fa"
         }
       ]
     }

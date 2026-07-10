@@ -46,8 +46,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 23614,
-          "sha256": "sha256:3c509c016e513705230f5c72b6914d703e0e406f84a7647c4f37664b37fb81b0"
+          "bytes": 23620,
+          "sha256": "sha256:1bee56ada62e4abd223404464fa630f8ff30232c4e2dc4b154a44c2a04335b3c"
         }
       ]
     },
@@ -57,7 +57,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.927116334438324"
+          "text": "0.924248456954956"
         }
       ]
     }

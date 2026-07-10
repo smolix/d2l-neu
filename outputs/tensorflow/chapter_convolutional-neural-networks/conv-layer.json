@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 21.895\nepoch 4, loss 7.704\nepoch 6, loss 2.952\nepoch 8, loss 1.166\nepoch 10, loss 0.465\n"
+          "text": "epoch 2, loss 31.113\nepoch 4, loss 10.484\nepoch 6, loss 3.914\nepoch 8, loss 1.540\nepoch 10, loss 0.619\n"
         }
       ]
     },
@@ -85,7 +85,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9181014, -1.0584217]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9033617, -1.0648787]], dtype=float32)>"
         }
       ]
     },

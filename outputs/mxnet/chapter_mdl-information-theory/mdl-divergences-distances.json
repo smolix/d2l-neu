@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37614,
-          "sha256": "sha256:df9a6257e0bcbd7ddc3de671294e3d702f9949b3f925cdb6fd3e0c188c09d1ef"
+          "sha256": "sha256:5bf32744f2a5459c5b4e26d0481197af762f88deaa86a84764271be08e9b8c5c"
         }
       ]
     },
@@ -100,7 +100,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
           "bytes": 35917,
-          "sha256": "sha256:abe044ca35aa7e76527850ee46623d9734d8a2900bb13eadf930a08e1ec4af56"
+          "sha256": "sha256:bd4fc3fb9e732aecfe536d25f2b9371cbecadc1d5d0667f77ac1706acec59cce"
         }
       ]
     },
@@ -133,7 +133,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "KSD^2 vs the true model  N(0,1): +0.00019\nKSD^2 vs the wrong model N(1,1): +0.64425\n"
+          "text": "KSD^2 vs the true model  N(0,1): +0.00019\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KSD^2 vs the wrong model N(1,1): +0.64425\n"
         }
       ]
     }

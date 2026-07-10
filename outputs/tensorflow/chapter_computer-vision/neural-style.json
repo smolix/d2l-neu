@@ -17,7 +17,7 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-1-1.svg",
           "bytes": 142658,
-          "sha256": "sha256:0756a0db8f2bb18a4504c074cef5b4a2873d98111652e8fae615d06c26e1df3b"
+          "sha256": "sha256:274af2e2e4ad0695060194873f189d9b4cb0e2f4bf564bf110c8bac5465aa6d1"
         }
       ]
     },
@@ -30,7 +30,7 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-2-1.svg",
           "bytes": 196603,
-          "sha256": "sha256:bce8c2d7d836b3d73210df1729da7bfd70dc74a4d6c770a03cac8e18ba8ae06f"
+          "sha256": "sha256:652f644ddddfaba43e85cde5383b54bac84951f00886f1985ef99e9180cf4602"
         }
       ]
     },
@@ -112,8 +112,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-training-2-1.svg",
-          "bytes": 180323,
-          "sha256": "sha256:4248037c9b0d2820f839273100ced0c6b24f35f90b66fbec6c221dec039ff904"
+          "bytes": 180343,
+          "sha256": "sha256:4994a3159572f8e87fd44754df71fb06e3d3bb015cd69a2243571871e2308c65"
         }
       ]
     }

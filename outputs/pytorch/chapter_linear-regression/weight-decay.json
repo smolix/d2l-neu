@@ -40,19 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.008641878142952919\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "/tmp/ipykernel_62016/1135735378.py:8: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.\nConsider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)\n  print('L2 norm of w:', float(l2_penalty(model.w)))\n"
+          "text": "L2 norm of w: 0.01156377512961626\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 21871,
-          "sha256": "sha256:893dbccdd019a68663569df17b4bd70cdb22dd5c1fa98e3b6c0778ca7a3c6471"
+          "bytes": 22833,
+          "sha256": "sha256:c1b938d306b7ec0c16f0f4f2cc3fccbceb23dd94cdae0fbcc6161b9409d9de3f"
         }
       ]
     },
@@ -63,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.00029441009974107146\n"
+          "text": "L2 norm of w: 0.0006835779640823603\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 22315,
-          "sha256": "sha256:b17374ef20005b93d2db73b4f99ea9ca0cf696600ee5a2bc3dd7e0867e38324e"
+          "bytes": 21245,
+          "sha256": "sha256:65a8fc4237edc745643b97735223a905354d4a61e6b713a202de6a939d9f9a1e"
         }
       ]
     },
@@ -81,7 +76,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda= 0  df= 20.0  strongest 1.00  weakest 1.00\nlambda= 3  df= 15.0  strongest 0.83  weakest 0.63\nlambda=30  df=  4.8  strongest 0.34  weakest 0.15\n"
+          "text": "lambda= 0  df= 20.0  strongest 1.00  weakest 1.00\nlambda= 3  df= 15.1  strongest 0.84  weakest 0.63\nlambda=30  df=  4.9  strongest 0.34  weakest 0.15\n"
         }
       ]
     },
@@ -92,8 +87,21 @@
     },
     "weight-decay-concise-implementation-2": {
       "code_fingerprint": "sha256:53b174fcfe4f80e2d9f18e2fb26fa5c2cca43c46042ca6f79b19f0987131c16a",
-      "kind": "text",
-      "outputs": []
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "L2 norm of w: 0.0008410557056777179\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
+          "bytes": 26679,
+          "sha256": "sha256:f1724a526df21385b374c13ef358437b80827059b4ca5bbf43f5a1919ce253b8"
+        }
+      ]
     }
   }
 }

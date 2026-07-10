@@ -319,10 +319,10 @@ The outcome of one such run:
 
 | Model | Parameters | Multiply-adds at $96 \times 96$ | Validation accuracy | Time per epoch |
 |---|---|---|---|---|
-| Mini-MobileNet | 542,474 | 50.3 million | 90.5% | 15.6 s |
-| VGG-style twin | 583,594 | 384.9 million | 89.9% | 20.6 s |
+| Mini-MobileNet | 542,474 | 50.3 million | 90.4% | 15.6 s |
+| VGG-style twin | 583,594 | 384.9 million | 86.6% | 20.6 s |
 
-At an equal parameter budget the separable network matches the dense one (slightly ahead in this run) while performing about $7.7\times$ fewer multiply-adds. Its epochs, however, are only about $1.3\times$ faster on the GPU we trained on: depthwise convolutions perform so little arithmetic per byte of memory they touch that the accelerator spends its time waiting rather than computing. The gap between operation counts and wall-clock time is the central complication of efficient network design, and we return to it below and in the exercises.
+At an equal parameter budget the separable network gives up nothing: it came out ahead of the dense twin in this run and at least even in our reruns (the dense twin's accuracy moves by a few points from seed to seed), while performing about $7.7\times$ fewer multiply-adds. Its epochs, however, are only about $1.3\times$ faster on the GPU we trained on: depthwise convolutions perform so little arithmetic per byte of memory they touch that the accelerator spends its time waiting rather than computing. The gap between operation counts and wall-clock time is the central complication of efficient network design, and we return to it below and in the exercises.
 
 ## Scaling and Searching
 
@@ -644,7 +644,7 @@ separable one reaches 512:
 
 . . .
 
-90.5% vs. 89.9% accuracy at $7.7\times$ fewer multiply-adds
+90.4% vs. 86.6% accuracy at $7.7\times$ fewer multiply-adds
 (50M vs. 385M). But epochs were only $1.3\times$ faster:
 **FLOPs are not latency** (depthwise convolutions are
 memory-bound).

@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20753,
-          "sha256": "sha256:e6da8d2469f5bf952b77840c54f510cb823d8dfe46ed940b9daae22808e068c2"
+          "bytes": 20307,
+          "sha256": "sha256:3b6c621d3f6fdc87f2369f20c79cd930b17f28b9765f508f9356538c17c5019b"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20311,
-          "sha256": "sha256:7a88d0edae0132d4318f69704ce007f95c9046cadbcfc3083993e8249778f4e3"
+          "bytes": 20304,
+          "sha256": "sha256:60011380bbda7b4c8de8ed79361c436753be63445ae8bd1e66f40f68f4d7b520"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has so i whe pay of so '"
+          "text": "'it has i the time travelle'"
         }
       ]
     }

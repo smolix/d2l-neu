@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=0.5426599383354187>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.5426599383354187>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=0.5422537922859192>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.5422537922859192>)"
         }
       ]
     },
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance    = 4\nE[divide by n]   = 2.666  (biased)\nE[divide by n-1] = 3.999  (unbiased)\n"
+          "text": "true variance    = 4\nE[divide by n]   = 2.675  (biased)\nE[divide by n-1] = 4.013  (unbiased)\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/statistics-permutation-test-1.svg",
           "bytes": 32404,
-          "sha256": "sha256:93519b12ff3b32126e7b99d6dd9cd5a0e2d1b3e42598ccf85ee06b1ac255760d"
+          "sha256": "sha256:3235ea33a23ff28aafa62a05af47f4a7cd2a3cd8fbf078e66cfc309e75ed0628"
         }
       ]
     },
@@ -68,7 +68,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=-0.0291602723300457>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.09347464144229889>)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=-0.03888393193483353>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.08342073857784271>)"
         }
       ]
     },

@@ -76,7 +76,12 @@
     "ndarray-getting-started-8": {
       "code_fingerprint": "sha256:f6906a20112ae05f4a6ab43dd4a5545db088cd47530d1ef027dc75dbd3f38037",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[ 1.6226422 ,  2.0252647 , -0.43359444, -0.07861735],\n       [ 0.1760909 , -0.97208923, -0.49529874,  0.4943786 ],\n       [ 0.6643493 , -0.9501635 ,  2.1795304 , -1.9551506 ]],      dtype=float32)"
+        }
+      ]
     },
     "ndarray-getting-started-9": {
       "code_fingerprint": "sha256:32aa41b4ea941da145316802ebaf4dfaa39067451bdf753af799371c94baa089",

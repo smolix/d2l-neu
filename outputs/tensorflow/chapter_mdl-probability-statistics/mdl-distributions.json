@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:a8edac99ec11728ae2b8863a3f0ba059ebd5d36611824e04d4e462ffd98bf73b"
+          "sha256": "sha256:27cfaea5d50079126f17c955252cdb2da01ba7452b1e087ee0c5fec08494fce2"
         }
       ]
     },
@@ -100,12 +100,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean (a+b)/2   = 2.0   sample mean: 1.999\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "var (b-a)^2/12 = 0.333  sample var : 0.334\n"
+          "text": "mean (a+b)/2   = 2.0   sample mean: 1.999\nvar (b-a)^2/12 = 0.333  sample var : 0.334\n"
         }
       ]
     },
@@ -129,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:5a459216bdf6ae272bad4ff519fe8fb8da28599ea38c28af246ce2dfb019be95"
+          "sha256": "sha256:0469ba4c47cd117a1efb96702364692a6dfda701b7414f87b0467a1cd847b275"
         }
       ]
     },

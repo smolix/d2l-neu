@@ -86,14 +86,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 1.480, train acc 0.462, best valid acc 0.406\n2353.4 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 1.690, train acc 0.375, best valid acc 0.391\n2444.0 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-training-and-validating-the-model-1.svg",
-          "bytes": 28398,
-          "sha256": "sha256:9e59456b306d2d5c0a80ff1204e427a068fb1c7b4b61687dfa1d243049365df5"
+          "bytes": 28117,
+          "sha256": "sha256:f51051c536deecd3a8329e8b69792db33682a5d921a55aa0880d33491e041bab"
         }
       ]
     },
@@ -104,14 +104,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 1.254, train acc 0.520\n2580.3 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 1.136, train acc 0.573\n2551.0 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-cifar10/kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 24524,
-          "sha256": "sha256:d652c0c19b281404e75b24d8ac20c5136d8ece974a8ed86872d43dc4d67a3bf5"
+          "bytes": 23798,
+          "sha256": "sha256:bce52b7ce20c0c85e6673464d48446adb99ccff4b0ca0bfa916d886546c8b7dd"
         }
       ]
     }

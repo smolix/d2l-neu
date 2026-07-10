@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.480, train acc 0.809, test acc 0.787\n10591.6 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "loss 0.479, train acc 0.810, test acc 0.784\n11463.1 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-bert/natural-language-inference-bert-fine-tuning-bert-3-1.svg",
           "bytes": 25196,
-          "sha256": "sha256:388f253cc10577968d75940b7893a24d1ce800d67251af48e293ff1659d4df45"
+          "sha256": "sha256:db3b057084cce294753f3bd40444ee504165b58559a5a7e838b8437495e53bc5"
         }
       ]
     }

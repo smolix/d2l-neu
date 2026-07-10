@@ -505,8 +505,8 @@ models = k_fold(trainer, data, k=5, model_fn=lambda: KaggleMLP(lr=0.03))
 
 :begin_tab:`pytorch`
 The small MLP edges out the (now competently trained) linear baseline: the
-linear model reaches a cross-validated log error of about $0.034$ and the
-MLP about $0.028$, so the nonlinearity buys a modest but real gain. The
+linear model reaches a cross-validated log error of about $0.036$ and the
+MLP about $0.027$, so the nonlinearity buys a modest but real gain. The
 lesson is still deliberately undramatic. The MLP survives at all only
 because it is small enough and regularized enough for a dataset of barely a
 thousand rows, and the bulk of the improvement over a careless, underfit
@@ -983,7 +983,7 @@ Start with a linear model, a fast baseline, but train it **competently**: 100 ep
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Same model, same data: badly underfit vs **0.034** converged. Every fancier model "beats" the underfit baseline; almost nothing beats the competent one. A baseline only counts if it is trained to convergence.
+Same model, same data: badly underfit vs **0.036** converged. Every fancier model "beats" the underfit baseline; almost nothing beats the competent one. A baseline only counts if it is trained to convergence.
 :::
 :::
 :::
@@ -1001,7 +1001,7 @@ Start with a linear model through the same K-fold loop, and train it **competent
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Ten epochs of SGD leaves this model badly **underfit**; trained to convergence it reaches $\approx$ **0.034**. An underfit baseline flatters every model compared against it.
+Ten epochs of SGD leaves this model badly **underfit**; trained to convergence it reaches $\approx$ **0.036**. An underfit baseline flatters every model compared against it.
 :::
 :::
 :::
@@ -1036,14 +1036,14 @@ Same K-fold loop, learning rate, and epoch budget, only the model changes:
 @!kaggle-house-price-mlp-select
 
 ::: {.d2l-note .rule}
-**0.034 linear vs 0.028 MLP**: the nonlinearity buys a modest but real gain. The bulk of the improvement over a careless, underfit baseline came from training *either* model to convergence. Trees would still win here.
+**0.036 linear vs 0.027 MLP**: the nonlinearity buys a modest but real gain. The bulk of the improvement over a careless, underfit baseline came from training *either* model to convergence. Trees would still win here.
 :::
 :::
 
 ::: {.slide title="The verdict: the MLP edges ahead" except="pytorch"}
 [Model selection]{.kicker}
 
-The natural next step is a small MLP: one 32-unit ReLU hidden layer, dropout $0.1$, weight decay $10^{-4}$; anything bigger overfits 1460 rows. Run through the *same* K-fold loop, learning rate, and epoch budget, it edges out the competently trained linear baseline: about $0.028$ vs $0.034$.
+The natural next step is a small MLP: one 32-unit ReLU hidden layer, dropout $0.1$, weight decay $10^{-4}$; anything bigger overfits 1460 rows. Run through the *same* K-fold loop, learning rate, and epoch budget, it edges out the competently trained linear baseline: about $0.027$ vs $0.036$.
 
 ::: {.d2l-note .rule}
 The lesson is deliberately undramatic: the nonlinearity buys only a modest gain here, and the bulk of the improvement over a careless, underfit baseline came from training *either* model to convergence. On small tabular data, gradient-boosted trees would still win.

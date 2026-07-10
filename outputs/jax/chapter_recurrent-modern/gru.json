@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20076,
-          "sha256": "sha256:9e3538f9f4df8d6377267792a2731a313500f8ced38806eda4d5759e1b09e963"
+          "bytes": 20078,
+          "sha256": "sha256:828bafb2acc179bdc8f40dd4ac60d7955b91a21795b2d5c8abba29540c594698"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20452,
-          "sha256": "sha256:7ff8ac38d2a3430cd95646d4f6cc7e22cc7985ba443f6347786c25d35d73493d"
+          "bytes": 20454,
+          "sha256": "sha256:b0b1043913cd9c9ff4b1256c127b714e3ea004ee988115b99d0f1a2fc7c359da"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has it and the time tra'"
+          "text": "'it has i the prover and th'"
         }
       ]
     }

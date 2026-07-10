@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GPU1 time: 0.1201 sec\nGPU2 time: 0.1184 sec\n"
+          "text": "GPU1 time: 0.1297 sec\nGPU2 time: 0.1172 sec\n"
         }
       ]
     },
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GPU1 & GPU2: 0.1185 sec\n"
+          "text": "GPU1 & GPU2: 0.1259 sec\n"
         }
       ]
     },
@@ -47,12 +47,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Run on GPU1: 0.1216 sec\n"
+          "text": "Run on GPU1: 0.1286 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Copy to CPU: 2.1543 sec\n"
+          "text": "Copy to CPU: 2.1512 sec\n"
         }
       ]
     },
@@ -63,7 +63,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Run on GPU1 and copy to CPU: 3.4255 sec\n"
+          "text": "Run on GPU1 and copy to CPU: 3.1287 sec\n"
         }
       ]
     }

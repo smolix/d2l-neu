@@ -42,7 +42,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
           "bytes": 47953,
-          "sha256": "sha256:18f7a44b714e5ee681885a4ff50be9ae9f95c62682987032a0f43297b45d5a7d"
+          "sha256": "sha256:c24a49cb19327692b6b9afe8b23cbd0da007c798bb10017840a79299aa3aee7a"
         }
       ]
     },
@@ -86,7 +86,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/mdl-naive-bayes-calibration-2-1.svg",
           "bytes": 22680,
-          "sha256": "sha256:76f65940d8408d8758eedf081cde2374e78754f6474f104865f29a8a70282052"
+          "sha256": "sha256:8ebd760e5546ce7e26bcb2f1554306bebf9eec1614c81fed73164ad3eac0ebb9"
         }
       ]
     },

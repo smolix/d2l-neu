@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
           "bytes": 24746,
-          "sha256": "sha256:7b674297604c5d80404d20d2291306c07562c6183f2f0dfbdb5b17fe2d5ffd72"
+          "sha256": "sha256:f5387c865a62ec58b49a153c2beac0270e6b632d8fa7bdc51f9fed4b47d6801d"
         }
       ]
     },
@@ -38,12 +38,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
+          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
         }
       ]
     },
@@ -88,7 +83,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
           "bytes": 30656,
-          "sha256": "sha256:e323c3c78e8a1fbc1eb18bc3e4e52914af97a846f1a7cf74ee3f36ee000cbe84"
+          "sha256": "sha256:af481c6f3f037b712e58df1898f28c5aff6e0b372ca0f74498f5a82e6f60ea1d"
         }
       ]
     },
@@ -126,7 +121,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[14:40:39] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[18:22:38] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",
@@ -164,7 +159,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
           "bytes": 1114875,
-          "sha256": "sha256:81171fd5e0fc06a717f066b868cd037e38787e26d88f0d7a4e31f26842e71baa"
+          "sha256": "sha256:80c1b58534abbeb1eaf6ba4d578fbb3883c30024ebe4d54b7e8f51bdc7990595"
         }
       ]
     },
@@ -208,7 +203,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
           "bytes": 24637,
-          "sha256": "sha256:b49785f2d19097b10b4061ba9877917da9be44b29156d5c7d9b0e1bcc8d84143"
+          "sha256": "sha256:10b36f51d416698a305411c5a9ab9c5c7da9a44cfefe49b4d75a34016bd7908a"
         }
       ]
     },

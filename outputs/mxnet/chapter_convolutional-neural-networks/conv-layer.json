@@ -75,7 +75,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 4.979\nepoch 4, loss 0.842\nepoch 6, loss 0.144\nepoch 8, loss 0.025\nepoch 10, loss 0.005\n"
+          "text": "epoch 2, loss 5.085\nepoch 4, loss 0.864\nepoch 6, loss 0.149\nepoch 8, loss 0.027\nepoch 10, loss 0.005\n"
         }
       ]
     },
@@ -85,7 +85,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 0.98546904, -0.9913927 ]])"
+          "text": "array([[ 0.9919812, -0.9846685]])"
         }
       ]
     },

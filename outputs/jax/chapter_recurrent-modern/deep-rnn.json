@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 25192,
-          "sha256": "sha256:3c6d6ee701855efa787e10d2d6068aaedd70d90399472472d77c195eeffe62c7"
+          "bytes": 25109,
+          "sha256": "sha256:a1424536353376c486b8ced1fb7f57ca059ffd59cf016ad94b090d2ee5802443"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 24639,
-          "sha256": "sha256:38e19ff16d26e4a230086a421abc2e39344c3160ff8a68f8441c53775349d05f"
+          "bytes": 24641,
+          "sha256": "sha256:4bf738baedd7f169749a467dd4a8ed0bc12e639367b8069452c4ad36b5beed89"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has only and why ont wh'"
+          "text": "'it has of space and the ti'"
         }
       ]
     }

@@ -89,8 +89,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
-          "bytes": 16963,
-          "sha256": "sha256:6b04f27d9e970bcc56c0996fade18cc8341e2c755352181d44f6978216352da8"
+          "bytes": 16962,
+          "sha256": "sha256:b4d8167f26ec702f1de8322d72dec420bcd33c14935fac146b046a5fa7bb7420"
         }
       ]
     },
@@ -101,14 +101,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.84, 11.3 sec/epoch on ['/device:GPU:0', '/device:GPU:1']\n"
+          "text": "test acc: 0.85, 18.4 sec/epoch on ['/device:GPU:0', '/device:GPU:1']\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
-          "bytes": 16962,
-          "sha256": "sha256:7d0a14fd62b63e6b3b95ca3df4b427a36d6160ccc2d78a9b43a46754ac5981fc"
+          "bytes": 16964,
+          "sha256": "sha256:5b9504e1d800dec005b1ca3580e82e7a756c8f87a5285a84c2d11de8089ce0f6"
         }
       ]
     }

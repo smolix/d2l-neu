@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
           "bytes": 26183,
-          "sha256": "sha256:92518037b21dfeff4a2539813b14935fdb610b29c0346c2f0ba86d197d527cf7"
+          "sha256": "sha256:a88140acd2bceb9d402d325b2fd08a11a78e7e3979ccb7ab84b003025a2ad548"
         }
       ]
     },
@@ -33,7 +33,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix \n tf.Tensor(\n[[ 0.85171026 -0.33836883 -0.9152006  -0.39569625]\n [ 1.877813   -0.27058578 -0.24479903 -0.9287827 ]\n [ 0.20873292 -0.43743375  0.6347097  -0.6602248 ]\n [ 1.2268527  -0.35100877 -1.1480328  -1.3661648 ]], shape=(4, 4), dtype=float32)\nafter multiplying 100 matrices\n [[-1.16961342e+22  2.91696324e+22 -3.10608020e+22 -4.15183292e+22]\n [-1.63695128e+22  4.08252567e+22 -4.34720312e+22 -5.81083427e+22]\n [-3.17293456e+21  7.91299287e+21 -8.42604181e+21 -1.12628440e+22]\n [ 5.61903317e+22 -1.40141185e+23  1.49226305e+23  1.99469958e+23]]\n"
+          "text": "a single matrix \n tf.Tensor(\n[[ 0.92268217  3.0246222   1.4224932  -0.75500286]\n [-0.48357016  0.9529061   2.1327522  -0.5586279 ]\n [ 0.07623399  0.2537863   0.44297355 -2.7561817 ]\n [ 1.3354055  -0.2189812  -2.0354893   1.6461977 ]], shape=(4, 4), dtype=float32)\nafter multiplying 100 matrices\n [[ 7.9512361e+24  3.1538704e+24  2.1868636e+25  5.3369549e+24]\n [ 4.6389094e+24  1.8400345e+24  1.2758595e+25  3.1136853e+24]\n [ 4.6935434e+24  1.8616948e+24  1.2908856e+25  3.1503560e+24]\n [-3.7318201e+24 -1.4802388e+24 -1.0263786e+25 -2.5048361e+24]]\n"
         }
       ]
     },
@@ -45,8 +45,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31005,
-          "sha256": "sha256:04dbbd5001faf0be1c3feaf58b5f617b65fe290a6e70314bcd7262b1b3872336"
+          "bytes": 31000,
+          "sha256": "sha256:86649dc3b4911f46a020d299574800e4655c552b0a5caeb78fd11449888e528c"
         }
       ]
     }

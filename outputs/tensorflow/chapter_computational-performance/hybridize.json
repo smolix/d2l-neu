@@ -36,7 +36,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[0.7576161, 1.8368175]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9933627, -0.9177382]], dtype=float32)>"
         }
       ]
     },
@@ -46,7 +46,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[0.75761586, 1.8368175 ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9933626, -0.9177381]], dtype=float32)>"
         }
       ]
     },
@@ -62,12 +62,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Eager Mode: 3.1449 sec\n"
+          "text": "Eager Mode: 2.6082 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Graph Mode: 0.6424 sec\n"
+          "text": "Graph Mode: 0.6376 sec\n"
         }
       ]
     },
@@ -88,7 +88,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total 44K\r\ndrwx------ 2 smola smola   6 Jun  8 23:53 assets\r\n-rw------- 1 smola smola  97 Jun  8 23:53 fingerprint.pb\r\n-rw------- 1 smola smola 39K Jun  8 23:53 saved_model.pb\r\ndrwx------ 2 smola smola  66 Jun  8 23:53 variables\r\n"
+          "text": "total 44K\r\ndrwx------ 2 smola smola   6 Jul 10 18:22 assets\r\n-rw------- 1 smola smola  96 Jul 10 18:22 fingerprint.pb\r\n-rw------- 1 smola smola 39K Jul 10 18:22 saved_model.pb\r\ndrwx------ 2 smola smola  66 Jul 10 18:22 variables\r\n"
         }
       ]
     }

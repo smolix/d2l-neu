@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: 0.097590, x2: -0.018779\n"
+          "text": "epoch 50, x1: 0.231727, x2: 0.268996\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 23416,
-          "sha256": "sha256:44835e70818c80cf45b260e9bb8000d83a3e458a290088a114155986916bec36"
+          "bytes": 23430,
+          "sha256": "sha256:f1048be6e98de55160c147b3cdd4180a57d4ab1d05b89d6152acad9a1ab019d5"
         }
       ]
     },
@@ -48,14 +48,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1000, x1: -0.838182, x2: -0.017424\n"
+          "text": "epoch 1000, x1: -0.829592, x2: -0.004528\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-1-1.svg",
-          "bytes": 122882,
-          "sha256": "sha256:0b8f7b11da0673d037ab98b5bc4f37b8473054b264b9c5deea691065d0fbf873"
+          "bytes": 123681,
+          "sha256": "sha256:5a77c9b654eb5897d63714293f07e665f6ab60295a8b72698bf991a11717daaa"
         }
       ]
     },
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: -0.155577, x2: -0.043254\n"
+          "text": "epoch 50, x1: 0.033649, x2: -0.031695\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-2-1.svg",
-          "bytes": 23426,
-          "sha256": "sha256:74b1dc0413c3fe42d102c5585bcce5424debf052f784ee684f58b4bba15bf165"
+          "bytes": 23436,
+          "sha256": "sha256:2ca4db40251e86e1173388ea5b2b75e9e3dbb71ec713d215ba625af1a7cf2b7e"
         }
       ]
     }

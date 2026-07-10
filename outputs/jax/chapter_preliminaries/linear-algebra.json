@@ -256,7 +256,12 @@
     "linear-algebra-dot-products-3": {
       "code_fingerprint": "sha256:fde0934d780878d6aafdb1d0eaf08680dd3ad8d34b11808c6e4f96dd52216b63",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(Array(1.7202967, dtype=float32), Array(True, dtype=bool))"
+        }
+      ]
     },
     "linear-algebra-matrix-vector-products-2": {
       "code_fingerprint": "sha256:12d708161529491330facd5483df654ef4c6b49b10541533c38ce5130bc77729",
@@ -311,7 +316,13 @@
     "linear-algebra-norms-4": {
       "code_fingerprint": "sha256:9ef354e0ddada7e081ad4d7f1e0929d37e6a4e6455b704d4403ed6e01796fb78",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3.259593 3.259593\nTrue\n"
+        }
+      ]
     },
     "linear-algebra-norms-3": {
       "code_fingerprint": "sha256:093a67664dad482afc42e37b568a8690cd5c41d671d83fb096e01311263e481a",
@@ -336,7 +347,12 @@
     "linear-algebra-eigenvalues-2": {
       "code_fingerprint": "sha256:91c10b70aee98442a992e32cbcc795cfc8bb982570ed2cad8015941031e6d1f5",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array(8.861246, dtype=float32)"
+        }
+      ]
     }
   }
 }

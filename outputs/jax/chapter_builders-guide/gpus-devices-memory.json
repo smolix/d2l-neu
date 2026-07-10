@@ -174,7 +174,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=True   peak   1505 MiB, 0.03 sec\n"
+          "text": "checkpointing=True   peak   1505 MiB, 0.04 sec\n"
         },
         {
           "type": "stream",
@@ -190,7 +190,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0033 sec\ntime until they all finished:     0.0073 sec\n"
+          "text": "time to queue 32 matrix products: 0.0036 sec\ntime until they all finished:     0.0080 sec\n"
         }
       ]
     },
@@ -207,8 +207,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 21160,
-          "sha256": "sha256:5708e7ebbd683999ca42577be39a072796d069bdc9114b0efe39d9de88dfe7d2"
+          "bytes": 21433,
+          "sha256": "sha256:31ff59afa5fa41f5c16a20c6effd85bee0756e7f19be1d99350ccf5e945bdba4"
         }
       ]
     }

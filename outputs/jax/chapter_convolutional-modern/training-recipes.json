@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-cosine-schedules-with-warmup-1.svg",
           "bytes": 29157,
-          "sha256": "sha256:f5aeda2b0a814251d5a7e8d5cc3d90e91115cac3202f8dfb053dc77b9694679c"
+          "sha256": "sha256:e324e4d0370b1b890f0dabcd7388c43113a23f09010af9e2548c383761d09c63"
         }
       ]
     },
@@ -55,8 +55,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-mixup-2-1.svg",
-          "bytes": 65331,
-          "sha256": "sha256:5ed3fc8b02e43374b606436ec067eed0eebce890c0e71351af2623a6a331ca11"
+          "bytes": 67311,
+          "sha256": "sha256:70521eae38780e28a7102525e33c92a65c1f2d06605619a0a441e31518d70f90"
         }
       ]
     },

@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
           "bytes": 40471,
-          "sha256": "sha256:d60a7edb13163903e9519b9550c0e47e5dadaf02e61c1cc02fc6cf4f8a8cbca4"
+          "sha256": "sha256:1a5e6aa4a513e55b98f1a84c15816a6838ffdf3f263c9a29276f1b4cff9707e4"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 19944,
-          "sha256": "sha256:5069a1978f107dba8f6781b6ff7a74baf390ca3c476bf3c58fce13454eeff73d"
+          "bytes": 17932,
+          "sha256": "sha256:4270f5a7e2638c00545e53acf5edaa6805398acdf9f6e2b62532cac94cbcffcf"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 67767,
-          "sha256": "sha256:214cb0fd6791f77921fd0d26af4126a0a16ca95eaa71cccd5a431394f82205db"
+          "bytes": 67555,
+          "sha256": "sha256:e74d5d6f2d81c7467b192a753afa52ee31ecfb51f368ebcc57760613018c1691"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44148,
-          "sha256": "sha256:0c75a712f9bbec11a09a6113d39e57b1c38be6d594ccaf1260d237869f83380c"
+          "bytes": 44113,
+          "sha256": "sha256:2792ae8e7bdc2d81c745ee413f50abded9745e15c6a07dc5131d5eaf7572f7e3"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 105811,
-          "sha256": "sha256:fd9f35b4d823690a29e411f33a6eac90fee32e3ecad675a0ff565b67938b8cdb"
+          "bytes": 104995,
+          "sha256": "sha256:e33efb60fa1818d640fce5566855d1093737735bece870df71a936e368fea3c7"
         }
       ]
     }

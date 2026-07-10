@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[14:40:00] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[18:21:59] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },

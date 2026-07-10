@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40386,
-          "sha256": "sha256:acd28193b16c08390cf92c24e1b8410f28918ce9707935744f8b4daf10568390"
+          "bytes": 40375,
+          "sha256": "sha256:7e9b9ae37b4e5b426e37c4e9ed88cb1eb708cca26072ed2d819c0df7d9d0d9ed"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 19545,
-          "sha256": "sha256:a3db3b293f60bbf49dea5b8e778914d74e76bc9353aea417f9f8833920d24cf1"
+          "bytes": 18754,
+          "sha256": "sha256:1e246150ff1a7a1fa8461d66d9a3af91f7efd7bda32935af3befb03b1d73b944"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 66946,
-          "sha256": "sha256:79f85733c7397c41489165ddcb4f03955a0214cc5b7f7c389ef504a75e2f6d08"
+          "bytes": 68839,
+          "sha256": "sha256:e5c50d1a0a8ea7eba7a62baa9c364d3fd1484a131e534bfeb0f05efa76a36edd"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 43644,
-          "sha256": "sha256:a8d0a78c866e84a13cedbee074fa3f33eeb433479ffa561aa051fcfec3b188e4"
+          "bytes": 45495,
+          "sha256": "sha256:691c38678f1a58dbefd95a6df56d2cac859e76bba4b5e2bdb7612c2d4a511086"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 102983,
-          "sha256": "sha256:f93a289c17610bacdaa8083b383bdaa36bb8e89ef9990d95f6f3a75ce34b93b8"
+          "bytes": 107155,
+          "sha256": "sha256:05ee2ae66ae589099b92fd1b17af2bbfa144d3a2b8b2e0c12fc1080fd2e95756"
         }
       ]
     }

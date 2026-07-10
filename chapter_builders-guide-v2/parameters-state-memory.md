@@ -29,6 +29,13 @@ from flax import linen as nn
 import optax
 ```
 
+```{.python .input #parameters-state-memory-parameters-state-and-memory}
+%%tab tensorflow
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import tensorflow as tf
+```
+
 ## Accessing Parameters
 :label:`subsec_param-access`
 
@@ -72,6 +79,25 @@ params = net.init(jax.random.key(42), X)
 net.apply(params, X).shape
 ```
 
+```{.python .input #parameters-state-memory-accessing-parameters-1}
+%%tab tensorflow
+class ResidualBlock(tf.keras.layers.Layer):
+    def __init__(self, d):
+        super().__init__()
+        self.body = tf.keras.Sequential([
+            tf.keras.layers.Dense(d), tf.keras.layers.ReLU(),
+            tf.keras.layers.Dense(d)])
+
+    def call(self, X):
+        return X + self.body(X)
+
+tf.keras.utils.set_random_seed(42)
+net = tf.keras.Sequential([tf.keras.layers.Dense(64), ResidualBlock(64),
+                           ResidualBlock(64), tf.keras.layers.Dense(10)])
+X = tf.random.normal((2, 20))
+net(X).shape
+```
+
 :begin_tab:`pytorch`
 A model built from modules is a tree, and its parameters are the leaves. To
 reach one leaf, walk the tree: indexing into a `Sequential` selects a child,
@@ -89,6 +115,14 @@ layer's subtree; its `'bias'` is a plain array. Nothing on the array marks it
 trainable; sitting under the `'params'` collection is what does.
 :end_tab:
 
+:begin_tab:`tensorflow`
+A model built from layers is a tree, and its parameters are the leaves. To
+reach one leaf, walk the tree: `net.layers` lists a model's children,
+attribute access selects within a layer. `net.layers[3]` is the output layer;
+its bias is a `Variable` the layer created through `add_weight`, announcing
+itself to Keras as trainable.
+:end_tab:
+
 ```{.python .input #parameters-state-memory-accessing-parameters-2}
 %%tab pytorch
 type(net[3].bias), net[3].bias.shape
@@ -98,6 +132,11 @@ type(net[3].bias), net[3].bias.shape
 %%tab jax
 bias = params['params']['layers_3']['bias']
 type(bias), bias.shape
+```
+
+```{.python .input #parameters-state-memory-accessing-parameters-2}
+%%tab tensorflow
+type(net.layers[3].bias), net.layers[3].bias.shape
 ```
 
 The same path syntax reaches arbitrarily deep. The first linear layer inside
@@ -113,6 +152,11 @@ net[1].body[0].weight.shape
 params['params']['layers_1']['body']['layers_0']['kernel'].shape
 ```
 
+```{.python .input #parameters-state-memory-accessing-parameters-3}
+%%tab tensorflow
+net.layers[1].body.layers[0].kernel.shape
+```
+
 :begin_tab:`pytorch`
 Each parameter also carries its gradient. We have not run backpropagation on
 this model yet, so there is nothing to see:
@@ -124,6 +168,12 @@ Gradients are not stored on parameters. A parameter is a plain array, and
 structure, one gradient leaf per parameter leaf:
 :end_tab:
 
+:begin_tab:`tensorflow`
+Gradients are not stored on variables. A `tf.GradientTape` records the
+forward pass, and its `gradient` method returns the gradients as a *second*
+list, parallel to the variables you differentiate with respect to:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-accessing-parameters-4}
 %%tab pytorch
 net[3].weight.grad is None
@@ -133,6 +183,14 @@ net[3].weight.grad is None
 %%tab jax
 grads = jax.grad(lambda p: net.apply(p, X).sum())(params)
 jax.tree_util.tree_structure(grads) == jax.tree_util.tree_structure(params)
+```
+
+```{.python .input #parameters-state-memory-accessing-parameters-4}
+%%tab tensorflow
+with tf.GradientTape() as tape:
+    loss = tf.reduce_sum(net(X))
+grads = tape.gradient(loss, net.trainable_weights)
+len(grads) == len(net.trainable_weights)
 ```
 
 :begin_tab:`pytorch`
@@ -149,6 +207,13 @@ The optimizer, weight decay, and checkpointing instead need *every* leaf, and
 whole tree and yields each leaf together with the key path that reaches it.
 :end_tab:
 
+:begin_tab:`tensorflow`
+Reaching parameters one path at a time is right for debugging a single layer.
+The optimizer, weight decay, and checkpointing instead need *every* leaf, and
+`net.weights` provides exactly that: a traversal of the whole tree, one
+variable per leaf, each carrying its path as its name.
+:end_tab:
+
 ```{.python .input #parameters-state-memory-accessing-parameters-5}
 %%tab pytorch
 [(name, p.shape) for name, p in net.named_parameters()]
@@ -158,6 +223,11 @@ whole tree and yields each leaf together with the key path that reaches it.
 %%tab jax
 leaves = jax.tree_util.tree_flatten_with_path(params)[0]
 [(jax.tree_util.keystr(path), leaf.shape) for path, leaf in leaves]
+```
+
+```{.python .input #parameters-state-memory-accessing-parameters-5}
+%%tab tensorflow
+[(v.path, v.shape) for v in net.weights]
 ```
 
 :begin_tab:`pytorch`
@@ -180,6 +250,20 @@ saving and loading: this pytree is itself the object a checkpoint serializes
 (:numref:`sec_read_write_v2`). So far its top level holds a single entry:
 :end_tab:
 
+:begin_tab:`tensorflow`
+Read one of the paths closely.
+`sequential_2/residual_block/sequential/dense_1/kernel` means: inside the
+outer `Sequential`, its child `residual_block` (the first residual block),
+that block's `body` (a `Sequential` of its own), the first `Dense` inside it,
+and finally the leaf `kernel`. The segments are layer *names*, assigned at
+construction: a default derived from the class, plus a counter that keeps
+names unique across the program (this is the third `Sequential` created, hence
+`sequential_2`). Names are paths, so they survive any amount of nesting and
+give every variable a stable identity for saving and loading
+(:numref:`sec_read_write_v2`). Keras splits the same list by trainability,
+and so far the split is trivial:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-accessing-parameters-6}
 %%tab pytorch
 list(net.state_dict()) == [name for name, _ in net.named_parameters()]
@@ -188,6 +272,11 @@ list(net.state_dict()) == [name for name, _ in net.named_parameters()]
 ```{.python .input #parameters-state-memory-accessing-parameters-6}
 %%tab jax
 list(params)
+```
+
+```{.python .input #parameters-state-memory-accessing-parameters-6}
+%%tab tensorflow
+[v.path for v in net.weights] == [v.path for v in net.trainable_weights]
 ```
 
 :begin_tab:`pytorch`
@@ -201,6 +290,12 @@ One tree, one naming scheme, and every consumer, whether optimizer,
 checkpoint, or debugger, walks it. The dictionary has the single collection
 `'params'` because all of this model's state happens to be trainable. That is
 not always so.
+:end_tab:
+
+:begin_tab:`tensorflow`
+One tree, one naming scheme, and every consumer, whether optimizer,
+checkpoint, or debugger, walks it. The equality above holds for this model
+because all of its state happens to be trainable. That is not always so.
 :end_tab:
 
 ## Parameters and Buffers
@@ -232,6 +327,17 @@ if the optimizer should update it, in another collection if it must persist
 and travel with the model, and leave it as a plain attribute otherwise. Here
 is a module that standardizes its inputs with statistics computed once, ahead
 of time, from a reference sample:
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras calls every registered tensor a *weight* and distinguishes by a
+per-variable flag: `add_weight(trainable=False)` creates a variable that is
+saved with the model but never handed to the optimizer, which is how
+`BatchNormalization` stores its running statistics. The rule of thumb: make
+it a trainable weight if the optimizer should update it, a non-trainable
+weight if it must persist and travel with the model, and a plain Python
+attribute otherwise. Here is a layer that standardizes its inputs with
+statistics computed once, ahead of time, from a reference sample:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-parameters-and-buffers-1}
@@ -269,6 +375,28 @@ variables = whiten.init(jax.random.key(2), sample[:2])
 jax.tree_util.tree_map(lambda x: x.shape, variables)
 ```
 
+```{.python .input #parameters-state-memory-parameters-and-buffers-1}
+%%tab tensorflow
+class Whitener(tf.keras.layers.Layer):
+    def __init__(self, mean, std):
+        super().__init__()
+        self.mean = self.add_weight(
+            shape=mean.shape, trainable=False, name='mean',
+            initializer=tf.keras.initializers.Constant(mean))
+        self.std = self.add_weight(
+            shape=std.shape, trainable=False, name='std',
+            initializer=tf.keras.initializers.Constant(std))
+        self.out = tf.keras.layers.Dense(2)
+
+    def call(self, X):
+        return self.out((X - self.mean) / self.std)
+
+sample = tf.random.normal((100, 4)) * tf.range(1., 5.)
+whiten = Whitener(tf.reduce_mean(sample, 0), tf.math.reduce_std(sample, 0))
+_ = whiten(sample[:2])   # build the Dense layer
+[v.path for v in whiten.weights]
+```
+
 :begin_tab:`pytorch`
 The buffers appear in the state dict, so they are checkpointed alongside the
 weights. They do not appear among the parameters, so the optimizer never sees
@@ -282,6 +410,13 @@ the statistics: a training loop hands it `variables['params']` and nothing
 else.
 :end_tab:
 
+:begin_tab:`tensorflow`
+All four variables are weights, so all four are checkpointed. The flag is
+what keeps the optimizer away from the statistics: a training step
+differentiates and updates `trainable_weights`, and the two constants sit in
+the other half of the split:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-parameters-and-buffers-2}
 %%tab pytorch
 [name for name, _ in whiten.named_parameters()]
@@ -290,6 +425,12 @@ else.
 ```{.python .input #parameters-state-memory-parameters-and-buffers-2}
 %%tab jax
 {col: list(tree) for col, tree in variables.items()}
+```
+
+```{.python .input #parameters-state-memory-parameters-and-buffers-2}
+%%tab tensorflow
+([v.path for v in whiten.trainable_weights],
+ [v.path for v in whiten.non_trainable_weights])
 ```
 
 :begin_tab:`pytorch`
@@ -309,6 +450,13 @@ CPU by converting the state across *dtypes* with `tree_map`. The collections
 convert; the module attribute is left behind:
 :end_tab:
 
+:begin_tab:`tensorflow`
+Registration through `add_weight` is what makes the layer aware of a tensor.
+A tensor stored as a plain attribute is invisible to it: not counted, not
+saved, and absent from every traversal. Attach one and the weights list does
+not grow:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-parameters-and-buffers-3}
 %%tab pytorch
 whiten.note = torch.zeros(4)   # plain attribute: invisible to the module
@@ -320,6 +468,12 @@ whiten.mean.dtype, whiten.note.dtype
 %%tab jax
 low = jax.tree_util.tree_map(lambda x: x.astype(jnp.float16), variables)
 low['constants']['mean'].dtype, whiten.mean.dtype
+```
+
+```{.python .input #parameters-state-memory-parameters-and-buffers-3}
+%%tab tensorflow
+whiten.note = tf.zeros(4)   # plain attribute: invisible to the layer
+[v.path.split('/')[-1] for v in whiten.weights]
 ```
 
 :begin_tab:`pytorch`
@@ -337,6 +491,16 @@ any host; on a machine with an accelerator, `jax.devices()[0]` is a GPU or
 TPU:
 :end_tab:
 
+:begin_tab:`tensorflow`
+Device placement works differently here: a TensorFlow variable's device is
+decided when the variable is *created*, not by a later move. With a GPU
+visible, Keras creates variables on it by default, non-trainable weights
+included, and a `tf.device` scope overrides the choice. There is no `.to()`
+to forget, so the classic left-behind-tensor bug cannot arise; the price is
+that relocating existing state means rebuilding it. Each variable reports its
+placement:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-parameters-and-buffers-4}
 %%tab pytorch
 if torch.cuda.is_available():
@@ -350,6 +514,11 @@ else:
 %%tab jax
 moved = jax.device_put(variables, jax.devices()[0])
 moved['constants']['mean'].device
+```
+
+```{.python .input #parameters-state-memory-parameters-and-buffers-4}
+%%tab tensorflow
+whiten.mean.value.device   # decided when the variable was created
 ```
 
 ## Counting Parameters, Counting Bytes
@@ -387,6 +556,16 @@ print(f'{n} parameters: {(weights + grads + adam_state) / 2**20:.2f} MiB '
       'for weights + gradients + Adam state')
 ```
 
+```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-1}
+%%tab tensorflow
+n = net.count_params()
+weights = sum(int(tf.size(v)) * tf.as_dtype(v.dtype).size
+              for v in net.weights)   # fp32: 4 bytes
+grads, adam_state = weights, 2 * weights
+print(f'{n} parameters: {(weights + grads + adam_state) / 2**20:.2f} MiB '
+      'for weights + gradients + Adam state')
+```
+
 The optimizer state is real memory, allocated tensor by tensor. After a
 single training step, Adam's two moments together hold exactly two extra
 copies of the model:
@@ -410,6 +589,19 @@ updates, opt_state = adam.update(grads, opt_state, params)
 params = optax.apply_updates(params, updates)
 mu, nu = opt_state[0].mu, opt_state[0].nu
 sum(x.size for t in (mu, nu) for x in jax.tree_util.tree_leaves(t)) == 2 * n
+```
+
+```{.python .input #parameters-state-memory-counting-parameters-counting-bytes-2}
+%%tab tensorflow
+adam = tf.keras.optimizers.Adam()
+adam.build(net.trainable_weights)   # Keras allocates the moments here, up front
+with tf.GradientTape() as tape:
+    loss = tf.reduce_sum(net(X))
+adam.apply_gradients(zip(tape.gradient(loss, net.trainable_weights),
+                         net.trainable_weights))
+moments = sum(int(tf.size(v)) for v in adam.variables
+              if v.ndim > 0)   # ndim 0 excludes the step count and learning rate
+moments == 2 * n
 ```
 
 For our little network the total is a third of a megabyte, which is why none
@@ -468,6 +660,13 @@ reuses the module's one kernel, so the tying is visible in the pytree itself:
 no head matrix exists.
 :end_tab:
 
+:begin_tab:`tensorflow`
+A miniature version shows the mechanics. Keras has no tying flag, so we say
+it in code: a small head layer that creates no variables of its own and
+instead multiplies by the transpose of the embedding table it is handed. One
+variable, two call sites:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-tied-parameters-1}
 %%tab pytorch
 class TinyLM(nn.Module):
@@ -507,6 +706,33 @@ params_lm = lm.init(jax.random.key(2), tokens)
 jax.tree_util.tree_map(lambda x: x.shape, params_lm)
 ```
 
+```{.python .input #parameters-state-memory-tied-parameters-1}
+%%tab tensorflow
+class TiedLMHead(tf.keras.layers.Layer):
+    def __init__(self, emb):
+        super().__init__()
+        self.emb = emb   # reuse the embedding layer; create nothing
+
+    def call(self, h):
+        return tf.matmul(h, self.emb.embeddings, transpose_b=True)
+
+class TinyLM(tf.keras.Model):
+    def __init__(self, vocab_size, d, tied=True):
+        super().__init__()
+        self.emb = tf.keras.layers.Embedding(vocab_size, d)
+        self.body = tf.keras.layers.Dense(d)
+        self.head = (TiedLMHead(self.emb) if tied else
+                     tf.keras.layers.Dense(vocab_size, use_bias=False))
+
+    def call(self, tokens):
+        return self.head(tf.nn.relu(self.body(self.emb(tokens))))
+
+lm = TinyLM(vocab_size=100, d=16)
+tokens = tf.random.uniform((2, 8), 0, 100, dtype=tf.int32)
+_ = lm(tokens)   # build
+[(v.path, tuple(v.shape)) for v in lm.weights]
+```
+
 :begin_tab:`pytorch`
 The module system understands the aliasing. Parameter traversal reports the
 shared tensor once, so the count below reflects the $|V| \times d$ saving and
@@ -517,6 +743,13 @@ the optimizer updates the tensor once per step:
 There is no aliasing bookkeeping to get right, because the pytree contains
 the table once. The parameter count reflects the $|V| \times d$ saving, and
 whatever optimizer walks the tree updates the table once per step:
+:end_tab:
+
+:begin_tab:`tensorflow`
+Because the head created no variable, there is no aliasing bookkeeping to get
+right: the traversal reports the table once and no head matrix exists. The
+parameter count reflects the $|V| \times d$ saving, and the optimizer updates
+the table once per step:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-tied-parameters-2}
@@ -534,6 +767,13 @@ params_untied = untied.init(jax.random.key(2), tokens)
  sum(x.size for x in jax.tree_util.tree_leaves(params_untied)))
 ```
 
+```{.python .input #parameters-state-memory-tied-parameters-2}
+%%tab tensorflow
+untied = TinyLM(vocab_size=100, d=16, tied=False)
+_ = untied(tokens)
+(lm.count_params(), untied.count_params())
+```
+
 :begin_tab:`pytorch`
 The state dict, by contrast, keeps *both* names, `emb.weight` and
 `head.weight`, pointing at the same storage. That is deliberate: a checkpoint
@@ -546,6 +786,13 @@ A checkpoint of the tied model stores the table once, because the checkpoint
 structure: the tied one has no `Dense_1` entry, so loading it into an untied
 module is a structural mismatch to resolve explicitly, not a silent aliasing
 decision.
+:end_tab:
+
+:begin_tab:`tensorflow`
+A checkpoint of the tied model stores the table once, because the head owns
+nothing to store. The flip side is that tied and untied checkpoints differ in
+structure: the untied model carries one extra kernel, so loading one into the
+other is a mismatch to resolve explicitly, not a silent aliasing decision.
 :end_tab:
 
 ```{.python .input #parameters-state-memory-tied-parameters-3}
@@ -583,6 +830,20 @@ jnp.allclose(g_tied['params']['Embed_0']['embedding'],
              + g_untied['params']['Dense_1']['kernel'].T)
 ```
 
+```{.python .input #parameters-state-memory-tied-parameters-4}
+%%tab tensorflow
+untied.set_weights(lm.get_weights()   # tied values, head kernel materialized
+                   + [tf.transpose(lm.emb.embeddings)])
+with tf.GradientTape() as tape:
+    loss = tf.reduce_sum(lm(tokens))
+g_tied = tape.gradient(loss, lm.emb.embeddings)
+with tf.GradientTape() as tape:
+    loss = tf.reduce_sum(untied(tokens))
+g_emb, g_head = tape.gradient(loss, [untied.emb.embeddings, untied.head.kernel])
+g_emb = tf.convert_to_tensor(g_emb)   # densify the embedding-lookup gradient
+bool(tf.reduce_max(tf.abs(g_tied - (g_emb + tf.transpose(g_head)))) < 1e-5)
+```
+
 ## Freezing Parameters
 
 :begin_tab:`pytorch`
@@ -603,6 +864,18 @@ label, and `optax.set_to_zero()` is the transformation that freezes, turning
 every gradient it handles into a zero update. The typical pattern freezes a
 pretrained backbone and trains only a new head. On a fresh copy of our
 residual MLP, labeling everything but the output layer `'freeze'` leaves 650
+of 18,634 parameters trainable:
+:end_tab:
+
+:begin_tab:`tensorflow`
+Every fine-tuning recipe (:numref:`sec_fine_tuning`) rests on one primitive,
+and in Keras it sits on the layer: setting `layer.trainable = False` moves
+the layer's variables from `trainable_weights` to `non_trainable_weights`,
+the split a training step consults. (One caveat for the `compile`-and-`fit`
+workflow: Keras documents that a change to `trainable` takes effect at the
+next `compile`. The manual steps below read the split live.) The typical
+pattern freezes a pretrained backbone and trains only a new head. On a fresh
+copy of our residual MLP, freezing everything but the output layer leaves 650
 of 18,634 parameters trainable:
 :end_tab:
 
@@ -631,6 +904,18 @@ n_train = sum(x.size for x, l in zip(jax.tree_util.tree_leaves(ft_params),
 (n_train, sum(x.size for x in jax.tree_util.tree_leaves(ft_params)))
 ```
 
+```{.python .input #parameters-state-memory-freezing-parameters-1}
+%%tab tensorflow
+finetune = tf.keras.Sequential([tf.keras.layers.Dense(64), ResidualBlock(64),
+                                ResidualBlock(64), tf.keras.layers.Dense(10)])
+_ = finetune(X)   # build
+for layer in finetune.layers[:-1]:
+    layer.trainable = False
+
+(sum(int(tf.size(v)) for v in finetune.trainable_weights),
+ finetune.count_params())
+```
+
 :begin_tab:`pytorch`
 The optimizer should receive only the trainable parameters. One gradient step
 then moves the head and nothing else:
@@ -640,6 +925,12 @@ then moves the head and nothing else:
 The optimizer receives the whole tree plus the labels, and the partition does
 the rest: Adam applies to the leaves labeled `'train'`, `set_to_zero` to the
 others. One gradient step then moves the head and nothing else:
+:end_tab:
+
+:begin_tab:`tensorflow`
+The tape differentiates with respect to the variables you hand it, and
+`trainable_weights` is now exactly the head. One gradient step then moves the
+head and nothing else:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-2}
@@ -663,6 +954,17 @@ stepped = optax.apply_updates(ft_params, updates)
 jax.tree_util.tree_map(lambda a, b: bool((a != b).any()), ft_params, stepped)
 ```
 
+```{.python .input #parameters-state-memory-freezing-parameters-2}
+%%tab tensorflow
+head_opt = tf.keras.optimizers.SGD(learning_rate=0.1)
+before = [tf.identity(v) for v in finetune.weights]
+with tf.GradientTape() as tape:
+    loss = tf.reduce_sum(finetune(X))
+head_opt.apply_gradients(zip(tape.gradient(loss, finetune.trainable_weights),
+                             finetune.trainable_weights))
+[not bool(tf.reduce_all(b == v)) for b, v in zip(before, finetune.weights)]
+```
+
 :begin_tab:`pytorch`
 Only the last two entries, the head's weight and bias, changed. Two pitfalls
 deserve a warning, because both fail silently.
@@ -673,6 +975,12 @@ Only the two leaves under `layers_3`, the head's kernel and bias, changed.
 Freezing traditionally carries two silent pitfalls, one about optimizer
 memory and one about batch normalization; with explicit state, both become
 questions you can settle by inspection.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Only the last two entries, the head's kernel and bias, changed. Two pitfalls
+deserve attention here: one about optimizer memory, and one about batch
+normalization, where Keras quietly protects you.
 :end_tab:
 
 :begin_tab:`pytorch`
@@ -692,6 +1000,15 @@ sees them, replacing frozen leaves with empty placeholders, so `opt_state`
 holds moments for the 650 trainable parameters only:
 :end_tab:
 
+:begin_tab:`tensorflow`
+First, freezing does not reclaim optimizer memory. A Keras optimizer
+allocates state for every variable in the list it was built over, whether or
+not that variable ever receives another update. The Adam instance from the
+previous section was built over all of `net`'s parameters, so freezing
+`net`'s backbone now leaves its moments, 8 bytes per frozen parameter, fully
+allocated:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-freezing-parameters-3}
 %%tab pytorch
 for p in net[:-1].parameters():
@@ -708,6 +1025,14 @@ moments = sum(x.size for x in jax.tree_util.tree_leaves(opt_state)
 moments == 2 * n_train
 ```
 
+```{.python .input #parameters-state-memory-freezing-parameters-3}
+%%tab tensorflow
+for layer in net.layers[:-1]:
+    layer.trainable = False   # frozen, but Adam's moments remain allocated
+moments = sum(int(tf.size(v)) for v in adam.variables if v.ndim > 0)
+moments == 2 * n
+```
+
 :begin_tab:`pytorch`
 Second, freezing governs parameters only, and batch normalization carries
 state that is not a parameter. Its running statistics are buffers, updated by
@@ -722,6 +1047,16 @@ in `'batch_stats'`, recomputed by any application whose caller passes
 `mutable=['batch_stats']`, which is exactly what a training step does. Label
 the layer's scale and bias `'freeze'` and the statistics keep drifting
 anyway, because they never pass through the optimizer at all:
+:end_tab:
+
+:begin_tab:`tensorflow`
+Second, batch normalization, whose running statistics are non-trainable
+weights recomputed by the forward pass in training mode. Elsewhere that is a
+classic trap: freeze the layer's scale and shift and the statistics drift
+anyway, since they never pass through the optimizer. Keras special-cases
+exactly this: setting `trainable = False` on a `BatchNormalization` layer
+also switches its forward pass to inference mode, so the statistics hold
+still even when the layer is called with `training=True`:
 :end_tab:
 
 ```{.python .input #parameters-state-memory-freezing-parameters-4}
@@ -744,6 +1079,16 @@ _, updated = bn.apply(stats, jax.random.normal(jax.random.key(5), (8, 4)) + 3,
 bool(jnp.allclose(updated['batch_stats']['mean'], before))
 ```
 
+```{.python .input #parameters-state-memory-freezing-parameters-4}
+%%tab tensorflow
+bn = tf.keras.layers.BatchNormalization()
+_ = bn(tf.zeros((8, 4)), training=True)   # build, then freeze
+bn.trainable = False
+before = tf.identity(bn.moving_mean)
+_ = bn(tf.random.normal((8, 4)) + 3, training=True)
+bool(tf.reduce_all(bn.moving_mean == before))
+```
+
 :begin_tab:`pytorch`
 `requires_grad` and `.eval()` are orthogonal switches: the first stops
 gradients, the second stops the behaviors tied to training mode, such as
@@ -758,6 +1103,15 @@ computing fresh batch statistics (without a `mutable` request, Flax raises an
 error rather than mutating silently). To pin a BatchNorm layer during
 fine-tuning you need both: freeze its leaves *and* apply it with
 `use_running_average=True`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+This courtesy is specific to `BatchNormalization`. Everywhere else,
+`trainable` and the `training` call argument are orthogonal switches: the
+first governs which variables receive updates, the second governs
+training-mode behaviors, and a frozen dropout layer still drops when called
+with `training=True`. To pin any other stateful layer during fine-tuning,
+set both.
 :end_tab:
 
 Freezing whole tensors is the bluntest form of partial training.
@@ -777,6 +1131,15 @@ of gradients, and its state carries their debiased moving average. Continuing
 the fine-tuning loop above, the average trails the moving head:
 :end_tab:
 
+:begin_tab:`tensorflow`
+Keras builds the average into the optimizer. `Adam(use_ema=True)` maintains
+an exponential moving average of every variable it updates, alongside its
+moments, and `finalize_variable_values` copies the averages back into the
+model, the usual last step before evaluation or saving. Continuing the
+fine-tuning above, the swapped-in average sits measurably behind the last raw
+iterate of the moving head:
+:end_tab:
+
 ```{.python .input #parameters-state-memory-freezing-parameters-5}
 %%tab jax
 ema = optax.ema(decay=0.9)
@@ -788,6 +1151,20 @@ for _ in range(5):
     avg, ema_state = ema.update(w, ema_state)   # weights in, average out
 float(jnp.abs(avg['params']['layers_3']['bias']
               - w['params']['layers_3']['bias']).max())
+```
+
+```{.python .input #parameters-state-memory-freezing-parameters-5}
+%%tab tensorflow
+ema_opt = tf.keras.optimizers.Adam(learning_rate=0.1, use_ema=True,
+                                   ema_momentum=0.9)
+for _ in range(5):
+    with tf.GradientTape() as tape:
+        loss = tf.reduce_sum(finetune(X))
+    ema_opt.apply_gradients(zip(tape.gradient(loss, finetune.trainable_weights),
+                                finetune.trainable_weights))
+raw = tf.identity(finetune.layers[-1].bias)   # the last raw iterate
+ema_opt.finalize_variable_values(finetune.trainable_weights)   # swap in averages
+float(tf.reduce_max(tf.abs(finetune.layers[-1].bias - raw)))
 ```
 
 ## Summary
@@ -820,6 +1197,22 @@ it allocates no state for frozen leaves, but it does not stop `'batch_stats'`
 updates in a training step.
 :end_tab:
 
+:begin_tab:`tensorflow`
+A model's state is one list of variables, each named by the path of the
+layers that own it. A per-variable flag splits the list into
+`trainable_weights` and `non_trainable_weights`; weights created with
+`add_weight(trainable=False)` persist and are saved but receive no updates,
+and every variable's device is fixed at creation. Training with Adam in fp32
+costs 16 bytes per parameter (4 weights, 4 gradients, 8 optimizer state)
+before activations, and the 8 bytes of Adam state per parameter survive every
+mixed-precision accounting convention. Tying is a head layer that owns no
+variables and reuses the embedding table at a second call site: one entry in
+`weights`, gradients summed over its uses. Setting `layer.trainable = False`
+freezes a layer but reclaims no optimizer state already allocated;
+`BatchNormalization` alone also stops updating its statistics when frozen,
+and `Adam(use_ema=True)` keeps a weight average as part of the optimizer.
+:end_tab:
+
 ## Exercises
 
 1. Write a helper that reports the byte cost of fp32 Adam training separately
@@ -849,4 +1242,16 @@ updates in a training step.
 4. In the tied `TinyLM`, try to freeze the embedding while training the head
    using `optax.multi_transform` labels. What choices do you have, and what
    does this teach about the interaction between tying and freezing?
+:end_tab:
+
+:begin_tab:`tensorflow`
+3. Round-trip the tied model's weights through `get_weights` and
+   `set_weights` (or a checkpoint, :numref:`sec_read_write_v2`) into a second
+   tied instance, then into an untied one. Where, if anywhere, is the tying
+   recorded? Explain why tying in Keras is a property of the layer code
+   rather than of the checkpoint.
+4. In the tied `TinyLM`, set `lm.emb.trainable = False` but leave `lm.head`
+   alone. How many trainable parameters remain, and can the head still
+   adapt? Explain what this teaches about the interaction between tying and
+   freezing.
 :end_tab:

@@ -32,6 +32,12 @@ from jax import numpy as jnp
 from flax import linen as nn
 ```
 
+```{.python .input #init-initialization}
+%%tab tensorflow
+import math
+import tensorflow as tf
+```
+
 ## Defaults and When to Override Them
 
 You can usually ignore initialization because the default is sensible.
@@ -58,6 +64,17 @@ puts the hard bound near $2.3$ standard deviations), and the bias starts at
 zero. Both claims are cheap to check against a fresh layer:
 :end_tab:
 
+:begin_tab:`tensorflow`
+Keras attaches no numbers at construction either: `Dense(256)` fixes only the
+output width, and the kernel comes into existence at build time, when the
+layer first learns its input shape (every Keras layer is lazy in the sense of
+:numref:`sec_lazy_init`). The build draws Glorot uniform, the Xavier scheme
+of :numref:`subsec_xavier` in its uniform variant: the kernel comes from
+$U(-b, b)$ with $b = \sqrt{6/(n_\textrm{in} + n_\textrm{out})}$, and the bias
+starts at zero. A uniform distribution on $[-b, b]$ has standard deviation
+$b/\sqrt{3}$, so all three claims are cheap to check against a fresh layer:
+:end_tab:
+
 ```{.python .input #init-defaults-and-when-to-override-them}
 %%tab pytorch
 torch.manual_seed(0)
@@ -76,6 +93,18 @@ w = params['params']['kernel']
 print(f'std {w.std():.4f}, predicted {1 / math.sqrt(512):.4f}')
 print(f'max |w| {jnp.abs(w).max():.4f}, '
       f'bias all zero: {bool((params["params"]["bias"] == 0).all())}')
+```
+
+```{.python .input #init-defaults-and-when-to-override-them}
+%%tab tensorflow
+tf.keras.utils.set_random_seed(0)
+layer = tf.keras.layers.Dense(256)
+layer.build((None, 512))
+w = layer.kernel.numpy()
+bound = math.sqrt(6 / (512 + 256))
+print(f'range [{w.min():.4f}, {w.max():.4f}], predicted bound {bound:.4f}')
+print(f'std {w.std():.4f}, predicted {bound / math.sqrt(3):.4f}')
+print(f'bias all zero: {bool((layer.bias.numpy() == 0).all())}')
 ```
 
 Other libraries make different but equally fan-aware choices, with one legacy
@@ -112,6 +141,19 @@ memory without an initializer. There is no construction-time fine print to
 remember: fan-in is always read off the first input when `init` runs.
 :end_tab:
 
+:begin_tab:`tensorflow`
+When should you override? Four situations recur: a deep network without
+normalization layers, where variance compounds across depth (we demonstrate
+this below); reproducing a paper whose results depend on its initialization
+recipe; architecture-specific corrections such as the residual scaling later
+in this section; and parameters you create by hand, where Keras quietly
+substitutes a default of its own, since `add_weight` falls back to Glorot
+uniform unless you pass an `initializer`, a sensible scale for a weight
+matrix and the wrong one for almost anything else. There is no
+construction-time fine print to remember: fan-in and fan-out are read off
+the input shape when `build` runs.
+:end_tab:
+
 ## Applying Initializers
 
 :begin_tab:`pytorch`
@@ -136,6 +178,20 @@ standard menu. That covers models you are about to build. The second route,
 for a params tree that already exists, is pytree surgery: build a *new* tree
 that replaces the parameters you select by path and keeps the rest. We show
 both, starting with constructor arguments.
+:end_tab:
+
+:begin_tab:`tensorflow`
+To impose a scheme we declare it where the layer is declared: every Keras
+layer accepts `kernel_initializer` and `bias_initializer` arguments, each an
+object mapping a shape and dtype to a tensor, and `tf.keras.initializers`
+supplies the standard menu (the string `'zeros'` names the same object as
+`tf.keras.initializers.Zeros()`). The arguments are stored at construction
+and run at build time, so they wait for lazy shapes automatically. That
+covers models you are about to build. The second route, for a model that
+already exists, rests on the fact that a kernel is a mutable variable:
+iterate over `model.layers`, decide by type what to do with each layer, and
+overwrite the kernels you select in place with `assign`. We show both,
+starting with constructor arguments.
 :end_tab:
 
 ```{.python .input #init-applying-initializers-1}
@@ -165,6 +221,21 @@ layer_0 = params['params']['layers_0']
 layer_0['kernel'][:, 0], layer_0['bias'][0]
 ```
 
+```{.python .input #init-applying-initializers-1}
+%%tab tensorflow
+init_normal = tf.keras.initializers.RandomNormal(stddev=0.01)
+net = tf.keras.Sequential([
+    tf.keras.layers.Dense(8, kernel_initializer=init_normal,
+                          bias_initializer='zeros'),
+    tf.keras.layers.ReLU(),
+    tf.keras.layers.Dense(1, kernel_initializer=init_normal,
+                          bias_initializer='zeros')])
+
+X = tf.ones((2, 4))
+net(X)
+net.layers[0].kernel[:, 0], net.layers[0].bias[0]
+```
+
 :begin_tab:`pytorch`
 The `isinstance` dispatch is what makes the pattern compose: one function can
 treat `nn.Linear`, `nn.Conv2d`, and `nn.Embedding` differently, and it
@@ -181,6 +252,16 @@ initializer, so the choice sits exactly where the layer is declared. Below we
 give the first layer Xavier initialization (:numref:`subsec_xavier`) and set
 the last to a constant, a poor idea for training by the symmetry argument of
 :numref:`sec_numerical_stability`, but it makes the mechanics visible:
+:end_tab:
+
+:begin_tab:`tensorflow`
+Mixing schemes per block needs no dispatch while the model is under
+construction: each layer names its own initializer, so the choice sits
+exactly where the layer is declared. Below we give the first layer Xavier
+initialization (:numref:`subsec_xavier`), which Keras spells `GlorotUniform`
+after its author, and set the last to a constant, a poor idea for training by
+the symmetry argument of :numref:`sec_numerical_stability`, but it makes the
+mechanics visible:
 :end_tab:
 
 ```{.python .input #init-applying-initializers-2}
@@ -210,6 +291,19 @@ params = net.init(jax.random.key(0), X)
  params['params']['layers_2']['kernel'])
 ```
 
+```{.python .input #init-applying-initializers-2}
+%%tab tensorflow
+net = tf.keras.Sequential([
+    tf.keras.layers.Dense(
+        8, kernel_initializer=tf.keras.initializers.GlorotUniform()),
+    tf.keras.layers.ReLU(),
+    tf.keras.layers.Dense(
+        1, kernel_initializer=tf.keras.initializers.Constant(42.0))])
+
+net(X)
+net.layers[0].kernel[:, 0], net.layers[2].kernel[:, 0]
+```
+
 :begin_tab:`pytorch`
 This ten-line pattern is the entire API. Later chapters wrap it into
 one-liners, `init_cnn` for convolutional networks and `init_seq2seq` for
@@ -226,6 +320,17 @@ every kernel of the constant-42 network from the previous cell and returns
 the repaired tree; biases pass through untouched:
 :end_tab:
 
+:begin_tab:`tensorflow`
+The second route re-initializes a model that already exists. The loop below
+is the whole mechanism: iterate `model.layers`, dispatch with `isinstance` so
+that activations and anything else without a kernel are skipped, and `assign`
+a fresh draw into each kernel. `assign` overwrites the variable's buffer in
+place, which is what we want, since the parameter must remain the same
+variable the model tracks and any existing optimizer updates. The function
+repairs the constant-42 network from the previous cell; biases pass through
+untouched:
+:end_tab:
+
 ```{.python .input #init-applying-initializers-3}
 %%tab jax
 def reinit(params, key, init_fn, match):
@@ -239,6 +344,17 @@ def reinit(params, key, init_fn, match):
 params = reinit(params, jax.random.key(1),
                 nn.initializers.xavier_uniform(), match="['kernel']")
 params['params']['layers_2']['kernel'][:3]
+```
+
+```{.python .input #init-applying-initializers-3}
+%%tab tensorflow
+def reinit(model, init):
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.layers.Dense):
+            layer.kernel.assign(init(layer.kernel.shape))
+
+reinit(net, tf.keras.initializers.GlorotUniform(seed=1))
+net.layers[2].kernel[:3]
 ```
 
 ## Modern Schemes: Truncation, Depth, and Zeros
@@ -273,6 +389,15 @@ the house preference throughout Flax: the `variance_scaling` factory behind
 truncated as well.
 :end_tab:
 
+:begin_tab:`tensorflow`
+`tf.keras.initializers.TruncatedNormal` fixes its cutoff at two standard
+deviations: draws landing outside the bound are discarded and redrawn, and no
+rescaling follows. Truncation also backs the fan-aware factory behind
+`HeNormal` and its relatives, which draws a truncated normal and then
+rescales it so the standard deviation lands on target despite the missing
+tails:
+:end_tab:
+
 ```{.python .input #init-truncated-normals}
 %%tab pytorch
 torch.manual_seed(0)
@@ -290,6 +415,16 @@ w = nn.initializers.normal(stddev=0.02)(key, (1000, 1000))
 print(f'normal:    std {w.std():.4f}, max weight {jnp.abs(w).max():.4f}')
 w = nn.initializers.truncated_normal(stddev=0.02)(key, (1000, 1000))
 print(f'truncated: std {w.std():.4f}, max weight {jnp.abs(w).max():.4f}')
+```
+
+```{.python .input #init-truncated-normals}
+%%tab tensorflow
+init = tf.keras.initializers.RandomNormal(stddev=0.02, seed=0)
+w = init((1000, 1000)).numpy()
+print(f'normal:    std {w.std():.4f}, max weight {abs(w).max():.4f}')
+init = tf.keras.initializers.TruncatedNormal(stddev=0.02, seed=0)
+w = init((1000, 1000)).numpy()
+print(f'truncated: std {w.std():.4f}, max weight {abs(w).max():.4f}')
 ```
 
 A million plain-normal draws produce entries near $5\sigma = 0.1$; the
@@ -370,6 +505,20 @@ class ResidualBlock(nn.Module):
         return X + nn.Dense(self.d, kernel_init=self.out_init)(Y)
 ```
 
+```{.python .input #init-watching-the-variance-compound-1}
+%%tab tensorflow
+class ResidualBlock(tf.keras.Model):
+    def __init__(self, d, out_init='he_normal'):
+        super().__init__()
+        self.body = tf.keras.Sequential([
+            tf.keras.layers.Dense(4 * d, kernel_initializer='he_normal'),
+            tf.keras.layers.ReLU(),
+            tf.keras.layers.Dense(d, kernel_initializer=out_init)])
+
+    def call(self, X):
+        return X + self.body(X)
+```
+
 :begin_tab:`pytorch`
 Every linear layer gets He initialization, appropriate for the ReLU inside
 the branch. Then a `named_parameters` loop, the same shape as nanoGPT's
@@ -386,6 +535,18 @@ field, so each of the three treatments is just a different initializer.
 Leaving it alone means He again, scaling by $1/\sqrt{N}$ is a closure over
 the depth that wraps the same three-argument signature, and zeroing is
 `nn.initializers.zeros`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Every dense layer gets He initialization, appropriate for the ReLU inside
+the branch; the string `'he_normal'` names the same object as
+`tf.keras.initializers.HeNormal()`. The treatment is a constructor argument
+as well: the block takes its output projection's initializer as a parameter,
+so each of the three treatments is just a different initializer. Leaving it
+alone means He again and zeroing is `'zeros'`, but scaling by $1/\sqrt{N}$
+has no menu entry, so we subclass `Initializer`: the instance stores the
+depth, and its `__call__` shrinks a fresh He draw, behind the same
+shape-and-dtype signature everything on the menu implements.
 :end_tab:
 
 ```{.python .input #init-watching-the-variance-compound-2}
@@ -422,6 +583,25 @@ def output_std(num_blocks, out_init):
     return net.apply(params, X).std().item()
 ```
 
+```{.python .input #init-watching-the-variance-compound-2}
+%%tab tensorflow
+class ScaledHe(tf.keras.initializers.Initializer):
+    def __init__(self, num_blocks):
+        self.num_blocks = num_blocks
+
+    def __call__(self, shape, dtype=None):
+        w = tf.keras.initializers.HeNormal()(shape, dtype)
+        return w * self.num_blocks ** -0.5
+
+def output_std(num_blocks, out_init):
+    tf.keras.utils.set_random_seed(0)
+    net = tf.keras.Sequential(
+        [ResidualBlock(64, out_init=out_init(num_blocks))
+         for _ in range(num_blocks)])
+    X = tf.random.normal((256, 64), seed=1)
+    return float(tf.math.reduce_std(net(X)))
+```
+
 One forward pass on unit-variance inputs per depth and treatment:
 
 ```{.python .input #init-watching-the-variance-compound-3}
@@ -440,6 +620,17 @@ for n in (2, 8, 32):
 tweaks = {'default': lambda n: he,
           'scaled': scaled_he,
           'zero': lambda n: nn.initializers.zeros}
+print(f'{"N":>3}' + ''.join(f'{name:>10}' for name in tweaks))
+for n in (2, 8, 32):
+    stds = (output_std(n, tweak) for tweak in tweaks.values())
+    print(f'{n:>3}' + ''.join(f'{s:>10.3g}' for s in stds))
+```
+
+```{.python .input #init-watching-the-variance-compound-3}
+%%tab tensorflow
+tweaks = {'default': lambda n: 'he_normal',
+          'scaled': ScaledHe,
+          'zero': lambda n: 'zeros'}
 print(f'{"N":>3}' + ''.join(f'{name:>10}' for name in tweaks))
 for n in (2, 8, 32):
     stds = (output_std(n, tweak) for tweak in tweaks.values())
@@ -470,6 +661,12 @@ signature everything in `nn.initializers` shares, so writing one is no harder
 than using one.
 :end_tab:
 
+:begin_tab:`tensorflow`
+An initializer is just an object mapping `(shape, dtype)` to a tensor:
+subclass `tf.keras.initializers.Initializer`, implement `__call__`, and every
+layer will accept an instance, so writing one is no harder than using one.
+:end_tab:
+
 Suppose, to make the point vividly, we want weights distributed as
 
 $$
@@ -491,6 +688,11 @@ Split the key, draw a magnitude from $U(5, 10)$, and draw a factor from
 $\{-1, 0, 0, 1\}$, which zeroes the entry with probability one half and keeps
 either sign with probability one quarter. Handing the function to
 `kernel_init` makes it official; `init` gives every layer an independent key:
+:end_tab:
+
+:begin_tab:`tensorflow`
+Draw uniformly from $U(-10, 10)$, then zero every entry of magnitude below 5.
+Handing an instance to `kernel_initializer` makes it official:
 :end_tab:
 
 ```{.python .input #init-custom-initializers-1}
@@ -519,6 +721,22 @@ params = net.init(jax.random.key(0), X)
 params['params']['layers_0']['kernel'][:, :2]
 ```
 
+```{.python .input #init-custom-initializers-1}
+%%tab tensorflow
+class MyInit(tf.keras.initializers.Initializer):
+    def __call__(self, shape, dtype=None):
+        w = tf.random.uniform(shape, -10, 10, dtype=dtype)
+        return w * tf.cast(tf.abs(w) >= 5, w.dtype)
+
+net = tf.keras.Sequential([
+    tf.keras.layers.Dense(8, kernel_initializer=MyInit()),
+    tf.keras.layers.ReLU(),
+    tf.keras.layers.Dense(1)])
+
+net(X)
+net.layers[0].kernel[:2]
+```
+
 :begin_tab:`pytorch`
 The `torch.no_grad()` block is required: parameters are leaf tensors that
 track gradients, and PyTorch rejects in-place arithmetic on them unless we
@@ -535,6 +753,14 @@ surgery produces a new tree rather than editing the old one. `.at[...].set()`
 is the functional replacement for indexed assignment, and a path-matched
 `tree_map` splices the result into the params tree, here offsetting a whole
 matrix and pinning a single entry in one pass:
+:end_tab:
+
+:begin_tab:`tensorflow`
+No guard is needed on the way in, because `assign` sits outside automatic
+differentiation: TensorFlow records gradients on a `GradientTape`, and an
+assignment is a write to the variable's buffer, not an operation on the tape.
+The same door handles one-off surgery, such as offsetting a whole matrix or
+pinning a single entry, since slicing a variable composes with `assign`:
 :end_tab:
 
 ```{.python .input #init-custom-initializers-2}
@@ -555,6 +781,14 @@ params = jax.tree_util.tree_map_with_path(
 params['params']['layers_0']['kernel'][0]
 ```
 
+```{.python .input #init-custom-initializers-2}
+%%tab tensorflow
+w = net.layers[0].kernel
+w.assign(w + 1)
+w[0, 0].assign(42)
+w[0]
+```
+
 :begin_tab:`pytorch`
 One caveat when building with lazy layers (:numref:`sec_lazy_init`): before
 the first forward pass their parameters are placeholders with no shape, so
@@ -566,6 +800,15 @@ run that materializes them.
 There is no ordering caveat to remember here: every Flax layer is lazy
 (:numref:`sec_lazy_init`), the params tree does not exist until `init`
 returns it, and surgery on the result is the only order the API admits.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The ordering caveat of the lazy world (:numref:`sec_lazy_init`) splits by
+route here: a constructor initializer is stored and runs at build time, so it
+can never fire too early, but `assign` surgery needs a kernel to exist and
+must therefore follow the first call (or an explicit `build`). The cells
+above respected that order by running `net(X)` before touching
+`net.layers[0].kernel`.
 :end_tab:
 
 ## Summary
@@ -586,6 +829,15 @@ mechanism is one pattern: an initializer is a function
 construction or run over an existing tree by path-matched pytree surgery.
 :end_tab:
 
+:begin_tab:`tensorflow`
+Keras initializes parameters at build time, when a layer first learns its
+input shape, with fan-aware defaults; override them when depth or a paper's
+recipe demands it. The mechanism is one pattern: an initializer is an object
+mapping `(shape, dtype)` to a tensor, handed to a layer as
+`kernel_initializer` at construction or, for a model that already exists,
+written into each selected kernel by a `model.layers` walk and `assign`.
+:end_tab:
+
 On top of Xavier and He,
 transformer-era code truncates normal tails to bound outliers, shrinks each
 residual output projection by $1/\sqrt{N}$ so the stream's variance stays
@@ -602,6 +854,11 @@ Anything the menu lacks is a few lines of `jax.random` code behind the same
 three-argument signature.
 :end_tab:
 
+:begin_tab:`tensorflow`
+Anything the menu lacks is an `Initializer` subclass with a few lines of
+`tf.random` code in its `__call__`.
+:end_tab:
+
 ## Exercises
 
 1. Instrument the residual stack: record the standard deviation of the
@@ -615,8 +872,9 @@ three-argument signature.
    relate the answer to the symmetry-breaking argument of
    :numref:`sec_numerical_stability`.
 1. Write an initializer that fills each parameter from a dictionary keyed by
-   parameter name (walk `net.named_parameters()` in PyTorch, the flattened
-   params tree in JAX). You have re-invented part of checkpoint loading,
+   parameter name (walk `net.named_parameters()` in PyTorch, `net.weights`
+   in TensorFlow, the flattened params tree in JAX). You have re-invented
+   part of checkpoint loading,
    which :numref:`sec_read_write_v2` covers.
 1. For a normal distribution truncated at $\pm 2\sigma$: what fraction of
    draws does the clip discard, and by how much does it shrink the standard

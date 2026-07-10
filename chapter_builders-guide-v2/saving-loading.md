@@ -52,6 +52,18 @@ from safetensors.flax import load_file, save_file
 from d2l import jax as d2l
 ```
 
+```{.python .input #saving-loading-saving-loading-and-pretrained-weights}
+%%tab tensorflow
+import json
+import struct
+import warnings
+from dataclasses import asdict, dataclass
+import numpy as np
+from d2l import tensorflow as d2l
+import tensorflow as tf
+from safetensors.tensorflow import load_file, save_file
+```
+
 ## State, Not Code
 
 :begin_tab:`pytorch`
@@ -65,6 +77,13 @@ lists and dicts that hold them.
 The state of a network is a tree of named arrays, the params pytree of
 :numref:`sec_parameters_v2`. Before we save a whole model, the warm-up is that
 `jnp.save` and `jnp.load` work on any array, and, through NumPy's pickle
+fallback, on the dicts that hold them.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The state of a network is a collection of named variables, the weights of
+:numref:`sec_parameters_v2`. Before we save a whole model, the warm-up is that
+`np.save` and `np.load` work on any tensor, and, through NumPy's pickle
 fallback, on the dicts that hold them.
 :end_tab:
 
@@ -82,6 +101,13 @@ jnp.save('tensors.npy', {'x': x, 'y': jnp.zeros(4)})
 jnp.load('tensors.npy', allow_pickle=True).item()
 ```
 
+```{.python .input #saving-loading-state-not-code-1}
+%%tab tensorflow
+x = tf.range(4)
+np.save('tensors.npy', {'x': x, 'y': tf.zeros(4)})
+np.load('tensors.npy', allow_pickle=True).item()
+```
+
 :begin_tab:`pytorch`
 A model's `state_dict` is one such dictionary, built for you. The keys are the
 dotted paths through the module tree (`hidden.weight`, `output.bias`); the values
@@ -93,6 +119,15 @@ A model's params is one such structure, built for you by `init`: a nested
 dictionary whose leaves sit at paths through the module tree (`hidden.kernel`,
 `output.bias`; flax calls a weight matrix a `kernel`). Here is the tree for a
 small MLP.
+:end_tab:
+
+:begin_tab:`tensorflow`
+A model's state is one such collection, built for you: `net.weights` is the
+list of its variables, and each variable's `path` names its place in the layer
+tree (`mlp/hidden/kernel`, `mlp/output/bias`; Keras calls a weight matrix a
+`kernel`). Keras invents layer names like `dense_3` when you do not choose
+them, so we name the layers explicitly to keep the paths stable across
+instances. Here is the tree for a small MLP.
 :end_tab:
 
 ```{.python .input #saving-loading-state-not-code-2}
@@ -129,6 +164,23 @@ params = variables['params']
 jax.tree_util.tree_map(lambda t: tuple(t.shape), params)
 ```
 
+```{.python .input #saving-loading-state-not-code-2}
+%%tab tensorflow
+class MLP(tf.keras.Model):
+    def __init__(self):
+        super().__init__(name='mlp')
+        self.hidden = tf.keras.layers.Dense(256, name='hidden')
+        self.out = tf.keras.layers.Dense(10, name='output')
+
+    def call(self, x):
+        return self.out(tf.nn.relu(self.hidden(x)))
+
+net = MLP()
+X = tf.random.normal((2, 20))
+Y = net(X)
+{v.path: tuple(v.shape) for v in net.weights}
+```
+
 Nothing in this dictionary knows it came from a class called `MLP`. That is the
 point: the names and shapes are enough to refill any network built by the same
 code, and they carry no dependence on how that code happens to be written today.
@@ -147,6 +199,18 @@ whatever the author's pickle stream tells it to.
 `jnp.save` writes NumPy's `.npy` format. For a single array that is pure data:
 a small header with the dtype and shape, then the raw bytes. The warm-up dict is
 another matter. NumPy can only store a dict by falling back to Python's
+`pickle`, which does not store data so much as a program that *reconstructs*
+data, and loading runs that program; that is what `allow_pickle=True` opted
+into. For a file you wrote and never let out of your control this is harmless.
+For a file you downloaded it is a remote-code-execution vector: any object in
+the stream can name a callable for the loader to invoke, which is why NumPy
+refuses pickled contents by default (`allow_pickle=False`).
+:end_tab:
+
+:begin_tab:`tensorflow`
+`np.save` writes NumPy's `.npy` format. For a single tensor that is pure data:
+a small header with the dtype and shape, then the raw bytes. The warm-up dict
+is another matter. NumPy can only store a dict by falling back to Python's
 `pickle`, which does not store data so much as a program that *reconstructs*
 data, and loading runs that program; that is what `allow_pickle=True` opted
 into. For a file you wrote and never let out of your control this is harmless.
@@ -196,6 +260,15 @@ declining to load the very files, dicts of named parameters, that model sharing
 needs.
 :end_tab:
 
+:begin_tab:`tensorflow`
+TensorFlow's own model files sidestep pickle: neither a TF checkpoint nor the
+Keras `.weights.h5`/`.keras` formats execute it on load. They are not
+automatically safe to download, though. A `.keras` archive can carry serialized
+code (a `Lambda` layer's function), which is why Keras refuses to deserialize
+such code unless you pass `safe_mode=False`, and why a model file from an
+untrusted source deserves the same caution as a pickle.
+:end_tab:
+
 safetensors removes the problem at the root by
 having no program to run. As :numref:`fig_bg_safetensors_layout` lays out byte
 by byte, a safetensors file is an 8-byte little-endian integer giving the
@@ -213,6 +286,15 @@ One mismatch to bridge first: safetensors stores a flat mapping from names to
 tensors, while flax parameters form a nested pytree. Two small helpers convert
 between the two, joining each leaf's path with dots on the way out and
 splitting it again on the way back.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Here the variable paths do the naming, so the flat mapping is a one-line
+comprehension over `net.weights`. Two quirks of the `tensorflow` binding to
+know: it converts through NumPy in both directions, so `load_file` hands back
+constant tensors that you `assign` into a model's variables, and `save_file`
+overwrites the values of the dict you pass it during that conversion, so give
+it a throwaway copy.
 :end_tab:
 
 ```{.python .input #saving-loading-safetensors-the-interchange-format-3}
@@ -248,6 +330,18 @@ exact = jax.tree_util.tree_all(
 exact, jnp.array_equal(net.apply({'params': restored}, X), Y)
 ```
 
+```{.python .input #saving-loading-safetensors-the-interchange-format-3}
+%%tab tensorflow
+state = {v.path: v for v in net.weights}
+save_file(dict(state), 'mlp-tf.safetensors')  # dict(): save_file clobbers its arg
+restored = load_file('mlp-tf.safetensors')
+clone = MLP()
+clone(X)                                   # build the variables first
+for v in clone.weights:
+    v.assign(restored[v.path])
+tf.reduce_all(clone(X) == Y)
+```
+
 Because the header is plain JSON at a known offset, you can read it without the
 library and see there is no magic to the format.
 
@@ -267,6 +361,14 @@ with open('mlp-jax.safetensors', 'rb') as f:
 header['hidden.kernel']
 ```
 
+```{.python .input #saving-loading-safetensors-the-interchange-format-4}
+%%tab tensorflow
+with open('mlp-tf.safetensors', 'rb') as f:
+    n = struct.unpack('<Q', f.read(8))[0]   # header length, little-endian
+    header = json.loads(f.read(n))
+header['mlp/hidden/kernel']
+```
+
 :begin_tab:`pytorch`
 `torch.save` keeps its place for your own scratch files and for the older code
 you will still meet. safetensors is what you use to hand a model to anyone else.
@@ -275,6 +377,12 @@ you will still meet. safetensors is what you use to hand a model to anyone else.
 :begin_tab:`jax`
 `jnp.save` keeps its place for your own scratch arrays and quick experiments.
 safetensors is what you use to hand a model to anyone else.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`np.save` and Keras's own `.weights.h5` keep their place for your own scratch
+files and checkpoints. safetensors is what you use to hand a model to anyone
+else.
 :end_tab:
 
 ## Checkpointing a Training Run
@@ -313,6 +421,18 @@ one more branch of the saved tree, and the PRNG key, which in JAX is explicit
 data rather than hidden global state, can too.
 :end_tab:
 
+:begin_tab:`tensorflow`
+In TensorFlow the bundle already has a name. `tf.train.Checkpoint` takes the
+objects to track as keyword arguments, model, optimizer, and a step counter,
+walks their variables, and saves and restores them as one unit, Adam's moment
+estimates included. Because this native already covers the job, the tensorflow
+tab defines no helper of its own; the calls below are the idiom as you would
+write it in any project. Saves are numbered (`run-tf-1`, `run-tf-2`, ...), so a
+crash mid-write leaves the previous good checkpoint untouched rather than a
+half-written one. The config is plain Python rather than variables, so it
+travels in a JSON sidecar next to the checkpoint files.
+:end_tab:
+
 ```{.python .input #saving-loading-checkpointing-a-training-run-1}
 %%tab pytorch
 def save_checkpoint(path, model, optimizer, step, cfg=None):  #@save
@@ -342,8 +462,8 @@ def load_checkpoint(path, model, optimizer=None):  #@save
 ```
 
 Train a tiny regressor for a hundred steps and checkpoint it. The `Config`
-dataclass is what a rebuild reads to size the model, so it travels inside the
-file with the weights.
+dataclass is what a rebuild reads to size the model, so it travels with the
+weights.
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-2}
 %%tab pytorch
@@ -418,6 +538,45 @@ ckptr.save(os.path.abspath('run-jax'),        # orbax wants an absolute path
 int(state.step), round(float(loss(state.params)), 4)
 ```
 
+```{.python .input #saving-loading-checkpointing-a-training-run-2}
+%%tab tensorflow
+@dataclass
+class Config:
+    in_dim: int = 20
+    hidden: int = 64
+    lr: float = 0.05
+
+def build(cfg):
+    return tf.keras.Sequential([
+        tf.keras.layers.Dense(cfg.hidden, activation='relu'),
+        tf.keras.layers.Dense(1)])
+
+tf.keras.utils.set_random_seed(1)
+cfg = Config()
+data = tf.random.normal((256, cfg.in_dim))
+target = data @ tf.random.normal((cfg.in_dim, 1)) + 0.1 * tf.random.normal((256, 1))
+loss = tf.keras.losses.MeanSquaredError()
+
+def step(model, opt):
+    with tf.GradientTape() as tape:
+        l = loss(target, model(data))
+    opt.apply_gradients(zip(tape.gradient(l, model.trainable_variables),
+                            model.trainable_variables))
+    return float(l)
+
+net = build(cfg)
+net(data[:1])                                # build the variables
+opt = tf.keras.optimizers.Adam(cfg.lr)
+for _ in range(100):
+    step(net, opt)
+
+ckpt = tf.train.Checkpoint(model=net, optimizer=opt, step=tf.Variable(100))
+path = ckpt.save('run-tf')                   # a numbered save: 'run-tf-1'
+with open('run-tf-cfg.json', 'w') as f:
+    json.dump(asdict(cfg), f)
+path, round(float(loss(target, net(data))), 4)
+```
+
 The restore is exact. Corrupt every parameter, load the checkpoint back, and the
 loss returns to where it was.
 
@@ -426,6 +585,15 @@ Note the shape of the restore call: orbax fills a *template*, here a freshly
 built `TrainState` with the right structure, rather than mutating a model in
 place. That is the functional style throughout: a restore returns a new state,
 it does not patch an old one.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Note the shape of the restore call: `restore` patches the tracked objects in
+place, matching each variable by its route through the object graph (`model`,
+then the layer, then its `kernel`) rather than by name, and it returns a status
+object. `assert_consumed()` on that status checks that every saved value found
+a variable and every variable found a value, turning a silent partial restore
+into a loud error.
 :end_tab:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-3}
@@ -449,11 +617,30 @@ after = float(loss(ckpt['state'].params))
 f'perturbed {before:.2f} -> restored {after:.4f}'
 ```
 
+```{.python .input #saving-loading-checkpointing-a-training-run-3}
+%%tab tensorflow
+for v in net.trainable_variables:
+    v.assign_add(tf.ones_like(v))         # wreck the weights
+before = float(loss(target, net(data)))
+ckpt.restore(path).assert_consumed()
+after = float(loss(target, net(data)))
+f'perturbed {before:.2f} -> restored {after:.4f}'
+```
+
 Now the reason the optimizer state is in the file. Resume the run two ways from
 the same checkpoint: once restoring the optimizer, once with a fresh one holding
 only the weights. The network is near its minimum, so the correct continuation
 barely moves. A fresh Adam, with its moment estimates reset and its bias
 correction starting over, takes an oversized first step and overshoots.
+
+:begin_tab:`tensorflow`
+One Keras 3 tripwire sits in the resume path. A freshly constructed Adam owns
+no slot variables; the moment estimates are created only when the optimizer is
+built. Restore into a fresh optimizer without building it first and the saved
+moments have no variables to land in, so `assert_consumed()` fails with an
+unresolved `optimizer` object. The fix is one line before the restore:
+`opt.build(model.trainable_variables)`.
+:end_tab:
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-4}
 %%tab pytorch
@@ -489,6 +676,26 @@ print('full  optimizer:', full_losses)
 print('fresh optimizer:', fresh_losses)
 ```
 
+```{.python .input #saving-loading-checkpointing-a-training-run-4}
+%%tab tensorflow
+net_full = build(cfg)
+net_full(data[:1])
+opt_full = tf.keras.optimizers.Adam(cfg.lr)
+opt_full.build(net_full.trainable_variables)   # create Adam's slots first
+tf.train.Checkpoint(model=net_full, optimizer=opt_full,
+                    step=tf.Variable(0)).restore(path).assert_consumed()
+full = [round(step(net_full, opt_full), 4) for _ in range(5)]
+
+net_fresh = build(cfg)
+net_fresh(data[:1])
+tf.train.Checkpoint(model=net_fresh).restore(path).expect_partial()  # weights only
+opt_fresh = tf.keras.optimizers.Adam(cfg.lr)
+fresh = [round(step(net_fresh, opt_fresh), 4) for _ in range(5)]
+
+print('full  optimizer:', full)
+print('fresh optimizer:', fresh)
+```
+
 The full-state run keeps descending; the weights-only run spikes and has to claw
 its way back. That transient is the cost of forgetting the optimizer, and it is
 why "just the weights" is not a resumable checkpoint.
@@ -508,6 +715,15 @@ checkpoint is a directory of per-array files rather than one monolith, a restore
 can target a device sharding so each accelerator materializes only its own
 pieces, and multi-host jobs save and restore in parallel;
 :numref:`chap_performance` returns to the machinery when models get that big.
+:end_tab:
+
+:begin_tab:`tensorflow`
+For models too large to hold in memory, the format already cooperates: a TF
+checkpoint is an index file plus data shards rather than one monolith, and
+restores are lazy, so a variable created later is filled from the file at
+creation time instead of everything materializing up front. Multi-host
+`tf.distribute` jobs build on the same machinery;
+:numref:`chap_performance` returns to it when models get that big.
 :end_tab:
 
 ## Loading Weights You Did Not Train
@@ -534,6 +750,15 @@ downloaded file, and build a network that reuses the trunk but ends in a new
 two-class head.
 :end_tab:
 
+:begin_tab:`tensorflow`
+The most common reason to load weights is that someone else produced them. You
+take a network trained on a large dataset and adapt it: keep the learned
+feature extractor, replace the final layer for your own labels.
+`keras.applications` is the built-in zoo; `weights='imagenet'` downloads the
+matching parameters the first time, and `include_top=False` drops the
+1000-class head so you can attach your own.
+:end_tab:
+
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-1}
 %%tab pytorch
 net = resnet18(weights=ResNet18_Weights.DEFAULT)   # ~45 MB on first run
@@ -555,6 +780,16 @@ new_params = Classifier().init(d2l.get_key(), X)['params']
 jax.tree_util.tree_map(lambda t: tuple(t.shape), new_params)
 ```
 
+```{.python .input #saving-loading-loading-weights-you-did-not-train-1}
+%%tab tensorflow
+backbone = tf.keras.applications.MobileNetV2(   # ~9 MB on first run
+    weights='imagenet', include_top=False, input_shape=(160, 160, 3),
+    pooling='avg')
+net = tf.keras.Sequential([backbone, tf.keras.layers.Dense(10, name='head')])
+net(tf.zeros((1, 160, 160, 3)))                 # build the new 10-class head
+net.layers[-1]
+```
+
 :begin_tab:`pytorch`
 A `state_dict` is an ordinary Python dict, so adapting one is ordinary dict
 surgery. We drop the pretrained 1000-class head (we just replaced it) and, to
@@ -568,6 +803,16 @@ the report. Take from the file every entry whose name and shape match the new
 model, keep the fresh initialization for the rest, and compute the two key sets
 that say what happened: *missing*, parameters the model has but the file did not
 fill, and *unexpected*, file entries with no home in the model.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras loads weight files whole, so the partial-loading control is a flag rather
+than dict surgery: `load_weights(path, skip_mismatch=True)` fills every
+variable whose saved shape matches and skips the rest, reporting the skips as a
+warning. To stage a mismatch, save the weights of a donor whose head has 101
+classes, our stand-in for a fine-tuned model someone else published, then load
+that file into the 10-class network. The cell records the warning so we can
+read it back as a report.
 :end_tab:
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-2}
@@ -592,6 +837,20 @@ print('missing:', sorted(set(new_flat) - set(matched)))
 print('unexpected:', sorted(set(file_flat) - set(new_flat)))
 ```
 
+```{.python .input #saving-loading-loading-weights-you-did-not-train-2}
+%%tab tensorflow
+donor = tf.keras.Sequential([backbone, tf.keras.layers.Dense(101, name='head')])
+donor(tf.zeros((1, 160, 160, 3)))
+donor.save_weights('donor-101.weights.h5')   # stand-in for a downloaded file
+
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter('always')
+    net.load_weights('donor-101.weights.h5', skip_mismatch=True)
+report = str(caught[-1].message).splitlines()
+print(report[0])
+print(report[2].split(' Target variable:')[0])
+```
+
 :begin_tab:`pytorch`
 Read this report; do not discard it. `missing_keys` lists parameters the model
 has but the file did not fill. The two `fc` entries are expected: that head is
@@ -613,6 +872,18 @@ prints it unless you do: name which keys you expect in each set and treat
 anything else as a bug.
 :end_tab:
 
+:begin_tab:`tensorflow`
+Read the warning; do not silence it. It names exactly one object that could not
+be loaded, the `head` layer, and gives the two shapes that disagree, `(1280,
+10)` against `(1280, 101)`. That is the expected mismatch: the head is new and
+meant to start random. Any other layer in that list would mean the backbones
+disagree, a wrong input shape or a renamed layer, and is a bug rather than
+something to skip. One piece of API drift to know: older tutorials pass
+`by_name=True` for partial loads, but in Keras 3 that flag only applies to
+legacy `.h5` files and *raises* on the native `.weights.h5` format;
+`skip_mismatch` is the current control.
+:end_tab:
+
 :begin_tab:`pytorch`
 With the backbone loaded, freeze it so training touches only the new head. Set
 `requires_grad = False` on the pretrained parameters (:numref:`sec_parameters_v2`)
@@ -625,6 +896,13 @@ Parameters in JAX carry no `requires_grad` flag; they are plain arrays, and what
 trains is decided by the optimizer. Label each parameter subtree and give the
 frozen label a transform that zeroes its updates: gradients still flow, the
 optimizer discards them.
+:end_tab:
+
+:begin_tab:`tensorflow`
+With the backbone loaded, freeze it so training touches only the new head. One
+attribute does it: setting `trainable = False` on the backbone removes its
+variables from `trainable_variables`, and as a Keras convenience also runs its
+BatchNorm layers in inference mode, which is what fine-tuning wants.
 :end_tab:
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
@@ -653,6 +931,14 @@ total = sum(int(s) for s in sizes.values())
 f'{trainable} trainable of {total}'
 ```
 
+```{.python .input #saving-loading-loading-weights-you-did-not-train-3}
+%%tab tensorflow
+backbone.trainable = False
+trainable = sum(int(tf.size(v)) for v in net.trainable_variables)
+total = sum(int(tf.size(v)) for v in net.weights)
+f'{trainable} trainable of {total}'
+```
+
 :begin_tab:`pytorch`
 torchvision is one source; the Hugging Face Hub is the ecosystem-scale one, and
 it distributes its weights as safetensors, which closes the loop with the format
@@ -665,6 +951,14 @@ The Hugging Face Hub distributes JAX weights as safetensors, so the flat dict
 you just merged has the same shape as the artifact you will download in
 practice. This section covers *how* to load and adapt pretrained weights;
 :numref:`sec_fine_tuning` covers when it helps and how far to unfreeze.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`keras.applications` is one source; the Hugging Face Hub is the ecosystem-scale
+one, and it distributes its weights as safetensors, which closes the loop with
+the format of the previous section. This section covers *how* to load and adapt
+pretrained weights; :numref:`sec_fine_tuning` covers when it helps and how far
+to unfreeze.
 :end_tab:
 
 ## Summary
@@ -693,12 +987,26 @@ weights is pytree surgery, and the missing/unexpected sets you compute are a
 diagnostic to read rather than a formality to skip.
 :end_tab:
 
+:begin_tab:`tensorflow`
+A saved model is state, not code: a collection of path-named variables that
+means something only once the code that built the network runs again. For your
+own files `np.save` and `.weights.h5` are fine; for files you share,
+safetensors stores the same tensors behind a plain JSON header, with no pickle
+to execute, which is why hubs standardize on it. A resumable checkpoint is a
+`tf.train.Checkpoint` of model, optimizer, and step saved as one unit, or a
+resume restarts the optimizer's momentum from zero; a fresh optimizer must be
+built before the restore so Adam's moments have somewhere to land. Loading
+someone else's weights is `load_weights` with `skip_mismatch=True`, and the
+skip warning is a diagnostic to read rather than a message to silence.
+:end_tab:
+
 ## Exercises
 
 1. Even if you never deploy to another machine, name two reasons to checkpoint.
    Then consider the atomic write: if the checkpoint were written straight to its
-   final path (delete the `os.replace` from `save_checkpoint`, or the
-   rename-into-place that orbax performs), describe the failure a crash mid-write
+   final path (delete the `os.replace` from `save_checkpoint`, the
+   rename-into-place that orbax performs, or the fresh numbered files that
+   `tf.train.Checkpoint.save` writes), describe the failure a crash mid-write
    now causes, and why the atomic version avoids it.
 1. Read the first 8 bytes of the safetensors file you wrote for the MLP as a
    little-endian integer, as the header cell does. How large is the JSON header

@@ -36,6 +36,13 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
+%%tab tensorflow
+import ml_dtypes
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
 ## The Dtype Zoo
 
 Half-precision (`float16`, "fp16") sounds like a free lunch: half the
@@ -54,6 +61,12 @@ x.to(torch.float16)**2, x.to(torch.bfloat16)**2
 %%tab jax
 x = jnp.array(300.0)
 x.astype(jnp.float16)**2, x.astype(jnp.bfloat16)**2
+```
+
+```{.python .input #numerics-the-dtype-zoo-1}
+%%tab tensorflow
+x = tf.constant(300.0)
+tf.cast(x, tf.float16)**2, tf.cast(x, tf.bfloat16)**2
 ```
 
 fp16 overflows to `inf`. The second format, `bfloat16` ("bf16", brain
@@ -100,6 +113,22 @@ for dtype in (jnp.float32, jnp.bfloat16, jnp.float16):
           f'  tiny {float(fi.tiny):9.3e}  eps {float(fi.eps):8.3e}')
 ```
 
+```{.python .input #numerics-the-dtype-zoo-2}
+%%tab tensorflow
+for dtype in (tf.float32, tf.bfloat16, tf.float16):
+    fi = ml_dtypes.finfo(dtype.as_numpy_dtype)
+    print(f'{dtype.name:10} max {float(fi.max):10.3e}'
+          f'  tiny {float(fi.tiny):9.3e}  eps {float(fi.eps):8.3e}')
+```
+
+:begin_tab:`tensorflow`
+TensorFlow has no `finfo` of its own (the `tf.experimental.numpy` one chokes
+on bfloat16). The numbers live one level down, in `ml_dtypes`, the small
+NumPy-extension package that defines the bfloat16 scalar type TensorFlow
+depends on; each `tf` dtype hands over its NumPy counterpart via
+`as_numpy_dtype`.
+:end_tab:
+
 bf16 matches fp32's `max` and `tiny` exactly (same exponent bits) and its
 `eps` of 0.0078 means two to three significant decimal digits. fp16 resolves
 about three to four digits but overflows at 65504 and underflows below
@@ -135,6 +164,14 @@ with jax.default_matmul_precision('tensorfloat32'):
     print(jax.config.jax_default_matmul_precision)
 ```
 
+```{.python .input #numerics-tf32-what-happens-to-fp32-matrix-multiplication}
+%%tab tensorflow
+print(tf.config.experimental.tensor_float_32_execution_enabled())
+tf.config.experimental.enable_tensor_float_32_execution(False)
+print(tf.config.experimental.tensor_float_32_execution_enabled())
+tf.config.experimental.enable_tensor_float_32_execution(True)  # the default
+```
+
 :begin_tab:`pytorch`
 The default is `'highest'`: fp32 matrix multiplications compute in true fp32
 and the tensor-core shortcut stays off. Setting `'high'` opts in (it also
@@ -165,6 +202,19 @@ on the GPUs of :numref:`sec_use_gpu_v2`. For training, tf32 is generally safe
 ill-conditioned linear algebra or reproducing results bit for bit.
 :end_tab:
 
+:begin_tab:`tensorflow`
+The getter answers `True`: TensorFlow turns tf32 on by default wherever the
+hardware supports it, the polarity JAX shares and today's PyTorch inverts,
+so an fp32 matrix multiplication on an Ampere-or-later GPU is already taking
+the fast path unless you say otherwise. The switch is global, not scoped: a
+numerically delicate block disables it, computes, and restores it, as the
+cell does. On the CPU this notebook runs on there are no tensor cores and
+the flag changes nothing beyond its own value; the distinction takes effect
+on the GPUs of :numref:`sec_use_gpu_v2`. For training, the default is
+generally safe (products still accumulate in fp32); disable it for
+ill-conditioned linear algebra or when reproducing results bit for bit.
+:end_tab:
+
 ### Below 16 Bits
 
 Production inference pushes further down: int8 quantization is standard for
@@ -181,6 +231,14 @@ them like any other float; what still lives in specialized libraries is the
 per-tensor scaling that makes them trainable.
 :end_tab:
 
+:begin_tab:`tensorflow`
+TensorFlow 2.21 ships no fp8 dtype. The formats exist one level down, in the
+same `ml_dtypes` package that supplied our `finfo`
+(`ml_dtypes.finfo(ml_dtypes.float8_e4m3fn)` reads them), but no `tf` dtype
+wraps them; fp8 work in the TensorFlow world happens in specialized
+libraries.
+:end_tab:
+
 ## Dtype Rules: Promotion, Parameters, and Casts
 
 :begin_tab:`pytorch`
@@ -191,6 +249,12 @@ promotes to the type that can represent both:
 :begin_tab:`jax`
 What happens when dtypes meet in one expression? For plain arrays, JAX
 promotes to a common type that can represent both:
+:end_tab:
+
+:begin_tab:`tensorflow`
+What happens when dtypes meet in one expression? For plain tensors,
+TensorFlow refuses to guess. There is no promotion; an operation whose
+inputs disagree raises on the spot:
 :end_tab:
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-1}
@@ -207,12 +271,36 @@ x32 = jnp.ones(3, dtype=jnp.float32)
 (x16 + x32).dtype, (x16 + 1.0).dtype, (x16 + jnp.arange(3)).dtype
 ```
 
+```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-1}
+%%tab tensorflow
+x16 = tf.ones(3, dtype=tf.float16)
+x32 = tf.ones(3, dtype=tf.float32)
+try:
+    x16 + x32
+except tf.errors.InvalidArgumentError as e:
+    print(e.message)
+(x16 + 1.0).dtype
+```
+
+:begin_tab:`pytorch, jax`
 Mixing two float tensors upcasts to the wider one, so an fp16 pipeline with a
 stray fp32 tensor quietly becomes fp32 from that point on, doubling downstream
 memory. Python scalars and integer tensors are *weak*: they adopt the float
 tensor's dtype instead of dragging it up, which is why sprinkling literals
 like `x + 1.0` into low-precision code is harmless. (Mixing fp16 with bf16
 promotes to fp32, since neither contains the other.)
+:end_tab:
+
+:begin_tab:`tensorflow`
+Only the Python scalar got through: literals like `x + 1.0` are cast to the
+tensor's dtype, so sprinkling them into low-precision code is harmless.
+Everything else, float with float or float with integer, is an error at the
+first operation that touches both. This strictness guards against exactly
+the failure that promotion invites in other frameworks, where an fp16
+pipeline with a stray fp32 tensor quietly becomes fp32 from that point on,
+doubling downstream memory; in TensorFlow the stray tensor cannot travel one
+op. The price is that every intended conversion is spelled `tf.cast`.
+:end_tab:
 
 :begin_tab:`pytorch`
 Module parameters play by a stricter rule: layers do not promote, they demand
@@ -231,6 +319,16 @@ inputs to a common type, the same rule as above). Since the parameters
 themselves are a plain pytree of arrays, "casting the model" is one
 `tree.map`. The byte accounting of :numref:`sec_parameters_v2` composes with
 dtype through `itemsize`:
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras layers package this strictness behind a *dtype policy*: every layer
+carries a `variable_dtype`, the format its weights are stored in, and a
+`compute_dtype`, the format its forward pass runs in, both fp32 by default.
+The constructor argument `dtype='bfloat16'` sets the pair at once, so
+"casting the model" is a construction-time choice rather than an in-place
+conversion. The byte accounting of :numref:`sec_parameters_v2` composes with
+dtype through the dtype's size in bytes:
 :end_tab:
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-2}
@@ -252,6 +350,18 @@ def param_bytes(params):
 param_bytes(params)
 ```
 
+```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-2}
+%%tab tensorflow
+net = tf.keras.Sequential([tf.keras.layers.Flatten(),
+                           tf.keras.layers.Dense(256, activation='relu'),
+                           tf.keras.layers.Dense(10)])
+net(tf.zeros((1, 28, 28, 1)))  # build the weights
+def param_bytes(net):
+    return sum(w.shape.num_elements() * tf.as_dtype(w.dtype).size
+               for w in net.weights)
+param_bytes(net)
+```
+
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-3}
 %%tab pytorch
 net = net.bfloat16()
@@ -271,6 +381,16 @@ print(net.apply(params16, X).dtype, param_bytes(params16))
 print(net.apply(params16, X.astype(jnp.bfloat16)).dtype)
 ```
 
+```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-3}
+%%tab tensorflow
+net = tf.keras.Sequential([
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(256, activation='relu', dtype='bfloat16'),
+    tf.keras.layers.Dense(10, dtype='bfloat16')])
+X = tf.random.normal((8, 28, 28, 1))
+print(net(X).dtype, param_bytes(net))
+```
+
 :begin_tab:`pytorch`
 The parameter footprint halves, inference works, and the error message shows
 the strictness: the fp32 input was refused rather than silently converted.
@@ -285,6 +405,16 @@ bf16 input (second line) keeps the whole forward pass in bf16, and so does
 constructing the layers with `dtype=jnp.bfloat16`, which pins the compute
 format regardless of what comes in. Nothing is refused and nothing raises:
 in flax the dtype story is promotion plus two explicit arguments.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The parameter footprint halves, and note what did not happen: no error,
+although we fed an fp32 input to a bf16 model. The strictness of the
+previous cell lives at the level of raw operations; a Keras layer casts
+floating-point inputs to its `compute_dtype` at the door, so by the time
+any op runs, the dtypes already agree. The layer's policy decides the
+arithmetic, not the input, and both faces of TensorFlow serve the same end:
+ops refuse to guess, layers make the choice explicit at construction.
 :end_tab:
 
 Casting the model like this is the right tool for *inference*: half the
@@ -328,6 +458,20 @@ give it; we cast logits to fp32 before the loss for exactly the reason the
 policy-based frameworks pin reductions there.
 :end_tab:
 
+:begin_tab:`tensorflow`
+In Keras the split is one global switch,
+`tf.keras.mixed_precision.set_global_policy('mixed_bfloat16')`. Every layer
+constructed afterwards gets the policy pair fp32 `variable_dtype`, bf16
+`compute_dtype`: master weights and 16-bit arithmetic, decided per layer
+rather than per operation. Two cautions follow from "constructed
+afterwards". The policy is consulted when a layer is built, so set it before
+creating the model, and it is global state, so we reset it to `'float32'` at
+the end of every cell that flips it, or it would silently reshape every
+model built later in this notebook. What you compute outside the layers,
+such as the loss, follows no policy; we cast logits to fp32 before the loss
+for exactly the reason the autocast frameworks pin reductions there.
+:end_tab:
+
 :numref:`fig_bg_amp-loop` draws the resulting
 loop: this is the distinction that matters between casting a whole model
 (everything in one dtype) and mixed precision (fp32 master
@@ -354,6 +498,17 @@ params = net.init(d2l.get_key(), X)
 net.apply(params, X).dtype, jax.tree.leaves(params)[0].dtype
 ```
 
+```{.python .input #numerics-mixed-precision-training-1}
+%%tab tensorflow
+tf.keras.mixed_precision.set_global_policy('mixed_bfloat16')
+net = tf.keras.Sequential([tf.keras.layers.Flatten(),
+                           tf.keras.layers.Dense(256, activation='relu'),
+                           tf.keras.layers.Dense(10)])
+Y = net(X)
+tf.keras.mixed_precision.set_global_policy('float32')
+Y.dtype, net.layers[1].kernel.dtype
+```
+
 :begin_tab:`pytorch`
 Compute in bf16, storage in fp32: exactly the opposite split from
 `net.bfloat16()`. The first argument names the device type the computation
@@ -366,6 +521,13 @@ Compute in bf16, storage in fp32: exactly the opposite split from casting the
 parameter tree, and the fp32 input no longer drags anything up because
 `dtype` pins the compute format. Note what the cell did not need: no context
 manager, no device argument. The same constructor arguments mean the same
+thing on CPU, GPU, and TPU.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Compute in bf16, storage in fp32: exactly the opposite split from
+`dtype='bfloat16'`, obtained from one line before construction and nothing
+per layer. There is no device argument; the same policy means the same
 thing on CPU, GPU, and TPU.
 :end_tab:
 
@@ -386,6 +548,15 @@ data = d2l.FashionMNIST(batch_size=256)
 images, labels = data.train
 batches = [(jnp.asarray(images[k:k+256], jnp.float32) / 255,
             jnp.asarray(labels[k:k+256], jnp.int32))
+           for k in range(0, 100 * 256, 256)]
+```
+
+```{.python .input #numerics-mixed-precision-training-2}
+%%tab tensorflow
+data = d2l.FashionMNIST(batch_size=256)
+images, labels = data.train
+batches = [(tf.constant(images[k:k+256, :, :, None], tf.float32) / 255,
+            tf.constant(labels[k:k+256], tf.int32))
            for k in range(0, 100 * 256, 256)]
 ```
 
@@ -434,6 +605,30 @@ def train(mixed):
     return losses
 ```
 
+```{.python .input #numerics-mixed-precision-training-3}
+%%tab tensorflow
+def train(mixed):
+    tf.keras.utils.set_random_seed(0)  # identical init for both runs
+    tf.keras.mixed_precision.set_global_policy(
+        'mixed_bfloat16' if mixed else 'float32')
+    net = tf.keras.Sequential([tf.keras.layers.Flatten(),
+                               tf.keras.layers.Dense(256, activation='relu'),
+                               tf.keras.layers.Dense(10)])
+    opt = tf.keras.optimizers.SGD(learning_rate=0.1)
+    losses = []
+    for X, y in batches:
+        with tf.GradientTape() as tape:
+            logits = tf.cast(net(X), tf.float32)
+            loss = tf.reduce_mean(
+                tf.keras.losses.sparse_categorical_crossentropy(
+                    y, logits, from_logits=True))
+        grads = tape.gradient(loss, net.trainable_variables)
+        opt.apply_gradients(zip(grads, net.trainable_variables))
+        losses.append(float(loss))
+    tf.keras.mixed_precision.set_global_policy('float32')
+    return losses
+```
+
 ```{.python .input #numerics-mixed-precision-training-4}
 %%tab pytorch
 loss32, loss16 = train(amp=False), train(amp=True)
@@ -448,6 +643,14 @@ loss32, loss16 = train(mixed=False), train(mixed=True)
 print(f'final loss: fp32 {loss32[-1]:.3f}, bf16 compute {loss16[-1]:.3f}')
 d2l.plot(list(range(1, 101)), [loss32, loss16], 'step', 'loss',
          legend=['fp32', 'bf16 compute'])
+```
+
+```{.python .input #numerics-mixed-precision-training-4}
+%%tab tensorflow
+loss32, loss16 = train(mixed=False), train(mixed=True)
+print(f'final loss: fp32 {loss32[-1]:.3f}, mixed_bfloat16 {loss16[-1]:.3f}')
+d2l.plot(list(range(1, 101)), [loss32, loss16], 'step', 'loss',
+         legend=['fp32', 'mixed_bfloat16'])
 ```
 
 The two curves lie on top of each other: bf16 rounding perturbs each step
@@ -481,6 +684,12 @@ g = jnp.array(1e-8)
 g.astype(jnp.float16), (g * 2**16).astype(jnp.float16)
 ```
 
+```{.python .input #numerics-loss-scaling-for-fp16-1}
+%%tab tensorflow
+g = tf.constant(1e-8)
+tf.cast(g, tf.float16), tf.cast(g * 2**16, tf.float16)
+```
+
 The gradient vanishes, yet the same value scaled by $2^{16}$ is perfectly
 representable. That is the idea of *loss scaling*: multiply the loss by a
 large constant before backpropagation, so that by linearity every gradient is
@@ -502,6 +711,22 @@ parameters, is therefore already complete, and we deliberately skip fp16 loss
 scaling. If old hardware ever forces fp16 on you, the two multiplications are
 yours to write: scale the loss inside `loss_fn`, divide the gradients before
 `optax.apply_updates`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+In Keras loss scaling is the `'mixed_float16'` policy plus an optimizer
+wrapper. Under that policy, `model.compile` wraps whatever optimizer you
+pass in `tf.keras.mixed_precision.LossScaleOptimizer`, which chooses the
+scale dynamically: start high, shrink when scaled gradients overflow to
+`inf` (skipping that step), grow back periodically. `model.fit` users
+therefore get correct fp16 training without touching anything; a custom
+loop applies the wrapper itself, multiplies with its `scale_loss` before
+taking gradients, and lets the wrapped optimizer unscale and skip bad steps.
+None of this machinery exists for `'mixed_bfloat16'` because none is needed:
+bf16's exponent range matches fp32, so any gradient fp32 can represent, bf16
+can too. Hence the modern default our training cell followed: prefer
+`'mixed_bfloat16'` where the hardware supports it, and reach for
+`'mixed_float16'` plus the scaler only on older accelerators.
 :end_tab:
 
 ```{.python .input #numerics-loss-scaling-for-fp16-2}
@@ -550,6 +775,12 @@ s = jnp.array(60000., dtype=jnp.float16) * 2  # overflows
 s, s - s
 ```
 
+```{.python .input #numerics-when-numerics-bite-1}
+%%tab tensorflow
+s = tf.constant(60000., dtype=tf.float16) * 2  # overflows
+s, s - s
+```
+
 By the time a NaN reaches your loss, the overflow that spawned it may be many
 operations upstream, and once a NaN lands in the weights it poisons every
 subsequent step. So diagnose in order: first check ranges (is anything in
@@ -571,6 +802,14 @@ downstream into the loss. The check reruns jitted code operation by
 operation when it trips, so treat it as a debugging mode, not a default.
 :end_tab:
 
+:begin_tab:`tensorflow`
+TensorFlow can localize the culprit for you: call
+`tf.debugging.enable_check_numerics()` and execution stops with an
+`InvalidArgumentError` at the first operation whose output contains `inf` or
+NaN, instead of letting it wash downstream into the loss. The check wraps
+every operation, so treat it as a debugging mode, not a default.
+:end_tab:
+
 **Let the library take the log.** The naive evaluation of
 $\log \sum_i \exp(x_i)$ overflows long before the answer does:
 
@@ -584,6 +823,12 @@ x.exp().sum().log(), torch.logsumexp(x, dim=0)
 %%tab jax
 x = jnp.array([12.0, 11.0, 10.0], dtype=jnp.float16)
 jnp.log(jnp.exp(x).sum()), jax.scipy.special.logsumexp(x)
+```
+
+```{.python .input #numerics-when-numerics-bite-2}
+%%tab tensorflow
+x = tf.constant([12.0, 11.0, 10.0], dtype=tf.float16)
+tf.math.log(tf.reduce_sum(tf.exp(x))), tf.math.reduce_logsumexp(x)
 ```
 
 The answer, 12.4, is unremarkable; only the intermediate $e^{12}$ exceeds
@@ -600,6 +845,11 @@ in.
 cross-entropy losses all build the shift in.
 :end_tab:
 
+:begin_tab:`tensorflow`
+`tf.math.reduce_logsumexp`, `tf.nn.log_softmax`, and Keras's cross-entropy
+losses with `from_logits=True` all build the shift in.
+:end_tab:
+
 **Accumulate in fp32.** Long sums in a 16-bit dtype drift, because once the
 running total is large, each small increment falls below the spacing of
 representable values and is partly or wholly rounded away:
@@ -614,6 +864,13 @@ x.cumsum(0)[-1], x.cumsum(0, dtype=torch.float32)[-1]
 %%tab jax
 x = jnp.full((10**7,), 1e-3, dtype=jnp.float16)
 x.cumsum()[-1], x.astype(jnp.float32).cumsum()[-1]
+```
+
+```{.python .input #numerics-when-numerics-bite-3}
+%%tab tensorflow
+x = tf.fill([10**7], tf.constant(1e-3, tf.float16))
+(tf.cumsum(x)[-1], tf.cumsum(tf.cast(x, tf.float32))[-1],
+ tf.cumsum(tf.cast(x, tf.float64))[-1])
 ```
 
 :begin_tab:`pytorch`
@@ -637,6 +894,24 @@ When you write your own reduction over 16-bit data, upcast first, as the
 second expression does.
 :end_tab:
 
+:begin_tab:`tensorflow`
+TensorFlow's strictly sequential scan makes the failure spectacular. The
+fp16 running total stalls at 4.0, four hundredths of a percent of the true
+answer: at 4, fp16's spacing is about 0.004, so each 0.001 increment rounds
+to no change and the remaining terms, essentially all ten million of them,
+contribute nothing. The fp32 accumulation reaches 9780, still 2 percent
+short, by the same mechanism in milder form; near $10^4$ fp32's own spacing
+is about 0.001, the size of one increment. Only the fp64 accumulator returns
+10004.04, the exact sum of the stored values (0.001 itself rounds to the
+nearest fp16, which is why the answer is not 10000). Means over large
+batches, epoch-level loss totals, and variance computations all follow this
+pattern; when you write your own, pick an accumulator wide relative to the
+*length* of the sum. Order helps too: `tf.reduce_sum` over the same fp32
+array returns the exact 10004.04, because it sums in blocks and keeps every
+partial sum small, which is one more reason to hand long reductions to the
+library instead of scanning.
+:end_tab:
+
 :begin_tab:`pytorch`
 Two smaller traps, for completeness. `scaler.unscale_(opt)` may be called at
 most once per step, so if you unscale to clip gradients, do not unscale again
@@ -649,6 +924,13 @@ not once per micro-step.
 The bf16-first recipe has no loss scale to manage, so there is no scaler
 bookkeeping to get wrong; gradient clipping and accumulation compose as plain
 optax transformations.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The bf16-first recipe has no loss scale to manage. If older hardware pushes
+you to `'mixed_float16'`, prefer `model.fit`, which owns the
+`LossScaleOptimizer` bookkeeping end to end; in a custom loop the
+scale-the-loss, unscale-the-gradients pairing is yours to keep straight.
 :end_tab:
 
 Finally, do not expect bitwise equality across
@@ -680,6 +962,18 @@ bf16; fp16 loss scaling is machinery for older hardware that JAX practice
 skips.
 :end_tab:
 
+:begin_tab:`tensorflow`
+TensorFlow's raw ops never promote; a dtype mismatch raises at the first
+operation, and Keras layers resolve this by casting inputs to their dtype
+policy, the pair of storage and compute formats fixed at construction.
+`dtype='bfloat16'` sets both and casts a model for inference;
+`set_global_policy('mixed_bfloat16')` keeps fp32 master weights over bf16
+compute, mixed-precision training as one line of configuration (reset the
+policy when you are done, it is global). fp16 training additionally needs
+the loss scaling that `LossScaleOptimizer` automates under
+`'mixed_float16'`; bf16 does not.
+:end_tab:
+
 When numbers misbehave: check for
 overflow before blaming the learning rate, use the library's `logsumexp`
 family, and accumulate long sums in fp32.
@@ -695,7 +989,9 @@ family, and accumulate long sums in fp32.
    that mixed precision is *slower* than fp32, and explain where the
    crossover comes from.
 1. Print every field of `torch.finfo(torch.float8_e4m3fn)` (in JAX,
-   `jnp.finfo(jnp.float8_e4m3fn)`) and compare with fp16 and bf16. Explain
+   `jnp.finfo(jnp.float8_e4m3fn)`; in TensorFlow,
+   `ml_dtypes.finfo(ml_dtypes.float8_e4m3fn)`) and compare with fp16 and
+   bf16. Explain
    the name `e4m3fn`, including why its `max` is 448 rather than the value
    the exponent bits alone would suggest.
 1. Under autocast, normalization layers run in fp32. To see why, take the

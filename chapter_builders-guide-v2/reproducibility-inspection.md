@@ -32,6 +32,11 @@ from flax import linen as nn
 import optax
 ```
 
+```{.python .input #reproducibility-inspection-reproducibility-and-inspection}
+%%tab tensorflow
+import tensorflow as tf
+```
+
 ## Seeds and Randomness
 
 Randomness enters a training run in more places than you might list on a
@@ -62,6 +67,17 @@ randomness comes only from deriving fresh keys with `jax.random.split`. The
 function below turns its seed into one key and splits it three ways, one
 key each for initialization, inputs, and targets, so the seed pins the
 whole run by construction:
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow collapses the inventory to one call:
+`tf.keras.utils.set_random_seed(k)` seeds Python's `random` module, NumPy's
+global generator, and TensorFlow's global generator together, the three a
+typical training script consults. It does not reach generators that carry
+their own state (`tf.random.Generator` objects, NumPy `Generator` objects
+from `np.random.default_rng`), each of which has its own seed. The function
+below draws everything, weights and data alike, from the seeded global
+state, so one call pins the whole run:
 :end_tab:
 
 ```{.python .input #reproducibility-inspection-seeds-and-randomness}
@@ -111,6 +127,29 @@ print('same seed, identical loss and weights:',
 print('different seed:', loss_a, 'vs', loss_c)
 ```
 
+```{.python .input #reproducibility-inspection-seeds-and-randomness}
+%%tab tensorflow
+def train_once(seed):
+    tf.keras.utils.set_random_seed(seed)  # seeds Python, NumPy, and TF
+    net = tf.keras.Sequential([tf.keras.layers.Dense(32, activation='relu'),
+                               tf.keras.layers.Dense(1)])
+    opt = tf.keras.optimizers.SGD(learning_rate=0.1)
+    X, y = tf.random.normal((128, 20)), tf.random.normal((128, 1))
+    for _ in range(5):
+        with tf.GradientTape() as tape:
+            loss = tf.reduce_mean((net(X) - y) ** 2)
+        grads = tape.gradient(loss, net.trainable_variables)
+        opt.apply_gradients(zip(grads, net.trainable_variables))
+    return float(loss), tf.identity(net.layers[0].kernel)
+
+loss_a, w_a = train_once(seed=0)
+loss_b, w_b = train_once(seed=0)
+loss_c, _ = train_once(seed=1)
+print('same seed, identical loss and weights:',
+      loss_a == loss_b, bool(tf.reduce_all(w_a == w_b)))
+print('different seed:', loss_a, 'vs', loss_c)
+```
+
 The two seeded runs agree *bitwise*, down to the last floating-point bit:
 same initial weights, same data, same gradients, same operations in the
 same order.
@@ -136,6 +175,15 @@ construction, because no draw advances any shared state. Here an
 unrelated draw between two uses of the same key changes nothing:
 :end_tab:
 
+:begin_tab:`tensorflow`
+A single global stream is fragile: every consumer shares it, so inserting
+one extra random call shifts everything drawn after it. A
+`tf.random.Generator` is a private stream with its own seed. Here a data
+split stays fixed no matter what else consumes randomness in between (the
+generator has no permutation method, so we sort random uniforms, the
+standard trick):
+:end_tab:
+
 ```{.python .input #reproducibility-inspection-generator-objects}
 %%tab pytorch
 g = torch.Generator().manual_seed(42)
@@ -154,6 +202,15 @@ split_again = jax.random.permutation(key_split, 10)
 print(jnp.array_equal(split, split_again), split)
 ```
 
+```{.python .input #reproducibility-inspection-generator-objects}
+%%tab tensorflow
+g = tf.random.Generator.from_seed(42)
+split = tf.argsort(g.uniform((10,)))  # a random permutation from g's stream
+_ = tf.random.normal((1000,))  # unrelated consumption of the global stream
+split_again = tf.argsort(tf.random.Generator.from_seed(42).uniform((10,)))
+print(bool(tf.reduce_all(split == split_again)), split.numpy())
+```
+
 :begin_tab:`pytorch`
 Most sampling functions accept `generator=`, and so does `DataLoader`,
 where it controls the shuffle order. We use that below.
@@ -162,6 +219,12 @@ where it controls the shuffle order. We use that below.
 :begin_tab:`jax`
 Every function in `jax.random` takes the key as its first argument; there
 is no variant that consults hidden state.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Sampling methods live on the generator itself (`g.normal`, `g.uniform`), so
+a consumer that should own its randomness takes a `Generator` argument. The
+input pipeline instead takes a seed directly, which we use next.
 :end_tab:
 
 ### DataLoader Workers
@@ -243,6 +306,40 @@ workers enabled, `seed_worker` gives each worker its own NumPy and `random`
 streams that still derive from the one base seed.
 :end_tab:
 
+:begin_tab:`tensorflow`
+The classic reproducibility hole in the loader-worker world is that
+parallel workers inherit or reseed a hidden generator: on fork-based
+loaders every child starts with a byte-for-byte copy of the parent's NumPy
+state, so all workers apply the same "random" augmentations, or each child
+seeds itself from entropy and no two runs agree. `tf.data` sidesteps the
+bug class by construction: the pipeline parallelizes with threads inside
+one process, so there is no forked child to inherit a stale copy, and its
+randomness is an explicit argument, `Dataset.shuffle(buffer, seed=...)`,
+not an ambient global that a seeding call may or may not reach. What
+remains is choosing what the seed means across epochs. With the default
+`reshuffle_each_iteration=True`, a seeded pipeline produces a *different*
+order on each pass but the same *sequence* of orders every time the
+pipeline is rebuilt, fresh shuffles per epoch, repeatable across runs:
+:end_tab:
+
+```{.python .input #reproducibility-inspection-dataloader-workers-3}
+%%tab tensorflow
+ds = tf.data.Dataset.range(8).shuffle(8, seed=0).batch(4)
+print([b.numpy().tolist() for b in ds])  # epoch 1
+print([b.numpy().tolist() for b in ds])  # epoch 2: reshuffled, still seeded
+ds = tf.data.Dataset.range(8).shuffle(8, seed=0).batch(4)
+print([b.numpy().tolist() for b in ds])  # rebuilt pipeline: epoch 1 again
+```
+
+:begin_tab:`tensorflow`
+Both alternatives are explicit choices rather than accidents:
+`reshuffle_each_iteration=False` freezes one order for every epoch, and
+leaving `seed` unset draws fresh orders each run. One knob remains that
+trades reproducibility away on purpose: parallel `map` and `interleave`
+accept `deterministic=False`, which hands elements on in completion order
+for speed; the default `True` keeps the pipeline's output order fixed.
+:end_tab:
+
 ### Randomness as a Value
 
 Every failure above is hidden global state: a generator that lives
@@ -265,6 +362,15 @@ seed into one key and split it, and reusing a key reproduced the
 permutation bit for bit.
 :end_tab:
 
+:begin_tab:`tensorflow`
+TensorFlow ships both designs side by side: the stateful API above (a
+global generator plus `tf.random.Generator` objects) and a stateless
+family in which the key is an argument:
+`tf.random.stateless_normal(shape, seed=[k1, k2])` returns the same
+numbers for the same seed pair by definition. The explicit `seed=`
+arguments of `tf.data` are the same idea applied to the input pipeline.
+:end_tab:
+
 ## Determinism and Its Price
 
 Seeding fixes which numbers the program draws. It does not fix how the
@@ -285,6 +391,14 @@ print(s_fwd == s_rev, (s_fwd - s_rev).item())
 x = jax.random.normal(jax.random.key(0), (1_000_000,))
 s_fwd, s_rev = x.sum(), x[::-1].sum()  # same numbers, different order
 print(s_fwd == s_rev, (s_fwd - s_rev).item())
+```
+
+```{.python .input #reproducibility-inspection-determinism-and-its-price-1}
+%%tab tensorflow
+x = tf.random.Generator.from_seed(0).normal((1_000_000,))
+s_fwd = tf.reduce_sum(x)
+s_rev = tf.reduce_sum(x[::-1])  # same numbers, different order
+print(bool(s_fwd == s_rev), float(s_fwd - s_rev))
 ```
 
 :begin_tab:`pytorch`
@@ -323,6 +437,26 @@ measured here. There is no error-raising mode: the flag substitutes
 deterministic kernels rather than refusing nondeterministic ones.
 :end_tab:
 
+:begin_tab:`tensorflow`
+On a CPU the summation order inside one operation is at least fixed, so
+seeded runs repeat; the bitwise agreement of `train_once` above is exactly
+that. On a GPU it often is not: kernels built on atomic additions (segment
+sums, the scatter-add behind `tf.gather`'s gradient) commit their partial
+sums in whatever order threads happen to finish, so two seeded runs on the
+*same machine* can differ in the last bits, and after enough training
+steps, in the loss curve. `tf.config.experimental.enable_op_determinism()`
+is the switch that forbids this: operations with a deterministic
+implementation use it (often at some speed cost), operations without one
+raise `tf.errors.UnimplementedError` rather than silently varying, and
+stateful random operations refuse to run without a seed, since an
+operation that seeds itself from entropy is nondeterminism by another
+name. Two properties follow from its design. It is meant to be called at
+program start, before any operation runs, because it configures kernels as
+they are created and nothing already executed is redone. And there is no
+call that turns it off short of a fresh process. We can still demonstrate
+the seed rule mid-flight by clearing the global seed:
+:end_tab:
+
 ```{.python .input #reproducibility-inspection-determinism-and-its-price-2}
 %%tab pytorch
 torch.use_deterministic_algorithms(True)
@@ -335,6 +469,17 @@ else:
     print('CPU run: every kernel used above is already deterministic;',
           'on CUDA, ops lacking a deterministic kernel raise RuntimeError')
 torch.use_deterministic_algorithms(False)
+```
+
+```{.python .input #reproducibility-inspection-determinism-and-its-price-2}
+%%tab tensorflow
+tf.config.experimental.enable_op_determinism()
+tf.random.set_seed(None)  # forget the global seed for a moment
+try:
+    tf.random.normal((2,))
+except RuntimeError as e:
+    print(str(e).split('.')[0])
+tf.random.set_seed(0)  # determinism stays on; reseed and continue
 ```
 
 Be honest about what this buys. No framework guarantees bitwise agreement
@@ -375,6 +520,22 @@ want to edit. :numref:`fig_bg_hooks` draws the general picture: an
 observation point in the gap the call wrapper already leaves around each
 module's computation, from which an observer can capture or check
 without a single line of the model changing.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras wraps `call` with a `__call__` too (it handles building, dtype
+casting, and masks), but the wrapper exposes no observation point: nothing
+can be attached to an unmodified model after the fact, and observing a
+black-box model from a library or a checkpoint without touching its code
+has no TensorFlow equivalent. Two idioms reach the same measurements with
+a little structure. In a *functional* model every
+intermediate tensor is a first-class object, so a second `tf.keras.Model`
+over the same graph can declare any internal tensor an output: surgery
+rather than hooking, sharing all weights and adding no computation. And
+where you own the model's code, an overridden `call` can stash or check
+whatever it likes as it runs. :numref:`fig_bg_hooks` still draws the right
+picture, with one amendment: in TensorFlow the observer cannot stand in
+the gap unless the model was built to leave one.
 :end_tab:
 
 ![The `__call__` wrapper as a pipeline: input flows through pre-hooks, then forward, then hooks, to the output, with the two hook stages dashed and orange against forward's solid blue, and a side arrow from the hooks stage to an observer that can capture, check, or modify.](../img/bg-hooks.svg)
@@ -420,6 +581,23 @@ X = jax.random.normal(jax.random.key(1), (256, 20))
 params = net.init(jax.random.key(0), X)
 ```
 
+```{.python .input #reproducibility-inspection-hooks-looking-inside}
+%%tab tensorflow
+def residual_block(X, num_hiddens):
+    body = tf.keras.Sequential([
+        tf.keras.layers.Dense(num_hiddens, activation='relu'),
+        tf.keras.layers.Dense(num_hiddens)])
+    return X + body(X)
+
+tf.keras.utils.set_random_seed(0)
+inputs = tf.keras.Input(shape=(20,))
+taps = [tf.keras.layers.Dense(64)(inputs)]  # keep every intermediate tensor
+for _ in range(8):
+    taps.append(residual_block(taps[-1], 64))
+outputs = tf.keras.layers.Dense(10)(taps[-1])
+net = tf.keras.Model(inputs, outputs)
+```
+
 ### Capturing Activation Statistics
 
 The initialization experiments of :numref:`sec_init_v2` measured the
@@ -451,6 +629,15 @@ for k, layer in enumerate(net.layers):
     print(f'{type(layer).__name__:15s} std {out.std():.2f}')
 ```
 
+```{.python .input #reproducibility-inspection-capturing-activation-statistics}
+%%tab tensorflow
+probe = tf.keras.Model(inputs, taps + [outputs])  # same layers, same weights
+X = tf.random.normal((256, 20))
+names = ['Dense'] + ['ResidualBlock'] * 8 + ['Dense']
+for name, out in zip(names, probe(X)):
+    print(f'{name:15s} std {float(tf.math.reduce_std(out)):.2f}')
+```
+
 The residual stream's spread grows block by block, since each block adds
 its body's output on top of the stream, exactly the depth effect that
 motivated the scaled initializations of :numref:`sec_init_v2`, measured
@@ -476,6 +663,17 @@ the layers you care about (the next cell uses one). And a module can opt
 in from the inside: calling `self.sow('intermediates', 'name', value)`
 anywhere in its own code records exactly the named values instead of
 every return.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Nothing needs detaching and nothing needs removing: `probe` shares the
+original model's layers and weights outright, its outputs are ordinary
+tensors with no gradient tape attached, and no observer stays registered
+anywhere, because the "hook" is just another model output. The limit is
+structural. Surgery needs a functional graph; a subclassed model whose
+`call` is imperative Python has no symbolic intermediates to tap. For that
+case you override `call` itself, which the next problem gives us a reason
+to do.
 :end_tab:
 
 ### A NaN Finder
@@ -520,6 +718,42 @@ for path, out in jax.tree_util.tree_flatten_with_path(mods['intermediates'])[0]:
         break
 ```
 
+```{.python .input #reproducibility-inspection-a-nan-finder}
+%%tab tensorflow
+class ResidualBlock(tf.keras.layers.Layer):
+    def __init__(self, num_hiddens, **kwargs):
+        super().__init__(**kwargs)
+        self.body = tf.keras.Sequential([
+            tf.keras.layers.Dense(num_hiddens, activation='relu'),
+            tf.keras.layers.Dense(num_hiddens)])
+
+    def call(self, X):
+        return X + self.body(X)
+
+class Checked(tf.keras.Model):
+    def __init__(self, layers):
+        super().__init__()
+        self.seq, self.first_bad = layers, None  # a plain list is tracked
+
+    def call(self, X):
+        for layer in self.seq:
+            X = layer(X)
+            if self.first_bad is None and not bool(
+                    tf.reduce_all(tf.math.is_finite(X))):
+                self.first_bad = layer.name
+        return X
+
+tf.keras.utils.set_random_seed(0)
+checked = Checked([tf.keras.layers.Dense(64)]
+                  + [ResidualBlock(64, name=f'block{k}') for k in range(1, 9)]
+                  + [tf.keras.layers.Dense(10)])
+_ = checked(tf.random.normal((2, 20)))  # build the weights
+kernel = checked.seq[3].body.layers[0].kernel
+kernel[0, 0].assign(float('nan'))  # sabotage one layer
+_ = checked(tf.random.normal((2, 20)))
+print('first non-finite output in', checked.first_bad)
+```
+
 :begin_tab:`pytorch`
 The report names module `3.body.0`, the layer we poisoned, rather than
 leaving you to bisect with print statements while NaNs propagate through
@@ -533,6 +767,16 @@ non-finite entry is the culprit. The report names
 `['layers_3']['body']['layers_0']`, the layer we poisoned, rather than
 leaving you to bisect with print statements while NaNs propagate through
 everything downstream.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The report names `block3`, the layer we poisoned, rather than leaving you
+to bisect with print statements while NaNs propagate through everything
+downstream. The check runs on every forward pass until you edit it out of
+`call`, the price of building observation into the model rather than
+attaching it from outside. For a one-off hunt TensorFlow also ships the
+whole idiom as a switch: `tf.debugging.enable_check_numerics()` instruments
+every operation and reports the first one to produce an inf or NaN.
 :end_tab:
 
 ### Backward Hooks and Beyond
@@ -562,11 +806,33 @@ clipping, compute the gradient tree and inspect or transform it like any
 other data:
 :end_tab:
 
+:begin_tab:`tensorflow`
+There are no backward hooks, but gradients do not need them:
+`tf.GradientTape` already hands back the gradient of every variable as a
+value. To log per-layer gradient norms, catch exploding gradients at their
+source, or experiment with per-layer clipping, compute the gradients and
+inspect or transform them like any other data. For the specific job of
+extracting features from a pretrained backbone, the surgery idiom is also
+the production tool:
+`tf.keras.Model(backbone.input, backbone.get_layer('avg_pool').output)`
+turns any functional backbone into a feature extractor by naming the
+tensor you want.
+:end_tab:
+
 ```{.python .input #reproducibility-inspection-backward-hooks-and-beyond}
 %%tab jax
 grads = jax.grad(lambda p: (net.apply(p, X) ** 2).mean())(params)
 norms = jax.tree_util.tree_map(jnp.linalg.norm, grads)
 print(norms['params']['layers_3']['body']['layers_0'])
+```
+
+```{.python .input #reproducibility-inspection-backward-hooks-and-beyond}
+%%tab tensorflow
+with tf.GradientTape() as tape:
+    loss = tf.reduce_mean(net(X) ** 2)
+grads = tape.gradient(loss, net.trainable_variables)
+print({v.path: float(tf.norm(g))  # block 3's first layer
+       for v, g in list(zip(net.trainable_variables, grads))[10:12]})
 ```
 
 ## Summary
@@ -593,6 +859,16 @@ XLA's kernels are already deterministic, while on GPU the flag
 `--xla_gpu_deterministic_ops=true` pins kernel choice too.
 :end_tab:
 
+:begin_tab:`tensorflow`
+`tf.keras.utils.set_random_seed` covers Python's `random`, NumPy, and
+TensorFlow's global generator in one call; `tf.random.Generator` objects
+and `Dataset.shuffle(seed=...)` carry their seeds explicitly. Seeding
+makes the program repeatable, not the arithmetic:
+`tf.config.experimental.enable_op_determinism()` pins kernel choice too,
+raising on operations that cannot comply, and wants to be the first line
+of the program.
+:end_tab:
+
 Bitwise agreement is a debugging tool;
 conclusions that hold across seeds are the scientific goal.
 
@@ -608,6 +884,12 @@ For looking inside a model, `capture_intermediates=True` returns every
 submodule's output from an unmodified `apply`, `sow` records named values
 from the inside, and gradients are values from `jax.grad` you inspect
 directly.
+:end_tab:
+
+:begin_tab:`tensorflow`
+For looking inside a model there is no hook to attach: declare the tensors
+you want as extra outputs of a functional model, or override `call` where
+you own the code, and read gradients as values from `tf.GradientTape`.
 :end_tab:
 
 ## Exercises
@@ -642,4 +924,15 @@ directly.
    `sow`, and PyTorch-style mutable hooks: which requires touching model
    code, which can silently retain memory, and which would you want for a
    model you do not own?
+:end_tab:
+
+:begin_tab:`tensorflow`
+5. Rebuild the activation-statistics table two more ways: with a
+   `Checked`-style `call` override that stashes `tf.math.reduce_std` of
+   every layer's output, and on a model you did not write, a
+   `tf.keras.applications` backbone, by naming layers with `get_layer`.
+   Compare the three contracts you now know, functional surgery, `call`
+   overrides, and PyTorch-style mutable hooks: which requires a symbolic
+   graph, which requires owning the model's code, and which black-box
+   models does each admit?
 :end_tab:

@@ -46,6 +46,12 @@ from jax import numpy as jnp
 from flax import linen as nn
 ```
 
+```{.python .input #model-construction-modules-and-model-construction}
+%%tab tensorflow
+from dataclasses import dataclass
+import tensorflow as tf
+```
+
 ## The Module Abstraction
 
 :begin_tab:`pytorch`
@@ -62,6 +68,14 @@ a 10-unit output layer. One habit from :numref:`sec_oo-design` carries over: a
 Flax module holds no parameters of its own. Constructing `net` records the
 architecture; `init(key, X)` creates the parameters as a separate object, and
 `apply(params, X)` runs the forward computation with them.
+:end_tab:
+
+:begin_tab:`tensorflow`
+In TensorFlow the module class is Keras's `tf.keras.Model`. We have used one
+of its subclasses all along: `tf.keras.Sequential` builds a model from a list
+of layers, here the familiar MLP with a 256-unit ReLU hidden layer and a
+10-unit output layer. Keras attaches the activation to the `Dense` layer
+itself rather than interposing a separate activation layer.
 :end_tab:
 
 ```{.python .input #model-construction-the-module-abstraction-1}
@@ -81,6 +95,15 @@ params = net.init(d2l.get_key(), X)
 net.apply(params, X).shape
 ```
 
+```{.python .input #model-construction-the-module-abstraction-1}
+%%tab tensorflow
+net = tf.keras.Sequential([tf.keras.layers.Dense(256, activation='relu'),
+                           tf.keras.layers.Dense(10)])
+
+X = tf.random.uniform((2, 20))
+net(X).shape
+```
+
 :begin_tab:`pytorch`
 `Sequential` is not a special construct. It is itself a module whose forward
 computation runs its children in order, and the children are the three modules
@@ -94,6 +117,12 @@ we passed to it. Their parameters do not live in `net`: `init` returned them
 as a nested dictionary, a *pytree*, whose structure mirrors the module tree:
 :end_tab:
 
+:begin_tab:`tensorflow`
+`Sequential` is not a special construct. It is itself a model whose forward
+computation runs its children in order, and the children are the two layers
+we passed to it, held in a tracked list:
+:end_tab:
+
 ```{.python .input #model-construction-the-module-abstraction-2}
 %%tab pytorch
 net._modules
@@ -102,6 +131,11 @@ net._modules
 ```{.python .input #model-construction-the-module-abstraction-2}
 %%tab jax
 jax.tree_util.tree_map(lambda x: x.shape, params)
+```
+
+```{.python .input #model-construction-the-module-abstraction-2}
+%%tab tensorflow
+net.layers
 ```
 
 :begin_tab:`pytorch`
@@ -120,6 +154,14 @@ exist, which is why `apply` takes `params` explicitly: the model is the pair
 of architecture and pytree, not either half alone.
 :end_tab:
 
+:begin_tab:`tensorflow`
+This list is what the Keras machinery traverses: `net.trainable_variables`
+collects variables by walking the children recursively, and the same walk
+underlies serialization. A layer the tracker does not see might as well not
+exist, though as we will see shortly, Keras goes to some lengths to make
+sure that cannot happen by accident.
+:end_tab:
+
 :begin_tab:`pytorch`
 `nn.Sequential` covers chains. For any other topology we subclass `nn.Module`
 directly and supply the two methods that define a module: a constructor that
@@ -130,6 +172,12 @@ creates the children, and a `forward` method that uses them.
 `nn.Sequential` covers chains. For any other topology we subclass `nn.Module`
 directly and supply the two methods that define a module: a `setup` method
 that creates the children, and a `__call__` method that uses them.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`Sequential` covers chains. For any other topology we subclass
+`tf.keras.Model` directly and supply the two methods that define a module: a
+constructor that creates the children, and a `call` method that uses them.
 :end_tab:
 
 ```{.python .input #model-construction-the-module-abstraction-3}
@@ -155,6 +203,18 @@ class MLP(nn.Module):
         return self.out(nn.relu(self.hidden(X)))
 ```
 
+```{.python .input #model-construction-the-module-abstraction-3}
+%%tab tensorflow
+class MLP(tf.keras.Model):
+    def __init__(self):
+        super().__init__()
+        self.hidden = tf.keras.layers.Dense(256, activation='relu')
+        self.out = tf.keras.layers.Dense(10)
+
+    def call(self, X):
+        return self.out(self.hidden(X))
+```
+
 ```{.python .input #model-construction-the-module-abstraction-4}
 %%tab pytorch
 net = MLP()
@@ -166,6 +226,12 @@ net(X).shape
 net = MLP()
 params = net.init(d2l.get_key(), X)
 net.apply(params, X).shape
+```
+
+```{.python .input #model-construction-the-module-abstraction-4}
+%%tab tensorflow
+net = MLP()
+net(X).shape
 ```
 
 :begin_tab:`pytorch`
@@ -189,6 +255,16 @@ We use that style later in this section, where a block's children are most
 natural to define exactly where they are called.
 :end_tab:
 
+:begin_tab:`tensorflow`
+Two details do the work here. First,
+`self.hidden = tf.keras.layers.Dense(...)` is not an ordinary attribute
+assignment: Keras intercepts `__setattr__`, sees that the value is a layer,
+and adds it to the tracked children we just inspected. That is why both
+layers' variables show up in `net.trainable_variables` with no further
+ceremony. Second, we never wrote a backward method; automatic differentiation
+derives gradients from whatever `call` computes.
+:end_tab:
+
 :begin_tab:`pytorch`
 Note also that we invoke the model as `net(X)`, never `net.forward(X)`.
 Calling a module runs `nn.Module.__call__`, which calls `forward` *and* any
@@ -205,6 +281,14 @@ submodule's output (`capture_intermediates`), which we use in
 :numref:`sec_repro_v2`.
 :end_tab:
 
+:begin_tab:`tensorflow`
+Note also that we invoke the model as `net(X)`, never `net.call(X)`. Calling
+a model runs Keras's `__call__`, which first *builds* the model if it has not
+been built yet, allocating variables from the input shape (a mechanism we
+examine at the end of this section), and then runs `call`. Keeping that gap
+between `__call__` and `call` in mind explains most of what follows.
+:end_tab:
+
 ## Sequential and Friends: Containers
 :label:`subsec_model-construction-sequential`
 
@@ -218,6 +302,12 @@ over the children in `forward`.
 To see that there is no magic left in `nn.Sequential`, we can write it
 ourselves. Two ingredients suffice: declare a field that holds the list of
 children, and loop over them in `__call__`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+To see that there is no magic left in `Sequential`, we can write it
+ourselves. Two ingredients suffice: store the children in an attribute, and
+loop over them in `call`.
 :end_tab:
 
 ```{.python .input #model-construction-sequential-and-friends-containers-1}
@@ -245,6 +335,19 @@ class MySequential(nn.Module):
         return X
 ```
 
+```{.python .input #model-construction-sequential-and-friends-containers-1}
+%%tab tensorflow
+class MySequential(tf.keras.Model):
+    def __init__(self, *args):
+        super().__init__()
+        self.modules = args
+
+    def call(self, X):
+        for module in self.modules:
+            X = module(X)
+        return X
+```
+
 :begin_tab:`pytorch`
 `add_module` writes a child into the registry under a string name (that is
 where the `'0'`, `'1'`, `'2'` keys above came from), and `children()` iterates
@@ -260,6 +363,13 @@ function, with nothing to track) and appear in the pytree under the field's
 name, as `modules_0` and `modules_2`. Our version is a drop-in replacement:
 :end_tab:
 
+:begin_tab:`tensorflow`
+`self.modules = args` looks like an ordinary assignment, and that is the
+point: the `__setattr__` interception scans whatever is assigned, looking
+inside lists, tuples, and dictionaries, so both `Dense` children are tracked
+and appear in `net.layers`. Our version is a drop-in replacement:
+:end_tab:
+
 ```{.python .input #model-construction-sequential-and-friends-containers-2}
 %%tab pytorch
 net = MySequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))
@@ -273,6 +383,13 @@ params = net.init(d2l.get_key(), X)
 net.apply(params, X).shape
 ```
 
+```{.python .input #model-construction-sequential-and-friends-containers-2}
+%%tab tensorflow
+net = MySequential(tf.keras.layers.Dense(256, activation='relu'),
+                   tf.keras.layers.Dense(10))
+net(X).shape
+```
+
 :begin_tab:`pytorch`
 The registration step is easy to lose. The following module looks reasonable,
 and its forward pass works, so nothing appears wrong:
@@ -284,6 +401,14 @@ store the children in a plain Python list instead of the framework's dedicated
 container, and their parameters silently vanish from the model. Flax closes
 that trap. Because the field scan looks inside lists and dictionaries, a plain
 list assigned in `setup` is tracked like any other child:
+:end_tab:
+
+:begin_tab:`tensorflow`
+In older imperative frameworks this registration step is famously easy to
+lose: store the children in a plain Python list instead of the framework's
+dedicated container, and their parameters silently vanish from the model.
+Keras closes that trap. Because the attribute scan looks inside lists and
+dictionaries, a plain list of layers is tracked like any other child:
 :end_tab:
 
 ```{.python .input #model-construction-sequential-and-friends-containers-3}
@@ -316,6 +441,23 @@ params = net.init(d2l.get_key(), X)
 net.apply(params, X).shape, sum(x.size for x in jax.tree_util.tree_leaves(params))
 ```
 
+```{.python .input #model-construction-sequential-and-friends-containers-3}
+%%tab tensorflow
+class ListMLP(tf.keras.Model):
+    def __init__(self):
+        super().__init__()
+        self.blocks = [tf.keras.layers.Dense(256, activation='relu'),
+                       tf.keras.layers.Dense(10)]
+
+    def call(self, X):
+        for block in self.blocks:
+            X = block(X)
+        return X
+
+net = ListMLP()
+net(X).shape, sum(int(tf.size(v)) for v in net.trainable_variables)
+```
+
 :begin_tab:`pytorch`
 The model computes, yet it owns zero parameters. A plain Python list is not a
 module, so the `__setattr__` interception ignores it and nothing inside it is
@@ -338,6 +480,16 @@ show. The declaration mistake Flax does have is different in kind and,
 more usefully, in loudness. Every attribute a module uses must be either a
 declared dataclass field or created in `setup`; a bare class attribute is
 neither, so the generated constructor does not accept a value for it:
+:end_tab:
+
+:begin_tab:`tensorflow`
+All 7946 parameters are present; there is no broken variant of this model to
+show. (We named the list `blocks` only because `layers` is reserved: Keras
+maintains that attribute itself, and assigning to it raises an error.) The
+structural mistake Keras does guard against is different in kind and, more
+usefully, in loudness. Building is a commitment: once a model's variables
+exist, its set of children is locked, and attaching a new layer to a built
+model fails at the assignment itself:
 :end_tab:
 
 ```{.python .input #model-construction-sequential-and-friends-containers-4}
@@ -367,6 +519,14 @@ except TypeError as e:
     print(e)
 ```
 
+```{.python .input #model-construction-sequential-and-friends-containers-4}
+%%tab tensorflow
+try:
+    net.head = tf.keras.layers.Dense(2)  # net is built: too late
+except ValueError as e:
+    print(e)
+```
+
 :begin_tab:`pytorch`
 Same forward pass, 7946 registered parameters. The division of labor among the
 containers is now clear. `nn.Sequential` registers its children and supplies
@@ -389,6 +549,17 @@ conventionally keep their stack of blocks in exactly the kind of plain list
 output head) as separate attributes.
 :end_tab:
 
+:begin_tab:`tensorflow`
+The error message states the rule Keras enforces: all state must be created
+in `__init__` or in `build`, never after. Keras therefore ships no special
+list or dict containers, because none are needed: any layer reachable from an
+attribute is tracked, and a late structural edit fails at assignment time
+rather than being silently ignored. Transformer implementations in Keras
+conventionally keep their stack of blocks in exactly the kind of plain list
+`ListMLP` used, with the named parts (embedding, final normalization, output
+head) as separate attributes.
+:end_tab:
+
 ## Forward Is Just Python
 
 :begin_tab:`pytorch`
@@ -408,6 +579,18 @@ connection*, the wiring idiom at the heart of ResNets and Transformers alike.
 Since the block's body is most natural to define at the point of use, we write
 this one in the inline style: `@nn.compact` lets `__call__` create its
 children as it runs.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`call` is an ordinary Python method. Nothing restricts it to chaining
+children: it can branch, loop, call any TensorFlow function, and combine
+intermediate results however it likes; TensorFlow executes eagerly, so all of
+this runs one operation at a time, just as in NumPy. (Once a model is wrapped
+in `tf.function` for speed, as the `Trainer` from :numref:`sec_oo-design`
+does, AutoGraph rewrites such control flow into graph form.) The loop in
+`MySequential` already used this freedom. Its most consequential one-line use
+is the *residual connection*, the wiring idiom at the heart of ResNets and
+Transformers alike:
 :end_tab:
 
 ```{.python .input #model-construction-forward-is-just-python-1}
@@ -433,6 +616,19 @@ class ResidualBlock(nn.Module):
         body = nn.Sequential([nn.Dense(self.num_hiddens), nn.relu,
                               nn.Dense(self.num_hiddens)])
         return X + body(X)
+```
+
+```{.python .input #model-construction-forward-is-just-python-1}
+%%tab tensorflow
+class ResidualBlock(tf.keras.Model):
+    def __init__(self, num_hiddens):
+        super().__init__()
+        self.body = tf.keras.Sequential([
+            tf.keras.layers.Dense(num_hiddens, activation='relu'),
+            tf.keras.layers.Dense(num_hiddens)])
+
+    def call(self, X):
+        return X + self.body(X)
 ```
 
 ![The residual wiring `X + body(X)`: the input splits at a branch point into the body stack and an identity skip, and the two rejoin by addition before the block's output.](../img/bg-residual-block.svg)
@@ -466,6 +662,21 @@ part of its identity. That is why `num_hiddens` is a declared field of the
 block rather than a width left for `init` to infer.
 :end_tab:
 
+:begin_tab:`tensorflow`
+`X + self.body(X)` is not a layer Keras provides. It is arithmetic in `call`,
+and it changes what the block *is*: the block computes a perturbation of the
+identity function rather than an arbitrary transformation, and during
+backpropagation the skip path hands gradients to earlier layers undiminished,
+tempering the vanishing gradients of :numref:`sec_numerical_stability`.
+:numref:`fig_bg_residual-block` diagrams exactly this wiring. Chapter 8
+develops both points when we build ResNet; for now we only need the
+mechanics. One mechanical consequence is visible already: the addition forces
+the input and output shapes to agree, so a residual block has a single width
+that is part of its identity. Keras always infers input widths at build time,
+so here the constraint falls on the caller: feed the block anything other
+than `num_hiddens` columns and the addition fails.
+:end_tab:
+
 ```{.python .input #model-construction-forward-is-just-python-2}
 %%tab pytorch
 block = ResidualBlock(24)
@@ -480,6 +691,12 @@ params = block.init(d2l.get_key(), X24)
 block.apply(params, X24).shape
 ```
 
+```{.python .input #model-construction-forward-is-just-python-2}
+%%tab tensorflow
+block = ResidualBlock(24)
+block(tf.random.normal((2, 24))).shape
+```
+
 :begin_tab:`pytorch`
 `forward` may also use state that is neither an input nor a parameter. Suppose
 we want to damp each block's contribution by a fixed factor:
@@ -488,6 +705,11 @@ we want to damp each block's contribution by a fixed factor:
 :begin_tab:`jax`
 `__call__` may also use state that is neither an input nor a parameter.
 Suppose we want to damp each block's contribution by a fixed factor:
+:end_tab:
+
+:begin_tab:`tensorflow`
+`call` may also use state that is neither an input nor a parameter. Suppose
+we want to damp each block's contribution by a fixed factor:
 :end_tab:
 
 ```{.python .input #model-construction-forward-is-just-python-3}
@@ -521,6 +743,21 @@ params = block.init(d2l.get_key(), X24)
 block.alpha, list(params['params'])
 ```
 
+```{.python .input #model-construction-forward-is-just-python-3}
+%%tab tensorflow
+class ScaledResidual(ResidualBlock):
+    def __init__(self, num_hiddens, alpha=0.5):
+        super().__init__(num_hiddens)
+        self.alpha = tf.constant(alpha)  # Fixed by design, never trained
+
+    def call(self, X):
+        return X + self.alpha * self.body(X)
+
+block = ScaledResidual(24)
+block(tf.random.normal((2, 24)))
+any('alpha' in w.path for w in block.weights), [w.path for w in block.weights][:2]
+```
+
 :begin_tab:`pytorch`
 `alpha` enters the computation, but it is not a parameter: it never appears in
 `named_parameters()`, so the optimizer never touches it. That much we wanted.
@@ -539,6 +776,17 @@ architecture itself, and constructing `ScaledResidual(24, alpha=0.5)`
 reproduces it exactly. What fields cannot express is non-parameter state that
 *changes* during the forward pass, such as running statistics; Flax gives such
 state an explicit home in a separate variable collection, introduced in
+:numref:`sec_parameters_v2`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`alpha` enters the computation, but it is not a parameter: as the output
+shows, `block.weights` contains only the `Dense` variables, so the optimizer
+never touches it. That much we wanted. Storing it as a `tf.constant` has a
+cost we did not want, though: not being a variable, it is invisible to weight
+checkpointing as well, so it will not be saved with the model. Some state is
+not a parameter but must still travel with the model; the registered home for
+such state is a non-trainable `tf.Variable`, introduced in
 :numref:`sec_parameters_v2`.
 :end_tab:
 
@@ -591,10 +839,28 @@ parameters are never allocated at construction time anyway: they come into
 existence only inside `init(key, X)`, and that call has the input in hand.
 :end_tab:
 
+:begin_tab:`tensorflow`
+We have been doing something odd since our first MLP without commenting on
+it: `Dense(256)` names only the layer's *output* width. Its kernel has shape
+`(in_features, 256)`, and we never said what `in_features` is. The layer
+cannot know it at construction time, since it depends on the data it will
+receive. So Keras never allocates variables at construction time: every layer
+has a `build(input_shape)` method that creates them, and `__call__` invokes
+it the first time data arrives. Deferred building is not a special mode; it
+is how every Keras layer works.
+:end_tab:
+
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-1}
 %%tab pytorch
 net = nn.Sequential(nn.LazyLinear(256), nn.ReLU(), nn.LazyLinear(10))
 net[0].weight
+```
+
+```{.python .input #model-construction-lazy-initialization-shapes-from-data-1}
+%%tab tensorflow
+net = tf.keras.Sequential([tf.keras.layers.Dense(256, activation='relu'),
+                           tf.keras.layers.Dense(10)])
+net.weights
 ```
 
 :begin_tab:`pytorch`
@@ -613,6 +879,15 @@ fixes the input of the next layer, so shapes cascade through the whole model
 in one call:
 :end_tab:
 
+:begin_tab:`tensorflow`
+There are no variables at all yet, and accessing `net.layers[0].kernel` would
+raise an error telling us to build the layer first. The first time data flows
+through, each layer's `build` reads the input width from the incoming shape
+and allocates and initializes a real kernel, and the layer's declared output
+width fixes the input of the next layer, so shapes cascade through the whole
+model:
+:end_tab:
+
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-2}
 %%tab pytorch
 net(X)
@@ -624,6 +899,12 @@ net[0].weight.shape
 net = nn.Sequential([nn.Dense(256), nn.relu, nn.Dense(10)])
 params = net.init(d2l.get_key(), X)
 jax.tree_util.tree_map(lambda x: x.shape, params)
+```
+
+```{.python .input #model-construction-lazy-initialization-shapes-from-data-2}
+%%tab tensorflow
+net(X)
+[w.shape for w in net.weights]
 ```
 
 We build models this way from Chapter 7 on because it removes shape arithmetic
@@ -660,6 +941,21 @@ and on nothing else, not on how many random numbers the program happened to
 draw beforehand (:numref:`sec_repro_v2` returns to seeding).
 :end_tab:
 
+:begin_tab:`tensorflow`
+The convenience comes with one rule: until the first call, the variables *do
+not exist*. Anything that needs the variable list, whether constructing an
+optimizer, reading a weight, or counting parameters, must happen after the
+model is built. Keras offers two ways to get there: a dry run on a
+representative batch, or `net.build((None, 20))`, which propagates shapes
+through the model without any data (`None` marks the batch dimension). Two
+consequences of build-time allocation are worth remembering. Initialization
+happens at build rather than at construction, so under a fixed seed the
+weights you get depend on how many random numbers the program drew before the
+model was built (:numref:`sec_repro_v2` returns to seeding). And, as the
+containers lesson showed, building is also the moment the model's structure
+locks.
+:end_tab:
+
 :begin_tab:`pytorch`
 The dry run is such a common preamble that we fold it into the `d2l.Module`
 base class from :numref:`sec_oo-design`: run the model once to materialize
@@ -672,6 +968,15 @@ The `init` call is such a common preamble that we fold it into the
 dummy input as a list of arguments plus a PRNG key and returns the
 initialized parameters. Our training loop calls it once, before the optimizer
 state is constructed.
+:end_tab:
+
+:begin_tab:`tensorflow`
+There is no initialization pass to fold into `d2l.Module` for Keras, because
+a non-default initializer is part of the layer's definition rather than a
+step applied afterwards: each layer accepts a `kernel_initializer` argument,
+and `build` invokes it when it allocates the kernel. Xavier's uniform variant
+(:numref:`subsec_xavier`) is in fact the Keras default, under the name
+`glorot_uniform`. A small demonstration, spelling the default out explicitly:
 :end_tab:
 
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-3}
@@ -737,6 +1042,17 @@ params = model.apply_init([X], key=d2l.get_key())
 jax.tree_util.tree_map(lambda x: x.shape, params)
 ```
 
+```{.python .input #model-construction-lazy-initialization-shapes-from-data-4}
+%%tab tensorflow
+net = tf.keras.Sequential([
+    tf.keras.layers.Dense(
+        256, activation='relu',
+        kernel_initializer=tf.keras.initializers.GlorotUniform()),
+    tf.keras.layers.Dense(10)])
+net.build((None, 20))
+net.layers[0].kernel.shape
+```
+
 :begin_tab:`pytorch`
 The dry run inside `apply_init` turned every lazy layer into a real one, after
 which `init_xavier` could match on `nn.Linear` and rewrite its weights. Which
@@ -748,6 +1064,13 @@ initializer to apply, and why Xavier's variance rule
 :begin_tab:`jax`
 `apply_init` materialized every shape and, for the first kernel, drew the
 initial values from the Xavier initializer, all in the same call. Which
+initializer to use, and why Xavier's variance rule (:numref:`subsec_xavier`)
+is a sensible default, is the subject of :numref:`sec_init_v2`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`build` materialized every shape and drew the first kernel's initial values
+from the Xavier initializer, without a batch of data in sight. Which
 initializer to use, and why Xavier's variance rule (:numref:`subsec_xavier`)
 is a sensible default, is the subject of :numref:`sec_init_v2`.
 :end_tab:
@@ -791,6 +1114,23 @@ class ResidualMLP(nn.Module):
         return nn.Dense(self.d_out)(X)
 ```
 
+```{.python .input #model-construction-building-from-a-config-1}
+%%tab tensorflow
+@dataclass
+class MLPConfig:
+    d_in: int = 784
+    d_hidden: int = 256
+    num_blocks: int = 4
+    d_out: int = 10
+
+def build(cfg: MLPConfig) -> tf.keras.Model:
+    blocks = [ResidualBlock(cfg.d_hidden) for _ in range(cfg.num_blocks)]
+    return tf.keras.Sequential([tf.keras.Input((cfg.d_in,)),
+                                tf.keras.layers.Dense(cfg.d_hidden),
+                                *blocks,
+                                tf.keras.layers.Dense(cfg.d_out)])
+```
+
 :begin_tab:`pytorch`
 One config produces one architecture: an input projection into the hidden
 width, `num_blocks` identical residual blocks, and an output projection. The
@@ -817,6 +1157,17 @@ the dummy input. Initializing the model and mapping shapes over the result
 displays the module tree as a pytree:
 :end_tab:
 
+:begin_tab:`tensorflow`
+One config produces one architecture: an input projection into the hidden
+width, `num_blocks` identical residual blocks, and an output projection. The
+free-standing `build(cfg)` function is unrelated to the `build` method Keras
+calls on layers, but the two meet here: because the config knows the input
+width, we can declare it with `tf.keras.Input`, and `Sequential` then builds
+the whole model at construction time, no dry run needed. This is where
+explicit shapes beat inferred ones. `net.summary()` displays the module tree,
+every shape and parameter count already known:
+:end_tab:
+
 ```{.python .input #model-construction-building-from-a-config-2}
 %%tab pytorch
 net = build(MLPConfig())
@@ -830,6 +1181,12 @@ params = net.init(d2l.get_key(), jnp.zeros((2, 784)))
 jax.tree_util.tree_map(lambda x: x.shape, params)
 ```
 
+```{.python .input #model-construction-building-from-a-config-2}
+%%tab tensorflow
+net = build(MLPConfig())
+net.summary()
+```
+
 ```{.python .input #model-construction-building-from-a-config-3}
 %%tab pytorch
 net(torch.rand(2, 784)).shape
@@ -838,6 +1195,11 @@ net(torch.rand(2, 784)).shape
 ```{.python .input #model-construction-building-from-a-config-3}
 %%tab jax
 net.apply(params, jax.random.uniform(d2l.get_key(), (2, 784))).shape
+```
+
+```{.python .input #model-construction-building-from-a-config-3}
+%%tab tensorflow
+net(tf.random.uniform((2, 784))).shape
 ```
 
 Architecture is now *data*. Rescaling the model is a change to two fields, not
@@ -860,6 +1222,13 @@ for net in (ResidualMLP(), ResidualMLP(d_hidden=512, num_blocks=8)):
           f'{n:,} parameters')
 ```
 
+```{.python .input #model-construction-building-from-a-config-4}
+%%tab tensorflow
+for cfg in (MLPConfig(), MLPConfig(d_hidden=512, num_blocks=8)):
+    print(f'd_hidden={cfg.d_hidden}, num_blocks={cfg.num_blocks}: '
+          f'{build(cfg).count_params():,} parameters')
+```
+
 :begin_tab:`pytorch`
 Because `build` is deterministic in `cfg`, the config is all you need to
 reconstruct the module tree later; :numref:`sec_read_write_v2` saves it
@@ -876,6 +1245,17 @@ parameters so that loading a checkpoint starts by rebuilding the exact same
 model. A handful of width and depth fields feeding a loop that stacks
 identical residual blocks is, minus attention, the exact shape of every
 Transformer implementation you will read.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Because `build` is deterministic in `cfg`, the config is all you need to
+reconstruct the module tree later; :numref:`sec_read_write_v2` saves it
+alongside the weights so that loading a checkpoint starts by rebuilding the
+exact same model. Keras bakes the same idea into every layer: `get_config()`
+returns the constructor arguments needed to re-create the object, and that is
+exactly what Keras model serialization records. A config of widths and depths
+feeding a loop that stacks identical residual blocks is, minus attention, the
+exact shape of every Transformer implementation you will read.
 :end_tab:
 
 ## Summary
@@ -906,6 +1286,21 @@ construction time. `__call__` is ordinary Python; a residual connection is one
 line in it. Every input width is inferred inside the mandatory `init` call
 (`apply_init`). Configs need no separate machinery: a linen module is a
 dataclass, so its fields are its config.
+:end_tab:
+
+:begin_tab:`tensorflow`
+A module owns variables, child layers, and a `call` method. Layers, blocks,
+and whole models are the same kind of object, so a model is a tree of
+modules, and variable collection and serialization are walks over that tree.
+The tree is discovered through attribute assignment: Keras scans every
+assigned attribute, lists and dictionaries included, so even a plain Python
+list of layers is tracked. Variables are created by `build`, not by the
+constructor: every layer infers its input width when the first batch arrives
+(or when `build(input_shape)` is called), after which the model's structure
+is locked. `call` is ordinary Python; a residual connection is one line in
+it. Configs turn architecture into data: a `dataclass` of widths and depths
+plus a `build(cfg)` function that stacks blocks, with `get_config()` as the
+Keras-native form of the same idea.
 :end_tab:
 
 ## Exercises
@@ -942,6 +1337,25 @@ dataclass, so its fields are its config.
 1. Extend `ResidualMLP` with an activation switch (for example,
    `act: str = 'relu'`) and make `__call__` honor it. Which decisions belong
    in fields and which belong in code? Where would you put a choice between
+   `ResidualBlock` and a plain feed-forward block?
+1. `ResidualBlock` requires its input and output widths to agree. Suppose you
+   want a block whose output is wider than its input. Give two standard fixes
+   and the cost of each. (Chapter 8 uses one of them in ResNet.)
+:end_tab:
+
+:begin_tab:`tensorflow`
+1. Keras's tracking has one blind spot left: create a `Dense` layer *inside*
+   `call` rather than in the constructor. The model runs without complaint;
+   check `len(net.trainable_variables)` after calling it, explain what an
+   optimizer would train, and explain what happens to the layer's weights
+   between two calls.
+1. Implement a `ParallelBlock` that takes two child modules `net1` and `net2`,
+   runs both on the same input, and concatenates their outputs along the last
+   dimension. What must be true of the two children's outputs for the
+   concatenation to be valid?
+1. Extend `MLPConfig` with an activation switch (for example,
+   `act: str = 'relu'`) and make `build` honor it. Which decisions belong in a
+   config and which belong in code? Where would you put a choice between
    `ResidualBlock` and a plain feed-forward block?
 1. `ResidualBlock` requires its input and output widths to agree. Suppose you
    want a block whose output is wider than its input. Give two standard fixes

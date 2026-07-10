@@ -41,6 +41,16 @@ import optax
 from d2l import jax as d2l
 ```
 
+```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
+%%tab tensorflow
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import time
+import numpy as np
+import tensorflow as tf
+from d2l import tensorflow as d2l
+```
+
 ## Devices
 
 :begin_tab:`pytorch`
@@ -61,6 +71,17 @@ is one specific CUDA card and its own memory. To see what your machine has,
 run `nvidia-smi` in a shell: it lists every card, its memory, and what is
 currently running on it. We wrap device lookup in two helpers that the rest
 of the book uses.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow names devices with strings. `'/CPU:0'` is the CPU and it stands for
+*all* physical CPU cores and all of main memory; `'/GPU:0'` is one specific
+CUDA card and its own memory, and `'/GPU:1'` is the second card. `tf.device`
+turns a name into a *scope*: operations executed inside it run on, and
+allocate their results on, the named device. To see what your machine has,
+run `nvidia-smi` in a shell: it lists every card, its memory, and what is
+currently running on it. We wrap device construction in two helpers that the
+rest of the book uses.
 :end_tab:
 
 ```{.python .input #gpus-devices-memory-devices-1}
@@ -89,6 +110,17 @@ def gpu(i=0):  #@save
 cpu()
 ```
 
+```{.python .input #gpus-devices-memory-devices-1}
+%%tab tensorflow
+def cpu():  #@save
+    """Get the CPU device."""
+    return tf.device('/CPU:0')
+def gpu(i=0):  #@save
+    """Get a GPU device."""
+    return tf.device(f'/GPU:{i}')
+cpu(), gpu(), gpu(1)
+```
+
 :begin_tab:`pytorch`
 Note that constructing a device object is free and always succeeds, whether or
 not the hardware exists; the check happens only when you try to put data on it.
@@ -99,6 +131,16 @@ Note that a JAX device object is a handle to hardware that actually exists:
 `jax.devices('gpu')` raises a `RuntimeError` when no GPU backend is present,
 rather than returning a placeholder (which is why the demo above calls only
 `cpu()`). Our next helper therefore counts GPUs through a `try`/`except`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Note that constructing a device scope is free and always succeeds, whether or
+not the hardware exists; the name is checked only when an operation runs
+inside the scope. Even then, TensorFlow's default *soft placement* falls back
+to the CPU rather than raising when the requested device is missing, which is
+what lets `gpu(1)` print happily on a laptop. The flip side of that tolerance
+is that a mistyped device name never crashes; check `x.device` when placement
+matters.
 :end_tab:
 
 We can query how many GPUs are actually available.
@@ -121,6 +163,14 @@ def num_gpus():  #@save
     except:
         return 0  # No GPU backend found
 
+num_gpus()
+```
+
+```{.python .input #gpus-devices-memory-devices-2}
+%%tab tensorflow
+def num_gpus():  #@save
+    """Get the number of available GPUs."""
+    return len(tf.config.experimental.list_physical_devices('GPU'))
 num_gpus()
 ```
 
@@ -165,6 +215,18 @@ CUDA; everything below transfers to TPUs with no change beyond the backend
 name.
 :end_tab:
 
+:begin_tab:`tensorflow`
+CUDA is not the only accelerator TensorFlow understands: the same device
+strings name TPUs (`'/TPU:0'`) on a TPU host, and the `tensorflow-metal`
+plugin exposes an Apple-silicon GPU as `'/GPU:0'`;
+`tf.config.list_physical_devices()` with no argument lists everything the
+runtime can see. We keep our own helpers anyway: they give all four of the
+book's implementations one vocabulary, and they degrade to the CPU instead of
+failing, which is exactly what lets this book's code run unchanged on a
+laptop. The book standardizes on CPU plus CUDA; everything below transfers to
+the other backends with little more than a renamed device string.
+:end_tab:
+
 ## Tensors, Models, and Devices
 
 :begin_tab:`pytorch`
@@ -176,6 +238,12 @@ By default, arrays are created on the *default device*, the first accelerator
 when one exists and the CPU otherwise. We can query where an array lives.
 :end_tab:
 
+:begin_tab:`tensorflow`
+By default, tensors are created on the first GPU whenever one exists and on
+the CPU otherwise: eager TensorFlow places every new tensor on `'/GPU:0'` if
+it can. We can query where a tensor lives.
+:end_tab:
+
 ```{.python .input #gpus-devices-memory-tensors-models-and-devices-1}
 %%tab pytorch
 x = torch.tensor([1, 2, 3])
@@ -185,6 +253,12 @@ x.device
 ```{.python .input #gpus-devices-memory-tensors-models-and-devices-1}
 %%tab jax
 x = jnp.array([1, 2, 3])
+x.device
+```
+
+```{.python .input #gpus-devices-memory-tensors-models-and-devices-1}
+%%tab tensorflow
+x = tf.constant([1.0, 2.0, 3.0])
 x.device
 ```
 
@@ -202,6 +276,14 @@ explicit placement, like `x` above, are *uncommitted*; they sit on the default
 device but JAX may treat them as movable when they meet committed data.
 :end_tab:
 
+:begin_tab:`tensorflow`
+To place a tensor somewhere specific, create it inside a device scope:
+everything executed under `with try_gpu():` allocates its results on that
+device. Creating data directly on the target device is better than creating
+it on the CPU and moving it: the tensor then never occupies main memory or
+crosses the bus at all.
+:end_tab:
+
 ```{.python .input #gpus-devices-memory-tensors-models-and-devices-2}
 %%tab pytorch
 X = torch.ones(2, 3, device=try_gpu())
@@ -211,6 +293,13 @@ X
 ```{.python .input #gpus-devices-memory-tensors-models-and-devices-2}
 %%tab jax
 X = jax.device_put(jnp.ones((2, 3)), try_gpu())
+X
+```
+
+```{.python .input #gpus-devices-memory-tensors-models-and-devices-2}
+%%tab tensorflow
+with try_gpu():
+    X = tf.ones((2, 3))
 X
 ```
 
@@ -227,6 +316,13 @@ Y
 %%tab jax
 Y = jax.device_put(jax.random.uniform(jax.random.PRNGKey(0), (2, 3)),
                    try_gpu(1))
+Y
+```
+
+```{.python .input #gpus-devices-memory-tensors-models-and-devices-3}
+%%tab tensorflow
+with try_gpu(1):
+    Y = tf.random.uniform((2, 3))
 Y
 ```
 
@@ -253,6 +349,20 @@ innocent-looking `+`, and you would never find it. Instead we copy
 explicitly, as in :numref:`fig_copyto`, and then add.
 :end_tab:
 
+:begin_tab:`tensorflow`
+Whenever we operate on multiple tensors, they should be on the same device.
+Here TensorFlow is the exception among our four frameworks: its eager *device
+policy* defaults to silent, so if `X` sits on the first GPU and `Y` on the
+second, `X + Y` does not raise. TensorFlow copies one operand across and
+returns an answer. Convenient, but it hides a slow bus transfer inside an
+innocent-looking `+`, the very thing the other frameworks refuse to do, and
+nothing in your code marks the line that pays for it.
+`tf.config.experimental.set_device_policy('explicit')` opts into strictness,
+turning silent copies into errors. Either way the discipline is the same:
+copy explicitly, as in :numref:`fig_copyto`, and then add. The explicit copy
+in TensorFlow is `tf.identity` inside a device scope.
+:end_tab:
+
 ![X lives on GPU 0 and Y on GPU 1; X.to(gpu(1)) makes a copy Z on GPU 1 (dashed), and Y + Z then runs entirely on GPU 1.](../img/bg-copyto.svg)
 :label:`fig_copyto`
 
@@ -270,6 +380,14 @@ print(X)
 print(Z)
 ```
 
+```{.python .input #gpus-devices-memory-copying-between-devices-1}
+%%tab tensorflow
+with try_gpu(1):
+    Z = tf.identity(X)
+print(X)
+print(Z)
+```
+
 Now that `Z` and `Y` live on the same device, we can add them.
 
 ```{.python .input #gpus-devices-memory-copying-between-devices-2}
@@ -279,6 +397,11 @@ Y + Z
 
 ```{.python .input #gpus-devices-memory-copying-between-devices-2}
 %%tab jax
+Y + Z
+```
+
+```{.python .input #gpus-devices-memory-copying-between-devices-2}
+%%tab tensorflow
 Y + Z
 ```
 
@@ -293,6 +416,15 @@ transfer: the array it returns shares `Z`'s buffer, so calling it defensively
 costs nothing. Comparing the buffer addresses confirms that no copy was made.
 :end_tab:
 
+:begin_tab:`tensorflow`
+What if `Z` already lives on the target device? `tf.identity` under a scope
+naming that same device stays put: no bus transfer happens, so the defensive
+copy costs a kernel launch and nothing more. In everyday TensorFlow you will
+rarely write even that much, since the silent policy fetches remote operands
+on demand; the point of spelling out the copy is to make the one expensive
+transfer visible in your code instead of buried in an operator.
+:end_tab:
+
 ```{.python .input #gpus-devices-memory-copying-between-devices-3}
 %%tab pytorch
 Z.to(try_gpu(1)) is Z
@@ -304,7 +436,7 @@ Z2 = jax.device_put(Z, try_gpu(1))
 Z2.unsafe_buffer_pointer() == Z.unsafe_buffer_pointer()
 ```
 
-The reason the framework makes you spell out every copy is the cost model. A
+The reason for keeping every copy explicit is the cost model. A
 modern GPU multiplies matrices hundreds of times faster than it can receive
 data over the PCIe bus, so a transfer in the wrong place can erase the
 speedup you bought the GPU for. The discipline that follows is simple: move data to the device
@@ -324,6 +456,13 @@ A model's parameters are literally a tree of arrays, the pytree that `init`
 returns, and `jax.device_put` accepts a pytree: one call places every leaf.
 :end_tab:
 
+:begin_tab:`tensorflow`
+A Keras model has no device argument and no move method: layers create their
+variables on the first call, and the variables live wherever that first call
+ran. So we run the first forward pass inside a device scope, and the
+parameters stay on that device from then on.
+:end_tab:
+
 ```{.python .input #gpus-devices-memory-models-on-a-device-1}
 %%tab pytorch
 net = nn.Sequential(nn.LazyLinear(1))
@@ -339,6 +478,14 @@ params = jax.device_put(params, try_gpu())
 net.apply(params, X)
 ```
 
+```{.python .input #gpus-devices-memory-models-on-a-device-1}
+%%tab tensorflow
+net = tf.keras.Sequential([tf.keras.layers.Dense(1)])
+with try_gpu():
+    Y_hat = net(X)  # The first call creates the variables inside the scope
+Y_hat
+```
+
 The input arrived on the device, the parameters live on the device, so the
 output is computed and stored there too. Let's confirm where the parameters
 ended up.
@@ -351,6 +498,11 @@ net[0].weight.device
 ```{.python .input #gpus-devices-memory-models-on-a-device-2}
 %%tab jax
 jax.tree_util.tree_map(lambda p: p.device, params)
+```
+
+```{.python .input #gpus-devices-memory-models-on-a-device-2}
+%%tab tensorflow
+net.layers[0].kernel.value.device
 ```
 
 :begin_tab:`pytorch`
@@ -369,6 +521,16 @@ state is built from the parameter pytree (`optax`'s `init(params)`), so it is
 born wherever the parameters live; and inside a compiled function you never
 place anything, since the computation runs where its inputs are. Keep the
 parameters and each batch on one device and everything downstream follows.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Device hygiene is short in TensorFlow because placement follows execution. A
+fresh tensor made during the forward pass is created where the surrounding
+ops run, and a Keras optimizer creates its slot variables at the first
+`apply_gradients`, next to the variables they update, so ordering takes care
+of itself. The one rule to remember is the first-call rule above: run the
+variable-building forward pass under the device scope you mean, because
+moving the variables afterwards means rebuilding the model.
 :end_tab:
 
 ## GPU Memory
@@ -405,6 +567,24 @@ that :numref:`fig_bg_allocator` sketches. On the CPU backend there is no such
 allocator and the call returns `None`.
 :end_tab:
 
+:begin_tab:`tensorflow`
+Here is a puzzle that every TensorFlow user hits in their first week. You
+create one small tensor, yet `nvidia-smi` shows the card nearly full; is that
+a leak? It is not, and the explanation is the right mental model for
+everything else in this section. Requesting memory from the CUDA driver is
+slow, so on first use TensorFlow maps nearly all of the GPU's memory in one
+grab and hands out pieces of it from its own allocator;
+`tf.config.experimental.set_memory_growth(gpu, True)`, called before the
+first computation, switches to growing the reservation on demand instead.
+`nvidia-smi` sees the process from the outside, so it reports the whole
+reservation no matter how little of it your tensors occupy. The real
+accounting lives inside: `tf.config.experimental.get_memory_info('GPU:0')`
+returns a dictionary whose `'current'` entry counts live tensors and whose
+`'peak'` entry is their high-water mark, the same nesting of views that
+:numref:`fig_bg_allocator` sketches. There is no such allocator for the CPU,
+and the call raises on `'CPU:0'`.
+:end_tab:
+
 ![The three memory views nest: nvidia-smi's driver allocation contains PyTorch's reserved cache, which contains the live tensors that memory_allocated() counts.](../img/bg-allocator.svg)
 :label:`fig_bg_allocator`
 
@@ -439,6 +619,22 @@ else:
     print('No GPU: memory_stats() returns None on the CPU backend.')
 ```
 
+```{.python .input #gpus-devices-memory-gpu-memory}
+%%tab tensorflow
+if num_gpus() > 0:
+    def report(tag):
+        info = tf.config.experimental.get_memory_info('GPU:0')
+        print(f'{tag}: {info["current"] / 2**20:7.1f} MiB in use, '
+              f'{info["peak"] / 2**20:7.1f} MiB peak')
+    with gpu():
+        big = tf.zeros((256, 1024, 1024))  # 1 GiB of float32
+    report('after creating big')
+    del big
+    report('after deleting it ')
+else:
+    print('No GPU: get_memory_info() tracks only GPU and TPU allocators.')
+```
+
 :begin_tab:`pytorch`
 After the deletion, `memory_allocated()` falls by a gibibyte while
 `memory_reserved()` does not move: the block went back to the cache, ready for
@@ -455,6 +651,15 @@ XLA's preallocated pool, not to the driver. If another process must share the
 card, set `XLA_PYTHON_CLIENT_PREALLOCATE=false` in the environment before the
 first computation; allocations then go to the driver on demand, visibly to
 `nvidia-smi` but more slowly.
+:end_tab:
+
+:begin_tab:`tensorflow`
+On a GPU, `'current'` falls by a gibibyte the moment the last reference dies,
+while `nvidia-smi` does not move at all: the block returns to TensorFlow's
+allocator pool, not to the driver. There is no `empty_cache` equivalent; the
+process keeps its reservation until it exits. If another process must share
+the card, enable memory growth, or set a hard cap with
+`tf.config.set_logical_device_configuration`, before the first computation.
 :end_tab:
 
 ### What Fills Memory During Training
@@ -477,6 +682,13 @@ We can watch the terms arrive by reading `bytes_in_use` around the pieces of
 a training step. The activations are the exception: they exist only while the
 gradient computation runs, so they leave their trace in `peak_bytes_in_use`
 rather than in a reading you can take afterwards.
+:end_tab:
+
+:begin_tab:`tensorflow`
+We can watch each term arrive by reading `'current'` at four points of a
+single training step. The activations are visible as a plateau for the same
+reason as in PyTorch: `tf.GradientTape` records the forward pass and holds
+the intermediate results until we ask it for gradients.
 :end_tab:
 
 ```{.python .input #gpus-devices-memory-what-fills-memory-during-training}
@@ -529,6 +741,35 @@ else:
     print('No GPU: run this cell on a GPU to see the terms arrive.')
 ```
 
+```{.python .input #gpus-devices-memory-what-fills-memory-during-training}
+%%tab tensorflow
+if num_gpus() > 0:
+    def in_use():
+        info = tf.config.experimental.get_memory_info('GPU:0')
+        return f'{info["current"] / 2**20:7.1f} MiB'
+    with gpu():
+        net = tf.keras.Sequential(
+            [tf.keras.layers.Dense(4096, activation='relu'),
+             tf.keras.layers.Dense(4096, activation='relu'),
+             tf.keras.layers.Dense(4096, activation='relu'),
+             tf.keras.layers.Dense(10)])
+        X = tf.random.normal((4096, 1024))
+        y = tf.random.uniform((4096,), 0, 10, dtype=tf.int32)
+        net(X)  # The first call creates the variables
+    opt = tf.keras.optimizers.Adam()
+    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+    print('weights           ', in_use())
+    with tf.GradientTape() as tape:
+        loss = loss_fn(y, net(X, training=True))
+    print('+ activations     ', in_use())
+    grads = tape.gradient(loss, net.trainable_variables)
+    print('+ gradients       ', in_use())
+    opt.apply_gradients(zip(grads, net.trainable_variables))
+    print('+ optimizer state ', in_use())
+else:
+    print('No GPU: run this cell on a GPU to see the four plateaus.')
+```
+
 :begin_tab:`pytorch`
 The four readings map onto the accounting. The first is the weights alone
 (about $4N$ bytes, plus the input batch). The second jumps by the size of the
@@ -561,6 +802,23 @@ because it scales the one term the model architecture does not fix. If a
 *growing* staircase appears across steps, look for device arrays accumulating
 on the Python side, such as appending the loss array itself, rather than
 `loss.item()`, to a running log.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The four readings map onto the accounting. The first is the weights alone
+(about $4N$ bytes, plus the input batch). The second jumps by the size of the
+activations the tape is holding, here several times the weights, because the
+batch is large. The third *falls* back: `tape.gradient` consumes the recorded
+forward pass, frees it, and leaves behind gradients exactly the size of the
+weights. The fourth adds $8N$ at the first `apply_gradients`, when Adam
+creates its slot variables. From then on the loop cycles between plateaus two
+and three; the weights, gradients, and optimizer state are permanent
+residents. The practical consequence: when you are out of memory, the knob
+that works immediately is the batch size, because it scales the one term the
+model architecture does not fix. If a *growing* staircase appears across
+steps instead of this steady cycle, look for tensors kept alive between
+iterations, classically a Python list accumulating the loss tensor itself
+rather than `float(loss)`, or a persistent `GradientTape` that never dies.
 :end_tab:
 
 ### Trading Compute for Memory: Activation Checkpointing
@@ -618,6 +876,25 @@ def run_stack(block, params_list, X, use_checkpoint=False):
     return X
 ```
 
+```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1}
+%%tab tensorflow
+class ResidualBlock(tf.keras.Model):  # As in :numref:`sec_model_construction_v2`
+    def __init__(self, num_hiddens):
+        super().__init__()
+        self.body = tf.keras.Sequential(
+            [tf.keras.layers.Dense(num_hiddens, activation='relu'),
+             tf.keras.layers.Dense(num_hiddens, activation='relu')])
+
+    def call(self, X):
+        return X + self.body(X)
+
+def run_stack(blocks, X, use_checkpoint=False):
+    for blk in blocks:
+        f = tf.recompute_grad(blk) if use_checkpoint else blk
+        X = f(X)
+    return X
+```
+
 :begin_tab:`pytorch`
 `torch.utils.checkpoint.checkpoint(blk, X)` runs `blk(X)` without storing its
 internals and remembers just enough to recompute them later. Recomputation
@@ -635,6 +912,16 @@ internals during the backward pass. Randomness needs no special handling:
 JAX functions receive their PRNG keys as explicit arguments, so recomputation
 with the same key reproduces a segment containing dropout bit for bit by
 construction.
+:end_tab:
+
+:begin_tab:`tensorflow`
+`tf.recompute_grad(blk)` returns a function that behaves exactly like `blk`
+on the forward pass but tells the tape to store only the inputs, rerunning
+`blk` during the backward pass to regenerate what it needs. One caveat:
+unlike its PyTorch counterpart it does not snapshot random-number state, so
+keep checkpointed segments deterministic (or drive their randomness with
+stateless seeds); a classic dropout layer inside the segment could resample
+on recomputation.
 :end_tab:
 
 Before measuring memory, we should verify the claim that nothing about the
@@ -670,6 +957,23 @@ def stack_grads(use_checkpoint):
 
 for g, g_ckpt in zip(stack_grads(False), stack_grads(True)):
     assert jnp.allclose(g, g_ckpt)
+print('checkpointed gradients match the ordinary ones')
+```
+
+```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-2}
+%%tab tensorflow
+tf.keras.utils.set_random_seed(0)
+blocks = [ResidualBlock(64) for _ in range(4)]
+X = tf.random.normal((32, 64))
+
+def stack_grads(use_checkpoint):
+    with tf.GradientTape() as tape:
+        loss = tf.reduce_sum(run_stack(blocks, X, use_checkpoint))
+    params = [v for blk in blocks for v in blk.trainable_variables]
+    return tape.gradient(loss, params)
+
+for g, g_ckpt in zip(stack_grads(False), stack_grads(True)):
+    assert np.allclose(g, g_ckpt)
 print('checkpointed gradients match the ordinary ones')
 ```
 
@@ -716,6 +1020,28 @@ else:
     print('No GPU: peak-memory comparison needs a GPU.')
 ```
 
+```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-3}
+%%tab tensorflow
+if num_gpus() > 0:
+    with gpu():
+        blocks = [ResidualBlock(1024) for _ in range(16)]
+        X = tf.random.normal((8192, 1024))
+        run_stack(blocks, X)  # Create the variables before measuring
+    params = [v for blk in blocks for v in blk.trainable_variables]
+    for use_checkpoint in (False, True):
+        tf.config.experimental.reset_memory_stats('GPU:0')
+        t = time.time()
+        with tf.GradientTape() as tape:
+            loss = tf.reduce_sum(run_stack(blocks, X, use_checkpoint))
+        grads = tape.gradient(loss, params)
+        tf.test.experimental.sync_devices()
+        peak = tf.config.experimental.get_memory_info('GPU:0')['peak'] / 2**20
+        print(f'checkpointing={use_checkpoint!s:5}  peak {peak:6.0f} MiB, '
+              f'{time.time() - t:.2f} sec')
+else:
+    print('No GPU: peak-memory comparison needs a GPU.')
+```
+
 Without checkpointing, the peak carries the activations of all sixteen blocks
 at once; with it, only the block inputs plus the recomputed activations of a
 single block, at the cost of a slower step. When a model almost fits, this
@@ -747,6 +1073,18 @@ worse, stalls everything. The explicit synchronization point is
 the work *finishing*, on this machine's CPU as well as on any GPU.
 :end_tab:
 
+:begin_tab:`tensorflow`
+The GPU runs ahead of Python. When you write `B = A @ A` on a GPU tensor,
+eager TensorFlow does not wait for the multiplication: it enqueues the kernel
+on the device's stream and returns a handle immediately, and Python races on
+to enqueue the next operation (inside a `@tf.function`, whole traced graphs
+are handed to the runtime the same way). This asynchrony is where much of the
+speed comes from, because the CPU can prepare work while the GPU crunches. It
+also means that timing or logging naively measures nothing, or worse, stalls
+everything. Eager ops on the CPU backend run synchronously, so seeing the gap
+between *queueing* work and the work *finishing* needs a GPU.
+:end_tab:
+
 ```{.python .input #gpus-devices-memory-don-t-break-the-pipeline-1}
 %%tab pytorch
 if torch.cuda.is_available():
@@ -772,6 +1110,22 @@ for _ in range(32):
 print(f'time to queue 32 matrix products: {time.time() - t:.4f} sec')
 B.block_until_ready()
 print(f'time until they all finished:     {time.time() - t:.4f} sec')
+```
+
+```{.python .input #gpus-devices-memory-don-t-break-the-pipeline-1}
+%%tab tensorflow
+if num_gpus() > 0:
+    with gpu():
+        A = tf.random.normal((4096, 4096))
+    (A @ A).numpy()  # Warm up
+    t = time.time()
+    for _ in range(32):
+        B = A @ A
+    print(f'time to queue 32 matrix products: {time.time() - t:.4f} sec')
+    tf.test.experimental.sync_devices()
+    print(f'time until they all finished:     {time.time() - t:.4f} sec')
+else:
+    print('No GPU: TensorFlow executes CPU ops synchronously.')
 ```
 
 :begin_tab:`pytorch`
@@ -804,6 +1158,22 @@ is exactly what our `ProgressBoard` from :numref:`sec_oo-design` does when the
 `Trainer` plots the loss.
 :end_tab:
 
+:begin_tab:`tensorflow`
+Python returned from the loop in about a millisecond; the products were still
+running. Any operation that needs a concrete value on the host forces a
+*synchronization point*: `.numpy()`, `float(loss)`, `print`, an `if` on a
+tensor's value. Each one makes Python block until the queue drains, and the
+device then sits idle until Python catches up
+(`tf.test.experimental.sync_devices()` is the explicit version that honest
+timings need). A `print(float(loss))` in the inner loop can serialize the
+whole pipeline this way, once per step, as :numref:`fig_bg_async_queue` lays
+out. The fix is not to give up monitoring but to move it off the hot path:
+keep running statistics on the device and transfer them once per epoch, or
+hand values to a background consumer, which is exactly what our
+`ProgressBoard` from :numref:`sec_oo-design` does when the `Trainer` plots
+the loss.
+:end_tab:
+
 ![Python queues kernels k1 through k4 and races ahead while the GPU works through them serially; loss.item() forces a synchronization point where the CPU blocks until the GPU drains its queue, then both resume.](../img/bg-async-queue.svg)
 :label:`fig_bg_async_queue`
 
@@ -823,6 +1193,18 @@ immediately, so Python prepares the next batch while the copy overlaps the
 device's current work, which is exactly the effect other stacks arrange with
 pinned host buffers. The full treatment of asynchrony, streams, and
 multi-device parallelism is in :numref:`chap_performance`.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The same overlap idea applies to getting data *onto* the device, and in
+TensorFlow it belongs to the input pipeline rather than to a per-tensor flag:
+ending a `tf.data` pipeline with `.prefetch(tf.data.AUTOTUNE)` keeps the next
+batches being prepared in the background while the device computes, and
+`tf.data.experimental.prefetch_to_device` stages them on the GPU ahead of
+use. The book's data loaders are `tf.data.Dataset`s, so this section's
+overlap discipline reduces to one appended call. The full treatment of
+asynchrony, streams, and multi-device parallelism is in
+:numref:`chap_performance`.
 :end_tab:
 
 ```{.python .input #gpus-devices-memory-don-t-break-the-pipeline-2}
@@ -873,6 +1255,15 @@ whenever one exists), and every batch streams over per step, at the boundary
 of the computation.
 :end_tab:
 
+:begin_tab:`tensorflow`
+In :numref:`sec_oo-design` the `Trainer` accepted a `num_gpus` argument and
+ignored it. We can now redeem that promise with everything this section
+taught: the model's variables are created on the device by a first forward
+pass (which the `Trainer` already runs before training, when it compiles its
+step functions), and every batch is re-materialized on the device per step,
+at the boundary of the computation.
+:end_tab:
+
 ```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-1}
 %%tab pytorch
 @d2l.add_to_class(d2l.Trainer)  #@save
@@ -909,6 +1300,24 @@ def prepare_batch(self, batch):
     return batch
 ```
 
+```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-1}
+%%tab tensorflow
+@d2l.add_to_class(d2l.Trainer)  #@save
+def __init__(self, max_epochs, num_gpus=0, gradient_clip_val=0):
+    self.save_hyperparameters()
+    self.gpus = [d2l.gpu(i) for i in range(min(num_gpus, d2l.num_gpus()))]
+
+@d2l.add_to_class(d2l.Trainer)  #@save
+def prepare_batch(self, batch):
+    if self.gpus:
+        # tf.data.Dataset emits batches on CPU. Re-wrap them inside the
+        # GPU device context so subsequent ops keep their inputs on-device
+        # rather than incurring an implicit copy each step.
+        with self.gpus[0]:
+            batch = [tf.identity(a) for a in batch]
+    return batch
+```
+
 :begin_tab:`pytorch`
 The `min(num_gpus, d2l.num_gpus())` makes the request a ceiling rather than a
 demand: on a machine with no GPU, `self.gpus` is empty, both hooks become
@@ -931,6 +1340,23 @@ one codebase serves both the laptop you are reading on and a GPU server. As a
 capstone we train a classifier built from this chapter's residual blocks on
 Fashion-MNIST; the `Trainer` moves each batch, and the memory budget of the
 run is exactly the accounting from above.
+:end_tab:
+
+:begin_tab:`tensorflow`
+The `min(num_gpus, d2l.num_gpus())` makes the request a ceiling rather than a
+demand: on a machine with no GPU, `self.gpus` is empty, `prepare_batch` is a
+no-op, and training proceeds on the CPU. The explicit `tf.identity` inside
+the device scope matters because `tf.data` pipelines emit their batches on
+the CPU: without it, every op that touches the batch pays the silent
+host-to-device copy this section warned about, once per step. There is no
+`prepare_model` patch to write, since Keras variables are created on the
+first call and the `Trainer` runs its compile-time forward pass through
+`prepare_batch`, so the weights land on the configured GPU automatically.
+Every `Trainer(num_gpus=1)` you see from the next chapter onward relies on
+this fallback, which is how one codebase serves both the laptop you are
+reading on and a GPU server. As a capstone we train a classifier built from
+this chapter's residual blocks on Fashion-MNIST; the memory budget of the
+run is exactly the four-plateau accounting from above.
 :end_tab:
 
 ```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-2}
@@ -961,6 +1387,22 @@ class ResMLPClassifier(d2l.Classifier):
             nn.Dense(self.num_hiddens), nn.relu,
             *[ResidualBlock(self.num_hiddens) for _ in range(self.num_blocks)],
             nn.Dense(10)])
+
+trainer = d2l.Trainer(max_epochs=1, num_gpus=1)
+trainer.fit(ResMLPClassifier(), d2l.FashionMNIST(batch_size=256))
+```
+
+```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-2}
+%%tab tensorflow
+class ResMLPClassifier(d2l.Classifier):
+    def __init__(self, num_hiddens=256, num_blocks=2, lr=0.1):
+        super().__init__()
+        self.save_hyperparameters()
+        self.net = tf.keras.Sequential(
+            [tf.keras.layers.Flatten(),
+             tf.keras.layers.Dense(num_hiddens, activation='relu'),
+             *[ResidualBlock(num_hiddens) for _ in range(num_blocks)],
+             tf.keras.layers.Dense(10)])
 
 trainer = d2l.Trainer(max_epochs=1, num_gpus=1)
 trainer.fit(ResMLPClassifier(), d2l.FashionMNIST(batch_size=256))
@@ -1002,11 +1444,31 @@ created on the device once, batches moved per step, graceful CPU fallback
 when no GPU exists.
 :end_tab:
 
+:begin_tab:`tensorflow`
+Every tensor and every Keras variable lives on a device, and TensorFlow's
+silent device policy will copy across devices for you, so keeping copies
+explicit and at the boundary of the training loop is a discipline here rather
+than an enforced rule; it matters just as much, because the hidden transfer
+is just as slow. GPU memory during training holds four things: weights,
+gradients, optimizer state (fixed by the model and optimizer), and the
+activations the `GradientTape` records (scaling with batch size);
+`get_memory_info` tracks live tensors inside the reservation TensorFlow maps
+at startup, while `nvidia-smi` shows the whole reservation, so the two
+disagree by design. Activation checkpointing (`tf.recompute_grad`) recomputes
+instead of stores, trading roughly a third more compute for activation
+memory. On a GPU, eager kernels run asynchronously ahead of Python:
+`.numpy()`, `float()`, and `print` are synchronization points that stall the
+pipeline, and `.prefetch(tf.data.AUTOTUNE)` is where input transfer overlaps
+compute. The `Trainer` encodes the placement discipline: variables created on
+the device at the compile-time forward pass, batches re-wrapped per step,
+graceful CPU fallback when no GPU exists.
+:end_tab:
+
 ## Exercises
 
 1. Using the accounting model of this section, predict the peak memory of the
    four-plateau cell at batch sizes 64, 256, and 1024, then measure with
-   `torch.cuda.max_memory_allocated()`. Where does the prediction break down,
+   your framework's peak-memory counter. Where does the prediction break down,
    and what did it omit?
 1. Increase the batch size in the checkpointing comparison until the
    non-checkpointed run raises an out-of-memory error. How much further can

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/convnext.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:970522076489c8e02699ae9acc40633595470912870c84b138d02d38b9613174",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "convnext-imports": {
+      "code_fingerprint": "sha256:bef36c62a2dfa221a5547e2f8de7950ce2237dd00f02f291381d007e9ff7b1b3",
+      "kind": "text",
+      "outputs": []
+    },
+    "convnext-block": {
+      "code_fingerprint": "sha256:63ca2fa2c60d637777d9cf3e263fc0a10a9c94d7c88e8f1f5caed8e72faddc12",
+      "kind": "text",
+      "outputs": []
+    },
+    "convnext-model": {
+      "code_fingerprint": "sha256:96dbcb65b500c71787dd2a278cbf04a72ac6d559bfeed1f487df68b074d73d24",
+      "kind": "text",
+      "outputs": []
+    },
+    "convnext-params": {
+      "code_fingerprint": "sha256:4473ed4dab6491cfde8f025a71678dab57d0593877ec354b6046e0318f63b7a0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "3376450"
+        }
+      ]
+    }
+  }
+}

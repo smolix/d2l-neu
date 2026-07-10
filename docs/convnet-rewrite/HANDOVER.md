@@ -118,3 +118,47 @@ any file.
    live, `:numref:` targets resolving.
 7. A short completion note appended to this file (what changed, what was
    deferred, open questions), committed with the final battery results.
+
+---
+
+## Completion note (GPU box, 2026-07-10)
+
+**Done.** All phases executed as specced; every acceptance criterion met.
+
+*What changed:*
+- Ch7: all seven files edited per spec-ch7 (receptive-field arithmetic +
+  eq_receptive_field, im2col section, dilation section + sec_dilation,
+  grouped/depthwise-separable section + sec_depthwise_separable, pooling
+  reality check, LeNet "30 years" table, honest 2026 framings, why-conv's
+  missing deck added, Resources sections on ch6/7/8 leading pages).
+- Ch8: restructured to the new 8-section map. New files: blocks.md (8.2,
+  vgg+nin+googlenet merged, all legacy labels carried), training-recipes.md
+  (8.5), convnext.md (8.6), efficient-convnets.md (8.7). batch-norm extended
+  (Beyond BN: GroupNorm 4-tab, LN-in-convnets, NFNets), resnet absorbed
+  DenseNet, alexnet compressed with rot-proof hardware claims, cnn-design
+  got SE + the Big Picture close, index rewritten. vgg/nin/googlenet/
+  densenet .md + outputs retired in the same commit as the config switch.
+- Figures: tools/arch_diagrams.py + 13 gallery-style figures (pilot-gated,
+  Alex approved v3 2026-07-10) + 2 grid-family mechanics figures; 13
+  orphaned legacy SVGs deleted.
+- Bib: 30 new entries (28 spec + chu2024qarepvgg + He.Zhang.Zhang.ea.2019 +
+  touvron2021cait), all arXiv-verified.
+- Store: every new/changed notebook executed on this box in all four
+  frameworks and captured; verify-fresh clean at each commit.
+
+*Honest findings the specs did not anticipate:*
+- 8.5: Fashion-MNIST at full 60k saturates (recipe gap 0.36pt); the
+  published experiment subsamples to 10k where the modern-recipe gap is a
+  reproducible ~1.2pt. Stated as such in prose.
+- 8.6: at Fashion-MNIST 96×96 scale, the scaled-down ConvNeXt (3.4M params,
+  92.4%) trails ResNet-18 (11.2M, 94.4%) under the identical modern recipe;
+  diagnostics ruled out config artifacts. Published as a regime-transfer
+  lesson (the roadmap's gains belong to the ImageNet/224px regime).
+
+*Deferred / open:*
+- lenet.svg / lenet-vert.svg remain legacy (optional polish per
+  figure-style.md §3).
+- Slide decks were refreshed/rewritten where their files changed, but no
+  global deck audit beyond that.
+- MXNet wheel on the box now reports 2.0.0+cu133.bw.zombie.1 (CLAUDE.md
+  documents ...20260529.3); store captured under the installed wheel.

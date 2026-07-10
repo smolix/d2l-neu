@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/convnext.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:09399b4e4a2b16fbcd8ab93858f867a9161d447277463d654fd482e051d00c32",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "convnext-imports": {
+      "code_fingerprint": "sha256:eeb29689eeaea2ccd522002f1d3f4cdafcb31a470654aa04c0d04bdbaf24d535",
+      "kind": "text",
+      "outputs": []
+    },
+    "convnext-block": {
+      "code_fingerprint": "sha256:064ab94a43669e6505dd13b5712c7de36fc05c799eb9f836fc911a499f11364a",
+      "kind": "text",
+      "outputs": []
+    },
+    "convnext-model": {
+      "code_fingerprint": "sha256:8a90acf939070bcfc45722d9eb73bd9356c563fe7845d6cb2215e13ee5e8d8dd",
+      "kind": "text",
+      "outputs": []
+    },
+    "convnext-params": {
+      "code_fingerprint": "sha256:c71c0ec26da1bc85899632e2fe91dbcfd8130d713b9111c6ebc608d8bedbcd50",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "3376450"
+        }
+      ]
+    }
+  }
+}

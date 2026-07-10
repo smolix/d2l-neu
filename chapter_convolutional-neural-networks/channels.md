@@ -326,9 +326,9 @@ and in operations alike. The saving is not free. A depthwise-separable
 layer can only express convolutions that factor into a per-channel spatial
 filter followed by a channel mixture, a strict subset of dense convolutions.
 In practice the accuracy given up is small relative to the compute saved,
-which is why the factorization anchors mobile architectures such as
-MobileNet and appears, with larger kernels, in recent designs such as
-ConvNeXt. <!-- TODO(ch8): numref sec_convnext / sec_efficient_cnns when ch8 lands -->
+which is why the factorization anchors the mobile architectures of
+:numref:`sec_efficient_cnns` and appears, with larger kernels, in
+ConvNeXt (:numref:`sec_convnext`).
 
 Let's verify the arithmetic. We build a dense $3 \times 3$ convolution with
 128 input and output channels and its depthwise-separable factorization,

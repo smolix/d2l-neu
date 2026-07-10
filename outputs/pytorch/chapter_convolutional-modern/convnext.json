@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "source": "chapter_convolutional-modern/convnext.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:21ac151a28a56286af46fb3ae633b4bcc169654b61a846f67aaaaf838a7d1126",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "convnext-imports": {
+      "code_fingerprint": "sha256:001df9aae5d47aca11c059827ac74f7d2a6f186957116da5e0eec659d647e06a",
+      "kind": "text",
+      "outputs": []
+    },
+    "convnext-block": {
+      "code_fingerprint": "sha256:c21ed41754a0a8d753b2b5e60c903ee71da8db027a2ccff81cd889c639017511",
+      "kind": "text",
+      "outputs": []
+    },
+    "convnext-model": {
+      "code_fingerprint": "sha256:6d44214f16e9160d6175bbf8a52a014d2194b61fd3802febf52c036081a7498c",
+      "kind": "text",
+      "outputs": []
+    },
+    "convnext-params": {
+      "code_fingerprint": "sha256:5629b18370305dc6b83f5b210244f5fdc01b0f81cea3612e3bc96f16a370e317",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "3376450"
+        }
+      ]
+    },
+    "convnext-recipe": {
+      "code_fingerprint": "sha256:e5c4e93cb50f40a40761269d853488d3557f15411b2b622762022dcf8a9efeaa",
+      "kind": "text",
+      "outputs": []
+    },
+    "convnext-train": {
+      "code_fingerprint": "sha256:e970b44214326ce085283010308648f075140ee48d65dd7ce7a0bbfecfd27c10",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "convnext/convnext-train-1.svg",
+          "bytes": 23614,
+          "sha256": "sha256:3c509c016e513705230f5c72b6914d703e0e406f84a7647c4f37664b37fb81b0"
+        }
+      ]
+    },
+    "convnext-eval": {
+      "code_fingerprint": "sha256:9e076656bf1ed8ec598f7b55fa6cf16d5ae061e862bf783c5346a22ea19c5031",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "0.927116334438324"
+        }
+      ]
+    }
+  }
+}

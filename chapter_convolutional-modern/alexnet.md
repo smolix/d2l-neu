@@ -238,8 +238,7 @@ see :citet:`Buslaev.Iglovikov.Khvedchenya.ea.2020` for an in-depth
 review of such preprocessing steps.
 Augmentation and its descendants have since grown into a central part
 of how convolutional networks are trained,
-and we return to them later in this chapter.
-<!-- TODO(ch8): :numref:`sec_training_recipes` when it lands -->
+and we return to them in :numref:`sec_training_recipes`.
 
 ```{.python .input #alexnet-capacity-control-and-preprocessing-1  n=5}
 %%tab pytorch

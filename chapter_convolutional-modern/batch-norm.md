@@ -981,8 +981,8 @@ position, just as a transformer normalizes each token's embedding. This
 per-position, channels-last layer normalization is the choice made by ConvNeXt,
 a convolutional architecture we will meet later in this chapter: it replaces
 every batch normalization in a ResNet-style network with layer normalization,
-uses fewer normalization layers overall, and loses no accuracy in the process.
-<!-- TODO(ch8): numref sec_convnext when 8.6 lands -->
+uses fewer normalization layers overall, and loses no accuracy in the process
+(:numref:`sec_convnext`).
 
 ### Normalizer-Free Networks
 

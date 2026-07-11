@@ -445,7 +445,14 @@ with d2l.try_gpu():
     trainer.fit(model, data)
 ```
 
-NiN has dramatically fewer parameters than AlexNet and VGG, primarily because it needs no giant fully connected layers. Instead, it aggregates across all image locations by global average pooling after the last stage of the network body, replacing an expensive learned reduction with a simple average. What surprised researchers at the time was that this averaging did not harm accuracy; averaging across a low-resolution representation with many channels also adds translation invariance. Two of NiN's choices outlived it: the $1 \times 1$ convolution as the standard channel-mixing operation, and global average pooling as the default classification head.
+NiN has dramatically fewer parameters than AlexNet and VGG, primarily
+because it needs no giant fully connected layers. Instead, global average
+pooling replaces an expensive learned reduction with a simple average across
+locations. Under ideal translation equivariance, a translation merely
+permutes those locations, so the global average is invariant. Finite boundaries
+and strided stages make real networks only approximately shift-invariant. Two
+of NiN's choices outlived it: $1 \times 1$ convolution for channel mixing and
+global average pooling as the common classification head.
 
 ## GoogLeNet: Multi-Branch Blocks and the Stem-Body-Head Pattern
 :label:`sec_googlenet`

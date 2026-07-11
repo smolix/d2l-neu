@@ -512,13 +512,11 @@ of this patch matrix with the flattened kernel.
 The rearrangement is called *im2col*
 (it turns image patches into the columns, here rows, of a matrix).
 
-This rewriting is how convolutions actually run on modern hardware.
-GPUs and other accelerators are built around
-fast dense matrix multiplication,
-and deep learning libraries execute convolutions
-by reducing them to matrix products,
-either by materializing the patch matrix
-or by forming it implicitly, tile by tile.
+This rewriting motivates one important family of convolution implementations.
+GPUs and other accelerators are built around fast dense matrix multiplication,
+and libraries often lower convolutions to explicit or implicit matrix products.
+Depending on the shapes and hardware, they may instead select direct,
+Winograd, FFT-based, or other specialized kernels.
 The explicit form costs memory:
 each input element is duplicated in up to $k_\textrm{h} k_\textrm{w}$ rows.
 Let's build the patch matrix for the input and kernel
@@ -642,6 +640,15 @@ so downsampling makes the receptive field grow geometrically with depth.
 We will use :eqref:`eq_receptive_field` repeatedly
 when we analyze modern architectures in :numref:`chap_modern_cnn`.
 
+Equation :eqref:`eq_receptive_field` gives the *theoretical* receptive field:
+the set of inputs that can affect an activation at all. Their influence is not
+uniform. :citet:`Luo.Li.Urtasun.ea.2016` measured the *effective* receptive
+field through gradients and found that it concentrates near the center of the
+theoretical region, with a roughly Gaussian profile in common randomly
+initialized and trained networks. Depth, dilation, and larger kernels enlarge
+the set of possible inputs; they do not guarantee that optimization will use
+all of it equally.
+
 Receptive fields derive their name from neurophysiology.
 Experiments recording from the visual cortex of several animal species
 :cite:`Hubel.Wiesel.1959,Hubel.Wiesel.1962,Hubel.Wiesel.1968`
@@ -657,9 +664,17 @@ The correspondence extends to features computed by deeper layers of networks tra
 
 ## Summary
 
-The core computation required for a convolutional layer is a cross-correlation operation. We saw that a simple nested for-loop is all that is required to compute its value. If we have multiple input and multiple output channels, we are  performing a matrix--matrix operation between channels. As can be seen, the computation is straightforward and, most importantly, highly *local*. This affords significant hardware optimization and many recent results in computer vision are only possible because of that. After all, it means that chip designers can invest in fast computation rather than memory when it comes to optimizing for convolutions. While this may not lead to optimal designs for other applications, it does open the door to ubiquitous and affordable computer vision.
+The core computation in a convolutional layer is cross-correlation. A nested
+loop states the operation directly; practical libraries select among implicit
+matrix multiplication, direct, Winograd, FFT-based, and specialized kernels.
+Locality creates extensive reuse of weights and overlapping input patches, but
+real performance depends on both arithmetic throughput and memory movement.
 
-In terms of convolutions themselves, they can be used for many purposes, for example detecting edges and lines, blurring images, or sharpening them. Most importantly, it is not necessary that the statistician (or engineer) invents suitable filters. Instead, we can simply *learn* them from data. This replaces feature engineering heuristics by evidence-based statistics. Lastly, these learned filters correspond to receptive fields and feature maps in the brain. This gives us confidence that we are on the right track.
+Convolutions can detect edges and lines, blur images, or sharpen them. In a
+neural network, the filters are learned from data rather than specified by
+hand. The language of receptive fields has a historical connection to visual
+neurophysiology, but that analogy is motivation rather than evidence that a
+particular network mirrors the brain.
 
 ## Exercises
 
@@ -848,7 +863,7 @@ parameter cost of large kernels.
 
 ::: {.slide title="Recap"}
 - Conv layer = small kernel slid across input + bias.
-- Inductive biases: translation invariance + locality →
+- Inductive biases: translation equivariance + locality →
   *orders of magnitude* fewer parameters than fully
   connected.
 - Hand-designed kernels can detect edges, blobs, blurs;

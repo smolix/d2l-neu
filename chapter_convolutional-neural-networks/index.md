@@ -8,11 +8,11 @@ structure and treated images as vectors of numbers by *flattening* them, irrespe
 deeply unsatisfying approach was necessary in order to feed the
 resulting one-dimensional vectors through a fully connected MLP.
 
-Because these networks are invariant to the order of the features, we
-could get similar results regardless of whether we preserve an order
-corresponding to the spatial structure of the pixels or if we permute
-the columns of our design matrix before fitting the MLP's parameters.
-Ideally, we would leverage our prior knowledge that nearby pixels
+An MLP assigns a separate weight to every input coordinate but has no built-in
+notion that two coordinates are neighbors. If we permute the pixels in every
+image consistently and retrain the MLP, we have merely renamed its input
+coordinates; the model class has not changed, even though the spatial layout
+has disappeared. Ideally, we would use our prior knowledge that nearby pixels
 are typically related to each other, to build efficient models for
 learning from image data.
 
@@ -44,7 +44,7 @@ conventionally used.  Some clever adaptations of CNNs have also
 brought them to bear on graph-structured data :cite:`Kipf.Welling.2016` and
 in recommender systems.
 
-First, we will dive more deeply into the motivation for convolutional
+First, we will examine the motivation for convolutional
 neural networks. This is followed by a walk through the basic operations
 that comprise the backbone of all convolutional networks.
 These include the convolutional layers themselves,
@@ -55,9 +55,9 @@ the use of multiple channels at each layer,
 including grouped and depthwise-separable convolutions,
 and a careful discussion of the structure of modern architectures.
 We will conclude the chapter with a full working example of LeNet,
-the first convolutional network successfully deployed,
+one of the earliest convolutional networks deployed at scale,
 long before the rise of modern deep learning.
-In the next chapter, we will dive into full implementations
+In the next chapter, we will develop full implementations
 of some popular and comparatively recent CNN architectures
 whose designs represent most of the techniques
 commonly used by modern practitioners.
@@ -106,4 +106,3 @@ All are freely accessible online except where noted.
 - [Backpropagation Applied to Handwritten Zip Code Recognition — LeCun et al. (1989), *Neural Computation*](https://doi.org/10.1162/neco.1989.1.4.541) — the first convnet trained end-to-end with backprop (paywalled, noted; widely reproduced online).
 - [Neocognitron — Fukushima (1980), *Biological Cybernetics*](https://doi.org/10.1007/BF00344251) — the pre-backprop ancestor of alternating convolution/pooling stages (paywalled, noted).
 - [Receptive fields, binocular interaction and functional architecture in the cat's visual cortex — Hubel & Wiesel (1962), *J. Physiology*](https://pmc.ncbi.nlm.nih.gov/articles/PMC1359523/) — free (PMC); the biological root of local receptive fields and hierarchical feature detection.
-

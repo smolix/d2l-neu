@@ -26,11 +26,10 @@ after applying many successive convolutions,
 we tend to wind up with outputs that are
 considerably smaller than our input.
 If we start with a $240 \times 240$ pixel image,
-ten layers of $5 \times 5$ convolutions
-reduce the image to $200 \times 200$ pixels,
-slicing off $30 \%$ of the image and with it
-obliterating any interesting information
-on the boundaries of the original image.
+ten unpadded layers of $5 \times 5$ convolutions
+reduce the representation to $200 \times 200$ pixels. The surviving outputs
+are centered away from the original boundary, and boundary pixels influence
+far fewer activations than interior pixels.
 *Padding* is the most popular tool for handling this issue.
 In other cases, we may want to reduce the dimensionality drastically,
 e.g., if we find the original input resolution to be unwieldy.
@@ -440,7 +439,15 @@ comp_conv2d(conv2d, X).shape, comp_conv2d(conv5, X).shape
 
 ## Summary and Discussion
 
-Padding can increase the height and width of the output. This is often used to give the output the same height and width as the input to avoid undesirable shrinkage of the output. Moreover, it ensures that all pixels are used equally frequently. Typically we pick symmetric padding on both sides of the input height and width. In this case we refer to $(p_\textrm{h}, p_\textrm{w})$ padding. Most commonly we set $p_\textrm{h} = p_\textrm{w}$, in which case we simply state that we choose padding $p$. 
+Padding can increase the height and width of the output and is often chosen so
+that input and output have the same spatial shape. It lets boundary pixels
+affect outputs centered near the boundary, but does not make their use identical
+to that of interior pixels: a corner pixel still belongs to fewer windows
+containing real image values. Typically we pick symmetric padding on both sides
+of the input height and width. In this case we refer to
+$(p_\textrm{h}, p_\textrm{w})$ padding. Most commonly we set
+$p_\textrm{h} = p_\textrm{w}$, in which case we simply state that we choose
+padding $p$.
 
 A similar convention applies to strides. When the vertical stride $s_\textrm{h}$ and horizontal stride $s_\textrm{w}$ match, we simply talk about stride $s$. The stride can reduce the resolution of the output, for example reducing the height and width of the output to only $1/n$ of the height and width of the input for $n > 1$. The same shorthand covers dilation: when $d_\textrm{h} = d_\textrm{w}$ we speak of dilation $d$. Dilation widens the window each output sees without adding weights or reducing resolution, which is what dense prediction needs. By default, the padding is 0 and the stride and dilation are 1.
 

@@ -118,9 +118,9 @@ book:
         - chapter_convolutional-modern/blocks.qmd
         - chapter_convolutional-modern/batch-norm.qmd
         - chapter_convolutional-modern/resnet.qmd
+        - chapter_convolutional-modern/efficient-convnets.qmd
         - chapter_convolutional-modern/training-recipes.qmd
         - chapter_convolutional-modern/convnext.qmd
-        - chapter_convolutional-modern/efficient-convnets.qmd
         - chapter_convolutional-modern/cnn-design.qmd
     - part: "Recurrent Neural Networks"
       chapters:

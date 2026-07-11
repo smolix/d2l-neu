@@ -38,6 +38,8 @@ from d2l import tensorflow as d2l
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab jax
 from d2l import jax as d2l
+from flax import linen as nn
+from functools import partial
 import jax
 from jax import numpy as jnp
 import math
@@ -48,19 +50,28 @@ import optax
 
 The original ResNet recipe was already careful: SGD with momentum, weight decay, a learning rate dropped by a factor of 10 twice during training, and random crops and horizontal flips as augmentation :cite:`He.Zhang.Ren.ea.2016`. Between then and roughly 2022, every one of those choices was revisited. The first systematic accounting, in 2019, collected the accumulated tricks (warmup, cosine decay, label smoothing, Mixup, zero-initializing the last batch-norm scale in each block) and showed that stacking them, plus a small tweak to the downsampling path, lifts ResNet-50 from 75.3% to 79.3% :cite:`He.Zhang.Zhang.ea.2019`, an early sign that the recipe rivals the architecture. :numref:`tab_recipe_2015_2022` summarizes the full shift.
 
-:What changed between a 2015-era and a 2022-era ImageNet classification recipe. The architecture is held fixed; every row is a training-procedure choice.
+:A 2015 ImageNet recipe and a representative high-accuracy recipe from the
+early 2020s. The later column is not a universal standard; strong recipes still
+vary by model and compute budget.
 :label:`tab_recipe_2015_2022`
 
 | Ingredient | 2015 recipe | 2022 recipe |
 |:--|:--|:--|
-| Optimizer | SGD with momentum | AdamW, or LAMB at large batch sizes |
+| Optimizer | SGD with momentum | AdamW or LAMB; tuned SGD remains competitive |
 | Schedule | step decay (drop by 10x twice) | cosine decay with linear warmup |
 | Augmentation | random crops, horizontal flips | RandAugment, Mixup, CutMix, random erasing |
 | Regularization | weight decay | + label smoothing, stochastic depth |
 | Duration | 90 epochs | 300 to 600 epochs |
 | Evaluated weights | final checkpoint | exponential moving average of weights |
 
-The *optimizer* row replaces SGD with AdamW :cite:`Loshchilov.Hutter.2019`. The "W" is the point: earlier Adam implementations folded weight decay into the gradient, where the adaptive rescaling distorts it. AdamW applies the decay directly to the weights ("decoupled" decay), restoring it as an effective regularizer, and made adaptive methods competitive with tuned SGD on vision tasks. At batch sizes in the tens of thousands, layerwise rescaling of the update (LARS :cite:`You.Gitman.Ginsburg.2017` and its Adam-based sibling LAMB, used for recipe A1 above) keeps training stable.
+The *optimizer* row shows one common change, from SGD to AdamW
+:cite:`Loshchilov.Hutter.2019`, rather than a universal replacement. Earlier
+Adam implementations folded weight decay into the gradient, where adaptive
+rescaling distorts it. AdamW decouples the weight update from the gradient and
+made adaptive methods competitive with tuned SGD on many vision recipes. At
+batch sizes in the tens of thousands, layerwise rescaling of the update (LARS
+:cite:`You.Gitman.Ginsburg.2017` and its Adam-based sibling LAMB, used for
+recipe A1 above) can keep training stable.
 
 The *schedule* row replaces discrete drops with a smooth cosine decay :cite:`Loshchilov.Hutter.2016`, preceded by a few epochs of linear warmup that protect the network from divergence while its randomly initialized layers produce large, poorly scaled gradients. We implement and plot it below.
 
@@ -204,7 +215,7 @@ def mixup(X, y, alpha):
 def mixup(key, X, y, alpha):
     """Return a mixed batch, both label sets, and the mixing weight."""
     key_lam, key_perm = jax.random.split(key)
-    lam = float(jax.random.beta(key_lam, alpha, alpha))
+    lam = jax.random.beta(key_lam, alpha, alpha)
     perm = jax.random.permutation(key_perm, X.shape[0])
     return lam * X + (1 - lam) * X[perm], y, y[perm], lam
 ```
@@ -217,7 +228,7 @@ data = d2l.FashionMNIST(batch_size=8)
 X, y = next(iter(data.train_dataloader()))
 X_mix, y_a, y_b, lam = mixup(X, y, alpha=2.0)
 d2l.show_images(torch.cat([X, X_mix]).squeeze(1), 2, 8)
-print(f'lambda = {lam:.2f}')
+print(f'lambda = {float(lam):.2f}')
 ```
 
 ```{.python .input #training-recipes-mixup-2}
@@ -340,11 +351,42 @@ dropped = tf.reduce_mean(tf.cast(tf.reduce_max(diff, 1) == 0, tf.float32))
 print(f'fraction of samples with a dropped branch: {float(dropped):.3f}')
 ```
 
-:begin_tab:`jax`
-Flax modules are pure functions, so per-sample coin flips must be threaded through an explicit random-number stream (a `'dropout'`-style rng collection passed to `Module.apply`), exactly as flax's own `nn.Dropout` does. The wrapper is mechanical but the plumbing would dominate the example, so we show the implementation in the PyTorch, MXNet, and TensorFlow tabs; the deterministic evaluation-time behavior is identical in all frameworks, since :eqref:`eq_stochastic_depth` reduces to the plain residual block.
-:end_tab:
+```{.python .input #training-recipes-stochastic-depth}
+%%tab jax
+class StochasticResidual(nn.Module):
+    """A residual block with per-sample stochastic depth."""
+    num_channels: int
+    p: float
+    training: bool = True
 
-In deep networks the drop probability is usually ramped linearly from 0 in the earliest block to a maximum (0.1 to 0.5) in the last: late blocks, which contribute the most refined corrections, are the ones most safely skipped. The technique both regularizes and speeds up training, since a dropped block computes nothing during that step.
+    @nn.compact
+    def __call__(self, X):
+        Y = nn.Conv(self.num_channels, (3, 3), padding='same')(X)
+        Y = nn.relu(nn.BatchNorm(not self.training)(Y))
+        Y = nn.Conv(self.num_channels, (3, 3), padding='same')(Y)
+        Y = nn.BatchNorm(not self.training)(Y)
+        if self.training and self.p > 0:
+            keep = jax.random.bernoulli(
+                self.make_rng('drop_path'), 1 - self.p,
+                (X.shape[0], 1, 1, 1))
+            Y = Y * keep / (1 - self.p)
+        return nn.relu(X + Y)
+
+blk = StochasticResidual(3, p=0.5)
+X = jax.random.normal(d2l.get_key(), (1000, 8, 8, 3))
+variables = blk.init({'params': d2l.get_key(),
+                      'drop_path': d2l.get_key()}, X)
+Y, _ = blk.apply(variables, X, rngs={'drop_path': d2l.get_key()},
+                 mutable=['batch_stats'])
+dropped = jnp.all(Y == nn.relu(X), axis=(1, 2, 3)).mean()
+print(f'fraction of samples with a dropped branch: {float(dropped):.3f}')
+```
+
+In deep networks the drop probability is usually ramped linearly from 0 in the
+earliest block to a maximum (0.1 to 0.5) in the last. The vectorized
+per-sample implementation above computes the branch before masking it, so it
+regularizes but does not save arithmetic. The original per-minibatch method can
+skip a dropped branch entirely and thereby shorten training.
 
 ### Averaging Weights
 
@@ -390,18 +432,38 @@ Gluon has no built-in weight EMA; the same shadow-dictionary loop as in the PyTo
 :end_tab:
 
 :begin_tab:`tensorflow`
-Keras builds this into the optimizer: `tf.keras.optimizers.AdamW(..., use_ema=True, ema_momentum=0.99)` maintains the shadow weights internally and can swap them in for evaluation, as we show in the optimizer cell below.
+Keras builds this into the optimizer:
+`tf.keras.optimizers.AdamW(..., use_ema=True, ema_momentum=0.99)` maintains the
+shadow weights internally. Its `finalize_variable_values` method copies the
+averages into the model variables before evaluation when a custom loop does
+not finalize them automatically.
 :end_tab:
 
-:begin_tab:`jax`
-Optax ships the transformation `optax.ema(decay)`, which can be chained after any optimizer to maintain averaged parameters alongside the raw ones.
-:end_tab:
+```{.python .input #training-recipes-averaging-weights}
+%%tab jax
+ema_tx = optax.ema(0.9, debias=False)
+state = ema_tx.init(jnp.array(0.0))
+raw, avg = [], []
+for t in range(100):
+    value = 1 + 0.3 * jax.random.normal(d2l.get_key(), ())
+    averaged, state = ema_tx.update(value, state)
+    raw.append(float(value))
+    avg.append(float(averaged))
+d2l.plot(list(range(100)), [raw, avg], xlabel='step', ylabel='weight',
+         legend=['raw iterates', 'EMA'])
+```
 
 The choice of $\beta$ sets an averaging horizon of roughly $1/(1-\beta)$ steps. If that horizon is long relative to the schedule's tail, the average lags behind the still-improving weights and EMA *hurts*; matched to the tail, it helps. The exercises ask you to map this trade-off.
 
 ## One Network, Two Recipes
 
-Now we put the ingredients together. The network is the ResNet-18 of :numref:`sec_resnet`, rebuilt here from the library's `Residual` block. The task is Fashion-MNIST at $96 \times 96$ resolution, with one deliberate modification: we train on a random subset of 10,000 of the 60,000 training images. On the full training set this ResNet-18 is so comfortable that both recipes land within half a point of each other (we measured 94.0% for the 2015 recipe versus 94.4% for the modern one), and a half-point gap on a single run sits within seed-to-seed noise. Regularization matters most when data is scarce relative to model capacity, which is exactly the regime ImageNet occupies for a modern network, so we recreate that regime by shrinking the data. You can rerun the experiment at full size by changing one argument.
+Now we put the ingredients together. The network is the ResNet-18 of
+:numref:`sec_resnet`, rebuilt here from the library's `Residual` block. The
+task is Fashion-MNIST at $96 \times 96$ resolution, with one deliberate
+modification: we train on a random subset of 10,000 of the 60,000 training
+images. This makes regularization consequential without turning the notebook
+into an ImageNet-scale experiment. You can rerun it at full size by changing
+one argument, but the comparison would then require retuning both recipes.
 
 ```{.python .input #training-recipes-one-network-two-recipes-1}
 %%tab pytorch
@@ -436,7 +498,83 @@ class ResNet18(d2l.Classifier):
         return self.lr  # Constant; recipes override this
 ```
 
-The two recipes are subclasses that differ *only* in optimizer, schedule, loss, and augmentation. A five-line `Trainer` subclass reads the model's schedule at the start of every epoch; nothing else about the training loop changes.
+```{.python .input #training-recipes-one-network-two-recipes-1}
+%%tab jax
+class FashionMNIST10k(d2l.FashionMNIST):
+    """Fashion-MNIST with a fixed training subset."""
+    def __init__(self, batch_size=128, resize=(96, 96), num_train=10000):
+        super().__init__(batch_size, resize)
+        idx = jax.random.permutation(jax.random.key(42), len(self.train[0]))
+        idx = idx[:num_train]
+        self.train = (self.train[0][idx], self.train[1][idx])
+
+class ResNet18(d2l.Classifier):
+    lr: float = 0.1
+    num_classes: int = 10
+    modern: bool = False
+    max_epochs: int = 30
+    steps_per_epoch: int = 79
+    training: bool = True
+
+    def setup(self):
+        layers = [nn.Conv(64, (7, 7), strides=(2, 2), padding='same'),
+                  nn.BatchNorm(not self.training), nn.relu,
+                  lambda x: nn.max_pool(x, (3, 3), (2, 2), padding='SAME')]
+        arch = ((2, 64), (2, 128), (2, 256), (2, 512))
+        for i, (depth, c) in enumerate(arch):
+            for j in range(depth):
+                down = (i > 0 and j == 0)
+                layers.append(d2l.Residual(
+                    c, use_1x1conv=down,
+                    strides=(2, 2) if down else (1, 1),
+                    training=self.training))
+        layers += [lambda x: x.mean(axis=(1, 2)), nn.Dense(self.num_classes)]
+        self.net = nn.Sequential(layers)
+
+    def configure_optimizers(self):
+        total = self.max_epochs * self.steps_per_epoch
+        if self.modern:
+            schedule = optax.warmup_cosine_decay_schedule(
+                0.0, self.lr, 3 * self.steps_per_epoch, total)
+            return optax.adamw(schedule, weight_decay=0.05)
+        schedule = optax.piecewise_constant_schedule(
+            self.lr, {int(0.6 * total): 0.1, int(0.85 * total): 0.1})
+        return optax.sgd(schedule, momentum=0.9)
+
+    @partial(jax.jit, static_argnums=(0,))
+    def mixed_value_and_grad(self, params, batch, state):
+        X, y = batch
+        key_mix, key_drop = jax.random.split(state.dropout_rng)
+        X, y_a, y_b, lam = mixup(key_mix, X, y, alpha=0.2)
+
+        def mixed_loss(p):
+            logits, updates = state.apply_fn(
+                {'params': p, 'batch_stats': state.batch_stats}, X,
+                mutable=['batch_stats'], rngs={'dropout': key_drop})
+            logp = jax.nn.log_softmax(logits)
+            eye = jnp.eye(self.num_classes)
+            ta = 0.9 * eye[y_a] + 0.1 / self.num_classes
+            tb = 0.9 * eye[y_b] + 0.1 / self.num_classes
+            loss_a = -(ta * logp).sum(axis=1).mean()
+            loss_b = -(tb * logp).sum(axis=1).mean()
+            return lam * loss_a + (1 - lam) * loss_b, updates
+
+        return jax.value_and_grad(mixed_loss, has_aux=True)(params)
+
+    def training_step(self, params, batch, state):
+        if not self.modern:
+            return super().training_step(params, batch, state)
+        value, grads = self.mixed_value_and_grad(params, batch, state)
+        loss, _ = value
+        self.plot('loss', loss, train=True)
+        return value, grads
+```
+
+The executable comparison uses a compact subset of the full recipe: optimizer,
+schedule, label smoothing, Mixup, and duration. It omits RandAugment, CutMix,
+stochastic depth, and EMA so that the experiment remains small enough to rerun
+in a textbook notebook. We call it the *compact modern recipe* below rather
+than attributing its result to the entire package.
 
 ```{.python .input #training-recipes-one-network-two-recipes-2}
 %%tab pytorch
@@ -482,41 +620,86 @@ We give the modern recipe a 1.5x longer budget (45 epochs versus 30), since long
 %%tab pytorch
 def val_accuracy(model, data, trainer):
     model.eval()
+    correct, n = 0.0, 0
     with torch.no_grad():
-        accs = [model.accuracy(model(X), y) for X, y in
-                map(trainer.prepare_batch, data.val_dataloader())]
-    return float(torch.stack(accs).mean())
+        for X, y in map(trainer.prepare_batch, data.val_dataloader()):
+            correct += float(model.accuracy(
+                model(X), y, averaged=False).sum())
+            n += len(y)
+    return correct / n
+```
+
+```{.python .input #training-recipes-one-network-two-recipes-3}
+%%tab jax
+def val_accuracy(model, data, trainer):
+    correct, n = 0.0, 0
+    for X, y in data.val_dataloader():
+        values = model.accuracy(trainer.state.params, (X,), y,
+                                trainer.state, averaged=False)
+        correct += float(values.sum())
+        n += len(y)
+    return correct / n
 ```
 
 ```{.python .input #training-recipes-one-network-two-recipes-4}
 %%tab pytorch
 data = FashionMNIST10k()
-model = ClassicRecipe(lr=0.05)
-trainer = RecipeTrainer(max_epochs=30, num_gpus=1)
-model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
-trainer.fit(model, data)
+classic_scores = []
+for seed in (1, 2, 3):
+    torch.manual_seed(seed)
+    model = ClassicRecipe(lr=0.05)
+    trainer = RecipeTrainer(max_epochs=30, num_gpus=1)
+    model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
+    trainer.fit(model, data)
+    classic_scores.append(val_accuracy(model, data, trainer))
+classic_scores
+```
+
+```{.python .input #training-recipes-one-network-two-recipes-4}
+%%tab jax
+data = FashionMNIST10k()
+model = ResNet18(lr=0.05, modern=False, max_epochs=30,
+                 steps_per_epoch=len(data.train_dataloader()))
+trainer = d2l.Trainer(max_epochs=30, num_gpus=1)
+trainer.fit(model, data, key=jax.random.key(1))
 val_accuracy(model, data, trainer)
 ```
 
 ```{.python .input #training-recipes-one-network-two-recipes-5}
 %%tab pytorch
-model = ModernRecipe(lr=2e-3)
-trainer = RecipeTrainer(max_epochs=45, num_gpus=1)
-model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
-trainer.fit(model, data)
+modern_scores = []
+for seed in (1, 2, 3):
+    torch.manual_seed(seed)
+    model = ModernRecipe(lr=2e-3)
+    trainer = RecipeTrainer(max_epochs=45, num_gpus=1)
+    model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
+    trainer.fit(model, data)
+    modern_scores.append(val_accuracy(model, data, trainer))
+modern_scores
+```
+
+```{.python .input #training-recipes-one-network-two-recipes-5}
+%%tab jax
+model = ResNet18(lr=2e-3, modern=True, max_epochs=45,
+                 steps_per_epoch=len(data.train_dataloader()))
+trainer = d2l.Trainer(max_epochs=45, num_gpus=1)
+trainer.fit(model, data, key=jax.random.key(1))
 val_accuracy(model, data, trainer)
 ```
 
 :begin_tab:`mxnet`
-The full head-to-head run is shown in the PyTorch tab; the numbers in :numref:`tab_recipe_results` come from that implementation. The modern recipe's machinery is equally available here: MXNet 2.0 registers `adamw` as an optimizer, and `mx.lr_scheduler.CosineScheduler` implements warmup followed by cosine decay per *step*, wired directly into the optimizer so no trainer changes are needed. With 79 batches per epoch and a 45-epoch budget:
+This reduced path demonstrates the optimizer and schedule rather than repeating
+the full head-to-head run. MXNet 2.0 registers `adamw` as an optimizer, and
+`mx.lr_scheduler.CosineScheduler` implements warmup followed by cosine decay
+per *step*, wired directly into the optimizer. With 79 batches per epoch and a
+45-epoch budget:
 :end_tab:
 
 :begin_tab:`tensorflow`
-The full head-to-head run is shown in the PyTorch tab; the numbers in :numref:`tab_recipe_results` come from that implementation. The modern recipe's machinery is equally available here: Keras schedules are objects passed as the learning rate, and the optimizer maintains the weight EMA itself. With 79 batches per epoch, 3 warmup epochs, and a 45-epoch budget:
-:end_tab:
-
-:begin_tab:`jax`
-The full head-to-head run is shown in the PyTorch tab; the numbers in :numref:`tab_recipe_results` come from that implementation. The modern recipe's machinery is equally available here: optax composes a warmup-cosine schedule with AdamW in two lines, and the result plugs into `configure_optimizers` unchanged. With 79 batches per epoch and a 45-epoch budget:
+This reduced path demonstrates the optimizer and schedule rather than repeating
+the full head-to-head run. Keras schedules are objects passed as the learning
+rate, and the optimizer maintains the weight EMA itself. With 79 batches per
+epoch, 3 warmup epochs, and a 45-epoch budget:
 :end_tab:
 
 ```{.python .input #training-recipes-one-network-two-recipes-6}
@@ -548,15 +731,21 @@ optimizer = optax.adamw(learning_rate=schedule, weight_decay=0.05)
 [round(float(schedule(step)), 6) for step in (0, 3 * 79, 24 * 79, 45 * 79)]
 ```
 
-:numref:`tab_recipe_results` reports what we measured on a single GPU, two random seeds per recipe. The modern recipe gains a bit over a point on the subsampled task, reproducibly across seeds, and the gap closes on the full training set. Both observations are the lesson: recipe improvements buy real accuracy, and their size depends on the data regime, which is one more reason that a single benchmark number understates or overstates a method depending on where it was measured. Our two-seed demonstration shows the direction and rough size of the effect; it is not a substitute for the many-seed, many-epoch evaluation of :citet:`wightman2021resnet`, whose ImageNet numbers should be cited instead of ours.
+:numref:`tab_recipe_results` reports the three PyTorch seeds and the independent
+JAX run. In both implementations the compact modern recipe gains about one
+percentage point on the subsampled task. The PyTorch standard deviation is
+smaller than that gap, but this small teaching experiment is not a substitute
+for the many-seed ImageNet evaluation of :citet:`wightman2021resnet`.
 
-:The same ResNet-18 under both recipes (Fashion-MNIST at $96 \times 96$, test accuracy, two seeds).
+:The same ResNet-18 under both recipes (10,000 Fashion-MNIST training images at
+$96 \times 96$; test accuracy). PyTorch entries are mean $\pm$ sample standard
+deviation across three seeds; JAX is one independent run.
 :label:`tab_recipe_results`
 
-| Training set | Recipe A (2015, 30 epochs) | Recipe B (modern, 45 epochs) |
+| Implementation | Recipe A (2015, 30 epochs) | Compact modern recipe (45 epochs) |
 |:--|:--|:--|
-| 10,000 images | 90.1% / 90.0% | 91.1% / 91.5% |
-| 60,000 images | 94.0% (20 epochs) | 94.4% (30 epochs) |
+| PyTorch (3 seeds) | $90.21 \pm 0.34$% | $91.19 \pm 0.09$% |
+| JAX (seed 1) | 89.37% | 90.64% |
 
 Two practical warnings from this experiment. First, the recipes' hyperparameters are not interchangeable: recipe A's learning rate of 0.05 would make AdamW diverge, and recipe B's rate of 0.002 would starve SGD, so ablating one ingredient requires retuning around it (this is why credible recipe ablations, like those of :citet:`wightman2021resnet`, are expensive). Second, the modern recipe's *training* loss stays well above recipe A's, because Mixup and label smoothing make the training targets themselves harder; comparing training losses across recipes tells you nothing about which generalizes better.
 
@@ -564,15 +753,39 @@ Two practical warnings from this experiment. First, the recipes' hyperparameters
 
 The recipe story reshapes how you should read reported benchmark numbers, on ImageNet above all.
 
-First, ImageNet top-1 accuracy is close to saturated for the classes of models this book trains, and the residual differences are heavily *recipe-confounded*. When an architecture paper reports beating a baseline by a point, the first question is whether both were trained with comparable recipes; as we saw, the recipe axis alone is worth four points on a fixed network. Careful papers now retrain baselines under their own recipe. When you read older comparison tables, mentally attach error bars of a few points to any cross-paper gap.
+First, ImageNet top-1 accuracy separates strong models less clearly than it
+once did, and the residual differences are heavily *recipe-confounded*. When
+an architecture paper reports beating a baseline by a point, the first
+question is whether both were trained with comparable recipes; as we saw, the
+recipe alone can change accuracy by four points on a fixed network. Careful
+papers now
+retrain baselines under their own recipe. Older cross-paper tables do not
+support precise conclusions from one-point gaps.
 
-Second, held-out numbers age. When :citet:`Recht.Roelofs.Schmidt.ea.2019` collected a fresh ImageNet test set (ImageNet-V2) by replicating the original protocol :cite:`Deng.Dong.Socher.ea.2009`, every model dropped several points, which at the time read as evidence of overfitting to the benchmark. Much of that reading did not survive closer inspection of the *labels*: when :citet:`beyer2020imagenetreal` relabeled the original validation set with a cleaner protocol (the "ReaL" labels), a large share of what modern models get "wrong" turned out to be label noise or genuinely multi-object images, and progress on ReaL labels tracks progress on the original labels well. The sober summary: benchmark decay is real but smaller than raw numbers suggest, and at high accuracy the remaining headroom on ImageNet is partly noise, so single-digit differences between strong models mean little.
+Second, held-out numbers age for more than one reason. When
+:citet:`Recht.Roelofs.Schmidt.ea.2019` collected ImageNet-V2 by following the
+original data-collection protocol :cite:`Deng.Dong.Socher.ea.2009`, models lost
+11--14 points. The authors found that gains on the original validation set
+still transferred and attributed the level shift to a slightly harder image
+distribution rather than adaptive overfitting. A separate problem concerns
+the labels on the *original* validation set. :citet:`beyer2020imagenetreal`
+collected multi-label ReaL annotations and showed that many apparent errors
+involve ambiguous or multi-object images. ReaL does not relabel ImageNet-V2,
+so it does not explain away the distribution shift. Together the studies say
+that both test distribution and annotation protocol matter once model
+accuracies are close.
 
 Third, the discriminating evaluations have moved downstream. Because classification at ImageNet scale is nearly solved, backbones are now separated by how well their features *transfer*: object detection on COCO and semantic segmentation on ADE20K stress resolution, receptive field, and memory behavior in ways a 224-pixel classification task does not, and they reorder models that are indistinguishable on top-1 accuracy. When we evaluate the architectures of the following sections, transfer performance is the score that modern papers argue over.
 
 ## Summary and Discussion
 
-Between 2015 and 2022 the standard recipe for training a convolutional network changed in every part: AdamW replaced plain SGD with momentum, cosine decay with warmup replaced step schedules, augmentation grew from flips-and-crops to RandAugment plus Mixup and CutMix, label smoothing and stochastic depth joined weight decay, budgets stretched from 90 to several hundred epochs, and evaluation moved to an EMA of the weights. On an unmodified ResNet-50 this package is worth about four points of ImageNet top-1 accuracy, more than most architecture transitions, and our controlled ResNet-18 experiment reproduced the effect in miniature: a reproducible gap of about a point on subsampled Fashion-MNIST, shrinking on the full dataset, from recipe changes alone.
+Between 2015 and the early 2020s, high-accuracy convolutional recipes changed
+along several axes: many adopted AdamW or LAMB, cosine decay with warmup,
+stronger augmentation, label smoothing, stochastic depth, longer budgets, and
+EMA evaluation. These choices are a menu rather than a single standard. In
+the cited ResNet-50 study their combined effect is about four ImageNet points.
+Our smaller experiment tests a compact subset of that menu on subsampled
+Fashion-MNIST and reports its seed-to-seed variation.
 
 That number carries two lessons beyond the ingredients themselves. Methodologically, no architecture comparison is meaningful unless the recipes match; the strong baseline, retrained with modern methods, is the control experiment of this field. And practically, if you have a fixed network and a fixed budget, tuning the recipe is usually the cheapest accuracy available. :numref:`sec_convnext` turns this logic around: starting from the modern recipe, it asks how much of the transformer's advantage over convnets survives once the recipe is equalized, and modernizes the architecture itself.
 

@@ -90,8 +90,10 @@ an image with better signal-to-noise ratio since we are combining the informatio
 from multiple adjacent pixels. *Max-pooling* was introduced in 
 :citet:`Riesenhuber.Poggio.1999` in the context of cognitive neuroscience to describe 
 how information might be aggregated hierarchically for the purpose 
-of object recognition; there already was an earlier version in speech recognition :cite:`Yamaguchi.Sakamoto.Akabane.ea.1990`. In almost all cases, max-pooling, as it is also referred to, 
-is preferable to average pooling. 
+of object recognition; there already was an earlier version in speech recognition
+:cite:`Yamaguchi.Sakamoto.Akabane.ea.1990`. Historically, max-pooling was
+often preferred inside convolutional bodies, while average pooling became the
+standard choice for global classifier heads. Neither dominates in every setting.
 
 In both cases, as with the cross-correlation operator,
 we can think of the pooling window
@@ -120,13 +122,13 @@ More generally, we can define a $p \times q$ pooling layer by aggregating over
 a region of said size. Returning to the problem of edge detection, 
 we use the output of the convolutional layer
 as input for $2\times 2$ max-pooling.
-Denote by `X` the input of the convolutional layer input and `Y` the pooling layer output. 
-Regardless of whether or not the values of `X[i, j]`, `X[i, j + 1]`, 
-`X[i+1, j]` and `X[i+1, j + 1]` are different,
-the pooling layer always outputs `Y[i, j] = 1`.
-That is to say, using the $2\times 2$ max-pooling layer,
-we can still detect if the pattern recognized by the convolutional layer
-moves no more than one element in height or width.
+Denote the edge-detector output by `X` and the pooling output by `Y`. If a
+single response of value 1 moves anywhere within the same $2\times2$ pooling
+window while the other responses remain no larger, then `Y[i, j]` remains 1.
+Thus max-pooling can make a representation insensitive to some small movements
+that stay within a window. Crossing a window boundary can still change the
+pooled output abruptly, so this is local tolerance rather than exact translation
+invariance.
 
 In the code below, we implement the forward propagation
 of the pooling layer in the `pool2d` function.
@@ -376,11 +378,26 @@ output vertically yields the same output as the other implementations.
 
 ## Summary
 
-Pooling is a simple operation: it replaces each window of values with a single summary, the maximum or the mean. The stride and padding semantics of convolutions carry over unchanged, and pooling applies to each channel separately, so the number of channels is preserved. There are no parameters to learn. Of the two classical choices, max-pooling is usually preferred to average pooling, and a $2 \times 2$ window with stride 2, which quarters the number of spatial locations, is the most common configuration.
+Pooling is a simple operation: it replaces each window of values with a single
+summary, the maximum or the mean. The stride and padding semantics of
+convolutions carry over unchanged, and pooling applies to each channel
+separately, so the number of channels is preserved. There are no parameters to
+learn. A $2 \times 2$ window with stride 2, which quarters the number of
+spatial locations, is the classical local configuration; global average
+pooling is now the common classification head.
 
 Be aware, though, that pooling is no longer how most downsampling happens. Modern convolutional networks reduce resolution mainly with *strided convolutions*: a convolution with stride 2 halves the resolution just as a pooling layer would, but it learns its aggregation weights rather than fixing them to max or mean. ResNet (:numref:`sec_resnet`) and its successors follow this pattern. Pooling survives in two roles. *Global average pooling*, introduced with the network-in-network architecture (:numref:`sec_nin`) :cite:`Lin.Chen.Yan.2013`, averages each channel over all spatial positions; it turns the final feature map into one number per channel and has replaced the large fully connected layers of early CNNs as the default classifier head. Max-pooling persists in some network stems (ResNet opens with one) and in detection models that merge feature maps across scales.
 
-One caveat applies to every stride-2 downsampler, pooled or convolutional: subsampling a signal without first removing its high spatial frequencies can *alias*, so that shifting the input by a single pixel changes the output noticeably; applying a small low-pass (blur) filter before subsampling restores much of the lost shift-invariance :cite:`zhang2019making`. Beyond these mainstays there are randomized variants such as stochastic pooling :cite:`Zeiler.Fergus.2013` and fractional max-pooling :cite:`Graham.2014`, and the attention mechanisms of :numref:`chap_attention-and-transformers` aggregate by learned alignment between a query and representation vectors rather than by spatial location.
+One caveat applies to every stride-2 downsampler, pooled or convolutional:
+subsampling a signal without first removing its high spatial frequencies can
+*alias*, so that shifting the input by a single pixel changes the output
+noticeably; applying a small low-pass (blur) filter before subsampling can make
+the result substantially more shift-consistent, though not exactly invariant
+:cite:`zhang2019making`. Beyond these mainstays there are randomized variants
+such as stochastic pooling :cite:`Zeiler.Fergus.2013` and fractional
+max-pooling :cite:`Graham.2014`, and the attention mechanisms of
+:numref:`chap_attention-and-transformers` aggregate by learned alignment
+between a query and representation vectors rather than by spatial location.
 
 
 ## Exercises
@@ -467,7 +484,7 @@ Max gives 4, 5, 7, 8 — matches the diagram:
 @pooling-maximum-pooling-and-average-pooling-3
 :::
 
-::: {.slide title="Why max gives translation invariance"}
+::: {.slide title="Why max gives local translation tolerance"}
 A 2×2 max-pool window on `[0, 1, 3, 4]` returns 4. Shift
 the input by a pixel; window now sees `[1, 0, 4, 0]` —
 still 4.
@@ -539,7 +556,7 @@ output channel). Pooling does **not**:
   learnable parameters.
 - 2×2 max-pool with stride 2 is the classic spatial
   downsampler.
-- Provides small translation invariance — output
+- Provides limited translation tolerance: the output
   unchanged under sub-window shifts.
 - Per-channel — no channel mixing.
 - Modern nets downsample mostly with strided convs;

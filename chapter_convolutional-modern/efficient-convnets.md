@@ -6,7 +6,15 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Efficient ConvNets: Depthwise Separability, Mobile Architectures, and Re-parameterization
 :label:`sec_efficient_cnns`
 
-The architectures of this chapter so far were designed to win accuracy benchmarks on datacenter GPUs. Most deployed convnets run somewhere else entirely: on phones, cameras, cars, and embedded boards, where the budget is milliseconds of latency and milliwatts of power. This regime is where convnets remain the default choice in 2026, and it is organized around three ideas. First, *factorize*: replace dense convolutions with the depthwise-separable convolutions of :numref:`sec_depthwise_separable`, the idea that MobileNet turned into a full architecture. Second, *scale and search*: once the block is fixed, let optimization allocate widths, depths, and resolutions, as the EfficientNet and later MobileNet generations do. Third, *re-parameterize*: train a multi-branch network, then deploy an algebraically identical single-branch one, the trick behind RepVGG and the mobile backbones that industrialized it.
+The architectures of this chapter so far were designed to win accuracy
+benchmarks on datacenter GPUs. Many deployment settings instead involve
+phones, cameras, cars, or embedded boards, where latency, memory, and power
+matter directly. Efficient convolutional architectures organize this regime
+around three ideas. First, *factorize*: replace dense convolutions with the
+depthwise-separable convolutions of :numref:`sec_depthwise_separable`.
+Second, *scale and search*: once the block is fixed, let optimization allocate
+widths, depths, and resolutions. Third, *re-parameterize*: train a multi-branch
+network, then deploy an algebraically identical single-branch one.
 
 ```{.python .input #efficient-convnets-imports}
 %%tab mxnet
@@ -20,6 +28,8 @@ npx.set_np()
 %%tab pytorch
 from d2l import torch as d2l
 import torch
+import statistics
+import time
 from torch import nn
 from torch.nn import functional as F
 ```
@@ -36,6 +46,7 @@ from d2l import jax as d2l
 from flax import linen as nn
 import jax
 from jax import numpy as jnp
+import optax
 ```
 
 ## Depthwise-Separable Networks
@@ -159,6 +170,9 @@ class MiniMobileNet(d2l.Classifier):
         layers += [nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(),
                    nn.Linear(c, num_classes)]
         self.net = nn.Sequential(*layers)
+
+    def configure_optimizers(self):
+        return torch.optim.SGD(self.parameters(), lr=self.lr, momentum=0.9)
 ```
 
 ```{.python .input #efficient-convnets-a-mini-mobilenet-2}
@@ -177,6 +191,9 @@ class MiniMobileNet(d2l.Classifier):
             self.net.add(DWSBlock(out_channels, strides))
         self.net.add(tf.keras.layers.GlobalAvgPool2D())
         self.net.add(tf.keras.layers.Dense(num_classes))
+
+    def configure_optimizers(self):
+        return tf.keras.optimizers.SGD(self.lr, momentum=0.9)
 ```
 
 ```{.python .input #efficient-convnets-a-mini-mobilenet-2}
@@ -199,6 +216,9 @@ class MiniMobileNet(d2l.Classifier):
         layers.extend([lambda x: x.mean(axis=(1, 2)),  # global average pooling
                        nn.Dense(self.num_classes)])
         self.net = nn.Sequential(layers)
+
+    def configure_optimizers(self):
+        return optax.sgd(self.lr, momentum=0.9)
 ```
 
 Before training, let's verify the arithmetic that motivates the design. The network below has 542,474 trainable parameters. A twin with each depthwise-separable pair replaced by one dense $3 \times 3$ convolution at the same widths would need $9 \sum_l c_{\textrm{i},l}\, c_{\textrm{o},l} \approx 4.7$ million parameters in its body, about $8.8\times$ more, matching the prediction of :eqref:`eq_depthwise_sep_ratio` for these channel counts.
@@ -239,18 +259,20 @@ sum(p.size for p in jax.tree_util.tree_leaves(params['params']))
 
 ### Training and Comparison
 
-Parameter counts alone do not settle whether the factorization gives anything up, so we run the controlled experiment: train the mini-MobileNet against a plain VGG-style network (:numref:`sec_vgg`) built to the *same parameter budget*. Dense $3 \times 3$ convolutions spend parameters roughly nine times faster per pair of channel counts, so to stay near half a million parameters the dense network must stop at 128 channels where the separable one reaches 512. Both use batch normalization and an identical global-average-pooling head, so the block type is the only remaining difference.
+Parameter counts alone do not settle whether the factorization gives anything
+up, so we train the mini-MobileNet against a plain VGG-style network
+(:numref:`sec_vgg`) at the *same parameter budget*. Dense $3 \times 3$
+convolutions spend parameters roughly nine times faster per pair of channel
+counts, so the dense network stops at 128 channels where the separable one
+reaches 512. Both use batch normalization and an identical
+global-average-pooling head. The comparison matches parameter count, input
+resolution, optimizer, and training budget; the separable block and the wider
+channel allocation it permits change together.
 
 :begin_tab:`mxnet`
-The training experiment below appears in the PyTorch version of this section; the numbers quoted in the text come from that run. Training either architecture with Gluon follows the same pattern as :numref:`sec_resnet`.
-:end_tab:
-
-:begin_tab:`tensorflow`
-The training experiment below appears in the PyTorch version of this section; the numbers quoted in the text come from that run. Training either architecture with Keras follows the same pattern as :numref:`sec_resnet`.
-:end_tab:
-
-:begin_tab:`jax`
-The training experiment below appears in the PyTorch version of this section; the numbers quoted in the text come from that run. Training either architecture with Flax follows the same pattern as :numref:`sec_resnet`.
+The MXNet path implements and verifies the MobileNet blocks and the RepVGG
+fusion algebra. It omits this repeated comparative training run; PyTorch uses
+three seeds, while JAX and TensorFlow execute independent comparisons.
 :end_tab:
 
 ```{.python .input #efficient-convnets-training-and-comparison-1}
@@ -278,27 +300,64 @@ class VGGSmall(d2l.Classifier):
         layers += [nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(),
                    nn.Linear(c, num_classes)]
         self.net = nn.Sequential(*layers)
+
+    def configure_optimizers(self):
+        return torch.optim.SGD(self.parameters(), lr=self.lr, momentum=0.9)
+```
+
+```{.python .input #efficient-convnets-training-and-comparison-1}
+%%tab tensorflow
+class VGGSmall(d2l.Classifier):
+    """A dense VGG-style network with the same parameter budget."""
+    def __init__(self, arch=((2, 32), (2, 64), (2, 128), (2, 128)),
+                 lr=0.1, num_classes=10):
+        super().__init__()
+        self.save_hyperparameters()
+        self.net = tf.keras.Sequential()
+        for num_convs, c_out in arch:
+            for _ in range(num_convs):
+                self.net.add(tf.keras.layers.Conv2D(
+                    c_out, 3, padding='same', use_bias=False))
+                self.net.add(tf.keras.layers.BatchNormalization())
+                self.net.add(tf.keras.layers.ReLU())
+            self.net.add(tf.keras.layers.MaxPool2D(2))
+        self.net.add(tf.keras.layers.GlobalAvgPool2D())
+        self.net.add(tf.keras.layers.Dense(num_classes))
+
+    def configure_optimizers(self):
+        return tf.keras.optimizers.SGD(self.lr, momentum=0.9)
+```
+
+```{.python .input #efficient-convnets-training-and-comparison-1}
+%%tab jax
+class VGGSmall(d2l.Classifier):
+    """A dense VGG-style network with the same parameter budget."""
+    arch: tuple = ((2, 32), (2, 64), (2, 128), (2, 128))
+    lr: float = 0.1
+    num_classes: int = 10
+    training: bool = True
+
+    def setup(self):
+        layers = []
+        for num_convs, c_out in self.arch:
+            for _ in range(num_convs):
+                layers += [nn.Conv(c_out, (3, 3), padding='same',
+                                   use_bias=False),
+                           nn.BatchNorm(not self.training), nn.relu]
+            layers.append(lambda x: nn.max_pool(x, (2, 2), (2, 2)))
+        layers += [lambda x: x.mean(axis=(1, 2)), nn.Dense(self.num_classes)]
+        self.net = nn.Sequential(layers)
+
+    def configure_optimizers(self):
+        return optax.sgd(self.lr, momentum=0.9)
 ```
 
 We train both for 10 epochs on Fashion-MNIST at $96 \times 96$ resolution, with the same trainer and data pipeline we used for ResNet-18 in :numref:`sec_resnet`.
 
 ```{.python .input #efficient-convnets-training-and-comparison-2}
 %%tab pytorch
-mobile = MiniMobileNet(lr=0.1)
-trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
 data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
-trainer.fit(mobile, data)
-```
 
-```{.python .input #efficient-convnets-training-and-comparison-3}
-%%tab pytorch
-vgg = VGGSmall(lr=0.1)
-trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
-trainer.fit(vgg, data)
-```
-
-```{.python .input #efficient-convnets-training-and-comparison-4}
-%%tab pytorch
 def val_acc(model, data):
     model.eval()
     correct, n = 0.0, 0
@@ -310,19 +369,133 @@ def val_acc(model, data):
             n += len(y)
     return correct / n
 
-for name, model in (('mini-MobileNet', mobile), ('VGG-style', vgg)):
-    print(f'{name}: {sum(p.numel() for p in model.parameters()):,} params, '
-          f'val acc {val_acc(model, data):.3f}')
+def train_one(model_cls, seed):
+    torch.manual_seed(seed)
+    model = model_cls(lr=0.05)
+    trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
+    torch.manual_seed(seed)  # Match minibatch order across the two models
+    start = time.perf_counter()
+    trainer.fit(model, data)
+    return model, val_acc(model, data), (time.perf_counter() - start) / 10
 ```
 
-The outcome of one such run:
+```{.python .input #efficient-convnets-training-and-comparison-2}
+%%tab jax
+data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
 
-| Model | Parameters | Multiply-adds at $96 \times 96$ | Validation accuracy | Time per epoch |
-|---|---|---|---|---|
-| Mini-MobileNet | 542,474 | 50.3 million | 90.4% | 15.6 s |
-| VGG-style twin | 583,594 | 384.9 million | 86.6% | 20.6 s |
+def train_jax(model_cls, seed):
+    d2l.tf.random.set_seed(seed)  # Seed the tf.data shuffle used by JAX
+    model = model_cls(lr=0.05, training=True)
+    trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
+    trainer.fit(model, data, key=jax.random.key(seed))
+    correct, n = 0.0, 0
+    for X, y in data.val_dataloader():
+        values = model.accuracy(trainer.state.params, (X,), y,
+                                trainer.state, averaged=False)
+        correct += float(values.sum())
+        n += len(y)
+    return model, trainer, correct / n
+```
 
-At an equal parameter budget the separable network gives up nothing: it came out ahead of the dense twin in this run and at least even in our reruns (the dense twin's accuracy moves by a few points from seed to seed), while performing about $7.7\times$ fewer multiply-adds. Its epochs, however, are only about $1.3\times$ faster on the GPU we trained on: depthwise convolutions perform so little arithmetic per byte of memory they touch that the accelerator spends its time waiting rather than computing. The gap between operation counts and wall-clock time is the central complication of efficient network design, and we return to it below and in the exercises.
+```{.python .input #efficient-convnets-training-and-comparison-2}
+%%tab tensorflow
+data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
+mobile = MiniMobileNet(lr=0.05)
+mobile_trainer = d2l.Trainer(max_epochs=10)
+tf.random.set_seed(1)
+with d2l.try_gpu():
+    mobile_trainer.fit(mobile, data)
+```
+
+```{.python .input #efficient-convnets-training-and-comparison-3}
+%%tab pytorch
+runs = {'mini-MobileNet': [], 'VGG-style': []}
+models = {}
+for seed in (1, 2, 3):
+    for name, cls in (('mini-MobileNet', MiniMobileNet),
+                      ('VGG-style', VGGSmall)):
+        model, acc, seconds = train_one(cls, seed)
+        models[name] = model
+        runs[name].append((acc, seconds))
+```
+
+```{.python .input #efficient-convnets-training-and-comparison-3}
+%%tab jax
+jax_runs = {'mini-MobileNet': [], 'VGG-style': []}
+jax_models, jax_trainers = {}, {}
+for seed in (1, 2, 3):
+    for name, cls in (('mini-MobileNet', MiniMobileNet),
+                      ('VGG-style', VGGSmall)):
+        model, trainer, acc = train_jax(cls, seed)
+        jax_models[name], jax_trainers[name] = model, trainer
+        jax_runs[name].append(acc)
+```
+
+```{.python .input #efficient-convnets-training-and-comparison-3}
+%%tab tensorflow
+vgg = VGGSmall(lr=0.05)
+vgg_trainer = d2l.Trainer(max_epochs=10)
+tf.random.set_seed(1)
+with d2l.try_gpu():
+    vgg_trainer.fit(vgg, data)
+```
+
+```{.python .input #efficient-convnets-training-and-comparison-4}
+%%tab pytorch
+for name, values in runs.items():
+    accs, seconds = zip(*values)
+    params = sum(p.numel() for p in models[name].parameters())
+    print(f'{name}: {params:,} params, '
+          f'val acc {statistics.mean(accs):.3f} ± {statistics.stdev(accs):.3f}, '
+          f'{statistics.mean(seconds):.1f} s/epoch; seeds '
+          f'{[round(x, 3) for x in accs]}')
+```
+
+```{.python .input #efficient-convnets-training-and-comparison-4}
+%%tab jax
+for name, values in jax_runs.items():
+    model, trainer = jax_models[name], jax_trainers[name]
+    count = sum(p.size for p in
+                jax.tree_util.tree_leaves(trainer.state.params))
+    accs = jnp.array(values)
+    print(f'{name}: {count:,} params, val acc '
+          f'{float(accs.mean()):.3f} ± {float(accs.std(ddof=1)):.3f}; '
+          f'seeds {[round(x, 3) for x in values]}')
+```
+
+```{.python .input #efficient-convnets-training-and-comparison-4}
+%%tab tensorflow
+def val_acc(model, data):
+    correct, n = 0.0, 0
+    for X, y in data.val_dataloader():
+        values = model.accuracy(model(X, training=False), y,
+                                averaged=False)
+        correct += float(tf.reduce_sum(values))
+        n += len(y)
+    return correct / n
+
+for name, model in (('mini-MobileNet', mobile), ('VGG-style', vgg)):
+    count = sum(int(tf.size(w)) for w in model.trainable_variables)
+    print(f'{name}: {count:,} params, val acc {val_acc(model, data):.3f}')
+```
+
+The table reports three seeds for PyTorch and JAX; each entry is the mean and
+sample standard deviation. TensorFlow supplies a one-seed parity check. The
+PyTorch times include training and validation and are averaged across seeds.
+
+| Model | Parameters | Multiply-adds | PyTorch accuracy | JAX accuracy | TensorFlow accuracy |
+|---|---:|---:|---:|---:|---:|
+| Mini-MobileNet | 542,474 | 50.3 million | $91.8 \pm 0.1$% | $89.2 \pm 1.6$% | 90.1% |
+| VGG-style control | 583,594 | 384.9 million | $90.7 \pm 1.9$% | $87.3 \pm 1.5$% | 90.5% |
+
+The two models have comparable accuracy in this small experiment: PyTorch and
+JAX favor Mini-MobileNet on average, while the single TensorFlow run favors
+the dense control by 0.4 points. The stable result is computational. At this
+parameter budget the separable network performs about $7.7\times$ fewer
+multiply-adds. Its PyTorch epochs average 7.3 seconds, versus 12.7 seconds for
+the dense model, only a $1.7\times$ speedup. Depthwise convolutions perform
+little arithmetic per byte of memory, so operation count and wall-clock time
+diverge. We return to this systems constraint below and in the exercises.
 
 ## Scaling and Searching
 
@@ -419,16 +592,27 @@ class RepVGGBlock(nn.Module):
 
 ### Fusing the Branches
 
-The fusion is three small pieces of weight algebra. At inference time, batch normalization is a fixed affine map per channel: it subtracts the running mean $\mu_o$, divides by $\sqrt{\sigma_o^2 + \epsilon}$, scales by $\gamma_o$, and shifts by $\beta_o$. Applied to the output of a convolution with kernel $\mathbf{W}$, it can be absorbed into the kernel and a bias,
+The fusion is three small pieces of weight algebra. At inference time, batch normalization is a fixed affine map per channel: it subtracts the running mean $\mu_o$, divides by $\sqrt{\sigma_o^2 + \epsilon}$, scales by $\gamma_o$, and shifts by $\beta_o$. Applied to the output of a convolution with kernel $\mathbf{W}$ and bias $b_o$, it can be absorbed into a new kernel and bias,
 
 $$
 \hat{\mathbf{W}}_o = \frac{\gamma_o}{\sqrt{\sigma_o^2 + \epsilon}}\, \mathbf{W}_o,
 \qquad
-\hat{b}_o = \beta_o - \frac{\gamma_o\, \mu_o}{\sqrt{\sigma_o^2 + \epsilon}},
+\hat{b}_o = \beta_o + \frac{\gamma_o(b_o-\mu_o)}{\sqrt{\sigma_o^2 + \epsilon}},
 $$
 :eqlabel:`eq_bn_fold`
 
-where the index $o$ runs over output channels. This *Conv-BN folding* is used far beyond RepVGG: every deployment toolchain applies it to every convolution-plus-batch-normalization pair in any network. Next, the two remaining branches are convolutions in disguise. A $1 \times 1$ kernel is a $3 \times 3$ kernel that is zero everywhere except at the center, so padding it with a ring of zeros changes nothing. The identity map is a convolution with the kernel $\mathbf{W}^{\textrm{id}}_{o,i}$ that is 1 at the center position when $i = o$ and 0 otherwise. Finally, convolution is linear in its kernel: the sum of three convolutions applied to the same input equals one convolution with the summed kernels, and likewise for the biases. Folding each branch by :eqref:`eq_bn_fold`, padding the $1 \times 1$ kernel, and summing gives the single fused layer.
+where the index $o$ runs over output channels. The RepVGG convolutions below
+set $b_o=0$, giving the shorter expression implemented in `fuse_bn`.
+Conv--BN folding is a standard inference optimization for such layer pairs.
+Next, the two remaining branches are convolutions in disguise. A $1 \times 1$
+kernel is a $3 \times 3$ kernel that is zero everywhere except at the center,
+so padding it with a ring of zeros changes nothing. The identity map is a
+convolution with the kernel $\mathbf{W}^{\textrm{id}}_{o,i}$ that is 1 at the
+center position when $i = o$ and 0 otherwise. Finally, convolution is linear
+in its kernel: the sum of three convolutions applied to the same input equals
+one convolution with the summed kernels, and likewise for the biases. Folding
+each branch by :eqref:`eq_bn_fold`, padding the $1 \times 1$ kernel, and
+summing gives the single fused layer.
 
 ```{.python .input #efficient-convnets-fusing-the-branches-1}
 %%tab mxnet
@@ -572,13 +756,25 @@ The maximum difference is on the order of $10^{-6}$, single-precision roundoff: 
 
 Deployment adds a constraint that the fusion algebra does not model. The fused kernel is a *sum* of branches whose scales, after folding batch normalization into them by :eqref:`eq_bn_fold`, can differ by orders of magnitude, so the summed weights and the activations they produce have wide, poorly centered distributions. Naive post-training INT8 quantization, which represents each tensor with 256 evenly spaced values, collapses on such distributions: a fused RepVGG drops from 75.1% to 40.2% top-1 accuracy on ImageNet, where a plain ResNet loses a fraction of a point. Quantization-aware re-parameterization variants restore the lost accuracy by constraining the branch statistics during training :cite:`chu2024qarepvgg`. The episode is a useful corrective to reading papers too literally: "mathematically identical" holds in FP32, and the real world quantizes.
 
-The idea nonetheless became standard industrial practice. MobileOne :cite:`vasu2023mobileone` applies train-time over-parameterization with re-parameterized depthwise-separable blocks to hit backbone latencies under one millisecond on a phone, and FastViT :cite:`vasu2023fastvit` combines re-parameterized convolutional stages with attention layers in the resolution-reduced stages. Both ship on consumer devices. Re-parameterization also generalizes beyond deployment tricks: training-time auxiliary branches that fold away are now a recurring design element, from large-kernel convnets to hybrid architectures.
+The idea has since appeared in deployment-oriented architectures. MobileOne
+:cite:`vasu2023mobileone` applies train-time over-parameterization to
+depthwise-separable blocks and reports sub-millisecond backbone latency on a
+phone. FastViT :cite:`vasu2023fastvit` combines re-parameterized convolutional
+stages with attention after resolution reduction. Training-time auxiliary
+branches that fold away also appear in large-kernel and hybrid architectures.
 
 ## Summary and Discussion
 
 Efficiency turned out to be a design axis of its own, with its own architectures and its own failure modes. Depthwise separability cuts the cost of convolution by roughly $k^2$ at small accuracy cost; the inverted bottleneck arranges the factorized operations so that the expensive tensors are also the transient ones; compound scaling and architecture search allocate a budget across width, depth, and resolution better than manual choice; and structural re-parameterization separates the network you train from the network you ship, connected by exact weight algebra. Twice in this section the correct accounting was memory traffic rather than arithmetic: EfficientNetV2 removed depthwise convolutions from early stages because they starve the accelerator, and RepVGG's whole premise is that fewer, larger operations beat more, smaller ones at equal FLOPs. Operation counts are a proxy, and hardware keeps score in its own currency.
 
-As of 2026, deployment sorts by that currency. On the cheapest tier, microcontrollers and entry phones, plain depthwise convnets of the MobileNet lineage remain the only thing that fits. Flagship phones run convolution-attention hybrids such as FastViT and MobileNetV4 variants, using convolutions at high resolution and attention where the feature maps are small. Pure vision transformers appear where a dedicated neural accelerator and its memory budget can be assumed, and in the datacenter. Convnets did not lose the efficiency race; they are its incumbent, and the hybrid designs concede exactly as much of the network to attention as the hardware can afford. How to navigate such trade-offs systematically, rather than architecture by architecture, is the subject of :numref:`sec_cnn-design`.
+No architecture family wins on every device. Depthwise convnets remain strong
+when memory and operator support are restricted; hybrids often use
+convolutions on large feature maps and attention only after downsampling; pure
+vision transformers become more practical when the accelerator and memory
+system support their operators well. FLOPs alone cannot choose among them.
+The correct comparison measures latency, memory, and energy on the target
+hardware. :numref:`sec_cnn-design` develops a systematic way to reason about
+such design choices.
 
 ## Exercises
 
@@ -635,7 +831,7 @@ predicts:
 @efficient-convnets-a-mini-mobilenet-3
 :::
 
-::: {.slide title="Matched budget, matched accuracy"}
+::: {.slide title="Matched parameter budget"}
 Same parameter budget, same head, 10 epochs of Fashion-MNIST at
 96×96; the dense net must stop at 128 channels where the
 separable one reaches 512:
@@ -644,8 +840,10 @@ separable one reaches 512:
 
 . . .
 
-90.4% vs. 86.6% accuracy at $7.7\times$ fewer multiply-adds
-(50M vs. 385M). But epochs were only $1.3\times$ faster:
+Accuracy is comparable across the seeded runs; the ordering
+depends on implementation. Mini-MobileNet uses $7.7\times$ fewer
+multiply-adds (50M vs. 385M), but its PyTorch epochs are only
+$1.7\times$ faster:
 **FLOPs are not latency** (depthwise convolutions are
 memory-bound).
 :::

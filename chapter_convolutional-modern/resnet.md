@@ -7,7 +7,9 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`sec_resnet`
 
 As we design ever deeper networks it becomes imperative to understand how adding layers can increase the complexity and expressiveness of the network.
-Even more important is the ability to design networks where adding layers makes networks strictly more expressive rather than just different.
+Even more important is the ability to design networks where adding layers
+preserves every function the shallower network could represent, while making
+additional functions available.
 To make some progress we need a bit of mathematics.
 
 ```{.python .input #resnet-residual-networks-resnet-and-resnext}
@@ -42,8 +44,9 @@ import jax
 
 ## Function Classes
 
-Consider $\mathcal{F}$, the class of functions that a specific network architecture (together with learning rates and other hyperparameter settings) can reach.
-That is, for all $f \in \mathcal{F}$ there exists some set of parameters (e.g., weights and biases) that can be obtained through training on a suitable dataset.
+Consider $\mathcal{F}$, the class of functions represented by a network
+architecture as its weights and biases vary. This definition concerns the
+parameterization; which members an optimizer can reach is a separate question.
 Let's assume that $f^*$ is the "truth" function that we really would like to find.
 If it is in $\mathcal{F}$, we are in good shape but typically we will not be quite so lucky.
 Instead, we will try to find some $f^*_\mathcal{F}$ which is our best bet within $\mathcal{F}$.
@@ -71,21 +74,24 @@ we can avoid the aforementioned issue from the non-nested function classes.
 ![For non-nested function classes, a larger (indicated by area) function class does not guarantee we will get closer to the "truth" function ($\mathit{f}^*$). This does not happen in nested function classes.](../img/functionclasses.svg)
 :label:`fig_functionclasses`
 
-Thus,
-only if larger function classes contain the smaller ones are we guaranteed that increasing them strictly increases the expressive power of the network.
+Thus, if larger function classes contain the smaller ones, increasing capacity
+cannot reduce expressive power. The containment may be equality, so the
+increase need not be strict.
 For deep neural networks,
-if we can
-train the newly-added layer into an identity function $f(\mathbf{x}) = \mathbf{x}$, the new model will be as effective as the original model. As the new model may get a better solution to fit the training dataset, the added layer might make it easier to reduce training errors.
+if a newly added block can represent the identity
+$f(\mathbf{x}) = \mathbf{x}$, the deeper model contains the shallower one as a
+special case. This protects representation capacity; it does not guarantee
+that optimization will find the best member of the larger class.
 
 This is the question that :citet:`He.Zhang.Ren.ea.2016` considered when working on very deep computer vision models.
 At the heart of their proposed *residual network* (*ResNet*) is the idea that every additional layer should
 more easily
 contain the identity function as one of its elements.
-These considerations are rather profound but they led to a surprisingly simple
-solution, a *residual block*.
-With it, ResNet won the ImageNet Large Scale Visual Recognition Challenge in 2015. The design had a profound influence on how to
+These considerations led to a simple solution, a *residual block*.
+With it, ResNet won the ImageNet Large Scale Visual Recognition Challenge in 2015. The design influenced how to
 build deep neural networks. For instance, residual blocks have been added to recurrent networks :cite:`prakash2016neural,kim2017residual`. Likewise, Transformers :cite:`Vaswani.Shazeer.Parmar.ea.2017` use them to stack many layers of networks efficiently. It is also used in graph neural networks :cite:`Kipf.Welling.2016` and, as a basic concept, it has been used extensively in computer vision :cite:`Redmon.Farhadi.2018,Ren.He.Girshick.ea.2015`. 
-Note that residual networks are predated by highway networks :cite:`srivastava2015highway` that share some of the motivation, albeit without the elegant parametrization around the identity function.
+Highway networks :cite:`srivastava2015highway` predate ResNet and share some
+of its motivation, using learned gates rather than a direct identity shortcut.
 
 
 ## Residual Blocks
@@ -112,8 +118,8 @@ The right figure illustrates the *residual block* of ResNet,
 where the solid line carrying the layer input
 $\mathbf{x}$ to the addition operator
 is called a *residual connection* (or *shortcut connection*).
-With residual blocks, inputs can
-forward propagate faster through the residual connections across layers.
+Residual connections provide a direct path for activations and gradients
+through a stack of blocks.
 In fact,
 the residual block
 can be thought of as
@@ -125,7 +131,15 @@ one of which is the identity mapping.
 :label:`fig_residual_block`
 
 
-ResNet has VGG's full $3\times 3$ convolutional layer design. The residual block has two $3\times 3$ convolutional layers with the same number of output channels. Each convolutional layer is followed by a batch normalization layer and a ReLU activation function. Then, we skip these two convolution operations and add the input directly before the final ReLU activation function.
+ResNet has VGG's full $3\times 3$ convolutional layer design. The residual
+block has two $3\times 3$ convolutional layers with the same number of output
+channels. Each convolutional layer is followed by batch normalization, and the
+first is followed by a ReLU. We add the input to the second normalized output
+and then apply the final ReLU. Because that ReLU clips negative values, this
+post-activation block is exactly the identity only on inputs that are already
+nonnegative. The pre-activation variant discussed in the exercises places the
+activation inside the residual branch and permits an exact identity on
+arbitrary inputs.
 This kind of design requires that the output of the two convolutional layers has to be of the same shape as the input, so that they can be added together. If we want to change the number of channels, we need to introduce an additional $1\times 1$ convolutional layer to transform the input into the desired shape for the addition operation. Let's have a look at the code below.
 
 ```{.python .input #resnet-residual-blocks-1}
@@ -566,16 +580,16 @@ Different from the smorgasbord of transformations in Inception,
 ResNeXt adopts the *same* transformation in all branches,
 thus minimizing the need for manual tuning of each branch. 
 
-![The ResNeXt block: a grouped $3 \times 3$ convolution with $\mathit{g}$ groups, sandwiched between two $1 \times 1$ convolutions that mix information across groups. Grouped convolution is $\mathit{g}$ times faster than a dense convolution; the block is a bottleneck residual block when the number of intermediate channels $\mathit{b}$ is less than $\mathit{c}$.](../img/arch-resnext-block.svg)
+![The ResNeXt block: a grouped $3 \times 3$ convolution with $\mathit{g}$ groups, sandwiched between two $1 \times 1$ convolutions that mix information across groups. Grouped convolution uses $\mathit{g}$ times fewer multiply-adds than a dense convolution; the block is a bottleneck residual block when the number of intermediate channels $\mathit{b}$ is less than $\mathit{c}$.](../img/arch-resnext-block.svg)
 :label:`fig_resnext_block`
 
-Breaking up a convolution from $c_\textrm{i}$ to $c_\textrm{o}$ channels into one of $g$ groups of size $c_\textrm{i}/g$ generating $g$ outputs of size $c_\textrm{o}/g$ is called, quite fittingly, a *grouped convolution*. The computational cost (proportionally) is reduced from $\mathcal{O}(c_\textrm{i} \cdot c_\textrm{o})$ to $\mathcal{O}(g \cdot (c_\textrm{i}/g) \cdot (c_\textrm{o}/g)) = \mathcal{O}(c_\textrm{i} \cdot c_\textrm{o} / g)$, i.e., it is $g$ times faster. Even better, the number of parameters needed to generate the output is also reduced from a $c_\textrm{i} \times c_\textrm{o}$ matrix to $g$ smaller matrices of size $(c_\textrm{i}/g) \times (c_\textrm{o}/g)$, again a $g$ times reduction. In what follows we assume that both $c_\textrm{i}$ and $c_\textrm{o}$ are divisible by $g$. 
+Breaking up a convolution from $c_\textrm{i}$ to $c_\textrm{o}$ channels into one of $g$ groups of size $c_\textrm{i}/g$ generating $g$ outputs of size $c_\textrm{o}/g$ is called, quite fittingly, a *grouped convolution*. The arithmetic cost is reduced from $\mathcal{O}(c_\textrm{i} \cdot c_\textrm{o})$ to $\mathcal{O}(g \cdot (c_\textrm{i}/g) \cdot (c_\textrm{o}/g)) = \mathcal{O}(c_\textrm{i} \cdot c_\textrm{o} / g)$, i.e., it uses $g$ times fewer multiply-adds. The number of parameters is likewise reduced from a $c_\textrm{i} \times c_\textrm{o}$ matrix to $g$ smaller matrices of size $(c_\textrm{i}/g) \times (c_\textrm{o}/g)$. Wall-clock speedup depends on kernel efficiency and memory traffic and can be much smaller. In what follows we assume that both $c_\textrm{i}$ and $c_\textrm{o}$ are divisible by $g$.
 
 The only challenge in this design is that no information is exchanged between the $g$ groups. The ResNeXt block of 
 :numref:`fig_resnext_block` amends this in two ways: the grouped convolution with a $3 \times 3$ kernel is sandwiched in between two $1 \times 1$ convolutions. The second one serves double duty in changing the number of channels back. The benefit is that we only pay the $\mathcal{O}(c \cdot b)$ cost for $1 \times 1$ kernels and can make do with an $\mathcal{O}(b^2 / g)$ cost for $3 \times 3$ kernels. Similar to the residual block implementation in
 :numref:`subsec_residual-blks`, the residual connection is replaced (thus generalized) by a $1 \times 1$ convolution.
 
-The block in :numref:`fig_resnext_block` will also play a major role in the design of generic modern CNNs in :numref:`sec_cnn-design`. Note that the idea of grouped convolutions dates back to the implementation of AlexNet :cite:`Krizhevsky.Sutskever.Hinton.2012`. When distributing the network across two GPUs with limited memory, the implementation treated each GPU as its own channel with no ill effects. 
+The block in :numref:`fig_resnext_block` will also play a major role in the design of generic modern CNNs in :numref:`sec_cnn-design`. Grouped convolutions appeared in AlexNet :cite:`Krizhevsky.Sutskever.Hinton.2012`, where most channels were split into two groups so that each GPU could process one group with limited cross-GPU communication.
 
 The following implementation of the `ResNeXtBlock` class takes as argument `groups` ($g$), with 
 `bot_channels` ($b$) intermediate (bottleneck) channels. Lastly, when we need to reduce the height and width of the representation, we add a stride of $2$ by setting `use_1x1conv=True, strides=2`.
@@ -1007,14 +1021,35 @@ blk = TransitionBlock(10)
 blk.init_with_output(d2l.get_key(), Y)[0].shape
 ```
 
-A full DenseNet alternates four dense blocks with transition layers, mirroring the four-stage layout of ResNet-18; assembling and training one is a straightforward variation on the ResNet code above. Feature reuse makes DenseNet parameter-efficient: it reached ResNet-level ImageNet accuracy with fewer parameters. Concatenation carries a cost that addition does not, however. Every layer's output must be kept in memory so that all later layers in the block can read it, so activation memory grows quadratically with depth inside a dense block, and mitigating this requires implementations that trade recomputation for memory :cite:`pleiss2017memory`. That memory bill is the main reason addition, not concatenation, won at scale: the architectures of the following sections, and the transformers of later chapters, all aggregate layers by residual sums.
+A full DenseNet alternates four dense blocks with transition layers, mirroring
+the four-stage layout of ResNet-18; assembling and training one is a
+straightforward variation on the ResNet code above. Feature reuse makes
+DenseNet parameter-efficient: it reached ResNet-level ImageNet accuracy with
+fewer parameters. Concatenation carries a cost that addition does not. The
+unique feature maps grow linearly with depth, but a naive implementation
+repeatedly materializes ever-wider concatenations and temporary normalized
+outputs, producing quadratic memory growth inside a dense block.
+Memory-efficient implementations recompute those temporaries during
+backpropagation :cite:`pleiss2017memory`. The remaining activation traffic
+helped residual addition become the more common choice at scale.
 
 ## Summary and Discussion
 
-Nested function classes are desirable since they allow us to obtain strictly *more powerful* rather than also subtly *different* function classes when adding capacity. One way of accomplishing this is by letting additional layers to simply pass through the input to the output. Residual connections allow for this. As a consequence, this changes the inductive bias from simple functions being of the form $f(\mathbf{x}) = 0$ to simple functions looking like $f(\mathbf{x}) = \mathbf{x}$. 
+Nested function classes are desirable because adding capacity then preserves
+the functions already available. A residual branch parametrizes a block as the
+identity plus a correction. In a pre-activation block, setting that correction
+to zero gives the identity exactly; in the post-activation block used above,
+the statement holds on the nonnegative inputs produced by the preceding ReLU.
 
 
-The residual mapping can learn the identity function more easily, such as pushing parameters in the weight layer to zero. We can train an effective *deep* neural network by having residual blocks. Inputs can forward propagate faster through the residual connections across layers. As a consequence, we can thus train much deeper networks. For instance, the original ResNet paper :cite:`He.Zhang.Ren.ea.2016` allowed for up to 152 layers. Another benefit of residual networks is that it allows us to add layers, initialized as the identity function, *during* the training process. After all, the default behavior of a layer is to let the data pass through unchanged. This can accelerate the training of very large networks in some cases. 
+The residual mapping makes a near-identity transformation accessible by
+driving the correction toward zero, while the shortcut supplies a direct path
+for activations and gradients. This enabled the original ResNet experiments
+to train networks as deep as 152 layers :cite:`He.Zhang.Ren.ea.2016`.
+Residual branches can also be initialized near the identity, for example by
+zero-initializing the final normalization scale. Ordinary randomly initialized
+residual blocks are not exact identities, and inserting new blocks during
+training requires a separate function-preserving procedure.
 
 Prior to residual connections,
 bypassing paths with gating units were introduced
@@ -1034,7 +1069,13 @@ denoising networks behind diffusion models, is a residual block. By parameter
 count, most residual blocks in the world now live outside convolutional
 networks.
 
-ResNeXt is an example for how the design of convolutional neural networks has evolved over time: by being more frugal with computation and trading it off against the size of the activations (number of channels), it allows for faster and more accurate networks at lower cost. An alternative way of viewing grouped convolutions is to think of a block-diagonal matrix for the convolutional weights. Note that there are quite a few such "tricks" that lead to more efficient networks. For instance, ShiftNet :cite:`wu2018shift` mimics the effects of a $3 \times 3$ convolution, simply by adding shifted activations to the channels, offering increased function complexity, this time without any computational cost. 
+ResNeXt illustrates the trade between arithmetic and activation width. A
+grouped convolution is a block-diagonal channel-mixing matrix, reducing
+multiply-adds while retaining a wide representation. ShiftNet
+:cite:`wu2018shift` takes this idea further by replacing spatial
+multiplications with shifts of channel activations. The shifts use no
+floating-point multiply-adds, though moving the activation data still incurs
+memory traffic.
 
 A common feature of the designs we have discussed so far is that the network design is fairly manual, primarily relying on the ingenuity of the designer to find the "right" network hyperparameters. While clearly feasible, it is also very costly in terms of human time and there is no guarantee that the outcome is optimal in any sense. In :numref:`sec_cnn-design` we will discuss a number of strategies for obtaining high quality networks in a more automated fashion. In particular, we will review the notion of *network design spaces* that led to the RegNetX/Y models
 :cite:`Radosavovic.Kosaraju.Girshick.ea.2020`.

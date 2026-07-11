@@ -38,17 +38,17 @@ inside nearly every deep network, transformers included.
 
 The second era, from 2016 to today, is one of maturation. Network
 topology stopped changing quickly and progress moved elsewhere.
-Training recipes improved so much that an unmodified ResNet-50 gains
+Deployment under latency and memory constraints produced a line of designs
+from depthwise-separable MobileNets :cite:`howard2017mobilenet` to structural
+re-parameterization (:numref:`sec_efficient_cnns`). Training recipes improved
+so much that an unmodified ResNet-50 gains
 over four points of ImageNet accuracy from the recipe alone
 :cite:`wightman2021resnet`; :numref:`sec_training_recipes` teaches the
 modern recipe, without which comparisons between architectures mislead.
 Building on that recipe, ConvNeXt :cite:`liu2022convnet` modernized a
 ResNet step by step, using only ideas from this book, into a network
 that matches a vision transformer of equal cost
-(:numref:`sec_convnext`). Deployment under latency and memory
-constraints produced its own line of designs, from the
-depthwise-separable MobileNets :cite:`howard2017mobilenet` to
-structural re-parameterization (:numref:`sec_efficient_cnns`). Finally,
+(:numref:`sec_convnext`). Finally,
 network design itself became an empirical science: rather than crafting
 a single network, the RegNet methodology
 :cite:`Radosavovic.Kosaraju.Girshick.ea.2020` explores whole *design

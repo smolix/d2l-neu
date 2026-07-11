@@ -101,8 +101,8 @@ of a neural network architecture suitable for computer vision:
    regardless of where it appears in the image: if the input is translated, the
    feature map produced by these layers should translate by the same amount.
    This property is called *translation equivariance*. Later in the network,
-   pooling followed by classification can turn equivariant features into
-   *translation-invariant* predictions.
+   global pooling or another location-agnostic readout can turn equivariant
+   features into *translation-invariant* predictions.
 1. The earliest layers of the network should focus on local regions,
    without regard for the contents of the image in distant regions. This is the *locality* principle.
    Eventually, these local representations can be aggregated
@@ -119,10 +119,11 @@ its input leaves the output unchanged:
 
 $$\begin{aligned} f(T_v \mathbf{X}) &= T_v f(\mathbf{X}) && \text{(equivariance)},\\ f(T_v \mathbf{X}) &= f(\mathbf{X}) && \text{(invariance)}.\end{aligned}$$
 
-Convolutional layers are equivariant maps. Invariance, where we want it,
-is supplied by the head of the network: pooling and other aggregation
-steps (:numref:`sec_pooling`) discard *where* a feature occurred and keep
-only *whether* it occurred.
+On an infinite or periodically extended grid, a stride-1 convolution is
+equivariant. Finite boundaries, padding, and subsampling require qualifications
+that we develop in :numref:`sec_padding` and :numref:`sec_pooling`. Invariance,
+where we want it, can be supplied by a global aggregation in the head: such an
+operation discards *where* a feature occurred and keeps whether it occurred.
 
 Let's see how this translates into mathematics.
 
@@ -163,13 +164,14 @@ For any given location ($i$, $j$) in the hidden representation $[\mathbf{H}]_{i,
 we compute its value by summing over pixels in $x$,
 centered around $(i, j)$ and weighted by $[\mathsf{V}]_{i, j, a, b}$. Before we carry on, let's consider the total number of parameters required for a *single* layer in this parametrization: a $1000 \times 1000$ image (1 megapixel) is mapped to a $1000 \times 1000$ hidden representation. This requires $10^{12}$ parameters. Networks of that size do get trained these days, but spending them on a single layer of a pet classifier would be pure waste: a trillion parameters is roughly a million times more than the number of training images we could plausibly collect, so the data could never pin most of them down.  
 
-### Translation Invariance
+### Translation Equivariance
 
 Now let's invoke the first principle
-established above: translation invariance :cite:`Zhang.ea.1988`.
+established above: translation equivariance :cite:`Zhang.ea.1988`.
 This implies that a shift in the input $\mathbf{X}$
 should simply lead to a shift in the hidden representation $\mathbf{H}$.
-This is only possible if $\mathsf{V}$ and $\mathbf{U}$ do not actually depend on $(i, j)$. As such,
+For a linear map on an infinite or periodically extended grid, this requires
+$\mathsf{V}$ and $\mathbf{U}$ not to depend on $(i, j)$. As such,
 we have $[\mathsf{V}]_{i, j, a, b} = [\mathbf{V}]_{a, b}$ and $\mathbf{U}$ is a constant, say $u$.
 As a result, we can simplify the definition for $\mathbf{H}$:
 
@@ -181,7 +183,12 @@ We are effectively weighting pixels at $(i+a, j+b)$
 in the vicinity of location $(i, j)$ with coefficients $[\mathbf{V}]_{a, b}$
 to obtain the value $[\mathbf{H}]_{i, j}$.
 Note that $[\mathbf{V}]_{a, b}$ needs many fewer coefficients than $[\mathsf{V}]_{i, j, a, b}$ since it
-no longer depends on the location within the image. Consequently, the number of parameters required is no longer $10^{12}$ but a much more reasonable $4 \times 10^6$: we still have the dependency on $a, b \in \{-1000, \ldots, 1000\}$. In short, we have made significant progress. Time-delay neural networks (TDNNs) are some of the first examples to exploit this idea :cite:`Waibel.Hanazawa.Hinton.ea.1989`.
+no longer depends on the location within the image. Consequently, the number
+of parameters required is no longer $10^{12}$ but roughly $4 \times 10^6$:
+there are $(2001)^2$ choices of offsets
+$a, b \in \{-1000, \ldots, 1000\}$. Time-delay neural networks (TDNNs) are
+some of the first examples to exploit this idea
+:cite:`Waibel.Hanazawa.Hinton.ea.1989`.
 
 ###  Locality
 
@@ -197,7 +204,10 @@ Equivalently, we can rewrite $[\mathbf{H}]_{i, j}$ as
 $$[\mathbf{H}]_{i, j} = u + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathbf{V}]_{a, b}  [\mathbf{X}]_{i+a, j+b}.$$
 :eqlabel:`eq_conv-layer`
 
-This reduces the number of parameters from $4 \times 10^6$ to $4 \Delta^2$, where $\Delta$ is typically smaller than $10$. As such, we reduced the number of parameters by another four orders of magnitude. Note that :eqref:`eq_conv-layer`, is what is called, in a nutshell, a *convolutional layer*. 
+This reduces the number of parameters from roughly $4 \times 10^6$ to
+$(2\Delta+1)^2$, where $\Delta$ is typically smaller than $10$. We reduced
+the number of parameters by another four orders of magnitude. Equation
+:eqref:`eq_conv-layer` is, in a nutshell, a *convolutional layer*.
 *Convolutional neural networks* (CNNs)
 are a special family of neural networks that contain convolutional layers.
 In the deep learning research community,
@@ -210,7 +220,7 @@ we now typically need just a few hundred, without
 altering the dimensionality of either
 the inputs or the hidden representations.
 The price paid for this drastic reduction in parameters
-is that our features are now translation invariant
+is that our features are now translation equivariant
 and that our layer can only incorporate local information,
 when determining the value of each hidden activation.
 All learning depends on imposing inductive bias.
@@ -218,7 +228,7 @@ When that bias agrees with reality,
 we get sample-efficient models
 that generalize well to unseen data.
 But of course, if those biases do not agree with reality,
-e.g., if images turned out not to be translation invariant,
+e.g., if the same local pattern required a different response at every location,
 our models might struggle even to fit our training data.
 
 This dramatic reduction in parameters brings us to our last desideratum, 
@@ -329,11 +339,19 @@ We turn to these issues in the remainder of the chapter.
 
 ## Summary and Discussion
 
-In this section we derived the structure of convolutional neural networks from first principles. While it is unclear whether this was the route taken to the invention of CNNs, it is satisfying to know that they are the *right* choice when applying reasonable principles to how image processing and computer vision algorithms should operate, at least at lower levels. In particular, translation invariance in images implies that all patches of an image will be treated in the same manner. Locality means that only a small neighborhood of pixels will be used to compute the corresponding hidden representations. Some of the earliest references to CNNs are in the form of the Neocognitron :cite:`Fukushima.1982`. 
+In this section we derived convolutional layers from two assumptions about
+low-level image processing. Translation equivariance means that the same local
+pattern is processed in the same way at every location; locality restricts that
+processing to a small neighborhood. Exact equivariance holds on an infinite or
+periodic grid. Boundaries, padding, and strides can break it, as the next
+sections will show. Some of the earliest CNN-like architectures appear in the
+Neocognitron :cite:`Fukushima.1982`.
 
 A second principle that we encountered in our reasoning is how to reduce the number of parameters in a function class without limiting its expressive power, at least, whenever certain assumptions on the model hold. We saw a dramatic reduction of complexity as a result of this restriction, turning computationally and statistically infeasible problems into tractable models. 
 
-Adding channels allowed us to bring back some of the complexity that was lost due to the restrictions imposed on the convolutional kernel by locality and translation invariance. Note that it is quite natural to add channels other than just red, green, and blue. Many satellite 
+Adding channels restores some of the expressive capacity removed by locality
+and translation equivariance. It is natural to add channels other than red,
+green, and blue. Many satellite
 images, in particular for agriculture and meteorology, have tens to hundreds of channels, 
 generating hyperspectral images instead. They report data on many different wavelengths. In the following we will see how to use convolutions effectively to manipulate the dimensionality of the images they operate on, how to move from location-based to channel-based representations, and how to deal with large numbers of categories efficiently. 
 
@@ -344,10 +362,10 @@ generating hyperspectral images instead. They report data on many different wave
    implements an MLP independently for each set of channels. This leads to the Network in Network 
    architectures :cite:`Lin.Chen.Yan.2013`. 
 1. Audio data is often represented as a one-dimensional sequence. 
-    1. When might you want to impose locality and translation invariance for audio? 
+    1. When might you want to impose locality and translation equivariance for audio?
     1. Derive the convolution operations for audio.
     1. Can you treat audio using the same tools as computer vision? Hint: use the spectrogram.
-1. Why might translation invariance not be a good idea after all? Give an example. 
+1. Why might translation equivariance not be a good inductive bias? Give an example.
 1. Do you think that convolutional layers might also be applicable for text data?
    Which problems might you encounter with language?
 1. What happens with convolutions when an object is at the boundary of an image?
@@ -417,7 +435,7 @@ Every output location $(i, j)$ owns its own full-image weight
 table. For a $1000 \times 1000$ image: $10^{12}$ parameters.
 :::
 
-::: {.slide title="Step 1: impose translation invariance"}
+::: {.slide title="Step 1: impose translation equivariance"}
 A shift in $\mathbf{X}$ should produce the same shift in
 $\mathbf{H}$. That forces the weights to be independent of
 location: $[\mathsf{V}]_{i, j, a, b} = [\mathbf{V}]_{a, b}$.
@@ -434,8 +452,8 @@ $[\mathbf{V}]_{a, b} = 0$ for $|a| > \Delta$ or $|b| > \Delta$.
 
 $$[\mathbf{H}]_{i, j} = u + \sum_{a = -\Delta}^{\Delta} \sum_{b = -\Delta}^{\Delta} [\mathbf{V}]_{a, b}  [\mathbf{X}]_{i+a, j+b}.$$
 
-With $\Delta < 10$, the count drops from $4 \times 10^6$ to
-$4 \Delta^2$: a few hundred parameters.
+With $\Delta < 10$, the count drops from roughly $4 \times 10^6$ to
+$(2\Delta+1)^2$: a few hundred parameters.
 
 This is a **convolutional layer**, and $\mathbf{V}$ is its
 *kernel* (or *filter*).
@@ -492,7 +510,7 @@ layers. That is the rest of this chapter.
 ::: {.slide title="Recap"}
 - Flattening images into vectors discards spatial structure and
   wastes parameters.
-- Two principles constrain the MLP: **translation invariance**
+- Two principles constrain the MLP: **translation equivariance**
   (share weights across locations) and **locality** (small
   windows).
 - Applying both turns a $10^{12}$-parameter layer into a

@@ -4,32 +4,67 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:955dbeb2102f62b0eee0a410a973f898b9126437312eaa0bd5b922f7953162ae",
+    "d2l_lib_fingerprint": "sha256:3be644b0f99d4fc4b00cb62347a20bcca73c05caadd0de5c2b1efb5748f28f14",
     "max_inline_bytes": 0
   },
   "cells": {
     "convnext-imports": {
-      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "code_fingerprint": "sha256:3e06b9a63c5deb0197c1569d1b7c5ff04065d33474dd51b0545fe0af2ba47cad",
       "kind": "text",
       "outputs": []
     },
     "convnext-block": {
-      "code_fingerprint": "sha256:a3283e42f433303eb9477cdf82b4aa28e528154ae7c6138811fcf783e1e0d4d9",
+      "code_fingerprint": "sha256:1e4c2bbca1966b50ff85d33392b9406b6c881acbf3a0906364a2dd9f74b74bca",
       "kind": "text",
       "outputs": []
     },
     "convnext-model": {
-      "code_fingerprint": "sha256:f5f8a05dac1f71530f804f95a0db6918fd893f030710aedddb6a974368b0804f",
+      "code_fingerprint": "sha256:17346fa33d416a95defa7531a06c352c3ca870139baa1df139869dce9a2e1623",
       "kind": "text",
       "outputs": []
     },
     "convnext-params": {
-      "code_fingerprint": "sha256:6efccd9e370cf1642e51a44592449641e1d5f217962cc401cf4fac9286973ec8",
+      "code_fingerprint": "sha256:81b89f039139abfdf0e601685f7d214b6629bcaed333623dc859a5977eea6144",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
           "text": "3376450"
+        }
+      ]
+    },
+    "convnext-recipe": {
+      "code_fingerprint": "sha256:957ff9a287b93b290f83988033e409c8041e5243dd12915cfd9b63b0bb4c1fa3",
+      "kind": "text",
+      "outputs": []
+    },
+    "convnext-train": {
+      "code_fingerprint": "sha256:1d133ae833bb107ffd76dc9c463c73de46315fe2e631a394c2bf49a61c53c315",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "convnext/convnext-train-1.svg",
+          "bytes": 21906,
+          "sha256": "sha256:c65cbc9d827de51851d9b9fb11e04972806a3b4f371ba5e25f2453986dcbb811"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "convnext/convnext-train-2.svg",
+          "bytes": 24712,
+          "sha256": "sha256:d92072f765347cc3f7646c9a596692b035cfe3da10efc9b458339d75014862f8"
+        }
+      ]
+    },
+    "convnext-eval": {
+      "code_fingerprint": "sha256:c0a42a5a8e735a39ce2e3ee39076df34551cef7ad1968d27135da3683b0cef96",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'ConvNeXt': 0.9219, 'compact ResNet-18': 0.9412}"
         }
       ]
     }

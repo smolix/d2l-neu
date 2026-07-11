@@ -402,7 +402,10 @@ p_dense, p_sep, p_dense / p_sep
 
 ## Discussion
 
-Channels allow us to combine the best of both worlds: MLPs that allow for significant nonlinearities and convolutions that allow for *localized* analysis of features. In particular, channels allow the CNN to reason with multiple features, such as edge and shape detectors at the same time. They also offer a practical trade-off between the drastic parameter reduction arising from translation invariance and locality, and the need for expressive and diverse models in computer vision. 
+Channels let a convolutional network maintain many learned features at every
+location and mix them through learned linear maps and nonlinearities. They offer
+a practical trade-off between the parameter reduction arising from translation
+equivariance and locality and the need for expressive image models.
 
 Note, though, that this flexibility comes at a price. Given an image of size $(h \times w)$, the cost for computing a $k \times k$ convolution is $\mathcal{O}(h \cdot w \cdot k^2)$. For $c_\textrm{i}$ and $c_\textrm{o}$ input and output channels respectively this increases to $\mathcal{O}(h \cdot w \cdot k^2 \cdot c_\textrm{i} \cdot c_\textrm{o})$. For a $256 \times 256$ pixel image with a $5 \times 5$ kernel and $128$ input and output channels respectively this amounts to over 53 billion operations (we count multiplications and additions separately). Later on we will encounter effective strategies to cut down on the cost, e.g., by requiring the channel-wise operations to be block-diagonal, leading to architectures such as ResNeXt :cite:`Xie.Girshick.Dollar.ea.2017`. The depthwise-separable factorization of :numref:`sec_depthwise_separable` is the extreme point of that strategy: by :eqref:`eq_depthwise_sep_ratio` it cuts the cost by a factor of $(1/c_\textrm{o} + 1/k^2)^{-1}$, here about $21\times$. 
 

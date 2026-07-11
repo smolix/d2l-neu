@@ -19,12 +19,12 @@
       "outputs": []
     },
     "convnext-model": {
-      "code_fingerprint": "sha256:8a90acf939070bcfc45722d9eb73bd9356c563fe7845d6cb2215e13ee5e8d8dd",
+      "code_fingerprint": "sha256:86d273bef92e2385584955b34085c4fc963db68f6d1ea0a0d95c658e0c02f3cf",
       "kind": "text",
       "outputs": []
     },
     "convnext-params": {
-      "code_fingerprint": "sha256:c71c0ec26da1bc85899632e2fe91dbcfd8130d713b9111c6ebc608d8bedbcd50",
+      "code_fingerprint": "sha256:ddfa9377a0ce6ced809f42a087a8fe66d90dd8a89758d7849465249d6392734e",
       "kind": "text",
       "outputs": [
         {

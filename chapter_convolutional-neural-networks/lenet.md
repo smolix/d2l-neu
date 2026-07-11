@@ -82,8 +82,8 @@ The architecture is summarized in :numref:`img_lenet`.
 The basic units in each convolutional block
 are a convolutional layer, a sigmoid activation function,
 and a subsequent average pooling operation.
-Note that while ReLUs and max-pooling work better,
-they had not yet been discovered.
+ReLUs and max-pooling were not part of LeNet-5 and had not yet become the
+standard choices for trained CNNs.
 Each convolutional layer uses a $5\times 5$ kernel
 and a sigmoid activation function.
 These layers map spatially arranged inputs
@@ -213,13 +213,15 @@ class LeNet(d2l.Classifier):  #@save
         ])
 ```
 
-We have taken some liberty in the reproduction of LeNet insofar as we have replaced the Gaussian activation layer by
-a softmax layer. This greatly simplifies the implementation, not least due to the
-fact that the Gaussian decoder is rarely used nowadays. We also use the
-logistic sigmoid instead of the scaled hyperbolic tangent of the
-original LeNet-5; the two behave similarly for the purposes of
-this demonstration. Other than that, this network matches
-the original LeNet-5 architecture.
+This is a teaching variant of LeNet-5 rather than an exact historical
+reproduction. We use $28\times28$ inputs with padding instead of the original
+$32\times32$ inputs, ordinary average pooling instead of trainable subsampling,
+full connectivity between convolutional channels instead of LeNet-5's partial
+C3 connections, logistic sigmoid instead of scaled hyperbolic tangent, and a
+linear logit head trained with cross-entropy instead of radial-basis output
+units. These changes keep the alternating convolution--pooling structure and
+the 6--16--120--84 channel/hidden dimensions while making every component
+recognizable in a modern library.
 
 :begin_tab:`pytorch, mxnet, tensorflow`
 Let's see what happens inside the network. By passing a
@@ -392,7 +394,7 @@ Each row except the last is a section of :numref:`chap_modern_cnn`: ReLU and max
 
 1. Let's modernize LeNet. Implement and test the following changes:
     1. Replace average pooling with max-pooling.
-    1. Replace the softmax layer with ReLU.
+    1. Replace the sigmoid activations with ReLU.
 1. Try to change the size of the LeNet style network to improve its accuracy in addition to max-pooling and ReLU.
     1. Adjust the convolution window size.
     1. Adjust the number of output channels.

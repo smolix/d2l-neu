@@ -14,17 +14,17 @@
       "outputs": []
     },
     "convnext-block": {
-      "code_fingerprint": "sha256:63ca2fa2c60d637777d9cf3e263fc0a10a9c94d7c88e8f1f5caed8e72faddc12",
+      "code_fingerprint": "sha256:9fc943a588cebf01fc67df4ef0ba8fc25fba0df1521c186f7a683d9c8aef3e8c",
       "kind": "text",
       "outputs": []
     },
     "convnext-model": {
-      "code_fingerprint": "sha256:96dbcb65b500c71787dd2a278cbf04a72ac6d559bfeed1f487df68b074d73d24",
+      "code_fingerprint": "sha256:5912c2087eace0f4c0104f4d07241892b42dcae122468a509ca141e898efe875",
       "kind": "text",
       "outputs": []
     },
     "convnext-params": {
-      "code_fingerprint": "sha256:4473ed4dab6491cfde8f025a71678dab57d0593877ec354b6046e0318f63b7a0",
+      "code_fingerprint": "sha256:5e324abc7ff233a4b16fc2d96c7bbc31edcfc973a9b9fe1a2c44d45727833ed7",
       "kind": "text",
       "outputs": [
         {

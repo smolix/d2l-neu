@@ -14,22 +14,22 @@
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:9258a9c7a548e2c4fafd867a602ae253927b39c6a066823756b4e5d181ec2a76",
+      "code_fingerprint": "sha256:ed61ebe4bbe75993b215afa940b23136b04c68e2578ae4a9507f0fe7cb3f4621",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:12b9a015782baaa36031e2fe700e0803793af8e6f601977b4fa563996f86fa08",
+      "code_fingerprint": "sha256:93b00cdb6c6849e2cbb7caca4fc2b7a570ee3c29afcdc32464ff0b9316ba783b",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-1": {
-      "code_fingerprint": "sha256:7374d4bf2f9a520274dbbde6b0d75a560dc102adc4befd77e899f46635b67119",
+      "code_fingerprint": "sha256:096a768d40152a764fa946e88d6d8d69328e91854479802f4a91b900cd54843e",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-3": {
-      "code_fingerprint": "sha256:c61225f06f1590c7a6f91a063ced98c434617bfcd4e3badb59d1bf5bb7c8026c",
+      "code_fingerprint": "sha256:58ff2f891a40223f4655a93cf15b5d616008efd8790f28a14341530ba1e51196",
       "kind": "asset",
       "outputs": [
         {
@@ -42,7 +42,7 @@
       ]
     },
     "batch-norm-lenet-with-batch-normalization-4": {
-      "code_fingerprint": "sha256:57ece4ab932187f38df19208ec047fa66f75f0f357e6f47a38ee6037ac8e5493",
+      "code_fingerprint": "sha256:3ca87498631154a1968c7a2c78b42758f2f66dd426797fbcd9eeeb8d3505b939",
       "kind": "text",
       "outputs": [
         {
@@ -52,12 +52,12 @@
       ]
     },
     "batch-norm-concise-implementation-1": {
-      "code_fingerprint": "sha256:f7325bc35b68505628fa9445af448a08fa2a7d0654c89321e99aa7fe874d9000",
+      "code_fingerprint": "sha256:2a93222c9f1310e4f0efd3fdcb67433abbf0658f4550d1ce5b866340b2672e7a",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:f6b7b082765b3323ca019886fff2cfc82d841da6cba1b06e8564e061d579419d",
+      "code_fingerprint": "sha256:af08511a19f397308aaec88ba9ea3e37acf6926d9871cbf97e2d50c45ec31c1c",
       "kind": "asset",
       "outputs": [
         {
@@ -70,7 +70,7 @@
       ]
     },
     "batch-norm-group-normalization": {
-      "code_fingerprint": "sha256:596c8d234a7e540a7a2ef8c9cc144251f93fdb25ca2c5f0634ac418a1ea58c0e",
+      "code_fingerprint": "sha256:7b65980d4fb178befae7ba3c4c88982def43f602b2e9e7ef8f45a9a1aeaba536",
       "kind": "text",
       "outputs": [
         {

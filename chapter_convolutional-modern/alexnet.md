@@ -115,13 +115,14 @@ relied on tiny datasets of hundreds or a few thousand low-resolution images,
 such as those in the UCI collection.
 
 The ImageNet dataset, released in 2009 :cite:`Deng.Dong.Socher.ea.2009`,
-changed this. It challenged researchers to learn models from 1 million
-examples, 1000 each from 1000 distinct categories drawn from the most popular
-noun nodes in WordNet :cite:`Miller.1995`, prefiltered by web image search
-and verified by Amazon Mechanical Turk workers. The scale exceeded earlier
-datasets by over an order of magnitude, and the images came at a relatively
-high resolution of $224 \times 224$ pixels, unlike the $32 \times 32$ pixel
-thumbnails of the 80-million-image TinyImages dataset
+changed this. The 2012 classification challenge supplied roughly 1.2 million
+training images across 1000 categories drawn from WordNet
+:cite:`Miller.1995`, prefiltered by web image search and verified by Amazon
+Mechanical Turk workers. Class sizes varied, and the source images had varying
+resolutions; models commonly trained on $224 \times 224$ crops. The scale
+exceeded earlier labeled datasets by over an order of magnitude, while the
+source images retained far more detail than the $32 \times 32$ thumbnails of
+the 80-million-image TinyImages dataset
 :cite:`Torralba.Fergus.Freeman.2008`, which allowed higher-level features to
 form. The associated competition, the ImageNet Large Scale Visual Recognition
 Challenge :cite:`russakovsky2015imagenet`, pushed computer vision and machine
@@ -137,20 +138,14 @@ computer graphics, in particular high-throughput $4 \times 4$ matrix--vector
 products, math very similar to that of convolutional layers, and around that
 time NVIDIA and ATI had begun optimizing them for general computing
 :cite:`Fernando.2004`, marketing them as *general-purpose GPUs* (GPGPUs).
-Where a CPU core runs at a high clock frequency and spends most of its chip
-area on the machinery of general control flow (branch predictors, deep
-pipelines, speculative execution, large caches), a GPU packs thousands of
-much simpler cores onto one chip. This wins on power, since consumption grows
-roughly quadratically with clock frequency: for the budget of one CPU core
-running at four times the speed, 16 GPU cores at $\frac{1}{4}$ the speed
-deliver $16 \times \frac{1}{4} = 4$ times the throughput. GPUs also have far
-wider memory buses, which matters because many deep learning operations are
-limited by memory bandwidth. The effect compounded quickly: between 1999,
-when NVIDIA's GeForce 256 processed roughly 480 million floating-point
-operations per second with no programming framework beyond graphics APIs, and
-2012, consumer GPU throughput grew by roughly three orders of magnitude, and
-it has kept growing by roughly another order of magnitude every five years
-since.
+Where a CPU devotes substantial area to low-latency execution, caches, and
+general control flow, a GPU devotes more of the chip to parallel arithmetic and
+supports much higher memory bandwidth. A convolution applies the same small
+program at many output locations and channels, providing enough independent
+work to use that throughput. Between the late 1990s and 2012, programmable GPU
+throughput grew by orders of magnitude and general-purpose GPU interfaces made
+it accessible without expressing the computation as a graphics pipeline
+:cite:`Fernando.2004`.
 
 This was the situation in 2012 when Alex Krizhevsky and Ilya Sutskever
 implemented a deep CNN that could run on GPUs. They realized that the

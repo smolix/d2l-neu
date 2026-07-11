@@ -72,37 +72,36 @@ def fig_copyto():
     GPU 0, Y lives on GPU 1; X.to(gpu(1)) makes a copy Z on GPU 1 (dashed
     outline marks it as a copy, not the original), and Y + Z is then computed
     entirely within GPU 1 -- the picture for "copy explicitly, then add"."""
-    fig, ax = plt.subplots(figsize=(9.7, 4.6))
+    fig, ax = plt.subplots(figsize=(9.7, 3.9))
     ax.set_xlim(0, 13.0)
-    ax.set_ylim(0, 5.4)
+    ax.set_ylim(0, 4.3)
     ax.set_aspect("equal")
     ax.axis("off")
 
-    gpu0 = device_box(ax, 0.4, 0.4, 5.1, 4.4, "GPU 0")
-    gpu1 = device_box(ax, 6.9, 0.4, 5.6, 4.4, "GPU 1")
+    # Shorter device boxes: X, Z, Y all sit on one level (y_row), so a single
+    # row plus the result row fits without the tall frames the old layout used.
+    gpu0 = device_box(ax, 0.4, 0.5, 5.1, 3.1, "GPU 0")
+    gpu1 = device_box(ax, 6.9, 0.5, 5.6, 3.1, "GPU 1")
 
-    # X and Z sit high (same height => a level copy arrow); Y sits low and to
-    # the left, well clear of that arrow's path; the result sits lower still,
-    # so none of the three connecting arrows cross a box that isn't its target.
-    X = tensor_box(ax, gpu0["cx"], gpu0["cy"] + 0.90, r"$X$", BLUE)
-    Z = tensor_box(ax, gpu1["cx"] + 1.50, gpu1["cy"] + 0.90, r"$Z$", BLUE,
+    y_row = 2.3
+    X = tensor_box(ax, gpu0["l"] + 1.05, y_row, r"$X$", BLUE)          # left
+    Z = tensor_box(ax, gpu1["l"] + 1.05, y_row, r"$Z$", BLUE,          # left
                     dashed=True)
-    Y = tensor_box(ax, gpu1["cx"] - 1.50, gpu1["cy"] - 0.30, r"$Y$", ORANGE)
-    result = tensor_box(ax, gpu1["cx"], gpu1["b"] + 0.65, r"$Y+Z$", GREEN,
-                         w=1.9)
+    Y = tensor_box(ax, gpu1["r"] - 1.05, y_row, r"$Y$", ORANGE)        # right
+    result = tensor_box(ax, gpu1["cx"], 1.15, r"$Z+Y$", GREEN, w=1.9)
 
-    # the copy: X (GPU 0) -> Z (GPU 1), crossing the device boundary above Y;
+    # the copy: X (GPU 0) -> Z (GPU 1), a level arrow across the boundary;
     # its label sits centred ABOVE both device boxes, clear of every box
-    fl.arrow(ax, (X["r"], X["cy"]), (Z["l"], Z["cy"]), color=BLUE, lw=2.2)
-    fl.vlabel(ax, (6.45, 5.05),
+    fl.arrow(ax, (X["r"], y_row), (Z["l"], y_row), color=BLUE, lw=2.2)
+    fl.vlabel(ax, (6.2, gpu0["t"] + 0.30),
               r"$Z = X.\mathrm{to}(\mathrm{gpu}(1))$", color=BLUE,
               fontsize=12.5)
 
-    # the compute, entirely inside GPU 1: Y + Z
-    fl.arrow(ax, (Y["cx"], Y["b"]), (result["l"] + 0.30, result["t"]),
-             color=ORANGE, lw=1.8)
-    fl.arrow(ax, (Z["cx"], Z["b"]), (result["r"] - 0.30, result["t"]),
+    # the compute, entirely inside GPU 1: Z + Y
+    fl.arrow(ax, (Z["cx"], Z["b"]), (result["l"] + 0.30, result["t"]),
              color=BLUE, lw=1.8)
+    fl.arrow(ax, (Y["cx"], Y["b"]), (result["r"] - 0.30, result["t"]),
+             color=ORANGE, lw=1.8)
 
     fl.save(fig, "bg-copyto")
 

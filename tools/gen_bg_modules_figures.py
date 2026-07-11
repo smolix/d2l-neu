@@ -35,23 +35,33 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
 # --------------------------------------------------------------------------- #
 
 def box(ax, cx, cy, w, h, color, head, sub=None, fontsize=13, subsize=11,
-        subcolor="black"):
+        subcolor="black", zorder=None):
     """A rounded box (fill + crisp edge, the standard two-layer trick used
     across the mdl figure generators) with a bold coloured header and an
-    optional black subtitle line.  Returns anchor points for connectors."""
+    optional black subtitle line.  Returns anchor points for connectors.
+    ``zorder`` (when given) sets the stacking of both patch layers and the
+    text, so a box can be drawn on top of connectors routed behind it."""
     x0, y0 = cx - w / 2, cy - h / 2
+    pk = {} if zorder is None else {"zorder": zorder}
+    tk = {} if zorder is None else {"zorder": zorder + 1}
+    if zorder is not None:
+        # opaque white base so connectors routed BEHIND the box are fully
+        # hidden (not showing through the translucent colour fill).
+        ax.add_patch(FancyBboxPatch(
+            (x0, y0), w, h, boxstyle="round,pad=0.02,rounding_size=0.10",
+            linewidth=0, edgecolor="none", facecolor="white", alpha=1.0, **pk))
     for fc, a in [(color, 0.14), ("none", 1.0)]:
         ax.add_patch(FancyBboxPatch(
             (x0, y0), w, h, boxstyle="round,pad=0.02,rounding_size=0.10",
-            linewidth=1.6, edgecolor=color, facecolor=fc, alpha=a))
+            linewidth=1.6, edgecolor=color, facecolor=fc, alpha=a, **pk))
     if sub:
         ax.text(cx, cy + 0.15 * h, head, ha="center", va="center",
-                fontsize=fontsize, color=color, fontweight="bold")
+                fontsize=fontsize, color=color, fontweight="bold", **tk)
         ax.text(cx, cy - 0.34 * h, sub, ha="center", va="center",
-                fontsize=subsize, color=subcolor)
+                fontsize=subsize, color=subcolor, **tk)
     else:
         ax.text(cx, cy, head, ha="center", va="center", fontsize=fontsize,
-                color=color, fontweight="bold")
+                color=color, fontweight="bold", **tk)
     return dict(cx=cx, cy=cy, top=(cx, cy + h / 2), bottom=(cx, cy - h / 2),
                 left=(cx - w / 2, cy), right=(cx + w / 2, cy))
 
@@ -110,71 +120,6 @@ def fig_module_tree():
 
 
 # =========================================================================== #
-# model-construction.md, "Forward Is Just Python": the residual wiring       #
-# =========================================================================== #
-
-def fig_residual_block():
-    """The wiring of ``X + body(X)``: the input arrow splits at a branch
-    point, one path runs through the ``body`` stack (Linear -> ReLU ->
-    Linear), the other is the identity skip straight across, and the two
-    rejoin at a (+) node before the output arrow."""
-    fig, ax = plt.subplots(figsize=(7.6, 4.2))
-
-    y_main = 1.55
-    x_in, x_split, x_join, x_out = 0.55, 1.55, 7.55, 9.15
-
-    # input arrow + label
-    fl.arrow(ax, (x_in, y_main), (x_split, y_main), color="black", lw=2.0)
-    ax.text(x_in - 0.12, y_main, r"$X$", ha="right", va="center",
-            fontsize=16, color="black")
-
-    # branch point
-    ax.plot(x_split, y_main, "o", color="black", ms=6, zorder=5)
-
-    # identity skip path: straight across at y_main
-    fl.arrow(ax, (x_split, y_main), (x_join, y_main), color=ORANGE, lw=2.2)
-    ax.text((x_split + x_join) / 2, y_main - 0.32, "identity",
-            ha="center", va="top", fontsize=12, color=ORANGE)
-
-    # the body path, above the main line: its three layers drawn as separate
-    # boxes (Linear -> ReLU -> Linear) chained by arrows
-    y_body = 3.35
-    lin1 = box(ax, 2.75, y_body, 1.40, 0.85, BLUE, "Linear", fontsize=12.5)
-    relu = box(ax, 4.55, y_body, 1.10, 0.85, GREEN, "ReLU", fontsize=12.5)
-    lin2 = box(ax, 6.35, y_body, 1.40, 0.85, BLUE, "Linear", fontsize=12.5)
-    fl.arrow(ax, lin1["right"], relu["left"], color=BLUE, lw=2.0, mut=13)
-    fl.arrow(ax, relu["right"], lin2["left"], color=BLUE, lw=2.0, mut=13)
-    ax.text(4.55, y_body + 0.72, "body", ha="center", va="center",
-            fontsize=12.5, color=BLUE, fontweight="bold")
-
-    # curved arrows: split -> first Linear, last Linear -> join
-    ax.add_patch(FancyArrowPatch((x_split, y_main), lin1["left"],
-                 connectionstyle="arc3,rad=-0.30", arrowstyle="-|>",
-                 mutation_scale=16, color=BLUE, lw=2.2, zorder=3))
-    ax.add_patch(FancyArrowPatch(lin2["right"], (x_join, y_main),
-                 connectionstyle="arc3,rad=-0.30", arrowstyle="-|>",
-                 mutation_scale=16, color=BLUE, lw=2.2, zorder=3))
-
-    # join node: a circled plus
-    ax.add_patch(plt.Circle((x_join, y_main), 0.26, facecolor="white",
-                            edgecolor="black", lw=1.8, zorder=6))
-    ax.text(x_join, y_main, r"$\oplus$", ha="center", va="center",
-            fontsize=17, color="black", zorder=7)
-
-    # output arrow + label
-    fl.arrow(ax, (x_join + 0.26, y_main), (x_out, y_main), color="black",
-             lw=2.0)
-    ax.text(x_out + 0.12, y_main, r"$X+\mathrm{body}(X)$", ha="left",
-            va="center", fontsize=15, color="black")
-
-    ax.set_xlim(-1.35, 11.9)
-    ax.set_ylim(0.55, 4.35)
-    ax.set_aspect("equal")
-    ax.axis("off")
-    fl.save(fig, "bg-residual-block")
-
-
-# =========================================================================== #
 # 2. parameters-state-memory.md, "Tied Parameters": one shared matrix         #
 # =========================================================================== #
 
@@ -184,43 +129,50 @@ def fig_weight_tying():
     (logits = h W^T).  Minimal: two use-site boxes plus the matrix -- both
     arrows point INTO the matrix, since the picture is about aliasing (two
     pointers, one tensor), not data flow."""
-    fig, ax = plt.subplots(figsize=(7.4, 5.2))
+    fig, ax = plt.subplots(figsize=(7.4, 4.7))
 
     # the shared matrix: tall and narrow (|V| rows >> d columns), with a few
-    # faint guide lines suggesting rows
-    mx, my, mw, mh = 5.0, 2.55, 1.5, 3.5
+    # faint guide lines suggesting rows.  Shortened by one "cell" top and
+    # bottom (4 cells instead of 6) so the figure is more compact.
+    mx, my, mw = 5.0, 2.55, 1.5
+    cell = 3.5 / 6.0
+    mh = 4 * cell
     m0x, m0y = mx - mw / 2, my - mh / 2
+    m_top = m0y + mh
     ax.add_patch(Rectangle((m0x, m0y), mw, mh, facecolor=GRAY, alpha=0.16,
                            edgecolor="black", lw=1.8, zorder=2))
-    for k in range(1, 6):
-        yy = m0y + k * mh / 6
+    for k in range(1, 4):
+        yy = m0y + k * mh / 4
         ax.plot([m0x, m0x + mw], [yy, yy], color=GRAY, lw=0.8, alpha=0.6,
-                zorder=3)
-    ax.text(mx, my + 0.34, r"$\mathbf{W}$", ha="center", va="center",
+                zorder=2)
+    ax.text(mx, my + 0.30, r"$\mathbf{W}$", ha="center", va="center",
             fontsize=20, color="black", zorder=4)
     ax.text(mx, my - 0.34, r"$|V|\times d$", ha="center", va="center",
             fontsize=13, color="black", zorder=4)
 
-    emb = box(ax, 1.75, 5.15, 3.1, 1.05, GREEN, "embedding",
+    # both call sites reference the same tensor: draw the arrows FIRST, at a
+    # z-order above the grey matrix but below the two coloured boxes, and start
+    # each tail from inside its box so the box (drawn on top) hides the origin
+    # and the arrow emerges cleanly from the box's lower edge.
+    yb = 4.55
+    for cx, tgt_dx, color in [(1.75, -0.55, GREEN), (8.25, 0.55, ORANGE)]:
+        ax.add_patch(FancyArrowPatch(
+            (cx, yb), (mx + tgt_dx, m_top - 0.30), arrowstyle="-|>",
+            mutation_scale=16, color=color, lw=2.2, zorder=3,
+            shrinkA=0, shrinkB=0))
+
+    emb = box(ax, 1.75, yb, 3.1, 1.05, GREEN, "embedding",
               "token id $\\to$ row of $\\mathbf{W}$", fontsize=13.5,
-              subsize=11)
-    head = box(ax, 8.25, 5.15, 3.1, 1.05, ORANGE, "output head",
-               r"logits $=h\,\mathbf{W}^\top$", fontsize=13.5, subsize=11)
+              subsize=11, zorder=5)
+    head = box(ax, 8.25, yb, 3.1, 1.05, ORANGE, "output head",
+               r"logits $=h\,\mathbf{W}^\top$", fontsize=13.5, subsize=11,
+               zorder=5)
 
-    # both arrows point INTO the matrix: one tensor, two call sites.  Straight
-    # lines (not curved): a curved arc3 anchored at the box's bottom-centre
-    # grazes tangent to the border right under the subtitle text, so a plain
-    # straight line reads cleanly instead.
-    fl.arrow(ax, emb["bottom"], (mx - 0.55, m0y + mh - 0.35), color=GREEN,
-             lw=2.2, mut=16)
-    fl.arrow(ax, head["bottom"], (mx + 0.55, m0y + mh - 0.35), color=ORANGE,
-             lw=2.2, mut=16)
-
-    ax.text(mx, m0y - 0.45, "one tensor, two call sites: gradients sum",
+    ax.text(mx, m0y - 0.42, "one tensor, two call sites: gradients sum",
             ha="center", va="center", fontsize=12, color="black")
 
     ax.set_xlim(0.1, 9.9)
-    ax.set_ylim(-0.2, 6.05)
+    ax.set_ylim(0.55, 5.35)
     ax.set_aspect("equal")
     ax.axis("off")
     fl.save(fig, "bg-weight-tying")
@@ -304,8 +256,10 @@ def fig_memory_ledger():
     fl.save(fig, "bg-memory-ledger")
 
 
-FIGURES = [fig_module_tree, fig_residual_block, fig_weight_tying,
-           fig_memory_ledger]
+# NB: bg-residual-block was restyled to the gallery look and now lives in
+# tools/gen_bg_arch_figures.py (kept separate so the two families don't share
+# global rcParams).
+FIGURES = [fig_module_tree, fig_weight_tying, fig_memory_ledger]
 
 
 def main():

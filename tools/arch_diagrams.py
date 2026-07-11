@@ -27,12 +27,16 @@ import matplotlib
 
 matplotlib.use("svg")
 
+import matplotlib.axis as _maxis
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.font_manager import FontProperties, fontManager
 from matplotlib.patches import FancyBboxPatch, Circle
 from matplotlib.path import Path as MplPath
 from matplotlib.patches import PathPatch
+from matplotlib.spines import Spine
 from matplotlib.textpath import TextPath
+from matplotlib.transforms import Bbox
 
 # --------------------------------------------------------------------------- #
 # Pinned style constants — never override per figure.                         #
@@ -90,11 +94,49 @@ plt.rcParams.update({
 WRITTEN: list[str] = []
 
 
+CROP_PAD = 9.0                  # px at 100 dpi (~6.5 pt) kept around content
+
+
+def _content_bbox(fig):
+    """Union (in inches) of the drawn artists' extents.  The canvas is a
+    fixed-size points grid the content rarely fills, and ``bbox_inches="tight"``
+    keeps the whole axes rectangle (the axes fills the figure), so we crop to
+    the artists ourselves — no excess whitespace above/below in HTML or PDF."""
+    agg = FigureCanvasAgg(fig)
+    agg.draw()
+    rend = agg.get_renderer()
+    boxes = []
+    for ax in fig.axes:
+        for art in ax.get_children():
+            if art is ax.patch or isinstance(art, (_maxis.XAxis, _maxis.YAxis,
+                                                   Spine)):
+                continue
+            if not art.get_visible():
+                continue
+            try:
+                bb = art.get_window_extent(rend)
+            except Exception:
+                continue
+            if bb is None or not (bb.width > 0 or bb.height > 0):
+                continue
+            if any(map(lambda v: v != v or abs(v) == float("inf"),
+                       (bb.x0, bb.y0, bb.x1, bb.y1))):
+                continue
+            boxes.append(bb)
+    if not boxes:
+        return "tight"
+    u = Bbox.union(boxes)
+    u = Bbox.from_extents(u.x0 - CROP_PAD, u.y0 - CROP_PAD,
+                          u.x1 + CROP_PAD, u.y1 + CROP_PAD)
+    return u.transformed(fig.dpi_scale_trans.inverted())
+
+
 def save(fig, name: str) -> None:
-    """Write ``img/<name>.svg`` byte-idempotently and close the figure."""
+    """Write ``img/<name>.svg`` byte-idempotently (cropped to content) and
+    close the figure."""
     os.makedirs(IMG_DIR, exist_ok=True)
     path = os.path.join(IMG_DIR, f"{name}.svg")
-    fig.savefig(path, format="svg", bbox_inches="tight",
+    fig.savefig(path, format="svg", bbox_inches=_content_bbox(fig),
                 metadata={"Date": None})
     plt.close(fig)
     WRITTEN.append(path)

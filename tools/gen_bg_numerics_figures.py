@@ -40,24 +40,32 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
 # --------------------------------------------------------------------------- #
 
 def box(ax, cx, cy, w, h, title, sub, color, title_fs=12.5, sub_fs=10.5,
-        fc_alpha=0.14):
+        fc_alpha=0.14, zorder=None):
     """Rounded box centred at (cx, cy) with a bold coloured title and an
-    optional smaller black second line.  Returns anchor points (l/r/t/b)."""
+    optional smaller black second line.  Returns anchor points (l/r/t/b).
+    ``zorder`` (when given) stacks the box and, via an opaque white base,
+    fully hides any connector routed behind it."""
     x, y = cx - w / 2, cy - h / 2
+    pk = {} if zorder is None else {"zorder": zorder}
+    tk = {} if zorder is None else {"zorder": zorder + 1}
+    if zorder is not None:
+        ax.add_patch(FancyBboxPatch(
+            (x, y), w, h, boxstyle="round,pad=0.02,rounding_size=0.12",
+            linewidth=0, edgecolor="none", facecolor="white", **pk))
     ax.add_patch(FancyBboxPatch(
         (x, y), w, h, boxstyle="round,pad=0.02,rounding_size=0.12",
-        linewidth=1.8, edgecolor=color, facecolor=color, alpha=fc_alpha))
+        linewidth=1.8, edgecolor=color, facecolor=color, alpha=fc_alpha, **pk))
     ax.add_patch(FancyBboxPatch(
         (x, y), w, h, boxstyle="round,pad=0.02,rounding_size=0.12",
-        linewidth=1.8, edgecolor=color, facecolor="none"))
+        linewidth=1.8, edgecolor=color, facecolor="none", **pk))
     if sub:
         ax.text(cx, cy + 0.19 * h, title, ha="center", va="center",
-                fontsize=title_fs, fontweight="bold", color=color)
+                fontsize=title_fs, fontweight="bold", color=color, **tk)
         ax.text(cx, cy - 0.26 * h, sub, ha="center", va="center",
-                fontsize=sub_fs, color="black")
+                fontsize=sub_fs, color="black", **tk)
     else:
         ax.text(cx, cy, title, ha="center", va="center",
-                fontsize=title_fs, fontweight="bold", color=color)
+                fontsize=title_fs, fontweight="bold", color=color, **tk)
     return dict(l=x, r=x + w, t=y + h, b=y, cx=cx, cy=cy)
 
 
@@ -136,14 +144,23 @@ def fig_amp_loop():
     xs = [1.3, 4.1, 6.9, 9.7, 12.5]
     w, h = 2.3, 1.15
 
-    master = box(ax, xs[0], y, w, h, "fp32 master", "weights", BLUE)
-    bf16w = box(ax, xs[1], y, w, h, "cast to bf16", "weights", ORANGE)
-    fwd = box(ax, xs[2], y, w, h, "forward", "bf16 activations", ORANGE)
-    loss = box(ax, xs[3], y, w, h, "loss", "fp32 accumulate", BLUE)
-    bwd = box(ax, xs[4], y, w, h, "backward", "bf16 grads", ORANGE)
+    # decreasing z-order left->right so each connector's tail tucks BEHIND its
+    # (opaque) source box while its head stays in FRONT of the target box
+    zb = [24, 20, 16, 12, 8]
+    master = box(ax, xs[0], y, w, h, "fp32 master", "weights", BLUE, zorder=zb[0])
+    bf16w = box(ax, xs[1], y, w, h, "cast to bf16", "weights", ORANGE,
+                zorder=zb[1])
+    fwd = box(ax, xs[2], y, w, h, "forward", "bf16 activations", ORANGE,
+              zorder=zb[2])
+    loss = box(ax, xs[3], y, w, h, "loss", "fp32 accumulate", BLUE, zorder=zb[3])
+    bwd = box(ax, xs[4], y, w, h, "backward", "bf16 grads", ORANGE, zorder=zb[4])
 
-    for a, b in [(master, bf16w), (bf16w, fwd), (fwd, loss), (loss, bwd)]:
-        fl.arrow(ax, (a["r"], y), (b["l"], y), color=GRAY, lw=1.8)
+    for (a, b), za in zip([(master, bf16w), (bf16w, fwd), (fwd, loss),
+                           (loss, bwd)], [22, 18, 14, 10]):
+        ax.add_patch(FancyArrowPatch(
+            (a["r"] - 0.28, y), (b["l"] + 0.16, y), arrowstyle="-|>",
+            mutation_scale=15, color=GRAY, lw=1.8, shrinkA=0, shrinkB=0,
+            zorder=za))
 
     # the return arc: optimizer step, gradients feed back into the fp32
     # master copy, closing the cycle.  Drawn as an explicit quadratic Bezier
@@ -160,14 +177,16 @@ def fig_amp_loop():
     verts = [p0, ctrl, p1]
     path = Path(verts, [Path.MOVETO, Path.CURVE3, Path.CURVE3])
     ax.add_patch(PathPatch(path, edgecolor=GREEN, facecolor="none", lw=2.0,
-                 zorder=5))
+                 zorder=30))
     # arrowhead tangent to the Bezier's own end (a point at t=0.92 along the
     # SAME curve, not a straight-line shortcut) so it blends into the arc
-    # with no visible fork
+    # with no visible fork; on top so the head lands in front of fp32 master
     t = 0.92
     p0a, ctrla, p1a = np.asarray(p0), np.asarray(ctrl), np.asarray(p1)
     near_end = (1 - t) ** 2 * p0a + 2 * (1 - t) * t * ctrla + t ** 2 * p1a
-    fl.arrow(ax, tuple(near_end), p1, color=GREEN, lw=2.0, mut=15)
+    ax.add_patch(FancyArrowPatch(
+        tuple(near_end), p1, arrowstyle="-|>", mutation_scale=15,
+        color=GREEN, lw=2.0, shrinkA=0, shrinkB=0, zorder=30))
     # label sits just above the arc's apex: a small gap, no dead band
     ax.text((p0[0] + p1[0]) / 2, apex_y + 0.14,
             "optimizer step: update fp32 master weights", ha="center",
@@ -176,7 +195,9 @@ def fig_amp_loop():
     # fp16-only note, hung below the backward box (where unscaling happens)
     # with a short dashed leader so it reads as attached, not adrift
     note_x, note_y = bwd["cx"] - 0.5, y - 1.55
-    ax.plot([bwd["cx"], note_x], [bwd["b"], note_y + 0.50], ":", color=GRAY,
+    # straight-down dotted leader: note_x lies within the backward box's span,
+    # so a vertical line drops cleanly from its underside onto the note
+    ax.plot([note_x, note_x], [bwd["b"], note_y + 0.55], ":", color=GRAY,
             lw=1.2, zorder=3)
     ax.text(note_x, note_y,
             "fp16 only: scale the loss up before backward,\n"

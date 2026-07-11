@@ -17,8 +17,10 @@ from arch_diagrams import (
 )
 
 LH = 12.5 * 1.25          # callout line height (must match callout())
-BLOCK_PAD = 12            # inner block container padding around its pills
-BLOCK_GAP = 14            # vertical gap between stacked inner blocks
+BLOCK_PAD = 12            # horizontal inner-block padding around its pills
+BLOCK_VPAD = 7            # vertical inner-block padding (tighter than horizontal)
+BLOCK_GAP = 14            # vertical gap between stacked groups
+BLOCK_LABEL_BAND = 12     # extra headroom inside a tinted block for its label
 
 
 # --------------------------------------------------------------------------- #
@@ -129,11 +131,13 @@ def fig_inception_block():
     bx = [130, 260, 400, 536]   # branch column x positions
     pw = [86, 110, 110, 118]    # per-branch pill widths
 
-    # block panel (the repeated unit) with LABEL_BAND above the concat box
-    panel = (54, y_bus_lo - 24, W - 28, y_cat + PILL_H / 2 + LABEL_BAND)
+    # block panel (the repeated unit); the concat box is centered, so the
+    # 'Inception block' label sits in the empty top-left corner at its height
+    # rather than in a reserved band above it — keeps the panel compact.
+    panel = (54, y_bus_lo - 24, W - 28, y_cat + PILL_H / 2 + 13)
     y_out = panel[3] + 30        # short output arrow beyond the panel top
     d.container(*panel, fill=ACCENT_TINT)
-    d.stage_label(panel[0] + 14, panel[3] - 9, "Inception block")
+    d.stage_label(panel[0] + 14, y_cat + PILL_H / 2 + 2, "Inception block")
     d.repeat(panel[0] - 13, panel[1], panel[3], "9")
 
     # input spine joins the lower bus
@@ -201,13 +205,13 @@ def _blocked_column(d, x, groups, pw, y0, outer_label, anchor_text="input x",
     layouts = []
     y = y0
     for g in groups:
-        pad = BLOCK_PAD if g.get("tint") else 0
-        extra_top = 16 if (g.get("tint") and g.get("label")) else 0
-        first = y + pad + PILL_H / 2
+        vpad = BLOCK_VPAD if g.get("tint") else 0
+        extra_top = BLOCK_LABEL_BAND if (g.get("tint") and g.get("label")) else 0
+        first = y + vpad + PILL_H / 2
         ys = [first + i * PILL_STEP for i in range(len(g["ops"]))]
-        top = ys[-1] + PILL_H / 2 + pad + extra_top
+        top = ys[-1] + PILL_H / 2 + vpad + extra_top
         layouts.append((g, ys, y, top))
-        y = top + 26                      # inter-group arrow gap
+        y = top + BLOCK_GAP               # inter-group arrow gap
     inner_top = layouts[-1][3]
     outer = (x - pw / 2 - BLOCK_PAD - 16, y0 - 20,
              x + pw / 2 + BLOCK_PAD + 16, inner_top + LABEL_BAND)
@@ -323,10 +327,11 @@ def fig_alexnet():
     # vertical leader down onto the LeNet panel top
     y_note = panel_l[3] + 96
     d.callout(60, y_note, [
-        [("~60k", ACCENT2, 1), (" parameters;", INK, 1)],
-        [("AlexNet has ", INK, 1), ("~60M", ACCENT, 1)],
-    ], target=(120, panel_l[3] + 4), leader_from=(120, y_note - 2 * LH + 6),
-        ha="left")
+        [("LeNet-5 has ", INK, 1), ("~60k", ACCENT2, 1),
+         (" parameters;", INK, 1)],
+        [("AlexNet has ", INK, 1), ("~60M", ACCENT, 1),
+         (" parameters", INK, 1)],
+    ], ha="left")
 
     save(d.fig, "arch-alexnet")
 
@@ -421,24 +426,24 @@ def fig_nin():
         d, xr, groups, pw_r, y0, "NiN head",
         anchor_text="(384, 5×5) features", novelty_at=(1, 0))
 
-    # shape notes on the inner side of the NiN spine (the middle gap is empty)
-    d.shape_note(xr - pw_r / 2 - 10,
+    # shape notes in the empty middle gap, fully outside the NiN grey box
+    d.shape_note(panel_r[0] - 8,
                  0.5 * (lay_r[0][3] + lay_r[1][1][0] - PILL_H / 2) + 1,
                  "(10, 5×5)", ha="right")
-    d.shape_note(xr - pw_r / 2 - 10,
+    d.shape_note(panel_r[0] - 8,
                  0.5 * (lay_r[1][1][0] + lay_r[1][1][1]),
                  "(10, 1×1)", ha="right")
 
     # callouts
     y_dense = lay_l[0][1][1]
-    d.callout(8, y_dense + LH, [
+    d.callout(32, y_dense + LH, [
         [("Over ", INK, 1), ("90%", ACCENT2, 1)],
         [("of VGG-11's weights", INK, 1)],
         [("live in this head", INK, 1)],
     ], target=(xl - pw_l / 2 - 4, y_dense), leader_from=(148, y_dense),
         ha="left")
     y_gap = lay_r[1][1][0]
-    d.callout(W - 8, y_gap + LH / 2, [
+    d.callout(W - 48, y_gap + LH / 2, [
         [("No parameters at all:", INK, 1)],
         [("one channel per class", INK, 1)],
     ], target=(xr + (pw_r + 10) / 2 + 4, y_gap), leader_from=(W - 172, y_gap),
@@ -617,7 +622,7 @@ def fig_densenet_block():
 
     # channel growth beside the spine
     d.shape_note(x + 14, y_anchor + 26, "(64, h×w)")
-    d.shape_note(x + pw / 2 + 10, 0.5 * (ys[1] + ys[2]), "(96, h×w)")
+    d.shape_note(x + pw / 2 + 30, 0.5 * (ys[1] + ys[2]), "(96, h×w)")
     d.shape_note(x + 14, panel[3] + 18, "(128, h×w)")
 
     d.callout(8, ys[1] + LH, [
@@ -657,7 +662,7 @@ def fig_resnet18():
         d, x, groups, pw, y0, "ResNet-18", anchor_text="96×96 image")
 
     # shapes at the stage boundaries (right of the inter-group arrows)
-    xs = x + pw / 2 + BLOCK_PAD + 8
+    xs = outer[2] + 8               # just outside the grey outer container
     def between(a, b):
         return 0.5 * (lay[a][3] + lay[b][1][0] - PILL_H / 2)
     d.shape_note(xs, between(0, 1) - 4, "(64, 24×24)")
@@ -712,7 +717,7 @@ def fig_convnext():
         d, x, groups, pw, y0, "ConvNeXt-T",
         anchor_text="224×224×3 image", novelty_at=(0, 0))
 
-    xs = x + pw / 2 + BLOCK_PAD + 8
+    xs = outer[2] + 8               # just outside the grey outer container
     def between(a, b):
         return 0.5 * (lay[a][3] + lay[b][1][0] - PILL_H / 2)
     d.shape_note(xs, between(0, 1) - 4, "(96, 56×56)")
@@ -801,7 +806,7 @@ def fig_repvgg_reparam():
     bx = [110, 240, 370]
     pw_b = 116
     y_row = y0 + PILL_STEP / 2          # branch pills (single row, centered)
-    y_plus = y0 + 3 * PILL_STEP
+    y_plus = y0 + 2 * PILL_STEP         # ⊕ just above the merge bus (compact)
     y_relu = y_plus + PILL_STEP
     y_bus_lo = y0 - PILL_H / 2 - 11
 
@@ -881,7 +886,7 @@ def fig_anynet():
         d, x, groups, pw, y0, "AnyNet design space",
         anchor_text="r×r image")
 
-    xs = x + pw / 2 + BLOCK_PAD + 8
+    xs = outer[2] + 8               # just outside the grey outer container
     def between(a, b):
         return 0.5 * (lay[a][3] + lay[b][1][0] - PILL_H / 2)
     d.shape_note(xs, between(0, 1) - 4, "(w₀, r/2 × r/2)")

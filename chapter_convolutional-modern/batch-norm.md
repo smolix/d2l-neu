@@ -870,7 +870,7 @@ comes from. Two problems recur.
 The first is *minibatch coupling*. The estimates $\hat{\boldsymbol{\mu}}_\mathcal{B}$
 and $\hat{\boldsymbol{\sigma}}_\mathcal{B}$ stand and fall with the batch size:
 we saw above that a fully connected layer learns nothing at batch size 1
-and that moderate minibatches in the 50--100 range work best.
+and that very small batches make the statistics unreliable.
 This bites hardest in dense prediction. Object detection and semantic
 segmentation train on high-resolution images, so memory often limits the batch
 to one or two images per device, exactly where batch statistics are noisiest.

@@ -356,7 +356,7 @@ class ConvNeXt(d2l.Classifier):
 :begin_tab:`jax`
 Unlike every network since :numref:`sec_batch_norm`, this model carries no
 batch statistics: layer normalization is a pure function of its input. The
-The `deterministic` mode controls stochastic depth rather than normalization,
+`deterministic` mode controls stochastic depth rather than normalization,
 and the module needs no mutable running statistics. Each block owns a
 `dropout` RNG stream that advances when it samples per-example residual masks.
 :end_tab:
@@ -613,8 +613,8 @@ jax_scores
 
 | Model | Parameters | PyTorch accuracy (3 seeds) | JAX accuracy (seed 1) |
 |---|---:|---:|---:|
-| ConvNeXt | 3,376,450 | $92.2 \pm 0.1$% | 92.19% |
-| Compact ResNet-18 | 3,348,320 | $94.2 \pm 0.1$% | 94.12% |
+| ConvNeXt | 3,376,450 | $92.2 \pm 0.1$% | 91.9% |
+| Compact ResNet-18 | 3,348,320 | $94.2 \pm 0.1$% | 94.37% |
 
 This comparison asks a narrower question than the earlier run against the
 11.2-million-parameter ResNet-18: at roughly 3.4 million parameters, does the
@@ -796,15 +796,15 @@ label smoothing + Mixup, from the previous section:
 :::
 
 ::: {.slide title="Read the result plainly"}
-- ConvNeXt, 3.4M params: **~92.5%** (92.2-92.6% across runs).
-- ResNet-18, 11.2M params, same recipe and budget: **94.4%**.
+- ConvNeXt, 3.4M params: **92.2 ± 0.1%** (three seeds).
+- Parameter-matched Compact ResNet-18, 3.35M, same recipe and budget: **94.2 ± 0.1%**.
 
 . . .
 
-Not a config artifact: layer-scale init, stochastic depth, and a
-45-epoch budget all move it less than run-to-run noise.
+The compact ResNet is ahead by about two points in both PyTorch and
+JAX. The control matches parameters, not latency or multiply-adds.
 
-The roadmap was validated on ImageNet at 224 px. On upsampled
+Every roadmap step was selected on ImageNet at 224 px. On upsampled
 28 px data, ResNet's overlapping stem + BN + size win.
 **Architectures are good for a regime, not in the abstract.**
 :::

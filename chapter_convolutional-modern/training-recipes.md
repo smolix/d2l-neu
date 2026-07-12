@@ -738,7 +738,7 @@ deviation across three seeds; JAX is one independent run.
 | Implementation | Recipe A (2015, 30 epochs) | Compact modern recipe (45 epochs) |
 |:--|:--|:--|
 | PyTorch (3 seeds) | $90.21 \pm 0.34$% | $91.19 \pm 0.09$% |
-| JAX (seed 1) | 89.37% | 90.64% |
+| JAX (seed 1) | 89.74% | 90.66% |
 
 Two practical warnings from this experiment. First, the recipes' hyperparameters are not interchangeable: recipe A's learning rate of 0.05 would make AdamW diverge, and recipe B's rate of 0.002 would starve SGD, so ablating one ingredient requires retuning around it (this is why credible recipe ablations, like those of :citet:`wightman2021resnet`, are expensive). Second, the modern recipe's *training* loss stays well above recipe A's, because Mixup and label smoothing make the training targets themselves harder; comparing training losses across recipes tells you nothing about which generalizes better.
 
@@ -874,7 +874,7 @@ cancels the jitter for the price of one parameter copy:
 
 ::: {.slide title="The experiment: one network, two recipes"}
 Same ResNet-18, Fashion-MNIST at 96×96, **10k training images**
-(on all 60k both recipes saturate within half a point; scarcity is
+(with all 60k images the gap largely closes; scarcity is
 where regularization earns its keep).
 
 @training-recipes-one-network-two-recipes-2@pytorch
@@ -893,10 +893,12 @@ AdamW + cosine warmup + label smoothing + Mixup, 45 epochs:
 :::
 
 ::: {.slide title="Results"}
-| Training set | Recipe A | Recipe B |
+10k training images; test accuracy.
+
+| Implementation | Recipe A | Recipe B |
 |:--|:--|:--|
-| 10k images | 90.1% / 90.0% | 91.1% / 91.5% |
-| 60k images | 94.0% | 94.4% |
+| PyTorch (3 seeds) | 90.2% | 91.2% |
+| JAX (seed 1) | 89.7% | 90.7% |
 
 . . .
 

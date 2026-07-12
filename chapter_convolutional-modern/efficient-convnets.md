@@ -485,8 +485,8 @@ PyTorch times include training and validation and are averaged across seeds.
 
 | Model | Parameters | Multiply-adds | PyTorch accuracy | JAX accuracy | TensorFlow accuracy |
 |---|---:|---:|---:|---:|---:|
-| Mini-MobileNet | 542,474 | 50.3 million | $91.8 \pm 0.1$% | $89.2 \pm 1.6$% | 90.1% |
-| VGG-style control | 583,594 | 384.9 million | $90.7 \pm 1.9$% | $87.3 \pm 1.5$% | 90.5% |
+| Mini-MobileNet | 542,474 | 50.3 million | $91.8 \pm 0.1$% | $89.7 \pm 0.3$% | 90.1% |
+| VGG-style control | 583,594 | 384.9 million | $90.7 \pm 1.9$% | $84.4 \pm 2.4$% | 90.5% |
 
 The two models have comparable accuracy in this small experiment: PyTorch and
 JAX favor Mini-MobileNet on average, while the single TensorFlow run favors

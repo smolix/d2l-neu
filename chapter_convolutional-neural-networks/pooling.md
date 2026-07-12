@@ -443,7 +443,7 @@ Two reasons it's everywhere:
 
 - **Spatial aggregation** — summarize over locations to
   answer "is there a cat *anywhere* in the image?".
-- **Translation invariance** — a 1-pixel shift doesn't
+- **Local translation tolerance** — a 1-pixel shift doesn't
   usually change the max of a small window. Robust to
   small spatial perturbations.
 

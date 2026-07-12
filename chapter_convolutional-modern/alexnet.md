@@ -143,8 +143,7 @@ supports much higher memory bandwidth. A convolution applies the same small
 program at many output locations and channels, providing enough independent
 work to use that throughput. Between the late 1990s and 2012, programmable GPU
 throughput grew by orders of magnitude and general-purpose GPU interfaces made
-it accessible without expressing the computation as a graphics pipeline
-:cite:`Fernando.2004`.
+it accessible without expressing the computation as a graphics pipeline.
 
 This was the situation in 2012 when Alex Krizhevsky and Ilya Sutskever
 implemented a deep CNN that could run on GPUs. They realized that the

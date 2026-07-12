@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/bptt.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bptt-backpropagation-through-time": {
+      "code_fingerprint": "sha256:233bb22443fdb8d00cee4bd8b5c7179c8539bb43e5758a2feab0634b896f1ee6",
+      "kind": "text",
+      "outputs": []
+    },
+    "bptt-vanishing-and-exploding-gradients": {
+      "code_fingerprint": "sha256:b3fffd04075ef2522e9659416f533ab83eaeaadf28d495bd4f95194985d32986",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "rho=0.9: ||J^40|| = 0.0148\nrho=1.0: ||J^40|| = 1\nrho=1.1: ||J^40|| = 45.3\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bptt/bptt-vanishing-and-exploding-gradients-1.svg",
+          "bytes": 35174,
+          "sha256": "sha256:138c8497ba50dfb95926898e9af2b0821fe542015f31770aa1bf84a72f954380"
+        }
+      ]
+    }
+  }
+}

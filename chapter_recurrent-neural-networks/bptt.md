@@ -1,432 +1,387 @@
 # Backpropagation Through Time
 :label:`sec_bptt`
 
-If you completed the exercises in :numref:`sec_rnn-scratch`,
-you would have seen that gradient clipping is vital 
-for preventing the occasional massive gradients
-from destabilizing training.
-We hinted that the exploding gradients
-stem from backpropagating across long sequences.
-Before introducing a slew of modern RNN architectures,
-let's take a closer look at how *backpropagation*
-works in sequence models in mathematical detail.
-Hopefully, this discussion will bring some precision 
-to the notion of *vanishing* and *exploding* gradients.
-If you recall our discussion of forward and backward 
-propagation through computational graphs
-when we introduced MLPs in :numref:`sec_backprop`,
-then forward propagation in RNNs
-should be relatively straightforward.
-Applying backpropagation in RNNs 
-is called *backpropagation through time* :cite:`Werbos.1990`.
-This procedure requires us to expand (or unroll) 
-the computational graph of an RNN
-one time step at a time.
-The unrolled RNN is essentially 
-a feedforward neural network 
-with the special property 
-that the same parameters 
-are repeated throughout the unrolled network,
-appearing at each time step.
-Then, just as in any feedforward neural network,
-we can apply the chain rule, 
-backpropagating gradients through the unrolled net.
-The gradient with respect to each parameter
-must be summed across all places 
-that the parameter occurs in the unrolled net.
-Handling such weight tying should be familiar 
-from our chapters on convolutional neural networks.
+Gradient clipping, which you met in :numref:`sec_rnn-scratch`, is what keeps
+the occasional enormous gradient from destabilizing RNN training, and we hinted
+there that these blow-ups come from backpropagating across long sequences.
+Before turning to the modern architectures of :numref:`chap_modern_rnn`, let us
+look closely at how backpropagation actually works in a sequence model, so that
+*vanishing* and *exploding* gradients become precise phenomena rather than
+slogans.
 
+Forward propagation in an RNN is straightforward: loop over time steps, reusing
+the same parameters at each one. Backpropagation is where the length of the
+sequence bites. Applying backpropagation to an RNN is called *backpropagation
+through time* :cite:`Werbos.1990`: we unroll the computational graph one step at
+a time into an ordinary feedforward network, then apply the chain rule,
+remembering that the same parameters reappear at every step, so their gradients
+are summed over all those occurrences (the weight tying is exactly as in a
+convolutional network). The catch is scale. A text sequence can run to thousands
+of tokens; the input at step 1 then passes through a thousand matrix products
+before it reaches the output, and another thousand to compute the gradient. This
+is costly in memory and, as we will see, numerically treacherous.
 
-Complications arise because sequences
-can be rather long.
-It is not unusual to work with text sequences
-consisting of over a thousand tokens. 
-Note that this poses problems both from 
-a computational (too much memory)
-and optimization (numerical instability)
-standpoint. 
-Input from the first step passes through
-over 1000 matrix products before arriving at the output, 
-and another 1000 matrix products 
-are required to compute the gradient. 
-We now analyze what can go wrong and 
-how to address it in practice.
+```{.python .input}
+%load_ext d2lbook.tab
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
+```
 
+```{.python .input #bptt-backpropagation-through-time}
+%%tab mxnet
+%matplotlib inline
+from d2l import mxnet as d2l
+import numpy as np
+```
 
-## Analysis of Gradients in RNNs
+```{.python .input #bptt-backpropagation-through-time}
+%%tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+import numpy as np
+```
+
+```{.python .input #bptt-backpropagation-through-time}
+%%tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import numpy as np
+```
+
+```{.python .input #bptt-backpropagation-through-time}
+%%tab jax
+%matplotlib inline
+from d2l import jax as d2l
+import numpy as np
+```
+
+## The Unrolled Graph and the Full Gradient
 :label:`subsec_bptt_analysis`
 
-We start with a simplified model of how an RNN works.
-This model ignores details about the specifics 
-of the hidden state and how it is updated.
-The mathematical notation here
-does not explicitly distinguish
-scalars, vectors, and matrices.
-We are just trying to develop some intuition.
-In this simplified model,
-we denote $h_t$ as the hidden state,
-$x_t$ as input, and $o_t$ as output
-at time step $t$.
-Recall our discussions in
-:numref:`subsec_rnn_w_hidden_states`
-that the input and the hidden state
-can be concatenated before being multiplied 
-by one weight variable in the hidden layer.
-Thus, we use $w_\textrm{h}$ and $w_\textrm{o}$ to indicate the weights 
-of the hidden layer and the output layer, respectively.
-As a result, the hidden states and outputs 
-at each time step are
+Start with a deliberately schematic RNN that hides the details of the hidden
+state and its update; the notation does not distinguish scalars, vectors, and
+matrices, because right now we only want the *shape* of the computation. Write
+$h_t$ for the hidden state, $x_t$ for the input, and $o_t$ for the output at
+step $t$, with $w_\textrm{h}$ and $w_\textrm{o}$ the hidden- and output-layer
+weights (recall from :numref:`subsec_rnn_w_hidden_states` that the input and the
+state can be concatenated so a single weight drives the hidden layer). Then
 
-$$\begin{aligned}h_t &= f(x_t, h_{t-1}, w_\textrm{h}),\\o_t &= g(h_t, w_\textrm{o}),\end{aligned}$$
+$$
+\begin{aligned}h_t &= f(x_t, h_{t-1}, w_\textrm{h}),\\
+o_t &= g(h_t, w_\textrm{o}),\end{aligned}
+$$
 :eqlabel:`eq_bptt_ht_ot`
 
-where $f$ and $g$ are transformations
-of the hidden layer and the output layer, respectively.
-Hence, we have a chain of values 
-$\{\ldots, (x_{t-1}, h_{t-1}, o_{t-1}), (x_{t}, h_{t}, o_t), \ldots\}$ 
-that depend on each other via recurrent computation.
-The forward propagation is fairly straightforward.
-All we need is to loop through the $(x_t, h_t, o_t)$ triples one time step at a time.
-The discrepancy between output $o_t$ and the desired target $y_t$ 
-is then evaluated by an objective function 
-across all the $T$ time steps as
+and the loss over all $T$ steps is $L = \frac{1}{T}\sum_{t=1}^T l(y_t, o_t)$.
 
-$$L(x_1, \ldots, x_T, y_1, \ldots, y_T, w_\textrm{h}, w_\textrm{o}) = \frac{1}{T}\sum_{t=1}^T l(y_t, o_t).$$
+Forward propagation just walks the chain of $(x_t, h_t, o_t)$ triples. The
+gradient with respect to the output weights $w_\textrm{o}$ is easy. The trouble
+is $w_\textrm{h}$, because it feeds *every* hidden state. By the chain rule,
 
-
-
-For backpropagation, matters are a bit trickier, 
-especially when we compute the gradients 
-with regard to the parameters $w_\textrm{h}$ of the objective function $L$. 
-To be specific, by the chain rule,
-
-$$\begin{aligned}\frac{\partial L}{\partial w_\textrm{h}}  & = \frac{1}{T}\sum_{t=1}^T \frac{\partial l(y_t, o_t)}{\partial w_\textrm{h}}  \\& = \frac{1}{T}\sum_{t=1}^T \frac{\partial l(y_t, o_t)}{\partial o_t} \frac{\partial g(h_t, w_\textrm{o})}{\partial h_t}  \frac{\partial h_t}{\partial w_\textrm{h}}.\end{aligned}$$
+$$
+\frac{\partial L}{\partial w_\textrm{h}} = \frac{1}{T}\sum_{t=1}^T
+\frac{\partial l(y_t, o_t)}{\partial o_t}\,
+\frac{\partial g(h_t, w_\textrm{o})}{\partial h_t}\,
+\frac{\partial h_t}{\partial w_\textrm{h}}.
+$$
 :eqlabel:`eq_bptt_partial_L_wh`
 
-The first and the second factors of the
-product in :eqref:`eq_bptt_partial_L_wh`
-are easy to compute.
-The third factor $\partial h_t/\partial w_\textrm{h}$ is where things get tricky, 
-since we need to recurrently compute the effect of the parameter $w_\textrm{h}$ on $h_t$.
-According to the recurrent computation
-in :eqref:`eq_bptt_ht_ot`,
-$h_t$ depends on both $h_{t-1}$ and $w_\textrm{h}$,
-where computation of $h_{t-1}$
-also depends on $w_\textrm{h}$.
-Thus, evaluating the total derivative of $h_t$ 
-with respect to $w_\textrm{h}$ using the chain rule yields
+The first two factors are local. The third, $\partial h_t/\partial w_\textrm{h}$,
+is the hard one, because $h_t$ depends on $w_\textrm{h}$ both directly and
+through $h_{t-1}$, which depends on $w_\textrm{h}$ in turn:
 
-$$\frac{\partial h_t}{\partial w_\textrm{h}}= \frac{\partial f(x_{t},h_{t-1},w_\textrm{h})}{\partial w_\textrm{h}} +\frac{\partial f(x_{t},h_{t-1},w_\textrm{h})}{\partial h_{t-1}} \frac{\partial h_{t-1}}{\partial w_\textrm{h}}.$$
+$$
+\frac{\partial h_t}{\partial w_\textrm{h}} =
+\frac{\partial f(x_t,h_{t-1},w_\textrm{h})}{\partial w_\textrm{h}} +
+\frac{\partial f(x_t,h_{t-1},w_\textrm{h})}{\partial h_{t-1}}\,
+\frac{\partial h_{t-1}}{\partial w_\textrm{h}}.
+$$
 :eqlabel:`eq_bptt_partial_ht_wh_recur`
 
+To unwind this recursion, use a small lemma: if $a_t = b_t + c_t a_{t-1}$ with
+$a_0 = 0$, then for $t \geq 1$
 
-To derive the above gradient, assume that we have 
-three sequences $\{a_{t}\},\{b_{t}\},\{c_{t}\}$ 
-satisfying $a_{0}=0$ and $a_{t}=b_{t}+c_{t}a_{t-1}$ for $t=1, 2,\ldots$.
-Then for $t\geq 1$, it is easy to show
-
-$$a_{t}=b_{t}+\sum_{i=1}^{t-1}\left(\prod_{j=i+1}^{t}c_{j}\right)b_{i}.$$
+$$
+a_t = b_t + \sum_{i=1}^{t-1}\Big(\prod_{j=i+1}^{t} c_j\Big) b_i.
+$$
 :eqlabel:`eq_bptt_at`
 
-By substituting $a_t$, $b_t$, and $c_t$ according to
+Substituting $a_t = \partial h_t/\partial w_\textrm{h}$,
+$b_t = \partial f/\partial w_\textrm{h}$, and $c_t = \partial f/\partial h_{t-1}$
+turns the recursion :eqref:`eq_bptt_partial_ht_wh_recur` into a closed form:
 
-$$\begin{aligned}a_t &= \frac{\partial h_t}{\partial w_\textrm{h}},\\
-b_t &= \frac{\partial f(x_{t},h_{t-1},w_\textrm{h})}{\partial w_\textrm{h}}, \\
-c_t &= \frac{\partial f(x_{t},h_{t-1},w_\textrm{h})}{\partial h_{t-1}},\end{aligned}$$
-
-the gradient computation in :eqref:`eq_bptt_partial_ht_wh_recur` satisfies
-$a_{t}=b_{t}+c_{t}a_{t-1}$.
-Thus, per :eqref:`eq_bptt_at`, 
-we can remove the recurrent computation 
-in :eqref:`eq_bptt_partial_ht_wh_recur` with
-
-$$\frac{\partial h_t}{\partial w_\textrm{h}}=\frac{\partial f(x_{t},h_{t-1},w_\textrm{h})}{\partial w_\textrm{h}}+\sum_{i=1}^{t-1}\left(\prod_{j=i+1}^{t} \frac{\partial f(x_{j},h_{j-1},w_\textrm{h})}{\partial h_{j-1}} \right) \frac{\partial f(x_{i},h_{i-1},w_\textrm{h})}{\partial w_\textrm{h}}.$$
+$$
+\frac{\partial h_t}{\partial w_\textrm{h}} =
+\frac{\partial f(x_t,h_{t-1},w_\textrm{h})}{\partial w_\textrm{h}} +
+\sum_{i=1}^{t-1}\Big(\prod_{j=i+1}^{t}
+\frac{\partial f(x_j,h_{j-1},w_\textrm{h})}{\partial h_{j-1}}\Big)
+\frac{\partial f(x_i,h_{i-1},w_\textrm{h})}{\partial w_\textrm{h}}.
+$$
 :eqlabel:`eq_bptt_partial_ht_wh_gen`
 
-While we can use the chain rule to compute $\partial h_t/\partial w_\textrm{h}$ recursively, 
-this chain can get very long whenever $t$ is large.
-Let's discuss a number of strategies for dealing with this problem.
+**The gradient of a recurrence, in three equations.** Equation
+:eqref:`eq_bptt_ht_ot` is the forward recurrence; :eqref:`eq_bptt_partial_ht_wh_recur`
+is its gradient, one step at a time; and :eqref:`eq_bptt_partial_ht_wh_gen` is
+that gradient unrolled. The last one is the object of study for the rest of this
+section. Its second term is a sum over all earlier steps $i$, and each summand
+carries a *product of Jacobians* $\prod_{j=i+1}^{t} \partial f/\partial h_{j-1}$
+that reaches back from step $t$ to step $i$. Computing this sum in full is exact,
+but the work grows with $t$, and, as the next section shows, those long products
+are exactly where the numbers go wrong.
 
-### Full Computation ### 
+## Vanishing and Exploding Gradients
 
-One idea might be to compute the full sum in :eqref:`eq_bptt_partial_ht_wh_gen`.
-However, this is very slow and gradients can blow up,
-since subtle changes in the initial conditions
-can potentially affect the outcome a lot.
-That is, we could see things similar to the butterfly effect,
-where minimal changes in the initial conditions 
-lead to disproportionate changes in the outcome.
-This is generally undesirable.
-After all, we are looking for robust estimators that generalize well. 
-Hence this strategy is almost never used in practice.
+Everything now hinges on the product of Jacobians
+$\prod_{j=i+1}^{t} \partial f/\partial h_{j-1}$ in
+:eqref:`eq_bptt_partial_ht_wh_gen`. To see what it does, make the recurrence
+concrete: drop the biases and the nonlinearity so that the hidden layer is a
+plain linear map,
 
-### Truncating Time Steps
+$$
+\mathbf{h}_t = \mathbf{W}_\textrm{hx}\mathbf{x}_t +
+\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1}, \qquad
+\mathbf{o}_t = \mathbf{W}_\textrm{qh}\mathbf{h}_t,
+$$
 
-Alternatively,
-we can truncate the sum in
-:eqref:`eq_bptt_partial_ht_wh_gen`
-after $\tau$ steps. 
-This is what we have been discussing so far. 
-This leads to an *approximation* of the true gradient,
-simply by terminating the sum at $\partial h_{t-\tau}/\partial w_\textrm{h}$. 
-In practice this works quite well. 
-It is what is commonly referred to as truncated 
-backpropagation through time :cite:`Jaeger.2002`.
-One of the consequences of this is that the model 
-focuses primarily on short-term influence 
-rather than long-term consequences. 
-This is actually *desirable*, since it biases the estimate 
-towards simpler and more stable models.
+with $\mathbf{W}_\textrm{hx}\in\mathbb{R}^{h\times d}$,
+$\mathbf{W}_\textrm{hh}\in\mathbb{R}^{h\times h}$, and
+$\mathbf{W}_\textrm{qh}\in\mathbb{R}^{q\times h}$. :numref:`fig_rnn_bptt` draws
+the resulting dependencies: each $\mathbf{h}_t$ feeds both the output
+$\mathbf{o}_t$ and the next state $\mathbf{h}_{t+1}$.
 
-
-### Randomized Truncation ### 
-
-Last, we can replace $\partial h_t/\partial w_\textrm{h}$
-by a random variable which is correct in expectation 
-but truncates the sequence.
-This is achieved by using a sequence of $\xi_t$
-with predefined $0 \leq \pi_t \leq 1$,
-where $P(\xi_t = 0) = 1-\pi_t$ and 
-$P(\xi_t = \pi_t^{-1}) = \pi_t$, thus $E[\xi_t] = 1$.
-We use this to replace the gradient
-$\partial h_t/\partial w_\textrm{h}$
-in :eqref:`eq_bptt_partial_ht_wh_recur`
-with
-
-$$z_t= \frac{\partial f(x_{t},h_{t-1},w_\textrm{h})}{\partial w_\textrm{h}} +\xi_t \frac{\partial f(x_{t},h_{t-1},w_\textrm{h})}{\partial h_{t-1}} \frac{\partial h_{t-1}}{\partial w_\textrm{h}}.$$
-
-
-It follows from the definition of $\xi_t$ 
-that $E[z_t] = \partial h_t/\partial w_\textrm{h}$.
-Whenever $\xi_t = 0$ the recurrent computation
-terminates at that time step $t$.
-This leads to a weighted sum of sequences of varying lengths,
-where long sequences are rare but appropriately overweighted. 
-This idea was proposed by 
-:citet:`Tallec.Ollivier.2017`.
-
-### Comparing Strategies
-
-![Comparing strategies for computing gradients in RNNs. From top to bottom: randomized truncation, regular truncation, and full computation.](../img/truncated-bptt.svg)
-:label:`fig_truncated_bptt`
-
-
-:numref:`fig_truncated_bptt` illustrates the three strategies 
-when analyzing the first few characters of *The Time Machine* 
-using backpropagation through time for RNNs:
-
-* The first row is the randomized truncation that partitions the text into segments of varying lengths.
-* The second row is the regular truncation that breaks the text into subsequences of the same length. This is what we have been doing in RNN experiments.
-* The third row is the full backpropagation through time that leads to a computationally infeasible expression.
-
-
-Unfortunately, while appealing in theory, 
-randomized truncation does not work 
-much better than regular truncation, 
-most likely due to a number of factors.
-First, the effect of an observation
-after a number of backpropagation steps 
-into the past is quite sufficient 
-to capture dependencies in practice. 
-Second, the increased variance counteracts the fact 
-that the gradient is more accurate with more steps. 
-Third, we actually *want* models that have only 
-a short range of interactions. 
-Hence, regularly truncated backpropagation through time 
-has a slight regularizing effect that can be desirable.
-
-## Backpropagation Through Time in Detail
-
-After discussing the general principle,
-let's discuss backpropagation through time in detail.
-In contrast to the analysis in :numref:`subsec_bptt_analysis`,
-in the following we will show how to compute
-the gradients of the objective function
-with respect to all the decomposed model parameters.
-To keep things simple, we consider 
-an RNN without bias parameters,
-whose activation function in the hidden layer
-uses the identity mapping ($\phi(x)=x$).
-For time step $t$, let the single example input 
-and the target be $\mathbf{x}_t \in \mathbb{R}^d$ and $y_t$, respectively. 
-The hidden state $\mathbf{h}_t \in \mathbb{R}^h$ 
-and the output $\mathbf{o}_t \in \mathbb{R}^q$
-are computed as
-
-$$\begin{aligned}\mathbf{h}_t &= \mathbf{W}_\textrm{hx} \mathbf{x}_t + \mathbf{W}_\textrm{hh} \mathbf{h}_{t-1},\\
-\mathbf{o}_t &= \mathbf{W}_\textrm{qh} \mathbf{h}_{t},\end{aligned}$$
-
-where $\mathbf{W}_\textrm{hx} \in \mathbb{R}^{h \times d}$, $\mathbf{W}_\textrm{hh} \in \mathbb{R}^{h \times h}$, and
-$\mathbf{W}_\textrm{qh} \in \mathbb{R}^{q \times h}$
-are the weight parameters.
-Denote by $l(\mathbf{o}_t, y_t)$
-the loss at time step $t$. 
-Our objective function,
-the loss over $T$ time steps
-from the beginning of the sequence is thus
-
-$$L = \frac{1}{T} \sum_{t=1}^T l(\mathbf{o}_t, y_t).$$
-
-
-In order to visualize the dependencies among
-model variables and parameters during computation
-of the RNN,
-we can draw a computational graph for the model,
-as shown in :numref:`fig_rnn_bptt`.
-For example, the computation of the hidden states of time step 3,
-$\mathbf{h}_3$, depends on the model parameters
-$\mathbf{W}_\textrm{hx}$ and $\mathbf{W}_\textrm{hh}$,
-the hidden state of the previous time step $\mathbf{h}_2$,
-and the input of the current time step $\mathbf{x}_3$.
-
-![Computational graph showing dependencies for an RNN model with three time steps. Boxes represent variables (not shaded) or parameters (shaded) and circles represent operators.](../img/rnn-bptt.svg)
+![Computational graph of an RNN unrolled over three time steps. Boxes are variables (shaded for parameters) and circles are operators; the loss gradient flows backwards along the arrows.](../img/rnn-bptt.svg)
 :label:`fig_rnn_bptt`
 
-As just mentioned, the model parameters in :numref:`fig_rnn_bptt` 
-are $\mathbf{W}_\textrm{hx}$, $\mathbf{W}_\textrm{hh}$, and $\mathbf{W}_\textrm{qh}$. 
-Generally, training this model requires 
-gradient computation with respect to these parameters
-$\partial L/\partial \mathbf{W}_\textrm{hx}$, $\partial L/\partial \mathbf{W}_\textrm{hh}$, and $\partial L/\partial \mathbf{W}_\textrm{qh}$.
-According to the dependencies in :numref:`fig_rnn_bptt`,
-we can traverse in the opposite direction of the arrows
-to calculate and store the gradients in turn.
-To flexibly express the multiplication of 
-matrices, vectors, and scalars of different shapes
-in the chain rule,
-we continue to use the $\textrm{prod}$ operator 
-as described in :numref:`sec_backprop`.
-
-
-First of all, differentiating the objective function
-with respect to the model output at any time step $t$
-is fairly straightforward:
-
-$$\frac{\partial L}{\partial \mathbf{o}_t} =  \frac{\partial l (\mathbf{o}_t, y_t)}{T \cdot \partial \mathbf{o}_t} \in \mathbb{R}^q.$$
-:eqlabel:`eq_bptt_partial_L_ot`
-
-Now we can calculate the gradient of the objective 
-with respect to the parameter $\mathbf{W}_\textrm{qh}$
-in the output layer:
-$\partial L/\partial \mathbf{W}_\textrm{qh} \in \mathbb{R}^{q \times h}$. 
-Based on :numref:`fig_rnn_bptt`, 
-the objective $L$ depends on $\mathbf{W}_\textrm{qh}$ 
-via $\mathbf{o}_1, \ldots, \mathbf{o}_T$. 
-Using the chain rule yields
+Now every Jacobian $\partial\mathbf{h}_{j}/\partial\mathbf{h}_{j-1}$ is the
+*same* matrix $\mathbf{W}_\textrm{hh}$. Propagating the loss gradient backwards,
+the hidden state at step $t$ collects a contribution from its own output and one
+from the next step,
 
 $$
-\frac{\partial L}{\partial \mathbf{W}_\textrm{qh}}
-= \sum_{t=1}^T \textrm{prod}\left(\frac{\partial L}{\partial \mathbf{o}_t}, \frac{\partial \mathbf{o}_t}{\partial \mathbf{W}_\textrm{qh}}\right)
-= \sum_{t=1}^T \frac{\partial L}{\partial \mathbf{o}_t} \mathbf{h}_t^\top,
+\frac{\partial L}{\partial \mathbf{h}_t} =
+\mathbf{W}_\textrm{hh}^\top \frac{\partial L}{\partial \mathbf{h}_{t+1}} +
+\mathbf{W}_\textrm{qh}^\top \frac{\partial L}{\partial \mathbf{o}_t},
 $$
-
-where $\partial L/\partial \mathbf{o}_t$
-is given by :eqref:`eq_bptt_partial_L_ot`.
-
-Next, as shown in :numref:`fig_rnn_bptt`,
-at the final time step $T$,
-the objective function
-$L$ depends on the hidden state $\mathbf{h}_T$ 
-only via $\mathbf{o}_T$.
-Therefore, we can easily find the gradient 
-$\partial L/\partial \mathbf{h}_T \in \mathbb{R}^h$
-using the chain rule:
-
-$$\frac{\partial L}{\partial \mathbf{h}_T} = \textrm{prod}\left(\frac{\partial L}{\partial \mathbf{o}_T}, \frac{\partial \mathbf{o}_T}{\partial \mathbf{h}_T} \right) = \mathbf{W}_\textrm{qh}^\top \frac{\partial L}{\partial \mathbf{o}_T}.$$
-:eqlabel:`eq_bptt_partial_L_hT_final_step`
-
-It gets trickier for any time step $t < T$,
-where the objective function $L$ depends on 
-$\mathbf{h}_t$ via $\mathbf{h}_{t+1}$ and $\mathbf{o}_t$.
-According to the chain rule,
-the gradient of the hidden state
-$\partial L/\partial \mathbf{h}_t \in \mathbb{R}^h$
-at any time step $t < T$ can be recurrently computed as:
-
-
-$$\frac{\partial L}{\partial \mathbf{h}_t} = \textrm{prod}\left(\frac{\partial L}{\partial \mathbf{h}_{t+1}}, \frac{\partial \mathbf{h}_{t+1}}{\partial \mathbf{h}_t} \right) + \textrm{prod}\left(\frac{\partial L}{\partial \mathbf{o}_t}, \frac{\partial \mathbf{o}_t}{\partial \mathbf{h}_t} \right) = \mathbf{W}_\textrm{hh}^\top \frac{\partial L}{\partial \mathbf{h}_{t+1}} + \mathbf{W}_\textrm{qh}^\top \frac{\partial L}{\partial \mathbf{o}_t}.$$
 :eqlabel:`eq_bptt_partial_L_ht_recur`
 
-For analysis, expanding the recurrent computation
-for any time step $1 \leq t \leq T$ gives
+which unrolls (this is :eqref:`eq_bptt_at` again, now with matrices) to
 
-$$\frac{\partial L}{\partial \mathbf{h}_t}= \sum_{i=t}^T {\left(\mathbf{W}_\textrm{hh}^\top\right)}^{T-i} \mathbf{W}_\textrm{qh}^\top \frac{\partial L}{\partial \mathbf{o}_{T+t-i}}.$$
+$$
+\frac{\partial L}{\partial \mathbf{h}_t} = \sum_{i=t}^T
+\big(\mathbf{W}_\textrm{hh}^\top\big)^{T-i}\, \mathbf{W}_\textrm{qh}^\top\,
+\frac{\partial L}{\partial \mathbf{o}_{T+t-i}}.
+$$
 :eqlabel:`eq_bptt_partial_L_ht`
 
-We can see from :eqref:`eq_bptt_partial_L_ht` 
-that this simple linear example already
-exhibits some key problems of long sequence models:
-it involves potentially very large powers of $\mathbf{W}_\textrm{hh}^\top$.
-In it, eigenvalues smaller than 1 vanish
-and eigenvalues larger than 1 diverge.
-This is numerically unstable,
-which manifests itself in the form of vanishing 
-and exploding gradients.
-One way to address this is to truncate the time steps
-at a computationally convenient size 
-as discussed in :numref:`subsec_bptt_analysis`. 
-In practice, this truncation can also be effected 
-by detaching the gradient after a given number of time steps.
-Later on, we will see how more sophisticated sequence models 
-such as long short-term memory can alleviate this further. 
+There it is: the gradient that reaches back $k = T-i$ steps is multiplied by the
+$k$-th power $(\mathbf{W}_\textrm{hh}^\top)^{k}$. A matrix power is governed by
+its eigenvalues. Writing $\rho(\mathbf{W}_\textrm{hh})$ for the spectral radius,
+the largest eigenvalue magnitude, the contribution from $k$ steps back scales
+roughly as $\rho^{k}$: eigen-directions with $|\lambda|<1$ shrink geometrically
+and *vanish*, those with $|\lambda|>1$ grow geometrically and *explode*, and only
+$\rho$ exactly at $1$ sits on the knife-edge. The parameter gradients
+$\partial L/\partial\mathbf{W}_\textrm{hx}$ and
+$\partial L/\partial\mathbf{W}_\textrm{hh}$ are just sums of these hidden-state
+gradients weighted by an input or a previous state, so they inherit the same
+fate.
 
-Finally, :numref:`fig_rnn_bptt` shows 
-that the objective function $L$ 
-depends on model parameters $\mathbf{W}_\textrm{hx}$ and $\mathbf{W}_\textrm{hh}$
-in the hidden layer via hidden states
-$\mathbf{h}_1, \ldots, \mathbf{h}_T$.
-To compute gradients with respect to such parameters
-$\partial L / \partial \mathbf{W}_\textrm{hx} \in \mathbb{R}^{h \times d}$ and $\partial L / \partial \mathbf{W}_\textrm{hh} \in \mathbb{R}^{h \times h}$,
-we apply the chain rule giving
+We can watch it happen. Take a random symmetric recurrence
+$\mathbf{J}=\mathbf{W}_\textrm{hh}$ (symmetric so that its singular values equal
+its eigenvalue magnitudes and $\|\mathbf{J}^k\|=\rho^k$ exactly), rescale it to a
+chosen spectral radius $\rho$, and measure the operator norm $\|\mathbf{J}^k\|$
+of its $k$-step Jacobian product as the lag $k$ grows.
 
-$$
-\begin{aligned}
-\frac{\partial L}{\partial \mathbf{W}_\textrm{hx}}
-&= \sum_{t=1}^T \textrm{prod}\left(\frac{\partial L}{\partial \mathbf{h}_t}, \frac{\partial \mathbf{h}_t}{\partial \mathbf{W}_\textrm{hx}}\right)
-= \sum_{t=1}^T \frac{\partial L}{\partial \mathbf{h}_t} \mathbf{x}_t^\top,\\
-\frac{\partial L}{\partial \mathbf{W}_\textrm{hh}}
-&= \sum_{t=1}^T \textrm{prod}\left(\frac{\partial L}{\partial \mathbf{h}_t}, \frac{\partial \mathbf{h}_t}{\partial \mathbf{W}_\textrm{hh}}\right)
-= \sum_{t=1}^T \frac{\partial L}{\partial \mathbf{h}_t} \mathbf{h}_{t-1}^\top,
-\end{aligned}
-$$
+```{.python .input #bptt-vanishing-and-exploding-gradients}
+np.random.seed(1)
+h = 100
+M = np.random.randn(h, h)
+W = M + M.T                                # a random *symmetric* recurrence
 
-where $\partial L/\partial \mathbf{h}_t$
-which is recurrently computed by
-:eqref:`eq_bptt_partial_L_hT_final_step`
-and :eqref:`eq_bptt_partial_L_ht_recur`
-is the key quantity that affects the numerical stability.
+def spectral_radius(A):
+    return np.abs(np.linalg.eigvals(A)).max()
 
+lags, norms = np.arange(41), []
+for rho in (0.9, 1.0, 1.1):
+    J = W * (rho / spectral_radius(W))     # rescale so that rho(J) = rho
+    power, seq = np.eye(h), []
+    for k in lags:
+        seq.append(np.linalg.norm(power, 2))   # operator norm of J^k
+        power = power @ J
+    norms.append(seq)
+    print(f'rho={rho}: ||J^40|| = {seq[-1]:.3g}')
 
+d2l.plot(lags, norms, xlabel='time lag $k$', ylabel=r'$\|\mathbf{J}^k\|$',
+         legend=[r'$\rho=0.9$ (vanish)', r'$\rho=1.0$', r'$\rho=1.1$ (explode)'],
+         yscale='log', figsize=(4.5, 3))
+```
 
-Since backpropagation through time is the application of backpropagation in RNNs,
-as we have explained in :numref:`sec_backprop`,
-training RNNs alternates forward propagation with
-backpropagation through time.
-Moreover, backpropagation through time
-computes and stores the above gradients in turn.
-Specifically, stored intermediate values
-are reused to avoid duplicate calculations,
-such as storing $\partial L/\partial \mathbf{h}_t$
-to be used in computation of both $\partial L / \partial \mathbf{W}_\textrm{hx}$ 
-and $\partial L / \partial \mathbf{W}_\textrm{hh}$.
+The three regimes are geometric and could not be cleaner: at $\rho=0.9$ the norm
+decays toward zero, at $\rho=1.1$ it grows without bound, and only $\rho=1.0$
+holds steady. Over forty steps a signal is amplified more than fortyfold or
+shrunk below two percent; either way, the gradient that finally arrives says
+almost nothing reliable about a dependency that far back. A general,
+non-symmetric $\mathbf{W}_\textrm{hh}$ adds transient wobbles on top, but the
+same $\rho^k$ trend wins in the end.
 
+### From Arithmetic to Architecture
+:label:`subsec_bptt-gradient-pathologies`
+
+The two failure modes call for two very different remedies. *Explosion* is the
+easy one: a gradient that is merely too large still points in a useful
+direction, so we simply rescale it. That is gradient clipping
+(:numref:`sec_rnn-scratch`), which caps the norm of the gradient before each
+update and reliably tames the rare blow-ups. *Vanishing* is the hard one, and no
+rescaling can fix it: once the signal from a distant step has decayed into
+numerical noise the information is gone, and scaling up noise only gives you
+bigger noise. The cure has to change the *dynamics* of the recurrence so that the
+Jacobian product stops shrinking in the first place, and this is an
+architectural question, not an arithmetic one. Two ideas answer it, and the rest
+of this part is built on them. The first is *gating* (:numref:`sec_lstm`): the
+cell carries a near-identity path along which the relevant Jacobian stays close
+to the identity, so gradients neither vanish nor explode as they travel along it.
+The second is to give up the nonlinearity in the state update altogether and use
+a *linear* recurrence whose state-to-state map is reparameterized so that its
+eigenvalues are pinned just inside the unit circle by construction, making
+$\rho \le 1$ a guarantee rather than a hope; this is the route the linear
+recurrences and state space models of :numref:`chap_modern_rnn` take. Both
+replace the vanilla RNN's fragile, learned-by-accident dynamics with a memory
+path that is stable by design, and both trace directly back to the product of
+Jacobians we have just analyzed.
+
+## Truncated Backpropagation Through Time
+
+Summing :eqref:`eq_bptt_partial_ht_wh_gen` in full is exact, but its cost grows
+with the sequence length and, as we just saw, it drags along the whole
+vanishing/exploding pathology. The standard practical answer is to *truncate*:
+stop the sum after $\tau$ steps, equivalently detaching the hidden state every
+$\tau$ steps so that no gradient flows across the boundary.
+:numref:`fig_truncated_bptt` contrasts the two.
+
+![Two ways to backpropagate the gradient across a token sequence. Top: full backpropagation through time follows one unbroken dependency chain over the entire sequence. Bottom: regular truncation cuts the sequence into equal segments of length $\tau=4$ and detaches the hidden state at each boundary, so the gradient never crosses it.](../img/mdl-rnn-truncated-bptt.svg)
+:label:`fig_truncated_bptt`
+
+Truncation introduces a real bias. The model only ever sees dependencies inside a
+window of $\tau$ steps and literally cannot learn a coupling longer than that, so
+its gradient is a truncated approximation of the true one :cite:`Jaeger.2002`.
+Often this is harmless or even helpful: shorter windows bias the estimate toward
+simpler, more stable, better-generalizing models, a mild regularizer. But it is a
+genuine ceiling on the memory the model can be trained to use, and it is one of
+the reasons we reach for the architectures above. In code, truncation is not a
+change to the loss but the one-line *detach-state* idiom: detach the hidden state
+from the graph at each chunk boundary before continuing the forward pass. We put
+it to work when we train an RNN language model in :numref:`sec_rnn-scratch`. One
+can instead truncate at *random* lengths chosen so the estimator stays unbiased
+in expectation :cite:`Tallec.Ollivier.2017`, but the extra variance rarely pays
+for itself and regular truncation remains the default.
+
+The store-versus-recompute trade-off behind truncation reaches far beyond RNNs.
+Backpropagation of any kind must keep intermediate activations around to reuse on
+the backward pass, and for very deep or very long models that storage becomes the
+binding constraint. *Activation checkpointing*, the technique that lets today's
+largest models fit in memory, is the same idea applied to depth rather than time:
+keep only a sparse set of activations on the forward pass and recompute the rest
+on demand during backpropagation, spending extra compute to shrink the memory
+footprint. We will meet it again in the chapters on large-scale model training.
 
 ## Summary
 
-Backpropagation through time is merely an application of backpropagation to sequence models with a hidden state.
-Truncation, such as regular or randomized, is needed for computational convenience and numerical stability.
-High powers of matrices can lead to divergent or vanishing eigenvalues. This manifests itself in the form of exploding or vanishing gradients.
-For efficient computation, intermediate values are cached during backpropagation through time.
-
-
+Backpropagation through time is nothing more than backpropagation applied to a
+sequence model with a hidden state: unroll the recurrence, apply the chain rule,
+and sum each shared parameter's gradient over every step at which it acts. The
+gradient that reaches back $k$ steps carries a $k$-fold product of state-to-state
+Jacobians, so in the linear case it scales like the $k$-th power of
+$\mathbf{W}_\textrm{hh}$. Eigenvalues below one make that product vanish and
+eigenvalues above one make it explode, which is precisely vanishing and exploding
+gradients. Clipping controls explosion; only a change of architecture, gating or
+a stably parameterized linear recurrence, controls vanishing. In practice we
+truncate the backward pass to a fixed horizon, trading a little bias for a lot of
+stability and memory, the same store-versus-recompute bargain that reappears as
+activation checkpointing at scale.
 
 ## Exercises
 
-1. Assume that we have a symmetric matrix $\mathbf{M} \in \mathbb{R}^{n \times n}$ with eigenvalues $\lambda_i$ whose corresponding eigenvectors are $\mathbf{v}_i$ ($i = 1, \ldots, n$). Without loss of generality, assume that they are ordered in the order $|\lambda_i| \geq |\lambda_{i+1}|$. 
+1. Assume that we have a symmetric matrix $\mathbf{M} \in \mathbb{R}^{n \times n}$ with eigenvalues $\lambda_i$ whose corresponding eigenvectors are $\mathbf{v}_i$ ($i = 1, \ldots, n$). Without loss of generality, assume that they are ordered so that $|\lambda_i| \geq |\lambda_{i+1}|$.
    1. Show that $\mathbf{M}^k$ has eigenvalues $\lambda_i^k$.
-   1. Prove that for a random vector $\mathbf{x} \in \mathbb{R}^n$, with high probability $\mathbf{M}^k \mathbf{x}$ will be very much aligned with the eigenvector $\mathbf{v}_1$ 
-of $\mathbf{M}$. Formalize this statement.
+   1. Prove that for a random vector $\mathbf{x} \in \mathbb{R}^n$, with high probability $\mathbf{M}^k \mathbf{x}$ will be very much aligned with the eigenvector $\mathbf{v}_1$ of $\mathbf{M}$. Formalize this statement.
    1. What does the above result mean for gradients in RNNs?
+1. Rerun the numerical demo with a general (non-symmetric) $\mathbf{W}_\textrm{hh}$, and also with the true product $\partial \mathbf{h}_t/\partial \mathbf{h}_{t-1}$ of a *nonlinear* RNN whose hidden layer applies $\tanh$. How does the nonlinearity change the growth of $\|\mathbf{J}^k\|$, and why can it never make an $|\lambda|>1$ direction stable on its own?
 1. Besides gradient clipping, can you think of any other methods to cope with gradient explosion in recurrent neural networks?
+1. Take the RNN language model you trained in :numref:`sec_rnn-scratch` and, for a fixed input sequence, measure the norm of the gradient of the loss at the final step with respect to the hidden state $k$ steps earlier, as a function of $k$. Plot it. Read off the *effective memory horizon*, the lag beyond which the gradient norm drops below, say, one percent of its value at $k=0$. How does this horizon compare to the truncation length $\tau$ you trained with?
 
 [Discussions](https://d2l.discourse.group/t/334)
+
+<!-- slides -->
+
+::: {.slide title="Backpropagation through time"}
+Training an RNN is backpropagation on the **unrolled** graph: expand the
+recurrence one step at a time into a feedforward net where the **same** weights
+reappear at every step, then apply the chain rule and **sum** each weight's
+gradient over all its occurrences (weight tying, as in a CNN).
+
+The catch is length: a thousand-token sequence means a thousand matrix products
+forward, and another thousand back.
+:::
+
+::: {.slide title="The gradient of a recurrence"}
+Forward: $h_t = f(x_t, h_{t-1}, w_\textrm{h})$, $o_t = g(h_t, w_\textrm{o})$.
+
+The hard factor is $\partial h_t/\partial w_\textrm{h}$: the weight acts at
+step $t$ **and** through $h_{t-1}$. Writing $f_t = f(x_t, h_{t-1}, w_\textrm{h})$
+and unrolling gives a sum over earlier steps, each a **product of Jacobians**:
+
+$$\frac{\partial h_t}{\partial w_\textrm{h}} =
+\frac{\partial f_t}{\partial w_\textrm{h}} +
+\sum_{i=1}^{t-1}\Big(\prod_{j=i+1}^{t}\frac{\partial f_j}{\partial h_{j-1}}\Big)
+\frac{\partial f_i}{\partial w_\textrm{h}}.$$
+:::
+
+::: {.slide title="Vanishing and exploding gradients"}
+Make it linear: $\mathbf{h}_t = \mathbf{W}_\textrm{hx}\mathbf{x}_t +
+\mathbf{W}_\textrm{hh}\mathbf{h}_{t-1}$. Every Jacobian is the **same** matrix,
+so reaching back $k$ steps multiplies by $(\mathbf{W}_\textrm{hh}^\top)^{k}$.
+
+. . .
+
+A matrix power is ruled by its eigenvalues (spectral radius $\rho$):
+
+- $|\lambda| < 1$: the term **vanishes** ($\sim\rho^k \to 0$).
+- $|\lambda| > 1$: the term **explodes** ($\sim\rho^k \to \infty$).
+- $\rho = 1$: the knife-edge.
+:::
+
+::: {.slide title="Watch it happen"}
+Operator norm $\|\mathbf{J}^k\|$ of the $k$-step Jacobian product for a symmetric
+recurrence rescaled to spectral radius $\rho$ (log scale):
+
+@bptt-vanishing-and-exploding-gradients
+
+Three straight lines: decay, flat, blow-up. Over 40 steps the signal is
+amplified more than fortyfold or crushed below two percent.
+:::
+
+::: {.slide title="Fix: arithmetic vs. architecture"}
+- **Explosion** is easy: rescale it. **Gradient clipping** caps the gradient
+  norm before each update.
+- **Vanishing** cannot be rescaled away (scaling up noise only gives bigger
+  noise). It needs a change of **dynamics**:
+  - **Gating** (LSTM/GRU): a near-identity memory path, Jacobian $\approx 1$.
+  - **Linear recurrence / SSM**: eigenvalues pinned inside the unit circle
+    **by construction**, so $\rho \le 1$ is guaranteed, not hoped for.
+:::
+
+::: {.slide title="Truncated BPTT"}
+![Full BPTT (top) vs. regular truncation into length-$\tau$ segments (bottom), detaching the hidden state at each boundary.](../img/mdl-rnn-truncated-bptt.svg){width=85%}
+
+Truncate the backward sum to $\tau$ steps: the **detach-state** idiom. Cheaper
+and more stable; the bias (no dependency longer than $\tau$) is often a helpful
+regularizer.
+:::
+
+::: {.slide title="Recap"}
+- BPTT = backprop on the unrolled recurrence; tied weights, summed gradients.
+- The $k$-step gradient carries a $k$-fold Jacobian product $\sim\rho^k$:
+  **vanish** ($\rho<1$) or **explode** ($\rho>1$).
+- Clipping tames explosion; **architecture** (gates, stable linear recurrence)
+  tames vanishing.
+- Truncation trades a little bias for stability and memory, the same
+  store-vs.-recompute bargain as activation checkpointing at scale.
+:::

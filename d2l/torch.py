@@ -754,6 +754,142 @@ class TimeMachine(d2l.DataModule):
             self.num_train, self.num_train + self.num_val)
         return self.get_tensorloader([self.X, self.Y], train, idx)
 
+import regex
+
+class BPETokenizer:
+    """Byte-level BPE tokenizer trained by iterated most-frequent-pair
+    merges.
+
+    Token ids 0..255 are raw bytes; learned merges get ids
+    256..vocab_size-1; special tokens sit above those and are never
+    produced by BPE itself. `pattern` is an optional pre-tokenization
+    regex: text is split into chunks and merges never cross chunk
+    boundaries.
+
+    Defined in :numref:`sec_text-sequence`"""
+
+    GPT2_PATTERN = (r"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+"
+                    r"| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+")
+
+    def __init__(self, vocab_size=1024, pattern=None,
+                 specials=('<pad>', '<bos>', '<eos>')):
+        self.vocab_size, self.pattern = vocab_size, pattern
+        self.merges = {}                                  # (id, id) -> new id
+        self.vocab = {i: bytes([i]) for i in range(256)}  # id -> bytes
+        self.byte_ids = list(range(256))                  # byte value -> id
+        self.specials = {s: vocab_size + i for i, s in enumerate(specials)}
+
+    def __len__(self):
+        return self.vocab_size + len(self.specials)
+
+    @property
+    def pad(self):
+        return self.specials['<pad>']
+
+    @property
+    def bos(self):
+        return self.specials['<bos>']
+
+    @property
+    def eos(self):
+        return self.specials['<eos>']
+
+    def _chunks(self, text):
+        return [text] if self.pattern is None else regex.findall(
+            self.pattern, text)
+
+    def _merge(self, ids, pair, new_id):
+        """Replace every occurrence of pair in ids by new_id."""
+        out, i = [], 0
+        while i < len(ids):
+            try:  # list.index scans for the next candidate at C speed
+                j = ids.index(pair[0], i)
+            except ValueError:
+                j = len(ids)
+            out.extend(ids[i:j])
+            if j < len(ids) - 1 and ids[j + 1] == pair[1]:
+                out.append(new_id)
+                i = j + 2
+            elif j < len(ids):
+                out.append(ids[j])
+                i = j + 1
+            else:
+                i = j
+        return out
+
+    def train(self, text):
+        """Learn vocab_size - 256 merges, most frequent pair first."""
+        chunk_freq = collections.Counter(self._chunks(text))
+        seqs = [list(chunk.encode('utf-8')) for chunk in chunk_freq]
+        for new_id in range(256, self.vocab_size):
+            pairs = collections.Counter()
+            for seq, w in zip(seqs, chunk_freq.values()):
+                if w == 1:  # Counter.update counts at C speed
+                    pairs.update(zip(seq, seq[1:]))
+                else:  # weight pair counts by chunk frequency
+                    for pair in zip(seq, seq[1:]):
+                        pairs[pair] += w
+            if not pairs:
+                break  # nothing left to merge
+            pair = max(pairs, key=pairs.get)
+            self.merges[pair] = new_id
+            self.vocab[new_id] = self.vocab[pair[0]] + self.vocab[pair[1]]
+            seqs = [self._merge(seq, pair, new_id) for seq in seqs]
+
+    def _encode_chunk(self, text_bytes):
+        ids = [self.byte_ids[b] for b in text_bytes]
+        while len(ids) > 1:
+            # The lowest-rank merge applicable anywhere in this chunk
+            pair = min(zip(ids, ids[1:]),
+                       key=lambda p: self.merges.get(p, float('inf')))
+            if pair not in self.merges:
+                break
+            ids = self._merge(ids, pair, self.merges[pair])
+        return ids
+
+    def encode(self, text, allow_special=False):
+        if allow_special and self.specials:
+            pat = '(' + '|'.join(regex.escape(s) for s in self.specials) + ')'
+            ids = []
+            for part in regex.split(pat, text):
+                if part in self.specials:
+                    ids.append(self.specials[part])
+                elif part:
+                    ids.extend(self.encode(part))
+            return ids
+        return [i for chunk in self._chunks(text)
+                for i in self._encode_chunk(chunk.encode('utf-8'))]
+
+    def decode(self, ids):
+        specials = {i: s.encode('utf-8') for s, i in self.specials.items()}
+        data = b''.join(self.vocab[i] if i in self.vocab else specials[i]
+                        for i in ids)
+        return data.decode('utf-8', errors='replace')
+
+    @classmethod
+    def from_tiktoken(cls, name):
+        """Load a published bytes->rank table (e.g. 'gpt2') into our encoder.
+
+        Defined in :numref:`sec_text-sequence`"""
+        import tiktoken  # lazy: d2l itself does not require tiktoken
+        enc = tiktoken.get_encoding(name)
+        ranks = enc._mergeable_ranks
+        tok = cls(vocab_size=len(ranks), pattern=enc._pat_str, specials=())
+        tok.specials = dict(enc._special_tokens)
+        tok.vocab = {rank: b for b, rank in ranks.items()}
+        tok.byte_ids = [ranks[bytes([b])] for b in range(256)]
+        for token, rank in ranks.items():
+            if len(token) > 1:  # recover which pair merged into this token
+                parts = [bytes([b]) for b in token]
+                while len(parts) > 2:
+                    a, b = min(zip(parts, parts[1:]),
+                               key=lambda p: ranks.get(p[0] + p[1],
+                                                       float('inf')))
+                    i = list(zip(parts, parts[1:])).index((a, b))
+                    parts[i:i + 2] = [a + b]
+                tok.merges[ranks[parts[0]], ranks[parts[1]]] = rank
+        return tok
+
 class Vocab:
     """Vocabulary for text.
 

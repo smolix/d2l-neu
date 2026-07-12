@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40282,
-          "sha256": "sha256:89fc9eeea023e8ed947264a06d2dbdefccec3f7b53b672a26e96d0b6dad2a1b1"
+          "bytes": 39917,
+          "sha256": "sha256:239b518a7fd2ab4f1942e990aef32ae48e2d7ca1746497c53c611aa834293a4b"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 19947,
-          "sha256": "sha256:7b1d59d2e1fe4dfb6f324592badf7f1b7d5bd62b03539f7f279a9c0f35405d84"
+          "bytes": 19945,
+          "sha256": "sha256:91454de1c4124271b3078f33424be32ba026a02b4f4300f53db6da151a6be61e"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 68371,
-          "sha256": "sha256:947f2b57cd549cbb200b4c9fee01c3fc2eb470f3439fd9d526fa311c34241edb"
+          "bytes": 67008,
+          "sha256": "sha256:edfa52b8d1e8673f0a54cab4842eacb5bf2f76a5d4fa51c8feebe87138c64d42"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 45131,
-          "sha256": "sha256:9b8cbfb76b892265bdaa7a1417e4a1ae5585c98d94c4cf2b58cdc4c760368c67"
+          "bytes": 44151,
+          "sha256": "sha256:e6a6689ae6b0b6d5ea03642591974daf272b6868e4cfa3ff6de0f8a8ffe16acf"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 105251,
-          "sha256": "sha256:a8612d0aabff6b81c8544c83acd2ea302e7d8d95970edafc237869b438b55721"
+          "bytes": 103472,
+          "sha256": "sha256:43d4d944517087ed97cae2249770df0b925bdf4f3a3735348d1fed9e2e09a83b"
         }
       ]
     }

@@ -97,30 +97,30 @@
       "outputs": []
     },
     "numerics-mixed-precision-training-3": {
-      "code_fingerprint": "sha256:c55217181a9750b5a683c6ab0e9bd4cea0185bd6da12e89ddd84252dcc62adf2",
+      "code_fingerprint": "sha256:29991aaad623b6edfbf0985da3d26ea848b50a879950b6209deb498c0295c048",
       "kind": "text",
       "outputs": []
     },
     "numerics-mixed-precision-training-4": {
-      "code_fingerprint": "sha256:863cc91fd43b60e8be5b1acc4e18893c6def9e9cc6126a97ca0c9a69f742cba0",
+      "code_fingerprint": "sha256:db99a0ad33818dc0ca32cfc60ff3c27e7707c166ace4e77865e4138db30506f7",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: loss 0.751, val acc 0.746, 1.86s\nbf16: loss 0.751, val acc 0.749, 1.22s\n"
+          "text": "fp32: loss 0.748, val acc 0.739, 1.78s\nbf16: loss 0.748, val acc 0.739, 1.00s\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 26842,
-          "sha256": "sha256:e444e563b41e113d3912ef3ec8532fea0f4e7d11e0b331c87a6d75d159c03930"
+          "bytes": 26843,
+          "sha256": "sha256:e1bb17e25338c610de5050ab1041af6e877d23f82fd07a98922e0faca065874d"
         }
       ]
     },
     "numerics-loss-scaling-for-fp16-1": {
-      "code_fingerprint": "sha256:4500751a25d5c53d7de8b3cd40f4bc31ddcd36ad06a238ea881d7564fc4b0b91",
+      "code_fingerprint": "sha256:b2585e75bdd8dbb4c15fa6805648882ea2d056535ba52ea971f5c380769cf8da",
       "kind": "text",
       "outputs": [
         {
@@ -130,7 +130,7 @@
       ]
     },
     "numerics-when-numerics-bite-1": {
-      "code_fingerprint": "sha256:a4f539e891c72b9eeb68d398639e0facf3799419af7c6b9e3d07c2368ba1bc15",
+      "code_fingerprint": "sha256:2c7339df0b5b22ddd8611233dc5a2a6e465452d6d53e57a2869b67c6caeb75b4",
       "kind": "text",
       "outputs": [
         {
@@ -140,7 +140,7 @@
       ]
     },
     "numerics-when-numerics-bite-2": {
-      "code_fingerprint": "sha256:a19ed590bd4baa51d4fd8822ca00b4e796c00807738f262ef7338ad6bdf4d07f",
+      "code_fingerprint": "sha256:3fd7482aa8e48ef3f4fd291ff83e68a8926894b3724b758b0add414e919f269d",
       "kind": "text",
       "outputs": [
         {
@@ -150,7 +150,7 @@
       ]
     },
     "numerics-when-numerics-bite-3": {
-      "code_fingerprint": "sha256:490943c5f12bb631a8213bb72b75dd09fc011fad4c7ee68f8802e01677ca0206",
+      "code_fingerprint": "sha256:e9a9047b79ceba6657e82bad3e42d56a364b02a095a63cee3b8e773cbd527dad",
       "kind": "text",
       "outputs": [
         {

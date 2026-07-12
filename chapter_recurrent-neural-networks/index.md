@@ -1,142 +1,79 @@
-# Recurrent Neural Networks
+# Sequence Models and Language Models
 :label:`chap_rnn`
 
-Up until now, we have focused primarily on fixed-length data.
-When introducing linear and logistic regression
-in :numref:`chap_regression` and :numref:`chap_classification`
-and multilayer perceptrons in :numref:`chap_perceptrons`,
-we were happy to assume that each feature vector $\mathbf{x}_i$
-consisted of a fixed number of components $x_1, \dots, x_d$,
-where each numerical feature $x_j$
-corresponded to a particular attribute.
-These datasets are sometimes called *tabular*,
-because they can be arranged in tables,
-where each example $i$ gets its own row,
-and each attribute gets its own column.
-Crucially, with tabular data, we seldom
-assume any particular structure over the columns.
+A great deal of intelligent behavior looks like predicting what comes next.
+We finish each other's sentences, anticipate the next note in a melody,
+and extrapolate a trend from the numbers seen so far.
+Each of these tasks takes a *sequence* of observations and asks for its continuation.
+The parts of this book that came before treated learning as a mapping
+from a fixed-length input to a single output, one example at a time.
+That framing served us well for tabular data and for images,
+but it quietly assumed away two features that define sequential data,
+and it is exactly those two features that this chapter is built to handle.
 
-Subsequently, in :numref:`chap_cnn`,
-we moved on to image data, where inputs consist
-of the raw pixel values at each coordinate in an image.
-Image data hardly fitted the bill
-of a prototypical tabular dataset.
-There, we needed to call upon convolutional neural networks (CNNs)
-to handle the hierarchical structure and invariances.
-However, our data were still of fixed length.
-Every Fashion-MNIST image is represented
-as a $28 \times 28$ grid of pixel values.
-Moreover, our goal was to develop a model
-that looked at just one image and then
-outputted a single prediction.
-But what should we do when faced with a
-sequence of images, as in a video,
-or when tasked with producing
-a sequentially structured prediction,
-as in the case of image captioning?
+The first assumption was that examples are independent and identically distributed.
+When we fit linear and logistic regression in :numref:`chap_regression`
+and :numref:`chap_classification`, or multilayer perceptrons in :numref:`chap_perceptrons`,
+we drew each example without regard to the others.
+In a sentence or a time series the opposite is true:
+every element depends on the ones before it,
+and that dependence is precisely the signal we want to model.
+The second assumption was that each input has a fixed shape.
+Even the images of :numref:`chap_cnn` arrived as a fixed grid of pixels.
+A document, a recording, or a price history has no such fixed length,
+and two examples rarely share one.
 
-A great many learning tasks require dealing with sequential data.
-Image captioning, speech synthesis, and music generation
-all require that models produce outputs consisting of sequences.
-In other domains, such as time series prediction,
-video analysis, and musical information retrieval,
-a model must learn from inputs that are sequences.
-These demands often arise simultaneously:
-tasks such as translating passages of text
-from one natural language to another,
-engaging in dialogue, or controlling a robot,
-demand that models both ingest and output
-sequentially structured data.
+Two ideas carry us through the whole chapter.
+The first is *autoregressive factorization*.
+Rather than model the probability of a whole sequence at once,
+we factor it into a product of one-step-ahead predictions:
+the probability of each element given the elements that precede it.
+This turns an unwieldy generative problem into an ordinary supervised one,
+in which the input is a prefix and the label is the next element.
+Every position in a sequence thus becomes another training signal,
+and generation becomes nothing more than repeating that prediction
+and feeding each output back in as the next input.
 
+The second idea is the *hidden state*.
+A prefix grows without bound as a sequence unrolls,
+yet we cannot afford a memory that grows along with it.
+So we insist that the model carry a fixed-size summary
+of everything it has read so far, revising that summary as each new element arrives.
+This is what a recurrent neural network does,
+and the tension at its heart runs through the rest of the part:
+how much of an unbounded past can a bounded state honestly remember?
+Getting a useful answer to that question is what makes the difference
+between a model that forgets within a few steps and one that holds a thought.
 
-Recurrent neural networks (RNNs) are deep learning models
-that capture the dynamics of sequences via
-*recurrent* connections, which can be thought of
-as cycles in the network of nodes.
-This might seem counterintuitive at first.
-After all, it is the feedforward nature of neural networks
-that makes the order of computation unambiguous.
-However, recurrent edges are defined in a precise way
-that ensures that no such ambiguity can arise.
-Recurrent neural networks are *unrolled* across time steps (or sequence steps),
-with the *same* underlying parameters applied at each step.
-While the standard connections are applied *synchronously*
-to propagate each layer's activations
-to the subsequent layer *at the same time step*,
-the recurrent connections are *dynamic*,
-passing information across adjacent time steps.
-As the unfolded view in :numref:`fig_unfolded-rnn` reveals,
-RNNs can be thought of as feedforward neural networks
-where each layer's parameters (both conventional and recurrent)
-are shared across time steps.
+Language modeling is the running application that ties these ideas together,
+and by the end we will have trained a small language model
+and sampled fresh text from it properly.
+The path there is a single build, one section handing off to the next:
+we tokenize a corpus, set a baseline to beat, learn a recurrence,
+face down the gradients that make it hard to train, and finally sample from it.
+We begin with sequences in the abstract in :numref:`sec_sequence`,
+then turn text into tokens a model can consume in :numref:`sec_text-sequence`.
+:numref:`sec_language-model` frames the language-modeling task
+and fits a simple counting baseline to beat.
+:numref:`sec_rnn` introduces the recurrent network itself,
+and :numref:`sec_rnn-scratch` implements an RNN language model end to end.
+:numref:`sec_bptt` confronts the gradient realities of training through time,
+and :numref:`sec_decoding` closes the loop
+by turning a trained model's predictions back into readable text.
 
-
-![On the left recurrent connections are depicted via cyclic edges. On the right, we unfold the RNN over time steps. Here, recurrent edges span adjacent time steps, while conventional connections are computed synchronously.](../img/unfolded-rnn.svg)
-:label:`fig_unfolded-rnn`
-
-
-Like neural networks more broadly,
-RNNs have a long discipline-spanning history,
-originating as models of the brain popularized
-by cognitive scientists and subsequently adopted
-as practical modeling tools employed
-by the machine learning community.
-As we do for deep learning more broadly,
-in this book we adopt the machine learning perspective,
-focusing on RNNs as practical tools that rose
-to popularity in the 2010s owing to
-breakthrough results on such diverse tasks
-as handwriting recognition :cite:`graves2008novel`,
-machine translation :cite:`Sutskever.Vinyals.Le.2014`,
-and recognizing medical diagnoses :cite:`Lipton.Kale.2016`.
-We point the reader interested in more
-background material to a publicly available
-comprehensive review :cite:`Lipton.Berkowitz.Elkan.2015`.
-We also note that sequentiality is not unique to RNNs.
-For example, the CNNs that we already introduced
-can be adapted to handle data of varying length,
-e.g., images of varying resolution.
-Moreover, RNNs have recently ceded considerable
-market share to Transformer models,
-which will be covered in :numref:`chap_attention-and-transformers`.
-However, RNNs rose to prominence as the default models
-for handling complex sequential structure in deep learning,
-and remain staple models for sequential modeling to this day.
-The stories of RNNs and of sequence modeling
-are inextricably linked, and this is as much
-a chapter about the ABCs of sequence modeling problems
-as it is a chapter about RNNs.
-
-
-One key insight paved the way for a revolution in sequence modeling.
-While the inputs and targets for many fundamental tasks in machine learning
-cannot easily be represented as fixed-length vectors,
-they can often nevertheless be represented as
-varying-length sequences of fixed-length vectors.
-For example, documents can be represented as sequences of words;
-medical records can often be represented as sequences of events
-(encounters, medications, procedures, lab tests, diagnoses);
-videos can be represented as varying-length sequences of still images.
-
-
-While sequence models have popped up in numerous application areas,
-basic research in the area has been driven predominantly
-by advances on core tasks in natural language processing.
-Thus, throughout this chapter, we will focus
-our exposition and examples on text data.
-If you get the hang of these examples,
-then applying the models to other data modalities
-should be relatively straightforward.
-In the next few sections, we introduce basic
-notation for sequences and some evaluation measures
-for assessing the quality of sequentially structured model outputs.
-After that, we discuss basic concepts of a language model
-and use this discussion to motivate our first RNN models.
-Finally, we describe the method for calculating gradients
-when backpropagating through RNNs and explore some challenges
-that are often encountered when training such networks,
-motivating the modern RNN architectures that will follow
-in :numref:`chap_modern_rnn`.
+A word on where this material stands.
+Recurrent networks powered the deep-learning breakthroughs of the 2010s
+in speech recognition and machine translation,
+and for a while they were the default model for anything sequential.
+Transformers later displaced them at scale, and much of today's attention goes there.
+Yet recurrence has returned in modern guise, which we take up in :numref:`chap_modern_rnn`,
+precisely because a bounded-memory state makes inference cheap
+when the alternative grows with the length of the sequence.
+Whichever architecture wins a given task,
+the concepts introduced here, namely autoregressive factorization, perplexity,
+backpropagation through time, and decoding,
+are exactly the ones on which the later material on large language models stands.
+They are worth learning once, and learning carefully.
 
 ```toc
 :maxdepth: 2
@@ -145,8 +82,7 @@ sequence
 text-sequence
 language-model
 rnn
-rnn-scratch
-rnn-concise
+rnn-implementation
 bptt
+decoding
 ```
-

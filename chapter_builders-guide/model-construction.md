@@ -7,26 +7,29 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 :label:`sec_model_construction`
 
 The networks we have trained so far were small enough to write down layer by
-layer. The networks ahead are not: a ResNet chains more than a hundred
-convolutional layers, and a GPT-style language model stacks dozens of identical
-Transformer blocks :cite:`Radford.Wu.Child.ea.2019`. Nobody writes such models
-one layer at a time, and nobody designs them that way either. The unit of
-design is the *block*, a group of layers that repeats, and the abstraction that
+layer. The networks ahead are not: deep ResNets chain more than a hundred
+convolutional layers :cite:`He.Zhang.Ren.ea.2016`, and a GPT-style language
+model stacks dozens of identical Transformer blocks
+:cite:`Radford.Wu.Child.ea.2019`. Such models are assembled from repeated
+*blocks*, groups of layers treated as units of design. The abstraction that
 makes blocks composable is the *module*.
 
 A module is an object with three responsibilities: it owns *parameters*, it
 owns *child modules*, and it implements a *forward computation* that maps
 inputs to outputs. The definition is deliberately recursive. A fully connected
 layer is a module (parameters, no children). A residual block is a module (no
-parameters of its own, a few child layers). A hundred-layer network is a module
-whose children are blocks whose children are layers. Every model is therefore a
-*tree* of modules, as sketched in :numref:`fig_blocks`, and almost everything
+direct parameters, a few child layers that own parameters). A hundred-layer
+network is a module whose children are blocks whose children are layers. Most
+models therefore have a tree-shaped module hierarchy, as sketched in
+:numref:`fig_blocks`. Reusing one child at several sites turns that tree into
+an object graph, a case we meet when tying parameters in
+:numref:`sec_parameters`. Almost everything
 this chapter does to a model, listing its parameters
 (:numref:`sec_parameters`), moving it to a GPU (:numref:`sec_use_gpu`),
 saving it to disk (:numref:`sec_read_write`), is implemented as a walk over
 that tree.
 
-![Layers compose into blocks and blocks compose into models: every model is a tree of modules.](../img/bg-module-tree.svg)
+![Layers compose into blocks and blocks compose into models, giving the usual tree-shaped module hierarchy.](../img/bg-module-tree.svg)
 :label:`fig_blocks`
 
 ```{.python .input #model-construction-modules-and-model-construction}
@@ -844,10 +847,12 @@ class ResidualBlock(nn.Block):
 :begin_tab:`pytorch`
 `X + self.body(X)` is not a layer PyTorch provides. It is arithmetic in
 `forward`, and it changes what the block *is*: the block computes a
-perturbation of the identity function rather than an arbitrary transformation,
-and during backpropagation the skip path hands gradients to earlier layers
-undiminished, tempering the vanishing gradients of
-:numref:`sec_numerical_stability`. :numref:`fig_bg_residual-block` diagrams
+perturbation of the identity function rather than an arbitrary transformation.
+If its body is $F$, its Jacobian is $I + J_F$, so backpropagation receives an
+additive identity contribution along the skip path. This contribution can
+still cancel against $J_F$; it is a direct path, not a guarantee that every
+gradient is preserved :cite:`He.Zhang.Ren.ea.2016`.
+:numref:`fig_bg_residual-block` diagrams
 exactly this wiring. Chapter 8 develops both points when we build ResNet; for
 now we only need the mechanics. One mechanical consequence
 is visible already: the addition forces the input and output shapes to agree,
@@ -858,23 +863,27 @@ why we gave `body` explicit `nn.Linear` layers rather than lazy ones.
 :begin_tab:`jax`
 `X + body(X)` is not a layer Flax provides. It is arithmetic in `__call__`,
 and it changes what the block *is*: the block computes a perturbation of the
-identity function rather than an arbitrary transformation, and during
-backpropagation the skip path hands gradients to earlier layers undiminished,
-tempering the vanishing gradients of :numref:`sec_numerical_stability`.
+identity function rather than an arbitrary transformation. If its body is
+$F$, its Jacobian is $I + J_F$, so backpropagation receives an additive
+identity contribution along the skip path. This contribution can still cancel
+against $J_F$; it is a direct path, not a guarantee that every gradient is
+preserved :cite:`He.Zhang.Ren.ea.2016`.
 :numref:`fig_bg_residual-block` diagrams exactly this wiring. Chapter 8
 develops both points when we build ResNet; for now we only need the mechanics.
 One mechanical consequence is visible already: the addition forces the input
 and output shapes to agree, so a residual block has a single width that is
-part of its identity. That is why `num_hiddens` is a declared field of the
-block rather than a width left for `init` to infer.
+part of its identity. That is why `num_hiddens` is an explicit constructor
+argument rather than a width inferred from a sample batch.
 :end_tab:
 
 :begin_tab:`tensorflow`
 `X + self.body(X)` is not a layer Keras provides. It is arithmetic in `call`,
 and it changes what the block *is*: the block computes a perturbation of the
-identity function rather than an arbitrary transformation, and during
-backpropagation the skip path hands gradients to earlier layers undiminished,
-tempering the vanishing gradients of :numref:`sec_numerical_stability`.
+identity function rather than an arbitrary transformation. If its body is
+$F$, its Jacobian is $I + J_F$, so backpropagation receives an additive
+identity contribution along the skip path. This contribution can still cancel
+against $J_F$; it is a direct path, not a guarantee that every gradient is
+preserved :cite:`He.Zhang.Ren.ea.2016`.
 :numref:`fig_bg_residual-block` diagrams exactly this wiring. Chapter 8
 develops both points when we build ResNet; for now we only need the
 mechanics. One mechanical consequence is visible already: the addition forces
@@ -888,9 +897,11 @@ than `num_hiddens` columns and the addition fails.
 `X + self.body(X)` is not a layer Gluon provides. It is arithmetic in
 `forward`, and it changes what the block *is*: the block computes a
 perturbation of the identity function rather than an arbitrary
-transformation, and during backpropagation the skip path hands gradients to
-earlier layers undiminished, tempering the vanishing gradients of
-:numref:`sec_numerical_stability`. :numref:`fig_bg_residual-block` diagrams
+transformation. If its body is $F$, its Jacobian is $I + J_F$, so
+backpropagation receives an additive identity contribution along the skip
+path. This contribution can still cancel against $J_F$; it is a direct path,
+not a guarantee that every gradient is preserved
+:cite:`He.Zhang.Ren.ea.2016`. :numref:`fig_bg_residual-block` diagrams
 exactly this wiring. Chapter 8 develops both points when we build ResNet; for
 now we only need the mechanics. One mechanical consequence is visible
 already: the addition forces the input and output shapes to agree, so a
@@ -1085,10 +1096,11 @@ will receive. So it does not allocate parameters at construction time at all:
 
 :begin_tab:`jax`
 NNX makes a different choice: `nnx.Linear` takes both its input and output
-widths and creates its parameters in the constructor. Explicit shapes catch a
-mismatched connection while the model is built, before a training run starts.
-They also keep the model object complete: an optimizer or checkpoint can
-inspect every parameter immediately, without a dummy forward pass.
+widths and creates its parameters in the constructor. This keeps the model
+object complete: an optimizer or checkpoint can inspect every parameter
+immediately, without a dummy forward pass. The widths also make a bad
+connection easier to diagnose, although an ordinary builder does not validate
+adjacent layers; an incompatible pair still fails when the model is called.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1203,10 +1215,11 @@ adjacent layers. This keeps the NNX code compact without hiding parameter
 creation behind a sample batch.
 
 :begin_tab:`pytorch`
-The convenience comes with one rule: until the first forward pass, the
-parameters *do not exist*. Anything that needs the parameter list, whether
-constructing an optimizer, applying an initializer, or counting parameters,
-must happen after a *dry run* on a representative batch. A related subtlety:
+Before the first forward pass, lazy layers contain registered
+`UninitializedParameter` placeholders rather than shaped arrays. An optimizer
+can be constructed over those placeholders, but reading shapes, counting
+elements, or applying a shape-dependent initializer requires a *dry run* on a
+representative batch. A related subtlety:
 the random initialization now happens at first call rather than at
 construction, so any random numbers your program draws in between shift the
 generator's state, and a fixed seed can yield different weights than the
@@ -1223,25 +1236,24 @@ layer's random stream is explicit (:numref:`sec_repro` returns to seeding).
 :end_tab:
 
 :begin_tab:`tensorflow`
-The convenience comes with one rule: until the first call, the variables *do
-not exist*. Anything that needs the variable list, whether constructing an
-optimizer, reading a weight, or counting parameters, must happen after the
-model is built. Keras offers two ways to get there: a dry run on a
+Until the first call, the variables do not exist. An optimizer object can be
+constructed without them, but reading weights, counting parameters, or
+building optimizer state requires the model's variable list. Keras offers two
+ways to create it: a dry run on a
 representative batch, or `net.build((None, 20))`, which propagates shapes
-through the model without any data (`None` marks the batch dimension). Two
-consequences of build-time allocation are worth remembering. Initialization
+through the model without any data (`None` marks the batch dimension).
+Initialization
 happens at build rather than at construction, so under a fixed seed the
 weights you get depend on how many random numbers the program drew before the
-model was built (:numref:`sec_repro` returns to seeding). And, as the
-containers lesson showed, building is also the moment the model's structure
-locks.
+model was built (:numref:`sec_repro` returns to seeding). As the containers
+lesson showed, building is also the moment the model's structure locks.
 :end_tab:
 
 :begin_tab:`mxnet`
-The convenience comes with one rule: until the first forward pass, the
-parameters have no shapes and no values. Anything that needs them, whether
-creating a `Trainer`, reading a weight, or counting parameters, must happen
-after a *dry run* on a representative batch. A related subtlety: the random
+Until the first forward pass, Gluon parameters have placeholder shapes and no
+allocated values. A `Trainer` can be constructed over those parameter
+objects, but reading a weight or counting elements requires a *dry run* on a
+representative batch. A related subtlety: the random
 draw now happens at first call rather than at `initialize()`, so any random
 numbers your program draws in between shift the generator's state, and a
 fixed seed can yield different weights than an explicitly shaped version of
@@ -1389,11 +1401,11 @@ is a sensible default, is the subject of :numref:`sec_init_param`.
 ## Building from a Config
 
 So far every width in this section was a literal typed into a constructor.
-Real model code does not work that way. An architecture is a handful of
-integers and switches (depth, width, output size), and those numbers must be
-varied across experiments, logged with results, and stored with checkpoints so
-that a saved model can be rebuilt. The standard pattern is to collect them in
-a small configuration object and derive the model from it:
+Real model code does not work that way. The architecture choices that vary
+across experiments, such as depth, width, and output size, must be logged with
+results and stored with checkpoints so that a saved model can be rebuilt. The
+topology remains in code; a small configuration object records its variable
+choices:
 
 ```{.python .input #model-construction-building-from-a-config-1}
 %%tab pytorch
@@ -1558,7 +1570,7 @@ net(tf.random.uniform((2, 784))).shape
 net(np.random.uniform(size=(2, 784))).shape
 ```
 
-Architecture is now *data*. Rescaling the model is a change to two fields, not
+The variable architecture choices are now data. Rescaling the model is a change to two fields, not
 an edit to model code:
 
 ```{.python .input #model-construction-building-from-a-config-4}
@@ -1601,16 +1613,16 @@ Because `build` is deterministic in `cfg`, the config is all you need to
 reconstruct the module tree later; :numref:`sec_read_write` saves it
 alongside the weights so that loading a checkpoint starts by rebuilding the
 exact same model. A config of widths and depths feeding a loop that stacks
-identical residual blocks is, minus attention, the exact shape of every
-Transformer implementation you will read.
+identical residual blocks is a common construction pattern in the Transformer
+implementations later in the book.
 :end_tab:
 
 :begin_tab:`jax`
 Because `build` is deterministic in `cfg`, the config is all we need to
 reconstruct the object graph later; :numref:`sec_read_write` saves it
 alongside the state. Width and depth fields feeding a loop that stacks
-identical residual blocks have the same form as the Transformer models later
-in the book.
+identical residual blocks form a common construction pattern in the
+Transformer models later in the book.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1619,9 +1631,9 @@ reconstruct the module tree later; :numref:`sec_read_write` saves it
 alongside the weights so that loading a checkpoint starts by rebuilding the
 exact same model. Keras bakes the same idea into every layer: `get_config()`
 returns the constructor arguments needed to re-create the object, and that is
-exactly what Keras model serialization records. A config of widths and depths
-feeding a loop that stacks identical residual blocks is, minus attention, the
-exact shape of every Transformer implementation you will read.
+what Keras model serialization records. A config of widths and depths feeding
+a loop that stacks identical residual blocks is a common construction pattern
+in the Transformer implementations later in the book.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -1629,17 +1641,18 @@ Because `build` is deterministic in `cfg`, the config is all you need to
 reconstruct the module tree later; :numref:`sec_read_write` saves it
 alongside the weights so that loading a checkpoint starts by rebuilding the
 exact same model. A config of widths and depths feeding a loop that stacks
-identical residual blocks is, minus attention, the exact shape of every
-Transformer implementation you will read.
+identical residual blocks is a common construction pattern in the Transformer
+implementations later in the book.
 :end_tab:
 
 ## Summary
 
 :begin_tab:`pytorch`
 A module owns parameters, child modules, and a `forward` method. Layers,
-blocks, and whole models are the same kind of object, so a model is a tree of
-modules, and parameter collection, device movement, and serialization are all
-walks over that tree. The tree is discovered through registration: attribute
+blocks, and whole models are the same kind of object, so the usual hierarchy
+is tree-shaped, while shared children introduce aliases. Parameter collection,
+device movement, and serialization traverse that object graph. Children are
+discovered through registration: attribute
 assignment and the containers `nn.Sequential`, `nn.ModuleList`, and
 `nn.ModuleDict` register children, while a plain Python list hides them,
 yielding a model that runs but trains nothing. `forward` is ordinary Python;
@@ -1662,9 +1675,10 @@ function records those widths and repeated-block counts.
 
 :begin_tab:`tensorflow`
 A module owns variables, child layers, and a `call` method. Layers, blocks,
-and whole models are the same kind of object, so a model is a tree of
-modules, and variable collection and serialization are walks over that tree.
-The tree is discovered through attribute assignment: Keras scans every
+and whole models are the same kind of object, so the usual hierarchy is
+tree-shaped, while shared children introduce aliases. Variable collection and
+serialization traverse that object graph. Children are discovered through
+attribute assignment: Keras scans every
 assigned attribute, lists and dictionaries included, so even a plain Python
 list of layers is tracked. Variables are created by `build`, not by the
 constructor: every layer infers its input width when the first batch arrives
@@ -1677,9 +1691,10 @@ Keras-native form of the same idea.
 
 :begin_tab:`mxnet`
 A module owns parameters, child blocks, and a `forward` method. Layers,
-blocks, and whole models are the same kind of object, so a model is a tree of
-blocks, and parameter collection, initialization, device movement, and
-serialization are all walks over that tree. The tree is discovered through
+blocks, and whole models are the same kind of object, so the usual hierarchy
+is tree-shaped, while shared children introduce aliases. Parameter collection,
+initialization, device movement, and serialization traverse that object graph.
+Children are discovered through
 registration: attribute assignment, `nn.Sequential`'s `add`, and
 `register_child` register children, while a plain Python list hides them,
 though `collect_params()` warns about the hidden blocks by name. `forward` is

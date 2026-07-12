@@ -2,8 +2,9 @@
 :label:`sec_model_construction_v2`
 
 > **Role.** The foundational section: every model from Chapter 7 onward is
-> built with what is taught here. Keeps the module-as-recursive-tree mental
-> model from the current section (its strongest material), replaces the toy
+> built with what is taught here. Keeps the recursive module-hierarchy mental
+> model from the current section, while noting that shared children form an
+> object graph rather than a tree; replaces the toy
 > examples with ones that point forward to the architectures the reader will
 > actually build, folds in lazy initialization (currently a standalone
 > section), and adds the config-driven assembly pattern that every real 2026
@@ -13,9 +14,10 @@
 
 *Topics.* Layers, blocks, and whole models are the same kind of object; a
 module owns (i) parameters, (ii) child modules, (iii) a `forward`
-computation. The module tree: a model is a recursive composition, and
-everything downstream — parameter traversal, serialization, device
-movement — is a tree walk. Why coarse *blocks* (not layers) are the unit of
+computation. The usual tree-shaped hierarchy: a model is a recursive
+composition, while sharing introduces aliases in the object graph, and
+everything downstream, including parameter traversal, serialization, and
+device movement, is a graph traversal that handles shared children. Why coarse *blocks* (not layers) are the unit of
 design, with the 2026 example in front: a Transformer is a stack of dozens
 of identical blocks.
 
@@ -67,7 +69,7 @@ preservation is required and why.
 :label:`sec_lazy_init`
 
 > **Lib constraint.** This subsection MUST keep the label `sec_lazy_init`
-> and carry over the `Module.apply_init` `#@save` (pytorch + jax tabs)
+> and carry over the PyTorch `Module.apply_init` `#@save`
 > **byte-identical**: shards stamp symbols with `Defined in
 > :numref:<label>`, and `apply_init` is used by 8+ downstream files
 > (alexnet, vgg, nin, googlenet, resnet, batch-norm, lenet, hyperopt-api —
@@ -78,10 +80,11 @@ preservation is required and why.
 at first call (`nn.LazyLinear`, `nn.LazyConv2d`). Why the book builds models
 this way from Chapter 7 on (it removes shape bookkeeping from pedagogy);
 when explicit shapes are better (config-driven code, see next subsection);
-the one rule: parameters do not exist until the first forward pass, so
-initialize/inspect *after* a dry run. Contrast: JAX/Flax has no lazy mode —
-`init(key, x)` is mandatory and shape-materializing (kept, it is the right
-conceptual contrast even in the PyTorch tab's prose).
+the one rule: registered placeholders are not materialized arrays until the
+first forward pass, so shape/value inspection and shape-dependent
+initialization follow a dry run (optimizers may be constructed earlier).
+Contrast: NNX linear layers take both widths and create parameters in the
+constructor from an explicit RNG stream.
 
 *Code (PyTorch).* Build with `nn.LazyLinear`, show `UninitializedParameter`
 before and a real weight after a dry run `net(X)`.
@@ -93,8 +96,8 @@ before and a real weight after a dry run `net(X)`.
 that records widths, depths, and switches. One config → one architecture;
 the config travels with the checkpoint (forward pointer to
 :numref:`sec_read_write_v2`); stacking `num_blocks` identical residual
-blocks from the config — the exact shape of every Transformer
-implementation the reader will meet, minus attention.
+blocks from the config — a common builder pattern in later Transformer
+implementations. The config records variable choices; topology stays in code.
 
 *Code (PyTorch).*
 
@@ -134,13 +137,11 @@ Chapter 8's ResNet.)*
 
 ## Framework Coverage
 
-- **JAX** — full coverage; two spots are *better* pedagogy. Containers: no
-  footgun — a plain Python list assigned in `setup()` is auto-tracked
-  (verified), so the broken-list demo has no repro; the JAX cell reframes
-  the exercise around dataclass-field typing. Config-driven assembly: flax
-  Modules *are* dataclasses, so the config becomes a field of the model
-  itself (verified) — highlight in prose. Lazy init: mandatory `init(key,x)`
-  — exactly the planned conceptual contrast.
+- **JAX** — full coverage via NNX. Graph nodes belong in `nnx.List` or
+  `nnx.Dict`; a plain Python container of modules is rejected rather than
+  silently hidden. Config-driven assembly stores an ordinary dataclass as
+  architecture data on an `nnx.Module`. Linear layers take explicit widths
+  and create parameters in the constructor.
 - **TensorFlow** — full coverage. Keras 3 auto-tracks plain lists/dicts
   (verified) — the container subsection carries an explicit "TF differs
   here" note instead of the bug demo. `build()`/first-call *is* Keras's
@@ -153,5 +154,5 @@ Chapter 8's ResNet.)*
   `ModuleList`/`ModuleDict` classes: ALT via named attributes /
   `register_child`.
 - **Net effect**: the container subsection becomes a genuine four-way
-  comparative lesson (silent failure / warned / auto-tracked ×2) — stronger
+  comparative lesson (silent failure / warned / rejected / auto-tracked) — stronger
   than the PyTorch-only version.

@@ -35,19 +35,8 @@
         }
       ]
     },
-    "reproducibility-inspection-dataloader-workers-1": {
-      "code_fingerprint": "sha256:dd4d3e691e7e1c1da88bddb7c793f288d3966d6f7203555466489d56ddcca0f8",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "worker 0: [684 559 629]\nworker 1: [684 559 629]\nworker 2: [684 559 629]\nworker 3: [684 559 629]\n"
-        }
-      ]
-    },
     "reproducibility-inspection-dataloader-workers-2": {
-      "code_fingerprint": "sha256:7ae0db2e43aec8a174e29c9570e51f1981f087ff09754e1ed5071800bdb85707",
+      "code_fingerprint": "sha256:7ef401adaa89facba88541b8fd47a4b94b33c3fd6cc5af6041be71859b000054",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +47,7 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-1": {
-      "code_fingerprint": "sha256:8e87e387dd87859f79d90274d789412210c554bd84fde8757f521fd5250de677",
+      "code_fingerprint": "sha256:40e3acfedf185f106b75caf8852f0335a8ffe7f9a1c9156108674854e012ba4b",
       "kind": "text",
       "outputs": [
         {
@@ -69,17 +58,23 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-2": {
-      "code_fingerprint": "sha256:3f288ab464a3be21ca0c0dedec631e527cac7968a2e6366773d71e1d02bcc800",
+      "code_fingerprint": "sha256:adc4adc228775950f04948a5b211685f0d0a5ab042da237acef8a0f0d58a3c69",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "avg_pool3d_backward_cuda does not have a deterministic implementation, but you set 'torch\n"
+        }
+      ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
-      "code_fingerprint": "sha256:3e17213f34e598f35459e3664377ade2796a7e78c1a2496a1cac28791df9b62e",
+      "code_fingerprint": "sha256:286e1acae41a1adfb2100f7586e28b1a34b2868beec99209338b70a8c3dafa4c",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-capturing-activation-statistics": {
-      "code_fingerprint": "sha256:73b09b986ea27f831c2cf08d7d6432be28b95b047c16b7750a62bc77133e8529",
+      "code_fingerprint": "sha256:df14a58d9c88ff12ca319a8891531f95b9297aafe9dc3d368ec9ce089c4be4d3",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +85,7 @@
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:55653d5d8e59743366f5ba829ebdd480fc5ac3a0c5270d552aa513d47dcbc170",
+      "code_fingerprint": "sha256:9c4b83bbccb5869993edd8385b807263508e8624d6a5c90cfb0c3b71890cbada",
       "kind": "text",
       "outputs": [
         {

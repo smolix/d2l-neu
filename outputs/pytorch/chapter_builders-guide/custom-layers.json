@@ -84,17 +84,12 @@
       ]
     },
     "custom-layers-the-composability-guarantee-4": {
-      "code_fingerprint": "sha256:e7433bd806de0152636bcafce9ae550be2a3eb8906b336ac461f308a1f635bf6",
+      "code_fingerprint": "sha256:3a980f087c18e0848c3de921d85943cd19ca247f375d25ecea91d89ef4caeb8f",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "(device(type='cuda', index=0), device(type='cuda', index=0))"
-        }
-      ]
+      "outputs": []
     },
     "custom-layers-checking-against-the-built-in": {
-      "code_fingerprint": "sha256:36fe49d83aeb4a0969eb57a7d05e84ffa73d425e2810114f4bd1bb79d0567558",
+      "code_fingerprint": "sha256:df11f970d196c440ecd21fd30ad0fcdb8600dd563d181323522d8aa5f52bb9a3",
       "kind": "text",
       "outputs": [
         {
@@ -104,12 +99,12 @@
       ]
     },
     "custom-layers-precomputed-state-buffers-1": {
-      "code_fingerprint": "sha256:feec662e45b66289876ac2bf4fdcd03fae2bfaca8db9ff50f3ba89dc121e0c0a",
+      "code_fingerprint": "sha256:2f7abb736596e1d9d9037320392366d4302d1e0ba7aaf91e0e033633d3ae4263",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-precomputed-state-buffers-2": {
-      "code_fingerprint": "sha256:6ef28e9ee7b56252a86e0007c85bd808bfd2875ffc6d346da30685e440ae783f",
+      "code_fingerprint": "sha256:c0820d23b3e9d372f9381487d846d0e5ac6761e98931a30a6227783b60d903c5",
       "kind": "text",
       "outputs": [
         {
@@ -120,7 +115,7 @@
       ]
     },
     "custom-layers-custom-gradients-1": {
-      "code_fingerprint": "sha256:612b06926b7d9a6a09135d1971110f01b9dfcfbb0cb85f5259b4af59f430c67c",
+      "code_fingerprint": "sha256:5f19a9abb76974bca9f7ef0c01e7dc5e2e4d0d7ea6fc3fe4f1d250f681bd363c",
       "kind": "text",
       "outputs": [
         {
@@ -130,12 +125,12 @@
       ]
     },
     "custom-layers-custom-gradients-2": {
-      "code_fingerprint": "sha256:2f98026bc27b181b19f7aedb7d01d39991b12584f69f39b538893186ee02fa02",
+      "code_fingerprint": "sha256:49492ecbe64b7052449d85251bea70ecc8a8c5b8fc5e9a85a6560316c4299da4",
       "kind": "text",
       "outputs": []
     },
     "custom-layers-custom-gradients-3": {
-      "code_fingerprint": "sha256:4ea7a12b05056b2e3176c6c2740eb941b0285f4d7be55bda6fce685e99de36c5",
+      "code_fingerprint": "sha256:2519f824e9fd43364236b34c8e477f34a37bff8e94a915d13df8e8830b1b8773",
       "kind": "text",
       "outputs": [
         {

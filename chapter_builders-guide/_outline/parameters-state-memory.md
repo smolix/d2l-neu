@@ -5,15 +5,15 @@
 > to the full 2026 question: what state does a model carry, and what does it
 > cost? Adds buffers, memory accounting, freezing, and realistic weight
 > tying. This is the section the planned transformer/generative chapters
-> will lean on hardest (KV-cache buffers, VRAM budgets, embedding tying,
+> will lean on hardest (runtime KV caches, VRAM budgets, embedding tying,
 > partial fine-tuning).
 
 ## Accessing Parameters **[KEPT]**
 
 *Topics.* Targeted access (`net[2].weight`, `.bias.grad`), bulk traversal
-(`named_parameters()`), nested/tree traversal on a module of modules; the
-`state_dict()` view of the same tree (names are paths). Everything the
-optimizer, the checkpoint, and the debugger see is this one tree.
+(`named_parameters()`), nested traversal on a module of modules; the
+`state_dict()` view of the same object graph (names are paths). Optimizers,
+checkpoints, and debuggers traverse this graph, including aliases.
 
 *Code (PyTorch).* Same progression as the current section (inspect one
 layer, then all, then a nested net), tightened; `state_dict().keys()` shown
@@ -23,11 +23,12 @@ next to `named_parameters()` so the naming scheme is learned once.
 
 *Topics.* Not all state is trainable. `register_buffer`: tensors that move
 with `.to(device)`, appear in `state_dict()`, but receive no gradient.
-Canonical examples the reader will meet later: BatchNorm running statistics
-(Chapter 8), causal attention masks and rotary-embedding tables
-(Transformers), a KV cache (generation). Rule of thumb: *parameter* if the
-optimizer should touch it, *buffer* if it must persist and follow the
-model, plain attribute otherwise.
+Canonical persistent examples include BatchNorm running statistics (Chapter
+8) and precomputed tables. Distinguish them from per-request state such as a
+KV cache, which follows computation but does not belong in a model checkpoint;
+causal masks are often recomputed or registered non-persistently. Rule of
+thumb: parameter if optimized, persistent buffer if checkpointed, explicit
+runtime cache if request-scoped, plain attribute for reconstructible data.
 
 *Code (PyTorch).* A module with a precomputed constant table as a buffer;
 show it in `state_dict()`, show `.parameters()` skips it, move the module
@@ -37,11 +38,11 @@ to GPU and note the buffer moved too.
 
 *Topics.* The "will it fit?" arithmetic every builder does before training:
 parameter count → bytes at a given dtype → gradient copy → optimizer state
-(Adam: two extra fp32 moments) → the ~4×–16× multiplier over raw weights;
+(Adam: two extra fp32 moments) → a stated-dtype multiplier over raw weights;
 activations as the remaining (batch-dependent) term, with the full
 treatment deferred to :numref:`sec_use_gpu_v2`. Worked numbers on the
-book's own MLP, then scaled to a 1B-parameter model to make the point that
-this arithmetic, not the forward pass, is what constrains design.
+book's own MLP, then scaled to a 1B-parameter model to establish the
+batch-independent floor; activations may still dominate.
 
 *Code (PyTorch).*
 
@@ -61,24 +62,27 @@ toy (one `Linear` reused twice, motivated by nothing) with the real case:
 **tying the input embedding and the output projection of a language model**
 — saves $|V| \times d$ parameters, and is standard from word2vec-era models
 through modern LLMs. What tying means for gradients (contributions sum) and
-for the state dict (one entry, not two).
+for traversal and checkpoints (one entry in `named_parameters`, two
+compatible paths in PyTorch's `state_dict`).
 
 *Code (PyTorch).* A miniature LM head: `nn.Embedding(V, d)` and an output
 `nn.Linear(d, V, bias=False)` with `out.weight = emb.weight`; verify
-`id(...)` equality, one entry in `state_dict()`, and summed gradients via a
+`id(...)` equality, one entry in `named_parameters()`, both `state_dict()`
+paths, and summed gradients via a
 small backward pass.
 
 ## Freezing Parameters **[NEW]**
 
 *Topics.* `requires_grad=False` as the primitive under every fine-tuning
-recipe: freeze a backbone, train a head; the optimizer should receive only
-trainable params (`filter(lambda p: p.requires_grad, ...)`); interaction
+recipe: freeze a backbone, train a head; passing only trainable params keeps
+optimizer membership explicit (`filter(lambda p: p.requires_grad, ...)`),
+while already allocated state survives later freezing; interaction
 with `.eval()` vs freezing (orthogonal concepts, commonly confused). Brief
 forward pointers: fine-tuning in the computer-vision chapter;
 parameter-efficient methods (LoRA) with the low-rank math in the linear
-algebra appendix (:numref:`sec_mdl-svd`). One-paragraph note: **EMA /
-weight averaging** as another form of derived, non-trained state
-(generative models will use it), pointer only, no implementation.
+algebra appendix (:numref:`sec_mdl-svd-low-rank`). One-paragraph note: **EMA /
+weight averaging** as another form of derived, non-trained state, with a
+pointer to the controlled recipe experiments.
 
 *Code (PyTorch).* Freeze all but the last layer of the config-built MLP
 from :numref:`sec_model_construction_v2`; print trainable vs total
@@ -102,9 +106,9 @@ tying + freezing interactions?
 
 ## Framework Coverage
 
-- **JAX** — full coverage, several structural wins. Buffers → flax
-  *variable collections* (`'params'` vs `'batch_stats'` etc., verified) —
-  arguably clearer than a per-tensor flag. Tying → `nn.Embed.attend()`
+- **JAX** — full coverage with NNX variable types. Buffers use
+  `nnx.Variable` subclasses (`nnx.Param`, `nnx.BatchStat`, or a custom type),
+  and filters select optimizer/checkpoint views. Tying → `nnx.Embed.attend()`
   reuses the embedding kernel as the output head and yields *one* pytree
   leaf (verified), no `id()`-aliasing bookkeeping. Freezing → optimizer-side
   `optax.multi_transform` (+`set_to_zero`, verified) — the model never

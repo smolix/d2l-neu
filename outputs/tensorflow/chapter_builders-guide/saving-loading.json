@@ -54,7 +54,7 @@
       ]
     },
     "saving-loading-checkpointing-a-training-run-2": {
-      "code_fingerprint": "sha256:8af2eb7ca9ea9fbcc6ed9a529e431f21de5582c621ca3c9a82c8168d69596077",
+      "code_fingerprint": "sha256:923c94bf18d4973d295a8c89d32499434b309adc4ff2d302cc52b05071200dce",
       "kind": "text",
       "outputs": [
         {
@@ -64,28 +64,28 @@
       ]
     },
     "saving-loading-checkpointing-a-training-run-3": {
-      "code_fingerprint": "sha256:adfdbbfe7ccc24b0a854321ad52f286709e9ed0f8f761a689b16bfe13f551f75",
+      "code_fingerprint": "sha256:2bc927a32da58639ffaa43094a7c47ecac5bfbfe75a72ba274224e7736eeda95",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 53412.64 -> restored 0.0023'"
+          "text": "'perturbed 53412.79 -> restored 0.0023'"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-4": {
-      "code_fingerprint": "sha256:9a4e834daf0aa3d72f823aa332c56112adb35f5b5d383557ac472f700f740318",
+      "code_fingerprint": "sha256:38732ffc4cc4cad73c1aa9712e1d6c1155f619b14f3d9bff7d79fc7cdfee5f83",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "full  optimizer: [0.0023, 0.0022, 0.0022, 0.0021, 0.002]\nfresh optimizer: [0.0023, 2.123, 0.2917, 1.0618, 0.682]\n"
+          "text": "full  optimizer: [0.0023, 0.0022, 0.0022, 0.0021, 0.002]\nfresh optimizer: [0.0023, 2.2343, 0.2641, 1.1344, 0.7329]\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-1": {
-      "code_fingerprint": "sha256:65389f3e69579c39a96bd46fbd0a6dc56a4f438793e8232802e744c2a3fe655f",
+      "code_fingerprint": "sha256:66791a84c816c1a8a9e5f1f3e4c367a6bfa99c6daaa8e8f231550f44b65b5230",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +95,7 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-2": {
-      "code_fingerprint": "sha256:40d9b9a89d544253f672cec3edd178f241aeb9ebdf434991ca33aee8f3ff269e",
+      "code_fingerprint": "sha256:64f4b8458798bd724bd4c1188b6dac0988868f10334ed0bceb16eca8b25a161a",
       "kind": "text",
       "outputs": [
         {
@@ -106,7 +106,7 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-3": {
-      "code_fingerprint": "sha256:b3b2d498562cb95715cb65e670bd5b54c2894b713499204cf87d6c5e6fcd00d9",
+      "code_fingerprint": "sha256:52715533209fda13357c5cfab6538158f14dbf79edb09fd43e155558e4ea90bf",
       "kind": "text",
       "outputs": [
         {

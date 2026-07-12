@@ -1,5 +1,5 @@
 # GPUs, Devices, and Memory
-:label:`sec_use_gpu_v2`
+:label:`sec_use_gpu`
 
 > **Role.** Modernization of the current use-gpu section, which is the most
 > structurally load-bearing file in the chapter: it `#@save`s
@@ -57,7 +57,7 @@ disagrees with `memory_allocated()`); measuring —
 `torch.cuda.memory_allocated/reserved/max_memory_allocated`,
 `empty_cache()` and what it does/does not do; the lifecycle of an OOM —
 what actually occupies memory during training: weights + grads + optimizer
-state (the arithmetic of :numref:`sec_parameters_v2`, now measured
+state (the arithmetic of :numref:`sec_parameters`, now measured
 empirically) + **activations**, and why activations scale with batch size
 while the rest does not.
 
@@ -72,7 +72,7 @@ loop between predicted and measured bytes.
 recompute them during backward — ~30–40% more compute for a large cut in
 activation memory; when it pays (deep stacks of identical blocks — exactly
 the config-built residual stack of this chapter, and exactly how large
-transformer training always runs). One honest measurement, not a survey.
+transformer training always runs). One measured comparison, not a survey.
 
 *Code (PyTorch).* Wrap the residual stack's blocks in
 `checkpoint(block, x)`; report max memory and wall-clock with/without at a
@@ -130,20 +130,20 @@ patches verbatim.*
   the sync-point lesson maps to `block_until_ready()` (verified with a
   dispatch-vs-completion timing probe); pinned memory reframes as
   "dispatch is async by default" (ALT, no per-tensor flag);
-  `device.memory_stats()` exists but returns None on CPU [GPU-box:
-  verify the bytes-in-use dict].
+  `device.memory_stats()` reports live and peak bytes on GPU and returns
+  `None` on CPU (verified on the GPU build).
 - **TensorFlow** — full coverage: `tf.recompute_grad` verified;
   `tf.config.experimental.get_memory_info('GPU:0')` exists (correctly
   errors on CPU); pinned-memory analogue is `tf.data`'s
   `prefetch(AUTOTUNE)` (ALT framing); sync lesson unchanged
   (`.numpy()` forces sync).
-- **MXNet** — two honest reductions and one crown jewel. **SKIP:
+- **MXNet** — two documented reductions and one strong lesson. **SKIP:
   activation checkpointing** (no recompute utility anywhere in the wheel —
   grepped the tree); **PARTIAL: memory introspection** —
   `gpu_memory_info()` is device-wide (`cudaMemGetInfo`), no per-process
   allocator counters, so the four-plateau demo becomes a coarser
   before/after measurement. Pinned memory DIRECT (`mx.cpu_pinned()`,
-  no `non_blocking` kwarg [UNVERIFIED overlap]). The crown jewel: the
+  no `non_blocking` keyword). The strongest lesson is the
   sync-point lesson via `npx.waitall()` is *mxnet's strongest material*,
   already written and green in `chapter_computational-performance/` —
   reuse near-verbatim. Note the 2.0 rename `context`→`device` (Context is

@@ -1,12 +1,14 @@
 # Custom Layers and Functions
-:label:`sec_custom_layers_v2`
+:label:`sec_custom_layer`
+
+The live label is preserved because downstream sections already cite it.
 
 > **Role.** The escape hatch: what to do when the framework's layer zoo does
 > not have what you need. The lesson kept from the current section is the
 > *composability guarantee* — a correctly written custom layer gets
 > parameter tracking, serialization, and device movement for free. The
 > examples are upgraded from toys (`CenteredLayer`, a hand-rolled `Linear`)
-> to layers the reader will actually reuse (RMSNorm), and a subsection on
+> to a realistic layer (RMSNorm), and a subsection on
 > custom autograd is added.
 
 ## Layers without Parameters **[KEPT]**
@@ -24,11 +26,10 @@ note kept).
 
 *Topics.* Replaces the hand-rolled `MyDense` (which duplicates `nn.Linear`
 and teaches nothing new) with **RMSNorm**: normalize by the root-mean-square
-of activations, scale by a learned gain — five lines, a real layer that did
-not exist when the current chapter was written, and the normalization used
-by essentially every modern LLM. Teaches the same mechanics (`nn.Parameter`
-creation, shape handling) on an object with a future: the transformer
-chapters can import this exact layer. Note the contrast with LayerNorm
+of activations, scale by a learned gain — five lines and a real layer that did
+not exist when the current chapter was written. Teaches the same mechanics
+(`nn.Parameter` creation and shape handling) on an object used by many
+language models. Note the contrast with LayerNorm
 (no mean subtraction, no bias) and why that matters is deferred to the
 normalization discussion in Chapter 8/11.
 
@@ -51,12 +52,11 @@ Verify: parameters registered, works inside `Sequential`, survives a
 guarantee demonstrated on all four axes, once, explicitly.
 
 Close by **checking ours against the framework's own**: `nn.RMSNorm`
-(torch ≥2.4, verified in 2.11), `flax.linen.RMSNorm`, and
+(torch ≥2.4, verified in 2.11), `flax.nnx.RMSNorm`, and
 `keras.layers.RMSNormalization` all exist (verified in the repo venvs) —
 compare outputs, then state the rule: *build it to understand it, use the
-native in production*. Downstream transformer chapters use the natives
-(mxnet, which has none, hand-rolls this five-liner locally). Consequently
-this is **not** a `#@save` — no new d2l symbol.
+native in production*. Consequently this is **not** a `#@save` — no new d2l
+symbol.
 
 ## State That Is Not a Parameter, Revisited **[NEW, short]**
 
@@ -94,13 +94,13 @@ still worth making a layer?
 
 > **Downstream constraints.** None: no downstream file depends on this
 > section's specific artifacts (the generic subclassing idiom is covered by
-> 6.1). `RMSNorm` is a candidate `#@save` for reuse by future transformer
-> chapters — decide at rewrite time.
+> 6.1). `RMSNorm` remains local because native implementations exist in the
+> actively maintained libraries.
 
 ## Framework Coverage
 
-- **JAX** — full coverage. RMSNorm via `self.param(...)` (mechanics
-  already proven by the current tab's `MyDense`). Custom gradients: teach
+- **JAX** — full coverage. RMSNorm via an `nnx.Param` created in the module
+  constructor. Custom gradients: teach
   `jax.custom_vjp` as the general mechanism (verified STE) *and* the
   three-line `x + stop_gradient(round(x) - x)` shortcut (verified,
   identical gradient) — the shortcut is the better STE example, the

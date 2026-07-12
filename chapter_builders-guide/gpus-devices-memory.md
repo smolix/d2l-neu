@@ -396,7 +396,7 @@ Y
 
 ```{.python .input #gpus-devices-memory-tensors-models-and-devices-3}
 %%tab jax
-Y = jax.device_put(jax.random.uniform(jax.random.PRNGKey(0), (2, 3)),
+Y = jax.device_put(jax.random.uniform(jax.random.key(0), (2, 3)),
                    try_gpu(1))
 Y
 ```
@@ -439,12 +439,11 @@ explicitly, as in :numref:`fig_copyto`, and then add.
 
 :begin_tab:`tensorflow`
 Whenever we operate on multiple tensors, they should be on the same device.
-Here TensorFlow is the exception among our four frameworks: its eager *device
-policy* defaults to silent, so if `X` sits on the first GPU and `Y` on the
+TensorFlow's eager *device policy* defaults to silent, so if `X` sits on the
+first GPU and `Y` on the
 second, `X + Y` does not raise. TensorFlow copies one operand across and
-returns an answer. Convenient, but it hides a slow bus transfer inside an
-innocent-looking `+`, the very thing the other frameworks refuse to do, and
-nothing in your code marks the line that pays for it.
+returns an answer. This hides a slow bus transfer inside an innocent-looking
+`+`, and nothing in your code marks the line that pays for it.
 `tf.config.experimental.set_device_policy('explicit')` opts into strictness,
 turning silent copies into errors. Either way the discipline is the same:
 copy explicitly, as in :numref:`fig_copyto`, and then add. The explicit copy
@@ -743,8 +742,8 @@ It is not, and the explanation is the right mental model for everything else
 in this section. Requesting memory from the CUDA driver is slow, so MXNet
 keeps a *memory pool* per device: when an array dies, its block is not
 returned to the driver but kept for the next array of a similar size, and
-`nvidia-smi` keeps counting it. Where the other three frameworks pair this
-pool with a per-process counter of live bytes, MXNet 2.0 does not: the only
+`nvidia-smi` keeps counting it. MXNet 2.0 has no per-process counter of live
+bytes: the only
 built-in query is `npx.gpu_memory_info(i)`, a wrapper around the driver's
 `cudaMemGetInfo` that returns device-wide `(free, total)` bytes, the
 outermost of the three views in :numref:`fig_bg_allocator` and the same
@@ -897,7 +896,7 @@ MXNet cannot show the terms arriving one by one: with no per-process counter,
 `gpu_memory_info` sees only the device-wide total, and the pool's high-water
 behavior smooths the individual plateaus out of that view, so the
 step-by-step readout in this subsection exists only in the other tabs. The
-accounting itself holds unchanged, with one timing difference worth knowing:
+accounting itself holds unchanged, with one timing difference:
 Gluon allocates each parameter's gradient buffer at `initialize` time (and
 `attach_grad` does the same for from-scratch arrays), so the $4N$ gradient
 term is resident from the start rather than appearing at the first backward
@@ -1047,9 +1046,11 @@ intermediate result only to read each one exactly once, on the way back.
 *Activation checkpointing* :cite:`Chen.Xu.Zhang.ea.2016` refuses to store
 them: it keeps only the inputs to selected segments of the network, and during
 the backward pass reruns each segment's forward computation to regenerate the
-activations it needs. The price is roughly one extra forward pass, some 30-40%
-more compute per step; the reward is that activation memory drops from "every
-layer" to "one segment at a time", as sketched in :numref:`fig_bg_activation_checkpoint`.
+activations it needs. For a stack of $N$ equally sized layers, dividing the
+stack into segments of about $\sqrt{N}$ layers reduces stored activations from
+$O(N)$ to $O(\sqrt{N})$. The price is roughly one extra forward pass, often
+30--40% more compute per step. :numref:`fig_bg_activation_checkpoint` sketches
+this schedule.
 The trade pays off exactly where deep learning spends most of its time: deep
 stacks of identical blocks, such as the residual stack we assembled in
 :numref:`sec_model_construction` and every Transformer you will meet later.
@@ -1070,10 +1071,15 @@ class ResidualBlock(nn.Module):  # As in :numref:`sec_model_construction`
     def forward(self, X):
         return X + self.body(X)
 
-def run_stack(blocks, X, use_checkpoint=False):
-    for blk in blocks:
-        X = checkpoint(blk, X, use_reentrant=False) if use_checkpoint \
-            else blk(X)
+def run_stack(blocks, X, use_checkpoint=False, segment_size=4):
+    for start in range(0, len(blocks), segment_size):
+        stop = min(start + segment_size, len(blocks))
+        def segment(X, start=start, stop=stop):
+            for i in range(start, stop):
+                X = blocks[i](X)
+            return X
+        X = checkpoint(segment, X, use_reentrant=False) \
+            if use_checkpoint else segment(X)
     return X
 ```
 
@@ -1088,12 +1094,14 @@ class ResidualBlock(nnx.Module):  # As in :numref:`sec_model_construction`
     def __call__(self, X):
         return X + self.body(X)
 
-def run_stack(graphdef, states, X, use_checkpoint=False):
-    def apply(state, X):
-        return nnx.merge(graphdef, state)(X)
-    f = jax.checkpoint(apply) if use_checkpoint else apply
-    for state in states:
-        X = f(state, X)
+def run_stack(graphdef, states, X, use_checkpoint=False, segment_size=4):
+    def segment(segment_states, X):
+        for state in segment_states:
+            X = nnx.merge(graphdef, state)(X)
+        return X
+    f = jax.checkpoint(segment) if use_checkpoint else segment
+    for start in range(0, len(states), segment_size):
+        X = f(states[start:start + segment_size], X)
     return X
 ```
 
@@ -1109,16 +1117,21 @@ class ResidualBlock(tf.keras.Model):  # As in :numref:`sec_model_construction`
     def call(self, X):
         return X + self.body(X)
 
-def run_stack(blocks, X, use_checkpoint=False):
-    for blk in blocks:
-        f = tf.recompute_grad(blk) if use_checkpoint else blk
+def run_stack(blocks, X, use_checkpoint=False, segment_size=4):
+    for start in range(0, len(blocks), segment_size):
+        segment_blocks = blocks[start:start + segment_size]
+        def segment(X):
+            for blk in segment_blocks:
+                X = blk(X)
+            return X
+        f = tf.recompute_grad(segment) if use_checkpoint else segment
         X = f(X)
     return X
 ```
 
 :begin_tab:`pytorch`
-`torch.utils.checkpoint.checkpoint(blk, X)` runs `blk(X)` without storing its
-internals and remembers just enough to recompute them later. Recomputation
+`torch.utils.checkpoint.checkpoint(segment, X)` runs a segment without storing
+its internals and remembers just enough to recompute them later. Recomputation
 must reproduce the original forward pass bit for bit, so by default
 `checkpoint` also stashes and restores the random-number-generator state,
 which keeps segments containing dropout correct at a small extra cost
@@ -1151,9 +1164,8 @@ nor Gluon offers a recompute-during-backward transform comparable to
 `torch.utils.checkpoint`, `jax.checkpoint`, or `tf.recompute_grad`, and none
 was added before development stopped. This subsection's code, the
 gradient-equality check and the peak-memory comparison below, therefore
-appears only in the other tabs. The technique itself is
-framework-independent, and so is the conclusion: recomputing activations
-buys a large cut in activation memory for roughly a third more compute. In
+appears only in the supported tabs. Recomputation can cut activation memory
+at the cost of roughly a third more compute. In
 MXNet the remaining memory knob is the batch size.
 :end_tab:
 
@@ -1179,9 +1191,9 @@ print('checkpointed gradients match the ordinary ones')
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-2}
 %%tab jax
-X = jax.random.normal(jax.random.PRNGKey(1), (32, 64))
+X = jax.random.normal(jax.random.key(1), (32, 64))
 blocks = [ResidualBlock(64, nnx.Rngs(k))
-          for k in jax.random.split(jax.random.PRNGKey(0), 4)]
+          for k in jax.random.split(jax.random.key(0), 4)]
 split_blocks = [nnx.split(block) for block in blocks]
 graphdef = split_blocks[0][0]
 states = [state for _, state in split_blocks]
@@ -1239,9 +1251,9 @@ else:
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-3}
 %%tab jax
 if num_gpus() > 0:
-    X = jax.random.normal(jax.random.PRNGKey(1), (8192, 1024))
+    X = jax.random.normal(jax.random.key(1), (8192, 1024))
     blocks = [ResidualBlock(1024, nnx.Rngs(k))
-              for k in jax.random.split(jax.random.PRNGKey(0), 16)]
+              for k in jax.random.split(jax.random.key(0), 16)]
     split_blocks = [nnx.split(block) for block in blocks]
     graphdef = split_blocks[0][0]
     states = [state for _, state in split_blocks]
@@ -1282,8 +1294,9 @@ else:
 ```
 
 Without checkpointing, the peak carries the activations of all sixteen blocks
-at once; with it, only the block inputs plus the recomputed activations of a
-single block, at the cost of a slower step. When a model almost fits, this
+at once; with four-block segments, it carries the four segment inputs plus the
+recomputed activations of one segment, at the cost of a slower step. When a
+model almost fits, this
 trade is the difference between training and not training, which is why large
 Transformer training runs use it as a matter of course.
 
@@ -1356,7 +1369,7 @@ else:
 
 ```{.python .input #gpus-devices-memory-don-t-break-the-pipeline-1}
 %%tab jax
-A = jax.random.normal(jax.random.PRNGKey(0), (2000, 2000)) / 45
+A = jax.random.normal(jax.random.key(0), (2000, 2000)) / 45
 (A @ A).block_until_ready()  # Warm up
 B, t = A, time.time()
 for _ in range(32):
@@ -1431,7 +1444,7 @@ running. Any operation that needs a concrete value on the host forces a
 *synchronization point*: `.numpy()`, `float(loss)`, `print`, an `if` on a
 tensor's value. Each one makes Python block until the queue drains, and the
 device then sits idle until Python catches up
-(`tf.test.experimental.sync_devices()` is the explicit version that honest
+(`tf.test.experimental.sync_devices()` is the explicit version that accurate
 timings need). A `print(float(loss))` in the inner loop can serialize the
 whole pipeline this way, once per step, as :numref:`fig_bg_async_queue` lays
 out. The fix is not to give up monitoring but to move it off the hot path:
@@ -1447,7 +1460,7 @@ running. Any operation that needs a concrete value on the host forces a
 *synchronization point*: `asnumpy()`, `.item()`, `print`, an `if` on a
 tensor's value. Each one makes Python block until the engine has produced
 that value, and the backend then sits idle until Python catches up
-(`npx.waitall()` is the explicit, drain-everything version that honest
+(`npx.waitall()` is the explicit, drain-everything version that accurate
 timings need). A `print(loss.item())` in the inner loop can serialize the
 whole pipeline this way, once per step, as :numref:`fig_bg_async_queue` lays
 out; worse, the conversion to NumPy holds Python's global interpreter lock
@@ -1522,11 +1535,11 @@ else:
 ```
 
 :begin_tab:`pytorch`
-Two caveats keep this technique honest. Pinning is itself expensive, so
-pinning a tensor once just to copy it once buys nothing; the win comes from
-*reusing* pinned buffers across iterations, which is what
-`DataLoader(pin_memory=True)` does for you, and why that flag plus
-`non_blocking=True` in your transfer is the standard pairing. And a
+Two caveats matter. Pinning is itself expensive, so synchronously pinning a
+tensor on the training thread just before one copy can erase the benefit.
+`DataLoader(pin_memory=True)` performs the pinning in its input pipeline,
+while `non_blocking=True` lets the training thread enqueue the transfer without
+waiting; this is why the two options are the standard pairing. A
 non-blocking copy is a promise, not a completed fact: mutating the source CPU
 tensor before the transfer finishes silently corrupts the data on the device.
 The full treatment of asynchrony, streams, and multi-device parallelism is in
@@ -1826,7 +1839,7 @@ block, so the two disagree by design. Activation checkpointing
 (`jax.checkpoint`) recomputes instead of stores, trading roughly a third more
 compute for activation memory. Dispatch is asynchronous on every backend:
 `.item()`, `np.asarray`, and `print` are synchronization points that stall
-the pipeline, and `block_until_ready()` is the explicit one that honest
+the pipeline, and `block_until_ready()` is the explicit one that accurate
 timings need. The `Trainer` encodes the placement discipline: parameters
 created on the device once, batches moved per step, graceful CPU fallback
 when no GPU exists.
@@ -1864,7 +1877,7 @@ them, only the device-wide `gpu_memory_info`, and no activation-checkpointing
 utility, so the batch size is its one memory knob. The execution engine is
 asynchronous on every backend: `asnumpy()`, `.item()`, and `print` are
 synchronization points that stall the pipeline, and `npx.waitall()` is the
-explicit one that honest timings need. The `Trainer` encodes the placement
+explicit one that accurate timings need. The `Trainer` encodes the placement
 discipline: parameters re-assigned once, batches moved per step, graceful
 CPU fallback when no GPU exists.
 :end_tab:

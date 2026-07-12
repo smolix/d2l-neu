@@ -63,12 +63,18 @@
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:3b661a788d56817dd397c2c829481119ac0bcaeffe0df5e497b88f4469ca5c67",
+      "code_fingerprint": "sha256:bd66f945c2b6f33af03f8beed5db3775267d11aa33b0a5e13afa6cc8c0b86eec",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first non-finite output in ('layers', 3, 'body', 'layers', 0)\n"
+        }
+      ]
     },
     "reproducibility-inspection-backward-hooks-and-beyond": {
-      "code_fingerprint": "sha256:60e665a4be73d13efd70cfc4fbfe73b2c8312a06b5b2134b9fbabae7a642e023",
+      "code_fingerprint": "sha256:2dbf7f423ad4e2aa2c1b034f930f02b8921db34a20b5126ac081dda4c0654b44",
       "kind": "text",
       "outputs": [
         {

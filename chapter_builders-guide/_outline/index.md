@@ -1,5 +1,5 @@
 # Builders' Guide (v2 proposal)
-:label:`chap_computation_v2`
+:label:`chap_computation`
 
 > **Status: outline for review.** One notebook per section; each notebook lists
 > its subsections and the topics each will cover, with indicative PyTorch code
@@ -21,15 +21,15 @@ and — as often as not — *initialized from someone else's weights* rather
 than from a random number generator.
 
 Accordingly, this chapter covers, in order: how models are assembled from
-modules and configs (:numref:`sec_model_construction_v2`); what a model's
+modules and configs (:numref:`sec_model_construction`); what a model's
 state actually is — parameters, buffers, and the memory they occupy
-(:numref:`sec_parameters_v2`); how state is initialized
-(:numref:`sec_init_v2`); how to build layers the framework does not ship
-(:numref:`sec_custom_layers_v2`); numerics — dtypes and mixed precision
-(:numref:`sec_numerics_v2`); serialization, checkpointing, and pretrained
-weights (:numref:`sec_read_write_v2`); GPUs, devices, and memory
-(:numref:`sec_use_gpu_v2`); and reproducibility and inspection
-(:numref:`sec_repro_v2`).
+(:numref:`sec_parameters`); how state is initialized
+(:numref:`sec_init_param`); how to build layers the framework does not ship
+(:numref:`sec_custom_layer`); numerics — dtypes and mixed precision
+(:numref:`sec_numerics`); serialization, checkpointing, and pretrained
+weights (:numref:`sec_read_write`); GPUs, devices, and memory
+(:numref:`sec_use_gpu`); and reproducibility and inspection
+(:numref:`sec_repro`).
 
 The boundaries with neighboring chapters are unchanged: the training-loop
 scaffolding (`Module`/`DataModule`/`Trainer`) was introduced in
@@ -54,8 +54,8 @@ cloud tooling stay in the appendix.
 
 ## Framework Coverage Summary
 
-Verified per-framework (JAX/TF empirically against freshly built venvs —
-jax 0.10.0 / flax 0.10.6 linen / optax 0.2.8 / orbax 0.11.24 and TF 2.21.0
+Verified per-framework against freshly built environments —
+JAX 0.10.2 / Flax NNX 0.12.7 / Optax 0.2.8 / Orbax 0.12.0 and TF 2.21.0
 / Keras 3.14.0; MXNet against the pinned 2.0 wheel's source plus the
 committed green-run output store). Per-section details in each notebook's
 **Framework Coverage** footer. The matrix:
@@ -85,13 +85,13 @@ committed green-run output store). Per-section details in each notebook's
 
 **Decisions needing sign-off at rewrite time.**
 
-1. JAX 6.5 teaches **bf16-only** (optax has no GradScaler; fp16 loss
-   scaling skipped as legacy practice). Stay on **flax.linen** (nnx exists
-   but would mean rewriting the book's jax core; one prose aside only).
+1. JAX 6.5 teaches **bf16-first** (Optax has no GradScaler; fp16 loss
+   scaling is explained but not used in the main training path). The book uses
+   Flax NNX throughout.
 2. MXNet 6.5 ships the **reduced variant** (fp16 + `multi_precision`
    verified path; `mxnet.amp` demoted to pointer unless GPU box validates).
 3. 6.6's pretrained-weights demo is per-framework: torchvision (pt),
-   `keras.applications` (tf), own-checkpoint + HF-in-prose (jax),
+   `keras.applications` (tf), the book's revision-pinned NNX ResNet loader,
    `model_zoo` if its S3 still resolves (mxnet).
 
 **d2l library surface (what ch6 exports, and its fate).** The freshness

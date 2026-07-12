@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.1741, 0.5929, 0.2959],\n        [0.9663, 0.7355, 0.1398]], device='cuda:1')"
+          "text": "tensor([[0.3162, 0.8519, 0.3521],\n        [0.3231, 0.4656, 0.2151]], device='cuda:1')"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1.1741, 1.5929, 1.2959],\n        [1.9663, 1.7355, 1.1398]], device='cuda:1')"
+          "text": "tensor([[1.3162, 1.8519, 1.3521],\n        [1.3231, 1.4656, 1.2151]], device='cuda:1')"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-0.4254],\n        [-0.4254]], device='cuda:0', grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[0.5471],\n        [0.5471]], device='cuda:0', grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -147,12 +147,12 @@
       ]
     },
     "gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1": {
-      "code_fingerprint": "sha256:fd059d70c4a7a63e15383060143804ea672cdb8210814bd72c077c13970f7ddd",
+      "code_fingerprint": "sha256:b07c82bcf987e79279c7b050518911b4f3657fa2482eaa9416838f36047d52f4",
       "kind": "text",
       "outputs": []
     },
     "gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-2": {
-      "code_fingerprint": "sha256:5103881af99902c3532899dad960a0466c36a0b13fecfb16f9461d1ab416def8",
+      "code_fingerprint": "sha256:18b0a6ec893b017de4ecbe19abdf7c6cd2859c6e68745fe9c8f162b8318cfca0",
       "kind": "text",
       "outputs": [
         {
@@ -163,50 +163,50 @@
       ]
     },
     "gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-3": {
-      "code_fingerprint": "sha256:5ca1a59af317a29dc739b47b9e25744b846d7e152b52d5045fb525ce48ef155f",
+      "code_fingerprint": "sha256:14a6e195e338b4e72c8a99523495bbbdeb381f64faf127ef43bb5f901a5fd8db",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  peak   2358 MiB, 0.04 sec\ncheckpointing=True   peak   1407 MiB, 0.05 sec\n"
+          "text": "checkpointing=False  peak   2358 MiB, 0.04 sec\ncheckpointing=True   peak   1335 MiB, 0.06 sec\n"
         }
       ]
     },
     "gpus-devices-memory-don-t-break-the-pipeline-1": {
-      "code_fingerprint": "sha256:bf100d40fe4232c830c82ad0cd154e255d18e091dae3bdeb1a18f0e6b427dc80",
+      "code_fingerprint": "sha256:aa3bd558b2e80f8354902cbec5d184c1b4d0310ac41f6bfb9050ab8f8168cb58",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0014 sec\ntime until they all finished:     0.0770 sec\n"
+          "text": "time to queue 32 matrix products: 0.0013 sec\ntime until they all finished:     0.0792 sec\n"
         }
       ]
     },
     "gpus-devices-memory-don-t-break-the-pipeline-2": {
-      "code_fingerprint": "sha256:6440e087b098377d5fae8cccb173d0f2928805bac6f741870733c2a2598902ee",
+      "code_fingerprint": "sha256:4fa8419f8d2d62b8f527c0482baeac47a982bd8f8dbe0e7a406aca06e179d944",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable copy:              0.539 ms\n"
+          "text": "pageable copy:              0.580 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pinned, non-blocking copy:  0.369 ms\n"
+          "text": "pinned, non-blocking copy:  0.368 ms\n"
         }
       ]
     },
     "gpus-devices-memory-the-trainer-now-with-devices-1": {
-      "code_fingerprint": "sha256:83b9419252f69a64d65486a40311ae1db94fc793975e1c1942dab92d6aa6f1ab",
+      "code_fingerprint": "sha256:a0453419d608972cbcf1a7e0eea40e9cd5e52d6a86c64dd6d56ce3139e7dbeb4",
       "kind": "text",
       "outputs": []
     },
     "gpus-devices-memory-the-trainer-now-with-devices-2": {
-      "code_fingerprint": "sha256:7856eb491418e027fcd915666e977bdd5582c710ea30304af339277a0c0e9bc4",
+      "code_fingerprint": "sha256:fcbb35ebcbc24ca9e35a9d1fa8898aa3c8bf2514e6910469dd53da6134bf8b83",
       "kind": "asset",
       "outputs": [
         {
@@ -214,7 +214,7 @@
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
           "bytes": 21806,
-          "sha256": "sha256:9edfe15380068dc512ae010ad7f4cd69ebfafacf248705b2355ced36d3da0314"
+          "sha256": "sha256:f8f300761aff454d0c795896d545a35725514f8214323a18bba63af9389c01c0"
         }
       ]
     }

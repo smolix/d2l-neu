@@ -302,56 +302,33 @@ accepting the reset of everything drawn after it.
 ### DataLoader Workers
 
 :begin_tab:`jax`
-The classic reproducibility hole in the loader-worker world is that
-parallel workers inherit or reseed a hidden generator, so their
-augmentations either coincide or vary from run to run without anyone
-deciding which. With explicit keys, that bug cannot be written down: a
-worker's randomness is whatever key you hand it, so you split one key
+Parallel loader workers still need separate random streams. With explicit
+keys, those streams are visible in the program: a worker's randomness is
+whatever key you hand it, so you split one key
 into per-worker keys (`jax.random.split(key, num_workers)`), refresh them
 each epoch by folding in the epoch number (`jax.random.fold_in`), and two
 workers can share a stream only if the code visibly passes the same key
-twice. One honest caveat: JAX programs usually borrow their input
+twice. JAX programs usually borrow their input
 pipeline from NumPy, PyTorch, or `tf.data`, and those loaders bring their
-hidden per-process generator state along. When you do that, the fix is
-the host framework's, not JAX's: give each worker process its own seed,
-derived from one base seed and refreshed every epoch.
+own worker-seeding contract. When you do that, configure the loader's
+workers from one base seed and refresh them each epoch.
 :end_tab:
 
 :begin_tab:`pytorch`
-Now for the classic hole: you seed torch, NumPy, and `random`, and the run
-is *still* not reproducible, because augmentation code in
-`Dataset.__getitem__` calls `np.random` inside loader worker processes. On
-Linux, worker processes start via `fork`, which gives each child a
-byte-for-byte copy of the parent, including NumPy's global generator state.
-We can simulate what every worker inherits:
+`DataLoader` creates a distinct torch seed for every worker from a base seed
+and the worker id. Current PyTorch also initializes Python's `random` module
+and NumPy's legacy global generator in each worker. This covers common dataset
+code, but it cannot discover generator objects owned by a dataset or a
+third-party library. Those sources still need an explicit worker initializer.
+The loader's `generator` controls both its base seed and the shuffled index
+order, so one generator can pin the whole input pipeline.
 :end_tab:
 
-```{.python .input #reproducibility-inspection-dataloader-workers-1}
-%%tab pytorch
-np.random.seed(0)                   # the parent process, dutifully seeded
-state = np.random.get_state()       # fork copies this state into each child
-for worker_id in range(4):
-    np.random.set_state(state)      # what a fork-started worker begins with
-    print(f'worker {worker_id}:', np.random.randint(0, 1000, size=3))
-```
-
 :begin_tab:`pytorch`
-All four workers produce the same "random" numbers, so they apply identical
-crops and noise; and because workers are re-forked from the same parent
-state each epoch, the same augmentations repeat every epoch. The pattern is
-not rare: a 2020 audit of over a hundred thousand public repositories using
-PyTorch together with NumPy found this bug in more than 95% of those that
-augment inside a custom dataset. On macOS and Windows the default start
-method is `spawn`, which imports a fresh interpreter per worker; there NumPy
-seeds itself from operating-system entropy, so workers differ from each
-other but also differ across runs, which is the opposite failure with the
-same root cause: nobody seeded the workers deliberately.
-
-The fix is deliberate per-worker seeding. PyTorch already hands each worker
-a distinct torch seed (a base seed plus the worker id, refreshed every
-epoch), but it cannot reach NumPy's or `random`'s generators, so we bridge
-them ourselves in a `worker_init_fn`, and pin the shuffle order with a
-`generator`. This is the recipe from PyTorch's reproducibility notes:
+The initializer below makes that boundary explicit. It is also the place to
+replace custom generator objects stored on `info.dataset`; seeding NumPy's
+global generator cannot affect an existing `np.random.default_rng()` object.
+The recipe follows PyTorch's reproducibility notes:
 :end_tab:
 
 ```{.python .input #reproducibility-inspection-dataloader-workers-2}
@@ -363,8 +340,8 @@ def seed_worker(worker_id):
 
 g = torch.Generator().manual_seed(0)
 data = TensorDataset(torch.arange(8))
-# num_workers=0 keeps this cell runnable under both fork and spawn;
-# real training uses num_workers > 0 with exactly these arguments
+# num_workers=0 keeps this notebook cell portable. In a training script,
+# num_workers>0 invokes seed_worker once in each worker process.
 loader = DataLoader(data, batch_size=4, shuffle=True, num_workers=0,
                     worker_init_fn=seed_worker, generator=g)
 print([batch[0].tolist() for batch in loader])
@@ -373,9 +350,10 @@ print([batch[0].tolist() for batch in loader])
 ```
 
 :begin_tab:`pytorch`
-Resetting the generator reproduces the exact shuffle order, and with
-workers enabled, `seed_worker` gives each worker its own NumPy and `random`
-streams that still derive from the one base seed.
+Resetting the generator reproduces the exact shuffle order. With workers
+enabled, `seed_worker` derives the legacy NumPy and Python streams from the
+same base seed. A dataset-owned `Generator` needs to be replaced there as
+well.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -582,7 +560,8 @@ from operations whose kernels are nondeterministic is up to you.
 torch.use_deterministic_algorithms(True)
 if torch.cuda.is_available():
     try:
-        torch.randn(10, device='cuda').kthvalue(1)
+        x = torch.randn(1, 1, 2, 2, 2, requires_grad=True, device='cuda')
+        nn.AvgPool3d(1)(x).sum().backward()
     except RuntimeError as e:
         print(str(e).split('.')[0])
 else:
@@ -602,7 +581,7 @@ except RuntimeError as e:
 tf.random.set_seed(0)  # determinism stays on; reseed and continue
 ```
 
-Be honest about what this buys. No framework guarantees bitwise agreement
+This guarantee has a narrow scope. No framework promises bitwise agreement
 across releases, platforms, or CPU versus GPU: it holds only for a
 pinned machine, library version, and flag configuration. That makes bitwise
 reproducibility a *debugging* tool, the setting that lets you bisect
@@ -824,13 +803,11 @@ tensors.
 :begin_tab:`jax`
 Nothing here needs detaching or removing: the captured intermediates are
 ordinary arrays with no autograd graph attached, the dictionary exists
-for this one call, and no observer stays registered on the model. Two
-refinements are worth knowing. `capture_intermediates` also accepts a
-filter, a function of the module and method name, so you can record only
-the layers you care about (the next cell uses one). And a module can opt
-in from the inside: calling `self.sow('intermediates', 'name', value)`
-anywhere in its own code records exactly the named values instead of
-every return.
+for this one call, and no observer stays registered on the model. The
+`method_outputs=nnx.Intermediate` argument records every method return. For
+finer control, a module can call
+`self.sow(nnx.Intermediate, 'name', value)` at selected points, and
+`nnx.capture(model, nnx.Intermediate)` then returns only those named values.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -904,7 +881,6 @@ for path, module in nnx.iter_modules(net):
         if not jnp.isfinite(out).all():
             print('first non-finite output in', path)
             break
-        break
 ```
 
 ```{.python .input #reproducibility-inspection-a-nan-finder}
@@ -1007,11 +983,12 @@ non-finite output is the culprit.
 Gradients get the same treatment.
 `module.register_full_backward_hook(f)` runs
 `f(module, grad_input, grad_output)` after the module's gradients are
-computed, which is how you log per-layer gradient norms, catch exploding
-gradients at their source, or experiment with per-layer clipping (use this
-API; the older `register_backward_hook` is deprecated and unreliable for
-modules with multiple inputs). Like forward hooks, it returns a handle to
-remove and should detach anything it stores. For the specific job of
+computed, which is how you log activation-gradient norms or catch an explosion
+at its source. A returned replacement changes `grad_input`; it does not edit
+the module's parameter gradients. Use this API rather than the older
+`register_backward_hook`, which is deprecated and unreliable for modules with
+multiple inputs. Like forward hooks, it returns a handle to remove and should
+detach anything it stores. For the specific job of
 extracting intermediate features from a standard vision backbone,
 torchvision's `create_feature_extractor` is the production upgrade: it
 traces the model with `torch.fx` and returns a module that outputs the
@@ -1078,8 +1055,10 @@ and a run repeats only if every one of them is seeded.
 
 :begin_tab:`pytorch`
 `torch.manual_seed` covers torch's CPU and CUDA generators; NumPy and
-`random` need their own seeds, and loader workers need them *per worker*
-via `worker_init_fn` plus a `generator` for the shuffle order. Seeding
+`random` need their own seeds in the main process. `DataLoader` derives
+distinct worker seeds and a supplied `generator` pins the shuffle order;
+`worker_init_fn` also configures generator objects that the loader cannot
+discover. Seeding
 makes the program repeatable, not the arithmetic:
 `torch.use_deterministic_algorithms(True)` pins kernel choice too, raising
 on operations that cannot comply.
@@ -1146,20 +1125,21 @@ are read after the fact from `param.grad()`.
 
 ## Exercises
 
-1. Extend `train_once` to load its data through a `DataLoader` with
-   `num_workers=4` and a custom `Dataset` whose `__getitem__` adds noise
-   drawn from `np.random`. Run it twice with the same seed on a Linux
-   machine. Is it reproducible? Which of the two worker failure modes do
-   you observe, and why does `torch.manual_seed` alone not fix it? Repair
-   the script with `seed_worker` and a seeded `generator`, and verify
-   bitwise agreement.
+1. Extend `train_once` to load data through a `DataLoader` with
+   `num_workers=4`. Give the dataset its own
+   `np.random.default_rng()` object and use it to add noise in
+   `__getitem__`. On a Linux process-based loader, check whether workers
+   copied the same generator state. In `seed_worker`, replace
+   `get_worker_info().dataset.rng` with a generator derived from
+   `torch.initial_seed()`, then verify agreement across two runs.
 2. Write a forward hook that counts multiply-accumulate operations for
    every `nn.Linear` from the shapes of its input and weight, and use it to
    report per-layer and total FLOPs for the residual stack above. Check the
    total against a hand count.
-3. Using `register_full_backward_hook`, clip each layer's gradient to a
-   fixed norm during the backward pass, and compare training against global
-   gradient-norm clipping. When do the two differ most?
+3. Using `register_full_backward_hook`, record the norm of each block's
+   `grad_output`. After the backward pass, compare these activation-gradient
+   norms with the parameter-gradient norms in the same block. Which one first
+   reveals an exploding backward signal?
 4. A forward hook that returns a value *replaces* the module's output. Use
    one to zero out the output of a single residual block's body (turning
    the block into the identity) and measure how the network's output
@@ -1167,10 +1147,10 @@ are read after the fact from `param.grad()`.
    loop?
 
 :begin_tab:`jax`
-5. Rebuild the activation-statistics table two more ways: with a
-   filtered `nnx.capture` that records only `ResidualBlock` outputs, and by
-   editing the block to call `self.sow(nnx.Intermediate, 'body_out', ...)`
-   on its body's output. Compare capture-all-methods, opt-in `sow`, and
+5. Rebuild the activation-statistics table by editing `ResidualBlock` to call
+   `self.sow(nnx.Intermediate, 'body_out', ...)` on its body's output, then
+   collect those values with `nnx.capture(net, nnx.Intermediate)`. Compare
+   capture-all-methods, opt-in `sow`, and
    PyTorch-style mutable hooks: which requires touching model
    code, which can silently retain memory, and which would you want for a
    model you do not own?

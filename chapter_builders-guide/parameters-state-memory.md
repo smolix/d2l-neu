@@ -323,10 +323,12 @@ that block's `body` (a `Sequential` of its own), the first `Dense` inside it,
 and finally the leaf `kernel`. The segments are layer *names*, assigned at
 construction: a default derived from the class, plus a counter that keeps
 names unique across the program (this is the third `Sequential` created, hence
-`sequential_2`). Names are paths, so they survive any amount of nesting and
-give every variable a stable identity for saving and loading
-(:numref:`sec_read_write`). Keras splits the same list by trainability,
-and so far the split is trivial:
+`sequential_2`). The paths expose ownership for inspection, but default names
+depend on construction history and are not an external identifier. Name layers
+explicitly when a tool must match paths across separately written programs;
+Keras checkpoints otherwise restore through the saved object topology and
+weight structure (:numref:`sec_read_write`). Keras splits the same list by
+trainability, and so far the split is trivial:
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -392,15 +394,19 @@ yet should never receive a gradient. The canonical example is batch
 normalization :cite:`Ioffe.Szegedy.2015`: each layer maintains a running mean
 and variance of its inputs, updated during the forward pass and used at
 prediction time. Those statistics must be saved with the model and must move
-to the GPU with it, but the optimizer has no business touching them. Later
-chapters add more examples: causal attention masks, precomputed positional
-tables, and the key--value cache of a language model at generation time.
+to the GPU with it, but the optimizer has no business touching them. A
+precomputed positional table may be treated the same way. Other non-trained
+state has a different lifetime: a language model's key--value cache belongs to
+one generation request, so it follows the computation device but should not be
+stored in a model checkpoint. Causal masks are often recomputed or registered
+as non-persistent state for the same reason.
 
 :begin_tab:`pytorch`
 PyTorch calls such tensors *buffers*, registered with `register_buffer`. The
 rule of thumb: make it a *parameter* if the optimizer should update it, a
-*buffer* if it must persist and travel with the model, and a plain Python
-attribute otherwise. Here is a module that standardizes its inputs with
+persistent *buffer* if checkpoints need it, and an explicit runtime input or
+cache if its lifetime is one request. Plain Python attributes hold
+reconstructible architecture data. Here is a module that standardizes its inputs with
 statistics computed once, ahead of time, from a reference sample:
 :end_tab:
 
@@ -408,7 +414,8 @@ statistics computed once, ahead of time, from a reference sample:
 NNX uses `Variable` subclasses to distinguish kinds of state. `nnx.Param`
 marks trainable state, `nnx.BatchStat` marks running statistics, and a custom
 subclass can mark another persistent buffer. Filters select which kinds an
-optimizer or checkpoint sees. Here is a module that standardizes its inputs
+optimizer or checkpoint sees, so an ephemeral cache can remain outside the
+checkpoint filter or be passed explicitly. Here is a module that standardizes its inputs
 with statistics computed once from a reference sample:
 :end_tab:
 
@@ -418,8 +425,9 @@ per-variable flag: `add_weight(trainable=False)` creates a variable that is
 saved with the model but never handed to the optimizer, which is how
 `BatchNormalization` stores its running statistics. The rule of thumb: make
 it a trainable weight if the optimizer should update it, a non-trainable
-weight if it must persist and travel with the model, and a plain Python
-attribute otherwise. Here is a layer that standardizes its inputs with
+weight if it must persist in checkpoints, and an explicit runtime input or
+cache if its lifetime is one request. Plain Python attributes hold
+reconstructible architecture data. Here is a layer that standardizes its inputs with
 statistics computed once, ahead of time, from a reference sample:
 :end_tab:
 
@@ -430,8 +438,9 @@ an attribute registers it like any other parameter, so it appears in
 `collect_params()`, is saved with the model, and moves with it across
 devices; but autograd never records a gradient for it and the optimizer never
 touches it. The rule of thumb: make it a `Parameter` if the optimizer should
-update it, a `Constant` if it must persist and travel with the model, and a
-plain Python attribute otherwise. Here is a block that standardizes its
+update it, a `Constant` if checkpoints need it, and an explicit runtime input
+or cache if its lifetime is one request. Plain Python attributes hold
+reconstructible architecture data. Here is a block that standardizes its
 inputs with statistics computed once, ahead of time, from a reference sample:
 :end_tab:
 
@@ -793,21 +802,21 @@ moments: 8 bytes per parameter, two extra copies of the model.
 
 For our little network the total is a third of a megabyte, which is why none
 of this mattered until now. Scale the same arithmetic to a 1-billion-parameter
-model and it dominates everything: 4 GB for the weights alone and 16 GB for
-weights, gradients, and Adam state, before storing a single activation. The
-memory that constrains model design is mostly this bookkeeping, and the
-remaining term, the activations saved for the backward pass, depends on batch
-size and is treated in :numref:`sec_use_gpu`.
+model and the standard fp32 Adam ledger gives a batch-independent floor: 4 GB
+for the weights alone and 16 GB for weights, gradients, and optimizer state,
+before storing a single activation (:numref:`sec_adam`). Activations depend on
+batch size, sequence length, and architecture; they can exceed parameter state
+and are treated in :numref:`sec_use_gpu`.
 
-Large models train in mixed precision :cite:`Micikevicius.Narang.Alben.ea.2018`,
-computing in fp16 or bf16 while Adam keeps fp32 master weights, and here
-published accountings disagree. One common convention counts 18 bytes per
-parameter (fp32 master weights, an fp16 working copy, fp32 gradients, and the
-two moments); the ZeRO paper counts 16, keeping gradients in fp16
-:cite:`Rajbhandari.Rasley.Ruwase.ea.2020`. The disagreement is bookkeeping,
-not physics: both include the fp32 master copy and both include the moments.
-The invariant to remember is that Adam's state alone is 8 bytes per parameter
-in fp32, two full extra copies of your model, under every convention.
+Large models often train in mixed precision
+:cite:`Micikevicius.Narang.Alben.ea.2018`, but storage policies differ. One
+implementation convention counts 18 bytes per parameter (fp32 master weights,
+an fp16 working copy, fp32 gradients, and two fp32 moments); the ZeRO paper
+counts 16 by keeping gradients in fp16
+:cite:`Rajbhandari.Rasley.Ruwase.ea.2020`. Other bf16 and AMP stacks keep no
+separate working copy or choose another dtype for optimizer state. State the
+dtypes before quoting a multiplier. In the two conventions above, the fp32
+Adam moments alone cost 8 bytes per parameter.
 
 :begin_tab:`mxnet`
 In gluon the fp32 master copy is one optimizer flag away: construct the
@@ -832,7 +841,8 @@ mapping each of $|V|$ tokens to a $d$-dimensional vector; the output
 projection maps a $d$-dimensional hidden state to $|V|$ logits, and its weight
 matrix has the same shape and an analogous meaning: one vector per token.
 *Tying* the two, using a single tensor for both roles, saves $|V| \times d$
-parameters and trains better than keeping them separate
+parameters. The cited studies also found lower language-model perplexity in
+their experimental settings
 :cite:`Press.Wolf.2017,Inan.Khosravi.Socher.2017`. The savings are large: in
 GPT-2 :cite:`Radford.Wu.Child.ea.2019` the shared $50257 \times 768$ matrix is
 about 38.6 million of the model's 124 million parameters, roughly 31%.
@@ -1118,9 +1128,10 @@ bool(np.abs(lm.emb.weight.grad()
 
 :begin_tab:`pytorch`
 Every fine-tuning recipe (:numref:`sec_fine_tuning`) rests on one primitive:
-setting `requires_grad = False` on a parameter excludes it from
-backpropagation, so the optimizer has nothing to apply and the weight stays
-put. The typical pattern freezes a pretrained backbone and trains only a new
+setting `requires_grad = False` prevents a parameter from accumulating a
+`.grad` value. Backpropagation can still pass through operations involving
+that tensor to reach trainable inputs or earlier parameters. With no gradient
+to apply, the weight stays put. The typical pattern freezes a pretrained backbone and trains only a new
 head. On a fresh copy of our residual MLP, freezing everything but the output
 layer leaves 650 of 18,634 parameters trainable:
 :end_tab:
@@ -1219,7 +1230,7 @@ finetune[:-1].setattr('grad_req', 'null')
 ```
 
 :begin_tab:`pytorch`
-The optimizer should receive only the trainable parameters. One gradient step
+Here the optimizer receives only the trainable parameters. One gradient step
 then moves the head and nothing else:
 :end_tab:
 
@@ -1314,9 +1325,11 @@ batch normalization.
 :end_tab:
 
 :begin_tab:`pytorch`
-First, freezing does not reclaim optimizer memory. Passing only the trainable
-parameters, as above, matters: an optimizer built over *all* parameters keeps
-its state for every parameter that ever received a gradient. The Adam
+First, freezing does not reclaim optimizer memory that is already allocated.
+Passing only trainable parameters keeps the optimizer's membership explicit.
+A parameter frozen before its first step has `grad=None` and acquires no Adam
+state even if it was included, but state created by an earlier update remains.
+The Adam
 instance from the previous section already stepped once on `net`, so freezing
 `net`'s backbone now leaves its moments, 8 bytes per frozen parameter, fully
 allocated:
@@ -1495,16 +1508,17 @@ Parameter-efficient methods instead add small trainable low-rank corrections
 next to frozen weights; the linear algebra behind them is developed in
 :numref:`sec_mdl-svd-low-rank`. A related idea maintains derived,
 non-trained state: an *exponential moving average* (EMA) of the weights kept
-alongside the trained ones and used for evaluation, which often outperforms
-the raw final iterate. Like BatchNorm statistics, the average is state the
-optimizer never touches, updated outside backpropagation; we will use it when
-we train generative models.
+alongside the trained ones and used for evaluation. Whether it improves on the
+final iterate depends on its decay and the training schedule; controlled
+examples appear in :numref:`sec_training_recipes`. Like BatchNorm statistics,
+the average is state updated outside backpropagation.
 
 :begin_tab:`jax`
 In optax the average is one more piece of explicit state. `optax.ema` is a
 transformation like any other: feed it the weights after each step, in place
-of gradients, and its state carries their debiased moving average. Continuing
-the fine-tuning loop above, the average trails the moving head:
+of gradients, and its state carries an accumulator and a step count. With the
+default debiasing, `ema.update` returns the corrected average. Continuing the
+fine-tuning loop above, the average trails the moving head:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1569,12 +1583,12 @@ float(np.abs(ema['3.bias'] - finetune[3].bias.data()).max())
 ## Summary
 
 :begin_tab:`pytorch`
-A model's state is one named tree of tensors. `named_parameters()` walks the
+A model's state is a named object graph of tensors. `named_parameters()` walks the
 trainable leaves; the `state_dict` adds buffers, tensors that persist and
 move with the model but receive no gradients, such as BatchNorm running
 statistics. Training with Adam in fp32 costs 16 bytes per parameter (4 weights,
-4 gradients, 8 optimizer state) before activations, and the 8 bytes of Adam
-state per parameter survive every mixed-precision accounting convention.
+4 gradients, 8 optimizer state) before activations. Mixed-precision totals
+depend on the dtypes and copies the implementation keeps.
 Assigning one parameter to two modules ties them: one entry in
 `named_parameters()`, gradients summed over its uses. Setting
 `requires_grad = False` freezes a parameter, but reclaims no optimizer state
@@ -1586,9 +1600,9 @@ A model owns a typed state tree. `nnx.Param` marks trainable leaves;
 `nnx.BatchStat` and custom `Variable` subclasses hold persistent state that
 receives no optimizer updates. Filters select each view, and checkpoints can
 save the whole tree. Training with Adam in fp32 costs 16 bytes per parameter
-(4 weights, 4 gradients, 8 optimizer state) before activations, and the
-8 bytes of Adam state per parameter survive every mixed-precision accounting
-convention. `nnx.Embed.attend` ties the embedding and the output head
+(4 weights, 4 gradients, 8 optimizer state) before activations.
+Mixed-precision totals depend on the dtypes and copies the implementation
+keeps. `nnx.Embed.attend` ties the embedding and the output head
 structurally: one leaf in the tree, gradients summed over its uses. Freezing
 is an optimizer-side partition, `optax.multi_transform` with `set_to_zero`;
 it allocates no state for frozen leaves, but it does not stop `nnx.BatchStat`
@@ -1602,8 +1616,8 @@ layers that own it. A per-variable flag splits the list into
 `add_weight(trainable=False)` persist and are saved but receive no updates,
 and every variable's device is fixed at creation. Training with Adam in fp32
 costs 16 bytes per parameter (4 weights, 4 gradients, 8 optimizer state)
-before activations, and the 8 bytes of Adam state per parameter survive every
-mixed-precision accounting convention. Tying is a head layer that owns no
+before activations. Mixed-precision totals depend on the dtypes and copies the
+implementation keeps. Tying is a head layer that owns no
 variables and reuses the embedding table at a second call site: one entry in
 `weights`, gradients summed over its uses. Setting `layer.trainable = False`
 freezes a layer but reclaims no optimizer state already allocated;
@@ -1618,9 +1632,9 @@ debugger, walks it. Each entry carries its own `grad_req` switch; a
 `Constant` is a `Parameter` with `grad_req='null'` hardwired, so persistent
 non-trained state and freezing are one mechanism. Training with Adam in fp32
 costs 16 bytes per parameter (4 weights, 4 gradients, 8 optimizer state)
-before activations, and the 8 bytes of Adam state per parameter survive every
-mixed-precision accounting convention (`multi_precision=True` adds the fp32
-master copy). `share_parameters` ties two layers to one `Parameter`: two
+before activations. Mixed-precision totals depend on the dtypes and copies the
+implementation keeps (`multi_precision=True` adds an fp32 master copy).
+`share_parameters` ties two layers to one `Parameter`: two
 names in the dictionary, one tensor, gradients summed over its uses, updated
 once per step. Setting `grad_req='null'` freezes a parameter and frees its
 gradient buffer, but reclaims no optimizer state already allocated and does

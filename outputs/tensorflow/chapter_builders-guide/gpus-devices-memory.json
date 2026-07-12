@@ -19,7 +19,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x77636284a640>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x776362663ac0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x77636266cdc0>)"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x763324d8d400>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x7633ac0bb180>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x763324048480>)"
         }
       ]
     },
@@ -39,7 +39,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x77636268b0c0>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x77636268abc0>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x776362689e80>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x776362689e40>])"
+          "text": "(<tensorflow.python.eager.context._EagerDeviceContext at 0x76332404ac00>,\n <tensorflow.python.eager.context._EagerDeviceContext at 0x76332404a9c0>,\n [<tensorflow.python.eager.context._EagerDeviceContext at 0x76332404a980>,\n  <tensorflow.python.eager.context._EagerDeviceContext at 0x76332404a940>])"
         }
       ]
     },
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.1180979 , 0.3823415 , 0.7571093 ],\n       [0.19437122, 0.9169433 , 0.37405598]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[0.76276755, 0.4281237 , 0.25674343],\n       [0.30518925, 0.91746545, 0.13975286]], dtype=float32)>"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.1180979, 1.3823415, 1.7571093],\n       [1.1943712, 1.9169433, 1.374056 ]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 3), dtype=float32, numpy=\narray([[1.7627676, 1.4281237, 1.2567434],\n       [1.3051893, 1.9174654, 1.1397529]], dtype=float32)>"
         }
       ]
     },
@@ -100,7 +100,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[-0.23649842],\n       [-0.23649842]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2, 1), dtype=float32, numpy=\narray([[1.0202142],\n       [1.0202142]], dtype=float32)>"
         }
       ]
     },
@@ -142,17 +142,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "+ optimizer state    640.9 MiB\n"
+          "text": "+ optimizer state    640.8 MiB\n"
         }
       ]
     },
     "gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1": {
-      "code_fingerprint": "sha256:4746f8fc3e634977a76efd037b42cea57bf13adb4f32b217fad192951d5a6bf8",
+      "code_fingerprint": "sha256:c597d87f303bd518ed34912f0fd4fe0c99d76f3031ab04d1413b4a7ce71ee433",
       "kind": "text",
       "outputs": []
     },
     "gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-2": {
-      "code_fingerprint": "sha256:23e22da85f17ec4c9a901f3c90ad3cc29f454b2a86abb3ca19420816afbfcd1b",
+      "code_fingerprint": "sha256:98717ebe645828c2f35032d8c94bd0b57d04657c3f3d18216e7829b9894a5a0d",
       "kind": "text",
       "outputs": [
         {
@@ -163,47 +163,42 @@
       ]
     },
     "gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-3": {
-      "code_fingerprint": "sha256:c14987cfa0bbdb0acfbef294abfecaf210460db58f2b572c6ebc6b1c32e00d97",
+      "code_fingerprint": "sha256:3e0349874aa08dd0a5d5a801409ddbda12a9552083309ea889ff376cabe4dfea",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointing=False  peak   2469 MiB, 0.09 sec\ncheckpointing=True   peak   1549 MiB, 0.09 sec\n"
+          "text": "checkpointing=False  peak   2429 MiB, 0.09 sec\ncheckpointing=True   peak   1393 MiB, 0.16 sec\n"
         }
       ]
     },
     "gpus-devices-memory-don-t-break-the-pipeline-1": {
-      "code_fingerprint": "sha256:115ed374d08978d6322fc6563ee5c6525f75ff37a5075f4503e7aa8bd81b30d7",
+      "code_fingerprint": "sha256:dc663e2c393ede412dbee08a9453c5a08c5b440086ae7a620c7917255342e039",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0027 sec\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "time until they all finished:     0.0539 sec\n"
+          "text": "time to queue 32 matrix products: 0.0027 sec\ntime until they all finished:     0.0545 sec\n"
         }
       ]
     },
     "gpus-devices-memory-the-trainer-now-with-devices-1": {
-      "code_fingerprint": "sha256:995c4d7122310b9bae74e7371d1b96a44b7fa8d82469ea7ff84ee59f943a8232",
+      "code_fingerprint": "sha256:550462c75d2aee6ce4a5c7d872a52e7d4f71c68eb662803ea8f0b3818e336bf7",
       "kind": "text",
       "outputs": []
     },
     "gpus-devices-memory-the-trainer-now-with-devices-2": {
-      "code_fingerprint": "sha256:b5220c72d45c0628d3e2fd498d7c8fcd4e37590777dda92b1ac93c23688f435e",
+      "code_fingerprint": "sha256:d3538888691891a4b4998afe2742d7f7239a1147543b9f050a6b98eb4202d1bb",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
-          "bytes": 20107,
-          "sha256": "sha256:03cec9170bfc8f0dfd5cf622342308ba57e7e2d6614d8c01d5ec4de51f646508"
+          "bytes": 20108,
+          "sha256": "sha256:cabee8d704c703b9c5c904a3b34bb9bbb885b17e5973764bdde6f2a1c1669181"
         }
       ]
     }

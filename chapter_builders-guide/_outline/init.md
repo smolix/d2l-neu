@@ -1,5 +1,7 @@
 # Initialization
-:label:`sec_init_v2`
+:label:`sec_init_param`
+
+The live label is preserved because downstream sections already cite it.
 
 > **Role.** The API companion to :numref:`sec_numerical_stability` (which
 > owns the theory: symmetry breaking, vanishing/exploding activations,
@@ -43,8 +45,8 @@ lineage init; (ii) **depth-aware residual scaling** — in an $N$-block
 residual network, scale the *last* layer of each block by $1/\sqrt{N}$
 (GPT-2) so the residual stream's variance stays O(1) regardless of depth;
 (iii) **zero-init of the final layer / gain** — start each block as an
-identity-plus-nothing map so early training is stable (zero-init gamma,
-FixUp lineage). Each gets two sentences of *why* anchored to the variance
+identity-plus-nothing map so early training is stable. Each gets two
+sentences of *why* anchored to the variance
 argument of :numref:`sec_numerical_stability`, not a re-derivation.
 
 *Code (PyTorch).* Initialize the residual stack three ways (default,
@@ -75,14 +77,15 @@ just re-invented part of `load_state_dict` (forward pointer to
 > **Downstream constraints.** `init_cnn`/`init_seq2seq` are *defined
 > downstream* (lenet.md, seq2seq.md), so this section's concrete examples
 > are freely editable; only the `apply(fn)` pattern itself must be taught
-> before Chapter 7. Preserved. Current file has no `:label:` (nothing can
-> cite it) — labels here are new.
+> before Chapter 7. Preserved. The live `sec_init_param` label is retained
+> because downstream sections already cite it.
 
 ## Framework Coverage
 
-- **JAX** — the one structural divergence in this section: there is no
-  `net.apply(fn)` mutate-in-place walker (params are immutable pytrees).
-  The JAX idiom is *construct with the right `kernel_init=` argument* —
+- **JAX** — the one structural divergence in this section: NNX creates
+  mutable `nnx.Param` variables in constructors rather than running a later
+  Linen `init/apply` pass. The main idiom is *construct with the right
+  `kernel_init=` argument* —
   and modern schemes + custom initializers unify into one pattern (any
   `(key, shape, dtype) → array` function; `truncated_normal` and
   `variance_scaling` verified). The prose should teach this as a genuine

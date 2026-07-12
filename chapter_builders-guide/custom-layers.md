@@ -14,7 +14,7 @@ A custom layer is a subclass of the module class from
 :numref:`sec_model_construction` with a forward method, and if you
 register its state properly you inherit everything a built-in layer gets:
 parameter tracking, serialization, and device movement, with no extra code. We
-build up from a stateless five-liner to RMSNorm, the normalization inside most
+build up from a stateless five-liner to RMSNorm, a normalization used by many
 current language models, then to layers with precomputed non-trainable state,
 and finally to the case where the forward computation alone is not enough
 because the gradient itself must be redefined.
@@ -41,6 +41,8 @@ import tensorflow as tf
 
 ```{.python .input #custom-layers-custom-layers-and-functions}
 %%tab mxnet
+import os
+import tempfile
 from mxnet import autograd, gluon, init, np, npx
 from mxnet.gluon import nn
 npx.set_np()
@@ -198,8 +200,8 @@ A layer with something to learn must create its own parameters, and wrapping a
 tensor in `nn.Parameter` is what registers them (:numref:`sec_parameters`).
 We could show the mechanics by re-implementing `nn.Linear`, but that teaches
 nothing the built-in does not already do. Instead we implement *RMSNorm*
-:cite:`Zhang.Sennrich.2019`, the normalization used by most current large
-language models, in the same five lines.
+:cite:`Zhang.Sennrich.2019`, a normalization used by many current language
+models, in the same five lines.
 :end_tab:
 
 :begin_tab:`jax`
@@ -207,8 +209,8 @@ A layer with something to learn must create its own parameters, and
 `nnx.Param` is what registers them in the object graph
 (:numref:`sec_parameters`). We could show the mechanics by re-implementing
 `nnx.Linear`, but that teaches nothing the built-in does not already do. Instead
-we implement *RMSNorm* :cite:`Zhang.Sennrich.2019`, the normalization used by
-most current large language models, in the same handful of lines.
+we implement *RMSNorm* :cite:`Zhang.Sennrich.2019`, a normalization used by
+many current language models, in the same handful of lines.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -218,8 +220,8 @@ splits creation off into a `build` method that runs on the first call, once
 the input shape is known, so the layer need not be told its width in advance.
 We could show the mechanics by re-implementing `Dense`, but that teaches
 nothing the built-in does not already do. Instead we implement *RMSNorm*
-:cite:`Zhang.Sennrich.2019`, the normalization used by most current large
-language models.
+:cite:`Zhang.Sennrich.2019`, a normalization used by many current language
+models.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -230,8 +232,8 @@ shape, and an initializer; its array is allocated only when `initialize()`
 runs, and the forward pass fetches the copy on the input's device with
 `.data(X.device)`. We could show the mechanics by re-implementing `nn.Dense`,
 but that teaches nothing the built-in does not already do. Instead we
-implement *RMSNorm* :cite:`Zhang.Sennrich.2019`, the normalization used by
-most current large language models.
+implement *RMSNorm* :cite:`Zhang.Sennrich.2019`, a normalization used by many
+current language models.
 :end_tab:
 
 Layer normalization standardizes each input vector: subtract the mean, divide
@@ -304,8 +306,10 @@ class RMSNorm(nn.Block):
         return self.gain.data(X.device) * X / rms
 ```
 
-Feeding it badly scaled data confirms the normalization: every output row has
-unit mean square, whatever the input scale was.
+Let $m_2$ denote an input row's mean square. With gain one, the output mean
+square is $m_2/(m_2 + \epsilon)$. It is therefore close to one when
+$m_2 \gg \epsilon$, as the badly scaled inputs below verify; a zero row
+remains zero.
 
 ```{.python .input #custom-layers-layers-with-parameters-rmsnorm-2}
 %%tab pytorch
@@ -350,10 +354,9 @@ First, the gain registered itself the moment we assigned an `nn.Parameter` in
 :end_tab:
 
 :begin_tab:`jax`
-First, the gain registered itself the moment `self.param` ran: `init`
-returned it inside the `params` collection of the variable tree. That tree is
-a plain pytree of arrays, and it is exactly the object an optimizer such as
-`optax` transforms.
+First, assigning `nnx.Param` registered the gain in the NNX object graph.
+`nnx.state(norm, nnx.Param)` selects it, and an `nnx.Optimizer` configured
+with `wrt=nnx.Param` will update it.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -481,10 +484,13 @@ bool(tf.reduce_all(net(X) == clone(X)))
 
 ```{.python .input #custom-layers-the-composability-guarantee-3}
 %%tab mxnet
-net.save_parameters('net.params')
+with tempfile.NamedTemporaryFile(suffix='.params', delete=False) as f:
+    path = f.name
+net.save_parameters(path)
 clone = nn.Sequential()
 clone.add(nn.Dense(8), RMSNorm(8), nn.Dense(2))
-clone.load_parameters('net.params')
+clone.load_parameters(path)
+os.remove(path)
 X = np.random.randn(4, 20)
 bool((net(X) == clone(X)).all())
 ```
@@ -497,11 +503,11 @@ just the same.
 :end_tab:
 
 :begin_tab:`jax`
-Fourth, it moves. Because the variable tree is a pytree of arrays,
-`jax.device_put` carries everything, the gain included, to whatever device
-you name. On a machine with a GPU (JAX's default device there) the cell below
-reports a GPU device twice; on a CPU-only machine it reports `cpu` and runs
-just the same.
+Fourth, it moves. NNX state is a pytree of `Variable` objects whose array
+values can be placed on a chosen device and written back with `nnx.update`.
+On a machine with a GPU (JAX's default device there) the cell below reports a
+GPU device twice; on a CPU-only machine it reports `cpu` and runs just the
+same.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -530,7 +536,7 @@ every placement and move includes it, custom layer or built-in alike.
 %%tab pytorch
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 net.to(device)
-next(net.parameters()).device, net(torch.randn(4, 20, device=device)).device
+net[1].gain.device, net(torch.randn(4, 20, device=device)).device
 ```
 
 ```{.python .input #custom-layers-the-composability-guarantee-4}
@@ -556,14 +562,12 @@ and compare outputs.
 
 :begin_tab:`mxnet`
 RMSNorm proved useful enough that most libraries now ship their own
-implementation. Gluon, whose development stopped before RMSNorm spread, is
-the exception: it has `nn.LayerNorm` but no RMSNorm, so there is no referee
+implementation. This Gluon version is the exception: it has `nn.LayerNorm`
+but no RMSNorm, so there is no referee
 to check our five-liner against. The general rule for custom layers, build
 one to understand it, then use the native implementation in production,
-therefore inverts on this tab: our class *is* the production implementation,
-and later chapters that need RMSNorm here hand-roll exactly these lines. The
-rule survives intact; it just resolves the other way when the library ships
-nothing to prefer.
+therefore resolves differently on this tab: when the library ships nothing
+to prefer, keep the tested custom implementation.
 :end_tab:
 
 :begin_tab:`jax`
@@ -614,11 +618,14 @@ bool(tf.experimental.numpy.allclose(ours(X), native(X)))
 They match to floating-point precision. This is the general rule for custom
 layers: build one to understand it, then use the native implementation in
 production. The native version may fuse the reduction and the scale into a
-single kernel, and it will be maintained as the library evolves. Later
-chapters follow the rule and use the native layer directly.
+single kernel, and it will be maintained as the library evolves.
 :end_tab:
 
 ## Precomputed State: Buffers
+
+The compact mask below accepts square self-attention score matrices. Cached
+decoding, where query and key lengths differ, needs an offset mask rather than
+this $T \times T$ slice.
 
 :begin_tab:`pytorch`
 :numref:`sec_parameters` introduced buffers as the third kind of module
@@ -725,7 +732,7 @@ class CausalMask(nn.Block):
 
     def forward(self, scores):
         T = scores.shape[-1]
-        return np.where(self.mask.data()[:T, :T].astype(bool),
+        return np.where(self.mask.data(scores.device)[:T, :T].astype(bool),
                         -np.inf, scores)
 ```
 
@@ -993,20 +1000,20 @@ w.grad
 ```
 
 The downstream gradient arrives at `w` untouched, as if the rounding were the
-identity, while the forward pass still computed with rounded values. One
-design choice deserves a mention: instead of the plain passthrough, many
-implementations clamp `grad_output` to $[-1, 1]$, or zero the gradient
-where the saved input had saturated. The clamped variants bound what flows
-through the fiction and are the safer default when the quantized layer sits
-deep in a large model.
+identity, while the forward pass still computed with rounded values. Some
+estimators instead zero the gradient where a saved input had saturated, while
+ordinary gradient clipping bounds a large upstream gradient independently of
+the quantizer. These are different approximations. Neither is a universal
+default; the surrogate backward rule must match the training objective it is
+meant to approximate.
 
 :begin_tab:`jax`
 JAX offers a shortcut for this particular lie. `jax.lax.stop_gradient` is an
 identity whose gradient is zero, so `X + stop_gradient(round(X) - X)`
 computes `round(X)` in the forward pass while the backward pass sees only the
 leading `X`. Three lines, no `custom_vjp`; the general mechanism earns its
-keep when the surrogate is not the identity, the clamped passthrough above
-for instance. The two definitions agree in value and in gradient:
+keep when the surrogate is not the identity, an input-dependent saturation
+rule for instance. The two definitions agree in value and in gradient:
 :end_tab:
 
 ```{.python .input #custom-layers-custom-gradients-4}
@@ -1115,8 +1122,9 @@ RMSNorm, keep your own.
    without the bias into the new state structure.
 1. Implement `Dropout` from scratch as a custom layer that zeroes each entry
    with probability $p$ and rescales the survivors during training, but is
-   the identity during evaluation. Give the module a class-annotated
-   `deterministic` attribute and an `nnx.Rngs` stream. Verify that
+   the identity during evaluation. Store `self.deterministic = False`, give
+   the module an `nnx.Rngs` stream, and implement
+   `set_view(self, *, deterministic)` to update the flag. Verify that
    `nnx.view(model, deterministic=True)` reaches a dropout layer nested in an
    `nnx.Sequential`.
 1. Implement a clamp with a custom gradient: a `custom_vjp` function whose

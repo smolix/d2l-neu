@@ -54,12 +54,12 @@
       ]
     },
     "saving-loading-checkpointing-a-training-run-1": {
-      "code_fingerprint": "sha256:d069529b1abd172e38c62dd03429183ac30a07ed604d1e21f919dfb69efd9ebf",
+      "code_fingerprint": "sha256:5c98c088656fe9b7b1c39cfdc1959055ef92745fc2c4bb17d493c10e24769ccf",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-checkpointing-a-training-run-2": {
-      "code_fingerprint": "sha256:1b313a386a2e07fe511f4020aff1b2c6039f3218e0776235a0752c92079d3064",
+      "code_fingerprint": "sha256:67b46c36e918115fb7a8ad0175718e3140dec42b9ae14364624d467a57d8ba6c",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "saving-loading-checkpointing-a-training-run-3": {
-      "code_fingerprint": "sha256:093443b2a7a5cadc59ae8690b7d0335e42b08cc2af1fbd1d2ea2d8df7b9ee50f",
+      "code_fingerprint": "sha256:7e3e38b7b46f74a547bcf4f8a881385dc6d888a4767b3c5ca84773f3fb889701",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "saving-loading-checkpointing-a-training-run-4": {
-      "code_fingerprint": "sha256:3d087141e74a99b1638a102727bbc97474925d9ff322902463c9474a373ebae1",
+      "code_fingerprint": "sha256:c41b2d84a63ef7086f7ae64d1d4aa392fc851a7b937ab865dba1d2c8a6a217dc",
       "kind": "text",
       "outputs": [
         {
@@ -90,7 +90,7 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-1": {
-      "code_fingerprint": "sha256:485fc0fcaed5d00a4f9e8278893cf02e9647525a272e87dbf77f3247edc60f99",
+      "code_fingerprint": "sha256:503682e0e3635896b2e9aa9e989a2d37c45b4f9f17df002b289ccd0c11bddfad",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-2": {
-      "code_fingerprint": "sha256:68e0a7648e21c36b87237c233d2a56791c82d0b185d3c4a01dfb70c97b3d0489",
+      "code_fingerprint": "sha256:4be3cd6d5215eeb5711cda8c19e7e0b74d3413c2a4c063b9acadf4923e25a42c",
       "kind": "text",
       "outputs": [
         {
@@ -111,7 +111,7 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-3": {
-      "code_fingerprint": "sha256:162040c3bb2ae2a0ab7513a052f19213ac58a3d99d68562a5f3100b5ec7dda42",
+      "code_fingerprint": "sha256:9029a54abb1514d996b11c5ba49683d1ccfcaa9e518e25f78bd2f3c4bce13055",
       "kind": "text",
       "outputs": [
         {

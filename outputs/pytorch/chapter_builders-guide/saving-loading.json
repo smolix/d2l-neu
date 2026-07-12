@@ -122,7 +122,7 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-2": {
-      "code_fingerprint": "sha256:3d0342518224de5c9eaed21ae2787eaff68dd529fc35ff6966d70283f241c02e",
+      "code_fingerprint": "sha256:31cad785552c24a691e76a1ca96349239bb4003df807a2b5b17a8d4da99fc0e3",
       "kind": "text",
       "outputs": [
         {
@@ -133,7 +133,7 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-3": {
-      "code_fingerprint": "sha256:8e0c1929da39189aa4fafbb9f0e59e6495d9a49b3f6636ca840cb73cb4199ba1",
+      "code_fingerprint": "sha256:485787cc6d8327bf2d5cf0dc7914a513eee42623e2cefc672fda898a18aeece5",
       "kind": "text",
       "outputs": [
         {

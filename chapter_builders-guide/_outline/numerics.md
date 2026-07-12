@@ -21,7 +21,8 @@ Range/precision table; what overflows where (fp16 max ≈ 65504 meets a loss
 of 10⁵).
 
 *Code (PyTorch).* Create the same tensor in each dtype; print
-`torch.finfo` for each; demonstrate one honest failure — square a large
+`torch.finfo` for each, distinguishing smallest normal from smallest
+subnormal; demonstrate one concrete failure — square a large
 fp16 value → `inf`, same value fine in bf16. Check
 `torch.backends.cuda.matmul.allow_tf32` and time an fp32 matmul with it on
 vs off *(numbers land in the committed output store, captured on the GPU
@@ -64,9 +65,9 @@ for X, y in loader:
     scaler.step(opt); scaler.update(); opt.zero_grad()
 ```
 
-Train the Fashion-MNIST MLP two ways (fp32 vs bf16 autocast); report
-time/epoch and final accuracy — same accuracy, measurably faster, which is
-the entire pitch.
+Train the Fashion-MNIST MLP two ways (fp32 vs bf16 autocast); report elapsed
+time and held-out accuracy. The CPU notebook should show accuracy parity and
+report the observed timing; accelerator speedups are hardware- and workload-dependent.
 
 ## When Numerics Bite **[NEW, short]**
 
@@ -79,8 +80,8 @@ in low precision drift; (iii) reproducibility across dtypes is not expected
 pointer to :numref:`sec_repro_v2`).
 
 *Code (PyTorch).* Sum 10⁷ small fp16 values naively vs via fp32
-accumulation; the drift is visible in the third digit — one cell, one
-lesson.
+accumulation; report each framework's actual reduction result rather than
+assuming identical scan order — one cell, one lesson.
 
 ## Summary and Exercises
 
@@ -100,7 +101,7 @@ with std 10².
 ## Framework Coverage
 
 *The most divergent section of the chapter — by design each tab teaches its
-framework's honest mixed-precision story rather than a forced translation.*
+framework's native mixed-precision story rather than a forced translation.*
 
 - **JAX** — coverage via a *better* mechanism: `param_dtype=` (storage) vs
   `dtype=` (compute) as two always-visible constructor args (verified:
@@ -109,7 +110,7 @@ framework's honest mixed-precision story rather than a forced translation.*
   `jax.default_matmul_precision` (verified); fp8 dtypes present with
   working `finfo` (verified). **One skip: no `GradScaler` equivalent in
   optax** (verified absent) → the JAX tab teaches bf16-only and says so —
-  honest 2026 practice anyway.
+  representative 2026 practice anyway.
 - **TensorFlow** — full coverage: `keras.mixed_precision.set_global_policy
   ('mixed_bfloat16')` verified (compute bf16 / variables fp32 — exactly
   the master-weights pattern), `LossScaleOptimizer` present for fp16.
@@ -125,5 +126,5 @@ framework's honest mixed-precision story rather than a forced translation.*
   demote to a pointer unless the GPU box validates it. tf32: SKIP (no user
   switch exists). fp8: SKIP (dtype absent). bf16 dtype exists in source
   [UNVERIFIED on GPU]. The mxnet tab of this section is therefore
-  ~"fp16 + master weights, everything else marked not-available" — honest,
+  ~"fp16 + master weights, everything else marked not-available" — explicit,
   and consistent with the archived status.

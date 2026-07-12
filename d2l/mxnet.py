@@ -584,7 +584,7 @@ class SoftmaxRegression(d2l.Classifier):
         return self.net(X)
 
 def save_checkpoint(prefix, model, trainer, step, cfg=None):
-    """Atomically write a resumable checkpoint (.params/.states/.json).
+    """Replace each component of a resumable MXNet checkpoint.
 
     Defined in :numref:`sec_read_write`"""
     meta = {'step': step}

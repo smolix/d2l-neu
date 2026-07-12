@@ -1,4 +1,8 @@
-# v2 → promotion checklist (collected from the writing pass, 2026-07-09)
+# v2 → promotion checklist (archive, completed 2026-07-09)
+
+> This file records the promotion that created the current Chapter 6. Its
+> pending labels, framework order, and verification items are historical; the
+> live source files and `_outline/index.md` describe the current NNX edition.
 
 ## GPU-box verification / capture (cells guarded on CPU)
 

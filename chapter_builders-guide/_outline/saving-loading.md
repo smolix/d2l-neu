@@ -43,11 +43,13 @@ the format — it is *just* names, dtypes, shapes, offsets.
 *Topics.* A crash-safe checkpoint is more than weights: model state,
 optimizer state (those Adam moments from :numref:`sec_parameters_v2` —
 without them resumption restarts momentum from zero), RNG state, step/epoch
-counter, and the config. Resume semantics: rebuild from config, load state,
-continue — demonstrated honestly by killing and resuming a short training
+counter, and the config. Resume semantics: rebuild from the saved config, load
+state and every explicit RNG source (including sampler state when exact
+continuation matters), continue — demonstrated by killing and resuming a short training
 run mid-way and showing the loss curve continues rather than restarts.
 Note on atomic writes (save to temp, rename) as the difference between a
-checkpoint and a corrupted file. Forward pointer: sharded/multi-file
+checkpoint and a corrupted file; multi-file formats need a versioned bundle
+and one atomic manifest update. Forward pointer: sharded/multi-file
 checkpoints and `mmap=True` loading for models larger than RAM — two
 sentences, not a demo.
 
@@ -103,15 +105,15 @@ evaluate; the result previews weight averaging/EMA.
 *`safetensors` is a **new dependency for all four venvs** (verified working
 for torch-style flat dicts, flax, tensorflow; mxnet via the numpy module).*
 
-- **JAX** — `safetensors.flax` verified (expects a *flat* dict → one small
-  flatten/unflatten helper around the pytree). Full checkpoints: **cleaner
+- **JAX** — `safetensors.flax` verified (expects a *flat* dict → a small
+  string-keyed demo plus a warning that arbitrary pytrees need typed paths or
+  a template-aware bridge). The worked pretrained example uses the
+  tested NNX ResNet-50 Hugging Face loader. Full checkpoints: **cleaner
   than PyTorch** — `orbax.checkpoint.StandardCheckpointer` round-trips the
-  whole `TrainState` (params + optax state + step) in one call (verified;
+  whole state (params + optax state + step + explicit PRNG key) in one call (verified;
   orbax already ships with flax, no new dep; atomic writes are its default).
   Partial loading: pytree surgery + a hand-written missing/unexpected-keys
-  diff (no `strict=False` analogue). Pretrained zoo: none — the JAX cell
-  reloads a checkpoint saved earlier in the notebook; HF Hub is the prose
-  answer.
+  diff (no `strict=False` analogue).
 - **TensorFlow** — `safetensors.tensorflow` verified (two footguns for the
   prose: numpy round-trip, and `save_file` mutates its input dict). Full
   checkpoints: **cleanest of the four** — `tf.train.Checkpoint(model=,

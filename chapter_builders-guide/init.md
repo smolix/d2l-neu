@@ -164,10 +164,11 @@ When should you override? Four situations recur: a deep network without
 normalization layers, where variance compounds across depth (we demonstrate
 this below); reproducing a paper whose results depend on its initialization
 recipe; architecture-specific corrections such as the residual scaling later
-in this section; and parameters you create by hand, though here Flax forces
-the choice on you, since `self.param(name, init_fn, shape)` will not hand you
-memory without an initializer. There is no construction-time fine print to
-remember: fan-in is always read off the first input when `init` runs.
+in this section; and parameters you create by hand, though here NNX forces
+the choice on you: construct the value explicitly and wrap it in `nnx.Param`.
+NNX layers receive their input and output widths in the constructor, and
+their initializers run there as well; no later `init` pass infers fan-in from
+the first input.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -214,11 +215,13 @@ any existing optimizer pointing at the old one.
 :end_tab:
 
 :begin_tab:`jax`
-Every NNX layer accepts `kernel_init` and `bias_init`, each a function
+NNX affine layers such as `Linear` and `Conv` accept `kernel_init` and
+`bias_init`, each a function
 `(key, shape, dtype) -> array`, and `nnx.initializers` supplies the standard
 menu. These functions run in the constructor. For a model that already
 exists, we can walk its modules and assign new values to selected parameters.
-We show both routes.
+For a parameter in a custom module, call an initializer directly and wrap its
+result in `nnx.Param`. We show the first two routes here.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -453,12 +456,14 @@ across depth, and at a block's start.
 
 A Gaussian gets the variance right, but its tails are unbounded. That is
 harmless for one draw and a near-certainty at scale: among the $10^8$ weights
-of a BERT-sized model, dozens land beyond five standard deviations. A single
-outsized weight can dominate a unit's output at initialization, and it wastes
-dynamic range once the model is cast to low precision
-(:numref:`sec_numerics`). The BERT and ViT lineage therefore samples from a
-normal distribution *truncated* at two standard deviations: the same scale,
-with a hard bound on every entry.
+of a BERT-sized model, dozens land beyond five standard deviations. Large
+draws also consume disproportionate dynamic range once a model is cast to low
+precision (:numref:`sec_numerics`). BERT and implementations in the ViT
+lineage use truncated-normal initialization
+:cite:`Devlin.Chang.Lee.ea.2018,Dosovitskiy.Beyer.Kolesnikov.ea.2021`: the
+tails are cut off at a fixed multiple of the nominal standard deviation. Raw
+truncated-normal initializers do not necessarily restore the variance removed
+with the tails; fan-aware variance-scaling initializers often do.
 
 :begin_tab:`pytorch`
 `nn.init.trunc_normal_` takes absolute cutoffs `a` and `b` (defaulting to
@@ -576,7 +581,7 @@ widths and stuck.
 
 :numref:`fig_bg_residual-stream` draws the two regimes side by side.
 
-![A residual stream with additive block contributions, unscaled (left) versus scaled by 1/sqrt(N) (right): each block contributes O(1) variance to the stream it joins, so left uncorrected the stream's variance compounds like N, drawn as a thickening, darkening line, while scaling each contribution tames it back to O(1), a stream of constant width and shade.](../img/bg-residual-stream.svg)
+![A residual stream with additive block contributions, unscaled (left) versus scaled by 1/sqrt(N) (right). Under the independent-contribution approximation, unscaled variance grows with N and scaling keeps the sum O(1). In an unnormalized stack, each branch reads an already inflated stream, so growth can be faster, as the experiment below shows.](../img/bg-residual-stream.svg)
 :label:`fig_bg_residual-stream`
 
 ### Starting a Block at Zero
@@ -588,13 +593,13 @@ of a residual block is a different and useful move. The branch then
 contributes exactly nothing, each block is the identity map, and the network
 starts as a shallow function whose depth switches on gradually during
 training. Symmetry is not a problem because the branch's earlier layers keep
-their random weights: the zeroed projection receives a nonzero gradient (its
-input, the branch activation, is nonzero), and once it moves off zero,
-gradient reaches the whole branch. Keep this scheme distinct from the previous
-one: GPT-2 makes every residual projection *small but nonzero*, whereas
-zero-init makes one layer *exactly zero* so the block starts as an exact
-identity. The zero variant is the standard trick for the final batch-norm gain
-in ResNet blocks and for policy heads in reinforcement learning.
+their random weights. On the first backward pass, the zeroed projection
+receives a nonzero gradient because its input is nonzero, while the earlier
+layers receive zero gradient through that projection. After the projection
+moves off zero, gradient reaches the whole branch. Keep this scheme distinct
+from the previous one: GPT-2 makes every residual projection *small but
+nonzero*, whereas zero-init makes one layer *exactly zero* so the block starts
+as an exact identity.
 
 ### Watching the Variance Compound
 
@@ -823,14 +828,14 @@ for n in (2, 8, 32):
     print(f'{n:>3}' + ''.join(f'{s:>10.3g}' for s in stds))
 ```
 
-The default column multiplies by a constant factor per block, exponential
-growth that reaches tens of millions by $N=32$; training this stack would
-diverge on the first step. The scaled column sits near a small constant at
-every depth: each contribution's variance is cut by a factor of $N$, so the
-total stays bounded no matter how deep the stack. The zero column reproduces the
-input's standard deviation exactly, since every block is the identity.
-Two lines of initialization code separate a network that cannot train from
-one that starts stable at any depth.
+The default column multiplies by a roughly constant factor per block in this
+unnormalized stack, reaching tens of millions by $N=32$. Such initial
+activations make optimization impractical. The scaled column stays near a
+small constant over the depths tested: scaling cuts each branch's variance by
+a factor of $N$, following the independent-contribution approximation above.
+The zero column reproduces the input's standard deviation, since every block
+is the identity. This forward-pass test does not prove how an optimizer will
+behave, but it catches an unusable initialization before training begins.
 
 ## Custom Initializers
 

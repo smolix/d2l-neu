@@ -9,12 +9,12 @@
   },
   "cells": {
     "saving-loading-saving-loading-and-pretrained-weights": {
-      "code_fingerprint": "sha256:e3568d9918be46d362f776988b762d0ff1056802a541ba71ecafe5cb68302ece",
+      "code_fingerprint": "sha256:f7a667750376254e51305fcfa08067680a3a5a714fc869730d4ffc3bd3535e0c",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-state-not-code-1": {
-      "code_fingerprint": "sha256:231070238b377f56636530ff6ca90d526f8b230d3649021cc5b15a665c3d74f3",
+      "code_fingerprint": "sha256:2b674a64dd1096a4b9500e5fbb858ce7787d0d54f6610911545aba6eccf25a84",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "saving-loading-state-not-code-2": {
-      "code_fingerprint": "sha256:74c74f894b31590d1073a8d470de6fda3cda9813c37f2f20a1de57eda87ac4d9",
+      "code_fingerprint": "sha256:ee93495ec616d0b25a20f354bb9e53f01ff956cf162b4996ef3252d10591236a",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +34,7 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-3": {
-      "code_fingerprint": "sha256:e41e129752d32f325ac8078aa97cfd9851180c476f6d99a9ce2d54e8458d9936",
+      "code_fingerprint": "sha256:d38acb1760675e2d2d0ae1b64e9d95227a679effcab62f05898463cb33497f0a",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-4": {
-      "code_fingerprint": "sha256:ff4b7c4e5edd40b09621b62868614f307b12c429350d5eaf35c945cf7b085e72",
+      "code_fingerprint": "sha256:cf39954e5adc42b4c8d3abafdbd19a00aeb3bce05ab6e666029ef522b426778b",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +54,7 @@
       ]
     },
     "saving-loading-checkpointing-a-training-run-2": {
-      "code_fingerprint": "sha256:9f93b6c7625af319ebf541e3ee97c40aa2f4b35f241472b793756995d2bd174b",
+      "code_fingerprint": "sha256:8c5e19d2a0f5eaac56bd91506f04e8dc11869d67c9cd36303bdd3090e2841203",
       "kind": "text",
       "outputs": [
         {
@@ -64,30 +64,47 @@
       ]
     },
     "saving-loading-checkpointing-a-training-run-3": {
-      "code_fingerprint": "sha256:b580b27f097c149c9c4b61296c2d2f5c453445d0c76bbb15bf7c1ac44c21db79",
+      "code_fingerprint": "sha256:453d669a07120755c896a09c2a067cbe5648ab185d704ab3e4c376c3643511ae",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 50458.19 -> restored 0.0022'"
+          "text": "'perturbed 50458.06 -> restored 0.0022'"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-4": {
-      "code_fingerprint": "sha256:62b236c59de0b4c9e5cab59da52c1feec7cce1ae9cc018d74ef00b4f8f5385bd",
+      "code_fingerprint": "sha256:c4a2380e68e62214dcd2602d0a9c838fea521c2e9bd27fc80b4f0fb1f3751ffd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "full  optimizer: [0.0022, 0.0021, 0.002, 0.002, 0.002]\nfresh optimizer: [0.0022, 2.8455, 0.2456, 0.8604, 1.3327]\n"
+          "text": "full  optimizer: [0.0022, 0.0021, 0.002, 0.002, 0.002]\nfresh optimizer: [0.0022, 2.8736, 0.247, 0.8254, 1.3269]\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-1": {
-      "code_fingerprint": "sha256:f22b8cad9e1620e1e6f27bf972ac923557a4c242bafd37ab7d2fbc34bd19861b",
+      "code_fingerprint": "sha256:bb15afebd43ede763161654bf50cba926b9fe790f518e4d035358f8c70a46723",
       "kind": "text",
       "outputs": [
+        {
+          "type": "display_data",
+          "text": "Downloading bytes:           |  0.00B            "
+        },
+        {
+          "type": "display_data",
+          "text": "Reconstructing (incomplete total...): |          |  0.00B /  0.00B            "
+        },
+        {
+          "type": "display_data",
+          "text": "Fetching 1 files:   0%|          | 0/1 [00:00<?, ?it/s]"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "new pretrained-model head: (2048, 10)\n"
+        },
         {
           "type": "execute_result",
           "text": "[(('head', 'bias'), (2,)),\n (('head', 'kernel'), (256, 2)),\n (('hidden', 'bias'), (256,)),\n (('hidden', 'kernel'), (20, 256))]"
@@ -95,20 +112,25 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-2": {
-      "code_fingerprint": "sha256:798a498f0f1165e7f639be7b5e979a689f8421a7aaf41ffad33f94c0f050e862",
+      "code_fingerprint": "sha256:edfcb183886c809053c124ed0dca4aed09aceb9d5c7f8b7a7bbc12db49b85277",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "missing: ['head.bias', 'head.kernel']\nunexpected: ['output.bias', 'output.kernel']\n"
+          "text": "missing: ['head.bias', 'head.kernel']\nunexpected: ['output.bias', 'output.kernel']\nloaded trunk: True\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-3": {
-      "code_fingerprint": "sha256:99c687fcbccb49f444c11fc1e362aba1d0c983fe70a89b72d93571393325b057",
+      "code_fingerprint": "sha256:d0bf629c8d44818f55c622c12ed7b3e33fc1c11caf84afec5ceb15d00dbf99be",
       "kind": "text",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "trunk unchanged: True\nhead changed: True\n"
+        },
         {
           "type": "execute_result",
           "text": "'514 trainable of 5890'"

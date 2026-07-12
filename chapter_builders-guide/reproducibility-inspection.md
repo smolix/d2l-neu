@@ -125,9 +125,10 @@ print('different seed:', loss_a, 'vs', loss_c)
 %%tab jax
 def train_once(seed):
     key_init, key_X, key_y = jax.random.split(jax.random.key(seed), 3)
-    net = nnx.Sequential(nnx.Linear(20, 32, rngs=nnx.Rngs(key_init)),
+    rngs = nnx.Rngs(key_init)
+    net = nnx.Sequential(nnx.Linear(20, 32, rngs=rngs),
                          nnx.relu,
-                         nnx.Linear(32, 1, rngs=nnx.Rngs(key_init)))
+                         nnx.Linear(32, 1, rngs=rngs))
     X = jax.random.normal(key_X, (128, 20))
     y = jax.random.normal(key_y, (128, 1))
     optimizer = nnx.Optimizer(net, optax.sgd(0.1), wrt=nnx.Param)

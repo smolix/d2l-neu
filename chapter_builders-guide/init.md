@@ -276,7 +276,6 @@ net = nnx.Sequential(
     nnx.Linear(8, 1, kernel_init=init_normal,
                bias_init=nnx.initializers.zeros, rngs=nnx.Rngs(1)))
 
-X = jnp.ones((2, 4))
 net.layers[0].kernel[:, 0], net.layers[0].bias[0]
 ```
 

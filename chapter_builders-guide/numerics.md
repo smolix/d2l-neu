@@ -779,7 +779,7 @@ def train(mixed):
                          nnx.Linear(784, 256, dtype=dtype,
                                     rngs=nnx.Rngs(0)), nnx.relu,
                          nnx.Linear(256, 10, dtype=dtype,
-                                    rngs=nnx.Rngs(0)))
+                                    rngs=nnx.Rngs(1)))
     # param_dtype stays fp32, so the same key gives identical init either way
     optimizer = nnx.Optimizer(net, optax.sgd(0.1), wrt=nnx.Param)
     @nnx.jit

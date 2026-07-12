@@ -340,6 +340,101 @@ def fig_rnn_pretokenization_pipeline():
 
 
 # =========================================================================== #
+# 9.3 "Language Models" (sec_language-model): partitioning a BPE token-id     #
+# stream into overlapping input/target subsequences.                         #
+#                                                                              #
+# One restyled carryover, written under a new house-style name so the old    #
+# hand-drawn SVG (``img/lang-model-data.svg``) is left untouched on disk.    #
+# =========================================================================== #
+
+# The actual first 12 BPE tokens of "The Time Traveller (for so it will be
+# convenient ..." under the section's tokenizer; leading spaces marked "␣".
+_PARTITION_TOKENS = ["The", "␣Time", "␣Traveller", "␣for", "␣so", "␣it",
+                     "␣will", "␣be", "␣con", "ven", "i", "ent"]
+_PARTITION_N = 5             # window length (num_steps)
+_PARTITION_OFFSETS = [0, 6]  # two windows sampled into one minibatch
+
+
+def _token_row(ax, y, edges, h, fill_upto=None):
+    """One copy of the token stream: monospace text in thin boxes whose width
+    is proportional to the token length (as in the 9.2 tokenizer figures)."""
+    for i, tok in enumerate(_PARTITION_TOKENS):
+        x0, x1 = edges[i], edges[i + 1]
+        ax.add_patch(plt.Rectangle((x0, y - h / 2), x1 - x0, h,
+                                   facecolor="white", edgecolor=GRAY,
+                                   linewidth=1.0, zorder=2))
+        ax.text((x0 + x1) / 2, y, tok, ha="center", va="center",
+                fontsize=13, family="monospace", color="black", zorder=4)
+
+
+def _window(ax, edges, lo, hi, y, h, color, label, label_side):
+    """A heavy rounded window outline with faint fill spanning token boxes
+    lo..hi (inclusive), plus its bold subsequence label above/below."""
+    x0, x1 = edges[lo], edges[hi + 1]
+    pad = 0.045
+    ax.add_patch(FancyBboxPatch(
+        (x0 + pad, y - h / 2 - 0.10), x1 - x0 - 2 * pad, h + 0.20,
+        boxstyle="round,pad=0.02,rounding_size=0.09",
+        linewidth=2.2, edgecolor=color, facecolor=color, alpha=0.14,
+        zorder=1))
+    ax.add_patch(FancyBboxPatch(
+        (x0 + pad, y - h / 2 - 0.10), x1 - x0 - 2 * pad, h + 0.20,
+        boxstyle="round,pad=0.02,rounding_size=0.09",
+        linewidth=2.2, edgecolor=color, facecolor="none", zorder=3))
+    ly = y + h / 2 + 0.32 if label_side == "above" else y - h / 2 - 0.34
+    va = "bottom" if label_side == "above" else "top"
+    ax.text((x0 + x1) / 2, ly, label, ha="center", va=va,
+            fontsize=14, color=color, zorder=4)
+
+
+def fig_partitioning():
+    """Partitioning one BPE token-id stream into (input, target) pairs.
+
+    Top row: the stream with two sampled length-5 input windows (blue),
+    labelled x_0 and x_6.  Bottom row: the same stream with the target
+    windows (orange), which are the input windows shifted forward by one
+    token.  Position indices x_0 .. x_11 sit between the two rows, shared
+    by both copies since the columns align."""
+    # box edges: width proportional to token length + constant padding
+    widths = [0.185 * len(t) + 0.34 for t in _PARTITION_TOKENS]
+    edges = np.concatenate([[0.0], np.cumsum(widths)])
+    total = edges[-1]
+
+    h = 0.62                    # token box height
+    y_in, y_tgt = 1.55, -0.10   # the two stream copies
+    fig, ax = plt.subplots(figsize=(11.2, 3.1))
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    _token_row(ax, y_in, edges, h)
+    _token_row(ax, y_tgt, edges, h)
+
+    # shared position indices between the rows (columns align)
+    y_idx = (y_in + y_tgt) / 2
+    for i in range(len(_PARTITION_TOKENS)):
+        ax.text((edges[i] + edges[i + 1]) / 2, y_idx, rf"$x_{{{i}}}$",
+                ha="center", va="center", fontsize=11, color="black")
+
+    # input windows (blue, labels above) and shifted target windows (orange,
+    # labels below)
+    for t in _PARTITION_OFFSETS:
+        _window(ax, edges, t, t + _PARTITION_N - 1, y_in, h, BLUE,
+                rf"$\mathbf{{x}}_{{{t}}}$", "above")
+        _window(ax, edges, t + 1, t + _PARTITION_N, y_tgt, h, ORANGE,
+                rf"$\mathbf{{x}}_{{{t + 1}}}$", "below")
+
+    # row labels on the left, in black per the house checklist
+    ax.text(-0.25, y_in, "inputs", ha="right", va="center", fontsize=13,
+            color="black")
+    ax.text(-0.25, y_tgt, "targets", ha="right", va="center", fontsize=13,
+            color="black")
+
+    ax.set_xlim(-1.75, total + 0.15)
+    ax.set_ylim(y_tgt - h / 2 - 0.75, y_in + h / 2 + 0.72)
+    fl.save(fig, "mdl-rnn-partitioning")
+
+
+# =========================================================================== #
 # 9.4 "Recurrent Neural Networks" (sec_rnn): the unrolled RNN and the         #
 # shift-by-one language-model training picture.                              #
 #                                                                              #
@@ -484,6 +579,83 @@ def fig_lm_shift():
 
 
 # =========================================================================== #
+# 9.6 "Backpropagation Through Time" (sec_bptt): full BPTT vs. regular        #
+# truncation, gradient chains severed (detached) at segment boundaries.       #
+#                                                                              #
+# One restyled carryover, written under a new house-style name so the old    #
+# hand-drawn SVG (``img/truncated-bptt.svg``) is left untouched.  The old     #
+# three-row figure's randomized-truncation row is dropped (that strategy is  #
+# retired from the section).                                                 #
+# =========================================================================== #
+
+def _segment(ax, x0, x1, yc, h=0.62):
+    """A faint rounded rectangle marking one backpropagation *segment*."""
+    ax.add_patch(FancyBboxPatch(
+        (x0, yc - h / 2), x1 - x0, h,
+        boxstyle="round,pad=0.02,rounding_size=0.10",
+        linewidth=0, facecolor=GRAY, alpha=0.12, zorder=0))
+
+
+def _chain(ax, xs, yc, r=0.085, color=BLUE):
+    """Nodes (green hidden states) linked left-to-right by dependency arrows."""
+    for x in xs:
+        ax.add_patch(plt.Circle((x, yc), r, facecolor=GREEN, edgecolor="none",
+                                 zorder=3))
+    for x0, x1 in zip(xs[:-1], xs[1:]):
+        fl.arrow(ax, (x0 + r + 0.02, yc), (x1 - r - 0.02, yc), color=color,
+                 lw=2.0, mut=13)
+
+
+def fig_truncated_bptt():
+    """Two ways of computing the gradient across a token sequence.  TOP: full
+    backpropagation through time -- one unbroken dependency chain spans the
+    whole sequence (a single segment).  BOTTOM: regular truncation -- the
+    sequence is cut into equal-length segments (here tau = 4) and the state is
+    *detached* at every boundary, so the gradient never crosses it."""
+    tokens = ["the", "time", "mach", "ine", "by", "h", "g", "wells"]
+    n = len(tokens)
+    tau = 4                                  # regular-truncation segment length
+    xs = np.linspace(1.15, 9.35, n)
+    dx = xs[1] - xs[0]
+    pad = 0.42 * dx                          # segment box overhang past the nodes
+
+    y_tok, y_full, y_trunc = 3.02, 2.05, 0.72
+
+    fig, ax = plt.subplots(figsize=(8.8, 3.1))
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    # token strip, shared by both rows (black text)
+    for x, tok in zip(xs, tokens):
+        ax.text(x, y_tok, tok, ha="center", va="center", fontsize=13,
+                color="black")
+
+    # TOP: full BPTT -- one segment spanning the whole sequence, unbroken chain
+    _segment(ax, xs[0] - pad, xs[-1] + pad, y_full)
+    _chain(ax, xs, y_full)
+
+    # BOTTOM: regular truncation -- equal segments, chain severed at boundaries
+    for s in range(0, n, tau):
+        blk = xs[s:s + tau]
+        _segment(ax, blk[0] - pad, blk[-1] + pad, y_trunc)
+        _chain(ax, blk, y_trunc)
+
+    # mark every detached boundary (here just one, between the two segments)
+    for s in range(tau, n, tau):
+        xb = (xs[s - 1] + xs[s]) / 2
+        ax.plot([xb, xb], [y_trunc - 0.31, y_trunc + 0.31], color=ORANGE,
+                lw=2.6, zorder=4)
+        ax.annotate("detach", xy=(xb, y_trunc + 0.33),
+                    xytext=(xb, y_trunc + 0.80), ha="center", va="bottom",
+                    fontsize=11.5, color="black",
+                    arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.3))
+
+    ax.set_xlim(xs[0] - pad - 0.35, xs[-1] + pad + 0.35)
+    ax.set_ylim(0.18, 3.42)
+    fl.save(fig, "mdl-rnn-truncated-bptt")
+
+
+# =========================================================================== #
 # Driver                                                                      #
 # =========================================================================== #
 
@@ -492,8 +664,10 @@ FIGURES = [
     fig_rnn_granularity_spectrum,
     fig_rnn_merge_tree,
     fig_rnn_pretokenization_pipeline,
+    fig_partitioning,
     fig_unfolded,
     fig_lm_shift,
+    fig_truncated_bptt,
 ]
 
 

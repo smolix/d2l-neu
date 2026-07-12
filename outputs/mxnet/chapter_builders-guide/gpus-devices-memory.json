@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:33f60647941109d7acb67c7f67dcebd13728017f51ac5ba419e4a0e0207e59c1",
+    "d2l_lib_fingerprint": "sha256:a8a9c347083a88cdf881ccb9870ff509a5b8c027e5b67d0b5e5e784c55c0eb5d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.77612984, 0.02931547, 0.11455398],\n       [0.7671152 , 0.95922667, 0.35406   ]], device=gpu(1))"
+          "text": "array([[0.9970491 , 0.50154305, 0.34098023],\n       [0.8148852 , 0.85463136, 0.65407676]], device=gpu(1))"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[1.7761298, 1.0293155, 1.1145539],\n       [1.7671151, 1.9592266, 1.3540599]], device=gpu(1))"
+          "text": "array([[1.9970491, 1.501543 , 1.3409803],\n       [1.8148851, 1.8546314, 1.6540768]], device=gpu(1))"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.11867658],\n       [-0.11867658]], device=gpu(0))"
+          "text": "array([[-0.00711842],\n       [-0.00711842]], device=gpu(0))"
         }
       ]
     },
@@ -142,12 +142,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0022 sec\n"
+          "text": "time to queue 32 matrix products: 0.0020 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time until they all finished:     0.1690 sec\n"
+          "text": "time until they all finished:     0.1657 sec\n"
         }
       ]
     },
@@ -169,8 +169,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-3-1.svg",
-          "bytes": 21288,
-          "sha256": "sha256:3811a4fc08cd7953e07eaad21fc19c855cb27a03b258e45af7479cc2e29324be"
+          "bytes": 21290,
+          "sha256": "sha256:089e57be363ad8b5922b028012d156d0a7c5f40a1e327ba01c9235dcf5a8a980"
         }
       ]
     }

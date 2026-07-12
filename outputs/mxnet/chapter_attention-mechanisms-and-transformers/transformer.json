@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:7c7957bd4fbfbe030f7a9d9253c3f58afa723d231fdfee752e3922e29a1f6bb8",
+    "d2l_lib_fingerprint": "sha256:c3743233e5a73cb013c8e99cf1a43c934a85e9ca775b06353d0916c6feed5434",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 0.00882802,  0.00823711, -0.00423086,  0.00569996,  0.0143657 ,\n         0.00661885, -0.00847615, -0.00216078],\n       [ 0.00882802,  0.00823711, -0.00423086,  0.00569996,  0.0143657 ,\n         0.00661885, -0.00847615, -0.00216078],\n       [ 0.00882802,  0.00823711, -0.00423086,  0.00569996,  0.0143657 ,\n         0.00661885, -0.00847615, -0.00216078]])"
+          "text": "array([[ 0.00315428, -0.00362154,  0.00102661,  0.0043958 ,  0.001227  ,\n         0.00180254, -0.00142878,  0.00461741],\n       [ 0.00315428, -0.00362154,  0.00102661,  0.0043958 ,  0.001227  ,\n         0.00180254, -0.00142878,  0.00461741],\n       [ 0.00315428, -0.00362154,  0.00102661,  0.0043958 ,  0.001227  ,\n         0.00180254, -0.00142878,  0.00461741]])"
         }
       ]
     },
@@ -92,8 +92,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-1-1.svg",
-          "bytes": 20439,
-          "sha256": "sha256:dd8dc235e33e6eb2e98a430e2a2e51810189a591c948313f1eec58a2f5d302e3"
+          "bytes": 20401,
+          "sha256": "sha256:daaabbd0089a6248633486ae2dc29e15fd7cad9b8d3883ca697da108e1327167"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
+          "text": "i lost . => ['je', 'suis', 'perdu', '.'], bleu,0.537\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
         }
       ]
     },
@@ -121,8 +121,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-4-1.svg",
-          "bytes": 50746,
-          "sha256": "sha256:c12499e5d9e7b722a6789c8dbdf3152f401939456e6411de69307dbaed6dbd51"
+          "bytes": 50761,
+          "sha256": "sha256:da275353ef41a75c337be3e26344bbb0c7779443c50ffaef6b144fa7f49febc4"
         }
       ]
     },
@@ -144,8 +144,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-7-1.svg",
-          "bytes": 52852,
-          "sha256": "sha256:0947c0433629c8cf7b5b2501f01765d2707de10f165d699f4383a8fa7c7b6cc6"
+          "bytes": 52504,
+          "sha256": "sha256:17f75d7998162770e3cde3eb9ed94edd394397a2084b37c459061081d464c21e"
         }
       ]
     },
@@ -157,8 +157,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-8-1.svg",
-          "bytes": 52149,
-          "sha256": "sha256:863c57199d856dfac4a9d979b48cdd83fa5c6f7467157c4573a5c0f7c4ac04d6"
+          "bytes": 52121,
+          "sha256": "sha256:01838dbbdf5b296c838f1c2798800fe66664a6e2ce557739679c21554b350f85"
         }
       ]
     }

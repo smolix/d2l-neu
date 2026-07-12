@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:b4f1f388ce1e296ff2e627db9d5b0ac9b46fee1a98c3253673d4a847347a69f1",
+    "d2l_lib_fingerprint": "sha256:e1d0a5deff260e534a8af594e37da7cd053bb39e4236ffaaa052c076d181a6f1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 20987,
-          "sha256": "sha256:612d5794b866501356495d57cdf600db2c4cc58a928c6f33ed83c30128689723"
+          "bytes": 20460,
+          "sha256": "sha256:dc3b048f348c2c1e76dbb8cc2c7e2d347ab52b2b7b254dbb00bd2d89c37c58fd"
         }
       ]
     },
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 20965,
-          "sha256": "sha256:f896e806c1a7be6f697b8d37ee91e2036f83460459b285dee1eb54fecb820b09"
+          "bytes": 20978,
+          "sha256": "sha256:a7c0f830b51b97603c346f492962f7dc741cedc5fa85e0a7bbe3ea75261aaaf3"
         }
       ]
     },

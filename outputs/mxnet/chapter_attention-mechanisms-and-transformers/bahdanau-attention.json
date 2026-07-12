@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:460488b0fabb5b4a54f059942ce9940b7fd639d458e731bf67bd28e081f47dfc",
+    "d2l_lib_fingerprint": "sha256:0661cde082902ed6ca9859c38c6ab885c44e06639ac37c07d7c4d1f432ade358",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
-          "bytes": 20927,
-          "sha256": "sha256:7807d24adaeb46f5f31db89b7b1f6a9e642d71ba019c56017c878c97baf889bf"
+          "bytes": 20764,
+          "sha256": "sha256:2b52d41896efbaa6576eda2d2433aaa1ee945afee7792828d758ecf66c6c231e"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'malade', '.'], bleu,0.658\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
+          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
-          "bytes": 20012,
-          "sha256": "sha256:2252025cee7b62b16dfafd4f4e339151292cfa08b84a393764828ad23b0a03f9"
+          "bytes": 19117,
+          "sha256": "sha256:dcde6a046054db3e532ab086dce8f8cbfe6deac4339487a5a1c9fbfdadaf3e1f"
         }
       ]
     }

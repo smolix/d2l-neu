@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:b4f1f388ce1e296ff2e627db9d5b0ac9b46fee1a98c3253673d4a847347a69f1",
+    "d2l_lib_fingerprint": "sha256:e1d0a5deff260e534a8af594e37da7cd053bb39e4236ffaaa052c076d181a6f1",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,7 +37,7 @@
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
           "bytes": 20514,
-          "sha256": "sha256:4f570406aa29abc0d5fa1b7b9216a2e92b1db0bc25b2047e1310179b01e1899f"
+          "sha256": "sha256:bf9fc9acf480a813fef40fec594a568ee82b13aa86f8846deb6f4280bb97b448"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array([1.8956134, 2.1341202, 1.5174835, 1.9180311, 1.8389509, 1.4799429], device=gpu(0)),\n array([-1.3922355 ,  0.14475982, -1.6216223 ,  1.3376334 ,  0.9928637 ,\n        -0.7608034 ], device=gpu(0)))"
+          "text": "(array([1.7407628, 1.7785244, 2.1792986, 2.133896 , 1.3585408, 2.1132448], device=gpu(0)),\n array([ 0.6163288 ,  1.7824067 ,  1.4378233 , -1.0945029 ,  0.21653906,\n        -0.48295924], device=gpu(0)))"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 20514,
-          "sha256": "sha256:7fdec6c4b461ae85a1019d2e6d501c87e9668c68c300b8f2e943e5318dd12acf"
+          "bytes": 20473,
+          "sha256": "sha256:7375bce88ae43fdc585a0777a347fd4f1311dc19519d00f7ab26a3185ad2d816"
         }
       ]
     },
@@ -75,7 +75,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(2.7939677e-08), array(0.99998987), True)"
+          "text": "(array(3.3527613e-08), array(0.99999), True)"
         }
       ]
     }

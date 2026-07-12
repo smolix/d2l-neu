@@ -63,7 +63,7 @@
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:bd66f945c2b6f33af03f8beed5db3775267d11aa33b0a5e13afa6cc8c0b86eec",
+      "code_fingerprint": "sha256:f3c22fd63573f8fe174478c556984f06b557d1d434427a11dd419b9fe7ae6e9b",
       "kind": "text",
       "outputs": [
         {
@@ -74,13 +74,13 @@
       ]
     },
     "reproducibility-inspection-backward-hooks-and-beyond": {
-      "code_fingerprint": "sha256:2dbf7f423ad4e2aa2c1b034f930f02b8921db34a20b5126ac081dda4c0654b44",
+      "code_fingerprint": "sha256:f4a45c7eb382fd4cf0165d1df669090243e845ae8fee12241d6a95fa212aed27",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\u001b[38;2;79;201;177mState\u001b[0m\u001b[38;2;255;213;3m({\u001b[0m\u001b[38;2;105;105;105m\u001b[0m\n  \u001b[38;2;156;220;254m'bias'\u001b[0m\u001b[38;2;212;212;212m: \u001b[0m\u001b[38;2;79;201;177mParam\u001b[0m\u001b[38;2;255;213;3m(\u001b[0m\u001b[38;2;105;105;105m # 1 (4 B)\u001b[0m\n    \u001b[38;2;156;220;254mvalue\u001b[0m\u001b[38;2;212;212;212m=\u001b[0mArray(nan, dtype=float32)\n  \u001b[38;2;255;213;3m)\u001b[0m,\n  \u001b[38;2;156;220;254m'kernel'\u001b[0m\u001b[38;2;212;212;212m: \u001b[0m\u001b[38;2;79;201;177mParam\u001b[0m\u001b[38;2;255;213;3m(\u001b[0m\u001b[38;2;105;105;105m # 1 (4 B)\u001b[0m\n    \u001b[38;2;156;220;254mvalue\u001b[0m\u001b[38;2;212;212;212m=\u001b[0mArray(nan, dtype=float32)\n  \u001b[38;2;255;213;3m)\u001b[0m\n\u001b[38;2;255;213;3m})\u001b[0m\n"
+          "text": "\u001b[38;2;79;201;177mState\u001b[0m\u001b[38;2;255;213;3m({\u001b[0m\u001b[38;2;105;105;105m\u001b[0m\n  \u001b[38;2;156;220;254m'bias'\u001b[0m\u001b[38;2;212;212;212m: \u001b[0m\u001b[38;2;79;201;177mParam\u001b[0m\u001b[38;2;255;213;3m(\u001b[0m\u001b[38;2;105;105;105m # 1 (4 B)\u001b[0m\n    \u001b[38;2;156;220;254mvalue\u001b[0m\u001b[38;2;212;212;212m=\u001b[0mArray(1.9621452, dtype=float32)\n  \u001b[38;2;255;213;3m)\u001b[0m,\n  \u001b[38;2;156;220;254m'kernel'\u001b[0m\u001b[38;2;212;212;212m: \u001b[0m\u001b[38;2;79;201;177mParam\u001b[0m\u001b[38;2;255;213;3m(\u001b[0m\u001b[38;2;105;105;105m # 1 (4 B)\u001b[0m\n    \u001b[38;2;156;220;254mvalue\u001b[0m\u001b[38;2;212;212;212m=\u001b[0mArray(15.665125, dtype=float32)\n  \u001b[38;2;255;213;3m)\u001b[0m\n\u001b[38;2;255;213;3m})\u001b[0m\n"
         }
       ]
     }

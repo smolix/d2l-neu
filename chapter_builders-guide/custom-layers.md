@@ -308,8 +308,7 @@ class RMSNorm(nn.Block):
 
 Let $m_2$ denote an input row's mean square. With gain one, the output mean
 square is $m_2/(m_2 + \epsilon)$. It is therefore close to one when
-$m_2 \gg \epsilon$, as the badly scaled inputs below verify; a zero row
-remains zero.
+$m_2 \gg \epsilon$, as the badly scaled inputs below verify.
 
 ```{.python .input #custom-layers-layers-with-parameters-rmsnorm-2}
 %%tab pytorch

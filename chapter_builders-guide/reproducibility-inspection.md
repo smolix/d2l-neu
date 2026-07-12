@@ -866,6 +866,7 @@ for h in handles:
 
 ```{.python .input #reproducibility-inspection-a-nan-finder}
 %%tab jax
+saved = net.layers[3].body.layers[0].kernel[0, 0]
 net.layers[3].body.layers[0].kernel[0, 0] = float('nan')
 _, inter = nnx.capture(
     net, nnx.Intermediate, method_outputs=nnx.Intermediate)(X)
@@ -881,6 +882,8 @@ for path, module in nnx.iter_modules(net):
         if not jnp.isfinite(out).all():
             print('first non-finite output in', path)
             break
+
+net.layers[3].body.layers[0].kernel[0, 0] = saved  # net is shared; undo the sabotage
 ```
 
 ```{.python .input #reproducibility-inspection-a-nan-finder}

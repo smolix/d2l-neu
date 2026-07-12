@@ -3,44 +3,56 @@
   "source": "chapter_computer-vision/fcn.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:3587cf273eb9c1d85433198dcb7e121feb855a821fa0d53cabb3c4875439fc68",
     "max_inline_bytes": 0
   },
   "cells": {
     "fcn-fully-convolutional-networks": {
-      "code_fingerprint": "sha256:3e0deb2b572b658d3b8365479435aafa7d23d3d03bccfa5397f7649662462642",
+      "code_fingerprint": "sha256:0a8aa98729808a5fca8ab6550e507d3aabe25fcd84ff7e77b2f4f1914289b303",
       "kind": "text",
       "outputs": []
     },
     "fcn-the-model-1": {
-      "code_fingerprint": "sha256:09e82f78fdcc308dd3437a7a3135a35d34c46482dc091439fc79f9f23d52c2d7",
+      "code_fingerprint": "sha256:9a3544491404f8081a1cd0b6a1bc87672ce1f753ea8177479210d3a7b94c7bf5",
       "kind": "text",
       "outputs": [
         {
+          "type": "display_data",
+          "text": "Downloading bytes:           |  0.00B            "
+        },
+        {
+          "type": "display_data",
+          "text": "Reconstructing (incomplete total...): |          |  0.00B /  0.00B            "
+        },
+        {
+          "type": "display_data",
+          "text": "Fetching 1 files:   0%|          | 0/1 [00:00<?, ?it/s]"
+        },
+        {
           "type": "stream",
           "name": "stdout",
-          "text": "Feature extractor output shape: (1, 10, 15, 512)\n"
+          "text": "Feature extractor output shape: (1, 10, 15, 2048)\n"
         }
       ]
     },
     "fcn-the-model-2": {
-      "code_fingerprint": "sha256:57fd75c1007d2b62298516c9ab65f3ddfea980ccac1a63c59af8a654ef1cc49f",
+      "code_fingerprint": "sha256:b895c73c359ecafef669055d43d2da5925596aaccd2e64741dafe5b611f14a9f",
       "kind": "text",
       "outputs": []
     },
     "fcn-the-model-3": {
-      "code_fingerprint": "sha256:a6c650fa0feb091d1d14ba987f0966f6b50ffecfc468c8a7a4ccf1ec55b98707",
+      "code_fingerprint": "sha256:d24a3e5625712dd796c554601fcd9d0d5f9b205d16df1eb38435d52b18fba3d0",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(1, 10, 15, 512)"
+          "text": "(1, 10, 15, 2048)"
         }
       ]
     },
     "fcn-the-model-4": {
-      "code_fingerprint": "sha256:b094ffa82b84043b2dbdc14e62dd7db0fe70605a68659db27005a1a4e1502a32",
+      "code_fingerprint": "sha256:a784aba7706cc7e6edeadb638a96d553c70e23502af6ef1006d16f5f629e800e",
       "kind": "text",
       "outputs": [
         {
@@ -51,28 +63,28 @@
       ]
     },
     "fcn-initializing-transposed-convolutional-layers-1": {
-      "code_fingerprint": "sha256:20e1cf7f7d646f35684d1ec73af1cb9227dd1689194bb74901fa726aa4c5494e",
+      "code_fingerprint": "sha256:49122bd6f8a291d9d1d316ed0194f6483b8c0b2a3615e424277931b51b8e55d5",
       "kind": "text",
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-2": {
-      "code_fingerprint": "sha256:023d563551380de76cc5820cc0ab644347a9d6815a143cef95702ddfea4f6b1f",
+      "code_fingerprint": "sha256:cc44994197a3f2ef7f3298394ab3ea64db4d9ca079fab855580f579c372707fc",
       "kind": "text",
       "outputs": []
     },
     "fcn-initializing-transposed-convolutional-layers-3": {
-      "code_fingerprint": "sha256:c852e1bcf6cc631f03e9a90e238c2f1c25f3eb5bfc8057c31ad3610594bb0a58",
+      "code_fingerprint": "sha256:f4e98129a477e7d24726e801331e0a5ec34a451eb72056504262e558dc314ad8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stderr",
-          "text": "E0710 18:39:32.201754   30367 cuda_timer.cc:87] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
+          "text": "E0712 03:34:03.907650   39407 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
         }
       ]
     },
     "fcn-initializing-transposed-convolutional-layers-4": {
-      "code_fingerprint": "sha256:f6c03b3ebc2a867ec1a3656a45edfcd1a5625de73ac796a0786274f2ca8fc596",
+      "code_fingerprint": "sha256:768a3a45c393fd5a08b4cf5b7a0a16bfb0adddaea0fb7ad414656b2c0a21cb77",
       "kind": "mixed",
       "outputs": [
         {
@@ -85,17 +97,17 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 86064,
-          "sha256": "sha256:df4c68353db342e80dc1b7697a00a454dc4f41416224fac2582b8c7f02917403"
+          "sha256": "sha256:8f141b3e7756615b3c7a4ae47edca2f48ce4dae7174796609422136fbe45cd58"
         }
       ]
     },
     "fcn-initializing-transposed-convolutional-layers-5": {
-      "code_fingerprint": "sha256:f538b46d21e8b2da9d224d53228b6bb3ba0ed369bf9ce43b48ce147bb3e92df8",
+      "code_fingerprint": "sha256:63344094908912563faf22ecfc078efe0e76d43b1dc9d9eddeac92f9a96af148",
       "kind": "text",
       "outputs": []
     },
     "fcn-reading-the-dataset": {
-      "code_fingerprint": "sha256:6a6424046648b53971b1cd26bee6eb8fe3bff05142bbe78d35ce6048ed245d56",
+      "code_fingerprint": "sha256:afbe5acd3f8795a592771678dcefb35d448ced9ba7a1141c9b79d07d664d0d7a",
       "kind": "text",
       "outputs": [
         {
@@ -111,56 +123,56 @@
       ]
     },
     "fcn-training": {
-      "code_fingerprint": "sha256:4a551698abc81aaf4d7cc22cd3bbbea265109b8b6e48e9438891d2edc3e3a9a2",
+      "code_fingerprint": "sha256:7b1431e30044cbb3a974f688fea20d313a138547cec589f2f0b46c6eb1ea9a9d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 1.324\n"
+          "text": "epoch 1, loss 1.593, pixel acc 0.708, val loss 1.191, val pixel acc 0.731\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 1.331\n"
+          "text": "epoch 2, loss 1.133, pixel acc 0.739, val loss 1.052, val pixel acc 0.749\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 1.494\n"
+          "text": "epoch 3, loss 1.012, pixel acc 0.758, val loss 0.974, val pixel acc 0.763\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 1.535\n"
+          "text": "epoch 4, loss 0.921, pixel acc 0.776, val loss 0.895, val pixel acc 0.778\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 1.453\n"
+          "text": "epoch 5, loss 0.852, pixel acc 0.790, val loss 0.834, val pixel acc 0.790\n"
         }
       ]
     },
     "fcn-prediction-1": {
-      "code_fingerprint": "sha256:4484bd212992fee787bfbc7db557a67b66777f22d5c17b574c05165721050fc1",
+      "code_fingerprint": "sha256:8bdeae05b726baaf4887a13c678a480f4ad78fa194f6c1d92c8d8e8ba2cd317c",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-2": {
-      "code_fingerprint": "sha256:4cba5b68d36b507f4339cfdbd67d527612093c4b0c0f32e5d0a93931da9771e0",
+      "code_fingerprint": "sha256:fb68fa2604dd4d4570f8472ca170ae550f8bbe5738802cec28636e9fff3ca73c",
       "kind": "text",
       "outputs": []
     },
     "fcn-prediction-3": {
-      "code_fingerprint": "sha256:4e7a15322dff3559e497cb890f8286e52e7ff27a181ef6949d1765fa14cf3163",
+      "code_fingerprint": "sha256:a7ac8e91bba7d3d3aea2b6d5a83a7a93dabe761aa2466ca74632bc06ce6af4e7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 151657,
-          "sha256": "sha256:69367b2ec822929dbda8871577e876b7b18519c567a9fb7a8bebda24262cc86f"
+          "bytes": 156709,
+          "sha256": "sha256:6761cbc62da45274a59b80eae31ea15c9852f21f9b38905d51eb8e79460b67b6"
         }
       ]
     }

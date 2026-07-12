@@ -3,28 +3,28 @@
   "source": "chapter_linear-regression/oo-design.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:8348d6ae241fad422ed954d352830e10615eab1549f69036e798ad9e46722e68",
     "max_inline_bytes": 0
   },
   "cells": {
     "oo-design-object-oriented-design-for-implementation": {
-      "code_fingerprint": "sha256:09abb6422f7e8065ccfc0947760b1c85d687f9ad8ffc2bb045aadebdfa47a827",
+      "code_fingerprint": "sha256:9bce2f77f4a66f72bfc69e5ece0abd0dfc3d49d4a84aaa790fe55badc39e7dd4",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-1": {
-      "code_fingerprint": "sha256:e604ca92b81ffde9fcd72a8217874506acf9a0727e5d49727946158ceb267edb",
+      "code_fingerprint": "sha256:b2c0067ca799617be4a91532da35fddc1ac2d1a622088e3b26ae252ce0bd61f6",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-2": {
-      "code_fingerprint": "sha256:80766f1b9b3a16cc29312d5d6c3b4832fe1652693c218794f2205854bc82d7f0",
+      "code_fingerprint": "sha256:357f99893a715c512c2ee1c361b2d0694b76002c6f1c4bda9d8ff0be78dd646a",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-3": {
-      "code_fingerprint": "sha256:05e209baf9f8a950f778f6de1e190d236f84f28159a7ef7bd7e2cae7a263c714",
+      "code_fingerprint": "sha256:7de7cfc66e6005f4adaa320cdd442bd21df82a8da00ed29fec3e264f1c65aed9",
       "kind": "text",
       "outputs": [
         {
@@ -35,12 +35,12 @@
       ]
     },
     "oo-design-utilities-4": {
-      "code_fingerprint": "sha256:c3ab9b8710b90ebdcc64514f13c0794dd54bf7d72fdd2f1bb681f9ef6076048e",
+      "code_fingerprint": "sha256:1c2ba12ed5712700bb427af0ef5efdda242a069ce9bc9112cc5fbb553e778649",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-5": {
-      "code_fingerprint": "sha256:b750ec044a2154a776890b891ccf6afaa8eb3b9cc22f77ab8b7477fde944e831",
+      "code_fingerprint": "sha256:133059d3c14d40d1d428debf764eb4b1913e93eb52fff7a043b2f3c636bb3ef2",
       "kind": "text",
       "outputs": [
         {
@@ -51,12 +51,12 @@
       ]
     },
     "oo-design-utilities-6": {
-      "code_fingerprint": "sha256:305a36c9f015fd5cb47ad89148daaf67da4d56830aafe798670f327408f32e22",
+      "code_fingerprint": "sha256:fc1c7c84bb0b7d2b211376a61486420f6b69123b3cdf6cc1f6c6477c4691b5b5",
       "kind": "text",
       "outputs": []
     },
     "oo-design-utilities-7": {
-      "code_fingerprint": "sha256:35094fdd6bc60c7be14e40df562f7addd4d7fc94ba12c74ea3e36e374a6bb277",
+      "code_fingerprint": "sha256:39975d87c35e356d95bae77aeb3b691012e92847c2847a043d398aa0af7b2f0b",
       "kind": "asset",
       "outputs": [
         {
@@ -64,22 +64,22 @@
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-utilities-7-1.svg",
           "bytes": 17183,
-          "sha256": "sha256:ea38b53dcc56c0d9ce81d3137b602df5d6686094d9597db8d19e7c6d9bdcfa72"
+          "sha256": "sha256:7c2fbeac2fee867ca299435b188e9cb77c337542c0a1152edc2b26fd1f439c62"
         }
       ]
     },
     "oo-design-models": {
-      "code_fingerprint": "sha256:2bcda0a2dd2a8aafb266fb285e0a74c796764edc81c3223fa2f5fda8f169cc6e",
+      "code_fingerprint": "sha256:4a3e13e066d14ec378224bee7ba3fa8a2af9e788aa6fe5713c3ea42c86c10fcf",
       "kind": "text",
       "outputs": []
     },
     "oo-design-data": {
-      "code_fingerprint": "sha256:405e3573d3a13a9e3c88465662df29f4c93f76f3b239e67aef4d37bc0e245a4a",
+      "code_fingerprint": "sha256:7e3de2b88147c6d0f23190afc5882730bd3fe45dc45c711f47efd783cb531ab1",
       "kind": "text",
       "outputs": []
     },
     "oo-design-training": {
-      "code_fingerprint": "sha256:80ce46a34122896f35e2f9f37ab833393476f799154fcaae9756fb7cb66a10b0",
+      "code_fingerprint": "sha256:53b21ceb8186fa4ca33e184315223251f24d04b52ca6c8ad769b97c9beb0c747",
       "kind": "text",
       "outputs": []
     }

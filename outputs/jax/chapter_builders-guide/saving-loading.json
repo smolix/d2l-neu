@@ -3,18 +3,18 @@
   "source": "chapter_builders-guide/saving-loading.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "saving-loading-saving-loading-and-pretrained-weights": {
-      "code_fingerprint": "sha256:2cf3bd6f46568e297d5711e02177ee0a3eb8c14b6fcf504de8130c088f763045",
+      "code_fingerprint": "sha256:e3568d9918be46d362f776988b762d0ff1056802a541ba71ecafe5cb68302ece",
       "kind": "text",
       "outputs": []
     },
     "saving-loading-state-not-code-1": {
-      "code_fingerprint": "sha256:b00917deab50e9a8ad826f38c48e716926ef5b61553b4788395955b70bb1d499",
+      "code_fingerprint": "sha256:231070238b377f56636530ff6ca90d526f8b230d3649021cc5b15a665c3d74f3",
       "kind": "text",
       "outputs": [
         {
@@ -24,17 +24,17 @@
       ]
     },
     "saving-loading-state-not-code-2": {
-      "code_fingerprint": "sha256:e2f1066185853838363a94a8009cc8e514b723f43203fc95738003540a34e6b6",
+      "code_fingerprint": "sha256:74c74f894b31590d1073a8d470de6fda3cda9813c37f2f20a1de57eda87ac4d9",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'hidden': {'bias': (256,), 'kernel': (20, 256)},\n 'output': {'bias': (10,), 'kernel': (256, 10)}}"
+          "text": "[(('hidden', 'bias'), (256,)),\n (('hidden', 'kernel'), (20, 256)),\n (('output', 'bias'), (10,)),\n (('output', 'kernel'), (256, 10))]"
         }
       ]
     },
     "saving-loading-safetensors-the-interchange-format-3": {
-      "code_fingerprint": "sha256:67d89b6766a0d4d85d20052d4929703575b38040dd7d1b24b11dc44540732499",
+      "code_fingerprint": "sha256:e41e129752d32f325ac8078aa97cfd9851180c476f6d99a9ce2d54e8458d9936",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "saving-loading-safetensors-the-interchange-format-4": {
-      "code_fingerprint": "sha256:c645d9c76b88c3943c593171d6d859cfe39bb460531950e15f9d35cc5706f278",
+      "code_fingerprint": "sha256:ff4b7c4e5edd40b09621b62868614f307b12c429350d5eaf35c945cf7b085e72",
       "kind": "text",
       "outputs": [
         {
@@ -54,48 +54,48 @@
       ]
     },
     "saving-loading-checkpointing-a-training-run-2": {
-      "code_fingerprint": "sha256:b96471afc5a101d3cb0eb1fff0153b57a79e27bea347ef0f93e460cf437f3862",
+      "code_fingerprint": "sha256:9f93b6c7625af319ebf541e3ee97c40aa2f4b35f241472b793756995d2bd174b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(100, 0.0013)"
+          "text": "(100, 0.0022)"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-3": {
-      "code_fingerprint": "sha256:e82406759a6095ede2e925360ddbce7ab7b13f6a0e7eef18f72fd3fb100be2c1",
+      "code_fingerprint": "sha256:b580b27f097c149c9c4b61296c2d2f5c453445d0c76bbb15bf7c1ac44c21db79",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'perturbed 48972.93 -> restored 0.0013'"
+          "text": "'perturbed 50458.19 -> restored 0.0022'"
         }
       ]
     },
     "saving-loading-checkpointing-a-training-run-4": {
-      "code_fingerprint": "sha256:53dbc2d0a04d46a3bd54d992fd2d179fce47d9a8ed906e60cd03838d15b5ef18",
+      "code_fingerprint": "sha256:62b236c59de0b4c9e5cab59da52c1feec7cce1ae9cc018d74ef00b4f8f5385bd",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "full  optimizer: [0.0013, 0.0013, 0.0012, 0.0012, 0.0012]\nfresh optimizer: [0.0013, 1.4763, 0.4244, 0.6804, 0.3325]\n"
+          "text": "full  optimizer: [0.0022, 0.0021, 0.002, 0.002, 0.002]\nfresh optimizer: [0.0022, 2.8455, 0.2456, 0.8604, 1.3327]\n"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-1": {
-      "code_fingerprint": "sha256:b13e9dfd4e2fc32ffa8df840579da4a1ab3b07be265c7eb8512ee6e214cbb1ba",
+      "code_fingerprint": "sha256:f22b8cad9e1620e1e6f27bf972ac923557a4c242bafd37ab7d2fbc34bd19861b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'head': {'bias': (2,), 'kernel': (256, 2)},\n 'hidden': {'bias': (256,), 'kernel': (20, 256)}}"
+          "text": "[(('head', 'bias'), (2,)),\n (('head', 'kernel'), (256, 2)),\n (('hidden', 'bias'), (256,)),\n (('hidden', 'kernel'), (20, 256))]"
         }
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-2": {
-      "code_fingerprint": "sha256:55f1342106a4fb9df0bb7631ea2b2e52446735cb2a8605eeee046bef9a24caa9",
+      "code_fingerprint": "sha256:798a498f0f1165e7f639be7b5e979a689f8421a7aaf41ffad33f94c0f050e862",
       "kind": "text",
       "outputs": [
         {
@@ -106,7 +106,7 @@
       ]
     },
     "saving-loading-loading-weights-you-did-not-train-3": {
-      "code_fingerprint": "sha256:2181d0cbd87c7b982f0869da2608d5f12c4879b349a97b1ca23b4c6a048a148b",
+      "code_fingerprint": "sha256:99c687fcbccb49f444c11fc1e362aba1d0c983fe70a89b72d93571393325b057",
       "kind": "text",
       "outputs": [
         {

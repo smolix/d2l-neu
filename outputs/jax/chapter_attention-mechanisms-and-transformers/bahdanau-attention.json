@@ -3,28 +3,28 @@
   "source": "chapter_attention-mechanisms-and-transformers/bahdanau-attention.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:e4ac7087ce7624a4e82e5368c265c3791d6e5909e54ca6711acec12458818d51",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:bf31c74325751fd5bdcdfd119641acdab1bff3d2db55fb2d7631c138f5e2b1e1",
     "max_inline_bytes": 0
   },
   "cells": {
     "bahdanau-attention-the-bahdanau-attention-mechanism": {
-      "code_fingerprint": "sha256:df34a8d380ad4395e9ca17848802aaa495e78579ed51629074c3ab8f33c766e5",
+      "code_fingerprint": "sha256:b5a0257e48a9d5a894c4943f40b39334f65cb496cddf322e8030beca04325f3f",
       "kind": "text",
       "outputs": []
     },
     "bahdanau-attention-defining-the-decoder-with-attention-1": {
-      "code_fingerprint": "sha256:c92e39f5f604aa7b81b4d2a9c3372354cfa3086ca2e1ee2890fc5e723a6409bd",
+      "code_fingerprint": "sha256:781b8bd5c67de89366e31094e74a320e925229bc3f90360bf7faceb59e5c34c0",
       "kind": "text",
       "outputs": []
     },
     "bahdanau-attention-defining-the-decoder-with-attention-2": {
-      "code_fingerprint": "sha256:82a970e75d7c8253c7fce55b9d8450ab33b145f85382e617cd297c5b48fd2c93",
+      "code_fingerprint": "sha256:2cc2938989c7697c522bf2248a46089d4c57238c3766da4df6294dbc5d6fae11",
       "kind": "text",
       "outputs": []
     },
     "bahdanau-attention-defining-the-decoder-with-attention-3": {
-      "code_fingerprint": "sha256:edbb613645e4d1f3dce782259fb795713917977f2e65f8c1030526362a3c7ccf",
+      "code_fingerprint": "sha256:806d622bdec553577600eebf35485f0d983abfc5af5ed2c7e4aac17a292f62f7",
       "kind": "text",
       "outputs": [
         {
@@ -35,44 +35,44 @@
       ]
     },
     "bahdanau-attention-training-1": {
-      "code_fingerprint": "sha256:1435b75490dc9ae2a16078928e5a1735299286c4277d2f05c154dc2c6ffd2e83",
+      "code_fingerprint": "sha256:b2693afc848cb2c97053d42251bcd711cf7f640a240c3cab276c936c366fa877",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
-          "bytes": 20729,
-          "sha256": "sha256:3a49b48a7a435fcfe6ee43e56ea4e46af4a1ab31a07a713df6fa97fca7d63b32"
+          "bytes": 20913,
+          "sha256": "sha256:133915d7be52ed59ac92503e32f135f8f115c46ddb93d706b00c1472e5365902"
         }
       ]
     },
     "bahdanau-attention-training-2": {
-      "code_fingerprint": "sha256:722a5315e2de0ec8c36f088db4f11edfc2a30a48986d8f7234799d20f21485d6",
+      "code_fingerprint": "sha256:d5620bef70ff670af125e1aa9561a381e14469bb7199da1b85b42f6ea1920cfb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
+          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'malade', '.'], bleu,0.658\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
         }
       ]
     },
     "bahdanau-attention-training-3": {
-      "code_fingerprint": "sha256:2d83615be7ff366362533ee774b78fb703e7c1eca27a76bb2fd47d8149492d66",
+      "code_fingerprint": "sha256:d541f5e82b5d731eecf85373dfffd7f15dfdec594586d473683ceab112cd9720",
       "kind": "text",
       "outputs": []
     },
     "bahdanau-attention-training-4": {
-      "code_fingerprint": "sha256:30d273684ba4ec97f9140e78006866f2b97d3cdf92542a09a4dcf01c0d8c7172",
+      "code_fingerprint": "sha256:1a7b381e4b986ee745c472acbe98ff800f5d0ffc263e7e77faf8f1acbee7c574",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
-          "bytes": 19872,
-          "sha256": "sha256:3e649b8b658414210918500458538e73b102ded86da2557f1f3baa095d1c673e"
+          "bytes": 19122,
+          "sha256": "sha256:aac922c8fe7a0cb9ff98c290ed4121c73909f7bf4644d5e346f017a77f4d642d"
         }
       ]
     }

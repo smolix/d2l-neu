@@ -3,23 +3,23 @@
   "source": "chapter_convolutional-modern/resnet.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:35e4c1b2eed0071cd094ae43af95c4f0573cea51e23ea7aab52db30abacf0ccf",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:d3aefb1468e5838ae451af6a0d6ff7ebe646c311b7c670f3797638098703cb14",
     "max_inline_bytes": 0
   },
   "cells": {
     "resnet-residual-networks-resnet-and-resnext": {
-      "code_fingerprint": "sha256:df34a8d380ad4395e9ca17848802aaa495e78579ed51629074c3ab8f33c766e5",
+      "code_fingerprint": "sha256:b5a0257e48a9d5a894c4943f40b39334f65cb496cddf322e8030beca04325f3f",
       "kind": "text",
       "outputs": []
     },
     "resnet-residual-blocks-1": {
-      "code_fingerprint": "sha256:213c59b21e1c2051c53c15446d0bc053d8aad7b0cb6438bb531c18d96491ec06",
+      "code_fingerprint": "sha256:024a2d516cd15ce549a4e4521ca4ffa32b7907de100aede766e394f8bf5bd290",
       "kind": "text",
       "outputs": []
     },
     "resnet-residual-blocks-2": {
-      "code_fingerprint": "sha256:c76cf8b93ebc75e0a979b0db2f831f18db922ef61586183dab9e13ced834ab3a",
+      "code_fingerprint": "sha256:79fcbb22b3acd95cf4c88f8dd60877bba0cc3d42b597b8c94f43254ae860f72a",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "resnet-residual-blocks-3": {
-      "code_fingerprint": "sha256:e8942e7346aba8bea86e057cbd315ad49b92ad1836b2692a48d338e0a36a55e1",
+      "code_fingerprint": "sha256:9e792416ef36b9d586ceb93e0d2ea8daf8d8b4404247ddd8b2c5c684d2f28da5",
       "kind": "text",
       "outputs": [
         {
@@ -39,56 +39,81 @@
       ]
     },
     "resnet-resnet-model-1": {
-      "code_fingerprint": "sha256:df5d42c643ecf90fe92a5cf2a7c384a5330402fa1845a6bef191359648c65b10",
+      "code_fingerprint": "sha256:113ec25aa8919c0955aedb63e86b593363f017c4fb14df3ce9ab2f0af0dcdfea",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-2": {
-      "code_fingerprint": "sha256:6cc8452f2c65a499546170478b9405f98367d50cd9a0b06622438936a4d74980",
+      "code_fingerprint": "sha256:eea161c9f3462c650faf0bdd242bf5993837ba09d212d06718956091744401ac",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-3": {
-      "code_fingerprint": "sha256:082d55f29f6cf2b07a9570aeda7b03c55413890cdc72e4ab8aff8139435565d4",
+      "code_fingerprint": "sha256:2020ffdedd8d48d4a64904b512fe5e9c2d196493d74d9e83c9223d95f82e3f0c",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-4": {
-      "code_fingerprint": "sha256:17738a3e2600168531ce23025128a2e0b5cf960beecf1016f7b7ddb47cff7999",
+      "code_fingerprint": "sha256:ec0987274c69e7bd18099174cd57e410edd3f0e5d9eba7e8561b697b5037237c",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnet-model-5": {
-      "code_fingerprint": "sha256:64f49ed56f4564c9a7338bba490f9dbaef2016c69c85c659d2c60932888c6133",
+      "code_fingerprint": "sha256:729ab677f1994607242aa52d157b9ec9ec7191a3083e9b7eca80940e790ba57f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 24, 24, 64)\nSequential output shape:\t (1, 24, 24, 64)\nSequential output shape:\t (1, 12, 12, 128)\nSequential output shape:\t (1, 6, 6, 256)\nSequential output shape:\t (1, 3, 3, 512)\nSequential output shape:\t (1, 10)\n"
+          "text": "Sequential output shape:\t (1, 24, 24, 64)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 24, 24, 64)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 12, 12, 128)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 6, 6, 256)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 3, 3, 512)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 10)\n"
         }
       ]
     },
     "resnet-training": {
-      "code_fingerprint": "sha256:97f7277eb8378d2a5b40a7904e9780c7df03e4f2531a9d28f68f9908fb7d7155",
+      "code_fingerprint": "sha256:63d497a0cbb88ff20a1a1cf7ee45ae4708f5ebf5a4f55ac198c09265f3153c92",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "resnet/resnet-training-1.svg",
-          "bytes": 21043,
-          "sha256": "sha256:db4b06d7be90785f3de6fb25539194628881dac919dcc04a7cdd2be87648baaf"
+          "bytes": 21037,
+          "sha256": "sha256:4d15b89121104688603effeb1ae5709acd10e25bd0b952457500bfff5639e0c6"
         }
       ]
     },
     "resnet-resnext-1": {
-      "code_fingerprint": "sha256:28a346ee8fb0b4cb5be42e457c899007ed5ec81eae8860090e3b8db04ae38fe7",
+      "code_fingerprint": "sha256:9ebc7f29c4c87fb6e576eb7f7f45b5d36860ea2e3384d33a1f88706f36dc1194",
       "kind": "text",
       "outputs": []
     },
     "resnet-resnext-2": {
-      "code_fingerprint": "sha256:687efb8de9c0a54d011f045285fda7a1d52c66f4a739d7a71373b673bb815fb5",
+      "code_fingerprint": "sha256:1b958d85fa4d968be5a556febdd56ef82be9f384e6e7718026c6f97921d2cc6a",
       "kind": "text",
       "outputs": [
         {
@@ -98,17 +123,17 @@
       ]
     },
     "densenet-dense-blocks-1": {
-      "code_fingerprint": "sha256:aaf978561ed9e797d159646d95fd0b4cdadc66f7eb1a1b04e67a15f83f4ffdb5",
+      "code_fingerprint": "sha256:0f755b62f42998de8212cab904d9e2afaffb438aef8e31fa8349bd35b13b65cf",
       "kind": "text",
       "outputs": []
     },
     "densenet-dense-blocks-2": {
-      "code_fingerprint": "sha256:63d271890de9ed2eba07fbfe74173846f4ebea69968d305b00b2a46f8b652e16",
+      "code_fingerprint": "sha256:f4a439985a01276e4478210e674fd45613ec30da36a825b7bacfe7d8ba66c1fa",
       "kind": "text",
       "outputs": []
     },
     "densenet-dense-blocks-3": {
-      "code_fingerprint": "sha256:5ee132c6f81c176b53c6c91ba2fec2a2d921ac569f060f7938d1c693fa2b9c85",
+      "code_fingerprint": "sha256:16efd5b435dfad8efb5ecc1c84c3db059e47eb586c8ec509ea00ee83261df26a",
       "kind": "text",
       "outputs": [
         {
@@ -118,12 +143,12 @@
       ]
     },
     "densenet-transition-layers-1": {
-      "code_fingerprint": "sha256:6f19108eada7187d0bfbe128ad618e47aaf3823f92b1240f7632d3d4c4ab61e9",
+      "code_fingerprint": "sha256:c4caf714f5c2069985de7fde04def9f5962ecfc967aa9afb3f946bed092bc1af",
       "kind": "text",
       "outputs": []
     },
     "densenet-transition-layers-2": {
-      "code_fingerprint": "sha256:7d2567a3b2a0fcd4a67cfa8b69bb0ee93541f5c290b86b37dc24c47c7dede333",
+      "code_fingerprint": "sha256:67fd6ff546e415e30ac730cb28f717886eb375efb527718b94c7af6395fbcc07",
       "kind": "text",
       "outputs": [
         {

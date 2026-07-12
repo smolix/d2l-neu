@@ -3,43 +3,43 @@
   "source": "chapter_recurrent-neural-networks/rnn-scratch.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:1df78851ed967ae81ae1c58589376a97c4476665d720cad1ed1456fac8875188",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:afc4df5438937b5bde9c143acd5bd2706ea36006d07988c3ea1e5bd8d0f31a70",
     "max_inline_bytes": 0
   },
   "cells": {
     "rnn-scratch-recurrent-neural-network-implementation-from-scratch": {
-      "code_fingerprint": "sha256:006e1999f18c19bb2f9cf5dfdf0c4b19ed04ce0bbd4e5e86d725e977aaf01515",
+      "code_fingerprint": "sha256:1e1f90a6c47635e6350f4f645795dce34693b25fcca1d2222b776e9b792cbe27",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-rnn-model-1": {
-      "code_fingerprint": "sha256:23b4af7f3ae53491f02ddd781f3588e901f7b71bd95fad4e33df9665a830ec14",
+      "code_fingerprint": "sha256:d740cab0348141173a338570ccc4610f7357d7ddc7a79c167e472eb8bfb7b2f8",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-rnn-model-2": {
-      "code_fingerprint": "sha256:3799aad6b8fd7935da658d224a927a7b6af91a41b2804076cb5a9ebe56d024e7",
+      "code_fingerprint": "sha256:9188d01f17de0797e11bf29f29830eea61e0ed6439adeef9b681f90f96de5c8e",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-rnn-model-3": {
-      "code_fingerprint": "sha256:f42f45fca192623ecf68a3a792b7c016d23fe6ad03b1a9559565eacab3049985",
+      "code_fingerprint": "sha256:0f5b871ac057368d12033dac3994026a5a95bb7f8fd24efffd293a2a1382b603",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-rnn-model-4": {
-      "code_fingerprint": "sha256:7e71945149d0fa1a64d357bd7f1578f4ed98ced08a508ab8b28e247d6ac78641",
+      "code_fingerprint": "sha256:902661c786a0862c8fdf300f4074a09699e974d3d8440617f2cf3d7004df0a8a",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-rnn-based-language-model": {
-      "code_fingerprint": "sha256:818434983884394f22f5e09fc894d4a5ed7bd05311441b8c95039b60bf80d6dd",
+      "code_fingerprint": "sha256:4986c2b15eef7b20e308c53dad1b6c835ff436118d2325c1a9ffa55b46901612",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-one-hot-encoding-1": {
-      "code_fingerprint": "sha256:9e9fadaa2bee2f44ee4e94d06ab5be1539ca583f85df7c15d1d1a8394dfdb4d1",
+      "code_fingerprint": "sha256:4e101477d870ad5fb91b2f151ce4d73bd14a1e5429f8e2a9f832591ad9500820",
       "kind": "text",
       "outputs": [
         {
@@ -49,51 +49,51 @@
       ]
     },
     "rnn-scratch-one-hot-encoding-2": {
-      "code_fingerprint": "sha256:69c586ba7bc30df1551aa0abaed4d10b78d16069b134e068ec374c784c7324ca",
+      "code_fingerprint": "sha256:af864cccb423aa50b217dd2859aad4c6ba5e05c7940a9a1a4977e0ac9c46c2f1",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-transforming-rnn-outputs-1": {
-      "code_fingerprint": "sha256:153f89ae753e2ad49d569cf7f5dd20e0f224231e715ecdf555c13d6e23b6dfd3",
+      "code_fingerprint": "sha256:44a007eba04c816fb795427c3a56840751dec8e1851d96d015e53ed5ea1797d2",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-transforming-rnn-outputs-2": {
-      "code_fingerprint": "sha256:f6b30f4ab5d72af5037d9a0e5fb8027c30e4970d8161dd00f98e94df0aadbda2",
+      "code_fingerprint": "sha256:a945c9ba33da3b27b67a9f861b985620372dda42017ec8ab6daf278c27410068",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-gradient-clipping": {
-      "code_fingerprint": "sha256:7fc19fb1e82dc77a0554324c0f5e6ceabb08ae8a36bfe4e4cdb44c87490450fb",
+      "code_fingerprint": "sha256:4380f96638293859f88715fb43a98203b6a226a0bc7976738cc4615a59102fbf",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-training": {
-      "code_fingerprint": "sha256:cd6944dd7ec4c51ec210038ff0c439213721922f7ed7c4a3b21f644caa7c36ee",
+      "code_fingerprint": "sha256:1d14de1aa51867cbc7ddf830af0d8ba757fde8315f67020b85a592832a6b7f2b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-scratch/rnn-scratch-training-1.svg",
-          "bytes": 24492,
-          "sha256": "sha256:1227ab7e1dcede43a30671449da446be0d74e95791289571e333663fdb94b5ab"
+          "bytes": 14167,
+          "sha256": "sha256:1bb75c4e1c823bf16d2ae6d2c81b19137b9d8fc27a5e80e85b147a1f8cdeb655"
         }
       ]
     },
     "rnn-scratch-decoding-1": {
-      "code_fingerprint": "sha256:c6976973ae84b858377f1cef99ec3aafae93e15319fa73b5626a5c74461a5181",
+      "code_fingerprint": "sha256:1631e4f2998eb17bba5e6011bb5b99cf71950030012bd0b83812bb90ec91a403",
       "kind": "text",
       "outputs": []
     },
     "rnn-scratch-decoding-2": {
-      "code_fingerprint": "sha256:36a3e19d313a244bd2ebd6c98257a36671f2a7a558f645b1538987ad49a4982d",
+      "code_fingerprint": "sha256:ac80f80ff80976bb74a964ad9ff7a29cd3692be097294e6d8b4b751d8a47f102",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.4, 'time traveller and the the the the'\n"
+          "text": "perplexity 7.3, 'time traveller and the the the the'\n"
         }
       ]
     }

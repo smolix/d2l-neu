@@ -3,13 +3,13 @@
   "source": "chapter_computer-vision/neural-style.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3a857365474f792e64a9b5b4af3f6339f011adca446f017693f3b04fdbd9687",
     "max_inline_bytes": 0
   },
   "cells": {
     "neural-style-reading-the-content-and-style-images-1": {
-      "code_fingerprint": "sha256:22c40d28998e62199e17723151b6ff67c11019143e91c054685a918f56836e82",
+      "code_fingerprint": "sha256:c68497c97ddcdca27569e6190e067cb450e29c68acc98dec7affd8acf46df33d",
       "kind": "asset",
       "outputs": [
         {
@@ -17,12 +17,12 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-1-1.svg",
           "bytes": 142658,
-          "sha256": "sha256:4ee970ef1e12a300076a89a02ce205942e693f638d752a267a36377b9531f894"
+          "sha256": "sha256:985c02485714f9cd25e18ff4afdb571506b62592634c8e671e8c571a4fbf02c3"
         }
       ]
     },
     "neural-style-reading-the-content-and-style-images-2": {
-      "code_fingerprint": "sha256:a382f899338528cb0ac8f5da34c0cdf205499af4f3258f837365fa10cf52e1d2",
+      "code_fingerprint": "sha256:83be94440b112e0471406bb977ad2bd5af0e0d1ce8cda95d48e2cdd01f9e99fa",
       "kind": "asset",
       "outputs": [
         {
@@ -30,90 +30,108 @@
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-reading-the-content-and-style-images-2-1.svg",
           "bytes": 196603,
-          "sha256": "sha256:aa3d99559bb5be76cff6ace7f9979a09f0afb3284d28f16e846b3ac67265198b"
+          "sha256": "sha256:b9aac977a7a18b577dcd09d5d1c9b561a8862e511e8d7281a8a07f238e6a9ad5"
         }
       ]
     },
     "neural-style-preprocessing-and-postprocessing": {
-      "code_fingerprint": "sha256:005f1d47f8acdcc8b6d8ba93ad571d53ffcc3a2d71a16a4e2fd9c9fb0ed00da9",
+      "code_fingerprint": "sha256:6bd48c7c4277bdce205aab5c3c64e26fe71e6d16e73e88f135353b28d2718684",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-1": {
-      "code_fingerprint": "sha256:6f56a047c0946f5fb16ad795d7b468a7f6a529441d525ca7e660cff424ef58e2",
+      "code_fingerprint": "sha256:4c01af341c78724d63bc78de194b881231c8f39fac1bc057960a5782462680ba",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "display_data",
+          "text": "Downloading bytes:           |  0.00B            "
+        },
+        {
+          "type": "display_data",
+          "text": "Reconstructing (incomplete total...): |          |  0.00B /  0.00B            "
+        },
+        {
+          "type": "display_data",
+          "text": "Fetching 1 files:   0%|          | 0/1 [00:00<?, ?it/s]"
+        }
+      ]
     },
     "neural-style-extracting-features-2": {
-      "code_fingerprint": "sha256:d1def0e4b0f9ab697fe6a6de6f8d8c458f9b1a394679ffc3b636772e9adc2698",
+      "code_fingerprint": "sha256:b4c3e46430561b3356a33d3a569b3ce84b082c70d52b5a13db1ea415a7c59a92",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-3": {
-      "code_fingerprint": "sha256:dee84fd848d4ebfac3b3a154ab2808f2d46e5835cc6ccd59701f0a941c262e6f",
+      "code_fingerprint": "sha256:2f6d4c30e42aee3d26b086a2f90f0a8f5ac0613060cd209955ef42aa647840fc",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-4": {
-      "code_fingerprint": "sha256:14067aba3b0c1068e7db14e35c6e0aaf23ef00512a7b6d52e13bbcff4ba6a9a7",
+      "code_fingerprint": "sha256:daa87c2f21d336d0c998bab13230566ea733243edd54d56281d7c99586720a31",
       "kind": "text",
       "outputs": []
     },
     "neural-style-extracting-features-5": {
-      "code_fingerprint": "sha256:e8ebddd138688f185c0ca2cfee6bd87f326afb1483a288964e29bac32ef84ed4",
+      "code_fingerprint": "sha256:29fec2d08a0b7aab4c3a298e755c773fe4ea3dfdc0062d74ae460bcf3456c754",
       "kind": "text",
       "outputs": []
     },
     "neural-style-content-loss": {
-      "code_fingerprint": "sha256:cdb9308f58eed474b73291fd4de000e943d1c95c5264cdd02c67deded72b4c45",
+      "code_fingerprint": "sha256:9a4cc80655856681b5bd2939ae0d7d39849fbb76c304c94a2cd06d4e1f0a3cc6",
       "kind": "text",
       "outputs": []
     },
     "neural-style-style-loss-1": {
-      "code_fingerprint": "sha256:fc50c9db837bf8ea6e0066804593395fdfeef5a4b5c92d06035d6234ae7f2289",
+      "code_fingerprint": "sha256:84d75931f69f9e977968c9a1ea8363d6a1b8ae07b8891cba2a3e93ee61b111ca",
       "kind": "text",
       "outputs": []
     },
     "neural-style-style-loss-2": {
-      "code_fingerprint": "sha256:fe9b4997bbb192c2d6a36703711a030a679c41d1412f8ab17bbd340885b2db71",
+      "code_fingerprint": "sha256:29d54a113441d2bad2546763649c599705864aea1b7dcc022b2c39bba2aff0c8",
       "kind": "text",
       "outputs": []
     },
     "neural-style-total-variation-loss": {
-      "code_fingerprint": "sha256:7a3ffba887cb647f74406bad0887ccbf844e8f5d2158ab39baf61cba22c717c9",
+      "code_fingerprint": "sha256:6f3104d9737a5188049b48d304c766438fbfe3e3ff4f8132d35ac0da1f486192",
       "kind": "text",
       "outputs": []
     },
     "neural-style-loss-function": {
-      "code_fingerprint": "sha256:32cc5048009413866522bf9fd11e0b85bb03562772d7c510e91cab82099e7920",
+      "code_fingerprint": "sha256:7e55132c7653633dc93f065bdc58a56c154fbe525017cff21a036b9ae62718e1",
       "kind": "text",
       "outputs": []
     },
     "neural-style-initializing-the-synthesized-image-1": {
-      "code_fingerprint": "sha256:8f3c5fac9e2c52b2feca9afd83add16fa7c61cefba96af2d4769408e3a7a45fb",
+      "code_fingerprint": "sha256:806139a4e66f69f70a236615f4fd7bd30c87ea327cb808ff796b781c6daaee9c",
       "kind": "text",
       "outputs": []
     },
     "neural-style-initializing-the-synthesized-image-2": {
-      "code_fingerprint": "sha256:2bab4f747c8bac4091d971b45260e5e2700da4e282f19a8122cef5dcae1dd4a4",
+      "code_fingerprint": "sha256:3060ab8a8c1d1e0a1f4191f2683f3b532dbc4af17837ea8905e9a69ed073874f",
       "kind": "text",
       "outputs": []
     },
     "neural-style-training-1": {
-      "code_fingerprint": "sha256:1fd8297756c90f808e548b399391380f1f9be36efb6d08908d74cee5cee19363",
+      "code_fingerprint": "sha256:80fc5d9b87d44edfa19a3c9aa6f66066d3bd6646f725a8c44b17a3403e98764d",
       "kind": "text",
       "outputs": []
     },
     "neural-style-training-2": {
-      "code_fingerprint": "sha256:46240efdec2c3847e61eb038e5159e3d82248968848936a3e2590d03d89a0626",
-      "kind": "asset",
+      "code_fingerprint": "sha256:d7da5483be8d3628d9826131b281e037e5c2df12fb33f477242ef8fe3c00c03d",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 50, content 0.870, style 1.596, TV 5.054, total 7.520\nepoch 100, content 0.533, style 0.640, TV 3.815, total 4.988\nepoch 150, content 0.458, style 0.499, TV 3.155, total 4.111\nepoch 200, content 0.423, style 0.430, TV 2.822, total 3.675\nepoch 250, content 0.401, style 0.387, TV 2.631, total 3.419\nepoch 300, content 0.387, style 0.358, TV 2.510, total 3.254\nepoch 350, content 0.377, style 0.337, TV 2.428, total 3.142\nepoch 400, content 0.369, style 0.321, TV 2.371, total 3.062\nepoch 450, content 0.364, style 0.310, TV 2.330, total 3.003\nepoch 500, content 0.359, style 0.301, TV 2.299, total 2.959\n"
+        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neural-style/neural-style-training-2-1.svg",
-          "bytes": 180602,
-          "sha256": "sha256:6626a45cc2e7a2427c315122184288a0d6d0bbaea4f418b7d59e672741c9fe75"
+          "bytes": 175927,
+          "sha256": "sha256:c125d16906ee8b083ba5425c6f0db549e97f4cb96f810ff273cd9326a7f049eb"
         }
       ]
     }

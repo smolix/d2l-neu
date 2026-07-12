@@ -3,7 +3,7 @@
   "source": "chapter_multilayer-perceptrons/mlp.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
           "bytes": 16908,
-          "sha256": "sha256:2208233e453a1e595dde2b536cb9b193b93dadd36d2c1bd19ced9cf73f33f4c9"
+          "sha256": "sha256:da80d87094fbe302e059c6faba809f4fc4d0b225d3ac34144e5eaa145d33369e"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
           "bytes": 21200,
-          "sha256": "sha256:792384a5e1731aaa06d8145430060aa4e12e3d936c704bfb64c746db03c3ab80"
+          "sha256": "sha256:6deb00124382e7efa752ac3dfcb27d5d9d3b8d632580a11b64e3f4d472344e89"
         }
       ]
     },
@@ -78,8 +78,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
-          "bytes": 21781,
-          "sha256": "sha256:5b4358167f31ad546e23c5e27e527dcc83f80cda781489e93d2d5782db5a52e3"
+          "bytes": 21780,
+          "sha256": "sha256:0685dd8c85bc8a26c756d5bcedb4b3448224a357680ba89dca23ee1724ea10b4"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
-          "bytes": 24512,
-          "sha256": "sha256:2767112429cffa0673c29e0261b61fabbca91c26ca2dced07741eae4516dde58"
+          "bytes": 24514,
+          "sha256": "sha256:5827d551318cd45b20f19c919b828dbe5c45de7ffb1dd24880545b1d5f880059"
         }
       ]
     },
@@ -104,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
-          "bytes": 20169,
-          "sha256": "sha256:406f6c432960fc7827b1a599c813c96c037eb07d45393d0472826f520ccf72c1"
+          "bytes": 20168,
+          "sha256": "sha256:411b511a604e480227a6aed6a0f3a587f1b0c139d30e7d3b08669f93b8c8915f"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
           "bytes": 22667,
-          "sha256": "sha256:f256ac44f3397a756079c2fdbd7cfe6ff407e22188eee31d45cbb4bd63803bb4"
+          "sha256": "sha256:4767f849047a9e87ca2a3aac592435224193d84c987ffaf8f19bfbbcdba37eff"
         }
       ]
     }

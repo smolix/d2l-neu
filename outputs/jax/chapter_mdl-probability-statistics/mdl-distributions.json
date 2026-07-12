@@ -3,7 +3,7 @@
   "source": "chapter_mdl-probability-statistics/mdl-distributions.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:35eb8afaa96909448c21b2ee9b39fa4e7eaa75827731778b5c4920722fdbb52c"
+          "sha256": "sha256:78afa49b5a057b5a09738d1ef7333470d265dd602f03bdb524f22a5a96ed82b0"
         }
       ]
     },
@@ -124,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:98bf15377b8509c003ad225331dfc5c58df18ba728af4767d5f9ef2759ef8c0a"
+          "sha256": "sha256:fb5ba0d8cb26caac04123d8ec692cf2f161372f1517f15e44e981371a8a910e6"
         }
       ]
     },
@@ -193,12 +193,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dA/deta      = 0.668188\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sigmoid(eta) = E[x] = p = 0.668188\n"
+          "text": "dA/deta      = 0.668188\nsigmoid(eta) = E[x] = p = 0.668188\n"
         }
       ]
     },

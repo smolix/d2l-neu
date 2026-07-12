@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ec8bc963d28cc4521d24d6bf23c35fb835accd929bcf9554925450ff2de8572e",
+    "d2l_lib_fingerprint": "sha256:576fb87650c64179b0ca9d972fa390a24e6d9a141fdf045e6e9bb0c5e6ab8938",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -39,45 +39,45 @@
       "outputs": []
     },
     "seq2seq-decoder-2": {
-      "code_fingerprint": "sha256:7d6b5555e47a11c3e51d39fdb29c9361670abe0164eb232e5f0663f05092e9a6",
+      "code_fingerprint": "sha256:197e7cf98d9e4e3502137fea6b85d2256afaeb0afebcb4bd9c76074a10cf7a2f",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-encoder-decoder-for-sequence-to-sequence-learning": {
-      "code_fingerprint": "sha256:2eab7fc1cbee0c1838beb78d50fa00d72029eeec361a0a89b3fef476c231998e",
+      "code_fingerprint": "sha256:b2dbc79c18c4e6d78c70c35f3204404ed370529f16aa423a0e05f1bce98d5c48",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-loss-function-with-masking": {
-      "code_fingerprint": "sha256:f2ceda76874cb86f2d9dfa5f61672a3de3c6eaeef7acd1ab06e72820e8009fd2",
+      "code_fingerprint": "sha256:441d3efdc0855e704212f4750afe516fa4d1ddc3b6b736ae857b34db26ba537c",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-training": {
-      "code_fingerprint": "sha256:36f7e55ce85fa1709f25c22cbdeb5eec3ff674aa1fb3d34363da2f921047d8a3",
+      "code_fingerprint": "sha256:527ffeb769be33b58e938b7f19246f051e30172f07d67502b8fb1d662cec619e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 20896,
-          "sha256": "sha256:13ae7245b0a8f16f9b4c6a08f7fc5240fb82fd67e341f70257265aadead7f9a0"
+          "bytes": 20885,
+          "sha256": "sha256:98c787ae17507a4a7c3af77791a5ffafd84d425d3f77913228668f97f674122b"
         }
       ]
     },
     "seq2seq-prediction": {
-      "code_fingerprint": "sha256:a03ce2eeb7a1d0e67d007216ae5f393efd34261447f8320b4147df5d847e649f",
+      "code_fingerprint": "sha256:1004b421a57e242419751ae635172d1d76ecca33f62ca6481d311d3fc6e76e44",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-evaluation-of-predicted-sequences-1": {
-      "code_fingerprint": "sha256:7e0dbbb503d8b850daa64d18d14466e917f9eaafde3912eac6a97ec841823aae",
+      "code_fingerprint": "sha256:9fbb5dcae65581b2b6abc6c0bbf5748d0761d8dd30f369874c6479a1cb693240",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-evaluation-of-predicted-sequences-2": {
-      "code_fingerprint": "sha256:6012964aee8b6ae049541fc725d4fd133690559db20b13bd2112f75542111cd9",
+      "code_fingerprint": "sha256:fe0ccf4e6c8a5d04606ac3b52dc384bd04ac7d26d1a4cbc39c49508279ca2517",
       "kind": "text",
       "outputs": [
         {

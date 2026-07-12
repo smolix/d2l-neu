@@ -3,7 +3,7 @@
   "source": "chapter_appendix-tools-for-deep-learning/utils.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:a2ac6537a5ed81a54b647a46686b339b9e1ea1fb1b274366d63d49057c2f3e81",
     "max_inline_bytes": 0
   },
@@ -24,17 +24,17 @@
       "outputs": []
     },
     "utils-utility-functions-and-classes-8": {
-      "code_fingerprint": "sha256:f68eb5a23c950838feae0955938628ba9a8de0ea206f8c1a4fef2a28b5dac619",
+      "code_fingerprint": "sha256:d87471d40e614ab46a48340ccbcf819334da3679a4c43b612e694c222e6d55db",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-10": {
-      "code_fingerprint": "sha256:dce5b1dbc6bbfdfe0a82eb6b9d6680384329ac5b3be57239f4ba90448deb4d63",
+      "code_fingerprint": "sha256:ab053c9580a2485104e9a6111a8870aef60c11abd25c4f57ece4c37ba2ef5ff6",
       "kind": "text",
       "outputs": []
     },
     "utils-utility-functions-and-classes-12": {
-      "code_fingerprint": "sha256:daba0a03d296e027bd35d4c13d6396eefbccdb519826a3d974e2c9b210efbd87",
+      "code_fingerprint": "sha256:82a1ee6d4cc0b7166276d3c0ce00caf1851039a242462e05417836257b6c6e90",
       "kind": "text",
       "outputs": []
     }

@@ -3,33 +3,33 @@
   "source": "chapter_linear-classification/classification.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:ade01166af559ca0bf7f9932590c7757124d24632045a8e9f6120e9282ea24fc",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:64a87f318b698ef49245fbb0b1f38a65050f3e1962234e497a8837940f7a712a",
     "max_inline_bytes": 0
   },
   "cells": {
     "classification-the-base-classification-model": {
-      "code_fingerprint": "sha256:703bb453901c3833eba31afc0d96fc5cc9c292e711e20d3f60ea0a59b87c290e",
+      "code_fingerprint": "sha256:1146153739b2577f60bb843b22617f2c3bd021a64c1f3bf33dd8c347464f8e7e",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-1": {
-      "code_fingerprint": "sha256:fa476bdafe11b29da1709c2b837670f8fa6cb92510335f1ec659f5d4a7bef84d",
+      "code_fingerprint": "sha256:82d4990f3514ccfc73f766bf07bbc4f4d2c882c4c1e5aea215f87a9e799e028a",
       "kind": "text",
       "outputs": []
     },
     "classification-the-classifier-class-2": {
-      "code_fingerprint": "sha256:61846de21864d5120fa6358a29e625980f703a0c3b4c3bb4738aa057a214fe49",
+      "code_fingerprint": "sha256:c7a8771a07f140f4645961cc08daaace1da73306f16cf9f0763027e3b6c7376f",
       "kind": "text",
       "outputs": []
     },
     "classification-accuracy-1": {
-      "code_fingerprint": "sha256:c9a714a9ccfdfab707984ce8b9f9b9c843dccb30f743e1836ff9fc0cedccef52",
+      "code_fingerprint": "sha256:8a5ada299099218a07551d52ab14ac07ec6fb6c217763f60338a9d6be3265ae6",
       "kind": "text",
       "outputs": []
     },
     "classification-beyond-accuracy": {
-      "code_fingerprint": "sha256:cd9a101b74c10c9732278e528099d6c9ef31af1a127c4104a1d8c39b49b08a6b",
+      "code_fingerprint": "sha256:f19fcce04b82b8b9e2af3d8b9e9299bb2103942574c389b68f544e3a98b2885b",
       "kind": "text",
       "outputs": [
         {

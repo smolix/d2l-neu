@@ -3,7 +3,7 @@
   "source": "chapter_recurrent-neural-networks/language-model.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:ff16f873e9e046b0cd29f159fd46d48fbfcf9c9fd6fcfe6c56f8bd95f874277f",
     "max_inline_bytes": 0
   },
@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[ 1 13  5 18  9  3  1  3 10  4]\n [15 14 12  3 19  1  5  8  1  3]] \nY: [[13  5 18  9  3  1  3 10  4 22]\n [14 12  3 19  1  5  8  1  3  9]]\n"
+          "text": "X: [[ 4  6 11  1 17  5  3  9  1  9]\n [ 2  6  3 12 19  1  8  2 15  3]] \nY: [[ 6 11  1 17  5  3  9  1  9  5]\n [ 6  3 12 19  1  8  2 15  3  5]]\n"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_mdl-probability-statistics/mdl-statistics.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
     "max_inline_bytes": 0
   },
@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(0.5310428, dtype=float32), Array(0.5310428, dtype=float32))"
+          "text": "(Array(0.53104275, dtype=float32), Array(0.5310429, dtype=float32))"
         }
       ]
     },
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/statistics-permutation-test-1.svg",
           "bytes": 32404,
-          "sha256": "sha256:2cff31736368d3638fc9ec66b3386870844ef32db4d11e615fa5acd8b5a9fd9b"
+          "sha256": "sha256:d4012ab34afcf0265e06284c20c6aabc248e4fb708990ea836e4c9f9bd81787b"
         }
       ]
     },

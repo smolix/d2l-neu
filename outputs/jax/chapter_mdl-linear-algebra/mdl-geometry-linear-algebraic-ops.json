@@ -3,7 +3,7 @@
   "source": "chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
     "max_inline_bytes": 0
   },
@@ -47,7 +47,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
           "bytes": 26257,
-          "sha256": "sha256:731187c6e3baaacbd9c9b59628df644e9fb85280e6b8b99b5239c6f9fc4135bf"
+          "sha256": "sha256:3b6be80949b06c9bc1ea58bdf8d65fdfc4183c48580d95e39a5cb64f62462a9c"
         }
       ]
     },
@@ -70,7 +70,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
           "bytes": 40874,
-          "sha256": "sha256:5a9c0390997c7f5afe0bf04e6eccf92f1c3bd6ad982a0eb679b3cbcc11b0d389"
+          "sha256": "sha256:6e28dd5e1473c060d83513aaa8cbf95508541617b211c7b1abbd0792300935e1"
         }
       ]
     },

@@ -3,7 +3,7 @@
   "source": "chapter_mdl-probability-statistics/mdl-naive-bayes.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:25cd0d4ec9c432c2f409c8f178fb6ca5d2af2bdf731cd05b371fc1a763af6de2",
     "max_inline_bytes": 0
   },
@@ -42,7 +42,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/naive-bayes-templates-1.svg",
           "bytes": 47953,
-          "sha256": "sha256:bf8b616bf0d13523a6d28c137a02ba166c90166134117074e0386f451b1fd20a"
+          "sha256": "sha256:9cda850198700870837bc694648cf567c0b1cff99e9fe8a3b4ebf4ef8269cff9"
         }
       ]
     },
@@ -86,7 +86,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-naive-bayes/mdl-naive-bayes-calibration-2-1.svg",
           "bytes": 22680,
-          "sha256": "sha256:b82f129350830a47b0b78134f3d3b13674dc889c9435fe2b79cc29aaf3612fb2"
+          "sha256": "sha256:f56bd11f7b6f7d5b88b32031dd474ef23e9a1ee9317f75c8ac40507df3c3a7ef"
         }
       ]
     },

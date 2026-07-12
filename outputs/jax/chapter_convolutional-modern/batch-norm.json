@@ -3,79 +3,74 @@
   "source": "chapter_convolutional-modern/batch-norm.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:35e4c1b2eed0071cd094ae43af95c4f0573cea51e23ea7aab52db30abacf0ccf",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:00d076d461c04c580d372d8f20d704441d2948dd63b0fcdd1efdab3d6483049f",
     "max_inline_bytes": 0
   },
   "cells": {
     "batch-norm-batch-normalization": {
-      "code_fingerprint": "sha256:39bd53754e4d9e460fbe5db1abb2385d9c68f4f17bceb9d0ea3630ce3964af1d",
+      "code_fingerprint": "sha256:b5a0257e48a9d5a894c4943f40b39334f65cb496cddf322e8030beca04325f3f",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:38be58843f2495358a2867b27babff6ac3ed5d238726751f5128eb4f7e44e723",
+      "code_fingerprint": "sha256:5beefcf385809d4c82869ecd89339c898a59c05a42e1dcb81880c5c4cbb7d336",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:fd9bee5ef27b167e7d39fdb48761f5046975329e01826799b20cc67784640f62",
+      "code_fingerprint": "sha256:fedc82c29c954b671ceebb7340608fae18827d97650c397937d580280300bbc0",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-1": {
-      "code_fingerprint": "sha256:7a6fb903a5feba5bb4b3ac0fafb69d978c8b8c15c2803061bd82e817b9a0c6dd",
-      "kind": "text",
-      "outputs": []
-    },
-    "batch-norm-lenet-with-batch-normalization-2": {
-      "code_fingerprint": "sha256:05c2375281f25112294f47e94d10071a6f44d33e7e47bccf99db0bcc1fc15a4d",
+      "code_fingerprint": "sha256:cee282c5403604087d90bc54fea1f2b11a6434e97f2cf0e6785b3368b0885467",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-lenet-with-batch-normalization-3": {
-      "code_fingerprint": "sha256:59877d65d967c37ca5606a404374d0fefe9570415da378783451ec8b91323276",
+      "code_fingerprint": "sha256:578e8506039dd40d2834b9aac8d7cb64d07a42c5845866db0dc08f3c0deb6c34",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 19982,
-          "sha256": "sha256:eaabb302740992b4dfd301e2059abdafd15ed73f390853f8c1db449b09ba04b9"
+          "bytes": 19978,
+          "sha256": "sha256:31a3682c65b991394db5c4a2862563f62f64023b91ed62ce4b68bfa06c790454"
         }
       ]
     },
     "batch-norm-lenet-with-batch-normalization-4": {
-      "code_fingerprint": "sha256:7d3798e16adaf65718a343b57a816bae1eb161e95198170d5b4dd3c61770225e",
+      "code_fingerprint": "sha256:a21fed2e38019bd19ea3f44d0183321eb25f76d9cca6a5442367e2094bc66451",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array([2.1386776, 2.380955 , 2.4950893, 2.3374465, 1.3177745, 1.1602042],      dtype=float32),\n Array([-0.10873674, -0.6913563 ,  0.5661901 , -0.68648887, -0.12582392,\n        -0.04549312], dtype=float32))"
+          "text": "(Array([2.6504378, 1.884742 , 1.8296056, 1.694317 , 1.9706972, 1.7446182],      dtype=float32),\n Array([ 1.2138836 ,  0.57459944, -0.29941848,  0.82196015,  0.15523143,\n         0.6392324 ], dtype=float32))"
         }
       ]
     },
     "batch-norm-concise-implementation-1": {
-      "code_fingerprint": "sha256:a98b99a24ee948f846385c8a8fa45c29909645897ad2d1bc7b26cd9ca8392b12",
+      "code_fingerprint": "sha256:32baf2de193a9943dd36c224fd2ec626bf819f9efd5f8a75206a6d173a6d4380",
       "kind": "text",
       "outputs": []
     },
     "batch-norm-concise-implementation-2": {
-      "code_fingerprint": "sha256:8abcea345cb3e01c36737f435ad6f8fd9b81daf034843c94cf87a9c62fbbaa9d",
+      "code_fingerprint": "sha256:dbc4bb2cb6b6c82d96063d54c04a3efb56a8a8526799c56657a5e044d9eb5ea3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 19976,
-          "sha256": "sha256:7ef2beda8fe7ee47ecb0d4a2470e0f0ed287aefd6022c8d134516dad8c491d53"
+          "bytes": 19970,
+          "sha256": "sha256:99ae15dc7df027ba97a17d7755dc208ab241bdfff65d3cc1bfaee736269e08f3"
         }
       ]
     },
     "batch-norm-group-normalization": {
-      "code_fingerprint": "sha256:a30153455afc583348b5662146da9fe1125e2bbce8811b36cff439c2a2facc38",
+      "code_fingerprint": "sha256:93114074eac06528e5b8fe7289ed662329e7712e1fbd91a861ef0103b8692a23",
       "kind": "text",
       "outputs": [
         {

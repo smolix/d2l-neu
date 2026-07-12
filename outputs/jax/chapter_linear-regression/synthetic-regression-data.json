@@ -3,7 +3,7 @@
   "source": "chapter_linear-regression/synthetic-regression-data.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e47a00b0cdeb6fc77fd3b07c8b9db78a160cb037a7db539e4ee837362a8130fa",
     "max_inline_bytes": 0
   },

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:52f6df4cb27d843ceb56ca8bf81637e721450558c88276400fdc5f0f8348901a",
+    "d2l_lib_fingerprint": "sha256:8f9704341e07ade2d127fd8c56820ca3268ce0bd15fa19a67c07d4289a3bc48b",
     "max_inline_bytes": 0
   },
   "cells": {

@@ -3,23 +3,23 @@
   "source": "chapter_generative-adversarial-networks/dcgan.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:6cfe691e6fa44489ee873236cb47c09f9f127e3c675a0be16a24373c4667f369",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:8c311b068c8ffd9b578a9894fd608de6db565ef1cbe32e7693a3fbc7bae49672",
     "max_inline_bytes": 0
   },
   "cells": {
     "dcgan-deep-convolutional-generative-adversarial-networks": {
-      "code_fingerprint": "sha256:2714675bab2e54b22e085339247525734c8c67fa09acb2e08d9e16617eddbb5c",
+      "code_fingerprint": "sha256:e7920e0ca3a7c8b3009d1a433e647882ef21d637741309209411e13001149c74",
       "kind": "text",
       "outputs": []
     },
     "dcgan-the-pokemon-dataset-1": {
-      "code_fingerprint": "sha256:143155eb8a682ceac4190a51d1e5406b11a21527f21aff6145e330dfbd72ee9b",
+      "code_fingerprint": "sha256:aa575ba8fa68030d25cc7620d27b7a915d413ab1544212dfe4fc59efdf5ea4ba",
       "kind": "text",
       "outputs": []
     },
     "dcgan-the-pokemon-dataset-2": {
-      "code_fingerprint": "sha256:3c9cf966c313ed8909f07948f99aba26b4caccab3316350ec84dd2a3fdb1c96b",
+      "code_fingerprint": "sha256:f99f263eec47bde41ee5249b5b103cad7f203f8a3f73e967c157e08ed7ca18f9",
       "kind": "text",
       "outputs": [
         {
@@ -30,25 +30,25 @@
       ]
     },
     "dcgan-the-pokemon-dataset-3": {
-      "code_fingerprint": "sha256:2c18a772c8cb08a96a872288fa386a280cd8c9b06624eb10641f699cb10f0e43",
+      "code_fingerprint": "sha256:49fadbfae6329c2f1e477e7c4cd2324efe070604d9eb6d0d5c448356009025aa",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-the-pokemon-dataset-3-1.svg",
-          "bytes": 397620,
-          "sha256": "sha256:517b1df78511c4b2ff93406c9eef9866c3c5080a296e37b0f6593c3a28f09b9d"
+          "bytes": 408164,
+          "sha256": "sha256:dcc70d13bb76d4363011de2eefe1b569e618db3fb631fb0ba1b82939807933fb"
         }
       ]
     },
     "dcgan-the-generator-1": {
-      "code_fingerprint": "sha256:1c8ae7f3c5ac92378e96402ea6e6c19503be04df1764c56a5837a09c368bbe23",
+      "code_fingerprint": "sha256:59d2edd7c67d0324ff49f802fbfa9d33fbd069e5f058ce78cf64e6580f079e9a",
       "kind": "text",
       "outputs": []
     },
     "dcgan-the-generator-2": {
-      "code_fingerprint": "sha256:b1fc64fa09ad9066c1ea1c70e1177922ae10db03d93ea136e42298e8b6feaf12",
+      "code_fingerprint": "sha256:fd373218d3891783c6bc71e0423a3f7038cf55a5dd94517cba208cce29ed3ba3",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +58,7 @@
       ]
     },
     "dcgan-the-generator-3": {
-      "code_fingerprint": "sha256:6010520e04d806eb4cc84de068077d540dc3de693a4e370ae02a219cd9b9589c",
+      "code_fingerprint": "sha256:1eeaa1ad6cd30f72303f63a4723baf6d9db2daacd597a83f1fa0849092c00078",
       "kind": "text",
       "outputs": [
         {
@@ -68,12 +68,12 @@
       ]
     },
     "dcgan-the-generator-4": {
-      "code_fingerprint": "sha256:6767f51b1d0534b627b655cb75f6d2d0b5913bca5d1e2709ace28ff4685a873b",
+      "code_fingerprint": "sha256:524ab37397cf2a025f5af6921d7ec8b61cc039e84754c25a8f0e0c46b8f4c929",
       "kind": "text",
       "outputs": []
     },
     "dcgan-the-generator-5": {
-      "code_fingerprint": "sha256:b517963e65a02513260551c73b0f3bd8ec7e14c24ff663631b982d040acd84a0",
+      "code_fingerprint": "sha256:725ada1312aee6b72c08558d952871fe189af118e96d88a672a6f5e0155fb92f",
       "kind": "text",
       "outputs": [
         {
@@ -83,7 +83,7 @@
       ]
     },
     "dcgan-discriminator-1": {
-      "code_fingerprint": "sha256:3ebb82da38036838e8a031653a8feb928987cabd527f6da993cc71dc09ca4f93",
+      "code_fingerprint": "sha256:519aa06ab8e14ea1ff77726201af743ebe6726a58fa995164c0369f07ad16177",
       "kind": "asset",
       "outputs": [
         {
@@ -91,17 +91,17 @@
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-discriminator-1-1.svg",
           "bytes": 18839,
-          "sha256": "sha256:149e82c830149f17ef06ac10e36ac045a233be21176f427e17da8d03a109652a"
+          "sha256": "sha256:b87ab9b944759aaf8be2e7fbfb377775d68f20f664fab00002d1407b60797c43"
         }
       ]
     },
     "dcgan-discriminator-2": {
-      "code_fingerprint": "sha256:0a48c602b45e85fce5f375b973b433f1432cfb1f5ffed8f658c1f8126960ae91",
+      "code_fingerprint": "sha256:87c0f968a3380f5323db39b73d3870b4ba623f0af8948bd01925460dc54d8e52",
       "kind": "text",
       "outputs": []
     },
     "dcgan-discriminator-3": {
-      "code_fingerprint": "sha256:e5939d577eac8a84d216b2cfc825c61cabba8244520c17d1a4c3dc76d2b98b1d",
+      "code_fingerprint": "sha256:ec3c9f3b1e9ab8be52526fba1bd76bd9b578f1e0c9d4306d584cbad2f79f1ea9",
       "kind": "text",
       "outputs": [
         {
@@ -111,12 +111,12 @@
       ]
     },
     "dcgan-discriminator-4": {
-      "code_fingerprint": "sha256:9f7359a85f74ab5b65d5dbb50f3266235c5027f40a1ff38bcb42d841ebb07631",
+      "code_fingerprint": "sha256:8aaa9748880d386f708ee46717ce313ae74b9ca9282a260f1d062cff0ba1c207",
       "kind": "text",
       "outputs": []
     },
     "dcgan-discriminator-5": {
-      "code_fingerprint": "sha256:b94389a52c5fefd3fd806c78058db60e2a8f85ab6b7e7b9fc136394db2207956",
+      "code_fingerprint": "sha256:61b9705fab5b490ce8c044026e0642ce87953b43289a24460c1c1d6c420d63be",
       "kind": "text",
       "outputs": [
         {
@@ -126,25 +126,25 @@
       ]
     },
     "dcgan-training-1": {
-      "code_fingerprint": "sha256:db46e927be8225787632ef394d65b8762bcf083d3fe42de9f4fbbbe877484cb8",
+      "code_fingerprint": "sha256:4bd8a3ddcdcd9e31e8d71c30d3bd5f0361782d5fe188f961f75dc4c0f61f41db",
       "kind": "text",
       "outputs": []
     },
     "dcgan-training-2": {
-      "code_fingerprint": "sha256:b4e3d32084fafbcbcc42195b2c0bd746d1fb38946c57d13d2b121edf1de1791a",
+      "code_fingerprint": "sha256:fe3670aea25c04548b40859f4cde3bd4f6153bb51a2af35345ec58d8fedb74b9",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss_D 0.105, loss_G 4.464, 6248.4 examples/sec\n"
+          "text": "loss_D 0.022, loss_G 4.643, 7824.0 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-training-2-1.svg",
-          "bytes": 206961,
-          "sha256": "sha256:c22cbae82b420fde2dfd466e92f856a7fcc1415afb7dcc1cb8177fbfe8a1bdb6"
+          "bytes": 248673,
+          "sha256": "sha256:eeb1df1c15511e07e82abfd20225af5853af426635ce34e9f9793c912234e640"
         }
       ]
     }

@@ -3,7 +3,7 @@
   "source": "chapter_preliminaries/probability.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
     "max_inline_bytes": 0
   },
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [48, 52]\n"
+          "text": "heads, tails:  [53, 47]\n"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([0.51, 0.49], dtype=float32)"
+          "text": "Array([0.51      , 0.48999998], dtype=float32)"
         }
       ]
     },
@@ -63,7 +63,7 @@
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
           "bytes": 30162,
-          "sha256": "sha256:1e1022c1d2b8e29a36c49283da453fd70c7779f0a697981725593ff7ce3ad7fd"
+          "sha256": "sha256:9cb6c32f14af48d2391645027750d82bd373503f5e42d53746f14cc0ef3e820e"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 108867,
-          "sha256": "sha256:2ec332ba5b55344790c4b7623d3294f292ddb2bea493eb4a335b8364d9a91fff"
+          "bytes": 108912,
+          "sha256": "sha256:d45577dde751542954a8757ca47cab55752caa9779cafd67eef8e615b7620ad3"
         }
       ]
     },

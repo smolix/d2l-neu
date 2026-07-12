@@ -3,7 +3,7 @@
   "source": "chapter_preliminaries/linear-algebra.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -219,7 +219,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[0.        , 0.33333334, 0.6666667 ],\n       [0.25      , 0.33333334, 0.41666666]], dtype=float32)"
+          "text": "Array([[0.        , 0.33333334, 0.6666667 ],\n       [0.25      , 0.33333334, 0.4166667 ]], dtype=float32)"
         }
       ]
     },

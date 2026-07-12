@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/multiple-gpus.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:5e0502f24254dcbefdf05f93aa91f7a653b06e0f63df2255bf0c8b7730830a2d",
     "max_inline_bytes": 0
   },
@@ -45,6 +45,11 @@
         },
         {
           "type": "stream",
+          "name": "stderr",
+          "text": "W0712 04:34:18.435837   19938 allocator_memory_registration.cc:63] Failed to register GPU memory with clique devices=2:[0,1]; local_participants=2; communication_id=0; incarnations=[]: INTERNAL: NCCL operation ncclCommRegister(comm, addr.opaque(), addr.size(), &handle) failed: unhandled cuda error (run with NCCL_DEBUG=INFO for details). Last NCCL warning(error) log entry (may be unrelated) 'Cuda failure 500 'named symbol not found''.\n"
+        },
+        {
+          "type": "stream",
           "name": "stdout",
           "text": "after allreduce:\n [[3. 3.]] \n [[3. 3.]]\n"
         }
@@ -57,12 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "input : [[ 0  1  2  3  4]\n [ 5  6  7  8  9]\n [10 11 12 13 14]\n [15 16 17 18 19]]\nload into [CudaDevice(id=0), CudaDevice(id=1)]\noutput: "
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "[[[ 0  1  2  3  4]\n  [ 5  6  7  8  9]]\n\n [[10 11 12 13 14]\n  [15 16 17 18 19]]]\n"
+          "text": "input : [[ 0  1  2  3  4]\n [ 5  6  7  8  9]\n [10 11 12 13 14]\n [15 16 17 18 19]]\nload into [CudaDevice(id=0), CudaDevice(id=1)]\noutput: [[[ 0  1  2  3  4]\n  [ 5  6  7  8  9]]\n\n [[10 11 12 13 14]\n  [15 16 17 18 19]]]\n"
         }
       ]
     },
@@ -88,14 +88,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.81, 0.9 sec/epoch on [CudaDevice(id=0)]\n"
+          "text": "test acc: 0.84, 0.7 sec/epoch on [CudaDevice(id=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
           "bytes": 16964,
-          "sha256": "sha256:a217bb74c426ad303b8a1adf90e69a7219738330e545827148055a99e6375c7f"
+          "sha256": "sha256:ebc1c2929693dff70f749c953417346b1b75885046963d6cfd06dca0406c51eb"
         }
       ]
     },
@@ -106,14 +106,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.83, 1.2 sec/epoch on [CudaDevice(id=0), CudaDevice(id=1)]\n"
+          "text": "test acc: 0.85, 1.1 sec/epoch on [CudaDevice(id=0), CudaDevice(id=1)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
-          "bytes": 16958,
-          "sha256": "sha256:3e71bad5a3c2bd383a02cd10b63c113c0712c111d6f93790c02cb4b80523e807"
+          "bytes": 16964,
+          "sha256": "sha256:d425abeb4374d1f68adf595ae69a813f5d1bb96dbf71bb8623efbc4a250e0ad1"
         }
       ]
     }

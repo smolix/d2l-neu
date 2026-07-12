@@ -3,8 +3,8 @@
   "source": "chapter_multilayer-perceptrons/kaggle-house-price.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:4e7e66d62360111d29c579089d71fa40730cf3b64fd27b801ed370e99e87a9cd",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:9fcedf159b4b38a8c554f7d2ad120d4f8b06d202c500631e6b93f8e6edc5e9c7",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,30 +66,30 @@
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-2": {
-      "code_fingerprint": "sha256:372dc3d8666fdbda14630692e12aae72f56bdb83a9f9ff9c4afa1e0843cec919",
+      "code_fingerprint": "sha256:17a1ab41af77da5c5d640d462294b97fa9bebe267f3989f7cd4e953c5658ae72",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-model-selection-linear": {
-      "code_fingerprint": "sha256:887ce8bd66af8a2bf0aa240ed8b128dd46de85951dfe1209f003a58a0cb93eb3",
+      "code_fingerprint": "sha256:a8d8470f8b6ea4ca04b1a1d391a8a4dc62e8a85f8c04eb85c0aef1e56379fb3d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "average validation log mse = 0.03505115929991007\n"
+          "text": "average validation log mse = 0.03759694065898657\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-linear-1.svg",
-          "bytes": 31226,
-          "sha256": "sha256:88eaf12b85516474e839a333e491ddbba7f9ebbcd5788821b3e1041a3476eb30"
+          "bytes": 30986,
+          "sha256": "sha256:70cda9f102b5f44b51a2194fe7486cbf2fc0f32db7e93dfef6b415215cd0138d"
         }
       ]
     },
     "kaggle-house-price-submitting-predictions-on-kaggle": {
-      "code_fingerprint": "sha256:d2c8b5ece9977043b951c444cf86f0aa45c6c44b9863a5fd2c55c85974d1bddd",
+      "code_fingerprint": "sha256:5729b81323f9d985a70747b66aafa16a844cf300783a6460eb604c2ddd2da673",
       "kind": "text",
       "outputs": []
     }

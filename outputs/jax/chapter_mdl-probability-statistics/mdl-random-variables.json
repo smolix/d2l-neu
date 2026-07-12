@@ -3,7 +3,7 @@
   "source": "chapter_mdl-probability-statistics/mdl-random-variables.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -59,7 +59,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
           "bytes": 27212,
-          "sha256": "sha256:4bfc6d3c239d43b9055849a68c2693154e0e1da042ca684717fe51e605688e69"
+          "sha256": "sha256:7f0a39ba728f798e3788759bb71f5c280f4db6e9768fdd6513411fef9e922e01"
         }
       ]
     }

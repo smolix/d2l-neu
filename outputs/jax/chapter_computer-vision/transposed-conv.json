@@ -3,23 +3,23 @@
   "source": "chapter_computer-vision/transposed-conv.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:4732c37083649ac6ce48f627c2881a720816d713309102f37f660ab81c95bfc3",
     "max_inline_bytes": 0
   },
   "cells": {
     "transposed-conv-transposed-convolution": {
-      "code_fingerprint": "sha256:870bf7c6c1e91511374f6607db2d33648c6487cd8f27f06fdb079d8f2dd3fc97",
+      "code_fingerprint": "sha256:be758c54f04d67e2ba45661da262aa2c77e0599def5a226b6a910ccd47f96c3a",
       "kind": "text",
       "outputs": []
     },
     "transposed-conv-basic-operation-1": {
-      "code_fingerprint": "sha256:f2dbc411b5f5a1f94fa79c306c159bd32c4c28b75d2df28484d402f113398776",
+      "code_fingerprint": "sha256:11da90553d4405dcba10c31228423ab49ecf56259c2ddaf61232e793535c83b7",
       "kind": "text",
       "outputs": []
     },
     "transposed-conv-basic-operation-2": {
-      "code_fingerprint": "sha256:f7aafa2950fa693c6aff56b09a0232da8159e3b363b1be1c4214cd940159dd3d",
+      "code_fingerprint": "sha256:59aa39b66e22311c4372832438108405b620ac4db518516465aff0081f48277c",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "transposed-conv-basic-operation-3": {
-      "code_fingerprint": "sha256:bb04f528d446eeb200d6999e9ddbe86c75ea8b3ebf9da15faa9d9d3dfde1b249",
+      "code_fingerprint": "sha256:b87cc1dfdee63afc883eb863b5f93f06a02956887978266df05c65317da7ac95",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-1": {
-      "code_fingerprint": "sha256:dfb732c6d845479b4ce4b8d85487edebf72d42a80428a63eeaad5aa6d1071a60",
+      "code_fingerprint": "sha256:09310810db8e50710c86451b445ff1cf0de2ade30b90adfa96c6e7dbfcb427f5",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-2": {
-      "code_fingerprint": "sha256:d6f189d3e298865e32254db3fe716661253e97e0e9118b1d35550e4d08cc12e4",
+      "code_fingerprint": "sha256:011e5b627d355ff359af7c9df6430ad2cb505ea3541f15573f29564181ed9940",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "transposed-conv-padding-strides-and-multiple-channels-3": {
-      "code_fingerprint": "sha256:7bb5a7d2b04c0f3d5d2118f07219251a40af74c4e1a8c69d25a2afe33e8d1134",
+      "code_fingerprint": "sha256:63ec1d40fd2443cf52b52d74bc155714280c3d2d833575d219cd242bb885131a",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-1": {
-      "code_fingerprint": "sha256:11a3142dfbf3879d9ffdcc9dbf5056f4c8940ccaca1e19459ae3907c0af252ec",
+      "code_fingerprint": "sha256:66003d0fb59a07660ee28bbcd3ab4babac8f49301fd571c53065d53675ab19d9",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-2": {
-      "code_fingerprint": "sha256:093ed9c7b7eb5333702dd9fd472fdc2f63c4884d0189a38a5c4f709a9ec819f9",
+      "code_fingerprint": "sha256:dcabe5a16aff8b5daedfa4d29abf314ae71d817bc695642c4c0475e6ca004686",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +89,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-3": {
-      "code_fingerprint": "sha256:00034b4e891c598e85e58426a6a06f61b92ecb54f2e2ec231dcdff6697fb9379",
+      "code_fingerprint": "sha256:98ce308bf9420342425eb0593ec19efb42bc35500fce2612ffdefc3012fa6a88",
       "kind": "text",
       "outputs": [
         {
@@ -99,7 +99,7 @@
       ]
     },
     "transposed-conv-connection-to-matrix-transposition-4": {
-      "code_fingerprint": "sha256:19b9e78b25231325f5b4a50175d0d199f5e9eaf57b599a7bdd3b418ea23530ae",
+      "code_fingerprint": "sha256:bcea54d9ce0f098e163310fce62d19bb0b06d00fde919e358143019d1eb541fd",
       "kind": "text",
       "outputs": [
         {

@@ -3,7 +3,7 @@
   "source": "chapter_mdl-optimization/mdl-gradient-based-optimization.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -104,7 +104,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
           "bytes": 100456,
-          "sha256": "sha256:6dddf36e442dc0b66e489d289a8141e010f64192451e6a4013bef4281ff4e00b"
+          "sha256": "sha256:72d4ed14279a6b75e5ea070b1f36ae2878a96049e075ec8e5a0257307fef510a"
         }
       ]
     },

@@ -3,7 +3,7 @@
   "source": "chapter_mdl-dynamics/mdl-sdes.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
     "max_inline_bytes": 0
   },
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-brownian-paths-1.svg",
           "bytes": 105300,
-          "sha256": "sha256:66e5f3f407f863e69cdee0e443cf6577ec0d87ee1cc5f168ee49f55738536700"
+          "sha256": "sha256:bbf682b42f5b7306c01001aea02dc869b2b417199e07fae113f0b61995eb4770"
         }
       ]
     },
@@ -67,7 +67,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ito-correction-1.svg",
           "bytes": 84296,
-          "sha256": "sha256:b04680098780b791e2dfe2eaa7d8e038d02080a0589ee91c7b6b00e370d66907"
+          "sha256": "sha256:7fc4c4995459afa1c008d773d78c94874fb8d178cc40c759bb187f25d6b2b838"
         }
       ]
     },
@@ -96,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-em-strong-order-1.svg",
           "bytes": 35310,
-          "sha256": "sha256:9830654e10875a13de7003d6c02512b3c18d54b7a0ce3e5f4cf6d1bf11cce9d8"
+          "sha256": "sha256:5f6c8611ff022ce00c1c710dea967a5301c604599664c34bc01861d7da4aa051"
         }
       ]
     },
@@ -125,7 +125,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ou-cloud-1.svg",
           "bytes": 121863,
-          "sha256": "sha256:0c28a01f6f1bd23a60de2c7a096b1becfc770ec41f4acb0caae1736ee95869f3"
+          "sha256": "sha256:a16484d7273df1581ed5921046890543df87ee67fe7fff8dafcac2bb4d257a14"
         }
       ]
     },
@@ -143,7 +143,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ou-stationary-1.svg",
           "bytes": 36032,
-          "sha256": "sha256:9a1200e25bcc201a2549251be66a087a367e26cbc9f447e089b8c70cddfcc24c"
+          "sha256": "sha256:b7ff47c8c3e3a936cdbd1c47ac7b7e7dafe7e166240633a6b6f2c0c5838f90eb"
         }
       ]
     },

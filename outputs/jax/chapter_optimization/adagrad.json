@@ -3,7 +3,7 @@
   "source": "chapter_optimization/adagrad.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:41beadcc1492534c156901ecc8338e2e1f0314bfdced1f4c97351b0b90e99658",
     "max_inline_bytes": 0
   },
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "adagrad/adagrad-the-algorithm-2-1.svg",
           "bytes": 23686,
-          "sha256": "sha256:0624c3af220a39e67d3b76951bf1101714894c66acb5b14116f5473a405276ea"
+          "sha256": "sha256:cb920c2a109be8ed421d46273435566b22a14ad5134b69bbc85b94160e42e8fc"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "adagrad/adagrad-the-algorithm-3-1.svg",
           "bytes": 23700,
-          "sha256": "sha256:ff0f2cb38b983bcd520c1db2319a1c88900d40f59efef6250f5684ef56dfdd0e"
+          "sha256": "sha256:264b53ba5fd3ff955b355e58740311ab1d40b727b30823859d6cd9e47ad0de69"
         }
       ]
     },
@@ -61,14 +61,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 1.794 sec/epoch\n"
+          "text": "loss: 0.243, 1.450 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adagrad/adagrad-implementation-from-scratch-2-1.svg",
-          "bytes": 18780,
-          "sha256": "sha256:96cc9b501b382072297a7356e9efad673fc358df32e8acd863f7580973235305"
+          "bytes": 18783,
+          "sha256": "sha256:5a09ce0b28eb24f6f1e145121c6fe771cecb891d8015c218a090700701be448a"
         }
       ]
     },
@@ -79,14 +79,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.705 sec/epoch\n"
+          "text": "loss: 0.242, 0.366 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adagrad/adagrad-concise-implementation-1.svg",
-          "bytes": 18779,
-          "sha256": "sha256:0757f0291b24f7d11a8e132104df0d24de959b963d41bbc6d1fbfc90d8da4aec"
+          "bytes": 18773,
+          "sha256": "sha256:17a5fd6a6615f5a66e90495d6de1f2e778dc3feae5dfebac6850861648588339"
         }
       ]
     }

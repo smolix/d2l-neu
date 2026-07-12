@@ -3,7 +3,7 @@
   "source": "chapter_mdl-probability-statistics/mdl-maximum-likelihood.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
-          "bytes": 20952,
-          "sha256": "sha256:e899af8d5c2a6eb3fdf5cc9f59e2123f8b690ce3d1b5572873e6393986283ccd"
+          "bytes": 20953,
+          "sha256": "sha256:07cd3b294fccc6f147f5856c81681723350d2ead26acfa8e0205538d55d91fe9"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
           "bytes": 30558,
-          "sha256": "sha256:5b45c3caa09b3ad55eab8cf991d17299e4d075f45c7203a2de1a5376c75add4d"
+          "sha256": "sha256:07d9a8b28fb2e9fc31a47e174cf76be5b04e67bb27edc1ea2255ba586f48526b"
         }
       ]
     },

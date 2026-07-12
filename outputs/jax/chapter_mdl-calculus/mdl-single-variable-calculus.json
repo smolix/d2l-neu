@@ -3,7 +3,7 @@
   "source": "chapter_mdl-calculus/mdl-single-variable-calculus.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -43,8 +43,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
-          "bytes": 15837,
-          "sha256": "sha256:88628c2f7aa198a4902775f24863d02129264fc79f6fd2760b29963d4c6802e3"
+          "bytes": 15836,
+          "sha256": "sha256:88ef766894986eb8c5d9fffc4b01e1ca080fbd5390f37e2d14ecb4346c707e71"
         }
       ]
     },
@@ -62,7 +62,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25211,
-          "sha256": "sha256:17d8d04aaec54c693c1616a4b2534f7353e5dac448cb2dd080b271442444c11b"
+          "sha256": "sha256:c5e045344a21424262ddbd3f0e60bc37cb630fcfcc9966b8b2232b25cd93607b"
         }
       ]
     },
@@ -96,8 +96,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
-          "bytes": 28558,
-          "sha256": "sha256:f42b3c729a1bed9f78acf039e51a11e67cd920a237eb795ccde5ea6a12194846"
+          "bytes": 28562,
+          "sha256": "sha256:7c82649ac4de00c308a9b3e87b23738ca46d9e72b8dea3a79c6e07e1ca8c2429"
         }
       ]
     },

@@ -3,7 +3,7 @@
   "source": "chapter_attention-mechanisms-and-transformers/queries-keys-values.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:f5d7090a5b7d03e006d515e58a4c2391432249930c336617e4ae7426e0d892ad",
     "max_inline_bytes": 0
   },
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "queries-keys-values/queries-keys-values-visualization-2-1.svg",
           "bytes": 18256,
-          "sha256": "sha256:0140977571d2f244b82d9e3e7b9acb290349ba852215dc8e49dc19907c80474e"
+          "sha256": "sha256:8e77ba59810871d6b63e47aa12f5655f435c57b7aa0a82a09c805196a4bea65b"
         }
       ]
     }

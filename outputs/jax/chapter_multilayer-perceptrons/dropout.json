@@ -3,75 +3,65 @@
   "source": "chapter_multilayer-perceptrons/dropout.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:35e4c1b2eed0071cd094ae43af95c4f0573cea51e23ea7aab52db30abacf0ccf",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:00d076d461c04c580d372d8f20d704441d2948dd63b0fcdd1efdab3d6483049f",
     "max_inline_bytes": 0
   },
   "cells": {
     "dropout": {
-      "code_fingerprint": "sha256:3e06b9a63c5deb0197c1569d1b7c5ff04065d33474dd51b0545fe0af2ba47cad",
+      "code_fingerprint": "sha256:f58d5676455baede0fac1ad44463f7d43d4d544b1e03b0dab31cdbf5acef33e6",
       "kind": "text",
       "outputs": []
     },
     "dropout-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:429d4129d1d06ca8e450299e2c3ab5d287b5e85245a8cc42f7d460187703125c",
+      "code_fingerprint": "sha256:cac5a830d95cec3cdd6847bf84133dda663ad1d24ba76ea5d60d6cd20112ee2a",
       "kind": "text",
       "outputs": []
     },
     "dropout-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:e2ec6732be5263e66ad1a422fced3beb2e8f5c3f6a1699b459fde73201aef42b",
+      "code_fingerprint": "sha256:1b60a5ef8056e5d30d5a1db3a148cccae50d1257d8fa980f3f2a99f37a583994",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "dropout_p = 0.5: [[ 0.  0.  4.  0.  0.  0. 12. 14.]\n [ 0.  0. 20. 22. 24. 26.  0. 30.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  0.  4.  0.  0.  0. 12. 14.]\n [ 0.  0. 20. 22. 24. 26.  0. 30.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
         }
       ]
     },
     "dropout-defining-the-model": {
-      "code_fingerprint": "sha256:cf4ecaaf4f0280b7178b403120d4634803c3400fe1b6342a1d72f792de97d87b",
+      "code_fingerprint": "sha256:dbd86a45dd127458b079c1b4652a4015b1c3369d865ff6ae2eab351a0f934c5a",
       "kind": "text",
       "outputs": []
     },
     "dropout-training": {
-      "code_fingerprint": "sha256:3dfde1135235c9a506bcbb91e7fa7c3d620dc00554e168d466e08dcb10aa61d2",
+      "code_fingerprint": "sha256:b0f76a31a152d967f26c4937a1b6febeafb68617ac36f5dbb1990caccff03139",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 24347,
-          "sha256": "sha256:489dc48ee7ccb09f5fe0ea87e5c73b176d1da265a05233dd40b1789d530407d2"
+          "bytes": 24334,
+          "sha256": "sha256:a77a0f8a6a77d2cc3722592584dd63ebbc0faba1a1ea7f6a62a37cc87362d758"
         }
       ]
     },
     "dropout-concise-implementation-1": {
-      "code_fingerprint": "sha256:6e3661eacf2d2490a9d8061f978e4e5bedfe45d56ff305975ccf100963b5dc2b",
-      "kind": "text",
-      "outputs": []
-    },
-    "dropout-concise-implementation-2": {
-      "code_fingerprint": "sha256:bf2e9c72774e4a4864ac25a27d63dd3e55d651a3b7aa1d0b1838fadefc4c34e1",
+      "code_fingerprint": "sha256:9040099dff0deee7c20fa94e07a5fc552e85c11a08dc268e690ae412de2aafbd",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:ce99a7a4c871e999c7069388e80f957af85bc14c5071c67a6f30e1fafad2a934",
+      "code_fingerprint": "sha256:5244a970661e670e654f02dd7db1a2e0e0ad79a5d7462c1e0a65b4da46a8e642",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 24341,
-          "sha256": "sha256:aa65dff4fc408cc22499b99e904fa9c67b70b900aedc0afce08803ea18b20292"
+          "bytes": 24333,
+          "sha256": "sha256:641d49cbdf13c340e4544bbc8c16d3f812bf2a5b7be81502a60a5bc873f2fe29"
         }
       ]
     }

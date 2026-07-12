@@ -3,7 +3,7 @@
   "source": "chapter_optimization/optimization-intro.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
     "max_inline_bytes": 0
   },
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-goal-of-optimization-3-1.svg",
           "bytes": 30007,
-          "sha256": "sha256:c07a1ad8ae01b8feefd600ca05551ce00b39b140ade625251b5c8b67932687ab"
+          "sha256": "sha256:59328821650e530e66ded16b7245591f1c960acc054c39889ab5720d0e13d29f"
         }
       ]
     },
@@ -40,7 +40,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-local-minima-1.svg",
           "bytes": 19689,
-          "sha256": "sha256:df4c7b7fb209e3ffb073678322b7398535aa745e6d43f8cf76c927912cd2a42f"
+          "sha256": "sha256:12a761bc69f7fdbf26e052e18a8ce42ead79bb72632aefaea464eb676ef51d03"
         }
       ]
     },
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-saddle-points-1-1.svg",
           "bytes": 17872,
-          "sha256": "sha256:fa60b2a4a783b7a188a0e0162fca9964c957040500cd7c39562a38b5774f17ac"
+          "sha256": "sha256:4fbf2d2d53c32bb546991f456d4d19acadbd102d99d92496b73ae83c3c86388e"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-saddle-points-2-1.svg",
           "bytes": 63302,
-          "sha256": "sha256:265984a4eba4d90e2ce9c1f8b434bdd2f25a5409f9523cde17d1aab9a5daf030"
+          "sha256": "sha256:999f6945083831bfd44aef0a5f8d6458301ce43ad72b4d73e00b89f6c0648ced"
         }
       ]
     },
@@ -79,7 +79,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-vanishing-gradients-1.svg",
           "bytes": 20456,
-          "sha256": "sha256:5ffca7041fd9ea607f42cb201658dd9c4c6ea0f27b293eb167cc3f865fe5e225"
+          "sha256": "sha256:ff410f39ea3ba95bbf9fd8dae39e209cb875ae326b30072266ca19e208efe2cd"
         }
       ]
     }

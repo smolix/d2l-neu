@@ -3,28 +3,28 @@
   "source": "chapter_recurrent-modern/encoder-decoder.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:955dbeb2102f62b0eee0a410a973f898b9126437312eaa0bd5b922f7953162ae",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:83a627e18f6601a1e4bed06cb3fad357227196170e4a82fdfd39fbd346c0ee1b",
     "max_inline_bytes": 0
   },
   "cells": {
     "encoder-decoder-the-encoder-decoder-architecture": {
-      "code_fingerprint": "sha256:9934b4b846713858c4558f5dd6524cbbc9399030ef3d716c69674226700fe1de",
+      "code_fingerprint": "sha256:a08465d5beed8129d92907fb7c8a54f0a5491cfa44ba692f0d01a873aefc1e4a",
       "kind": "text",
       "outputs": []
     },
     "encoder-decoder-encoder": {
-      "code_fingerprint": "sha256:1586b022a0209a2de65d60fdf3e0db4edb2254c479d733d22ffaec76f8be9ac3",
+      "code_fingerprint": "sha256:1c34539228c852707ee86db8d67a542b26b34e8688d8d9fca9cca12725f2544e",
       "kind": "text",
       "outputs": []
     },
     "encoder-decoder-decoder": {
-      "code_fingerprint": "sha256:9e5042e874ce6b047b568ffd3897593175cdf03778a2ba4a56dc0912f90d1b84",
+      "code_fingerprint": "sha256:28cc8da040a392900ddf138c5d6f1bb6d58a3a99f99fcd96f950e42c2755cea7",
       "kind": "text",
       "outputs": []
     },
     "encoder-decoder-putting-the-encoder-and-decoder-together": {
-      "code_fingerprint": "sha256:00087f96690b5094e8e9e66f6dfbb857b13bee4612fcfd84e3f91266bb633ff5",
+      "code_fingerprint": "sha256:42c74b5c1b671dfa1a9a0e6c9ca3c154ab3d39704e9fd0951125f1bef72d455e",
       "kind": "text",
       "outputs": []
     }

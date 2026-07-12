@@ -3,52 +3,52 @@
   "source": "chapter_recurrent-neural-networks/rnn-concise.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:2e3b088a8ced48fabfe2e0d95f336b9501bdd87183e1ac0e57ed72d18df5d6df",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:af3354044f46abeee9224ac5fbf8da791e385c98fec89cbab1ccccb246811e7b",
     "max_inline_bytes": 0
   },
   "cells": {
     "rnn-concise-concise-implementation-of-recurrent-neural-networks": {
-      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "code_fingerprint": "sha256:e93d9ef204d1a90f9b1faf49d1dd62465808d04e0d2c4a2d12b2d85774f163d1",
       "kind": "text",
       "outputs": []
     },
     "rnn-concise-defining-the-model-1": {
-      "code_fingerprint": "sha256:fc12a838e18dc86a65671ea88eaef61c53ef90abf3ab2fcaa2ce341967e06ae0",
+      "code_fingerprint": "sha256:c1acfd8032662d8319edb26198659a055f9f4a55ba4f878385d0923fac1bb870",
       "kind": "text",
       "outputs": []
     },
     "rnn-concise-defining-the-model-2": {
-      "code_fingerprint": "sha256:d8fac13e1276f20fa992f8860717bec473bacc9adc64ce55de41e8e7492e7ddb",
+      "code_fingerprint": "sha256:a2c11b7a208877e2d1cc143ed5998abe17a05304e4b1dda15e6b534fff7330d5",
       "kind": "text",
       "outputs": []
     },
     "rnn-concise-training-and-predicting-1": {
-      "code_fingerprint": "sha256:d673df89567815c97e1724097e3efb21afd7a7fce6adac4c674f81141651fae2",
+      "code_fingerprint": "sha256:b30a126dd909468bbdb2243538f30f5ef6c4572902898a0625a3108354d2da38",
       "kind": "text",
       "outputs": []
     },
     "rnn-concise-training-and-predicting-2": {
-      "code_fingerprint": "sha256:6667afaf1a4a5b9a2fb1905381ea692dfabfa0964f3eff661a869acd61b677ca",
+      "code_fingerprint": "sha256:17252223e754a584b9a101bbbb07f6e50cc10b8295e9f9c73c4801071390f395",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
-          "bytes": 24422,
-          "sha256": "sha256:b8ef702837e40be85754926c10fbbd7a209dd9606475e75dee76d0133aa85073"
+          "bytes": 14167,
+          "sha256": "sha256:5c8bb7506b325a61c9e9962dd004c69fd1b364ec96abdbb685b6c1f7debdc85c"
         }
       ]
     },
     "rnn-concise-training-and-predicting-3": {
-      "code_fingerprint": "sha256:cb019e3a9a63e39ae4ed65465e8c8597cc7c8a861c30125b29e6df1967c96405",
+      "code_fingerprint": "sha256:f7e71fc0523e52b1aefca25706a3b3aa8c4458011616e6cb12ddbf51e20b5848",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.3, 'time traveller at all the time tra'\n"
+          "text": "perplexity 7.3, 'time traveller a dimension and the'\n"
         }
       ]
     }

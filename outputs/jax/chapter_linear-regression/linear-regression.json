@@ -3,7 +3,7 @@
   "source": "chapter_linear-regression/linear-regression.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1.00149 sec\n"
+          "text": "0.71533 sec\n"
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.05435 sec\n"
+          "text": "0.06655 sec\n"
         }
       ]
     },
@@ -65,7 +65,7 @@
           "mime": "image/svg+xml",
           "asset": "linear-regression/linear-regression-the-normal-distribution-and-squared-loss-2-1.svg",
           "bytes": 28697,
-          "sha256": "sha256:5e831712f0b677936a874b4a6dacf016b4589224090a0157bda6db2678f7fd70"
+          "sha256": "sha256:e77fd67f542d06a5074611fa16c9440a7722906c6e7a27165985e39d7bbd038a"
         }
       ]
     }

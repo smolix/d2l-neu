@@ -3,64 +3,64 @@
   "source": "chapter_recurrent-modern/lstm.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:7a8d52fe203a0fd2718fc7c2b87e018ec9244286a54dd11dd43eba8b053392d3",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:0b9652fed2526a9d57e4c999f12ece62f4c57d2c1d0d23cddaa5cc723e6314db",
     "max_inline_bytes": 0
   },
   "cells": {
     "lstm-long-short-term-memory-lstm": {
-      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "code_fingerprint": "sha256:f58d5676455baede0fac1ad44463f7d43d4d544b1e03b0dab31cdbf5acef33e6",
       "kind": "text",
       "outputs": []
     },
     "lstm-initializing-model-parameters-1": {
-      "code_fingerprint": "sha256:8a71c2fe031a6225fc7390abbcf74b968e742172a76e693d1091d4a75151b0bd",
+      "code_fingerprint": "sha256:6210f6eaff7a641f83754c255adeccc4252033fdccdf38e730c0ff67c14d60c8",
       "kind": "text",
       "outputs": []
     },
     "lstm-initializing-model-parameters-2": {
-      "code_fingerprint": "sha256:dcb745ae3ecd8b68a2439bde52ad1af68fa032ba1ed5f125af8091fc9462a9ba",
+      "code_fingerprint": "sha256:c962a97b730f161d9289d22ac9f64826695298dc62d22783c418d70a8c713de5",
       "kind": "text",
       "outputs": []
     },
     "lstm-training-and-prediction": {
-      "code_fingerprint": "sha256:70a67f53f0cc5044f25db03b49d80d85b04635926e8b97e52c5a30289082c7ee",
+      "code_fingerprint": "sha256:1bf6a7d9755d20fa6317ebee45b8a9a1b065fc3fec657ee5d05eaa1b024668dc",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 20059,
-          "sha256": "sha256:b2e599a5158e29990dea4617e969ab98347b22419952f77a23491b8fc9d262b2"
+          "bytes": 15325,
+          "sha256": "sha256:2f6c7113657ead1779ddeea22de9a983af7e47170a2f3aa8f88ceca739a8b803"
         }
       ]
     },
     "lstm-concise-implementation-1": {
-      "code_fingerprint": "sha256:bc9b63ddc2ebde4263aea2cd2595676b62197efe8ab5f053171eb4636e1c490d",
+      "code_fingerprint": "sha256:2ed0c810ed7aa4c4b2314d34f35c45e91297226dfc28d394d6dfdc80584f6321",
       "kind": "text",
       "outputs": []
     },
     "lstm-concise-implementation-2": {
-      "code_fingerprint": "sha256:ea7d8fc40b7f2fdf8318b1db54938e2a3eadc076e0e8aeec64e08ad5baf03c92",
+      "code_fingerprint": "sha256:515b0445ee165351b52db8d08d02084046be1c7b502ee7db3a83c66b3801cc0c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 20440,
-          "sha256": "sha256:19004d4048ad6d475fbeb657cd47d3cf0a53ed14238471a6e379e8ac4a334739"
+          "bytes": 15325,
+          "sha256": "sha256:80fcefe39a0a722c5d4df5fc06a6418623a83cc96c614d7e8710032788cbffea"
         }
       ]
     },
     "lstm-concise-implementation-3": {
-      "code_fingerprint": "sha256:11c86036036d2996cada20ef1d520c8bfb645518bae90880bbe6f9377feea3e6",
+      "code_fingerprint": "sha256:712ca26725d896c8143cb0cae682be5330fde593017011dfa99073bb56c0838f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has a meally the the th'"
+          "text": "'it has in the the the the '"
         }
       ]
     }

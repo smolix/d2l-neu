@@ -3,18 +3,18 @@
   "source": "chapter_builders-guide/parameters-state-memory.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "parameters-state-memory-parameters-state-and-memory": {
-      "code_fingerprint": "sha256:0106ad28ecdb6947ddebe9f3f33bf9ec6a1ad176f22bae21cc4cd393073f0b3a",
+      "code_fingerprint": "sha256:ce52e7505ac536d5ee33596c32de606d3adcf648adc17e4e44c391a59aab5b1d",
       "kind": "text",
       "outputs": []
     },
     "parameters-state-memory-accessing-parameters-1": {
-      "code_fingerprint": "sha256:0d790d79dd2da357186666c0e11b03edad39aa10ae3bf7f444a85db622c145f6",
+      "code_fingerprint": "sha256:aa05d609c0ee72bfab7ce18297e77bf9fb11261e1bc25b60d87226c68742d7c1",
       "kind": "text",
       "outputs": [
         {
@@ -24,17 +24,17 @@
       ]
     },
     "parameters-state-memory-accessing-parameters-2": {
-      "code_fingerprint": "sha256:508bc5a0ad0b397b57839d17b626a06f8b35d9059f5d49d01d0f965e27bd7450",
+      "code_fingerprint": "sha256:41943ec7fd447aa49f49e1965f40f7148a35ef18c1fd14a51ea83d5c796f3e05",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(jaxlib._jax.ArrayImpl, (10,))"
+          "text": "(flax.nnx.variablelib.Param, (10,))"
         }
       ]
     },
     "parameters-state-memory-accessing-parameters-3": {
-      "code_fingerprint": "sha256:3681d426c7d2ce56d3c205057e9be689ce9c26e32303aa9fdc56ce35f699c256",
+      "code_fingerprint": "sha256:ed9159f9951144edfb50943ba8d0acf8db7f81d3beaf2e5f970307ff1304602f",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "parameters-state-memory-accessing-parameters-4": {
-      "code_fingerprint": "sha256:812902f9b15d1ded365d57c05ba72d3db62783673c8f5ac6b79fa41a2b90e804",
+      "code_fingerprint": "sha256:71c2679eb136ae81429fceb649fc5fbb6331c3ff4dfe695d99608ea16e447e0c",
       "kind": "text",
       "outputs": [
         {
@@ -54,47 +54,47 @@
       ]
     },
     "parameters-state-memory-accessing-parameters-5": {
-      "code_fingerprint": "sha256:7295c36fa223ef7fbd4ee9fc4e1199605b52b4e6e04c1d6de7daa5bd4721d481",
+      "code_fingerprint": "sha256:7aed0034671d67c0f2a7ea78e7ed28135031210b599714298efafadd760802cc",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[(\"['params']['layers_0']['bias']\", (64,)),\n (\"['params']['layers_0']['kernel']\", (20, 64)),\n (\"['params']['layers_1']['body']['layers_0']['bias']\", (64,)),\n (\"['params']['layers_1']['body']['layers_0']['kernel']\", (64, 64)),\n (\"['params']['layers_1']['body']['layers_2']['bias']\", (64,)),\n (\"['params']['layers_1']['body']['layers_2']['kernel']\", (64, 64)),\n (\"['params']['layers_2']['body']['layers_0']['bias']\", (64,)),\n (\"['params']['layers_2']['body']['layers_0']['kernel']\", (64, 64)),\n (\"['params']['layers_2']['body']['layers_2']['bias']\", (64,)),\n (\"['params']['layers_2']['body']['layers_2']['kernel']\", (64, 64)),\n (\"['params']['layers_3']['bias']\", (10,)),\n (\"['params']['layers_3']['kernel']\", (64, 10))]"
+          "text": "[(('layers', 0, 'bias'), (64,)),\n (('layers', 0, 'kernel'), (20, 64)),\n (('layers', 1, 'body', 'layers', 0, 'bias'), (64,)),\n (('layers', 1, 'body', 'layers', 0, 'kernel'), (64, 64)),\n (('layers', 1, 'body', 'layers', 2, 'bias'), (64,)),\n (('layers', 1, 'body', 'layers', 2, 'kernel'), (64, 64)),\n (('layers', 2, 'body', 'layers', 0, 'bias'), (64,)),\n (('layers', 2, 'body', 'layers', 0, 'kernel'), (64, 64)),\n (('layers', 2, 'body', 'layers', 2, 'bias'), (64,)),\n (('layers', 2, 'body', 'layers', 2, 'kernel'), (64, 64)),\n (('layers', 3, 'bias'), (10,)),\n (('layers', 3, 'kernel'), (64, 10))]"
         }
       ]
     },
     "parameters-state-memory-accessing-parameters-6": {
-      "code_fingerprint": "sha256:14203cd8351902c205cd4717f8100f20216945cddac1acdad5c4521c8150cc8c",
+      "code_fingerprint": "sha256:fba5a07ce4cec6a3e13b5fe90b752fbd81f5bf1a2114f470a75b74a30e5186a2",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "['params']"
+          "text": "['layers']"
         }
       ]
     },
     "parameters-state-memory-parameters-and-buffers-1": {
-      "code_fingerprint": "sha256:73a6f09ae0816c13cc2175d4a82d93ba17ac0ac11b1b160e17deb8498bd57bdb",
+      "code_fingerprint": "sha256:ce14f8732a72ea011b2788aa40c3617bcd9f2b5918b6691c9e15304758b02f04",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'constants': {'mean': (4,), 'std': (4,)},\n 'params': {'Dense_0': {'bias': (2,), 'kernel': (4, 2)}}}"
+          "text": "[(('mean',), (4,)),\n (('out', 'bias'), (2,)),\n (('out', 'kernel'), (4, 2)),\n (('std',), (4,))]"
         }
       ]
     },
     "parameters-state-memory-parameters-and-buffers-2": {
-      "code_fingerprint": "sha256:ca9d3468b462e0833f1aeb4d4639e48615e5afc145eba953f897524b60deca15",
+      "code_fingerprint": "sha256:203bbb413d3c21b75b512d4355156b43c2d034be9ba9d46df307b14b5bb46462",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'constants': ['mean', 'std'], 'params': ['Dense_0']}"
+          "text": "{'params': ['out'], 'buffers': ['mean', 'std']}"
         }
       ]
     },
     "parameters-state-memory-parameters-and-buffers-3": {
-      "code_fingerprint": "sha256:9489e8e80df68cc98d49c1fd8d04954d7a64304ae177f7e2fd0f28ae325b4cea",
+      "code_fingerprint": "sha256:b39dc51e8fa321c1fb3e7d63bb57f467dc8c2d6596b10d01e40de9bf6f323aa3",
       "kind": "text",
       "outputs": [
         {
@@ -104,7 +104,7 @@
       ]
     },
     "parameters-state-memory-parameters-and-buffers-4": {
-      "code_fingerprint": "sha256:3ce8a2a1e2323a59af980bd35e7ed068c19aad419aa411c6843f033ae62693b5",
+      "code_fingerprint": "sha256:4d56d25f6205a53dfc3e03535f87c8145155d80cffe2a31a2fe08d729df96b31",
       "kind": "text",
       "outputs": [
         {
@@ -114,7 +114,7 @@
       ]
     },
     "parameters-state-memory-counting-parameters-counting-bytes-1": {
-      "code_fingerprint": "sha256:2fa246a9b5986bc54f2b8664823a77b0f7a96c8ed974552c189ee476ccaa4578",
+      "code_fingerprint": "sha256:73e9dfd9016122a615ba023fd5d061c86cc2df129657c9ff8feb890665e2cf9c",
       "kind": "text",
       "outputs": [
         {
@@ -125,7 +125,7 @@
       ]
     },
     "parameters-state-memory-counting-parameters-counting-bytes-2": {
-      "code_fingerprint": "sha256:56e2864ee03ac87251cee8103145df2458438f7d032b3d79d7629ab5f524308a",
+      "code_fingerprint": "sha256:dd1fa0ea1b0c115106b7232338918356cd0c4695bee9d5e90204356d1935a3bb",
       "kind": "text",
       "outputs": [
         {
@@ -135,17 +135,17 @@
       ]
     },
     "parameters-state-memory-tied-parameters-1": {
-      "code_fingerprint": "sha256:549df97158c892be9d1a0d3bbe1c6ff8bf13ee4b07e0fed79ba7e90354018b8e",
+      "code_fingerprint": "sha256:ec436c0c52cc2991ad3fe5e263fefc1f1c1f7724d780a8696b00abf5edeb12ba",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'params': {'Dense_0': {'bias': (16,), 'kernel': (16, 16)},\n  'Embed_0': {'embedding': (100, 16)}}}"
+          "text": "[(('body', 'bias'), (16,)),\n (('body', 'kernel'), (16, 16)),\n (('emb', 'embedding'), (100, 16))]"
         }
       ]
     },
     "parameters-state-memory-tied-parameters-2": {
-      "code_fingerprint": "sha256:4d91263079ac07ffee5b796a7d92a59e2b90de35b62ed037b0b7fde2793232a2",
+      "code_fingerprint": "sha256:ba7074c5233f4b9ce85b43a34aa453ef1a5df0a31bfecdf96b5f772071201837",
       "kind": "text",
       "outputs": [
         {
@@ -155,7 +155,7 @@
       ]
     },
     "parameters-state-memory-tied-parameters-4": {
-      "code_fingerprint": "sha256:63ec1d1ee4ea2c2a552ebe66c9e74062e5dccb742a4fed2367cb39f60707470a",
+      "code_fingerprint": "sha256:d5e4f45e92333ac894fcec91fcdf3e9606616b20cf3ff10cd4de047e517ea22d",
       "kind": "text",
       "outputs": [
         {
@@ -165,7 +165,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-1": {
-      "code_fingerprint": "sha256:985b51d6e51f58324de3a67937d48191dc71a9f9099002f78b7269cd1ccf997a",
+      "code_fingerprint": "sha256:6111022db9c0ae10bbe7779a17bf900f87063777b6b64e1e572ad158a9981610",
       "kind": "text",
       "outputs": [
         {
@@ -175,17 +175,17 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-2": {
-      "code_fingerprint": "sha256:06c500430decc824711def068c512873dbc3c8faeb1964b1220316289663efd6",
+      "code_fingerprint": "sha256:af254aa0f660490c0187dee5e311c243520ec5b2da94e07ce2a4d84012166cf0",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'params': {'layers_0': {'bias': False, 'kernel': False},\n  'layers_1': {'body': {'layers_0': {'bias': False, 'kernel': False},\n    'layers_2': {'bias': False, 'kernel': False}}},\n  'layers_2': {'body': {'layers_0': {'bias': False, 'kernel': False},\n    'layers_2': {'bias': False, 'kernel': False}}},\n  'layers_3': {'bias': True, 'kernel': True}}}"
+          "text": "{'layers': {0: {'bias': False, 'kernel': False},\n  1: {'body': {'layers': {0: {'bias': False, 'kernel': False},\n     2: {'bias': False, 'kernel': False}}}},\n  2: {'body': {'layers': {0: {'bias': False, 'kernel': False},\n     2: {'bias': False, 'kernel': False}}}},\n  3: {'bias': True, 'kernel': True}}}"
         }
       ]
     },
     "parameters-state-memory-freezing-parameters-3": {
-      "code_fingerprint": "sha256:002f5f752607777d04cf7c7b188dd20f91d15e8a708bccce44597e606b69ddd9",
+      "code_fingerprint": "sha256:7ba715ce0c606691045854d8db2e42ecb0ee9004572b7bf581f2bbe57c5577b1",
       "kind": "text",
       "outputs": [
         {
@@ -195,7 +195,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-4": {
-      "code_fingerprint": "sha256:250e6e53c9dd7661b5158c82030fda5b4ee4b7bedc06405b8ab9901efaf0b685",
+      "code_fingerprint": "sha256:3353dc1d284d1a07fa4e98c901d66ec202f9e66c724c77a818701abe1a7cab24",
       "kind": "text",
       "outputs": [
         {
@@ -205,7 +205,7 @@
       ]
     },
     "parameters-state-memory-freezing-parameters-5": {
-      "code_fingerprint": "sha256:f27732dd6232bf58a548f824ca566b1dc7a8eaf538c57bba14174b4c6d442bf1",
+      "code_fingerprint": "sha256:41e33446fb627ebe3fb7aba28916ea36e8b80b45b66a9e1fa0f19c1884081908",
       "kind": "text",
       "outputs": [
         {

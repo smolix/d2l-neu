@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/async-computation.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:ea15296e4230a955869ca7cd9a939724a9d1eb63986a283c1d4cc073c85468ac",
     "max_inline_bytes": 0
   },
@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "numpy: 0.4992 sec\njax: 0.0172 sec\n"
+          "text": "numpy: 0.3757 sec\njax: 0.0169 sec\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Done: 0.0032 sec\n"
+          "text": "Done: 0.0026 sec\n"
         }
       ]
     },

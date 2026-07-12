@@ -3,7 +3,7 @@
   "source": "chapter_optimization/sgd.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:691fcf67ffe3b171688d3e07c546251bb9084a8f7a67a852af0e2439c9faa550",
     "max_inline_bytes": 0
   },
@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: 0.016812, x2: 0.026106\n"
+          "text": "epoch 50, x1: -0.073898, x2: 0.044372\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 23585,
-          "sha256": "sha256:2ffc7feadc57e1f3d0983ba2f47f7324bd24b91d941d866d634753f70858cce3"
+          "bytes": 23599,
+          "sha256": "sha256:15883fca1df5b3bba34995cad3cdec70b94b5e2891b8922252fb4ffdd834982b"
         }
       ]
     },
@@ -48,14 +48,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1000, x1: -0.821684, x2: -0.044436\n"
+          "text": "epoch 1000, x1: -0.931585, x2: -0.053880\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-1-1.svg",
-          "bytes": 123798,
-          "sha256": "sha256:2784ac3454ed70b208d357524d47f5f1d6a34aa1b4e65a942522453d7b669ec1"
+          "bytes": 123035,
+          "sha256": "sha256:0be20c6f3ed50054f608544478fb1a07cf711f753a3d072655140a65286cde66"
         }
       ]
     },
@@ -66,14 +66,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: -0.109339, x2: 0.068920\n"
+          "text": "epoch 50, x1: -0.077700, x2: 0.192614\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-2-1.svg",
-          "bytes": 23593,
-          "sha256": "sha256:2526c2f1a505593832e72c1689ae8510c03b493caa83e8c567368125f5996f3a"
+          "bytes": 23587,
+          "sha256": "sha256:b89ae53d178e6966a4db38e479141f1176081729fc19216d6a4c5cf10c5e108c"
         }
       ]
     }

@@ -3,18 +3,18 @@
   "source": "chapter_convolutional-neural-networks/padding-and-strides.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "padding-and-strides-padding-and-stride": {
-      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "code_fingerprint": "sha256:f58d5676455baede0fac1ad44463f7d43d4d544b1e03b0dab31cdbf5acef33e6",
       "kind": "text",
       "outputs": []
     },
     "padding-and-strides-padding-1": {
-      "code_fingerprint": "sha256:32e3918b15675f2ac13b5db56c4da78255dd57dfa152217ef3ab7521107ff96a",
+      "code_fingerprint": "sha256:3cc8e236d477f65373c492c4f15dbf6bf888f121819631df7d91ac573ca94e33",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "padding-and-strides-padding-2": {
-      "code_fingerprint": "sha256:2c6db45734ffd19235e1e15a5e06134a70eab4e1225b4abeefe58360a4df1f25",
+      "code_fingerprint": "sha256:9aeb3be4ce529ebe0c00b61110a96807094d8ef233fe7075d3411563a7b334b7",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +34,7 @@
       ]
     },
     "padding-and-strides-stride-1": {
-      "code_fingerprint": "sha256:5b82f4c0e0e9fe1e536ff5977c03008f8ef2fbf5c52f304aa5e7750bc38a0e29",
+      "code_fingerprint": "sha256:667ac8ecc4614f961d2d703e211443515eacf6a3923b35e841a336b03ef3d6f8",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "padding-and-strides-stride-2": {
-      "code_fingerprint": "sha256:639755555d83ab1e13fa64aee911d1bfd57fce8912c496be421e9013288a2dad",
+      "code_fingerprint": "sha256:abe3346fa9fac046c93a50a7378fb0764e6310c290a65524e268e86f1e599b01",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +54,7 @@
       ]
     },
     "padding-and-strides-dilation": {
-      "code_fingerprint": "sha256:2c0b0ebff6fc682ae2e0d8a32ab57079d5b3cc9ca90fc66afefebe39614d3773",
+      "code_fingerprint": "sha256:5af4030d406509e4c2f220f64aedaf20f97406a7e2f241bff508f145884d5694",
       "kind": "text",
       "outputs": [
         {

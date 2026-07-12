@@ -3,8 +3,8 @@
   "source": "chapter_linear-regression/weight-decay.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:9bb3ed6c7c0ed17260e198777cb5a6be3f89ce190938aea4633e0ed1ca9987a4",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:6f5cce4a0bdaa26d31f3f371ab576dcb3c88a80122f6a7767ec4c8ab25b9eea6",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,53 +24,53 @@
       "outputs": []
     },
     "weight-decay-defining-the-model-1": {
-      "code_fingerprint": "sha256:6c2a7ec6d97afd936ec93eb5585d852cc2809915f9208e41a870571a852962e2",
+      "code_fingerprint": "sha256:c59672f3405e717ecdea87d72019ffc7a50a4d8e8677a65bbf117a2f65c7c21a",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-defining-the-model-2": {
-      "code_fingerprint": "sha256:683ea25d7464c79edd1a06c56e4e6c57079148762baedb8b49804ad93033d50e",
+      "code_fingerprint": "sha256:574d9960acfb710cc6a88766037ff82cf00f7458c606a0133063aa50968b75cc",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-training-without-regularization": {
-      "code_fingerprint": "sha256:34d2cd41ed0071e544efe6d8ed08ca05c8d6fe527529369fccb54f68e9607879",
+      "code_fingerprint": "sha256:e78b3552117066b9e07cd04a543e7a7733ec3192a7e0fce720aca2802290274e",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.011310961097478867\n"
+          "text": "L2 norm of w: 0.010900448076426983\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 22721,
-          "sha256": "sha256:bef46b242a8b25e32c2bbf866085631a7b44b8624d1503777f1fa12310ea5e68"
+          "bytes": 21861,
+          "sha256": "sha256:d5d4eda53102a43e1ec62553b660d60ca9a943a4d6167b807d8c86c0dbbeb5fd"
         }
       ]
     },
     "weight-decay-using-weight-decay": {
-      "code_fingerprint": "sha256:5570b4f257fa9ce830f5131b7a0cae16df2ddf1154df27638f4b3d6b7f5e615b",
+      "code_fingerprint": "sha256:e3d559f0ef22059f7366abbddae2aa6ff2080dacc0d66440abbce5992ba36eac",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0007313899113796651\n"
+          "text": "L2 norm of w: 0.0007449396653100848\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 21242,
-          "sha256": "sha256:edcff3bb3691771d95aa64bf088bb076f4ece5b48c174d11575b4c4cf075334a"
+          "bytes": 21234,
+          "sha256": "sha256:ec0499dbd028386dab859fa738b8e92fafa8cd2e202d244f6b2ab372d62bf5cc"
         }
       ]
     },
     "weight-decay-why-shrinkage-helps-the-spectral-view": {
-      "code_fingerprint": "sha256:2eed41d4815ec92376606deac11e53a430992216d24f7c6dfbe318f158b760cc",
+      "code_fingerprint": "sha256:09b015eaaee130e70e7b3699bd447e78017595c1ebeeba8374185ce9ecd1f1fe",
       "kind": "text",
       "outputs": [
         {
@@ -81,25 +81,25 @@
       ]
     },
     "weight-decay-concise-implementation-1": {
-      "code_fingerprint": "sha256:d3dff8f3efdcbb21e1fbb642ad95a0129453b35868b2b163346bfb81d64a2d42",
+      "code_fingerprint": "sha256:0481f9d6518c06283c69f5d9260ed238d5c850e5208bc6d445a00659c66bd5eb",
       "kind": "text",
       "outputs": []
     },
     "weight-decay-concise-implementation-2": {
-      "code_fingerprint": "sha256:4d828775335fb46fa134446f775c8a7c7d7cd0dd09daa73e2c1202c34bc691a5",
+      "code_fingerprint": "sha256:16faa55df9bed4eab856543e40ba598ef508bd4668d90c7f7e96a1a75796ce0a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0009909220971167088\n"
+          "text": "L2 norm of w: 0.011407211422920227\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 23896,
-          "sha256": "sha256:d4d52bbbb84b5a283796031c0b5840291a5c76de8c33c7080c5130e34f92478c"
+          "bytes": 23231,
+          "sha256": "sha256:25adc9d4ae92b18999774b3c89356153be33728e65ae95fc90505bcca2536348"
         }
       ]
     }

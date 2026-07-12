@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:71fd5bc32436d62802e0b225411a3944cd396aaf27ed9fd70489b839a94254b6",
+    "d2l_lib_fingerprint": "sha256:82a9739d9aff13a4d36d9d4c323066f38c28f95b07ffa094461f49edf1bdb026",
     "max_inline_bytes": 0
   },
   "cells": {

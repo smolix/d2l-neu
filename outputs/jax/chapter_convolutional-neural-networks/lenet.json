@@ -3,42 +3,72 @@
   "source": "chapter_convolutional-neural-networks/lenet.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:35e4c1b2eed0071cd094ae43af95c4f0573cea51e23ea7aab52db30abacf0ccf",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:d3aefb1468e5838ae451af6a0d6ff7ebe646c311b7c670f3797638098703cb14",
     "max_inline_bytes": 0
   },
   "cells": {
     "lenet-convolutional-neural-networks-lenet": {
-      "code_fingerprint": "sha256:80b36b6abece9df3349ac59eb9ec74030e4675a9cf63a3b40e33cb2162e59bc6",
+      "code_fingerprint": "sha256:a7fd8b5373586c013db88b683e166649063779d03f9f451bf4c76ec98989804c",
       "kind": "text",
       "outputs": []
     },
     "lenet-2": {
-      "code_fingerprint": "sha256:e3caee3dff33099b5daf026c6fea60c75ea67af201c57323c20b2342364a378c",
+      "code_fingerprint": "sha256:09cb83dd1fb5f39b55edd47df1176cd4add4823e9999a1ec0b96c8036ae7481b",
       "kind": "text",
       "outputs": []
     },
     "lenet-3": {
-      "code_fingerprint": "sha256:a901028ae405e69674f38c0df457c0e8c19623aa09d3c2f88700c821e8758d8e",
+      "code_fingerprint": "sha256:620e6d8f9da8a42dc8765ef6c852c01152eedad61c2e9d47382a150b9465fc18",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\nfunction output shape:\t (1, 14, 14, 6)\nConv output shape:\t (1, 10, 10, 16)\nPjitFunction output shape:\t (1, 10, 10, 16)\nfunction output shape:\t (1, 5, 5, 16)\nfunction output shape:\t (1, 400)\nDense output shape:\t (1, 120)\nPjitFunction output shape:\t (1, 120)\nDense output shape:\t (1, 84)\nPjitFunction output shape:\t (1, 84)\nDense output shape:\t (1, 10)\n"
+          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "function output shape:\t (1, 14, 14, 6)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conv output shape:\t (1, 10, 10, 16)\nPjitFunction output shape:\t (1, 10, 10, 16)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "function output shape:\t (1, 5, 5, 16)\nfunction output shape:\t (1, 400)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Linear output shape:\t (1, 120)\nPjitFunction output shape:\t (1, 120)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Linear output shape:\t (1, 84)\nPjitFunction output shape:\t (1, 84)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Linear output shape:\t (1, 10)\n"
         }
       ]
     },
     "lenet-training": {
-      "code_fingerprint": "sha256:dc086a931f053939e47a6fb511fc8f4cd02c0297ff9e17b6fcff77618e68990f",
+      "code_fingerprint": "sha256:875fb8c337288edb296fd6dfb54392d9891777128a7b3779a27cfa49112ebaed",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 21485,
-          "sha256": "sha256:6736e9b7f878611bab5d62ef2812a6de1bd06b4a1f5cffbc50bb6c9ede51a80b"
+          "bytes": 21488,
+          "sha256": "sha256:277164e73de68e732191339edf6bf96ff8c0f6063183da6ce6e877728dc9e3c1"
         }
       ]
     }

@@ -3,62 +3,62 @@
   "source": "chapter_linear-regression/linear-regression-concise.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:a1067bb1e565f0f6167801b35dcd1ffe382246a6c1a17edff37b8f699fe14539",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:a3270e634638db8ffd3a4a06c2f976a86ce839651b4c238a19fcc7eefae6777b",
     "max_inline_bytes": 0
   },
   "cells": {
     "linear-regression-concise-concise-implementation-of-linear-regression": {
-      "code_fingerprint": "sha256:8c060599d06e85a27ceb24de151ee6d039f3948b38b9860ac25b8684466df8ad",
+      "code_fingerprint": "sha256:01a52a8f8cd92ee75afb113c0c47c0dce8f57ecc4e738102b3579b744add4a53",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-defining-the-model-1": {
-      "code_fingerprint": "sha256:14e8ae99d491e01de98799a4163a1393dab06997e5b9d4297b41343230f32bca",
+      "code_fingerprint": "sha256:0623a2021861abf11be6353e0e6168ebe329ab4a5d2f5a499cdc3ddd3ee41e8d",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-defining-the-model-2": {
-      "code_fingerprint": "sha256:911cb0ebba5a6738867051c9a299d2448f78d4d137970d508ffa057cf7b2aae9",
+      "code_fingerprint": "sha256:62b867971175f21df248af33a2bad400d5417b293fe12e585756b6d8ec232db9",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-defining-the-loss-function": {
-      "code_fingerprint": "sha256:7e14d80c5e59d97967610cca761c5335a1b06995b9c5b0233cc26b937ac40162",
+      "code_fingerprint": "sha256:046854de20cbc84ae62e72609b6bb0e7c29296073f39d88606bac6c4ffe1106a",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-defining-the-optimization-algorithm": {
-      "code_fingerprint": "sha256:4f90c5961de01a905a901333a693bf9b1279dc692e7841bb02c8deac7fd562b6",
+      "code_fingerprint": "sha256:81dfe53bc1c1a3c1d7a544d96ebc55d9d53b645329c28fc1f53b290b583d8e90",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-training-1": {
-      "code_fingerprint": "sha256:d061a5c4a1a6d0a724680d22fd0cc1c4b3ba0cb8aa9dafdaaf296b0678cbfbc3",
+      "code_fingerprint": "sha256:b7c9e5b3eccac66e47e077313accc66d6ca9910c85566a67b90d3cce411174d3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-concise/linear-regression-concise-training-1-1.svg",
-          "bytes": 18946,
-          "sha256": "sha256:bbf1623b2a1be4c13943606812d7c4a253e2d7f39575acae8456924aa53f75af"
+          "bytes": 18947,
+          "sha256": "sha256:7553f88055e6ce033c1478a2a3a83726e95549192156827913cecbbea4bc683c"
         }
       ]
     },
     "linear-regression-concise-training-2": {
-      "code_fingerprint": "sha256:afd27d2fb835834edc0e470edfcfc30c32f6c2b004139c363aa9eb12b67a93cb",
+      "code_fingerprint": "sha256:f86ce352729d2d5ecc5cc3623ee22797211d5de6c07d279b765ab3428f0c8a51",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-concise-training-3": {
-      "code_fingerprint": "sha256:afe2c599f88266f73de2d3260cdbc923abada937445dab796684679ac40e8510",
+      "code_fingerprint": "sha256:fd02f7aebcd1437036952933cfd39c6ae663efcc11dbe1e78dc773f4c35d6e36",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: [ 0.00017989 -0.00031614]\nerror in estimating b: [8.440018e-05]\n"
+          "text": "error in estimating w: [ 5.2094460e-05 -9.9658966e-05]\nerror in estimating b: [0.00019169]\n"
         }
       ]
     }

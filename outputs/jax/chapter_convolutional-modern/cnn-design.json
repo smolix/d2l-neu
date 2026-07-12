@@ -3,49 +3,64 @@
   "source": "chapter_convolutional-modern/cnn-design.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:606fd0374810c36d2eff1e1db69d4319bdd5eceead185ebc472c24e61923f596",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:13c8ce70728f5895f600ed45808d534efb34ebafa75ac869afe8f5fcad680470",
     "max_inline_bytes": 0
   },
   "cells": {
     "cnn-design-designing-convolutional-network-architectures": {
-      "code_fingerprint": "sha256:0b1653a63242762a0ccbb54d3b2d1029a4ca08012ce8b7fb33fea866f2717480",
+      "code_fingerprint": "sha256:2365c50553bdbcaa2c8f07ac7838e72824d3a33eb0dc2436e192106b7ab29c1b",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-1": {
-      "code_fingerprint": "sha256:1af0fd77662e25aadf11bb352d48f5a2b6022a40a4849f870eb44b64e3a1292c",
+      "code_fingerprint": "sha256:59a83561fd4082f1277ab4639fb86f5622f03f3ef324510c62d6ba109ad0e8f1",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-2": {
-      "code_fingerprint": "sha256:6c7ddfeb6af03678307db0d94402f70f294df1cc5bbf66d17b2e0924c268dbbc",
+      "code_fingerprint": "sha256:3a8e1a1e1a5f5ec673fc70886257fb5be68e466467b99f07f657710e93fa4636",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-the-anynet-design-space-3": {
-      "code_fingerprint": "sha256:72c6000074e052d61978aad72d8ae9906bcdbc554976e208b1297374c71f05ca",
+      "code_fingerprint": "sha256:5da0fec59f2db7027bcc133fc727e31762606e6c4eda82d55ed44ab1312fc204",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-1": {
-      "code_fingerprint": "sha256:d87bfd34839f4f36b5e32eaa888fc05cab09ba5fc04b002f63ead6d806b721e3",
+      "code_fingerprint": "sha256:60dd51cbcb45f0d242b23092d2073ad351263051e4e635011f5da8d4c93e8b3b",
       "kind": "text",
       "outputs": []
     },
     "cnn-design-regnet-2": {
-      "code_fingerprint": "sha256:fb0a34738a38c9bcf6bf0aae1d73a924028c37b42253b53620f045aa3b823f21",
+      "code_fingerprint": "sha256:3acf5c0012513baab2d1f9274388c5f94226f59322b0836160dfbc59aa0a0b2b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 48, 48, 32)\nSequential output shape:\t (1, 24, 24, 32)\nSequential output shape:\t (1, 12, 12, 80)\nSequential output shape:\t (1, 10)\n"
+          "text": "Sequential output shape:\t (1, 48, 48, 32)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 24, 24, 32)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 12, 12, 80)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Sequential output shape:\t (1, 10)\n"
         }
       ]
     },
     "cnn-design-squeeze-and-excitation-gates": {
-      "code_fingerprint": "sha256:6ab849fa9572289b4250823b4b4be0532c0914cf87ed4a8893286d5f678d5b05",
+      "code_fingerprint": "sha256:0942d3f7da7953c3be3dc5079ff7237faadd204813ad6ac757dfd6c5c70d32a3",
       "kind": "text",
       "outputs": [
         {
@@ -55,15 +70,15 @@
       ]
     },
     "cnn-design-training": {
-      "code_fingerprint": "sha256:87001aad388efefaa8cb802366a32670fea2fc3640e2969eed22852f0b946510",
+      "code_fingerprint": "sha256:84502b8be299121b0f19031d98dd953ac72389106c118bbcd7cc362a9577502c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 21014,
-          "sha256": "sha256:5ed53278ae0865f1179f25359a0179f06a4eff9a402a10b3bb330299b47a1b19"
+          "bytes": 22797,
+          "sha256": "sha256:f1f15789551eb82ad9a3c94ad557901f2ef647b1cb10f8bca989aafab5e2faac"
         }
       ]
     }

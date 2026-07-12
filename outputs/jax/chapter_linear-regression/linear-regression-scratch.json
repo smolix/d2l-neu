@@ -3,72 +3,72 @@
   "source": "chapter_linear-regression/linear-regression-scratch.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:990fa820195153bfc695d02ad1fd7dabb56908dbbedab2a0e02913ef52da9108",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:db175360734b1e1ffd2c88be9a393eafc60fc0a1c22e22c5606e26bf0cb2d3d7",
     "max_inline_bytes": 0
   },
   "cells": {
     "linear-regression-scratch-linear-regression-implementation-from-scratch": {
-      "code_fingerprint": "sha256:56ad2fb3dd2226a03fb8130ff35136bf6d95bce7d18dce2dca775135e9f16669",
+      "code_fingerprint": "sha256:196859e268a004259681e117f31b170bd48e3250d5386c057e0254d7381ffd06",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-defining-the-model-1": {
-      "code_fingerprint": "sha256:486cd04dd7442f75c8f882c2aebe9493022287bdc18b0ac91f0536e244123e39",
+      "code_fingerprint": "sha256:4d339473ff6c15ad5b0497fdbe0f5f5adc8c23393d8e3c07f9b147f968e1cdd7",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-defining-the-model-2": {
-      "code_fingerprint": "sha256:ca739542dcabcd8bf54ecd73ea5edcb90ab1940c8526d41c348b9165af2a85ce",
+      "code_fingerprint": "sha256:a3835c82ff1ca8eed43d12032f2ca5620f264814ca6653b416886dc92a97b6b2",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-defining-the-loss-function": {
-      "code_fingerprint": "sha256:af9468bbc3f9812df4ea55c43b3e535b37b90c2f7ef7aa1153ed40560f8b4802",
+      "code_fingerprint": "sha256:4daacccb8d652dc9f54531503622cfc066a744862878b04e234015de98c15b7e",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-defining-the-optimization-algorithm-1": {
-      "code_fingerprint": "sha256:13adae19c3e82589ec224e0e5ba3a02dca9a56a3700ca22cc7add335812e1158",
+      "code_fingerprint": "sha256:eea92f2e429f162f5849bc735b4ad40a0c8141fb2d1ad602c657283fd92c5bbf",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-defining-the-optimization-algorithm-2": {
-      "code_fingerprint": "sha256:87ba3c75bf297ebbe3cc663dccde179af484efd14d7791ada687843e369360a4",
+      "code_fingerprint": "sha256:7e88f08a91975c75e56b53c7714383e4e52fb79b8b5f5fbc13acbcbb7c00d55d",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-training-1": {
-      "code_fingerprint": "sha256:44e50c274c917deb94b8e7b479a77aca60c0cbabd759b4c4e24daef77ee3e6d4",
+      "code_fingerprint": "sha256:1aaa3fac3c8c6d240816a85f2ada9db276bb09de1dd93b387c42a2427d8538d6",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-training-2": {
-      "code_fingerprint": "sha256:eeeca325955279fcbe4edece32d960e964eaab7bba1674343edb293b95d7f4d5",
+      "code_fingerprint": "sha256:71ab35e04d90c704ff3034ccbbd02bce5519c443e2c83b18979e2aa4889cafb4",
       "kind": "text",
       "outputs": []
     },
     "linear-regression-scratch-training-3": {
-      "code_fingerprint": "sha256:b1bf411f71ad4c3db756991777b36e2ab2c1410245ed2f5bdad0e3dd28cd1e05",
+      "code_fingerprint": "sha256:c8bba101d3198735a7162f3303084e806c501dfdae264f3e4e5d40e146161349",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
-          "bytes": 19063,
-          "sha256": "sha256:e82a7fecbea565a74de9ff40b3fbed6c52ecccdd7a32a07de1febf88615d845a"
+          "bytes": 19065,
+          "sha256": "sha256:a893119d6550d3dc380b9c6edf34ff582c7765b4c4b5e47aa71f056491e4f58a"
         }
       ]
     },
     "linear-regression-scratch-training-4": {
-      "code_fingerprint": "sha256:eed5e60699ba3b8f5d1e3f49298b489ea90d03b8dcf454b5467944add0116fc3",
+      "code_fingerprint": "sha256:6e32fb6934f68b0672f925d6d92898703f47e8b39872b4e9ff4fa6540a9c1f96",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error in estimating w: [ 0.00059068 -0.00061369]\nerror in estimating b: [0.00087309]\n"
+          "text": "error in estimating w: [ 0.00054932 -0.00054836]\nerror in estimating b: [0.00093031]\n"
         }
       ]
     }

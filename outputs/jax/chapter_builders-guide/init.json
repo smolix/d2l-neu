@@ -3,64 +3,59 @@
   "source": "chapter_builders-guide/init.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "init-initialization": {
-      "code_fingerprint": "sha256:7897f550f7331a97d5cd3321ab25eaee00a6098f3e5a775247cdabf3c0fdb04d",
+      "code_fingerprint": "sha256:cf8ba44fa14f83f471bdfa7780f8e95ee1393eeb88e44d86c7b9d44b804bff64",
       "kind": "text",
       "outputs": []
     },
     "init-defaults-and-when-to-override-them": {
-      "code_fingerprint": "sha256:7e775b0357b3bfc183088924a45b00ef3c4a89edde4e92eb420d52a2b27dc1ad",
+      "code_fingerprint": "sha256:a0eeef8cc9ab3522792656a613433b9aaa01da307266d9f4de80a9ac011b05c5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "std 0.0442, predicted 0.0442\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "max |w| 0.1005, bias all zero: True\n"
+          "text": "std 0.0443, predicted 0.0442\nmax |w| 0.1005, bias all zero: True\n"
         }
       ]
     },
     "init-applying-initializers-1": {
-      "code_fingerprint": "sha256:f61a0fff945aad921b6ce3b3ea0e59a7a281f652f68ff9c103690af6cb62cfca",
+      "code_fingerprint": "sha256:6356d8b0b415b2d90e928dcd2fa85e4575504f6ebabc97ef22962e0939951a17",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array([0.01945418, 0.01829314, 0.01973047, 0.0029223 ], dtype=float32),\n Array(0., dtype=float32))"
+          "text": "(Array([0.01004014, 0.01661628, 0.00595053, 0.00908357], dtype=float32),\n Array(0., dtype=float32))"
         }
       ]
     },
     "init-applying-initializers-2": {
-      "code_fingerprint": "sha256:31c7f171d5f49dee83d8a9f8a22d0ba899867968d39fd1aa457d212a779b18cb",
+      "code_fingerprint": "sha256:655cc37a7c0f6c81ad4ff6aa608fd9522dc19c15e4649fdbd7156a198143cb6f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array([0.6705319 , 0.65948135, 0.67281896, 0.16255635], dtype=float32),\n Array([[42.],\n        [42.],\n        [42.],\n        [42.],\n        [42.],\n        [42.],\n        [42.],\n        [42.]], dtype=float32))"
+          "text": "(Array([0.48410526, 0.63880914, 0.3169195 , 0.4499392 ], dtype=float32),\n Param( # 8 (32 B)\n   value=Array([[42.],\n          [42.],\n          [42.],\n          [42.],\n          [42.],\n          [42.],\n          [42.],\n          [42.]], dtype=float32)\n ))"
         }
       ]
     },
     "init-applying-initializers-3": {
-      "code_fingerprint": "sha256:30d547ef8c831a2ef6c01edf7db504837c50c24a4866968e514efa7d365b7692",
+      "code_fingerprint": "sha256:ba378ed969f8438080660ed0c9fe9fe7aa82d84a2e98e28ea0c975697551ef4d",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[-0.5623827],\n       [-0.4208908],\n       [-0.3695746]], dtype=float32)"
+          "text": "Array([[-0.15734486],\n       [ 0.0798452 ],\n       [-0.4529283 ]], dtype=float32)"
         }
       ]
     },
     "init-truncated-normals": {
-      "code_fingerprint": "sha256:d0f8957c74abd7558be5ba0ef637afcf103d59eac9c9fe2385a08f9fbb642641",
+      "code_fingerprint": "sha256:86ef87f5ed9f7384144f3042f40fcdb122ae444b254c43f6fa0bb39c84602e96",
       "kind": "text",
       "outputs": [
         {
@@ -76,17 +71,17 @@
       ]
     },
     "init-watching-the-variance-compound-1": {
-      "code_fingerprint": "sha256:600b57d81d7abc9b7c0d972bda6e6ef49312a4533c5b2539565938cb819eed6e",
+      "code_fingerprint": "sha256:ac9065c716de83f99bc7d19a17566ffcfc6a7c39895a4188c543d7450fdfd59d",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-2": {
-      "code_fingerprint": "sha256:b2398434e97d8d208d38fad8da708cc6331b6840420546fc953aab2fc761a7a8",
+      "code_fingerprint": "sha256:555bb993cdbe0fbd5b1529508df0ed554ba739e02195e70d4813f3587b6b4440",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-3": {
-      "code_fingerprint": "sha256:8de2f98f3b905cb9c3ee373228d15feece5de92a3aa3cc8e84277befbf8af442",
+      "code_fingerprint": "sha256:930fef99f66a06ea905e2dffa6827f3c3946480ae1c9bc640d20864380870772",
       "kind": "text",
       "outputs": [
         {
@@ -97,37 +92,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2      3.18      2.06     0.993\n"
+          "text": "  2      2.89      1.93     0.993\n  8      75.3      2.27     0.993\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  8      79.6      2.26     0.993\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " 32   3.8e+07      2.43     0.993\n"
+          "text": " 32   3.6e+07      2.59     0.993\n"
         }
       ]
     },
     "init-custom-initializers-1": {
-      "code_fingerprint": "sha256:d179533502fd6902ebf2a9110005253c51c4b9e5e183603670710860cdabc3db",
+      "code_fingerprint": "sha256:ea3a47d089aa695444629229fc5991767f5e63a346a2b5b4ec89c5b5f49c01aa",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 0.      ,  0.      ],\n       [-9.391251,  0.      ],\n       [ 0.      , -9.587161],\n       [-5.10726 ,  0.      ]], dtype=float32)"
+          "text": "Array([[-6.4136   ,  8.940486 ],\n       [-6.2257624,  0.       ],\n       [ 0.       , -9.485439 ],\n       [ 0.       ,  9.542628 ]], dtype=float32)"
         }
       ]
     },
     "init-custom-initializers-2": {
-      "code_fingerprint": "sha256:3858106594320a23eb2847693a4f629f09da939dfa202c84dde8ac6c33a53160",
+      "code_fingerprint": "sha256:f4927273fbd0ceaa96d24545445400d92d42060b36e533af606b2d84058246ea",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([42.       ,  1.       , -8.169698 ,  6.4895024,  8.383193 ,\n        1.       ,  8.120875 ,  1.       ], dtype=float32)"
+          "text": "Array([42.       ,  9.940486 ,  1.       ,  1.       ,  1.       ,\n        1.       , -4.9630113,  1.       ], dtype=float32)"
         }
       ]
     }

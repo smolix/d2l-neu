@@ -3,33 +3,33 @@
   "source": "chapter_natural-language-processing-pretraining/bert.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:1b4ab4d806f0ecc3e33f4aee775df74a26538a38537d0b682e18d73cd9b1e98a",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:72c487d6c35d8c83629da96d30dab0d7f64aa1654c03a5afc69e8c6fd41bf86f",
     "max_inline_bytes": 0
   },
   "cells": {
     "bert-bert-combining-the-best-of-both-worlds": {
-      "code_fingerprint": "sha256:453db3978826d6ca1e22ffcc237a0c22be7ab4b486b0e347f828dfbe9fd3c6a2",
+      "code_fingerprint": "sha256:214544ef2731d7ef06bd3bbf0238d5834950c3464e6f43579c60020186562903",
       "kind": "text",
       "outputs": []
     },
     "bert-input-representation-1": {
-      "code_fingerprint": "sha256:bfb7c98f4e083eda79c483ac28fdc54dca6ffd222f89103fde9cc377ad128959",
+      "code_fingerprint": "sha256:84a9033f8059c4fe0867c76badc4de9aa1d03fe396ef3a6fa7f71045dc529b85",
       "kind": "text",
       "outputs": []
     },
     "bert-input-representation-2": {
-      "code_fingerprint": "sha256:801f568985f387ec79530771c92510819781619c108fa08ff8b6be4ab04158d0",
+      "code_fingerprint": "sha256:828dd8a79c72e1a6021aca3da354d37ac33300af0426382eb3ee6ec7d65e5315",
       "kind": "text",
       "outputs": []
     },
     "bert-input-representation-3": {
-      "code_fingerprint": "sha256:a979a3650e401c0e7f8e047d085ae6428f0fad44b2894607b58d30a6f680fb62",
+      "code_fingerprint": "sha256:74ae991ac70a193881d66c09fb72a98c31bb80131c251cff8bb41f5e0cb517b2",
       "kind": "text",
       "outputs": []
     },
     "bert-input-representation-4": {
-      "code_fingerprint": "sha256:bd2447acf6f473dc45d3603599c2c57549dd3b1e845a93b506d9bf11dc7dfb33",
+      "code_fingerprint": "sha256:c7f34084ff7bcd5208667794db4f947959d62fa9b74ae91de6382af96e58796c",
       "kind": "text",
       "outputs": [
         {
@@ -39,12 +39,12 @@
       ]
     },
     "bert-masked-language-modeling-1": {
-      "code_fingerprint": "sha256:80388f7bbe86d3f54537d5c7dde33a6bbed98ce224cbb97d4bb4628bbd48b0e0",
+      "code_fingerprint": "sha256:a82ab6173c151ffec17dac26beca70895f031f3f56103095437637397def6681",
       "kind": "text",
       "outputs": []
     },
     "bert-masked-language-modeling-2": {
-      "code_fingerprint": "sha256:32122f43a17959c60a7688f50791610285a33d01d5c45814cf9000796a5b129e",
+      "code_fingerprint": "sha256:419697b1e986bf4146ecce979137729e9b62e828aac3d84408433a8c21a59032",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +54,7 @@
       ]
     },
     "bert-masked-language-modeling-3": {
-      "code_fingerprint": "sha256:75bd5dfe3a02a4541556fa2d9463b19608f6bb7638a691eff6a8ae79b039c7a2",
+      "code_fingerprint": "sha256:29608c47381774529518f5f703974e3003bc5205e425591d7e821fea2f6e77ae",
       "kind": "text",
       "outputs": [
         {
@@ -64,12 +64,12 @@
       ]
     },
     "bert-next-sentence-prediction-1": {
-      "code_fingerprint": "sha256:4eeb4e17ffa6beb6ea8d272317601321e46183e6e2a52d19d63aa946ee9abe75",
+      "code_fingerprint": "sha256:a620a6cc79dfe9bc07f4c590abf06f85cf768b96bdd465ade66eaf6ce73b7729",
       "kind": "text",
       "outputs": []
     },
     "bert-next-sentence-prediction-2": {
-      "code_fingerprint": "sha256:b461938cf2bd5f3e543dfc5822b29a6280ada19c942619d9cedeb8b8810499e2",
+      "code_fingerprint": "sha256:d8eb82503df6df23e80e0a9dcd7213a07c92ac98a74e44ec70b6defd073ff28a",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "bert-next-sentence-prediction-3": {
-      "code_fingerprint": "sha256:619ea7763622c884b25c1f5b7ce7b5218d8c56f5dd4b49b856a701dba42f3fbf",
+      "code_fingerprint": "sha256:217a362b6c161fd727c39f1b6944cc46b865882476edbf6049ecb7b15375035a",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +89,7 @@
       ]
     },
     "bert-putting-it-all-together": {
-      "code_fingerprint": "sha256:53c4c2a9baa742d4d2a612e0a2e3aa79a644258ed55f0325182fb7db087efe0d",
+      "code_fingerprint": "sha256:0ac6bb735c738854908965a47e0361037406491578a7ec47fbd110a5ebbc42f1",
       "kind": "text",
       "outputs": []
     }

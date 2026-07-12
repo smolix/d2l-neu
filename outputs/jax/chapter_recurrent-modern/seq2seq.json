@@ -3,23 +3,23 @@
   "source": "chapter_recurrent-modern/seq2seq.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:a0000d3978d8ead27956b1462a357eab05384544331974de228fcb38831bdb78",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:9f83f5e9530dd2fb9fe4490149e5991f26da63a4ef593a5d5325e81767250024",
     "max_inline_bytes": 0
   },
   "cells": {
     "seq2seq-sequence-to-sequence-learning-for-machine-translation": {
-      "code_fingerprint": "sha256:6fc71cc9b242fb451887fc580bd37e323f291c673f723ca99d574a05733d1f94",
+      "code_fingerprint": "sha256:3f3baadaab177e39141e1e5fc2bbfea3a11d92062ee8bfa068ea9fc6784a3c1d",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-encoder-2": {
-      "code_fingerprint": "sha256:599395c4a82746d1bdab45e310ac5cd58dc5a314bba4ab63da109a5ea6eaaadd",
+      "code_fingerprint": "sha256:f907b0ba2a8f6e8aab8fedb4305feb71bac990f290208d04a4f7d5f8b23fa191",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-encoder-3": {
-      "code_fingerprint": "sha256:701373593172555748012a69cdbdc6fcd89171c865053af750320d7d2d1b0057",
+      "code_fingerprint": "sha256:b8229953f937895ff77bd214255356233143fd8db2a90197626a337874b90147",
       "kind": "text",
       "outputs": [
         {
@@ -30,61 +30,61 @@
       ]
     },
     "seq2seq-encoder-4": {
-      "code_fingerprint": "sha256:142031f947f5f22abb24a106d1bfb06710f583cd239d81872b8f16dda728a339",
+      "code_fingerprint": "sha256:9459e28a8864936177dec19cb6c8295a1074faf9188cf2dccd04a8722f44c23b",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-decoder-1": {
-      "code_fingerprint": "sha256:695d49089e0aad20beec7b0f10185cbf3c87b6b255c09f430a13551e8040335b",
+      "code_fingerprint": "sha256:eae49acdb0aa903c9c67b19f5f0866d5a5dc8267f622ded2051a972e6fdcf4f1",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-decoder-2": {
-      "code_fingerprint": "sha256:1ab19958af75e5255c532d1a2c35f276e68d0d9b201d48f8f6951e0d3c2442d4",
+      "code_fingerprint": "sha256:328ac195fa02163ed1f04234cf5f9af914f9c53f552e0b0f4ced5b854ba3095c",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-encoder-decoder-for-sequence-to-sequence-learning": {
-      "code_fingerprint": "sha256:08f3ecaabb4c03b91334985e3bf962818374241216e33ab04c1b30aa664cf2d8",
+      "code_fingerprint": "sha256:fb28ed5729bc8f6b80aa92ad7f219a631fc410d97e145ff048b623aa5f1c6dd1",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-loss-function-with-masking": {
-      "code_fingerprint": "sha256:9d2f3d6793c97663ea02b4ce0ada618a13ef87322d7c9f050cc3465712faf5f6",
+      "code_fingerprint": "sha256:013de494d4a259428d8405f96596944745737d81af38d07f1e3c7ec8073146ad",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-training": {
-      "code_fingerprint": "sha256:c129af2b5827547cb74df004c4eb50f816b7c8425e68ab8f0ec8fbc2be2e1251",
+      "code_fingerprint": "sha256:e6527e083aac391b6f2cb605f885391c078952b030b037c2a2a6dfffc34c1619",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 20355,
-          "sha256": "sha256:c72f34c9145250169b4dfbb90c0f43f53672e47eeb69eb40e8ccc0ed73020299"
+          "bytes": 20545,
+          "sha256": "sha256:8b2a58d3fb656038a9eca56c2da25aa25773526564a5f1af73894dfca31a923d"
         }
       ]
     },
     "seq2seq-prediction": {
-      "code_fingerprint": "sha256:dde395fc69f3839cf412970367a12d4f0e866e5124ba4255338c0e0746204b4c",
+      "code_fingerprint": "sha256:5c2d9b8d6e6c6adcb30aa6dea3bfde8952510edb4167ce441898a3fc814ec4f2",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-evaluation-of-predicted-sequences-1": {
-      "code_fingerprint": "sha256:a86b9290209268fa54ab19d656c1145a8eab0c8a3adc144cacdca1229e700252",
+      "code_fingerprint": "sha256:8c759192b5be8d0c02567587577dd5e9475e4ece501a1aa143d8c4b3ccb855b3",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-evaluation-of-predicted-sequences-2": {
-      "code_fingerprint": "sha256:6c290521bd20f29b0c285370b275821c1aa68099841e15513701a6ef0bb00356",
+      "code_fingerprint": "sha256:97da74814c40056a0a4bd01aae856cb66ba5301f0d58823fd2faceae5ac15ce3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
+          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'en', 'retard', '.'], bleu,0.548\ni'm home . => ['je', 'suis', 'malade', '.'], bleu,0.512\n"
         }
       ]
     }

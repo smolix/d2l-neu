@@ -3,38 +3,38 @@
   "source": "chapter_natural-language-processing-applications/natural-language-inference-bert.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:8291236017ee35f0cc85d0364037d1661c469435f93aaea101e0efcf43a4381f",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:38f9f5744a8377dba71adcc15d208e1ac5b3c288574ae3c84f6760966c4ed2f1",
     "max_inline_bytes": 0
   },
   "cells": {
     "natural-language-inference-bert-natural-language-inference-fine-tuning-bert": {
-      "code_fingerprint": "sha256:aa0d84f514a9a972c6e5a4fe03bc8077750e392c4ce85ab5a7b401246062cebe",
+      "code_fingerprint": "sha256:39b598f9ba851be22b0da70f2fe9d55513e35dc802693c00cb9820e8820de077",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-loading-pretrained-bert-1": {
-      "code_fingerprint": "sha256:a61a5922f2b29812d6de44111c7707f0a8b1d783f58d741606751e517793b8ed",
+      "code_fingerprint": "sha256:f490bfe67b8d56b3846a0926c5205f2129251ac0bc9bb00d18a30d2b19e409aa",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-loading-pretrained-bert-2": {
-      "code_fingerprint": "sha256:c7bbe25188af3b1b68af17a3db33bf3ff9ad6877ab196f4adc69ba2c73fb2497",
+      "code_fingerprint": "sha256:d55cecb477825c1735699ae2cfe0b93ff18412b9a22538a90de78292e82d35fd",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-loading-pretrained-bert-3": {
-      "code_fingerprint": "sha256:acd9fc4a1331c1b232a7906575afd039e4e5ff1b6c0faa259d91b48c8a0a0891",
+      "code_fingerprint": "sha256:f7f2bd33b693830458139f85d3b6eab3aa82d21b59839dfeb99c0f5b0f377be6",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-the-dataset-for-fine-tuning-bert-1": {
-      "code_fingerprint": "sha256:2e4e95c2cfd53482f5310b0652060396ac50c6a0b1b4bc7c5cdc4c4fb70ffc8d",
+      "code_fingerprint": "sha256:b16c314b89ad5c19d4e92995531ced9eb4abb54a9fdb2a38abb366aa485a09f0",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-the-dataset-for-fine-tuning-bert-2": {
-      "code_fingerprint": "sha256:88da2b656e860a123ec2c211f0f8526d15035fe72dd47cd8a66c784d6c18270c",
+      "code_fingerprint": "sha256:a8b07e11b8e523265d4b6a995800cb86c6994ce3963d0a9e23369204a5b8ed53",
       "kind": "text",
       "outputs": [
         {
@@ -50,43 +50,43 @@
       ]
     },
     "natural-language-inference-bert-fine-tuning-bert-1": {
-      "code_fingerprint": "sha256:4dd4709945759368a780ba12cc7782f0805a639f38db47983364d802fd252755",
+      "code_fingerprint": "sha256:297cfb3d05a37ec837e1629ab4ec69ec04bd9e642851fa0b7e31455b9a80c022",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-fine-tuning-bert-2": {
-      "code_fingerprint": "sha256:10c76127311e4589c7e00531cdd883ffc5e5046fb6f9fb497d754e45e518aa65",
+      "code_fingerprint": "sha256:5cfcfd7db9d947690be8cbd93c064ad850020fd68de5564f9c6aa888a8787e39",
       "kind": "text",
       "outputs": []
     },
     "natural-language-inference-bert-fine-tuning-bert-3": {
-      "code_fingerprint": "sha256:7bc8f2868a2404e27b1bdb45d5b32997e20e2301eb569ee10456ab32a158bad3",
+      "code_fingerprint": "sha256:811f01d0dbdaeed0b6832394e7011ee6b8536eeb9e00c41df78a206242a334de",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.7827, test acc 0.7201\n"
+          "text": "epoch 1, loss 0.7756, test acc 0.7261\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.6350, test acc 0.7547\n"
+          "text": "epoch 2, loss 0.6322, test acc 0.7517\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.5670, test acc 0.7716\n"
+          "text": "epoch 3, loss 0.5643, test acc 0.7755\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.5172, test acc 0.7847\n"
+          "text": "epoch 4, loss 0.5161, test acc 0.7817\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.4810, test acc 0.7851\n"
+          "text": "epoch 5, loss 0.4792, test acc 0.7850\n"
         }
       ]
     }

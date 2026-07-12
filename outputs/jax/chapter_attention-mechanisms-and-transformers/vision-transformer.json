@@ -3,56 +3,56 @@
   "source": "chapter_attention-mechanisms-and-transformers/vision-transformer.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:cd52d798c186ac1fa99d4939904884264a26b8a091861f16ca0d7d1172f17f8b",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:5179f455fbf588004b553bddb2ce97d5ee192b604344f1c8000ca454b67ca366",
     "max_inline_bytes": 0
   },
   "cells": {
     "vision-transformer-transformers-for-vision": {
-      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "code_fingerprint": "sha256:f58d5676455baede0fac1ad44463f7d43d4d544b1e03b0dab31cdbf5acef33e6",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-patch-embedding-1": {
-      "code_fingerprint": "sha256:2166f19d00b97460a991300eeaba4efa6ef1e00254072f5b25b51634605d5aca",
+      "code_fingerprint": "sha256:333a375e80dca97c3d4d2fc673d4a475889c5c921d86c258a6c5c522d4072c46",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-patch-embedding-2": {
-      "code_fingerprint": "sha256:fc0ba9f42299d4ccc38914b99d646ab32c9beda5646ac23725610b5c906eefe8",
+      "code_fingerprint": "sha256:9a3478d2cdf807f0f4763198b0fc1c033cddac081d943897e74afd9b5d9491a4",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-vision-transformer-encoder-1": {
-      "code_fingerprint": "sha256:acac121a7fc0294c68ed81db2112fd3af33259038844bbebbd2c41704a2a9ff7",
+      "code_fingerprint": "sha256:8beca04cf5810ab0cfa8bf6a8cea246dea43aa0803b933c57c51768911816ddb",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-vision-transformer-encoder-3": {
-      "code_fingerprint": "sha256:3d7ad7265abb1417661e53fd7b0bb4fddd4a4afffb79fc7108a02b7e86bb4eb7",
+      "code_fingerprint": "sha256:593d44c3260c445153133d7b5826a0494340746ba99a45693f5edca82ac74def",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-vision-transformer-encoder-4": {
-      "code_fingerprint": "sha256:e0c32f251aed51d171392e51f9daba6348426a14f1bc1cb09365e8ec83797d1e",
+      "code_fingerprint": "sha256:ff50052d18175fc62ce2e2e04977f038041f26d1dea4331ec893a5acd228febc",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-putting-it-all-together": {
-      "code_fingerprint": "sha256:a5ea2c845fbe38da42920451496f15a2280857f224c15d804a557ea8ac0ee85f",
+      "code_fingerprint": "sha256:409ae0be4909ce0f1bbf2f7817c9abb6f3b22f5687f9cae54bc9a60400592810",
       "kind": "text",
       "outputs": []
     },
     "vision-transformer-training": {
-      "code_fingerprint": "sha256:f470fbfce23db8f3c322f75d17efa8016897f8c1c5f263e4146a10e432cc9642",
+      "code_fingerprint": "sha256:d55cb76d3b7d87181318b57cdcea4c3c30ad30d221e6947a7c528e1b81f027e6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "vision-transformer/vision-transformer-training-1.svg",
-          "bytes": 21634,
-          "sha256": "sha256:abbbd9981ac716e5fa795bb3e9e6931d0ddb94cb771a9de9e22ec9b49d8a689d"
+          "bytes": 21637,
+          "sha256": "sha256:71e64898064283a52b9b572b83fba75bfecd36192a1695037c14e8e0659c8c7e"
         }
       ]
     }

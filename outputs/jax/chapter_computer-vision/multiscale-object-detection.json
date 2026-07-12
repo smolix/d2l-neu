@@ -3,7 +3,7 @@
   "source": "chapter_computer-vision/multiscale-object-detection.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:32d59d484acfb7de06a9ddde75ee51a5110d3ef98d2561989b6a63e3a4d4bb6b",
     "max_inline_bytes": 0
   },
@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-3-1.svg",
           "bytes": 100148,
-          "sha256": "sha256:28163f0dd31088b12f0b8f022da62daf29add0839046f4531b663c1fc675c169"
+          "sha256": "sha256:4852543b149988809bb2686b58c55b0c653dd85c860e2030545cbcf4eec5faeb"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-4-1.svg",
           "bytes": 90278,
-          "sha256": "sha256:38d3a2aa6c84e674de1aa5ab7453512b442226700c5e645d57f8e41310cdc9cb"
+          "sha256": "sha256:3c456813f52e9174ae18134cc8eff316e23916c98889881aba5959684c47cea1"
         }
       ]
     },
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "multiscale-object-detection/multiscale-object-detection-multiscale-anchor-boxes-5-1.svg",
           "bytes": 87821,
-          "sha256": "sha256:d818fb89c5049b1dc298c9aca08d44d83f6ed205bcf692c3fe743d4f32bb2abc"
+          "sha256": "sha256:3da2409c8e47f020cc17b7924e8bf8463ae11f86d55227f5725d56f6d24180e3"
         }
       ]
     }

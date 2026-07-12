@@ -3,64 +3,64 @@
   "source": "chapter_recurrent-modern/gru.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:7a8d52fe203a0fd2718fc7c2b87e018ec9244286a54dd11dd43eba8b053392d3",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:0b9652fed2526a9d57e4c999f12ece62f4c57d2c1d0d23cddaa5cc723e6314db",
     "max_inline_bytes": 0
   },
   "cells": {
     "gru-gated-recurrent-units-gru": {
-      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "code_fingerprint": "sha256:f58d5676455baede0fac1ad44463f7d43d4d544b1e03b0dab31cdbf5acef33e6",
       "kind": "text",
       "outputs": []
     },
     "gru-initializing-model-parameters": {
-      "code_fingerprint": "sha256:efd989a0a51e06d749c170b497e5459466b313a437f2f38b5f875a86a88123e3",
+      "code_fingerprint": "sha256:bc18fd9d6e46c97a0d2d26064f3ecd0397853c9e195640f04c948c49ea87784d",
       "kind": "text",
       "outputs": []
     },
     "gru-defining-the-model": {
-      "code_fingerprint": "sha256:91d5196c7a81192be146d372caa2045f1d051e379c736db9450cda8aad104904",
+      "code_fingerprint": "sha256:77fb9a6727291da3079b0b0980215a445deced8c74ab312cda002d8e396a2551",
       "kind": "text",
       "outputs": []
     },
     "gru-training": {
-      "code_fingerprint": "sha256:c1956d2c2047babad52248fec8b97d4ae250f71344e806ef388adfe2fb23d752",
+      "code_fingerprint": "sha256:505b6de57be6e7862f9b927c974eda66bd0f51c70e7f0704256674a1d46e49a8",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 20078,
-          "sha256": "sha256:828bafb2acc179bdc8f40dd4ac60d7955b91a21795b2d5c8abba29540c594698"
+          "bytes": 15325,
+          "sha256": "sha256:db6b6f7b69e6a2d0dce8109f3f63d59add9832c1e4ec6f297f67cb8a5d28ba32"
         }
       ]
     },
     "gru-concise-implementation-1": {
-      "code_fingerprint": "sha256:1b02ad7c8017ee3684caa7db38e90999b6cbecd6727ea438ebfa488203409edf",
+      "code_fingerprint": "sha256:5ee1f15cd46129af1ae8998f88b310cb5dda96aa32c6292d937179abae7c180c",
       "kind": "text",
       "outputs": []
     },
     "gru-concise-implementation-2": {
-      "code_fingerprint": "sha256:78840f127bcf23ea8617baa45cae08e73537c772a2da1630d38792eba3003871",
+      "code_fingerprint": "sha256:2276c4f03f90d723a413d4441105dbf52b3058ec0cda72c236d2bf9aacf33f03",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 20454,
-          "sha256": "sha256:b0b1043913cd9c9ff4b1256c127b714e3ea004ee988115b99d0f1a2fc7c359da"
+          "bytes": 15325,
+          "sha256": "sha256:95c2275229e7a660004f228aac6f30a3242e498ca4140c4646ec28f6f840329f"
         }
       ]
     },
     "gru-concise-implementation-3": {
-      "code_fingerprint": "sha256:2b79bb7c18eb55baee1dbd26c3277191f5309cb1d08c50260f8491b5c7240925",
+      "code_fingerprint": "sha256:c07eef39362000495d975248b01c2acf89c8944b071e7401491d0562fd31c521",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has i the prover and th'"
+          "text": "'it has of a move is a man '"
         }
       ]
     }

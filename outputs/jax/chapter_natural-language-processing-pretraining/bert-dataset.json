@@ -3,58 +3,58 @@
   "source": "chapter_natural-language-processing-pretraining/bert-dataset.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:f48fe429c80da53631334f60e90ea34b43f0335dceb3b01fcaf0fe3afa7db768",
     "max_inline_bytes": 0
   },
   "cells": {
     "bert-dataset-the-dataset-for-pretraining-bert-1": {
-      "code_fingerprint": "sha256:ccd5a3a985ffcda8d598d4418287fe712a8e4711dea96abaa35f5d9a3e279274",
+      "code_fingerprint": "sha256:1acb6efdf385c17281921d385628756ca2f1dd0e0affa084ecdf190fd4b72f45",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-the-dataset-for-pretraining-bert-2": {
-      "code_fingerprint": "sha256:7672c2d2fd1212a02cf4b6e8b533ea9754de9370c5f19b90054ddafd72d94284",
+      "code_fingerprint": "sha256:4f4660fe86a988f5fe6bbddedef42afd7ca2829726ee99c0f9e3979134f1d65b",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-generating-the-next-sentence-prediction-task-1": {
-      "code_fingerprint": "sha256:c631cc990f0348d6c26286647ea6b2a0c922d9947c2ff7dbda22564aa6b64232",
+      "code_fingerprint": "sha256:faae21ba255fb8c8221084de5aa6d27ee672aa08293010b1c9d4f846a7fb8281",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-generating-the-next-sentence-prediction-task-2": {
-      "code_fingerprint": "sha256:1dcaf851e25b111fbc7361fefca17559923380e30a0e9968a300f073aca40fd6",
+      "code_fingerprint": "sha256:aaf93697069360f89bb62e8259f7383bd6c2d94e87ac06394edb577cb4987396",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-generating-the-masked-language-modeling-task-1": {
-      "code_fingerprint": "sha256:80b6069595bb23331807f1821b7ce2120caee6ff9edb31251bd7f3e590f8d780",
+      "code_fingerprint": "sha256:75631381b3690e0d4820a21020bd2a8384adf3ef880cd2cba9aeefd13f8c8e08",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-generating-the-masked-language-modeling-task-2": {
-      "code_fingerprint": "sha256:72d420fb801fd71efa9f12086f31529f43074ca4982b0e8407df307c79d83fc8",
+      "code_fingerprint": "sha256:db29992a8715eb4bf749a0946fb921cdd3ee24b73fbe2baff270074d9fdf9b81",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-1": {
-      "code_fingerprint": "sha256:d7abb0d7b653335389f314d69d43a66b8abb5413148d51433b94b0eec1961520",
+      "code_fingerprint": "sha256:767d317f6a403d3dddfe9d71443f51424a7643a6c2f34c72678ce42f6dbc5045",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-2": {
-      "code_fingerprint": "sha256:416be4f01597966ed1d2aa1181a2398701f5ff5f37e6a1238f3cc178a2955ea0",
+      "code_fingerprint": "sha256:9647a051fd121249aa93af5b78b1b4917f0de40d53eaaab84ca5a091c672170a",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-3": {
-      "code_fingerprint": "sha256:d78e542305dbd44aa495a2f8bfd4334e2d92071b827e261ea9a25b7b9a230d58",
+      "code_fingerprint": "sha256:9d43c86e0a5f811d91d9f8e778759433f3f75c23894bcb60cc4eec2409646a80",
       "kind": "text",
       "outputs": []
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-4": {
-      "code_fingerprint": "sha256:4b2d7974ab6461f3779ca34a17279e61474805c47317e8f1349aaa5812f6af68",
+      "code_fingerprint": "sha256:159c01bbd388e28d9434023a9b6cec70b47f7d03499fe45f65e0b2ac71251919",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +65,7 @@
       ]
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-5": {
-      "code_fingerprint": "sha256:72f14addaf131d0fd5e51c0810946dccbdd95c8c461a44d45fa3160eb13d13da",
+      "code_fingerprint": "sha256:23784cba96d98671004e5342cc8cd6ab2b38968a86fa61b613a0086aa62d9cb4",
       "kind": "text",
       "outputs": [
         {

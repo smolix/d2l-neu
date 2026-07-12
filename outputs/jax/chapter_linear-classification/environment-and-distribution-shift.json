@@ -3,7 +3,7 @@
   "source": "chapter_linear-classification/environment-and-distribution-shift.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -36,12 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weighted      target accuracy: 0.933   (source accuracy: 0.795)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "clipped, c=5  target accuracy: 0.945   (source accuracy: 0.817)\n"
+          "text": "weighted      target accuracy: 0.933   (source accuracy: 0.795)\nclipped, c=5  target accuracy: 0.945   (source accuracy: 0.817)\n"
         }
       ]
     }

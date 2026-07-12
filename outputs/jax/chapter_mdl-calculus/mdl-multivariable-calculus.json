@@ -3,7 +3,7 @@
   "source": "chapter_mdl-calculus/mdl-multivariable-calculus.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -44,7 +44,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-multivariable-calculus/multivariable-calculus-a-note-on-mathematical-optimization-1.svg",
           "bytes": 13743,
-          "sha256": "sha256:fc9b891565ea09f19ca6baf144cf44ea9a583abf95d05799f0eaeda45d55a054"
+          "sha256": "sha256:c6f8feaea408ae3ea7d306b63a82e71c2da3cd9b459489cb5449d0ac2552538b"
         }
       ]
     },

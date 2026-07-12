@@ -3,7 +3,7 @@
   "source": "chapter_computational-performance/hybridize.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:2fc77b08027f9251bfab8bac1ed3cd56f49f5571d758c67f35b71d48cda7b3c2",
     "max_inline_bytes": 0
   },
@@ -31,54 +31,54 @@
       ]
     },
     "hybridize-hybridizing-the-sequential-class-1": {
-      "code_fingerprint": "sha256:2f59ca13a2308817eb1e6979d5abae2e0eec52fda52d629d75118634545b8f78",
+      "code_fingerprint": "sha256:333f56528e3a620dd5f463ddd22f1269192509566b007d6516dcf8e6655e3a00",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 0.5303471, -0.5135098]], dtype=float32)"
+          "text": "Array([[0.17220086, 0.34535384]], dtype=float32)"
         }
       ]
     },
     "hybridize-hybridizing-the-sequential-class-2": {
-      "code_fingerprint": "sha256:a35fe9949695938dfc7e8fe789c46c5ca90e3f1d4ba48e1e9d3e581c998a00d2",
+      "code_fingerprint": "sha256:3778b71737d287d0fed06c74ea8bd3dd8f5b368a0f9cc3dc68c43cd8496fcd6a",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 0.5303473, -0.5135098]], dtype=float32)"
+          "text": "Array([[0.17220086, 0.34535384]], dtype=float32)"
         }
       ]
     },
     "hybridize-acceleration-by-hybridization-1": {
-      "code_fingerprint": "sha256:496be7be8bc3390d1ba7996c2ea55c89d29c56b3d68435c3b37a1086ffec496c",
+      "code_fingerprint": "sha256:3b9fa561b3ef7f93890fc389a9ceef9c11cb0e752930db54fef5198bc054d498",
       "kind": "text",
       "outputs": []
     },
     "hybridize-acceleration-by-hybridization-2": {
-      "code_fingerprint": "sha256:f4305fdf9da37980d893fa33a32bac3813121a7f7f2cef690120dab9a77a3aa6",
+      "code_fingerprint": "sha256:0369ddd7a7acf3bcc5066f7947c7adc95bc9f3ad28e958cfdc8f3908f2c0dfc0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Without jax.jit: 6.3506 sec\n"
+          "text": "Without jax.jit: 1.6228 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "With jax.jit: 0.2636 sec\n"
+          "text": "With jax.jit: 0.5025 sec\n"
         }
       ]
     },
     "hybridize-serialization-1": {
-      "code_fingerprint": "sha256:5c59fe1b0a232e79e193dbca492c385acf08a19cda25d45f83f82e9a652cf3f2",
+      "code_fingerprint": "sha256:886061f2782e724b9ccad217a08336fb6bdd4f8e34f12dabaf63c972e11bb7f6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Serialized parameter size: 658128 bytes\n{ \u001b[34;1mlambda \u001b[39;22m; a\u001b[35m:f32[256]\u001b[39m b\u001b[35m:f32[512,256]\u001b[39m c\u001b[35m:f32[128]\u001b[39m d\u001b[35m:f32[256,128]\u001b[39m e\u001b[35m:f32[2]\u001b[39m f\u001b[35m:f32[128,2]\u001b[39m\n    g\u001b[35m:f32[1,512]\u001b[39m. \u001b[34;1mlet\n    \u001b[39;22mh\u001b[35m:f32[1,256]\u001b[39m = dot_general[dimension_numbers=(([1], [0]), ([], []))] g b\n    i\u001b[35m:f32[1,256]\u001b[39m = reshape[dimensions=None new_sizes=(1, 256) sharding=None] a\n    j\u001b[35m:f32[1,256]\u001b[39m = add h i\n    k\u001b[35m:f32[1,256]\u001b[39m = custom_jvp_call[\n      name=relu\n      call_jaxpr={ \u001b[34;1mlambda \u001b[39;22m; l\u001b[35m:f32[1,256]\u001b[39m. \u001b[34;1mlet\n          \u001b[39;22mm\u001b[35m:f32[1,256]\u001b[39m = jit[\n            name=relu\n            jaxpr={ \u001b[34;1mlambda \u001b[39;22m; l\u001b[35m:f32[1,256]\u001b[39m. \u001b[34;1mlet\n                \u001b[39;22mm\u001b[35m:f32[1,256]\u001b[39m = max l 0.0:f32[]\n              \u001b[34;1min \u001b[39;22m(m,) }\n          ] l\n        \u001b[34;1min \u001b[39;22m(m,) }\n      jvp=jvp\n      symbolic_zeros=False\n    ] j\n    n\u001b[35m:f32[1,128]\u001b[39m = dot_general[dimension_numbers=(([1], [0]), ([], []))] k d\n    o\u001b[35m:f32[1,128]\u001b[39m = reshape[dimensions=None new_sizes=(1, 128) sharding=None] c\n    p\u001b[35m:f32[1,128]\u001b[39m = add n o\n    q\u001b[35m:f32[1,128]\u001b[39m = custom_jvp_call[\n      name=relu\n      call_jaxpr={ \u001b[34;1mlambda \u001b[39;22m; r\u001b[35m:f32[1,128]\u001b[39m. \u001b[34;1mlet\n          \u001b[39;22ms\u001b[35m:f32[1,128]\u001b[39m = jit[\n            name=relu\n            jaxpr={ \u001b[34;1mlambda \u001b[39;22m; r\u001b[35m:f32[1,128]\u001b[39m. \u001b[34;1mlet\n                \u001b[39;22ms\u001b[35m:f32[1,128]\u001b[39m = max r 0.0:f32[]\n              \u001b[34;1min \u001b[39;22m(s,) }\n          ] r\n        \u001b[34;1min \u001b[39;22m(s,) }\n      jvp=jvp\n      symbolic_zeros=False\n    ] p\n    t\u001b[35m:f32[1,2]\u001b[39m = dot_general[dimension_numbers=(([1], [0]), ([], []))] q f\n    u\u001b[35m:f32[1,2]\u001b[39m = reshape[dimensions=None new_sizes=(1, 2) sharding=None] e\n    v\u001b[35m:f32[1,2]\u001b[39m = add t u\n  \u001b[34;1min \u001b[39;22m(v,) }\n"
+          "text": "Serialized parameter size: 658108 bytes\n{ \u001b[34;1mlambda \u001b[39;22m; a\u001b[35m:f32[256]\u001b[39m b\u001b[35m:f32[512,256]\u001b[39m c\u001b[35m:f32[128]\u001b[39m d\u001b[35m:f32[256,128]\u001b[39m e\u001b[35m:f32[2]\u001b[39m f\u001b[35m:f32[128,2]\u001b[39m\n    g\u001b[35m:f32[1,512]\u001b[39m. \u001b[34;1mlet\n    \u001b[39;22mh\u001b[35m:f32[1,256]\u001b[39m = dot_general[dimension_numbers=(([1], [0]), ([], []))] g b\n    i\u001b[35m:f32[1,256]\u001b[39m = reshape[dimensions=None new_sizes=(1, 256) sharding=None] a\n    j\u001b[35m:f32[1,256]\u001b[39m = add h i\n    k\u001b[35m:f32[1,256]\u001b[39m = custom_jvp_call[\n      name=relu\n      call_jaxpr={ \u001b[34;1mlambda \u001b[39;22m; l\u001b[35m:f32[1,256]\u001b[39m. \u001b[34;1mlet\n          \u001b[39;22mm\u001b[35m:f32[1,256]\u001b[39m = jit[\n            name=relu\n            jaxpr={ \u001b[34;1mlambda \u001b[39;22m; l\u001b[35m:f32[1,256]\u001b[39m. \u001b[34;1mlet\n                \u001b[39;22mm\u001b[35m:f32[1,256]\u001b[39m = max l 0.0:f32[]\n              \u001b[34;1min \u001b[39;22m(m,) }\n          ] l\n        \u001b[34;1min \u001b[39;22m(m,) }\n      jvp=jvp\n      symbolic_zeros=False\n    ] j\n    n\u001b[35m:f32[1,128]\u001b[39m = dot_general[dimension_numbers=(([1], [0]), ([], []))] k d\n    o\u001b[35m:f32[1,128]\u001b[39m = reshape[dimensions=None new_sizes=(1, 128) sharding=None] c\n    p\u001b[35m:f32[1,128]\u001b[39m = add n o\n    q\u001b[35m:f32[1,128]\u001b[39m = custom_jvp_call[\n      name=relu\n      call_jaxpr={ \u001b[34;1mlambda \u001b[39;22m; r\u001b[35m:f32[1,128]\u001b[39m. \u001b[34;1mlet\n          \u001b[39;22ms\u001b[35m:f32[1,128]\u001b[39m = jit[\n            name=relu\n            jaxpr={ \u001b[34;1mlambda \u001b[39;22m; r\u001b[35m:f32[1,128]\u001b[39m. \u001b[34;1mlet\n                \u001b[39;22ms\u001b[35m:f32[1,128]\u001b[39m = max r 0.0:f32[]\n              \u001b[34;1min \u001b[39;22m(s,) }\n          ] r\n        \u001b[34;1min \u001b[39;22m(s,) }\n      jvp=jvp\n      symbolic_zeros=False\n    ] p\n    t\u001b[35m:f32[1,2]\u001b[39m = dot_general[dimension_numbers=(([1], [0]), ([], []))] q f\n    u\u001b[35m:f32[1,2]\u001b[39m = reshape[dimensions=None new_sizes=(1, 2) sharding=None] e\n    v\u001b[35m:f32[1,2]\u001b[39m = add t u\n  \u001b[34;1min \u001b[39;22m(v,) }\n"
         }
       ]
     }

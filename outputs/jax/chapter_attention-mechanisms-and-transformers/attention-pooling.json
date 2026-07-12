@@ -3,23 +3,23 @@
   "source": "chapter_attention-mechanisms-and-transformers/attention-pooling.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "attention-pooling-attention-pooling-by-similarity": {
-      "code_fingerprint": "sha256:291730bf8b7e4b411e6a9fd0d6ffe84533bc7953fefc7f6d608e8a00a823c460",
+      "code_fingerprint": "sha256:109b8040c7fc82aef50157690ccb67feb642457581560f36590473ee6973d5f5",
       "kind": "text",
       "outputs": []
     },
     "attention-pooling-kernels-and-data-1": {
-      "code_fingerprint": "sha256:5f781f725a96158859d249b77f7a0169d424e4965f5c0187f858080ee96b5c0b",
+      "code_fingerprint": "sha256:f5ac588a8de04ce14e05f375726a0617677c1cbab7f3a3aff513915135ce93bb",
       "kind": "text",
       "outputs": []
     },
     "attention-pooling-kernels-and-data-2": {
-      "code_fingerprint": "sha256:17889b7eb08c08616aebfa954fa570e566b2c795b841e2b8966cb8e9b4942fcd",
+      "code_fingerprint": "sha256:1bdf7bde3fc4b94b9177b8d0d786a5965e45b485caaea47e267fa7e127f47e82",
       "kind": "asset",
       "outputs": [
         {
@@ -32,22 +32,22 @@
       ]
     },
     "attention-pooling-kernels-and-data-3": {
-      "code_fingerprint": "sha256:031eb7798b955eacc6d8c535f4b335a3aa7963b095d69a47e88fdd28d3951f86",
+      "code_fingerprint": "sha256:c71556134699e7814b4793887c615da25ddca983069e65fcfd4409b8eb03bfc5",
       "kind": "text",
       "outputs": []
     },
     "attention-pooling-attention-pooling-via-nadaraya-watson-regression-1": {
-      "code_fingerprint": "sha256:b7f934a1f944aec74a16ec8073337959264ef8f08347124c2e91005c65f6a0f3",
+      "code_fingerprint": "sha256:13aa01fe86c605fa2aa22951303304df12614077ec193b828ba356b23dd93606",
       "kind": "text",
       "outputs": []
     },
     "attention-pooling-attention-pooling-via-nadaraya-watson-regression-2": {
-      "code_fingerprint": "sha256:550743e6e2d0e93b158b26aa739ccf9fd6c7879a702d4dfb6aec91ec9361a2b1",
+      "code_fingerprint": "sha256:bcb12248de5c97d61cb6c0acf014b2e4a831768a98457ba32aca139bd01ce376",
       "kind": "text",
       "outputs": []
     },
     "attention-pooling-attention-pooling-via-nadaraya-watson-regression-3": {
-      "code_fingerprint": "sha256:2aa0bb3602c133d0ea27262bbdd21f538df6dac0a704db7579af67d9dc7b1f77",
+      "code_fingerprint": "sha256:94462d622bcf087125068fc287b8578a49f06d8bd12d44aaf53835b7494ae03b",
       "kind": "asset",
       "outputs": [
         {
@@ -60,7 +60,7 @@
       ]
     },
     "attention-pooling-attention-pooling-via-nadaraya-watson-regression-4": {
-      "code_fingerprint": "sha256:89fa0cb061be14fcb496e531b02bb5b65bf58bbdc1a8f243cc104c6aafb783fa",
+      "code_fingerprint": "sha256:9154adc79e4e3bfbf5f2737e052a3cefc8ff45278bcb8212b47c6bd17bdd403d",
       "kind": "asset",
       "outputs": [
         {
@@ -73,7 +73,7 @@
       ]
     },
     "attention-pooling-adapting-attention-pooling-1": {
-      "code_fingerprint": "sha256:ad02c1c8042c60659987545903571c51c96183c263bb9e6e20826ab657e1851b",
+      "code_fingerprint": "sha256:0ad9e42d7ede92be56eb6ab72329bb892498b706ac51f68e994a7db15be0db99",
       "kind": "asset",
       "outputs": [
         {
@@ -86,7 +86,7 @@
       ]
     },
     "attention-pooling-adapting-attention-pooling-2": {
-      "code_fingerprint": "sha256:6398db05fde477d03fd8c02f1435cfeaa921365c9f2f5d7ead9ebb6bf87aed88",
+      "code_fingerprint": "sha256:e102a3e3d9ce56655cf7c64416405c042db9555f7819d9917f83f5d257f1c71e",
       "kind": "asset",
       "outputs": [
         {

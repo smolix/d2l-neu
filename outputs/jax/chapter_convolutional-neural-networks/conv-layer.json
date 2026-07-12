@@ -3,23 +3,23 @@
   "source": "chapter_convolutional-neural-networks/conv-layer.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "conv-layer-convolutions-for-images": {
-      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "code_fingerprint": "sha256:f58d5676455baede0fac1ad44463f7d43d4d544b1e03b0dab31cdbf5acef33e6",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-the-cross-correlation-operation-1": {
-      "code_fingerprint": "sha256:3299e4509b5319f04b6d82501a37e37a1361eca7e43b44e99e842c2dd2a604ab",
+      "code_fingerprint": "sha256:2654ef4107c0f37a96096d176ffa3e8113a4ab1c03ed1a5ddc2eaaae1cbe6124",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-the-cross-correlation-operation-2": {
-      "code_fingerprint": "sha256:da81f83fec530ff5eaf9bfc5ca894e974147a50f072ff7d1a940b6bfd052d00b",
+      "code_fingerprint": "sha256:bcd5a9389b4037511a61d36f3d02311a7b22379318ad4ccef4965d61fe9576fc",
       "kind": "text",
       "outputs": [
         {
@@ -29,12 +29,12 @@
       ]
     },
     "conv-layer-convolutional-layers": {
-      "code_fingerprint": "sha256:aa00a01e4e9e68a50c4f7ea080706bb35f5728fe27837f20713dfc502412760e",
+      "code_fingerprint": "sha256:c02c349ed218846a92cc21ab11701606b7c4d04e1c4d70522a15edf1424c8057",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-object-edge-detection-in-images-1": {
-      "code_fingerprint": "sha256:1f97eb2652e6e1dad0b9e9f614f43b794637129472d435f7383fac0aad3a5442",
+      "code_fingerprint": "sha256:be30894ed06036823df4c4af81ec1a1fb36a1e306446bb841f358934bfbc84f4",
       "kind": "text",
       "outputs": [
         {
@@ -44,12 +44,12 @@
       ]
     },
     "conv-layer-object-edge-detection-in-images-2": {
-      "code_fingerprint": "sha256:ed8f9684f85fcdf2833c2ae6438fa3a1cb215f0f3ffb3c9ae9f8cd65abd7738d",
+      "code_fingerprint": "sha256:4b8c3017e5ef34d0c2d798798cc446d31304b92d9c85ac45ad4ed0d9498ae1bb",
       "kind": "text",
       "outputs": []
     },
     "conv-layer-object-edge-detection-in-images-3": {
-      "code_fingerprint": "sha256:c31796993ec5b7cf906f86479d1161b7174916540a4b5691f065d9f6883ed6d4",
+      "code_fingerprint": "sha256:167c2f419433598c70fc31a61dc5dc01bdb3c0599d0e9da0b3428361fb38e1a2",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "conv-layer-object-edge-detection-in-images-4": {
-      "code_fingerprint": "sha256:bce5df9dfad4e9a7634e49381e50b25e84a3e2475261f5807b778121bd057656",
+      "code_fingerprint": "sha256:90796f37e25ea48d8dc32f9542517233444c2d1145339d5952ba16e48b2c09c7",
       "kind": "text",
       "outputs": [
         {
@@ -69,28 +69,28 @@
       ]
     },
     "conv-layer-learning-a-kernel-1": {
-      "code_fingerprint": "sha256:5c6b4a0869c175033b40e1e3ea9785b2a80008b31de4f06872b206a2e7966b84",
+      "code_fingerprint": "sha256:d0b177a1ad7adc751242dde043594d16ed64ea20daace5bdb17835d1b8ae050e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 4.909\nepoch 4, loss 0.824\nepoch 6, loss 0.138\nepoch 8, loss 0.023\nepoch 10, loss 0.004\n"
+          "text": "epoch 2, loss 4.868\nepoch 4, loss 0.817\nepoch 6, loss 0.137\nepoch 8, loss 0.023\nepoch 10, loss 0.004\n"
         }
       ]
     },
     "conv-layer-learning-a-kernel-2": {
-      "code_fingerprint": "sha256:d21b2c32b988308c1d24bf9d4f7af0eea021c84ab1b00098017b43f2bdcc5a02",
+      "code_fingerprint": "sha256:52c450fa6932d85aa32ab75fcfd90c155cc85a96ab0b431b0c5255dc85c677ec",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[ 0.98807997, -0.9888774 ]], dtype=float32)"
+          "text": "Array([[ 0.98822   , -0.98883337]], dtype=float32)"
         }
       ]
     },
     "conv-layer-convolution-as-matrix-multiplication-1": {
-      "code_fingerprint": "sha256:d5b823c9fcfe3ab22fbb64d75c4d132b025ee1a324dc331b6723dc1791f5356f",
+      "code_fingerprint": "sha256:028927a6d4ce22d77d8cb495dbd22fb0988f9f8166a8b8a01b17f91b25f13cac",
       "kind": "text",
       "outputs": [
         {

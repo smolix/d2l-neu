@@ -624,7 +624,8 @@ def try_all_gpus():
     """Return all available GPUs, or [cpu(),] if no GPU exists.
 
     Defined in :numref:`sec_use_gpu`"""
-    return [gpu(i) for i in range(num_gpus())]
+    devices = [gpu(i) for i in range(num_gpus())]
+    return devices if devices else [cpu()]
 
 def corr2d(X, K):
     """Compute 2D cross-correlation.

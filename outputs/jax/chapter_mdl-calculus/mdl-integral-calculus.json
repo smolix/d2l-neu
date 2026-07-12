@@ -3,7 +3,7 @@
   "source": "chapter_mdl-calculus/mdl-integral-calculus.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -128,7 +128,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
           "bytes": 44497,
-          "sha256": "sha256:9acb17be2e3c59cf51ebae6bca02c261268a3f00815e24a21c832f7e0becab37"
+          "sha256": "sha256:80327fa0cec262401720cde7965bf0c8db30d3cb202f3d1c9771bc74d7612bb7"
         }
       ]
     }

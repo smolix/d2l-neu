@@ -3,7 +3,7 @@
   "source": "chapter_mdl-optimization/mdl-constrained-optimization-duality.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -31,12 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   0.10       0.4460         9.23e-17             0.1000\n"
+          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10       0.4460         9.23e-17             0.1000\n"
         },
         {
           "type": "stream",
@@ -81,7 +76,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/constrained-duality-gap-1.svg",
           "bytes": 26638,
-          "sha256": "sha256:a25ee94a61789a256193e8707d5150d900fdce9a3f93976a66dfabdf14862e6c"
+          "sha256": "sha256:daecaab98230fdecfe245cc02b07950cf7e4ce952127dc9779351f81f7d9ce3d"
         }
       ]
     }

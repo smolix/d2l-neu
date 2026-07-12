@@ -3,7 +3,7 @@
   "source": "chapter_linear-classification/generalization-classification.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-the-test-set-2-1.svg",
           "bytes": 34254,
-          "sha256": "sha256:a36864350225fb7a7767a49cbff59a22977d9fb75febb847f845a8aff5faa69c"
+          "sha256": "sha256:3c86188fc2f77b16b8efd5878bf5c0f12cb9d68c39f2616a17978272af7da3a8"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "mime": "image/svg+xml",
           "asset": "generalization-classification/generalization-classification-test-set-reuse-1-1.svg",
           "bytes": 31658,
-          "sha256": "sha256:c732bb48579ac3ac333598ce5e290a8850be40a983ebc97ffcf9a8dd69dc5cc5"
+          "sha256": "sha256:ea40de4bcae4fba6d3fc2103d8da48a09bc8e1430f77405db17bb0b6832f7498"
         }
       ]
     }

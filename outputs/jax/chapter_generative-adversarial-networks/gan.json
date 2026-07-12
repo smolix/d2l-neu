@@ -3,23 +3,23 @@
   "source": "chapter_generative-adversarial-networks/gan.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:d13c7a5a3bd1952fcbdbb7318b7e0321683403fe14540457021d481145a83fca",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:40e70cf7ab150bd8588980510ba98556a4177a3ee8af7d95b718ee7753801301",
     "max_inline_bytes": 0
   },
   "cells": {
     "gan-generative-adversarial-networks": {
-      "code_fingerprint": "sha256:f0c4ae999917d432b6d5c91028d4e7cede5f3f4183b8d5c50cc6ebcb4ffb3a04",
+      "code_fingerprint": "sha256:2a5a92d0bb783076961cfb4b2d40b8edb423ee500f750622f6954d5e2b88e19c",
       "kind": "text",
       "outputs": []
     },
     "gan-generate-some-real-data-1": {
-      "code_fingerprint": "sha256:bef09c64c6917bb0c3c01f810cbed1d8fb5266d64a2a3a564ad67104e63f0a4d",
+      "code_fingerprint": "sha256:90828cde2b17c2da02a4bc2afc28c3abe1f73751307633551e944a2221265ffb",
       "kind": "text",
       "outputs": []
     },
     "gan-generate-some-real-data-2": {
-      "code_fingerprint": "sha256:49235e5d0fe2e7d128bf36ca1f48d3066f54d17640fbeccf6ed9b3fe66b913cc",
+      "code_fingerprint": "sha256:ce6adccc39fcfb39e86e9663f50555a86d697a8369c0c1ed6077679bb5e65226",
       "kind": "mixed",
       "outputs": [
         {
@@ -32,55 +32,55 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-generate-some-real-data-2-1.svg",
           "bytes": 20415,
-          "sha256": "sha256:440d846a1a2718f63dbca0815db61f7c6cab7e66c025303aa619559eb251d24f"
+          "sha256": "sha256:ca16168f47a9da4e3369000730adc26b2159ad7b95b40e7726e0c6b7d739c5c9"
         }
       ]
     },
     "gan-generate-some-real-data-3": {
-      "code_fingerprint": "sha256:032cc4493d11c14a161e33e4b58a395d2f8bdc26d3edc1b743669a7e0212892d",
+      "code_fingerprint": "sha256:381478ec7f216b916fc9c84dc387faa11ca2cb1cb0617f476be45e2d758b81e4",
       "kind": "text",
       "outputs": []
     },
     "gan-generator": {
-      "code_fingerprint": "sha256:4eb79bf9b86479f50426718b68306b663cfef4c0c77f261894733b8875943c5b",
+      "code_fingerprint": "sha256:ea3cf2b6880063c241057f1c8ea31cfe6193322bd273830b4add674a98699ed4",
       "kind": "text",
       "outputs": []
     },
     "gan-discriminator": {
-      "code_fingerprint": "sha256:e2866179a8f8a2679ac5ed78a85fd5c52b646caa588b352b96dd6ffe26cb8aef",
+      "code_fingerprint": "sha256:ced6eb7567c856d92a0ee95eb3719f6c25d1e9723154082a743a678a7596a5ec",
       "kind": "text",
       "outputs": []
     },
     "gan-training-1": {
-      "code_fingerprint": "sha256:762dd112006f8314389eee120d775563c9e4807e8adb128899645c4e97deb43f",
+      "code_fingerprint": "sha256:f92c8c8c64014297cd5777e0f46a861c65a9123b5a4b0473b2357205530a5147",
       "kind": "text",
       "outputs": []
     },
     "gan-training-2": {
-      "code_fingerprint": "sha256:20f68db81b5427f6057c7e5c33997727cda8e5f71b515bf6abed56921e4df84f",
+      "code_fingerprint": "sha256:c214685291710659e9d4060b6e8376ba72b3979c0d7088fe49a19c87fdc33732",
       "kind": "text",
       "outputs": []
     },
     "gan-training-3": {
-      "code_fingerprint": "sha256:afe4d19f113fe39c1aec8bc88482905a7c4020ed31ae9b4c8a79e66a94489404",
+      "code_fingerprint": "sha256:1fb9f8617b2467e4c5c72a9b4f396f90320e4a05eb312ba797a6a5bae3c07c51",
       "kind": "text",
       "outputs": []
     },
     "gan-training-4": {
-      "code_fingerprint": "sha256:f82192842454cb2e213f22440e4a3bb0a33c8cd361c356706ec8aada81fd8357",
+      "code_fingerprint": "sha256:4a7189b0f73505d1b160730cac4a636e0cbeb610f4b268020a383def7504f713",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss_D 0.693, loss_G 0.693, 1353.0 examples/sec\n"
+          "text": "loss_D 0.693, loss_G 0.693, 1878.1 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-training-4-1.svg",
-          "bytes": 60052,
-          "sha256": "sha256:aed1350791f9ec846c45e33330087452b6dbf5a54bfb0f7645aca76c4c104301"
+          "bytes": 61444,
+          "sha256": "sha256:539f5bf324a2f232a0aa8d147d603a5d47f50c9cd00acb455fe4e6cb6d295c58"
         }
       ]
     }

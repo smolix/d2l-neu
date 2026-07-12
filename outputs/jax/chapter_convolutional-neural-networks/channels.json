@@ -3,23 +3,23 @@
   "source": "chapter_convolutional-neural-networks/channels.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:4732c37083649ac6ce48f627c2881a720816d713309102f37f660ab81c95bfc3",
     "max_inline_bytes": 0
   },
   "cells": {
     "channels-multiple-input-and-multiple-output-channels": {
-      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "code_fingerprint": "sha256:f58d5676455baede0fac1ad44463f7d43d4d544b1e03b0dab31cdbf5acef33e6",
       "kind": "text",
       "outputs": []
     },
     "channels-multiple-input-channels-1": {
-      "code_fingerprint": "sha256:91934fd6bb51fc69c52351a119a83efcc140aa97d7aafb03d12fec3d6056f532",
+      "code_fingerprint": "sha256:23da072c572fda1a1fa0e0f1f63eaac46ac41317e910f2106ad9aedc18dd47cd",
       "kind": "text",
       "outputs": []
     },
     "channels-multiple-input-channels-2": {
-      "code_fingerprint": "sha256:3f1e6d387ade35f0b8546653a3d465023267c3d05c38332eb0b269a52d593d20",
+      "code_fingerprint": "sha256:66056ca1a07ec5994751234b4fac1221001eafacd836cb5a71a4d9cc426eba6b",
       "kind": "text",
       "outputs": [
         {
@@ -29,12 +29,12 @@
       ]
     },
     "channels-multiple-output-channels-1": {
-      "code_fingerprint": "sha256:2673caf04e447bfc3701dba964977c6a5fcac4f0247b265c9c19585f52df2860",
+      "code_fingerprint": "sha256:ceefb41fe06c5d1ee89488ea5682e115c77f91e55387edc56636abbfb1e1d34a",
       "kind": "text",
       "outputs": []
     },
     "channels-multiple-output-channels-2": {
-      "code_fingerprint": "sha256:d98da99bf5a82276009c73e8c849880cb537e4273ceb0b2403d425e224cbf72d",
+      "code_fingerprint": "sha256:225dbcfcbaf6c930cdf1ecebed3ed40935f6ff988231cf97aacbd7bee27e12e3",
       "kind": "text",
       "outputs": [
         {
@@ -44,7 +44,7 @@
       ]
     },
     "channels-multiple-output-channels-3": {
-      "code_fingerprint": "sha256:8ba7c87eaf8a7af166e8c62fdb727c9676f73bfd4f432641c0a1c132b2f2b6ef",
+      "code_fingerprint": "sha256:a3c310c77b32cd0d62ef2160499e63b989a946809e877f5531653a11d556d21c",
       "kind": "text",
       "outputs": [
         {
@@ -54,17 +54,17 @@
       ]
     },
     "channels-1-times-1-convolutional-layer-1": {
-      "code_fingerprint": "sha256:d95e47d92f3050d62c95f7f4d434b2a6ff1fff0f9af752c1bad0c1aadaa8b9fa",
+      "code_fingerprint": "sha256:aca93e3fbe292665ee29a12d268a8cea6bf949d13ddc64fbee391a52c8a358b9",
       "kind": "text",
       "outputs": []
     },
     "channels-1-times-1-convolutional-layer-2": {
-      "code_fingerprint": "sha256:9338eae6c769a18132ee5c41e9da4c7e602c77191c9c1d5caa7285965728be17",
+      "code_fingerprint": "sha256:9a840388f36d3a2c6c362f7ff76b3d06aa66f5e998497ded2504c20f7bf33cd6",
       "kind": "text",
       "outputs": []
     },
     "channels-grouped-depthwise-and-depthwise-separable-convolutions": {
-      "code_fingerprint": "sha256:57799b5af30f4ceb74b6e059546d455bd2ee7abbf96de0c60110b83017723261",
+      "code_fingerprint": "sha256:9956fd2fb3ff294c377fc1d1763383c49816cc3dd3cfa847ed62454bc35ebc3b",
       "kind": "text",
       "outputs": [
         {

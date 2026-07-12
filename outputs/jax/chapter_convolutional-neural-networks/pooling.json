@@ -3,23 +3,23 @@
   "source": "chapter_convolutional-neural-networks/pooling.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "pooling": {
-      "code_fingerprint": "sha256:020270eb9a222b81c21ec1997781972e09838525fca9983f6eb7bdfbc2e882ed",
+      "code_fingerprint": "sha256:f58d5676455baede0fac1ad44463f7d43d4d544b1e03b0dab31cdbf5acef33e6",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-1": {
-      "code_fingerprint": "sha256:5816dd52031ba97628bca640b5f4bf219762bc1a0d5ede8c83443680ea97b2d0",
+      "code_fingerprint": "sha256:329512b02dc8ca6eb53b79d8d151dea211bfc490dd0bd9bad64fc524779f5855",
       "kind": "text",
       "outputs": []
     },
     "pooling-maximum-pooling-and-average-pooling-2": {
-      "code_fingerprint": "sha256:9aa9af8082cdf1f7d3ecad0ec9a0f373d63866cec7ba672fb865dc639f739b84",
+      "code_fingerprint": "sha256:64e9e549621485138c9ae58e08622acc29d0b1b9a7a45237db9a43f5bc5d8f0e",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "pooling-maximum-pooling-and-average-pooling-3": {
-      "code_fingerprint": "sha256:fe3b913547c05147916978ab7df990509cc34ea14a18205c90c6e4b4f33827d5",
+      "code_fingerprint": "sha256:1e48713bd106cf22f80617114508e71d2d8d208f9a01fa754efd4faf8dab836e",
       "kind": "text",
       "outputs": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "pooling-padding-and-stride-1": {
-      "code_fingerprint": "sha256:df455b29c49ba3243fdf43c700a4995f2998a628ff32a0a5dff35b6e550c9fed",
+      "code_fingerprint": "sha256:fd5f0bcecae5a28831c3da81afe9a02444d57f60151870bc7824c2495cc684dc",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     "pooling-padding-and-stride-2": {
-      "code_fingerprint": "sha256:44cb7b55301d31431924ef2468a407b6f057d574164b89d736d7dce91ca730b2",
+      "code_fingerprint": "sha256:3c989f8fb172746eddb89dd527cc15c6095cab4aca801630e7657f632b549dad",
       "kind": "text",
       "outputs": [
         {
@@ -59,7 +59,7 @@
       ]
     },
     "pooling-padding-and-stride-3": {
-      "code_fingerprint": "sha256:70359184d94d9ccbe4442b719b4ff029f4256d6c76e64065bd4cb06082726e49",
+      "code_fingerprint": "sha256:1b3f46649af557f56c8285553576bdc799100072c296846490278cc7ae1b2362",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "pooling-padding-and-stride-4": {
-      "code_fingerprint": "sha256:4e716311ab1474c4be9b7de652b0fa0656a798bbe02c570ecc53cabc77dff7a7",
+      "code_fingerprint": "sha256:e80d20ee554073f22d755dc59187d5343c27d1f6088a7c3fc94a92e3e1ac00d1",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +79,7 @@
       ]
     },
     "pooling-multiple-channels-1": {
-      "code_fingerprint": "sha256:35aa19109dcbf204aac8f6285a0bb6f9870edee433cfc1832fafee28eadc0aad",
+      "code_fingerprint": "sha256:50803f43091c7500ad2bad3e328ed42defb5453dcb929c57757511cea8286cca",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +89,7 @@
       ]
     },
     "pooling-multiple-channels-2": {
-      "code_fingerprint": "sha256:9bba8fc44f664879607a8212877a8d68b83b75f5c7c481a47aaf7653062a7acf",
+      "code_fingerprint": "sha256:048e6f1744e4d944404eeca466b7f3529cde9192e3670c8a47543e5973cf2638",
       "kind": "text",
       "outputs": [
         {

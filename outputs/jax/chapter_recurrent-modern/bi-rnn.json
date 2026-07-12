@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-modern/bi-rnn.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:10c55a68d0d64d07945dbc2e2cb883f792356d0dfac0c6ed54e2aff1e75e4f28",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:303577b7ded224d71419964033860a07b4e385d6173974901dab34d471f2d7b9",
     "max_inline_bytes": 0
   },
   "cells": {

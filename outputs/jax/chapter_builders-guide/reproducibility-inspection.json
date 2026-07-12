@@ -3,29 +3,29 @@
   "source": "chapter_builders-guide/reproducibility-inspection.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
   "cells": {
     "reproducibility-inspection-reproducibility-and-inspection": {
-      "code_fingerprint": "sha256:0106ad28ecdb6947ddebe9f3f33bf9ec6a1ad176f22bae21cc4cd393073f0b3a",
+      "code_fingerprint": "sha256:ce52e7505ac536d5ee33596c32de606d3adcf648adc17e4e44c391a59aab5b1d",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-seeds-and-randomness": {
-      "code_fingerprint": "sha256:888159ca2b9625dec70ded99495bfcfe2e26905aeeb6a21db9eb41fabb8cc87c",
+      "code_fingerprint": "sha256:e4e20157d01f2590f63b5d15d78874740449f4b8c49aa746345ab254095bc164",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "same seed, identical loss and weights: True True\ndifferent seed: 1.015503 vs 0.77521855\n"
+          "text": "same seed, identical loss and weights: True True\ndifferent seed: 1.0239224 vs 0.7823312\n"
         }
       ]
     },
     "reproducibility-inspection-generator-objects": {
-      "code_fingerprint": "sha256:5872b69b3e7b2268b97d73df93505e4064ce9975ccec012d00f9b3be9b1b8aec",
+      "code_fingerprint": "sha256:302cd86d15b265fdb0655abe35010824c9558f35e8c53bc501b299a02fc395cd",
       "kind": "text",
       "outputs": [
         {
@@ -36,56 +36,45 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-1": {
-      "code_fingerprint": "sha256:b29949c15a506b0e09b26ee2b7c812a3cbea4f3ea65999016005fc55d78a431a",
+      "code_fingerprint": "sha256:b3f4fd6700c85b2d581ee2efca4cec91738e0150116a44becbf28aa3a3243896",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "False 0.000213623046875\n"
+          "text": "False 0.0001678466796875\n"
         }
       ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
-      "code_fingerprint": "sha256:e16104170f5f28219f535fc8385157d163ada15e74a4622576409cc3c52d013b",
+      "code_fingerprint": "sha256:c65da8d9e1fa59085f25e41c5be440f05369ddc159dbd0e187d2e27e0196df98",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-capturing-activation-statistics": {
-      "code_fingerprint": "sha256:58859b469b19d58fb4f10913413ef05368eb7a3bf7f5aab3d2b3d13996a2c676",
+      "code_fingerprint": "sha256:ab85c85e96606b663634597a1ca560125f81d7feb611808ea14e66aee8550134",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Dense           std 1.00\nResidualBlock   std 1.24\nResidualBlock   std 1.46\nResidualBlock   std 1.80\nResidualBlock   std 2.26\nResidualBlock   std 2.82\nResidualBlock   std 3.56\nResidualBlock   std 4.69\nResidualBlock   std 6.01\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Dense           std 6.56\n"
+          "text": "Linear          std 0.99\nResidualBlock   std 1.23\nResidualBlock   std 1.50\nResidualBlock   std 1.78\nResidualBlock   std 2.15\nResidualBlock   std 2.75\nResidualBlock   std 3.26\nResidualBlock   std 3.90\nResidualBlock   std 4.33\nLinear          std 4.27\n"
         }
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:c18f71c04dbf3edefd7ff5e2a670d9915c1a4b9837a3b9648f29baf4290df599",
+      "code_fingerprint": "sha256:3b661a788d56817dd397c2c829481119ac0bcaeffe0df5e497b88f4469ca5c67",
       "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "first non-finite output in ['layers_3']['body']['layers_0']\n"
-        }
-      ]
+      "outputs": []
     },
     "reproducibility-inspection-backward-hooks-and-beyond": {
-      "code_fingerprint": "sha256:bb93dab7859b5b9a24b9daf0122d26238f72f59cd737eae6e24539c5ba41f7fb",
+      "code_fingerprint": "sha256:60e665a4be73d13efd70cfc4fbfe73b2c8312a06b5b2134b9fbabae7a642e023",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "{'bias': Array(5.7519174, dtype=float32), 'kernel': Array(34.747364, dtype=float32)}\n"
+          "text": "\u001b[38;2;79;201;177mState\u001b[0m\u001b[38;2;255;213;3m({\u001b[0m\u001b[38;2;105;105;105m\u001b[0m\n  \u001b[38;2;156;220;254m'bias'\u001b[0m\u001b[38;2;212;212;212m: \u001b[0m\u001b[38;2;79;201;177mParam\u001b[0m\u001b[38;2;255;213;3m(\u001b[0m\u001b[38;2;105;105;105m # 1 (4 B)\u001b[0m\n    \u001b[38;2;156;220;254mvalue\u001b[0m\u001b[38;2;212;212;212m=\u001b[0mArray(nan, dtype=float32)\n  \u001b[38;2;255;213;3m)\u001b[0m,\n  \u001b[38;2;156;220;254m'kernel'\u001b[0m\u001b[38;2;212;212;212m: \u001b[0m\u001b[38;2;79;201;177mParam\u001b[0m\u001b[38;2;255;213;3m(\u001b[0m\u001b[38;2;105;105;105m # 1 (4 B)\u001b[0m\n    \u001b[38;2;156;220;254mvalue\u001b[0m\u001b[38;2;212;212;212m=\u001b[0mArray(nan, dtype=float32)\n  \u001b[38;2;255;213;3m)\u001b[0m\n\u001b[38;2;255;213;3m})\u001b[0m\n"
         }
       ]
     }

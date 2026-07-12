@@ -3,28 +3,28 @@
   "source": "chapter_convolutional-modern/efficient-convnets.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:28cecefa99548a4a2f30ff6a46009e2932e17f5b076e43a2a10bce30be90ffdd",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:00d076d461c04c580d372d8f20d704441d2948dd63b0fcdd1efdab3d6483049f",
     "max_inline_bytes": 0
   },
   "cells": {
     "efficient-convnets-imports": {
-      "code_fingerprint": "sha256:8c060599d06e85a27ceb24de151ee6d039f3948b38b9860ac25b8684466df8ad",
+      "code_fingerprint": "sha256:01a52a8f8cd92ee75afb113c0c47c0dce8f57ecc4e738102b3579b744add4a53",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-1": {
-      "code_fingerprint": "sha256:de9c513ec78c5e8f1e42c55617e9af1fae69d9ef076a89252aaddc58b0a2411e",
+      "code_fingerprint": "sha256:7ccc2e1671a7ad7eed229d5c10234322a15b57cec374119ab0695e201620292b",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-2": {
-      "code_fingerprint": "sha256:10e6c64774579ee0d516030bbfccea3261a957a9f5d0edcb18c8b9fef3ca5eb3",
+      "code_fingerprint": "sha256:5ec59451df6d6813a89d57a6a973fc7da9a3e562e5481c86e30be92816d9cd80",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-3": {
-      "code_fingerprint": "sha256:8d80596ea15da279f7be5b29468f6cc8a7f790a285ac5d05c88e0ec1cd5e4166",
+      "code_fingerprint": "sha256:498b3ad5bff0b185fe6f026f789a69a961fd7683ada392ea74e8e7b2222a336d",
       "kind": "text",
       "outputs": [
         {
@@ -34,91 +34,91 @@
       ]
     },
     "efficient-convnets-training-and-comparison-1": {
-      "code_fingerprint": "sha256:76e1bb08654ba1b613a1bdea44c84108e71eb1fcfc755a1c267026fc6c5259c8",
+      "code_fingerprint": "sha256:dc9e3d73e731c760ba6537fe2609c7a5c4eecc49e416bdb8b398abba027aeaca",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-training-and-comparison-2": {
-      "code_fingerprint": "sha256:7a0b2602e76e31d15b50ba9739f3b198d3d83bf7492d0b2261770d817e1d2e0b",
+      "code_fingerprint": "sha256:80b8bbe8765f3b0b92aaede2aa55e56c3eb584655b87816820305002edb44851",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-training-and-comparison-3": {
-      "code_fingerprint": "sha256:435f6af2dfcea038b24fa58f83db557c50d20e1cb64ca32bc6ddc2da7b658a1e",
+      "code_fingerprint": "sha256:e8a1a121245c30cfc3ce02cab5cd5d7d013c9c0693fbac2df02b897813435c43",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-1.svg",
-          "bytes": 20496,
-          "sha256": "sha256:d0f74e5a94a0242206341fcc3ba289e3c11c57506e63cb6c65e796b48bf4f803"
+          "bytes": 20455,
+          "sha256": "sha256:71be38eaba296833255ba37112a0cab6559b15265a7c9bde0caa806f2f38f12a"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-2.svg",
-          "bytes": 20498,
-          "sha256": "sha256:b250fce8a54cf5e963d70b3d544a23eb955b07dc0e868a663a01735a83c9c46a"
+          "bytes": 21032,
+          "sha256": "sha256:fddde0c36f75121bfbf6b67e9d9323a25552e26e0c65863a439fe23961746cfa"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-3.svg",
-          "bytes": 20498,
-          "sha256": "sha256:01197ffbb991250fbacfbf9214d9987733e5a06a4e89209e14c019d1a2e8b9c2"
+          "bytes": 20989,
+          "sha256": "sha256:55c94b75f81e9f127ee3bae8edfe9d7f843c59190fd684158f6dc91915346ed3"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-4.svg",
-          "bytes": 20502,
-          "sha256": "sha256:3d548a9433717303e430a738e3da144c17490d27deb885b2e3b2601c52647426"
+          "bytes": 22046,
+          "sha256": "sha256:5244924632d752a93cab9f389e85265754f8e3591383953533b964464fc0d1e0"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-5.svg",
-          "bytes": 20494,
-          "sha256": "sha256:4fc2ed97ba3276593f5960b6237d4d5d7b248cdc6482c7a2afe97b3c396403d6"
+          "bytes": 20520,
+          "sha256": "sha256:f284216c3852a3c1f48f11680aa5dc09bf083b046f7ff7c3622304f37e1333cd"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-6.svg",
-          "bytes": 20496,
-          "sha256": "sha256:2b80b51880c4a0bfef3b91989d21c2017945cd4da64462b22b2b055d9e228a2f"
+          "bytes": 20490,
+          "sha256": "sha256:7da12fc21b723c74a9679a27ef2c4d54300a72b97b767cec53b0a394cc96ff33"
         }
       ]
     },
     "efficient-convnets-training-and-comparison-4": {
-      "code_fingerprint": "sha256:771ab61b6e6ab161dad85d5c15451be617d43f9c82d4f3a58f6f6f94e12df9fa",
+      "code_fingerprint": "sha256:0ec5d71d5491d7b2e3bb6efaa0f7e4446115e5e8f50432db876cb808e61ffe36",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mini-MobileNet: 542,474 params, val acc 0.892 ± 0.016; seeds [0.91, 0.887, 0.878]\nVGG-style: 583,594 params, val acc 0.873 ± 0.015; seeds [0.856, 0.879, 0.884]\n"
+          "text": "mini-MobileNet: 542,474 params, val acc 0.897 ± 0.003; seeds [0.899, 0.899, 0.893]\nVGG-style: 583,594 params, val acc 0.844 ± 0.024; seeds [0.855, 0.861, 0.816]\n"
         }
       ]
     },
     "efficient-convnets-the-repvgg-block": {
-      "code_fingerprint": "sha256:3c8006494736a7ad50bbc46494881ca2ab23c54f2f54b4d46dd395d916cb5e0c",
+      "code_fingerprint": "sha256:bf59b8d0441758652ea58e976981d8c4d504f9021b082b30b23acc4cb6d69a44",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-1": {
-      "code_fingerprint": "sha256:2ba5452554f44f13969d0db6c43d6cb76b7bb99f2e35aa215c156bff216a5dca",
+      "code_fingerprint": "sha256:e2b04605d54c4007fc2993b184e28318461e3fe9646e80d66e896e3d481fda30",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-2": {
-      "code_fingerprint": "sha256:340ba90b8d3ec891c8d44082b4bb46037216a02113e18ad271a2c4b278959978",
+      "code_fingerprint": "sha256:89a4f60931ea8b4f9c0139e171c3cd303c61b435914d0bb06130dddb12430704",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "2.384185791015625e-06"
+          "text": "2.86102294921875e-06"
         }
       ]
     }

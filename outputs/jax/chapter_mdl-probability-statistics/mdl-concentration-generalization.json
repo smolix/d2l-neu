@@ -3,7 +3,7 @@
   "source": "chapter_mdl-probability-statistics/mdl-concentration-generalization.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "max_inline_bytes": 0
   },
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-the-tail-race-in-code-1.svg",
           "bytes": 31472,
-          "sha256": "sha256:a17cb3f49aa8bd3316fb3ad792b9d14565caaa52045d6a6b4aad1f638d078e37"
+          "sha256": "sha256:77e77954f0b06410524594d5268c9653b9c39bcbbcd1f526ec58ef8118eabbe0"
         }
       ]
     },
@@ -72,7 +72,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-concentration-generalization/mdl-concentration-generalization-double-descent-in-twenty-five-lines-1.svg",
           "bytes": 33075,
-          "sha256": "sha256:148aa935f26a56b5710b504aa6b3b6100ebebc9bdecd77184726ea1afe51e065"
+          "sha256": "sha256:5108f25ffc7f9f487547b78474fd2c8651d42756c28ff1b2b2e33015238966df"
         }
       ]
     }

@@ -3,8 +3,8 @@
   "source": "chapter_recurrent-neural-networks/sequence.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
-    "d2l_lib_fingerprint": "sha256:4c9f41c6f000232beeaf6428a9922c97ca1e41fee0fc578da8a3e13103b82f0e",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:03f1dfaeb4f16c20b713b556f41e828ef399993394358a03f0ed621763006732",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
           "bytes": 40471,
-          "sha256": "sha256:1a5e6aa4a513e55b98f1a84c15816a6838ffdf3f263c9a29276f1b4cff9707e4"
+          "sha256": "sha256:46f22e371126c3a5599831385d44dfb78b3923fc05baf122998b4ef935f5210a"
         }
       ]
     },
@@ -37,64 +37,64 @@
       "outputs": []
     },
     "sequence-training-4": {
-      "code_fingerprint": "sha256:4f9835b94dd636d45af648cb0b8a414d6893d510e84031a0f8ac0b5dec35b9e4",
+      "code_fingerprint": "sha256:dd9bd90f3c8314cb6ce21fdb77e9de178dc7adf3dd807bbc85d9721eb7afa7ef",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 17932,
-          "sha256": "sha256:4270f5a7e2638c00545e53acf5edaa6805398acdf9f6e2b62532cac94cbcffcf"
+          "bytes": 17933,
+          "sha256": "sha256:a110a17976639bc5b590dbbfd321c2e97665713c7f937ed37d66981a512a8eaf"
         }
       ]
     },
     "sequence-prediction-1": {
-      "code_fingerprint": "sha256:e955cde00777cd6c92fa258b220899767700a0a9573ae645efef35cfed985dd9",
+      "code_fingerprint": "sha256:759ad8bbc40e41690c7548adc49ebaca9c6589b67e2a7597241bcad8c9ab53fe",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 67555,
-          "sha256": "sha256:e74d5d6f2d81c7467b192a753afa52ee31ecfb51f368ebcc57760613018c1691"
+          "bytes": 67605,
+          "sha256": "sha256:25f3022f1d384ab5f2f22d2c6bd1ee48932012093e4fa4f1729c26f4368a14d1"
         }
       ]
     },
     "sequence-prediction-2": {
-      "code_fingerprint": "sha256:c46e35117f5a27d7113ead191ada07ff917bcbaf8135e74de883895b90bc3a17",
+      "code_fingerprint": "sha256:6b654e7ed9207c0c6c13c512a1be11eb63b1062d9ddb732e3c4f4761524aa2db",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-3": {
-      "code_fingerprint": "sha256:d76e92e015afd3c1e56ed393bc7f88da8dfffaa16dc0bfebcbb0e60ac079a327",
+      "code_fingerprint": "sha256:8d29ca981f20cbcdf3089a5332a902a9450e093d2a4a97055c42a471c55043df",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44113,
-          "sha256": "sha256:2792ae8e7bdc2d81c745ee413f50abded9745e15c6a07dc5131d5eaf7572f7e3"
+          "bytes": 44079,
+          "sha256": "sha256:8bbd5c841b13f3d012b2790cd50505154c8e4cd4bc62591e4b4e09e6b94feb95"
         }
       ]
     },
     "sequence-prediction-4": {
-      "code_fingerprint": "sha256:ccc69049801ef8028e05bf842ec94e29615e35c5d5c7f70015d6f67d240c7c85",
+      "code_fingerprint": "sha256:e58f9a89a59750af2536e6908af6b611946d5be0a191e5efdf79bd0b2303eb5b",
       "kind": "text",
       "outputs": []
     },
     "sequence-prediction-5": {
-      "code_fingerprint": "sha256:e0211d73c3ab43e18a5bb96a6443362776ae0f6951c64b50382b956d1e82b787",
+      "code_fingerprint": "sha256:9f0a60c8e6692d607fc59518ada10cf040131311a2ec050853c527b2acc46a8d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 104995,
-          "sha256": "sha256:e33efb60fa1818d640fce5566855d1093737735bece870df71a936e368fea3c7"
+          "bytes": 104833,
+          "sha256": "sha256:39eab6414633b10ccff130cc3769e0e014069c6b643757227d126d9c294d0923"
         }
       ]
     }

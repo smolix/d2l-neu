@@ -3,7 +3,7 @@
   "source": "chapter_optimization/adam.md",
   "framework": "jax",
   "provenance": {
-    "framework_version": "jax==0.10.0",
+    "framework_version": "jax==0.10.2",
     "d2l_lib_fingerprint": "sha256:def55e87fc7ba5a1a4e68de13e7018d33b9c213f6a63c65485b85f14f961c941",
     "max_inline_bytes": 0
   },
@@ -20,14 +20,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 2.293 sec/epoch\n"
+          "text": "loss: 0.243, 1.726 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-implementation-2-1.svg",
-          "bytes": 18778,
-          "sha256": "sha256:1400806090508a4a66939eb0a219c0304d132d5b1660ebb039f99848c4a072b3"
+          "bytes": 18775,
+          "sha256": "sha256:0b98e35d2a9046dbe60b5c04cb745cd0931850bf542440eb2083440b5602ed46"
         }
       ]
     },
@@ -38,14 +38,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.246, 0.769 sec/epoch\n"
+          "text": "loss: 0.244, 0.356 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-implementation-3-1.svg",
-          "bytes": 18772,
-          "sha256": "sha256:857627b4935cd4a5edeb247004c9bbf9f015bb9dd4e55b56276a95365fd672ec"
+          "bytes": 18702,
+          "sha256": "sha256:54a9fe03e71e20161bd12fb4214ba6c4e030d8526ac06cfd8fe2ae1bd1800fee"
         }
       ]
     },
@@ -56,14 +56,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.247, 1.167 sec/epoch\n"
+          "text": "loss: 0.244, 0.706 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-yogi-1.svg",
-          "bytes": 18775,
-          "sha256": "sha256:20b2298c26fb8834c57f069bbb3881ab6fd8508bf8b348839602b6c807d16c0a"
+          "bytes": 18776,
+          "sha256": "sha256:7f9fed8da28cd4f99e5802c97f646b8a05b871cca6809448237bea1f37e3a4fb"
         }
       ]
     }

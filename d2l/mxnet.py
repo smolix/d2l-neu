@@ -418,7 +418,7 @@ class Trainer(d2l.HyperParameters):
     def clip_gradients(self, grad_clip_val, model):
         params = model.parameters()
         if not isinstance(params, list):
-            params = [p.data() for p in params.values()]    
+            params = [p.data() for p in params.values()]
         norm = math.sqrt(sum((p.grad ** 2).sum() for p in params))
         if norm > grad_clip_val:
             for param in params:
@@ -960,10 +960,8 @@ class RNNScratch(d2l.Module):
             # Initial state with shape: (batch_size, num_hiddens)
             state = d2l.zeros((inputs.shape[1], self.num_hiddens),
                               ctx=inputs.ctx)
-        else:
-            state, = state
         outputs = []
-        for X in inputs:  # Shape of inputs: (num_steps, batch_size, num_inputs) 
+        for X in inputs:  # Shape of inputs: (num_steps, batch_size, num_inputs)
             state = d2l.tanh(d2l.matmul(X, self.W_xh) +
                              d2l.matmul(state, self.W_hh) + self.b_h)
             outputs.append(state)
@@ -990,57 +988,65 @@ class RNNLMScratch(d2l.Classifier):
         super().__init__()
         self.save_hyperparameters()
         self.init_params()
-        
+
     def init_params(self):
+        self.W_e = d2l.randn(self.vocab_size, self.rnn.num_inputs)
         self.W_hq = d2l.randn(
             self.rnn.num_hiddens, self.vocab_size) * self.rnn.sigma
-        self.b_q = d2l.zeros(self.vocab_size)        
+        self.b_q = d2l.zeros(self.vocab_size)
         for param in self.get_scratch_params():
             param.attach_grad()
+
     def training_step(self, batch):
         l = self.loss(self(*batch[:-1]), batch[-1])
         self.plot('ppl', d2l.exp(l), train=True)
         return l
-        
+
     def validation_step(self, batch):
         l = self.loss(self(*batch[:-1]), batch[-1])
         self.plot('ppl', d2l.exp(l), train=False)
 
-    def one_hot(self, X):    
-        # Output shape: (num_steps, batch_size, vocab_size)    
-        return npx.one_hot(X.T, self.vocab_size)
+    def embedding(self, X):
+        # Output shape: (num_steps, batch_size, num_inputs)
+        return self.W_e[X.T]
 
     def output_layer(self, rnn_outputs):
         outputs = [d2l.matmul(H, self.W_hq) + self.b_q for H in rnn_outputs]
         return d2l.stack(outputs, 1)
 
     def forward(self, X, state=None):
-        embs = self.one_hot(X)
+        embs = self.embedding(X)
         rnn_outputs, _ = self.rnn(embs, state)
         return self.output_layer(rnn_outputs)
 
-    def predict(self, prefix, num_preds, vocab, device=None):
-        state, outputs = None, [vocab[prefix[0]]]
-        for i in range(len(prefix) + num_preds - 1):
+    def predict(self, prefix, num_tokens, tok, device=None, temperature=0.0,
+                rng=None):
+        outputs, state = tok.encode(prefix), None
+        for i in range(len(outputs) - 1):  # Warm up on the prefix
+            X = d2l.tensor([[outputs[i]]], ctx=device)
+            _, state = self.rnn(self.embedding(X), state)
+        rng = random.Random() if rng is None else rng
+        for _ in range(num_tokens):  # Generate num_tokens continuation tokens
             X = d2l.tensor([[outputs[-1]]], ctx=device)
-            embs = self.one_hot(X)
-            rnn_outputs, state = self.rnn(embs, state)
-            if i < len(prefix) - 1:  # Warm-up period
-                outputs.append(vocab[prefix[i + 1]])
-            else:  # Predict num_preds steps
-                Y = self.output_layer(rnn_outputs)
-                outputs.append(int(d2l.reshape(d2l.argmax(Y, axis=2), ())))
-        return ''.join([vocab.idx_to_token[i] for i in outputs])
+            rnn_outputs, state = self.rnn(self.embedding(X), state)
+            logits = d2l.numpy(self.output_layer(rnn_outputs))[0, 0]
+            if temperature == 0:
+                outputs.append(int(logits.argmax()))
+            else:
+                weights = [math.exp(l) for l in
+                           (logits - logits.max()) / temperature]
+                outputs.append(rng.choices(range(len(weights)), weights)[0])
+        return tok.decode(outputs)
 
 class RNN(d2l.Module):
     """The RNN model implemented with high-level APIs.
 
     Defined in :numref:`sec_rnn-concise`"""
-    def __init__(self, num_hiddens):
+    def __init__(self, num_inputs, num_hiddens):
         super().__init__()
-        self.save_hyperparameters()        
-        self.rnn = rnn.RNN(num_hiddens)
-        
+        self.save_hyperparameters()
+        self.rnn = gluon.rnn.RNN(num_hiddens)
+
     def forward(self, inputs, H=None):
         if H is None:
             H, = self.rnn.begin_state(inputs.shape[1], ctx=inputs.ctx)
@@ -1052,8 +1058,14 @@ class RNNLM(d2l.RNNLMScratch):
 
     Defined in :numref:`sec_rnn-concise`"""
     def init_params(self):
+        self.emb = nn.Embedding(self.vocab_size, self.rnn.num_inputs,
+                                weight_initializer=init.Normal(1))
         self.linear = nn.Dense(self.vocab_size, flatten=False)
         self.initialize()
+
+    def embedding(self, X):
+        return self.emb(X.T)
+
     def output_layer(self, hiddens):
         return d2l.swapaxes(self.linear(hiddens), 0, 1)
 

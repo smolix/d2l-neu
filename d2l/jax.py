@@ -1007,13 +1007,13 @@ class RNNScratch(nnx.Module):
         self.b_h = nnx.Param(jnp.zeros(num_hiddens))
 
     def __call__(self, inputs, state=None):
-        if state is not None:
-            state, = state
+        if state is None:
+            # Initial state with shape: (batch_size, num_hiddens)
+            state = jnp.zeros((inputs.shape[1], self.num_hiddens))
         outputs = []
-        for X in inputs:  # Shape of inputs: (num_steps, batch_size, num_inputs) 
-            state = d2l.tanh(d2l.matmul(X, self.W_xh) + (
-                d2l.matmul(state, self.W_hh) if state is not None else 0)
-                             + self.b_h)
+        for X in inputs:  # Shape of inputs: (num_steps, batch_size, num_inputs)
+            state = d2l.tanh(d2l.matmul(X, self.W_xh) +
+                             d2l.matmul(state, self.W_hh) + self.b_h)
             outputs.append(state)
         return outputs, state
 
@@ -1039,6 +1039,8 @@ class RNNLMScratch(d2l.Classifier):
         self.save_hyperparameters(ignore=['rnn', 'rngs'])
         self.rnn = rnn
         rngs = nnx.Rngs(1) if rngs is None else rngs
+        self.W_e = nnx.Param(
+            rngs.params.normal((vocab_size, rnn.num_inputs)))
         self.W_hq = nnx.Param(rngs.params.normal(
             (rnn.num_hiddens, vocab_size)) * rnn.sigma)
         self.b_q = nnx.Param(jnp.zeros(vocab_size))
@@ -1059,33 +1061,39 @@ class RNNLMScratch(d2l.Classifier):
             key, value = 'ppl', d2l.exp(value)
         super().plot(key, value, train)
 
-    def one_hot(self, X):    
-        # Output shape: (num_steps, batch_size, vocab_size)    
-        return jax.nn.one_hot(X.T, self.vocab_size)
+    def embedding(self, X):
+        # Output shape: (num_steps, batch_size, num_inputs)
+        return self.W_e[X.T]
 
     def output_layer(self, rnn_outputs):
         outputs = [d2l.matmul(H, self.W_hq) + self.b_q for H in rnn_outputs]
         return d2l.stack(outputs, 1)
 
     def forward(self, X, state=None):
-        embs = self.one_hot(X)
+        embs = self.embedding(X)
         rnn_outputs, _ = self.rnn(embs, state)
         return self.output_layer(rnn_outputs)
 
-    def predict(self, prefix, num_preds, vocab, device=None):
+    def predict(self, prefix, num_tokens, tok, device=None, temperature=0.0,
+                rng=None):
         model = nnx.view(self, deterministic=True, use_running_average=True,
                          raise_if_not_found=False)
-        state, outputs = None, [vocab[prefix[0]]]
-        for i in range(len(prefix) + num_preds - 1):
+        outputs, state = tok.encode(prefix), None
+        for i in range(len(outputs) - 1):  # Warm up on the prefix
+            X = d2l.tensor([[outputs[i]]])
+            _, state = model.rnn(model.embedding(X), state)
+        rng = random.Random() if rng is None else rng
+        for _ in range(num_tokens):  # Generate num_tokens continuation tokens
             X = d2l.tensor([[outputs[-1]]])
-            embs = model.one_hot(X)
-            rnn_outputs, state = model.rnn(embs, state)
-            if i < len(prefix) - 1:  # Warm-up period
-                outputs.append(vocab[prefix[i + 1]])
-            else:  # Predict num_preds steps
-                Y = model.output_layer(rnn_outputs)
-                outputs.append(int(d2l.reshape(d2l.argmax(Y, axis=2), ())))
-        return ''.join([vocab.idx_to_token[i] for i in outputs])
+            rnn_outputs, state = model.rnn(model.embedding(X), state)
+            logits = d2l.numpy(model.output_layer(rnn_outputs))[0, 0]
+            if temperature == 0:
+                outputs.append(int(logits.argmax()))
+            else:
+                weights = [math.exp(l) for l in
+                           (logits - logits.max()) / temperature]
+                outputs.append(rng.choices(range(len(weights)), weights)[0])
+        return tok.decode(outputs)
 
 class RNN(nnx.Module):
     """The RNN model implemented with high-level APIs.
@@ -1093,7 +1101,7 @@ class RNN(nnx.Module):
     Defined in :numref:`sec_rnn-concise`"""
     def __init__(self, num_inputs, num_hiddens, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
-        self.num_hiddens = num_hiddens
+        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
         self.rnn = nnx.RNN(
             nnx.SimpleCell(num_inputs, num_hiddens, rngs=rngs),
             time_major=True, return_carry=True, rngs=rngs)
@@ -1110,16 +1118,17 @@ class RNNLM(d2l.RNNLMScratch):
         d2l.Classifier.__init__(self)
         self.save_hyperparameters(ignore=['rnn', 'rngs'])
         self.rnn = rnn
-        rngs = nnx.Rngs(1) if rngs is None else rngs
+        rngs = nnx.Rngs(2) if rngs is None else rngs
+        self.emb = nnx.Embed(vocab_size, rnn.num_inputs,
+                             embedding_init=nnx.initializers.normal(1.0),
+                             rngs=rngs)
         self.linear = nnx.Linear(rnn.num_hiddens, vocab_size, rngs=rngs)
+
+    def embedding(self, X):
+        return self.emb(X.T)
 
     def output_layer(self, hiddens):
         return d2l.swapaxes(self.linear(hiddens), 0, 1)
-
-    def forward(self, X, state=None):
-        embs = self.one_hot(X)
-        rnn_outputs, _ = self.rnn(embs, state)
-        return self.output_layer(rnn_outputs)
 
 class GRU(d2l.RNN):
     """The multilayer GRU model.

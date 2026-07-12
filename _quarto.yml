@@ -129,9 +129,9 @@ book:
         - chapter_recurrent-neural-networks/text-sequence.qmd
         - chapter_recurrent-neural-networks/language-model.qmd
         - chapter_recurrent-neural-networks/rnn.qmd
-        - chapter_recurrent-neural-networks/rnn-scratch.qmd
-        - chapter_recurrent-neural-networks/rnn-concise.qmd
+        - chapter_recurrent-neural-networks/rnn-implementation.qmd
         - chapter_recurrent-neural-networks/bptt.qmd
+        - chapter_recurrent-neural-networks/decoding.qmd
         - chapter_recurrent-modern/index.qmd
         - chapter_recurrent-modern/lstm.qmd
         - chapter_recurrent-modern/gru.qmd

@@ -29,6 +29,7 @@ import gen_mdl_figures as fl  # importing applies the shared style + helpers
 np, plt = fl.np, fl.plt
 BLUE, ORANGE, GREEN, GRAY, LIGHT = fl.BLUE, fl.ORANGE, fl.GREEN, fl.GRAY, fl.LIGHT
 
+from matplotlib.lines import Line2D
 from matplotlib.patches import FancyBboxPatch
 
 
@@ -656,6 +657,187 @@ def fig_truncated_bptt():
 
 
 # =========================================================================== #
+# 9.7 "Decoding and Generation" (sec_decoding): the worked beam-search tree   #
+# and the maximization-vs-sampling decoding task map.                        #
+#                                                                              #
+# The beam-search tree is restyled from the retired hand-drawn                #
+# ``img/beam-search.svg`` of the old ``chapter_recurrent-modern/beam-         #
+# search.md``; the task map is new.                                          #
+# =========================================================================== #
+
+def fig_beam_tree():
+    """Beam search with beam size 2 over the vocabulary {A, B, C, D, E}.
+
+    Columns are generation steps t = 1, 2, 3.  Only kept (blue) prefixes are
+    expanded, each over all five tokens; of the 2x5 candidates per step the
+    two best survive.  Kept path: A, C -> AB, CE -> ABD, CED.
+    """
+    tokens = ["A", "B", "C", "D", "E"]
+    x_root, x1, x2, x3 = 0.0, 2.1, 4.2, 6.3
+    s = 0.62                                   # vertical slot spacing
+    r = 0.24                                   # node radius
+
+    # ten-slot grid used by the 2x5 candidate columns (t = 2 and t = 3);
+    # a slightly wider gap separates the two parents' expansion groups
+    ggap = 0.34
+    rows10 = [(4.5 - i) * s + (ggap / 2 if i < 5 else -ggap / 2)
+              for i in range(10)]
+    # five evenly spaced slots for t = 1 (all expansions of the root)
+    rows5 = list(np.linspace(rows10[0] - s, rows10[-1] + s, 5))
+
+    fig, ax = plt.subplots(figsize=(6.4, 5.3))
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    def node(x, y, text, kept):
+        face = BLUE if kept else "white"
+        edge = BLUE if kept else GRAY
+        col = "white" if kept else GRAY
+        ax.add_patch(plt.Circle((x, y), r, facecolor=face, edgecolor=edge,
+                                linewidth=1.4, zorder=3))
+        ax.text(x, y, f"${text}$", ha="center", va="center", fontsize=13,
+                color=col, zorder=4)
+
+    def edge(p, q, kept):
+        (x0, y0), (x1_, y1_) = p, q
+        d = np.hypot(x1_ - x0, y1_ - y0)
+        ux, uy = (x1_ - x0) / d, (y1_ - y0) / d
+        ax.plot([x0 + ux * (r + 0.04), x1_ - ux * (r + 0.04)],
+                [y0 + uy * (r + 0.04), y1_ - uy * (r + 0.04)],
+                color=BLUE if kept else GRAY, lw=2.2 if kept else 1.0,
+                alpha=1.0 if kept else 0.45, zorder=2)
+
+    # root: the (empty) prefix
+    ax.add_patch(FancyBboxPatch(
+        (x_root - 0.62, -0.30), 1.24, 0.60,
+        boxstyle="round,pad=0.02,rounding_size=0.12",
+        facecolor=GRAY, alpha=0.15, edgecolor="none", zorder=3))
+    ax.text(x_root, 0.0, "prefix", ha="center", va="center", fontsize=13,
+            color="black", zorder=4)
+    root = (x_root + 0.68, 0.0)
+
+    # ---- t = 1: expand the root over the whole vocabulary; keep A and C ----
+    kept1 = {"A", "C"}
+    pos1 = {}
+    for tok, y in zip(tokens, rows5):
+        pos1[tok] = (x1, y)
+        edge((root[0] - 0.04, root[1]), (x1, y), tok in kept1)
+        node(x1, y, tok, tok in kept1)
+
+    # ---- t = 2: expand A (top five slots) and C (bottom five); keep AB, CE --
+    kept2 = {("A", "B"), ("C", "E")}
+    pos2 = {}
+    for gi, parent in enumerate(["A", "C"]):
+        for ti, tok in enumerate(tokens):
+            y = rows10[gi * 5 + ti]
+            pos2[(parent, tok)] = (x2, y)
+            edge(pos1[parent], (x2, y), (parent, tok) in kept2)
+            node(x2, y, tok, (parent, tok) in kept2)
+
+    # ---- t = 3: expand AB and CE; keep ABD and CED -------------------------
+    kept3 = {("A", "B", "D"), ("C", "E", "D")}
+    for gi, parent in enumerate([("A", "B"), ("C", "E")]):
+        for ti, tok in enumerate(tokens):
+            y = rows10[gi * 5 + ti]
+            seq = parent + (tok,)
+            edge(pos2[parent], (x3, y), seq in kept3)
+            node(x3, y, tok, seq in kept3)
+
+    # column headers (functional: they name the generation steps)
+    ytop = rows10[0] + 0.78
+    for x, lab in [(x1, "$t = 1$"), (x2, "$t = 2$"), (x3, "$t = 3$")]:
+        ax.text(x, ytop, lab, ha="center", va="center", fontsize=14,
+                color="black")
+
+    # legend: kept vs pruned candidates
+    handles = [
+        Line2D([], [], marker="o", ls="none", markersize=9,
+               markerfacecolor=BLUE, markeredgecolor=BLUE,
+               label="kept in the beam ($k = 2$)"),
+        Line2D([], [], marker="o", ls="none", markersize=9,
+               markerfacecolor="white", markeredgecolor=GRAY,
+               label="scored, then pruned"),
+    ]
+    ax.legend(handles=handles, loc="lower center", fontsize=11.5, ncol=2,
+              frameon=False, bbox_to_anchor=(0.5, -0.085),
+              handletextpad=0.35, columnspacing=1.4)
+
+    ax.set_xlim(x_root - 0.75, x3 + 0.55)
+    ax.set_ylim(rows10[-1] - 0.95, ytop + 0.32)
+    fl.save(fig, "mdl-rnn-beam-tree")
+
+
+def fig_decoding_taskmap():
+    """One trained language model, two families of decoding strategies.
+
+    A root box (the model's next-token distribution) feeds a maximization
+    branch (one nearly-right answer: greedy, beam search) and a sampling
+    branch (many acceptable answers: temperature, top-k/top-p/min-p), each
+    with a short stack of the tasks it serves.
+    """
+    fig, ax = plt.subplots(figsize=(8.6, 4.4))
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    def box(cx, cy, w, h, face, alpha, edge="none", lw=0.0, z=2):
+        ax.add_patch(FancyBboxPatch(
+            (cx - w / 2, cy - h / 2), w, h,
+            boxstyle="round,pad=0.02,rounding_size=0.10",
+            facecolor=face, alpha=alpha, edgecolor=edge, linewidth=lw,
+            zorder=z))
+
+    # root: the trained model's next-token distribution
+    rx, ry, rw, rh = 5.0, 4.05, 4.3, 0.95
+    box(rx, ry, rw, rh, GRAY, 0.13)
+    ax.text(rx, ry + 0.18, "trained language model", ha="center", va="center",
+            fontsize=14, color="black", zorder=3)
+    ax.text(rx, ry - 0.22, r"$P(x_t \mid x_1, \ldots, x_{t-1})$", ha="center",
+            va="center", fontsize=13, color="black", zorder=3)
+
+    # the two family boxes
+    fam = dict(w=4.6, h=1.5, y=2.15)
+    lx, rx2 = 2.45, 7.55
+    for cx, color, title, goal, methods in [
+            (lx, BLUE, "maximization", "one (nearly) right answer",
+             "greedy decoding,  beam search"),
+            (rx2, ORANGE, "sampling", "many acceptable answers",
+             "temperature,  top-$k$,  top-$p$,  min-$p$")]:
+        box(cx, fam["y"], fam["w"], fam["h"], color, 0.14)
+        ax.text(cx, fam["y"] + 0.42, title, ha="center", va="center",
+                fontsize=15, color="black", zorder=3)
+        ax.text(cx, fam["y"], goal, ha="center", va="center",
+                fontsize=12.5, color="black", style="italic", zorder=3)
+        ax.text(cx, fam["y"] - 0.42, methods, ha="center", va="center",
+                fontsize=12, color="black", zorder=3)
+
+    # arrows from the root to each family
+    for cx in (lx, rx2):
+        fl.arrow(ax, (rx if cx == lx else rx, ry - rh / 2 - 0.04),
+                 (cx, fam["y"] + fam["h"] / 2 + 0.06),
+                 color=BLUE if cx == lx else ORANGE, lw=2.0, mut=15)
+
+    # task chips under each family
+    chips = {
+        lx: (BLUE, ["machine translation", "speech recognition",
+                    "code, constrained output"]),
+        rx2: (ORANGE, ["chat and dialogue", "story writing",
+                       "brainstorming"]),
+    }
+    ch, cw, gap = 0.56, 3.6, 0.16
+    y0 = fam["y"] - fam["h"] / 2 - 0.42
+    for cx, (color, labels) in chips.items():
+        for i, lab in enumerate(labels):
+            cy = y0 - i * (ch + gap)
+            box(cx, cy, cw, ch, color, 0.07, edge=color, lw=1.0)
+            ax.text(cx, cy, lab, ha="center", va="center", fontsize=12,
+                    color="black", zorder=3)
+
+    ax.set_xlim(0.1, 9.9)
+    ax.set_ylim(y0 - 2 * (ch + gap) - ch / 2 - 0.25, ry + rh / 2 + 0.25)
+    fl.save(fig, "mdl-rnn-decoding-taskmap")
+
+
+# =========================================================================== #
 # Driver                                                                      #
 # =========================================================================== #
 
@@ -668,6 +850,8 @@ FIGURES = [
     fig_unfolded,
     fig_lm_shift,
     fig_truncated_bptt,
+    fig_beam_tree,
+    fig_decoding_taskmap,
 ]
 
 

@@ -140,7 +140,6 @@ book:
         - chapter_recurrent-modern/machine-translation-and-dataset.qmd
         - chapter_recurrent-modern/encoder-decoder.qmd
         - chapter_recurrent-modern/seq2seq.qmd
-        - chapter_recurrent-modern/beam-search.qmd
     - part: "Attention Mechanisms and Transformers"
       chapters:
         - chapter_attention-mechanisms-and-transformers/index.qmd

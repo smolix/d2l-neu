@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/decoding.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:d3a59957534bfdbbe1b1b7fb1046126d7a4b15b1669c63f82253935af51db8ef",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "decoding-decoding-and-generation": {
+      "code_fingerprint": "sha256:212824fd147bed1e10f7fdceef3bb97f265be24e13e488375957dff63301a661",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-model-to-decode-from-1": {
+      "code_fingerprint": "sha256:7df5ac05830d480d83c5d13242cee00852c693b3ad3c656d3711fe41c593b2dc",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-model-to-decode-from-2": {
+      "code_fingerprint": "sha256:48a1146703a01a87c728d773eb5479fb7ab81c759cece5530307474ea72fdc5a",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-model-to-decode-from-3": {
+      "code_fingerprint": "sha256:c9a0c068b234f24b33eab4f3e9b55368ae15ada9e4ebb3550925454e70b48a69",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
+          "bytes": 19514,
+          "sha256": "sha256:7266bd68f89ceaa543a29e48041eab7f537463d933fc35a17a1b61b3be0ef216"
+        }
+      ]
+    },
+    "decoding-a-model-to-decode-from-4": {
+      "code_fingerprint": "sha256:1ec545754b07730ed6ac151dd3e165c5980987c1443db2aece9064129ef4ff5e",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-greedy-decoding": {
+      "code_fingerprint": "sha256:3de559983450f37af8bf4583a817c8f8af5fad28eaf8f1f62b406d6943d83d07",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\"the time traveller.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong\"\n\"it seemed to me that the little people were no greatly complete.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong\"\n"
+        }
+      ]
+    },
+    "decoding-beam-search-1": {
+      "code_fingerprint": "sha256:7414fa5240b549aa31b845cd91c92c838042707e5fe91db09407c56864e3f3c0",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-beam-search-2": {
+      "code_fingerprint": "sha256:2868bcbf4e6777380f782b067881f067e38e79be209597b2b4238e82639a33e0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=1, score -3.22, distinct-3 0.26: \"the time traveller.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong\"\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=4, score -3.57, distinct-3 0.26: \"the time traveller.\\n\\n'Then I hesitated.\\n\\n'Then I hesitated.\\n\\n'Then I hesitated.\\n\\n'Then I hesitated\"\nk=1, score -3.77, distinct-3 0.53: \"it seemed to me that the little people were no greatly complete.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong\"\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=4, score -3.48, distinct-3 0.42: \"it seemed to me that it seemed to me.\\n\\n'Then I hesitated.\\n\\n'Then I hesitated.\\n\\n'Then I hesitated.\\n\\n'As\"\n"
+        }
+      ]
+    },
+    "decoding-a-unified-sampler-1": {
+      "code_fingerprint": "sha256:da46afbd506a299548c7e2e111ed829ced262d5d7744db17e76a0b5026c12378",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-unified-sampler-2": {
+      "code_fingerprint": "sha256:9165c28146d7344f08ddc3497128406ac325436e8be31d53a6180bf7d5f2f0a8",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-unified-sampler-3": {
+      "code_fingerprint": "sha256:9ab99e3bc1ddfc838d98255c1acb519775ab3fb30b448009b8eca77898375ab9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "greedy: 0\n{'k': 2} [0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1]\n{'p': 0.85} [0, 2, 1, 0, 0, 0, 0, 1, 1, 1, 0, 2, 2, 1, 1]\n{'min_p': 0.5} [1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0]\n"
+        }
+      ]
+    },
+    "decoding-one-distribution-three-cutoffs-1": {
+      "code_fingerprint": "sha256:930d722f552be7e06385d0dd97e7612d4b1f75c591cbdfdcdec2412addc230e0",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<matplotlib.legend.Legend at 0x7abe327ef410>"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
+          "bytes": 48472,
+          "sha256": "sha256:abeafc6cb7ec52c04ce6b25af91f65636b28d980a91135a3067ad16bf02cc1d1"
+        }
+      ]
+    },
+    "decoding-one-distribution-three-cutoffs-2": {
+      "code_fingerprint": "sha256:846e8bb689c5be78af79b4fec4d9affdb780b889474309a7f69c132bf33f2372",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "'the time traveller': top prob 0.14, top-k keeps 20, top-p keeps 282, min-p keeps 22\n'it seemed to me that': top prob 0.14, top-k keeps 20, top-p keeps 123, min-p keeps 23\n"
+        }
+      ]
+    },
+    "decoding-the-same-prefix-under-every-strategy-1": {
+      "code_fingerprint": "sha256:78015e3a916818d5dbc0aaab6547edfe81bfa56ce933608d095414ea43131b15",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=0.5: \"the time traveller.\\n\\n'Afterter and the end that\\ndaygthod of the sun.\\n\\n'Then a suppose I was in the froration, and was notictictedvoidly\"\nT=1.0: \"the time traveller loerable day faramooly trailestion?'\\n the sames-morial, in\\n�ating--alizontetly as thirst away theirip, and had changeicult d\"\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=2.0: 'the time travellerddencientedtM off beganir suchickil beli G withready comestven and w, white shetzesycholog which myself lifolbet her nnhadult by chan mdantppedsychologist went trick per'\n"
+        }
+      ]
+    },
+    "decoding-the-same-prefix-under-every-strategy-2": {
+      "code_fingerprint": "sha256:7200e8fcc9d4dd8fbcf75c3bea7246edda4a9e12cba8a032fe136cb8f9195563",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " greedy (distinct-3 0.21): \"the time traveller.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong\"\n  T=1.0 (distinct-3 1.00): \"the time traveller loerable day faramooly trailestion?'\\n the sames-morial, in\\n�ating--alizontetly as thirst away theirip, and had changeicult d\"\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  top-k (distinct-3 1.00): 'the time travellerred that I had limate in their giderial. \"pulation and the Morlocksaugh and his greme, and then for a second speel of means and centray'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  top-p (distinct-3 1.00): 'the time travellerivided in of desceance of incyingigi and dady-inaled that there are exre up count of the machine\\ngoned it suspircue in avaletdant'\n  min-p (distinct-3 1.00): 'the time travellerred, and\\naseemed--ab more. But the flickeneathissels.\\nBut the matter from the _ency,\\nrecaps of\\nlittletin upon'\n"
+        }
+      ]
+    }
+  }
+}

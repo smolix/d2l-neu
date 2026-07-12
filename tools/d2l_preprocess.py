@@ -991,7 +991,6 @@ CHAPTER_NUMBERING = {
     'chapter_recurrent-modern/machine-translation-and-dataset.md': [10, 5],
     'chapter_recurrent-modern/encoder-decoder.md': [10, 6],
     'chapter_recurrent-modern/seq2seq.md': [10, 7],
-    'chapter_recurrent-modern/beam-search.md': [10, 8],
     'chapter_attention-mechanisms-and-transformers/index.md': [11],
     'chapter_attention-mechanisms-and-transformers/queries-keys-values.md': [11, 1],
     'chapter_attention-mechanisms-and-transformers/attention-pooling.md': [11, 2],

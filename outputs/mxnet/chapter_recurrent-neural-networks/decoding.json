@@ -1,0 +1,183 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/decoding.md",
+  "framework": "mxnet",
+  "provenance": {
+    "framework_version": "mxnet==2.0.0",
+    "d2l_lib_fingerprint": "sha256:435cf002853256adc4663ff50b1f805c0bc8e72e5dab96e03cc015e5cb32dee9",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "decoding-decoding-and-generation": {
+      "code_fingerprint": "sha256:9aeb4f96fd9ceb78b224c5faebc3b7dea38989fdda8e08b6800e9df4ae2e8447",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-model-to-decode-from-1": {
+      "code_fingerprint": "sha256:f4b3a5bca8eb6b7609e58ff81e2987c5960cd6faebbd9ea9173095dc9446b0ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-model-to-decode-from-2": {
+      "code_fingerprint": "sha256:33cf45a289239d544a74b1023f5a38aabce17aeb33a931317a16e7fc30db885f",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-model-to-decode-from-3": {
+      "code_fingerprint": "sha256:532251416cc889496a1f9fc97c3a7055bbbaa7805ea0a0858f6a2967defe184c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
+          "bytes": 18330,
+          "sha256": "sha256:8ce267cd4a5498d7ead33ad19c6d1f791ec219e24fba088d3307dca615eb349b"
+        }
+      ]
+    },
+    "decoding-a-model-to-decode-from-4": {
+      "code_fingerprint": "sha256:51c90e2651b6af17faf96326a233cafb13f547bd34e8b6e840075a7ba9da09f2",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-greedy-decoding": {
+      "code_fingerprint": "sha256:2e21be18ee35185e37306681f6cfb756f7b6dce8a6aadf4085ad84f2eada68ca",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "'the time traveller, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape,'\n'it seemed to me that the Time Traveller, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\ns'\n"
+        }
+      ]
+    },
+    "decoding-beam-search-1": {
+      "code_fingerprint": "sha256:911cb182bd162056f49ca66c71ed6a31d64bbf265b6462d3960dcd59314b5d58",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-beam-search-2": {
+      "code_fingerprint": "sha256:5084cd7f5ed88e7927500da3f4bbfd73307c2723da313ff073eea22fd656c0a2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=1, score -4.28, distinct-3 0.18: 'the time traveller, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\ns'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=4, score -3.52, distinct-3 0.61: \"the time traveller. I had seen.\\n\\n'There I found that the Time Traveller, as I did not see.\\n\\n'There I found that the Time Traveller, as I did not\"\nk=1, score -4.02, distinct-3 0.26: 'it seemed to me that the Time Traveller, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=4, score -3.45, distinct-3 0.47: \"it seemed to me that the Time Traveller, as I did not see.\\n\\n'There I found that the Time Traveller, as I did not see.\\n\\n'There I found that the Time Traveller,\"\n"
+        }
+      ]
+    },
+    "decoding-a-unified-sampler-1": {
+      "code_fingerprint": "sha256:20c9c85e60f43834776d89bd6030de989871da9d1d201223e854220347f31041",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-unified-sampler-2": {
+      "code_fingerprint": "sha256:31bf9df91ca9c3088565b5fe46f9bcc7af99a6186230be10d90485696da6af5a",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-unified-sampler-3": {
+      "code_fingerprint": "sha256:992cc5ddcaa06a319dbf0c061810593f4f2c389595a028a8e280d9c97217c223",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "greedy: 0\n{'k': 2} [0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1]\n{'p': 0.85} [0, 2, 1, 0, 0, 0, 0, 1, 1, 1, 0, 2, 2, 1, 1]\n{'min_p': 0.5} [1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0]\n"
+        }
+      ]
+    },
+    "decoding-one-distribution-three-cutoffs-1": {
+      "code_fingerprint": "sha256:50e338d04d45f76c1a8923bfe2986220f8a7fb3cf35f903ea2ef80e577e06b4f",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<matplotlib.legend.Legend at 0x74126b7bed80>"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
+          "bytes": 52779,
+          "sha256": "sha256:8a00925ca52297697038a18fd8736aef5c549cfd9c206d1944b7d1d38911c549"
+        }
+      ]
+    },
+    "decoding-one-distribution-three-cutoffs-2": {
+      "code_fingerprint": "sha256:da3d2f5598415c45ba62a2cfa5f54d3eb640771c7174bbc76322fb39791bfed9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "'the time traveller': top prob 0.32, top-k keeps 20, top-p keeps 78, min-p keeps 5\n'it seemed to me that': top prob 0.75, top-k keeps 20, top-p keeps 15, min-p keeps 1\n"
+        }
+      ]
+    },
+    "decoding-the-same-prefix-under-every-strategy-1": {
+      "code_fingerprint": "sha256:629a4a7f116c2eaa6f04557f7e71417101236e71500b07d7324decaacf7b9170",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=0.5: \"the time traveller, and the\\ndoorous, in the specular, but the same, and the thing,\\n'F the big open, I have the\\nthrough the Editor, and the science, and the\"\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=1.0: 'the time travellerly coming, stamly; at to moveisted consteen at me, and the light,, and u ble only me. I should have said the clearly I suppose, and odd faster'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=2.0: 'the time traveller pres the men comvery en sha usvedir\\n They hadur w did suk-nor him ad--�� come ifook had inwhck sasounross nment have fehing two�ciung,x'\n"
+        }
+      ]
+    },
+    "decoding-the-same-prefix-under-every-strategy-2": {
+      "code_fingerprint": "sha256:9476b5bd1e109d36f09cd81a7d4fe9daf179e855ce66bb229c11c25bf2db9355",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " greedy (distinct-3 0.15): 'the time traveller, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape,'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  T=1.0 (distinct-3 1.00): 'the time travellerly coming, stamly; at to moveisted consteen at me, and the light,, and u ble only me. I should have said the clearly I suppose, and odd faster'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  top-k (distinct-3 0.98): \"the time traveller. What I he to the, I held the mouth, would be the men's an uns, theres. Whatever the dreaded the emotter than belie away, the\\nn\"\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  top-p (distinct-3 1.00): 'the time traveller; and the\\nsawak-f and intelm, she, will mass or the sigence. I only thinked a well.\\nThere I could fildies. The was secome the valaces'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  min-p (distinct-3 1.00): 'the time traveller. What I he susite and wrongly, I found his expressed to me, and\\nsar well, as it, and then\\nme, for instance, and I saw the like, but the se'\n"
+        }
+      ]
+    }
+  }
+}

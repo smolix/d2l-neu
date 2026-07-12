@@ -1069,6 +1069,78 @@ class RNNLM(d2l.RNNLMScratch):
     def output_layer(self, hiddens):
         return d2l.swapaxes(self.linear(hiddens), 0, 1)
 
+def beam_search(step_fn, prefix, num_tokens, beam_size=4,
+                alpha=0.75, eos_id=None):
+    """Length-normalized beam search (score = log P / len^alpha).
+
+    Defined in :numref:`sec_beam-search`"""
+    def log_softmax(logits):
+        logits = [float(l) for l in logits]
+        m = max(logits)
+        lse = m + math.log(sum(math.exp(l - m) for l in logits))
+        return [l - lse for l in logits]
+    score = lambda logp, ids: logp / max(1, len(ids) - len(prefix))**alpha
+    beams = [(0.0, list(prefix), False)]  # (log-prob, sequence, finished)
+    for _ in range(num_tokens):
+        if all(done for _, _, done in beams):
+            break
+        candidates = [b for b in beams if b[2]]  # Finished pass through
+        for logp, ids, _ in (b for b in beams if not b[2]):
+            logprobs = log_softmax(step_fn(ids))
+            best = sorted(range(len(logprobs)),
+                          key=lambda i: -logprobs[i])[:beam_size]
+            candidates += [(logp + logprobs[i], ids + [i], i == eos_id)
+                           for i in best]
+        beams = sorted(candidates, key=lambda b: score(b[0], b[1]),
+                       reverse=True)[:beam_size]
+    return sorted([(score(logp, ids), ids) for logp, ids, _ in beams],
+                  reverse=True)
+
+def sample_next(logits, strategy='greedy', temperature=1.0,
+                k=None, p=None, min_p=None, rng=None):
+    """Choose the next token id from a 1-D numpy logits array.
+    strategy: 'greedy' | 'sample' (with optional top-k / top-p / min-p
+
+    Defined in :numref:`sec_beam-search`"""
+    logits = [float(l) for l in logits]
+    if strategy == 'greedy' or temperature == 0:
+        return max(range(len(logits)), key=lambda i: logits[i])
+    m = max(logits)
+    probs = [math.exp((l - m) / temperature) for l in logits]
+    total = sum(probs)
+    probs = [q / total for q in probs]
+    order = sorted(range(len(probs)), key=lambda i: -probs[i])
+    keep = len(order)
+    if k is not None:  # Top-k: the k most probable tokens
+        keep = min(keep, k)
+    if p is not None:  # Top-p: smallest head with cumulative mass >= p
+        mass, n = 0.0, 0
+        while mass < p and n < len(order):
+            mass, n = mass + probs[order[n]], n + 1
+        keep = min(keep, n)
+    if min_p is not None:  # Min-p: within a factor of the top token
+        bar = min_p * probs[order[0]]
+        keep = min(keep, sum(q >= bar for q in probs))
+    kept = order[:keep]
+    rng = random if rng is None else rng
+    r = rng.random() * sum(probs[i] for i in kept)
+    for i in kept:
+        r -= probs[i]
+        if r <= 0:
+            return i
+    return kept[-1]
+
+def generate(step_fn, prefix, num_tokens, eos_id=None, **strategy):
+    """Autoregressive generation. step_fn(ids: list[int]) -> numpy logits
+
+    Defined in :numref:`sec_beam-search`"""
+    ids = list(prefix)
+    for _ in range(num_tokens):
+        ids.append(sample_next(step_fn(ids), **strategy))
+        if eos_id is not None and ids[-1] == eos_id:
+            break
+    return ids
+
 class GRU(d2l.RNN):
     """The multilayer GRU model.
 

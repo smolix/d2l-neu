@@ -404,14 +404,14 @@ def k_fold(trainer, data, k, model_fn):
 def k_fold(trainer, data, k, model_fn):
     val_loss, models = [], []
     for i, data_fold in enumerate(k_fold_data(data, k)):
-        model = model_fn()
+        # One-hot vocabularies are fitted within each fold, so the number of
+        # input columns can differ slightly between folds.
+        model = model_fn(data_fold)
         model.board.yscale='log'
         if i != 0: model.board.display = False
         trainer.fit(model, data_fold)
         val_loss.append(float(model.board.data['val_loss'][-1].y))
-        # In JAX/Flax, params live in trainer.state, not the (frozen) model.
-        # Capture each fold's trained params so the ensemble can use them.
-        models.append((model, trainer.state.params, data_fold.test))
+        models.append((model, data_fold.test))
     print(f'average validation log mse = {sum(val_loss)/len(val_loss)}')
     return models
 ```
@@ -457,10 +457,19 @@ linear_models = k_fold(trainer, data, k=5,
 ```
 
 ```{.python .input #kaggle-house-price-model-selection-linear}
-%%tab mxnet, tensorflow, jax
+%%tab mxnet, tensorflow
 trainer = d2l.Trainer(max_epochs=100)
 models = k_fold(trainer, data, k=5,
                 model_fn=lambda: d2l.LinearRegression(lr=0.03))
+```
+
+```{.python .input #kaggle-house-price-model-selection-linear}
+%%tab jax
+trainer = d2l.Trainer(max_epochs=100)
+models = k_fold(
+    trainer, data, k=5,
+    model_fn=lambda fold: d2l.LinearRegression(
+        fold.train.shape[1] - 1, lr=0.03))
 ```
 
 :begin_tab:`pytorch`
@@ -582,9 +591,8 @@ submission.to_csv('submission.csv', index=False)
 
 ```{.python .input #kaggle-house-price-submitting-predictions-on-kaggle}
 %%tab jax
-preds = [model.apply({'params': params},
-         d2l.tensor(test.values.astype(float), dtype=d2l.float32))
-         for model, params, test in models]
+preds = [model(d2l.tensor(test.values.astype(float), dtype=d2l.float32))
+         for model, test in models]
 # Average the K log-price predictions in log space, then exponentiate.
 ensemble_preds = d2l.exp(d2l.reduce_mean(d2l.concat(preds, 1), 1))
 submission = pd.DataFrame({'Id':data.raw_val.Id,
@@ -956,7 +964,7 @@ A fresh model per fold; average:
 ::: {.slide title="K-fold in code" only="jax" layout="code"}
 [Model selection]{.kicker}
 
-`k_fold_data` slices out fold $i$ as validation and trains on the rest. Then fit a fresh model per fold and average the held-out scores; in Flax the trained parameters live in `trainer.state`, not the frozen model, so each fold's params are captured for the ensemble:
+`k_fold_data` slices out fold $i$ as validation and trains on the rest. Then fit a fresh model per fold and average the held-out scores; NNX models retain their trained parameters directly, so the same ensemble structure works across frameworks:
 
 @-kaggle-house-price-k-fold-cross-validation-2
 :::

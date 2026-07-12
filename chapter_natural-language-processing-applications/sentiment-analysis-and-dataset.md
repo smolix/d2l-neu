@@ -62,8 +62,6 @@ import os
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
-import optax
 import numpy as np
 import os
 ```
@@ -256,13 +254,15 @@ def load_data_imdb(batch_size, num_steps=500):
     train_tokens = d2l.tokenize(train_data[0], token='word')
     test_tokens = d2l.tokenize(test_data[0], token='word')
     vocab = d2l.Vocab(train_tokens, min_freq=5)
-    train_features = jnp.array([d2l.truncate_pad(
-        vocab[line], num_steps, vocab['<pad>']) for line in train_tokens])
-    test_features = jnp.array([d2l.truncate_pad(
-        vocab[line], num_steps, vocab['<pad>']) for line in test_tokens])
-    train_iter = d2l.load_array((train_features, jnp.array(train_data[1])),
+    train_features = np.asarray([d2l.truncate_pad(
+        vocab[line], num_steps, vocab['<pad>']) for line in train_tokens],
+                                dtype=np.int32)
+    test_features = np.asarray([d2l.truncate_pad(
+        vocab[line], num_steps, vocab['<pad>']) for line in test_tokens],
+                               dtype=np.int32)
+    train_iter = d2l.load_array((train_features, np.asarray(train_data[1])),
                                 batch_size)
-    test_iter = d2l.load_array((test_features, jnp.array(test_data[1])),
+    test_iter = d2l.load_array((test_features, np.asarray(test_data[1])),
                                batch_size,
                                is_train=False)
     return train_iter, test_iter, vocab

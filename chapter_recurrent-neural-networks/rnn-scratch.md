@@ -47,7 +47,7 @@ import tensorflow as tf
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 import math
@@ -104,18 +104,17 @@ class RNNScratch(d2l.Module):  #@save
 
 ```{.python .input #rnn-scratch-rnn-model-1  n=7}
 %%tab jax
-class RNNScratch(nn.Module):  #@save
+class RNNScratch(nnx.Module):  #@save
     """The RNN model implemented from scratch."""
-    num_inputs: int
-    num_hiddens: int
-    sigma: float = 0.01
-
-    def setup(self):
-        self.W_xh = self.param('W_xh', nn.initializers.normal(self.sigma),
-                               (self.num_inputs, self.num_hiddens))
-        self.W_hh = self.param('W_hh', nn.initializers.normal(self.sigma),
-                               (self.num_hiddens, self.num_hiddens))
-        self.b_h = self.param('b_h', nn.initializers.zeros, (self.num_hiddens,))
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
+        self.sigma = sigma
+        self.W_xh = nnx.Param(
+            rngs.params.normal((num_inputs, num_hiddens)) * sigma)
+        self.W_hh = nnx.Param(
+            rngs.params.normal((num_hiddens, num_hiddens)) * sigma)
+        self.b_h = nnx.Param(jnp.zeros(num_hiddens))
 ```
 
 The `forward` method below defines how to compute 
@@ -216,7 +215,7 @@ outputs, state = rnn(X)
 batch_size, num_inputs, num_hiddens, num_steps = 2, 16, 32, 100
 rnn = RNNScratch(num_inputs, num_hiddens)
 X = d2l.ones((num_steps, batch_size, num_inputs))
-(outputs, state), _ = rnn.init_with_output(d2l.get_key(), X)
+outputs, state = rnn(X)
 ```
 
 Let's check whether the RNN model
@@ -347,25 +346,24 @@ class RNNLMScratch(d2l.Classifier):  #@save
 %%tab jax
 class RNNLMScratch(d2l.Classifier):  #@save
     """The RNN-based language model implemented from scratch."""
-    rnn: nn.Module
-    vocab_size: int
-    lr: float = 0.01
+    def __init__(self, rnn, vocab_size, lr=0.01, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rnn', 'rngs'])
+        self.rnn = rnn
+        rngs = nnx.Rngs(1) if rngs is None else rngs
+        self.W_hq = nnx.Param(rngs.params.normal(
+            (rnn.num_hiddens, vocab_size)) * rnn.sigma)
+        self.b_q = nnx.Param(jnp.zeros(vocab_size))
 
-    def setup(self):
-        self.W_hq = self.param('W_hq', nn.initializers.normal(self.rnn.sigma),
-                               (self.rnn.num_hiddens, self.vocab_size))
-        self.b_q = self.param('b_q', nn.initializers.zeros, (self.vocab_size))
-
-    def training_step(self, params, batch, state):
-        value, grads = jax.value_and_grad(
-            self.loss, has_aux=True)(params, batch[:-1], batch[-1], state)
-        l, _ = value
+    def training_step(self, batch):
+        l = self.loss(self(*batch[:-1]), batch[-1])
         self.plot('ppl', d2l.exp(l), train=True)
-        return value, grads
+        return l
 
-    def validation_step(self, params, batch, state):
-        l, _ = self.loss(params, batch[:-1], batch[-1], state)
+    def validation_step(self, batch):
+        l = self.loss(self(*batch[:-1]), batch[-1])
         self.plot('ppl', d2l.exp(l), train=False)
+        return l
 ```
 
 ### One-Hot Encoding
@@ -505,9 +503,7 @@ check_shape(outputs, (batch_size, num_steps, num_inputs))
 ```{.python .input #rnn-scratch-transforming-rnn-outputs-2  n=23}
 %%tab jax
 model = RNNLMScratch(rnn, num_inputs)
-outputs, _ = model.init_with_output(d2l.get_key(),
-                                    d2l.ones((batch_size, num_steps),
-                                             dtype=d2l.int32))
+outputs = model(d2l.ones((batch_size, num_steps), dtype=d2l.int32))
 check_shape(outputs, (batch_size, num_steps, num_inputs))
 ```
 
@@ -819,18 +815,18 @@ def predict(self, prefix, num_preds, vocab, device=None):
 ```{.python .input #rnn-scratch-decoding-1}
 %%tab jax
 @d2l.add_to_class(RNNLMScratch)  #@save
-def predict(self, prefix, num_preds, vocab, params):
+def predict(self, prefix, num_preds, vocab, device=None):
+    model = nnx.view(self, deterministic=True, use_running_average=True,
+                     raise_if_not_found=False)
     state, outputs = None, [vocab[prefix[0]]]
     for i in range(len(prefix) + num_preds - 1):
         X = d2l.tensor([[outputs[-1]]])
-        embs = self.one_hot(X)
-        rnn_outputs, state = self.rnn.apply({'params': params['rnn']},
-                                            embs, state)
+        embs = model.one_hot(X)
+        rnn_outputs, state = model.rnn(embs, state)
         if i < len(prefix) - 1:  # Warm-up period
             outputs.append(vocab[prefix[i + 1]])
         else:  # Predict num_preds steps
-            Y = self.apply({'params': params}, rnn_outputs,
-                           method=self.output_layer)
+            Y = model.output_layer(rnn_outputs)
             outputs.append(int(d2l.reshape(d2l.argmax(Y, axis=2), ())))
     return ''.join([vocab.idx_to_token[i] for i in outputs])
 ```
@@ -855,8 +851,13 @@ print(f'perplexity {ppl:.1f}, {pred!r}')
 
 ```{.python .input #rnn-scratch-decoding-2}
 %%tab jax
-ppl = float(model.board.data['val_ppl'][-1].y)
-pred = model.predict('time traveller', 20, data.vocab, trainer.state.params)
+total_loss = num_tokens = 0
+for X_val, y_val in data.val_dataloader():
+    losses = model.loss(model(X_val), y_val, averaged=False)
+    total_loss += float(losses.sum())
+    num_tokens += losses.size
+ppl = math.exp(total_loss / num_tokens)
+pred = model.predict('time traveller', 20, data.vocab)
 print(f'perplexity {ppl:.1f}, {pred!r}')
 ```
 

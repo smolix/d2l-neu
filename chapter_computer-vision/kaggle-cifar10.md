@@ -59,7 +59,7 @@ import collections
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 import numpy as np
 import tensorflow as tf
@@ -579,49 +579,54 @@ loss = nn.CrossEntropyLoss(reduction="none")
 
 ```{.python .input #kaggle-cifar10-defining-the-model-3}
 #@tab jax
-class Residual(nn.Module):
-    num_channels: int
-    use_1x1conv: bool = False
-    strides: int = 1
+class Residual(nnx.Module):
+    def __init__(self, in_channels, num_channels, use_1x1conv=False,
+                 strides=1, *, rngs):
+        stride = (strides, strides)
+        self.conv1 = nnx.Conv(in_channels, num_channels, (3, 3),
+                              strides=stride, padding='same', rngs=rngs)
+        self.bn1 = nnx.BatchNorm(num_channels, rngs=rngs)
+        self.conv2 = nnx.Conv(num_channels, num_channels, (3, 3),
+                              padding='same', rngs=rngs)
+        self.bn2 = nnx.BatchNorm(num_channels, rngs=rngs)
+        self.conv3 = (nnx.Conv(in_channels, num_channels, (1, 1),
+                               strides=stride, rngs=rngs)
+                      if use_1x1conv else None)
 
-    @nn.compact
-    def __call__(self, X, training=False):
-        Y = nn.relu(nn.BatchNorm(use_running_average=not training)(
-            nn.Conv(self.num_channels, kernel_size=(3, 3),
-                    strides=(self.strides, self.strides), padding='SAME')(X)))
-        Y = nn.BatchNorm(use_running_average=not training)(
-            nn.Conv(self.num_channels, kernel_size=(3, 3), padding='SAME')(Y))
-        if self.use_1x1conv:
-            X = nn.Conv(self.num_channels, kernel_size=(1, 1),
-                        strides=(self.strides, self.strides))(X)
-        return nn.relu(Y + X)
+    def __call__(self, X):
+        Y = nnx.relu(self.bn1(self.conv1(X)))
+        Y = self.bn2(self.conv2(Y))
+        if self.conv3 is not None:
+            X = self.conv3(X)
+        return nnx.relu(Y + X)
 
-class ResNet18(nn.Module):
-    num_classes: int = 10
+class ResNet18(nnx.Module):
+    def __init__(self, num_classes=10, *, rngs):
+        self.stem = nnx.List([
+            nnx.Conv(3, 64, (3, 3), padding='same', rngs=rngs),
+            nnx.BatchNorm(64, rngs=rngs), nnx.relu])
+        channels = [64, 128, 256, 512]
+        blocks, in_channels = [], 64
+        for i, num_channels in enumerate(channels):
+            for j in range(2):
+                strides = 2 if i > 0 and j == 0 else 1
+                use_1x1conv = i > 0 and j == 0
+                blocks.append(Residual(in_channels, num_channels,
+                                       use_1x1conv, strides, rngs=rngs))
+                in_channels = num_channels
+        self.blocks = nnx.List(blocks)
+        self.head = nnx.Linear(512, num_classes, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, X, training=False):
-        X = nn.relu(nn.BatchNorm(use_running_average=not training)(
-            nn.Conv(64, kernel_size=(3, 3), strides=(1, 1),
-                    padding='SAME')(X)))
-        # Block 1
-        for _ in range(2):
-            X = Residual(64)(X, training=training)
-        # Block 2
-        X = Residual(128, use_1x1conv=True, strides=2)(X, training=training)
-        X = Residual(128)(X, training=training)
-        # Block 3
-        X = Residual(256, use_1x1conv=True, strides=2)(X, training=training)
-        X = Residual(256)(X, training=training)
-        # Block 4
-        X = Residual(512, use_1x1conv=True, strides=2)(X, training=training)
-        X = Residual(512)(X, training=training)
+    def __call__(self, X):
+        for layer in self.stem:
+            X = layer(X)
+        for block in self.blocks:
+            X = block(X)
         X = jnp.mean(X, axis=(1, 2))  # Global average pooling
-        X = nn.Dense(self.num_classes)(X)
-        return X
+        return self.head(X)
 
 def get_net():
-    return ResNet18(num_classes=10)
+    return ResNet18(num_classes=10, rngs=nnx.Rngs(0))
 
 def loss_fn(logits, labels):
     return optax.softmax_cross_entropy_with_integer_labels(logits, labels)
@@ -759,20 +764,20 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 #@tab jax
 def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
           lr_decay):
-    dummy = jnp.ones((1, 32, 32, 3))
-    variables = net.init(jax.random.PRNGKey(0), dummy, training=True)
     # `optax.exponential_decay.transition_steps` and Keras's
     # `ExponentialDecay.decay_steps` count *gradient-update steps*, not
     # epochs — unlike PyTorch's `StepLR(step_size=lr_period)`, which the
     # PT tab steps once per epoch. Scale by `num_batches` so all four
     # frameworks decay the LR every `lr_period` *epochs*.
-    num_batches = sum(1 for _ in train_iter)
+    num_batches = int(train_iter.cardinality().numpy())
     schedule = optax.exponential_decay(
         init_value=lr, transition_steps=lr_period * num_batches,
         decay_rate=lr_decay, staircase=True)
     tx = optax.chain(optax.add_decayed_weights(wd),
                      optax.sgd(schedule, momentum=0.9))
-    opt_state = tx.init(variables['params'])
+    optimizer = nnx.Optimizer(net, tx, wrt=nnx.Param)
+    train_net = nnx.view(net, use_running_average=False)
+    eval_net = nnx.view(net, use_running_average=True)
     timer = d2l.Timer()
     legend = ['train loss', 'train acc']
     if valid_iter is not None:
@@ -780,55 +785,56 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
     animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
                             legend=legend)
 
-    @jax.jit
-    def train_step(variables, opt_state, X, y):
-        def compute_loss(params):
-            variables_ = {'params': params,
-                          'batch_stats': variables.get('batch_stats', {})}
-            logits, updates = net.apply(
-                variables_, X, training=True, mutable=['batch_stats'])
+    @nnx.jit
+    def train_step(net, optimizer, X, y):
+        def compute_loss(net):
+            logits = net(X)
             l = loss_fn(logits, y)
-            return l.mean(), (l.sum(), (logits.argmax(axis=-1) == y).sum(),
-                              updates)
-        grads, (l_sum, acc, updates) = jax.grad(
-            compute_loss, has_aux=True)(variables['params'])
-        param_updates, new_opt_state = tx.update(
-            grads, opt_state, variables['params'])
-        new_params = optax.apply_updates(variables['params'], param_updates)
-        new_variables = {'params': new_params, **updates}
-        return new_variables, new_opt_state, l_sum, acc
+            return l.mean(), (l.sum(), (logits.argmax(axis=-1) == y).sum())
+        (_, (l_sum, acc)), grads = nnx.value_and_grad(
+            compute_loss, has_aux=True)(net)
+        optimizer.update(net, grads)
+        return l_sum, acc
+
+    @nnx.jit
+    def eval_step(net, X, y):
+        logits = net(X)
+        return (logits.argmax(axis=-1) == y).sum()
 
     for epoch in range(num_epochs):
-        metric = d2l.Accumulator(3)
+        loss_sum = jnp.array(0.0)
+        train_correct = jnp.array(0)
+        num_examples = 0
+        timer.start()
         for i, (features, labels) in enumerate(train_iter):
-            timer.start()
             X = jnp.array(features.numpy())  # Already NHWC from tf.data
             y = jnp.array(labels.numpy())
-            variables, opt_state, l, acc = train_step(
-                variables, opt_state, X, y)
-            metric.add(float(l), float(acc), len(labels))
-            timer.stop()
-            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
-                animator.add(epoch + (i + 1) / num_batches,
-                             (metric[0] / metric[2], metric[1] / metric[2],
-                              None))
+            l, acc = train_step(train_net, optimizer, X, y)
+            loss_sum += l
+            train_correct += acc
+            num_examples += len(labels)
+        loss_sum, train_correct = jax.device_get((loss_sum, train_correct))
+        timer.stop()
+        train_loss = float(loss_sum) / num_examples
+        train_acc = float(train_correct) / num_examples
         if valid_iter is not None:
-            valid_metric = d2l.Accumulator(2)
+            valid_correct = jnp.array(0)
+            valid_examples = 0
             for features, labels in valid_iter:
                 X = jnp.array(features.numpy())  # Already NHWC
                 y = jnp.array(labels.numpy())
-                logits = net.apply(variables, X, training=False)
-                valid_metric.add(
-                    float((logits.argmax(axis=-1) == y).sum()), len(labels))
-            valid_acc = valid_metric[0] / valid_metric[1]
-            animator.add(epoch + 1, (None, None, valid_acc))
-    measures = (f'train loss {metric[0] / metric[2]:.3f}, '
-                f'train acc {metric[1] / metric[2]:.3f}')
+                valid_correct += eval_step(eval_net, X, y)
+                valid_examples += len(labels)
+            valid_acc = float(jax.device_get(valid_correct)) / valid_examples
+        animator.add(epoch + 1, (train_loss, train_acc,
+                                 valid_acc if valid_iter is not None else None))
+    measures = (f'train loss {train_loss:.3f}, '
+                f'train acc {train_acc:.3f}')
     if valid_iter is not None:
         measures += f', valid acc {valid_acc:.3f}'
-    print(measures + f'\n{metric[2] * num_epochs / timer.sum():.1f}'
+    print(measures + f'\n{num_examples * num_epochs / timer.sum():.1f}'
           f' examples/sec')
-    return variables
+    return net
 ```
 
 ```{.python .input #kaggle-cifar10-defining-the-training-function}
@@ -932,8 +938,8 @@ train(net, train_iter, valid_iter, num_epochs, lr, wd, devices, lr_period,
 num_epochs, lr, wd = 20, 0.005, 5e-4
 lr_period, lr_decay = 4, 0.9
 net = get_net()
-variables = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
-                  lr_decay)
+net = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
+            lr_decay)
 ```
 
 ```{.python .input #kaggle-cifar10-training-and-validating-the-model}
@@ -987,12 +993,12 @@ df.to_csv('submission.csv', index=False)
 ```{.python .input #kaggle-cifar10-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab jax
 net, preds = get_net(), []
-variables = train(net, train_valid_iter, None, num_epochs, lr, wd, lr_period,
-                  lr_decay)
+net = train(net, train_valid_iter, None, num_epochs, lr, wd, lr_period,
+            lr_decay)
 
 for X, _ in test_iter:
     X_jax = jnp.array(X.numpy())  # Already NHWC from tf.data
-    y_hat = net.apply(variables, X_jax, training=False)
+    y_hat = nnx.view(net, use_running_average=True)(X_jax)
     preds.extend(np.array(y_hat.argmax(axis=-1)))
 # Get class names from the train_valid dataset directory
 class_names = sorted(os.listdir(

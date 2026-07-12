@@ -56,15 +56,12 @@ import tensorflow as tf
 
 ```{.python .input #oo-design-object-oriented-design-for-implementation}
 %%tab jax
-from dataclasses import field
 from d2l import jax as d2l
-from flax import linen as nn
-from flax.training import train_state
+from flax import nnx
 from jax import numpy as jnp
 import numpy as np
 import jax
 import time
-from typing import Any
 ```
 
 ## Utilities
@@ -187,10 +184,10 @@ per epoch) can share a single x-axis, with `every_n` chosen so each curve shows
 a fixed number of points per epoch.
 
 :begin_tab:`jax`
-With the introduction of [dataclasses](https://docs.python.org/3/library/dataclasses.html)
-in Python 3.7, classes decorated with `@dataclass` automatically add magic
-methods such as `__init__` and `__repr__`. The member variables are defined
-using type annotations. All Flax modules are Python 3.7 dataclasses.
+Flax NNX modules are ordinary Python objects. Their constructors create
+parameters eagerly and store them on the module, while NNX transformations
+make those stateful objects compatible with JAX compilation and
+differentiation.
 :end_tab:
 
 ```{.python .input #oo-design-models}
@@ -351,19 +348,15 @@ class Module(d2l.nn_Module, d2l.HyperParameters):  #@save
 %%tab jax
 class Module(d2l.nn_Module, d2l.HyperParameters):  #@save
     """The base class of models."""
-    # No need for save_hyperparam when using Python dataclass
-    plot_train_per_epoch: int = field(default=2, init=False)
-    plot_valid_per_epoch: int = field(default=1, init=False)
-    # Use default_factory to make sure new plots are generated on each run
-    board: ProgressBoard = field(default_factory=lambda: ProgressBoard(),
-                                 init=False)
+    def __init__(self, plot_train_per_epoch=2, plot_valid_per_epoch=1):
+        super().__init__()
+        self.save_hyperparameters()
+        self.board = ProgressBoard()
+        self.trainer = None
 
     def loss(self, y_hat, y):
         raise NotImplementedError
 
-    # JAX & Flax do not have a forward-method-like syntax. Flax uses setup
-    # and built-in __call__ magic methods for forward pass. Adding here
-    # for consistency
     def forward(self, X, *args, **kwargs):
         assert hasattr(self, 'net'), 'Neural network is not defined'
         return self.net(X, *args, **kwargs)
@@ -390,19 +383,11 @@ class Module(d2l.nn_Module, d2l.HyperParameters):  #@save
                         ('train_' if train else 'val_') + key,
                         every_n=int(n))
 
-    def training_step(self, params, batch, state):
-        l, grads = jax.value_and_grad(self.loss)(params, batch[:-1],
-                                                 batch[-1], state)
-        self.plot("loss", l, train=True)
-        return l, grads
+    def training_step(self, batch):
+        return self.loss(self(*batch[:-1]), batch[-1])
 
-    def validation_step(self, params, batch, state):
-        l = self.loss(params, batch[:-1], batch[-1], state)
-        self.plot('loss', l, train=False)
-        
-    def apply_init(self, dummy_input, key):
-        """To be defined later in :numref:`sec_lazy_init`"""
-        raise NotImplementedError
+    def validation_step(self, batch):
+        return self.loss(self(*batch[:-1]), batch[-1])
 
     def configure_optimizers(self):
         raise NotImplementedError
@@ -428,9 +413,11 @@ defined by our subclasses.
 :end_tab:
 
 :begin_tab:`jax`
-You may notice that `Module` is a subclass of `linen.Module`, the base class of neural networks in Flax.
-It provides convenient features for handling neural networks. For example, it handles the model parameters, provides the `nn.compact` decorator to simplify code, invokes the `__call__` method among other things.
-Here we also redirect `__call__` to the `forward` method, consistent with the `forward` convention used elsewhere in the book.
+`Module` is a subclass of `nnx.Module`, the NNX base class. An NNX module owns
+its parameters and child modules as ordinary attributes. Here we redirect
+`__call__` to `forward`, consistent with the convention used elsewhere in the
+book. Later, `nnx.jit` and `nnx.value_and_grad` will traverse that object graph
+without requiring a separate parameter dictionary.
 :end_tab:
 
 ##  Data
@@ -620,40 +607,20 @@ class Trainer(d2l.HyperParameters):  #@save
         model.board.xlim = [0, self.max_epochs]
         self.model = model
 
-    def fit(self, model, data, key=None):
+    def fit(self, model, data):
         self.prepare_data(data)
         self.prepare_model(model)
-        self.optim = model.configure_optimizers()
-
-        if key is None:
-            root_key = d2l.get_key()
-        else:
-            root_key = key
-        params_key, dropout_key = jax.random.split(root_key)
-        key = {'params': params_key, 'dropout': dropout_key}
-
-        dummy_input = next(iter(self.train_dataloader))[:-1]
-        variables = model.apply_init(dummy_input, key=key)
-        params = variables['params']
-
-        if 'batch_stats' in variables.keys():
-            # Here batch_stats will be used later (e.g., for batch norm)
-            batch_stats = variables['batch_stats']
-        else:
-            batch_stats = {}
-
-        # Flax uses optax under the hood for a single state obj TrainState.
-        # More will be discussed later in the dropout and batch
-        # normalization section
-        class TrainState(train_state.TrainState):
-            batch_stats: Any
-            dropout_rng: jax.Array
-
-        self.state = TrainState.create(apply_fn=model.apply,
-                                       params=params,
-                                       batch_stats=batch_stats,
-                                       dropout_rng=dropout_key,
-                                       tx=model.configure_optimizers())
+        tx = model.configure_optimizers()
+        if self.gradient_clip_val > 0:
+            tx = optax.chain(
+                optax.clip_by_global_norm(self.gradient_clip_val), tx)
+        self.optim = nnx.Optimizer(model, tx, wrt=nnx.Param)
+        self.train_model = nnx.view(
+            model, deterministic=False, use_running_average=False,
+            raise_if_not_found=False)
+        self.val_model = nnx.view(
+            model, deterministic=True, use_running_average=True,
+            raise_if_not_found=False)
         self.epoch = 0
         self.train_batch_idx = 0
         self.val_batch_idx = 0
@@ -1000,30 +967,30 @@ parallel training in later chapters.
 :::
 :::
 
-::: {.slide title="`Trainer`: threading state, the JAX way" only="jax"}
+::: {.slide title="`Trainer`: owning state, the NNX way" only="jax"}
 [Base classes]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-JAX has no mutable `self.params`, so `fit` takes an explicit PRNG `key`,
-splits it for init and dropout, and bundles parameters, optimizer, and
-RNG into a single immutable `TrainState`:
+NNX modules own parameters, random-number streams, and mutable collections.
+`fit` creates an optimizer over the model graph and two lightweight views for
+training and validation modes:
 
 ::: {.d2l-note .rule}
-Same `fit(model, data)` contract; the state is passed *through* each
-step rather than stored on the object.
+Same `fit(model, data)` contract; `nnx.jit` follows the model and optimizer
+graphs through each compiled step.
 :::
 :::
 
 ::: {.col .narrow}
 ```{.python #oo-design-exercises-2}
-root = key or d2l.get_key()
-p_key, d_key = jax.random.split(root)
-params = model.apply_init(
-    dummy, key=...)['params']
-self.state = TrainState.create(
-    apply_fn=model.apply,
-    params=params, tx=optim, ...)
+tx = model.configure_optimizers()
+self.optim = nnx.Optimizer(
+    model, tx, wrt=nnx.Param)
+self.train_model = nnx.view(
+    model, deterministic=False, ...)
+self.val_model = nnx.view(
+    model, deterministic=True, ...)
 ```
 :::
 :::
@@ -1065,8 +1032,8 @@ self.state = TrainState.create(
 - `ProgressBoard` plots the loss live yet never blocks: **keep the hot
   path pure and compiled; push logging off to the side**, a theme that
   recurs all book.
-- **Watch the framing:** JAX is functional (a dataclass `Module`,
-  parameters and a `TrainState` threaded through `fit`).
+- **Watch the framing:** NNX keeps JAX transformations functional while
+  presenting the model, variables, and optimizer as explicit object graphs.
 :::
 :::
 :::

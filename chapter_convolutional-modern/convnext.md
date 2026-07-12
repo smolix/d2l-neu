@@ -38,8 +38,7 @@ from d2l import tensorflow as d2l
 ```{.python .input #convnext-imports}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
-from functools import partial
+from flax import nnx
 import jax
 from jax import numpy as jnp
 import optax
@@ -206,26 +205,33 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
 
 ```{.python .input #convnext-block}
 %%tab jax
-class ConvNeXtBlock(nn.Module):
+class ConvNeXtBlock(nnx.Module):
     """Depthwise 7x7, LN, 1x1 expand, GELU, 1x1 project, scaled residual."""
-    dim: int
-    drop_prob: float = 0.0
-    layer_scale: float = 1e-6
-    training: bool = True
+    deterministic: bool
 
-    @nn.compact
+    def __init__(self, dim, drop_prob=0.0, layer_scale=1e-6, rngs=None):
+        rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key())
+                if rngs is None else rngs)
+        self.dim, self.drop_prob = dim, drop_prob
+        self.deterministic = False
+        self.rngs = rngs
+        self.dwconv = nnx.Conv(dim, dim, kernel_size=(7, 7), padding='same',
+                               feature_group_count=dim, rngs=rngs)
+        self.norm = nnx.LayerNorm(dim, epsilon=1e-6, rngs=rngs)
+        self.pwconv1 = nnx.Linear(dim, 4 * dim, rngs=rngs)
+        self.pwconv2 = nnx.Linear(4 * dim, dim, rngs=rngs)
+        self.gamma = nnx.Param(layer_scale * jnp.ones(dim))
+
+    def set_view(self, *, deterministic):
+        self.deterministic = deterministic
+
     def __call__(self, X):
-        Y = nn.Conv(self.dim, kernel_size=(7, 7), padding='same',
-                    feature_group_count=self.dim)(X)
-        Y = nn.LayerNorm(epsilon=1e-6)(Y)
-        Y = nn.Dense(self.dim)(nn.gelu(nn.Dense(4 * self.dim)(Y)))
-        gamma = self.param('gamma',
-                           nn.initializers.constant(self.layer_scale),
-                           (self.dim,))
-        Y = gamma * Y
-        if self.training and self.drop_prob > 0:
+        Y = self.norm(self.dwconv(X))
+        Y = self.pwconv2(nnx.gelu(self.pwconv1(Y)))
+        Y = self.gamma * Y
+        if not self.deterministic and self.drop_prob > 0:
             keep = jax.random.bernoulli(
-                self.make_rng('dropout'), 1 - self.drop_prob,
+                self.rngs.dropout(), 1 - self.drop_prob,
                 (X.shape[0], 1, 1, 1))
             Y = Y * keep / (1 - self.drop_prob)
         return X + Y
@@ -318,41 +324,41 @@ class ConvNeXt(d2l.Classifier):
 ```{.python .input #convnext-model}
 %%tab jax
 class ConvNeXt(d2l.Classifier):
-    arch: tuple = ((2, 40), (2, 80), (6, 160), (2, 320))
-    lr: float = 2e-3
-    num_classes: int = 10
-    drop_path_max: float = 0.1
-    training: bool = True
-
-    def setup(self):
-        layers = [nn.Conv(self.arch[0][1], kernel_size=(4, 4),
-                          strides=(4, 4)),
-                  nn.LayerNorm(epsilon=1e-6)]
-        total = sum(d for d, _ in self.arch)
-        rates = [self.drop_path_max * i / max(total - 1, 1)
+    def __init__(self, arch=((2, 40), (2, 80), (6, 160), (2, 320)),
+                 lr=2e-3, num_classes=10, drop_path_max=0.1, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key(),
+                         mixup=d2l.get_key()) if rngs is None else rngs)
+        self.rngs = rngs
+        layers = [nnx.Conv(1, arch[0][1], kernel_size=(4, 4),
+                           strides=(4, 4), rngs=rngs),
+                  nnx.LayerNorm(arch[0][1], epsilon=1e-6, rngs=rngs)]
+        total = sum(d for d, _ in arch)
+        rates = [drop_path_max * i / max(total - 1, 1)
                  for i in range(total)]
-        b = 0
-        for i, (depth, c) in enumerate(self.arch):
+        b, c_prev = 0, arch[0][1]
+        for i, (depth, c) in enumerate(arch):
             if i > 0:  # separate downsampling layer between stages
-                layers += [nn.LayerNorm(epsilon=1e-6),
-                           nn.Conv(c, kernel_size=(2, 2), strides=(2, 2))]
+                layers += [nnx.LayerNorm(c_prev, epsilon=1e-6, rngs=rngs),
+                           nnx.Conv(c_prev, c, kernel_size=(2, 2),
+                                    strides=(2, 2), rngs=rngs)]
             for _ in range(depth):
-                layers.append(ConvNeXtBlock(
-                    c, drop_prob=rates[b], training=self.training))
+                layers.append(ConvNeXtBlock(c, drop_prob=rates[b], rngs=rngs))
                 b += 1
+            c_prev = c
         layers += [lambda x: x.mean(axis=(1, 2)),  # global average pooling
-                   nn.LayerNorm(epsilon=1e-6),
-                   nn.Dense(self.num_classes)]
-        self.net = nn.Sequential(layers)
+                   nnx.LayerNorm(c_prev, epsilon=1e-6, rngs=rngs),
+                   nnx.Linear(c_prev, num_classes, rngs=rngs)]
+        self.net = nnx.Sequential(*layers)
 ```
 
 :begin_tab:`jax`
 Unlike every network since :numref:`sec_batch_norm`, this model carries no
 batch statistics: layer normalization is a pure function of its input. The
-`training` flag above controls stochastic depth rather than normalization, and
-the module needs no mutable `batch_stats` collection. During training, Flax
-supplies the independent `dropout` random-number stream used to sample the
-per-example residual masks.
+The `deterministic` mode controls stochastic depth rather than normalization,
+and the module needs no mutable running statistics. Each block owns a
+`dropout` RNG stream that advances when it samples per-example residual masks.
 :end_tab:
 
 A $96 \times 96$ input leaves the stem as a $24 \times 24$ map, and the three downsampling layers reduce it to $12 \times 12$, $6 \times 6$, and finally $3 \times 3$ before the head pools it away. We check the output shape and count parameters: 3,376,450, about a third of the 11.2 million in the ResNet-18 we trained in :numref:`sec_training_recipes`. The exact count is a stringent correctness check for any reimplementation, ours included, since a single wrongly sized layer changes it.
@@ -384,11 +390,10 @@ sum(int(tf.size(w)) for w in model.net.trainable_weights)
 
 ```{.python .input #convnext-params}
 %%tab jax
-model = ConvNeXt(training=False)
+model = ConvNeXt()
 X = jnp.zeros((1, 96, 96, 1))
-params = model.init(d2l.get_key(), X)
-assert model.apply(params, X).shape == (1, 10)
-sum(p.size for p in jax.tree_util.tree_leaves(params['params']))
+assert nnx.view(model, deterministic=True)(X).shape == (1, 10)
+sum(p.size for _, p in nnx.state(model, nnx.Param).flat_state())
 ```
 
 ### Training with the modern recipe
@@ -486,10 +491,11 @@ def mixup(key, X, y, alpha):
     return lam * X + (1 - lam) * X[perm], y, y[perm], lam
 
 class ModernConvNeXt(ConvNeXt):
-    lr: float = 2e-3
-    max_epochs: int = 30
-    steps_per_epoch: int = 468
-    drop_path_max: float = 0.0
+    def __init__(self, lr=2e-3, num_classes=10, drop_path_max=0.0,
+                 max_epochs=30, steps_per_epoch=468, rngs=None):
+        super().__init__(lr=lr, num_classes=num_classes,
+                         drop_path_max=drop_path_max, rngs=rngs)
+        self.max_epochs, self.steps_per_epoch = max_epochs, steps_per_epoch
 
     def configure_optimizers(self):
         total = self.max_epochs * self.steps_per_epoch
@@ -497,63 +503,43 @@ class ModernConvNeXt(ConvNeXt):
             0.0, self.lr, 3 * self.steps_per_epoch, total)
         return optax.adamw(schedule, weight_decay=0.05)
 
-    @partial(jax.jit, static_argnums=(0,))
-    def mixed_value_and_grad(self, params, batch, state):
+    def training_step(self, batch):
         X, y = batch
-        key_mix, key_drop = jax.random.split(state.dropout_rng)
-        X, y_a, y_b, lam = mixup(key_mix, X, y, 0.2)
-
-        def mixed_loss(p):
-            variables = {'params': p}
-            kwargs = {'rngs': {'dropout': key_drop}}
-            if state.batch_stats:
-                variables['batch_stats'] = state.batch_stats
-                logits, updates = state.apply_fn(
-                    variables, X, mutable=['batch_stats'], **kwargs)
-            else:
-                logits = state.apply_fn(variables, X, **kwargs)
-                updates = {}
-            logp = jax.nn.log_softmax(logits)
-            eye = jnp.eye(self.num_classes)
-            ta = 0.9 * eye[y_a] + 0.1 / self.num_classes
-            tb = 0.9 * eye[y_b] + 0.1 / self.num_classes
-            loss = (lam * -(ta * logp).sum(axis=1).mean()
-                    + (1 - lam) * -(tb * logp).sum(axis=1).mean())
-            return loss, updates
-
-        return jax.value_and_grad(mixed_loss, has_aux=True)(params)
-
-    def training_step(self, params, batch, state):
-        value, grads = self.mixed_value_and_grad(params, batch, state)
-        self.plot('loss', value[0], train=True)
-        return value, grads
+        X, y_a, y_b, lam = mixup(self.rngs.mixup(), X, y, 0.2)
+        logp = jax.nn.log_softmax(self(X))
+        eye = jnp.eye(self.num_classes)
+        ta = 0.9 * eye[y_a] + 0.1 / self.num_classes
+        tb = 0.9 * eye[y_b] + 0.1 / self.num_classes
+        return (lam * -(ta * logp).sum(axis=1).mean()
+                + (1 - lam) * -(tb * logp).sum(axis=1).mean())
 
 class CompactResNet18(d2l.Classifier):
-    lr: float = 2e-3
-    num_classes: int = 10
-    base: int = 35
-    max_epochs: int = 30
-    steps_per_epoch: int = 468
-    training: bool = True
-
-    def setup(self):
-        channels = (self.base, 2 * self.base, 4 * self.base, 8 * self.base)
-        layers = [nn.Conv(self.base, (7, 7), strides=(2, 2),
-                          padding='same'),
-                  nn.BatchNorm(not self.training), nn.relu,
-                  lambda x: nn.max_pool(x, (3, 3), (2, 2), padding='SAME')]
+    def __init__(self, lr=2e-3, num_classes=10, base=35, max_epochs=30,
+                 steps_per_epoch=468, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key(),
+                         mixup=d2l.get_key()) if rngs is None else rngs)
+        self.rngs = rngs
+        channels = (base, 2 * base, 4 * base, 8 * base)
+        layers = [nnx.Conv(1, base, (7, 7), strides=(2, 2),
+                           padding='same', rngs=rngs),
+                  nnx.BatchNorm(base, rngs=rngs), nnx.relu,
+                  lambda x: nnx.max_pool(x, (3, 3), (2, 2), padding='SAME')]
+        in_channels = base
         for i, c in enumerate(channels):
             for j in range(2):
                 down = i > 0 and j == 0
                 layers.append(d2l.Residual(
                     c, use_1x1conv=down,
                     strides=(2, 2) if down else (1, 1),
-                    training=self.training))
-        layers += [lambda x: x.mean(axis=(1, 2)), nn.Dense(self.num_classes)]
-        self.net = nn.Sequential(layers)
+                    in_channels=in_channels, rngs=rngs))
+                in_channels = c
+        layers += [lambda x: x.mean(axis=(1, 2)),
+                   nnx.Linear(channels[-1], num_classes, rngs=rngs)]
+        self.net = nnx.Sequential(*layers)
 
     configure_optimizers = ModernConvNeXt.configure_optimizers
-    mixed_value_and_grad = ModernConvNeXt.mixed_value_and_grad
     training_step = ModernConvNeXt.training_step
 ```
 
@@ -602,11 +588,10 @@ for name, model in (
             steps_per_epoch=len(data.train_dataloader())))):
     d2l.tf.random.set_seed(1)  # Match the tf.data order between models
     trainer = d2l.Trainer(max_epochs=30, num_gpus=1)
-    trainer.fit(model, data, key=jax.random.key(1))
+    trainer.fit(model, data)
     correct, n = 0.0, 0
     for X, y in data.val_dataloader():
-        values = model.accuracy(trainer.state.params, (X,), y,
-                                trainer.state, averaged=False)
+        values = model.accuracy(trainer.val_model(X), y, averaged=False)
         correct += float(values.sum())
         n += len(y)
     jax_scores[name] = correct / n

@@ -50,9 +50,10 @@ from torch.nn import functional as F
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
+from d2l.nnx_resnet import ResNet50
+from flax import nnx
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
 import optax
 import numpy as np
 from PIL import Image
@@ -90,24 +91,13 @@ for the input pixel at the same spatial position.
 ![Fully convolutional network.](../img/fcn.svg)
 :label:`fig_fcn`
 
-Below, we use a ResNet-18 model pretrained on the ImageNet dataset to extract image features
+Below, we use a ResNet model pretrained on the ImageNet dataset to extract image features
 and denote the model instance as `pretrained_net`.
 The last few layers of this model
 include a global average pooling layer
 and a fully connected layer:
 they are not needed
 in the fully convolutional network.
-
-:begin_tab:`jax`
-Note: there is no pretrained ResNet bundled with Flax, and no third-party
-package providing ImageNet-pretrained ResNet weights is available in this
-JAX environment (e.g. `flaxmodels`, `transformers`). To preserve the
-pedagogical point of this section, conceptually treat the from-scratch
-ResNet feature extractor below as if its weights had been initialized
-from ImageNet pretraining; in practice you would port pretrained weights
-from PyTorch or load them via a library such as `flaxmodels`. The
-PyTorch and TensorFlow tabs use truly pretrained backbones.
-:end_tab:
 
 ```{.python .input #fcn-the-model-1}
 #@tab mxnet
@@ -124,60 +114,10 @@ list(pretrained_net.children())[-3:]
 
 ```{.python .input #fcn-the-model-1}
 #@tab jax
-# Define ResNet building blocks for the feature extractor
-class ResNetBlock(nn.Module):
-    num_channels: int
-    strides: tuple = (1, 1)
-    use_1x1conv: bool = False
-
-    @nn.compact
-    def __call__(self, x, training=False):
-        residual = x
-        y = nn.Conv(self.num_channels, kernel_size=(3, 3),
-                    strides=self.strides, padding='SAME')(x)
-        y = nn.BatchNorm(use_running_average=not training)(y)
-        y = nn.relu(y)
-        y = nn.Conv(self.num_channels, kernel_size=(3, 3),
-                    strides=(1, 1), padding='SAME')(y)
-        y = nn.BatchNorm(use_running_average=not training)(y)
-        if self.use_1x1conv:
-            residual = nn.Conv(self.num_channels, kernel_size=(1, 1),
-                               strides=self.strides)(x)
-            residual = nn.BatchNorm(
-                use_running_average=not training)(residual)
-        return nn.relu(y + residual)
-
-class ResNetFeatures(nn.Module):
-    """ResNet-18 feature extractor (without global avg pool and FC)."""
-    @nn.compact
-    def __call__(self, x, training=False):
-        # Initial conv + bn + relu + maxpool
-        x = nn.Conv(64, kernel_size=(7, 7), strides=(2, 2),
-                    padding='SAME')(x)
-        x = nn.BatchNorm(use_running_average=not training)(x)
-        x = nn.relu(x)
-        x = nn.max_pool(x, window_shape=(3, 3), strides=(2, 2),
-                        padding='SAME')
-        # Stage 1: 64 channels
-        x = ResNetBlock(64)(x, training)
-        x = ResNetBlock(64)(x, training)
-        # Stage 2: 128 channels, downsample
-        x = ResNetBlock(128, strides=(2, 2), use_1x1conv=True)(x, training)
-        x = ResNetBlock(128)(x, training)
-        # Stage 3: 256 channels, downsample
-        x = ResNetBlock(256, strides=(2, 2), use_1x1conv=True)(x, training)
-        x = ResNetBlock(256)(x, training)
-        # Stage 4: 512 channels, downsample
-        x = ResNetBlock(512, strides=(2, 2), use_1x1conv=True)(x, training)
-        x = ResNetBlock(512)(x, training)
-        return x
-
-pretrained_net = ResNetFeatures()
-# Initialize with a dummy input to see the architecture
+pretrained_net = ResNet50.from_pretrained()
 dummy = jnp.ones((1, 320, 480, 3))
-variables = pretrained_net.init(jax.random.PRNGKey(0), dummy)
 print('Feature extractor output shape:',
-      pretrained_net.apply(variables, dummy).shape)
+      pretrained_net.feature_map(dummy).shape)
 ```
 
 ```{.python .input #fcn-the-model-1}
@@ -225,7 +165,7 @@ pretrained_net.layers[-3:]
 ```
 
 Next, we create the fully convolutional network instance `net`.
-It copies all the pretrained layers in the ResNet-18
+It copies all the pretrained convolutional layers in the ResNet
 except for the final global average pooling layer
 and the fully connected layer that are closest
 to the output.
@@ -244,8 +184,7 @@ net = nn.Sequential(*list(pretrained_net.children())[:-2])
 
 ```{.python .input #fcn-the-model-2}
 #@tab jax
-# The ResNetFeatures module already excludes global avg pool and FC.
-# We define the full FCN model below.
+# `feature_map` omits the global average pooling and classification head.
 ```
 
 ```{.python .input #fcn-the-model-2}
@@ -276,7 +215,7 @@ net(X).shape
 ```{.python .input #fcn-the-model-3}
 #@tab jax
 X = jnp.ones((1, 320, 480, 3))
-pretrained_net.apply(variables, X).shape
+pretrained_net.feature_map(X).shape
 ```
 
 ```{.python .input #fcn-the-model-3}
@@ -321,25 +260,22 @@ net.add_module('transpose_conv', nn.ConvTranspose2d(num_classes, num_classes,
 #@tab jax
 num_classes = 21
 
-class FCN(nn.Module):
+class FCN(nnx.Module):
     """Fully Convolutional Network for semantic segmentation."""
-    num_classes: int
+    def __init__(self, backbone, num_classes, *, rngs):
+        self.backbone = backbone
+        self.classifier = nnx.Conv(2048, num_classes, (1, 1), rngs=rngs)
+        self.upsample = nnx.ConvTranspose(
+            num_classes, num_classes, (64, 64), strides=32, padding='SAME',
+            use_bias=False, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, x, training=False):
-        # Feature extraction (ResNet-18 backbone)
-        x = ResNetFeatures()(x, training)
-        # 1x1 conv to map to num_classes channels
-        x = nn.Conv(self.num_classes, kernel_size=(1, 1))(x)
-        # Transposed conv to upsample by 32x
-        x = nn.ConvTranspose(self.num_classes, kernel_size=(64, 64),
-                              strides=(32, 32), padding='SAME')(x)
-        return x
+    def __call__(self, X):
+        X = self.backbone.feature_map(X)
+        return self.upsample(self.classifier(X))
 
-net = FCN(num_classes=num_classes)
-variables = net.init(jax.random.PRNGKey(0), jnp.ones((1, 320, 480, 3)))
+net = FCN(pretrained_net, num_classes, rngs=nnx.Rngs(0))
 print('FCN output shape:',
-      net.apply(variables, jnp.ones((1, 320, 480, 3))).shape)
+      net(jnp.ones((1, 320, 480, 3))).shape)
 ```
 
 ```{.python .input #fcn-the-model-4}
@@ -491,29 +427,19 @@ with torch.no_grad():
 
 ```{.python .input #fcn-initializing-transposed-convolutional-layers-2}
 #@tab jax
-class BilinearConvTranspose(nn.Module):
+class BilinearConvTranspose(nnx.Module):
     """A transposed conv layer initialized with bilinear interpolation."""
-    channels: int
-    kernel_size: int
-    strides: tuple
+    def __init__(self, channels, kernel_size, strides, *, rngs):
+        self.layer = nnx.ConvTranspose(
+            channels, channels, (kernel_size, kernel_size), strides=strides,
+            padding='SAME', use_bias=False, rngs=rngs)
+        self.layer.kernel[...] = bilinear_kernel(
+            channels, channels, kernel_size)
 
-    @nn.compact
-    def __call__(self, x):
-        return nn.ConvTranspose(self.channels,
-                                kernel_size=(self.kernel_size,
-                                             self.kernel_size),
-                                strides=self.strides,
-                                padding='SAME')(x)
+    def __call__(self, X):
+        return self.layer(X)
 
-conv_trans = BilinearConvTranspose(channels=3, kernel_size=4, strides=(2, 2))
-dummy_img = jnp.ones((1, 100, 100, 3))
-ct_variables = conv_trans.init(jax.random.PRNGKey(0), dummy_img)
-# Replace the kernel with bilinear weights
-bilinear_w = bilinear_kernel(3, 3, 4)
-ct_variables = {**ct_variables,
-    'params': {**ct_variables['params'],
-               'ConvTranspose_0': {**ct_variables['params']['ConvTranspose_0'],
-                                   'kernel': bilinear_w}}}
+conv_trans = BilinearConvTranspose(3, 4, (2, 2), rngs=nnx.Rngs(0))
 ```
 
 ```{.python .input #fcn-initializing-transposed-convolutional-layers-2}
@@ -549,7 +475,7 @@ out_img = Y[0].permute(1, 2, 0).detach()
 #@tab jax
 img = np.array(Image.open('../img/catdog.jpg')).astype(np.float32) / 255
 X = jnp.expand_dims(jnp.array(img), axis=0)  # NHWC
-Y = conv_trans.apply(ct_variables, X)
+Y = conv_trans(X)
 out_img = np.array(Y[0])
 ```
 
@@ -621,18 +547,7 @@ net.transpose_conv.weight.data.copy_(W);
 # Initialize the FCN with bilinear weights for the transposed conv layer
 # and Xavier initialization for the 1x1 conv layer
 W = bilinear_kernel(num_classes, num_classes, 64)
-
-def init_fcn_weights(rng):
-    """Initialize FCN with bilinear upsampling for transposed conv."""
-    variables = net.init(rng, jnp.ones((1, 320, 480, 3)))
-    params = variables['params']
-    # Set bilinear kernel for the transposed conv layer
-    flat_params = dict(params)
-    flat_params['ConvTranspose_0'] = {
-        **params['ConvTranspose_0'], 'kernel': W}
-    return {**variables, 'params': flat_params}
-
-variables = init_fcn_weights(jax.random.PRNGKey(42))
+net.upsample.kernel[...] = W
 ```
 
 ```{.python .input #fcn-initializing-transposed-convolutional-layers-5}
@@ -656,7 +571,16 @@ The output image shape of random cropping is
 specified as $320\times 480$: both the height and width are divisible by $32$.
 
 ```{.python .input #fcn-reading-the-dataset}
+#@tab mxnet,pytorch,tensorflow
 batch_size, crop_size = 32, (320, 480)
+train_iter, test_iter = d2l.load_data_voc(batch_size, crop_size)
+```
+
+```{.python .input #fcn-reading-the-dataset}
+#@tab jax
+# The NNX ResNet-50 is deeper than the ResNet-18 used in the PyTorch tab, so
+# use a smaller minibatch while keeping the same crops and number of epochs.
+batch_size, crop_size = 4, (320, 480)
 train_iter, test_iter = d2l.load_data_voc(batch_size, crop_size)
 ```
 
@@ -697,38 +621,66 @@ d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 
 ```{.python .input #fcn-training}
 #@tab jax
-def loss_fn(params, batch_stats, X, Y):
-    # X is NHWC, Y is NHW with integer class labels
-    logits, updates = net.apply(
-        {'params': params, 'batch_stats': batch_stats},
-        X, training=True, mutable=['batch_stats'])
-    # logits shape: (N, H, W, num_classes)
-    loss = optax.softmax_cross_entropy_with_integer_labels(logits, Y)
-    return loss.mean(), updates
-
 num_epochs, lr, wd = 5, 0.001, 1e-3
-optimizer = optax.sgd(lr)
-opt_state = optimizer.init(variables['params'])
-batch_stats = variables.get('batch_stats', {})
+def parameter_labels(params):
+    return jax.tree_util.tree_map_with_path(
+        lambda path, _: ('head' if any(
+            getattr(p, 'key', None) in ('classifier', 'upsample')
+            for p in path) else 'backbone'), params)
 
-@jax.jit
-def train_step(params, batch_stats, opt_state, X, Y):
-    (loss_val, updates), grads = jax.value_and_grad(
-        loss_fn, has_aux=True)(params, batch_stats, X, Y)
-    param_updates, opt_state_new = optimizer.update(grads, opt_state, params)
-    params_new = optax.apply_updates(params, param_updates)
-    return params_new, updates['batch_stats'], opt_state_new, loss_val
+optimizer = nnx.Optimizer(
+    net, optax.multi_transform(
+        {'head': optax.chain(optax.add_decayed_weights(wd),
+                             optax.sgd(lr * 10)),
+         'backbone': optax.chain(optax.add_decayed_weights(wd),
+                                 optax.sgd(lr))},
+        parameter_labels),
+    wrt=nnx.Param)
+eval_net = nnx.view(net, use_running_average=True, raise_if_not_found=False)
 
-params = variables['params']
+@nnx.jit
+def train_step(model, optimizer, X, Y):
+    def loss_fn(model):
+        logits = model(X)
+        loss = optax.softmax_cross_entropy_with_integer_labels(logits, Y)
+        return loss.mean(), logits
+    (loss, logits), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model)
+    optimizer.update(model, grads)
+    correct = (jnp.argmax(logits, axis=-1) == Y).sum()
+    return loss, correct
+
+@nnx.jit
+def eval_step(model, X, Y):
+    logits = model(X)
+    losses = optax.softmax_cross_entropy_with_integer_labels(logits, Y)
+    correct = (jnp.argmax(logits, axis=-1) == Y).sum()
+    return losses.sum(), correct
+
 for epoch in range(num_epochs):
+    loss_terms, correct_terms, num_pixels = [], [], 0
     for X, Y in train_iter:
-        # Convert CHW to HWC for JAX
         X = jnp.transpose(jnp.array(X), (0, 2, 3, 1))
         Y = jnp.array(Y)
-        params, batch_stats, opt_state, loss_val = train_step(
-            params, batch_stats, opt_state, X, Y)
-    print(f'epoch {epoch + 1}, loss {float(loss_val):.3f}')
-variables = {'params': params, 'batch_stats': batch_stats}
+        loss, correct = train_step(net, optimizer, X, Y)
+        loss_terms.append(loss * Y.size)
+        correct_terms.append(correct)
+        num_pixels += Y.size
+    val_loss_terms, val_correct_terms, val_pixels = [], [], 0
+    for X, Y in test_iter:
+        X = jnp.transpose(jnp.array(X), (0, 2, 3, 1))
+        Y = jnp.array(Y)
+        val_loss, val_correct = eval_step(eval_net, X, Y)
+        val_loss_terms.append(val_loss)
+        val_correct_terms.append(val_correct)
+        val_pixels += Y.size
+    loss_sum = float(jnp.stack(loss_terms).sum())
+    correct = int(jnp.stack(correct_terms).sum())
+    val_loss_sum = float(jnp.stack(val_loss_terms).sum())
+    val_correct = int(jnp.stack(val_correct_terms).sum())
+    print(f'epoch {epoch + 1}, loss {loss_sum / num_pixels:.3f}, '
+          f'pixel acc {correct / num_pixels:.3f}, '
+          f'val loss {val_loss_sum / val_pixels:.3f}, '
+          f'val pixel acc {val_correct / val_pixels:.3f}')
 ```
 
 ```{.python .input #fcn-training}
@@ -776,7 +728,8 @@ def predict(img):
     rgb_std = np.array([0.229, 0.224, 0.225])
     X = (img.astype(np.float32) / 255 - rgb_mean) / rgb_std
     X = jnp.expand_dims(jnp.array(X), axis=0)  # NHWC
-    pred = net.apply(variables, X, training=False)
+    pred = nnx.view(net, use_running_average=True,
+                    raise_if_not_found=False)(X)
     return jnp.argmax(pred, axis=-1).reshape(pred.shape[1], pred.shape[2])
 ```
 

@@ -64,7 +64,7 @@ import tensorflow as tf
 ```{.python .input #multihead-attention-multi-head-attention}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 from jax import numpy as jnp
 import jax
 ```
@@ -236,21 +236,21 @@ class MultiHeadAttention(d2l.Module):  #@save
 
 ```{.python .input #multihead-attention-implementation-1}
 %%tab jax
-class MultiHeadAttention(nn.Module):  #@save
-    num_hiddens: int
-    num_heads: int
-    dropout: float
-    bias: bool = False
+class MultiHeadAttention(nnx.Module):  #@save
+    def __init__(self, num_hiddens, num_heads, dropout, bias=False, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.num_hiddens, self.num_heads = num_hiddens, num_heads
+        self.attention = d2l.DotProductAttention(dropout, rngs=rngs)
+        self.W_q = nnx.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                              rngs=rngs)
+        self.W_k = nnx.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                              rngs=rngs)
+        self.W_v = nnx.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                              rngs=rngs)
+        self.W_o = nnx.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                              rngs=rngs)
 
-    def setup(self):
-        self.attention = d2l.DotProductAttention(self.dropout)
-        self.W_q = nn.Dense(self.num_hiddens, use_bias=self.bias)
-        self.W_k = nn.Dense(self.num_hiddens, use_bias=self.bias)
-        self.W_v = nn.Dense(self.num_hiddens, use_bias=self.bias)
-        self.W_o = nn.Dense(self.num_hiddens, use_bias=self.bias)
-
-    @nn.compact
-    def __call__(self, queries, keys, values, valid_lens, training=False):
+    def __call__(self, queries, keys, values, valid_lens):
         # Shape of queries, keys, or values:
         # (batch_size, no. of queries or key-value pairs, num_hiddens)
         # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
@@ -269,7 +269,7 @@ class MultiHeadAttention(nn.Module):  #@save
         # Shape of output: (batch_size * num_heads, no. of queries,
         # num_hiddens / num_heads)
         output, attention_weights = self.attention(
-            queries, keys, values, valid_lens, training=training)
+            queries, keys, values, valid_lens)
         # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
         output_concat = self.transpose_output(output)
         return self.W_o(output_concat), attention_weights
@@ -440,8 +440,8 @@ batch_size, num_queries, num_kvpairs = 2, 4, 6
 valid_lens = d2l.tensor([3, 2])
 X = d2l.ones((batch_size, num_queries, num_hiddens))
 Y = d2l.ones((batch_size, num_kvpairs, num_hiddens))
-d2l.check_shape(attention.init_with_output(d2l.get_key(), X, Y, Y, valid_lens,
-                                           training=False)[0][0],
+d2l.check_shape(nnx.view(attention, deterministic=True)(
+                    X, Y, Y, valid_lens)[0],
                 (batch_size, num_queries, num_hiddens))
 ```
 

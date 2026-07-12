@@ -38,10 +38,7 @@ import tensorflow as tf
 ```{.python .input #softmax-regression-concise-concise-implementation-of-softmax-regression}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
-from functools import partial
-import jax
-from jax import numpy as jnp
+from flax import nnx
 import optax
 ```
 
@@ -72,11 +69,9 @@ by keeping the dimension along the first axis unchanged.
 :end_tab:
 
 :begin_tab:`jax`
-Flax allows users to write the network class in a more compact way
-using `@nn.compact` decorator. With `@nn.compact`, one
-can simply write all network logic inside a single “forward pass”
-method, without needing to define the standard `setup` method in
-the dataclass.
+NNX layers are ordinary stateful Python objects. Since Fashion-MNIST images
+have $28\times28=784$ features, we declare that input width when constructing
+the linear layer and flatten each minibatch in `forward`.
 :end_tab:
 
 ```{.python .input #softmax-regression-concise-defining-the-model}
@@ -124,14 +119,15 @@ class SoftmaxRegression(d2l.Classifier):  #@save
 ```{.python .input #softmax-regression-concise-defining-the-model}
 %%tab jax
 class SoftmaxRegression(d2l.Classifier):  #@save
-    num_outputs: int
-    lr: float
+    def __init__(self, num_outputs, lr, num_inputs=784, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.net = nnx.Linear(num_inputs, num_outputs, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, X):
+    def forward(self, X):
         X = X.reshape((X.shape[0], -1))  # Flatten
-        X = nn.Dense(self.num_outputs)(X)
-        return X
+        return self.net(X)
 ```
 
 ## Softmax Revisited
@@ -264,17 +260,11 @@ def loss(self, Y_hat, Y, averaged=True):
 ```{.python .input #softmax-regression-concise-softmax-revisited}
 %%tab jax
 @d2l.add_to_class(d2l.Classifier)  #@save
-@partial(jax.jit, static_argnums=(0, 5))
-def loss(self, params, X, Y, state, averaged=True):
-    # To be used later (e.g., for batch norm)
-    Y_hat = state.apply_fn({'params': params}, *X,
-                           mutable=False, rngs=None)
+def loss(self, Y_hat, Y, averaged=True):
     Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
     Y = d2l.reshape(Y, (-1,))
     fn = optax.softmax_cross_entropy_with_integer_labels
-    # The returned empty dictionary is a placeholder for auxiliary data,
-    # which will be used later (e.g., for batch norm)
-    return (fn(Y_hat, Y).mean(), {}) if averaged else (fn(Y_hat, Y), {})
+    return fn(Y_hat, Y).mean() if averaged else fn(Y_hat, Y)
 ```
 
 The built-in fused loss (named differently in each library) takes **logits**,

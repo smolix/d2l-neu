@@ -161,11 +161,9 @@ import tensorflow as tf
 ```{.python .input #dropout}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
-from functools import partial
+from flax import nnx
 import jax
 from jax import numpy as jnp
-import optax
 ```
 
 ## Dropout in Practice
@@ -364,29 +362,28 @@ class DropoutMLPScratch(d2l.Classifier):
 ```{.python .input #dropout-defining-the-model}
 %%tab jax
 class DropoutMLPScratch(d2l.Classifier):
-    num_hiddens_1: int
-    num_hiddens_2: int
-    num_outputs: int
-    dropout_1: float
-    dropout_2: float
-    lr: float
-    training: bool = True
+    def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
+                 dropout_1, dropout_2, lr, num_inputs=784, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key()) \
+            if rngs is None else rngs
+        self.lin1 = nnx.Linear(num_inputs, num_hiddens_1, rngs=rngs)
+        self.lin2 = nnx.Linear(num_hiddens_1, num_hiddens_2, rngs=rngs)
+        self.lin3 = nnx.Linear(num_hiddens_2, num_outputs, rngs=rngs)
+        self.rngs = rngs
+        self.deterministic = False
 
-    def setup(self):
-        self.lin1 = nn.Dense(self.num_hiddens_1)
-        self.lin2 = nn.Dense(self.num_hiddens_2)
-        self.lin3 = nn.Dense(self.num_outputs)
-        self.relu = nn.relu
+    def set_view(self, *, deterministic):
+        self.deterministic = deterministic
 
     def forward(self, X):
-        H1 = self.relu(self.lin1(X.reshape(X.shape[0], -1)))
-        if self.training:
-            H1 = dropout_layer(H1, self.dropout_1,
-                               self.make_rng('dropout'))
-        H2 = self.relu(self.lin2(H1))
-        if self.training:
-            H2 = dropout_layer(H2, self.dropout_2,
-                               self.make_rng('dropout'))
+        H1 = nnx.relu(self.lin1(X.reshape(X.shape[0], -1)))
+        if not self.deterministic:
+            H1 = dropout_layer(H1, self.dropout_1, self.rngs.dropout())
+        H2 = nnx.relu(self.lin2(H1))
+        if not self.deterministic:
+            H2 = dropout_layer(H2, self.dropout_2, self.rngs.dropout())
         return self.lin3(H2)
 ```
 
@@ -481,53 +478,30 @@ class DropoutMLP(d2l.Classifier):
 ```{.python .input #dropout-concise-implementation-1}
 %%tab jax
 class DropoutMLP(d2l.Classifier):
-    num_hiddens_1: int
-    num_hiddens_2: int
-    num_outputs: int
-    dropout_1: float
-    dropout_2: float
-    lr: float
-    training: bool = True
+    def __init__(self, num_outputs, num_hiddens_1, num_hiddens_2,
+                 dropout_1, dropout_2, lr, num_inputs=784, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key()) \
+            if rngs is None else rngs
+        self.lin1 = nnx.Linear(num_inputs, num_hiddens_1, rngs=rngs)
+        self.drop1 = nnx.Dropout(dropout_1, rngs=rngs)
+        self.lin2 = nnx.Linear(num_hiddens_1, num_hiddens_2, rngs=rngs)
+        self.drop2 = nnx.Dropout(dropout_2, rngs=rngs)
+        self.lin3 = nnx.Linear(num_hiddens_2, num_outputs, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, X):
-        x = nn.relu(nn.Dense(self.num_hiddens_1)(X.reshape((X.shape[0], -1))))
-        x = nn.Dropout(self.dropout_1, deterministic=not self.training)(x)
-        x = nn.relu(nn.Dense(self.num_hiddens_2)(x))
-        x = nn.Dropout(self.dropout_2, deterministic=not self.training)(x)
-        return nn.Dense(self.num_outputs)(x)
+    def forward(self, X):
+        X = X.reshape((X.shape[0], -1))
+        X = self.drop1(nnx.relu(self.lin1(X)))
+        X = self.drop2(nnx.relu(self.lin2(X)))
+        return self.lin3(X)
 ```
 
 :begin_tab:`jax`
-Note that we need to redefine the loss function since a network
-with a dropout layer needs a PRNGKey when using `Module.apply()`,
-and this RNG seed should be explicitly named `dropout`. This key is
-used by the `dropout` layer in Flax to generate the random dropout
-mask internally. It is important to use a unique `dropout_rng` key
-with every epoch in the training loop, otherwise the generated dropout
-mask will not be stochastic and different between the epoch runs.
-This `dropout_rng` can be stored in the
-`TrainState` object (in the `d2l.Trainer` class defined in
-:numref:`oo-design-training`) as an attribute and with every epoch
-it is replaced with a new `dropout_rng`. We already handled this with the
-`fit_epoch` method defined in :numref:`sec_linear_scratch`.
+NNX dropout layers own an RNG stream. Each training call advances that stream,
+while the evaluation view created by `Trainer` sets `deterministic=True` and
+therefore disables masking. No key needs to be threaded through the loss.
 :end_tab:
-
-```{.python .input #dropout-concise-implementation-2}
-%%tab jax
-@d2l.add_to_class(d2l.Classifier)  #@save
-@partial(jax.jit, static_argnums=(0, 5))
-def loss(self, params, X, Y, state, averaged=True):
-    Y_hat = state.apply_fn({'params': params}, *X,
-                           mutable=False,  # To be used later (e.g., batch norm)
-                           rngs={'dropout': state.dropout_rng})
-    Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
-    Y = d2l.reshape(Y, (-1,))
-    fn = optax.softmax_cross_entropy_with_integer_labels
-    # The returned empty dictionary is a placeholder for auxiliary data,
-    # which will be used later (e.g., for batch norm)
-    return (fn(Y_hat, Y).mean(), {}) if averaged else (fn(Y_hat, Y), {})
-```
 
 Next, we train the model.
 
@@ -851,16 +825,6 @@ gap a plain 256-256 MLP would open up is held in check.
 no-op, with no rescaling needed.
 
 @dropout-concise-implementation-1
-:::
-
-::: {.slide title="JAX: dropout needs a fresh PRNG key" only="jax"}
-[Concise]{.kicker}
-
-Flax's `nn.Dropout` pulls randomness from a named
-`dropout` key, so the loss threads one through
-`apply`. A new key each epoch keeps the mask stochastic:
-
-@dropout-concise-implementation-2
 :::
 
 ::: {.slide title="Train the concise model"}

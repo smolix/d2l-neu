@@ -468,11 +468,8 @@ import tensorflow as tf
 ```{.python .input #preface-code-2}
 #@tab jax
 #@save
-from dataclasses import field
 from functools import partial
-import flax
-from flax import linen as nn
-from flax.training import train_state
+from flax import nnx
 import jax
 from jax import numpy as jnp
 from jax import grad, vmap

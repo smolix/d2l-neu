@@ -37,7 +37,7 @@ from d2l import tensorflow as d2l
 ```{.python .input #resnet-residual-networks-resnet-and-resnext}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 from jax import numpy as jnp
 import jax
 ```
@@ -224,34 +224,33 @@ class Residual(tf.keras.Model):  #@save
 
 ```{.python .input #resnet-residual-blocks-1}
 %%tab jax
-class Residual(nn.Module):  #@save
+class Residual(nnx.Module):  #@save
     """The Residual block of ResNet models."""
-    num_channels: int
-    use_1x1conv: bool = False
-    strides: tuple = (1, 1)
-    training: bool = True
-
-    def setup(self):
-        self.conv1 = nn.Conv(self.num_channels, kernel_size=(3, 3),
-                             padding='same', strides=self.strides)
-        self.conv2 = nn.Conv(self.num_channels, kernel_size=(3, 3),
-                             padding='same')
+    def __init__(self, num_channels, use_1x1conv=False, strides=(1, 1),
+                 in_channels=None, rngs=None):
+        in_channels = num_channels if in_channels is None else in_channels
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.conv1 = nnx.Conv(in_channels, num_channels, kernel_size=(3, 3),
+                              padding='same', strides=strides, rngs=rngs)
+        self.conv2 = nnx.Conv(num_channels, num_channels, kernel_size=(3, 3),
+                              padding='same', rngs=rngs)
         # Auto-enable 1x1 conv when downsampling so the residual shape matches.
-        if self.use_1x1conv or any(s != 1 for s in self.strides):
-            self.conv3 = nn.Conv(self.num_channels, kernel_size=(1, 1),
-                                 strides=self.strides)
+        if use_1x1conv or any(s != 1 for s in strides):
+            self.conv3 = nnx.Conv(in_channels, num_channels,
+                                  kernel_size=(1, 1), strides=strides,
+                                  rngs=rngs)
         else:
             self.conv3 = None
-        self.bn1 = nn.BatchNorm(not self.training)
-        self.bn2 = nn.BatchNorm(not self.training)
+        self.bn1 = nnx.BatchNorm(num_channels, rngs=rngs)
+        self.bn2 = nnx.BatchNorm(num_channels, rngs=rngs)
 
     def __call__(self, X):
-        Y = nn.relu(self.bn1(self.conv1(X)))
+        Y = nnx.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
         if self.conv3:
             X = self.conv3(X)
         Y += X
-        return nn.relu(Y)
+        return nnx.relu(Y)
 ```
 
 This code generates two types of networks: one where we add the input directly to the output before applying the ReLU nonlinearity whenever `use_1x1conv=False` and the stride is `1`; and one where we adjust channels and resolution by means of a $1 \times 1$ convolution before adding, which the block enables automatically whenever `use_1x1conv=True` or the stride is not `1`. :numref:`fig_resnet_block` illustrates this.
@@ -288,7 +287,7 @@ Y.shape
 %%tab jax
 blk = Residual(3)
 X = jax.random.normal(d2l.get_key(), (4, 6, 6, 3))
-blk.init_with_output(d2l.get_key(), X)[0].shape
+blk(X).shape
 ```
 
 We also have the option to halve the output height and width while increasing the number of output channels.
@@ -315,8 +314,8 @@ blk(X).shape
 
 ```{.python .input #resnet-residual-blocks-3}
 %%tab jax
-blk = Residual(6, use_1x1conv=True, strides=(2, 2))
-blk.init_with_output(d2l.get_key(), X)[0].shape
+blk = Residual(6, use_1x1conv=True, strides=(2, 2), in_channels=3)
+blk(X).shape
 ```
 
 ## ResNet Model
@@ -360,20 +359,19 @@ class ResNet(d2l.Classifier):
 ```{.python .input #resnet-resnet-model-1}
 %%tab jax
 class ResNet(d2l.Classifier):
-    arch: tuple
-    lr: float = 0.1
-    num_classes: int = 10
-    training: bool = True
+    def __init__(self, arch, lr=0.1, num_classes=10, in_channels=1, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.net = self.create_net(in_channels, rngs)
 
-    def setup(self):
-        self.net = self.create_net()
-
-    def b1(self):
-        return nn.Sequential([
-            nn.Conv(64, kernel_size=(7, 7), strides=(2, 2), padding='same'),
-            nn.BatchNorm(not self.training), nn.relu,
-            lambda x: nn.max_pool(x, window_shape=(3, 3), strides=(2, 2),
-                                  padding='same')])
+    def b1(self, in_channels, rngs):
+        return nnx.Sequential(
+            nnx.Conv(in_channels, 64, kernel_size=(7, 7), strides=(2, 2),
+                     padding='same', rngs=rngs),
+            nnx.BatchNorm(64, rngs=rngs), nnx.relu,
+            lambda x: nnx.max_pool(x, window_shape=(3, 3), strides=(2, 2),
+                                   padding='same'))
 ```
 
 GoogLeNet uses four modules made up of Inception blocks.
@@ -422,15 +420,19 @@ def block(self, num_residuals, num_channels, first_block=False):
 ```{.python .input #resnet-resnet-model-2}
 %%tab jax
 @d2l.add_to_class(ResNet)
-def block(self, num_residuals, num_channels, first_block=False):
+def block(self, num_residuals, num_channels, in_channels,
+          first_block=False, rngs=None):
     blk = []
     for i in range(num_residuals):
         if i == 0 and not first_block:
             blk.append(Residual(num_channels, use_1x1conv=True,
-                                strides=(2, 2), training=self.training))
+                                strides=(2, 2), in_channels=in_channels,
+                                rngs=rngs))
         else:
-            blk.append(Residual(num_channels, training=self.training))
-    return nn.Sequential(blk)
+            blk.append(Residual(num_channels, in_channels=in_channels,
+                                rngs=rngs))
+        in_channels = num_channels
+    return nnx.Sequential(*blk)
 ```
 
 Then, we add all the modules to ResNet. Here, two residual blocks are used for each module. Lastly, just like GoogLeNet, we add a global average pooling layer, followed by the fully connected layer output.
@@ -481,16 +483,17 @@ def __init__(self, arch, lr=0.1, num_classes=10):
 ```{.python .input #resnet-resnet-model-3}
 %%tab jax
 @d2l.add_to_class(ResNet)
-def create_net(self):
-    net = nn.Sequential([self.b1()])
-    for i, b in enumerate(self.arch):
-        net.layers.extend([self.block(*b, first_block=(i==0))])
-    net.layers.extend([nn.Sequential([
-        # Flax does not provide a GlobalAvg2D layer
+def create_net(self, in_channels, rngs):
+    layers = [self.b1(in_channels, rngs)]
+    stage_channels = 64
+    for i, (num_residuals, num_channels) in enumerate(self.arch):
+        layers.append(self.block(num_residuals, num_channels, stage_channels,
+                                 first_block=(i == 0), rngs=rngs))
+        stage_channels = num_channels
+    layers.append(nnx.Sequential(
         lambda x: x.mean(axis=(1, 2)),  # global avg pooling over H, W (NHWC)
-        lambda x: x.reshape((x.shape[0], -1)),
-        nn.Dense(self.num_classes)])])
-    return net
+        nnx.Linear(stage_channels, self.num_classes, rngs=rngs)))
+    return nnx.Sequential(*layers)
 ```
 
 There are four convolutional layers in each module (excluding the $1\times 1$ convolutional layer). Together with the first $7\times 7$ convolutional layer and the final fully connected layer, there are 18 layers in total. Therefore, this model is commonly known as ResNet-18.
@@ -512,9 +515,9 @@ class ResNet18(ResNet):
 ```{.python .input #resnet-resnet-model-4}
 %%tab jax
 class ResNet18(ResNet):
-    arch: tuple = ((2, 64), (2, 128), (2, 256), (2, 512))
-    lr: float = 0.1
-    num_classes: int = 10
+    def __init__(self, lr=0.1, num_classes=10, in_channels=1, rngs=None):
+        super().__init__(((2, 64), (2, 128), (2, 256), (2, 512)),
+                         lr, num_classes, in_channels, rngs)
 ```
 
 ```{.python .input #resnet-resnet-model-5}
@@ -529,7 +532,7 @@ ResNet18().layer_summary((1, 96, 96, 1))
 
 ```{.python .input #resnet-resnet-model-5}
 %%tab jax
-ResNet18(training=False).layer_summary((1, 96, 96, 1))
+ResNet18().layer_summary((1, 96, 96, 1))
 ```
 
 ## Training
@@ -693,41 +696,39 @@ class ResNeXtBlock(tf.keras.Model):  #@save
 
 ```{.python .input #resnet-resnext-1}
 %%tab jax
-class ResNeXtBlock(nn.Module):  #@save
+class ResNeXtBlock(nnx.Module):  #@save
     """The ResNeXt block."""
-    num_channels: int
-    groups: int
-    bot_mul: int
-    use_1x1conv: bool = False
-    strides: tuple = (1, 1)
-    training: bool = True
-
-    def setup(self):
-        bot_channels = int(round(self.num_channels * self.bot_mul))
-        self.conv1 = nn.Conv(bot_channels, kernel_size=(1, 1),
-                               strides=(1, 1))
-        self.conv2 = nn.Conv(bot_channels, kernel_size=(3, 3),
-                               strides=self.strides, padding='same',
-                               feature_group_count=self.groups)
-        self.conv3 = nn.Conv(self.num_channels, kernel_size=(1, 1),
-                               strides=(1, 1))
-        self.bn1 = nn.BatchNorm(not self.training)
-        self.bn2 = nn.BatchNorm(not self.training)
-        self.bn3 = nn.BatchNorm(not self.training)
-        if self.use_1x1conv:
-            self.conv4 = nn.Conv(self.num_channels, kernel_size=(1, 1),
-                                       strides=self.strides)
-            self.bn4 = nn.BatchNorm(not self.training)
+    def __init__(self, num_channels, groups, bot_mul, use_1x1conv=False,
+                 strides=(1, 1), in_channels=None, rngs=None):
+        in_channels = num_channels if in_channels is None else in_channels
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        bot_channels = int(round(num_channels * bot_mul))
+        self.conv1 = nnx.Conv(in_channels, bot_channels, kernel_size=(1, 1),
+                              strides=(1, 1), rngs=rngs)
+        self.conv2 = nnx.Conv(bot_channels, bot_channels,
+                              kernel_size=(3, 3), strides=strides,
+                              padding='same', feature_group_count=groups,
+                              rngs=rngs)
+        self.conv3 = nnx.Conv(bot_channels, num_channels,
+                              kernel_size=(1, 1), strides=(1, 1), rngs=rngs)
+        self.bn1 = nnx.BatchNorm(bot_channels, rngs=rngs)
+        self.bn2 = nnx.BatchNorm(bot_channels, rngs=rngs)
+        self.bn3 = nnx.BatchNorm(num_channels, rngs=rngs)
+        if use_1x1conv:
+            self.conv4 = nnx.Conv(in_channels, num_channels,
+                                  kernel_size=(1, 1), strides=strides,
+                                  rngs=rngs)
+            self.bn4 = nnx.BatchNorm(num_channels, rngs=rngs)
         else:
             self.conv4 = None
 
     def __call__(self, X):
-        Y = nn.relu(self.bn1(self.conv1(X)))
-        Y = nn.relu(self.bn2(self.conv2(Y)))
+        Y = nnx.relu(self.bn1(self.conv1(X)))
+        Y = nnx.relu(self.bn2(self.conv2(Y)))
         Y = self.bn3(self.conv3(Y))
         if self.conv4:
             X = self.bn4(self.conv4(X))
-        return nn.relu(Y + X)
+        return nnx.relu(Y + X)
 ```
 
 Its use is entirely analogous to that of the `ResNetBlock` discussed previously. For instance, when using (`use_1x1conv=False, strides=1`), the input and output are of the same shape. Alternatively, setting `use_1x1conv=True, strides=2` halves the output height and width.
@@ -759,7 +760,7 @@ Y.shape
 %%tab jax
 blk = ResNeXtBlock(32, 16, 1)
 X = jnp.zeros((4, 96, 96, 32))
-blk.init_with_output(d2l.get_key(), X)[0].shape
+blk(X).shape
 ```
 
 ## Concatenation instead of Addition: DenseNet
@@ -820,15 +821,14 @@ class ConvBlock(tf.keras.layers.Layer):
 
 ```{.python .input #densenet-dense-blocks-1}
 %%tab jax
-class ConvBlock(nn.Module):
-    num_channels: int
-    training: bool = True
+class ConvBlock(nnx.Module):
+    def __init__(self, in_channels, num_channels, rngs):
+        self.bn = nnx.BatchNorm(in_channels, rngs=rngs)
+        self.conv = nnx.Conv(in_channels, num_channels, kernel_size=(3, 3),
+                             padding=(1, 1), rngs=rngs)
 
-    @nn.compact
     def __call__(self, X):
-        Y = nn.relu(nn.BatchNorm(not self.training)(X))
-        Y = nn.Conv(self.num_channels, kernel_size=(3, 3), padding=(1, 1))(Y)
-        return Y
+        return self.conv(nnx.relu(self.bn(X)))
 ```
 
 A *dense block* consists of multiple convolution blocks, each using the same number of output channels. In the forward propagation, however, we concatenate the input and output of each convolution block on the channel dimension. Lazy evaluation allows us to adjust the dimensionality automatically.
@@ -887,14 +887,14 @@ class DenseBlock(tf.keras.layers.Layer):
 
 ```{.python .input #densenet-dense-blocks-2}
 %%tab jax
-class DenseBlock(nn.Module):
-    num_convs: int
-    num_channels: int
-    training: bool = True
-
-    def setup(self):
-        self.layers = [ConvBlock(self.num_channels, self.training)
-                       for _ in range(self.num_convs)]
+class DenseBlock(nnx.Module):
+    def __init__(self, num_convs, num_channels, in_channels=3, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        layers = []
+        for i in range(num_convs):
+            layers.append(ConvBlock(
+                in_channels + i * num_channels, num_channels, rngs))
+        self.layers = nnx.List(layers)
 
     def __call__(self, X):
         for layer in self.layers:
@@ -937,7 +937,7 @@ Y.shape
 %%tab jax
 blk = DenseBlock(2, 10)
 X = jnp.zeros((4, 8, 8, 3))
-Y = blk.init_with_output(d2l.get_key(), X)[0]
+Y = blk(X)
 Y.shape
 ```
 
@@ -981,16 +981,16 @@ class TransitionBlock(tf.keras.layers.Layer):
 
 ```{.python .input #densenet-transition-layers-1}
 %%tab jax
-class TransitionBlock(nn.Module):
-    num_channels: int
-    training: bool = True
+class TransitionBlock(nnx.Module):
+    def __init__(self, in_channels, num_channels, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.bn = nnx.BatchNorm(in_channels, rngs=rngs)
+        self.conv = nnx.Conv(in_channels, num_channels,
+                             kernel_size=(1, 1), rngs=rngs)
 
-    @nn.compact
     def __call__(self, X):
-        X = nn.BatchNorm(not self.training)(X)
-        X = nn.relu(X)
-        X = nn.Conv(self.num_channels, kernel_size=(1, 1))(X)
-        X = nn.avg_pool(X, window_shape=(2, 2), strides=(2, 2))
+        X = self.conv(nnx.relu(self.bn(X)))
+        X = nnx.avg_pool(X, window_shape=(2, 2), strides=(2, 2))
         return X
 ```
 
@@ -1017,8 +1017,8 @@ blk(Y).shape
 
 ```{.python .input #densenet-transition-layers-2}
 %%tab jax
-blk = TransitionBlock(10)
-blk.init_with_output(d2l.get_key(), Y)[0].shape
+blk = TransitionBlock(23, 10)
+blk(Y).shape
 ```
 
 A full DenseNet alternates four dense blocks with transition layers, mirroring

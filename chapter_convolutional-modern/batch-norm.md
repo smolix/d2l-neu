@@ -40,11 +40,9 @@ import tensorflow as tf
 ```{.python .input #batch-norm-batch-normalization}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
-from functools import partial
+from flax import nnx
 from jax import numpy as jnp
 import jax
-import optax
 ```
 
 ## Training Deep Networks
@@ -369,8 +367,7 @@ def batch_norm(X, deterministic, gamma, beta, moving_mean, moving_var, eps,
     # mode or prediction mode
     if deterministic:
         # In prediction mode, use mean and variance obtained by moving average
-        # `linen.Module.variables` have a `value` attribute containing the array
-        X_hat = (X - moving_mean.value) / jnp.sqrt(moving_var.value + eps)
+        X_hat = (X - moving_mean[...]) / jnp.sqrt(moving_var[...] + eps)
     else:
         assert len(X.shape) in (2, 4)
         if len(X.shape) == 2:
@@ -380,16 +377,16 @@ def batch_norm(X, deterministic, gamma, beta, moving_mean, moving_var, eps,
             var = ((X - mean) ** 2).mean(axis=0)
         else:
             # When using a two-dimensional convolutional layer, calculate the
-            # mean and variance on the channel dimension (axis=1). Here we
+            # mean and variance over batch and spatial dimensions. Here we
             # need to maintain the shape of `X`, so that the broadcasting
             # operation can be carried out later
-            mean = X.mean(axis=(0, 2, 3), keepdims=True)
-            var = ((X - mean) ** 2).mean(axis=(0, 2, 3), keepdims=True)
+            mean = X.mean(axis=(0, 1, 2), keepdims=True)
+            var = ((X - mean) ** 2).mean(axis=(0, 1, 2), keepdims=True)
         # In training mode, the current mean and variance are used
         X_hat = (X - mean) / jnp.sqrt(var + eps)
         # Update the mean and variance using moving average
-        moving_mean.value = momentum * moving_mean.value + (1.0 - momentum) * mean
-        moving_var.value = momentum * moving_var.value + (1.0 - momentum) * var
+        moving_mean[...] = momentum * moving_mean[...] + (1.0 - momentum) * mean
+        moving_var[...] = momentum * moving_var[...] + (1.0 - momentum) * var
     Y = gamma * X_hat + beta  # Scale and shift
     return Y
 ```
@@ -534,36 +531,38 @@ class BatchNorm(tf.keras.layers.Layer):
 
 ```{.python .input #batch-norm-implementation-from-scratch-2}
 %%tab jax
-class BatchNorm(nn.Module):
+class BatchNorm(nnx.Module):
+    deterministic: bool
+
     # `num_features`: the number of outputs for a fully connected layer
     # or the number of output channels for a convolutional layer.
     # `num_dims`: 2 for a fully connected layer and 4 for a convolutional layer
     # Use `deterministic` to determine whether the current mode is training
     # mode or prediction mode
-    num_features: int
-    num_dims: int
-    deterministic: bool = False
-
-    @nn.compact
-    def __call__(self, X):
-        if self.num_dims == 2:
-            shape = (1, self.num_features)
+    def __init__(self, num_features, num_dims, deterministic=False):
+        self.deterministic = deterministic
+        if num_dims == 2:
+            shape = (1, num_features)
         else:
-            shape = (1, 1, 1, self.num_features)
+            shape = (1, 1, 1, num_features)
 
         # The scale parameter and the shift parameter (model parameters) are
         # initialized to 1 and 0, respectively
-        gamma = self.param('gamma', jax.nn.initializers.ones, shape)
-        beta = self.param('beta', jax.nn.initializers.zeros, shape)
+        self.gamma = nnx.Param(jnp.ones(shape))
+        self.beta = nnx.Param(jnp.zeros(shape))
 
         # The variables that are not model parameters are initialized to 0 and
         # 1. Save them to the 'batch_stats' collection
-        moving_mean = self.variable('batch_stats', 'moving_mean', jnp.zeros, shape)
-        moving_var = self.variable('batch_stats', 'moving_var', jnp.ones, shape)
-        Y = batch_norm(X, self.deterministic, gamma, beta,
-                       moving_mean, moving_var, eps=1e-5, momentum=0.9)
+        self.moving_mean = nnx.BatchStat(jnp.zeros(shape))
+        self.moving_var = nnx.BatchStat(jnp.ones(shape))
 
-        return Y
+    def set_view(self, *, deterministic):
+        self.deterministic = deterministic
+
+    def __call__(self, X):
+        return batch_norm(X, self.deterministic, self.gamma, self.beta,
+                          self.moving_mean, self.moving_var,
+                          eps=1e-5, momentum=0.9)
 ```
 
 We used `momentum` to govern the aggregation over past mean and variance estimates. This is somewhat of a misnomer as it has nothing whatsoever to do with the *momentum* term of optimization. Nonetheless, it is the commonly adopted name for this term and in deference to API naming convention we use the same variable name in our code.
@@ -637,54 +636,32 @@ class BNLeNetScratch(d2l.Classifier):
 ```{.python .input #batch-norm-lenet-with-batch-normalization-1}
 %%tab jax
 class BNLeNetScratch(d2l.Classifier):
-    lr: float = 0.1
-    num_classes: int = 10
-    training: bool = True
-
-    def setup(self):
-        self.net = nn.Sequential([
-            nn.Conv(6, kernel_size=(5, 5)),
-            BatchNorm(6, num_dims=4, deterministic=not self.training),
-            nn.sigmoid,
-            lambda x: nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
-            nn.Conv(16, kernel_size=(5, 5)),
-            BatchNorm(16, num_dims=4, deterministic=not self.training),
-            nn.sigmoid,
-            lambda x: nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
+    def __init__(self, lr=0.1, num_classes=10, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.net = nnx.Sequential(
+            nnx.Conv(1, 6, kernel_size=(5, 5), rngs=rngs),
+            BatchNorm(6, num_dims=4),
+            nnx.sigmoid,
+            lambda x: nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
+            nnx.Conv(6, 16, kernel_size=(5, 5), rngs=rngs),
+            BatchNorm(16, num_dims=4),
+            nnx.sigmoid,
+            lambda x: nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
             lambda x: x.reshape((x.shape[0], -1)),
-            nn.Dense(120),
-            BatchNorm(120, num_dims=2, deterministic=not self.training),
-            nn.sigmoid,
-            nn.Dense(84),
-            BatchNorm(84, num_dims=2, deterministic=not self.training),
-            nn.sigmoid,
-            nn.Dense(self.num_classes)])
+            nnx.Linear(7 * 7 * 16, 120, rngs=rngs),
+            BatchNorm(120, num_dims=2), nnx.sigmoid,
+            nnx.Linear(120, 84, rngs=rngs),
+            BatchNorm(84, num_dims=2), nnx.sigmoid,
+            nnx.Linear(84, num_classes, rngs=rngs))
 ```
 
 :begin_tab:`jax`
-Since `BatchNorm` layers need to calculate the batch statistics
-(mean and variance), Flax keeps track of the `batch_stats` dictionary, updating
-them with every minibatch. Collections like `batch_stats` can be stored in the
-`TrainState` object (in the `d2l.Trainer` class defined in
-:numref:`oo-design-training`) as an attribute and during the model's forward pass,
-these should be passed to the `mutable` argument, so that Flax returns the mutated
-variables.
+NNX stores running means and variances as `BatchStat` variables inside each
+layer. The training view updates them in place, while the evaluation view sets
+`deterministic=True` recursively and reads the accumulated statistics.
 :end_tab:
-
-```{.python .input #batch-norm-lenet-with-batch-normalization-2}
-%%tab jax
-@d2l.add_to_class(d2l.Classifier)  #@save
-@partial(jax.jit, static_argnums=(0, 5))
-def loss(self, params, X, Y, state, averaged=True):
-    Y_hat, updates = state.apply_fn({'params': params,
-                                     'batch_stats': state.batch_stats},
-                                    *X, mutable=['batch_stats'],
-                                    rngs={'dropout': state.dropout_rng})
-    Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
-    Y = d2l.reshape(Y, (-1,))
-    fn = optax.softmax_cross_entropy_with_integer_labels
-    return (fn(Y_hat, Y).mean(), updates) if averaged else (fn(Y_hat, Y), updates)
-```
 
 As before, we will train our network on the Fashion-MNIST dataset.
 This code is virtually identical to that when we first trained LeNet.
@@ -745,8 +722,8 @@ tf.reshape(model.net.layers[1].gamma, (-1,)), tf.reshape(
 
 ```{.python .input #batch-norm-lenet-with-batch-normalization-4}
 %%tab jax
-trainer.state.params['net']['layers_1']['gamma'].reshape((-1,)), \
-trainer.state.params['net']['layers_1']['beta'].reshape((-1,))
+model.net.layers[1].gamma[...].reshape((-1,)), \
+model.net.layers[1].beta[...].reshape((-1,))
 ```
 
 ## Concise Implementation
@@ -821,31 +798,26 @@ class BNLeNet(d2l.Classifier):
 ```{.python .input #batch-norm-concise-implementation-1}
 %%tab jax
 class BNLeNet(d2l.Classifier):
-    lr: float = 0.1
-    num_classes: int = 10
-    training: bool = True
-
-    def setup(self):
+    def __init__(self, lr=0.1, num_classes=10, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         # Flax's default momentum=0.99 decays the OLD running stats; PT/MX use
         # momentum=0.1 on the NEW stats, i.e. decay-of-OLD = 0.9. Pass 0.9 to
         # match the other tabs.
-        self.net = nn.Sequential([
-            nn.Conv(6, kernel_size=(5, 5)),
-            nn.BatchNorm(not self.training, momentum=0.9),
-            nn.sigmoid,
-            lambda x: nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
-            nn.Conv(16, kernel_size=(5, 5)),
-            nn.BatchNorm(not self.training, momentum=0.9),
-            nn.sigmoid,
-            lambda x: nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
+        self.net = nnx.Sequential(
+            nnx.Conv(1, 6, kernel_size=(5, 5), rngs=rngs),
+            nnx.BatchNorm(6, momentum=0.9, rngs=rngs), nnx.sigmoid,
+            lambda x: nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
+            nnx.Conv(6, 16, kernel_size=(5, 5), rngs=rngs),
+            nnx.BatchNorm(16, momentum=0.9, rngs=rngs), nnx.sigmoid,
+            lambda x: nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
             lambda x: x.reshape((x.shape[0], -1)),
-            nn.Dense(120),
-            nn.BatchNorm(not self.training, momentum=0.9),
-            nn.sigmoid,
-            nn.Dense(84),
-            nn.BatchNorm(not self.training, momentum=0.9),
-            nn.sigmoid,
-            nn.Dense(self.num_classes)])
+            nnx.Linear(7 * 7 * 16, 120, rngs=rngs),
+            nnx.BatchNorm(120, momentum=0.9, rngs=rngs), nnx.sigmoid,
+            nnx.Linear(120, 84, rngs=rngs),
+            nnx.BatchNorm(84, momentum=0.9, rngs=rngs), nnx.sigmoid,
+            nnx.Linear(84, num_classes, rngs=rngs))
 ```
 
 Below, we use the same hyperparameters to train our model.
@@ -966,13 +938,12 @@ G = tf.reshape(tf.transpose(Y, (0, 3, 1, 2)), (32, 4, -1))
 ```{.python .input #batch-norm-group-normalization}
 %%tab jax
 X = jax.random.normal(jax.random.PRNGKey(0), (32, 8, 8, 16))  # Channels last
-gn = nn.GroupNorm(num_groups=4)  # 4 groups of 4 channels each
-params = gn.init(jax.random.PRNGKey(1), X)
-Y = gn.apply(params, X)
+gn = nnx.GroupNorm(16, num_groups=4, rngs=nnx.Rngs(1))
+Y = gn(X)
 # Collect each (example, group) pair's elements
 G = jnp.transpose(Y, (0, 3, 1, 2)).reshape(32, 4, -1)
 (jnp.abs(G.mean(axis=2)).max(), G.var(axis=2).mean(),
- jnp.allclose(gn.apply(params, X[:1]), Y[:1], atol=1e-6))
+ jnp.allclose(gn(X[:1]), Y[:1], atol=1e-6))
 ```
 
 The trade-off runs in the other direction too: with large batches, batch

@@ -48,9 +48,10 @@ import tensorflow as tf
 ```{.python .input #rnn-concise-concise-implementation-of-recurrent-neural-networks}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
+import math
 ```
 
 ## Defining the Model
@@ -73,9 +74,9 @@ this list will also contain other information.
 :end_tab:
 
 :begin_tab:`jax`
-Flax does not provide an RNNCell for concise implementation of Vanilla RNNs
-as of today. There are more advanced variants of RNNs like LSTMs and GRUs
-which are available in the Flax `linen` API.
+Flax NNX provides `SimpleCell` for a vanilla recurrent cell. Unlike a layer
+that processes an entire sequence at once, the cell consumes one time step and
+an explicit hidden state; below we scan it over the input sequence.
 :end_tab:
 
 ```{.python .input #rnn-concise-defining-the-model-1}
@@ -125,24 +126,17 @@ class RNN(d2l.Module):  #@save
 
 ```{.python .input #rnn-concise-defining-the-model-1}
 %%tab jax
-class RNN(nn.Module):  #@save
+class RNN(nnx.Module):  #@save
     """The RNN model implemented with high-level APIs."""
-    num_hiddens: int
+    def __init__(self, num_inputs, num_hiddens, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.num_hiddens = num_hiddens
+        self.rnn = nnx.RNN(
+            nnx.SimpleCell(num_inputs, num_hiddens, rngs=rngs),
+            time_major=True, return_carry=True, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, inputs, H=None, training=False):
-        if H is None:
-            batch_size = inputs.shape[1]
-            # The carry is zero-initialized, so the PRNGKey (required by the
-            # API) is unused here; a fixed key is fine.
-            H = nn.SimpleCell(features=self.num_hiddens).initialize_carry(
-                jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
-
-        SimpleRNN = nn.scan(nn.SimpleCell, variable_broadcast="params",
-                            in_axes=0, out_axes=0,
-                            split_rngs={"params": False})
-
-        H, outputs = SimpleRNN(features=self.num_hiddens)(H, inputs)
+    def __call__(self, inputs, H=None):
+        H, outputs = self.rnn(inputs, initial_carry=H)
         return outputs, H
 ```
 
@@ -187,17 +181,19 @@ class RNNLM(d2l.RNNLMScratch):  #@save
 %%tab jax
 class RNNLM(d2l.RNNLMScratch):  #@save
     """The RNN-based language model implemented with high-level APIs."""
-    training: bool = True
-
-    def setup(self):
-        self.linear = nn.Dense(self.vocab_size)
+    def __init__(self, rnn, vocab_size, lr=0.01, rngs=None):
+        d2l.Classifier.__init__(self)
+        self.save_hyperparameters(ignore=['rnn', 'rngs'])
+        self.rnn = rnn
+        rngs = nnx.Rngs(1) if rngs is None else rngs
+        self.linear = nnx.Linear(rnn.num_hiddens, vocab_size, rngs=rngs)
 
     def output_layer(self, hiddens):
         return d2l.swapaxes(self.linear(hiddens), 0, 1)
 
     def forward(self, X, state=None):
         embs = self.one_hot(X)
-        rnn_outputs, _ = self.rnn(embs, state, self.training)
+        rnn_outputs, _ = self.rnn(embs, state)
         return self.output_layer(rnn_outputs)
 ```
 
@@ -235,7 +231,7 @@ model.predict('it has', 20, data.vocab)
 ```{.python .input #rnn-concise-training-and-predicting-1}
 %%tab jax
 data = d2l.TimeMachine(batch_size=1024, num_steps=32)
-rnn = RNN(num_hiddens=32)
+rnn = RNN(num_inputs=len(data.vocab), num_hiddens=32)
 model = RNNLM(rnn, vocab_size=len(data.vocab), lr=1)
 ```
 
@@ -288,8 +284,13 @@ print(f'perplexity {ppl:.1f}, {pred!r}')
 
 ```{.python .input #rnn-concise-training-and-predicting-3}
 %%tab jax
-ppl = float(model.board.data['val_ppl'][-1].y)
-pred = model.predict('time traveller', 20, data.vocab, trainer.state.params)
+total_loss = num_tokens = 0
+for X_val, y_val in data.val_dataloader():
+    losses = model.loss(model(X_val), y_val, averaged=False)
+    total_loss += float(losses.sum())
+    num_tokens += losses.size
+ppl = math.exp(total_loss / num_tokens)
+pred = model.predict('time traveller', 20, data.vocab)
 print(f'perplexity {ppl:.1f}, {pred!r}')
 ```
 

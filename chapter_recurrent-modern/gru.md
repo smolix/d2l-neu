@@ -44,7 +44,7 @@ import tensorflow as tf
 ```{.python .input #gru-gated-recurrent-units-gru}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 ```
@@ -231,22 +231,20 @@ class GRUScratch(d2l.Module):
 ```{.python .input #gru-initializing-model-parameters}
 %%tab jax
 class GRUScratch(d2l.Module):
-    num_inputs: int
-    num_hiddens: int
-    sigma: float = 0.01
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        init_weight = lambda shape: nnx.Param(
+            rngs.params.normal(shape) * sigma)
+        triple = lambda: (
+            init_weight((num_inputs, num_hiddens)),
+            init_weight((num_hiddens, num_hiddens)),
+            nnx.Param(jnp.zeros(num_hiddens)))
 
-    def setup(self):
-        init_weight = lambda name, shape: self.param(name,
-                                                     nn.initializers.normal(self.sigma),
-                                                     shape)
-        triple = lambda name : (
-            init_weight(f'W_x{name}', (self.num_inputs, self.num_hiddens)),
-            init_weight(f'W_h{name}', (self.num_hiddens, self.num_hiddens)),
-            self.param(f'b_{name}', nn.initializers.zeros, (self.num_hiddens)))
-
-        self.W_xz, self.W_hz, self.b_z = triple('z')  # Update gate
-        self.W_xr, self.W_hr, self.b_r = triple('r')  # Reset gate
-        self.W_xh, self.W_hh, self.b_h = triple('h')  # Candidate hidden state
+        self.W_xz, self.W_hz, self.b_z = triple()  # Update gate
+        self.W_xr, self.W_hr, self.b_r = triple()  # Reset gate
+        self.W_xh, self.W_hh, self.b_h = triple()  # Candidate hidden state
 ```
 
 ### Defining the Model
@@ -425,21 +423,15 @@ class GRU(d2l.RNN):
 ```{.python .input #gru-concise-implementation-1}
 %%tab jax
 class GRU(d2l.RNN):
-    num_hiddens: int
+    def __init__(self, num_inputs, num_hiddens, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.num_hiddens = num_hiddens
+        self.rnn = nnx.RNN(
+            nnx.GRUCell(num_inputs, num_hiddens, rngs=rngs),
+            time_major=True, return_carry=True, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, inputs, H=None, training=False):
-        if H is None:
-            batch_size = inputs.shape[1]
-            # The carry is zero-initialized, so the PRNGKey (required by the
-            # API) is unused here; a fixed key is fine.
-            H = nn.GRUCell(features=self.num_hiddens).initialize_carry(
-                jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
-
-        GRU = nn.scan(nn.GRUCell, variable_broadcast="params",
-                      in_axes=0, out_axes=0, split_rngs={"params": False})
-
-        H, outputs = GRU(features=self.num_hiddens)(H, inputs)
+    def __call__(self, inputs, H=None):
+        H, outputs = self.rnn(inputs, initial_carry=H)
         return outputs, H
 ```
 
@@ -463,7 +455,7 @@ trainer.fit(model, data)
 
 ```{.python .input #gru-concise-implementation-2}
 %%tab jax
-gru = GRU(num_hiddens=32)
+gru = GRU(num_inputs=len(data.vocab), num_hiddens=32)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
@@ -490,7 +482,7 @@ model.predict('it has', 20, data.vocab)
 
 ```{.python .input #gru-concise-implementation-3}
 %%tab jax
-model.predict('it has', 20, data.vocab, trainer.state.params)
+model.predict('it has', 20, data.vocab)
 ```
 
 ## Summary

@@ -64,10 +64,6 @@ d2l.set_figsize()
 import tensorflow as tf
 tf.config.set_visible_devices([], 'GPU')
 from d2l import jax as d2l
-import jax
-from jax import numpy as jnp
-from flax import linen as nn
-import optax
 import numpy as np
 from scipy import stats
 from collections import defaultdict

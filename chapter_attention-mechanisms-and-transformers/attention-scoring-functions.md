@@ -42,7 +42,7 @@ import tensorflow as tf
 ```{.python .input #attention-scoring-functions}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 from jax import numpy as jnp
 import jax
 import math
@@ -176,7 +176,7 @@ def masked_softmax(X, valid_lens):  #@save
         return jnp.where(mask, X, value)
 
     if valid_lens is None:
-        return nn.softmax(X, axis=-1)
+        return jax.nn.softmax(X, axis=-1)
     else:
         shape = X.shape
         if valid_lens.ndim == 1:
@@ -186,7 +186,7 @@ def masked_softmax(X, valid_lens):  #@save
         # On the last axis, replace masked elements with a very large negative
         # value, whose exponentiation outputs 0
         X = _sequence_mask(X.reshape(-1, shape[-1]), valid_lens, value=-1e6)
-        return nn.softmax(X.reshape(shape), axis=-1)
+        return jax.nn.softmax(X.reshape(shape), axis=-1)
 ```
 
 To illustrate how this function works,
@@ -368,23 +368,22 @@ class DotProductAttention(tf.keras.layers.Layer):  #@save
 
 ```{.python .input #attention-scoring-functions-scaled-dot-product-attention-1}
 %%tab jax
-class DotProductAttention(nn.Module):  #@save
+class DotProductAttention(nnx.Module):  #@save
     """Scaled dot product attention."""
-    dropout: float
+    def __init__(self, dropout, rngs=None):
+        rngs = nnx.Rngs(dropout=0) if rngs is None else rngs
+        self.dropout = nnx.Dropout(dropout, rngs=rngs)
 
     # Shape of queries: (batch_size, no. of queries, d)
     # Shape of keys: (batch_size, no. of key-value pairs, d)
     # Shape of values: (batch_size, no. of key-value pairs, value dimension)
     # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-    @nn.compact
-    def __call__(self, queries, keys, values, valid_lens=None,
-                 training=False):
+    def __call__(self, queries, keys, values, valid_lens=None):
         d = queries.shape[-1]
         # Swap the last two dimensions of keys with keys.swapaxes(1, 2)
         scores = queries@(keys.swapaxes(1, 2)) / math.sqrt(d)
         attention_weights = masked_softmax(scores, valid_lens)
-        dropout_layer = nn.Dropout(self.dropout, deterministic=not training)
-        return dropout_layer(attention_weights)@values, attention_weights
+        return self.dropout(attention_weights) @ values, attention_weights
 ```
 
 To illustrate how the `DotProductAttention` class works,
@@ -434,8 +433,8 @@ values = jax.random.normal(d2l.get_key(), (2, 10, 4))
 valid_lens = d2l.tensor([2, 6])
 
 attention = DotProductAttention(dropout=0.5)
-(output, attention_weights), params = attention.init_with_output(
-    d2l.get_key(), queries, keys, values, valid_lens)
+output, attention_weights = nnx.view(
+    attention, deterministic=True)(queries, keys, values, valid_lens)
 print(output)
 ```
 
@@ -565,32 +564,30 @@ class AdditiveAttention(tf.keras.layers.Layer):  #@save
 
 ```{.python .input #attention-scoring-functions-additive-attention-1}
 %%tab jax
-class AdditiveAttention(nn.Module):  #@save
-    num_hiddens: int
-    dropout: float
+class AdditiveAttention(nnx.Module):  #@save
+    def __init__(self, key_size, query_size, num_hiddens, dropout, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.W_k = nnx.Linear(key_size, num_hiddens, use_bias=False, rngs=rngs)
+        self.W_q = nnx.Linear(query_size, num_hiddens, use_bias=False,
+                              rngs=rngs)
+        self.w_v = nnx.Linear(num_hiddens, 1, use_bias=False, rngs=rngs)
+        self.dropout = nnx.Dropout(dropout, rngs=rngs)
 
-    def setup(self):
-        self.W_k = nn.Dense(self.num_hiddens, use_bias=False)
-        self.W_q = nn.Dense(self.num_hiddens, use_bias=False)
-        self.w_v = nn.Dense(1, use_bias=False)
-
-    @nn.compact
-    def __call__(self, queries, keys, values, valid_lens, training=False):
+    def __call__(self, queries, keys, values, valid_lens):
         queries, keys = self.W_q(queries), self.W_k(keys)
         # After dimension expansion, shape of queries: (batch_size, no. of
         # queries, 1, num_hiddens) and shape of keys: (batch_size, 1, no. of
         # key-value pairs, num_hiddens). Sum them up with broadcasting
         features = jnp.expand_dims(queries, axis=2) + jnp.expand_dims(keys, axis=1)
-        features = nn.tanh(features)
+        features = nnx.tanh(features)
         # There is only one output of self.w_v, so we remove the last
         # one-dimensional entry from the shape. Shape of scores: (batch_size,
         # no. of queries, no. of key-value pairs)
         scores = self.w_v(features).squeeze(-1)
         attention_weights = masked_softmax(scores, valid_lens)
-        dropout_layer = nn.Dropout(self.dropout, deterministic=not training)
         # Shape of values: (batch_size, no. of key-value pairs, value
         # dimension)
-        return dropout_layer(attention_weights)@values, attention_weights
+        return self.dropout(attention_weights) @ values, attention_weights
 ```
 
 Let's see how `AdditiveAttention` works. In our toy example we pick queries, keys and values of size 
@@ -627,9 +624,10 @@ d2l.check_shape(attention(queries, keys, values, valid_lens, training=False),
 ```{.python .input #attention-scoring-functions-additive-attention-2}
 %%tab jax
 queries = jax.random.normal(d2l.get_key(), (2, 1, 20))
-attention = AdditiveAttention(num_hiddens=8, dropout=0.1)
-(output, attention_weights), params = attention.init_with_output(
-    d2l.get_key(), queries, keys, values, valid_lens)
+attention = AdditiveAttention(key_size=2, query_size=20, num_hiddens=8,
+                              dropout=0.1)
+output, attention_weights = nnx.view(
+    attention, deterministic=True)(queries, keys, values, valid_lens)
 print(output)
 ```
 

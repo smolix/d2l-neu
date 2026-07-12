@@ -38,7 +38,7 @@ from d2l import tensorflow as d2l
 ```{.python .input #cnn-design-designing-convolutional-network-architectures}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 ```
 
@@ -91,22 +91,18 @@ class AnyNet(d2l.Classifier):
 ```{.python .input #cnn-design-the-anynet-design-space-1}
 %%tab jax
 class AnyNet(d2l.Classifier):
-    arch: tuple
-    stem_channels: int
-    lr: float = 0.1
-    num_classes: int = 10
-    training: bool = True
+    def __init__(self, arch, stem_channels, lr=0.1, num_classes=10,
+                 in_channels=1, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.net = self.create_net(in_channels, rngs)
 
-    def setup(self):
-        self.net = self.create_net()
-
-    def stem(self, num_channels):
-        return nn.Sequential([
-            nn.Conv(num_channels, kernel_size=(3, 3), strides=(2, 2),
-                    padding=(1, 1)),
-            nn.BatchNorm(not self.training),
-            nn.relu
-        ])
+    def stem(self, in_channels, num_channels, rngs):
+        return nnx.Sequential(
+            nnx.Conv(in_channels, num_channels, kernel_size=(3, 3),
+                     strides=(2, 2), padding=(1, 1), rngs=rngs),
+            nnx.BatchNorm(num_channels, rngs=rngs), nnx.relu)
 ```
 
 Each stage consists of `depth` ResNeXt blocks,
@@ -159,16 +155,17 @@ def stage(self, depth, num_channels, groups, bot_mul):
 ```{.python .input #cnn-design-the-anynet-design-space-2}
 %%tab jax
 @d2l.add_to_class(AnyNet)
-def stage(self, depth, num_channels, groups, bot_mul):
+def stage(self, depth, num_channels, groups, bot_mul, in_channels, rngs):
     blk = []
     for i in range(depth):
         if i == 0:
             blk.append(d2l.ResNeXtBlock(num_channels, groups, bot_mul,
-                use_1x1conv=True, strides=(2, 2), training=self.training))
+                use_1x1conv=True, strides=(2, 2), in_channels=in_channels,
+                rngs=rngs))
         else:
             blk.append(d2l.ResNeXtBlock(num_channels, groups, bot_mul,
-                                        training=self.training))
-    return nn.Sequential(blk)
+                                        in_channels=num_channels, rngs=rngs))
+    return nnx.Sequential(*blk)
 ```
 
 Putting the network stem, body, and head together,
@@ -220,15 +217,16 @@ def __init__(self, arch, stem_channels, lr=0.1, num_classes=10):
 ```{.python .input #cnn-design-the-anynet-design-space-3}
 %%tab jax
 @d2l.add_to_class(AnyNet)
-def create_net(self):
-    net = nn.Sequential([self.stem(self.stem_channels)])
-    for i, s in enumerate(self.arch):
-        net.layers.extend([self.stage(*s)])
-    net.layers.extend([nn.Sequential([
+def create_net(self, in_channels, rngs):
+    layers = [self.stem(in_channels, self.stem_channels, rngs)]
+    stage_channels = self.stem_channels
+    for s in self.arch:
+        layers.append(self.stage(*s, stage_channels, rngs))
+        stage_channels = s[1]
+    layers.append(nnx.Sequential(
         lambda x: x.mean(axis=(1, 2)),  # global avg pooling over H, W (NHWC)
-        lambda x: x.reshape((x.shape[0], -1)),
-        nn.Dense(self.num_classes)])])
-    return net
+        nnx.Linear(stage_channels, self.num_classes, rngs=rngs)))
+    return nnx.Sequential(*layers)
 ```
 
 ## Distributions and Parameters of Design Spaces
@@ -284,10 +282,9 @@ class RegNetX32(AnyNet):
 ```{.python .input #cnn-design-regnet-1}
 %%tab jax
 class RegNetX32(AnyNet):
-    lr: float = 0.1
-    num_classes: int = 10
-    stem_channels: int = 32
-    arch: tuple = ((4, 32, 16, 1), (6, 80, 16, 1))
+    def __init__(self, lr=0.1, num_classes=10, in_channels=1, rngs=None):
+        super().__init__(((4, 32, 16, 1), (6, 80, 16, 1)), 32,
+                         lr, num_classes, in_channels, rngs)
 ```
 
 We can see that each RegNetX stage progressively reduces resolution and increases output channels.
@@ -307,7 +304,7 @@ tf.get_logger().setLevel(logging.WARNING)
 
 ```{.python .input #cnn-design-regnet-2}
 %%tab jax
-RegNetX32(training=False).layer_summary((1, 96, 96, 1))
+RegNetX32().layer_summary((1, 96, 96, 1))
 ```
 
 ### Squeeze-and-Excitation Gates
@@ -369,19 +366,22 @@ SE(32)(tf.random.normal((2, 16, 16, 32))).shape
 
 ```{.python .input #cnn-design-squeeze-and-excitation-gates}
 %%tab jax
-class SE(nn.Module):
-    num_channels: int
-    ratio: int = 4
+class SE(nnx.Module):
+    def __init__(self, num_channels, ratio=4, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.squeeze = nnx.Linear(num_channels, num_channels // ratio,
+                                  rngs=rngs)
+        self.excite = nnx.Linear(num_channels // ratio, num_channels,
+                                 rngs=rngs)
 
-    @nn.compact
     def __call__(self, X):
         s = X.mean(axis=(1, 2))
-        s = nn.relu(nn.Dense(self.num_channels // self.ratio)(s))
-        s = nn.sigmoid(nn.Dense(self.num_channels)(s))
+        s = nnx.relu(self.squeeze(s))
+        s = nnx.sigmoid(self.excite(s))
         return X * s[:, None, None, :]
 
 X = jax.random.normal(d2l.get_key(), (2, 16, 16, 32))
-SE(32).init_with_output(d2l.get_key(), X)[0].shape
+SE(32)(X).shape
 ```
 
 The output has the same shape as the input: an SE gate can be dropped into any block, which is exactly how RegNetY, EfficientNet, and their successors use it.

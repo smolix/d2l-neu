@@ -159,24 +159,23 @@ net(x)
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import numpy as np
 
 # Factory for networks
-class Net(nn.Module):
-    @nn.compact
+class Net(nnx.Module):
+    def __init__(self, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.fc1 = nnx.Linear(512, 256, rngs=rngs)
+        self.fc2 = nnx.Linear(256, 128, rngs=rngs)
+        self.fc3 = nnx.Linear(128, 2, rngs=rngs)
+
     def __call__(self, x):
-        x = nn.Dense(256)(x)
-        x = nn.relu(x)
-        x = nn.Dense(128)(x)
-        x = nn.relu(x)
-        x = nn.Dense(2)(x)
-        return x
+        return self.fc3(nnx.relu(self.fc2(nnx.relu(self.fc1(x)))))
 
 net = Net()
 x = jnp.ones((1, 512))
-params = net.init(jax.random.PRNGKey(0), x)
-net.apply(params, x)
+net(x)
 ```
 
 :begin_tab:`mxnet`
@@ -193,7 +192,7 @@ We can re-enable this functionality with tf.function. tf.function is more common
 :end_tab:
 
 :begin_tab:`jax`
-By wrapping the model's `apply` function with `jax.jit`, we compile the computation into an optimized XLA program. The first call traces the function and compiles it; subsequent calls execute the compiled version directly. The model's computation result remains unchanged.
+By wrapping a forward function with `nnx.jit`, we compile the computation into an optimized XLA program while passing the stateful module directly. The first call traces and compiles the function; subsequent calls execute the compiled version. The result remains unchanged.
 :end_tab:
 
 ```{.python .input #hybridize-hybridizing-the-sequential-class-2}
@@ -216,8 +215,11 @@ net(x)
 
 ```{.python .input #hybridize-hybridizing-the-sequential-class-2}
 #@tab jax
-jitted_apply = jax.jit(net.apply)
-jitted_apply(params, x)
+@nnx.jit
+def jitted_apply(model, x):
+    return model(x)
+
+jitted_apply(net, x)
 ```
 
 :begin_tab:`mxnet`
@@ -310,12 +312,13 @@ with Benchmark('Graph Mode'):
 ```{.python .input #hybridize-acceleration-by-hybridization-2}
 #@tab jax
 with Benchmark('Without jax.jit'):
-    for i in range(1000): net.apply(params, x)
+    for i in range(1000): y = net(x)
+    y.block_until_ready()
 
-jitted_apply = jax.jit(net.apply)
-jitted_apply(params, x)  # Warm-up (triggers compilation)
+jitted_apply(net, x).block_until_ready()  # Warm-up (triggers compilation)
 with Benchmark('With jax.jit'):
-    for i in range(1000): jitted_apply(params, x).block_until_ready()
+    for i in range(1000): y = jitted_apply(net, x)
+    y.block_until_ready()
 ```
 
 :begin_tab:`mxnet`
@@ -331,7 +334,7 @@ As is observed in the above results, after a `tf.keras.Sequential` instance is s
 :end_tab:
 
 :begin_tab:`jax`
-As is observed in the above results, after wrapping the model's `apply` function with `jax.jit`, computing performance is improved through XLA compilation. Note that we call `block_until_ready()` to ensure accurate timing, since JAX uses asynchronous dispatch by default.
+As is observed in the above results, `nnx.jit` can reduce Python dispatch overhead through XLA compilation. We call `block_until_ready()` for accurate timing because JAX dispatch is asynchronous.
 :end_tab:
 
 ### Serialization
@@ -351,7 +354,9 @@ Let's see the `saved_model` instance in action.
 :end_tab:
 
 :begin_tab:`jax`
-In JAX, model parameters are stored as nested Python dictionaries (pytrees), which can be serialized using standard tools. The `flax.serialization` module provides `to_bytes` and `from_bytes` for converting parameters to and from byte strings. Additionally, `jax.jit`-compiled functions can be exported to StableHLO, a portable intermediate representation that can be executed independently of Python.
+NNX exposes model state as a pytree. The `flax.serialization` module can
+encode its pure-dictionary view as bytes. Compiled JAX functions can also be
+exported to StableHLO, a portable intermediate representation.
 :end_tab:
 
 ```{.python .input #hybridize-serialization-1}
@@ -379,10 +384,11 @@ tf.saved_model.save(net, 'my_mlp')
 ```{.python .input #hybridize-serialization-1}
 #@tab jax
 from flax import serialization
-param_bytes = serialization.to_bytes(params)
+graphdef, state = nnx.split(net)
+param_bytes = serialization.to_bytes(nnx.to_pure_dict(state))
 print(f'Serialized parameter size: {len(param_bytes)} bytes')
 # We can also inspect the computation graph via jaxpr
-print(jax.make_jaxpr(net.apply)(params, x))
+print(jax.make_jaxpr(lambda s, x: nnx.merge(graphdef, s)(x))(state, x))
 ```
 
 :begin_tab:`mxnet`

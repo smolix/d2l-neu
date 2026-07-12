@@ -54,7 +54,7 @@ from d2l import tensorflow as d2l
 #@tab jax
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 from d2l import jax as d2l
 import numpy as np
 ```
@@ -174,10 +174,10 @@ tconv(X)
 ```{.python .input #transposed-conv-basic-operation-3}
 #@tab jax
 X, K = X.reshape(1, 2, 2, 1), K.reshape(2, 2, 1, 1)
-tconv = nn.ConvTranspose(1, kernel_size=(2, 2), use_bias=False)
-params = tconv.init(jax.random.PRNGKey(0), X)
-params = {**params, 'params': {'kernel': K}}
-tconv.apply(params, X)
+tconv = nnx.ConvTranspose(1, 1, kernel_size=(2, 2), use_bias=False,
+                          rngs=nnx.Rngs(0))
+tconv.kernel[...] = K
+tconv(X)
 ```
 
 ## Padding, Strides, and Multiple Channels
@@ -209,11 +209,11 @@ tconv(X)
 
 ```{.python .input #transposed-conv-padding-strides-and-multiple-channels-1}
 #@tab jax
-tconv = nn.ConvTranspose(1, kernel_size=(2, 2), padding='VALID', use_bias=False)
-params = tconv.init(jax.random.PRNGKey(0), X)
-params = {**params, 'params': {'kernel': K}}
+tconv = nnx.ConvTranspose(1, 1, kernel_size=(2, 2), padding='VALID',
+                          use_bias=False, rngs=nnx.Rngs(0))
+tconv.kernel[...] = K
 # Apply then remove the outer border (equivalent to padding=1 in PyTorch)
-out = tconv.apply(params, X)
+out = tconv(X)
 out[:, 1:-1, 1:-1, :]
 ```
 
@@ -250,10 +250,10 @@ tconv(X)
 
 ```{.python .input #transposed-conv-padding-strides-and-multiple-channels-2}
 #@tab jax
-tconv = nn.ConvTranspose(1, kernel_size=(2, 2), strides=(2, 2), use_bias=False)
-params = tconv.init(jax.random.PRNGKey(0), X)
-params = {**params, 'params': {'kernel': K}}
-tconv.apply(params, X)
+tconv = nnx.ConvTranspose(1, 1, kernel_size=(2, 2), strides=(2, 2),
+                          use_bias=False, rngs=nnx.Rngs(0))
+tconv.kernel[...] = K
+tconv(X)
 ```
 
 For multiple input and output channels,
@@ -298,12 +298,12 @@ tconv(conv(X)).shape == X.shape
 #@tab jax
 # JAX uses channels-last format: (batch, height, width, channels)
 X = jax.random.normal(jax.random.PRNGKey(0), (1, 16, 16, 10))
-conv = nn.Conv(20, kernel_size=(5, 5), padding='SAME', strides=(3, 3))
-tconv = nn.ConvTranspose(10, kernel_size=(5, 5), padding='SAME', strides=(3, 3))
-params_conv = conv.init(jax.random.PRNGKey(1), X)
-Y = conv.apply(params_conv, X)
-params_tconv = tconv.init(jax.random.PRNGKey(2), Y)
-tconv.apply(params_tconv, Y).shape == X.shape
+conv = nnx.Conv(10, 20, kernel_size=(5, 5), padding='SAME',
+                strides=(3, 3), rngs=nnx.Rngs(1))
+tconv = nnx.ConvTranspose(20, 10, kernel_size=(5, 5), padding='SAME',
+                          strides=(3, 3), rngs=nnx.Rngs(2))
+Y = conv(X)
+tconv(Y).shape == X.shape
 ```
 
 ## Connection to Matrix Transposition

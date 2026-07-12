@@ -697,15 +697,25 @@ def load_array(data_arrays, batch_size, is_train=True):  #@save
     Validation iterators yield all batches (the last may be smaller),
     matching how PyTorch / TF / MXNet behave.
     """
+    # Keep dataset storage on the host. Only minibatches need to be transferred
+    # to an accelerator, and host-side indexing avoids launching a device gather
+    # for every array in every minibatch.
+    data_arrays = tuple(np.asarray(a) for a in data_arrays)
     n = data_arrays[0].shape[0]
     indices = np.arange(n)
     last = n - (n % batch_size) if is_train else n
     def data_iter():
         if is_train:
             np.random.shuffle(indices)
+            # Shuffle each full field once, then transfer contiguous slices.
+            # This avoids a separate fancy-index gather for every field and
+            # every minibatch.
+            epoch_arrays = tuple(a[indices] for a in data_arrays)
+        else:
+            epoch_arrays = data_arrays
         for i in range(0, last, batch_size):
-            batch_indices = indices[i: min(i + batch_size, n)]
-            yield tuple(jnp.array(a[batch_indices]) for a in data_arrays)
+            yield tuple(jnp.array(a[i: min(i + batch_size, n)])
+                        for a in epoch_arrays)
     class DataIter:
         def __iter__(self):
             return data_iter()

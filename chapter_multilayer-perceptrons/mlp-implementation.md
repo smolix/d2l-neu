@@ -33,8 +33,7 @@ import tensorflow as tf
 ```{.python .input #mlp-implementation-implementation-of-multilayer-perceptrons}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
-import jax
+from flax import nnx
 from jax import numpy as jnp
 ```
 
@@ -88,8 +87,7 @@ to define the model parameter.
 :end_tab:
 
 :begin_tab:`jax`
-In the code below we use `flax.linen.Module.param`
-to define the model parameter.
+In the code below, `nnx.Param` marks each array as a trainable parameter.
 :end_tab:
 
 ```{.python .input #mlp-implementation-initializing-model-parameters}
@@ -135,19 +133,17 @@ class MLPScratch(d2l.Classifier):
 ```{.python .input #mlp-implementation-initializing-model-parameters}
 %%tab jax
 class MLPScratch(d2l.Classifier):
-    num_inputs: int
-    num_outputs: int
-    num_hiddens: int
-    lr: float
-    sigma: float = 0.01
-
-    def setup(self):
-        self.W1 = self.param('W1', nn.initializers.normal(self.sigma),
-                             (self.num_inputs, self.num_hiddens))
-        self.b1 = self.param('b1', nn.initializers.zeros, self.num_hiddens)
-        self.W2 = self.param('W2', nn.initializers.normal(self.sigma),
-                             (self.num_hiddens, self.num_outputs))
-        self.b2 = self.param('b2', nn.initializers.zeros, self.num_outputs)
+    def __init__(self, num_inputs, num_outputs, num_hiddens, lr,
+                 sigma=0.01, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.W1 = nnx.Param(
+            rngs.params.normal((num_inputs, num_hiddens)) * sigma)
+        self.b1 = nnx.Param(jnp.zeros(num_hiddens))
+        self.W2 = nnx.Param(
+            rngs.params.normal((num_hiddens, num_outputs)) * sigma)
+        self.b2 = nnx.Param(jnp.zeros(num_outputs))
 ```
 
 ### Model
@@ -262,17 +258,17 @@ class MLP(d2l.Classifier):
 ```{.python .input #mlp-implementation-model-2-2}
 %%tab jax
 class MLP(d2l.Classifier):
-    num_outputs: int
-    num_hiddens: int
-    lr: float
+    def __init__(self, num_outputs, num_hiddens, lr, num_inputs=784,
+                 rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.hidden = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)
+        self.output = nnx.Linear(num_hiddens, num_outputs, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, X):
+    def forward(self, X):
         X = X.reshape((X.shape[0], -1))  # Flatten
-        X = nn.Dense(self.num_hiddens)(X)
-        X = nn.relu(X)
-        X = nn.Dense(self.num_outputs)(X)
-        return X
+        return self.output(nnx.relu(self.hidden(X)))
 ```
 
 Previously, we defined `forward` methods for models to transform input using the model parameters.
@@ -537,17 +533,16 @@ classes.
 
 ::: {.cols .vc}
 ::: {.col}
-Flax builds the network inside one `@nn.compact` method:
-declare each layer where it is applied and the parameters
-are registered for you.
+NNX stores each layer as an ordinary attribute and registers its
+parameters automatically:
 
 @mlp-implementation-model-2-2
 :::
 
 ::: {.col .narrow}
 ::: {.d2l-note .rule}
-No hand-written parameter dictionary: `nn.Dense` registers
-its weights the first time it is called.
+No hand-written parameter dictionary: each `nnx.Linear` owns
+its weights from construction onward.
 :::
 
 Same architecture as the diagram, one compact method.

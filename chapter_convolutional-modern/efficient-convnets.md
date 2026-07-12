@@ -43,7 +43,7 @@ from d2l import tensorflow as d2l
 ```{.python .input #efficient-convnets-imports}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 import optax
@@ -113,21 +113,23 @@ class DWSBlock(tf.keras.layers.Layer):
 
 ```{.python .input #efficient-convnets-a-mini-mobilenet-1}
 %%tab jax
-class DWSBlock(nn.Module):
+class DWSBlock(nnx.Module):
     """Depthwise 3x3 and pointwise 1x1 convolutions, each with BN and ReLU."""
-    in_channels: int
-    out_channels: int
-    strides: tuple = (1, 1)
-    training: bool = True
+    def __init__(self, in_channels, out_channels, strides=(1, 1), rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.depthwise = nnx.Conv(
+            in_channels, in_channels, kernel_size=(3, 3), strides=strides,
+            padding='same', feature_group_count=in_channels, use_bias=False,
+            rngs=rngs)
+        self.bn1 = nnx.BatchNorm(in_channels, rngs=rngs)
+        self.pointwise = nnx.Conv(in_channels, out_channels,
+                                  kernel_size=(1, 1), use_bias=False,
+                                  rngs=rngs)
+        self.bn2 = nnx.BatchNorm(out_channels, rngs=rngs)
 
-    @nn.compact
     def __call__(self, X):
-        X = nn.Conv(self.in_channels, kernel_size=(3, 3),
-                    strides=self.strides, padding='same',
-                    feature_group_count=self.in_channels, use_bias=False)(X)
-        X = nn.relu(nn.BatchNorm(not self.training)(X))
-        X = nn.Conv(self.out_channels, kernel_size=(1, 1), use_bias=False)(X)
-        return nn.relu(nn.BatchNorm(not self.training)(X))
+        X = nnx.relu(self.bn1(self.depthwise(X)))
+        return nnx.relu(self.bn2(self.pointwise(X)))
 ```
 
 Like VGG (:numref:`sec_vgg`), the whole network is a list of block parameters, here (channels, stride) pairs. A small convolutional stem lifts the grayscale input to 32 channels at half resolution; seven depthwise-separable blocks double the channels while shrinking the feature map; global average pooling and a linear layer produce the class scores.
@@ -199,23 +201,22 @@ class MiniMobileNet(d2l.Classifier):
 ```{.python .input #efficient-convnets-a-mini-mobilenet-2}
 %%tab jax
 class MiniMobileNet(d2l.Classifier):
-    arch: tuple = ((64, 1), (128, 2), (128, 1), (256, 2), (256, 1),
-                   (512, 2), (512, 1))
-    lr: float = 0.1
-    num_classes: int = 10
-    training: bool = True
-
-    def setup(self):
-        layers = [nn.Conv(32, kernel_size=(3, 3), strides=(2, 2),
-                          padding='same', use_bias=False),
-                  nn.BatchNorm(not self.training), nn.relu]
+    def __init__(self, arch=((64, 1), (128, 2), (128, 1), (256, 2),
+                             (256, 1), (512, 2), (512, 1)),
+                 lr=0.1, num_classes=10, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        layers = [nnx.Conv(1, 32, kernel_size=(3, 3), strides=(2, 2),
+                           padding='same', use_bias=False, rngs=rngs),
+                  nnx.BatchNorm(32, rngs=rngs), nnx.relu]
         c = 32
-        for c_out, s in self.arch:
-            layers.append(DWSBlock(c, c_out, (s, s), self.training))
+        for c_out, s in arch:
+            layers.append(DWSBlock(c, c_out, (s, s), rngs))
             c = c_out
         layers.extend([lambda x: x.mean(axis=(1, 2)),  # global average pooling
-                       nn.Dense(self.num_classes)])
-        self.net = nn.Sequential(layers)
+                       nnx.Linear(c, num_classes, rngs=rngs)])
+        self.net = nnx.Sequential(*layers)
 
     def configure_optimizers(self):
         return optax.sgd(self.lr, momentum=0.9)
@@ -250,11 +251,10 @@ sum(int(tf.size(w)) for w in model.net.trainable_weights)
 
 ```{.python .input #efficient-convnets-a-mini-mobilenet-3}
 %%tab jax
-model = MiniMobileNet(training=False)
+model = MiniMobileNet()
 X = jnp.zeros((1, 96, 96, 1))
-params = model.init(d2l.get_key(), X)
-assert model.apply(params, X).shape == (1, 10)
-sum(p.size for p in jax.tree_util.tree_leaves(params['params']))
+assert model(X).shape == (1, 10)
+sum(p.size for _, p in nnx.state(model, nnx.Param).flat_state())
 ```
 
 ### Training and Comparison
@@ -332,21 +332,22 @@ class VGGSmall(d2l.Classifier):
 %%tab jax
 class VGGSmall(d2l.Classifier):
     """A dense VGG-style network with the same parameter budget."""
-    arch: tuple = ((2, 32), (2, 64), (2, 128), (2, 128))
-    lr: float = 0.1
-    num_classes: int = 10
-    training: bool = True
-
-    def setup(self):
-        layers = []
-        for num_convs, c_out in self.arch:
+    def __init__(self, arch=((2, 32), (2, 64), (2, 128), (2, 128)),
+                 lr=0.1, num_classes=10, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        layers, c = [], 1
+        for num_convs, c_out in arch:
             for _ in range(num_convs):
-                layers += [nn.Conv(c_out, (3, 3), padding='same',
-                                   use_bias=False),
-                           nn.BatchNorm(not self.training), nn.relu]
-            layers.append(lambda x: nn.max_pool(x, (2, 2), (2, 2)))
-        layers += [lambda x: x.mean(axis=(1, 2)), nn.Dense(self.num_classes)]
-        self.net = nn.Sequential(layers)
+                layers += [nnx.Conv(c, c_out, (3, 3), padding='same',
+                                    use_bias=False, rngs=rngs),
+                           nnx.BatchNorm(c_out, rngs=rngs), nnx.relu]
+                c = c_out
+            layers.append(lambda x: nnx.max_pool(x, (2, 2), (2, 2)))
+        layers += [lambda x: x.mean(axis=(1, 2)),
+                   nnx.Linear(c, num_classes, rngs=rngs)]
+        self.net = nnx.Sequential(*layers)
 
     def configure_optimizers(self):
         return optax.sgd(self.lr, momentum=0.9)
@@ -385,13 +386,12 @@ data = d2l.FashionMNIST(batch_size=128, resize=(96, 96))
 
 def train_jax(model_cls, seed):
     d2l.tf.random.set_seed(seed)  # Seed the tf.data shuffle used by JAX
-    model = model_cls(lr=0.05, training=True)
+    model = model_cls(lr=0.05, rngs=nnx.Rngs(seed))
     trainer = d2l.Trainer(max_epochs=10, num_gpus=1)
-    trainer.fit(model, data, key=jax.random.key(seed))
+    trainer.fit(model, data)
     correct, n = 0.0, 0
     for X, y in data.val_dataloader():
-        values = model.accuracy(trainer.state.params, (X,), y,
-                                trainer.state, averaged=False)
+        values = model.accuracy(trainer.val_model(X), y, averaged=False)
         correct += float(values.sum())
         n += len(y)
     return model, trainer, correct / n
@@ -454,9 +454,9 @@ for name, values in runs.items():
 ```{.python .input #efficient-convnets-training-and-comparison-4}
 %%tab jax
 for name, values in jax_runs.items():
-    model, trainer = jax_models[name], jax_trainers[name]
-    count = sum(p.size for p in
-                jax.tree_util.tree_leaves(trainer.state.params))
+    model = jax_models[name]
+    count = sum(p.size for _, p in nnx.state(
+        model, nnx.Param).flat_state())
     accs = jnp.array(values)
     print(f'{name}: {count:,} params, val acc '
           f'{float(accs.mean()):.3f} ± {float(accs.std(ddof=1)):.3f}; '
@@ -571,23 +571,21 @@ class RepVGGBlock(tf.keras.Model):
 
 ```{.python .input #efficient-convnets-the-repvgg-block}
 %%tab jax
-class RepVGGBlock(nn.Module):
+class RepVGGBlock(nnx.Module):
     """Train-time block: 3x3, 1x1, and identity branches, each with BN."""
-    num_channels: int
-    training: bool = True
-
-    def setup(self):
-        self.conv3 = nn.Conv(self.num_channels, kernel_size=(3, 3),
-                             padding='same', use_bias=False)
-        self.conv1 = nn.Conv(self.num_channels, kernel_size=(1, 1),
-                             use_bias=False)
-        self.bn3 = nn.BatchNorm(not self.training)
-        self.bn1 = nn.BatchNorm(not self.training)
-        self.bn0 = nn.BatchNorm(not self.training)
+    def __init__(self, num_channels, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.conv3 = nnx.Conv(num_channels, num_channels, kernel_size=(3, 3),
+                              padding='same', use_bias=False, rngs=rngs)
+        self.conv1 = nnx.Conv(num_channels, num_channels, kernel_size=(1, 1),
+                              use_bias=False, rngs=rngs)
+        self.bn3 = nnx.BatchNorm(num_channels, rngs=rngs)
+        self.bn1 = nnx.BatchNorm(num_channels, rngs=rngs)
+        self.bn0 = nnx.BatchNorm(num_channels, rngs=rngs)
 
     def __call__(self, X):
-        return nn.relu(self.bn3(self.conv3(X)) + self.bn1(self.conv1(X))
-                       + self.bn0(X))
+        return nnx.relu(self.bn3(self.conv3(X)) + self.bn1(self.conv1(X))
+                        + self.bn0(X))
 ```
 
 ### Fusing the Branches
@@ -675,17 +673,16 @@ def fuse_block(blk):
 
 ```{.python .input #efficient-convnets-fusing-the-branches-1}
 %%tab jax
-def fuse_bn(W, bn_params, bn_stats, eps=1e-5):
-    scale = bn_params['scale'] / jnp.sqrt(bn_stats['var'] + eps)
-    return W * scale, bn_params['bias'] - bn_stats['mean'] * scale
+def fuse_bn(W, bn, eps=1e-5):
+    scale = bn.scale[...] / jnp.sqrt(bn.var[...] + eps)
+    return W * scale, bn.bias[...] - bn.mean[...] * scale
 
-def fuse_block(variables, c):
-    p, s = variables['params'], variables['batch_stats']
+def fuse_block(blk, c):
     pad = ((1, 1), (1, 1), (0, 0), (0, 0))
-    W3, b3 = fuse_bn(p['conv3']['kernel'], p['bn3'], s['bn3'])
-    W1, b1 = fuse_bn(jnp.pad(p['conv1']['kernel'], pad), p['bn1'], s['bn1'])
+    W3, b3 = fuse_bn(blk.conv3.kernel[...], blk.bn3)
+    W1, b1 = fuse_bn(jnp.pad(blk.conv1.kernel[...], pad), blk.bn1)
     I = jnp.pad(jnp.eye(c).reshape(1, 1, c, c), pad)
-    W0, b0 = fuse_bn(I, p['bn0'], s['bn0'])
+    W0, b0 = fuse_bn(I, blk.bn0)
     return W3 + W1 + W0, b3 + b1 + b0
 ```
 
@@ -735,18 +732,18 @@ float(tf.reduce_max(tf.abs(Y - Y_fused)))
 %%tab jax
 c = 8
 blk = RepVGGBlock(c)
-variables = blk.init(d2l.get_key(), jnp.zeros((32, 16, 16, c)))
+train_blk = nnx.view(blk, use_running_average=False)
 for _ in range(4):  # populate the BN running statistics
     X = jax.random.normal(d2l.get_key(), (32, 16, 16, c))
-    _, updates = blk.apply(variables, X, mutable=['batch_stats'])
-    variables = {'params': variables['params'],
-                 'batch_stats': updates['batch_stats']}
-W_fused, b_fused = fuse_block(variables, c)
+    train_blk(X)
+W_fused, b_fused = fuse_block(blk, c)
 X = jax.random.normal(d2l.get_key(), (32, 16, 16, c))
-Y = RepVGGBlock(c, training=False).apply(variables, X)
-fused = nn.Conv(c, kernel_size=(3, 3), padding='same')
-Y_fused = nn.relu(fused.apply(
-    {'params': {'kernel': W_fused, 'bias': b_fused}}, X))
+Y = nnx.view(blk, use_running_average=True)(X)
+fused = nnx.Conv(c, c, kernel_size=(3, 3), padding='same',
+                 rngs=nnx.Rngs(0))
+fused.kernel[...] = W_fused
+fused.bias[...] = b_fused
+Y_fused = nnx.relu(fused(X))
 float(jnp.abs(Y - Y_fused).max())
 ```
 

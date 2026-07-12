@@ -79,7 +79,7 @@ C = tf.Variable(d2l.normal([256, 256], 0, 1))
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 import numpy as np
@@ -724,13 +724,9 @@ def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
 #@save
 def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
     # Initialization
-    net = nn.Dense(1)
-    key = jax.random.PRNGKey(0)
-    X_dummy = jnp.ones((1, 5))
-    params = net.init(key, X_dummy)
-
-    optimizer = trainer_fn(**hyperparams)
-    opt_state = optimizer.init(params)
+    net = nnx.Linear(5, 1, rngs=nnx.Rngs(0))
+    optimizer = nnx.Optimizer(
+        net, trainer_fn(**hyperparams), wrt=nnx.Param)
 
     loss = lambda pred, y: jnp.mean((pred - y) ** 2) / 2
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
@@ -738,36 +734,35 @@ def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
     n, timer = 0, d2l.Timer()
     # JIT-fuse the per-batch optimizer update so per-step Python overhead
     # stays out of the inner loop.
-    @jax.jit
-    def step(params, opt_state, X, y):
-        def loss_fn(params):
-            out = net.apply(params, X)
+    @nnx.jit
+    def step(model, optimizer, X, y):
+        def loss_fn(model):
+            out = model(X)
             y_reshaped = y.reshape(out.shape)
             return jnp.mean((out - y_reshaped) ** 2) / 2
-        l, grads = jax.value_and_grad(loss_fn)(params)
-        updates, opt_state = optimizer.update(grads, opt_state, params)
-        params = optax.apply_updates(params, updates)
-        return params, opt_state, l
+        l, grads = nnx.value_and_grad(loss_fn)(model)
+        optimizer.update(model, grads)
+        return l
 
     # Pre-stack the full dataset on device so the periodic full-loss
     # evaluation is a single compiled call.
     eval_batches = [(jnp.array(X), jnp.array(y)) for X, y in data_iter]
     Xs = jnp.concatenate([X for X, _ in eval_batches], axis=0)
     ys = jnp.concatenate([y for _, y in eval_batches], axis=0)
-    @jax.jit
-    def full_eval(params):
-        out = net.apply(params, Xs)
+    @nnx.jit
+    def full_eval(model):
+        out = model(Xs)
         y_r = ys.reshape(out.shape)
         return jnp.mean((out - y_r) ** 2) / 2
     for _ in range(num_epochs):
         for X, y in data_iter:
             X, y = jnp.array(X), jnp.array(y)
-            params, opt_state, _ = step(params, opt_state, X, y)
+            step(net, optimizer, X, y)
             n += X.shape[0]
             if n % 200 == 0:
                 timer.stop()
                 animator.add(n/X.shape[0]/len(data_iter),
-                             (float(full_eval(params)),))
+                             (float(full_eval(net)),))
                 timer.start()
     print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
 ```

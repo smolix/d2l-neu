@@ -69,7 +69,7 @@ import tensorflow as tf
 ```{.python .input #lstm-long-short-term-memory-lstm}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 ```
@@ -305,23 +305,21 @@ class LSTMScratch(d2l.Module):
 ```{.python .input #lstm-initializing-model-parameters-1}
 %%tab jax
 class LSTMScratch(d2l.Module):
-    num_inputs: int
-    num_hiddens: int
-    sigma: float = 0.01
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        init_weight = lambda shape: nnx.Param(
+            rngs.params.normal(shape) * sigma)
+        triple = lambda: (
+            init_weight((num_inputs, num_hiddens)),
+            init_weight((num_hiddens, num_hiddens)),
+            nnx.Param(jnp.zeros(num_hiddens)))
 
-    def setup(self):
-        init_weight = lambda name, shape: self.param(name,
-                                                     nn.initializers.normal(self.sigma),
-                                                     shape)
-        triple = lambda name : (
-            init_weight(f'W_x{name}', (self.num_inputs, self.num_hiddens)),
-            init_weight(f'W_h{name}', (self.num_hiddens, self.num_hiddens)),
-            self.param(f'b_{name}', nn.initializers.zeros, (self.num_hiddens)))
-
-        self.W_xi, self.W_hi, self.b_i = triple('i')  # Input gate
-        self.W_xf, self.W_hf, self.b_f = triple('f')  # Forget gate
-        self.W_xo, self.W_ho, self.b_o = triple('o')  # Output gate
-        self.W_xc, self.W_hc, self.b_c = triple('c')  # Input node
+        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
+        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
+        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
+        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
 ```
 
 :begin_tab:`pytorch, mxnet, tensorflow`
@@ -555,22 +553,15 @@ class LSTM(d2l.RNN):
 ```{.python .input #lstm-concise-implementation-1}
 %%tab jax
 class LSTM(d2l.RNN):
-    num_hiddens: int
+    def __init__(self, num_inputs, num_hiddens, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.num_hiddens = num_hiddens
+        self.rnn = nnx.RNN(
+            nnx.LSTMCell(num_inputs, num_hiddens, rngs=rngs),
+            time_major=True, return_carry=True, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, inputs, H_C=None, training=False):
-        # Flax ≥0.8 deprecates OptimizedLSTMCell; use LSTMCell instead.
-        if H_C is None:
-            batch_size = inputs.shape[1]
-            # The carry is zero-initialized, so the PRNGKey (required by the
-            # API) is unused here; a fixed key is fine.
-            H_C = nn.LSTMCell(features=self.num_hiddens).initialize_carry(
-                jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
-
-        LSTM = nn.scan(nn.LSTMCell, variable_broadcast="params",
-                       in_axes=0, out_axes=0, split_rngs={"params": False})
-
-        H_C, outputs = LSTM(features=self.num_hiddens)(H_C, inputs)
+    def __call__(self, inputs, H_C=None):
+        H_C, outputs = self.rnn(inputs, initial_carry=H_C)
         return outputs, H_C
 ```
 
@@ -591,7 +582,7 @@ trainer.fit(model, data)
 
 ```{.python .input #lstm-concise-implementation-2}
 %%tab jax
-lstm = LSTM(num_hiddens=32)
+lstm = LSTM(num_inputs=len(data.vocab), num_hiddens=32)
 model = d2l.RNNLM(lstm, vocab_size=len(data.vocab), lr=4)
 trainer.fit(model, data)
 ```
@@ -615,7 +606,7 @@ model.predict('it has', 20, data.vocab)
 
 ```{.python .input #lstm-concise-implementation-3}
 %%tab jax
-model.predict('it has', 20, data.vocab, trainer.state.params)
+model.predict('it has', 20, data.vocab)
 ```
 
 LSTMs are the prototypical latent variable autoregressive model with nontrivial state control.

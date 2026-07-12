@@ -187,27 +187,29 @@ def train(net_fn, train_iter, test_iter, num_epochs, lr,
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 import math
 import numpy as np
 
-class Net(nn.Module):
-    @nn.compact
+class Net(nnx.Module):
+    def __init__(self, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.conv1 = nnx.Conv(1, 6, kernel_size=(5, 5), padding='same',
+                              rngs=rngs)
+        self.conv2 = nnx.Conv(6, 16, kernel_size=(5, 5), padding='valid',
+                              rngs=rngs)
+        self.fc1 = nnx.Linear(16 * 5 * 5, 120, rngs=rngs)
+        self.fc2 = nnx.Linear(120, 84, rngs=rngs)
+        self.fc3 = nnx.Linear(84, 10, rngs=rngs)
+
     def __call__(self, x):
-        x = nn.Conv(features=6, kernel_size=(5, 5), padding='SAME')(x)
-        x = nn.relu(x)
-        x = nn.max_pool(x, window_shape=(2, 2), strides=(2, 2))
-        x = nn.Conv(features=16, kernel_size=(5, 5))(x)
-        x = nn.relu(x)
-        x = nn.max_pool(x, window_shape=(2, 2), strides=(2, 2))
+        x = nnx.max_pool(nnx.relu(self.conv1(x)), window_shape=(2, 2),
+                         strides=(2, 2))
+        x = nnx.max_pool(nnx.relu(self.conv2(x)), window_shape=(2, 2),
+                         strides=(2, 2))
         x = x.reshape((x.shape[0], -1))
-        x = nn.Dense(features=120)(x)
-        x = nn.relu(x)
-        x = nn.Dense(features=84)(x)
-        x = nn.relu(x)
-        x = nn.Dense(features=10)(x)
-        return x
+        return self.fc3(nnx.relu(self.fc2(nnx.relu(self.fc1(x)))))
 
 def net_fn():
     return Net()
@@ -219,62 +221,61 @@ data = d2l.FashionMNIST(batch_size=batch_size)
 train_iter = data.get_dataloader(train=True)
 test_iter = data.get_dataloader(train=False)
 
-def evaluate_accuracy_jax(params, apply_fn, data_iter):
-    metric = d2l.Accumulator(2)  # num_correct, num_examples
+def evaluate_accuracy_jax(model, data_iter):
+    @nnx.jit
+    def eval_step(model, X, y):
+        y_hat = model(X)
+        return jnp.array([jnp.sum(jnp.argmax(y_hat, axis=1) == y),
+                          y.shape[0]])
+
+    metric = jnp.zeros(2)  # num_correct, num_examples
     for X, y in data_iter:
         X, y = jnp.array(X), jnp.array(y)
-        y_hat = apply_fn({'params': params}, X)
-        metric.add(float(jnp.sum(jnp.argmax(y_hat, axis=1) == y)),
-                   float(y.shape[0]))
-    return metric[0] / metric[1]
+        metric += eval_step(model, X, y)
+    return float(metric[0] / metric[1])
 
 def train(net, train_iter, test_iter, num_epochs, lr, scheduler=None):
-    model = net if not callable(net) else net()
-    key = jax.random.PRNGKey(0)
-    dummy = jnp.ones((1, 28, 28, 1))
-    params = model.init(key, dummy)['params']
-    if scheduler is not None:
-        # Use inject_hyperparams so we can update the LR each epoch
-        tx = optax.inject_hyperparams(optax.sgd)(learning_rate=lr)
-    else:
-        tx = optax.sgd(lr)
-    opt_state = tx.init(params)
+    model = net if isinstance(net, nnx.Module) else net()
+    # Keep one optimizer graph for the entire run. The scalar learning rate is
+    # an array argument to the compiled step, so changing it does not recompile.
+    optimizer = nnx.Optimizer(model, optax.sgd(1.0), wrt=nnx.Param)
 
-    @jax.jit
-    def train_step(params, opt_state, X, y):
-        def compute_loss(params):
-            logits = model.apply({'params': params}, X)
-            return jnp.mean(loss_fn(logits, y))
-        l, grads = jax.value_and_grad(compute_loss)(params)
-        updates, opt_state_new = tx.update(grads, opt_state, params)
-        params = optax.apply_updates(params, updates)
-        logits = model.apply({'params': params}, X)
-        acc = jnp.mean(jnp.argmax(logits, axis=1) == y)
-        return params, opt_state_new, l, acc
+    @nnx.jit
+    def train_step(model, optimizer, X, y, learning_rate):
+        def compute_loss(model):
+            logits = model(X)
+            loss = jnp.mean(loss_fn(logits, y))
+            correct = jnp.sum(jnp.argmax(logits, axis=1) == y)
+            return loss, correct
+        (l, correct), grads = nnx.value_and_grad(
+            compute_loss, has_aux=True)(model)
+        grads = jax.tree.map(lambda g: learning_rate * g, grads)
+        optimizer.update(model, grads)
+        return jnp.array([l * X.shape[0], correct, X.shape[0]])
 
     animator = d2l.Animator(xlabel='epoch', xlim=[0, num_epochs],
                             legend=['train loss', 'train acc', 'test acc'])
     num_batches = len(train_iter)
+    epoch_lr = lr
     for epoch in range(num_epochs):
-        metric = d2l.Accumulator(3)  # train_loss, train_acc, num_examples
+        metric = jnp.zeros(3)  # train_loss, train_correct, num_examples
+        learning_rate = jnp.asarray(epoch_lr)
         for i, (X, y) in enumerate(train_iter):
             X, y = jnp.array(X), jnp.array(y)
-            params, opt_state, l, acc = train_step(
-                params, opt_state, X, y)
-            metric.add(float(l) * X.shape[0], float(acc) * X.shape[0],
-                       X.shape[0])
-            train_loss = metric[0] / metric[2]
-            train_acc = metric[1] / metric[2]
+            metric += train_step(model, optimizer, X, y, learning_rate)
             if (i + 1) % 50 == 0:
+                train_loss, train_acc = np.asarray(
+                    metric[:2] / metric[2]).tolist()
                 animator.add(epoch + i / num_batches,
                              (train_loss, train_acc, None))
 
-        test_acc = evaluate_accuracy_jax(params, model.apply, test_iter)
+        train_loss, train_acc = np.asarray(
+            metric[:2] / metric[2]).tolist()
+        test_acc = evaluate_accuracy_jax(model, test_iter)
         animator.add(epoch + 1, (None, None, test_acc))
 
         if scheduler:
-            new_lr = scheduler(epoch)
-            opt_state.hyperparams['learning_rate'] = jnp.array(new_lr)
+            epoch_lr = scheduler(epoch)
 
     print(f'train loss {train_loss:.3f}, train acc {train_acc:.3f}, '
           f'test acc {test_acc:.3f}')

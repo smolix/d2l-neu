@@ -24,10 +24,9 @@ from torch import nn
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 import numpy as np
-from flax.training import train_state
 ```
 
 ```{.python .input #bert-pretraining-pretraining-bert-1}
@@ -160,15 +159,14 @@ def _get_batch_loss_bert(net, loss, vocab_size, tokens_X,
 ```{.python .input #bert-pretraining-pretraining-bert-2-2}
 #@tab jax
 #@save
-def _get_batch_loss_bert(params, net, vocab_size, tokens_X,
+def _get_batch_loss_bert(net, vocab_size, tokens_X,
                          segments_X, valid_lens_x,
                          pred_positions_X, mlm_weights_X,
-                         mlm_Y, nsp_y, rng):
+                         mlm_Y, nsp_y):
     # Forward pass
-    _, mlm_Y_hat, nsp_Y_hat = net.apply(params, tokens_X, segments_X,
-                                        valid_lens_x.reshape(-1),
-                                        pred_positions_X, training=True,
-                                        rngs={'dropout': rng})
+    _, mlm_Y_hat, nsp_Y_hat = net(tokens_X, segments_X,
+                                  valid_lens_x.reshape(-1),
+                                  pred_positions_X)
     # Compute masked language model loss
     mlm_l = optax.softmax_cross_entropy_with_integer_labels(
         mlm_Y_hat.reshape(-1, vocab_size), mlm_Y.reshape(-1))
@@ -314,19 +312,18 @@ def train_bert(train_iter, net, loss, vocab_size, devices, num_steps):
 ```{.python .input #bert-pretraining-pretraining-bert-2-3}
 #@tab jax
 def train_bert(train_iter, net, vocab_size, num_steps):
-    # Initialize model parameters using a dummy batch
-    dummy_tokens = jnp.ones((2, 64), dtype=jnp.int32)
-    dummy_segments = jnp.zeros((2, 64), dtype=jnp.int32)
-    dummy_valid_lens = jnp.array([64, 64], dtype=jnp.float32)
-    dummy_pred_positions = jnp.zeros((2, 10), dtype=jnp.int32)
-    key = jax.random.PRNGKey(0)
-    params = net.init(key, dummy_tokens, dummy_segments, dummy_valid_lens,
-                      dummy_pred_positions, training=False)
-    tx = optax.adam(learning_rate=1e-4)
-    state = train_state.TrainState.create(
-        apply_fn=net.apply, params=params, tx=tx)
+    optimizer = nnx.Optimizer(net, optax.adam(learning_rate=1e-4),
+                              wrt=nnx.Param)
 
-    grad_fn = jax.value_and_grad(_get_batch_loss_bert, has_aux=True)
+    @nnx.jit
+    def train_step(net, optimizer, batch):
+        def loss_fn(model):
+            return _get_batch_loss_bert(model, vocab_size, *batch)
+        (l, (mlm_l, nsp_l)), grads = nnx.value_and_grad(
+            loss_fn, has_aux=True)(net)
+        optimizer.update(net, grads)
+        return l, mlm_l, nsp_l
+
     step, timer = 0, d2l.Timer()
     animator = d2l.Animator(xlabel='step', ylabel='loss',
                             xlim=[1, num_steps], legend=['mlm', 'nsp'])
@@ -334,18 +331,14 @@ def train_bert(train_iter, net, vocab_size, num_steps):
     # losses, no. of sentence pairs, count
     metric = d2l.Accumulator(4)
     num_steps_reached = False
-    rng = jax.random.PRNGKey(1)
     while step < num_steps and not num_steps_reached:
         # train_iter is a callable: invoke it each epoch for a fresh iterator.
         for (tokens_X, segments_X, valid_lens_x, pred_positions_X,
-             mlm_weights_X, mlm_Y, nsp_y) in train_iter():
+            mlm_weights_X, mlm_Y, nsp_y) in train_iter():
             timer.start()
-            rng, step_rng = jax.random.split(rng)
-            (l, (mlm_l, nsp_l)), grads = grad_fn(
-                state.params, net, vocab_size, tokens_X, segments_X,
-                valid_lens_x, pred_positions_X, mlm_weights_X, mlm_Y, nsp_y,
-                step_rng)
-            state = state.apply_gradients(grads=grads)
+            batch = (tokens_X, segments_X, valid_lens_x, pred_positions_X,
+                     mlm_weights_X, mlm_Y, nsp_y)
+            _, mlm_l, nsp_l = train_step(net, optimizer, batch)
             metric.add(float(mlm_l), float(nsp_l), tokens_X.shape[0], 1)
             timer.stop()
             animator.add(step + 1,
@@ -359,7 +352,7 @@ def train_bert(train_iter, net, vocab_size, num_steps):
           f'NSP loss {metric[1] / metric[3]:.3f}')
     print(f'{metric[2] / timer.sum():.1f} sentence pairs/sec on '
           f'{str(jax.devices())}')
-    return state
+    return net
 ```
 
 ```{.python .input #bert-pretraining-pretraining-bert-2-3}
@@ -416,7 +409,7 @@ train_bert(train_iter, net, loss, len(vocab), devices, 50)
 
 ```{.python .input #bert-pretraining-pretraining-bert-2-4}
 #@tab jax
-state = train_bert(train_iter, net, len(vocab), 50)
+net = train_bert(train_iter, net, len(vocab), 50)
 ```
 
 ```{.python .input #bert-pretraining-pretraining-bert-2-4}
@@ -457,13 +450,13 @@ def get_bert_encoding(net, tokens_a, tokens_b=None):
 
 ```{.python .input #bert-pretraining-representing-text-with-bert-1}
 #@tab jax
-def get_bert_encoding(net, params, tokens_a, tokens_b=None):
+def get_bert_encoding(net, tokens_a, tokens_b=None):
     tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
     token_ids = jnp.array(vocab[tokens], dtype=jnp.int32)[None, :]
     segments = jnp.array(segments, dtype=jnp.int32)[None, :]
     valid_len = jnp.array([len(tokens)], dtype=jnp.float32)
-    encoded_X, _, _ = net.apply(params, token_ids, segments, valid_len,
-                                training=False)
+    encoded_X, _, _ = nnx.view(net, deterministic=True)(
+        token_ids, segments, valid_len)
     return encoded_X
 ```
 
@@ -503,7 +496,7 @@ encoded_text.shape, encoded_text_cls.shape, encoded_text_crane[0][:3]
 ```{.python .input #bert-pretraining-representing-text-with-bert-2}
 #@tab jax
 tokens_a = ['a', 'crane', 'is', 'flying']
-encoded_text = get_bert_encoding(net, state.params, tokens_a)
+encoded_text = get_bert_encoding(net, tokens_a)
 # Tokens: '<cls>', 'a', 'crane', 'is', 'flying', '<sep>'
 encoded_text_cls = encoded_text[:, 0, :]
 encoded_text_crane = encoded_text[:, 2, :]
@@ -540,7 +533,7 @@ encoded_pair.shape, encoded_pair_cls.shape, encoded_pair_crane[0][:3]
 ```{.python .input #bert-pretraining-representing-text-with-bert-3}
 #@tab jax
 tokens_a, tokens_b = ['a', 'crane', 'driver', 'came'], ['he', 'just', 'left']
-encoded_pair = get_bert_encoding(net, state.params, tokens_a, tokens_b)
+encoded_pair = get_bert_encoding(net, tokens_a, tokens_b)
 # Tokens: '<cls>', 'a', 'crane', 'driver', 'came', '<sep>', 'he', 'just',
 # 'left', '<sep>'
 encoded_pair_cls = encoded_pair[:, 0, :]

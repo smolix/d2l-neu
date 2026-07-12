@@ -44,7 +44,7 @@ import tensorflow as tf
 ```{.python .input #linear-regression-concise-concise-implementation-of-linear-regression}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 import optax
@@ -155,10 +155,13 @@ class LinearRegression(d2l.Module):  #@save
 %%tab jax
 class LinearRegression(d2l.Module):  #@save
     """The linear regression model implemented with high-level APIs."""
-    lr: float
-
-    def setup(self):
-        self.net = nn.Dense(1, kernel_init=nn.initializers.normal(0.01))
+    def __init__(self, num_inputs, lr, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.net = nnx.Linear(
+            num_inputs, 1, kernel_init=nnx.initializers.normal(0.01),
+            rngs=rngs)
 ```
 
 In the `forward` method we just invoke the built-in `__call__` method of the predefined layers to compute the outputs.
@@ -228,8 +231,7 @@ def loss(self, y_hat, y):
 ```{.python .input #linear-regression-concise-defining-the-loss-function}
 %%tab jax
 @d2l.add_to_class(LinearRegression)  #@save
-def loss(self, params, X, y, state):
-    y_hat = state.apply_fn({'params': params}, *X)
+def loss(self, y_hat, y):
     return d2l.reduce_mean(jnp.square(y_hat - y))
 ```
 
@@ -334,8 +336,16 @@ trainer.fit(model, data)
 ```
 
 ```{.python .input #linear-regression-concise-training-1}
-%%tab mxnet, tensorflow, jax
+%%tab mxnet, tensorflow
 model = LinearRegression(lr=0.03)
+data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
+trainer = d2l.Trainer(max_epochs=10)
+trainer.fit(model, data)
+```
+
+```{.python .input #linear-regression-concise-training-1}
+%%tab jax
+model = LinearRegression(2, lr=0.03)
 data = d2l.SyntheticRegressionData(w=d2l.tensor([2, -3.4]), b=4.2)
 trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
@@ -381,11 +391,10 @@ w, b = model.get_w_b()
 ```{.python .input #linear-regression-concise-training-2}
 %%tab jax
 @d2l.add_to_class(LinearRegression)  #@save
-def get_w_b(self, state):
-    net = state.params['net']
-    return net['kernel'], net['bias']
+def get_w_b(self):
+    return self.net.kernel[...], self.net.bias[...]
 
-w, b = model.get_w_b(trainer.state)
+w, b = model.get_w_b()
 ```
 
 ```{.python .input #linear-regression-concise-training-3}

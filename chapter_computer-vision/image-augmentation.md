@@ -50,12 +50,9 @@ warnings.filterwarnings('ignore', message='.*dtype.*align.*',
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
-from functools import partial
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
-from flax.training import train_state
-import flax
+from flax import nnx
 import optax
 import numpy as np
 import tensorflow as tf
@@ -734,22 +731,20 @@ def train_batch_ch13(net, X, y, loss, trainer, devices):
 ```{.python .input #image-augmentation-multi-gpu-training-1}
 #@tab jax
 #@save
-@partial(jax.jit, static_argnums=(3, 4))  # net, loss_fn are static
-def train_batch_ch13(state, X, y, net, loss_fn):
+@nnx.jit
+def train_batch_ch13(net, optimizer, X, y):
     """Train for a minibatch with JAX (defined in Chapter 13)."""
-    def compute_loss(params):
-        logits, updates = state.apply_fn(
-            {'params': params, 'batch_stats': state.batch_stats},
-            X, mutable=['batch_stats'])
-        loss = loss_fn(logits, y).mean()
-        return loss, (logits, updates)
-    (loss, (logits, updates)), grads = jax.value_and_grad(
-        compute_loss, has_aux=True)(state.params)
-    state = state.apply_gradients(grads=grads)
-    state = state.replace(batch_stats=updates['batch_stats'])
+    def compute_loss(model):
+        logits = model(X)
+        loss = optax.softmax_cross_entropy_with_integer_labels(
+            logits, y).mean()
+        return loss, logits
+    (loss, logits), grads = nnx.value_and_grad(
+        compute_loss, has_aux=True)(net)
+    optimizer.update(net, grads)
     train_loss_sum = loss * X.shape[0]
     train_acc_sum = (logits.argmax(axis=-1) == y).sum()
-    return state, train_loss_sum, train_acc_sum
+    return train_loss_sum, train_acc_sum
 ```
 
 ```{.python .input #image-augmentation-multi-gpu-training-1}
@@ -834,51 +829,56 @@ def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
 ```{.python .input #image-augmentation-multi-gpu-training-2}
 #@tab jax
 #@save
-def train_ch13(net, train_iter, test_iter, loss_fn, state, num_epochs):
+def train_ch13(net, train_iter, test_iter, optimizer, num_epochs):
     """Train a model with JAX (defined in Chapter 13)."""
-    num_batches = sum(1 for _ in tfds.as_numpy(train_iter))
+    num_batches = int(train_iter.cardinality().numpy())
     animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
                             legend=['train loss', 'train acc', 'test acc'])
     timer = d2l.Timer()
 
-    # Use a separate eval module (training=False) so BatchNorm uses
-    # running stats instead of batch stats at test time. Params are shared
-    # with the training network; only the `training` flag differs.
-    eval_net = net.clone(training=False)
+    train_net = nnx.view(net, use_running_average=False,
+                         raise_if_not_found=False)
+    eval_net = nnx.view(net, use_running_average=True,
+                        raise_if_not_found=False)
 
-    @jax.jit
-    def eval_step(params, batch_stats, X):
-        logits = eval_net.apply(
-            {'params': params, 'batch_stats': batch_stats}, X)
-        return logits
+    @nnx.jit
+    def eval_step(model, X):
+        return model(X)
 
     for epoch in range(num_epochs):
         # Sum of training loss, sum of training accuracy, no. of examples,
         # no. of examples
-        metric = d2l.Accumulator(4)
+        loss_sum = jnp.array(0.0)
+        train_correct = jnp.array(0.0)
+        num_examples = 0
+        timer.start()
         for i, (features, labels) in enumerate(tfds.as_numpy(train_iter)):
-            timer.start()
-            state, l, acc = train_batch_ch13(
-                state, jnp.array(features), jnp.array(labels), net, loss_fn)
+            l, acc = train_batch_ch13(
+                train_net, optimizer, jnp.array(features), jnp.array(labels))
             n = features.shape[0]
-            metric.add(float(l), float(acc), n, n)
-            timer.stop()
-            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
-                animator.add(epoch + (i + 1) / num_batches,
-                             (metric[0] / metric[2], metric[1] / metric[3],
-                              None))
+            loss_sum += l
+            train_correct += acc
+            num_examples += n
+        # One transfer per epoch also waits for all dispatched training work,
+        # keeping the throughput measurement meaningful without synchronizing
+        # every minibatch.
+        loss_sum, train_correct = jax.device_get((loss_sum, train_correct))
+        timer.stop()
         # Evaluate on test set
-        correct, total = 0, 0
+        correct, total = jnp.array(0), 0
         for X, y in tfds.as_numpy(test_iter):
-            logits = eval_step(state.params, state.batch_stats, jnp.array(X))
-            correct += int((logits.argmax(axis=-1) == y).sum())
+            logits = eval_step(eval_net, jnp.array(X))
+            correct += (logits.argmax(axis=-1) == y).sum()
             total += y.shape[0]
+        correct = int(jax.device_get(correct))
+        train_loss = float(loss_sum) / num_examples
+        train_acc = float(train_correct) / num_examples
         test_acc = correct / total
-        animator.add(epoch + 1, (None, None, test_acc))
-    print(f'loss {metric[0] / metric[2]:.3f}, train acc '
-          f'{metric[1] / metric[3]:.3f}, test acc {test_acc:.3f}')
-    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec')
-    return state
+        animator.add(epoch + 1, (train_loss, train_acc, test_acc))
+    print(f'loss {train_loss:.3f}, train acc '
+          f'{train_acc:.3f}, test acc {test_acc:.3f}')
+    print(f'{num_examples * num_epochs / timer.sum():.1f} examples/sec')
+    return net
 ```
 
 ```{.python .input #image-augmentation-multi-gpu-training-2}
@@ -957,52 +957,37 @@ def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
 #@tab jax
 batch_size = 256
 
-class ResNet18(nn.Module):
-    num_classes: int = 10
-    training: bool = True
-
-    def setup(self):
-        self.net = nn.Sequential([
-            nn.Conv(64, kernel_size=(3, 3), strides=(1, 1), padding='same'),
-            nn.BatchNorm(not self.training),
-            nn.relu,
-            d2l.Residual(64, training=self.training),
-            d2l.Residual(64, training=self.training),
+class ResNet18(nnx.Module):
+    def __init__(self, num_classes=10, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.net = nnx.Sequential(
+            nnx.Conv(3, 64, kernel_size=(3, 3), strides=(1, 1),
+                     padding='same', rngs=rngs),
+            nnx.BatchNorm(64, rngs=rngs), nnx.relu,
+            d2l.Residual(64, in_channels=64, rngs=rngs),
+            d2l.Residual(64, in_channels=64, rngs=rngs),
             d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
-                         training=self.training),
-            d2l.Residual(128, training=self.training),
+                         in_channels=64, rngs=rngs),
+            d2l.Residual(128, in_channels=128, rngs=rngs),
             d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
-                         training=self.training),
-            d2l.Residual(256, training=self.training),
+                         in_channels=128, rngs=rngs),
+            d2l.Residual(256, in_channels=256, rngs=rngs),
             d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
-                         training=self.training),
-            d2l.Residual(512, training=self.training),
+                         in_channels=256, rngs=rngs),
+            d2l.Residual(512, in_channels=512, rngs=rngs),
             lambda x: x.mean(axis=(1, 2)),
-            nn.Dense(self.num_classes),
-        ])
+            nnx.Linear(512, num_classes, rngs=rngs))
 
     def __call__(self, x):
         return self.net(x)
 
-net = ResNet18(num_classes=10, training=True)
+net = ResNet18(num_classes=10)
 
 def train_with_data_aug(train_aug_fn, test_aug_fn, net, lr=0.001):
     train_iter = load_cifar10(True, train_aug_fn, batch_size)
     test_iter = load_cifar10(False, test_aug_fn, batch_size)
-    loss_fn = optax.softmax_cross_entropy_with_integer_labels
-    # Initialize model parameters
-    dummy_input = jnp.ones((1, 32, 32, 3))
-    key = jax.random.PRNGKey(0)
-    variables = net.init(key, dummy_input)
-    params = variables['params']
-    batch_stats = variables.get('batch_stats', {})
-
-    class TrainState(train_state.TrainState):
-        batch_stats: dict
-
-    state = TrainState.create(apply_fn=net.apply, params=params,
-                              tx=optax.adam(lr), batch_stats=batch_stats)
-    state = train_ch13(net, train_iter, test_iter, loss_fn, state, 10)
+    optimizer = nnx.Optimizer(net, optax.adam(lr), wrt=nnx.Param)
+    train_ch13(net, train_iter, test_iter, optimizer, 10)
 ```
 
 ```{.python .input #image-augmentation-multi-gpu-training-3}

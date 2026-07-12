@@ -396,11 +396,13 @@ class WeightDecayScratch(d2l.LinearRegressionScratch):
 ```{.python .input #weight-decay-defining-the-model-1}
 %%tab jax
 class WeightDecayScratch(d2l.LinearRegressionScratch):
-    lambd: int = 0
-        
-    def loss(self, params, X, y, state):
-        return (super().loss(params, X, y, state) +
-                self.lambd * l2_penalty(params['w']))
+    def __init__(self, num_inputs, lambd, lr, sigma=0.01, rngs=None):
+        super().__init__(num_inputs, lr, sigma, rngs=rngs)
+        self.save_hyperparameters(ignore=['rngs'])
+
+    def loss(self, y_hat, y):
+        return (super().loss(y_hat, y) +
+                self.lambd * l2_penalty(self.w))
 ```
 
 The following code fits our model on the training set with 20 examples and evaluates it on the validation set with 100 examples.
@@ -438,8 +440,7 @@ def train_scratch(lambd):
     model = WeightDecayScratch(num_inputs=200, lambd=lambd, lr=0.01)
     model.board.yscale='log'
     trainer.fit(model, data)
-    print('L2 norm of w:',
-          float(l2_penalty(trainer.state.params['w'])))
+    print('L2 norm of w:', float(l2_penalty(model.w)))
 ```
 
 ```{.python .input #weight-decay-defining-the-model-2}
@@ -668,7 +669,9 @@ class WeightDecay(d2l.LinearRegression):
 ```{.python .input #weight-decay-concise-implementation-1}
 %%tab jax
 class WeightDecay(d2l.LinearRegression):
-    wd: float = 0
+    def __init__(self, wd, lr, num_inputs=200, rngs=None):
+        super().__init__(num_inputs, lr, rngs=rngs)
+        self.save_hyperparameters(ignore=['rngs'])
 
     def configure_optimizers(self):
         # Weight Decay is not available directly within optax.sgd, but
@@ -677,7 +680,8 @@ class WeightDecay(d2l.LinearRegression):
         # matching the per-parameter-group convention in PyTorch / MXNet.
         def kernel_mask(params):
             return jax.tree_util.tree_map_with_path(
-                lambda path, _: path[-1].key != 'bias', params)
+                lambda path, _: getattr(path[-1], 'name', None) == 'kernel',
+                params)
         return optax.chain(
             optax.masked(optax.add_decayed_weights(self.wd), kernel_mask),
             optax.sgd(self.lr))
@@ -717,7 +721,7 @@ model = WeightDecay(wd=3, lr=0.01)
 model.board.yscale='log'
 trainer.fit(model, data)
 
-print('L2 norm of w:', float(l2_penalty(model.get_w_b(trainer.state)[0])))
+print('L2 norm of w:', float(l2_penalty(model.get_w_b()[0])))
 ```
 
 ```{.python .input #weight-decay-concise-implementation-2}

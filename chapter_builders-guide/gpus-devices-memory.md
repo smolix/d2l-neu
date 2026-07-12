@@ -36,7 +36,7 @@ from d2l import torch as d2l
 import time
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 from d2l import jax as d2l
 ```
@@ -232,7 +232,8 @@ def try_gpu(i=0):  #@save
 
 def try_all_gpus():  #@save
     """Return all available GPUs, or [cpu(),] if no GPU exists."""
-    return [gpu(i) for i in range(num_gpus())]
+    devices = [gpu(i) for i in range(num_gpus())]
+    return devices if devices else [cpu()]
 
 try_gpu(), try_gpu(10), try_all_gpus()
 ```
@@ -574,8 +575,8 @@ tree in one call.
 :end_tab:
 
 :begin_tab:`jax`
-A model's parameters are literally a tree of arrays, the pytree that `init`
-returns, and `jax.device_put` accepts a pytree: one call places every leaf.
+An NNX model owns a state tree, and `jax.device_put` accepts that tree. Update
+the model with the placed state and every registered leaf moves together.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -601,10 +602,9 @@ net(X)
 
 ```{.python .input #gpus-devices-memory-models-on-a-device-1}
 %%tab jax
-net = nn.Sequential([nn.Dense(1)])
-params = net.init(d2l.get_key(), X)
-params = jax.device_put(params, try_gpu())
-net.apply(params, X)
+net = nnx.Sequential(nnx.Linear(X.shape[-1], 1, rngs=nnx.Rngs(0)))
+nnx.update(net, jax.device_put(nnx.state(net), try_gpu()))
+net(X)
 ```
 
 ```{.python .input #gpus-devices-memory-models-on-a-device-1}
@@ -634,7 +634,7 @@ net[0].weight.device
 
 ```{.python .input #gpus-devices-memory-models-on-a-device-2}
 %%tab jax
-jax.tree_util.tree_map(lambda p: p.device, params)
+jax.tree_util.tree_map(lambda p: p.device, nnx.state(net))
 ```
 
 ```{.python .input #gpus-devices-memory-models-on-a-device-2}
@@ -659,7 +659,7 @@ else.
 
 :begin_tab:`jax`
 Device hygiene is short in JAX because all state is explicit. The optimizer's
-state is built from the parameter pytree (`optax`'s `init(params)`), so it is
+state is built from the model's parameter state, so it is
 born wherever the parameters live; and inside a compiled function you never
 place anything, since the computation runs where its inputs are. Keep the
 parameters and each batch on one device and everything downstream follows.
@@ -935,20 +935,24 @@ if num_gpus() > 0:
     def in_use():
         s = gpu().memory_stats()
         return f'{s["bytes_in_use"] / 2**20:7.1f} MiB'
-    net = nn.Sequential([nn.Dense(4096), nn.relu, nn.Dense(4096), nn.relu,
-                         nn.Dense(4096), nn.relu, nn.Dense(10)])
+    rngs = nnx.Rngs(0)
+    net = nnx.Sequential(nnx.Linear(1024, 4096, rngs=rngs), nnx.relu,
+                         nnx.Linear(4096, 4096, rngs=rngs), nnx.relu,
+                         nnx.Linear(4096, 4096, rngs=rngs), nnx.relu,
+                         nnx.Linear(4096, 10, rngs=rngs))
     key1, key2 = jax.random.split(d2l.get_key())
     X = jax.random.normal(key1, (4096, 1024))
     y = jax.random.randint(key2, (4096,), 0, 10)
-    def loss(params):
-        logits = net.apply(params, X)
+    def loss(model):
+        logits = model(X)
         return optax.softmax_cross_entropy_with_integer_labels(
             logits, y).mean()
-    params = jax.block_until_ready(net.init(d2l.get_key(), X))
+    jax.block_until_ready(nnx.state(net))
     print('weights              ', in_use())
-    grads = jax.block_until_ready(jax.grad(loss)(params))
+    grads = jax.block_until_ready(nnx.grad(loss)(net))
     print('+ gradients          ', in_use())
-    opt_state = jax.block_until_ready(optax.adam(1e-3).init(params))
+    optimizer = nnx.Optimizer(net, optax.adam(1e-3), wrt=nnx.Param)
+    jax.block_until_ready(optimizer.opt_state)
     print('+ optimizer state    ', in_use())
     peak = gpu().memory_stats()['peak_bytes_in_use'] / 2**20
     print(f'peak with activations {peak:7.1f} MiB')
@@ -1075,19 +1079,21 @@ def run_stack(blocks, X, use_checkpoint=False):
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1}
 %%tab jax
-class ResidualBlock(nn.Module):  # As in :numref:`sec_model_construction`
-    num_hiddens: int
+class ResidualBlock(nnx.Module):  # As in :numref:`sec_model_construction`
+    def __init__(self, num_hiddens, rngs):
+        self.body = nnx.Sequential(
+            nnx.Linear(num_hiddens, num_hiddens, rngs=rngs), nnx.relu,
+            nnx.Linear(num_hiddens, num_hiddens, rngs=rngs), nnx.relu)
 
-    @nn.compact
     def __call__(self, X):
-        Y = nn.relu(nn.Dense(self.num_hiddens)(X))
-        Y = nn.relu(nn.Dense(self.num_hiddens)(Y))
-        return X + Y
+        return X + self.body(X)
 
-def run_stack(block, params_list, X, use_checkpoint=False):
-    f = jax.checkpoint(block.apply) if use_checkpoint else block.apply
-    for p in params_list:
-        X = f(p, X)
+def run_stack(graphdef, states, X, use_checkpoint=False):
+    def apply(state, X):
+        return nnx.merge(graphdef, state)(X)
+    f = jax.checkpoint(apply) if use_checkpoint else apply
+    for state in states:
+        X = f(state, X)
     return X
 ```
 
@@ -1173,14 +1179,17 @@ print('checkpointed gradients match the ordinary ones')
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-2}
 %%tab jax
-block = ResidualBlock(64)
 X = jax.random.normal(jax.random.PRNGKey(1), (32, 64))
-params_list = [block.init(k, X)
-               for k in jax.random.split(jax.random.PRNGKey(0), 4)]
+blocks = [ResidualBlock(64, nnx.Rngs(k))
+          for k in jax.random.split(jax.random.PRNGKey(0), 4)]
+split_blocks = [nnx.split(block) for block in blocks]
+graphdef = split_blocks[0][0]
+states = [state for _, state in split_blocks]
 
 def stack_grads(use_checkpoint):
-    loss = lambda ps: run_stack(block, ps, X, use_checkpoint).sum()
-    return jax.tree_util.tree_leaves(jax.grad(loss)(params_list))
+    loss = lambda states: run_stack(graphdef, states, X,
+                                    use_checkpoint).sum()
+    return jax.tree_util.tree_leaves(jax.grad(loss)(states))
 
 for g, g_ckpt in zip(stack_grads(False), stack_grads(True)):
     assert jnp.allclose(g, g_ckpt)
@@ -1230,16 +1239,19 @@ else:
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-3}
 %%tab jax
 if num_gpus() > 0:
-    block = ResidualBlock(1024)
     X = jax.random.normal(jax.random.PRNGKey(1), (8192, 1024))
-    params_list = [block.init(k, X)
-                   for k in jax.random.split(jax.random.PRNGKey(0), 16)]
+    blocks = [ResidualBlock(1024, nnx.Rngs(k))
+              for k in jax.random.split(jax.random.PRNGKey(0), 16)]
+    split_blocks = [nnx.split(block) for block in blocks]
+    graphdef = split_blocks[0][0]
+    states = [state for _, state in split_blocks]
     for use_checkpoint in (True, False):  # low first: the peak only grows
         grad_fn = jax.jit(jax.grad(
-            lambda ps: run_stack(block, ps, X, use_checkpoint).sum()))
-        jax.block_until_ready(grad_fn(params_list))  # compile outside timing
+            lambda states: run_stack(
+                graphdef, states, X, use_checkpoint).sum()))
+        jax.block_until_ready(grad_fn(states))  # compile outside timing
         t = time.time()
-        jax.block_until_ready(grad_fn(params_list))
+        jax.block_until_ready(grad_fn(states))
         peak = gpu().memory_stats()['peak_bytes_in_use'] / 2**20
         print(f'checkpointing={use_checkpoint!s:5}  peak {peak:6.0f} MiB, '
               f'{time.time() - t:.2f} sec')
@@ -1728,16 +1740,15 @@ trainer.fit(ResMLPClassifier(), d2l.FashionMNIST(batch_size=256))
 ```{.python .input #gpus-devices-memory-the-trainer-now-with-devices-2}
 %%tab jax
 class ResMLPClassifier(d2l.Classifier):
-    num_hiddens: int = 256
-    num_blocks: int = 2
-    lr: float = 0.1
-
-    def setup(self):
-        self.net = nn.Sequential([
-            lambda x: x.reshape((x.shape[0], -1)),  # Flatten
-            nn.Dense(self.num_hiddens), nn.relu,
-            *[ResidualBlock(self.num_hiddens) for _ in range(self.num_blocks)],
-            nn.Dense(10)])
+    def __init__(self, num_hiddens=256, num_blocks=2, lr=0.1, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.net = nnx.Sequential(
+            lambda x: x.reshape((x.shape[0], -1)),
+            nnx.Linear(784, num_hiddens, rngs=rngs), nnx.relu,
+            *[ResidualBlock(num_hiddens, rngs) for _ in range(num_blocks)],
+            nnx.Linear(num_hiddens, 10, rngs=rngs))
 
 trainer = d2l.Trainer(max_epochs=1, num_gpus=1)
 trainer.fit(ResMLPClassifier(), d2l.FashionMNIST(batch_size=256))

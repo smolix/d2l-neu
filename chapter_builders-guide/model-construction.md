@@ -40,10 +40,11 @@ from torch.nn import functional as F
 
 ```{.python .input #model-construction-modules-and-model-construction}
 %%tab jax
+from dataclasses import dataclass
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 ```
 
 ```{.python .input #model-construction-modules-and-model-construction}
@@ -69,13 +70,12 @@ familiar MLP with a 256-unit ReLU hidden layer and a 10-unit output layer.
 :end_tab:
 
 :begin_tab:`jax`
-In JAX the module class is Flax's `flax.linen.Module`, imported as `nn`. We
-have used one of its subclasses all along: `nn.Sequential` builds a model from
-a list of layers, here the familiar MLP with a 256-unit ReLU hidden layer and
-a 10-unit output layer. One habit from :numref:`sec_oo-design` carries over: a
-Flax module holds no parameters of its own. Constructing `net` records the
-architecture; `init(key, X)` creates the parameters as a separate object, and
-`apply(params, X)` runs the forward computation with them.
+In JAX the module class is Flax's `nnx.Module`. We have used one of its
+subclasses all along: `nnx.Sequential` builds a model from a chain of layers,
+here the familiar MLP with a 256-unit ReLU hidden layer and a 10-unit output
+layer. NNX modules own their initialized parameters, so construction requires
+the layer widths and an RNG stream; a forward pass then uses the same direct
+`net(X)` notation as the other frameworks.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -106,11 +106,11 @@ net(X).shape
 
 ```{.python .input #model-construction-the-module-abstraction-1}
 %%tab jax
-net = nn.Sequential([nn.Dense(256), nn.relu, nn.Dense(10)])
+net = nnx.Sequential(nnx.Linear(20, 256, rngs=nnx.Rngs(0)), nnx.relu,
+                     nnx.Linear(256, 10, rngs=nnx.Rngs(1)))
 
 X = jax.random.uniform(d2l.get_key(), (2, 20))
-params = net.init(d2l.get_key(), X)
-net.apply(params, X).shape
+net(X).shape
 ```
 
 ```{.python .input #model-construction-the-module-abstraction-1}
@@ -142,8 +142,8 @@ we passed to it, stored under names in a registry:
 :begin_tab:`jax`
 `Sequential` is not a special construct. It is itself a module whose forward
 computation runs its children in order, and the children are the three modules
-we passed to it. Their parameters do not live in `net`: `init` returned them
-as a nested dictionary, a *pytree*, whose structure mirrors the module tree:
+we passed to it. Each child owns its parameters; selecting `nnx.Param` state
+gives a flat path view whose structure mirrors the module tree:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -166,7 +166,8 @@ net._modules
 
 ```{.python .input #model-construction-the-module-abstraction-2}
 %%tab jax
-jax.tree_util.tree_map(lambda x: x.shape, params)
+[(path, value.shape)
+ for path, value in nnx.state(net, nnx.Param).flat_state()]
 ```
 
 ```{.python .input #model-construction-the-module-abstraction-2}
@@ -188,11 +189,10 @@ shortly.
 :end_tab:
 
 :begin_tab:`jax`
-This pytree is what every downstream operation traverses: an optimizer update
-is a `tree_map` over `params`, and the same traversal underlies device
-movement and serialization. A parameter outside the pytree might as well not
-exist, which is why `apply` takes `params` explicitly: the model is the pair
-of architecture and pytree, not either half alone.
+`nnx.state(net, nnx.Param)` selects the trainable leaves of the object graph.
+Optimizer updates, device movement, and serialization traverse this state.
+The parameters remain owned by their layers; filters give us a state view
+without maintaining a second model representation by hand.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -219,9 +219,9 @@ creates the children, and a `forward` method that uses them.
 :end_tab:
 
 :begin_tab:`jax`
-`nn.Sequential` covers chains. For any other topology we subclass `nn.Module`
-directly and supply the two methods that define a module: a `setup` method
-that creates the children, and a `__call__` method that uses them.
+`nnx.Sequential` covers chains. For any other topology we subclass
+`nnx.Module` directly and supply an ordinary constructor that creates the
+children and a `__call__` method that uses them.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -250,13 +250,13 @@ class MLP(nn.Module):
 
 ```{.python .input #model-construction-the-module-abstraction-3}
 %%tab jax
-class MLP(nn.Module):
-    def setup(self):
-        self.hidden = nn.Dense(256)
-        self.out = nn.Dense(10)
+class MLP(nnx.Module):
+    def __init__(self, rngs):
+        self.hidden = nnx.Linear(20, 256, rngs=rngs)
+        self.out = nnx.Linear(256, 10, rngs=rngs)
 
     def __call__(self, X):
-        return self.out(nn.relu(self.hidden(X)))
+        return self.out(nnx.relu(self.hidden(X)))
 ```
 
 ```{.python .input #model-construction-the-module-abstraction-3}
@@ -291,9 +291,8 @@ net(X).shape
 
 ```{.python .input #model-construction-the-module-abstraction-4}
 %%tab jax
-net = MLP()
-params = net.init(d2l.get_key(), X)
-net.apply(params, X).shape
+net = MLP(nnx.Rngs(0))
+net(X).shape
 ```
 
 ```{.python .input #model-construction-the-module-abstraction-4}
@@ -319,15 +318,12 @@ derives gradients from whatever `forward` computes.
 :end_tab:
 
 :begin_tab:`jax`
-Two details do the work here. First, `self.hidden = nn.Dense(256)` inside
-`setup` is not an ordinary attribute assignment: Flax registers the value as a
-child module, and the attribute names become keys of the params pytree
-(`hidden`, `out`). Second, we never wrote a backward method; `jax.grad`
-derives gradients from whatever `__call__` computes. Flax also offers a more
-compact way to write the same module: decorate `__call__` with `@nn.compact`
-and create the layers inline at the point of use, skipping `setup` entirely.
-We use that style later in this section, where a block's children are most
-natural to define exactly where they are called.
+Two details do the work here. First, assigning `nnx.Linear` children to
+`self.hidden` and `self.out` makes them part of the NNX object graph, and their
+attribute names become paths in the selected parameter state. Second, we never
+wrote a backward method; `nnx.grad` derives gradients from whatever `__call__`
+computes. Layers are constructed once in `__init__`, keeping parameter
+creation separate from the forward computation.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -357,12 +353,10 @@ model-inspection tooling attaches; we use it in :numref:`sec_repro`.
 :end_tab:
 
 :begin_tab:`jax`
-Note also that we never call `__call__` directly on a bare module:
-`net.apply(params, X)` binds the parameters to the module tree and then runs
-`__call__`. That gap between `apply` and `__call__` is where model-inspection
-tooling attaches; `apply` can, for instance, be asked to record every
-submodule's output (`capture_intermediates`), which we use in
-:numref:`sec_repro`.
+The model is already stateful, so `net(X)` calls `__call__` directly. NNX
+transformations understand its object graph: `nnx.jit`, `nnx.grad`, and state
+filters operate on the module without separately binding a parameter
+dictionary.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -425,8 +419,9 @@ class MySequential(nn.Module):
 
 ```{.python .input #model-construction-sequential-and-friends-containers-1}
 %%tab jax
-class MySequential(nn.Module):
-    modules: list
+class MySequential(nnx.Module):
+    def __init__(self, *modules):
+        self.modules = nnx.List(modules)
 
     def __call__(self, X):
         for module in self.modules:
@@ -472,12 +467,9 @@ the registry in insertion order. Our version is a drop-in replacement:
 :end_tab:
 
 :begin_tab:`jax`
-`modules: list` is a dataclass field: a linen module *is* a Python dataclass,
-so the constructor argument, the attribute, and the field declaration are all
-the same thing. Flax scans every field for submodules, looking inside lists
-and dictionaries, so both `Dense` children are tracked (`nn.relu` is a plain
-function, with nothing to track) and appear in the pytree under the field's
-name, as `modules_0` and `modules_2`. Our version is a drop-in replacement:
+`nnx.List` is a graph-aware container. Both `Linear` children are tracked
+(`nnx.relu` is a plain function, with nothing to track), and their parameters
+appear beneath the `modules` path. Our version is a drop-in replacement:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -501,9 +493,9 @@ net(X).shape
 
 ```{.python .input #model-construction-sequential-and-friends-containers-2}
 %%tab jax
-net = MySequential([nn.Dense(256), nn.relu, nn.Dense(10)])
-params = net.init(d2l.get_key(), X)
-net.apply(params, X).shape
+net = MySequential(nnx.Linear(20, 256, rngs=nnx.Rngs(0)), nnx.relu,
+                   nnx.Linear(256, 10, rngs=nnx.Rngs(1)))
+net(X).shape
 ```
 
 ```{.python .input #model-construction-sequential-and-friends-containers-2}
@@ -528,11 +520,8 @@ and its forward pass works, so nothing appears wrong:
 :end_tab:
 
 :begin_tab:`jax`
-In imperative frameworks this registration step is famously easy to lose:
-store the children in a plain Python list instead of the framework's dedicated
-container, and their parameters silently vanish from the model. Flax closes
-that trap. Because the field scan looks inside lists and dictionaries, a plain
-list assigned in `setup` is tracked like any other child:
+Graph-aware containers make registration explicit in NNX. `nnx.List` tracks
+the child modules and still supports ordinary indexing and iteration:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -569,16 +558,17 @@ net(X).shape, sum(p.numel() for p in net.parameters())
 
 ```{.python .input #model-construction-sequential-and-friends-containers-3}
 %%tab jax
-class ListMLP(nn.Module):
-    def setup(self):
-        self.layers = [nn.Dense(256), nn.Dense(10)]
+class ListMLP(nnx.Module):
+    def __init__(self, rngs):
+        self.layers = nnx.List([nnx.Linear(20, 256, rngs=rngs),
+                                nnx.Linear(256, 10, rngs=rngs)])
 
     def __call__(self, X):
-        return self.layers[1](nn.relu(self.layers[0](X)))
+        return self.layers[1](nnx.relu(self.layers[0](X)))
 
-net = ListMLP()
-params = net.init(d2l.get_key(), X)
-net.apply(params, X).shape, sum(x.size for x in jax.tree_util.tree_leaves(params))
+net = ListMLP(nnx.Rngs(0))
+state = nnx.state(net, nnx.Param)
+net(X).shape, sum(x.size for _, x in state.flat_state())
 ```
 
 ```{.python .input #model-construction-sequential-and-friends-containers-3}
@@ -633,11 +623,10 @@ the existing list is the entire fix:
 :end_tab:
 
 :begin_tab:`jax`
-All 7946 parameters are present; there is no broken variant of this model to
-show. The declaration mistake Flax does have is different in kind and,
-more usefully, in loudness. Every attribute a module uses must be either a
-declared dataclass field or created in `setup`; a bare class attribute is
-neither, so the generated constructor does not accept a value for it:
+All 7946 parameters are present. NNX deliberately rejects a plain Python list
+that contains graph nodes, because treating such a container as static would
+silently hide its parameters. The error points directly to `nnx.List` (or
+`nnx.data`) as the repair:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -683,17 +672,13 @@ net(X).shape, sum(p.numel() for p in net.parameters())
 
 ```{.python .input #model-construction-sequential-and-friends-containers-4}
 %%tab jax
-class NoFieldSequential(nn.Module):
-    modules = []  # Missing the `: list` annotation, so not a field
-
-    def __call__(self, X):
-        for module in self.modules:
-            X = module(X)
-        return X
+class PlainListSequential(nnx.Module):
+    def __init__(self, *modules):
+        self.modules = list(modules)  # Graph nodes cannot be static data
 
 try:
-    net = NoFieldSequential([nn.Dense(256), nn.relu, nn.Dense(10)])
-except TypeError as e:
+    net = PlainListSequential(nnx.Linear(20, 10, rngs=nnx.Rngs(0)))
+except ValueError as e:
     print(e)
 ```
 
@@ -730,13 +715,11 @@ keep their stack of blocks in an `nn.ModuleList` and their named parts
 :end_tab:
 
 :begin_tab:`jax`
-Flax therefore ships no special list or dict containers, because none are
-needed: any pytree of modules, in a field or assigned in `setup`, is tracked,
-and a misdeclared child fails at construction time instead of yielding a model
-that runs but trains nothing. Transformer implementations in Flax
-conventionally keep their stack of blocks in exactly the kind of plain list
-`MySequential` used, with the named parts (embedding, final normalization,
-output head) as separate attributes.
+NNX supplies `nnx.List` and `nnx.Dict` for graph nodes. A misdeclared child
+fails at construction time instead of yielding a model that runs but trains
+nothing. Transformer implementations conventionally keep their stack of
+blocks in an `nnx.List`, with the embedding and output head as named
+attributes.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -777,9 +760,7 @@ children: it can branch, loop, call any `jnp` function, and combine
 intermediate results however it likes. The loop in `MySequential` already used
 this freedom. Its most consequential one-line use is the *residual
 connection*, the wiring idiom at the heart of ResNets and Transformers alike.
-Since the block's body is most natural to define at the point of use, we write
-this one in the inline style: `@nn.compact` lets `__call__` create its
-children as it runs.
+The residual body is constructed once and then reused on every call.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -821,14 +802,14 @@ class ResidualBlock(nn.Module):
 
 ```{.python .input #model-construction-forward-is-just-python-1}
 %%tab jax
-class ResidualBlock(nn.Module):
-    num_hiddens: int
+class ResidualBlock(nnx.Module):
+    def __init__(self, num_hiddens, rngs):
+        self.body = nnx.Sequential(
+            nnx.Linear(num_hiddens, num_hiddens, rngs=rngs), nnx.relu,
+            nnx.Linear(num_hiddens, num_hiddens, rngs=rngs))
 
-    @nn.compact
     def __call__(self, X):
-        body = nn.Sequential([nn.Dense(self.num_hiddens), nn.relu,
-                              nn.Dense(self.num_hiddens)])
-        return X + body(X)
+        return X + self.body(X)
 ```
 
 ```{.python .input #model-construction-forward-is-just-python-1}
@@ -927,10 +908,9 @@ block(torch.randn(2, 24)).shape
 
 ```{.python .input #model-construction-forward-is-just-python-2}
 %%tab jax
-block = ResidualBlock(24)
+block = ResidualBlock(24, nnx.Rngs(0))
 X24 = jax.random.normal(d2l.get_key(), (2, 24))
-params = block.init(d2l.get_key(), X24)
-block.apply(params, X24).shape
+block(X24).shape
 ```
 
 ```{.python .input #model-construction-forward-is-just-python-2}
@@ -982,19 +962,16 @@ block = ScaledResidual(24)
 
 ```{.python .input #model-construction-forward-is-just-python-3}
 %%tab jax
-class ScaledResidual(nn.Module):
-    num_hiddens: int
-    alpha: float = 0.5  # Fixed by design, never trained
+class ScaledResidual(ResidualBlock):
+    def __init__(self, num_hiddens, rngs, alpha=0.5):
+        super().__init__(num_hiddens, rngs)
+        self.alpha = alpha  # Fixed architecture data, never trained
 
-    @nn.compact
     def __call__(self, X):
-        body = nn.Sequential([nn.Dense(self.num_hiddens), nn.relu,
-                              nn.Dense(self.num_hiddens)])
-        return X + self.alpha * body(X)
+        return X + self.alpha * self.body(X)
 
-block = ScaledResidual(24)
-params = block.init(d2l.get_key(), X24)
-block.alpha, list(params['params'])
+block = ScaledResidual(24, nnx.Rngs(0))
+block.alpha, [path for path, _ in nnx.state(block, nnx.Param).flat_state()]
 ```
 
 ```{.python .input #model-construction-forward-is-just-python-3}
@@ -1037,14 +1014,11 @@ state is a *buffer*, introduced in :numref:`sec_parameters`.
 :end_tab:
 
 :begin_tab:`jax`
-`alpha` enters the computation, but it is not a parameter: the pytree contains
-only the two `Dense` children, so the optimizer never touches it. Nor can it
-fail to travel with the model, since it is a dataclass field, part of the
-architecture itself, and constructing `ScaledResidual(24, alpha=0.5)`
-reproduces it exactly. What fields cannot express is non-parameter state that
-*changes* during the forward pass, such as running statistics; Flax gives such
-state an explicit home in a separate variable collection, introduced in
-:numref:`sec_parameters`.
+`alpha` enters the computation, but it is ordinary architecture data rather
+than an `nnx.Param`, so the optimizer never touches it. Constructing
+`ScaledResidual(24, alpha=0.5)` reproduces it. Mutable non-parameter state,
+such as running statistics, instead uses another `nnx.Variable` subclass,
+introduced in :numref:`sec_parameters`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1071,24 +1045,25 @@ introduced in :numref:`sec_parameters`.
 
 :begin_tab:`jax`
 One more freedom deserves a demonstration, because JAX users are often warned
-they lose it: data-dependent control flow. Outside of `jax.jit`, `init` and
-`apply` execute eagerly, one operation at a time, so a Python `while` loop
+they lose it: data-dependent control flow. Outside of `jax.jit`, an NNX call
+executes eagerly, one operation at a time, so a Python `while` loop
 whose condition depends on the data works exactly as it would in NumPy:
 :end_tab:
 
 ```{.python .input #model-construction-forward-is-just-python-4}
 %%tab jax
-class HalvingMLP(nn.Module):
-    @nn.compact
+class HalvingMLP(nnx.Module):
+    def __init__(self, rngs):
+        self.proj = nnx.Linear(20, 24, rngs=rngs)
+
     def __call__(self, X):
-        X = nn.Dense(24)(X)
+        X = self.proj(X)
         while jnp.abs(X).sum() > 1:  # Ordinary Python control flow
             X = X / 2
         return X.sum()
 
-net = HalvingMLP()
-params = net.init(d2l.get_key(), X)
-net.apply(params, X)
+net = HalvingMLP(nnx.Rngs(0))
+net(X)
 ```
 
 :begin_tab:`jax`
@@ -1109,13 +1084,11 @@ will receive. So it does not allocate parameters at construction time at all:
 :end_tab:
 
 :begin_tab:`jax`
-We have been doing something odd since our first MLP without commenting on it:
-`nn.Dense(256)` names only the layer's *output* width. Its kernel has shape
-`(in_features, 256)`, and we never said what `in_features` is. The layer
-cannot know it at construction time, since it depends on the data it will
-receive. Flax resolves this without any special lazy machinery, because its
-parameters are never allocated at construction time anyway: they come into
-existence only inside `init(key, X)`, and that call has the input in hand.
+NNX makes a different choice: `nnx.Linear` takes both its input and output
+widths and creates its parameters in the constructor. Explicit shapes catch a
+mismatched connection while the model is built, before a training run starts.
+They also keep the model object complete: an optimizer or checkpoint can
+inspect every parameter immediately, without a dummy forward pass.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1169,12 +1142,8 @@ input of the next lazy layer, and shapes cascade through the whole model:
 :end_tab:
 
 :begin_tab:`jax`
-There is consequently nothing to inspect before initialization: constructing
-`net` records the architecture and nothing else. During `init`, the dummy
-input flows through the model, each `Dense` reads its input width from the
-incoming shape and allocates a real kernel, and its declared output width
-fixes the input of the next layer, so shapes cascade through the whole model
-in one call:
+There is no uninitialized form to inspect. We state the two boundary widths
+and the hidden width once; the resulting state is available immediately:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1206,9 +1175,10 @@ net[0].weight.shape
 
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-2}
 %%tab jax
-net = nn.Sequential([nn.Dense(256), nn.relu, nn.Dense(10)])
-params = net.init(d2l.get_key(), X)
-jax.tree_util.tree_map(lambda x: x.shape, params)
+net = nnx.Sequential(nnx.Linear(20, 256, rngs=nnx.Rngs(0)), nnx.relu,
+                     nnx.Linear(256, 10, rngs=nnx.Rngs(1)))
+[(path, value.shape)
+ for path, value in nnx.state(net, nnx.Param).flat_state()]
 ```
 
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-2}
@@ -1224,12 +1194,13 @@ net(X)
 net.collect_params()
 ```
 
-We build models this way from Chapter 7 on because it removes shape arithmetic
-from model definitions. In a convolutional network the flattened feature-map
-size depends on the input resolution and on every upstream stride and padding
-choice; computing it by hand clutters the code, and every architecture edit
-invalidates the numbers downstream of it. Declaring output widths and letting
-input widths come from data ends that bookkeeping.
+Lazy layers can remove shape arithmetic from model definitions. In a
+convolutional network the flattened feature-map size depends on the input
+resolution and upstream strides. We usually avoid that fragile arithmetic by
+using global or adaptive pooling before the first linear layer. When a width
+is part of the architecture, we name it in the model config and pass it to
+adjacent layers. This keeps the NNX code compact without hiding parameter
+creation behind a sample batch.
 
 :begin_tab:`pytorch`
 The convenience comes with one rule: until the first forward pass, the
@@ -1240,22 +1211,15 @@ the random initialization now happens at first call rather than at
 construction, so any random numbers your program draws in between shift the
 generator's state, and a fixed seed can yield different weights than the
 explicitly shaped version of the same model (:numref:`sec_repro` returns to
-seeding). Other libraries make the dry run explicit rather than implicit: a
-Flax module in JAX has no lazy mode at all, and its parameters exist only
-after a mandatory `init(key, dummy_input)` call performs the same shape
-inference. PyTorch's lazy layers give you that behavior with the first real
-batch playing the role of the dummy input.
+seeding). NNX has no lazy mode: its linear layers require both widths and
+create parameters in the constructor. PyTorch's lazy layers instead let the
+first real batch supply the missing width.
 :end_tab:
 
 :begin_tab:`jax`
-Note what did not need to be said: there is no rule about *when* parameters
-become available, because `init` is mandatory and everything that needs
-parameters, whether constructing the optimizer state, counting them, or
-transforming them, starts from its return value. The ordering mistakes that
-implicit lazy initialization invites cannot arise. Randomness is equally
-explicit: which weights `init` produces depends on the PRNG key we pass it
-and on nothing else, not on how many random numbers the program happened to
-draw beforehand (:numref:`sec_repro` returns to seeding).
+Parameters are available as soon as construction returns. Initialization
+randomness comes from the `nnx.Rngs` object passed to the constructors, so a
+layer's random stream is explicit (:numref:`sec_repro` returns to seeding).
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1294,11 +1258,8 @@ every shape, then optionally apply an initialization function.
 :end_tab:
 
 :begin_tab:`jax`
-The `init` call is such a common preamble that we fold it into the
-`d2l.Module` base class from :numref:`sec_oo-design`: `apply_init` takes the
-dummy input as a list of arguments plus a PRNG key and returns the
-initialized parameters. Our training loop calls it once, before the optimizer
-state is constructed.
+NNX needs no dry-run helper. The model constructor creates the layers with
+their initializers and owns the resulting parameters.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1329,14 +1290,6 @@ def apply_init(self, inputs, init=None):
         self.net.apply(init)
 ```
 
-```{.python .input #model-construction-lazy-initialization-shapes-from-data-3}
-%%tab jax
-@d2l.add_to_class(d2l.Module)  #@save
-def apply_init(self, dummy_input, key):
-    params = self.init(key, *dummy_input)  # dummy_input tuple unpacked
-    return params
-```
-
 :begin_tab:`pytorch`
 `nn.Module.apply(fn)` calls `fn` on every module in the tree, children first.
 It is the standard way to push a policy across an arbitrary model, one more
@@ -1346,11 +1299,8 @@ demonstration:
 :end_tab:
 
 :begin_tab:`jax`
-Where does a non-default initializer fit? In Flax it is part of the layer's
-definition rather than a pass applied afterwards: each `Dense` accepts a
-`kernel_init` function, and `init` invokes it when it allocates the kernel.
-From Chapter 7 on the idiom `params = model.apply_init([X], key)` opens most
-of our training scripts. A small demonstration:
+Each `nnx.Linear` accepts a `kernel_init` function and invokes it in the
+constructor. A small demonstration:
 :end_tab:
 
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-4}
@@ -1373,14 +1323,17 @@ model.net[0].weight.shape
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-4}
 %%tab jax
 class TinyMLP(d2l.Module):
-    def setup(self):
-        self.net = nn.Sequential([
-            nn.Dense(256, kernel_init=nn.initializers.xavier_uniform()),
-            nn.relu, nn.Dense(10)])
+    def __init__(self, rngs):
+        super().__init__()
+        self.net = nnx.Sequential(
+            nnx.Linear(20, 256,
+                       kernel_init=nnx.initializers.xavier_uniform(),
+                       rngs=rngs), nnx.relu,
+            nnx.Linear(256, 10, rngs=rngs))
 
-model = TinyMLP()
-params = model.apply_init([X], key=d2l.get_key())
-jax.tree_util.tree_map(lambda x: x.shape, params)
+model = TinyMLP(nnx.Rngs(0))
+[(path, value.shape)
+ for path, value in nnx.state(model, nnx.Param).flat_state()]
 ```
 
 ```{.python .input #model-construction-lazy-initialization-shapes-from-data-4}
@@ -1413,8 +1366,8 @@ initializer to apply, and why Xavier's variance rule
 :end_tab:
 
 :begin_tab:`jax`
-`apply_init` materialized every shape and, for the first kernel, drew the
-initial values from the Xavier initializer, all in the same call. Which
+The constructor created every parameter and drew the first kernel from the
+Xavier initializer. Which
 initializer to use, and why Xavier's variance rule (:numref:`subsec_xavier`)
 is a sensible default, is the subject of :numref:`sec_init_param`.
 :end_tab:
@@ -1459,17 +1412,29 @@ def build(cfg: MLPConfig) -> nn.Module:
 
 ```{.python .input #model-construction-building-from-a-config-1}
 %%tab jax
-class ResidualMLP(nn.Module):
+@dataclass
+class MLPConfig:
+    d_in: int = 784
     d_hidden: int = 256
     num_blocks: int = 4
     d_out: int = 10
 
-    @nn.compact
+class ResidualMLP(nnx.Module):
+    def __init__(self, cfg, rngs):
+        self.cfg = cfg
+        self.proj = nnx.Linear(cfg.d_in, cfg.d_hidden, rngs=rngs)
+        self.blocks = nnx.List([
+            ResidualBlock(cfg.d_hidden, rngs) for _ in range(cfg.num_blocks)])
+        self.out = nnx.Linear(cfg.d_hidden, cfg.d_out, rngs=rngs)
+
     def __call__(self, X):
-        X = nn.Dense(self.d_hidden)(X)
-        for _ in range(self.num_blocks):
-            X = ResidualBlock(self.d_hidden)(X)
-        return nn.Dense(self.d_out)(X)
+        X = self.proj(X)
+        for block in self.blocks:
+            X = block(X)
+        return self.out(X)
+
+def build(cfg: MLPConfig) -> nnx.Module:
+    return ResidualMLP(cfg, nnx.Rngs(0))
 ```
 
 ```{.python .input #model-construction-building-from-a-config-1}
@@ -1520,17 +1485,10 @@ module tree:
 :end_tab:
 
 :begin_tab:`jax`
-Here the config *is* the model class. A linen module is a dataclass, so the
-fields `d_hidden`, `num_blocks`, and `d_out` are simultaneously the
-configuration record and the constructor signature: `ResidualMLP()` is the
-default architecture, `ResidualMLP(d_hidden=512, num_blocks=8)` a rescaled
-one, and there is no separate config object or `build` function to keep in
-sync with the model code. The architecture itself is the same: an input
-projection into the hidden width, `num_blocks` identical residual blocks, and
-an output projection, with `@nn.compact` creating each block inline as the
-loop runs. There is no input-width field at all, since `init` reads it from
-the dummy input. Initializing the model and mapping shapes over the result
-displays the module tree as a pytree:
+One config produces one architecture. The input width is explicit because
+NNX creates parameters in the constructor. `nnx.List` registers the repeated
+residual blocks, while the loop in `__call__` controls their execution.
+Selecting parameter state displays the resulting object graph:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1562,9 +1520,9 @@ net
 
 ```{.python .input #model-construction-building-from-a-config-2}
 %%tab jax
-net = ResidualMLP()
-params = net.init(d2l.get_key(), jnp.zeros((2, 784)))
-jax.tree_util.tree_map(lambda x: x.shape, params)
+net = build(MLPConfig())
+[(path, value.shape)
+ for path, value in nnx.state(net, nnx.Param).flat_state()]
 ```
 
 ```{.python .input #model-construction-building-from-a-config-2}
@@ -1587,7 +1545,7 @@ net(torch.rand(2, 784)).shape
 
 ```{.python .input #model-construction-building-from-a-config-3}
 %%tab jax
-net.apply(params, jax.random.uniform(d2l.get_key(), (2, 784))).shape
+net(jax.random.uniform(d2l.get_key(), (2, 784))).shape
 ```
 
 ```{.python .input #model-construction-building-from-a-config-3}
@@ -1613,10 +1571,10 @@ for cfg in (MLPConfig(), MLPConfig(d_hidden=512, num_blocks=8)):
 
 ```{.python .input #model-construction-building-from-a-config-4}
 %%tab jax
-for net in (ResidualMLP(), ResidualMLP(d_hidden=512, num_blocks=8)):
-    params = net.init(d2l.get_key(), jnp.zeros((2, 784)))
-    n = sum(x.size for x in jax.tree_util.tree_leaves(params))
-    print(f'd_hidden={net.d_hidden}, num_blocks={net.num_blocks}: '
+for cfg in (MLPConfig(), MLPConfig(d_hidden=512, num_blocks=8)):
+    net = build(cfg)
+    n = sum(x.size for _, x in nnx.state(net, nnx.Param).flat_state())
+    print(f'd_hidden={cfg.d_hidden}, num_blocks={cfg.num_blocks}: '
           f'{n:,} parameters')
 ```
 
@@ -1648,12 +1606,11 @@ Transformer implementation you will read.
 :end_tab:
 
 :begin_tab:`jax`
-Because the module is a dataclass, its fields are all you need to reconstruct
-the module tree later; :numref:`sec_read_write` saves them alongside the
-parameters so that loading a checkpoint starts by rebuilding the exact same
-model. A handful of width and depth fields feeding a loop that stacks
-identical residual blocks is, minus attention, the exact shape of every
-Transformer implementation you will read.
+Because `build` is deterministic in `cfg`, the config is all we need to
+reconstruct the object graph later; :numref:`sec_read_write` saves it
+alongside the state. Width and depth fields feeding a loop that stacks
+identical residual blocks have the same form as the Transformer models later
+in the book.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1693,17 +1650,14 @@ follow a dry run (`apply_init`). Configs turn architecture into data: a
 :end_tab:
 
 :begin_tab:`jax`
-A module owns child modules and a `__call__` method; its parameters live in a
-pytree that `init(key, X)` creates and `apply(params, X)` consumes, with a
-structure that mirrors the module tree. Layers, blocks, and whole models are
-the same kind of object, and parameter collection, optimizer updates, and
-serialization are all traversals of the pytree. Children are discovered by
-scanning dataclass fields and `setup` assignments, lists and dictionaries
-included; the one declaration mistake, an unannotated field, fails loudly at
-construction time. `__call__` is ordinary Python; a residual connection is one
-line in it. Every input width is inferred inside the mandatory `init` call
-(`apply_init`). Configs need no separate machinery: a linen module is a
-dataclass, so its fields are its config.
+A module owns parameters, child modules, and a `__call__` method. Layers,
+blocks, and whole models are the same kind of object, and state selection,
+optimizer updates, and serialization traverse the NNX object graph.
+`nnx.List` and `nnx.Dict` register collections of children; a plain container
+holding graph nodes is rejected. `__call__` is ordinary Python, so a residual
+connection is one line. NNX linear layers take both widths and create their
+parameters in the constructor. A dataclass config plus a deterministic build
+function records those widths and repeated-block counts.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1779,18 +1733,17 @@ depths plus a `build` function that stacks blocks.
 :end_tab:
 
 :begin_tab:`jax`
-1. Extend `ListMLP` with a *dictionary* of submodules assigned in `setup` and
-   verify that every parameter appears in the pytree returned by `init`. Then
-   try to hide a `Dense` from `init` after all, by creating it inside
-   `__call__` without `@nn.compact`, and describe how the failure announces
-   itself.
+1. Extend `ListMLP` with an `nnx.Dict` of submodules and verify that every
+   parameter appears in `nnx.state(net, nnx.Param)`. Then replace it with a
+   plain dictionary holding those modules and describe how NNX reports the
+   invalid graph container.
 1. Implement a `ParallelBlock` that takes two child modules `net1` and `net2`
    as fields, runs both on the same input, and concatenates their outputs
    along the last dimension. What must be true of the two children's outputs
    for the concatenation to be valid?
-1. Extend `ResidualMLP` with an activation switch (for example,
-   `act: str = 'relu'`) and make `__call__` honor it. Which decisions belong
-   in fields and which belong in code? Where would you put a choice between
+1. Extend `MLPConfig` with an activation switch (for example,
+   `act: str = 'relu'`) and make `ResidualMLP` honor it. Which decisions belong
+   in the config and which belong in code? Where would you put a choice between
    `ResidualBlock` and a plain feed-forward block?
 1. `ResidualBlock` requires its input and output widths to agree. Suppose you
    want a block whose output is wider than its input. Give two standard fixes

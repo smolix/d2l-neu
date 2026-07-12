@@ -48,7 +48,7 @@ from torch.nn import functional as F
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 import numpy as np
 ```
@@ -116,20 +116,20 @@ def mlp(num_inputs, num_hiddens, flatten):
 
 ```{.python .input #natural-language-inference-attention-attending-1}
 #@tab jax
-class MLP(nn.Module):
-    num_hiddens: int
-    flatten: bool
+class MLP(nnx.Module):
+    def __init__(self, num_inputs, num_hiddens, flatten, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.dropout1 = nnx.Dropout(0.2, rngs=rngs)
+        self.dense1 = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)
+        self.dropout2 = nnx.Dropout(0.2, rngs=rngs)
+        self.dense2 = nnx.Linear(num_hiddens, num_hiddens, rngs=rngs)
+        self.flatten = flatten
 
-    @nn.compact
-    def __call__(self, x, training=False):
-        x = nn.Dropout(0.2)(x, deterministic=not training)
-        x = nn.Dense(self.num_hiddens)(x)
-        x = nn.relu(x)
+    def __call__(self, x):
+        x = nnx.relu(self.dense1(self.dropout1(x)))
         if self.flatten:
             x = x.reshape((x.shape[0], -1))
-        x = nn.Dropout(0.2)(x, deterministic=not training)
-        x = nn.Dense(self.num_hiddens)(x)
-        x = nn.relu(x)
+        x = nnx.relu(self.dense2(self.dropout2(x)))
         if self.flatten:
             x = x.reshape((x.shape[0], -1))
         return x
@@ -230,18 +230,17 @@ class Attend(nn.Module):
 
 ```{.python .input #natural-language-inference-attention-attending-2}
 #@tab jax
-class Attend(nn.Module):
-    num_hiddens: int
+class Attend(nnx.Module):
+    def __init__(self, embed_size, num_hiddens, rngs=None):
+        self.f = MLP(embed_size, num_hiddens, flatten=False, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, A, B, training=False):
-        f = MLP(self.num_hiddens, flatten=False)
+    def __call__(self, A, B):
         # Shape of `A`/`B`: (`batch_size`, no. of tokens in sequence A/B,
         # `embed_size`)
         # Shape of `f_A`/`f_B`: (`batch_size`, no. of tokens in sequence A/B,
         # `num_hiddens`)
-        f_A = f(A, training=training)
-        f_B = f(B, training=training)
+        f_A = self.f(A)
+        f_B = self.f(B)
         # Shape of `e`: (`batch_size`, no. of tokens in sequence A,
         # no. of tokens in sequence B)
         e = jnp.matmul(f_A, f_B.transpose(0, 2, 1))
@@ -331,14 +330,13 @@ class Compare(nn.Module):
 
 ```{.python .input #natural-language-inference-attention-comparing}
 #@tab jax
-class Compare(nn.Module):
-    num_hiddens: int
+class Compare(nnx.Module):
+    def __init__(self, embed_size, num_hiddens, rngs=None):
+        self.g = MLP(2 * embed_size, num_hiddens, flatten=False, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, A, B, beta, alpha, training=False):
-        g = MLP(self.num_hiddens, flatten=False)
-        V_A = g(jnp.concatenate([A, beta], axis=2), training=training)
-        V_B = g(jnp.concatenate([B, alpha], axis=2), training=training)
+    def __call__(self, A, B, beta, alpha):
+        V_A = self.g(jnp.concatenate([A, beta], axis=2))
+        V_B = self.g(jnp.concatenate([B, alpha], axis=2))
         return V_A, V_B
 ```
 
@@ -409,19 +407,18 @@ class Aggregate(nn.Module):
 
 ```{.python .input #natural-language-inference-attention-aggregating}
 #@tab jax
-class Aggregate(nn.Module):
-    num_hiddens: int
-    num_outputs: int
+class Aggregate(nnx.Module):
+    def __init__(self, num_hiddens, num_outputs, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.h = MLP(2 * num_hiddens, num_hiddens, flatten=True, rngs=rngs)
+        self.output = nnx.Linear(num_hiddens, num_outputs, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, V_A, V_B, training=False):
+    def __call__(self, V_A, V_B):
         # Sum up both sets of comparison vectors
         V_A = V_A.sum(axis=1)
         V_B = V_B.sum(axis=1)
         # Feed the concatenation of both summarization results into an MLP
-        Y_hat = nn.Dense(self.num_outputs)(
-            MLP(self.num_hiddens, flatten=True)(
-                jnp.concatenate([V_A, V_B], axis=1), training=training))
+        Y_hat = self.output(self.h(jnp.concatenate([V_A, V_B], axis=1)))
         return Y_hat
 ```
 
@@ -492,21 +489,21 @@ class DecomposableAttention(nn.Module):
 
 ```{.python .input #natural-language-inference-attention-putting-it-all-together}
 #@tab jax
-class DecomposableAttention(nn.Module):
-    vocab_size: int
-    embed_size: int
-    num_hiddens: int
+class DecomposableAttention(nnx.Module):
+    def __init__(self, vocab_size, embed_size, num_hiddens, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.embedding = nnx.Embed(vocab_size, embed_size, rngs=rngs)
+        self.attend = Attend(embed_size, num_hiddens, rngs=rngs)
+        self.compare = Compare(embed_size, num_hiddens, rngs=rngs)
+        self.aggregate = Aggregate(num_hiddens, 3, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, premises, hypotheses, training=False):
-        A = nn.Embed(self.vocab_size, self.embed_size)(premises)
-        B = nn.Embed(self.vocab_size, self.embed_size)(hypotheses)
-        beta, alpha = Attend(self.num_hiddens)(A, B, training=training)
-        V_A, V_B = Compare(self.num_hiddens)(
-            A, B, beta, alpha, training=training)
+    def __call__(self, premises, hypotheses):
+        A = self.embedding(premises)
+        B = self.embedding(hypotheses)
+        beta, alpha = self.attend(A, B)
+        V_A, V_B = self.compare(A, B, beta, alpha)
         # There are 3 possible outputs: entailment, contradiction, and neutral
-        Y_hat = Aggregate(self.num_hiddens, num_outputs=3)(
-            V_A, V_B, training=training)
+        Y_hat = self.aggregate(V_A, V_B)
         return Y_hat
 ```
 
@@ -539,10 +536,24 @@ We begin by reading the dataset.
 
 ### Reading the dataset
 
-We download and read the SNLI dataset using the function defined in :numref:`sec_natural-language-inference-and-dataset`. The batch size and sequence length are set to $256$ and $50$, respectively.
+We download and read the SNLI dataset using the function defined in
+:numref:`sec_natural-language-inference-and-dataset`. Most implementations use
+minibatches of $256$ examples padded or truncated to $50$ tokens. The JAX
+implementation uses minibatches of $512$ and length $32$ to avoid spending most
+of its time on padding. With the tokenization performed by `read_snli`, about
+1.2% of the labeled training premises and 0.02% of the hypotheses exceed 32
+tokens. This substantially reduces computation while introducing little
+additional truncation.
 
 ```{.python .input #natural-language-inference-attention-reading-the-dataset}
+#@tab mxnet,pytorch,tensorflow
 batch_size, num_steps = 256, 50
+train_iter, test_iter, vocab = d2l.load_data_snli(batch_size, num_steps)
+```
+
+```{.python .input #natural-language-inference-attention-reading-the-dataset}
+#@tab jax
+batch_size, num_steps = 512, 32
 train_iter, test_iter, vocab = d2l.load_data_snli(batch_size, num_steps)
 ```
 
@@ -629,54 +640,47 @@ d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```{.python .input #natural-language-inference-attention-training-and-evaluating-the-model-2-2}
 #@tab jax
 lr, num_epochs = 0.001, 4
-# Initialize model parameters
-dummy_premises = jnp.ones((1, 50), dtype=jnp.int32)
-dummy_hypotheses = jnp.ones((1, 50), dtype=jnp.int32)
-rng = jax.random.PRNGKey(0)
-params = net.init(rng, dummy_premises, dummy_hypotheses, training=False)
-# Replace the embedding parameters with pretrained GloVe embeddings
-params = {**params, 'params': {**params['params'],
-    'Embed_0': {'embedding': jnp.array(embeds)}}}
+net.embedding.embedding[...] = jnp.array(embeds)
+optimizer = nnx.Optimizer(net, optax.adam(lr), wrt=nnx.Param)
+train_net = nnx.view(net, deterministic=False)
+eval_net = nnx.view(net, deterministic=True)
 
-optimizer = optax.adam(lr)
-opt_state = optimizer.init(params)
+@nnx.jit
+def train_step(net, optimizer, premises, hypotheses, labels):
+    def loss_fn(model):
+        logits = model(premises, hypotheses)
+        return optax.softmax_cross_entropy_with_integer_labels(
+            logits, labels).mean()
+    loss, grads = nnx.value_and_grad(loss_fn)(net)
+    optimizer.update(net, grads)
+    return loss
 
-def loss_fn(params, premises, hypotheses, labels, rng):
-    logits = net.apply(params, premises, hypotheses, training=True,
-                       rngs={'dropout': rng})
-    return optax.softmax_cross_entropy_with_integer_labels(
-        logits, labels).mean()
-
-@jax.jit
-def train_step(params, opt_state, premises, hypotheses, labels, rng):
-    loss, grads = jax.value_and_grad(loss_fn)(
-        params, premises, hypotheses, labels, rng)
-    updates, opt_state = optimizer.update(grads, opt_state, params)
-    params = optax.apply_updates(params, updates)
-    return params, opt_state, loss
-
-@jax.jit
-def eval_step(params, premises, hypotheses, labels):
-    logits = net.apply(params, premises, hypotheses, training=False)
+@nnx.jit
+def eval_step(net, premises, hypotheses, labels):
+    logits = net(premises, hypotheses)
     return (logits.argmax(axis=-1) == labels).sum()
 
+timer = d2l.Timer()
 for epoch in range(num_epochs):
-    train_loss, n_train = 0.0, 0
+    batch_losses, n_train = [], 0
     for batch in train_iter:
         premises, hypotheses, labels = batch[0], batch[1], batch[2]
-        rng, step_rng = jax.random.split(rng)
-        params, opt_state, loss = train_step(
-            params, opt_state, premises, hypotheses, labels, step_rng)
-        train_loss += float(loss) * len(labels)
+        batch_losses.append(train_step(
+            train_net, optimizer, premises, hypotheses, labels))
         n_train += len(labels)
+    # Synchronize once per epoch, rather than once per minibatch.
+    train_loss = float(jnp.stack(batch_losses).mean())
     # Evaluate on test set
-    n_correct, n_test = 0, 0
+    batch_correct, n_test = [], 0
     for batch in test_iter:
         premises, hypotheses, labels = batch[0], batch[1], batch[2]
-        n_correct += int(eval_step(params, premises, hypotheses, labels))
+        batch_correct.append(eval_step(
+            eval_net, premises, hypotheses, labels))
         n_test += len(labels)
-    print(f'epoch {epoch + 1}, loss {train_loss / n_train:.4f}, '
+    n_correct = int(jnp.stack(batch_correct).sum())
+    print(f'epoch {epoch + 1}, loss {train_loss:.4f}, '
           f'test acc {n_correct / n_test:.4f}')
+print(f'{num_epochs * n_train / timer.stop():.1f} examples/sec')
 ```
 
 ```{.python .input #natural-language-inference-attention-training-and-evaluating-the-model-2-2}
@@ -729,11 +733,11 @@ def predict_snli(net, vocab, premise, hypothesis):
 ```{.python .input #natural-language-inference-attention-using-the-model-1}
 #@tab jax
 #@save
-def predict_snli(net, params, vocab, premise, hypothesis):
+def predict_snli(net, vocab, premise, hypothesis):
     """Predict the logical relationship between the premise and hypothesis."""
     premise = jnp.array(vocab[premise]).reshape((1, -1))
     hypothesis = jnp.array(vocab[hypothesis]).reshape((1, -1))
-    label = jnp.argmax(net.apply(params, premise, hypothesis, training=False),
+    label = jnp.argmax(nnx.view(net, deterministic=True)(premise, hypothesis),
                        axis=1)
     return 'entailment' if label == 0 else 'contradiction' if label == 1 \
             else 'neutral'
@@ -760,7 +764,7 @@ predict_snli(net, vocab, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
 
 ```{.python .input #natural-language-inference-attention-using-the-model-2}
 #@tab jax
-predict_snli(net, params, vocab, ['he', 'is', 'good', '.'],
+predict_snli(net, vocab, ['he', 'is', 'good', '.'],
              ['he', 'is', 'bad', '.'])
 ```
 

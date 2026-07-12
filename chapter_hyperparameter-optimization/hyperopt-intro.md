@@ -87,10 +87,8 @@ from scipy import stats
 ```{.python .input #hyperopt-intro-the-optimization-problem}
 %%tab jax
 from d2l import jax as d2l
-import jax
+from flax import nnx
 from jax import numpy as jnp
-from flax import linen as nn
-import optax
 import numpy as np
 from scipy import stats
 ```
@@ -163,17 +161,19 @@ class HPOTrainer(d2l.Trainer):  #@save
 
 ```{.python .input #hyperopt-intro-the-objective-function-1  n=8}
 %%tab jax
+@nnx.jit  #@save
+def hpo_validation_batch(model, batch):
+    _, batch_accuracy = model.validation_step(batch)
+    num_examples = batch[-1].size
+    return jnp.array([batch_accuracy * num_examples, num_examples])
+
 class HPOTrainer(d2l.Trainer):  #@save
     def validation_error(self):
-        self.model.training = False
-        accuracy = 0
-        val_batch_idx = 0
+        metric = jnp.zeros(2)  # num_correct, num_examples
         for batch in self.val_dataloader:
             batch = self.prepare_batch(batch)
-            accuracy += self.model.accuracy(
-                self.state.params, batch[:-1], batch[-1], self.state)
-            val_batch_idx += 1
-        return 1 - accuracy / val_batch_idx
+            metric += hpo_validation_batch(self.val_model, batch)
+        return 1 - metric[0] / metric[1]
 ```
 
 We optimize validation error with respect to the hyperparameter configuration
@@ -185,7 +185,7 @@ model for `max_epochs` epochs, then compute and return its validation error:
 def hpo_objective_softmax_classification(config, max_epochs=8):
     learning_rate = config["learning_rate"]
     trainer = d2l.HPOTrainer(max_epochs=max_epochs)
-    data = d2l.FashionMNIST(batch_size=16)
+    data = d2l.FashionMNIST(batch_size=256)
     model = d2l.SoftmaxRegression(num_outputs=10, lr=learning_rate)
     trainer.fit(model=model, data=data)
     return d2l.numpy(trainer.validation_error())

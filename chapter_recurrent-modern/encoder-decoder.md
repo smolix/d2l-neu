@@ -60,7 +60,7 @@ import tensorflow as tf
 ```{.python .input #encoder-decoder-the-encoder-decoder-architecture}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 ```
 
 ## Encoder
@@ -109,11 +109,8 @@ class Encoder(tf.keras.layers.Layer):  #@save
 
 ```{.python .input #encoder-decoder-encoder}
 %%tab jax
-class Encoder(nn.Module):  #@save
+class Encoder(nnx.Module):  #@save
     """The base encoder interface for the encoder--decoder architecture."""
-    def setup(self):
-        raise NotImplementedError
-
     # Later there can be additional arguments (e.g., length excluding padding)
     def __call__(self, X, *args):
         raise NotImplementedError
@@ -183,11 +180,8 @@ class Decoder(tf.keras.layers.Layer):  #@save
 
 ```{.python .input #encoder-decoder-decoder}
 %%tab jax
-class Decoder(nn.Module):  #@save
+class Decoder(nnx.Module):  #@save
     """The base decoder interface for the encoder--decoder architecture."""
-    def setup(self):
-        raise NotImplementedError
-
     # Later there can be additional arguments (e.g., length excluding padding)
     def init_state(self, enc_all_outputs, *args):
         raise NotImplementedError
@@ -240,14 +234,16 @@ class EncoderDecoder(d2l.Classifier):  #@save
 %%tab jax
 class EncoderDecoder(d2l.Classifier):  #@save
     """The base class for the encoder--decoder architecture."""
-    encoder: nn.Module
-    decoder: nn.Module
+    def __init__(self, encoder, decoder):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
 
-    def __call__(self, enc_X, dec_X, *args, training=False):
-        enc_all_outputs = self.encoder(enc_X, *args, training=training)
+    def forward(self, enc_X, dec_X, *args):
+        enc_all_outputs = self.encoder(enc_X, *args)
         dec_state = self.decoder.init_state(enc_all_outputs, *args)
         # Return decoder output only
-        return self.decoder(dec_X, dec_state, training=training)[0]
+        return self.decoder(dec_X, dec_state)[0]
 ```
 
 In the next section,

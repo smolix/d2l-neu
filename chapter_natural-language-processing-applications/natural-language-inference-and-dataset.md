@@ -89,8 +89,6 @@ data_dir = d2l.download_extract('SNLI')
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
-import optax
 import numpy as np
 import os
 import re
@@ -252,13 +250,13 @@ class SNLIDataset:
             self.vocab = vocab
         self.premises = self._pad(all_premise_tokens)
         self.hypotheses = self._pad(all_hypothesis_tokens)
-        self.labels = jnp.array(dataset[2])
+        self.labels = np.asarray(dataset[2], dtype=np.int32)
         print('read ' + str(len(self.premises)) + ' examples')
 
     def _pad(self, lines):
-        return jnp.array([d2l.truncate_pad(
+        return np.asarray([d2l.truncate_pad(
             self.vocab[line], self.num_steps, self.vocab['<pad>'])
-                         for line in lines])
+                         for line in lines], dtype=np.int32)
 
     def __getitem__(self, idx):
         return (self.premises[idx], self.hypotheses[idx]), self.labels[idx]

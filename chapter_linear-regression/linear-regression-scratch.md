@@ -58,7 +58,7 @@ import tensorflow as tf
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 import optax
@@ -119,14 +119,13 @@ class LinearRegressionScratch(d2l.Module):  #@save
 %%tab jax
 class LinearRegressionScratch(d2l.Module):  #@save
     """The linear regression model implemented from scratch."""
-    num_inputs: int
-    lr: float
-    sigma: float = 0.01
-
-    def setup(self):
-        self.w = self.param('w', nn.initializers.normal(self.sigma),
-                            (self.num_inputs, 1))
-        self.b = self.param('b', nn.initializers.zeros, (1))
+    def __init__(self, num_inputs, lr, sigma=0.01, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.w = nnx.Param(
+            rngs.params.normal((num_inputs, 1)) * sigma)
+        self.b = nnx.Param(jnp.zeros(1))
 ```
 
 Next we must define our model,
@@ -175,19 +174,10 @@ def loss(self, y_hat, y):
     return d2l.reduce_mean(l)
 ```
 
-:begin_tab:`jax`
-JAX/Flax models are stateless: parameters are not stored on
-the module. The loss takes the parameter pytree `params` plus
-the model state explicitly and runs the forward pass via
-`state.apply_fn`, returning the loss for `jax.grad` to
-differentiate.
-:end_tab:
-
 ```{.python .input #linear-regression-scratch-defining-the-loss-function  n=10}
 %%tab jax
 @d2l.add_to_class(LinearRegressionScratch)  #@save
-def loss(self, params, X, y, state):
-    y_hat = state.apply_fn({'params': params}, *X)  # X unpacked from a tuple
+def loss(self, y_hat, y):
     l = (y_hat - d2l.reshape(y, y_hat.shape)) ** 2 / 2
     return d2l.reduce_mean(l)
 ```
@@ -327,9 +317,7 @@ class SGD(d2l.HyperParameters):  #@save
 
     def update(self, updates, state, params=None):
         del params
-        # When state.apply_gradients method is called to update flax's
-        # train_state object, it internally calls optax.apply_updates method
-        # adding the params to the update equation defined below.
+        # NNX's Optimizer applies these updates to its model's parameters.
         updates = jax.tree_util.tree_map(lambda g: -self.lr * g, updates)
         return updates, state
 
@@ -571,51 +559,38 @@ def fit_epoch(self):
 
 ```{.python .input #linear-regression-scratch-training-2  n=19}
 %%tab jax
-# Fuse the optimizer + state.replace updates into a single JIT'd call so
-# JAX dispatches one compiled kernel per batch instead of many Python-level
-# optax ops.
-@jax.jit  #@save
-def _trainer_update(state, grads):
-    return state.apply_gradients(grads=grads).replace(
-        dropout_rng=jax.random.split(state.dropout_rng)[0])
+@nnx.jit  #@save
+def _trainer_train_step(model, optimizer, batch):
+    loss, grads = nnx.value_and_grad(
+        lambda m: m.training_step(batch))(model)
+    optimizer.update(model, grads)
+    return loss
 
 
-@jax.jit  #@save
-def _trainer_update_with_bn(state, grads, batch_stats):
-    return state.apply_gradients(grads=grads).replace(
-        dropout_rng=jax.random.split(state.dropout_rng)[0],
-        batch_stats=batch_stats)
+@nnx.jit  #@save
+def _trainer_validation_step(model, batch):
+    return model.validation_step(batch)
 
 
 @d2l.add_to_class(d2l.Trainer)  #@save
 def fit_epoch(self):
-    self.model.training = True
-    if self.state.batch_stats:
-        # Mutable states will be used later (e.g., for batch norm)
-        for batch in self.train_dataloader:
-            (_, mutated_vars), grads = self.model.training_step(
-                self.state.params, self.prepare_batch(batch), self.state)
-            if self.gradient_clip_val > 0:
-                grads = self.clip_gradients(self.gradient_clip_val, grads)
-            self.state = _trainer_update_with_bn(
-                self.state, grads, mutated_vars['batch_stats'])
-            self.train_batch_idx += 1
-    else:
-        for batch in self.train_dataloader:
-            _, grads = self.model.training_step(
-                self.state.params, self.prepare_batch(batch), self.state)
-            if self.gradient_clip_val > 0:
-                grads = self.clip_gradients(self.gradient_clip_val, grads)
-            self.state = _trainer_update(self.state, grads)
-            self.train_batch_idx += 1
+    for batch in self.train_dataloader:
+        loss = _trainer_train_step(
+            self.train_model, self.optim, self.prepare_batch(batch))
+        self.model.plot('loss', loss, train=True)
+        self.train_batch_idx += 1
 
     if self.val_dataloader is None:
         return
-    self.model.training = False
     for batch in self.val_dataloader:
-        self.model.validation_step(self.state.params,
-                                   self.prepare_batch(batch),
-                                   self.state)
+        metrics = _trainer_validation_step(
+            self.val_model, self.prepare_batch(batch))
+        if isinstance(metrics, tuple):
+            loss, accuracy = metrics
+            self.model.plot('acc', accuracy, train=False)
+        else:
+            loss = metrics
+        self.model.plot('loss', loss, train=False)
         self.val_batch_idx += 1
 ```
 
@@ -700,9 +675,9 @@ print(f'error in estimating b: {data.b - model.b}')
 
 ```{.python .input #linear-regression-scratch-training-4  n=23}
 %%tab jax
-params = trainer.state.params
-print(f"error in estimating w: {data.w - d2l.reshape(params['w'], data.w.shape)}")
-print(f"error in estimating b: {data.b - params['b']}")
+print(f"error in estimating w: "
+      f"{data.w - d2l.reshape(model.w[...], data.w.shape)}")
+print(f"error in estimating b: {data.b - model.b[...]}")
 ```
 
 We should not take the ability to exactly recover 
@@ -928,15 +903,18 @@ The gradient is the **error-weighted input**: a large residual $\hat{y}-y$ gives
 :::
 :::
 
-::: {.slide title="A stateless loss" only="jax"}
+::: {.slide title="A transformable loss" only="jax"}
 [Loss · JAX]{.kicker}
 
-JAX/Flax modules **hold no parameters** of their own. The loss takes the parameter pytree explicitly and runs the forward pass through `state.apply_fn`, so `jax.grad` has something to differentiate:
+NNX modules own their parameters, while `nnx.value_and_grad` exposes the
+trainable part of that object graph to JAX. The loss can therefore call the
+model directly without manually threading a parameter pytree:
 
 @linear-regression-scratch-defining-the-loss-function@jax
 
 ::: {.d2l-note .rule}
-"Parameters in, loss out" is what makes the function pure, and therefore `jit`- and `grad`-friendly.
+NNX separates graph structure from array state at transformation boundaries,
+preserving the pure computation required by `jit` and `grad`.
 :::
 :::
 

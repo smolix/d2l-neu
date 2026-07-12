@@ -47,7 +47,7 @@ import os
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 import numpy as np
 import json
@@ -241,67 +241,49 @@ def load_pretrained_model(pretrained_model, num_hiddens, ffn_num_hiddens,
         len(vocab), num_hiddens, ffn_num_hiddens=ffn_num_hiddens,
         num_heads=num_heads, num_blks=num_blks, dropout=dropout,
         max_len=max_len)
-    # Initialize model parameters with dummy inputs
-    dummy_tokens = jnp.ones((2, max_len), dtype=jnp.int32)
-    dummy_segments = jnp.zeros((2, max_len), dtype=jnp.int32)
-    dummy_valid_lens = jnp.array([max_len, max_len], dtype=jnp.float32)
-    key = jax.random.PRNGKey(0)
-    params = bert.init(key, dummy_tokens, dummy_segments, dummy_valid_lens,
-                       training=False)
-    # Load pretrained PyTorch BERT parameters (as numpy) and convert to JAX
+    # Load pretrained PyTorch BERT parameters (as NumPy) into the NNX graph.
     pt_state_dict = _load_torch_state_dict(
         os.path.join(data_dir, 'pretrained.params'))
-    params = _convert_torch_to_jax_bert(params, pt_state_dict)
-    return bert, vocab, params
+    _load_torch_into_nnx_bert(bert, pt_state_dict)
+    return bert, vocab
 
-def _convert_torch_to_jax_bert(params, pt_state_dict):
-    """Convert PyTorch BERT state dict (numpy arrays) to JAX/Flax params."""
-    import copy
-    new_params = copy.deepcopy(dict(params))
+def _load_torch_into_nnx_bert(bert, pt_state_dict):
+    """Load a PyTorch BERT state dict into an NNX model."""
     p = pt_state_dict
-    jax_p = new_params['params']
     # Encoder: token, segment, position embeddings
-    enc = jax_p['encoder']
-    enc['token_embedding']['embedding'] = jnp.array(
+    enc = bert.encoder
+    enc.token_embedding.embedding[...] = jnp.array(
         p['encoder.token_embedding.weight'])
-    enc['segment_embedding']['embedding'] = jnp.array(
+    enc.segment_embedding.embedding[...] = jnp.array(
         p['encoder.segment_embedding.weight'])
-    enc['pos_embedding'] = jnp.array(
-        p['encoder.pos_embedding'])
+    enc.pos_embedding[...] = jnp.array(p['encoder.pos_embedding'])
     # Transformer encoder blocks
-    for i in range(2):
+    for i, blk in enumerate(enc.blks):
         prefix = f'encoder.blks.{i}'
-        blk = enc[f'blks_{i}']
         # Multi-head attention
-        attn = blk['attention']
+        attn = blk.attention
         for name in ['W_q', 'W_k', 'W_v', 'W_o']:
-            attn[name]['kernel'] = jnp.array(
+            linear = getattr(attn, name)
+            linear.kernel[...] = jnp.array(
                 p[f'{prefix}.attention.{name}.weight'].T)
-            attn[name]['bias'] = jnp.array(
+            linear.bias[...] = jnp.array(
                 p[f'{prefix}.attention.{name}.bias'])
         # Addnorm layers (LayerNorm)
         for ln_name in ['addnorm1', 'addnorm2']:
-            blk[ln_name]['LayerNorm_0']['scale'] = jnp.array(
-                p[f'{prefix}.{ln_name}.ln.weight'])
-            blk[ln_name]['LayerNorm_0']['bias'] = jnp.array(
-                p[f'{prefix}.{ln_name}.ln.bias'])
+            ln = getattr(blk, ln_name).ln
+            ln.scale[...] = jnp.array(p[f'{prefix}.{ln_name}.ln.weight'])
+            ln.bias[...] = jnp.array(p[f'{prefix}.{ln_name}.ln.bias'])
         # FFN
-        ffn = blk['ffn']
-        ffn['dense1']['kernel'] = jnp.array(
+        ffn = blk.ffn
+        ffn.dense1.kernel[...] = jnp.array(
             p[f'{prefix}.ffn.dense1.weight'].T)
-        ffn['dense1']['bias'] = jnp.array(
-            p[f'{prefix}.ffn.dense1.bias'])
-        ffn['dense2']['kernel'] = jnp.array(
+        ffn.dense1.bias[...] = jnp.array(p[f'{prefix}.ffn.dense1.bias'])
+        ffn.dense2.kernel[...] = jnp.array(
             p[f'{prefix}.ffn.dense2.weight'].T)
-        ffn['dense2']['bias'] = jnp.array(
-            p[f'{prefix}.ffn.dense2.bias'])
+        ffn.dense2.bias[...] = jnp.array(p[f'{prefix}.ffn.dense2.bias'])
     # Hidden (tanh) layer
-    jax_p['hidden']['kernel'] = jnp.array(
-        p['hidden.0.weight'].T)
-    jax_p['hidden']['bias'] = jnp.array(
-        p['hidden.0.bias'])
-    new_params['params'] = jax_p
-    return new_params
+    bert.hidden.kernel[...] = jnp.array(p['hidden.0.weight'].T)
+    bert.hidden.bias[...] = jnp.array(p['hidden.0.bias'])
 ```
 
 ```{.python .input #natural-language-inference-bert-loading-pretrained-bert-2}
@@ -370,7 +352,7 @@ bert, vocab = load_pretrained_model(
 ```{.python .input #natural-language-inference-bert-loading-pretrained-bert-3}
 #@tab jax
 devices = d2l.try_all_gpus()
-bert, vocab, bert_params = load_pretrained_model(
+bert, vocab = load_pretrained_model(
     'bert.small', num_hiddens=256, ffn_num_hiddens=512, num_heads=4,
     num_blks=2, dropout=0.1, max_len=512, devices=devices)
 ```
@@ -516,7 +498,7 @@ class SNLIBERTDataset:
             *[d2l.tokenize([s.lower() for s in sentences])
               for sentences in dataset[:2]])]
         
-        self.labels = jnp.array(dataset[2])
+        self.labels = np.asarray(dataset[2], dtype=np.int32)
         self.vocab = vocab
         self.max_len = max_len
         (self.all_token_ids, self.all_segments,
@@ -524,19 +506,19 @@ class SNLIBERTDataset:
         print('read ' + str(len(self.all_token_ids)) + ' examples')
 
     def _preprocess(self, all_premise_hypothesis_tokens):
-        # JAX arrays cannot be passed across process boundaries, so we use a
-        # plain list comprehension instead of multiprocessing.Pool.
-        out = [self._mp_worker(tokens)
+        # This Python token/list processing is inexpensive enough here that a
+        # list comprehension avoids multiprocessing setup and serialization.
+        out = [self._preprocess_pair(tokens)
                for tokens in all_premise_hypothesis_tokens]
         all_token_ids = [
             token_ids for token_ids, segments, valid_len in out]
         all_segments = [segments for token_ids, segments, valid_len in out]
         valid_lens = [valid_len for token_ids, segments, valid_len in out]
-        return (jnp.array(all_token_ids, dtype=jnp.int32),
-                jnp.array(all_segments, dtype=jnp.int32), 
-                jnp.array(valid_lens))
+        return (np.asarray(all_token_ids, dtype=np.int32),
+                np.asarray(all_segments, dtype=np.int32),
+                np.asarray(valid_lens, dtype=np.float32))
 
-    def _mp_worker(self, premise_hypothesis_tokens):
+    def _preprocess_pair(self, premise_hypothesis_tokens):
         p_tokens, h_tokens = premise_hypothesis_tokens
         self._truncate_pair_of_tokens(p_tokens, h_tokens)
         tokens, segments = d2l.get_tokens_and_segments(p_tokens, h_tokens)
@@ -732,15 +714,15 @@ class BERTClassifier(nn.Module):
 
 ```{.python .input #natural-language-inference-bert-fine-tuning-bert-1}
 #@tab jax
-class BERTClassifier(nn.Module):
-    bert: d2l.BERTModel
+class BERTClassifier(nnx.Module):
+    def __init__(self, bert, rngs=None):
+        self.bert = bert
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.output = nnx.Linear(bert.hidden.out_features, 3, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, tokens_X, segments_X, valid_lens_x, training=False):
-        encoded_X = self.bert.encoder(
-            tokens_X, segments_X, valid_lens_x, training=training)
-        return nn.Dense(3)(
-            jnp.tanh(self.bert.hidden(encoded_X[:, 0, :])))
+    def __call__(self, tokens_X, segments_X, valid_lens_x):
+        encoded_X = self.bert.encoder(tokens_X, segments_X, valid_lens_x)
+        return self.output(jnp.tanh(self.bert.hidden(encoded_X[:, 0, :])))
 ```
 
 ```{.python .input #natural-language-inference-bert-fine-tuning-bert-1}
@@ -780,18 +762,6 @@ net = BERTClassifier(bert)
 ```{.python .input #natural-language-inference-bert-fine-tuning-bert-2}
 #@tab jax
 net = BERTClassifier(bert)
-# Initialize the classifier with pretrained BERT parameters
-dummy_tokens = jnp.ones((2, max_len), dtype=jnp.int32)
-dummy_segments = jnp.zeros((2, max_len), dtype=jnp.int32)
-dummy_valid_lens = jnp.array([max_len, max_len], dtype=jnp.float32)
-rng = jax.random.PRNGKey(0)
-params = net.init(rng, dummy_tokens, dummy_segments, dummy_valid_lens,
-                  training=False)
-# Copy pretrained BERT encoder and hidden layer parameters
-import copy
-new_params = copy.deepcopy(dict(params))
-new_params['params']['bert'] = bert_params['params']
-params = new_params
 ```
 
 ```{.python .input #natural-language-inference-bert-fine-tuning-bert-2}
@@ -846,50 +816,42 @@ d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```{.python .input #natural-language-inference-bert-fine-tuning-bert-3}
 #@tab jax
 lr, num_epochs = 1e-4, 5
-optimizer = optax.adam(lr)
-opt_state = optimizer.init(params)
+optimizer = nnx.Optimizer(net, optax.adam(lr), wrt=nnx.Param)
 
-def loss_fn(params, tokens_X, segments_X, valid_lens_x, labels, rng):
-    logits = net.apply(params, tokens_X, segments_X, valid_lens_x,
-                       training=True, rngs={'dropout': rng})
-    return optax.softmax_cross_entropy_with_integer_labels(
-        logits, labels).mean()
+@nnx.jit
+def train_step(net, optimizer, tokens_X, segments_X, valid_lens_x, labels):
+    def loss_fn(model):
+        logits = model(tokens_X, segments_X, valid_lens_x)
+        return optax.softmax_cross_entropy_with_integer_labels(
+            logits, labels).mean()
+    loss, grads = nnx.value_and_grad(loss_fn)(net)
+    optimizer.update(net, grads)
+    return loss
 
-@jax.jit
-def train_step(params, opt_state, tokens_X, segments_X, valid_lens_x,
-               labels, rng):
-    loss, grads = jax.value_and_grad(loss_fn)(
-        params, tokens_X, segments_X, valid_lens_x, labels, rng)
-    updates, opt_state = optimizer.update(grads, opt_state, params)
-    params = optax.apply_updates(params, updates)
-    return params, opt_state, loss
-
-@jax.jit
-def eval_step(params, tokens_X, segments_X, valid_lens_x, labels):
-    logits = net.apply(params, tokens_X, segments_X, valid_lens_x,
-                       training=False)
+@nnx.jit
+def eval_step(net, tokens_X, segments_X, valid_lens_x, labels):
+    logits = nnx.view(net, deterministic=True)(
+        tokens_X, segments_X, valid_lens_x)
     return (logits.argmax(axis=-1) == labels).sum()
 
-rng = jax.random.PRNGKey(0)
 for epoch in range(num_epochs):
-    train_loss, n_train = 0.0, 0
+    train_loss, n_train = jnp.array(0.0), 0
     for batch in train_iter:
         tokens_X, segments_X, valid_lens_x, labels = (
             batch[0], batch[1], batch[2], batch[3])
-        rng, step_rng = jax.random.split(rng)
-        params, opt_state, loss = train_step(
-            params, opt_state, tokens_X, segments_X, valid_lens_x,
-            labels, step_rng)
-        train_loss += float(loss) * len(labels)
+        loss = train_step(net, optimizer, tokens_X, segments_X,
+                          valid_lens_x, labels)
+        train_loss += loss * len(labels)
         n_train += len(labels)
     # Evaluate on test set
-    n_correct, n_test = 0, 0
+    n_correct, n_test = jnp.array(0), 0
     for batch in test_iter:
         tokens_X, segments_X, valid_lens_x, labels = (
             batch[0], batch[1], batch[2], batch[3])
-        n_correct += int(eval_step(
-            params, tokens_X, segments_X, valid_lens_x, labels))
+        n_correct += eval_step(
+            net, tokens_X, segments_X, valid_lens_x, labels)
         n_test += len(labels)
+    train_loss, n_correct = float(train_loss), int(n_correct)
     print(f'epoch {epoch + 1}, loss {train_loss / n_train:.4f}, '
           f'test acc {n_correct / n_test:.4f}')
 ```

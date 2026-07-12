@@ -42,8 +42,6 @@ import torch
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
-import optax
 import numpy as np
 import os
 import random

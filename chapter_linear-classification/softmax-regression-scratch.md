@@ -37,10 +37,9 @@ import tensorflow as tf
 ```{.python .input #softmax-regression-scratch-softmax-regression-implementation-from-scratch}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
-from functools import partial
 ```
 
 ## The Softmax
@@ -218,15 +217,13 @@ class SoftmaxRegressionScratch(d2l.Classifier):
 ```{.python .input #softmax-regression-scratch-the-model-1}
 %%tab jax
 class SoftmaxRegressionScratch(d2l.Classifier):
-    num_inputs: int
-    num_outputs: int
-    lr: float
-    sigma: float = 0.01
-
-    def setup(self):
-        self.W = self.param('W', nn.initializers.normal(self.sigma),
-                            (self.num_inputs, self.num_outputs))
-        self.b = self.param('b', nn.initializers.zeros, self.num_outputs)
+    def __init__(self, num_inputs, num_outputs, lr, sigma=0.01, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.W = nnx.Param(
+            rngs.params.normal((num_inputs, num_outputs)) * sigma)
+        self.b = nnx.Param(jnp.zeros(num_outputs))
 ```
 
 The code below defines how the network
@@ -346,17 +343,8 @@ def loss(self, y_hat, y):
 ```{.python .input #softmax-regression-scratch-the-cross-entropy-loss-3}
 %%tab jax
 @d2l.add_to_class(SoftmaxRegressionScratch)
-@partial(jax.jit, static_argnums=(0))
-def loss(self, params, X, y, state):
-    def cross_entropy(y_hat, y):
-        # Tiny clip to keep log finite when softmax outputs underflow to 0.
-        p = jnp.clip(jnp.take_along_axis(y_hat, jnp.expand_dims(y, -1),
-                                         axis=1).squeeze(-1), min=1e-12)
-        return -d2l.reduce_mean(d2l.log(p))
-    y_hat = state.apply_fn({'params': params}, *X)
-    # The returned empty dictionary is a placeholder for auxiliary data,
-    # which will be used later (e.g., for batch norm)
-    return cross_entropy(y_hat, y), {}
+def loss(self, y_hat, y):
+    return cross_entropy(y_hat, y)
 ```
 
 ## Training
@@ -411,7 +399,7 @@ preds.shape
 ```{.python .input #softmax-regression-scratch-prediction-1}
 %%tab jax
 X, y = next(iter(data.val_dataloader()))
-preds = d2l.argmax(model.apply({'params': trainer.state.params}, X), axis=1)
+preds = d2l.argmax(model(X), axis=1)
 preds.shape
 ```
 
@@ -454,8 +442,7 @@ print(f'Test accuracy: {float(tf.reduce_mean(tf.concat(correct, 0))):.3f}')
 %%tab jax
 correct = []
 for X_i, y_i in data.val_dataloader():
-    correct.append(model.accuracy(trainer.state.params, (X_i,), y_i,
-                                  trainer.state, False))
+    correct.append(model.accuracy(model(X_i), y_i, averaged=False))
 print(f'Test accuracy: {float(jnp.concatenate(correct).mean()):.3f}')
 ```
 
@@ -524,8 +511,7 @@ d2l.show_heatmaps(tf.reshape(C, (1, 1, 10, 10)), xlabel='true class',
 %%tab jax
 C = jnp.zeros((10, 10))
 for X_i, y_i in data.val_dataloader():
-    preds_i = d2l.argmax(
-        model.apply({'params': trainer.state.params}, X_i), axis=1)
+    preds_i = d2l.argmax(model(X_i), axis=1)
     C += jnp.bincount(10 * preds_i + y_i, length=100).reshape(10, 10)
 C /= C.sum(axis=0, keepdims=True)              # column j: true class j
 d2l.show_heatmaps(C.reshape(1, 1, 10, 10), xlabel='true class',

@@ -56,7 +56,7 @@ from torch import nn
 ```{.python .input #pooling}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 ```
@@ -247,7 +247,7 @@ pool2d(X)
 ```{.python .input #pooling-padding-and-stride-2}
 %%tab jax
 # Pooling has no model parameters, hence it needs no initialization
-nn.max_pool(X, window_shape=(3, 3), strides=(3, 3))
+nnx.max_pool(X, window_shape=(3, 3), strides=(3, 3))
 ```
 
 Needless to say, the stride and padding can be manually specified to override framework defaults if required.
@@ -276,7 +276,7 @@ pool2d(X_padded)
 ```{.python .input #pooling-padding-and-stride-3}
 %%tab jax
 X_padded = jnp.pad(X, ((0, 0), (1, 0), (1, 0), (0, 0)), mode='constant')
-nn.max_pool(X_padded, window_shape=(3, 3), padding='VALID', strides=(2, 2))
+nnx.max_pool(X_padded, window_shape=(3, 3), padding='VALID', strides=(2, 2))
 ```
 
 Of course, we can specify an arbitrary rectangular pooling window with arbitrary height and width respectively, as the example below shows.
@@ -307,7 +307,7 @@ pool2d(X_padded)
 %%tab jax
 
 X_padded = jnp.pad(X, ((0, 0), (0, 0), (1, 1), (0, 0)), mode='constant')
-nn.max_pool(X_padded, window_shape=(2, 3), strides=(2, 3), padding='VALID')
+nnx.max_pool(X_padded, window_shape=(2, 3), strides=(2, 3), padding='VALID')
 ```
 
 ## Multiple Channels
@@ -366,7 +366,7 @@ pool2d(X_padded)
 ```{.python .input #pooling-multiple-channels-2}
 %%tab jax
 X_padded = jnp.pad(X, ((0, 0), (1, 0), (1, 0), (0, 0)), mode='constant')
-nn.max_pool(X_padded, window_shape=(3, 3), padding='VALID', strides=(2, 2))
+nnx.max_pool(X_padded, window_shape=(3, 3), padding='VALID', strides=(2, 2))
 ```
 
 :begin_tab:`tensorflow`

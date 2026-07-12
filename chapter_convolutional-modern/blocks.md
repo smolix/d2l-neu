@@ -33,8 +33,7 @@ from d2l import tensorflow as d2l
 ```{.python .input #blocks-imports}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
-import jax
+from flax import nnx
 from jax import numpy as jnp
 ```
 
@@ -88,13 +87,16 @@ def vgg_block(num_convs, num_channels):
 
 ```{.python .input #vgg-vgg-blocks}
 %%tab jax
-def vgg_block(num_convs, out_channels):
+def vgg_block(num_convs, in_channels, out_channels, rngs):
     layers = []
     for _ in range(num_convs):
-        layers.append(nn.Conv(out_channels, kernel_size=(3, 3), padding=(1, 1)))
-        layers.append(nn.relu)
-    layers.append(lambda x: nn.max_pool(x, window_shape=(2, 2), strides=(2, 2)))
-    return nn.Sequential(layers)
+        layers.append(nnx.Conv(in_channels, out_channels,
+                               kernel_size=(3, 3), padding=(1, 1), rngs=rngs))
+        layers.append(nnx.relu)
+        in_channels = out_channels
+    layers.append(lambda x: nnx.max_pool(
+        x, window_shape=(2, 2), strides=(2, 2)))
+    return nnx.Sequential(*layers)
 ```
 
 ### The VGG Network
@@ -161,24 +163,30 @@ class VGG(d2l.Classifier):
 ```{.python .input #vgg-vgg-network-1  n=5}
 %%tab jax
 class VGG(d2l.Classifier):
-    arch: list
-    lr: float = 0.1
-    num_classes: int = 10
-    training: bool = True
-
-    def setup(self):
+    def __init__(self, arch, lr=0.1, num_classes=10,
+                 input_shape=(224, 224, 1), rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key())
+                if rngs is None else rngs)
         conv_blks = []
-        for (num_convs, out_channels) in self.arch:
-            conv_blks.append(vgg_block(num_convs, out_channels))
+        in_channels = input_shape[-1]
+        for num_convs, out_channels in arch:
+            conv_blks.append(vgg_block(
+                num_convs, in_channels, out_channels, rngs))
+            in_channels = out_channels
+        height, width = input_shape[:2]
+        flat_features = (height // 2 ** len(arch)) * (
+            width // 2 ** len(arch)) * in_channels
 
-        self.net = nn.Sequential([
+        self.net = nnx.Sequential(
             *conv_blks,
             lambda x: x.reshape((x.shape[0], -1)),  # flatten
-            nn.Dense(4096), nn.relu,
-            nn.Dropout(0.5, deterministic=not self.training),
-            nn.Dense(4096), nn.relu,
-            nn.Dropout(0.5, deterministic=not self.training),
-            nn.Dense(self.num_classes)])
+            nnx.Linear(flat_features, 4096, rngs=rngs), nnx.relu,
+            nnx.Dropout(0.5, rngs=rngs),
+            nnx.Linear(4096, 4096, rngs=rngs), nnx.relu,
+            nnx.Dropout(0.5, rngs=rngs),
+            nnx.Linear(4096, num_classes, rngs=rngs))
 ```
 
 The original VGG network had five convolutional blocks, among which the first two have one convolutional layer each and the latter three contain two convolutional layers each. The first block has 64 output channels and each subsequent block doubles the number of output channels, until that number reaches 512. Since this network uses eight convolutional layers and three fully connected layers, it is often called VGG-11.
@@ -198,7 +206,7 @@ VGG(arch=((1, 64), (1, 128), (2, 256), (2, 512), (2, 512))).layer_summary(
 ```{.python .input #vgg-vgg-network-2}
 %%tab jax
 VGG(arch=((1, 64), (1, 128), (2, 256), (2, 512), (2, 512)),
-    training=False).layer_summary((1, 224, 224, 1))
+    ).layer_summary((1, 224, 224, 1))
 ```
 
 As you can see, we halve height and width at each block, finally reaching a height and width of 7 before flattening the representations for processing by the fully connected part of the network. :citet:`Simonyan.Zisserman.2014` described several other variants of VGG. In fact, it has become the norm to propose *families* of networks with different speed--accuracy trade-offs when introducing a new architecture.
@@ -294,12 +302,14 @@ def nin_block(out_channels, kernel_size, strides, padding):
 
 ```{.python .input #nin-nin-blocks}
 %%tab jax
-def nin_block(out_channels, kernel_size, strides, padding):
-    return nn.Sequential([
-        nn.Conv(out_channels, kernel_size, strides, padding),
-        nn.relu,
-        nn.Conv(out_channels, kernel_size=(1, 1)), nn.relu,
-        nn.Conv(out_channels, kernel_size=(1, 1)), nn.relu])
+def nin_block(in_channels, out_channels, kernel_size, strides, padding, rngs):
+    return nnx.Sequential(
+        nnx.Conv(in_channels, out_channels, kernel_size, strides=strides,
+                 padding=padding, rngs=rngs), nnx.relu,
+        nnx.Conv(out_channels, out_channels, kernel_size=(1, 1), rngs=rngs),
+        nnx.relu,
+        nnx.Conv(out_channels, out_channels, kernel_size=(1, 1), rngs=rngs),
+        nnx.relu)
 ```
 
 ### The NiN Model
@@ -371,23 +381,22 @@ class NiN(d2l.Classifier):
 ```{.python .input #nin-nin-model-1}
 %%tab jax
 class NiN(d2l.Classifier):
-    lr: float = 0.1
-    num_classes: int = 10
-    training: bool = True
-
-    def setup(self):
-        self.net = nn.Sequential([
-            nin_block(96, kernel_size=(11, 11), strides=(4, 4), padding=(0, 0)),
-            lambda x: nn.max_pool(x, (3, 3), strides=(2, 2)),
-            nin_block(256, kernel_size=(5, 5), strides=(1, 1), padding=(2, 2)),
-            lambda x: nn.max_pool(x, (3, 3), strides=(2, 2)),
-            nin_block(384, kernel_size=(3, 3), strides=(1, 1), padding=(1, 1)),
-            lambda x: nn.max_pool(x, (3, 3), strides=(2, 2)),
-            nn.Dropout(0.5, deterministic=not self.training),
-            nin_block(self.num_classes, kernel_size=(3, 3), strides=(1, 1), padding=(1, 1)),
+    def __init__(self, lr=0.1, num_classes=10, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key())
+                if rngs is None else rngs)
+        self.net = nnx.Sequential(
+            nin_block(1, 96, (11, 11), (4, 4), (0, 0), rngs),
+            lambda x: nnx.max_pool(x, (3, 3), strides=(2, 2)),
+            nin_block(96, 256, (5, 5), (1, 1), (2, 2), rngs),
+            lambda x: nnx.max_pool(x, (3, 3), strides=(2, 2)),
+            nin_block(256, 384, (3, 3), (1, 1), (1, 1), rngs),
+            lambda x: nnx.max_pool(x, (3, 3), strides=(2, 2)),
+            nnx.Dropout(0.5, rngs=rngs),
+            nin_block(384, num_classes, (3, 3), (1, 1), (1, 1), rngs),
             lambda x: x.mean(axis=(1, 2)),  # global avg pooling over H, W (NHWC)
-            lambda x: x.reshape((x.shape[0], -1))  # flatten
-        ])
+            lambda x: x.reshape((x.shape[0], -1)))  # flatten
 ```
 
 We create a data example to see the output shape of each block.
@@ -404,7 +413,7 @@ NiN().layer_summary((1, 224, 224, 1))
 
 ```{.python .input #nin-nin-model-2}
 %%tab jax
-NiN(training=False).layer_summary((1, 224, 224, 1))
+NiN().layer_summary((1, 224, 224, 1))
 ```
 
 ### Training
@@ -550,32 +559,28 @@ class Inception(tf.keras.Model):
 
 ```{.python .input #googlenet-inception-blocks}
 %%tab jax
-class Inception(nn.Module):
-    # `c1`--`c4` are the number of output channels for each branch
-    c1: int
-    c2: tuple
-    c3: tuple
-    c4: int
-
-    def setup(self):
+class Inception(nnx.Module):
+    def __init__(self, in_channels, c1, c2, c3, c4, rngs):
         # Branch 1
-        self.b1_1 = nn.Conv(self.c1, kernel_size=(1, 1))
+        self.b1_1 = nnx.Conv(in_channels, c1, kernel_size=(1, 1), rngs=rngs)
         # Branch 2
-        self.b2_1 = nn.Conv(self.c2[0], kernel_size=(1, 1))
-        self.b2_2 = nn.Conv(self.c2[1], kernel_size=(3, 3), padding='same')
+        self.b2_1 = nnx.Conv(in_channels, c2[0], kernel_size=(1, 1), rngs=rngs)
+        self.b2_2 = nnx.Conv(c2[0], c2[1], kernel_size=(3, 3),
+                             padding='same', rngs=rngs)
         # Branch 3
-        self.b3_1 = nn.Conv(self.c3[0], kernel_size=(1, 1))
-        self.b3_2 = nn.Conv(self.c3[1], kernel_size=(5, 5), padding='same')
+        self.b3_1 = nnx.Conv(in_channels, c3[0], kernel_size=(1, 1), rngs=rngs)
+        self.b3_2 = nnx.Conv(c3[0], c3[1], kernel_size=(5, 5),
+                             padding='same', rngs=rngs)
         # Branch 4
-        self.b4_1 = lambda x: nn.max_pool(x, window_shape=(3, 3),
-                                          strides=(1, 1), padding='same')
-        self.b4_2 = nn.Conv(self.c4, kernel_size=(1, 1))
+        self.b4_2 = nnx.Conv(in_channels, c4, kernel_size=(1, 1), rngs=rngs)
 
     def __call__(self, x):
-        b1 = nn.relu(self.b1_1(x))
-        b2 = nn.relu(self.b2_2(nn.relu(self.b2_1(x))))
-        b3 = nn.relu(self.b3_2(nn.relu(self.b3_1(x))))
-        b4 = nn.relu(self.b4_2(self.b4_1(x)))
+        b1 = nnx.relu(self.b1_1(x))
+        b2 = nnx.relu(self.b2_2(nnx.relu(self.b2_1(x))))
+        b3 = nnx.relu(self.b3_2(nnx.relu(self.b3_1(x))))
+        pooled = nnx.max_pool(x, window_shape=(3, 3),
+                              strides=(1, 1), padding='same')
+        b4 = nnx.relu(self.b4_2(pooled))
         return jnp.concatenate((b1, b2, b3, b4), axis=-1)
 ```
 
@@ -669,23 +674,30 @@ class GoogleNet(d2l.Classifier):
 ```{.python .input #blocks-stem-body-and-head-2}
 %%tab jax
 class GoogleNet(d2l.Classifier):
-    lr: float = 0.1
-    num_classes: int = 10
-
-    def setup(self):
-        pool = lambda x: nn.max_pool(x, window_shape=(3, 3), strides=(2, 2),
-                                     padding='same')
-        stem = nn.Sequential([
-            nn.Conv(64, kernel_size=(7, 7), strides=(2, 2), padding='same'),
-            nn.relu, pool,
-            nn.Conv(64, kernel_size=(1, 1)), nn.relu,
-            nn.Conv(192, kernel_size=(3, 3), padding='same'), nn.relu, pool])
-        body = [nn.Sequential([Inception(*c) for c in group])
-                for group in arch]
-        head = nn.Sequential([lambda x: x.mean(axis=(1, 2)),
-                              nn.Dense(self.num_classes)])
-        self.net = nn.Sequential([stem, body[0], pool, body[1], pool,
-                                  body[2], head])
+    def __init__(self, lr=0.1, num_classes=10, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        pool = lambda x: nnx.max_pool(
+            x, window_shape=(3, 3), strides=(2, 2), padding='same')
+        stem = nnx.Sequential(
+            nnx.Conv(1, 64, kernel_size=(7, 7), strides=(2, 2),
+                     padding='same', rngs=rngs), nnx.relu, pool,
+            nnx.Conv(64, 64, kernel_size=(1, 1), rngs=rngs), nnx.relu,
+            nnx.Conv(64, 192, kernel_size=(3, 3), padding='same', rngs=rngs),
+            nnx.relu, pool)
+        body, in_channels = [], 192
+        for group in arch:
+            blocks = []
+            for c1, c2, c3, c4 in group:
+                blocks.append(Inception(
+                    in_channels, c1, c2, c3, c4, rngs))
+                in_channels = c1 + c2[1] + c3[1] + c4
+            body.append(nnx.Sequential(*blocks))
+        head = nnx.Sequential(lambda x: x.mean(axis=(1, 2)),
+                              nnx.Linear(in_channels, num_classes, rngs=rngs))
+        self.net = nnx.Sequential(stem, body[0], pool, body[1], pool,
+                                  body[2], head)
 ```
 
 We check the shapes on a $96 \times 96$ input, a resolution at which the network still works and the table stays compact. Resolution falls at the stem and at each pooling step between groups; the channel count grows after every group of Inception blocks, from 192 to 480 to 832 to 1024.

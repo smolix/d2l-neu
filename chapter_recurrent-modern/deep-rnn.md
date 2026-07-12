@@ -119,7 +119,7 @@ import tensorflow as tf
 ```{.python .input #deep-rnn-deep-recurrent-neural-networks}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 ```
@@ -155,15 +155,13 @@ class StackedRNNScratch(d2l.Module):
 ```{.python .input #deep-rnn-implementation-from-scratch-1}
 %%tab jax
 class StackedRNNScratch(d2l.Module):
-    num_inputs: int
-    num_hiddens: int
-    num_layers: int
-    sigma: float = 0.01
-
-    def setup(self):
-        self.rnns = [d2l.RNNScratch(self.num_inputs if i==0 else self.num_hiddens,
-                                    self.num_hiddens, self.sigma)
-                     for i in range(self.num_layers)]
+    def __init__(self, num_inputs, num_hiddens, num_layers, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+        self.rnns = nnx.List([
+            d2l.RNNScratch(num_inputs if i == 0 else num_hiddens,
+                           num_hiddens, sigma, rngs=nnx.Rngs(i))
+            for i in range(num_layers)])
 ```
 
 The multilayer forward computation
@@ -293,35 +291,28 @@ class GRU(d2l.RNN):  #@save
 %%tab jax
 class GRU(d2l.RNN):  #@save
     """The multilayer GRU model."""
-    num_hiddens: int
-    num_layers: int
-    dropout: float = 0
+    def __init__(self, num_inputs, num_hiddens, num_layers, dropout=0,
+                 rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1, carry=2) if rngs is None else rngs
+        self.num_hiddens, self.num_layers = num_hiddens, num_layers
+        self.rnns = nnx.List([
+            nnx.RNN(nnx.GRUCell(
+                num_inputs if i == 0 else num_hiddens, num_hiddens,
+                rngs=rngs), time_major=True, return_carry=True, rngs=rngs)
+            for i in range(num_layers)])
+        self.dropouts = nnx.List([
+            nnx.Dropout(dropout, rngs=rngs)
+            for _ in range(num_layers - 1)])
 
-    @nn.compact
-    def __call__(self, X, state=None, training=False):
-        outputs = X
+    def __call__(self, X, state=None):
+        states = [None] * self.num_layers if state is None else state
         new_state = []
-        if state is None:
-            batch_size = X.shape[1]
-            # One distinct carry per layer (a list comprehension, not `[c] * n`,
-            # which would alias the same object across all layers).
-            state = [nn.GRUCell(features=self.num_hiddens).initialize_carry(
-                jax.random.PRNGKey(0), (batch_size, self.num_hiddens))
-                for _ in range(self.num_layers)]
-
-        GRU = nn.scan(nn.GRUCell, variable_broadcast="params",
-                      in_axes=0, out_axes=0, split_rngs={"params": False})
-
-        # Introduce a dropout layer after every GRU layer except last
-        for i in range(self.num_layers - 1):
-            layer_i_state, X = GRU(features=self.num_hiddens)(state[i], outputs)
-            new_state.append(layer_i_state)
-            X = nn.Dropout(self.dropout, deterministic=not training)(X)
-
-        # Final GRU layer without dropout
-        out_state, X = GRU(features=self.num_hiddens)(state[-1], X)
-        new_state.append(out_state)
-        return X, jnp.array(new_state)
+        for i, rnn in enumerate(self.rnns):
+            H, X = rnn(X, initial_carry=states[i])
+            new_state.append(H)
+            if i < self.num_layers - 1:
+                X = self.dropouts[i](X)
+        return X, new_state
 ```
 
 The architectural decisions such as choosing hyperparameters 
@@ -358,7 +349,7 @@ trainer.fit(model, data)
 
 ```{.python .input #deep-rnn-concise-implementation-2}
 %%tab jax
-gru = GRU(num_hiddens=32, num_layers=2)
+gru = GRU(num_inputs=len(data.vocab), num_hiddens=32, num_layers=2)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=2)
 trainer.fit(model, data)
 ```
@@ -375,7 +366,7 @@ model.predict('it has', 20, data.vocab)
 
 ```{.python .input #deep-rnn-concise-implementation-3}
 %%tab jax
-model.predict('it has', 20, data.vocab, trainer.state.params)
+model.predict('it has', 20, data.vocab)
 ```
 
 ## Summary

@@ -56,7 +56,7 @@ import tensorflow as tf
 ```{.python .input #bahdanau-attention-the-bahdanau-attention-mechanism}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 from jax import numpy as jnp
 import jax
 ```
@@ -281,18 +281,18 @@ class Seq2SeqAttentionDecoder(AttentionDecoder):
 
 ```{.python .input #bahdanau-attention-defining-the-decoder-with-attention-2}
 %%tab jax
-class Seq2SeqAttentionDecoder(nn.Module):
-    vocab_size: int
-    embed_size: int
-    num_hiddens: int
-    num_layers: int
-    dropout: float = 0
-
-    def setup(self):
-        self.attention = d2l.AdditiveAttention(self.num_hiddens, self.dropout)
-        self.embedding = nn.Embed(self.vocab_size, self.embed_size)
-        self.dense = nn.Dense(self.vocab_size)
-        self.rnn = d2l.GRU(self.num_hiddens, self.num_layers, dropout=self.dropout)
+class Seq2SeqAttentionDecoder(nnx.Module):
+    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
+                 dropout=0, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1, carry=2) if rngs is None else rngs
+        self.attention = d2l.AdditiveAttention(
+            key_size=num_hiddens, query_size=num_hiddens,
+            num_hiddens=num_hiddens, dropout=dropout, rngs=rngs)
+        self.embedding = nnx.Embed(vocab_size, embed_size, rngs=rngs)
+        self.dense = nnx.Linear(num_hiddens, vocab_size, rngs=rngs)
+        self.rnn = d2l.GRU(embed_size + num_hiddens, num_hiddens,
+                           num_layers, dropout=dropout, rngs=rngs)
+        self._attention_weights = nnx.Intermediate(jnp.empty((0,)))
 
     def init_state(self, enc_outputs, enc_valid_lens, *args):
         # Shape of outputs: (num_steps, batch_size, num_hiddens).
@@ -301,8 +301,7 @@ class Seq2SeqAttentionDecoder(nn.Module):
         # Attention Weights are returned as part of state; init with None
         return (outputs.transpose(1, 0, 2), hidden_state, enc_valid_lens)
 
-    @nn.compact
-    def __call__(self, X, state, training=False):
+    def __call__(self, X, state):
         # Shape of enc_outputs: (batch_size, num_steps, num_hiddens).
         # Shape of hidden_state: (num_layers, batch_size, num_hiddens)
         # Ignore Attention value in state
@@ -315,24 +314,25 @@ class Seq2SeqAttentionDecoder(nn.Module):
             query = jnp.expand_dims(hidden_state[-1], axis=1)
             # Shape of context: (batch_size, 1, num_hiddens)
             context, attention_w = self.attention(query, enc_outputs,
-                                                  enc_outputs, enc_valid_lens,
-                                                  training=training)
+                                                  enc_outputs, enc_valid_lens)
             # Concatenate on the feature dimension
             x = jnp.concatenate((context, jnp.expand_dims(x, axis=1)), axis=-1)
             # Reshape x as (1, batch_size, embed_size + num_hiddens)
-            out, hidden_state = self.rnn(x.transpose(1, 0, 2), hidden_state,
-                                         training=training)
+            out, hidden_state = self.rnn(x.transpose(1, 0, 2), hidden_state)
             outputs.append(out)
             attention_weights.append(attention_w)
 
-        # Flax sow API is used to capture intermediate variables
-        self.sow('intermediates', 'dec_attention_weights', attention_weights)
+        self._attention_weights.set_value(jnp.stack(attention_weights))
 
         # After fully connected layer transformation, shape of outputs:
         # (num_steps, batch_size, vocab_size)
         outputs = self.dense(jnp.concatenate(outputs, axis=0))
         return outputs.transpose(1, 0, 2), [enc_outputs, hidden_state,
                                             enc_valid_lens]
+
+    @property
+    def attention_weights(self):
+        return self._attention_weights.get_value()
 ```
 
 In the following, we test the implemented
@@ -377,11 +377,8 @@ encoder = d2l.Seq2SeqEncoder(vocab_size, embed_size, num_hiddens, num_layers)
 decoder = Seq2SeqAttentionDecoder(vocab_size, embed_size, num_hiddens,
                                   num_layers)
 X = jnp.zeros((batch_size, num_steps), dtype=jnp.int32)
-state = decoder.init_state(encoder.init_with_output(d2l.get_key(),
-                                                    X, training=False)[0],
-                           None)
-(output, state), _ = decoder.init_with_output(d2l.get_key(), X,
-                                              state, training=False)
+state = decoder.init_state(encoder(X), None)
+output, state = decoder(X, state)
 d2l.check_shape(output, (batch_size, num_steps, vocab_size))
 d2l.check_shape(state[0], (batch_size, num_steps, num_hiddens))
 d2l.check_shape(state[1][0], (batch_size, num_hiddens))
@@ -506,8 +503,7 @@ for en, fr, p in zip(engs, fras, preds):
 %%tab jax
 engs = ['i lost .', 'i\'m calm .', 'i\'m home .']
 fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
-preds, _ = model.predict_step(
-    trainer.state.params, data.build(engs, fras), data.num_steps)
+preds, _ = model.predict_step(data.build(engs, fras), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
     translation = []
     for token in data.tgt_vocab.to_tokens(p):
@@ -563,8 +559,7 @@ attention_weights = d2l.reshape(attention_weights, (1, 1, -1, data.num_steps))
 ```{.python .input #bahdanau-attention-training-3}
 %%tab jax
 _, (dec_attention_weights, _) = model.predict_step(
-    trainer.state.params, data.build([engs[-1]], [fras[-1]]),
-    data.num_steps, True)
+    data.build([engs[-1]], [fras[-1]]), data.num_steps, True)
 attention_weights = d2l.concat(
     [step[0][0][0] for step in dec_attention_weights], 0)
 attention_weights = d2l.reshape(attention_weights, (1, 1, -1, data.num_steps))

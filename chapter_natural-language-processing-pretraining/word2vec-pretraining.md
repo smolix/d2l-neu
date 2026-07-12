@@ -44,7 +44,7 @@ data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import math
 import numpy as np
 import optax
@@ -103,10 +103,9 @@ print(f'Parameter embedding_weight ({embed.weight.shape}, '
 
 ```{.python .input #word2vec-pretraining-embedding-layer-1}
 #@tab jax
-embed = nn.Embed(num_embeddings=20, features=4)
-params = embed.init(jax.random.PRNGKey(0), jnp.ones((1,), dtype=jnp.int32))
-print(f'Parameter embedding ({params["params"]["embedding"].shape}, '
-      f'dtype={params["params"]["embedding"].dtype})')
+embed = nnx.Embed(num_embeddings=20, features=4, rngs=nnx.Rngs(0))
+print(f'Parameter embedding ({embed.embedding.shape}, '
+      f'dtype={embed.embedding.dtype})')
 ```
 
 ```{.python .input #word2vec-pretraining-embedding-layer-1}
@@ -141,7 +140,7 @@ embed(x)
 ```{.python .input #word2vec-pretraining-embedding-layer-2}
 #@tab jax
 x = jnp.array([[1, 2, 3], [4, 5, 6]])
-embed.apply(params, x)
+embed(x)
 ```
 
 ```{.python .input #word2vec-pretraining-embedding-layer-2}
@@ -192,10 +191,9 @@ def skip_gram(center, contexts_and_negatives, embed_v, embed_u):
 
 ```{.python .input #word2vec-pretraining-defining-the-forward-propagation-1}
 #@tab jax
-def skip_gram(center, contexts_and_negatives, embed_v, embed_u,
-              params_v, params_u):
-    v = embed_v.apply(params_v, center)
-    u = embed_u.apply(params_u, contexts_and_negatives)
+def skip_gram(center, contexts_and_negatives, embed_v, embed_u):
+    v = embed_v(center)
+    u = embed_u(contexts_and_negatives)
     pred = jnp.matmul(v, jnp.transpose(u, (0, 2, 1)))
     return pred
 ```
@@ -225,8 +223,7 @@ skip_gram(torch.ones((2, 1), dtype=torch.long),
 ```{.python .input #word2vec-pretraining-defining-the-forward-propagation-2}
 #@tab jax
 skip_gram(jnp.ones((2, 1), dtype=jnp.int32),
-          jnp.ones((2, 4), dtype=jnp.int32), embed, embed,
-          params, params).shape
+          jnp.ones((2, 4), dtype=jnp.int32), embed, embed).shape
 ```
 
 ```{.python .input #word2vec-pretraining-defining-the-forward-propagation-2}
@@ -364,8 +361,9 @@ net = nn.Sequential(nn.Embedding(num_embeddings=len(vocab),
 ```{.python .input #word2vec-pretraining-initializing-model-parameters}
 #@tab jax
 embed_size = 100
-embed_v = nn.Embed(num_embeddings=len(vocab), features=embed_size)
-embed_u = nn.Embed(num_embeddings=len(vocab), features=embed_size)
+net = nnx.List([
+    nnx.Embed(len(vocab), embed_size, rngs=nnx.Rngs(0)),
+    nnx.Embed(len(vocab), embed_size, rngs=nnx.Rngs(1))])
 ```
 
 ```{.python .input #word2vec-pretraining-initializing-model-parameters}
@@ -445,33 +443,22 @@ def train(net, data_iter, lr, num_epochs, device=d2l.try_gpu()):
 
 ```{.python .input #word2vec-pretraining-defining-the-training-loop-1}
 #@tab jax
-def train(embed_v, embed_u, data_iter, lr, num_epochs):
-    key = jax.random.PRNGKey(42)
-    key, key_v, key_u = jax.random.split(key, 3)
-    # Initialize parameters
-    dummy = jnp.ones((1,), dtype=jnp.int32)
-    params_v = embed_v.init(key_v, dummy)
-    params_u = embed_u.init(key_u, dummy)
-    all_params = {'v': params_v, 'u': params_u}
-    optimizer = optax.adam(lr)
-    opt_state = optimizer.init(all_params)
+def train(net, data_iter, lr, num_epochs):
+    optimizer = nnx.Optimizer(net, optax.adam(lr), wrt=nnx.Param)
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[1, num_epochs])
 
-    @jax.jit
-    def train_step(all_params, opt_state, center, context_negative,
-                   mask, label):
-        def compute_loss(all_params):
-            pred = skip_gram(center, context_negative, embed_v, embed_u,
-                             all_params['v'], all_params['u'])
+    @nnx.jit
+    def train_step(net, optimizer, center, context_negative, mask, label):
+        def compute_loss(model):
+            pred = skip_gram(center, context_negative, model[0], model[1])
             l = (loss(pred.reshape(label.shape), label, mask)
                  / mask.sum(axis=1) * mask.shape[1])
             return l.sum(), l.size
-        (loss_val, l_size), grads = jax.value_and_grad(
-            compute_loss, has_aux=True)(all_params)
-        updates, opt_state = optimizer.update(grads, opt_state, all_params)
-        all_params = optax.apply_updates(all_params, updates)
-        return all_params, opt_state, loss_val, l_size
+        (loss_val, l_size), grads = nnx.value_and_grad(
+            compute_loss, has_aux=True)(net)
+        optimizer.update(net, grads)
+        return loss_val, l_size
 
     for epoch in range(num_epochs):
         timer, num_batches = d2l.Timer(), len(data_iter)
@@ -479,8 +466,8 @@ def train(embed_v, embed_u, data_iter, lr, num_epochs):
         loss_sum, count = jnp.array(0.0), jnp.array(0, dtype=jnp.int32)
         for i, batch in enumerate(data_iter):
             center, context_negative, mask, label = batch
-            all_params, opt_state, loss_val, l_size = train_step(
-                all_params, opt_state, center, context_negative, mask, label)
+            loss_val, l_size = train_step(
+                net, optimizer, center, context_negative, mask, label)
             loss_sum = loss_sum + loss_val
             count = count + l_size
             if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
@@ -490,7 +477,7 @@ def train(embed_v, embed_u, data_iter, lr, num_epochs):
     total_count = int(count)
     print(f'loss {total_loss / total_count:.3f}, '
           f'{total_count / timer.stop():.1f} tokens/sec')
-    return all_params
+    return net
 ```
 
 ```{.python .input #word2vec-pretraining-defining-the-training-loop-1}
@@ -536,7 +523,7 @@ train(net, data_iter, lr, num_epochs)
 ```{.python .input #word2vec-pretraining-defining-the-training-loop-2}
 #@tab jax
 lr, num_epochs = 0.002, 5
-all_params = train(embed_v, embed_u, data_iter, lr, num_epochs)
+net = train(net, data_iter, lr, num_epochs)
 ```
 
 ```{.python .input #word2vec-pretraining-defining-the-training-loop-2}
@@ -588,8 +575,8 @@ get_similar_tokens('chip', 3, net[0])
 
 ```{.python .input #word2vec-pretraining-applying-word-embeddings}
 #@tab jax
-def get_similar_tokens(query_token, k, embed_params):
-    W = embed_params['params']['embedding']
+def get_similar_tokens(query_token, k, embed):
+    W = embed.embedding[...]
     x = W[vocab[query_token]]
     # Compute the cosine similarity. Add 1e-9 for numerical stability
     cos = jnp.dot(W, x) / jnp.sqrt(jnp.sum(W * W, axis=1) *
@@ -598,7 +585,7 @@ def get_similar_tokens(query_token, k, embed_params):
     for i in topk[1:]:  # Remove the input words
         print(f'cosine sim={float(cos[i]):.3f}: {vocab.to_tokens(int(i))}')
 
-get_similar_tokens('chip', 3, all_params['v'])
+get_similar_tokens('chip', 3, net[0])
 ```
 
 ```{.python .input #word2vec-pretraining-applying-word-embeddings}

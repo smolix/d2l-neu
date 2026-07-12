@@ -104,9 +104,7 @@ import tensorflow as tf
 %%tab jax
 import collections
 from d2l import jax as d2l
-from flax import linen as nn
-from functools import partial
-import jax
+from flax import nnx
 from jax import numpy as jnp
 import math
 import optax
@@ -297,21 +295,18 @@ class Seq2SeqEncoder(d2l.Encoder):  #@save
 %%tab jax
 class Seq2SeqEncoder(d2l.Encoder):  #@save
     """The RNN encoder for sequence-to-sequence learning."""
-    vocab_size: int
-    embed_size: int
-    num_hiddens: int
-    num_layers: int
-    dropout: float = 0
+    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
+                 dropout=0, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1, carry=2) if rngs is None else rngs
+        self.embedding = nnx.Embed(vocab_size, embed_size, rngs=rngs)
+        self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout,
+                           rngs=rngs)
 
-    def setup(self):
-        self.embedding = nn.Embed(self.vocab_size, self.embed_size)
-        self.rnn = d2l.GRU(self.num_hiddens, self.num_layers, self.dropout)
-
-    def __call__(self, X, *args, training=False):
+    def __call__(self, X, *args):
         # X shape: (batch_size, num_steps)
         embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
         # embs shape: (num_steps, batch_size, embed_size)
-        outputs, state = self.rnn(embs, training=training)
+        outputs, state = self.rnn(embs)
         # outputs shape: (num_steps, batch_size, num_hiddens)
         # state shape: (num_layers, batch_size, num_hiddens)
         return outputs, state
@@ -355,7 +350,7 @@ vocab_size, embed_size, num_hiddens, num_layers = 10, 8, 16, 2
 batch_size, num_steps = 4, 9
 encoder = Seq2SeqEncoder(vocab_size, embed_size, num_hiddens, num_layers)
 X = d2l.zeros((batch_size, num_steps))
-(enc_outputs, enc_state), _ = encoder.init_with_output(d2l.get_key(), X)
+enc_outputs, enc_state = encoder(X)
 
 d2l.check_shape(enc_outputs, (num_steps, batch_size, num_hiddens))
 ```
@@ -388,7 +383,8 @@ d2l.check_shape(enc_state[0], (batch_size, num_hiddens))
 
 ```{.python .input #seq2seq-encoder-4}
 %%tab jax
-d2l.check_shape(enc_state, (num_layers, batch_size, num_hiddens))
+d2l.check_len(enc_state, num_layers)
+d2l.check_shape(enc_state[0], (batch_size, num_hiddens))
 ```
 
 ```{.python .input #seq2seq-encoder-4}
@@ -549,21 +545,18 @@ class Seq2SeqDecoder(d2l.Decoder):
 %%tab jax
 class Seq2SeqDecoder(d2l.Decoder):
     """The RNN decoder for sequence to sequence learning."""
-    vocab_size: int
-    embed_size: int
-    num_hiddens: int
-    num_layers: int
-    dropout: float = 0
-
-    def setup(self):
-        self.embedding = nn.Embed(self.vocab_size, self.embed_size)
-        self.rnn = d2l.GRU(self.num_hiddens, self.num_layers, self.dropout)
-        self.dense = nn.Dense(self.vocab_size)
+    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
+                 dropout=0, rngs=None):
+        rngs = nnx.Rngs(params=2, dropout=3, carry=4) if rngs is None else rngs
+        self.embedding = nnx.Embed(vocab_size, embed_size, rngs=rngs)
+        self.rnn = d2l.GRU(embed_size + num_hiddens, num_hiddens,
+                           num_layers, dropout, rngs=rngs)
+        self.dense = nnx.Linear(num_hiddens, vocab_size, rngs=rngs)
 
     def init_state(self, enc_all_outputs, *args):
         return enc_all_outputs
 
-    def __call__(self, X, state, training=False):
+    def __call__(self, X, state):
         # X shape: (batch_size, num_steps)
         # embs shape: (num_steps, batch_size, embed_size)
         embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
@@ -574,8 +567,7 @@ class Seq2SeqDecoder(d2l.Decoder):
         context = jnp.tile(context, (embs.shape[0], 1, 1))
         # Concat at the feature dimension
         embs_and_context = d2l.concat((embs, context), -1)
-        outputs, hidden_state = self.rnn(embs_and_context, hidden_state,
-                                         training=training)
+        outputs, hidden_state = self.rnn(embs_and_context, hidden_state)
         outputs = d2l.swapaxes(self.dense(outputs), 0, 1)
         # outputs shape: (batch_size, num_steps, vocab_size)
         # hidden_state shape: (num_layers, batch_size, num_hiddens)
@@ -593,7 +585,8 @@ decoder = Seq2SeqDecoder(vocab_size, embed_size, num_hiddens, num_layers)
 state = decoder.init_state(encoder(X))
 dec_outputs, state = decoder(X, state)
 d2l.check_shape(dec_outputs, (batch_size, num_steps, vocab_size))
-d2l.check_shape(state[1], (num_layers, batch_size, num_hiddens))
+d2l.check_len(state[1], num_layers)
+d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```
 
 ```{.python .input #seq2seq-decoder-2}
@@ -609,13 +602,13 @@ d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```{.python .input #seq2seq-decoder-2}
 %%tab jax
 decoder = Seq2SeqDecoder(vocab_size, embed_size, num_hiddens, num_layers)
-state = decoder.init_state(encoder.init_with_output(d2l.get_key(), X)[0])
-(dec_outputs, state), _ = decoder.init_with_output(d2l.get_key(), X,
-                                                   state)
+state = decoder.init_state(encoder(X))
+dec_outputs, state = decoder(X, state)
 
 
 d2l.check_shape(dec_outputs, (batch_size, num_steps, vocab_size))
-d2l.check_shape(state[1], (num_layers, batch_size, num_hiddens))
+d2l.check_len(state[1], num_layers)
+d2l.check_shape(state[1][0], (batch_size, num_hiddens))
 ```
 
 ```{.python .input #seq2seq-decoder-2}
@@ -696,34 +689,12 @@ class Seq2Seq(d2l.EncoderDecoder):  #@save
 %%tab jax
 class Seq2Seq(d2l.EncoderDecoder):  #@save
     """The RNN encoder--decoder for sequence to sequence learning."""
-    encoder: nn.Module
-    decoder: nn.Module
-    tgt_pad: int
-    lr: float
+    def __init__(self, encoder, decoder, tgt_pad, lr):
+        super().__init__(encoder, decoder)
+        self.tgt_pad, self.lr = tgt_pad, lr
 
-    @partial(jax.jit, static_argnums=(0, 5))
-    def loss(self, params, X, Y, state, averaged=False):
-        Y_hat = state.apply_fn({'params': params}, *X, training=True,
-                               rngs={'dropout': state.dropout_rng})
-        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
-        Y = d2l.reshape(Y, (-1,))
-        fn = optax.softmax_cross_entropy_with_integer_labels
-        l = fn(Y_hat, Y)
-        mask = d2l.astype(Y != self.tgt_pad, d2l.float32)
-        return d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask), {}
-
-    def validation_step(self, params, batch, state):
-        # Evaluate with dropout disabled (training=False); training=True path
-        # is used by self.loss during fit.
-        Y_hat = state.apply_fn({'params': params}, *batch[:-1],
-                               training=False)
-        Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
-        Y = d2l.reshape(batch[-1], (-1,))
-        fn = optax.softmax_cross_entropy_with_integer_labels
-        l = fn(Y_hat, Y)
-        mask = d2l.astype(Y != self.tgt_pad, d2l.float32)
-        l = d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask)
-        self.plot('loss', l, train=False)
+    def validation_step(self, batch):
+        return self.loss(self(*batch[:-1]), batch[-1])
 
     def configure_optimizers(self):
         # Adam optimizer is used here
@@ -764,16 +735,13 @@ def loss(self, Y_hat, Y):
 ```{.python .input #seq2seq-loss-function-with-masking}
 %%tab jax
 @d2l.add_to_class(Seq2Seq)
-@partial(jax.jit, static_argnums=(0, 5))
-def loss(self, params, X, Y, state, averaged=False):
-    Y_hat = state.apply_fn({'params': params}, *X, training=True,
-                           rngs={'dropout': state.dropout_rng})
+def loss(self, Y_hat, Y, averaged=False):
     Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
     Y = d2l.reshape(Y, (-1,))
     fn = optax.softmax_cross_entropy_with_integer_labels
     l = fn(Y_hat, Y)
     mask = d2l.astype(d2l.reshape(Y, -1) != self.tgt_pad, d2l.float32)
-    return d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask), {}
+    return d2l.reduce_sum(l * mask) / d2l.reduce_sum(mask)
 ```
 
 ## Training
@@ -924,33 +892,23 @@ def predict_step(self, batch, device, num_steps,
 ```{.python .input #seq2seq-prediction}
 %%tab jax
 @d2l.add_to_class(d2l.EncoderDecoder)  #@save
-def predict_step(self, params, batch, num_steps,
+def predict_step(self, batch, num_steps,
                  save_attention_weights=False):
+    model = nnx.view(self, deterministic=True, use_running_average=True,
+                     raise_if_not_found=False)
     src, tgt, src_valid_len, _ = batch
-    enc_all_outputs, inter_enc_vars = self.encoder.apply(
-        {'params': params['encoder']}, src, src_valid_len, training=False,
-        mutable='intermediates')
-    # Save encoder attention weights if inter_enc_vars containing encoder
-    # attention weights is not empty. (to be covered later)
-    enc_attention_weights = []
-    if bool(inter_enc_vars) and save_attention_weights:
-        # Encoder Attention Weights saved in the intermediates collection
-        enc_attention_weights = inter_enc_vars[
-            'intermediates']['enc_attention_weights'][0]
+    enc_all_outputs = model.encoder(src, src_valid_len)
+    enc_attention_weights = (getattr(model.encoder, 'attention_weights', [])
+                             if save_attention_weights else [])
 
-    dec_state = self.decoder.init_state(enc_all_outputs, src_valid_len)
+    dec_state = model.decoder.init_state(enc_all_outputs, src_valid_len)
     outputs, attention_weights = [d2l.expand_dims(tgt[:,0], 1), ], []
     for _ in range(num_steps):
-        (Y, dec_state), inter_dec_vars = self.decoder.apply(
-            {'params': params['decoder']}, outputs[-1], dec_state,
-            training=False, mutable='intermediates')
+        Y, dec_state = model.decoder(outputs[-1], dec_state)
         outputs.append(d2l.argmax(Y, 2))
         # Save attention weights (to be covered later)
         if save_attention_weights:
-            # Decoder Attention Weights saved in the intermediates collection
-            dec_attention_weights = inter_dec_vars[
-                'intermediates']['dec_attention_weights'][0]
-            attention_weights.append(dec_attention_weights)
+            attention_weights.append(model.decoder.attention_weights)
     return d2l.concat(outputs[1:], 1), (attention_weights,
                                         enc_attention_weights)
 ```
@@ -1070,8 +1028,7 @@ for en, fr, p in zip(engs, fras, preds):
 %%tab jax
 engs = ['i lost .', 'i\'m calm .', 'i\'m home .']
 fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
-preds, _ = model.predict_step(trainer.state.params, data.build(engs, fras),
-                              data.num_steps)
+preds, _ = model.predict_step(data.build(engs, fras), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
     translation = []
     for token in data.tgt_vocab.to_tokens(p):

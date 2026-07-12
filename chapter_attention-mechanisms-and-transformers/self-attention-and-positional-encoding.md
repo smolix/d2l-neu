@@ -53,7 +53,7 @@ import tensorflow as tf
 ```{.python .input #self-attention-and-positional-encoding}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 from jax import numpy as jnp
 import jax
 ```
@@ -126,8 +126,8 @@ d2l.check_shape(attention(X, X, X, valid_lens, training=False),
 %%tab jax
 batch_size, num_queries, valid_lens = 2, 4, d2l.tensor([3, 2])
 X = d2l.ones((batch_size, num_queries, num_hiddens))
-d2l.check_shape(attention.init_with_output(d2l.get_key(), X, X, X, valid_lens,
-                                           training=False)[0][0],
+d2l.check_shape(nnx.view(attention, deterministic=True)(
+                    X, X, X, valid_lens)[0],
                 (batch_size, num_queries, num_hiddens))
 ```
 
@@ -321,29 +321,25 @@ class PositionalEncoding(tf.keras.layers.Layer):  #@save
 
 ```{.python .input #self-attention-and-positional-encoding-positional-encoding-1}
 %%tab jax
-class PositionalEncoding(nn.Module):  #@save
+class PositionalEncoding(nnx.Module):  #@save
     """Positional encoding."""
-    num_hiddens: int
-    dropout: float
-    max_len: int = 1000
-
-    def setup(self):
+    def __init__(self, num_hiddens, dropout, max_len=1000, rngs=None):
+        rngs = nnx.Rngs(dropout=0) if rngs is None else rngs
         # Create a long enough P
-        self.P = d2l.zeros((1, self.max_len, self.num_hiddens))
-        X = d2l.arange(self.max_len, dtype=jnp.float32).reshape(
+        P = d2l.zeros((1, max_len, num_hiddens))
+        X = d2l.arange(max_len, dtype=jnp.float32).reshape(
             -1, 1) / jnp.power(10000, jnp.arange(
-            0, self.num_hiddens, 2, dtype=jnp.float32) / self.num_hiddens)
-        self.P = self.P.at[:, :, 0::2].set(jnp.sin(X))
-        self.P = self.P.at[:, :, 1::2].set(jnp.cos(X[:, :self.num_hiddens // 2]))
+            0, num_hiddens, 2, dtype=jnp.float32) / num_hiddens)
+        P = P.at[:, :, 0::2].set(jnp.sin(X))
+        P = P.at[:, :, 1::2].set(jnp.cos(X[:, :num_hiddens // 2]))
+        self.P = nnx.Cache(P)
+        self.dropout = nnx.Dropout(dropout, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, X, training=False, offset=0):
-        # Flax sow API is used to capture intermediate variables
-        self.sow('intermediates', 'P', self.P)
+    def __call__(self, X, offset=0):
         # `offset` lets autoregressive decoders advance the encoding position
         # past tokens already emitted, instead of always slicing from 0.
         X = X + self.P[:, offset:offset + X.shape[1], :]
-        return nn.Dropout(self.dropout)(X, deterministic=not training)
+        return self.dropout(X)
 ```
 
 In the positional embedding matrix $\mathbf{P}$,
@@ -395,10 +391,8 @@ d2l.plot(np.arange(num_steps), P[0, :, 6:10].T, xlabel='Row (position)',
 %%tab jax
 encoding_dim, num_steps = 32, 60
 pos_encoding = PositionalEncoding(encoding_dim, 0)
-params = pos_encoding.init(d2l.get_key(), d2l.zeros((1, num_steps, encoding_dim)))
-X, inter_vars = pos_encoding.apply(params, d2l.zeros((1, num_steps, encoding_dim)),
-                                   mutable='intermediates')
-P = inter_vars['intermediates']['P'][0]  # retrieve intermediate value P
+X = pos_encoding(d2l.zeros((1, num_steps, encoding_dim)))
+P = pos_encoding.P
 P = P[:, :X.shape[1], :]
 d2l.plot(d2l.arange(num_steps), P[0, :, 6:10].T, xlabel='Row (position)',
          figsize=(6, 2.5), legend=["Col %d" % d for d in range(6, 10)])

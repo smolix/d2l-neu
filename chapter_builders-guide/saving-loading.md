@@ -44,8 +44,7 @@ import struct
 from dataclasses import asdict, dataclass
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
-from flax.training import train_state
+from flax import nnx
 import optax
 import orbax.checkpoint as ocp
 from safetensors.flax import load_file, save_file
@@ -87,7 +86,7 @@ lists and dicts that hold them.
 :end_tab:
 
 :begin_tab:`jax`
-The state of a network is a tree of named arrays, the params pytree of
+The state of a network is a tree of typed, named variables introduced in
 :numref:`sec_parameters`. Before we save a whole model, the warm-up is that
 `jnp.save` and `jnp.load` work on any array, and, through NumPy's pickle
 fallback, on the dicts that hold them.
@@ -143,10 +142,9 @@ are the tensors, buffers included. Here is the tree for a small MLP.
 :end_tab:
 
 :begin_tab:`jax`
-A model's params is one such structure, built for you by `init`: a nested
-dictionary whose leaves sit at paths through the module tree (`hidden.kernel`,
-`output.bias`; flax calls a weight matrix a `kernel`). Here is the tree for a
-small MLP.
+A model's parameter state is one such structure. Its paths follow the module
+graph (`hidden.kernel`, `output.bias`; Flax calls a weight matrix a `kernel`).
+Here is the tree for a small MLP.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -184,19 +182,20 @@ Y = net(X)
 
 ```{.python .input #saving-loading-state-not-code-2}
 %%tab jax
-class MLP(nn.Module):
-    def setup(self):
-        self.hidden = nn.Dense(256)
-        self.output = nn.Dense(10)
+class MLP(nnx.Module):
+    def __init__(self, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.hidden = nnx.Linear(20, 256, rngs=rngs)
+        self.output = nnx.Linear(256, 10, rngs=rngs)
 
     def __call__(self, x):
-        return self.output(nn.relu(self.hidden(x)))
+        return self.output(nnx.relu(self.hidden(x)))
 
 net = MLP()
 X = jax.random.normal(d2l.get_key(), (2, 20))
-Y, variables = net.init_with_output(d2l.get_key(), X)
-params = variables['params']
-jax.tree_util.tree_map(lambda t: tuple(t.shape), params)
+Y = net(X)
+params = nnx.state(net, nnx.Param)
+[(path, tuple(value.shape)) for path, value in params.flat_state()]
 ```
 
 ```{.python .input #saving-loading-state-not-code-2}
@@ -345,7 +344,7 @@ Save and reload the MLP's state through it and confirm the round trip is exact.
 
 :begin_tab:`jax`
 One mismatch to bridge first: safetensors stores a flat mapping from names to
-tensors, while flax parameters form a nested pytree. Two small helpers convert
+tensors, while NNX state forms a nested pytree. Two small helpers convert
 between the two, joining each leaf's path with dots on the way out and
 splitting it again on the way back.
 :end_tab:
@@ -381,8 +380,14 @@ torch.equal(clone(X), Y)
 ```{.python .input #saving-loading-safetensors-the-interchange-format-3}
 %%tab jax
 def flatten(tree):
-    leaves = jax.tree_util.tree_flatten_with_path(tree)[0]
-    return {'.'.join(p.key for p in path): v for path, v in leaves}
+    if hasattr(tree, 'flat_state'):
+        leaves = tree.flat_state()
+    else:
+        leaves = jax.tree_util.tree_flatten_with_path(tree)[0]
+        leaves = [(tuple(getattr(k, 'key', getattr(k, 'idx', k))
+                         for k in path), value)
+                  for path, value in leaves]
+    return {'.'.join(map(str, path)): value for path, value in leaves}
 
 def unflatten(flat):
     tree = {}
@@ -396,9 +401,13 @@ def unflatten(flat):
 
 save_file(flatten(params), 'mlp-jax.safetensors')
 restored = unflatten(load_file('mlp-jax.safetensors'))
-exact = jax.tree_util.tree_all(
-    jax.tree_util.tree_map(jnp.array_equal, restored, params))
-exact, jnp.array_equal(net.apply({'params': restored}, X), Y)
+clone = MLP(nnx.Rngs(1))
+clone_state = nnx.state(clone, nnx.Param)
+nnx.replace_by_pure_dict(clone_state, restored)
+nnx.update(clone, clone_state)
+exact = jax.tree_util.tree_all(jax.tree_util.tree_map(
+    jnp.array_equal, restored, nnx.to_pure_dict(params)))
+exact, jnp.array_equal(clone(X), Y)
 ```
 
 ```{.python .input #saving-loading-safetensors-the-interchange-format-3}
@@ -505,9 +514,8 @@ leaves the previous good checkpoint untouched rather than a half-written one.
 :end_tab:
 
 :begin_tab:`jax`
-In JAX the bundle already has a name. A flax `TrainState` carries the
-parameters, the optax optimizer state, and the step counter as one pytree, and
-orbax, the JAX checkpointing library, saves and restores such pytrees whole: its
+NNX exposes the model and optimizer state as pytrees, including the optimizer's
+step counter. Orbax, the JAX checkpointing library, saves and restores such trees whole: its
 `StandardCheckpointer` writes atomically by default, to a temporary directory
 renamed into place on success, so a crash mid-write leaves the previous good
 checkpoint untouched rather than a half-written one. Because these natives
@@ -641,12 +649,14 @@ class Config:
     lr: float = 0.05
 
 def build(cfg):
-    return nn.Sequential([nn.Dense(cfg.hidden), nn.relu, nn.Dense(1)])
+    return nnx.Sequential(
+        nnx.Linear(cfg.in_dim, cfg.hidden, rngs=nnx.Rngs(0)), nnx.relu,
+        nnx.Linear(cfg.hidden, 1, rngs=nnx.Rngs(1)))
 
-def fresh_state(cfg, model):
-    p = model.init(jax.random.PRNGKey(0), jnp.zeros((1, cfg.in_dim)))['params']
-    return train_state.TrainState.create(apply_fn=model.apply, params=p,
-                                         tx=optax.adam(cfg.lr))
+def fresh_state(cfg):
+    model = build(cfg)
+    optimizer = nnx.Optimizer(model, optax.adam(cfg.lr), wrt=nnx.Param)
+    return model, optimizer
 
 cfg = Config()
 model = build(cfg)
@@ -654,22 +664,25 @@ data = jax.random.normal(d2l.get_key(), (256, cfg.in_dim))
 target = (data @ jax.random.normal(d2l.get_key(), (cfg.in_dim, 1))
           + 0.1 * jax.random.normal(d2l.get_key(), (256, 1)))
 
-def loss(params):
-    return jnp.mean((model.apply({'params': params}, data) - target) ** 2)
+def loss(model):
+    return jnp.mean((model(data) - target) ** 2)
 
-@jax.jit
-def step(state):
-    l, grads = jax.value_and_grad(loss)(state.params)
-    return state.apply_gradients(grads=grads), l
+@nnx.jit
+def step(model, optimizer):
+    l, grads = nnx.value_and_grad(loss)(model)
+    optimizer.update(model, grads)
+    return l
 
-state = fresh_state(cfg, model)
+model, optimizer = fresh_state(cfg)
 for _ in range(100):
-    state, l = step(state)
+    l = step(model, optimizer)
 
 ckptr = ocp.StandardCheckpointer()
 ckptr.save(os.path.abspath('run-jax'),        # orbax wants an absolute path
-           {'state': state, 'cfg': asdict(cfg)}, force=True)
-int(state.step), round(float(loss(state.params)), 4)
+           {'model': nnx.to_pure_dict(nnx.state(model)),
+            'optimizer': nnx.to_pure_dict(nnx.state(optimizer)),
+            'cfg': asdict(cfg)}, force=True)
+int(optimizer.step), round(float(loss(model)), 4)
 ```
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-2}
@@ -754,10 +767,9 @@ The restore is exact. Corrupt every parameter, load the checkpoint back, and the
 loss returns to where it was.
 
 :begin_tab:`jax`
-Note the shape of the restore call: orbax fills a *template*, here a freshly
-built `TrainState` with the right structure, rather than mutating a model in
-place. That is the functional style throughout: a restore returns a new state,
-it does not patch an old one.
+Orbax fills a template with the saved arrays. We then update freshly built NNX
+objects from the restored pure dictionaries. Rebuilding first checks that the
+architecture still agrees with the checkpoint structure.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -790,11 +802,22 @@ f'perturbed {before:.2f} -> restored {after:.4f}'
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-3}
 %%tab jax
-wrecked = jax.tree_util.tree_map(lambda p: p + 1.0, state.params)
-before = float(loss(wrecked))
-template = {'state': fresh_state(cfg, model), 'cfg': asdict(Config())}
+model_state = nnx.state(model)
+nnx.update(model, jax.tree.map(lambda p: p + 1.0, model_state))
+before = float(loss(model))
+template_model, template_optimizer = fresh_state(cfg)
+template = {
+    'model': nnx.to_pure_dict(nnx.state(template_model)),
+    'optimizer': nnx.to_pure_dict(nnx.state(template_optimizer)),
+    'cfg': asdict(Config())}
 ckpt = ckptr.restore(os.path.abspath('run-jax'), template)
-after = float(loss(ckpt['state'].params))
+restored_model = nnx.state(model)
+nnx.replace_by_pure_dict(restored_model, ckpt['model'])
+nnx.update(model, restored_model)
+restored_optimizer = nnx.state(optimizer)
+nnx.replace_by_pure_dict(restored_optimizer, ckpt['optimizer'])
+nnx.update(optimizer, restored_optimizer)
+after = float(loss(model))
 f'perturbed {before:.2f} -> restored {after:.4f}'
 ```
 
@@ -851,16 +874,24 @@ print('fresh optimizer:', fresh)
 
 ```{.python .input #saving-loading-checkpointing-a-training-run-4}
 %%tab jax
-full = ckpt['state']                          # params + optimizer + step
+full, full_opt = fresh_state(cfg)
+full_state, full_opt_state = nnx.state(full), nnx.state(full_opt)
+nnx.replace_by_pure_dict(full_state, ckpt['model'])
+nnx.replace_by_pure_dict(full_opt_state, ckpt['optimizer'])
+nnx.update(full, full_state)
+nnx.update(full_opt, full_opt_state)
 full_losses = []
 for _ in range(5):
-    full, l = step(full)
+    l = step(full, full_opt)
     full_losses.append(round(float(l), 4))
 
-fresh = fresh_state(cfg, model).replace(params=ckpt['state'].params)
+fresh, fresh_opt = fresh_state(cfg)
+fresh_state_ = nnx.state(fresh)
+nnx.replace_by_pure_dict(fresh_state_, ckpt['model'])
+nnx.update(fresh, fresh_state_)
 fresh_losses = []
 for _ in range(5):
-    fresh, l = step(fresh)
+    l = step(fresh, fresh_opt)
     fresh_losses.append(round(float(l), 4))
 
 print('full  optimizer:', full_losses)
@@ -996,16 +1027,18 @@ net.fc
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-1}
 %%tab jax
-class Classifier(nn.Module):
-    def setup(self):
-        self.hidden = nn.Dense(256)
-        self.head = nn.Dense(2)      # new 2-class head, new name
+class Classifier(nnx.Module):
+    def __init__(self, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.hidden = nnx.Linear(20, 256, rngs=rngs)
+        self.head = nnx.Linear(256, 2, rngs=rngs)  # new head, new name
 
     def __call__(self, x):
-        return self.head(nn.relu(self.hidden(x)))
+        return self.head(nnx.relu(self.hidden(x)))
 
-new_params = Classifier().init(d2l.get_key(), X)['params']
-jax.tree_util.tree_map(lambda t: tuple(t.shape), new_params)
+classifier = Classifier()
+new_params = nnx.state(classifier, nnx.Param)
+[(path, tuple(value.shape)) for path, value in new_params.flat_state()]
 ```
 
 ```{.python .input #saving-loading-loading-weights-you-did-not-train-1}
@@ -1284,8 +1317,8 @@ A saved model is state, not code: a pytree of named arrays that means something
 only once the code that built the network runs again. For your own files
 `jnp.save` is fine; for files you share, safetensors stores the same tensors
 behind a plain JSON header, with no pickle to execute, which is why hubs
-standardize on it. A resumable checkpoint is the `TrainState`: params, optimizer
-state, and step in one pytree that orbax saves atomically in a single call, or a
+standardize on it. A resumable checkpoint contains model state, optimizer
+state, and step in pytrees that Orbax saves atomically in a single call, or a
 resume restarts the optimizer's momentum from zero. Loading someone else's
 weights is pytree surgery, and the missing/unexpected sets you compute are a
 diagnostic to read rather than a formality to skip.

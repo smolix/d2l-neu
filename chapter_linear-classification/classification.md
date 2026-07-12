@@ -30,9 +30,7 @@ import tensorflow as tf
 ```{.python .input #classification-the-base-classification-model}
 %%tab jax
 from d2l import jax as d2l
-from functools import partial
 from jax import numpy as jnp
-import jax
 import optax
 ```
 
@@ -53,12 +51,10 @@ only needs to run the forward pass once.
 :begin_tab:`jax`
 We define the `Classifier` class below. In the `validation_step` we report both the loss value and the classification accuracy on a validation batch. The plotting machinery records one point per batch, and since all validation batches (except possibly the last) contain the same number of examples, the average of the plotted per-batch values equals the loss and accuracy over the whole validation set. That average is off only when the final batch is smaller, a minor discrepancy we ignore to keep the code simple.
 
-We also redefine the `training_step` method for JAX since all models that will
-subclass `Classifier` later will have a loss that returns auxiliary data.
-This auxiliary data can be used for models with batch normalization
-(to be explained in :numref:`sec_batch_norm`), while in all other cases
-we will make the loss also return a placeholder (empty dictionary) to
-represent the auxiliary data.
+NNX modules own their parameters and other state. The compiled trainer can
+therefore call the model directly, while NNX tracks updates such as BatchNorm
+running statistics automatically. The validation step returns its two metrics
+to the trainer, which records them outside the compiled computation.
 :end_tab:
 
 ```{.python .input #classification-the-classifier-class-1}
@@ -79,22 +75,9 @@ class Classifier(d2l.Module):  #@save
 %%tab jax
 class Classifier(d2l.Module):  #@save
     """The base class of classification models."""
-    def training_step(self, params, batch, state):
-        # Here value is a tuple since models with BatchNorm layers require
-        # the loss to return auxiliary data
-        value, grads = jax.value_and_grad(
-            self.loss, has_aux=True)(params, batch[:-1], batch[-1], state)
-        l, _ = value
-        self.plot("loss", l, train=True)
-        return value, grads
-
-    def validation_step(self, params, batch, state):
-        # Discard the second returned value. It is used for training models
-        # with BatchNorm layers since loss also returns auxiliary data
-        l, _ = self.loss(params, batch[:-1], batch[-1], state)
-        self.plot('loss', l, train=False)
-        self.plot('acc', self.accuracy(params, batch[:-1], batch[-1], state),
-                  train=False)
+    def validation_step(self, batch):
+        Y_hat = self(*batch[:-1])
+        return self.loss(Y_hat, batch[-1]), self.accuracy(Y_hat, batch[-1])
 ```
 
 By default we use a stochastic gradient descent optimizer operating on minibatches, just as we did in the context of linear regression. `configure_optimizers` is a hook: `Trainer` calls it once at the start of training (see :numref:`sec_oo-design`), and it returns the optimizer object that `Trainer` then uses to update the parameters after each backward pass. We install it on `d2l.Module` rather than `Classifier` because regression models use the same default; a subclass can still override it (later chapters do exactly that) to switch optimizers.
@@ -163,24 +146,16 @@ def accuracy(self, Y_hat, Y, averaged=True):
 ```
 
 :begin_tab:`jax`
-The JAX `accuracy` takes `params` and `state` instead of a
-precomputed `Y_hat`, because Flax modules are stateless and the
-forward pass needs both. It reads `state.batch_stats` to
-support models with BatchNorm (a no-op for models without it),
-and is decorated with `@jax.jit` for compiled execution. After
-the forward pass it applies the same `argmax`, comparison, and
-mean over the 0/1 hits.
+The NNX version receives the precomputed scores just like the other
+frameworks. The surrounding validation step is compiled, so this small metric
+does not need its own `jit` decorator.
 :end_tab:
 
 ```{.python .input #classification-accuracy-1  n=9}
 %%tab jax
 @d2l.add_to_class(Classifier)  #@save
-@partial(jax.jit, static_argnums=(0, 5))
-def accuracy(self, params, X, Y, state, averaged=True):
+def accuracy(self, Y_hat, Y, averaged=True):
     """Compute the fraction of correct predictions."""
-    Y_hat = state.apply_fn({'params': params,
-                            'batch_stats': state.batch_stats},  # BatchNorm Only
-                           *X)
     Y_hat = d2l.reshape(Y_hat, (-1, Y_hat.shape[-1]))
     preds = d2l.astype(d2l.argmax(Y_hat, axis=1), Y.dtype)
     compare = d2l.astype(preds == d2l.reshape(Y, (-1,)), d2l.float32)
@@ -353,8 +328,9 @@ batch; we ignore that to keep the code simple.
 :::
 :::
 
-::: {.slide title="Validation under JAX: stateless, functional" only="jax"}
-Flax modules carry no state, so the step threads `params`/`state` explicitly:
+::: {.slide title="Validation under JAX: stateful NNX modules" only="jax"}
+NNX modules own parameters and mutable state; the compiled step returns both
+metrics for the trainer to record:
 
 @classification-the-classifier-class-1
 :::

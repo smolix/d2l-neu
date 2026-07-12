@@ -131,7 +131,7 @@ from torch import nn
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 import numpy as np
 ```
@@ -266,35 +266,28 @@ class BERTEncoder(nn.Module):
 ```{.python .input #bert-input-representation-2}
 #@tab jax
 #@save
-class BERTEncoder(nn.Module):
+class BERTEncoder(nnx.Module):
     """BERT encoder."""
-    vocab_size: int
-    num_hiddens: int
-    ffn_num_hiddens: int
-    num_heads: int
-    num_blks: int
-    dropout: float
-    max_len: int = 1000
-
-    def setup(self):
-        self.token_embedding = nn.Embed(self.vocab_size, self.num_hiddens)
-        self.segment_embedding = nn.Embed(2, self.num_hiddens)
-        self.blks = [d2l.TransformerEncoderBlock(
-            self.num_hiddens, self.ffn_num_hiddens, self.num_heads,
-            self.dropout, True) for _ in range(self.num_blks)]
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
+                 num_blks, dropout, max_len=1000, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.token_embedding = nnx.Embed(vocab_size, num_hiddens, rngs=rngs)
+        self.segment_embedding = nnx.Embed(2, num_hiddens, rngs=rngs)
+        self.blks = nnx.List([d2l.TransformerEncoderBlock(
+            num_hiddens, ffn_num_hiddens, num_heads, dropout, True, rngs=rngs)
+            for _ in range(num_blks)])
         # In BERT, positional embeddings are learnable, thus we create a
         # parameter of positional embeddings that are long enough
-        self.pos_embedding = self.param('pos_embedding',
-                                        nn.initializers.normal(0.02),
-                                        (1, self.max_len, self.num_hiddens))
+        self.pos_embedding = nnx.Param(
+            jax.random.normal(rngs.params(), (1, max_len, num_hiddens)) * 0.02)
 
-    def __call__(self, tokens, segments, valid_lens, training=False):
+    def __call__(self, tokens, segments, valid_lens):
         # Shape of `X` remains unchanged in the following code snippet:
         # (batch size, max sequence length, `num_hiddens`)
         X = self.token_embedding(tokens) + self.segment_embedding(segments)
         X = X + self.pos_embedding[:, :X.shape[1], :]
         for blk in self.blks:
-            X, _ = blk(X, valid_lens, training=training)
+            X, _ = blk(X, valid_lens)
         return X
 ```
 
@@ -358,7 +351,6 @@ encoder = BERTEncoder(vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
                       num_blks, dropout)
 tokens = jnp.ones((2, 8), dtype=jnp.int32)
 segments = jnp.array([[0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 1, 1, 1]])
-params = encoder.init(jax.random.PRNGKey(0), tokens, segments, None)
 ```
 
 ```{.python .input #bert-input-representation-3}
@@ -397,7 +389,7 @@ encoded_X.shape
 #@tab jax
 tokens = jax.random.randint(jax.random.PRNGKey(0), (2, 8), 0, vocab_size)
 segments = jnp.array([[0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 1, 1, 1, 1, 1]])
-encoded_X = encoder.apply(params, tokens, segments, None)
+encoded_X = nnx.view(encoder, deterministic=True)(tokens, segments, None)
 encoded_X.shape
 ```
 
@@ -511,12 +503,14 @@ class MaskLM(nn.Module):
 ```{.python .input #bert-masked-language-modeling-1}
 #@tab jax
 #@save
-class MaskLM(nn.Module):
+class MaskLM(nnx.Module):
     """The masked language model task of BERT."""
-    vocab_size: int
-    num_hiddens: int
+    def __init__(self, vocab_size, num_hiddens, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.dense1 = nnx.Linear(num_hiddens, num_hiddens, rngs=rngs)
+        self.layer_norm = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.dense2 = nnx.Linear(num_hiddens, vocab_size, rngs=rngs)
 
-    @nn.compact
     def __call__(self, X, pred_positions):
         num_pred_positions = pred_positions.shape[1]
         pred_positions = pred_positions.reshape(-1)
@@ -527,10 +521,10 @@ class MaskLM(nn.Module):
         batch_idx = jnp.repeat(batch_idx, num_pred_positions)
         masked_X = X[batch_idx, pred_positions]
         masked_X = masked_X.reshape((batch_size, num_pred_positions, -1))
-        mlm_Y_hat = nn.Dense(self.num_hiddens)(masked_X)
-        mlm_Y_hat = nn.relu(mlm_Y_hat)
-        mlm_Y_hat = nn.LayerNorm()(mlm_Y_hat)
-        mlm_Y_hat = nn.Dense(self.vocab_size)(mlm_Y_hat)
+        mlm_Y_hat = self.dense1(masked_X)
+        mlm_Y_hat = nnx.relu(mlm_Y_hat)
+        mlm_Y_hat = self.layer_norm(mlm_Y_hat)
+        mlm_Y_hat = self.dense2(mlm_Y_hat)
         return mlm_Y_hat
 ```
 
@@ -591,8 +585,7 @@ mlm_Y_hat.shape
 #@tab jax
 mlm = MaskLM(vocab_size, num_hiddens)
 mlm_positions = jnp.array([[1, 5, 2], [6, 1, 5]])
-mlm_params = mlm.init(jax.random.PRNGKey(0), encoded_X, mlm_positions)
-mlm_Y_hat = mlm.apply(mlm_params, encoded_X, mlm_positions)
+mlm_Y_hat = mlm(encoded_X, mlm_positions)
 mlm_Y_hat.shape
 ```
 
@@ -693,12 +686,15 @@ class NextSentencePred(nn.Module):
 ```{.python .input #bert-next-sentence-prediction-1}
 #@tab jax
 #@save
-class NextSentencePred(nn.Module):
+class NextSentencePred(nnx.Module):
     """The next sentence prediction task of BERT."""
-    @nn.compact
+    def __init__(self, num_hiddens, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.output = nnx.Linear(num_hiddens, 2, rngs=rngs)
+
     def __call__(self, X):
         # `X` shape: (batch size, `num_hiddens`)
-        return nn.Dense(2)(X)
+        return self.output(X)
 ```
 
 ```{.python .input #bert-next-sentence-prediction-1}
@@ -743,9 +739,8 @@ nsp_Y_hat.shape
 # Use the `<cls>` token (index 0) as input to NSP
 # input_shape for NSP: (batch size, `num_hiddens`)
 cls_X = encoded_X[:, 0, :]
-nsp = NextSentencePred()
-nsp_params = nsp.init(jax.random.PRNGKey(0), cls_X)
-nsp_Y_hat = nsp.apply(nsp_params, cls_X)
+nsp = NextSentencePred(num_hiddens)
+nsp_Y_hat = nsp(cls_X)
 nsp_Y_hat.shape
 ```
 
@@ -863,29 +858,21 @@ class BERTModel(nn.Module):
 ```{.python .input #bert-putting-it-all-together}
 #@tab jax
 #@save
-class BERTModel(nn.Module):
+class BERTModel(nnx.Module):
     """The BERT model."""
-    vocab_size: int
-    num_hiddens: int
-    ffn_num_hiddens: int
-    num_heads: int
-    num_blks: int
-    dropout: float
-    max_len: int = 1000
-
-    def setup(self):
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens,
+                 num_heads, num_blks, dropout, max_len=1000, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
         self.encoder = BERTEncoder(
-            self.vocab_size, self.num_hiddens, self.ffn_num_hiddens,
-            self.num_heads, self.num_blks, self.dropout,
-            max_len=self.max_len)
-        self.hidden = nn.Dense(self.num_hiddens)
-        self.mlm = MaskLM(self.vocab_size, self.num_hiddens)
-        self.nsp = NextSentencePred()
+            vocab_size, num_hiddens, ffn_num_hiddens, num_heads, num_blks,
+            dropout, max_len=max_len, rngs=rngs)
+        self.hidden = nnx.Linear(num_hiddens, num_hiddens, rngs=rngs)
+        self.mlm = MaskLM(vocab_size, num_hiddens, rngs=rngs)
+        self.nsp = NextSentencePred(num_hiddens, rngs=rngs)
 
     def __call__(self, tokens, segments, valid_lens=None, pred_positions=None,
-                 training=False):
-        encoded_X = self.encoder(tokens, segments, valid_lens,
-                                 training=training)
+                 training=None):
+        encoded_X = self.encoder(tokens, segments, valid_lens)
         if pred_positions is not None:
             mlm_Y_hat = self.mlm(encoded_X, pred_positions)
         else:

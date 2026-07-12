@@ -35,7 +35,7 @@ import tensorflow as tf
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 import numpy as np
 from PIL import Image
@@ -243,30 +243,19 @@ class G_block(tf.keras.layers.Layer):
 
 ```{.python .input #dcgan-the-generator-1}
 #@tab jax
-class G_block(nn.Module):
-    out_channels: int
-    kernel_size: int = 4
-    strides: int = 2
-    padding: str = 'SAME'
-    # BatchNorm: DCGAN's convention is to keep the generator in
-    # "training mode" (use per-batch statistics, not running averages)
-    # at sampling time too, so we leave this hardcoded to False. Override
-    # via `Generator(use_running_average=True)` when you want
-    # population-statistics inference (e.g., to compare against PT/MX,
-    # which call `.eval()` on the generator at sampling time).
-    use_running_average: bool = False
+class G_block(nnx.Module):
+    def __init__(self, out_channels, in_channels=3, kernel_size=4,
+                 strides=2, padding='SAME', rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        init = nnx.initializers.normal(0.02)
+        self.conv2d_trans = nnx.ConvTranspose(
+            in_channels, out_channels, kernel_size=(kernel_size, kernel_size),
+            strides=(strides, strides), padding=padding, use_bias=False,
+            kernel_init=init, rngs=rngs)
+        self.batch_norm = nnx.BatchNorm(out_channels, rngs=rngs)
 
-    @nn.compact
     def __call__(self, X):
-        X = nn.ConvTranspose(
-            self.out_channels, kernel_size=(self.kernel_size, self.kernel_size),
-            strides=(self.strides, self.strides), padding=self.padding,
-            use_bias=False,
-            kernel_init=nn.initializers.normal(0.02))(X)
-        X = nn.BatchNorm(
-            use_running_average=self.use_running_average)(X)
-        X = nn.relu(X)
-        return X
+        return nnx.relu(self.batch_norm(self.conv2d_trans(X)))
 ```
 
 In default, the transposed convolution layer uses a $k_h = k_w = 4$ kernel, a $s_h = s_w = 2$ strides, and a $p_h = p_w = 1$ padding. With an input shape of $n_h^{'} \times n_w^{'} = 16 \times 16$, the generator block will double input's width and height.
@@ -305,9 +294,8 @@ g_blk(x).shape
 ```{.python .input #dcgan-the-generator-2}
 #@tab jax
 x = jnp.zeros((2, 16, 16, 3))  # Channel last convention
-g_blk = G_block(out_channels=20)
-params = g_blk.init(jax.random.PRNGKey(0), x)
-g_blk.apply(params, x, mutable=['batch_stats'])[0].shape
+g_blk = G_block(out_channels=20, rngs=nnx.Rngs(0))
+g_blk(x).shape
 ```
 
 If we change the transposed convolution layer to a $4\times 4$ kernel, $1\times 1$ strides and zero padding, then with an input size of $1 \times 1$, the output will have its width and height increased by 3 respectively.
@@ -339,9 +327,9 @@ g_blk(x).shape
 #@tab jax
 x = jnp.zeros((2, 1, 1, 3))
 # `padding="VALID"` corresponds to no padding
-g_blk = G_block(out_channels=20, strides=1, padding='VALID')
-params = g_blk.init(jax.random.PRNGKey(0), x)
-g_blk.apply(params, x, mutable=['batch_stats'])[0].shape
+g_blk = G_block(out_channels=20, strides=1, padding='VALID',
+                rngs=nnx.Rngs(0))
+g_blk(x).shape
 ```
 
 The generator consists of four basic blocks that increase input's both width and height from 1 to 32. At the same time, it first projects the latent variable into $64\times 8$ channels, and then halve the channels each time. At last, a transposed convolution layer is used to generate the output. It further doubles the width and height to match the desired $64\times 64$ shape, and reduces the channel size to $3$. The tanh activation function is applied to project output values into the $(-1, 1)$ range.
@@ -393,33 +381,33 @@ net_G = tf.keras.Sequential([
 #@tab jax
 n_G = 64
 
-class Generator(nn.Module):
-    n_G: int = 64
-    use_running_average: bool = False
+class Generator(nnx.Module):
+    def __init__(self, latent_dim=100, n_G=64, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.blocks = nnx.List([
+            G_block(n_G * 8, latent_dim, strides=1, padding='VALID', rngs=rngs),
+            G_block(n_G * 4, n_G * 8, rngs=rngs),
+            G_block(n_G * 2, n_G * 4, rngs=rngs),
+            G_block(n_G, n_G * 2, rngs=rngs)])
+        self.output = nnx.ConvTranspose(
+            n_G, 3, kernel_size=(4, 4), strides=(2, 2), padding='SAME',
+            use_bias=False, kernel_init=nnx.initializers.normal(0.02),
+            rngs=rngs)
 
-    @nn.compact
     def __call__(self, X):
-        X = G_block(out_channels=self.n_G*8, strides=1, padding='VALID',
-                     use_running_average=self.use_running_average)(X)
+        X = self.blocks[0](X)
         # Output: (4, 4, 64 * 8)
-        X = G_block(out_channels=self.n_G*4,
-                     use_running_average=self.use_running_average)(X)
+        X = self.blocks[1](X)
         # Output: (8, 8, 64 * 4)
-        X = G_block(out_channels=self.n_G*2,
-                     use_running_average=self.use_running_average)(X)
+        X = self.blocks[2](X)
         # Output: (16, 16, 64 * 2)
-        X = G_block(out_channels=self.n_G,
-                     use_running_average=self.use_running_average)(X)
+        X = self.blocks[3](X)
         # Output: (32, 32, 64)
-        X = nn.ConvTranspose(
-            3, kernel_size=(4, 4), strides=(2, 2), padding='SAME',
-            use_bias=False,
-            kernel_init=nn.initializers.normal(0.02))(X)
-        X = nn.tanh(X)
+        X = nnx.tanh(self.output(X))
         # Output: (64, 64, 3)
         return X
 
-net_G = Generator(n_G=n_G)
+net_G = Generator(n_G=n_G, rngs=nnx.Rngs(0))
 ```
 
 Generate a 100 dimensional latent variable to verify the generator's output shape.
@@ -446,8 +434,7 @@ net_G(x).shape
 ```{.python .input #dcgan-the-generator-5}
 #@tab jax
 x = jnp.zeros((1, 1, 1, 100))
-params_G = net_G.init(jax.random.PRNGKey(0), x)
-net_G.apply(params_G, x, mutable=['batch_stats'])[0].shape
+net_G(x).shape
 ```
 
 ## Discriminator
@@ -478,7 +465,7 @@ d2l.plot(x.numpy(), Y, 'x', 'y', alphas)
 #@tab jax
 alphas = [0, .2, .4, .6, .8, 1]
 x = jnp.arange(-2, 1, 0.1)
-Y = [np.array(nn.leaky_relu(x, negative_slope=alpha)) for alpha in alphas]
+Y = [np.array(nnx.leaky_relu(x, negative_slope=alpha)) for alpha in alphas]
 d2l.plot(np.array(x), Y, 'x', 'y', alphas)
 ```
 
@@ -531,25 +518,20 @@ class D_block(tf.keras.layers.Layer):
 
 ```{.python .input #dcgan-discriminator-2}
 #@tab jax
-class D_block(nn.Module):
-    out_channels: int
-    kernel_size: int = 4
-    strides: int = 2
-    padding: str = 'SAME'
-    alpha: float = 0.2
-    use_running_average: bool = False
+class D_block(nnx.Module):
+    def __init__(self, out_channels, in_channels=3, kernel_size=4,
+                 strides=2, padding='SAME', alpha=0.2, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.alpha = alpha
+        self.conv2d = nnx.Conv(
+            in_channels, out_channels, kernel_size=(kernel_size, kernel_size),
+            strides=(strides, strides), padding=padding, use_bias=False,
+            kernel_init=nnx.initializers.normal(0.02), rngs=rngs)
+        self.batch_norm = nnx.BatchNorm(out_channels, rngs=rngs)
 
-    @nn.compact
     def __call__(self, X):
-        X = nn.Conv(
-            self.out_channels, kernel_size=(self.kernel_size, self.kernel_size),
-            strides=(self.strides, self.strides), padding=self.padding,
-            use_bias=False,
-            kernel_init=nn.initializers.normal(0.02))(X)
-        X = nn.BatchNorm(
-            use_running_average=self.use_running_average)(X)
-        X = nn.leaky_relu(X, negative_slope=self.alpha)
-        return X
+        X = self.batch_norm(self.conv2d(X))
+        return nnx.leaky_relu(X, negative_slope=self.alpha)
 ```
 
 A basic block with default settings will halve the width and height of the inputs, as we demonstrated in :numref:`sec_padding`. For example, given a input shape $n_h = n_w = 16$, with a kernel shape $k_h = k_w = 4$, a stride shape $s_h = s_w = 2$, and a padding shape $p_h = p_w = 1$, the output shape will be:
@@ -587,9 +569,8 @@ d_blk(x).shape
 ```{.python .input #dcgan-discriminator-3}
 #@tab jax
 x = jnp.zeros((2, 16, 16, 3))
-d_blk = D_block(out_channels=20)
-params = d_blk.init(jax.random.PRNGKey(0), x)
-d_blk.apply(params, x, mutable=['batch_stats'])[0].shape
+d_blk = D_block(out_channels=20, rngs=nnx.Rngs(0))
+d_blk(x).shape
 ```
 
 The discriminator is a mirror of the generator.
@@ -634,31 +615,32 @@ net_D = tf.keras.Sequential([
 #@tab jax
 n_D = 64
 
-class Discriminator(nn.Module):
-    n_D: int = 64
-    use_running_average: bool = False
+class Discriminator(nnx.Module):
+    def __init__(self, n_D=64, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.blocks = nnx.List([
+            D_block(n_D, 3, rngs=rngs),
+            D_block(n_D * 2, n_D, rngs=rngs),
+            D_block(n_D * 4, n_D * 2, rngs=rngs),
+            D_block(n_D * 8, n_D * 4, rngs=rngs)])
+        self.output = nnx.Conv(
+            n_D * 8, 1, kernel_size=(4, 4), padding='VALID', use_bias=False,
+            kernel_init=nnx.initializers.normal(0.02), rngs=rngs)
 
-    @nn.compact
     def __call__(self, X):
-        X = D_block(out_channels=self.n_D,
-                     use_running_average=self.use_running_average)(X)
+        X = self.blocks[0](X)
         # Output: (32, 32, 64)
-        X = D_block(out_channels=self.n_D*2,
-                     use_running_average=self.use_running_average)(X)
+        X = self.blocks[1](X)
         # Output: (16, 16, 64 * 2)
-        X = D_block(out_channels=self.n_D*4,
-                     use_running_average=self.use_running_average)(X)
+        X = self.blocks[2](X)
         # Output: (8, 8, 64 * 4)
-        X = D_block(out_channels=self.n_D*8,
-                     use_running_average=self.use_running_average)(X)
+        X = self.blocks[3](X)
         # Output: (4, 4, 64 * 8)
-        X = nn.Conv(
-            1, kernel_size=(4, 4), padding='VALID', use_bias=False,
-            kernel_init=nn.initializers.normal(0.02))(X)
+        X = self.output(X)
         # Output: (1, 1, 1)
         return X
 
-net_D = Discriminator(n_D=n_D)
+net_D = Discriminator(n_D=n_D, rngs=nnx.Rngs(1))
 ```
 
 It uses a convolution layer with output channel $1$ as the last layer to obtain a single prediction value.
@@ -685,8 +667,7 @@ net_D(x).shape
 ```{.python .input #dcgan-discriminator-5}
 #@tab jax
 x = jnp.zeros((1, 64, 64, 3))
-params_D = net_D.init(jax.random.PRNGKey(0), x)
-net_D.apply(params_D, x, mutable=['batch_stats'])[0].shape
+net_D(x).shape
 ```
 
 ## Training
@@ -844,97 +825,46 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim,
 
 ```{.python .input #dcgan-training-1}
 #@tab jax
+@nnx.jit
+def update_D(X, Z, net_D, net_G, optimizer_D):
+    """Update the discriminator while keeping generator weights fixed."""
+    batch_size = X.shape[0]
+    fake_X = net_G(Z)
+
+    def loss_D_fn(model_D):
+        real_Y = model_D(X).squeeze()
+        fake_Y = model_D(fake_X).squeeze()
+        return (jnp.sum(optax.sigmoid_binary_cross_entropy(
+                    real_Y, jnp.ones((batch_size,)))) +
+                jnp.sum(optax.sigmoid_binary_cross_entropy(
+                    fake_Y, jnp.zeros((batch_size,))))) / 2
+
+    loss_D, grads_D = nnx.value_and_grad(loss_D_fn)(net_D)
+    optimizer_D.update(net_D, grads_D)
+    return loss_D
+
+@nnx.jit
+def update_G(Z, net_D, net_G, optimizer_G):
+    """Update the generator through the fixed discriminator."""
+    def loss_G_fn(model_G, model_D):
+        # Passing the discriminator explicitly keeps its parameters outside
+        # the differentiated argument while preserving training-mode
+        # BatchNorm, as in the discriminator update.
+        fake_Y = model_D(model_G(Z)).squeeze()
+        return jnp.sum(optax.sigmoid_binary_cross_entropy(
+            fake_Y, jnp.ones((Z.shape[0],))))
+
+    loss_G, grads_G = nnx.value_and_grad(
+        loss_G_fn, argnums=0)(net_G, net_D)
+    optimizer_G.update(net_G, grads_G)
+    return loss_G
+
 def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim):
     key = jax.random.PRNGKey(0)
-
-    # Initialize generator and discriminator parameters
-    dummy_Z = jnp.ones((1, 1, 1, latent_dim))
-    dummy_X = jnp.ones((1, 64, 64, 3))
-    key, key_G, key_D = jax.random.split(key, 3)
-    variables_G = net_G.init(key_G, dummy_Z)
-    variables_D = net_D.init(key_D, dummy_X)
-
-    # Reinitialize with normal(0, 0.02). Use one subkey per leaf so that
-    # different parameter tensors aren't drawn from the same RNG state.
-    leaves_G, treedef_G = jax.tree_util.tree_flatten(variables_G['params'])
-    keys_G_init = jax.random.split(key_G, len(leaves_G))
-    params_G = jax.tree_util.tree_unflatten(
-        treedef_G,
-        [jax.random.normal(k, p.shape) * 0.02
-         for k, p in zip(keys_G_init, leaves_G)])
-    batch_stats_G = variables_G.get('batch_stats', {})
-    leaves_D, treedef_D = jax.tree_util.tree_flatten(variables_D['params'])
-    keys_D_init = jax.random.split(key_D, len(leaves_D))
-    params_D = jax.tree_util.tree_unflatten(
-        treedef_D,
-        [jax.random.normal(k, p.shape) * 0.02
-         for k, p in zip(keys_D_init, leaves_D)])
-    batch_stats_D = variables_D.get('batch_stats', {})
-
-    optimizer_D = optax.adam(lr, b1=0.5, b2=0.999)
-    optimizer_G = optax.adam(lr, b1=0.5, b2=0.999)
-    opt_state_D = optimizer_D.init(params_D)
-    opt_state_G = optimizer_G.init(params_G)
-
-    @jax.jit
-    def update_D(params_D, params_G, batch_stats_D, batch_stats_G,
-                 opt_state_D, X, Z):
-        # Compute fake_X once inside JIT
-        fake_X, updates_G = net_G.apply(
-            {'params': params_G, 'batch_stats': batch_stats_G},
-            Z, mutable=['batch_stats'])
-        batch_stats_G_new = updates_G['batch_stats']
-        batch_size = X.shape[0]
-
-        def loss_D_fn(params_D):
-            real_Y, updates_real = net_D.apply(
-                {'params': params_D, 'batch_stats': batch_stats_D},
-                X, mutable=['batch_stats'])
-            fake_Y, updates_fake = net_D.apply(
-                {'params': params_D,
-                 'batch_stats': updates_real['batch_stats']},
-                fake_X, mutable=['batch_stats'])
-            ones = jnp.ones((batch_size,))
-            zeros = jnp.zeros((batch_size,))
-            loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(
-                          real_Y.squeeze(), ones)) +
-                      jnp.sum(optax.sigmoid_binary_cross_entropy(
-                          fake_Y.squeeze(), zeros))) / 2
-            return loss_D, updates_fake
-
-        (loss_D_val, updates_D), grads_D = jax.value_and_grad(
-            loss_D_fn, has_aux=True)(params_D)
-        updates_optax_D, opt_state_D_new = optimizer_D.update(
-            grads_D, opt_state_D, params_D)
-        params_D_new = optax.apply_updates(params_D, updates_optax_D)
-        batch_stats_D_new = updates_D['batch_stats']
-        return (params_D_new, batch_stats_D_new, batch_stats_G_new,
-                opt_state_D_new, loss_D_val)
-
-    @jax.jit
-    def update_G(params_G, params_D, batch_stats_G, batch_stats_D,
-                 opt_state_G, Z):
-        batch_size = Z.shape[0]
-
-        def loss_G_fn(params_G):
-            fake_X, updates_G = net_G.apply(
-                {'params': params_G, 'batch_stats': batch_stats_G},
-                Z, mutable=['batch_stats'])
-            fake_Y, _ = net_D.apply(
-                {'params': params_D, 'batch_stats': batch_stats_D},
-                fake_X, mutable=['batch_stats'])
-            ones = jnp.ones((batch_size,))
-            loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(
-                fake_Y.squeeze(), ones))
-            return loss_G, updates_G
-
-        (loss_G_val, updates_G), grads_G = jax.value_and_grad(
-            loss_G_fn, has_aux=True)(params_G)
-        updates_optax_G, opt_state_G_new = optimizer_G.update(
-            grads_G, opt_state_G, params_G)
-        params_G_new = optax.apply_updates(params_G, updates_optax_G)
-        batch_stats_G_new = updates_G['batch_stats']
-        return (params_G_new, batch_stats_G_new, opt_state_G_new, loss_G_val)
+    optimizer_D = nnx.Optimizer(
+        net_D, optax.adam(lr, b1=0.5, b2=0.999), wrt=nnx.Param)
+    optimizer_G = nnx.Optimizer(
+        net_G, optax.adam(lr, b1=0.5, b2=0.999), wrt=nnx.Param)
 
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[1, num_epochs], nrows=2, figsize=(5, 5),
@@ -943,32 +873,25 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim):
 
     for epoch in range(1, num_epochs + 1):
         timer = d2l.Timer()
-        metric = d2l.Accumulator(3)  # loss_D, loss_G, num_examples
+        losses_D, losses_G = [], []
+        num_examples = 0
         for batch in data_iter:
             X = jnp.array(batch[0])  # Already (N, H, W, C)
             batch_size = X.shape[0]
             key, subkey = jax.random.split(key)
             Z = jax.random.normal(subkey, (batch_size, 1, 1, latent_dim))
 
-            # Update discriminator
-            (params_D, batch_stats_D, batch_stats_G, opt_state_D,
-             loss_D_val) = update_D(
-                params_D, params_G, batch_stats_D, batch_stats_G,
-                opt_state_D, X, Z)
+            loss_D_val = update_D(X, Z, net_D, net_G, optimizer_D)
+            loss_G_val = update_G(Z, net_D, net_G, optimizer_G)
 
-            # Update generator
-            (params_G, batch_stats_G, opt_state_G, loss_G_val) = update_G(
-                params_G, params_D, batch_stats_G, batch_stats_D,
-                opt_state_G, Z)
-
-            metric.add(loss_D_val, loss_G_val, batch_size)
+            losses_D.append(loss_D_val)
+            losses_G.append(loss_G_val)
+            num_examples += batch_size
 
         # Show generated examples
         key, subkey = jax.random.split(key)
         Z = jax.random.normal(subkey, (21, 1, 1, latent_dim))
-        fake_x, _ = net_G.apply(
-            {'params': params_G, 'batch_stats': batch_stats_G},
-            Z, mutable=['batch_stats'])
+        fake_x = nnx.view(net_G, use_running_average=True)(Z)
         fake_x = fake_x / 2 + 0.5
         imgs = jnp.concatenate(
             [jnp.concatenate([fake_x[i * 7 + j] for j in range(7)], axis=1)
@@ -976,10 +899,13 @@ def train(net_D, net_G, data_iter, num_epochs, lr, latent_dim):
         animator.axes[1].cla()
         animator.axes[1].imshow(np.array(imgs))
         # Show the losses
-        loss_D, loss_G = metric[0] / metric[2], metric[1] / metric[2]
+        # Aggregate the scalar losses once per epoch. Converting the sample
+        # grid above has already synchronized the generated images.
+        loss_D = float(jnp.stack(losses_D).sum()) / num_examples
+        loss_G = float(jnp.stack(losses_G).sum()) / num_examples
         animator.add(epoch, (loss_D, loss_G))
     print(f'loss_D {loss_D:.3f}, loss_G {loss_G:.3f}, '
-          f'{metric[2] / timer.stop():.1f} examples/sec')
+          f'{num_examples / timer.stop():.1f} examples/sec')
 ```
 
 We train the model with a small number of epochs just for demonstration.

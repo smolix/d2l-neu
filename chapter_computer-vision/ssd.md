@@ -162,14 +162,15 @@ def cls_predictor(num_inputs, num_anchors, num_classes):
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 import numpy as np
 from PIL import Image
 
-def cls_predictor(num_anchors, num_classes):
-    return nn.Conv(num_anchors * (num_classes + 1), kernel_size=(3, 3),
-                   padding='SAME')
+def cls_predictor(num_inputs, num_anchors, num_classes, rngs=None):
+    rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+    return nnx.Conv(num_inputs, num_anchors * (num_classes + 1),
+                    kernel_size=(3, 3), padding='same', rngs=rngs)
 ```
 
 ```{.python .input #ssd-class-prediction-layer}
@@ -205,8 +206,10 @@ def bbox_predictor(num_inputs, num_anchors):
 
 ```{.python .input #ssd-bounding-box-prediction-layer}
 #@tab jax
-def bbox_predictor(num_anchors):
-    return nn.Conv(num_anchors * 4, kernel_size=(3, 3), padding='SAME')
+def bbox_predictor(num_inputs, num_anchors, rngs=None):
+    rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+    return nnx.Conv(num_inputs, num_anchors * 4, kernel_size=(3, 3),
+                    padding='same', rngs=rngs)
 ```
 
 ```{.python .input #ssd-bounding-box-prediction-layer}
@@ -269,11 +272,11 @@ Y1.shape, Y2.shape
 ```{.python .input #ssd-concatenating-predictions-for-multiple-scales-1}
 #@tab jax
 def forward(x, block):
-    # Flax uses NHWC format; input shape: (N, H, W, C)
-    return block.init_with_output(jax.random.PRNGKey(0), x)[0]
+    # NNX convolutions use NHWC format; input shape: (N, H, W, C)
+    return block(x)
 
-Y1 = forward(jnp.zeros((2, 20, 20, 8)), cls_predictor(5, 10))
-Y2 = forward(jnp.zeros((2, 10, 10, 16)), cls_predictor(3, 10))
+Y1 = forward(jnp.zeros((2, 20, 20, 8)), cls_predictor(8, 5, 10))
+Y2 = forward(jnp.zeros((2, 10, 10, 16)), cls_predictor(16, 3, 10))
 Y1.shape, Y2.shape
 ```
 
@@ -401,17 +404,21 @@ def down_sample_blk(in_channels, out_channels):
 
 ```{.python .input #ssd-downsampling-block-1}
 #@tab jax
-class DownSampleBlk(nn.Module):
-    num_channels: int
+class DownSampleBlk(nnx.Module):
+    def __init__(self, in_channels, out_channels, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.layers = nnx.List([
+            nnx.Conv(in_channels, out_channels, (3, 3), padding='same',
+                     rngs=rngs),
+            nnx.BatchNorm(out_channels, rngs=rngs), nnx.relu,
+            nnx.Conv(out_channels, out_channels, (3, 3), padding='same',
+                     rngs=rngs),
+            nnx.BatchNorm(out_channels, rngs=rngs), nnx.relu])
 
-    @nn.compact
-    def __call__(self, x, training=False):
-        for _ in range(2):
-            x = nn.Conv(self.num_channels, kernel_size=(3, 3),
-                        padding='SAME')(x)
-            x = nn.BatchNorm(use_running_average=not training)(x)
-            x = nn.relu(x)
-        x = nn.max_pool(x, window_shape=(2, 2), strides=(2, 2))
+    def __call__(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        x = nnx.max_pool(x, window_shape=(2, 2), strides=(2, 2))
         return x
 ```
 
@@ -442,7 +449,7 @@ forward(torch.zeros((2, 3, 20, 20)), down_sample_blk(3, 10)).shape
 
 ```{.python .input #ssd-downsampling-block-2}
 #@tab jax
-forward(jnp.zeros((2, 20, 20, 3)), DownSampleBlk(num_channels=10)).shape
+forward(jnp.zeros((2, 20, 20, 3)), DownSampleBlk(3, 10)).shape
 ```
 
 ```{.python .input #ssd-downsampling-block-2}
@@ -485,11 +492,16 @@ forward(torch.zeros((2, 3, 256, 256)), base_net()).shape
 
 ```{.python .input #ssd-base-network-block}
 #@tab jax
-class BaseNet(nn.Module):
-    @nn.compact
-    def __call__(self, x, training=False):
-        for num_filters in [16, 32, 64]:
-            x = DownSampleBlk(num_channels=num_filters)(x, training)
+class BaseNet(nnx.Module):
+    def __init__(self, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.blks = nnx.List([DownSampleBlk(3, 16, rngs),
+                              DownSampleBlk(16, 32, rngs),
+                              DownSampleBlk(32, 64, rngs)])
+
+    def __call__(self, x):
+        for blk in self.blks:
+            x = blk(x)
         return x
 
 forward(jnp.zeros((2, 256, 256, 3)), BaseNet()).shape
@@ -562,10 +574,12 @@ def get_blk(i):
 def get_blk(i):
     if i == 0:
         return BaseNet()
+    elif i == 1:
+        return DownSampleBlk(64, 128)
     elif i == 4:
         return None  # Global max pooling handled in TinySSD
     else:
-        return DownSampleBlk(num_channels=128)
+        return DownSampleBlk(128, 128)
 ```
 
 ```{.python .input #ssd-the-complete-model-1}
@@ -611,30 +625,17 @@ def blk_forward(X, blk, size, ratio, cls_predictor, bbox_predictor):
 
 ```{.python .input #ssd-the-complete-model-2}
 #@tab jax
-def blk_forward(X, blk_params, blk_apply, size, ratio, cls_params,
-                cls_apply, bbox_params, bbox_apply, training=False,
-                batch_stats=None):
-    if blk_apply is not None:
-        if batch_stats is not None:
-            Y, updates = blk_apply({'params': blk_params,
-                                    'batch_stats': batch_stats},
-                                   X, training=training,
-                                   mutable=['batch_stats'])
-        else:
-            Y = blk_apply({'params': blk_params}, X, training=training)
-            updates = {}
-    else:
-        # Global max pooling
-        Y = X.max(axis=(1, 2), keepdims=True)
-        updates = {}
+def blk_forward(X, blk, size, ratio, cls_predictor, bbox_predictor):
+    Y = (blk(X) if blk is not None else
+         X.max(axis=(1, 2), keepdims=True))
     # Convert NHWC to NCHW for multibox_prior
     Y_nchw = jnp.transpose(Y, (0, 3, 1, 2))
     anchors = d2l.multibox_prior(Y_nchw, sizes=size, ratios=ratio)
     # Keep predictions in NHWC; flatten_pred relies on channel-last layout
     # to align each anchor's class and box predictions with multibox_prior.
-    cls_preds = cls_apply({'params': cls_params}, Y)
-    bbox_preds = bbox_apply({'params': bbox_params}, Y)
-    return (Y, anchors, cls_preds, bbox_preds, updates)
+    cls_preds = cls_predictor(Y)
+    bbox_preds = bbox_predictor(Y)
+    return Y, anchors, cls_preds, bbox_preds
 ```
 
 ```{.python .input #ssd-the-complete-model-2}
@@ -742,26 +743,27 @@ class TinySSD(nn.Module):
 
 ```{.python .input #ssd-the-complete-model-4}
 #@tab jax
-class TinySSD(nn.Module):
-    num_classes: int
+class TinySSD(nnx.Module):
+    def __init__(self, num_classes, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.num_classes = num_classes
+        self.blks = nnx.List([BaseNet(rngs), DownSampleBlk(64, 128, rngs),
+                              DownSampleBlk(128, 128, rngs),
+                              DownSampleBlk(128, 128, rngs)])
+        channels = [64, 128, 128, 128, 128]
+        self.cls_layers = nnx.List([
+            cls_predictor(c, num_anchors, num_classes, rngs)
+            for c in channels])
+        self.bbox_layers = nnx.List([
+            bbox_predictor(c, num_anchors, rngs) for c in channels])
 
-    def setup(self):
-        self.blks = [get_blk(i) for i in range(5)]
-        self.cls_layers = [cls_predictor(num_anchors, self.num_classes)
-                           for _ in range(5)]
-        self.bbox_layers = [bbox_predictor(num_anchors) for _ in range(5)]
-
-    def __call__(self, X, training=False):
+    def __call__(self, X):
         anchors, cls_preds, bbox_preds = [None] * 5, [None] * 5, [None] * 5
         # Convert NCHW input to NHWC for Flax
         X = jnp.transpose(X, (0, 2, 3, 1))
         for i in range(5):
-            blk = self.blks[i]
-            if blk is not None:
-                X = blk(X, training=training)
-            else:
-                # Global max pooling
-                X = X.max(axis=(1, 2), keepdims=True)
+            X = (self.blks[i](X) if i < 4 else
+                 X.max(axis=(1, 2), keepdims=True))
             # Convert NHWC to NCHW for multibox_prior
             X_nchw = jnp.transpose(X, (0, 3, 1, 2))
             anchors[i] = d2l.multibox_prior(X_nchw, sizes=sizes[i],
@@ -890,8 +892,7 @@ print('output bbox preds:', bbox_preds.shape)
 #@tab jax
 net = TinySSD(num_classes=1)
 X = jnp.zeros((32, 3, 256, 256))
-variables = net.init(jax.random.PRNGKey(0), X)
-anchors, cls_preds, bbox_preds = net.apply(variables, X)
+anchors, cls_preds, bbox_preds = net(X)
 
 print('output anchors:', anchors.shape)
 print('output class preds:', cls_preds.shape)
@@ -949,12 +950,9 @@ trainer = torch.optim.SGD(net.parameters(), lr=0.2, weight_decay=5e-4)
 ```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-2}
 #@tab jax
 net = TinySSD(num_classes=1)
-dummy_X = jnp.zeros((32, 3, 256, 256))
-variables = net.init(jax.random.PRNGKey(0), dummy_X, training=True)
-params = variables['params']
-batch_stats = variables.get('batch_stats', {})
-trainer = optax.sgd(learning_rate=0.2)
-opt_state = trainer.init(params)
+optimizer = nnx.Optimizer(net, optax.sgd(learning_rate=0.2), wrt=nnx.Param)
+train_net = nnx.view(net, use_running_average=False)
+eval_net = nnx.view(net, use_running_average=True)
 ```
 
 ```{.python .input #ssd-reading-the-dataset-and-initializing-the-model-2}
@@ -1197,25 +1195,19 @@ print(f'{len(train_iter.dataset) / timer.stop():.1f} examples/sec on '
 
 ```{.python .input #ssd-training-the-model}
 #@tab jax
-@jax.jit
-def train_step(params, batch_stats, opt_state, X, Y):
-    def loss_fn(params):
-        variables = {'params': params, 'batch_stats': batch_stats}
-        (anchors, cls_preds, bbox_preds), updates = net.apply(
-            variables, X, training=True, mutable=['batch_stats'])
+@nnx.jit
+def train_step(net, optimizer, X, Y):
+    def loss_fn(net):
+        anchors, cls_preds, bbox_preds = net(X)
         bbox_labels, bbox_masks, cls_labels = d2l.multibox_target(anchors, Y)
         l = calc_loss(cls_preds, cls_labels, bbox_preds, bbox_labels,
                       bbox_masks)
-        return l.mean(), (updates, cls_preds, bbox_preds,
-                          bbox_labels, bbox_masks, cls_labels)
+        return l.mean(), (cls_preds, bbox_preds, bbox_labels, bbox_masks,
+                          cls_labels)
 
-    (loss, aux), grads = jax.value_and_grad(
-        loss_fn, has_aux=True)(params)
-    updates_dict, cls_preds, bbox_preds, bbox_labels, bbox_masks, \
-        cls_labels = aux
-    new_batch_stats = updates_dict['batch_stats']
-    param_updates, opt_state = trainer.update(grads, opt_state, params)
-    params = optax.apply_updates(params, param_updates)
+    (loss, aux), grads = nnx.value_and_grad(loss_fn, has_aux=True)(net)
+    optimizer.update(net, grads)
+    cls_preds, bbox_preds, bbox_labels, bbox_masks, cls_labels = aux
     # Compute scalar metrics inside the jit so we don't ship large tensors
     # back to the host every step.
     cls_correct = (cls_preds.argmax(axis=-1).astype(cls_labels.dtype)
@@ -1223,8 +1215,7 @@ def train_step(params, batch_stats, opt_state, X, Y):
     cls_count = jnp.array(cls_labels.size, dtype=cls_correct.dtype)
     bbox_abs_sum = jnp.abs((bbox_labels - bbox_preds) * bbox_masks).sum()
     bbox_count = jnp.array(bbox_labels.size, dtype=bbox_abs_sum.dtype)
-    return (params, new_batch_stats, opt_state, loss,
-            cls_correct, cls_count, bbox_abs_sum, bbox_count)
+    return loss, cls_correct, cls_count, bbox_abs_sum, bbox_count
 
 num_epochs, timer = 20, d2l.Timer()
 animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
@@ -1239,9 +1230,8 @@ for epoch in range(num_epochs):
     for features, target in train_iter:
         timer.start()
         X, Y = jnp.asarray(features), jnp.asarray(target)
-        (params, batch_stats, opt_state, loss,
-         cls_correct, cls_count, bbox_abs_sum, bbox_count) = train_step(
-            params, batch_stats, opt_state, X, Y)
+        loss, cls_correct, cls_count, bbox_abs_sum, bbox_count = train_step(
+            train_net, optimizer, X, Y)
         cls_correct_sum += cls_correct
         cls_total += cls_count
         bbox_abs_total += bbox_abs_sum
@@ -1392,8 +1382,7 @@ output = predict(X)
 ```{.python .input #ssd-prediction-2}
 #@tab jax
 def predict(X):
-    variables = {'params': params, 'batch_stats': batch_stats}
-    anchors, cls_preds, bbox_preds = net.apply(variables, X, training=False)
+    anchors, cls_preds, bbox_preds = eval_net(X)
     cls_probs = jax.nn.softmax(cls_preds, axis=2).transpose(0, 2, 1)
     output = d2l.multibox_detection(cls_probs, bbox_preds, anchors)
     idx = [i for i, row in enumerate(output[0]) if row[0] != -1]

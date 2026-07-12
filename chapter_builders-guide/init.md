@@ -26,10 +26,9 @@ from torch import nn
 ```{.python .input #init-initialization}
 %%tab jax
 import math
-from typing import Callable
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 ```
 
 ```{.python .input #init-initialization}
@@ -61,13 +60,11 @@ $b/\sqrt{3}$, so both claims are cheap to check against a fresh layer:
 :end_tab:
 
 :begin_tab:`jax`
-Flax attaches no numbers at construction: `nn.Dense(256)` is only a
-specification, and parameters come into existence when `init` sees the first
-input, which is where the layer reads off its fan-in (every Flax layer is
-lazy in the sense of :numref:`sec_lazy_init`). What `init` draws is LeCun
-normal: the weight comes from a normal distribution with standard deviation
+NNX creates parameters when `nnx.Linear` is constructed, using the explicit
+input width to determine fan-in. Its default is LeCun normal: the weight comes
+from a normal distribution with standard deviation
 $1/\sqrt{n_\textrm{in}}$, truncated so that no entry lands in the far tails
-(Flax rescales after clipping to keep the standard deviation on target, which
+(the initializer rescales after clipping to keep the standard deviation on target, which
 puts the hard bound near $2.3$ standard deviations), and the bias starts at
 zero. Both claims are cheap to check against a fresh layer:
 :end_tab:
@@ -108,12 +105,11 @@ print(f'std {w.std():.4f}, predicted {bound / math.sqrt(3):.4f}')
 
 ```{.python .input #init-defaults-and-when-to-override-them}
 %%tab jax
-layer = nn.Dense(256)
-params = layer.init(jax.random.key(0), jnp.zeros((1, 512)))
-w = params['params']['kernel']
+layer = nnx.Linear(512, 256, rngs=nnx.Rngs(0))
+w = layer.kernel
 print(f'std {w.std():.4f}, predicted {1 / math.sqrt(512):.4f}')
 print(f'max |w| {jnp.abs(w).max():.4f}, '
-      f'bias all zero: {bool((params["params"]["bias"] == 0).all())}')
+      f'bias all zero: {bool((layer.bias == 0).all())}')
 ```
 
 ```{.python .input #init-defaults-and-when-to-override-them}
@@ -218,15 +214,11 @@ any existing optimizer pointing at the old one.
 :end_tab:
 
 :begin_tab:`jax`
-To impose a scheme we do not walk the model and overwrite tensors; there is
-nothing to overwrite, since parameters live in a pytree of immutable arrays
-that does not exist until `init` runs. Flax makes initialization an argument
-instead: every layer accepts `kernel_init` and `bias_init`, each an arbitrary
-function `(key, shape, dtype) -> array`, and `nn.initializers` supplies the
-standard menu. That covers models you are about to build. The second route,
-for a params tree that already exists, is pytree surgery: build a *new* tree
-that replaces the parameters you select by path and keeps the rest. We show
-both, starting with constructor arguments.
+Every NNX layer accepts `kernel_init` and `bias_init`, each a function
+`(key, shape, dtype) -> array`, and `nnx.initializers` supplies the standard
+menu. These functions run in the constructor. For a model that already
+exists, we can walk its modules and assign new values to selected parameters.
+We show both routes.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -273,16 +265,16 @@ net[0].weight.data[0], net[0].bias.data[0]
 
 ```{.python .input #init-applying-initializers-1}
 %%tab jax
-init_normal = nn.initializers.normal(0.01)
-net = nn.Sequential([
-    nn.Dense(8, kernel_init=init_normal, bias_init=nn.initializers.zeros),
-    nn.relu,
-    nn.Dense(1, kernel_init=init_normal, bias_init=nn.initializers.zeros)])
+init_normal = nnx.initializers.normal(0.01)
+net = nnx.Sequential(
+    nnx.Linear(4, 8, kernel_init=init_normal,
+               bias_init=nnx.initializers.zeros, rngs=nnx.Rngs(0)),
+    nnx.relu,
+    nnx.Linear(8, 1, kernel_init=init_normal,
+               bias_init=nnx.initializers.zeros, rngs=nnx.Rngs(1)))
 
 X = jnp.ones((2, 4))
-params = net.init(jax.random.key(0), X)
-layer_0 = params['params']['layers_0']
-layer_0['kernel'][:, 0], layer_0['bias'][0]
+net.layers[0].kernel[:, 0], net.layers[0].bias[0]
 ```
 
 ```{.python .input #init-applying-initializers-1}
@@ -366,14 +358,13 @@ net[0].weight.data[0], net[2].weight.data
 
 ```{.python .input #init-applying-initializers-2}
 %%tab jax
-net = nn.Sequential([
-    nn.Dense(8, kernel_init=nn.initializers.xavier_uniform()),
-    nn.relu,
-    nn.Dense(1, kernel_init=nn.initializers.constant(42.0))])
+net = nnx.Sequential(
+    nnx.Linear(4, 8, kernel_init=nnx.initializers.xavier_uniform(),
+               rngs=nnx.Rngs(0)), nnx.relu,
+    nnx.Linear(8, 1, kernel_init=nnx.initializers.constant(42.0),
+               rngs=nnx.Rngs(1)))
 
-params = net.init(jax.random.key(0), X)
-(params['params']['layers_0']['kernel'][:, 0],
- params['params']['layers_2']['kernel'])
+net.layers[0].kernel[:, 0], net.layers[2].kernel
 ```
 
 ```{.python .input #init-applying-initializers-2}
@@ -404,12 +395,10 @@ to `apply`.
 :end_tab:
 
 :begin_tab:`jax`
-The second route re-initializes a tree that already exists.
-`jax.tree_util.tree_flatten_with_path` pairs every leaf with its location in
-the tree, `keystr` renders that location as a string we can test, and one
-fresh key per leaf keeps the draws independent. The function below re-draws
-every kernel of the constant-42 network from the previous cell and returns
-the repaired tree; biases pass through untouched:
+The second route walks the existing object graph. `nnx.iter_modules` yields
+each child with its path, and one fresh key per matching layer keeps the draws
+independent. The function below re-draws every linear kernel of the
+constant-42 network; biases pass through untouched:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -432,17 +421,15 @@ the same, and nothing else is needed.
 
 ```{.python .input #init-applying-initializers-3}
 %%tab jax
-def reinit(params, key, init_fn, match):
-    flat, treedef = jax.tree_util.tree_flatten_with_path(params)
-    keys = jax.random.split(key, len(flat))
-    leaves = [init_fn(k, leaf.shape, leaf.dtype)
-              if jax.tree_util.keystr(path).endswith(match) else leaf
-              for (path, leaf), k in zip(flat, keys)]
-    return jax.tree_util.tree_unflatten(treedef, leaves)
+def reinit(model, key, init_fn):
+    layers = [m for _, m in nnx.iter_modules(model)
+              if isinstance(m, nnx.Linear)]
+    for layer, subkey in zip(layers, jax.random.split(key, len(layers))):
+        layer.kernel[...] = init_fn(
+            subkey, layer.kernel.shape, layer.kernel.dtype)
 
-params = reinit(params, jax.random.key(1),
-                nn.initializers.xavier_uniform(), match="['kernel']")
-params['params']['layers_2']['kernel'][:3]
+reinit(net, jax.random.key(1), nnx.initializers.xavier_uniform())
+net.layers[2].kernel[:3]
 ```
 
 ```{.python .input #init-applying-initializers-3}
@@ -480,7 +467,7 @@ standard deviations must state them explicitly:
 :end_tab:
 
 :begin_tab:`jax`
-`nn.initializers.truncated_normal` states its cutoffs in units of the
+`nnx.initializers.truncated_normal` states its cutoffs in units of the
 standard deviation (`lower=-2.0`, `upper=2.0` by default), so the clip at two
 standard deviations is what you get with no extra arguments. Truncation is
 the house preference throughout Flax: the `variance_scaling` factory behind
@@ -520,9 +507,9 @@ print(f'truncated: std {w.std():.4f}, max weight {w.abs().max():.4f}')
 ```{.python .input #init-truncated-normals}
 %%tab jax
 key = jax.random.key(0)
-w = nn.initializers.normal(stddev=0.02)(key, (1000, 1000))
+w = nnx.initializers.normal(stddev=0.02)(key, (1000, 1000))
 print(f'normal:    std {w.std():.4f}, max weight {jnp.abs(w).max():.4f}')
-w = nn.initializers.truncated_normal(stddev=0.02)(key, (1000, 1000))
+w = nnx.initializers.truncated_normal(stddev=0.02)(key, (1000, 1000))
 print(f'truncated: std {w.std():.4f}, max weight {jnp.abs(w).max():.4f}')
 ```
 
@@ -629,16 +616,16 @@ class ResidualBlock(nn.Module):
 
 ```{.python .input #init-watching-the-variance-compound-1}
 %%tab jax
-he = nn.initializers.variance_scaling(2.0, 'fan_in', 'truncated_normal')
+he = nnx.initializers.variance_scaling(2.0, 'fan_in', 'truncated_normal')
 
-class ResidualBlock(nn.Module):
-    d: int
-    out_init: Callable = he
+class ResidualBlock(nnx.Module):
+    def __init__(self, d, out_init=he, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.fc1 = nnx.Linear(d, 4 * d, kernel_init=he, rngs=rngs)
+        self.fc2 = nnx.Linear(4 * d, d, kernel_init=out_init, rngs=rngs)
 
-    @nn.compact
     def __call__(self, X):
-        Y = nn.relu(nn.Dense(4 * self.d, kernel_init=he)(X))
-        return X + nn.Dense(self.d, kernel_init=self.out_init)(Y)
+        return X + self.fc2(nnx.relu(self.fc1(X)))
 ```
 
 ```{.python .input #init-watching-the-variance-compound-1}
@@ -681,12 +668,12 @@ one of three treatments: leave it alone, scale it by $1/\sqrt{N}$, or zero it.
 :begin_tab:`jax`
 Every dense layer gets He initialization, appropriate for the ReLU inside
 the branch; `variance_scaling(2.0, 'fan_in', 'truncated_normal')` is exactly
-what `nn.initializers.he_normal()` expands to. The treatment is a constructor
-argument as well: the block takes its output projection's initializer as a
-field, so each of the three treatments is just a different initializer.
+what `nnx.initializers.he_normal()` expands to. The block takes its output
+projection's initializer as a constructor argument, so each treatment is a
+different initializer.
 Leaving it alone means He again, scaling by $1/\sqrt{N}$ is a closure over
 the depth that wraps the same three-argument signature, and zeroing is
-`nn.initializers.zeros`.
+`nnx.initializers.zeros`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -742,11 +729,12 @@ def scaled_he(num_blocks):
     return init
 
 def output_std(num_blocks, out_init):
-    net = nn.Sequential([ResidualBlock(64, out_init=out_init(num_blocks))
-                         for _ in range(num_blocks)])
+    rngs = nnx.Rngs(0)
+    net = nnx.Sequential(*[
+        ResidualBlock(64, out_init=out_init(num_blocks), rngs=rngs)
+        for _ in range(num_blocks)])
     X = jax.random.normal(jax.random.key(1), (256, 64))
-    params = net.init(jax.random.key(0), X)
-    return net.apply(params, X).std().item()
+    return net(X).std().item()
 ```
 
 ```{.python .input #init-watching-the-variance-compound-2}
@@ -806,7 +794,7 @@ for n in (2, 8, 32):
 %%tab jax
 tweaks = {'default': lambda n: he,
           'scaled': scaled_he,
-          'zero': lambda n: nn.initializers.zeros}
+          'zero': lambda n: nnx.initializers.zeros}
 print(f'{"N":>3}' + ''.join(f'{name:>10}' for name in tweaks))
 for n in (2, 8, 32):
     stds = (output_std(n, tweak) for tweak in tweaks.values())
@@ -855,7 +843,7 @@ no harder than using one.
 
 :begin_tab:`jax`
 An initializer is just a function `(key, shape, dtype) -> array`, the
-signature everything in `nn.initializers` shares, so writing one is no harder
+signature everything in `nnx.initializers` shares, so writing one is no harder
 than using one.
 :end_tab:
 
@@ -926,9 +914,10 @@ def my_init(key, shape, dtype=jnp.float32):
                              shape)
     return mag * sign
 
-net = nn.Sequential([nn.Dense(8, kernel_init=my_init), nn.relu, nn.Dense(1)])
-params = net.init(jax.random.key(0), X)
-params['params']['layers_0']['kernel'][:, :2]
+net = nnx.Sequential(
+    nnx.Linear(4, 8, kernel_init=my_init, rngs=nnx.Rngs(0)), nnx.relu,
+    nnx.Linear(8, 1, rngs=nnx.Rngs(1)))
+net.layers[0].kernel[:, :2]
 ```
 
 ```{.python .input #init-custom-initializers-1}
@@ -972,12 +961,10 @@ such as offsetting a whole matrix or pinning a single entry:
 :end_tab:
 
 :begin_tab:`jax`
-No guard is needed on the way in, because nothing gets overwritten: a JAX
-array rejects assignment (`w[0, 0] = 42` raises a `TypeError`), so one-off
-surgery produces a new tree rather than editing the old one. `.at[...].set()`
-is the functional replacement for indexed assignment, and a path-matched
-`tree_map` splices the result into the params tree, here offsetting a whole
-matrix and pinning a single entry in one pass:
+NNX parameters are mutable variables. Assignment updates the value owned by
+the layer while preserving the `nnx.Param` object that optimizers and
+checkpoints track. One-off surgery therefore looks like ordinary indexed
+assignment:
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1006,12 +993,9 @@ net[0].weight[0]
 
 ```{.python .input #init-custom-initializers-2}
 %%tab jax
-params = jax.tree_util.tree_map_with_path(
-    lambda path, w: ((w + 1).at[0, 0].set(42)
-                     if jax.tree_util.keystr(path).endswith(
-                         "['layers_0']['kernel']") else w),
-    params)
-params['params']['layers_0']['kernel'][0]
+net.layers[0].kernel[...] += 1
+net.layers[0].kernel[0, 0] = 42
+net.layers[0].kernel[0]
 ```
 
 ```{.python .input #init-custom-initializers-2}
@@ -1037,9 +1021,8 @@ run that materializes them.
 :end_tab:
 
 :begin_tab:`jax`
-There is no ordering caveat to remember here: every Flax layer is lazy
-(:numref:`sec_lazy_init`), the params tree does not exist until `init`
-returns it, and surgery on the result is the only order the API admits.
+There is no ordering caveat: NNX parameters are created in the constructor,
+so both graph walks and direct assignment can run immediately.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1071,11 +1054,10 @@ routines, walked over the model by `net.apply`.
 :end_tab:
 
 :begin_tab:`jax`
-Flax initializes parameters when `init` meets the first input, with fan-aware
-defaults; override them when depth or a paper's recipe demands it. The
-mechanism is one pattern: an initializer is a function
+NNX initializes parameters in layer constructors with fan-aware defaults;
+override them when depth or a paper's recipe demands it. An initializer is a function
 `(key, shape, dtype) -> array`, handed to a layer as `kernel_init` at
-construction or run over an existing tree by path-matched pytree surgery.
+construction or run over selected modules in an existing object graph.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1136,7 +1118,7 @@ subclass with a few lines of array code in its `_init_weight`.
    :numref:`sec_numerical_stability`.
 1. Write an initializer that fills each parameter from a dictionary keyed by
    parameter name (walk `net.named_parameters()` in PyTorch, `net.weights`
-   in TensorFlow, the flattened params tree in JAX, `net.collect_params()`
+   in TensorFlow, `nnx.iter_modules(net)` in JAX, `net.collect_params()`
    in MXNet). You have re-invented part of checkpoint loading,
    which :numref:`sec_read_write` covers.
 1. For a normal distribution truncated at $\pm 2\sigma$: what fraction of

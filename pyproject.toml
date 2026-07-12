@@ -70,18 +70,25 @@ tensorflow = [
     "tensorflow-probability[tf] ; sys_platform == 'darwin'",
 ]
 jax = [
-    "jax[cuda12]>=0.10.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
-    "flax ; sys_platform == 'linux' and platform_machine == 'x86_64'",
-    "optax ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    # Pin the complete NNX stack: notebook-output provenance records these
+    # versions, and an unbounded Flax upgrade can change graph/state semantics.
+    "jax[cuda12]==0.10.2 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "flax==0.12.7 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "optax==0.2.8 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "orbax-checkpoint==0.12.0 ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "huggingface-hub ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "safetensors ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "tensorflow ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "tensorflow-datasets ; sys_platform == 'linux' and platform_machine == 'x86_64'",
-    "flaxmodels ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     # Apple Silicon: plain `jax` resolves the CPU jaxlib arm64 macOS wheel.
     # tensorflow(+datasets) come along because d2l/jax.py imports tf for its
     # data utilities (mirrors the linux jax extra).
-    "jax>=0.10.0 ; sys_platform == 'darwin'",
-    "flax ; sys_platform == 'darwin'",
-    "optax ; sys_platform == 'darwin'",
+    "jax==0.10.2 ; sys_platform == 'darwin'",
+    "flax==0.12.7 ; sys_platform == 'darwin'",
+    "optax==0.2.8 ; sys_platform == 'darwin'",
+    "orbax-checkpoint==0.12.0 ; sys_platform == 'darwin'",
+    "huggingface-hub ; sys_platform == 'darwin'",
+    "safetensors ; sys_platform == 'darwin'",
     "tensorflow ; sys_platform == 'darwin'",
     "tensorflow-datasets ; sys_platform == 'darwin'",
 ]

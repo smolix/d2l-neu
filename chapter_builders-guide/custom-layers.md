@@ -29,7 +29,7 @@ from torch import nn
 %%tab jax
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 from flax import serialization
 from d2l import jax as d2l
 ```
@@ -58,10 +58,7 @@ parent constructor.
 :begin_tab:`jax`
 The smallest custom layer has no state at all. `CenteredLayer` subtracts the
 mean from its input. To build it, we inherit from the base module class and
-implement `__call__` under the `@nn.compact` decorator, the method where a
-flax layer both declares its variables and computes; this one declares none.
-Flax modules are dataclasses, so a layer with nothing to configure needs no
-constructor at all.
+implement `__call__`. This layer owns no variables and needs no constructor.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -90,8 +87,7 @@ class CenteredLayer(nn.Module):
 
 ```{.python .input #custom-layers-layers-without-parameters-1}
 %%tab jax
-class CenteredLayer(nn.Module):
-    @nn.compact
+class CenteredLayer(nnx.Module):
     def __call__(self, X):
         return X - X.mean()
 ```
@@ -119,9 +115,9 @@ class CenteredLayer(nn.Block):
 Feeding data through confirms that it does what it says.
 
 :begin_tab:`jax`
-A flax module never runs by being called directly; `apply` runs it with an
-explicit dictionary of variables. `CenteredLayer` has none, so the dictionary
-is empty.
+NNX modules are ordinary Python objects: calling the object invokes
+`__call__` directly. Since `CenteredLayer` owns no variables, construction
+needs neither an input shape nor an RNG stream.
 :end_tab:
 
 ```{.python .input #custom-layers-layers-without-parameters-2}
@@ -133,7 +129,7 @@ layer(torch.tensor([1.0, 2, 3, 4, 5]))
 ```{.python .input #custom-layers-layers-without-parameters-2}
 %%tab jax
 layer = CenteredLayer()
-layer.apply({}, jnp.array([1.0, 2, 3, 4, 5]))
+layer(jnp.array([1.0, 2, 3, 4, 5]))
 ```
 
 ```{.python .input #custom-layers-layers-without-parameters-2}
@@ -155,9 +151,8 @@ up floating-point numbers, we may see a very small nonzero value instead,
 which is roundoff, not a bug.
 
 :begin_tab:`jax`
-`init_with_output` initializes the parameters (the `Dense` layer contributes
-some, ours contributes none) and returns the output in the same call;
-`d2l.get_key()` supplies the PRNG keys.
+NNX creates the `Linear` parameters in its constructor, so we specify both
+feature dimensions there. `CenteredLayer` contributes no parameters.
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -175,9 +170,8 @@ Y.mean()
 
 ```{.python .input #custom-layers-layers-without-parameters-3}
 %%tab jax
-net = nn.Sequential([nn.Dense(128), CenteredLayer()])
-Y, _ = net.init_with_output(d2l.get_key(),
-                            jax.random.uniform(d2l.get_key(), (4, 8)))
+net = nnx.Sequential(nnx.Linear(8, 128, rngs=nnx.Rngs(0)), CenteredLayer())
+Y = net(jax.random.uniform(d2l.get_key(), (4, 8)))
 Y.mean()
 ```
 
@@ -210,9 +204,9 @@ language models, in the same five lines.
 
 :begin_tab:`jax`
 A layer with something to learn must create its own parameters, and
-`self.param` is what registers them in the variable tree
+`nnx.Param` is what registers them in the object graph
 (:numref:`sec_parameters`). We could show the mechanics by re-implementing
-`nn.Dense`, but that teaches nothing the built-in does not already do. Instead
+`nnx.Linear`, but that teaches nothing the built-in does not already do. Instead
 we implement *RMSNorm* :cite:`Zhang.Sennrich.2019`, the normalization used by
 most current large language models, in the same handful of lines.
 :end_tab:
@@ -270,15 +264,14 @@ class RMSNorm(nn.Module):
 
 ```{.python .input #custom-layers-layers-with-parameters-rmsnorm-1}
 %%tab jax
-class RMSNorm(nn.Module):
-    d: int
-    eps: float = 1e-6
+class RMSNorm(nnx.Module):
+    def __init__(self, d, eps=1e-6):
+        self.gain = nnx.Param(jnp.ones(d))
+        self.eps = eps
 
-    @nn.compact
     def __call__(self, X):
-        gain = self.param('gain', nn.initializers.ones, (self.d,))
         rms = jnp.sqrt((X ** 2).mean(-1, keepdims=True) + self.eps)
-        return gain * X / rms
+        return self.gain * X / rms
 ```
 
 ```{.python .input #custom-layers-layers-with-parameters-rmsnorm-1}
@@ -325,8 +318,7 @@ norm(X).pow(2).mean(-1)
 %%tab jax
 norm = RMSNorm(8)
 X = 100 * jax.random.normal(d2l.get_key(), (4, 8))
-params = norm.init(d2l.get_key(), X)
-(norm.apply(params, X) ** 2).mean(-1)
+(norm(X) ** 2).mean(-1)
 ```
 
 ```{.python .input #custom-layers-layers-with-parameters-rmsnorm-2}
@@ -382,7 +374,7 @@ list(norm.named_parameters())
 
 ```{.python .input #custom-layers-the-composability-guarantee-1}
 %%tab jax
-params
+nnx.state(norm, nnx.Param)
 ```
 
 ```{.python .input #custom-layers-the-composability-guarantee-1}
@@ -405,9 +397,9 @@ net(torch.randn(4, 20)).shape
 
 ```{.python .input #custom-layers-the-composability-guarantee-2}
 %%tab jax
-net = nn.Sequential([nn.Dense(8), RMSNorm(8), nn.Dense(2)])
-Y, net_params = net.init_with_output(d2l.get_key(),
-                                     jax.random.normal(d2l.get_key(), (4, 20)))
+net = nnx.Sequential(nnx.Linear(20, 8, rngs=nnx.Rngs(0)), RMSNorm(8),
+                     nnx.Linear(8, 2, rngs=nnx.Rngs(1)))
+Y = net(jax.random.normal(d2l.get_key(), (4, 20)))
 Y.shape
 ```
 
@@ -434,9 +426,9 @@ disk works the same way; see :numref:`sec_read_write`).
 
 :begin_tab:`jax`
 Third, its state serializes with everything else. `flax.serialization` turns
-the variable tree into bytes and back; restoring those bytes into a freshly
-initialized tree makes the two models agree exactly (saving to disk works the
-same way; see :numref:`sec_read_write`).
+the pure dictionary view of NNX state into bytes and back; restoring those
+values into the state of a fresh model makes the two models agree exactly
+(saving to disk works the same way; see :numref:`sec_read_write`).
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -465,10 +457,16 @@ torch.equal(net(X), clone(X))
 
 ```{.python .input #custom-layers-the-composability-guarantee-3}
 %%tab jax
-raw = serialization.to_bytes(net_params)
+graph, state = nnx.split(net)
+raw = serialization.to_bytes(nnx.to_pure_dict(state))
 X = jax.random.normal(d2l.get_key(), (4, 20))
-clone_params = serialization.from_bytes(net.init(d2l.get_key(), X), raw)
-bool(jnp.array_equal(net.apply(net_params, X), net.apply(clone_params, X)))
+clone = nnx.Sequential(nnx.Linear(20, 8, rngs=nnx.Rngs(2)), RMSNorm(8),
+                       nnx.Linear(8, 2, rngs=nnx.Rngs(3)))
+clone_graph, clone_state = nnx.split(clone)
+restored = serialization.from_bytes(nnx.to_pure_dict(clone_state), raw)
+nnx.replace_by_pure_dict(clone_state, restored)
+clone = nnx.merge(clone_graph, clone_state)
+bool(jnp.array_equal(net(X), clone(X)))
 ```
 
 ```{.python .input #custom-layers-the-composability-guarantee-3}
@@ -538,8 +536,8 @@ next(net.parameters()).device, net(torch.randn(4, 20, device=device)).device
 ```{.python .input #custom-layers-the-composability-guarantee-4}
 %%tab jax
 device = jax.devices()[0]
-net_params = jax.device_put(net_params, device)
-net_params['params']['layers_1']['gain'].device, net.apply(net_params, X).device
+nnx.update(net, jax.device_put(nnx.state(net), device))
+net.layers[1].gain.device, net(X).device
 ```
 
 None of this took any code beyond the class definition. The guarantee comes
@@ -569,9 +567,8 @@ nothing to prefer.
 :end_tab:
 
 :begin_tab:`jax`
-Copying needs no special machinery here: a parameter tree is a plain
-dictionary, so we build one for each implementation around the same `gain`
-array (the native layer names its parameter `scale`).
+Parameters are mutable NNX variables, so we assign the same `gain` array to
+our layer and to the native layer's `scale` parameter.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -593,11 +590,13 @@ torch.allclose(ours(X), native(X))
 
 ```{.python .input #custom-layers-checking-against-the-built-in}
 %%tab jax
-ours, native = RMSNorm(8), nn.RMSNorm(epsilon=1e-6)
+ours = RMSNorm(8)
+native = nnx.RMSNorm(8, epsilon=1e-6, rngs=nnx.Rngs(0))
 gain = jnp.linspace(0.5, 1.5, 8)
 X = jax.random.normal(d2l.get_key(), (16, 8))
-bool(jnp.allclose(ours.apply({'params': {'gain': gain}}, X),
-                  native.apply({'params': {'scale': gain}}, X)))
+ours.gain[...] = gain
+native.scale[...] = gain
+bool(jnp.allclose(ours(X), native(X)))
 ```
 
 ```{.python .input #custom-layers-checking-against-the-built-in}
@@ -634,16 +633,14 @@ wrong too (`.to(device)` would skip it and the state dict would omit it).
 
 :begin_tab:`jax`
 :numref:`sec_parameters` introduced state that persists and travels with
-the model but receives no gradient. Flax files every variable under a named
-*collection*: `self.param` writes to the `params` collection, the one that
-gets differentiated and optimized, and `self.variable(collection, name,
-init_fn)` writes anywhere else. A common case is a layer built around a
-precomputed table, for instance the causal mask that keeps attention scores
-from looking at future positions. The mask is fixed, so a parameter is wrong
-(the optimizer would update it); a collection of its own keeps it out of the
-gradient computation while it still serializes and moves with the rest of the
-variable tree. BatchNorm's running statistics live in a `batch_stats`
-collection by exactly this mechanism.
+the model but receives no gradient. NNX distinguishes kinds of state through
+`Variable` subclasses. `nnx.Param` marks trainable state; a custom subclass
+can mark a buffer that an optimizer must skip. A common example is the causal
+mask that keeps attention scores from looking at future positions. The mask
+is fixed, so a parameter is wrong. Storing it in `Buffer` keeps it out of the
+gradient computation while it still serializes and moves with the model.
+BatchNorm uses the same idea for its running statistics through
+`nnx.BatchStat`.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -688,16 +685,17 @@ class CausalMask(nn.Module):
 
 ```{.python .input #custom-layers-precomputed-state-buffers-1}
 %%tab jax
-class CausalMask(nn.Module):
-    max_len: int
+class Buffer(nnx.Variable):
+    pass
 
-    @nn.compact
+class CausalMask(nnx.Module):
+    def __init__(self, max_len):
+        self.mask = Buffer(jnp.triu(
+            jnp.ones((max_len, max_len), dtype=bool), 1))
+
     def __call__(self, scores):
-        # Precompute once for the longest sequence; slice per call
-        mask = self.variable('buffers', 'mask', lambda: jnp.triu(
-            jnp.ones((self.max_len, self.max_len), dtype=bool), 1))
         T = scores.shape[-1]
-        return jnp.where(mask.value[:T, :T], -jnp.inf, scores)
+        return jnp.where(self.mask[:T, :T], -jnp.inf, scores)
 ```
 
 ```{.python .input #custom-layers-precomputed-state-buffers-1}
@@ -737,8 +735,8 @@ to touch, and still lists the mask in its state dict.
 :end_tab:
 
 :begin_tab:`jax`
-The layer masks the strict upper triangle, has an empty `params` collection
-for the optimizer, and still carries the mask in its variables.
+The layer masks the strict upper triangle, has no `nnx.Param` variables for
+the optimizer, and still carries the mask as `Buffer` state.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -763,9 +761,8 @@ print(list(mask.parameters()), list(mask.state_dict()))
 ```{.python .input #custom-layers-precomputed-state-buffers-2}
 %%tab jax
 mask = CausalMask(max_len=8)
-variables = mask.init(d2l.get_key(), jnp.zeros((3, 3)))
-print(mask.apply(variables, jnp.zeros((3, 3))))
-print(variables.get('params', {}), list(variables['buffers']))
+print(mask(jnp.zeros((3, 3))))
+print(nnx.state(mask, nnx.Param), nnx.state(mask, Buffer))
 ```
 
 ```{.python .input #custom-layers-precomputed-state-buffers-2}
@@ -1047,9 +1044,9 @@ implementations to understand them; prefer the native ones in production.
 
 :begin_tab:`jax`
 A custom layer is a module subclass: `__call__` defines the computation,
-`self.param` registers learnable state in the `params` collection, and
-`self.variable` registers persistent state in a collection no optimizer
-touches. Registration is what buys composability; a correctly written layer
+`nnx.Param` registers learnable state, and another `nnx.Variable` subclass
+registers persistent state that the optimizer does not touch. Registration
+is what buys composability; a correctly written layer
 gets parameter tracking, container compatibility, serialization, and device
 movement for free, as we verified on RMSNorm axis by axis. When the chain
 rule itself must be overridden, as in the straight-through estimator,
@@ -1112,15 +1109,16 @@ RMSNorm, keep your own.
 
 :begin_tab:`jax`
 1. Add an optional learned bias to `RMSNorm` (a shift applied after the
-   scale, restoring part of what LayerNorm had). Verify that the variable
-   tree of a model containing it grows by the expected entry, and observe
+   scale, restoring part of what LayerNorm had). Verify that the parameter
+   state of a model containing it grows by the expected entry, and observe
    what `flax.serialization.from_bytes` does when it restores bytes saved
-   without the bias into the new structure.
+   without the bias into the new state structure.
 1. Implement `Dropout` from scratch as a custom layer that zeroes each entry
    with probability $p$ and rescales the survivors during training, but is
-   the identity during evaluation. Flax has no global training flag: accept a
-   `deterministic` argument in `__call__` and draw the mask with
-   `self.make_rng('dropout')`. What extra argument does `apply` now need?
+   the identity during evaluation. Give the module a class-annotated
+   `deterministic` attribute and an `nnx.Rngs` stream. Verify that
+   `nnx.view(model, deterministic=True)` reaches a dropout layer nested in an
+   `nnx.Sequential`.
 1. Implement a clamp with a custom gradient: a `custom_vjp` function whose
    forward is `jnp.clip(X, lo, hi)` and whose backward passes the gradient
    only where the input lay strictly inside the clamp range; the forward rule

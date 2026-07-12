@@ -56,7 +56,7 @@ import tensorflow as tf
 ```{.python .input #padding-and-strides-padding-and-stride}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 ```
@@ -196,13 +196,13 @@ comp_conv2d(conv2d, X).shape
 # elevations and reductions on the input and output
 def comp_conv2d(conv2d, X):
     # (1, X.shape, 1) indicates that batch size and the number of channels are both 1
-    key = d2l.get_key()
     X = X.reshape((1,) + X.shape + (1,))
-    Y, _ = conv2d.init_with_output(key, X)
+    Y = conv2d(X)
     # Strip the dimensions: examples and channels
     return Y.reshape(Y.shape[1:3])
 # 1 row and column is padded on either side, so a total of 2 rows or columns are added
-conv2d = nn.Conv(1, kernel_size=(3, 3), padding='SAME')
+conv2d = nnx.Conv(1, 1, kernel_size=(3, 3), padding='SAME',
+                  rngs=nnx.Rngs(d2l.get_key()))
 X = jax.random.uniform(d2l.get_key(), shape=(8, 8))
 comp_conv2d(conv2d, X).shape
 ```
@@ -239,7 +239,8 @@ comp_conv2d(conv2d, X).shape
 %%tab jax
 # We use a convolution kernel with height 5 and width 3. The padding on
 # either side of the height and width are 2 and 1, respectively
-conv2d = nn.Conv(1, kernel_size=(5, 3), padding=(2, 1))
+conv2d = nnx.Conv(1, 1, kernel_size=(5, 3), padding=(2, 1),
+                  rngs=nnx.Rngs(d2l.get_key()))
 comp_conv2d(conv2d, X).shape
 ```
 
@@ -308,7 +309,8 @@ comp_conv2d(conv2d, X).shape
 
 ```{.python .input #padding-and-strides-stride-1}
 %%tab jax
-conv2d = nn.Conv(1, kernel_size=(3, 3), padding=1, strides=2)
+conv2d = nnx.Conv(1, 1, kernel_size=(3, 3), padding=1, strides=2,
+                  rngs=nnx.Rngs(d2l.get_key()))
 comp_conv2d(conv2d, X).shape
 ```
 
@@ -340,7 +342,8 @@ comp_conv2d(conv2d, X).shape
 
 ```{.python .input #padding-and-strides-stride-2}
 %%tab jax
-conv2d = nn.Conv(1, kernel_size=(3, 5), padding=(0, 1), strides=(3, 4))
+conv2d = nnx.Conv(1, 1, kernel_size=(3, 5), padding=(0, 1), strides=(3, 4),
+                  rngs=nnx.Rngs(d2l.get_key()))
 comp_conv2d(conv2d, X).shape
 ```
 
@@ -432,8 +435,10 @@ comp_conv2d(conv2d, X).shape, comp_conv2d(conv5, X).shape
 %%tab jax
 # Dilation 2 gives the 3x3 kernel a 5x5 footprint, so both convolutions
 # shrink the 8x8 input to 4x4
-conv2d = nn.Conv(1, kernel_size=(3, 3), padding='VALID', kernel_dilation=2)
-conv5 = nn.Conv(1, kernel_size=(5, 5), padding='VALID')
+conv2d = nnx.Conv(1, 1, kernel_size=(3, 3), padding='VALID',
+                  kernel_dilation=2, rngs=nnx.Rngs(d2l.get_key()))
+conv5 = nnx.Conv(1, 1, kernel_size=(5, 5), padding='VALID',
+                 rngs=nnx.Rngs(d2l.get_key()))
 comp_conv2d(conv2d, X).shape, comp_conv2d(conv5, X).shape
 ```
 

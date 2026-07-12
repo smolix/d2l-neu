@@ -38,8 +38,7 @@ from d2l import tensorflow as d2l
 ```{.python .input #training-recipes-training-recipes-matter}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
-from functools import partial
+from flax import nnx
 import jax
 from jax import numpy as jnp
 import math
@@ -353,32 +352,39 @@ print(f'fraction of samples with a dropped branch: {float(dropped):.3f}')
 
 ```{.python .input #training-recipes-stochastic-depth}
 %%tab jax
-class StochasticResidual(nn.Module):
+class StochasticResidual(nnx.Module):
     """A residual block with per-sample stochastic depth."""
-    num_channels: int
-    p: float
-    training: bool = True
+    deterministic: bool
 
-    @nn.compact
+    def __init__(self, num_channels, p, rngs=None):
+        rngs = (nnx.Rngs(params=d2l.get_key(), drop_path=d2l.get_key())
+                if rngs is None else rngs)
+        self.p, self.deterministic, self.rngs = p, False, rngs
+        self.conv1 = nnx.Conv(num_channels, num_channels, (3, 3),
+                              padding='same', rngs=rngs)
+        self.bn1 = nnx.BatchNorm(num_channels, rngs=rngs)
+        self.conv2 = nnx.Conv(num_channels, num_channels, (3, 3),
+                              padding='same', rngs=rngs)
+        self.bn2 = nnx.BatchNorm(num_channels, rngs=rngs)
+
+    def set_view(self, *, deterministic):
+        self.deterministic = deterministic
+
     def __call__(self, X):
-        Y = nn.Conv(self.num_channels, (3, 3), padding='same')(X)
-        Y = nn.relu(nn.BatchNorm(not self.training)(Y))
-        Y = nn.Conv(self.num_channels, (3, 3), padding='same')(Y)
-        Y = nn.BatchNorm(not self.training)(Y)
-        if self.training and self.p > 0:
+        Y = self.conv1(X)
+        Y = nnx.relu(self.bn1(Y))
+        Y = self.bn2(self.conv2(Y))
+        if not self.deterministic and self.p > 0:
             keep = jax.random.bernoulli(
-                self.make_rng('drop_path'), 1 - self.p,
+                self.rngs.drop_path(), 1 - self.p,
                 (X.shape[0], 1, 1, 1))
             Y = Y * keep / (1 - self.p)
-        return nn.relu(X + Y)
+        return nnx.relu(X + Y)
 
 blk = StochasticResidual(3, p=0.5)
 X = jax.random.normal(d2l.get_key(), (1000, 8, 8, 3))
-variables = blk.init({'params': d2l.get_key(),
-                      'drop_path': d2l.get_key()}, X)
-Y, _ = blk.apply(variables, X, rngs={'drop_path': d2l.get_key()},
-                 mutable=['batch_stats'])
-dropped = jnp.all(Y == nn.relu(X), axis=(1, 2, 3)).mean()
+Y = blk(X)
+dropped = jnp.all(Y == nnx.relu(X), axis=(1, 2, 3)).mean()
 print(f'fraction of samples with a dropped branch: {float(dropped):.3f}')
 ```
 
@@ -509,27 +515,30 @@ class FashionMNIST10k(d2l.FashionMNIST):
         self.train = (self.train[0][idx], self.train[1][idx])
 
 class ResNet18(d2l.Classifier):
-    lr: float = 0.1
-    num_classes: int = 10
-    modern: bool = False
-    max_epochs: int = 30
-    steps_per_epoch: int = 79
-    training: bool = True
-
-    def setup(self):
-        layers = [nn.Conv(64, (7, 7), strides=(2, 2), padding='same'),
-                  nn.BatchNorm(not self.training), nn.relu,
-                  lambda x: nn.max_pool(x, (3, 3), (2, 2), padding='SAME')]
+    def __init__(self, lr=0.1, num_classes=10, modern=False,
+                 max_epochs=30, steps_per_epoch=79, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key(),
+                         mixup=d2l.get_key()) if rngs is None else rngs)
+        self.rngs = rngs
+        layers = [nnx.Conv(1, 64, (7, 7), strides=(2, 2), padding='same',
+                           rngs=rngs),
+                  nnx.BatchNorm(64, rngs=rngs), nnx.relu,
+                  lambda x: nnx.max_pool(x, (3, 3), (2, 2), padding='SAME')]
         arch = ((2, 64), (2, 128), (2, 256), (2, 512))
+        in_channels = 64
         for i, (depth, c) in enumerate(arch):
             for j in range(depth):
                 down = (i > 0 and j == 0)
                 layers.append(d2l.Residual(
                     c, use_1x1conv=down,
                     strides=(2, 2) if down else (1, 1),
-                    training=self.training))
-        layers += [lambda x: x.mean(axis=(1, 2)), nn.Dense(self.num_classes)]
-        self.net = nn.Sequential(layers)
+                    in_channels=in_channels, rngs=rngs))
+                in_channels = c
+        layers += [lambda x: x.mean(axis=(1, 2)),
+                   nnx.Linear(512, num_classes, rngs=rngs)]
+        self.net = nnx.Sequential(*layers)
 
     def configure_optimizers(self):
         total = self.max_epochs * self.steps_per_epoch
@@ -541,33 +550,18 @@ class ResNet18(d2l.Classifier):
             self.lr, {int(0.6 * total): 0.1, int(0.85 * total): 0.1})
         return optax.sgd(schedule, momentum=0.9)
 
-    @partial(jax.jit, static_argnums=(0,))
-    def mixed_value_and_grad(self, params, batch, state):
-        X, y = batch
-        key_mix, key_drop = jax.random.split(state.dropout_rng)
-        X, y_a, y_b, lam = mixup(key_mix, X, y, alpha=0.2)
-
-        def mixed_loss(p):
-            logits, updates = state.apply_fn(
-                {'params': p, 'batch_stats': state.batch_stats}, X,
-                mutable=['batch_stats'], rngs={'dropout': key_drop})
-            logp = jax.nn.log_softmax(logits)
-            eye = jnp.eye(self.num_classes)
-            ta = 0.9 * eye[y_a] + 0.1 / self.num_classes
-            tb = 0.9 * eye[y_b] + 0.1 / self.num_classes
-            loss_a = -(ta * logp).sum(axis=1).mean()
-            loss_b = -(tb * logp).sum(axis=1).mean()
-            return lam * loss_a + (1 - lam) * loss_b, updates
-
-        return jax.value_and_grad(mixed_loss, has_aux=True)(params)
-
-    def training_step(self, params, batch, state):
+    def training_step(self, batch):
         if not self.modern:
-            return super().training_step(params, batch, state)
-        value, grads = self.mixed_value_and_grad(params, batch, state)
-        loss, _ = value
-        self.plot('loss', loss, train=True)
-        return value, grads
+            return super().training_step(batch)
+        X, y = batch
+        X, y_a, y_b, lam = mixup(self.rngs.mixup(), X, y, alpha=0.2)
+        logp = jax.nn.log_softmax(self(X))
+        eye = jnp.eye(self.num_classes)
+        ta = 0.9 * eye[y_a] + 0.1 / self.num_classes
+        tb = 0.9 * eye[y_b] + 0.1 / self.num_classes
+        loss_a = -(ta * logp).sum(axis=1).mean()
+        loss_b = -(tb * logp).sum(axis=1).mean()
+        return lam * loss_a + (1 - lam) * loss_b
 ```
 
 The executable comparison uses a compact subset of the full recipe: optimizer,
@@ -634,8 +628,7 @@ def val_accuracy(model, data, trainer):
 def val_accuracy(model, data, trainer):
     correct, n = 0.0, 0
     for X, y in data.val_dataloader():
-        values = model.accuracy(trainer.state.params, (X,), y,
-                                trainer.state, averaged=False)
+        values = model.accuracy(trainer.val_model(X), y, averaged=False)
         correct += float(values.sum())
         n += len(y)
     return correct / n
@@ -661,7 +654,7 @@ data = FashionMNIST10k()
 model = ResNet18(lr=0.05, modern=False, max_epochs=30,
                  steps_per_epoch=len(data.train_dataloader()))
 trainer = d2l.Trainer(max_epochs=30, num_gpus=1)
-trainer.fit(model, data, key=jax.random.key(1))
+trainer.fit(model, data)
 val_accuracy(model, data, trainer)
 ```
 
@@ -683,7 +676,7 @@ modern_scores
 model = ResNet18(lr=2e-3, modern=True, max_epochs=45,
                  steps_per_epoch=len(data.train_dataloader()))
 trainer = d2l.Trainer(max_epochs=45, num_gpus=1)
-trainer.fit(model, data, key=jax.random.key(1))
+trainer.fit(model, data)
 val_accuracy(model, data, trainer)
 ```
 

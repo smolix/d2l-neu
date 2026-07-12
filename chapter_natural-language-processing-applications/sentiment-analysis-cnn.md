@@ -65,12 +65,11 @@ train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 import numpy as np
-import flax
 
-batch_size = 64
+batch_size = 256
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
@@ -371,24 +370,21 @@ class TextCNN(nn.Module):
 
 ```{.python .input #sentiment-analysis-cnn-defining-the-model-1}
 #@tab jax
-class TextCNN(nn.Module):
-    vocab_size: int
-    embed_size: int
-    kernel_sizes: list
-    num_channels: list
-    training: bool = True
-
-    def setup(self):
-        self.embedding = nn.Embed(self.vocab_size, self.embed_size)
+class TextCNN(nnx.Module):
+    def __init__(self, vocab_size, embed_size, kernel_sizes, num_channels,
+                 rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.embedding = nnx.Embed(vocab_size, embed_size, rngs=rngs)
         # The embedding layer not to be trained
-        self.constant_embedding = nn.Embed(self.vocab_size, self.embed_size)
-        self.dropout = nn.Dropout(0.5)
-        self.decoder = nn.Dense(2)
+        self.constant_embedding = nnx.Embed(vocab_size, embed_size, rngs=rngs)
+        self.dropout = nnx.Dropout(0.5, rngs=rngs)
+        self.decoder = nnx.Linear(sum(num_channels), 2, rngs=rngs)
         # Create multiple one-dimensional convolutional layers
-        self.convs = [nn.Conv(features=c, kernel_size=(k,))
-                      for c, k in zip(self.num_channels, self.kernel_sizes)]
+        self.convs = nnx.List([
+            nnx.Conv(2 * embed_size, c, kernel_size=(k,), rngs=rngs)
+            for c, k in zip(num_channels, kernel_sizes)])
 
-    def __call__(self, inputs, deterministic=False):
+    def __call__(self, inputs):
         # Concatenate two embedding layer outputs with shape (batch size, no.
         # of tokens, token vector dimension) along vectors
         embeddings = jnp.concatenate((
@@ -399,10 +395,9 @@ class TextCNN(nn.Module):
         # pooling, a tensor of shape (batch size, no. of channels) is obtained.
         # Concatenate along channels
         encoding = jnp.concatenate([
-            jnp.max(nn.relu(conv(embeddings)), axis=1)
+            jnp.max(nnx.relu(conv(embeddings)), axis=1)
             for conv in self.convs], axis=1)
-        outputs = self.decoder(self.dropout(encoding,
-                                            deterministic=deterministic))
+        outputs = self.decoder(self.dropout(encoding))
         return outputs
 ```
 
@@ -464,9 +459,8 @@ net.apply(init_weights);
 embed_size, kernel_sizes, nums_channels = 100, [3, 4, 5], [100, 100, 100]
 devices = d2l.try_all_gpus()
 net = TextCNN(len(vocab), embed_size, kernel_sizes, nums_channels)
-# Initialize parameters
-dummy_input = jnp.ones((1, 500), dtype=jnp.int32)
-params = net.init(jax.random.PRNGKey(0), dummy_input, deterministic=True)
+d2l.check_shape(nnx.view(net, deterministic=True)(
+    jnp.ones((1, 500), dtype=jnp.int32)), (1, 2))
 ```
 
 ```{.python .input #sentiment-analysis-cnn-defining-the-model-2}
@@ -512,10 +506,8 @@ net.constant_embedding.weight.requires_grad = False
 glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
 embeds = glove_embedding[vocab.idx_to_token]
 # Set pretrained embedding weights in the parameters
-params = flax.core.unfreeze(params)
-params['params']['embedding']['embedding'] = jnp.array(embeds)
-params['params']['constant_embedding']['embedding'] = jnp.array(embeds)
-params = flax.core.freeze(params)
+net.embedding.embedding[...] = jnp.array(embeds)
+net.constant_embedding.embedding = nnx.data(jnp.array(embeds))
 ```
 
 ```{.python .input #sentiment-analysis-cnn-loading-pretrained-word-vectors}
@@ -550,42 +542,37 @@ d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-1}
 #@tab jax
 lr, num_epochs = 0.001, 5
-optimizer = optax.adam(lr)
-opt_state = optimizer.init(params['params'])
+optimizer = nnx.Optimizer(net, optax.adam(lr), wrt=nnx.Param)
 loss_fn = optax.softmax_cross_entropy_with_integer_labels
 
-@jax.jit
-def train_step(params, opt_state, X, y, key):
-    def compute_loss(p):
-        logits = net.apply({'params': p}, X, deterministic=False,
-                           rngs={'dropout': key})
+@nnx.jit
+def train_step(net, optimizer, X, y):
+    def compute_loss(model):
+        logits = model(X)
         return loss_fn(logits, y).mean(), logits
-    (loss, logits), grads = jax.value_and_grad(
-        compute_loss, has_aux=True)(params)
-    updates, opt_state_new = optimizer.update(grads, opt_state, params)
-    params_new = optax.apply_updates(params, updates)
-    return params_new, opt_state_new, loss, logits
+    (loss, logits), grads = nnx.value_and_grad(
+        compute_loss, has_aux=True)(net)
+    optimizer.update(net, grads)
+    return loss, logits
 
-key = jax.random.PRNGKey(0)
 for epoch in range(num_epochs):
-    metric = d2l.Accumulator(4)
+    loss_sum, train_correct, num_train = (
+        jnp.array(0.0), jnp.array(0), 0)
     for X, y in train_iter:
-        key, subkey = jax.random.split(key)
-        params_p = params['params']
-        params_p, opt_state, l, logits = train_step(
-            params_p, opt_state, X, y, subkey)
-        params = {'params': params_p}
-        metric.add(float(l) * len(y), float((logits.argmax(axis=-1) == y).sum()),
-                   len(y), len(y))
+        l, logits = train_step(net, optimizer, X, y)
+        loss_sum += l * len(y)
+        train_correct += (logits.argmax(axis=-1) == y).sum()
+        num_train += len(y)
     # Evaluate
-    correct, total = 0, 0
+    correct, total = jnp.array(0), 0
     for X, y in test_iter:
-        logits = net.apply(params, X, deterministic=True,
-                           rngs={'dropout': jax.random.PRNGKey(0)})
-        correct += int((logits.argmax(axis=-1) == y).sum())
+        logits = nnx.view(net, deterministic=True)(X)
+        correct += (logits.argmax(axis=-1) == y).sum()
         total += len(y)
-    print(f'epoch {epoch + 1}, loss {metric[0] / metric[2]:.3f}, '
-          f'train acc {metric[1] / metric[3]:.3f}, '
+    loss_sum, train_correct, correct = (
+        float(loss_sum), int(train_correct), int(correct))
+    print(f'epoch {epoch + 1}, loss {loss_sum / num_train:.3f}, '
+          f'train acc {train_correct / num_train:.3f}, '
           f'test acc {correct / total:.3f}')
 ```
 
@@ -608,8 +595,7 @@ d2l.predict_sentiment(net, vocab, 'this movie is so great')
 ```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-2}
 #@tab jax
 tokens = jnp.array(vocab['this movie is so great'.split()])
-logits = net.apply(params, tokens.reshape(1, -1), deterministic=True,
-                   rngs={'dropout': jax.random.PRNGKey(0)})
+logits = nnx.view(net, deterministic=True)(tokens.reshape(1, -1))
 'positive' if int(jnp.argmax(logits, axis=1)[0]) == 1 else 'negative'
 ```
 
@@ -626,8 +612,7 @@ d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 ```{.python .input #sentiment-analysis-cnn-training-and-evaluating-the-model-3}
 #@tab jax
 tokens = jnp.array(vocab['this movie is so bad'.split()])
-logits = net.apply(params, tokens.reshape(1, -1), deterministic=True,
-                   rngs={'dropout': jax.random.PRNGKey(0)})
+logits = nnx.view(net, deterministic=True)(tokens.reshape(1, -1))
 'positive' if int(jnp.argmax(logits, axis=1)[0]) == 1 else 'negative'
 ```
 

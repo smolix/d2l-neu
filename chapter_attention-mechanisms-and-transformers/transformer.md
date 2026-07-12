@@ -57,7 +57,7 @@ import tensorflow as tf
 ```{.python .input #transformer-the-transformer-architecture}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 from jax import numpy as jnp
 import jax
 import math
@@ -204,17 +204,18 @@ class PositionWiseFFN(tf.keras.layers.Layer):  #@save
 
 ```{.python .input #transformer-positionwise-feed-forward-networks-1}
 %%tab jax
-class PositionWiseFFN(nn.Module):  #@save
+class PositionWiseFFN(nnx.Module):  #@save
     """The positionwise feed-forward network."""
-    ffn_num_hiddens: int
-    ffn_num_outputs: int
-
-    def setup(self):
-        self.dense1 = nn.Dense(self.ffn_num_hiddens)
-        self.dense2 = nn.Dense(self.ffn_num_outputs)
+    def __init__(self, ffn_num_hiddens, ffn_num_outputs,
+                 ffn_num_inputs=None, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        ffn_num_inputs = (ffn_num_hiddens if ffn_num_inputs is None
+                          else ffn_num_inputs)
+        self.dense1 = nnx.Linear(ffn_num_inputs, ffn_num_hiddens, rngs=rngs)
+        self.dense2 = nnx.Linear(ffn_num_hiddens, ffn_num_outputs, rngs=rngs)
 
     def __call__(self, X):
-        return self.dense2(nn.relu(self.dense1(X)))
+        return self.dense2(nnx.relu(self.dense1(X)))
 ```
 
 The following example
@@ -250,7 +251,7 @@ ffn(tf.ones((2, 3, 4)))[0]
 ```{.python .input #transformer-positionwise-feed-forward-networks-2}
 %%tab jax
 ffn = PositionWiseFFN(4, 8)
-ffn.init_with_output(d2l.get_key(), jnp.ones((2, 3, 4)))[0][0]
+ffn(jnp.ones((2, 3, 4)))[0]
 ```
 
 ## Residual Connection and Layer Normalization
@@ -314,13 +315,11 @@ print('layer norm:', ln(X), '\nbatch norm:', bn(X, training=True))
 
 ```{.python .input #transformer-residual-connection-and-layer-normalization-1}
 %%tab jax
-ln = nn.LayerNorm()
-bn = nn.BatchNorm()
+ln = nnx.LayerNorm(2, rngs=nnx.Rngs(0))
+bn = nnx.BatchNorm(2, rngs=nnx.Rngs(1))
 X = d2l.tensor([[1, 2], [2, 3]], dtype=d2l.float32)
 # Compute mean and variance from X in the training mode
-print('layer norm:', ln.init_with_output(d2l.get_key(), X)[0],
-      '\nbatch norm:', bn.init_with_output(d2l.get_key(), X,
-                                           use_running_average=False)[0])
+print('layer norm:', ln(X), '\nbatch norm:', bn(X))
 ```
 
 Now we can implement the `AddNorm` class
@@ -372,14 +371,15 @@ class AddNorm(tf.keras.layers.Layer):  #@save
 
 ```{.python .input #transformer-residual-connection-and-layer-normalization-2}
 %%tab jax
-class AddNorm(nn.Module):  #@save
+class AddNorm(nnx.Module):  #@save
     """The residual connection followed by layer normalization."""
-    dropout: float
+    def __init__(self, num_hiddens, dropout, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.dropout = nnx.Dropout(dropout, rngs=rngs)
+        self.ln = nnx.LayerNorm(num_hiddens, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, X, Y, training=False):
-        return nn.LayerNorm()(
-            nn.Dropout(self.dropout)(Y, deterministic=not training) + X)
+    def __call__(self, X, Y):
+        return self.ln(self.dropout(Y) + X)
 ```
 
 The residual connection requires that
@@ -413,10 +413,9 @@ d2l.check_shape(add_norm(tf.ones(shape), tf.ones(shape), training=False),
 
 ```{.python .input #transformer-residual-connection-and-layer-normalization-3}
 %%tab jax
-add_norm = AddNorm(0.5)
+add_norm = AddNorm(4, 0.5)
 shape = (2, 3, 4)
-output, _ = add_norm.init_with_output(d2l.get_key(), d2l.ones(shape),
-                                      d2l.ones(shape))
+output = add_norm(d2l.ones(shape), d2l.ones(shape))
 d2l.check_shape(output, shape)
 ```
 
@@ -489,26 +488,22 @@ class TransformerEncoderBlock(tf.keras.layers.Layer):  #@save
 
 ```{.python .input #transformer-encoder-1}
 %%tab jax
-class TransformerEncoderBlock(nn.Module):  #@save
+class TransformerEncoderBlock(nnx.Module):  #@save
     """The Transformer encoder block."""
-    num_hiddens: int
-    ffn_num_hiddens: int
-    num_heads: int
-    dropout: float
-    use_bias: bool = False
+    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
+                 use_bias=False, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.attention = d2l.MultiHeadAttention(
+            num_hiddens, num_heads, dropout, use_bias, rngs=rngs)
+        self.addnorm1 = AddNorm(num_hiddens, dropout, rngs=rngs)
+        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens,
+                                   num_hiddens, rngs=rngs)
+        self.addnorm2 = AddNorm(num_hiddens, dropout, rngs=rngs)
 
-    def setup(self):
-        self.attention = d2l.MultiHeadAttention(self.num_hiddens, self.num_heads,
-                                                self.dropout, self.use_bias)
-        self.addnorm1 = AddNorm(self.dropout)
-        self.ffn = PositionWiseFFN(self.ffn_num_hiddens, self.num_hiddens)
-        self.addnorm2 = AddNorm(self.dropout)
-
-    def __call__(self, X, valid_lens, training=False):
-        output, attention_weights = self.attention(X, X, X, valid_lens,
-                                                   training=training)
-        Y = self.addnorm1(X, output, training=training)
-        return self.addnorm2(Y, self.ffn(Y), training=training), attention_weights
+    def __call__(self, X, valid_lens):
+        output, attention_weights = self.attention(X, X, X, valid_lens)
+        Y = self.addnorm1(X, output)
+        return self.addnorm2(Y, self.ffn(Y)), attention_weights
 ```
 
 As we can see,
@@ -546,8 +541,7 @@ d2l.check_shape(encoder_blk(X, valid_lens, training=False), X.shape)
 X = jnp.ones((2, 100, 24))
 valid_lens = jnp.array([3, 2])
 encoder_blk = TransformerEncoderBlock(24, 48, 8, 0.5)
-(output, _), _ = encoder_blk.init_with_output(d2l.get_key(), X, valid_lens,
-                                              training=False)
+output, _ = nnx.view(encoder_blk, deterministic=True)(X, valid_lens)
 d2l.check_shape(output, X.shape)
 ```
 
@@ -648,36 +642,35 @@ class TransformerEncoder(d2l.Encoder):  #@save
 %%tab jax
 class TransformerEncoder(d2l.Encoder):  #@save
     """The Transformer encoder."""
-    vocab_size: int
-    num_hiddens:int
-    ffn_num_hiddens: int
-    num_heads: int
-    num_blks: int
-    dropout: float
-    use_bias: bool = False
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
+                 num_blks, dropout, use_bias=False, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.num_hiddens = num_hiddens
+        self.embedding = nnx.Embed(vocab_size, num_hiddens, rngs=rngs)
+        self.pos_encoding = d2l.PositionalEncoding(
+            num_hiddens, dropout, rngs=rngs)
+        self.blks = nnx.List([
+            TransformerEncoderBlock(num_hiddens, ffn_num_hiddens,
+                                    num_heads, dropout, use_bias, rngs=rngs)
+            for _ in range(num_blks)])
+        self._attention_weights = nnx.Intermediate(jnp.empty((0,)))
 
-    def setup(self):
-        self.embedding = nn.Embed(self.vocab_size, self.num_hiddens)
-        self.pos_encoding = d2l.PositionalEncoding(self.num_hiddens, self.dropout)
-        self.blks = [TransformerEncoderBlock(self.num_hiddens,
-                                             self.ffn_num_hiddens,
-                                             self.num_heads,
-                                             self.dropout, self.use_bias)
-                     for _ in range(self.num_blks)]
-
-    def __call__(self, X, valid_lens, training=False):
+    def __call__(self, X, valid_lens):
         # Since positional encoding values are between -1 and 1, the embedding
         # values are multiplied by the square root of the embedding dimension
         # to rescale before they are summed up
         X = self.embedding(X) * math.sqrt(self.num_hiddens)
-        X = self.pos_encoding(X, training=training)
+        X = self.pos_encoding(X)
         attention_weights = [None] * len(self.blks)
         for i, blk in enumerate(self.blks):
-            X, attention_w = blk(X, valid_lens, training=training)
+            X, attention_w = blk(X, valid_lens)
             attention_weights[i] = attention_w
-        # Flax sow API is used to capture intermediate variables
-        self.sow('intermediates', 'enc_attention_weights', attention_weights)
+        self._attention_weights.set_value(jnp.stack(attention_weights))
         return X
+
+    @property
+    def attention_weights(self):
+        return self._attention_weights.get_value()
 ```
 
 Below we specify hyperparameters to create a two-layer Transformer encoder.
@@ -707,9 +700,8 @@ d2l.check_shape(encoder(tf.ones((2, 100)), valid_lens, training=False),
 ```{.python .input #transformer-encoder-4}
 %%tab jax
 encoder = TransformerEncoder(200, 24, 48, 8, 2, 0.5)
-d2l.check_shape(encoder.init_with_output(d2l.get_key(),
-                                         jnp.ones((2, 100), dtype=jnp.int32),
-                                         valid_lens)[0],
+d2l.check_shape(nnx.view(encoder, deterministic=True)(
+                    jnp.ones((2, 100), dtype=jnp.int32), valid_lens),
                 (2, 100, 24))
 ```
 
@@ -901,27 +893,26 @@ class TransformerDecoderBlock(tf.keras.layers.Layer):
 
 ```{.python .input #transformer-decoder-1}
 %%tab jax
-class TransformerDecoderBlock(nn.Module):
-    # The i-th block in the Transformer decoder
-    num_hiddens: int
-    ffn_num_hiddens: int
-    num_heads: int
-    dropout: float
-    i: int
+class TransformerDecoderBlock(nnx.Module):
+    """The i-th block in the Transformer decoder."""
+    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout, i,
+                 rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.i, self.deterministic = i, False
+        self.attention1 = d2l.MultiHeadAttention(
+            num_hiddens, num_heads, dropout, rngs=rngs)
+        self.addnorm1 = AddNorm(num_hiddens, dropout, rngs=rngs)
+        self.attention2 = d2l.MultiHeadAttention(
+            num_hiddens, num_heads, dropout, rngs=rngs)
+        self.addnorm2 = AddNorm(num_hiddens, dropout, rngs=rngs)
+        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens,
+                                   num_hiddens, rngs=rngs)
+        self.addnorm3 = AddNorm(num_hiddens, dropout, rngs=rngs)
 
-    def setup(self):
-        self.attention1 = d2l.MultiHeadAttention(self.num_hiddens,
-                                                 self.num_heads,
-                                                 self.dropout)
-        self.addnorm1 = AddNorm(self.dropout)
-        self.attention2 = d2l.MultiHeadAttention(self.num_hiddens,
-                                                 self.num_heads,
-                                                 self.dropout)
-        self.addnorm2 = AddNorm(self.dropout)
-        self.ffn = PositionWiseFFN(self.ffn_num_hiddens, self.num_hiddens)
-        self.addnorm3 = AddNorm(self.dropout)
+    def set_view(self, *, deterministic):
+        self.deterministic = deterministic
 
-    def __call__(self, X, state, training=False):
+    def __call__(self, X, state):
         enc_outputs, enc_valid_lens = state[0], state[1]
         # During training, all the tokens of any output sequence are processed
         # at the same time, so state[2][self.i] is None as initialized. When
@@ -933,7 +924,7 @@ class TransformerDecoderBlock(nn.Module):
         else:
             key_values = jnp.concatenate((state[2][self.i], X), axis=1)
         state[2][self.i] = key_values
-        if training:
+        if not self.deterministic:
             batch_size, num_steps, _ = X.shape
             # Shape of dec_valid_lens: (batch_size, num_steps), where every
             # row is [1, 2, ..., num_steps]
@@ -943,14 +934,14 @@ class TransformerDecoderBlock(nn.Module):
             dec_valid_lens = None
         # Self-attention
         X2, attention_w1 = self.attention1(X, key_values, key_values,
-                                           dec_valid_lens, training=training)
-        Y = self.addnorm1(X, X2, training=training)
+                                           dec_valid_lens)
+        Y = self.addnorm1(X, X2)
         # Encoder-decoder attention. Shape of enc_outputs:
         # (batch_size, num_steps, num_hiddens)
         Y2, attention_w2 = self.attention2(Y, enc_outputs, enc_outputs,
-                                           enc_valid_lens, training=training)
-        Z = self.addnorm2(Y, Y2, training=training)
-        return self.addnorm3(Z, self.ffn(Z), training=training), state, attention_w1, attention_w2
+                                           enc_valid_lens)
+        Z = self.addnorm2(Y, Y2)
+        return self.addnorm3(Z, self.ffn(Z)), state, attention_w1, attention_w2
 ```
 
 To support compatible dimensions for the scaled dot product operations
@@ -987,10 +978,9 @@ d2l.check_shape(decoder_blk(X, state, training=False)[0], X.shape)
 %%tab jax
 decoder_blk = TransformerDecoderBlock(24, 48, 8, 0.5, 0)
 X = d2l.ones((2, 100, 24))
-state = [encoder_blk.init_with_output(d2l.get_key(), X, valid_lens)[0][0],
+state = [nnx.view(encoder_blk, deterministic=True)(X, valid_lens)[0],
          valid_lens, [None]]
-d2l.check_shape(decoder_blk.init_with_output(d2l.get_key(), X, state)[0][0],
-                X.shape)
+d2l.check_shape(nnx.view(decoder_blk, deterministic=True)(X, state)[0], X.shape)
 ```
 
 Now we construct the entire Transformer decoder
@@ -1140,46 +1130,48 @@ class TransformerDecoder(d2l.AttentionDecoder):
 
 ```{.python .input #transformer-decoder-3}
 %%tab jax
-class TransformerDecoder(nn.Module):
-    vocab_size: int
-    num_hiddens: int
-    ffn_num_hiddens: int
-    num_heads: int
-    num_blks: int
-    dropout: float
-
-    def setup(self):
-        self.embedding = nn.Embed(self.vocab_size, self.num_hiddens)
-        self.pos_encoding = d2l.PositionalEncoding(self.num_hiddens,
-                                                   self.dropout)
-        self.blks = [TransformerDecoderBlock(self.num_hiddens,
-                                             self.ffn_num_hiddens,
-                                             self.num_heads, self.dropout, i)
-                     for i in range(self.num_blks)]
-        self.dense = nn.Dense(self.vocab_size)
+class TransformerDecoder(nnx.Module):
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
+                 num_blks, dropout, rngs=None):
+        rngs = nnx.Rngs(params=2, dropout=3) if rngs is None else rngs
+        self.num_hiddens, self.num_blks = num_hiddens, num_blks
+        self.embedding = nnx.Embed(vocab_size, num_hiddens, rngs=rngs)
+        self.pos_encoding = d2l.PositionalEncoding(
+            num_hiddens, dropout, rngs=rngs)
+        self.blks = nnx.List([
+            TransformerDecoderBlock(num_hiddens, ffn_num_hiddens,
+                                    num_heads, dropout, i, rngs=rngs)
+            for i in range(num_blks)])
+        self.dense = nnx.Linear(num_hiddens, vocab_size, rngs=rngs)
+        self._self_attention_weights = nnx.Intermediate(jnp.empty((0,)))
+        self._cross_attention_weights = nnx.Intermediate(jnp.empty((0,)))
 
     def init_state(self, enc_outputs, enc_valid_lens):
         return [enc_outputs, enc_valid_lens, [None] * self.num_blks]
 
-    def __call__(self, X, state, training=False):
+    def __call__(self, X, state):
         # During step-by-step prediction, position-encode the new token using
         # its true offset (the number of tokens already decoded), rather than
         # always re-applying P[0:1]. This matches the pos encoding seen at
         # training time and is critical for stable autoregressive decoding.
         pos_offset = 0 if state[2][0] is None else state[2][0].shape[1]
         X = self.embedding(X) * jnp.sqrt(jnp.float32(self.num_hiddens))
-        X = self.pos_encoding(X, training=training, offset=pos_offset)
+        X = self.pos_encoding(X, offset=pos_offset)
         attention_weights = [[None] * len(self.blks) for _ in range(2)]
         for i, blk in enumerate(self.blks):
-            X, state, attention_w1, attention_w2 = blk(X, state,
-                                                       training=training)
+            X, state, attention_w1, attention_w2 = blk(X, state)
             # Decoder self-attention weights
             attention_weights[0][i] = attention_w1
             # Encoder-decoder attention weights
             attention_weights[1][i] = attention_w2
-        # Flax sow API is used to capture intermediate variables
-        self.sow('intermediates', 'dec_attention_weights', attention_weights)
+        self._self_attention_weights.set_value(jnp.stack(attention_weights[0]))
+        self._cross_attention_weights.set_value(jnp.stack(attention_weights[1]))
         return self.dense(X), state
+
+    @property
+    def attention_weights(self):
+        return (self._self_attention_weights.get_value(),
+                self._cross_attention_weights.get_value())
 ```
 
 ## Training
@@ -1302,8 +1294,7 @@ for en, fr, p in zip(engs, fras, preds):
 %%tab jax
 engs = ['i lost .', 'i\'m calm .', 'i\'m home .']
 fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
-preds, _ = model.predict_step(
-    trainer.state.params, data.build(engs, fras), data.num_steps)
+preds, _ = model.predict_step(data.build(engs, fras), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
     translation = []
     for token in data.tgt_vocab.to_tokens(p):
@@ -1348,8 +1339,7 @@ d2l.check_shape(enc_attention_weights,
 ```{.python .input #transformer-training-3}
 %%tab jax
 _, (dec_attention_weights, enc_attention_weights) = model.predict_step(
-    trainer.state.params, data.build([engs[-1]], [fras[-1]]),
-    data.num_steps, True)
+    data.build([engs[-1]], [fras[-1]]), data.num_steps, True)
 enc_attention_weights = d2l.concat(enc_attention_weights, 0)
 shape = (num_blks, num_heads, -1, data.num_steps)
 enc_attention_weights = d2l.reshape(enc_attention_weights, shape)

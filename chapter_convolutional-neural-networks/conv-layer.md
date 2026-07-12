@@ -31,7 +31,7 @@ from torch.nn import functional as F
 ```{.python .input #conv-layer-convolutions-for-images}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 ```
@@ -229,13 +229,12 @@ class Conv2D(tf.keras.layers.Layer):
 
 ```{.python .input #conv-layer-convolutional-layers}
 %%tab jax
-class Conv2D(nn.Module):
-    kernel_size: tuple
-
-    def setup(self):
-        self.weight = self.param('w', nn.initializers.uniform(),
-                                 self.kernel_size)
-        self.bias = self.param('b', nn.initializers.zeros, (1,))
+class Conv2D(nnx.Module):
+    def __init__(self, kernel_size, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.weight = nnx.Param(
+            nnx.initializers.uniform()(rngs.params(), kernel_size))
+        self.bias = nnx.Param(jnp.zeros(1))
 
     def __call__(self, x):
         return corr2d(x, self.weight) + self.bias
@@ -409,8 +408,9 @@ for i in range(10):
 # kernel of shape (1, 2). For the sake of simplicity, we ignore the bias here.
 # Use a small-stddev normal init so the toy 10-step SGD has time to converge
 # (Flax's default lecun_normal yields a much larger initial loss).
-conv2d = nn.Conv(1, kernel_size=(1, 2), use_bias=False, padding='VALID',
-                 kernel_init=nn.initializers.normal(stddev=0.01))
+conv2d = nnx.Conv(1, 1, kernel_size=(1, 2), use_bias=False, padding='VALID',
+                  kernel_init=nnx.initializers.normal(stddev=0.01),
+                  rngs=nnx.Rngs(d2l.get_key()))
 
 # The two-dimensional convolutional layer uses four-dimensional input and
 # output in the format of (example, height, width, channel), where the batch
@@ -419,16 +419,13 @@ X = X.reshape((1, 6, 8, 1))
 Y = Y.reshape((1, 6, 7, 1))
 lr = 3e-2  # Learning rate
 
-params = conv2d.init(d2l.get_key(), X)
-
-def loss(params, X, Y):
-    Y_hat = conv2d.apply(params, X)
+def loss(model, X, Y):
+    Y_hat = model(X)
     return ((Y_hat - Y) ** 2).sum()
 
 for i in range(10):
-    l, grads = jax.value_and_grad(loss)(params, X, Y)
-    # Update the kernel
-    params = jax.tree_util.tree_map(lambda p, g: p - lr * g, params, grads)
+    l, grads = nnx.value_and_grad(loss)(conv2d, X, Y)
+    conv2d.kernel[...] -= lr * grads.kernel[...]
     if (i + 1) % 2 == 0:
         print(f'epoch {i + 1}, loss {l:.3f}')
 ```
@@ -452,7 +449,7 @@ d2l.reshape(conv2d.get_weights()[0], (1, 2))
 
 ```{.python .input #conv-layer-learning-a-kernel-2}
 %%tab jax
-params['params']['kernel'].reshape((1, 2))
+conv2d.kernel[...].reshape((1, 2))
 ```
 
 Indeed, the learned kernel tensor is close

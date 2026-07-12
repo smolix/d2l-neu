@@ -115,13 +115,13 @@ d2l.plt.imshow(content_img);
 #@tab jax
 %matplotlib inline
 from d2l import jax as d2l
+from d2l.nnx_resnet import ResNet50
+from flax import nnx
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
 import optax
 import numpy as np
 from PIL import Image
-import tensorflow as tf
 
 d2l.set_figsize()
 content_img = Image.open('../img/rainier.jpg')
@@ -255,6 +255,13 @@ def postprocess(img):
 
 We use the VGG-19 model pretrained on the ImageNet dataset to extract image features :cite:`Gatys.Ecker.Bethge.2016`.
 
+:begin_tab:`jax`
+The original experiment uses VGG-19. Here we use a pretrained ResNet-50,
+which gives us a native NNX model while preserving the central idea: shallow
+and deep features from a frozen ImageNet network describe style and content,
+respectively.
+:end_tab:
+
 ```{.python .input #neural-style-extracting-features-1}
 #@tab mxnet
 pretrained_net = gluon.model_zoo.vision.vgg19(pretrained=True)
@@ -268,9 +275,7 @@ pretrained_net = torchvision.models.vgg19(
 
 ```{.python .input #neural-style-extracting-features-1}
 #@tab jax
-# Load pretrained VGG-19 via TensorFlow (JAX venv does not have torch)
-pretrained_net = tf.keras.applications.VGG19(
-    weights='imagenet', include_top=False)
+pretrained_net = ResNet50.from_pretrained()
 ```
 
 ```{.python .input #neural-style-extracting-features-1}
@@ -314,15 +319,10 @@ net = nn.Sequential(*[pretrained_net.features[i] for i in
 
 ```{.python .input #neural-style-extracting-features-3}
 #@tab jax
-# The `#@tab all` layer indices refer to the torchvision VGG-19 `features`
-# list (which interleaves Conv, ReLU, and MaxPool layers).
-# TF VGG-19 has a different numbering, so we remap here.
-_torch_to_tf = {0: 1, 5: 4, 10: 7, 19: 12, 25: 15, 28: 17}
-style_layers = [_torch_to_tf[i] for i in style_layers]
-content_layers = [_torch_to_tf[i] for i in content_layers]
-# Skip the InputLayer (index 0); keep layers 1..max_needed
-_vgg_layers = pretrained_net.layers
-net = _vgg_layers[1:max(content_layers + style_layers) + 1]
+# Layer 0 is the pooled stem; layers 1--4 are the four residual stages.
+# Matching all five scales transfers both fine texture and broad structure.
+style_layers, content_layers = [0, 1, 2, 3, 4], [3]
+net = pretrained_net
 ```
 
 ```{.python .input #neural-style-extracting-features-3}
@@ -362,30 +362,26 @@ def extract_features(X, content_layers, style_layers):
 
 ```{.python .input #neural-style-extracting-features-4}
 #@tab jax
-def extract_features(X_tf, content_layers, style_layers):
-    """Extract content and style features using TF VGG-19.
-
-    X_tf is a TF tensor in (N, H, W, C) layout after VGG preprocessing."""
+def extract_features(X, content_layers, style_layers, model=None):
+    """Return selected ResNet features in NCHW layout."""
+    model = net if model is None else model
     contents = []
     styles = []
-    # net starts at TF layer index 1 (InputLayer skipped)
-    for i, layer in enumerate(net, start=1):
-        X_tf = layer(X_tf)
+    X = jnp.transpose(X, (0, 2, 3, 1))
+    X = nnx.relu(model.stem_bn(model.stem_conv(X)))
+    X = nnx.max_pool(X, (3, 3), (2, 2),
+                     padding=((1, 1), (1, 1)))
+    features = [X]
+    for stage in model.stages:
+        X = stage(X)
+        features.append(X)
+    for i, feature in enumerate(features):
+        feature = jnp.transpose(feature, (0, 3, 1, 2))
         if i in style_layers:
-            # TF output is (N,H,W,C) -> convert to (N,C,H,W) for loss fns
-            styles.append(tf.transpose(X_tf, (0, 3, 1, 2)))
+            styles.append(feature)
         if i in content_layers:
-            contents.append(tf.transpose(X_tf, (0, 3, 1, 2)))
+            contents.append(feature)
     return contents, styles
-
-def _to_vgg_input(X_nchw):
-    """Convert (N,C,H,W) image tensor (ImageNet-normalised) to VGG input."""
-    X_nhwc = tf.transpose(X_nchw, (0, 2, 3, 1))
-    X_raw = (X_nhwc * tf.constant(np.array(rgb_std).reshape(1,1,1,3),
-                                   dtype=tf.float32)
-             + tf.constant(np.array(rgb_mean).reshape(1,1,1,3),
-                           dtype=tf.float32)) * 255.0
-    return tf.keras.applications.vgg19.preprocess_input(X_raw)
 ```
 
 ```{.python .input #neural-style-extracting-features-4}
@@ -452,15 +448,12 @@ def get_styles(image_shape, device):
 #@tab jax
 def get_contents(image_shape):
     content_X = preprocess(content_img, image_shape)
-    content_X_tf = _to_vgg_input(tf.constant(np.array(content_X)))
-    contents_Y, _ = extract_features(content_X_tf, content_layers,
-                                     style_layers)
+    contents_Y, _ = extract_features(content_X, content_layers, style_layers)
     return content_X, contents_Y
 
 def get_styles(image_shape):
     style_X = preprocess(style_img, image_shape)
-    style_X_tf = _to_vgg_input(tf.constant(np.array(style_X)))
-    _, styles_Y = extract_features(style_X_tf, content_layers, style_layers)
+    _, styles_Y = extract_features(style_X, content_layers, style_layers)
     return style_X, styles_Y
 ```
 
@@ -701,7 +694,7 @@ def get_inits(X, device, lr, styles_Y):
 def get_inits(X, lr, styles_Y):
     # Initialize synthesized image to the content image
     gen_img = jnp.array(X, dtype=jnp.float32)
-    styles_Y_gram = [gram(jnp.array(np.array(Y))) for Y in styles_Y]
+    styles_Y_gram = [gram(Y) for Y in styles_Y]
     return gen_img, styles_Y_gram
 ```
 
@@ -777,69 +770,50 @@ def train(X, contents_Y, styles_Y, device, lr, num_epochs, lr_decay_epoch):
 
 ```{.python .input #neural-style-training-1}
 #@tab jax
-def _tf_gram(X):
-    """Gram matrix for a (N,C,H,W) TF tensor."""
-    num_channels = tf.shape(X)[1]
-    n = tf.cast(tf.reduce_prod(tf.shape(X)) // num_channels, tf.float32)
-    X_flat = tf.reshape(X, (tf.shape(X)[0], num_channels, -1))
-    return tf.matmul(X_flat, tf.transpose(X_flat, (0, 2, 1))) / (
-        tf.cast(num_channels, tf.float32) * n)
-
 def train(X, contents_Y, styles_Y, lr, num_epochs, lr_decay_epoch):
     X, styles_Y_gram = get_inits(X, lr, styles_Y)
-    # Pre-extract content / style targets ONCE outside the loop and keep them
-    # as TF constants so the per-step graph never does host round-trips.
-    contents_Y_tf = [tf.constant(np.array(y), dtype=tf.float32)
-                     for y in contents_Y]
-    styles_Y_gram_tf = [tf.constant(np.array(g), dtype=tf.float32)
-                        for g in styles_Y_gram]
-
+    schedule = optax.exponential_decay(
+        lr, transition_steps=lr_decay_epoch, decay_rate=0.8,
+        staircase=True)
+    optimizer = optax.adam(schedule)
+    opt_state = optimizer.init(X)
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[10, num_epochs],
                             legend=['content', 'style', 'TV'],
                             ncols=2, figsize=(7, 2.5))
-    # Use TF for gradient computation since VGG features are in TF
-    X_tf = tf.Variable(np.array(X))
-    tf_optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
 
-    # Compile a single train_step into a TF graph so the per-step Python
-    # overhead (and the per-step TF dispatch) is fused into one graph call.
-    @tf.function(reduce_retracing=True)
-    def train_step(X_tf):
-        with tf.GradientTape() as tape:
-            X_vgg = _to_vgg_input(X_tf)
-            contents_Y_hat_tf, styles_Y_hat_tf = extract_features(
-                X_vgg, content_layers, style_layers)
-            contents_l_vec = tf.stack([
-                tf.reduce_mean(tf.square(yh - y)) * content_weight
-                for yh, y in zip(contents_Y_hat_tf, contents_Y_tf)])
-            styles_l_vec = tf.stack([
-                tf.reduce_mean(tf.square(_tf_gram(yh) - g)) * style_weight
-                for yh, g in zip(styles_Y_hat_tf, styles_Y_gram_tf)])
-            tv_l = 0.5 * (
-                tf.reduce_mean(tf.abs(X_tf[:, :, 1:, :] - X_tf[:, :, :-1, :]))
-                + tf.reduce_mean(tf.abs(X_tf[:, :, :, 1:] - X_tf[:, :, :, :-1]))
-            ) * tv_weight
-            total_loss = (tf.reduce_sum(contents_l_vec)
-                          + tf.reduce_sum(styles_l_vec) + tv_l)
-        grads = tape.gradient(total_loss, X_tf)
-        tf_optimizer.apply_gradients([(grads, X_tf)])
-        return contents_l_vec, styles_l_vec, tv_l
+    @nnx.jit
+    def train_step(model, X, opt_state):
+        def loss_fn(X):
+            contents_Y_hat, styles_Y_hat = extract_features(
+                X, content_layers, style_layers, model)
+            contents_l, styles_l, tv_l, total = compute_loss(
+                X, contents_Y_hat, styles_Y_hat, contents_Y,
+                styles_Y_gram)
+            return total, (jnp.stack(contents_l), jnp.stack(styles_l), tv_l)
+        (_, losses), grads = jax.value_and_grad(
+            loss_fn, has_aux=True)(X)
+        updates, opt_state = optimizer.update(grads, opt_state, X)
+        return optax.apply_updates(X, updates), opt_state, losses
 
+    history = []
     for epoch in range(num_epochs):
-        contents_l_vec, styles_l_vec, tv_l = train_step(X_tf)
-        # Learning rate decay
-        if (epoch + 1) % lr_decay_epoch == 0:
-            scale = 0.8 ** ((epoch + 1) // lr_decay_epoch)
-            tf_optimizer.learning_rate.assign(lr * scale)
+        X, opt_state, (contents_l, styles_l, tv_l) = train_step(
+            net, X, opt_state)
         if (epoch + 1) % 10 == 0:
-            animator.axes[1].imshow(postprocess(
-                jnp.array(X_tf.numpy())))
+            animator.axes[1].imshow(postprocess(X))
             animator.add(epoch + 1,
-                         [float(tf.reduce_sum(contents_l_vec)),
-                          float(tf.reduce_sum(styles_l_vec)),
+                         [float(jnp.sum(contents_l)),
+                          float(jnp.sum(styles_l)),
                           float(tv_l)])
-    return jnp.array(X_tf.numpy())
+        if (epoch + 1) % 50 == 0:
+            history.append((epoch + 1, float(jnp.sum(contents_l)),
+                            float(jnp.sum(styles_l)), float(tv_l)))
+    for epoch, content_l, style_l, variation_l in history:
+        print(f'epoch {epoch}, content {content_l:.3f}, '
+              f'style {style_l:.3f}, TV {variation_l:.3f}, '
+              f'total {content_l + style_l + variation_l:.3f}')
+    return X
 ```
 
 ```{.python .input #neural-style-training-1}

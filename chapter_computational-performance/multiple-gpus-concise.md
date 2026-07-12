@@ -23,13 +23,10 @@ from torch import nn
 ```{.python .input #multiple-gpus-concise-concise-implementation-for-multiple-gpus}
 #@tab jax
 from d2l import jax as d2l
-import functools
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
-from flax.training import train_state
-import flax
 import numpy as np
 ```
 
@@ -109,32 +106,30 @@ def resnet18(num_classes, in_channels=1):
 ```{.python .input #multiple-gpus-concise-a-toy-network}
 #@tab jax
 #@save
-class ResNet18(nn.Module):
+class ResNet18(nnx.Module):
     """A slightly modified ResNet-18 model."""
-    num_classes: int = 10
-    training: bool = True
-
-    def setup(self):
-        self.net = nn.Sequential([
-            nn.Conv(64, kernel_size=(3, 3), strides=(1, 1), padding='same'),
-            nn.BatchNorm(not self.training),
-            nn.relu,
+    def __init__(self, num_classes=10, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.net = nnx.Sequential(
+            nnx.Conv(1, 64, kernel_size=(3, 3), strides=(1, 1),
+                     padding='same', rngs=rngs),
+            nnx.BatchNorm(64, rngs=rngs),
+            nnx.relu,
             # ResNet blocks
-            d2l.Residual(64, training=self.training),
-            d2l.Residual(64, training=self.training),
+            d2l.Residual(64, in_channels=64, rngs=rngs),
+            d2l.Residual(64, in_channels=64, rngs=rngs),
             d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
-                         training=self.training),
-            d2l.Residual(128, training=self.training),
+                         in_channels=64, rngs=rngs),
+            d2l.Residual(128, in_channels=128, rngs=rngs),
             d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
-                         training=self.training),
-            d2l.Residual(256, training=self.training),
+                         in_channels=128, rngs=rngs),
+            d2l.Residual(256, in_channels=256, rngs=rngs),
             d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
-                         training=self.training),
-            d2l.Residual(512, training=self.training),
+                         in_channels=256, rngs=rngs),
+            d2l.Residual(512, in_channels=512, rngs=rngs),
             # Global average pooling and classifier
             lambda x: x.mean(axis=(1, 2)),
-            nn.Dense(self.num_classes),
-        ])
+            nnx.Linear(512, num_classes, rngs=rngs))
 
     def __call__(self, x):
         return self.net(x)
@@ -183,7 +178,9 @@ For a refresher on initialization methods see :numref:`sec_numerical_stability`.
 :end_tab:
 
 :begin_tab:`jax`
-In JAX, we initialize the model parameters and create a `TrainState` that bundles the parameters with the optimizer. For multi-GPU training, we replicate the state across all devices using `jax.tree.map`.
+In JAX, NNX modules own their parameters and other state. We create one model
+and optimizer replica per device with `nnx.vmap`; `nnx.pmap` then updates these
+replicas in parallel.
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -209,7 +206,7 @@ devices = d2l.try_all_gpus()
 
 ```{.python .input #multiple-gpus-concise-network-initialization-1}
 #@tab jax
-net = ResNet18(num_classes=10)
+net = ResNet18(num_classes=10, rngs=nnx.Rngs(0))
 # Count available devices (GPUs/TPUs)
 num_devices = jax.local_device_count()
 print(f'Using {num_devices} devices: {jax.devices()}')
@@ -350,56 +347,46 @@ def train(net, num_gpus, batch_size, lr, resize=64):
 ```{.python .input #multiple-gpus-concise-training-1}
 #@tab jax
 def train(num_devices, batch_size, lr):
-    data = d2l.FashionMNIST(batch_size=batch_size)
+    devices = jax.local_devices()[:num_devices]
+    if len(devices) != num_devices:
+        raise ValueError(f'Requested {num_devices} devices, found {len(devices)}')
+    data = d2l.FashionMNIST(batch_size=batch_size, resize=(64, 64))
     train_iter = data.get_dataloader(train=True)
     test_iter = data.get_dataloader(train=False)
-    net = ResNet18(num_classes=10, training=True)
-    # Initialize parameters
-    dummy_input = jnp.ones((1, 28, 28, 1))
-    key = jax.random.PRNGKey(0)
-    variables = net.init(key, dummy_input)
-    params = variables['params']
-    batch_stats = variables.get('batch_stats', {})
-    # Create optimizer and training state
-    tx = optax.sgd(lr)
+    # All replicas must start from identical parameters; pmean then keeps
+    # them synchronized after every update.
+    keys = jnp.broadcast_to(jax.random.key(0), (num_devices,))
 
-    class TrainState(train_state.TrainState):
-        batch_stats: dict
+    @nnx.vmap(in_axes=0, out_axes=(0, 0))
+    def create_replica(key):
+        model = ResNet18(num_classes=10, rngs=nnx.Rngs(key))
+        optimizer = nnx.Optimizer(model, optax.sgd(lr), wrt=nnx.Param)
+        return model, optimizer
 
-    state = TrainState.create(apply_fn=net.apply, params=params,
-                              tx=tx, batch_stats=batch_stats)
-    # Replicate state across devices
-    num_devices = jax.local_device_count()
-    state = jax.tree.map(
-        lambda x: jnp.stack([x] * num_devices), state)
+    net, optimizer = create_replica(keys)
 
-    @functools.partial(jax.pmap, axis_name='batch')
-    def train_step(state, images, labels):
+    def train_step(net, optimizer, images, labels):
         """A single training step on one device."""
-        def loss_fn(params):
-            logits, updates = state.apply_fn(
-                {'params': params, 'batch_stats': state.batch_stats},
-                images, mutable=['batch_stats'])
-            loss = optax.softmax_cross_entropy_with_integer_labels(
+        def loss_fn(model):
+            logits = model(images)
+            return optax.softmax_cross_entropy_with_integer_labels(
                 logits, labels).mean()
-            return loss, updates
-        (loss, updates), grads = jax.value_and_grad(
-            loss_fn, has_aux=True)(state.params)
+        loss, grads = nnx.value_and_grad(loss_fn)(net)
         # Average gradients across devices
         grads = jax.lax.pmean(grads, axis_name='batch')
-        state = state.apply_gradients(grads=grads)
-        state = state.replace(
-            batch_stats=updates['batch_stats'])
-        return state, loss
+        optimizer.update(net, grads)
+        return loss
 
-    @functools.partial(jax.pmap, axis_name='batch')
-    def eval_step(state, images, labels):
+    def eval_step(net, images, labels):
         """Evaluate accuracy on one device."""
-        logits, _ = state.apply_fn(
-            {'params': state.params,
-             'batch_stats': state.batch_stats},
-            images, mutable=['batch_stats'])
+        logits = nnx.view(net, use_running_average=True)(images)
         return (logits.argmax(axis=-1) == labels).sum(), labels.shape[0]
+
+    train_step = nnx.pmap(train_step, axis_name='batch',
+                          in_axes=(0, 0, 0, 0), out_axes=0,
+                          devices=devices)
+    eval_step = nnx.pmap(eval_step, in_axes=(0, 0, 0), out_axes=0,
+                         devices=devices)
 
     def reshape_batch(X, y, num_devices):
         """Reshape a batch for pmap: (batch, ...) -> (num_devices, per_device, ...)."""
@@ -416,15 +403,15 @@ def train(num_devices, batch_size, lr):
         for X, y in train_iter:
             X, y = np.array(X), np.array(y)
             X, y = reshape_batch(X, y, num_devices)
-            state, loss = train_step(state, X, y)
-        jax.random.normal(jax.random.PRNGKey(0), ()).block_until_ready()
+            loss = train_step(net, optimizer, X, y)
+        loss.block_until_ready()
         timer.stop()
         # Evaluate accuracy
         correct, total = 0, 0
         for X, y in test_iter:
             X, y = np.array(X), np.array(y)
             X, y = reshape_batch(X, y, num_devices)
-            c, t = eval_step(state, X, y)
+            c, t = eval_step(net, X, y)
             correct += int(c.sum())
             total += int(t.sum())
         test_acc = correct / total

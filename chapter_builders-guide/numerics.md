@@ -31,7 +31,7 @@ from d2l import torch as d2l
 %%tab jax
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 from d2l import jax as d2l
 ```
@@ -433,12 +433,13 @@ param_bytes(net)
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-2}
 %%tab jax
-net = nn.Sequential([lambda x: x.reshape((x.shape[0], -1)),
-                     nn.Dense(256), nn.relu, nn.Dense(10)])
-params = net.init(d2l.get_key(), jnp.zeros((1, 28, 28, 1)))
-def param_bytes(params):
-    return sum(p.size * p.dtype.itemsize for p in jax.tree.leaves(params))
-param_bytes(params)
+net = nnx.Sequential(lambda x: x.reshape((x.shape[0], -1)),
+                     nnx.Linear(784, 256, rngs=nnx.Rngs(0)), nnx.relu,
+                     nnx.Linear(256, 10, rngs=nnx.Rngs(1)))
+def param_bytes(model):
+    return sum(p.size * p.dtype.itemsize
+               for _, p in nnx.state(model, nnx.Param).flat_state())
+param_bytes(net)
 ```
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-2}
@@ -479,10 +480,12 @@ print(net(X.bfloat16()).dtype, param_bytes(net))
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-3}
 %%tab jax
-params16 = jax.tree.map(lambda p: p.astype(jnp.bfloat16), params)
+graph, state = nnx.split(net)
+net16 = nnx.merge(graph, jax.tree.map(
+    lambda p: p.astype(jnp.bfloat16), state))
 X = jax.random.normal(d2l.get_key(), (8, 28, 28, 1))
-print(net.apply(params16, X).dtype, param_bytes(params16))
-print(net.apply(params16, X.astype(jnp.bfloat16)).dtype)
+print(net16(X).dtype, param_bytes(net16))
+print(net16(X.astype(jnp.bfloat16)).dtype)
 ```
 
 ```{.python .input #numerics-dtype-rules-promotion-parameters-and-casts-3}
@@ -623,11 +626,12 @@ Y.dtype, net[1].weight.dtype
 
 ```{.python .input #numerics-mixed-precision-training-1}
 %%tab jax
-net = nn.Sequential([lambda x: x.reshape((x.shape[0], -1)),
-                     nn.Dense(256, dtype=jnp.bfloat16), nn.relu,
-                     nn.Dense(10, dtype=jnp.bfloat16)])
-params = net.init(d2l.get_key(), X)
-net.apply(params, X).dtype, jax.tree.leaves(params)[0].dtype
+net = nnx.Sequential(lambda x: x.reshape((x.shape[0], -1)),
+                     nnx.Linear(784, 256, dtype=jnp.bfloat16,
+                                rngs=nnx.Rngs(0)), nnx.relu,
+                     nnx.Linear(256, 10, dtype=jnp.bfloat16,
+                                rngs=nnx.Rngs(1)))
+net(X).dtype, jax.tree.leaves(nnx.state(net, nnx.Param))[0].dtype
 ```
 
 ```{.python .input #numerics-mixed-precision-training-1}
@@ -749,25 +753,25 @@ def train(amp):
 %%tab jax
 def train(mixed):
     dtype = jnp.bfloat16 if mixed else jnp.float32
-    net = nn.Sequential([lambda x: x.reshape((x.shape[0], -1)),
-                         nn.Dense(256, dtype=dtype), nn.relu,
-                         nn.Dense(10, dtype=dtype)])
+    net = nnx.Sequential(lambda x: x.reshape((x.shape[0], -1)),
+                         nnx.Linear(784, 256, dtype=dtype,
+                                    rngs=nnx.Rngs(0)), nnx.relu,
+                         nnx.Linear(256, 10, dtype=dtype,
+                                    rngs=nnx.Rngs(0)))
     # param_dtype stays fp32, so the same key gives identical init either way
-    params = net.init(jax.random.PRNGKey(0), batches[0][0])
-    opt = optax.sgd(learning_rate=0.1)
-    state = opt.init(params)
-    def loss_fn(params, X, y):
-        logits = net.apply(params, X).astype(jnp.float32)
-        return optax.softmax_cross_entropy_with_integer_labels(
-            logits, y).mean()
-    @jax.jit
-    def step(params, state, X, y):
-        loss, grads = jax.value_and_grad(loss_fn)(params, X, y)
-        updates, state = opt.update(grads, state)
-        return optax.apply_updates(params, updates), state, loss
+    optimizer = nnx.Optimizer(net, optax.sgd(0.1), wrt=nnx.Param)
+    @nnx.jit
+    def step(model, optimizer, X, y):
+        def loss_fn(model):
+            logits = model(X).astype(jnp.float32)
+            return optax.softmax_cross_entropy_with_integer_labels(
+                logits, y).mean()
+        loss, grads = nnx.value_and_grad(loss_fn)(model)
+        optimizer.update(model, grads)
+        return loss
     losses = []
     for X, y in batches:
-        params, state, loss = step(params, state, X, y)
+        loss = step(net, optimizer, X, y)
         losses.append(float(loss))
     return losses
 ```

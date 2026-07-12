@@ -62,7 +62,7 @@ import keras
 ```{.python .input #vision-transformer-transformers-for-vision}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 ```
@@ -152,21 +152,19 @@ class PatchEmbedding(tf.keras.layers.Layer):  #@save
 
 ```{.python .input #vision-transformer-patch-embedding-1}
 %%tab jax
-class PatchEmbedding(nn.Module):
-    img_size: int = 96
-    patch_size: int = 16
-    num_hiddens: int = 512
-
-    def setup(self):
+class PatchEmbedding(nnx.Module):
+    def __init__(self, img_size=96, patch_size=16, num_hiddens=512,
+                 num_channels=3, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
         def _make_tuple(x):
             if not isinstance(x, (list, tuple)):
                 return (x, x)
             return x
-        img_size, patch_size = _make_tuple(self.img_size), _make_tuple(self.patch_size)
+        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
         self.num_patches = (img_size[0] // patch_size[0]) * (
             img_size[1] // patch_size[1])
-        self.conv = nn.Conv(self.num_hiddens, kernel_size=patch_size,
-                            strides=patch_size, padding='SAME')
+        self.conv = nnx.Conv(num_channels, num_hiddens, kernel_size=patch_size,
+                             strides=patch_size, padding='SAME', rngs=rngs)
 
     def __call__(self, X):
         # Output shape: (batch size, no. of patches, no. of channels)
@@ -200,7 +198,7 @@ d2l.check_shape(patch_emb(X), (batch_size, (img_size//patch_size)**2, num_hidden
 img_size, patch_size, num_hiddens, batch_size = 96, 16, 512, 4
 patch_emb = PatchEmbedding(img_size, patch_size, num_hiddens)
 X = d2l.zeros((batch_size, img_size, img_size, 3))
-output, _ = patch_emb.init_with_output(d2l.get_key(), X)
+output = patch_emb(X)
 d2l.check_shape(output, (batch_size, (img_size//patch_size)**2, num_hiddens))
 ```
 
@@ -248,18 +246,20 @@ class ViTMLP(tf.keras.layers.Layer):  #@save
 
 ```{.python .input #vision-transformer-vision-transformer-encoder-1}
 %%tab jax
-class ViTMLP(nn.Module):
-    mlp_num_hiddens: int
-    mlp_num_outputs: int
-    dropout: float = 0.5
+class ViTMLP(nnx.Module):
+    def __init__(self, mlp_num_hiddens, mlp_num_outputs, dropout=0.5,
+                 mlp_num_inputs=None, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        mlp_num_inputs = (mlp_num_outputs if mlp_num_inputs is None
+                          else mlp_num_inputs)
+        self.dense1 = nnx.Linear(mlp_num_inputs, mlp_num_hiddens, rngs=rngs)
+        self.dropout1 = nnx.Dropout(dropout, rngs=rngs)
+        self.dense2 = nnx.Linear(mlp_num_hiddens, mlp_num_outputs, rngs=rngs)
+        self.dropout2 = nnx.Dropout(dropout, rngs=rngs)
 
-    @nn.compact
-    def __call__(self, x, training=False):
-        x = nn.Dense(self.mlp_num_hiddens)(x)
-        x = nn.gelu(x)
-        x = nn.Dropout(self.dropout, deterministic=not training)(x)
-        x = nn.Dense(self.mlp_num_outputs)(x)
-        x = nn.Dropout(self.dropout, deterministic=not training)(x)
+    def __call__(self, x):
+        x = self.dropout1(nnx.gelu(self.dense1(x)))
+        x = self.dropout2(self.dense2(x))
         return x
 ```
 
@@ -321,23 +321,21 @@ class ViTBlock(tf.keras.layers.Layer):  #@save
 
 ```{.python .input #vision-transformer-vision-transformer-encoder-3}
 %%tab jax
-class ViTBlock(nn.Module):
-    num_hiddens: int
-    mlp_num_hiddens: int
-    num_heads: int
-    dropout: float
-    use_bias: bool = False
+class ViTBlock(nnx.Module):
+    def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
+                 use_bias=False, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.ln1 = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.attention = d2l.MultiHeadAttention(
+            num_hiddens, num_heads, dropout, use_bias, rngs=rngs)
+        self.ln2 = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.mlp = ViTMLP(mlp_num_hiddens, num_hiddens, dropout,
+                          num_hiddens, rngs=rngs)
 
-    def setup(self):
-        self.attention = d2l.MultiHeadAttention(self.num_hiddens, self.num_heads,
-                                                self.dropout, self.use_bias)
-        self.mlp = ViTMLP(self.mlp_num_hiddens, self.num_hiddens, self.dropout)
-
-    @nn.compact
-    def __call__(self, X, valid_lens=None, training=False):
-        X = X + self.attention(*([nn.LayerNorm()(X)] * 3),
-                               valid_lens, training=training)[0]
-        return X + self.mlp(nn.LayerNorm()(X), training=training)
+    def __call__(self, X, valid_lens=None):
+        X_norm = self.ln1(X)
+        X = X + self.attention(X_norm, X_norm, X_norm, valid_lens)[0]
+        return X + self.mlp(self.ln2(X))
 ```
 
 Just as in :numref:`subsec_transformer-encoder`,
@@ -362,7 +360,7 @@ d2l.check_shape(encoder_blk(X, training=False), X.shape)
 %%tab jax
 X = d2l.ones((2, 100, 24))
 encoder_blk = ViTBlock(24, 48, 8, 0.5)
-d2l.check_shape(encoder_blk.init_with_output(d2l.get_key(), X)[0], X.shape)
+d2l.check_shape(nnx.view(encoder_blk, deterministic=True)(X), X.shape)
 ```
 
 ## Putting It All Together
@@ -452,40 +450,33 @@ class ViT(d2l.Classifier):  #@save
 %%tab jax
 class ViT(d2l.Classifier):
     """Vision Transformer."""
-    img_size: int
-    patch_size: int
-    num_hiddens: int
-    mlp_num_hiddens: int
-    num_heads: int
-    num_blks: int
-    emb_dropout: float
-    blk_dropout: float
-    lr: float = 0.1
-    use_bias: bool = False
-    num_classes: int = 10
-    training: bool = False
-
-    def setup(self):
-        self.patch_embedding = PatchEmbedding(self.img_size, self.patch_size,
-                                              self.num_hiddens)
-        self.cls_token = self.param('cls_token', nn.initializers.zeros,
-                                    (1, 1, self.num_hiddens))
+    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
+                 num_heads, num_blks, emb_dropout, blk_dropout, lr=0.1,
+                 use_bias=False, num_classes=10, num_channels=1, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.patch_embedding = PatchEmbedding(
+            img_size, patch_size, num_hiddens, num_channels, rngs=rngs)
+        self.cls_token = nnx.Param(jnp.zeros((1, 1, num_hiddens)))
         num_steps = self.patch_embedding.num_patches + 1  # Add the cls token
         # Positional embeddings are learnable
-        self.pos_embedding = self.param('pos_embed', nn.initializers.normal(),
-                                        (1, num_steps, self.num_hiddens))
-        self.blks = [ViTBlock(self.num_hiddens, self.mlp_num_hiddens,
-                              self.num_heads, self.blk_dropout, self.use_bias)
-                    for _ in range(self.num_blks)]
-        self.head = nn.Sequential([nn.LayerNorm(), nn.Dense(self.num_classes)])
+        self.pos_embedding = nnx.Param(
+            rngs.params.normal((1, num_steps, num_hiddens)))
+        self.embedding_dropout = nnx.Dropout(emb_dropout, rngs=rngs)
+        self.blks = nnx.List([
+            ViTBlock(num_hiddens, mlp_num_hiddens, num_heads, blk_dropout,
+                     use_bias, rngs=rngs) for _ in range(num_blks)])
+        self.head = nnx.Sequential(
+            nnx.LayerNorm(num_hiddens, rngs=rngs),
+            nnx.Linear(num_hiddens, num_classes, rngs=rngs))
 
-    @nn.compact
-    def __call__(self, X):
+    def forward(self, X):
         X = self.patch_embedding(X)
         X = d2l.concat((jnp.tile(self.cls_token, (X.shape[0], 1, 1)), X), 1)
-        X = nn.Dropout(self.emb_dropout, deterministic=not self.training)(X + self.pos_embedding)
+        X = self.embedding_dropout(X + self.pos_embedding)
         for blk in self.blks:
-            X = blk(X, training=self.training)
+            X = blk(X)
         return self.head(X[:, 0])
 ```
 

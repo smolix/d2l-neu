@@ -56,12 +56,11 @@ train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
-import flax
-from flax import linen as nn
+from flax import nnx
 import optax
 import numpy as np
 
-batch_size = 64
+batch_size = 128
 train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 ```
 
@@ -173,36 +172,34 @@ class BiRNN(nn.Module):
 
 ```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-1}
 #@tab jax
-class BiRNN(nn.Module):
-    vocab_size: int
-    embed_size: int
-    num_hiddens: int
-    num_layers: int
-
-    def setup(self):
-        self.embedding = nn.Embed(self.vocab_size, self.embed_size)
-        # Forward and backward LSTMs for bidirectional encoding
-        self.forward_rnn = nn.RNN(
-            nn.OptimizedLSTMCell(self.num_hiddens), reverse=False)
-        self.backward_rnn = nn.RNN(
-            nn.OptimizedLSTMCell(self.num_hiddens), reverse=True)
-        self.decoder = nn.Dense(2)
+class BiRNN(nnx.Module):
+    def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
+                 rngs=None):
+        rngs = nnx.Rngs(params=0, carry=1) if rngs is None else rngs
+        self.embedding = nnx.Embed(vocab_size, embed_size, rngs=rngs)
+        self.forward_rnns = nnx.List([])
+        self.backward_rnns = nnx.List([])
+        for i in range(num_layers):
+            num_inputs = embed_size if i == 0 else 2 * num_hiddens
+            self.forward_rnns.append(nnx.RNN(
+                nnx.LSTMCell(num_inputs, num_hiddens, rngs=rngs), rngs=rngs))
+            self.backward_rnns.append(nnx.RNN(
+                nnx.LSTMCell(num_inputs, num_hiddens, rngs=rngs),
+                reverse=True, keep_order=True, rngs=rngs))
+        self.decoder = nnx.Linear(4 * num_hiddens, 2, rngs=rngs)
 
     def __call__(self, inputs):
         # The shape of `inputs` is (batch size, no. of time steps)
         embeddings = self.embedding(inputs)
-        # Run forward and backward RNNs
-        # Each output shape is (batch size, no. of time steps, num_hiddens)
-        forward_out = self.forward_rnn(embeddings)
-        # Flax's `nn.RNN(..., reverse=True)` un-reverses its output back to
-        # input order, so `backward_out[:, 0, :]` corresponds to the
-        # backward LSTM having consumed the entire reversed sequence (its
-        # *final* hidden) while `forward_out[:, -1, :]` is the forward
-        # LSTM's final hidden. Concatenate these two: shape (batch size,
-        # 2 * num_hiddens).
-        backward_out = self.backward_rnn(embeddings)
-        encoding = jnp.concatenate(
-            [forward_out[:, -1, :], backward_out[:, 0, :]], axis=1)
+        outputs = embeddings
+        for forward_rnn, backward_rnn in zip(
+                self.forward_rnns, self.backward_rnns):
+            outputs = jnp.concatenate(
+                [forward_rnn(outputs), backward_rnn(outputs)], axis=-1)
+        # Each endpoint contains both directions, so concatenating the first
+        # and last time steps produces 4 * num_hiddens features.
+        encoding = jnp.concatenate([outputs[:, 0, :], outputs[:, -1, :]],
+                                   axis=1)
         outs = self.decoder(encoding)
         return outs
 ```
@@ -270,9 +267,8 @@ net.apply(init_weights);
 
 ```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-3}
 #@tab jax
-# JAX/Flax modules are initialized lazily; we initialize parameters here
-dummy_input = jnp.ones((1, 500), dtype=jnp.int32)
-params = net.init(jax.random.PRNGKey(0), dummy_input)
+# NNX modules create their parameters in the constructor.
+d2l.check_shape(net(jnp.ones((1, 500), dtype=jnp.int32)), (1, 2))
 ```
 
 ```{.python .input #sentiment-analysis-rnn-representing-single-text-with-rnns-3}
@@ -319,10 +315,8 @@ net.embedding.weight.requires_grad = False
 
 ```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-3}
 #@tab jax
-# Set pretrained embedding weights in the parameters
-params = flax.core.unfreeze(params)
-params['params']['embedding']['embedding'] = jnp.array(embeds)
-params = flax.core.freeze(params)
+# Store the pretrained table as non-trainable NNX data.
+net.embedding.embedding = nnx.data(jnp.array(embeds))
 ```
 
 ```{.python .input #sentiment-analysis-rnn-loading-pretrained-word-vectors-3}
@@ -356,46 +350,43 @@ d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 
 ```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-1}
 #@tab jax
-lr, num_epochs = 0.01, 5
-# Work with the inner params dict directly so JIT caches across iterations
-params_p = params['params']
-optimizer = optax.adam(lr)
-opt_state = optimizer.init(params_p)
+lr, num_epochs = 0.01, 4
+optimizer = nnx.Optimizer(net, optax.adam(lr), wrt=nnx.Param)
 loss_fn = optax.softmax_cross_entropy_with_integer_labels
 
-@jax.jit
-def train_step(params_p, opt_state, X, y):
-    def compute_loss(p):
-        logits = net.apply({'params': p}, X)
+@nnx.jit
+def train_step(net, optimizer, X, y):
+    def compute_loss(model):
+        logits = model(X)
         return loss_fn(logits, y).mean(), logits
-    (loss, logits), grads = jax.value_and_grad(
-        compute_loss, has_aux=True)(params_p)
-    updates, opt_state = optimizer.update(grads, opt_state, params_p)
-    params_p = optax.apply_updates(params_p, updates)
-    return params_p, opt_state, loss, logits
+    (loss, logits), grads = nnx.value_and_grad(
+        compute_loss, has_aux=True)(net)
+    optimizer.update(net, grads)
+    return loss, logits
 
-@jax.jit
-def eval_step(params_p, X):
-    return net.apply({'params': params_p}, X)
+@nnx.jit
+def eval_step(net, X):
+    return net(X)
 
 for epoch in range(num_epochs):
-    metric = d2l.Accumulator(4)
+    loss_terms, train_correct_terms, num_train = [], [], 0
     for X, y in train_iter:
-        params_p, opt_state, l, logits = train_step(
-            params_p, opt_state, X, y)
-        metric.add(float(l) * len(y), float((logits.argmax(axis=-1) == y).sum()),
-                   len(y), len(y))
+        l, logits = train_step(net, optimizer, X, y)
+        loss_terms.append(l * len(y))
+        train_correct_terms.append((logits.argmax(axis=-1) == y).sum())
+        num_train += len(y)
     # Evaluate
-    correct, total = 0, 0
+    correct_terms, total = [], 0
     for X, y in test_iter:
-        logits = eval_step(params_p, X)
-        correct += int((logits.argmax(axis=-1) == y).sum())
+        logits = eval_step(net, X)
+        correct_terms.append((logits.argmax(axis=-1) == y).sum())
         total += len(y)
-    print(f'epoch {epoch + 1}, loss {metric[0] / metric[2]:.3f}, '
-          f'train acc {metric[1] / metric[3]:.3f}, '
+    loss_sum = float(jnp.stack(loss_terms).sum())
+    train_correct = int(jnp.stack(train_correct_terms).sum())
+    correct = int(jnp.stack(correct_terms).sum())
+    print(f'epoch {epoch + 1}, loss {loss_sum / num_train:.3f}, '
+          f'train acc {train_correct / num_train:.3f}, '
           f'test acc {correct / total:.3f}')
-# Re-wrap params for downstream use (e.g. predict_sentiment)
-params = {'params': params_p}
 ```
 
 ```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-1}
@@ -432,10 +423,10 @@ def predict_sentiment(net, vocab, sequence):
 ```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-2}
 #@tab jax
 #@save
-def predict_sentiment(net, params, vocab, sequence):
+def predict_sentiment(net, vocab, sequence):
     """Predict the sentiment of a text sequence."""
     sequence = jnp.array(vocab[sequence.split()])
-    label = jnp.argmax(net.apply(params, sequence.reshape(1, -1)), axis=1)
+    label = jnp.argmax(net(sequence.reshape(1, -1)), axis=1)
     return 'positive' if label == 1 else 'negative'
 ```
 
@@ -459,7 +450,7 @@ predict_sentiment(net, vocab, 'this movie is so great')
 
 ```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-3}
 #@tab jax
-predict_sentiment(net, params, vocab, 'this movie is so great')
+predict_sentiment(net, vocab, 'this movie is so great')
 ```
 
 ```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-3}
@@ -474,7 +465,7 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 
 ```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-4}
 #@tab jax
-predict_sentiment(net, params, vocab, 'this movie is so bad')
+predict_sentiment(net, vocab, 'this movie is so bad')
 ```
 
 ```{.python .input #sentiment-analysis-rnn-training-and-evaluating-the-model-4}

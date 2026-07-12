@@ -41,7 +41,7 @@ from torch import nn
 ```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
+from flax import nnx
 import jax
 from jax import numpy as jnp
 ```
@@ -370,18 +370,19 @@ p_dense, p_sep, p_dense / p_sep
 %%tab jax
 c_i, c_o, k = 128, 128, 3
 X = jax.random.normal(d2l.get_key(), (1, 32, 32, c_i))
-dense = nn.Conv(c_o, kernel_size=(k, k), padding='SAME', use_bias=False)
-depthwise = nn.Conv(c_i, kernel_size=(k, k), padding='SAME',
-                    feature_group_count=c_i, use_bias=False)
-pointwise = nn.Conv(c_o, kernel_size=(1, 1), use_bias=False)
-params_dense = dense.init(d2l.get_key(), X)
-params_dw = depthwise.init(d2l.get_key(), X)
-Y = depthwise.apply(params_dw, X)
-params_pw = pointwise.init(d2l.get_key(), Y)
-assert dense.apply(params_dense, X).shape == pointwise.apply(params_pw, Y).shape
-size = lambda params: sum(p.size for p in jax.tree_util.tree_leaves(params))
-p_dense = size(params_dense)
-p_sep = size(params_dw) + size(params_pw)
+dense = nnx.Conv(c_i, c_o, kernel_size=(k, k), padding='SAME',
+                 use_bias=False, rngs=nnx.Rngs(d2l.get_key()))
+depthwise = nnx.Conv(c_i, c_i, kernel_size=(k, k), padding='SAME',
+                     feature_group_count=c_i, use_bias=False,
+                     rngs=nnx.Rngs(d2l.get_key()))
+pointwise = nnx.Conv(c_i, c_o, kernel_size=(1, 1), use_bias=False,
+                     rngs=nnx.Rngs(d2l.get_key()))
+Y = depthwise(X)
+assert dense(X).shape == pointwise(Y).shape
+size = lambda model: sum(p.size for p in jax.tree_util.tree_leaves(
+    nnx.state(model, nnx.Param)))
+p_dense = size(dense)
+p_sep = size(depthwise) + size(pointwise)
 p_dense, p_sep, p_dense / p_sep
 ```
 

@@ -355,13 +355,26 @@ def kill_stale_kernels(venv_dir):
                     cmdline = (entry / "cmdline").read_bytes().split(b"\x00")
                 except (OSError, PermissionError):
                     continue
-                if any(b"ipykernel_launcher" in arg for arg in cmdline):
-                    pid = int(entry.name)
-                    try:
-                        os.kill(pid, signal.SIGKILL)
-                        killed += 1
-                    except OSError:
-                        pass
+                if not any(b"ipykernel_launcher" in arg for arg in cmdline):
+                    continue
+                # A live nbconvert process is the parent of its kernel.  Do not
+                # mistake kernels owned by another concurrent notebook run for
+                # stale processes.  Genuine survivors are reparented to init
+                # (or have a parent that has already disappeared).
+                try:
+                    status = (entry / "status").read_text()
+                    ppid = int(next(line.split()[1] for line in status.splitlines()
+                                    if line.startswith("PPid:")))
+                except (OSError, PermissionError, StopIteration, ValueError):
+                    continue
+                if ppid != 1 and (proc_root / str(ppid)).exists():
+                    continue
+                pid = int(entry.name)
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                    killed += 1
+                except OSError:
+                    pass
         except (OSError, PermissionError):
             pass
         return killed
@@ -380,9 +393,20 @@ def kill_stale_kernels(venv_dir):
         try:
             cmd = subprocess.run(["ps", "-o", "command=", "-p", str(pid)],
                                  capture_output=True, text=True, timeout=5).stdout
+            parent = subprocess.run(
+                ["ps", "-o", "ppid=", "-p", str(pid)], capture_output=True,
+                text=True, timeout=5).stdout.strip()
         except Exception:
             continue
-        if venv_dir in cmd and "ipykernel_launcher" in cmd:
+        try:
+            ppid = int(parent)
+            parent_alive = bool(subprocess.run(
+                ["ps", "-o", "pid=", "-p", str(ppid)], capture_output=True,
+                text=True, timeout=5).stdout.strip())
+        except (ValueError, OSError, subprocess.SubprocessError):
+            continue
+        if (venv_dir in cmd and "ipykernel_launcher" in cmd and
+                (ppid == 1 or not parent_alive)):
             try:
                 os.kill(pid, signal.SIGKILL)
                 killed += 1

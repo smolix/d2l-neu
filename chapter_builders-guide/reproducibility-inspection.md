@@ -28,7 +28,7 @@ from torch.utils.data import DataLoader, TensorDataset
 %%tab jax
 import jax
 from jax import numpy as jnp
-from flax import linen as nn
+from flax import nnx
 import optax
 ```
 
@@ -125,18 +125,17 @@ print('different seed:', loss_a, 'vs', loss_c)
 %%tab jax
 def train_once(seed):
     key_init, key_X, key_y = jax.random.split(jax.random.key(seed), 3)
-    net = nn.Sequential([nn.Dense(32), nn.relu, nn.Dense(1)])
+    net = nnx.Sequential(nnx.Linear(20, 32, rngs=nnx.Rngs(key_init)),
+                         nnx.relu,
+                         nnx.Linear(32, 1, rngs=nnx.Rngs(key_init)))
     X = jax.random.normal(key_X, (128, 20))
     y = jax.random.normal(key_y, (128, 1))
-    params = net.init(key_init, X)
-    opt = optax.sgd(learning_rate=0.1)
-    opt_state = opt.init(params)
-    loss_fn = lambda p: ((net.apply(p, X) - y) ** 2).mean()
+    optimizer = nnx.Optimizer(net, optax.sgd(0.1), wrt=nnx.Param)
+    loss_fn = lambda model: ((model(X) - y) ** 2).mean()
     for _ in range(5):
-        loss, grads = jax.value_and_grad(loss_fn)(params)
-        updates, opt_state = opt.update(grads, opt_state)
-        params = optax.apply_updates(params, updates)
-    return loss, params['params']['layers_0']['kernel']
+        loss, grads = nnx.value_and_grad(loss_fn)(net)
+        optimizer.update(net, grads)
+    return loss, net.layers[0].kernel[...]
 
 loss_a, w_a = train_once(seed=0)
 loss_b, w_b = train_once(seed=0)
@@ -630,12 +629,9 @@ can capture, check, or modify without a single line of the model changing.
 :end_tab:
 
 :begin_tab:`jax`
-A flax model's `apply` is a pure function from parameters and inputs to
-outputs, which would seem to leave an observer nowhere to attach. But
-Flax wraps every submodule's `__call__`, and `apply` exposes that
-machinery directly: `net.apply(params, X, capture_intermediates=True)`
-returns, alongside the output, a dictionary holding the return value of
-every submodule, with no change to the model's source. That matters
+NNX can wrap a module call with `nnx.capture`, recording the return value of
+each submodule method alongside the model output without changing the model's
+source. That matters
 precisely when the model came from a library or a checkpoint you do not
 want to edit. :numref:`fig_bg_hooks` draws the general picture: an
 observation point in the gap the call wrapper already leaves around each
@@ -703,21 +699,20 @@ net = nn.Sequential(nn.Linear(20, 64),
 
 ```{.python .input #reproducibility-inspection-hooks-looking-inside}
 %%tab jax
-class ResidualBlock(nn.Module):
-    num_hiddens: int
-
-    def setup(self):
-        self.body = nn.Sequential([nn.Dense(self.num_hiddens), nn.relu,
-                                   nn.Dense(self.num_hiddens)])
+class ResidualBlock(nnx.Module):
+    def __init__(self, num_hiddens, rngs):
+        self.body = nnx.Sequential(
+            nnx.Linear(num_hiddens, num_hiddens, rngs=rngs), nnx.relu,
+            nnx.Linear(num_hiddens, num_hiddens, rngs=rngs))
 
     def __call__(self, X):
         return X + self.body(X)
 
-net = nn.Sequential([nn.Dense(64),
-                     *[ResidualBlock(64) for _ in range(8)],
-                     nn.Dense(10)])
+rngs = nnx.Rngs(0)
+net = nnx.Sequential(nnx.Linear(20, 64, rngs=rngs),
+                     *[ResidualBlock(64, rngs) for _ in range(8)],
+                     nnx.Linear(64, 10, rngs=rngs))
 X = jax.random.normal(jax.random.key(1), (256, 20))
-params = net.init(jax.random.key(0), X)
 ```
 
 ```{.python .input #reproducibility-inspection-hooks-looking-inside}
@@ -779,10 +774,10 @@ for name, std in stats:
 
 ```{.python .input #reproducibility-inspection-capturing-activation-statistics}
 %%tab jax
-_, mods = net.apply(params, X, capture_intermediates=True)
-inter = mods['intermediates']
+_, inter = nnx.capture(
+    net, nnx.Intermediate, method_outputs=nnx.Intermediate)(X)
 for k, layer in enumerate(net.layers):
-    out = inter[f'layers_{k}']['__call__'][0]
+    out = inter['layers'][k]['__call__'][0]
     print(f'{type(layer).__name__:15s} std {out.std():.2f}')
 ```
 
@@ -894,15 +889,21 @@ for h in handles:
 
 ```{.python .input #reproducibility-inspection-a-nan-finder}
 %%tab jax
-sabotaged = jax.tree_util.tree_map(lambda x: x, params)  # copy the tree
-kernel = sabotaged['params']['layers_3']['body']['layers_0']['kernel']
-sabotaged['params']['layers_3']['body']['layers_0']['kernel'] = (
-    kernel.at[0, 0].set(float('nan')))  # sabotage one layer
-_, mods = net.apply(sabotaged, X,
-                    capture_intermediates=lambda m, _: isinstance(m, nn.Dense))
-for path, out in jax.tree_util.tree_flatten_with_path(mods['intermediates'])[0]:
-    if not jnp.isfinite(out).all():
-        print('first non-finite output in', jax.tree_util.keystr(path[:-2]))
+net.layers[3].body.layers[0].kernel[0, 0] = float('nan')
+_, inter = nnx.capture(
+    net, nnx.Intermediate, method_outputs=nnx.Intermediate)(X)
+
+def get_path(tree, path):
+    for key in path:
+        tree = tree[key]
+    return tree
+
+for path, module in nnx.iter_modules(net):
+    if isinstance(module, nnx.Linear):
+        out = get_path(inter, path)['__call__'][0]
+        if not jnp.isfinite(out).all():
+            print('first non-finite output in', path)
+            break
         break
 ```
 
@@ -972,10 +973,9 @@ everything downstream.
 :end_tab:
 
 :begin_tab:`jax`
-Filtering the capture to `nn.Dense` records only leaf layers, so the
-flattened dictionary lists their outputs in execution order and the first
-non-finite entry is the culprit. The report names
-`['layers_3']['body']['layers_0']`, the layer we poisoned, rather than
+We inspect the captured outputs of linear modules in object-graph order, which
+matches execution order for this sequential network. The report names
+`('layers', 3, 'body', 'layers', 0)`, the layer we poisoned, rather than
 leaving you to bisect with print statements while NaNs propagate through
 everything downstream.
 :end_tab:
@@ -1021,7 +1021,7 @@ hooks work on anything.
 
 :begin_tab:`jax`
 Gradients need no hook at all, because they are not events that fire
-inside a backward pass: `jax.grad` returns them as a tree of values in
+inside a backward pass: `nnx.grad` returns them as a tree of values in
 the same shape as the parameters. To log per-layer gradient norms, catch
 exploding gradients at their source, or experiment with per-layer
 clipping, compute the gradient tree and inspect or transform it like any
@@ -1056,9 +1056,9 @@ code can stand between them.
 
 ```{.python .input #reproducibility-inspection-backward-hooks-and-beyond}
 %%tab jax
-grads = jax.grad(lambda p: (net.apply(p, X) ** 2).mean())(params)
+grads = nnx.grad(lambda model: (model(X) ** 2).mean())(net)
 norms = jax.tree_util.tree_map(jnp.linalg.norm, grads)
-print(norms['params']['layers_3']['body']['layers_0'])
+print(norms['layers'][3]['body']['layers'][0])
 ```
 
 ```{.python .input #reproducibility-inspection-backward-hooks-and-beyond}
@@ -1125,9 +1125,9 @@ handle.
 :end_tab:
 
 :begin_tab:`jax`
-For looking inside a model, `capture_intermediates=True` returns every
-submodule's output from an unmodified `apply`, `sow` records named values
-from the inside, and gradients are values from `jax.grad` you inspect
+For looking inside a model, `nnx.capture(..., method_outputs=...)` returns
+submodule outputs from an unmodified call, `sow` records named values from
+the inside, and gradients are values from `nnx.grad` you inspect
 directly.
 :end_tab:
 
@@ -1168,12 +1168,10 @@ are read after the fact from `param.grad()`.
 
 :begin_tab:`jax`
 5. Rebuild the activation-statistics table two more ways: with a
-   `capture_intermediates` filter that records only `ResidualBlock`
-   outputs, and by editing the block to call
-   `self.sow('intermediates', 'body_out', ...)` on its body's output
-   (`flax.linen.intercept_methods` is a third route worth reading about).
-   Compare the three contracts you now know, capture-everything, opt-in
-   `sow`, and PyTorch-style mutable hooks: which requires touching model
+   filtered `nnx.capture` that records only `ResidualBlock` outputs, and by
+   editing the block to call `self.sow(nnx.Intermediate, 'body_out', ...)`
+   on its body's output. Compare capture-all-methods, opt-in `sow`, and
+   PyTorch-style mutable hooks: which requires touching model
    code, which can silently retain memory, and which would you want for a
    model you do not own?
 :end_tab:

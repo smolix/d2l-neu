@@ -64,8 +64,7 @@ import tensorflow as tf
 ```{.python .input #alexnet-deep-convolutional-neural-networks-alexnet}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
-import jax
+from flax import nnx
 from jax import numpy as jnp
 ```
 
@@ -311,31 +310,31 @@ class AlexNet(d2l.Classifier):
 ```{.python .input #alexnet-capacity-control-and-preprocessing-1}
 %%tab jax
 class AlexNet(d2l.Classifier):
-    lr: float = 0.1
-    num_classes: int = 10
-    training: bool = True
-
-    def setup(self):
-        self.net = nn.Sequential([
-            nn.Conv(features=96, kernel_size=(11, 11), strides=4, padding='VALID'),
-            nn.relu,
-            lambda x: nn.max_pool(x, window_shape=(3, 3), strides=(2, 2)),
-            nn.Conv(features=256, kernel_size=(5, 5)),
-            nn.relu,
-            lambda x: nn.max_pool(x, window_shape=(3, 3), strides=(2, 2)),
-            nn.Conv(features=384, kernel_size=(3, 3)), nn.relu,
-            nn.Conv(features=384, kernel_size=(3, 3)), nn.relu,
-            nn.Conv(features=256, kernel_size=(3, 3)), nn.relu,
-            lambda x: nn.max_pool(x, window_shape=(3, 3), strides=(2, 2)),
+    def __init__(self, lr=0.1, num_classes=10, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = (nnx.Rngs(params=d2l.get_key(), dropout=d2l.get_key())
+                if rngs is None else rngs)
+        self.net = nnx.Sequential(
+            nnx.Conv(1, 96, kernel_size=(11, 11), strides=4,
+                     padding='VALID', rngs=rngs),
+            nnx.relu,
+            lambda x: nnx.max_pool(x, window_shape=(3, 3), strides=(2, 2)),
+            nnx.Conv(96, 256, kernel_size=(5, 5), rngs=rngs),
+            nnx.relu,
+            lambda x: nnx.max_pool(x, window_shape=(3, 3), strides=(2, 2)),
+            nnx.Conv(256, 384, kernel_size=(3, 3), rngs=rngs), nnx.relu,
+            nnx.Conv(384, 384, kernel_size=(3, 3), rngs=rngs), nnx.relu,
+            nnx.Conv(384, 256, kernel_size=(3, 3), rngs=rngs), nnx.relu,
+            lambda x: nnx.max_pool(x, window_shape=(3, 3), strides=(2, 2)),
             lambda x: x.reshape((x.shape[0], -1)),  # flatten
-            nn.Dense(features=4096),
-            nn.relu,
-            nn.Dropout(0.5, deterministic=not self.training),
-            nn.Dense(features=4096),
-            nn.relu,
-            nn.Dropout(0.5, deterministic=not self.training),
-            nn.Dense(features=self.num_classes)
-        ])
+            nnx.Linear(5 * 5 * 256, 4096, rngs=rngs),
+            nnx.relu,
+            nnx.Dropout(0.5, rngs=rngs),
+            nnx.Linear(4096, 4096, rngs=rngs),
+            nnx.relu,
+            nnx.Dropout(0.5, rngs=rngs),
+            nnx.Linear(4096, num_classes, rngs=rngs))
 ```
 
 We construct a single-channel data example with both height and width of 224 to observe the output shape of each layer. It matches the AlexNet architecture in :numref:`fig_alexnet`.
@@ -352,7 +351,7 @@ AlexNet().layer_summary((1, 224, 224, 1))
 
 ```{.python .input #alexnet-capacity-control-and-preprocessing-2}
 %%tab jax
-AlexNet(training=False).layer_summary((1, 224, 224, 1))
+AlexNet().layer_summary((1, 224, 224, 1))
 ```
 
 ## Training

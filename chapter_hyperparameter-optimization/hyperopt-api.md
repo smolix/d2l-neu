@@ -41,10 +41,6 @@ from scipy import stats
 %%tab jax
 import time
 from d2l import jax as d2l
-import jax
-from jax import numpy as jnp
-from flax import linen as nn
-import optax
 import numpy as np
 from scipy import stats
 ```
@@ -213,6 +209,9 @@ class HPOTuner(d2l.HyperParameters):  #@save
             config = self.scheduler.suggest()
             print(f"Trial {i}: config = {config}")
             error = self.objective(**config)
+            # Each objective creates a training figure. HPO can evaluate many
+            # configurations, so release completed figures between trials.
+            d2l.plt.close('all')
             error = float(error)
             self.scheduler.update(config, error)
             runtime = time.time() - start_time

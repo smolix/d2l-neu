@@ -63,10 +63,8 @@ from d2l import tensorflow as d2l
 ```{.python .input #lenet-convolutional-neural-networks-lenet}
 %%tab jax
 from d2l import jax as d2l
-from flax import linen as nn
-import jax
+from flax import nnx
 from jax import numpy as jnp
-from typing import Callable
 ```
 
 ## LeNet
@@ -190,27 +188,27 @@ class LeNet(d2l.Classifier):  #@save
 %%tab jax
 class LeNet(d2l.Classifier):  #@save
     """The LeNet-5 model."""
-    lr: float = 0.1
-    num_classes: int = 10
-    kernel_init: Callable = nn.initializers.xavier_uniform
-
-    def setup(self):
-        self.net = nn.Sequential([
-            nn.Conv(features=6, kernel_size=(5, 5), padding='SAME',
-                    kernel_init=self.kernel_init()),
-            nn.sigmoid,
-            lambda x: nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
-            nn.Conv(features=16, kernel_size=(5, 5), padding='VALID',
-                    kernel_init=self.kernel_init()),
-            nn.sigmoid,
-            lambda x: nn.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
+    def __init__(self, lr=0.1, num_classes=10, kernel_init=None, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs', 'kernel_init'])
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        kernel_init = (nnx.initializers.xavier_uniform() if kernel_init is None
+                       else kernel_init)
+        self.net = nnx.Sequential(
+            nnx.Conv(1, 6, kernel_size=(5, 5), padding='SAME',
+                     kernel_init=kernel_init, rngs=rngs),
+            nnx.sigmoid,
+            lambda x: nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
+            nnx.Conv(6, 16, kernel_size=(5, 5), padding='VALID',
+                     kernel_init=kernel_init, rngs=rngs),
+            nnx.sigmoid,
+            lambda x: nnx.avg_pool(x, window_shape=(2, 2), strides=(2, 2)),
             lambda x: x.reshape((x.shape[0], -1)),  # flatten
-            nn.Dense(features=120, kernel_init=self.kernel_init()),
-            nn.sigmoid,
-            nn.Dense(features=84, kernel_init=self.kernel_init()),
-            nn.sigmoid,
-            nn.Dense(features=self.num_classes, kernel_init=self.kernel_init())
-        ])
+            nnx.Linear(400, 120, kernel_init=kernel_init, rngs=rngs),
+            nnx.sigmoid,
+            nnx.Linear(120, 84, kernel_init=kernel_init, rngs=rngs),
+            nnx.sigmoid,
+            nnx.Linear(84, num_classes, kernel_init=kernel_init, rngs=rngs))
 ```
 
 This is a teaching variant of LeNet-5 rather than an exact historical
@@ -241,13 +239,9 @@ and printing the output shape at each layer,
 we can inspect the model to ensure
 that its operations line up with
 what we expect from :numref:`img_lenet_vert`.
-Flax provides `nn.tabulate`, a nifty method to summarise the layers and
-parameters in our network. Here we use the `bind` method to create a bounded model.
-The variables are now bound to the `d2l.Module` class, i.e., this bounded model
-becomes a stateful object which can then be used to access the `Sequential`
-object attribute `net` and the `layers` within. Note that the `bind` method should
-only be used for interactive experimentation, and is not a direct
-replacement for the `apply` method.
+Because an NNX model already owns its initialized layers, we can pass an array
+through the callables stored in `Sequential` and print each intermediate shape
+directly.
 :end_tab:
 
 ![Compressed notation for LeNet-5.](../img/lenet-vert.svg)
@@ -282,13 +276,9 @@ model.layer_summary((1, 28, 28, 1))
 ```{.python .input #lenet-3}
 %%tab jax
 @d2l.add_to_class(d2l.Classifier)  #@save
-def layer_summary(self, X_shape, key=None):
-    key = d2l.get_key() if key is None else key  # resolve at call time
+def layer_summary(self, X_shape):
     X = jnp.zeros(X_shape)
-    params = self.init(key, X)
-    bound_model = self.clone().bind(params, mutable=['batch_stats'])
-    _ = bound_model(X)
-    for layer in bound_model.net.layers:
+    for layer in self.net.layers:
         X = layer(X)
         print(layer.__class__.__name__, 'output shape:\t', X.shape)
 

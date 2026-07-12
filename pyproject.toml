@@ -11,6 +11,7 @@ dependencies = [
     "matplotlib",
     "matplotlib-inline",
     "requests",
+    "tiktoken",
     "pandas",
     "scipy",
     "pillow",

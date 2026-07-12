@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0b9652fed2526a9d57e4c999f12ece62f4c57d2c1d0d23cddaa5cc723e6314db",
+    "d2l_lib_fingerprint": "sha256:4c267a8aa61f8baf666219216797258c7285f4ff1ba5c1a314c7ae2d539cb85e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-training-1.svg",
-          "bytes": 15325,
-          "sha256": "sha256:db6b6f7b69e6a2d0dce8109f3f63d59add9832c1e4ec6f297f67cb8a5d28ba32"
+          "bytes": 20073,
+          "sha256": "sha256:f8bd584bfe14ab02c15b47a9fed3f87366580bc418e69c601e4ddfb87ee9ba37"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gru/gru-concise-implementation-2-1.svg",
-          "bytes": 15325,
-          "sha256": "sha256:95c2275229e7a660004f228aac6f30a3242e498ca4140c4646ec28f6f840329f"
+          "bytes": 20451,
+          "sha256": "sha256:3ba8ae10cfda6f344542d028eb3bbd475c26c09a3323ba06201b8bd16df3792b"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has of a move is a man '"
+          "text": "'it has experiment of the t'"
         }
       ]
     }

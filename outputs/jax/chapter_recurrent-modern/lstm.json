@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0b9652fed2526a9d57e4c999f12ece62f4c57d2c1d0d23cddaa5cc723e6314db",
+    "d2l_lib_fingerprint": "sha256:4c267a8aa61f8baf666219216797258c7285f4ff1ba5c1a314c7ae2d539cb85e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 15325,
-          "sha256": "sha256:2f6c7113657ead1779ddeea22de9a983af7e47170a2f3aa8f88ceca739a8b803"
+          "bytes": 20051,
+          "sha256": "sha256:1d0e4f2b8a934b99c620c1945df97781d57667da4556a402c54cafc6e5b53be4"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 15325,
-          "sha256": "sha256:80fcefe39a0a722c5d4df5fc06a6418623a83cc96c614d7e8710032788cbffea"
+          "bytes": 20441,
+          "sha256": "sha256:f866006e6a6b6e29b6b6d25c056f361ab3ab322f8a519a91d5325b57fbae6bf2"
         }
       ]
     },
@@ -60,7 +60,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has in the the the the '"
+          "text": "'it has ind and the the the'"
         }
       ]
     }

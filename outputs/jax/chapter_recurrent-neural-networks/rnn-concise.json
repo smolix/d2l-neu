@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:af3354044f46abeee9224ac5fbf8da791e385c98fec89cbab1ccccb246811e7b",
+    "d2l_lib_fingerprint": "sha256:47af8429bddb6d3c955f7bdd7910d4a6a889e7ccf687347397c56b586778f071",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-concise/rnn-concise-training-and-predicting-2-1.svg",
-          "bytes": 14167,
-          "sha256": "sha256:5c8bb7506b325a61c9e9962dd004c69fd1b364ec96abdbb685b6c1f7debdc85c"
+          "bytes": 25131,
+          "sha256": "sha256:db8c97300ffdf96752160a8a609bf5503a46f624aff08572814d38ba23f177d3"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 7.3, 'time traveller a dimension and the'\n"
+          "text": "perplexity 7.2, 'time traveller and the time travel'\n"
         }
       ]
     }

@@ -356,14 +356,20 @@ class RNNLMScratch(d2l.Classifier):  #@save
         self.b_q = nnx.Param(jnp.zeros(vocab_size))
 
     def training_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('ppl', d2l.exp(l), train=True)
-        return l
+        return self.loss(self(*batch[:-1]), batch[-1])
 
     def validation_step(self, batch):
-        l = self.loss(self(*batch[:-1]), batch[-1])
-        self.plot('ppl', d2l.exp(l), train=False)
-        return l
+        return self.loss(self(*batch[:-1]), batch[-1])
+
+    def plot(self, key, value, train):
+        # The train/val steps run inside `@nnx.jit` and only return the mean
+        # loss: plotting a tracer from there would crash the board's drawing
+        # thread. `Trainer.fit_epoch` instead calls this with the materialized
+        # loss (outside jit), which we relabel as perplexity for parity with
+        # the other tabs.
+        if key == 'loss':
+            key, value = 'ppl', d2l.exp(value)
+        super().plot(key, value, train)
 ```
 
 ### One-Hot Encoding

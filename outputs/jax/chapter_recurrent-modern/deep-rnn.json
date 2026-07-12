@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:2b5b7d20aa190cc3949873da0e168fe1e84c6e2e993fcea2a9eee6acd2681cd5",
+    "d2l_lib_fingerprint": "sha256:d200da53fd2771e3232336a6bd62e4f0198f0033906eec16121af60f485ca964",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-implementation-from-scratch-3-1.svg",
-          "bytes": 14167,
-          "sha256": "sha256:f7900d6df9cf18f8b4be9a37473e80153127995284070ed776a02dd840ead9ed"
+          "bytes": 25147,
+          "sha256": "sha256:90c1aa01c39854e0a52907dcd9c67594e61ca16540bcd517b8deb6a435419fcf"
         }
       ]
     },
@@ -49,8 +49,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rnn/deep-rnn-concise-implementation-2-1.svg",
-          "bytes": 14167,
-          "sha256": "sha256:37bc5e166bb6514c91c46049b7f82f6459232e670615b5d0b7ee9e5a470f3933"
+          "bytes": 24560,
+          "sha256": "sha256:8a0f4f5adee37d542eef3dca69ef45382e40b0f2ee8a70ecadd696e1bbc3b1f4"
         }
       ]
     },

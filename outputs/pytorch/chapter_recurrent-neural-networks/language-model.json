@@ -4,33 +4,138 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:51b626cf7034803b7527b7ab337df36ae735c25cdaff0a7e3d3a6e0f1a446723",
+    "d2l_lib_fingerprint": "sha256:2c844656c2439440c467891fbe139f2adf2204f2644b82d115f429fa40a58b7f",
     "max_inline_bytes": 0
   },
   "cells": {
     "language-model-language-models": {
-      "code_fingerprint": "sha256:902f00de903668f0d78c861a74b2e97d44027ea632b610e6950d602b980ba11a",
+      "code_fingerprint": "sha256:0905001ac3534e6811f124bd3a9282dfc9d5cf16a1fba43030f31b8c9267137e",
       "kind": "text",
       "outputs": []
     },
-    "language-model-partitioning-sequences-1": {
-      "code_fingerprint": "sha256:3c75bbcca8993f2c9b0c765811dcb3d6b1adbb13d7f168262abb8583c04fcffb",
+    "language-model-markov-models-and-counting-1": {
+      "code_fingerprint": "sha256:625f87f257188dd5203592b665ea265f8ff4d272d615006fd0bd97022a220f75",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(29402, 3373)"
+        }
+      ]
+    },
+    "language-model-markov-models-and-counting-2": {
+      "code_fingerprint": "sha256:5511ace948a850d190b2f26e04bb436ba5389f0698a00c5aae7b65eba6f942c3",
       "kind": "text",
       "outputs": []
     },
-    "language-model-partitioning-sequences-2": {
-      "code_fingerprint": "sha256:d172b89bd0a497bf4697819b652171a77d631dd13f8ed4de03d6e490b268360b",
-      "kind": "text",
-      "outputs": []
-    },
-    "language-model-partitioning-sequences-3": {
-      "code_fingerprint": "sha256:b7d28db72d9041b92b259da3c35f553924495fc599332d9761d842c65f7e0737",
+    "language-model-sampling-from-n-gram-models": {
+      "code_fingerprint": "sha256:e184f612bdfaa30866f2bc35d21e736f06136cd263018db2c0ea5cc4b8a97c89",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[11,  1, 21,  2,  5,  6, 18,  1, 17,  9],\n        [15,  2, 10,  3,  4,  5,  6, 12, 19,  1]]) \nY: tensor([[ 1, 21,  2,  5,  6, 18,  1, 17,  9,  5],\n        [ 2, 10,  3,  4,  5,  6, 12, 19,  1, 20]])\n"
+          "text": "1-gram: the time import meat on and looking they immediately in any up examination some and grew s his narrow fortunate risk matches in their cold good but\n2-gram: the time machine and holding one indeed no refuge there came one direction i saw for which i ve told blank the soil smelt sweet and blackening\n3-gram: the time traveller then when we were i put out my hand i had expected happened the bronze doors as yet i had hitherto seen it was\n"
+        }
+      ]
+    },
+    "language-model-the-sparsity-wall": {
+      "code_fingerprint": "sha256:0de47231c978a03ee46a2be2a589e2727b5d9f03c0e2cb541244c503bf7786ad",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "unseen held-out 1-grams: 8.4% (4315 distinct in training)\nunseen held-out 2-grams: 51.5% (18535 distinct in training)\nunseen held-out 3-grams: 87.0% (26982 distinct in training)\n"
+        }
+      ]
+    },
+    "language-model-word-frequency-and-zipf-s-law-1": {
+      "code_fingerprint": "sha256:d827a574057e254a7db0122b873d5e76fe16a47f834a6c1f9afdcd433d077c6a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[('the', 2261),\n ('i', 1267),\n ('and', 1245),\n ('of', 1155),\n ('a', 816),\n ('to', 695),\n ('was', 552),\n ('in', 541),\n ('that', 443),\n ('my', 440)]"
+        }
+      ]
+    },
+    "language-model-word-frequency-and-zipf-s-law-2": {
+      "code_fingerprint": "sha256:e11e1fa8da312d3317502489671bd8890f62a0a7209ca59efcd5920dc1245323",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
+          "bytes": 33996,
+          "sha256": "sha256:b61fcded8ba34c31e2150b42343f975ad3de270aec28f6479d67cfd83e9e2888"
+        }
+      ]
+    },
+    "language-model-word-frequency-and-zipf-s-law-3": {
+      "code_fingerprint": "sha256:34dc7f45093391255639be2c70f69d011ddefc27263c96532dece3dd4d9f80b7",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
+          "bytes": 45605,
+          "sha256": "sha256:4340342144ca4ecb37bd34a8cfdde5f9377c311c3a7b780586adc6f6916e4b0b"
+        }
+      ]
+    },
+    "language-model-perplexity": {
+      "code_fingerprint": "sha256:24ae9d28f0057f53b12b704c410a72ac1eefa91f88b7091810a2799d71116a5a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1-gram held-out perplexity:    840.7\n2-gram held-out perplexity:    775.1\n3-gram held-out perplexity:   2618.1\n"
+        }
+      ]
+    },
+    "language-model-bits-per-byte": {
+      "code_fingerprint": "sha256:0f4e1ff6618f8ec3067fe9bedd4e3d49901ba8d27aea05cbbc0edbfbc5ee7c99",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tokenization   |V|  tokens      ppl   bpb\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        word  4579    3373   2618.1  2.21\n"
+        }
+      ]
+    },
+    "language-model-partitioning-sequences-1": {
+      "code_fingerprint": "sha256:f81e2abba553ac9225582c7e99dd5337e6b104b95553bebf7ec254ac7315c7ae",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-2": {
+      "code_fingerprint": "sha256:b673a47a2ab65b6e7132e18dd4aea271ca2a7721c24ac07d227d4a068f079ac5",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-3": {
+      "code_fingerprint": "sha256:cb055a0d4e64c2c51324cfa04a445d212dd2d9affbc0d7fd10469a4cdbd96e8c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X: tensor([[314, 584, 101, 311, 313, 313, 680,  10, 267, 115],\n        [867, 109, 271, 338, 362, 311, 272, 625, 304, 284]]) \nY: tensor([[ 584,  101,  311,  313,  313,  680,   10,  267,  115, 1015],\n        [ 109,  271,  338,  362,  311,  272,  625,  304,  284,  942]])\nX[0]: ' believe that that machine\\nhas'\nY[0]: 'lieve that that machine\\nhas travell'\n"
         }
       ]
     }

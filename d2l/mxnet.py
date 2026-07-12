@@ -749,11 +749,19 @@ class TimeMachine(d2l.DataModule):
         corpus = [vocab[token] for token in tokens]
         return corpus, vocab
 
-    def __init__(self, batch_size, num_steps, num_train=10000, num_val=5000):
+    def __init__(self, batch_size, num_steps, num_train=10000, num_val=5000,
+                 tokenization='bpe', vocab_size=1024):
         super(d2l.TimeMachine, self).__init__()
         self.save_hyperparameters()
-        corpus, self.vocab = self.build(self._download())
-        array = d2l.tensor([corpus[i:i+num_steps+1] 
+        raw_text = self._download()
+        if tokenization == 'bpe':
+            self.tokenizer = d2l.BPETokenizer(
+                vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
+            self.tokenizer.train(raw_text)
+            corpus, self.vocab = self.tokenizer.encode(raw_text), self.tokenizer
+        else:  # 'char': the character-level pipeline
+            corpus, self.vocab = self.build(raw_text)
+        array = d2l.tensor([corpus[i:i+num_steps+1]
                             for i in range(len(corpus)-num_steps)])
         self.X, self.Y = array[:,:-1], array[:,1:]
 

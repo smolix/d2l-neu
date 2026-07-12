@@ -4,33 +4,133 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:7d17ef5ac67c29c17941379364c06baea2887f78edd3c697932e5ab6c350ed23",
+    "d2l_lib_fingerprint": "sha256:8d81b3c345d96ce68e28450361dadbe857a832ea4804240a3042eef4e01909e8",
     "max_inline_bytes": 0
   },
   "cells": {
     "language-model-language-models": {
-      "code_fingerprint": "sha256:99a220b8650c2d4d56c545ca84a7f6d546769306eead0869709a2a9644420c38",
+      "code_fingerprint": "sha256:78769cd97b8b74765c46fd8f9beff738c34630f8d16bf950ea368d4c109cbc6e",
       "kind": "text",
       "outputs": []
     },
-    "language-model-partitioning-sequences-1": {
-      "code_fingerprint": "sha256:4ef35dd55a829e2aa8e8cd8b3683ecc23d209d1a6483e4dc1824b24fd393e746",
+    "language-model-markov-models-and-counting-1": {
+      "code_fingerprint": "sha256:3b15df53b59136d4efcee73f1f14fcb520a366d777ce4463fe8156252c06ae9d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(29402, 3373)"
+        }
+      ]
+    },
+    "language-model-markov-models-and-counting-2": {
+      "code_fingerprint": "sha256:f5262dfd1534ab90fccd8b588cd03c6a8460827553c57518051a08fbd933e364",
       "kind": "text",
       "outputs": []
     },
-    "language-model-partitioning-sequences-2": {
-      "code_fingerprint": "sha256:0b8342a84966be1c33a4babeb270ca20b32a6f95b11f2c4c954f87b10702f663",
-      "kind": "text",
-      "outputs": []
-    },
-    "language-model-partitioning-sequences-3": {
-      "code_fingerprint": "sha256:7cea73d4d72391c6debc1c7c7e8fa92118ebed099b1312eb893b9dba01472bce",
+    "language-model-sampling-from-n-gram-models": {
+      "code_fingerprint": "sha256:9463e7601370edae9b552736d4a2fe16e1c3afbfacc65e1daef2bfbfabcf0cd0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[12 12  1  7  6  2  1  8  1 13]\n [15  9  1  5  1 17  5 12 12  1]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[12  1  7  6  2  1  8  1 13  7]\n [ 9  1  5  1 17  5 12 12  1  2]], shape=(2, 10), dtype=int32)\n"
+          "text": "1-gram: the time import meat on and looking they immediately in any up examination some and grew s his narrow fortunate risk matches in their cold good but\n2-gram: the time machine and holding one indeed no refuge there came one direction i saw for which i ve told blank the soil smelt sweet and blackening\n3-gram: the time traveller then when we were i put out my hand i had expected happened the bronze doors as yet i had hitherto seen it was\n"
+        }
+      ]
+    },
+    "language-model-the-sparsity-wall": {
+      "code_fingerprint": "sha256:2631a1b37e8b265e520fd85a09ebb75a0c5ce1af6ebe5704a52353dfba7523dc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "unseen held-out 1-grams: 8.4% (4315 distinct in training)\nunseen held-out 2-grams: 51.5% (18535 distinct in training)\nunseen held-out 3-grams: 87.0% (26982 distinct in training)\n"
+        }
+      ]
+    },
+    "language-model-word-frequency-and-zipf-s-law-1": {
+      "code_fingerprint": "sha256:6ec5cebfc5149d38bb6c4cea99a41e3899259de710590f246246fbbaf50becb3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[('the', 2261),\n ('i', 1267),\n ('and', 1245),\n ('of', 1155),\n ('a', 816),\n ('to', 695),\n ('was', 552),\n ('in', 541),\n ('that', 443),\n ('my', 440)]"
+        }
+      ]
+    },
+    "language-model-word-frequency-and-zipf-s-law-2": {
+      "code_fingerprint": "sha256:8bf5512d30ce62ea47c9f08b3ca1e4287ac2be05499afc4ce3fc3edec3817811",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
+          "bytes": 33996,
+          "sha256": "sha256:5439995a30ecd7545cba61415076360a1fe13724ad506d8db666e7825c65ce71"
+        }
+      ]
+    },
+    "language-model-word-frequency-and-zipf-s-law-3": {
+      "code_fingerprint": "sha256:c545b95d77d57eb0d107134a7f021ada65d5eeb58e076eed88542e265971c470",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
+          "bytes": 45605,
+          "sha256": "sha256:f244261c990711926872c3bceeb49c4d84546ff0731633901560b03b84e8e1ca"
+        }
+      ]
+    },
+    "language-model-perplexity": {
+      "code_fingerprint": "sha256:45fe3678e39f62363a50644f69ac75736d78719834e406e03d91209f9d908a58",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1-gram held-out perplexity:    840.7\n2-gram held-out perplexity:    775.1\n3-gram held-out perplexity:   2618.1\n"
+        }
+      ]
+    },
+    "language-model-bits-per-byte": {
+      "code_fingerprint": "sha256:753cafc6dd805af9cc852b376cf06a958fbf57020265ac058511ae9757a63d19",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tokenization   |V|  tokens      ppl   bpb\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n        word  4579    3373   2618.1  2.21\n"
+        }
+      ]
+    },
+    "language-model-partitioning-sequences-1": {
+      "code_fingerprint": "sha256:7f7151359e2880916f55380b2102a5f1ad80bbd207dbe1c80eea96d9fd2f6def",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-2": {
+      "code_fingerprint": "sha256:fa76cd373191e3c228877e1919a4eb22d1d5ca636044ceb632fbbbd6cb34f912",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-3": {
+      "code_fingerprint": "sha256:c69255d097695ab3f8337c2a784feed7ad0803bbde530064bbe270c7cfeae2a2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X: tf.Tensor(\n[[1020  312  360  291  719  304   44  492  341  322]\n [  44   10  341  286  566  273  260  619  100  994]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[312 360 291 719 304  44 492 341 322 280]\n [ 10 341 286 566 273 260 619 100 994  44]], shape=(2, 10), dtype=int32)\nX[0]: \" Editor hilariously, 'these\"\nY[0]: \" hilariously, 'these c\"\n"
         }
       ]
     }

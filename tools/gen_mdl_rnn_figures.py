@@ -191,7 +191,7 @@ def fig_rnn_granularity_spectrum():
     ax.annotate('bytes (vocab 256)', xy=(256, 1.0), xytext=(400, 1.01),
                 fontsize=13, color='black', ha='left', va='center')
     ax.annotate('long sequences,\nnothing ever\nout of vocabulary',
-                xy=(430, 0.88), fontsize=11, color=GRAY, ha='left', va='top')
+                xy=(430, 0.88), fontsize=11, color='black', ha='left', va='top')
 
     band = (grid >= 512) & (grid <= 2e5)
     ax.fill_between(grid[band], curve[band] - 0.06, curve[band] + 0.06,
@@ -206,7 +206,7 @@ def fig_rnn_granularity_spectrum():
                 color='black', ha='center', va='bottom')
     ax.annotate('short sequences, but a\nfixed list: rare words fall\n'
                 'out (out of vocabulary)',
-                xy=(6.5e5, 0.65), fontsize=11, color=GRAY, ha='center',
+                xy=(6.5e5, 0.65), fontsize=11, color='black', ha='center',
                 va='top')
     fl.save(fig, 'mdl-rnn-granularity-spectrum')
 

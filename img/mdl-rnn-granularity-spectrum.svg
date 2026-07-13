@@ -1804,7 +1804,7 @@ L 362.892672 192
    </g>
    <g id="text_14">
     <!-- long sequences, -->
-    <g style="fill: #7f7f7f" transform="translate(91.411831 66.135123) scale(0.11 -0.11)">
+    <g transform="translate(91.411831 66.135123) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-2c" d="M 750 794 
 L 1409 794 
@@ -1833,7 +1833,7 @@ z
      <use xlink:href="#DejaVuSans-2c" transform="translate(781.591797 0)"/>
     </g>
     <!-- nothing ever -->
-    <g style="fill: #7f7f7f" transform="translate(91.411831 78.452717) scale(0.11 -0.11)">
+    <g transform="translate(91.411831 78.452717) scale(0.11 -0.11)">
      <use xlink:href="#DejaVuSans-6e"/>
      <use xlink:href="#DejaVuSans-6f" transform="translate(63.378906 0)"/>
      <use xlink:href="#DejaVuSans-74" transform="translate(124.560547 0)"/>
@@ -1848,7 +1848,7 @@ z
      <use xlink:href="#DejaVuSans-72" transform="translate(595.800781 0)"/>
     </g>
     <!-- out of vocabulary -->
-    <g style="fill: #7f7f7f" transform="translate(91.411831 90.770311) scale(0.11 -0.11)">
+    <g transform="translate(91.411831 90.770311) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-66" d="M 2375 4863 
 L 2375 4384 
@@ -2113,7 +2113,7 @@ z
    </g>
    <g id="text_17">
     <!-- short sequences, but a -->
-    <g style="fill: #7f7f7f" transform="translate(292.406129 110.876176) scale(0.11 -0.11)">
+    <g transform="translate(292.406129 110.876176) scale(0.11 -0.11)">
      <use xlink:href="#DejaVuSans-73"/>
      <use xlink:href="#DejaVuSans-68" transform="translate(52.099609 0)"/>
      <use xlink:href="#DejaVuSans-6f" transform="translate(115.478516 0)"/>
@@ -2138,7 +2138,7 @@ z
      <use xlink:href="#DejaVuSans-61" transform="translate(1084.179688 0)"/>
     </g>
     <!-- fixed list: rare words fall -->
-    <g style="fill: #7f7f7f" transform="translate(289.159411 123.19377) scale(0.11 -0.11)">
+    <g transform="translate(289.159411 123.19377) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-78" d="M 3513 3500 
 L 2247 1797 
@@ -2185,7 +2185,7 @@ z
      <use xlink:href="#DejaVuSans-6c" transform="translate(1176.712891 0)"/>
     </g>
     <!-- out (out of vocabulary) -->
-    <g style="fill: #7f7f7f" transform="translate(292.146598 135.511363) scale(0.11 -0.11)">
+    <g transform="translate(292.146598 135.511363) scale(0.11 -0.11)">
      <use xlink:href="#DejaVuSans-6f"/>
      <use xlink:href="#DejaVuSans-75" transform="translate(61.181641 0)"/>
      <use xlink:href="#DejaVuSans-74" transform="translate(124.560547 0)"/>

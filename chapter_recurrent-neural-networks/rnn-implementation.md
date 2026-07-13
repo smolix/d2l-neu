@@ -684,8 +684,8 @@ print(f'validation perplexity {ppl_scratch:.1f}')
 ```
 
 A perplexity in the tens-to-hundreds may look alarming next to the
-single-digit perplexities that character-level RNNs report on this same
-book. Both numbers are correct, and the comparison is meaningless: our model
+single-digit perplexities of the character-level models earlier in this
+chapter. Both numbers are correct, and the comparison is meaningless: our model
 chooses among 1,024 BPE tokens per step, a character model among 27
 characters, and per-token perplexity cannot compare models with different
 tokenizers. This is precisely why :numref:`sec_language-model` introduced
@@ -701,11 +701,12 @@ print(f'{bytes_per_token:.2f} bytes/token, '
       f'{math.log2(ppl_scratch) / bytes_per_token:.2f} bits per byte')
 ```
 
-A character-level model at perplexity 7 pays about $\log_2 7 \approx 2.8$
-bits per character, that is, roughly 2.8 bits per byte. Our BPE-level model,
-despite a perplexity more than ten times larger, compresses the same text
-*better*. The lesson carries beyond this comparison: whenever two language
-models tokenize differently, compare bits per byte, never perplexity.
+Back in :numref:`sec_language-model`, the character-tokenized trigram scored
+2.68 bits per byte on this same text. Our BPE-level model, despite a
+per-token perplexity more than ten times larger, comes in below that,
+compressing the same text *better*. The lesson carries beyond this
+comparison: whenever two language models tokenize differently, compare bits
+per byte, never perplexity.
 
 ## Generating Text
 
@@ -1315,8 +1316,8 @@ Val ppl ~90–100 over 1,024 tokens vs. char-level ppl ~7 over 27:
 
 @rnn-implementation-training-5
 
-~2.4 bpb beats the char model's ~2.8: the "worse" perplexity is
-the better language model.
+~2.4 bpb beats the char-trigram baseline's 2.68 bpb: the "worse"
+perplexity is the better language model.
 :::
 
 ::: {.slide title="Generating text"}
@@ -1372,7 +1373,7 @@ Same trainer, same data:
 ::: {.slide title="Scratch vs. concise, measured"}
 @rnn-implementation-scratch-versus-concise-measured
 
-- PyTorch/MXNet: fused kernel wins ~2x; per-step launch
+- PyTorch/MXNet: fused kernel wins severalfold; per-step launch
   overhead dominates at this size.
 - JAX: both versions JIT-compile; the gap is small.
 - TF: `SimpleRNN` has **no** fused GPU kernel; the compiled

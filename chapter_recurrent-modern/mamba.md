@@ -620,7 +620,7 @@ small linear heads rather than stored as parameters; the $\Delta$ head is
 factored through rank $H/16$ (Mamba's `dt_rank`), which keeps its
 parameter count negligible; and its bias is initialized so that
 $\textrm{softplus}$ of it reproduces the log-uniform step sizes of
-:numref:`subsec_s4d`, so an *untrained* selective layer starts as exactly
+:numref:`subsec_s4d`, so an *untrained* selective layer starts as approximately
 the multi-timescale S4D and must learn to deviate. The scan call is
 unchanged, except that the decay tensor now genuinely spans
 `(num_steps, batch, H, N)` instead of broadcasting one value.
@@ -1233,7 +1233,7 @@ how cleverly the update rule was chosen: to reproduce $k$ arbitrary
 tokens from a vocabulary of size $V$, *something* in the model must hold
 $k \log_2 V$ bits from the moment they appear to the moment they are
 needed. Our selective-copy experiment lived comfortably inside that
-budget, four symbols of three bits each against thousands of state
+budget, four symbols of three bits each against hundreds of state
 dimensions. Scale the demand instead of the model and the wall is
 mathematical: once what must be recalled exceeds what the state can
 encode, no parameterization, gating, or training trick can help.
@@ -1471,7 +1471,7 @@ never assumed constant coefficients. Same scan, per-step tensors:
 ::: {.slide title="The selective SSM layer"}
 Three changes vs. `S4D`: $\Delta, \mathbf{B}, \mathbf{C}$ from linear
 heads; low-rank $\Delta$ head (`dt_rank`); bias init so the *untrained*
-layer is exactly the multi-timescale S4D:
+layer is approximately the multi-timescale S4D:
 
 @mamba-what-selectivity-costs-and-what-survives-2
 :::
@@ -1512,7 +1512,8 @@ A dozen lines around `SelectiveSSM`; the stack keeps the
 
 . . .
 
-- Mamba: best validation perplexity of the chapter.
+- Mamba: best validation perplexity of the chapter in most runs (minGRU
+  edges it on some tabs).
 - Caveats stated honestly: Adam vs. the baselines' SGD; more parameters;
   a small corpus rewards memorization.
 :::

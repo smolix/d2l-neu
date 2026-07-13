@@ -259,7 +259,7 @@ ten numbers in all (here $x_{\leq m}$ denotes the given prefix), and keep
 the two largest, say $P(A, B \mid x_{\leq m})$ and $P(C, E \mid x_{\leq
 m})$. The third step repeats the recipe from the survivors $AB$ and $CE$,
 yielding say $ABD$ and $CED$. Note what pruning bought us: instead of
-$5^3 = 125$ sequences we scored $3 \times 10 = 30$, and in general beam
+$5^3 = 125$ sequences we scored $5 + 10 + 10 = 25$, and in general beam
 search costs $\mathcal{O}(k |\mathcal{V}| T)$, a factor $k$ more than
 greedy and exponentially less than exhaustive search.
 
@@ -334,13 +334,15 @@ for text in ('the time traveller', 'it seemed to me that'):
               f'{data.tokenizer.decode(ids)!r}')
 ```
 
-Beam search does what it promises: at $k = 4$ it finds continuations that
-the model scores markedly better than the greedy ones, curing the myopia
-of the four-token example above. And yet look at the text. The
-higher-scoring continuations lock into a literal loop, repeating one
-phrase verbatim, and the distinct-3 numbers collapse far below the values
-sampling will achieve; where greedy decoding already loops, beam search
-simply finds a higher-probability loop to be stuck in. This is the
+Beam search mostly does what it promises: at $k = 4$ it usually finds
+continuations that the model scores better than the greedy ones, curing the
+myopia of the four-token example above. It remains an approximate search,
+though, so on a given prefix a wider beam can occasionally come back
+*worse*. And yet look at the text. The continuations it returns lock into a
+literal loop, repeating one phrase verbatim, and the distinct-3 numbers
+collapse far below the values sampling will achieve; where greedy decoding
+already loops, beam search simply finds a higher-probability loop to be
+stuck in. This is the
 degeneration mechanism at work: the better a maximizer gets, the deeper
 it digs into the repetitive mode of the distribution. The lesson
 generalizes far beyond RNNs. For open-ended text
@@ -544,10 +546,9 @@ different prefixes and compare the kept sets. Top-$k$ keeps twenty tokens
 regardless. The other two rules track the model's confidence (how
 confident it is after a given prefix varies from training run to training
 run; the printed top probability tells you what this one thinks): the
-more certain the model, the smaller the kept set, and min-$p$, whose bar
-is a fixed fraction of the top probability, tightens the fastest. That is
-the behavior we wanted: strict where the model is sure, permissive where
-it is genuinely uncertain.
+more certain the model, the smaller the top-$p$ and min-$p$ sets tend to
+be. That is the behavior we wanted: strict where the model is sure,
+permissive where it is genuinely uncertain.
 
 ```{.python .input #decoding-one-distribution-three-cutoffs-2}
 for text in ('the time traveller', 'it seemed to me that'):
@@ -563,9 +564,9 @@ for text in ('the time traveller', 'it seemed to me that'):
 Time to hear the dials rather than plot them. First, temperature alone: at
 $T = 0.5$ the text hugs the model's mode and inherits some of greedy's
 repetitiveness, at $T = 1$ it is diverse but occasionally derails into
-tail nonsense, and at $T = 2$ the flattened distribution produces
-gibberish, including tokens whose bytes no longer decode to valid text at
-all (the replacement characters below).
+tail nonsense, already reaching for tokens whose bytes no longer decode to
+valid text (the replacement characters below), and at $T = 2$ the flattened
+distribution produces gibberish outright.
 
 ```{.python .input #decoding-the-same-prefix-under-every-strategy-1}
 prefix = data.tokenizer.encode('the time traveller')
@@ -782,11 +783,11 @@ $$\frac{1}{L^\alpha} \sum_{t=m+1}^{m+L} \log P(x_t \mid x_{<t}),
 
 . . .
 
-$k = 4$ finds sequences the model scores **higher**, and they are the ones
-that lock into a **literal loop** (distinct-3 collapses). For open-ended
-text the argmax is the wrong target; search cannot fix that. Large beams
-even hurt MT. Beam search survives where its assumptions hold: ASR, MT,
-constrained decoding.
+$k = 4$ *usually* finds sequences the model scores **higher** (it is an
+approximate search, so not always), and those are the ones that lock into a
+**literal loop** (distinct-3 collapses). For open-ended text the argmax is
+the wrong target; search cannot fix that. Large beams even hurt MT. Beam
+search survives where its assumptions hold: ASR, MT, constrained decoding.
 :::
 
 ::: {.slide title="Sampling and the unreliable tail"}

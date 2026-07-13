@@ -13,7 +13,9 @@ this book does not provide. See the PyTorch, TensorFlow, and JAX tabs.
 :end_tab:
 
 The gated cells of :numref:`sec_lstm` solved the memory problem and promptly
-ran into a compute problem. A recurrent network must consume its input one
+ran into a compute problem, even as :numref:`sec_seq2seq` had already shown
+the strain of forcing an entire sequence through a single fixed-size state.
+A recurrent network must consume its input one
 step at a time: $\mathbf{H}_t$ cannot be computed before
 $\mathbf{H}_{t-1}$ exists, so a sequence of length $T$ costs $T$
 *sequential* rounds of work no matter how many processors we own. Modern
@@ -205,8 +207,9 @@ perfect work for an accelerator.
 ![A parallel prefix scan on eight elements. Each round combines every position with the one a fixed stride back (arrows), doubling the stride each round; dashed arrows copy unchanged values. Labels show which input elements each node has absorbed; after $\log_2 8 = 3$ rounds, every position holds its full prefix (green).](../img/mdl-modernrnn-scan-tree.svg)
 :label:`fig_scan_tree`
 
-This doubling schedule performs $O(T \log T)$ total work, a $\log T$
-factor more than the sequential loop, in exchange for $O(\log T)$ depth.
+This doubling schedule, the scheme of Hillis and Steele, performs
+$O(T \log T)$ total work, a $\log T$ factor more than the sequential loop,
+in exchange for $O(\log T)$ depth.
 Blelloch's classic two-sweep scan gets the work back down to $O(T)$ at
 slightly more than twice the depth; production kernels use it, and we
 happily pay the log factor for code that fits on a slide.
@@ -547,8 +550,9 @@ print(pred)
 
 In our runs the minGRU's validation perplexity comes in a few points
 behind the GRU of :numref:`sec_gru` (low-to-mid eighties versus high
-seventies under the identical recipe), despite having input-only gates
-and roughly a quarter of the GRU's recurrent parameters, at $2h(d+1)$
+seventies to low eighties under the identical recipe), despite having
+input-only gates and roughly a quarter of the GRU's recurrent parameters,
+at $2h(d+1)$
 versus $3h(d+h+1)$ weights. The claim here is deliberately modest: not
 that the minGRU is better, but that very little of the GRU's quality is
 lost at this scale while the training computation becomes a parallel
@@ -1187,7 +1191,7 @@ for name, (params, acc, secs) in results.items():
 In our runs the S4D lands between 81 and 83 percent accuracy in every
 framework and every rerun, clipped or unclipped. The LSTM baseline is
 another story: across repeated runs (with and without clipping, at
-nearby learning rates) its final accuracy ranged from 59 to 80 percent,
+nearby learning rates) its final accuracy ranged from roughly 60 to 83 percent,
 and the pattern tracks each framework's initialization defaults
 precisely. PyTorch initializes its LSTM with plain uniform weights, and
 the baseline is erratic from run to run; Flax applies one classic
@@ -1396,8 +1400,9 @@ Time Machine, 1,024-token BPE, 50k windows of 32, emb 64, hidden 128,
 
 . . .
 
-- A few points behind the GRU (low-to-mid eighties vs. high seventies)
-  at ~1/4 of its recurrent parameters: $2h(d{+}1)$ vs. $3h(d{+}h{+}1)$.
+- A few points behind the GRU (low-to-mid eighties vs. high seventies to
+  low eighties) at ~1/4 of its recurrent parameters: $2h(d{+}1)$ vs.
+  $3h(d{+}h{+}1)$.
 - Modest claim: nothing essential lost, training became a scan.
 - Price paid: the decay $\mathbf{a}_t$ is decided by the **input alone**
   (remember that).
@@ -1500,7 +1505,7 @@ S4D stack vs. parameter-matched LSTM (~30k params each):
 
 . . .
 
-- S4D: 81-83% in every framework, every rerun. LSTM: 59-80% across
+- S4D: 81-83% in every framework, every rerun. LSTM: 60-83% across
   reruns, tracking init defaults; plain init (PyTorch) is erratic, and
   only Keras's two tricks (orthogonal + forget bias 1) reach parity.
 - The $\Delta$-init hands the S4D multi-scale memory **by design**; the

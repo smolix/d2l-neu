@@ -776,7 +776,7 @@ def loss(self, Y_hat, Y, averaged=False):
 ## Training, Decoding, and Evaluation
 :label:`sec_seq2seq_training`
 
-We now train the translator on the full dataset. Two layers, width 256, dropout
+We now train the translator on our 1,024-pair training split. Two layers, width 256, dropout
 0.2, Adam at learning rate 0.005, gradients clipped to norm 1, for 30 epochs.
 
 ```{.python .input #seq2seq-training}
@@ -953,8 +953,11 @@ def chrf(pred, label, n=6, beta=2):  #@save
     return (1 + beta**2) * prec * rec / (beta**2 * prec + rec)
 ```
 
-Scoring our greedy translations, a correct translation earns a chrF near 1 and a
-wrong word costs partial credit rather than everything.
+Scoring our greedy translations, a correct translation earns a chrF near 1 while a
+wrong word costs partial credit rather than everything. At this toy scale
+translation quality varies from framework to framework: on some tabs the model
+returns a fluent but wrong French sentence, and chrF's partial credit, not an
+all-or-nothing zero, is exactly what you then see in its score.
 
 ```{.python .input #seq2seq-chrf-eval}
 for eng, fra, out in zip(engs, fras, translations):

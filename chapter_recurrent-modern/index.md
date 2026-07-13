@@ -1,78 +1,69 @@
-# Modern Recurrent Neural Networks
+# Gated and Linear Recurrence
 :label:`chap_modern_rnn`
 
-The previous chapter introduced the key ideas 
-behind recurrent neural networks (RNNs). 
-However, just as with convolutional neural networks,
-there has been a tremendous amount of innovation
-in RNN architectures, culminating in several complex
-designs that have proven successful in practice. 
-In particular, the most popular designs 
-feature mechanisms for mitigating the notorious
-numerical instability faced by RNNs,
-as typified by vanishing and exploding gradients.
-Recall that in :numref:`chap_rnn` we dealt 
-with exploding gradients by applying a blunt
-gradient clipping heuristic. 
-Despite the efficacy of this hack,
-it leaves open the problem of vanishing gradients. 
+The recurrent networks of :numref:`chap_rnn` compress an unbounded past into a
+fixed-size hidden state: one vector that must carry forward everything later
+steps will need. That raises a question the vanilla RNN never really answers.
+What should the state remember? Its reply is "whatever stochastic gradient
+descent happens to find," and :numref:`sec_bptt` showed why that reply is
+unsatisfying. Learning a long-range dependency means pushing a gradient back
+through many steps, where the recurrent Jacobian multiplies it again and again
+until it vanishes or explodes. Clipping tames the blow-up, but a signal that
+has decayed into noise cannot be recovered. To decide what a state remembers,
+we have to change the recurrence itself.
 
-In this chapter, we introduce the key ideas behind 
-the most successful RNN architectures for sequences,
-which stem from two papers.
-The first, *Long Short-Term Memory* :cite:`Hochreiter.Schmidhuber.1997`,
-introduces the *memory cell*, a unit of computation that replaces 
-traditional nodes in the hidden layer of a network.
-With these memory cells, networks are able 
-to overcome difficulties with training 
-encountered by earlier recurrent networks.
-Intuitively, the memory cell avoids 
-the vanishing gradient problem
-by keeping values in each memory cell's internal state
-cascading along a recurrent edge with weight 1 
-across many successive time steps. 
-A set of multiplicative gates help the network
-to determine not only the inputs to allow 
-into the memory state, 
-but when the content of the memory state 
-should influence the model's output. 
+This chapter gives three answers, in roughly historical and conceptual order.
+The first is to *gate* it. The long short-term memory (LSTM) cell and its
+streamlined cousin the gated recurrent unit (GRU, :numref:`sec_lstm`) attach
+learned, input- and state-dependent gates that control what the state reads,
+writes, and forgets; a value protected by a forget gate can survive hundreds
+of steps. The second is to *linearize* it. Dropping the nonlinearity from the
+state update, as minGRU does and as the structured state space models S4 and
+S4D do from a continuous-time starting point (:numref:`sec_ssm`), turns the
+recurrence into an affine map. Training then parallelizes across the sequence
+with a scan instead of crawling one step at a time, and the memory becomes
+analyzable, its decay read straight off the eigenvalues. The third is to
+*select* it. A linear recurrence with fixed coefficients is content-blind, so
+we make its dynamics input-dependent again, the move behind Mamba
+(:numref:`sec_mamba`); this recovers the content-awareness of a gate while
+keeping the linear-time, parallel-training cost. Gate, linearize, select:
+three ways to answer one question. Remarkably, the forget gate of the first
+answer reappears inside the third, since Mamba's input-dependent step size is
+a gate wrapped around a linear state, and the arc closes on the idea it opened
+with.
 
-The second paper, *Bidirectional Recurrent Neural Networks* :cite:`Schuster.Paliwal.1997`,
-introduces an architecture in which information 
-from both the future (subsequent time steps) 
-and the past (preceding time steps)
-are used to determine the output 
-at any point in the sequence.
-This is in contrast to previous networks, 
-in which only past input can affect the output.
-Bidirectional RNNs have become a mainstay 
-for sequence labeling tasks in natural language processing,
-among a myriad of other tasks. 
-Fortunately, the two innovations are not mutually exclusive, 
-and have been successfully combined for phoneme classification
-:cite:`Graves.Schmidhuber.2005` and handwriting recognition :cite:`graves2008novel`.
+Woven through this progression is a second thread. :numref:`sec_seq2seq`
+develops the encoder-decoder architecture that first carried recurrent
+networks to large-scale machine translation, the application that drove the
+field for years. The same abstraction still frames speech recognition,
+captioning, and multimodal front-ends, so it is worth building once even
+though word-level translation is behind us. It also exposes a limitation that
+reframes the whole chapter: the encoder squeezes an entire source sentence
+through a single fixed-size vector. That bottleneck is the memory question in
+another guise, and it points to two escapes, namely building a *better* fixed
+state (the rest of this chapter) or letting the model *look back* at
+everything at once (attention, the next part).
 
-
-The first sections in this chapter will explain the LSTM architecture,
-a lighter-weight version called the gated recurrent unit (GRU),
-the key ideas behind bidirectional RNNs 
-and a brief explanation of how RNN layers 
-are stacked together to form deep RNNs. 
-Subsequently, we will explore the application of RNNs
-in sequence-to-sequence tasks, 
-introducing machine translation
-along with key ideas such as *encoder--decoder* architectures and *beam search*.
+The chapter therefore has one recurring adversary, the fixed-size state, met
+at growing sophistication and never fully beaten. Gating, linearization, and
+selection each make a bounded memory hold more of what matters, and modern
+hybrid language models run these layers in production for exactly that reason.
+What recurrence buys in exchange is inference at constant memory and linear
+time in the sequence length, a bargain that keeps it attractive wherever
+generation must run cheaply and at scale. Yet no fixed-size state can recall
+arbitrary detail on demand; asked to
+reproduce a phone number it read a thousand tokens ago, it fails where a
+simple lookup would not. That honest limit hands the story to
+:numref:`chap_attention-and-transformers`. The ideas gathered here span nearly
+three decades, from the 1997 LSTM to the 2024 selective state space models,
+and together they make recurrence a living architecture rather than a
+historical one.
 
 ```toc
 :maxdepth: 2
 
 lstm
-gru
-deep-rnn
-bi-rnn
-machine-translation-and-dataset
-encoder-decoder
 seq2seq
-beam-search
+ssm
+mamba
 ```
-

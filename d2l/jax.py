@@ -1202,32 +1202,104 @@ def generate(step_fn, prefix, num_tokens, eos_id=None, **strategy):
             break
     return ids
 
-class GRU(d2l.RNN):
-    """The multilayer GRU model.
+class LSTMScratch(nnx.Module):
+    """The long short-term memory (LSTM) cell implemented from scratch.
 
-    Defined in :numref:`sec_deep_rnn`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers, dropout=0,
+    Defined in :numref:`sec_lstm`"""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
+        self.sigma = sigma
+        init_weight = lambda shape: nnx.Param(
+            rngs.params.normal(shape) * sigma)
+        triple = lambda: (
+            init_weight((num_inputs, num_hiddens)),
+            init_weight((num_hiddens, num_hiddens)),
+            nnx.Param(jnp.zeros(num_hiddens)))
+        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
+        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
+        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
+        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
+
+    def __call__(self, inputs, H_C=None):
+        def scan_fn(H_C, X):
+            H, C = H_C
+            I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
+                            d2l.matmul(H, self.W_hi) + self.b_i)
+            F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
+                            d2l.matmul(H, self.W_hf) + self.b_f)
+            O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
+                            d2l.matmul(H, self.W_ho) + self.b_o)
+            C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
+                               d2l.matmul(H, self.W_hc) + self.b_c)
+            C = F * C + I * C_tilde
+            H = O * d2l.tanh(C)
+            return (H, C), H  # Return (carry, per-step output)
+
+        if H_C is None:
+            batch_size = inputs.shape[1]
+            H_C = (jnp.zeros((batch_size, self.num_hiddens)),
+                   jnp.zeros((batch_size, self.num_hiddens)))
+        H_C, outputs = jax.lax.scan(scan_fn, H_C, inputs)
+        return outputs, H_C
+
+class LSTM(d2l.RNN):
+    """The multilayer LSTM model implemented with high-level APIs.
+
+    Defined in :numref:`sec_lstm`"""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0,
                  rngs=None):
-        rngs = nnx.Rngs(params=0, dropout=1, carry=2) if rngs is None else rngs
-        self.num_hiddens, self.num_layers = num_hiddens, num_layers
+        rngs = nnx.Rngs(params=0, dropout=1, carry=2) if rngs is None \
+            else rngs
+        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
+        self.num_layers = num_layers
         self.rnns = nnx.List([
-            nnx.RNN(nnx.GRUCell(
-                num_inputs if i == 0 else num_hiddens, num_hiddens,
-                rngs=rngs), time_major=True, return_carry=True, rngs=rngs)
+            nnx.RNN(nnx.LSTMCell(num_inputs if i == 0 else num_hiddens,
+                                 num_hiddens, rngs=rngs),
+                    time_major=True, return_carry=True, rngs=rngs)
             for i in range(num_layers)])
         self.dropouts = nnx.List([
-            nnx.Dropout(dropout, rngs=rngs)
-            for _ in range(num_layers - 1)])
+            nnx.Dropout(dropout, rngs=rngs) for _ in range(num_layers - 1)])
+
+    def __call__(self, inputs, H_C=None):
+        outputs = inputs
+        H_C = [None] * self.num_layers if H_C is None else H_C
+        new_H_C = []
+        for i, rnn in enumerate(self.rnns):
+            carry, outputs = rnn(outputs, initial_carry=H_C[i])
+            new_H_C.append(carry)
+            if i < self.num_layers - 1:
+                outputs = self.dropouts[i](outputs)
+        return outputs, new_H_C
+
+class GRU(d2l.RNN):
+    """The multilayer GRU model implemented with high-level APIs.
+
+    Defined in :numref:`sec_gru`"""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0,
+                 rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1, carry=2) if rngs is None \
+            else rngs
+        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
+        self.num_layers = num_layers
+        self.rnns = nnx.List([
+            nnx.RNN(nnx.GRUCell(num_inputs if i == 0 else num_hiddens,
+                                num_hiddens, rngs=rngs),
+                    time_major=True, return_carry=True, rngs=rngs)
+            for i in range(num_layers)])
+        self.dropouts = nnx.List([
+            nnx.Dropout(dropout, rngs=rngs) for _ in range(num_layers - 1)])
 
     def __call__(self, X, state=None):
-        states = [None] * self.num_layers if state is None else state
+        outputs = X
+        state = [None] * self.num_layers if state is None else state
         new_state = []
         for i, rnn in enumerate(self.rnns):
-            H, X = rnn(X, initial_carry=states[i])
-            new_state.append(H)
+            carry, outputs = rnn(outputs, initial_carry=state[i])
+            new_state.append(carry)
             if i < self.num_layers - 1:
-                X = self.dropouts[i](X)
-        return X, new_state
+                outputs = self.dropouts[i](outputs)
+        return outputs, new_state
 
 class MTFraEng(d2l.DataModule):
     """The English-French dataset.

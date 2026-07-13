@@ -134,12 +134,11 @@ book:
         - chapter_recurrent-neural-networks/decoding.qmd
         - chapter_recurrent-modern/index.qmd
         - chapter_recurrent-modern/lstm.qmd
-        - chapter_recurrent-modern/gru.qmd
-        - chapter_recurrent-modern/deep-rnn.qmd
-        - chapter_recurrent-modern/bi-rnn.qmd
         - chapter_recurrent-modern/machine-translation-and-dataset.qmd
         - chapter_recurrent-modern/encoder-decoder.qmd
         - chapter_recurrent-modern/seq2seq.qmd
+        - chapter_recurrent-modern/ssm.qmd
+        - chapter_recurrent-modern/mamba.qmd
     - part: "Attention Mechanisms and Transformers"
       chapters:
         - chapter_attention-mechanisms-and-transformers/index.qmd

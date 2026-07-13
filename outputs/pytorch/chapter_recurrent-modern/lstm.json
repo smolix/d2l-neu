@@ -4,63 +4,168 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:477923828982bf6fee4f4fe9f5723c02c56c71e112b28457ee75ee9833f05b65",
+    "d2l_lib_fingerprint": "sha256:666e881b18c801e98dfbc2e4bda1c1a1c3d6681aabcbadc0a8789f9f498fe1e8",
     "max_inline_bytes": 0
   },
   "cells": {
-    "lstm-long-short-term-memory-lstm": {
-      "code_fingerprint": "sha256:3ed408caa328a2917807af7598d0dc5631ad73c35a8abcf5a6c19afdf87b2ec1",
+    "lstm-gated-recurrent-networks": {
+      "code_fingerprint": "sha256:c7e49803ad99b6f242f769f72a986c5d683e860486a91ebd1cc929366d0d3fd4",
       "kind": "text",
       "outputs": []
     },
-    "lstm-initializing-model-parameters-1": {
-      "code_fingerprint": "sha256:8f101aa1e55d4b7ded605e768adbe82f89b1d7cf6bdfd064d2afc5c1d484ef29",
+    "lstm-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:335598f349e72aaf280eb00e5308a022042747f44beb2a045934544fa5c24e72",
       "kind": "text",
       "outputs": []
     },
-    "lstm-initializing-model-parameters-2": {
-      "code_fingerprint": "sha256:f679a0042290e99d35f2bf91e8106e1ca939ea0d1c49808788356773e8b1e2e1",
+    "lstm-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:03ecf089cb37ec1a51fce0da0c81231b594648033c1e7a80883e1f85dbbcc709",
       "kind": "text",
       "outputs": []
     },
-    "lstm-training-and-prediction": {
-      "code_fingerprint": "sha256:ed00c93f3b6114ed936b5884cfcdffbcd6b26a5e11531798f1068a9c52301048",
+    "lstm-implementation-from-scratch-3": {
+      "code_fingerprint": "sha256:c3d0995a90f77b62e45be432c2163cb60cad8afd0b63b76bcce0e935e7dffa63",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-training-1": {
+      "code_fingerprint": "sha256:d0eeedd28f55aeb33cf263493ded551f6bb58a87d8876b4a3492c28b4f1c4645",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-training-2": {
+      "code_fingerprint": "sha256:ab59a850a433cec192a2737101d687e298b904eab42a42e9d895df79bf269057",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-training-3": {
+      "code_fingerprint": "sha256:78a65c0a3e2d9e4c813e6a266b761a27c51b40724967a0cd9eaaea23c6a72307",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "lstm/lstm-training-and-prediction-1.svg",
-          "bytes": 19928,
-          "sha256": "sha256:715aaf1bf058d58d3d067b6b14444895c593f86551d1f263978ad845fcdfca4b"
+          "asset": "lstm/lstm-training-3-1.svg",
+          "bytes": 18363,
+          "sha256": "sha256:fd469861240956f0532d0982c2134e9c4866f807747d0b88d32de1c446b18376"
+        }
+      ]
+    },
+    "lstm-training-4": {
+      "code_fingerprint": "sha256:77a3e2696b70e928b4ae44daf2aa320a851808385650ffacdedbd28b3e7c953b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation perplexity 103.7\n"
         }
       ]
     },
     "lstm-concise-implementation-1": {
-      "code_fingerprint": "sha256:6d4acd9dcc3c8d5d8d4f3fc1dc52454263398e2d58d6be54b725999e282b3197",
+      "code_fingerprint": "sha256:5873bd82b1e2443dbb1c334409e2ff2d47bc28eda0122d920f96616570ed7d38",
       "kind": "text",
       "outputs": []
     },
     "lstm-concise-implementation-2": {
-      "code_fingerprint": "sha256:75989d64d813b8a1a9db2d122b42e592b607f58c25b899884fd865cc033724ae",
+      "code_fingerprint": "sha256:e70c403c4bca27f07c3b29227b1d7365b6b5605ae46d842283aa607dff67439f",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-concise-implementation-3": {
+      "code_fingerprint": "sha256:c6e483259648588f3ae98a7f2a8c2431fd5dff77f910c4d5f8f73775f3850938",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "lstm/lstm-concise-implementation-2-1.svg",
-          "bytes": 20300,
-          "sha256": "sha256:84e30a44a45f730c6edcdab6e7ac3f7d3bdccaf1f4f6e9614b2d4d11bccfb4c4"
+          "asset": "lstm/lstm-concise-implementation-3-1.svg",
+          "bytes": 18561,
+          "sha256": "sha256:c99c56cfb2210e5b2fe445f33157165ea368cd83d88ed14daed2d410a676cde1"
         }
       ]
     },
-    "lstm-concise-implementation-3": {
-      "code_fingerprint": "sha256:20a7facc610fd6da1f98072a505afd38884b7c8ec445e0a612c3ba8eb5d7057e",
+    "lstm-concise-implementation-4": {
+      "code_fingerprint": "sha256:5c96692d586109cfefdcc46fce198fd3cd94a0c5812d361786fcf356492682b1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "perplexity 91.3, 'the time travellers, and the\\nside of the Time Traveller. I was not a little sound of the parp of the\\nside of'\n"
+        }
+      ]
+    },
+    "lstm-implementation-and-comparison-1": {
+      "code_fingerprint": "sha256:bf2e6f11218b0aaadc425abfbc13144f3285d0594d8526ca5055e31d127f8c7f",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-implementation-and-comparison-2": {
+      "code_fingerprint": "sha256:e58e10fdba5bf64261f65c5d6252dfb60c530450a007d4c25dc6910a61008186",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-implementation-and-comparison-3": {
+      "code_fingerprint": "sha256:3395ce3ca749087941abd298660f629b59f058e3f70e0295745cbf4dd04b7ed6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lstm/lstm-implementation-and-comparison-3-1.svg",
+          "bytes": 18937,
+          "sha256": "sha256:ceefce871a60363ed3d6ddfbd255486f95b91bc7d599283709861cff4835a0a1"
+        }
+      ]
+    },
+    "lstm-implementation-and-comparison-4": {
+      "code_fingerprint": "sha256:0570812878f1332ac12131fb685a3b0a92a74b4bc8e4d1f86c9439228cee936f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation perplexity 76.6\n"
+        }
+      ]
+    },
+    "lstm-deep-recurrent-networks-1": {
+      "code_fingerprint": "sha256:71529f123e2b9313ebd64b3ff499fe3d427ca8383cff564bb77f9df84ad22da9",
+      "kind": "text",
+      "outputs": []
+    },
+    "lstm-deep-recurrent-networks-2": {
+      "code_fingerprint": "sha256:40c53ef18b899d44781ac16b71745e244373b57f25a55ecc2b56d1b232d76792",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lstm/lstm-deep-recurrent-networks-2-1.svg",
+          "bytes": 20847,
+          "sha256": "sha256:d1eabbc28d4510ecd410a4204442fe8b57a53768530a17bb38d4985200b127a1"
+        }
+      ]
+    },
+    "lstm-deep-recurrent-networks-3": {
+      "code_fingerprint": "sha256:c5f814fa6fb6d1d67c5c4771698059a516f49afcc4ea649f0916441e479da969",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "           model  val ppl\n  LSTM (scratch)    103.7\n            LSTM     91.3\n             GRU     76.6\n LSTM (2 layers)    113.7\n"
+        }
+      ]
+    },
+    "lstm-bidirectional-recurrent-networks": {
+      "code_fingerprint": "sha256:0d74224cba385b3a6216d66a50c3e0a1bb6b0de24861c57f6f43c1c063762834",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has on the think have a'"
+          "text": "(torch.Size([32, 8, 256]), torch.Size([2, 8, 128]))"
         }
       ]
     }

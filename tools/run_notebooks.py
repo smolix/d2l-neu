@@ -90,6 +90,11 @@ def score_notebook(nb_path):
                     m = re.search(r"loss_G (\d+\.\d+)", line)
                     if m:
                         gan_loss_G = float(m.group(1))
+                    # Showcase prediction printed by the gated-RNN section
+                    # (10.1): "perplexity 78.3, 'the time traveller ...'"
+                    m = re.search(r"perplexity \d+\.\d+, ['\"](.+)['\"]", line)
+                    if m:
+                        generated_texts.append(m.group(1))
             # Generated text in execute_result: "'it has ...'"
             if "data" in out and "text/plain" in out["data"]:
                 txt = "".join(out["data"]["text/plain"])

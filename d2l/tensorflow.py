@@ -1129,11 +1129,71 @@ def generate(step_fn, prefix, num_tokens, eos_id=None, **strategy):
             break
     return ids
 
-class GRU(d2l.RNN):
-    """The multilayer GRU model.
+class LSTMScratch(d2l.Module):
+    """The long short-term memory (LSTM) cell implemented from scratch.
 
-    Defined in :numref:`sec_deep_rnn`"""
-    def __init__(self, num_hiddens, num_layers, dropout=0):
+    Defined in :numref:`sec_lstm`"""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+
+        init_weight = lambda *shape: tf.Variable(d2l.normal(shape) * sigma)
+        triple = lambda: (init_weight(num_inputs, num_hiddens),
+                          init_weight(num_hiddens, num_hiddens),
+                          tf.Variable(d2l.zeros(num_hiddens)))
+        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
+        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
+        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
+        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
+
+    def forward(self, inputs, H_C=None):
+        if H_C is None:
+            # Initial state with shape: (batch_size, num_hiddens)
+            H = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
+            C = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
+        else:
+            H, C = H_C
+        outputs = []
+        for X in tf.unstack(inputs):
+            I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
+                            d2l.matmul(H, self.W_hi) + self.b_i)
+            F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
+                            d2l.matmul(H, self.W_hf) + self.b_f)
+            O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
+                            d2l.matmul(H, self.W_ho) + self.b_o)
+            C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
+                               d2l.matmul(H, self.W_hc) + self.b_c)
+            C = F * C + I * C_tilde
+            H = O * d2l.tanh(C)
+            outputs.append(H)
+        return outputs, (H, C)
+
+class LSTM(d2l.RNN):
+    """The multilayer LSTM model implemented with high-level APIs.
+
+    Defined in :numref:`sec_lstm`"""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        self.lstms = [tf.keras.layers.LSTM(
+            num_hiddens, return_sequences=True, return_state=True,
+            dropout=dropout) for _ in range(num_layers)]
+
+    def forward(self, inputs, H_C=None):
+        X = tf.transpose(inputs, perm=[1, 0, 2])  # To batch-major layout
+        if H_C is None:
+            H_C = [None] * self.num_layers
+        new_H_C = []
+        for lstm, state in zip(self.lstms, H_C):
+            X, *state = lstm(X, initial_state=state)
+            new_H_C.append(state)
+        return tf.transpose(X, perm=[1, 0, 2]), new_H_C
+
+class GRU(d2l.RNN):
+    """The multilayer GRU model implemented with high-level APIs.
+
+    Defined in :numref:`sec_gru`"""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
         d2l.Module.__init__(self)
         self.save_hyperparameters()
         gru_cells = [tf.keras.layers.GRUCell(num_hiddens, dropout=dropout)

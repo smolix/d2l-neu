@@ -4,22 +4,81 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:9f83f5e9530dd2fb9fe4490149e5991f26da63a4ef593a5d5325e81767250024",
+    "d2l_lib_fingerprint": "sha256:7b7e2b1b431a7d084904a7754d62d89c7e6d327e018d2580d3e943c4ab6d8296",
     "max_inline_bytes": 0
   },
   "cells": {
-    "seq2seq-sequence-to-sequence-learning-for-machine-translation": {
-      "code_fingerprint": "sha256:3f3baadaab177e39141e1e5fc2bbfea3a11d92062ee8bfa068ea9fc6784a3c1d",
+    "seq2seq-imports": {
+      "code_fingerprint": "sha256:c9b9d4c0cfa6e216de4fd5c636b09d01ad5671081f8a44002c8448a2017ca7bc",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-encoder-2": {
-      "code_fingerprint": "sha256:f907b0ba2a8f6e8aab8fedb4305feb71bac990f290208d04a4f7d5f8b23fa191",
+    "seq2seq-abstraction-encoder": {
+      "code_fingerprint": "sha256:594c9139d3626b7664703c97c3b357f23e0d4efdad2849658ac8ffda2d0b9004",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-encoder-3": {
-      "code_fingerprint": "sha256:b8229953f937895ff77bd214255356233143fd8db2a90197626a337874b90147",
+    "seq2seq-abstraction-decoder": {
+      "code_fingerprint": "sha256:6bdc4fe718dccfcd5b18fc7926b7c1257a47294fa2e0bbb56feaa8b13386d96e",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-abstraction-together": {
+      "code_fingerprint": "sha256:f9295b031e3c2f668221e7b8bd39ac083866c6a6043100dc5daf8ade99f5eb97",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-mtfraeng": {
+      "code_fingerprint": "sha256:c051f423d35a07a99a4ba2c0aa4260ebf87f1633306934f68219c45de819d48c",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-mtfraeng-encode": {
+      "code_fingerprint": "sha256:1060734acad1eb0cce2ede275325b790299164a0a780027fa7a3de36c91e4aa4",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-vocab-shims": {
+      "code_fingerprint": "sha256:28cb074491619a338ecaa2de31739f9af38f8380647fd0b46acd9b1c323c5ea8",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-mtfraeng-batch": {
+      "code_fingerprint": "sha256:89eac8c6ae3dfee1b55d5c1c9fd399c09be8d500d051165b356cb3ba4c255598",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "source: [[1433  335  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105 1892  304  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 687  904  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  785 1239  371  335  256 4002 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  106   39  268  768  558  694  256 4002 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001   99   39  281  485  410 2012  262 4002 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 5 4]\nshared vocabulary size: 4003\n"
+        }
+      ]
+    },
+    "seq2seq-length-hist-fn": {
+      "code_fingerprint": "sha256:9a1da6aa3d98e79ecec7cc2241b372f197c51e6ab3303c777c15f6eb1ed5a26b",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-length-hist": {
+      "code_fingerprint": "sha256:64efb8be5a6793a8b95cde34447cf086f8fe41d6fb43a736b6fba3f73fc5d75d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-length-hist-1.svg",
+          "bytes": 24562,
+          "sha256": "sha256:9e08530418440be155125078aec3863f898a6092e249212138424b7bcb8aa58f"
+        }
+      ]
+    },
+    "seq2seq-encoder": {
+      "code_fingerprint": "sha256:7a2bc15588a1852b219e074f6664f9752fe3af385b6303e995d39178e2ab4a36",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-check": {
+      "code_fingerprint": "sha256:581db068d772e1c4735e3b0c0f525bc4b289d4aed73d0b2d47a4471154419077",
       "kind": "text",
       "outputs": [
         {
@@ -29,62 +88,122 @@
         }
       ]
     },
-    "seq2seq-encoder-4": {
-      "code_fingerprint": "sha256:9459e28a8864936177dec19cb6c8295a1074faf9188cf2dccd04a8722f44c23b",
+    "seq2seq-decoder": {
+      "code_fingerprint": "sha256:41107f6f2964d3903abb309791484e8fc49e99f767f99b699f20be3d33cb87d0",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-decoder-1": {
-      "code_fingerprint": "sha256:eae49acdb0aa903c9c67b19f5f0866d5a5dc8267f622ded2051a972e6fdcf4f1",
+    "seq2seq-decoder-check": {
+      "code_fingerprint": "sha256:c04007821f3a76d13fbc4e02f3e185e6f79e4605605894ac8b49e2863ac4b967",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-decoder-2": {
-      "code_fingerprint": "sha256:328ac195fa02163ed1f04234cf5f9af914f9c53f552e0b0f4ced5b854ba3095c",
+    "seq2seq-model": {
+      "code_fingerprint": "sha256:f56c136115f45f4519c899d1a7f45c7996905cffd3c35bbb58b41abfb039513d",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-encoder-decoder-for-sequence-to-sequence-learning": {
-      "code_fingerprint": "sha256:fb28ed5729bc8f6b80aa92ad7f219a631fc410d97e145ff048b623aa5f1c6dd1",
-      "kind": "text",
-      "outputs": []
-    },
-    "seq2seq-loss-function-with-masking": {
-      "code_fingerprint": "sha256:013de494d4a259428d8405f96596944745737d81af38d07f1e3c7ec8073146ad",
+    "seq2seq-loss": {
+      "code_fingerprint": "sha256:f84f092263fe09744bb13f1b9068abbea6e5410519310891cacc2c132cdecbab",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-training": {
-      "code_fingerprint": "sha256:e6527e083aac391b6f2cb605f885391c078952b030b037c2a2a6dfffc34c1619",
+      "code_fingerprint": "sha256:62ee93b4503c79c831412e804b845eb3225eaa4a967be674cccb768d76d94ffa",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 20545,
-          "sha256": "sha256:8b2a58d3fb656038a9eca56c2da25aa25773526564a5f1af73894dfca31a923d"
+          "bytes": 20442,
+          "sha256": "sha256:1d76b139aab695977ac44005fdd9cf592e85282aa041504e54fd94e967ce2879"
         }
       ]
     },
-    "seq2seq-prediction": {
-      "code_fingerprint": "sha256:5c2d9b8d6e6c6adcb30aa6dea3bfde8952510edb4167ce441898a3fc814ec4f2",
+    "seq2seq-predict-step": {
+      "code_fingerprint": "sha256:19c445264d2380774cc0b437d5019799345c40cab35ad73e45807d28b5f1e05e",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-evaluation-of-predicted-sequences-1": {
-      "code_fingerprint": "sha256:8c759192b5be8d0c02567587577dd5e9475e4ece501a1aa143d8c4b3ccb855b3",
+    "seq2seq-detok": {
+      "code_fingerprint": "sha256:2295e3fa96084d9ddd1abb44ffc0ab4df18f218316b56ca89959ef6117757b78",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-evaluation-of-predicted-sequences-2": {
-      "code_fingerprint": "sha256:97da74814c40056a0a4bd01aae856cb66ba5301f0d58823fd2faceae5ac15ce3",
+    "seq2seq-greedy": {
+      "code_fingerprint": "sha256:8f8c891b1d57bb53514b576ba18b1a372ead283b2794de46e1798e6e6375b3f2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'en', 'retard', '.'], bleu,0.548\ni'm home . => ['je', 'suis', 'malade', '.'], bleu,0.512\n"
+          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis gras .'\n"
+        }
+      ]
+    },
+    "seq2seq-chrf": {
+      "code_fingerprint": "sha256:8deed2fc4db636ef0b42b14141660406909973129fd9c4b0bda0c624bc3d93c6",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-chrf-eval": {
+      "code_fingerprint": "sha256:6338fdf1018619b7befaf54a4898c3f0416e9b31af050ffa955ed3c53a579f6b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis gras .', chrF 0.316\n"
+        }
+      ]
+    },
+    "seq2seq-bleu": {
+      "code_fingerprint": "sha256:b2a686c468f41decb612c211b4b205816f46090393ac0a37493513cbe602a163",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-step-fn": {
+      "code_fingerprint": "sha256:bf5225b1b85dd9f7698c80126968f9ecb3c0c595c3232dfc6df987521c975f36",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-beam": {
+      "code_fingerprint": "sha256:cd5214aa7dca91ed88651a9e5ed5567077a648d0c4b01d5d03aec5044d54987d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost .     k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i'm calm .   k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i'm home .   k=1: 0.32  k=2: 0.32  k=5: 0.32\n"
+        }
+      ]
+    },
+    "seq2seq-bottleneck": {
+      "code_fingerprint": "sha256:a511b12b7702be350ecc6c1c97822910109b01ea14364f5f0797472c203be967",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-bottleneck-plot": {
+      "code_fingerprint": "sha256:f8b2704ee3aa9e780d7c77bd88f0625c8b59880b3a0c6ee7bcd16414577d3cbf",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
+          "bytes": 23434,
+          "sha256": "sha256:a258ad4c0a9093857d894666555703a04f22e901debabe330f930b481f7322ad"
         }
       ]
     }

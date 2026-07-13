@@ -4,81 +4,174 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:7be8583000aa079895f3dc47a31c24c061f39a241032a2ff270b02f22414c566",
+    "d2l_lib_fingerprint": "sha256:6f6a2461f8aebae918767a75292d0024ed5f87cf3047d8bde8b646cd302e6ba1",
     "max_inline_bytes": 0
   },
   "cells": {
-    "seq2seq-sequence-to-sequence-learning-for-machine-translation": {
-      "code_fingerprint": "sha256:b6d2446ca1ae78a9670d0cefd84bfe56c16f91e92383ded8959ef2b5c9cb3270",
+    "seq2seq-imports": {
+      "code_fingerprint": "sha256:ee2e97e52e249c2095c975f19e93db6e920aa3a2becf6477eedc2b0c84ec83a7",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-encoder-1": {
-      "code_fingerprint": "sha256:b530cd64fa6f731d4076771d5f31a72be87b2d2539f1a2ce6689ea78e2056aea",
+    "seq2seq-abstraction-encoder": {
+      "code_fingerprint": "sha256:a19a405fae6aba27b83a40f9786565a0c75aff03c7044de78fba06437e3bfa27",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-encoder-3": {
-      "code_fingerprint": "sha256:54cdecc23791217141aaaab7af3b2f6ae9a9bfed029aa23cacb2659da625042a",
+    "seq2seq-abstraction-decoder": {
+      "code_fingerprint": "sha256:e6fce870a36476fa6ff8ef499187eb452fc712a5c6c42884eaefc487f8b5fc3b",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-encoder-4": {
-      "code_fingerprint": "sha256:4e6491c1560d81e4f272cee7fbc16ee96e29e613bf1ab0547fd1dc8aca587fa9",
+    "seq2seq-abstraction-together": {
+      "code_fingerprint": "sha256:2ebca096d5e21f840935958c53aa2354d9b4bd77791b045537d26df9898805e1",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-decoder-1": {
-      "code_fingerprint": "sha256:a34548f5bf04e4045cee150dd6c2782887ad6e3a946ff948e3690a604087cb38",
+    "seq2seq-mtfraeng": {
+      "code_fingerprint": "sha256:9d23270a3358d2d6ddf6ce9e57e674df096a4036abb78bca3802ce12b7fb4526",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-decoder-2": {
-      "code_fingerprint": "sha256:be7fdf7276475312f87b57d188313673bb8b8effaadce44f7ed90a0e834239d0",
+    "seq2seq-mtfraeng-encode": {
+      "code_fingerprint": "sha256:01e497fe54900a292af6eba55754ae9cae1b8596e1de929de616d9a126829a59",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-encoder-decoder-for-sequence-to-sequence-learning": {
-      "code_fingerprint": "sha256:75a0ed1748f0bbd21eb33919ba53979c344b513173a77254f8b729b83ede3563",
+    "seq2seq-vocab-shims": {
+      "code_fingerprint": "sha256:2e21b4693a69277dfe0d2fe23e47d846a9e80c258045e650eeb0d29d409683c2",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-loss-function-with-masking": {
-      "code_fingerprint": "sha256:c0a0b18346b7824c11fb36a396093aa4f171f59c0c2812d4ceeb7eb2a661f815",
+    "seq2seq-mtfraeng-batch": {
+      "code_fingerprint": "sha256:78c2a520dbcfbc23e513e0d4d379de8de6338557496bfde5d6f9055e74a3639e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "source: [[3075  306  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105 1677  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 105  297 2133  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001 2784  692 2786  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  270  306  296 2004  117 1504  256 4002 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  270  296 2774  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 4 5]\nshared vocabulary size: 4003\n"
+        }
+      ]
+    },
+    "seq2seq-length-hist-fn": {
+      "code_fingerprint": "sha256:1b23024d06e4bcf69d11951f459e8c32f854bcb9612893cdc86ea51d9d7b1bfc",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-length-hist": {
+      "code_fingerprint": "sha256:824b805f0a3111205b511cce42727a905b9864c6d0358c6c9ab32131975cecf6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-length-hist-1.svg",
+          "bytes": 24562,
+          "sha256": "sha256:004db20512c66edcdb49a9501535cb734fa57d07471c699972f9726fd9e61284"
+        }
+      ]
+    },
+    "seq2seq-encoder": {
+      "code_fingerprint": "sha256:303166dc7e5188ebb2856075bf883df1a3d9718386cb5e4902342f188546846c",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-check": {
+      "code_fingerprint": "sha256:6b589a0d2ada5135dc7df415b2c9e128a0c0e66da92a3326adaad59acc6622a6",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-decoder": {
+      "code_fingerprint": "sha256:3bb3314c5b5f9e1f6b617c97d602fef16596bad3d8e3d0eb4be6ab6d8a5f2ea4",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-decoder-check": {
+      "code_fingerprint": "sha256:02dbb537758e6e534e61cafb09037a977379303b2d89d2cc7bd271049931507c",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-model": {
+      "code_fingerprint": "sha256:110cd800837647b089258cd6791dbdab57f8bf88194c4a7231864eb80d5705af",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-loss": {
+      "code_fingerprint": "sha256:b153797c6570023bd1968b9d20c5b20538e8690c4a1018dc2cb433abb8474d1e",
       "kind": "text",
       "outputs": []
     },
     "seq2seq-training": {
-      "code_fingerprint": "sha256:e283f38d4d9e893f54df79a82d9e2a8a81aab04a7ff9f7abdc03d2f69e80706d",
+      "code_fingerprint": "sha256:a088dab7bae042f26c9934885aada6012cc66a78c7df9572ee25a183a5eaa2f9",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 20396,
-          "sha256": "sha256:b81ad0f4019635614ae08bea8f00fa0ca9ce57b2f3f8115fab2de260314a67f8"
+          "bytes": 20411,
+          "sha256": "sha256:aa971aff05f560735d8a3a1588c9f1caf237825f88023b6aee48d5700eae3371"
         }
       ]
     },
-    "seq2seq-prediction": {
-      "code_fingerprint": "sha256:de62a4983779bc5dc27af993eeb2d0834badfeaccb77839bc856146fbbadad8d",
+    "seq2seq-predict-step": {
+      "code_fingerprint": "sha256:eb16e0d0333e8275dcd3b814841e3dffd07c749f32b48cf14abd6a7533231ace",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-evaluation-of-predicted-sequences-1": {
-      "code_fingerprint": "sha256:466d05c55ad91a2c8a2d61f5140d1f535e687f8450a22c9c9b7d5bea397b5477",
+    "seq2seq-detok": {
+      "code_fingerprint": "sha256:3a729744cdc44cd0a5e6d052ed4717b07a9b4ad37168d8e566db8c2085f22840",
       "kind": "text",
       "outputs": []
     },
-    "seq2seq-evaluation-of-predicted-sequences-2": {
-      "code_fingerprint": "sha256:39fb79b4849a466e83ecf26242c92fd6f001bc9f75a74c2dca40a7d645293d0d",
+    "seq2seq-greedy": {
+      "code_fingerprint": "sha256:91e90cb8748b5fd562cc2d75933934218fe393fbda2111e3ee357c99ce0900fa",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', '<unk>', '.'], bleu,0.658\ni'm home . => ['je', 'suis', '<unk>', '.'], bleu,0.512\n"
+          "text": "i lost . => \"je l'ai perdu .\"\ni'm calm . => 'je suis enonne .'\ni'm home . => 'je suis à poil .'\n"
+        }
+      ]
+    },
+    "seq2seq-chrf": {
+      "code_fingerprint": "sha256:2104482c1c8883f353f2cbb0fb59f3d5e1b0bd1af7ad66e87055886fa69786eb",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-chrf-eval": {
+      "code_fingerprint": "sha256:0b6292f4a4342e5555ad0bfa46b823043b4fccf01614376a5acde4c3a1647ad7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost . => \"je l'ai perdu .\", chrF 0.830\ni'm calm . => 'je suis enonne .', chrF 0.382\ni'm home . => 'je suis à poil .', chrF 0.348\n"
+        }
+      ]
+    },
+    "seq2seq-bleu": {
+      "code_fingerprint": "sha256:4a873e9ebd092de8ed2bd67c3924a9b9330cc502ba0b6bd43bbf36dd3852e92e",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-bottleneck": {
+      "code_fingerprint": "sha256:1f2cf6c68ebeb1a7154350b753ac43fe2feee1ed5065b210dd311d28a1a3e482",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-bottleneck-plot": {
+      "code_fingerprint": "sha256:797573411082a6874d052941e5ea19bc16574e1ae194c8668bafbb58a7e0e1c1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
+          "bytes": 24712,
+          "sha256": "sha256:67b6b1c91f3e2153d35c6e44c7f84b3ea1676cde5f8bcfdefdacb2484c58c95e"
         }
       ]
     }

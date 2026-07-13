@@ -898,6 +898,12 @@ class BPETokenizer:
                 tok.merges[ranks[parts[0]], ranks[parts[1]]] = rank
         return tok
 
+    def __getitem__(self, token):
+        return self.specials[token]
+
+    def to_tokens(self, ids):
+        return [self.decode([int(i)]) for i in ids]
+
 class Vocab:
     """Vocabulary for text.
 
@@ -1194,89 +1200,8 @@ class GRU(d2l.RNN):
         self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
                           dropout=dropout)
 
-class MTFraEng(d2l.DataModule):
-    """The English-French dataset.
-
-    Defined in :numref:`sec_machine_translation`"""
-    def _download(self):
-        d2l.extract(d2l.download(
-            d2l.DATA_URL+'fra-eng.zip', self.root, 
-            '94646ad1522d915e7b0f9296181140edcf86a4f5'))
-        with open(self.root + '/fra-eng/fra.txt', encoding='utf-8') as f:
-            return f.read()
-
-    def _preprocess(self, text):
-        # Replace non-breaking space with space
-        text = text.replace('\u202f', ' ').replace('\xa0', ' ')
-        # Insert space between words and punctuation marks
-        no_space = lambda char, prev_char: char in ',.!?' and prev_char != ' '
-        out = [' ' + char if i > 0 and no_space(char, text[i - 1]) else char
-               for i, char in enumerate(text.lower())]
-        return ''.join(out)
-
-    def _tokenize(self, text, max_examples=None):
-        src, tgt = [], []
-        for i, line in enumerate(text.split('\n')):
-            if max_examples and i >= max_examples: break
-            parts = line.split('\t')
-            if len(parts) == 2:
-                # Skip empty tokens
-                src.append([t for t in f'{parts[0]} <eos>'.split(' ') if t])
-                tgt.append([t for t in f'{parts[1]} <eos>'.split(' ') if t])
-        return src, tgt
-
-    def __init__(self, batch_size, num_steps=9, num_train=512, num_val=128):
-        super(MTFraEng, self).__init__()
-        self.save_hyperparameters()
-        self.arrays, self.src_vocab, self.tgt_vocab = self._build_arrays(
-            self._download())
-
-    def _build_arrays(self, raw_text, src_vocab=None, tgt_vocab=None):
-        def _build_array(sentences, vocab, is_tgt=False):
-            pad_or_trim = lambda seq, t: (
-                seq[:t-1] + ['<eos>'] if len(seq) > t else seq + ['<pad>'] * (t - len(seq)))
-            sentences = [pad_or_trim(s, self.num_steps) for s in sentences]
-            if is_tgt:
-                sentences = [['<bos>'] + s for s in sentences]
-            if vocab is None:
-                vocab = d2l.Vocab(sentences, min_freq=2)
-            array = d2l.tensor([vocab[s] for s in sentences])
-            valid_len = d2l.reduce_sum(
-                d2l.astype(array != vocab['<pad>'], d2l.int32), 1)
-            return array, vocab, valid_len
-        src, tgt = self._tokenize(self._preprocess(raw_text), 
-                                  self.num_train + self.num_val)
-        src_array, src_vocab, src_valid_len = _build_array(src, src_vocab)
-        tgt_array, tgt_vocab, _ = _build_array(tgt, tgt_vocab, True)
-        return ((src_array, tgt_array[:,:-1], src_valid_len, tgt_array[:,1:]),
-                src_vocab, tgt_vocab)
-
-    def get_dataloader(self, train):
-        idx = slice(0, self.num_train) if train else slice(self.num_train, None)
-        return self.get_tensorloader(self.arrays, train, idx)
-
-    def build(self, src_sentences, tgt_sentences):
-        raw_text = '\n'.join([src + '\t' + tgt for src, tgt in zip(
-            src_sentences, tgt_sentences)])
-        arrays, _, _ = self._build_arrays(
-            raw_text, self.src_vocab, self.tgt_vocab)
-        return arrays
-
-def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
-    """Plot the histogram for list length pairs.
-
-    Defined in :numref:`sec_machine_translation`"""
-    d2l.set_figsize()
-    _, _, patches = d2l.plt.hist(
-        [[len(l) for l in xlist], [len(l) for l in ylist]])
-    d2l.plt.xlabel(xlabel)
-    d2l.plt.ylabel(ylabel)
-    for patch in patches[1].patches:
-        patch.set_hatch('/')
-    d2l.plt.legend(legend)
-
 class Encoder(nn.Module):
-    """The base encoder interface for the encoder--decoder architecture.
+    """The base encoder interface for the encoder-decoder architecture.
 
     Defined in :numref:`sec_encoder-decoder`"""
     def __init__(self):
@@ -1287,13 +1212,12 @@ class Encoder(nn.Module):
         raise NotImplementedError
 
 class Decoder(nn.Module):
-    """The base decoder interface for the encoder--decoder architecture.
+    """The base decoder interface for the encoder-decoder architecture.
 
     Defined in :numref:`sec_encoder-decoder`"""
     def __init__(self):
         super().__init__()
 
-    # Later there can be additional arguments (e.g., length excluding padding)
     def init_state(self, enc_all_outputs, *args):
         raise NotImplementedError
 
@@ -1301,7 +1225,7 @@ class Decoder(nn.Module):
         raise NotImplementedError
 
 class EncoderDecoder(d2l.Classifier):
-    """The base class for the encoder--decoder architecture.
+    """The base class for the encoder-decoder architecture.
 
     Defined in :numref:`sec_encoder-decoder`"""
     def __init__(self, encoder, decoder):
@@ -1326,17 +1250,88 @@ class EncoderDecoder(d2l.Classifier):
         for _ in range(num_steps):
             Y, dec_state = self.decoder(outputs[-1], dec_state)
             outputs.append(d2l.argmax(Y, 2))
-            # Save attention weights (to be covered later)
             if save_attention_weights:
                 attention_weights.append(self.decoder.attention_weights)
         return d2l.concat(outputs[1:], 1), attention_weights
 
+class MTFraEng(d2l.DataModule):
+    """The English-French dataset, tokenized with a shared byte-level BPE.
+
+    Defined in :numref:`sec_machine_translation`"""
+    def __init__(self, batch_size, num_steps=20, num_train=1024, num_val=128,
+                 vocab_size=4000):
+        super().__init__()
+        self.save_hyperparameters()
+        pairs = self._pairs(self._preprocess(self._download()))
+        # Train ONE shared byte-level BPE over both languages.
+        m = min(5000, len(pairs))
+        self.tokenizer = d2l.BPETokenizer(
+            vocab_size, pattern=d2l.BPETokenizer.GPT2_PATTERN)
+        self.tokenizer.train('\n'.join([p[0] for p in pairs[:m]] +
+                                       [p[1] for p in pairs[:m]]))
+        # src_vocab / tgt_vocab both refer to the shared tokenizer.
+        self.src_vocab = self.tgt_vocab = self.tokenizer
+        pairs = pairs[:num_train + num_val]
+        self.src_sents = [p[0] for p in pairs]
+        self.tgt_sents = [p[1] for p in pairs]
+        self.arrays = self._encode(pairs)
+
+    def _download(self):
+        d2l.extract(d2l.download(
+            d2l.DATA_URL + 'fra-eng.zip', self.root,
+            '94646ad1522d915e7b0f9296181140edcf86a4f5'))
+        with open(self.root + '/fra-eng/fra.txt', encoding='utf-8') as f:
+            return f.read()
+
+    def _preprocess(self, text):
+        # Normalize spaces, lowercase, and put a space before punctuation.
+        text = text.replace(' ', ' ').replace('\xa0', ' ').lower()
+        no_space = lambda c, prev: c in ',.!?' and prev != ' '
+        return ''.join([' ' + c if i > 0 and no_space(c, text[i - 1]) else c
+                        for i, c in enumerate(text)])
+
+    def _pairs(self, text):
+        return [ln.split('\t') for ln in text.split('\n') if ln.count('\t') == 1]
+
+    def _encode(self, pairs):
+        tok, t = self.tokenizer, self.num_steps
+        def row(sent, is_tgt):
+            ids = tok.encode(sent)
+            ids = (ids[:t - 1] + [tok.eos] if len(ids) >= t else
+                   ids + [tok.eos] + [tok.pad] * (t - 1 - len(ids)))
+            return [tok.bos] + ids if is_tgt else ids
+        src = d2l.tensor([row(s, False) for s, _ in pairs])
+        tgt = d2l.tensor([row(t, True) for _, t in pairs])
+        valid_len = d2l.reduce_sum(d2l.astype(src != tok.pad, d2l.int32), 1)
+        return src, tgt[:, :-1], valid_len, tgt[:, 1:]
+
+    def build(self, src_sentences, tgt_sentences):
+        return self._encode([(self._preprocess(s), self._preprocess(t))
+                             for s, t in zip(src_sentences, tgt_sentences)])
+
+    def get_dataloader(self, train):
+        idx = slice(0, self.num_train) if train else slice(self.num_train, None)
+        return self.get_tensorloader(self.arrays, train, idx)
+
+def show_list_len_pair_hist(legend, xlabel, ylabel, xlist, ylist):
+    """Plot the histogram for list length pairs.
+
+    Defined in :numref:`sec_machine_translation`"""
+    d2l.set_figsize()
+    _, _, patches = d2l.plt.hist(
+        [[len(l) for l in xlist], [len(l) for l in ylist]])
+    d2l.plt.xlabel(xlabel)
+    d2l.plt.ylabel(ylabel)
+    for patch in patches[1].patches:
+        patch.set_hatch('/')
+    d2l.plt.legend(legend)
+
 def init_seq2seq(module):
     """Initialize weights for sequence-to-sequence learning.
 
-    Defined in :numref:`sec_seq2seq`"""
+    Defined in :numref:`sec_machine_translation`"""
     if type(module) == nn.Linear:
-         nn.init.xavier_uniform_(module.weight)
+        nn.init.xavier_uniform_(module.weight)
     if type(module) == nn.GRU:
         for param in module._flat_weights_names:
             if "weight" in param:
@@ -1345,38 +1340,54 @@ def init_seq2seq(module):
 class Seq2SeqEncoder(d2l.Encoder):
     """The RNN encoder for sequence-to-sequence learning.
 
-    Defined in :numref:`sec_seq2seq`"""
+    Defined in :numref:`sec_machine_translation`"""
     def __init__(self, vocab_size, embed_size, num_hiddens, num_layers,
                  dropout=0):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, embed_size)
         self.rnn = d2l.GRU(embed_size, num_hiddens, num_layers, dropout)
         self.apply(init_seq2seq)
-            
+
     def forward(self, X, *args):
-        # X shape: (batch_size, num_steps)
         embs = self.embedding(d2l.astype(d2l.transpose(X), d2l.int64))
-        # embs shape: (num_steps, batch_size, embed_size)
         outputs, state = self.rnn(embs)
-        # outputs shape: (num_steps, batch_size, num_hiddens)
-        # state shape: (num_layers, batch_size, num_hiddens)
+        # outputs: (num_steps, batch_size, num_hiddens)
+        # state: (num_layers, batch_size, num_hiddens)
         return outputs, state
 
 class Seq2Seq(d2l.EncoderDecoder):
-    """The RNN encoder--decoder for sequence to sequence learning.
+    """The RNN encoder-decoder for sequence-to-sequence learning.
 
-    Defined in :numref:`sec_seq2seq_decoder`"""
+    Defined in :numref:`sec_machine_translation`"""
     def __init__(self, encoder, decoder, tgt_pad, lr):
         super().__init__(encoder, decoder)
         self.save_hyperparameters()
-        
+
     def validation_step(self, batch):
         Y_hat = self(*batch[:-1])
         self.plot('loss', self.loss(Y_hat, batch[-1]), train=False)
-        
+
     def configure_optimizers(self):
-        # Adam optimizer is used here
         return torch.optim.Adam(self.parameters(), lr=self.lr)
+
+def chrf(pred, label, n=6, beta=2):
+    """chrF (Popovic, 2015): character n-gram F-score.
+
+    Defined in :numref:`sec_seq2seq_training`"""
+    def ngrams(s, k):
+        s = s.replace(' ', '')
+        return collections.Counter(s[i:i + k] for i in range(len(s) - k + 1))
+    prec = rec = 0.0
+    for k in range(1, n + 1):
+        p, r = ngrams(pred, k), ngrams(label, k)
+        overlap = sum((p & r).values())
+        if sum(p.values()) and sum(r.values()):
+            prec += overlap / sum(p.values())
+            rec += overlap / sum(r.values())
+    prec, rec = prec / n, rec / n
+    if prec + rec == 0:
+        return 0.0
+    return (1 + beta**2) * prec * rec / (beta**2 * prec + rec)
 
 def bleu(pred_seq, label_seq, k):
     """Compute the BLEU.
@@ -1395,6 +1406,19 @@ def bleu(pred_seq, label_seq, k):
                 label_subs[' '.join(pred_tokens[i: i + n])] -= 1
         score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
     return score
+
+def associative_scan(a, b, dim=0):
+    """Parallel prefix scan for h_t = a_t * h_{t-1} + b_t with h_0 = 0.
+
+    Defined in :numref:`sec_ssm`"""
+    a, b = a.movedim(dim, 0), b.movedim(dim, 0)
+    step = 1
+    while step < b.shape[0]:  # ceil(log2 T) rounds of combines
+        a_prev, b_prev = a[:-step], b[:-step]
+        a, b = (torch.cat([a[:step], a_prev * a[step:]]),
+                torch.cat([b[:step], a[step:] * b_prev + b[step:]]))
+        step *= 2
+    return b.movedim(0, dim)
 
 def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
                   cmap='Reds'):

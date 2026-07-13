@@ -386,6 +386,42 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
   > ever captured. (This is the bug that once shipped stale word-level BLEU into
   > the attention chapter after `MTFraEng` moved to a shared byte-level BPE.)
 
+  > **The capture-side guard (the deeper, bless-boundary defense).** `refresh-stale`
+  > removing stamps fixes the *scheduler* path, but the trap can still be entered
+  > by hand — anyone who runs `make capture-outputs FILES=…` (the fast path just
+  > below) on a lib-stale-but-un-re-executed notebook would bless old-lib outputs
+  > under the new fingerprint. So the same disagreement is caught a second time at
+  > the point where it would do damage: **`capture_outputs.py` refuses to bless
+  > outputs it cannot prove were produced under the current lib.**
+  >
+  > The mechanism is an **execution-provenance sidecar**. Every successful notebook
+  > execution (`tools/run_notebooks.write_execution_provenance`, the single
+  > chokepoint through `execute_notebook`, so it covers the scheduler, direct
+  > `make …executed`, and best-of-N paths) drops
+  > `_notebooks/<fw>/<ch>/<stem>.provenance.json` recording the
+  > `framework_version` + `d2l_lib_fingerprint` + per-cell `code_fingerprint`
+  > **at execution time** (gitignored scratch, wiped by `make clean`). At capture
+  > time `capture_outputs.py` recomputes the *current* fingerprints and compares:
+  >
+  > | sidecar vs current | meaning | capture does |
+  > |---|---|---|
+  > | present, **agree** | proven executed under the current lib/source | bless |
+  > | present, **disagree** | old-lib outputs (or source regenerated w/o re-run) | **REFUSE** (non-zero exit, store untouched) |
+  > | absent, store already lib-stale | can't prove a re-run | **WARN**, still bless (back-compat) |
+  > | absent, nothing suspicious | pre-sidecar tree, nothing to flag | bless |
+  >
+  > A genuine re-execution rewrites the sidecar (provenance is a pure function of
+  > source+lib, so it is identical across best-of-N attempts), so a matching
+  > sidecar is *positive proof* of freshness — the guard is a strict no-op on a
+  > freshly-executed tree and has **zero false positives** on the normal capture
+  > flow. It refuses only the exact trap: a sidecar written under an old lib with
+  > no re-execution since. `--force` overrides (escape hatch; the refusal is
+  > normally correct — re-execute instead). `make test-trap`
+  > (`tools/test_refresh_stale_trap.py`) is a fast, GPU-free regression test that
+  > reproduces the trap on a tmp fixture and asserts all three defenses hold: the
+  > audit flags it, stamp-removal forces a re-run, and the guard refuses the stale
+  > bless while still accepting a genuine re-capture.
+
   Because `refresh-stale` now always re-executes the stale set, the *fast*
   recovery for the "I just ran `make all` after editing sources, so the
   `_notebooks/` outputs are already fresh and I only need to bless them" case is a
@@ -395,9 +431,13 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
   make capture-outputs FILES="chapter_x/foo.md chapter_y/bar.md"
   ```
 
-  Reserve `refresh-stale` / `render-fresh` for "re-execute the audit-stale set
-  from scratch to be safe, then render." A no-op `refresh-stale` on a fresh store
-  prints `Nothing stale — store is fresh.` and exits without touching anything.
+  This shortcut is safe precisely because the capture-side guard above backs it:
+  if those `_notebooks/` outputs turn out to be lib-stale (not actually
+  re-executed under the current lib), the guard refuses rather than silently
+  blessing them. Reserve `refresh-stale` / `render-fresh` for "re-execute the
+  audit-stale set from scratch to be safe, then render." A no-op `refresh-stale`
+  on a fresh store prints `Nothing stale — store is fresh.` and exits without
+  touching anything.
 
 This is the contract that lets us keep deterministic small outputs inline safely:
 they are kept correct by construction.
@@ -853,8 +893,10 @@ yubikey-free path recorded in CLAUDE.md memory); LFS rides the same HTTPS remote
 
 | Script | Status | Contract |
 |---|---|---|
-| `tools/capture_outputs.py` | **NEW** | `_notebooks/<fw>/<chapter>/<stem>.ipynb` → `outputs/<fw>/<chapter>/<stem>.json` + asset files. Idempotent: identical inputs → byte-identical manifest (stable key order, no timestamps in the hashed payload). Writes assets to stable per-cell paths (overwrite in place); records `bytes`+`sha256` per asset. Computes `code_fingerprint` per §3.1. |
-| `tools/audit_outputs.py` | **NEW** | Freshness (§3.2) + integrity (§4.3). Exit non-zero on integrity failure; `--stale` lists the minimal re-execution set; `--json` for tooling. |
+| `tools/capture_outputs.py` | **NEW** | `_notebooks/<fw>/<chapter>/<stem>.ipynb` → `outputs/<fw>/<chapter>/<stem>.json` + asset files. Idempotent: identical inputs → byte-identical manifest (stable key order, no timestamps in the hashed payload). Writes assets to stable per-cell paths (overwrite in place); records `bytes`+`sha256` per asset. Computes `code_fingerprint` per §3.1. **Freshness guard (§3.3):** a pre-write pass refuses (non-zero exit, nothing written) to bless any notebook whose execution-provenance sidecar disagrees with the current lib/source; `--force` overrides. |
+| `tools/audit_outputs.py` | **NEW** | Freshness (§3.2) + integrity (§4.3). Exit non-zero on integrity failure; `--stale` lists the minimal re-execution set; `--stale-stamps` lists the `.executed` stamps to `rm` to force re-execution (§3.3); `--json` for tooling. |
+| `tools/run_notebooks.py` | **CHANGED** | Executes notebooks; on every successful run `write_execution_provenance()` records the source+lib fingerprints the run used into `_notebooks/<fw>/<ch>/<stem>.provenance.json` (gitignored, `make clean`-wiped) — the signal the capture guard reads (§3.3). Single chokepoint (`execute_notebook`) covers scheduler / direct-make / best-of-N paths. |
+| `tools/test_refresh_stale_trap.py` | **NEW** | `make test-trap`. Fast, GPU-free e2e regression for the §3.3 trap: builds a tmp fixture, moves a lib fingerprint under an unchanged notebook, and asserts the audit flags it, `refresh-stale`'s stamp-removal forces a re-run, and the capture guard refuses the stale bless (and accepts a genuine re-capture). Never touches the real store. |
 | `tools/inject_outputs.py` | **CHANGED** | Output source flips from `_notebooks/` to `outputs/` via a new `index_store_by_id()` that returns the **same shape** as `index_ipynb_by_id()` — `{cell_id: [nbformat-output-dict]}` — by reconstructing nbformat dicts from the manifest (inline text → `stream`/`text/plain` dicts; assets → re-read the file, re-encode to the dict's `data`). Everything downstream (`format_cell_output`, dedup, markup) is **unchanged**, so injected output is byte-identical to the `_notebooks/` path. Auto-detects: uses `outputs/` when a manifest exists, else falls back to `_notebooks/`. |
 | `tools/add_cell_ids.py` | unchanged | Still the authority for stable ids — the invariant capture/audit rely on. |
 | `tools/scan_notebook_manifests.py` | unchanged | Execution queues. Capture reuses its file enumeration. |

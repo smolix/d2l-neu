@@ -136,7 +136,7 @@ export PYTHONUNBUFFERED := 1
 .PHONY: help all all-quick rebuild-book-artifacts check-all-artifacts html lib clean veryclean
 .PHONY: pdf pdfs $(addprefix pdf-,$(FRAMEWORKS))
 .PHONY: notebooks run-all-notebooks slides
-.PHONY: capture-outputs audit-outputs verify-outputs-fresh refresh-stale render-fresh
+.PHONY: capture-outputs audit-outputs verify-outputs-fresh refresh-stale render-fresh test-trap
 
 # ── Help ───────────────────────────────────────────────────
 
@@ -153,6 +153,7 @@ help:
 	@echo "  capture-outputs         [any] Bless executed _notebooks/ → committed outputs/ [FILES=...]"
 	@echo "  audit-outputs           [any] Report stale notebooks (code drift) + store integrity"
 	@echo "  verify-outputs-fresh    [any] Render gate: fail on stale inline outputs / orphaned ids"
+	@echo "  test-trap               [any] Regression test for the refresh-stale freshness trap"
 	@echo "  lib                     [any] Build d2l Python package"
 	@echo "  venv-<fw> / kernels     [any] Sync UV env / register ipykernels (for VS Code)"
 	@echo "  detect                  [any] Print the auto-detected resource + parallelism plan"
@@ -213,6 +214,14 @@ audit-outputs:
 
 verify-outputs-fresh:
 	@python3 tools/audit_outputs.py --verify-fresh
+
+# Fast, self-contained regression test (no GPU, no venv) that reproduces the
+# freshness-disagreement trap on a tmp fixture and asserts all three defenses:
+# the audit flags the lib-stale stamp, `refresh-stale`'s stamp-removal forces a
+# re-run, and the capture-side guard refuses to bless the stale outputs. Never
+# touches the committed store. See docs/build-system.md §3.3.
+test-trap:
+	@python3 tools/test_refresh_stale_trap.py
 
 # Re-execute exactly what the audit reports stale, then re-capture those files.
 # Execution goes through the unified scheduler (parallel GPU/CPU dispatch),

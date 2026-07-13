@@ -329,6 +329,12 @@ def execute_notebook(nb_path, timeout=600, kernel=None, cuda_devices=None,
             [sys.executable, "-m", "jupyter", "trust", str(nb_path)],
             capture_output=True, timeout=30,
         )
+        # Record the source+lib provenance this run executed under, so the
+        # capture-side guard can refuse to bless stale outputs (see the function
+        # docstring and docs/build-system.md §3.3). Provenance is a pure function
+        # of source + lib, so it is identical across best-of-N re-runs of the same
+        # notebook — safe to (re)write on every successful execution.
+        write_execution_provenance(nb_path)
         return True, elapsed, stderr or ""
     err = (stderr or "").strip() or (stdout or "").strip()
     return False, elapsed, err
@@ -361,6 +367,54 @@ def _write_error_log(fw_root, rel, stderr):
     log_path = log_dir / (rel + ".log")
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text(stderr or "")
+
+
+def write_execution_provenance(nb_path):
+    """Record, in a sidecar, the source+lib provenance a notebook was executed
+    under, so `capture_outputs.py`'s guard can REFUSE to bless outputs produced
+    under a *different* lib/source than the current tree.
+
+    This closes the freshness-disagreement trap from the capture side (see
+    docs/build-system.md §3.3): the audit keys staleness on *fingerprints* while
+    the scheduler skips on *mtime*, so a lib-fingerprint-stale-but-mtime-fresh
+    notebook can slip through un-re-executed and have its pre-edit outputs blessed
+    under the new fingerprint. The `<stem>.provenance.json` sidecar records the
+    fingerprints computed AT EXECUTION TIME; capture compares them to the current
+    tree and only blesses when they agree. A genuine re-execution rewrites this
+    sidecar, so a matching sidecar is a positive proof of freshness.
+
+    Sidecar layout (mirrors the manifest so the comparison is apples-to-apples):
+        {schema, framework, provenance:{framework_version, d2l_lib_fingerprint},
+         code_fingerprints:{cell_id: sha256}}
+
+    Written next to the executed notebook under `_notebooks/` (gitignored scratch,
+    wiped by `make clean`). Best-effort: a sidecar-write hiccup must never fail an
+    otherwise-successful execution, so failures only warn.
+    """
+    try:
+        import capture_outputs as cap
+        nb_path = Path(nb_path).resolve()
+        rel = nb_path.relative_to(NOTEBOOKS_DIR.resolve())
+        fw = rel.parts[0]
+        if fw not in cap.FRAMEWORKS:
+            return
+        repo_root = NOTEBOOKS_DIR.parent
+        nb = json.loads(nb_path.read_bytes())
+        fps, _ = cap.prefix_fingerprints(cap.code_cells_of(nb))
+        sidecar = {
+            "schema": 1,
+            "framework": fw,
+            "provenance": cap.build_provenance(
+                repo_root, fw, nb_path.with_suffix(".d")),
+            "code_fingerprints": fps,
+        }
+        nb_path.with_suffix(".provenance.json").write_text(
+            json.dumps(sidecar, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8")
+    except Exception as e:  # noqa: BLE001 — never fail a good run over the sidecar
+        with _print_lock:
+            print(f"  (warning: could not record execution provenance for "
+                  f"{nb_path}: {e})", file=sys.stderr, flush=True)
 
 
 def _touch_executed_stamp(nb):

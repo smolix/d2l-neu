@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:52c977b44b1c68f7103eb412457c699ee6525ee926d166410f027dfaf7bc0261",
+    "d2l_lib_fingerprint": "sha256:3b137a49d0e6355efe8f46adf8a326b982bd8f63cf75e6ccfd8c976f7d405c27",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(3, 8), dtype=float32, numpy=\narray([[-0.2077516 ,  0.17892066,  0.3169442 ,  0.05837081, -0.24287233,\n         0.23963231, -0.70023674,  0.34063214],\n       [-0.2077516 ,  0.17892066,  0.3169442 ,  0.05837081, -0.24287233,\n         0.23963231, -0.70023674,  0.34063214],\n       [-0.2077516 ,  0.17892066,  0.3169442 ,  0.05837081, -0.24287233,\n         0.23963231, -0.70023674,  0.34063214]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(3, 8), dtype=float32, numpy=\narray([[ 0.4245348 , -0.29858866, -0.20821068, -0.101275  , -0.27450442,\n        -0.3879199 , -0.20743948,  0.08684686],\n       [ 0.4245348 , -0.29858866, -0.20821068, -0.101275  , -0.27450442,\n        -0.3879199 , -0.20743948,  0.08684686],\n       [ 0.4245348 , -0.29858866, -0.20821068, -0.101275  , -0.27450442,\n        -0.3879199 , -0.20743948,  0.08684686]], dtype=float32)>"
         }
       ]
     },
@@ -92,73 +92,73 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-1-1.svg",
-          "bytes": 22499,
-          "sha256": "sha256:dde79b66855c2550d748cdae3e9ba4f79c1de4c2142978116fce264391efb612"
+          "bytes": 22523,
+          "sha256": "sha256:cd7469033ad5b6b5aa775ad1cf69bc0c9c7ab4a8ed98db1afd1fbd16744287c1"
         }
       ]
     },
     "transformer-training-2": {
-      "code_fingerprint": "sha256:d3ea34de1ad90220b5df9339fe0aae2461ab3828da9bdf63b1fb11ab450b3754",
+      "code_fingerprint": "sha256:ebc3ddd3765f1aa01872aa07cf1f66ef8c391769fda8b8e80d2de582e98d4a4e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'calme', '.'], bleu,1.000\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
+          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis chez moi .', chrF 1.000\n"
         }
       ]
     },
     "transformer-training-3": {
-      "code_fingerprint": "sha256:0611ead7aa14ea681489f81de6264b4268d8fe8743938beb3483691eb714cca5",
+      "code_fingerprint": "sha256:e30f3d015c631bceac3c1bc59c0bcd963f365727f3b84567ce39fea5b5cfad7a",
       "kind": "text",
       "outputs": []
     },
     "transformer-training-4": {
-      "code_fingerprint": "sha256:fdbef8455c320e47b01f549c3d88c12b1ca1de406c1a656e05351bbeb0a8c1c3",
+      "code_fingerprint": "sha256:591a9fdafd59d0e9a9a989572054c0cdd23b6143e0981319a6f5b815134a2ca3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-4-1.svg",
-          "bytes": 49921,
-          "sha256": "sha256:89783a842e0a65dfdf9c2688f23d842f46085a8e7874de2bdedc8ea927de09b4"
+          "bytes": 50597,
+          "sha256": "sha256:b43d4435b7ed6d85902c1e0ec159b2fd42823aa0a89fcca7e277baefdfef6060"
         }
       ]
     },
     "transformer-training-5": {
-      "code_fingerprint": "sha256:9c09868a91780a0ebf2f0a4f40386b4b4fc11daf0a407178f38cfec0170c6728",
+      "code_fingerprint": "sha256:8b8378c843ff37a885f288694943a476996f31d3ccf64beb7a69531dfd2c4c6b",
       "kind": "text",
       "outputs": []
     },
     "transformer-training-6": {
-      "code_fingerprint": "sha256:dc0dc62a9960e8191e329d50d99818f7d500e46fa39ce16d9036c85e63defbf9",
+      "code_fingerprint": "sha256:f7125e8feb2a81fe368ea23117b8214d54d1e8ffc6506bd748ed15d6bef69780",
       "kind": "text",
       "outputs": []
     },
     "transformer-training-7": {
-      "code_fingerprint": "sha256:bfee57b4e2a20cff0fa2cd83860a08d0e6fa2804cd7f1feedb430d7cfdad4fc9",
+      "code_fingerprint": "sha256:2d99b7b81f9d26c5369f977aa833164bcbeed9affb17e0d67282bf944a604694",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-7-1.svg",
-          "bytes": 52380,
-          "sha256": "sha256:18065631f34f83880f0e9c4de6d25cb2da6a71d5748c30fa19fabd4f8c26a2ff"
+          "bytes": 55884,
+          "sha256": "sha256:adca3055dad83baf372e73f1892ba60cc9ed9f2dc3130130c008be94eacafa05"
         }
       ]
     },
     "transformer-training-8": {
-      "code_fingerprint": "sha256:36eaac466c75b6f5ce1b0960754e8e8e9fa86037c48bc1fababafb947a20fe16",
+      "code_fingerprint": "sha256:732b03780806150fda58ac2e0c046cd10ca3c342a6dae3f1fa501986f00cf5a8",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer/transformer-training-8-1.svg",
-          "bytes": 50670,
-          "sha256": "sha256:113b66bea8f858ebf191573af15818bebca9ba6244febc53125a8759efc1b577"
+          "bytes": 51212,
+          "sha256": "sha256:472af2b3c1366f5fe82819fb0b57d08563db206621f4efb98b8a60dd8728c60d"
         }
       ]
     }

@@ -1256,7 +1256,7 @@ trainer.fit(model, data)
 
 After training,
 we use the Transformer model
-to translate a few English sentences into French and compute their BLEU scores.
+to translate a few English sentences into French and compute their chrF scores.
 
 ```{.python .input #transformer-training-2}
 %%tab pytorch
@@ -1265,13 +1265,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #transformer-training-2}
@@ -1281,13 +1280,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #transformer-training-2}
@@ -1296,13 +1294,12 @@ engs = ['i lost .', 'i\'m calm .', 'i\'m home .']
 fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(data.build(engs, fras), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #transformer-training-2}
@@ -1312,13 +1309,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 Let's visualize the Transformer attention weights when translating the final English sentence into French.
@@ -1660,9 +1656,10 @@ hidden, 4 heads, dropout 0.2. Adam lr=0.001, gradient clip 1,
 :::
 
 ::: {.slide title="Translate four sentences"}
-This is a tiny model on a tiny dataset. Look for good short
-translations and BLEU differences across examples; errors are
-usually data/model-size limits, not a change in the architecture.
+A tiny Transformer on a tiny BPE-tokenized dataset. Each
+prediction decodes to one French string, scored with chrF; on
+these short sentences it translates cleanly, and any slip at this
+scale is a data/model-size limit, not the architecture.
 
 @transformer-training-2
 :::

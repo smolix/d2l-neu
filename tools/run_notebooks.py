@@ -65,7 +65,10 @@ def score_notebook(nb_path):
     """Score an executed notebook's output quality.
 
     Returns a float >= 0.  Higher is better.
-    - seq2seq / attention notebooks: sum of BLEU scores (format: "bleu,X.XXX")
+    - seq2seq / attention notebooks: sum of translation scores. The showcase
+      prints one per sentence as "chrF 0.658" (current, character-level metric)
+      or legacy "bleu,0.658"; both are matched so a store captured under either
+      idiom scores identically.
     - LSTM / RNN text-generation notebooks: heuristic penalizing repetition
     Returns 0.0 if the notebook has no scoreable output or failed to execute.
     """
@@ -75,17 +78,17 @@ def score_notebook(nb_path):
     except Exception:
         return 0.0
 
-    bleu_scores = []
+    mt_scores = []
     generated_texts = []
     gan_loss_G = None
 
     for cell in nb.get("cells", []):
         for out in cell.get("outputs", []):
-            # BLEU scores in stream output: "bleu,0.658"
+            # Translation scores in stream output: "chrF 0.658" or "bleu,0.658"
             if "text" in out:
                 for line in out["text"]:
-                    for m in re.finditer(r"bleu,(\d+\.\d+)", line):
-                        bleu_scores.append(float(m.group(1)))
+                    for m in re.finditer(r"(?:chrF |bleu,)(\d+\.\d+)", line):
+                        mt_scores.append(float(m.group(1)))
                     # GAN loss: "loss_D 0.161, loss_G 4.254"
                     m = re.search(r"loss_G (\d+\.\d+)", line)
                     if m:
@@ -101,8 +104,8 @@ def score_notebook(nb_path):
                 if "it has" in txt:
                     generated_texts.append(txt)
 
-    if bleu_scores:
-        return sum(bleu_scores)
+    if mt_scores:
+        return sum(mt_scores)
 
     if generated_texts:
         return _score_generated_text(generated_texts[-1])

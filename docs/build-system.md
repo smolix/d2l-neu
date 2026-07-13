@@ -357,23 +357,47 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
   current and render."
 
   Both phases run in **parallel**, not serially:
-  - `refresh-stale` feeds the audit-stale set to the unified scheduler
+  - `refresh-stale` **force-re-executes exactly the audit-stale set**, then
+    re-captures it in one pass. It asks the audit for the stale
+    `(framework, file)` `.executed` stamps (`audit_outputs.py --stale-stamps`)
+    and `rm`s them, then feeds the stale *source* set to the unified scheduler
     (`notebook_scheduler.py --files <stale>`) for full GPU/CPU-slot parallel
-    dispatch, then re-captures the whole set in one pass. It is *not* forced:
-    a notebook that is stale-in-store but already executed (its `.ipynb` up to
-    date, merely never captured — e.g. right after a `make all` whose
-    `run-all-notebooks` executed but did not bless the store) is **skipped by
-    the scheduler and picked up by the single capture pass** — so recovery after
-    a full execution is a fast capture-only path, no wasted GPU re-run. (The
+    dispatch. Removing the stamps is load-bearing — see the trap below. (The
     earlier implementation looped `make -B …executed` one notebook at a time
     with the GPU pool idle, then captured per file.)
   - `render-fresh` then rebuilds slides and PDFs with the same RAM-aware fleet as
     `rebuild-book-artifacts` (`$(MAKE) -j$(RENDER_JOBS)` under `RENDER_V8_ENV`),
     rather than a bare serial `make slides`.
 
-  Typical recovery when `make all` executed cleanly but left the store unblessed
-  (so the `--verify-fresh` html gate fails): just `make render-fresh` — the
-  scheduler sees the stamps are fresh, skips execution, captures, and re-renders.
+  > **The freshness-disagreement trap (why `refresh-stale` removes stamps).**
+  > The audit judges staleness by **code provenance** (fingerprints: framework
+  > version, `d2l_lib_fingerprint`, per-cell `code_fingerprint`), comparing the
+  > *committed store* against the *current notebook*. The scheduler's own skip
+  > check (`notebook_scheduler._stale`) judges by **mtime** (is the `.executed`
+  > stamp newer than its `.ipynb` / `.d` deps?). These disagree exactly when a
+  > notebook's **source is unchanged but a `#@save` symbol it imports was edited
+  > elsewhere**: `make notebooks` regenerates a byte-identical `.ipynb`, the
+  > stamp stays newer than it, so the scheduler thinks it is fresh and **skips**
+  > it — yet its outputs were produced against the *old* library and are stale.
+  > A plain `--files` dispatch skips it, and the capture pass then blesses its
+  > pre-edit outputs under the *new* fingerprint: **falsely green**. `rm`-ing the
+  > audit's `--stale-stamps` first makes a missing stamp force both `_stale()`
+  > and Make to actually re-run the notebook, so only genuinely-fresh outputs are
+  > ever captured. (This is the bug that once shipped stale word-level BLEU into
+  > the attention chapter after `MTFraEng` moved to a shared byte-level BPE.)
+
+  Because `refresh-stale` now always re-executes the stale set, the *fast*
+  recovery for the "I just ran `make all` after editing sources, so the
+  `_notebooks/` outputs are already fresh and I only need to bless them" case is a
+  **direct capture**, which never re-executes:
+
+  ```
+  make capture-outputs FILES="chapter_x/foo.md chapter_y/bar.md"
+  ```
+
+  Reserve `refresh-stale` / `render-fresh` for "re-execute the audit-stale set
+  from scratch to be safe, then render." A no-op `refresh-stale` on a fresh store
+  prints `Nothing stale — store is fresh.` and exits without touching anything.
 
 This is the contract that lets us keep deterministic small outputs inline safely:
 they are kept correct by construction.

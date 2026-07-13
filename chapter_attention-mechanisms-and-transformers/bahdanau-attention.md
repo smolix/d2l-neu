@@ -465,7 +465,7 @@ trainer.fit(model, data)
 
 After the model is trained,
 we use it to translate a few English sentences
-into French and compute their BLEU scores.
+into French and compute their chrF scores.
 
 ```{.python .input #bahdanau-attention-training-2}
 %%tab pytorch
@@ -474,13 +474,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #bahdanau-attention-training-2}
@@ -490,13 +489,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #bahdanau-attention-training-2}
@@ -505,13 +503,12 @@ engs = ['i lost .', 'i\'m calm .', 'i\'m home .']
 fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(data.build(engs, fras), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #bahdanau-attention-training-2}
@@ -521,13 +518,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 Let's visualize the attention weights
@@ -698,8 +694,9 @@ model attention; everything else stays the same:
 :::
 
 ::: {.slide title="Translate four sentences"}
-Compare BLEU vs. plain seq2seq — attention typically helps
-more on longer/harder sentences:
+Decode each prediction to one French string and score it with
+chrF. A well-trained tab nails these short sentences; attention
+helps most on the longer, harder ones:
 
 @bahdanau-attention-training-2
 :::

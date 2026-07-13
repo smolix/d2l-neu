@@ -508,7 +508,7 @@ crossers = [v for i, v in bpe.vocab.items()
             if i >= 256 and b' ' in v.strip(b' ')]
 print('boundary-crossing tokens now:', len(crossers))
 gained = sorted(set(bpe.vocab.values()) - set(tok.vocab.values()),
-                key=len, reverse=True)
+                key=lambda v: (-len(v), v))
 print('longest tokens gained instead:',
       [v.decode('utf-8', 'replace') for v in gained[:6]])
 ```
@@ -778,7 +778,7 @@ vocabulary entry is only as meaningful as the model's training exposure to
 it.
 
 ```{.python .input #text-sequence-fertility-digits-and-glitch-tokens-3}
-enc.encode(' SolidGoldMagikarp')  # one token for a 17-character string
+enc.encode(' SolidGoldMagikarp')  # one token for an 18-character string
 ```
 
 ## Summary

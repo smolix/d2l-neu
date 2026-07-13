@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:fa1e5ca47e0836083d42450fc5b88ec5bfde26fec539b60e07952dee438440b7",
+    "d2l_lib_fingerprint": "sha256:439cbd732bacd4e0f61f9cbbd72635353b8084578de1c5ef3117308881b2d818",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,37 +42,37 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
-          "bytes": 20913,
-          "sha256": "sha256:133915d7be52ed59ac92503e32f135f8f115c46ddb93d706b00c1472e5365902"
+          "bytes": 20486,
+          "sha256": "sha256:3632cb49d9e4683f39412be976513f1c5198364661d39468248ba0b0c0c0b228"
         }
       ]
     },
     "bahdanau-attention-training-2": {
-      "code_fingerprint": "sha256:d5620bef70ff670af125e1aa9561a381e14469bb7199da1b85b42f6ea1920cfb",
+      "code_fingerprint": "sha256:d0bbbc0127a96319c5bdf29dae29f1a5c9f2d1fc93f8fb3ecdf9dc995f2aa1ff",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => [\"j'ai\", 'perdu', '.'], bleu,1.000\ni'm calm . => ['je', 'suis', 'malade', '.'], bleu,0.658\ni'm home . => ['je', 'suis', 'chez', 'moi', '.'], bleu,1.000\n"
+          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis chez moi .', chrF 1.000\n"
         }
       ]
     },
     "bahdanau-attention-training-3": {
-      "code_fingerprint": "sha256:d541f5e82b5d731eecf85373dfffd7f15dfdec594586d473683ceab112cd9720",
+      "code_fingerprint": "sha256:86243bd4e2668d7f15805c87b77219e60fb70297fc3a96aab191370cc652f8f3",
       "kind": "text",
       "outputs": []
     },
     "bahdanau-attention-training-4": {
-      "code_fingerprint": "sha256:1a7b381e4b986ee745c472acbe98ff800f5d0ffc263e7e77faf8f1acbee7c574",
+      "code_fingerprint": "sha256:2f312cff25a6af7b67dce8d10d65d9ad89c43bbaffb945fd60a4ea0b0f260f78",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
-          "bytes": 19122,
-          "sha256": "sha256:aac922c8fe7a0cb9ff98c290ed4121c73909f7bf4644d5e346f017a77f4d642d"
+          "bytes": 18344,
+          "sha256": "sha256:ad9290275d157913017faf200e3f852362b6767fc21ad2cd6c63a7cdf5425640"
         }
       ]
     }

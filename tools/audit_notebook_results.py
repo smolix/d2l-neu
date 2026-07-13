@@ -29,7 +29,8 @@ TEST_ACC_RE = re.compile(r"test acc:?\s+([0-9.eE+-]+)")
 VALID_ACC_ONLY_RE = re.compile(r"valid acc\s+([0-9.eE+-]+)")
 RMSE_RE = re.compile(r"test RMSE\s+([0-9.eE+-]+)")
 PERPLEXITY_RE = re.compile(r"perplexity\s+([0-9.eE+-]+)")
-BLEU_RE = re.compile(r"bleu,([0-9.eE+-]+)")
+# Showcase translation scores: current "chrF 0.658" or legacy "bleu,0.658".
+BLEU_RE = re.compile(r"(?:chrF |bleu,)([0-9.eE+-]+)")
 OPT_LOSS_RE = re.compile(r"^loss:\s*([0-9.eE+-]+)\s*$", re.MULTILINE)
 GAN_RE = re.compile(r"loss_D\s+([0-9.eE+-]+),\s+loss_G\s+([0-9.eE+-]+)")
 
@@ -233,7 +234,7 @@ def classify(rel: str, nb: dict, stamp: Path, output_text: str, error_outputs: i
         if rmses[-1] > threshold:
             issues.append(("fail", f"test RMSE {rmses[-1]:.3f} exceeds {threshold:.1f}"))
     if bleus and max(bleus) == 0:
-        issues.append(("warn", "all reported BLEU scores are zero"))
+        issues.append(("warn", "all reported translation scores (chrF/BLEU) are zero"))
     if perplexities and perplexities[-1] > 100:
         issues.append(("warn", f"perplexity {perplexities[-1]:.1f} is high"))
     if optim_losses and optim_losses[-1] > 0.5:

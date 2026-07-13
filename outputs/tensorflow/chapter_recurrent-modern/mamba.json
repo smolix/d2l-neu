@@ -1,0 +1,219 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/mamba.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:da343ef8c413b8f4efc6be1b1dff7c8a847bb6a74978651f6634c0b799942953",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mamba-selective-state-space-models-1": {
+      "code_fingerprint": "sha256:2cb4f97eec1a2e4ac583f799b1fb1357200a1a802590680aa6450a763fbffc7c",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-selective-state-space-models-2": {
+      "code_fingerprint": "sha256:9697da05c9ea510c344f47ede89606ba57f17bddc0ca5e8ef70b1b7f4df8158f",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-a-task-that-defeats-time-invariance": {
+      "code_fingerprint": "sha256:d89886f78e64548bcbcbe83562e6c82fb97c028e666b41d09a0dad3a7c20002e",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-an-lti-baseline-and-a-gated-one-1": {
+      "code_fingerprint": "sha256:dead17bc226be08a54b894c981cfdc69a8acbd4c209233410af21cd17d25b302",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-an-lti-baseline-and-a-gated-one-2": {
+      "code_fingerprint": "sha256:29fdd880af86405eab9b00223b3de615bc4dc901ac858f66b6b5e31c3f534efb",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-an-lti-baseline-and-a-gated-one-3": {
+      "code_fingerprint": "sha256:a0250e97011ee59702d4b000f64f9fdee82d1b5989c9f899cb633b612bc03371",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "S4D: final validation accuracy 0.548\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-3-1.svg",
+          "bytes": 21804,
+          "sha256": "sha256:a0b29f10d1450bcd29c99a19f9e9eb6953aa5af5932b1a1fda568376e7adf3db"
+        }
+      ]
+    },
+    "mamba-an-lti-baseline-and-a-gated-one-4": {
+      "code_fingerprint": "sha256:4e63cccdc7126a743222636d3139e373aed79faaa1b88b2cbc416b8b7a0788d2",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "LSTM: final validation accuracy 0.970\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-4-1.svg",
+          "bytes": 21869,
+          "sha256": "sha256:ff0df556d1d6e0b6bc338a68e9e2e386be34d1ebeb3ff81ee202e9a2ab3f780d"
+        }
+      ]
+    },
+    "mamba-an-lti-baseline-and-a-gated-one-5": {
+      "code_fingerprint": "sha256:18cec1125b86380b476189a33f100af47ad9fdb4bb5ee22075a4b7e5890604b2",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-5-1.svg",
+          "bytes": 27848,
+          "sha256": "sha256:6cc9281dd8b1aaef9006d2de504537a064b38783f2dec643e3cd50609821866f"
+        }
+      ]
+    },
+    "mamba-what-selectivity-costs-and-what-survives-1": {
+      "code_fingerprint": "sha256:e4202d5800643cd205dde6ead49ab4014862edb5b6eb0d20080b482d2947049e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "time-varying scan vs loop: 4.77e-07\n"
+        }
+      ]
+    },
+    "mamba-what-selectivity-costs-and-what-survives-2": {
+      "code_fingerprint": "sha256:7a7c6977c4853188b7afea41c45b78c5f29f6a574becefce6646421d8b03d85e",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-the-mamba-block": {
+      "code_fingerprint": "sha256:91a6d2c85624493a9ac3f8fe8b8038a23e64e6313bed363eae4e54441f0333db",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-the-three-answers-measured-on-one-task-1": {
+      "code_fingerprint": "sha256:b200715698d4cc3508d26b7780ce3f653bf1ecaa67189f6b27e563de58bcff1a",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-the-three-answers-measured-on-one-task-2": {
+      "code_fingerprint": "sha256:3497d5342d5b320ef9dec636cb46ab4ac565515e3b082ef1c83d427ff19e40b1",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-the-three-answers-measured-on-one-task-3": {
+      "code_fingerprint": "sha256:fb3363d079614cdf5792a77b79b19a45b35e4afa2cbe020e419bd4698520b33b",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mamba/mamba-the-three-answers-measured-on-one-task-3-1.svg",
+          "bytes": 18363,
+          "sha256": "sha256:63a95d0e100f55d561a086aa2bb2e682fb5d041994b7ee874f9921a4c0abdc0b"
+        }
+      ]
+    },
+    "mamba-the-three-answers-measured-on-one-task-4": {
+      "code_fingerprint": "sha256:14364cc7ccd77b6de4da2645f92b9363913162269023ac43fd8af95f8cc6c775",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mamba/mamba-the-three-answers-measured-on-one-task-4-1.svg",
+          "bytes": 18746,
+          "sha256": "sha256:4b5259134056b55ddb38be1cf5f6f36ca1b88d6f1d48add972e1f22683fac9b1"
+        }
+      ]
+    },
+    "mamba-the-three-answers-measured-on-one-task-5": {
+      "code_fingerprint": "sha256:b87ff8ac4cd75bd162cae62159b059dcda5a977f4447ebc4f49a560e3fe00312",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mamba/mamba-the-three-answers-measured-on-one-task-5-1.svg",
+          "bytes": 20816,
+          "sha256": "sha256:dbb7f819f8c2f18543b7bb7533275c1353df43fa1ae36e0cfc83b37dc9b713d4"
+        }
+      ]
+    },
+    "mamba-the-three-answers-measured-on-one-task-6": {
+      "code_fingerprint": "sha256:1c515935d800987d0d28c434d1d6ffc206b9c6873dcdd87d57c791e86d790f0a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     98.3   2.38   297,027      2.3\n minGRU     81.8   2.29   214,851      2.5\n  Mamba     69.8   2.20   488,739     10.1\n"
+        }
+      ]
+    },
+    "mamba-the-three-answers-measured-on-one-task-7": {
+      "code_fingerprint": "sha256:739aaf4bc66ce32294b56eb62395ad1315a630eeea55435e0b4f0306f5aa0859",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   LSTM: 'the time traveller bemer. Thendse keeneve about the first. We\\ntow to becom'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " minGRU: 'the time traveller. I had\\n\\nsaiding the Morlocks as I saw a men pilliet, and\\nmp'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  Mamba: \"the time traveller. I had\\nfings with the nights of a paradual don't, and I could see\"\n"
+        }
+      ]
+    },
+    "mamba-selective-copying-revisited-1": {
+      "code_fingerprint": "sha256:2388ddbd41fd2e3a8d6669ce513bde45d2e72830809d642dc20e271c6c086663",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Mamba: final validation accuracy 0.996\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mamba/mamba-selective-copying-revisited-1-1.svg",
+          "bytes": 21881,
+          "sha256": "sha256:ba8a54234498b655b2afbe66f43ca8c303b9f30204da2852391b69d27a7216f0"
+        }
+      ]
+    },
+    "mamba-selective-copying-revisited-2": {
+      "code_fingerprint": "sha256:718361c52c37a124d553d7fa325001708c99b7cd1669ecfeb3c736676a7bab82",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mamba/mamba-selective-copying-revisited-2-1.svg",
+          "bytes": 30437,
+          "sha256": "sha256:77139ee041773b76db4290614ed0d333436c2c5074c4b68e06aff9220d290e57"
+        }
+      ]
+    }
+  }
+}

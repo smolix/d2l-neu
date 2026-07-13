@@ -148,7 +148,7 @@ $\mathbf{W}_\textrm{qh}\in\mathbb{R}^{q\times h}$. :numref:`fig_rnn_bptt` draws
 the resulting dependencies: each $\mathbf{h}_t$ feeds both the output
 $\mathbf{o}_t$ and the next state $\mathbf{h}_{t+1}$.
 
-![Computational graph of an RNN unrolled over three time steps. Boxes are variables (shaded for parameters) and circles are operators; the loss gradient flows backwards along the arrows.](../img/rnn-bptt.svg)
+![Computational graph of an RNN unrolled over three time steps. Boxes are variables (shaded for parameters) and circles are operators; the loss gradient flows backwards along the arrows.](../img/mdl-rnn-bptt.svg)
 :label:`fig_rnn_bptt`
 
 Now every Jacobian $\partial\mathbf{h}_{j}/\partial\mathbf{h}_{j-1}$ is the

@@ -580,13 +580,15 @@ def fig_lm_shift():
 
 
 # =========================================================================== #
-# 9.6 "Backpropagation Through Time" (sec_bptt): full BPTT vs. regular        #
-# truncation, gradient chains severed (detached) at segment boundaries.       #
+# 9.6 "Backpropagation Through Time" (sec_bptt): the unrolled computational    #
+# graph for BPTT, plus full BPTT vs. regular truncation with the gradient      #
+# chains severed (detached) at segment boundaries.                            #
 #                                                                              #
-# One restyled carryover, written under a new house-style name so the old    #
-# hand-drawn SVG (``img/truncated-bptt.svg``) is left untouched.  The old     #
-# three-row figure's randomized-truncation row is dropped (that strategy is  #
-# retired from the section).                                                 #
+# Two restyled carryovers, written under new house-style names so the old    #
+# hand-drawn SVGs (``img/rnn-bptt.svg``, ``img/truncated-bptt.svg``) are left  #
+# untouched.  In ``fig_truncated_bptt`` the old three-row figure's            #
+# randomized-truncation row is dropped (that strategy is retired from the     #
+# section).                                                                   #
 # =========================================================================== #
 
 def _segment(ax, x0, x1, yc, h=0.62):
@@ -654,6 +656,121 @@ def fig_truncated_bptt():
     ax.set_xlim(xs[0] - pad - 0.35, xs[-1] + pad + 0.35)
     ax.set_ylim(0.18, 3.42)
     fl.save(fig, "mdl-rnn-truncated-bptt")
+
+
+def fig_rnn_bptt():
+    """The linear RNN unrolled over three time steps as a computational graph,
+    drawn for the backpropagation-through-time analysis.
+
+    Variable boxes -- inputs X_t (blue), hidden states H_t (green), outputs
+    O_t (orange) and the scalar loss L -- alternate with the grey operator
+    circles that produce them; shaded boxes hold the *shared* parameters (the
+    weights W_hx, W_hh feeding every hidden operator; W_qh feeding every output
+    operator; the initial state H_0).  Each hidden state H_t feeds BOTH its
+    output O_t (through the output operator) and the next hidden operator (the
+    recurrence), so the loss gradient -- flowing backwards along the arrows --
+    reaches H_t from its own output and from the step ahead: the
+    product-of-Jacobians path the section studies.  Time runs bottom-to-top so
+    the computation reads left-to-right, X -> H -> O -> L.
+    """
+    fig, ax = plt.subplots(figsize=(10.0, 6.0))
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    ys = [0.9, 3.0, 5.1]                 # time steps t = 1, 2, 3 (bottom -> top)
+    yp = -1.25                           # parameter / initial-state row
+    X, F, H, G, O, LS, LB = 0.75, 2.55, 4.35, 6.15, 7.95, 9.9, 11.35
+    bw, bh, r = 1.3, 0.85, 0.35
+    subs = ["1", "2", "3"]
+
+    def opc(cx, cy):
+        ax.add_patch(plt.Circle((cx, cy), r, facecolor="white", edgecolor=GRAY,
+                                 lw=1.8, zorder=4))
+
+    def pbox(cx, cy, text, w):
+        ax.add_patch(FancyBboxPatch(
+            (cx - w / 2, cy - bh / 2), w, bh,
+            boxstyle="round,pad=0.02,rounding_size=0.12",
+            linewidth=1.6, edgecolor=GRAY, facecolor=GRAY, alpha=0.32, zorder=3))
+        ax.text(cx, cy, text, ha="center", va="center", fontsize=13,
+                fontweight="bold", color="black", zorder=5)
+
+    def sar(p, q, color=GRAY, lw=1.9, mut=15):
+        fl.arrow(ax, p, q, color=color, lw=lw, mut=mut)
+
+    def car(p, q, rad, color=GRAY, lw=1.9, mut=14):
+        ax.annotate("", xy=q, xytext=p,
+                    arrowprops=dict(arrowstyle="->", color=color, lw=lw,
+                                    shrinkA=0, shrinkB=0, mutation_scale=mut,
+                                    connectionstyle=f"arc3,rad={rad}"))
+
+    def cb(center, toward, rr=r):
+        """A point on a circle of radius rr toward another point."""
+        c = np.asarray(center, float); o = np.asarray(toward, float)
+        d = o - c
+        return c + rr * d / np.linalg.norm(d)
+
+    # ------------------------------------------------------------------ #
+    # column headers (functional; match the sibling unrolled-graph figs) #
+    # ------------------------------------------------------------------ #
+    y_hdr = ys[-1] + bh / 2 + 0.55
+    for cx, lab in [(X, "inputs"), (H, "hidden state"), (O, "outputs"),
+                    (LB, "loss")]:
+        ax.text(cx, y_hdr, lab, ha="center", va="center", fontsize=13,
+                color="black")
+
+    # ------------------------------------------------------------------ #
+    # nodes + the horizontal forward chain, one row per time step        #
+    # ------------------------------------------------------------------ #
+    half = bw / 2
+    for y, s in zip(ys, subs):
+        _box(ax, X, y, bw, bh, rf"$\mathbf{{X}}_{{{s}}}$", BLUE)
+        opc(F, y)
+        _box(ax, H, y, bw, bh, rf"$\mathbf{{H}}_{{{s}}}$", GREEN)
+        opc(G, y)
+        _box(ax, O, y, bw, bh, rf"$\mathbf{{O}}_{{{s}}}$", ORANGE)
+        sar((X + half, y), (F - r, y))          # X_t -> f
+        sar((F + r, y), (H - half, y))          # f   -> H_t
+        sar((H + half, y), (G - r, y))          # H_t -> g
+        sar((G + r, y), (O - half, y))          # g   -> O_t
+        sar((O + half, y), cb((LS, ys[1]), (O + half, y)))   # O_t -> loss op
+
+    # loss operator and the scalar loss box
+    opc(LS, ys[1])
+    _box(ax, LB, ys[1], bw, bh, r"$L$", GRAY, text_color="black")
+    sar((LS + r, ys[1]), (LB - half, ys[1]))    # loss op -> L
+
+    # ------------------------------------------------------------------ #
+    # recurrence: H_{t-1} feeds the next hidden operator (up-and-left)    #
+    # ------------------------------------------------------------------ #
+    # H_0, the initial hidden state, is a variable (green box, not shaded); it
+    # sits on the bottom row at the H column and feeds the first hidden operator
+    _box(ax, H, yp, 1.0, bh, r"$\mathbf{H}_0$", GREEN)
+    prev = [(H, yp)] + [(H, y) for y in ys[:-1]]     # H_0, H_1, H_2
+    for (hx, hy), y in zip(prev, ys):
+        start = (hx - 0.30, hy + bh / 2)
+        car(start, cb((F, y), start), rad=0.16, lw=1.7)
+
+    # ------------------------------------------------------------------ #
+    # shared parameters: one box fans out to every operator it drives.   #
+    # The fan-out arrows leave the box at splayed points so they reach    #
+    # the stacked circles without crossing the lower ones.               #
+    # ------------------------------------------------------------------ #
+    def fanout(box_cx, box_w, col_x, label):
+        pbox(box_cx, yp, label, box_w)
+        top = yp + bh / 2
+        # start x for the arrow to row i: leftmost for the highest circle
+        starts = [box_cx + 0.30, box_cx - box_w * 0.18, box_cx - box_w * 0.40]
+        for sx, y in zip(starts, ys):
+            p = (sx, top)
+            car(p, cb((col_x, y), p), rad=0.0 if y == ys[0] else 0.10, lw=1.7)
+
+    fanout(F, 2.05, F, r"$\mathbf{W}_{hx},\mathbf{W}_{hh}$")
+    fanout(G, 1.15, G, r"$\mathbf{W}_{qh}$")
+
+    ax.set_xlim(-0.15, LB + half + 0.2)
+    ax.set_ylim(yp - bh / 2 - 0.2, y_hdr + 0.3)
+    fl.save(fig, "mdl-rnn-bptt")
 
 
 # =========================================================================== #
@@ -850,6 +967,7 @@ FIGURES = [
     fig_unfolded,
     fig_lm_shift,
     fig_truncated_bptt,
+    fig_rnn_bptt,
     fig_beam_tree,
     fig_decoding_taskmap,
 ]

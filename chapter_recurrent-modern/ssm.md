@@ -1,7 +1,1520 @@
+```{.python .input}
+%load_ext d2lbook.tab
+tab.interact_select('pytorch', 'tensorflow', 'jax')
+```
+
 # Linear Recurrence and State Space Models
 :label:`sec_ssm`
 
-This section is being written (chapter 10 modernization, outline §10.3):
-minGRU and linear recurrence, parallel scans, continuous-time state space
-models and ZOH discretization, the recurrence-convolution duality, HiPPO,
-and S4D trained on sequential image classification.
+:begin_tab:`mxnet`
+This section is intentionally not implemented in MXNet. Its models are built
+on a parallel associative scan, a primitive that the MXNet 2.0 wheel used by
+this book does not provide. See the PyTorch, TensorFlow, and JAX tabs.
+:end_tab:
+
+The gated cells of :numref:`sec_lstm` solved the memory problem and promptly
+ran into a compute problem. A recurrent network must consume its input one
+step at a time: $\mathbf{H}_t$ cannot be computed before
+$\mathbf{H}_{t-1}$ exists, so a sequence of length $T$ costs $T$
+*sequential* rounds of work no matter how many processors we own. Modern
+accelerators are throughput machines, built to run tens of thousands of
+threads at once, and a recurrence at inference batch sizes leaves nearly all
+of them idle. Compare the convolutional networks of :numref:`chap_cnn`: a
+convolution applies the same weights at every position, just as a recurrence
+applies the same cell at every step, but all positions are computed *at
+once*. That difference in training throughput, far more than any difference
+in modeling power, is what pushed recurrent networks out of large-scale use.
+
+This section is about getting the parallelism back without giving up the
+thing that makes recurrence attractive: a state of fixed size, updated in
+constant time per token at inference (:numref:`subsec_rnn-constant-memory`).
+The obstacle turns out to be the nonlinearity wrapped around the state
+update, and the section removes it in two passes. First we strip the GRU
+down to a minimal gated cell whose update is *linear* in the state, which
+makes the whole sequence computable by a parallel *scan* in logarithmic
+depth. Then we rebuild the linear recurrence properly, starting from a
+continuous-time *state space model* (SSM): discretization will hand us
+principled gates, stability by construction rather than by hope, an exact
+equivalence between recurrence and convolution, and, through the HiPPO
+theory, an answer to what a state must be for its memory of the past to be
+provably good. The result, the S4 family of models
+:cite:`Gu.Goel.Re.2022`, is the backbone of the selective state space
+models we meet in the next section and of recurrent layers inside several
+production language models.
+
+```{.python .input #ssm-linear-recurrence-and-state-space-models}
+%%tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+import math
+import numpy as np
+import time
+import torch
+from torch import nn
+```
+
+```{.python .input #ssm-linear-recurrence-and-state-space-models}
+%%tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import math
+import numpy as np
+import time
+import tensorflow as tf
+```
+
+```{.python .input #ssm-linear-recurrence-and-state-space-models}
+%%tab jax
+%matplotlib inline
+from d2l import jax as d2l
+from flax import nnx
+import jax
+from jax import numpy as jnp
+import math
+import numpy as np
+import optax
+import time
+```
+
+## Linearizing the Recurrence
+:label:`subsec_mingru`
+
+Why exactly can a recurrence not be parallelized? Take the vanilla update
+$\mathbf{H}_t = \phi(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} +
+\mathbf{H}_{t-1} \mathbf{W}_{\textrm{hh}} + \mathbf{b})$ and try to jump
+ahead two steps: substituting the update into itself buries
+$\mathbf{H}_{t-2}$ under two nested applications of $\phi$, and nothing
+simplifies. A composition of nonlinear maps has no compact closed form, so
+the only way to evaluate step $t$ is to have evaluated step $t-1$. The
+nonlinearity in the *state path* is the exact culprit. Everything else
+about the cell, gates computed from the input, nonlinear read-outs of the
+state, deep stacks of layers, creates no such obstruction.
+
+That observation suggests a surgical experiment: keep the gating idea of
+:numref:`sec_lstm`, but remove every appearance of $\mathbf{H}_{t-1}$
+inside a nonlinearity. Recall the GRU update, :eqref:`gru_gates`
+through :eqref:`gru_H`: two gates and a candidate, each a function of
+$\mathbf{X}_t$ *and* $\mathbf{H}_{t-1}$, followed by a convex blend.
+:citet:`Feng.Tung.Ahmed.ea.2024` asked how much of that machinery is
+load-bearing and arrived at the *minGRU* by making two cuts. First, the
+update gate is computed from the input alone. Second, the candidate state
+is computed from the input alone, which leaves the reset gate with nothing
+to reset, so it is deleted outright. What survives is
+
+$$
+\mathbf{Z}_t = \sigma(\mathbf{X}_t \mathbf{W}_{\textrm{xz}} + \mathbf{b}_\textrm{z}),
+\qquad
+\tilde{\mathbf{H}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{\textrm{xh}} + \mathbf{b}_\textrm{h}),
+$$
+:eqlabel:`eq_mingru_heads`
+
+$$
+\mathbf{H}_t = (1 - \mathbf{Z}_t) \odot \mathbf{H}_{t-1} + \mathbf{Z}_t \odot \tilde{\mathbf{H}}_t.
+$$
+:eqlabel:`eq_mingru`
+
+Here $\mathbf{Z}_t$ gates the write, so $\mathbf{Z}_t \approx 0$ means
+"hold the state"; substituting $\mathbf{Z}_t \leftarrow 1 - \mathbf{Z}_t$
+recovers the orientation of :eqref:`gru_H`. (Feng et al. also drop the
+$\tanh$ on the candidate; we keep it because a bounded candidate trains
+more stably under the plain SGD recipe we reuse below, and an exercise asks
+you to remove it.) The cell looks almost unchanged, but its character is
+transformed: for fixed inputs, :eqref:`eq_mingru` is an *affine* function
+of $\mathbf{H}_{t-1}$,
+
+$$
+\mathbf{H}_t = \mathbf{a}_t \odot \mathbf{H}_{t-1} + \mathbf{b}_t,
+\qquad
+\mathbf{a}_t = 1 - \mathbf{Z}_t,
+\quad
+\mathbf{b}_t = \mathbf{Z}_t \odot \tilde{\mathbf{H}}_t,
+$$
+:eqlabel:`eq_affine_recurrence`
+
+where every coefficient $\mathbf{a}_t, \mathbf{b}_t$ depends only on
+$\mathbf{X}_t$ and hence can be computed for *all* $t$ simultaneously, in
+one batched matrix product. Two consequences follow, and they organize the
+rest of this section. Parallelism: affine maps compose into affine maps,
+so the $T$-step recurrence can be evaluated by a divide-and-conquer scheme
+rather than a left-to-right walk. Analyzable memory: unrolling
+:eqref:`eq_affine_recurrence` shows that the input from $k$ steps ago
+reaches $\mathbf{H}_t$ scaled by exactly
+$\prod_{j=t-k+1}^{t} \mathbf{a}_j$, a product of gate values you can print,
+plot, and reason about. Because $\mathbf{a}_t = 1 - \mathbf{Z}_t \in (0, 1)$
+elementwise, that product can never explode, and how fast it decays is a
+learned, per-unit property: the eigenvalue analysis of
+:numref:`subsec_bptt-gradient-pathologies` applies with the eigenvalues in
+plain sight. Linear recurrent units (LRUs) push the same idea further with
+complex-valued decays and careful initialization, and match well-tuned
+nonlinear RNNs on long-range benchmarks :cite:`Orvieto.Smith.Gu.ea.2023`.
+
+Does linearity in the state cost us expressivity? Within a single layer,
+yes: a linear state can only accumulate and forget, not compute. The
+answer, as everywhere else in deep learning, is depth: nonlinearities
+remain between layers, where they do not obstruct parallelism, and the
+stack recovers the lost capacity. We will see the pattern concretely in
+the S4D block near the end of this section.
+
+## Parallel Scans
+:label:`subsec_parallel-scans`
+
+### An Associative Combine
+
+The classic *prefix sum* problem asks for all running totals
+$s_t = x_1 + \cdots + x_t$ of a sequence. It looks as sequential as our
+recurrence, yet it parallelizes beautifully, because addition is
+*associative*: sums may be grouped arbitrarily, so partial sums of blocks
+can be computed independently and merged. The general result, due to
+:citet:`Blelloch.1990`, is that a running "total" under *any* associative
+binary operator can be computed in $O(\log T)$ parallel rounds; the
+operation is called a *parallel scan*, and it is exactly as general as it
+sounds.
+
+Our recurrence fits once we find the right operator. Represent the affine
+update at step $t$ by its coefficient pair $(\mathbf{a}_t, \mathbf{b}_t)$,
+standing for the map $\mathbf{h} \mapsto \mathbf{a}_t \odot \mathbf{h} +
+\mathbf{b}_t$. Applying $(\mathbf{a}_1, \mathbf{b}_1)$ first and
+$(\mathbf{a}_2, \mathbf{b}_2)$ second gives
+$\mathbf{a}_2 \odot (\mathbf{a}_1 \odot \mathbf{h} + \mathbf{b}_1) +
+\mathbf{b}_2$, which is again affine:
+
+$$
+(\mathbf{a}_2, \mathbf{b}_2) \circ (\mathbf{a}_1, \mathbf{b}_1)
+= (\mathbf{a}_1 \odot \mathbf{a}_2,\ \mathbf{a}_2 \odot \mathbf{b}_1 + \mathbf{b}_2).
+$$
+:eqlabel:`eq_scan_combine`
+
+The operator $\circ$ is associative because function composition is
+associative, and composing the first $t$ pairs yields the map that carries
+$\mathbf{h}_0$ all the way to $\mathbf{h}_t$; with
+$\mathbf{h}_0 = \mathbf{0}$ the state is simply the $\mathbf{b}$-component
+of that composite. So the entire trajectory
+$\mathbf{h}_1, \ldots, \mathbf{h}_T$ is the prefix scan of
+$(\mathbf{a}_1, \mathbf{b}_1), \ldots, (\mathbf{a}_T, \mathbf{b}_T)$
+under :eqref:`eq_scan_combine`.
+
+:numref:`fig_scan_tree` shows the parallel schedule we will implement, on
+eight elements. In round one, every position combines with its immediate
+predecessor; in round two, with the position two back; then four back, and
+so on, doubling the stride. After round $r$ position $t$ holds the
+composite of elements $\max(1, t - 2^r + 1)$ through $t$, so after
+$\lceil \log_2 T \rceil$ rounds every position holds its full prefix. Each
+round is one batched elementwise multiply-add over the whole sequence,
+perfect work for an accelerator.
+
+![A parallel prefix scan on eight elements. Each round combines every position with the one a fixed stride back (arrows), doubling the stride each round; dashed arrows copy unchanged values. Labels show which input elements each node has absorbed; after $\log_2 8 = 3$ rounds, every position holds its full prefix (green).](../img/mdl-modernrnn-scan-tree.svg)
+:label:`fig_scan_tree`
+
+This doubling schedule performs $O(T \log T)$ total work, a $\log T$
+factor more than the sequential loop, in exchange for $O(\log T)$ depth.
+Blelloch's classic two-sweep scan gets the work back down to $O(T)$ at
+slightly more than twice the depth; production kernels use it, and we
+happily pay the log factor for code that fits on a slide.
+
+### Implementation
+
+We implement the doubling scan for the elementwise-affine recurrence
+$\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ with
+$\mathbf{h}_0 = \mathbf{0}$. Time runs along the first axis; any batch or
+feature axes ride along elementwise, and the coefficient tensors follow
+ordinary broadcasting rules, a convenience we will lean on later when
+$\mathbf{a}$ is shared across the batch. Each iteration of the loop is one
+round of :numref:`fig_scan_tree`: positions $t < s$ keep their values (the
+`[:s]` prefix), and every other position combines with the value at stride
+$s$ by :eqref:`eq_scan_combine`. The function is built from differentiable
+tensor ops, so gradients flow through training without further ado.
+
+:begin_tab:`pytorch`
+We save this helper in the `d2l` library: it is the computational core of
+this section and the next.
+:end_tab:
+
+:begin_tab:`jax`
+JAX ships the scan as a primitive: `jax.lax.associative_scan` takes the
+combine function and applies it in log depth. We only need to supply
+:eqref:`eq_scan_combine` on `(a, b)` pairs.
+:end_tab:
+
+:begin_tab:`tensorflow`
+TensorFlow has no associative-scan primitive, so we write the doubling
+schedule with slicing and concatenation, mirroring the PyTorch tab.
+:end_tab:
+
+```{.python .input #ssm-implementation-1}
+%%tab pytorch
+def associative_scan(a, b, dim=0):  #@save
+    """Parallel prefix scan for h_t = a_t * h_{t-1} + b_t with h_0 = 0."""
+    a, b = a.movedim(dim, 0), b.movedim(dim, 0)
+    step = 1
+    while step < b.shape[0]:  # ceil(log2 T) rounds of combines
+        a_prev, b_prev = a[:-step], b[:-step]
+        a, b = (torch.cat([a[:step], a_prev * a[step:]]),
+                torch.cat([b[:step], a[step:] * b_prev + b[step:]]))
+        step *= 2
+    return b.movedim(0, dim)
+```
+
+```{.python .input #ssm-implementation-1}
+%%tab tensorflow
+def associative_scan(a, b):
+    """Parallel prefix scan for h_t = a_t * h_{t-1} + b_t with h_0 = 0."""
+    step = 1
+    while step < b.shape[0]:  # ceil(log2 T) rounds of combines
+        a_prev, b_prev = a[:-step], b[:-step]
+        a, b = (tf.concat([a[:step], a_prev * a[step:]], 0),
+                tf.concat([b[:step], a[step:] * b_prev + b[step:]], 0))
+        step *= 2
+    return b
+```
+
+```{.python .input #ssm-implementation-1}
+%%tab jax
+def scan_combine(prev, cur):
+    a_prev, b_prev = prev
+    a_cur, b_cur = cur
+    return a_prev * a_cur, a_cur * b_prev + b_cur
+
+def associative_scan(a, b):
+    """Parallel prefix scan for h_t = a_t * h_{t-1} + b_t with h_0 = 0."""
+    return jax.lax.associative_scan(scan_combine, (a, b))[1]
+```
+
+Correctness first: on random coefficients (decays $\mathbf{a}_t$ drawn in
+$(0, 1)$, a deliberately awkward length that is not a power of two), the
+scan must agree with the sequential loop it replaces.
+
+```{.python .input #ssm-implementation-2}
+%%tab pytorch
+def sequential_scan(a, b):
+    h, outputs = d2l.zeros_like(b[0]), []
+    for t in range(b.shape[0]):
+        h = a[t] * h + b[t]
+        outputs.append(h)
+    return d2l.stack(outputs, 0)
+
+a, b = torch.rand(100, 4, 8), torch.randn(100, 4, 8)
+err = (associative_scan(a, b) - sequential_scan(a, b)).abs().max()
+print(f'maximum deviation: {float(err):.2e}')
+```
+
+```{.python .input #ssm-implementation-2}
+%%tab tensorflow
+def sequential_scan(a, b):
+    return tf.scan(lambda h, ab: ab[0] * h + ab[1], (a, b),
+                   initializer=tf.zeros_like(b[0]))
+
+a = tf.random.uniform((100, 4, 8))
+b = tf.random.normal((100, 4, 8))
+err = tf.reduce_max(tf.abs(associative_scan(a, b) - sequential_scan(a, b)))
+print(f'maximum deviation: {float(err):.2e}')
+```
+
+```{.python .input #ssm-implementation-2}
+%%tab jax
+def sequential_scan(a, b):
+    step = lambda h, ab: (ab[0] * h + ab[1],) * 2
+    return jax.lax.scan(step, jnp.zeros_like(b[0]), (a, b))[1]
+
+key1, key2 = jax.random.split(d2l.get_key())
+a = jax.random.uniform(key1, (100, 4, 8))
+b = jax.random.normal(key2, (100, 4, 8))
+err = jnp.abs(associative_scan(a, b) - sequential_scan(a, b)).max()
+print(f'maximum deviation: {float(err):.2e}')
+```
+
+Now the payoff. We time the parallel scan against the sequential
+evaluation as the sequence grows from 256 to 16,384 steps, at a fixed
+batch of 32 sequences with 128 units.
+
+```{.python .input #ssm-implementation-3}
+%%tab pytorch
+device = d2l.try_gpu()
+
+def wall_clock(f, *args, reps=3):
+    f(*args)  # Warm up
+    if device.type == 'cuda':
+        torch.cuda.synchronize()
+    start = time.time()
+    for _ in range(reps):
+        f(*args)
+    if device.type == 'cuda':
+        torch.cuda.synchronize()
+    return (time.time() - start) / reps
+
+lengths, times = [256, 1024, 4096, 16384], [[], []]
+for T in lengths:
+    a = torch.rand(T, 32, 128, device=device)
+    b = torch.randn(T, 32, 128, device=device)
+    times[0].append(wall_clock(associative_scan, a, b) * 1e3)
+    times[1].append(wall_clock(sequential_scan, a, b) * 1e3)
+d2l.plot(lengths, times, 'sequence length', 'time per call (ms)',
+         legend=['parallel scan', 'sequential loop'],
+         xscale='log', yscale='log', figsize=(5, 3))
+```
+
+```{.python .input #ssm-implementation-3}
+%%tab tensorflow
+parallel_fn = tf.function(associative_scan)
+sequential_fn = tf.function(sequential_scan)
+
+def wall_clock(f, *args, reps=3):
+    f(*args)  # Warm up (and trace)
+    start = time.time()
+    for _ in range(reps):
+        f(*args).numpy()  # Force execution to finish
+    return (time.time() - start) / reps
+
+lengths, times = [256, 1024, 4096, 16384], [[], []]
+for T in lengths:
+    a = tf.random.uniform((T, 32, 128))
+    b = tf.random.normal((T, 32, 128))
+    times[0].append(wall_clock(parallel_fn, a, b) * 1e3)
+    times[1].append(wall_clock(sequential_fn, a, b) * 1e3)
+d2l.plot(lengths, times, 'sequence length', 'time per call (ms)',
+         legend=['parallel scan', 'sequential loop'],
+         xscale='log', yscale='log', figsize=(5, 3))
+```
+
+```{.python .input #ssm-implementation-3}
+%%tab jax
+parallel_fn = jax.jit(associative_scan)
+sequential_fn = jax.jit(sequential_scan)
+
+def wall_clock(f, *args, reps=3):
+    f(*args).block_until_ready()  # Warm up (and compile)
+    start = time.time()
+    for _ in range(reps):
+        f(*args).block_until_ready()
+    return (time.time() - start) / reps
+
+lengths, times = [256, 1024, 4096, 16384], [[], []]
+for T in lengths:
+    key1, key2 = jax.random.split(jax.random.key(T))
+    a = jax.random.uniform(key1, (T, 32, 128))
+    b = jax.random.normal(key2, (T, 32, 128))
+    times[0].append(wall_clock(parallel_fn, a, b) * 1e3)
+    times[1].append(wall_clock(sequential_fn, a, b) * 1e3)
+d2l.plot(lengths, times, 'sequence length', 'time per call (ms)',
+         legend=['parallel scan', 'sequential loop'],
+         xscale='log', yscale='log', figsize=(5, 3))
+```
+
+The sequential curve climbs linearly with $T$, dominated by the cost of
+launching $T$ tiny dependent steps. The scan's curve stays well below it
+at every length, by roughly an order of magnitude in our runs: its
+handful of rounds are large batched operations that actually saturate the
+hardware. This plot is the
+"trains like a CNN" moment for recurrence, and everything else in this
+section and the next is built on top of it. Note what the scan did *not*
+change: at inference we still update
+$\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ one
+token at a time, in constant memory, exactly like any RNN.
+
+### A minGRU Language Model
+
+Assembling :eqref:`eq_mingru_heads` through
+:eqref:`eq_affine_recurrence` around the scan yields a drop-in
+replacement for the recurrent cells of :numref:`sec_lstm`: same
+`(inputs, state)` interface, no step-by-step loop. A carried-in state
+folds into the first element, since
+$\mathbf{h}_1 = \mathbf{a}_1 \odot \mathbf{h}_0 + \mathbf{b}_1$.
+
+```{.python .input #ssm-a-mingru-language-model-1}
+%%tab pytorch
+class MinGRU(d2l.Module):
+    """The minimal GRU: input-only gates and a linear state path."""
+    def __init__(self, num_inputs, num_hiddens):
+        super().__init__()
+        self.save_hyperparameters()
+        self.W_xz = nn.Linear(num_inputs, num_hiddens)
+        self.W_xh = nn.Linear(num_inputs, num_hiddens)
+
+    def forward(self, inputs, H=None):
+        Z = torch.sigmoid(self.W_xz(inputs))     # (num_steps, batch, hiddens)
+        H_tilde = torch.tanh(self.W_xh(inputs))
+        a, b = 1 - Z, Z * H_tilde
+        if H is not None:  # Fold the carried-in state into the first step
+            b = torch.cat([b[:1] + a[:1] * H, b[1:]])
+        outputs = associative_scan(a, b)
+        return outputs, outputs[-1]
+```
+
+```{.python .input #ssm-a-mingru-language-model-1}
+%%tab tensorflow
+class MinGRU(d2l.Module):
+    """The minimal GRU: input-only gates and a linear state path."""
+    def __init__(self, num_inputs, num_hiddens):
+        super().__init__()
+        self.save_hyperparameters()
+        self.W_xz = tf.keras.layers.Dense(num_hiddens)
+        self.W_xh = tf.keras.layers.Dense(num_hiddens)
+
+    def forward(self, inputs, H=None):
+        Z = tf.sigmoid(self.W_xz(inputs))        # (num_steps, batch, hiddens)
+        H_tilde = tf.tanh(self.W_xh(inputs))
+        a, b = 1 - Z, Z * H_tilde
+        if H is not None:  # Fold the carried-in state into the first step
+            b = tf.concat([b[:1] + a[:1] * H, b[1:]], 0)
+        outputs = associative_scan(a, b)
+        return outputs, outputs[-1]
+```
+
+```{.python .input #ssm-a-mingru-language-model-1}
+%%tab jax
+class MinGRU(nnx.Module):
+    """The minimal GRU: input-only gates and a linear state path."""
+    def __init__(self, num_inputs, num_hiddens, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.num_inputs, self.num_hiddens = num_inputs, num_hiddens
+        self.W_xz = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)
+        self.W_xh = nnx.Linear(num_inputs, num_hiddens, rngs=rngs)
+
+    def __call__(self, inputs, H=None):
+        Z = jax.nn.sigmoid(self.W_xz(inputs))    # (num_steps, batch, hiddens)
+        H_tilde = jnp.tanh(self.W_xh(inputs))
+        a, b = 1 - Z, Z * H_tilde
+        if H is not None:  # Fold the carried-in state into the first step
+            b = jnp.concatenate([b[:1] + a[:1] * H, b[1:]])
+        outputs = associative_scan(a, b)
+        return outputs, outputs[-1]
+```
+
+Is stripping the GRU this aggressively survivable? We rerun the exact
+recipe of :numref:`sec_lstm`: *The Time Machine* under the 1,024-token
+BPE tokenizer, 50,000 windows of 32 tokens, embedding dimension 64, 128
+hidden units, ten epochs, gradients clipped to norm 1, so the numbers are
+directly comparable with that section's scoreboard.
+
+```{.python .input #ssm-a-mingru-language-model-2}
+%%tab pytorch, jax, tensorflow
+data = d2l.TimeMachine(batch_size=1024, num_steps=32,
+                       num_train=50000, num_val=5000)
+```
+
+```{.python .input #ssm-a-mingru-language-model-3}
+%%tab pytorch, jax
+mingru = MinGRU(num_inputs=64, num_hiddens=128)
+model = d2l.RNNLM(mingru, vocab_size=len(data.vocab), lr=4)
+```
+
+```{.python .input #ssm-a-mingru-language-model-3}
+%%tab tensorflow
+with d2l.try_gpu():
+    mingru = MinGRU(num_inputs=64, num_hiddens=128)
+    model = d2l.RNNLM(mingru, vocab_size=len(data.vocab), lr=4)
+```
+
+```{.python .input #ssm-a-mingru-language-model-4}
+%%tab pytorch, jax, tensorflow
+trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
+model.board.yscale = 'log'
+start = time.time()
+trainer.fit(model, data)
+fit_time = time.time() - start
+```
+
+```{.python .input #ssm-a-mingru-language-model-5}
+%%tab pytorch
+ppl = float(model.board.data['val_ppl'][-1].y)
+pred = model.predict('the time traveller', 30, data.tokenizer, d2l.try_gpu())
+print(f'validation perplexity {ppl:.1f}, {fit_time:.0f}s wall clock')
+print(pred)
+```
+
+```{.python .input #ssm-a-mingru-language-model-5}
+%%tab tensorflow
+ppl = float(model.board.data['val_ppl'][-1].y)
+pred = model.predict('the time traveller', 30, data.tokenizer)
+print(f'validation perplexity {ppl:.1f}, {fit_time:.0f}s wall clock')
+print(pred)
+```
+
+```{.python .input #ssm-a-mingru-language-model-5}
+%%tab jax
+def val_ppl(model):
+    total_loss = num_tokens = 0
+    for X_val, y_val in data.val_dataloader():
+        losses = model.loss(model(X_val), y_val, averaged=False)
+        total_loss += float(losses.sum())
+        num_tokens += losses.size
+    return math.exp(total_loss / num_tokens)
+
+pred = model.predict('the time traveller', 30, data.tokenizer)
+print(f'validation perplexity {val_ppl(model):.1f}, '
+      f'{fit_time:.0f}s wall clock')
+print(pred)
+```
+
+In our runs the minGRU's validation perplexity comes in a few points
+behind the GRU of :numref:`sec_gru` (low-to-mid eighties versus high
+seventies under the identical recipe), despite having input-only gates
+and roughly a quarter of the GRU's recurrent parameters, at $2h(d+1)$
+versus $3h(d+h+1)$ weights. The claim here is deliberately modest: not
+that the minGRU is better, but that very little of the GRU's quality is
+lost at this scale while the training computation becomes a parallel
+scan. At 32-step windows the
+sequential loop was never the bottleneck; the wall-clock argument is the
+benchmark above, whose gap widens without bound as sequences grow. What
+the stripped cell *does* give up is any dependence of the gates on the
+state: the decay $\mathbf{a}_t$ is decided by the current input alone.
+Hold that thought; it returns as the central limitation at the end of this
+section.
+
+## State Space Models
+:label:`subsec_ssm`
+
+The minGRU linearized an RNN by deletion. State space models arrive at the
+same destination from the opposite direction, starting from a classical
+object with sixty years of control-theory pedigree: the continuous-time
+linear dynamical system
+
+$$
+\dot{\mathbf{x}}(t) = \mathbf{A}\, \mathbf{x}(t) + \mathbf{B}\, u(t),
+\qquad
+y(t) = \mathbf{C}\, \mathbf{x}(t) + D\, u(t),
+$$
+:eqlabel:`eq_ssm_cont`
+
+in which a scalar input signal $u(t)$ drives a hidden state
+$\mathbf{x}(t) \in \mathbb{R}^N$ through the *state matrix*
+$\mathbf{A} \in \mathbb{R}^{N \times N}$ and input vector
+$\mathbf{B} \in \mathbb{R}^{N}$, and a scalar output $y(t)$ reads the
+state through $\mathbf{C} \in \mathbb{R}^{1 \times N}$ plus a direct
+skip term $D u(t)$. (For vector-valued sequences we will simply run one
+such system per feature channel.)
+
+Why go continuous when our data are discrete tokens or pixels? Because
+:eqref:`eq_ssm_cont` parameterizes *dynamics*, a law of motion, rather
+than a table of per-step transition weights. The law is independent of
+how finely we sample it: one extra scalar, a step size $\Delta$, converts
+the same $(\mathbf{A}, \mathbf{B})$ into a recurrence at any rate, so
+resolution becomes a knob rather than something baked into the weights.
+Better still, the conversion has a closed form that will hand us, for
+free, the gate that :numref:`sec_lstm` had to engineer by hand.
+
+### Discretization: the Step Size is a Gate
+:label:`subsec_zoh`
+
+To turn :eqref:`eq_ssm_cont` into a recurrence, hold the input constant
+over each sampling interval of length $\Delta$ (a *zero-order hold*, ZOH)
+and integrate the ODE exactly across the interval. For the linear system
+this integral is explicit, giving the discrete recurrence
+
+$$
+\mathbf{x}_t = \bar{\mathbf{A}}\, \mathbf{x}_{t-1} + \bar{\mathbf{B}}\, u_t,
+\qquad
+y_t = \mathbf{C}\, \mathbf{x}_t + D\, u_t,
+$$
+:eqlabel:`eq_ssm_disc`
+
+with
+
+$$
+\bar{\mathbf{A}} = \exp(\Delta \mathbf{A}),
+\qquad
+\bar{\mathbf{B}} = (\Delta \mathbf{A})^{-1} \left(\exp(\Delta \mathbf{A}) - \mathbf{I}\right) \Delta \mathbf{B},
+$$
+:eqlabel:`eq_zoh`
+
+where $\exp$ is the matrix exponential. (A cruder alternative, the Euler
+step $\bar{\mathbf{A}} \approx \mathbf{I} + \Delta \mathbf{A}$, is the
+subject of an exercise.) In practice $\mathbf{A}$ is taken *diagonal*,
+$\mathbf{A} = \mathrm{diag}(a_1, \ldots, a_N)$, which costs surprisingly
+little modeling power and makes :eqref:`eq_zoh` elementwise:
+
+$$
+\bar{a}_n = e^{\Delta a_n},
+\qquad
+\bar{b}_n = \frac{e^{\Delta a_n} - 1}{a_n}\, b_n.
+$$
+:eqlabel:`eq_zoh_diag`
+
+Now make $\Delta$ a *learnable parameter* and watch what it does.
+
+> **The step size is a gate.** As $\Delta \to 0$, we get
+> $\bar{\mathbf{A}} \to \mathbf{I}$ and $\bar{\mathbf{B}} \to \mathbf{0}$:
+> the state copies itself forward and ignores the input, a frozen memory.
+> As $\Delta$ grows (with the real parts of the eigenvalues of
+> $\mathbf{A}$ negative), $\bar{\mathbf{A}} \to \mathbf{0}$ and the state
+> is rewritten from the current input alone. A learned $\Delta$ is
+> therefore exactly an update gate in the sense of :numref:`sec_lstm`,
+> interpolating between "remember everything" and "overwrite everything",
+> except that it was not bolted on: it fell out of asking how fast a
+> continuous memory should run. This one correspondence is the bridge
+> between the gated RNNs behind us and the selective models ahead, where
+> $\Delta$ becomes input-dependent and gating is rediscovered a third
+> time.
+
+Stability, which :numref:`subsec_bptt-gradient-pathologies` taught us to
+fear, is now a matter of *parameterization* rather than luck. Store
+$a_n$ as $-e^{\theta_n}$ (or any form pinned to the left half-plane), and
+the discrete eigenvalues satisfy
+
+$$
+|\bar{a}_n| = e^{\Delta\, \mathrm{Re}(a_n)} < 1
+\quad \textrm{whenever } \mathrm{Re}(a_n) < 0,
+$$
+
+for *every* value of the learned parameters: the spectral radius lives
+inside the unit circle *by construction*, and no gradient update can push
+the recurrence into the exploding regime. Contrast the vanilla RNN, whose
+$\mathbf{W}_{\textrm{hh}}$ had to be coaxed toward the knife-edge
+$\rho \approx 1$ by clipping and prayer. Allowing complex $a_n$
+(conjugate pairs) adds rotation to the decay: each state dimension
+becomes a damped oscillator with a learned frequency, enriching the
+dynamics at no cost to stability. For everything we train below, plain
+negative-real $a_n$ suffices.
+
+### Recurrence is Convolution
+:label:`subsec_ssm-conv`
+
+The system :eqref:`eq_ssm_disc` is linear and *time-invariant* (LTI): the
+same $\bar{\mathbf{A}}, \bar{\mathbf{B}}, \mathbf{C}$ act at every step.
+Unroll the recurrence from $\mathbf{x}_0 = \mathbf{0}$ and every output
+becomes a weighted sum of all past inputs:
+
+$$
+y_t = \sum_{k=0}^{t-1} \mathbf{C} \bar{\mathbf{A}}^{k} \bar{\mathbf{B}}\, u_{t-k} + D\, u_t
+= (\bar{\mathbf{K}} * \mathbf{u})_t + D\, u_t,
+\qquad
+\bar{\mathbf{K}} = (\mathbf{C}\bar{\mathbf{B}},\
+\mathbf{C}\bar{\mathbf{A}}\bar{\mathbf{B}},\
+\mathbf{C}\bar{\mathbf{A}}^2\bar{\mathbf{B}}, \ldots).
+$$
+:eqlabel:`eq_ssm_kernel`
+
+That is a plain causal convolution, with a kernel $\bar{\mathbf{K}}$ as
+long as the sequence itself, materialized from three small matrices. One
+model is thus three models (:numref:`fig_ssm_views`): a continuous ODE
+(elegant for analysis and parameterization), a recurrence (constant-state
+inference, one token at a time), and a convolution (parallel training).
+The S4 line of work trains through this convolutional view, computing
+$\bar{\mathbf{K}}$ and applying it with FFTs in $O(T \log T)$ time
+:cite:`Gu.Goel.Re.2022`; it is a beautiful trick, but it leans on
+time-invariance, and the next section will make the dynamics
+input-dependent precisely to gain selectivity. The parallel scan covers
+both cases, so the scan is the path we implement.
+
+![Three views of one linear state space model. Left: a continuous-time ODE responds to an input pulse. Middle: the discretized system is a linear recurrence, one step per token. Right: unrolled, the same system is a causal convolution whose kernel collects the impulse response.](../img/mdl-modernrnn-ssm-views.svg)
+:label:`fig_ssm_views`
+
+Seeing is believing: for a random diagonal SSM we now compute the same
+outputs three ways, with the sequential recurrence, with the parallel
+scan, and by convolving with the materialized kernel from
+:eqref:`eq_ssm_kernel` (we drop the $D$ skip here, since all three views
+share it verbatim).
+
+```{.python .input #ssm-recurrence-is-convolution}
+%%tab pytorch
+num_states, num_steps, delta = 8, 64, 0.1
+a = -torch.arange(1., num_states + 1)               # Re(a) < 0
+b, c = torch.ones(num_states), torch.randn(num_states)
+a_bar = torch.exp(delta * a)                        # Zero-order hold
+b_bar = (a_bar - 1) / a * b
+u = torch.randn(num_steps)
+
+x, ys = torch.zeros(num_states), []                 # (i) recurrence
+for t in range(num_steps):
+    x = a_bar * x + b_bar * u[t]
+    ys.append(torch.dot(c, x))
+y_loop = torch.stack(ys)
+
+xs = associative_scan(a_bar.tile(num_steps, 1),     # (ii) parallel scan
+                      b_bar * u[:, None])
+y_scan = xs @ c
+
+k = torch.arange(num_steps)[:, None]                # (iii) convolution
+kernel = (c * b_bar * a_bar ** k).sum(-1)
+y_conv = torch.tensor(np.convolve(u, kernel)[:num_steps])
+
+print(f'scan vs loop: {float((y_scan - y_loop).abs().max()):.2e}, '
+      f'conv vs loop: {float((y_conv - y_loop).abs().max()):.2e}')
+```
+
+```{.python .input #ssm-recurrence-is-convolution}
+%%tab tensorflow
+num_states, num_steps, delta = 8, 64, 0.1
+a = -tf.range(1., num_states + 1.)                   # Re(a) < 0
+b, c = tf.ones(num_states), tf.random.normal((num_states,))
+a_bar = tf.exp(delta * a)                           # Zero-order hold
+b_bar = (a_bar - 1) / a * b
+u = tf.random.normal((num_steps,))
+
+x, ys = tf.zeros(num_states), []                    # (i) recurrence
+for t in range(num_steps):
+    x = a_bar * x + b_bar * u[t]
+    ys.append(tf.reduce_sum(c * x))
+y_loop = tf.stack(ys)
+
+xs = associative_scan(tf.tile(a_bar[None], (num_steps, 1)),
+                      b_bar * u[:, None])           # (ii) parallel scan
+y_scan = tf.linalg.matvec(xs, c)
+
+k = tf.range(num_steps, dtype=tf.float32)[:, None]  # (iii) convolution
+kernel = tf.reduce_sum(c * b_bar * a_bar ** k, -1)
+y_conv = np.convolve(u.numpy(), kernel.numpy())[:num_steps]
+
+print(f'scan vs loop: {float(tf.reduce_max(tf.abs(y_scan - y_loop))):.2e}, '
+      f'conv vs loop: {float(np.abs(y_conv - y_loop.numpy()).max()):.2e}')
+```
+
+```{.python .input #ssm-recurrence-is-convolution}
+%%tab jax
+num_states, num_steps, delta = 8, 64, 0.1
+a = -jnp.arange(1., num_states + 1)                 # Re(a) < 0
+b, c = jnp.ones(num_states), jax.random.normal(d2l.get_key(), (num_states,))
+a_bar = jnp.exp(delta * a)                          # Zero-order hold
+b_bar = (a_bar - 1) / a * b
+u = jax.random.normal(d2l.get_key(), (num_steps,))
+
+def step(x, u_t):                                   # (i) recurrence
+    x = a_bar * x + b_bar * u_t
+    return x, jnp.dot(c, x)
+_, y_loop = jax.lax.scan(step, jnp.zeros(num_states), u)
+
+xs = associative_scan(jnp.tile(a_bar, (num_steps, 1)),
+                      b_bar * u[:, None])           # (ii) parallel scan
+y_scan = xs @ c
+
+k = jnp.arange(num_steps)[:, None]                  # (iii) convolution
+kernel = (c * b_bar * a_bar ** k).sum(-1)
+y_conv = jnp.array(np.convolve(u, kernel)[:num_steps])
+
+print(f'scan vs loop: {float(jnp.abs(y_scan - y_loop).max()):.2e}, '
+      f'conv vs loop: {float(jnp.abs(y_conv - y_loop).max()):.2e}')
+```
+
+The three views agree to floating-point precision. Each is the right tool
+for a different job, and the freedom to switch among them at will is the
+practical superpower of keeping the recurrence linear.
+
+## Remembering the Past: HiPPO
+:label:`subsec_hippo`
+
+One question remains before we can call this a principled design: what
+should $\mathbf{A}$ *be*? Stability constrains its eigenvalues to the left
+half-plane but otherwise leaves $N^2$ (or $N$ diagonal) numbers to choose,
+and early attempts to train SSMs from random initializations performed
+poorly. The question has a crisp mathematical form. The state
+$\mathbf{x}(t)$ is a fixed budget of $N$ numbers summarizing the input
+seen so far; which $N$ numbers lose the least?
+
+HiPPO (high-order polynomial projection operators) is the answer
+:cite:`Gu.Dao.Ermon.ea.2020`. Fix a measure over the past, say uniform
+weight on everything seen so far, and ask that $\mathbf{x}(t)$ hold the
+$N$ coefficients of the best *orthogonal polynomial approximation* (of
+degree less than $N$) of the input's history under that measure, the same
+least-squares projection that powers Fourier and Legendre series. The remarkable
+theorem is that this optimal compression can be maintained *online*: as
+new input arrives, the optimal coefficients evolve according to a linear
+ODE of exactly the form :eqref:`eq_ssm_cont`, with a specific,
+input-independent matrix. For the uniform ("scaled Legendre", LegS)
+measure it is
+
+$$
+A_{nk} = -\begin{cases}
+\sqrt{(2n+1)(2k+1)} & \textrm{if } n > k, \\
+n + 1 & \textrm{if } n = k, \\
+0 & \textrm{if } n < k,
+\end{cases}
+\qquad
+B_n = \sqrt{2n + 1},
+$$
+:eqlabel:`eq_hippo`
+
+for $n, k = 0, \ldots, N-1$. We state the matrix and cite the derivation;
+what matters for us is what it buys. :numref:`fig_hippo_reconstruction`
+shows a signal compressed online into a HiPPO state of size $N$ and then
+reconstructed from the state alone at the final time: with $N = 64$
+numbers, a thousand-step history is recovered almost perfectly, smoothing
+only the sharpest transients. A fixed-size state provably *can* carry a
+long past, provided its dynamics are chosen for the job. That is what
+initializing an SSM with HiPPO provides, and it is the ingredient random
+initialization was missing.
+
+![Compressing a function into $N$ numbers, online. A HiPPO-LegS state of size $N$ is updated as the signal (black) streams in; afterwards, the full history is reconstructed (color) from the final state alone. Larger states recover the past in increasing detail.](../img/mdl-modernrnn-hippo-reconstruction.svg)
+:label:`fig_hippo_reconstruction`
+
+The path from this theorem to a practical layer was walked in three quick
+steps. S4 :cite:`Gu.Goel.Re.2022` made the HiPPO recurrence trainable and
+fast by exploiting the matrix's *normal plus low-rank* structure to
+compute the convolution kernel :eqref:`eq_ssm_kernel` efficiently, and
+demonstrated the payoff on the Long Range Arena benchmark
+:cite:`Tay.Dehghani.Abnar.ea.2021`, solving tasks with dependencies over
+16,000 steps ahead of every transformer of its day. S4D
+:cite:`Gu.Gupta.Goel.Re.2022` showed that keeping only a diagonal
+approximation of the HiPPO matrix loses almost nothing, collapsing the
+machinery to the elementwise formulas :eqref:`eq_zoh_diag`; the simplest
+variant initializes $a_n = -(n + 1)$, the diagonal of :eqref:`eq_hippo`,
+which is exactly what we implement below. S5
+:cite:`Smith.Warrington.Linderman.2023` replaced the per-channel scalar
+systems and FFTs with one multi-input state space layer evaluated by the
+parallel scan, the same computational pattern we built above. Our
+implementation sits deliberately at the intersection: S4D's diagonal
+parameterization, S5's scan.
+
+## S4D in Practice
+:label:`subsec_s4d`
+
+Time to assemble a working network. The `S4D` layer below runs one
+independent scalar SSM per feature channel, each with $N$ internal states:
+its parameters are the diagonal $\mathbf{a}$ (stored as
+$-e^{\log \textrm{magnitude}}$ to pin eigenvalues to the left half-plane,
+initialized to $-(n+1)$), a per-channel learnable step size $\Delta$
+(stored as $\log \Delta$, initialized log-uniformly between $10^{-3}$ and
+$10^{-1}$, so different channels start as gates of very different speeds),
+the read-out $\mathbf{C}$, and the skip $D$; following S4D we fix
+$\mathbf{B} = \mathbf{1}$ and let $\mathbf{C}$ absorb its scale. The
+forward pass is three lines of ZOH followed by the scan from
+:numref:`subsec_parallel-scans`; since the dynamics are time-invariant,
+the decay coefficients are the same at every position, and broadcasting
+(a singleton batch axis for `a`) spares us materializing them per element.
+
+```{.python .input #ssm-s4d-in-practice-1}
+%%tab pytorch
+class S4D(nn.Module):
+    """A diagonal state space layer: one SSM per feature channel."""
+    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1):
+        super().__init__()
+        H, N = num_hiddens, num_states
+        self.log_a = nn.Parameter(
+            torch.log(torch.arange(1., N + 1)).repeat(H, 1))
+        self.log_dt = nn.Parameter(
+            torch.rand(H, 1) * math.log(dt_max / dt_min) + math.log(dt_min))
+        self.C = nn.Parameter(torch.randn(H, N) / math.sqrt(N))
+        self.D = nn.Parameter(torch.ones(H))
+
+    def forward(self, u):                    # (num_steps, batch, num_hiddens)
+        a = -torch.exp(self.log_a)                    # (H, N), Re(a) < 0
+        a_bar = torch.exp(torch.exp(self.log_dt) * a)
+        b_bar = (a_bar - 1) / a                       # ZOH with B = 1
+        a_elems = a_bar.expand(u.shape[0], 1, -1, -1) # Same at every step
+        b_elems = b_bar * u.unsqueeze(-1)             # (T, batch, H, N)
+        x = associative_scan(a_elems, b_elems)
+        return (x * self.C).sum(-1) + self.D * u
+```
+
+```{.python .input #ssm-s4d-in-practice-1}
+%%tab tensorflow
+class S4D(tf.keras.layers.Layer):
+    """A diagonal state space layer: one SSM per feature channel."""
+    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1):
+        super().__init__()
+        H, N = num_hiddens, num_states
+        # Keras 3 tracks keras.Variable (not plain tf.Variable) attributes
+        self.log_a = tf.keras.Variable(tf.tile(
+            tf.math.log(tf.range(1., N + 1.))[None], (H, 1)))
+        self.log_dt = tf.keras.Variable(
+            tf.random.uniform((H, 1)) * math.log(dt_max / dt_min)
+            + math.log(dt_min))
+        self.C = tf.keras.Variable(tf.random.normal((H, N)) / math.sqrt(N))
+        self.D = tf.keras.Variable(tf.ones(H))
+
+    def call(self, u):                       # (num_steps, batch, num_hiddens)
+        a = -tf.exp(self.log_a)                       # (H, N), Re(a) < 0
+        a_bar = tf.exp(tf.exp(self.log_dt) * a)
+        b_bar = (a_bar - 1) / a                       # ZOH with B = 1
+        a_elems = tf.tile(a_bar[None, None], (u.shape[0], 1, 1, 1))
+        b_elems = b_bar * tf.expand_dims(u, -1)       # (T, batch, H, N)
+        x = associative_scan(a_elems, b_elems)
+        return tf.reduce_sum(x * self.C, -1) + self.D * u
+```
+
+```{.python .input #ssm-s4d-in-practice-1}
+%%tab jax
+class S4D(nnx.Module):
+    """A diagonal state space layer: one SSM per feature channel."""
+    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1,
+                 rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        H, N = num_hiddens, num_states
+        self.log_a = nnx.Param(jnp.tile(jnp.log(jnp.arange(1., N + 1)),
+                                        (H, 1)))
+        self.log_dt = nnx.Param(
+            rngs.params.uniform((H, 1)) * math.log(dt_max / dt_min)
+            + math.log(dt_min))
+        self.C = nnx.Param(rngs.params.normal((H, N)) / math.sqrt(N))
+        self.D = nnx.Param(jnp.ones(H))
+
+    def __call__(self, u):                   # (num_steps, batch, num_hiddens)
+        a = -jnp.exp(self.log_a.value)                # (H, N), Re(a) < 0
+        a_bar = jnp.exp(jnp.exp(self.log_dt.value) * a)
+        b_bar = (a_bar - 1) / a                       # ZOH with B = 1
+        a_elems = jnp.broadcast_to(                   # Same at every step
+            a_bar[None, None], (u.shape[0], 1, *a_bar.shape))
+        b_elems = b_bar * u[..., None]                # (T, batch, H, N)
+        x = associative_scan(a_elems, b_elems)
+        return (x * self.C).sum(-1) + self.D * u
+```
+
+A single `S4D` layer mixes information across *time* but never across
+*channels* (each channel owns a private SSM), and it is linear. Both gaps
+are closed the modern way, by wrapping the layer in a residual block with
+normalization and a gated MLP (:numref:`fig_ssm_block`): the MLP mixes
+channels and supplies the nonlinearity that the state path gave up, and
+the gate is one more echo of :numref:`sec_lstm`. Stacking $L$ such blocks
+yields the standard deep SSM of the S4/S4D/S5 papers.
+
+![The S4D residual block: sequence mixing by a per-channel diagonal SSM, channel mixing by a gated MLP, each behind LayerNorm with a residual connection, stacked $L$ times.](../img/mdl-modernrnn-ssm-block.svg)
+:label:`fig_ssm_block`
+
+```{.python .input #ssm-s4d-in-practice-2}
+%%tab pytorch
+class S4DBlock(nn.Module):
+    def __init__(self, num_hiddens, num_states):
+        super().__init__()
+        self.ln1 = nn.LayerNorm(num_hiddens)
+        self.ssm = S4D(num_hiddens, num_states)
+        self.ln2 = nn.LayerNorm(num_hiddens)
+        self.W_v = nn.Linear(num_hiddens, 2 * num_hiddens)
+        self.W_g = nn.Linear(num_hiddens, 2 * num_hiddens)
+        self.W_o = nn.Linear(2 * num_hiddens, num_hiddens)
+
+    def forward(self, X):
+        X = X + self.ssm(self.ln1(X))
+        Y = self.ln2(X)
+        return X + self.W_o(self.W_v(Y) * torch.sigmoid(self.W_g(Y)))
+```
+
+```{.python .input #ssm-s4d-in-practice-2}
+%%tab tensorflow
+class S4DBlock(tf.keras.layers.Layer):
+    def __init__(self, num_hiddens, num_states):
+        super().__init__()
+        self.ln1 = tf.keras.layers.LayerNormalization()
+        self.ssm = S4D(num_hiddens, num_states)
+        self.ln2 = tf.keras.layers.LayerNormalization()
+        self.W_v = tf.keras.layers.Dense(2 * num_hiddens)
+        self.W_g = tf.keras.layers.Dense(2 * num_hiddens)
+        self.W_o = tf.keras.layers.Dense(num_hiddens)
+
+    def call(self, X):
+        X = X + self.ssm(self.ln1(X))
+        Y = self.ln2(X)
+        return X + self.W_o(self.W_v(Y) * tf.sigmoid(self.W_g(Y)))
+```
+
+```{.python .input #ssm-s4d-in-practice-2}
+%%tab jax
+class S4DBlock(nnx.Module):
+    def __init__(self, num_hiddens, num_states, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.ln1 = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.ssm = S4D(num_hiddens, num_states, rngs=rngs)
+        self.ln2 = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.W_v = nnx.Linear(num_hiddens, 2 * num_hiddens, rngs=rngs)
+        self.W_g = nnx.Linear(num_hiddens, 2 * num_hiddens, rngs=rngs)
+        self.W_o = nnx.Linear(2 * num_hiddens, num_hiddens, rngs=rngs)
+
+    def __call__(self, X):
+        X = X + self.ssm(self.ln1(X))
+        Y = self.ln2(X)
+        return X + self.W_o(self.W_v(Y) * jax.nn.sigmoid(self.W_g(Y)))
+```
+
+### Sequential Image Classification
+
+Where should a long-memory architecture prove itself? A classic stress
+test is *sequential image classification*: feed a model the
+Fashion-MNIST images of :numref:`sec_fashion_mnist` one pixel at a time,
+as a plain sequence of 784 scalars, and ask for the class at the end. No
+spatial structure is given; whatever relates pixel 3 to pixel 787 must be
+carried across hundreds of steps of state. The classifier below embeds
+each pixel, runs an encoder over the sequence, mean-pools the features
+over time, and classifies; it accepts any encoder with our
+`(num_steps, batch, features)` calling convention, which lets us swap an
+S4D stack against an LSTM without touching anything else. We train with
+Adam, since the SSM's exponentials make plain SGD's step sizes awkward.
+
+```{.python .input #ssm-sequential-image-classification-1}
+%%tab pytorch
+class SeqClassifier(d2l.Classifier):
+    """Classify a sequence with an encoder plus mean pooling."""
+    def __init__(self, encoder, num_hiddens, lr=3e-3):
+        super().__init__()
+        self.save_hyperparameters()
+        self.emb = nn.Linear(1, num_hiddens)
+        self.head = nn.LazyLinear(10)
+
+    def forward(self, X):
+        X = X.reshape(X.shape[0], -1, 1).movedim(1, 0)  # Pixel sequence
+        Y = self.encoder(self.emb(X))
+        Y = Y[0] if isinstance(Y, tuple) else Y         # RNNs return a state
+        return self.head(Y.mean(dim=0))
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=self.lr)
+```
+
+```{.python .input #ssm-sequential-image-classification-1}
+%%tab tensorflow
+class SeqClassifier(d2l.Classifier):
+    """Classify a sequence with an encoder plus mean pooling."""
+    def __init__(self, encoder, num_hiddens, lr=3e-3):
+        super().__init__()
+        self.save_hyperparameters()
+        self.emb = tf.keras.layers.Dense(num_hiddens)
+        self.head = tf.keras.layers.Dense(10)
+
+    def forward(self, X):
+        X = tf.reshape(X, (tf.shape(X)[0], 784, 1))     # Pixel sequence
+        X = tf.transpose(X, (1, 0, 2))
+        Y = self.encoder(self.emb(X))
+        Y = Y[0] if isinstance(Y, tuple) else Y         # RNNs return a state
+        return self.head(tf.reduce_mean(Y, axis=0))
+
+    def configure_optimizers(self):
+        return tf.keras.optimizers.Adam(float(self.lr))
+```
+
+```{.python .input #ssm-sequential-image-classification-1}
+%%tab jax
+class SeqClassifier(d2l.Classifier):
+    """Classify a sequence with an encoder plus mean pooling."""
+    def __init__(self, encoder, num_hiddens, num_features=None, lr=3e-3,
+                 rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['encoder', 'rngs'])
+        rngs = nnx.Rngs(1) if rngs is None else rngs
+        num_features = num_hiddens if num_features is None else num_features
+        self.encoder = encoder
+        self.emb = nnx.Linear(1, num_hiddens, rngs=rngs)
+        self.head = nnx.Linear(num_features, 10, rngs=rngs)
+
+    def forward(self, X):
+        X = X.reshape(X.shape[0], -1, 1).transpose(1, 0, 2)  # Pixel sequence
+        Y = self.encoder(self.emb(X))
+        Y = Y[0] if isinstance(Y, tuple) else Y         # RNNs return a state
+        return self.head(Y.mean(axis=0))
+
+    def configure_optimizers(self):
+        return optax.adam(self.lr)
+```
+
+Our S4D model stacks two blocks of width 48 with $N = 4$ states per
+channel; the baseline is the LSTM of :numref:`sec_lstm` sized to the same
+parameter count (48-dimensional pixel embeddings, 64 hidden units,
+roughly 30,000 parameters each). Ten epochs each, identical data
+pipeline, identical head, and gradients clipped to norm 1 for both
+models: at 784 steps the LSTM otherwise destabilizes mid-training, its
+loss spiking exactly as :numref:`subsec_bptt-gradient-pathologies` would
+predict, while the S4D, whose recurrence cannot leave the unit circle,
+reaches the same accuracy with or without clipping.
+
+```{.python .input #ssm-sequential-image-classification-2}
+%%tab pytorch
+data = d2l.FashionMNIST(batch_size=128)
+results = {}
+
+def train_and_report(name, model, epochs=10):
+    trainer = d2l.Trainer(max_epochs=epochs, gradient_clip_val=1, num_gpus=1)
+    start = time.time()
+    trainer.fit(model, data)
+    params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    results[name] = (params, float(model.board.data['val_acc'][-1].y),
+                     (time.time() - start) / epochs)
+
+s4d = SeqClassifier(nn.Sequential(*[S4DBlock(48, 4) for _ in range(2)]),
+                    num_hiddens=48)
+train_and_report('S4D', s4d)
+```
+
+```{.python .input #ssm-sequential-image-classification-2}
+%%tab tensorflow
+data = d2l.FashionMNIST(batch_size=128)
+results = {}
+
+def train_and_report(name, model, epochs=10):
+    trainer = d2l.Trainer(max_epochs=epochs, gradient_clip_val=1)
+    start = time.time()
+    trainer.fit(model, data)
+    params = sum(int(tf.size(v)) for v in model.trainable_variables)
+    results[name] = (params, float(model.board.data['val_acc'][-1].y),
+                     (time.time() - start) / epochs)
+
+with d2l.try_gpu():
+    s4d = SeqClassifier(
+        tf.keras.Sequential([S4DBlock(48, 4) for _ in range(2)]),
+        num_hiddens=48)
+    train_and_report('S4D', s4d)
+```
+
+```{.python .input #ssm-sequential-image-classification-2}
+%%tab jax
+data = d2l.FashionMNIST(batch_size=128)
+results = {}
+
+def train_and_report(name, model, epochs=10):
+    trainer = d2l.Trainer(max_epochs=epochs, gradient_clip_val=1, num_gpus=1)
+    start = time.time()
+    trainer.fit(model, data)
+    params = sum(p.size for p in
+                 jax.tree.leaves(nnx.state(model, nnx.Param)))
+    results[name] = (params, float(model.board.data['val_acc'][-1].y),
+                     (time.time() - start) / epochs)
+
+s4d = SeqClassifier(nnx.Sequential(*[S4DBlock(48, 4) for _ in range(2)]),
+                    num_hiddens=48)
+train_and_report('S4D', s4d)
+```
+
+```{.python .input #ssm-sequential-image-classification-3}
+%%tab pytorch, jax
+if tab.selected('pytorch'):
+    lstm = SeqClassifier(d2l.LSTM(num_inputs=48, num_hiddens=64),
+                         num_hiddens=48)
+if tab.selected('jax'):
+    lstm = SeqClassifier(d2l.LSTM(num_inputs=48, num_hiddens=64),
+                         num_hiddens=48, num_features=64)
+train_and_report('LSTM', lstm)
+```
+
+```{.python .input #ssm-sequential-image-classification-3}
+%%tab tensorflow
+with d2l.try_gpu():
+    lstm = SeqClassifier(d2l.LSTM(num_inputs=48, num_hiddens=64),
+                         num_hiddens=48)
+    train_and_report('LSTM', lstm)
+```
+
+```{.python .input #ssm-sequential-image-classification-4}
+%%tab pytorch, jax, tensorflow
+print(f'{"model":>6} {"params":>8} {"val acc":>8} {"s/epoch":>8}')
+for name, (params, acc, secs) in results.items():
+    print(f'{name:>6} {params:>8,} {acc:>8.3f} {secs:>8.1f}')
+```
+
+In our runs the S4D lands between 81 and 83 percent accuracy in every
+framework and every rerun, clipped or unclipped. The LSTM baseline is
+another story: across repeated runs (with and without clipping, at
+nearby learning rates) its final accuracy ranged from 59 to 80 percent,
+and the pattern tracks each framework's initialization defaults
+precisely. PyTorch initializes its LSTM with plain uniform weights, and
+the baseline is erratic from run to run; Flax applies one classic
+remedy, orthogonal recurrent weights, and does better; Keras applies
+two, orthogonal weights plus a forget-gate bias of 1 (the very tricks
+discussed in :numref:`sec_lstm`), and only then does the LSTM reliably
+pull level with the S4D. The contrast is the section's thesis in
+miniature. At initialization the S4D's channels already implement a
+bank of exponential memories with time constants spanning more than two
+orders of magnitude (what the log-uniform $\Delta$ init provides), so
+pixel-to-pixel structure hundreds of steps apart is visible to the model
+from the first gradient step, in any framework; an LSTM holds long-range
+state only when a decade's worth of initialization folklore is applied
+on its behalf, and hopes for a lucky draw otherwise. What HiPPO and
+discretization provide is that memory *by design*, robustly, rather than
+by folklore. Wall-clock per epoch, also in the table,
+depends on what each framework fuses: against PyTorch's cuDNN-fused LSTM
+our teaching-grade scan pays its log-factor overhead, while in JAX,
+where both models run compiled scans, the parallel scan is several times
+faster than the sequential LSTM; production SSM kernels close the
+remaining gap the same way cuDNN once did for the LSTM. On the Long
+Range Arena :cite:`Tay.Dehghani.Abnar.ea.2021`, with sequences up to
+16,000 steps, this architecture family was the first to solve tasks on
+which both RNNs and transformers had failed, which is what first made
+the field take state space models seriously.
+
+## Summary
+
+Recurrence buys constant-memory inference but serializes training; this
+section removed the serialization by making the state update linear. The
+minGRU shows the deletion route: gates computed from the input alone turn
+the GRU into an elementwise affine recurrence
+$\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$, which
+an associative combine evaluates in $O(\log T)$ parallel rounds, at
+language-modeling quality on par with the GRU. State space models reach
+the same recurrence from first principles: discretizing continuous linear
+dynamics yields the ZOH formulas, in which the learnable step size
+$\Delta$ *is* an update gate and stability holds by construction, with
+eigenvalues pinned inside the unit circle by parameterization rather than
+by clipping (:numref:`subsec_bptt-gradient-pathologies`). Time-invariance
+makes the same model a recurrence, a convolution, and an ODE at once, and
+HiPPO supplies the state matrix for which the fixed-size state is a
+provably good compression of the whole past. Assembled into residual
+blocks (S4D), the result decisively beats a plainly initialized,
+parameter-matched LSTM on 784-step sequential image classification and
+matches the best-initialized one, carrying its long-range memory from
+the first step rather than learning it.
+
+Everything here, though, is *linear and time-invariant*: the kernel
+$\bar{\mathbf{K}}$, and with it the decision of what to remember, is fixed
+before the model ever sees the input. An S4D cannot read a token and
+decide that *this one* matters while its neighbor is noise: its gates,
+unlike the LSTM's, do not look at the data as it flows past, and the model
+is in this precise sense content-blind. Curing that, and keeping the
+scan, is the subject of the next section.
+
+## Exercises
+
+1. *Effective memory.* For a scalar recurrence
+   $h_t = \bar{a} h_{t-1} + u_t$, define the effective memory horizon as
+   the lag $k$ at which the influence $\bar{a}^k$ of an input drops below
+   $0.01$. Plot the horizon as a function of $\bar{a} \in (0.9, 0.999)$
+   and as a function of $\Delta$ under $\bar{a} = e^{-\Delta}$. How must
+   $\Delta$ scale for the model to remember 10 times longer, and how does
+   this connect the step-size-as-gate box to the eigenvalue analysis of
+   :numref:`subsec_bptt-gradient-pathologies`?
+1. *ZOH versus Euler.* The Euler discretization uses
+   $\bar{\mathbf{A}} = \mathbf{I} + \Delta \mathbf{A}$ and
+   $\bar{\mathbf{B}} = \Delta \mathbf{B}$. For the scalar system
+   $a = -1, b = 1$ driven by $u_t = \sin(0.1 t)$, compare Euler and ZOH
+   outputs against a fine-grained reference solution for
+   $\Delta \in \{0.1, 0.5, 1.0, 2.5\}$. Which discretization degrades
+   gracefully, and what goes visibly wrong with Euler at $\Delta = 2.5$?
+   (Check the eigenvalue $|1 + \Delta a|$ first.)
+1. *Kernels as fingerprints.* Materialize and plot the convolution kernel
+   :eqref:`eq_ssm_kernel` for (a) our diagonal initialization
+   $a_n = -(n+1)$ with $\mathbf{B} = \mathbf{1}$ and random $\mathbf{C}$,
+   and (b) the full (non-diagonal) HiPPO matrix :eqref:`eq_hippo`, using
+   matrix powers. How do the kernels differ in shape and in how much mass
+   they place on the distant past?
+1. *minLSTM.* Apply the minGRU recipe to the LSTM of :numref:`sec_lstm`:
+   make all gates functions of the input only, drop the output gate's
+   dependence on the state, and write the cell update
+   $\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t
+   \odot \tilde{\mathbf{C}}_t$ as an affine recurrence
+   :eqref:`eq_affine_recurrence`. Implement it with `associative_scan`
+   and train it with this section's language-modeling recipe. Does the
+   extra gate help? (Compare :citet:`Feng.Tung.Ahmed.ea.2024`, who also
+   normalize the two gates to sum to one.)
+1. *The candidate nonlinearity.* Our minGRU keeps a $\tanh$ on the
+   candidate $\tilde{\mathbf{H}}_t$, while :citet:`Feng.Tung.Ahmed.ea.2024`
+   use a purely linear candidate. Remove the $\tanh$ and retrain. What
+   happens to training stability and final perplexity, and why does an
+   unbounded candidate interact badly with a convex-combination update?
+1. *State passing.* The scan assumes $\mathbf{h}_0 = \mathbf{0}$, and
+   `MinGRU` folds a carried state into $\mathbf{b}_1$. Use this to process
+   a length-$T$ sequence in $T/\tau$ chunks of length $\tau$, passing the
+   final state of each chunk into the next, and verify that the outputs
+   match the unchunked scan exactly. Why might chunking be useful at
+   training time? (Think memory, and recall truncated BPTT from
+   :numref:`sec_bptt`.)
+
+[Discussions](https://d2l.discourse.group/)
+
+<!-- slides -->
+
+::: {.slide title="Linear Recurrence and State Space Models"}
+Gated RNNs fixed the memory problem and kept a compute problem:
+$\mathbf{H}_t$ needs $\mathbf{H}_{t-1}$, so training is **sequential in
+$t$** while GPUs sit idle. CNNs (ch. 7) compute all positions at once.
+
+Goal: **parallel training, O(1)-state inference**. Two passes at it:
+
+- Strip the GRU until its state update is **linear** → evaluate the whole
+  sequence with a parallel **scan** (minGRU).
+- Rebuild properly from continuous time → **state space models**:
+  principled gates ($\Delta$), stability by construction,
+  recurrence $\equiv$ convolution, HiPPO memory, S4D.
+:::
+
+::: {.slide title="Why recurrence resists parallelism"}
+$$\mathbf{H}_t = \phi(\mathbf{X}_t \mathbf{W}_{xh} + \mathbf{H}_{t-1} \mathbf{W}_{hh} + \mathbf{b})$$
+
+Substitute it into itself: $\mathbf{H}_{t-2}$ is buried under two nested
+$\phi$'s. **Nonlinear compositions don't simplify**: the nonlinearity on
+the *state path* is the exact culprit.
+
+. . .
+
+Everything else is innocent: gates from inputs, nonlinear readouts, depth
+between layers. So: remove $\mathbf{H}_{t-1}$ from inside nonlinearities,
+keep the rest.
+:::
+
+::: {.slide title="minGRU: two cuts"}
+From the GRU: gates and candidate from the **input only** (the reset gate
+then has nothing to reset, so it is deleted):
+
+$$\mathbf{Z}_t = \sigma(\mathbf{X}_t \mathbf{W}_{xz} + \mathbf{b}_z),\qquad \tilde{\mathbf{H}}_t = \tanh(\mathbf{X}_t \mathbf{W}_{xh} + \mathbf{b}_h),$$
+
+$$\mathbf{H}_t = (1 - \mathbf{Z}_t) \odot \mathbf{H}_{t-1} + \mathbf{Z}_t \odot \tilde{\mathbf{H}}_t.$$
+
+. . .
+
+Now **affine in the state**:
+$\mathbf{H}_t = \mathbf{a}_t \odot \mathbf{H}_{t-1} + \mathbf{b}_t$ with
+$\mathbf{a}_t = 1 - \mathbf{Z}_t$, $\mathbf{b}_t = \mathbf{Z}_t \odot \tilde{\mathbf{H}}_t$
+with all coefficients computable for **all $t$ at once**.
+
+- Memory is readable: input from $k$ steps back is scaled by
+  $\prod_j \mathbf{a}_j \in (0,1)$: eigenvalues in plain sight (9.6).
+:::
+
+::: {.slide title="The parallel scan"}
+Represent step $t$ by the affine map $(\mathbf{a}_t, \mathbf{b}_t)$.
+Composition is again affine, and **associative**:
+
+$$(\mathbf{a}_2, \mathbf{b}_2) \circ (\mathbf{a}_1, \mathbf{b}_1) = (\mathbf{a}_1 \odot \mathbf{a}_2,\ \mathbf{a}_2 \odot \mathbf{b}_1 + \mathbf{b}_2).$$
+
+Any associative "running total" parallelizes (Blelloch, 1990):
+
+![Doubling strides 1, 2, 4: after $\log_2 T$ rounds every position holds its prefix.](../img/mdl-modernrnn-scan-tree.svg){width=88%}
+:::
+
+::: {.slide title="Implementation"}
+One round per stride; each round is a batched multiply-add:
+
+@ssm-implementation-1
+
+. . .
+
+@ssm-implementation-2
+:::
+
+::: {.slide title="Trains like a CNN"}
+Scan vs. sequential loop, batch 32, 128 units:
+
+@ssm-implementation-3
+
+. . .
+
+The loop grows linearly in $T$; the scan's few rounds saturate the GPU.
+Inference is unchanged: still one token, one state update at a time.
+:::
+
+::: {.slide title="A minGRU cell"}
+Drop-in replacement for the cells of 10.1, with no time loop; a carried
+state folds into $\mathbf{b}_1$:
+
+@ssm-a-mingru-language-model-1
+:::
+
+::: {.slide title="Language modeling, same recipe as 10.1"}
+Time Machine, 1,024-token BPE, 50k windows of 32, emb 64, hidden 128,
+10 epochs, clip 1:
+
+@ssm-a-mingru-language-model-2
+
+@ssm-a-mingru-language-model-3
+
+@ssm-a-mingru-language-model-4
+:::
+
+::: {.slide title="minGRU result"}
+@ssm-a-mingru-language-model-5
+
+. . .
+
+- A few points behind the GRU (low-to-mid eighties vs. high seventies)
+  at ~1/4 of its recurrent parameters: $2h(d{+}1)$ vs. $3h(d{+}h{+}1)$.
+- Modest claim: nothing essential lost, training became a scan.
+- Price paid: the decay $\mathbf{a}_t$ is decided by the **input alone**
+  (remember that).
+:::
+
+::: {.slide title="State space models"}
+The principled route to the same recurrence: continuous-time linear
+dynamics:
+
+$$\dot{\mathbf{x}}(t) = \mathbf{A}\mathbf{x}(t) + \mathbf{B}u(t), \qquad y(t) = \mathbf{C}\mathbf{x}(t) + Du(t).$$
+
+Why continuous? It parameterizes a **law of motion**, not a table of step
+weights: one extra scalar $\Delta$ (step size) converts $(\mathbf{A},
+\mathbf{B})$ into a recurrence at *any* sampling rate.
+:::
+
+::: {.slide title="ZOH discretization: the step size is a gate"}
+Hold $u$ constant over $\Delta$, integrate exactly:
+
+$$\bar{\mathbf{A}} = \exp(\Delta \mathbf{A}), \qquad \bar{\mathbf{B}} = (\Delta \mathbf{A})^{-1}(\exp(\Delta \mathbf{A}) - \mathbf{I})\, \Delta \mathbf{B}.$$
+
+. . .
+
+- $\Delta \to 0$: $\bar{\mathbf{A}} \to \mathbf{I}$, $\bar{\mathbf{B}} \to 0$. Copy the state, ignore the input.
+- $\Delta$ large: $\bar{\mathbf{A}} \to 0$. Overwrite from the input.
+- A learned $\Delta$ **is an update gate**, not bolted on: it fell out
+  of the calculus. (In 10.4, $\Delta$ becomes input-dependent.)
+
+. . .
+
+Stability **by construction**: store $a_n = -e^{\theta_n}$, then
+$|\bar{a}_n| = e^{\Delta\,\mathrm{Re}(a_n)} < 1$ for every parameter
+value. No clipping, no knife-edge (9.6).
+:::
+
+::: {.slide title="Recurrence is convolution"}
+LTI: the same $\bar{\mathbf{A}}, \bar{\mathbf{B}}, \mathbf{C}$ at every
+step. Unroll:
+
+$$y_t = \sum_k \mathbf{C}\bar{\mathbf{A}}^k \bar{\mathbf{B}}\, u_{t-k}, \qquad \bar{\mathbf{K}} = (\mathbf{C}\bar{\mathbf{B}}, \mathbf{C}\bar{\mathbf{A}}\bar{\mathbf{B}}, \mathbf{C}\bar{\mathbf{A}}^2\bar{\mathbf{B}}, \ldots).$$
+
+![One model, three views: ODE, recurrence, convolution.](../img/mdl-modernrnn-ssm-views.svg){width=100%}
+:::
+
+::: {.slide title="Three views, one answer"}
+@ssm-recurrence-is-convolution
+
+. . .
+
+S4 trains through the conv view with FFTs ($O(T \log T)$); we keep the
+**scan**, because it survives input-dependent dynamics (10.4); the
+kernel view will not.
+:::
+
+::: {.slide title="What should A be? HiPPO"}
+The state is $N$ numbers summarizing all history. Which $N$ lose least?
+**HiPPO**: make $\mathbf{x}(t)$ the coefficients of the optimal
+polynomial approximation of the past; maintaining it online *is* a
+linear ODE with a fixed matrix ($A_{nn} = -(n{+}1)$, $B_n = \sqrt{2n+1}$).
+
+![Reconstructing 1,000 steps of history from the final state alone.](../img/mdl-modernrnn-hippo-reconstruction.svg){width=100%}
+
+. . .
+
+Lineage: **S4** (fast kernels, solved Long Range Arena) → **S4D**
+(diagonal suffices; init $a_n = -(n{+}1)$) → **S5** (parallel scan).
+We implement S4D's parameterization with S5's scan.
+:::
+
+::: {.slide title="The S4D layer"}
+Per channel: $N$-state diagonal SSM; learnable $\log \Delta$ per channel
+(log-uniform init: gates of many speeds); $\mathbf{B} = \mathbf{1}$;
+three lines of ZOH + the scan:
+
+@ssm-s4d-in-practice-1
+:::
+
+::: {.slide title="The S4D block"}
+SSM mixes time, gated MLP mixes channels and restores nonlinearity:
+
+![](../img/mdl-modernrnn-ssm-block.svg){width=58%}
+
+. . .
+
+@ssm-s4d-in-practice-2
+:::
+
+::: {.slide title="Sequential Fashion-MNIST"}
+784 pixels, one at a time; class at the end. Same head, data, epochs,
+clip 1 (the LSTM destabilizes without it; the S4D *can't* explode):
+S4D stack vs. parameter-matched LSTM (~30k params each):
+
+@ssm-sequential-image-classification-2
+
+@ssm-sequential-image-classification-3
+:::
+
+::: {.slide title="Results"}
+@ssm-sequential-image-classification-4
+
+. . .
+
+- S4D: 81-83% in every framework, every rerun. LSTM: 59-80% across
+  reruns, tracking init defaults; plain init (PyTorch) is erratic, and
+  only Keras's two tricks (orthogonal + forget bias 1) reach parity.
+- The $\Delta$-init hands the S4D multi-scale memory **by design**; the
+  LSTM gets it only from initialization folklore.
+- LRA (16k steps) is where this family first beat everything.
+:::
+
+::: {.slide title="Recap"}
+- Linear state path → affine maps → **associative scan**: $O(\log T)$
+  depth training, O(1)-state inference.
+- minGRU ≈ GRU quality on our LM recipe.
+- SSMs: $\Delta$ **is** a gate; eigenvalues inside the unit circle **by
+  construction**; recurrence $\equiv$ convolution $\equiv$ ODE.
+- HiPPO: a fixed-size state *provably* carries a long past.
+- But everything is **LTI**: the kernel is fixed before the model sees
+  the data: content-blind. Fixing that (and keeping the scan) is 10.4.
+:::

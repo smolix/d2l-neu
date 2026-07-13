@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/ssm.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:d801db6a93b0950d0514485144d5941728fff2fb6ab3eea1735aac9d5629f9db",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "ssm-linear-recurrence-and-state-space-models": {
+      "code_fingerprint": "sha256:0f2b43a7434c7ecc9ad5d2b0ed0ca57c0be89a1c20adaea2203c36e05b1f7d50",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-implementation-1": {
+      "code_fingerprint": "sha256:2ddc0c7b9a221f033ef1f3dc7e55bd99bdff9c5157c330226ce892e427bfc60e",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-implementation-2": {
+      "code_fingerprint": "sha256:4d4bac9bd2596db9a8d1a757161bf3389a55f1595f719242e2c5777512c1a5e3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "maximum deviation: 4.77e-07\n"
+        }
+      ]
+    },
+    "ssm-implementation-3": {
+      "code_fingerprint": "sha256:f7be4acd468ea44528717d0dd2be983d8fecdb1aab049992e75745388a86b40f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssm/ssm-implementation-3-1.svg",
+          "bytes": 31168,
+          "sha256": "sha256:35f9af34784e0b2b2cc62d0befac2bbcbce2e113746d607f9fdc2ac19168ae9b"
+        }
+      ]
+    },
+    "ssm-a-mingru-language-model-1": {
+      "code_fingerprint": "sha256:4a73fe6b8d1a2a107bc49cbe842b94681602c571048f19b6c9d078d773c0b222",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-a-mingru-language-model-2": {
+      "code_fingerprint": "sha256:415ed2d0f724c19e37155a5a3706b560efc56e37b81b29e73d90c7c48db5ced1",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-a-mingru-language-model-3": {
+      "code_fingerprint": "sha256:c620f0afbbb821cdb36b6cdfc615d28aa07d7d221de50eca274af2c1481f1a78",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-a-mingru-language-model-4": {
+      "code_fingerprint": "sha256:61f552a369f01a696503801cde3d10dcb7cb0b1dc41f5a7853d4182e282c0abb",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssm/ssm-a-mingru-language-model-4-1.svg",
+          "bytes": 18563,
+          "sha256": "sha256:2cc140cd743e0aabfefd990284e6b1c1abb96eba291b83737b9498b525ff38e2"
+        }
+      ]
+    },
+    "ssm-a-mingru-language-model-5": {
+      "code_fingerprint": "sha256:c6c48626aa4a11996ec3bee35c6f8459b3172a52357207cda0c4c0d72530a732",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "validation perplexity 84.9, 9s wall clock\nthe time traveller, and\nthere I had\nmet of the\nside, and the\nside, and the\nside, and the\n"
+        }
+      ]
+    },
+    "ssm-recurrence-is-convolution": {
+      "code_fingerprint": "sha256:ecb6ab92778d5fea860a15053704f11e6a3d4e429643cfecd810a01a053c5e48",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "scan vs loop: 1.79e-07, conv vs loop: 1.19e-07\n"
+        }
+      ]
+    },
+    "ssm-s4d-in-practice-1": {
+      "code_fingerprint": "sha256:c490dad14853705bfc1efd43ecc866712802bd1a29edf3143fa9f861e97739a9",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-s4d-in-practice-2": {
+      "code_fingerprint": "sha256:0f8077ff5ebc2e0adc7e2ddf156f73913375cf407ad700683fa713cd74c445b9",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-sequential-image-classification-1": {
+      "code_fingerprint": "sha256:ae27e57908e2241dc2cac75a364a9711417410f2a9b754fc1f77a512c0a2c399",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-sequential-image-classification-2": {
+      "code_fingerprint": "sha256:e8d9098727fd0cf29063aab0fa6831ca2080b09af74e88cb893b162c7b525ccc",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssm/ssm-sequential-image-classification-2-1.svg",
+          "bytes": 22076,
+          "sha256": "sha256:568e945702a6f2fca067f11daabd6c1c638a6e8027b6a9140e7f0cd853fb82a4"
+        }
+      ]
+    },
+    "ssm-sequential-image-classification-3": {
+      "code_fingerprint": "sha256:5b7eb255e566cb022fc19f44ad24b643201723316ebd6c9f9c44b29e94662ceb",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssm/ssm-sequential-image-classification-3-1.svg",
+          "bytes": 21517,
+          "sha256": "sha256:e9af3f5ef80bdea13755d9065cc55c427eb924e27bbb5d06ec87d537f9b475a1"
+        }
+      ]
+    },
+    "ssm-sequential-image-classification-4": {
+      "code_fingerprint": "sha256:570ef2a25c96bec25216072b053a25ef26bb1913531a57697692524ce944fdb3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.812     26.8\n  LSTM   29,930    0.595      3.9\n"
+        }
+      ]
+    }
+  }
+}

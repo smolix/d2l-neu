@@ -1060,6 +1060,7 @@ CHAPTER_NUMBERING = {
     'chapter_reinforcement-learning/mdp.md': [17, 1],
     'chapter_reinforcement-learning/value-iter.md': [17, 2],
     'chapter_reinforcement-learning/qlearning.md': [17, 3],
+    'chapter_reinforcement-learning/policy-gradient.md': [17, 4],
     'chapter_gaussian-processes/index.md': [18],
     'chapter_gaussian-processes/gp-intro.md': [18, 1],
     'chapter_gaussian-processes/gp-priors.md': [18, 2],

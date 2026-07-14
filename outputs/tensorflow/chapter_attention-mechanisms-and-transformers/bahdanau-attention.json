@@ -29,44 +29,56 @@
       "outputs": []
     },
     "bahdanau-attention-training-1": {
-      "code_fingerprint": "sha256:116d7bf40bf58b8e2f4f8a7e2a8bdd5632e4102ed32d8e349bdd3418158e7024",
-      "kind": "asset",
+      "code_fingerprint": "sha256:5f165d43483aca76dd264fee5fe356d1da999d4fb606a2b430ea5b775d314441",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/smola/d2l-neu/.venv-tensorflow/lib/python3.12/site-packages/keras/src/layers/layer.py:1566: UserWarning: Layer 'seq2_seq' looks like it has unbuilt state, but Keras is not able to trace the layer `call()` in order to build it automatically. Possible causes:\n1. The `call()` method of your layer may be crashing. Try to `__call__()` the layer eagerly on some test input first to see if it works. E.g. `x = np.random.random((3, 4)); y = layer(x)`\n2. If the `call()` method is correct, then you may need to implement the `def build(self, input_shape)` method on your layer. It should create all variables used by the layer (e.g. by calling `layer.build()` on all its children layers).\nException encountered: ''EncoderDecoder.call() got an unexpected keyword argument 'args'''\n  warnings.warn(\n/home/smola/d2l-neu/.venv-tensorflow/lib/python3.12/site-packages/keras/src/layers/layer.py:427: UserWarning: `build()` was called on layer 'seq2_seq', however the layer does not have a `build()` method implemented and it looks like it has unbuilt state. This will cause the layer to be marked as built, despite not being actually built, which may cause failures down the line. Make sure to implement a proper `build()` method.\n  warnings.warn(\n/home/smola/d2l-neu/.venv-tensorflow/lib/python3.12/site-packages/keras/src/layers/layer.py:1566: UserWarning: Layer 'seq2_seq_encoder_1' looks like it has unbuilt state, but Keras is not able to trace the layer `call()` in order to build it automatically. Possible causes:\n1. The `call()` method of your layer may be crashing. Try to `__call__()` the layer eagerly on some test input first to see if it works. E.g. `x = np.random.random((3, 4)); y = layer(x)`\n2. If the `call()` method is correct, then you may need to implement the `def build(self, input_shape)` method on your layer. It should create all variables used by the layer (e.g. by calling `layer.build()` on all its children layers).\nException encountered: ''Seq2SeqEncoder.call() got an unexpected keyword argument 'args'''\n  warnings.warn(\n/home/smola/d2l-neu/.venv-tensorflow/lib/python3.12/site-packages/keras/src/layers/layer.py:427: UserWarning: `build()` was called on layer 'seq2_seq_encoder_1', however the layer does not have a `build()` method implemented and it looks like it has unbuilt state. This will cause the layer to be marked as built, despite not being actually built, which may cause failures down the line. Make sure to implement a proper `build()` method.\n  warnings.warn(\n"
+        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
-          "bytes": 22188,
-          "sha256": "sha256:9cb8db22dcf4c1ad2e03dfd25727392303a49bb33a6c6fed1697ac3807e68a16"
+          "bytes": 33744,
+          "sha256": "sha256:058356813b5b3d5dfa0d59277d3e9e402a2304e0664e53357e0d72174b55213d"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "bahdanau-attention/bahdanau-attention-training-1-2.svg",
+          "bytes": 33744,
+          "sha256": "sha256:217201f81ed762d2047242ae4fbd4c7362632cfc3ea2b8b354f68afde585203a"
         }
       ]
     },
     "bahdanau-attention-training-2": {
-      "code_fingerprint": "sha256:a41a9009c56980c1580095288c0737bab4f82a32227dbaa070bdd7fbaab34766",
+      "code_fingerprint": "sha256:690c40ff09781db69e5b7a3821a3248cba94580f615933336890fb3ebb8cc8cf",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => 'je suis en prie .', chrF 0.110\ni'm calm . => 'je suis en prie .', chrF 0.382\ni'm home . => 'je suis sérieux .', chrF 0.324\n"
+          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis chez moi .', chrF 1.000\n"
         }
       ]
     },
     "bahdanau-attention-training-3": {
-      "code_fingerprint": "sha256:6d64d365d3ea816120a6cc1eb1145706bca4971817e6fb4ebad00d6f83fc959b",
+      "code_fingerprint": "sha256:fa5efb9dae565c708af8de3c3798bd9e1f33615796b72b01a257cf1765cc3a4c",
       "kind": "text",
       "outputs": []
     },
     "bahdanau-attention-training-4": {
-      "code_fingerprint": "sha256:0869def8777bc4e6a2f3fb623b6443348e77b2f1b58497453a7ca4c2fe8f63f1",
+      "code_fingerprint": "sha256:df2bb75358d80bfea8b1d60693c997670caf2cf10e3ba8c1fb7aca970d068fca",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
-          "bytes": 17734,
-          "sha256": "sha256:b3d4cdaa9d9942dbd70ff5d9839558dfb2e66c7c9ffd9a3cf4162afce720db72"
+          "bytes": 18977,
+          "sha256": "sha256:b85f12a8b8f24c79ce3c572dc48bd820fe4d4dd20e263e25bf7bca46124c3812"
         }
       ]
     }

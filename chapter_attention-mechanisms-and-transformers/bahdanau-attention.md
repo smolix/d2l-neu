@@ -416,7 +416,7 @@ decoder = Seq2SeqAttentionDecoder(
     len(data.tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
 model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
                     lr=0.005)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
+trainer = d2l.Trainer(max_epochs=200, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
@@ -431,7 +431,7 @@ with d2l.try_gpu():
         len(data.tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
     model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
                         lr=0.005)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1)
+trainer = d2l.Trainer(max_epochs=200, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
@@ -445,7 +445,7 @@ decoder = Seq2SeqAttentionDecoder(
     len(data.tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
 model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
                     lr=0.005)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
+trainer = d2l.Trainer(max_epochs=200, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
@@ -459,7 +459,7 @@ decoder = Seq2SeqAttentionDecoder(
     len(data.tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
 model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
                     lr=0.005)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
+trainer = d2l.Trainer(max_epochs=200, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
@@ -686,9 +686,10 @@ src_steps):
 :::
 
 ::: {.slide title="Training"}
-Same hyperparameters as plain seq2seq (embed/hidden 256,
-2 layers, dropout 0.2, Adam 0.005, 30 epochs). Gives the
-model attention; everything else stays the same:
+Same architecture recipe as plain seq2seq (embed/hidden 256,
+2 layers, dropout 0.2, Adam 0.005) — we just add attention.
+We train for 200 epochs, long enough for the additive
+attention to settle into a sharp source--target alignment:
 
 @bahdanau-attention-training-1
 :::

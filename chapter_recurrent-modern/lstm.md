@@ -617,17 +617,25 @@ forget-gate biases set to 1) where our teaching code drew every weight
 from the same small Gaussian. At a fixed training budget, how you start
 matters.
 
+Reading the perplexity off the scoreboard, we let the model continue
+*the time traveller*. As :numref:`sec_rnn-scratch` explained, greedy
+(argmax) decoding of a model this lightly trained soon drifts into a
+repetition loop, so we sample at a low temperature: the continuation stays
+close to the model's preferences yet keeps moving.
+
 ```{.python .input #lstm-concise-implementation-4}
 %%tab pytorch, mxnet
 ppls['LSTM'] = val_ppl(model)
-pred = model.predict('the time traveller', 30, data.tokenizer, d2l.try_gpu())
+pred = model.predict('the time traveller', 30, data.tokenizer, d2l.try_gpu(),
+                     temperature=0.5)
 print(f"perplexity {ppls['LSTM']:.1f}, {pred!r}")
 ```
 
 ```{.python .input #lstm-concise-implementation-4}
 %%tab tensorflow, jax
 ppls['LSTM'] = val_ppl(model)
-pred = model.predict('the time traveller', 30, data.tokenizer)
+pred = model.predict('the time traveller', 30, data.tokenizer,
+                     temperature=0.5)
 print(f"perplexity {ppls['LSTM']:.1f}, {pred!r}")
 ```
 

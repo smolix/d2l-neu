@@ -37,18 +37,18 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-the-pokemon-dataset-3-1.svg",
-          "bytes": 365616,
-          "sha256": "sha256:8f25ea6ee84cfe1953ce235038048f683b21ed6a1564e855391a430e026628f2"
+          "bytes": 369628,
+          "sha256": "sha256:81d0a1b20a5951b4a7f5ce58a623587ba055f008b2129e61b6e742998b489122"
         }
       ]
     },
     "dcgan-the-generator-1": {
-      "code_fingerprint": "sha256:469369c639298233d73155d1382f0550ad072c03fee5ab6d25caef398a59f8cc",
+      "code_fingerprint": "sha256:f83f6b2b7c605b1e4ef0cdb7bf8f05eb51065780f524536067403aaddcc48450",
       "kind": "text",
       "outputs": []
     },
     "dcgan-the-generator-2": {
-      "code_fingerprint": "sha256:d79d223924e96d26c13becce9fddac4de9b32a67e0160fd1c52b2911de17b30f",
+      "code_fingerprint": "sha256:17299e9ef0d873453f1984f94a40a4682803cb52042af34aec7b8f85cf160238",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +58,7 @@
       ]
     },
     "dcgan-the-generator-3": {
-      "code_fingerprint": "sha256:646c1db5b8317b530a1911e377aec6b27082536949ea4b99b90fbf966b839674",
+      "code_fingerprint": "sha256:34bc47d148edb586beae30ba37aa3db7615dadbfe4758a9a43aaa8cbaf71e7dc",
       "kind": "text",
       "outputs": [
         {
@@ -68,12 +68,12 @@
       ]
     },
     "dcgan-the-generator-4": {
-      "code_fingerprint": "sha256:be782094e5778a9307fce0e7702a1f786caa05869ca991b08391280256e84d2b",
+      "code_fingerprint": "sha256:7ad7e95e52149ef59f1005cf90d487805e4dba6513bd32911fc0e02242b3c883",
       "kind": "text",
       "outputs": []
     },
     "dcgan-the-generator-5": {
-      "code_fingerprint": "sha256:95125806fb4cc0d4b3c8f7ba64e4684ed1a7f8e68813aebea13893459c6006c8",
+      "code_fingerprint": "sha256:c81bbf945a41d2227aee83de82819da35563aa18fa8bd1e88a8b75b92aa84b77",
       "kind": "text",
       "outputs": [
         {
@@ -83,7 +83,7 @@
       ]
     },
     "dcgan-discriminator-1": {
-      "code_fingerprint": "sha256:72f9d508ab8f66d89fa8498a23c33c17b88d46faff27912a7b1f6300e7d029a3",
+      "code_fingerprint": "sha256:fea66d2d3792ebcf707fa3cb47b5b06d72e7da0d62cf59795075cc861f9acb31",
       "kind": "asset",
       "outputs": [
         {
@@ -91,17 +91,17 @@
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-discriminator-1-1.svg",
           "bytes": 18824,
-          "sha256": "sha256:c5ca5341b8fe6cb585b3dea4efc2121e83d7e60367979b5928406cfaf4833075"
+          "sha256": "sha256:da53cfa710795b13fad1a4fde22dc1398dbfd474931fba51192095b2778a46c7"
         }
       ]
     },
     "dcgan-discriminator-2": {
-      "code_fingerprint": "sha256:c392ba2e9da25917b695deb1848731d0b7429e8680966ab1a4a2da260621d599",
+      "code_fingerprint": "sha256:b26bebb974f007f025a208d7d9b23fca3132c744e342a35bd93a273a751368a3",
       "kind": "text",
       "outputs": []
     },
     "dcgan-discriminator-3": {
-      "code_fingerprint": "sha256:08917a1cfd47e98c85d52a7a635ac8d897e020a475bd13da037a98ad4a3a0998",
+      "code_fingerprint": "sha256:48cc61627b5325e779cb82c2fa8744c7f3f3175bafff02342da60c1052bd3862",
       "kind": "text",
       "outputs": [
         {
@@ -111,12 +111,12 @@
       ]
     },
     "dcgan-discriminator-4": {
-      "code_fingerprint": "sha256:41614a9995a6dde170c3379b7e30c2c355ca5783a607fe8c1f150d65e92fa290",
+      "code_fingerprint": "sha256:9430dd9c71e6fac3817988ed1863d9d5ada341ac2ec15a48ebf5af2d026ef1e0",
       "kind": "text",
       "outputs": []
     },
     "dcgan-discriminator-5": {
-      "code_fingerprint": "sha256:5eac59f80eba67e6d77a18d0dd0c1ba2228df958e8b87f6db0bcae8bae10277f",
+      "code_fingerprint": "sha256:5d8b785e4a20bb598030664a7d26fc2f60249c40d989ea3548e290f28a878699",
       "kind": "text",
       "outputs": [
         {
@@ -126,25 +126,25 @@
       ]
     },
     "dcgan-training-1": {
-      "code_fingerprint": "sha256:7449c1267fdf76163938479acff2fef1a9d907bfdf754d44c9f794b7637da03f",
+      "code_fingerprint": "sha256:2fa0407165a53bd4dbf03e80161c393b6506c09be25bddee8fed7c279c6b1d2e",
       "kind": "text",
       "outputs": []
     },
     "dcgan-training-2": {
-      "code_fingerprint": "sha256:6089e2f1b8fd52b65c7592ef65e37b5b8ccc7017d5823d09d58e829ae646caec",
+      "code_fingerprint": "sha256:b1ffbe94daa06e7fd115a98536008d72e7eca4ec5519e998c3fb6163376c31f7",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss_D 0.579, loss_G 1.016, 12654.4 examples/sec on /GPU:0\n"
+          "text": "loss_D 0.166, loss_G 3.138, 11832.7 examples/sec on /GPU:0\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-training-2-1.svg",
-          "bytes": 220924,
-          "sha256": "sha256:f501fe0ffe462d49c4351dd594fb5696aac74ca273edd675e749b15375347d73"
+          "bytes": 214213,
+          "sha256": "sha256:a3b7482644cb5b4cf903ef92bfe735cef60ddd53d88df7a7cfdeea1b5a3ff10c"
         }
       ]
     }

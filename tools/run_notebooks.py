@@ -53,11 +53,22 @@ _print_lock = threading.Lock()
 # Stops early if score >= good_enough_score.
 # ---------------------------------------------------------------------------
 
+# 2026-07-14: root-caused and fixed the notebooks that previously needed
+# multiple attempts, so they now converge reliably on a single run and were
+# removed from this table (the retries were masking real, fixable defects):
+#   - lstm            : the failure was greedy-decode (temperature=0) repetition,
+#                       not under-convergence; fixed with temperature=0.5 in the
+#                       showcase predict cells. Verified 8/8 real runs + 75/75 stress.
+#   - bahdanau-attn   : TF/MXNet were shipping *broken* (best-of-5 never reached
+#                       2.5); pure under-training. max_epochs 30->200 -> all four 3.000.
+#   - transformer     : cold-start instability + rare-target over-regularization;
+#                       fixed with LR warmup + dropout 0.2->0.1 + max_epochs 30->40.
+#                       0/39 unseeded pytorch failures; all four 3.000 on attempt 1.
+# dcgan is kept at a light best-of-2: a systematic TF BatchNorm bug (the real
+# failure the retry could never fix) is now fixed at the source, leaving only
+# TF's thin convergence margin (min ~3.03) worth a single cheap second attempt.
 BEST_OF_N = {
-    "chapter_recurrent-modern/lstm.ipynb":                                    (5, 2.0),
-    "chapter_attention-mechanisms-and-transformers/bahdanau-attention.ipynb":  (5, 2.5),
-    "chapter_attention-mechanisms-and-transformers/transformer.ipynb":         (5, 2.5),
-    "chapter_generative-adversarial-networks/dcgan.ipynb":                    (3, 3.0),
+    "chapter_generative-adversarial-networks/dcgan.ipynb":                    (2, 3.0),
 }
 
 

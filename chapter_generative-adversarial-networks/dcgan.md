@@ -238,7 +238,11 @@ class G_block(tf.keras.layers.Layer):
         self.activation = tf.keras.layers.ReLU()
 
     def call(self, X):
-        return self.activation(self.batch_norm(self.conv2d_trans(X)))
+        # Force batch-statistic normalization (`training=True`); otherwise a
+        # bare `net_G(X)` call inside the training step runs BatchNorm in
+        # inference mode (moving stats), unlike the PyTorch/MXNet/JAX tabs.
+        return self.activation(
+            self.batch_norm(self.conv2d_trans(X), training=True))
 ```
 
 ```{.python .input #dcgan-the-generator-1}
@@ -513,7 +517,11 @@ class D_block(tf.keras.layers.Layer):
         self.activation = tf.keras.layers.LeakyReLU(alpha)
 
     def call(self, X):
-        return self.activation(self.batch_norm(self.conv2d(X)))
+        # Force batch-statistic normalization (`training=True`); a bare
+        # `net_D(X)` call inside the training step would otherwise run
+        # BatchNorm in inference mode, unlike the other framework tabs.
+        return self.activation(
+            self.batch_norm(self.conv2d(X), training=True))
 ```
 
 ```{.python .input #dcgan-discriminator-2}

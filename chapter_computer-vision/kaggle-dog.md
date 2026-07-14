@@ -480,19 +480,31 @@ def get_net():
 
 ```{.python .input #kaggle-dog-fine-tuning-a-pretrained-model-1}
 #@tab tensorflow
+# Frozen ImageNet ResNet-50 feature extractor plus a small trainable 120-way
+# head. We keep them as SEPARATE models (not one Keras `Model`) so the frozen
+# backbone can run OUTSIDE the GradientTape and in micro-batches: a batch-32
+# ResNet-50 forward at 224x224 otherwise reserves ~8.6 GiB (its activations are
+# held for the head's backprop), whereas the JAX/PyTorch tabs never retain the
+# backbone activations. Micro-batching caps the peak activation working set.
+BACKBONE_MICROBATCH = 16
+
 def get_net():
-    # Load pretrained ResNet50, freeze backbone, add custom head. Keep the
-    # ImageNet logits as frozen features to match the PyTorch tab.
     backbone = keras.applications.ResNet50(
         weights='imagenet', include_top=True, classifier_activation=None,
         input_shape=(224, 224, 3))
     backbone.trainable = False
-    inputs = keras.Input(shape=(224, 224, 3))
-    x = backbone(inputs, training=False)
-    x = keras.layers.Dense(256, activation='relu')(x)
-    outputs = keras.layers.Dense(120)(x)
-    finetune_net = keras.Model(inputs, outputs)
-    return finetune_net
+    head = keras.Sequential([keras.layers.Input(shape=(1000,)),
+                             keras.layers.Dense(256, activation='relu'),
+                             keras.layers.Dense(120)])
+    return backbone, head
+
+def backbone_features(backbone, X):
+    """Run the frozen backbone in micro-batches. The concatenated result is
+    identical to a single forward pass, but only one micro-batch's activations
+    are live at a time, so the peak footprint stays small."""
+    outs = [backbone(X[i:i + BACKBONE_MICROBATCH], training=False)
+            for i in range(0, X.shape[0], BACKBONE_MICROBATCH)]
+    return tf.concat(outs, axis=0)
 ```
 
 Before calculating the loss,
@@ -571,10 +583,10 @@ def evaluate_loss_from_feats(feats, labels, output_net, batch_size):
 loss = keras.losses.SparseCategoricalCrossentropy(
     from_logits=True, reduction='none')
 
-def evaluate_loss(data_iter, net):
+def evaluate_loss(data_iter, backbone, head):
     l_sum, n = 0.0, 0
     for features, labels in data_iter:
-        logits = net(features, training=False)
+        logits = head(backbone_features(backbone, features), training=False)
         l = loss(labels, logits)
         l_sum += float(tf.reduce_sum(l))
         n += len(labels)
@@ -758,9 +770,10 @@ def train(backbone, output_net, train_iter, valid_iter,
 
 ```{.python .input #kaggle-dog-defining-the-training-function}
 #@tab tensorflow
-def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
-          lr_decay):
-    # Only train the custom head; backbone is already frozen in get_net()
+def train(backbone, head, train_iter, valid_iter, num_epochs, lr, wd,
+          lr_period, lr_decay):
+    # Only train the custom head; the backbone is frozen (see get_net()) and is
+    # run outside the tape.
     # Keras's `ExponentialDecay.decay_steps` counts *gradient-update
     # steps*, not epochs — unlike PyTorch's `StepLR(step_size=lr_period)`,
     # which the PT tab steps once per epoch. Scale by `num_batches` so the
@@ -783,11 +796,14 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
         metric = d2l.Accumulator(2)
         for i, (features, labels) in enumerate(train_iter):
             timer.start()
+            # Frozen backbone forward runs outside the tape (its activations are
+            # freed immediately); only the small head is taped for backprop.
+            feats = backbone_features(backbone, features)
             with tf.GradientTape() as tape:
-                logits = net(features, training=True)
+                logits = head(feats, training=True)
                 l = loss(labels, logits)
-            grads = tape.gradient(l, net.trainable_variables)
-            optimizer.apply_gradients(zip(grads, net.trainable_variables))
+            grads = tape.gradient(l, head.trainable_variables)
+            optimizer.apply_gradients(zip(grads, head.trainable_variables))
             metric.add(float(tf.reduce_sum(l)), len(labels))
             timer.stop()
             if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
@@ -795,13 +811,13 @@ def train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
                              (metric[0] / metric[1], None))
         measures = f'train loss {metric[0] / metric[1]:.3f}'
         if valid_iter is not None:
-            valid_loss = evaluate_loss(valid_iter, net)
+            valid_loss = evaluate_loss(valid_iter, backbone, head)
             animator.add(epoch + 1, (None, valid_loss))
     if valid_iter is not None:
         measures += f', valid loss {valid_loss:.3f}'
     print(measures + f'\n{metric[1] * num_epochs / timer.sum():.1f}'
           f' examples/sec')
-    return net
+    return head
 ```
 
 ## Training and Validating the Model
@@ -840,9 +856,9 @@ output_net = train(backbone, output_net, train_iter, valid_iter, num_epochs,
 #@tab tensorflow
 num_epochs, lr, wd = 10, 1e-4, 1e-4
 lr_period, lr_decay = 2, 0.9
-net = get_net()
-net = train(net, train_iter, valid_iter, num_epochs, lr, wd, lr_period,
-            lr_decay)
+backbone, head = get_net()
+head = train(backbone, head, train_iter, valid_iter, num_epochs, lr, wd,
+             lr_period, lr_decay)
 ```
 
 ## Classifying the Testing Set and Submitting Results on Kaggle
@@ -919,12 +935,12 @@ with open('submission.csv', 'w') as f:
 
 ```{.python .input #kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle}
 #@tab tensorflow
-net = get_net()
-net = train(net, train_valid_iter, None, num_epochs, lr, wd, lr_period,
-            lr_decay)
+backbone, head = get_net()
+head = train(backbone, head, train_valid_iter, None, num_epochs, lr, wd,
+             lr_period, lr_decay)
 preds = []
 for data, label in test_iter:
-    logits = net(data, training=False)
+    logits = head(backbone_features(backbone, data), training=False)
     output = tf.nn.softmax(logits, axis=-1)
     preds.extend(output.numpy())
 # Get class names from the train_valid dataset directory

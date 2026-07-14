@@ -9,17 +9,17 @@
   },
   "cells": {
     "ssm-linear-recurrence-and-state-space-models": {
-      "code_fingerprint": "sha256:2cb4f97eec1a2e4ac583f799b1fb1357200a1a802590680aa6450a763fbffc7c",
+      "code_fingerprint": "sha256:099b52a105683895d2974a6d973ff39da2f94f7fc4a870b54e41dd401cbcc782",
       "kind": "text",
       "outputs": []
     },
     "ssm-implementation-1": {
-      "code_fingerprint": "sha256:9697da05c9ea510c344f47ede89606ba57f17bddc0ca5e8ef70b1b7f4df8158f",
+      "code_fingerprint": "sha256:4c608aea35a65278cb61829f25a371548c657ebd94e2e0f67ea30a085fb0a4a2",
       "kind": "text",
       "outputs": []
     },
     "ssm-implementation-2": {
-      "code_fingerprint": "sha256:ab96181b6fa020993a2b3334cdb9a7d587cf832a55fa681e027d12cab223cf43",
+      "code_fingerprint": "sha256:3241e9a7c9ea57edcae3cc534dca1a60c8e21f229d3f537b5a2be533934f16cd",
       "kind": "text",
       "outputs": [
         {
@@ -30,117 +30,117 @@
       ]
     },
     "ssm-implementation-3": {
-      "code_fingerprint": "sha256:ddde1ae2708d06d015d57d8c7b5e992c19f67047bc6ce125ddc329344951dcc6",
+      "code_fingerprint": "sha256:28e8c05810edece808e91430435e4a80342e676d5ef7679408719b906295a17d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 30575,
-          "sha256": "sha256:bdb65124cc1669415e2eef23cb30b83abf6b2d7f205eb9ef348261186a6546b4"
+          "bytes": 35492,
+          "sha256": "sha256:c4a2addefd73d0353c0bbe2c46553f97f8579396100a702564c9b91970805785"
         }
       ]
     },
     "ssm-a-mingru-language-model-1": {
-      "code_fingerprint": "sha256:4bda87842c8c4e7dcd2e36f3173cf934e983b2e5cf8c8ff058d061ed53a1f2eb",
+      "code_fingerprint": "sha256:709900c99f0ccce59286dadc6e04b1ede5836f13d6db1c21ad5d01a8973f50ec",
       "kind": "text",
       "outputs": []
     },
     "ssm-a-mingru-language-model-2": {
-      "code_fingerprint": "sha256:b9cf973bd761945df8939e04f0442702adc204d32aadb1f403a9bc736d634d93",
+      "code_fingerprint": "sha256:17824a6dacd51a8879335b6e053842afe0ad9c459440c729fa629b12a7b2be95",
       "kind": "text",
       "outputs": []
     },
     "ssm-a-mingru-language-model-3": {
-      "code_fingerprint": "sha256:2f6baa41dacb707b4d147ec1bb9f990a9927e936ee7a4a1eb0881911a4300cef",
+      "code_fingerprint": "sha256:bcbdded9ffe18ca44d505d98789a931b7c02d18423c52300daea9187342e834d",
       "kind": "text",
       "outputs": []
     },
     "ssm-a-mingru-language-model-4": {
-      "code_fingerprint": "sha256:189cd5193ad37a62c835a8b52a7a27e5a73db4403fad4b3ff4572f85a6e7938b",
+      "code_fingerprint": "sha256:df3867c0731409ecb0a878e29b5da8c7ce7538edaafc140d3a840e9dfe3f6d7d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-a-mingru-language-model-4-1.svg",
-          "bytes": 18749,
-          "sha256": "sha256:718c622c4b088af9306fe0580f3bc3ad1a3c7762b64dd2390b44fe8b9ca2023e"
+          "bytes": 18754,
+          "sha256": "sha256:ede28de4e23258f7a5c42614af1a24db0e4cb82765f39bbad78a3bda6b41e7b1"
         }
       ]
     },
     "ssm-a-mingru-language-model-5": {
-      "code_fingerprint": "sha256:d8bcf5874000e47c73314e87b474f59cfef59c2636fdf895e05800a62385227a",
+      "code_fingerprint": "sha256:b57e2d68c302e6c0bfe5f58a41d920363ac89da141cb165713fc946e3d2e81c8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 82.1, 32s wall clock\nthe time traveller, and the Time Traveller.\n\n'I had come at the Time Traveller.\n\n'I had come at the Time Traveller.\n\n\n"
+          "text": "validation perplexity 82.5, 38s wall clock\nthe time traveller.\n\n'I had\ndising to the\nsharached the\nsharached the\nshar\n"
         }
       ]
     },
     "ssm-recurrence-is-convolution": {
-      "code_fingerprint": "sha256:ad08f1665f160686aa04a6fb297bd36ee637743efd85f034e9e4a32befce8c94",
+      "code_fingerprint": "sha256:9f65a986c64fe6a6b8036b7ca5fa3b7878b0d871d9cfdc96c20f84fb8e455f1e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scan vs loop: 5.96e-08, conv vs loop: 4.47e-08\n"
+          "text": "scan vs loop: 1.94e-07, conv vs loop: 1.34e-07\n"
         }
       ]
     },
     "ssm-s4d-in-practice-1": {
-      "code_fingerprint": "sha256:d81776e5621aa20f226c4af861c82f01cfd4c1cc672a7bdaed3566f9fa1b3538",
+      "code_fingerprint": "sha256:1e33fd6bd210f5d82618d419017c6920cd810fb3bb10666aaaf9c9d09d6004bf",
       "kind": "text",
       "outputs": []
     },
     "ssm-s4d-in-practice-2": {
-      "code_fingerprint": "sha256:5ecd435e51314af52160270d809bdac07d7ba6f2232267c7f6f5f2233699050c",
+      "code_fingerprint": "sha256:2d588259ac7e0510935e8790a5a9dcb5c385647dcad3c0043d36d79279ee4021",
       "kind": "text",
       "outputs": []
     },
     "ssm-sequential-image-classification-1": {
-      "code_fingerprint": "sha256:d7f15e5c3b96cd96123f645c2c029797c43f22a8fec07449b37870b4fa41974a",
+      "code_fingerprint": "sha256:490216276773e456243a66bc7889df0162b577ef1b4f105296311e7becb10b33",
       "kind": "text",
       "outputs": []
     },
     "ssm-sequential-image-classification-2": {
-      "code_fingerprint": "sha256:af7c3d06b1fa9db9afe27fc0b87aa670d4073ec206b5cab68d57007f29ff5e5c",
+      "code_fingerprint": "sha256:796abe5c18beadc3bc7cc29a8bc698dad6290dbb10954bd1fb15c0d74381595b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-2-1.svg",
-          "bytes": 20452,
-          "sha256": "sha256:3c7530347725e44f3f2e85b0a330831950d7defdbe771464851343d6f8087072"
+          "bytes": 20968,
+          "sha256": "sha256:ae08620f6cb3eaf61b49ec37b638073755ab5989ece783f27ae718094bd7f01e"
         }
       ]
     },
     "ssm-sequential-image-classification-3": {
-      "code_fingerprint": "sha256:a4262ea4e4464c3443fc9f0b0671143e08997a8deb724bd489989c43fa8f899b",
+      "code_fingerprint": "sha256:746ade7de4a09c5fa8f79cce4ccbf2ce65a28d6f9e58e49726a7bf979117362b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-3-1.svg",
-          "bytes": 21004,
-          "sha256": "sha256:d1d1069ee46c4291303fe14d9524ece2d0f2dc41da7b0964e555dc81083de7ec"
+          "bytes": 20642,
+          "sha256": "sha256:a700087ebdf292b0099380f41ceb5bc363e9a69975351aecc2c683d1c4298f27"
         }
       ]
     },
     "ssm-sequential-image-classification-4": {
-      "code_fingerprint": "sha256:c3dd6af21fea297a438c7c6afc293fb7e063ff6a6a3854f9a7b315228dab3163",
+      "code_fingerprint": "sha256:2aae0afd610aad07924f137fd5af937016cb6ce32cc6e6c81e3d829a582d7d6b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.829     10.0\n  LSTM   29,674    0.827     18.1\n"
+          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.835     17.9\n  LSTM   29,674    0.617     21.8\n"
         }
       ]
     }

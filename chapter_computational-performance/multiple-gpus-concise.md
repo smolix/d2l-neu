@@ -457,12 +457,12 @@ train(num_gpus=1, batch_size=256, lr=0.1)
 
 ```{.python .input #multiple-gpus-concise-training-2}
 #@tab pytorch
-train(net, num_gpus=1, batch_size=512, lr=0.2)
+train(net, num_gpus=1, batch_size=192, lr=0.1)
 ```
 
 ```{.python .input #multiple-gpus-concise-training-2}
 #@tab jax
-train(num_devices=1, batch_size=256, lr=0.1)
+train(num_devices=1, batch_size=128, lr=0.05)
 ```
 
 ```{.python .input #multiple-gpus-concise-training-2}
@@ -484,12 +484,12 @@ train(num_gpus=2, batch_size=512, lr=0.2)
 
 ```{.python .input #multiple-gpus-concise-training-3}
 #@tab pytorch
-train(net, num_gpus=2, batch_size=1024, lr=0.4)
+train(net, num_gpus=2, batch_size=384, lr=0.2)
 ```
 
 ```{.python .input #multiple-gpus-concise-training-3}
 #@tab jax
-train(num_devices=2, batch_size=512, lr=0.2)
+train(num_devices=2, batch_size=256, lr=0.1)
 ```
 
 ```{.python .input #multiple-gpus-concise-training-3}

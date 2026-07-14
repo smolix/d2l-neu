@@ -49,6 +49,13 @@ warnings.filterwarnings('ignore', message='.*dtype.*align.*',
 ```{.python .input #image-augmentation}
 #@tab jax
 %matplotlib inline
+import os
+# Disable XLA's convolution autotuning. For this ResNet-18 / batch-256 training
+# step the autotuner selects algorithms whose scratch reserves ~8.1 GiB of GPU
+# memory; the default (non-tuned) algorithm computes exactly the same result
+# with far less workspace (~3 GiB true footprint). Set before JAX starts XLA.
+os.environ['XLA_FLAGS'] = (os.environ.get('XLA_FLAGS', '') +
+                           ' --xla_gpu_autotune_level=0').strip()
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
@@ -62,6 +69,16 @@ import tensorflow_datasets as tfds
 ```{.python .input #image-augmentation}
 #@tab tensorflow
 %matplotlib inline
+import os
+# cuDNN's convolution autotuner allocates large transient scratch buffers when
+# the input's batch dimension is dynamic -- here the tf.data loader yields a
+# variable-size final batch -- spiking the reserved footprint to ~8.6 GiB for
+# this ResNet-18 / batch-256 training step. Disabling autotuning falls back to
+# cuDNN's default low-memory algorithm (same result), and we cap the workspace
+# as a backstop; the true footprint drops to ~4.5 GiB. Set before TF starts
+# cuDNN.
+os.environ['TF_CUDNN_USE_AUTOTUNE'] = '0'
+os.environ['TF_CUDNN_WORKSPACE_LIMIT_IN_MB'] = '2048'
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import keras

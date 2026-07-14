@@ -86,13 +86,24 @@ import os
 %matplotlib inline
 import os
 from d2l import jax as d2l
-from d2l.nnx_resnet import ResNet50
+from d2l.nnx_resnet import ResNet50, Bottleneck
 from flax import nnx
 import jax
 from jax import numpy as jnp
 import optax
 import numpy as np
 import tensorflow as tf  # only used for tf.data input pipeline
+
+# Activation (gradient) checkpointing. Fine-tuning ResNet-50 at batch size 128
+# would otherwise hold the whole forward graph's activations live for the
+# backward pass (~23 GB). Wrapping each residual block (`Bottleneck`) in
+# `nnx.remat` recomputes that block's activations during backprop instead of
+# storing them, cutting the peak to ~6 GB. `nnx.remat` propagates state
+# correctly, so gradients and batch-norm running statistics are identical to
+# the un-checkpointed model.
+if not getattr(Bottleneck, '_d2l_remat', False):
+    Bottleneck.__call__ = nnx.remat(Bottleneck.__call__)
+    Bottleneck._d2l_remat = True
 ```
 
 ```{.python .input #fine-tuning-hot-dog-recognition}
@@ -594,6 +605,30 @@ def _make_tf_dataset(img_dir, augs, batch_size, shuffle=False):
     ds = ds.batch(batch_size, drop_remainder=True).prefetch(tf.data.AUTOTUNE)
     return ds
 
+def _checkpointed_backbone(base):
+    """Run the ResNet50 convolutional backbone with per-residual-block
+    activation checkpointing. A plain `tf.GradientTape` over ResNet-50 at batch
+    size 128 keeps every layer's activations live for the backward pass (~22 GB
+    of GPU memory). Splitting the backbone into its 16 residual blocks and
+    wrapping each in `tf.recompute_grad` recomputes a block's activations during
+    backprop instead of storing them, dropping the peak to a few GB. The
+    gradients are unchanged -- activations are simply traded for a little extra
+    compute. Returns a callable `fn(x, training) -> 2048-d pooled features`."""
+    boundaries = ['pool1_pool'] + [l.name for l in base.layers
+                                   if l.name.endswith('_out')]
+    segments = [keras.Model(base.input, base.get_layer(boundaries[0]).output)]
+    for a, b in zip(boundaries[:-1], boundaries[1:]):
+        segments.append(keras.Model(base.get_layer(a).output,
+                                    base.get_layer(b).output))
+    pool = keras.layers.GlobalAveragePooling2D()
+    def forward(x, training=False):
+        h = x
+        for seg in segments:
+            h = tf.recompute_grad(
+                lambda t, seg=seg: seg(t, training=training))(h)
+        return pool(h)
+    return forward
+
 # If `param_group=True`, the head (classifier Dense) is updated with a
 # learning rate ten times larger than the backbone, mirroring the PyTorch
 # fine-tuning recipe. `momentum` is forwarded to both SGD optimizers; the
@@ -611,6 +646,10 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
     head_layer = net.layers[-1]
     head_vars = head_layer.trainable_variables
     head_var_ids = {id(v) for v in head_vars}
+    # Activation-checkpointed backbone (see `_checkpointed_backbone`); the
+    # classifier head is applied to its pooled features. Training still runs
+    # over `net.trainable_variables`, so the discriminative-LR split is intact.
+    backbone = _checkpointed_backbone(net.layers[0])
 
     opt_head = keras.optimizers.SGD(
         learning_rate=learning_rate * (10 if param_group else 1),
@@ -625,7 +664,7 @@ def train_fine_tuning(net, learning_rate, batch_size=128, num_epochs=5,
     @tf.function
     def train_step(x, y):
         with tf.GradientTape() as tape:
-            logits = net(x, training=True)
+            logits = head_layer(backbone(x, training=True))
             loss = loss_fn(y, logits)
         grads = tape.gradient(loss, net.trainable_variables)
         head_pairs, base_pairs = [], []

@@ -250,13 +250,18 @@ class S4D(tf.keras.layers.Layer):
         self.D = tf.keras.Variable(tf.ones(H))
 
     def call(self, u):                       # (num_steps, batch, num_hiddens)
-        a = -tf.exp(self.log_a)                       # (H, N), Re(a) < 0
-        a_bar = tf.exp(tf.exp(self.log_dt) * a)
-        b_bar = (a_bar - 1) / a                       # ZOH with B = 1
-        a_elems = tf.tile(a_bar[None, None], (u.shape[0], 1, 1, 1))
-        b_elems = b_bar * tf.expand_dims(u, -1)       # (T, batch, H, N)
-        x = associative_scan(a_elems, b_elems)
-        return tf.reduce_sum(x * self.C, -1) + self.D * u
+        # Recompute the (T, batch, H, N) coefficients in the backward pass
+        # instead of storing the whole scan (the store-vs-recompute trade)
+        @tf.recompute_grad
+        def ssm(u):
+            a = -tf.exp(self.log_a)                   # (H, N), Re(a) < 0
+            a_bar = tf.exp(tf.exp(self.log_dt) * a)
+            b_bar = (a_bar - 1) / a                   # ZOH with B = 1
+            a_elems = tf.tile(a_bar[None, None], (u.shape[0], 1, 1, 1))
+            b_elems = b_bar * tf.expand_dims(u, -1)   # (T, batch, H, N)
+            x = associative_scan(a_elems, b_elems)
+            return tf.reduce_sum(x * self.C, -1) + self.D * u
+        return ssm(u)
 
 class S4DBlock(tf.keras.layers.Layer):
     def __init__(self, num_hiddens, num_states):
@@ -673,13 +678,18 @@ class SelectiveSSM(tf.keras.layers.Layer):
         self.D = tf.keras.Variable(tf.ones(H))
 
     def call(self, u):                       # (num_steps, batch, num_hiddens)
-        a = -tf.exp(self.log_a)                       # (H, N), Re(a) < 0
-        dt = tf.math.softplus(self.W_dt(u) + self.b_dt)   # (T, batch, H)
-        B, C = self.W_B(u), self.W_C(u)               # (T, batch, N)
-        a_bar = tf.exp(tf.expand_dims(dt, -1) * a)    # (T, batch, H, N)
-        b_bar = tf.expand_dims(dt * u, -1) * tf.expand_dims(B, -2)
-        x = associative_scan(a_bar, b_bar)
-        return tf.reduce_sum(x * tf.expand_dims(C, -2), -1) + self.D * u
+        # Recompute the (T, batch, H, N) coefficients in the backward pass
+        # instead of storing the whole scan (the store-vs-recompute trade)
+        @tf.recompute_grad
+        def ssm(u):
+            a = -tf.exp(self.log_a)                   # (H, N), Re(a) < 0
+            dt = tf.math.softplus(self.W_dt(u) + self.b_dt)   # (T, batch, H)
+            B, C = self.W_B(u), self.W_C(u)           # (T, batch, N)
+            a_bar = tf.exp(tf.expand_dims(dt, -1) * a)    # (T, batch, H, N)
+            b_bar = tf.expand_dims(dt * u, -1) * tf.expand_dims(B, -2)
+            x = associative_scan(a_bar, b_bar)
+            return tf.reduce_sum(x * tf.expand_dims(C, -2), -1) + self.D * u
+        return ssm(u)
 ```
 
 ```{.python .input #mamba-what-selectivity-costs-and-what-survives-2}

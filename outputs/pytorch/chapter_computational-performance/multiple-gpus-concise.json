@@ -29,38 +29,38 @@
       "outputs": []
     },
     "multiple-gpus-concise-training-2": {
-      "code_fingerprint": "sha256:6c62a11428834857d3ad034a3402eff97fba25237fb3d1e404ae3d7ea9597566",
+      "code_fingerprint": "sha256:c3e7c0070ff13d3084aa77f9d16345db2e20464adaff5d8afd249dfb2a796413",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.75, 31.8 sec/epoch on [device(type='cuda', index=0)]\n"
+          "text": "test acc: 0.92, 33.3 sec/epoch on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-2-1.svg",
-          "bytes": 18804,
-          "sha256": "sha256:0f41d62e08cf5a18950c9a1edf266e2e5a855bd525d30fcafdfd96c428b15cec"
+          "bytes": 19836,
+          "sha256": "sha256:c8963b39f3d9388970d4ecdeb770ff617d0ff1ad189bad088e077a36c1398726"
         }
       ]
     },
     "multiple-gpus-concise-training-3": {
-      "code_fingerprint": "sha256:d18cd946c70eacfb025452b3234eb88ed04311e6ebdf785360ac6387374f9fc6",
+      "code_fingerprint": "sha256:f393eaf8ae5f0a0f5c66461ef33b744b238a9677ea1ec595964ba69c78eb9800",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.89, 20.3 sec/epoch on [device(type='cuda', index=0), device(type='cuda', index=1)]\n"
+          "text": "test acc: 0.82, 22.2 sec/epoch on [device(type='cuda', index=0), device(type='cuda', index=1)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-3-1.svg",
-          "bytes": 16235,
-          "sha256": "sha256:1da4575cc88a36559982efc51c5167961c9d6a8351113a5725615f6c382afe79"
+          "bytes": 17663,
+          "sha256": "sha256:eab90320eb743d88b35337b1c5ee74a92a2eca77f6975d7afce8a6679428e914"
         }
       ]
     }

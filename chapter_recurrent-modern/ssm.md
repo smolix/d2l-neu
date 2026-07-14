@@ -58,6 +58,12 @@ from torch import nn
 ```{.python .input #ssm-linear-recurrence-and-state-space-models}
 %%tab tensorflow
 %matplotlib inline
+# Use CUDA's async stream-ordered allocator instead of TF's default BFC pool,
+# which grows and never releases: this section's independent experiments (scan
+# timing, a minGRU LM, an S4D classifier) would otherwise each leave their peak
+# reserved, stacking up far above the live working set.
+import os
+os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 from d2l import tensorflow as d2l
 import math
 import numpy as np

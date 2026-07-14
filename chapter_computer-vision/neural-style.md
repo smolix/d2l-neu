@@ -131,6 +131,11 @@ d2l.plt.imshow(content_img);
 ```{.python .input #neural-style-reading-the-content-and-style-images-1}
 #@tab tensorflow
 %matplotlib inline
+import os
+# Cap cuDNN's convolution workspace. At 300x450 the default algorithm picker
+# reserves ~9 GiB for a single VGG-19 forward pass; a 2 GiB cap keeps the true
+# footprint near 1.4 GiB with the same result. Set before TF initializes cuDNN.
+os.environ['TF_CUDNN_WORKSPACE_LIMIT_IN_MB'] = '2048'
 from d2l import tensorflow as d2l
 import tensorflow as tf
 import keras

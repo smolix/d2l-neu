@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22395,
-          "sha256": "sha256:f60529fb3dcfdcece30671e71db2d397182027c3125f247e228ab0a3a738491c"
+          "bytes": 22396,
+          "sha256": "sha256:de87058431cf6d6d753973741d943b5f7bf9e7d0d8f5c5cd1c511f5390e05d24"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 49428,
-          "sha256": "sha256:5bb41ff9175a42f7c7314d5b3d4c56db0eff152ddbcbfe2ff99217e5bfe6c183"
+          "bytes": 51519,
+          "sha256": "sha256:7d0a2b57e64df6defed987999f47bc47ea077e5dffbabcd91879f92172a5d91b"
         }
       ]
     },
@@ -138,8 +138,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21525,
-          "sha256": "sha256:4de512292fd4ffea31494a7b21e7f81775ba506ff393d07dd8902f47f6c93ced"
+          "bytes": 21519,
+          "sha256": "sha256:c18356be2bd1e7c4317f572cdfdf508d06da5bb2650aaa65e9e4e166fb4cfcc0"
         }
       ]
     }

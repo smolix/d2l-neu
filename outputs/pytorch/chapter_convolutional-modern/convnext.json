@@ -46,43 +46,43 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 23629,
-          "sha256": "sha256:2e6fffc52bd4248a34ba9d5deecd2d693d3324c63259677ed737370a5d4703f4"
+          "bytes": 23627,
+          "sha256": "sha256:e1b216574eda22039602a6cdafa9b1f860cb3567bab1d0b0067e473abd2c2fba"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 24852,
-          "sha256": "sha256:c2d223c57a28117429b8cdd0d540e7ca29d5285062ddd16e45116b516e3d0a7c"
+          "bytes": 24853,
+          "sha256": "sha256:8dfbe784359186364cb9c725a4bfb4bdd07fe69add45bf2bb8f9a3fa8cb2a470"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-3.svg",
-          "bytes": 22794,
-          "sha256": "sha256:03fc75e1619dc9be65d99ace39d526c571bdcdc6dd99cff389e9fa74b98b4ba2"
+          "bytes": 22792,
+          "sha256": "sha256:ac8cb814febee578e194ee39118ad945cbed277a6182ef5e23f8e6d63e32ff5f"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-4.svg",
-          "bytes": 24198,
-          "sha256": "sha256:dcbb0aa7d6c1b255a153338befc2c60f035cafc15674fd53c45a943c7b1022c8"
+          "bytes": 24200,
+          "sha256": "sha256:4635fa329ba07bb508261e06bf3a5ac0d853ad5ecf4bd8760daf2acbc41cf9c6"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-5.svg",
           "bytes": 23782,
-          "sha256": "sha256:5f1ef9d95d11075b8b8a41f42c7669af475921f33bd3e245c793e2b8ec388848"
+          "sha256": "sha256:33ff17f616757f9a3a17e05b3804e32e9fd3a874482be3247539f7acd811973b"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-6.svg",
-          "bytes": 24196,
-          "sha256": "sha256:337c584c954ed2e0c26620fdec949e372a4b73126e15498c314ad46c4eddeea6"
+          "bytes": 24195,
+          "sha256": "sha256:28a951d0427ec81d1793b392c353ed5ff35b39a87de6217f61c9e545fa0bc2e9"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ConvNeXt: 3,376,450 parameters, 0.922 ± 0.001\ncompact ResNet-18: 3,348,320 parameters, 0.942 ± 0.001\n"
+          "text": "ConvNeXt: 3,376,450 parameters, 0.924 ± 0.001\ncompact ResNet-18: 3,348,320 parameters, 0.941 ± 0.002\n"
         }
       ]
     }

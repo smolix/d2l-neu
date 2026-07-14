@@ -51,43 +51,43 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-1.svg",
-          "bytes": 20518,
-          "sha256": "sha256:43fe0f92eebd7bae3c339baa0aead6d407968baabb4329450fa2103ce6b5ae01"
+          "bytes": 20517,
+          "sha256": "sha256:b5fddc357df562b739da424f8363ad2172b38e3cb49e6563e011b10803f48881"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-2.svg",
-          "bytes": 20517,
-          "sha256": "sha256:2c6a97383314e6691e3e1e327f374c0e58da387f02fabb6beea0fbe6166f4410"
+          "bytes": 20516,
+          "sha256": "sha256:680a382f2328bb0c4b2a3a079afbb63b24013ed8520c72b6e4564dce76d8070e"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-3.svg",
-          "bytes": 20510,
-          "sha256": "sha256:8ddca3344c7e5725dde0b52f6faf425b093565298e0a0112c513268d2dbeb69d"
+          "bytes": 20514,
+          "sha256": "sha256:2f273f479a9b58c01c78497beaa88cae3c20584ea0c0845ab3e6a5a38e9aa2dc"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-4.svg",
-          "bytes": 20509,
-          "sha256": "sha256:271337a22e06409b27450d10dc42dbb4c12297cc7e8473ff8af129a6c38810cd"
+          "bytes": 20513,
+          "sha256": "sha256:0aafc04e5da958e1db79b6ffb443449cf4b4732c7cc3d692d54c7cb50505539c"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-5.svg",
-          "bytes": 20514,
-          "sha256": "sha256:154086c09b2e18d0b5465535291b539f08e8045382474b0466336a1acb40a365"
+          "bytes": 20541,
+          "sha256": "sha256:80958fd859561c564f7d179edadeb4b814f5669e961355039da38e50fed2e3c1"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-6.svg",
-          "bytes": 20519,
-          "sha256": "sha256:672b7e59a2e9693419d41e4cacbf0c8149a54ab21baa737b716a4d54a300273c"
+          "bytes": 20511,
+          "sha256": "sha256:5d1717ea83ccc419c45f5432c199da09579b3d923dec9f85686983edbaa116b4"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mini-MobileNet: 542,474 params, val acc 0.918 ± 0.001, 7.3 s/epoch; seeds [0.918, 0.917, 0.917]\nVGG-style: 583,594 params, val acc 0.907 ± 0.019, 12.7 s/epoch; seeds [0.891, 0.902, 0.929]\n"
+          "text": "mini-MobileNet: 542,474 params, val acc 0.914 ± 0.002, 10.4 s/epoch; seeds [0.915, 0.914, 0.912]\nVGG-style: 583,594 params, val acc 0.920 ± 0.009, 20.8 s/epoch; seeds [0.91, 0.923, 0.927]\n"
         }
       ]
     },

@@ -71,9 +71,12 @@ from scipy.special import digamma
 ## Mutual Information: Definitions and Properties
 :label:`sec_mdl-mi-recap`
 
-Throughout, $(X, Y)$ is a pair of random variables with joint distribution
-$P_{X,Y}$ (p.m.f. or p.d.f. $p_{X,Y}(x,y)$) and marginals $P_X$ and $P_Y$
-(densities $p_X(x)$ and $p_Y(y)$). Everything we build answers one question:
+Throughout, $(X,Y)$ is a pair of random variables with joint distribution
+$P_{X,Y}$ and marginals $P_X,P_Y$. We begin the entropy bookkeeping in the
+discrete case. For continuous variables the same symbols denote differential
+entropies only when the relevant integrals are finite; the KL definition of
+mutual information below remains primary and avoids undefined differences such
+as $\infty-\infty$. Everything we build answers one question:
 what does observing $Y$ tell us about $X$?
 
 ### From One Variable to Two: Joint and Conditional Entropy
@@ -84,13 +87,13 @@ entropy* of $(X, Y)$ is the average surprise of observing the pair,
 $$H(X, Y) = -E_{(x, y) \sim P_{X,Y}} [\log p_{X, Y}(x, y)],$$
 :eqlabel:`eq_mdl-joint_ent_def`
 
-a sum over outcomes in the discrete case and an integral in the continuous
-case, exactly as in :numref:`sec_mdl-information_theory`. The two extremes
-orient the definition: if $Y = X$, the pair carries no more information than
-either variable alone, $H(X, Y) = H(X)$; if $X$ and $Y$ are independent,
-surprises add, $H(X, Y) = H(X) + H(Y)$. Every dependent pair sits in between
-(for discrete variables, $\max\{H(X), H(Y)\} \leq H(X,Y) \leq H(X) + H(Y)$;
-Exercise 1 asks you to prove both ends).
+a sum over outcomes. The two extremes orient the discrete definition: if
+$Y=X$, the pair carries no more information than either variable alone,
+$H(X,Y)=H(X)$; if $X$ and $Y$ are independent, surprises add,
+$H(X,Y)=H(X)+H(Y)$. Every discrete dependent pair sits between these bounds.
+For a continuous $Y=X$, by contrast, the joint law lies on a lower-dimensional
+diagonal, has no ordinary joint density with respect to area, and has infinite
+mutual information; the discrete identity must not be transferred verbatim.
 
 Often we care about a directed version of the question. Take $X$ to be the
 pixels of an image and $Y$ its class label. The image is a complicated,
@@ -105,7 +108,9 @@ with $p(y \mid x) = p_{X,Y}(x, y)/p_X(x)$, measures exactly this residual:
 the average surprise in $Y$ *after* $X$ is known. The three quantities are
 linked by a bookkeeping identity.
 
-**Proposition (chain rule for entropy).** *$H(X, Y) = H(X) + H(Y \mid X)$.*
+**Proposition (chain rule for entropy).** *For discrete variables, or for
+continuous variables when the displayed entropies are finite,
+$H(X,Y)=H(X)+H(Y\mid X)$.*
 
 **Proof.** Inside the expectation defining $H(X,Y)$, factor the joint density:
 $\log p_{X,Y}(x,y) = \log p_X(x) + \log p(y \mid x)$. Taking
@@ -168,15 +173,16 @@ $X$, the divergence, and hence $I(X; Y)$, is infinite. Symmetry and
 nonnegativity are immediate from the divergence form, and the entropy
 identities follow by expanding the logarithm.
 
-**Proposition (properties of mutual information).** *For any pair $(X, Y)$:*
+**Proposition (properties of mutual information).** *For any pair $(X,Y)$,
+$I(X;Y)$ is symmetric and non-negative, with equality if and only if $X$ and
+$Y$ are independent. When the relevant discrete or differential entropies are
+finite, it also satisfies*
 
-1. *(Entropy identities)*
-   $I(X; Y) = H(X) + H(Y) - H(X, Y) = H(X) - H(X \mid Y) = H(Y) - H(Y \mid X)$.
-2. *(Symmetry)* $I(X; Y) = I(Y; X)$.
-3. *(Nonnegativity)* $I(X; Y) \geq 0$, with equality if and only if $X$ and
-   $Y$ are independent.
+$$
+I(X;Y)=H(X)+H(Y)-H(X,Y)=H(X)-H(X\mid Y)=H(Y)-H(Y\mid X).
+$$
 
-**Proof.** For claim 1, expand the logarithm in
+**Proof.** When the entropy terms are finite, expand the logarithm in
 :eqref:`eq_mdl-mut_ent_def`:
 
 $$
@@ -187,9 +193,9 @@ $$
 
 Substituting the chain rule $H(X,Y) = H(Y) + H(X \mid Y)$ gives
 $I(X;Y) = H(X) - H(X \mid Y)$, and the symmetric substitution gives
-$H(Y) - H(Y \mid X)$. Claim 2 is immediate from
-:eqref:`eq_mdl-mut_ent_def`, whose integrand is symmetric in the roles of
-$x$ and $y$. Claim 3 is Gibbs' inequality
+$H(Y) - H(Y \mid X)$. Symmetry is immediate from
+:eqref:`eq_mdl-mut_ent_def`, whose density ratio is unchanged when $X$ and $Y$
+are swapped. Nonnegativity is Gibbs' inequality
 (:numref:`sec_mdl-information_theory`) applied to the two distributions
 $P_{X,Y}$ and $P_X \otimes P_Y$: the divergence is non-negative, and zero
 exactly when they coincide, i.e., when
@@ -522,8 +528,10 @@ No processing of $Y$, deterministic or random, clever or dumb, can
   sensible objective rather than wishful thinking.
 * **Equality is achievable.** If $Z = g(Y)$ for an *invertible* $g$, then the
   chain runs both ways and $I(X; Z) = I(X; Y)$, consistent with the
-  reparameterization invariance proved earlier. Information is lost only when
-  processing is many-to-one or noisy.
+  reparameterization invariance proved earlier. A many-to-one or noisy map may lose information, but it need not: a
+  sufficient statistic can be noninvertible or noisy while preserving all the
+  information about $X$. Equality in data processing is characterized by such
+  sufficiency, not by invertibility alone.
 * **A sufficient statistic is a lossless compression.** When equality holds
   with $Z$ much "smaller" than $Y$, the map has discarded only what was
   irrelevant to $X$: this is the information-theoretic reading of a
@@ -1401,9 +1409,12 @@ two halves of this section are one subject.
 Let's consolidate the section's findings into usage guidance, because mutual
 information is at once indispensable and routinely over-read.
 
-* **The number is not a measurement.** Every practical "MI estimate" is a
-  variational lower bound, estimated from a batch, computed with an
-  imperfectly-optimized critic: a noisy bound on a bound. The $\log N$
+* **A neural bound is not a direct measurement.** The high-dimensional neural
+  estimators discussed above (InfoNCE, NWJ, DV/MINE, and decoder bounds) are
+  variational bounds estimated from batches and often optimized with imperfect
+  critics: noisy estimates of bounds. Histogram, kernel, and nearest-neighbor
+  estimators are not variational lower bounds, although they have their own
+  dimensionality, bias, and tuning problems. The $\log N$
   ceiling caps what any of them can certify, and past the ceiling an
   estimator returns either a saturated number (InfoNCE) or an exploding one
   (DV/NWJ).

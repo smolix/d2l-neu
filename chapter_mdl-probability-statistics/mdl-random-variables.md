@@ -149,51 +149,15 @@ $p(x)=0.2\,\mathcal N(x;3,1)+0.8\,\mathcal N(x;-1,1)$ and recover the probabilit
 of an interval by a Riemann sum, the discrete approximation of the integral.
 
 ```{.python .input #random-variables-density-to-probability}
-#@tab mxnet
+import numpy as onp
 # Recover P(-2 < X <= 3) from the density by a Riemann sum (numerical integral)
 epsilon = 0.01
-x = np.arange(-8, 8, epsilon)
-p = 0.2*np.exp(-(x - 3)**2 / 2)/np.sqrt(2 * np.pi) + \
-    0.8*np.exp(-(x + 1)**2 / 2)/np.sqrt(2 * np.pi)
-print(f'total mass     : {float(np.sum(epsilon * p)):.4f}')
+x = onp.arange(-8, 8, epsilon)
+p = 0.2*onp.exp(-(x - 3)**2 / 2)/onp.sqrt(2 * onp.pi) + \
+    0.8*onp.exp(-(x + 1)**2 / 2)/onp.sqrt(2 * onp.pi)
+print(f'total mass     : {float(onp.sum(epsilon * p)):.4f}')
 mask = (x > -2) & (x <= 3)
-print(f'P(-2 < X <= 3) : {float(np.sum(epsilon * p[mask])):.4f}')
-```
-
-```{.python .input #random-variables-density-to-probability}
-#@tab pytorch
-# Recover P(-2 < X <= 3) from the density by a Riemann sum (numerical integral)
-epsilon = 0.01
-x = torch.arange(-8, 8, epsilon)
-p = 0.2*torch.exp(-(x - 3)**2 / 2)/torch.sqrt(torch.tensor(2 * torch.pi)) + \
-    0.8*torch.exp(-(x + 1)**2 / 2)/torch.sqrt(torch.tensor(2 * torch.pi))
-print(f'total mass     : {float(torch.sum(epsilon * p)):.4f}')
-mask = (x > -2) & (x <= 3)
-print(f'P(-2 < X <= 3) : {float(torch.sum(epsilon * p[mask])):.4f}')
-```
-
-```{.python .input #random-variables-density-to-probability}
-#@tab tensorflow
-# Recover P(-2 < X <= 3) from the density by a Riemann sum (numerical integral)
-epsilon = 0.01
-x = tf.range(-8, 8, epsilon)
-p = 0.2*tf.exp(-(x - 3)**2 / 2)/tf.sqrt(2 * np.pi) + \
-    0.8*tf.exp(-(x + 1)**2 / 2)/tf.sqrt(2 * np.pi)
-print(f'total mass     : {float(tf.reduce_sum(epsilon * p)):.4f}')
-mask = (x > -2) & (x <= 3)
-print(f'P(-2 < X <= 3) : {float(tf.reduce_sum(epsilon * p[mask])):.4f}')
-```
-
-```{.python .input #random-variables-density-to-probability}
-#@tab jax
-# Recover P(-2 < X <= 3) from the density by a Riemann sum (numerical integral)
-epsilon = 0.01
-x = jnp.arange(-8, 8, epsilon)
-p = 0.2*jnp.exp(-(x - 3)**2 / 2)/jnp.sqrt(2 * jnp.pi) + \
-    0.8*jnp.exp(-(x + 1)**2 / 2)/jnp.sqrt(2 * jnp.pi)
-print(f'total mass     : {float(jnp.sum(epsilon * p)):.4f}')
-mask = (x > -2) & (x <= 3)
-print(f'P(-2 < X <= 3) : {float(jnp.sum(epsilon * p[mask])):.4f}')
+print(f'P(-2 < X <= 3) : {float(onp.sum(epsilon * p[mask])):.4f}')
 ```
 
 The total mass prints as $1.0000$, just as :eqref:`eq_mdl-density` demands
@@ -574,39 +538,12 @@ diverge numerically by extending the integration range and seeing the partial
 sums refuse to settle.
 
 ```{.python .input #random-variables-cauchy-diverges}
-#@tab mxnet
+import numpy as onp
 # Cauchy second moment integral over growing ranges: it should NOT converge
 for R in [10, 100, 1000]:
-    x = np.arange(-R, R, 0.01)
-    integrand = x**2 / (np.pi * (1 + x**2))
-    print(f'integral_-{R}^{R} x^2 p(x) dx = {float(np.sum(0.01*integrand)):.3f}')
-```
-
-```{.python .input #random-variables-cauchy-diverges}
-#@tab pytorch
-# Cauchy second moment integral over growing ranges: it should NOT converge
-for R in [10, 100, 1000]:
-    x = torch.arange(-R, R, 0.01)
-    integrand = x**2 / (torch.pi * (1 + x**2))
-    print(f'integral_-{R}^{R} x^2 p(x) dx = {float(torch.sum(0.01*integrand)):.3f}')
-```
-
-```{.python .input #random-variables-cauchy-diverges}
-#@tab tensorflow
-# Cauchy second moment integral over growing ranges: it should NOT converge
-for R in [10, 100, 1000]:
-    x = tf.range(-float(R), float(R), 0.01)
-    integrand = x**2 / (np.pi * (1 + x**2))
-    print(f'integral_-{R}^{R} x^2 p(x) dx = {float(tf.reduce_sum(0.01*integrand)):.3f}')
-```
-
-```{.python .input #random-variables-cauchy-diverges}
-#@tab jax
-# Cauchy second moment integral over growing ranges: it should NOT converge
-for R in [10, 100, 1000]:
-    x = jnp.arange(-R, R, 0.01)
-    integrand = x**2 / (jnp.pi * (1 + x**2))
-    print(f'integral_-{R}^{R} x^2 p(x) dx = {float(jnp.sum(0.01*integrand)):.3f}')
+    x = onp.arange(-R, R, 0.01)
+    integrand = x**2 / (onp.pi * (1 + x**2))
+    print(f'integral_-{R}^{R} x^2 p(x) dx = {float(onp.sum(0.01*integrand)):.3f}')
 ```
 
 The "integral" grows without bound as the range widens: it does not converge, so
@@ -897,8 +834,9 @@ proof is the Cauchy--Schwarz argument of
 :numref:`sec_mdl-geometry-linear-algebraic-ops` wearing probabilistic clothes.
 
 **Proposition (correlation bound).** *For any $X,Y$ with finite, nonzero
-variances, $-1\le\rho(X,Y)\le 1$, with equality iff $Y$ is an affine function of
-$X$ (a perfect linear relationship).*
+variances, $-1\le\rho(X,Y)\le 1$, with equality iff $Y=aX+b$ almost surely
+for constants $a\ne0,b$ (a perfect linear relationship up to probability-zero
+events).*
 
 **Proof.** A variance is never negative, so $\textrm{Var}(tX+Y)\ge 0$ for every
 real $t$. Expanding it by the variance-of-a-sum rule :eqref:`eq_mdl-var_sum`
@@ -921,8 +859,9 @@ $$
 
 Dividing by $\sigma_X^2\sigma_Y^2$ gives $\rho^2\le 1$, which is the claim.
 Equality forces the discriminant to vanish, so the quadratic has a (repeated)
-root $t^\star$ with $\textrm{Var}(t^\star X+Y)=0$; a variable of zero variance is
-constant, so $t^\star X+Y=c$, i.e. $Y=-t^\star X+c$ is affine in $X$.
+root $t^\star$ with $\textrm{Var}(t^\star X+Y)=0$; a variable of zero variance is constant almost surely, so
+$t^\star X+Y=c$ almost surely, i.e. $Y=-t^\star X+c$ almost surely is affine in
+$X$.
 Conversely, suppose $Y=aX+b$; the nonzero-variance hypothesis forces $a\neq0$,
 since $a=0$ would make $Y$ constant. Using
 $\textrm{Cov}(X,aX+b)=a\,\textrm{Var}(X)$ (shifts drop out, scales pull
@@ -1119,7 +1058,11 @@ $|\det A|$ and the density thins by the same factor.
 ## Exercises
 1. Suppose $X$ has density $p(x) = \frac{1}{x^2}$ for $x \ge 1$ and $p(x) = 0$ otherwise. Verify it is a density and compute $P(X > 2)$ and the c.d.f. $F(x)$.
 2. The Laplace distribution has density $p(x) = \tfrac12 e^{-|x|}$. Find its mean and standard deviation. (*Hint:* $\int_0^\infty xe^{-x}\,dx = 1$ and $\int_0^\infty x^2e^{-x}\,dx = 2$.)
-3. I claim a random variable with mean $1$ and standard deviation $2$ produced $25\%$ of samples above $9$. Use Chebyshev :eqref:`eq_mdl-chebyshev` to decide whether to believe me.
+3. A population has mean $1$ and standard deviation $2$. Use Chebyshev
+   :eqref:`eq_mdl-chebyshev` to bound the population probability $P(X>9)$. Then
+   explain why observing $25\%$ above $9$ in a *finite sample* is evidence
+   against the claim but is not logically impossible without knowing the sample
+   size.
 4. Two variables $X,Y$ have joint density $p_{XY}(x, y) = x+y$ on $[0,1]^2$ and $0$ otherwise. Verify that it integrates to one, find the marginals $p_X,p_Y$ and the covariance $\textrm{Cov}(X,Y)$, and decide whether $X$ and $Y$ are independent.
 5. Give a second proof of the affine variance rule $\textrm{Var}(aX+b)=a^2\textrm{Var}(X)$ :eqref:`eq_mdl-var_affine`, this time starting from the computational form $\textrm{Var}(aX+b)=E[(aX+b)^2]-E[aX+b]^2$ :eqref:`eq_mdl-var_comp`: expand both expectations with linearity :eqref:`eq_mdl-exp_linear` and watch the cross terms cancel. (The proof in the text instead worked with the deviation $a(X-\mu_X)$.)
 6. Using $\textrm{Var}(X+Y)=\textrm{Var}(X)+\textrm{Var}(Y)+2\textrm{Cov}(X,Y)$ :eqref:`eq_mdl-var_sum`, show that for independent identically distributed $X_1,\ldots,X_n$ with variance $\sigma^2$, the sample mean $\bar X=\tfrac1n\sum_i X_i$ has variance $\sigma^2/n$. (This is why averaging reduces noise.)

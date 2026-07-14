@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 29488,
-          "sha256": "sha256:91cf01609c35bb24499c559bba50296aa498b1ed88e7b03cc968a7338110774d"
+          "sha256": "sha256:6878efa58655a7e641e43c5f3691b87a1c429dfbad6ed016c5b00c24683df384"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[18:22:19] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[06:27:19] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",

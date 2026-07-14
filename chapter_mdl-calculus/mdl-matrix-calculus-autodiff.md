@@ -705,13 +705,16 @@ $n$ passes, one per parameter direction, to assemble the same row. The cost rule
   small constant multiple of one forward evaluation (typically $2$--$4\times$ in
   practice; for arithmetic circuits, programs built from $+,-,\times,\div$, the
   Baur--Strassen theorem pins the multiple at no more than $5$
-  :cite:`Baur.Strassen.1983`), *independent of the number of inputs $n$*.
+  :cite:`Baur.Strassen.1983`). This is one sweep regardless of how many input
+  partial derivatives are requested; its absolute work still scales with the
+  cost of the primal program, which usually grows with $n$.
 * **Forward mode** costs one pass per *input*: cheap for *tall* Jacobians
   ($m\gg n$).
 
 :numref:`fig_mdl-cal-jacobian-shapes` turns the rule into shapes: what a pass
-buys is one *row* (reverse) or one *column* (forward), so the cheap mode is the
-one whose unit matches your Jacobian's short side.
+buys is one linear combination of rows (reverse) or columns (forward). A
+coordinate seed selects one literal row or column, so the cheap mode is the one
+whose number of coordinate seeds matches the Jacobian's short side.
 
 ![The shape of the Jacobian dictates the cheap mode. A scalar loss has a $1\times n$ Jacobian: one row, hence one VJP, one backward pass. A one-input map has an $m\times 1$ Jacobian: one column, one JVP, one forward pass. The full $m\times n$ matrix costs $\min(m,n)$ passes either way.](../img/mdl-cal-jacobian-shapes.svg)
 :label:`fig_mdl-cal-jacobian-shapes`
@@ -742,7 +745,7 @@ pushes it through each recorded operation's VJP, accumulating contributions wher
 value feeds several consumers. :numref:`fig_mdl-cal-fwd-vs-rev` contrasts the two
 sweeps.
 
-![Forward-mode versus reverse-mode automatic differentiation on a computation graph. Forward mode (top) propagates a Jacobian--vector product left to right, in lock-step with evaluation, computing one Jacobian column per pass. Reverse mode (bottom) records a tape on a forward pass, then propagates a vector--Jacobian product right to left, computing one Jacobian row (the full gradient of a scalar output) per pass.](../img/mdl-cal-fwd-vs-rev.svg)
+![Forward-mode versus reverse-mode automatic differentiation on a computation graph. Forward mode (top) propagates a Jacobian--vector product left to right, in lock-step with evaluation; a coordinate seed selects one Jacobian column. Reverse mode (bottom) records a tape on a forward pass, then propagates a vector--Jacobian product right to left; a coordinate output seed selects one row, and a scalar output yields its full gradient.](../img/mdl-cal-fwd-vs-rev.svg)
 :label:`fig_mdl-cal-fwd-vs-rev`
 
 A tiny tape makes this concrete. We record each operation as a node holding its
@@ -967,8 +970,10 @@ $$
 
 so we push the tangent $\mathbf v$ through the gradient computation in *forward over
 reverse*: a forward-mode JVP applied to the reverse-mode gradient. The cost is a small
-constant multiple of one gradient evaluation: curvature in a direction for roughly the
-price of a single backward pass, *independent of $n$* :cite:`Baydin.Pearlmutter.Radul.ea.2018`.
+constant multiple of one gradient evaluation: curvature in one chosen direction
+without $n$ separate gradient evaluations :cite:`Baydin.Pearlmutter.Radul.ea.2018`.
+Its absolute work still scales with the computation of $L$ and therefore usually
+with the problem size.
 In terms of our toy engines, layering a `Dual` seed over the reverse-mode `Var`
 tape is exactly this forward-over-reverse construction. It is
 what makes Newton and conjugate-gradient methods
@@ -1167,14 +1172,15 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
   the rank-one $\nabla_{\mathbf W}\|\mathbf W\mathbf x-\mathbf y\|^2=2(\mathbf W\mathbf x-\mathbf y)\mathbf x^\top$,
   and the softmax--cross-entropy logit gradient $\mathbf p-\mathbf y$.
 * **Forward-mode AD** carries a derivative via *dual numbers* ($\varepsilon^2=0$);
-  one pass computes a Jacobian--vector product (a Jacobian *column*), cheap for tall
-  Jacobians.
+  one pass computes a Jacobian--vector product, a linear combination of columns
+  (one literal column for a coordinate seed), so it is cheap for tall Jacobians.
 * **Reverse-mode AD** records a *tape* and replays it backward, computing a
-  vector--Jacobian product (a Jacobian *row*) per pass. Because a loss is scalar,
-  **backpropagation is reverse-mode AD**: one backward sweep yields the gradient
-  w.r.t. every parameter at a small constant multiple of one forward evaluation,
-  *independent of the number of inputs $n$*, at the price of storing
-  the forward intermediates.
+  vector--Jacobian product, a linear combination of rows (one literal row for a
+  coordinate seed). Because a loss is scalar, **backpropagation is reverse-mode
+  AD**: one backward sweep yields the gradient with respect to every parameter at
+  a small constant multiple of one forward evaluation, at the price of storing
+  the forward intermediates. The number of sweeps does not grow with $n$; the
+  cost of each sweep still follows the cost of the primal computation.
 * **Never form the Jacobian.** Autograd exposes the JVP and the VJP and you
   *compose* them; a dense $m\times n$ Jacobian costs $\min(m,n)$ passes and is
   almost always avoidable. One order up, the **Hessian--vector product**
@@ -1222,8 +1228,10 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
    once more, via `torch.autograd.grad(L, x, create_graph=True)`) computes the same
    product as *reverse-over-reverse*; it works, but it tapes the backward pass
    itself, so it costs somewhat more time and memory than forward-over-reverse.
-8. **Gradient of the log-determinant.** For invertible $\mathbf A$, show that
-   $\nabla_{\mathbf A}\log\det\mathbf A=\mathbf A^{-\top}$. *Hint:* perturb one entry
+8. **Gradient of the log-absolute-determinant.** For a real invertible
+   $\mathbf A$, show that
+   $\nabla_{\mathbf A}\log|\det\mathbf A|=\mathbf A^{-\top}$. (If
+   $\det\mathbf A>0$, this is also the gradient of $\log\det\mathbf A$.) *Hint:* perturb one entry
    at a time: with $\mathbf E=\mathbf e_a\mathbf e_b^\top$, expand
    $\det(\mathbf A+\varepsilon\mathbf E)
    =\det(\mathbf A)\det(\mathbf I+\varepsilon\mathbf A^{-1}\mathbf E)
@@ -1236,8 +1244,9 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
    gradient descent; normalizing flows, generative models built from invertible
    maps and trained on exactly this log-likelihood (:numref:`sec_mdl-flow-matching`),
    depend on it. Verify it numerically by
-   differentiating `logdet` of a random $3\times3$ matrix with a framework's
-   autograd and comparing against $\mathbf A^{-\top}$.
+   differentiating the log-absolute-determinant of a random invertible
+   $3\times3$ matrix (use a `slogdet`-style routine) with a framework's autograd
+   and comparing against $\mathbf A^{-\top}$.
 9. **Attention Jacobians.** In self-attention (:numref:`sec_attention-scoring-functions`),
    softmax is applied *row-wise* to the score matrix
    $\mathbf S=\mathbf Q\mathbf K^\top/\sqrt d$, giving attention weights
@@ -1248,8 +1257,8 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
    $\operatorname{diag}(\mathbf p_i)-\mathbf p_i\mathbf p_i^\top$ of
    :eqref:`eq_mdl-softmax-jacobian`. Then push one step further down the chain:
    differentiating the scores $\mathbf s_i=\mathbf K\mathbf q_i/\sqrt d$ with
-   respect to the query $\mathbf q_i$ contributes the factor
-   $\mathbf K^\top/\sqrt d$, so
+   respect to the query $\mathbf q_i$ contributes the Jacobian
+   $\mathbf K/\sqrt d$, so
    $\partial\mathbf p_i/\partial\mathbf q_i
    =\bigl(\operatorname{diag}(\mathbf p_i)-\mathbf p_i\mathbf p_i^\top\bigr)\mathbf K/\sqrt d$.
    Where does the temperature-like $1/\sqrt d$ end up in the gradient, and what
@@ -1505,7 +1514,7 @@ A handful of overloaded operators *is* forward-mode AD: the $\varepsilon$-part r
 
 ::: {.cols .vc}
 ::: {.col}
-With a *vector* tangent, one forward pass carries a **Jacobian–vector product** $\mathbf J\mathbf v$, never forming $\mathbf J$. Seeding $\mathbf e_j$ reads off **column** $j$.
+With a *vector* tangent, one forward pass carries a **Jacobian–vector product** $\mathbf J\mathbf v$, a linear combination of columns, never forming $\mathbf J$. Seeding $\mathbf e_j$ reads off literal **column** $j$.
 
 ::: {.d2l-note}
 Forward mode costs one pass per **input**. Cheap for *tall* Jacobians ($m\gg n$), and exactly wrong for a deep net, whose loss is one scalar over millions of inputs.
@@ -1538,7 +1547,7 @@ Reverse mode multiplies *left-to-right*, carrying a **vector–Jacobian product*
 A scalar loss is a single-row Jacobian ($m=1$), so **one** backward sweep yields the *entire* gradient.
 
 ::: {.d2l-note .rule}
-Gradient of a scalar at a small constant multiple of one forward pass, *independent of $n$*: the cheap-gradient principle (Baur--Strassen).
+Gradient of a scalar in one reverse sweep at a small constant multiple of the primal cost: the cheap-gradient principle (Baur--Strassen).
 :::
 :::
 
@@ -1619,7 +1628,7 @@ Differentiate the gradient *once, in one direction*. For $L(\mathbf x) = \tfrac1
 
 . . .
 
-Cost: a small constant multiple of *one gradient*, independent of $n$. This is what makes Newton and conjugate-gradient methods, and curvature diagnostics, tractable at scale.
+Cost: a small constant multiple of *one gradient*, rather than $n$ gradients. The absolute cost still follows the primal computation. This is what makes Newton and conjugate-gradient methods, and curvature diagnostics, tractable at scale.
 :::
 
 ::: {.slide title="Differentiating through an equation"}

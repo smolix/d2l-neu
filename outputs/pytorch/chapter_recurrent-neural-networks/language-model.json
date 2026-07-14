@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:b61fcded8ba34c31e2150b42343f975ad3de270aec28f6479d67cfd83e9e2888"
+          "sha256": "sha256:eb5121343bc644585b1e2b5f46204cb75b9ed92eab32b9a9c8a5402f78f39328"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:4340342144ca4ecb37bd34a8cfdde5f9377c311c3a7b780586adc6f6916e4b0b"
+          "sha256": "sha256:61700669ffa5372a662c65f9be79d7fe7b0a23a5a69e317cb7537bdeb9fc7ae1"
         }
       ]
     },
@@ -109,12 +109,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n"
+          "text": "   character    27   17345      6.4  2.68\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "        word  4579    3373   2618.1  2.21\n"
+          "text": " BPE (1,024)  1024    5509    281.6  2.58\n        word  4579    3373   2618.1  2.21\n"
         }
       ]
     },
@@ -135,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[314, 584, 101, 311, 313, 313, 680,  10, 267, 115],\n        [867, 109, 271, 338, 362, 311, 272, 625, 304, 284]]) \nY: tensor([[ 584,  101,  311,  313,  313,  680,   10,  267,  115, 1015],\n        [ 109,  271,  338,  362,  311,  272,  625,  304,  284,  942]])\nX[0]: ' believe that that machine\\nhas'\nY[0]: 'lieve that that machine\\nhas travell'\n"
+          "text": "X: tensor([[ 116,  701,   46,   10,   80,  320,  102,  380,  282,  459],\n        [1015,  275,  667,   10,   10,   39,   89,  292,  545,  491]]) \nY: tensor([[701,  46,  10,  80, 320, 102, 380, 282, 459, 337],\n        [275, 667,  10,  10,  39,  89, 292, 545, 491, 260]])\nX[0]: 'try.\\nProfessor S'\nY[0]: 'ry.\\nProfessor Sim'\n"
         }
       ]
     }

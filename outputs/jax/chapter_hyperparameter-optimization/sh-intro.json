@@ -15,7 +15,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "WARNING: All log messages before absl::InitializeLog() is called are written to STDERR\nI0000 00:00:1783828071.078369   28137 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.\nTo enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.\n"
+          "text": "WARNING: All log messages before absl::InitializeLog() is called are written to STDERR\nI0000 00:00:1784012218.987304    3268 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.\nTo enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.\n"
         }
       ]
     },
@@ -51,7 +51,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.15119993686676025, runtime = 19.459858179092407\n"
+          "text": "    error = 0.15669995546340942, runtime = 35.00252175331116\n"
         }
       ]
     },
@@ -67,8 +67,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sh-intro/sh-intro-successive-halving-7-1.svg",
-          "bytes": 25869,
-          "sha256": "sha256:4f25a1a285658df18851afe356aff415e006de3d01f6a50b074a222fcea2bfa2"
+          "bytes": 25888,
+          "sha256": "sha256:9c17eb68d88db8f7471a57b6db42982422c79ded6ad0f45e7b2ca9d3231c862c"
         }
       ]
     }

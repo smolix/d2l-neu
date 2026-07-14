@@ -30,26 +30,14 @@
     },
     "bahdanau-attention-training-1": {
       "code_fingerprint": "sha256:5f165d43483aca76dd264fee5fe356d1da999d4fb606a2b430ea5b775d314441",
-      "kind": "mixed",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "/home/smola/d2l-neu/.venv-tensorflow/lib/python3.12/site-packages/keras/src/layers/layer.py:1566: UserWarning: Layer 'seq2_seq' looks like it has unbuilt state, but Keras is not able to trace the layer `call()` in order to build it automatically. Possible causes:\n1. The `call()` method of your layer may be crashing. Try to `__call__()` the layer eagerly on some test input first to see if it works. E.g. `x = np.random.random((3, 4)); y = layer(x)`\n2. If the `call()` method is correct, then you may need to implement the `def build(self, input_shape)` method on your layer. It should create all variables used by the layer (e.g. by calling `layer.build()` on all its children layers).\nException encountered: ''EncoderDecoder.call() got an unexpected keyword argument 'args'''\n  warnings.warn(\n/home/smola/d2l-neu/.venv-tensorflow/lib/python3.12/site-packages/keras/src/layers/layer.py:427: UserWarning: `build()` was called on layer 'seq2_seq', however the layer does not have a `build()` method implemented and it looks like it has unbuilt state. This will cause the layer to be marked as built, despite not being actually built, which may cause failures down the line. Make sure to implement a proper `build()` method.\n  warnings.warn(\n/home/smola/d2l-neu/.venv-tensorflow/lib/python3.12/site-packages/keras/src/layers/layer.py:1566: UserWarning: Layer 'seq2_seq_encoder_1' looks like it has unbuilt state, but Keras is not able to trace the layer `call()` in order to build it automatically. Possible causes:\n1. The `call()` method of your layer may be crashing. Try to `__call__()` the layer eagerly on some test input first to see if it works. E.g. `x = np.random.random((3, 4)); y = layer(x)`\n2. If the `call()` method is correct, then you may need to implement the `def build(self, input_shape)` method on your layer. It should create all variables used by the layer (e.g. by calling `layer.build()` on all its children layers).\nException encountered: ''Seq2SeqEncoder.call() got an unexpected keyword argument 'args'''\n  warnings.warn(\n/home/smola/d2l-neu/.venv-tensorflow/lib/python3.12/site-packages/keras/src/layers/layer.py:427: UserWarning: `build()` was called on layer 'seq2_seq_encoder_1', however the layer does not have a `build()` method implemented and it looks like it has unbuilt state. This will cause the layer to be marked as built, despite not being actually built, which may cause failures down the line. Make sure to implement a proper `build()` method.\n  warnings.warn(\n"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-1-1.svg",
-          "bytes": 33744,
-          "sha256": "sha256:058356813b5b3d5dfa0d59277d3e9e402a2304e0664e53357e0d72174b55213d"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "bahdanau-attention/bahdanau-attention-training-1-2.svg",
-          "bytes": 33744,
-          "sha256": "sha256:217201f81ed762d2047242ae4fbd4c7362632cfc3ea2b8b354f68afde585203a"
+          "bytes": 33183,
+          "sha256": "sha256:3c66b1daa0673bd35f9797f7e1bc85094dd0c7c7aea4fc8e3024975507760bca"
         }
       ]
     },
@@ -77,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "bahdanau-attention/bahdanau-attention-training-4-1.svg",
-          "bytes": 18977,
-          "sha256": "sha256:b85f12a8b8f24c79ce3c572dc48bd820fe4d4dd20e263e25bf7bca46124c3812"
+          "bytes": 17796,
+          "sha256": "sha256:a2334c34132c5976c487fe61e615648f293c5b18525d390bcb5259677fac49ea"
         }
       ]
     }

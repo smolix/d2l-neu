@@ -65,7 +65,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'0.66 sec'"
+          "text": "'0.74 sec'"
         }
       ]
     },
@@ -78,7 +78,7 @@
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-visualization-2-1.svg",
           "bytes": 49046,
-          "sha256": "sha256:5c668b6c0ebea0c24950c8cadcf7f89427bc538dce3a09a0102abd42f99602f7"
+          "sha256": "sha256:6dab03e537c43cfa0bb9b02b4f750b6f3db63c50389bff418b19becdcb76bf51"
         }
       ]
     }

@@ -427,9 +427,9 @@ the density is largest at the
 origin, yet the volume of a radius-$r$ shell grows like $r^{d-1}$, and the
 fight between decaying density and exploding volume is settled overwhelmingly
 at $r\approx\sqrt d$. In $d=784$ (an MNIST-sized Gaussian) a typical draw has
-norm within a few percent of $28$; a draw with norm below $14$ is, by
-:eqref:`eq_mdl-norm-concentration`, rarer than $2e^{-24}$. You will never see
-one.
+norm within a few percent of $28$; a draw with norm below $14$ has probability at most $2e^{-24}$ by
+:eqref:`eq_mdl-norm-concentration`, so it is extraordinarily unlikely in an
+ordinary experiment.
 
 ### Near-Orthogonality Revisited
 
@@ -474,16 +474,14 @@ default, exponentially many at a time*.
 a layer with variance $1/d$ (or $2/d$ for ReLU), and the standard telling
 (:numref:`sec_numerical_stability`) checks variances: each pre-activation
 $\langle\mathbf w,\mathbf x\rangle$ has variance $\|\mathbf x\|^2/d\approx 1$.
-Concentration upgrades the telling. A layer output is a $d$-dimensional
-random-ish vector of such coordinates, and by the same kind of argument as
-:eqref:`eq_mdl-norm-concentration` (the post-activation coordinates are
-neither Gaussian nor exactly independent, so the constants are heuristic) its
-*norm* concentrates: the claim "unit
-activations layer after layer" holds for
-essentially every draw of a wide network's weights, with a failure probability
-that shrinks rapidly with width. That is why a single forward pass at
-initialization is a meaningful diagnostic at all: the number it prints is the
-number every other draw would have printed.
+For a **single wide random layer**, analogous concentration results can make
+this variance calculation representative: under independence or weak-dependence
+and tail assumptions, the empirical activation norm is close to its expectation
+with high probability. Iterating the statement through a deep nonlinear network
+is a different problem. Dependencies accumulate across layers, and preserving
+mean variance does not guarantee controlled singular values or dynamical
+isometry. A forward-pass norm check is therefore a useful diagnostic, not a
+proof that all signals remain stable through depth.
 
 **Distance concentration and nearest neighbors.** For two independent draws
 the difference $\mathbf x-\mathbf y$ is again a Gaussian vector, now with
@@ -770,8 +768,10 @@ $Br/\sqrt n$. $\blacksquare$
 
 Now look at what is *absent* from :eqref:`eq_mdl-linear-rademacher`: the
 dimension $d$. A linear class over a million features and over ten features
-have the *same* capacity bound if their weight norms and data norms match.
-**Norm, not parameter count, controls capacity.** This single line is the
+has the *same* bound only when both its weight-radius $B$ and input-radius $r$
+match. Thus parameter count does not appear explicitly; capacity in this bound
+is controlled by the **product** $Br$. Changing or adding features can change
+$r$, so weight norm alone is not an invariant measure of capacity. This single line is the
 theory behind weight decay (:numref:`sec_weight_decay`): shrinking
 $\|\mathbf w\|$ shrinks $B$, which shrinks the one term in
 :eqref:`eq_mdl-rademacher-bound` the learner can control. Hold on to it; it
@@ -786,7 +786,9 @@ compare), while :eqref:`eq_mdl-linear-rademacher` computes that of the
 *predictor* class $\mathcal F$. The bridge is the *contraction principle*
 :cite:`Boucheron.Lugosi.Massart.2013`: composing every $f\in\mathcal F$ with
 one fixed $L$-Lipschitz function $\phi$ multiplies the Rademacher complexity
-by at most $L$, $\widehat{\mathfrak R}_S(\phi\circ\mathcal F)\le
+by at most $L$ after centering $\phi(0)=0$; subtracting the constant
+$\phi(0)$ does not affect the signed complexity. Thus
+$\widehat{\mathfrak R}_S(\phi\circ\mathcal F)\le
 L\,\widehat{\mathfrak R}_S(\mathcal F)$. Margin losses (the hinge, the
 clipped square, the logistic) are Lipschitz in the prediction, so the loss
 class of the norm-bounded linear model inherits the bound
@@ -933,14 +935,15 @@ $$
 \bigl\|\mathbf w^{(p+1)}_{\min}\bigr\| \le \bigl\|\mathbf w^{(p)}_{\min}\bigr\| :
 $$
 
-**more features let the minimum-norm interpolant get smaller.** Now recall the
-lesson of :eqref:`eq_mdl-linear-rademacher`: for linear classes the
-capacity that matters is the *norm*, not the parameter count. Past the
-threshold, growing $p$ grows the nominal parameter count but *shrinks* the
-norm the fit actually uses, so the effective capacity of the learned
-predictor falls and the test error follows it down. The second descent is
-the classical theory applied to the
-right complexity measure.
+**more nested features let the minimum-norm interpolant get no larger.** This is
+a useful part of the mechanism, but it is not by itself a Rademacher-complexity
+proof of the second descent. The bound :eqref:`eq_mdl-linear-rademacher` depends
+on $Br$: as $p$ grows here, $\|\mathbf w\|$ falls while the random-feature
+norm $\|\boldsymbol\phi(\mathbf x)\|$ grows. Moreover, selecting the radius
+from the fitted, data-dependent solution requires a localized or
+algorithm-dependent argument. The experiment below therefore tracks solution
+norm as a diagnostic correlated with test error, not as a complete capacity
+certificate.
 
 ### Double Descent in Twenty-Six Lines
 
@@ -997,9 +1000,10 @@ $p=50$ and $0.18$ at $p=80$ to $0.060$ at $p=400$: *ten times better than the
 best underparameterized model*. Note also which curve did *not* move: train
 error is zero up to floating point everywhere past the threshold (the table
 prints $10^{-28}$), so no
-empirical-risk-based criterion can tell these models apart; only the norm
-does, exactly as :numref:`sec_generalization_deep`'s survey said of deep
-networks and as the Rademacher calculation predicts. The best model in this
+empirical-risk-based criterion can tell these models apart; the solution norm
+distinguishes them in this experiment. The Rademacher calculation motivates
+looking beyond parameter count, but its relevant product also includes feature
+norms and does not by itself predict this test curve. The best model in this
 entire experiment is the most overparameterized one, fitting noisy data
 *exactly*, with ten times more parameters than data points.
 
@@ -1045,8 +1049,9 @@ predicts a given network's test error from first principles remains open.
   concentrates at $1$ with failure probability $2e^{-d\varepsilon^2/8}$, so a
   Gaussian is a *thin shell*, random directions are *near-orthogonal*
   ($\cos\approx 1/\sqrt d$), pairwise distances concentrate (degrading
-  nearest-neighbor contrast), and unit-variance initialization keeps
-  activation norms pinned across layers for essentially every draw.
+  nearest-neighbor contrast). In a single wide random layer, related
+  concentration can make the variance calculation representative, but stability
+  across many nonlinear layers needs additional dependence and Jacobian control.
 * Hoeffding certifies one *pre-chosen* function; a learner chooses *after*
   seeing data, so guarantees must hold *uniformly* over the class. For finite
   classes the union bound gives deviation
@@ -1057,15 +1062,16 @@ predicts a given network's test error from first principles remains open.
   signs) bounds uniform deviations:
   $R(f)\le\hat R(f)+2\mathfrak R_n(\mathcal F)+\sqrt{\log(1/\delta)/2n}$. For
   the linear class $\{\|\mathbf w\|\le B\}$ on data with $\|\mathbf x\|\le r$
-  it computes to $Br/\sqrt n$: *norm, not parameter count, is capacity*. On
-  classes that interpolate, the complexity is $\approx 1$ and the bounds are
-  vacuous; the failure belongs to the crude class choice, and uniform
+  it computes to $Br/\sqrt n$: parameter count is absent when the weight and
+  data radii are held fixed. A class rich enough to fit arbitrary random signs
+  has complexity near its maximum and yields a vacuous bound; the failure belongs to the crude class choice, and uniform
   convergence survives as the language of guarantees.
 * *Double descent*: sweeping random features through the interpolation
   threshold $p=n$, test error follows the classical U, spikes at $p=n$ (a
   near-singular system divides noise by $\sigma_{\min}$), then descends again
-  as the minimum-norm interpolant's norm (the true capacity) shrinks with
-  every added feature. Interpolating noise is *benign* when a few strong
+  while the minimum-norm interpolant shrinks with added nested features. This
+  norm trend is a mechanism and diagnostic; a formal capacity explanation must
+  also track feature norms and the data-dependent selection of the solution. Interpolating noise is *benign* when a few strong
   spectral directions carry the signal and many weak ones absorb the noise.
 
 ## Exercises

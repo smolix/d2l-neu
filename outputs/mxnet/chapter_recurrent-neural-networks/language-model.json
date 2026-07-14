@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:c04e902f85728fee6d177ad1f37e8d26e97bbe03b9e41acdd9369248864d0a0f"
+          "sha256": "sha256:7ded15ea557af992ae738bcf869fb10cbd3a6b5e6bd867eedc27a8b28fa348d2"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:4a3f67378b4ab6e6d04a0e92c0f0582107ff4e3d9ce137f38329757237db0293"
+          "sha256": "sha256:c399167963825700e2478bc777e837e62d9edf58109b3f015a52f15ea73c5420"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[313. 636. 969. 273. 571. 601.  44. 622. 838.  10.]\n [311. 537. 284. 419. 612.  10.  10.  39.  84. 299.]] \nY: [[636. 969. 273. 571. 601.  44. 622. 838.  10. 662.]\n [537. 284. 419. 612.  10.  10.  39.  84. 299. 442.]]\nX[0]: ' that any kind of trick, however\\n'\nY[0]: ' any kind of trick, however\\nsu'\n"
+          "text": "X: [[116.  41. 284.  10. 257. 348. 108. 259. 292.  46.]\n [ 44. 657. 329. 466. 272. 262. 270. 589. 273.  32.]] \nY: [[ 41. 284.  10. 257. 348. 108. 259. 292.  46. 497.]\n [657. 329. 466. 272. 262. 270. 589. 273.  32. 325.]]\nX[0]: 't) in\\nheadlines.'\nY[0]: ') in\\nheadlines. And'\n"
         }
       ]
     }

@@ -259,7 +259,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(2.089024), array(True))"
+          "text": "(array(1.9813567), array(True))"
         }
       ]
     },
@@ -320,7 +320,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "6.238413 6.238413\nTrue\n"
+          "text": "6.3388753 6.3388753\nTrue\n"
         }
       ]
     },
@@ -350,7 +350,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(8.861247)"
+          "text": "array(8.861246)"
         }
       ]
     }

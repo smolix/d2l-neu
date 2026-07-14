@@ -25,12 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "function output shape:\t (1, 14, 14, 6)\n"
+          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\nfunction output shape:\t (1, 14, 14, 6)\n"
         },
         {
           "type": "stream",
@@ -67,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 21488,
-          "sha256": "sha256:277164e73de68e732191339edf6bf96ff8c0f6063183da6ce6e877728dc9e3c1"
+          "bytes": 21497,
+          "sha256": "sha256:99fc9286333e7233575096c949469a14e2f5eb55efff445b05d1e162ae1dd6d2"
         }
       ]
     }

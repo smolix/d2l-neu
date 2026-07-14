@@ -20,12 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "std 0.0443, predicted 0.0442\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "max |w| 0.1005, bias all zero: True\n"
+          "text": "std 0.0443, predicted 0.0442\nmax |w| 0.1005, bias all zero: True\n"
         }
       ]
     },

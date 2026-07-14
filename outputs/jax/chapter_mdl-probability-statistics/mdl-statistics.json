@@ -14,38 +14,38 @@
       "outputs": []
     },
     "statistics-estimator-metrics": {
-      "code_fingerprint": "sha256:0f67fb2804aa6bcd4a5a6e26567fcb9e0d78cbafce5843ba5109909772e141e4",
+      "code_fingerprint": "sha256:81f58f120c554b6610fa1aa9696f9d631da3f41a1422a15a6713deeafced1ff2",
       "kind": "text",
       "outputs": []
     },
     "statistics-sampling-distribution": {
-      "code_fingerprint": "sha256:e2b44f112404208eeac049c597682c90b7e19a381399a0d0bd1c1987709c5e01",
+      "code_fingerprint": "sha256:203f9549a19697e40837fbd76bb310f4ea796f5f4ad653a7c2910d8b68cfd36e",
       "kind": "text",
       "outputs": []
     },
     "statistics-verify-decomposition": {
-      "code_fingerprint": "sha256:631dfd7e83648aef726b7d1c6d3fb4de79de24933b5ea32b902aa88687d63844",
+      "code_fingerprint": "sha256:0a823695ebba022f2fcb910742f22a24dbff8bf6ea55460c62c6e05284810ef3",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(0.53104275, dtype=float32), Array(0.5310429, dtype=float32))"
+          "text": "(np.float64(0.5256354205845384), np.float64(0.5256354205845384))"
         }
       ]
     },
     "statistics-unbiased-variance": {
-      "code_fingerprint": "sha256:b2058a064d77465badf3c728aa991e4f99ad113f873acc89d578de9380724ac0",
+      "code_fingerprint": "sha256:fb941b0c7f28a9cedee7739228c0d02ab684421ac5447a7597cd9d5d287fc2b2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance    = 4\nE[divide by n]   = 2.656  (biased)\nE[divide by n-1] = 3.985  (unbiased)\n"
+          "text": "true variance    = 4\nE[divide by n]   = 2.665  (biased)\nE[divide by n-1] = 3.998  (unbiased)\n"
         }
       ]
     },
     "statistics-permutation-test": {
-      "code_fingerprint": "sha256:392dc341530ea13bfbe2b976df3607c42e303a2341261f12d987927fdcd25fd3",
+      "code_fingerprint": "sha256:ff1c45da6da92d267cfff1a19270a70e99b983af82f66c8cd53d0ce69d0d1cbd",
       "kind": "mixed",
       "outputs": [
         {
@@ -58,22 +58,22 @@
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/statistics-permutation-test-1.svg",
           "bytes": 32404,
-          "sha256": "sha256:d4012ab34afcf0265e06284c20c6aabc248e4fb708990ea836e4c9f9bd81787b"
+          "sha256": "sha256:c123b7112cb6207af5527efbf98459004b64beffc060004d487a2c227a187da5"
         }
       ]
     },
     "statistics-confidence-interval": {
-      "code_fingerprint": "sha256:813ca35e22de295f0d18a5f0bbad5ed66f83cceb6b010e22a67391542fcb79b9",
+      "code_fingerprint": "sha256:dbff728abad46492577e50bace1750ef6e82965a99e0e0254822b01765cf3f98",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(-0.09469981, dtype=float32), Array(0.03548859, dtype=float32))"
+          "text": "(np.float64(-0.00949413975199926), np.float64(0.11915269457401512))"
         }
       ]
     },
     "mdl-statistics-a-gaussian-example-1": {
-      "code_fingerprint": "sha256:4cfd34a028da283557af8af534b114257bbbccaf5271710e8d522321746dffa5",
+      "code_fingerprint": "sha256:1b61703ca7cce60a127e8bcded4538edeeeba7eaa8fc5ea5383e3a781186e27b",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "statistics-bootstrap": {
-      "code_fingerprint": "sha256:0d42060d79bb9544fcc342d9f833713e1f396e0f82f10306a49c004b0def7cc9",
+      "code_fingerprint": "sha256:255babded5453374b2c58f71cd10782cf88ea62269fc8d90f5cf31160bd517c2",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +95,7 @@
       ]
     },
     "statistics-bootstrap-contrast": {
-      "code_fingerprint": "sha256:9c78587bac4308959d4a8fe4a1a26705e8069c02a65415db87b294e504c77856",
+      "code_fingerprint": "sha256:6b6f4fc10a59fe389a199f75728bf27314477b3d8656a95ed028fae0efb43729",
       "kind": "text",
       "outputs": [
         {

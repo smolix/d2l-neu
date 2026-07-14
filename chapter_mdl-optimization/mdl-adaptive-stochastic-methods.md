@@ -5,7 +5,7 @@ The optimizer that trains essentially every modern network is AdamW with warmup
 and a decaying learning-rate schedule, not the plain gradient descent whose
 theory :numref:`sec_mdl-gradient-based-optimization` developed. This section
 closes the gap between that theory and that default. Two questions were left
-open there. First, the one convergence guarantee that applied *verbatim* to
+open there. First, the smooth nonconvex benchmark used to reason about
 deep networks, the $O(1/K)$ stationarity rate, was proved for the exact
 gradient, while training uses noisy minibatch estimates; what survives?
 Second, the whole $\kappa$ story was about a *single* step size $\eta$ forced
@@ -123,8 +123,12 @@ Read the optimized bound against its deterministic ancestor. Without noise
 the $O(1/K)$ rate exactly. With noise, the second term dominates for large
 $K$, and it decays like $K^{-1/2}$: **noise turns the deterministic $1/K$
 into a square root**, the same square root that governed the minibatch
-variance ($1/b$ energy, $1/\sqrt{b}$ amplitude): to make the expected gradient
-norm $10\times$ smaller, run $100\times$ longer. The prescribed step obeys the same
+variance ($1/b$ energy, $1/\sqrt{b}$ amplitude). Be careful about what is
+bounded: the theorem controls the **expected squared gradient norm**. Running
+$100\times$ longer reduces that bound by $10\times$; interpreting it as a bound
+on the gradient norm itself gives only a factor $\sqrt{10}$. A tenfold reduction
+of that norm would require $10{,}000\times$ the budget under this worst-case
+rate. The prescribed step obeys the same
 logic as the noise-ball analysis: a longer budget affords a smaller $\eta$,
 shrinking the floor the iterates can reach.
 
@@ -458,8 +462,9 @@ practice the construction's fingerprint, occasional large gradients that
 matter, is not exotic: rare tokens, rare classes, and loss spikes all
 qualify. Practice mostly retains plain Adam anyway (the drift needs the rare
 gradients to be *consistently* informative in the same direction, which real
-noise usually breaks up), but the theorem permanently settled what kind of
-guarantee Adam has: none, without modification, even for convex problems.
+noise usually breaks up), but the theorem establishes the narrower conclusion that vanilla Adam lacks a
+general convergence guarantee without additional assumptions or modification,
+even for convex problems.
 
 ### The Valley, Revisited
 
@@ -751,6 +756,120 @@ chapter's instruments (estimator variance and the stability ceiling)
 pointed at the first thousand steps, and together they predict the practice
 that every large training run has converged on independently.
 
+## Variance Reduction for Finite Sums
+:label:`sec_mdl-variance-reduction`
+
+Minibatching reduces variance by averaging more examples, but a fixed-size
+minibatch still has noise at the optimum. A finite training set offers another
+possibility: reuse information from earlier gradients as a **control variate**.
+Write the empirical objective as
+
+$$
+F(\mathbf x)=\frac1n\sum_{i=1}^n f_i(\mathbf x).
+$$
+
+At a reference point $\widetilde{\mathbf x}$, compute the full gradient
+$\widetilde{\boldsymbol\mu}=\nabla F(\widetilde{\mathbf x})$. The **SVRG**
+estimator at the current point is
+
+$$
+\mathbf v_i(\mathbf x)
+=\nabla f_i(\mathbf x)-\nabla f_i(\widetilde{\mathbf x})
+ +\widetilde{\boldsymbol\mu}.
+$$
+:eqlabel:`eq_mdl-opt-svrg`
+
+For a uniformly sampled index,
+
+$$
+\mathbb E_i[\mathbf v_i(\mathbf x)]
+=\nabla F(\mathbf x)-\nabla F(\widetilde{\mathbf x})
+ +\nabla F(\widetilde{\mathbf x})
+=\nabla F(\mathbf x),
+$$
+
+so the estimator is unbiased. Its advantage is not the mean but the variance:
+when $\mathbf x$ is close to the snapshot, the two component gradients are
+highly correlated and their difference is much less variable than either one.
+After an inner loop moves too far from the snapshot, refresh the full gradient
+and repeat. Under smooth strong convexity, this mechanism yields geometric
+convergence with a fixed step size, rather than SGD's fixed-step noise floor
+:cite:`Bottou.Curtis.Nocedal.2018`.
+
+The cell compares SVRG with SGD on ridge regression. One SVRG epoch pays $n$
+component-gradient equivalents for the full gradient and two per inner step;
+SGD receives the same total budget of $3n$ component gradients per reported
+epoch. Both use a fixed step size, so the comparison isolates the control
+variate rather than a schedule.
+
+```{.python .input #mdl-adaptive-svrg}
+rng = np.random.default_rng(4)
+n_vr, d_vr = 300, 12
+X_vr = rng.standard_normal((n_vr, d_vr))
+w_true_vr = rng.standard_normal(d_vr)
+y_vr = X_vr @ w_true_vr + 0.5 * rng.standard_normal(n_vr)
+lam_vr = 0.1
+H_vr = X_vr.T @ X_vr / n_vr + lam_vr * np.eye(d_vr)
+w_star_vr = np.linalg.solve(H_vr, X_vr.T @ y_vr / n_vr)
+
+def component_grad(w, i):
+    return X_vr[i] * (X_vr[i] @ w - y_vr[i]) + lam_vr * w
+
+def full_grad(w):
+    return X_vr.T @ (X_vr @ w - y_vr) / n_vr + lam_vr * w
+
+def objective_vr(w):
+    return (0.5 * np.mean((X_vr @ w - y_vr)**2)
+            + 0.5 * lam_vr * (w @ w))
+
+eta_vr, epochs_vr = 0.05, 20
+snapshot, gaps_svrg = np.zeros(d_vr), []
+for _ in range(epochs_vr):
+    mean_grad = full_grad(snapshot)
+    w = snapshot.copy()
+    for _ in range(n_vr):
+        i = rng.integers(n_vr)
+        v = component_grad(w, i) - component_grad(snapshot, i) + mean_grad
+        w -= eta_vr * v
+    snapshot = w
+    gaps_svrg.append(objective_vr(snapshot) - objective_vr(w_star_vr))
+
+rng_sgd = np.random.default_rng(5)
+w_sgd, gaps_sgd = np.zeros(d_vr), []
+for _ in range(epochs_vr):
+    for _ in range(3 * n_vr):               # same component-gradient budget
+        i = rng_sgd.integers(n_vr)
+        w_sgd -= eta_vr * component_grad(w_sgd, i)
+    gaps_sgd.append(objective_vr(w_sgd) - objective_vr(w_star_vr))
+
+for e in (1, 5, 20):
+    print(f'budget epoch {e:2d}: SGD gap={gaps_sgd[e-1]:.2e}  '
+          f'SVRG gap={gaps_svrg[e-1]:.2e}')
+```
+
+SGD makes cheaper early progress, but its constant-step iterates continue to
+wander around the optimum. SVRG pays for its snapshots and then drives the gap
+down geometrically on this finite, strongly convex problem. The result does not
+say SVRG universally beats SGD: full passes are expensive on enormous or
+streaming datasets, the linear-rate theorem uses finite-sum smoothness and
+convexity, and stale control variates are less effective when the objective
+changes during training.
+
+**SAGA** removes the periodic full-gradient pass by storing the most recently
+seen gradient for every example and using their table average as the control
+variate. It spends one new component gradient per step but stores $O(nd)$
+numbers in the literal form (structure can reduce this for generalized linear
+models). SARAH-style estimators update the control variate recursively. The
+shared principle is more important than the acronyms: correlate a noisy new
+estimate with a stored estimate whose mean is known, subtract the shared noise,
+and add the known mean back.
+
+Variance reduction is distinct from momentum. Momentum averages gradients
+across recent iterates and can reduce high-frequency noise, but its moving
+average is generally biased for the gradient at the current point. SVRG and
+SAGA engineer an estimator that is unbiased at the current point and whose
+variance shrinks as the optimization converges.
+
 ## Beyond Diagonals: the Preconditioning Ladder
 :label:`subsec_mdl-preconditioning-ladder`
 
@@ -842,13 +961,14 @@ $\eta$ transfers from a small model to a large one.
   quadratic, $\eta_i = 1/\lambda_i$ removes the condition number entirely.
   **AdaGrad** is steepest descent in the metric
   $\mathrm{diag}(\sqrt{\sum_t \mathbf{g}_t^2})$, built for sparse
-  gradients, but its never-forgetting denominator drives steps to zero on
-  nonconvex problems; **RMSProp** substitutes an EMA; **Adam** adds momentum
+  gradients, but its never-forgetting denominator can drive steps toward zero
+  and make progress impractically slow on persistent noisy or nonconvex
+  problems; **RMSProp** substitutes an EMA; **Adam** adds momentum
   and *exact* bias correction: $\mathbb{E}[\mathbf{v}_t] =
   (1 - \beta_2^t)\,\bar{\mathbf{g}^2}$ under stationarity, so dividing by
   $1 - \beta_2^t$ cancels the zero-initialization deficit identically.
-* Adam has **no convergence guarantee**, even convex: in the Reddi--Kale--Kumar
-  construction the effective step on a rare informative gradient shrinks
+* Vanilla Adam is **not guaranteed to converge in general**, even on convex
+  problems: in the Reddi--Kale--Kumar construction the effective step on a rare informative gradient shrinks
   (by $\sqrt{\mathbf{v}}\approx C$) faster than its information accrues, and
   Adam converges to the *worst* point while AMSGrad's running-max fix (a
   nonincreasing per-coordinate step) and plain SGD find the optimum. What
@@ -869,6 +989,12 @@ $\eta$ transfers from a small model to a large one.
   $t$ the preconditioner is estimated from a handful of gradients (unbiased
   $\ne$ accurate), and the stability ceiling has not yet adapted to the
   target step.
+* On finite-sum objectives, **SVRG** subtracts a component gradient at a
+  snapshot and adds the snapshot's full gradient, producing an unbiased
+  control-variate estimator whose variance shrinks near the snapshot. **SAGA**
+  replaces full-gradient refreshes by a table of stored component gradients.
+  These methods can reach linear fixed-step convergence under smooth strong
+  convexity, but require repeated access to a finite dataset.
 * Between Adam's diagonal and Newton's full inverse runs the
   **preconditioning ladder**: K-FAC's Kronecker-factored Fisher (natural
   gradient at two small inverses via
@@ -957,6 +1083,12 @@ $\eta$ transfers from a small model to a large one.
    hard max by $\tilde{v}_t = \max(\gamma\tilde{v}_{t-1}, v_t)$ and find the
    largest forgetting factor $\gamma < 1$ at which the drift to $+1$
    reappears.
+
+8. **SVRG unbiasedness and cost.** Prove the conditional unbiasedness of
+   :eqref:`eq_mdl-opt-svrg`. Count component-gradient evaluations in one epoch
+   of the cell, then vary the inner-loop length from $n/2$ to $4n$. Explain the
+   tradeoff between amortizing the snapshot gradient and letting the control
+   variate become stale.
 
 ## Discussions
 
@@ -1107,8 +1239,8 @@ with *its own* activity, not wall-clock time.
 
 ::: {.d2l-note .warn}
 $\mathbf{s}_t$ never forgets, so steps decay like $\eta/(\sigma\sqrt{t})$:
-Robbins--Monro hard-wired in. On nonconvex terrain the method stalls
-because it remembers too much. **RMSProp**
+Robbins--Monro hard-wired in. On some nonconvex problems the resulting decay can make progress
+impractically slow because the accumulator remembers too much. **RMSProp**
 forgets on purpose: an EMA with memory $\approx 1/(1-\beta_2)$ steps
 ($10$ at its standard $\beta_2 = 0.9$).
 :::
@@ -1209,8 +1341,8 @@ maximum, makes per-coordinate steps nonincreasing, so the large
 gradient is never forgotten.
 
 ::: {.d2l-note}
-The theorem settled what kind of guarantee Adam has: **none, even
-convex**, without modification. Practice keeps Adam anyway: real noise
+The theorem shows that vanilla Adam has **no general convergence guarantee,
+even on convex objectives**, without additional assumptions or modification. Practice keeps Adam anyway: real noise
 usually breaks up consistently-informative rare gradients.
 :::
 :::

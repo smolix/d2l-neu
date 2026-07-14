@@ -448,7 +448,16 @@ def main():
     args = parser.parse_args()
 
     src = args.source
-    files = args.files or list(CHAPTER_NUMBERING.keys())
+    if args.files is not None:
+        files = args.files
+    else:
+        # Numbered book pages plus code-bearing standalone notebooks.  The
+        # manifest scanner and Makefile already discover every chapter_*/*.md;
+        # keeping the same source universe prevents batch cleanup from deleting
+        # notebook-only supplements that intentionally stay out of the book TOC.
+        standalone = sorted(str(path.relative_to(src))
+                            for path in src.glob("chapter_*/*.md"))
+        files = list(dict.fromkeys([*CHAPTER_NUMBERING.keys(), *standalone]))
 
     # In --files mode (per-notebook Make invocation), suppress the verbose
     # batch-style banner / counts. Each per-notebook rebuild fires gen

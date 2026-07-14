@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 25816,
-          "sha256": "sha256:53b73633f5cbf38ab1424b8efe6c1ba439bcc4023386abba7f55feb95398a983"
+          "bytes": 19145,
+          "sha256": "sha256:65e8d3ddfeba06ce8ae5789ae296fcb04f62c030971c2c3b815286bc44df08e4"
         }
       ]
     },
@@ -124,7 +124,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'the time traveller\\nof the\\nshames of the\\nside of the\\nshames of the\\nside of the\\nshames of the\\nside of the\\nshames of the\\nside of'"
+          "text": "'the time traveller, I had seen. I had the bigature, and the wrong. I had the bigature, and the wrong. I had the bigature, and the wrong. I had'"
         }
       ]
     },
@@ -135,12 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time traveller itscomemanetul dgeverom the pushed of light placeity grincience of the\nsun?'ather\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "the time traveller me to the\nslemnly\nandhaminger, I began to an\nwhere-goysical at\n"
+          "text": "the time traveller un by the though in his horimli and pout that the earth stood into u and vap for of a were Sning G\nthe time traveller, and the wanitions of the little people of the sunlitions and that is\ntravelling the slopes of\n"
         }
       ]
     },
@@ -165,7 +160,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it hasful sheow dark gr notapp towards comeple� neverfulon car feelackull\\r cl'"
+          "text": "'it has�roughue�hingps\\x7factTheown�btast our-- trens thinkace then'"
         }
       ]
     },
@@ -177,8 +172,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 18939,
-          "sha256": "sha256:4620d318507e24cc00873d9577bfe954f4f89a3d785fda5941f9e77c5eade5df"
+          "bytes": 18940,
+          "sha256": "sha256:b1eae76dab9f6fac14354d62a0119b220e95895c275e0b22ab8844234b0be2e9"
         }
       ]
     },
@@ -189,7 +184,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 111.4, 'the time traveller,\\nand I had\\nnots that the\\ntimeeriously\\nmanished, as I\\nwas entered that the'\n"
+          "text": "perplexity 109.1, \"the time traveller. I was\\nfound not see I\\nmatheie, and I was nothing to\\n\\n'In a moment I\"\n"
         }
       ]
     },
@@ -200,7 +195,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      49.9     94.7\n concise      35.7    111.4\n"
+          "text": "   model  time (s)  val ppl\n scratch      54.7     94.7\n concise      53.5    109.1\n"
         }
       ]
     }

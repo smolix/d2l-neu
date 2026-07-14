@@ -53,7 +53,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "per-mode factors x_1/x_0 = [ 0.818182 -0.818182]  predicted 1 - eta* lambda = [ 0.818182 -0.818182]\nmeasured contraction |x_k+1| / |x_k|: min 0.818182, max 0.818182\npredicted (kappa-1)/(kappa+1) = 0.818182\n"
+          "text": "per-mode factors x_1/x_0 ="
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " [ 0.818182 -0.818182]  predicted 1 - eta* lambda = [ 0.818182 -0.818182]\nmeasured contraction |x_k+1| / |x_k|: min 0.818182, max 0.818182\npredicted (kappa-1)/(kappa+1) = 0.818182\n"
         }
       ]
     },
@@ -104,7 +109,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
           "bytes": 100456,
-          "sha256": "sha256:c95cd90067382f88a104c9d3642a2f2c8abc65b4814517a0689ab8eea88e3f73"
+          "sha256": "sha256:32ece0d917d63c37b0757d69604e51cfea271760da7db3e654b4b0768801cb2d"
         }
       ]
     },
@@ -116,6 +121,17 @@
           "type": "stream",
           "name": "stdout",
           "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD with the optimal step contracts by 0.9802 per step; it needs 691 steps for |x_k| <= 1e-6\nNewton iteration 1:  |grad| = 2.8e-01\nNewton iteration 2:  |grad| = 3.2e-02\nNewton iteration 3:  |grad| = 1.1e-03\nNewton iteration 4:  |grad| = 1.2e-06\nNewton iteration 5:  |grad| = 1.6e-12\nNewton iteration 6:  |grad| = 3.1e-17\nagrees with the SGD section optimum: True\n"
+        }
+      ]
+    },
+    "mdl-gradient-bfgs-quadratic": {
+      "code_fingerprint": "sha256:42f9a947e2c31a575116886283bc75e6f672c4b907567486d37dc7e7e4ce0729",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "BFGS step 1: distance to optimum 7.85e-01\nBFGS step 2: distance to optimum 7.66e-01\nBFGS step 3: distance to optimum 7.13e-01\nBFGS step 4: distance to optimum 6.35e-01\nBFGS step 5: distance to optimum 4.68e-02\nBFGS step 6: distance to optimum 1.05e-14\nGD after the same 6 iterations: 7.94e-01\n"
         }
       ]
     }

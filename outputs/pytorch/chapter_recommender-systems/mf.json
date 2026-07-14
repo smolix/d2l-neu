@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.677, test RMSE 1.040\n257894.9 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 0.685, test RMSE 1.031\n268469.1 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mf/mf-training-and-evaluating-the-model-2-1.svg",
           "bytes": 21541,
-          "sha256": "sha256:0c0063c97ea89847c51bb7f71f78cee1234e2a5c47c5fe398f175dc91a1bec4d"
+          "sha256": "sha256:a27c54a55990ee16ec705d8ce047d395b9bfccd963ea1ef48476f9ba06c7af65"
         }
       ]
     },
@@ -52,7 +52,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([2.9875], device='cuda:0', grad_fn=<AddBackward0>)"
+          "text": "tensor([2.9528], device='cuda:0', grad_fn=<AddBackward0>)"
         }
       ]
     }

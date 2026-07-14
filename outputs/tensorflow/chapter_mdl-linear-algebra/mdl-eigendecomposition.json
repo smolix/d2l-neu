@@ -14,17 +14,17 @@
       "outputs": []
     },
     "eigendecomposition-an-example": {
-      "code_fingerprint": "sha256:3722407fc039dc377c99aee57730e6405f13ac650150ab62ace12f3a3bdc6081",
+      "code_fingerprint": "sha256:fb484945cbf8b695fcfbd0290e49f04b1d6c7edbc87e39ea3710d4087ae42073",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(2,), dtype=complex128, numpy=array([1.+0.j, 4.+0.j])>,\n <tf.Tensor: shape=(2, 2), dtype=complex128, numpy=\n array([[-0.70710678+0.j, -0.4472136 +0.j],\n        [ 0.70710678+0.j, -0.89442719+0.j]])>)"
+          "text": "EigResult(eigenvalues=array([1., 4.]), eigenvectors=array([[-0.70710678, -0.4472136 ],\n       [ 0.70710678, -0.89442719]]))"
         }
       ]
     },
     "mdl-eigendecomposition-jordan-power": {
-      "code_fingerprint": "sha256:6959a206cd74188eb350fab6701a8c64b0bdd31cdf81a34bab9d7d7b2d0b5217",
+      "code_fingerprint": "sha256:0a148fe6bda17dc55befbd57cf7bb923751f6c842eece5f007db7d6fad5afedc",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +35,7 @@
       ]
     },
     "eigendecomposition-complex-rotation": {
-      "code_fingerprint": "sha256:5c98b93a45edde0e5975c711715ceef2a3e8d8874b2e41cdc0a0190e450277ee",
+      "code_fingerprint": "sha256:22fcb22508016895fa5e37d9422cda79badb11407f6c1993fc6824d1d61d6876",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +46,7 @@
       ]
     },
     "mdl-eigendecomposition-complex-eigenvalues-are-rotations-1": {
-      "code_fingerprint": "sha256:c74e4d7a40cef3fb527c20235e7e665439eec0e2caaf811ec7c82d3716fdabe4",
+      "code_fingerprint": "sha256:b2c78348090ec05f93f0fac73b233553c02b08e4cd9bf108a4c0802da89e27e0",
       "kind": "text",
       "outputs": [
         {
@@ -56,8 +56,19 @@
         }
       ]
     },
+    "mdl-eigendecomposition-nonnormal-transient": {
+      "code_fingerprint": "sha256:7b35afd4d7ed6ccf294573a55471d84f1952ffbc7c6a5705088effe0828d9e6d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues: [0.9 0.8]\nnormal matrix: max ||D^k|| = 1.000\nnon-normal:    max ||A^k|| = 10.788 at k = 6\neigenvector condition number = 80.0\nat z=1: ||(zI-A)^-1|| = 200.3,  normal comparison = 10.0\n"
+        }
+      ]
+    },
     "eigendecomposition-psd-gram": {
-      "code_fingerprint": "sha256:546d41d72eb9e4f894e390cd8c535d17872bd9812413aa1f44f03dfa03bb9726",
+      "code_fingerprint": "sha256:bd70033aaed80fdbac9f82b324ad80922e8791fad1c7b9e0828905a12cde491d",
       "kind": "text",
       "outputs": [
         {
@@ -68,7 +79,7 @@
       ]
     },
     "mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches": {
-      "code_fingerprint": "sha256:9e6a6dfe5db45f9c2c9452179a3319a4b1ced41dba0f81bef2341c01e48a5a50",
+      "code_fingerprint": "sha256:53beedc6d33ac241c8dc6eded3e46556e57888d900e59d041b73dcbb05fa5367",
       "kind": "text",
       "outputs": [
         {
@@ -79,23 +90,23 @@
       ]
     },
     "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:bc27ca1c987f6def64e155dda2eb542aa9c6889da96b78f4a60eaa46c11d10c6",
+      "code_fingerprint": "sha256:5a08f5ca3755502a9306f165d91c13331de9dff48696cf67aafa9f6aeb044316",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(4,), dtype=complex64, numpy=\narray([0.9922856+0.j, 9.0803385+0.j, 2.9734392+0.j, 4.9539413+0.j],\n      dtype=complex64)>"
+          "text": "array([9.08033648, 0.99228545, 4.95394089, 2.97343718])"
         }
       ]
     },
     "eigendecomposition-power-iteration": {
-      "code_fingerprint": "sha256:bc2200a4ee0db08779c53f818ae7e3d582ec008ba92b1e0c88b6a48c3f6127a4",
+      "code_fingerprint": "sha256:c1c675903b5cbbbc4d8af5aa509bc5d83e43ebb27b854ba333a9e406674b9e4a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "stabilized norm ratio = 1.9390711037   max|eigenvalue| = 1.9390711037\n"
+          "text": "stabilized norm ratio = 1.9744593215   max|eigenvalue| = 1.9744593215\n"
         }
       ]
     }

@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40648,
-          "sha256": "sha256:84c874cf3076036be78b6e4dd8932bf195e36b51524f3537cd3da526a8f0ffd2"
+          "bytes": 40477,
+          "sha256": "sha256:cc7b027bb7e0ea71e17f524e83927fd10cfc8c792692d24bf3757fdb7c0fc16a"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 18609,
-          "sha256": "sha256:9b6b36f820636288eb347396273d44ec2979d7cb5ff7474486043e4850070f3a"
+          "bytes": 17933,
+          "sha256": "sha256:506270bec66c1e8359ecc0d052ff0ef2091a82aa9fa82e6f9ed81ee8df2cc3a0"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 68357,
-          "sha256": "sha256:d7faf08cf21d8a1f0ca077c8afa849dec7dd70e5b4b85fcdb96abd08e53b8a94"
+          "bytes": 69879,
+          "sha256": "sha256:72a4d11a3e3e0042c10fe36f1ced10df273a2c53902afb40bbbd3d8db2fd84a3"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 46181,
-          "sha256": "sha256:c215c52d4ededdec057914cd65fc5eaa93585decd8d62f4e4911ea28e41a52ca"
+          "bytes": 46788,
+          "sha256": "sha256:d1b7cb74236da5ae4170b1044fdbee9618496254b83855d0d3c9871ee5f5bed7"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 107645,
-          "sha256": "sha256:2c55edd905e6db43e28fb4b10d1de81578f0df648d9645efcaf01f2b7bb78176"
+          "bytes": 109078,
+          "sha256": "sha256:f0bfdbe225552f94b31c3b92a88b29a3e939f50808a498c5df2090f0f1d36550"
         }
       ]
     }

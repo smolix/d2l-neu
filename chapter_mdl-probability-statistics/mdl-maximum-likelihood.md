@@ -1,10 +1,10 @@
 # Maximum Likelihood
 :label:`sec_mdl-maximum_likelihood`
 
-Every loss function in this book is a disguised probability statement. When we
-"minimize the cross-entropy" of a classifier or "minimize the squared error" of
-a regressor, we are answering one question: *which parameters make the observed
-data most probable?* That is the **maximum likelihood** principle, the idea
+Many standard machine-learning losses have a probabilistic interpretation. When
+we minimize a classifier's cross-entropy or a regressor's squared error under a
+Gaussian noise model, we are answering one question: *which parameters make the
+observed data most probable?* That is the **maximum likelihood** principle, the idea
 that turns a probabilistic model into a trainable objective. This section
 states the principle and proves the three equivalences that make it
 operational: likelihood becomes a *negative log-likelihood*, the negative
@@ -54,50 +54,32 @@ import numpy as onp
 
 ## The Maximum Likelihood Principle
 
-Suppose we have a model with parameters $\boldsymbol{\theta}$ and a collection of
-observed data $X$. As a concrete picture, let $\boldsymbol{\theta}$ be the single
-number giving the probability a coin lands heads, and let $X$ be a sequence of
-independent flips. We want the *most probable* parameters given the data, i.e.,
+Suppose we have a model with parameters $\boldsymbol{\theta}$ and observed
+data $X$. The **likelihood** is the model probability or density of the observed
+data, viewed as a function of the parameter:
 
 $$
-\hat{\boldsymbol{\theta}} = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}}\, P(\boldsymbol{\theta}\mid X).
-$$
-:eqlabel:`eq_mdl-max_like`
-
-(When $\boldsymbol{\theta}$ is continuous, $P(\boldsymbol{\theta}\mid X)$ is a
-density and "most probable" means its *mode*, the MAP objective of
-:numref:`subsec_mdl-map`; a flat prior, introduced next, reduces it to the
-likelihood alone.)
-
-This looks like it requires a prior, and Bayes' rule makes the dependence
-explicit:
-
-$$
-P(\boldsymbol{\theta}\mid X) = \frac{P(X \mid \boldsymbol{\theta})\,P(\boldsymbol{\theta})}{P(X)}.
+L(\boldsymbol{\theta};X)=P(X\mid\boldsymbol{\theta}).
 $$
 
-Two of the three pieces drop out of the $\mathop{\mathrm{argmax}}$, but for
-*different reasons*. The evidence $P(X)$ does not depend on $\boldsymbol{\theta}$,
-so it can never change which $\boldsymbol{\theta}$ wins; dropping it is free, no
-assumption required. The prior $P(\boldsymbol{\theta})$ is a different matter:
-discarding it is a *modelling choice*. Only if we hold *no* prior belief that one
-parameter value is better than another, a *flat (uniform) prior* (e.g. that the
-coin's bias is equally likely to be any value in $[0,1]$), is
-$P(\boldsymbol{\theta})$ constant in $\boldsymbol{\theta}$ and free to drop too.
-(We say "flat" rather than "uninformative" because a prior flat in $\theta$ is
-not flat in a transformed parameter such as $\theta^2$;
-:numref:`subsec_mdl-map` returns to this.)
-What remains is the **likelihood** $P(X \mid \boldsymbol{\theta})$, the
-probability the data assigns under each parameter, and the principle in its
-working form:
+Maximum likelihood is the direct rule
 
 $$
-\hat{\boldsymbol{\theta}} = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}}\, P(X \mid \boldsymbol{\theta}).
+\hat{\boldsymbol{\theta}}_{\textrm{MLE}}
+ = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}}
+   P(X \mid \boldsymbol{\theta}).
 $$
 :eqlabel:`eq_mdl-mle`
 
-We restore the prior $P(\boldsymbol{\theta})$ deliberately in
-:numref:`subsec_mdl-map`; everything until then assumes it is flat.
+No prior is part of this definition. MLE asks which member of the chosen model
+family fits the observations best; it does not assign probabilities to the
+parameters themselves. Later, :numref:`subsec_mdl-map` introduces the distinct
+**maximum a posteriori** rule
+$\operatorname*{argmax}_{\boldsymbol{\theta}}P(\boldsymbol{\theta}\mid X)$, which multiplies
+the likelihood by a prior density. A prior that is constant in the chosen
+parameterization makes the two optimizers coincide, but “flat” is not invariant
+under nonlinear reparameterization and is not the foundation of maximum
+likelihood.
 
 ### A Worked Example: The Coin
 
@@ -121,32 +103,8 @@ The likelihood is a function of $\theta$ alone, so we can plot it and read off
 its peak.
 
 ```{.python .input #maximum-likelihood-a-concrete-example}
-#@tab mxnet
-theta = np.arange(0, 1, 0.001)
-p = theta**9 * (1 - theta)**4.
-
-d2l.plot(theta, p, 'theta', 'likelihood')
-```
-
-```{.python .input #maximum-likelihood-a-concrete-example}
-#@tab pytorch
-theta = torch.arange(0, 1, 0.001)
-p = theta**9 * (1 - theta)**4.
-
-d2l.plot(theta, p, 'theta', 'likelihood')
-```
-
-```{.python .input #maximum-likelihood-a-concrete-example}
-#@tab tensorflow
-theta = tf.range(0, 1, 0.001)
-p = theta**9 * (1 - theta)**4.
-
-d2l.plot(theta, p, 'theta', 'likelihood')
-```
-
-```{.python .input #maximum-likelihood-a-concrete-example}
-#@tab jax
-theta = jnp.arange(0, 1, 0.001)
+import numpy as onp
+theta = onp.arange(0, 1, 0.001)
 p = theta**9 * (1 - theta)**4.
 
 d2l.plot(theta, p, 'theta', 'likelihood')
@@ -346,9 +304,10 @@ total mass $\hat p_{\textrm{data}}(x) = n_x/n$, its empirical frequency. (We wor
 in natural logarithms, so the units are *nats*; switching to bits merely rescales
 every quantity by $\ln 2$ and changes no $\mathop{\mathrm{argmin}}$.)
 
-**Proposition (MLE = minimum cross-entropy).** *Maximizing the likelihood is the
-same as minimizing the cross-entropy from the empirical distribution
-$\hat p_{\textrm{data}}$ to the model $p_{\boldsymbol{\theta}}$:*
+**Proposition (discrete MLE = minimum cross-entropy).** *For discrete
+outcomes, maximizing the likelihood is the same as minimizing the
+cross-entropy from the empirical distribution $\hat p_{\textrm{data}}$ to the
+model $p_{\boldsymbol{\theta}}$:*
 
 $$
 \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}} \prod_{i=1}^n p(x_i\mid\boldsymbol{\theta})
@@ -398,22 +357,30 @@ is KL-closest to the data. The projection reading even survives a
 *misspecified* model: when no $p_{\boldsymbol{\theta}}$ equals the
 data-generating distribution there is no true parameter to converge to, and the
 MLE instead converges to the parameter whose $p_{\boldsymbol{\theta}}$ is
-KL-closest to the data-generating distribution :cite:`White.1982`. Training
-cannot drive the cross-entropy below the *entropy floor*
-$H(\hat p_{\textrm{data}})$, the irreducible cost of the data's own randomness;
-all it can remove is the KL gap, as :numref:`fig_mdl-mle-kl` shows. As a special
+KL-closest to the data-generating distribution :cite:`White.1982`. For this fixed **discrete empirical distribution**, the cross-entropy cannot
+fall below the constant $H(\hat p_{\textrm{data}})$; optimization changes only
+the KL gap, as :numref:`fig_mdl-mle-kl` shows. This is an algebraic decomposition
+of the observed frequencies, not by itself a statement about irreducible
+population randomness. As a special
 case, the *categorical* NLL of a classifier with one-hot labels is precisely the
 softmax cross-entropy loss of :numref:`sec_softmax`.
 
-![Minimizing the negative log-likelihood is minimizing the KL divergence to the data. The per-example cross-entropy splits into the entropy $H(\hat p_{\textrm{data}})$, an irreducible entropy floor set by the data's own randomness, plus $D_{\textrm{KL}}(\hat p_{\textrm{data}} \| p_{\boldsymbol{\theta}})$, the only part training can remove. As the model improves, the KL slice shrinks and the cross-entropy descends toward the floor but never below it.](../img/mdl-prob-mle-kl.svg)
+![For discrete outcomes, the per-example negative log-likelihood is the cross-entropy from the empirical frequencies to the model. It splits into the fixed empirical entropy $H(\hat p_{\textrm{data}})$ plus $D_{\textrm{KL}}(\hat p_{\textrm{data}} \| p_{\boldsymbol{\theta}})$, the part optimization can change. As the model improves, the KL slice shrinks and the cross-entropy approaches the empirical-entropy floor.](../img/mdl-prob-mle-kl.svg)
 :label:`fig_mdl-mle-kl`
 
 ### From Probabilities to Densities
 
 Everything so far was phrased for discrete outcomes, where $P(X\mid\boldsymbol{\theta})$
 is a genuine probability. For continuous data we replace probabilities by
-densities $p$, and the only worry is that the probability of observing *any
-exact* real value is zero, so the naive likelihood is $0$ for every
+densities $p$. The discrete empirical-cross-entropy identity above should not
+be copied literally: an atomic empirical measure is generally singular with
+respect to a continuous density, so that KL divergence is infinite. The
+sample objective remains the average negative log-density, while its population
+expectation is a cross-entropy and differs from
+$D_{\textrm{KL}}(p_\star\|p_{\boldsymbol{\theta}})$ by the fixed differential
+entropy of the data-generating density when those quantities are finite. The
+remaining practical issue is that the probability of observing *any exact*
+real value is zero, so the naive probability likelihood is $0$ for every
 $\boldsymbol{\theta}$. The resolution is to ask for a match only to within a small
 tolerance $\epsilon$, then watch the $\epsilon$ cancel.
 
@@ -749,7 +716,7 @@ parameter is.
 We dropped the prior $P(\boldsymbol{\theta})$ by declaring it flat.
 Keeping it instead turns maximum likelihood into *maximum a posteriori* (MAP)
 estimation, and the prior reappears as a regularizer. Maximizing the full
-posterior :eqref:`eq_mdl-max_like` and taking negative logs,
+posterior :eqref:`eq_mdl-map` and taking negative logs,
 
 $$
 \hat{\boldsymbol{\theta}}_{\textrm{MAP}}
@@ -881,7 +848,7 @@ pseudo-count accounting built here is what justifies it.
 One caution before we move on: MAP is *not* the same as "being Bayesian." MAP
 restores the prior but still reports a single point: the *mode* of the posterior
 $P(\boldsymbol{\theta}\mid X)$, the same $\mathop{\mathrm{argmax}}$ as in
-:eqref:`eq_mdl-max_like`. Genuine Bayesian inference keeps the entire posterior
+:eqref:`eq_mdl-map`. Genuine Bayesian inference keeps the entire posterior
 *distribution* and *integrates* over it, predicting with the posterior-averaged
 $\int p(x\mid\boldsymbol{\theta})\,P(\boldsymbol{\theta}\mid X)\,d\boldsymbol{\theta}$
 rather than plugging in one $\hat{\boldsymbol{\theta}}_{\textrm{MAP}}$. That
@@ -1113,10 +1080,11 @@ the parameters without changing the model, the same identifiability failure we
 met in the estimator theory above), and EM can stall at a poor local maximum, so
 practice restarts it from several initializations. And strictly speaking the GMM
 likelihood is *unbounded*: let one component collapse onto a single data point
-with $\sigma_k \to 0$. What monotonicity itself guarantees is only that the
-log-likelihood ascends to a limit; under standard additional conditions the
-iterates converge to a stationary point :cite:`Wu.1983`, with degenerate spikes
-excluded by a floor on $\sigma_k$ or a prior.
+with $\sigma_k \to 0$. Monotonicity itself guarantees only nondecrease; because this objective is
+unbounded, the values may diverge rather than approach a finite limit. With a
+variance floor or prior making the relevant level set bounded, plus standard
+continuity and regularity conditions, EM limit points are stationary
+:cite:`Wu.1983`.
 
 The bound, not the closed-form M-step, is the part that scales. A *variational
 autoencoder* :cite:`Kingma.Welling.2014` keeps the ELBO but replaces the
@@ -1135,17 +1103,19 @@ taken up in detail there.
 
 ## Summary
 
-* The **maximum likelihood** principle picks the parameters that make the
-  observed data most probable; with a flat prior, Bayes' rule reduces
-  the posterior mode to $\mathop{\mathrm{argmax}}_{\boldsymbol{\theta}} P(X\mid\boldsymbol{\theta})$.
+* The **maximum likelihood** principle directly picks the parameter that
+  maximizes the observed-data probability or density,
+  $\mathop{\mathrm{argmax}}_{\boldsymbol{\theta}}P(X\mid\boldsymbol{\theta})$.
+  It does not require a prior; MAP is a separate posterior-mode rule that
+  coincides with MLE under a constant prior in the chosen parameterization.
 * We optimize the **negative log-likelihood** $-\sum_i \log p(x_i\mid\boldsymbol{\theta})$:
   the log fixes underflow and makes gradients an additive sum, while the sign
   flip turns "maximize probability" into "minimize a loss."
-* The average NLL *is* the **cross-entropy** from the empirical distribution to
-  the model (this section is the canonical derivation; see
-  :numref:`sec_mdl-information_theory` for the entropy/KL background). Minimizing
-  it minimizes the KL divergence to the data: maximum likelihood is the
-  KL-projection onto the model family. Categorical NLL is softmax cross-entropy,
+* For **discrete outcomes**, the average NLL is the cross-entropy from the
+  empirical frequencies to the model and differs from the corresponding KL by
+  a fixed empirical entropy. For continuous data, use the average negative
+  log-density at the sample; the clean KL-projection statement is a population
+  statement under suitable integrability conditions. Categorical NLL is softmax cross-entropy,
   **fixed-variance Gaussian NLL is mean squared error**, and a Laplace model gives
   mean absolute error: picking a loss is picking a noise model.
 * The MLE is **consistent** (given identifiability and uniform convergence) and,

@@ -14,38 +14,38 @@
       "outputs": []
     },
     "statistics-estimator-metrics": {
-      "code_fingerprint": "sha256:3e123aee5a0b0795b0dea398da2c01b515af5efdc513ef2791fb74fdee2658a5",
+      "code_fingerprint": "sha256:576772aae9b2837f55590c1e95ef7322ef286f9122755974d319de6cdb55a28a",
       "kind": "text",
       "outputs": []
     },
     "statistics-sampling-distribution": {
-      "code_fingerprint": "sha256:73999871db623750c85218a4cd2862b6a94ed7bf17552b2520b89320f7d6e02c",
+      "code_fingerprint": "sha256:7c50314be30e419eb03cfe139b8d495fc672896ee4d5e553d1ae3db0ffc93c70",
       "kind": "text",
       "outputs": []
     },
     "statistics-verify-decomposition": {
-      "code_fingerprint": "sha256:ee66ce6043312a47db714e7ac6b3ffba15d3a6569ad5c416ee99b800843fdb04",
+      "code_fingerprint": "sha256:4cf389e99a70db8f3d97bb025d716c623bf252689f09d38ecd0f25ee67c7c15e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(0.53379095), array(0.53379095))"
+          "text": "(0.519784893201361, 0.5197848932013611)"
         }
       ]
     },
     "statistics-unbiased-variance": {
-      "code_fingerprint": "sha256:ad0c8c0179544ab3f6a5a776437fbe06c0526e7cc36ab82c628441fdbb1ecd30",
+      "code_fingerprint": "sha256:ab10dbe4f119ce6be93070fe59c9bcae03299532ae7f1d2d4631d9d1a6d71413",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance    = 4\nE[divide by n]   = 2.650  (biased)\nE[divide by n-1] = 3.975  (unbiased)\n"
+          "text": "true variance    = 4\nE[divide by n]   = 2.670  (biased)\nE[divide by n-1] = 4.005  (unbiased)\n"
         }
       ]
     },
     "statistics-permutation-test": {
-      "code_fingerprint": "sha256:1f4a5f19d714d2dadb47ba52ce73033db7b54af4e27692ea32c106e54e627972",
+      "code_fingerprint": "sha256:fdfae9af1312c8708bd4f30ff434a90f150ba30fe2ea38975b88535399c132d3",
       "kind": "mixed",
       "outputs": [
         {
@@ -58,22 +58,22 @@
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/statistics-permutation-test-1.svg",
           "bytes": 32404,
-          "sha256": "sha256:bf926fa64e914a5eb318bc292a8426f3a901a9f7da51b484690c6564e41d2b84"
+          "sha256": "sha256:c4c6e3562a63fd3e59666387ea7f83a8e7f38b019601a0c936022feed681041d"
         }
       ]
     },
     "statistics-confidence-interval": {
-      "code_fingerprint": "sha256:c059060aa926f493ca378f768b4e75c17498be77ce80573fa0b69f116d457abb",
+      "code_fingerprint": "sha256:8fe2ea493739a2fef713541e369b3bc3e3d6bf22f34f6c681efc3a08182d72a4",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(array(-0.01667231), array(0.10434487))"
+          "text": "(-0.09597399859530559, 0.027255595625125736)"
         }
       ]
     },
     "mdl-statistics-a-gaussian-example-1": {
-      "code_fingerprint": "sha256:788dc1d9474d6ba83d24e0d1bb85d536e66b3156a803cbe6e1eb2e19c84cab08",
+      "code_fingerprint": "sha256:f0e032ae70d27c3d720caac5ad4271314222680f8ba7d44e8ff1e2541943f7cb",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "statistics-bootstrap": {
-      "code_fingerprint": "sha256:64ffddf15eed21a380abff8b4f16ab635a1816fdb8050dc9d10bfa98f14537ed",
+      "code_fingerprint": "sha256:5784ecc540097e4215371e7668f007d457b74584b868968585a9fd0687f01400",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +95,7 @@
       ]
     },
     "statistics-bootstrap-contrast": {
-      "code_fingerprint": "sha256:e817e3f94ffb01c1a9e654712ec128bf0f7960079eaa34f91c0166ec98910d3f",
+      "code_fingerprint": "sha256:83a616c9bd01f47ca4592bf0c7c1b94460e225af27f83f128e99e8a7742c6b3e",
       "kind": "text",
       "outputs": [
         {

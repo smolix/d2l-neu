@@ -65,14 +65,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.958, valid loss 0.898\n348.2 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.869, valid loss 0.962\n270.4 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-training-and-validating-the-model-1.svg",
-          "bytes": 23071,
-          "sha256": "sha256:d5ac1d4a5037ed52233c3793386e47f5bad572d886d2b4daef41c275ebf958f4"
+          "bytes": 23061,
+          "sha256": "sha256:62b917b1471fb80b707684f106926e147dbe4bdcee1fa78d8d1a86236e808bab"
         }
       ]
     },
@@ -83,19 +83,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.828\n376.9 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.904\n317.8 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[19:00:18] /home/smola/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n"
+          "text": "[07:14:02] /home/smola/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-dog/kaggle-dog-classifying-the-testing-set-and-submitting-results-on-kaggle-1.svg",
-          "bytes": 20802,
-          "sha256": "sha256:c81759195aa1fdad6f5d28af06644777dd3023164afde229a3dd36094f996087"
+          "bytes": 20805,
+          "sha256": "sha256:7431bc855de3c5daab0cd7c26560a92ed34577552f4a96b282f1c8091270ca92"
         }
       ]
     }

@@ -57,12 +57,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160"
+          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
+          "text": "   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
         },
         {
           "type": "stream",
@@ -110,6 +110,17 @@
           "type": "stream",
           "name": "stdout",
           "text": "WSD 80/20      9.53e-02       5.48e-03\n"
+        }
+      ]
+    },
+    "mdl-adaptive-svrg": {
+      "code_fingerprint": "sha256:3984a4ef58cb3abcf682cba9da9ed60c4f4dac2c7132481d5653d2c73cd36ab5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "budget epoch  1: SGD gap=5.91e-02  SVRG gap=3.24e+00\nbudget epoch  5: SGD gap=1.77e-01  SVRG gap=4.57e-02\nbudget epoch 20: SGD gap=6.90e-02  SVRG gap=4.12e-08\n"
         }
       ]
     }

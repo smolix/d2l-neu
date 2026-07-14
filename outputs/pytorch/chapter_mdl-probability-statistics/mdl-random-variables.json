@@ -14,7 +14,7 @@
       "outputs": []
     },
     "random-variables-density-to-probability": {
-      "code_fingerprint": "sha256:7622d8410f529371cf056ea5c0e1d4b587b41e17abfd57f2760e67ae721c31ae",
+      "code_fingerprint": "sha256:0414350b85f1b9233a927f75145e427568a0d955abc630937dfdfac78543c17a",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "random-variables-cauchy-diverges": {
-      "code_fingerprint": "sha256:063a39e68d76fcd39af3c6e3e6b0180391e17b1c82455d4b5f9cab68644cfc0a",
+      "code_fingerprint": "sha256:c33958eabc55d2a988a66351950e9fd51fa2b96f4c516cd126613c81c623f3f1",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "random-variables-change-of-variables": {
-      "code_fingerprint": "sha256:841fad7144ee9b0f5f9b9984110b722ed1fca5f58ffbba3d614e0f6acfde75c9",
+      "code_fingerprint": "sha256:9748cf2650df01ea99166ebe4afcf9d21473500ce552fe607313de48c45c989a",
       "kind": "asset",
       "outputs": [
         {
@@ -44,7 +44,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
           "bytes": 27212,
-          "sha256": "sha256:f46618eb928e2267532e49b6ce4ce03c435192ff325215e5100f9760f9d058bf"
+          "sha256": "sha256:fbca806ad82f9cfb04c12ae0ffbb236f650b637c9538787e8600207410a9eae7"
         }
       ]
     }

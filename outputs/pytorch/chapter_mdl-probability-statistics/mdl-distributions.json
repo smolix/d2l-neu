@@ -14,33 +14,33 @@
       "outputs": []
     },
     "distributions-bernoulli": {
-      "code_fingerprint": "sha256:f22ccc581fc612667785976b83daac25d80b865e09ee0f9cdc8a01fefc5c27ed",
+      "code_fingerprint": "sha256:3034fa2a826220119a40cb846b7ec14fc0776faf741fd4a593ff00adf27f0a37",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pmf  P(0), P(1) = (0.7, 0.3)\nmean of 10,000 draws = 0.295199990272522  (≈ p)\n"
+          "text": "pmf  P(0), P(1) = (0.7, 0.3)\nmean of 10,000 draws = 0.3006  (≈ p)\n"
         },
         {
           "type": "execute_result",
-          "text": "tensor([[0., 0., 1.],\n        [1., 0., 0.],\n        [0., 0., 0.]])"
+          "text": "array([[0, 1, 1],\n       [1, 0, 0],\n       [0, 0, 0]])"
         }
       ]
     },
     "distributions-categorical": {
-      "code_fingerprint": "sha256:e8991d2641648fd4ab62a8b9b17d2c49acae44e149d893cd3e9b22ea14f93a29",
+      "code_fingerprint": "sha256:69c32fc732b2117e7dd10b4343e52edc33af1cdacba9192a8feeabce93bf170c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0000001192092896\none sample -> class 1\n"
+          "text": "categorical p = [0.638 0.235 0.095 0.032]  sum = 1.0\none sample -> class 0\n"
         }
       ]
     },
     "distributions-discrete-uniform": {
-      "code_fingerprint": "sha256:25d57b42b2af828413cbf2a33d9ba4a238a124681cfb826425d6ca05bbe4d03a",
+      "code_fingerprint": "sha256:fb9c0ebb82be0443f000b882b426ada75ece5a392f2c1b6a3c8ede31d9a65af7",
       "kind": "text",
       "outputs": [
         {
@@ -51,22 +51,22 @@
       ]
     },
     "distributions-binomial": {
-      "code_fingerprint": "sha256:601767ed85eb71452c72fe81f530c5c5796eb89860db9519a39addf60005f5ca",
+      "code_fingerprint": "sha256:4adf67e9822809fb92a1c2485a7326d5b9c93f2d1c09769724ff3592116ff379",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean np = 4.0   var np(1-p) = 2.4\nP(X=k): [0.006 0.04  0.121 0.215 0.251 0.201 0.111 0.042 0.011 0.002 0.   ]\n"
+          "text": "mean onp = 4.0   var onp(1-p) = 2.4\nP(X=k): [0.006 0.04  0.121 0.215 0.251 0.201 0.111 0.042 0.011 0.002 0.   ]\n"
         },
         {
           "type": "execute_result",
-          "text": "tensor([[6., 4., 5.],\n        [4., 5., 4.],\n        [6., 2., 3.]])"
+          "text": "array([[5, 3, 1],\n       [1, 5, 6],\n       [4, 5, 4]])"
         }
       ]
     },
     "distributions-poisson": {
-      "code_fingerprint": "sha256:b39df6f202bd095d74a8bd0e4a4db901f946374ae241ec945ec4adb8ee7d2e5f",
+      "code_fingerprint": "sha256:6bb23abce367a18a275fedfc885215ee6a93cdc4f2779aacf4a984ebca71c1b2",
       "kind": "text",
       "outputs": [
         {
@@ -76,12 +76,12 @@
         },
         {
           "type": "execute_result",
-          "text": "tensor([[7., 3., 5.],\n        [4., 6., 3.],\n        [6., 2., 3.]])"
+          "text": "array([[2, 0, 7],\n       [3, 4, 4],\n       [6, 6, 4]])"
         }
       ]
     },
     "distributions-binomial-to-poisson": {
-      "code_fingerprint": "sha256:dab91bfcaeb5a6ac27384bf3a501a0e0088212819b56455a70efb4a43a83015a",
+      "code_fingerprint": "sha256:3e6c14d0bd4e846c4b1925057e7c7db4c83ee15e44bcabb22773999d7951fb63",
       "kind": "asset",
       "outputs": [
         {
@@ -89,12 +89,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:bb0709c3a9327da4199beaeaaca23763a183e61124f4dcd43cee7a54cdf6a107"
+          "sha256": "sha256:f8b8bd8bba8de4abe6cb349d119a2a3329048321791d973fcfd4e9f2e61ac2c1"
         }
       ]
     },
     "distributions-continuous-uniform": {
-      "code_fingerprint": "sha256:c80a02d2310f468a959048abe01ff721c7d06f7a447d5c4fd0ed2538fe88dedd",
+      "code_fingerprint": "sha256:5b364027ff7509a3560bcf349994f070733916ad8b693db7fad9cdc332798118",
       "kind": "text",
       "outputs": [
         {
@@ -105,18 +105,18 @@
       ]
     },
     "distributions-exponential": {
-      "code_fingerprint": "sha256:c4e67f14e8ea11b6ed854d4a88b508cb8f87372dd93c95dfe5d44f6cdabfeac0",
+      "code_fingerprint": "sha256:025c135af6611ab585e32eb53bf28c2b9cf3a35238c141616d01df9461869bfe",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1/lambda = 2.0   sample mean = 2.0006930828094482\nvar 1/lambda^2 = 4.0  sample var = 4.040887832641602\n"
+          "text": "mean 1/lambda = 2.0   sample mean = 2.001\nvar 1/lambda^2 = 4.0  sample var = 3.984\n"
         }
       ]
     },
     "mdl-distributions-gaussian-1": {
-      "code_fingerprint": "sha256:50bdef0b5c6ed2b1e318deb007b0191fe0691852036f77e39d5bae2100569535",
+      "code_fingerprint": "sha256:c1b3cb40355c79e9636b9e1de5dbf0eb6e737cc6d1a34b6bf0a81ca6cf5a12b0",
       "kind": "asset",
       "outputs": [
         {
@@ -124,49 +124,49 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:f52dee79bacda8528bf8cb4a62ab036462b9f523708391c2b2693a1213802039"
+          "sha256": "sha256:e566b19f72b13f413fdcbd3b77a19b7008bc248ffaa7c6765fd7463138fe9af0"
         }
       ]
     },
     "distributions-gaussian": {
-      "code_fingerprint": "sha256:3aebd98b14fbb122bd670fe71e51315345859917b4e2eeb1453af256777fb59c",
+      "code_fingerprint": "sha256:e7f70451fe6ace208caa5496c064406de89cba6eecbe308485c1eed1d1009600",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass (≈1): 0.999936580657959\n"
+          "text": "total mass (≈1): 0.9999\n"
         },
         {
           "type": "execute_result",
-          "text": "tensor([[ 1.5410, -0.2934, -2.1788],\n        [ 0.5684, -1.0845, -1.3986],\n        [ 0.4033,  0.8380, -0.7193]])"
+          "text": "array([[ 0.12573022, -0.13210486,  0.64042265],\n       [ 0.10490012, -0.53566937,  0.36159505],\n       [ 1.30400005,  0.94708096, -0.70373524]])"
         }
       ]
     },
     "distributions-laplace": {
-      "code_fingerprint": "sha256:7a45cb2f4594e64506381c708a40cb50f138b15b3fb70c18a733eaa31c077a07",
+      "code_fingerprint": "sha256:ab19421f8e83121b00664be1ace016faf77b9961a4075d5989448b6e3575797e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Laplace var (2b^2): 2.0136115550994873  Gaussian var: 2.0047993659973145\nP(|x| > 3sd): Laplace 0.014894999563694  Gaussian 0.002785000018775463\n"
+          "text": "Laplace var (2b^2): 1.998  Gaussian var: 2.005\nP(|x| > 3sd): Laplace 0.014575  Gaussian 0.00272\n"
         }
       ]
     },
     "distributions-mvn": {
-      "code_fingerprint": "sha256:e3a49f3f5c05078cfdf74d788f70f42133073de327c703597323b5cce248522f",
+      "code_fingerprint": "sha256:50683951125894d58b1e6bd4afe1f03bf2e3791e7a53b1be274f45e7060e90c6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "empirical covariance:\n [[2.   1.  ]\n [1.   2.01]]\neigenvalues (≈ 1, 3): [1.01 3.  ]\nCholesky-recipe covariance:\n [[2.04 1.04]\n [1.04 2.05]]\n"
+          "text": "empirical covariance:\n [[1.96 1.03]\n [1.03 2.06]]\neigenvalues (≈ 1, 3): [0.98 3.04]\nCholesky-recipe covariance:\n [[1.93 0.97]\n [0.97 2.  ]]\n"
         }
       ]
     },
     "mdl-distributions-multivariate-gaussian-1": {
-      "code_fingerprint": "sha256:bac93e95630387bda1722edb48acffd748bd2f594dfe4a238330102fef10b997",
+      "code_fingerprint": "sha256:c0ca66f8bfe6dd648c5a2353cfc0e97b5defa00632a71392cf4cfd2f0d99589e",
       "kind": "text",
       "outputs": [
         {
@@ -177,7 +177,7 @@
       ]
     },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:495431f7fc696a09145cc459ecbbd54aea604c3e4e844d84ec2343d0e1256120",
+      "code_fingerprint": "sha256:6fbaed31f254be67ea25641a8a5827ab2fb49a93a583e747e67738ad5ec73745",
       "kind": "text",
       "outputs": [
         {
@@ -188,7 +188,7 @@
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:704ecc8e7cda946e4e319fefdb5da4573a8883d84dd299a37efa3dee718edfae",
+      "code_fingerprint": "sha256:65f11256c54446b00710eb51b8a519e5549b79b01676ee2c38c062e077da2d75",
       "kind": "text",
       "outputs": [
         {

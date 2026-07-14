@@ -14,17 +14,17 @@
       "outputs": []
     },
     "eigendecomposition-an-example": {
-      "code_fingerprint": "sha256:9df5381c18267c741ac6c9c3f11c942b301e6ef706a08ae1225caa4d1e23b2c3",
+      "code_fingerprint": "sha256:9c9b2aa6cad941f192aaf2c9487aa8f56479fb0148d32dce5a2e4918e0ff6c59",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "torch.return_types.linalg_eig(\neigenvalues=tensor([1.+0.j, 4.+0.j], dtype=torch.complex128),\neigenvectors=tensor([[-0.7071+0.j, -0.4472+0.j],\n        [ 0.7071+0.j, -0.8944+0.j]], dtype=torch.complex128))"
+          "text": "EigResult(eigenvalues=array([1., 4.]), eigenvectors=array([[-0.70710678, -0.4472136 ],\n       [ 0.70710678, -0.89442719]]))"
         }
       ]
     },
     "mdl-eigendecomposition-jordan-power": {
-      "code_fingerprint": "sha256:38b01f48ab61488610358d14269242f79d0456ef6a161234de92e04b560df84f",
+      "code_fingerprint": "sha256:2256c569a7e5de5404fac12fb35fcd8281a6387b74758967dbe912f7c0184629",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +35,7 @@
       ]
     },
     "eigendecomposition-complex-rotation": {
-      "code_fingerprint": "sha256:785c9e5a51099a0ac070de076eff8575da72c525846a7f5144ceffe8e07a4922",
+      "code_fingerprint": "sha256:2b5f4e74d9b00fa1d008a1aee5484002d670f2b351fa9b4b01b841225fa6d8af",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +46,7 @@
       ]
     },
     "mdl-eigendecomposition-complex-eigenvalues-are-rotations-1": {
-      "code_fingerprint": "sha256:e294d5d3cbc930df848ca60b4c8c731678a77fd83ebb7f3a3b8fd888699ed1fb",
+      "code_fingerprint": "sha256:21dce692efe58bb9c23ab971489f5eb7588711d01712e9eba05a3d7eadeabb4c",
       "kind": "text",
       "outputs": [
         {
@@ -56,8 +56,19 @@
         }
       ]
     },
+    "mdl-eigendecomposition-nonnormal-transient": {
+      "code_fingerprint": "sha256:6a47717084de9ed185de3a302b4cc9534d685dbfd65ac259f5fb09d545ad7917",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues: [0.9 0.8]\nnormal matrix: max ||D^k|| = 1.000\nnon-normal:    max ||A^k|| = 10.788 at k = 6\neigenvector condition number = 80.0\nat z=1: ||(zI-A)^-1|| = 200.3,  normal comparison = 10.0\n"
+        }
+      ]
+    },
     "eigendecomposition-psd-gram": {
-      "code_fingerprint": "sha256:e515525924149aa832464dff587ae5ded1161ace79e62a28b48c2a6b4f0a8d79",
+      "code_fingerprint": "sha256:92a6423d336bbe2307765d1a7712c9e0b343691e97ac15ada7d672727ce91ef5",
       "kind": "text",
       "outputs": [
         {
@@ -68,7 +79,7 @@
       ]
     },
     "mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches": {
-      "code_fingerprint": "sha256:831517921c01f20c5ba573deb03cd1e625a8ed4ca881d35439d679cd74c5add1",
+      "code_fingerprint": "sha256:eb64e423ddbe2f5221ee697d0063e094d22c3d1ea826f5ae967c694ca1228195",
       "kind": "text",
       "outputs": [
         {
@@ -79,23 +90,23 @@
       ]
     },
     "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:21411f26f6e950914bb89f6ce86dd5a8bbe727b776332d03141050da24d0e50d",
+      "code_fingerprint": "sha256:e3418e6bd47d741d39053b25bd88cf9071755ddc599e8add20328b3e87e507c4",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([9.0803+0.j, 0.9923+0.j, 4.9539+0.j, 2.9734+0.j])"
+          "text": "array([9.08033648, 0.99228545, 4.95394089, 2.97343718])"
         }
       ]
     },
     "eigendecomposition-power-iteration": {
-      "code_fingerprint": "sha256:247f89b37e513e6dd38aa93d8dbd984d849472dbc011d489a793bf89a9608933",
+      "code_fingerprint": "sha256:a29ff0c4c7dd05881c5ea3216a5a6cf8cb60b230a8a1932738b52bf02c3d2d39",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "stabilized norm ratio = 2.4532329634   max|eigenvalue| = 2.4532329634\n"
+          "text": "stabilized norm ratio = 1.9744593215   max|eigenvalue| = 1.9744593215\n"
         }
       ]
     }

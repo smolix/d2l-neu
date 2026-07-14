@@ -104,7 +104,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
           "bytes": 100456,
-          "sha256": "sha256:fe534355ce8ec20b148b40f29b2e680085339a35cce46a15328cc74ad6c05774"
+          "sha256": "sha256:a7e1f11e59a57b4928877f58be21a4ea69449457a2ac701d016bbe4fc262888a"
         }
       ]
     },
@@ -116,6 +116,17 @@
           "type": "stream",
           "name": "stdout",
           "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD with the optimal step contracts by 0.9802 per step; it needs 691 steps for |x_k| <= 1e-6\nNewton iteration 1:  |grad| = 2.8e-01\nNewton iteration 2:  |grad| = 3.2e-02\nNewton iteration 3:  |grad| = 1.1e-03\nNewton iteration 4:  |grad| = 1.2e-06\nNewton iteration 5:  |grad| = 1.6e-12\nNewton iteration 6:  |grad| = 3.1e-17\nagrees with the SGD section optimum: True\n"
+        }
+      ]
+    },
+    "mdl-gradient-bfgs-quadratic": {
+      "code_fingerprint": "sha256:21db4a50b1ff6018bb57ba916bf18f73e67622baa724c0dc923052e775aa823c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "BFGS step 1: distance to optimum 7.85e-01\nBFGS step 2: distance to optimum 7.66e-01\nBFGS step 3: distance to optimum 7.13e-01\nBFGS step 4: distance to optimum 6.35e-01\nBFGS step 5: distance to optimum 4.68e-02\nBFGS step 6: distance to optimum 1.05e-14\nGD after the same 6 iterations: 7.94e-01\n"
         }
       ]
     }

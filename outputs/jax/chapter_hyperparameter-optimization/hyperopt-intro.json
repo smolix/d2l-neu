@@ -35,42 +35,42 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.17129993438720703\n"
+          "text": "    validation_error = 0.1580999493598938\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-1.svg",
-          "bytes": 20454,
-          "sha256": "sha256:48755584b8d6ed9c7c378d5c9ea3df5091550e0429c04a266e6f33cc75021a44"
+          "bytes": 20339,
+          "sha256": "sha256:2cd06d845f8c030e0f29f9e33550f771be21b5d0ddff0b469025aa38bbd2481e"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-2.svg",
-          "bytes": 21710,
-          "sha256": "sha256:17bcec23ebb4f6db2648f1d67a756e1559c46faf9bc35b914db9e4dfca5dc8c0"
+          "bytes": 20883,
+          "sha256": "sha256:f014a562b62e642b385a3b0483d0cb79ca9c5899843ce2c95858c1aecad935f4"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-3.svg",
-          "bytes": 19320,
-          "sha256": "sha256:84788cdb0ba1c7feecdfe59e87dd4c4fe606df3cf02a122af92cd76ab2da9b9e"
+          "bytes": 20336,
+          "sha256": "sha256:0f3eed1f1f54e53e15933581477a1956aa876fdf0cfeb6bc90a498f0955c7519"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-4.svg",
           "bytes": 20337,
-          "sha256": "sha256:579b19fc8e59dee608c0d5ca3cc5690a28cffee5ffe482ad9b7a6c40bf8b12a2"
+          "sha256": "sha256:91eb730531dc286b93035202def5e6f01ba42f6591fcd2a3335bb945f6d1101d"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-5.svg",
-          "bytes": 20886,
-          "sha256": "sha256:c3d8ebc22326c90e9cac21a584d624dfd064b5dfaad613460101224e3a98fb71"
+          "bytes": 20885,
+          "sha256": "sha256:589d7e6be3a7a773a5bac2f21563deb840f2323f17542762fb82df23043769b9"
         }
       ]
     },
@@ -81,7 +81,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "optimal learning rate = 0.020948530767014178\n"
+          "text": "optimal learning rate = 0.018589094748167008\n"
         }
       ]
     }

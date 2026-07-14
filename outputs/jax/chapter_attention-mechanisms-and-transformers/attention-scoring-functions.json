@@ -55,7 +55,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[[-0.9914504   1.5364522  -0.02564497 -0.8097085 ]]\n\n [[ 0.3913288   0.36001438 -0.6106866  -0.57328236]]]\n"
+          "text": "[[[-0.9914504   1.5364522  -0.02564497 -0.8097085 ]]\n\n [[ 0.39132884  0.36001438 -0.6106866  -0.57328224]]]\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-scaled-dot-product-attention-3-1.svg",
           "bytes": 14338,
-          "sha256": "sha256:f09a3324ad46d76f1c3d980a3c1ad26b4496e20111fd9b71b4208be5048c5be4"
+          "sha256": "sha256:28bf55e53a855292e0394b5dc9d03f4a11b7da473665a67758192f07f23f7322"
         }
       ]
     },
@@ -84,7 +84,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[[[ 0.30575567 -1.2908455  -0.60701466  0.10614904]]\n\n [[ 0.12414876  0.14733072 -0.33732188 -0.4280055 ]]]\n"
+          "text": "[[[ 0.30575567 -1.2908455  -0.60701466  0.10614904]]\n\n [[ 0.12414877  0.14733073 -0.33732188 -0.42800546]]]\n"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-additive-attention-3-1.svg",
           "bytes": 14354,
-          "sha256": "sha256:a960bfbf5136d00ff4658b661b2e6889605e907f2f97ca9a0f395b4eb432e82c"
+          "sha256": "sha256:061990dbb0a5e3418c2de8d1ca32df2e1891d077cbbbc9356fba8d11afb04d2e"
         }
       ]
     }

@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
           "bytes": 26193,
-          "sha256": "sha256:770487f3d3cea3b27cf001fde9e31a15d4380b2bc7bd486f76bf469347462e05"
+          "sha256": "sha256:4d62e2367ebe2eac87676a17b70500549e0efdb3861008a0d0ff2021b4bf2897"
         }
       ]
     },
@@ -33,7 +33,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix \n tensor([[ 0.2629,  0.5222, -1.6793,  0.2715],\n        [ 0.7573, -1.6142,  1.1807, -0.0834],\n        [ 0.3606, -0.3940, -0.9188,  0.2026],\n        [-0.2744, -0.0277, -0.8899, -0.8361]])\nafter multiplying 100 matrices\n tensor([[-2.2457e+21, -1.6095e+21, -1.1650e+21,  5.4708e+20],\n        [-8.1072e+20, -5.8132e+20, -4.1989e+20,  1.9736e+20],\n        [-2.5750e+21, -1.8465e+21, -1.3333e+21,  6.2677e+20],\n        [-1.8619e+21, -1.3317e+21, -9.7197e+20,  4.5489e+20]])\n"
+          "text": "a single matrix \n tensor([[-0.2036, -0.5914, -1.6315, -0.9862],\n        [-0.8302,  0.1281,  0.1576,  1.1544],\n        [-1.3041,  0.9696,  1.3502,  0.1268],\n        [-0.0734, -0.6120, -1.0808, -0.8756]])\nafter multiplying 100 matrices\n tensor([[ 1.8231e+26,  3.8445e+25, -6.0441e+24,  1.4300e+26],\n        [-1.8820e+26, -3.9687e+25,  6.2393e+24, -1.4762e+26],\n        [ 1.8587e+26,  3.9197e+25, -6.1623e+24,  1.4580e+26],\n        [ 1.3897e+26,  2.9306e+25, -4.6072e+24,  1.0901e+26]])\n"
         }
       ]
     },
@@ -45,8 +45,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 30997,
-          "sha256": "sha256:a2b19e085fb09c7642aac7d20aa63368be4f87d92d355a12254022ed141efb4b"
+          "bytes": 31011,
+          "sha256": "sha256:65b9a0e7d3b7675e891945423f21b2dc50910749edecf418e79ded56d3606b50"
         }
       ]
     }

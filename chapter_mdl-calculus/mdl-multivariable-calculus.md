@@ -353,32 +353,8 @@ has critical points $x = -1, 0, 2$ with values $-5, 0, -32$, so the minimum is
 at $x = 2$, as the plot confirms.
 
 ```{.python .input #multivariable-calculus-a-note-on-mathematical-optimization}
-#@tab mxnet
-x = np.arange(-2, 3, 0.01)
-f = (3 * x**4) - (4 * x**3) - (12 * x**2)
-
-d2l.plot(x, f, 'x', 'f(x)')
-```
-
-```{.python .input #multivariable-calculus-a-note-on-mathematical-optimization}
-#@tab pytorch
-x = torch.arange(-2, 3, 0.01)
-f = (3 * x**4) - (4 * x**3) - (12 * x**2)
-
-d2l.plot(x, f, 'x', 'f(x)')
-```
-
-```{.python .input #multivariable-calculus-a-note-on-mathematical-optimization}
-#@tab tensorflow
-x = tf.range(-2, 3, 0.01)
-f = (3 * x**4) - (4 * x**3) - (12 * x**2)
-
-d2l.plot(x, f, 'x', 'f(x)')
-```
-
-```{.python .input #multivariable-calculus-a-note-on-mathematical-optimization}
-#@tab jax
-x = jnp.arange(-2, 3, 0.01)
+import numpy as onp
+x = onp.arange(-2, 3, 0.01)
 f = (3 * x**4) - (4 * x**3) - (12 * x**2)
 
 d2l.plot(x, f, 'x', 'f(x)')

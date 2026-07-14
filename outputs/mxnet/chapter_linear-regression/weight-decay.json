@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.010222149081528187\n"
+          "text": "L2 norm of w: 0.010061698034405708\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 21861,
-          "sha256": "sha256:03bed5472cea3a452745f77cba963914a33223cf3b5b58862e9a5764849d96e6"
+          "bytes": 23678,
+          "sha256": "sha256:9c3d5faa589b222e9ab100e497c498dd1f7ba0422b9497811b616fd3b6a23f45"
         }
       ]
     },
@@ -58,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.000872180622536689\n"
+          "text": "L2 norm of w: 0.0008424330735579133\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 21243,
-          "sha256": "sha256:b4c907ffa53fd70eb2f0902df87f93ec85759cd8fabf7f3b863faf4ddc3d14d4"
+          "bytes": 21631,
+          "sha256": "sha256:41e39b803058f6aa12b37cc6dde9034308b2f7978a62957f4faa84f40cb800a6"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda= 0  df= 20.0  strongest 1.00  weakest 1.00\nlambda= 3  df= 15.1  strongest 0.84  weakest 0.65\nlambda=30  df=  4.9  strongest 0.35  weakest 0.16\n"
+          "text": "lambda= 0  df= 20.0  strongest 1.00  weakest 1.00\nlambda= 3  df= 15.2  strongest 0.84  weakest 0.66\nlambda=30  df=  5.0  strongest 0.35  weakest 0.16\n"
         }
       ]
     },
@@ -92,14 +92,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.001112939789891243\n"
+          "text": "L2 norm of w: 0.0010585944401100278\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 25431,
-          "sha256": "sha256:754a6cbfb982a40cb079a6f2e0af9f9c18821afabfc7c7aabb16df6978144f19"
+          "bytes": 25463,
+          "sha256": "sha256:1012ddb256e531158a03d96d154988b1654d6f88b753b3d7b1e62abe82bba9f2"
         }
       ]
     }

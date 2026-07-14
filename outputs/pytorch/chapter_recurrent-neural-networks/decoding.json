@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 19514,
-          "sha256": "sha256:7266bd68f89ceaa543a29e48041eab7f537463d933fc35a17a1b61b3be0ef216"
+          "bytes": 18939,
+          "sha256": "sha256:459d2bc7fbc53c3fb84a323326ef972c3c91b33b6fc3d513a8e9ec03152d5f65"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"the time traveller.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong\"\n\"it seemed to me that the little people were no greatly complete.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong\"\n"
+          "text": "'the time traveller I\\nwas drey to the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the'\n'it seemed to me that I had\\nlittlefort of the\\nshamient, and\\nmind. I was\\nthe bushes\\ndistinct,\\nand the\\nside, I saw the\\nside, I saw the'\n"
         }
       ]
     },
@@ -64,17 +64,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -3.22, distinct-3 0.26: \"the time traveller.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong\"\n"
+          "text": "k=1, score -4.69, distinct-3 0.37: 'the time traveller I\\nwas drey to the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside,'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.57, distinct-3 0.26: \"the time traveller.\\n\\n'Then I hesitated.\\n\\n'Then I hesitated.\\n\\n'Then I hesitated.\\n\\n'Then I hesitated\"\nk=1, score -3.77, distinct-3 0.53: \"it seemed to me that the little people were no greatly complete.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong\"\n"
+          "text": "k=4, score -4.08, distinct-3 1.00: 'the time traveller I could friend to the\\ntime. It was a\\nlooking to me. I had a\\npossibly a violently,\\nand I was'\nk=1, score -4.67, distinct-3 0.97: 'it seemed to me that I had\\nlittlefort of the\\nshamient, and\\nmind. I was\\nthe bushes\\ndistinct,\\nand the\\nside,'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.48, distinct-3 0.42: \"it seemed to me that it seemed to me.\\n\\n'Then I hesitated.\\n\\n'Then I hesitated.\\n\\n'Then I hesitated.\\n\\n'As\"\n"
+          "text": "k=4, score -4.02, distinct-3 0.79: \"it seemed to me that I had\\ndisength of the\\nshall of a\\nback to me.\\n\\n'And here\\n\\n'And here\\n\\n'As I\"\n"
         }
       ]
     },
@@ -105,14 +105,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x7abe327ef410>"
+          "text": "<matplotlib.legend.Legend at 0x7f8b3997db80>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 48472,
-          "sha256": "sha256:abeafc6cb7ec52c04ce6b25af91f65636b28d980a91135a3067ad16bf02cc1d1"
+          "bytes": 47887,
+          "sha256": "sha256:0ff5b0f355ab302bd21c5265cfbe93c8e0accceb8b7de8791884853b25804250"
         }
       ]
     },
@@ -123,7 +123,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.14, top-k keeps 20, top-p keeps 282, min-p keeps 22\n'it seemed to me that': top prob 0.14, top-k keeps 20, top-p keeps 123, min-p keeps 23\n"
+          "text": "'the time traveller': top prob 0.25, top-k keeps 20, top-p keeps 93, min-p keeps 9\n'it seemed to me that': top prob 0.29, top-k keeps 20, top-p keeps 95, min-p keeps 10\n"
         }
       ]
     },
@@ -134,12 +134,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: \"the time traveller.\\n\\n'Afterter and the end that\\ndaygthod of the sun.\\n\\n'Then a suppose I was in the froration, and was notictictedvoidly\"\nT=1.0: \"the time traveller loerable day faramooly trailestion?'\\n the sames-morial, in\\n�ating--alizontetly as thirst away theirip, and had changeicult d\"\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "T=2.0: 'the time travellerddencientedtM off beganir suchickil beli G withready comestven and w, white shetzesycholog which myself lifolbet her nnhadult by chan mdantppedsychologist went trick per'\n"
+          "text": "T=0.5: \"the time traveller, I had\\ntheless take the speak\\nine was house, I had the balance in this\\nprise.\\n\\n'I looked not\\nbeenions, the vaguely a\"\nT=1.0: 'the time traveller with\\nbacking pl in one as some where I wan with, an in the sphinx of them again as it intmsk--I find on the spleidort. And now all the atheblement of even'\nT=2.0: 'the time traveller o he\\ns gr�neps before� min not min\\npswod tob examkass-eryasby� en obkenedally am sl oniult�ensong had!ple is-th isple'\n"
         }
       ]
     },
@@ -150,17 +145,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 0.21): \"the time traveller.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong.\\n\\n'In the wrong\"\n  T=1.0 (distinct-3 1.00): \"the time traveller loerable day faramooly trailestion?'\\n the sames-morial, in\\n�ating--alizontetly as thirst away theirip, and had changeicult d\"\n"
+          "text": " greedy (distinct-3 0.29): 'the time traveller I\\nwas drey to the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): 'the time travellerred that I had limate in their giderial. \"pulation and the Morlocksaugh and his greme, and then for a second speel of means and centray'\n"
+          "text": "  T=1.0 (distinct-3 1.00): 'the time traveller with\\nbacking pl in one as some where I wan with, an in the sphinx of them again as it intmsk--I find on the spleidort. And now all the atheblement of even'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-p (distinct-3 1.00): 'the time travellerivided in of desceance of incyingigi and dady-inaled that there are exre up count of the machine\\ngoned it suspircue in avaletdant'\n  min-p (distinct-3 1.00): 'the time travellerred, and\\naseemed--ab more. But the flickeneathissels.\\nBut the matter from the _ency,\\nrecaps of\\nlittletin upon'\n"
+          "text": "  top-k (distinct-3 1.00): 'the time traveller the\\ntime wastingoors I reme.\\nThe Time,\\nand\\nwere, perhaps, I began idea cheerious. The thingbf in a\\nreal exicusible, as'\n  top-p (distinct-3 1.00): 'the time traveller. I had\\nuate on\\nmoo out of,\\nbeen air\\nwells, of his lo with a me of simply haray to spred hired. And it into the weimated'\n  min-p (distinct-3 0.98): 'the time traveller, and the little, that they mights a houth, and the line,\\nand the thingsing of a tasss of angth. I had a spread. But the dawn of the parad'\n"
         }
       ]
     }

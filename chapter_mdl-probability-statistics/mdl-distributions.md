@@ -34,7 +34,6 @@ unify them, using the following imports throughout.
 %matplotlib inline
 from d2l import mxnet as d2l
 import numpy as np
-from scipy.special import factorial
 ```
 
 ```{.python .input #distributions-imports}
@@ -50,7 +49,6 @@ import torch
 %matplotlib inline
 from d2l import tensorflow as d2l
 import numpy as np
-from scipy.special import factorial
 import tensorflow as tf
 ```
 
@@ -59,7 +57,6 @@ import tensorflow as tf
 %matplotlib inline
 from d2l import jax as d2l
 import numpy as np
-from scipy.special import factorial
 import jax
 from jax import numpy as jnp
 ```
@@ -114,44 +111,11 @@ The variance $p(1-p)$ is largest at $p=\tfrac12$ (the fairest, least predictable
 coin) and vanishes at $p\in\{0,1\}$ (a certain outcome carries no randomness).
 
 ```{.python .input #distributions-bernoulli}
-#@tab mxnet
-rng = np.random.default_rng(0)
+import numpy as onp
+rng = onp.random.default_rng(0)
 p = 0.3
 sample = 1 * (rng.random((3, 3)) < p)          # 1 with prob p, else 0
 big = 1 * (rng.random(10000) < p)              # large sample for the mean
-print('pmf  P(0), P(1) =', (1 - p, p))
-print('mean of 10,000 draws =', float(big.mean()), ' (≈ p)')
-sample
-```
-
-```{.python .input #distributions-bernoulli}
-#@tab pytorch
-torch.manual_seed(0)
-p = 0.3
-sample = (torch.rand(3, 3) < p).float()        # 1 with prob p, else 0
-big = (torch.rand(10000) < p).float()          # large sample for the mean
-print('pmf  P(0), P(1) =', (1 - p, p))
-print('mean of 10,000 draws =', float(big.mean()), ' (≈ p)')
-sample
-```
-
-```{.python .input #distributions-bernoulli}
-#@tab tensorflow
-tf.random.set_seed(0)
-p = 0.3
-sample = tf.cast(tf.random.uniform((3, 3)) < p, tf.float32)
-big = tf.cast(tf.random.uniform((10000,)) < p, tf.float32)  # large sample
-print('pmf  P(0), P(1) =', (1 - p, p))
-print('mean of 10,000 draws =', float(tf.reduce_mean(big)), ' (≈ p)')
-sample
-```
-
-```{.python .input #distributions-bernoulli}
-#@tab jax
-p = 0.3
-key1, key2 = jax.random.split(jax.random.PRNGKey(0))
-sample = jax.random.bernoulli(key1, p, (3, 3)).astype(jnp.float32)
-big = jax.random.bernoulli(key2, p, (10000,)).astype(jnp.float32)  # large sample
 print('pmf  P(0), P(1) =', (1 - p, p))
 print('mean of 10,000 draws =', float(big.mean()), ' (≈ p)')
 sample
@@ -204,41 +168,12 @@ The teaching cell turns a logit vector into a categorical via softmax, confirms 
 normalizes, and draws one sample.
 
 ```{.python .input #distributions-categorical}
-#@tab mxnet
-rng = np.random.default_rng(0)
-z = np.array([2.0, 1.0, 0.1, -1.0])            # logits over K = 4 classes
-p_cat = np.exp(z) / np.exp(z).sum()            # softmax -> categorical
+import numpy as onp
+rng = onp.random.default_rng(0)
+z = onp.array([2.0, 1.0, 0.1, -1.0])            # logits over K = 4 classes
+p_cat = onp.exp(z) / onp.exp(z).sum()            # softmax -> categorical
 draw = int(rng.choice(len(p_cat), p=p_cat))
 print('categorical p =', p_cat.round(3), ' sum =', float(p_cat.sum()))
-print('one sample -> class', draw)
-```
-
-```{.python .input #distributions-categorical}
-#@tab pytorch
-torch.manual_seed(0)
-z = torch.tensor([2.0, 1.0, 0.1, -1.0])        # logits over K = 4 classes
-p_cat = torch.softmax(z, dim=0)                # softmax -> categorical
-draw = int(torch.multinomial(p_cat, 1))
-print('categorical p =', p_cat.numpy().round(3), ' sum =', float(p_cat.sum()))
-print('one sample -> class', draw)
-```
-
-```{.python .input #distributions-categorical}
-#@tab tensorflow
-tf.random.set_seed(0)
-z = tf.constant([2.0, 1.0, 0.1, -1.0])         # logits over K = 4 classes
-p_cat = tf.nn.softmax(z)                        # softmax -> categorical
-draw = int(tf.random.categorical(tf.math.log(p_cat)[None], 1)[0, 0])
-print('categorical p =', p_cat.numpy().round(3), ' sum =', float(tf.reduce_sum(p_cat)))
-print('one sample -> class', draw)
-```
-
-```{.python .input #distributions-categorical}
-#@tab jax
-z = jnp.array([2.0, 1.0, 0.1, -1.0])           # logits over K = 4 classes
-p_cat = jax.nn.softmax(z)                        # softmax -> categorical
-draw = int(jax.random.categorical(jax.random.PRNGKey(0), z))
-print('categorical p =', np.asarray(p_cat).round(3), ' sum =', float(p_cat.sum()))
 print('one sample -> class', draw)
 ```
 
@@ -322,53 +257,16 @@ so the whole pmf builds up from $P(X=0)=(1-p)^n$ by repeated multiplication, wit
 never a factorial in sight.
 
 ```{.python .input #distributions-binomial}
-#@tab mxnet
-rng = np.random.default_rng(0)
+import numpy as onp
+rng = onp.random.default_rng(0)
 n, p = 10, 0.4
-pmf = np.zeros(n + 1)
+pmf = onp.zeros(n + 1)
 pmf[0] = (1 - p)**n
 for k in range(n):                               # successive-ratio recursion
     pmf[k + 1] = pmf[k] * (n - k) / (k + 1) * p / (1 - p)
-print('mean np =', n * p, '  var np(1-p) =', n * p * (1 - p))
+print('mean onp =', n * p, '  var onp(1-p) =', n * p * (1 - p))
 print('P(X=k):', pmf.round(3))
 rng.binomial(n, p, size=(3, 3))                  # sample counts of successes
-```
-
-```{.python .input #distributions-binomial}
-#@tab pytorch
-torch.manual_seed(0)
-n, p = 10, 0.4
-m = torch.distributions.Binomial(n, torch.tensor(p))
-k = torch.arange(n + 1.)
-pmf = m.log_prob(k).exp()
-print('mean np =', n * p, '  var np(1-p) =', n * p * (1 - p))
-print('P(X=k):', pmf.numpy().round(3))
-m.sample((3, 3))                                 # sample counts of successes
-```
-
-```{.python .input #distributions-binomial}
-#@tab tensorflow
-n, p = 10, 0.4
-pmf = np.zeros(n + 1)
-pmf[0] = (1 - p)**n
-for k in range(n):                               # successive-ratio recursion
-    pmf[k + 1] = pmf[k] * (n - k) / (k + 1) * p / (1 - p)
-print('mean np =', n * p, '  var np(1-p) =', n * p * (1 - p))
-print('P(X=k):', pmf.round(3))
-tf.random.stateless_binomial((3, 3), [0, 0], n, p)  # sample counts of successes
-```
-
-```{.python .input #distributions-binomial}
-#@tab jax
-n, p = 10, 0.4
-pmf = np.zeros(n + 1)
-pmf[0] = (1 - p)**n
-for k in range(n):                               # successive-ratio recursion
-    pmf[k + 1] = pmf[k] * (n - k) / (k + 1) * p / (1 - p)
-print('mean np =', n * p, '  var np(1-p) =', n * p * (1 - p))
-print('P(X=k):', pmf.round(3))
-# sum n Bernoulli trials -> counts of successes
-jax.random.bernoulli(jax.random.PRNGKey(0), p, (3, 3, n)).sum(-1)
 ```
 
 ### Poisson
@@ -411,11 +309,23 @@ photons on a sensor, mutations in a genome, requests hitting a server. Run over
 the whole timeline, the bus-stop slicing above is the *Poisson process*: the
 event counts in disjoint time windows are independent Poisson variables.
 
-**Mean and variance.** The limit hands them to us for free: the binomial mean $np_n
-\to\lambda$ and variance $np_n(1-p_n)\to\lambda$, so
+**Mean and variance.** The binomial moments suggest the answer, but
+convergence in distribution alone does not automatically pass unbounded
+moments to the limit. The Poisson pmf verifies them directly:
 
 $$
-\mu_X = \lambda, \qquad \sigma_X^2 = \lambda.
+E[X]=\sum_{k\ge1}k e^{-\lambda}\frac{\lambda^k}{k!}
+=\lambda,
+\qquad
+E[X(X-1)]=\lambda^2.
+$$
+
+Therefore
+
+$$
+\mu_X=\lambda,
+\qquad
+\sigma_X^2=E[X(X-1)]+E[X]-E[X]^2=\lambda.
 $$
 
 Mean equals variance is the Poisson fingerprint: over-dispersed count data (where
@@ -425,47 +335,17 @@ reappears later in this section as the Gamma--Poisson mixture, better known as t
 *negative binomial*.
 
 ```{.python .input #distributions-poisson}
-#@tab mxnet
-rng = np.random.default_rng(0)
+import numpy as onp
+rng = onp.random.default_rng(0)
 lam = 4.0
-k = np.arange(15)
-pmf = np.exp(-lam) * lam**k / factorial(k)
+k = onp.arange(15)
+pmf = onp.empty_like(k, dtype=float)
+pmf[0] = onp.exp(-lam)
+for j in range(len(k) - 1):                    # P(j+1) / P(j) = lambda / (j+1)
+    pmf[j + 1] = pmf[j] * lam / (j + 1)
 print('mean = var = lambda =', lam)
 print('P(X=k):', pmf.round(3))
 rng.poisson(lam, size=(3, 3))                   # sample event counts
-```
-
-```{.python .input #distributions-poisson}
-#@tab pytorch
-torch.manual_seed(0)
-lam = 4.0
-m = torch.distributions.Poisson(lam)
-k = torch.arange(15.)
-pmf = m.log_prob(k).exp()
-print('mean = var = lambda =', lam)
-print('P(X=k):', pmf.numpy().round(3))
-m.sample((3, 3))                                 # sample event counts
-```
-
-```{.python .input #distributions-poisson}
-#@tab tensorflow
-tf.random.set_seed(0)
-lam = 4.0
-k = np.arange(15)
-pmf = np.exp(-lam) * lam**k / factorial(k)
-print('mean = var = lambda =', lam)
-print('P(X=k):', pmf.round(3))
-tf.random.poisson((3, 3), lam)                  # sample event counts
-```
-
-```{.python .input #distributions-poisson}
-#@tab jax
-lam = 4.0
-k = np.arange(15)
-pmf = np.exp(-lam) * lam**k / factorial(k)
-print('mean = var = lambda =', lam)
-print('P(X=k):', pmf.round(3))
-jax.random.poisson(jax.random.PRNGKey(0), lam, (3, 3))  # sample event counts
 ```
 
 **Watching the limit happen.** The limit is visible in a plot. The cell below
@@ -605,42 +485,13 @@ $U\sim U(0,1)$, the sampler simplifies to
 $X=-\tfrac1\lambda\log U\sim\mathrm{Exp}(\lambda)$.
 
 ```{.python .input #distributions-exponential}
-#@tab mxnet
-rng = np.random.default_rng(0)
+import numpy as onp
+rng = onp.random.default_rng(0)
 lam = 0.5
 U = rng.random(100000)
-sample = -np.log(U) / lam                        # inverse-transform sampler
+sample = -onp.log(U) / lam                        # inverse-transform sampler
 print('mean 1/lambda =', 1 / lam, '  sample mean =', float(sample.mean().round(3)))
 print('var 1/lambda^2 =', 1 / lam**2, ' sample var =', float(sample.var().round(3)))
-```
-
-```{.python .input #distributions-exponential}
-#@tab pytorch
-torch.manual_seed(0)
-lam = 0.5
-U = torch.rand(100000)
-sample = -torch.log(U) / lam                     # inverse-transform sampler
-print('mean 1/lambda =', 1 / lam, '  sample mean =', float(sample.mean()))
-print('var 1/lambda^2 =', 1 / lam**2, ' sample var =', float(sample.var()))
-```
-
-```{.python .input #distributions-exponential}
-#@tab tensorflow
-tf.random.set_seed(0)
-lam = 0.5
-U = tf.random.uniform((100000,))
-sample = -tf.math.log(U) / lam                   # inverse-transform sampler
-print('mean 1/lambda =', 1 / lam, '  sample mean =', float(tf.reduce_mean(sample)))
-print('var 1/lambda^2 =', 1 / lam**2, ' sample var =', float(tf.math.reduce_variance(sample)))
-```
-
-```{.python .input #distributions-exponential}
-#@tab jax
-lam = 0.5
-U = jax.random.uniform(jax.random.PRNGKey(0), (100000,))
-sample = -jnp.log(U) / lam                        # inverse-transform sampler
-print('mean 1/lambda =', 1 / lam, '  sample mean =', float(sample.mean()))
-print('var 1/lambda^2 =', 1 / lam**2, ' sample var =', float(sample.var()))
 ```
 
 ### Gaussian
@@ -731,42 +582,13 @@ the negative log-likelihood equal to mean squared error
 and latent distribution throughout deep generative modeling.
 
 ```{.python .input #distributions-gaussian}
-#@tab mxnet
-rng = np.random.default_rng(0)
+import numpy as onp
+rng = onp.random.default_rng(0)
 mu, sigma = 0.0, 1.0
-x = np.arange(-4, 4, 0.01)
-p = np.exp(-(x - mu)**2 / (2 * sigma**2)) / np.sqrt(2 * np.pi * sigma**2)
+x = onp.arange(-4, 4, 0.01)
+p = onp.exp(-(x - mu)**2 / (2 * sigma**2)) / onp.sqrt(2 * onp.pi * sigma**2)
 print('total mass (≈1):', float((0.01 * p).sum().round(4)))
 rng.normal(mu, sigma, size=(3, 3))              # sample from N(mu, sigma^2)
-```
-
-```{.python .input #distributions-gaussian}
-#@tab pytorch
-torch.manual_seed(0)
-mu, sigma = 0.0, 1.0
-x = torch.arange(-4, 4, 0.01)
-p = torch.exp(-(x - mu)**2 / (2 * sigma**2)) / np.sqrt(2 * np.pi * sigma**2)
-print('total mass (≈1):', float((0.01 * p).sum()))
-torch.normal(mu, sigma, size=(3, 3))            # sample from N(mu, sigma^2)
-```
-
-```{.python .input #distributions-gaussian}
-#@tab tensorflow
-tf.random.set_seed(0)
-mu, sigma = 0.0, 1.0
-x = tf.range(-4, 4, 0.01)
-p = tf.exp(-(x - mu)**2 / (2 * sigma**2)) / np.sqrt(2 * np.pi * sigma**2)
-print('total mass (≈1):', float(tf.reduce_sum(0.01 * p)))
-tf.random.normal((3, 3), mu, sigma)             # sample from N(mu, sigma^2)
-```
-
-```{.python .input #distributions-gaussian}
-#@tab jax
-mu, sigma = 0.0, 1.0
-x = jnp.arange(-4, 4, 0.01)
-p = jnp.exp(-(x - mu)**2 / (2 * sigma**2)) / jnp.sqrt(2 * jnp.pi * sigma**2)
-print('total mass (≈1):', float((0.01 * p).sum()))
-mu + sigma * jax.random.normal(jax.random.PRNGKey(0), (3, 3))  # sample N(mu, sigma^2)
 ```
 
 ### Laplace
@@ -806,54 +628,16 @@ matches a Laplace and a Gaussian on variance and confirms the Laplace's heavier
 tail by the fraction of mass beyond $3$ standard deviations.
 
 ```{.python .input #distributions-laplace}
-#@tab mxnet
-rng = np.random.default_rng(0)
+import numpy as onp
+rng = onp.random.default_rng(0)
 mu, b = 0.0, 1.0
-sigma = np.sqrt(2) * b                            # matched-variance Gaussian sd
+sigma = onp.sqrt(2) * b                            # matched-variance Gaussian sd
 U = (rng.random(200000) - 0.5) * (1 - 1e-7)       # open interval avoids log(0)
-lap = mu - b * np.sign(U) * np.log(1 - 2 * np.abs(U))  # inverse transform
+lap = mu - b * onp.sign(U) * onp.log(1 - 2 * onp.abs(U))  # inverse transform
 gau = rng.normal(mu, sigma, 200000)
 print('Laplace var (2b^2):', float(lap.var().round(3)), ' Gaussian var:', float(gau.var().round(3)))
-print('P(|x| > 3sd): Laplace', float((np.abs(lap) > 3 * sigma).mean()),
-      ' Gaussian', float((np.abs(gau) > 3 * sigma).mean()))
-```
-
-```{.python .input #distributions-laplace}
-#@tab pytorch
-torch.manual_seed(0)
-mu, b = 0.0, 1.0
-sigma = np.sqrt(2) * b                            # matched-variance Gaussian sd
-lap = torch.distributions.Laplace(mu, b).sample((200000,))
-gau = torch.normal(mu, sigma, (200000,))
-print('Laplace var (2b^2):', float(lap.var()), ' Gaussian var:', float(gau.var()))
-print('P(|x| > 3sd): Laplace', float((lap.abs() > 3 * sigma).float().mean()),
-      ' Gaussian', float((gau.abs() > 3 * sigma).float().mean()))
-```
-
-```{.python .input #distributions-laplace}
-#@tab tensorflow
-tf.random.set_seed(0)
-mu, b = 0.0, 1.0
-sigma = np.sqrt(2) * b                            # matched-variance Gaussian sd
-U = (tf.random.uniform((200000,)) - 0.5) * (1 - 1e-7)  # open interval avoids log(0)
-lap = mu - b * tf.sign(U) * tf.math.log(1 - 2 * tf.abs(U))  # inverse transform
-gau = tf.random.normal((200000,), mu, sigma)
-print('Laplace var (2b^2):', float(tf.math.reduce_variance(lap)),
-      ' Gaussian var:', float(tf.math.reduce_variance(gau)))
-print('P(|x| > 3sd): Laplace', float(tf.reduce_mean(tf.cast(tf.abs(lap) > 3 * sigma, tf.float32))),
-      ' Gaussian', float(tf.reduce_mean(tf.cast(tf.abs(gau) > 3 * sigma, tf.float32))))
-```
-
-```{.python .input #distributions-laplace}
-#@tab jax
-mu, b = 0.0, 1.0
-sigma = jnp.sqrt(2.) * b                           # matched-variance Gaussian sd
-key1, key2 = jax.random.split(jax.random.PRNGKey(0))
-lap = mu + b * jax.random.laplace(key1, (200000,))
-gau = mu + sigma * jax.random.normal(key2, (200000,))
-print('Laplace var (2b^2):', float(lap.var()), ' Gaussian var:', float(gau.var()))
-print('P(|x| > 3sd): Laplace', float((jnp.abs(lap) > 3 * sigma).mean()),
-      ' Gaussian', float((jnp.abs(gau) > 3 * sigma).mean()))
+print('P(|x| > 3sd): Laplace', float((onp.abs(lap) > 3 * sigma).mean()),
+      ' Gaussian', float((onp.abs(gau) > 3 * sigma).mean()))
 ```
 
 ### Multivariate Gaussian
@@ -945,63 +729,18 @@ built into $\boldsymbol\Sigma$, then re-samples by the Cholesky recipe and
 confirms that it reproduces $\boldsymbol\Sigma$ as well.
 
 ```{.python .input #distributions-mvn}
-#@tab mxnet
-rng = np.random.default_rng(0)
-mu_v = np.array([0., 0.])
-Sigma = np.array([[2., 1.], [1., 2.]])
+import numpy as onp
+rng = onp.random.default_rng(0)
+mu_v = onp.array([0., 0.])
+Sigma = onp.array([[2., 1.], [1., 2.]])
 sample = rng.multivariate_normal(mu_v, Sigma, size=5000)
-emp = np.cov(sample.T)
-vals, vecs = np.linalg.eigh(emp)
+emp = onp.cov(sample.T)
+vals, vecs = onp.linalg.eigh(emp)
 print('empirical covariance:\n', emp.round(2))
 print('eigenvalues (≈ 1, 3):', vals.round(2))   # Sigma has eigenvalues 1 and 3
-L = np.linalg.cholesky(Sigma)                   # Sigma = L L^T
+L = onp.linalg.cholesky(Sigma)                   # Sigma = L L^T
 chol = mu_v + rng.standard_normal((5000, 2)) @ L.T  # x = mu + L z
-print('Cholesky-recipe covariance:\n', np.cov(chol.T).round(2))
-```
-
-```{.python .input #distributions-mvn}
-#@tab pytorch
-torch.manual_seed(0)
-mu_v = torch.zeros(2)
-Sigma = torch.tensor([[2., 1.], [1., 2.]])
-sample = torch.distributions.MultivariateNormal(mu_v, Sigma).sample((5000,))
-emp = torch.cov(sample.T)
-vals, vecs = torch.linalg.eigh(emp)
-print('empirical covariance:\n', emp.numpy().round(2))
-print('eigenvalues (≈ 1, 3):', vals.numpy().round(2))  # Sigma eigenvalues 1 and 3
-L = torch.linalg.cholesky(Sigma)                # Sigma = L L^T
-chol = mu_v + torch.randn(5000, 2) @ L.T        # x = mu + L z
-print('Cholesky-recipe covariance:\n', torch.cov(chol.T).numpy().round(2))
-```
-
-```{.python .input #distributions-mvn}
-#@tab tensorflow
-rng = np.random.default_rng(0)
-mu_v = np.array([0., 0.])
-Sigma = np.array([[2., 1.], [1., 2.]])
-sample = rng.multivariate_normal(mu_v, Sigma, size=5000)
-emp = np.cov(sample.T)
-vals, vecs = np.linalg.eigh(emp)
-print('empirical covariance:\n', emp.round(2))
-print('eigenvalues (≈ 1, 3):', vals.round(2))   # Sigma has eigenvalues 1 and 3
-L = np.linalg.cholesky(Sigma)                   # Sigma = L L^T
-chol = mu_v + rng.standard_normal((5000, 2)) @ L.T  # x = mu + L z
-print('Cholesky-recipe covariance:\n', np.cov(chol.T).round(2))
-```
-
-```{.python .input #distributions-mvn}
-#@tab jax
-mu_v = jnp.zeros(2)
-Sigma = jnp.array([[2., 1.], [1., 2.]])
-sample = jax.random.multivariate_normal(jax.random.PRNGKey(0), mu_v, Sigma, (5000,))
-emp = jnp.cov(sample.T)
-vals, vecs = jnp.linalg.eigh(emp)
-print('empirical covariance:\n', np.asarray(emp).round(2))
-print('eigenvalues (≈ 1, 3):', np.asarray(vals).round(2))  # Sigma eigenvalues 1 and 3
-L = jnp.linalg.cholesky(Sigma)                  # Sigma = L L^T
-z = jax.random.normal(jax.random.PRNGKey(1), (5000, 2))
-chol = mu_v + z @ L.T                           # x = mu + L z
-print('Cholesky-recipe covariance:\n', np.asarray(jnp.cov(chol.T)).round(2))
+print('Cholesky-recipe covariance:\n', onp.cov(chol.T).round(2))
 ```
 
 **Probability in high dimension.** One more Gaussian fact matters enormously in
@@ -1213,40 +952,13 @@ maximum). We verify :eqref:`eq_mdl-exp_family_moment` for the
 Bernoulli, where it should read $A'(\eta)=\sigma(\eta)=\mathbb E[x]=p$.
 
 ```{.python .input #distributions-exp-family}
-#@tab mxnet
+import numpy as onp
 eta = 0.7                                        # natural parameter (logit)
-A = lambda e: np.log1p(np.exp(e))                # Bernoulli log-partition (softplus)
+A = lambda e: onp.log1p(onp.exp(e))                # Bernoulli log-partition (softplus)
 eps = 1e-6
 dA = (A(eta + eps) - A(eta - eps)) / (2 * eps)   # numerical dA/deta
 print('dA/deta      =', round(float(dA), 6))
-print('sigmoid(eta) = E[x] = p =', round(float(1 / (1 + np.exp(-eta))), 6))
-```
-
-```{.python .input #distributions-exp-family}
-#@tab pytorch
-eta = torch.tensor(0.7, requires_grad=True)      # natural parameter (logit)
-A = torch.log1p(torch.exp(eta))                  # Bernoulli log-partition (softplus)
-A.backward()                                     # autograd: dA/deta
-print('dA/deta      =', round(float(eta.grad), 6))
-print('sigmoid(eta) = E[x] = p =', round(float(torch.sigmoid(eta).detach()), 6))
-```
-
-```{.python .input #distributions-exp-family}
-#@tab tensorflow
-eta = tf.Variable(0.7)                            # natural parameter (logit)
-with tf.GradientTape() as t:
-    A = tf.math.log1p(tf.exp(eta))                # Bernoulli log-partition (softplus)
-print('dA/deta      =', round(float(t.gradient(A, eta)), 6))
-print('sigmoid(eta) = E[x] = p =', round(float(tf.sigmoid(eta)), 6))
-```
-
-```{.python .input #distributions-exp-family}
-#@tab jax
-eta = 0.7                                        # natural parameter (logit)
-A = lambda e: jnp.log1p(jnp.exp(e))              # Bernoulli log-partition (softplus)
-dA = jax.grad(A)(eta)                            # autodiff: dA/deta
-print('dA/deta      =', round(float(dA), 6))
-print('sigmoid(eta) = E[x] = p =', round(float(jax.nn.sigmoid(eta)), 6))
+print('sigmoid(eta) = E[x] = p =', round(float(1 / (1 + onp.exp(-eta))), 6))
 ```
 
 The derivative of the softplus is the sigmoid, and it lands exactly on the

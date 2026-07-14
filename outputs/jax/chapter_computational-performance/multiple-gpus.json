@@ -45,11 +45,6 @@
         },
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "W0712 04:34:18.435837   19938 allocator_memory_registration.cc:63] Failed to register GPU memory with clique devices=2:[0,1]; local_participants=2; communication_id=0; incarnations=[]: INTERNAL: NCCL operation ncclCommRegister(comm, addr.opaque(), addr.size(), &handle) failed: unhandled cuda error (run with NCCL_DEBUG=INFO for details). Last NCCL warning(error) log entry (may be unrelated) 'Cuda failure 500 'named symbol not found''.\n"
-        },
-        {
-          "type": "stream",
           "name": "stdout",
           "text": "after allreduce:\n [[3. 3.]] \n [[3. 3.]]\n"
         }
@@ -94,8 +89,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
-          "bytes": 16964,
-          "sha256": "sha256:ebc1c2929693dff70f749c953417346b1b75885046963d6cfd06dca0406c51eb"
+          "bytes": 16962,
+          "sha256": "sha256:40f6e1954169b6f4fcdc1432bd10958b1d7f206498f7143fc4211e5a26d9902a"
         }
       ]
     },
@@ -106,14 +101,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.85, 1.1 sec/epoch on [CudaDevice(id=0), CudaDevice(id=1)]\n"
+          "text": "test acc: 0.81, 1.3 sec/epoch on [CudaDevice(id=0), CudaDevice(id=1)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
-          "bytes": 16964,
-          "sha256": "sha256:d425abeb4374d1f68adf595ae69a813f5d1bb96dbf71bb8623efbc4a250e0ad1"
+          "bytes": 16962,
+          "sha256": "sha256:22c27456f1bcb3f177460c21492fe7b8db8ad2e093a8a8f39cc57cb7a5d2979c"
         }
       ]
     }

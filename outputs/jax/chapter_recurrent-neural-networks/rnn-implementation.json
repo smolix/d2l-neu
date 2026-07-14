@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 26394,
-          "sha256": "sha256:9bfb619c8566075290fe388c30bbd0ad87e6f32437b27fb12fe8241b171ba8b5"
+          "bytes": 22965,
+          "sha256": "sha256:e7f4053c8102b57f26ac8b4c6269387679006351e68310c4f1d8bba80cdd2263"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 97.2\n"
+          "text": "validation perplexity 94.9\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.38 bits per byte\n"
+          "text": "2.78 bytes/token, 2.36 bits per byte\n"
         }
       ]
     },
@@ -124,7 +124,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "\"the time traveller.\\n\\n'I had\\nwossibly\\ndismist.\\n\\n'I had\\nwossibly\\ndismist.\\n\\n'I had\\nwossibly\\ndism\""
+          "text": "\"the time travellerns. I was nothing of the\\nshames, and I was nothing of the Time Traveller.\\n\\n'I had a triumph of a\\ndiskcame of my fruits of\""
         }
       ]
     },
@@ -135,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time travellercith, I saw the remoth really gener down, how never felt falizudulllecession like ch\nthe time travellerpulation.\n\n'I had to letnce.\n\n'But I was nothing of\ndises of int\n"
+          "text": "the time travellerally have mo guming upon the thing as indversation of pressty about white and seemed even it ageases ourwith\nthe time travelleral my art of the unancialistless. And in a certain followed me. The skyits the palace of\n"
         }
       ]
     },
@@ -172,8 +172,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 18948,
-          "sha256": "sha256:f817ea0b3cd9f6707c701aebcd4649e90fda899b75675547590b91eb43090207"
+          "bytes": 18757,
+          "sha256": "sha256:5bf477e35dcc5dc39cb75b474b0831e86ec3db41b38ac8f1d4bc93b0e369471c"
         }
       ]
     },
@@ -184,7 +184,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 109.6, 'the time travellers of\\nmblance of the\\nsmer I saw the\\nsunly in the\\nfraid to make the'\n"
+          "text": "perplexity 105.9, \"the time traveller.\\n\\n'Then I\\ncame a\\nhuman and touching\\ndism, and then\\nbrown\"\n"
         }
       ]
     },
@@ -195,7 +195,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      16.0     97.2\n concise       9.7    109.6\n"
+          "text": "   model  time (s)  val ppl\n scratch      20.7     94.9\n concise      12.5    105.9\n"
         }
       ]
     }

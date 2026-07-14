@@ -8,8 +8,11 @@ per-coordinate methods that actually train today's networks --- AdaGrad, Adam,
 AdamW --- add to them and where their guarantees break, *when* convexity
 guarantees they find the global optimum, *how* constraints and their multipliers
 reshape a problem through Lagrangian duality, and *which* numerical pitfalls turn
-a correct algorithm into a `NaN`. The main book's optimization chapter covers the
-practical optimizer zoo; here we develop the foundations that explain it.
+a correct algorithm into a `NaN`. The main book's optimization chapter is the
+reader's practical first encounter: it should explain how to choose, configure,
+and diagnose optimizers in training. This appendix is its mathematical
+companion. It derives representative guarantees and failure modes, but is not
+intended to duplicate the main chapter's workflow-oriented treatment.
 
 ```toc
 :maxdepth: 2

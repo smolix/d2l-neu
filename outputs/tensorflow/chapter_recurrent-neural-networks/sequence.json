@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 40150,
-          "sha256": "sha256:1ccf768111f8cafbe1784f25c37594e4047473116065cd399a2c34ad8ce20e66"
+          "bytes": 39670,
+          "sha256": "sha256:1038c7bd8c38630e7a4642cf6e9604d24ab6e7b6b8f2f0c9626d0bad7c5fa858"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 19947,
-          "sha256": "sha256:93bbf82786eda7e4b1e724dc665f432793395929bd405eafaef69a6381122e99"
+          "bytes": 19944,
+          "sha256": "sha256:986b0bbb00275dd90066e8ee7a7e071b80be3e202bfb7229d6da1553f358c276"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 67322,
-          "sha256": "sha256:7ca961cab2298724528aef2ac3078ef4b042b3ea5335724f94b9098a4a13ca05"
+          "bytes": 67221,
+          "sha256": "sha256:c86d997eca4b90e1480f816d666461c747ae01b9c91def3d12dff80bc38f1d4f"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44208,
-          "sha256": "sha256:4f8f2d92e06dc5f1697391229167abc8d441906427ba875ae304b529a0146b10"
+          "bytes": 44598,
+          "sha256": "sha256:f012f48dea1da4f8343ce24df566b60a3c98b2d3f170e044cbe82d0f418c4474"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 105567,
-          "sha256": "sha256:5e1ae4a01a6052b83cd6ea4b8c80f2eb99da9af6016063ea28f0a1a115c2e515"
+          "bytes": 104151,
+          "sha256": "sha256:db9f415141c2ab61b8e7eda3439dee573777cbac71810adb44d75c841bc71e79"
         }
       ]
     }

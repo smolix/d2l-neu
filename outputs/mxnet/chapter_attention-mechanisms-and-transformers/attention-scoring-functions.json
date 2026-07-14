@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[[0.52142644, 0.4785736 , 0.        , 0.        ],\n        [0.5252397 , 0.4747603 , 0.        , 0.        ]],\n\n       [[0.37533018, 0.3040842 , 0.32058558, 0.        ],\n        [0.3273354 , 0.4050588 , 0.2676058 , 0.        ]]])"
+          "text": "array([[[0.6080476 , 0.3919524 , 0.        , 0.        ],\n        [0.36555624, 0.63444376, 0.        , 0.        ]],\n\n       [[0.29908606, 0.39846796, 0.30244598, 0.        ],\n        [0.2650466 , 0.36391997, 0.3710334 , 0.        ]]])"
         }
       ]
     },
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.2637721 , 0.36130184, 0.37492615, 0.        ]],\n\n       [[0.37960425, 0.6203958 , 0.        , 0.        ],\n        [0.2737989 , 0.30542076, 0.17244773, 0.24833253]]])"
+          "text": "array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.37851992, 0.25218087, 0.36929914, 0.        ]],\n\n       [[0.66364235, 0.33635768, 0.        , 0.        ],\n        [0.26687595, 0.20592855, 0.29318666, 0.2340088 ]]])"
         }
       ]
     },
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-scaled-dot-product-attention-3-1.svg",
-          "bytes": 14798,
-          "sha256": "sha256:cd3cd689080ff948f25074935ca5fefa580ec5a38143b6584ecdbae1a9581e27"
+          "bytes": 14932,
+          "sha256": "sha256:6f40aa60283ac5bd3b9a9a24d7cab9aa6f7830050784cf89f860f61a4247fb16"
         }
       ]
     },
@@ -85,7 +85,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-additive-attention-3-1.svg",
           "bytes": 13573,
-          "sha256": "sha256:7d0dcba8998b543cc2bddd50e081f9c5856bbd72c3a5277d4a65be379a809263"
+          "sha256": "sha256:1b4d0ba7158815a0b2a1c1ab5055891f3c774787c8ecfdd4d23dd3134fe41aa0"
         }
       ]
     }

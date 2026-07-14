@@ -163,23 +163,8 @@ sides of :eqref:`eq_mdl-eigpair` scale by $c$.)
 We can check this in code using the built-in `eig` routine.
 
 ```{.python .input #eigendecomposition-an-example}
-#@tab mxnet
-np.linalg.eig(np.array([[2, 1], [2, 3]]))
-```
-
-```{.python .input #eigendecomposition-an-example}
-#@tab pytorch
-torch.linalg.eig(torch.tensor([[2, 1], [2, 3]], dtype=torch.float64))
-```
-
-```{.python .input #eigendecomposition-an-example}
-#@tab tensorflow
-tf.linalg.eig(tf.constant([[2, 1], [2, 3]], dtype=tf.float64))
-```
-
-```{.python .input #eigendecomposition-an-example}
-#@tab jax
-jnp.linalg.eig(jnp.array([[2, 1], [2, 3]], dtype=jnp.float64))
+import numpy as onp
+onp.linalg.eig(onp.array([[2, 1], [2, 3]]))
 ```
 
 :begin_tab:`mxnet`
@@ -596,6 +581,160 @@ phase portraits of continuous-time flows $\dot{\mathbf{x}}=\mathbf{A}\mathbf{x}$
 a complex pair $a\pm ib$ produces a spiral, with the real part $a$ setting
 growth or decay and the imaginary part $b$ the angular velocity.
 
+## Non-Normal Matrices and Transient Amplification
+:label:`sec_mdl-nonnormal-transient`
+
+The Jordan example showed that eigenvalues can miss a large temporary excursion.
+Defectiveness is the sharpest version of the problem, but it is not the whole
+problem: a matrix can have distinct eigenvalues, be diagonalizable, and still
+amplify some inputs dramatically before its asymptotic decay becomes visible.
+The property separating the clean case from this behavior is **normality**.
+
+### Normality: When Eigenvalues Control Norms
+
+Over the complex numbers, a matrix is **normal** when it commutes with its
+conjugate transpose,
+
+$$
+\mathbf A^*\mathbf A=\mathbf A\mathbf A^*.
+$$
+
+For a real matrix, $\mathbf A^*$ is simply $\mathbf A^\top$. Symmetric,
+orthogonal, and unitary matrices are normal, as are planar rotation--scaling
+blocks. The complex spectral theorem says that a matrix is normal if and only
+if it has an orthonormal eigenbasis over $\mathbb C$:
+$\mathbf A=\mathbf U\boldsymbol\Lambda\mathbf U^*$ with $\mathbf U$ unitary.
+Consequently,
+
+$$
+\|\mathbf A^k\|_2
+=\|\mathbf U\boldsymbol\Lambda^k\mathbf U^*\|_2
+=\max_i|\lambda_i|^k
+=\rho(\mathbf A)^k.
+$$
+:eqlabel:`eq_mdl-normal-power-norm`
+
+For normal matrices the eigenvalues therefore control the largest possible
+amplification at *every* iteration, not merely its asymptotic exponential
+rate. This is why the orthonormal eigenbasis in the next section is more than
+an aesthetic convenience: the change of coordinates neither stretches nor
+nearly collapses any direction.
+
+A diagonalizable non-normal matrix instead has
+$\mathbf A=\mathbf W\boldsymbol\Lambda\mathbf W^{-1}$ with a generally
+non-orthogonal eigenvector matrix. The elementary bound
+
+$$
+\|\mathbf A^k\|_2
+\le \underbrace{\|\mathbf W\|_2\|\mathbf W^{-1}\|_2}_{\kappa_2(\mathbf W)}
+   \rho(\mathbf A)^k
+$$
+:eqlabel:`eq_mdl-nonnormal-power-bound`
+
+exposes the missing factor: nearly parallel eigenvectors make
+$\kappa_2(\mathbf W)$ large. Individual eigenmodes then carry large
+coefficients that can reinforce before their eventual cancellation. The bound
+need not be tight, but it explains why eigenvalues alone can be a poor
+finite-time diagnostic.
+
+### A Stable Matrix That First Grows
+
+Consider the upper-triangular matrix
+
+$$
+\mathbf A=\begin{bmatrix}0.9&4\\0&0.8\end{bmatrix}.
+$$
+:eqlabel:`eq_mdl-nonnormal-example`
+
+Its distinct eigenvalues $0.9$ and $0.8$ make it diagonalizable, and both lie
+strictly inside the unit circle. Nevertheless, its eigenvectors are nearly
+parallel and its first few powers are large. The off-diagonal entry has the
+closed form
+
+$$
+(\mathbf A^k)_{12}
+=4\,\frac{0.9^k-0.8^k}{0.9-0.8}
+=40(0.9^k-0.8^k),
+$$
+
+which initially grows even though both geometric factors decay. Singular
+values, rather than eigenvalue moduli, measure this one-step and finite-time
+stretch. The NumPy cell compares the non-normal matrix with the diagonal
+matrix having exactly the same eigenvalues.
+
+```{.python .input #mdl-eigendecomposition-nonnormal-transient}
+A = np.array([[0.9, 4.0], [0.0, 0.8]])
+D = np.diag([0.9, 0.8])                         # same eigenvalues, normal
+ks = np.arange(0, 61)
+norm_A = np.array([np.linalg.norm(np.linalg.matrix_power(A, k), 2) for k in ks])
+norm_D = np.array([np.linalg.norm(np.linalg.matrix_power(D, k), 2) for k in ks])
+k_peak = int(norm_A.argmax())
+W = np.linalg.eig(A)[1]
+z = 1.0
+res_A = np.linalg.norm(np.linalg.inv(z * np.eye(2) - A), 2)
+res_D = np.linalg.norm(np.linalg.inv(z * np.eye(2) - D), 2)
+print('eigenvalues:', np.linalg.eigvals(A))
+print(f'normal matrix: max ||D^k|| = {norm_D.max():.3f}')
+print(f'non-normal:    max ||A^k|| = {norm_A[k_peak]:.3f} at k = {k_peak}')
+print(f'eigenvector condition number = {np.linalg.cond(W):.1f}')
+print(f'at z=1: ||(zI-A)^-1|| = {res_A:.1f},  normal comparison = {res_D:.1f}')
+```
+
+The normal matrix contracts from the first step. The non-normal matrix has the
+same spectral radius but amplifies a suitably chosen input by more than an
+order of magnitude before decay wins. This is **transient amplification**:
+stability as $k\to\infty$ coexisting with substantial finite-time growth.
+
+### Pseudospectra: Stability under Perturbation
+
+A second symptom of non-normality is eigenvalue sensitivity. For
+$\varepsilon>0$, the **$\varepsilon$-pseudospectrum** is
+
+$$
+\Lambda_\varepsilon(\mathbf A)
+=\{z\in\mathbb C:\sigma_{\min}(z\mathbf I-\mathbf A)\le\varepsilon\}
+=\{z:z\text{ is an eigenvalue of }\mathbf A+\mathbf E
+       \text{ for some }\|\mathbf E\|_2\le\varepsilon\}.
+$$
+:eqlabel:`eq_mdl-pseudospectrum`
+
+Away from an eigenvalue this can equivalently be read through the
+**resolvent** $(z\mathbf I-\mathbf A)^{-1}$: membership means its norm is at
+least $1/\varepsilon$. For a normal matrix the resolvent norm is exactly the
+reciprocal distance from $z$ to the nearest eigenvalue. For a non-normal
+matrix it can be much larger, so small perturbations can move eigenvalues far
+and a forced linear system can respond strongly even when $z$ is not close to
+the displayed spectrum. The final line of the cell measures this effect at
+$z=1$: the two matrices have the same eigenvalues, yet the non-normal
+resolvent is roughly twenty times larger.
+
+Pseudospectra are primarily a diagnostic rather than another decomposition to
+memorize. In numerical linear algebra they warn that computed eigenvalues may
+be sensitive; in dynamical systems they warn about transient responses; and
+in deep learning they explain why a spectral-radius constraint alone does not
+control a layer's Lipschitz constant or its gradient amplification.
+
+### Products of Jacobians
+
+A recurrent or very deep network adds one complication: its backward map is a
+product of generally different Jacobians,
+
+$$
+\mathbf J_T\mathbf J_{T-1}\cdots\mathbf J_1.
+$$
+
+Even if every factor has eigenvalues inside the unit circle, the factors need
+not share eigenvectors and their expanding singular directions can rotate into
+one another. There is therefore no rule that obtains the product's norm by
+multiplying the factors' spectral radii. Singular values give finite-horizon
+bounds,
+$\|\mathbf J_T\cdots\mathbf J_1\|_2\le\prod_t\sigma_{\max}(\mathbf J_t)$;
+long-run average logarithmic growth is summarized by **Lyapunov exponents**.
+The practical hierarchy is now precise: eigenvalues describe asymptotic powers
+of one fixed map, singular values describe finite-time stretch, pseudospectra
+describe sensitivity, and Lyapunov exponents describe long products of
+changing maps.
+
 ## Symmetric Matrices and Positive Definiteness
 
 ### The Spectral Theorem
@@ -963,46 +1102,13 @@ that the eigenvalues are approximately $0.99$, $2.97$, $4.95$, $9.08$,
 all comfortably inside the ranges provided.
 
 ```{.python .input #eigendecomposition-gershgorin-circle-theorem}
-#@tab mxnet
-A = np.array([[1.0, 0.1, 0.1, 0.1],
+import numpy as onp
+A = onp.array([[1.0, 0.1, 0.1, 0.1],
               [0.1, 3.0, 0.2, 0.3],
               [0.1, 0.2, 5.0, 0.5],
               [0.1, 0.3, 0.5, 9.0]])
 
-v, _ = np.linalg.eig(A)
-v
-```
-
-```{.python .input #eigendecomposition-gershgorin-circle-theorem}
-#@tab pytorch
-A = torch.tensor([[1.0, 0.1, 0.1, 0.1],
-              [0.1, 3.0, 0.2, 0.3],
-              [0.1, 0.2, 5.0, 0.5],
-              [0.1, 0.3, 0.5, 9.0]])
-
-v, _ = torch.linalg.eig(A)
-v
-```
-
-```{.python .input #eigendecomposition-gershgorin-circle-theorem}
-#@tab tensorflow
-A = tf.constant([[1.0, 0.1, 0.1, 0.1],
-                [0.1, 3.0, 0.2, 0.3],
-                [0.1, 0.2, 5.0, 0.5],
-                [0.1, 0.3, 0.5, 9.0]])
-
-v, _ = tf.linalg.eig(A)
-v
-```
-
-```{.python .input #eigendecomposition-gershgorin-circle-theorem}
-#@tab jax
-A = jnp.array([[1.0, 0.1, 0.1, 0.1],
-               [0.1, 3.0, 0.2, 0.3],
-               [0.1, 0.2, 5.0, 0.5],
-               [0.1, 0.3, 0.5, 9.0]])
-
-v, _ = jnp.linalg.eig(A)
+v, _ = onp.linalg.eig(A)
 v
 ```
 
@@ -1104,55 +1210,15 @@ $5\times5$ matrix, read off the stabilized norm ratio, and compare it to the
 largest eigenvalue modulus. They agree.
 
 ```{.python .input #eigendecomposition-power-iteration}
-#@tab mxnet
-np.random.seed(8675309)
-A = np.random.randn(5, 5)
-v = np.random.randn(5, 1)
+import numpy as onp
+onp.random.seed(8675309)
+A = onp.random.randn(5, 5)
+v = onp.random.randn(5, 1)
 for _ in range(200):
     Av = A @ v
-    ratio = np.linalg.norm(Av) / np.linalg.norm(v)
-    v = Av / np.linalg.norm(Av)
-rho = max(abs(np.linalg.eigvals(A)))
-print(f'stabilized norm ratio = {ratio:.10f}   max|eigenvalue| = {rho:.10f}')
-```
-
-```{.python .input #eigendecomposition-power-iteration}
-#@tab pytorch
-torch.manual_seed(42)
-A = torch.randn(5, 5, dtype=torch.float64)
-v = torch.randn(5, 1, dtype=torch.float64)
-for _ in range(200):
-    Av = A @ v
-    ratio = (torch.norm(Av) / torch.norm(v)).item()
-    v = Av / torch.norm(Av)
-rho = max(abs(torch.linalg.eigvals(A))).item()
-print(f'stabilized norm ratio = {ratio:.10f}   max|eigenvalue| = {rho:.10f}')
-```
-
-```{.python .input #eigendecomposition-power-iteration}
-#@tab tensorflow
-tf.random.set_seed(42)
-A = tf.random.normal((5, 5), dtype=tf.float64)
-v = tf.random.normal((5, 1), dtype=tf.float64)
-for _ in range(200):
-    Av = tf.matmul(A, v)
-    ratio = (tf.norm(Av) / tf.norm(v)).numpy()
-    v = Av / tf.norm(Av)
-rho = max(abs(tf.linalg.eigvals(A).numpy()))
-print(f'stabilized norm ratio = {ratio:.10f}   max|eigenvalue| = {rho:.10f}')
-```
-
-```{.python .input #eigendecomposition-power-iteration}
-#@tab jax
-key = jax.random.PRNGKey(42)
-_, key_v = jax.random.split(key)                  # split off a distinct key for v
-A = jax.random.normal(key, (5, 5), dtype=jnp.float64)
-v = jax.random.normal(key_v, (5, 1), dtype=jnp.float64)
-for _ in range(200):
-    Av = A @ v
-    ratio = float(jnp.linalg.norm(Av) / jnp.linalg.norm(v))
-    v = Av / jnp.linalg.norm(Av)
-rho = float(max(abs(jnp.linalg.eigvals(A))))
+    ratio = onp.linalg.norm(Av) / onp.linalg.norm(v)
+    v = Av / onp.linalg.norm(Av)
+rho = max(abs(onp.linalg.eigvals(A)))
 print(f'stabilized norm ratio = {ratio:.10f}   max|eigenvalue| = {rho:.10f}')
 ```
 
@@ -1176,9 +1242,12 @@ condition, *irreducibility*: from every state you can reach every other) has a
 real, positive dominant eigenvalue whose eigenvector can be chosen with all
 entries non-negative, so it is interpretable as a distribution. Google's
 original **PageRank** :cite:`Brin.Page.1998` is exactly this eigenvector.
-Model a random web surfer who at each step follows a random outgoing link;
-collect the click probabilities into a column-stochastic matrix $\mathbf{P}$
-(every column sums to $1$, and every entry is non-negative). Two lines show
+Model a random web surfer who at each step follows a random outgoing link.
+Before forming a transition matrix, repair every **dangling** page (one with no
+outgoing links), for example by replacing its empty column by the uniform
+distribution. The resulting click probabilities form a column-stochastic
+matrix $\mathbf{P}$ (every column sums to $1$, and every entry is
+non-negative). Two lines show
 that $\rho(\mathbf{P})=1$. Because the columns sum to one,
 $\mathbf{1}^\top\mathbf{P}=\mathbf{1}^\top$, so $1$ is an eigenvalue of
 $\mathbf{P}^\top$ and hence of $\mathbf{P}$ (a matrix and its transpose share
@@ -1190,9 +1259,9 @@ eigenvalue in a disc centered at $p_{ii}\ge0$ with radius $1-p_{ii}$, hence
 within modulus $p_{ii}+(1-p_{ii})=1$. The fraction of time the
 surfer spends on each page is the stationary distribution $\boldsymbol\pi$ with
 $\mathbf{P}\boldsymbol\pi=\boldsymbol\pi$, the dominant eigenvector. One wrinkle:
-the raw link matrix fails the theorem's irreducibility condition on the real web,
-which is full of dangling pages (no outgoing links) and disconnected pockets. The
-fix is *damping*: iterate the blended matrix
+the repaired link matrix can still fail irreducibility or be periodic because
+the web contains disconnected pockets and cycles. The separate fix is
+*damping*: iterate the blended matrix
 $\alpha\mathbf{P}+(1-\alpha)\tfrac1n\mathbf{1}\mathbf{1}^\top$ with
 $\alpha\approx0.85$, i.e. with probability $0.15$ the surfer teleports to a
 uniformly random page. Every entry of the blend is positive, so
@@ -1209,14 +1278,24 @@ the stationary distribution of a Markov chain and in spectral clustering.
 ## Spectral Radius, Stability, and Deep Networks
 :label:`subsec_mdl-spectral-radius`
 
-We now see exactly what we hoped for. The quantity controlling whether iterated
-multiplication grows or shrinks a vector is the *spectral radius*
-$\rho(\mathbf A)=\max_i|\lambda_i|$, the largest eigenvalue modulus, which is
-exactly the stretching factor we measured above. If we rescale $\mathbf{A}$ by
-$\rho(\mathbf A)$ so that its largest eigenvalue modulus is $1$, the random data
-neither explodes nor vanishes; it equilibrates to a stable size. This is the
-principle behind weight-initialization scaling, and it raises the question of
-how large $\rho$ typically is to begin with.
+The *spectral radius*
+$\rho(\mathbf A)=\max_i|\lambda_i|$ controls the **asymptotic exponential
+rate** of powers of one fixed matrix:
+
+$$
+\lim_{k\to\infty}\|\mathbf A^k\|^{1/k}=\rho(\mathbf A).
+$$
+
+This statement is weaker than saying that $\|\mathbf A^k\|$ is approximately
+$\rho(\mathbf A)^k$ at every finite $k$. A defective Jordan block contributes
+polynomial factors, and a non-normal matrix can amplify some vectors greatly
+before its eventual asymptotic behavior takes over. For example,
+$\mathbf A=\left[\begin{smallmatrix}1&1\\0&1\end{smallmatrix}\right]$ has
+$\rho(\mathbf A)=1$ but
+$\mathbf A^k=\left[\begin{smallmatrix}1&k\\0&1\end{smallmatrix}\right]$.
+Thus rescaling to $\rho(\mathbf A)=1$ controls the exponential rate but does
+not guarantee bounded iterates. This distinction matters for initialization
+and raises the question of how large $\rho$ typically is to begin with.
 
 ### What Random Matrices Look Like
 
@@ -1269,22 +1348,23 @@ $$
 \qquad \mathbf{J}_t=\frac{\partial\mathbf{h}_t}{\partial\mathbf{h}_{t-1}} .
 $$
 
-This is precisely a product of matrices applied to a vector (and the transposes
-change nothing spectrally: $\mathbf{J}^\top$ has the same eigenvalue moduli as
-$\mathbf{J}$). If the Jacobians
-behave like a single repeated matrix of spectral radius $\rho$, the gradient
-magnitude scales like $\rho^{T}$ over $T$ steps: when $\rho>1$ it *explodes*, and
-when $\rho<1$ it *vanishes*, decaying to nothing before it can carry
-information back across many time steps
-:cite:`bengio1994learning,Pascanu.Mikolov.Bengio.2013`. Either failure makes
-long-range learning impossible. The rule we built here, keep the largest
-eigenvalue modulus near $1$, is exactly the principle behind
-orthogonal/identity recurrent initialization
+This is a product of matrices applied to a vector. In the idealized linear case
+where every Jacobian is the same diagonalizable matrix $\mathbf J$, its
+asymptotic exponential rate is governed by $\rho(\mathbf J)$. Actual recurrent
+networks multiply **different**, generally non-normal Jacobians. Their gradient
+norm is controlled directly by singular values of the product
+$\mathbf J_T\cdots\mathbf J_1$, or asymptotically by Lyapunov exponents; the
+spectral radii of the individual factors do not determine it. Large singular
+values can produce exploding gradients and small ones vanishing gradients
+:cite:`bengio1994learning,Pascanu.Mikolov.Bengio.2013`.
+
+This refined view explains why orthogonal/identity initialization
 :cite:`Saxe.McClelland.Ganguli.2014`, gradient clipping, and the gating
-mechanisms of LSTMs and GRUs,
-which we develop in the recurrent-network chapters. The closely related *singular
-values* and the *condition number* of :numref:`sec_mdl-svd-low-rank` refine this
-picture for a single layer.
+mechanisms of LSTMs and GRUs help: they control finite-time amplification and
+information flow, not merely eigenvalue moduli. Singular values and condition
+numbers, introduced in :numref:`sec_mdl-svd-low-rank`, supply the right
+single-layer language; products require the same ideas applied along the whole
+trajectory.
 
 ## Summary
 * Eigenvectors are directions a matrix stretches without rotating; eigenvalues
@@ -1312,12 +1392,20 @@ picture for a single layer.
   quotient identifies $\lambda_{\max}$ and $\lambda_{\min}$ as extreme stretches.
 * The Gershgorin Circle Theorem localizes the eigenvalues in discs around the
   diagonal, giving cheap bounds and a no-computation invertibility test.
-* Iterated matrix powers are governed by the largest eigenvalue modulus, the
-  *spectral radius*. Keeping it near $1$ is the principle behind weight
-  initialization and behind controlling exploding/vanishing gradients in
-  recurrent networks.
+* The *spectral radius* gives the asymptotic exponential rate of powers of one
+  fixed matrix, but Jordan blocks and non-normality can cause polynomial or
+  transient growth. Recurrent gradients involve products of changing
+  Jacobians, so their singular values and Lyapunov exponents, rather than the
+  factors' spectral radii alone, control exploding and vanishing gradients.
 
 ## Exercises
+1. For the non-normal matrix in :eqref:`eq_mdl-nonnormal-example`, derive the
+   formula for $(\mathbf A^k)_{12}$ by diagonalization or induction. Find the
+   integer $k$ at which this entry is largest, and compare it with the NumPy
+   result for $\|\mathbf A^k\|_2$.
+1. Prove :eqref:`eq_mdl-normal-power-norm` from a unitary diagonalization.
+   Then construct a diagonalizable $2\times2$ matrix with spectral radius
+   $1/2$ but one-step norm larger than an arbitrary prescribed $M>0$.
 1. What are the eigenvalues and eigenvectors of
 $$
 \mathbf{A} = \begin{bmatrix}

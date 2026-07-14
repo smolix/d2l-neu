@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [47, 53]\n"
+          "text": "heads, tails:  [51, 49]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([48., 52.])"
+          "text": "tensor([43., 57.])"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([0.5080, 0.4920])"
+          "text": "tensor([0.4964, 0.5036])"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 30140,
-          "sha256": "sha256:8e998cc5339e53bd7f1a92b3c816b5c58218c2459b5db0651e595474c62bf808"
+          "bytes": 30167,
+          "sha256": "sha256:7edb27e40b39cd31904f7ad9b4964726bb4214d14a40bf3847f336ff5a3f9c74"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 106060,
-          "sha256": "sha256:58392095100ea66441795fd1e3298d1c779319b4300c90c055a6896e2f32ddd3"
+          "bytes": 106513,
+          "sha256": "sha256:63f95fb4b2f618dee15214ffec320d898359c1ce812581d3101f38e3c41ba2a6"
         }
       ]
     },
@@ -86,7 +86,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(0.8383)"
+          "text": "tensor(0.8307)"
         }
       ]
     }

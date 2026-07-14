@@ -42,8 +42,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
-          "bytes": 24334,
-          "sha256": "sha256:a77a0f8a6a77d2cc3722592584dd63ebbc0faba1a1ea7f6a62a37cc87362d758"
+          "bytes": 24336,
+          "sha256": "sha256:08ffa56959acd5c67b5f40d300325e060aec8953170ad9fa38e10e361f9d2915"
         }
       ]
     },
@@ -60,8 +60,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 24333,
-          "sha256": "sha256:641d49cbdf13c340e4544bbc8c16d3f812bf2a5b7be81502a60a5bc873f2fe29"
+          "bytes": 24341,
+          "sha256": "sha256:1d87d736d288590f639749caecf8bf61488b811fa34e17910b99800c6e34619d"
         }
       ]
     }

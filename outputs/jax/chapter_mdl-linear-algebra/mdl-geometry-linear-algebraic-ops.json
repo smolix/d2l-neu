@@ -14,32 +14,32 @@
       "outputs": []
     },
     "geometry-linear-algebraic-ops-dot-products-and-angles": {
-      "code_fingerprint": "sha256:ad09aa5d07c13cc222c7ef60d54a960b06215bc6d23aeaa15e3fcdf9ec4db9b2",
+      "code_fingerprint": "sha256:56a5137a3e1990c9860e8d7398f44a0d6162fbd7ca3b319eb9ec03cda40e3189",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(0.41899002, dtype=float32)"
+          "text": "np.float64(0.4189900840328574)"
         }
       ]
     },
     "mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace": {
-      "code_fingerprint": "sha256:35a61f4b9f469a2d04619cbb7f9b6a75b5db8eb732c27f10647a46fd5d7db7a0",
+      "code_fingerprint": "sha256:5e9bf448ff7866dc90d31d8ce513389550c59ce7ffab9d6c082356bbd0b98039",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(3.641364e-07, dtype=float32), Array(1.6180891e-07, dtype=float32))"
+          "text": "(np.float64(4.153077993666847e-16), np.float64(4.211628519682908e-16))"
         }
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-1": {
-      "code_fingerprint": "sha256:f851708238aec9c3df473ff20a2ba65873a4b089f7dc8f92ba033bf8983d429e",
+      "code_fingerprint": "sha256:0b502b00fd15720ceb914af325cf91b96e66162e9991c62cf8a5de30baa992a5",
       "kind": "text",
       "outputs": []
     },
     "geometry-linear-algebraic-ops-hyperplanes-2": {
-      "code_fingerprint": "sha256:f7b1f0efe3e495d3b5f8bd7c5d31cc27b67ea05ccff1d67aee680aa5decca835",
+      "code_fingerprint": "sha256:f9ce7420ac723e2223180d07cbd255652a8b35b31730cc3a5112685c6ff221c8",
       "kind": "asset",
       "outputs": [
         {
@@ -47,70 +47,70 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
           "bytes": 26257,
-          "sha256": "sha256:3b6be80949b06c9bc1ea58bdf8d65fdfc4183c48580d95e39a5cb64f62462a9c"
+          "sha256": "sha256:b5a9a68a23d59892cf5c492dc7e140d1c82351003f1d5f89feef3d0c4f61f8ff"
         }
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-4": {
-      "code_fingerprint": "sha256:3210f4a47ca457af0d16400752812d71f2d6518e1404be22f686a7ef1f7adb84",
+      "code_fingerprint": "sha256:4702203d061e6e8aa58c44a38862bf748b5b9ea80ad5406f894181a8d36b03ba",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(0.91550004, dtype=float32)"
+          "text": "np.float64(0.9155)"
         }
       ]
     },
     "geometry-linear-algebraic-ops-projection-histogram": {
-      "code_fingerprint": "sha256:74f4585bf2c37f7f1ba593139297ceb339b6f6c7d0d15a58380b8a12f5a0cf98",
+      "code_fingerprint": "sha256:ae7ed1706db4c40c30874afb1ba94bf19506f81435984e298b7f8d1117440182",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
-          "bytes": 40874,
-          "sha256": "sha256:6e28dd5e1473c060d83513aaa8cbf95508541617b211c7b1abbd0792300935e1"
+          "bytes": 40875,
+          "sha256": "sha256:bf1802f04ac5f86682d4a52b00bbe28478677e491fc33071ca74b029f990db4f"
         }
       ]
     },
     "geometry-linear-algebraic-ops-invertibility": {
-      "code_fingerprint": "sha256:8eed7fded7dd42728f2337a5f98b8c059703384b6350f360892d01061e165548",
+      "code_fingerprint": "sha256:13e7fc72e485aac2a896a9c9a6d0fd23382d10bf66ab0f78a7ef3636f8ad5ec7",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([[1., 0.],\n       [0., 1.]], dtype=float32)"
+          "text": "array([[1., 0.],\n       [0., 1.]])"
         }
       ]
     },
     "geometry-linear-algebraic-ops-determinant": {
-      "code_fingerprint": "sha256:98fe26d6b7deffb0cafc3b86c74f91528abd93645f6c48a678e67ae807adcd3a",
+      "code_fingerprint": "sha256:4674e6a525639415f4f914eae6f219a6f0e1eab0aa92fb2de08ed697c4bfb863",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array(5., dtype=float32)"
+          "text": "np.float64(4.999999999999999)"
         }
       ]
     },
     "mdl-geometry-linear-algebraic-ops-det-3x3": {
-      "code_fingerprint": "sha256:09c606ddc301ea1b4f90c082fa0ade8a786092ee30d6649cbe140d2d887f2161",
+      "code_fingerprint": "sha256:e76846f323a24a4bf9a29c2d68d874d6a11d5ec5abf2d22f322f53d253baba6f",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(8., dtype=float32), Array(-8., dtype=float32), Array(6., dtype=float32))"
+          "text": "(np.float64(8.000000000000002),\n np.float64(-8.000000000000002),\n np.float64(6.0))"
         }
       ]
     },
     "geometry-linear-algebraic-ops-expressing-in-code-2": {
-      "code_fingerprint": "sha256:ed7f45cbadd9df28212633539c55d5cced9adc074c15c6843b4bb885449ed57d",
+      "code_fingerprint": "sha256:b8345da0fdcdf03ee21fd58cdd93cbb470a6334750b0bcdd8d8f4413659bfb43",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(Array(5., dtype=float32),\n Array([ 0., -5.], dtype=float32),\n Array([[-1.,  8.],\n        [-4.,  7.]], dtype=float32),\n Array(4., dtype=float32))"
+          "text": "(np.float64(5.0),\n array([ 0., -5.]),\n array([[-1.,  8.],\n        [-4.,  7.]]),\n np.float64(4.0))"
         }
       ]
     }

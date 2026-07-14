@@ -14,7 +14,7 @@ matching and its tractable denoising form, recognize DDPM
 Langevin sampling, DDIM, and guidance from the same score calculus, and then
 build flow matching and rectified flow as the complementary route that
 *prescribes* the noise-to-data path, closing with the optimal-transport
-explanation of why straight paths sample fastest and a single table that
+connection between straight paths and kinetic energy and a single table that
 unifies the whole family :cite:`song2021score,Lipman.Chen.BenHamu.ea.2022`.
 
 One idea powers everything. The quantity we want, a marginal score or a
@@ -662,10 +662,10 @@ $$
 $$
 
 DDPM would now *resample*: draw fresh noise and form a noisy
-$\mathbf{x}_{t-1}$. DDIM instead **re-uses the predicted noise**, placing
-$\mathbf{x}_{t-1}$ exactly where the marginal form says a point with clean
-component $\hat{\mathbf{x}}_0$ and noise component
-$\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$ should sit at time $t - 1$:
+$\mathbf{x}_{t-1}$. DDIM instead **reuses the predicted direction**, forming
+$\mathbf{x}_{t-1}$ from the current clean estimate
+$\hat{\mathbf{x}}_0$ and noise estimate
+$\boldsymbol{\epsilon}_{\boldsymbol{\theta}}$ at time $t-1$:
 
 $$
 \mathbf{x}_{t-1}
@@ -674,29 +674,31 @@ $$
 $$
 :eqlabel:`eq_mdl-ddim-update`
 
-*Why this is consistent:* if the noise prediction is exact for the realization
-($\boldsymbol{\epsilon}_{\boldsymbol{\theta}} = \boldsymbol{\epsilon}$, so
-$\hat{\mathbf{x}}_0 = \mathbf{x}_0$), the update maps
-$\sqrt{\bar{\alpha}_t}\, \mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_t}\, \boldsymbol{\epsilon}
-\mapsto \sqrt{\bar{\alpha}_{t-1}}\, \mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_{t-1}}\, \boldsymbol{\epsilon}$:
-each sample slides along its own deterministic curve
-$t \mapsto \sqrt{\bar{\alpha}_t}\, \mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_t}\, \boldsymbol{\epsilon}$,
-and every marginal :eqref:`eq_mdl-ddpm-marginal` is preserved en route. Because
-each update is a *single deterministic map* between adjacent noise levels
-(not a draw whose errors must average out), nothing stops us taking
-$t$ down a sparse subsequence (say 50 of the 1000 levels): big strides replace
-small staggers.
+The algebra is easiest to remember through a hypothetical forward pair:
+if we knew that realization's actual $(\mathbf{x}_0,\boldsymbol{\epsilon})$,
+the formula would move it along the curve
+$t \mapsto \sqrt{\bar{\alpha}_t}\,\mathbf{x}_0
++ \sqrt{1-\bar{\alpha}_t}\,\boldsymbol{\epsilon}$. A network trained by
+squared error does not recover that latent noise realization, however; it
+recovers the conditional mean
+$\mathbb{E}[\boldsymbol{\epsilon}\mid\mathbf{x}_t]$. Thus
+:eqref:`eq_mdl-ddim-update` is a deterministic update defined from the learned
+conditional estimate, not an exact jump along each sample's hidden forward
+curve. We may evaluate it on a sparse subsequence of the training noise levels,
+but larger gaps introduce discretization/model error.
 :::
 
 Two remarks complete the picture. First, DDIM is the $\eta = 0$ endpoint of a
-family that interpolates continuously to DDPM ($\eta = 1$) by re-injecting a
-fraction of fresh noise; all members share the same marginals and the same
-network. Second, in the limit of fine steps the DDIM trajectory solves the
-probability-flow ODE of the VP-SDE (:numref:`sec_mdl-probability-flow-ode`):
-DDIM is that ODE's bespoke integrator, exact for Gaussian marginals, which is
-why it tolerates step sizes that would wreck a generic Euler scheme.
+family that interpolates to an ancestral sampler by reinjecting noise; its
+non-Markovian forward construction has the same one-time noising marginals as
+DDPM, so the same trained network can be reused. Second, in the fine-step
+continuous-time limit the deterministic trajectory is related to the
+probability-flow ODE of the VP-SDE
+(:numref:`sec_mdl-probability-flow-ode`). This relationship motivates sparse
+deterministic sampling, but it does not make a finite DDIM stride exact, even
+when a marginal happens to be Gaussian.
 
-![In the $(t, x)$ plane, every pair of a clean point $x_0$ and a noise draw $\epsilon$ traces its own curve $\sqrt{\bar{\alpha}_t}\, x_0 + \sqrt{1 - \bar{\alpha}_t}\, \epsilon$ from data (left) to noise (right), and at each time the curves' cross-section reproduces the marginal. DDIM slides each sample deterministically along its own curve: the marked strides skip the intermediate grid times (gray) that ancestral sampling would visit one by one.](../img/mdl-dyn-ddim-strides.svg)
+![In the $(t, x)$ plane, each forward pair $(x_0,\epsilon)$ defines a curve $\sqrt{\bar{\alpha}_t}\,x_0+\sqrt{1-\bar{\alpha}_t}\,\epsilon$ whose cross-sections reproduce the noising marginals. DDIM uses the network's conditional noise estimate to take deterministic strides across selected time levels (marked), skipping the intermediate grid times (gray); the drawn curves explain the update algebra, not an exactly recovered latent path.](../img/mdl-dyn-ddim-strides.svg)
 :label:`fig_mdl-dyn-ddim-strides`
 
 How much do the strides cost when the marginal is *not* a single Gaussian? Our
@@ -742,10 +744,11 @@ Ten strides land every sample in the same mode as the thousand-step reference
 (the mode fraction is *identical* at every stride count: the update is
 deterministic, and in this run no trajectory crosses the valley)
 and slip by only $0.08$ per sample on a scale where the modes sit at
-$\pm 0.97$. This is the limit of DDIM's exactness: for a single Gaussian
-marginal every stride of :eqref:`eq_mdl-ddim-update` would be exact, but on a
-mixture the predicted noise is a posterior *mean* rather than the realization's
-own noise, so long strides bend slightly off the true curves. By fifty strides
+$\pm 0.97$. The discrepancy illustrates the central point: the predicted
+noise is a posterior *mean*, not the realization's latent noise, so a finite
+deterministic stride need not preserve the target marginal exactly. This is
+true even for Gaussian data; Gaussianity makes the score linear, but does not
+turn the conditional mean into the sampled noise realization. By fifty strides
 the terminal law is statistically indistinguishable from the thousand-step one
 (KS $0.018$ against the $5\%$ threshold $0.021$). Big steps do replace small
 ones; the bill, paid in stride count, comes due exactly where the marginal
@@ -1670,11 +1673,12 @@ $\mathbb{E} \|\mathbf{X}_1 - \mathbf{X}_0\|^2 = W_2^2$ exactly. (When
 $\pi^\star$ is a map, this displacement interpolation is realized by a genuine
 velocity field; smoothing handles the general case.)
 
-The equality analysis *is* the case for straightness. Jensen's inequality is
-tight iff the integrand is constant, i.e. iff each particle moves with
-constant velocity, along a straight line. Curvature is therefore pure waste: any
-bend in a trajectory burns kinetic energy above the $W_2^2$ floor without
-moving mass anywhere new. In this light the methods of this section line up as
+The equality analysis explains straightness. For a fixed pair of endpoints,
+Jensen's inequality is tight iff the particle has constant velocity, hence
+follows their straight segment. Attaining the global $W_2^2$ floor additionally
+requires an *optimal endpoint coupling*. Curvature raises the kinetic energy
+for a fixed coupling, but straight segments under an arbitrary coupling need
+not be optimal transport. In this light the methods of this section line up as
 one program:
 
 * **Diffusion / probability-flow trajectories** are curved (the VP path
@@ -1682,10 +1686,12 @@ one program:
   Euler error analysis of :numref:`sec_mdl-euler-runge-kutta`, extra solver
   steps.
 * **Rectified flow** starts from straight *conditional* segments (each pair in
-  :eqref:`eq_mdl-rf-path` is a constant-speed line); only the crossings forced
-  by the independent coupling bend the marginal flow, and **reflow** iterates
-  toward a non-crossing (hence straight, hence transport-optimal)
-  configuration.
+  :eqref:`eq_mdl-rf-path` is a constant-speed line), while averaging velocities
+  at locations reached by several pairs can bend the learned marginal flow.
+  **Reflow** often reduces this curvature by replacing independent pairs with
+  pairs generated by the current model. It does not by itself certify the
+  optimal-transport coupling; in more than one dimension, noncrossing alone
+  implies neither straightness nor optimality.
 * **Minibatch OT couplings** attack the same waste before training: within
   each batch, re-pair the noise and data samples by solving a small discrete
   OT problem (an assignment over $256$ points) and run CFM on the matched
@@ -1720,14 +1726,15 @@ the stochastic branch is Anderson's reverse SDE
 :eqref:`eq_mdl-dyn-reverse-sde`, and both branches reuse, unchanged, the
 solvers of :numref:`sec_mdl-euler-runge-kutta` and
 :numref:`sec_mdl-euler-maruyama`. The ODE route is deterministic (the same
-$\mathbf{x}_T$ always yields the same sample, useful for interpolation and
-editing), needs fewer steps, and inherits the exact log-likelihood of a
-continuous normalizing flow via the trace integral of
-:numref:`sec_mdl-continuous-normalizing-flows`. The SDE route injects fresh
-noise each step, which *contracts* accumulated error (the noise keeps
-re-randomizing the parts of the state the score will re-attract) and buys
-sample diversity and robustness to score error at the price of step count;
-predictor–corrector sits in between. The remaining dial is the number of
+$\mathbf{x}_T$ yields the same sample, useful for interpolation and editing)
+and often works with fewer steps for suitably trained, low-curvature fields.
+It also supports likelihood evaluation through the continuous-normalizing-flow
+trace integral of :numref:`sec_mdl-continuous-normalizing-flows`; this is exact
+only for the exact field, divergence, and numerical integration. The SDE route
+injects fresh noise and can improve exploration or empirical robustness, but
+noise does not universally contract model or discretization error, nor does it
+by itself guarantee sample diversity. Predictor–corrector methods combine the
+two styles. The remaining dial is the number of
 steps, and we can now measure exactly what it buys. The cell reuses the
 trained two-moons velocity field and grades Euler sampling at increasing step
 counts with the squared energy distance.
@@ -1858,11 +1865,14 @@ $\gamma_t \equiv 0$. Exercise 8 walks the construction.
 * Flow matching prescribes the path and regresses the velocity;
   rectified flow's straight-line path makes the target the constant
   $\mathbf{x}_1 - \mathbf{x}_0$. By Benamou–Brenier, $W_2^2$ is the least
-  kinetic energy of any bridging flow, met exactly by straight constant-speed
-  transport: curvature is wasted energy and wasted solver steps, which
-  reflow and minibatch-OT couplings remove.
-* Sampling is numerically solving the learned dynamics: ODE for determinism,
-  few steps, and likelihoods; SDE for diversity and error-correction; solver
+  kinetic energy of any bridging flow. Constant-speed straight paths attain
+  that energy only when their endpoint coupling is optimal. Reflow and
+  minibatch-OT couplings aim to reduce curvature or coupling cost; neither is
+  an automatic certificate of exact optimal transport.
+* Sampling is numerically solving the learned dynamics: ODEs offer deterministic
+  samples and likelihood evaluation; SDEs inject sampling noise and may aid
+  exploration. Step count and robustness are method- and problem-dependent;
+  solver
   order (Heun, EDM) and path straightness set the step budget.
 
 The dynamical lens of this chapter does not stop at generative models. Read a
@@ -2126,8 +2136,9 @@ laws are statistically indistinguishable:
 
 @!mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed
 
-Same network; $\eta$ interpolates back to DDPM. DDIM is the PF-ODE's bespoke
-integrator, exact for Gaussian marginals.
+Same network; $\eta$ controls reinjected noise. In the fine-step limit,
+deterministic DDIM is related to the probability-flow ODE; finite strides are
+numerical approximations, including for Gaussian marginals.
 :::
 
 ::: {.slide title="Guidance is Bayes on scores"}

@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "numpy: 0.4906 sec\ntensorflow: 0.0077 sec\n"
+          "text": "numpy: 0.5038 sec\ntensorflow: 0.0084 sec\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Done: 0.0144 sec\n"
+          "text": "Done: 0.0150 sec\n"
         }
       ]
     },
@@ -52,7 +52,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "numpy conversion: 0.0067 sec\nscalar conversion: 0.0059 sec\n"
+          "text": "numpy conversion: 0.0063 sec\nscalar conversion: 0.0076 sec\n"
         }
       ]
     },
@@ -63,17 +63,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "synchronous (eager + .numpy() barrier): 1.7576 sec\n"
+          "text": "synchronous (eager + .numpy() barrier): 1.9622 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "asynchronous (eager, single sync at end): 0.6520 sec\n"
+          "text": "asynchronous (eager, single sync at end): 0.6944 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "tf.function (compiled graph): 0.9575 sec\n"
+          "text": "tf.function (compiled graph): 1.3044 sec\n"
         }
       ]
     }

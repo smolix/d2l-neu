@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 18330,
-          "sha256": "sha256:8ce267cd4a5498d7ead33ad19c6d1f791ec219e24fba088d3307dca615eb349b"
+          "bytes": 21015,
+          "sha256": "sha256:6651425d44d910bf854268df17fb76a4692108d62ef97dc6ca3f0c6c954c6eb1"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape,'\n'it seemed to me that the Time Traveller, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\ns'\n"
+          "text": "\"the time traveller metals and the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller\"\n\"it seemed to me that the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to re\"\n"
         }
       ]
     },
@@ -64,17 +64,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.28, distinct-3 0.18: 'the time traveller, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\ns'\n"
+          "text": "k=1, score -5.44, distinct-3 0.68: \"the time traveller metals and the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to reserved in the sun\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.52, distinct-3 0.61: \"the time traveller. I had seen.\\n\\n'There I found that the Time Traveller, as I did not see.\\n\\n'There I found that the Time Traveller, as I did not\"\nk=1, score -4.02, distinct-3 0.26: 'it seemed to me that the Time Traveller, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and'\n"
+          "text": "k=4, score -4.16, distinct-3 0.76: 'the time traveller whole to the Time Machine was direction of\\npresently I could see no signs--and I could see no signs--and I felt assu'\nk=1, score -5.40, distinct-3 0.55: \"it seemed to me that the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to reserved in the sunseday of\\n\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.45, distinct-3 0.47: \"it seemed to me that the Time Traveller, as I did not see.\\n\\n'There I found that the Time Traveller, as I did not see.\\n\\n'There I found that the Time Traveller,\"\n"
+          "text": "k=4, score -3.81, distinct-3 0.26: 'it seemed to me that I could see no signs--and I could see no signs--and I could see no signs--and I could see no signs--and'\n"
         }
       ]
     },
@@ -105,14 +105,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x74126b7bed80>"
+          "text": "<matplotlib.legend.Legend at 0x7a7e33fcf020>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 52779,
-          "sha256": "sha256:8a00925ca52297697038a18fd8736aef5c549cfd9c206d1944b7d1d38911c549"
+          "bytes": 46232,
+          "sha256": "sha256:d30f9fe258af1e8a10e5c6d94a0340a162eab041b297fd02fd47df894f44f784"
         }
       ]
     },
@@ -123,7 +123,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.32, top-k keeps 20, top-p keeps 78, min-p keeps 5\n'it seemed to me that': top prob 0.75, top-k keeps 20, top-p keeps 15, min-p keeps 1\n"
+          "text": "'the time traveller': top prob 0.06, top-k keeps 20, top-p keeps 307, min-p keeps 78\n'it seemed to me that': top prob 0.14, top-k keeps 20, top-p keeps 101, min-p keeps 30\n"
         }
       ]
     },
@@ -134,17 +134,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: \"the time traveller, and the\\ndoorous, in the specular, but the same, and the thing,\\n'F the big open, I have the\\nthrough the Editor, and the science, and the\"\n"
+          "text": "T=0.5: 'the time traveller; and I was always of popleiallysity of decay to the smoking a tile I began to make to full I was nextes I heard a half-gre'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0: 'the time travellerly coming, stamly; at to moveisted consteen at me, and the light,, and u ble only me. I should have said the clearly I suppose, and odd faster'\n"
+          "text": "T=1.0: 'the time traveller decays mustiniteed him jay of evening away of reolden Age I rudgnerear us too arroracness in thisreadion? For of anach we came open came'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0: 'the time traveller pres the men comvery en sha usvedir\\n They hadur w did suk-nor him ad--�� come ifook had inwhck sasounross nment have fehing two�ciung,x'\n"
+          "text": "T=2.0: \"the time travellerte waitkedence last himily� off-usein day e place Sure susp an hies you;ouZust caant op sha't. And not hill whichious indle ' that too8 as get rcl\"\n"
         }
       ]
     },
@@ -155,27 +155,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 0.15): 'the time traveller, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape, and the\\nshape,'\n"
+          "text": " greedy (distinct-3 0.54): \"the time traveller metals and the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 1.00): 'the time travellerly coming, stamly; at to moveisted consteen at me, and the light,, and u ble only me. I should have said the clearly I suppose, and odd faster'\n"
+          "text": "  T=1.0 (distinct-3 1.00): 'the time traveller decays mustiniteed him jay of evening away of reolden Age I rudgnerear us too arroracness in thisreadion? For of anach we came open came'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 0.98): \"the time traveller. What I he to the, I held the mouth, would be the men's an uns, theres. Whatever the dreaded the emotter than belie away, the\\nn\"\n"
+          "text": "  top-k (distinct-3 1.00): 'the time traveller idea of charical corous in particularly hairits of the little lawn. Sapted prettyly it was in parturslses an in free-worth D'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-p (distinct-3 1.00): 'the time traveller; and the\\nsawak-f and intelm, she, will mass or the sigence. I only thinked a well.\\nThere I could fildies. The was secome the valaces'\n"
+          "text": "  top-p (distinct-3 1.00): \"the time traveller moate of the ruinous?' I sc,' said I was projiveracted to meat anyte haes smis time were rust asport me wallsical droppeds from the Prou\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  min-p (distinct-3 1.00): 'the time traveller. What I he susite and wrongly, I found his expressed to me, and\\nsar well, as it, and then\\nme, for instance, and I saw the like, but the se'\n"
+          "text": "  min-p (distinct-3 1.00): 'the time travellerite was a paod fast at though and hesitated in his minds animals as having very lighteve and as I was lay in my necism a range bet as flower'\n"
         }
       ]
     }

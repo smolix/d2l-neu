@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "gan/gan-generate-some-real-data-2-1.svg",
           "bytes": 20415,
-          "sha256": "sha256:ca16168f47a9da4e3369000730adc26b2159ad7b95b40e7726e0c6b7d739c5c9"
+          "sha256": "sha256:a05eeeadbcbfe8595f67165a5465cfb82cb390c1dd13decc7b638174eb3c153d"
         }
       ]
     },
@@ -73,14 +73,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss_D 0.693, loss_G 0.693, 1878.1 examples/sec\n"
+          "text": "loss_D 0.693, loss_G 0.694, 1631.9 examples/sec\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gan/gan-training-4-1.svg",
-          "bytes": 61444,
-          "sha256": "sha256:539f5bf324a2f232a0aa8d147d603a5d47f50c9cd00acb455fe4e6cb6d295c58"
+          "bytes": 61029,
+          "sha256": "sha256:68a4cb1e191c858f0463bae0256f9317fed5d0684824ef710b39dab8dcaa49c4"
         }
       ]
     }

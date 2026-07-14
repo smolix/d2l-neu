@@ -24,7 +24,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[[0.5019, 0.4981, 0.0000, 0.0000],\n         [0.6150, 0.3850, 0.0000, 0.0000]],\n\n        [[0.4045, 0.3904, 0.2050, 0.0000],\n         [0.4104, 0.2715, 0.3180, 0.0000]]])"
+          "text": "tensor([[[0.4207, 0.5793, 0.0000, 0.0000],\n         [0.4597, 0.5403, 0.0000, 0.0000]],\n\n        [[0.3617, 0.3271, 0.3112, 0.0000],\n         [0.2922, 0.3509, 0.3570, 0.0000]]])"
         }
       ]
     },
@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[[1.0000, 0.0000, 0.0000, 0.0000],\n         [0.2424, 0.3913, 0.3664, 0.0000]],\n\n        [[0.6540, 0.3460, 0.0000, 0.0000],\n         [0.2572, 0.1572, 0.1868, 0.3988]]])"
+          "text": "tensor([[[1.0000, 0.0000, 0.0000, 0.0000],\n         [0.3161, 0.3826, 0.3013, 0.0000]],\n\n        [[0.5481, 0.4519, 0.0000, 0.0000],\n         [0.1584, 0.2128, 0.3131, 0.3158]]])"
         }
       ]
     },
@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-scaled-dot-product-attention-3-1.svg",
-          "bytes": 14343,
-          "sha256": "sha256:46c3fc2ee3922a08574b76b92041df6d4816659cf4ea73d1eba8183f221cb9b4"
+          "bytes": 14806,
+          "sha256": "sha256:5e7f616295aa80ff6690a5f904ea31acdd93dbe039f4b461501ebab56a8f6241"
         }
       ]
     },
@@ -84,8 +84,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "attention-scoring-functions/attention-scoring-functions-additive-attention-3-1.svg",
-          "bytes": 14814,
-          "sha256": "sha256:dab25f393fda09c5e082b77186956e1454f40e3f37ee1d34c63b62f9baa6239e"
+          "bytes": 13609,
+          "sha256": "sha256:72b345485f889c228145f5876a5f664af71a474c9a6312cc17083e5bb357aa14"
         }
       ]
     }

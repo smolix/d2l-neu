@@ -31,12 +31,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "unweighted    target accuracy: 0.502   (source accuracy: 0.860)\n"
+          "text": "unweighted    target accuracy: 0.502   (source accuracy: 0.860)\nweighted      target accuracy: 0.933   (source accuracy: 0.795)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weighted      target accuracy: 0.933   (source accuracy: 0.795)\nclipped, c=5  target accuracy: 0.945   (source accuracy: 0.817)\n"
+          "text": "clipped, c=5  target accuracy: 0.945   (source accuracy: 0.817)\n"
         }
       ]
     }

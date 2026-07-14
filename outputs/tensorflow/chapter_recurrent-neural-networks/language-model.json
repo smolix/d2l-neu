@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:5439995a30ecd7545cba61415076360a1fe13724ad506d8db666e7825c65ce71"
+          "sha256": "sha256:8aba38855e6674eef27be6df09ccdf1db72a51899b47532815a23188a8b26a6b"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:f244261c990711926872c3bceeb49c4d84546ff0731633901560b03b84e8e1ca"
+          "sha256": "sha256:9eadb2c8479fd80fac0c21e58f351a6317efa91e2f178a7e29b4c4ed5643f94f"
         }
       ]
     },
@@ -109,7 +109,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n        word  4579    3373   2618.1  2.21\n"
+          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        word  4579    3373   2618.1  2.21\n"
         }
       ]
     },
@@ -130,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[1020  312  360  291  719  304   44  492  341  322]\n [  44   10  341  286  566  273  260  619  100  994]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[312 360 291 719 304  44 492 341 322 280]\n [ 10 341 286 566 273 260 619 100 994  44]], shape=(2, 10), dtype=int32)\nX[0]: \" Editor hilariously, 'these\"\nY[0]: \" hilariously, 'these c\"\n"
+          "text": "X: tf.Tensor(\n[[ 44 310 109  98 114 300 270 277  10  99]\n [415 536 102 568 304 261 268 719  63  10]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[310 109  98 114 300 270 277  10  99 521]\n [536 102 568 304 261 268 719  63  10  79]], shape=(2, 10), dtype=int32)\nX[0]: ', embraced and\\nc'\nY[0]: ' embraced and\\ncare'\n"
         }
       ]
     }

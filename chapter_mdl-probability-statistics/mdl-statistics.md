@@ -60,7 +60,9 @@ $$
 $$
 :eqlabel:`eq_mdl-bias`
 
-the expectation taken over the random sample. When $\operatorname{Bias}(\hat\theta_n)=0$ for every $\theta$ we call $\hat\theta_n$ *unbiased*: it is right *on average*, even though any single estimate misses. Bias is the error that does not wash out by collecting more data of the same kind: it is baked into the rule.
+the expectation taken over the random sample. When $\operatorname{Bias}(\hat\theta_n)=0$ for every $\theta$ we call $\hat\theta_n$ *unbiased*: it is right *on average*, even though any single estimate misses. Bias is systematic error at a fixed sample size. It may persist as data grows,
+or it may vanish for an asymptotically unbiased estimator; that distinction is
+made below.
 
 The second feature is the *spread*. The **variance** measures how much the estimator fluctuates around its own center, with the **standard error** its square root,
 
@@ -88,7 +90,7 @@ $$
 
 Consistency is the formal content of the slogan "more data gets us arbitrarily close to the truth." Its prototype is the *weak law of large numbers*: the sample mean is a consistent estimator of the population mean, a proposition we state and prove below once the bias-variance decomposition supplies the tools. We have also already proved a headline instance: :numref:`sec_mdl-maximum_likelihood` established consistency for the maximum-likelihood estimator under its regularity hypotheses. A sufficient condition for consistency in general is that *both* the bias and the variance tend to zero, since then the whole sampling distribution collapses onto $\theta$. (The two limits are independent: an estimator can be asymptotically unbiased yet inconsistent because its variance does not vanish, and its variance can vanish while a persistent bias keeps it inconsistent.)
 
-Finally, among *unbiased* estimators we prefer the one that fluctuates least, and we call it *efficient*: efficiency ranks unbiased estimators by their variance, the smaller the better. There is a hard floor here, and we have met it too: the Cramér--Rao bound of :numref:`sec_mdl-maximum_likelihood` caps the variance of any unbiased estimator at $1/(n\,I(\theta))$, the inverse Fisher information, and the coin-flip simulation there watched the maximum-likelihood estimator land right on that floor. An estimator attaining the bound is as good as unbiased estimation can be (the precise sense in which the MLE is asymptotically efficient). What this section takes from the bound: once unbiasedness is secured, what remains to minimize is variance, which is exactly the second half of the decomposition we turn to next.
+Finally, among *unbiased* estimators we prefer the one that fluctuates least, and we call it *efficient*: efficiency ranks unbiased estimators by their variance, the smaller the better. There is a hard floor here, and we have met it too: the Cramér--Rao bound of :numref:`sec_mdl-maximum_likelihood` places a lower bound on the variance of any unbiased estimator, $1/(n\,I(\theta))$, the inverse Fisher information, and the coin-flip simulation there watched the maximum-likelihood estimator land right on that floor. An estimator attaining the bound is as good as unbiased estimation can be (the precise sense in which the MLE is asymptotically efficient). What this section takes from the bound: once unbiasedness is secured, what remains to minimize is variance, which is exactly the second half of the decomposition we turn to next.
 
 ## The Bias-Variance Decomposition
 
@@ -161,106 +163,33 @@ Identity :eqref:`eq_mdl-bias-variance` also explains the central tension of mode
 The decomposition is an exact algebraic identity, so it should hold to numerical precision on a concrete example. We first define bias and MSE as the formulas :eqref:`eq_mdl-bias` and :eqref:`eq_mdl-mse_est` say: averages over a collection of estimates, against the true parameter.
 
 ```{.python .input #statistics-estimator-metrics}
-#@tab mxnet
+import numpy as onp
 def stat_bias(true_theta, est_theta):  # E[theta_hat] - theta
-    return np.mean(est_theta) - true_theta
+    return onp.mean(est_theta) - true_theta
 
 def mse(est_theta, true_theta):        # E[(theta_hat - theta)^2]
-    return np.mean(np.square(est_theta - true_theta))
-```
-
-```{.python .input #statistics-estimator-metrics}
-#@tab pytorch
-def stat_bias(true_theta, est_theta):  # E[theta_hat] - theta
-    return torch.mean(est_theta) - true_theta
-
-def mse(est_theta, true_theta):        # E[(theta_hat - theta)^2]
-    return torch.mean(torch.square(est_theta - true_theta))
-```
-
-```{.python .input #statistics-estimator-metrics}
-#@tab tensorflow
-def stat_bias(true_theta, est_theta):  # E[theta_hat] - theta
-    return tf.reduce_mean(est_theta) - true_theta
-
-def mse(est_theta, true_theta):        # E[(theta_hat - theta)^2]
-    return tf.reduce_mean(tf.square(est_theta - true_theta))
-```
-
-```{.python .input #statistics-estimator-metrics}
-#@tab jax
-def stat_bias(true_theta, est_theta):  # E[theta_hat] - theta
-    return jnp.mean(est_theta) - true_theta
-
-def mse(est_theta, true_theta):        # E[(theta_hat - theta)^2]
-    return jnp.mean(jnp.square(est_theta - true_theta))
+    return onp.mean(onp.square(est_theta - true_theta))
 ```
 
 To exercise these we need the *sampling distribution* itself, not a single dataset: we draw many independent datasets from $\mathcal{N}(\theta,\sigma^2)$, compute the sample mean on each, and collect the resulting estimates. Their spread is the variance and their center the bias.
 
 ```{.python .input #statistics-sampling-distribution}
-#@tab mxnet
+import numpy as onp
 theta_true, sigma = 1.0, 4.0
 num_datasets, n = 10000, 30  # 10k datasets, each of n=30 points
-samples = np.random.normal(theta_true, sigma, (num_datasets, n))
-theta_hats = samples.mean(axis=1)  # one sample-mean estimate per dataset
-```
-
-```{.python .input #statistics-sampling-distribution}
-#@tab pytorch
-theta_true, sigma = 1.0, 4.0
-num_datasets, n = 10000, 30  # 10k datasets, each of n=30 points
-samples = torch.normal(theta_true, sigma, size=(num_datasets, n))
-theta_hats = samples.mean(axis=1)  # one sample-mean estimate per dataset
-```
-
-```{.python .input #statistics-sampling-distribution}
-#@tab tensorflow
-theta_true, sigma = 1.0, 4.0
-num_datasets, n = 10000, 30  # 10k datasets, each of n=30 points
-samples = tf.random.normal((num_datasets, n), theta_true, sigma)
-theta_hats = tf.reduce_mean(samples, axis=1)  # one estimate per dataset
-```
-
-```{.python .input #statistics-sampling-distribution}
-#@tab jax
-theta_true, sigma = 1.0, 4.0
-num_datasets, n = 10000, 30  # 10k datasets, each of n=30 points
-key = jax.random.PRNGKey(0)
-samples = jax.random.normal(key, (num_datasets, n)) * sigma + theta_true
+samples = onp.random.normal(theta_true, sigma, (num_datasets, n))
 theta_hats = samples.mean(axis=1)  # one sample-mean estimate per dataset
 ```
 
 Now we read the decomposition off the empirical sampling distribution: the MSE of the estimates around the true $\theta$ should match the squared bias plus the variance of the estimates around their own mean, the two sides of :eqref:`eq_mdl-bias-variance`. One detail matters for exactness. The identity is a statement about expectations under a *single* distribution, here the empirical distribution of our $10{,}000$ estimates, whose expectations are plain averages; that dictates the *plug-in* variance that divides by the number of estimates (`ddof=0`, the default in most libraries), not the unbiased $n-1$ variant we meet in the next subsection. With the plug-in choice the proof's algebra goes through verbatim for the empirical averages.
 
 ```{.python .input #statistics-verify-decomposition}
-#@tab mxnet
+import numpy as onp
 bias = stat_bias(theta_true, theta_hats)
 # Default ddof=0: the plug-in variance of the estimates, which makes the
 # identity exact for empirical averages (the n-1 variant is the next subsection)
-var = np.var(theta_hats)
-mse(theta_hats, theta_true), var + np.square(bias)
-```
-
-```{.python .input #statistics-verify-decomposition}
-#@tab pytorch
-bias = stat_bias(theta_true, theta_hats)
-var = theta_hats.var(unbiased=False)  # plug-in variance (ddof=0): exact identity
-mse(theta_hats, theta_true), var + torch.square(bias)
-```
-
-```{.python .input #statistics-verify-decomposition}
-#@tab tensorflow
-bias = stat_bias(theta_true, theta_hats)
-var = tf.math.reduce_variance(theta_hats)  # plug-in variance: divides by n
-mse(theta_hats, theta_true), var + tf.square(bias)
-```
-
-```{.python .input #statistics-verify-decomposition}
-#@tab jax
-bias = stat_bias(theta_true, theta_hats)
-var = jnp.var(theta_hats)  # default ddof=0: the plug-in variance, exact identity
-mse(theta_hats, theta_true), var + jnp.square(bias)
+var = onp.var(theta_hats)
+mse(theta_hats, theta_true), var + onp.square(bias)
 ```
 
 The two numbers agree to floating-point round-off (the identity is exact), and both are close to the theoretical value. For the sample mean of $\mathcal{N}(\theta,\sigma^2)$ the bias is exactly zero (the average of unbiased draws is unbiased) and the variance is $\sigma^2/n$ (the variance-of-a-sum result from :numref:`sec_mdl-random_variables`), so $\operatorname{MSE}=\sigma^2/n = 16/30 \approx 0.53$. Because *both* the bias ($0$) and the variance ($\sigma^2/n\to0$) vanish as $n\to\infty$, the sample mean is consistent, exactly as the weak law of large numbers :eqref:`eq_mdl-lln` asserts: the simulation is that proposition run in the small.
@@ -302,44 +231,13 @@ Dividing by $n-1$ gives $\mathbb{E}[s^2]=\sigma^2$. $\blacksquare$
 The intuition is *degrees of freedom*: estimating $\bar x$ from the same data consumes one degree of freedom, so only $n-1$ of the deviations are free to vary, and dividing by $n-1$ rather than $n$ corrects for it exactly. (As $n\to\infty$ the two estimators agree, so $s_0^2$ is biased but asymptotically unbiased and consistent.) We can watch the bias appear and the correction remove it by estimating both variances over many datasets and averaging.
 
 ```{.python .input #statistics-unbiased-variance}
-#@tab mxnet
+import numpy as onp
 n = 3  # small n makes the 1/n bias glaring; the gap shrinks like 1/n
-data = np.random.normal(0, 2, (100000, n))  # sigma^2 = 4
-dev2 = np.square(data - data.mean(axis=1, keepdims=True)).sum(axis=1)
+data = onp.random.normal(0, 2, (100000, n))  # sigma^2 = 4
+dev2 = onp.square(data - data.mean(axis=1, keepdims=True)).sum(axis=1)
 print('true variance    = 4')
 print(f'E[divide by n]   = {float((dev2 / n).mean()):.3f}  (biased)')
 print(f'E[divide by n-1] = {float((dev2 / (n - 1)).mean()):.3f}  (unbiased)')
-```
-
-```{.python .input #statistics-unbiased-variance}
-#@tab pytorch
-n = 3  # small n makes the 1/n bias glaring; the gap shrinks like 1/n
-data = torch.normal(0, 2, size=(100000, n))  # sigma^2 = 4
-dev2 = torch.square(data - data.mean(axis=1, keepdim=True)).sum(axis=1)
-print('true variance    = 4')
-print(f'E[divide by n]   = {(dev2 / n).mean():.3f}  (biased)')
-print(f'E[divide by n-1] = {(dev2 / (n - 1)).mean():.3f}  (unbiased)')
-```
-
-```{.python .input #statistics-unbiased-variance}
-#@tab tensorflow
-n = 3  # small n makes the 1/n bias glaring; the gap shrinks like 1/n
-data = tf.random.normal((100000, n), 0, 2)  # sigma^2 = 4
-dev2 = tf.reduce_sum(tf.square(
-    data - tf.reduce_mean(data, axis=1, keepdims=True)), axis=1)
-print('true variance    = 4')
-print(f'E[divide by n]   = {tf.reduce_mean(dev2 / n):.3f}  (biased)')
-print(f'E[divide by n-1] = {tf.reduce_mean(dev2 / (n - 1)):.3f}  (unbiased)')
-```
-
-```{.python .input #statistics-unbiased-variance}
-#@tab jax
-n = 3  # small n makes the 1/n bias glaring; the gap shrinks like 1/n
-data = jax.random.normal(jax.random.PRNGKey(1), (100000, n)) * 2  # sigma^2 = 4
-dev2 = jnp.square(data - data.mean(axis=1, keepdims=True)).sum(axis=1)
-print('true variance    = 4')
-print(f'E[divide by n]   = {(dev2 / n).mean():.3f}  (biased)')
-print(f'E[divide by n-1] = {(dev2 / (n - 1)).mean():.3f}  (unbiased)')
 ```
 
 With $n=3$ the biased estimator averages near $\tfrac{n-1}{n}\sigma^2 = \tfrac23\cdot 4 \approx 2.67$, while dividing by $n-1$ recovers $4$, confirming :eqref:`eq_mdl-unbiased-var`. The `ddof` argument ("delta degrees of freedom") selects the denominator: `ddof=1` divides by $n-1$, `ddof=0` by $n$.
@@ -485,46 +383,12 @@ $$
 This is one of the most-used formulas in statistics. The half-width $1.96\,\hat\sigma_n/\sqrt n$ shrinks like $1/\sqrt n$: to halve the interval we need *four times* the data. Let us construct one for a standard-normal sample, taking the asymptotic $t_\star=1.96$.
 
 ```{.python .input #statistics-confidence-interval}
-#@tab mxnet
+import numpy as onp
 N = 1000
-samples = np.random.normal(loc=0, scale=1, size=(N,))
+samples = onp.random.normal(loc=0, scale=1, size=(N,))
 t_star = 1.96  # asymptotic value; small N would look this up in a t-table
-mu_hat = np.mean(samples)
-se = samples.std(ddof=1) / np.sqrt(N)  # ddof=1: unbiased sigma_hat
-(mu_hat - t_star * se, mu_hat + t_star * se)
-```
-
-```{.python .input #statistics-confidence-interval}
-#@tab pytorch
-N = 1000
-samples = torch.normal(0, 1, size=(N,))
-t_star = 1.96  # asymptotic value; small N would look this up in a t-table
-mu_hat = torch.mean(samples)
-se = samples.std(unbiased=True) / N**0.5  # unbiased=True: ddof=1
-(mu_hat - t_star * se, mu_hat + t_star * se)
-```
-
-```{.python .input #statistics-confidence-interval}
-#@tab tensorflow
-N = 1000
-samples = tf.random.normal((N,), 0, 1)
-t_star = 1.96  # asymptotic value; small N would look this up in a t-table
-mu_hat = tf.reduce_mean(samples)
-n_d = tf.cast(tf.size(samples), samples.dtype)
-sigma_hat = tf.sqrt(tf.reduce_sum(tf.square(samples - mu_hat)) / (n_d - 1))
-se = sigma_hat / tf.sqrt(n_d)  # ddof=1 done by hand: divide by n-1
-(mu_hat - t_star * se, mu_hat + t_star * se)
-```
-
-```{.python .input #statistics-confidence-interval}
-#@tab jax
-N = 1000
-# split a fresh subkey rather than reusing the PRNGKey(0) stream from above
-key = jax.random.split(jax.random.PRNGKey(0))[1]
-samples = jax.random.normal(key, (N,))
-t_star = 1.96  # asymptotic value; small N would look this up in a t-table
-mu_hat = jnp.mean(samples)
-se = jnp.std(samples, ddof=1) / jnp.sqrt(N)  # ddof=1: unbiased sigma_hat
+mu_hat = onp.mean(samples)
+se = samples.std(ddof=1) / onp.sqrt(N)  # ddof=1: unbiased sigma_hat
 (mu_hat - t_star * se, mu_hat + t_star * se)
 ```
 
@@ -558,13 +422,21 @@ the *delta method* :cite:`Wasserman.2013`. For instance, an accuracy of $\hat p=
 
 The Gaussian interval :eqref:`eq_mdl-gauss_confidence` rests on a special feature of the mean: its sampling distribution is known, so its standard error has a closed form, $\hat\sigma_n/\sqrt n$. Most quantities a practitioner actually cares about have no such formula. What is the standard error of a *median*, a *correlation*, a model's *test accuracy*, its *AUC* (the area under the ROC curve: the probability that a random positive example is scored above a random negative one) or its *BLEU* score (the sequence-overlap metric of :numref:`sec_seq2seq`)? These are complicated functions of the data with no textbook sampling distribution, and writing down their standard error analytically ranges from painful to impossible.
 
-The **bootstrap**, introduced by Bradley Efron :cite:`Efron.1979`, escapes this with a single substitution. We never had access to the true distribution $F$ that generated our $n$ data points; if we did, we could simulate the sampling distribution of *any* statistic by drawing fresh datasets from $F$ and recomputing it. The bootstrap's move, the **plug-in principle**, is to substitute the *empirical* distribution $\hat F_n$, which puts mass $1/n$ on each observed point, for the unknown $F$. Drawing $n$ points from $\hat F_n$ is exactly *resampling our own data $n$ times with replacement*. Concretely:
+The **bootstrap**, introduced by Bradley Efron :cite:`Efron.1979`, escapes this with a single substitution. We never had access to the true distribution $F$ that generated our $n$ data points; if we did, we could simulate the sampling distribution of a chosen statistic
+by drawing fresh datasets from $F$ and recomputing it. The bootstrap's move, the **plug-in principle**, is to substitute the *empirical* distribution $\hat F_n$, which puts mass $1/n$ on each observed point, for the unknown $F$. Drawing $n$ points from $\hat F_n$ is exactly *resampling our own data $n$ times with replacement*. Concretely:
 
 1. From the original sample of size $n$, draw $n$ points **with replacement** to form a *bootstrap resample*; some points appear several times, others not at all.
 2. Compute the statistic $\hat\theta^*$ on the resample.
 3. Repeat $B$ times to obtain $\hat\theta^*_1,\ldots,\hat\theta^*_B$.
 
-The spread of these $B$ replicates approximates the sampling distribution of $\hat\theta$, so their standard deviation estimates its standard error, and the $\alpha/2$ and $1-\alpha/2$ empirical percentiles of $\{\hat\theta^*_b\}$ form a *percentile* confidence interval. How many replicates? A few hundred ($B\approx200$) suffice for a standard error, but the percentile interval rests on estimated tail quantiles, so use $B$ of at least $1{,}000$--$2{,}000$; resampling is cheap, and below we simply take $B=10{,}000$. :numref:`fig_mdl-bootstrap` shows the construction: one original sample fans out into many resamples, whose statistics pile up into a histogram standing in for the true (unknowable) sampling distribution, with the central band cut off at those percentiles. One caveat: this resampling distribution is *centered at $\hat\theta$, not at $\theta$*; the bootstrap estimates the *shape and width* of the sampling distribution from the one sample we have, and is only as representative as that sample.
+The spread of these $B$ replicates approximates the sampling distribution of $\hat\theta$, so their standard deviation estimates its standard error, and the $\alpha/2$ and $1-\alpha/2$ empirical percentiles of $\{\hat\theta^*_b\}$ form a *percentile* confidence interval. How many replicates? A few hundred ($B\approx200$) suffice for a standard error, but the percentile interval rests on estimated tail quantiles, so use $B$ of at least $1{,}000$--$2{,}000$; resampling is cheap, and below we simply take $B=10{,}000$. :numref:`fig_mdl-bootstrap` shows the construction: one original sample fans out into many resamples, whose statistics pile up into a histogram standing in for the true (unknowable) sampling distribution, with the central band cut off at those percentiles. Two caveats matter. This resampling distribution is *centered at
+$\hat\theta$, not at $\theta$*; the bootstrap estimates shape and width from
+the one sample we have. It also is not valid for every statistic or sampling
+scheme. Ordinary iid bootstrap theory works well for many smooth statistics,
+but extrema, parameters on a boundary, very small samples, and nonsmooth or
+non-identifiable problems can fail; dependent observations require block,
+cluster, or other structure-preserving resampling. Exercise 1 shows the classic
+failure for a sample maximum.
 
 ![The bootstrap. From a single observed sample (top) we draw many resamples of the same size *with replacement* (middle); recomputing the statistic $\hat\theta$ on each gives the replicates $\hat\theta^\ast_b$, whose histogram (bottom) approximates the sampling distribution. Its spread estimates the standard error, and the central $1-\alpha$ percentile band is a confidence interval. The resampling distribution is centered at $\hat\theta$, the dashed estimate, rather than at the unknown true $\theta$.](../img/mdl-prob-bootstrap.svg)
 :label:`fig_mdl-bootstrap`
@@ -588,7 +460,9 @@ print(f'bootstrap SE         = {se_boot:.3f}')
 print(f'percentile 95% CI    = ({ci_pct[0]:.3f}, {ci_pct[1]:.3f})')
 ```
 
-The bootstrap hands us a standard error and an interval for the median directly, with no distribution theory at all. For contrast, the Gaussian formula :eqref:`eq_mdl-gauss_confidence` only knows how to handle the *mean*, a different target, which on this skewed data sits well above the median.
+The bootstrap hands us a standard error and an interval for the median directly,
+without deriving its sampling distribution in closed form; its validity still
+rests on the regularity and iid-sampling conditions just stated. For contrast, the Gaussian formula :eqref:`eq_mdl-gauss_confidence` only knows how to handle the *mean*, a different target, which on this skewed data sits well above the median.
 
 ```{.python .input #statistics-bootstrap-contrast}
 mu_hat = data.mean()
@@ -606,7 +480,11 @@ The two intervals answer different questions and do not overlap, a direct conseq
 * The unbiased sample variance divides by $n-1$, not $n$: estimating the mean from the same data costs one degree of freedom, and the $1/(n-1)$ factor corrects the resulting bias exactly.
 * *Hypothesis testing* weighs evidence against a null $H_0$ via a test statistic and its $p$-value $P_{H_0}(\textrm{data this extreme})$; we control the type I error rate $\alpha$ and want high power $1-\beta$. A $p$-value is not $P(H_0\mid\textrm{data})$. A *permutation test* builds the null distribution by shuffling group labels, with no Gaussian assumptions; under many tests, control the family-wise error rate (Bonferroni) or the false discovery rate (Benjamini--Hochberg).
 * A *confidence interval* contains $\theta$ with probability $\ge 1-\alpha$ over repeated datasets; the Gaussian interval $\hat\mu_n \pm 1.96\,\hat\sigma_n/\sqrt n$, exact for Gaussian data in the large-$n$ limit and extended to other data by the *central limit theorem*, has half-width shrinking like $1/\sqrt n$.
-* The *bootstrap* estimates the sampling distribution of *any* statistic with no closed-form standard error (a median, an accuracy, an AUC) by resampling the data with replacement: the spread of the replicates is the standard error and their central percentiles form a confidence interval.
+* The ordinary iid *bootstrap* estimates the sampling distribution of many
+  regular statistics with no convenient closed-form standard error (a median,
+  an accuracy, an AUC) by resampling observations with replacement. It can fail
+  for extrema, boundaries, and nonregular statistics, and dependent data need a
+  resampling scheme that preserves their structure.
 
 ## Exercises
 
@@ -986,7 +864,7 @@ is convenient, the bootstrap (next) sidesteps the calculus entirely.
 :::
 :::
 
-::: {.slide title="The bootstrap: any statistic, no formula"}
+::: {.slide title="The bootstrap: many statistics, no formula"}
 [Intervals]{.kicker}
 
 ::: {.cols .vc}
@@ -1032,7 +910,7 @@ statistic, different answer:
 
 ::: {.col}
 - Testing: control $\alpha$, want power $\ge 0.8$; the p-value is data-given-null, not null-given-data; correct for multiplicity.
-- Intervals shrink like $1/\sqrt n$; the bootstrap gives error bars for any statistic.
+- Intervals often shrink like $1/\sqrt n$; the bootstrap gives error bars for many regular statistics, with specialized resampling for dependent data.
 :::
 :::
 

@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-brownian-paths-1.svg",
           "bytes": 105300,
-          "sha256": "sha256:4cbbc47f511964806815d53fa0793440b4a5ea7c3b5d528d6b52b45d8995b3a7"
+          "sha256": "sha256:5fd3f694b60de4da4b52ca757233b19987e396e956fdf5587d57844faf604c18"
         }
       ]
     },
@@ -67,7 +67,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ito-correction-1.svg",
           "bytes": 84296,
-          "sha256": "sha256:b0885d838831a374415eda2c5fb0e98076fee465ab8e1a53bafe6867e71a7850"
+          "sha256": "sha256:aaa8e832addee3c28230c7de353f925b269f474c33fe365ee363c81c10d835c4"
         }
       ]
     },
@@ -96,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-em-strong-order-1.svg",
           "bytes": 35310,
-          "sha256": "sha256:61624ee090e4d6f8caacb480a0af879c1eff902e85a1ca0791d96767807c3246"
+          "sha256": "sha256:39aa5236dcdd1b6931149c342e131515bdc9b6a128e10986783d100cbeb2273b"
         }
       ]
     },
@@ -125,7 +125,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ou-cloud-1.svg",
           "bytes": 121863,
-          "sha256": "sha256:9713c92734a47fbc6f5b0f68399b6c7931352394218558cdfe37c0ad94c3825e"
+          "sha256": "sha256:9cda19b0f6fbfc3397552b1d433ca226039cd7a9d2f266c53152b21dbc3c48d3"
         }
       ]
     },
@@ -143,7 +143,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-sdes/sdes-ou-stationary-1.svg",
           "bytes": 36032,
-          "sha256": "sha256:8155f0e4012e145353682687ff0a05428524bdb5a22a7ecbf41cc2218ef60633"
+          "sha256": "sha256:0ae3dcfa06776dbdd8e1acfd1d786bc4501551252034f32a9a4be25504ce9d9a"
         }
       ]
     },

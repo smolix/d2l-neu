@@ -109,32 +109,32 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "E0713 23:23:14.557412   52811 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
+          "text": "E0714 06:52:06.054077   58782 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.637, train acc 0.778, test acc 0.875\n"
+          "text": "epoch 1, loss 0.638, train acc 0.778, test acc 0.876\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.524, train acc 0.915, test acc 0.910\n"
+          "text": "epoch 2, loss 0.525, train acc 0.916, test acc 0.912\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.419, train acc 0.932, test acc 0.917\n"
+          "text": "epoch 3, loss 0.421, train acc 0.933, test acc 0.917\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.341, train acc 0.942, test acc 0.921\n"
+          "text": "epoch 4, loss 0.340, train acc 0.943, test acc 0.920\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.287, train acc 0.945, test acc 0.926\n"
+          "text": "epoch 5, loss 0.286, train acc 0.945, test acc 0.924\n"
         }
       ]
     },
@@ -160,32 +160,32 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.700, train acc 0.548, test acc 0.519\n"
+          "text": "epoch 1, loss 0.719, train acc 0.530, test acc 0.505\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.661, train acc 0.603, test acc 0.560\n"
+          "text": "epoch 2, loss 0.671, train acc 0.594, test acc 0.524\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.596, train acc 0.697, test acc 0.499\n"
+          "text": "epoch 3, loss 0.592, train acc 0.690, test acc 0.589\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.483, train acc 0.783, test acc 0.554\n"
+          "text": "epoch 4, loss 0.431, train acc 0.811, test acc 0.626\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.393, train acc 0.820, test acc 0.556\n"
+          "text": "epoch 5, loss 0.380, train acc 0.827, test acc 0.647\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 6, loss 0.340, train acc 0.860, test acc 0.624\n"
+          "text": "epoch 6, loss 0.326, train acc 0.863, test acc 0.624\n"
         }
       ]
     },

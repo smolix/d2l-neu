@@ -60,7 +60,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.4023999571800232, runtime = 14.280946254730225\n"
+          "text": "    error = 0.8999999761581421, runtime = 18.575066328048706\n"
         }
       ]
     },
@@ -72,8 +72,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4-1.svg",
-          "bytes": 18670,
-          "sha256": "sha256:2e35fa258735ffb473fb48214596eede4c499e9b6ae0e6d52328b9e4a4fa71ff"
+          "bytes": 18151,
+          "sha256": "sha256:e2fed37facd0c887beadedcfaca42540b72dd0f42ce2498b615ecbbd01529b6d"
         }
       ]
     }

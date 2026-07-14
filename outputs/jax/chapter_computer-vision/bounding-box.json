@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-object-detection-and-bounding-boxes-2-1.svg",
           "bytes": 87007,
-          "sha256": "sha256:31328bed6de930e89dd9cc6f2dfd1809dbd9e9e67bb647e5eec5e31467dd2e58"
+          "sha256": "sha256:a1750e3b4ab432a7e1d35b34d5de0caff24e60549cb12f22c4f0d747b155ae7c"
         }
       ]
     },
@@ -60,7 +60,7 @@
           "mime": "image/svg+xml",
           "asset": "bounding-box/bounding-box-bounding-boxes-5-1.svg",
           "bytes": 87556,
-          "sha256": "sha256:7eff921cc53d15d895c862bf2769808581d234c233fa83501ddb47846b7eae4b"
+          "sha256": "sha256:277d41596ab50f58f714496e61c8cc7cab35651d47078c9319a7f3a0971738db"
         }
       ]
     }

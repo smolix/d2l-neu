@@ -46,12 +46,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "before allreduce:\n"
+          "text": "before allreduce:\n "
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " [[1. 1.]] @gpu(0) \n [[2. 2.]] @gpu(1)\nafter allreduce:\n [[3. 3.]] @gpu(0) \n [[3. 3.]] @gpu(1)\n"
+          "text": "[[1. 1.]] @gpu(0) \n [[2. 2.]] @gpu(1)\nafter allreduce:\n [[3. 3.]] @gpu(0) \n [[3. 3.]] @gpu(1)\n"
         }
       ]
     },
@@ -88,14 +88,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.83, 2.7 sec/epoch on [gpu(0)]\n"
+          "text": "test acc: 0.83, 17.6 sec/epoch on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
-          "bytes": 16966,
-          "sha256": "sha256:70d2e3b7cd7da23fc6a727a1898d3941ecd3b168e54f536ba8b537ab9bf5d24e"
+          "bytes": 16962,
+          "sha256": "sha256:3147d9ddadfe0727b20fee2925c1b1e41ad8da48a2776a1f85729682017629ec"
         }
       ]
     },
@@ -106,14 +106,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.85, 6.3 sec/epoch on [gpu(0), gpu(1)]\n"
+          "text": "test acc: 0.85, 16.8 sec/epoch on [gpu(0), gpu(1)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
-          "bytes": 16964,
-          "sha256": "sha256:48587e00d0a7c60f266887d30c0a8f5f5bea2766518b793caadb19ab47661f8e"
+          "bytes": 16965,
+          "sha256": "sha256:9bdd94645c9d9f8ae82f8a99cd0e773fc94496b394da0c6a0d06e5072cad8105"
         }
       ]
     }

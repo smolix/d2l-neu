@@ -14,27 +14,22 @@
       "outputs": []
     },
     "maximum-likelihood-a-concrete-example": {
-      "code_fingerprint": "sha256:350a8c8ce5d7f5c0522cf2d76cd7797198cf4111038d6585e7819f3c7961f917",
+      "code_fingerprint": "sha256:a53b6b9b58d46e176213030d69b5551d4a4a4ffd2839ed7c5ddbd75ced9c2c98",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
-          "bytes": 20951,
-          "sha256": "sha256:53f749c8559c4ce4861fbc6dede32594cfbdc6d6d40a5afcb36c4a2b08c91cfa"
+          "bytes": 20942,
+          "sha256": "sha256:017196f2a25562decea2afd0a1c757a4d858793e83a3864490fbbe3716b1238e"
         }
       ]
     },
     "maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood": {
-      "code_fingerprint": "sha256:6fa7097e1f52a962b2b1b3e79b7645d3eb51ef90ff94a16cc1e21731d4f58e38",
+      "code_fingerprint": "sha256:8c22502c2a71a2a900cfc62f382ef400d57f918637a7ef987cd3c0b15bbc2bbb",
       "kind": "text",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[18:24:00] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
-        },
         {
           "type": "execute_result",
           "text": "(array(0.9713101), 0.9713101437890875)"
@@ -42,7 +37,7 @@
       ]
     },
     "mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works": {
-      "code_fingerprint": "sha256:4002585dec11414094107026f866244ec2271e07b2906ad5ed4172196802f7bd",
+      "code_fingerprint": "sha256:ed81db9e096b4ba22f36c9d43df40dff095e528c5f11980526c1122c147f09c1",
       "kind": "asset",
       "outputs": [
         {
@@ -50,12 +45,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
           "bytes": 30558,
-          "sha256": "sha256:f4a8d4c3b41ac2e72e09a21d7d14c830e6d5a7e8471c71cf57e99a908321361b"
+          "sha256": "sha256:d34356869fce6cda9721c20db3137612a808c74d5bd83ea178b7d8a5dfde9d94"
         }
       ]
     },
     "maximum-likelihood-fisher-information": {
-      "code_fingerprint": "sha256:6b9a0edce4d89e8d2ebf6756dd9f8284080db389370598ac7c2ed60c961431e4",
+      "code_fingerprint": "sha256:2dcd8db5e44eb09b73eaa1e9af63bfac82260d910dfa888c5041087d8bef56a4",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +60,7 @@
       ]
     },
     "maximum-likelihood-em-gmm": {
-      "code_fingerprint": "sha256:4add433d45e3683570e024f7f7e50f3ab085b79c58d4e9ecc9e6f5eab8838629",
+      "code_fingerprint": "sha256:5878887523daa7482770066b86fd240532db4fc71e81a654f29570a13275a351",
       "kind": "text",
       "outputs": [
         {

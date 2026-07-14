@@ -37,7 +37,7 @@
           "mime": "image/svg+xml",
           "asset": "self-attention-and-positional-encoding/self-attention-and-positional-encoding-positional-encoding-2-1.svg",
           "bytes": 31366,
-          "sha256": "sha256:7f5ee6b3fd45d8b711e395920e811014c032959123e1ee6926df3e9809f73fb0"
+          "sha256": "sha256:78a0b51dbc65bb2ea83d833cd8b8791551b7615fdab05d0fbbce373e7e5aea8c"
         }
       ]
     },
@@ -61,7 +61,7 @@
           "mime": "image/svg+xml",
           "asset": "self-attention-and-positional-encoding/self-attention-and-positional-encoding-absolute-positional-information-2-1.svg",
           "bytes": 31325,
-          "sha256": "sha256:f79f7cfbf807724a74d0f0088e1d0db6d2f7d3ef368443d6092b4ad1647814c5"
+          "sha256": "sha256:21cf87a637ac8e9819cd093a2bf4ffcee6fbb0132c708acf1cd05125a24851dc"
         }
       ]
     }

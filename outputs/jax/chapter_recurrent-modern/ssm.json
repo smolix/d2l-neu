@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 30968,
-          "sha256": "sha256:d51b175cd5a6c3a25e68aab606014d3ff3d5fa68cc6b8dabe8753aef1b8da704"
+          "bytes": 31164,
+          "sha256": "sha256:b6dc871d78f757e70f56aced0b37f53ac3696cdf51653ade4e81fa8b28c3363c"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-a-mingru-language-model-4-1.svg",
-          "bytes": 18565,
-          "sha256": "sha256:43b0b039dc85b337b232a2c73723b77364247e6473700cb186a81cfd196e202e"
+          "bytes": 18566,
+          "sha256": "sha256:712499e56bf6f6dc26185998753e3f9c12edfb2e1c26555b113eefe4ddea7c22"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 84.9, 11s wall clock\nthe time traveller. I had\ndism.\n\n'I had a chemer.\n\n'I had a chemer.\n"
+          "text": "validation perplexity 85.1, 11s wall clock\nthe time traveller. I had\ndism.\n\n'Ince, and the Time Traveller. I felt as a chair, and the\n"
         }
       ]
     },
@@ -115,8 +115,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-2-1.svg",
-          "bytes": 20450,
-          "sha256": "sha256:98cf0ce0821228da9c10ce1457c31c4acac2efba349f0c891d91dd0bffba8434"
+          "bytes": 20972,
+          "sha256": "sha256:6b7bc64f9f79071da9ec9f5d60f5d37fac2fee01271ff1366a902125da7cf0a9"
         }
       ]
     },
@@ -128,8 +128,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-3-1.svg",
-          "bytes": 20969,
-          "sha256": "sha256:fe9f64ffcf4f2f1c0c82e1b8deb921af8b820852f77964500d04be6dfe11b6c7"
+          "bytes": 20978,
+          "sha256": "sha256:bebc6b9a6cbde2dca971277641ca4437d57c85b26d2437e1487199cc5763adcb"
         }
       ]
     },
@@ -140,7 +140,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.827      4.3\n  LSTM   29,674    0.815     28.1\n"
+          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.835      5.6\n  LSTM   29,674    0.817     29.6\n"
         }
       ]
     }

@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-the-pokemon-dataset-3-1.svg",
-          "bytes": 369628,
-          "sha256": "sha256:81d0a1b20a5951b4a7f5ce58a623587ba055f008b2129e61b6e742998b489122"
+          "bytes": 366916,
+          "sha256": "sha256:bf9991015bb78712abb7eb8a04a054f65d8c55547d111bedeb2bd94bd292a5f1"
         }
       ]
     },
@@ -91,7 +91,7 @@
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-discriminator-1-1.svg",
           "bytes": 18824,
-          "sha256": "sha256:da53cfa710795b13fad1a4fde22dc1398dbfd474931fba51192095b2778a46c7"
+          "sha256": "sha256:6e1c317b6f3d7426362e42e4b44e7760f47624f3ac4d27f7aa31feaf77f73639"
         }
       ]
     },
@@ -137,14 +137,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss_D 0.166, loss_G 3.138, 11832.7 examples/sec on /GPU:0\n"
+          "text": "loss_D 0.136, loss_G 3.421, 8259.0 examples/sec on /GPU:0\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dcgan/dcgan-training-2-1.svg",
-          "bytes": 214213,
-          "sha256": "sha256:a3b7482644cb5b4cf903ef92bfe735cef60ddd53d88df7a7cfdeea1b5a3ff10c"
+          "bytes": 208990,
+          "sha256": "sha256:f064ab2a394abec7d8b5fe9ba62814283766368a8134324565a0426bac7444ac"
         }
       ]
     }

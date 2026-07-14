@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor(-5.5879e-09, grad_fn=<MeanBackward0>)"
+          "text": "tensor(-4.1910e-09, grad_fn=<MeanBackward0>)"
         }
       ]
     },
@@ -86,7 +86,12 @@
     "custom-layers-the-composability-guarantee-4": {
       "code_fingerprint": "sha256:3a980f087c18e0848c3de921d85943cd19ca247f375d25ecea91d89ef4caeb8f",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(device(type='cuda', index=0), device(type='cuda', index=0))"
+        }
+      ]
     },
     "custom-layers-checking-against-the-built-in": {
       "code_fingerprint": "sha256:df11f970d196c440ecd21fd30ad0fcdb8600dd563d181323522d8aa5f52bb9a3",

@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:755623f2cc167f70653ba50e20d11cb5a909ef89b4ec9a8b3b2e60762aa49f3f"
+          "sha256": "sha256:3e40b096d519117a8bea7f13e4cc54e575b5ce1ee531513ac019e5c1f04a35e9"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:96d664777c06036205eba2c5cd482fff0e0634d6672384747cd4dfed4d457d66"
+          "sha256": "sha256:955082ecea810f47f1085f035769c66def44a917ad6e50b70a7d135206b9dffb"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[762  44 338  10 259 961 637 285 535 108]\n [261 105 120 438 359 997 260  10 103 959]] \nY: [[ 44 338  10 259 961 637 285 535 108 462]\n [105 120 438 359 997 260  10 103 959  46]]\nX[0]: ' moment, we\\nincline to overl'\nY[0]: ', we\\nincline to overlook'\n"
+          "text": "X: [[ 46 492 455 262 666 279 391 111 278 115]\n [ 68 278 836 865 415 545 491 516 360 844]] \nY: [[492 455 262 666 279 391 111 278 115 612]\n [278 836 865 415 545 491 516 360 844  46]]\nX[0]: \". 'There are balloons\"\nY[0]: \" 'There are balloons.'\"\n"
         }
       ]
     }

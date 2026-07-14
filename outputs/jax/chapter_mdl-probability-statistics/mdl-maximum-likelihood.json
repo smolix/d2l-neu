@@ -14,20 +14,20 @@
       "outputs": []
     },
     "maximum-likelihood-a-concrete-example": {
-      "code_fingerprint": "sha256:72b794808fba919f3fc6d5bf6c23253d7cb70a17a0731425444873b3720c3b99",
+      "code_fingerprint": "sha256:9a3da5b1d7bc66949a977057def22efefbf7d2538578fa15b8199faafd35a1c0",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/maximum-likelihood-a-concrete-example-1.svg",
-          "bytes": 20953,
-          "sha256": "sha256:07cd3b294fccc6f147f5856c81681723350d2ead26acfa8e0205538d55d91fe9"
+          "bytes": 20942,
+          "sha256": "sha256:769de5858801627fb9bea3517ccf5b1fe42a87d18c0fe7f177764a5e8d887c8c"
         }
       ]
     },
     "maximum-likelihood-numerical-optimization-and-the-negative-log-likelihood": {
-      "code_fingerprint": "sha256:914ef6895d519a047579b404135b706a33e3da971252963d4bbf0ead594778d0",
+      "code_fingerprint": "sha256:de48c2dacc0b7693b1b1c13ea4ec1fa3e854a35aec27ed85480e018676d61baf",
       "kind": "text",
       "outputs": [
         {
@@ -37,7 +37,7 @@
       ]
     },
     "mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works": {
-      "code_fingerprint": "sha256:b6f5129c02878cc7476df868190b5b6ed7624dc807dc6402081c98dff9c9b1b2",
+      "code_fingerprint": "sha256:627ac1e771add4cfd58e0174a0c9fa3368a4817bede6077e40ccd15c57307d01",
       "kind": "asset",
       "outputs": [
         {
@@ -45,12 +45,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-maximum-likelihood/mdl-maximum-likelihood-estimator-theory-why-maximum-likelihood-works-1.svg",
           "bytes": 30558,
-          "sha256": "sha256:07d9a8b28fb2e9fc31a47e174cf76be5b04e67bb27edc1ea2255ba586f48526b"
+          "sha256": "sha256:10efbc3c093137e1bdac9d3d3d05ae4aee8939abce1985f05082299503212341"
         }
       ]
     },
     "maximum-likelihood-fisher-information": {
-      "code_fingerprint": "sha256:44c30ece97e397e1b98cf47dd7fe3b354218c8937d0f407999983b5667f53a78",
+      "code_fingerprint": "sha256:63b2cdaf47418c47bd462c7b3b3de78477ab54fabcc7cb4c29f4a3458c046716",
       "kind": "text",
       "outputs": [
         {
@@ -60,7 +60,7 @@
       ]
     },
     "maximum-likelihood-em-gmm": {
-      "code_fingerprint": "sha256:ede49fa39e7455923e1924b1c07e382c656f33ba4248dd1bb69b8f3dc7c9f125",
+      "code_fingerprint": "sha256:1be30b099d088ff81089ae8aa46b4b33a11d1e70d4c458a7cd90542c761203ab",
       "kind": "text",
       "outputs": [
         {

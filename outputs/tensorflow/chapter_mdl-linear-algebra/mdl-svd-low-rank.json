@@ -58,7 +58,7 @@
       ]
     },
     "svd-least-squares": {
-      "code_fingerprint": "sha256:7c91e3324fd1e2e8053370483a65a6fb2e83cc3d3118c196aaffae4cee996d4a",
+      "code_fingerprint": "sha256:1c346d1c342e383d4a25fca9735e1615e41c2ad66fb3340440a44440a21efc52",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "mdl-svd-low-rank-the-svd-in-modern-deep-learning-1": {
-      "code_fingerprint": "sha256:0375be883c59c17a97788dbfe41a356ef16cdde461adc15db6d41faf01c18faf",
+      "code_fingerprint": "sha256:f49cf7da6eb2fe7ca181a7e6135fc885fda6f95bb4ff92540a76e6f52dd1c0ae",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +80,7 @@
       ]
     },
     "svd-weight-spectrum": {
-      "code_fingerprint": "sha256:254af5e8f164abef7ab40148fda82d78b076e8e1f16bbf634ef6414b20b2e389",
+      "code_fingerprint": "sha256:2c04457ca4f11b3144335665e336a45b3045129ecdedb26422599c0f1287cb6f",
       "kind": "text",
       "outputs": [
         {
@@ -91,7 +91,7 @@
       ]
     },
     "svd-verify": {
-      "code_fingerprint": "sha256:43d8a0fcf90b0b512b1b9027e65e02d098e8f8c3d2206602feb08232f7bd6b8e",
+      "code_fingerprint": "sha256:e4156604cdb415087698431bc02baa3b10c4683b3b8e8c89bfea28f8ca76c79b",
       "kind": "text",
       "outputs": [
         {

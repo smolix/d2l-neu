@@ -58,23 +58,18 @@
       ]
     },
     "svd-least-squares": {
-      "code_fingerprint": "sha256:c0575481de19c6b369cfff6c9e6b0ac592384981183e1c177f6746aad7c92b9b",
+      "code_fingerprint": "sha256:b05ae25b7b5498259bc11c6be33d090a6972a237d8b868a9080337ff842d8183",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pinv : [3.5 1.4]  residual 2.0494\nlstsq: [3.5 1.4]  residual 2.0494\ncond(A)     = 7.469\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "cond(A^T A) = 55.782 = cond(A)^2\n"
+          "text": "pinv : [3.5 1.4]  residual 2.0494\nlstsq: [3.5 1.4]  residual 2.0494\ncond(A)     = 7.469\ncond(A^T A) = 55.782 = cond(A)^2\n"
         }
       ]
     },
     "mdl-svd-low-rank-the-svd-in-modern-deep-learning-1": {
-      "code_fingerprint": "sha256:a46ef6d4f9744de717e3bbfccb8119c635b3c2b796d2e4a9ba573f442d58eea2",
+      "code_fingerprint": "sha256:96972fe1dc7008c8f44c538bb2872e93cb87de064883f33a9267850579083eeb",
       "kind": "text",
       "outputs": [
         {
@@ -85,7 +80,7 @@
       ]
     },
     "svd-weight-spectrum": {
-      "code_fingerprint": "sha256:1e17e7d9ee1130665fcd4d9769756394eb546296b0eec9078166949c8c5b82d9",
+      "code_fingerprint": "sha256:cf4c328ffdc84f2dcb51cb4bd664ffd1700522c3299cc76a607b1ee630e4d3c5",
       "kind": "text",
       "outputs": [
         {
@@ -96,7 +91,7 @@
       ]
     },
     "svd-verify": {
-      "code_fingerprint": "sha256:e6ec8e12970ffc589e1202d87b5b6fb31f5bc007fe2e3a2b0fdc8ef0de141056",
+      "code_fingerprint": "sha256:333b4c875476d81180f3bcacfb3d731f236782938605661502ec143092c0260f",
       "kind": "text",
       "outputs": [
         {

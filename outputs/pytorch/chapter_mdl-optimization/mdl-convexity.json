@@ -79,8 +79,19 @@
         }
       ]
     },
+    "mdl-convexity-coordinate-descent": {
+      "code_fingerprint": "sha256:eba4e7325cd0bc13458b40912af773c29c1e30f021f95863294f2eebe806099b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sweep   1: GD gap= 1.64e+02  coordinate gap= 1.39e+02\nsweep   5: GD gap= 1.30e+02  coordinate gap= 5.79e+01\nsweep  20: GD gap= 5.51e+01  coordinate gap= 2.34e+00\nsweep 100: GD gap= 6.49e-01  coordinate gap= 9.45e-08\n"
+        }
+      ]
+    },
     "convexity-pl-rate": {
-      "code_fingerprint": "sha256:1b7c8dd37507267d2ba96cf80db638004df32e48b35fef0c9f3fd06a0b65f079",
+      "code_fingerprint": "sha256:73fc7cb22c50f8f5792adb6202f918bb94ecc441a07de00a8cf94c81abfae789",
       "kind": "text",
       "outputs": [
         {

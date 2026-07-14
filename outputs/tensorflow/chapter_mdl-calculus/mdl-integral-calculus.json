@@ -14,7 +14,7 @@
       "outputs": []
     },
     "integral-riemann-converge": {
-      "code_fingerprint": "sha256:d4b38ed7ee71deac83b9480f5cc92da139f2a250b0b5befa544a91da5c069e62",
+      "code_fingerprint": "sha256:77bc0e3bc44845dfeaa1ba7bf868b3b0441a627a6d48274f49b481b332a26816",
       "kind": "text",
       "outputs": [
         {
@@ -25,18 +25,18 @@
       ]
     },
     "integral-ftc-check": {
-      "code_fingerprint": "sha256:0304497c4718993aab07c44e0b000c58a4d0daaef19be83dca2b38ded7977c67",
+      "code_fingerprint": "sha256:282cbb32e0dc878bf83f3859672dc67e773448cb002ba7f23b19e4c044693068",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |dF/dx - f|      : 2.9802322387695312e-05\nRiemann F(2) vs G(2)-G(0): 0.8045181035995483 0.8047189712524414\n"
+          "text": "max |dF/dx - f|      : 5.551115123125783e-14\nRiemann F(2) vs G(2)-G(0): 0.8045188628837103 0.8047189562170501\n"
         }
       ]
     },
     "integral-improper": {
-      "code_fingerprint": "sha256:adc40cbfcd456d3555ef27aa8cfbee6be4ca15859592ec2bdc9dd1307c9a4909",
+      "code_fingerprint": "sha256:351e38f2be6e074e867209e62658acf9dbeb3e3f99d890d0b29774713db0333f",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +47,7 @@
       ]
     },
     "integral-box-volume": {
-      "code_fingerprint": "sha256:bc61402f000d027907f60212f67097559c637aa1a9054839d5fcc6e0d4ad0ff3",
+      "code_fingerprint": "sha256:ed3cb2d32fe67dcbd920022848edd4a020adbc326b70b540492cdfc6050fc943",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +58,7 @@
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:435643a94b9d5f2dafb1b5c7c6f5d04e18b8de92c59b010c9479adb7b1a2fc94",
+      "code_fingerprint": "sha256:a6d5aa3b22db680a93894459e8884e718dc8cbffcb002dbf963a92b7dc0f7bdf",
       "kind": "text",
       "outputs": [
         {
@@ -69,18 +69,18 @@
       ]
     },
     "integral-density": {
-      "code_fingerprint": "sha256:9ffe2e260b029e91e38950fd8753cc7268180bc772377fe4cc606c6e454bcc65",
+      "code_fingerprint": "sha256:7d1d0775456db0831660ffa02acc04ce33624f2b5f2024629c9b8b9d4ddb05df",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass  integral p dx : 1.0\nmean        integral x p dx: -0.0\n"
+          "text": "total mass  integral p dx : 1.0\nmean        integral x p dx: 0.0\n"
         }
       ]
     },
     "integral-monte-carlo": {
-      "code_fingerprint": "sha256:4234de101d86a8f7ecc2a094dc982d2a2d6e8484f0aa970096bbdc10521943f2",
+      "code_fingerprint": "sha256:cfe0401cb3248c986afffef85848290290ea8e6c9035f63bdc062ce3be5704f5",
       "kind": "mixed",
       "outputs": [
         {
@@ -93,7 +93,18 @@
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
           "bytes": 44497,
-          "sha256": "sha256:3fc199760fffbfe0cd71b720124a3c4d99ed276c01268aa71e0045c09c0ab613"
+          "sha256": "sha256:7070e9c9c1ac679bf1a1f5fad606ab6dec31a345201a37cac7b2e52d01339fc5"
+        }
+      ]
+    },
+    "mdl-integral-stochastic-gradient-estimators": {
+      "code_fingerprint": "sha256:c9debcd4e5aa8efb6bbb16fe5e90ff4fccc7f499fcdea1b99204845447e88db9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true derivative = 3.0000\npathwise               mean=3.0019  sample sd=1.998  MC se=0.0045\nscore function         mean=2.9974  sample sd=7.162  MC se=0.0160\nscore + baseline       mean=2.9924  sample sd=4.878  MC se=0.0109\n"
         }
       ]
     }

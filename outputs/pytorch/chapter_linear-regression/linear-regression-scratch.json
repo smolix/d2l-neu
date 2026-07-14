@@ -54,7 +54,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<torch._C.Generator at 0x749ac471a390>"
+          "text": "<torch._C.Generator at 0x7e6fdedc2430>"
         }
       ]
     },
@@ -67,7 +67,7 @@
           "mime": "image/svg+xml",
           "asset": "linear-regression-scratch/linear-regression-scratch-training-3-1.svg",
           "bytes": 19121,
-          "sha256": "sha256:fff1d110036e3d53616c6e2a3392bc7dc0cc22d35e6351d34c5ae993cc0dfc12"
+          "sha256": "sha256:0fbe8fbcf28b8c5c665cad4fbfa39a0417a72bd9351abcdc8babb83b38c4f931"
         }
       ]
     },

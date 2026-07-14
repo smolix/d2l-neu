@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-fwd-rev-kl-1.svg",
           "bytes": 37614,
-          "sha256": "sha256:5bf32744f2a5459c5b4e26d0481197af762f88deaa86a84764271be08e9b8c5c"
+          "sha256": "sha256:0d61f2af6114f50285e306fa8b0783b4e87ba4e24c1b628605e9c5d0a55f23a5"
         }
       ]
     },
@@ -93,14 +93,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epsilon = 1.00: entropic cost = 1.7700   (unregularized LP: 1.7000)\nepsilon = 0.10: entropic cost = 1.7000   (unregularized LP: 1.7000)\nepsilon = 0.02: entropic cost = 1.7000   (unregularized LP: 1.7000)\n"
+          "text": "epsilon = 1.00: entropic cost = 1.7700   (unregularized LP: 1.7000)\nepsilon = 0.10: entropic cost = 1.7000   (unregularized LP: 1.7000)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epsilon = 0.02: entropic cost = 1.7000   (unregularized LP: 1.7000)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-divergences-distances/divergences-distances-sinkhorn-1.svg",
           "bytes": 35917,
-          "sha256": "sha256:bd4fc3fb9e732aecfe536d25f2b9371cbecadc1d5d0667f77ac1706acec59cce"
+          "sha256": "sha256:1e288e2fe2f2081561fa7f6dff3abb89aa49f25460c1ac8c8f58f2273ef49de5"
         }
       ]
     },

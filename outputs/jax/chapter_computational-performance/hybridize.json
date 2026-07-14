@@ -62,12 +62,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Without jax.jit: 1.6228 sec\n"
+          "text": "Without jax.jit: 1.9083 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "With jax.jit: 0.5025 sec\n"
+          "text": "With jax.jit: 0.5272 sec\n"
         }
       ]
     },

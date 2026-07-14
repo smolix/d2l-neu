@@ -1,4 +1,4 @@
-# Modern Convolutional Neural Networks
+# Modern Convnets
 :label:`chap_modern_cnn`
 
 Now that we understand how to wire up convolutional networks, let's tour

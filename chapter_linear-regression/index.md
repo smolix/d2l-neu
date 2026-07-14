@@ -1,4 +1,4 @@
-# Linear Neural Networks for Regression
+# Linear Regression in Neural Networks
 :label:`chap_regression`
 
 Before we worry about making our neural networks deep,

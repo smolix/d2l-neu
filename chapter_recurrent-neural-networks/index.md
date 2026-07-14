@@ -1,4 +1,4 @@
-# Sequence Models and Language Models
+# Sequence Models
 :label:`chap_rnn`
 
 A great deal of intelligent behavior looks like predicting what comes next.

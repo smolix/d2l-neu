@@ -55,7 +55,7 @@ book:
     - chapter_installation/index.qmd
     - chapter_notation/index.qmd
     - chapter_introduction/index.qmd
-    - part: "Preliminaries"
+    - part: "Basics"
       chapters:
         - chapter_preliminaries/index.qmd
         - chapter_preliminaries/ndarray.qmd
@@ -65,8 +65,6 @@ book:
         - chapter_preliminaries/autograd.qmd
         - chapter_preliminaries/probability.qmd
         - chapter_preliminaries/lookup-api.qmd
-    - part: "Linear Neural Networks"
-      chapters:
         - chapter_linear-regression/index.qmd
         - chapter_linear-regression/linear-regression.qmd
         - chapter_linear-regression/oo-design.qmd
@@ -83,8 +81,6 @@ book:
         - chapter_linear-classification/softmax-regression-concise.qmd
         - chapter_linear-classification/generalization-classification.qmd
         - chapter_linear-classification/environment-and-distribution-shift.qmd
-    - part: "Multilayer Perceptrons"
-      chapters:
         - chapter_multilayer-perceptrons/index.qmd
         - chapter_multilayer-perceptrons/mlp.qmd
         - chapter_multilayer-perceptrons/mlp-implementation.qmd
@@ -93,8 +89,6 @@ book:
         - chapter_multilayer-perceptrons/generalization-deep.qmd
         - chapter_multilayer-perceptrons/dropout.qmd
         - chapter_multilayer-perceptrons/kaggle-house-price.qmd
-    - part: "Deep Learning Computation"
-      chapters:
         - chapter_builders-guide/index.qmd
         - chapter_builders-guide/model-construction.qmd
         - chapter_builders-guide/parameters-state-memory.qmd
@@ -104,8 +98,6 @@ book:
         - chapter_builders-guide/saving-loading.qmd
         - chapter_builders-guide/gpus-devices-memory.qmd
         - chapter_builders-guide/reproducibility-inspection.qmd
-    - part: "Convolutional Neural Networks"
-      chapters:
         - chapter_convolutional-neural-networks/index.qmd
         - chapter_convolutional-neural-networks/why-conv.qmd
         - chapter_convolutional-neural-networks/conv-layer.qmd
@@ -122,8 +114,6 @@ book:
         - chapter_convolutional-modern/training-recipes.qmd
         - chapter_convolutional-modern/convnext.qmd
         - chapter_convolutional-modern/cnn-design.qmd
-    - part: "Recurrent Neural Networks"
-      chapters:
         - chapter_recurrent-neural-networks/index.qmd
         - chapter_recurrent-neural-networks/sequence.qmd
         - chapter_recurrent-neural-networks/text-sequence.qmd
@@ -132,6 +122,8 @@ book:
         - chapter_recurrent-neural-networks/rnn-implementation.qmd
         - chapter_recurrent-neural-networks/bptt.qmd
         - chapter_recurrent-neural-networks/decoding.qmd
+    - part: "Recurrent Neural Networks"
+      chapters:
         - chapter_recurrent-modern/index.qmd
         - chapter_recurrent-modern/lstm.qmd
         - chapter_recurrent-modern/seq2seq.qmd

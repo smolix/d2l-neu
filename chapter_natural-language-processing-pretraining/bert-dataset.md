@@ -68,6 +68,7 @@ at the end of this section.
 #@save
 WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
                   'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
+WIKITEXT_2_SHA1 = '98ee727e59fcc34fddaadae93e15b1f8ed5561a4'
 
 #@save
 def _read_wiki(data_dir=None):
@@ -75,7 +76,8 @@ def _read_wiki(data_dir=None):
     import io
     import pandas as pd
     with contextlib.redirect_stdout(io.StringIO()):
-        fname = d2l.download(WIKITEXT_2_URL, folder='../data')
+        fname = d2l.download(WIKITEXT_2_URL, folder='../data',
+                              sha1_hash=WIKITEXT_2_SHA1)
     lines = pd.read_parquet(fname)['text'].tolist()
     # Uppercase letters are converted to lowercase ones
     paragraphs = [line.strip().lower().split(' . ')

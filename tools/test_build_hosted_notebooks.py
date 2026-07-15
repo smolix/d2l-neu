@@ -66,6 +66,28 @@ The JAX implementation is unavailable.
             self.assertEqual(nb["metadata"]["d2l"]["revision"], "abc123")
             self.assertEqual(nb["metadata"]["kernelspec"]["name"], "python3")
 
+    def test_jax_setup_does_not_install_tensorflow_datasets(self):
+        source = "".join(hosted._setup_cell("jax", "abc123")["source"])
+        self.assertIn("tensorflow", source)
+        self.assertIn('Path(".d2l-hosted") / "abc123"', source)
+        self.assertNotIn("tensorflow-datasets", source)
+        self.assertNotIn("tensorflow_datasets", source)
+
+    def test_normalization_adds_page_specific_dependencies(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "page.ipynb"
+            path.write_text(json.dumps({
+                "cells": [{"cell_type": "code", "metadata": {},
+                           "source": ["from d2l import torch as d2l\n",
+                                      "import syne_tune\n"],
+                           "outputs": [], "execution_count": None}],
+                "metadata": {}, "nbformat": 4, "nbformat_minor": 5,
+            }), encoding="utf-8")
+            nb = hosted.normalize_notebook(path, "pytorch", "abc123")
+            setup = "".join(nb["cells"][0]["source"])
+            self.assertIn("syne-tune", setup)
+            self.assertIn("'syne-tune': 'syne_tune'", setup)
+
 
 if __name__ == "__main__":
     unittest.main()

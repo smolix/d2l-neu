@@ -60,7 +60,6 @@ from jax import numpy as jnp
 import numpy as np
 import random
 import tensorflow as tf
-import tensorflow_datasets as tfds
 ```
 
 ## Generating the Dataset
@@ -298,19 +297,30 @@ def get_tensorloader(self, tensors, train, indices=slice(0, None)):
 
 ```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}
 %%tab jax
+class TensorFlowDataLoader:  #@save
+    """Expose a tf.data.Dataset as re-iterable NumPy batches."""
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __iter__(self):
+        return self.dataset.as_numpy_iterator()
+
+    def __len__(self):
+        return len(self.dataset)
+
 @d2l.add_to_class(d2l.DataModule)  #@save
 def get_tensorloader(self, tensors, train, indices=slice(0, None)):
     tensors = tuple(a[indices] for a in tensors)
-    # Use Tensorflow Datasets & Dataloader. JAX or Flax do not provide
-    # any dataloading functionality. `drop_remainder=train` keeps every
+    # Use TensorFlow's data loader. JAX and Flax do not provide data-loading
+    # functionality. `drop_remainder=train` keeps every
     # *training* minibatch the same shape, so a `@jax.jit`'d step
     # function compiles once per epoch instead of recompiling for the
     # smaller last batch.
     shuffle_buffer = tensors[0].shape[0] if train else 1
-    return tfds.as_numpy(
-        tf.data.Dataset.from_tensor_slices(tensors).shuffle(
-            buffer_size=shuffle_buffer
-        ).batch(self.batch_size, drop_remainder=train))
+    dataset = tf.data.Dataset.from_tensor_slices(tensors).shuffle(
+        buffer_size=shuffle_buffer).batch(
+            self.batch_size, drop_remainder=train)
+    return TensorFlowDataLoader(dataset)
 ```
 
 ```{.python .input #synthetic-regression-data-concise-implementation-of-the-data-loader-1}

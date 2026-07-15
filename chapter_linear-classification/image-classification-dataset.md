@@ -55,7 +55,6 @@ from jax import numpy as jnp
 import numpy as np
 import time
 import tensorflow as tf
-import tensorflow_datasets as tfds
 
 d2l.use_svg_display()
 ```
@@ -194,10 +193,10 @@ def get_dataloader(self, train):
     # `drop_remainder=train` keeps every training minibatch the same
     # shape, so JAX does not retrace the `@jax.jit`'d step function for
     # a smaller last batch.
-    return tfds.as_numpy(
-        tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
-            shuffle_buf).batch(self.batch_size,
-                               drop_remainder=train).map(resize_fn))
+    dataset = (tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
+        shuffle_buf).batch(self.batch_size, drop_remainder=train).map(
+            resize_fn))
+    return d2l.TensorFlowDataLoader(dataset)
 ```
 
 Now that the loader is defined, let us read one image and confirm where the channel axis lands.

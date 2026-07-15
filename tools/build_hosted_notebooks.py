@@ -57,6 +57,23 @@ _PROSE_HEADER_RE = re.compile(
     re.MULTILINE,
 )
 _IMAGE_RE = re.compile(r"!\[[^\]]*\]\((\.\./img/[^)\s]+)")
+_IMPORT_RE = re.compile(
+    r"^\s*(?:from\s+([A-Za-z_]\w*)|import\s+([A-Za-z_]\w*))",
+    re.MULTILINE,
+)
+_OPTIONAL_PACKAGES = {
+    "gpytorch": "gpytorch",
+    "gymnasium": "gymnasium",
+    "orbax": "orbax-checkpoint",
+    "safetensors": "safetensors",
+    "syne_tune": "syne-tune",
+    "tiktoken": "tiktoken",
+}
+_PACKAGE_IMPORTS = {
+    "orbax-checkpoint": "orbax",
+    "pillow": "PIL",
+    "syne-tune": "syne_tune",
+}
 
 
 def git_revision(root: Path = ROOT) -> str:
@@ -112,26 +129,30 @@ def _source_string(value) -> str:
     return "".join(value) if isinstance(value, list) else (value or "")
 
 
-def _setup_cell(variant: str, revision: str) -> dict:
+def _setup_cell(variant: str, revision: str,
+                optional_packages: tuple[str, ...] = ()) -> dict:
     module = "torch" if variant == "pytorch" else "jax"
     packages = (
-        "numpy pandas matplotlib requests scipy pillow torch torchvision"
+        "numpy pandas matplotlib requests scipy pillow regex torch torchvision"
         if variant == "pytorch"
-        else "numpy pandas matplotlib requests scipy pillow jax flax optax "
-             "tensorflow tensorflow-datasets"
-    )
+        else "numpy pandas matplotlib requests scipy pillow regex jax flax optax "
+             "tensorflow"
+    ).split()
+    packages.extend(optional_packages)
+    imports = {package: _PACKAGE_IMPORTS[package]
+               for package in packages if package in _PACKAGE_IMPORTS}
     source = f'''# Hosted D2L setup: fetch the exact helper module used to build this notebook.
 from pathlib import Path
 from urllib.request import urlretrieve
 import importlib.util, subprocess, sys
 
-required = "{packages}".split()
-imports = {{"pillow": "PIL", "tensorflow-datasets": "tensorflow_datasets"}}
+required = {packages!r}
+imports = {imports!r}
 missing = [p for p in required if importlib.util.find_spec(imports.get(p, p)) is None]
 if missing:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
 
-root = Path(".d2l-hosted")
+root = Path(".d2l-hosted") / "{revision}"
 package = root / "d2l"
 package.mkdir(parents=True, exist_ok=True)
 base = "https://raw.githubusercontent.com/{REPOSITORY}/{revision}/d2l"
@@ -157,6 +178,7 @@ def normalize_notebook(src: Path, variant: str, revision: str) -> dict:
     nb = json.loads(src.read_text(encoding="utf-8"))
     cells = []
     uses_d2l = False
+    optional_packages = set()
     for cell in nb.get("cells", []):
         source = _source_string(cell.get("source"))
         if cell.get("cell_type") == "markdown":
@@ -169,12 +191,18 @@ def normalize_notebook(src: Path, variant: str, revision: str) -> dict:
             cell["source"] = source.splitlines(keepends=True)
         elif cell.get("cell_type") == "code":
             uses_d2l = uses_d2l or bool(re.search(r"\bfrom\s+d2l\b|\bimport\s+d2l\b", source))
+            modules = {match.group(1) or match.group(2)
+                       for match in _IMPORT_RE.finditer(source)}
+            optional_packages.update(
+                _OPTIONAL_PACKAGES[module]
+                for module in modules if module in _OPTIONAL_PACKAGES)
             cell.setdefault("outputs", [])
             cell.setdefault("execution_count", None)
         cells.append(cell)
 
     if uses_d2l and variant in {"pytorch", "jax"}:
-        cells.insert(0, _setup_cell(variant, revision))
+        cells.insert(0, _setup_cell(
+            variant, revision, tuple(sorted(optional_packages))))
 
     nb["cells"] = cells
     metadata = nb.setdefault("metadata", {})

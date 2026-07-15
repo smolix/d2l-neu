@@ -83,7 +83,6 @@ from jax import grad, vmap
 import numpy as np
 import optax
 import tensorflow as tf
-import tensorflow_datasets as tfds
 from typing import Any, Callable
 
 def use_svg_display():
@@ -364,16 +363,16 @@ class DataModule(d2l.HyperParameters):
 
     def get_tensorloader(self, tensors, train, indices=slice(0, None)):
         tensors = tuple(a[indices] for a in tensors)
-        # Use Tensorflow Datasets & Dataloader. JAX or Flax do not provide
-        # any dataloading functionality. `drop_remainder=train` keeps every
+        # Use TensorFlow's data loader. JAX and Flax do not provide data-loading
+        # functionality. `drop_remainder=train` keeps every
         # *training* minibatch the same shape, so a `@jax.jit`'d step
         # function compiles once per epoch instead of recompiling for the
         # smaller last batch.
         shuffle_buffer = tensors[0].shape[0] if train else 1
-        return tfds.as_numpy(
-            tf.data.Dataset.from_tensor_slices(tensors).shuffle(
-                buffer_size=shuffle_buffer
-            ).batch(self.batch_size, drop_remainder=train))
+        dataset = tf.data.Dataset.from_tensor_slices(tensors).shuffle(
+            buffer_size=shuffle_buffer).batch(
+                self.batch_size, drop_remainder=train)
+        return TensorFlowDataLoader(dataset)
 
 class Trainer(d2l.HyperParameters):
     """The base class for training models with data.
@@ -468,6 +467,19 @@ class SyntheticRegressionData(d2l.DataModule):
     def get_dataloader(self, train):
         i = slice(0, self.num_train) if train else slice(self.num_train, None)
         return self.get_tensorloader((self.X, self.y), train, i)
+
+class TensorFlowDataLoader:
+    """Expose a tf.data.Dataset as re-iterable NumPy batches.
+
+    Defined in :numref:`sec_synthetic-regression-data`"""
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __iter__(self):
+        return self.dataset.as_numpy_iterator()
+
+    def __len__(self):
+        return len(self.dataset)
 
 class LinearRegressionScratch(d2l.Module):
     """The linear regression model implemented from scratch.
@@ -580,10 +592,10 @@ class FashionMNIST(d2l.DataModule):
         # `drop_remainder=train` keeps every training minibatch the same
         # shape, so JAX does not retrace the `@jax.jit`'d step function for
         # a smaller last batch.
-        return tfds.as_numpy(
-            tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
-                shuffle_buf).batch(self.batch_size,
-                                   drop_remainder=train).map(resize_fn))
+        dataset = (tf.data.Dataset.from_tensor_slices(process(*data)).shuffle(
+            shuffle_buf).batch(self.batch_size, drop_remainder=train).map(
+                resize_fn))
+        return d2l.TensorFlowDataLoader(dataset)
 
     def visualize(self, batch, nrows=1, ncols=8, labels=None):
         X, y = batch
@@ -2018,7 +2030,8 @@ def train_ch13(net, train_iter, test_iter, optimizer, num_epochs):
         train_correct = jnp.array(0.0)
         num_examples = 0
         timer.start()
-        for i, (features, labels) in enumerate(tfds.as_numpy(train_iter)):
+        for i, (features, labels) in enumerate(
+                train_iter.as_numpy_iterator()):
             l, acc = train_batch_ch13(
                 train_net, optimizer, jnp.array(features), jnp.array(labels))
             n = features.shape[0]
@@ -2032,7 +2045,7 @@ def train_ch13(net, train_iter, test_iter, optimizer, num_epochs):
         timer.stop()
         # Evaluate on test set
         correct, total = jnp.array(0), 0
-        for X, y in tfds.as_numpy(test_iter):
+        for X, y in test_iter.as_numpy_iterator():
             logits = eval_step(eval_net, jnp.array(X))
             correct += (logits.argmax(axis=-1) == y).sum()
             total += y.shape[0]

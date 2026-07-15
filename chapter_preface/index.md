@@ -476,7 +476,6 @@ from jax import grad, vmap
 import numpy as np
 import optax
 import tensorflow as tf
-import tensorflow_datasets as tfds
 from typing import Any, Callable
 ```
 

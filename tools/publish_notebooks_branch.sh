@@ -11,14 +11,16 @@ fi
 root="$(git rev-parse --show-toplevel)"
 staging="$(cd "$staging" && pwd)"
 worktree="$(mktemp -d -t d2l-notebooks-XXXXXX)"
+temp_branch="generated-notebooks-$$-${RANDOM}"
 
 cleanup() {
   git -C "$root" worktree remove --force "$worktree" >/dev/null 2>&1 || true
+  git -C "$root" branch -D "$temp_branch" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
 git -C "$root" worktree add --detach "$worktree" HEAD
-git -C "$worktree" checkout --orphan generated-notebooks
+git -C "$worktree" checkout --orphan "$temp_branch"
 git -C "$worktree" rm -rf -q .
 cp -a "$staging"/. "$worktree"/
 git -C "$worktree" add --all

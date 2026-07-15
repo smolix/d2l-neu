@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:8bbe14be88220e3d642456035daac614bc6544558073316c2dc0575493498cbb",
+    "d2l_lib_fingerprint": "sha256:63042cbdde4ab2bee4d0584c8ae1f69820d8ccdbca9be3a51a71c22c2fb72672",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -108,14 +108,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: loss 0.748, val acc 0.739, 2.39s\nbf16: loss 0.748, val acc 0.739, 1.60s\n"
+          "text": "fp32: loss 0.748, val acc 0.740, 2.44s\nbf16: loss 0.748, val acc 0.740, 1.39s\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerics/numerics-mixed-precision-training-4-1.svg",
-          "bytes": 26838,
-          "sha256": "sha256:99edeb2fd46b1d92f2fa24fd9e63a3f75ea82ec5e6b3b3b70c8d3b38861ddb4f"
+          "bytes": 26835,
+          "sha256": "sha256:07227d1399d901cd1f23eb91fb6532fcdbcef53822de7f64f45fc90cb39a0b05"
         }
       ]
     },

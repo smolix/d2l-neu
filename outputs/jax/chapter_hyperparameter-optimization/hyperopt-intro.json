@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:a841efb21713f19628c20cddcd7efdf65581c3f953faad4bd5605027b9e06db0",
+    "d2l_lib_fingerprint": "sha256:0535cf7d068a4fa831fa3683b609f2cca38058c4367e69cb81a070ee7e0b058a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -35,42 +35,42 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    validation_error = 0.1580999493598938\n"
+          "text": "    validation_error = 0.26889997720718384\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-1.svg",
-          "bytes": 20339,
-          "sha256": "sha256:2cd06d845f8c030e0f29f9e33550f771be21b5d0ddff0b469025aa38bbd2481e"
+          "bytes": 20342,
+          "sha256": "sha256:fb9fdf96826e27a7acf0971b550a77c1f062d5d3d50eab6f072c7d9848d43cf8"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-2.svg",
-          "bytes": 20883,
-          "sha256": "sha256:f014a562b62e642b385a3b0483d0cb79ca9c5899843ce2c95858c1aecad935f4"
+          "bytes": 21443,
+          "sha256": "sha256:8ae5f4093f7912f0fb13805c81811aa5ce19a9c753ed81801f3f914ce34edb35"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-3.svg",
-          "bytes": 20336,
-          "sha256": "sha256:0f3eed1f1f54e53e15933581477a1956aa876fdf0cfeb6bc90a498f0955c7519"
+          "bytes": 19822,
+          "sha256": "sha256:88b4a6a098c94629c16342d29cb73b046d0e425edea2bab51bf4b6185ee141d5"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-4.svg",
-          "bytes": 20337,
-          "sha256": "sha256:91eb730531dc286b93035202def5e6f01ba42f6591fcd2a3335bb945f6d1101d"
+          "bytes": 21521,
+          "sha256": "sha256:b27927de66abc86e8901e21cacc70582482ea39f01fc95adc4cf2f968b67fb0f"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-intro/hyperopt-intro-random-search-1-5.svg",
-          "bytes": 20885,
-          "sha256": "sha256:589d7e6be3a7a773a5bac2f21563deb840f2323f17542762fb82df23043769b9"
+          "bytes": 19664,
+          "sha256": "sha256:df8091e540349d72dc4f508e631b7df54004a2316460a84e36f503ec751bdbe4"
         }
       ]
     },
@@ -81,7 +81,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "optimal learning rate = 0.018589094748167008\n"
+          "text": "optimal learning rate = 0.006841895213941745\n"
         }
       ]
     }

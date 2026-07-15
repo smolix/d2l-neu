@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d5657a1a0096de0d95d02296e0c96d23ffc4ab11b5f675112433e6fba753e122",
+    "d2l_lib_fingerprint": "sha256:f71de113fe59b8acd12d7bd4b72b30d35992b9562b62f21af04839c1455ee818",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -121,7 +121,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-training-on-the-time-machine-2-1.svg",
           "bytes": 19053,
-          "sha256": "sha256:df83fc37f8a60e295b441bf980f2c03d8aea073bed0e10f7c0d9ca111ad9898b"
+          "sha256": "sha256:54c7bbacee818bad58ab0b04ed0685dc3c3b944aa4761cad2f5ff68fbeb0011b"
         }
       ]
     },
@@ -201,7 +201,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[(b'\\xa0', 254), (b'\\xad', 255), (b' t', 256), (b' a', 257), (b'he', 258), (b'in', 259)]\n{'<|endoftext|>': 50256}\n"
+          "text": "[(b'\\xa0', 254), (b'\\xad', 255), (b' t', 256), (b' a', 257), (b'he', 258), (b'in', 259)]"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n{'<|endoftext|>': 50256}\n"
         }
       ]
     },
@@ -241,7 +246,7 @@
           "mime": "image/svg+xml",
           "asset": "text-sequence/text-sequence-fertility-digits-and-glitch-tokens-1-1.svg",
           "bytes": 25538,
-          "sha256": "sha256:c313925b50c1ca58955269a3dfcf2390975bfbad5dfe21040d541e3b08b8228d"
+          "sha256": "sha256:a9ef6980a88079166b324d48faf04ba872527e517cbdedaa8252fccfd99c6c34"
         }
       ]
     },

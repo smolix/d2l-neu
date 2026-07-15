@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:13c8ce70728f5895f600ed45808d534efb34ebafa75ac869afe8f5fcad680470",
+    "d2l_lib_fingerprint": "sha256:d378c0b455b8e6a2dfa87e50c8c8f2ea7bf57e21091dab1512373b358acfeeb3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,6 +37,11 @@
       "code_fingerprint": "sha256:3acf5c0012513baab2d1f9274388c5f94226f59322b0836160dfbc59aa0a0b2b",
       "kind": "text",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "E0715 18:38:19.246548   30432 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
+        },
         {
           "type": "stream",
           "name": "stdout",
@@ -77,8 +82,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 21015,
-          "sha256": "sha256:d216b1716550b57ef790aec3af2014000b0ea3a1b44072440e4e54f6cabd5bf4"
+          "bytes": 21656,
+          "sha256": "sha256:3ad820d390edd4dbd8c0776ef17cab6893284e79a0c6aeacb6b589448d7f638c"
         }
       ]
     }

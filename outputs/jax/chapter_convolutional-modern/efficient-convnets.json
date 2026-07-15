@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:00d076d461c04c580d372d8f20d704441d2948dd63b0fcdd1efdab3d6483049f",
+    "d2l_lib_fingerprint": "sha256:88ebe5ce8c1fc951d6e3558009348d5d3a207e94229e1c1fc113717a4aee97e9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -51,43 +51,43 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-1.svg",
-          "bytes": 22179,
-          "sha256": "sha256:6864bee5feca6de510e0e7f5304062aed7a033f5ff6255d662f061c59a6633c6"
+          "bytes": 20330,
+          "sha256": "sha256:68c3737c0cf1b67d37fcd732e622e9822bd5ed51e7515a22e5d39ced8ceb9cdd"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-2.svg",
-          "bytes": 21035,
-          "sha256": "sha256:c863c88ba44d2eac68ccc9d5eee0ea95c8ebeb737df5cfa9f39b37efebaf48dc"
+          "bytes": 20447,
+          "sha256": "sha256:6f97d3094fe2141fc31ec9c11afc5a64c35dfd85344ed7ee64fd6a947a9a0481"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-3.svg",
-          "bytes": 22046,
-          "sha256": "sha256:d747cc18ada2ac8599197ec7c7b49056ea9938994a4ff7414ab0753d2732fbb3"
+          "bytes": 21508,
+          "sha256": "sha256:92ae4af1c304cefcb74b1dd69b8997d8d7cea4b7a05fd36f643b3482dd71a063"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-4.svg",
-          "bytes": 20442,
-          "sha256": "sha256:1dc1c8a19eccf7efbc7c0af91eb0fa207b48dd91147ed1de971e9e2a5625f379"
+          "bytes": 22038,
+          "sha256": "sha256:b3d1174bcbb3f4653e855903a6fcbe1d2c6abcd4f315b7925d855208e589da0a"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-5.svg",
-          "bytes": 20514,
-          "sha256": "sha256:84622728b617987e47a16937d2fc306339f6b77e313aab67ba2ce2d3b22b6b1c"
+          "bytes": 20991,
+          "sha256": "sha256:c5d2c0fb837495dbdb7cd00f2ab3847942d349ec5e51938147b80fc600c93b22"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-6.svg",
-          "bytes": 20492,
-          "sha256": "sha256:a71ba00b3854baf6a6014acff222735d54a1333e1f7df4c6e06a48418d9dc793"
+          "bytes": 21011,
+          "sha256": "sha256:601c13717128fbc2c220d665a2d2327be950630de904c57b6279889797aa36a0"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mini-MobileNet: 542,474 params, val acc 0.899 ± 0.020; seeds [0.879, 0.92, 0.898]\nVGG-style: 583,594 params, val acc 0.851 ± 0.064; seeds [0.779, 0.869, 0.904]\n"
+          "text": "mini-MobileNet: 542,474 params, val acc 0.891 ± 0.005; seeds [0.894, 0.893, 0.885]\nVGG-style: 583,594 params, val acc 0.833 ± 0.021; seeds [0.855, 0.827, 0.815]\n"
         }
       ]
     },

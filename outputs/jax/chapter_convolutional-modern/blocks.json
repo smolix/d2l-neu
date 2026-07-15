@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:00d076d461c04c580d372d8f20d704441d2948dd63b0fcdd1efdab3d6483049f",
+    "d2l_lib_fingerprint": "sha256:88ebe5ce8c1fc951d6e3558009348d5d3a207e94229e1c1fc113717a4aee97e9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -82,8 +82,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 20997,
-          "sha256": "sha256:c29a7071a487dc5bb29bfafad0ec4bd743564275cbb27270ed1c7158048c69fa"
+          "bytes": 20989,
+          "sha256": "sha256:81ea2480d8fb5720637b1d6a0fb27fc3a19467b7a683790bbbb55494ede291d1"
         }
       ]
     },
@@ -136,8 +136,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 20965,
-          "sha256": "sha256:ff408666a04ee10202db7d7221b91f950bebe4e2c1ea8694c07b5fb70b60d963"
+          "bytes": 20970,
+          "sha256": "sha256:88d543a50733958793bbbf9fb31d3ef50766084682470251ac16962d0908d3e6"
         }
       ]
     },

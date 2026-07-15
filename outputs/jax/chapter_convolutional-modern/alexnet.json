@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:00d076d461c04c580d372d8f20d704441d2948dd63b0fcdd1efdab3d6483049f",
+    "d2l_lib_fingerprint": "sha256:88ebe5ce8c1fc951d6e3558009348d5d3a207e94229e1c1fc113717a4aee97e9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "alexnet/alexnet-training-1.svg",
-          "bytes": 20968,
-          "sha256": "sha256:211dda483155428e07866db7e365c8d79a664d7962acd92d1ee46107e8b823fa"
+          "bytes": 20971,
+          "sha256": "sha256:3d91aaf10c4cb73e4d2e732b14df32b1d276143c7c06442a7aa070ca9b3dc859"
         }
       ]
     }

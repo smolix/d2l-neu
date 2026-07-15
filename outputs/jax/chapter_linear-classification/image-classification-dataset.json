@@ -4,22 +4,22 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:381ff75878daa0dd37ba8dde97a9b142c154e24a5a222de97108831da19608e4",
+    "d2l_lib_fingerprint": "sha256:c6b5e4fcd25857b2548e2834d0f5bd4b800f3a424a5fd9a0d3309e91e1d364f5",
     "max_inline_bytes": 0
   },
   "cells": {
     "image-classification-dataset-the-image-classification-dataset": {
-      "code_fingerprint": "sha256:ea095b6bdb913b641791c057433103cdf4dca6436c274faac10b9496d352b67a",
+      "code_fingerprint": "sha256:0c3dbea1ea979bf46817ca99344757400df0af05e4dc44353f1b5ad4da472ee3",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-1": {
-      "code_fingerprint": "sha256:ce4da3a2b40106ae352b4f9c99740e418cc25b75dccc346ad5290b7571e43f0a",
+      "code_fingerprint": "sha256:21945e2b668b765444248d95b91cade0c5a7eb8563874c93abfba5e3fd6607ed",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-2": {
-      "code_fingerprint": "sha256:d580363f124407385db47435eb7e0afddb78027c97ed20f0a5a7832a49b4b7dc",
+      "code_fingerprint": "sha256:dfbd8ea9272d61c750340d46991c11e03942e71799ba6975099debdcf0880e24",
       "kind": "text",
       "outputs": [
         {
@@ -29,17 +29,17 @@
       ]
     },
     "image-classification-dataset-loading-the-dataset-4": {
-      "code_fingerprint": "sha256:b05184f6a4e48e395c0cea8a73972f39f17937ddd7e36b726e95fee21e4697fe",
+      "code_fingerprint": "sha256:4e7929b5f5c93738ae09ef6abdbf424b58dda4fa7e849afe5cb49de237b1bf29",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-reading-a-minibatch-1": {
-      "code_fingerprint": "sha256:78cfb1d692eb27def3be29ad8141722bd3429c5f27dd8ebdf77c5e167998d258",
+      "code_fingerprint": "sha256:a7c924d5c70c378e6c8ac6b2470eb700a63e6e55a1c61a01828e8808c40244e4",
       "kind": "text",
       "outputs": []
     },
     "image-classification-dataset-loading-the-dataset-3": {
-      "code_fingerprint": "sha256:9e4f357a65d75ac7b68f63707d248b0ee35854042c2fb95eeddda07a0c4cff59",
+      "code_fingerprint": "sha256:7340b5d00bff15b3dc1335bdb91aa0f9d5423e80137ff921ba048a1b093b93b9",
       "kind": "text",
       "outputs": [
         {
@@ -49,7 +49,7 @@
       ]
     },
     "image-classification-dataset-reading-a-minibatch-2": {
-      "code_fingerprint": "sha256:0ef94d53b8613e87af1d44be641c2ae99a3cfd5a7182030fd299b0dffdd5c20e",
+      "code_fingerprint": "sha256:ca3fdc50008cdb643552158b09e9c560254752140b15a6bd0461136f7aa9ca40",
       "kind": "text",
       "outputs": [
         {
@@ -60,17 +60,17 @@
       ]
     },
     "image-classification-dataset-reading-a-minibatch-3": {
-      "code_fingerprint": "sha256:e8b8943d6e7f4173260251496883f37234763d647972654ffe38e22758e33f78",
+      "code_fingerprint": "sha256:485a75ba181c4a1b7c49912501e898f02d0ac75087fcf3c9671caafe917b5256",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'0.82 sec'"
+          "text": "'0.57 sec'"
         }
       ]
     },
     "image-classification-dataset-visualization-2": {
-      "code_fingerprint": "sha256:7593df2ec60114db513abffbf632c1b77e814925fd67f5e596afe5db06bfa52a",
+      "code_fingerprint": "sha256:7519d5dbc5bb077a9cff47be175406d8a20688c462409d927bdb9e99a87627c0",
       "kind": "asset",
       "outputs": [
         {
@@ -78,7 +78,7 @@
           "mime": "image/svg+xml",
           "asset": "image-classification-dataset/image-classification-dataset-visualization-2-1.svg",
           "bytes": 49046,
-          "sha256": "sha256:07f23f61547913261122de10dba28026f531fd2fa08cde81cf1dfaca9bf1172e"
+          "sha256": "sha256:aaa755d0654b6aad4d028ff1d7c216d2f1204524c28b3d6c74ea7ed983df9bd0"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:45834ad75835e20fb9f8b1ccb144457809d6a769c78b98d6a31433d42dce8484",
+    "d2l_lib_fingerprint": "sha256:86db787e0e0064aee150df74313cc7e01373afd86c1b2ee1c6ba495e9c578b44",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
           "bytes": 31164,
-          "sha256": "sha256:b6dc871d78f757e70f56aced0b37f53ac3696cdf51653ade4e81fa8b28c3363c"
+          "sha256": "sha256:bde392951d661df8a712a77430d74a2ba4b134cbd099233ea5572bd32f223393"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-a-mingru-language-model-4-1.svg",
-          "bytes": 18566,
-          "sha256": "sha256:712499e56bf6f6dc26185998753e3f9c12edfb2e1c26555b113eefe4ddea7c22"
+          "bytes": 18570,
+          "sha256": "sha256:76a4c0f8a91c6acb97a76a54710939d4f2f8aa41c4dacd643609e2c6af3d6086"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 85.1, 11s wall clock\nthe time traveller. I had\ndism.\n\n'Ince, and the Time Traveller. I felt as a chair, and the\n"
+          "text": "validation perplexity 85.3, 11s wall clock\nthe time traveller.\n\n'I had\ndisming\nbrached the\npresents of the\nshall\nthe\n"
         }
       ]
     },
@@ -115,8 +115,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-2-1.svg",
-          "bytes": 20972,
-          "sha256": "sha256:6b7bc64f9f79071da9ec9f5d60f5d37fac2fee01271ff1366a902125da7cf0a9"
+          "bytes": 20454,
+          "sha256": "sha256:7bc133b5d309b4e7e5ca1143f80188726f8cc1e26c00e83a4568dda6acde877c"
         }
       ]
     },
@@ -128,8 +128,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-3-1.svg",
-          "bytes": 20978,
-          "sha256": "sha256:bebc6b9a6cbde2dca971277641ca4437d57c85b26d2437e1487199cc5763adcb"
+          "bytes": 20977,
+          "sha256": "sha256:57218d28b47ebe090a5cb4399989ef8f031026d04805280579f5c804d06bc0fd"
         }
       ]
     },
@@ -140,7 +140,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.835      5.6\n  LSTM   29,674    0.817     29.6\n"
+          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.826      5.0\n  LSTM   29,674    0.472     28.5\n"
         }
       ]
     }

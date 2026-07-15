@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:03f1dfaeb4f16c20b713b556f41e828ef399993394358a03f0ed621763006732",
+    "d2l_lib_fingerprint": "sha256:d5eebdb7ca8f4947d0c36cfda4e182e782f03e18aa8a6e29472e13e25305d78d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
           "bytes": 40471,
-          "sha256": "sha256:fac4137d220b492c46e637e171915359659d398bd7bdfbaac0e71508f37aeb6c"
+          "sha256": "sha256:27e016533e11dffda25bff35ae3536554754364269a2cc8a5e7077c88c63861f"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
           "bytes": 17934,
-          "sha256": "sha256:532e818546f33534fc44902ef4b6d2c3da8e1f633d2ebac1b31425c1bab529fe"
+          "sha256": "sha256:55d5d46515d205ec98d8d38fdbe2e0239ab44ab5926550b02ea95c75b4b27020"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 67656,
-          "sha256": "sha256:cb68dba606c5688a6d528b976f5ffc8ab9d8d46696b722d14ee1f94ed9d30607"
+          "bytes": 67612,
+          "sha256": "sha256:8aecfe0817b51bd1bc0030832a59955f88fe5b11ce2cf2734f15b0b29d47cdfb"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44020,
-          "sha256": "sha256:17a472a0f01b0b9317ce8df637ee27ee1728cf343f9f582dafa7f47cd0938903"
+          "bytes": 44034,
+          "sha256": "sha256:f4f493b47948250ac448f4ae6068f5d9fd46d39ca03de0b073cdcc3870b539dd"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 104701,
-          "sha256": "sha256:17271eda63656c95612d936330324933780927e786ac30d071c8d9716a9a412a"
+          "bytes": 104788,
+          "sha256": "sha256:c750382e0353ac502d211a7a18eb8a506b603eb114aa311c370ed839be8a16fc"
         }
       ]
     }

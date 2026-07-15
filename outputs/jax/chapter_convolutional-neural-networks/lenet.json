@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d3aefb1468e5838ae451af6a0d6ff7ebe646c311b7c670f3797638098703cb14",
+    "d2l_lib_fingerprint": "sha256:4684cdafaf90cf6b01806a4001b6a279b3bbbb1a6b3f6a2cabdc335cb33f12e3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 21497,
-          "sha256": "sha256:99fc9286333e7233575096c949469a14e2f5eb55efff445b05d1e162ae1dd6d2"
+          "bytes": 21500,
+          "sha256": "sha256:32b32377012b87e38daba2c5a3be13f8d4eefc5d28528b8ffe6a05848b367793"
         }
       ]
     }

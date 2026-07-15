@@ -7,9 +7,9 @@ authoring-only metadata, adds a revision-pinned setup cell when the local
 ``d2l`` package is used, copies referenced images, and writes a deterministic
 manifest consumed by the book site.
 
-It deliberately publishes only PyTorch, JAX, and genuinely framework-neutral
-NumPy notebooks.  TensorFlow and MXNet may remain in the book, but they are not
-hosted-notebook targets.
+It deliberately publishes PyTorch, TensorFlow, JAX, and genuinely
+framework-neutral NumPy notebooks.  MXNet may remain in the book, but it is
+not a hosted-notebook target.
 
 Examples
 --------
@@ -36,6 +36,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from urllib.parse import quote
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +46,7 @@ DEFAULT_DATA = ROOT / "_d2l-notebooks-data.html"
 DEFAULT_KAGGLE_MAP = ROOT / "hosted_notebooks_kaggle.json"
 REPOSITORY = "smolix/d2l-neu"
 BRANCH = "notebooks"
+HOSTED_FRAMEWORKS = ("pytorch", "tensorflow", "jax")
 
 _CODE_BLOCK_RE = re.compile(r"```\{\.python[^\n]*\}\n(.*?)```", re.DOTALL)
 _TAB_RE = re.compile(r"^(?:%%tab|#@tab)\s+([^\n]+)$", re.MULTILINE)
@@ -61,18 +63,21 @@ _IMPORT_RE = re.compile(
     r"^\s*(?:from\s+([A-Za-z_]\w*)|import\s+([A-Za-z_]\w*))",
     re.MULTILINE,
 )
+_CELL_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _OPTIONAL_PACKAGES = {
     "gpytorch": "gpytorch",
     "gymnasium": "gymnasium",
     "orbax": "orbax-checkpoint",
     "safetensors": "safetensors",
     "syne_tune": "syne-tune",
+    "tensorflow_probability": "tensorflow-probability",
     "tiktoken": "tiktoken",
 }
 _PACKAGE_IMPORTS = {
     "orbax-checkpoint": "orbax",
     "pillow": "PIL",
     "syne-tune": "syne_tune",
+    "tensorflow-probability": "tensorflow_probability",
 }
 
 
@@ -93,8 +98,8 @@ def classify_source(path: Path) -> list[str]:
 
     Untagged scientific-Python notebooks become a single NumPy variant.  Any
     explicit framework branch or framework import opts the source out of that
-    fallback; such a source receives only the PyTorch/JAX variants it actually
-    implements.
+    fallback; such a source receives only the PyTorch/TensorFlow/JAX variants
+    it actually implements.
     """
     text = path.read_text(encoding="utf-8")
     code = "\n".join(_CODE_BLOCK_RE.findall(text))
@@ -106,19 +111,23 @@ def classify_source(path: Path) -> list[str]:
     for match in _TAB_RE.finditer(text):
         names = {name.strip() for name in match.group(1).split(",")}
         specific = names - {"all"}
-        explicit.update(specific & {"pytorch", "jax"})
+        explicit.update(specific & set(HOSTED_FRAMEWORKS))
         has_specific = has_specific or bool(specific)
     for match in _INTERACT_RE.finditer(text):
         names = set(re.findall(r"['\"]([\w-]+)['\"]", match.group(1)))
-        explicit.update(names & {"pytorch", "jax"})
+        explicit.update(names & set(HOSTED_FRAMEWORKS))
         has_specific = has_specific or bool(names - {"all"})
 
     if has_specific:
-        return [variant for variant in ("pytorch", "jax") if variant in explicit]
+        return [variant for variant in HOSTED_FRAMEWORKS if variant in explicit]
     if _FRAMEWORK_CODE_RE.search(code):
         variants = []
         if re.search(r"\b(?:torch|torchvision)\b|from\s+d2l\s+import\s+torch", code):
             variants.append("pytorch")
+        if re.search(
+                r"\b(?:tensorflow|keras)\b|from\s+d2l\s+import\s+tensorflow",
+                code):
+            variants.append("tensorflow")
         if re.search(r"\b(?:jax|flax|optax)\b|from\s+d2l\s+import\s+jax", code):
             variants.append("jax")
         return variants
@@ -129,15 +138,40 @@ def _source_string(value) -> str:
     return "".join(value) if isinstance(value, list) else (value or "")
 
 
+def _normalized_cell_id(cell: dict, index: int, used: set[str]) -> str:
+    """Return a deterministic, unique nbformat-compatible cell ID."""
+    raw = str(cell.get("id") or cell.get("metadata", {}).get("id") or "")
+    if _CELL_ID_RE.fullmatch(raw) and raw not in used:
+        used.add(raw)
+        return raw
+
+    stem = re.sub(r"[^A-Za-z0-9_-]+", "-", raw).strip("-_")
+    if not stem:
+        stem = "d2l-" + str(cell.get("cell_type", "cell"))
+    basis = f"{raw}\0{index}\0{_source_string(cell.get('source'))}"
+    nonce = 0
+    while True:
+        material = basis if nonce == 0 else f"{basis}\0{nonce}"
+        suffix = hashlib.sha256(material.encode()).hexdigest()[:12]
+        candidate = f"{stem[:51]}-{suffix}"
+        if candidate not in used:
+            used.add(candidate)
+            return candidate
+        nonce += 1
+
+
 def _setup_cell(variant: str, revision: str,
                 optional_packages: tuple[str, ...] = ()) -> dict:
-    module = "torch" if variant == "pytorch" else "jax"
-    packages = (
-        "numpy pandas matplotlib requests scipy pillow regex torch torchvision"
-        if variant == "pytorch"
-        else "numpy pandas matplotlib requests scipy pillow regex jax flax optax "
-             "tensorflow"
-    ).split()
+    common = "numpy pandas matplotlib requests scipy pillow regex"
+    if variant == "pytorch":
+        module = "torch"
+        packages = f"{common} torch torchvision".split()
+    elif variant == "tensorflow":
+        module = "tensorflow"
+        packages = f"{common} tensorflow".split()
+    else:
+        module = "jax"
+        packages = f"{common} jax flax optax tensorflow".split()
     packages.extend(optional_packages)
     imports = {package: _PACKAGE_IMPORTS[package]
                for package in packages if package in _PACKAGE_IMPORTS}
@@ -149,6 +183,16 @@ import importlib.util, subprocess, sys
 required = {packages!r}
 imports = {imports!r}
 missing = [p for p in required if importlib.util.find_spec(imports.get(p, p)) is None]
+# TensorFlow Probability still uses the legacy TF-Keras package. If this page
+# needs it, match TF-Keras to Colab's existing TensorFlow minor release instead
+# of allowing pip to replace the provider's coherent TensorFlow/CUDA stack.
+if "tensorflow-probability" in required and (
+        importlib.util.find_spec("tensorflow_probability") is None or
+        importlib.util.find_spec("tf_keras") is None):
+    import tensorflow as _tf
+    tf_minor = ".".join(_tf.__version__.split(".")[:2])
+    missing = [p for p in missing if p != "tensorflow-probability"]
+    missing.extend(["tensorflow-probability", f"tf-keras~={{tf_minor}}.0"])
 if missing:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
 
@@ -200,11 +244,16 @@ def normalize_notebook(src: Path, variant: str, revision: str) -> dict:
             cell.setdefault("execution_count", None)
         cells.append(cell)
 
-    if uses_d2l and variant in {"pytorch", "jax"}:
+    if uses_d2l and variant in set(HOSTED_FRAMEWORKS):
         cells.insert(0, _setup_cell(
             variant, revision, tuple(sorted(optional_packages))))
 
+    used_ids: set[str] = set()
+    for index, cell in enumerate(cells):
+        cell["id"] = _normalized_cell_id(cell, index, used_ids)
     nb["cells"] = cells
+    if nb.get("nbformat") == 4:
+        nb["nbformat_minor"] = max(5, nb.get("nbformat_minor", 0))
     metadata = nb.setdefault("metadata", {})
     metadata["kernelspec"] = {
         "display_name": "Python 3",
@@ -229,18 +278,25 @@ def _write_json(path: Path, value) -> None:
     )
 
 
+def _kaggle_import_url(raw: str) -> str:
+    """Return Kaggle's dynamic importer for a public notebook URL."""
+    return "https://www.kaggle.com/kernels/welcome?src=" + quote(raw, safe="")
+
+
 def _urls(path: str, kaggle: str | None = None) -> dict[str, str]:
     github = f"https://github.com/{REPOSITORY}/blob/{BRANCH}/{path}"
     raw = f"https://raw.githubusercontent.com/{REPOSITORY}/{BRANCH}/{path}"
     colab = f"https://colab.research.google.com/github/{REPOSITORY}/blob/{BRANCH}/{path}"
-    urls = {"github": github, "raw": raw, "colab": colab}
-    if kaggle:
-        urls["kaggle"] = kaggle
-    return urls
+    return {
+        "github": github,
+        "raw": raw,
+        "colab": colab,
+        "kaggle": kaggle or _kaggle_import_url(raw),
+    }
 
 
 def load_kaggle_map(path: Path) -> dict:
-    """Load verified canonical Kaggle URLs, or return an empty mapping."""
+    """Load optional canonical Kaggle URL overrides, or an empty mapping."""
     if not path.exists():
         return {}
     value = json.loads(path.read_text(encoding="utf-8"))
@@ -429,7 +485,7 @@ def parse_args():
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--data-file", type=Path, default=DEFAULT_DATA)
     parser.add_argument("--kaggle-map", type=Path, default=DEFAULT_KAGGLE_MAP,
-                        help="JSON mapping of page/variant to verified Kaggle URL")
+                        help="optional JSON page/variant canonical Kaggle URL overrides")
     parser.add_argument("--revision", help="source Git revision (defaults to HEAD)")
     return parser.parse_args()
 

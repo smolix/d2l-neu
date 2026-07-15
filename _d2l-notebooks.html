@@ -64,7 +64,7 @@
 </style>
 
 <script>
-// The generated manifest maps a book page to its PyTorch, JAX, or NumPy
+// The generated manifest maps a book page to its PyTorch, TensorFlow, JAX, or NumPy
 // notebook. The sidebar controls are inserted immediately after Slides.
 (function() {
   if (!window.D2L_NOTEBOOKS_MANIFEST) return;
@@ -153,8 +153,8 @@
     ui.label.textContent = 'Run notebook · ' + display;
     setAction(ui.links[0], data.colab, 'Open the ' + display + ' notebook in Colab');
     setAction(ui.links[1], data.kaggle,
-      data.kaggle ? 'Open the ' + display + ' notebook in Kaggle'
-                  : 'Kaggle launch awaits a verified published copy');
+      data.kaggle ? 'Import the ' + display + ' notebook into Kaggle'
+                  : 'Kaggle import is unavailable for this notebook');
     setAction(ui.links[2], data.raw, 'Download the ' + display + ' notebook');
   }
 

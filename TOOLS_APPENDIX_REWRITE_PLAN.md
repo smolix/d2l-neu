@@ -26,6 +26,7 @@ per framework, publish a generated orphan branch named `notebooks` in this repos
 
 ```text
 pytorch/<chapter>/<notebook>.ipynb
+tensorflow/<chapter>/<notebook>.ipynb
 jax/<chapter>/<notebook>.ipynb
 numpy/<chapter>/<notebook>.ipynb
 manifest.json
@@ -34,8 +35,8 @@ README.md
 
 Policy:
 
-- PyTorch is primary, JAX secondary.
-- Do not publish TensorFlow or MXNet hosted notebooks.
+- PyTorch is primary; TensorFlow and JAX are also published where implemented.
+- Do not publish MXNet hosted notebooks.
 - Publish one NumPy notebook for framework-independent sources rather than duplicating it
   under PyTorch and JAX.
 - Preserve stable code-cell IDs and readable executed outputs, but normalize notebook
@@ -55,7 +56,8 @@ Add a **Run notebook** control near the existing Slides control. It must:
 
 - derive the current page key and selected framework;
 - use the NumPy variant automatically for framework-independent pages;
-- otherwise offer PyTorch or JAX according to the current framework selection;
+- otherwise offer PyTorch, TensorFlow, or JAX according to the current framework
+  selection;
 - offer **Open in Colab**, **Open in Kaggle**, and **Download notebook**;
 - disable unsupported combinations with an explanatory tooltip;
 - update when the framework tab changes, including cross-window preference changes;
@@ -68,12 +70,13 @@ Colab URLs follow the supported GitHub form:
 https://colab.research.google.com/github/smolix/d2l-neu/blob/notebooks/<variant>/<chapter>/<file>.ipynb
 ```
 
-Kaggle support is conditional on an end-to-end import test. The former public
-`kernels/welcome?src=...` route was tested on July 15, 2026 and returned HTTP 404.
-Canonical notebooks must therefore be published through a D2L Kaggle account with the
-official Kaggle CLI; verified URLs are supplied through `hosted_notebooks_kaggle.json`.
-Until then the visible Kaggle control is disabled with an explanation. The download link
-points at the public raw notebook and remains the provider-independent fallback.
+Kaggle URLs use its dynamic `kernels/welcome?src=...` importer. An end-to-end browser
+test on July 15, 2026 confirmed that it creates an editable scratchpad containing the
+requested notebook, including its table of contents and remote images. Inspection works
+without an account; editing and execution require sign-in. Optional canonical URLs can
+still be supplied through `hosted_notebooks_kaggle.json` and take precedence over the
+dynamic importer. The download link points at the same public raw notebook and remains
+the provider-independent fallback.
 
 ## Notebook content
 
@@ -199,8 +202,8 @@ must match the chapter palette and typography.
    their shared primitives for the remaining figures.
 6. Rewrite the seven source `.md` notebooks in order, adding compact executable examples,
    high-quality diagrams, summaries, and exercises.
-7. Generate PyTorch/JAX/NumPy notebook variants and test representative Colab/Kaggle
-   launches. Never edit generated `.qmd` files directly.
+7. Generate PyTorch/TensorFlow/JAX/NumPy notebook variants and test representative
+   Colab/Kaggle launches. Never edit generated `.qmd` files directly.
 8. Run source lint, figure lint, notebook generation/validation, hosted-manifest checks,
    focused HTML rendering, link/accessibility checks, and visual inspection. A full book
    rebuild is deferred unless explicitly requested.
@@ -208,9 +211,9 @@ must match the chapter palette and typography.
 ## Acceptance criteria
 
 - The seven notebooks appear in the agreed order and SageMaker is absent.
-- PyTorch, JAX, and framework-independent NumPy notebook variants are classified and
-  published deterministically; TF/MXNet are not offered as hosted variants.
-- Every eligible page has correct Colab, Kaggle (if validated), and download actions that
+- PyTorch, TensorFlow, JAX, and framework-independent NumPy notebook variants are
+  classified and published deterministically; MXNet is not offered as a hosted variant.
+- Every eligible page has correct Colab, Kaggle import, and download actions that
   follow framework selection.
 - Hosted notebooks contain setup, code, outputs, images/assets, and revision metadata
   needed to run independently of the local build tree.

@@ -153,7 +153,7 @@ help:
 	@echo "  notebooks               [any] Generate notebooks for all frameworks"
 	@echo "  notebook-env-locks      [any] Refresh downloadable CPU/GPU uv locks (network)"
 	@echo "  notebook-zips           [any] Build runnable per-framework notebook downloads"
-	@echo "  hosted-notebooks        [any] Stage PyTorch/JAX/NumPy notebooks + site manifest"
+	@echo "  hosted-notebooks        [any] Stage PyTorch/TF/JAX/NumPy notebooks + site manifest"
 	@echo "  check-hosted-notebooks  [any] Verify hosted notebook staging is deterministic"
 	@echo "  dry-run-notebooks-branch      Build the generated branch commit without pushing"
 	@echo "  publish-notebooks-branch      Replace and push the generated notebooks branch"
@@ -517,7 +517,7 @@ notebooks-%: _notebooks/%/.generated _notebooks/%/.symlinks
 
 # Public, provider-neutral notebook tree. NumPy variants are derived from
 # framework-independent sources in the PyTorch generation tree.
-hosted-notebooks: notebooks-pytorch notebooks-jax
+hosted-notebooks: notebooks-pytorch notebooks-tensorflow notebooks-jax
 	@python3 tools/build_hosted_notebooks.py build
 
 check-hosted-notebooks: hosted-notebooks

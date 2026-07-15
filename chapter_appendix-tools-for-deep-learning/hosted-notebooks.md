@@ -25,11 +25,11 @@ Each code-bearing page can have one or more generated notebooks. **Run
 notebook** on the right of the web page follows the active framework tab:
 
 * framework-independent pages use one NumPy notebook;
-* framework-specific pages prefer PyTorch and offer JAX where the source has a
-  JAX implementation;
+* framework-specific pages offer PyTorch, TensorFlow, or JAX where the source
+  implements that framework;
 * **Colab** opens the generated notebook, while **Download** saves the same
   provider-neutral file;
-* **Kaggle** is enabled only for a tested, published Kaggle copy.
+* **Kaggle** imports the generated notebook into a new Kaggle scratchpad.
 
 The public notebook is generated from the book source and records its exact Git
 revision. Editing it does not change the book source.
@@ -111,8 +111,9 @@ resource
 ```
 
 For PyTorch, check `torch.cuda.is_available()` and inspect
-`torch.cuda.get_device_properties(0)`. For JAX, inspect `jax.devices()`. A
-reported accelerator is not a guarantee that the workload fits its memory.
+`torch.cuda.get_device_properties(0)`. For TensorFlow, inspect
+`tf.config.list_physical_devices("GPU")`; for JAX, inspect `jax.devices()`.
+A reported accelerator is not a guarantee that the workload fits its memory.
 
 Colab also supports a local runtime. This lets the browser UI control a kernel
 on hardware you operate, but it changes the security boundary: notebook code
@@ -137,10 +138,13 @@ the checkpoint appears in the version output. The
 run, and download notebook outputs; keep its token in the provider's secret
 store or a local credential file, never in a notebook cell.
 
-Kaggle does not document a stable public URL that imports any arbitrary GitHub
-notebook directly into an editable session. For that reason this book links
-only to canonical Kaggle copies that have been published and tested. The
-download action remains available for importing the `.ipynb` manually.
+The book's **Kaggle** action passes the public notebook URL to Kaggle's dynamic
+importer. Kaggle creates a new scratchpad containing that notebook. You can
+inspect the imported notebook without signing in; sign in to edit or run it.
+The scratchpad is independent of the generated source notebook, so save a
+version in your Kaggle account if you want to keep your changes. The
+**Download** action remains available when you prefer to import the `.ipynb`
+manually.
 
 ### Colab or Kaggle?
 

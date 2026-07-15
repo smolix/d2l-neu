@@ -47,6 +47,16 @@ DEFAULT_KAGGLE_MAP = ROOT / "hosted_notebooks_kaggle.json"
 REPOSITORY = "smolix/d2l-neu"
 BRANCH = "notebooks"
 HOSTED_FRAMEWORKS = ("pytorch", "tensorflow", "jax")
+# Hosted JAX notebooks download d2l/jax.py from the build revision, so their
+# runtime must match the NNX stack against which that helper was generated.
+# TensorFlow is part of this stack because d2l/jax.py uses it for data loading;
+# pinning it also gives TF and its Protobuf runtime a coherent version pair.
+HOSTED_JAX_VERSIONS = {
+    "jax": ("0.10.2", "jax[cuda12]==0.10.2"),
+    "flax": ("0.12.7", "flax==0.12.7"),
+    "optax": ("0.2.8", "optax==0.2.8"),
+    "tensorflow": ("2.21.0", "tensorflow==2.21.0"),
+}
 
 _CODE_BLOCK_RE = re.compile(r"```\{\.python[^\n]*\}\n(.*?)```", re.DOTALL)
 _TAB_RE = re.compile(r"^(?:%%tab|#@tab)\s+([^\n]+)$", re.MULTILINE)
@@ -172,17 +182,31 @@ def _setup_cell(variant: str, revision: str,
     else:
         module = "jax"
         packages = f"{common} jax flax optax tensorflow".split()
+    pinned = HOSTED_JAX_VERSIONS if variant == "jax" else {}
     packages.extend(optional_packages)
     imports = {package: _PACKAGE_IMPORTS[package]
                for package in packages if package in _PACKAGE_IMPORTS}
     source = f'''# Hosted D2L setup: fetch the exact helper module used to build this notebook.
 from pathlib import Path
 from urllib.request import urlretrieve
+from importlib.metadata import PackageNotFoundError, version
 import importlib.util, subprocess, sys
 
 required = {packages!r}
 imports = {imports!r}
-missing = [p for p in required if importlib.util.find_spec(imports.get(p, p)) is None]
+pinned = {pinned!r}
+missing = []
+for package in required:
+    if package in pinned:
+        wanted, requirement = pinned[package]
+        try:
+            installed = version(package)
+        except PackageNotFoundError:
+            installed = None
+        if installed != wanted:
+            missing.append(requirement)
+    elif importlib.util.find_spec(imports.get(package, package)) is None:
+        missing.append(package)
 # TensorFlow Probability still uses the legacy TF-Keras package. If this page
 # needs it, match TF-Keras to Colab's existing TensorFlow minor release instead
 # of allowing pip to replace the provider's coherent TensorFlow/CUDA stack.

@@ -74,7 +74,11 @@ The JAX implementation is unavailable.
 
     def test_jax_setup_does_not_install_tensorflow_datasets(self):
         source = "".join(hosted._setup_cell("jax", "abc123")["source"])
-        self.assertIn("tensorflow", source)
+        self.assertIn("tensorflow==2.21.0", source)
+        self.assertIn("jax[cuda12]==0.10.2", source)
+        self.assertIn("flax==0.12.7", source)
+        self.assertIn("optax==0.2.8", source)
+        self.assertIn("installed != wanted", source)
         self.assertIn('Path(".d2l-hosted") / "abc123"', source)
         self.assertNotIn("tensorflow-datasets", source)
         self.assertNotIn("tensorflow_datasets", source)

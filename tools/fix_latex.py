@@ -12,11 +12,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from d2l_preprocess import CHAPTER_NUMBERING
+from d2l_preprocess import CHAPTER_NUMBERING, PDF_CHAPTER_FILES
 
 
 def fix_all(content):
-    files = list(CHAPTER_NUMBERING.items())
+    files = [(rel, CHAPTER_NUMBERING[rel]) for rel in PDF_CHAPTER_FILES]
 
     # Find all \chapter{...} with optional \label{...}
     chapter_re = re.compile(r'\\chapter\{[^}]+\}(?:\\label\{[^}]+\})?')

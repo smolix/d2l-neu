@@ -268,15 +268,16 @@ book:
         - chapter_mdl-dynamics/mdl-sdes.qmd
         - chapter_mdl-dynamics/mdl-fokker-planck-probability-flow.qmd
         - chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.qmd
-    - part: "Appendix: Tools for Deep Learning"
+    - part: "Tools for Deep Learning"
       chapters:
         - chapter_appendix-tools-for-deep-learning/index.qmd
-        - chapter_appendix-tools-for-deep-learning/jupyter.qmd
-        - chapter_appendix-tools-for-deep-learning/sagemaker.qmd
-        - chapter_appendix-tools-for-deep-learning/aws.qmd
-        - chapter_appendix-tools-for-deep-learning/colab.qmd
-        - chapter_appendix-tools-for-deep-learning/selecting-servers-gpus.qmd
-        - chapter_appendix-tools-for-deep-learning/contributing.qmd
+        - chapter_appendix-tools-for-deep-learning/interactive-development.qmd
+        - chapter_appendix-tools-for-deep-learning/hosted-notebooks.qmd
+        - chapter_appendix-tools-for-deep-learning/cloud-instances.qmd
+        - chapter_appendix-tools-for-deep-learning/hardware.qmd
+        - chapter_appendix-tools-for-deep-learning/software-ecosystem.qmd
+        - chapter_appendix-tools-for-deep-learning/training-systems.qmd
+        - chapter_appendix-tools-for-deep-learning/model-serving.qmd
         - chapter_appendix-tools-for-deep-learning/utils.qmd
         - chapter_appendix-tools-for-deep-learning/d2l.qmd
     - references.qmd
@@ -306,7 +307,9 @@ format:
     css: _d2l-style.css
     include-after-body:
       - _d2l-slides-data.html
+      - _d2l-notebooks-data.html
       - _d2l-tabs.html
+      - _d2l-notebooks.html
   pdf:
     pdf-engine: xelatex
     documentclass: book

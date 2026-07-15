@@ -21,7 +21,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 from d2l_preprocess import (
-    FRAMEWORKS, FRAMEWORK_DISPLAY, CHAPTER_NUMBERING,
+    FRAMEWORKS, FRAMEWORK_DISPLAY, CHAPTER_NUMBERING, PDF_CHAPTER_FILES,
     parse_blocks, extract_tab, is_boilerplate, is_python_block,
     clean_save_markers, translate_directives,
     CodeBlock, MarkdownBlock, CodeTabSet, TocBlock,
@@ -196,7 +196,7 @@ def main():
     src = args.source
     fw = args.framework
     dst = args.output
-    files = list(CHAPTER_NUMBERING.keys())
+    files = PDF_CHAPTER_FILES
 
     print(f'Generating PDF sources for {FRAMEWORK_DISPLAY.get(fw, fw)}...')
 

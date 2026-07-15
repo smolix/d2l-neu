@@ -1113,18 +1113,29 @@ CHAPTER_NUMBERING = {
     'chapter_mdl-dynamics/mdl-fokker-planck-probability-flow.md': [26, 3],
     'chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.md': [26, 4],
     'chapter_appendix-tools-for-deep-learning/index.md': [27],
-    'chapter_appendix-tools-for-deep-learning/jupyter.md': [27, 1],
-    'chapter_appendix-tools-for-deep-learning/sagemaker.md': [27, 2],
-    'chapter_appendix-tools-for-deep-learning/aws.md': [27, 3],
-    'chapter_appendix-tools-for-deep-learning/colab.md': [27, 4],
-    'chapter_appendix-tools-for-deep-learning/selecting-servers-gpus.md': [27, 5],
-    'chapter_appendix-tools-for-deep-learning/contributing.md': [27, 6],
-    'chapter_appendix-tools-for-deep-learning/utils.md': [27, 7],
-    'chapter_appendix-tools-for-deep-learning/d2l.md': [27, 8],
+    'chapter_appendix-tools-for-deep-learning/interactive-development.md': [27, 1],
+    'chapter_appendix-tools-for-deep-learning/hosted-notebooks.md': [27, 2],
+    'chapter_appendix-tools-for-deep-learning/cloud-instances.md': [27, 3],
+    'chapter_appendix-tools-for-deep-learning/hardware.md': [27, 4],
+    'chapter_appendix-tools-for-deep-learning/software-ecosystem.md': [27, 5],
+    'chapter_appendix-tools-for-deep-learning/training-systems.md': [27, 6],
+    'chapter_appendix-tools-for-deep-learning/model-serving.md': [27, 7],
+    'chapter_appendix-tools-for-deep-learning/utils.md': [27, 8],
+    'chapter_appendix-tools-for-deep-learning/d2l.md': [27, 9],
     'chapter_references/zreferences.md': None,
 }
 
 CHAPTER_FILES = list(CHAPTER_NUMBERING.keys())
+
+# These reference pages remain part of the HTML book, where their searchable
+# API listings are useful, but are intentionally omitted from the PDFs.
+PDF_EXCLUDED_FILES = frozenset({
+    'chapter_appendix-tools-for-deep-learning/utils.md',
+    'chapter_appendix-tools-for-deep-learning/d2l.md',
+})
+PDF_CHAPTER_FILES = [
+    rel for rel in CHAPTER_FILES if rel not in PDF_EXCLUDED_FILES
+]
 
 
 def main():

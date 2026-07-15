@@ -136,6 +136,7 @@ export PYTHONUNBUFFERED := 1
 .PHONY: help all all-quick rebuild-book-artifacts check-all-artifacts html lib clean veryclean
 .PHONY: pdf pdfs $(addprefix pdf-,$(FRAMEWORKS))
 .PHONY: notebooks run-all-notebooks slides notebook-env-locks notebook-zips
+.PHONY: hosted-notebooks check-hosted-notebooks dry-run-notebooks-branch publish-notebooks-branch
 .PHONY: capture-outputs audit-outputs verify-outputs-fresh refresh-stale render-fresh test-trap
 
 # ── Help ───────────────────────────────────────────────────
@@ -152,6 +153,10 @@ help:
 	@echo "  notebooks               [any] Generate notebooks for all frameworks"
 	@echo "  notebook-env-locks      [any] Refresh downloadable CPU/GPU uv locks (network)"
 	@echo "  notebook-zips           [any] Build runnable per-framework notebook downloads"
+	@echo "  hosted-notebooks        [any] Stage PyTorch/JAX/NumPy notebooks + site manifest"
+	@echo "  check-hosted-notebooks  [any] Verify hosted notebook staging is deterministic"
+	@echo "  dry-run-notebooks-branch      Build the generated branch commit without pushing"
+	@echo "  publish-notebooks-branch      Replace and push the generated notebooks branch"
 	@echo "  capture-outputs         [any] Bless executed _notebooks/ → committed outputs/ [FILES=...]"
 	@echo "  audit-outputs           [any] Report stale notebooks (code drift) + store integrity"
 	@echo "  verify-outputs-fresh    [any] Render gate: fail on stale inline outputs / orphaned ids"
@@ -395,7 +400,7 @@ html: _book/index.html
 	@touch $@
 
 # Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
-_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html d2l.bib | .venv-build/.synced
+_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-notebooks.html tools/build_hosted_notebooks.py d2l.bib | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Verifying committed outputs are fresh ==="
 	@python3 tools/audit_outputs.py --verify-fresh || \
@@ -408,6 +413,8 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 		fi; \
 		echo "Building slides manifest (TOC button + landing page)..."; \
 		python3 tools/build_slides_index.py; \
+		echo "Building hosted-notebook manifest (buttons below Slides)..."; \
+		python3 tools/build_hosted_notebooks.py manifest; \
 		"$(CURDIR)/$(QUARTO)" render --to html; \
 		python3 tools/fix_crossref_numbers.py .; \
 		python3 tools/add_cfasync.py _book; \
@@ -507,6 +514,21 @@ _notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.
 # build incrementally.
 notebooks-%: _notebooks/%/.generated _notebooks/%/.symlinks
 	@echo "Notebooks for $* in _notebooks/$*/ ($(words $(IPYNB_$*)) notebooks)"
+
+# Public, provider-neutral notebook tree. NumPy variants are derived from
+# framework-independent sources in the PyTorch generation tree.
+hosted-notebooks: notebooks-pytorch notebooks-jax
+	@python3 tools/build_hosted_notebooks.py build
+
+check-hosted-notebooks: hosted-notebooks
+	@PYTHONPATH=tools python3 -m unittest tools/test_build_hosted_notebooks.py
+	@python3 tools/build_hosted_notebooks.py check
+
+dry-run-notebooks-branch: check-hosted-notebooks
+	@tools/publish_notebooks_branch.sh _hosted_notebooks notebooks --dry-run
+
+publish-notebooks-branch: check-hosted-notebooks
+	@tools/publish_notebooks_branch.sh _hosted_notebooks notebooks
 
 notebooks: $(addprefix notebooks-,$(FRAMEWORKS))
 

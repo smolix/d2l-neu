@@ -131,12 +131,35 @@ def main():
             elif not zipfile.is_zipfile(z):
                 errors.append(f'notebook zip {z} is not a valid zip archive')
             else:
-                n = sum(1 for e in zipfile.ZipFile(z).namelist()
-                        if e.endswith('.ipynb'))
-                if n == 0:
-                    errors.append(f'notebook zip {z} contains no .ipynb files')
-                else:
-                    print(f'  ✓ {fw}: notebook zip ({n} notebooks)')
+                top = f'd2l-{fw}'
+                with zipfile.ZipFile(z) as archive:
+                    names = set(archive.namelist())
+                    n = sum(1 for e in names if e.endswith('.ipynb'))
+                    required = {
+                        f'{top}/README.md', f'{top}/.python-version',
+                        f'{top}/pyproject.toml', f'{top}/pylock.cpu.toml',
+                        f'{top}/pylock.gpu.toml', f'{top}/d2l/__init__.py',
+                        f'{top}/d2l/{"torch" if fw == "pytorch" else fw}.py',
+                    }
+                    if fw == 'mxnet':
+                        required.add(f'{top}/pylock.cpu-macos.toml')
+                    missing = required - names
+                    if n == 0:
+                        errors.append(f'notebook zip {z} contains no .ipynb files')
+                    if missing:
+                        errors.append(f'notebook zip {z} lacks runnable-project files: '
+                                      + ', '.join(sorted(missing)))
+                    for lock_name in (f'{top}/pylock.cpu.toml',
+                                      f'{top}/pylock.gpu.toml'):
+                        if lock_name not in names:
+                            continue
+                        lock = archive.read(lock_name).decode('utf-8')
+                        if 'requires-python = ">=3.12,<3.13"' not in lock:
+                            errors.append(f'{z}:{lock_name} has the wrong Python range')
+                        if 'directory = { path = ".", editable = true }' not in lock:
+                            errors.append(f'{z}:{lock_name} does not install bundled d2l')
+                    if n and not missing:
+                        print(f'  ✓ {fw}: runnable notebook zip ({n} notebooks)')
     else:
         print(f'  note: {book}/notebooks absent — skipping notebook-zip check')
 

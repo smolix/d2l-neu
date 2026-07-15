@@ -136,33 +136,44 @@ def fix_all(content):
                     break
     content = '\n'.join(lines)
 
+    # Cross-references to unnumbered frontmatter must use their titles. A
+    # numeric \ref is undefined for \chapter* and can otherwise inherit the
+    # preceding chapter counter.
+    frontmatter_refs = {
+        'sec-chap-installation': 'Installation',
+        'sec-chap-notation': 'Notation',
+        'sec-chap-introduction': 'Introduction',
+    }
+    for label, title in frontmatter_refs.items():
+        content = content.replace(
+            f'Chapter~\\ref{{{label}}}', f'\\hyperref[{label}]{{{title}}}')
+
     # ── Phase 5: Page numbering ──
     content = content.replace(
         '\\begin{document}',
         '\\begin{document}\n\\pagenumbering{roman}', 1)
 
-    intro_m = re.search(r'\\setcounter\{chapter\}\{0\}\n\\chapter\{Introduction\}', content)
-    if intro_m:
-        content = (content[:intro_m.start()] +
+    first_chapter = re.search(
+        r'\\setcounter\{chapter\}\{0\}\n\\chapter\{Preliminaries\}', content)
+    if first_chapter:
+        content = (content[:first_chapter.start()] +
                   '\\pagenumbering{arabic}\\setcounter{page}{1}\n' +
-                  content[intro_m.start():])
+                  content[first_chapter.start():])
 
     # ── Phase 6: Appendix ──
-    # The "Mathematics for Deep Learning" appendix (logical chapters 22+)
+    # The "Mathematics for Deep Learning" appendix (logical chapters 21+)
     # renders with \appendix lettering (A, B, C, …), sections nested (A.1…).
     # Phase 2 gave each appendix chapter \setcounter{chapter}{ch-1}; under
     # \appendix we want them counted from 0 (→A), so remap every appendix
-    # counter N>=21 → N-21 (22→A, 23→B, 24→C, …). The previous code hardcoded
-    # only 21→0 and 22→1, so chapters 24+ kept their global numbers and
-    # rendered as A, B, X, Y, Z… (and \Alph overflows past 26).
-    first_app = re.search(r'\\setcounter\{chapter\}\{21\}', content)
+    # counter N>=20 → N-20 (21→A, 22→B, 23→C, …).
+    first_app = re.search(r'\\setcounter\{chapter\}\{20\}', content)
     if first_app:
         idx = first_app.start()
         head, tail = content[:idx], content[idx:]
 
         def _shift_appendix(m):
             n = int(m.group(1))
-            return f'\\setcounter{{chapter}}{{{n - 21}}}' if n >= 21 else m.group(0)
+            return f'\\setcounter{{chapter}}{{{n - 20}}}' if n >= 20 else m.group(0)
 
         tail = re.sub(r'\\setcounter\{chapter\}\{(\d+)\}', _shift_appendix, tail)
         content = head + '\\appendix\n' + tail

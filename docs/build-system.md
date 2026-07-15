@@ -474,18 +474,19 @@ Two consequences worth knowing:
   `_quarto.yml` alone is not enough. (This was exactly why the
   Mathematics-for-Deep-Learning chapters first rendered without numbers.)
 - **Part titles in `_quarto.yml` are cosmetic.** `build_chapter_map` flattens the
-  `chapters:` lists and ignores the `part:` strings, so whether *N* groups live
-  under one part or *N* parts has **zero** effect on numbering — only the map and
-  the flat file order do. Part grouping is purely the left-nav/sidebar structure.
-  (A part whose `part:` is a bare title string keeps its `index.md` as a numbered
-  chapter; pointing `part:` at a `.qmd` file instead makes that page an *unnumbered
-  divider*, which breaks any `:numref:` that targets it — so we use title strings.)
+  `chapters:` lists, so whether *N* groups live under one part or *N* parts has
+  **zero** effect on numbering — only the map and flat file order do. A bare
+  `part:` title contributes no page. Quarto renders a file-backed part as an
+  unnumbered divider but does not allocate it a Pandoc chapter position, so the
+  postprocessor deliberately excludes that page from its positional map. The
+  Preface uses this form and remains `None` in `CHAPTER_NUMBERING` for source
+  preprocessing.
 
 Current tail of the map: the **Mathematics for Deep Learning** part is chapters
-**22–27** (Linear Algebra 22, Calculus 23, Optimization 24, Probability &
-Statistical Learning 25, Information Theory 26, Dynamics 27) — each group's
+**21–26** (Linear Algebra 21, Calculus 22, Optimization 23, Probability &
+Statistical Learning 24, Information Theory 25, Dynamics 26) — each group's
 `index.md` is the chapter, its siblings the `N.k` sections — and the **Tools for
-Deep Learning** appendix is chapter **28**. The legacy
+Deep Learning** appendix is chapter **27**. The legacy
 `chapter_appendix-mathematics-for-deep-learning/` part (formerly chapter 22) has
 been retired; inserting or retiring a group means renumbering the map's tail and
 the matching `_quarto.yml` order together.
@@ -635,7 +636,8 @@ request. Those run through the aggregate targets:
 | `make all` | `lib` → `notebooks` → `run-all-notebooks` → `rebuild-book-artifacts`. The full pipeline; ~3 h on the 4×4090 box. | **Yes** (all 4 fw) |
 | `make all-quick` | `lib` → `notebooks` → `rebuild-book-artifacts`. Regenerate + render from the **committed** `outputs/`; no execution. | No |
 | `make rebuild-book-artifacts` | `slides` → `html` → `notebook-zips` → `-j4 pdfs` → `check-all-artifacts`. Renders everything from `outputs/`. | No |
-| `make notebook-zips` | One `d2l-<fw>.zip` of that framework's **executed** notebooks per framework → `_book/notebooks/` (~23 MB each). Code from generated `_notebooks/`, outputs injected from the committed store, plus the referenced `../img/` figure subset bundled under `d2l-<fw>/img/` so the download is self-contained (`tools/build_notebook_zips.py`); CPU-only, deterministic. Linked from the navbar **Notebooks** menu (`/notebooks/d2l-<fw>.zip`). | No |
+| `make notebook-env-locks` | Refresh the committed `pylock.cpu.toml` and `pylock.gpu.toml` files under `notebook_envs/` from their `.in` inputs. MXNet also gets an Apple Silicon CPU lock. Requires package-index/network access; run only when changing reader dependencies. | No |
+| `make notebook-zips` | One runnable `d2l-<fw>.zip` per framework → `_book/notebooks/`. Each deterministic archive combines generated notebooks, committed outputs, referenced figures, the matching `d2l` source, `pyproject.toml`, and pinned CPU/GPU uv locks (`tools/build_notebook_zips.py`). Linked from the navbar **Notebooks** menu (`/notebooks/d2l-<fw>.zip`). | No |
 | `make check-all-artifacts` | Asserts `_book/index.html`, `_slides/index.html`, `_book/slides/index.html` exist, per-fw PDFs, slide coverage, and per-fw notebook zips. | No |
 | `make clean` | Wipe build products (`_book _pdf _notebooks _slides`, generated `.qmd`, `d2l/.built`, stamps). **Keeps** `./data/`, `logs/`, `.upload-manifest-*.txt`. | — |
 | `make veryclean` | `clean` **plus** wipe `./data/` (datasets), `logs/`, upload manifests — forces dataset re-download. | — |

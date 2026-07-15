@@ -135,7 +135,7 @@ export PYTHONUNBUFFERED := 1
 
 .PHONY: help all all-quick rebuild-book-artifacts check-all-artifacts html lib clean veryclean
 .PHONY: pdf pdfs $(addprefix pdf-,$(FRAMEWORKS))
-.PHONY: notebooks run-all-notebooks slides
+.PHONY: notebooks run-all-notebooks slides notebook-env-locks notebook-zips
 .PHONY: capture-outputs audit-outputs verify-outputs-fresh refresh-stale render-fresh test-trap
 
 # ── Help ───────────────────────────────────────────────────
@@ -150,6 +150,8 @@ help:
 	@echo "  slides-<fw> / slides    [any] Build slides (CPU; slides safe with -j4)"
 	@echo "  notebooks-<fw>         [any] Generate (not execute) notebooks for one framework"
 	@echo "  notebooks               [any] Generate notebooks for all frameworks"
+	@echo "  notebook-env-locks      [any] Refresh downloadable CPU/GPU uv locks (network)"
+	@echo "  notebook-zips           [any] Build runnable per-framework notebook downloads"
 	@echo "  capture-outputs         [any] Bless executed _notebooks/ → committed outputs/ [FILES=...]"
 	@echo "  audit-outputs           [any] Report stale notebooks (code drift) + store integrity"
 	@echo "  verify-outputs-fresh    [any] Render gate: fail on stale inline outputs / orphaned ids"
@@ -821,13 +823,17 @@ slides: $(addprefix slides-,$(FRAMEWORKS))
 
 # ── Downloadable notebook zips (per framework) ────────────
 # A first-class build output, linked from the navbar "Notebooks" menu: one
-# d2l-<fw>.zip of that framework's executed notebooks. CPU-only / GPU-free, like
-# PDFs and slides — the *code* comes from the generated _notebooks/ tree and the
-# *outputs* are injected from the committed store (tools/build_notebook_zips.py),
-# so it never needs a framework venv. Deterministic (fixed zip timestamps) so an
-# unchanged build re-produces byte-identical zips and the R2 sync skips them.
+# d2l-<fw>.zip of that framework's executed notebooks. Building the ZIP is
+# CPU-only: code comes from _notebooks/, outputs from the committed store, and
+# pinned reader environments from notebook_envs/. The ZIP also carries the d2l
+# source, so readers can select its CPU or GPU lock and run it directly.
+# Fixed ZIP timestamps keep unchanged builds byte-identical for the R2 sync.
 NOTEBOOK_ZIP_DIR := _book/notebooks
-.PHONY: notebook-zips
+
+notebook-env-locks:
+	python3 tools/lock_notebook_envs.py \
+		$(if $(FRAMEWORKS_FILTER),--frameworks $(FRAMEWORKS_FILTER))
+
 notebook-zips: notebooks
 	@mkdir -p $(LOGDIR) $(NOTEBOOK_ZIP_DIR)
 	@echo "=== Building per-framework notebook zips → $(NOTEBOOK_ZIP_DIR)/ ==="

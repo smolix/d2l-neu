@@ -1,0 +1,11 @@
+-e .
+jupyterlab
+ipykernel
+safetensors
+jax==0.10.2
+flax==0.12.7
+optax==0.2.8
+orbax-checkpoint==0.12.0
+huggingface-hub
+tensorflow
+tensorflow-datasets

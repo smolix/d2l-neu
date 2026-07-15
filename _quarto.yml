@@ -51,10 +51,11 @@ book:
     logo: static/logo-with-text.png
   chapters:
     - index.qmd
-    - chapter_preface/index.qmd
-    - chapter_installation/index.qmd
-    - chapter_notation/index.qmd
-    - chapter_introduction/index.qmd
+    - part: chapter_preface/index.qmd
+      chapters:
+        - chapter_installation/index.qmd
+        - chapter_notation/index.qmd
+        - chapter_introduction/index.qmd
     - part: "Basics"
       chapters:
         - chapter_preliminaries/index.qmd

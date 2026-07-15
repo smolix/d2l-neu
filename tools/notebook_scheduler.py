@@ -32,6 +32,7 @@ Env in (Makefile SCHED_ENV, else detect_resources):
   D2L_GPU_VRAM_PER   e.g. "24564,..." (per-GPU VRAM MiB, for jax mem fraction)
   D2L_CPU_SLOTS      e.g. "8"
   D2L_GPU_MIB_PER_SLOT e.g. "7680"
+  D2L_JAX_TOTAL_SLOTS e.g. "8"       (combined GPU + CPU JAX jobs)
 
 Usage: notebook_scheduler.py [--frameworks a,b] [--dry-run] [--force-all]
 """
@@ -178,6 +179,17 @@ class Scheduler:
         self.results = []
         self.peak_gpu = [0] * self.num_gpus
         self.peak_cpu = 0
+        self.fw_inflight = {fw: 0 for fw in FRAMEWORKS}
+        self.peak_fw = {fw: 0 for fw in FRAMEWORKS}
+        self.fw_total_cap = {}
+        for fw in FRAMEWORKS:
+            key = f"{fw.upper()}_TOTAL_SLOTS"
+            raw = os.environ.get(f"D2L_{key}") or _detect(key)
+            try:
+                if int(raw) > 0:
+                    self.fw_total_cap[fw] = int(raw)
+            except (TypeError, ValueError):
+                pass
 
         # Pre-set the inner `make <stamp>`'s ?= resource vars in the child env so
         # it doesn't re-run detect_resources/nvidia-smi on every dispatch.
@@ -193,16 +205,21 @@ class Scheduler:
             "JAX_MGPU_MEM_FRACTION": _detect("JAX_MGPU_MEM_FRACTION") or "0.30",
             "MXNET_GPU_SLOTS": _detect("MXNET_GPU_SLOTS") or "8",
             "JAX_GPU_SLOTS": _detect("JAX_GPU_SLOTS") or "8",
+            "JAX_TOTAL_SLOTS": _detect("JAX_TOTAL_SLOTS") or "1",
         }
 
     # ---- reservation (under lock); returns assignment dict or None ----
     def _reserve(self, it):
+        cap = self.fw_total_cap.get(it.fw)
+        if cap is not None and self.fw_inflight[it.fw] >= cap:
+            return None
         if it.req[0] == "cpu":
             if not self.cpu_free:
                 return None
             slot = self.cpu_free.pop()
+            self.fw_inflight[it.fw] += 1
             return {"cuda": "", "cpu_cores": self.core_groups[slot],
-                    "_": ("cpu", slot)}
+                    "_": ("cpu", slot), "_fw": it.fw}
         _, ngpu, spg = it.req
         # GPUs with at least spg free, most-free first (spread load)
         cand = sorted((g for g in range(self.num_gpus) if self.gpu_free[g] >= spg),
@@ -217,10 +234,12 @@ class Scheduler:
             vram = min(self.gpu_vram[g] for g in chosen)
             frac = min(0.95, max(0.05, (spg * self.mib_per_slot) / vram))
             env["XLA_PYTHON_CLIENT_MEM_FRACTION"] = f"{frac:.2f}"
+        self.fw_inflight[it.fw] += 1
         return {"cuda": ",".join(str(g) for g in chosen), "cpu_cores": None,
-                "extra_env": env, "_": ("gpu", chosen, spg)}
+                "extra_env": env, "_": ("gpu", chosen, spg), "_fw": it.fw}
 
     def _release(self, asg):
+        self.fw_inflight[asg["_fw"]] -= 1
         kind = asg["_"][0]
         if kind == "cpu":
             self.cpu_free.append(asg["_"][1])
@@ -233,6 +252,8 @@ class Scheduler:
         for g in range(self.num_gpus):
             self.peak_gpu[g] = max(self.peak_gpu[g], self.gpu_cap[g] - self.gpu_free[g])
         self.peak_cpu = max(self.peak_cpu, self.cpu_slots - len(self.cpu_free))
+        for fw in FRAMEWORKS:
+            self.peak_fw[fw] = max(self.peak_fw[fw], self.fw_inflight[fw])
 
     # ---- execution ----
     def _make_env(self, asg):
@@ -313,9 +334,12 @@ class Scheduler:
             print(f"  FAILED: {it.label}", flush=True)
         if self.args.dry_run:
             ok = all(self.peak_gpu[g] <= self.gpu_cap[g] for g in range(self.num_gpus)) \
-                 and self.peak_cpu <= self.cpu_slots
+                 and self.peak_cpu <= self.cpu_slots \
+                 and all(self.peak_fw[fw] <= cap
+                         for fw, cap in self.fw_total_cap.items())
             print(f"peak: gpu={self.peak_gpu} (caps {self.gpu_cap}), "
-                  f"cpu={self.peak_cpu} (<= {self.cpu_slots}) — "
+                  f"cpu={self.peak_cpu} (<= {self.cpu_slots}), "
+                  f"framework={self.peak_fw} (caps {self.fw_total_cap}) — "
                   f"INVARIANTS {'OK' if ok else 'VIOLATED'}", flush=True)
         return 1 if failed else 0
 

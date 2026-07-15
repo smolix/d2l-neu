@@ -591,7 +591,7 @@ $(DEP_FILES) &: $(SRC_MDS) tools/scan_d2l_usage.py \
 # slots than the global pool. Today only JAX is heavier than "light";
 # caps for other frameworks would just equal the global pool, which is
 # the same as "no cap" — `run_one_notebook.py` treats 0/unset as no cap.
-$(foreach v,JAX_GPU_SLOTS JAX_CPU_SLOTS,$(eval $(call _detected,$(v))))
+$(foreach v,JAX_GPU_SLOTS JAX_CPU_SLOTS JAX_TOTAL_SLOTS,$(eval $(call _detected,$(v))))
 
 # Memory-and-thread-conservative defaults for JAX. PREALLOCATE=false: don't
 # grab 75 % of GPU on init (1.6 GiB instead of ~19 GiB resident). OMP/BLAS=2:
@@ -604,7 +604,8 @@ $(foreach v,JAX_GPU_SLOTS JAX_CPU_SLOTS,$(eval $(call _detected,$(v))))
 # extra tf_XLAEigen threads (still well under the ulimit headroom).
 EXTRA_ENV_jax := XLA_PYTHON_CLIENT_PREALLOCATE=false \
                  OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
-                 D2L_JAX_GPU_SLOTS=$(JAX_GPU_SLOTS) D2L_JAX_CPU_SLOTS=$(JAX_CPU_SLOTS)
+                 D2L_JAX_GPU_SLOTS=$(JAX_GPU_SLOTS) D2L_JAX_CPU_SLOTS=$(JAX_CPU_SLOTS) \
+                 D2L_JAX_TOTAL_SLOTS=$(JAX_TOTAL_SLOTS)
 
 # TensorFlow baseline is ~212 threads + ~22.5 GiB resident on the active GPU
 # (TF preallocates ~all of VRAM on first device init). The mitigations:
@@ -732,7 +733,8 @@ run-notebooks-%: _notebooks/%/.generated
 # per-GPU slot capacity + per-GPU VRAM (heterogeneous-aware) + CPU slots.
 $(foreach v,GPU_SLOTS_PER GPU_VRAM_PER GPU_MIB_PER_SLOT,$(eval $(call _detected,$(v))))
 SCHED_ENV = D2L_GPU_SLOTS_PER='$(GPU_SLOTS_PER)' D2L_GPU_VRAM_PER='$(GPU_VRAM_PER)' \
-	D2L_GPU_MIB_PER_SLOT=$(GPU_MIB_PER_SLOT) D2L_CPU_SLOTS=$(CPU_SLOTS)
+	D2L_GPU_MIB_PER_SLOT=$(GPU_MIB_PER_SLOT) D2L_CPU_SLOTS=$(CPU_SLOTS) \
+	D2L_JAX_TOTAL_SLOTS=$(JAX_TOTAL_SLOTS)
 
 # The unified scheduler (tools/notebook_scheduler.py) replaces the old "two
 # background `make -jN` queues" orchestration: it owns the GPU/CPU/multi-GPU

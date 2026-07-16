@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:458557626249f8ff2a4b651f5ef5559f9469fe9c986b4eef03d41ff4dc7353d2",
+    "d2l_lib_fingerprint": "sha256:7e34cb59ef252c347b2e5dd5601e9044fe397e3088d073422e19d7725913c47a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -64,7 +64,7 @@
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-utilities-7-1.svg",
           "bytes": 17183,
-          "sha256": "sha256:61e1336e85fe4f4309facb0b244cf0c5c193ba01bd7fbe0be23445c7ad9046a2"
+          "sha256": "sha256:e789415919c0423722f8171625c3bcd96cab7fa850a198039d7dfe5c785cb257"
         }
       ]
     },

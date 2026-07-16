@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e2367637747627c5deb2b321a24dfa0d81fbc4668364a951ecf8a43b5e72546a",
+    "d2l_lib_fingerprint": "sha256:e381d243f99e381e49fc827e7b377da6ca73b93e58439aecb7fbbb55dc95f462",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -60,7 +60,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    error = 0.45159995555877686, runtime = 32.776601791381836\n"
+          "text": "    error = 0.25839996337890625, runtime = 18.802814245224\n"
         }
       ]
     },
@@ -72,8 +72,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hyperopt-api/hyperopt-api-example-optimizing-the-hyperparameters-of-a-convolutional-neural-network-4-1.svg",
-          "bytes": 17578,
-          "sha256": "sha256:1d84ebb9520fd349f94827ae0339569725b20c170e5371ae405cca996db7b608"
+          "bytes": 18023,
+          "sha256": "sha256:5469048c79bbda3202f7d99c0af24f6ebc197366f3a98805ea783c7c50950200"
         }
       ]
     }

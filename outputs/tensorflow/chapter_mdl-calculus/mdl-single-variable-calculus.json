@@ -9,12 +9,12 @@
   },
   "cells": {
     "single-variable-calculus-imports": {
-      "code_fingerprint": "sha256:03f7f59527fa49f8058468d5de1f4870af3e715c2f344bc2f278d7c44b301472",
+      "code_fingerprint": "sha256:b832b3ccfc6d751746e8baa9a126ae8f460c334e9696b1ddac3e7e4d0668a720",
       "kind": "text",
       "outputs": []
     },
     "single-variable-calculus-differential-calculus-4": {
-      "code_fingerprint": "sha256:665ad02f53e44a259dc5fd57ae814dd7952cecb3108f2624a4bddac7dc41d2a0",
+      "code_fingerprint": "sha256:1b0e9b6ad0ac41ea1bb2aeda0c1a8f78637ecb15191b0e83f742d0d5ec7017c5",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "single-variable-calculus-autograd-check": {
-      "code_fingerprint": "sha256:1953f9866295ffe134815e49e6403a8ba260c31a5339d79e9da6189e9ecddddb",
+      "code_fingerprint": "sha256:730194d7af21b7af80cb0c56eb16cfb410ab927c8a18e4647a0e08bf7d441cbc",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "single-variable-calculus-linear-approximation": {
-      "code_fingerprint": "sha256:8950ce217e666c53b3a865289ab140487b3abaaf84d64b951dea360ab1e1d267",
+      "code_fingerprint": "sha256:80b941255044e961bf67f3d8e51f72828384ea5e6f4434e11ad80ebd3d7b0b93",
       "kind": "asset",
       "outputs": [
         {
@@ -44,12 +44,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
           "bytes": 15846,
-          "sha256": "sha256:ba3c4c667f4defa68b6c9f0e58590dd28df2fd8d6d4432223a693864e3daf928"
+          "sha256": "sha256:2bd1bdc8a183aa39c89b63f8a2d923a8bb659b73644d1ec7232718085ae43000"
         }
       ]
     },
     "single-variable-calculus-gradient-descent": {
-      "code_fingerprint": "sha256:e246c2ed82df2d5b37f2d98c2dc1195654bd062630341942d40864e82b56de72",
+      "code_fingerprint": "sha256:74a3018f514194df45579f37e61f445bf67a841a8783dfe56e44d8cf80b6f745",
       "kind": "mixed",
       "outputs": [
         {
@@ -62,12 +62,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25211,
-          "sha256": "sha256:08a8d7a794d64dac1d8c75ba192200b8c1bf487bfb4658cb965a415d2719809a"
+          "sha256": "sha256:603f477e67d8607096cbd10916953b4f9a3d108927a12007fff6e8a1a34e3b7e"
         }
       ]
     },
     "mdl-single-variable-calculus-newton-s-method": {
-      "code_fingerprint": "sha256:a6c74ad4640b9d70ee6d5c20d34a0bf1dbaf457dfbed76a4c2062098120da845",
+      "code_fingerprint": "sha256:2bf887647e7f18a045cbb3f23da295ba31a13e4aef41d253ed15589b4070f5cd",
       "kind": "text",
       "outputs": [
         {
@@ -78,7 +78,7 @@
       ]
     },
     "single-variable-calculus-taylor-error-rate": {
-      "code_fingerprint": "sha256:7f74a5380bd065320a931b9a016d0f6a0055b4ede3c2bb9075c83030b5087982",
+      "code_fingerprint": "sha256:4c0f3e799dc1b8c77fc8a70da502d9ad6ab2f9db5f5e55ac3258a6ce36fd5893",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +89,7 @@
       ]
     },
     "single-variable-calculus-taylor-series": {
-      "code_fingerprint": "sha256:58ab6b2a5c0db6a0a64019bd2f3c2410877d055ebc10092ef233e2abf3d696ed",
+      "code_fingerprint": "sha256:7a15c38e15d9bffbbd96d9ce713570cc589f030cd3d70c400363f3dcbd32a885",
       "kind": "asset",
       "outputs": [
         {
@@ -97,12 +97,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
           "bytes": 28560,
-          "sha256": "sha256:0fbf276b62d4ab7ad83794bc1e61e5e7a6b5c8f9b370d4b56b79f7a8c8ec7923"
+          "sha256": "sha256:69c6ecb0ff8edaddad60619ec94462059d579b41b22abf89a8c6a9dc33c588b1"
         }
       ]
     },
     "single-variable-calculus-one-sided": {
-      "code_fingerprint": "sha256:7993d80497a755500b84416de7d37ff0e1739b9e3f862cc2c7196026afc0db7c",
+      "code_fingerprint": "sha256:fef441a351d4c259adbd1e937af17d7e5458d5a59a655b85e7afb46fdf30fd53",
       "kind": "text",
       "outputs": [
         {
@@ -113,7 +113,7 @@
       ]
     },
     "mdl-single-variable-calculus-why-sgd-shrugs": {
-      "code_fingerprint": "sha256:f88909db9152db9241efe23edf1d97e2a6b22fe5c0475c2a3fae4f40fbc85c52",
+      "code_fingerprint": "sha256:66b1e1adb992e49d216315c6a7caf7f8013c01d5e95ad646977b891438fc19d3",
       "kind": "text",
       "outputs": [
         {

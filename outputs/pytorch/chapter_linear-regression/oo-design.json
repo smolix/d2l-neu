@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:49124207e9b74d44da32874dce89cbb55797d7a0fb6e2aa4ee4b72411f9ec3bc",
+    "d2l_lib_fingerprint": "sha256:af7a2481a9fb34fd7c8598e06646b866f65204938e37645853c1e7d3e64f5e30",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -64,7 +64,7 @@
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-utilities-7-1.svg",
           "bytes": 17183,
-          "sha256": "sha256:6a0ac28fe75131ba625fa1254bb94b266ef182326d9054a5bc3308f0f2b96591"
+          "sha256": "sha256:79863e8e21f20f71e0d76c0bb8435182ceda38cee3e1e340d8d3f46fedd6a19c"
         }
       ]
     },

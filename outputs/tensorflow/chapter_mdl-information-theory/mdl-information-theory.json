@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, np.float64(0.4990474758191936))"
+          "text": "(0.5, np.float64(0.50087400814468))"
         }
       ]
     },
@@ -121,8 +121,19 @@
         }
       ]
     },
+    "mdl-information-theory-typical-sequences-and-the-source-coding-theorem": {
+      "code_fingerprint": "sha256:981fba48173a74f9bc90fefe4065793303576ce5d38d5480e903f2c60c109e84",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "entropy H = 0.881 bits/symbol, so nH = 176 bits\ntypical strings: 2^188.8 of all 2^200\nprobability they carry: 0.9893\n"
+        }
+      ]
+    },
     "information-theory-perplexity": {
-      "code_fingerprint": "sha256:206d437854981b08837baab43114d5b82f47c680d74a0e086eed10d1dd3294c5",
+      "code_fingerprint": "sha256:47d4e3c02edd582432dbe04cd4e1f5b13e6fd046d349b3b523c5b3a3f79a3326",
       "kind": "text",
       "outputs": [
         {
@@ -133,7 +144,7 @@
       ]
     },
     "information-theory-label-smoothing": {
-      "code_fingerprint": "sha256:6cc366121c0b366bb805f969f2e71e65743cd4522bcd8e1a527427b6cb98b8b0",
+      "code_fingerprint": "sha256:d5053c4669d3d276a5326ae2f013f0889b6fa2df403852f47f4e0fc0f0855c4c",
       "kind": "text",
       "outputs": [
         {
@@ -144,13 +155,18 @@
       ]
     },
     "information-theory-distillation": {
-      "code_fingerprint": "sha256:59b5777f8f20d5c2d2fa73da9749f3e42b59b496e9f7939126240360492de150",
+      "code_fingerprint": "sha256:640ae3ca7d6f35a4a60be0c79a84ba46bab3fa46519b77ed467cae7170cf94e0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T= 1.0  |autograd - closed| = 0.0e+00  T^2 grad = [-0.462, 0.441, 0.022]\nT= 2.0  |autograd - closed| = 1.5e-08  T^2 grad = [-0.672, 0.549, 0.123]\nT= 5.0  |autograd - closed| = 2.8e-09  T^2 grad = [-0.741, 0.478, 0.263]\nT=10.0  |autograd - closed| = 1.2e-09  T^2 grad = [-0.719, 0.413, 0.306]\n"
+          "text": "T= 1.0  |autograd - closed| = 0.0e+00  T^2 grad = [-0.462, 0.441, 0.022]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T= 2.0  |autograd - closed| = 1.5e-08  T^2 grad = [-0.672, 0.549, 0.123]\nT= 5.0  |autograd - closed| = 2.8e-09  T^2 grad = [-0.741, 0.478, 0.263]\nT=10.0  |autograd - closed| = 1.2e-09  T^2 grad = [-0.719, 0.413, 0.306]\n"
         }
       ]
     }

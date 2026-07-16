@@ -9,12 +9,12 @@
   },
   "cells": {
     "convexity-imports": {
-      "code_fingerprint": "sha256:2873cf518be6f740de1e83e7ae767eb092b490ee935317169145e246bdd660ea",
+      "code_fingerprint": "sha256:81e703cb4950d4e170895e8cb478d065a075863abe4d5407525405af88e09586",
       "kind": "text",
       "outputs": []
     },
     "convexity-three-lenses": {
-      "code_fingerprint": "sha256:6cc018d2e7f46988b466d938a7d9d9f0fa2a5b29726a0efcfde1b3b101a3ef3b",
+      "code_fingerprint": "sha256:9b172d099fa63a2a6c34385601dc8b7d2463e91986ec3ec0eff27af7a6352337",
       "kind": "text",
       "outputs": [
         {
@@ -25,7 +25,7 @@
       ]
     },
     "convexity-jensen-mc": {
-      "code_fingerprint": "sha256:dcf96be9038dd478990f7cb78ae6349f325165dc0fabca4044af66e5bfab3d14",
+      "code_fingerprint": "sha256:9c47d66d8739f9e89851215dc54587dd7451d6e2b6ecf3fed0bc650a096a2222",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "convexity-basins": {
-      "code_fingerprint": "sha256:04a020e0ed271a6a9897dba756a49bdf8e1b53d8e176c1a5189118f5d8956949",
+      "code_fingerprint": "sha256:2d324ad18d05cce41443671dc03b42430a60d375d27f06081c909ae9743e7b18",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +47,7 @@
       ]
     },
     "convexity-rate-check": {
-      "code_fingerprint": "sha256:8c93daeda9d831fbb6aab15a692e97da3b49629a08ae317b9d8e9a2487768dec",
+      "code_fingerprint": "sha256:9619ab1916c879d28a10a6c5c43c8c25ee8f3943c5a8b1270d47130ccc7a8f1b",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +58,7 @@
       ]
     },
     "convexity-lse-hessian": {
-      "code_fingerprint": "sha256:4af768238bd7689501a66643211f685b38a6270dfe139d174c346fd3ff7a1dfa",
+      "code_fingerprint": "sha256:86df5425cfbc03e47cc1053faebde7c21ae584af86bcdaca4d3a0312abd93fa2",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "convexity-prox-ista": {
-      "code_fingerprint": "sha256:90b9357df54daa8748c2ba3be255947a1659448a5146088e70bdc3f64888abc0",
+      "code_fingerprint": "sha256:056ba660f3e17d5185e0140bd626601ff75c8bdce994485e0480ca70c76fc3b6",
       "kind": "text",
       "outputs": [
         {
@@ -80,18 +80,20 @@
       ]
     },
     "mdl-convexity-coordinate-descent": {
-      "code_fingerprint": "sha256:eba4e7325cd0bc13458b40912af773c29c1e30f021f95863294f2eebe806099b",
-      "kind": "text",
+      "code_fingerprint": "sha256:fa270403e9da632cd0d4a5f58d5411210be39996a429f748d453f6354e290683",
+      "kind": "asset",
       "outputs": [
         {
-          "type": "stream",
-          "name": "stdout",
-          "text": "sweep   1: GD gap= 1.64e+02  coordinate gap= 1.39e+02\nsweep   5: GD gap= 1.30e+02  coordinate gap= 5.79e+01\nsweep  20: GD gap= 5.51e+01  coordinate gap= 2.34e+00\nsweep 100: GD gap= 6.49e-01  coordinate gap= 9.45e-08\n"
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-convexity/mdl-convexity-coordinate-descent-1.svg",
+          "bytes": 33273,
+          "sha256": "sha256:1ee63b76b0590def4c4682d6b9367df91f99014cb0290e4191455ced415eb496"
         }
       ]
     },
     "convexity-pl-rate": {
-      "code_fingerprint": "sha256:73fc7cb22c50f8f5792adb6202f918bb94ecc441a07de00a8cf94c81abfae789",
+      "code_fingerprint": "sha256:231e65c566108f59d470436148b40f6f1cea4c28b340777963fb8d0514505c1f",
       "kind": "text",
       "outputs": [
         {

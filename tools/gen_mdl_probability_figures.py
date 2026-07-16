@@ -1288,6 +1288,219 @@ def fig_bootstrap():
     fl.save(fig, "mdl-prob-bootstrap")
 
 
+# =========================================================================== #
+# BAYESIAN COMPUTATION (sec_mdl-bayesian-computation)                         #
+# =========================================================================== #
+
+def fig_bayes_importance():
+    """Importance sampling lives or dies by proposal coverage.  Same bimodal
+    target in both panels; stems show 24 seeded draws from the proposal with
+    height equal to the *normalized* weight p/q.  A narrow proposal reaches the
+    right mode only through a couple of draws, which then carry nearly all the
+    weight (tiny effective sample size); a proposal that covers the target
+    spreads the weight evenly."""
+    x = np.linspace(-3.2, 4.4, 700)
+
+    def target(t):
+        return (0.65 * np.exp(-0.5 * ((t - 0.0) / 0.55) ** 2)
+                / (0.55 * np.sqrt(2 * np.pi))
+                + 0.35 * np.exp(-0.5 * ((t - 2.3) / 0.45) ** 2)
+                / (0.45 * np.sqrt(2 * np.pi)))
+
+    def gauss(t, m, s):
+        return np.exp(-0.5 * ((t - m) / s) ** 2) / (s * np.sqrt(2 * np.pi))
+
+    rng = np.random.default_rng(5)
+    draws = rng.standard_normal(24)
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.7), sharey=True)
+    for ax, (m, s), title in (
+            (axa, (-0.1, 0.55),
+             "narrow proposal: ESS looks perfect, a mode is missing"),
+            (axb, (0.9, 1.45), "covering proposal: honest weights")):
+        theta = m + s * draws
+        w = target(theta) / gauss(theta, m, s)
+        w = w / w.sum()
+        ess = 1.0 / np.sum(w ** 2)
+        ax.plot(x, target(x), color=BLUE, lw=2.4, zorder=4)
+        ax.plot(x, gauss(x, m, s), color=ORANGE, lw=2.0, ls="--", zorder=4)
+        # weights on their own scale so both panels compare directly
+        ax.vlines(theta, 0.0, w, color=GREEN, lw=1.6, zorder=3)
+        ax.plot(theta, w, "o", color=GREEN, ms=4, zorder=5)
+        ax.set_title(f"{title}\nESS $\\approx$ {ess:.0f} of 24", fontsize=11.5)
+        ax.set_xlabel(r"$\theta$")
+        ax.set_ylim(0, 0.78)
+        ax.set_yticks([])
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+    axa.text(-1.15, 0.62, r"target $p$", color=BLUE, ha="right", fontsize=11)
+    axa.text(0.72, 0.55, r"proposal $q$", color=ORANGE, ha="left",
+             fontsize=11)
+    axa.text(2.75, 0.42, "no draw ever lands here:\nthe weights cannot know",
+             color=GREEN, ha="center", va="bottom", fontsize=10.5)
+    axb.text(3.0, 0.33, r"proposal $q$", color=ORANGE, ha="left", fontsize=11)
+    axb.text(1.55, 0.60, "both modes sampled,\nweight spread over draws",
+             color=GREEN, ha="left", va="bottom", fontsize=10.5)
+    fl.save(fig, "mdl-prob-bayes-importance")
+
+
+def fig_bayes_metropolis():
+    """What a Metropolis random walk actually does: crawl over the posterior
+    contours by local proposals, always accepting uphill moves and sometimes
+    accepting downhill ones.  Correlated Gaussian target (contours), 40 seeded
+    steps; rejected proposals are gray crosses tied to the state that refused
+    them, and the chain repeats that state."""
+    cov = np.array([[0.65, -0.45], [-0.45, 0.55]])
+    prec = np.linalg.inv(cov)
+
+    def logp(t):
+        return -0.5 * np.einsum("...i,ij,...j->...", t, prec, t)
+
+    g = np.linspace(-2.6, 2.6, 300)
+    GX, GY = np.meshgrid(g, g)
+    Z = np.exp(logp(np.stack([GX, GY], axis=-1)))
+
+    rng = np.random.default_rng(11)
+    cur = np.array([-2.1, -1.9])
+    path = [cur.copy()]
+    rejected = []                       # (from-state, rejected proposal)
+    for _ in range(40):
+        prop = cur + 0.55 * rng.standard_normal(2)
+        if np.log(rng.random()) < logp(prop) - logp(cur):
+            cur = prop
+        else:
+            rejected.append((path[-1].copy(), prop.copy()))
+        path.append(cur.copy())
+    path = np.array(path)
+
+    fig, ax = plt.subplots(figsize=(6.6, 5.0))
+    ax.contour(GX, GY, Z, levels=[0.05, 0.2, 0.45, 0.75],
+               colors=[BLUE], linewidths=1.1, alpha=0.85)
+    for src, rej in rejected:
+        ax.plot([src[0], rej[0]], [src[1], rej[1]], color=GRAY, lw=0.9,
+                ls=(0, (1.6, 2.2)), zorder=3)
+        ax.plot([rej[0]], [rej[1]], "x", color=GRAY, ms=6, mew=1.4, zorder=3)
+    ax.plot(path[:, 0], path[:, 1], color=ORANGE, lw=1.6, zorder=4)
+    ax.plot(path[:, 0], path[:, 1], "o", color=ORANGE, ms=3.5, zorder=5)
+    ax.plot(path[0, 0], path[0, 1], "s", color="black", ms=7, zorder=6)
+    ax.text(path[0, 0] + 0.13, path[0, 1] - 0.05, "start", fontsize=11,
+            ha="left", va="top", color="black")
+    ax.text(1.62, 1.9, "rejected proposal:\nchain repeats its state",
+            color=GRAY, fontsize=10.5, ha="center", va="center")
+    ax.text(-1.4, 2.15, "posterior contours", color=BLUE, fontsize=11,
+            ha="center")
+    ax.set_xlabel(r"$\theta_0$")
+    ax.set_ylabel(r"$\theta_1$")
+    ax.set_xlim(-2.75, 2.75)
+    ax.set_ylim(-2.55, 2.55)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-prob-bayes-metropolis")
+
+
+def fig_bayes_laplace():
+    """The Laplace approximation is a quadratic fit to the log posterior at
+    its mode.  Left: log density of a Gamma(4, 1) posterior and the tangent
+    parabola at the mode — indistinguishable locally.  Right: exponentiating
+    both shows what the Gaussian keeps (location, curvature) and what it
+    misses (the skew: too much mass left of the mode, too little in the right
+    tail)."""
+    x = np.linspace(0.35, 10.5, 800)
+    k = 4.0                                     # Gamma(k, 1), mode at k-1
+    mode = k - 1.0
+    logf = (k - 1) * np.log(x) - x              # up to a constant
+    logf -= logf.max()
+    curv = (k - 1) / mode ** 2                  # -d^2/dx^2 log f at the mode
+    quad = -0.5 * curv * (x - mode) ** 2
+
+    from math import gamma as _gamma
+    dens = x ** (k - 1) * np.exp(-x) / _gamma(k)
+    gauss = (np.exp(-0.5 * (x - mode) ** 2 * curv)
+             * np.sqrt(curv / (2 * np.pi)))
+
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.7))
+    axa.plot(x, logf, color=BLUE, lw=2.4)
+    axa.plot(x, quad, color=ORANGE, lw=2.0, ls="--")
+    axa.plot([mode], [0.0], "o", color="black", ms=5, zorder=6)
+    axa.annotate("same value, slope,\nand curvature at the mode",
+                 xy=(mode, 0.0), xytext=(5.6, -0.55), fontsize=10.5,
+                 ha="left", va="center", color="black",
+                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.2))
+    axa.text(1.02, -2.45, r"$\log p(\theta\mid\mathcal{D})$", color=BLUE,
+             fontsize=11, ha="left")
+    axa.text(6.4, -3.4, "quadratic fit", color=ORANGE, fontsize=11)
+    axa.set_ylim(-4.4, 0.75)
+    axa.set_xlabel(r"$\theta$")
+    axa.set_ylabel("log density")
+    axa.set_yticks([])
+    axb.plot(x, dens, color=BLUE, lw=2.4)
+    axb.plot(x, gauss, color=ORANGE, lw=2.0, ls="--")
+    axb.text(4.75, 0.208, "true posterior", color=BLUE, fontsize=11,
+             ha="left")
+    axb.text(1.02, 0.030, "Laplace:\nmisses the skew", color=ORANGE,
+             fontsize=10.5, ha="left")
+    axb.fill_between(x, dens, gauss, where=x > 4.9, color=BLUE, alpha=0.15,
+                     lw=0)
+    axb.text(7.05, 0.045, "tail mass the\nGaussian drops", color=BLUE,
+             fontsize=10.5, ha="left", va="center")
+    axb.set_xlabel(r"$\theta$")
+    axb.set_ylabel("density")
+    axb.set_yticks([])
+    for ax in (axa, axb):
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-prob-bayes-laplace")
+
+
+def fig_bayes_kl_modes():
+    """Which KL you optimize decides how a too-simple family fails.  Bimodal
+    target; the reverse-KL Gaussian (what variational inference minimizes)
+    locks onto one mode, because putting q-mass where p is tiny is charged
+    infinitely; the forward-KL Gaussian (moment matching) covers both modes
+    and puts mass in the valley between them.  Both Gaussians found by grid
+    minimization of their KL, not by sketching."""
+    x = np.linspace(-4.6, 4.6, 1400)
+    dx = x[1] - x[0]
+
+    def gauss(t, m, s):
+        return np.exp(-0.5 * ((t - m) / s) ** 2) / (s * np.sqrt(2 * np.pi))
+
+    p = 0.5 * gauss(x, -1.6, 0.5) + 0.5 * gauss(x, 1.6, 0.5)
+
+    # forward KL(p || q): moment matching is the exact optimum
+    m_f = np.sum(x * p) * dx
+    s_f = np.sqrt(np.sum((x - m_f) ** 2 * p) * dx)
+    q_f = gauss(x, m_f, s_f)
+
+    # reverse KL(q || p): coarse grid minimization
+    best = (np.inf, 0.0, 1.0)
+    for m in np.linspace(-2.4, 2.4, 97):
+        for s in np.linspace(0.25, 2.4, 87):
+            q = gauss(x, m, s)
+            kl = np.sum(q * (np.log(q + 1e-300) - np.log(p + 1e-300))) * dx
+            if kl < best[0]:
+                best = (kl, m, s)
+    q_r = gauss(x, best[1], best[2])
+
+    fig, ax = plt.subplots(figsize=(7.6, 4.0))
+    ax.plot(x, p, color=BLUE, lw=2.6, zorder=4)
+    ax.plot(x, q_r, color=ORANGE, lw=2.2, ls="--", zorder=4)
+    ax.plot(x, q_f, color=GREEN, lw=2.2, ls="-.", zorder=4)
+    top = max(p.max(), q_r.max(), q_f.max())
+    ax.text(-1.6, p.max() + 0.035, r"target $p$", color=BLUE, fontsize=11.5,
+            ha="center")
+    ax.text(2.65, 0.62, "reverse KL:\nmode-seeking", color=ORANGE,
+            fontsize=11, ha="left", va="center")
+    ax.text(-3.65, 0.16, "forward KL:\nmass-covering", color=GREEN,
+            fontsize=11, ha="center", va="center")
+    ax.set_xlabel(r"$\theta$")
+    ax.set_ylabel("density")
+    ax.set_yticks([])
+    ax.set_ylim(0, top * 1.12)
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-prob-bayes-kl-modes")
+
+
 FIGURES = [
     # random variables
     fig_marginal,
@@ -1320,6 +1533,11 @@ FIGURES = [
     fig_type_i_ii_matrix,
     fig_coverage_strip,
     fig_bootstrap,
+    # bayesian computation
+    fig_bayes_importance,
+    fig_bayes_metropolis,
+    fig_bayes_laplace,
+    fig_bayes_kl_modes,
 ]
 
 

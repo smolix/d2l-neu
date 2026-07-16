@@ -38,6 +38,8 @@ import tempfile
 from pathlib import Path
 from urllib.parse import quote
 
+from export_hosted_env import load_profile
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INPUT = ROOT / "_notebooks"
@@ -47,16 +49,6 @@ DEFAULT_KAGGLE_MAP = ROOT / "hosted_notebooks_kaggle.json"
 REPOSITORY = "smolix/d2l-neu"
 BRANCH = "notebooks"
 HOSTED_FRAMEWORKS = ("pytorch", "tensorflow", "jax")
-# Hosted JAX notebooks download d2l/jax.py from the build revision, so their
-# runtime must match the NNX stack against which that helper was generated.
-# TensorFlow is part of this stack because d2l/jax.py uses it for data loading;
-# pinning it also gives TF and its Protobuf runtime a coherent version pair.
-HOSTED_JAX_VERSIONS = {
-    "jax": ("0.10.2", "jax[cuda12]==0.10.2"),
-    "flax": ("0.12.7", "flax==0.12.7"),
-    "optax": ("0.2.8", "optax==0.2.8"),
-    "tensorflow": ("2.21.0", "tensorflow==2.21.0"),
-}
 
 _CODE_BLOCK_RE = re.compile(r"```\{\.python[^\n]*\}\n(.*?)```", re.DOTALL)
 _TAB_RE = re.compile(r"^(?:%%tab|#@tab)\s+([^\n]+)$", re.MULTILINE)
@@ -73,6 +65,11 @@ _IMPORT_RE = re.compile(
     r"^\s*(?:from\s+([A-Za-z_]\w*)|import\s+([A-Za-z_]\w*))",
     re.MULTILINE,
 )
+_D2L_SUBMODULE_RE = re.compile(
+    r"^\s*(?:from\s+d2l\.([A-Za-z_]\w*)\s+import|"
+    r"import\s+d2l\.([A-Za-z_]\w*))",
+    re.MULTILINE,
+)
 _CELL_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _OPTIONAL_PACKAGES = {
     "gpytorch": "gpytorch",
@@ -84,9 +81,12 @@ _OPTIONAL_PACKAGES = {
     "tiktoken": "tiktoken",
 }
 _PACKAGE_IMPORTS = {
+    "ml-dtypes": "ml_dtypes",
     "orbax-checkpoint": "orbax",
     "pillow": "PIL",
+    "protobuf": "google.protobuf",
     "syne-tune": "syne_tune",
+    "tf-keras": "tf_keras",
     "tensorflow-probability": "tensorflow_probability",
 }
 
@@ -171,65 +171,153 @@ def _normalized_cell_id(cell: dict, index: int, used: set[str]) -> str:
 
 
 def _setup_cell(variant: str, revision: str,
-                optional_packages: tuple[str, ...] = ()) -> dict:
+                optional_packages: tuple[str, ...] = (),
+                helper_modules: tuple[str, ...] = ()) -> dict:
     common = "numpy pandas matplotlib requests scipy pillow regex"
+    profile = load_profile(variant)
     if variant == "pytorch":
         module = "torch"
-        packages = f"{common} torch torchvision".split()
     elif variant == "tensorflow":
         module = "tensorflow"
-        packages = f"{common} tensorflow".split()
     else:
         module = "jax"
-        packages = f"{common} jax flax optax tensorflow".split()
-    pinned = HOSTED_JAX_VERSIONS if variant == "jax" else {}
-    packages.extend(optional_packages)
+    helper_files = tuple(dict.fromkeys(
+        ("__init__.py", f"{module}.py",
+         *(f"{name}.py" for name in helper_modules))
+    ))
+    requested_optional = set(optional_packages)
+    if "tensorflow-probability" in requested_optional:
+        requested_optional.add("tf-keras")
+    optional_by_name = {
+        package["distribution"]: package
+        for package in profile["optional_packages"]
+    }
+    core_names = {
+        package["distribution"] for package in profile["packages"]
+    }
+    unknown = requested_optional - set(optional_by_name) - core_names
+    if unknown:
+        raise ValueError(
+            f"{variant} optional packages are not locked: {sorted(unknown)}"
+        )
+    locked = profile["packages"] + [
+        optional_by_name[name]
+        for name in sorted(requested_optional & set(optional_by_name))
+    ]
+    packages = common.split() + [
+        package["distribution"] for package in locked
+    ]
+    pinned = {
+        package["distribution"]: (
+            package["version"], package["requirement"],
+            package.get("gpu_requirement", package["requirement"]),
+            package["match"]
+        )
+        for package in locked if package["hosted_policy"] == "exact"
+    }
+    fallbacks = {
+        package["distribution"]: package["requirement"]
+        for package in locked if package["hosted_policy"] == "preserve"
+    }
+    packages = list(dict.fromkeys(packages))
     imports = {package: _PACKAGE_IMPORTS[package]
                for package in packages if package in _PACKAGE_IMPORTS}
     source = f'''# Hosted D2L setup: fetch the exact helper module used to build this notebook.
 from pathlib import Path
 from urllib.request import urlretrieve
 from importlib.metadata import PackageNotFoundError, version
-import importlib.util, subprocess, sys
+import importlib.util, os, subprocess, sys
 
 required = {packages!r}
 imports = {imports!r}
 pinned = {pinned!r}
+fallbacks = {fallbacks!r}
+device = os.environ.get("D2L_HOSTED_DEVICE", "auto").lower()
+if device not in ("auto", "cpu", "gpu"):
+    raise ValueError(f"Invalid D2L_HOSTED_DEVICE={{device!r}}")
+if device == "auto":
+    try:
+        gpu = (Path("/dev/nvidia0").exists() or
+               subprocess.run(["nvidia-smi", "-L"], capture_output=True,
+                              timeout=5).returncode == 0)
+    except (FileNotFoundError, subprocess.SubprocessError):
+        gpu = False
+else:
+    gpu = device == "gpu"
+if not gpu:
+    os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
+    os.environ.setdefault("JAX_PLATFORMS", "cpu")
+tensorflow_version = None
+if {variant!r} in ("tensorflow", "jax"):
+    try:
+        tensorflow_version = version("tensorflow")
+    except PackageNotFoundError:
+        pass
+# Colab's CPU image currently carries a CUDA-enabled TensorFlow wheel. Its
+# first ordinary tensor operation probes CUDA and emits an error-level cuInit
+# diagnostic. JAX notebooks also use TensorFlow for data loading, so overlay
+# the matching CPU build in both CPU variants. Keep the provider's
+# ``tensorflow`` distribution metadata: other preinstalled Colab packages
+# depend on that distribution name, while both wheels expose the same module.
+if not gpu and {variant!r} in ("tensorflow", "jax"):
+    try:
+        tensorflow_cpu_version = version("tensorflow-cpu")
+    except PackageNotFoundError:
+        tensorflow_cpu_version = None
+    if (tensorflow_version is not None and
+            tensorflow_cpu_version != tensorflow_version):
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install", "-q", "--no-deps",
+            f"tensorflow-cpu=={{tensorflow_version}}",
+        ])
+if "tf-keras" in fallbacks and tensorflow_version is not None:
+    fallbacks["tf-keras"] = f"tf-keras=={{tensorflow_version}}"
 missing = []
 for package in required:
     if package in pinned:
-        wanted, requirement = pinned[package]
+        wanted, cpu_requirement, gpu_requirement, match = pinned[package]
+        requirement = gpu_requirement if gpu else cpu_requirement
         try:
             installed = version(package)
         except PackageNotFoundError:
             installed = None
-        if installed != wanted:
+        actual = (installed.split("+", 1)[0]
+                  if installed is not None and match == "public" else installed)
+        if actual != wanted:
             missing.append(requirement)
     elif importlib.util.find_spec(imports.get(package, package)) is None:
-        missing.append(package)
-# TensorFlow Probability still uses the legacy TF-Keras package. If this page
-# needs it, match TF-Keras to Colab's existing TensorFlow minor release instead
-# of allowing pip to replace the provider's coherent TensorFlow/CUDA stack.
-if "tensorflow-probability" in required and (
-        importlib.util.find_spec("tensorflow_probability") is None or
-        importlib.util.find_spec("tf_keras") is None):
-    import tensorflow as _tf
-    tf_minor = ".".join(_tf.__version__.split(".")[:2])
-    missing = [p for p in missing if p != "tensorflow-probability"]
-    missing.extend(["tensorflow-probability", f"tf-keras~={{tf_minor}}.0"])
+        missing.append(fallbacks.get(package, package))
 if missing:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
+
+mismatched = []
+for package, (wanted, _, _, match) in pinned.items():
+    try:
+        installed = version(package)
+    except PackageNotFoundError:
+        installed = None
+    actual = (installed.split("+", 1)[0]
+              if installed is not None and match == "public" else installed)
+    if actual != wanted:
+        mismatched.append(f"{{package}}={{installed!r}} (expected {{wanted}})")
+if mismatched:
+    raise RuntimeError("Hosted runtime setup failed: " + ", ".join(mismatched))
 
 root = Path(".d2l-hosted") / "{revision}"
 package = root / "d2l"
 package.mkdir(parents=True, exist_ok=True)
 base = "https://raw.githubusercontent.com/{REPOSITORY}/{revision}/d2l"
-for name in ("__init__.py", "{module}.py"):
+for name in {helper_files!r}:
     target = package / name
     if not target.exists():
         urlretrieve(f"{{base}}/{{name}}", target)
 if str(root.resolve()) not in sys.path:
     sys.path.insert(0, str(root.resolve()))
+pythonpath = os.environ.get("PYTHONPATH", "").split(os.pathsep)
+if str(root.resolve()) not in pythonpath:
+    os.environ["PYTHONPATH"] = os.pathsep.join(
+        [str(root.resolve()), *[entry for entry in pythonpath if entry]]
+    )
 '''
     return {
         "cell_type": "code",
@@ -247,6 +335,7 @@ def normalize_notebook(src: Path, variant: str, revision: str) -> dict:
     cells = []
     uses_d2l = False
     optional_packages = set()
+    helper_modules = set()
     for cell in nb.get("cells", []):
         source = _source_string(cell.get("source"))
         if cell.get("cell_type") == "markdown":
@@ -264,13 +353,18 @@ def normalize_notebook(src: Path, variant: str, revision: str) -> dict:
             optional_packages.update(
                 _OPTIONAL_PACKAGES[module]
                 for module in modules if module in _OPTIONAL_PACKAGES)
+            helper_modules.update(
+                match.group(1) or match.group(2)
+                for match in _D2L_SUBMODULE_RE.finditer(source)
+            )
             cell.setdefault("outputs", [])
             cell.setdefault("execution_count", None)
         cells.append(cell)
 
     if uses_d2l and variant in set(HOSTED_FRAMEWORKS):
         cells.insert(0, _setup_cell(
-            variant, revision, tuple(sorted(optional_packages))))
+            variant, revision, tuple(sorted(optional_packages)),
+            tuple(sorted(helper_modules))))
 
     used_ids: set[str] = set()
     for index, cell in enumerate(cells):
@@ -291,6 +385,10 @@ def normalize_notebook(src: Path, variant: str, revision: str) -> dict:
         "variant": variant,
         "generated": True,
     }
+    if variant in HOSTED_FRAMEWORKS:
+        metadata["d2l"]["environment_sha256"] = load_profile(variant)[
+            "environment_sha256"
+        ]
     return nb
 
 

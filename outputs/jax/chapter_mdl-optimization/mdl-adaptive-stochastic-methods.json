@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-optimization/mdl-adaptive-stochastic-methods.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "adaptive-stochastic-methods-imports": {
+      "code_fingerprint": "sha256:233bb22443fdb8d00cee4bd8b5c7179c8539bb43e5758a2feab0634b896f1ee6",
+      "kind": "text",
+      "outputs": []
+    },
+    "adaptive-stochastic-methods-ghadimi-lan": {
+      "code_fingerprint": "sha256:db13a23690217180bc2e632efe2e0206b5751fbf66758357ba03d6e040ff4eab",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    K    eta_K     E|grad(x_R)|^2   min-so-far\n  125   0.0447      2.134e-01      9.385e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  500   0.0224      8.485e-02      1.398e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 2000   0.0112      3.774e-02      2.973e-04\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 8000   0.0056      1.729e-02      5.428e-05\nlog-log slope, random iterate: -0.60  (theory: -1/2)\nlog-log slope, min-so-far:     -1.23\n"
+        }
+      ]
+    },
+    "adaptive-stochastic-methods-reddi": {
+      "code_fingerprint": "sha256:10e84f7ea1ed6fa76b3a15e88c3072dae9f01da2f6f9955ec8cddd06048d6be6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        x_t at t =    30      300     3000    15000     (x* = -1)\nadam        0.745    1.000    1.000    1.000\namsgrad    -0.953   -0.985   -0.995   -0.998\nsgd        -0.954   -0.986   -0.995   -0.998\n"
+        }
+      ]
+    },
+    "adaptive-stochastic-methods-adam-vs-gd": {
+      "code_fingerprint": "sha256:fff0456c963c178ae6dad1397ee57626e8bb0ed34d5ac02f1bfdd063aff59ae7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Adam reaches f < 1e-8 at k = 344\n"
+        }
+      ]
+    },
+    "adaptive-stochastic-methods-adamw": {
+      "code_fingerprint": "sha256:b1071eb4acbb68ce223d8a100169379ab8066839b74b91f3c3bfcd8b6fb36892",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per-step decay rate, l2 through Adam (alpha*lam/sigma_i): [1.e-05 1.e-03]\nper-step decay rate, AdamW (uniform):                     0.0001\n|w| after 4000 steps,  Adam + l2: [0.9677 0.0235]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "|w| after 4000 steps,  AdamW    : [0.6681 0.6598]\nAdamW prediction (1 - alpha*lam)^T = 0.6703\n"
+        }
+      ]
+    },
+    "adaptive-stochastic-methods-schedules": {
+      "code_fingerprint": "sha256:6c57279254ac1bb4d1d642dcecf1a3b1262059910a2e7fd3a0b51e6491373593",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "         E f at 80% budget   E f at end     (floor ~ 0.088)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "constant       9.53e-02       9.19e-02\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "c/k decay      2.82e-03       1.94e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cosine         8.71e-03       1.58e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "WSD 80/20      9.53e-02       5.48e-03\n"
+        }
+      ]
+    },
+    "mdl-adaptive-svrg": {
+      "code_fingerprint": "sha256:7b2f5f1f90b9756cca862709a5a54371130160d9287f52930e846a3385fb7546",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
+          "bytes": 29558,
+          "sha256": "sha256:1c29cc1ce3fd182243fa3f239a55a5ec0ea9275aaa8346d9e7eea54911c16570"
+        }
+      ]
+    }
+  }
+}

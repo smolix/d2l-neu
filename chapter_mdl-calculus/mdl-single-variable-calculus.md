@@ -61,7 +61,6 @@ import math
 import numpy as onp
 from d2l import tensorflow as d2l
 import tensorflow as tf
-tf.pi = tf.acos(tf.zeros(1)).numpy() * 2  # Define pi in TensorFlow
 ```
 
 ```{.python .input #single-variable-calculus-imports}

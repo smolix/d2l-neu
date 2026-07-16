@@ -1,0 +1,99 @@
+{
+  "critical_apis": [
+    "tensorflow.GradientTape",
+    "tensorflow.data.Dataset",
+    "tensorflow.keras.optimizers.SGD"
+  ],
+  "environment_sha256": "ea7887753a58db3ad62031d4147730c2759eee940c4f16788e3988760053dcf0",
+  "framework": "tensorflow",
+  "optional_packages": [
+    {
+      "constraint": "gymnasium==1.2.3",
+      "distribution": "gymnasium",
+      "hosted_policy": "exact",
+      "import": "gymnasium",
+      "match": "exact",
+      "requirement": "gymnasium[toy-text]==1.2.3",
+      "version": "1.2.3"
+    },
+    {
+      "constraint": "safetensors==0.8.0",
+      "distribution": "safetensors",
+      "hosted_policy": "exact",
+      "import": "safetensors",
+      "match": "exact",
+      "requirement": "safetensors==0.8.0",
+      "version": "0.8.0"
+    },
+    {
+      "constraint": "tensorflow-probability==0.25.0",
+      "distribution": "tensorflow-probability",
+      "hosted_policy": "exact",
+      "import": "tensorflow_probability",
+      "match": "exact",
+      "requirement": "tensorflow-probability[tf]==0.25.0",
+      "version": "0.25.0"
+    },
+    {
+      "constraint": "tf-keras==2.21.0",
+      "distribution": "tf-keras",
+      "hosted_policy": "preserve",
+      "import": "tf_keras",
+      "match": "exact",
+      "requirement": "tf-keras==2.21.0",
+      "version": "2.21.0"
+    },
+    {
+      "constraint": "tiktoken==0.13.0",
+      "distribution": "tiktoken",
+      "hosted_policy": "exact",
+      "import": "tiktoken",
+      "match": "exact",
+      "requirement": "tiktoken==0.13.0",
+      "version": "0.13.0"
+    }
+  ],
+  "packages": [
+    {
+      "constraint": "tensorflow==2.21.0",
+      "distribution": "tensorflow",
+      "hosted_policy": "preserve",
+      "import": "tensorflow",
+      "match": "exact",
+      "requirement": "tensorflow==2.21.0",
+      "version": "2.21.0"
+    },
+    {
+      "constraint": "keras==3.14.0",
+      "distribution": "keras",
+      "hosted_policy": "preserve",
+      "import": "keras",
+      "match": "exact",
+      "requirement": "keras==3.14.0",
+      "version": "3.14.0"
+    },
+    {
+      "constraint": "protobuf==7.34.1",
+      "distribution": "protobuf",
+      "hosted_policy": "preserve",
+      "import": "google.protobuf",
+      "match": "exact",
+      "requirement": "protobuf==7.34.1",
+      "version": "7.34.1"
+    },
+    {
+      "constraint": "ml-dtypes==0.5.4",
+      "distribution": "ml-dtypes",
+      "hosted_policy": "preserve",
+      "import": "ml_dtypes",
+      "match": "exact",
+      "requirement": "ml-dtypes==0.5.4",
+      "version": "0.5.4"
+    }
+  ],
+  "platform": "linux-x86_64",
+  "python": "3.12",
+  "schema_version": 2,
+  "source_lock": "uv.lock",
+  "source_lock_sha256": "03bd597e77581e84b9080c73128a1af3ddcdc20000f62b56466f478299acae18"
+}

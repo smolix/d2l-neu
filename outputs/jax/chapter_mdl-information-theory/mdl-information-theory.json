@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, np.float64(0.5041192221669659))"
+          "text": "(0.5, np.float64(0.5036180549565036))"
         }
       ]
     },
@@ -121,8 +121,19 @@
         }
       ]
     },
+    "mdl-information-theory-typical-sequences-and-the-source-coding-theorem": {
+      "code_fingerprint": "sha256:835ab5dc226b678d9d533eff664acd5befbf96e4648390e253b4b1aa6f1963fb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "entropy H = 0.881 bits/symbol, so nH = 176 bits\ntypical strings: 2^188.8 of all 2^200\nprobability they carry: 0.9893\n"
+        }
+      ]
+    },
     "information-theory-perplexity": {
-      "code_fingerprint": "sha256:fceef1520a77bd1a5a9d871202e756b2a2674b0869fd05c4325698769290adfe",
+      "code_fingerprint": "sha256:84dcb9943bee272ca67bf0d07c0cc06a05b96cb3fcfe17947a19042b0c8d1c48",
       "kind": "text",
       "outputs": [
         {
@@ -133,7 +144,7 @@
       ]
     },
     "information-theory-label-smoothing": {
-      "code_fingerprint": "sha256:285341ae4739b9b9934d0d25776b180a1becbcaba4e9dfc0e026483f82372865",
+      "code_fingerprint": "sha256:77bc23147d95ea125e4253c0089432a92af5e910d08a3af46b82adbae2b97992",
       "kind": "text",
       "outputs": [
         {
@@ -144,7 +155,7 @@
       ]
     },
     "information-theory-distillation": {
-      "code_fingerprint": "sha256:425462367afa6d1f4fbed04e54f86caf2d7da518e322036e9aa53f03598b793f",
+      "code_fingerprint": "sha256:d2008bf3ebc440c97f91e0c83bc07372eae48e50492e668942aff26c0fb749d4",
       "kind": "text",
       "outputs": [
         {

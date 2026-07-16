@@ -187,7 +187,7 @@ print(f"{purchase_and_operation / rental_per_productive_hour:.0f} "
       "productive hours to break even")
 ```
 
-The honest inputs are *productive* hours (a home box idles more than you
+The relevant inputs are *productive* hours (a home box idles more than you
 think) — against which weigh privacy, zero queue time, and the real
 pedagogical value of hardware you can take apart.
 

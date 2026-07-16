@@ -136,7 +136,10 @@ export PYTHONUNBUFFERED := 1
 .PHONY: help all all-quick rebuild-book-artifacts check-all-artifacts html lib clean veryclean
 .PHONY: pdf pdfs $(addprefix pdf-,$(FRAMEWORKS))
 .PHONY: notebooks run-all-notebooks slides notebook-env-locks notebook-zips
-.PHONY: hosted-notebooks check-hosted-notebooks dry-run-notebooks-branch publish-notebooks-branch
+.PHONY: hosted-notebooks hosted-env-locks check-hosted-env-locks
+.PHONY: check-hosted-runtime-contracts check-hosted-notebooks
+.PHONY: check-hosted-docker check-hosted-docker-cpu check-hosted-docker-gpu
+.PHONY: dry-run-notebooks-branch publish-notebooks-branch
 .PHONY: capture-outputs audit-outputs verify-outputs-fresh refresh-stale render-fresh test-trap
 
 # ── Help ───────────────────────────────────────────────────
@@ -154,7 +157,9 @@ help:
 	@echo "  notebook-env-locks      [any] Refresh downloadable CPU/GPU uv locks (network)"
 	@echo "  notebook-zips           [any] Build runnable per-framework notebook downloads"
 	@echo "  hosted-notebooks        [any] Stage PyTorch/TF/JAX/NumPy notebooks + site manifest"
-	@echo "  check-hosted-notebooks  [any] Verify hosted notebook staging is deterministic"
+	@echo "  hosted-env-locks        [any] Regenerate hosted profiles/constraints from uv.lock"
+	@echo "  check-hosted-notebooks  [any] Verify hosted staging + runtime contracts"
+	@echo "  check-hosted-docker     [GPU] Opt-in Colab CPU/GPU framework matrix (slow)"
 	@echo "  dry-run-notebooks-branch      Build the generated branch commit without pushing"
 	@echo "  publish-notebooks-branch      Replace and push the generated notebooks branch"
 	@echo "  capture-outputs         [any] Bless executed _notebooks/ → committed outputs/ [FILES=...]"
@@ -517,12 +522,48 @@ notebooks-%: _notebooks/%/.generated _notebooks/%/.symlinks
 
 # Public, provider-neutral notebook tree. NumPy variants are derived from
 # framework-independent sources in the PyTorch generation tree.
-hosted-notebooks: notebooks-pytorch notebooks-tensorflow notebooks-jax
+hosted-env-locks:
+	@python3 tools/export_hosted_env.py generate
+
+check-hosted-env-locks:
+	@python3 tools/export_hosted_env.py check
+
+hosted-notebooks: check-hosted-env-locks notebooks-pytorch notebooks-tensorflow notebooks-jax
 	@python3 tools/build_hosted_notebooks.py build
 
-check-hosted-notebooks: hosted-notebooks
-	@PYTHONPATH=tools python3 -m unittest tools/test_build_hosted_notebooks.py
+check-hosted-runtime-contracts: check-hosted-env-locks d2l/.built \
+		.venv-pytorch/.synced .venv-tensorflow/.synced .venv-jax/.synced
+	@env MPLBACKEND=Agg OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+		.venv-pytorch/bin/python tools/check_hosted_runtime.py pytorch
+	@env MPLBACKEND=Agg TF_FORCE_GPU_ALLOW_GROWTH=true \
+		TF_NUM_INTRAOP_THREADS=2 TF_NUM_INTEROP_THREADS=2 \
+		OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+		.venv-tensorflow/bin/python tools/check_hosted_runtime.py tensorflow
+	@env MPLBACKEND=Agg XLA_PYTHON_CLIENT_PREALLOCATE=false \
+		OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+		.venv-jax/bin/python tools/check_hosted_runtime.py jax
+
+check-hosted-notebooks: hosted-notebooks check-hosted-runtime-contracts
+	@PYTHONPATH=tools python3 -m unittest \
+		tools/test_export_hosted_env.py tools/test_check_hosted_runtime.py \
+		tools/test_build_hosted_notebooks.py tools/test_check_pip_delta.py \
+		tools/test_run_hosted_docker.py
 	@python3 tools/build_hosted_notebooks.py check
+
+# Slow, opt-in provider compatibility canary. It runs serial, executes no full
+# notebook, and hard-limits every ephemeral container. Select cases or storage
+# policy without changing the Makefile, for example:
+#   make check-hosted-docker HOSTED_DOCKER_ARGS='--device cpu'
+#   make check-hosted-docker HOSTED_DOCKER_ARGS='--prune-other-image'
+HOSTED_DOCKER_ARGS ?=
+check-hosted-docker: check-hosted-env-locks
+	@python3 tools/run_hosted_docker.py $(HOSTED_DOCKER_ARGS)
+
+check-hosted-docker-cpu: check-hosted-env-locks
+	@python3 tools/run_hosted_docker.py --device cpu $(HOSTED_DOCKER_ARGS)
+
+check-hosted-docker-gpu: check-hosted-env-locks
+	@python3 tools/run_hosted_docker.py --device gpu $(HOSTED_DOCKER_ARGS)
 
 dry-run-notebooks-branch: check-hosted-notebooks
 	@tools/publish_notebooks_branch.sh _hosted_notebooks notebooks --dry-run

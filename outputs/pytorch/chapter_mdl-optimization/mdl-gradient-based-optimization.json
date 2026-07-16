@@ -53,12 +53,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "per-mode factors x_1/x_0 ="
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " [ 0.818182 -0.818182]  predicted 1 - eta* lambda = [ 0.818182 -0.818182]\nmeasured contraction |x_k+1| / |x_k|: min 0.818182, max 0.818182\npredicted (kappa-1)/(kappa+1) = 0.818182\n"
+          "text": "per-mode factors x_1/x_0 = [ 0.818182 -0.818182]  predicted 1 - eta* lambda = [ 0.818182 -0.818182]\nmeasured contraction |x_k+1| / |x_k|: min 0.818182, max 0.818182\npredicted (kappa-1)/(kappa+1) = 0.818182\n"
         }
       ]
     },
@@ -109,7 +104,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
           "bytes": 100456,
-          "sha256": "sha256:32ece0d917d63c37b0757d69604e51cfea271760da7db3e654b4b0768801cb2d"
+          "sha256": "sha256:fe417754214d53a4361ffe78a535581bc40fe1634d800cd23c93db819e7c1037"
         }
       ]
     },
@@ -125,13 +120,20 @@
       ]
     },
     "mdl-gradient-bfgs-quadratic": {
-      "code_fingerprint": "sha256:42f9a947e2c31a575116886283bc75e6f672c4b907567486d37dc7e7e4ce0729",
-      "kind": "text",
+      "code_fingerprint": "sha256:5a8eabf0468bef29aab5bbc1f17ddbe27b16c84c3b59b48c3c7fc2fe3901404a",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "BFGS step 1: distance to optimum 7.85e-01\nBFGS step 2: distance to optimum 7.66e-01\nBFGS step 3: distance to optimum 7.13e-01\nBFGS step 4: distance to optimum 6.35e-01\nBFGS step 5: distance to optimum 4.68e-02\nBFGS step 6: distance to optimum 1.05e-14\nGD after the same 6 iterations: 7.94e-01\n"
+          "text": "after d = 6 steps: BFGS 1.05e-14, GD 7.94e-01\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-gradient-based-optimization/mdl-gradient-bfgs-quadratic-1.svg",
+          "bytes": 28838,
+          "sha256": "sha256:ecab4d7ccf2d646ec1e293c6a120ecae0a466be3c1a69fbac552d8d550caa69a"
         }
       ]
     }

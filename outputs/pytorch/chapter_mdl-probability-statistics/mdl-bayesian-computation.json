@@ -4,22 +4,22 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "d2l_lib_fingerprint": "sha256:c331c425e61294a34df98bc5aa3a46f822d5b083c2df77144f35a38e6963aaf2",
     "max_inline_bytes": 0
   },
   "cells": {
     "bayesian-computation-imports": {
-      "code_fingerprint": "sha256:a081394b455f8e2468af85581ae4d2203edf9db139324d9a81f43db2d6738f53",
+      "code_fingerprint": "sha256:81e703cb4950d4e170895e8cb478d065a075863abe4d5407525405af88e09586",
       "kind": "text",
       "outputs": []
     },
     "bayesian-computation-model": {
-      "code_fingerprint": "sha256:db95e22a8bc2adfd982aca36cc7a1bbc5bbe33cface78af337a0b03dca2c8fd6",
+      "code_fingerprint": "sha256:5c42459898f8296981fed1106ae9f06ccf4f2a5757224e50d8e1c3899c8b7452",
       "kind": "text",
       "outputs": []
     },
     "bayesian-computation-grid": {
-      "code_fingerprint": "sha256:c46cf6b4bb08ff16cd3bab56752342a0693e172673411f5cf6df459d892181d7",
+      "code_fingerprint": "sha256:c201be74d597934e72b278768c634e711e0402919f82f731b0a6e75be6793f36",
       "kind": "text",
       "outputs": [
         {
@@ -30,7 +30,7 @@
       ]
     },
     "bayesian-computation-map-predictive": {
-      "code_fingerprint": "sha256:6b4125c8ea1030c79cf3f3f6b66236b407591f0e7967cdc7e3414e0c6176b7b7",
+      "code_fingerprint": "sha256:e627345699c1b2ad7d87bbb5529a75d16e7d4a9ec98e9e952eba5be89a484e1b",
       "kind": "text",
       "outputs": [
         {
@@ -41,7 +41,7 @@
       ]
     },
     "bayesian-computation-importance": {
-      "code_fingerprint": "sha256:7b47ef17ab57c72ccb823a06e4253da3e10fe2e4d7d43863c31fa18a263305bd",
+      "code_fingerprint": "sha256:a0cb16cec0f582b819a820a7873a153f87da12c213eecff384debcb65ce1fbb7",
       "kind": "text",
       "outputs": [
         {
@@ -52,7 +52,7 @@
       ]
     },
     "bayesian-computation-metropolis": {
-      "code_fingerprint": "sha256:ea01a00a9ce076f6b39cbee567127440e588ab8c26246faf976d7749e1c35d8a",
+      "code_fingerprint": "sha256:b8f10417be8b055ed04761f9d14ad10f3ec2965a097353c138c0b210993f3868",
       "kind": "text",
       "outputs": [
         {
@@ -63,7 +63,7 @@
       ]
     },
     "bayesian-computation-mcmc-diagnostics": {
-      "code_fingerprint": "sha256:af54cad759f0cd4786ce7d4743ac454683168a0cc7b7c927493a78ba24b182ce",
+      "code_fingerprint": "sha256:58ec004049fd3d194cf4be9aec31ccd4ba77f1985e2db4f898c66c299af51396",
       "kind": "mixed",
       "outputs": [
         {
@@ -73,15 +73,15 @@
         },
         {
           "type": "display_data",
-          "mime": "image/png",
-          "asset": "mdl-bayesian-computation/bayesian-computation-mcmc-diagnostics-1.png",
-          "bytes": 100355,
-          "sha256": "sha256:9a8afe6f5ae49a70570f4a74f80e321dcbe3f03e53054df94d7bea3b7e6518fa"
+          "mime": "image/svg+xml",
+          "asset": "mdl-bayesian-computation/bayesian-computation-mcmc-diagnostics-1.svg",
+          "bytes": 89462,
+          "sha256": "sha256:8de9575f12045635ad3a1f72708228636ec268c6ef0f6dd1917196bf61e53fdf"
         }
       ]
     },
     "bayesian-computation-variational": {
-      "code_fingerprint": "sha256:3998445ca0e2f56761074cc38b9bb3b2e3bbfae363ba378149fd5d4b21d3f2e2",
+      "code_fingerprint": "sha256:468590e0fa0c01e8f17e8aa0a964f16b5eed3be01d1799790ec33d76fa39f988",
       "kind": "text",
       "outputs": [
         {
@@ -92,15 +92,15 @@
       ]
     },
     "bayesian-computation-comparison-plot": {
-      "code_fingerprint": "sha256:c84e8fe9401b9f2c1f44253681a82c92693087d40595a875b69ec130b01ed785",
+      "code_fingerprint": "sha256:05d3d1a5d543f9fba1dbdf3b83585f6fa6d6fcb8502472cf930c467a65b1b9de",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
-          "mime": "image/png",
-          "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.png",
-          "bytes": 60041,
-          "sha256": "sha256:8bfce5c9aeb5705ed365f656dd4d1bf967e449d9ee3a1d85298a99b609cc289e"
+          "mime": "image/svg+xml",
+          "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.svg",
+          "bytes": 140281,
+          "sha256": "sha256:798eb8e10ccc9ebb5fafdf56eb5e97064ff05ea833fec3a8eb172cda69c213c3"
         }
       ]
     }

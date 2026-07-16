@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, 0.5033403477784936)"
+          "text": "(0.5, 0.5007301720150258)"
         }
       ]
     },
@@ -121,8 +121,19 @@
         }
       ]
     },
+    "mdl-information-theory-typical-sequences-and-the-source-coding-theorem": {
+      "code_fingerprint": "sha256:251b4fc83d43c4addb658debf77bb37c286b74b1bcc6b7a4c372723e00792295",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "entropy H = 0.881 bits/symbol, so nH = 176 bits\ntypical strings: 2^188.8 of all 2^200\nprobability they carry: 0.9893\n"
+        }
+      ]
+    },
     "information-theory-perplexity": {
-      "code_fingerprint": "sha256:0fa1544ea0de0956f75afc43e5162a4db3a27a11f2a2cd3ea115de7350143989",
+      "code_fingerprint": "sha256:3982f4f0047694a34f4d36a2a821a7fdc695f9fe0c45d0ab45d6d25844d1c416",
       "kind": "text",
       "outputs": [
         {
@@ -133,7 +144,7 @@
       ]
     },
     "information-theory-label-smoothing": {
-      "code_fingerprint": "sha256:e5a707a9a9f20915fe4420c8684b5014b3c70b8c11275da7362f91c881d814c7",
+      "code_fingerprint": "sha256:260e0698beef1c14857723b303e5d2ed19ccd27eeb0f92dbfaa10d38b34cb55d",
       "kind": "text",
       "outputs": [
         {
@@ -144,13 +155,18 @@
       ]
     },
     "information-theory-distillation": {
-      "code_fingerprint": "sha256:eb70a5c97cb759e56c3b23f319eb9b0a9f09b31e0db1e93f73c4a1b1d3d2397d",
+      "code_fingerprint": "sha256:adc952a86deb85e105042982ef7d1f147151d47e0eb6af83a02d2ece6bdaff16",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "T= 1.0  |autograd - closed| = 0.0e+00  T^2 grad = [-0.462, 0.441, 0.022]\nT= 2.0  |autograd - closed| = 3.0e-08  T^2 grad = [-0.672, 0.549, 0.123]\nT= 5.0  |autograd - closed| = 2.8e-09  T^2 grad = [-0.741, 0.478, 0.263]\nT=10.0  |autograd - closed| = 9.3e-10  T^2 grad = [-0.719, 0.413, 0.306]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "[07:12:15] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     }

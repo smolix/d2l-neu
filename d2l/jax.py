@@ -5,17 +5,20 @@ import jax
 # Force JAX to initialize CUDA (and load its own cuBLAS/cuSOLVER) before any
 # subsequent `import tensorflow` pulls in TF's bundled CUDA libraries. Without
 # this, TF's older cuBLAS is loaded first and jax.xla_bridge falls back to CPU.
-jax.devices()
+_jax_devices = jax.devices()
+_jax_uses_gpu = any(device.platform == 'gpu' for device in _jax_devices)
 import tensorflow as _tf
 # TF is only used for data loading in JAX notebooks; hide GPUs from it so it
 # doesn't fight JAX for the pre-allocated GPU memory (avoids transient
 # "Dst tensor is not initialized" OOMs seen when multiple notebooks share a
 # device).
-try:
-    _tf.config.set_visible_devices([], 'GPU')
-except RuntimeError:
-    for _tf_gpu in _tf.config.list_physical_devices('GPU'):
-        _tf.config.experimental.set_memory_growth(_tf_gpu, True)
+if _jax_uses_gpu:
+    try:
+        _tf.config.set_visible_devices([], 'GPU')
+    except RuntimeError:
+        for _tf_gpu in _tf.config.list_physical_devices('GPU'):
+            _tf.config.experimental.set_memory_growth(_tf_gpu, True)
+del _jax_devices, _jax_uses_gpu
 del _tf
 from jax import numpy as jnp
 from flax import nnx
@@ -248,7 +251,13 @@ class ProgressBoard(d2l.HyperParameters):
         axes.set_xlabel(self.xlabel)
         axes.set_ylabel(self.ylabel)
         axes.set_xscale(self.xscale)
-        axes.set_yscale(self.yscale)
+        # A smoothed series exists before it necessarily contains its first point.
+        # Matplotlib rejects an empty/nonpositive log axis, so keep the temporary
+        # live frame linear and apply the requested log scale as soon as a positive
+        # value is available. The final training figure therefore still uses log.
+        has_positive_y = any(p.y > 0 for _, values in series for p in values)
+        if self.yscale != 'log' or has_positive_y:
+            axes.set_yscale(self.yscale)
         if series: axes.legend()
 
     def _render(self, thread=False):

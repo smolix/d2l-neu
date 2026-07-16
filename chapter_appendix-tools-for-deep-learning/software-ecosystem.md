@@ -94,7 +94,7 @@ from *your* task — even fifty examples — and run the shortlist on it. The
 gap between leaderboard rank and performance on your distribution is
 routinely larger than the gap between adjacent leaderboard entries. The
 evaluation discipline this book has practiced throughout — held-out data,
-honest baselines, error analysis — applies to *choosing* models exactly
+meaningful baselines, error analysis — applies to *choosing* models exactly
 as it does to training them.
 
 ## Staying Current

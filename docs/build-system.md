@@ -638,6 +638,10 @@ request. Those run through the aggregate targets:
 | `make rebuild-book-artifacts` | `slides` → `html` → `notebook-zips` → `-j4 pdfs` → `check-all-artifacts`. Renders everything from `outputs/`. | No |
 | `make notebook-env-locks` | Refresh the committed `pylock.cpu.toml` and `pylock.gpu.toml` files under `notebook_envs/` from their `.in` inputs. MXNet also gets an Apple Silicon CPU lock. Requires package-index/network access; run only when changing reader dependencies. | No |
 | `make notebook-zips` | One runnable `d2l-<fw>.zip` per framework → `_book/notebooks/`. Each deterministic archive combines generated notebooks, committed outputs, referenced figures, the matching `d2l` source, `pyproject.toml`, and pinned CPU/GPU uv locks (`tools/build_notebook_zips.py`). Linked from the navbar **Notebooks** menu (`/notebooks/d2l-<fw>.zip`). | No |
+| `make hosted-env-locks` | Regenerate `hosted/hosted-lock-*.json` and `hosted/constraints-*.txt` from `uv.lock`. | No |
+| `make check-hosted-runtime-contracts` | Validate hosted package versions, imports, critical APIs, and one optimizer/state update in each local framework venv. | No notebooks |
+| `make check-hosted-notebooks` | Stage all hosted variants, run runtime contracts and focused tests, and verify deterministic output. | No notebooks |
+| `make check-hosted-docker` | Slowly test the generated setup layer and a real optimizer update for PyTorch, TensorFlow, and JAX on CPU and GPU in current official Colab images. | Six small contracts; no notebooks |
 | `make check-all-artifacts` | Asserts `_book/index.html`, `_slides/index.html`, `_book/slides/index.html` exist, per-fw PDFs, slide coverage, and per-fw notebook zips. | No |
 | `make clean` | Wipe build products (`_book _pdf _notebooks _slides`, generated `.qmd`, `d2l/.built`, stamps). **Keeps** `./data/`, `logs/`, `.upload-manifest-*.txt`. | — |
 | `make veryclean` | `clean` **plus** wipe `./data/` (datasets), `logs/`, upload manifests — forces dataset re-download. | — |
@@ -671,6 +675,108 @@ Things that bite if you don't know them:
   unchanged. Only a public-version change (`2.0.0 → 2.1.0`) or a per-cell code
   change invalidates. Re-capture after a same-public-version wheel rebuild is a
   deliberate choice, not something the gate forces.
+
+### 6.4.1 Hosted notebook environment contracts
+
+The public Colab/Kaggle notebooks download a revision-pinned `d2l` helper, so
+their framework runtime must match that revision too. Package presence is not a
+compatibility test: a provider may already contain an older Flax, or a newer
+generated Protobuf module with an older runtime. Hosted environments therefore
+have a committed, generated contract under `hosted/`:
+
+- `tools/export_hosted_env.py` reads `uv.lock` and emits one JSON profile and
+  pip constraints file for PyTorch, TensorFlow, and JAX. Core packages,
+  cross-framework ABI packages (`protobuf`, `ml-dtypes`), and page-specific
+  optional dependencies all get their reference versions from the lock. Each
+  core record also declares its hosted policy. Colab's coherent
+  PyTorch/TensorFlow/protobuf stack is preserved and validated behaviorally;
+  the JAX/Flax/Optax/Orbax NNX stack and notebook-specific optional packages are
+  exact pins. Extras such as `jax[cuda12]`, `tensorflow-probability[tf]`, and
+  `syne-tune[gpsearchers]` remain installation requirements while constraints
+  use their base distribution names.
+- `tools/build_hosted_notebooks.py` consumes those JSON files when creating the
+  setup cell. It embeds the environment fingerprint in notebook metadata,
+  preserves compatible provider-managed packages, installs exact mismatches in
+  one transaction, and validates those exact pins before downloading the
+  revision-pinned helper. A missing preserved package falls back to the lock
+  version. JAX selects its CPU wheel by default and its CUDA 12 extra only when
+  a GPU is available.
+- `tools/check_hosted_runtime.py` is the small compatibility canary. It checks
+  exact local versions by default. Its provider-compatible mode checks exact
+  hosted pins plus external API symbols, exercises the TensorFlow Metadata
+  Protobuf path, and performs a real optimizer update on the selected CPU or
+  GPU. The JAX contract additionally tests `nnx.view`, shared parameter state,
+  BatchNorm, Dropout, and a jitted update.
+
+The normal update sequence is:
+
+```bash
+# after changing pyproject.toml / uv.lock
+make hosted-env-locks
+
+# fast compatibility tests; no Docker and no notebook execution
+make check-hosted-runtime-contracts
+
+# full generation/publication gate
+make check-hosted-notebooks
+```
+
+`hosted-notebooks` fails when the generated profiles are stale, so a direct
+publication cannot silently combine a new lock with old setup cells. Dockerized
+Colab-image canaries remain an occasional, explicit check; these local contracts
+are the fast first gate.
+
+#### Colab Docker compatibility matrix
+
+Run the slow provider check after changing a framework stack, hosted setup
+logic, or when Colab updates its runtime:
+
+```bash
+make check-hosted-docker
+```
+
+`tools/run_hosted_docker.py` runs six serial cases: PyTorch, TensorFlow, and JAX
+on both CPU and GPU. Each case starts from the current official Colab image,
+executes the same generated setup cell published in notebooks, imports the
+revision-pinned downloaded `d2l` helper, and performs an optimizer update on the
+requested device. It also exercises the TensorFlow Metadata generated-Protobuf
+path. Full notebook execution is deliberately outside this canary.
+
+The harness defaults to at most 8 CPUs, 24 GiB RAM, 2,048 PIDs, one explicitly
+selected GPU, and serial execution. Overrides are rejected when they exceed the
+host's CPU count, 50% of currently available RAM, or the smaller of 4,096 PIDs
+and 75% of `RLIMIT_NPROC`. Framework thread pools, JAX preallocation, TensorFlow
+memory growth, shared memory, and pip's download cache are also bounded.
+Each case compares `pip check` before and after setup: conflicts already present
+in the provider image are reported as its baseline, while newly introduced
+conflicts fail the case. A zero process exit is not sufficient: the completed
+case log is also scanned, and CUDA/XLA error diagnostics, Python tracebacks, and
+version/API exceptions fail the case.
+
+Useful narrower runs are:
+
+```bash
+make check-hosted-docker-cpu
+make check-hosted-docker-gpu HOSTED_DOCKER_ARGS='--framework jax --gpu 1'
+make check-hosted-docker HOSTED_DOCKER_ARGS='--framework pytorch --device gpu'
+```
+
+The official CPU and GPU images are large and may share no layers. On a Docker
+volume that cannot hold both, process CPU and GPU serially and explicitly allow
+the harness to delete the other cached provider image before pulling:
+
+```bash
+make check-hosted-docker HOSTED_DOCKER_ARGS='--prune-other-image'
+```
+
+Images are otherwise retained, containers are always removed, and each run
+writes per-case setup scripts, output logs, the resolved immutable image digest,
+resource limits, timings, and `summary.json` under
+`logs/hosted-docker/<timestamp>/`. The default `:latest` tags intentionally
+detect provider drift; pass `--cpu-image` or `--gpu-image` to reproduce a
+specific image. Linux hosts need Docker plus NVIDIA Container Toolkit for GPU
+cases. `--network auto` uses bridge networking when its DNS works and otherwise
+falls back to host networking on Linux.
 
 ### 6.5 Updating a framework wheel pin (MXNet)
 

@@ -104,7 +104,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
           "bytes": 100456,
-          "sha256": "sha256:ab7e9c70c6069cec0d572632daa5c46e3547fd3a0177f6adb9c0b4bfe087cc7f"
+          "sha256": "sha256:5f945397a55d93ebdeb7c45f402189632ee58b9ce823c604088031ef8c2b2183"
         }
       ]
     },
@@ -120,13 +120,20 @@
       ]
     },
     "mdl-gradient-bfgs-quadratic": {
-      "code_fingerprint": "sha256:4baa8e7f7611df25d6695d4ecdfe4a5a7cecb53216ac160d46a2148ba153a35a",
-      "kind": "text",
+      "code_fingerprint": "sha256:3b4d5c322238b145bc53347ba6cf4beabbbb32e89bb9d37d704ee0ff20180192",
+      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "BFGS step 1: distance to optimum 7.85e-01\nBFGS step 2: distance to optimum 7.66e-01\nBFGS step 3: distance to optimum 7.13e-01\nBFGS step 4: distance to optimum 6.35e-01\nBFGS step 5: distance to optimum 4.68e-02\nBFGS step 6: distance to optimum 1.05e-14\nGD after the same 6 iterations: 7.94e-01\n"
+          "text": "after d = 6 steps: BFGS 1.05e-14, GD 7.94e-01\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-gradient-based-optimization/mdl-gradient-bfgs-quadratic-1.svg",
+          "bytes": 28838,
+          "sha256": "sha256:d3d2c748c4ab15a217e8920ff4f52c55bc960739067036b0ece90fd2d5af12db"
         }
       ]
     }

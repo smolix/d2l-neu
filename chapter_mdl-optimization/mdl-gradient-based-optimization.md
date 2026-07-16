@@ -1125,6 +1125,9 @@ A_bfgs = Q @ np.diag(np.geomspace(1., 1000., d_bfgs)) @ Q.T
 b_bfgs = rng.standard_normal(d_bfgs)
 x_star_bfgs = np.linalg.solve(A_bfgs, b_bfgs)
 x_bfgs, H_bfgs = np.zeros(d_bfgs), np.eye(d_bfgs)
+x_gd = np.zeros(d_bfgs)
+eta_gd = 2 / (1 + 1000)                       # optimal fixed quadratic step
+dist_bfgs, dist_gd = [], []
 for k in range(d_bfgs):
     g = A_bfgs @ x_bfgs - b_bfgs
     p_bfgs = -H_bfgs @ g
@@ -1135,15 +1138,14 @@ for k in range(d_bfgs):
     V = np.eye(d_bfgs) - rho * np.outer(step, y_diff)
     H_bfgs = V @ H_bfgs @ V.T + rho * np.outer(step, step)
     x_bfgs += step
-    print(f'BFGS step {k + 1}: distance to optimum '
-          f'{np.linalg.norm(x_bfgs - x_star_bfgs):.2e}')
-
-x_gd = np.zeros(d_bfgs)
-eta_gd = 2 / (1 + 1000)                       # optimal fixed quadratic step
-for _ in range(d_bfgs):
     x_gd -= eta_gd * (A_bfgs @ x_gd - b_bfgs)
-print(f'GD after the same {d_bfgs} iterations: '
-      f'{np.linalg.norm(x_gd - x_star_bfgs):.2e}')
+    dist_bfgs.append(np.linalg.norm(x_bfgs - x_star_bfgs))
+    dist_gd.append(np.linalg.norm(x_gd - x_star_bfgs))
+d2l.plot(np.arange(1, d_bfgs + 1), [dist_gd, dist_bfgs],
+         'iteration', 'distance to optimum',
+         legend=['gradient descent', 'BFGS'], yscale='log')
+print(f'after d = {d_bfgs} steps: BFGS {dist_bfgs[-1]:.2e}, '
+      f'GD {dist_gd[-1]:.2e}')
 ```
 
 The finite-termination property is an ideal quadratic benchmark, not a promise

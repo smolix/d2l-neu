@@ -909,12 +909,65 @@ def fig_ib_tradeoff():
     fl.save(fig, "mdl-it-ib-tradeoff")
 
 
+def fig_capacity_rd():
+    """Shannon's two operational curves, drawn to be read.  Left: the Gaussian
+    rate--distortion function R(D) = (1/2) log2(sigma^2/D) — the price list for
+    lossy compression: reconstruction quality is bought with bits, the cost
+    explodes as D -> 0, and beyond the source variance silence is free.
+    Right: binary-symmetric-channel capacity C = 1 - h2(eps) — what survives
+    noise: a clean channel carries one bit, a coin-flip channel carries none,
+    and a reliable *flipper* (eps = 1) is again perfect."""
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.8))
+
+    # --- left: Gaussian rate-distortion, sigma^2 = 1 ---
+    D = np.linspace(0.02, 1.45, 600)
+    R = np.where(D < 1.0, 0.5 * np.log2(np.maximum(1.0 / D, 1.0)), 0.0)
+    axa.plot(D, R, color=BLUE, lw=2.6, zorder=4)
+    axa.axvline(1.0, color=GRAY, lw=1.0, ls="--", zorder=2)
+    axa.fill_between(D, 0, 2.9, where=D >= 1.0, color=LIGHT, alpha=0.5, lw=0)
+    axa.text(0.10, 2.28, "exact recovery\nis infinitely\nexpensive",
+             color=BLUE, fontsize=10.5, ha="left", va="top")
+    axa.text(1.22, 1.45, "distortion $\\geq\\sigma^2$:\nsend nothing",
+             color=GRAY, fontsize=10.5, ha="center", va="center")
+    axa.set_xlabel(r"allowed distortion $D$  (squared error, $\sigma^2=1$)")
+    axa.set_ylabel(r"rate $R(D)$  (bits/sample)")
+    axa.set_xlim(0.0, 1.45)
+    axa.set_ylim(0.0, 2.9)
+    axa.set_title("Gaussian rate–distortion", fontsize=12)
+
+    # --- right: BSC capacity ---
+    eps = np.linspace(1e-4, 1 - 1e-4, 600)
+    h2 = -(eps * np.log2(eps) + (1 - eps) * np.log2(1 - eps))
+    C = 1 - h2
+    axb.plot(eps, C, color=ORANGE, lw=2.6, zorder=4)
+    axb.plot([0.5], [0.0], "o", color=ORANGE, ms=6, zorder=5)
+    axb.annotate("output independent\nof input: $C=0$",
+                 xy=(0.5, 0.0), xytext=(0.5, 0.42), fontsize=10.5,
+                 color="black", ha="center", va="bottom",
+                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.2))
+    axb.text(0.035, 0.90, "clean channel:\none full bit", color="black",
+             fontsize=10.5, ha="left", va="top")
+    axb.text(0.965, 0.90, "reliable flipper:\nalso perfect", color="black",
+             fontsize=10.5, ha="right", va="top")
+    axb.set_xlabel(r"flip probability $\varepsilon$")
+    axb.set_ylabel(r"capacity $C=1-h_2(\varepsilon)$  (bits/use)")
+    axb.set_xlim(0, 1)
+    axb.set_ylim(0, 1.06)
+    axb.set_title("Binary symmetric channel", fontsize=12)
+
+    for ax in (axa, axb):
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+    fl.save(fig, "mdl-it-capacity-rd")
+
+
 FIGURES = [
     # sec_mdl-information_theory
     fig_self_info_curve,         # mdl-it-self-info-curve
     fig_bernoulli_entropy,       # mdl-it-bernoulli-entropy
     fig_code_length_decomposition,  # mdl-it-code-length-bars
     fig_kraft_tree,              # mdl-it-kraft-tree
+    fig_capacity_rd,             # mdl-it-capacity-rd
     # sec_mdl-mutual-information
     fig_mi_overlap,              # mdl-it-mi-overlap
     fig_mi_variational_bounds,   # mdl-it-mi-variational-bounds

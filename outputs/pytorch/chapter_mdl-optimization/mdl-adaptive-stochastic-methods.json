@@ -9,12 +9,12 @@
   },
   "cells": {
     "adaptive-stochastic-methods-imports": {
-      "code_fingerprint": "sha256:2873cf518be6f740de1e83e7ae767eb092b490ee935317169145e246bdd660ea",
+      "code_fingerprint": "sha256:81e703cb4950d4e170895e8cb478d065a075863abe4d5407525405af88e09586",
       "kind": "text",
       "outputs": []
     },
     "adaptive-stochastic-methods-ghadimi-lan": {
-      "code_fingerprint": "sha256:0d09829772272f28919a05272ab152348a11c175be730c193c4affc27abc32c7",
+      "code_fingerprint": "sha256:543622ef262d00adb44be779dd699559a9a5135b1e7550362cdea4b3e38d66cd",
       "kind": "text",
       "outputs": [
         {
@@ -40,7 +40,7 @@
       ]
     },
     "adaptive-stochastic-methods-reddi": {
-      "code_fingerprint": "sha256:53fa44653c4d5804420c8c2428ef761d6c62c51b1c3b4ba9715903e7fede1407",
+      "code_fingerprint": "sha256:9a4cfdd1adc535f02d440c3d26bb99120958280a4c50cb34ee78ac1bde3463b2",
       "kind": "text",
       "outputs": [
         {
@@ -51,18 +51,13 @@
       ]
     },
     "adaptive-stochastic-methods-adam-vs-gd": {
-      "code_fingerprint": "sha256:5413bc762d59f5a76b31310c7814d511d958448f97053006a61033528716d9aa",
+      "code_fingerprint": "sha256:3d6c814bc4a75ea5e2d6cc14329a1d830a2e1e47da9f8538dc7f09a207dce741",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
+          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
         },
         {
           "type": "stream",
@@ -72,7 +67,7 @@
       ]
     },
     "adaptive-stochastic-methods-adamw": {
-      "code_fingerprint": "sha256:ee1c5d1cfc9fd7c2c80abf4eef356ea5dc0c363a31a1fa778fef4c71e8be7387",
+      "code_fingerprint": "sha256:3e36ca624bc56f96c98458b3b29c2beb7ba56811bb6a62e31c167f135dd9e720",
       "kind": "text",
       "outputs": [
         {
@@ -83,7 +78,7 @@
       ]
     },
     "adaptive-stochastic-methods-schedules": {
-      "code_fingerprint": "sha256:093c868a5a0b560bee1ca412742ed618c1073b240b50d0055f614937cdc37324",
+      "code_fingerprint": "sha256:5560eb812b6780ad893f51153d1d04837602f570cc1b336006a8c7c4b49dbb9b",
       "kind": "text",
       "outputs": [
         {
@@ -114,13 +109,15 @@
       ]
     },
     "mdl-adaptive-svrg": {
-      "code_fingerprint": "sha256:3984a4ef58cb3abcf682cba9da9ed60c4f4dac2c7132481d5653d2c73cd36ab5",
-      "kind": "text",
+      "code_fingerprint": "sha256:53d529c31328fdbdfb6b3cbb88a692064585db004f0473188abdf5d78f27e8aa",
+      "kind": "asset",
       "outputs": [
         {
-          "type": "stream",
-          "name": "stdout",
-          "text": "budget epoch  1: SGD gap=5.91e-02  SVRG gap=3.24e+00\nbudget epoch  5: SGD gap=1.77e-01  SVRG gap=4.57e-02\nbudget epoch 20: SGD gap=6.90e-02  SVRG gap=4.12e-08\n"
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
+          "bytes": 29558,
+          "sha256": "sha256:5e86f6f17ab3ce7daf8636c9b4c30b09ed2617bbfe757b9a75b6867972469690"
         }
       ]
     }

@@ -684,6 +684,13 @@ The normal matrix contracts from the first step. The non-normal matrix has the
 same spectral radius but amplifies a suitably chosen input by more than an
 order of magnitude before decay wins. This is **transient amplification**:
 stability as $k\to\infty$ coexisting with substantial finite-time growth.
+:numref:`fig_mdl-la-transient-growth` draws the whole story: on a log scale
+the two norm curves share the same asymptotic slope — that is the common
+spectral radius — but only after the non-normal matrix has climbed through a
+ten-fold excursion that eigenvalues alone gave no hint of.
+
+![Two matrices with identical eigenvalues, radically different finite-time behavior. Left: the spectral norm of the powers of the non-normal matrix climbs by an order of magnitude before the asymptotic decay — the same log-slope as its normal twin — takes over. Right: the reason, seen through pseudospectra; perturbations of size $\varepsilon$ can move the non-normal matrix's eigenvalues far outside the unit circle, while the normal matrix's stay in tight disks.](../img/mdl-la-transient-growth.svg)
+:label:`fig_mdl-la-transient-growth`
 
 ### Pseudospectra: Stability under Perturbation
 
@@ -706,7 +713,11 @@ matrix it can be much larger, so small perturbations can move eigenvalues far
 and a forced linear system can respond strongly even when $z$ is not close to
 the displayed spectrum. The final line of the cell measures this effect at
 $z=1$: the two matrices have the same eigenvalues, yet the non-normal
-resolvent is roughly twenty times larger.
+resolvent is roughly twenty times larger. The right panel of
+:numref:`fig_mdl-la-transient-growth` draws the comparison whole — around the
+normal matrix's eigenvalues the pseudospectral level sets are tight
+concentric disks, while around the non-normal matrix's they balloon far
+beyond the unit circle at the same $\varepsilon$.
 
 Pseudospectra are primarily a diagnostic rather than another decomposition to
 memorize. In numerical linear algebra they warn that computed eigenvalues may

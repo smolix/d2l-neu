@@ -1265,6 +1265,92 @@ def fig_pca():
     save(fig, "mdl-la-pca")
 
 
+def fig_transient_growth():
+    """Transient amplification made visible.  Left: ||A^k||_2 for the
+    non-normal A = [[0.9, 4], [0, 0.8]] versus the diagonal (normal) matrix
+    with identical eigenvalues — same spectral radius, same asymptotic decay
+    rate, yet A first amplifies by an order of magnitude.  Right: the
+    epsilon-pseudospectra of both matrices — level sets of
+    sigma_min(zI - A) — showing that tiny perturbations move A's eigenvalues
+    far outside the unit disk while the normal matrix's stay put.  Same
+    matrices as the accompanying notebook cell."""
+    A = np.array([[0.9, 4.0], [0.0, 0.8]])
+    D = np.diag([0.9, 0.8])
+    ks = np.arange(0, 61)
+    norm_A = np.array([np.linalg.norm(np.linalg.matrix_power(A, k), 2)
+                       for k in ks])
+    norm_D = np.array([np.linalg.norm(np.linalg.matrix_power(D, k), 2)
+                       for k in ks])
+    k_peak = int(norm_A.argmax())
+
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(10.4, 3.9))
+    axa.semilogy(ks, norm_A, color=BLUE, lw=2.4, zorder=4)
+    axa.semilogy(ks, norm_D, color=ORANGE, lw=2.2, ls="--", zorder=4)
+    axa.axhline(1.0, color=GRAY, lw=0.9, ls=":", zorder=2)
+    axa.plot([k_peak], [norm_A[k_peak]], "o", color=BLUE, ms=6, zorder=6)
+    axa.annotate(f"peak at $k={k_peak}$:\ntransient growth $\\times$"
+                 f"{norm_A[k_peak]:.0f}",
+                 xy=(k_peak, norm_A[k_peak]),
+                 xytext=(k_peak + 9, norm_A[k_peak] * 1.6),
+                 fontsize=10.5, ha="left", va="center", color="black",
+                 arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.2))
+    axa.text(51, 0.30, "non-normal $\\mathbf{A}$", color=BLUE, fontsize=11,
+             ha="center", zorder=7,
+             bbox=dict(facecolor="white", edgecolor="none", alpha=0.9,
+                       pad=1.5))
+    axa.text(15, 0.022, "normal, same\neigenvalues", color=ORANGE,
+             fontsize=10.5, ha="center", va="center")
+    axa.set_xlabel(r"$k$")
+    axa.set_ylabel(r"$\|\mathbf{A}^k\|_2$")
+    axa.set_ylim(1e-3, 40)
+    axa.set_title("same spectrum, different transients", fontsize=12)
+
+    # ----- right: pseudospectra via sigma_min(zI - M) on a grid -----
+    gx = np.linspace(-1.6, 2.6, 320)
+    gy = np.linspace(-1.7, 1.7, 260)
+    GX, GY = np.meshgrid(gx, gy)
+    Z = GX + 1j * GY
+
+    def smin_grid(M):
+        out = np.empty_like(GX)
+        for i in range(GX.shape[0]):
+            for j in range(GX.shape[1]):
+                out[i, j] = np.linalg.svd(
+                    Z[i, j] * np.eye(2) - M, compute_uv=False)[-1]
+        return out
+
+    levels = [0.05, 0.1, 0.2, 0.4]
+    theta = np.linspace(0, 2 * np.pi, 200)
+    axb.plot(np.cos(theta), np.sin(theta), color=GRAY, lw=1.0, ls=":",
+             zorder=2)
+    axb.contour(GX, GY, smin_grid(A), levels=levels, colors=[BLUE],
+                linewidths=1.3, zorder=4)
+    axb.contour(GX, GY, smin_grid(D), levels=levels, colors=[ORANGE],
+                linewidths=1.1, linestyles="--", zorder=3)
+    axb.plot([0.9, 0.8], [0.0, 0.0], "o", color="black", ms=5, zorder=6)
+    axb.text(1.72, 1.28, "$\\varepsilon$-pseudospectra\nof $\\mathbf{A}$",
+             color=BLUE, fontsize=10.5, ha="center", va="center", zorder=7,
+             bbox=dict(facecolor="white", edgecolor="none", alpha=0.9,
+                       pad=1.5))
+    axb.text(-0.55, -1.15, "of the normal matrix:\ntight disks",
+             color=ORANGE, fontsize=10.5, ha="center", va="center", zorder=7,
+             bbox=dict(facecolor="white", edgecolor="none", alpha=0.9,
+                       pad=1.5))
+    axb.text(-1.18, 0.82, "unit circle", color=GRAY, fontsize=10,
+             ha="center", zorder=7,
+             bbox=dict(facecolor="white", edgecolor="none", alpha=0.9,
+                       pad=1.0))
+    axb.set_xlabel(r"$\mathrm{Re}\,z$")
+    axb.set_ylabel(r"$\mathrm{Im}\,z$")
+    axb.set_aspect("equal")
+    axb.set_title("tiny perturbations, runaway eigenvalues", fontsize=12)
+
+    for ax in (axa, axb):
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+    save(fig, "mdl-la-transient-growth")
+
+
 # =========================================================================== #
 # Driver                                                                      #
 # =========================================================================== #
@@ -1294,6 +1380,7 @@ FIGURES = [
     fig_lora,
     fig_condition,
     fig_pca,
+    fig_transient_growth,
 ]
 
 

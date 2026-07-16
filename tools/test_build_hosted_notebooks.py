@@ -66,6 +66,8 @@ The JAX implementation is unavailable.
                 "https://raw.githubusercontent.com/smolix/d2l-neu/notebooks/"
                 "img/example.svg", markdown)
             self.assertEqual(nb["metadata"]["d2l"]["revision"], "abc123")
+            self.assertRegex(
+                nb["metadata"]["d2l"]["environment_sha256"], r"^[0-9a-f]{64}$")
             self.assertEqual(nb["metadata"]["kernelspec"]["name"], "python3")
             self.assertEqual(nb["nbformat_minor"], 5)
             ids = [cell["id"] for cell in nb["cells"]]
@@ -74,27 +76,59 @@ The JAX implementation is unavailable.
 
     def test_jax_setup_does_not_install_tensorflow_datasets(self):
         source = "".join(hosted._setup_cell("jax", "abc123")["source"])
-        self.assertIn("tensorflow==2.21.0", source)
-        self.assertIn("jax[cuda12]==0.10.2", source)
-        self.assertIn("flax==0.12.7", source)
-        self.assertIn("optax==0.2.8", source)
-        self.assertIn("installed != wanted", source)
+        profile = hosted.load_profile("jax")
+        for package in profile["packages"]:
+            self.assertIn(package["requirement"], source)
+        jax = next(
+            package for package in profile["packages"]
+            if package["distribution"] == "jax"
+        )
+        self.assertIn(jax["gpu_requirement"], source)
+        self.assertIn('D2L_HOSTED_DEVICE', source)
+        self.assertIn('CUDA_VISIBLE_DEVICES', source)
+        self.assertIn('JAX_PLATFORMS', source)
+        self.assertIn("actual != wanted", source)
         self.assertIn('Path(".d2l-hosted") / "abc123"', source)
+        self.assertIn('os.environ["PYTHONPATH"]', source)
         self.assertNotIn("tensorflow-datasets", source)
         self.assertNotIn("tensorflow_datasets", source)
+        self.assertIn("tensorflow-cpu", source)
+        self.assertIn("--no-deps", source)
 
-    def test_tensorflow_setup_preserves_colab_tensorflow_stack(self):
+    def test_tensorflow_setup_uses_locked_compatibility_stack(self):
         source = "".join(hosted._setup_cell("tensorflow", "abc123")["source"])
-        self.assertIn('("__init__.py", "tensorflow.py")', source)
+        self.assertIn("'__init__.py'", source)
+        self.assertIn("'tensorflow.py'", source)
+        profile = hosted.load_profile("tensorflow")
+        for package in profile["packages"]:
+            self.assertIn(package["requirement"], source)
+            self.assertIn(package["requirement"], source.split("fallbacks =", 1)[1])
         self.assertNotIn("tensorflow-datasets", source)
         self.assertNotIn("tensorflow_datasets", source)
-        self.assertNotIn("protobuf", source)
+        self.assertIn("tensorflow-cpu", source)
+
+    def test_pytorch_setup_does_not_overlay_tensorflow_cpu(self):
+        source = "".join(hosted._setup_cell("pytorch", "abc123")["source"])
+        self.assertIn("'pytorch' in (\"tensorflow\", \"jax\")", source)
 
     def test_tensorflow_probability_matches_runtime_tf_keras(self):
         source = "".join(hosted._setup_cell(
             "tensorflow", "abc123", ("tensorflow-probability",))["source"])
         self.assertIn("tensorflow_probability", source)
-        self.assertIn('f"tf-keras~={tf_minor}.0"', source)
+        optional = {
+            package["distribution"]: package
+            for package in hosted.load_profile("tensorflow")["optional_packages"]
+        }
+        self.assertIn(optional["tensorflow-probability"]["requirement"], source)
+        self.assertIn(optional["tf-keras"]["requirement"], source)
+        self.assertIn("'tf-keras': 'tf_keras'", source)
+        self.assertIn('fallbacks["tf-keras"] = f"tf-keras=={tensorflow_version}"',
+                      source)
+
+    def test_setup_fetches_referenced_d2l_submodules(self):
+        source = "".join(hosted._setup_cell(
+            "jax", "abc123", helper_modules=("nnx_resnet",))["source"])
+        self.assertIn("'nnx_resnet.py'", source)
 
     def test_urls_use_kaggle_dynamic_importer(self):
         urls = hosted._urls("jax/chapter_demo/example.ipynb")

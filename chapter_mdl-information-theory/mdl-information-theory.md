@@ -888,6 +888,36 @@ cannot name almost all typical blocks, so rates below entropy cannot be
 reliable. For stationary ergodic sources the entropy rate
 :eqref:`eq_mdl-entropy_rate` replaces $H$.
 
+For a Bernoulli source the counting claim can be checked *exactly*, because
+strings with the same number of ones share one probability. The cell groups
+the $2^{200}$ binary strings of length $n=200$ by their count of ones,
+declares a string typical when its surprisal is within $0.1$ bit per symbol
+of $H$, and adds up exactly how many strings are typical and how much
+probability they carry.
+
+```{.python .input #mdl-information-theory-typical-sequences-and-the-source-coding-theorem}
+import numpy as onp
+n, p = 200, 0.3
+k = onp.arange(n + 1)
+log_fact = onp.concatenate([[0.0], onp.cumsum(onp.log(onp.arange(1, n + 1)))])
+log_count = log_fact[n] - log_fact[k] - log_fact[n - k]     # log #strings, k ones
+prob_k = onp.exp(log_count + k * onp.log(p) + (n - k) * onp.log(1 - p))
+h2 = -(p * onp.log2(p) + (1 - p) * onp.log2(1 - p))
+bits_per_symbol = -(k * onp.log2(p) + (n - k) * onp.log2(1 - p)) / n
+typical = onp.abs(bits_per_symbol - h2) < 0.1
+
+m = log_count[typical].max()
+log2_typical = (m + onp.log(onp.exp(log_count[typical] - m).sum())) / onp.log(2)
+print(f'entropy H = {h2:.3f} bits/symbol, so nH = {n * h2:.0f} bits')
+print(f'typical strings: 2^{log2_typical:.1f} of all 2^{n}')
+print(f'probability they carry: {prob_k[typical].sum():.4f}')
+```
+
+A vanishing fraction of the strings — about $2^{nH}$ of the $2^n$, missing
+some $24$ orders of magnitude of the count — soaks up almost all of the
+probability. Indexing just those strings *is* the compressor, and $nH$ bits
+is the length of the index.
+
 ### Lossy Compression and Rate--Distortion
 :label:`subsec_mdl-rate-distortion`
 
@@ -912,10 +942,15 @@ R(D)=\frac12\log\frac{\sigma^2}{D}
 \qquad R(D)=0\quad(D\ge\sigma^2),
 $$
 
-in nats per sample. This curve is a useful benchmark for learned compression:
+in nats per sample. The left panel of :numref:`fig_mdl-it-capacity-rd` plots
+it: bits buy reconstruction quality at a rate that explodes as $D\to0$ and
+drops to zero once the allowed distortion exceeds the source variance —
+at that point transmitting nothing and reconstructing the mean is already
+good enough. This curve is a useful benchmark for learned compression:
 reconstruction losses measure distortion, while quantized latents and entropy
 models determine rate. Objectives of the form
-$D+\beta R$ select one supporting point of the trade-off. Autoencoders and
+$D+\beta R$ select one supporting point of the trade-off — geometrically, the
+point where the curve has slope $-1/\beta$. Autoencoders and
 variational bottlenecks use approximations to these two terms; they do not evade
 the trade-off by learning the codec.
 
@@ -942,8 +977,18 @@ $$
 C=1-h_2(\varepsilon)\quad\text{bits per channel use},
 $$
 
-where $h_2$ is binary entropy. At $\varepsilon=0$ one bit survives; at
-$\varepsilon=1/2$ the output is independent of the input and capacity is zero.
+where $h_2$ is binary entropy. The right panel of
+:numref:`fig_mdl-it-capacity-rd` plots this curve, and it rewards a moment's
+reading. At $\varepsilon=0$ one bit survives per use. At $\varepsilon=1/2$
+the output is independent of the input and capacity is zero — no code, however
+clever, gets anything through. And at $\varepsilon=1$ capacity is back to one
+bit: a channel that *always* lies is as good as one that always tells the
+truth, because the receiver can simply flip every bit. What destroys
+information is not corruption but *unpredictability*.
+
+![Shannon's two operational curves. Left: the Gaussian rate–distortion function — the number of bits per sample needed to reconstruct within squared error $D$; fidelity gets expensive fast, and beyond the source variance no bits are needed at all. Right: the capacity of a binary symmetric channel with flip probability $\varepsilon$; a coin-flip channel carries nothing, while a channel that always flips is again perfect.](../img/mdl-it-capacity-rd.svg)
+:label:`fig_mdl-it-capacity-rd`
+
 The same mutual-information lens applies when a representation passes through
 noise, quantization, dropout, or a bandwidth bottleneck. Data processing limits
 what later layers can recover, while coding or redundancy determines how close

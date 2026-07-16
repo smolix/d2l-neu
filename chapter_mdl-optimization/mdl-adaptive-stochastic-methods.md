@@ -34,6 +34,30 @@ every optimizer below is under ten lines written by hand, which is the fastest
 way to see there is no magic in any of them.
 
 ```{.python .input #adaptive-stochastic-methods-imports}
+#@tab mxnet
+%matplotlib inline
+from d2l import mxnet as d2l
+import numpy as np
+```
+
+```{.python .input #adaptive-stochastic-methods-imports}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+import numpy as np
+```
+
+```{.python .input #adaptive-stochastic-methods-imports}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import numpy as np
+```
+
+```{.python .input #adaptive-stochastic-methods-imports}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
 import numpy as np
 ```
 
@@ -842,9 +866,9 @@ for _ in range(epochs_vr):
         w_sgd -= eta_vr * component_grad(w_sgd, i)
     gaps_sgd.append(objective_vr(w_sgd) - objective_vr(w_star_vr))
 
-for e in (1, 5, 20):
-    print(f'budget epoch {e:2d}: SGD gap={gaps_sgd[e-1]:.2e}  '
-          f'SVRG gap={gaps_svrg[e-1]:.2e}')
+d2l.plot(np.arange(1, epochs_vr + 1), [gaps_sgd, gaps_svrg],
+         'equal-budget epoch', 'optimality gap',
+         legend=['SGD, fixed step', 'SVRG, fixed step'], yscale='log')
 ```
 
 SGD makes cheaper early progress, but its constant-step iterates continue to

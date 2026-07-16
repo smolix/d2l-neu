@@ -214,7 +214,13 @@ class ProgressBoard(d2l.HyperParameters):
         axes.set_xlabel(self.xlabel)
         axes.set_ylabel(self.ylabel)
         axes.set_xscale(self.xscale)
-        axes.set_yscale(self.yscale)
+        # A smoothed series exists before it necessarily contains its first point.
+        # Matplotlib rejects an empty/nonpositive log axis, so keep the temporary
+        # live frame linear and apply the requested log scale as soon as a positive
+        # value is available. The final training figure therefore still uses log.
+        has_positive_y = any(p.y > 0 for _, values in series for p in values)
+        if self.yscale != 'log' or has_positive_y:
+            axes.set_yscale(self.yscale)
         if series: axes.legend()
 
     def _render(self, thread=False):

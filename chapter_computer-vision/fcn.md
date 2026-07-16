@@ -692,7 +692,11 @@ num_epochs, lr, wd = 5, 0.001, 1e-3
 fcn_net.compile(
     optimizer=keras.optimizers.SGD(learning_rate=lr, weight_decay=wd),
     loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-    metrics=['accuracy'])
+    metrics=['accuracy'],
+    # Keras may otherwise select XLA automatically. For this unusually large
+    # transposed convolution, XLA's cuDNN autotuning can take tens of minutes
+    # before the first training step and offers no benefit to this example.
+    jit_compile=False)
 fcn_net.fit(train_iter, epochs=num_epochs, validation_data=test_iter)
 ```
 

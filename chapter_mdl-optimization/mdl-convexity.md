@@ -25,6 +25,30 @@ source for the convergence theory. All code in this section is plain NumPy;
 every demonstration is a handful of lines.
 
 ```{.python .input #convexity-imports}
+#@tab mxnet
+%matplotlib inline
+from d2l import mxnet as d2l
+import numpy as np
+```
+
+```{.python .input #convexity-imports}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+import numpy as np
+```
+
+```{.python .input #convexity-imports}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import numpy as np
+```
+
+```{.python .input #convexity-imports}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
 import numpy as np
 ```
 
@@ -1124,15 +1148,18 @@ f_star_cd = f_cd(x_star_cd)
 L_cd = np.linalg.eigvalsh(A_cd)[-1]
 x_gd, x_cd = np.zeros(d_cd), np.zeros(d_cd)
 r_cd = A_cd @ x_cd - b_cd
+gap_gd, gap_cd = [], []
 for sweep in range(1, 101):
     x_gd -= (A_cd @ x_gd - b_cd) / L_cd           # one full gradient
     for j in range(d_cd):                         # one coordinate sweep
         delta = -r_cd[j] / A_cd[j, j]
         x_cd[j] += delta
         r_cd += delta * A_cd[:, j]
-    if sweep in (1, 5, 20, 100):
-        print(f'sweep {sweep:3d}: GD gap={f_cd(x_gd)-f_star_cd:9.2e}  '
-              f'coordinate gap={f_cd(x_cd)-f_star_cd:9.2e}')
+    gap_gd.append(f_cd(x_gd) - f_star_cd)
+    gap_cd.append(f_cd(x_cd) - f_star_cd)
+d2l.plot(np.arange(1, 101), [gap_gd, gap_cd], 'sweep', 'optimality gap',
+         legend=[r'gradient descent, step $1/L$', 'exact coordinate sweep'],
+         yscale='log')
 ```
 
 This coupled quadratic is deliberately unfavorable to independent coordinates:

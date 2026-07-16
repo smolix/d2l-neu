@@ -12,9 +12,10 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 from arch_diagrams import (  # noqa: E402
     ACCENT, ACCENT2, ACCENT2_TINT, ACCENT_TINT, CONTAINER_FILL, GRAY_TEXT,
-    INK, NOVELTY_FILL, SANS, STROKE, Diagram, WRITTEN, save,
+    IMG_DIR, INK, NOVELTY_FILL, SANS, STROKE, Diagram, WRITTEN, save,
 )
-from matplotlib.patches import FancyBboxPatch, Rectangle  # noqa: E402
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.patches import Circle, FancyBboxPatch, Rectangle  # noqa: E402
 
 
 WHITE = "#FFFFFF"
@@ -58,18 +59,44 @@ def caption(d, x, y, text, color=GRAY_TEXT, ha="center", fs=9.5):
 
 
 def kernel_state():
-    d = Diagram(560, 238)
-    box(d, 105, 146, 150, 88, "Notebook document", note="cells · saved outputs")
-    box(d, 455, 146, 150, 88, "Live kernel", fill=NOVELTY_FILL,
-        edge=NOVELTY_FILL, color=WHITE, bold=True, note="variables · imports · devices")
-    h_arrow(d, 180, 380, 158)
-    caption(d, 280, 174, "execute selected cells")
-    h_arrow(d, 380, 180, 125, color=ACCENT)
-    caption(d, 280, 106, "return outputs", color=ACCENT)
-    box(d, 280, 42, 192, 36, "Restart + run all", fill=ACCENT_TINT,
-        edge=ACCENT, color=ACCENT, bold=True)
-    v_arrow(d, 280, 60, 97, color=ACCENT)
-    caption(d, 280, 18, "the reproducibility check: document → fresh state")
+    d = Diagram(640, 316)
+    # Left: the document as the reader sees it (reading order).
+    d.container(22, 64, 306, 296, fill=PALE, edge="#AEB4BA")
+    caption(d, 164, 282, "NOTEBOOK DOCUMENT", INK)
+    caption(d, 164, 266, "reading order", fs=8.8)
+    doc_cells = [(228, "In [2]", "model = MLP()"),
+                 (170, "In [3]", "train(model, data)"),
+                 (112, "In [1]", "data = load_data()")]
+    for y, tag, code in doc_cells:
+        box(d, 164, y, 256, 44, "", fill=WHITE)
+        d.ax.text(46, y + 12, tag, family=SANS, fontsize=8.5,
+                  color=GRAY_TEXT, ha="left", va="center", zorder=6)
+        d.rich(46, y - 8, [(code, INK, False)], 10.5, ha="left", mono=True)
+    # Right: what the kernel actually executed (time order).
+    d.container(334, 64, 618, 296, fill=ACCENT_TINT, edge=ACCENT)
+    caption(d, 476, 282, "KERNEL SESSION", ACCENT)
+    caption(d, 476, 266, "execution order", fs=8.8)
+    run_steps = [(228, "1", "data = load_data()"),
+                 (170, "2", "model = MLP()"),
+                 (112, "3", "train(model, data)")]
+    for y, num, code in run_steps:
+        d.ax.add_patch(Circle((362, y), 10, facecolor=ACCENT,
+                              edgecolor="none", zorder=5))
+        d.ax.text(362, y, num, family=SANS, fontsize=9.5, color=WHITE,
+                  fontweight="bold", ha="center", va="center", zorder=6)
+        d.rich(382, y, [(code, INK, False)], 10.5, ha="left", mono=True)
+        if y != 112:
+            v_arrow(d, 362, y - 12, y - 44, color=ACCENT)
+    d.ax.text(596, 112, "✓", family=SANS, fontsize=13, color=ACCENT,
+              fontweight="bold", ha="center", va="center", zorder=6)
+    # The mapping between the two orders crosses — that crossing is the bug.
+    for y_doc, y_run in [(228, 170), (170, 112), (112, 228)]:
+        d.ax.plot([294, 350], [y_doc, y_run], color=GRAY_TEXT, lw=1.3,
+                  ls=(0, (1.0, 2.6)), solid_capstyle="round", zorder=2)
+    box(d, 320, 32, 576, 38,
+        "restart + run all replays reading order and exposes the bug:  "
+        "NameError: 'data' is not defined",
+        fill=ACCENT2_TINT, edge=ACCENT2, color=ACCENT2, bold=True, fs=10.5)
     save(d.fig, "tools-kernel-state")
 
 
@@ -159,57 +186,92 @@ def cloud_lifecycle():
             edge=NOVELTY_FILL if label == "Compute" else INK,
             color=WHITE if label == "Compute" else INK, bold=label == "Compute")
         if i: h_arrow(d, xs[i - 1] + 52, x - 52, 146)
-    box(d, 350, 54, 250, 48, "Persistent object storage", fill=ACCENT_TINT,
+    box(d, 330, 54, 250, 48, "Persistent object storage", fill=ACCENT_TINT,
         edge=ACCENT, color=ACCENT, bold=True, note="data · logs · checkpoints")
-    v_arrow(d, 492, 122, 78, color=ACCENT)
-    h_arrow(d, 225, 492, 54, color=ACCENT)
-    caption(d, 120, 54, "resume on a new VM", color=ACCENT)
-    h_arrow(d, 225, 124, 54, color=ACCENT)
+    d.ax.plot([492, 492, 430], [123, 100, 100], color=ACCENT, lw=STROKE,
+              solid_capstyle="round", zorder=4)
+    v_arrow(d, 430, 100, 82, color=ACCENT)
+    h_arrow(d, 203, 100, 54, color=ACCENT)
+    caption(d, 152, 30, "resume on a new VM", color=ACCENT)
     box(d, 560, 54, 76, 36, "Delete VM", fill=ACCENT2_TINT, edge=ACCENT2,
         color=ACCENT2, bold=True)
-    h_arrow(d, 492, 522, 54, color=ACCENT2)
+    h_arrow(d, 457, 522, 54, color=ACCENT2)
     save(d.fig, "tools-cloud-lifecycle")
 
 
-def cost_stack():
-    d = Diagram(580, 270)
-    components = [("GPU time", 106, ACCENT), ("idle / setup", 58, "#7FAAC9"),
-                  ("storage", 48, "#AAB5BF"), ("egress", 34, ACCENT2),
-                  ("engineering", 78, NOVELTY_FILL)]
-    x = 42
-    for label, width, color in components:
-        d.ax.add_patch(Rectangle((x, 112), width, 54, facecolor=color,
-                                 edgecolor=WHITE, linewidth=1.5))
-        d.ax.text(x + width / 2, 139, label, family=SANS, fontsize=9.5,
-                  color=WHITE if color != "#AAB5BF" else INK,
-                  ha="center", va="center", zorder=5)
-        x += width
-    caption(d, 290, 194, "invoice price is only one part of experiment cost", fs=12)
-    box(d, 290, 55, 238, 40, "cost per completed result", fill=NOVELTY_FILL,
-        edge=NOVELTY_FILL, color=WHITE, bold=True)
-    v_arrow(d, 290, 112, 75)
-    save(d.fig, "tools-cost-stack")
+def _save_plot(fig, name):
+    """Like arch_diagrams.save, but keeps axis furniture (tick and axis
+    labels), which _content_bbox deliberately crops away for box diagrams."""
+    import os
+    path = os.path.join(IMG_DIR, f"{name}.svg")
+    fig.savefig(path, format="svg", bbox_inches="tight",
+                metadata={"Date": None})
+    plt.close(fig)
+    WRITTEN.append(path)
 
 
-def hardware_decision():
-    d = Diagram(620, 330)
-    box(d, 310, 286, 210, 42, "What must run locally?", fill=NOVELTY_FILL,
-        edge=NOVELTY_FILL, color=WHITE, bold=True)
-    boxes = [(125, 202, "Interactive inference", "latency · privacy"),
-             (310, 202, "Fine-tuning", "weights + optimizer"),
-             (495, 202, "Training", "throughput · scaling")]
-    for x, y, label, note in boxes:
-        box(d, x, y, 148, 54, label, note=note)
-        d.line([(310, 265), (310, 244), (x, 244), (x, 229)])
-    outcomes = [(125, "Unified memory", "capacity first"),
-                (310, "One discrete GPU", "balanced default"),
-                (495, "Rent a cluster", "bursty scale")]
-    for x, label, note in outcomes:
-        box(d, x, 88, 152, 54, label, fill=ACCENT_TINT, edge=ACCENT,
-            color=ACCENT, bold=True, note=note)
-        v_arrow(d, x, 175, 115, color=ACCENT)
-    caption(d, 310, 28, "memory fit first; then software support, throughput, power, and cost")
-    save(d.fig, "tools-hardware-decision")
+def hardware_menu():
+    """Capacity × bandwidth scatter: the July 2026 local-hardware menu."""
+    fig = plt.figure(figsize=(640 / 72.0, 360 / 72.0))
+    ax = fig.add_axes([0.11, 0.14, 0.78, 0.82])
+    discrete = [("RTX 5070 Ti", 16, 896, "$0.9k", (-8, -26), "left"),
+                ("RTX 3090 used", 24, 936, "$1.2k", (8, 12), "left"),
+                ("RTX 5090", 32, 1792, "$3–4k", (0, 28), "center"),
+                ("RTX PRO 6000", 96, 1792, "$13k", (12, -6), "left")]
+    unified = [("Strix Halo", 128, 256, "$2–2.5k", (-12, -6), "right"),
+               ("DGX Spark", 128, 273, "$4.7k", (12, 10), "left"),
+               ("M4 Max", 128, 546, "$3.7k", (12, -6), "left"),
+               ("M3 Ultra", 512, 819, "$5.3k+", (0, 28), "center")]
+    datacenter = [("H100 SXM", 80, 3350, "rented", (12, -6), "left")]
+    groups = [(discrete, ACCENT, "discrete GPU — bandwidth first"),
+              (unified, ACCENT2, "unified memory — capacity first"),
+              (datacenter, NOVELTY_FILL, "datacenter — rent by the hour")]
+    for devices, color, _ in groups:
+        for name, mem, bw, price, (dx, dy), ha in devices:
+            ax.scatter([mem], [bw], s=64, color=color, zorder=5)
+            ax.annotate(name, (mem, bw), textcoords="offset points",
+                        xytext=(dx, dy), ha=ha, va="center",
+                        family=SANS, fontsize=9.5, color=INK, zorder=6)
+            ax.annotate(price, (mem, bw), textcoords="offset points",
+                        xytext=(dx, dy - 11), ha=ha, va="center",
+                        family=SANS, fontsize=8.2, color=GRAY_TEXT, zorder=6)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlim(11, 1024)
+    ax.set_ylim(190, 5200)
+    ax.set_xticks([16, 32, 64, 128, 256, 512])
+    ax.set_xticklabels(["16", "32", "64", "128", "256", "512"],
+                       family=SANS, fontsize=9)
+    ax.set_yticks([256, 512, 1024, 2048, 4096])
+    ax.set_yticklabels(["256", "512", "1024", "2048", "4096"],
+                       family=SANS, fontsize=9)
+    ax.minorticks_off()
+    ax.set_xlabel("accelerator-visible memory (GB)", family=SANS,
+                  fontsize=11, color=INK)
+    ax.set_ylabel("memory bandwidth (GB/s)", family=SANS,
+                  fontsize=11, color=INK)
+    right = ax.secondary_yaxis(
+        "right", functions=(lambda v: v / 4.5, lambda v: v * 4.5))
+    right.set_yticks([57, 114, 228, 455, 910])
+    right.set_yticklabels(["57", "114", "228", "455", "910"],
+                          family=SANS, fontsize=9, color=GRAY_TEXT)
+    right.minorticks_off()
+    right.set_ylabel("≤ decode tok/s (8B model, 4-bit)", family=SANS,
+                     fontsize=10, color=GRAY_TEXT)
+    right.spines["right"].set_color(GRAY_TEXT)
+    right.tick_params(colors=GRAY_TEXT)
+    for spine in ("top",):
+        ax.spines[spine].set_visible(False)
+    for spine in ("left", "bottom"):
+        ax.spines[spine].set_color("black")
+    ax.tick_params(colors="black")
+    ax.grid(True, which="major", color="#DDDDDD", lw=0.7, zorder=0)
+    for i, (_, color, legend) in enumerate(groups):
+        ax.text(0.02, 0.97 - 0.075 * i, "●", transform=ax.transAxes,
+                family=SANS, fontsize=10, color=color, va="top", zorder=6)
+        ax.text(0.055, 0.97 - 0.075 * i, legend, transform=ax.transAxes,
+                family=SANS, fontsize=9.5, color=INK, va="top", zorder=6)
+    _save_plot(fig, "tools-hardware-menu")
 
 
 def memory_fit():
@@ -292,22 +354,6 @@ def ecosystem_artifact():
     save(d.fig, "tools-ecosystem-artifact")
 
 
-def artifact_lifecycle():
-    d = Diagram(650, 230)
-    xs = [66, 170, 276, 382, 488, 594]
-    labels = ["Discover", "Inspect", "Pin", "Cache", "Adapt", "Publish"]
-    for i, (x, label) in enumerate(zip(xs, labels)):
-        box(d, x, 122, 84, 42, label, fill=NOVELTY_FILL if label == "Pin" else WHITE,
-            edge=NOVELTY_FILL if label == "Pin" else INK,
-            color=WHITE if label == "Pin" else INK, bold=label == "Pin", fs=10.5)
-        if i: h_arrow(d, xs[i - 1] + 42, x - 42, 122)
-    box(d, 382, 43, 228, 36, "record revision + license", fill=ACCENT_TINT,
-        edge=ACCENT, color=ACCENT, bold=True)
-    v_arrow(d, 276, 101, 61, color=ACCENT)
-    caption(d, 325, 195, "a reproducible workflow preserves identity through every transformation")
-    save(d.fig, "tools-artifact-lifecycle")
-
-
 def training_ladder():
     d = Diagram(620, 315)
     levels = [(78, 64, "1 GPU", "baseline"), (205, 105, "DDP", "replicate"),
@@ -345,39 +391,6 @@ def training_memory():
     caption(d, 310, 239, "each technique attacks a different term in peak memory")
     caption(d, 310, 24, "measure the new communication, recomputation, or transfer cost")
     save(d.fig, "tools-training-memory")
-
-
-def checkpoint_recovery():
-    d = Diagram(620, 260)
-    box(d, 100, 150, 150, 54, "Training workers", note="distributed state")
-    box(d, 310, 150, 150, 54, "Atomic checkpoint", fill=NOVELTY_FILL,
-        edge=NOVELTY_FILL, color=WHITE, bold=True, note="model · optimizer · RNG")
-    box(d, 520, 150, 150, 54, "Replacement workers", note="possibly new hosts")
-    h_arrow(d, 175, 235, 150, color=ACCENT)
-    h_arrow(d, 385, 445, 150, color=ACCENT)
-    box(d, 310, 56, 218, 40, "preemption / host loss", fill=ACCENT2_TINT,
-        edge=ACCENT2, color=ACCENT2, bold=True)
-    v_arrow(d, 430, 76, 120, color=ACCENT2)
-    caption(d, 310, 222, "recovery is part of the training design, not an afterthought")
-    save(d.fig, "tools-checkpoint-recovery")
-
-
-def serving_stack():
-    d = Diagram(620, 315)
-    layers = [(270, "Application", "auth · policy · product"),
-              (205, "API / router", "backpressure · observability"),
-              (140, "Serving engine", "batching · KV cache · scheduling"),
-              (75, "Runtime + hardware", "kernels · memory · accelerators")]
-    for i, (y, label, note) in enumerate(layers):
-        box(d, 310, y, 410 - i * 38, 46, label,
-            fill=NOVELTY_FILL if label == "Serving engine" else WHITE,
-            edge=NOVELTY_FILL if label == "Serving engine" else INK,
-            color=WHITE if label == "Serving engine" else INK,
-            bold=label == "Serving engine", note=note)
-        if i: v_arrow(d, 310, layers[i - 1][0] - 23, y + 23)
-    caption(d, 560, 270, "product layer", ha="right")
-    caption(d, 560, 75, "systems layer", ha="right")
-    save(d.fig, "tools-serving-stack")
 
 
 def prefill_decode():
@@ -434,10 +447,9 @@ def prefix_cache():
 
 def main():
     for function in (kernel_state, remote_layers, hosted_lifecycle, notebook_pipeline,
-                     cloud_spectrum, cloud_lifecycle, cost_stack, hardware_decision,
+                     cloud_spectrum, cloud_lifecycle, hardware_menu,
                      memory_fit, memory_path, workstation, ecosystem_artifact,
-                     artifact_lifecycle, training_ladder, training_memory,
-                     checkpoint_recovery, serving_stack, prefill_decode,
+                     training_ladder, training_memory, prefill_decode,
                      continuous_batching, prefix_cache):
         function()
     for output in WRITTEN:
@@ -445,7 +457,7 @@ def main():
         lines = path.read_text(encoding="utf-8").splitlines()
         path.write_text("\n".join(line.rstrip() for line in lines) + "\n",
                         encoding="utf-8")
-    print("Generated 20 Tools for Deep Learning figures in img/")
+    print(f"Generated {len(WRITTEN)} Tools for Deep Learning figures in img/")
 
 
 if __name__ == "__main__":

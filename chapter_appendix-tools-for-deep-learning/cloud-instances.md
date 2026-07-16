@@ -1,193 +1,207 @@
-# Renting Cloud Accelerators
+# Cloud Computing
 :label:`sec_cloud_instances`
 
-Renting a machine is useful when a workload is too large, too slow, or too
-bursty for local hardware. The difficult part is rarely clicking **Create
-instance**. It is choosing a resource that fits, controlling its trust
-boundary, preserving results, and stopping every billable component when the
-experiment ends.
+Sooner or later a workload outgrows the free tiers of
+:numref:`sec_hosted_notebooks`: the dataset takes a day to preprocess, the
+model needs 80 GB of accelerator memory, or you want eight GPUs for an
+afternoon. Renting is the natural next step, and it has never been cheaper —
+the same H100 that rented for around \$8 per hour during the 2023 shortage
+goes for \$2–4 on specialist clouds in mid-2026, and a consumer RTX 4090
+can be had for well under a dollar an hour. For calibration: the notebooks
+in this book are kept below 8 GB of GPU memory, so *any* rentable GPU with
+16 GB runs everything here with room to spare. It is working with large
+language models — fine-tuning beyond LoRA, serving long contexts,
+pretraining anything — that pushes you up the memory ladder, and the price
+ladder with it.
 
-## Choosing a Provider
+The hard part of cloud computing is not clicking **Create instance**. It is
+knowing what the market offers, picking a machine that fits the workload
+rather than the marketing page, and running it with the discipline that
+disposable compute demands: results leave the machine, and the machine gets
+deleted.
 
-### Provider Categories
+## The Rental Market
 
-Cloud offerings lie on a spectrum rather than in two neat groups.
+### Three Tiers of Provider
 
 ![Cloud options trade managed integration and governance for price dispersion and operational responsibility.](../img/tools-cloud-spectrum.svg)
 :label:`fig_tools_cloud_spectrum`
 
-* **Hyperscalers** such as AWS, Google Cloud, and Microsoft Azure offer broad
-  regional coverage, identity and networking controls, managed storage, and
-  many adjacent services.
-* **GPU specialists** focus on accelerators, cluster fabrics, and machine
-  learning images. Examples include CoreWeave, Lambda, Crusoe, and RunPod.
-* **Marketplaces** such as Vast.ai aggregate independently operated hosts. They
-  can expose consumer GPUs at attractive prices, with more variation in host
-  reliability, storage, networking, and trust.
-* **Colocation or dedicated hosts** provide control for sustained use but move
-  hardware operation back to you.
+* **Hyperscalers** — AWS, Google Cloud, Microsoft Azure — sell GPUs
+  embedded in a full cloud: identity management, virtual networks, managed
+  storage, and every adjacent service. You pay for that integration; their
+  on-demand GPU prices are consistently the highest, and the largest
+  instances often hide behind quota requests or sales conversations. They
+  are the right answer when the data already lives there, when compliance
+  matters, or when a training job is one part of a bigger system. Google
+  additionally rents TPUs (a v5e chip for about \$1.20 per hour), the
+  natural target for the JAX code in this book.
+* **GPU specialists** — Lambda, CoreWeave, Crusoe, Nebius, Voltage Park,
+  Together, and others — do one thing: accelerators with fast interconnect
+  and ML-ready images. Self-serve H100s run \$2–4.30 per hour (July 2026);
+  Lambda and Nebius are fully self-serve, while CoreWeave publishes prices
+  but onboards through sales. This tier is the sweet spot for serious
+  training runs that do not need a hyperscaler's ecosystem.
+* **Marketplaces** — Vast.ai, RunPod, TensorDock, Prime Intellect, and the
+  auction-style SF Compute — aggregate machines from many independent
+  operators, including consumer GPUs that the big clouds do not carry. This
+  is where compute is cheapest: an RTX 4090 for \$0.30–0.60 per hour, an
+  H100 from about \$1.50. The catch is variance: host reliability, disk
+  speed, and network quality differ per listing, and your code runs on a
+  stranger's machine — fine for coursework and public data, inappropriate
+  for anything sensitive unless the platform's vetted tier is used.
 
-These are categories, not quality rankings. Sensitive or regulated data may
-require a provider, region, contract, and isolation model that a public
-marketplace cannot offer. A public benchmark or synthetic dataset may not.
+### What Things Cost
 
-### Start With the Workload
+Prices move quickly — the long arc is downward, though 2026's capacity
+crunch pushed some rates back up — so treat the following July 2026
+snapshot as a calibration, not a catalog. The *ratios* between tiers,
+however, have been stable for years:
 
-Specify the constraint before browsing instance names:
+:GPU rental snapshot, on-demand (July 2026)
+:label:`tab_cloud_prices`
 
-1. Peak accelerator memory, including weights, optimizer state, activations,
-   temporary workspaces, and a safety margin.
-1. Compute type and throughput: tensor-core precision, memory bandwidth, or
-   latency may matter more than nominal FLOP/s.
-1. Number of accelerators and their interconnect. PCIe-connected devices do not
-   behave like a high-bandwidth fabric for communication-heavy training.
-1. Host RAM, CPU preprocessing, local scratch capacity, and storage speed.
-1. Ingress, egress, and checkpoint bandwidth.
-1. Expected wall time and tolerance for interruption.
+| Provider (tier) | Cheap GPU option | ≈ \$/hr | 1× H100 80 GB ≈ \$/hr |
+|---|---|---|---|
+| Vast.ai (marketplace) | RTX 4090 24 GB | 0.35 | 1.50–1.90 |
+| RunPod (marketplace) | RTX 4090 24 GB | 0.35–0.70 | 2.90 (vetted hosts) |
+| Prime Intellect (marketplace) | RTX 4090 24 GB | 0.32 | 1.49 |
+| Lambda (specialist) | A100 40 GB | 1.99 | 3.99–4.29 |
+| Nebius (specialist) | RTX PRO 6000 48 GB | 1.80 | 3.85 |
+| Voltage Park (specialist) | H100 (only SKU) | 1.99 | 1.99 |
+| AWS (hyperscaler) | L4 24 GB (g6) | 0.80 | 6.88 (p5) |
+| Azure (hyperscaler) | A10 24 GB | 1.43 | 6.98 |
+| Google Cloud (hyperscaler) | L4 24 GB | 0.70 | ≈ 11 (A3) |
 
-If the model does not fit, a faster GPU does not solve the problem. If data
-loading starves the accelerator, paying for another accelerator can make
-utilization worse.
+Three practical notes. First, the free money: new accounts get trial
+credits (Google Cloud \$300, Azure \$100–200 for students, AWS \$1,000
+through its startup program), which comfortably covers every experiment in
+this book many times over. Second, multi-GPU nodes price linearly per GPU
+on most providers, but the interconnect does not: an 8×H100 machine with
+NVLink is a qualitatively different tool from eight PCIe cards, and
+communication-heavy training (:numref:`sec_training_systems`) will feel the
+difference. Third, newer is not always cheaper per unit of work: B200-class
+instances (\$6–14 per GPU-hour) only pay off when you exploit their memory
+and FP8/FP4 throughput.
 
-### Compute the Complete Cost
+### Cost per Result, Not per Hour
 
-Hourly accelerator price is only the most visible term.
-
-![The useful denominator is a completed result, so include setup, idle time, storage, data transfer, and engineering effort.](../img/tools-cost-stack.svg)
-:label:`fig_tools_cloud_cost_stack`
-
-The following small model is more informative than comparing hourly prices.
-Change its assumptions before choosing an instance.
+The hourly price is the most visible term of a larger sum: setup time,
+idle time while you debug, storage that keeps billing after the run, data
+egress, and — the term engineers habitually forget — your own time. A
+faster, pricier GPU frequently wins on cost per *completed* experiment.
+The little model below is worth re-running with your own assumptions;
+here it compares a cheap marketplace card against two datacenter GPUs for
+the same eight-hour (on the slowest card) job:
 
 ```{.python .input #cloud-instances-cost-model}
 import numpy as np
 
-hours = np.array([8.0, 8.0, 8.0])
-gpu_per_hour = np.array([1.20, 2.10, 3.40])
-relative_speed = np.array([1.0, 1.8, 3.1])
-setup_hours = np.array([1.0, 0.5, 0.5])
+gpu = ["RTX 4090", "A100 80GB", "H100"]
+gpu_per_hour = np.array([0.40, 1.50, 2.50])   # marketplace, July 2026
+relative_speed = np.array([1.0, 1.6, 3.0])    # measure for your workload!
+setup_hours = np.array([0.5, 0.5, 0.5])
+storage_and_egress = np.array([2.0, 2.0, 2.0])
 engineer_per_hour = 60.0
-storage_and_egress = np.array([4.0, 6.0, 8.0])
 
-wall_hours = hours / relative_speed
+wall_hours = 8.0 / relative_speed
 invoice = (wall_hours + setup_hours) * gpu_per_hour + storage_and_egress
-complete_cost = invoice + setup_hours * engineer_per_hour
-list(zip(np.round(wall_hours, 2), np.round(invoice, 2),
-         np.round(complete_cost, 2)))
+complete = invoice + setup_hours * engineer_per_hour
+for row in zip(gpu, np.round(wall_hours, 1), np.round(invoice, 2),
+               np.round(complete, 2)):
+    print(row)
 ```
 
-This is not an argument for assigning a monetary value to every minute in all
-contexts. It is a reminder that an unreliable cheap host can be expensive when
-experiments repeatedly fail, and that a reproducible image can pay for itself.
+The invoice favors the cheap card; the complete cost is nearly a tie, and
+if slow iteration means one extra debugging round, the fast card wins. This
+is also why an unreliable \$0.30 host can be the most expensive machine you
+ever rent. For scale: a LoRA fine-tune of a 7B model is a few hours on one
+consumer GPU — \$3–15 total on a marketplace — while pretraining even a
+small LLM from scratch is thousands of GPU-hours. Know which regime you
+are in before optimizing pennies.
 
-Spot or interruptible capacity can reduce the invoice when the job checkpoints
-and resumes correctly. It is usually a poor discount for an interactive
-session or an uncheckpointed run. Treat eviction as a normal event and test
-recovery before committing a long experiment.
+Two cost traps deserve their own warnings:
 
-## Operating Disposable Compute
+* **Spot and interruptible capacity** is 50–90% off, and it is the right
+  default for any job that checkpoints and resumes cleanly
+  (:numref:`sec_training_systems`). It is the wrong discount for an
+  interactive session or an uncheckpointed run — eviction notice can be as
+  short as a few seconds on marketplace spot tiers. Test recovery *before*
+  the long run, not during it.
+* **Egress fees.** Hyperscalers charge roughly \$0.09–0.12 per GB to move
+  data out. Re-downloading a 140 GB checkpoint daily costs more per month
+  than many GPUs. Keep data and compute in the same region, and prefer
+  providers with free egress (most marketplaces) when your workflow moves
+  big artifacts around.
 
-### A Disposable-Compute Workflow
+## Working on a Rented Machine
 
-Separate the lifetime of computation from the lifetime of valuable state.
+### Boot, Connect, Verify
 
-![Provision compute, connect securely, checkpoint to durable storage, and delete the VM; resume from that storage on a replacement.](../img/tools-cloud-lifecycle.svg)
+Start from the provider's current deep-learning image — drivers, CUDA, and
+container runtime preinstalled. Hand-installing CUDA on a bare OS image is
+an afternoon you never get back, and reproducing it next month is another.
+Connect with the SSH-tunnel pattern of :numref:`sec_interactive_development`
+(the same two commands work on every provider), or use VS Code Remote SSH.
+Run long jobs under `tmux` so an SSH disconnect does not kill training, and
+verify the machine before trusting it with a long run:
+
+```bash
+nvidia-smi                 # driver ok? expected GPU? memory free?
+df -h                      # scratch disk has room for data + checkpoints?
+python -c "import torch; print(torch.cuda.get_device_name(0))"
+```
+
+A one-minute smoke test — one batch through the model, one checkpoint
+written and read back — catches most of what the console's green checkmark
+does not: broken drivers, full disks, read-only mounts, and datasets that
+stream too slowly to keep the GPU busy.
+
+### Compute Is Disposable, Results Are Not
+
+![Provision compute, connect securely, checkpoint to durable storage, and delete the VM; resume from that storage on a replacement machine.](../img/tools-cloud-lifecycle.svg)
 :label:`fig_tools_cloud_lifecycle`
 
-A vendor-neutral workflow is:
+The workflow in :numref:`fig_tools_cloud_lifecycle` separates the lifetime
+of the machine from the lifetime of your work. Code lives in Git and is
+cloned onto the instance; data and checkpoints sync to durable object
+storage (S3, GCS, or the provider's volume product) on a schedule the job
+controls; the instance itself can then be preempted, crashed, or deleted
+without losing more than the last checkpoint interval. This is not merely a
+safety practice — it is what makes spot pricing and marketplace hosts
+usable at all.
 
-1. Create a project, budget, and billing alert. Set quotas low enough that a
-   credential mistake cannot allocate a fleet.
-1. Choose a current provider image with drivers and container support. Avoid a
-   hand-written CUDA installation unless driver work is the experiment.
-1. Attach the smallest necessary identity. Do not place long-lived cloud keys
-   on the instance.
-1. Restrict inbound networking to SSH, a VPN, or the provider's session
-   manager. Do not expose Jupyter directly to the public internet.
-1. Restore code, data, and a checkpoint from versioned durable storage.
-1. Run a short smoke test, then the measured workload.
-1. Sync checkpoints, logs, and final artifacts away from the VM.
-1. Delete the instance and inspect disks, snapshots, reserved addresses, and
-   object storage that may continue to incur charges.
-
-### Secure Connection and Remote Jupyter
-
-Prefer an SSH configuration entry over repeatedly copying long commands:
-
-```text
-Host d2l-gpu
-    HostName 203.0.113.10
-    User ubuntu
-    IdentityFile ~/.ssh/d2l_ed25519
-    IdentitiesOnly yes
-```
-
-Then forward a local port to a JupyterLab server bound only to the remote
-loopback interface:
-
-```bash
-# Remote machine
-uv run jupyter lab --no-browser --ip 127.0.0.1 --port 8888
-```
-
-```bash
-# Local machine
-ssh -N -L 8888:127.0.0.1:8888 d2l-gpu
-```
-
-Open the tokenized `http://127.0.0.1:8888/` URL locally. Keep Jupyter's token
-enabled. VS Code Remote SSH provides another route: the editor stays local
-while its server and Python kernel run on the instance.
-
-### Images and Containers
-
-A machine image defines the host operating system and driver. A container
-defines most user-space libraries. The host driver must be compatible with the
-container's CUDA runtime. Record all three identities: image, container digest,
-and source revision.
-
-Use an image from the provider or framework vendor when possible, then pin a
-container by digest for important runs. `latest` is a convenient experiment,
-not a reproducible dependency. Mount data read-only when the job does not need
-to modify it, and write checkpoints to a deliberate output location.
-
-### Capacity and Failure Checks
-
-Before a long run, verify:
-
-```bash
-nvidia-smi
-df -h
-ulimit -n
-```
-
-Also run a framework allocation and one training step. A GPU name in a console
-does not verify that the driver works, collectives can communicate, the disk
-has space, or the dataset can be read fast enough. Monitor accelerator
-utilization, host memory, I/O wait, network traffic, and checkpoint duration.
-
-## Ownership Economics
-
-Rent when demand is bursty, the required device changes frequently, or a short
-job needs more memory than you can sensibly own. Buy when a well-understood
-workload uses one system steadily, privacy favors local execution, and power,
-noise, cooling, maintenance, and opportunity cost are acceptable. Hybrid use
-is common: develop locally, reproduce on one rented GPU, then scale only the
-measured bottleneck.
+When the experiment ends, tear down *everything that bills*: the instance,
+its disks and snapshots, reserved IP addresses, and stale buckets. Set a
+billing alert on day one; a forgotten idle GPU costs the same as a busy
+one, and quota limits are the only thing standing between a leaked
+credential and a very large invoice.
 
 ## Summary
 
-* Choose from workload constraints, not provider instance names.
-* Include idle time, storage, egress, reliability, and setup in cost.
-* Match the provider's trust boundary to the data.
-* Make compute disposable and checkpoints durable.
-* Restrict network access, pin environments, test recovery, and delete every
-  billable resource after use.
+* Every notebook in this book fits in 8 GB of GPU memory, so the cheapest
+  rentable GPUs suffice; LLM-scale work is what climbs the price ladder.
+* The market has three tiers — hyperscalers, GPU specialists, and
+  marketplaces — with roughly a 4× price spread for the same GPU and a
+  matching spread in integration, reliability, and trust.
+* Compare cost per completed result, not per hour: include setup, idle
+  time, storage, egress, and your own time.
+* Spot capacity is the right default for checkpointed jobs and wrong for
+  everything else; egress fees punish moving large artifacts.
+* Treat instances as disposable: provider image, SSH tunnel, `tmux`,
+  checkpoints to durable storage, then delete every billable resource.
 
 ## Exercises
 
-1. Compare three currently available instances using cost per completed run,
-   not cost per hour. State the date and all assumptions.
-1. Draw the trust boundary for a marketplace host processing public data and
-   for a hyperscaler processing confidential data.
-1. Write a teardown checklist that includes resources other than the VM.
+1. Price a fine-tuning job you care about on three providers from
+   :numref:`tab_cloud_prices` using cost per completed run. State the date
+   and your speed assumptions, then check how prices have moved since this
+   table was written.
+1. Take whichever training notebook of this book you ran most recently and
+   measure its actual GPU memory high-water mark. Which entries of
+   :numref:`tab_cloud_prices` could run it?
+1. Simulate an interruption: start a checkpointed training run, kill the
+   process mid-epoch, and resume on a fresh machine from object storage.
+   Time the recovery and identify what you forgot to save.
+1. Draw the trust boundary for (a) a marketplace host processing a public
+   dataset and (b) a hyperscaler processing medical records. What changes?

@@ -278,6 +278,7 @@ book:
         - chapter_appendix-tools-for-deep-learning/software-ecosystem.qmd
         - chapter_appendix-tools-for-deep-learning/training-systems.qmd
         - chapter_appendix-tools-for-deep-learning/model-serving.qmd
+        - chapter_appendix-tools-for-deep-learning/developers-guide.qmd
         - chapter_appendix-tools-for-deep-learning/utils.qmd
         - chapter_appendix-tools-for-deep-learning/d2l.qmd
     - references.qmd

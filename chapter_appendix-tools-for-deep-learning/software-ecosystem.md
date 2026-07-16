@@ -1,53 +1,149 @@
-# Models, Datasets, and the ML Software Ecosystem
+# Ecosystem
 :label:`sec_software_ecosystem`
 
-Modern machine learning rarely begins with an empty directory. We discover a
-model or dataset, inspect its documentation and license, pin a revision, cache
-the files, adapt and evaluate it, and publish a new artifact. Libraries make
-each step convenient; a reliable workflow preserves identity and provenance
-across all of them.
+Almost nothing in modern machine learning starts from an empty directory.
+You begin from someone else's work: a pretrained checkpoint, a curated
+dataset, a paper with released code, a benchmark that tells you what "good"
+currently means. Knowing *where to look* — and how to judge what you find —
+has quietly become a core skill, as load-bearing as knowing how to write a
+training loop. This section is the map we wish someone had handed us: the
+places that matter in 2026, the leaderboards worth trusting, how to stay
+current in a field that turns over monthly, and the handful of habits that
+keep borrowed artifacts from becoming liabilities.
 
-## Artifact Identity
+## Where to Find Things
 
-### A Model Is More Than Its Weights
+### Models
+
+The [Hugging Face Hub](https://huggingface.co/models) is the default: over
+two million public models as of spring 2026, with Git-style versioning,
+model cards, and integration into effectively every library in this book.
+Its scale cuts both ways — the top 200 repositories account for about half
+of all downloads, and most of the rest is abandoned experiments — so search
+by task, sort by downloads and recency, and read the model card before
+committing bandwidth. Complements worth knowing:
+
+* [ModelScope](https://modelscope.cn/), Alibaba's hub, is the primary home
+  of the Chinese open-model ecosystem (Qwen and friends, 170,000+ models) —
+  increasingly where open-weight state of the art appears first.
+* [Kaggle Models](https://www.kaggle.com/models) hosts curated weights
+  wired into Kaggle's competition and notebook infrastructure
+  (:numref:`sec_hosted_notebooks`).
+* The [Ollama library](https://ollama.com/library) is a short, curated
+  menu of local-runtime models — less a discovery surface than a
+  convenience layer (:numref:`sec_model_serving`).
+* [`timm`](https://huggingface.co/timm) remains the reference collection
+  of vision backbones; [Civitai](https://civitai.com/) dominates community
+  image-generation checkpoints and LoRAs.
+
+### Datasets
+
+[Hugging Face Datasets](https://huggingface.co/datasets) (half a million
+public datasets) and [Kaggle](https://www.kaggle.com/datasets) cover most
+supervised needs. For pretraining-scale text, the lineage runs from raw
+[Common Crawl](https://commoncrawl.org/) through filtered derivatives —
+[FineWeb](https://huggingface.co/datasets/HuggingFaceFW/fineweb) (~15
+trillion tokens, plus a 1,000-language successor) has become the standard
+open baseline, the role C4 played in this book's era of BERT. For
+vision–language pairs, DataComp superseded LAION as the recommended
+starting point. Older and very large corpora sometimes live only on
+[Academic Torrents](https://academictorrents.com/). Whatever the source:
+datasets have versions, licenses, and documented failure modes exactly as
+models do, and the data card deserves the same read as the model card.
+
+### Papers and Code
+
+New work appears on [arXiv](https://arxiv.org/list/cs.LG/recent) first;
+the community's curated front page for ML is [Hugging Face
+Papers](https://huggingface.co/papers), which absorbed that role when
+Papers with Code — for years the standard index from papers to code and
+benchmarks — was shut down without notice in mid-2025. (Its historical
+leaderboard data survives only as a frozen archive; let that be a lesson
+about free infrastructure.) [Semantic Scholar](https://www.semanticscholar.org/)
+and [alphaXiv](https://alphaxiv.org/) help with search and discussion, and
+GitHub remains where the code actually is — a repository's issue tracker
+and commit recency tell you more about whether a method reproduces than
+the paper's abstract does.
+
+## Choosing a Model: Benchmarks and Leaderboards
+
+"Which model should I use?" changed answers a dozen times while this book
+was written; what stays stable is *how* to answer it. No single number
+survived contact with optimization — static benchmark suites become
+training data, and the once-canonical Open LLM Leaderboard was retired in
+2025 for exactly that reason. Practitioners now triangulate:
+
+* [LMArena](https://lmarena.ai/) (now Arena) — blind human pairwise
+  preference; hard to game, but measures "pleasing an average user," which
+  may not be your task.
+* [LiveBench](https://livebench.ai/) — contamination-resistant by rotating
+  fresh questions monthly.
+* [SWE-bench Verified](https://www.swebench.com/) — the reference for
+  agentic coding against real GitHub issues; representative of the
+  benchmark-per-capability pattern (math, long context, safety all have
+  their own).
+* [Artificial Analysis](https://artificialanalysis.ai/) — the
+  quality/price/latency triangulation across hundreds of models and
+  providers; usually the first stop when cost matters.
+* [OpenRouter rankings](https://openrouter.ai/rankings) — revealed
+  preference by real token volume rather than scores; instructive
+  precisely where it disagrees with the quality leaderboards.
+
+Then the step that outranks all of the above: build a small evaluation set
+from *your* task — even fifty examples — and run the shortlist on it. The
+gap between leaderboard rank and performance on your distribution is
+routinely larger than the gap between adjacent leaderboard entries. The
+evaluation discipline this book has practiced throughout — held-out data,
+honest baselines, error analysis — applies to *choosing* models exactly
+as it does to training them.
+
+## Staying Current
+
+A field this fast rewards a deliberate information diet over doomscrolling.
+A workable minimal set, as of 2026:
+
+* [r/LocalLLaMA](https://www.reddit.com/r/LocalLLaMA/) — the town square
+  of open-weight ML; new releases, quantizations, and hardware reports
+  surface here first, usually with reproduction attempts attached.
+* [Hugging Face Papers](https://huggingface.co/papers) daily — a curated
+  dozen papers instead of arXiv's daily hundreds.
+* One good newsletter — Andrew Ng's *The Batch*, Jack Clark's *Import AI*,
+  or Sebastian Raschka's *Ahead of AI* — for the weekly synthesis.
+* For systems depth, the [GPU MODE](https://github.com/gpu-mode/lectures)
+  lecture series and community, and the
+  [EleutherAI Discord](https://www.eleuther.ai/community) for open
+  research.
+
+X/Twitter remains where labs announce and researchers argue; treat it as a
+discovery feed, not an archive. And the chapter-end
+resources of this book (:numref:`chap_appendix_tools`) collect the
+durable long-form references.
+
+## Using What You Found
+
+### Pin the Identity
 
 ![A reusable model artifact combines configuration, weights, preprocessing, documentation, and an immutable revision.](../img/tools-ecosystem-artifact.svg)
 :label:`fig_tools_model_artifact`
 
-Weights without the matching architecture may be uninterpretable. A language
-model also needs tokenizer rules and special tokens; a vision model needs its
-resize and normalization policy. Generation defaults, label mappings, license,
-training provenance, evaluation limits, and the exact revision affect whether
-we can reproduce or deploy the result.
+A model is more than its weights: the tokenizer, preprocessing,
+configuration, license, and revision all determine whether you can
+reproduce a result (:numref:`fig_tools_model_artifact`). Repositories are
+Git repositories — `main` moves. Pin the commit:
 
-Model and data cards are part of the artifact, not marketing attached after the
-fact. Read the stated training data, intended use, limitations, evaluation
-conditions, license, and access restrictions before downloading gigabytes or
-building a product assumption around it.
+```text
+from huggingface_hub import snapshot_download
 
-### The Artifact Lifecycle
+path = snapshot_download(
+    repo_id="organization/model-name",
+    revision="0123456789abcdef",          # an immutable commit, not main
+    allow_patterns=["*.json", "*.safetensors"],
+)
+```
 
-![Pin identity early and preserve it while caching, adapting, and publishing.](../img/tools-artifact-lifecycle.svg)
-:label:`fig_tools_artifact_lifecycle`
-
-A practical sequence is:
-
-1. **Discover** candidates using task, language, license, size, and measured
-   evaluations.
-1. **Inspect** the card, repository tree, configuration, custom code, and file
-   formats.
-1. **Pin** an immutable commit or version rather than a moving branch.
-1. **Download and cache** through a documented client; record where the cache
-   lives and how large it may grow.
-1. **Load** with known library versions and explicit preprocessing.
-1. **Adapt** with a full fine-tune, an adapter, prompting, or conversion.
-1. **Evaluate** on the actual use case, including failure modes and resource
-   behavior.
-1. **Publish** a new revision with its relationship to the parent artifact.
-1. **Deploy** the pinned, evaluated artifact, rather than whatever the repository serves
-   under `main` later.
-
-The following compact manifest is a useful local companion to a model cache.
+A tiny manifest turns "which model was that?" from archaeology into a
+lookup — in production you would add file hashes, library versions, and an
+evaluation record:
 
 ```{.python .input #software-ecosystem-manifest}
 from dataclasses import asdict, dataclass
@@ -61,155 +157,65 @@ class Artifact:
     license: str
     parent: str | None = None
 
-artifact = Artifact(
-    repository="organization/model-name",
-    revision="0123456789abcdef",
-    task="text-generation",
-    license="check-model-card",
-)
+artifact = Artifact(repository="organization/model-name",
+                    revision="0123456789abcdef",
+                    task="text-generation", license="apache-2.0")
 print(json.dumps(asdict(artifact), indent=2))
 ```
 
-In production, include file hashes, preprocessing revision, framework and
-library versions, evaluation record, and approval status.
+The same pinning discipline applies to *derived* artifacts: a LoRA adapter
+without its base-model revision is incomplete, and a quantized conversion
+(GGUF, AWQ, ONNX — see :numref:`sec_model_serving`) is a new artifact
+whose numerical fidelity someone should have checked against the source.
 
-## Working with Repositories
+### Trust and Licenses
 
-### Hugging Face as a Running Example
+Downloaded models are software supply-chain inputs, and the ecosystem has
+real teeth:
 
-The [Hugging Face Hub](https://huggingface.co/docs/hub/) hosts versioned models,
-datasets, and application demos. Its surrounding libraries separate useful
-concerns:
-
-* **Transformers** supplies architectures, pretrained model interfaces,
-  generation, and training utilities.
-* **Datasets** loads, transforms, streams, and caches datasets, commonly through
-  Apache Arrow.
-* **Tokenizers** provides fast, serializable tokenization pipelines.
-* **Accelerate** configures device placement and launches distributed jobs.
-* **PEFT** implements parameter-efficient adaptation such as low-rank adapters.
-* **TRL** focuses on post-training objectives and preference optimization.
-* **Diffusers** supplies modular diffusion pipelines.
-* **safetensors** stores tensors without executable pickle payloads and supports
-  efficient metadata and slicing.
-
-These libraries are related but optional. Use the narrowest layer that solves
-the problem. A simple image classifier does not need an LLM post-training
-stack, and a serving engine need not import the library used to train a model.
-
-A revision-pinned download should make the identity explicit:
-
-```text
-from huggingface_hub import snapshot_download
-
-path = snapshot_download(
-    repo_id="organization/model-name",
-    revision="0123456789abcdef",
-    allow_patterns=["*.json", "*.safetensors"],
-)
-```
-
-The placeholder revision above is illustrative. Use a real immutable commit.
-`allow_patterns` can avoid downloading unrelated framework formats, but ensure
-the selected files form a complete artifact.
-
-### Formats and Transformations
-
-Formats encode different contracts:
-
-* **safetensors** is a tensor container, not an architecture or serving API.
-* **Adapter weights** encode a transformation relative to a named base model.
-  Publishing the adapter without the base revision is incomplete.
-* **ONNX** represents a computation graph for interoperable runtimes. Export can
-  specialize shapes or omit behavior that existed in Python.
-* **GGUF** packages quantized models and metadata for llama.cpp-family local
-  runtimes.
-* Framework checkpoints may contain only tensors or arbitrary serialized Python
-  objects, depending on how they were saved.
-
-Conversion is a new artifact. Record the converter version, command, source
-revision, quantization calibration, target precision, and an evaluation against
-the source. Matching file names do not imply matching numerical behavior.
-
-### Trust, Access, and Licensing
-
-Treat model repositories as software supply-chain inputs.
-
-* Prefer non-executable tensor formats. Loading an untrusted pickle-based
-  checkpoint can execute code.
-* `trust_remote_code=True` deliberately executes repository code. Read and pin
-  that code, isolate it, and use the flag only when the architecture requires
-  it.
-* Gated assets may require accepting terms. An access token proves identity; it
-  does not grant permission to redistribute the files.
-* A model, its training data, and its application may have different legal and
-  policy constraints. Record the actual license text and version.
-* Use read-scoped tokens in a secret manager. Never commit or print them.
-
-Check file hashes after transfers, especially when an artifact is mirrored.
-For a small file, the mechanism is straightforward:
-
-```{.python .input #software-ecosystem-hash}
-import hashlib
-from pathlib import Path
-
-def sha256(path, block_size=1 << 20):
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as handle:
-        for block in iter(lambda: handle.read(block_size), b""):
-            digest.update(block)
-    return digest.hexdigest()
-```
-
-### Caches and Storage
-
-Shared caches save time and bandwidth but can silently consume a workstation's
-disk. Know the cache root, inspect it, and prune through the library rather than
-deleting files while another job uses them. On a cluster, decide whether each
-node has a local cache or all nodes contend for network storage. A common
-pattern stages immutable weights locally and writes only checkpoints and logs
-to shared durable storage.
-
-Offline and air-gapped environments need more than copied weights. Mirror the
-complete pinned artifact, required packages or containers, licenses, and
-checksums; test with network access disabled.
-
-## Lineage and Publication
-
-### Beyond One Hub
-
-The Hub is a useful example, not the whole ecosystem. Kaggle hosts datasets,
-models, and notebook outputs; ModelScope serves a broad international model
-community; `timm` and PyTorch Hub distribute model implementations and
-weights; OpenMMLab provides task-specific toolboxes; and GGUF and MLX
-communities distribute artifacts optimized for local runtimes. Enterprise
-registries add approval, access, and lineage controls.
-
-Avoid building a logo catalog. Ask the same questions of every source: What is
-the immutable identity? What files and executable code are involved? What is
-the license? How is the artifact evaluated, cached, transformed, and retired?
-
-### Experiments and Lineage
-
-Experiment trackers such as MLflow, Weights & Biases, and framework-specific
-loggers connect configurations, metrics, code revisions, and artifacts. They
-do not create reproducibility automatically. Log the source and data revision,
-environment, seed policy, hardware, parent model, and output hashes. Keep a
-plain export path so results remain inspectable outside one service.
+* Prefer **safetensors** — a pure tensor container. Legacy pickle-based
+  checkpoints can execute arbitrary code on load, and the Hub's scanners
+  are a mitigation, not a guarantee.
+* `trust_remote_code=True` runs Python from the repository on your
+  machine. Read and pin that code; use the flag only when the architecture
+  genuinely requires it.
+* "Open" spans a wide range of licenses: permissive Apache/MIT weights,
+  acceptable-use licenses with commercial thresholds, research-only
+  releases, and gated models whose terms you accept per account. The
+  license lives in the repository — record the one you actually accepted,
+  since repositories can relicense between revisions.
+* Every hub client caches aggressively (tens to hundreds of gigabytes in
+  `~/.cache/huggingface` is routine). Learn your cache tool's `scan` and
+  `delete` commands before your disk teaches you.
 
 ## Summary
 
-* A complete artifact includes preprocessing, configuration, documentation,
-  license, and revision in addition to weights.
-* Pin before downloading and preserve identity through every transformation.
-* Loading remote code and pickle-based checkpoints changes the trust boundary.
-* A conversion or adapter is a new artifact with a recorded parent.
-* Caching, access control, licensing, and lineage are part of the workflow.
+* Discovery is a skill: Hugging Face is the center for models and
+  datasets, with ModelScope, Kaggle, Ollama's library, and Civitai as the
+  complements that matter; FineWeb-class corpora are the open pretraining
+  baseline.
+* Papers with Code is gone; arXiv plus Hugging Face Papers is the 2026
+  reading pipeline, with GitHub as the ground truth for whether code
+  exists and is alive.
+* No leaderboard is trusted alone: triangulate Arena, LiveBench,
+  task-specific benchmarks, and price/latency data — then decide on a
+  small evaluation you built from your own task.
+* Keep a deliberate information diet: one community, one curated paper
+  feed, one newsletter.
+* Pin revisions, prefer safetensors, read licenses, treat remote code as
+  code review, and manage your caches — borrowed artifacts are supply
+  chain, not just downloads.
 
 ## Exercises
 
-1. Inspect a model repository and list every file needed for offline inference.
-1. Design a manifest for an adapter that unambiguously identifies its base
-   model, training data, code, and evaluation.
-1. Convert a small model between two formats and define numerical and task-level
-   checks that would detect an unacceptable conversion.
+1. Pick a task you care about and shortlist three models using at least
+   two leaderboards plus Artificial Analysis. Where do the rankings
+   disagree, and why might that be?
+1. Inspect a model repository of your choice and list every file needed
+   for offline inference. Which of them could execute code on your
+   machine?
+1. Build a 25-example evaluation set for a task you know well and run
+   your shortlist from Exercise 1 on it. Does your ranking match the
+   leaderboards'?
+1. Find the license of a popular open-weight model and determine: may you
+   deploy it commercially, fine-tune it, and redistribute the fine-tune?

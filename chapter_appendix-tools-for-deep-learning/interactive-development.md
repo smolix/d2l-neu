@@ -1,27 +1,95 @@
-# Interactive Development with JupyterLab and VS Code
+# Notebooks
 :label:`sec_interactive_development`
 
-A notebook is both a document and an interface to a live Python process. The
-document stores cells and selected outputs. The kernel stores imports,
-variables, random-number state, open files, compiled programs, and accelerator
-allocations. Confusing these two kinds of state is the source of many notebook
-failures.
+Every section of this book is an executable notebook: prose, mathematics,
+code, and the code's output live in a single document. That is a deliberate
+choice, not a formatting convenience. Deep learning is an empirical subject.
+The fastest way to understand a model is to train it, change something — the
+learning rate, the width of a layer, the amount of data — and watch what
+happens. A notebook makes that loop immediate: the explanation sits next to
+the experiment, and the experiment is one keystroke from running. This is
+also how most practitioners work day to day, from quick data inspection to
+research prototypes, which is why the Jupyter notebook has become the shared
+medium of machine learning.
 
-![A notebook document sends cells to a live kernel; restart and run all reconstructs state from the document alone.](../img/tools-kernel-state.svg)
+Reading alone will not build the same understanding. We wrote each notebook
+expecting you to *edit* it: break the code, fix it, try a variant the text
+only mentions. This section explains how to run the book on your own machine
+and how to work in notebooks effectively — including the one habit, *restart
+and run all*, that separates reproducible notebooks from lucky ones. If you
+would rather not install anything, :numref:`sec_hosted_notebooks` shows how
+to run the same notebooks free of charge on Colab or Kaggle; if you need more
+hardware than your laptop offers, see :numref:`sec_cloud_instances`.
+
+## Why Notebooks?
+
+A plain Python script re-runs from the top every time, so a slow step — say,
+loading and preprocessing a dataset — repeats on every experiment. A notebook
+keeps a live Python process (the *kernel*) between executions: load the data
+once, then iterate on the model as often as you like while the data stays in
+memory. Combined with inline plots and the ability to interleave explanation
+with computation, this is what makes notebooks such an effective medium for
+teaching and for research alike.
+
+The price of that convenience is *state*. Understanding where state lives is
+the key to using notebooks well.
+
+### The Document and the Kernel
+
+A notebook is really two things. The *document* stores cells and saved
+outputs — it is what you read, share, and commit. The *kernel* holds the live
+state: imported modules, variables, random-number generators, open files,
+compiled programs, and accelerator memory. The document orders cells top to
+bottom; the kernel only knows the order in which you *executed* them.
+Confusing these two orders is the root cause of most notebook bugs.
+
+![The document orders cells top to bottom; the kernel accumulates state in execution order. Restart and run all replays document order — the only order a reader can reproduce — and exposes the mismatch.](../img/tools-kernel-state.svg)
 :label:`fig_tools_kernel_state`
 
-If cell 12 works only because cell 19 ran earlier, the displayed order does not
-describe the computation. **Restart kernel and run all** is therefore the most
-important notebook reproducibility check. It catches hidden state, missing
-setup, and order dependencies before another reader does.
+:numref:`fig_tools_kernel_state` shows the classic failure. During an
+editing session you executed a data-loading cell first, then wrote a
+model-definition cell *above* it, and everything worked because the kernel
+already held `data`. The document now tells a story that never happened. A
+reader who runs the cells in the order shown — or you, tomorrow, after a
+restart — hits a `NameError`.
 
-## Reproducible Notebook State
+The execution counters (`In [3]`, `In [1]`, …) are historical clues, not a
+dependency graph. The following pair of cells demonstrates benign,
+document-ordered state: the second cell works only because the first ran.
 
-### Start in the Book Environment
+```{.python .input #interactive-development-hidden-state-a}
+import numpy as np
 
-Download the notebook archive described in :ref:`chap_installation`, or clone
-the current sources from [GitHub](https://github.com/smolix/d2l-neu). The
-archive includes CPU and GPU `uv` environment files. From the extracted
+rng = np.random.default_rng(7)
+samples = rng.normal(size=5)
+```
+
+```{.python .input #interactive-development-hidden-state-b}
+float(samples.mean())
+```
+
+That dependency is fine, because it follows the reading order. A cell that
+depends on an assignment *below* it, or on a cell you have since deleted, is
+not. Keep cells small, keep function definitions separate from experiments,
+and pass data explicitly rather than mutating globals across many cells.
+
+### Restart and Run All
+
+**Restart kernel and run all cells** discards the kernel's accumulated state
+and replays the document from a blank slate, in reading order. It is the
+single most important reproducibility check a notebook offers: it catches
+hidden state, missing setup, and order dependencies before another reader
+does. Make it a reflex before saving, sharing, or committing a notebook.
+Every notebook in this book is built and tested exactly this way — the
+outputs you see on the website are produced by a clean top-to-bottom run.
+
+## Running the Book Locally
+
+### Setting Up
+
+Download the notebook archive described in :ref:`chap_installation`, or
+clone the current sources from [GitHub](https://github.com/smolix/d2l-neu).
+The archive includes CPU and GPU `uv` environment files. From the extracted
 directory, create the environment once and launch JupyterLab through it:
 
 ```bash
@@ -29,10 +97,13 @@ uv sync --locked
 uv run jupyter lab
 ```
 
-Use the GPU lock on a compatible NVIDIA system when the examples require it.
-The environment selected by the notebook kernel must be the same environment
-in which the packages were installed. A Jupyter server can see many kernels;
-its own Python process does not determine which one executes a notebook.
+Use the GPU lock file on a compatible NVIDIA system when the examples require
+it. One subtlety matters more than any other: the *kernel* selected inside a
+notebook must belong to the environment where the packages were installed. A
+Jupyter server can see many kernels; its own Python process does not
+determine which one executes your notebook.
+
+### A Quick Sanity Check
 
 Before changing code, record a compact identity check:
 
@@ -48,98 +119,73 @@ import sys
 }
 ```
 
-This catches two common mistakes: selecting the wrong environment and opening
-the notebook from a directory where relative data paths no longer resolve.
+This catches the two most common setup mistakes in one cell: a kernel from
+the wrong environment (`sys.executable` points somewhere unexpected) and a
+notebook opened from a directory where relative data paths no longer resolve.
 
-## Local Editors
+## Working in an Editor
 
-### Work Effectively in JupyterLab
+### JupyterLab
 
 [JupyterLab](https://jupyterlab.readthedocs.io/) combines a file browser,
-notebook editor, terminals, text editor, debugger support, and running-kernel
-view. The essentials are stable even as the interface evolves:
+notebook editor, terminals, a text editor, debugger support, and a view of
+running kernels. The essentials are stable even as the interface evolves:
 
-* Use the file browser to open an `.ipynb`; use a terminal for `uv`, Git, and
+* Run a cell with `Shift+Enter`; use a terminal tab for `uv`, Git, and
   inspecting files.
-* Select the intended kernel by environment name, then verify `sys.executable`.
-* Run a cell with `Shift+Enter`; use **Run All Above** only when the dependency
-  order is already clear.
-* Interrupt a long computation before restarting. Restart releases Python
-  state and normally releases accelerator allocations owned by that process.
+* Select the kernel by environment name, then verify `sys.executable`.
+* Interrupt a long computation before restarting. Restarting releases Python
+  state and, normally, the accelerator memory owned by that process.
 * Use **Restart Kernel and Run All Cells** before saving a result for others.
-* Inspect the **Running** panel and stop kernels you no longer use. Closing a
-  browser tab does not necessarily stop its kernel.
+* Inspect the **Running** panel and stop kernels you no longer use — closing
+  a browser tab does not necessarily stop its kernel, and an orphaned kernel
+  can hold gigabytes of GPU memory.
 
-Cell execution counters are historical clues, not a dependency graph. A lower
-cell can have an earlier counter after out-of-order execution. Prefer small
-cells with explicit inputs and outputs, keep function definitions separate
-from experiments, and avoid silently mutating global objects across many
-cells.
+### VS Code
 
-The following example demonstrates hidden state. It succeeds only after the
-first cell has run:
+[Visual Studio Code](https://code.visualstudio.com/docs/datascience/jupyter-notebooks)
+edits and runs `.ipynb` files with kernel selection, a variable inspector,
+cell-level debugging, and notebook-aware diffs. Open the repository as a
+folder, choose the interpreter created by `uv`, and select that interpreter
+as the notebook kernel.
 
-```{.python .input #interactive-development-hidden-state-a}
-import numpy as np
-rng = np.random.default_rng(7)
-samples = rng.normal(size=5)
-```
-
-```{.python .input #interactive-development-hidden-state-b}
-float(samples.mean())
-```
-
-That dependency is reasonable because the document orders the cells. A cell
-that depends on an assignment below it is not. For important computations,
-move reusable logic into functions and pass data explicitly.
+VS Code shines when a notebook grows into a project: the same editor
+navigates definitions, runs tests, formats code, and reviews Git diffs. A
+good division of labor is to keep logic that deserves tests in `.py` modules
+and use the notebook as the explanatory path and experiment record. This
+repository also ships a VS Code extension that understands the book's
+authoring workflow — switching framework views, previewing slides, syncing
+edits back to the source — described in :numref:`sec_developers_guide`.
 
 ### Debugging and Timing
 
-Use a notebook debugger when supported by the selected kernel, or place a
-small failing call in a module and use the Python debugger in a terminal. A
-traceback should retain the original exception; broad `try/except` blocks that
-print “failed” discard the location and type needed for diagnosis.
-
-IPython already provides timing tools:
+Use the notebook debugger when the kernel supports it, or move a small
+failing call into a module and debug it in a terminal. Resist broad
+`try/except` blocks that print "failed": they discard the exception type and
+location that diagnosis needs. For quick measurements, IPython's magics are
+built in:
 
 ```{.python .input #interactive-development-timing}
 values = np.arange(100_000, dtype=np.float64)
 %timeit values @ values
 ```
 
-Accelerator operations are often asynchronous. A host timer may measure only
-dispatch unless the framework synchronizes. Use the framework's benchmarking
-utilities or an explicit synchronization, warm up compilation and kernels, and
-state the shapes, precision, device, and software version.
+One caveat when timing accelerators: GPU operations are asynchronous, so a
+host-side timer may measure only the dispatch of work, not its completion.
+Synchronize explicitly (or use the framework's benchmarking utilities), warm
+up compiled kernels first, and record the shapes, precision, device, and
+library versions alongside the number.
 
-### Work in VS Code
+## Remote Machines
 
-[Visual Studio Code's Jupyter support](https://code.visualstudio.com/docs/datascience/jupyter-notebooks)
-edits and runs `.ipynb` files, selects kernels, inspects variables, debugs
-cells, and compares notebook changes. Open the extracted repository as a
-folder, choose the interpreter created by `uv`, and then select that interpreter
-as the notebook kernel.
+Your editor, the notebook server, the kernel, and the accelerator need not
+be on the same machine. A common setup runs JupyterLab next to the GPU while
+you edit from a laptop.
 
-VS Code also works well when a notebook calls ordinary Python modules:
-the same editor navigates definitions, runs tests, formats code, and reviews
-Git diffs. Keep source code that deserves tests in `.py` files and use the
-notebook for the explanatory path and experiment record.
-
-The D2L Tools extension in this repository understands the book's authoring
-workflow. It can open generated framework views, navigate between generated
-notebooks and authoritative Markdown, capture reviewed outputs, run content
-checks, and preview slides. Generated `.ipynb` and `.qmd` files remain build
-artifacts; edit the source `.md` notebook and regenerate them.
-
-## Remote Compute
-
-An editor, notebook server, kernel, and accelerator may run in different
-places.
-
-![A local editor can reach a remote Jupyter server and Python kernel through an SSH tunnel; the accelerator remains attached to the remote kernel.](../img/tools-remote-layers.svg)
+![A local editor reaches a remote Jupyter server and kernel through an SSH tunnel; the accelerator stays attached to the remote kernel.](../img/tools-remote-layers.svg)
 :label:`fig_tools_remote_layers`
 
-For JupyterLab, bind the remote server to loopback and forward it over SSH:
+Bind the remote server to loopback and forward it over SSH:
 
 ```bash
 # Remote machine
@@ -151,53 +197,47 @@ uv run jupyter lab --no-browser --ip 127.0.0.1 --port 8888
 ssh -N -L 8888:127.0.0.1:8888 myserver
 ```
 
-Open the tokenized local URL. Do not bind an unauthenticated Jupyter server to
-all network interfaces. The SSH connection provides encryption and access
-control; Jupyter's token remains a useful second boundary.
+Then open the tokenized `http://127.0.0.1:8888/...` URL locally. Never bind
+an unauthenticated Jupyter server to all network interfaces: anyone who can
+reach the port can execute code as you. The SSH tunnel provides encryption
+and access control; Jupyter's token remains a useful second boundary.
 
-VS Code Remote SSH instead installs a small VS Code server remotely. The UI
-runs locally, while extensions, terminals, file access, and kernels associated
-with the remote window run on the server. Confirm the status bar says **SSH**
-before selecting the remote Python environment; a local kernel cannot use the
-remote GPU.
+VS Code's Remote SSH goes one step further: it installs a small server-side
+component so the editor UI runs locally while terminals, extensions, files,
+and kernels all live on the remote machine. Confirm the status bar shows
+**SSH** before selecting the Python environment — a local kernel cannot use
+the remote GPU. Either way, treat remote compute as disposable and its
+storage as precious: commit code and copy checkpoints off the machine before
+it is rebooted, preempted, or deleted (:numref:`sec_cloud_instances`).
 
-Remote files may be valuable even when compute is disposable. Commit code and
-copy checkpoints or results to durable storage before terminating a cloud
-machine.
-
-### Notebook Hygiene
-
-Before sharing or committing a notebook:
-
-1. Restart the kernel and run all cells in order.
-1. Check that setup does not rely on personal paths, unrecorded downloads, or
-   environment variables.
-1. Remove secrets and outputs containing private data.
-1. Keep outputs that teach or verify something; remove noisy progress logs and
-   transient widget state.
-1. Confirm random behavior is controlled where the lesson requires a stable
-   result, while avoiding claims of universal determinism.
-1. Save the environment, data/model revisions, and hardware facts needed to
-   interpret measurements.
-
-For this book, edit Markdown sources and let the build create `.ipynb`. This
-keeps reviewable prose and multi-framework code in one authoritative file.
+Before sharing or committing any notebook, a final hygiene pass pays off:
+restart and run all; check that setup does not rely on personal paths or
+unrecorded downloads; remove secrets and private data from outputs; keep the
+outputs that teach or verify something and delete noisy progress logs; and
+note the environment and hardware needed to interpret any measurement.
 
 ## Summary
 
-* The document and live kernel hold different state.
-* Restart and run all is the basic test that execution order is reproducible.
-* Launch JupyterLab or select a VS Code kernel from the book's `uv` environment.
-* JupyterLab integrates notebooks, terminals, kernels, and debugging; VS Code
-  integrates notebooks with modules, tests, diffs, and remote development.
-* Use SSH tunneling or Remote SSH instead of exposing a notebook server.
-* Edit the book's source Markdown, not generated notebook or Quarto files.
+* Notebooks interleave prose, code, and results, and keep expensive state
+  alive between experiments — that is why this book is written as notebooks,
+  and why you should run and edit them rather than only read them.
+* The document and the kernel hold different state in different orders;
+  restart and run all is the test that they agree.
+* Launch JupyterLab from the book's `uv` environment, and verify the kernel
+  with `sys.executable` before trusting any result.
+* JupyterLab integrates notebooks, terminals, and kernels; VS Code adds
+  modules, tests, diffs, and first-class remote development.
+* Use SSH tunneling or VS Code Remote SSH instead of exposing a notebook
+  server to the network.
 
 ## Exercises
 
-1. Create an intentional out-of-order dependency, detect it with restart and
-   run all, and refactor it into explicit cell order.
-1. Compare `sys.executable` in a terminal, JupyterLab kernel, and VS Code
-   kernel. Explain any difference.
-1. Connect to a remote CPU machine through an SSH tunnel and identify where the
-   editor, server, kernel, and file system run.
+1. Create an intentional out-of-order dependency like the one in
+   :numref:`fig_tools_kernel_state`, confirm that it works interactively,
+   and then detect it with restart and run all.
+1. Compare `sys.executable` in a terminal, a JupyterLab kernel, and a VS
+   Code kernel on your machine. Explain any difference.
+1. Time a matrix product with `%timeit` on CPU and, if available, on a GPU
+   with and without synchronization. Explain the discrepancy.
+1. Connect to a remote machine through an SSH tunnel and identify where the
+   editor, server, kernel, and file system each run.

@@ -1,202 +1,247 @@
-# Training Systems
+# Model Training
 :label:`sec_training_systems`
 
-Distributed training is not a switch that makes a program faster. It divides
-model state or work, introduces communication, and changes failure recovery.
-Begin with a measured single-accelerator baseline. Add the simplest technique
-that solves a demonstrated memory or throughput constraint.
+Throughout this book we trained on a single device, occasionally two. Real
+budgets are larger: a LoRA fine-tune fits on one consumer GPU, a full
+fine-tune of a 7B model wants a node of them, and pretraining anything
+competitive occupies hundreds to hundreds of thousands of accelerators for
+weeks. This section is a practical map of that territory: the parallelism
+concepts you need in order to read any framework's documentation, the
+actual libraries people use in 2026, and which tool fits which scale.
+Distributed training is not a switch that makes a program faster — it
+divides model state and work, adds communication, and changes failure
+recovery — so the golden rule is to start from a measured single-GPU
+baseline and add the *simplest* technique that removes a demonstrated
+constraint.
 
-## Parallelism and Memory
+## From One GPU to Many
 
 ### The Scaling Ladder
 
 ![A practical scaling ladder progresses from one accelerator to replication, sharding, and composed parallelism.](../img/tools-training-ladder.svg)
 :label:`fig_tools_training_ladder`
 
-1. **One accelerator** gives the reference loss, numerical behavior, memory,
-   tokens or examples per second, and checkpoint.
-1. **Data parallelism** replicates the model, processes different minibatches,
-   and reduces gradients. PyTorch DistributedDataParallel (DDP) and JAX data
-   sharding are common entry points.
-1. **Fully sharded data parallelism** divides parameters, gradients, and
-   optimizer state, materializing what each computation needs. PyTorch FSDP2
-   and JAX sharding APIs expose this more explicitly than a replicated model.
-1. **Tensor, pipeline, context, and expert parallelism** divide computation
-   along different axes. Large systems compose them because no single axis is
-   sufficient.
+1. **One accelerator** establishes the reference: loss curve, tokens or
+   examples per second, peak memory, and a checkpoint you can trust.
+1. **Data parallelism (DDP)** replicates the model on every GPU, feeds each
+   a different slice of the batch, and averages gradients after every
+   backward pass. It is the entry point whenever model, gradients, and
+   optimizer state fit on one device.
+1. **Fully sharded data parallelism (FSDP)** shards parameters, gradients,
+   and optimizer state across GPUs and gathers each layer only while it is
+   being used. Same idea as DeepSpeed's ZeRO stage 3; it buys roughly a
+   world-size reduction in state memory at the price of all-gather traffic.
+1. **Tensor, pipeline, context, and expert parallelism** split individual
+   layers, layer groups, the sequence dimension, and mixture-of-experts
+   experts, respectively. Large systems compose several of these because no
+   single axis suffices at scale.
 
-More axes create more topology constraints, schedules, and failure modes. They
-are justified by model scale, not by the prestige of a complex configuration.
-
-### Account for Peak Memory
-
-![Sharding, checkpointing, accumulation, and offload reduce different memory terms and introduce different costs.](../img/tools-training-memory.svg)
-:label:`fig_tools_training_memory`
-
-Peak training memory contains parameters, gradients, optimizer state,
-activations, communication buffers, compiler workspaces, and allocator
-fragmentation. The largest point may occur during optimizer update or
-checkpoint save rather than forward propagation.
-
-This NumPy model lets us compare strategies without requiring multiple GPUs.
-
-```{.python .input #training-systems-memory-model}
-import numpy as np
-
-terms_gib = {
-    "parameters": 14.0,
-    "gradients": 14.0,
-    "optimizer": 56.0,
-    "activations": 18.0,
-    "temporary": 5.0,
-}
-
-def estimated_per_device(world_size=1, shard_state=False,
-                         checkpoint_activations=False):
-    divisor = world_size if shard_state else 1
-    state = sum(terms_gib[k] / divisor
-                for k in ("parameters", "gradients", "optimizer"))
-    activations = terms_gib["activations"] * (0.35 if checkpoint_activations else 1)
-    return state + activations + terms_gib["temporary"]
-
-for strategy in [(1, False, False), (8, False, True), (8, True, True)]:
-    print(strategy, round(estimated_per_device(*strategy), 1), "GiB")
-```
-
-The constants are illustrative. Measure framework allocator peaks and validate
-that checkpointing's recomputation or offload's transfer time is acceptable.
-
-### Data Parallelism
-
-DDP gives each rank one model replica and a shard of each global batch. After
-backpropagation it averages gradients across ranks. Effective batch size is
-
-$$
-B_{\textrm{global}}=B_{\textrm{device}}N_{\textrm{ranks}}N_{\textrm{accumulation}}.
-$$
-
-Changing world size without adjusting this quantity can change optimization.
-Distributed samplers must avoid unintended duplicate examples, and evaluation
-must aggregate metrics with correct denominators.
-
-A minimal PyTorch launch commonly starts with:
+In PyTorch, the first two rungs are a launcher and a wrapper:
 
 ```bash
 torchrun --standalone --nproc-per-node=4 train.py
 ```
 
-The script initializes a process group, selects the local device, wraps the
-model, and saves only from designated ranks. JAX represents device placement
-through arrays and named meshes; `jax.jit` with sharding specifications can
-compile the required communication. In both systems, inspect placement rather
-than assuming a model uses every visible accelerator.
+Inside `train.py`, DDP wraps the model
+(`DistributedDataParallel(model)`), while FSDP's current API applies
+`fully_shard(model)` — the rewritten "FSDP2", which shards each parameter
+as a `DTensor` and has displaced the original FSDP wrapper in PyTorch's
+documentation and in downstream libraries. JAX expresses the same ideas
+through sharded arrays and named meshes: `jax.jit` with sharding
+specifications compiles the collectives for you, which is why the JAX code
+in this book has barely mentioned devices at all.
 
-### Sharded and Composed Parallelism
+One bookkeeping identity matters on every rung. The batch size that
+optimization sees is
 
-FSDP reduces replicated state but adds all-gather and reduce-scatter traffic.
-Wrapping or sharding policy affects peak materialization and overlap. Save a
-distributed checkpoint that can be restored without gathering a model larger
-than one host's memory.
+$$
+B_{\textrm{global}} = B_{\textrm{device}} \cdot N_{\textrm{ranks}} \cdot N_{\textrm{accumulation}},
+$$
 
-Tensor parallelism divides matrix operations and communicates within layers.
-Pipeline parallelism places layer groups on stages and schedules microbatches,
-trading bubbles against memory. Context or sequence parallelism divides long
-sequence work. Expert parallelism routes tokens among sparse experts and is
-sensitive to load imbalance and all-to-all communication.
+so changing the number of GPUs without adjusting per-device batch size or
+learning rate silently changes the optimization problem. Distributed
+samplers must not duplicate examples, and evaluation must aggregate
+metrics with the right denominators — the two classic sources of
+"multi-GPU accuracy is different" bugs.
 
-Map frequent, high-volume collectives to the fastest links. Device count alone
-does not describe topology: intra-node NVLink or fabric, PCIe, and inter-node
-network links have different bandwidth and latency.
+### Where the Memory Goes
 
-## Building a Training Run
+![Sharding, checkpointing, accumulation, and offload reduce different memory terms and introduce different costs.](../img/tools-training-memory.svg)
+:label:`fig_tools_training_memory`
 
-### Precision and Memory Techniques
+Peak training memory is the sum of parameters, gradients, optimizer state,
+activations, communication buffers, and allocator overhead — for a 7B-
+parameter model trained in BF16 with Adam, roughly 14 + 14 + 56 GB of
+state before a single activation is stored. The toy model below is crude
+but sorts strategies correctly, and needs no GPU to run:
 
-* **Mixed precision** stores or computes selected values in FP16, BF16, FP8, or
-  lower formats while retaining sufficient accumulation and sensitive state.
-  Verify loss scaling and numerical stability.
-* **Gradient accumulation** reduces per-step activation memory but does not
-  shrink model state. It changes optimizer-step frequency relative to examples.
-* **Activation checkpointing** discards selected activations and recomputes
-  them during backpropagation.
-* **CPU or NVMe offload** exchanges accelerator memory for transfer latency and
-  host capacity.
-* **Quantized optimizer or model state** saves bytes with algorithmic and
-  implementation constraints.
+```{.python .input #training-systems-memory-model}
+terms_gib = {"parameters": 14.0, "gradients": 14.0, "optimizer": 56.0,
+             "activations": 18.0, "temporary": 5.0}
 
-Combine techniques deliberately. Four individually sensible optimizations can
-interfere with compilation, overlap, or numerical behavior.
+def per_device_gib(world_size=1, shard_state=False, ckpt_activations=False):
+    divisor = world_size if shard_state else 1
+    state = sum(terms_gib[k] / divisor
+                for k in ("parameters", "gradients", "optimizer"))
+    activations = terms_gib["activations"] * (0.35 if ckpt_activations else 1)
+    return state + activations + terms_gib["temporary"]
 
-### Launchers and Frameworks
+for label, cfg in [("1 GPU, plain", (1, False, False)),
+                   ("8 GPU DDP + ckpt", (8, False, True)),
+                   ("8 GPU FSDP + ckpt", (8, True, True))]:
+    print(f"{label:>20s}: {per_device_gib(*cfg):6.1f} GiB/device")
+```
 
-Framework-native tools should be the baseline. Higher-level systems solve
-different problems:
+Plain training does not fit any single GPU; DDP does not help, because it
+replicates state; FSDP brings the same model under 25 GiB per device. Each
+standard memory technique attacks one term and charges a different price:
+**mixed precision** (BF16 compute, FP8 on recent hardware) halves compute
+bytes; **gradient accumulation** shrinks activation memory but not state;
+**activation checkpointing** trades ~30% recomputation for most of the
+activation term; **CPU/NVMe offload** (DeepSpeed's ZeRO-Offload and
+descendants) trades transfer latency for capacity; **LoRA and QLoRA**
+sidestep the problem by making the optimizer state tiny — which is why a
+7B fine-tune fits on a 16 GB card. Combine techniques deliberately: four
+individually sensible optimizations can interfere with compilation,
+overlap, or numerics.
 
-* Hugging Face **Accelerate**, PyTorch Lightning/Fabric, and **DeepSpeed** offer
-  launch and strategy abstractions.
-* **Ray Train** coordinates distributed workers in a larger cluster scheduler.
-* **Megatron-Core**, NVIDIA NeMo, and Nanotron provide large-model parallelism
-  patterns and optimized training components.
+Two topology rules from the Hugging Face *Ultra-Scale Playbook* (a free,
+experiment-backed guide distilled from 4,000+ runs on up to 512 GPUs, and
+the best single thing to read after this section) compress a lot of
+practice: keep tensor parallelism *inside* a node, where NVLink can carry
+its dense traffic — letting TP cross nodes loses several times as much
+throughput as letting pipeline parallelism cross — and map the
+highest-volume collectives to the fastest links available.
 
-Choose by the needed parallel axes, checkpoint format, observability,
-framework compatibility, and ability to escape the abstraction when debugging.
-Do not add an orchestrator merely to launch four stable local processes.
+## The Library Landscape
 
-### Keep the Input Pipeline Fed
+What should you actually type? As of mid-2026 the ecosystem has settled
+into layers.
 
-Profile host preprocessing, storage reads, tokenization, collation, transfer,
-and accelerator computation separately. Use bounded prefetching; an unlimited
-queue converts a throughput problem into a memory problem. Shard data
-deterministically across ranks and workers, and define behavior when a worker
-count changes after recovery.
+**PyTorch built-ins.** `torchrun` + DDP for replication; `fully_shard`
+(FSDP2) for sharding; `DTensor` underneath as the common abstraction for
+sharded tensors; tensor-, context-, and pipeline-parallel APIs exist but
+are still marked experimental. These primitives are what most higher-level
+tools now generate.
 
-Useful rates include examples or tokens per second, accelerator utilization,
-model FLOP utilization where meaningful, time spent in collectives, data wait,
-and checkpoint duration. Throughput without validation loss or convergence can
-reward a fast incorrect run.
+**Hugging Face stack.** `accelerate` launches the same script on DDP,
+FSDP2, or DeepSpeed with a config file rather than code changes;
+`transformers.Trainer` sits on top of it; `peft` implements LoRA/QLoRA;
+and `trl` provides post-training — supervised fine-tuning, DPO, and the
+GRPO family of reinforcement-learning trainers that took off when
+DeepSeek-R1 showed pure RL could buy reasoning. For models up to roughly
+30B parameters on a handful of nodes, this stack is the default answer.
 
-## Recovery and Reproducibility
+**DeepSpeed.** ZeRO stages 1–3 (optimizer, gradient, parameter sharding)
+plus CPU/NVMe offload. It pioneered the sharding ideas that FSDP absorbed
+and remains actively maintained, but for new PyTorch projects it has
+ceded the default slot to FSDP2; reach for it when you need its offload
+machinery to squeeze a large model onto scarce memory, or because a tool
+you use (notably several RLHF frameworks) builds on it.
 
-### Checkpointing and Preemption
+**Megatron-Core and TorchTitan.** The serious pretraining tier. NVIDIA's
+Megatron-Core implements tensor/pipeline/sequence/expert parallelism with
+FP8 support and powers many industrial labs (and NVIDIA's own NeMo
+framework and Nemotron models). TorchTitan is the PyTorch-native
+equivalent: a clean reference stack composing FSDP, tensor, pipeline, and
+context parallelism plus expert parallelism for MoE, demonstrated at
+1,000-GPU scale on models from Llama 3 405B to DeepSeek-V3. Choose this
+tier only when you are genuinely pretraining — the configuration surface
+is proportional to its power.
 
-![A recoverable run writes complete atomic state to durable storage and restores it on replacement workers.](../img/tools-checkpoint-recovery.svg)
-:label:`fig_tools_checkpoint_recovery`
+**Fine-tuning frontends.** Unsloth owns the single-GPU niche with fused
+kernels and quantized training (roughly 2× speed and large memory savings
+for LoRA/QLoRA work). Axolotl drives full and parameter-efficient
+fine-tunes across a node or several from one YAML file, with FSDP2 and
+DeepSpeed backends. LLaMA-Factory covers a similar space with a GUI and
+very broad model support. (Its former peer `torchtune` wound down in 2025
+— check a library's pulse before adopting it; this landscape churns.)
 
-A complete training checkpoint may include model and optimizer state, learning
-rate schedule, gradient scaler, step and data position, random-number state,
-and distributed metadata. Write to a temporary location and publish atomically
-when complete. Keep more than the latest checkpoint until restore is tested.
+**JAX.** MaxText is the reference for TPU (and GPU) pretraining and now
+post-training; Levanter/Marin demonstrated fully reproducible open
+pretraining. On TPUs the XLA compiler handles the parallelism that the
+PyTorch world configures by hand — the trade is less knob-turning for
+less low-level control.
 
-Run a recovery drill: interrupt workers, create replacements, restore, and
-compare the next steps with an uninterrupted control. Exact bitwise equality
-may be unrealistic for some distributed kernels, but loss, samples consumed,
-and schedule position must behave as designed.
+**RL post-training at scale.** Beyond TRL's single-node comfort zone, veRL
+is the most widely adopted open framework (FSDP or Megatron for training,
+vLLM or SGLang for rollouts), with OpenRLHF as a leaner Ray+DeepSpeed
+alternative. This corner moves fastest of all; expect its details to age
+first.
 
-### Reproducibility and Debugging
+### What to Use at Which Scale
 
-Record source, configuration, environment or container digest, data revision,
-topology, seed policy, and collective settings. First reproduce on one process,
-then one node, then multiple nodes. Distributed logs need rank, host, and time;
-otherwise four interleaved stack traces conceal the first failure.
+:Training tools by scale (mid-2026)
+:label:`tab_training_tools`
 
-Use tiny synthetic data to test process startup and collectives. Then run one
-real batch, a checkpoint round trip, and only then a long job. Timeouts should
-fail with diagnostics rather than leave expensive workers idle indefinitely.
+| Scale | Typical job | Reach for |
+|---|---|---|
+| 1 GPU, ≥ 8 GB | LoRA/QLoRA fine-tune ≤ 8B | Unsloth, or PEFT + Trainer |
+| 1 node, 2–8 GPUs | full fine-tune ≤ 70B, DDP/FSDP2 | Accelerate or Axolotl |
+| few nodes | large fine-tune, small pretrain | FSDP2 + torchrun, DeepSpeed |
+| many nodes | serious pretraining, MoE | Megatron-Core, TorchTitan, MaxText |
+| RL post-training | GRPO/DPO pipelines | TRL (small), veRL/OpenRLHF (large) |
+
+The table is a starting point, not a verdict — but note its shape: you buy
+generality with configuration burden as you move down, and most projects
+live in the first two rows. If a workload fits a simpler row, use the
+simpler row.
+
+## Keeping a Long Run Alive
+
+Everything above buys throughput; what turns throughput into results is
+operational discipline, because at scale *something* fails every few
+hours.
+
+* **Checkpoint completely and atomically.** A resumable checkpoint holds
+  model and optimizer state, the learning-rate schedule and step count,
+  data-loader position, and RNG state. Write to a temporary path and
+  rename on completion, so a crash mid-write cannot destroy the previous
+  checkpoint; keep more than one until restore has been tested. Sharded
+  (per-rank) checkpoints avoid gathering a model larger than any single
+  host's memory.
+* **Drill the recovery.** Kill the job deliberately, restore on fresh
+  workers, and check that loss, step count, and data position continue as
+  if nothing happened. Untested recovery is a rumor, and spot-priced
+  training (:numref:`sec_cloud_instances`) is only cheap if recovery
+  actually works.
+* **Feed the accelerators.** Profile data loading separately from compute:
+  storage reads, decoding and augmentation, tokenization, and host-to-
+  device transfer. A starved GPU shows high nominal utilization and low
+  throughput; adding more GPUs to a data-bound job makes it *worse*.
+* **Watch convergence, not just speed.** Tokens per second without a loss
+  curve rewards fast wrong runs. Log both, plus time spent in collectives
+  and checkpoint duration; debug distributed failures by reproducing on
+  one process, then one node, then many, with rank and host on every log
+  line.
 
 ## Summary
 
-* Scale from a measured one-accelerator reference.
-* DDP replicates state; FSDP and other axes shard selected work and state.
-* Each memory technique reduces a particular term and adds a particular cost.
-* Topology, input feeding, convergence, and checkpoint recovery determine useful
-  throughput.
-* Test failure recovery before relying on interruptible or multi-node training.
+* Scale in order — DDP while state fits, FSDP2/ZeRO when it does not,
+  tensor/pipeline/expert parallelism only for genuine pretraining — from a
+  measured single-GPU baseline.
+* Peak memory is a sum of terms; each technique (sharding, checkpointing,
+  accumulation, offload, LoRA) removes one term at a known price.
+* In 2026 the default stacks are: Unsloth/PEFT on one GPU, Accelerate or
+  Axolotl with FSDP2 on a node, Megatron-Core/TorchTitan/MaxText for
+  pretraining, TRL then veRL for RL post-training.
+* Keep tensor parallelism inside a node; map heavy collectives to fast
+  links.
+* Long runs survive on atomic checkpoints, tested recovery, a fed input
+  pipeline, and convergence metrics — not on optimism.
 
 ## Exercises
 
-1. Extend the memory model with communication buffers and allocator margin.
-   Identify which estimates can be measured automatically.
-1. For a global batch target, enumerate three combinations of device batch,
-   world size, and accumulation. Explain their throughput differences.
-1. Specify the contents and atomic publication protocol for a sharded
-   checkpoint that can resume with a different number of workers.
+1. Extend the memory model with a communication-buffer term and a LoRA
+   configuration (frozen base weights, small trainable adapter). At what
+   world size does FSDP stop paying for a 7B model?
+1. For a fixed global batch of 4M tokens, enumerate three combinations of
+   device batch, world size, and accumulation steps, and reason about
+   their relative throughput and optimizer behavior.
+1. Take a training notebook of roughly the scale of
+   :numref:`sec_bert-pretraining` and run it once with
+   `torchrun --nproc-per-node=2`. Measure the actual speedup over one GPU
+   and explain the gap from 2×.
+1. Design (on paper) the checkpoint contents and restore protocol for a
+   sharded training job that must resume with a *different* number of
+   workers. Which parts of the state are per-rank, and which are global?

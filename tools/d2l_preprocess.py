@@ -1120,8 +1120,9 @@ CHAPTER_NUMBERING = {
     'chapter_appendix-tools-for-deep-learning/software-ecosystem.md': [27, 5],
     'chapter_appendix-tools-for-deep-learning/training-systems.md': [27, 6],
     'chapter_appendix-tools-for-deep-learning/model-serving.md': [27, 7],
-    'chapter_appendix-tools-for-deep-learning/utils.md': [27, 8],
-    'chapter_appendix-tools-for-deep-learning/d2l.md': [27, 9],
+    'chapter_appendix-tools-for-deep-learning/developers-guide.md': [27, 8],
+    'chapter_appendix-tools-for-deep-learning/utils.md': [27, 9],
+    'chapter_appendix-tools-for-deep-learning/d2l.md': [27, 10],
     'chapter_references/zreferences.md': None,
 }
 

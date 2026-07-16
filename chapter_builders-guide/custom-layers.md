@@ -622,9 +622,11 @@ single kernel, and it will be maintained as the library evolves.
 
 ## Precomputed State: Buffers
 
-The compact mask below accepts square self-attention score matrices. Cached
-decoding, where query and key lengths differ, needs an offset mask rather than
-this $T \times T$ slice.
+Some layer state is neither a parameter nor a passing activation: a causal
+mask, a fixed positional table, running statistics. Such values must
+persist, serialize, and move to the device together with the model — yet no
+optimizer may ever touch them. Frameworks give this third kind of state its
+own channel, and custom layers are where you create it.
 
 :begin_tab:`pytorch`
 :numref:`sec_parameters` introduced buffers as the third kind of module
@@ -674,6 +676,10 @@ from looking at future positions. The mask is fixed, so an ordinary parameter
 is wrong (the optimizer would update it) and a plain array attribute is wrong
 too (`save_parameters` would omit it and `reset_device` would skip it).
 :end_tab:
+
+One caveat before the code: the compact mask below accepts square
+self-attention score matrices. Cached decoding, where query and key lengths
+differ, needs an offset mask rather than this $T \times T$ slice.
 
 ```{.python .input #custom-layers-precomputed-state-buffers-1}
 %%tab pytorch

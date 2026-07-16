@@ -643,7 +643,8 @@ floats, and their difference loses its leading digits to
 
 Error creeps back in at $h=10^{-12}$; at $10^{-16}$, when $1+h$ rounds
 to exactly $1$, the quotient collapses to $0$. This is a key reason
-**autograd** (§2.5) differentiates *analytically*.
+**autograd** (the automatic-differentiation section) differentiates
+*analytically*.
 :::
 
 ::: {.slide title="The picture: tangent of slope 2 at x = 1"}
@@ -738,9 +739,10 @@ Stack all $n$ partials into the **gradient**
 $\nabla f = [\partial_{x_1} f, \ldots, \partial_{x_n} f]^\top$.
 
 Along a unit direction $\mathbf{u}$, the rate of change is the dot
-product $\nabla f^\top \mathbf{u}$; by §2.3's cosine formula this is
-largest when $\mathbf{u}$ aligns with $\nabla f$. So the gradient is the
-direction of **steepest ascent** (proof via Cauchy–Schwarz, §23.2).
+product $\nabla f^\top \mathbf{u}$; by the linear-algebra section's cosine
+formula this is largest when $\mathbf{u}$ aligns with $\nabla f$. So the
+gradient is the direction of **steepest ascent** (proof via Cauchy–Schwarz,
+the multivariable-calculus section).
 
 ::: {.d2l-note}
 $-\nabla f$ points downhill, which gives the gradient-descent direction.
@@ -756,9 +758,10 @@ $-\nabla f$ points downhill, which gives the gradient-descent direction.
 ::: {.slide title="Gradient identities: calculus done by linear algebra"}
 [Gradients]{.kicker}
 
-A few vector rules recur constantly; each is a §2.3 operation
-($\nabla_{\mathbf{x}}\,\mathbf{A}\mathbf{x} = \mathbf{A}^\top$ is the
-transpose of the Jacobian; derivations in §23.3):
+A few vector rules recur constantly; each is a linear-algebra-section
+operation ($\nabla_{\mathbf{x}}\,\mathbf{A}\mathbf{x} = \mathbf{A}^\top$ is
+the transpose of the Jacobian; derivations in the matrix-calculus-and-
+automatic-differentiation section):
 
 ::: {.cols}
 ::: {.col}
@@ -820,12 +823,13 @@ assemble into
 
 $$\nabla_{\mathbf{x}} y = \mathbf{A}\, \nabla_{\mathbf{u}} y,
 \qquad A_{ij} = \frac{\partial u_j}{\partial x_i}\
-\text{(the transpose of the Jacobian, §23.3).}$$
+\text{(the transpose of the Jacobian, matrix-calculus section).}$$
 
 ::: {.d2l-note}
 A network's gradient is a **chain of such products**: traversed
 forward it evaluates the function, traversed backward it computes every
-gradient. That backward pass is **backpropagation** (§5.3).
+gradient. That backward pass is **backpropagation** (the backpropagation
+section).
 :::
 
 This is why linear algebra is a prerequisite for deep learning.
@@ -848,7 +852,8 @@ This is why linear algebra is a prerequisite for deep learning.
   $\nabla \|\mathbf{x}\|^2 = 2\mathbf{x}$, …, all plain linear algebra.
 - The **chain rule** multiplies along the path; multivariate, it *is* a
   matrix–vector product, the heart of backprop.
-- Next: **autograd** (§2.5) runs all of this for us, analytically.
+- Next: **autograd** (the automatic-differentiation section) runs all of
+  this for us, analytically.
 :::
 :::
 

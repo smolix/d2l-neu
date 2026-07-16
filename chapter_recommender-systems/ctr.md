@@ -53,7 +53,7 @@ There are a training set and a test set, consisting of 15000 and 3000 samples/li
 
 ## Dataset Wrapper
 
-For the convenience of data loading, we implement a `CTRDataset` which loads the advertising dataset from the CSV file and can be used by `DataLoader`.
+For the convenience of data loading, we implement a `CTRDataset` which loads the advertising dataset from the CSV file and can be used by a standard data loader.
 
 ```{.python .input #ctr-dataset-wrapper-1  n=13}
 #@tab mxnet

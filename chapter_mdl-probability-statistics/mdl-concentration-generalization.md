@@ -1164,8 +1164,9 @@ miss probability at $\sigma^2/(nt^2)$, so certifying $10^{-6}$ takes a
 data is **exponential** in $n$, and this section proves it.
 
 The main book bounded test-set error with Hoeffding's
-inequality *on faith* (§4.6). Here we prove it, then follow the
-same machinery into high dimension and out to generalization itself.
+inequality *on faith* (the generalization-in-classification section). Here we
+prove it, then follow the same machinery into high dimension and out to
+generalization itself.
 :::
 
 ::: {.col .fig}
@@ -1246,7 +1247,7 @@ and independence, at **every finite $n$**.
 :::
 :::
 
-::: {.slide title="The Chapter 4 bound, now a theorem"}
+::: {.slide title="Bounding test error, now a theorem"}
 [Hoeffding]{.kicker}
 
 Inverted, Hoeffding is a *finite-sample confidence interval*: with
@@ -1256,14 +1257,15 @@ $$|\bar X - E[\bar X]| \;\le\; (b-a)\sqrt{\frac{\log(2/\delta)}{2n}}.$$
 
 . . .
 
-§4.6 demanded a test-set error estimate within $t=0.01$ at
-$\delta = 0.05$ and quoted "roughly 18,500 examples." Solve
-$2e^{-2nt^2} \le \delta$:
+The generalization-in-classification section demanded a test-set error
+estimate within $t=0.01$ at $\delta = 0.05$ and quoted "roughly 18,500
+examples." Solve $2e^{-2nt^2} \le \delta$:
 
 $$n = \frac{\log(2/\delta)}{2t^2} \approx 18{,}445.$$
 
-A citation is now a theorem, and unlike the Gaussian interval of §25.4,
-its coverage is a guarantee at every $n$, not an asymptote.
+A citation is now a theorem, and unlike the Gaussian interval of the
+statistics section, its coverage is a guarantee at every $n$, not an
+asymptote.
 :::
 
 ::: {.slide title="Names for the well-behaved: sub-Gaussian and friends"}
@@ -1600,8 +1602,9 @@ spectrum, the theory is instructive but open.
 ::: {.col}
 - **Chernoff:** Markov on $e^{\lambda X}$; independent sums factor the
   MGF → exponential tails.
-- **Hoeffding:** $2e^{-2nt^2/(b-a)^2}$ turns §4.6's 18,500-example quote
-  into a theorem, valid at every finite $n$.
+- **Hoeffding:** $2e^{-2nt^2/(b-a)^2}$ turns the generalization-in-
+  classification section's 18,500-example quote into a theorem, valid at
+  every finite $n$.
 - **High dimension:** thin shells, orthogonal-by-default directions.
 :::
 

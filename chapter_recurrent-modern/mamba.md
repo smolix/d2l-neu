@@ -892,7 +892,7 @@ scoreboard. The task is the language-modeling recipe used throughout,
 :numref:`sec_rnn-scratch`, 50,000 windows of 32 tokens, ten epochs,
 gradients clipped to norm 1. Alongside perplexity we report bits per byte
 (all three models share one tokenizer, but bpb keeps the scoreboard
-comparable with the character-level models of chapter 9), parameter
+comparable with the character-level models of :numref:`chap_rnn`), parameter
 counts, and wall clock per epoch.
 
 ```{.python .input #mamba-the-three-answers-measured-on-one-task-1}

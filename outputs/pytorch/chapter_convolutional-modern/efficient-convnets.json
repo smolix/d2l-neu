@@ -9,22 +9,22 @@
   },
   "cells": {
     "efficient-convnets-imports": {
-      "code_fingerprint": "sha256:843b4edfd4a47eda25592d830fc1fdcb9e78e491e31e3d288524e6019394a28f",
+      "code_fingerprint": "sha256:51c99d21ba1a61c5cb2ce8a488dcf8a246d6904ce4a4721d4a5102f24e3fe4c6",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-1": {
-      "code_fingerprint": "sha256:f9f307d787c2dfa6830202e2388b6226e7df926c4002119e06792a5d6b7f0946",
+      "code_fingerprint": "sha256:d46a09e4623d6e19dbbaf1fe5f034b96465f68b32e5573f80bc580ad9939eb29",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-2": {
-      "code_fingerprint": "sha256:773fb7e62f81e2b4be3d9e4a05f762d423fed81fd7eba95a3f6ca258f4fb8870",
+      "code_fingerprint": "sha256:6084f9009c83846c6e2fb195f47319bcd8df90d9f09c9aff88bc8b6ede01e5a3",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-3": {
-      "code_fingerprint": "sha256:48add912f1641e38635086d96f082f29dc41595f4df231ba78315125503043ab",
+      "code_fingerprint": "sha256:c15b9c920ff9be2a3939de63ecaf387f60dfc6d51d30e2852d493c74ac45ca7a",
       "kind": "text",
       "outputs": [
         {
@@ -34,91 +34,63 @@
       ]
     },
     "efficient-convnets-training-and-comparison-1": {
-      "code_fingerprint": "sha256:d5c4c908ea806f6d2084ca6a8124223be98c1c07c15ff53e4bfa6e0b99a4f22d",
+      "code_fingerprint": "sha256:264282d7d440c817f1980eea657a66422f1c9f10b961f667888edac1ebdcc53b",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-training-and-comparison-2": {
-      "code_fingerprint": "sha256:18f28599aa14629d1977b2dc4f269fe83e734b733e75e2cc40736f4991f6b9e7",
+      "code_fingerprint": "sha256:0d1602fe593806ec6d586b568ac1965b53f78ed64c763d53d618a2954eefa230",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-training-and-comparison-3": {
-      "code_fingerprint": "sha256:29b81f6616a42cda32a0209a903cf231ee650b666dd088620cdbe946e657a4b3",
+      "code_fingerprint": "sha256:236ce0acf237dcfd6c8e2b94174112d3594e0e70c2041ba64e071becf43e5d25",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-1.svg",
-          "bytes": 20517,
-          "sha256": "sha256:b5fddc357df562b739da424f8363ad2172b38e3cb49e6563e011b10803f48881"
+          "bytes": 20518,
+          "sha256": "sha256:027886f3aeff08a68215248adfce964eeb23915ffb72bbede4af8e8aa032016d"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-2.svg",
-          "bytes": 20516,
-          "sha256": "sha256:680a382f2328bb0c4b2a3a079afbb63b24013ed8520c72b6e4564dce76d8070e"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-3.svg",
           "bytes": 20514,
-          "sha256": "sha256:2f273f479a9b58c01c78497beaa88cae3c20584ea0c0845ab3e6a5a38e9aa2dc"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-4.svg",
-          "bytes": 20513,
-          "sha256": "sha256:0aafc04e5da958e1db79b6ffb443449cf4b4732c7cc3d692d54c7cb50505539c"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-5.svg",
-          "bytes": 20541,
-          "sha256": "sha256:80958fd859561c564f7d179edadeb4b814f5669e961355039da38e50fed2e3c1"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-6.svg",
-          "bytes": 20511,
-          "sha256": "sha256:5d1717ea83ccc419c45f5432c199da09579b3d923dec9f85686983edbaa116b4"
+          "sha256": "sha256:10a8504cfe277717e8fe2a3edc1a8b319dc55f2d75eea50bccc8beb3349bfa59"
         }
       ]
     },
     "efficient-convnets-training-and-comparison-4": {
-      "code_fingerprint": "sha256:090e33d7c61b8ab6e1d52e597fd81c90044cd3de369b33fd80f6642b9b62b734",
+      "code_fingerprint": "sha256:97fd8a6cf909020f9a6a531d5d7c7eb46df4e723cca007220da61976df30556b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mini-MobileNet: 542,474 params, val acc 0.914 ± 0.002, 10.4 s/epoch; seeds [0.915, 0.914, 0.912]\nVGG-style: 583,594 params, val acc 0.920 ± 0.009, 20.8 s/epoch; seeds [0.91, 0.923, 0.927]\n"
+          "text": "mini-MobileNet: 542,474 params, val acc 0.907, 6.9 s/epoch\nVGG-style: 583,594 params, val acc 0.896, 17.5 s/epoch\n"
         }
       ]
     },
     "efficient-convnets-the-repvgg-block": {
-      "code_fingerprint": "sha256:ee393ea5ec2004fb65f24e9b3d2fa9bc3add4bfdee41f667f2946f15838ebaf6",
+      "code_fingerprint": "sha256:a01e5857b8d4a4d8a7130e4422626dc2f38af09bcea44fc7677854008c341c82",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-1": {
-      "code_fingerprint": "sha256:e00e4f71c55479767fb7e0546ee1beff793b21253df4c505430aec064c94401e",
+      "code_fingerprint": "sha256:7466d5ba426a2bae631a3a6719798bd8539b857111fbb954bf9424666ec478b2",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-2": {
-      "code_fingerprint": "sha256:b6514dbaa7a6558a427a7d219bf1fdd69179f3f6676c0d016ecaf2ed3b120e06",
+      "code_fingerprint": "sha256:443493e5e6a1bb3385701c438720c2b9474dc058a311f78934c6fe3381725e34",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "1.9073486328125e-06"
+          "text": "2.384185791015625e-06"
         }
       ]
     }

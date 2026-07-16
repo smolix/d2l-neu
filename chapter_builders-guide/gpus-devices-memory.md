@@ -991,8 +991,8 @@ else:
 :begin_tab:`pytorch`
 The four readings map onto the accounting. The first is the weights alone
 (about $4N$ bytes, plus the input batch). The second jumps by the size of the
-stored activations, here several times the weights, because the batch is
-large. The third *falls* back: `backward` frees the activations as it consumes
+stored activations — here roughly a third more than the weights; a larger
+batch or longer sequence scales this term while the weights stay put. The third *falls* back: `backward` frees the activations as it consumes
 them and leaves behind gradients exactly the size of the weights. The fourth
 adds $8N$ at the first `opt.step()`, when Adam lazily creates its moment
 buffers. From then on the loop cycles between plateaus two and three; the
@@ -1025,8 +1025,9 @@ on the Python side, such as appending the loss array itself, rather than
 :begin_tab:`tensorflow`
 The four readings map onto the accounting. The first is the weights alone
 (about $4N$ bytes, plus the input batch). The second jumps by the size of the
-activations the tape is holding, here several times the weights, because the
-batch is large. The third *falls* back: `tape.gradient` consumes the recorded
+activations the tape is holding — here roughly a third more than the
+weights; a larger batch or longer sequence scales this term while the
+weights stay put. The third *falls* back: `tape.gradient` consumes the recorded
 forward pass, frees it, and leaves behind gradients exactly the size of the
 weights. The fourth adds $8N$ at the first `apply_gradients`, when Adam
 creates its slot variables. From then on the loop cycles between plateaus two
@@ -1409,7 +1410,7 @@ print(f'time until they all finished:     {time.time() - t:.4f} sec')
 ```
 
 :begin_tab:`pytorch`
-Python returned from the loop in about a millisecond; the products were still
+Python returned from the loop in a few milliseconds; the products were still
 running. Any operation that needs a concrete value on the host forces a
 *synchronization point*: `.item()`, `.numpy()`, `print`, an `if` on a tensor's
 value. Each one makes Python block until the queue drains, and the device then
@@ -1423,8 +1424,8 @@ is exactly what our `ProgressBoard` from :numref:`sec_oo-design` does when the
 :end_tab:
 
 :begin_tab:`jax`
-Python returned from the loop in well under a millisecond; the products were
-still running. Any operation that needs a concrete value on the host forces a
+Python returned from the loop in a few milliseconds — far less time than
+the thousand products take; they were still running. Any operation that needs a concrete value on the host forces a
 *synchronization point*: `.item()`, `np.asarray`, `print`, an `if` on an
 array's value, and `block_until_ready()` itself, whose job is to make the
 synchronization explicit (our timings above depend on it). Each one makes
@@ -1439,7 +1440,7 @@ is exactly what our `ProgressBoard` from :numref:`sec_oo-design` does when the
 :end_tab:
 
 :begin_tab:`tensorflow`
-Python returned from the loop in about a millisecond; the products were still
+Python returned from the loop in a few milliseconds; the products were still
 running. Any operation that needs a concrete value on the host forces a
 *synchronization point*: `.numpy()`, `float(loss)`, `print`, an `if` on a
 tensor's value. Each one makes Python block until the queue drains, and the

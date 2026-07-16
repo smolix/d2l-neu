@@ -400,8 +400,9 @@ hparams = {'num_outputs':10, 'num_hiddens_1':256, 'num_hiddens_2':256,
            'dropout_1':0.2, 'dropout_2':0.5, 'lr':0.1}
 model = DropoutMLPScratch(**hparams)
 data = d2l.FashionMNIST(batch_size=256)
-# macOS uses multiprocessing spawn; this transformed MXNet dataset contains
-# weak references that cannot be pickled for worker processes.
+# Keep loading in-process: on spawn-based platforms (macOS, Windows) this
+# transformed MXNet dataset cannot be pickled for loader workers, and the
+# dataset is small enough that parallel loading buys nothing on Linux either.
 data.num_workers = 0
 trainer = d2l.Trainer(max_epochs=30)
 trainer.fit(model, data)
@@ -883,7 +884,7 @@ family of stochastic-regularization methods.
 ::: {.d2l-note}
 Exercise 5 flips the switch: keep dropout **on** at test time,
 average 20 passes, and you get uncertainty estimates (MC dropout).
-Next (§5.7): everything in this chapter, deployed on a Kaggle
-competition.
+Next (the Kaggle house-prices section): everything in this chapter,
+deployed on a Kaggle competition.
 :::
 :::

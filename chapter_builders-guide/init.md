@@ -571,12 +571,12 @@ depth-wise cousin of the layer-wise explosion in
 linear layer of each residual branch, the output projection that writes into
 the stream, by a factor of $1/\sqrt{N}$: with $N$ roughly independent
 contributions each scaled down that way, the sum's variance stays $O(1)$
-regardless of depth :cite:`Radford.Wu.Child.ea.2019`. The published recipe is
-a normal with std $0.02/\sqrt{2N}$ on the residual projections (the factor is
-$2N$ because each of the $N$ transformer layers writes to the stream twice,
-once from attention and once from the MLP). Unlike Xavier or He, the base 0.02
-is not derived from fan-in; it is an empirical constant that worked at GPT-2's
-widths and stuck.
+regardless of depth :cite:`Radford.Wu.Child.ea.2019`. For an $L$-layer
+transformer the published recipe is a normal with std $0.02/\sqrt{2L}$ on the
+residual projections — the number of contributions is $N = 2L$, because each
+layer writes to the stream twice, once from attention and once from the MLP.
+Unlike Xavier or He, the base 0.02 is not derived from fan-in; it is an
+empirical constant that worked at GPT-2's widths and stuck.
 
 :numref:`fig_bg_residual-stream` draws the two regimes side by side.
 

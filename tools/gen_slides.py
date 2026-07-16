@@ -481,6 +481,23 @@ def generate_slides_qmd(src_path, framework, warnings):
         return None
 
     text = Path(src_path).read_text(encoding='utf-8')
+
+    # Self-healing cover kickers: rewrite the section number in any
+    # "[Dive into Deep Learning · §N.M]{.kicker}" line from CHAPTER_NUMBERING,
+    # so slide covers survive chapter renumbering without hand edits.
+    rel = None
+    sp = str(src_path).replace('\\', '/')
+    for key in CHAPTER_NUMBERING:
+        if sp.endswith(key):
+            rel = key
+            break
+    nums = CHAPTER_NUMBERING.get(rel) if rel else None
+    if nums:
+        section = '.'.join(str(n) for n in nums)
+        text = re.sub(
+            r'(\[Dive into Deep Learning · §)[0-9]+(?:\.[0-9]+)?(\]\{\.kicker\})',
+            r'\g<1>' + section + r'\g<2>', text)
+
     slides = parse_slide_blocks(text)
     if not slides:
         return None

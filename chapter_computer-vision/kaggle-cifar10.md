@@ -1101,8 +1101,8 @@ for the actual competition:
 :::
 
 ::: {.slide title="Organizing the dataset"}
-Kaggle ships everything in one folder; standard
-torchvision-style training expects `train/<class>/img.png`.
+Kaggle ships everything in one folder; most vision toolkits expect
+the folder-per-class layout (`train/<class>/img.png`).
 Build that layout from the labels.csv:
 
 @kaggle-cifar10-organizing-the-dataset-1

@@ -1610,9 +1610,9 @@ class AdditiveAttention(nnx.Module):
 class AttentionDecoder(d2l.Decoder):
     """The base attention-based decoder interface.
 
-    Flax modules are dataclasses, so the base class deliberately omits
-    `__init__`; subclasses declare their fields as class-level
-    annotations and (optionally) a `setup()` method.
+    Subclasses build their layers in an ordinary `__init__`, as with any
+    NNX module; this base class only adds the accessor for the attention
+    weights recorded during decoding.
 
     Defined in :numref:`sec_seq2seq_attention`"""
     @property

@@ -123,26 +123,7 @@ book:
         - chapter_recurrent-neural-networks/rnn-implementation.qmd
         - chapter_recurrent-neural-networks/bptt.qmd
         - chapter_recurrent-neural-networks/decoding.qmd
-    - part: "Recurrent Neural Networks"
-      chapters:
-        - chapter_recurrent-modern/index.qmd
-        - chapter_recurrent-modern/lstm.qmd
-        - chapter_recurrent-modern/seq2seq.qmd
-        - chapter_recurrent-modern/ssm.qmd
-        - chapter_recurrent-modern/mamba.qmd
-    - part: "Attention Mechanisms and Transformers"
-      chapters:
-        - chapter_attention-mechanisms-and-transformers/index.qmd
-        - chapter_attention-mechanisms-and-transformers/queries-keys-values.qmd
-        - chapter_attention-mechanisms-and-transformers/attention-pooling.qmd
-        - chapter_attention-mechanisms-and-transformers/attention-scoring-functions.qmd
-        - chapter_attention-mechanisms-and-transformers/bahdanau-attention.qmd
-        - chapter_attention-mechanisms-and-transformers/multihead-attention.qmd
-        - chapter_attention-mechanisms-and-transformers/self-attention-and-positional-encoding.qmd
-        - chapter_attention-mechanisms-and-transformers/transformer.qmd
-        - chapter_attention-mechanisms-and-transformers/vision-transformer.qmd
-        - chapter_attention-mechanisms-and-transformers/large-pretraining-transformers.qmd
-    - part: "Optimization"
+    - part: "Advanced"
       chapters:
         - chapter_optimization/index.qmd
         - chapter_optimization/optimization-intro.qmd
@@ -156,8 +137,16 @@ book:
         - chapter_optimization/adadelta.qmd
         - chapter_optimization/adam.qmd
         - chapter_optimization/lr-scheduler.qmd
-    - part: "Computational Performance"
-      chapters:
+        - chapter_attention-mechanisms-and-transformers/index.qmd
+        - chapter_attention-mechanisms-and-transformers/queries-keys-values.qmd
+        - chapter_attention-mechanisms-and-transformers/attention-pooling.qmd
+        - chapter_attention-mechanisms-and-transformers/attention-scoring-functions.qmd
+        - chapter_attention-mechanisms-and-transformers/bahdanau-attention.qmd
+        - chapter_attention-mechanisms-and-transformers/multihead-attention.qmd
+        - chapter_attention-mechanisms-and-transformers/self-attention-and-positional-encoding.qmd
+        - chapter_attention-mechanisms-and-transformers/transformer.qmd
+        - chapter_attention-mechanisms-and-transformers/vision-transformer.qmd
+        - chapter_attention-mechanisms-and-transformers/large-pretraining-transformers.qmd
         - chapter_computational-performance/index.qmd
         - chapter_computational-performance/hybridize.qmd
         - chapter_computational-performance/async-computation.qmd
@@ -166,6 +155,17 @@ book:
         - chapter_computational-performance/multiple-gpus.qmd
         - chapter_computational-performance/multiple-gpus-concise.qmd
         - chapter_computational-performance/parameterserver.qmd
+        - chapter_transformers/index.qmd
+        - chapter_recurrent-modern/index.qmd
+        - chapter_recurrent-modern/lstm.qmd
+        - chapter_recurrent-modern/seq2seq.qmd
+        - chapter_recurrent-modern/ssm.qmd
+        - chapter_recurrent-modern/mamba.qmd
+        - chapter_reinforcement-learning/index.qmd
+        - chapter_reinforcement-learning/mdp.qmd
+        - chapter_reinforcement-learning/value-iter.qmd
+        - chapter_reinforcement-learning/qlearning.qmd
+        - chapter_diffusion-models/index.qmd
     - part: "Computer Vision"
       chapters:
         - chapter_computer-vision/index.qmd
@@ -206,23 +206,21 @@ book:
         - chapter_natural-language-processing-applications/natural-language-inference-bert.qmd
     - part: "Advanced Topics"
       chapters:
-        - chapter_reinforcement-learning/index.qmd
-        - chapter_reinforcement-learning/mdp.qmd
-        - chapter_reinforcement-learning/value-iter.qmd
-        - chapter_reinforcement-learning/qlearning.qmd
         - chapter_gaussian-processes/index.qmd
         - chapter_gaussian-processes/gp-intro.qmd
         - chapter_gaussian-processes/gp-priors.qmd
         - chapter_gaussian-processes/gp-inference.qmd
+        - chapter_generative-adversarial-networks/index.qmd
+        - chapter_generative-adversarial-networks/gan.qmd
+        - chapter_generative-adversarial-networks/dcgan.qmd
+    - part: "Attic"
+      chapters:
         - chapter_hyperparameter-optimization/index.qmd
         - chapter_hyperparameter-optimization/hyperopt-intro.qmd
         - chapter_hyperparameter-optimization/hyperopt-api.qmd
         - chapter_hyperparameter-optimization/rs-async.qmd
         - chapter_hyperparameter-optimization/sh-intro.qmd
         - chapter_hyperparameter-optimization/sh-async.qmd
-        - chapter_generative-adversarial-networks/index.qmd
-        - chapter_generative-adversarial-networks/gan.qmd
-        - chapter_generative-adversarial-networks/dcgan.qmd
         - chapter_recommender-systems/index.qmd
         - chapter_recommender-systems/recsys-intro.qmd
         - chapter_recommender-systems/movielens.qmd

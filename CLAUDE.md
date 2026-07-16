@@ -231,6 +231,21 @@ shape on the **preliminaries** and **linear-neural-networks** chapters.
 - **Proofs, intuition-first.** Foundations chapters favour short, *elegant*
   proofs (`**Proposition.**` / `**Proof.**` … `$\blacksquare$`) over assertion,
   led by a picture or intuition.
+- **Experimental results in prose: quote only the precision that survives
+  re-execution.** Notebook training runs are re-captured regularly, and
+  seed-level accuracy fluctuates by a few tenths of a point. Prose, tables,
+  and slides must therefore never quote per-seed last-digit values
+  ("90.21 ± 0.34"), per-framework orderings that flip within noise, or exact
+  timing ratios. Round to the stability the store actually has (≈½ point for
+  10-epoch Fashion-MNIST runs), prefer ranges and qualitative statements
+  ("both about 92%", "roughly 2× faster"), and never build a *conclusion* on
+  a difference smaller than the run-to-run noise. Single seeded runs per
+  framework, not multi-seed sweeps — the compute belongs to readers.
+- **References use labels, never hardcoded numbers.** Always `:numref:`/
+  `:ref:` against a `:label:`; chapter renumbering is routine (it has
+  happened twice) and hardcoded "Chapter 7"/"§5.4" strings silently rot.
+  Slide-cover kickers (`[Dive into Deep Learning · §N.M]{.kicker}`) are
+  rewritten automatically by `gen_slides.py` from `CHAPTER_NUMBERING`.
 - **Gotchas.** Multi-line display equations: put `$$` alone on its own opening
   and closing lines with `:eqlabel:` on the next line, or the label fails to
   attach. Never put a `]` in an image caption (it truncates the alt-text); write
@@ -341,12 +356,26 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   store is a portable baseline: a CPU/Apple-Silicon machine renders the whole
   book and re-runs only the CPU notebooks it touches. See `docs/build-system.md`
   §3.1/§3.3a.
+- **Part structure (2026-07-16 restructure, per Alex):** front matter
+  (introduction is unnumbered) | **Basics** = ch. 1–8 (preliminaries through
+  Sequence Models) | **Advanced** = 9 Optimization, 10 Attention, 11
+  Computational Performance, 12 Transformers (placeholder), 13 State Space
+  Models (formerly "Gated and Linear Recurrence"), 14 RL, 15 Diffusion
+  Models (placeholder) | Computer Vision 16 | NLP 17–18 | Advanced Topics
+  (rump: 19 GP, 20 GANs — final home TBD) | **Attic** = 21 HPO, 22 RecSys |
+  math appendix | Tools. Title shortenings ("Computation", "Modern
+  Convnets", "Sequence Models", singular "Multilayer Perceptron") are
+  deliberate: inside a single "Basics" part the long framework-y titles
+  were redundant, and ch. 13's rename marks the book's pivot to the
+  linear-recurrence/SSM view. Language Models and Computer Vision are
+  slated to become their own parts later; the preface still describes the
+  old three-part plan and needs a full rewrite (deferred, per Alex).
 - The **"Mathematics for Deep Learning"** part (branch
   `math-for-deep-learning-appendix`) is now the **default math appendix**: a
-  single part of 6 numbered chapters under `chapter_mdl-*` — **22** Linear
-  Algebra, **23** Calculus, **24** Optimization, **25** Probability & Statistical
-  Learning, **26** Information Theory, **27** Dynamics (Tools for Deep Learning is
-  now **28**) — with `mdl-`-prefixed labels. All six chapters are now fully
+  single part of 6 numbered chapters under `chapter_mdl-*` — **23** Linear
+  Algebra, **24** Calculus, **25** Optimization, **26** Probability & Statistical
+  Learning, **27** Information Theory, **28** Dynamics (Tools for Deep Learning is
+  now **29**) — with `mdl-`-prefixed labels. All six chapters are now fully
   written; the appendix gained two new sections (`mdl-adaptive-stochastic-methods`
   = §24.2, `mdl-concentration-generalization` = §25.5) and ch. 25 was reordered
   (naive Bayes moved last, §25.6). The branch `math-appendix-polish` carries a

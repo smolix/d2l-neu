@@ -298,7 +298,7 @@ class SNLIDataset:
 
 ### Putting It All Together
 
-Now we can invoke the `read_snli` function and the `SNLIDataset` class to download the SNLI dataset and return `DataLoader` instances for both training and testing sets, together with the vocabulary of the training set.
+Now we can invoke the `read_snli` function and the `SNLIDataset` class to download the SNLI dataset and return data-loader objects for both training and testing sets, together with the vocabulary of the training set.
 It is noteworthy that we must use the vocabulary constructed from the training set
 as that of the testing set. 
 As a result, any new token from the testing set will be unknown to the model trained on the training set.

@@ -1135,7 +1135,7 @@ $$d\mathbf X = \underbrace{\mathbf f(\mathbf X,t)\,dt}_{\text{drift}}
 + \underbrace{g(t)\,d\mathbf W}_{\text{diffusion}}.$$
 
 (A *learned* flow sends one **given** $p_{\text{data}}$ there: that is
-exactly flow matching, §27.4.)
+exactly flow matching, the score-matching-diffusion-and-flow-matching section.)
 :::
 
 ::: {.col .fig}

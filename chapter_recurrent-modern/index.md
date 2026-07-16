@@ -1,4 +1,4 @@
-# Gated and Linear Recurrence
+# State Space Models
 :label:`chap_modern_rnn`
 
 The recurrent networks of :numref:`chap_rnn` compress an unbounded past into a

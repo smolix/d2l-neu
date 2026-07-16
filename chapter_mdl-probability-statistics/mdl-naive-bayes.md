@@ -327,9 +327,10 @@ Estimating that table directly is hopeless: $2^d$ feature patterns
 ($2^{784}$ for MNIST, more than atoms in the universe).
 
 ::: {.d2l-note}
-The plan: **maximum likelihood** (§25.3) fits a generative model by
-counting; Bayes flips it into a classifier; the **statistics** of §25.4
-then judge the result: error bar, failure map, calibration.
+The plan: **maximum likelihood** (the maximum-likelihood section) fits a
+generative model by counting; Bayes flips it into a classifier; the
+**statistics** of the statistics section then judge the result: error bar,
+failure map, calibration.
 :::
 :::
 
@@ -550,8 +551,8 @@ denominator) instead of presence/absence.
 [Error bar]{.kicker}
 
 An accuracy is an *estimate* from $10{,}000$ random test examples, so it
-carries a standard error, and §25.4's bootstrap delivers it: resample the
-test set, recompute, read off the spread:
+carries a standard error, and the statistics section's bootstrap delivers it:
+resample the test set, recompute, read off the spread:
 
 @!mdl-naive-bayes-calibration-1
 

@@ -1114,7 +1114,7 @@ of (:numref:`sec_mdl-matrix-calculus-autodiff`). Discretize
 and you get *literally* the backpropagation recursion through the unrolled
 network: backprop **is** the discrete adjoint method, a lineage that runs
 from optimal control :cite:`Pontryagin.Boltyanskii.Gamkrelidze.ea.1962`
-straight to `loss.backward()`. The continuous formulation adds one practical
+straight to the backward pass of every deep-learning framework. The continuous formulation adds one practical
 twist: instead of storing the forward states for the VJPs, you may
 *re-integrate* $\mathbf{x}(t)$ backward alongside $\mathbf{a}(t)$, making
 memory $O(1)$ in the number of solver steps, at the cost of extra compute
@@ -1573,7 +1573,8 @@ $$e^{At} = \sum_{k=0}^{\infty}\frac{(At)^k}{k!} = V e^{\Lambda t}V^{-1}.$$
 . . .
 
 The eigenbasis decouples the system into independent scalar modes
-$e^{\lambda_i t}$, exactly the §22 eigendecomposition at work.
+$e^{\lambda_i t}$, exactly the eigendecomposition machinery of the linear
+algebra part at work.
 :::
 
 ::: {.slide title="Three ways to the same map"}

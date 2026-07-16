@@ -15,7 +15,34 @@ sys.path.insert(0, str(Path(__file__).parent))
 from d2l_preprocess import CHAPTER_NUMBERING, PDF_CHAPTER_FILES
 
 
+# References into pages that exist only in the HTML edition (the
+# PDF_EXCLUDED_FILES reference pages). Quarto renders a :numref: to an
+# absent target as a literal bold "?@sec-..." marker; rewrite the known
+# ones into prose that degrades gracefully in print. Any *other* residual
+# "?@" marker is a genuine broken reference — warn loudly so it is caught
+# at build time instead of shipping.
+HTML_ONLY_REFS = {
+    'sec-utils': 'the utility reference of the online edition',
+    'sec-d2l': 'the d2l API reference of the online edition',
+}
+
+
+def fix_html_only_refs(content):
+    for target, wording in HTML_ONLY_REFS.items():
+        for pat in (r'\textbf{?@%s}' % target, '?@%s' % target):
+            if pat in content:
+                n = content.count(pat)
+                content = content.replace(pat, wording)
+                print(f'  Rewrote {n} reference(s) to HTML-only {target}')
+    residual = sorted(set(re.findall(r'\?@[a-z0-9-]+', content)))
+    if residual:
+        print(f'  WARNING: unresolved crossrefs remain in the PDF: '
+              f'{", ".join(residual)}')
+    return content
+
+
 def fix_all(content):
+    content = fix_html_only_refs(content)
     files = [(rel, CHAPTER_NUMBERING[rel]) for rel in PDF_CHAPTER_FILES]
 
     # Find all \chapter{...} with optional \label{...}

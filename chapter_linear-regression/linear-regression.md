@@ -1097,7 +1097,8 @@ normal equation $\mathbf{X}^\top(\mathbf{X}\mathbf{w}^*-\mathbf{y})=\mathbf{0}$.
 ::: {.d2l-note .rule}
 With a constant $\eta$, SGD never lands on the minimizer: it hovers in a
 **noise ball** whose squared radius scales with $\eta$. Shrinking $\eta$
-shrinks the ball, the reason learning-rate *schedules* exist (§24.2).
+shrinks the ball, the reason learning-rate *schedules* exist (the
+stochastic-and-adaptive-methods section).
 :::
 :::
 
@@ -1210,8 +1211,8 @@ only linearly, the robust MAE fit from the outlier demo.
 ![Left: Laplace tails carry far more mass than Gaussian tails of equal variance. Right: the penalties each induces, with Huber between them.](../img/mdl-linreg-loss-menu.svg){width=94%}
 
 ::: {.d2l-note .rule}
-§3.7 adds a *prior* to this likelihood → weight decay; the next chapter
-runs the recipe on categorical noise → softmax.
+The weight-decay section adds a *prior* to this likelihood → weight decay;
+the next chapter runs the recipe on categorical noise → softmax.
 :::
 :::
 :::

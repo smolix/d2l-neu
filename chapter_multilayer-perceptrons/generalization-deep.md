@@ -183,7 +183,7 @@ and it appears when we grow the model, when we train for more epochs,
 and when we add more data
 :cite:`nakkiran2021deep` (:numref:`fig_double_descent`).
 
-![Two possible capacity curves. The classical schematic on the left is U-shaped. The double-descent schematic on the right has an interpolation threshold where training error reaches zero and test error peaks before falling again. The location and even the presence of this second descent depend on the model, data, optimizer, and training budget.](../img/mdl-mlp-double-descent.svg)
+![The double-descent curve. In the shaded classical regime, test error traces the familiar U shape with its sweet spot, while training error falls monotonically and reaches zero at the interpolation threshold, where capacity roughly matches the number of examples. Test error peaks there — and then descends a second time as capacity grows further. The location and even the presence of this second descent depend on the model, data, optimizer, and training budget.](../img/mdl-mlp-double-descent.svg)
 :label:`fig_double_descent`
 
 Why can bigger be better past the point of interpolation? In linear
@@ -588,7 +588,7 @@ the classical story predicts.
 :::
 
 ::: {.slide title="Double descent: a second curve observed in some regimes" layout="figure"}
-![The U-shaped schematic on the left and a double-descent schematic on the right. In the latter, test error peaks near the capacity at which the training procedure first interpolates, then falls again. The second curve is contingent on the model, data, optimizer, and training budget.](../img/mdl-mlp-double-descent.svg){width=70%}
+![One curve, two regimes: the classical U ends at the interpolation threshold, where training error reaches zero and test error peaks — then descends a second time. That second descent is contingent on the model, data, optimizer, and training budget.](../img/mdl-mlp-double-descent.svg){width=70%}
 :::
 
 ::: {.slide title="One mechanism in tractable models"}
@@ -603,9 +603,9 @@ Past that transition, additional features create more interpolating
 solutions, and the minimum-norm solution can have lower variance.
 
 ::: {.d2l-note .rule}
-The appendix (§25.5) derives this mechanism in a specified model. It is not a
-theorem that every deep network follows the same curve or selects the same
-kind of interpolant.
+The appendix (the concentration-and-generalization section) derives this
+mechanism in a specified model. It is not a theorem that every deep network
+follows the same curve or selects the same kind of interpolant.
 :::
 :::
 
@@ -804,7 +804,7 @@ is the next such tool.)
 ::: {.d2l-note}
 Why certain choices improve generalization remains a **massive open
 question**. Try the surprises yourself: exercise 6 reproduces epoch-wise
-double descent; exercise 7, grokking on modular addition. Next (§5.6):
-dropout, regularization by structured noise.
+double descent; exercise 7, grokking on modular addition. Next (the dropout
+section): dropout, regularization by structured noise.
 :::
 :::

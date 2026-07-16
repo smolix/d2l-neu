@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  2.  4.  6.  8.  0.  0.  0.]\n [16. 18.  0.  0.  0. 26.  0.  0.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
+          "text": "dropout_p = 0: [[ 0.  1.  2.  3.  4.  5.  6.  7.]\n [ 8.  9. 10. 11. 12. 13. 14. 15.]]\ndropout_p = 0.5: [[ 0.  2.  4.  0.  0. 10.  0.  0.]\n [ 0. 18. 20.  0. 24. 26. 28. 30.]]\ndropout_p = 1: [[0. 0. 0. 0. 0. 0. 0. 0.]\n [0. 0. 0. 0. 0. 0. 0. 0.]]\n"
         }
       ]
     },
@@ -35,7 +35,7 @@
       "outputs": []
     },
     "dropout-training": {
-      "code_fingerprint": "sha256:6a26141712517b9111c4a91014277ab8017801e8552aebcb3ff69faeb9fc62a4",
+      "code_fingerprint": "sha256:1ac731ce07af71a618e5cbdd5696512c79df4d3029ebf0668cc2965386778af4",
       "kind": "asset",
       "outputs": [
         {
@@ -43,25 +43,25 @@
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-training-1.svg",
           "bytes": 24814,
-          "sha256": "sha256:c673d48685ffdee12310403b03d595696d2d7a69696b1214697522a8f231c675"
+          "sha256": "sha256:b85a7362627f63a3419c8dd4a7c3576a0128e1e7ca8104f4e36bfd5d5e9a4bb1"
         }
       ]
     },
     "dropout-concise-implementation-1": {
-      "code_fingerprint": "sha256:6fce2c7d78468260d68e8e9266d29ac4eeb6d0ac3c90a602f6ed0f1d91f7bc5a",
+      "code_fingerprint": "sha256:95c5cbef7674657af96a03953b5bc61245aecb6c1f790c19db1e814abc29794a",
       "kind": "text",
       "outputs": []
     },
     "dropout-concise-implementation-3": {
-      "code_fingerprint": "sha256:bf0be521bd697273f355c0217e2767dbea5aa0a7a86a9e20833ea69062adde95",
+      "code_fingerprint": "sha256:27b7963d72e079b6d1f012cb06afb248923cdfea57a9628c98c42aa4658825b7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dropout/dropout-concise-implementation-3-1.svg",
-          "bytes": 24818,
-          "sha256": "sha256:a0a89250699d9c1c3b8b08aef1212a8efda509fd5fbec0f8892bdf43b0f92b77"
+          "bytes": 24809,
+          "sha256": "sha256:5c2204c7ef2a3ef6b30dc588d245bb8f9124abe00c5afff8a27752d99fe49f37"
         }
       ]
     }

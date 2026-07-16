@@ -6,7 +6,8 @@ The previous two sections built differentiation up from a single weight
 many weights (:numref:`sec_mdl-multivariable_calculus`). Real network layers,
 however, map *vectors to vectors*, and their parameters are *matrices*, so the
 natural object of study is the derivative of a vector-valued map, the *Jacobian*,
-and the natural question is why `loss.backward()` is cheap. This section answers
+and the natural question is why the backward pass — PyTorch's `loss.backward()`,
+JAX's `grad`, and their kin — is cheap. This section answers
 both: **backpropagation is reverse-mode automatic differentiation, a sequence of
 vector--Jacobian products**, and the choice between forward- and reverse-mode AD
 is dictated by the *shape* of the Jacobian you are after. Along the way we
@@ -881,7 +882,7 @@ the primitive set is large (every differentiable op ships a VJP rule); and the g
 is built either eagerly (PyTorch's dynamic tape) or by tracing (JAX, TensorFlow).
 But the skeleton (record forward, seed the output adjoint, replay backward
 accumulating VJPs) is exactly what you wrote above and exactly what
-`loss.backward()` does.
+the backward pass does.
 
 ### The Cost Asymmetry, Counted
 
@@ -1288,7 +1289,7 @@ monograph *Evaluating Derivatives* :cite:`Griewank.Walther.2008` and in the surv
 ::: {.cover}
 [Dive into Deep Learning · §23.3]{.kicker}
 
-Why `loss.backward()` is cheap<br>**Jacobians · the chain rule · forward- and reverse-mode autodiff**.
+Why the backward pass is cheap<br>**Jacobians · the chain rule · forward- and reverse-mode autodiff**.
 :::
 :::
 
@@ -1587,7 +1588,7 @@ A node's adjoint is the *sum* over its outgoing edges, the chain rule's "sum ove
 :::
 :::
 
-::: {.slide title="Thirty lines reproduce loss.backward()"}
+::: {.slide title="Thirty lines reproduce the backward pass"}
 [Reverse mode]{.kicker}
 
 One forward pass records the tape; one backward pass yields both partials, matching the framework's own autograd. Real engines change only the details (tensor nodes, VJP backwards, a larger primitive set), but the skeleton is exactly this:

@@ -1140,7 +1140,8 @@ $$\operatorname{sigmoid}'(x) = \operatorname{sigmoid}(x)\,(1 - \operatorname{sig
 The gradient peaks at just $0.25$ and **vanishes** past
 $|x|\gtrsim 5$. Even at its best, ten stacked layers attenuate the
 backward signal by $0.25^{10} \approx 10^{-6}$: the
-**vanishing-gradient** problem ReLU fixed (the full story in §5.4).
+**vanishing-gradient** problem ReLU fixed (the full story in the
+numerical-stability section).
 :::
 :::
 :::
@@ -1222,7 +1223,7 @@ probabilities.
 :::
 
 ::: {.d2l-note}
-Next (§5.2): build one and train it on Fashion-MNIST, from
-scratch, then in a few high-level API lines.
+Next (the MLP-implementation section): build one and train it on
+Fashion-MNIST, from scratch, then in a few high-level API lines.
 :::
 :::

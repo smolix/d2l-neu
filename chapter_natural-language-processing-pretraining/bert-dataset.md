@@ -719,7 +719,7 @@ interface — the standard PyTorch / framework idiom:
 
 ::: {.slide title="Loader factory"}
 Download corpus → tokenize → generate NSP + MLM pairs →
-DataLoader:
+Data loader:
 
 @bert-dataset-transforming-text-into-the-pretraining-dataset-3
 :::

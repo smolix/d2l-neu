@@ -1072,7 +1072,7 @@ Here $P(y)$ shifts while $P(\mathbf{x}\mid y)$ is fixed, so the weights are labe
 
 . . .
 
-Take an off-the-shelf classifier, measure its $k\times k$ **confusion matrix** $\mathbf{C}$ on a source validation set (the very matrix we computed for Fashion-MNIST in §4.4, column-normalized), and the **average prediction** $\mu(\hat{\mathbf{y}})$ on the (unlabeled) target. They are linked by total probability:
+Take an off-the-shelf classifier, measure its $k\times k$ **confusion matrix** $\mathbf{C}$ on a source validation set (the very matrix we computed for Fashion-MNIST in the softmax-from-scratch section, column-normalized), and the **average prediction** $\mu(\hat{\mathbf{y}})$ on the (unlabeled) target. They are linked by total probability:
 
 $$\mathbf{C}\, p(\mathbf{y}) = \mu(\hat{\mathbf{y}}) \quad\Longrightarrow\quad p(\mathbf{y}) = \mathbf{C}^{-1}\mu(\hat{\mathbf{y}}).$$
 

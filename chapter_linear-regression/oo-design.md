@@ -898,22 +898,23 @@ instance is callable: `model(X)` runs `forward`.
 :::
 :::
 
-::: {.slide title="`Module`: the same contract, written functionally" only="jax"}
+::: {.slide title="`Module`: the same contract, in NNX" only="jax"}
 [Base classes]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col}
-In Flax a module **is a dataclass**: no `__init__`, fields declared by
-type annotation. The same contract, written functionally:
+An NNX module is an ordinary Python object that **owns its parameters**.
+The contract is the same as everywhere else:
 
 - `forward` / `__call__`: the prediction.
-- **`training_step`** returns *(loss, grads)* via
-  `jax.value_and_grad`, since parameters are passed in, not stored.
-- `configure_optimizers`: the optax optimizer.
+- **`training_step`**: loss on one batch; the trainer differentiates it
+  with `nnx.value_and_grad` *with respect to the module itself*.
+- `configure_optimizers`: the optax optimizer, wrapped in
+  `nnx.Optimizer`.
 
 ::: {.d2l-note .rule}
-Parameters live *outside* the module; every step is a pure function of
-them.
+JAX still traces pure functions under the hood — NNX splits the module
+into structure and state at the `jit` boundary, so *we* never have to.
 :::
 :::
 

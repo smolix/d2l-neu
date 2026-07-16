@@ -1759,7 +1759,7 @@ $$P(X \ge a) \le \frac{E[X]}{a}.$$
 ::: {.d2l-note .rule}
 Apply it to $(X-\mu)^2$ to get **Chebyshev**; sharper bounds
 (Hoeffding, Bernstein) and their consequences for generalization are
-developed in §25.5.
+developed in the concentration-and-generalization section.
 :::
 :::
 

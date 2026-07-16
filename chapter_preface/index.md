@@ -290,17 +290,17 @@ on the most powerful and general tools
 that are widely used by deep learning practitioners.
 
 * **Part 3: Scalability, Efficiency, and Applications** (available [online](https://d2l.ai)).
-In Chapter 12,
+In :numref:`chap_optimization`,
 we discuss several common optimization algorithms
 used to train deep learning models.
-Next, in Chapter 13,
+Next, in :numref:`chap_performance`,
 we examine several key factors
 that influence the computational performance
 of deep learning code.
-Then, in Chapter 14,
+Then, in :numref:`chap_cv`,
 we illustrate major applications
 of deep learning in computer vision.
-Finally, in Chapter 15 and Chapter 16,
+Finally, in :numref:`chap_nlp_pretrain` and :numref:`chap_nlp_app`,
 we demonstrate how to pretrain language representation models
 and apply them to natural language processing tasks.
 

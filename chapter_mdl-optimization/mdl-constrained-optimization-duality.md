@@ -1601,8 +1601,9 @@ Verified on ridge regression, where the theorem is exact:
 @!constrained-weight-decay
 
 ::: {.d2l-note}
-One number, three readings: **weight decay** (§3.7), a norm budget's
-shadow price, and a Gaussian prior (§25.3).
+One number, three readings: **weight decay** (the weight-decay section), a
+norm budget's shadow price, and a Gaussian prior (the maximum-likelihood
+section).
 :::
 :::
 

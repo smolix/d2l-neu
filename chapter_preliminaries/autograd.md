@@ -896,8 +896,9 @@ From the chain rule to **backpropagation**<br>the engine that differentiates a w
 ::: {.col}
 Hand-deriving gradients for a million-parameter network is hopeless.
 Instead the framework **records** each operation as you run the forward
-pass, then **replays it in reverse**, applying the chain rule of §2.4
-mechanically, to get the gradient w.r.t. *every* input at once.
+pass, then **replays it in reverse**, applying the chain rule of the
+calculus section mechanically, to get the gradient w.r.t. *every* input
+at once.
 
 ::: {.d2l-note}
 Every training step in this book is one forward pass and one backward
@@ -972,8 +973,8 @@ promised $4\mathbf{x}$, at every coordinate:
 @autograd-a-simple-function-5
 
 ::: {.d2l-note}
-That reverse sweep **is** the §2.4 chain rule, run from output to
-input.
+That reverse sweep **is** the calculus section's chain rule, run from
+output to input.
 :::
 :::
 
@@ -1140,7 +1141,8 @@ both:
 :::
 
 ::: {.d2l-note}
-Backpropagation through real networks gets its full treatment in §5.3;
-forward vs. reverse mode is derived in §23.3.
+Backpropagation through real networks gets its full treatment in the
+backpropagation section; forward vs. reverse mode is derived in the
+matrix-calculus-and-automatic-differentiation section.
 :::
 :::

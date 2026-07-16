@@ -1374,8 +1374,8 @@ usually breaks up consistently-informative rare gradients.
 ::: {.slide title="The valley, revisited"}
 [The payoff]{.kicker}
 
-The $\kappa = 10^3$ quadratic of §24.1, optimally tuned GD versus
-hand-rolled Adam:
+The $\kappa = 10^3$ quadratic of the gradient-based-optimization section,
+optimally tuned GD versus hand-rolled Adam:
 
 @!adaptive-stochastic-methods-adam-vs-gd
 
@@ -1417,9 +1417,10 @@ $$\underbrace{\frac{\eta\,\lambda}{\sqrt{\hat{v}_{t,i}} + \epsilon}\; w_{t,i}}_{
 ::: {.d2l-note .warn}
 The regularization strength is no longer a constant of the problem:
 noisy-gradient weights are barely decayed, quiet ones are decayed hard.
-Whatever $\lambda$ *meant* (the Gaussian prior of MAP, §25.3; the norm
-constraint it multiplies, §24.4) assumed one $\lambda$ for all
-coordinates. Adam's preconditioner silently discards it.
+Whatever $\lambda$ *meant* (the Gaussian prior of MAP, the maximum-likelihood
+section; the norm constraint it multiplies, the constrained-optimization-and-
+duality section) assumed one $\lambda$ for all coordinates. Adam's
+preconditioner silently discards it.
 :::
 :::
 
@@ -1499,7 +1500,8 @@ this chapter's instruments:
   $\mathrm{sign}(\mathbf{g}_1)$, full-magnitude movement on every
   coordinate, noise included. Bias correction makes it *unbiased*, not
   *accurate*; only $\sim 1/(1-\beta_2)$ steps of data fix the variance.
-- The **edge of stability** (§24.1): sharpness equilibrates onto $2/\eta$,
+- The **edge of stability** (the gradient-based-optimization section):
+  sharpness equilibrates onto $2/\eta$,
   but that takes time; a full-size $\eta$ at initialization violates a
   ceiling the landscape has not yet adapted to.
 

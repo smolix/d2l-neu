@@ -381,13 +381,13 @@ model-inspection tooling attaches; we use it in :numref:`sec_repro`.
 :label:`subsec_model-construction-sequential`
 
 :begin_tab:`pytorch`
-To see that there is no magic left in `nn.Sequential`, we can write it
+To see that there is no magic left in `nnx.Sequential`, we can write it
 ourselves. Two ingredients suffice: register each child under a name, and loop
 over the children in `forward`.
 :end_tab:
 
 :begin_tab:`jax`
-To see that there is no magic left in `nn.Sequential`, we can write it
+To see that there is no magic left in `nnx.Sequential`, we can write it
 ourselves. Two ingredients suffice: declare a field that holds the list of
 children, and loop over them in `__call__`.
 :end_tab:
@@ -399,7 +399,7 @@ loop over them in `call`.
 :end_tab:
 
 :begin_tab:`mxnet`
-To see that there is no magic left in `nn.Sequential`, we can write it
+To see that there is no magic left in `nnx.Sequential`, we can write it
 ourselves. Two ingredients suffice: register each child, and loop over the
 children in `forward`. One Gluon 2.0 wrinkle: the registry holds weak
 references, so our class also keeps the blocks in a plain list to keep them
@@ -844,71 +844,39 @@ class ResidualBlock(nn.Block):
 ![The residual wiring `X + body(X)`: the input splits at a branch point into the body stack and an identity skip, and the two rejoin by addition before the block's output.](../img/bg-residual-block.svg)
 :label:`fig_bg_residual-block`
 
-:begin_tab:`pytorch`
-`X + self.body(X)` is not a layer PyTorch provides. It is arithmetic in
-`forward`, and it changes what the block *is*: the block computes a
-perturbation of the identity function rather than an arbitrary transformation.
-If its body is $F$, its Jacobian is $I + J_F$, so backpropagation receives an
-additive identity contribution along the skip path. This contribution can
-still cancel against $J_F$; it is a direct path, not a guarantee that every
-gradient is preserved :cite:`He.Zhang.Ren.ea.2016`.
-:numref:`fig_bg_residual-block` diagrams
-exactly this wiring. Chapter 8 develops both points when we build ResNet; for
-now we only need the mechanics. One mechanical consequence
-is visible already: the addition forces the input and output shapes to agree,
-so a residual block has a single width that is part of its identity. That is
-why we gave `body` explicit `nn.Linear` layers rather than lazy ones.
-:end_tab:
-
-:begin_tab:`jax`
-`X + body(X)` is not a layer Flax provides. It is arithmetic in `__call__`,
-and it changes what the block *is*: the block computes a perturbation of the
-identity function rather than an arbitrary transformation. If its body is
-$F$, its Jacobian is $I + J_F$, so backpropagation receives an additive
-identity contribution along the skip path. This contribution can still cancel
-against $J_F$; it is a direct path, not a guarantee that every gradient is
-preserved :cite:`He.Zhang.Ren.ea.2016`.
-:numref:`fig_bg_residual-block` diagrams exactly this wiring. Chapter 8
-develops both points when we build ResNet; for now we only need the mechanics.
-One mechanical consequence is visible already: the addition forces the input
-and output shapes to agree, so a residual block has a single width that is
-part of its identity. That is why `num_hiddens` is an explicit constructor
-argument rather than a width inferred from a sample batch.
-:end_tab:
-
-:begin_tab:`tensorflow`
-`X + self.body(X)` is not a layer Keras provides. It is arithmetic in `call`,
-and it changes what the block *is*: the block computes a perturbation of the
-identity function rather than an arbitrary transformation. If its body is
-$F$, its Jacobian is $I + J_F$, so backpropagation receives an additive
-identity contribution along the skip path. This contribution can still cancel
-against $J_F$; it is a direct path, not a guarantee that every gradient is
-preserved :cite:`He.Zhang.Ren.ea.2016`.
-:numref:`fig_bg_residual-block` diagrams exactly this wiring. Chapter 8
-develops both points when we build ResNet; for now we only need the
-mechanics. One mechanical consequence is visible already: the addition forces
-the input and output shapes to agree, so a residual block has a single width
-that is part of its identity. Keras always infers input widths at build time,
-so here the constraint falls on the caller: feed the block anything other
-than `num_hiddens` columns and the addition fails.
-:end_tab:
-
-:begin_tab:`mxnet`
-`X + self.body(X)` is not a layer Gluon provides. It is arithmetic in
-`forward`, and it changes what the block *is*: the block computes a
-perturbation of the identity function rather than an arbitrary
+`X + body(X)` is not a layer any framework provides. It is plain arithmetic
+in the forward computation, and it changes what the block *is*: the block
+computes a perturbation of the identity function rather than an arbitrary
 transformation. If its body is $F$, its Jacobian is $I + J_F$, so
 backpropagation receives an additive identity contribution along the skip
 path. This contribution can still cancel against $J_F$; it is a direct path,
 not a guarantee that every gradient is preserved
 :cite:`He.Zhang.Ren.ea.2016`. :numref:`fig_bg_residual-block` diagrams
-exactly this wiring. Chapter 8 develops both points when we build ResNet; for
-now we only need the mechanics. One mechanical consequence is visible
-already: the addition forces the input and output shapes to agree, so a
-residual block has a single width that is part of its identity. Gluon defers
-input widths to the first forward pass (a mechanism we examine at the end of
-this section), so here the constraint falls on the caller: feed the block
-anything other than `num_hiddens` columns and the addition fails.
+exactly this wiring, and :numref:`sec_resnet` develops both points when we
+build ResNet; for now we only need the mechanics. One mechanical consequence
+is visible already: the addition forces the input and output shapes to
+agree, so a residual block has a single width that is part of its identity.
+
+:begin_tab:`pytorch`
+That is why we gave `body` explicit `nn.Linear` layers rather than lazy ones.
+:end_tab:
+
+:begin_tab:`jax`
+That is why `num_hiddens` is an explicit constructor argument rather than a
+width inferred from a sample batch.
+:end_tab:
+
+:begin_tab:`tensorflow`
+Keras always infers input widths at build time, so here the constraint falls
+on the caller: feed the block anything other than `num_hiddens` columns and
+the addition fails.
+:end_tab:
+
+:begin_tab:`mxnet`
+Gluon defers input widths to the first forward pass (a mechanism we examine
+at the end of this section), so here the constraint falls on the caller:
+feed the block anything other than `num_hiddens` columns and the addition
+fails.
 :end_tab:
 
 ```{.python .input #model-construction-forward-is-just-python-2}
@@ -1027,7 +995,7 @@ state is a *buffer*, introduced in :numref:`sec_parameters`.
 :begin_tab:`jax`
 `alpha` enters the computation, but it is ordinary architecture data rather
 than an `nnx.Param`, so the optimizer never touches it. Constructing
-`ScaledResidual(24, alpha=0.5)` reproduces it. Mutable non-parameter state,
+`ScaledResidual(24, nnx.Rngs(0), alpha=0.5)` reproduces it. Mutable non-parameter state,
 such as running statistics, instead uses another `nnx.Variable` subclass,
 introduced in :numref:`sec_parameters`.
 :end_tab:
@@ -1211,8 +1179,9 @@ convolutional network the flattened feature-map size depends on the input
 resolution and upstream strides. We usually avoid that fragile arithmetic by
 using global or adaptive pooling before the first linear layer. When a width
 is part of the architecture, we name it in the model config and pass it to
-adjacent layers. This keeps the NNX code compact without hiding parameter
-creation behind a sample batch.
+adjacent layers — code that stays explicit and compact without hiding
+parameter creation behind a sample batch, whether or not the framework
+offers a lazy mode.
 
 :begin_tab:`pytorch`
 Before the first forward pass, lazy layers contain registered
@@ -1305,7 +1274,7 @@ def apply_init(self, inputs, init=None):
 :begin_tab:`pytorch`
 `nn.Module.apply(fn)` calls `fn` on every module in the tree, children first.
 It is the standard way to push a policy across an arbitrary model, one more
-operation that is a tree walk, and from Chapter 7 on the idiom
+operation that is a tree walk, and from :numref:`chap_cnn` on the idiom
 `model.apply_init([X], init)` opens most of our training scripts. A small
 demonstration:
 :end_tab:
@@ -1724,7 +1693,7 @@ depths plus a `build` function that stacks blocks.
    `ResidualBlock` and a plain feed-forward block?
 1. `ResidualBlock` requires its input and output widths to agree. Suppose you
    want a block whose output is wider than its input. Give two standard fixes
-   and the cost of each. (Chapter 8 uses one of them in ResNet.)
+   and the cost of each. (:numref:`sec_resnet` uses one of them in ResNet.)
 :end_tab:
 
 :begin_tab:`mxnet`
@@ -1744,7 +1713,7 @@ depths plus a `build` function that stacks blocks.
    `ResidualBlock` and a plain feed-forward block?
 1. `ResidualBlock` requires its input and output widths to agree. Suppose you
    want a block whose output is wider than its input. Give two standard fixes
-   and the cost of each. (Chapter 8 uses one of them in ResNet.)
+   and the cost of each. (:numref:`sec_resnet` uses one of them in ResNet.)
 :end_tab:
 
 :begin_tab:`jax`
@@ -1762,7 +1731,7 @@ depths plus a `build` function that stacks blocks.
    `ResidualBlock` and a plain feed-forward block?
 1. `ResidualBlock` requires its input and output widths to agree. Suppose you
    want a block whose output is wider than its input. Give two standard fixes
-   and the cost of each. (Chapter 8 uses one of them in ResNet.)
+   and the cost of each. (:numref:`sec_resnet` uses one of them in ResNet.)
 :end_tab:
 
 :begin_tab:`tensorflow`
@@ -1781,5 +1750,5 @@ depths plus a `build` function that stacks blocks.
    `ResidualBlock` and a plain feed-forward block?
 1. `ResidualBlock` requires its input and output widths to agree. Suppose you
    want a block whose output is wider than its input. Give two standard fixes
-   and the cost of each. (Chapter 8 uses one of them in ResNet.)
+   and the cost of each. (:numref:`sec_resnet` uses one of them in ResNet.)
 :end_tab:

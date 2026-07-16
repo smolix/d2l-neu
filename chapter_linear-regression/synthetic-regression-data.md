@@ -464,8 +464,8 @@ yours, full stop.
 :::
 
 ::: {.col .narrow}
-The dataset lives in a `DataModule` (§3.2): *where the batches come from*,
-kept separate from the model.
+The dataset lives in a `DataModule` (the object-oriented-design section):
+*where the batches come from*, kept separate from the model.
 
 ![](../img/mdl-linreg-oo-classes.svg)
 :::

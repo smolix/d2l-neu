@@ -336,7 +336,7 @@ The Image Classification Dataset<br>**Fashion-MNIST**, the dataset we will class
 - **Fashion-MNIST**: a drop-in replacement, same shape and API, but harder clothing classes ($28\times28$ grayscale, 10 classes, 60 k / 10 k).
 
 ::: {.d2l-note}
-Here a linear model caps out near **82%** (§4.4): headroom the deeper models of later chapters will spend.
+Here a linear model caps out near **82%** (the softmax-from-scratch section): headroom the deeper models of later chapters will spend.
 :::
 :::
 
@@ -512,7 +512,7 @@ A `visualize` method tiles one validation batch, each image captioned with its c
 ::: {.col}
 - **Channel axis** differs: PyTorch/MXNet $c\times h\times w$, TensorFlow/JAX $h\times w\times c$ (the loader hides it).
 - Always **look at your data**; a full loading pass costs seconds, so training speed is set by the model, not I/O.
-- Next: a linear classifier on this data, and its **~82% ceiling** (§4.4).
+- Next: a linear classifier on this data, and its **~82% ceiling** (the softmax-from-scratch section).
 :::
 :::
 :::

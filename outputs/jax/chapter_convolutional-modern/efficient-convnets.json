@@ -14,19 +14,24 @@
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-1": {
-      "code_fingerprint": "sha256:7ccc2e1671a7ad7eed229d5c10234322a15b57cec374119ab0695e201620292b",
+      "code_fingerprint": "sha256:ef5211489d2d65c704c89398e6ff7e5cbb6621e4976531cab825729b23a92aba",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-2": {
-      "code_fingerprint": "sha256:5ec59451df6d6813a89d57a6a973fc7da9a3e562e5481c86e30be92816d9cd80",
+      "code_fingerprint": "sha256:888900e31e1628647598d439ba41d50a694d854835db1833e3db423b726354ac",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-a-mini-mobilenet-3": {
-      "code_fingerprint": "sha256:498b3ad5bff0b185fe6f026f789a69a961fd7683ada392ea74e8e7b2222a336d",
+      "code_fingerprint": "sha256:e5b07e030dcbcc3211feae506f202a8c015826dc907af4785678faf6789d997c",
       "kind": "text",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "E0716 22:23:30.664377   32292 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
+        },
         {
           "type": "execute_result",
           "text": "542474"
@@ -34,86 +39,58 @@
       ]
     },
     "efficient-convnets-training-and-comparison-1": {
-      "code_fingerprint": "sha256:dc9e3d73e731c760ba6537fe2609c7a5c4eecc49e416bdb8b398abba027aeaca",
+      "code_fingerprint": "sha256:fbcfdc20041116e17928d662ab9bf6b1ce357579840e069f6f94b981532f7f44",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-training-and-comparison-2": {
-      "code_fingerprint": "sha256:80b8bbe8765f3b0b92aaede2aa55e56c3eb584655b87816820305002edb44851",
+      "code_fingerprint": "sha256:02acb86e9d11a7e3ca334ad51fa502532cbffc8384202fb238ca6b92d81217c9",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-training-and-comparison-3": {
-      "code_fingerprint": "sha256:e8a1a121245c30cfc3ce02cab5cd5d7d013c9c0693fbac2df02b897813435c43",
+      "code_fingerprint": "sha256:086b971fd0c592619ef8fd259eb28764be60961500eb1a7383f4dd9b15a62eb1",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-1.svg",
-          "bytes": 20330,
-          "sha256": "sha256:68c3737c0cf1b67d37fcd732e622e9822bd5ed51e7515a22e5d39ced8ceb9cdd"
+          "bytes": 20496,
+          "sha256": "sha256:b616b849817170c6903fce34201719981b2ef176663e5904dbd8357e990dd637"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-2.svg",
-          "bytes": 20447,
-          "sha256": "sha256:6f97d3094fe2141fc31ec9c11afc5a64c35dfd85344ed7ee64fd6a947a9a0481"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-3.svg",
-          "bytes": 21508,
-          "sha256": "sha256:92ae4af1c304cefcb74b1dd69b8997d8d7cea4b7a05fd36f643b3482dd71a063"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-4.svg",
-          "bytes": 22038,
-          "sha256": "sha256:b3d1174bcbb3f4653e855903a6fcbe1d2c6abcd4f315b7925d855208e589da0a"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-5.svg",
-          "bytes": 20991,
-          "sha256": "sha256:c5d2c0fb837495dbdb7cd00f2ab3847942d349ec5e51938147b80fc600c93b22"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-6.svg",
-          "bytes": 21011,
-          "sha256": "sha256:601c13717128fbc2c220d665a2d2327be950630de904c57b6279889797aa36a0"
+          "bytes": 20495,
+          "sha256": "sha256:749a7461d13d446169fb87e1d4a5f49fea618ea05c44caf85cd73cae391f0723"
         }
       ]
     },
     "efficient-convnets-training-and-comparison-4": {
-      "code_fingerprint": "sha256:0ec5d71d5491d7b2e3bb6efaa0f7e4446115e5e8f50432db876cb808e61ffe36",
+      "code_fingerprint": "sha256:bb15aaae2f0ce0709a44ed0d54900e50a39740b8019447ed1fca6da9ae9efab6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mini-MobileNet: 542,474 params, val acc 0.891 ± 0.005; seeds [0.894, 0.893, 0.885]\nVGG-style: 583,594 params, val acc 0.833 ± 0.021; seeds [0.855, 0.827, 0.815]\n"
+          "text": "mini-MobileNet: 542,474 params, val acc 0.908\nVGG-style: 583,594 params, val acc 0.896\n"
         }
       ]
     },
     "efficient-convnets-the-repvgg-block": {
-      "code_fingerprint": "sha256:bf59b8d0441758652ea58e976981d8c4d504f9021b082b30b23acc4cb6d69a44",
+      "code_fingerprint": "sha256:7248d905dfd74fd7609fafae2d25011d1d78339dafa0e3468e7a36f44d16b079",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-1": {
-      "code_fingerprint": "sha256:e2b04605d54c4007fc2993b184e28318461e3fe9646e80d66e896e3d481fda30",
+      "code_fingerprint": "sha256:efe51d9089c793c2091d62741c2578f4e7ee713a0e959e89ca36e94a42fd14f0",
       "kind": "text",
       "outputs": []
     },
     "efficient-convnets-fusing-the-branches-2": {
-      "code_fingerprint": "sha256:89a4f60931ea8b4f9c0139e171c3cd303c61b435914d0bb06130dddb12430704",
+      "code_fingerprint": "sha256:f4ed1c1f06ccc509ce6179829e3bb08055361e52ab3bb8db46a0f7fc4d32e635",
       "kind": "text",
       "outputs": [
         {

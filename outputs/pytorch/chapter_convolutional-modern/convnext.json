@@ -39,61 +39,33 @@
       "outputs": []
     },
     "convnext-train": {
-      "code_fingerprint": "sha256:dd6ebcfabc359eec6198a3e2f6103f940d70e048086e0513741a6cc68a43267f",
+      "code_fingerprint": "sha256:76a2029424aace6ae014c541f1825354f09cac04b412148dc40b741e18a820d3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-1.svg",
-          "bytes": 23627,
-          "sha256": "sha256:e1b216574eda22039602a6cdafa9b1f860cb3567bab1d0b0067e473abd2c2fba"
+          "bytes": 23620,
+          "sha256": "sha256:6320bfc38b93214e908da572a1d9441dc7dc9cfe6c2aa32d340b865c756caad6"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "convnext/convnext-train-2.svg",
-          "bytes": 24853,
-          "sha256": "sha256:8dfbe784359186364cb9c725a4bfb4bdd07fe69add45bf2bb8f9a3fa8cb2a470"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "convnext/convnext-train-3.svg",
-          "bytes": 22792,
-          "sha256": "sha256:ac8cb814febee578e194ee39118ad945cbed277a6182ef5e23f8e6d63e32ff5f"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "convnext/convnext-train-4.svg",
-          "bytes": 24200,
-          "sha256": "sha256:4635fa329ba07bb508261e06bf3a5ac0d853ad5ecf4bd8760daf2acbc41cf9c6"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "convnext/convnext-train-5.svg",
-          "bytes": 23782,
-          "sha256": "sha256:33ff17f616757f9a3a17e05b3804e32e9fd3a874482be3247539f7acd811973b"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "convnext/convnext-train-6.svg",
-          "bytes": 24195,
-          "sha256": "sha256:28a951d0427ec81d1793b392c353ed5ff35b39a87de6217f61c9e545fa0bc2e9"
+          "bytes": 24851,
+          "sha256": "sha256:05241b580c3c60ad034d61b4bd74490e482ccb5ef725aca142568748c84c39f1"
         }
       ]
     },
     "convnext-eval": {
-      "code_fingerprint": "sha256:55c5c054f5d935796fb1892d29af1b4c4fe19a821a330b5213e941b44bdebd5f",
+      "code_fingerprint": "sha256:c8f0a4f171c6566a20e8b19f2b1be354ae260ea2a881e3969bd12b3dabcac8c6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ConvNeXt: 3,376,450 parameters, 0.924 ± 0.001\ncompact ResNet-18: 3,348,320 parameters, 0.941 ± 0.002\n"
+          "text": "ConvNeXt: 3,376,450 parameters, val acc 0.921\ncompact ResNet-18: 3,348,320 parameters, val acc 0.942\n"
         }
       ]
     }

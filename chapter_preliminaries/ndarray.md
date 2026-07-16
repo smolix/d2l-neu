@@ -144,8 +144,8 @@ x
 The `dtype` (data type) of a tensor determines how its elements are stored.
 We use **32-bit** floating point (`float32`) as the default throughout these
 chapters. Training systems also use lower-precision floating-point formats,
-often together with higher-precision accumulation. Chapter 6 develops those
-formats and their numerical tradeoffs. You can inspect a tensor's type via its
+often together with higher-precision accumulation. :numref:`sec_numerics`
+develops those formats and their numerical tradeoffs. You can inspect a tensor's type via its
 `dtype` attribute. In finite precision, naive
 computations can overflow or underflow, which is why later sections compute
 quantities such as the softmax and cross-entropy with stabilized formulas

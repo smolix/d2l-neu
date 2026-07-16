@@ -405,8 +405,8 @@ average the 0/1 hits:
 
 ::: {.d2l-note}
 The `astype` matches dtypes before `==`, since the comparison is
-type-sensitive. JAX adds `@jax.jit` and runs the forward pass from
-`params`.
+type-sensitive. The JAX version is line-for-line the same method: it
+receives precomputed scores and needs no `jit` of its own.
 :::
 :::
 
@@ -516,9 +516,10 @@ matrix**: entry $(i, j)$ counts true class $j$ predicted as class $i$.
 - Every **off-diagonal cell** isolates one specific kind of error.
 
 ::: {.d2l-note .rule}
-This object returns twice: in §4.4 we compute one for our Fashion-MNIST
-model and read *which* classes it confuses; in §4.7 the very same matrix is
-**inverted** to correct label shift.
+This object returns twice: in the softmax-from-scratch section we compute one
+for our Fashion-MNIST model and read *which* classes it confuses; in the
+distribution-shift section the very same matrix is **inverted** to correct
+label shift.
 :::
 :::
 
@@ -539,8 +540,8 @@ model and read *which* classes it confuses; in §4.7 the very same matrix is
 - Under **imbalance** accuracy can lie: always-healthy scores **0.99**
   with recall **0.0**.
 - **Precision / recall** split the failure modes; **F1** compresses them.
-- The **confusion matrix** itemizes all $q^2$ outcomes, computed in
-  §4.4, inverted in §4.7.
+- The **confusion matrix** itemizes all $q^2$ outcomes, computed in the
+  softmax-from-scratch section, inverted in the distribution-shift section.
 :::
 :::
 :::

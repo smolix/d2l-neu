@@ -755,8 +755,9 @@ deep-learning regime.
 :::
 
 We developed the mechanics, including when *forward mode* is preferable, in
-§2.5; the full theory (both modes as Jacobian products, and the memory
-trade-offs they imply) lives in the calculus appendix.
+the automatic-differentiation section; the full theory (both modes as
+Jacobian products, and the memory trade-offs they imply) lives in the
+calculus appendix.
 :::
 
 ::: {.slide title="Forward and backward depend on each other"}

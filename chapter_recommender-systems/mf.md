@@ -107,7 +107,7 @@ $$
 \textrm{RMSE} = \sqrt{\frac{1}{|\mathcal{T}|}\sum_{(u, i) \in \mathcal{T}}(\mathbf{R}_{ui} -\hat{\mathbf{R}}_{ui})^2}
 $$
 
-where $\mathcal{T}$ is the set consisting of pairs of users and items that you want to evaluate on. $|\mathcal{T}|$ is the size of this set. We can use the RMSE function provided by `mx.gluon.metric`.
+where $\mathcal{T}$ is the set consisting of pairs of users and items that you want to evaluate on. $|\mathcal{T}|$ is the size of this set. We can use MXNet's RMSE function provided by `mx.gluon.metric`.
 
 ```{.python .input #mf-evaluation-measures  n=3}
 #@tab mxnet

@@ -601,17 +601,19 @@ first use.
 :::
 :::
 
-::: {.slide title="One layer, declared functionally" only="jax"}
+::: {.slide title="One layer, with explicit sizes and randomness" only="jax"}
 [The Model]{.kicker}
 
-Flax modules are **dataclasses**: declare fields, build sub-modules in
-`setup`. The layer's parameters live outside the object, threaded in
-explicitly later:
+`nnx.Linear(num_inputs, 1, rngs=rngs)` is the whole model. NNX has no
+lazy mode, so we state the input width and hand the layer an explicit
+RNG stream — and its parameters exist, on the module, as soon as the
+constructor returns:
 
 @linear-regression-concise-defining-the-model-1
 
 ::: {.d2l-note .rule}
-JAX keeps state functional, so the model holds *no* mutable weights.
+Two JAX signatures — explicit shapes, explicit randomness. The weights
+then live on the module, just as in the other frameworks.
 :::
 :::
 
@@ -690,8 +692,8 @@ by swapping one line.
 
 ::: {.cols .vc}
 ::: {.col}
-Our `Trainer`, `Module`, and `DataModule` from §3.2
-don't care that the model is now a built-in layer.
+Our `Trainer`, `Module`, and `DataModule` from the object-oriented-design
+section don't care that the model is now a built-in layer.
 
 The training loop is **identical** to the from-scratch version.
 :::
@@ -707,7 +709,8 @@ The training loop is **identical** to the from-scratch version.
 
 ::: {.cols .vc}
 ::: {.col}
-Same synthetic data, same ten epochs, same `fit` call as §3.4:
+Same synthetic data, same ten epochs, same `fit` call as the
+linear-regression-from-scratch section:
 
 @-linear-regression-concise-training-1
 
@@ -721,7 +724,7 @@ only the amount of code we wrote changed.
 :::
 :::
 
-::: {.slide title="Where the parameters live now" except="jax"}
+::: {.slide title="Where the parameters live now"}
 [Training · payoff]{.kicker}
 
 They no longer hang off our class as `self.w`, `self.b`; they live
@@ -734,26 +737,8 @@ They no longer hang off our class as `self.w`, `self.b`; they live
 @linear-regression-concise-training-3
 
 ::: {.d2l-note}
-Same verdict as §3.4: the true $\mathbf{w}^* = [2,-3.4]$, $b^* = 4.2$
-recovered to a few $10^{-4}$. The built-in pieces really do compute the
-same thing our hand-rolled ones did.
-:::
-:::
-
-::: {.slide title="Where the parameters live now" only="jax" layout="tight"}
-[Training · payoff]{.kicker}
-
-In JAX they live in the training **state**, not the model at all, so
-`get_w_b` takes `state` and reads `kernel` and `bias`:
-
-@linear-regression-concise-training-2
-
-. . .
-
-@linear-regression-concise-training-3
-
-::: {.d2l-note}
-Same verdict as §3.4: the true $\mathbf{w}^* = [2,-3.4]$, $b^* = 4.2$
+Same verdict as the linear-regression-from-scratch section: the true
+$\mathbf{w}^* = [2,-3.4]$, $b^* = 4.2$
 recovered to a few $10^{-4}$. The built-in pieces really do compute the
 same thing our hand-rolled ones did.
 :::

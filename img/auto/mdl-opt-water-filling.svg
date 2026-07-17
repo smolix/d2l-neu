@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="418.640913pt" height="236.16pt" viewBox="0 0 418.640913 236.16" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="430.860913pt" height="236.16pt" viewBox="0 0 430.860913 236.16" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -21,8 +21,8 @@
  <g id="figure_1">
   <g id="patch_1">
    <path d="M 0 236.16 
-L 418.640913 236.16 
-L 418.640913 0 
+L 430.860913 236.16 
+L 430.860913 0 
 L 0 0 
 z
 " style="fill: #ffffff"/>
@@ -124,7 +124,7 @@ L 284.926711 184.008649
    </g>
    <g id="text_1">
     <!-- $n_{1}=0.1$ -->
-    <g transform="translate(26.862886 198.63881) scale(0.09 -0.09)">
+    <g transform="translate(23.442886 200.158497) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-6e" d="M 494 109 
 Q 494 147 500 166 
@@ -273,7 +273,7 @@ z
    </g>
    <g id="text_2">
     <!-- $n_{2}=0.4$ -->
-    <g transform="translate(80.790403 198.63881) scale(0.09 -0.09)">
+    <g transform="translate(77.370403 200.158497) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-32" d="M 319 0 
 L 319 172 
@@ -354,7 +354,7 @@ z
    </g>
    <g id="text_3">
     <!-- $n_{3}=0.8$ -->
-    <g transform="translate(134.717919 198.63881) scale(0.09 -0.09)">
+    <g transform="translate(131.297919 200.158497) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-33" d="M 609 494 
 Q 759 275 1012 169 
@@ -477,7 +477,7 @@ z
    </g>
    <g id="text_4">
     <!-- dry -->
-    <g style="fill: #7f7f7f" transform="translate(196.66528 78.449146) scale(0.09 -0.09)">
+    <g style="fill: #7f7f7f" transform="translate(195.027467 78.033209) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-64" d="M 2906 2969 
 L 2906 4863 
@@ -547,7 +547,7 @@ z
    </g>
    <g id="text_5">
     <!-- $n_{4}=1.6$ -->
-    <g transform="translate(188.645436 198.63881) scale(0.09 -0.09)">
+    <g transform="translate(185.225436 200.158497) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-36" d="M 1600 -141 
 Q 1203 -141 937 70 
@@ -615,7 +615,7 @@ z
    </g>
    <g id="text_6">
     <!-- dry -->
-    <g style="fill: #7f7f7f" transform="translate(250.592797 24.507524) scale(0.09 -0.09)">
+    <g style="fill: #7f7f7f" transform="translate(248.954984 24.091587) scale(0.11 -0.11)">
      <use xlink:href="#DejaVuSans-64"/>
      <use xlink:href="#DejaVuSans-72" transform="translate(63.476562 0)"/>
      <use xlink:href="#DejaVuSans-79" transform="translate(104.589844 0)"/>
@@ -623,7 +623,7 @@ z
    </g>
    <g id="text_7">
     <!-- $n_{5}=2.5$ -->
-    <g transform="translate(242.572953 198.63881) scale(0.09 -0.09)">
+    <g transform="translate(239.152953 200.158497) scale(0.11 -0.11)">
      <defs>
       <path id="Cmr10-35" d="M 556 728 
 Q 622 541 758 387 
@@ -689,7 +689,7 @@ z
    </g>
    <g id="text_8">
     <!-- water level $w=1/\mu\approx1.43$ -->
-    <g style="fill: #ff7f0e" transform="translate(289.240913 100.651622) scale(0.1 -0.1)">
+    <g style="fill: #ff7f0e" transform="translate(289.240913 100.906622) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-77" d="M 269 3500 
 L 844 3500 
@@ -1014,7 +1014,7 @@ L 98.380403 106.963563
    </g>
    <g id="text_9">
     <!-- $p_2^\star=w-n_2$ -->
-    <g style="fill: #1f77b4" transform="translate(103.730255 131.680608) scale(0.095 -0.095)">
+    <g style="fill: #1f77b4" transform="translate(103.730255 132.093108) scale(0.11 -0.11)">
      <defs>
       <path id="Cmmi10-70" d="M -159 -1241 
 Q -219 -1241 -219 -1159 
@@ -1109,7 +1109,7 @@ z
    </g>
    <g id="text_10">
     <!-- channels, floors at the noise levels $n_i$ -->
-    <g style="fill: #7f7f7f" transform="translate(61.757919 216.399921) scale(0.095 -0.095)">
+    <g transform="translate(47.807919 217.539687) scale(0.11 -0.11)">
      <defs>
       <path id="DejaVuSans-63" d="M 3122 3366 
 L 3122 2828 

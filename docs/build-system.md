@@ -482,14 +482,30 @@ Two consequences worth knowing:
   Preface uses this form and remains `None` in `CHAPTER_NUMBERING` for source
   preprocessing.
 
-Current tail of the map: the **Mathematics for Deep Learning** part is chapters
-**21–26** (Linear Algebra 21, Calculus 22, Optimization 23, Probability &
-Statistical Learning 24, Information Theory 25, Dynamics 26) — each group's
-`index.md` is the chapter, its siblings the `N.k` sections — and the **Tools for
-Deep Learning** appendix is chapter **27**. The legacy
-`chapter_appendix-mathematics-for-deep-learning/` part (formerly chapter 22) has
-been retired; inserting or retiring a group means renumbering the map's tail and
-the matching `_quarto.yml` order together.
+Current tail of the map (2026-07-17 layout): **Attic** = GP **20**, HPO **21**,
+RecSys **22**; the **Mathematics for Deep Learning** part is chapters **23–28**
+(Linear Algebra 23, Calculus 24, Optimization 25, Probability & Statistical
+Learning 26, Information Theory 27, Dynamics 28) — each group's `index.md` is
+the chapter, its siblings the `N.k` sections — and the **Tools for Deep
+Learning** appendix is chapter **29**. The legacy
+`chapter_appendix-mathematics-for-deep-learning/` part has been retired;
+inserting or retiring a group means renumbering the map's tail and the matching
+`_quarto.yml` order together.
+
+**Dict order is load-bearing for the PDF.** `gen_pdf.py` emits the PDF book's
+chapter list from `PDF_CHAPTER_FILES` — i.e. `CHAPTER_NUMBERING` **dict order**
+— and `fix_latex.py` pairs the rendered tex's `\chapter` commands against that
+same list *positionally*. HTML instead follows `_quarto.yml` order. If the two
+orders diverge, the HTML stays correct but the PDF silently misnumbers and
+misorders chapters (this happened in the 2026-07-16 restructure: the dict was
+renumbered but not reordered, so the PDF placed State Space Models before
+Attention and lettered GANs as appendix "T"; fixed 2026-07-17). Keep
+`CHAPTER_NUMBERING` dict order identical to `_quarto.yml` chapter order —
+there is a matching guard in `gen_pdf.py`. Related constant: `fix_latex.py`
+Phase 6 starts `\appendix` lettering at logical chapter **23** (the math part;
+the Attic stays numbered so PDF matches HTML), keyed on
+`\setcounter{chapter}{22}` — renumbering the map's tail means revisiting that
+boundary.
 
 ### 4.2 The one index that matters: cell-id → output
 

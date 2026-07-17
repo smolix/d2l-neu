@@ -1,25 +1,14 @@
 # Stochastic Gradient Descent
 :label:`sec_sgd`
 
-In earlier chapters we kept using stochastic gradient descent in our training procedure, however, without explaining why it works.
-To shed some light on it,
-we just described the basic principles of gradient descent
-in :numref:`sec_gd`.
-In this section, we go on to discuss
-*stochastic gradient descent* in greater detail.
+Stochastic gradient descent has trained every model in this book so far,
+without our ever justifying it. :numref:`sec_gd` supplied the descent half of
+the story; this section supplies the stochastic half: what replacing the
+gradient by a noisy estimate does to the trajectory, why the learning rate
+must then decay, and how the minibatch size controls the noise.
 
 ```{.python .input #sgd-stochastic-gradient-descent}
-#@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-import math
-import random
-from mxnet import np, npx
-npx.set_np()
-```
-
-```{.python .input #sgd-stochastic-gradient-descent}
-#@tab pytorch
+%%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import math
@@ -28,51 +17,47 @@ import torch
 ```
 
 ```{.python .input #sgd-stochastic-gradient-descent}
-#@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import math
-import tensorflow as tf
-```
-
-```{.python .input #sgd-stochastic-gradient-descent}
-#@tab jax
+%%tab jax
 %matplotlib inline
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
 import math
-import numpy as np
 ```
 
 ## Stochastic Gradient Updates
 
-In deep learning, the objective function is usually the average of the loss functions for each example in the training dataset.
-Given a training dataset of $n$ examples,
-we assume that $f_i(\mathbf{x})$ is the loss function
-with respect to the training example of index $i$,
-where $\mathbf{x}$ is the parameter vector.
-Then we arrive at the objective function
+In deep learning, the objective function is an average of per-example losses.
+Given a training dataset of $n$ examples with loss $f_i(\mathbf{x})$ on the
+example of index $i$, where $\mathbf{x}$ is the parameter vector, the
+objective is
 
-$$f(\mathbf{x}) = \frac{1}{n} \sum_{i = 1}^n f_i(\mathbf{x}).$$
+$$f(\mathbf{x}) = \frac{1}{n} \sum_{i = 1}^n f_i(\mathbf{x}),$$
 
-The gradient of the objective function at $\mathbf{x}$ is computed as
+with gradient
 
 $$\nabla f(\mathbf{x}) = \frac{1}{n} \sum_{i = 1}^n \nabla f_i(\mathbf{x}).$$
 
-If gradient descent is used, the computational cost for each independent variable iteration is $\mathcal{O}(n)$, which grows linearly with $n$. Therefore, when the  training dataset is larger, the cost of gradient descent for each iteration will be higher.
-
-Stochastic gradient descent (SGD) reduces computational cost at each iteration. At each iteration of stochastic gradient descent, we uniformly sample an index $i\in\{1,\ldots, n\}$ for data examples at random, and compute the gradient $\nabla f_i(\mathbf{x})$ to update $\mathbf{x}$:
+Gradient descent therefore pays $\mathcal{O}(n)$ per update — a full pass
+over the dataset to move the parameters once. Stochastic gradient descent
+(SGD) refuses to pay it. At each iteration it samples an index
+$i\in\{1,\ldots, n\}$ uniformly at random and updates using that single
+example's gradient:
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f_i(\mathbf{x}),$$
 
-where $\eta$ is the learning rate. We can see that the computational cost for each iteration drops from $\mathcal{O}(n)$ of the gradient descent to the constant $\mathcal{O}(1)$. Moreover, we want to emphasize that the stochastic gradient $\nabla f_i(\mathbf{x})$ is an unbiased estimate of the full gradient $\nabla f(\mathbf{x})$ because
+where $\eta$ is the learning rate. The cost per iteration drops from
+$\mathcal{O}(n)$ to $\mathcal{O}(1)$, and the estimate is *unbiased*: because
+$i$ is uniform,
 
 $$\mathbb{E}_i \nabla f_i(\mathbf{x}) = \frac{1}{n} \sum_{i = 1}^n \nabla f_i(\mathbf{x}) = \nabla f(\mathbf{x}).$$
 
-This means that, on average, the stochastic gradient is a good estimate of the gradient.
-
-Now, we will compare it with gradient descent by adding random noise with a mean of 0 and a variance of 1 to the gradient to simulate a stochastic gradient descent.
+On average the stochastic gradient points the right way; any single draw may
+point almost anywhere. To see what that does to the trajectory we revisit the
+quadratic $f(x_1, x_2) = x_1^2 + 2x_2^2$ from :numref:`sec_gd` and simulate
+the sampling noise by adding zero-mean, unit-variance Gaussian noise to each
+gradient evaluation (the exercises show this simulation is faithful to
+sampling from an actual dataset).
 
 ```{.python .input #sgd-stochastic-gradient-updates-1}
 def f(x1, x2):  # Objective function
@@ -83,7 +68,7 @@ def f_grad(x1, x2):  # Gradient of the objective function
 ```
 
 ```{.python .input #sgd-stochastic-gradient-updates-2}
-#@tab mxnet
+%%tab pytorch
 def sgd(x1, x2, s1, s2, f_grad):
     g1, g2 = f_grad(x1, x2)
     # Simulate noisy gradient (Python's random.gauss avoids a GPU sync per
@@ -96,38 +81,18 @@ def sgd(x1, x2, s1, s2, f_grad):
 ```
 
 ```{.python .input #sgd-stochastic-gradient-updates-2}
-#@tab pytorch
+%%tab jax
 def sgd(x1, x2, s1, s2, f_grad):
+    global key
     g1, g2 = f_grad(x1, x2)
-    # Simulate noisy gradient (Python's random.gauss avoids a GPU sync per
-    # step that a framework-tensor .item() would force in this 1000-step
-    # demo; the noise is scalar so a framework tensor buys nothing).
-    g1 += random.gauss(0, 1)
-    g2 += random.gauss(0, 1)
+    # Simulate noisy gradient: split off a fresh subkey per step, the JAX
+    # idiom for drawing a stream of random numbers
+    key, subkey = jax.random.split(key)
+    n1, n2 = jax.random.normal(subkey, (2,))
     eta_t = eta * lr()
-    return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
-```
+    return (x1 - eta_t * (g1 + n1), x2 - eta_t * (g2 + n2), 0, 0)
 
-```{.python .input #sgd-stochastic-gradient-updates-2}
-#@tab tensorflow
-def sgd(x1, x2, s1, s2, f_grad):
-    g1, g2 = f_grad(x1, x2)
-    # Simulate noisy gradient
-    g1 += d2l.normal([], 0.0, 1)
-    g2 += d2l.normal([], 0.0, 1)
-    eta_t = eta * lr()
-    return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
-```
-
-```{.python .input #sgd-stochastic-gradient-updates-2}
-#@tab jax
-def sgd(x1, x2, s1, s2, f_grad):
-    g1, g2 = f_grad(x1, x2)
-    # Simulate noisy gradient
-    g1 += np.random.normal(0.0, 1)
-    g2 += np.random.normal(0.0, 1)
-    eta_t = eta * lr()
-    return (x1 - eta_t * g1, x2 - eta_t * g2, 0, 0)
+key = jax.random.PRNGKey(42)
 ```
 
 ```{.python .input #sgd-stochastic-gradient-updates-3}
@@ -139,13 +104,43 @@ lr = constant_lr  # Constant learning rate
 d2l.show_trace_2d(f, d2l.train_2d(sgd, steps=50, f_grad=f_grad))
 ```
 
-As we can see, the trajectory of the variables in the stochastic gradient descent is much more noisy than the one we observed in gradient descent in :numref:`sec_gd`. This is due to the stochastic nature of the gradient. That is, even when we arrive near the minimum, we are still subject to the uncertainty injected by the instantaneous gradient via $\eta \nabla f_i(\mathbf{x})$. Even after 50 steps the quality is still not so good. Even worse, it will not improve after additional steps (we encourage you to experiment with a larger number of steps to confirm this). This leaves us with the only alternative: change the learning rate $\eta$. However, if we pick this too small, we will not make any meaningful progress initially. On the other hand, if we pick it too large, we will not get a good solution, as seen above. The only way to resolve these conflicting goals is to reduce the learning rate *dynamically* as optimization progresses.
-
-This is also the reason for adding a learning rate function `lr` into the `sgd` step function. In the example above any functionality for learning rate scheduling lies dormant as we set the associated `lr` function to be constant.
+The trajectory is far noisier than the gradient-descent trace in
+:numref:`sec_gd`, and, more troubling, it does not settle: run it for more
+steps and the quality stops improving (we encourage you to check). The reason
+is visible in the update rule. Near the minimum the true gradient vanishes,
+but the noise does not, so each step still moves the parameters by $\eta$
+times pure noise. With a constant learning rate the iterates end up executing
+a random walk around the optimum instead of converging to it. Shrinking
+$\eta$ tames the walk but slows the approach; the way out of this bind is to
+change $\eta$ *during* optimization, which is why the step function above
+threads through a learning rate function `lr`, dormant so far.
 
 ## Dynamic Learning Rate
 
-Replacing $\eta$ with a time-dependent learning rate $\eta(t)$ adds to the complexity of controlling convergence of an optimization algorithm. In particular, we need to figure out how rapidly $\eta$ should decay. If it is too quick, we will stop optimizing prematurely. If we decrease it too slowly, we waste too much time on optimization. The following are a few basic strategies that are used in adjusting $\eta$ over time (we will discuss more advanced strategies later):
+How close does that random walk get? For a quadratic bowl the answer is
+sharp enough to guide practice. Model one coordinate of the update as
+$x_{t+1} = x_t - \eta\, (\lambda x_t + \xi_t)$, with curvature $\lambda$ and
+zero-mean noise $\xi_t$ of variance $\sigma^2$. Far from the optimum the
+contraction term dominates and SGD makes gradient-descent-like progress.
+Close to it, contraction and noise injection balance at
+
+$$\mathbb{E}\big[x_\infty^2\big] \approx \frac{\eta\, \sigma^2}{2\lambda}.$$
+:eqlabel:`eq_sgd-noise-ball`
+
+The iterates rattle around inside a *noise ball* whose squared radius grows
+linearly with the learning rate; the two-line derivation, and a picture of
+GD and SGD racing on the same bowl, are in
+:numref:`subsec_mdl-stochastic-gradients`. Equation :eqref:`eq_sgd-noise-ball`
+says exactly what the demo showed: a constant $\eta$ stalls at a noise floor
+proportional to $\eta$. Halving $\eta$ halves the floor — and also halves the
+speed of the initial approach. The escape is a *time-dependent* learning rate
+$\eta(t)$: large early to cross the valley, decaying later to quench the
+noise.
+
+Choosing how fast $\eta(t)$ decays becomes the new problem. Too fast, and
+optimization stops prematurely; too slow, and we waste time bouncing in the
+ball. A few basic strategies (more refined ones follow in
+:numref:`sec_scheduler`):
 
 $$
 \begin{aligned}
@@ -155,9 +150,11 @@ $$
 \end{aligned}
 $$
 
-In the first *piecewise constant* scenario we decrease the learning rate, e.g., whenever progress in optimization stalls. This is a common strategy for training deep networks. Alternatively we could decrease it much more aggressively by an *exponential decay*. Unfortunately this often leads to premature stopping before the algorithm has converged. A popular choice is *polynomial decay* with $\alpha = 0.5$. In the case of convex optimization there are a number of proofs that show that this rate is well behaved.
-
-Let's see what the exponential decay looks like in practice.
+In the *piecewise constant* scenario we drop the learning rate whenever
+progress stalls — riding each noise floor until we hit it, then lowering the
+floor. *Exponential decay* is more aggressive. *Polynomial decay* with
+$\alpha = 0.5$ is a standard well-behaved choice for convex problems. Let's
+see what exponential decay looks like in practice.
 
 ```{.python .input #sgd-dynamic-learning-rate-1}
 def exponential_lr():
@@ -171,7 +168,13 @@ lr = exponential_lr
 d2l.show_trace_2d(f, d2l.train_2d(sgd, steps=1000, f_grad=f_grad))
 ```
 
-As expected, the variance in the parameters is significantly reduced. However, this comes at the expense of failing to converge to the optimal solution $\mathbf{x} = (0, 0)$. Even after 1000 iteration steps we are still very far away from the optimal solution. Indeed, the algorithm fails to converge at all. On the other hand, if we use a polynomial decay where the learning rate decays with the inverse square root of the number of steps, convergence gets better after only 50 steps.
+The variance in the parameters is much reduced — but the iterates never reach
+the optimum $\mathbf{x} = (0, 0)$, even after 1000 steps. The schedule
+quenches the noise *too* eagerly: its total budget $\sum_t \eta(t)$ is
+finite, so the iterate can only ever travel a bounded distance from where it
+started. It stops not because it has arrived but because it has run out of
+learning rate. Polynomial decay with $\alpha = 0.5$ avoids that trap, and
+convergence improves after only 50 steps.
 
 ```{.python .input #sgd-dynamic-learning-rate-2}
 def polynomial_lr():
@@ -185,123 +188,138 @@ lr = polynomial_lr
 d2l.show_trace_2d(f, d2l.train_2d(sgd, steps=50, f_grad=f_grad))
 ```
 
-There exist many more choices for how to set the learning rate. For instance, we could start with a small rate, then rapidly ramp up and then decrease it again, albeit more slowly. We could even alternate between smaller and larger learning rates. There exists a large variety of such schedules. For now let's focus on learning rate schedules for which a comprehensive theoretical analysis is possible, i.e., on learning rates in a convex setting. For general nonconvex problems it is very difficult to obtain meaningful convergence guarantees, since in general minimizing nonlinear nonconvex problems is NP hard. For a survey see e.g., the excellent [lecture notes](https://www.stat.cmu.edu/%7Eryantibs/convexopt-F15/lectures/26-nonconvex.pdf) of Tibshirani 2015.
+The two experiments are instances of a classical theorem.
+:citet:`Robbins.Monro.1951` — the paper that founded stochastic
+approximation — showed that convergence requires exactly the two properties
+the demos probe: the learning rates must sum to infinity,
+$\sum_t \eta(t) = \infty$, so the iterate can travel arbitrarily far (the
+condition exponential decay just violated), while their squares must remain
+controlled, $\sum_t \eta(t)^2 < \infty$, so the injected noise is eventually
+quenched. Polynomial decay with $\alpha \in (1/2, 1]$ satisfies both; our
+$\alpha = 1/2$ sits at the edge of the window, where running for a fixed
+budget of $T$ steps with averaged iterates gives the classical
+$\mathcal{O}(1/\sqrt{T})$ guarantee for convex objectives. We state these
+results rather than prove them: the convex rates, and the traps hidden in
+their constants, are worked out in
+:numref:`subsec_mdl-stochastic-gradients`. None of the noise-ball reasoning
+needs convexity, either — for smooth nonconvex objectives SGD still drives
+the expected gradient norm to zero at a noise-controlled rate, the theorem of
+:citet:`Ghadimi.Lan.2013` proved in :numref:`subsec_mdl-nonconvex-sgd`.
 
+## Gradient Variance and Batch Size
 
+So far the noise was ours: we chose $\sigma = 1$. In real training the noise
+comes from *which* examples land in the minibatch, and there we hold a dial —
+the batch size $b$. A minibatch gradient averages $b$ independent draws, so
+its variance is $1/b$ times the single-example variance
+(:numref:`subsec_mdl-stochastic-gradients` states and proves this precisely).
+That $1/b$ is a claim about real networks, so let us measure it on one: a
+small two-layer MLP on the airfoil-noise regression dataset that serves as
+this chapter's workhorse from :numref:`sec_minibatch_sgd` on. We freeze the
+parameters at a random initialization, take the full-dataset gradient as
+ground truth, and measure the mean squared deviation of minibatch gradients
+from it, for batch sizes spanning three orders of magnitude — sampling with
+replacement, matching the theory.
 
-## Convergence Analysis for Convex Objectives
+```{.python .input #sgd-gradient-variance-and-batch-size}
+%%tab pytorch
+data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
+X = torch.cat([Xb for Xb, yb in data_iter])
+y = torch.cat([yb for Xb, yb in data_iter])
 
-The following convergence analysis of stochastic gradient descent for convex objective functions
-is optional and primarily serves to convey more intuition about the problem.
-We limit ourselves to one of the simplest proofs :cite:`Nesterov.Vial.2000`.
-Significantly more advanced proof techniques exist, e.g., whenever the objective function is particularly well behaved.
+torch.manual_seed(1)
+W1, b1 = torch.randn(feature_dim, 64) * 0.1, torch.zeros(64)
+W2, b2 = torch.randn(64, 1) * 0.1, torch.zeros(1)
+params = [W1, b1, W2, b2]
+for p in params:
+    p.requires_grad_(True)
 
+def batch_grad(idx):  # Flattened loss gradient on the minibatch X[idx]
+    h = torch.relu(X[idx] @ W1 + b1)
+    loss = ((h @ W2 + b2).squeeze() - y[idx]).pow(2).mean() / 2
+    return torch.cat([g.reshape(-1) for g in torch.autograd.grad(loss, params)])
 
-Suppose that the objective function $f(\boldsymbol{\xi}, \mathbf{x})$ is convex in $\mathbf{x}$
-for all $\boldsymbol{\xi}$.
-More concretely,
-we consider the stochastic gradient descent update:
+g_full = batch_grad(torch.arange(len(y)))
+batch_sizes = [1, 8, 64, 512]
+var = []
+for b in batch_sizes:
+    idx = torch.randint(0, len(y), (200, b))
+    var.append(torch.stack([((batch_grad(i) - g_full) ** 2).sum()
+                            for i in idx]).mean().item())
+d2l.plot(batch_sizes, [var, [var[0] / b for b in batch_sizes]],
+         'batch size', 'gradient variance', xscale='log', yscale='log',
+         legend=['measured', '1/b'])
+```
 
-$$\mathbf{x}_{t+1} = \mathbf{x}_{t} - \eta_t \partial_\mathbf{x} f(\boldsymbol{\xi}_t, \mathbf{x}),$$
+```{.python .input #sgd-gradient-variance-and-batch-size}
+%%tab jax
+data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
+X = jnp.concatenate([jnp.asarray(Xb) for Xb, yb in data_iter])
+y = jnp.concatenate([jnp.asarray(yb) for Xb, yb in data_iter])
 
-where $f(\boldsymbol{\xi}_t, \mathbf{x})$
-is the objective function
-with respect to the training example $\boldsymbol{\xi}_t$
-drawn from some distribution
-at step $t$ and $\mathbf{x}$ is the model parameter.
-Denote by
+k1, k2 = jax.random.split(jax.random.PRNGKey(1))
+params = dict(W1=0.1 * jax.random.normal(k1, (feature_dim, 64)),
+              b1=jnp.zeros(64),
+              W2=0.1 * jax.random.normal(k2, (64, 1)), b2=jnp.zeros(1))
 
-$$R(\mathbf{x}) = E_{\boldsymbol{\xi}}[f(\boldsymbol{\xi}, \mathbf{x})]$$
+def batch_loss(params, idx):
+    h = jax.nn.relu(X[idx] @ params['W1'] + params['b1'])
+    return jnp.mean(((h @ params['W2'] + params['b2']).squeeze()
+                     - y[idx]) ** 2) / 2
 
-the expected risk and by $R^*$ its minimum with regard to $\mathbf{x}$. Last let $\mathbf{x}^*$ be the minimizer (we assume that it exists within the domain where $\mathbf{x}$ is defined). In this case we can track the distance between the current parameter $\mathbf{x}_t$ at time $t$ and the risk minimizer $\mathbf{x}^*$ and see whether it improves over time:
+def batch_grad(idx):  # Flattened loss gradient on the minibatch X[idx]
+    grads = jax.grad(batch_loss)(params, idx)
+    return jnp.concatenate([g.reshape(-1) for g in jax.tree.leaves(grads)])
 
-$$\begin{aligned}    &\|\mathbf{x}_{t+1} - \mathbf{x}^*\|^2 \\ =& \|\mathbf{x}_{t} - \eta_t \partial_\mathbf{x} f(\boldsymbol{\xi}_t, \mathbf{x}) - \mathbf{x}^*\|^2 \\    =& \|\mathbf{x}_{t} - \mathbf{x}^*\|^2 + \eta_t^2 \|\partial_\mathbf{x} f(\boldsymbol{\xi}_t, \mathbf{x})\|^2 - 2 \eta_t    \left\langle \mathbf{x}_t - \mathbf{x}^*, \partial_\mathbf{x} f(\boldsymbol{\xi}_t, \mathbf{x})\right\rangle.   \end{aligned}$$
-:eqlabel:`eq_sgd-xt+1-xstar`
+g_full = batch_grad(jnp.arange(len(y)))
+batch_sizes = [1, 8, 64, 512]
+var, key = [], jax.random.PRNGKey(0)
+for b in batch_sizes:
+    key, subkey = jax.random.split(key)
+    idx = jax.random.randint(subkey, (200, b), 0, len(y))
+    err = jax.vmap(lambda i: ((batch_grad(i) - g_full) ** 2).sum())(idx)
+    var.append(float(err.mean()))
+d2l.plot(batch_sizes, [var, [var[0] / b for b in batch_sizes]],
+         'batch size', 'gradient variance', xscale='log', yscale='log',
+         legend=['measured', '1/b'])
+```
 
-We assume that the $\ell_2$ norm of stochastic gradient $\partial_\mathbf{x} f(\boldsymbol{\xi}_t, \mathbf{x})$ is bounded  by some  constant $L$, hence we have that
+The measured points fall on the $1/b$ reference line across the whole range:
+three orders of magnitude in batch size buy three orders of magnitude in
+variance. Note what the log scale conceals. Variance falling like $1/b$ means
+noise *amplitude* falls like $1/\sqrt{b}$, so spending $100\times$ more
+compute per step buys only a $10\times$ quieter gradient. Batch size is thus
+a genuine second dial next to the learning rate, but one with diminishing
+returns. How to spend a compute budget between the two —
+and how batching interacts with the hardware that made it cheap — is the
+subject of :numref:`sec_minibatch_sgd`; what happens to the $1/b$ payoff at
+the scale of modern language models is taken up in :numref:`sec_batch_size`.
 
-$$\eta_t^2 \|\partial_\mathbf{x} f(\boldsymbol{\xi}_t, \mathbf{x})\|^2 \leq \eta_t^2 L^2.$$
-:eqlabel:`eq_sgd-L`
-
-
-We are mostly interested in how the distance between $\mathbf{x}_t$ and $\mathbf{x}^*$ changes *in expectation*. In fact, for any specific sequence of steps the distance might well increase, depending on whichever $\boldsymbol{\xi}_t$ we encounter. Hence we need to bound the dot product.
-Since for any convex function $f$ it holds that
-$f(\mathbf{y}) \geq f(\mathbf{x}) + \langle f'(\mathbf{x}), \mathbf{y} - \mathbf{x} \rangle$
-for all $\mathbf{x}$ and $\mathbf{y}$,
-by convexity we have
-
-$$f(\boldsymbol{\xi}_t, \mathbf{x}^*) \geq f(\boldsymbol{\xi}_t, \mathbf{x}_t) + \left\langle \mathbf{x}^* - \mathbf{x}_t, \partial_{\mathbf{x}} f(\boldsymbol{\xi}_t, \mathbf{x}_t) \right\rangle.$$
-:eqlabel:`eq_sgd-f-xi-xstar`
-
-Plugging both inequalities :eqref:`eq_sgd-L` and :eqref:`eq_sgd-f-xi-xstar` into :eqref:`eq_sgd-xt+1-xstar` we obtain a bound on the distance between parameters at time $t+1$ as follows:
-
-$$\|\mathbf{x}_{t} - \mathbf{x}^*\|^2 - \|\mathbf{x}_{t+1} - \mathbf{x}^*\|^2 \geq 2 \eta_t (f(\boldsymbol{\xi}_t, \mathbf{x}_t) - f(\boldsymbol{\xi}_t, \mathbf{x}^*)) - \eta_t^2 L^2.$$
-:eqlabel:`eqref_sgd-xt-diff`
-
-This means that we make progress as long as the  difference between current loss and the optimal loss outweighs $\eta_t L^2/2$. Since this difference is bound to converge to zero it follows that the learning rate $\eta_t$ also needs to *vanish*.
-
-Next we take expectations over :eqref:`eqref_sgd-xt-diff`. This yields
-
-$$E\left[\|\mathbf{x}_{t} - \mathbf{x}^*\|^2\right] - E\left[\|\mathbf{x}_{t+1} - \mathbf{x}^*\|^2\right] \geq 2 \eta_t [E[R(\mathbf{x}_t)] - R^*] -  \eta_t^2 L^2.$$
-
-The last step involves summing over the inequalities for $t \in \{1, \ldots, T\}$. Since the sum telescopes and by dropping the lower term we obtain
-
-$$\|\mathbf{x}_1 - \mathbf{x}^*\|^2 \geq 2 \left (\sum_{t=1}^T   \eta_t \right) [E[R(\mathbf{x}_t)] - R^*] - L^2 \sum_{t=1}^T \eta_t^2.$$
-:eqlabel:`eq_sgd-x1-xstar`
-
-Note that we exploited that $\mathbf{x}_1$ is given and thus the expectation can be dropped. Last define
-
-$$\bar{\mathbf{x}} \stackrel{\textrm{def}}{=} \frac{\sum_{t=1}^T \eta_t \mathbf{x}_t}{\sum_{t=1}^T \eta_t}.$$
-
-Since
-
-$$E\left(\frac{\sum_{t=1}^T \eta_t R(\mathbf{x}_t)}{\sum_{t=1}^T \eta_t}\right) = \frac{\sum_{t=1}^T \eta_t E[R(\mathbf{x}_t)]}{\sum_{t=1}^T \eta_t} = E[R(\mathbf{x}_t)],$$
-
-by Jensen's inequality (setting $i=t$, $\alpha_i = \eta_t/\sum_{t=1}^T \eta_t$ in :eqref:`eq_jensens-inequality`) and convexity of $R$ it follows that $E[R(\mathbf{x}_t)] \geq E[R(\bar{\mathbf{x}})]$, thus
-
-$$\sum_{t=1}^T \eta_t E[R(\mathbf{x}_t)] \geq \sum_{t=1}^T \eta_t  E\left[R(\bar{\mathbf{x}})\right].$$
-
-Plugging this into the inequality :eqref:`eq_sgd-x1-xstar` yields the bound
-
-$$
-E\left[R(\bar{\mathbf{x}})\right] - R^* \leq \frac{r^2 + L^2 \sum_{t=1}^T \eta_t^2}{2 \sum_{t=1}^T \eta_t},
-$$
-
-where $r^2 \stackrel{\textrm{def}}{=} \|\mathbf{x}_1 - \mathbf{x}^*\|^2$ is a bound on the distance between the initial choice of parameters and the final outcome. In short, the speed of convergence depends on how
-the norm of stochastic gradient is bounded ($L$) and how far away from optimality the initial parameter value is ($r$). Note that the bound is in terms of $\bar{\mathbf{x}}$ rather than $\mathbf{x}_T$. This is the case since $\bar{\mathbf{x}}$ is a smoothed version of the optimization path.
-Whenever $r, L$, and $T$ are known we can pick the learning rate $\eta = r/(L \sqrt{T})$. This yields as upper bound $rL/\sqrt{T}$. That is, we converge with rate $\mathcal{O}(1/\sqrt{T})$ to the optimal solution.
-
-
-
-
-
-## Stochastic Gradients and Finite Samples
-
-So far we have played a bit fast and loose when it comes to talking about stochastic gradient descent. We posited that we draw instances $x_i$, typically with labels $y_i$ from some distribution $p(x, y)$ and that we use this to update the model parameters in some manner. In particular, for a finite sample size we simply argued that the discrete distribution $p(x, y) = \frac{1}{n} \sum_{i=1}^n \delta_{x_i}(x) \delta_{y_i}(y)$
-for some functions $\delta_{x_i}$ and $\delta_{y_i}$
-allows us to perform stochastic gradient descent over it.
-
-However, this is not really what we did. In the toy examples in the current section we simply added noise to an otherwise non-stochastic gradient, i.e., we pretended to have pairs $(x_i, y_i)$. It turns out that this is justified here (see the exercises for a detailed discussion). More troubling is that in all previous discussions we clearly did not do this. Instead we iterated over all instances *exactly once*. To see why this is preferable consider the converse, namely that we are sampling $n$ observations from the discrete distribution *with replacement*. The probability of choosing an element $i$ at random is $1/n$. Thus to choose it *at least* once is
-
-$$P(\textrm{choose~} i) = 1 - P(\textrm{omit~} i) = 1 - (1-1/n)^n \approx 1-e^{-1} \approx 0.63.$$
-
-A similar reasoning shows that the probability of picking some sample (i.e., training example) *exactly once* is given by
-
-$${n \choose 1} \frac{1}{n} \left(1-\frac{1}{n}\right)^{n-1} = \frac{n}{n-1} \left(1-\frac{1}{n}\right)^{n} \approx e^{-1} \approx 0.37.$$
-
-Sampling with replacement leads to an increased variance and decreased data efficiency relative to sampling *without replacement*. Hence, in practice we perform the latter (and this is the default choice throughout this book). Last note that repeated passes through the training dataset traverse it in a *different* random order.
-
+One loose end. Our theory, and the measurement above, sampled indices *with
+replacement*: each draw is independent, which is what makes the analysis
+clean. Practice does something else. Drawing $n$ times with replacement
+touches only a fraction $1 - (1-1/n)^n \approx 1 - e^{-1} \approx 0.63$ of
+the dataset per pass while picking other examples twice or more — worse data
+efficiency, and higher variance, than simply shuffling the dataset and
+traversing it exactly once per epoch. So that is what every training loop in
+this book does, reshuffling before each epoch. The cost is theoretical:
+within an epoch, successive gradients are no longer independent, and the
+clean proofs no longer apply verbatim. The gap is real but benign in
+practice, and the exercises take it up.
 
 ## Summary
 
-* For convex problems we can prove that for a wide choice of learning rates stochastic gradient descent will converge to the optimal solution.
-* For deep learning this is generally not the case. However, the analysis of convex problems gives us useful insight into how to approach optimization, namely to reduce the learning rate progressively, albeit not too quickly.
-* Problems occur when the learning rate is too small or too large. In practice  a suitable learning rate is often found only after multiple experiments.
-* When there are more examples in the training dataset, it costs more to compute each iteration for gradient descent, so stochastic gradient descent is preferred in these cases.
-* Optimality guarantees for stochastic gradient descent are in general not available in nonconvex cases since the number of local minima that require checking might well be exponential.
-
-
-
+SGD trades exactness for speed: an unbiased $\mathcal{O}(1)$-per-step
+gradient estimate in place of an $\mathcal{O}(n)$ exact one. The price is
+variance, and this section met both of the dials that control it. A constant
+learning rate leaves the iterates rattling in a noise ball of radius
+proportional to $\eta$; decaying learning rates converge, provided the decay
+is slow enough to travel arbitrarily far yet fast enough to quench the noise.
+Batch size is the other dial: minibatch gradient variance falls like $1/b$,
+measured exactly so on a real network, though at a linear cost in compute per
+step. The proofs owed here — the convex rates and the nonconvex
+Ghadimi–Lan theorem — live in :numref:`subsec_mdl-stochastic-gradients` and
+:numref:`subsec_mdl-nonconvex-sgd`.
 
 ## Exercises
 
@@ -310,17 +328,10 @@ Sampling with replacement leads to an increased variance and decreased data effi
 1. Compare convergence of stochastic gradient descent when you sample from $\{(x_1, y_1), \ldots, (x_n, y_n)\}$ with replacement and when you sample without replacement.
 1. How would you change the stochastic gradient descent solver if some gradient (or rather some coordinate associated with it) was consistently larger than all the other gradients?
 1. Assume that $f(x) = x^2 (1 + \sin x)$. How many local minima does $f$ have? Can you change $f$ in such a way that to minimize it one needs to evaluate all the local minima?
-
-:begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/t/352)
-:end_tab:
+1. Repeat the gradient-variance measurement of this section at the parameters reached *after* training the network (use any optimizer from this chapter). Does the $1/b$ dependence still hold? What changes — the slope or the level — and why?
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/497)
-:end_tab:
-
-:begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/t/1067)
 :end_tab:
 
 :begin_tab:`jax`
@@ -346,9 +357,8 @@ $\mathcal{O}(1)$ per step, unbiased estimator
 
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f_i(\mathbf{x}).$$
 
-The price: noisy gradients. They blur the trajectory, but
-also help escape narrow local minima — a double-edged
-property this chapter unpacks.
+The price: noisy gradients. On average the step points the
+right way; any single step may point almost anywhere.
 :::
 
 ::: {.slide title="Setup"}
@@ -369,48 +379,87 @@ watch how the trajectory differs:
 :::
 
 ::: {.slide title="SGD trajectory"}
-With constant learning rate, SGD oscillates around the
-minimum forever — the variance of the noise sets a floor
-on how close it gets:
+With a constant learning rate, SGD never settles — near the
+minimum the true gradient vanishes but the noise doesn't,
+so the iterates random-walk around the optimum:
 
 @sgd-stochastic-gradient-updates-3
 :::
 
-::: {.slide title="Why decaying learning rate"}
-Constant $\eta$ → $\mathcal{O}(\eta)$ noise floor.
-Decay $\eta$ over time → converges to the minimum.
+::: {.slide title="The noise ball"}
+Model one coordinate: $x_{t+1} = x_t - \eta(\lambda x_t + \xi_t)$,
+noise variance $\sigma^2$. Contraction and noise injection
+balance at
 
-Common schedules:
+$$\mathbb{E}\big[x_\infty^2\big] \approx \frac{\eta\,\sigma^2}{2\lambda}.$$
 
-- **Inverse**: $\eta_t = \eta_0 / (1 + \beta t)$
-- **Polynomial**: $\eta_t = \eta_0 (1 + \beta t)^{-\alpha}$,
-  $\alpha \in (0.5, 1)$
-- **Exponential**: $\eta_t = \eta_0 \cdot \alpha^t$,
-  $0 < \alpha < 1$
-- **Piecewise constant**: drop by 10× every $K$ epochs
+- Constant $\eta$ → stall at a noise floor **proportional
+  to $\eta$**.
+- Halving $\eta$ halves the floor — and the speed of approach.
+
+::: {.d2l-note}
+Escape: make $\eta$ *time-dependent* — large early to travel,
+decaying to quench the noise.
+:::
 :::
 
-::: {.slide title="A decay schedule in code"}
+::: {.slide title="Decay schedules"}
+$$
+\begin{aligned}
+    \eta(t) & = \eta_i \textrm{ if } t_i \leq t \leq t_{i+1}  && \textrm{piecewise constant} \\
+    \eta(t) & = \eta_0 \cdot e^{-\lambda t} && \textrm{exponential decay} \\
+    \eta(t) & = \eta_0 \cdot (\beta t + 1)^{-\alpha} && \textrm{polynomial decay}
+\end{aligned}
+$$
+
+Robbins–Monro (1951): convergence needs
+$\sum_t \eta(t) = \infty$ (can travel anywhere) **and**
+$\sum_t \eta(t)^2 < \infty$ (noise quenched).
+:::
+
+::: {.slide title="Exponential decay: too eager"}
+$\sum_t \eta(t) < \infty$ — a finite travel budget. The
+iterate stops short of the optimum, out of learning rate:
+
 @sgd-dynamic-learning-rate-1
 :::
 
-::: {.slide title="Decay schedule comparison"}
-Exponential decay reduces variance quickly, but can shrink the step
-size too fast. Polynomial inverse-square-root decay keeps exploration
-longer and converges better in this example:
+::: {.slide title="Polynomial decay"}
+$\eta(t) \propto t^{-1/2}$ keeps exploring long enough and
+converges much better after only 50 steps:
 
 @sgd-dynamic-learning-rate-2
+:::
+
+::: {.slide title="Gradient variance vs batch size"}
+In real training the noise comes from *which examples* land
+in the minibatch. Averaging $b$ independent example
+gradients divides the variance by $b$. Measured on a real
+network (2-layer MLP, airfoil data), it holds across three
+orders of magnitude:
+
+@sgd-gradient-variance-and-batch-size
+:::
+
+::: {.slide title="Batch size is a dial with diminishing returns"}
+- Variance $\propto 1/b$ → noise *amplitude* $\propto 1/\sqrt{b}$.
+- $100\times$ more compute per step → only $10\times$ quieter
+  gradients.
+- How to spend compute between $\eta$ and $b$: next section.
+  What happens at LM scale: the batch-size section later in
+  the chapter.
 :::
 
 ::: {.slide title="Recap"}
 - SGD: $\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f_i(\mathbf{x})$
   with random $i$. Unbiased; $\mathcal{O}(1)$/step instead of
   $\mathcal{O}(n)$.
-- Constant $\eta$: bounces around the minimum forever.
-- Decay schedules ($1/t$, polynomial, exponential, step)
-  give convergence in expectation; the right schedule
-  depends on the problem.
-- Noise is sometimes a feature: knocks parameters out of
-  narrow local basins. Minibatch SGD (next) tames the
-  variance with a bit of averaging.
+- Constant $\eta$: noise ball with squared radius
+  $\approx \eta\sigma^2/(2\lambda)$.
+- Decay: $\sum \eta_t = \infty$, $\sum \eta_t^2 < \infty$
+  (Robbins–Monro) → convergence.
+- Minibatch of size $b$: variance $\propto 1/b$ — verified on
+  a real network.
+- Proofs: convex rates and nonconvex Ghadimi–Lan, in the
+  math appendix.
 :::

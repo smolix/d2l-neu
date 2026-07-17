@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/practice.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e0add1ec1abdfdb3b8080f96f13ba7ce4ddbf35f83791104e71585ab0003b68d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "practice": {
+      "code_fingerprint": "sha256:b842bc21b9d605c609e2d141e7a30cc6e04b2ea300094b1b1b55366240f9bb8d",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-gradient-clipping-1": {
+      "code_fingerprint": "sha256:4657919782d10d409b89a218ec5b25e6b88c5f73446c0f882ac750a04933eb34",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-a-nan-averted-1": {
+      "code_fingerprint": "sha256:0a3dc7264d14e214b42e7c87c622383357de0e53fb17270beae932fbf8906654",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-a-nan-averted-2": {
+      "code_fingerprint": "sha256:4e89ec9c42e46eb0e276659f6da51833402e8b07fc0c9fb684a89f81d11dd249",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "unclipped: final loss inf\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "clipped at 1.0: final loss 1.024\n"
+        }
+      ]
+    },
+    "practice-a-nan-averted-3": {
+      "code_fingerprint": "sha256:9f80921be44527ba954205f6594e80af92aa2911240cc4c6e0724716dc94a235",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "practice/practice-a-nan-averted-3-1.svg",
+          "bytes": 27761,
+          "sha256": "sha256:403932085e2eb3c5c519d97d8d882a4577d433813956a371d5296b095c023f99"
+        }
+      ]
+    },
+    "practice-weight-averaging-1": {
+      "code_fingerprint": "sha256:94196fd1cec9e23f0641a2a16b493f20b5e32fd27c554548e8e0dd5c9ddc8ffd",
+      "kind": "text",
+      "outputs": []
+    },
+    "practice-weight-averaging-2": {
+      "code_fingerprint": "sha256:522e2ef641c60adc6719e433ca506aafaa586e91cac77c061eeadd8c2fecbdc5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final test accuracy: live 0.886, EMA 0.912\n"
+        }
+      ]
+    },
+    "practice-weight-averaging-3": {
+      "code_fingerprint": "sha256:cfb2b86b70daefabbb88180e2a7377ac4c2a1e6c08024e752d5216c0028afb01",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "practice/practice-weight-averaging-3-1.svg",
+          "bytes": 22792,
+          "sha256": "sha256:d668476ece99c06f2fb9ed9875b0a86950feb06b8681c832701cbd033e44c0ac"
+        }
+      ]
+    }
+  }
+}

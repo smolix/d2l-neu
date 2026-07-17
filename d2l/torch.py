@@ -1142,6 +1142,459 @@ def generate(step_fn, prefix, num_tokens, eos_id=None, **strategy):
             break
     return ids
 
+def annotate(text, xy, xytext):
+    d2l.plt.gca().annotate(text, xy=xy, xytext=xytext,
+                           arrowprops=dict(arrowstyle='->'))
+
+def train_2d(trainer, steps=20, f_grad=None):
+    """Optimize a 2D objective function with a customized trainer.
+
+    Defined in :numref:`sec_gd`"""
+    # `s1` and `s2` are internal state variables used by the stateful
+    # optimizers (momentum, Adam) later in this chapter
+    x1, x2, s1, s2 = -5, -2, 0, 0
+    results = [(x1, x2)]
+    for i in range(steps):
+        if f_grad:
+            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad)
+        else:
+            x1, x2, s1, s2 = trainer(x1, x2, s1, s2)
+        results.append((x1, x2))
+    print(f'epoch {i + 1}, x1: {float(x1):f}, x2: {float(x2):f}')
+    return results
+
+def show_trace_2d(f, results):
+    """Show the trace of 2D variables during optimization.
+
+    Defined in :numref:`sec_gd`"""
+    d2l.set_figsize()
+    d2l.plt.plot(*zip(*results), '-o', color='#ff7f0e')
+    x1, x2 = d2l.meshgrid(d2l.arange(-5.5, 1.0, 0.1),
+                          d2l.arange(-3.0, 1.0, 0.1), indexing='ij')
+    d2l.plt.contour(x1, x2, f(x1, x2), colors='#1f77b4')
+    d2l.plt.xlabel('x1')
+    d2l.plt.ylabel('x2')
+
+class Timer:
+    """Record multiple running times.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    def __init__(self):
+        self.times = []
+        self.start()
+
+    def start(self):
+        """Start the timer."""
+        self.tik = time.time()
+
+    def stop(self):
+        """Stop the timer and record the time in a list."""
+        self.times.append(time.time() - self.tik)
+        return self.times[-1]
+
+    def avg(self):
+        """Return the average time."""
+        return sum(self.times) / len(self.times)
+
+    def sum(self):
+        """Return the sum of time."""
+        return sum(self.times)
+
+    def cumsum(self):
+        """Return the accumulated time."""
+        return np.array(self.times).cumsum().tolist()
+
+d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
+                           '76e5be1548fd8222e5074cf0faae75edff8cf93f')
+
+def get_data_ch11(batch_size=10, n=1500):
+    data = np.genfromtxt(d2l.download('airfoil'),
+                         dtype=np.float32, delimiter='\t')
+    data = torch.from_numpy((data - data.mean(axis=0)) / data.std(axis=0))
+    data_iter = d2l.load_array((data[:n, :-1], data[:n, -1]),
+                               batch_size, is_train=True)
+    return data_iter, data.shape[1]-1
+
+def train_ch11(trainer_fn, states, hyperparams, data_iter,
+               feature_dim, num_epochs=2):
+    # Initialization
+    w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
+                     requires_grad=True)
+    b = torch.zeros((1), requires_grad=True)
+    net, loss = lambda X: d2l.linreg(X, w, b), d2l.squared_loss
+    # Train
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    n, timer = 0, d2l.Timer()
+    for _ in range(num_epochs):
+        for X, y in data_iter:
+            l = loss(net(X), y).mean()
+            l.backward()
+            trainer_fn([w, b], states, hyperparams)
+            n += X.shape[0]
+            if n % 200 == 0:
+                timer.stop()
+                animator.add(n/X.shape[0]/len(data_iter),
+                             (d2l.evaluate_loss(net, data_iter, loss),))
+                timer.start()
+    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+    return timer.cumsum(), animator.Y[0]
+
+def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=4):
+    # Initialization
+    net = nn.Sequential(nn.Linear(5, 1))
+    def init_weights(module):
+        if type(module) == nn.Linear:
+            torch.nn.init.normal_(module.weight, std=0.01)
+    net.apply(init_weights)
+
+    optimizer = trainer_fn(net.parameters(), **hyperparams)
+    loss = nn.MSELoss(reduction='none')
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
+    n, timer = 0, d2l.Timer()
+    for _ in range(num_epochs):
+        for X, y in data_iter:
+            optimizer.zero_grad()
+            out = net(X)
+            y = y.reshape(out.shape)
+            l = loss(out, y)
+            l.mean().backward()
+            optimizer.step()
+            n += X.shape[0]
+            if n % 200 == 0:
+                timer.stop()
+                # `MSELoss` computes squared error without the 1/2 factor
+                animator.add(n/X.shape[0]/len(data_iter),
+                             (d2l.evaluate_loss(net, data_iter, loss) / 2,))
+                timer.start()
+    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
+
+class TinyLM(nn.Module):
+    """A small decoder-only transformer language model.
+
+    Defined in :numref:`sec_adam`"""
+    def __init__(self, vocab_size, d_model=128, num_heads=2, num_blks=2,
+                 max_len=64):
+        super().__init__()
+        self.num_heads = num_heads
+        self.token_emb = nn.Embedding(vocab_size, d_model)
+        self.pos_emb = nn.Embedding(max_len, d_model)
+        self.blks = nn.ModuleList([nn.ModuleDict(dict(
+            norm1=nn.LayerNorm(d_model),
+            qkv=nn.Linear(d_model, 3 * d_model),
+            proj=nn.Linear(d_model, d_model),
+            norm2=nn.LayerNorm(d_model),
+            mlp=nn.Sequential(nn.Linear(d_model, 4 * d_model), nn.GELU(),
+                              nn.Linear(4 * d_model, d_model))))
+            for _ in range(num_blks)])
+        self.norm = nn.LayerNorm(d_model)
+        self.head = nn.Linear(d_model, vocab_size)
+
+    def attention(self, blk, X):
+        B, T, D = X.shape
+        q, k, v = blk['qkv'](X).chunk(3, dim=-1)
+        q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
+                   for u in (q, k, v))
+        Y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+        return blk['proj'](Y.transpose(1, 2).reshape(B, T, D))
+
+    def forward(self, X):
+        H = self.token_emb(X) + self.pos_emb(torch.arange(X.shape[1],
+                                                          device=X.device))
+        for blk in self.blks:
+            H = H + self.attention(blk, blk['norm1'](H))
+            H = H + blk['mlp'](blk['norm2'](H))
+        return self.head(self.norm(H))
+
+def train_lm(model, data, optimizer, num_steps):
+    """Train a model on next-token prediction for a fixed number of steps.
+
+    Defined in :numref:`sec_adam`"""
+    device = d2l.try_gpu()
+    model.to(device)
+    losses, step = [], 0
+    while step < num_steps:
+        for X, Y in data.train_dataloader():
+            X, Y = X.to(device), Y.to(device)
+            logits = model(X)
+            loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
+                                   Y.reshape(-1))
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            losses.append(loss.item())
+            step += 1
+            if step >= num_steps:
+                return losses
+
+def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
+                  cmap='Reds'):
+    """Show heatmaps of matrices.
+
+    Defined in :numref:`sec_queries-keys-values`"""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
+
+def masked_softmax(X, valid_lens):
+    """Perform softmax operation by masking elements on the last axis.
+
+    Defined in :numref:`sec_attention-scoring-functions`"""
+    # X: 3D tensor, valid_lens: 1D or 2D tensor 
+    def _sequence_mask(X, valid_len, value=0):
+        maxlen = X.size(1)
+        mask = torch.arange((maxlen), dtype=torch.float32,
+                            device=X.device)[None, :] < valid_len[:, None]
+        # Out-of-place to avoid mutating the input tensor in-place, which
+        # autograd can flag and which interferes with downstream views.
+        return torch.where(mask, X, torch.full_like(X, value))
+    
+    if valid_lens is None:
+        return nn.functional.softmax(X, dim=-1)
+    else:
+        shape = X.shape
+        if valid_lens.dim() == 1:
+            valid_lens = torch.repeat_interleave(valid_lens, shape[1])
+        else:
+            valid_lens = valid_lens.reshape(-1)
+        # On the last axis, replace masked elements with a very large negative
+        # value, whose exponentiation outputs 0
+        X = _sequence_mask(X.reshape(-1, shape[-1]), valid_lens, value=-1e6)
+        return nn.functional.softmax(X.reshape(shape), dim=-1)
+
+class DotProductAttention(nn.Module):
+    """Scaled dot product attention.
+
+    Defined in :numref:`sec_attention-scoring-functions`"""
+    def __init__(self, dropout):
+        super().__init__()
+        self.dropout = nn.Dropout(dropout)
+
+    # Shape of queries: (batch_size, no. of queries, d)
+    # Shape of keys: (batch_size, no. of key-value pairs, d)
+    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
+    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
+    def forward(self, queries, keys, values, valid_lens=None):
+        d = queries.shape[-1]
+        # Swap the last two dimensions of keys with keys.transpose(1, 2)
+        scores = torch.bmm(queries, keys.transpose(1, 2)) / math.sqrt(d)
+        self.attention_weights = masked_softmax(scores, valid_lens)
+        return torch.bmm(self.dropout(self.attention_weights), values)
+
+class AdditiveAttention(nn.Module):
+    """Additive attention.
+
+    Defined in :numref:`sec_attention-scoring-functions`"""
+    def __init__(self, num_hiddens, dropout):
+        super().__init__()
+        self.W_k = nn.LazyLinear(num_hiddens, bias=False)
+        self.W_q = nn.LazyLinear(num_hiddens, bias=False)
+        self.w_v = nn.LazyLinear(1, bias=False)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, queries, keys, values, valid_lens):
+        queries, keys = self.W_q(queries), self.W_k(keys)
+        # After dimension expansion, shape of queries: (batch_size, no. of
+        # queries, 1, num_hiddens) and shape of keys: (batch_size, 1, no. of
+        # key-value pairs, num_hiddens). Sum them up with broadcasting
+        features = queries.unsqueeze(2) + keys.unsqueeze(1)
+        features = torch.tanh(features)
+        # There is only one output of self.w_v, so we remove the last
+        # one-dimensional entry from the shape. Shape of scores: (batch_size,
+        # no. of queries, no. of key-value pairs)
+        scores = self.w_v(features).squeeze(-1)
+        self.attention_weights = masked_softmax(scores, valid_lens)
+        # Shape of values: (batch_size, no. of key-value pairs, value
+        # dimension)
+        return torch.bmm(self.dropout(self.attention_weights), values)
+
+class MultiHeadAttention(d2l.Module):
+    """Multi-head attention.
+
+    Defined in :numref:`sec_multihead-attention`"""
+    def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
+        super().__init__()
+        self.num_heads = num_heads
+        self.attention = d2l.DotProductAttention(dropout)
+        self.W_q = nn.LazyLinear(num_hiddens, bias=bias)
+        self.W_k = nn.LazyLinear(num_hiddens, bias=bias)
+        self.W_v = nn.LazyLinear(num_hiddens, bias=bias)
+        self.W_o = nn.LazyLinear(num_hiddens, bias=bias)
+
+    def forward(self, queries, keys, values, valid_lens):
+        # Shape of queries, keys, or values:
+        # (batch_size, no. of queries or key-value pairs, num_hiddens)
+        # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
+        # After transposing, shape of output queries, keys, or values:
+        # (batch_size * num_heads, no. of queries or key-value pairs,
+        # num_hiddens / num_heads)
+        queries = self.transpose_qkv(self.W_q(queries))
+        keys = self.transpose_qkv(self.W_k(keys))
+        values = self.transpose_qkv(self.W_v(values))
+
+        if valid_lens is not None:
+            # On axis 0, copy the first item (scalar or vector) for num_heads
+            # times, then copy the next item, and so on
+            valid_lens = torch.repeat_interleave(
+                valid_lens, repeats=self.num_heads, dim=0)
+
+        # Shape of output: (batch_size * num_heads, no. of queries,
+        # num_hiddens / num_heads)
+        output = self.attention(queries, keys, values, valid_lens)
+        # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
+        output_concat = self.transpose_output(output)
+        return self.W_o(output_concat)
+
+    def transpose_qkv(self, X):
+        """Transposition for parallel computation of multiple attention heads.
+
+        Defined in :numref:`sec_multihead-attention`"""
+        # Shape of input X: (batch_size, no. of queries or key-value pairs,
+        # num_hiddens). Shape of output X: (batch_size, no. of queries or
+        # key-value pairs, num_heads, num_hiddens / num_heads)
+        X = X.reshape(X.shape[0], X.shape[1], self.num_heads, -1)
+        # Shape of output X: (batch_size, num_heads, no. of queries or key-value
+        # pairs, num_hiddens / num_heads)
+        X = X.permute(0, 2, 1, 3)
+        # Shape of output: (batch_size * num_heads, no. of queries or key-value
+        # pairs, num_hiddens / num_heads)
+        return X.reshape(-1, X.shape[2], X.shape[3])
+
+    def transpose_output(self, X):
+        """Reverse the operation of transpose_qkv.
+
+        Defined in :numref:`sec_multihead-attention`"""
+        X = X.reshape(-1, self.num_heads, X.shape[1], X.shape[2])
+        X = X.permute(0, 2, 1, 3)
+        return X.reshape(X.shape[0], X.shape[1], -1)
+
+class PositionalEncoding(nn.Module):
+    """Positional encoding.
+
+    Defined in :numref:`sec_self-attention-and-positional-encoding`"""
+    def __init__(self, num_hiddens, dropout, max_len=1000):
+        super().__init__()
+        self.dropout = nn.Dropout(dropout)
+        # Create a long enough P
+        self.P = d2l.zeros((1, max_len, num_hiddens))
+        X = d2l.arange(max_len, dtype=torch.float32).reshape(
+            -1, 1) / torch.pow(10000, torch.arange(
+            0, num_hiddens, 2, dtype=torch.float32) / num_hiddens)
+        self.P[:, :, 0::2] = torch.sin(X)
+        self.P[:, :, 1::2] = torch.cos(X[:, :num_hiddens // 2])
+
+    def forward(self, X, offset=0):
+        # `offset` lets autoregressive decoders advance the encoding position
+        # past tokens already emitted, instead of always slicing from 0.
+        X = X + self.P[:, offset:offset + X.shape[1], :].to(X.device)
+        return self.dropout(X)
+
+class PositionWiseFFN(nn.Module):
+    """The positionwise feed-forward network.
+
+    Defined in :numref:`sec_transformer`"""
+    def __init__(self, ffn_num_hiddens, ffn_num_outputs):
+        super().__init__()
+        self.dense1 = nn.LazyLinear(ffn_num_hiddens)
+        self.relu = nn.ReLU()
+        self.dense2 = nn.LazyLinear(ffn_num_outputs)
+
+    def forward(self, X):
+        return self.dense2(self.relu(self.dense1(X)))
+
+class AddNorm(nn.Module):
+    """The residual connection followed by layer normalization.
+
+    Defined in :numref:`sec_transformer`"""
+    def __init__(self, norm_shape, dropout):
+        super().__init__()
+        self.dropout = nn.Dropout(dropout)
+        self.ln = nn.LayerNorm(norm_shape)
+
+    def forward(self, X, Y):
+        return self.ln(self.dropout(Y) + X)
+
+class TransformerEncoderBlock(nn.Module):
+    """The Transformer encoder block.
+
+    Defined in :numref:`sec_transformer`"""
+    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
+                 use_bias=False):
+        super().__init__()
+        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
+                                                dropout, use_bias)
+        self.addnorm1 = AddNorm(num_hiddens, dropout)
+        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
+        self.addnorm2 = AddNorm(num_hiddens, dropout)
+
+    def forward(self, X, valid_lens):
+        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens))
+        return self.addnorm2(Y, self.ffn(Y))
+
+class Benchmark:
+    """For measuring running time.
+
+    Defined in :numref:`sec_hybridize`"""
+    def __init__(self, description='Done'):
+        self.description = description
+
+    def __enter__(self):
+        self.timer = d2l.Timer()
+        return self
+
+    def __exit__(self, *args):
+        print(f'{self.description}: {self.timer.stop():.4f} sec')
+
+def split_batch(X, y, devices):
+    """Split `X` and `y` into multiple devices.
+
+    Defined in :numref:`sec_multi_gpu`"""
+    assert X.shape[0] == y.shape[0]
+    return (nn.parallel.scatter(X, devices),
+            nn.parallel.scatter(y, devices))
+
+def resnet18(num_classes, in_channels=1):
+    """A slightly modified ResNet-18 model.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    def resnet_block(in_channels, out_channels, num_residuals,
+                     first_block=False):
+        blk = []
+        for i in range(num_residuals):
+            if i == 0 and not first_block:
+                blk.append(d2l.Residual(out_channels, use_1x1conv=True, 
+                                        strides=2))
+            else:
+                blk.append(d2l.Residual(out_channels))
+        return nn.Sequential(*blk)
+
+    # This model uses a smaller convolution kernel, stride, and padding and
+    # removes the max-pooling layer
+    net = nn.Sequential(
+        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU())
+    net.add_module("resnet_block1", resnet_block(64, 64, 2, first_block=True))
+    net.add_module("resnet_block2", resnet_block(64, 128, 2))
+    net.add_module("resnet_block3", resnet_block(128, 256, 2))
+    net.add_module("resnet_block4", resnet_block(256, 512, 2))
+    net.add_module("global_avg_pool", nn.AdaptiveAvgPool2d((1,1)))
+    net.add_module("fc", nn.Sequential(nn.Flatten(),
+                                       nn.Linear(512, num_classes)))
+    return net
+
 class LSTMScratch(d2l.Module):
     """The long short-term memory (LSTM) cell implemented from scratch.
 
@@ -1426,957 +1879,43 @@ def associative_scan(a, b, dim=0):
         step *= 2
     return b.movedim(0, dim)
 
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices.
-
-    Defined in :numref:`sec_queries-keys-values`"""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
-
-def masked_softmax(X, valid_lens):
-    """Perform softmax operation by masking elements on the last axis.
-
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    # X: 3D tensor, valid_lens: 1D or 2D tensor 
-    def _sequence_mask(X, valid_len, value=0):
-        maxlen = X.size(1)
-        mask = torch.arange((maxlen), dtype=torch.float32,
-                            device=X.device)[None, :] < valid_len[:, None]
-        # Out-of-place to avoid mutating the input tensor in-place, which
-        # autograd can flag and which interferes with downstream views.
-        return torch.where(mask, X, torch.full_like(X, value))
-    
-    if valid_lens is None:
-        return nn.functional.softmax(X, dim=-1)
-    else:
-        shape = X.shape
-        if valid_lens.dim() == 1:
-            valid_lens = torch.repeat_interleave(valid_lens, shape[1])
-        else:
-            valid_lens = valid_lens.reshape(-1)
-        # On the last axis, replace masked elements with a very large negative
-        # value, whose exponentiation outputs 0
-        X = _sequence_mask(X.reshape(-1, shape[-1]), valid_lens, value=-1e6)
-        return nn.functional.softmax(X.reshape(shape), dim=-1)
-
-class DotProductAttention(nn.Module):
-    """Scaled dot product attention.
-
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, dropout):
-        super().__init__()
-        self.dropout = nn.Dropout(dropout)
-
-    # Shape of queries: (batch_size, no. of queries, d)
-    # Shape of keys: (batch_size, no. of key-value pairs, d)
-    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
-    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-    def forward(self, queries, keys, values, valid_lens=None):
-        d = queries.shape[-1]
-        # Swap the last two dimensions of keys with keys.transpose(1, 2)
-        scores = torch.bmm(queries, keys.transpose(1, 2)) / math.sqrt(d)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        return torch.bmm(self.dropout(self.attention_weights), values)
-
-class AdditiveAttention(nn.Module):
-    """Additive attention.
-
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, num_hiddens, dropout):
-        super().__init__()
-        self.W_k = nn.LazyLinear(num_hiddens, bias=False)
-        self.W_q = nn.LazyLinear(num_hiddens, bias=False)
-        self.w_v = nn.LazyLinear(1, bias=False)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, queries, keys, values, valid_lens):
-        queries, keys = self.W_q(queries), self.W_k(keys)
-        # After dimension expansion, shape of queries: (batch_size, no. of
-        # queries, 1, num_hiddens) and shape of keys: (batch_size, 1, no. of
-        # key-value pairs, num_hiddens). Sum them up with broadcasting
-        features = queries.unsqueeze(2) + keys.unsqueeze(1)
-        features = torch.tanh(features)
-        # There is only one output of self.w_v, so we remove the last
-        # one-dimensional entry from the shape. Shape of scores: (batch_size,
-        # no. of queries, no. of key-value pairs)
-        scores = self.w_v(features).squeeze(-1)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        # Shape of values: (batch_size, no. of key-value pairs, value
-        # dimension)
-        return torch.bmm(self.dropout(self.attention_weights), values)
-
-class AttentionDecoder(d2l.Decoder):
-    """The base attention-based decoder interface.
-
-    Defined in :numref:`sec_seq2seq_attention`"""
-    def __init__(self):
-        super().__init__()
-
-    @property
-    def attention_weights(self):
-        raise NotImplementedError
-
-class MultiHeadAttention(d2l.Module):
-    """Multi-head attention.
-
-    Defined in :numref:`sec_multihead-attention`"""
-    def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
-        super().__init__()
-        self.num_heads = num_heads
-        self.attention = d2l.DotProductAttention(dropout)
-        self.W_q = nn.LazyLinear(num_hiddens, bias=bias)
-        self.W_k = nn.LazyLinear(num_hiddens, bias=bias)
-        self.W_v = nn.LazyLinear(num_hiddens, bias=bias)
-        self.W_o = nn.LazyLinear(num_hiddens, bias=bias)
-
-    def forward(self, queries, keys, values, valid_lens):
-        # Shape of queries, keys, or values:
-        # (batch_size, no. of queries or key-value pairs, num_hiddens)
-        # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-        # After transposing, shape of output queries, keys, or values:
-        # (batch_size * num_heads, no. of queries or key-value pairs,
-        # num_hiddens / num_heads)
-        queries = self.transpose_qkv(self.W_q(queries))
-        keys = self.transpose_qkv(self.W_k(keys))
-        values = self.transpose_qkv(self.W_v(values))
-
-        if valid_lens is not None:
-            # On axis 0, copy the first item (scalar or vector) for num_heads
-            # times, then copy the next item, and so on
-            valid_lens = torch.repeat_interleave(
-                valid_lens, repeats=self.num_heads, dim=0)
-
-        # Shape of output: (batch_size * num_heads, no. of queries,
-        # num_hiddens / num_heads)
-        output = self.attention(queries, keys, values, valid_lens)
-        # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
-        output_concat = self.transpose_output(output)
-        return self.W_o(output_concat)
-
-    def transpose_qkv(self, X):
-        """Transposition for parallel computation of multiple attention heads.
-
-        Defined in :numref:`sec_multihead-attention`"""
-        # Shape of input X: (batch_size, no. of queries or key-value pairs,
-        # num_hiddens). Shape of output X: (batch_size, no. of queries or
-        # key-value pairs, num_heads, num_hiddens / num_heads)
-        X = X.reshape(X.shape[0], X.shape[1], self.num_heads, -1)
-        # Shape of output X: (batch_size, num_heads, no. of queries or key-value
-        # pairs, num_hiddens / num_heads)
-        X = X.permute(0, 2, 1, 3)
-        # Shape of output: (batch_size * num_heads, no. of queries or key-value
-        # pairs, num_hiddens / num_heads)
-        return X.reshape(-1, X.shape[2], X.shape[3])
-
-    def transpose_output(self, X):
-        """Reverse the operation of transpose_qkv.
-
-        Defined in :numref:`sec_multihead-attention`"""
-        X = X.reshape(-1, self.num_heads, X.shape[1], X.shape[2])
-        X = X.permute(0, 2, 1, 3)
-        return X.reshape(X.shape[0], X.shape[1], -1)
-
-class PositionalEncoding(nn.Module):
-    """Positional encoding.
-
-    Defined in :numref:`sec_self-attention-and-positional-encoding`"""
-    def __init__(self, num_hiddens, dropout, max_len=1000):
-        super().__init__()
-        self.dropout = nn.Dropout(dropout)
-        # Create a long enough P
-        self.P = d2l.zeros((1, max_len, num_hiddens))
-        X = d2l.arange(max_len, dtype=torch.float32).reshape(
-            -1, 1) / torch.pow(10000, torch.arange(
-            0, num_hiddens, 2, dtype=torch.float32) / num_hiddens)
-        self.P[:, :, 0::2] = torch.sin(X)
-        self.P[:, :, 1::2] = torch.cos(X[:, :num_hiddens // 2])
-
-    def forward(self, X, offset=0):
-        # `offset` lets autoregressive decoders advance the encoding position
-        # past tokens already emitted, instead of always slicing from 0.
-        X = X + self.P[:, offset:offset + X.shape[1], :].to(X.device)
-        return self.dropout(X)
-
-class PositionWiseFFN(nn.Module):
-    """The positionwise feed-forward network.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, ffn_num_hiddens, ffn_num_outputs):
-        super().__init__()
-        self.dense1 = nn.LazyLinear(ffn_num_hiddens)
-        self.relu = nn.ReLU()
-        self.dense2 = nn.LazyLinear(ffn_num_outputs)
-
-    def forward(self, X):
-        return self.dense2(self.relu(self.dense1(X)))
-
-class AddNorm(nn.Module):
-    """The residual connection followed by layer normalization.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, norm_shape, dropout):
-        super().__init__()
-        self.dropout = nn.Dropout(dropout)
-        self.ln = nn.LayerNorm(norm_shape)
-
-    def forward(self, X, Y):
-        return self.ln(self.dropout(Y) + X)
-
-class TransformerEncoderBlock(nn.Module):
-    """The Transformer encoder block.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
-                 use_bias=False):
-        super().__init__()
-        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
-                                                dropout, use_bias)
-        self.addnorm1 = AddNorm(num_hiddens, dropout)
-        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
-        self.addnorm2 = AddNorm(num_hiddens, dropout)
-
-    def forward(self, X, valid_lens):
-        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens))
-        return self.addnorm2(Y, self.ffn(Y))
-
-class TransformerEncoder(d2l.Encoder):
-    """The Transformer encoder.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens,
-                 num_heads, num_blks, dropout, use_bias=False):
-        super().__init__()
-        self.num_hiddens = num_hiddens
-        self.embedding = nn.Embedding(vocab_size, num_hiddens)
-        self.pos_encoding = d2l.PositionalEncoding(num_hiddens, dropout)
-        self.blks = nn.Sequential()
-        for i in range(num_blks):
-            self.blks.add_module("block"+str(i), TransformerEncoderBlock(
-                num_hiddens, ffn_num_hiddens, num_heads, dropout, use_bias))
-
-    def forward(self, X, valid_lens):
-        # Since positional encoding values are between -1 and 1, the embedding
-        # values are multiplied by the square root of the embedding dimension
-        # to rescale before they are summed up
-        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
-        self.attention_weights = [None] * len(self.blks)
-        for i, blk in enumerate(self.blks):
-            X = blk(X, valid_lens)
-            self.attention_weights[
-                i] = blk.attention.attention.attention_weights
-        return X
-
-def annotate(text, xy, xytext):
-    d2l.plt.gca().annotate(text, xy=xy, xytext=xytext,
-                           arrowprops=dict(arrowstyle='->'))
-
-def train_2d(trainer, steps=20, f_grad=None):
-    """Optimize a 2D objective function with a customized trainer.
-
-    Defined in :numref:`sec_gd`"""
-    # `s1` and `s2` are internal state variables that will be used in Momentum, adagrad, RMSProp
-    x1, x2, s1, s2 = -5, -2, 0, 0
-    results = [(x1, x2)]
-    for i in range(steps):
-        if f_grad:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad)
-        else:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2)
-        results.append((x1, x2))
-    print(f'epoch {i + 1}, x1: {float(x1):f}, x2: {float(x2):f}')
-    return results
-
-def show_trace_2d(f, results):
-    """Show the trace of 2D variables during optimization.
-
-    Defined in :numref:`sec_gd`"""
-    d2l.set_figsize()
-    d2l.plt.plot(*zip(*results), '-o', color='#ff7f0e')
-    x1, x2 = d2l.meshgrid(d2l.arange(-5.5, 1.0, 0.1),
-                          d2l.arange(-3.0, 1.0, 0.1), indexing='ij')
-    d2l.plt.contour(x1, x2, f(x1, x2), colors='#1f77b4')
-    d2l.plt.xlabel('x1')
-    d2l.plt.ylabel('x2')
-
-class Timer:
-    """Record multiple running times.
-
-    Defined in :numref:`sec_minibatch_sgd`"""
-    def __init__(self):
-        self.times = []
-        self.start()
-
-    def start(self):
-        """Start the timer."""
-        self.tik = time.time()
-
-    def stop(self):
-        """Stop the timer and record the time in a list."""
-        self.times.append(time.time() - self.tik)
-        return self.times[-1]
-
-    def avg(self):
-        """Return the average time."""
-        return sum(self.times) / len(self.times)
-
-    def sum(self):
-        """Return the sum of time."""
-        return sum(self.times)
-
-    def cumsum(self):
-        """Return the accumulated time."""
-        return np.array(self.times).cumsum().tolist()
-
-d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
-                           '76e5be1548fd8222e5074cf0faae75edff8cf93f')
-
-def get_data_ch11(batch_size=10, n=1500):
-    data = np.genfromtxt(d2l.download('airfoil'),
-                         dtype=np.float32, delimiter='\t')
-    data = torch.from_numpy((data - data.mean(axis=0)) / data.std(axis=0))
-    data_iter = d2l.load_array((data[:n, :-1], data[:n, -1]),
-                               batch_size, is_train=True)
-    return data_iter, data.shape[1]-1
-
-def train_ch11(trainer_fn, states, hyperparams, data_iter,
-               feature_dim, num_epochs=2):
-    # Initialization
-    w = torch.normal(mean=0.0, std=0.01, size=(feature_dim, 1),
-                     requires_grad=True)
-    b = torch.zeros((1), requires_grad=True)
-    net, loss = lambda X: d2l.linreg(X, w, b), d2l.squared_loss
-    # Train
-    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    n, timer = 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            l = loss(net(X), y).mean()
-            l.backward()
-            trainer_fn([w, b], states, hyperparams)
-            n += X.shape[0]
-            if n % 200 == 0:
-                timer.stop()
-                animator.add(n/X.shape[0]/len(data_iter),
-                             (d2l.evaluate_loss(net, data_iter, loss),))
-                timer.start()
-    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
-    return timer.cumsum(), animator.Y[0]
-
-def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=4):
-    # Initialization
-    net = nn.Sequential(nn.Linear(5, 1))
-    def init_weights(module):
-        if type(module) == nn.Linear:
-            torch.nn.init.normal_(module.weight, std=0.01)
-    net.apply(init_weights)
-
-    optimizer = trainer_fn(net.parameters(), **hyperparams)
-    loss = nn.MSELoss(reduction='none')
-    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    n, timer = 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            optimizer.zero_grad()
-            out = net(X)
-            y = y.reshape(out.shape)
-            l = loss(out, y)
-            l.mean().backward()
-            optimizer.step()
-            n += X.shape[0]
-            if n % 200 == 0:
-                timer.stop()
-                # `MSELoss` computes squared error without the 1/2 factor
-                animator.add(n/X.shape[0]/len(data_iter),
-                             (d2l.evaluate_loss(net, data_iter, loss) / 2,))
-                timer.start()
-    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
-
-class Benchmark:
-    """For measuring running time.
-
-    Defined in :numref:`sec_hybridize`"""
-    def __init__(self, description='Done'):
-        self.description = description
-
-    def __enter__(self):
-        self.timer = d2l.Timer()
-        return self
-
-    def __exit__(self, *args):
-        print(f'{self.description}: {self.timer.stop():.4f} sec')
-
-def split_batch(X, y, devices):
-    """Split `X` and `y` into multiple devices.
-
-    Defined in :numref:`sec_multi_gpu`"""
-    assert X.shape[0] == y.shape[0]
-    return (nn.parallel.scatter(X, devices),
-            nn.parallel.scatter(y, devices))
-
-def resnet18(num_classes, in_channels=1):
-    """A slightly modified ResNet-18 model.
-
-    Defined in :numref:`sec_multi_gpu_concise`"""
-    def resnet_block(in_channels, out_channels, num_residuals,
-                     first_block=False):
-        blk = []
-        for i in range(num_residuals):
-            if i == 0 and not first_block:
-                blk.append(d2l.Residual(out_channels, use_1x1conv=True, 
-                                        strides=2))
-            else:
-                blk.append(d2l.Residual(out_channels))
-        return nn.Sequential(*blk)
-
-    # This model uses a smaller convolution kernel, stride, and padding and
-    # removes the max-pooling layer
-    net = nn.Sequential(
-        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(64),
-        nn.ReLU())
-    net.add_module("resnet_block1", resnet_block(64, 64, 2, first_block=True))
-    net.add_module("resnet_block2", resnet_block(64, 128, 2))
-    net.add_module("resnet_block3", resnet_block(128, 256, 2))
-    net.add_module("resnet_block4", resnet_block(256, 512, 2))
-    net.add_module("global_avg_pool", nn.AdaptiveAvgPool2d((1,1)))
-    net.add_module("fc", nn.Sequential(nn.Flatten(),
-                                       nn.Linear(512, num_classes)))
-    return net
-
-def train_batch_ch13(net, X, y, loss, trainer, devices):
-    """Train for a minibatch with multiple GPUs (defined in Chapter 13).
-
-    Defined in :numref:`sec_image_augmentation`"""
-    if isinstance(X, list):
-        # Required for BERT fine-tuning (to be covered later)
-        X = [x.to(devices[0]) for x in X]
-    else:
-        X = X.to(devices[0])
-    y = y.to(devices[0])
-    net.train()
-    trainer.zero_grad()
-    pred = net(X)
-    l = loss(pred, y)
-    l.sum().backward()
-    trainer.step()
-    train_loss_sum = l.sum() if l.numel() > 1 else l * y.numel()
-    train_acc_sum = d2l.accuracy(pred, y)
-    return train_loss_sum, train_acc_sum
-
-def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
-               devices=d2l.try_all_gpus()):
-    """Train a model with multiple GPUs (defined in Chapter 13).
-
-    Defined in :numref:`sec_image_augmentation`"""
-    timer, num_batches = d2l.Timer(), len(train_iter)
-    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
-                            legend=['train loss', 'train acc', 'test acc'])
-    net = nn.DataParallel(net, device_ids=devices).to(devices[0])
-    for epoch in range(num_epochs):
-        # Sum of training loss, sum of training accuracy, no. of examples,
-        # no. of examples
-        metric = d2l.Accumulator(4)
-        for i, (features, labels) in enumerate(train_iter):
-            timer.start()
-            l, acc = train_batch_ch13(
-                net, features, labels, loss, trainer, devices)
-            metric.add(l, acc, labels.shape[0], labels.numel())
-            timer.stop()
-            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
-                animator.add(epoch + (i + 1) / num_batches,
-                             (metric[0] / metric[2], metric[1] / metric[3],
-                              None))
-        test_acc = d2l.evaluate_accuracy_gpu(net, test_iter)
-        animator.add(epoch + 1, (None, None, test_acc))
-    print(f'loss {metric[0] / metric[2]:.3f}, train acc '
-          f'{metric[1] / metric[3]:.3f}, test acc {test_acc:.3f}')
-    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec on '
-          f'{str(devices)}')
-
-d2l.DATA_HUB['hotdog'] = (d2l.DATA_URL + 'hotdog.zip', 
-                         'fba480ffa8aa7e0febbb511d181409f899b9baa5')
-
-def box_corner_to_center(boxes):
-    """Convert from (upper-left, lower-right) to (center, width, height).
-
-    Defined in :numref:`sec_bbox`"""
-    x1, y1, x2, y2 = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
-    cx = (x1 + x2) / 2
-    cy = (y1 + y2) / 2
-    w = x2 - x1
-    h = y2 - y1
-    boxes = d2l.stack((cx, cy, w, h), axis=-1)
-    return boxes
-
-def box_center_to_corner(boxes):
-    """Convert from (center, width, height) to (upper-left, lower-right).
-
-    Defined in :numref:`sec_bbox`"""
-    cx, cy, w, h = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
-    x1 = cx - 0.5 * w
-    y1 = cy - 0.5 * h
-    x2 = cx + 0.5 * w
-    y2 = cy + 0.5 * h
-    boxes = d2l.stack((x1, y1, x2, y2), axis=-1)
-    return boxes
-
-def bbox_to_rect(bbox, color):
-    """Convert bounding box to matplotlib format.
-
-    Defined in :numref:`sec_bbox`"""
-    # Convert the bounding box (upper-left x, upper-left y, lower-right x,
-    # lower-right y) format to the matplotlib format: ((upper-left x,
-    # upper-left y), width, height)
-    return d2l.plt.Rectangle(
-        xy=(bbox[0], bbox[1]), width=bbox[2]-bbox[0], height=bbox[3]-bbox[1],
-        fill=False, edgecolor=color, linewidth=2)
-
-def multibox_prior(data, sizes, ratios):
-    """Generate anchor boxes with different shapes centered on each pixel.
-
-    Defined in :numref:`sec_anchor`"""
-    in_height, in_width = data.shape[-2:]
-    device, num_sizes, num_ratios = data.device, len(sizes), len(ratios)
-    boxes_per_pixel = (num_sizes + num_ratios - 1)
-    size_tensor = d2l.tensor(sizes, device=device)
-    ratio_tensor = d2l.tensor(ratios, device=device)
-    # Offsets are required to move the anchor to the center of a pixel. Since
-    # a pixel has height=1 and width=1, we choose to offset our centers by 0.5
-    offset_h, offset_w = 0.5, 0.5
-    steps_h = 1.0 / in_height  # Scaled steps in y axis
-    steps_w = 1.0 / in_width  # Scaled steps in x axis
-
-    # Generate all center points for the anchor boxes
-    center_h = (torch.arange(in_height, device=device) + offset_h) * steps_h
-    center_w = (torch.arange(in_width, device=device) + offset_w) * steps_w
-    shift_y, shift_x = torch.meshgrid(center_h, center_w, indexing='ij')
-    shift_y, shift_x = shift_y.reshape(-1), shift_x.reshape(-1)
-
-    # Generate `boxes_per_pixel` number of heights and widths that are later
-    # used to create anchor box corner coordinates (xmin, xmax, ymin, ymax)
-    w = torch.cat((size_tensor * torch.sqrt(ratio_tensor[0]),
-                   sizes[0] * torch.sqrt(ratio_tensor[1:])))\
-                   * in_height / in_width  # Handle rectangular inputs
-    h = torch.cat((size_tensor / torch.sqrt(ratio_tensor[0]),
-                   sizes[0] / torch.sqrt(ratio_tensor[1:])))
-    # Divide by 2 to get half height and half width
-    anchor_manipulations = torch.stack((-w, -h, w, h)).T.repeat(
-                                        in_height * in_width, 1) / 2
-
-    # Each center point will have `boxes_per_pixel` number of anchor boxes, so
-    # generate a grid of all anchor box centers with `boxes_per_pixel` repeats
-    out_grid = torch.stack([shift_x, shift_y, shift_x, shift_y],
-                dim=1).repeat_interleave(boxes_per_pixel, dim=0)
-    output = out_grid + anchor_manipulations
-    return output.unsqueeze(0)
-
-def show_bboxes(axes, bboxes, labels=None, colors=None):
-    """Show bounding boxes.
-
-    Defined in :numref:`sec_anchor`"""
-
-    def make_list(obj, default_values=None):
-        if obj is None:
-            obj = default_values
-        elif not isinstance(obj, (list, tuple)):
-            obj = [obj]
-        return obj
-
-    labels = make_list(labels)
-    colors = make_list(colors, ['b', 'g', 'r', 'm', 'c'])
-    for i, bbox in enumerate(bboxes):
-        color = colors[i % len(colors)]
-        rect = d2l.bbox_to_rect(d2l.numpy(bbox), color)
-        axes.add_patch(rect)
-        if labels and len(labels) > i:
-            text_color = 'k' if color == 'w' else 'w'
-            axes.text(rect.xy[0], rect.xy[1], labels[i],
-                      va='center', ha='center', fontsize=9, color=text_color,
-                      bbox=dict(facecolor=color, lw=0))
-
-def box_iou(boxes1, boxes2):
-    """Compute pairwise IoU across two lists of anchor or bounding boxes.
-
-    Defined in :numref:`sec_anchor`"""
-    box_area = lambda boxes: ((boxes[:, 2] - boxes[:, 0]) *
-                              (boxes[:, 3] - boxes[:, 1]))
-    # Shape of `boxes1`, `boxes2`, `areas1`, `areas2`: (no. of boxes1, 4),
-    # (no. of boxes2, 4), (no. of boxes1,), (no. of boxes2,)
-    areas1 = box_area(boxes1)
-    areas2 = box_area(boxes2)
-    # Shape of `inter_upperlefts`, `inter_lowerrights`, `inters`: (no. of
-    # boxes1, no. of boxes2, 2)
-    inter_upperlefts = torch.max(boxes1[:, None, :2], boxes2[:, :2])
-    inter_lowerrights = torch.min(boxes1[:, None, 2:], boxes2[:, 2:])
-    inters = (inter_lowerrights - inter_upperlefts).clamp(min=0)
-    # Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
-    inter_areas = inters[:, :, 0] * inters[:, :, 1]
-    union_areas = areas1[:, None] + areas2 - inter_areas
-    return inter_areas / union_areas
-
-def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
-    """Assign closest ground-truth bounding boxes to anchor boxes.
-
-    Defined in :numref:`sec_anchor`"""
-    num_anchors, num_gt_boxes = anchors.shape[0], ground_truth.shape[0]
-    # Element x_ij in the i-th row and j-th column is the IoU of the anchor
-    # box i and the ground-truth bounding box j
-    jaccard = box_iou(anchors, ground_truth)
-    # Initialize the tensor to hold the assigned ground-truth bounding box for
-    # each anchor
-    anchors_bbox_map = torch.full((num_anchors,), -1, dtype=torch.long,
-                                  device=device)
-    # Assign ground-truth bounding boxes according to the threshold
-    max_ious, indices = torch.max(jaccard, dim=1)
-    anc_i = torch.nonzero(max_ious >= iou_threshold).reshape(-1)
-    box_j = indices[max_ious >= iou_threshold]
-    anchors_bbox_map[anc_i] = box_j
-    col_discard = torch.full((num_anchors,), -1)
-    row_discard = torch.full((num_gt_boxes,), -1)
-    for _ in range(num_gt_boxes):
-        max_idx = torch.argmax(jaccard)  # Find the largest IoU
-        box_idx = (max_idx % num_gt_boxes).long()
-        anc_idx = torch.div(max_idx, num_gt_boxes, rounding_mode='floor')
-        anchors_bbox_map[anc_idx] = box_idx
-        jaccard[:, box_idx] = col_discard
-        jaccard[anc_idx, :] = row_discard
-    return anchors_bbox_map
-
-def offset_boxes(anchors, assigned_bb, eps=1e-6):
-    """Transform for anchor box offsets.
-
-    Defined in :numref:`sec_anchor`"""
-    c_anc = d2l.box_corner_to_center(anchors)
-    c_assigned_bb = d2l.box_corner_to_center(assigned_bb)
-    offset_xy = 10 * (c_assigned_bb[:, :2] - c_anc[:, :2]) / c_anc[:, 2:]
-    offset_wh = 5 * d2l.log(eps + c_assigned_bb[:, 2:] / c_anc[:, 2:])
-    offset = d2l.concat([offset_xy, offset_wh], axis=1)
-    return offset
-
-def multibox_target(anchors, labels):
-    """Label anchor boxes using ground-truth bounding boxes.
-
-    Defined in :numref:`sec_anchor`"""
-    batch_size, anchors = labels.shape[0], anchors.squeeze(0)
-    batch_offset, batch_mask, batch_class_labels = [], [], []
-    device, num_anchors = anchors.device, anchors.shape[0]
-    for i in range(batch_size):
-        label = labels[i, :, :]
-        anchors_bbox_map = assign_anchor_to_bbox(
-            label[:, 1:], anchors, device)
-        bbox_mask = ((anchors_bbox_map >= 0).float().unsqueeze(-1)).repeat(
-            1, 4)
-        # Initialize class labels and assigned bounding box coordinates with
-        # zeros
-        class_labels = torch.zeros(num_anchors, dtype=torch.long,
-                                   device=device)
-        assigned_bb = torch.zeros((num_anchors, 4), dtype=torch.float32,
-                                  device=device)
-        # Label classes of anchor boxes using their assigned ground-truth
-        # bounding boxes. If an anchor box is not assigned any, we label its
-        # class as background (the value remains zero)
-        indices_true = torch.nonzero(anchors_bbox_map >= 0)
-        bb_idx = anchors_bbox_map[indices_true]
-        class_labels[indices_true] = label[bb_idx, 0].long() + 1
-        assigned_bb[indices_true] = label[bb_idx, 1:]
-        # Offset transformation
-        offset = offset_boxes(anchors, assigned_bb) * bbox_mask
-        batch_offset.append(offset.reshape(-1))
-        batch_mask.append(bbox_mask.reshape(-1))
-        batch_class_labels.append(class_labels)
-    bbox_offset = torch.stack(batch_offset)
-    bbox_mask = torch.stack(batch_mask)
-    class_labels = torch.stack(batch_class_labels)
-    return (bbox_offset, bbox_mask, class_labels)
-
-def offset_inverse(anchors, offset_preds):
-    """Predict bounding boxes based on anchor boxes with predicted offsets.
-
-    Defined in :numref:`sec_anchor`"""
-    anc = d2l.box_corner_to_center(anchors)
-    pred_bbox_xy = (offset_preds[:, :2] * anc[:, 2:] / 10) + anc[:, :2]
-    pred_bbox_wh = d2l.exp(offset_preds[:, 2:] / 5) * anc[:, 2:]
-    pred_bbox = d2l.concat((pred_bbox_xy, pred_bbox_wh), axis=1)
-    predicted_bbox = d2l.box_center_to_corner(pred_bbox)
-    return predicted_bbox
-
-def nms(boxes, scores, iou_threshold):
-    """Sort confidence scores of predicted bounding boxes.
-
-    Defined in :numref:`sec_anchor`"""
-    B = torch.argsort(scores, dim=-1, descending=True)
-    keep = []  # Indices of predicted bounding boxes that will be kept
-    while B.numel() > 0:
-        i = B[0]
-        keep.append(i)
-        if B.numel() == 1: break
-        iou = box_iou(boxes[i, :].reshape(-1, 4),
-                      boxes[B[1:], :].reshape(-1, 4)).reshape(-1)
-        inds = torch.nonzero(iou <= iou_threshold).reshape(-1)
-        B = B[inds + 1]
-    return d2l.tensor(keep, device=boxes.device)
-
-def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
-                       pos_threshold=0.009999999):
-    """Predict bounding boxes using non-maximum suppression.
-
-    Defined in :numref:`sec_anchor`"""
-    device, batch_size = cls_probs.device, cls_probs.shape[0]
-    anchors = anchors.squeeze(0)
-    num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
-    out = []
-    for i in range(batch_size):
-        cls_prob, offset_pred = cls_probs[i], offset_preds[i].reshape(-1, 4)
-        conf, class_id = torch.max(cls_prob[1:], 0)
-        predicted_bb = offset_inverse(anchors, offset_pred)
-        keep = nms(predicted_bb, conf, nms_threshold)
-        # Find all non-`keep` indices and set the class to background
-        all_idx = torch.arange(num_anchors, dtype=torch.long, device=device)
-        combined = torch.cat((keep, all_idx))
-        uniques, counts = combined.unique(return_counts=True)
-        non_keep = uniques[counts == 1]
-        all_id_sorted = torch.cat((keep, non_keep))
-        class_id[non_keep] = -1
-        class_id = class_id[all_id_sorted]
-        conf, predicted_bb = conf[all_id_sorted], predicted_bb[all_id_sorted]
-        # Here `pos_threshold` is a threshold for positive (non-background)
-        # predictions
-        below_min_idx = (conf < pos_threshold)
-        class_id[below_min_idx] = -1
-        conf[below_min_idx] = 1 - conf[below_min_idx]
-        pred_info = torch.cat((class_id.unsqueeze(1),
-                               conf.unsqueeze(1),
-                               predicted_bb), dim=1)
-        out.append(pred_info)
-    return d2l.stack(out)
-
-d2l.DATA_HUB['banana-detection'] = (
-    d2l.DATA_URL + 'banana-detection.zip',
-    '5de26c8fce5ccdea9f91267273464dc968d20d72')
-
-def read_data_bananas(is_train=True):
-    """Read the banana detection dataset images and labels.
-
-    Defined in :numref:`sec_object-detection-dataset`"""
-    data_dir = d2l.download_extract('banana-detection')
-    csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
-                             else 'bananas_val', 'label.csv')
-    csv_data = pd.read_csv(csv_fname)
-    csv_data = csv_data.set_index('img_name')
-    images, targets = [], []
-    for img_name, target in csv_data.iterrows():
-        images.append(torchvision.io.read_image(
-            os.path.join(data_dir, 'bananas_train' if is_train else
-                         'bananas_val', 'images', f'{img_name}')))
-        # Here `target` contains (class, upper-left x, upper-left y,
-        # lower-right x, lower-right y), where all the images have the same
-        # banana class (index 0)
-        targets.append(list(target))
-    return images, torch.tensor(targets).unsqueeze(1) / 256
-
-class BananasDataset(torch.utils.data.Dataset):
-    """A customized dataset to load the banana detection dataset.
-
-    Defined in :numref:`sec_object-detection-dataset`"""
-    def __init__(self, is_train):
-        self.features, self.labels = read_data_bananas(is_train)
-        print('read ' + str(len(self.features)) + (f' training examples' if
-              is_train else f' validation examples'))
-
-    def __getitem__(self, idx):
-        return (self.features[idx].float(), self.labels[idx])
-
-    def __len__(self):
-        return len(self.features)
-
-def load_data_bananas(batch_size):
-    """Load the banana detection dataset.
-
-    Defined in :numref:`sec_object-detection-dataset`"""
-    train_iter = torch.utils.data.DataLoader(BananasDataset(is_train=True),
-                                             batch_size, shuffle=True)
-    val_iter = torch.utils.data.DataLoader(BananasDataset(is_train=False),
-                                           batch_size)
-    return train_iter, val_iter
-
-d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
-                           '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
-
-def read_voc_images(voc_dir, is_train=True):
-    """Read all VOC feature and label images.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-    txt_fname = os.path.join(voc_dir, 'ImageSets', 'Segmentation',
-                             'train.txt' if is_train else 'val.txt')
-    mode = torchvision.io.image.ImageReadMode.RGB
-    with open(txt_fname, 'r') as f:
-        images = f.read().split()
-    features, labels = [], []
-    for i, fname in enumerate(images):
-        features.append(torchvision.io.read_image(os.path.join(
-            voc_dir, 'JPEGImages', f'{fname}.jpg')))
-        labels.append(torchvision.io.read_image(os.path.join(
-            voc_dir, 'SegmentationClass' ,f'{fname}.png'), mode))
-    return features, labels
-
-VOC_COLORMAP = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
-                [0, 0, 128], [128, 0, 128], [0, 128, 128], [128, 128, 128],
-                [64, 0, 0], [192, 0, 0], [64, 128, 0], [192, 128, 0],
-                [64, 0, 128], [192, 0, 128], [64, 128, 128], [192, 128, 128],
-                [0, 64, 0], [128, 64, 0], [0, 192, 0], [128, 192, 0],
-                [0, 64, 128]]
-
-VOC_CLASSES = ['background', 'aeroplane', 'bicycle', 'bird', 'boat',
-               'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
-               'diningtable', 'dog', 'horse', 'motorbike', 'person',
-               'potted plant', 'sheep', 'sofa', 'train', 'tv/monitor']
-
-def voc_colormap2label():
-    """Build the mapping from RGB to class indices for VOC labels.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-    colormap2label = torch.zeros(256 ** 3, dtype=torch.long)
-    for i, colormap in enumerate(VOC_COLORMAP):
-        colormap2label[
-            (colormap[0] * 256 + colormap[1]) * 256 + colormap[2]] = i
-    return colormap2label
-
-def voc_label_indices(colormap, colormap2label):
-    """Map any RGB values in VOC labels to their class indices.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-    colormap = colormap.permute(1, 2, 0).numpy().astype('int32')
-    idx = ((colormap[:, :, 0] * 256 + colormap[:, :, 1]) * 256
-           + colormap[:, :, 2])
-    return colormap2label[idx]
-
-def voc_rand_crop(feature, label, height, width):
-    """Randomly crop both feature and label images.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-    rect = torchvision.transforms.RandomCrop.get_params(
-        feature, (height, width))
-    feature = torchvision.transforms.functional.crop(feature, *rect)
-    label = torchvision.transforms.functional.crop(label, *rect)
-    return feature, label
-
-class VOCSegDataset(torch.utils.data.Dataset):
-    """A customized dataset to load the VOC dataset.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-
-    def __init__(self, is_train, crop_size, voc_dir):
-        self.transform = torchvision.transforms.Normalize(
-            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        self.crop_size = crop_size
-        features, labels = read_voc_images(voc_dir, is_train=is_train)
-        self.features = [self.normalize_image(feature)
-                         for feature in self.filter(features)]
-        self.labels = self.filter(labels)
-        self.colormap2label = voc_colormap2label()
-        print('read ' + str(len(self.features)) + ' examples')
-
-    def normalize_image(self, img):
-        return self.transform(img.float() / 255)
-
-    def filter(self, imgs):
-        return [img for img in imgs if (
-            img.shape[1] >= self.crop_size[0] and
-            img.shape[2] >= self.crop_size[1])]
-
-    def __getitem__(self, idx):
-        feature, label = voc_rand_crop(self.features[idx], self.labels[idx],
-                                       *self.crop_size)
-        return (feature, voc_label_indices(label, self.colormap2label))
-
-    def __len__(self):
-        return len(self.features)
-
-def load_data_voc(batch_size, crop_size):
-    """Load the VOC semantic segmentation dataset.
-
-    Defined in :numref:`sec_semantic_segmentation`"""
-    voc_dir = d2l.download_extract('voc2012', os.path.join(
-        'VOCdevkit', 'VOC2012'))
-    num_workers = d2l.get_dataloader_workers()
-    train_iter = torch.utils.data.DataLoader(
-        VOCSegDataset(True, crop_size, voc_dir), batch_size,
-        shuffle=True, drop_last=True, num_workers=num_workers)
-    test_iter = torch.utils.data.DataLoader(
-        VOCSegDataset(False, crop_size, voc_dir), batch_size,
-        drop_last=True, num_workers=num_workers)
-    return train_iter, test_iter
-
-d2l.DATA_HUB['cifar10_tiny'] = (d2l.DATA_URL + 'kaggle_cifar10_tiny.zip',
-                                '2068874e4b9a9f0fb07ebe0ad2b29754449ccacd')
-
-def read_csv_labels(fname):
-    """Read `fname` to return a filename to label dictionary.
-
-    Defined in :numref:`sec_kaggle_cifar10`"""
-    with open(fname, 'r') as f:
-        # Skip the file header line (column name)
-        lines = f.readlines()[1:]
-    tokens = [l.rstrip().split(',') for l in lines]
-    return dict(((name, label) for name, label in tokens))
-
-def copyfile(filename, target_dir):
-    """Copy a file into a target directory.
-
-    Defined in :numref:`sec_kaggle_cifar10`"""
-    os.makedirs(target_dir, exist_ok=True)
-    shutil.copy(filename, target_dir)
-
-def reorg_train_valid(data_dir, labels, valid_ratio):
-    """Split the validation set out of the original training set.
-
-    Defined in :numref:`sec_kaggle_cifar10`"""
-    # The number of examples of the class that has the fewest examples in the
-    # training dataset
-    n = collections.Counter(labels.values()).most_common()[-1][1]
-    # The number of examples per class for the validation set
-    n_valid_per_label = max(1, math.floor(n * valid_ratio))
-    label_count = {}
-    for train_file in os.listdir(os.path.join(data_dir, 'train')):
-        label = labels[train_file.split('.')[0]]
-        fname = os.path.join(data_dir, 'train', train_file)
-        copyfile(fname, os.path.join(data_dir, 'train_valid_test',
-                                     'train_valid', label))
-        if label not in label_count or label_count[label] < n_valid_per_label:
-            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
-                                         'valid', label))
-            label_count[label] = label_count.get(label, 0) + 1
-        else:
-            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
-                                         'train', label))
-    return n_valid_per_label
-
-def reorg_test(data_dir):
-    """Organize the testing set for data loading during prediction.
-
-    Defined in :numref:`sec_kaggle_cifar10`"""
-    for test_file in os.listdir(os.path.join(data_dir, 'test')):
-        copyfile(os.path.join(data_dir, 'test', test_file),
-                 os.path.join(data_dir, 'train_valid_test', 'test',
-                              'unknown'))
-
-d2l.DATA_HUB['dog_tiny'] = (d2l.DATA_URL + 'kaggle_dog_tiny.zip',
-                            '0cb91d09b814ecdc07b50f31f8dcad3e81d6a86d')
+def update_D(X, Z, net_D, net_G, loss, trainer_D):
+    """Update discriminator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = X.shape[0]
+    ones = torch.ones((batch_size,), device=X.device)
+    zeros = torch.zeros((batch_size,), device=X.device)
+    trainer_D.zero_grad()
+    real_Y = net_D(X)
+    fake_X = net_G(Z)
+    # Do not need to compute gradient for `net_G`, detach it from
+    # computing gradients.
+    fake_Y = net_D(fake_X.detach())
+    loss_D = (loss(real_Y, ones.reshape(real_Y.shape)) +
+              loss(fake_Y, zeros.reshape(fake_Y.shape))) / 2
+    loss_D.backward()
+    trainer_D.step()
+    return loss_D
+
+def update_G(Z, net_D, net_G, loss, trainer_G):
+    """Update generator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = Z.shape[0]
+    ones = torch.ones((batch_size,), device=Z.device)
+    trainer_G.zero_grad()
+    # We could reuse `fake_X` from `update_D` to save computation
+    fake_X = net_G(Z)
+    # Recomputing `fake_Y` is needed since `net_D` is changed
+    fake_Y = net_D(fake_X)
+    loss_G = loss(fake_Y, ones.reshape(fake_Y.shape))
+    loss_G.backward()
+    trainer_G.step()
+    return loss_G
+
+d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
+                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
                        '319d85e578af0cdc590547f26231e4e31cdf1e42')
@@ -2984,6 +2523,526 @@ def predict_snli(net, vocab, premise, hypothesis):
     return 'entailment' if label == 0 else 'contradiction' if label == 1 \
             else 'neutral'
 
+def train_batch_ch13(net, X, y, loss, trainer, devices):
+    """Train for a minibatch with multiple GPUs (defined in Chapter 13).
+
+    Defined in :numref:`sec_image_augmentation`"""
+    if isinstance(X, list):
+        # Required for BERT fine-tuning (to be covered later)
+        X = [x.to(devices[0]) for x in X]
+    else:
+        X = X.to(devices[0])
+    y = y.to(devices[0])
+    net.train()
+    trainer.zero_grad()
+    pred = net(X)
+    l = loss(pred, y)
+    l.sum().backward()
+    trainer.step()
+    train_loss_sum = l.sum() if l.numel() > 1 else l * y.numel()
+    train_acc_sum = d2l.accuracy(pred, y)
+    return train_loss_sum, train_acc_sum
+
+def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
+               devices=d2l.try_all_gpus()):
+    """Train a model with multiple GPUs (defined in Chapter 13).
+
+    Defined in :numref:`sec_image_augmentation`"""
+    timer, num_batches = d2l.Timer(), len(train_iter)
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs], ylim=[0, 1],
+                            legend=['train loss', 'train acc', 'test acc'])
+    net = nn.DataParallel(net, device_ids=devices).to(devices[0])
+    for epoch in range(num_epochs):
+        # Sum of training loss, sum of training accuracy, no. of examples,
+        # no. of examples
+        metric = d2l.Accumulator(4)
+        for i, (features, labels) in enumerate(train_iter):
+            timer.start()
+            l, acc = train_batch_ch13(
+                net, features, labels, loss, trainer, devices)
+            metric.add(l, acc, labels.shape[0], labels.numel())
+            timer.stop()
+            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+                animator.add(epoch + (i + 1) / num_batches,
+                             (metric[0] / metric[2], metric[1] / metric[3],
+                              None))
+        test_acc = d2l.evaluate_accuracy_gpu(net, test_iter)
+        animator.add(epoch + 1, (None, None, test_acc))
+    print(f'loss {metric[0] / metric[2]:.3f}, train acc '
+          f'{metric[1] / metric[3]:.3f}, test acc {test_acc:.3f}')
+    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec on '
+          f'{str(devices)}')
+
+d2l.DATA_HUB['hotdog'] = (d2l.DATA_URL + 'hotdog.zip', 
+                         'fba480ffa8aa7e0febbb511d181409f899b9baa5')
+
+def box_corner_to_center(boxes):
+    """Convert from (upper-left, lower-right) to (center, width, height).
+
+    Defined in :numref:`sec_bbox`"""
+    x1, y1, x2, y2 = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+    cx = (x1 + x2) / 2
+    cy = (y1 + y2) / 2
+    w = x2 - x1
+    h = y2 - y1
+    boxes = d2l.stack((cx, cy, w, h), axis=-1)
+    return boxes
+
+def box_center_to_corner(boxes):
+    """Convert from (center, width, height) to (upper-left, lower-right).
+
+    Defined in :numref:`sec_bbox`"""
+    cx, cy, w, h = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+    x1 = cx - 0.5 * w
+    y1 = cy - 0.5 * h
+    x2 = cx + 0.5 * w
+    y2 = cy + 0.5 * h
+    boxes = d2l.stack((x1, y1, x2, y2), axis=-1)
+    return boxes
+
+def bbox_to_rect(bbox, color):
+    """Convert bounding box to matplotlib format.
+
+    Defined in :numref:`sec_bbox`"""
+    # Convert the bounding box (upper-left x, upper-left y, lower-right x,
+    # lower-right y) format to the matplotlib format: ((upper-left x,
+    # upper-left y), width, height)
+    return d2l.plt.Rectangle(
+        xy=(bbox[0], bbox[1]), width=bbox[2]-bbox[0], height=bbox[3]-bbox[1],
+        fill=False, edgecolor=color, linewidth=2)
+
+def multibox_prior(data, sizes, ratios):
+    """Generate anchor boxes with different shapes centered on each pixel.
+
+    Defined in :numref:`sec_anchor`"""
+    in_height, in_width = data.shape[-2:]
+    device, num_sizes, num_ratios = data.device, len(sizes), len(ratios)
+    boxes_per_pixel = (num_sizes + num_ratios - 1)
+    size_tensor = d2l.tensor(sizes, device=device)
+    ratio_tensor = d2l.tensor(ratios, device=device)
+    # Offsets are required to move the anchor to the center of a pixel. Since
+    # a pixel has height=1 and width=1, we choose to offset our centers by 0.5
+    offset_h, offset_w = 0.5, 0.5
+    steps_h = 1.0 / in_height  # Scaled steps in y axis
+    steps_w = 1.0 / in_width  # Scaled steps in x axis
+
+    # Generate all center points for the anchor boxes
+    center_h = (torch.arange(in_height, device=device) + offset_h) * steps_h
+    center_w = (torch.arange(in_width, device=device) + offset_w) * steps_w
+    shift_y, shift_x = torch.meshgrid(center_h, center_w, indexing='ij')
+    shift_y, shift_x = shift_y.reshape(-1), shift_x.reshape(-1)
+
+    # Generate `boxes_per_pixel` number of heights and widths that are later
+    # used to create anchor box corner coordinates (xmin, xmax, ymin, ymax)
+    w = torch.cat((size_tensor * torch.sqrt(ratio_tensor[0]),
+                   sizes[0] * torch.sqrt(ratio_tensor[1:])))\
+                   * in_height / in_width  # Handle rectangular inputs
+    h = torch.cat((size_tensor / torch.sqrt(ratio_tensor[0]),
+                   sizes[0] / torch.sqrt(ratio_tensor[1:])))
+    # Divide by 2 to get half height and half width
+    anchor_manipulations = torch.stack((-w, -h, w, h)).T.repeat(
+                                        in_height * in_width, 1) / 2
+
+    # Each center point will have `boxes_per_pixel` number of anchor boxes, so
+    # generate a grid of all anchor box centers with `boxes_per_pixel` repeats
+    out_grid = torch.stack([shift_x, shift_y, shift_x, shift_y],
+                dim=1).repeat_interleave(boxes_per_pixel, dim=0)
+    output = out_grid + anchor_manipulations
+    return output.unsqueeze(0)
+
+def show_bboxes(axes, bboxes, labels=None, colors=None):
+    """Show bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+
+    def make_list(obj, default_values=None):
+        if obj is None:
+            obj = default_values
+        elif not isinstance(obj, (list, tuple)):
+            obj = [obj]
+        return obj
+
+    labels = make_list(labels)
+    colors = make_list(colors, ['b', 'g', 'r', 'm', 'c'])
+    for i, bbox in enumerate(bboxes):
+        color = colors[i % len(colors)]
+        rect = d2l.bbox_to_rect(d2l.numpy(bbox), color)
+        axes.add_patch(rect)
+        if labels and len(labels) > i:
+            text_color = 'k' if color == 'w' else 'w'
+            axes.text(rect.xy[0], rect.xy[1], labels[i],
+                      va='center', ha='center', fontsize=9, color=text_color,
+                      bbox=dict(facecolor=color, lw=0))
+
+def box_iou(boxes1, boxes2):
+    """Compute pairwise IoU across two lists of anchor or bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    box_area = lambda boxes: ((boxes[:, 2] - boxes[:, 0]) *
+                              (boxes[:, 3] - boxes[:, 1]))
+    # Shape of `boxes1`, `boxes2`, `areas1`, `areas2`: (no. of boxes1, 4),
+    # (no. of boxes2, 4), (no. of boxes1,), (no. of boxes2,)
+    areas1 = box_area(boxes1)
+    areas2 = box_area(boxes2)
+    # Shape of `inter_upperlefts`, `inter_lowerrights`, `inters`: (no. of
+    # boxes1, no. of boxes2, 2)
+    inter_upperlefts = torch.max(boxes1[:, None, :2], boxes2[:, :2])
+    inter_lowerrights = torch.min(boxes1[:, None, 2:], boxes2[:, 2:])
+    inters = (inter_lowerrights - inter_upperlefts).clamp(min=0)
+    # Shape of `inter_areas` and `union_areas`: (no. of boxes1, no. of boxes2)
+    inter_areas = inters[:, :, 0] * inters[:, :, 1]
+    union_areas = areas1[:, None] + areas2 - inter_areas
+    return inter_areas / union_areas
+
+def assign_anchor_to_bbox(ground_truth, anchors, device, iou_threshold=0.5):
+    """Assign closest ground-truth bounding boxes to anchor boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    num_anchors, num_gt_boxes = anchors.shape[0], ground_truth.shape[0]
+    # Element x_ij in the i-th row and j-th column is the IoU of the anchor
+    # box i and the ground-truth bounding box j
+    jaccard = box_iou(anchors, ground_truth)
+    # Initialize the tensor to hold the assigned ground-truth bounding box for
+    # each anchor
+    anchors_bbox_map = torch.full((num_anchors,), -1, dtype=torch.long,
+                                  device=device)
+    # Assign ground-truth bounding boxes according to the threshold
+    max_ious, indices = torch.max(jaccard, dim=1)
+    anc_i = torch.nonzero(max_ious >= iou_threshold).reshape(-1)
+    box_j = indices[max_ious >= iou_threshold]
+    anchors_bbox_map[anc_i] = box_j
+    col_discard = torch.full((num_anchors,), -1)
+    row_discard = torch.full((num_gt_boxes,), -1)
+    for _ in range(num_gt_boxes):
+        max_idx = torch.argmax(jaccard)  # Find the largest IoU
+        box_idx = (max_idx % num_gt_boxes).long()
+        anc_idx = torch.div(max_idx, num_gt_boxes, rounding_mode='floor')
+        anchors_bbox_map[anc_idx] = box_idx
+        jaccard[:, box_idx] = col_discard
+        jaccard[anc_idx, :] = row_discard
+    return anchors_bbox_map
+
+def offset_boxes(anchors, assigned_bb, eps=1e-6):
+    """Transform for anchor box offsets.
+
+    Defined in :numref:`sec_anchor`"""
+    c_anc = d2l.box_corner_to_center(anchors)
+    c_assigned_bb = d2l.box_corner_to_center(assigned_bb)
+    offset_xy = 10 * (c_assigned_bb[:, :2] - c_anc[:, :2]) / c_anc[:, 2:]
+    offset_wh = 5 * d2l.log(eps + c_assigned_bb[:, 2:] / c_anc[:, 2:])
+    offset = d2l.concat([offset_xy, offset_wh], axis=1)
+    return offset
+
+def multibox_target(anchors, labels):
+    """Label anchor boxes using ground-truth bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    batch_size, anchors = labels.shape[0], anchors.squeeze(0)
+    batch_offset, batch_mask, batch_class_labels = [], [], []
+    device, num_anchors = anchors.device, anchors.shape[0]
+    for i in range(batch_size):
+        label = labels[i, :, :]
+        anchors_bbox_map = assign_anchor_to_bbox(
+            label[:, 1:], anchors, device)
+        bbox_mask = ((anchors_bbox_map >= 0).float().unsqueeze(-1)).repeat(
+            1, 4)
+        # Initialize class labels and assigned bounding box coordinates with
+        # zeros
+        class_labels = torch.zeros(num_anchors, dtype=torch.long,
+                                   device=device)
+        assigned_bb = torch.zeros((num_anchors, 4), dtype=torch.float32,
+                                  device=device)
+        # Label classes of anchor boxes using their assigned ground-truth
+        # bounding boxes. If an anchor box is not assigned any, we label its
+        # class as background (the value remains zero)
+        indices_true = torch.nonzero(anchors_bbox_map >= 0)
+        bb_idx = anchors_bbox_map[indices_true]
+        class_labels[indices_true] = label[bb_idx, 0].long() + 1
+        assigned_bb[indices_true] = label[bb_idx, 1:]
+        # Offset transformation
+        offset = offset_boxes(anchors, assigned_bb) * bbox_mask
+        batch_offset.append(offset.reshape(-1))
+        batch_mask.append(bbox_mask.reshape(-1))
+        batch_class_labels.append(class_labels)
+    bbox_offset = torch.stack(batch_offset)
+    bbox_mask = torch.stack(batch_mask)
+    class_labels = torch.stack(batch_class_labels)
+    return (bbox_offset, bbox_mask, class_labels)
+
+def offset_inverse(anchors, offset_preds):
+    """Predict bounding boxes based on anchor boxes with predicted offsets.
+
+    Defined in :numref:`sec_anchor`"""
+    anc = d2l.box_corner_to_center(anchors)
+    pred_bbox_xy = (offset_preds[:, :2] * anc[:, 2:] / 10) + anc[:, :2]
+    pred_bbox_wh = d2l.exp(offset_preds[:, 2:] / 5) * anc[:, 2:]
+    pred_bbox = d2l.concat((pred_bbox_xy, pred_bbox_wh), axis=1)
+    predicted_bbox = d2l.box_center_to_corner(pred_bbox)
+    return predicted_bbox
+
+def nms(boxes, scores, iou_threshold):
+    """Sort confidence scores of predicted bounding boxes.
+
+    Defined in :numref:`sec_anchor`"""
+    B = torch.argsort(scores, dim=-1, descending=True)
+    keep = []  # Indices of predicted bounding boxes that will be kept
+    while B.numel() > 0:
+        i = B[0]
+        keep.append(i)
+        if B.numel() == 1: break
+        iou = box_iou(boxes[i, :].reshape(-1, 4),
+                      boxes[B[1:], :].reshape(-1, 4)).reshape(-1)
+        inds = torch.nonzero(iou <= iou_threshold).reshape(-1)
+        B = B[inds + 1]
+    return d2l.tensor(keep, device=boxes.device)
+
+def multibox_detection(cls_probs, offset_preds, anchors, nms_threshold=0.5,
+                       pos_threshold=0.009999999):
+    """Predict bounding boxes using non-maximum suppression.
+
+    Defined in :numref:`sec_anchor`"""
+    device, batch_size = cls_probs.device, cls_probs.shape[0]
+    anchors = anchors.squeeze(0)
+    num_classes, num_anchors = cls_probs.shape[1], cls_probs.shape[2]
+    out = []
+    for i in range(batch_size):
+        cls_prob, offset_pred = cls_probs[i], offset_preds[i].reshape(-1, 4)
+        conf, class_id = torch.max(cls_prob[1:], 0)
+        predicted_bb = offset_inverse(anchors, offset_pred)
+        keep = nms(predicted_bb, conf, nms_threshold)
+        # Find all non-`keep` indices and set the class to background
+        all_idx = torch.arange(num_anchors, dtype=torch.long, device=device)
+        combined = torch.cat((keep, all_idx))
+        uniques, counts = combined.unique(return_counts=True)
+        non_keep = uniques[counts == 1]
+        all_id_sorted = torch.cat((keep, non_keep))
+        class_id[non_keep] = -1
+        class_id = class_id[all_id_sorted]
+        conf, predicted_bb = conf[all_id_sorted], predicted_bb[all_id_sorted]
+        # Here `pos_threshold` is a threshold for positive (non-background)
+        # predictions
+        below_min_idx = (conf < pos_threshold)
+        class_id[below_min_idx] = -1
+        conf[below_min_idx] = 1 - conf[below_min_idx]
+        pred_info = torch.cat((class_id.unsqueeze(1),
+                               conf.unsqueeze(1),
+                               predicted_bb), dim=1)
+        out.append(pred_info)
+    return d2l.stack(out)
+
+d2l.DATA_HUB['banana-detection'] = (
+    d2l.DATA_URL + 'banana-detection.zip',
+    '5de26c8fce5ccdea9f91267273464dc968d20d72')
+
+def read_data_bananas(is_train=True):
+    """Read the banana detection dataset images and labels.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    data_dir = d2l.download_extract('banana-detection')
+    csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
+                             else 'bananas_val', 'label.csv')
+    csv_data = pd.read_csv(csv_fname)
+    csv_data = csv_data.set_index('img_name')
+    images, targets = [], []
+    for img_name, target in csv_data.iterrows():
+        images.append(torchvision.io.read_image(
+            os.path.join(data_dir, 'bananas_train' if is_train else
+                         'bananas_val', 'images', f'{img_name}')))
+        # Here `target` contains (class, upper-left x, upper-left y,
+        # lower-right x, lower-right y), where all the images have the same
+        # banana class (index 0)
+        targets.append(list(target))
+    return images, torch.tensor(targets).unsqueeze(1) / 256
+
+class BananasDataset(torch.utils.data.Dataset):
+    """A customized dataset to load the banana detection dataset.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    def __init__(self, is_train):
+        self.features, self.labels = read_data_bananas(is_train)
+        print('read ' + str(len(self.features)) + (f' training examples' if
+              is_train else f' validation examples'))
+
+    def __getitem__(self, idx):
+        return (self.features[idx].float(), self.labels[idx])
+
+    def __len__(self):
+        return len(self.features)
+
+def load_data_bananas(batch_size):
+    """Load the banana detection dataset.
+
+    Defined in :numref:`sec_object-detection-dataset`"""
+    train_iter = torch.utils.data.DataLoader(BananasDataset(is_train=True),
+                                             batch_size, shuffle=True)
+    val_iter = torch.utils.data.DataLoader(BananasDataset(is_train=False),
+                                           batch_size)
+    return train_iter, val_iter
+
+d2l.DATA_HUB['voc2012'] = (d2l.DATA_URL + 'VOCtrainval_11-May-2012.tar',
+                           '4e443f8a2eca6b1dac8a6c57641b67dd40621a49')
+
+def read_voc_images(voc_dir, is_train=True):
+    """Read all VOC feature and label images.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    txt_fname = os.path.join(voc_dir, 'ImageSets', 'Segmentation',
+                             'train.txt' if is_train else 'val.txt')
+    mode = torchvision.io.image.ImageReadMode.RGB
+    with open(txt_fname, 'r') as f:
+        images = f.read().split()
+    features, labels = [], []
+    for i, fname in enumerate(images):
+        features.append(torchvision.io.read_image(os.path.join(
+            voc_dir, 'JPEGImages', f'{fname}.jpg')))
+        labels.append(torchvision.io.read_image(os.path.join(
+            voc_dir, 'SegmentationClass' ,f'{fname}.png'), mode))
+    return features, labels
+
+VOC_COLORMAP = [[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
+                [0, 0, 128], [128, 0, 128], [0, 128, 128], [128, 128, 128],
+                [64, 0, 0], [192, 0, 0], [64, 128, 0], [192, 128, 0],
+                [64, 0, 128], [192, 0, 128], [64, 128, 128], [192, 128, 128],
+                [0, 64, 0], [128, 64, 0], [0, 192, 0], [128, 192, 0],
+                [0, 64, 128]]
+
+VOC_CLASSES = ['background', 'aeroplane', 'bicycle', 'bird', 'boat',
+               'bottle', 'bus', 'car', 'cat', 'chair', 'cow',
+               'diningtable', 'dog', 'horse', 'motorbike', 'person',
+               'potted plant', 'sheep', 'sofa', 'train', 'tv/monitor']
+
+def voc_colormap2label():
+    """Build the mapping from RGB to class indices for VOC labels.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    colormap2label = torch.zeros(256 ** 3, dtype=torch.long)
+    for i, colormap in enumerate(VOC_COLORMAP):
+        colormap2label[
+            (colormap[0] * 256 + colormap[1]) * 256 + colormap[2]] = i
+    return colormap2label
+
+def voc_label_indices(colormap, colormap2label):
+    """Map any RGB values in VOC labels to their class indices.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    colormap = colormap.permute(1, 2, 0).numpy().astype('int32')
+    idx = ((colormap[:, :, 0] * 256 + colormap[:, :, 1]) * 256
+           + colormap[:, :, 2])
+    return colormap2label[idx]
+
+def voc_rand_crop(feature, label, height, width):
+    """Randomly crop both feature and label images.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    rect = torchvision.transforms.RandomCrop.get_params(
+        feature, (height, width))
+    feature = torchvision.transforms.functional.crop(feature, *rect)
+    label = torchvision.transforms.functional.crop(label, *rect)
+    return feature, label
+
+class VOCSegDataset(torch.utils.data.Dataset):
+    """A customized dataset to load the VOC dataset.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+
+    def __init__(self, is_train, crop_size, voc_dir):
+        self.transform = torchvision.transforms.Normalize(
+            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        self.crop_size = crop_size
+        features, labels = read_voc_images(voc_dir, is_train=is_train)
+        self.features = [self.normalize_image(feature)
+                         for feature in self.filter(features)]
+        self.labels = self.filter(labels)
+        self.colormap2label = voc_colormap2label()
+        print('read ' + str(len(self.features)) + ' examples')
+
+    def normalize_image(self, img):
+        return self.transform(img.float() / 255)
+
+    def filter(self, imgs):
+        return [img for img in imgs if (
+            img.shape[1] >= self.crop_size[0] and
+            img.shape[2] >= self.crop_size[1])]
+
+    def __getitem__(self, idx):
+        feature, label = voc_rand_crop(self.features[idx], self.labels[idx],
+                                       *self.crop_size)
+        return (feature, voc_label_indices(label, self.colormap2label))
+
+    def __len__(self):
+        return len(self.features)
+
+def load_data_voc(batch_size, crop_size):
+    """Load the VOC semantic segmentation dataset.
+
+    Defined in :numref:`sec_semantic_segmentation`"""
+    voc_dir = d2l.download_extract('voc2012', os.path.join(
+        'VOCdevkit', 'VOC2012'))
+    num_workers = d2l.get_dataloader_workers()
+    train_iter = torch.utils.data.DataLoader(
+        VOCSegDataset(True, crop_size, voc_dir), batch_size,
+        shuffle=True, drop_last=True, num_workers=num_workers)
+    test_iter = torch.utils.data.DataLoader(
+        VOCSegDataset(False, crop_size, voc_dir), batch_size,
+        drop_last=True, num_workers=num_workers)
+    return train_iter, test_iter
+
+d2l.DATA_HUB['cifar10_tiny'] = (d2l.DATA_URL + 'kaggle_cifar10_tiny.zip',
+                                '2068874e4b9a9f0fb07ebe0ad2b29754449ccacd')
+
+def read_csv_labels(fname):
+    """Read `fname` to return a filename to label dictionary.
+
+    Defined in :numref:`sec_kaggle_cifar10`"""
+    with open(fname, 'r') as f:
+        # Skip the file header line (column name)
+        lines = f.readlines()[1:]
+    tokens = [l.rstrip().split(',') for l in lines]
+    return dict(((name, label) for name, label in tokens))
+
+def copyfile(filename, target_dir):
+    """Copy a file into a target directory.
+
+    Defined in :numref:`sec_kaggle_cifar10`"""
+    os.makedirs(target_dir, exist_ok=True)
+    shutil.copy(filename, target_dir)
+
+def reorg_train_valid(data_dir, labels, valid_ratio):
+    """Split the validation set out of the original training set.
+
+    Defined in :numref:`sec_kaggle_cifar10`"""
+    # The number of examples of the class that has the fewest examples in the
+    # training dataset
+    n = collections.Counter(labels.values()).most_common()[-1][1]
+    # The number of examples per class for the validation set
+    n_valid_per_label = max(1, math.floor(n * valid_ratio))
+    label_count = {}
+    for train_file in os.listdir(os.path.join(data_dir, 'train')):
+        label = labels[train_file.split('.')[0]]
+        fname = os.path.join(data_dir, 'train', train_file)
+        copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                     'train_valid', label))
+        if label not in label_count or label_count[label] < n_valid_per_label:
+            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                         'valid', label))
+            label_count[label] = label_count.get(label, 0) + 1
+        else:
+            copyfile(fname, os.path.join(data_dir, 'train_valid_test',
+                                         'train', label))
+    return n_valid_per_label
+
+def reorg_test(data_dir):
+    """Organize the testing set for data loading during prediction.
+
+    Defined in :numref:`sec_kaggle_cifar10`"""
+    for test_file in os.listdir(os.path.join(data_dir, 'test')):
+        copyfile(os.path.join(data_dir, 'test', test_file),
+                 os.path.join(data_dir, 'train_valid_test', 'test',
+                              'unknown'))
+
+d2l.DATA_HUB['dog_tiny'] = (d2l.DATA_URL + 'kaggle_dog_tiny.zip',
+                            '0cb91d09b814ecdc07b50f31f8dcad3e81d6a86d')
+
 def rbfkernel(x1, x2, ls=4.):
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
     return np.exp(-(1. / ls**2 / 2) * (dist ** 2))
@@ -3150,44 +3209,6 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
             return []
         sorted_rung = sorted(rung, key=lambda x: x[1])
         return [x[0] for x in sorted_rung[:n]]
-
-def update_D(X, Z, net_D, net_G, loss, trainer_D):
-    """Update discriminator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = X.shape[0]
-    ones = torch.ones((batch_size,), device=X.device)
-    zeros = torch.zeros((batch_size,), device=X.device)
-    trainer_D.zero_grad()
-    real_Y = net_D(X)
-    fake_X = net_G(Z)
-    # Do not need to compute gradient for `net_G`, detach it from
-    # computing gradients.
-    fake_Y = net_D(fake_X.detach())
-    loss_D = (loss(real_Y, ones.reshape(real_Y.shape)) +
-              loss(fake_Y, zeros.reshape(fake_Y.shape))) / 2
-    loss_D.backward()
-    trainer_D.step()
-    return loss_D
-
-def update_G(Z, net_D, net_G, loss, trainer_G):
-    """Update generator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = Z.shape[0]
-    ones = torch.ones((batch_size,), device=Z.device)
-    trainer_G.zero_grad()
-    # We could reuse `fake_X` from `update_D` to save computation
-    fake_X = net_G(Z)
-    # Recomputing `fake_Y` is needed since `net_D` is changed
-    fake_Y = net_D(fake_X)
-    loss_G = loss(fake_Y, ones.reshape(fake_Y.shape))
-    loss_G.backward()
-    trainer_G.step()
-    return loss_G
-
-d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
-                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 d2l.DATA_HUB['ml-100k'] = (
     'https://files.grouplens.org/datasets/movielens/ml-100k.zip',
@@ -4106,6 +4127,44 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
             break
         output_seq.append(pred)
     return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
+
+class AttentionDecoder(d2l.Decoder):
+    """The base attention-based decoder interface.
+
+    Defined in :numref:`sec_seq2seq_attention`"""
+    def __init__(self):
+        super().__init__()
+
+    @property
+    def attention_weights(self):
+        raise NotImplementedError
+
+class TransformerEncoder(d2l.Encoder):
+    """The Transformer encoder.
+
+    Defined in :numref:`sec_transformer`"""
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens,
+                 num_heads, num_blks, dropout, use_bias=False):
+        super().__init__()
+        self.num_hiddens = num_hiddens
+        self.embedding = nn.Embedding(vocab_size, num_hiddens)
+        self.pos_encoding = d2l.PositionalEncoding(num_hiddens, dropout)
+        self.blks = nn.Sequential()
+        for i in range(num_blks):
+            self.blks.add_module("block"+str(i), TransformerEncoderBlock(
+                num_hiddens, ffn_num_hiddens, num_heads, dropout, use_bias))
+
+    def forward(self, X, valid_lens):
+        # Since positional encoding values are between -1 and 1, the embedding
+        # values are multiplied by the square root of the embedding dimension
+        # to rescale before they are summed up
+        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
+        self.attention_weights = [None] * len(self.blks)
+        for i, blk in enumerate(self.blks):
+            X = blk(X, valid_lens)
+            self.attention_weights[
+                i] = blk.attention.attention.attention_weights
+        return X
 
 
 ones_like = torch.ones_like

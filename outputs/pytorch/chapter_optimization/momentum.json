@@ -4,12 +4,17 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:ec6fd3eff997e16ebf489492cbc9791c26072dee50dd538aedea6cb3551cf3ec",
+    "d2l_lib_fingerprint": "sha256:37488325a80540de64d2cbfee2e040907efc00f88483d3574109cfc048a0e14f",
     "max_inline_bytes": 0
   },
   "cells": {
+    "momentum": {
+      "code_fingerprint": "sha256:83ee1804e04d4af489cb08927d789ef694355b923bc3e421818bd1a1431fe83d",
+      "kind": "text",
+      "outputs": []
+    },
     "momentum-an-ill-conditioned-problem-1": {
-      "code_fingerprint": "sha256:49cf802857f21d1be9e4f19cb0bf36a11f02186316f41de8a116814cfce33028",
+      "code_fingerprint": "sha256:9fe469e31ceee1f9338327fcbc7bbf6b8f2361d53fd0f35a83eb82f2166a3233",
       "kind": "mixed",
       "outputs": [
         {
@@ -22,12 +27,12 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-an-ill-conditioned-problem-1-1.svg",
           "bytes": 23964,
-          "sha256": "sha256:e45d8105841646a5bc73c8c707b6f9af79abc77eb75e4e039cf9977af2ff4f27"
+          "sha256": "sha256:abff87538343a6c8b6dce9ff647bb089aabbefe55b83110a24de1ea8bfb74d3b"
         }
       ]
     },
     "momentum-an-ill-conditioned-problem-2": {
-      "code_fingerprint": "sha256:fafbadbcf4d2674a47b311a40b72643ff172c119b1069c30423acb0386e96b6c",
+      "code_fingerprint": "sha256:89631518e36aa25d4dafd37b8a65f563bdc3cc6319ff088669bca78303a4d6f8",
       "kind": "mixed",
       "outputs": [
         {
@@ -40,12 +45,12 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-an-ill-conditioned-problem-2-1.svg",
           "bytes": 22562,
-          "sha256": "sha256:50f175954263846c12cd8eeb898ad947100d91e57c34a59086d27ab56c4ca25f"
+          "sha256": "sha256:f9eee8b4e33b557b769550c1a0f2923501d62feb68cc75c29e3e738e3d146f57"
         }
       ]
     },
     "momentum-the-momentum-method-1": {
-      "code_fingerprint": "sha256:b367745c102b9a8de8978cbf3e520f34c345809c3cd4acc1c1550bebbc7dca04",
+      "code_fingerprint": "sha256:5a47d2c642de80101f5465c5ebbfb74885d6fecd8e77b2b806946c66bf0fc23e",
       "kind": "mixed",
       "outputs": [
         {
@@ -58,12 +63,12 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-the-momentum-method-1-1.svg",
           "bytes": 22432,
-          "sha256": "sha256:f541668d8428410ce333181f8f447e05b5ae329d6303f6d9ea994fbf6ba9e74a"
+          "sha256": "sha256:de57138c8a519d5983fe8dc6034af1b9ddb4ff3ceb3c92024002fb90f9b0d47c"
         }
       ]
     },
     "momentum-the-momentum-method-2": {
-      "code_fingerprint": "sha256:07e51b8b2685b635f432917a47371fb11f04e163f9b6da2c5e02c31750a5f48c",
+      "code_fingerprint": "sha256:5b889462791131d106ec0d7f8fc01bbfc678ef553661ebb077a851893cc26af6",
       "kind": "mixed",
       "outputs": [
         {
@@ -76,12 +81,12 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-the-momentum-method-2-1.svg",
           "bytes": 22436,
-          "sha256": "sha256:26f677e2889282de549ca01ff841a164020b0c774bf447312d640cdd16c0f358"
+          "sha256": "sha256:89d0fc709280ff27839704e31f57d765904de1b945261c0b4da9afadf970e6af"
         }
       ]
     },
     "momentum-effective-sample-weight": {
-      "code_fingerprint": "sha256:95f3c2efd7594862e86c10cbf3444719d1bed382d24f4ca0239f80d00ef972f1",
+      "code_fingerprint": "sha256:163e0349813614ea44607d5241160673ce196ffcb5fd2043de45fe8df9c780a4",
       "kind": "asset",
       "outputs": [
         {
@@ -89,102 +94,143 @@
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-effective-sample-weight-1.svg",
           "bytes": 25361,
-          "sha256": "sha256:46c8377e75548d79913c246098348faff42f6e345f572bd7e816627e9ff7c93c"
+          "sha256": "sha256:e2eaf4afbcace376e1e17246ddb64781e5d387ba05e27d362f7d3aab7f390642"
         }
       ]
     },
-    "momentum-implementation-from-scratch-1": {
-      "code_fingerprint": "sha256:6e1a54797b013ff2f037393b763a7a04888be244b2863425b8255da04973cc07",
-      "kind": "text",
-      "outputs": []
-    },
-    "momentum-implementation-from-scratch-2": {
-      "code_fingerprint": "sha256:dc38e66fbab2a76c85b5392f1478022bd5d7e0aa1065392cdabe8a06fab72419",
-      "kind": "text",
-      "outputs": []
-    },
-    "momentum-implementation-from-scratch-3": {
-      "code_fingerprint": "sha256:303fe34b0b52d1dfee0d59978dd8dd2600c9968f08ff287d2c887332f7328925",
+    "momentum-acceleration-and-damping": {
+      "code_fingerprint": "sha256:e99fe13091976deaa2e0c1497f07ab41aa50020e3a34a5cc8e0cd9cd2bd3d0f5",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.242, 0.113 sec/epoch\n"
+          "text": "epoch 20, x1: 0.195696, x2: -0.249649\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "momentum/momentum-acceleration-and-damping-1.svg",
+          "bytes": 24490,
+          "sha256": "sha256:ae8edd1017595d5c3d71fcd79039a5e6b987ee6b1ea6b40a206dcb4d13780aef"
+        }
+      ]
+    },
+    "momentum-implementation-from-scratch-1": {
+      "code_fingerprint": "sha256:42cde6a12ace3cd4a6add7c2c5aa4c1a7556f9797546afd95970d8eb0f564d45",
+      "kind": "text",
+      "outputs": []
+    },
+    "momentum-implementation-from-scratch-2": {
+      "code_fingerprint": "sha256:44affda1d0eb12c539155f34cf8f38c96236f7c2ab775a3ffe10e129d9ae73fc",
+      "kind": "text",
+      "outputs": []
+    },
+    "momentum-implementation-from-scratch-3": {
+      "code_fingerprint": "sha256:64baea2e4e6df465dfa365242fcc3ce2c3072e5878d3df8bc17c753ff09ed45e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.245, 0.120 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-implementation-from-scratch-3-1.svg",
-          "bytes": 18782,
-          "sha256": "sha256:709de32faa71daf9496ca5050819ed3b3537007fa20315e7541e521316431166"
+          "bytes": 18783,
+          "sha256": "sha256:1a8001eb176707ac29e99b0be7963d1ab6ff233739ed72547f1adeac4b2a5876"
         }
       ]
     },
     "momentum-implementation-from-scratch-4": {
-      "code_fingerprint": "sha256:6b58b85f8e08c65c3aac40bff9e7011f612f5709f552b3c0d06e637fa9152708",
+      "code_fingerprint": "sha256:e5b1db6ab6d48c45ecd94a759b2ded55aa222c3e0343304de6359e41cc77e7a1",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.245, 0.085 sec/epoch\n"
+          "text": "loss: 0.246, 0.069 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-implementation-from-scratch-4-1.svg",
-          "bytes": 18783,
-          "sha256": "sha256:cb81511a1e935ade2f6fb6cffed17482c229922323be8442517d154baaf52dcf"
+          "bytes": 18784,
+          "sha256": "sha256:fb81cfada53c4fc4012535ceb99710dac87d5109d5041245100d0fdd5d592345"
         }
       ]
     },
     "momentum-implementation-from-scratch-5": {
-      "code_fingerprint": "sha256:7d9756327e14ca458a02e8f07a52b03ffc5500ecb5e086c521a5f364c85489fa",
+      "code_fingerprint": "sha256:91fa32b94013ec58b71cf4bedf5cb996307b0b94d44d0549e94081e3f44ee79b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.246, 0.097 sec/epoch\n"
+          "text": "loss: 0.243, 0.066 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-implementation-from-scratch-5-1.svg",
           "bytes": 18782,
-          "sha256": "sha256:90629726192be722e674bdb2d2571ffbbff567df95b7aaf588b20263377e1056"
+          "sha256": "sha256:c2bf77932d7fde4e1215c2973eb7acb9298a2f066444e78f26c97b3a5b5e230c"
         }
       ]
     },
     "momentum-concise-implementation": {
-      "code_fingerprint": "sha256:d5179950c5c6f7bc8dc9b37e550dd7b5eeefd4af590e31082cc1a28b42d04411",
+      "code_fingerprint": "sha256:bc9c6aff8e0a2b84a976b1768950cea564b90747b5364b31e8d9be3c14865d4a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.245, 0.084 sec/epoch\n"
+          "text": "loss: 0.251, 0.064 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "momentum/momentum-concise-implementation-1.svg",
-          "bytes": 18634,
-          "sha256": "sha256:8aae4c9e9b4f323d80182c15b7d8a6ffb444b07581bf60f58efbcaae1233bcc6"
+          "bytes": 18631,
+          "sha256": "sha256:e16c87e5b3309439c8036a45372dbcfba2af4251f4ec470f4b4baf8ecb87f536"
         }
       ]
     },
-    "momentum-scalar-functions": {
-      "code_fingerprint": "sha256:b8bd1843b2f9022dd8dae38453ed404d63b16cbf2b3bf4c695ec800a42932142",
-      "kind": "asset",
+    "momentum-nesterov-momentum-1": {
+      "code_fingerprint": "sha256:13528b90a1bdd5a98cbaae6bde746c8650dc58466a28d66010d1554c58f4d080",
+      "kind": "mixed",
       "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 20, x1: 0.217791, x2: -0.000070\n"
+        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "momentum/momentum-scalar-functions-1.svg",
-          "bytes": 27279,
-          "sha256": "sha256:46640fa3e2cbaa1f467f13e833deddcdca6303cda0f6edc4c308755da80fa67e"
+          "asset": "momentum/momentum-nesterov-momentum-1-1.svg",
+          "bytes": 23582,
+          "sha256": "sha256:dd9b6a1c01a8c3fbc238f64b1b683087518cd6ac06824a4fbd121d1fb90b5092"
+        }
+      ]
+    },
+    "momentum-nesterov-momentum-2": {
+      "code_fingerprint": "sha256:5cc0ecb5c9a40ca1190e26416a5968144ac66261cfdf88e6947c97593d1a1c39",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.248, 0.061 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "momentum/momentum-nesterov-momentum-2-1.svg",
+          "bytes": 18635,
+          "sha256": "sha256:1571f46e0d589c5405568cbc7483da1ad6fe40cb270ec99a8883f7773b1885a7"
         }
       ]
     }

@@ -188,25 +188,31 @@ def fix_all(content):
                   content[first_chapter.start():])
 
     # ── Phase 6: Appendix ──
-    # The "Mathematics for Deep Learning" appendix (logical chapters 21+)
-    # renders with \appendix lettering (A, B, C, …), sections nested (A.1…).
-    # Phase 2 gave each appendix chapter \setcounter{chapter}{ch-1}; under
-    # \appendix we want them counted from 0 (→A), so remap every appendix
-    # counter N>=20 → N-20 (21→A, 22→B, 23→C, …).
-    first_app = re.search(r'\\setcounter\{chapter\}\{20\}', content)
+    # The "Mathematics for Deep Learning" part and everything after it
+    # (logical chapters 23+: mdl chapters + Tools) render with \appendix
+    # lettering (A, B, C, …), sections nested (A.1…). The Attic (20-22)
+    # stays numbered so PDF numbers match the HTML edition. Phase 2 gave
+    # each chapter \setcounter{chapter}{ch-1}; under \appendix we want the
+    # appendix counted from 0 (→A), so remap every appendix counter
+    # N>=22 → N-22 (23→A, 24→B, …, 29→G).
+    first_app = re.search(r'\\setcounter\{chapter\}\{22\}', content)
     if first_app:
         idx = first_app.start()
         head, tail = content[:idx], content[idx:]
 
         def _shift_appendix(m):
             n = int(m.group(1))
-            return f'\\setcounter{{chapter}}{{{n - 20}}}' if n >= 20 else m.group(0)
+            return f'\\setcounter{{chapter}}{{{n - 22}}}' if n >= 22 else m.group(0)
 
         tail = re.sub(r'\\setcounter\{chapter\}\{(\d+)\}', _shift_appendix, tail)
         content = head + '\\appendix\n' + tail
 
-    # ── Phase 7: Remove the "X" empty chapter (from zreferences) ──
+    # ── Phase 7: Remove the empty chapter (from zreferences) ──
+    # Older Quarto emitted \chapter{\texorpdfstring{}{}}; current Quarto emits
+    # a bare \chapter{}\label{section}. Both would render as an empty lettered
+    # appendix before References.
     content = re.sub(r'\\chapter\{\\texorpdfstring[^}]*\}[^\n]*\n', '', content)
+    content = re.sub(r'\\chapter\{\}\\label\{section\}[^\n]*\n', '', content)
 
     # ── Phase 8: TOC depth ──
     # Set depth to 2 so sections within chapters show in TOC

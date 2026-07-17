@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/scaling.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:1db0b18934dddd76795e35bb3b817f4d64177f3ab2870ca0585e6c52d769dd29",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "scaling-scaling-up": {
+      "code_fingerprint": "sha256:1706f65bbb74d1baaff055c683ad66c5f9a9778ff600edd2353777f376dc991b",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-a-family-of-widths-1": {
+      "code_fingerprint": "sha256:be7ee1f621e854554279ddd5eb2b5ac27965aae81f661271d618eb4a0b000d21",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-a-family-of-widths-2": {
+      "code_fingerprint": "sha256:86e58ff4a043e97dcb5b2b1e0063fad1963c84e829b9b27fba8e9f1b55f94488",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-a-family-of-widths-3": {
+      "code_fingerprint": "sha256:fb0d92884d93286e660aedc5e753a42c8615f772be0fc61a5b4c2f4bbddc62a8",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-the-sweep": {
+      "code_fingerprint": "sha256:984e1a25905d37c609b264d59f56ffd27acfc93a27028948e7fc51ec5dacba60",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "width  128: best lr 7.8e-03\nwidth  256: best lr 2.0e-03\nwidth  512: best lr 2.0e-03\nwidth 1024: best lr 9.8e-04\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "scaling/scaling-the-sweep-1.svg",
+          "bytes": 30814,
+          "sha256": "sha256:9ee10bdc0698276643020b9c91257db2a2d7a812aec35f1891a89a85453d8ea2"
+        }
+      ]
+    },
+    "scaling-the-rules": {
+      "code_fingerprint": "sha256:4c44532df2fe21c6c19386adff737c761937b6892f58069d331d12cbdddf03db",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-the-coordinate-check-1": {
+      "code_fingerprint": "sha256:4474ff38a33af95054429cc4fbcc253d189e5ea82065edc949b8abaa26dedb0c",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-the-coordinate-check-2": {
+      "code_fingerprint": "sha256:f54c59cb1d093af78307dde3e435d6ca8f345a4f4a9ce920579ffb906c226bf4",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "scaling/scaling-the-coordinate-check-2-1.svg",
+          "bytes": 26566,
+          "sha256": "sha256:352e782ea6b7bb8eb0af9c688e47a20d6a58d0c8be56f9ced5d6d92a66ab1112"
+        }
+      ]
+    },
+    "scaling-the-coordinate-check-3": {
+      "code_fingerprint": "sha256:d16822666d4ef2b9dc49f596c78796acf8796b1f216edcb8863a64a9088e6b46",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "scaling/scaling-the-coordinate-check-3-1.svg",
+          "bytes": 26437,
+          "sha256": "sha256:aa0570216ee1602759cc769148adeb0db5dcbd3a050b4be173fa7755df1d8db0"
+        }
+      ]
+    },
+    "scaling-learning-rate-transfer": {
+      "code_fingerprint": "sha256:a1fd7cb827f9e98a1aed1a52c2725e7a83cc83ac9c7794d6d42822a8c1cfb880",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "width  128: best lr 7.8e-03\nwidth  256: best lr 7.8e-03\nwidth  512: best lr 1.6e-02\nwidth 1024: best lr 1.6e-02\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "scaling/scaling-learning-rate-transfer-1.svg",
+          "bytes": 30895,
+          "sha256": "sha256:56e2d468c99cf1c3b150ced5afac0a78c6049fb7327bd7f226d1be9328845c67"
+        }
+      ]
+    }
+  }
+}

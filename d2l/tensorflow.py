@@ -1144,6 +1144,412 @@ def generate(step_fn, prefix, num_tokens, eos_id=None, **strategy):
             break
     return ids
 
+def annotate(text, xy, xytext):
+    d2l.plt.gca().annotate(text, xy=xy, xytext=xytext,
+                           arrowprops=dict(arrowstyle='->'))
+
+def train_2d(trainer, steps=20, f_grad=None):
+    """Optimize a 2D objective function with a customized trainer.
+
+    Defined in :numref:`sec_gd`"""
+    # `s1` and `s2` are internal state variables used by the stateful
+    # optimizers (momentum, Adam) later in this chapter
+    x1, x2, s1, s2 = -5, -2, 0, 0
+    results = [(x1, x2)]
+    for i in range(steps):
+        if f_grad:
+            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad)
+        else:
+            x1, x2, s1, s2 = trainer(x1, x2, s1, s2)
+        results.append((x1, x2))
+    print(f'epoch {i + 1}, x1: {float(x1):f}, x2: {float(x2):f}')
+    return results
+
+class Timer:
+    """Record multiple running times.
+
+    Defined in :numref:`sec_minibatch_sgd`"""
+    def __init__(self):
+        self.times = []
+        self.start()
+
+    def start(self):
+        """Start the timer."""
+        self.tik = time.time()
+
+    def stop(self):
+        """Stop the timer and record the time in a list."""
+        self.times.append(time.time() - self.tik)
+        return self.times[-1]
+
+    def avg(self):
+        """Return the average time."""
+        return sum(self.times) / len(self.times)
+
+    def sum(self):
+        """Return the sum of time."""
+        return sum(self.times)
+
+    def cumsum(self):
+        """Return the accumulated time."""
+        return np.array(self.times).cumsum().tolist()
+
+def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
+                  cmap='Reds'):
+    """Show heatmaps of matrices.
+
+    Defined in :numref:`sec_queries-keys-values`"""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
+
+def masked_softmax(X, valid_lens):
+    """Perform softmax operation by masking elements on the last axis.
+
+    Defined in :numref:`sec_attention-scoring-functions`"""
+    # X: 3D tensor, valid_lens: 1D or 2D tensor
+    def _sequence_mask(X, valid_len, value=0):
+        maxlen = tf.shape(X)[1]
+        mask = tf.range(start=0, limit=maxlen, dtype=tf.float32)[
+            None, :] < tf.cast(valid_len[:, None], dtype=tf.float32)
+        return tf.where(mask, X, value)
+
+    if valid_lens is None:
+        return tf.nn.softmax(X, axis=-1)
+    else:
+        shape = tf.shape(X)
+        if len(valid_lens.shape) == 1:
+            valid_lens = tf.repeat(valid_lens, repeats=shape[1])
+        else:
+            valid_lens = tf.reshape(valid_lens, shape=(-1,))
+        # On the last axis, replace masked elements with a very large negative
+        # value, whose exponentiation outputs 0
+        X = _sequence_mask(tf.reshape(X, (-1, shape[-1])), valid_lens,
+                           value=-1e6)
+        return tf.nn.softmax(tf.reshape(X, shape), axis=-1)
+
+class DotProductAttention(tf.keras.layers.Layer):
+    """Scaled dot product attention.
+
+    Defined in :numref:`sec_attention-scoring-functions`"""
+    def __init__(self, dropout):
+        super().__init__()
+        self.dropout = tf.keras.layers.Dropout(dropout)
+        
+    # Shape of queries: (batch_size, no. of queries, d)
+    # Shape of keys: (batch_size, no. of key-value pairs, d)
+    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
+    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
+    def call(self, queries, keys, values, valid_lens=None, training=False,
+             **kwargs):
+        d = tf.cast(tf.shape(queries)[-1], dtype=tf.float32)
+        scores = tf.matmul(queries, keys, transpose_b=True)/tf.math.sqrt(d)
+        self.attention_weights = masked_softmax(scores, valid_lens)
+        return tf.matmul(self.dropout(
+            self.attention_weights, training=training), values)
+
+class AdditiveAttention(tf.keras.layers.Layer):
+    """Additive attention.
+
+    Defined in :numref:`sec_attention-scoring-functions`"""
+    def __init__(self, key_size, query_size, num_hiddens, dropout, **kwargs):
+        super().__init__(**kwargs)
+        self.W_k = tf.keras.layers.Dense(num_hiddens, use_bias=False)
+        self.W_q = tf.keras.layers.Dense(num_hiddens, use_bias=False)
+        self.w_v = tf.keras.layers.Dense(1, use_bias=False)
+        self.dropout = tf.keras.layers.Dropout(dropout)
+        
+    def call(self, queries, keys, values, valid_lens, training=False, **kwargs):
+        queries, keys = self.W_q(queries), self.W_k(keys)
+        # After dimension expansion, shape of queries: (batch_size, no. of
+        # queries, 1, num_hiddens) and shape of keys: (batch_size, 1, no. of
+        # key-value pairs, num_hiddens). Sum them up with broadcasting
+        features = tf.expand_dims(queries, axis=2) + tf.expand_dims(
+            keys, axis=1)
+        features = tf.nn.tanh(features)
+        # There is only one output of self.w_v, so we remove the last
+        # one-dimensional entry from the shape. Shape of scores: (batch_size,
+        # no. of queries, no. of key-value pairs)
+        scores = tf.squeeze(self.w_v(features), axis=-1)
+        self.attention_weights = masked_softmax(scores, valid_lens)
+        # Shape of values: (batch_size, no. of key-value pairs, value
+        # dimension)
+        return tf.matmul(self.dropout(
+            self.attention_weights, training=training), values)
+
+class MultiHeadAttention(d2l.Module):
+    """Multi-head attention.
+
+    Defined in :numref:`sec_multihead-attention`"""
+    def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
+        super().__init__()
+        self.num_heads = num_heads
+        self.attention = d2l.DotProductAttention(dropout)
+        self.W_q = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
+        self.W_k = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
+        self.W_v = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
+        self.W_o = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
+    
+    def call(self, queries, keys, values, valid_lens, training=False, **kwargs):
+        # Shape of queries, keys, or values:
+        # (batch_size, no. of queries or key-value pairs, num_hiddens)
+        # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
+        # After transposing, shape of output queries, keys, or values:
+        # (batch_size * num_heads, no. of queries or key-value pairs,
+        # num_hiddens / num_heads)
+        queries = self.transpose_qkv(self.W_q(queries))
+        keys = self.transpose_qkv(self.W_k(keys))
+        values = self.transpose_qkv(self.W_v(values))
+        
+        if valid_lens is not None:
+            # On axis 0, copy the first item (scalar or vector) for num_heads
+            # times, then copy the next item, and so on
+            valid_lens = tf.repeat(valid_lens, repeats=self.num_heads, axis=0)
+            
+        # Shape of output: (batch_size * num_heads, no. of queries,
+        # num_hiddens / num_heads)
+        output = self.attention(queries, keys, values, valid_lens,
+                                training=training)
+        
+        # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
+        output_concat = self.transpose_output(output)
+        return self.W_o(output_concat)
+
+    def transpose_qkv(self, X):
+        """Transposition for parallel computation of multiple attention heads.
+
+        Defined in :numref:`sec_multihead-attention`"""
+        # Shape of input X: (batch_size, no. of queries or key-value pairs,
+        # num_hiddens). Shape of output X: (batch_size, no. of queries or
+        # key-value pairs, num_heads, num_hiddens / num_heads)
+        X = tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], self.num_heads, -1))
+        # Shape of output X: (batch_size, num_heads, no. of queries or key-value
+        # pairs, num_hiddens / num_heads)
+        X = tf.transpose(X, perm=(0, 2, 1, 3))
+        # Shape of output: (batch_size * num_heads, no. of queries or key-value
+        # pairs, num_hiddens / num_heads)
+        return tf.reshape(X, (-1, tf.shape(X)[2], tf.shape(X)[3]))
+
+    def transpose_output(self, X):
+        """Reverse the operation of transpose_qkv.
+
+        Defined in :numref:`sec_multihead-attention`"""
+        X = tf.reshape(X, (-1, self.num_heads, tf.shape(X)[1], tf.shape(X)[2]))
+        X = tf.transpose(X, perm=(0, 2, 1, 3))
+        return tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], -1))
+
+class PositionalEncoding(tf.keras.layers.Layer):
+    """Positional encoding.
+
+    Defined in :numref:`sec_self-attention-and-positional-encoding`"""
+    def __init__(self, num_hiddens, dropout, max_len=1000):
+        super().__init__()
+        self.dropout = tf.keras.layers.Dropout(dropout)
+        # Create a long enough P
+        self.P = np.zeros((1, max_len, num_hiddens))
+        X = np.arange(max_len, dtype=np.float32).reshape(
+            -1,1)/np.power(10000, np.arange(
+            0, num_hiddens, 2, dtype=np.float32) / num_hiddens)
+        self.P[:, :, 0::2] = np.sin(X)
+        self.P[:, :, 1::2] = np.cos(X[:, :num_hiddens // 2])
+        
+    def call(self, X, training=False, **kwargs):
+        X = X + self.P[:, :X.shape[1], :]
+        return self.dropout(X, training=training)
+
+class PositionWiseFFN(tf.keras.layers.Layer):
+    """The positionwise feed-forward network.
+
+    Defined in :numref:`sec_transformer`"""
+    def __init__(self, ffn_num_hiddens, ffn_num_outputs):
+        super().__init__()
+        self.dense1 = tf.keras.layers.Dense(ffn_num_hiddens)
+        self.relu = tf.keras.layers.ReLU()
+        self.dense2 = tf.keras.layers.Dense(ffn_num_outputs)
+
+    def call(self, X):
+        return self.dense2(self.relu(self.dense1(X)))
+
+class AddNorm(tf.keras.layers.Layer):
+    """The residual connection followed by layer normalization.
+
+    Defined in :numref:`sec_transformer`"""
+    def __init__(self, norm_shape, dropout):
+        super().__init__()
+        self.dropout = tf.keras.layers.Dropout(dropout)
+        # `norm_shape` mirrors PyTorch's `nn.LayerNorm` convention: it gives
+        # the shape of the trailing dims to normalize over. Convert that to
+        # Keras's `axis` argument (negative axis indices counting from the end).
+        self.ln = tf.keras.layers.LayerNormalization(
+            axis=list(range(-len(norm_shape), 0)))
+
+    def call(self, X, Y, training=False, **kwargs):
+        return self.ln(self.dropout(Y, training=training) + X)
+
+class TransformerEncoderBlock(tf.keras.layers.Layer):
+    """The Transformer encoder block.
+
+    Defined in :numref:`sec_transformer`"""
+    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
+                 bias=False):
+        super().__init__()
+        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
+                                                dropout, bias)
+        self.addnorm1 = AddNorm([num_hiddens], dropout)
+        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
+        self.addnorm2 = AddNorm([num_hiddens], dropout)
+
+    def call(self, X, valid_lens, training=False, **kwargs):
+        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens,
+                          training=training), training=training)
+        return self.addnorm2(Y, self.ffn(Y), training=training)
+
+class PatchEmbedding(tf.keras.layers.Layer):
+    def __init__(self, img_size=96, patch_size=16, num_hiddens=512):
+        super().__init__()
+        def _make_tuple(x):
+            if not isinstance(x, (list, tuple)):
+                return (x, x)
+            return x
+        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
+        self.num_patches = (img_size[0] // patch_size[0]) * (
+            img_size[1] // patch_size[1])
+        self.conv = tf.keras.layers.Conv2D(num_hiddens, kernel_size=patch_size,
+                                           strides=patch_size)
+
+    def call(self, X):
+        # Input shape: (batch, H, W, C); output: (batch, num_patches, num_hiddens)
+        X = self.conv(X)
+        return tf.reshape(X, (tf.shape(X)[0], -1, X.shape[-1]))
+
+class ViTMLP(tf.keras.layers.Layer):
+    def __init__(self, mlp_num_hiddens, mlp_num_outputs, dropout=0.5):
+        super().__init__()
+        self.dense1 = tf.keras.layers.Dense(mlp_num_hiddens, activation='gelu')
+        self.dropout1 = tf.keras.layers.Dropout(dropout)
+        self.dense2 = tf.keras.layers.Dense(mlp_num_outputs)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
+
+    def call(self, x, training=False):
+        return self.dropout2(self.dense2(
+            self.dropout1(self.dense1(x), training=training)),
+            training=training)
+
+class ViTBlock(tf.keras.layers.Layer):
+    def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
+                 use_bias=False):
+        super().__init__()
+        self.ln1 = tf.keras.layers.LayerNormalization()
+        self.attention = tf.keras.layers.MultiHeadAttention(
+            num_heads=num_heads, key_dim=num_hiddens // num_heads,
+            dropout=dropout, use_bias=use_bias)
+        self.ln2 = tf.keras.layers.LayerNormalization()
+        self.mlp = ViTMLP(mlp_num_hiddens, num_hiddens, dropout)
+
+    def call(self, X, training=False):
+        X_norm = self.ln1(X, training=training)
+        X = X + self.attention(X_norm, X_norm, training=training)
+        return X + self.mlp(self.ln2(X, training=training), training=training)
+
+class ViT(d2l.Classifier):
+    """Vision Transformer.
+
+    Defined in :numref:`sec_vision-transformer`"""
+    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
+                 num_heads, num_blks, emb_dropout, blk_dropout, lr=0.1,
+                 use_bias=False, num_classes=10):
+        super().__init__()
+        self.save_hyperparameters()
+        self.patch_embedding = PatchEmbedding(img_size, patch_size, num_hiddens)
+        num_steps = self.patch_embedding.num_patches + 1  # Add the cls token
+        self.num_steps = num_steps
+        self.num_hiddens = num_hiddens
+        self.emb_dropout = tf.keras.layers.Dropout(emb_dropout)
+        self.blks = [ViTBlock(num_hiddens, mlp_num_hiddens, num_heads,
+                              blk_dropout, use_bias)
+                     for _ in range(num_blks)]
+        self.head_norm = tf.keras.layers.LayerNormalization()
+        self.head_dense = tf.keras.layers.Dense(num_classes)
+
+    def build(self, input_shape):
+        self.cls_token = self.add_weight(
+            name='cls_token', shape=(1, 1, self.num_hiddens),
+            initializer='zeros', trainable=True)
+        self.pos_embedding = self.add_weight(
+            name='pos_embedding', shape=(1, self.num_steps, self.num_hiddens),
+            initializer='random_normal', trainable=True)
+        super().build(input_shape)
+
+    def call(self, X, training=False):
+        X = self.patch_embedding(X)
+        batch_size = tf.shape(X)[0]
+        cls_tokens = tf.tile(self.cls_token, [batch_size, 1, 1])
+        X = tf.concat([cls_tokens, X], axis=1)
+        X = self.emb_dropout(X + self.pos_embedding, training=training)
+        for blk in self.blks:
+            X = blk(X, training=training)
+        return self.head_dense(self.head_norm(X[:, 0]))
+
+class Benchmark:
+    """For measuring running time.
+
+    Defined in :numref:`sec_hybridize`"""
+    def __init__(self, description='Done'):
+        self.description = description
+
+    def __enter__(self):
+        self.timer = d2l.Timer()
+        return self
+
+    def __exit__(self, *args):
+        print(f'{self.description}: {self.timer.stop():.4f} sec')
+
+def split_batch(X, y, devices):
+    """Split `X` and `y` into multiple devices.
+
+    Defined in :numref:`sec_multi_gpu`"""
+    assert X.shape[0] == y.shape[0]
+    return (tf.split(X, len(devices)), tf.split(y, len(devices)))
+
+def resnet18(num_classes, in_channels=1):
+    """A slightly modified ResNet-18 model built with Keras.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    def resnet_block(num_channels, num_residuals, first_block=False):
+        blk = tf.keras.Sequential()
+        for i in range(num_residuals):
+            if i == 0 and not first_block:
+                blk.add(d2l.Residual(num_channels, use_1x1conv=True,
+                                     strides=2))
+            else:
+                blk.add(d2l.Residual(num_channels))
+        return blk
+
+    # Smaller conv, no max-pool (same as the PT version)
+    net = tf.keras.Sequential([
+        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Activation('relu'),
+        resnet_block(64, 2, first_block=True),
+        resnet_block(128, 2),
+        resnet_block(256, 2),
+        resnet_block(512, 2),
+        tf.keras.layers.GlobalAveragePooling2D(),
+        tf.keras.layers.Dense(num_classes),
+    ])
+    return net
+
 class LSTMScratch(d2l.Module):
     """The long short-term memory (LSTM) cell implemented from scratch.
 
@@ -1414,532 +1820,662 @@ def bleu(pred_seq, label_seq, k):
         score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
     return score
 
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices.
+def update_D(X, Z, net_D, net_G, loss, optimizer_D):
+    """Update discriminator.
 
-    Defined in :numref:`sec_queries-keys-values`"""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = tf.shape(X)[0]
+    ones = tf.ones((batch_size,)) # Labels corresponding to real data
+    zeros = tf.zeros((batch_size,)) # Labels corresponding to fake data
+    # Do not need to compute gradient for `net_G`, so it is outside GradientTape
+    fake_X = net_G(Z)
+    with tf.GradientTape() as tape:
+        real_Y = net_D(X)
+        fake_Y = net_D(fake_X)
+        # We multiply the loss by batch_size to match PyTorch's BCEWithLogitsLoss
+        loss_D = (loss(ones, tf.reshape(real_Y, [-1])) + loss(
+            zeros, tf.reshape(fake_Y, [-1]))) * tf.cast(
+                batch_size, tf.float32) / 2
+    grads_D = tape.gradient(loss_D, net_D.trainable_variables)
+    optimizer_D.apply_gradients(zip(grads_D, net_D.trainable_variables))
+    return loss_D
 
-def masked_softmax(X, valid_lens):
-    """Perform softmax operation by masking elements on the last axis.
+def update_G(Z, net_D, net_G, loss, optimizer_G):
+    """Update generator.
 
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    # X: 3D tensor, valid_lens: 1D or 2D tensor
-    def _sequence_mask(X, valid_len, value=0):
-        maxlen = tf.shape(X)[1]
-        mask = tf.range(start=0, limit=maxlen, dtype=tf.float32)[
-            None, :] < tf.cast(valid_len[:, None], dtype=tf.float32)
-        return tf.where(mask, X, value)
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = tf.shape(Z)[0]
+    ones = tf.ones((batch_size,))
+    with tf.GradientTape() as tape:
+        # We could reuse `fake_X` from `update_D` to save computation
+        fake_X = net_G(Z)
+        # Recomputing `fake_Y` is needed since `net_D` is changed
+        fake_Y = net_D(fake_X)
+        # We multiply the loss by batch_size to match PyTorch's BCEWithLogits loss
+        loss_G = loss(ones, tf.reshape(fake_Y, [-1])) * tf.cast(
+            batch_size, tf.float32)
+    grads_G = tape.gradient(loss_G, net_G.trainable_variables)
+    optimizer_G.apply_gradients(zip(grads_G, net_G.trainable_variables))
+    return loss_G
 
-    if valid_lens is None:
-        return tf.nn.softmax(X, axis=-1)
-    else:
-        shape = tf.shape(X)
-        if len(valid_lens.shape) == 1:
-            valid_lens = tf.repeat(valid_lens, repeats=shape[1])
-        else:
-            valid_lens = tf.reshape(valid_lens, shape=(-1,))
-        # On the last axis, replace masked elements with a very large negative
-        # value, whose exponentiation outputs 0
-        X = _sequence_mask(tf.reshape(X, (-1, shape[-1])), valid_lens,
-                           value=-1e6)
-        return tf.nn.softmax(tf.reshape(X, shape), axis=-1)
+d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
+                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
-class DotProductAttention(tf.keras.layers.Layer):
-    """Scaled dot product attention.
+d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
+                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
 
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, dropout):
-        super().__init__()
-        self.dropout = tf.keras.layers.Dropout(dropout)
-        
-    # Shape of queries: (batch_size, no. of queries, d)
-    # Shape of keys: (batch_size, no. of key-value pairs, d)
-    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
-    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-    def call(self, queries, keys, values, valid_lens=None, training=False,
-             **kwargs):
-        d = tf.cast(tf.shape(queries)[-1], dtype=tf.float32)
-        scores = tf.matmul(queries, keys, transpose_b=True)/tf.math.sqrt(d)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        return tf.matmul(self.dropout(
-            self.attention_weights, training=training), values)
+def read_ptb():
+    """Load the PTB dataset into a list of text lines.
 
-class AdditiveAttention(tf.keras.layers.Layer):
-    """Additive attention.
+    Defined in :numref:`sec_word2vec_data`"""
+    data_dir = d2l.download_extract('ptb')
+    # Read the training set
+    with open(os.path.join(data_dir, 'ptb.train.txt')) as f:
+        raw_text = f.read()
+    return [line.split() for line in raw_text.split('\n')]
 
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, key_size, query_size, num_hiddens, dropout, **kwargs):
-        super().__init__(**kwargs)
-        self.W_k = tf.keras.layers.Dense(num_hiddens, use_bias=False)
-        self.W_q = tf.keras.layers.Dense(num_hiddens, use_bias=False)
-        self.w_v = tf.keras.layers.Dense(1, use_bias=False)
-        self.dropout = tf.keras.layers.Dropout(dropout)
-        
-    def call(self, queries, keys, values, valid_lens, training=False, **kwargs):
-        queries, keys = self.W_q(queries), self.W_k(keys)
-        # After dimension expansion, shape of queries: (batch_size, no. of
-        # queries, 1, num_hiddens) and shape of keys: (batch_size, 1, no. of
-        # key-value pairs, num_hiddens). Sum them up with broadcasting
-        features = tf.expand_dims(queries, axis=2) + tf.expand_dims(
-            keys, axis=1)
-        features = tf.nn.tanh(features)
-        # There is only one output of self.w_v, so we remove the last
-        # one-dimensional entry from the shape. Shape of scores: (batch_size,
-        # no. of queries, no. of key-value pairs)
-        scores = tf.squeeze(self.w_v(features), axis=-1)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        # Shape of values: (batch_size, no. of key-value pairs, value
-        # dimension)
-        return tf.matmul(self.dropout(
-            self.attention_weights, training=training), values)
+def subsample(sentences, vocab):
+    """Subsample high-frequency words.
 
-class AttentionDecoder(d2l.Decoder):
-    """The base attention-based decoder interface.
+    Defined in :numref:`sec_word2vec_data`"""
+    # Exclude unknown tokens ('<unk>')
+    sentences = [[token for token in line if vocab[token] != vocab.unk]
+                 for line in sentences]
+    counter = collections.Counter([
+        token for line in sentences for token in line])
+    num_tokens = sum(counter.values())
 
-    Defined in :numref:`sec_seq2seq_attention`"""
-    def __init__(self):
-        super().__init__()
+    # Return True if `token` is kept during subsampling
+    def keep(token):
+        return(random.uniform(0, 1) <
+               math.sqrt(1e-4 / counter[token] * num_tokens))
 
-    @property
-    def attention_weights(self):
-        raise NotImplementedError
+    return ([[token for token in line if keep(token)] for line in sentences],
+            counter)
 
-class MultiHeadAttention(d2l.Module):
-    """Multi-head attention.
+def get_centers_and_contexts(corpus, max_window_size):
+    """Return center words and context words in skip-gram.
 
-    Defined in :numref:`sec_multihead-attention`"""
-    def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
-        super().__init__()
-        self.num_heads = num_heads
-        self.attention = d2l.DotProductAttention(dropout)
-        self.W_q = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
-        self.W_k = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
-        self.W_v = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
-        self.W_o = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
-    
-    def call(self, queries, keys, values, valid_lens, training=False, **kwargs):
-        # Shape of queries, keys, or values:
-        # (batch_size, no. of queries or key-value pairs, num_hiddens)
-        # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-        # After transposing, shape of output queries, keys, or values:
-        # (batch_size * num_heads, no. of queries or key-value pairs,
-        # num_hiddens / num_heads)
-        queries = self.transpose_qkv(self.W_q(queries))
-        keys = self.transpose_qkv(self.W_k(keys))
-        values = self.transpose_qkv(self.W_v(values))
-        
-        if valid_lens is not None:
-            # On axis 0, copy the first item (scalar or vector) for num_heads
-            # times, then copy the next item, and so on
-            valid_lens = tf.repeat(valid_lens, repeats=self.num_heads, axis=0)
-            
-        # Shape of output: (batch_size * num_heads, no. of queries,
-        # num_hiddens / num_heads)
-        output = self.attention(queries, keys, values, valid_lens,
-                                training=training)
-        
-        # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
-        output_concat = self.transpose_output(output)
-        return self.W_o(output_concat)
+    Defined in :numref:`sec_word2vec_data`"""
+    centers, contexts = [], []
+    for line in corpus:
+        # To form a "center word--context word" pair, each sentence needs to
+        # have at least 2 words
+        if len(line) < 2:
+            continue
+        centers += line
+        for i in range(len(line)):  # Context window centered at `i`
+            window_size = random.randint(1, max_window_size)
+            indices = list(range(max(0, i - window_size),
+                                 min(len(line), i + 1 + window_size)))
+            # Exclude the center word from the context words
+            indices.remove(i)
+            contexts.append([line[idx] for idx in indices])
+    return centers, contexts
 
-    def transpose_qkv(self, X):
-        """Transposition for parallel computation of multiple attention heads.
+class RandomGenerator:
+    """Randomly draw among {1, ..., n} according to n sampling weights.
 
-        Defined in :numref:`sec_multihead-attention`"""
-        # Shape of input X: (batch_size, no. of queries or key-value pairs,
-        # num_hiddens). Shape of output X: (batch_size, no. of queries or
-        # key-value pairs, num_heads, num_hiddens / num_heads)
-        X = tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], self.num_heads, -1))
-        # Shape of output X: (batch_size, num_heads, no. of queries or key-value
-        # pairs, num_hiddens / num_heads)
-        X = tf.transpose(X, perm=(0, 2, 1, 3))
-        # Shape of output: (batch_size * num_heads, no. of queries or key-value
-        # pairs, num_hiddens / num_heads)
-        return tf.reshape(X, (-1, tf.shape(X)[2], tf.shape(X)[3]))
+    Defined in :numref:`sec_word2vec_data`"""
+    def __init__(self, sampling_weights):
+        # Exclude 
+        self.population = list(range(1, len(sampling_weights) + 1))
+        self.sampling_weights = sampling_weights
+        self.candidates = []
+        self.i = 0
 
-    def transpose_output(self, X):
-        """Reverse the operation of transpose_qkv.
+    def draw(self):
+        if self.i == len(self.candidates):
+            # Cache `k` random sampling results
+            self.candidates = random.choices(
+                self.population, self.sampling_weights, k=10000)
+            self.i = 0
+        self.i += 1
+        return self.candidates[self.i - 1]
 
-        Defined in :numref:`sec_multihead-attention`"""
-        X = tf.reshape(X, (-1, self.num_heads, tf.shape(X)[1], tf.shape(X)[2]))
-        X = tf.transpose(X, perm=(0, 2, 1, 3))
-        return tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], -1))
+def get_negatives(all_contexts, vocab, counter, K):
+    """Return noise words in negative sampling.
 
-class PositionalEncoding(tf.keras.layers.Layer):
-    """Positional encoding.
+    Defined in :numref:`sec_word2vec_data`"""
+    # Sampling weights for words with indices 1, 2, ... (index 0 is the
+    # excluded unknown token) in the vocabulary
+    sampling_weights = [counter[vocab.to_tokens(i)]**0.75
+                        for i in range(1, len(vocab))]
+    all_negatives, generator = [], RandomGenerator(sampling_weights)
+    for contexts in all_contexts:
+        negatives = []
+        while len(negatives) < len(contexts) * K:
+            neg = generator.draw()
+            # Noise words cannot be context words
+            if neg not in contexts:
+                negatives.append(neg)
+        all_negatives.append(negatives)
+    return all_negatives
 
-    Defined in :numref:`sec_self-attention-and-positional-encoding`"""
-    def __init__(self, num_hiddens, dropout, max_len=1000):
-        super().__init__()
-        self.dropout = tf.keras.layers.Dropout(dropout)
-        # Create a long enough P
-        self.P = np.zeros((1, max_len, num_hiddens))
-        X = np.arange(max_len, dtype=np.float32).reshape(
-            -1,1)/np.power(10000, np.arange(
-            0, num_hiddens, 2, dtype=np.float32) / num_hiddens)
-        self.P[:, :, 0::2] = np.sin(X)
-        self.P[:, :, 1::2] = np.cos(X[:, :num_hiddens // 2])
-        
-    def call(self, X, training=False, **kwargs):
-        X = X + self.P[:, :X.shape[1], :]
-        return self.dropout(X, training=training)
+def batchify(data):
+    """Return a minibatch of examples for skip-gram with negative sampling.
 
-class PositionWiseFFN(tf.keras.layers.Layer):
-    """The positionwise feed-forward network.
+    Defined in :numref:`sec_word2vec_data`"""
+    max_len = max(len(c) + len(n) for _, c, n in data)
+    centers, contexts_negatives, masks, labels = [], [], [], []
+    for center, context, negative in data:
+        cur_len = len(context) + len(negative)
+        centers += [center]
+        contexts_negatives += [context + negative + [0] * (max_len - cur_len)]
+        masks += [[1] * cur_len + [0] * (max_len - cur_len)]
+        labels += [[1] * len(context) + [0] * (max_len - len(context))]
+    return (d2l.reshape(d2l.tensor(centers), (-1, 1)), d2l.tensor(
+        contexts_negatives), d2l.tensor(masks), d2l.tensor(labels))
 
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, ffn_num_hiddens, ffn_num_outputs):
-        super().__init__()
-        self.dense1 = tf.keras.layers.Dense(ffn_num_hiddens)
-        self.relu = tf.keras.layers.ReLU()
-        self.dense2 = tf.keras.layers.Dense(ffn_num_outputs)
+def _pad_ptb(all_centers, all_contexts, all_negatives):
+    """Pre-pad all skip-gram examples to the global max length.
 
-    def call(self, X):
-        return self.dense2(self.relu(self.dense1(X)))
+    Returns four NumPy arrays: centers (N,), contexts_negatives (N, L),
 
-class AddNorm(tf.keras.layers.Layer):
-    """The residual connection followed by layer normalization.
+    Defined in :numref:`sec_word2vec_data`"""
+    import numpy as _np
+    n = len(all_centers)
+    max_len = max(len(c) + len(neg)
+                  for c, neg in zip(all_contexts, all_negatives))
+    centers = _np.asarray(all_centers, dtype=_np.int64)
+    contexts_negatives = _np.zeros((n, max_len), dtype=_np.int64)
+    masks = _np.zeros((n, max_len), dtype=_np.float32)
+    labels = _np.zeros((n, max_len), dtype=_np.float32)
+    for i, (c, neg) in enumerate(zip(all_contexts, all_negatives)):
+        cur_len = len(c) + len(neg)
+        contexts_negatives[i, :cur_len] = c + neg
+        masks[i, :cur_len] = 1.
+        labels[i, :len(c)] = 1.
+    return centers, contexts_negatives, masks, labels
 
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, norm_shape, dropout):
-        super().__init__()
-        self.dropout = tf.keras.layers.Dropout(dropout)
-        # `norm_shape` mirrors PyTorch's `nn.LayerNorm` convention: it gives
-        # the shape of the trailing dims to normalize over. Convert that to
-        # Keras's `axis` argument (negative axis indices counting from the end).
-        self.ln = tf.keras.layers.LayerNormalization(
-            axis=list(range(-len(norm_shape), 0)))
+def load_data_ptb(batch_size, max_window_size, num_noise_words):
+    """Download the PTB dataset and then load it into memory.
 
-    def call(self, X, Y, training=False, **kwargs):
-        return self.ln(self.dropout(Y, training=training) + X)
+    Defined in :numref:`sec_word2vec_data`"""
+    sentences = read_ptb()
+    vocab = d2l.Vocab(sentences, min_freq=10)
+    subsampled, counter = subsample(sentences, vocab)
+    corpus = [vocab[line] for line in subsampled]
+    all_centers, all_contexts = get_centers_and_contexts(
+        corpus, max_window_size)
+    all_negatives = get_negatives(
+        all_contexts, vocab, counter, num_noise_words)
+    centers, cn, masks, labels = _pad_ptb(
+        all_centers, all_contexts, all_negatives)
+    # centers shape: (N,) -> (N, 1) to match batchify convention
+    centers_t = tf.constant(centers[:, None], dtype=tf.int64)
+    cn_t = tf.constant(cn, dtype=tf.int64)
+    masks_t = tf.constant(masks, dtype=tf.float32)
+    labels_t = tf.constant(labels, dtype=tf.float32)
+    dataset = tf.data.Dataset.from_tensor_slices(
+        (centers_t, cn_t, masks_t, labels_t))
+    dataset = dataset.shuffle(buffer_size=len(centers)).batch(
+        batch_size).prefetch(tf.data.AUTOTUNE)
+    return dataset, vocab
 
-class TransformerEncoderBlock(tf.keras.layers.Layer):
-    """The Transformer encoder block.
+d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
+                                '0b8703943ccdb6eb788e6f091b8946e82231bc4d')
 
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
-                 bias=False):
-        super().__init__()
-        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
-                                                dropout, bias)
-        self.addnorm1 = AddNorm([num_hiddens], dropout)
-        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
-        self.addnorm2 = AddNorm([num_hiddens], dropout)
+d2l.DATA_HUB['glove.6b.100d'] = (d2l.DATA_URL + 'glove.6B.100d.zip',
+                                 'cd43bfb07e44e6f27cbcc7bc9ae3d80284fdaf5a')
 
-    def call(self, X, valid_lens, training=False, **kwargs):
-        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens,
-                          training=training), training=training)
-        return self.addnorm2(Y, self.ffn(Y), training=training)
+d2l.DATA_HUB['glove.42b.300d'] = (d2l.DATA_URL + 'glove.42B.300d.zip',
+                                  'b5116e234e9eb9076672cfeabf5469f3eec904fa')
 
-class TransformerEncoder(d2l.Encoder):
-    """The Transformer encoder.
+d2l.DATA_HUB['wiki.en'] = (d2l.DATA_URL + 'wiki.en.zip',
+                           'c1816da3821ae9f43899be655002f6c723e91b88')
 
-    Defined in :numref:`sec_transformer`"""
+class TokenEmbedding:
+    """Token Embedding.
+
+    Defined in :numref:`sec_synonyms`"""
+    def __init__(self, embedding_name):
+        self.idx_to_token, self.idx_to_vec = self._load_embedding(
+            embedding_name)
+        self.unknown_idx = 0
+        self.token_to_idx = {token: idx for idx, token in
+                             enumerate(self.idx_to_token)}
+
+    def _load_embedding(self, embedding_name):
+        idx_to_token, idx_to_vec = ['<unk>'], []
+        data_dir = d2l.download_extract(embedding_name)
+        with open(os.path.join(data_dir, 'vec.txt'), 'r') as f:
+            for line in f:
+                elems = line.rstrip().split(' ')
+                token, elems = elems[0], [float(elem) for elem in elems[1:]]
+                if len(elems) > 1:
+                    idx_to_token.append(token)
+                    idx_to_vec.append(elems)
+        idx_to_vec = [[0] * len(idx_to_vec[0])] + idx_to_vec
+        return idx_to_token, tf.constant(idx_to_vec, dtype=tf.float32)
+
+    def __getitem__(self, tokens):
+        indices = [self.token_to_idx.get(token, self.unknown_idx)
+                   for token in tokens]
+        return tf.gather(self.idx_to_vec, indices)
+
+    def __len__(self):
+        return len(self.idx_to_token)
+
+def get_tokens_and_segments(tokens_a, tokens_b=None):
+    """Get tokens of the BERT input sequence and their segment IDs.
+
+    Defined in :numref:`sec_bert`"""
+    tokens = ['<cls>'] + tokens_a + ['<sep>']
+    # 0 and 1 are marking segment A and B, respectively
+    segments = [0] * (len(tokens_a) + 2)
+    if tokens_b is not None:
+        tokens += tokens_b + ['<sep>']
+        segments += [1] * (len(tokens_b) + 1)
+    return tokens, segments
+
+class BERTEncoder(keras.layers.Layer):
+    """BERT encoder.
+
+    Defined in :numref:`sec_bert`"""
     def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
-                 num_blks, dropout, bias=False):
-        super().__init__()
-        self.num_hiddens = num_hiddens
-        self.embedding = tf.keras.layers.Embedding(vocab_size, num_hiddens)
-        self.pos_encoding = d2l.PositionalEncoding(num_hiddens, dropout)
-        self.blks = [TransformerEncoderBlock(
-            num_hiddens, ffn_num_hiddens, num_heads, dropout, bias)
+                 num_blks, dropout, max_len=1000, **kwargs):
+        super(BERTEncoder, self).__init__(**kwargs)
+        self.token_embedding = keras.layers.Embedding(vocab_size, num_hiddens)
+        self.segment_embedding = keras.layers.Embedding(2, num_hiddens)
+        # In BERT, positional embeddings are learnable, thus we create a
+        # trainable variable of positional embeddings that are long enough
+        self.pos_embedding = self.add_weight(
+            name='pos_embedding', shape=(1, max_len, num_hiddens),
+            initializer='random_normal', trainable=True)
+        # BERT's attention sublayers use biased projections; the default for
+        # `TransformerEncoderBlock` is `bias=False`, so override here.
+        self.blks = [d2l.TransformerEncoderBlock(
+            num_hiddens, ffn_num_hiddens, num_heads, dropout, bias=True)
             for _ in range(num_blks)]
 
-    def call(self, X, valid_lens, training=False, **kwargs):
-        # Since positional encoding values are between -1 and 1, the embedding
-        # values are multiplied by the square root of the embedding dimension
-        # to rescale before they are summed up
-        X = self.pos_encoding(self.embedding(X) * tf.math.sqrt(
-            tf.cast(self.num_hiddens, dtype=tf.float32)), training=training)
-        self.attention_weights = [None] * len(self.blks)
-        for i, blk in enumerate(self.blks):
+    def call(self, tokens, segments, valid_lens, training=False, **kwargs):
+        # Shape of `X` remains unchanged in the following code snippet:
+        # (batch size, max sequence length, `num_hiddens`)
+        X = self.token_embedding(tokens) + self.segment_embedding(segments)
+        X = X + self.pos_embedding[:, :tf.shape(X)[1], :]
+        for blk in self.blks:
             X = blk(X, valid_lens, training=training)
-            self.attention_weights[
-                i] = blk.attention.attention.attention_weights
         return X
 
-class PatchEmbedding(tf.keras.layers.Layer):
-    def __init__(self, img_size=96, patch_size=16, num_hiddens=512):
-        super().__init__()
-        def _make_tuple(x):
-            if not isinstance(x, (list, tuple)):
-                return (x, x)
-            return x
-        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
-        self.num_patches = (img_size[0] // patch_size[0]) * (
-            img_size[1] // patch_size[1])
-        self.conv = tf.keras.layers.Conv2D(num_hiddens, kernel_size=patch_size,
-                                           strides=patch_size)
+class MaskLM(keras.layers.Layer):
+    """The masked language model task of BERT.
 
-    def call(self, X):
-        # Input shape: (batch, H, W, C); output: (batch, num_patches, num_hiddens)
-        X = self.conv(X)
-        return tf.reshape(X, (tf.shape(X)[0], -1, X.shape[-1]))
+    Defined in :numref:`sec_bert`"""
+    def __init__(self, vocab_size, num_hiddens, **kwargs):
+        super(MaskLM, self).__init__(**kwargs)
+        self.mlp = keras.Sequential([
+            keras.layers.Dense(num_hiddens, activation='relu'),
+            keras.layers.LayerNormalization(),
+            keras.layers.Dense(vocab_size),
+        ])
 
-class ViTMLP(tf.keras.layers.Layer):
-    def __init__(self, mlp_num_hiddens, mlp_num_outputs, dropout=0.5):
-        super().__init__()
-        self.dense1 = tf.keras.layers.Dense(mlp_num_hiddens, activation='gelu')
-        self.dropout1 = tf.keras.layers.Dropout(dropout)
-        self.dense2 = tf.keras.layers.Dense(mlp_num_outputs)
-        self.dropout2 = tf.keras.layers.Dropout(dropout)
-
-    def call(self, x, training=False):
-        return self.dropout2(self.dense2(
-            self.dropout1(self.dense1(x), training=training)),
-            training=training)
-
-class ViTBlock(tf.keras.layers.Layer):
-    def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
-                 use_bias=False):
-        super().__init__()
-        self.ln1 = tf.keras.layers.LayerNormalization()
-        self.attention = tf.keras.layers.MultiHeadAttention(
-            num_heads=num_heads, key_dim=num_hiddens // num_heads,
-            dropout=dropout, use_bias=use_bias)
-        self.ln2 = tf.keras.layers.LayerNormalization()
-        self.mlp = ViTMLP(mlp_num_hiddens, num_hiddens, dropout)
-
-    def call(self, X, training=False):
-        X_norm = self.ln1(X, training=training)
-        X = X + self.attention(X_norm, X_norm, training=training)
-        return X + self.mlp(self.ln2(X, training=training), training=training)
-
-class ViT(d2l.Classifier):
-    """Vision Transformer.
-
-    Defined in :numref:`sec_vision-transformer`"""
-    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
-                 num_heads, num_blks, emb_dropout, blk_dropout, lr=0.1,
-                 use_bias=False, num_classes=10):
-        super().__init__()
-        self.save_hyperparameters()
-        self.patch_embedding = PatchEmbedding(img_size, patch_size, num_hiddens)
-        num_steps = self.patch_embedding.num_patches + 1  # Add the cls token
-        self.num_steps = num_steps
-        self.num_hiddens = num_hiddens
-        self.emb_dropout = tf.keras.layers.Dropout(emb_dropout)
-        self.blks = [ViTBlock(num_hiddens, mlp_num_hiddens, num_heads,
-                              blk_dropout, use_bias)
-                     for _ in range(num_blks)]
-        self.head_norm = tf.keras.layers.LayerNormalization()
-        self.head_dense = tf.keras.layers.Dense(num_classes)
-
-    def build(self, input_shape):
-        self.cls_token = self.add_weight(
-            name='cls_token', shape=(1, 1, self.num_hiddens),
-            initializer='zeros', trainable=True)
-        self.pos_embedding = self.add_weight(
-            name='pos_embedding', shape=(1, self.num_steps, self.num_hiddens),
-            initializer='random_normal', trainable=True)
-        super().build(input_shape)
-
-    def call(self, X, training=False):
-        X = self.patch_embedding(X)
+    def call(self, X, pred_positions, **kwargs):
+        num_pred_positions = pred_positions.shape[1]
+        pred_positions_flat = tf.reshape(pred_positions, [-1])
         batch_size = tf.shape(X)[0]
-        cls_tokens = tf.tile(self.cls_token, [batch_size, 1, 1])
-        X = tf.concat([cls_tokens, X], axis=1)
-        X = self.emb_dropout(X + self.pos_embedding, training=training)
-        for blk in self.blks:
-            X = blk(X, training=training)
-        return self.head_dense(self.head_norm(X[:, 0]))
+        batch_idx = tf.repeat(tf.range(batch_size), num_pred_positions)
+        # Suppose that `batch_size` = 2, `num_pred_positions` = 3, then
+        # `batch_idx` is `tf.tensor([0, 0, 0, 1, 1, 1])`
+        indices = tf.stack([batch_idx, pred_positions_flat], axis=1)
+        masked_X = tf.gather_nd(X, indices)
+        masked_X = tf.reshape(masked_X, [batch_size, num_pred_positions, -1])
+        mlm_Y_hat = self.mlp(masked_X)
+        return mlm_Y_hat
 
-def annotate(text, xy, xytext):
-    d2l.plt.gca().annotate(text, xy=xy, xytext=xytext,
-                           arrowprops=dict(arrowstyle='->'))
+class NextSentencePred(keras.layers.Layer):
+    """The next sentence prediction task of BERT.
 
-def train_2d(trainer, steps=20, f_grad=None):
-    """Optimize a 2D objective function with a customized trainer.
+    Defined in :numref:`sec_bert`"""
+    def __init__(self, **kwargs):
+        super(NextSentencePred, self).__init__(**kwargs)
+        # `output` is reserved on Keras Layer (a read-only property), so use
+        # `dense` for the head.
+        self.dense = keras.layers.Dense(2)
 
-    Defined in :numref:`sec_gd`"""
-    # `s1` and `s2` are internal state variables that will be used in Momentum, adagrad, RMSProp
-    x1, x2, s1, s2 = -5, -2, 0, 0
-    results = [(x1, x2)]
-    for i in range(steps):
-        if f_grad:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2, f_grad)
+    def call(self, X, **kwargs):
+        # `X` shape: (batch size, `num_hiddens`)
+        return self.dense(X)
+
+class BERTModel(keras.Model):
+    """The BERT model.
+
+    Defined in :numref:`sec_bert`"""
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens,
+                 num_heads, num_blks, dropout, max_len=1000):
+        super(BERTModel, self).__init__()
+        self.encoder = BERTEncoder(vocab_size, num_hiddens, ffn_num_hiddens,
+                                   num_heads, num_blks, dropout,
+                                   max_len=max_len)
+        self.hidden = keras.layers.Dense(num_hiddens, activation='tanh')
+        self.mlm = MaskLM(vocab_size, num_hiddens)
+        self.nsp = NextSentencePred()
+
+    def call(self, tokens, segments, valid_lens=None, pred_positions=None,
+             training=False, **kwargs):
+        encoded_X = self.encoder(tokens, segments, valid_lens,
+                                 training=training)
+        if pred_positions is not None:
+            mlm_Y_hat = self.mlm(encoded_X, pred_positions)
         else:
-            x1, x2, s1, s2 = trainer(x1, x2, s1, s2)
-        results.append((x1, x2))
-    print(f'epoch {i + 1}, x1: {float(x1):f}, x2: {float(x2):f}')
-    return results
+            mlm_Y_hat = None
+        # The hidden layer of the MLP classifier for next sentence prediction.
+        # 0 is the index of the '<cls>' token
+        nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, 0, :]))
+        return encoded_X, mlm_Y_hat, nsp_Y_hat
 
-def show_trace_2d(f, results):
-    """Show the trace of 2D variables during optimization.
+WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
+                  'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
+WIKITEXT_2_SHA1 = '98ee727e59fcc34fddaadae93e15b1f8ed5561a4'
 
-    Defined in :numref:`sec_gd`"""
-    d2l.set_figsize()
-    d2l.plt.plot(*zip(*results), '-o', color='#ff7f0e')
-    x1, x2 = d2l.meshgrid(d2l.arange(-5.5, 1.0, 0.1),
-                          d2l.arange(-3.0, 1.0, 0.1))
-    d2l.plt.contour(x1, x2, f(x1, x2), colors='#1f77b4')
-    d2l.plt.xlabel('x1')
-    d2l.plt.ylabel('x2')
+def _read_wiki(data_dir=None):
+    import contextlib
+    import io
+    import pandas as pd
+    with contextlib.redirect_stdout(io.StringIO()):
+        fname = d2l.download(WIKITEXT_2_URL, folder='../data',
+                              sha1_hash=WIKITEXT_2_SHA1)
+    lines = pd.read_parquet(fname)['text'].tolist()
+    # Uppercase letters are converted to lowercase ones
+    paragraphs = [line.strip().lower().split(' . ')
+                  for line in lines if len(line.split(' . ')) >= 2]
+    random.shuffle(paragraphs)
+    return paragraphs
 
-class Timer:
-    """Record multiple running times.
+def _get_next_sentence(sentence, next_sentence, paragraphs):
+    if random.random() < 0.5:
+        is_next = True
+    else:
+        # `paragraphs` is a list of lists of lists
+        next_sentence = random.choice(random.choice(paragraphs))
+        is_next = False
+    return sentence, next_sentence, is_next
 
-    Defined in :numref:`sec_minibatch_sgd`"""
-    def __init__(self):
-        self.times = []
-        self.start()
+def _get_nsp_data_from_paragraph(paragraph, paragraphs, vocab, max_len):
+    nsp_data_from_paragraph = []
+    for i in range(len(paragraph) - 1):
+        tokens_a, tokens_b, is_next = _get_next_sentence(
+            paragraph[i], paragraph[i + 1], paragraphs)
+        # Consider 1 '<cls>' token and 2 '<sep>' tokens
+        if len(tokens_a) + len(tokens_b) + 3 > max_len:
+            continue
+        tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
+        nsp_data_from_paragraph.append((tokens, segments, is_next))
+    return nsp_data_from_paragraph
 
-    def start(self):
-        """Start the timer."""
-        self.tik = time.time()
-
-    def stop(self):
-        """Stop the timer and record the time in a list."""
-        self.times.append(time.time() - self.tik)
-        return self.times[-1]
-
-    def avg(self):
-        """Return the average time."""
-        return sum(self.times) / len(self.times)
-
-    def sum(self):
-        """Return the sum of time."""
-        return sum(self.times)
-
-    def cumsum(self):
-        """Return the accumulated time."""
-        return np.array(self.times).cumsum().tolist()
-
-d2l.DATA_HUB['airfoil'] = (d2l.DATA_URL + 'airfoil_self_noise.dat',
-                           '76e5be1548fd8222e5074cf0faae75edff8cf93f')
-
-def get_data_ch11(batch_size=10, n=1500):
-    data = np.genfromtxt(d2l.download('airfoil'),
-                         dtype=np.float32, delimiter='\t')
-    data = (data - data.mean(axis=0)) / data.std(axis=0)
-    data_iter = d2l.load_array((data[:n, :-1], data[:n, -1]),
-                               batch_size, is_train=True)
-    return data_iter, data.shape[1]-1
-
-def train_ch11(trainer_fn, states, hyperparams, data_iter,
-               feature_dim, num_epochs=2):
-    # Initialization
-    w = tf.Variable(tf.random.normal(shape=(feature_dim, 1),
-                                   mean=0, stddev=0.01),trainable=True)
-    b = tf.Variable(tf.zeros(1), trainable=True)
-
-    # Train
-    net, loss = lambda X: d2l.linreg(X, w, b), d2l.squared_loss
-    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    n, timer = 0, d2l.Timer()
-
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-          with tf.GradientTape() as g:
-            l = tf.math.reduce_mean(loss(net(X), y))
-
-          dw, db = g.gradient(l, [w, b])
-          trainer_fn([w, b], [dw, db], states, hyperparams)
-          n += X.shape[0]
-          if n % 200 == 0:
-              timer.stop()
-              p = n/X.shape[0]
-              q = p/tf.data.experimental.cardinality(data_iter).numpy()
-              r = (d2l.evaluate_loss(net, data_iter, loss),)
-              animator.add(q, r)
-              timer.start()
-    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
-    return timer.cumsum(), animator.Y[0]
-
-def train_concise_ch11(trainer_fn, hyperparams, data_iter, num_epochs=2):
-    # Initialization
-    net = tf.keras.Sequential()
-    net.add(tf.keras.layers.Dense(1,
-            kernel_initializer=tf.random_normal_initializer(stddev=0.01)))
-    optimizer = trainer_fn(**hyperparams)
-    loss = tf.keras.losses.MeanSquaredError()
-    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
-                            xlim=[0, num_epochs], ylim=[0.22, 0.35])
-    n, timer = 0, d2l.Timer()
-    for _ in range(num_epochs):
-        for X, y in data_iter:
-            with tf.GradientTape() as g:
-                out = net(X)
-                l = loss(y, out)
-                params = net.trainable_variables
-                grads = g.gradient(l, params)
-            optimizer.apply_gradients(zip(grads, params))
-            n += X.shape[0]
-            if n % 200 == 0:
-                timer.stop()
-                p = n/X.shape[0]
-                q = p/tf.data.experimental.cardinality(data_iter).numpy()
-                # `MeanSquaredError` computes squared error without the 1/2
-                # factor
-                r = (d2l.evaluate_loss(net, data_iter, loss) / 2,)
-                animator.add(q, r)
-                timer.start()
-    print(f'loss: {animator.Y[0][-1]:.3f}, {timer.sum()/num_epochs:.3f} sec/epoch')
-
-class Benchmark:
-    """For measuring running time.
-
-    Defined in :numref:`sec_hybridize`"""
-    def __init__(self, description='Done'):
-        self.description = description
-
-    def __enter__(self):
-        self.timer = d2l.Timer()
-        return self
-
-    def __exit__(self, *args):
-        print(f'{self.description}: {self.timer.stop():.4f} sec')
-
-def split_batch(X, y, devices):
-    """Split `X` and `y` into multiple devices.
-
-    Defined in :numref:`sec_multi_gpu`"""
-    assert X.shape[0] == y.shape[0]
-    return (tf.split(X, len(devices)), tf.split(y, len(devices)))
-
-def resnet18(num_classes, in_channels=1):
-    """A slightly modified ResNet-18 model built with Keras.
-
-    Defined in :numref:`sec_multi_gpu_concise`"""
-    def resnet_block(num_channels, num_residuals, first_block=False):
-        blk = tf.keras.Sequential()
-        for i in range(num_residuals):
-            if i == 0 and not first_block:
-                blk.add(d2l.Residual(num_channels, use_1x1conv=True,
-                                     strides=2))
+def _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_preds,
+                        vocab):
+    # For the input of a masked language model, make a new copy of tokens and
+    # replace some of them by '<mask>' or random tokens
+    mlm_input_tokens = [token for token in tokens]
+    pred_positions_and_labels = []
+    # Shuffle for getting 15% random tokens for prediction in the masked
+    # language modeling task
+    random.shuffle(candidate_pred_positions)
+    for mlm_pred_position in candidate_pred_positions:
+        if len(pred_positions_and_labels) >= num_mlm_preds:
+            break
+        masked_token = None
+        # 80% of the time: replace the word with the '<mask>' token
+        if random.random() < 0.8:
+            masked_token = '<mask>'
+        else:
+            # 10% of the time: keep the word unchanged
+            if random.random() < 0.5:
+                masked_token = tokens[mlm_pred_position]
+            # 10% of the time: replace the word with a random word
             else:
-                blk.add(d2l.Residual(num_channels))
-        return blk
+                masked_token = random.choice(vocab.idx_to_token)
+        mlm_input_tokens[mlm_pred_position] = masked_token
+        pred_positions_and_labels.append(
+            (mlm_pred_position, tokens[mlm_pred_position]))
+    return mlm_input_tokens, pred_positions_and_labels
 
-    # Smaller conv, no max-pool (same as the PT version)
-    net = tf.keras.Sequential([
-        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same'),
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Activation('relu'),
-        resnet_block(64, 2, first_block=True),
-        resnet_block(128, 2),
-        resnet_block(256, 2),
-        resnet_block(512, 2),
-        tf.keras.layers.GlobalAveragePooling2D(),
-        tf.keras.layers.Dense(num_classes),
-    ])
-    return net
+def _get_mlm_data_from_tokens(tokens, vocab):
+    candidate_pred_positions = []
+    # `tokens` is a list of strings
+    for i, token in enumerate(tokens):
+        # Special tokens are not predicted in the masked language modeling
+        # task
+        if token in ['<cls>', '<sep>']:
+            continue
+        candidate_pred_positions.append(i)
+    # 15% of random tokens are predicted in the masked language modeling task
+    num_mlm_preds = max(1, round(len(tokens) * 0.15))
+    mlm_input_tokens, pred_positions_and_labels = _replace_mlm_tokens(
+        tokens, candidate_pred_positions, num_mlm_preds, vocab)
+    pred_positions_and_labels = sorted(pred_positions_and_labels,
+                                       key=lambda x: x[0])
+    pred_positions = [v[0] for v in pred_positions_and_labels]
+    mlm_pred_labels = [v[1] for v in pred_positions_and_labels]
+    return vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]
+
+def _pad_bert_inputs(examples, max_len, vocab):
+    max_num_mlm_preds = round(max_len * 0.15)
+    all_token_ids, all_segments, valid_lens,  = [], [], []
+    all_pred_positions, all_mlm_weights, all_mlm_labels = [], [], []
+    nsp_labels = []
+    for (token_ids, pred_positions, mlm_pred_label_ids, segments,
+         is_next) in examples:
+        all_token_ids.append(token_ids + [vocab['<pad>']] * (
+            max_len - len(token_ids)))
+        all_segments.append(segments + [0] * (max_len - len(segments)))
+        # `valid_lens` excludes count of '<pad>' tokens
+        valid_lens.append(float(len(token_ids)))
+        all_pred_positions.append(pred_positions + [0] * (
+            max_num_mlm_preds - len(pred_positions)))
+        # Predictions of padded tokens will be filtered out in the loss via
+        # multiplication of 0 weights
+        all_mlm_weights.append(
+            [1.0] * len(mlm_pred_label_ids) + [0.0] * (
+                max_num_mlm_preds - len(pred_positions)))
+        all_mlm_labels.append(mlm_pred_label_ids + [0] * (
+            max_num_mlm_preds - len(mlm_pred_label_ids)))
+        nsp_labels.append(int(is_next))
+    return (all_token_ids, all_segments, valid_lens, all_pred_positions,
+            all_mlm_weights, all_mlm_labels, nsp_labels)
+
+class _WikiTextDataset:
+    def __init__(self, paragraphs, max_len):
+        # Input `paragraphs[i]` is a list of sentence strings representing a
+        # paragraph; while output `paragraphs[i]` is a list of sentences
+        # representing a paragraph, where each sentence is a list of tokens
+        paragraphs = [d2l.tokenize(
+            paragraph, token='word') for paragraph in paragraphs]
+        sentences = [sentence for paragraph in paragraphs
+                     for sentence in paragraph]
+        self.vocab = d2l.Vocab(sentences, min_freq=5, reserved_tokens=[
+            '<pad>', '<mask>', '<cls>', '<sep>'])
+        # Get data for the next sentence prediction task
+        examples = []
+        for paragraph in paragraphs:
+            examples.extend(_get_nsp_data_from_paragraph(
+                paragraph, paragraphs, self.vocab, max_len))
+        # Get data for the masked language model task
+        examples = [(_get_mlm_data_from_tokens(tokens, self.vocab)
+                      + (segments, is_next))
+                     for tokens, segments, is_next in examples]
+        # Pad inputs
+        (self.all_token_ids, self.all_segments, self.valid_lens,
+         self.all_pred_positions, self.all_mlm_weights,
+         self.all_mlm_labels, self.nsp_labels) = _pad_bert_inputs(
+            examples, max_len, self.vocab)
+
+    def __len__(self):
+        return len(self.all_token_ids)
+
+def load_data_wiki(batch_size, max_len):
+    """Load the WikiText-2 dataset.
+
+    Defined in :numref:`sec_bert-dataset`"""
+    paragraphs = _read_wiki()
+    train_set = _WikiTextDataset(paragraphs, max_len)
+    AUTOTUNE = tf.data.AUTOTUNE
+    train_iter = tf.data.Dataset.from_tensor_slices((
+        tf.constant(train_set.all_token_ids, dtype=tf.int32),
+        tf.constant(train_set.all_segments, dtype=tf.int32),
+        tf.constant(train_set.valid_lens, dtype=tf.float32),
+        tf.constant(train_set.all_pred_positions, dtype=tf.int32),
+        tf.constant(train_set.all_mlm_weights, dtype=tf.float32),
+        tf.constant(train_set.all_mlm_labels, dtype=tf.int32),
+        tf.constant(train_set.nsp_labels, dtype=tf.int32),
+    )).shuffle(buffer_size=10000).batch(batch_size).prefetch(AUTOTUNE)
+    return train_iter, train_set.vocab
+
+# Construct loss functions once at module scope; re-instantiating per batch
+# is wasteful.
+_mlm_loss_fn = keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
+_nsp_loss_fn = keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction='none')
+
+def _get_batch_loss_bert(net, vocab_size, tokens_X, segments_X,
+                         valid_lens_x, pred_positions_X, mlm_weights_X,
+                         mlm_Y, nsp_y, training=True):
+    # Forward pass
+    _, mlm_Y_hat, nsp_Y_hat = net(
+        tokens_X, segments_X, tf.cast(tf.reshape(valid_lens_x, [-1]),
+                                      dtype=tf.float32),
+        pred_positions_X, training=training)
+    # Compute masked language model loss (mask per-token losses before summing)
+    mlm_l = _mlm_loss_fn(tf.reshape(mlm_Y, [-1]),
+                         tf.reshape(mlm_Y_hat, [-1, vocab_size]))
+    mlm_l = tf.reduce_sum(mlm_l * tf.reshape(mlm_weights_X, [-1])) / (
+        tf.reduce_sum(mlm_weights_X) + 1e-8)
+    # Compute next sentence prediction loss
+    nsp_l = tf.reduce_mean(_nsp_loss_fn(tf.cast(nsp_y, tf.int32), nsp_Y_hat))
+    l = mlm_l + nsp_l
+    return mlm_l, nsp_l, l
+
+d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
+                          '01ada507287d82875905620988597833ad4e0903')
+
+def read_imdb(data_dir, is_train):
+    """Read the IMDb review dataset text sequences and labels.
+
+    Defined in :numref:`sec_sentiment`"""
+    data, labels = [], []
+    for label in ('pos', 'neg'):
+        folder_name = os.path.join(data_dir, 'train' if is_train else 'test',
+                                   label)
+        for file in os.listdir(folder_name):
+            with open(os.path.join(folder_name, file), 'rb') as f:
+                review = f.read().decode('utf-8').replace('\n', '')
+                data.append(review)
+                labels.append(1 if label == 'pos' else 0)
+    return data, labels
+
+def load_data_imdb(batch_size, num_steps=500):
+    """Return data iterators and the vocabulary of the IMDb review dataset.
+
+    Defined in :numref:`sec_sentiment`"""
+    data_dir = d2l.download_extract('aclImdb', 'aclImdb')
+    train_data = read_imdb(data_dir, True)
+    test_data = read_imdb(data_dir, False)
+    train_tokens = d2l.tokenize(train_data[0], token='word')
+    test_tokens = d2l.tokenize(test_data[0], token='word')
+    vocab = d2l.Vocab(train_tokens, min_freq=5)
+    train_features = np.array([d2l.truncate_pad(
+        vocab[line], num_steps, vocab['<pad>']) for line in train_tokens])
+    test_features = np.array([d2l.truncate_pad(
+        vocab[line], num_steps, vocab['<pad>']) for line in test_tokens])
+    train_iter = d2l.load_array((train_features, np.array(train_data[1])),
+                                batch_size)
+    test_iter = d2l.load_array((test_features, np.array(test_data[1])),
+                               batch_size,
+                               is_train=False)
+    return train_iter, test_iter, vocab
+
+def predict_sentiment(net, vocab, sequence):
+    """Predict the sentiment of a text sequence.
+
+    Defined in :numref:`sec_sentiment_rnn`"""
+    sequence = tf.constant(vocab[sequence.split()], dtype=tf.int32)
+    sequence = tf.reshape(sequence, (1, -1))
+    label = tf.argmax(net(sequence, training=False), axis=1)
+    return 'positive' if int(label[0]) == 1 else 'negative'
+
+d2l.DATA_HUB['SNLI'] = (
+    'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
+    '9fcde07509c7e87ec61c640c1b2753d9041758e4')
+
+def read_snli(data_dir, is_train):
+    """Read the SNLI dataset into premises, hypotheses, and labels.
+
+    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
+    def extract_text(s):
+        # Remove information that will not be used by us
+        s = re.sub('\\(', '', s) 
+        s = re.sub('\\)', '', s)
+        # Substitute two or more consecutive whitespace with space
+        s = re.sub('\\s{2,}', ' ', s)
+        return s.strip()
+    label_set = {'entailment': 0, 'contradiction': 1, 'neutral': 2}
+    file_name = os.path.join(data_dir, 'snli_1.0_train.txt'
+                             if is_train else 'snli_1.0_test.txt')
+    with open(file_name, 'r') as f:
+        rows = [row.split('\t') for row in f.readlines()[1:]]
+    premises = [extract_text(row[1]) for row in rows if row[0] in label_set]
+    hypotheses = [extract_text(row[2]) for row in rows if row[0] in label_set]
+    labels = [label_set[row[0]] for row in rows if row[0] in label_set]
+    return premises, hypotheses, labels
+
+class SNLIDataset:
+    """A customized dataset to load the SNLI dataset.
+
+    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
+    def __init__(self, dataset, num_steps, vocab=None):
+        self.num_steps = num_steps
+        all_premise_tokens = d2l.tokenize(dataset[0])
+        all_hypothesis_tokens = d2l.tokenize(dataset[1])
+        if vocab is None:
+            self.vocab = d2l.Vocab(all_premise_tokens + all_hypothesis_tokens,
+                                   min_freq=5, reserved_tokens=['<pad>'])
+        else:
+            self.vocab = vocab
+        self.premises = self._pad(all_premise_tokens)
+        self.hypotheses = self._pad(all_hypothesis_tokens)
+        self.labels = np.array(dataset[2])
+        print('read ' + str(len(self.premises)) + ' examples')
+
+    def _pad(self, lines):
+        return np.array([d2l.truncate_pad(
+            self.vocab[line], self.num_steps, self.vocab['<pad>'])
+                         for line in lines])
+
+    def __getitem__(self, idx):
+        return (self.premises[idx], self.hypotheses[idx]), self.labels[idx]
+
+    def __len__(self):
+        return len(self.premises)
+
+def load_data_snli(batch_size, num_steps=50):
+    """Download the SNLI dataset and return data iterators and vocabulary.
+
+    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
+    data_dir = d2l.download_extract('SNLI')
+    train_data = read_snli(data_dir, True)
+    test_data = read_snli(data_dir, False)
+    train_set = SNLIDataset(train_data, num_steps)
+    test_set = SNLIDataset(test_data, num_steps, train_set.vocab)
+    AUTOTUNE = tf.data.AUTOTUNE
+    train_iter = tf.data.Dataset.from_tensor_slices(
+        (train_set.premises, train_set.hypotheses, train_set.labels)
+    ).shuffle(buffer_size=len(train_set.labels)).batch(batch_size).prefetch(AUTOTUNE)
+    test_iter = tf.data.Dataset.from_tensor_slices(
+        (test_set.premises, test_set.hypotheses, test_set.labels)
+    ).batch(batch_size).prefetch(AUTOTUNE)
+    return train_iter, test_iter, train_set.vocab
+
+def predict_snli(net, vocab, premise, hypothesis):
+    """Predict the logical relationship between the premise and hypothesis.
+
+    Defined in :numref:`sec_natural-language-inference-attention`"""
+    premise = tf.constant([vocab[premise]], dtype=tf.int32)
+    hypothesis = tf.constant([vocab[hypothesis]], dtype=tf.int32)
+    label = tf.argmax(net((premise, hypothesis), training=False), axis=1)
+    return 'entailment' if label == 0 else 'contradiction' if label == 1 \
+            else 'neutral'
 
 def train_batch_ch13(net, X, y, loss, optimizer):
     """Train for a minibatch with Keras (defined in Chapter 13).
@@ -2600,622 +3136,6 @@ def reorg_test(data_dir):
 d2l.DATA_HUB['dog_tiny'] = (d2l.DATA_URL + 'kaggle_dog_tiny.zip',
                             '0cb91d09b814ecdc07b50f31f8dcad3e81d6a86d')
 
-d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
-                       '319d85e578af0cdc590547f26231e4e31cdf1e42')
-
-def read_ptb():
-    """Load the PTB dataset into a list of text lines.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    data_dir = d2l.download_extract('ptb')
-    # Read the training set
-    with open(os.path.join(data_dir, 'ptb.train.txt')) as f:
-        raw_text = f.read()
-    return [line.split() for line in raw_text.split('\n')]
-
-def subsample(sentences, vocab):
-    """Subsample high-frequency words.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    # Exclude unknown tokens ('<unk>')
-    sentences = [[token for token in line if vocab[token] != vocab.unk]
-                 for line in sentences]
-    counter = collections.Counter([
-        token for line in sentences for token in line])
-    num_tokens = sum(counter.values())
-
-    # Return True if `token` is kept during subsampling
-    def keep(token):
-        return(random.uniform(0, 1) <
-               math.sqrt(1e-4 / counter[token] * num_tokens))
-
-    return ([[token for token in line if keep(token)] for line in sentences],
-            counter)
-
-def get_centers_and_contexts(corpus, max_window_size):
-    """Return center words and context words in skip-gram.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    centers, contexts = [], []
-    for line in corpus:
-        # To form a "center word--context word" pair, each sentence needs to
-        # have at least 2 words
-        if len(line) < 2:
-            continue
-        centers += line
-        for i in range(len(line)):  # Context window centered at `i`
-            window_size = random.randint(1, max_window_size)
-            indices = list(range(max(0, i - window_size),
-                                 min(len(line), i + 1 + window_size)))
-            # Exclude the center word from the context words
-            indices.remove(i)
-            contexts.append([line[idx] for idx in indices])
-    return centers, contexts
-
-class RandomGenerator:
-    """Randomly draw among {1, ..., n} according to n sampling weights.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    def __init__(self, sampling_weights):
-        # Exclude 
-        self.population = list(range(1, len(sampling_weights) + 1))
-        self.sampling_weights = sampling_weights
-        self.candidates = []
-        self.i = 0
-
-    def draw(self):
-        if self.i == len(self.candidates):
-            # Cache `k` random sampling results
-            self.candidates = random.choices(
-                self.population, self.sampling_weights, k=10000)
-            self.i = 0
-        self.i += 1
-        return self.candidates[self.i - 1]
-
-def get_negatives(all_contexts, vocab, counter, K):
-    """Return noise words in negative sampling.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    # Sampling weights for words with indices 1, 2, ... (index 0 is the
-    # excluded unknown token) in the vocabulary
-    sampling_weights = [counter[vocab.to_tokens(i)]**0.75
-                        for i in range(1, len(vocab))]
-    all_negatives, generator = [], RandomGenerator(sampling_weights)
-    for contexts in all_contexts:
-        negatives = []
-        while len(negatives) < len(contexts) * K:
-            neg = generator.draw()
-            # Noise words cannot be context words
-            if neg not in contexts:
-                negatives.append(neg)
-        all_negatives.append(negatives)
-    return all_negatives
-
-def batchify(data):
-    """Return a minibatch of examples for skip-gram with negative sampling.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    max_len = max(len(c) + len(n) for _, c, n in data)
-    centers, contexts_negatives, masks, labels = [], [], [], []
-    for center, context, negative in data:
-        cur_len = len(context) + len(negative)
-        centers += [center]
-        contexts_negatives += [context + negative + [0] * (max_len - cur_len)]
-        masks += [[1] * cur_len + [0] * (max_len - cur_len)]
-        labels += [[1] * len(context) + [0] * (max_len - len(context))]
-    return (d2l.reshape(d2l.tensor(centers), (-1, 1)), d2l.tensor(
-        contexts_negatives), d2l.tensor(masks), d2l.tensor(labels))
-
-def _pad_ptb(all_centers, all_contexts, all_negatives):
-    """Pre-pad all skip-gram examples to the global max length.
-
-    Returns four NumPy arrays: centers (N,), contexts_negatives (N, L),
-
-    Defined in :numref:`sec_word2vec_data`"""
-    import numpy as _np
-    n = len(all_centers)
-    max_len = max(len(c) + len(neg)
-                  for c, neg in zip(all_contexts, all_negatives))
-    centers = _np.asarray(all_centers, dtype=_np.int64)
-    contexts_negatives = _np.zeros((n, max_len), dtype=_np.int64)
-    masks = _np.zeros((n, max_len), dtype=_np.float32)
-    labels = _np.zeros((n, max_len), dtype=_np.float32)
-    for i, (c, neg) in enumerate(zip(all_contexts, all_negatives)):
-        cur_len = len(c) + len(neg)
-        contexts_negatives[i, :cur_len] = c + neg
-        masks[i, :cur_len] = 1.
-        labels[i, :len(c)] = 1.
-    return centers, contexts_negatives, masks, labels
-
-def load_data_ptb(batch_size, max_window_size, num_noise_words):
-    """Download the PTB dataset and then load it into memory.
-
-    Defined in :numref:`sec_word2vec_data`"""
-    sentences = read_ptb()
-    vocab = d2l.Vocab(sentences, min_freq=10)
-    subsampled, counter = subsample(sentences, vocab)
-    corpus = [vocab[line] for line in subsampled]
-    all_centers, all_contexts = get_centers_and_contexts(
-        corpus, max_window_size)
-    all_negatives = get_negatives(
-        all_contexts, vocab, counter, num_noise_words)
-    centers, cn, masks, labels = _pad_ptb(
-        all_centers, all_contexts, all_negatives)
-    # centers shape: (N,) -> (N, 1) to match batchify convention
-    centers_t = tf.constant(centers[:, None], dtype=tf.int64)
-    cn_t = tf.constant(cn, dtype=tf.int64)
-    masks_t = tf.constant(masks, dtype=tf.float32)
-    labels_t = tf.constant(labels, dtype=tf.float32)
-    dataset = tf.data.Dataset.from_tensor_slices(
-        (centers_t, cn_t, masks_t, labels_t))
-    dataset = dataset.shuffle(buffer_size=len(centers)).batch(
-        batch_size).prefetch(tf.data.AUTOTUNE)
-    return dataset, vocab
-
-d2l.DATA_HUB['glove.6b.50d'] = (d2l.DATA_URL + 'glove.6B.50d.zip',
-                                '0b8703943ccdb6eb788e6f091b8946e82231bc4d')
-
-d2l.DATA_HUB['glove.6b.100d'] = (d2l.DATA_URL + 'glove.6B.100d.zip',
-                                 'cd43bfb07e44e6f27cbcc7bc9ae3d80284fdaf5a')
-
-d2l.DATA_HUB['glove.42b.300d'] = (d2l.DATA_URL + 'glove.42B.300d.zip',
-                                  'b5116e234e9eb9076672cfeabf5469f3eec904fa')
-
-d2l.DATA_HUB['wiki.en'] = (d2l.DATA_URL + 'wiki.en.zip',
-                           'c1816da3821ae9f43899be655002f6c723e91b88')
-
-class TokenEmbedding:
-    """Token Embedding.
-
-    Defined in :numref:`sec_synonyms`"""
-    def __init__(self, embedding_name):
-        self.idx_to_token, self.idx_to_vec = self._load_embedding(
-            embedding_name)
-        self.unknown_idx = 0
-        self.token_to_idx = {token: idx for idx, token in
-                             enumerate(self.idx_to_token)}
-
-    def _load_embedding(self, embedding_name):
-        idx_to_token, idx_to_vec = ['<unk>'], []
-        data_dir = d2l.download_extract(embedding_name)
-        with open(os.path.join(data_dir, 'vec.txt'), 'r') as f:
-            for line in f:
-                elems = line.rstrip().split(' ')
-                token, elems = elems[0], [float(elem) for elem in elems[1:]]
-                if len(elems) > 1:
-                    idx_to_token.append(token)
-                    idx_to_vec.append(elems)
-        idx_to_vec = [[0] * len(idx_to_vec[0])] + idx_to_vec
-        return idx_to_token, tf.constant(idx_to_vec, dtype=tf.float32)
-
-    def __getitem__(self, tokens):
-        indices = [self.token_to_idx.get(token, self.unknown_idx)
-                   for token in tokens]
-        return tf.gather(self.idx_to_vec, indices)
-
-    def __len__(self):
-        return len(self.idx_to_token)
-
-def get_tokens_and_segments(tokens_a, tokens_b=None):
-    """Get tokens of the BERT input sequence and their segment IDs.
-
-    Defined in :numref:`sec_bert`"""
-    tokens = ['<cls>'] + tokens_a + ['<sep>']
-    # 0 and 1 are marking segment A and B, respectively
-    segments = [0] * (len(tokens_a) + 2)
-    if tokens_b is not None:
-        tokens += tokens_b + ['<sep>']
-        segments += [1] * (len(tokens_b) + 1)
-    return tokens, segments
-
-class BERTEncoder(keras.layers.Layer):
-    """BERT encoder.
-
-    Defined in :numref:`sec_bert`"""
-    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
-                 num_blks, dropout, max_len=1000, **kwargs):
-        super(BERTEncoder, self).__init__(**kwargs)
-        self.token_embedding = keras.layers.Embedding(vocab_size, num_hiddens)
-        self.segment_embedding = keras.layers.Embedding(2, num_hiddens)
-        # In BERT, positional embeddings are learnable, thus we create a
-        # trainable variable of positional embeddings that are long enough
-        self.pos_embedding = self.add_weight(
-            name='pos_embedding', shape=(1, max_len, num_hiddens),
-            initializer='random_normal', trainable=True)
-        # BERT's attention sublayers use biased projections; the default for
-        # `TransformerEncoderBlock` is `bias=False`, so override here.
-        self.blks = [d2l.TransformerEncoderBlock(
-            num_hiddens, ffn_num_hiddens, num_heads, dropout, bias=True)
-            for _ in range(num_blks)]
-
-    def call(self, tokens, segments, valid_lens, training=False, **kwargs):
-        # Shape of `X` remains unchanged in the following code snippet:
-        # (batch size, max sequence length, `num_hiddens`)
-        X = self.token_embedding(tokens) + self.segment_embedding(segments)
-        X = X + self.pos_embedding[:, :tf.shape(X)[1], :]
-        for blk in self.blks:
-            X = blk(X, valid_lens, training=training)
-        return X
-
-class MaskLM(keras.layers.Layer):
-    """The masked language model task of BERT.
-
-    Defined in :numref:`sec_bert`"""
-    def __init__(self, vocab_size, num_hiddens, **kwargs):
-        super(MaskLM, self).__init__(**kwargs)
-        self.mlp = keras.Sequential([
-            keras.layers.Dense(num_hiddens, activation='relu'),
-            keras.layers.LayerNormalization(),
-            keras.layers.Dense(vocab_size),
-        ])
-
-    def call(self, X, pred_positions, **kwargs):
-        num_pred_positions = pred_positions.shape[1]
-        pred_positions_flat = tf.reshape(pred_positions, [-1])
-        batch_size = tf.shape(X)[0]
-        batch_idx = tf.repeat(tf.range(batch_size), num_pred_positions)
-        # Suppose that `batch_size` = 2, `num_pred_positions` = 3, then
-        # `batch_idx` is `tf.tensor([0, 0, 0, 1, 1, 1])`
-        indices = tf.stack([batch_idx, pred_positions_flat], axis=1)
-        masked_X = tf.gather_nd(X, indices)
-        masked_X = tf.reshape(masked_X, [batch_size, num_pred_positions, -1])
-        mlm_Y_hat = self.mlp(masked_X)
-        return mlm_Y_hat
-
-class NextSentencePred(keras.layers.Layer):
-    """The next sentence prediction task of BERT.
-
-    Defined in :numref:`sec_bert`"""
-    def __init__(self, **kwargs):
-        super(NextSentencePred, self).__init__(**kwargs)
-        # `output` is reserved on Keras Layer (a read-only property), so use
-        # `dense` for the head.
-        self.dense = keras.layers.Dense(2)
-
-    def call(self, X, **kwargs):
-        # `X` shape: (batch size, `num_hiddens`)
-        return self.dense(X)
-
-class BERTModel(keras.Model):
-    """The BERT model.
-
-    Defined in :numref:`sec_bert`"""
-    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens,
-                 num_heads, num_blks, dropout, max_len=1000):
-        super(BERTModel, self).__init__()
-        self.encoder = BERTEncoder(vocab_size, num_hiddens, ffn_num_hiddens,
-                                   num_heads, num_blks, dropout,
-                                   max_len=max_len)
-        self.hidden = keras.layers.Dense(num_hiddens, activation='tanh')
-        self.mlm = MaskLM(vocab_size, num_hiddens)
-        self.nsp = NextSentencePred()
-
-    def call(self, tokens, segments, valid_lens=None, pred_positions=None,
-             training=False, **kwargs):
-        encoded_X = self.encoder(tokens, segments, valid_lens,
-                                 training=training)
-        if pred_positions is not None:
-            mlm_Y_hat = self.mlm(encoded_X, pred_positions)
-        else:
-            mlm_Y_hat = None
-        # The hidden layer of the MLP classifier for next sentence prediction.
-        # 0 is the index of the '<cls>' token
-        nsp_Y_hat = self.nsp(self.hidden(encoded_X[:, 0, :]))
-        return encoded_X, mlm_Y_hat, nsp_Y_hat
-
-WIKITEXT_2_URL = ('https://huggingface.co/datasets/Salesforce/wikitext/'
-                  'resolve/main/wikitext-2-v1/train-00000-of-00001.parquet')
-WIKITEXT_2_SHA1 = '98ee727e59fcc34fddaadae93e15b1f8ed5561a4'
-
-def _read_wiki(data_dir=None):
-    import contextlib
-    import io
-    import pandas as pd
-    with contextlib.redirect_stdout(io.StringIO()):
-        fname = d2l.download(WIKITEXT_2_URL, folder='../data',
-                              sha1_hash=WIKITEXT_2_SHA1)
-    lines = pd.read_parquet(fname)['text'].tolist()
-    # Uppercase letters are converted to lowercase ones
-    paragraphs = [line.strip().lower().split(' . ')
-                  for line in lines if len(line.split(' . ')) >= 2]
-    random.shuffle(paragraphs)
-    return paragraphs
-
-def _get_next_sentence(sentence, next_sentence, paragraphs):
-    if random.random() < 0.5:
-        is_next = True
-    else:
-        # `paragraphs` is a list of lists of lists
-        next_sentence = random.choice(random.choice(paragraphs))
-        is_next = False
-    return sentence, next_sentence, is_next
-
-def _get_nsp_data_from_paragraph(paragraph, paragraphs, vocab, max_len):
-    nsp_data_from_paragraph = []
-    for i in range(len(paragraph) - 1):
-        tokens_a, tokens_b, is_next = _get_next_sentence(
-            paragraph[i], paragraph[i + 1], paragraphs)
-        # Consider 1 '<cls>' token and 2 '<sep>' tokens
-        if len(tokens_a) + len(tokens_b) + 3 > max_len:
-            continue
-        tokens, segments = d2l.get_tokens_and_segments(tokens_a, tokens_b)
-        nsp_data_from_paragraph.append((tokens, segments, is_next))
-    return nsp_data_from_paragraph
-
-def _replace_mlm_tokens(tokens, candidate_pred_positions, num_mlm_preds,
-                        vocab):
-    # For the input of a masked language model, make a new copy of tokens and
-    # replace some of them by '<mask>' or random tokens
-    mlm_input_tokens = [token for token in tokens]
-    pred_positions_and_labels = []
-    # Shuffle for getting 15% random tokens for prediction in the masked
-    # language modeling task
-    random.shuffle(candidate_pred_positions)
-    for mlm_pred_position in candidate_pred_positions:
-        if len(pred_positions_and_labels) >= num_mlm_preds:
-            break
-        masked_token = None
-        # 80% of the time: replace the word with the '<mask>' token
-        if random.random() < 0.8:
-            masked_token = '<mask>'
-        else:
-            # 10% of the time: keep the word unchanged
-            if random.random() < 0.5:
-                masked_token = tokens[mlm_pred_position]
-            # 10% of the time: replace the word with a random word
-            else:
-                masked_token = random.choice(vocab.idx_to_token)
-        mlm_input_tokens[mlm_pred_position] = masked_token
-        pred_positions_and_labels.append(
-            (mlm_pred_position, tokens[mlm_pred_position]))
-    return mlm_input_tokens, pred_positions_and_labels
-
-def _get_mlm_data_from_tokens(tokens, vocab):
-    candidate_pred_positions = []
-    # `tokens` is a list of strings
-    for i, token in enumerate(tokens):
-        # Special tokens are not predicted in the masked language modeling
-        # task
-        if token in ['<cls>', '<sep>']:
-            continue
-        candidate_pred_positions.append(i)
-    # 15% of random tokens are predicted in the masked language modeling task
-    num_mlm_preds = max(1, round(len(tokens) * 0.15))
-    mlm_input_tokens, pred_positions_and_labels = _replace_mlm_tokens(
-        tokens, candidate_pred_positions, num_mlm_preds, vocab)
-    pred_positions_and_labels = sorted(pred_positions_and_labels,
-                                       key=lambda x: x[0])
-    pred_positions = [v[0] for v in pred_positions_and_labels]
-    mlm_pred_labels = [v[1] for v in pred_positions_and_labels]
-    return vocab[mlm_input_tokens], pred_positions, vocab[mlm_pred_labels]
-
-def _pad_bert_inputs(examples, max_len, vocab):
-    max_num_mlm_preds = round(max_len * 0.15)
-    all_token_ids, all_segments, valid_lens,  = [], [], []
-    all_pred_positions, all_mlm_weights, all_mlm_labels = [], [], []
-    nsp_labels = []
-    for (token_ids, pred_positions, mlm_pred_label_ids, segments,
-         is_next) in examples:
-        all_token_ids.append(token_ids + [vocab['<pad>']] * (
-            max_len - len(token_ids)))
-        all_segments.append(segments + [0] * (max_len - len(segments)))
-        # `valid_lens` excludes count of '<pad>' tokens
-        valid_lens.append(float(len(token_ids)))
-        all_pred_positions.append(pred_positions + [0] * (
-            max_num_mlm_preds - len(pred_positions)))
-        # Predictions of padded tokens will be filtered out in the loss via
-        # multiplication of 0 weights
-        all_mlm_weights.append(
-            [1.0] * len(mlm_pred_label_ids) + [0.0] * (
-                max_num_mlm_preds - len(pred_positions)))
-        all_mlm_labels.append(mlm_pred_label_ids + [0] * (
-            max_num_mlm_preds - len(mlm_pred_label_ids)))
-        nsp_labels.append(int(is_next))
-    return (all_token_ids, all_segments, valid_lens, all_pred_positions,
-            all_mlm_weights, all_mlm_labels, nsp_labels)
-
-class _WikiTextDataset:
-    def __init__(self, paragraphs, max_len):
-        # Input `paragraphs[i]` is a list of sentence strings representing a
-        # paragraph; while output `paragraphs[i]` is a list of sentences
-        # representing a paragraph, where each sentence is a list of tokens
-        paragraphs = [d2l.tokenize(
-            paragraph, token='word') for paragraph in paragraphs]
-        sentences = [sentence for paragraph in paragraphs
-                     for sentence in paragraph]
-        self.vocab = d2l.Vocab(sentences, min_freq=5, reserved_tokens=[
-            '<pad>', '<mask>', '<cls>', '<sep>'])
-        # Get data for the next sentence prediction task
-        examples = []
-        for paragraph in paragraphs:
-            examples.extend(_get_nsp_data_from_paragraph(
-                paragraph, paragraphs, self.vocab, max_len))
-        # Get data for the masked language model task
-        examples = [(_get_mlm_data_from_tokens(tokens, self.vocab)
-                      + (segments, is_next))
-                     for tokens, segments, is_next in examples]
-        # Pad inputs
-        (self.all_token_ids, self.all_segments, self.valid_lens,
-         self.all_pred_positions, self.all_mlm_weights,
-         self.all_mlm_labels, self.nsp_labels) = _pad_bert_inputs(
-            examples, max_len, self.vocab)
-
-    def __len__(self):
-        return len(self.all_token_ids)
-
-def load_data_wiki(batch_size, max_len):
-    """Load the WikiText-2 dataset.
-
-    Defined in :numref:`sec_bert-dataset`"""
-    paragraphs = _read_wiki()
-    train_set = _WikiTextDataset(paragraphs, max_len)
-    AUTOTUNE = tf.data.AUTOTUNE
-    train_iter = tf.data.Dataset.from_tensor_slices((
-        tf.constant(train_set.all_token_ids, dtype=tf.int32),
-        tf.constant(train_set.all_segments, dtype=tf.int32),
-        tf.constant(train_set.valid_lens, dtype=tf.float32),
-        tf.constant(train_set.all_pred_positions, dtype=tf.int32),
-        tf.constant(train_set.all_mlm_weights, dtype=tf.float32),
-        tf.constant(train_set.all_mlm_labels, dtype=tf.int32),
-        tf.constant(train_set.nsp_labels, dtype=tf.int32),
-    )).shuffle(buffer_size=10000).batch(batch_size).prefetch(AUTOTUNE)
-    return train_iter, train_set.vocab
-
-# Construct loss functions once at module scope; re-instantiating per batch
-# is wasteful.
-_mlm_loss_fn = keras.losses.SparseCategoricalCrossentropy(
-    from_logits=True, reduction='none')
-_nsp_loss_fn = keras.losses.SparseCategoricalCrossentropy(
-    from_logits=True, reduction='none')
-
-def _get_batch_loss_bert(net, vocab_size, tokens_X, segments_X,
-                         valid_lens_x, pred_positions_X, mlm_weights_X,
-                         mlm_Y, nsp_y, training=True):
-    # Forward pass
-    _, mlm_Y_hat, nsp_Y_hat = net(
-        tokens_X, segments_X, tf.cast(tf.reshape(valid_lens_x, [-1]),
-                                      dtype=tf.float32),
-        pred_positions_X, training=training)
-    # Compute masked language model loss (mask per-token losses before summing)
-    mlm_l = _mlm_loss_fn(tf.reshape(mlm_Y, [-1]),
-                         tf.reshape(mlm_Y_hat, [-1, vocab_size]))
-    mlm_l = tf.reduce_sum(mlm_l * tf.reshape(mlm_weights_X, [-1])) / (
-        tf.reduce_sum(mlm_weights_X) + 1e-8)
-    # Compute next sentence prediction loss
-    nsp_l = tf.reduce_mean(_nsp_loss_fn(tf.cast(nsp_y, tf.int32), nsp_Y_hat))
-    l = mlm_l + nsp_l
-    return mlm_l, nsp_l, l
-
-d2l.DATA_HUB['aclImdb'] = (d2l.DATA_URL + 'aclImdb_v1.tar.gz', 
-                          '01ada507287d82875905620988597833ad4e0903')
-
-def read_imdb(data_dir, is_train):
-    """Read the IMDb review dataset text sequences and labels.
-
-    Defined in :numref:`sec_sentiment`"""
-    data, labels = [], []
-    for label in ('pos', 'neg'):
-        folder_name = os.path.join(data_dir, 'train' if is_train else 'test',
-                                   label)
-        for file in os.listdir(folder_name):
-            with open(os.path.join(folder_name, file), 'rb') as f:
-                review = f.read().decode('utf-8').replace('\n', '')
-                data.append(review)
-                labels.append(1 if label == 'pos' else 0)
-    return data, labels
-
-def load_data_imdb(batch_size, num_steps=500):
-    """Return data iterators and the vocabulary of the IMDb review dataset.
-
-    Defined in :numref:`sec_sentiment`"""
-    data_dir = d2l.download_extract('aclImdb', 'aclImdb')
-    train_data = read_imdb(data_dir, True)
-    test_data = read_imdb(data_dir, False)
-    train_tokens = d2l.tokenize(train_data[0], token='word')
-    test_tokens = d2l.tokenize(test_data[0], token='word')
-    vocab = d2l.Vocab(train_tokens, min_freq=5)
-    train_features = np.array([d2l.truncate_pad(
-        vocab[line], num_steps, vocab['<pad>']) for line in train_tokens])
-    test_features = np.array([d2l.truncate_pad(
-        vocab[line], num_steps, vocab['<pad>']) for line in test_tokens])
-    train_iter = d2l.load_array((train_features, np.array(train_data[1])),
-                                batch_size)
-    test_iter = d2l.load_array((test_features, np.array(test_data[1])),
-                               batch_size,
-                               is_train=False)
-    return train_iter, test_iter, vocab
-
-def predict_sentiment(net, vocab, sequence):
-    """Predict the sentiment of a text sequence.
-
-    Defined in :numref:`sec_sentiment_rnn`"""
-    sequence = tf.constant(vocab[sequence.split()], dtype=tf.int32)
-    sequence = tf.reshape(sequence, (1, -1))
-    label = tf.argmax(net(sequence, training=False), axis=1)
-    return 'positive' if int(label[0]) == 1 else 'negative'
-
-d2l.DATA_HUB['SNLI'] = (
-    'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
-    '9fcde07509c7e87ec61c640c1b2753d9041758e4')
-
-def read_snli(data_dir, is_train):
-    """Read the SNLI dataset into premises, hypotheses, and labels.
-
-    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
-    def extract_text(s):
-        # Remove information that will not be used by us
-        s = re.sub('\\(', '', s) 
-        s = re.sub('\\)', '', s)
-        # Substitute two or more consecutive whitespace with space
-        s = re.sub('\\s{2,}', ' ', s)
-        return s.strip()
-    label_set = {'entailment': 0, 'contradiction': 1, 'neutral': 2}
-    file_name = os.path.join(data_dir, 'snli_1.0_train.txt'
-                             if is_train else 'snli_1.0_test.txt')
-    with open(file_name, 'r') as f:
-        rows = [row.split('\t') for row in f.readlines()[1:]]
-    premises = [extract_text(row[1]) for row in rows if row[0] in label_set]
-    hypotheses = [extract_text(row[2]) for row in rows if row[0] in label_set]
-    labels = [label_set[row[0]] for row in rows if row[0] in label_set]
-    return premises, hypotheses, labels
-
-class SNLIDataset:
-    """A customized dataset to load the SNLI dataset.
-
-    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
-    def __init__(self, dataset, num_steps, vocab=None):
-        self.num_steps = num_steps
-        all_premise_tokens = d2l.tokenize(dataset[0])
-        all_hypothesis_tokens = d2l.tokenize(dataset[1])
-        if vocab is None:
-            self.vocab = d2l.Vocab(all_premise_tokens + all_hypothesis_tokens,
-                                   min_freq=5, reserved_tokens=['<pad>'])
-        else:
-            self.vocab = vocab
-        self.premises = self._pad(all_premise_tokens)
-        self.hypotheses = self._pad(all_hypothesis_tokens)
-        self.labels = np.array(dataset[2])
-        print('read ' + str(len(self.premises)) + ' examples')
-
-    def _pad(self, lines):
-        return np.array([d2l.truncate_pad(
-            self.vocab[line], self.num_steps, self.vocab['<pad>'])
-                         for line in lines])
-
-    def __getitem__(self, idx):
-        return (self.premises[idx], self.hypotheses[idx]), self.labels[idx]
-
-    def __len__(self):
-        return len(self.premises)
-
-def load_data_snli(batch_size, num_steps=50):
-    """Download the SNLI dataset and return data iterators and vocabulary.
-
-    Defined in :numref:`sec_natural-language-inference-and-dataset`"""
-    data_dir = d2l.download_extract('SNLI')
-    train_data = read_snli(data_dir, True)
-    test_data = read_snli(data_dir, False)
-    train_set = SNLIDataset(train_data, num_steps)
-    test_set = SNLIDataset(test_data, num_steps, train_set.vocab)
-    AUTOTUNE = tf.data.AUTOTUNE
-    train_iter = tf.data.Dataset.from_tensor_slices(
-        (train_set.premises, train_set.hypotheses, train_set.labels)
-    ).shuffle(buffer_size=len(train_set.labels)).batch(batch_size).prefetch(AUTOTUNE)
-    test_iter = tf.data.Dataset.from_tensor_slices(
-        (test_set.premises, test_set.hypotheses, test_set.labels)
-    ).batch(batch_size).prefetch(AUTOTUNE)
-    return train_iter, test_iter, train_set.vocab
-
-def predict_snli(net, vocab, premise, hypothesis):
-    """Predict the logical relationship between the premise and hypothesis.
-
-    Defined in :numref:`sec_natural-language-inference-attention`"""
-    premise = tf.constant([vocab[premise]], dtype=tf.int32)
-    hypothesis = tf.constant([vocab[hypothesis]], dtype=tf.int32)
-    label = tf.argmax(net((premise, hypothesis), training=False), axis=1)
-    return 'entailment' if label == 0 else 'contradiction' if label == 1 \
-            else 'neutral'
-
 def rbfkernel(x1, x2, ls=4.):
     dist = distance_matrix(np.expand_dims(x1, 1), np.expand_dims(x2, 1))
     return np.exp(-(1. / ls**2 / 2) * (dist ** 2))
@@ -3377,47 +3297,6 @@ class SuccessiveHalvingScheduler(d2l.HPOScheduler):
             return []
         sorted_rung = sorted(rung, key=lambda x: x[1])
         return [x[0] for x in sorted_rung[:n]]
-
-def update_D(X, Z, net_D, net_G, loss, optimizer_D):
-    """Update discriminator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = tf.shape(X)[0]
-    ones = tf.ones((batch_size,)) # Labels corresponding to real data
-    zeros = tf.zeros((batch_size,)) # Labels corresponding to fake data
-    # Do not need to compute gradient for `net_G`, so it is outside GradientTape
-    fake_X = net_G(Z)
-    with tf.GradientTape() as tape:
-        real_Y = net_D(X)
-        fake_Y = net_D(fake_X)
-        # We multiply the loss by batch_size to match PyTorch's BCEWithLogitsLoss
-        loss_D = (loss(ones, tf.reshape(real_Y, [-1])) + loss(
-            zeros, tf.reshape(fake_Y, [-1]))) * tf.cast(
-                batch_size, tf.float32) / 2
-    grads_D = tape.gradient(loss_D, net_D.trainable_variables)
-    optimizer_D.apply_gradients(zip(grads_D, net_D.trainable_variables))
-    return loss_D
-
-def update_G(Z, net_D, net_G, loss, optimizer_G):
-    """Update generator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = tf.shape(Z)[0]
-    ones = tf.ones((batch_size,))
-    with tf.GradientTape() as tape:
-        # We could reuse `fake_X` from `update_D` to save computation
-        fake_X = net_G(Z)
-        # Recomputing `fake_Y` is needed since `net_D` is changed
-        fake_Y = net_D(fake_X)
-        # We multiply the loss by batch_size to match PyTorch's BCEWithLogits loss
-        loss_G = loss(ones, tf.reshape(fake_Y, [-1])) * tf.cast(
-            batch_size, tf.float32)
-    grads_G = tape.gradient(loss_G, net_G.trainable_variables)
-    optimizer_G.apply_gradients(zip(grads_G, net_G.trainable_variables))
-    return loss_G
-
-d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
-                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 import io, os, queue, threading, time
 
@@ -3919,6 +3798,44 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
             break
         output_seq.append(pred.numpy())
     return ' '.join(tgt_vocab.to_tokens(tf.reshape(output_seq, shape = -1).numpy().tolist())), attention_weight_seq
+
+class AttentionDecoder(d2l.Decoder):
+    """The base attention-based decoder interface.
+
+    Defined in :numref:`sec_seq2seq_attention`"""
+    def __init__(self):
+        super().__init__()
+
+    @property
+    def attention_weights(self):
+        raise NotImplementedError
+
+class TransformerEncoder(d2l.Encoder):
+    """The Transformer encoder.
+
+    Defined in :numref:`sec_transformer`"""
+    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
+                 num_blks, dropout, bias=False):
+        super().__init__()
+        self.num_hiddens = num_hiddens
+        self.embedding = tf.keras.layers.Embedding(vocab_size, num_hiddens)
+        self.pos_encoding = d2l.PositionalEncoding(num_hiddens, dropout)
+        self.blks = [TransformerEncoderBlock(
+            num_hiddens, ffn_num_hiddens, num_heads, dropout, bias)
+            for _ in range(num_blks)]
+
+    def call(self, X, valid_lens, training=False, **kwargs):
+        # Since positional encoding values are between -1 and 1, the embedding
+        # values are multiplied by the square root of the embedding dimension
+        # to rescale before they are summed up
+        X = self.pos_encoding(self.embedding(X) * tf.math.sqrt(
+            tf.cast(self.num_hiddens, dtype=tf.float32)), training=training)
+        self.attention_weights = [None] * len(self.blks)
+        for i, blk in enumerate(self.blks):
+            X = blk(X, valid_lens, training=training)
+            self.attention_weights[
+                i] = blk.attention.attention.attention_weights
+        return X
 
 
 reshape = tf.reshape

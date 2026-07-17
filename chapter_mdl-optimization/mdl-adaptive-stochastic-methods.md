@@ -250,7 +250,7 @@ estimating a useful diagonal rescaling *from the gradients themselves*.
 ### AdaGrad: Calibrating Steps by Accumulated Evidence
 
 The first such scheme, **AdaGrad** :cite:`Duchi.Hazan.Singer.2011` (shown in
-action in :numref:`sec_adagrad`), keeps a
+action in :numref:`sec_adam`), keeps a
 running sum of squared gradients per coordinate and divides by its square
 root:
 
@@ -312,7 +312,7 @@ nothing. The method stalls because it remembers too much.
 The repair is to replace the all-time sum with an **exponential moving
 average**, the same fix that turns a cumulative mean into
 something that can track a moving target. **RMSProp**
-:cite:`Tieleman.Hinton.2012` (shown in action in :numref:`sec_rmsprop`) keeps
+:cite:`Tieleman.Hinton.2012` (shown in action in :numref:`sec_adam`) keeps
 
 $$
 \mathbf{v}_t = \beta_2\, \mathbf{v}_{t-1} + (1 - \beta_2)\, \mathbf{g}_t^2,

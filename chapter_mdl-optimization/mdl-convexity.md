@@ -1401,7 +1401,7 @@ convex conjugates. Beyond the chapter, Jensen's inequality and the
 log-sum-exp/negative-entropy pair are the analytic engine of
 :numref:`sec_mdl-information_theory` and the variational bounds of
 :numref:`sec_mdl-divergences-distances`, and the main book's
-:numref:`sec_convexity`, :numref:`sec_softmax`, and :numref:`sec_weight_decay`
+:numref:`sec_optimization-intro`, :numref:`sec_softmax`, and :numref:`sec_weight_decay`
 all stand on results proved here.
 
 [Discussions](https://d2l.discourse.group/t/convexity)

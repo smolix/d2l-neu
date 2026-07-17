@@ -127,16 +127,17 @@ book:
       chapters:
         - chapter_optimization/index.qmd
         - chapter_optimization/optimization-intro.qmd
-        - chapter_optimization/convexity.qmd
         - chapter_optimization/gd.qmd
         - chapter_optimization/sgd.qmd
         - chapter_optimization/minibatch-sgd.qmd
         - chapter_optimization/momentum.qmd
-        - chapter_optimization/adagrad.qmd
-        - chapter_optimization/rmsprop.qmd
-        - chapter_optimization/adadelta.qmd
         - chapter_optimization/adam.qmd
+        - chapter_optimization/adamw.qmd
         - chapter_optimization/lr-scheduler.qmd
+        - chapter_optimization/muon.qmd
+        - chapter_optimization/batch-size.qmd
+        - chapter_optimization/scaling.qmd
+        - chapter_optimization/practice.qmd
         - chapter_attention-mechanisms-and-transformers/index.qmd
         - chapter_attention-mechanisms-and-transformers/queries-keys-values.qmd
         - chapter_attention-mechanisms-and-transformers/attention-pooling.qmd
@@ -165,25 +166,11 @@ book:
         - chapter_reinforcement-learning/mdp.qmd
         - chapter_reinforcement-learning/value-iter.qmd
         - chapter_reinforcement-learning/qlearning.qmd
+        - chapter_generative-adversarial-networks/index.qmd
+        - chapter_generative-adversarial-networks/gan.qmd
+        - chapter_generative-adversarial-networks/dcgan.qmd
         - chapter_diffusion-models/index.qmd
-    - part: "Computer Vision"
-      chapters:
-        - chapter_computer-vision/index.qmd
-        - chapter_computer-vision/image-augmentation.qmd
-        - chapter_computer-vision/fine-tuning.qmd
-        - chapter_computer-vision/bounding-box.qmd
-        - chapter_computer-vision/anchor.qmd
-        - chapter_computer-vision/multiscale-object-detection.qmd
-        - chapter_computer-vision/object-detection-dataset.qmd
-        - chapter_computer-vision/ssd.qmd
-        - chapter_computer-vision/rcnn.qmd
-        - chapter_computer-vision/semantic-segmentation-and-dataset.qmd
-        - chapter_computer-vision/transposed-conv.qmd
-        - chapter_computer-vision/fcn.qmd
-        - chapter_computer-vision/neural-style.qmd
-        - chapter_computer-vision/kaggle-cifar10.qmd
-        - chapter_computer-vision/kaggle-dog.qmd
-    - part: "Natural Language Processing"
+    - part: "Language Models"
       chapters:
         - chapter_natural-language-processing-pretraining/index.qmd
         - chapter_natural-language-processing-pretraining/word2vec.qmd
@@ -204,17 +191,29 @@ book:
         - chapter_natural-language-processing-applications/natural-language-inference-attention.qmd
         - chapter_natural-language-processing-applications/finetuning-bert.qmd
         - chapter_natural-language-processing-applications/natural-language-inference-bert.qmd
-    - part: "Advanced Topics"
+    - part: "Image Models"
+      chapters:
+        - chapter_computer-vision/index.qmd
+        - chapter_computer-vision/image-augmentation.qmd
+        - chapter_computer-vision/fine-tuning.qmd
+        - chapter_computer-vision/bounding-box.qmd
+        - chapter_computer-vision/anchor.qmd
+        - chapter_computer-vision/multiscale-object-detection.qmd
+        - chapter_computer-vision/object-detection-dataset.qmd
+        - chapter_computer-vision/ssd.qmd
+        - chapter_computer-vision/rcnn.qmd
+        - chapter_computer-vision/semantic-segmentation-and-dataset.qmd
+        - chapter_computer-vision/transposed-conv.qmd
+        - chapter_computer-vision/fcn.qmd
+        - chapter_computer-vision/neural-style.qmd
+        - chapter_computer-vision/kaggle-cifar10.qmd
+        - chapter_computer-vision/kaggle-dog.qmd
+    - part: "Attic"
       chapters:
         - chapter_gaussian-processes/index.qmd
         - chapter_gaussian-processes/gp-intro.qmd
         - chapter_gaussian-processes/gp-priors.qmd
         - chapter_gaussian-processes/gp-inference.qmd
-        - chapter_generative-adversarial-networks/index.qmd
-        - chapter_generative-adversarial-networks/gan.qmd
-        - chapter_generative-adversarial-networks/dcgan.qmd
-    - part: "Attic"
-      chapters:
         - chapter_hyperparameter-optimization/index.qmd
         - chapter_hyperparameter-optimization/hyperopt-intro.qmd
         - chapter_hyperparameter-optimization/hyperopt-api.qmd

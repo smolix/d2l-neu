@@ -154,6 +154,14 @@ authoring" section below.
 Conventions for writing/revising chapter `.md` content. Model the density and
 shape on the **preliminaries** and **linear-neural-networks** chapters.
 
+- **Framework coverage policy (2026-07-17, per Alex):** the Basics part
+  (ch. 1–8) and the math appendix carry all four frameworks; the **Advanced
+  part (ch. 9–16) carries PyTorch and JAX only**. New or rewritten Advanced
+  content must not add TensorFlow/MXNet tabs, and existing TF/MXNet material
+  there is slated for removal as chapters are touched. Per-chapter framework
+  subsets are already supported by the pipeline (the RL chapter ships
+  PyTorch-only: coverage follows per-cell tabs, and `outputs/` simply has no
+  tf/mxnet trees for it).
 - **Code teaches; it does not draw.** Every notebook code cell must *compute or
   demonstrate* something the prose discusses (fit a model, decompose a matrix,
   verify an identity, classify data). Code whose only purpose is to draw an
@@ -356,20 +364,25 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   store is a portable baseline: a CPU/Apple-Silicon machine renders the whole
   book and re-runs only the CPU notebooks it touches. See `docs/build-system.md`
   §3.1/§3.3a.
-- **Part structure (2026-07-16 restructure, per Alex):** front matter
+- **Part structure (2026-07-17 restructure, per Alex):** front matter
   (introduction is unnumbered) | **Basics** = ch. 1–8 (preliminaries through
   Sequence Models) | **Advanced** = 9 Optimization, 10 Attention, 11
   Computational Performance, 12 Transformers (placeholder), 13 State Space
-  Models (formerly "Gated and Linear Recurrence"), 14 RL, 15 Diffusion
-  Models (placeholder) | Computer Vision 16 | NLP 17–18 | Advanced Topics
-  (rump: 19 GP, 20 GANs — final home TBD) | **Attic** = 21 HPO, 22 RecSys |
-  math appendix | Tools. Title shortenings ("Computation", "Modern
-  Convnets", "Sequence Models", singular "Multilayer Perceptron") are
-  deliberate: inside a single "Basics" part the long framework-y titles
-  were redundant, and ch. 13's rename marks the book's pivot to the
-  linear-recurrence/SSM view. Language Models and Computer Vision are
-  slated to become their own parts later; the preface still describes the
-  old three-part plan and needs a full rewrite (deferred, per Alex).
+  Models (formerly "Gated and Linear Recurrence"), 14 RL, 15 GANs, 16
+  Diffusion Models (placeholder) | **Language Models** (formerly "Natural
+  Language Processing") = 17–18 | **Image Models** (formerly "Computer
+  Vision") = 19 | **Attic** = 20 GP, 21 HPO, 22 RecSys (GP leads the Attic:
+  it is the Bayesian-optimization background HPO builds on) | math appendix
+  23–28 | Tools 29. Title shortenings ("Computation", "Modern Convnets",
+  "Sequence Models", singular "Multilayer Perceptron") are deliberate:
+  inside a single "Basics" part the long framework-y titles were redundant,
+  and ch. 13's rename marks the book's pivot to the linear-recurrence/SSM
+  view. The preface still describes the old three-part plan and needs a
+  full rewrite (deferred, per Alex). **Invariant:** `CHAPTER_NUMBERING`
+  dict order must equal `_quarto.yml` chapter order — `gen_pdf.py` emits
+  the PDF book in dict order and `fix_latex.py` pairs tex `\chapter`s
+  against it positionally; a mismatch silently misnumbers the PDF (see
+  `docs/build-system.md` §4.1).
 - The **"Mathematics for Deep Learning"** part (branch
   `math-for-deep-learning-appendix`) is now the **default math appendix**: a
   single part of 6 numbered chapters under `chapter_mdl-*` — **23** Linear

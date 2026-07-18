@@ -281,11 +281,13 @@ most aggressive steps precisely when its scale estimate is built from the
 fewest samples. The derivation, and a picture of the transient, are in
 :numref:`subsec_mdl-per-coordinate`.
 
-One cosmetic difference from :eqref:`eq_rmsprop`: Adam adds $\epsilon$
-*outside* the square root. At the values involved the placement matters
-little; we use $\epsilon = 10^{-6}$ in the code below, while framework
-implementations default to $10^{-8}$. What $\epsilon$ is really for is a
-question we take up at the end of the section.
+One more difference from :eqref:`eq_rmsprop`: Adam adds $\epsilon$
+*outside* the square root. At this demo's scales, where
+$\sqrt{\hat{\mathbf{v}}_t}$ is of order one, the placement matters little;
+it decides the update where $\sqrt{\hat{\mathbf{v}}_t}$ is small — sparse
+gradients, mixed precision — and the $\eta/\epsilon$ step ceiling we meet
+at the end of the section depends on it. We use $\epsilon = 10^{-6}$ in
+the code below, while framework implementations default to $10^{-8}$.
 
 The implementation carries two buffers per parameter and a step counter for
 the bias correction, which we keep in the `hyperparams` dictionary.
@@ -672,11 +674,12 @@ print(f'final perplexity: SGD {math.exp(final_loss(sgd_lm[best_sgd])):.2f}, '
       f'Adam {math.exp(final_loss(adam_lm[best_adam])):.2f}')
 ```
 
-Tuned Adam beats tuned SGD by a wide margin, roughly 20% in final training
+Tuned Adam beats tuned SGD ("tuned" here and below meaning the best of the
+coarse four-point grid) by a wide margin, roughly 20% in final training
 loss in our runs, and the gap is not a transient: Adam's curve is
 below SGD's at every point after the first few dozen steps and is still
-opening at the end. No learning rate rescues SGD, since the sweep already
-found its best and the next one diverged. On this problem, per-coordinate
+opening at the end. No rate in our grid rescued SGD: the sweep found its
+best, and the next one diverged. On this problem, per-coordinate
 scaling is worth more than any amount of step-size tuning.
 
 ### The Same Race on a CNN
@@ -809,9 +812,8 @@ the same two optimizers behave so differently on the two tasks.
 
 ### Why the Gap Lives Where It Does
 
-The honest answer is that this is current research rather than settled
-textbook material, but its outline is clear, and all of its threads run
-through the parameter census.
+This is current research rather than settled textbook material, but its
+outline is clear, and all of its threads run through the parameter census.
 
 First, the gap is not about minibatch noise. :citet:`Kunstner.Chen.Lavington.ea.2023`
 showed that it persists in *full-batch* training, where there is no noise to
@@ -841,9 +843,11 @@ story: three populations with different geometry and different update
 statistics, all sharing one $\eta$ under SGD.
 
 None of these accounts is final, and they are not mutually exclusive; the
-character-level vocabulary here is nearly balanced, yet the architectural
-heterogeneity alone sustains a wide gap. What is settled is the practice:
-on transformers, use the method that scales per coordinate.
+character-level vocabulary here has no starved rare tokens — its frequencies
+are skewed, but unlike the rare words of a word-level vocabulary, even the
+rarest character recurs thousands of times over the run — yet the
+architectural heterogeneity alone sustains a wide gap. What is settled is
+the practice: on transformers, use the method that scales per coordinate.
 
 ## When the Variance Estimate Misbehaves
 
@@ -885,10 +889,11 @@ preconditioner estimated from first-order information, cheap enough to run
 at any scale, at the price of two extra state buffers per parameter.
 
 Where it wins is not uniform. At matched tuning on a small transformer
-language model, Adam beats SGD with momentum decisively and the gap cannot
-be tuned away, while on a comparable CNN the two are close. The best current
-explanations point at heterogeneity, across token frequencies and across
-architectural blocks, that a single global learning rate cannot serve. The
+language model, Adam beats SGD with momentum decisively, and no rate in
+our grid closed the gap; on a comparable CNN the two are close. The best
+current explanations point at heterogeneity, across token frequencies and
+across architectural blocks, that a single global learning rate cannot
+serve. The
 variance estimate at Adam's heart can also misbehave; $\epsilon$, AMSGrad,
 and Yogi are the standard responses.
 
@@ -1068,7 +1073,7 @@ On the language model:
 
 - SGD's best lr sits one grid point below divergence; Adam's optimum is
   interior.
-- The gap opens early, never closes, and cannot be tuned away.
+- The gap opens early and no rate in our grid closes it.
 :::
 
 ::: {.slide title="Same race, same harness, on a CNN"}

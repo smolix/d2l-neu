@@ -222,12 +222,15 @@ SGD provably converges where plain SGD can fail
 :cite:`Zhang.Karimireddy.Veit.ea.2020`. The threshold should be set
 accordingly, above the typical norms of a healthy run, which you know
 because you logged them. A guard that fires on most steps is not guarding
-anything; it is a learning-rate cut in disguise, and the honest response is
+anything; it is a learning-rate cut in disguise, and the fix is
 to lower the learning rate or raise the threshold
 :cite:`Godbole.Dahl.Gilmer.ea.2023`. For the Adam family the arithmetic
-differs but the conclusion holds. Adam's normalization already caps every
-coordinate's step near $\eta$ (:numref:`sec_adam`), so clipping will not
-rescue a too-large Adam learning rate, and in our runs it did not. What it
+differs but the conclusion holds. In steady state Adam's normalization
+keeps every coordinate's step near $\eta$ (:numref:`sec_adam`), transiently
+up to a few times that — $|\hat{m}/\sqrt{\hat{v}}|$ can briefly reach
+$(1 - \beta_1)/\sqrt{1 - \beta_2} \approx 3$ at the defaults — so clipping
+is no substitute for lowering a too-large Adam learning rate, and in our
+runs it was not. What it
 still buys is protection for the estimates: one enormous gradient otherwise
 enters $\mathbf{m}$ and $\mathbf{v}$ and distorts the steps for the
 $\sim 1/(1-\beta_2)$ steps the averages take to forget it.
@@ -267,12 +270,15 @@ touching the rate: the bounces roughly cancel in the mean, so an average of
 iterates sits near the center of the region the run is circling.
 Stochastic weight averaging made this a standard trick, averaging
 checkpoints from the tail of training and evaluating the average
-:cite:`Izmailov.Podoprikhin.Garipov.ea.2018`. The running form is an
-exponential moving average of the parameters,
+:cite:`Izmailov.Podoprikhin.Garipov.ea.2018`. You have met the running form
+twice: :numref:`sec_training_recipes` put an exponential moving average of
+the weights into the standard recipe, and :numref:`sec_parameters` showed
+the machinery for maintaining one. It is
 $\bar{\mathbf{x}}_t = \alpha\, \bar{\mathbf{x}}_{t-1} + (1 - \alpha)\, \mathbf{x}_t$:
 the same leaky average this chapter has applied to gradients (momentum) and
 to squared gradients (Adam), now applied to the weights themselves, purely
-for evaluation. The training run never sees it.
+for evaluation. The training run never sees it. What is new here is the
+noise-ball reading of *why* it helps.
 
 We test it on the schedule testbed of :numref:`sec_scheduler`, reproduced
 verbatim, in the situation where that section's story began: the constant
@@ -341,14 +347,20 @@ test_iter = fashion.get_dataloader(train=False)
 :begin_tab:`pytorch`
 The EMA update walks the two `state_dict`s in parallel. Floating-point
 entries are averaged, which includes the BatchNorm running statistics, so
-the averaged model stays self-consistent; integer buffers are copied
+the averaged model stays approximately consistent — an EMA of running
+statistics is not the exact statistic of the EMA weights; the clean
+alternative is to recompute them for the averaged weights, as the
+checkpoint-averaging note below prescribes. Integer buffers are copied
 through.
 :end_tab:
 
 :begin_tab:`jax`
-The EMA update is one `tree.map` over the two models' states. That state
-includes the BatchNorm running statistics, so the averaged model stays
-self-consistent.
+The EMA update is one `tree.map` over the parameters and BatchNorm
+statistics of the two models. Averaging the running statistics keeps the
+averaged model approximately consistent — an EMA of running statistics is
+not the exact statistic of the EMA weights; the clean alternative is to
+recompute them for the averaged weights, as the checkpoint-averaging note
+below prescribes.
 :end_tab:
 
 ```{.python .input #practice-weight-averaging-2}
@@ -400,8 +412,9 @@ def train_step(model, optimizer, X, y):
 
 @nnx.jit
 def ema_step(ema, model, decay=0.999):
+    kinds = (nnx.Param, nnx.BatchStat)  # skip any non-float state
     new = jax.tree.map(lambda e, p: decay * e + (1 - decay) * p,
-                       nnx.state(ema), nnx.state(model))
+                       nnx.state(ema, kinds), nnx.state(model, kinds))
     nnx.update(ema, new)
 
 @nnx.jit
@@ -435,21 +448,24 @@ d2l.plot(list(range(1, num_epochs + 1)), [live_acc, avg_acc], 'epoch',
 
 Two curves, two lessons. First, the EMA needs its window to fill before it
 is worth anything: for the first several epochs it trails badly, because
-the average still carries heavy weight on near-initialization iterates.
-This is the same startup transient that Adam's bias correction cancels for
-its moment estimates (:numref:`sec_adam`), uncorrected here, and it is why
+the average still carries heavy weight on stale, near-initialization
+iterates. This is lag, not the zero-initialization deficit that Adam's bias
+correction removes (:numref:`sec_adam`): the average starts at the initial
+weights, so its coefficients already sum to one and there is nothing to
+correct — the early estimates are simply dominated by old iterates. That
+lag is why
 practical EMAs either warm up the decay or start averaging late. Second,
 once the window has filled, the averaged model is better and much steadier.
-In our runs the EMA ends one to three points above the live weights, and
-the width of that range is itself the finding: the live curve gambles a few
+In our runs the EMA ends half a point to a point above the live weights,
+and the steadiness matters more than the size: the live curve gambles a few
 points of accuracy on when you happen to stop, and the average does not.
 The averaged model
 at a constant rate lands in the range the decayed schedules of
 :numref:`sec_scheduler` reached, which is the schedule-free observation of
 that section from the other side: decay and averaging are two ways to
-quench the same noise. That also predicts the honest caveat. Add the same
+quench the same noise. That also predicts a limit. Add the same
 EMA to a run whose schedule already decayed well, and on a model this size
-the remaining nudge is within run-to-run noise; we checked. The technique
+the remaining nudge is too small to call from a single run. The technique
 earns its keep where the decayed endpoint is expensive to reach, or where
 no decay is coming. The cost is one extra copy of the parameters, cheap by
 the accounting of :numref:`sec_adamw`. One footnote for checkpoint
@@ -538,9 +554,10 @@ right emphasis: the log is the experiment.
 
 Three method families were left out on purpose. Sharpness-aware
 minimization takes an inner ascent step before each descent step to seek
-flat minima; it doubles the gradient cost, and its dependable wins are in
-vision and fine-tuning rather than large-scale pretraining
-:cite:`Foret.Kleiner.Mobahi.ea.2021`. Variance-reduction methods of the
+the flat minima whose connection to generalization
+:numref:`sec_generalization_deep` discussed; it doubles the gradient cost,
+and its dependable wins are in vision and fine-tuning rather than
+large-scale pretraining :cite:`Foret.Kleiner.Mobahi.ea.2021`. Variance-reduction methods of the
 SVRG family own an elegant theory for finite sums that has never paid its
 way on deep networks; the theory, and the honest post-mortem, live in
 :numref:`sec_mdl-variance-reduction`. LARS and LAMB, the layerwise-adaptive
@@ -688,9 +705,10 @@ The instrumented run: median gradient norm ~0.3, threshold 1.0 —
   (Zhang et al., 2020); the guard exists for the tail.
 - Firing on most steps = a learning-rate cut in disguise. Lower $\eta$ or
   raise $\theta$.
-- Adam: clipping won't rescue a too-large $\eta$ (steps are already
-  $\sim\eta$-capped) — it guards $\mathbf{m}, \mathbf{v}$ from one huge
-  gradient lingering $1/(1-\beta_2)$ steps.
+- Adam: steps sit near $\eta$ in steady state (transients up to ~3×), so
+  clipping is no substitute for lowering a too-large $\eta$ — it guards
+  $\mathbf{m}, \mathbf{v}$ from one huge gradient lingering
+  $1/(1-\beta_2)$ steps.
 :::
 
 ::: {.slide title="The stability kit at scale"}
@@ -716,14 +734,15 @@ the chapter's leaky average, now on the weights (SWA; Izmailov et al.,
 
 @!practice-weight-averaging-3
 
-- Window must fill first (Adam's bias-correction transient, uncorrected).
-- Then: 1–3 points above the live weights, and no when-to-stop lottery.
+- Window must fill first — the early gap is lag on stale iterates, not a
+  bias to correct; warm up the decay or start late.
+- Then: modestly above the live weights, and no when-to-stop lottery.
 :::
 
 ::: {.slide title="Averaging: where it matters"}
 - Constant rate + EMA ≈ decayed schedule: decay and averaging quench the
   same noise (§9.8's schedule-free view). On an already-decayed run this
-  size: within noise — we checked.
+  size: too small to call from a single run.
 - LLMs: checkpoint averaging (LAWA); **Llama 3 shipped an average** of its
   annealing checkpoints. Model soups: average fine-tuned models.
 - Diffusion (ch. 15): EMA is **mandatory** — quality tracks the window so

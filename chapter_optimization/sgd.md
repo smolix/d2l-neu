@@ -128,7 +128,9 @@ $$\mathbb{E}\big[x_\infty^2\big] \approx \frac{\eta\, \sigma^2}{2\lambda}.$$
 :eqlabel:`eq_sgd-noise-ball`
 
 The iterates rattle around inside a *noise ball* whose squared radius grows
-linearly with the learning rate; the two-line derivation, and a picture of
+linearly with the learning rate — the same noise ball that
+:numref:`sec_linear_regression` promised an explanation for when it first
+named the phenomenon; the two-line derivation, and a picture of
 GD and SGD racing on the same bowl, are in
 :numref:`subsec_mdl-stochastic-gradients`. Equation :eqref:`eq_sgd-noise-ball`
 says exactly what the demo showed: a constant $\eta$ stalls at a noise floor
@@ -218,8 +220,8 @@ small two-layer MLP on the airfoil-noise regression dataset that serves as
 this chapter's workhorse from :numref:`sec_minibatch_sgd` on. We freeze the
 parameters at a random initialization, take the full-dataset gradient as
 ground truth, and measure the mean squared deviation of minibatch gradients
-from it, for batch sizes spanning three orders of magnitude — sampling with
-replacement, matching the theory.
+from it, for batch sizes spanning nearly three orders of magnitude —
+sampling with replacement, matching the theory.
 
 ```{.python .input #sgd-gradient-variance-and-batch-size}
 %%tab pytorch
@@ -285,8 +287,8 @@ d2l.plot(batch_sizes, [var, [var[0] / b for b in batch_sizes]],
 ```
 
 The measured points fall on the $1/b$ reference line across the whole range:
-three orders of magnitude in batch size buy three orders of magnitude in
-variance. Note what the log scale conceals. Variance falling like $1/b$ means
+a factor of 500 in batch size buys a factor of 500 in variance. Note what
+the log scale conceals. Variance falling like $1/b$ means
 noise *amplitude* falls like $1/\sqrt{b}$, so spending $100\times$ more
 compute per step buys only a $10\times$ quieter gradient. Batch size is thus
 a genuine second dial next to the learning rate, but one with diminishing
@@ -312,13 +314,14 @@ practice, and the exercises take it up.
 SGD trades exactness for speed: an unbiased $\mathcal{O}(1)$-per-step
 gradient estimate in place of an $\mathcal{O}(n)$ exact one. The price is
 variance, and this section met both of the dials that control it. A constant
-learning rate leaves the iterates rattling in a noise ball of radius
+learning rate leaves the iterates rattling in a noise ball of squared radius
 proportional to $\eta$; decaying learning rates converge, provided the decay
 is slow enough to travel arbitrarily far yet fast enough to quench the noise.
 Batch size is the other dial: minibatch gradient variance falls like $1/b$,
-measured exactly so on a real network, though at a linear cost in compute per
-step. The proofs owed here — the convex rates and the nonconvex
-Ghadimi–Lan theorem — live in :numref:`subsec_mdl-stochastic-gradients` and
+measured on a real network over a factor of 500 in batch size, though at a
+linear cost in compute per step. The proofs owed here — the convex rates
+and the nonconvex Ghadimi–Lan theorem — live in
+:numref:`subsec_mdl-stochastic-gradients` and
 :numref:`subsec_mdl-nonconvex-sgd`.
 
 ## Exercises
@@ -435,8 +438,8 @@ converges much better after only 50 steps:
 In real training the noise comes from *which examples* land
 in the minibatch. Averaging $b$ independent example
 gradients divides the variance by $b$. Measured on a real
-network (2-layer MLP, airfoil data), it holds across three
-orders of magnitude:
+network (2-layer MLP, airfoil data), it holds from batch
+size 1 to 512:
 
 @sgd-gradient-variance-and-batch-size
 :::

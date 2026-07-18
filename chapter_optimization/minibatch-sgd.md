@@ -356,7 +356,8 @@ def get_data_ch11(batch_size=10, n=1500):
 
 ## Implementation from Scratch
 
-Recall the minibatch SGD implementation from :numref:`sec_linear_scratch`.
+Recall the minibatch update derived in :numref:`sec_linear_regression` and
+implemented from scratch in :numref:`sec_linear_scratch`.
 Here we make it slightly more general, giving it the call signature that
 every optimizer in this chapter will share: a `states` input holding whatever
 auxiliary variables the algorithm carries (SGD carries none; momentum and

@@ -35,7 +35,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "clipped at 1.0: final loss 1.024\n"
+          "text": "clipped at 1.0: final loss 1.058\n"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 27761,
-          "sha256": "sha256:403932085e2eb3c5c519d97d8d882a4577d433813956a371d5296b095c023f99"
+          "bytes": 39997,
+          "sha256": "sha256:bfaee9a8e66469930a8c7b6c9175fe57c573176bf98935115dca501522622f2e"
         }
       ]
     },
@@ -58,18 +58,18 @@
       "outputs": []
     },
     "practice-weight-averaging-2": {
-      "code_fingerprint": "sha256:522e2ef641c60adc6719e433ca506aafaa586e91cac77c061eeadd8c2fecbdc5",
+      "code_fingerprint": "sha256:070132a9ff0b37863406c83ccf44768e0110d3efe400ae99e0209c79adcbf9d0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final test accuracy: live 0.886, EMA 0.912\n"
+          "text": "final test accuracy: live 0.903, EMA 0.913\n"
         }
       ]
     },
     "practice-weight-averaging-3": {
-      "code_fingerprint": "sha256:cfb2b86b70daefabbb88180e2a7377ac4c2a1e6c08024e752d5216c0028afb01",
+      "code_fingerprint": "sha256:6bcbd0389e49493b708d256d92ec66f2669f3114bed1d967787782d1ee357276",
       "kind": "asset",
       "outputs": [
         {
@@ -77,7 +77,7 @@
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
           "bytes": 22792,
-          "sha256": "sha256:d668476ece99c06f2fb9ed9875b0a86950feb06b8681c832701cbd033e44c0ac"
+          "sha256": "sha256:7772a061ed31753cbe73b67dd31716d1256b6088607425102dab0b2f00273c46"
         }
       ]
     }

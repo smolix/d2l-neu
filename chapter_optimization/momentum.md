@@ -140,7 +140,8 @@ against curvature, as above, and against noise.
 How much history does the velocity hold? The weights
 $1, \beta, \beta^2, \ldots$ sum to $\frac{1}{1-\beta}$ in the limit, so a
 useful reading is: **momentum $\beta$ averages over roughly the last
-$\frac{1}{1-\beta}$ gradients**. $\beta = 0.9$, the common default, looks
+$\frac{1}{1-\beta}$ gradients**. $\beta = 0.9$ — the `momentum=0.9` you
+have been passing to optimizers since :numref:`sec_training_recipes` — looks
 back about $10$ steps; $\beta = 0.99$ about $100$. The plot shows how sharply
 the weights decay for various $\beta$:
 
@@ -189,9 +190,9 @@ and rings around the minimum. The fastest setting, $\beta^\star$, sits at
 critical damping between the two. Our valley has $\kappa = 20$, giving
 $\beta^\star \approx 0.4$ — and in hindsight, the tuning that sailed down
 the valley earlier, $\eta = 0.6$ with $\beta = 0.5$, sits close to the
-optimum. Push $\beta$ well past critical and momentum turns against us.
-Here is $\beta = 0.8$, twice the critical value, at a learning rate where
-plain gradient descent would be perfectly stable:
+optimum. Push $\beta$ too far and momentum turns against us. Here is
+$\beta = 0.8$, well past the fastest-converging $\beta^\star$, at a
+learning rate where plain gradient descent would be perfectly stable:
 
 ```{.python .input #momentum-acceleration-and-damping}
 eta, beta = 0.3, 0.8
@@ -367,8 +368,8 @@ d2l.train_concise_ch11(
 ```
 
 On this small, noisy problem the curve is essentially indistinguishable from
-plain momentum, and that is the honest general picture: with small-batch
-stochastic gradients the look-ahead correction is dwarfed by sampling noise.
+plain momentum, as is typical at small batch: the look-ahead correction is
+dwarfed by sampling noise.
 Nesterov momentum earns its difference where curvature dominates noise —
 full-batch or large-batch training, and $\beta$ pushed close to $1$. Since
 it costs nothing extra, it is often simply switched on.
@@ -480,7 +481,7 @@ Proofs: math appendix (gradient-based optimization).
 
 ::: {.slide title="Too much momentum: ringing"}
 This valley: $\kappa = 20$ → $\beta^\star \approx 0.4$. Now
-$\eta = 0.3$ (GD-stable), $\beta = 0.8$ — twice critical, under-damped:
+$\eta = 0.3$ (GD-stable), $\beta = 0.8$ — well past $\beta^\star$, under-damped:
 
 @momentum-acceleration-and-damping
 

@@ -14,12 +14,12 @@
       "outputs": []
     },
     "muon-orthogonalization-by-newton-schulz-1": {
-      "code_fingerprint": "sha256:f845b8da90d957ea5136461693c8eef034fa5e55aefea2f9c56bff45ce9fe051",
+      "code_fingerprint": "sha256:32ab31031376da491867f12da549c0617e0d4042ecb5083cee6db9acdea51cda",
       "kind": "text",
       "outputs": []
     },
     "muon-orthogonalization-by-newton-schulz-2": {
-      "code_fingerprint": "sha256:b2a0184c509ed83134bb225f0fdfd2dfa42b3e67eca99a23ab5cd20285f6bc77",
+      "code_fingerprint": "sha256:4f6ec7f99a9108de8ef11f4d528a2cecdf9d1f03095f913e84e607674c8e3c75",
       "kind": "mixed",
       "outputs": [
         {
@@ -31,18 +31,18 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-orthogonalization-by-newton-schulz-2-1.svg",
-          "bytes": 30196,
-          "sha256": "sha256:ef3a8c871524a7284fc85d6cb40f02f2d53d746ca3ca26859ebf340d00ff178d"
+          "bytes": 30175,
+          "sha256": "sha256:a05aad69647ea9bc621f340038090ed1532726838f5ed5eb831fbb26ed3f16f5"
         }
       ]
     },
     "muon-the-update": {
-      "code_fingerprint": "sha256:33335826939e3ac964eb614e7c0c3d34b942abc1f9195d96b5c34a67f293cc06",
+      "code_fingerprint": "sha256:d991143267bfa8cb10f028cf86700a5aab37a654269c5c199ca200d5d10a07bc",
       "kind": "text",
       "outputs": []
     },
     "muon-dividing-the-census-1": {
-      "code_fingerprint": "sha256:37d36c252d4ffecaab629d34ed5e9a5fb49ebfd7f2ad2cd1d8edc7650bc0be1f",
+      "code_fingerprint": "sha256:60c951637ef24f108cacaa4a24fcbdb3438f923d52f169d8fc7d0786f686f577",
       "kind": "text",
       "outputs": [
         {
@@ -53,158 +53,158 @@
       ]
     },
     "muon-dividing-the-census-2": {
-      "code_fingerprint": "sha256:48285df56540effff70599c0bf5579dd5c5e919e3e7f6e3cac0dc51bc38cbd5a",
+      "code_fingerprint": "sha256:f36df315444ed82bd284a3cbfb192454bbc456d95eb10bba14cd427299d2046c",
       "kind": "text",
       "outputs": []
     },
     "muon-the-race-on-the-language-model-1": {
-      "code_fingerprint": "sha256:c51ade62ab106c702f02109fad04301f9ca0a711468094fe52c082efaba31d3e",
+      "code_fingerprint": "sha256:8914d975acab101462771ce0b68cad68bc411344eeb2a06998b62226e281eaca",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.0003: final loss 1.307\n"
+          "text": "lr 0.0003: final loss 1.309\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 1.034\n"
+          "text": "lr 0.001: final loss 1.038\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 1.045\n"
+          "text": "lr 0.003: final loss 1.063\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 2.270\n"
+          "text": "lr 0.01: final loss 2.275\n"
         }
       ]
     },
     "muon-the-race-on-the-language-model-2": {
-      "code_fingerprint": "sha256:f03adc9fcd5b9d28811c08f1e019016ee994e989e83ae6ba21d93009f50246a6",
+      "code_fingerprint": "sha256:a488d980b260e3ccd7a87ee7dd9ba04e9f5237cd5947631680945f5dde9b8fe8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.0003: final loss 1.220\n"
+          "text": "lr 0.0003: final loss 1.236\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 0.714\n"
+          "text": "lr 0.001: final loss 0.687\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 0.684\n"
+          "text": "lr 0.003: final loss 0.606\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 1.040\n"
+          "text": "lr 0.01: final loss 0.939\n"
         }
       ]
     },
     "muon-the-race-on-the-language-model-3": {
-      "code_fingerprint": "sha256:9fd271ba2bf6024d32a93570bc80b5877fad57ee984d24531a838476051bcb4f",
+      "code_fingerprint": "sha256:c15c161495d790d7a7e1f6c3e29013a049725cac7fd74dd666730c95ec59c76d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final perplexity: AdamW 2.81, Muon+AdamW 1.98\n"
+          "text": "final perplexity: AdamW 2.82, Muon+AdamW 1.83\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-race-on-the-language-model-3-1.svg",
-          "bytes": 28691,
-          "sha256": "sha256:2e15581b4dc57cefa3261bbb5ac967a0d5e7b17993a89d3c8aa30e4c54a1e21f"
+          "bytes": 29422,
+          "sha256": "sha256:9a8c297d845c716932b8c19ff5f050d47c6b6bb4dbe884aa48cb7da8f53d2771"
         }
       ]
     },
     "muon-the-same-race-on-a-cnn-1": {
-      "code_fingerprint": "sha256:03e40da818c5c023a16594f29735cff2bd7e8e108f77831792f16c0cafd2bb14",
+      "code_fingerprint": "sha256:8c37221306d57e18f8e4b35c46f50cfb7d8d1b8270578f132beb93a447584b79",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.0003: final loss 0.238, test accuracy 0.900\n"
+          "text": "lr 0.0003: final loss 0.235, test accuracy 0.897\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 0.160, test accuracy 0.915\n"
+          "text": "lr 0.001: final loss 0.160, test accuracy 0.916\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 0.105, test accuracy 0.924\n"
+          "text": "lr 0.003: final loss 0.096, test accuracy 0.917\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.154, test accuracy 0.908\n"
+          "text": "lr 0.01: final loss 0.144, test accuracy 0.901\n"
         }
       ]
     },
     "muon-the-same-race-on-a-cnn-2": {
-      "code_fingerprint": "sha256:8ceed3b0cb8f8c6604606b15d4a8f84f2c72529ac191c6e6677c5bba5ab54621",
+      "code_fingerprint": "sha256:a7deeda0bd0689cd1b619da92f87f49a50304c6b5bbd4b8025a4e8e9e40dbb62",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.0003: final loss 0.121, test accuracy 0.918\n"
+          "text": "lr 0.0003: final loss 0.126, test accuracy 0.919\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 0.024, test accuracy 0.920\n"
+          "text": "lr 0.001: final loss 0.026, test accuracy 0.923\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 0.027, test accuracy 0.915\n"
+          "text": "lr 0.003: final loss 0.028, test accuracy 0.916\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.106, test accuracy 0.900\n"
+          "text": "lr 0.01: final loss 0.105, test accuracy 0.903\n"
         }
       ]
     },
     "muon-the-same-race-on-a-cnn-3": {
-      "code_fingerprint": "sha256:715b34be8e886e0e82e6df2b442ef28b741afbafa2fbdbb3797a059e88aad93f",
+      "code_fingerprint": "sha256:649dd0afe586f881a8dbe3b4da998975d44b11f669de73949e95f3d7d0647ab2",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test accuracy: AdamW 0.924, Muon+AdamW 0.920\n"
+          "text": "test accuracy: AdamW 0.917, Muon+AdamW 0.923\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-same-race-on-a-cnn-3-1.svg",
-          "bytes": 28741,
-          "sha256": "sha256:e6c71c80b58319990528951b1be50b3a8fccfa7d9759ceca92daa461226e7fa7"
+          "bytes": 28750,
+          "sha256": "sha256:0932fbbba3762065674b3e232c0c8b1bbbfcd8cd2287a00a699fd106fa95b158"
         }
       ]
     },
     "muon-library-implementations": {
-      "code_fingerprint": "sha256:164267ac232001aceae5e41b7314b1f0f37d4aa2e6b246495e4e0ff6d5fc118c",
+      "code_fingerprint": "sha256:2f637fb913fa863873ed505c9e91212c8e3a7d30e3a783b30709b8ccc3c68aef",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final loss 0.569\n"
+          "text": "final loss 0.583\n"
         }
       ]
     }

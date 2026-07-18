@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 1.773 sec/epoch\n"
+          "text": "loss: 0.244, 1.990 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-adamw-from-scratch-2-1.svg",
-          "bytes": 18772,
-          "sha256": "sha256:93354a19646ffa7f9712e7dbec1793cb8aa99f25e6ea17e8ac4341c97f7168c4"
+          "bytes": 18776,
+          "sha256": "sha256:78e696506587efb016f75701fe2d2c654af471c517a8fa8c75a906de563361d3"
         }
       ]
     },
@@ -43,14 +43,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.387 sec/epoch\n"
+          "text": "loss: 0.244, 0.423 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-adamw-from-scratch-3-1.svg",
-          "bytes": 18706,
-          "sha256": "sha256:f9604b4d3ac605ef736bbb890ed9fb465d897830c5981ce6882a285070c639a2"
+          "bytes": 18704,
+          "sha256": "sha256:8e3a34a117e0d14e5066f3a90e15d5e75e68704118254ebd214446bb19e2381e"
         }
       ]
     },
@@ -72,8 +72,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-one-number-two-meanings-1.svg",
-          "bytes": 25771,
-          "sha256": "sha256:579180618cc9e0e071f520604eb4b174960aedb3686662e4252e45022575e250"
+          "bytes": 25775,
+          "sha256": "sha256:ce9ee5a23f106b7ce1d78b9fbd7d06e3b716e4328b87112d4ee92f50c5e92173"
         }
       ]
     },
@@ -89,17 +89,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.62 2.27 2.18\n"
+          "text": "2.62 2.26 2.20\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.16 2.22 2.36\n"
+          "text": "3.17 2.19 2.37\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.65 2.32 2.37\n"
+          "text": "2.74 2.34 2.38\n"
         }
       ]
     },
@@ -110,35 +110,35 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.65 2.28 2.44\n"
+          "text": "2.66 2.34 2.44\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.11 2.29 2.56\n"
+          "text": "3.10 2.35 2.57\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.11 2.31 2.59\n"
+          "text": "3.11 2.21 2.61\n"
         }
       ]
     },
     "adamw-a-grid-twice-4": {
-      "code_fingerprint": "sha256:887a9d986b0e3fd6e28b4a7a05042f6849dabac960467e874c58c82fd890cf02",
+      "code_fingerprint": "sha256:0d8e76e6962d9a346b94c8bbc66e9f7fad869cbd341dd66c76d441aecd9e5f6a",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-a-grid-twice-4-1.svg",
-          "bytes": 39863,
-          "sha256": "sha256:14cb007426add0ee8d241efaf9d5049725fac0c21a94e7e7aa294f7bcfd7e366"
+          "bytes": 41020,
+          "sha256": "sha256:d31babe41271dca29940cce505b57ff8b9bf32557a9d2e771cc36a34dbb0705f"
         }
       ]
     },
     "adamw-what-not-to-decay-1": {
-      "code_fingerprint": "sha256:5300cb9c1b6b5d490d4976f789cfdc04fe6750135f4425bae69ffb8e7f6350e2",
+      "code_fingerprint": "sha256:ca80e56bc26de0f82a4f48dbaf7cfb02738da5035f2fe57ab8e2c3be699be8f6",
       "kind": "text",
       "outputs": [
         {
@@ -149,25 +149,25 @@
       ]
     },
     "adamw-what-not-to-decay-2": {
-      "code_fingerprint": "sha256:988360452dc9acb9c570c2a8ea8f65642306362a1de40882d600bfa62bbaf14d",
+      "code_fingerprint": "sha256:88760389d620fa29ae466b2f8c692e5e62e6105b210f5ce26467412987b1dc20",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity per character: 2.74\n"
+          "text": "perplexity per character: 2.78\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-what-not-to-decay-2-1.svg",
-          "bytes": 19442,
-          "sha256": "sha256:b6a09f56ec84243665b45555aa6edb0e04e63cb2d6054aa8bf77b418c314876d"
+          "bytes": 19448,
+          "sha256": "sha256:760bee3da86dcdc832d7cb57f6fae8e5bd3c2b8d9b6fb5988aadaaec9432c0db"
         }
       ]
     },
     "adamw-optimizer-state-and-memory": {
-      "code_fingerprint": "sha256:fdcbab9be1ad07e2d0bb01552324e85cf027dc54e744bc015e02f6eed29dcf16",
+      "code_fingerprint": "sha256:62529592c6f8a40490d57e878a473be6fa484b01d905ca182e80832109f2d49e",
       "kind": "text",
       "outputs": [
         {

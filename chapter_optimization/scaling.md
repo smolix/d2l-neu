@@ -79,7 +79,8 @@ trust framework defaults, both because the two frameworks' defaults differ
 and because the initialization is about to become part of the story: every
 weight is Gaussian with variance $1/\text{fan-in}$, every bias zero. This is
 *standard parametrization* (SP) — up to constants, what default initializers
-do. The optimizer lives in a method, `configure_adam`, so that a variant of
+do, and what the Xavier and He schemes of :numref:`sec_numerical_stability`
+prescribe. The optimizer lives in a method, `configure_adam`, so that a variant of
 the class can override it later.
 
 ```{.python .input #scaling-a-family-of-widths-2}
@@ -96,9 +97,12 @@ class MLP(nn.Module):
             nn.init.normal_(lin.weight, std=lin.in_features ** -0.5)
             nn.init.zeros_(lin.bias)
 
-    def forward(self, X):
+    def features(self, X):
         h = F.relu(self.fc_h1(F.relu(self.fc_in(X))))
-        return self.fc_out(F.relu(self.fc_h2(h)))
+        return F.relu(self.fc_h2(h))
+
+    def forward(self, X):
+        return self.fc_out(self.features(X))
 
     def configure_adam(self, lr):
         return torch.optim.Adam(self.parameters(), lr)
@@ -116,9 +120,12 @@ class MLP(nnx.Module):
         self.fc_h2 = nnx.Linear(width, width, kernel_init=init, rngs=rngs)
         self.fc_out = nnx.Linear(width, 10, kernel_init=init, rngs=rngs)
 
-    def __call__(self, X):
+    def features(self, X):
         h = nnx.relu(self.fc_h1(nnx.relu(self.fc_in(X))))
-        return self.fc_out(nnx.relu(self.fc_h2(h)))
+        return nnx.relu(self.fc_h2(h))
+
+    def __call__(self, X):
+        return self.fc_out(self.features(X))
 
     def configure_adam(self, lr):
         return nnx.Optimizer(self, optax.adam(lr), wrt=nnx.Param)
@@ -216,7 +223,8 @@ it naively means transferring a mistake.
 The drift has a mechanism, and it is worth seeing exactly, because the fix
 consists of undoing it layer by layer. Consider a hidden weight matrix
 $\mathbf{W} \in \mathbb{R}^{n \times n}$ receiving activations $\mathbf{h}$
-with entries of typical size $\overline{|h|}$. Its gradient is an outer
+with entries of typical size $\overline{|h|}$. For a single example its
+gradient is an outer
 product, $\mathbf{g} = \boldsymbol{\delta} \mathbf{h}^\top$, where
 $\boldsymbol{\delta}$ is the backpropagated error. On the very first step
 Adam's ratio $\hat{\mathbf{m}}/\sqrt{\hat{\mathbf{v}}}$ equals
@@ -234,7 +242,10 @@ $$
 
 No cancellation: all $n$ terms add coherently, because the update is
 perfectly correlated with the incoming activations. One optimizer step moves
-every coordinate of the hidden layer by about $\eta n \overline{|h|}$.
+every coordinate of the hidden layer by about $\eta n \overline{|h|}$. (A
+minibatch gradient is a sum of such outer products and its sign does not
+factorize, so read this as the leading-order intuition; the coordinate
+check below confirms the width scaling empirically.)
 Double the width and one step hits twice as hard, so the largest stable
 $\eta$ — which the sweep showed is also roughly the best $\eta$ — halves.
 The effect is also *per layer*: the input layer's fan-in is 784 at
@@ -293,7 +304,8 @@ class MuMLP(MLP):
         self.m = width / base_width
 
     def forward(self, X):
-        return super().forward(X) / self.m    # rule 1: scale the logits
+        # rule 1: scale the output matrix's logits; the bias is untouched
+        return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
         hidden = [self.fc_h1.weight, self.fc_h2.weight]
@@ -313,7 +325,8 @@ class MuMLP(MLP):
         self.m = width / base_width
 
     def __call__(self, X):
-        return super().__call__(X) / self.m   # rule 1: scale the logits
+        # rule 1: scale the output matrix's logits; the bias is untouched
+        return self.fc_out(self.features(X) / self.m)
 
     def configure_adam(self, lr):
         def labels(params):                   # rule 2: hidden LR / m
@@ -419,8 +432,11 @@ anymore. The logits curve *falls* with width rather than staying level, and
 this is by design — the $1/m$ output multiplier starts the logits small,
 and they grow to order one through learning (the coherent alignment of
 :eqref:`eq_scaling_first_step`, now correctly budgeted) rather than through
-size. Flat or falling means stable; only growth is a failure. This
-one-figure test catches essentially every muP implementation bug — a missed
+size. Growth is the unambiguous failure; flat or falling says only that the
+forward pass is stable, since the check reads activation sizes, not feature
+learning — updates shrinking too fast would also read as falling, with the
+layer quietly frozen. This
+one-figure test catches the common muP implementation bugs — a missed
 multiplier, a mislabeled layer, a framework default that snuck back in —
 and the exercises use it exactly that way.
 
@@ -439,14 +455,16 @@ d2l.plot(lrs, [mup_loss[w] for w in widths], 'learning rate',
 ```
 
 The width-128 curve is identical to before, as it must be. The other three
-no longer march left: across an eightfold change in width every optimum
-stays within one grid point of the base model's, where under standard
-parametrization it walked three. Read off the transfer directly: reuse the
-base width's best learning rate at width 1,024 and the muP model lands
-within about a percent of the best loss any learning rate achieves at that
-width; the standard-parametrization model misses its own best by 15–20%.
+no longer march left: under standard parametrization the optimum slid
+steadily down, three grid steps across the eightfold change in width; under
+muP it stops sliding — each width's optimum lands within a grid step or two
+of the base model's, scatter rather than drift. Read off the transfer
+directly: reuse the base width's best learning rate at width 1,024 and the
+muP model lands within a couple of percent of the best loss any learning
+rate achieves at that width; the standard-parametrization model misses its
+own best by 15–20%.
 This is *hyperparameter transfer*: tune the base model, scale up, keep the
-numbers. Two honest caveats belong next to the result. On this small
+numbers. Two caveats belong next to the result. On this small
 family, retuning the wide model directly costs nothing, and standard
 parametrization retuned at width 1,024 reaches a comparable loss — muP's
 value is not a better optimum but not needing the sweep at the width where
@@ -482,9 +500,11 @@ witnessed — land at the right spectral scale at every width. Seen this way,
 muP is bookkeeping that repairs an optimizer which measures updates in the
 wrong norm. An optimizer that measures them in the right norm needs less
 repair: Muon orthogonalizes each hidden matrix's update and scales it per
-shape, so its updates sit at the prescribed spectral scale by construction
-:cite:`Jordan.Jin.Boza.ea.2024,Bernstein.Newhouse.2024`, and much of muP's
-per-layer control comes built in. This is one reason learning rates chosen
+shape :cite:`Jordan.Jin.Boza.ea.2024,Bernstein.Newhouse.2024`, so much of
+muP's per-layer control comes built in — though its RMS-matched scale is an
+empirical convention, not the $\sqrt{n_{\text{out}} / n_{\text{in}}}$ of
+:eqref:`eq_spectral_condition`, a distinction :numref:`sec_muon` already
+flagged. This is one reason learning rates chosen
 for Muon-family optimizers tend to survive width changes with less ceremony.
 
 ## What the Big Runs Do
@@ -532,8 +552,9 @@ $1/m$, logits scaled by $1/m$, inputs and biases left alone — after which
 the optimum found at the base width holds across the family. The coordinate
 check verifies any such scheme in seconds: mean activation sizes across
 width must be flat after a training step. Spectrally, muP makes Adam's
-updates land at the norm scale a layer's shape prescribes, which
-Muon-style optimizers approximate by construction. Production practice
+updates land at the norm scale a layer's shape prescribes, much of which
+Muon-style optimizers build in through their own shape-scaled updates.
+Production practice
 spans principled parametrization, fitted scaling laws, and empirically
 matched update sizes; the goal of transfer is common to all of them.
 
@@ -606,7 +627,7 @@ Eight learning rates × four widths, 32 runs, about a minute:
 :::
 
 ::: {.slide title="Why: one step scales with fan-in"}
-Gradient of a hidden matrix = outer product
+Single-example gradient of a hidden matrix = outer product
 $\mathbf{g} = \boldsymbol{\delta}\mathbf{h}^\top$; Adam's first update is a
 sign step, and signs of outer products factorize:
 
@@ -658,7 +679,8 @@ writes the instability.
 
 - All layer curves flat: no width-dependent update scale left.
 - Logits *fall* by design (the $1/m$ multiplier); they grow to $O(1)$ by
-  learning, not by size. Growth is the only failure mode.
+  learning, not by size. Growth is the unambiguous failure — the check
+  reads activation size, not feature learning.
 
 ::: {.d2l-note}
 Run this before trusting any muP integration — it catches missed
@@ -671,12 +693,12 @@ The payoff: the same sweep, under muP:
 
 @scaling-learning-rate-transfer
 
-- The optimum stays within one grid point across 8× width (SP: walked
-  three). Reusing the base optimum at width 1,024: within ~1% of that
-  width's best loss (SP: misses by 15–20%).
+- The optimum stops sliding: scatter within a grid step or two across 8×
+  width (SP: slid three). Reusing the base optimum at width 1,024: within a
+  couple % of that width's best loss (SP: misses by 15–20%).
 - **Tune small, ship big**: TP5 tuned GPT-3 6.7B from a 40M proxy at ~7% of
   pretraining cost — and beat the original.
-- Honest caveat: at a width you *can* sweep, retuned SP matches; muP buys
+- Caveat: at a width you *can* sweep, retuned SP matches; muP buys
   the sweep you cannot afford.
 :::
 
@@ -687,8 +709,9 @@ $\|\mathbf{W}\|_2 \asymp \|\Delta\mathbf{W}\|_2 \asymp
 
 - muP $\equiv$ this spectral condition (Yang–Simon–Bernstein, 2023): the
   per-layer LRs make Adam's updates land at the right spectral scale.
-- muP = bookkeeping for an optimizer using the wrong norm; **Muon** hits the
-  scale by construction — per-layer control built in.
+- muP = bookkeeping for an optimizer using the wrong norm; **Muon**'s
+  shape-scaled updates build much of that control in (its RMS-match
+  convention is not the $\sqrt{n_{\text{out}}/n_{\text{in}}}$ scale).
 :::
 
 ::: {.slide title="What the big runs do"}

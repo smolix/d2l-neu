@@ -13,7 +13,8 @@ hold on large-scale training.
 The organizing idea of this chapter says an optimizer begins with a choice of
 descent direction, and this section makes the choice explicit: the direction
 of steepest descent *depends on the norm* used to measure the step. Under the
-Euclidean norm the answer is the gradient, and we recover SGD. Under the
+Euclidean norm the answer is the gradient, and we recover the direction of
+SGD. Under the
 $\ell_\infty$ norm the answer is the sign of the gradient, and we recover, in
 essence, Adam. Under the *spectral* norm, the natural way to measure a matrix,
 the answer is the gradient with its singular values erased, and we arrive at
@@ -21,7 +22,7 @@ Muon :cite:`Jordan.Jin.Boza.ea.2024`, which since 2024 has gone from a
 speed-run leaderboard to trillion-parameter training runs. We derive it, build
 it in about fifteen lines, race it against AdamW on the testbeds of
 :numref:`sec_adam`, place it in the family of preconditioned methods it
-belongs to, and finish with an honest look at the evidence.
+belongs to, and finish by weighing the evidence.
 
 ```{.python .input #muon}
 %%tab pytorch
@@ -61,7 +62,13 @@ The problem is not fully posed until we say which norm defines the ball
 $\|\mathbf{d}\| \leq \eta$, and different norms give genuinely different
 answers :cite:`Bernstein.Newhouse.2024`. Under the Euclidean norm the ball is
 round, the minimizer points straight along $-\mathbf{g}$, and
-:eqref:`eq_muon-ball` returns gradient descent. So "just follow the gradient"
+:eqref:`eq_muon-ball` returns *normalized* gradient descent,
+$-\eta\,\mathbf{g}/\|\mathbf{g}\|_2$ — the SGD direction. Ordinary SGD takes
+that direction with a length that scales with $\|\mathbf{g}\|_2$
+(equivalently, it solves the regularized model $\min_{\mathbf{d}} \langle
+\mathbf{g}, \mathbf{d} \rangle + \|\mathbf{d}\|_2^2 / (2\eta)$ rather than the
+fixed ball); every ball in this section settles the *direction*, and how the
+step length scales is a separate dial. So "just follow the gradient"
 was never norm-free; it is the Euclidean choice, made silently, and every
 method in this chapter that we described as a modification of SGD can instead
 be read as a different answer to the same question.
@@ -133,8 +140,10 @@ moves at the same rate. This is per-direction equalization, in whatever basis
 the gradient supplies, where Adam manages only per-coordinate equalization in
 the axis basis it is handed. The reasoning also says where it does *not*
 apply. An embedding table never multiplies a dense activation vector; its
-input is one-hot, each row is looked up in isolation, and the operator
-reading of the matrix collapses :cite:`Bernstein.2025`. Embeddings, the
+input is one-hot, each row is looked up in isolation, and the norm the input
+induces is the largest *row* norm rather than the spectral norm — a geometry
+for which spectral orthogonalization is the wrong tool
+:cite:`Bernstein.2025`. Embeddings, the
 output head, and the one-dimensional vectors stay with AdamW, and the census
 split becomes an optimizer assignment. :numref:`tab_muon_norms` collects the
 story so far.
@@ -145,13 +154,13 @@ suits a different population of the parameter census.
 
 | ball on the step | steepest step | natural habitat |
 |:--|:--|:--|
-| Euclidean, $\|\mathbf{d}\|_2 \leq \eta$ | $-\eta\, \mathbf{g} / \|\mathbf{g}\|_2$ | no structure assumed (SGD) |
+| Euclidean, $\|\mathbf{d}\|_2 \leq \eta$ | $-\eta\, \mathbf{g} / \|\mathbf{g}\|_2$ | no structure assumed (SGD direction) |
 | box, $\|\mathbf{d}\|_\infty \leq \eta$ | $-\eta\, \mathrm{sign}(\mathbf{g})$ | coordinates of very different scale (Adam family) |
 | spectral, $\|\Delta \mathbf{W}\|_2 \leq \eta$ | $-\eta\, \mathbf{U}\mathbf{V}^\top$ | hidden matrices acting on activations (Muon) |
 
 :numref:`fig_opt_norm_balls` draws the three choices for one gradient.
 
-![Steepest descent depends on the ball. Under $\ell_2$ the best step within the ball follows the gradient; under $\ell_\infty$ it moves to a corner, keeping only the signs; under the spectral norm — shown in singular-value coordinates, where the ball is the unit square — the best matrix update sits at the corner where every singular value equals one, whatever the spectrum $\sigma(\mathbf{G})$ of the gradient: that corner is the orthogonalization $\mathbf{U}\mathbf{V}^{\top}$.](../img/mdl-opt-norm-balls.svg)
+![Steepest descent depends on the ball. Under $\ell_2$ the best step within the ball follows the gradient direction — normalized gradient descent; under $\ell_\infty$ it moves to a corner, keeping only the signs; under the spectral norm — shown in singular-value coordinates, where the ball is the unit square — the best matrix update sits at the corner where every singular value equals one, whatever the spectrum $\sigma(\mathbf{G})$ of the gradient: that corner is the orthogonalization $\mathbf{U}\mathbf{V}^{\top}$.](../img/mdl-opt-norm-balls.svg)
 :label:`fig_opt_norm_balls`
 
 ## Orthogonalization by Newton--Schulz
@@ -172,10 +181,11 @@ because each factor of $\mathbf{X}\mathbf{X}^\top$ contributes
 $\mathbf{U}\boldsymbol{\Sigma}^2\mathbf{U}^\top$ and the orthogonal factors
 telescope. A polynomial in the matrix is the same polynomial applied to each
 singular value, with $\mathbf{U}$ and $\mathbf{V}$ untouched. So we can drive
-all singular values toward $1$, never computing them, by iterating a scalar
-polynomial that has $1$ as an attracting fixed point on $(0, 1]$. Dividing
-$\mathbf{X}$ by its Frobenius norm first guarantees every singular value
-starts in $(0, 1]$.
+all *nonzero* singular values toward $1$, never computing them, by iterating a
+scalar polynomial that has $1$ as an attracting fixed point on $(0, 1]$.
+Dividing $\mathbf{X}$ by its Frobenius norm first guarantees every nonzero
+singular value starts in $(0, 1]$; exact zeros are fixed points of any odd
+polynomial, so a rank-deficient matrix stays rank-deficient.
 
 The classical Newton--Schulz cubic does this with $p(x) = \tfrac{3}{2}x -
 \tfrac{1}{2}x^3$, but its progress near zero is slow: a tiny singular value
@@ -194,28 +204,34 @@ $1$; it oscillates in a band around it. For an optimizer this is a fine
 trade: we need "all directions move at roughly the same rate", not
 machine-precision orthogonality, and the iteration is stable enough to run
 in `bfloat16`. Five iterations of :eqref:`eq_muon-quintic` is a handful of
-matrix multiplications, the operation GPUs are best at.
+matrix multiplications, the operation GPUs are best at; the implementation
+transposes a tall matrix first, so the Gram factor
+$\mathbf{X}\mathbf{X}^\top$ is the smaller of the two squares.
 
 ```{.python .input #muon-orthogonalization-by-newton-schulz-1}
 %%tab pytorch
 def newton_schulz(M, num_iters=5, eps=1e-7):
     a, b, c = 3.4445, -4.7750, 2.0315
-    X = M / (M.norm() + eps)
+    tall = M.shape[0] > M.shape[1]
+    X = M.T if tall else M  # keep the Gram factor X @ X.T small
+    X = X / (X.norm() + eps)
     for _ in range(num_iters):
         A = X @ X.T
         X = a * X + (b * A + c * A @ A) @ X
-    return X
+    return X.T if tall else X
 ```
 
 ```{.python .input #muon-orthogonalization-by-newton-schulz-1}
 %%tab jax
 def newton_schulz(M, num_iters=5, eps=1e-7):
     a, b, c = 3.4445, -4.7750, 2.0315
-    X = M / (jnp.linalg.norm(M) + eps)
+    tall = M.shape[0] > M.shape[1]
+    X = M.T if tall else M  # keep the Gram factor X @ X.T small
+    X = X / (jnp.linalg.norm(X) + eps)
     for _ in range(num_iters):
         A = X @ X.T
         X = a * X + (b * A + c * A @ A) @ X
-    return X
+    return X.T if tall else X
 ```
 
 Let's watch it work. We take a random $96 \times 64$ matrix, whose singular
@@ -259,15 +275,17 @@ training.)
 ### The Update
 
 Muon assembles three ingredients we now have in hand. Gradients are noisy, so
-we orthogonalize not the raw gradient but a momentum buffer, the leaky
-average of :numref:`sec_momentum`, with the same $\mu = 0.95$ used by its
-authors. The buffer is orthogonalized by Newton--Schulz. And the result is
+we do not orthogonalize the raw gradient: we keep a momentum buffer, the
+leaky average of :numref:`sec_momentum`, with the same $\mu = 0.95$ used by
+its authors, and hand Newton--Schulz the Nesterov blend
+$\mathbf{G}_t + \mu \mathbf{M}_t$ — the gradient plus a look ahead along the
+freshly updated buffer. And the result is
 rescaled once per matrix shape:
 
 $$
 \mathbf{M}_t = \mu\, \mathbf{M}_{t-1} + \mathbf{G}_t,
 \qquad
-\mathbf{W}_{t+1} = \mathbf{W}_t - \eta \cdot 0.2 \sqrt{\max(m, n)}\; \mathrm{NS}_5(\mathbf{M}_t)
+\mathbf{W}_{t+1} = \mathbf{W}_t - \eta \cdot 0.2 \sqrt{\max(m, n)}\; \mathrm{NS}_5(\mathbf{G}_t + \mu\, \mathbf{M}_t)
 $$
 :eqlabel:`eq_muon-update`
 
@@ -288,8 +306,10 @@ distinction matters when transferring across model widths, which is
 :numref:`sec_scaling`'s subject.)
 
 The implementation is short. `reshape` handles the one wrinkle we will need
-later: a convolution kernel is a matrix in disguise, one row per output
-channel, and flattening it lets the same code precondition CNNs. On our tiny
+later: a convolution kernel is a matrix in disguise — one row per output
+channel in PyTorch's OIHW layout, one column in Flax's HWIO, transposes of
+each other, and orthogonalization commutes with transposition — so
+flattening it lets the same code precondition CNNs. On our tiny
 matrices the fifteen extra multiplications add a visible fraction to the
 step time; at production scale, where the forward and backward passes
 dwarf them, the reported overhead is around one percent of the training
@@ -308,7 +328,8 @@ class Muon(torch.optim.Optimizer):
             for p in group['params']:
                 buf = self.state[p].setdefault('buf', torch.zeros_like(p))
                 buf.mul_(group['momentum']).add_(p.grad)
-                M = buf.reshape(len(buf), -1)  # flattens conv kernels
+                G = p.grad + group['momentum'] * buf  # Nesterov momentum
+                M = G.reshape(len(G), -1)             # flattens conv kernels
                 O = newton_schulz(M).reshape(p.shape)
                 p.add_(O, alpha=-group['lr'] * 0.2 * math.sqrt(max(M.shape)))
 ```
@@ -320,11 +341,12 @@ def scratch_muon(learning_rate, momentum=0.95):
         return jax.tree.map(jnp.zeros_like, params)
     def update(grads, bufs, params=None):
         bufs = jax.tree.map(lambda b, g: momentum * b + g, bufs, grads)
-        def step(b):
-            M = b.reshape(-1, b.shape[-1])  # flattens conv kernels
-            O = newton_schulz(M).reshape(b.shape)
+        def step(g, b):
+            G = g + momentum * b            # Nesterov momentum
+            M = G.reshape(-1, G.shape[-1])  # flattens conv kernels
+            O = newton_schulz(M).reshape(G.shape)
             return -learning_rate * 0.2 * math.sqrt(max(M.shape)) * O
-        return jax.tree.map(step, bufs), bufs
+        return jax.tree.map(step, grads, bufs), bufs
     return optax.GradientTransformation(init, update)
 ```
 
@@ -419,8 +441,9 @@ def muon_adamw(lr, exclude=('emb', 'head')):
 The protocol is the one from :numref:`sec_adam`: same model, same
 initialization, 2,000 steps at a constant learning rate, a four-point
 learning-rate grid per contestant, best final training loss speaks for its
-family. Weight decay is switched off in both arms so that the *only*
-difference between them is the direction of the update on the hidden
+family. "Tuned" in what follows means the best of this coarse four-point
+grid, nothing finer. Weight decay is switched off in both arms so that the
+*only* difference between them is the direction of the update on the hidden
 matrices. First the baseline, all parameters on AdamW:
 
 ```{.python .input #muon-the-race-on-the-language-model-1}
@@ -501,9 +524,9 @@ print(f'final perplexity: '
 ```
 
 :begin_tab:`pytorch`
-Tuned against tuned, the hybrid finishes at or slightly below AdamW; in our
-runs the two winners land within run-to-run noise of each other, and we
-claim no more than parity from a single seed. Parity is not nothing — the
+Tuned against tuned, the hybrid finishes a few percent of perplexity below
+AdamW; from a single seed we claim a modest edge and no more. The edge is
+not nothing — the
 hybrid gets there carrying nearly half the optimizer state — but a
 0.4M-parameter model trained for a minute cannot show much more. The
 fair-tuning literature discussed at the end of this section measures
@@ -516,11 +539,12 @@ where the identical protocol produces a very different margin.
 :begin_tab:`jax`
 Here the tuned hybrid beats tuned AdamW by a wide margin — several tenths of
 a nat, a visibly lower curve throughout. Resist the strong conclusion: the
-PyTorch tab runs the identical protocol and ends in a near-tie. The two
+PyTorch tab runs the identical protocol and ends with a far smaller edge. The two
 frameworks differ in details as mundane as default layer initialization,
 and races this small are sensitive to all of them. What survives both tabs
-is the weaker, honest statement: at matched tuning the hybrid never lost,
-while carrying nearly half the optimizer state. That claims about optimizers
+is the weaker statement the data supports: the hybrid beat AdamW
+in both single-seed runs — narrowly in PyTorch, by a wide margin here — while carrying
+nearly half the optimizer state. That claims about optimizers
 are this protocol-sensitive is not an embarrassment to hide but the
 section's recurring lesson, and the fair-tuning studies at the end of the
 section exist precisely because of it. The demo is mechanism, not
@@ -533,8 +557,8 @@ benchmark.
 language model, nearly vanished on a CNN. It is natural to ask the same
 question of Muon. We reuse the compact Fashion-MNIST CNN from that section,
 along with its test-accuracy check; `reshape` in the update flattens each
-convolution kernel to a matrix with one row per output channel, and the
-output head stays with AdamW.
+convolution kernel to a matrix (one row per output channel in PyTorch, one
+column in Flax), and the output head stays with AdamW.
 
 ```{.python .input #muon-the-same-race-on-a-cnn-1}
 %%tab pytorch
@@ -692,8 +716,8 @@ torch.manual_seed(0)
 model = d2l.TinyLM(len(data.vocab))
 hidden, rest = split_lm(model)
 optimizer = MultiOptimizer(
-    torch.optim.Muon(hidden, lr=best_muon, weight_decay=0.0,
-                     adjust_lr_fn='match_rms_adamw'),
+    torch.optim.Muon(hidden, lr=best_muon, momentum=0.95, nesterov=True,
+                     weight_decay=0.0, adjust_lr_fn='match_rms_adamw'),
     torch.optim.AdamW(rest, lr=best_muon, weight_decay=0.0))
 losses = d2l.train_lm(model, data, optimizer, 2000)
 print(f'final loss {final_loss(losses):.3f}')
@@ -711,7 +735,7 @@ def muon_spec(params):
 
 model = d2l.TinyLM(len(data.vocab), rngs=nnx.Rngs(0))
 tx = optax.contrib.muon(learning_rate=best_muon, consistent_rms=0.2,
-                        weight_decay=0.0,
+                        beta=0.95, nesterov=True, weight_decay=0.0,
                         muon_weight_dimension_numbers=muon_spec)
 optimizer = nnx.Optimizer(model, tx, wrt=nnx.Param)
 losses = d2l.train_lm(model, data, optimizer, 2000)
@@ -812,7 +836,7 @@ it. Benchmark verdicts are also protocol-dependent: AlgoPerf's fixed tuning
 budgets crowned Shampoo, the speedrun's unlimited tinkering crowned Muon,
 and a comparison run at one scale with one tuning budget is evidence about
 that protocol, not a universal ranking
-:cite:`Schmidt.Schneider.Hennig.2021`. The honest summary for a practitioner
+:cite:`Schmidt.Schneider.Hennig.2021`. Where this leaves a practitioner
 in 2026: AdamW remains the default; Muon on hidden matrices is the one
 challenger with both a clean derivation and frontier-scale production
 mileage, and its advantage is real but measured in tens of percent, not
@@ -821,21 +845,24 @@ multiples.
 ## Summary
 
 Steepest descent is not one algorithm but a family indexed by a norm: the
-Euclidean ball yields SGD, the $\ell_\infty$ box yields sign descent and its
+Euclidean ball yields normalized SGD, the $\ell_\infty$ box yields sign
+descent and its
 smoothed form Adam, and the spectral ball, the right measure for a matrix
 that transforms activations, yields the orthogonalized gradient
 $\mathbf{U}\mathbf{V}^\top$. Muon computes it without an SVD by a tuned
 five-step Newton--Schulz iteration, pure matrix multiplications that run in
-low precision, applies it to the momentum buffer of each hidden matrix, and
+low precision, applies it to each hidden matrix's Nesterov blend
+$\mathbf{G}_t + \mu\,\mathbf{M}_t$ of gradient and momentum buffer, and
 rescales by $0.2\sqrt{\max(m, n)}$ so one learning rate serves both Muon and
 the AdamW that handles embeddings, heads, and vectors. It is Shampoo without
 accumulators, K-FAC's grandchild, and the spectral rung of the
 preconditioning ladder.
 
-On our tiny testbed the tuned hybrid never lost to tuned AdamW while
-carrying nearly half the optimizer state, with a margin that ranged from
-parity to substantial across two frameworks running the identical protocol;
-on the CNN it optimized faster but generalized the same. All of this is
+On our tiny testbed the hybrid beat tuned AdamW in both
+single-seed runs while carrying nearly half the optimizer state, with a
+margin that ranged from modest (PyTorch) to substantial (JAX) under the
+identical protocol; on the CNN it optimized faster but generalized the
+same. All of this is
 consistent with the production record: real gains of tens of percent on
 transformer pretraining at matched tuning, trillion-parameter runs without
 loss spikes, and no revolution. The methodological lesson is worth as much
@@ -898,14 +925,16 @@ $$\mathbf{d}^\star = \operatorname*{argmin}_{\|\mathbf{d}\| \leq \eta} \langle \
 
 Not fully posed until the **ball** is chosen (Bernstein & Newhouse, 2024):
 
-- Euclidean ball → $-\eta\,\mathbf{g}/\|\mathbf{g}\|_2$: **SGD** was a choice, made silently.
+- Euclidean ball → $-\eta\,\mathbf{g}/\|\mathbf{g}\|_2$: the **SGD direction** —
+  following the gradient was a choice, made silently; the step's length is a
+  separate dial.
 - Box ($\ell_\infty$) → $-\eta\,\mathrm{sign}(\mathbf{g})$: every coordinate moves the
   same distance — the equalization that is Adam's real work (§9.6).
 :::
 
 ::: {.slide title="Matrices want the spectral norm"}
 A hidden matrix transforms activations: $\mathbf{y} = \mathbf{W}\mathbf{x}$.
-The honest size of an update is what it does to activations:
+The size of an update that matters is what it does to activations:
 
 $$\|\Delta\mathbf{W}\mathbf{x}\|_2 \leq \|\Delta\mathbf{W}\|_2\, \|\mathbf{x}\|_2.$$
 
@@ -920,8 +949,8 @@ $$\Delta\mathbf{W}^\star = -\eta\, \mathbf{U}\mathbf{V}^\top$$
 equalization where Adam is per-coordinate.
 
 ::: {.d2l-note}
-Embeddings see one-hot inputs — no operator, no spectral ball. They stay
-with AdamW.
+Embeddings see one-hot inputs — the induced norm is the max *row* norm, not
+the spectral norm. They stay with AdamW.
 :::
 :::
 
@@ -947,9 +976,9 @@ has slope 3.44 at 0 → five iterations suffice, in `bfloat16`, all matmuls.
 :::
 
 ::: {.slide title="Muon in fifteen lines"}
-Momentum buffer → Newton–Schulz → shape-scaled step:
+Momentum buffer → Nesterov blend → Newton–Schulz → shape-scaled step:
 
-$$\mathbf{M}_t = \mu \mathbf{M}_{t-1} + \mathbf{G}_t, \qquad \mathbf{W}_{t+1} = \mathbf{W}_t - \eta\cdot 0.2\sqrt{\max(m,n)}\;\mathrm{NS}_5(\mathbf{M}_t)$$
+$$\mathbf{M}_t = \mu \mathbf{M}_{t-1} + \mathbf{G}_t, \qquad \mathbf{W}_{t+1} = \mathbf{W}_t - \eta\cdot 0.2\sqrt{\max(m,n)}\;\mathrm{NS}_5(\mathbf{G}_t + \mu \mathbf{M}_t)$$
 
 $0.2\sqrt{\max(m,n)}$ sets every update's RMS to $0.2\,\eta$ — AdamW's
 typical RMS, so AdamW-tuned $\eta$ transfers (Moonlight, 2025).
@@ -973,9 +1002,9 @@ Same init, 2,000 steps, constant lr, four-point grid each, weight decay off
 
 @!muon-the-race-on-the-language-model-3
 
-- At matched tuning the hybrid **never lost** — carrying ~half the
-  optimizer state.
-- The margin ranged from *parity* (PyTorch) to *substantial* (JAX) under
+- The hybrid **beat** AdamW in both single-seed runs — carrying
+  ~half the optimizer state.
+- The margin ranged from *modest* (PyTorch) to *substantial* (JAX) under
   the identical protocol: small races are protocol-sensitive. Mechanism,
   not benchmark.
 :::
@@ -1003,7 +1032,7 @@ $$(\mathbf{G}\mathbf{G}^\top)^{-1/4}\mathbf{G}(\mathbf{G}^\top\mathbf{G})^{-1/4}
   (exercise).
 :::
 
-::: {.slide title="Adoption — and the honest accounting"}
+::: {.slide title="Adoption — and the fair-tuning accounting"}
 **In production:** Moonlight (≈½ the compute of its AdamW baseline);
 Kimi K2 — 15.5T tokens with MuonClip, zero loss spikes; GLM-4.5;
 `torch.optim.Muon` in core.

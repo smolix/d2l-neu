@@ -5,7 +5,10 @@ For a deep learning problem we first define a loss function, and once we
 have it, an optimization algorithm drives it down. In optimization the loss
 is called the *objective function*; by convention we minimize, and if we
 ever need to maximize something, flipping the sign of the objective
-suffices. None of this is difficult to state. What is difficult is the
+suffices. One more convention: the optimization literature writes the thing
+being adjusted as a single vector $\mathbf{x}$, so for the next few sections
+$\mathbf{x}$ bundles up all the parameters that earlier chapters wrote as
+$(\mathbf{w}, b)$ — same object, shorter name. None of this is difficult to state. What is difficult is the
 surface being minimized: the graph of a deep network's loss over a
 parameter space with millions of dimensions, and the shape of that surface
 decides which algorithms work. This section surveys the terrain before the
@@ -21,9 +24,10 @@ Euclidean norm, not the only answer, and changing the norm changes the
 algorithm, a thread that pays off in :numref:`sec_muon`. Second, a *step
 size over time*: how far to trust the local slope, and how that trust
 should shrink or grow over a training run, the subject of
-:numref:`sec_scheduler`. Third, a *way of living with noise*: in practice
-every gradient is an estimate computed on a minibatch, and the batch size,
-together with averaging over time, decides how noisy an estimate we act on
+:numref:`sec_scheduler`. Third, a *way of living with noise*: at any
+interesting scale the gradient is an estimate computed on a minibatch,
+and the batch size, together with averaging over time, decides how noisy
+an estimate we act on
 (:numref:`sec_minibatch_sgd`, :numref:`sec_batch_size`). Each method in
 this chapter, from gradient descent to Muon, is a particular way of making
 these three decisions.
@@ -122,9 +126,9 @@ annotate('global minimum', (1.1, -0.95), (0.6, 0.8))
 
 Deep learning objectives have many local minima, and an iterate that lands
 near one sees its gradient approach zero: from the signal alone, a local
-minimum is indistinguishable from the global one. Only some amount of
-noise dislodges the parameters — one reason, as we will see below, that
-the noise in minibatch gradients is not purely a nuisance.
+minimum is indistinguishable from the global one. Noise can dislodge the
+parameters, at least from a shallow basin — one reason, as we will see
+below, that the noise in minibatch gradients is not purely a nuisance.
 
 ### Saddle Points
 
@@ -183,7 +187,11 @@ this section.
 ### Vanishing Gradients
 
 The most insidious way to starve the gradient signal involves no critical
-point at all. Recall the activation functions of
+point at all. This is old news by now — :numref:`sec_numerical_stability`
+diagnosed vanishing and exploding gradients through depth and prescribed
+initialization, and :numref:`sec_bptt` traced the same disease through time
+— but it is worth seeing in its purest one-dimensional form. Recall the
+activation functions of
 :numref:`subsec_activation-functions` and suppose we want to minimize
 $f(x) = \tanh(x)$ starting from $x = 4$. The derivative is
 $f'(x) = 1 - \tanh^2(x)$, so $f'(4) = 0.0013$: the surface is simply very
@@ -258,8 +266,9 @@ at $2/\lambda_{\max}$, the flat curvature then contracts by only
 $1 - 2/\kappa$ per step, and the iteration count grows *linearly* with
 $\kappa$ — the arithmetic is worked out in
 :numref:`subsec_mdl-quadratic-model`. For deep networks $\kappa$ is not
-$20$; measured values run to the thousands and beyond, and this valley is
-the honest cartoon of why plain gradient descent crawls. Much of the
+$20$; measured values run to the thousands and beyond, and this valley,
+with the squeeze turned up, is the right mental model for why plain
+gradient descent crawls. Much of the
 chapter is aimed at exactly this picture: momentum cuts the effective cost
 from $\kappa$ to $\sqrt{\kappa}$ (:numref:`sec_momentum`), adaptive
 methods rescale each coordinate by its own history (:numref:`sec_adam`),
@@ -291,19 +300,21 @@ The second villain is that the gradient we act on is an estimate. The loss
 is an average over the training set, so computing its exact gradient costs
 a full pass over the data; every practical method instead uses a minibatch
 of $b$ examples. The estimate is unbiased, and its variance falls like
-$1/b$ — :numref:`sec_sgd` measures exactly this on a real network, three
+$1/b$ — :numref:`sec_sgd` measures this on a real network, nearly three
 orders of magnitude of batch size falling neatly on the $1/b$ line. Noise
 changes the character of the iteration: with a constant learning rate the
 parameters do not converge but rattle around the optimum in a *noise
-ball* whose radius scales with $\eta$, which is the fundamental reason
-learning rates must decay (:numref:`sec_sgd`, :numref:`sec_scheduler`).
+ball* whose squared radius scales with $\eta$, which is the fundamental
+reason learning rates must decay (:numref:`sec_sgd`, :numref:`sec_scheduler`).
 Batch size becomes a second dial next to the learning rate — one with
 hardware consequences (:numref:`sec_minibatch_sgd`) and, at scale, a
 measurable point of diminishing returns (:numref:`sec_batch_size`) — and
 averaging over time, momentum's second job, quiets noise that batching
 alone leaves behind (:numref:`sec_momentum`). Nor is noise purely a tax:
-it is what bounces the iterate out of the local minima and saddle points
-of the previous section, at no charge. Living with noise — spending it,
+it helps bounce the iterate out of the shallow local minima and saddle
+points of the previous section — though gradient descent from a random
+start escapes strict saddles even without noise, and a deep basin is
+expensive to leave, noise or not. Living with noise — spending it,
 canceling it, budgeting for it — is the third of the chapter's three
 decisions.
 
@@ -454,8 +465,8 @@ the gradient goes to zero — the signal cannot tell the two apart:
 
 @optimization-intro-local-minima
 
-Only *noise* can knock the iterate out — minibatch variance does this for
-free.
+*Noise* can knock the iterate out of a shallow basin — minibatch variance
+supplies exactly that.
 :::
 
 ::: {.slide title="Saddle points"}
@@ -521,13 +532,13 @@ in the "forbidden" regime.
 The gradient is a minibatch estimate: unbiased, variance $\propto 1/b$
 (measured on a real network in the SGD section).
 
-- Constant $\eta$ → no convergence: a **noise ball** of radius
+- Constant $\eta$ → no convergence: a **noise ball** of squared radius
   $\propto \eta$. Hence decaying learning rates and schedules.
 - Batch size = a second dial, with hardware consequences (Minibatches)
   and diminishing returns at scale (Batch Size).
 - Momentum's second job: averaging noise over *time*.
-- Not purely a tax — noise kicks the iterate out of local minima and
-  saddles for free.
+- Not purely a tax — noise kicks the iterate out of saddles and shallow
+  minima; deep barriers stay expensive.
 :::
 
 ::: {.slide title="What convexity still buys"}

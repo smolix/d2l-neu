@@ -13,9 +13,12 @@ parameters. This section explains the W. Back in :numref:`sec_weight_decay`
 we saw that adding an $\ell_2$ penalty to the loss and shrinking the weights
 by a fixed factor each step are the same operation under stochastic gradient
 descent, and we promised to return to the optimizer once we had better ones.
-Under Adam the two operations part ways, the penalty version quietly stops
-doing its job, and the one-line repair by :citet:`Loshchilov.Hutter.2019`
-became part of the name of the method.
+That section already warned, and :numref:`sec_training_recipes` repeated in
+recipe form, that under Adam the two operations part ways: the penalty
+version is rescaled coordinate-by-coordinate and quietly stops doing its
+job. The one-line repair by :citet:`Loshchilov.Hutter.2019` became part of
+the name of the method. What the earlier chapters asserted, this section
+derives and measures.
 
 The plan: first the two-line algebra that breaks the equivalence, then AdamW
 from scratch, then an experiment on the language model of
@@ -61,8 +64,10 @@ $$
 Penalizing the loss *is* shrinking the weights, by the uniform factor
 $1 - \eta\lambda$. Now feed the same penalized gradient through Adam's
 update :eqref:`eq_adam-update`. Everything in the gradient is divided by
-$\sqrt{\hat{\mathbf{v}}_t}$, the penalty included, so the shrinkage applied
-to coordinate $i$ is no longer uniform:
+$\sqrt{\hat{\mathbf{v}}_t}$, the penalty included. Schematically, treating
+$\sqrt{\hat{\mathbf{v}}_t}$ as a common preconditioner for loss term and
+penalty alike (both moments are in fact built from the penalized gradient),
+the shrinkage applied to coordinate $i$ is no longer uniform:
 
 $$
 \underbrace{\frac{\eta\,\lambda}{\sqrt{\hat{v}_{t,i}} + \epsilon}\; x_{t,i}}_{\textrm{$\ell_2$ penalty through Adam}}
@@ -177,10 +182,11 @@ d2l.train_concise_ch11(trainer,
 ```
 
 A note on defaults before we move on. AdamW inherits Adam's
-$(\beta_1, \beta_2) = (0.9, 0.999)$, but large language models are almost
-universally trained with $\beta_2 = 0.95$, a convention set by GPT-3
-:cite:`brown2020language` and kept by essentially every open recipe since,
-including OLMo 2 :cite:`OLMo.2025`. The shorter second-moment window
+$(\beta_1, \beta_2) = (0.9, 0.999)$, but large language models are
+commonly trained with $\beta_2 = 0.95$, a convention set by GPT-3
+:cite:`brown2020language` and kept by many open recipes since, including
+OLMo 2 :cite:`OLMo.2025` (not all: PaLM did not
+:cite:`chowdhery2022palm`). The shorter second-moment window
 (about twenty steps instead of a thousand) makes the scale estimate track
 heavy-tailed gradient noise faster, at some cost in smoothing; we return to
 what this buys in :numref:`sec_practice`. One thing that has *not* survived
@@ -245,8 +251,9 @@ def val_loss(model, data):
 
 ### One Number, Two Meanings
 
-First, the size of the problem. We train `TinyLM` twice at the tuned
-learning rate from :numref:`sec_adam` with the standard $\lambda = 0.1$,
+First, the size of the problem. We train `TinyLM` twice, each framework at
+its own tuned learning rate from :numref:`sec_adam`, with the standard
+$\lambda = 0.1$,
 once as an $\ell_2$ penalty inside Adam's gradient, and once decoupled as
 AdamW. In PyTorch the coupled version is what `Adam`'s `weight_decay`
 argument does; in Optax we build it by adding the decay to the gradient
@@ -378,10 +385,10 @@ decoupled_tbl = sweep(lambda lr, wd: optax.adamw(lr, weight_decay=wd),
 ```{.python .input #adamw-a-grid-twice-4}
 def show_grids(tables, wd_axes, titles):
     fig, axes = d2l.plt.subplots(1, 2, figsize=(7, 3), sharey=True)
+    lo = min(v for tbl in tables for row in tbl for v in row)
+    hi = max(v for tbl in tables for row in tbl for v in row)
     for ax, tbl, wds, title in zip(axes, tables, wd_axes, titles):
-        lo = min(min(row) for row in tbl)
-        hi = max(max(row) for row in tbl)
-        ax.imshow(tbl, cmap='viridis')
+        ax.imshow(tbl, cmap='viridis', vmin=lo, vmax=hi)
         for i, row in enumerate(tbl):
             best = min(range(len(row)), key=lambda j: row[j])
             for j, v in enumerate(row):
@@ -389,6 +396,11 @@ def show_grids(tables, wd_axes, titles):
                         color='black' if (v - lo) / (hi - lo) > 0.5
                         else 'white',
                         fontweight='bold' if j == best else 'normal')
+        i, j = min(((i, j) for i, row in enumerate(tbl)
+                    for j in range(len(row))),
+                   key=lambda ij: tbl[ij[0]][ij[1]])
+        ax.add_patch(d2l.plt.Rectangle((j - 0.5, i - 0.5), 1, 1, fill=False,
+                                       edgecolor='red', lw=2))
         ax.set_xticks(range(len(wds)), [f'{wd:g}' for wd in wds])
         ax.set_yticks(range(len(lrs)), [f'{lr:g}' for lr in lrs])
         ax.set_xlabel('weight decay $\\lambda$')
@@ -400,11 +412,12 @@ show_grids([coupled_tbl, decoupled_tbl],
            ['Adam + $\\ell_2$', 'AdamW'])
 ```
 
-Read each heatmap row by row; the best $\lambda$ in each row is set in
-bold. In the AdamW grid the bold entries line up in a single column: the
-best weight decay is the same at every learning rate in the grid, and in
-our runs the same column wins across seeds and even across the two
-frameworks, whose different initializations shift everything else. In the
+Read each heatmap row by row; the two panels share one color scale, the
+best $\lambda$ in each row is set in bold, and each panel's best cell is
+boxed in red. In the AdamW grid the bold entries line up in a single
+column: the best weight decay is the same at every learning rate in the
+grid, and in this single-seed run the same column wins in both frameworks,
+whose different initializations shift everything else. In the
 coupled grid the bold entries wander: change $\eta$ and the $\lambda$ you
 tuned is no longer right, exactly the joint-tuning burden that
 :citet:`Loshchilov.Hutter.2019` documented on image classifiers, where the
@@ -647,7 +660,8 @@ $$\mathbf{x}_{t+1} = \mathbf{x}_t - \eta\,(\mathbf{g}_t + \lambda \mathbf{x}_t)
 
 . . .
 
-Under Adam, the penalty goes **through the preconditioner**:
+Under Adam, the penalty goes **through the preconditioner**
+(schematically — the appendix has the exact recurrence):
 
 $$\underbrace{\frac{\eta\lambda}{\sqrt{\hat{v}_{t,i}} + \epsilon}\, x_{t,i}}_{\textrm{$\ell_2$ through Adam}}
 \qquad\textrm{vs.}\qquad
@@ -686,7 +700,8 @@ decoupled:
 
 ::: {.slide title="A grid, twice"}
 $3\times 3$ learning rate × weight decay, held-out loss, on a training
-slice small enough to overfit. Best $\lambda$ per row in bold:
+slice small enough to overfit. Best $\lambda$ per row in bold; each
+panel's best cell boxed in red:
 
 @!adamw-a-grid-twice-4
 

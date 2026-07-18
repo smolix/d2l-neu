@@ -25,14 +25,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.222 sec/epoch\n"
+          "text": "loss: 0.243, 0.110 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-adamw-from-scratch-2-1.svg",
-          "bytes": 18776,
-          "sha256": "sha256:d291e238382b4df0afcd117e5fe2c2c21f09e36bc61b2743c5e13bc8322b7d50"
+          "bytes": 18774,
+          "sha256": "sha256:a3e62e4331d3406dff9e181a762cb920a1cbe4dced28cc11dcb8bb28f383ffc9"
         }
       ]
     },
@@ -43,14 +43,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.079 sec/epoch\n"
+          "text": "loss: 0.242, 0.082 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-adamw-from-scratch-3-1.svg",
-          "bytes": 18624,
-          "sha256": "sha256:8948ff9551e881f27c6043416124713ddae8046694c90c2ffd190351cb6ad201"
+          "bytes": 18626,
+          "sha256": "sha256:07322372a071bd3fb2db7c3e2978dc225a3b8d3435fe4123db8688d4cbfbd118"
         }
       ]
     },
@@ -72,8 +72,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-one-number-two-meanings-1.svg",
-          "bytes": 25808,
-          "sha256": "sha256:9ec5ffc5dbc3d7fd8e94e8d01555be556c8956284757e6b9ccdc083acd65e4ae"
+          "bytes": 25814,
+          "sha256": "sha256:3a8bc63a24d452f9c0c09b7478e509ddcc6b8c00396757896b03f087d72cda56"
         }
       ]
     },
@@ -94,12 +94,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.17 2.70 2.34\n"
+          "text": "4.09 2.70 2.34\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "4.00 2.37 2.34\n"
+          "text": "4.08 2.38 2.34\n"
         }
       ]
     },
@@ -115,30 +115,30 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.17 2.42 2.49\n"
+          "text": "3.17 2.13 2.49\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "3.02 2.39 2.57\n"
+          "text": "3.03 2.41 2.52\n"
         }
       ]
     },
     "adamw-a-grid-twice-4": {
-      "code_fingerprint": "sha256:59d08c88d12380cc9266ec888bd75852dc9e57187b21ba6d73f7a420768fb120",
+      "code_fingerprint": "sha256:31efdfc04a3c1974dbfffcb00e171c86e355280151ccfe551dfe65443e83e65d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-a-grid-twice-4-1.svg",
-          "bytes": 39290,
-          "sha256": "sha256:b722628b4d3eaea67c3922981b2a45597671c8a866d087364ab16fcae6aac3eb"
+          "bytes": 40049,
+          "sha256": "sha256:8462a253380b1a6b2c54e4be34e3fdda5f3bdc4420848ada0ec134685dc0ed4a"
         }
       ]
     },
     "adamw-what-not-to-decay-1": {
-      "code_fingerprint": "sha256:168b914be7188ada6f1de05c88a54d3053c4eb92c1d52a8625435f0dc99676f9",
+      "code_fingerprint": "sha256:4fe0fb2d7934c4f209fe43b71c0376e9a61124da6ceb6bf419bb5bb56ad8195f",
       "kind": "text",
       "outputs": [
         {
@@ -149,7 +149,7 @@
       ]
     },
     "adamw-what-not-to-decay-2": {
-      "code_fingerprint": "sha256:dc24796ed37df28f8b047e907ce7bb37d9492b985c3d148458438a473b10d48e",
+      "code_fingerprint": "sha256:995087c7084e9c81ace80ca9e1737202c4395b303a3274012d7548593df8a227",
       "kind": "mixed",
       "outputs": [
         {
@@ -161,13 +161,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adamw/adamw-what-not-to-decay-2-1.svg",
-          "bytes": 19444,
-          "sha256": "sha256:18d234069190458fa5ba60f6da3152adb76b89c7349f2debf87006a7c2388cf5"
+          "bytes": 19438,
+          "sha256": "sha256:7b5bb114aa00257793bdaa9eaf12a0002a24f9c70edcc79ae8426c983a0bf21c"
         }
       ]
     },
     "adamw-optimizer-state-and-memory": {
-      "code_fingerprint": "sha256:abfedfec052b4ed980c32b2d823fc315e0d2b8b7d78dfcf2ac64930024453e63",
+      "code_fingerprint": "sha256:78247b92975081177331f24bdb03025de14b105cab340ed4ca3e8a62ced07752",
       "kind": "text",
       "outputs": [
         {

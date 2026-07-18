@@ -101,9 +101,12 @@ We will measure both testbeds of this chapter: the Fashion-MNIST CNN of
 :numref:`sec_adam` and the `TinyLM` character-level transformer of
 :numref:`subsec_tinylm`, on its usual *Time Machine* data. The setup cell
 assembles the data as indexable tensors, so that a random index set gives a
-random minibatch, exactly as the theory assumes. For the language model one
-"example" is a 64-character sequence, so its noise scale is denominated in
-sequences.
+random minibatch. One caveat: the theory assumes independent draws, and the
+*Time Machine* windows start at every character, so adjacent 64-character
+examples overlap by 63 characters — a rough proxy for iid sampling, fine
+for our purposes. For the language model one "example" is such a sequence,
+so its noise scale and batch sizes are denominated in sequences (tokens =
+sequences × 64).
 
 ```{.python .input #batch-size-a-two-batch-estimator-1}
 %%tab pytorch
@@ -270,8 +273,9 @@ ramps. Third, the caveats: the estimate is itself noisy, increasingly so as
 $\|\nabla f\|^2$ shrinks toward the noise floor of the estimator, and
 repeated runs scatter within a factor of about two, which is precise enough
 for choosing a batch size and not for much else. And the magnitude does not
-transfer across problems: measurements on GPT-3-scale models put the noise
-scale in the millions of tokens :cite:`McCandlish.Kaplan.Amodei.ea.2018`,
+transfer across problems: the measurements of
+:citet:`McCandlish.Kaplan.Amodei.ea.2018` across workloads put the noise
+scale for large language models in the millions of tokens,
 against a few thousand characters here. What transfers is the concept and
 the growth during training, not the number.
 
@@ -544,10 +548,15 @@ $b \ll b_{\textrm{noise}}$, saturating at $\eta_{\max}$ beyond it — the rule
 announces its own expiry at the noise scale. For Adam and its relatives the
 scaling is weaker. The preconditioner already divides each coordinate by its
 root-mean-square gradient, which itself shrinks as the batch quiets the
-noise, and a stochastic-differential-equation analysis shows that the
-invariant quantity is $\eta^2 / b$ rather than $\eta / b$, giving the
-square-root rule :cite:`Malladi.Lyu.Panigrahi.ea.2022` — the rule the sweeps
-above relied on.
+noise. The stochastic-differential-equation analysis of
+:citet:`Malladi.Lyu.Panigrahi.ea.2022` makes the scaling precise: growing
+the batch by a factor $k$ preserves Adam's dynamics if every time constant
+moves together — $\eta' = \sqrt{k}\,\eta$, $\beta_i' = 1 - k(1 - \beta_i)$,
+$\epsilon' = \epsilon / \sqrt{k}$ — which is possible only while
+$k(1 - \beta_i) < 1$, i.e. $k < 10$ at $\beta_1 = 0.9$. Common practice, and
+the sweeps above, move $\eta$ alone; the full rule reduces to that
+square-root heuristic when the $\beta$s barely move, and
+:eqref:`eq_lr-rules` states it in that everyday form.
 
 We verify both rules on the CNN with the chapter's usual instrument, a
 learning-rate grid, trained at $b=8$ and $b=64$ on a fixed budget of 12,800
@@ -668,7 +677,7 @@ orders of magnitude with architecture, dataset, and optimizer
 :cite:`Shallue.Lee.Antognini.ea.2019`. Large batches were once also blamed
 for a *generalization* gap — converging to sharp minima that test poorly
 :cite:`Keskar.Mudigere.Nocedal.ea.2017` — but much of that gap closes under
-honest retuning of $\eta$ and training length; the durable cost of a large
+full retuning of $\eta$ and training length; the durable cost of a large
 batch is data efficiency, which is what this section measured.
 
 ## Growing the Batch
@@ -745,7 +754,7 @@ is why serious runs grow their batch during training rather than fixing it.
    reaches twice its minimum. How close is the factor-of-two prediction of
    :eqref:`eq_steps-examples`?
 1. The sweeps moved $\eta$ by the square-root rule rather than retuning.
-   Retune honestly: for each batch size in the CNN sweep, run a three-point
+   Retune properly: for each batch size in the CNN sweep, run a three-point
    learning-rate grid around the rule's value and keep the best
    steps-to-target. Which points of the curve move, and does the elbow?
 1. Suppose one optimizer step at batch size $b$ takes $t(b) = t_0 (1 + b /
@@ -827,8 +836,9 @@ CNN, then `TinyLM` — at initialization and after 500 steps of Adam:
   init; severalfold to two orders of magnitude larger 500 steps later.
 
 ::: {.d2l-note}
-GPT-3-scale measurements put $b_{\textrm{noise}}$ in the **millions of
-tokens**. The magnitude does not transfer; the growth does.
+For large language models, measured noise scales run to the **millions of
+tokens** (McCandlish et al., 2018). The magnitude does not transfer; the
+growth does.
 :::
 :::
 
@@ -891,7 +901,8 @@ $$\eta(b) = \frac{b}{b_0}\, \eta_0 \;\;\textrm{(SGD)},
   $\eta_{\textrm{opt}}(b) = \eta_{\max}/(1 + b_{\textrm{noise}}/b)$:
   the rule expires at the noise scale.
 - Square root: Adam's preconditioner already divides by the gradient's
-  RMS; the SDE invariant is $\eta^2/b$ (Malladi et al., 2022).
+  RMS; the full SDE rule also moves $\beta_i$ and $\epsilon$, and reduces
+  to $\eta \propto \sqrt{b}$ when they barely move (Malladi et al., 2022).
 :::
 
 ::: {.slide title="Verification: the basin slides"}

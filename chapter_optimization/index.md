@@ -11,9 +11,9 @@ anew by every algorithm: a *descent direction* — which way counts as
 "down", a question whose answer turns out to depend on which norm measures
 the size of a step; a *step size over time* — how boldly to move, and how
 that boldness should change over a run; and a *way of living with noise* —
-since every gradient is estimated from a minibatch, never computed
-exactly. The twelve sections of this chapter are these three decisions
-unfolded, roughly in the order history made them.
+since almost every gradient is estimated from a minibatch rather than
+computed exactly. The twelve sections of this chapter are these three
+decisions unfolded, roughly in the order history made them.
 
 Two properties of the loss surface make the decisions consequential. The
 first is *curvature*: a deep network's loss rises steeply along some
@@ -21,7 +21,7 @@ directions of parameter space and barely at all along others, and a single
 step size must serve both — too bold and the steep directions oscillate
 out of control, too timid and the flat directions never arrive. The second
 is *noise*: the exact gradient costs a full pass over the dataset, so
-every practical method settles for a minibatch estimate whose variance is
+any method that scales settles for a minibatch estimate whose variance is
 ours to choose. :numref:`sec_optimization-intro` maps this terrain. The
 five sections after it climb the classical ladder, each rung repairing a
 failure of the one below: gradient descent and the ideal of
@@ -113,7 +113,7 @@ with proofs — and we do not repeat those entries here.
 - [An Empirical Model of Large-Batch Training — McCandlish et al. (2018)](https://arxiv.org/abs/1812.06162) — free; defines the gradient-noise scale and the critical batch size, the two quantities measured at the center of :numref:`sec_batch_size`, and predicts when doubling the batch stops halving the steps.
 - [Understanding Warmup-Stable-Decay Learning Rates: A River Valley Loss Landscape Perspective — Wen et al. (2024)](https://arxiv.org/abs/2410.05192) — free; the modern upgrade of the ill-conditioned valley of :numref:`sec_optimization-intro`: a river-valley landscape in which the stable phase travels along the river and the decay phase descends its bank, explaining the WSD loss cliff of :numref:`sec_scheduler`.
 - [Fantastic Pretraining Optimizers and Where to Find Them — Stanford (2025)](https://arxiv.org/abs/2509.02046) — free; re-benchmarks ten optimizers under matched tuning and watches most claimed speedups over AdamW shrink — the fair-comparison discipline that :numref:`sec_muon` and :numref:`sec_practice` adopt as a rule.
-- [Benchmarking Neural Network Training Algorithms — Dahl et al. (2023)](https://arxiv.org/abs/2306.07179) — free; the MLCommons AlgoPerf benchmark ([code and results](https://github.com/mlcommons/algorithmic-efficiency)): why optimizer verdicts depend on the comparison protocol, the evidence standard behind the honesty notes of :numref:`sec_muon` and :numref:`sec_practice`.
+- [Benchmarking Neural Network Training Algorithms — Dahl et al. (2023)](https://arxiv.org/abs/2306.07179) — free; the MLCommons AlgoPerf benchmark ([code and results](https://github.com/mlcommons/algorithmic-efficiency)): why optimizer verdicts depend on the comparison protocol, the evidence standard behind the caveats of :numref:`sec_muon` and :numref:`sec_practice`.
 
 **Tutorials, notes, and interactive**
 

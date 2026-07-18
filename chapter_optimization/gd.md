@@ -2,8 +2,10 @@
 :label:`sec_gd`
 
 Gradient descent itself trains almost nothing in deep learning: every method
-in this chapter replaces it with a stochastic variant. We begin with it anyway
-because its failure modes carry over intact. A learning rate that diverges on
+in this chapter replaces it with a stochastic variant — the update rule you
+have been applying since :numref:`sec_linear_scratch`, so far without a
+justification. We begin with the noise-free version anyway because its
+failure modes carry over intact. A learning rate that diverges on
 a one-dimensional parabola diverges on a billion-parameter transformer for the
 same reason, and the cure for badly scaled coordinates — preconditioning —
 reappears, in estimated form, inside the adaptive methods of

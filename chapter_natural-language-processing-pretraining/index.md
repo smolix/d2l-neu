@@ -55,6 +55,7 @@ We will cover them in :numref:`chap_nlp_app`.
 ```toc
 :maxdepth: 2
 
+seq2seq
 word2vec
 approx-training
 word-embedding-dataset

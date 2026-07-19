@@ -155,9 +155,12 @@ book:
         - chapter_transformers/scaling-laws.qmd
         - chapter_recurrent-modern/index.qmd
         - chapter_recurrent-modern/lstm.qmd
-        - chapter_recurrent-modern/seq2seq.qmd
         - chapter_recurrent-modern/ssm.qmd
         - chapter_recurrent-modern/mamba.qmd
+        - chapter_recurrent-modern/matrix-state.qmd
+        - chapter_recurrent-modern/deltanet.qmd
+        - chapter_recurrent-modern/test-time-regression.qmd
+        - chapter_recurrent-modern/hybrids.qmd
         - chapter_computational-performance/index.qmd
         - chapter_computational-performance/hybridize.qmd
         - chapter_computational-performance/async-computation.qmd
@@ -177,6 +180,7 @@ book:
     - part: "Language Models"
       chapters:
         - chapter_natural-language-processing-pretraining/index.qmd
+        - chapter_natural-language-processing-pretraining/seq2seq.qmd
         - chapter_natural-language-processing-pretraining/word2vec.qmd
         - chapter_natural-language-processing-pretraining/approx-training.qmd
         - chapter_natural-language-processing-pretraining/word-embedding-dataset.qmd

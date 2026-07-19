@@ -436,3 +436,169 @@ class TransformerEncoderBlock(nnx.Module):  #@save
         Y = self.addnorm1(X, output)
         return self.addnorm2(Y, self.ffn(Y)), attention_weights
 ```
+
+## Legacy Recurrent Classes (tensorflow, mxnet only)
+
+**Why these are here (2026-07-19).** `chapter_recurrent-modern/lstm.md` now
+carries PyTorch/JAX tabs only (the Advanced-part policy), but `seq2seq.md` —
+relocated to this part as its historical baseline — still builds its
+translator on `d2l.GRU` in all four frameworks. These are the frozen
+tensorflow/mxnet `LSTMScratch`/`LSTM`/`GRU` classes, byte-identical to the
+last four-framework revision of `lstm.md`, kept so seq2seq's committed
+outputs stay reproducible from source. Deleted together with the rest of
+this file when the Language-Models part is modernized.
+
+```{.python .input #lstm-implementation-from-scratch-1}
+%%tab mxnet
+class LSTMScratch(d2l.Module):  #@save
+    """The long short-term memory (LSTM) cell implemented from scratch."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+
+        init_weight = lambda *shape: d2l.randn(*shape) * sigma
+        triple = lambda: (init_weight(num_inputs, num_hiddens),
+                          init_weight(num_hiddens, num_hiddens),
+                          d2l.zeros(num_hiddens))
+        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
+        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
+        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
+        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
+```
+
+```{.python .input #lstm-implementation-from-scratch-1}
+%%tab tensorflow
+class LSTMScratch(d2l.Module):  #@save
+    """The long short-term memory (LSTM) cell implemented from scratch."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+
+        init_weight = lambda *shape: tf.Variable(d2l.normal(shape) * sigma)
+        triple = lambda: (init_weight(num_inputs, num_hiddens),
+                          init_weight(num_hiddens, num_hiddens),
+                          tf.Variable(d2l.zeros(num_hiddens)))
+        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
+        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
+        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
+        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
+```
+
+```{.python .input #lstm-implementation-from-scratch-2}
+%%tab mxnet
+@d2l.add_to_class(LSTMScratch)  #@save
+def forward(self, inputs, H_C=None):
+    if H_C is None:
+        # Initial state with shape: (batch_size, num_hiddens)
+        H = d2l.zeros((inputs.shape[1], self.num_hiddens),
+                      ctx=inputs.ctx)
+        C = d2l.zeros((inputs.shape[1], self.num_hiddens),
+                      ctx=inputs.ctx)
+    else:
+        H, C = H_C
+    outputs = []
+    for X in inputs:
+        I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
+                        d2l.matmul(H, self.W_hi) + self.b_i)
+        F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
+                        d2l.matmul(H, self.W_hf) + self.b_f)
+        O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
+                        d2l.matmul(H, self.W_ho) + self.b_o)
+        C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
+                           d2l.matmul(H, self.W_hc) + self.b_c)
+        C = F * C + I * C_tilde
+        H = O * d2l.tanh(C)
+        outputs.append(H)
+    return outputs, (H, C)
+```
+
+```{.python .input #lstm-implementation-from-scratch-2}
+%%tab tensorflow
+@d2l.add_to_class(LSTMScratch)  #@save
+def forward(self, inputs, H_C=None):
+    if H_C is None:
+        # Initial state with shape: (batch_size, num_hiddens)
+        H = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
+        C = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
+    else:
+        H, C = H_C
+    outputs = []
+    for X in tf.unstack(inputs):
+        I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
+                        d2l.matmul(H, self.W_hi) + self.b_i)
+        F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
+                        d2l.matmul(H, self.W_hf) + self.b_f)
+        O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
+                        d2l.matmul(H, self.W_ho) + self.b_o)
+        C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
+                           d2l.matmul(H, self.W_hc) + self.b_c)
+        C = F * C + I * C_tilde
+        H = O * d2l.tanh(C)
+        outputs.append(H)
+    return outputs, (H, C)
+```
+
+```{.python .input #lstm-concise-implementation-1}
+%%tab mxnet
+class LSTM(d2l.RNN):  #@save
+    """The multilayer LSTM model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        self.rnn = rnn.LSTM(num_hiddens, num_layers, dropout=dropout)
+
+    def forward(self, inputs, H_C=None):
+        if H_C is None:
+            H_C = self.rnn.begin_state(inputs.shape[1], ctx=inputs.ctx)
+        return self.rnn(inputs, H_C)
+```
+
+```{.python .input #lstm-concise-implementation-1}
+%%tab tensorflow
+class LSTM(d2l.RNN):  #@save
+    """The multilayer LSTM model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        self.lstms = [tf.keras.layers.LSTM(
+            num_hiddens, return_sequences=True, return_state=True,
+            dropout=dropout) for _ in range(num_layers)]
+
+    def forward(self, inputs, H_C=None):
+        X = tf.transpose(inputs, perm=[1, 0, 2])  # To batch-major layout
+        if H_C is None:
+            H_C = [None] * self.num_layers
+        new_H_C = []
+        for lstm, state in zip(self.lstms, H_C):
+            X, *state = lstm(X, initial_state=state)
+            new_H_C.append(state)
+        return tf.transpose(X, perm=[1, 0, 2]), new_H_C
+```
+
+```{.python .input #lstm-implementation-and-comparison-1}
+%%tab mxnet
+class GRU(d2l.RNN):  #@save
+    """The multilayer GRU model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        self.rnn = rnn.GRU(num_hiddens, num_layers, dropout=dropout)
+```
+
+```{.python .input #lstm-implementation-and-comparison-1}
+%%tab tensorflow
+class GRU(d2l.RNN):  #@save
+    """The multilayer GRU model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        gru_cells = [tf.keras.layers.GRUCell(num_hiddens, dropout=dropout)
+                     for _ in range(num_layers)]
+        self.rnn = tf.keras.layers.RNN(gru_cells, return_sequences=True,
+                                       return_state=True)
+
+    def forward(self, X, state=None):
+        outputs, *state = self.rnn(tf.transpose(X, perm=[1, 0, 2]), state)
+        state = [s[0] if isinstance(s, list) else s for s in state]
+        return tf.transpose(outputs, perm=[1, 0, 2]), state
+```

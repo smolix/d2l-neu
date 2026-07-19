@@ -11,15 +11,20 @@ called *sequence transduction*, or *sequence-to-sequence* (seq2seq) learning, an
 they were the arena in which recurrent networks first beat classical pipelines at
 scale :cite:`Sutskever.Vinyals.Le.2014,Cho.Van-Merrienboer.Gulcehre.ea.2014`.
 
-This section builds a complete seq2seq system on top of the machinery already in
-hand. We introduce the *encoder-decoder* abstraction that organizes almost every
-transduction model built since, assemble a small English-to-French translator
-from two GRUs, train it with the teacher forcing of :numref:`sec_rnn` and a
-masked loss, translate with the decoding strategies of :numref:`sec_decoding`,
-and score the results with a character-level metric. We end at the idea that will
-drive the rest of the book: the encoder squeezes the entire source through a
-single fixed-size vector, and that bottleneck both limits this model and points
-to its two successors.
+This section is deliberately historical: it builds the 2014 system that taught
+the field what sequence transduction demands, using the recurrent tools of
+:numref:`chap_modern_rnn`. You have already met both of its successors — the
+attention of :numref:`chap_attention` grew directly out of this model's central
+weakness, and the transformer encoder-decoders of :numref:`sec_transformer`
+displaced it outright — so read it as the baseline that the rest of this part,
+and much of the modern field, is measured against. We introduce the
+*encoder-decoder* abstraction that organizes almost every transduction model
+built since, assemble a small English-to-French translator from two GRUs, train
+it with the teacher forcing of :numref:`sec_rnn` and a masked loss, translate
+with the decoding strategies of :numref:`sec_decoding`, and score the results
+with a character-level metric. We end by *measuring* the weakness itself: the
+encoder squeezes the entire source through a single fixed-size vector, and that
+bottleneck is where attention began.
 
 ```{.python .input}
 %load_ext d2lbook.tab
@@ -203,9 +208,9 @@ class Decoder(nnx.Module):  #@save
 
 Wiring them together is a three-line class: run the encoder, hand its output to
 `init_state`, then run the decoder. Subclassing `d2l.Classifier` gives us the
-training loop and the softmax cross-entropy loss for free, so every concrete
-model in this section and the attention chapter that follows needs to specify
-only the encoder, the decoder, and how the two connect.
+training loop and the softmax cross-entropy loss for free, so a concrete
+model needs to specify only the encoder, the decoder, and how the two
+connect.
 
 ```{.python .input #seq2seq-abstraction-together}
 %%tab mxnet, pytorch
@@ -283,8 +288,10 @@ short sentences with `<pad>` to a common length, and truncate long ones. Targets
 additionally get a `<bos>` prefix: the decoder is fed the target shifted right (by
 one, starting from `<bos>`), and is trained to predict the target shifted left
 (ending in `<eos>`), which is exactly the teacher forcing of :numref:`sec_rnn`.
-We also record each source's length excluding padding, which the attention models
-of the next chapter will need.
+We also record each source's length excluding padding, the bookkeeping an
+attention-based decoder uses to mask padded positions
+(:numref:`sec_attention-scoring-functions`); our recurrent model here never
+reads it.
 
 ```{.python .input #seq2seq-mtfraeng}
 class MTFraEng(d2l.DataModule):  #@save
@@ -811,8 +818,7 @@ trainer.fit(model, data)
 To translate we run the decoder autoregressively: feed `<bos>`, take an output
 token, feed it back, and stop at `<eos>`. Two forms are useful. The batched
 `predict_step`, attached to `EncoderDecoder`, decodes a whole minibatch in one
-call; the attention models of the next chapter reuse it (with its
-`save_attention_weights` hook), and we use it for the length sweep below.
+call, and we use it for the length sweep below.
 
 ```{.python .input #seq2seq-predict-step}
 %%tab pytorch
@@ -972,8 +978,8 @@ precision by emitting only a couple of sure words:
 $$\text{BLEU} = \exp\!\left(\min\!\left(0, 1 - \frac{\text{len}_{\text{label}}}{\text{len}_{\text{pred}}}\right)\right) \prod_{n=1}^{k} p_n^{1/2^n}.$$
 :eqlabel:`eq_bleu`
 
-We keep its implementation, `d2l.bleu`, in the library for the exercises and the
-attention chapter, but chrF is the metric we teach.
+We keep its implementation, `d2l.bleu`, in the library for the exercises, but
+chrF is the metric we teach.
 
 ```{.python .input #seq2seq-bleu}
 def bleu(pred_seq, label_seq, k):  #@save
@@ -995,8 +1001,8 @@ def bleu(pred_seq, label_seq, k):  #@save
 
 Both chrF and BLEU are surface-overlap metrics; neither knows whether a
 translation *means* the same thing. That gap is filled by learned neural metrics
-such as COMET and, increasingly, by prompting a large language model to judge,
-which we return to when we have the models to build them.
+such as COMET and, increasingly, by prompting a large language model to judge —
+a model of exactly the kind :numref:`chap_transformers` builds.
 
 ### Beam Search
 
@@ -1098,14 +1104,17 @@ d2l.plt.grid(True);
 
 The curve slopes down: as the source grows, translation quality falls off, and it
 falls off precisely because the model must funnel more and more information
-through an unchanged $\mathbf{c}$. This single bottleneck is the villain of the
-rest of the book, and there are exactly two ways to defeat it. One is to let the
-decoder look back at *all* the encoder's per-step states instead of only the final
-one, choosing what to attend to at each step. That is *attention*, and it is the
-subject of the next part. The other is to keep a single running state but make it
-a far better memory, one that decides what to store and what to discard as it
-goes. That is where the rest of *this* chapter heads, into linear and selective
-state space models. The same bottleneck, met twice, motivates both.
+through an unchanged $\mathbf{c}$. This single bottleneck is where two large
+stories in this book began, and you have now read both. One escape lets the
+decoder look back at *all* the encoder's per-step states instead of only the
+final one, choosing what to attend to at each step — that is *attention*
+(:numref:`chap_attention`), born in 2014 as exactly this repair
+:cite:`Bahdanau.Cho.Bengio.2014`, and its transformer descendants
+(:numref:`chap_transformers`) retired this model from production. The other
+keeps a single running state but makes it a far better memory, one that decides
+what to store and what to discard as it goes — the linear and selective state
+space models of :numref:`chap_modern_rnn`. The same bottleneck, measured here
+on a fifty-line translator, motivated both.
 
 ## Summary
 
@@ -1259,7 +1268,7 @@ $$\mathcal{L} = \frac{\sum_{b,t} \mathbf{1}\{y_{b,t} \ne \texttt{<pad>}\}\, \ell
 
 ::: {.slide title="Greedy translation"}
 `predict_step` decodes a whole minibatch at once (feed `<bos>`, take argmax,
-feed back, stop at `<eos>`); the attention chapter reuses it:
+feed back, stop at `<eos>`):
 
 @seq2seq-predict-step
 
@@ -1297,8 +1306,9 @@ the source grows:
 
 @seq2seq-bottleneck-plot
 
-Two escapes: **attention** (look back at all encoder states, next part) or a
-**better recurrent state** (rest of this chapter).
+Two escapes, both already taken: **attention** (look back at all encoder
+states — where the attention chapters began) or a **better recurrent state**
+(the state space models you built).
 :::
 
 ::: {.slide title="Recap"}

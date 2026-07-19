@@ -544,7 +544,7 @@ limit of linear separability on Fashion-MNIST, not a tuning artifact.
 The ten classes are not linearly separable in pixel space (shirts and pullovers
 look nearly identical to a linear model). The misclassification gallery and the
 confusion matrix at the end of the section make this concrete. Replacing the flat linear layer with
-even a single hidden layer (Chapter 5) pushes past it.
+even a single hidden layer (:numref:`chap_perceptrons`) pushes past it.
 
 **Why the clip is only a band-aid.** The clip stops $\log 0$ but leaves the naive
 `softmax` free to overflow for large logits; the real fix (subtracting the row
@@ -664,7 +664,8 @@ each row by its total:
 
 ::: {.d2l-note .warn}
 Naive `exp` **overflows** for large logits. Fine for teaching; never use
-it in production. The stable fix arrives in §4.5.
+it in production. The stable fix arrives in the concise-softmax-regression
+section.
 :::
 :::
 
@@ -688,9 +689,9 @@ first and stays finite on the identical input:
 @softmax-regression-scratch-the-softmax-overflow
 
 ::: {.d2l-note .warn}
-One `NaN` poisons every downstream gradient. §4.5 derives the fix (fuse
-softmax and log via **log-sum-exp**) and shows the frameworks already ship
-it.
+One `NaN` poisons every downstream gradient. The concise-softmax-regression
+section derives the fix (fuse softmax and log via **log-sum-exp**) and shows
+the frameworks already ship it.
 :::
 :::
 
@@ -770,8 +771,8 @@ clip keeps the log finite when a probability underflows to 0:
 
 ::: {.d2l-note .warn}
 The clip only masks $\log 0$; it does not fix the upstream overflow, and
-it silently kills the gradient on any clamped entry. The cure is §4.5's
-fused loss.
+it silently kills the gradient on any clamped entry. The cure is the
+concise-softmax-regression section's fused loss.
 :::
 :::
 
@@ -854,8 +855,8 @@ artifact. The next slide shows where the missing 18% lives.
 
 ::: {.cols .vc}
 ::: {.col}
-Accumulate a $10\times 10$ count matrix over the validation set (§4.3's
-confusion matrix) and normalize each column:
+Accumulate a $10\times 10$ count matrix over the validation set (the
+base-classification section's confusion matrix) and normalize each column:
 
 - **Upper-body garments** (t-shirt, pullover, dress, coat, **shirt**)
   trade errors almost exclusively among themselves; the shirt column
@@ -878,9 +879,9 @@ that can only **weigh pixels linearly**.
 ::: {.slide title="The errors form two blocks, not a blur" except="pytorch"}
 [Prediction · the confusion matrix]{.kicker}
 
-Accumulate a $10\times 10$ count matrix over the validation set (§4.3's
-confusion matrix), normalize each column, and the misses turn out to be
-anything but uniform:
+Accumulate a $10\times 10$ count matrix over the validation set (the
+base-classification section's confusion matrix), normalize each column, and
+the misses turn out to be anything but uniform:
 
 - **Upper-body garments** (t-shirt, pullover, dress, coat, **shirt**) trade
   errors almost exclusively among themselves; the shirt column is the
@@ -899,13 +900,14 @@ can only **weigh pixels linearly**.
 
 ::: {.cols .vc}
 ::: {.col}
-A linear classifier draws **straight** decision boundaries: the §4.1
-picture, now with a price tag. In pixel space shirts and pullovers
-overlap, and no hyperplane separates them.
+A linear classifier draws **straight** decision boundaries: the
+softmax-regression section's picture, now with a price tag. In pixel space
+shirts and pullovers overlap, and no hyperplane separates them.
 
 The capacity of lines is finite: in the plane a line shatters any 3
-points but **never** the 4-point XOR pattern (§4.6 makes this precise).
-A single hidden layer (Chapter 5) bends the boundary and pushes past the
+points but **never** the 4-point XOR pattern (the generalization-in-
+classification section makes this precise). A single hidden layer (the
+multilayer-perceptrons chapter) bends the boundary and pushes past the
 ceiling.
 :::
 
@@ -934,7 +936,7 @@ ceiling.
   shows the errors in two blocks (upper-body garments, footwear), exactly
   where silhouette fails.
 - `exp(1000)` = `NaN`: the naive softmax is fragile and the clip merely
-  hides it; §4.5 derives the real fix.
+  hides it; the concise-softmax-regression section derives the real fix.
 :::
 :::
 :::

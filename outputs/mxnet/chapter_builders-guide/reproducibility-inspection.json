@@ -36,23 +36,23 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-1": {
-      "code_fingerprint": "sha256:2268060f87647492a77455f3bbaae20f2c2b977943a7dac8bc68f5f723682196",
+      "code_fingerprint": "sha256:155949a2142acbd4342e088e189509ebe5c2cabc9c5d17dc69c75ac40d203585",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "True 0.0\n"
+          "text": "False 1.0\n"
         }
       ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
-      "code_fingerprint": "sha256:e1cfb949168793dd3ee5048f2ed1de9c330adb8695a83a3f5b59cdd44545181a",
+      "code_fingerprint": "sha256:4cae9ffd8292752418d9be6426db6898a9e7d44dd8fcb5b5cc50e2f14b26bc7b",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-capturing-activation-statistics": {
-      "code_fingerprint": "sha256:f251f7f705093c867212256d47c4aba865f8afc60a63e233c4baa1a639f76d71",
+      "code_fingerprint": "sha256:34e9850201f27c435584f6e9a24837507cd71be807658531d02f414e24de32c9",
       "kind": "text",
       "outputs": [
         {
@@ -63,9 +63,15 @@
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:c995d35a899652d47558eb750f6d32889479e7a036fe3a0c9bf8aaa09d4fe749",
+      "code_fingerprint": "sha256:58644fe26c2fae9d64d240fd9912faa9d764840e363dc3ee126eafd68b087e51",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first non-finite output in 3.body.1\n"
+        }
+      ]
     }
   }
 }

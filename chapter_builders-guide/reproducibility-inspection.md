@@ -150,16 +150,18 @@ print('different seed:', loss_a, 'vs', loss_c)
 %%tab tensorflow
 def train_once(seed):
     tf.keras.utils.set_random_seed(seed)  # seeds Python, NumPy, and TF
-    net = tf.keras.Sequential([tf.keras.layers.Dense(32, activation='relu'),
-                               tf.keras.layers.Dense(1)])
-    opt = tf.keras.optimizers.SGD(learning_rate=0.1)
-    X, y = tf.random.normal((128, 20)), tf.random.normal((128, 1))
-    for _ in range(5):
-        with tf.GradientTape() as tape:
-            loss = tf.reduce_mean((net(X) - y) ** 2)
-        grads = tape.gradient(loss, net.trainable_variables)
-        opt.apply_gradients(zip(grads, net.trainable_variables))
-    return float(loss), tf.identity(net.layers[0].kernel)
+    with tf.device('/CPU:0'):  # GPU kernels are not bitwise-deterministic
+        net = tf.keras.Sequential([
+            tf.keras.layers.Dense(32, activation='relu'),
+            tf.keras.layers.Dense(1)])
+        opt = tf.keras.optimizers.SGD(learning_rate=0.1)
+        X, y = tf.random.normal((128, 20)), tf.random.normal((128, 1))
+        for _ in range(5):
+            with tf.GradientTape() as tape:
+                loss = tf.reduce_mean((net(X) - y) ** 2)
+            grads = tape.gradient(loss, net.trainable_variables)
+            opt.apply_gradients(zip(grads, net.trainable_variables))
+        return float(loss), tf.identity(net.layers[0].kernel)
 
 loss_a, w_a = train_once(seed=0)
 loss_b, w_b = train_once(seed=0)
@@ -197,7 +199,9 @@ print('different seed:', loss_a, 'vs', loss_c)
 
 The two seeded runs agree *bitwise*, down to the last floating-point bit:
 same initial weights, same data, same gradients, same operations in the
-same order.
+same order. One detail deserves a flag: we pinned the TensorFlow run to
+the CPU. On a GPU the same seeded code produces equal losses but weights
+that differ in their last bits — the reason emerges in the next section.
 
 ### Generator Objects
 
@@ -451,7 +455,7 @@ the entire toolkit.
 Seeding fixes which numbers the program draws. It does not fix how the
 arithmetic evaluates. Floating-point addition is not associative
 (:numref:`sec_numerics`), so summing the same numbers in a different
-order gives a different answer:
+order or grouping may give a different answer:
 
 ```{.python .input #reproducibility-inspection-determinism-and-its-price-1}
 %%tab pytorch
@@ -478,10 +482,9 @@ print(bool(s_fwd == s_rev), float(s_fwd - s_rev))
 
 ```{.python .input #reproducibility-inspection-determinism-and-its-price-1}
 %%tab mxnet
-np.random.seed(0)
-x = np.random.normal(0, 1, (1_000_000,))
-s_fwd, s_rev = x.sum(), np.flip(x, 0).sum()  # same numbers, different order
-print(bool(s_fwd == s_rev), (s_fwd - s_rev).item())
+a, b, c = [np.array([v], dtype='float32') for v in (1e8, -1e8, 1.0)]
+s_left, s_right = (a + b) + c, a + (b + c)  # same numbers, regrouped
+print(bool(s_left == s_right), float(s_left - s_right))
 ```
 
 :begin_tab:`pytorch`
@@ -541,6 +544,10 @@ the seed rule mid-flight by clearing the global seed:
 :end_tab:
 
 :begin_tab:`mxnet`
+We regroup three numbers rather than reversing a million, because MXNet's
+`sum` accumulates in double precision and its result is impressively
+insensitive to element order — the associativity failure is a property of
+the *format*, and the three-line version exhibits it in any framework.
 On a CPU the summation order inside one operation is at least fixed, so
 seeded runs repeat; the bitwise agreement of `train_once` above is exactly
 that. On a GPU it often is not: kernels built on atomic additions commit
@@ -937,7 +944,7 @@ leaves = ([('0', net[0])]
           + [('9', net[9])])
 handles = [blk.register_forward_hook(make_finite_check(name))
            for name, blk in leaves]
-net[3].body[0].weight.data()[0, 0] = float('nan')  # sabotage one layer
+net[3].body[1].weight.data()[0, 0] = float('nan')  # sabotage one layer
 try:
     net(np.random.normal(0, 1, (2, 20)))
 except RuntimeError as e:
@@ -971,12 +978,17 @@ every operation and reports the first one to produce an inf or NaN.
 :end_tab:
 
 :begin_tab:`mxnet`
-The report names block `3.body.0`, the layer we poisoned, rather than
+The report names block `3.body.1`, the layer we poisoned, rather than
 leaving you to bisect with print statements while NaNs propagate through
-everything downstream. One difference from PyTorch shows in the setup:
-Gluon 2.0 blocks carry no path names and there is no `named_modules`
+everything downstream. Two Gluon-specific details show in the setup.
+First, blocks carry no path names and there is no `named_modules`
 equivalent, so we spell out the list of leaves ourselves, easy here
-because the structure is ours. Registration order does not matter: hooks
+because the structure is ours. Second, we deliberately poison the block's
+*second* dense layer: Gluon's fused `Dense(..., activation='relu')`
+kernel maps NaN to $0$, so a NaN planted before the fused activation is
+silently erased before any hook can see it — a small object lesson, in a
+section about diagnosis, that the instrument must be placed where the
+symptom can actually appear. Registration order does not matter: hooks
 fire in execution order, so the first completed forward with a
 non-finite output is the culprit.
 :end_tab:
@@ -1129,21 +1141,24 @@ are read after the fact from `param.grad()`.
 
 ## Exercises
 
-1. Extend `train_once` to load data through a `DataLoader` with
-   `num_workers=4`. Give the dataset its own
-   `np.random.default_rng()` object and use it to add noise in
-   `__getitem__`. On a Linux process-based loader, check whether workers
-   copied the same generator state. In `seed_worker`, replace
-   `get_worker_info().dataset.rng` with a generator derived from
-   `torch.initial_seed()`, then verify agreement across two runs.
-2. Write a forward hook that counts multiply-accumulate operations for
-   every `nn.Linear` from the shapes of its input and weight, and use it to
-   report per-layer and total FLOPs for the residual stack above. Check the
-   total against a hand count.
-3. Using `register_full_backward_hook`, record the norm of each block's
-   `grad_output`. After the backward pass, compare these activation-gradient
-   norms with the parameter-gradient norms in the same block. Which one first
-   reveals an exploding backward signal?
+1. Extend `train_once` to load data through your framework's parallel data
+   loader (e.g., PyTorch's `DataLoader`, with `num_workers=4`). Give the
+   dataset its own `np.random.default_rng()` object and use it to add noise
+   as each example loads. On a process-based loader, check whether workers
+   copied the same generator state. Using the per-worker seeding hook this
+   section introduced for your framework, replace the dataset's stashed
+   generator with one derived from the worker's own seed, then verify
+   agreement across two runs.
+2. Write a forward hook (or your framework's equivalent introduced in this
+   section) that counts multiply-accumulate operations for every linear
+   layer from the shapes of its input and weight, and use it to report
+   per-layer and total FLOPs for the residual stack above. Check the total
+   against a hand count.
+3. Using a backward hook (or your framework's equivalent introduced in this
+   section), record the norm of each block's output gradient. After the
+   backward pass, compare these activation-gradient norms with the
+   parameter-gradient norms in the same block. Which one first reveals an
+   exploding backward signal?
 4. A forward hook that returns a value *replaces* the module's output. Use
    one to zero out the output of a single residual block's body (turning
    the block into the identity) and measure how the network's output

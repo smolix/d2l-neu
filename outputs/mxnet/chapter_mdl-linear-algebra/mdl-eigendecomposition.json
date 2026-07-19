@@ -14,7 +14,7 @@
       "outputs": []
     },
     "eigendecomposition-an-example": {
-      "code_fingerprint": "sha256:cd0fbec3049dd9840e6b077b218b69392f094f6f62b97d5570dde8c9e81b9d19",
+      "code_fingerprint": "sha256:a685d6667bd55945de103c1630cacc776e6963f06984c65595ba3becda66dc62",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "mdl-eigendecomposition-jordan-power": {
-      "code_fingerprint": "sha256:3a7b123a3d48909713a165e8cf6843ef5dcffc53cb9d3951f43c30428ba10605",
+      "code_fingerprint": "sha256:a537d3cf6af37189277666046b4b6bd88a24b4c97112b89db53a95eb5b7f4f8b",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +35,7 @@
       ]
     },
     "eigendecomposition-complex-rotation": {
-      "code_fingerprint": "sha256:bfabfac42d3b2c57ae5a54b2aa886de187e50fb04a8694c8840a8fe3f1cd2dfb",
+      "code_fingerprint": "sha256:4c9216473e1d10146d2a3116c7accb983fcec7b11e55f4429231ba74d505a4ff",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +46,7 @@
       ]
     },
     "mdl-eigendecomposition-complex-eigenvalues-are-rotations-1": {
-      "code_fingerprint": "sha256:70b8ec79db8bcbb5294b6868f71790f5e1f627afaf7360b35485855827c49f3a",
+      "code_fingerprint": "sha256:71e0493cb7f02e63be66e2befead75e87949468a2e15e56fcd0564244e499bf4",
       "kind": "text",
       "outputs": [
         {
@@ -56,8 +56,19 @@
         }
       ]
     },
+    "mdl-eigendecomposition-nonnormal-transient": {
+      "code_fingerprint": "sha256:e39b41ac5513ebfbd8bcde0b386e051216e6d65695dd6115936037a5e477a22a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues: [0.9 0.8]\nnormal matrix: max ||D^k|| = 1.000\nnon-normal:    max ||A^k|| = 10.788 at k = 6\neigenvector condition number = 80.0\nat z=1: ||(zI-A)^-1|| = 200.3,  normal comparison = 10.0\n"
+        }
+      ]
+    },
     "eigendecomposition-psd-gram": {
-      "code_fingerprint": "sha256:ab207c2412dbd5fa712a22698e1aefbb5bf86a61968bf507397b7cb25d85a8bd",
+      "code_fingerprint": "sha256:78314eb54a223497da8c8236b1886ea6430755442d62fd6f602dad6c64d84d4b",
       "kind": "text",
       "outputs": [
         {
@@ -68,7 +79,7 @@
       ]
     },
     "mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches": {
-      "code_fingerprint": "sha256:753307468f13dbdb899367477cc285fa6d167add0ae22a5661a73cbde40de9ef",
+      "code_fingerprint": "sha256:8a8890655c1fd874bc506410f49a858ade3406c5a01371ee4634ecea6ffa3fd3",
       "kind": "text",
       "outputs": [
         {
@@ -79,7 +90,7 @@
       ]
     },
     "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:99ef1762fe5590932907d910879d2079f06fa6ba4c913b1607525b4fe8f4b607",
+      "code_fingerprint": "sha256:cff189e1db5ce8e9e95d9348671e6d1511a3be70a748d1eb5bdd9e6da89543d0",
       "kind": "text",
       "outputs": [
         {
@@ -89,7 +100,7 @@
       ]
     },
     "eigendecomposition-power-iteration": {
-      "code_fingerprint": "sha256:e1ea395719f6a175e1cb1db3ab2dbebadfb88d70535c308cd2bb59ba678e20a0",
+      "code_fingerprint": "sha256:8889632d27d81b12272ec8cf4a466f247ae9574911cb4732de9ebac008966bca",
       "kind": "text",
       "outputs": [
         {

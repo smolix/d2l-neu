@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.000, test RMSE 0.903\n37754981.1 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.000, test RMSE 0.902\n32874329.1 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "autorec/autorec-training-and-evaluating-the-model-1.svg",
-          "bytes": 22470,
-          "sha256": "sha256:aa326fe6563be437522044691b63e01dd056e3e4e2e4d95ab5919038dc267b42"
+          "bytes": 22466,
+          "sha256": "sha256:b863f5d4c925ee99b5930e2ef9270fb2af380ac8d5d7092876e809dae9d86f53"
         }
       ]
     }

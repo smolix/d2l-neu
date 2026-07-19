@@ -105,51 +105,12 @@ the truth, with the error shrinking roughly in proportion to $\epsilon$ for this
 left-endpoint rule.
 
 ```{.python .input #integral-riemann-converge}
-#@tab mxnet
+import numpy as onp
 def riemann(eps, a=0., b=2.):
-    x = np.arange(a, b, eps)
-    return float(np.sum(eps * x / (1 + x**2)))
+    x = onp.arange(a, b, eps)
+    return float(onp.sum(eps * x / (1 + x**2)))
 
-truth = float(np.log(np.array(5.)) / 2)
-for eps in [0.5, 0.1, 0.05, 0.01, 0.001]:
-    approx = riemann(eps)
-    print(f'eps={eps:<6} sum={approx:.6f}  error={abs(approx - truth):.6f}')
-print(f'truth = (1/2) log 5 = {truth:.6f}')
-```
-
-```{.python .input #integral-riemann-converge}
-#@tab pytorch
-def riemann(eps, a=0., b=2.):
-    x = torch.arange(a, b, eps)
-    return float(torch.sum(eps * x / (1 + x**2)))
-
-truth = float(torch.log(torch.tensor(5.)) / 2)
-for eps in [0.5, 0.1, 0.05, 0.01, 0.001]:
-    approx = riemann(eps)
-    print(f'eps={eps:<6} sum={approx:.6f}  error={abs(approx - truth):.6f}')
-print(f'truth = (1/2) log 5 = {truth:.6f}')
-```
-
-```{.python .input #integral-riemann-converge}
-#@tab tensorflow
-def riemann(eps, a=0., b=2.):
-    x = tf.range(a, b, eps)
-    return float(tf.reduce_sum(eps * x / (1 + x**2)))
-
-truth = float(tf.math.log(5.) / 2)
-for eps in [0.5, 0.1, 0.05, 0.01, 0.001]:
-    approx = riemann(eps)
-    print(f'eps={eps:<6} sum={approx:.6f}  error={abs(approx - truth):.6f}')
-print(f'truth = (1/2) log 5 = {truth:.6f}')
-```
-
-```{.python .input #integral-riemann-converge}
-#@tab jax
-def riemann(eps, a=0., b=2.):
-    x = jnp.arange(a, b, eps)
-    return float(jnp.sum(eps * x / (1 + x**2)))
-
-truth = float(jnp.log(5.) / 2)
+truth = float(onp.log(onp.array(5.)) / 2)
 for eps in [0.5, 0.1, 0.05, 0.01, 0.001]:
     approx = riemann(eps)
     print(f'eps={eps:<6} sum={approx:.6f}  error={abs(approx - truth):.6f}')
@@ -262,51 +223,15 @@ area-so-far function $F$ has derivative $f$: compute $F$ as a cumulative Riemann
 sum, finite-difference it, and compare against $f$ itself.
 
 ```{.python .input #integral-ftc-check}
-#@tab mxnet
+import numpy as onp
 f = lambda t: t / (1 + t**2)
-G = lambda t: np.log(1 + t**2) / 2          # antiderivative: F(x) = G(x) - G(0)
+G = lambda t: onp.log(1 + t**2) / 2          # antiderivative: F(x) = G(x) - G(0)
 eps = 1e-3
-x = np.arange(0., 2., eps)
-F = np.cumsum(eps * f(x))                    # area-so-far via Riemann sum
+x = onp.arange(0., 2., eps)
+F = onp.cumsum(eps * f(x))                    # area-so-far via Riemann sum
 dFdx = (F[1:] - F[:-1]) / eps                # telescopes to f(x[1:]) exactly
-print('max |dF/dx - f|      :', float(np.abs(dFdx - f(x[1:])).max()))
-print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(np.array(2.))))
-```
-
-```{.python .input #integral-ftc-check}
-#@tab pytorch
-f = lambda t: t / (1 + t**2)
-G = lambda t: torch.log(1 + t**2) / 2        # antiderivative: F(x) = G(x) - G(0)
-eps = 1e-3
-x = torch.arange(0., 2., eps)
-F = torch.cumsum(eps * f(x), dim=0)          # area-so-far via Riemann sum
-dFdx = (F[1:] - F[:-1]) / eps                # telescopes to f(x[1:]) exactly
-print('max |dF/dx - f|      :', float((dFdx - f(x[1:])).abs().max()))
-print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(torch.tensor(2.))))
-```
-
-```{.python .input #integral-ftc-check}
-#@tab tensorflow
-f = lambda t: t / (1 + t**2)
-G = lambda t: tf.math.log(1 + t**2) / 2      # antiderivative: F(x) = G(x) - G(0)
-eps = 1e-3
-x = tf.range(0., 2., eps)
-F = tf.cumsum(eps * f(x))                     # area-so-far via Riemann sum
-dFdx = (F[1:] - F[:-1]) / eps                 # telescopes to f(x[1:]) exactly
-print('max |dF/dx - f|      :', float(tf.reduce_max(tf.abs(dFdx - f(x[1:])))))
-print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(tf.constant(2.))))
-```
-
-```{.python .input #integral-ftc-check}
-#@tab jax
-f = lambda t: t / (1 + t**2)
-G = lambda t: jnp.log(1 + t**2) / 2          # antiderivative: F(x) = G(x) - G(0)
-eps = 1e-3
-x = jnp.arange(0., 2., eps)
-F = jnp.cumsum(eps * f(x))                    # area-so-far via Riemann sum
-dFdx = (F[1:] - F[:-1]) / eps                 # telescopes to f(x[1:]) exactly
-print('max |dF/dx - f|      :', float(jnp.abs(dFdx - f(x[1:])).max()))
-print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(jnp.array(2.))))
+print('max |dF/dx - f|      :', float(onp.abs(dFdx - f(x[1:])).max()))
+print('Riemann F(2) vs G(2)-G(0):', float(F[-1]), float(G(onp.array(2.))))
 ```
 
 The first comparison is exact in exact arithmetic: differencing the cumulative
@@ -360,38 +285,11 @@ $\int_0^b e^{-x}\,dx = 1-e^{-b}$, read off the antiderivative, and a
 left-Riemann approximation of each with $\epsilon = 10^{-3}$.
 
 ```{.python .input #integral-improper}
-#@tab mxnet
+import numpy as onp
 for b in [1., 2., 5., 10., 20.]:
-    x = np.arange(0., b, 1e-3)
-    left = float(np.sum(1e-3 * np.exp(-x)))
-    exact = 1 - float(np.exp(np.array(-b)))
-    print(f'b={b:<4}  left-Riemann sum={left:.6f}  exact 1-e^-b={exact:.6f}')
-```
-
-```{.python .input #integral-improper}
-#@tab pytorch
-for b in [1., 2., 5., 10., 20.]:
-    x = torch.arange(0., b, 1e-3)
-    left = float(torch.sum(1e-3 * torch.exp(-x)))
-    exact = 1 - float(torch.exp(torch.tensor(-b)))
-    print(f'b={b:<4}  left-Riemann sum={left:.6f}  exact 1-e^-b={exact:.6f}')
-```
-
-```{.python .input #integral-improper}
-#@tab tensorflow
-for b in [1., 2., 5., 10., 20.]:
-    x = tf.range(0., b, 1e-3)
-    left = float(tf.reduce_sum(1e-3 * tf.exp(-x)))
-    exact = 1 - float(tf.exp(-b))
-    print(f'b={b:<4}  left-Riemann sum={left:.6f}  exact 1-e^-b={exact:.6f}')
-```
-
-```{.python .input #integral-improper}
-#@tab jax
-for b in [1., 2., 5., 10., 20.]:
-    x = jnp.arange(0., b, 1e-3)
-    left = float(jnp.sum(1e-3 * jnp.exp(-x)))
-    exact = 1 - float(jnp.exp(-b))
+    x = onp.arange(0., b, 1e-3)
+    left = float(onp.sum(1e-3 * onp.exp(-x)))
+    exact = 1 - float(onp.exp(onp.array(-b)))
     print(f'b={b:<4}  left-Riemann sum={left:.6f}  exact 1-e^-b={exact:.6f}')
 ```
 
@@ -543,44 +441,13 @@ bell $e^{-x^2-y^2}$ over the box $[-2,2]^2$; the cell totals its boxes.
 :label:`fig_mdl-bell-surface`
 
 ```{.python .input #integral-box-volume}
-#@tab mxnet
+import math
+import numpy as onp
 eps = 1e-2
-x, y = np.meshgrid(np.arange(-2., 2., eps), np.arange(-2., 2., eps),
+x, y = onp.meshgrid(onp.arange(-2., 2., eps), onp.arange(-2., 2., eps),
                    indexing='ij')
-vol = float(np.sum(eps ** 2 * np.exp(-x**2 - y**2)))
+vol = float(onp.sum(eps ** 2 * onp.exp(-x**2 - y**2)))
 exact = math.pi * math.erf(2.) ** 2
-print(f'Riemann volume over the box [-2, 2]^2 : {vol:.5f}')
-print(f'exact volume  pi * erf(2)^2           : {exact:.5f}')
-```
-
-```{.python .input #integral-box-volume}
-#@tab pytorch
-eps = 1e-2
-x, y = torch.meshgrid(torch.arange(-2., 2., eps), torch.arange(-2., 2., eps),
-                      indexing='ij')
-vol = float(torch.sum(eps ** 2 * torch.exp(-x**2 - y**2)))
-exact = float(torch.pi * torch.erf(torch.tensor(2.)) ** 2)
-print(f'Riemann volume over the box [-2, 2]^2 : {vol:.5f}')
-print(f'exact volume  pi * erf(2)^2           : {exact:.5f}')
-```
-
-```{.python .input #integral-box-volume}
-#@tab tensorflow
-eps = 1e-2
-x, y = tf.meshgrid(tf.range(-2., 2., eps), tf.range(-2., 2., eps))
-vol = float(tf.reduce_sum(eps ** 2 * tf.exp(-x**2 - y**2)))
-exact = float(np.pi * tf.math.erf(2.) ** 2)
-print(f'Riemann volume over the box [-2, 2]^2 : {vol:.5f}')
-print(f'exact volume  pi * erf(2)^2           : {exact:.5f}')
-```
-
-```{.python .input #integral-box-volume}
-#@tab jax
-eps = 1e-2
-x, y = jnp.meshgrid(jnp.arange(-2., 2., eps), jnp.arange(-2., 2., eps),
-                    indexing='ij')
-vol = float(jnp.sum(eps ** 2 * jnp.exp(-x**2 - y**2)))
-exact = float(jnp.pi * jax.scipy.special.erf(jnp.array(2.)) ** 2)
 print(f'Riemann volume over the box [-2, 2]^2 : {vol:.5f}')
 print(f'exact volume  pi * erf(2)^2           : {exact:.5f}')
 ```
@@ -783,39 +650,12 @@ wide enough that the Gaussian's tails beyond it contribute nothing to six
 decimals.
 
 ```{.python .input #integral-gaussian}
-#@tab mxnet
-g = np.arange(-6., 6., 0.01)
-x, y = np.meshgrid(g, g, indexing='ij')
-val = float(np.sum(0.01 ** 2 * np.exp(-x**2 - y**2)))
+import numpy as onp
+g = onp.arange(-6., 6., 0.01)
+x, y = onp.meshgrid(g, g, indexing='ij')
+val = float(onp.sum(0.01 ** 2 * onp.exp(-x**2 - y**2)))
 print('grid integral of e^(-x^2-y^2):', round(val, 6))
-print('exact value pi               :', round(float(np.pi), 6))
-```
-
-```{.python .input #integral-gaussian}
-#@tab pytorch
-g = torch.arange(-6., 6., 0.01)
-x, y = torch.meshgrid(g, g, indexing='ij')
-val = float(torch.sum(0.01 ** 2 * torch.exp(-x**2 - y**2)))
-print('grid integral of e^(-x^2-y^2):', round(val, 6))
-print('exact value pi               :', round(float(torch.pi), 6))
-```
-
-```{.python .input #integral-gaussian}
-#@tab tensorflow
-g = tf.range(-6., 6., 0.01)
-x, y = tf.meshgrid(g, g)
-val = float(tf.reduce_sum(0.01 ** 2 * tf.exp(-x**2 - y**2)))
-print('grid integral of e^(-x^2-y^2):', round(val, 6))
-print('exact value pi               :', round(float(np.pi), 6))
-```
-
-```{.python .input #integral-gaussian}
-#@tab jax
-g = jnp.arange(-6., 6., 0.01)
-x, y = jnp.meshgrid(g, g, indexing='ij')
-val = float(jnp.sum(0.01 ** 2 * jnp.exp(-x**2 - y**2)))
-print('grid integral of e^(-x^2-y^2):', round(val, 6))
-print('exact value pi               :', round(float(jnp.pi), 6))
+print('exact value pi               :', round(float(onp.pi), 6))
 ```
 
 ## Integration Meets Probability
@@ -850,35 +690,11 @@ verifies that $\tfrac{1}{\sqrt\pi}e^{-x^2}$ is normalized and computes its mean,
 which symmetry sends to $0$.
 
 ```{.python .input #integral-density}
-#@tab mxnet
-x = np.arange(-8., 8., 1e-3)
-p = np.exp(-x**2) / np.sqrt(np.array(np.pi))
-print('total mass  integral p dx :', round(float(np.sum(1e-3 * p)), 6))
-print('mean        integral x p dx:', round(float(np.sum(1e-3 * x * p)), 6))
-```
-
-```{.python .input #integral-density}
-#@tab pytorch
-x = torch.arange(-8., 8., 1e-3)
-p = torch.exp(-x**2) / np.sqrt(np.pi)
-print('total mass  integral p dx :', round(float(torch.sum(1e-3 * p)), 6))
-print('mean        integral x p dx:', round(float(torch.sum(1e-3 * x * p)), 6))
-```
-
-```{.python .input #integral-density}
-#@tab tensorflow
-x = tf.range(-8., 8., 1e-3)
-p = tf.exp(-x**2) / np.sqrt(np.pi)
-print('total mass  integral p dx :', round(float(tf.reduce_sum(1e-3 * p)), 6))
-print('mean        integral x p dx:', round(float(tf.reduce_sum(1e-3 * x * p)), 6))
-```
-
-```{.python .input #integral-density}
-#@tab jax
-x = jnp.arange(-8., 8., 1e-3)
-p = jnp.exp(-x**2) / jnp.sqrt(jnp.pi)
-print('total mass  integral p dx :', round(float(jnp.sum(1e-3 * p)), 6))
-print('mean        integral x p dx:', round(float(jnp.sum(1e-3 * x * p)), 6))
+import numpy as onp
+x = onp.arange(-8., 8., 1e-3)
+p = onp.exp(-x**2) / onp.sqrt(onp.array(onp.pi))
+print('total mass  integral p dx :', round(float(onp.sum(1e-3 * p)), 6))
+print('mean        integral x p dx:', round(float(onp.sum(1e-3 * x * p)), 6))
 ```
 
 When an expectation has no closed form, the rule rather than the exception in
@@ -959,6 +775,32 @@ quantitative face of the curse of dimensionality.
 
 ### Differentiating under the Integral Sign
 
+::: {.callout-note title="Assumptions behind common calculus interchanges"}
+Several formulas in this appendix are conditional statements. The following
+sufficient conditions cover the cases used most often in machine learning:
+
+* A derivative or Jacobian formula assumes differentiability on a neighborhood
+  of the point. At a ReLU kink, autograd returns a library convention rather
+  than a classical derivative.
+* Equality of mixed partials and symmetry of the Hessian follow when the second
+  partial derivatives are continuous on a neighborhood.
+* Swapping two integrals is valid for a non-negative integrand (Tonelli) or an
+  absolutely integrable one (Fubini). Conditional convergence needs separate
+  care.
+* Passing a limit or derivative through an integral is justified when an
+  integrable dominating function controls the relevant sequence or derivative
+  throughout a neighborhood of the parameter. Moving boundaries contribute the
+  Leibniz boundary terms below.
+* A change of variables requires a one-to-one differentiable map on the region
+  of interest, or a partition into such regions, and a nonzero Jacobian
+  determinant away from negligible boundary sets.
+
+These are convenient sufficient conditions, not the weakest possible ones.
+When a model changes support, approaches a singular distribution, or contains a
+nonsmooth branch, pause and check the relevant theorem rather than applying the
+formal rule mechanically.
+:::
+
 One more interchange matters in deep learning: moving a gradient through an
 integral. When an integrand
 depends on a parameter $\boldsymbol{\theta}$, we will routinely write
@@ -972,9 +814,10 @@ The swap needs a hypothesis. The standard sufficient condition, a consequence
 of the **dominated convergence theorem** that we also state on faith
 :cite:`Folland.1999`, is that, near the current $\boldsymbol{\theta}$, the
 integrands' derivatives are bounded in magnitude by a single integrable
-function of $x$. The smooth, rapidly decaying densities of deep learning almost
-always comply. The condition fails exactly when the integrand's
-support or its spikes move with $\boldsymbol{\theta}$.
+function of $x$. Many smooth, rapidly decaying densities used in deep learning comply, but the
+condition must be checked rather than inferred from smoothness alone. Moving
+support and increasingly sharp parameter-dependent spikes are two common ways
+it can fail; failure is not limited to those cases.
 
 When it is the *limits* of integration
 that move, the correct derivative is known in closed form. The **Leibniz
@@ -1000,15 +843,108 @@ seed of Fisher information (:numref:`sec_mdl-maximum_likelihood`). This score
 is a gradient with respect to the *parameters* $\boldsymbol{\theta}$; it is a
 different object from the data score
 $\nabla_{\mathbf{x}}\log p(\mathbf{x})$ that score matching estimates, which is
-a gradient with respect to the data point. Applying
-the same swap to an expectation gives
-$\nabla_{\boldsymbol{\theta}}\,\mathbb{E}_{x\sim p_{\boldsymbol{\theta}}}[g(x)]
+a gradient with respect to the data point. Applying the same swap to an expectation gives, when $g$ itself does not
+depend on $\boldsymbol\theta$,
+
+$$
+\nabla_{\boldsymbol{\theta}}\,\mathbb{E}_{x\sim p_{\boldsymbol{\theta}}}[g(x)]
 = \mathbb{E}\bigl[g(x)\,\nabla_{\boldsymbol{\theta}}\log
-p_{\boldsymbol{\theta}}(x)\bigr]$, the score-function (REINFORCE) identity
-:cite:`Williams.1992` at
-the heart of policy-gradient methods, the reinforcement-learning algorithms
-that improve a stochastic policy by following the gradient of its expected
-reward.
+p_{\boldsymbol{\theta}}(x)\bigr].
+$$
+:eqlabel:`eq_mdl-score-function-gradient`
+
+This is the **score-function**, or REINFORCE, identity
+:cite:`Williams.1992`, at the heart of policy-gradient methods. If
+$g(x,\boldsymbol\theta)$ also depends directly on the parameter, add the
+ordinary term
+$\mathbb E[\nabla_{\boldsymbol\theta}g(x,\boldsymbol\theta)]$ to the right.
+
+#### Pathwise and Score-Function Gradients
+:label:`subsec_mdl-stochastic-gradient-estimators`
+
+The score-function identity is only one way to differentiate an expectation.
+If a random variable can be generated by transforming parameter-free noise,
+
+$$
+\boldsymbol\epsilon\sim q,\qquad
+x=T_{\boldsymbol\theta}(\boldsymbol\epsilon),
+$$
+
+then
+
+$$
+\nabla_{\boldsymbol\theta}
+\mathbb E_{x\sim p_{\boldsymbol\theta}}[g(x,\boldsymbol\theta)]
+=
+\mathbb E_{\boldsymbol\epsilon\sim q}
+\left[\frac{d}{d\boldsymbol\theta}
+ g(T_{\boldsymbol\theta}(\boldsymbol\epsilon),\boldsymbol\theta)\right].
+$$
+:eqlabel:`eq_mdl-pathwise-gradient`
+
+This is the **pathwise**, or **reparameterization**, gradient. For example,
+$X\sim\mathcal N(\mu,\sigma^2)$ can be written
+$X=\mu+\sigma\epsilon$ with $\epsilon\sim\mathcal N(0,1)$; automatic
+differentiation then follows an ordinary differentiable path from $\mu$ and
+$\sigma$ to the sample. Variational autoencoders use exactly this device to
+backpropagate through a Gaussian latent variable.
+
+The two estimators are both Monte Carlo estimators of the same derivative, but
+their variances can differ sharply. For
+$L(\theta)=\mathbb E_{X\sim\mathcal N(\theta,1)}[X^2]=\theta^2+1$, the true
+derivative is $2\theta$. With $X=\theta+\epsilon$, one sample contributes
+$2X$ to the pathwise estimator. The score of the normal location family is
+$\partial_\theta\log p_\theta(X)=X-\theta=\epsilon$, so REINFORCE contributes
+$X^2\epsilon$. Subtracting any baseline $b$ that does not depend on $X$
+leaves the expectation unchanged because $\mathbb E[\epsilon]=0$; choosing a
+good baseline can remove substantial variance.
+
+```{.python .input #mdl-integral-stochastic-gradient-estimators}
+import numpy as onp
+rng = onp.random.default_rng(7)
+theta, n = 1.5, 200000
+eps = rng.standard_normal(n)
+x = theta + eps
+pathwise = 2 * x
+score = x**2 * eps
+b_opt = theta**2 + 3                         # minimizes Var[(X^2-b) epsilon]
+score_baseline = (x**2 - b_opt) * eps
+
+def report(name, samples):
+    se = samples.std(ddof=1) / onp.sqrt(len(samples))
+    print(f'{name:22s} mean={samples.mean():.4f}  '
+          f'sample sd={samples.std(ddof=1):.3f}  MC se={se:.4f}')
+
+print(f'true derivative = {2 * theta:.4f}')
+report('pathwise', pathwise)
+report('score function', score)
+report('score + baseline', score_baseline)
+```
+
+All three sample means agree with $2\theta$ within Monte Carlo error. The
+pathwise estimate is much less noisy on this smooth problem; the baseline
+helps REINFORCE but does not generally close the gap. This is a common pattern,
+not a universal ordering: variance depends on the model, transformation, and
+integrand.
+
+The score estimator remains valuable because it does not differentiate through
+the sampled value. It therefore works for Bernoulli and categorical choices,
+where an exact differentiable reparameterization is generally unavailable.
+Continuous relaxations such as Gumbel--softmax
+:cite:`Jang.Gu.Poole.2017,Maddison.Mnih.Teh.2017` create a differentiable
+surrogate; straight-through estimators use a discrete forward value and a
+surrogate backward derivative. These can reduce variance, but they are biased
+for the original discrete objective unless a separate argument establishes
+otherwise.
+
+Both identities inherit the assumptions of differentiation under the integral
+sign. The score form also assumes the relevant support does not move with
+$\boldsymbol\theta$, or that the missing boundary terms are included. The
+pathwise form requires a differentiable transformation and an integrable bound
+for its derivative. In practice, “differentiate through randomness” therefore
+means choosing an estimator, checking its assumptions, and reporting its
+variance or Monte Carlo standard error—not merely asking an autodiff library
+for a gradient.
 
 ## Summary
 
@@ -1037,27 +973,40 @@ reward.
   $\int x\,p\,dx$. When it has no closed form, Monte Carlo estimates it by
   sampling, converging at the dimension-free rate $1/\sqrt{n}$, unlike a grid,
   whose cost explodes with dimension.
+* Gradients of expectations admit two principal Monte Carlo estimators. The
+  **score-function estimator** differentiates the log-density and works for
+  discrete samples but can have high variance; the **pathwise estimator**
+  differentiates a transformation of parameter-free noise and is usually
+  preferred when such a smooth reparameterization exists. Baselines reduce
+  score-estimator variance without changing its expectation.
 
 ## Exercises
 
-1. Evaluate $\int_1^2 \tfrac{1}{x}\,dx$ using an antiderivative, then confirm with
+1. For $X\sim\mathcal N(\theta,1)$ and $g(X)=X^4$, derive the pathwise and
+   score-function gradient estimators. Verify analytically that both have mean
+   $4\theta^3+12\theta$, then compare their Monte Carlo variances in NumPy.
+2. Show that replacing $g(X)$ by $g(X)-b$ in
+   :eqref:`eq_mdl-score-function-gradient` leaves the expected gradient
+   unchanged when $b$ is independent of $X$. Derive the scalar baseline that
+   minimizes the estimator's second moment.
+3. Evaluate $\int_1^2 \tfrac{1}{x}\,dx$ using an antiderivative, then confirm with
    a Riemann sum.
-2. Use the change-of-variables formula to integrate
+4. Use the change-of-variables formula to integrate
    $\int_0^{\sqrt{\pi}} x\sin(x^2)\,dx$.
-3. Compute $\int_{[0,1]^2} xy\,dx\,dy$ by Fubini's theorem.
-4. For which $p$ does $\int_1^\infty x^{-p}\,dx$ converge? Verify the boundary
+5. Compute $\int_{[0,1]^2} xy\,dx\,dy$ by Fubini's theorem.
+6. For which $p$ does $\int_1^\infty x^{-p}\,dx$ converge? Verify the boundary
    $p=1$ numerically by watching the partial integrals as the upper limit grows.
-5. Find the constant $c$ that makes $c\,e^{-x^2}$ a probability density on
+7. Find the constant $c$ that makes $c\,e^{-x^2}$ a probability density on
    $\mathbb{R}$, then compute its mean and $\mathbb{E}[X^2]$.
-6. Let $f(x,y) = (x^2-y^2)/(x^2+y^2)^2$. Compute the iterated integrals
+8. Let $f(x,y) = (x^2-y^2)/(x^2+y^2)^2$. Compute the iterated integrals
    $\int_0^1\!\bigl(\int_0^1 f\,dx\bigr)dy$ and $\int_0^1\!\bigl(\int_0^1
    f\,dy\bigr)dx$ over $[0,1]^2$ and confirm they equal $-\tfrac{\pi}{4}$ and
    $+\tfrac{\pi}{4}$. Why does this not contradict Fubini's theorem? (Hint:
    $\frac{\partial}{\partial x}\frac{-x}{x^2+y^2} = f(x,y)$; the singularity at the
    origin breaks absolute integrability.)
-7. Estimate $\int_0^1 e^{-x^2}\,dx$ by Monte Carlo (average $e^{-x_i^2}$ over
+9. Estimate $\int_0^1 e^{-x^2}\,dx$ by Monte Carlo (average $e^{-x_i^2}$ over
    $x_i$ uniform on $[0,1]$) and compare with a Riemann sum.
-8. Use integration by parts :eqref:`eq_mdl-parts` twice to evaluate
+10. Use integration by parts :eqref:`eq_mdl-parts` twice to evaluate
    $\int_0^\infty u^2 e^{-u}\,du$, the second moment behind the exponential
    distribution's variance in :numref:`sec_mdl-distributions`. The integral you
    have computed is $\Gamma(3)$, an instance of the **Gamma function**

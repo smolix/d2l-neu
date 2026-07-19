@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: tensor([-0.0688,  0.8773]) \nlabel: tensor([1.0605])\n"
+          "text": "features: tensor([ 0.2264, -1.8700]) \nlabel: tensor([11.0306])\n"
         }
       ]
     },

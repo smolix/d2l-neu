@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d3aefb1468e5838ae451af6a0d6ff7ebe646c311b7c670f3797638098703cb14",
+    "d2l_lib_fingerprint": "sha256:4684cdafaf90cf6b01806a4001b6a279b3bbbb1a6b3f6a2cabdc335cb33f12e3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,12 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "function output shape:\t (1, 14, 14, 6)\n"
+          "text": "Conv output shape:\t (1, 28, 28, 6)\nPjitFunction output shape:\t (1, 28, 28, 6)\nfunction output shape:\t (1, 14, 14, 6)\n"
         },
         {
           "type": "stream",
@@ -67,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lenet/lenet-training-1.svg",
-          "bytes": 21488,
-          "sha256": "sha256:277164e73de68e732191339edf6bf96ff8c0f6063183da6ce6e877728dc9e3c1"
+          "bytes": 21500,
+          "sha256": "sha256:32b32377012b87e38daba2c5a3be13f8d4eefc5d28528b8ffe6a05848b367793"
         }
       ]
     }

@@ -436,25 +436,18 @@ same operations one at a time from Python grows with model and batch size.
 :end_tab:
 
 :begin_tab:`jax`
-Because JAX is purely functional there is no implicit `self`-attached state,
-so each step must explicitly take in and return the optimizer state, the
-dropout RNG, and (optionally) batch statistics (the latter two are only
-exercised by later chapters). `state.apply_gradients(grads=…)` does not mutate
-in place; it returns a *new* state object, which we then thread back through the
-loop. This explicit plumbing is what the extra lines below are doing.
-
-Running the optax update and the `state.replace` bookkeeping one operation at a
-time from Python pays a dispatch cost on every call; compiling the whole step
-into one kernel removes it. We therefore wrap the optimizer step and the
-bookkeeping
-(`state.apply_gradients`, `state.replace(dropout_rng=…, batch_stats=…)`)
-in two small `@jax.jit` functions, `_trainer_update` and
-`_trainer_update_with_bn`, and call the appropriate one per batch.
-The forward and gradient computation is already inside `self.model.loss`
-(itself `@jax.jit`-decorated), so the entire per-batch work consists of
-two JIT-ed calls with no Python-side optax dispatch. Because the hand-rolled
-`SGD.init` below returns a proper `EmptyState()` pytree, even that optimizer
-is JIT-traceable, so we always take the compiled path.
+Under the hood JAX still traces pure functions, but NNX hides the plumbing:
+the module owns its parameters, and `nnx.value_and_grad` differentiates the
+loss *with respect to the module itself*. Running each operation one at a
+time from Python would pay a dispatch cost on every call; compiling the
+whole step removes it. We therefore wrap one training step — forward, loss,
+gradients, and the in-place `optimizer.update(model, grads)` — in a single
+`@nnx.jit` function, `_trainer_train_step`, with a companion
+`_trainer_validation_step` for evaluation. `nnx.jit` splits the module into
+static structure and mutable state at the compilation boundary and stitches
+the updated state back afterwards, so the entire per-batch work is one
+compiled call, and the mutation you see in the Python code is exactly what
+happens.
 :end_tab:
 
 ```{.python .input #linear-regression-scratch-training-1  n=15}
@@ -789,10 +782,11 @@ Built by hand once, demystified for good<br>**model · loss · optimizer · trai
 Four pieces, built by hand today: a **model** (`w`, `b`, `forward`), a
 **loss**, an **optimizer**, and the **training loop** driving them,
 each slotted into the `Module` / `Trainer` / `DataModule` scaffold of
-§3.2.
+the object-oriented-design section.
 
 ::: {.d2l-note .rule}
-Because we manufactured the data (§3.3, noise $\sigma = 0.01$), we can check a
+Because we manufactured the data (the synthetic-regression-data section,
+noise $\sigma = 0.01$), we can check a
 *correct* implementation against known targets. It must deliver **two
 numbers**: a loss landing on the noise floor
 $\sigma^2/2 = 5\times10^{-5}$, and parameters returning to
@@ -824,9 +818,10 @@ We need parameters before we can optimize them. Draw `w` from a tiny Gaussian, s
 @linear-regression-scratch-defining-the-model-1
 
 ::: {.d2l-note}
-`requires_grad=True` (or the framework's equivalent) is the flag that
-matters: it tells autograd to track `w` and `b` so gradients can flow back
-from the loss. For a single linear layer **any** small init works
+PyTorch's `requires_grad=True` is the flag that matters: it tells autograd
+to track `w` and `b` so gradients can flow back from the loss (JAX tracks
+via its `grad` transformation, TensorFlow via `GradientTape`, MXNet via
+`attach_grad`). For a single linear layer **any** small init works
 (exercise 1); symmetry breaking only matters once we stack layers.
 :::
 :::
@@ -882,7 +877,7 @@ The $\tfrac12$ makes the gradient just $\hat{y}-y$; averaging (not summing) keep
 ::: {.slide title="The gradient, by hand"}
 [Loss]{.kicker}
 
-What is it that `loss.backward()` will compute? For one example $\ell = \tfrac12(\hat{y}-y)^2$ with $\hat{y}=\mathbf{w}^\top\mathbf{x}+b$, the chain rule gives:
+What is it that the backward pass will compute? For one example $\ell = \tfrac12(\hat{y}-y)^2$ with $\hat{y}=\mathbf{w}^\top\mathbf{x}+b$, the chain rule gives:
 
 $$\frac{\partial \ell}{\partial \mathbf{w}} = (\hat{y}-y)\,\mathbf{x},
   \qquad
@@ -899,7 +894,7 @@ $$\nabla_{\mathbf{w}} L = \frac{1}{|\mathcal{B}|}\sum_{i\in\mathcal{B}}(\hat{y}^
 . . .
 
 ::: {.d2l-note .rule}
-The gradient is the **error-weighted input**: a large residual $\hat{y}-y$ gives a large push, in the direction of $\mathbf{x}$. This is exactly what `loss.backward()` fills in and what the SGD step subtracts.
+The gradient is the **error-weighted input**: a large residual $\hat{y}-y$ gives a large push, in the direction of $\mathbf{x}$. This is exactly what the backward pass fills in and what the SGD step subtracts.
 :::
 :::
 
@@ -1000,7 +995,7 @@ The `fit` call drives the four-step loop over every minibatch and plots both los
 Both curves flatten at $\approx 5\times10^{-5}$, **exactly** the
 $\sigma^2/2$ we predicted, so the residual error is the noise we injected,
 not a bug. And validation tracks training with **no gap**: 2 parameters
-on 1000 points has no room to overfit (§3.6).
+on 1000 points has no room to overfit (the generalization section).
 :::
 :::
 :::

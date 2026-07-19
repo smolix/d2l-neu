@@ -580,18 +580,19 @@ $\mathcal{N}(0, 0.01^2)$), so trajectories differ slightly.
 We have a working MLP. Making it *reliable* is the rest of
 this chapter:
 
-- **Backprop (§5.3):** how gradients flow through an arbitrary
-  stack.
-- **Initialization (§5.4):** choose $\sigma$ so signals neither
-  vanish nor explode through depth.
-- **Generalization (§5.5):** why a flexible model does well on
-  unseen data at all.
-- **Regularization (§5.6):** dropout, and friends.
+- **Backprop (the forward/backward-propagation section):** how gradients
+  flow through an arbitrary stack.
+- **Initialization (the numerical-stability section):** choose $\sigma$ so
+  signals neither vanish nor explode through depth.
+- **Generalization (the generalization-in-deep-learning section):** why a
+  flexible model does well on unseen data at all.
+- **Regularization (the dropout section):** dropout, and friends.
 
 ::: {.d2l-note}
 Each question gets its own section, and exercise 2 hands you the
 cliffhanger: add a second hidden layer while keeping
-$\sigma = 0.01$, and the deeper net trains *worse*. §5.4 explains.
+$\sigma = 0.01$, and the deeper net trains *worse*. The numerical-stability
+section explains.
 :::
 :::
 
@@ -620,7 +621,7 @@ $\sigma = 0.01$, and the deeper net trains *worse*. §5.4 explains.
 :::
 
 ::: {.d2l-note}
-Next (§5.3): open the black box, what `backward()` actually
-computes, by hand and then verified.
+Next (the forward/backward-propagation section): open the black box, what
+`backward()` actually computes, by hand and then verified.
 :::
 :::

@@ -9,12 +9,12 @@
   },
   "cells": {
     "information-theory-imports": {
-      "code_fingerprint": "sha256:41f5a1cd18499e548e8963fdec77f80197735f28e60512d8286f1a247209d3c6",
+      "code_fingerprint": "sha256:855b31a2deb91e0c800c9dc8212943091196c450ce95dacbc9bc755d259e49bb",
       "kind": "text",
       "outputs": []
     },
     "information-theory-self-information": {
-      "code_fingerprint": "sha256:2081ea328f31ac768f83cc3d125092b707beb71d7d1ff24e5f253c95a7e9c021",
+      "code_fingerprint": "sha256:b644a6d08c5cd6f8aedf5dc49dd882861f3ad1b2ba119e95e2405fe5df13c221",
       "kind": "text",
       "outputs": [
         {
@@ -24,37 +24,37 @@
       ]
     },
     "information-theory-definition": {
-      "code_fingerprint": "sha256:cd772004ad13fc4c62977a832cf33eefaa533f3586021bc37b0bbc011c585910",
+      "code_fingerprint": "sha256:e5c3fc6576e77dcf5c271daacc32791209b6f1a729a9e86490ab9536795bd32b",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "1.1682825"
+          "text": "1.1682824501765625"
         }
       ]
     },
     "information-theory-definition-2": {
-      "code_fingerprint": "sha256:9bc38a5a72e23aebe7483ea897a787ca181703ed3f8c6fc0aa5ddd5f7b656e73",
+      "code_fingerprint": "sha256:cfdfa48e50117b0b0eeeb7b2c49211962be59d4dc56a29722f2093dc8e8378c4",
       "kind": "text",
       "outputs": []
     },
     "information-theory-example-1": {
-      "code_fingerprint": "sha256:ee8fc23b47140a72273da356a1017d44e4934204e5fc671bb2c3e66e1e4b72cc",
+      "code_fingerprint": "sha256:d3a964405297f7cb5fe4e7a0fac9914b157ab7ffa67db9c745dc8e3b6a0e587c",
       "kind": "text",
       "outputs": []
     },
     "information-theory-example-2": {
-      "code_fingerprint": "sha256:41679a130f441c979d262bcf2f2b5ced5f54967d33d8e8b4ac9cd2130f19cbdb",
+      "code_fingerprint": "sha256:d64b1f3cddfe4432385da43afc9c0349a05cfe6571fbf74a6cd7cce546d786c5",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.5, array(0.49942034))"
+          "text": "(0.5, 0.5007301720150258)"
         }
       ]
     },
     "information-theory-example-3": {
-      "code_fingerprint": "sha256:1c8b3280906e461fbd511ff73ed5d6e8d0bee5366b9bfe5674c20e64d0770a6e",
+      "code_fingerprint": "sha256:4b162fddbb23944a648e68306e749058a9e250aa6a51380dda1e4524d3575abf",
       "kind": "text",
       "outputs": [
         {
@@ -64,7 +64,7 @@
       ]
     },
     "information-theory-kl-categorical": {
-      "code_fingerprint": "sha256:aee252e81c9a937ac2d3b2db2d853a41b5df776235b6c2adb0d441948b77bf0e",
+      "code_fingerprint": "sha256:9226c3601802921d09589a88465fd9fb25136c53214c78e45d4b111cfb0d5bd7",
       "kind": "text",
       "outputs": [
         {
@@ -75,22 +75,22 @@
       ]
     },
     "information-theory-formal-definition-1": {
-      "code_fingerprint": "sha256:898fa077769e9ad0b53f57142b4dcad8ebb950c7e4e2541b9f82531c9171c45b",
+      "code_fingerprint": "sha256:732be73a61da2874a25f6adb2887d254fb1ad598b57eee0c035fffa8994662fe",
       "kind": "text",
       "outputs": []
     },
     "information-theory-formal-definition-2": {
-      "code_fingerprint": "sha256:69cc56521279cc4107a83ab80440cd9a56cb6fbf93394597a4ad9a0b01a7bbf4",
+      "code_fingerprint": "sha256:4374b350ed290e15efd9cf18af3645afcc1c7120d066328828ab0a66205279c6",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "0.9485599994659424"
+          "text": "0.9485599924429406"
         }
       ]
     },
     "information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification": {
-      "code_fingerprint": "sha256:bee52d1798587b5893f718b2a20fc73eaac22af64a6fabb34a0d6163d164b7be",
+      "code_fingerprint": "sha256:c5f387a05c004d2c16a8404e888a09984e49f3c5ed332404436d07e29c49b582",
       "kind": "text",
       "outputs": [
         {
@@ -100,7 +100,7 @@
       ]
     },
     "information-theory-coding": {
-      "code_fingerprint": "sha256:d6177f79b492c9f0243002f13af5795ad40b7f02c4381985ce01f353a0480f7c",
+      "code_fingerprint": "sha256:f3a3c5d9a1304ded39f897c41777c98da6f1f3db774ec2cf1e4c5efc8abc82fd",
       "kind": "text",
       "outputs": [
         {
@@ -111,7 +111,7 @@
       ]
     },
     "mdl-information-theory-from-symbol-codes-to-arithmetic-coding": {
-      "code_fingerprint": "sha256:2c041bc4daae15fae0eb4acad0c0f504dcb0dc5d569addc1146bd5d26495dad7",
+      "code_fingerprint": "sha256:4bf383e680c1c427b50392510cdb924dc97f53b01d2ec45310e7664b8125d812",
       "kind": "text",
       "outputs": [
         {
@@ -121,8 +121,19 @@
         }
       ]
     },
+    "mdl-information-theory-typical-sequences-and-the-source-coding-theorem": {
+      "code_fingerprint": "sha256:251b4fc83d43c4addb658debf77bb37c286b74b1bcc6b7a4c372723e00792295",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "entropy H = 0.881 bits/symbol, so nH = 176 bits\ntypical strings: 2^188.8 of all 2^200\nprobability they carry: 0.9893\n"
+        }
+      ]
+    },
     "information-theory-perplexity": {
-      "code_fingerprint": "sha256:ca492f006cf011196e8b4438cc2451fb65f286f38be3b5d851afa45946ce8fa8",
+      "code_fingerprint": "sha256:3982f4f0047694a34f4d36a2a821a7fdc695f9fe0c45d0ab45d6d25844d1c416",
       "kind": "text",
       "outputs": [
         {
@@ -133,7 +144,7 @@
       ]
     },
     "information-theory-label-smoothing": {
-      "code_fingerprint": "sha256:53e74f4bb913a55aa2f765e80a4f52c984001bd5239aac0edc628aab909a62ac",
+      "code_fingerprint": "sha256:260e0698beef1c14857723b303e5d2ed19ccd27eeb0f92dbfaa10d38b34cb55d",
       "kind": "text",
       "outputs": [
         {
@@ -144,7 +155,7 @@
       ]
     },
     "information-theory-distillation": {
-      "code_fingerprint": "sha256:0b7f85cc35475aca96fea22f529cebfe7f922a664d6139ba403e67d003e72631",
+      "code_fingerprint": "sha256:adc952a86deb85e105042982ef7d1f147151d47e0eb6af83a02d2ece6bdaff16",
       "kind": "text",
       "outputs": [
         {
@@ -155,7 +166,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[18:22:49] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[07:12:15] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     }

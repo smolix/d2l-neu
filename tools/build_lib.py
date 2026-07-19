@@ -566,6 +566,54 @@ d2l = sys.modules[__name__]
 """
 
 
+def reorder_blocks_by_dependency(blocks):
+    """Defer a block until the classes it subclasses are defined.
+
+    Blocks are collected in CHAPTER_NUMBERING dict order, and book order can
+    put a subclass's chapter before its base's (after the 2026-07 part
+    restructure, AttentionDecoder in ch. 10 subclasses Decoder from ch. 13).
+    The emitted module resolves `class X(d2l.Y)` at import time via the
+    `d2l = sys.modules[__name__]` self-alias, so Y must be defined first.
+    Only class-base references are treated as edges — names inside function
+    bodies resolve lazily and would create spurious cycles. On a genuine
+    cycle the remainder is emitted in original order.
+    """
+    defined_by = {}
+    for i, (code, _, _) in enumerate(blocks):
+        for name in _block_defined_names(code):
+            defined_by.setdefault(name, i)
+    base_re = re.compile(r'^\s*class\s+\w+\(([^)]*)\)', re.MULTILINE)
+    deps = []
+    for i, (code, _, _) in enumerate(blocks):
+        need = set()
+        for m in base_re.finditer(code):
+            for base in m.group(1).split(','):
+                base = base.strip()
+                if base.startswith('d2l.'):
+                    base = base[4:]
+                j = defined_by.get(base)
+                if j is not None and j != i:
+                    need.add(j)
+        deps.append(need)
+    order, emitted = [], set()
+    remaining = list(range(len(blocks)))
+    while remaining:
+        progressed = False
+        for i in list(remaining):
+            if deps[i] <= emitted:
+                order.append(i)
+                emitted.add(i)
+                remaining.remove(i)
+                progressed = True
+        if not progressed:
+            order.extend(remaining)
+            break
+    if order != list(range(len(blocks))):
+        n = sum(1 for pos, i in enumerate(order) if i != pos)
+        print(f'  Reordered {n} blocks for class-definition order')
+    return [blocks[i] for i in order]
+
+
 def build_library(src_dir, output_file, framework, lib_config, files):
     """Build a framework-specific library file."""
     print(f'  Extracting #@save blocks for {framework}...')
@@ -601,6 +649,8 @@ def build_library(src_dir, output_file, framework, lib_config, files):
     all_blocks = drop_unresolved_blocks(all_blocks, extra_names)
     if len(all_blocks) != before:
         print(f'  Dropped {before - len(all_blocks)} orphan blocks')
+
+    all_blocks = reorder_blocks_by_dependency(all_blocks)
 
     print(f'  After merging: {len(all_blocks)} blocks')
 

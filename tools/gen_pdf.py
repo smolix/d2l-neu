@@ -21,7 +21,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 from d2l_preprocess import (
-    FRAMEWORKS, FRAMEWORK_DISPLAY, CHAPTER_NUMBERING,
+    FRAMEWORKS, FRAMEWORK_DISPLAY, CHAPTER_NUMBERING, PDF_CHAPTER_FILES,
     parse_blocks, extract_tab, is_boilerplate, is_python_block,
     clean_save_markers, translate_directives,
     CodeBlock, MarkdownBlock, CodeTabSet, TocBlock,
@@ -196,7 +196,31 @@ def main():
     src = args.source
     fw = args.framework
     dst = args.output
-    files = list(CHAPTER_NUMBERING.keys())
+    files = PDF_CHAPTER_FILES
+
+    # CHAPTER_NUMBERING dict order is the PDF's physical chapter order, and
+    # fix_latex.py later pairs the tex's \chapter commands against it
+    # positionally — so it must match _quarto.yml's chapter order, and logical
+    # numbers must be non-decreasing along it. A dict renumbered but not
+    # reordered silently misnumbers the whole PDF (build-system.md §4.1).
+    quarto_yml = Path(__file__).parent.parent / '_quarto.yml'
+    if quarto_yml.exists():
+        yml_order = re.findall(r'- (?:part: )?(chapter_[\w-]+/[\w.-]+)\.qmd',
+                               quarto_yml.read_text(encoding='utf-8'))
+        dict_order = [rel[:-3] for rel in CHAPTER_NUMBERING
+                      if rel != 'chapter_references/zreferences.md']
+        if yml_order != dict_order:
+            diverge = next(
+                (f'  _quarto.yml: {a}\n  NUMBERING:   {b}'
+                 for a, b in zip(yml_order, dict_order) if a != b),
+                f'lengths {len(yml_order)} vs {len(dict_order)}')
+            sys.exit('ERROR: CHAPTER_NUMBERING dict order != _quarto.yml '
+                     f'chapter order; first divergence:\n{diverge}')
+    numbered = [CHAPTER_NUMBERING[rel] for rel in files
+                if CHAPTER_NUMBERING.get(rel)]
+    if numbered != sorted(numbered):
+        sys.exit('ERROR: CHAPTER_NUMBERING logical numbers are not '
+                 'monotone in dict order — the PDF would misnumber.')
 
     print(f'Generating PDF sources for {FRAMEWORK_DISPLAY.get(fw, fw)}...')
 

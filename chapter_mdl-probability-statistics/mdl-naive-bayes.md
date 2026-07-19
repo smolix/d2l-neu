@@ -56,9 +56,14 @@ $$\hat{y} = \mathop{\mathrm{argmax}}_y \, p(y\mid\mathbf{x}) = \mathop{\mathrm{a
 
 The denominator $p(\mathbf{x})$ is the same for every $y$, so it cannot change which label wins the $\mathrm{argmax}$ and we drop it; in shorthand, $p(y\mid\mathbf{x}) \propto p(\mathbf{x}\mid y)\,p(y)$. (Should we ever want the actual posterior probabilities, normalizing the numerators so they sum to one recovers $p(\mathbf{x})$ for free.)
 
-This is the defining choice of a **generative** classifier: rather than modelling the label given the data, it models how the *data are generated* within each class, $p(\mathbf{x}\mid y)$, together with how often each class occurs, $p(y)$, and lets Bayes' rule turn that into a decision. It is the opposite of the **discriminative** route taken by logistic regression and the softmax classifier of :numref:`sec_softmax`, which fit the posterior $p(y\mid\mathbf{x})$ directly and never model the inputs at all. The two form the classic generative--discriminative pair, and they trade off in a characteristic way :cite:`Ng.Jordan.2002,Murphy.2012,Bishop.2006`: the generative model commits to a (here, deliberately crude) story for $p(\mathbf{x}\mid y)$, so it has more parameters fixed by assumption, learns from *fewer* examples, and approaches its (typically higher) error faster; the discriminative model assumes less about the inputs and so usually wins given enough data. Naive Bayes is the simplest generative classifier in wide use. :numref:`fig_mdl-naive-genvdisc` sketches the two routes side by side.
+This is the defining choice of a **generative** classifier: rather than modelling the label given the data, it models how the *data are generated* within each class, $p(\mathbf{x}\mid y)$, together with how often each class occurs, $p(y)$, and lets Bayes' rule turn that into a decision. It is the opposite of the **discriminative** route taken by logistic regression and the softmax classifier of :numref:`sec_softmax`, which fit the posterior $p(y\mid\mathbf{x})$ directly, without requiring a model for the marginal input distribution. The two form the classic generative--discriminative pair. In particular
+well-specified comparisons, including the models analyzed by
+:citet:`Ng.Jordan.2002`, a generative model can approach its asymptotic error
+with fewer examples while a discriminative model reaches a lower asymptotic
+error. This is a model-dependent trade-off, not a universal law: either side can
+win when its assumptions better match the data. Naive Bayes is the simplest generative classifier in wide use. :numref:`fig_mdl-naive-genvdisc` sketches the two routes side by side.
 
-![Two routes to a classifier. Left: a generative model learns how each class generates inputs (the class-conditional densities $p(\mathbf{x}\mid y)$ weighted by the priors $p(y)$) and flips them through Bayes' rule, predicting whichever class makes the observation most plausible; the tie point of the weighted densities is where the decision flips. Right: a discriminative model never models the inputs at all; it devotes its capacity directly to the posterior $p(y\mid\mathbf{x})$, that is, to the decision boundary between the classes.](../img/mdl-prob-naive-genvdisc.svg)
+![Two routes to a classifier. Left: a generative model learns how each class generates inputs (the class-conditional densities $p(\mathbf{x}\mid y)$ weighted by the priors $p(y)$) and flips them through Bayes' rule, predicting whichever class makes the observation most plausible; the tie point of the weighted densities is where the decision flips. Right: a discriminative model need not specify how inputs are generated; it devotes its capacity directly to the posterior $p(y\mid\mathbf{x})$, that is, to the decision boundary between the classes.](../img/mdl-prob-naive-genvdisc.svg)
 :label:`fig_mdl-naive-genvdisc`
 
 The reframing has not yet helped computationally: the *class-conditional* $p(\mathbf{x}\mid y)$ is still a distribution over the same $2^d$ patterns. The chain rule of probability (:numref:`sec_mdl-random_variables`) lays the difficulty bare,
@@ -69,7 +74,10 @@ a product whose later factors condition on ever-longer histories and still hide 
 
 ### The Naive Assumption
 
-Here is the leap. *Assume the features are conditionally independent given the label.* Formally, two features are **conditionally independent** given $y$ when $p(x_i, x_j\mid y) = p(x_i\mid y)\,p(x_j\mid y)$: the factorization that defines independence in :numref:`sec_mdl-random_variables`, imposed on the conditional distribution given each class rather than on the joint. Assumed for all $d$ features at once, every history drops out and the product collapses to one factor per feature:
+Here is the leap. *Assume the features are jointly conditionally independent
+given the label.* Pairwise conditional independence alone is not enough when
+$d>2$; the naive Bayes assumption is the full factorization of the conditional
+joint distribution into one-feature marginals:
 
 $$p(\mathbf{x}\mid y) = \prod_{i=1}^d p(x_i\mid y).$$
 :eqlabel:`eq_mdl-naive_assumption`
@@ -246,7 +254,9 @@ d2l.plt.colorbar();
 
 The errors are anything but uniform: the model's worst failures are $4\to9$, $5\to3$, $8\to3$, and $7\to9$ (the reverse confusion $9\to4$ sits just below the printed four). These are largely the digit pairs whose learned *templates*, plotted above, overlap the most: the most-overlapping pair is indeed the top confusion $4/9$, though the correspondence is loose rather than exact, as Exercise 6 lets you check. A $4$ and a $9$ differ mainly in whether the top strokes close into a loop, a fact carried by the *joint* behavior of a handful of neighboring pixels; a model that sees only per-pixel marginals is structurally blind to it. The confusion matrix is the independence assumption's failure map.
 
-Third, the confidence. The class scores determine a genuine posterior: since each score $s_y(\mathbf x)$ is the logarithm of the Bayes-rule numerator $p(\mathbf x\mid y)\,p(y)$, exponentiating and normalizing restores the dropped denominator, so $p(y\mid\mathbf x) = \exp(s_y(\mathbf x))/\sum_{y'}\exp(s_{y'}(\mathbf x))$, a softmax of the scores (Exercise 4 works this out). The model therefore announces a probability along with each predicted digit. A model is **calibrated** if those announcements are honest: among predictions made with confidence $c$, a fraction $c$ should be correct. We predicted early in this section that multiplying $784$ falsely-independent factors would leave the model badly miscalibrated; the cell below checks, binning the test examples by their maximum posterior and comparing the claimed confidence with the achieved accuracy in each bin, the tabular form of a *reliability diagram*, the standard name for this diagnostic. (The softmax is evaluated in its subtract-the-max stable form from :numref:`subsec_mdl-stable-softmax`.)
+Third, the confidence. The class scores determine a genuine posterior: since each score $s_y(\mathbf x)$ is the logarithm of the Bayes-rule numerator $p(\mathbf x\mid y)\,p(y)$, exponentiating and normalizing restores the dropped denominator, so $p(y\mid\mathbf x) = \exp(s_y(\mathbf x))/\sum_{y'}\exp(s_{y'}(\mathbf x))$, a softmax of the scores (Exercise 4 works this out). The model therefore announces a probability along with each predicted digit. A model is **calibrated** if its announced probabilities match empirical
+frequencies: among predictions made with confidence $c$, a fraction $c$ should
+be correct. We predicted early in this section that multiplying $784$ falsely-independent factors would leave the model badly miscalibrated; the cell below checks, binning the test examples by their maximum posterior and comparing the claimed confidence with the achieved accuracy in each bin, the tabular form of a *reliability diagram*, the standard name for this diagnostic. (The softmax is evaluated in its subtract-the-max stable form from :numref:`subsec_mdl-stable-softmax`.)
 
 ```{.python .input #mdl-naive-bayes-calibration-3}
 s = scores(X_test)
@@ -266,9 +276,9 @@ On average the model claims $98.6\%$ confidence while delivering $84.3\%$ accura
 ## Summary
 
 * Bayes' rule recasts classification generatively: $p(y\mid\mathbf{x}) \propto p(\mathbf{x}\mid y)\,p(y)$, predicting the label that maximizes the numerator.
-* As a **generative** model it estimates $p(\mathbf{x}\mid y)\,p(y)$, the mirror image of a **discriminative** model like softmax regression, which estimates $p(y\mid\mathbf{x})$ directly; the generative side needs fewer samples but has a higher asymptotic error.
+* As a **generative** model it estimates $p(\mathbf{x}\mid y)\,p(y)$, the mirror image of a **discriminative** model like softmax regression, which estimates $p(y\mid\mathbf{x})$ directly. Sample-efficiency and asymptotic-error comparisons depend on the model families and which assumptions match the data.
 * The **naive** conditional-independence assumption $p(\mathbf{x}\mid y)=\prod_i p(x_i\mid y)$ replaces $\mathcal{O}(2^d)$ parameters with $\mathcal{O}(d)$, and the classifier needs only the $\mathrm{argmax}$, not the probabilities, to be right.
-* Working in log space (sums of log-likelihoods) avoids the underflow of multiplying hundreds of probabilities, and reveals that the score is affine in the features: naive Bayes is a **linear** classifier, drawing hyperplanes like the softmax of :numref:`sec_softmax`.
+* Working in log space avoids the underflow of multiplying hundreds of probabilities. Bernoulli and multinomial naive Bayes have scores affine in their chosen features and therefore linear decision boundaries; Gaussian naive Bayes with class-dependent variances generally has quadratic boundaries.
 * Training is maximum likelihood by counting: class priors and per-feature frequencies. Laplace smoothing, $(n_{iy}+1)/(n_y+2)$ for a binary feature, is the posterior mean under a uniform prior (:numref:`subsec_mdl-beta-map`) and keeps every log-probability finite.
 * On MNIST it learns ten averaged digit templates and classifies respectably, but its independence assumption caps accuracy. It shines where features are closer to independent, the canonical case being bag-of-words text classification.
 * The $84.27\%$ carries a bootstrap error bar of about $\pm 0.7$ points; the confusion matrix localizes the failures in template-overlapping pairs like $4/9$ and $5/3$; and the model is severely **miscalibrated**, claiming $98.6\%$ mean confidence while delivering $84.3\%$ accuracy, because falsely independent factors double-count correlated evidence. Bin confidence against accuracy (a reliability diagram) before trusting any classifier's probabilities.
@@ -317,9 +327,10 @@ Estimating that table directly is hopeless: $2^d$ feature patterns
 ($2^{784}$ for MNIST, more than atoms in the universe).
 
 ::: {.d2l-note}
-The plan: **maximum likelihood** (§25.3) fits a generative model by
-counting; Bayes flips it into a classifier; the **statistics** of §25.4
-then judge the result: error bar, failure map, calibration.
+The plan: **maximum likelihood** (the maximum-likelihood section) fits a
+generative model by counting; Bayes flips it into a classifier; the
+**statistics** of the statistics section then judge the result: error bar,
+failure map, calibration.
 :::
 :::
 
@@ -352,7 +363,7 @@ $2^d$ patterns. No savings *yet*.
 - **Discriminative** (softmax / logistic): fit the boundary $p(y\mid\mathbf x)$ directly.
 
 ::: {.d2l-note}
-Generative needs fewer samples but has a higher error floor;
+In some matched model comparisons, generative fitting reaches its error floor sooner while discriminative fitting reaches a lower floor;
 discriminative wins given enough data.
 :::
 :::
@@ -540,8 +551,8 @@ denominator) instead of presence/absence.
 [Error bar]{.kicker}
 
 An accuracy is an *estimate* from $10{,}000$ random test examples, so it
-carries a standard error, and §25.4's bootstrap delivers it: resample the
-test set, recompute, read off the spread:
+carries a standard error, and the statistics section's bootstrap delivers it:
+resample the test set, recompute, read off the spread:
 
 @!mdl-naive-bayes-calibration-1
 

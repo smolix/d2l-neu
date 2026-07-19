@@ -6,7 +6,8 @@ continuous probability the rest of deep learning relies on---densities,
 expectations, and how they transform under a map---catalogues the distributions
 whose negative log-likelihoods are exactly our loss functions, derives
 maximum-likelihood and MAP estimation (and the priors that become regularizers),
-builds the statistics needed to tell a real improvement from noise, proves the
+turns the resulting posterior integrals into computations with Monte Carlo and
+variational approximations, builds the statistics needed to tell a real improvement from noise, proves the
 concentration inequalities that make finite samples trustworthy---following them
 to uniform convergence, Rademacher complexity, and double descent---and caps it
 all with naive Bayes: a working classifier, fit by counting and then audited
@@ -18,6 +19,7 @@ with the chapter's own tools.
 mdl-random-variables
 mdl-distributions
 mdl-maximum-likelihood
+mdl-bayesian-computation
 mdl-statistics
 mdl-concentration-generalization
 mdl-naive-bayes

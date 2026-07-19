@@ -31,6 +31,12 @@ import numpy as np
 
 ```{.python .input #bert-pretraining-pretraining-bert-1}
 #@tab tensorflow
+# Use CUDA's async stream-ordered allocator instead of TF's default BFC pool.
+# BFC grows in doubling chunks and never releases, so the spiky backward pass
+# over the vocabulary-sized MLM logits leaves ~5 GiB reserved-but-unused; the
+# async allocator returns freed blocks, making the footprint track live usage.
+import os
+os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 from d2l import tensorflow as d2l
 import tensorflow as tf
 from tensorflow import keras
@@ -357,7 +363,7 @@ def train_bert(train_iter, net, vocab_size, num_steps):
 
 ```{.python .input #bert-pretraining-pretraining-bert-2-3}
 #@tab tensorflow
-def train_bert(train_iter, net, vocab_size, devices, num_steps):
+def train_bert(train_iter, net, vocab_size, devices, num_steps, num_micro=2):
     optimizer = keras.optimizers.Adam(learning_rate=1e-4)
     step, timer = 0, d2l.Timer()
     animator = d2l.Animator(xlabel='step', ylabel='loss',
@@ -367,17 +373,35 @@ def train_bert(train_iter, net, vocab_size, devices, num_steps):
     metric = d2l.Accumulator(4)
     num_steps_reached = False
     while step < num_steps and not num_steps_reached:
-        for (tokens_X, segments_X, valid_lens_x, pred_positions_X,
-             mlm_weights_X, mlm_Y, nsp_y) in train_iter:
+        for batch in train_iter:
             timer.start()
-            with tf.GradientTape() as tape:
-                mlm_l, nsp_l, l = _get_batch_loss_bert(
-                    net, vocab_size, tokens_X, segments_X, valid_lens_x,
-                    pred_positions_X, mlm_weights_X, mlm_Y, nsp_y,
-                    training=True)
-            grads = tape.gradient(l, net.trainable_variables)
-            optimizer.apply_gradients(zip(grads, net.trainable_variables))
-            metric.add(float(mlm_l), float(nsp_l), tokens_X.shape[0], 1)
+            # TF's eager autodiff holds the whole batch's vocabulary-sized MLM
+            # activations and gradients live at once, which is why this step is
+            # ~5x heavier here than in the other frameworks. Split the batch
+            # into `num_micro` micro-batches and accumulate their averaged
+            # gradients: mathematically the same update, but the peak MLM
+            # tensors shrink to 1/num_micro of a full batch's.
+            splits = [tf.split(t, num_micro, axis=0) for t in batch]
+            accum, mlm_sum, nsp_sum = None, 0., 0.
+            for j in range(num_micro):
+                (tokens_X, segments_X, valid_lens_x, pred_positions_X,
+                 mlm_weights_X, mlm_Y, nsp_y) = [s[j] for s in splits]
+                with tf.GradientTape() as tape:
+                    mlm_l, nsp_l, l = _get_batch_loss_bert(
+                        net, vocab_size, tokens_X, segments_X, valid_lens_x,
+                        pred_positions_X, mlm_weights_X, mlm_Y, nsp_y,
+                        training=True)
+                    l = l / num_micro
+                grads = tape.gradient(l, net.trainable_variables)
+                # Embedding grads come back as IndexedSlices; densify so they
+                # accumulate (dense (vocab_size, num_hiddens) is small).
+                grads = [tf.convert_to_tensor(g) for g in grads]
+                accum = grads if accum is None else [
+                    a + g for a, g in zip(accum, grads)]
+                mlm_sum += float(mlm_l) / num_micro
+                nsp_sum += float(nsp_l) / num_micro
+            optimizer.apply_gradients(zip(accum, net.trainable_variables))
+            metric.add(mlm_sum, nsp_sum, batch[0].shape[0], 1)
             timer.stop()
             animator.add(step + 1,
                          (metric[0] / metric[3], metric[1] / metric[3]))

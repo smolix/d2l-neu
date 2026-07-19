@@ -63,7 +63,7 @@
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
           "bytes": 30162,
-          "sha256": "sha256:9cb6c32f14af48d2391645027750d82bd373503f5e42d53746f14cc0ef3e820e"
+          "sha256": "sha256:96514ccb4097e380ed0eec0655c3c2d08f78e197b70cef71bca9ef8048b68848"
         }
       ]
     },
@@ -76,7 +76,7 @@
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
           "bytes": 108912,
-          "sha256": "sha256:d45577dde751542954a8757ca47cab55752caa9779cafd67eef8e615b7620ad3"
+          "sha256": "sha256:4ce0c975d488e2320226f6dad972e46c24ff63232ae026d775772501c2967aed"
         }
       ]
     },

@@ -1090,8 +1090,9 @@ deeper. Classical complexity measures do not explain this.
 :::
 
 The modern road, **Rademacher complexity** and the double-descent behavior
-of overparametrized models reproduced from scratch, is developed in §25.5;
-the deep-learning story resumes in §5.5.
+of overparametrized models reproduced from scratch, is developed in the
+concentration-and-generalization section; the deep-learning story resumes
+in the generalization-in-deep-learning section.
 :::
 
 ::: {.slide title="Recap"}
@@ -1114,7 +1115,8 @@ the deep-learning story resumes in §5.5.
   $d+1$ (labels read off / Radon); it bounds the gap at
   $\mathcal{O}(1/\sqrt{n})$.
 - **Deep nets** defy these bounds, generalizing despite huge capacity:
-  the puzzle of §5.5, with the modern tools in §25.5.
+  the puzzle of the generalization-in-deep-learning section, with the modern
+  tools in the concentration-and-generalization section.
 :::
 :::
 :::

@@ -14,56 +14,56 @@
       "outputs": []
     },
     "auto-parallelism-parallel-computation-on-gpus-1": {
-      "code_fingerprint": "sha256:2dda994cc17ca9e909519946f9b157f7fb43f1d269a3fcb425f0b217b3ef5eed",
+      "code_fingerprint": "sha256:ada8a2a02b2f797b74b10a782a51d46bf1f43ad50c722ada86e9da74f2a72f62",
       "kind": "text",
       "outputs": []
     },
     "auto-parallelism-parallel-computation-on-gpus-2": {
-      "code_fingerprint": "sha256:a4382ff32b58e65294ca704e2b32fbd12e81658da2a39a0b47e2c0e863aca3ca",
+      "code_fingerprint": "sha256:fd34ac2b39d7fdd82f13e24590da145ded01cfb28e80a316d30d17dd07de72c2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GPU1 time: 0.0784 sec\nGPU2 time: 0.0801 sec\n"
+          "text": "GPU1 time: 0.0355 sec\nGPU2 time: 0.0387 sec\n"
         }
       ]
     },
     "auto-parallelism-parallel-computation-on-gpus-3": {
-      "code_fingerprint": "sha256:3d76a12ded1f55950cd0b657a77499247093984bde0f0bce57fc96fa61ffb09b",
+      "code_fingerprint": "sha256:000ee94f82d7a1ea01b288478d8e3ef3d28daa789f5983b163fb645ef295c3b6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GPU1 & GPU2: 0.1079 sec\n"
+          "text": "GPU1 & GPU2: 0.0789 sec\n"
         }
       ]
     },
     "auto-parallelism-parallel-computation-and-communication-1": {
-      "code_fingerprint": "sha256:3d58ee933d7cc027698140c1759930dfe71f0f786f37cfb9c21030d33c568b3c",
+      "code_fingerprint": "sha256:09734b1af8e8a9159fb1a09afd3bc4f19175c801ca107d73f5175344e9f270f7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Run on GPU1: 0.0782 sec\n"
+          "text": "Run on GPU1: 0.0355 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Copy to CPU: 0.9248 sec\n"
+          "text": "Copy to CPU: 1.7271 sec\n"
         }
       ]
     },
     "auto-parallelism-parallel-computation-and-communication-2": {
-      "code_fingerprint": "sha256:eb0833408fe16289d65c8576b654f681a1029b58085300c3ae4efd5e1bce8e38",
+      "code_fingerprint": "sha256:144358d3aedd7628d0d89286be4662b08868ff2b96ebfa72385b0be9158abd5a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Run on GPU1 and copy to CPU: 1.2903 sec\n"
+          "text": "Run on GPU1 and copy to CPU: 2.0540 sec\n"
         }
       ]
     }

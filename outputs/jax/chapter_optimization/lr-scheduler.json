@@ -4,183 +4,316 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:6c9ebf04292f2bea5a9708ad4ddbe61da61d6b00df5cbade875397f95f91ca98",
+    "d2l_lib_fingerprint": "sha256:c2747597d8c3128147e6a2b95fdf215105ade3f8d506b50b4ef6dbfe7953a277",
     "max_inline_bytes": 0
   },
   "cells": {
-    "lr-scheduler-toy-problem-1": {
-      "code_fingerprint": "sha256:339fc9dd84771e337ca96aed9ff2e5980ab5f77ed1166e084c5de328b877930c",
+    "lr-scheduler-a-testbed-1": {
+      "code_fingerprint": "sha256:b92137072a7445913521a60c0804e46f52f537bf0769b1f13e20631590acabed",
       "kind": "text",
       "outputs": []
     },
-    "lr-scheduler-toy-problem-2": {
-      "code_fingerprint": "sha256:7d9cf8f8cae5b64c0190a8fb549b2c4e8cc5893f54e57975a6a1e0efe57ffa54",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "train loss 0.127, train acc 0.953, test acc 0.894\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-toy-problem-2-1.svg",
-          "bytes": 27447,
-          "sha256": "sha256:07871b64f9dcb2a541f95e1b4a213927963091b3efa90b724cafa33372a63093"
-        }
-      ]
-    },
-    "lr-scheduler-schedulers-1": {
-      "code_fingerprint": "sha256:079835c87d88e47bb66c2f351baeda12b96af21e17f6137bfb6100e326b9562c",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "learning rate is now 0.10\n"
-        }
-      ]
-    },
-    "lr-scheduler-schedulers-2": {
-      "code_fingerprint": "sha256:0f69c2d5d190064dc0ebe0037fb9b6570010c69d33a22a11728c4396a8132f04",
+    "lr-scheduler-a-testbed-2": {
+      "code_fingerprint": "sha256:e46aaafac49ae18266f8576b9addc358f63adc67d11afceeb20f9c299f1c8980",
       "kind": "text",
       "outputs": []
     },
-    "lr-scheduler-schedulers-3": {
-      "code_fingerprint": "sha256:3ec28c48fdd36ae05818b3dae2655d7bddd30e4f0ed4cdaade6232cec122f9a5",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-schedulers-3-1.svg",
-          "bytes": 13762,
-          "sha256": "sha256:f776723ae305223e1e9e74360579640794cedfbf02dee6ab7cd85bb57839aa6f"
-        }
-      ]
-    },
-    "lr-scheduler-schedulers-4": {
-      "code_fingerprint": "sha256:475ad6b02e89aeccb5aeb3bd4cbdce8121e2bbae46d4fdc96edeec4d07767c24",
+    "lr-scheduler-a-testbed-3": {
+      "code_fingerprint": "sha256:ca07a4c2f6f6c578d50d8d21639d28593638de72b028736e63b58b55228db3c1",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.239, train acc 0.912, test acc 0.897\n"
+          "text": "train loss 0.057, train acc 0.979, test acc 0.898\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-schedulers-4-1.svg",
-          "bytes": 27437,
-          "sha256": "sha256:20553f8d6e48df77797ba0b57a26ef1b080716cd55ee347b762cbef2b9de6e31"
+          "asset": "lr-scheduler/lr-scheduler-a-testbed-3-1.svg",
+          "bytes": 31458,
+          "sha256": "sha256:e334dee2e2920836744417917298c7a56a86f04852a2f6035ef798b950025c26"
         }
       ]
     },
-    "lr-scheduler-factor-scheduler": {
-      "code_fingerprint": "sha256:1df1ecb050f85c1e7c626948e67560d1757f8e2f2d511e21f8900529800c6e4b",
+    "lr-scheduler-square-root-decay-1": {
+      "code_fingerprint": "sha256:66ce098c0e0ea01a765c82fff8d3b68a5dd8b3514b4c530d2ee5c4ed7a8463b0",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-factor-scheduler-1.svg",
-          "bytes": 13420,
-          "sha256": "sha256:6b0435ed17ee8f8656f7a34336ca61714097d8dd4d3d6387c14d543e3d75cb4f"
+          "asset": "lr-scheduler/lr-scheduler-square-root-decay-1-1.svg",
+          "bytes": 19860,
+          "sha256": "sha256:3d046923257caaaa8578cf83507fde0863457796aea8da829ad06871b4a81d5d"
         }
       ]
     },
-    "lr-scheduler-multi-factor-scheduler-1": {
-      "code_fingerprint": "sha256:710d6ece2da5a95b43732c50c7f9f2b50be3e8b68fbf073eb0fa2493263c60df",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-multi-factor-scheduler-1-1.svg",
-          "bytes": 13325,
-          "sha256": "sha256:17f8ddc78965222905235cf04367c2ccf9f174b315909d6dc73718b0ffd234ad"
-        }
-      ]
-    },
-    "lr-scheduler-multi-factor-scheduler-2": {
-      "code_fingerprint": "sha256:3fac986a928f951642e050a1eebe6c7f5c8a274639d01bb6a20bac29fa1a0118",
+    "lr-scheduler-square-root-decay-2": {
+      "code_fingerprint": "sha256:49213808e2af1ea25c565dd36e8c6d58de94e97e2a554986451ac2df2288146a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.214, train acc 0.917, test acc 0.878\n"
+          "text": "train loss 0.093, train acc 0.968, test acc 0.901\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-multi-factor-scheduler-2-1.svg",
-          "bytes": 28186,
-          "sha256": "sha256:253155959b13108e50494f9cc6a844c246930b63e4954c22e542f8fb1f62ed53"
+          "asset": "lr-scheduler/lr-scheduler-square-root-decay-2-1.svg",
+          "bytes": 30932,
+          "sha256": "sha256:47810e9a47305d4de8145a94c901431dc1c32090c502011975a6c1e5f4ac5ebb"
         }
       ]
     },
-    "lr-scheduler-cosine-scheduler-1": {
-      "code_fingerprint": "sha256:618ce37c0e17d72817b99c857035c40798c9f49dcb2ace8c17179d24f17fd4fa",
+    "lr-scheduler-multiplicative-decay-1": {
+      "code_fingerprint": "sha256:cff70ab6e305cc0db7db997ff78a138bd42412deccaa464a1bf9de4b2d6a2369",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-cosine-scheduler-1-1.svg",
-          "bytes": 10760,
-          "sha256": "sha256:efd73ffedcd556b19cc10fd69aa053b14e3284db99b0f211dceba3718291df03"
+          "asset": "lr-scheduler/lr-scheduler-multiplicative-decay-1-1.svg",
+          "bytes": 19951,
+          "sha256": "sha256:07596f1984515d72a9a71e2c325a90b0c834cc11d5a89168226e8b0ac4d17223"
         }
       ]
     },
-    "lr-scheduler-cosine-scheduler-2": {
-      "code_fingerprint": "sha256:fb48d97755e8f7e5389aa906074b52457fc73d71d49afb61a518cf67c5805a96",
+    "lr-scheduler-multiplicative-decay-2": {
+      "code_fingerprint": "sha256:b1d43f2ddd8ca2466067ba6916cfb4dbf28bca7d8272299eb57eeecd14c97ac2",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.140, train acc 0.950, test acc 0.906\n"
+          "text": "train loss 0.081, train acc 0.975, test acc 0.905\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-cosine-scheduler-2-1.svg",
-          "bytes": 27446,
-          "sha256": "sha256:c9fe2bf5316e3aed35db3962a8d99a1933e33e381903608e84831654c78dacd2"
+          "asset": "lr-scheduler/lr-scheduler-multiplicative-decay-2-1.svg",
+          "bytes": 30942,
+          "sha256": "sha256:7ae1a696ca455c3e0711ce7e7eb2dd4f1cd59a5a700765b124147d4a4aaab92d"
+        }
+      ]
+    },
+    "lr-scheduler-piecewise-constant-decay-1": {
+      "code_fingerprint": "sha256:af11e4bc7aa631b6ac5fc899cbb865583fb352540ce1bdaddb4ad20d64997b14",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-piecewise-constant-decay-1-1.svg",
+          "bytes": 18862,
+          "sha256": "sha256:9309cc9db2d375b101e21d0985390d7d6ccea1f5e5aad337865d337ec950021d"
+        }
+      ]
+    },
+    "lr-scheduler-piecewise-constant-decay-2": {
+      "code_fingerprint": "sha256:d80b4f4c2f603bd508838f3ff5856d357fafb37da61d33028ef2c912568fc424",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.036, train acc 0.990, test acc 0.909\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-piecewise-constant-decay-2-1.svg",
+          "bytes": 31472,
+          "sha256": "sha256:8ff0767d94b3400e251968ef65a759b8405b43bb6a796b789096c38cd7e915b8"
+        }
+      ]
+    },
+    "lr-scheduler-cosine-decay-1": {
+      "code_fingerprint": "sha256:89b069f0f42d414a3519feab541f947949270bf32dfed5e845dc2351adc85b84",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-cosine-decay-1-1.svg",
+          "bytes": 17368,
+          "sha256": "sha256:a06c1580374cb5b426179c315caeed2fbed36646cc1ee0f5a90647e3a00de53c"
+        }
+      ]
+    },
+    "lr-scheduler-cosine-decay-2": {
+      "code_fingerprint": "sha256:f072f0134485369c67c70d7328fd3198985432497d790e2e1c527996b82181a3",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.083, train acc 0.973, test acc 0.912\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-cosine-decay-2-1.svg",
+          "bytes": 30941,
+          "sha256": "sha256:f0191e390adba0f720c89b9c0ebe4546de3b2b483f82b2744ae0eab624feaffe"
         }
       ]
     },
     "lr-scheduler-warmup-1": {
-      "code_fingerprint": "sha256:53650e64ed7ad0e9f75172c062367f8b6c4451be51a948f6bd5309b76cb736db",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-warmup-1-1.svg",
-          "bytes": 10685,
-          "sha256": "sha256:9a84976d10765a23fd32fd6ff759fc3960fdd0a1e42b70920af92a8d45079eb3"
-        }
-      ]
-    },
-    "lr-scheduler-warmup-2": {
-      "code_fingerprint": "sha256:d9579dfe316ed02c76c6f74d9a2a72055e78171597b47a63572e6bb3c16f741c",
+      "code_fingerprint": "sha256:2f4dfb443b3413e455a920c48a3be8afe625371cf2afaa22664bb16883125dc2",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.147, train acc 0.946, test acc 0.905\n"
+          "text": "train loss 2.314, train acc 0.098, test acc 0.100\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "lr-scheduler/lr-scheduler-warmup-2-1.svg",
-          "bytes": 27451,
-          "sha256": "sha256:297b4f801c215d588c540fd64775eac825b79280a02cf188bfb44845f48afdde"
+          "asset": "lr-scheduler/lr-scheduler-warmup-1-1.svg",
+          "bytes": 24909,
+          "sha256": "sha256:dedfb39affc6fc27b9b9b87c30dab57710dc246515fce618aac4ac794be0431e"
+        }
+      ]
+    },
+    "lr-scheduler-warmup-2": {
+      "code_fingerprint": "sha256:56be5457261895842e4d4898fdc354e1cf237c52f44a7506fdf6ef73a589bd90",
+      "kind": "text",
+      "outputs": []
+    },
+    "lr-scheduler-warmup-3": {
+      "code_fingerprint": "sha256:4fda3d41ee9db1e9567e66ddc31e85993b78736d284bcaf2fd6fcb62cb1cf08c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.208, train acc 0.920, test acc 0.885\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-warmup-3-1.svg",
+          "bytes": 24562,
+          "sha256": "sha256:b66e99b1815b89cceba8d9a469616ba19b878593d0822d9b357698cddc7bf26d"
+        }
+      ]
+    },
+    "lr-scheduler-warmup-4": {
+      "code_fingerprint": "sha256:2ba50f7f6fbb02f5db4195bd0d3c300b6bbb81e45474f9c96c7c67671a6c478c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-warmup-4-1.svg",
+          "bytes": 17398,
+          "sha256": "sha256:30247fcc90ca74a850c81ab2ad1887c5ff3ef18532e92f8c547ed936ee98ece2"
+        }
+      ]
+    },
+    "lr-scheduler-warmup-5": {
+      "code_fingerprint": "sha256:76a95eae846fbdd968cc8156bec0600f20ab3cec581d4c2d21cded09c2f55b36",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.043, train acc 0.989, test acc 0.912\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-warmup-5-1.svg",
+          "bytes": 31461,
+          "sha256": "sha256:f8b70ba8da3234410d48e4e54747bf90c16b8593573b5309df0069130dc5adea"
+        }
+      ]
+    },
+    "lr-scheduler-warmup-stable-decay-1": {
+      "code_fingerprint": "sha256:c8683beeef11d865f7a8aa315f1a45a98969f3e1cef75c68113181482666916e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-warmup-stable-decay-1-1.svg",
+          "bytes": 17284,
+          "sha256": "sha256:3f1fe5a48a2c1c614c3833952ab3b5c37425e1b4d2790dac02295fb4cad9bb44"
+        }
+      ]
+    },
+    "lr-scheduler-warmup-stable-decay-2": {
+      "code_fingerprint": "sha256:59a51eb7a5af02e79920133900dd9ac81ca6a47d45d1a6421cefecf54332e53a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.025, train acc 0.995, test acc 0.910\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-warmup-stable-decay-2-1.svg",
+          "bytes": 31456,
+          "sha256": "sha256:83fbe1a5f05237f300d8bfe4fae4f21ce8ffba43c8b663bf6fe07bc696b0d14a"
+        }
+      ]
+    },
+    "lr-scheduler-branching-off-the-plateau-1": {
+      "code_fingerprint": "sha256:b8499d114bca8f01b27d50970164d6ad5e4f9cc941bb797fb3bb1a0005d53712",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.084, train acc 0.969, test acc 0.900\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-branching-off-the-plateau-1-1.svg",
+          "bytes": 27214,
+          "sha256": "sha256:df1dfeb93babc333fbf5191dd72ba21a789fb37cebd2838ece1441d0497fd5c5"
+        }
+      ]
+    },
+    "lr-scheduler-branching-off-the-plateau-2": {
+      "code_fingerprint": "sha256:300302817dd34d7a77a3d0df534533ca6220eb073e1e5734ad726da44540216c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.058, train acc 0.979, test acc 0.891\n"
+        },
+        {
+          "type": "execute_result",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-branching-off-the-plateau-2-1.svg",
+          "bytes": 28397,
+          "sha256": "sha256:28a5797b244f7bb6ae967260f15b72d2db5c132639af4b63c28d6f23352c7680"
+        }
+      ]
+    },
+    "lr-scheduler-branching-off-the-plateau-3": {
+      "code_fingerprint": "sha256:b6e4210fc4a6ca3592761c5fd0ce5df86b9937c0ef6462d3e158e4a70dc2acf1",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "train loss 0.014, train acc 0.998, test acc 0.908\n"
+        },
+        {
+          "type": "execute_result",
+          "mime": "image/svg+xml",
+          "asset": "lr-scheduler/lr-scheduler-branching-off-the-plateau-3-1.svg",
+          "bytes": 28856,
+          "sha256": "sha256:a4bdde8c06ade30c6a6ea4d0ba0a2cd2818544d48b349502280110e35830f333"
         }
       ]
     }

@@ -4,33 +4,133 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:ff16f873e9e046b0cd29f159fd46d48fbfcf9c9fd6fcfe6c56f8bd95f874277f",
+    "d2l_lib_fingerprint": "sha256:cbea54bc8f1730ca35a2a5d61212c1684894af2ab917b8c613cc569f3cac4bc5",
     "max_inline_bytes": 0
   },
   "cells": {
     "language-model-language-models": {
-      "code_fingerprint": "sha256:5cfb8cd1e4f8bcd8167db469f4c0e14d5e0290de23b9905ede34a21f0a7b86f1",
+      "code_fingerprint": "sha256:fc78a9742a46bf3dc3c8cef109049fdc7ca6b5227a9bcf624ba672311fae325a",
       "kind": "text",
       "outputs": []
     },
-    "language-model-partitioning-sequences-1": {
-      "code_fingerprint": "sha256:2d4427c2d4accf7f8f5e7a28a0ad777ba635f99d8bdbc85cbc81c793a0f58701",
+    "language-model-markov-models-and-counting-1": {
+      "code_fingerprint": "sha256:fbb5499cf7fa27b708a2098f3e5de32f5fcdc12f23211120f2f433df178b32e3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "(29402, 3373)"
+        }
+      ]
+    },
+    "language-model-markov-models-and-counting-2": {
+      "code_fingerprint": "sha256:11ce770f809b8a02cff0f5312d08cd36b3d5e7f59171586a6b58d1afb4c11370",
       "kind": "text",
       "outputs": []
     },
-    "language-model-partitioning-sequences-2": {
-      "code_fingerprint": "sha256:8592d4764d27fd256ae18c42d630331b7b146f059baa303a1fbd2989760a2ce5",
-      "kind": "text",
-      "outputs": []
-    },
-    "language-model-partitioning-sequences-3": {
-      "code_fingerprint": "sha256:603157156bba3596f396681f92f6eda1479016949d659adac9865881013cbdf2",
+    "language-model-sampling-from-n-gram-models": {
+      "code_fingerprint": "sha256:6887be8f0b1a91b79ef8dc87d70d2c4ed7969dd6187316e18abada87b951ea17",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[ 4  6 11  1 17  5  3  9  1  9]\n [ 2  6  3 12 19  1  8  2 15  3]] \nY: [[ 6 11  1 17  5  3  9  1  9  5]\n [ 6  3 12 19  1  8  2 15  3  5]]\n"
+          "text": "1-gram: the time import meat on and looking they immediately in any up examination some and grew s his narrow fortunate risk matches in their cold good but\n2-gram: the time machine and holding one indeed no refuge there came one direction i saw for which i ve told blank the soil smelt sweet and blackening\n3-gram: the time traveller then when we were i put out my hand i had expected happened the bronze doors as yet i had hitherto seen it was\n"
+        }
+      ]
+    },
+    "language-model-the-sparsity-wall": {
+      "code_fingerprint": "sha256:339c22de343696fc28491950dd09977ea98c0d7e78b77ae68ea5b6b140f53be1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "unseen held-out 1-grams: 8.4% (4315 distinct in training)\nunseen held-out 2-grams: 51.5% (18535 distinct in training)\nunseen held-out 3-grams: 87.0% (26982 distinct in training)\n"
+        }
+      ]
+    },
+    "language-model-word-frequency-and-zipf-s-law-1": {
+      "code_fingerprint": "sha256:90b4057265b825fafc8b9cfb2e851da9c9720295c68c64a465b2e36a50fd34ae",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[('the', 2261),\n ('i', 1267),\n ('and', 1245),\n ('of', 1155),\n ('a', 816),\n ('to', 695),\n ('was', 552),\n ('in', 541),\n ('that', 443),\n ('my', 440)]"
+        }
+      ]
+    },
+    "language-model-word-frequency-and-zipf-s-law-2": {
+      "code_fingerprint": "sha256:dbae06ac83dff7567bc4516e7ae2e75bf3136c391e93739b5231d45815f58fa0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
+          "bytes": 33996,
+          "sha256": "sha256:3e40b096d519117a8bea7f13e4cc54e575b5ce1ee531513ac019e5c1f04a35e9"
+        }
+      ]
+    },
+    "language-model-word-frequency-and-zipf-s-law-3": {
+      "code_fingerprint": "sha256:2287547ccbeb57086e4d3f24d06263595cf6b293c274126c4eafcb44358ac00a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
+          "bytes": 45605,
+          "sha256": "sha256:955082ecea810f47f1085f035769c66def44a917ad6e50b70a7d135206b9dffb"
+        }
+      ]
+    },
+    "language-model-perplexity": {
+      "code_fingerprint": "sha256:d4ee11fee84c21d3af8f1795af11e77d9ea34e04083cbced7e1e7af0fa2b1246",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1-gram held-out perplexity:    840.7\n2-gram held-out perplexity:    775.1\n3-gram held-out perplexity:   2618.1\n"
+        }
+      ]
+    },
+    "language-model-bits-per-byte": {
+      "code_fingerprint": "sha256:90825930176522a8855bcb4416a7441762a848826c9cf9eab09a89ed2c380e12",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tokenization   |V|  tokens      ppl   bpb\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n        word  4579    3373   2618.1  2.21\n"
+        }
+      ]
+    },
+    "language-model-partitioning-sequences-1": {
+      "code_fingerprint": "sha256:8182cdc839f046d8949041cff05480b71cb87cb6f5db092ef7947b78219a1c6b",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-2": {
+      "code_fingerprint": "sha256:8f3d509fb214efecc6e536ab2cf7ccf284145f4aa58512769ff982daa4777697",
+      "kind": "text",
+      "outputs": []
+    },
+    "language-model-partitioning-sequences-3": {
+      "code_fingerprint": "sha256:cd968e2f8b91893ab865414814f63ca7ef494b2752900e19d5df5433a0304db5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "X: [[ 46 492 455 262 666 279 391 111 278 115]\n [ 68 278 836 865 415 545 491 516 360 844]] \nY: [[492 455 262 666 279 391 111 278 115 612]\n [278 836 865 415 545 491 516 360 844  46]]\nX[0]: \". 'There are balloons\"\nY[0]: \" 'There are balloons.'\"\n"
         }
       ]
     }

@@ -966,7 +966,8 @@ correlated training sets. $K = 5$ or $10$ is a common compromise.
 The classical U is only half the story for huge models. Once capacity is large enough to **interpolate** the data, pushing it further often makes test error **fall again**.
 
 ::: {.d2l-note}
-§5.5 takes up the modern story; §25.5 reproduces this curve from
+The generalization-in-deep-learning section takes up the modern story; the
+concentration-and-generalization section reproduces this curve from
 scratch and explains the peak.
 :::
 :::

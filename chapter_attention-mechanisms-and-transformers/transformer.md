@@ -31,7 +31,7 @@ such as in areas to do with language, vision, speech, and reinforcement learning
 %%tab mxnet
 from d2l import mxnet as d2l
 import math
-from mxnet import autograd, init, np, npx
+from mxnet import autograd, gluon, init, lr_scheduler, np, npx
 from mxnet.gluon import nn
 import pandas as pd
 npx.set_np()
@@ -61,6 +61,7 @@ from flax import nnx
 from jax import numpy as jnp
 import jax
 import math
+import optax
 import pandas as pd
 ```
 
@@ -1185,28 +1186,81 @@ As in :numref:`sec_seq2seq_training`,
 we train the Transformer model
 for sequence-to-sequence learning on the English--French machine translation dataset.
 
+Transformers are notoriously sensitive to the learning rate at the very start of
+training: from a cold-started model the first few full-sized Adam steps can push
+the layer norms and attention weights into a bad regime, and the final
+translation quality then varies noticeably from run to run. The standard remedy,
+used in essentially every Transformer implementation, is a *learning-rate
+warmup*: ramp the learning rate up linearly from near zero over the first couple
+of epochs and only then let the optimizer take full-sized steps
+:cite:`Vaswani.Shazeer.Parmar.ea.2017`. We attach this schedule to Adam by
+overriding `configure_optimizers` in a small `Seq2Seq` subclass, hold the rate
+constant after the warmup (training here is only a few hundred steps, so decaying
+it away would waste the budget), and train for a few more epochs (40) so the
+small model converges fully on this tiny dataset. We also use a light dropout of
+0.1 (as in the original Transformer): with the heavier 0.2 the small model tends
+to fall back on its dominant `je suis ...` output template and mistranslate rarer
+targets. Together these make a single run reliably reach a good chrF.
+
 ```{.python .input #transformer-training-1}
 %%tab pytorch
 data = d2l.MTFraEng(batch_size=128)
-num_hiddens, num_blks, dropout = 256, 2, 0.2
+num_hiddens, num_blks, dropout = 256, 2, 0.1
 ffn_num_hiddens, num_heads = 64, 4
+
+class WarmupAdam(torch.optim.Adam):  # linear LR warmup, then hold constant
+    def __init__(self, params, lr, warmup):
+        super().__init__(params, lr=lr)
+        self.peak_lr, self.warmup, self.step_num = lr, warmup, 0
+    def step(self, *args, **kwargs):
+        self.step_num += 1
+        for group in self.param_groups:
+            group['lr'] = self.peak_lr * min(1.0, self.step_num / self.warmup)
+        super().step(*args, **kwargs)
+
+class TransformerSeq2Seq(d2l.Seq2Seq):
+    def __init__(self, encoder, decoder, tgt_pad, lr, warmup):
+        super().__init__(encoder, decoder, tgt_pad, lr)
+        self.warmup = warmup
+    def configure_optimizers(self):
+        return WarmupAdam(self.parameters(), self.lr, self.warmup)
+
 encoder = TransformerEncoder(
     len(data.src_vocab), num_hiddens, ffn_num_hiddens, num_heads,
     num_blks, dropout)
 decoder = TransformerDecoder(
     len(data.tgt_vocab), num_hiddens, ffn_num_hiddens, num_heads,
     num_blks, dropout)
-model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
-                    lr=0.001)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
+warmup = 2 * (data.num_train // data.batch_size)  # ramp over ~2 epochs
+model = TransformerSeq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
+                           lr=0.001, warmup=warmup)
+trainer = d2l.Trainer(max_epochs=40, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
 ```{.python .input #transformer-training-1}
 %%tab tensorflow
 data = d2l.MTFraEng(batch_size=128)
-num_hiddens, num_blks, dropout = 256, 2, 0.2
+num_hiddens, num_blks, dropout = 256, 2, 0.1
 ffn_num_hiddens, num_heads = 64, 4
+
+class WarmupConstant(tf.keras.optimizers.schedules.LearningRateSchedule):
+    """Ramp the LR up linearly over `warmup` steps, then hold it constant."""
+    def __init__(self, peak_lr, warmup):
+        self.peak_lr, self.warmup = peak_lr, float(warmup)
+    def __call__(self, step):
+        step = tf.cast(step, tf.float32)
+        return self.peak_lr * tf.minimum(1.0, (step + 1.0) / self.warmup)
+
+class TransformerSeq2Seq(d2l.Seq2Seq):
+    def __init__(self, encoder, decoder, tgt_pad, lr, warmup):
+        super().__init__(encoder, decoder, tgt_pad, lr)
+        self.warmup = warmup
+    def configure_optimizers(self):
+        return tf.keras.optimizers.Adam(
+            learning_rate=WarmupConstant(self.lr, self.warmup))
+
+warmup = 2 * (data.num_train // data.batch_size)  # ramp over ~2 epochs
 with d2l.try_gpu():
     encoder = TransformerEncoder(
         len(data.src_vocab), num_hiddens, ffn_num_hiddens, num_heads,
@@ -1214,49 +1268,83 @@ with d2l.try_gpu():
     decoder = TransformerDecoder(
         len(data.tgt_vocab), num_hiddens, ffn_num_hiddens, num_heads,
         num_blks, dropout)
-    model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
-                        lr=0.001)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1)
+    model = TransformerSeq2Seq(encoder, decoder,
+                               tgt_pad=data.tgt_vocab['<pad>'],
+                               lr=0.001, warmup=warmup)
+trainer = d2l.Trainer(max_epochs=40, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
 ```{.python .input #transformer-training-1}
 %%tab jax
 data = d2l.MTFraEng(batch_size=128)
-num_hiddens, num_blks, dropout = 256, 2, 0.2
+num_hiddens, num_blks, dropout = 256, 2, 0.1
 ffn_num_hiddens, num_heads = 64, 4
+
+class TransformerSeq2Seq(d2l.Seq2Seq):
+    def __init__(self, encoder, decoder, tgt_pad, lr, warmup):
+        super().__init__(encoder, decoder, tgt_pad, lr)
+        self.warmup = warmup
+    def configure_optimizers(self):
+        # Linear LR warmup over `warmup` steps, then hold constant. optax
+        # evaluates this schedule at every update using its own step counter.
+        schedule = lambda step: self.lr * jnp.minimum(
+            1.0, (step + 1) / self.warmup)
+        return optax.adam(learning_rate=schedule)
+
 encoder = TransformerEncoder(
     len(data.src_vocab), num_hiddens, ffn_num_hiddens, num_heads,
     num_blks, dropout)
 decoder = TransformerDecoder(
     len(data.tgt_vocab), num_hiddens, ffn_num_hiddens, num_heads,
     num_blks, dropout)
-model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
-                    lr=0.001)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
+warmup = 2 * (data.num_train // data.batch_size)  # ramp over ~2 epochs
+model = TransformerSeq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
+                           lr=0.001, warmup=warmup)
+trainer = d2l.Trainer(max_epochs=40, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
 ```{.python .input #transformer-training-1}
 %%tab mxnet
 data = d2l.MTFraEng(batch_size=128)
-num_hiddens, num_blks, dropout = 256, 2, 0.2
+num_hiddens, num_blks, dropout = 256, 2, 0.1
 ffn_num_hiddens, num_heads = 64, 4
+
+class WarmupConstant(lr_scheduler.LRScheduler):
+    """Ramp the LR up linearly over `warmup` steps, then hold it constant."""
+    def __init__(self, peak_lr, warmup):
+        super().__init__(base_lr=peak_lr)
+        self.peak_lr, self.warmup = peak_lr, warmup
+    def __call__(self, num_update):
+        return self.peak_lr * min(1.0, num_update / self.warmup)
+
+class TransformerSeq2Seq(d2l.Seq2Seq):
+    def __init__(self, encoder, decoder, tgt_pad, lr, warmup):
+        super().__init__(encoder, decoder, tgt_pad, lr)
+        self.warmup = warmup
+    def configure_optimizers(self):
+        return gluon.Trainer(self.parameters(), 'adam',
+                             {'learning_rate': self.lr,
+                              'lr_scheduler': WarmupConstant(self.lr,
+                                                             self.warmup)})
+
 encoder = TransformerEncoder(
     len(data.src_vocab), num_hiddens, ffn_num_hiddens, num_heads,
     num_blks, dropout)
 decoder = TransformerDecoder(
     len(data.tgt_vocab), num_hiddens, ffn_num_hiddens, num_heads,
     num_blks, dropout)
-model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
-                    lr=0.001)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
+warmup = 2 * (data.num_train // data.batch_size)  # ramp over ~2 epochs
+model = TransformerSeq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
+                           lr=0.001, warmup=warmup)
+trainer = d2l.Trainer(max_epochs=40, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
 After training,
 we use the Transformer model
-to translate a few English sentences into French and compute their BLEU scores.
+to translate a few English sentences into French and compute their chrF scores.
 
 ```{.python .input #transformer-training-2}
 %%tab pytorch
@@ -1265,13 +1353,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #transformer-training-2}
@@ -1281,13 +1368,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #transformer-training-2}
@@ -1296,13 +1382,12 @@ engs = ['i lost .', 'i\'m calm .', 'i\'m home .']
 fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(data.build(engs, fras), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #transformer-training-2}
@@ -1312,13 +1397,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 Let's visualize the Transformer attention weights when translating the final English sentence into French.
@@ -1653,16 +1737,19 @@ a time.
 
 ::: {.slide title="Training: tiny config"}
 Same MTFraEng dataset as the seq2seq chapter. 2 layers, 256
-hidden, 4 heads, dropout 0.2. Adam lr=0.001, gradient clip 1,
-30 epochs:
+hidden, 4 heads, dropout 0.1. Adam lr=0.001 with a linear
+learning-rate **warmup** (then held constant), gradient clip 1,
+40 epochs. The warmup keeps the cold-started model stable so a
+single run reliably converges:
 
 @transformer-training-1
 :::
 
 ::: {.slide title="Translate four sentences"}
-This is a tiny model on a tiny dataset. Look for good short
-translations and BLEU differences across examples; errors are
-usually data/model-size limits, not a change in the architecture.
+A tiny Transformer on a tiny BPE-tokenized dataset. Each
+prediction decodes to one French string, scored with chrF; on
+these short sentences it translates cleanly, and any slip at this
+scale is a data/model-size limit, not the architecture.
 
 @transformer-training-2
 :::

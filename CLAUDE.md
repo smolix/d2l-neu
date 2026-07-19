@@ -154,6 +154,14 @@ authoring" section below.
 Conventions for writing/revising chapter `.md` content. Model the density and
 shape on the **preliminaries** and **linear-neural-networks** chapters.
 
+- **Framework coverage policy (2026-07-17, per Alex):** the Basics part
+  (ch. 1–8) and the math appendix carry all four frameworks; the **Advanced
+  part (ch. 9–16) carries PyTorch and JAX only**. New or rewritten Advanced
+  content must not add TensorFlow/MXNet tabs, and existing TF/MXNet material
+  there is slated for removal as chapters are touched. Per-chapter framework
+  subsets are already supported by the pipeline (the RL chapter ships
+  PyTorch-only: coverage follows per-cell tabs, and `outputs/` simply has no
+  tf/mxnet trees for it).
 - **Code teaches; it does not draw.** Every notebook code cell must *compute or
   demonstrate* something the prose discusses (fit a model, decompose a matrix,
   verify an identity, classify data). Code whose only purpose is to draw an
@@ -231,6 +239,21 @@ shape on the **preliminaries** and **linear-neural-networks** chapters.
 - **Proofs, intuition-first.** Foundations chapters favour short, *elegant*
   proofs (`**Proposition.**` / `**Proof.**` … `$\blacksquare$`) over assertion,
   led by a picture or intuition.
+- **Experimental results in prose: quote only the precision that survives
+  re-execution.** Notebook training runs are re-captured regularly, and
+  seed-level accuracy fluctuates by a few tenths of a point. Prose, tables,
+  and slides must therefore never quote per-seed last-digit values
+  ("90.21 ± 0.34"), per-framework orderings that flip within noise, or exact
+  timing ratios. Round to the stability the store actually has (≈½ point for
+  10-epoch Fashion-MNIST runs), prefer ranges and qualitative statements
+  ("both about 92%", "roughly 2× faster"), and never build a *conclusion* on
+  a difference smaller than the run-to-run noise. Single seeded runs per
+  framework, not multi-seed sweeps — the compute belongs to readers.
+- **References use labels, never hardcoded numbers.** Always `:numref:`/
+  `:ref:` against a `:label:`; chapter renumbering is routine (it has
+  happened twice) and hardcoded "Chapter 7"/"§5.4" strings silently rot.
+  Slide-cover kickers (`[Dive into Deep Learning · §N.M]{.kicker}`) are
+  rewritten automatically by `gen_slides.py` from `CHAPTER_NUMBERING`.
 - **Gotchas.** Multi-line display equations: put `$$` alone on its own opening
   and closing lines with `:eqlabel:` on the next line, or the label fails to
   attach. Never put a `]` in an image caption (it truncates the alt-text); write
@@ -341,12 +364,31 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
   store is a portable baseline: a CPU/Apple-Silicon machine renders the whole
   book and re-runs only the CPU notebooks it touches. See `docs/build-system.md`
   §3.1/§3.3a.
+- **Part structure (2026-07-17 restructure, per Alex):** front matter
+  (introduction is unnumbered) | **Basics** = ch. 1–8 (preliminaries through
+  Sequence Models) | **Advanced** = 9 Optimization, 10 Attention, 11
+  Computational Performance, 12 Transformers (placeholder), 13 State Space
+  Models (formerly "Gated and Linear Recurrence"), 14 RL, 15 GANs, 16
+  Diffusion Models (placeholder) | **Language Models** (formerly "Natural
+  Language Processing") = 17–18 | **Image Models** (formerly "Computer
+  Vision") = 19 | **Attic** = 20 GP, 21 HPO, 22 RecSys (GP leads the Attic:
+  it is the Bayesian-optimization background HPO builds on) | math appendix
+  23–28 | Tools 29. Title shortenings ("Computation", "Modern Convnets",
+  "Sequence Models", singular "Multilayer Perceptron") are deliberate:
+  inside a single "Basics" part the long framework-y titles were redundant,
+  and ch. 13's rename marks the book's pivot to the linear-recurrence/SSM
+  view. The preface still describes the old three-part plan and needs a
+  full rewrite (deferred, per Alex). **Invariant:** `CHAPTER_NUMBERING`
+  dict order must equal `_quarto.yml` chapter order — `gen_pdf.py` emits
+  the PDF book in dict order and `fix_latex.py` pairs tex `\chapter`s
+  against it positionally; a mismatch silently misnumbers the PDF (see
+  `docs/build-system.md` §4.1).
 - The **"Mathematics for Deep Learning"** part (branch
   `math-for-deep-learning-appendix`) is now the **default math appendix**: a
-  single part of 6 numbered chapters under `chapter_mdl-*` — **22** Linear
-  Algebra, **23** Calculus, **24** Optimization, **25** Probability & Statistical
-  Learning, **26** Information Theory, **27** Dynamics (Tools for Deep Learning is
-  now **28**) — with `mdl-`-prefixed labels. All six chapters are now fully
+  single part of 6 numbered chapters under `chapter_mdl-*` — **23** Linear
+  Algebra, **24** Calculus, **25** Optimization, **26** Probability & Statistical
+  Learning, **27** Information Theory, **28** Dynamics (Tools for Deep Learning is
+  now **29**) — with `mdl-`-prefixed labels. All six chapters are now fully
   written; the appendix gained two new sections (`mdl-adaptive-stochastic-methods`
   = §24.2, `mdl-concentration-generalization` = §25.5) and ch. 25 was reordered
   (naive Bayes moved last, §25.6). The branch `math-appendix-polish` carries a

@@ -101,9 +101,9 @@ class AttentionDecoder(d2l.Decoder):  #@save
 class AttentionDecoder(d2l.Decoder):  #@save
     """The base attention-based decoder interface.
 
-    Flax modules are dataclasses, so the base class deliberately omits
-    `__init__`; subclasses declare their fields as class-level
-    annotations and (optionally) a `setup()` method.
+    Subclasses build their layers in an ordinary `__init__`, as with any
+    NNX module; this base class only adds the accessor for the attention
+    weights recorded during decoding.
     """
     @property
     def attention_weights(self):
@@ -416,7 +416,7 @@ decoder = Seq2SeqAttentionDecoder(
     len(data.tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
 model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
                     lr=0.005)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
+trainer = d2l.Trainer(max_epochs=200, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
@@ -431,7 +431,7 @@ with d2l.try_gpu():
         len(data.tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
     model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
                         lr=0.005)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1)
+trainer = d2l.Trainer(max_epochs=200, gradient_clip_val=1)
 trainer.fit(model, data)
 ```
 
@@ -445,7 +445,7 @@ decoder = Seq2SeqAttentionDecoder(
     len(data.tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
 model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
                     lr=0.005)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
+trainer = d2l.Trainer(max_epochs=200, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
@@ -459,13 +459,13 @@ decoder = Seq2SeqAttentionDecoder(
     len(data.tgt_vocab), embed_size, num_hiddens, num_layers, dropout)
 model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
                     lr=0.005)
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
+trainer = d2l.Trainer(max_epochs=200, gradient_clip_val=1, num_gpus=1)
 trainer.fit(model, data)
 ```
 
 After the model is trained,
 we use it to translate a few English sentences
-into French and compute their BLEU scores.
+into French and compute their chrF scores.
 
 ```{.python .input #bahdanau-attention-training-2}
 %%tab pytorch
@@ -474,13 +474,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #bahdanau-attention-training-2}
@@ -490,13 +489,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #bahdanau-attention-training-2}
@@ -505,13 +503,12 @@ engs = ['i lost .', 'i\'m calm .', 'i\'m home .']
 fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(data.build(engs, fras), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 ```{.python .input #bahdanau-attention-training-2}
@@ -521,13 +518,12 @@ fras = ['j\'ai perdu .', 'je suis calme .', 'je suis chez moi .']
 preds, _ = model.predict_step(
     data.build(engs, fras), d2l.try_gpu(), data.num_steps)
 for en, fr, p in zip(engs, fras, preds):
-    translation = []
-    for token in data.tgt_vocab.to_tokens(p):
-        if token == '<eos>':
-            break
-        translation.append(token)
-    print(f'{en} => {translation}, bleu,'
-          f'{d2l.bleu(" ".join(translation), fr, k=2):.3f}')
+    ids = [int(i) for i in d2l.numpy(p)]
+    if data.tgt_vocab.eos in ids:
+        ids = ids[:ids.index(data.tgt_vocab.eos)]
+    translation = data.tgt_vocab.decode(ids)
+    print(f'{en} => {translation!r}, chrF '
+          f'{d2l.chrf(translation, data._preprocess(fr)):.3f}')
 ```
 
 Let's visualize the attention weights
@@ -690,16 +686,18 @@ src_steps):
 :::
 
 ::: {.slide title="Training"}
-Same hyperparameters as plain seq2seq (embed/hidden 256,
-2 layers, dropout 0.2, Adam 0.005, 30 epochs). Gives the
-model attention; everything else stays the same:
+Same architecture recipe as plain seq2seq (embed/hidden 256,
+2 layers, dropout 0.2, Adam 0.005) — we just add attention.
+We train for 200 epochs, long enough for the additive
+attention to settle into a sharp source--target alignment:
 
 @bahdanau-attention-training-1
 :::
 
 ::: {.slide title="Translate four sentences"}
-Compare BLEU vs. plain seq2seq — attention typically helps
-more on longer/harder sentences:
+Decode each prediction to one French string and score it with
+chrF. A well-trained tab nails these short sentences; attention
+helps most on the longer, harder ones:
 
 @bahdanau-attention-training-2
 :::

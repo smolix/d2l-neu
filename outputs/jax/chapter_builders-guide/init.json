@@ -25,7 +25,7 @@
       ]
     },
     "init-applying-initializers-1": {
-      "code_fingerprint": "sha256:6356d8b0b415b2d90e928dcd2fa85e4575504f6ebabc97ef22962e0939951a17",
+      "code_fingerprint": "sha256:1f7314eda32da00eed66f16d9aeca0ba471ede9541fcf9f36f316476ac1138ee",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +35,7 @@
       ]
     },
     "init-applying-initializers-2": {
-      "code_fingerprint": "sha256:655cc37a7c0f6c81ad4ff6aa608fd9522dc19c15e4649fdbd7156a198143cb6f",
+      "code_fingerprint": "sha256:bd3b20f865ffb92d83957ebe1fd53f5d60f8be5fa313468d8ef9c8548192d54e",
       "kind": "text",
       "outputs": [
         {
@@ -45,7 +45,7 @@
       ]
     },
     "init-applying-initializers-3": {
-      "code_fingerprint": "sha256:ba378ed969f8438080660ed0c9fe9fe7aa82d84a2e98e28ea0c975697551ef4d",
+      "code_fingerprint": "sha256:a92f5332b4690ca26038f88d7e771599f39685ef9a90cb3187830ec65433086b",
       "kind": "text",
       "outputs": [
         {
@@ -55,7 +55,7 @@
       ]
     },
     "init-truncated-normals": {
-      "code_fingerprint": "sha256:86ef87f5ed9f7384144f3042f40fcdb122ae444b254c43f6fa0bb39c84602e96",
+      "code_fingerprint": "sha256:41bb07cfb6b57d440253b46f44dcac319897528bc94d247cd5cd632e68a113d5",
       "kind": "text",
       "outputs": [
         {
@@ -71,17 +71,17 @@
       ]
     },
     "init-watching-the-variance-compound-1": {
-      "code_fingerprint": "sha256:ac9065c716de83f99bc7d19a17566ffcfc6a7c39895a4188c543d7450fdfd59d",
+      "code_fingerprint": "sha256:44e9de23ff80e5aacb2de4b0857563d2495a84af0decb108a34046738e45ba0b",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-2": {
-      "code_fingerprint": "sha256:555bb993cdbe0fbd5b1529508df0ed554ba739e02195e70d4813f3587b6b4440",
+      "code_fingerprint": "sha256:a213f3ddf4de201adf2a709a963bdc9d4b656f2dc95fbdf045c12dd0b23384d4",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-3": {
-      "code_fingerprint": "sha256:930fef99f66a06ea905e2dffa6827f3c3946480ae1c9bc640d20864380870772",
+      "code_fingerprint": "sha256:f60388a7330752ad937bcc43ddbfaf29fbb975be9c1b4383575ee20b8c30a00f",
       "kind": "text",
       "outputs": [
         {
@@ -102,7 +102,7 @@
       ]
     },
     "init-custom-initializers-1": {
-      "code_fingerprint": "sha256:ea3a47d089aa695444629229fc5991767f5e63a346a2b5b4ec89c5b5f49c01aa",
+      "code_fingerprint": "sha256:459077482e4c8e0b0dabb621cd65fc12bba7fa2415bfc5955f8d050f421578ea",
       "kind": "text",
       "outputs": [
         {
@@ -112,7 +112,7 @@
       ]
     },
     "init-custom-initializers-2": {
-      "code_fingerprint": "sha256:f4927273fbd0ceaa96d24545445400d92d42060b36e533af606b2d84058246ea",
+      "code_fingerprint": "sha256:6c2a812a2e29277385fb87f2403a887f4d834b5037df20c9ead8dc9e9fec1d07",
       "kind": "text",
       "outputs": [
         {

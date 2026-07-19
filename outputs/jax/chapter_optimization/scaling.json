@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/scaling.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:63042cbdde4ab2bee4d0584c8ae1f69820d8ccdbca9be3a51a71c22c2fb72672",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "scaling-scaling-up": {
+      "code_fingerprint": "sha256:b92137072a7445913521a60c0804e46f52f537bf0769b1f13e20631590acabed",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-a-family-of-widths-1": {
+      "code_fingerprint": "sha256:53567be73d8221923219226f0e15d1b45af6f1b330159d9ee949c946d4a856bc",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-a-family-of-widths-2": {
+      "code_fingerprint": "sha256:56fb8c5991d6724860c9e8e1d74c87c3099ca9e77206143f2380c2264b91995f",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-a-family-of-widths-3": {
+      "code_fingerprint": "sha256:71f6a5dab7546dcf4a2d15da619459984b82ee21db7fa29d1d1e0f8979dd13a0",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-the-sweep": {
+      "code_fingerprint": "sha256:193e40359cbfbbaccad68e9b784d8b3ae46a3dd0c926ca27610839bb53b05a22",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "width  128: best lr 3.9e-03\nwidth  256: best lr 2.0e-03\nwidth  512: best lr 2.0e-03\nwidth 1024: best lr 9.8e-04\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "scaling/scaling-the-sweep-1.svg",
+          "bytes": 30845,
+          "sha256": "sha256:e68dabec2f39f7f6fd1c046fbb9d17b7d9206c2083bee07b06566c458a7a5c21"
+        }
+      ]
+    },
+    "scaling-the-rules": {
+      "code_fingerprint": "sha256:4dbb4029f16d6a48caf05a191080b629982c59a0b735ea36e29ba20ee699c378",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-the-coordinate-check-1": {
+      "code_fingerprint": "sha256:1686b7a0a8cdc0d53f56a9a2aa2a833c161773bfd3baa6d6a7c98d2197adad5d",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-the-coordinate-check-2": {
+      "code_fingerprint": "sha256:1dfddcfbebebee5843900debcfc2e6098c2facd0ce9903b0477e0013e4a03580",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "scaling/scaling-the-coordinate-check-2-1.svg",
+          "bytes": 26754,
+          "sha256": "sha256:d529aa49f8e07066ef64d684a982c95b51a848571d99144b83ccdb15661a25f1"
+        }
+      ]
+    },
+    "scaling-the-coordinate-check-3": {
+      "code_fingerprint": "sha256:fb4cc1fd0ca5d2002e03d62bf414a9c52eb345aa2ec572a473789747201fe27c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "scaling/scaling-the-coordinate-check-3-1.svg",
+          "bytes": 26624,
+          "sha256": "sha256:23b12943dc0045639657d76d449a5a6fefddfa484610acf7efbd3c80a154542e"
+        }
+      ]
+    },
+    "scaling-learning-rate-transfer": {
+      "code_fingerprint": "sha256:a1ba0ee892efa99fb346dea575138da6ad038042d095daf11167f73638e97ff9",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "width  128: best lr 3.9e-03\nwidth  256: best lr 7.8e-03\nwidth  512: best lr 1.6e-02\nwidth 1024: best lr 7.8e-03\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "scaling/scaling-learning-rate-transfer-1.svg",
+          "bytes": 30892,
+          "sha256": "sha256:27858b20e8853c81caf6d965862840ae37d0cae9bbfb50423d269ae732a5b8ed"
+        }
+      ]
+    }
+  }
+}

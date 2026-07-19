@@ -39,6 +39,7 @@ the slope of the *secant* line through $(x, f(x))$ and $(x+\epsilon, f(x+\epsilo
 #@tab mxnet
 %matplotlib inline
 import math
+import numpy as onp
 from d2l import mxnet as d2l
 from mxnet import autograd, np, npx
 npx.set_np()
@@ -48,6 +49,7 @@ npx.set_np()
 #@tab pytorch
 %matplotlib inline
 import math
+import numpy as onp
 from d2l import torch as d2l
 import torch
 ```
@@ -56,15 +58,16 @@ import torch
 #@tab tensorflow
 %matplotlib inline
 import math
+import numpy as onp
 from d2l import tensorflow as d2l
 import tensorflow as tf
-tf.pi = tf.acos(tf.zeros(1)).numpy() * 2  # Define pi in TensorFlow
 ```
 
 ```{.python .input #single-variable-calculus-imports}
 #@tab jax
 %matplotlib inline
 import math
+import numpy as onp
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
@@ -255,55 +258,14 @@ $$
 passes through $(x, f(x))$ with slope $\frac{df}{dx}(x)$: it is the *tangent* at $x$, the best straight-line model of $f$ nearby and the limit of the rotating secants of :numref:`fig_mdl-secant-to-tangent`. Drawing the tangent at several points of $\sin$, using $\frac{d}{dx}\sin(x) = \cos(x)$, shows each line hugging the curve in a neighborhood and peeling away as we move off.
 
 ```{.python .input #single-variable-calculus-linear-approximation}
-#@tab mxnet
+import numpy as onp
 # Compute sin
-xs = np.arange(-np.pi, np.pi, 0.01)
-plots = [np.sin(xs)]
+xs = onp.arange(-onp.pi, onp.pi, 0.01)
+plots = [onp.sin(xs)]
 
 # Compute some linear approximations. Use d(sin(x)) / dx = cos(x)
 for x0 in [-1.5, 0, 2]:
-    plots.append(np.sin(x0) + (xs - x0) * np.cos(x0))
-
-d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
-```
-
-```{.python .input #single-variable-calculus-linear-approximation}
-#@tab pytorch
-# Compute sin
-xs = torch.arange(-torch.pi, torch.pi, 0.01)
-plots = [torch.sin(xs)]
-
-# Compute some linear approximations. Use d(sin(x))/dx = cos(x)
-for x0 in [-1.5, 0.0, 2.0]:
-    plots.append(torch.sin(torch.tensor(x0)) + (xs - x0) *
-                 torch.cos(torch.tensor(x0)))
-
-d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
-```
-
-```{.python .input #single-variable-calculus-linear-approximation}
-#@tab tensorflow
-# Compute sin
-xs = tf.range(-tf.pi, tf.pi, 0.01)
-plots = [tf.sin(xs)]
-
-# Compute some linear approximations. Use d(sin(x))/dx = cos(x)
-for x0 in [-1.5, 0.0, 2.0]:
-    plots.append(tf.sin(tf.constant(x0)) + (xs - x0) *
-                 tf.cos(tf.constant(x0)))
-
-d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
-```
-
-```{.python .input #single-variable-calculus-linear-approximation}
-#@tab jax
-# Compute sin
-xs = jnp.arange(-jnp.pi, jnp.pi, 0.01)
-plots = [jnp.sin(xs)]
-
-# Compute some linear approximations. Use d(sin(x))/dx = cos(x)
-for x0 in [-1.5, 0.0, 2.0]:
-    plots.append(jnp.sin(x0) + (xs - x0) * jnp.cos(x0))
+    plots.append(onp.sin(x0) + (xs - x0) * onp.cos(x0))
 
 d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
 ```
@@ -576,12 +538,9 @@ $$
 Plotting $P_1$, $P_2$, and $P_5$ against $e^x$ shows each higher degree tracking the curve farther from the base point.
 
 ```{.python .input #single-variable-calculus-taylor-series}
-#@tab mxnet
-# Compute the exponential function
-xs = np.arange(0, 3, 0.01)
-ys = np.exp(xs)
-
-# Compute a few Taylor series approximations
+# This calculation is backend-neutral, so one NumPy cell serves every tab.
+xs = onp.arange(0, 3, 0.01)
+ys = onp.exp(xs)
 P1 = 1 + xs
 P2 = 1 + xs + xs**2 / 2
 P5 = 1 + xs + xs**2 / 2 + xs**3 / 6 + xs**4 / 24 + xs**5 / 120
@@ -591,55 +550,7 @@ d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
     "Degree 5 Taylor Series"])
 ```
 
-```{.python .input #single-variable-calculus-taylor-series}
-#@tab pytorch
-# Compute the exponential function
-xs = torch.arange(0, 3, 0.01)
-ys = torch.exp(xs)
-
-# Compute a few Taylor series approximations
-P1 = 1 + xs
-P2 = 1 + xs + xs**2 / 2
-P5 = 1 + xs + xs**2 / 2 + xs**3 / 6 + xs**4 / 24 + xs**5 / 120
-
-d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
-    "Exponential", "Degree 1 Taylor Series", "Degree 2 Taylor Series",
-    "Degree 5 Taylor Series"])
-```
-
-```{.python .input #single-variable-calculus-taylor-series}
-#@tab tensorflow
-# Compute the exponential function
-xs = tf.range(0, 3, 0.01)
-ys = tf.exp(xs)
-
-# Compute a few Taylor series approximations
-P1 = 1 + xs
-P2 = 1 + xs + xs**2 / 2
-P5 = 1 + xs + xs**2 / 2 + xs**3 / 6 + xs**4 / 24 + xs**5 / 120
-
-d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
-    "Exponential", "Degree 1 Taylor Series", "Degree 2 Taylor Series",
-    "Degree 5 Taylor Series"])
-```
-
-```{.python .input #single-variable-calculus-taylor-series}
-#@tab jax
-# Compute the exponential function
-xs = jnp.arange(0, 3, 0.01)
-ys = jnp.exp(xs)
-
-# Compute a few Taylor series approximations
-P1 = 1 + xs
-P2 = 1 + xs + xs**2 / 2
-P5 = 1 + xs + xs**2 / 2 + xs**3 / 6 + xs**4 / 24 + xs**5 / 120
-
-d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
-    "Exponential", "Degree 1 Taylor Series", "Degree 2 Taylor Series",
-    "Degree 5 Taylor Series"])
-```
-
-Taylor series matter here in two ways. *Theoretically*, replacing an unwieldy function by its low-degree polynomial makes it tractable: the first-order term is what gave us gradient descent, the second-order term is the curvature behind Newton's method and step-size limits. *Numerically*, functions like $e^x$ and $\cos(x)$ are computed in practice by evaluating a truncated series (with a remainder bound to control the error), the basic trick behind standard math libraries.
+Taylor series matter here in two ways. *Theoretically*, replacing an unwieldy function by its low-degree polynomial makes it tractable: the first-order term is what gave us gradient descent, the second-order term is the curvature behind Newton's method and step-size limits. *Numerically*, the same local-polynomial idea underlies elementary-function libraries, but production implementations do more than truncate the Taylor series at the input: they first reduce the argument to a small interval and then evaluate a carefully chosen polynomial or rational approximation with controlled error.
 
 ## When the Tangent Fails
 :label:`sec_mdl-tangent-fails`
@@ -794,7 +705,12 @@ g = lambda x: jax.nn.relu(x) - jax.nn.relu(-x)
 print(f"autograd: g'(0) = {jax.grad(g)(0.0):.1f}  (true slope: 1.0)")
 ```
 
-Autograd reports slope $0$ for a function that *is* the identity: the per-kink convention $\mathrm{ReLU}'(0) = 0$, chained, produces a number that is not a subgradient of $g$ at $0$ at all. What automatic differentiation computes at nonsmooth points is, in general, an element of a *conservative field* :cite:`Bolte.Pauwels.2021`, a relaxed gradient notion that agrees with the true derivative everywhere outside a *measure-zero* set, one so small it can be covered by intervals of arbitrarily small total length (:numref:`sec_mdl-random_variables` makes such size-zero statements precise). That a Lipschitz function even *has* a derivative outside a measure-zero set is **Rademacher's theorem** :cite:`Rademacher.1919`. The payoff, which we quote on faith from :citet:`Bolte.Pauwels.2021`, is that SGD driven by a conservative field still converges to stationary points almost surely under the usual step-size conditions.
+Autograd reports slope $0$ for a function that *is* the identity: the per-kink convention $\mathrm{ReLU}'(0) = 0$, chained, produces a number that is not a subgradient of $g$ at $0$ at all. What automatic differentiation computes at nonsmooth points is, in general, an element of a *conservative field* :cite:`Bolte.Pauwels.2021`, a relaxed gradient notion that agrees with the true derivative everywhere outside a *measure-zero* set, one so small it can be covered by intervals of arbitrarily small total length (:numref:`sec_mdl-random_variables` makes such size-zero statements precise). That a Lipschitz function even *has* a derivative outside a measure-zero set is **Rademacher's theorem** :cite:`Rademacher.1919`. Under the definability/path-differentiability assumptions studied by
+:citet:`Bolte.Pauwels.2021`, together with bounded iterates and the usual
+stochastic-approximation conditions on steps and gradient noise, SGD driven by
+such a conservative field converges to an appropriate stationary set almost
+surely. This is a conditional theorem, not a guarantee for every nonsmooth
+program.
 
 Why does training tolerate the occasional bad chained value? The usual picture is that a network's kinks (the points where some $\mathrm{ReLU}$ input is exactly zero) form a measure-zero set, and a randomly drawn point lands in a measure-zero set with probability zero, provided the draw comes from a distribution with a density (an *absolutely continuous* one). Take this as a heuristic picture rather than a theorem: we have not proved that the kink set of a whole network is measure zero, and in floating-point arithmetic the argument fails outright, since the floats are a countable set on which every representable value, exact zeros included, carries positive probability. The rigorous backstop is the conservative-field convergence result quoted above. The convex-analysis machinery is developed further in :numref:`sec_gd`; the lesson here is that the local-linear program survives at corners because almost every step of stochastic training differentiates a locally smooth function, and the conservative-field theory covers the steps that do land on a kink.
 
@@ -804,7 +720,7 @@ Why does training tolerate the occasional bad chained value? The usual picture i
 * The derivatives of elementary functions, combined with the sum, product, and chain rules, differentiate any expression mechanically. Each rule is the small-change identity expanded to first order; the chain rule run in reverse over a network is backpropagation.
 * Choosing the step $\epsilon = -\eta f'(x)$ in the local model predicts a decrease of $\eta[f'(x)]^2$. When the slope is $L$-Lipschitz the *descent lemma* turns this into a genuine guarantee $f(x - \eta f'(x)) \le f(x) - \eta(1 - L\eta/2)[f'(x)]^2$, a strict drop for $0 < \eta < 2/L$ (best at $\eta = 1/L$). Descent stalls at the stationary points $f'(x) = 0$, and a step past $2/L$ can *increase* $f$ when curvature overwhelms the first-order gain.
 * The second derivative is curvature: its sign decides minimum vs. maximum, and Taylor series extend the line and parabola to the best polynomial model of any order.
-* At corners like $\mathrm{ReLU}(0)$ the derivative is undefined, but the *subdifferential* supplies a set of valid slopes ($\partial|x|(0) = [-1,1]$) and optimality becomes $0 \in \partial f(x)$. Autograd returns one fixed element per kink ($\mathrm{ReLU}'(0) = 0$); chained through a composition that value can fail to be a subgradient at the kinks themselves, but what autograd computes is an element of a conservative field, for which SGD convergence guarantees survive.
+* At corners like $\mathrm{ReLU}(0)$ the derivative is undefined, but the *subdifferential* supplies a set of valid slopes ($\partial|x|(0) = [-1,1]$) and optimality becomes $0 \in \partial f(x)$. Autograd returns one fixed element per kink ($\mathrm{ReLU}'(0) = 0$); chained through a composition that value can fail to be a subgradient at the kinks themselves. Conservative-field theory supplies convergence results under additional structural, boundedness, step-size, and noise assumptions.
 
 ## Exercises
 
@@ -1189,7 +1105,7 @@ Autograd reports slope $0$ for the identity function: the chained convention $0 
 The failure we just watched lives only **at** the kink, and the kinks form (heuristically) a **measure-zero set**.
 
 ::: {.d2l-note}
-A randomly drawn point lands in a measure-zero set with probability zero, so stochastic training almost never evaluates a derivative exactly at a corner; the rigorous guarantee is the conservative-field theory, under which SGD still converges to stationary points.
+Under a continuous sampling distribution, a fixed measure-zero set is hit with probability zero. Training iterates are data-dependent, however, and can land on kinks. Conservative-field convergence results cover many definable networks under their stated boundedness, step-size, and noise assumptions; they are not an unconditional guarantee for arbitrary nonsmooth training.
 :::
 :::
 

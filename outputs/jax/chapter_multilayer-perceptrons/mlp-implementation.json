@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d3aefb1468e5838ae451af6a0d6ff7ebe646c311b7c670f3797638098703cb14",
+    "d2l_lib_fingerprint": "sha256:4684cdafaf90cf6b01806a4001b6a279b3bbbb1a6b3f6a2cabdc335cb33f12e3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-1.svg",
-          "bytes": 24819,
-          "sha256": "sha256:1a6f75b52c21e0c044d72cfc47d049fbc45e0f98c03aa16914012e9fdb24cb8f"
+          "bytes": 24820,
+          "sha256": "sha256:29a22681cc7c898f9b990a14dd320d603dd0c8b2ce8a1a5a455a6dcb829e804d"
         }
       ]
     },
@@ -54,8 +54,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp-implementation/mlp-implementation-training-2-1.svg",
-          "bytes": 23822,
-          "sha256": "sha256:5d7399386166cbaddac7f793a30479c3d91126fc828ebb0c48a1412448b0952c"
+          "bytes": 23817,
+          "sha256": "sha256:0e43aaf4d94fb02ab0dd1e6b3a6da2fc3de5617abea6ec9c75356c7a4782fc66"
         }
       ]
     }

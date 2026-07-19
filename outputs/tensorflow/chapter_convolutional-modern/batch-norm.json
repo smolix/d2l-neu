@@ -36,8 +36,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-lenet-with-batch-normalization-3-1.svg",
-          "bytes": 19976,
-          "sha256": "sha256:897348f13eed494b5e5e8c7fa6c38a1f545d2a10584f7625ff74276b251bcece"
+          "bytes": 19978,
+          "sha256": "sha256:6ac36f712627c911b7ef115fa3da1d52946858fcc9cf2fcee9adba9da4f64b8f"
         }
       ]
     },
@@ -47,7 +47,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([2.50478  , 2.132476 , 3.31272  , 3.6142602, 3.2083244, 3.4327197],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([ 0.12195671,  1.8091393 , -3.4991102 , -2.118213  , -1.997389  ,\n         1.8012662 ], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([2.5606916, 2.7510953, 1.2381386, 4.1118836, 3.2458546, 2.7814143],\n       dtype=float32)>,\n <tf.Tensor: shape=(6,), dtype=float32, numpy=\n array([-2.4185839,  1.5941043,  0.8766667,  2.1913376,  3.395065 ,\n         1.3416406], dtype=float32)>)"
         }
       ]
     },
@@ -64,8 +64,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-norm/batch-norm-concise-implementation-2-1.svg",
-          "bytes": 19978,
-          "sha256": "sha256:94257d591578dcd5d6c9986fdaf1399c406442910577b190f8b21d89b1a4b024"
+          "bytes": 19972,
+          "sha256": "sha256:5e095a12cb97f388f21db7d2469d1eb2f3fe5cb9d92959f17842ff6875a712f2"
         }
       ]
     },
@@ -75,7 +75,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=2.9802322387695312e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.998993992805481>,\n True)"
+          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=3.3527612686157227e-08>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.9989861249923706>,\n True)"
         }
       ]
     }

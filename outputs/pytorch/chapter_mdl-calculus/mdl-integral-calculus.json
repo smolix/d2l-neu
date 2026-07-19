@@ -14,7 +14,7 @@
       "outputs": []
     },
     "integral-riemann-converge": {
-      "code_fingerprint": "sha256:e580fd88b8f4125a1574cd4d14aacf2d719074185cd5969c67bf7f351c91a669",
+      "code_fingerprint": "sha256:790d02d4aa3077ce890b862c5a01d74baa6f6c0d654eaae1b72a3cf3d0b7ea6d",
       "kind": "text",
       "outputs": [
         {
@@ -25,18 +25,18 @@
       ]
     },
     "integral-ftc-check": {
-      "code_fingerprint": "sha256:88f79660b5ee2f9724b80154b1f2b3a99fb3372a4ff832ee8f6ad9f4e946088b",
+      "code_fingerprint": "sha256:672d028d8eefbd4ca0e90b4b996e4d114a6fd16396a62dd62944cbb6d582049e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max |dF/dx - f|      : 5.739927291870117e-05\nRiemann F(2) vs G(2)-G(0): 0.8045188784599304 0.8047189712524414\n"
+          "text": "max |dF/dx - f|      : 5.551115123125783e-14\nRiemann F(2) vs G(2)-G(0): 0.8045188628837103 0.8047189562170501\n"
         }
       ]
     },
     "integral-improper": {
-      "code_fingerprint": "sha256:cc8e32059449765ac4688fbe6a433630c6749aab9f09068bb5f1fee466a68443",
+      "code_fingerprint": "sha256:285a5e5730a38681a4f8bc697b1a70f4e5b0f71bf422d2488608779f468a356c",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +47,7 @@
       ]
     },
     "integral-box-volume": {
-      "code_fingerprint": "sha256:a7645e1a7c39d105daef4388d157ad8a129c42544ecd08e8b4625dc24764817e",
+      "code_fingerprint": "sha256:e3f92532b4405ef62f841e199ff17878ab8f029c033ea860118cfd25097074d4",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +58,7 @@
       ]
     },
     "integral-gaussian": {
-      "code_fingerprint": "sha256:932bc183751d8aadd7a0e15cb5d0b1a08d74b8d0471ea3d05f0e222e14ef2038",
+      "code_fingerprint": "sha256:28c797aa5502303d1bd03a022d96a4ff2711254f6dc855878e2da306e06cbe93",
       "kind": "text",
       "outputs": [
         {
@@ -69,7 +69,7 @@
       ]
     },
     "integral-density": {
-      "code_fingerprint": "sha256:ef2314d4b16a68d91f7645f4f82fb5b3052eafc8b9bc77f99622b089dcc7fb81",
+      "code_fingerprint": "sha256:7138dab0967757ab4354b2f80f20ac95e4f83cd245da3ad87cc29cc0f1ca18cb",
       "kind": "text",
       "outputs": [
         {
@@ -80,7 +80,7 @@
       ]
     },
     "integral-monte-carlo": {
-      "code_fingerprint": "sha256:cec7d75f321d198d7751f1cfac33cc0ea62719344d193cfd5d3d785e186ce0d9",
+      "code_fingerprint": "sha256:b9da1e64aad791721a0c0041825a1953bbf39b9476017a860fb1bf1140ee6ed3",
       "kind": "mixed",
       "outputs": [
         {
@@ -93,7 +93,18 @@
           "mime": "image/svg+xml",
           "asset": "mdl-integral-calculus/integral-monte-carlo-1.svg",
           "bytes": 44497,
-          "sha256": "sha256:6872749655e9884a33267b74eaea0c7a8d0ac86eb0dcc81def58e0f0e32d6ef8"
+          "sha256": "sha256:3a46855d39e635d50e57c4a9be75eb5bc64d40ddf950ae324d656bf5f8bb98c8"
+        }
+      ]
+    },
+    "mdl-integral-stochastic-gradient-estimators": {
+      "code_fingerprint": "sha256:5181b0b97c378cc456127c381452328d58c5bbd74269ec0ec71880ecbc0b1be8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true derivative = 3.0000\npathwise               mean=3.0019  sample sd=1.998  MC se=0.0045\nscore function         mean=2.9974  sample sd=7.162  MC se=0.0160\nscore + baseline       mean=2.9924  sample sd=4.878  MC se=0.0109\n"
         }
       ]
     }

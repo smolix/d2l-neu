@@ -4,76 +4,89 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:691fcf67ffe3b171688d3e07c546251bb9084a8f7a67a852af0e2439c9faa550",
+    "d2l_lib_fingerprint": "sha256:8ed25d8a7ed68fb06ad7e5e12456d3265d6441faf046340dbcb6b3ab8bf728f4",
     "max_inline_bytes": 0
   },
   "cells": {
     "sgd-stochastic-gradient-descent": {
-      "code_fingerprint": "sha256:97066eb7b6956426aab52ed16977a979b5f9b7d98042202710d9f1d26f73e08c",
+      "code_fingerprint": "sha256:b004c6bb26c984c3fbb878b809cb91b87f2f712275b5530c6543f2ff6cc30bd6",
       "kind": "text",
       "outputs": []
     },
     "sgd-stochastic-gradient-updates-1": {
-      "code_fingerprint": "sha256:49e02a6eeb6d593f5930468fbb1e01ba7cf9e72894def8c4d52c47680efb5c71",
+      "code_fingerprint": "sha256:55e66a22340682efe0f77cd8476fc76152c813e170c3ae9982ae7650d0cb678c",
       "kind": "text",
       "outputs": []
     },
     "sgd-stochastic-gradient-updates-2": {
-      "code_fingerprint": "sha256:abaf97881c0b4ea24f4a5c47b47ef7473cc59e9e5b8b613cba964c8650acd032",
+      "code_fingerprint": "sha256:60199a52488f88292ff12c3f34376d5e052644d9065bbf4b9014708e89f74da7",
       "kind": "text",
       "outputs": []
     },
     "sgd-stochastic-gradient-updates-3": {
-      "code_fingerprint": "sha256:7abb3854c6f119b7289f57fe76a129ba58e2f8ba603447a103c01f16d5e81a21",
+      "code_fingerprint": "sha256:eef4beb77068e79c7e737d4842b2dfe096b001f3510d566ddf3383252ee5d416",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: -0.073898, x2: 0.044372\n"
+          "text": "epoch 50, x1: -0.141533, x2: -0.069805\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
-          "bytes": 23599,
-          "sha256": "sha256:15883fca1df5b3bba34995cad3cdec70b94b5e2891b8922252fb4ffdd834982b"
+          "bytes": 23593,
+          "sha256": "sha256:b66643d935e42b5ab273ecaf0d5ace79937d66737e313c17ac5deb1b4982312a"
         }
       ]
     },
     "sgd-dynamic-learning-rate-1": {
-      "code_fingerprint": "sha256:baa73059aa79a7aac2df262eb479ce41c567cb31f24ed5e68f9d82a79c496916",
+      "code_fingerprint": "sha256:8de4b16dd7447fc56772142fe26f1ba9b44e91f9e56af23a564d1ed061208e87",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1000, x1: -0.931585, x2: -0.053880\n"
+          "text": "epoch 1000, x1: -0.810909, x2: -0.028332\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-1-1.svg",
-          "bytes": 123035,
-          "sha256": "sha256:0be20c6f3ed50054f608544478fb1a07cf711f753a3d072655140a65286cde66"
+          "bytes": 123943,
+          "sha256": "sha256:d0fdea006b7cb8cc39a4039bfefabf34ae48c4065c7b6abac7cf4f50c005d068"
         }
       ]
     },
     "sgd-dynamic-learning-rate-2": {
-      "code_fingerprint": "sha256:ef00909269dc293034fca0e6113cdf264577e2894e3c6cb7d38fa25651ffd745",
+      "code_fingerprint": "sha256:6c6d9be0989e29cc0e9e7b603d1b49d8fadc3d0064eca3e342064b26dab27a23",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 50, x1: -0.077700, x2: 0.192614\n"
+          "text": "epoch 50, x1: 0.037837, x2: 0.002780\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-2-1.svg",
-          "bytes": 23587,
-          "sha256": "sha256:b89ae53d178e6966a4db38e479141f1176081729fc19216d6a4c5cf10c5e108c"
+          "bytes": 23597,
+          "sha256": "sha256:c2b9a45c9eb6e8a8ed040e984426ebea6c572bda158d4b46f873a4a5331e4123"
+        }
+      ]
+    },
+    "sgd-gradient-variance-and-batch-size": {
+      "code_fingerprint": "sha256:cfb4d6e05dfabaa871851d3de1aa712c4a955b5b735f2e98002eeffa32ca24b8",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "sgd/sgd-gradient-variance-and-batch-size-1.svg",
+          "bytes": 30067,
+          "sha256": "sha256:285a04224b69c7f9bea0deba7524e1cac3b748bcd36471752c696ef03071153c"
         }
       ]
     }

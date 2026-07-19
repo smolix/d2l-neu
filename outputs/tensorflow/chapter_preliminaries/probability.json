@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "heads, tails:  [42, 58]\n"
+          "text": "heads, tails:  [41, 59]\n"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([51., 49.], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([53., 47.], dtype=float32)>"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.46, 0.54], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.49, 0.51], dtype=float32)>"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.4934, 0.5066], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.5067, 0.4933], dtype=float32)>"
         }
       ]
     },
@@ -62,8 +62,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-6-1.svg",
-          "bytes": 30166,
-          "sha256": "sha256:15beb68499425ff0f4c708cfc8a040a63cb03d9dded0f66499fb85b186e2d257"
+          "bytes": 30167,
+          "sha256": "sha256:470ec73f0f056d9272bb61de9e84522819f31488b4be5ca96a4133c03813dc1d"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "probability/probability-a-simple-example-tossing-coins-5-1.svg",
-          "bytes": 105466,
-          "sha256": "sha256:d8c71bccb1e575f45e11eeb5c9124f6b6f1724508ca7a780e571d826409dfc0e"
+          "bytes": 105576,
+          "sha256": "sha256:9a8ed4d361309143bb7377e24db2ac05319852390dc46bcdbb5794058a7cd229"
         }
       ]
     },
@@ -86,7 +86,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.8401350975036621>"
+          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.8270394802093506>"
         }
       ]
     }

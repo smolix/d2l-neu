@@ -1,0 +1,7 @@
+-e .
+jupyterlab
+ipykernel
+safetensors
+tensorflow
+tensorflow-datasets
+tensorflow-probability[tf]

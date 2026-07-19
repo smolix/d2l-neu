@@ -747,7 +747,7 @@ The predicted class is $\operatorname{argmax}_j o_j$ with each $o_j$ affine, so 
 ::: {.d2l-note .warn}
 The softmax's nonlinearity lives in the **probabilities**, never in the
 **boundaries**. Those stay linear, a ceiling we will hit, measurably, when
-we train this model on images (§4.4).
+we train this model on images (the softmax-from-scratch section).
 :::
 :::
 

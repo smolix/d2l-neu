@@ -187,7 +187,7 @@ in :numref:`fig_mdl-f-div-generators`.
 | squared Hellinger $H^2$ | $(\sqrt{u} - 1)^2$ | yes | $H$ is a metric |
 | total variation | $\tfrac{1}{2}\lvert u - 1 \rvert$ | yes | yes |
 | Jensen--Shannon | $\tfrac{u}{2} \log u - \tfrac{u+1}{2} \log \tfrac{u+1}{2}$ | yes | $\sqrt{\textrm{JS}}$ is a metric |
-| $\alpha$-divergence ($\alpha \neq 0, 1$) | $\dfrac{u^\alpha - 1}{\alpha(\alpha - 1)}$ | no | no |
+| $\alpha$-divergence ($\alpha \neq 0, 1$) | $\dfrac{u^\alpha-\alpha u+\alpha-1}{\alpha(\alpha-1)}$ | no | no |
 
 ![Six generators on the same axes. Every curve is convex and touches zero at the no-discrepancy point of the density ratio, but they penalize over- and under-representation very differently: the KL generator grows slowly for small ratios and superlinearly for large ones, the reverse-KL generator diverges as the ratio approaches zero, the chi-squared generator is the symmetric parabola, and the total-variation generator grows only linearly.](../img/mdl-it-f-div-generators.svg)
 :label:`fig_mdl-f-div-generators`
@@ -224,12 +224,21 @@ terms of the ratio $u = p/q$ produces the generator in the table (Exercise 1
 checks a similar unwinding).
 
 The table's last row is a *family within the family*
-:cite:`Amari.2016`. For each $\alpha \neq 0, 1$ the generator
-$f_\alpha(u) = (u^\alpha - 1)/(\alpha(\alpha-1))$
-is convex with $f_\alpha(1) = 0$, and the two directions of KL are its limits:
-$f_\alpha \to u \log u$ (forward KL) as $\alpha \to 1$ and $f_\alpha \to -\log u$
-(reverse KL) as $\alpha \to 0$, while $\alpha = \tfrac{1}{2}$ gives twice the
-squared Hellinger. Closely related, and the form that appears in
+:cite:`Amari.2016`. For each $\alpha \neq 0, 1$ use the normalized generator
+
+$$
+f_\alpha(u)=\frac{u^\alpha-\alpha u+\alpha-1}{\alpha(\alpha-1)}.
+$$
+
+It is convex with $f_\alpha(1)=0$, and its pointwise limits are
+$u\log u-u+1$ as $\alpha\to1$ and $-\log u+u-1$ as
+$\alpha\to0$. The added linear terms integrate to zero because
+$E_Q[p/q-1]=0$, so the resulting divergences are forward and reverse KL.
+At $\alpha=\tfrac12$ it gives twice the squared Hellinger divergence under the
+table's convention. The shorter generator
+$(u^\alpha-1)/(\alpha(\alpha-1))$ defines the same divergence for fixed
+$\alpha$—the two differ only by a multiple of $u-1$—but it does **not** have
+the claimed pointwise limits. Closely related, and the form that appears in
 applications, is the **Rényi divergence** :cite:`Renyi.1961`,
 
 $$
@@ -1071,9 +1080,11 @@ D_{\textrm{F}}(P\|Q) = \frac{1}{2}\, E_{\mathbf{x} \sim P}\!\left[
 $$
 :eqlabel:`eq_mdl-fisher-div-def`
 
-It is non-negative, and zero only when the scores agree everywhere on the
-support of $P$, which (for connected support) forces
-$\log p - \log q$ constant, hence $P = Q$ by normalization. For two
+It is non-negative. If $p$ and $q$ are positive on the same connected support,
+score equality $P$-almost everywhere forces $\log p-\log q$ to be constant
+there, and normalization then gives $P=Q$. Connected support of $P$ alone is
+not enough: $Q$ could agree with $P$ on that support while assigning additional
+mass elsewhere. For two
 equal-variance Gaussians the scores differ by the constant
 $(\mu_2 - \mu_1)/\sigma^2$, so
 $D_{\textrm{F}} = (\mu_1 - \mu_2)^2 / (2\sigma^4)$; compare KL's
@@ -1281,7 +1292,7 @@ makes inevitable.
 
 | Training objective | Divergence minimized | Treated in | Characteristic behavior |
 |:---|:---|:---|:---|
-| maximum likelihood: autoregressive models, normalizing flows | forward KL | :numref:`sec_mdl-fwd-vs-rev-kl` | mass-covering; never misses a mode, may over-spread |
+| maximum likelihood: autoregressive models, normalizing flows | forward KL | :numref:`sec_mdl-fwd-vs-rev-kl` | zero-avoiding and often mass-covering; may over-spread |
 | variational inference, VAE posterior (ELBO) | reverse KL | :numref:`sec_mdl-fwd-vs-rev-kl` | mode-seeking; sharp but can drop modes; local optima |
 | original GAN | Jensen--Shannon | :numref:`sec_mdl-f-gan-dual` | sharp samples; no gradient on disjoint supports |
 | f-GAN | any chosen f-divergence | :numref:`sec_mdl-f-gan-dual` | inherits the chosen generator's behavior; critic-limited |
@@ -1326,15 +1337,16 @@ function class of the IPM, before a single parameter is trained.
   biases the estimate low.
 * The direction of KL is a modeling decision: forward KL (maximum
   likelihood) is zero-avoiding and mass-covering; reverse KL (variational
-  inference) is zero-forcing and mode-seeking, with one local optimum per
-  mode.
+  inference) is zero-forcing and often mode-seeking on multimodal targets;
+  the number and location of local optima depend on the model family.
 * Total variation is the largest probability any event can disagree by, and
   Pinsker's inequality $\textrm{TV} \leq \sqrt{D_{\textrm{KL}}/2}$ means
   small KL certifies indistinguishability under every test.
 * IPMs replace events by a test-function class; the RKHS ball gives MMD,
   with a closed-form unbiased estimator from samples alone.
-* Wasserstein distances measure mass transport, stay smooth on disjoint
-  supports (hence WGAN), equal an integral of CDF differences in 1-D, and
+* Wasserstein distances measure mass transport and remain informative and
+  continuous when supports are disjoint (they need not be differentiable or
+  smooth there), equal an integral of CDF differences in 1-D, and
   are computed at scale by entropic regularization and Sinkhorn iterations.
 * The score $\nabla_{\mathbf{x}} \log p$ is blind to the normalizing
   constant; the Fisher divergence compares score fields and underlies score
@@ -1738,7 +1750,7 @@ failure modes.
 
 ::: {.col}
 - TV is the best single-sample advantage; Pinsker bounds it by $\sqrt{\mathrm{KL}/2}$.
-- $W_1$ stays smooth on disjoint supports (WGAN); Sinkhorn anneals onto the LP.
+- $W_1$ remains informative on disjoint supports (WGAN), though not necessarily smooth; Sinkhorn approaches the unregularized transport problem as regularization vanishes.
 - The score drops $Z$; the Fisher/Stein row powers diffusion and SVGD.
 :::
 :::

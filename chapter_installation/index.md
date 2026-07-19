@@ -1,275 +1,198 @@
 # Installation
 :label:`chap_installation`
 
-In order to get up and running,
-we will need an environment for running Python,
-the Jupyter Notebook, the relevant libraries,
-and the code needed to run the book itself.
+The examples in this book are available as Jupyter notebooks for PyTorch, JAX,
+TensorFlow, and MXNet. Each framework download contains the notebooks, their
+saved outputs, the figures they reference, the matching `d2l` source code, and
+pinned CPU and GPU environments. This makes a notebook bundle the shortest path
+to running the book locally.
 
-## Installing Miniconda
+The downloads are ZIP archives rather than tar-gzipped files. Saved outputs can
+be read without installing a framework. Running the notebooks requires Python,
+Jupyter, and the selected framework; the included [uv](https://docs.astral.sh/uv/)
+lock files install these together.
 
-Your simplest option is to install
-[Miniconda](https://conda.io/en/latest/miniconda.html).
-Note that the Python 3.x version is required.
-You can skip the following steps
-if your machine already has conda installed.
+## Choose a Framework
 
-Visit the Miniconda website and determine
-the appropriate version for your system
-based on your Python 3.x version and machine architecture.
-Suppose that your Python version is 3.9
-(our tested version).
-If you are using macOS,
-you would download the bash script
-whose name contains the strings "MacOSX",
-navigate to the download location,
-and execute the installation as follows
-(taking Intel Macs as an example):
+We recommend PyTorch if you do not already have a framework preference. The
+first several chapters run comfortably on a CPU. A GPU becomes useful for larger
+convolutional networks, transformers, and the application chapters.
 
-```bash
-# The file name is subject to changes
-sh Miniconda3-py39_4.12.0-MacOSX-x86_64.sh -b
-```
+* [PyTorch notebooks](/notebooks/d2l-pytorch.zip)
+* [JAX notebooks](/notebooks/d2l-jax.zip)
+* [TensorFlow notebooks](/notebooks/d2l-tensorflow.zip)
+* [MXNet notebooks](/notebooks/d2l-mxnet.zip)
 
-
-A Linux user
-would download the file
-whose name contains the strings "Linux"
-and execute the following at the download location:
+The published bundles correspond to the version of the book on this website.
+The latest source and development version are available from
+[smolix/d2l-neu on GitHub](https://github.com/smolix/d2l-neu):
 
 ```bash
-# The file name is subject to changes
-sh Miniconda3-py39_4.12.0-Linux-x86_64.sh -b
+git clone https://github.com/smolix/d2l-neu.git
+cd d2l-neu
 ```
 
+The repository contains the book sources, build tools, framework environments,
+and the current `d2l` package. For reading and executing notebooks, the
+framework-specific ZIP above is smaller and requires fewer build tools.
 
-A Windows user would download and install Miniconda by following its [online instructions](https://conda.io/en/latest/miniconda.html).
-On Windows, you may search for `cmd` to open the Command Prompt (command-line interpreter) for running commands.
+## Install uv
 
-Next, initialize the shell so we can run `conda` directly.
+[uv](https://docs.astral.sh/uv/getting-started/installation/) manages both the
+Python interpreter and the packages used by the notebooks. Conda is not needed.
+On macOS or Linux, install uv with its standalone installer or a system package
+manager:
 
 ```bash
-~/miniconda3/bin/conda init
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+On Windows PowerShell, use:
 
-Then close and reopen your current shell.
-You should be able to create
-a new environment as follows:
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Open a new terminal if the installer updates your `PATH`, then check the
+installation:
 
 ```bash
-conda create --name d2l python=3.9 -y
+uv --version
 ```
 
+The notebook environments use Python 3.12. uv downloads a suitable interpreter
+when one is not already available.
 
-Now we can activate the `d2l` environment:
+## Download and Unpack the Notebooks
+
+Download one framework archive from the links above and unpack it. For example,
+for PyTorch on macOS or Linux:
 
 ```bash
-conda activate d2l
+curl -LO https://d2l.smola.org/notebooks/d2l-pytorch.zip
+unzip d2l-pytorch.zip
+cd d2l-pytorch
 ```
 
+Windows can extract the ZIP from File Explorer or PowerShell. Run the remaining
+commands from the extracted directory, which contains `pyproject.toml`, the
+`d2l/` package, and the uv lock files.
 
-## Installing the Deep Learning Framework and the `d2l` Package
+## CPU Environment
 
-Before installing any deep learning framework,
-please first check whether or not
-you have proper GPUs on your machine
-(the GPUs that power the display
-on a standard laptop are not relevant for our purposes).
-For example,
-if your computer has NVIDIA GPUs and has installed [CUDA](https://developer.nvidia.com/cuda-downloads),
-then you are all set.
-If your machine does not house any GPU,
-there is no need to worry just yet.
-Your CPU provides more than enough horsepower
-to get you through the first few chapters.
-Just remember that you will want to access GPUs
-before running larger models.
-
-
-:begin_tab:`mxnet`
-
-To install a GPU-enabled version of MXNet,
-we need to find out what version of CUDA you have installed.
-You can check this by running `nvcc --version`
-or `cat /usr/local/cuda/version.txt`.
-Assume that you have installed CUDA 11.2,
-then execute the following command:
+The CPU environment is the recommended starting point. Create an isolated
+Python 3.12 environment and synchronize it with the CPU lock:
 
 ```bash
-# For macOS and Linux users
-pip install mxnet-cu112==1.9.1
-
-# For Windows users
-pip install mxnet-cu112==1.9.1 -f https://dist.mxnet.io/python
+uv venv --python 3.12
+uv pip sync pylock.cpu.toml
 ```
 
-
-You may change the last digits according to your CUDA version, e.g., `cu101` for
-CUDA 10.1 and `cu90` for CUDA 9.0.
-
-
-If your machine has no NVIDIA GPUs
-or CUDA,
-you can install the CPU version
-as follows:
+For MXNet on Apple Silicon, use its separate macOS lock:
 
 ```bash
-pip install mxnet==1.9.1
+uv pip sync pylock.cpu-macos.toml
 ```
 
+The MXNet Linux CPU lock uses the Linux/x86-64 wheel distributed with the
+[smolix/mxnet release](https://github.com/smolix/mxnet/releases/tag/mxnet-2.0.0.zombie.1).
+The other CPU locks select platform-appropriate packages where their frameworks
+provide them.
 
-:end_tab:
-
-
-:begin_tab:`pytorch`
-
-You can install PyTorch (the specified versions are tested at the time of writing) with either CPU or GPU support as follows:
+Start JupyterLab in the environment selected by the lock file:
 
 ```bash
-pip install torch==2.0.0 torchvision==0.15.1
+uv run --no-sync jupyter lab
 ```
 
+JupyterLab normally opens a browser automatically. Otherwise, open the local URL
+printed in the terminal. The `--no-sync` option tells uv to preserve the exact
+CPU or GPU environment selected with `uv pip sync`.
 
-:end_tab:
+## GPU Environment
 
-:begin_tab:`tensorflow`
-You can install TensorFlow with either CPU or GPU support as follows:
+The included GPU locks reproduce the accelerator environments used for the
+book. They target Linux on x86-64 with an NVIDIA GPU. Before installing one,
+check that the NVIDIA driver is visible:
 
 ```bash
-pip install tensorflow==2.12.0 tensorflow-probability==0.20.0
+nvidia-smi
 ```
 
-
-:end_tab:
-
-:begin_tab:`jax`
-You can install JAX and Flax with either CPU or GPU support as follows:
+From the extracted notebook directory, create the environment if necessary and
+synchronize the GPU lock:
 
 ```bash
-# GPU
-pip install "jax[cuda11_pip]==0.4.13" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html flax==0.7.0
+uv venv --python 3.12
+uv pip sync pylock.gpu.toml
+uv run --no-sync jupyter lab
 ```
 
+Synchronizing a GPU lock after a CPU lock replaces packages as needed; a second
+virtual environment is optional. The locks currently select the following
+accelerator stacks:
 
-If your machine has no NVIDIA GPUs
-or CUDA,
-you can install the CPU version
-as follows:
+* PyTorch: CUDA 12.8 wheels.
+* JAX: the CUDA 12 pip distribution.
+* TensorFlow: the `and-cuda` distribution and its CUDA libraries.
+* MXNet: the CUDA 13.3 Blackwell build from `smolix/mxnet`.
 
-```bash
-# CPU
-pip install "jax[cpu]==0.4.13" flax==0.7.0
-```
+GPU software is sensitive to the operating system, driver, and device. If the
+provided lock does not match your machine, use the framework's current
+installation guide for [PyTorch](https://pytorch.org/get-started/locally/),
+[JAX](https://docs.jax.dev/en/latest/installation.html), or
+[TensorFlow](https://www.tensorflow.org/install/pip). The CPU lock remains useful
+for the early chapters. A hosted notebook or GPU server is often more convenient
+for later, compute-intensive chapters.
 
+## Verify the Installation
 
-:end_tab:
-
-
-Our next step is to install
-the `d2l` package that we developed
-in order to encapsulate
-frequently used functions and classes
-found throughout this book:
-
-```bash
-pip install d2l==1.0.3
-```
-
-
-## Downloading and Running the Code
-
-Next, you will want to download the notebooks
-so that you can run each of the book's code blocks.
-Simply click on the "Notebooks" tab at the top
-of any HTML page on [the D2L.ai website](https://d2l.ai/)
-to download the code and then unzip it.
-Alternatively, you can fetch the notebooks
-from the command line as follows:
-
-:begin_tab:`mxnet`
-
-```bash
-mkdir d2l-en && cd d2l-en
-curl https://d2l.ai/d2l-en-1.0.3.zip -o d2l-en.zip
-unzip d2l-en.zip && rm d2l-en.zip
-cd mxnet
-```
-
-
-:end_tab:
-
+The following commands report the installed framework version and whether it
+can see an accelerator.
 
 :begin_tab:`pytorch`
 
 ```bash
-mkdir d2l-en && cd d2l-en
-curl https://d2l.ai/d2l-en-1.0.3.zip -o d2l-en.zip
-unzip d2l-en.zip && rm d2l-en.zip
-cd pytorch
+uv run --no-sync python -c "import torch; print(torch.__version__); print(torch.cuda.is_available())"
 ```
-
-
-:end_tab:
-
-:begin_tab:`tensorflow`
-
-```bash
-mkdir d2l-en && cd d2l-en
-curl https://d2l.ai/d2l-en-1.0.3.zip -o d2l-en.zip
-unzip d2l-en.zip && rm d2l-en.zip
-cd tensorflow
-```
-
 
 :end_tab:
 
 :begin_tab:`jax`
 
 ```bash
-mkdir d2l-en && cd d2l-en
-curl https://d2l.ai/d2l-en-1.0.3.zip -o d2l-en.zip
-unzip d2l-en.zip && rm d2l-en.zip
-cd jax
+uv run --no-sync python -c "import jax; print(jax.__version__); print(jax.devices())"
 ```
 
-
-:end_tab:
-
-If you do not already have `unzip` installed, first run `sudo apt-get install unzip`.
-Now we can start the Jupyter Notebook server by running:
-
-```bash
-jupyter notebook
-```
-
-
-At this point, you can open http://localhost:8888
-(it may have already opened automatically) in your web browser.
-Then we can run the code for each section of the book.
-Whenever you open a new command line window,
-you will need to execute `conda activate d2l`
-to activate the runtime environment
-before running the D2L notebooks,
-or updating your packages
-(either the deep learning framework
-or the `d2l` package).
-To exit the environment,
-run `conda deactivate`.
-
-
-:begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/t/23)
-:end_tab:
-
-:begin_tab:`pytorch`
-[Discussions](https://d2l.discourse.group/t/24)
 :end_tab:
 
 :begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/t/436)
+
+```bash
+uv run --no-sync python -c "import tensorflow as tf; print(tf.__version__); print(tf.config.list_physical_devices('GPU'))"
+```
+
 :end_tab:
 
-:begin_tab:`jax`
-[Discussions](https://d2l.discourse.group/t/17964)
+:begin_tab:`mxnet`
+
+```bash
+uv run --no-sync python -c "import mxnet as mx; print(mx.__version__); print(mx.context.num_gpus())"
+```
+
 :end_tab:
+
+A CPU installation normally reports no GPU; that is not an error.
+
+## Data, Models, and Disk Space
+
+The notebook ZIP contains the notebooks, saved cell outputs, and book figures.
+It does not contain every training dataset or pretrained model. Notebooks fetch
+these assets on first use and cache them in a data or framework cache directory.
+Consequently, executing data-dependent notebooks requires an internet
+connection and additional disk space even though reading their saved outputs
+does not.
+
+Some later examples also require more memory or execution time than a typical
+laptop provides. Begin with the CPU environment and the early chapters, then
+move to the GPU environment or a remote machine when the workload warrants it.

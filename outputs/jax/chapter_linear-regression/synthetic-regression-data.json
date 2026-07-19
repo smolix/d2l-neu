@@ -4,27 +4,27 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e47a00b0cdeb6fc77fd3b07c8b9db78a160cb037a7db539e4ee837362a8130fa",
+    "d2l_lib_fingerprint": "sha256:82aa5420e681c0cce744adbfe03c698c2c1e8dcb3cbf3350258cdd6823ba9683",
     "max_inline_bytes": 0
   },
   "cells": {
     "synthetic-regression-data": {
-      "code_fingerprint": "sha256:65b8cfa49e8537a0d0ab153a7f5c2567f18538e23bb2fc89a25f4374873fae07",
+      "code_fingerprint": "sha256:216fccd8f5a0432349d7bfb6a181dbac53403462a7ea6be96191f73a14c926f5",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-generating-the-dataset-1": {
-      "code_fingerprint": "sha256:ab0b5f2853e8dedf8d05376aa08918b59760cef2f5d2f8f00030a4d619ff8b71",
+      "code_fingerprint": "sha256:7e214fac60fc2ee566a116ecad5cb63635c65077b8d896d17d33a3f2aa63887c",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-generating-the-dataset-2": {
-      "code_fingerprint": "sha256:7b1a7ef2886484bf913ca0e95f419d2b3369133a2d2fa856cf3d48b16ead74c0",
+      "code_fingerprint": "sha256:7aa096954cf08d9a3719da3dd35b6a9d47940a8d46f4f01d73d16bd647e10ba2",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-generating-the-dataset-3": {
-      "code_fingerprint": "sha256:7226f014c3ad41548eebe6241bae54b93a50449dd5e3b9d4b3081e229ed401bf",
+      "code_fingerprint": "sha256:382fc42adc1fd30afc87878aadfdc1b5892390448ed52ef022e486aac49b9f5f",
       "kind": "text",
       "outputs": [
         {
@@ -35,12 +35,12 @@
       ]
     },
     "synthetic-regression-data-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:c71f6992633262b074204eeb9505f2f95905e919b6351ff3d8eb497eec7d7cf4",
+      "code_fingerprint": "sha256:7c1819a39f4f4d25df1aa749e8a405a557917e4eef27675ed1827148b4edb995",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:39f25b9a72a9ad66163457c96242deddc1636e820bd60f7410c0e2dc17a74876",
+      "code_fingerprint": "sha256:f3e6bc13fc00470e2f8a99c1317b4e21fa5a6892fe3ba0031047184c20ef71fc",
       "kind": "text",
       "outputs": [
         {
@@ -51,17 +51,17 @@
       ]
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-1": {
-      "code_fingerprint": "sha256:937532d694f97c082892a02e01d3640896a16b185849fc5f4393d3fcb18ec9da",
+      "code_fingerprint": "sha256:829910ef75fb70bbdf7aba95f2316fc20e3cd2d824b3c0ea64b1ed316196da10",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-2": {
-      "code_fingerprint": "sha256:e2afee5cbcaa4fb17ac6b2a891bdec5fed8476a86cf9f19e7e19b2e4cdfd9c4a",
+      "code_fingerprint": "sha256:dbee0fc639daedd199515c14f315465f972c8f35577393e2ab8d0c62422a90dc",
       "kind": "text",
       "outputs": []
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-3": {
-      "code_fingerprint": "sha256:1cc79072d619f0ae3812560173ae63373600df2e616a908327a7c8fdb65dc3b9",
+      "code_fingerprint": "sha256:0719e3f5f3811addcb10308d9c00523b398ae81bee5af63fa724582c5d48bd78",
       "kind": "text",
       "outputs": [
         {
@@ -72,7 +72,7 @@
       ]
     },
     "synthetic-regression-data-concise-implementation-of-the-data-loader-4": {
-      "code_fingerprint": "sha256:e052b39cda78a3281df4148da08709c85aabe120ac4e2f835e1adb81c65cfe5a",
+      "code_fingerprint": "sha256:8ca1e2601c15a8033c6e60d9e9f6a7c0bd75fc65bb90d02c42cdc7258e856117",
       "kind": "text",
       "outputs": [
         {

@@ -14,17 +14,17 @@
       "outputs": []
     },
     "eigendecomposition-an-example": {
-      "code_fingerprint": "sha256:f7091e59f737c35e75bde981e87e60eed7c1e6a2edb10856953547379971c168",
+      "code_fingerprint": "sha256:be7b5dd8de9e6548691cf7fd99bc39ec3892c31d75f7921a8efdc230cc237eb4",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "EigResult(eigenvalues=Array([1.+0.j, 4.+0.j], dtype=complex128), eigenvectors=Array([[-0.70710678+0.j, -0.4472136 +0.j],\n       [ 0.70710678+0.j, -0.89442719+0.j]], dtype=complex128))"
+          "text": "EigResult(eigenvalues=array([1., 4.]), eigenvectors=array([[-0.70710678, -0.4472136 ],\n       [ 0.70710678, -0.89442719]]))"
         }
       ]
     },
     "mdl-eigendecomposition-jordan-power": {
-      "code_fingerprint": "sha256:a965df3a3753fd57b09ed052ec2ebc58d2a1665d542d57089c7c900e4c6db458",
+      "code_fingerprint": "sha256:b4eb460dfd9574ae3b887583517175c56cd328265d0f6110e699640690a792c7",
       "kind": "text",
       "outputs": [
         {
@@ -35,7 +35,7 @@
       ]
     },
     "eigendecomposition-complex-rotation": {
-      "code_fingerprint": "sha256:690d7859cf4f00fa57d1140115219d8dd07021b100b68d3a6f304875d516d927",
+      "code_fingerprint": "sha256:900d875ac0f12b10a350a15041ebf74c3d4100fb111bea3d7c43aa3f06ae0bb4",
       "kind": "text",
       "outputs": [
         {
@@ -46,7 +46,7 @@
       ]
     },
     "mdl-eigendecomposition-complex-eigenvalues-are-rotations-1": {
-      "code_fingerprint": "sha256:dab03baf418f84252e1cd00864f3e465cda66fd83dabcc295da0d350a54b7e80",
+      "code_fingerprint": "sha256:ee82ec78de7da934de9fd1ddee843a7e9d4b5d40349148e0e57b553aa86490f3",
       "kind": "text",
       "outputs": [
         {
@@ -56,8 +56,19 @@
         }
       ]
     },
+    "mdl-eigendecomposition-nonnormal-transient": {
+      "code_fingerprint": "sha256:b0ba10d15024a8bba209f73034e964642bec1502ca5a20a6e855df557d94b2bc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues: [0.9 0.8]\nnormal matrix: max ||D^k|| = 1.000\nnon-normal:    max ||A^k|| = 10.788 at k = 6\neigenvector condition number = 80.0\nat z=1: ||(zI-A)^-1|| = 200.3,  normal comparison = 10.0\n"
+        }
+      ]
+    },
     "eigendecomposition-psd-gram": {
-      "code_fingerprint": "sha256:bfe8c36726de5ea6b93ccd2dcd66f11747832f51ff0a465ae532f25cc3b53b7c",
+      "code_fingerprint": "sha256:e7c24c1b6708974cd200cadb372129f092da6d25b966d4a990d69fcbdbd222a4",
       "kind": "text",
       "outputs": [
         {
@@ -68,7 +79,7 @@
       ]
     },
     "mdl-eigendecomposition-the-rayleigh-quotient-eigenvalues-as-extreme-stretches": {
-      "code_fingerprint": "sha256:555451ed1230e4a1486ade260f85d4e40b8e560baaf8d9c728ada41e7b85bedb",
+      "code_fingerprint": "sha256:da6bc3375a20263a351608e237a24bc25da0a3d5274cb311eb2cad8b26d4ea0d",
       "kind": "text",
       "outputs": [
         {
@@ -79,23 +90,23 @@
       ]
     },
     "eigendecomposition-gershgorin-circle-theorem": {
-      "code_fingerprint": "sha256:86f838ff283851e743c429541db442385c6b9eedf5697aa2265d6fdf192295cc",
+      "code_fingerprint": "sha256:1010d2ae1dcda80fb67fe10d2ea5c55d755f9c5b3af7da1e4c6ba9ec8f864f67",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "Array([9.08033648+0.j, 0.99228545+0.j, 4.95394089+0.j, 2.97343718+0.j],      dtype=complex128)"
+          "text": "array([9.08033648, 0.99228545, 4.95394089, 2.97343718])"
         }
       ]
     },
     "eigendecomposition-power-iteration": {
-      "code_fingerprint": "sha256:df93ab0faeafd3881f7483d96e6b6ec44d4f3ed98ccd78af851214d29fae8cbf",
+      "code_fingerprint": "sha256:3f67d32146665ae85eba133ed39409d32946e5e0c3c421ad1f6d5cb9d4e11db8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "stabilized norm ratio = 1.9268990665   max|eigenvalue| = 1.9268990665\n"
+          "text": "stabilized norm ratio = 1.9744593215   max|eigenvalue| = 1.9744593215\n"
         }
       ]
     }

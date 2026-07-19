@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-cloud-marginals-1.svg",
           "bytes": 71874,
-          "sha256": "sha256:f82801157201a394a952f3393f7ca0e1210c63bef8096349f5437c29c581f8cc"
+          "sha256": "sha256:0c7238fdd8a844c13b5ded8542b611783ff560ec30a0441b6f30b4c17a8e2cbb"
         }
       ]
     },
@@ -71,14 +71,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\nt=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
+          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-pf-ode-overlay-1.svg",
           "bytes": 245349,
-          "sha256": "sha256:a2c2f4621a192de7e39f2fce820dccb2d59ad670d96d2d36dd507f719b09e412"
+          "sha256": "sha256:42eb0f412f561fd72f8313e93256c3e13196f5c5f2bbb82510aecac1df444266"
         }
       ]
     },
@@ -96,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-mixture-score-1.svg",
           "bytes": 25825,
-          "sha256": "sha256:543fcb31a6419b1c46a66ffe46c68790f825cab1c9b5710bbf28c1989a4faf3d"
+          "sha256": "sha256:7049957e35a04a6648bbfe9ff337485ce1cbcf77733bfe9451d5462d3236f72e"
         }
       ]
     },
@@ -119,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-reverse-sde-1.svg",
           "bytes": 43149,
-          "sha256": "sha256:30282c6dbc52d05280ee2b2e71110601268b0582650d51c6f2d09fa2a8a08c7b"
+          "sha256": "sha256:644f509fd019832f353c26767a1ea1ff4becbd2d6ba13342440d040885795ba2"
         }
       ]
     }

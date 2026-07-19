@@ -27,6 +27,9 @@ Modes:
   --verify-fresh   render gate: exit non-zero on any HARD-stale (inline) cell or
                    integrity error; SOFT (asset) staleness only warns.
   --stale          print the minimal re-execution set (one source path per line).
+  --stale-stamps   print the `.executed` stamp path of every stale (framework,
+                   file) pair — the exact stamps to `rm` to FORCE re-execution
+                   (mtime-fresh but fingerprint-stale notebooks; see refresh-stale).
   --json           machine-readable report to stdout.
 
 Requires the *generated* notebooks (`_notebooks/<fw>/...`) to exist so current
@@ -203,6 +206,10 @@ def main():
                          'verify-fresh html gate)')
     ap.add_argument('--stale', action='store_true',
                     help='print minimal re-execution set (source paths)')
+    ap.add_argument('--stale-stamps', action='store_true',
+                    help='print the .executed stamp path of every stale '
+                         '(framework, file) pair — the exact stamps to remove '
+                         'to FORCE re-execution (see refresh-stale)')
     ap.add_argument('--json', action='store_true', help='machine-readable output')
     args = ap.parse_args()
 
@@ -257,6 +264,19 @@ def main():
         # minimal re-execution set — unique source paths, one per line
         for src in sorted({r['source'] for r in stale}):
             print(src)
+        return 0
+
+    if args.stale_stamps:
+        # Per-(framework, file) `.executed` stamp paths for the stale set. The
+        # audit's staleness is code-provenance/fingerprint based; the scheduler's
+        # own skip check is mtime based (a stamp newer than its unchanged .ipynb
+        # looks "fresh"). Removing exactly these stamps reconciles the two: it
+        # forces the scheduler — and Make — to re-execute the genuinely stale
+        # notebooks instead of capturing their pre-edit outputs. See
+        # `make refresh-stale` and docs/build-system.md §3.3.
+        for r in sorted(stale, key=lambda r: (r['framework'], r['source'])):
+            print(f"{args.notebooks_dir}/{r['framework']}/"
+                  f"{Path(r['source']).with_suffix('.executed')}")
         return 0
 
     # ── human report ──

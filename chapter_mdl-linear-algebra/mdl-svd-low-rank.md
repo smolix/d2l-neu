@@ -686,7 +686,6 @@ alongside `cond(A^T A)` to show the normal-equations matrix is far worse
 conditioned.
 
 ```{.python .input #svd-least-squares}
-#@tab mxnet
 A = np.array([[1., 1.], [1., 2.], [1., 3.], [1., 4.]])  # 4 eqns, 2 unknowns
 b = np.array([6., 5., 7., 10.])
 x_pinv = np.linalg.pinv(A) @ b
@@ -697,50 +696,6 @@ print('lstsq:', x_lstsq.round(4), ' residual',
       round(float(np.linalg.norm(A @ x_lstsq - b)), 4))
 print('cond(A)     =', round(float(np.linalg.cond(A)), 3))
 print('cond(A^T A) =', round(float(np.linalg.cond(A.T @ A)), 3), '= cond(A)^2')
-```
-
-```{.python .input #svd-least-squares}
-#@tab pytorch
-A = torch.tensor([[1., 1.], [1., 2.], [1., 3.], [1., 4.]], dtype=torch.float64)
-b = torch.tensor([6., 5., 7., 10.], dtype=torch.float64)
-x_pinv = torch.linalg.pinv(A) @ b
-x_lstsq = torch.linalg.lstsq(A, b).solution
-print('pinv :', x_pinv.numpy().round(4), ' residual',
-      round(float(torch.linalg.norm(A @ x_pinv - b)), 4))
-print('lstsq:', x_lstsq.numpy().round(4), ' residual',
-      round(float(torch.linalg.norm(A @ x_lstsq - b)), 4))
-print('cond(A)     =', round(float(torch.linalg.cond(A)), 3))
-print('cond(A^T A) =', round(float(torch.linalg.cond(A.T @ A)), 3), '= cond(A)^2')
-```
-
-```{.python .input #svd-least-squares}
-#@tab tensorflow
-A = tf.constant([[1., 1.], [1., 2.], [1., 3.], [1., 4.]], dtype=tf.float64)
-b = tf.constant([[6.], [5.], [7.], [10.]], dtype=tf.float64)
-x_pinv = tf.linalg.pinv(A) @ b
-x_lstsq = tf.linalg.lstsq(A, b)
-print('pinv :', x_pinv.numpy().ravel().round(4), ' residual',
-      round(float(tf.norm(A @ x_pinv - b)), 4))
-print('lstsq:', x_lstsq.numpy().ravel().round(4), ' residual',
-      round(float(tf.norm(A @ x_lstsq - b)), 4))
-s = tf.linalg.svd(A, compute_uv=False)
-sn = tf.linalg.svd(tf.transpose(A) @ A, compute_uv=False)
-print('cond(A)     =', round(float(s[0] / s[-1]), 3))
-print('cond(A^T A) =', round(float(sn[0] / sn[-1]), 3), '= cond(A)^2')
-```
-
-```{.python .input #svd-least-squares}
-#@tab jax
-A = jnp.array([[1., 1.], [1., 2.], [1., 3.], [1., 4.]], dtype=jnp.float64)
-b = jnp.array([6., 5., 7., 10.], dtype=jnp.float64)
-x_pinv = jnp.linalg.pinv(A) @ b
-x_lstsq, *_ = jnp.linalg.lstsq(A, b, rcond=None)
-print('pinv :', np.asarray(x_pinv).round(4), ' residual',
-      round(float(jnp.linalg.norm(A @ x_pinv - b)), 4))
-print('lstsq:', np.asarray(x_lstsq).round(4), ' residual',
-      round(float(jnp.linalg.norm(A @ x_lstsq - b)), 4))
-print('cond(A)     =', round(float(jnp.linalg.cond(A)), 3))
-print('cond(A^T A) =', round(float(jnp.linalg.cond(A.T @ A)), 3), '= cond(A)^2')
 ```
 
 ### The Condition Number
@@ -803,12 +758,13 @@ prefer an SVD/QR least-squares solve over the normal equations
 Geometrically, a large $\kappa$ means very *elongated* level sets. For a quadratic
 bowl $f(\mathbf{x})=\tfrac12\mathbf{x}^\top\mathbf{M}\mathbf{x}$ with $\mathbf{M}$
 symmetric positive definite, the contours are ellipses whose axis ratio is exactly
-$\kappa(\mathbf{M})=\lambda_{\max}/\lambda_{\min}$; when $\kappa\gg1$ the bowl is a
-narrow valley, and gradient descent zig-zags across the steep walls while crawling
-along the flat floor. (For a least-squares objective
-$\tfrac12\|\mathbf{A}\mathbf{x}-\mathbf{b}\|^2$ the bowl's matrix is
-$\mathbf{M}=\mathbf{A}^\top\mathbf{A}$, so its axis ratio is $\kappa(\mathbf{A})^2$,
-one more reason squaring the conditioning hurts.) This is the same picture that ended
+$\sqrt{\kappa(\mathbf{M})}=\sqrt{\lambda_{\max}/\lambda_{\min}}$; when
+$\kappa\gg1$ the bowl is a narrow valley, and gradient descent zig-zags across
+the steep walls while crawling along the flat floor. (For a least-squares
+objective $\tfrac12\|\mathbf{A}\mathbf{x}-\mathbf{b}\|^2$ the bowl's matrix
+is $\mathbf{M}=\mathbf{A}^\top\mathbf{A}$, so its geometric axis ratio is
+$\kappa(\mathbf A)$ while the Hessian condition number that controls gradient
+descent is $\kappa(\mathbf A)^2$.) This is the same picture that ended
 the Rayleigh discussion in :numref:`subsec_mdl-rayleigh`, and it is no coincidence:
 with the best fixed step size, gradient descent's error contracts like
 $(\kappa-1)/(\kappa+1)$ per step on such a bowl: *one number, two consequences*,
@@ -983,7 +939,6 @@ Let us verify the two facts the whole section rests on: that the SVD reconstruct
 $\mathbf{A}$, and that $\sigma_i^2$ are the eigenvalues of $\mathbf{A}^\top\mathbf{A}$.
 
 ```{.python .input #svd-verify}
-#@tab mxnet
 A = np.array([[3., 1.], [1., 3.], [0., 2.]])   # a 3x2 matrix
 U, s, Vt = np.linalg.svd(A, full_matrices=False)
 recon = (U * s) @ Vt
@@ -991,39 +946,6 @@ eig = np.sort(np.linalg.eigvalsh(A.T @ A))[::-1]
 print('reconstruction error:', round(float(np.linalg.norm(recon - A)), 12))
 print('sigma^2          :', (s ** 2).round(6))
 print('eig(A^T A) sorted:', eig.round(6))
-```
-
-```{.python .input #svd-verify}
-#@tab pytorch
-A = torch.tensor([[3., 1.], [1., 3.], [0., 2.]], dtype=torch.float64)
-U, s, Vt = torch.linalg.svd(A, full_matrices=False)
-recon = (U * s) @ Vt
-eig = torch.linalg.eigvalsh(A.T @ A).flip(0)
-print('reconstruction error:', round(float(torch.linalg.norm(recon - A)), 12))
-print('sigma^2          :', (s ** 2).numpy().round(6))
-print('eig(A^T A) sorted:', eig.numpy().round(6))
-```
-
-```{.python .input #svd-verify}
-#@tab tensorflow
-A = tf.constant([[3., 1.], [1., 3.], [0., 2.]], dtype=tf.float64)
-s, U, V = tf.linalg.svd(A)
-recon = U @ tf.linalg.diag(s) @ tf.transpose(V)
-eig = tf.sort(tf.linalg.eigvalsh(tf.transpose(A) @ A), direction='DESCENDING')
-print('reconstruction error:', round(float(tf.norm(recon - A)), 12))
-print('sigma^2          :', (s.numpy() ** 2).round(6))
-print('eig(A^T A) sorted:', eig.numpy().round(6))
-```
-
-```{.python .input #svd-verify}
-#@tab jax
-A = jnp.array([[3., 1.], [1., 3.], [0., 2.]], dtype=jnp.float64)
-U, s, Vt = jnp.linalg.svd(A, full_matrices=False)
-recon = (U * s) @ Vt
-eig = jnp.sort(jnp.linalg.eigvalsh(A.T @ A))[::-1]
-print('reconstruction error:', round(float(jnp.linalg.norm(recon - A)), 12))
-print('sigma^2          :', np.asarray(s ** 2).round(6))
-print('eig(A^T A) sorted:', np.asarray(eig).round(6))
 ```
 
 The reconstruction error is at the level of floating-point round-off, and the

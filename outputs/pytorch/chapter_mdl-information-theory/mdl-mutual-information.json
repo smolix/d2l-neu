@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:45c2ae56a34afa3d721c945d6f3b7fa7678259f86d6dd7c757fc94244ac59ff3"
+          "sha256": "sha256:860b31ef904845f2acbc37685ba9b854fcf451991e3945a20eb7dded80c870bd"
         }
       ]
     },
@@ -126,7 +126,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:cde0ecfd1163e823ad9d0be95a18d41220c14c21cc320c3366474a8e518107e6"
+          "sha256": "sha256:533e414615dd3cdba7f034d080cf2b9911d90c85cc94c60b6cf8da7010e899a8"
         }
       ]
     },
@@ -137,12 +137,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n"
+          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
+          "text": "  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
         }
       ]
     },
@@ -176,7 +181,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:468fffecb2891c286db6ca90031f9771daada78bf91bd9328c215194b277c0e1"
+          "sha256": "sha256:6f8875aa89ef838ed8c126a4c0f9c67295bd4e617eb5e38d0fd27c197b15abfa"
         }
       ]
     },

@@ -68,9 +68,9 @@ devices = jax.devices('gpu')
 def run(x):
     return [jnp.dot(x, x) for _ in range(50)]
 
-x_gpu1 = jax.device_put(jax.random.normal(jax.random.PRNGKey(0), (4000, 4000)),
+x_gpu1 = jax.device_put(jax.random.normal(jax.random.PRNGKey(0), (3000, 3000)),
                          devices[0])
-x_gpu2 = jax.device_put(jax.random.normal(jax.random.PRNGKey(1), (4000, 4000)),
+x_gpu2 = jax.device_put(jax.random.normal(jax.random.PRNGKey(1), (3000, 3000)),
                          devices[1])
 ```
 

@@ -14,38 +14,38 @@
       "outputs": []
     },
     "statistics-estimator-metrics": {
-      "code_fingerprint": "sha256:9bd4dbaa750f43742246e4662d27e4129555c5257c9e5418193fe5e32b66c4e8",
+      "code_fingerprint": "sha256:8f00617faafe0bcdbee867403dcf50cddbe9bac319c32e0cb18e1497ab5bd600",
       "kind": "text",
       "outputs": []
     },
     "statistics-sampling-distribution": {
-      "code_fingerprint": "sha256:108970785b9d4a236468df12306dedbf6a93a8eac95bfd5c66d42bdd0018ab7f",
+      "code_fingerprint": "sha256:5b4bffa30b0e4579fe5d08e6f8cbe5d4db0e664753aee66d250b181964e4b70d",
       "kind": "text",
       "outputs": []
     },
     "statistics-verify-decomposition": {
-      "code_fingerprint": "sha256:c5d62556fbf2adc6027bdb8128dd92842009886bffb603062f8914947f15a1b4",
+      "code_fingerprint": "sha256:459f822e6072445dd45a6cf5e9923551ae9e25e23835c015227bbd2d37e09c3c",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=0.5422537922859192>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.5422537922859192>)"
+          "text": "(np.float64(0.5252508626744904), np.float64(0.5252508626744903))"
         }
       ]
     },
     "statistics-unbiased-variance": {
-      "code_fingerprint": "sha256:7531fc11410c9c4fcbfcd4ba8a00ddc6e9da02038f8a929e3395b67f0800a02c",
+      "code_fingerprint": "sha256:6f073bb5c60d5b3a60cf6d4884ca6d9a05adba9901eb4ef4975629f989b5e2fc",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance    = 4\nE[divide by n]   = 2.675  (biased)\nE[divide by n-1] = 4.013  (unbiased)\n"
+          "text": "true variance    = 4\nE[divide by n]   = 2.664  (biased)\nE[divide by n-1] = 3.995  (unbiased)\n"
         }
       ]
     },
     "statistics-permutation-test": {
-      "code_fingerprint": "sha256:0cf87bd3435a2e59df86c0c15876e62b3e70484fa1a5c5137ca41e8c01e63ab0",
+      "code_fingerprint": "sha256:64686f364d141dcc89bf979bd4b04daf39a159f044b394411ffb1b79acee2307",
       "kind": "mixed",
       "outputs": [
         {
@@ -58,22 +58,22 @@
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/statistics-permutation-test-1.svg",
           "bytes": 32404,
-          "sha256": "sha256:3235ea33a23ff28aafa62a05af47f4a7cd2a3cd8fbf078e66cfc309e75ed0628"
+          "sha256": "sha256:e86b647c7bf3ad1c54ca8b5bb0d1800a1c2cd1f7ba34eb54196f8b64751363fb"
         }
       ]
     },
     "statistics-confidence-interval": {
-      "code_fingerprint": "sha256:db17e2e65bb749c1858e7ac62bbcf691fb0b49328f22d15a163f22be511fb2b6",
+      "code_fingerprint": "sha256:4e34129bf176d431a8119df18303056c5d687f56aba27880d290a9b64a42bc76",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=-0.03888393193483353>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.08342073857784271>)"
+          "text": "(np.float64(-0.054421283253163005), np.float64(0.06711478695389529))"
         }
       ]
     },
     "mdl-statistics-a-gaussian-example-1": {
-      "code_fingerprint": "sha256:0bd5b87ba8357f6547e097447052906ee9d4f26c6b31f9634db47187a0514f95",
+      "code_fingerprint": "sha256:300f15a0f1e4bea523bc5277f6e02324d7194168a0b23d3274aed03e23be6d8c",
       "kind": "text",
       "outputs": [
         {
@@ -84,7 +84,7 @@
       ]
     },
     "statistics-bootstrap": {
-      "code_fingerprint": "sha256:0b60ce364ae3c94b3533af6ef0cca46113d7f0aa67adac830872792d6714fd8d",
+      "code_fingerprint": "sha256:38daa47f69bd0787c898b64efd201fe1927a8aee208c3485683d4fe97b3acc59",
       "kind": "text",
       "outputs": [
         {
@@ -95,7 +95,7 @@
       ]
     },
     "statistics-bootstrap-contrast": {
-      "code_fingerprint": "sha256:f69b283e5050f995d624d0e2251dffaaf067abbccfb94eb7f84ba0e063ff54d8",
+      "code_fingerprint": "sha256:55539a97a7e489aebe9494e10a0a040d6e16d7732651237cde8d77f3ef800022",
       "kind": "text",
       "outputs": [
         {

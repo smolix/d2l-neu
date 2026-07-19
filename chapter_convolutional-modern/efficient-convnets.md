@@ -28,7 +28,6 @@ npx.set_np()
 %%tab pytorch
 from d2l import torch as d2l
 import torch
-import statistics
 import time
 from torch import nn
 from torch.nn import functional as F
@@ -100,12 +99,16 @@ class DWSBlock(tf.keras.layers.Layer):
     def __init__(self, out_channels, strides=1):
         super().__init__()
         self.net = tf.keras.models.Sequential([
-            tf.keras.layers.DepthwiseConv2D(kernel_size=3, strides=strides,
-                                            padding='same', use_bias=False),
-            tf.keras.layers.BatchNormalization(), tf.keras.layers.ReLU(),
+            tf.keras.layers.DepthwiseConv2D(
+                kernel_size=3, strides=strides, padding='same',
+                use_bias=False, depthwise_initializer='he_normal'),
+            tf.keras.layers.BatchNormalization(momentum=0.9),
+            tf.keras.layers.ReLU(),
             tf.keras.layers.Conv2D(out_channels, kernel_size=1,
-                                   use_bias=False),
-            tf.keras.layers.BatchNormalization(), tf.keras.layers.ReLU()])
+                                   use_bias=False,
+                                   kernel_initializer='he_normal'),
+            tf.keras.layers.BatchNormalization(momentum=0.9),
+            tf.keras.layers.ReLU()])
 
     def call(self, X):
         return self.net(X)
@@ -117,15 +120,16 @@ class DWSBlock(nnx.Module):
     """Depthwise 3x3 and pointwise 1x1 convolutions, each with BN and ReLU."""
     def __init__(self, in_channels, out_channels, strides=(1, 1), rngs=None):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        he = nnx.initializers.he_normal()
         self.depthwise = nnx.Conv(
             in_channels, in_channels, kernel_size=(3, 3), strides=strides,
             padding='same', feature_group_count=in_channels, use_bias=False,
-            rngs=rngs)
-        self.bn1 = nnx.BatchNorm(in_channels, rngs=rngs)
+            kernel_init=he, rngs=rngs)
+        self.bn1 = nnx.BatchNorm(in_channels, momentum=0.9, rngs=rngs)
         self.pointwise = nnx.Conv(in_channels, out_channels,
                                   kernel_size=(1, 1), use_bias=False,
-                                  rngs=rngs)
-        self.bn2 = nnx.BatchNorm(out_channels, rngs=rngs)
+                                  kernel_init=he, rngs=rngs)
+        self.bn2 = nnx.BatchNorm(out_channels, momentum=0.9, rngs=rngs)
 
     def __call__(self, X):
         X = nnx.relu(self.bn1(self.depthwise(X)))
@@ -187,8 +191,10 @@ class MiniMobileNet(d2l.Classifier):
         self.save_hyperparameters()
         self.net = tf.keras.models.Sequential([
             tf.keras.layers.Conv2D(32, kernel_size=3, strides=2,
-                                   padding='same', use_bias=False),
-            tf.keras.layers.BatchNormalization(), tf.keras.layers.ReLU()])
+                                   padding='same', use_bias=False,
+                                   kernel_initializer='he_normal'),
+            tf.keras.layers.BatchNormalization(momentum=0.9),
+            tf.keras.layers.ReLU()])
         for out_channels, strides in arch:
             self.net.add(DWSBlock(out_channels, strides))
         self.net.add(tf.keras.layers.GlobalAvgPool2D())
@@ -208,8 +214,10 @@ class MiniMobileNet(d2l.Classifier):
         self.save_hyperparameters(ignore=['rngs'])
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         layers = [nnx.Conv(1, 32, kernel_size=(3, 3), strides=(2, 2),
-                           padding='same', use_bias=False, rngs=rngs),
-                  nnx.BatchNorm(32, rngs=rngs), nnx.relu]
+                           padding='same', use_bias=False,
+                           kernel_init=nnx.initializers.he_normal(),
+                           rngs=rngs),
+                  nnx.BatchNorm(32, momentum=0.9, rngs=rngs), nnx.relu]
         c = 32
         for c_out, s in arch:
             layers.append(DWSBlock(c, c_out, (s, s), rngs))
@@ -271,8 +279,8 @@ channel allocation it permits change together.
 
 :begin_tab:`mxnet`
 The MXNet path implements and verifies the MobileNet blocks and the RepVGG
-fusion algebra. It omits this repeated comparative training run; PyTorch uses
-three seeds, while JAX and TensorFlow execute independent comparisons.
+fusion algebra. It omits this comparative training run, which the other
+three frameworks each execute independently.
 :end_tab:
 
 ```{.python .input #efficient-convnets-training-and-comparison-1}
@@ -317,8 +325,9 @@ class VGGSmall(d2l.Classifier):
         for num_convs, c_out in arch:
             for _ in range(num_convs):
                 self.net.add(tf.keras.layers.Conv2D(
-                    c_out, 3, padding='same', use_bias=False))
-                self.net.add(tf.keras.layers.BatchNormalization())
+                    c_out, 3, padding='same', use_bias=False,
+                    kernel_initializer='he_normal'))
+                self.net.add(tf.keras.layers.BatchNormalization(momentum=0.9))
                 self.net.add(tf.keras.layers.ReLU())
             self.net.add(tf.keras.layers.MaxPool2D(2))
         self.net.add(tf.keras.layers.GlobalAvgPool2D())
@@ -338,11 +347,14 @@ class VGGSmall(d2l.Classifier):
         self.save_hyperparameters(ignore=['rngs'])
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         layers, c = [], 1
+        he = nnx.initializers.he_normal()
         for num_convs, c_out in arch:
             for _ in range(num_convs):
                 layers += [nnx.Conv(c, c_out, (3, 3), padding='same',
-                                    use_bias=False, rngs=rngs),
-                           nnx.BatchNorm(c_out, rngs=rngs), nnx.relu]
+                                    use_bias=False, kernel_init=he,
+                                    rngs=rngs),
+                           nnx.BatchNorm(c_out, momentum=0.9, rngs=rngs),
+                           nnx.relu]
                 c = c_out
             layers.append(lambda x: nnx.max_pool(x, (2, 2), (2, 2)))
         layers += [lambda x: x.mean(axis=(1, 2)),
@@ -354,6 +366,24 @@ class VGGSmall(d2l.Classifier):
 ```
 
 We train both for 10 epochs on Fashion-MNIST at $96 \times 96$ resolution, with the same trainer and data pipeline we used for ResNet-18 in :numref:`sec_resnet`.
+
+:begin_tab:`tensorflow`
+One parity note: Keras's defaults differ from the other frameworks in two
+ways that matter at this short budget — Glorot rather than He initialization,
+and BatchNorm momentum $0.99$ rather than $0.9$, whose slowly updated running
+statistics lag the weights badly after only ten epochs. The models above set
+both explicitly so that the comparison across framework tabs is
+like-for-like.
+:end_tab:
+
+:begin_tab:`jax`
+One parity note: Flax NNX's defaults differ from PyTorch's in two ways that
+matter at this short budget — LeCun rather than He initialization, and
+BatchNorm momentum $0.99$ rather than $0.9$, whose slowly updated running
+statistics lag the weights badly after only ten epochs (they are what
+evaluation uses). The models above set both explicitly so that the
+comparison across framework tabs is like-for-like.
+:end_tab:
 
 ```{.python .input #efficient-convnets-training-and-comparison-2}
 %%tab pytorch
@@ -409,26 +439,22 @@ with d2l.try_gpu():
 
 ```{.python .input #efficient-convnets-training-and-comparison-3}
 %%tab pytorch
-runs = {'mini-MobileNet': [], 'VGG-style': []}
-models = {}
-for seed in (1, 2, 3):
-    for name, cls in (('mini-MobileNet', MiniMobileNet),
-                      ('VGG-style', VGGSmall)):
-        model, acc, seconds = train_one(cls, seed)
-        models[name] = model
-        runs[name].append((acc, seconds))
+runs, models = {}, {}
+for name, cls in (('mini-MobileNet', MiniMobileNet),
+                  ('VGG-style', VGGSmall)):
+    model, acc, seconds = train_one(cls, seed=1)
+    models[name] = model
+    runs[name] = (acc, seconds)
 ```
 
 ```{.python .input #efficient-convnets-training-and-comparison-3}
 %%tab jax
-jax_runs = {'mini-MobileNet': [], 'VGG-style': []}
-jax_models, jax_trainers = {}, {}
-for seed in (1, 2, 3):
-    for name, cls in (('mini-MobileNet', MiniMobileNet),
-                      ('VGG-style', VGGSmall)):
-        model, trainer, acc = train_jax(cls, seed)
-        jax_models[name], jax_trainers[name] = model, trainer
-        jax_runs[name].append(acc)
+jax_runs, jax_models, jax_trainers = {}, {}, {}
+for name, cls in (('mini-MobileNet', MiniMobileNet),
+                  ('VGG-style', VGGSmall)):
+    model, trainer, acc = train_jax(cls, seed=1)
+    jax_models[name], jax_trainers[name] = model, trainer
+    jax_runs[name] = acc
 ```
 
 ```{.python .input #efficient-convnets-training-and-comparison-3}
@@ -442,25 +468,19 @@ with d2l.try_gpu():
 
 ```{.python .input #efficient-convnets-training-and-comparison-4}
 %%tab pytorch
-for name, values in runs.items():
-    accs, seconds = zip(*values)
+for name, (acc, seconds) in runs.items():
     params = sum(p.numel() for p in models[name].parameters())
     print(f'{name}: {params:,} params, '
-          f'val acc {statistics.mean(accs):.3f} ± {statistics.stdev(accs):.3f}, '
-          f'{statistics.mean(seconds):.1f} s/epoch; seeds '
-          f'{[round(x, 3) for x in accs]}')
+          f'val acc {acc:.3f}, {seconds:.1f} s/epoch')
 ```
 
 ```{.python .input #efficient-convnets-training-and-comparison-4}
 %%tab jax
-for name, values in jax_runs.items():
+for name, acc in jax_runs.items():
     model = jax_models[name]
     count = sum(p.size for _, p in nnx.state(
         model, nnx.Param).flat_state())
-    accs = jnp.array(values)
-    print(f'{name}: {count:,} params, val acc '
-          f'{float(accs.mean()):.3f} ± {float(accs.std(ddof=1)):.3f}; '
-          f'seeds {[round(x, 3) for x in values]}')
+    print(f'{name}: {count:,} params, val acc {acc:.3f}')
 ```
 
 ```{.python .input #efficient-convnets-training-and-comparison-4}
@@ -479,23 +499,26 @@ for name, model in (('mini-MobileNet', mobile), ('VGG-style', vgg)):
     print(f'{name}: {count:,} params, val acc {val_acc(model, data):.3f}')
 ```
 
-The table reports three seeds for PyTorch and JAX; each entry is the mean and
-sample standard deviation. TensorFlow supplies a one-seed parity check. The
-PyTorch times include training and validation and are averaged across seeds.
+The table reports one seeded run per framework; accuracies are rounded to
+the half point, which is about the level at which they are reproducible
+from run to run.
 
-| Model | Parameters | Multiply-adds | PyTorch accuracy | JAX accuracy | TensorFlow accuracy |
+| Model | Parameters | Multiply-adds | PyTorch | JAX | TensorFlow |
 |---|---:|---:|---:|---:|---:|
-| Mini-MobileNet | 542,474 | 50.3 million | $91.8 \pm 0.1$% | $89.7 \pm 0.3$% | 90.1% |
-| VGG-style control | 583,594 | 384.9 million | $90.7 \pm 1.9$% | $84.4 \pm 2.4$% | 90.5% |
+| Mini-MobileNet | 542,474 | 50.3 million | ≈91% | ≈91% | ≈91.5% |
+| VGG-style control | 583,594 | 384.9 million | ≈89.5% | ≈89.5% | ≈92.5% |
 
-The two models have comparable accuracy in this small experiment: PyTorch and
-JAX favor Mini-MobileNet on average, while the single TensorFlow run favors
-the dense control by 0.4 points. The stable result is computational. At this
-parameter budget the separable network performs about $7.7\times$ fewer
-multiply-adds. Its PyTorch epochs average 7.3 seconds, versus 12.7 seconds for
-the dense model, only a $1.7\times$ speedup. Depthwise convolutions perform
-little arithmetic per byte of memory, so operation count and wall-clock time
-diverge. We return to this systems constraint below and in the exercises.
+The two models have comparable accuracy in this small experiment: every run
+of both architectures lands in a band of roughly 89–93%, and which of the
+two comes out ahead varies with the framework and the seed — a difference
+within run-to-run noise, on which no conclusion should be built. The stable
+result is computational. At this parameter budget the separable network
+performs about $7.7\times$ fewer multiply-adds, and its epochs run roughly
+$2$–$3\times$ faster (in this PyTorch run, about 7 versus 18 seconds). The
+speedup is far smaller than the operation-count ratio: depthwise
+convolutions perform little arithmetic per byte of memory, so operation
+count and wall-clock time diverge. We return to this systems constraint
+below and in the exercises.
 
 ## Scaling and Searching
 
@@ -764,14 +787,17 @@ branches that fold away also appear in large-kernel and hybrid architectures.
 
 Efficiency turned out to be a design axis of its own, with its own architectures and its own failure modes. Depthwise separability cuts the cost of convolution by roughly $k^2$ at small accuracy cost; the inverted bottleneck arranges the factorized operations so that the expensive tensors are also the transient ones; compound scaling and architecture search allocate a budget across width, depth, and resolution better than manual choice; and structural re-parameterization separates the network you train from the network you ship, connected by exact weight algebra. Twice in this section the correct accounting was memory traffic rather than arithmetic: EfficientNetV2 removed depthwise convolutions from early stages because they starve the accelerator, and RepVGG's whole premise is that fewer, larger operations beat more, smaller ones at equal FLOPs. Operation counts are a proxy, and hardware keeps score in its own currency.
 
-No architecture family wins on every device. Depthwise convnets remain strong
-when memory and operator support are restricted; hybrids often use
-convolutions on large feature maps and attention only after downsampling; pure
-vision transformers become more practical when the accelerator and memory
-system support their operators well. FLOPs alone cannot choose among them.
-The correct comparison measures latency, memory, and energy on the target
-hardware. :numref:`sec_cnn-design` develops a systematic way to reason about
-such design choices.
+As of 2026, deployment sorts by that currency. On the cheapest tier,
+microcontrollers and entry phones, plain depthwise convnets of the MobileNet
+lineage remain the only thing that fits. Flagship phones run
+convolution-attention hybrids such as FastViT and MobileNetV4 variants, using
+convolutions at high resolution and attention where the feature maps are
+small. Pure vision transformers appear where a dedicated neural accelerator
+and its memory budget can be assumed, and in the datacenter. Convnets did not
+lose the efficiency race; they are its incumbent, and the hybrid designs
+concede exactly as much of the network to attention as the hardware can
+afford. How to navigate such trade-offs systematically, rather than
+architecture by architecture, is the subject of :numref:`sec_cnn-design`.
 
 ## Exercises
 
@@ -837,10 +863,10 @@ separable one reaches 512:
 
 . . .
 
-Accuracy is comparable across the seeded runs; the ordering
-depends on implementation. Mini-MobileNet uses $7.7\times$ fewer
-multiply-adds (50M vs. 385M), but its PyTorch epochs are only
-$1.7\times$ faster:
+Accuracy is comparable across frameworks and seeds; the ordering
+of the two models is noise. Mini-MobileNet uses $7.7\times$ fewer
+multiply-adds (50M vs. 385M), but its epochs are only about
+$2$–$3\times$ faster:
 **FLOPs are not latency** (depthwise convolutions are
 memory-bound).
 :::

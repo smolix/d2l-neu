@@ -33,6 +33,8 @@ def build_chapter_map(book_dir):
         if isinstance(item, str):
             flat.append(item)
         elif isinstance(item, dict):
+            # Quarto renders a file-backed part page but does not allocate it a
+            # Pandoc chapter position. Only its child chapters enter this map.
             if 'chapters' in item:
                 for ch in item['chapters']:
                     flat.append(ch)
@@ -233,7 +235,8 @@ def strip_frontmatter_figures(content, unnumbered):
 def strip_frontmatter_numbers(content, unnumbered):
     """Remove chapter numbers from frontmatter sidebar entries.
 
-    Frontmatter files (index, Preface, Installation, Notation, References)
+    Frontmatter files (index, Preface, Installation, Notation, Introduction,
+    References)
     get Pandoc chapter numbers that should not be displayed. This ONLY strips
     the sidebar <span class="chapter-number">N</span> entries for these files.
     (Heading numbers in frontmatter files don't exist because they have
@@ -248,6 +251,31 @@ def strip_frontmatter_numbers(content, unnumbered):
             content = content.replace(old, '')
             count += n
 
+    return content, count
+
+
+def fix_frontmatter_crossrefs(content):
+    """Use page titles, not raw Pandoc chapter numbers, for frontmatter xrefs."""
+    count = 0
+    titles = {
+        'chapter_preface/index.html': 'Preface',
+        'chapter_installation/index.html': 'Installation',
+        'chapter_notation/index.html': 'Notation',
+        'chapter_introduction/index.html': 'Introduction',
+    }
+    for target, title in titles.items():
+        pattern = re.compile(
+            rf'(<a href="[^"]*{re.escape(target)}" class="quarto-xref">'
+            rf'<span>).*?(</span></a>)')
+
+        def repl(m):
+            nonlocal count
+            replacement = f'{m.group(1)}{title}{m.group(2)}'
+            if replacement != m.group(0):
+                count += 1
+            return replacement
+
+        content = pattern.sub(repl, content)
     return content, count
 
 
@@ -394,7 +422,7 @@ def main():
           f"{len(unnumbered)} frontmatter")
 
     totals = {'numbers': 0, 'chap2sec': 0, 'eqrefs': 0,
-              'citations': 0, 'strip': 0, 'figstrip': 0}
+              'frontrefs': 0, 'citations': 0, 'strip': 0, 'figstrip': 0}
     files_modified = 0
 
     for html_path in sorted(output_dir.rglob('*.html')):
@@ -406,6 +434,7 @@ def main():
         # unnumbered set (index.qmd). Stripping after would hit the wrong files.
         c, n = strip_frontmatter_numbers(content, unnumbered); content = c; totals['strip'] += n
         c, n = strip_frontmatter_figures(content, unnumbered); content = c; totals['figstrip'] += n
+        c, n = fix_frontmatter_crossrefs(content); content = c; totals['frontrefs'] += n
         c, n = fix_section_numbers(content, ch_map);      content = c; totals['numbers'] += n
         c, n = fix_chapter_to_section(content, ch_map, section_files); content = c; totals['chap2sec'] += n
         c, n = fix_equation_crossrefs(content, ch_map);   content = c; totals['eqrefs'] += n
@@ -426,6 +455,7 @@ def main():
     print(f'\nFixed: {totals["numbers"]} numbers, '
           f'{totals["chap2sec"]} Chapter→Section, '
           f'{totals["eqrefs"]} equation refs, '
+          f'{totals["frontrefs"]} frontmatter refs, '
           f'{totals["citations"]} citations, '
           f'stripped {totals["strip"]} sidebar + {totals["figstrip"]} frontmatter figs '
           f'in {files_modified} files, '

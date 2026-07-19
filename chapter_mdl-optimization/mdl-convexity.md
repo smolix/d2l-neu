@@ -25,6 +25,30 @@ source for the convergence theory. All code in this section is plain NumPy;
 every demonstration is a handful of lines.
 
 ```{.python .input #convexity-imports}
+#@tab mxnet
+%matplotlib inline
+from d2l import mxnet as d2l
+import numpy as np
+```
+
+```{.python .input #convexity-imports}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+import numpy as np
+```
+
+```{.python .input #convexity-imports}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import numpy as np
+```
+
+```{.python .input #convexity-imports}
+#@tab jax
+%matplotlib inline
+from d2l import jax as d2l
 import numpy as np
 ```
 
@@ -190,9 +214,11 @@ minimum. We return to this in :numref:`subsec_mdl-why-convexity-matters`.
 
 ### The Second-Order Lens
 
-When $f$ is twice differentiable there is a third test, usually the easiest to
-run: $f$ is convex if and only if its Hessian is positive semidefinite
-everywhere,
+When $f$ is twice differentiable on an open convex domain there is a third
+test, usually the easiest to run: $f$ is convex if and only if its Hessian is
+positive semidefinite everywhere. On a lower-dimensional or closed domain, the
+test applies on the relative interior with the appropriate continuity at the
+boundary,
 
 $$
 \nabla^2 f(\mathbf{x}) \succeq 0 \qquad \textrm{for all } \mathbf{x} \in C.
@@ -212,8 +238,8 @@ always PSD (:numref:`subsec_mdl-psd`); and
 $e^x$, $-\log x$, and $x \log x$ are convex on their domains because their
 second derivatives $e^x$, $1/x^2$, and $1/x$ are positive.
 
-**Proposition (the three lenses agree).** *Let $f$ be differentiable on a convex
-domain $C$. Then the chord condition :eqref:`eq_mdl-opt-chord` and the
+**Proposition (the three lenses agree).** *Let $f$ be differentiable on an open
+convex domain $C$. Then the chord condition :eqref:`eq_mdl-opt-chord` and the
 first-order condition :eqref:`eq_mdl-opt-first-order` are equivalent. If $f$ is
 twice differentiable, both are equivalent to
 $\nabla^2 f(\mathbf{x}) \succeq 0$ on $C$.*
@@ -331,8 +357,11 @@ line (a supporting hyperplane, in $n$ dimensions) fits under the graph. We take
 this on faith; see :cite:`Rockafellar.1970` (or :citet:`Boyd.Vandenberghe.2004`,
 section 2.5).*
 
-Subgradients make everything in this section, from Jensen's inequality to
-local-equals-global to the descent methods, go through for ReLU-style kinks.
+Subgradients preserve the supporting-hyperplane, Jensen, and
+local-equals-global arguments at ReLU-style kinks. Optimization algorithms need
+their own analysis: a subgradient step need not decrease the objective, and the
+standard subgradient method uses diminishing steps and has slower rates than
+smooth gradient descent.
 
 ![At the kink of $f(x) = |x|$ the gradient does not exist, but the subgradient fans out into a set: every slope $g \in \left(-1, 1\right)$ tucks a supporting line under the V, and the two extreme slopes $\pm 1$ lie along the branches themselves, so $\partial f(0)$ is the whole interval from $-1$ to $1$. The zero-slope member (orange) is the optimality certificate $0 \in \partial f(0)$: the corner is a provable minimum, no gradient required.](../img/mdl-opt-subgradient-fan.svg)
 :label:`fig_mdl-opt-subgradient-fan`
@@ -1059,6 +1088,101 @@ descent can produce an exact zero (a smooth step lands wherever the arithmetic
 falls); the prox is the piece of the algorithm that *knows about the kink*,
 and one application per step suffices for sparsity.
 
+### Coordinate and Block Coordinate Descent
+:label:`subsec_mdl-coordinate-descent`
+
+A full gradient updates every coordinate at once. When parameters or examples
+are sparse, touching one coordinate or one block can be much cheaper. Suppose
+$f$ has coordinate-wise smoothness constants $L_j$:
+
+$$
+f(\mathbf x+t\mathbf e_j)
+\le f(\mathbf x)+t\,\partial_jf(\mathbf x)+\tfrac12L_jt^2.
+$$
+
+Minimizing this one-dimensional upper bound gives the **coordinate-descent**
+step
+
+$$
+x_j\leftarrow x_j-\frac{1}{L_j}\partial_jf(\mathbf x),
+$$
+:eqlabel:`eq_mdl-coordinate-step`
+
+with all other coordinates fixed. The method can cycle through coordinates,
+choose the largest partial derivative, or sample $j$. Randomized selection
+avoids adversarial orderings and has a clean representative guarantee: for a
+$\mu$-strongly convex objective, sampling coordinate $j$ proportional to
+$L_j$ and taking :eqref:`eq_mdl-coordinate-step` contracts expected
+suboptimality at a rate governed by
+$1-\mu/\sum_jL_j$. The comparison with full-gradient descent is not “one
+iteration versus one iteration”: a coordinate step reads and changes much
+less state, so work, memory traffic, and sparsity determine the useful unit.
+
+For a positive-definite quadratic
+
+$$
+f(\mathbf x)=\tfrac12\mathbf x^\top A\mathbf x-\mathbf b^\top\mathbf x,
+$$
+
+we can minimize the chosen coordinate *exactly*:
+
+$$
+x_j\leftarrow x_j-\frac{(A\mathbf x-\mathbf b)_j}{A_{jj}}.
+$$
+:eqlabel:`eq_mdl-quadratic-coordinate`
+
+Maintaining the residual $\mathbf r=A\mathbf x-\mathbf b$ makes a coordinate
+update cheap: after changing $x_j$ by $\delta$, update
+$\mathbf r\leftarrow\mathbf r+\delta A_{:j}$. On a sparse matrix this touches
+only the nonzeros in column $j$. A full cyclic sweep is the Gauss--Seidel
+iteration for $A\mathbf x=\mathbf b$.
+
+```{.python .input #mdl-convexity-coordinate-descent}
+d_cd = 40
+A_cd = (2 * np.eye(d_cd) - 0.95 * np.eye(d_cd, k=1)
+        - 0.95 * np.eye(d_cd, k=-1))             # SPD, strongly coupled
+b_cd = np.ones(d_cd)
+x_star_cd = np.linalg.solve(A_cd, b_cd)
+f_cd = lambda x: 0.5 * x @ A_cd @ x - b_cd @ x
+f_star_cd = f_cd(x_star_cd)
+L_cd = np.linalg.eigvalsh(A_cd)[-1]
+x_gd, x_cd = np.zeros(d_cd), np.zeros(d_cd)
+r_cd = A_cd @ x_cd - b_cd
+gap_gd, gap_cd = [], []
+for sweep in range(1, 101):
+    x_gd -= (A_cd @ x_gd - b_cd) / L_cd           # one full gradient
+    for j in range(d_cd):                         # one coordinate sweep
+        delta = -r_cd[j] / A_cd[j, j]
+        x_cd[j] += delta
+        r_cd += delta * A_cd[:, j]
+    gap_gd.append(f_cd(x_gd) - f_star_cd)
+    gap_cd.append(f_cd(x_cd) - f_star_cd)
+d2l.plot(np.arange(1, 101), [gap_gd, gap_cd], 'sweep', 'optimality gap',
+         legend=[r'gradient descent, step $1/L$', 'exact coordinate sweep'],
+         yscale='log')
+```
+
+This coupled quadratic is deliberately unfavorable to independent coordinates:
+changing one affects its neighbors. Even so, exact coordinate minimization
+uses the fresh residual after each update and advances much faster per sweep
+than the conservative global step $1/L$. Different matrices can reverse that
+comparison; the point is the mechanism, not a universal ranking.
+
+The same idea extends in two directions. **Block coordinate descent** updates a
+layer, feature group, or matrix block by solving a small subproblem, exploiting
+structure that scalar coordinates miss. For a composite objective
+$f(\mathbf x)+\lambda\|\mathbf x\|_1$, the coordinate subproblem includes the
+nonsmooth term and its exact update is soft-thresholding, the proximal operator
+of :eqref:`eq_mdl-opt-soft-threshold`. This is why coordinate methods are
+natural for sparse regression and matrix factorization: each cheap local solve
+can create exact zeros, whereas an ordinary smooth gradient step cannot.
+
+Coordinate descent is not the default for dense end-to-end neural training:
+accelerators are built for large matrix operations, not sequential scalar
+updates. It remains important for sparse linear models, embedding tables,
+alternating minimization, and inner problems where a block has a closed-form or
+very cheap solve.
+
 ### Reality Check: Deep Networks Are Non-Convex
 
 The convexity calculus had one missing rule,
@@ -1193,7 +1317,9 @@ curvature and conditioning.
   of :numref:`chap_mdl-information-theory`. **Proximal operators** generalize
   projections from sets to functions; soft-thresholding is the prox of
   $\lambda|\cdot|$, and one prox per step (ISTA) optimizes kinked composite
-  losses at gradient descent's rate.
+  losses at gradient descent's rate. **Coordinate descent** minimizes one
+  coordinate or block at a time; on quadratics it is an exact one-dimensional
+  solve, and with $\ell_1$ regularization that solve becomes soft-thresholding.
 * Deep networks are **non-convex by construction** (permutation symmetry makes
   the minimizer set non-convex), but the **PL condition** preserves linear
   convergence without convexity, and gradient descent's **implicit bias**
@@ -1255,6 +1381,12 @@ curvature and conditioning.
    (c) restart GD from a nonzero $\mathbf{w}_0$ with a component off the row
    space. What changes in the limit, and why?
 
+9. **Coordinate descent as Gauss--Seidel.** Derive
+   :eqref:`eq_mdl-quadratic-coordinate`, then show that one cyclic sweep is
+   Gauss--Seidel applied to $A\mathbf x=\mathbf b$. Modify the NumPy cell to use
+   randomized coordinates, compare equal numbers of coordinate updates, and
+   construct a matrix for which cyclic ordering is substantially worse.
+
 ## Discussions
 
 Within this part, this section is load-bearing in both directions.
@@ -1269,7 +1401,7 @@ convex conjugates. Beyond the chapter, Jensen's inequality and the
 log-sum-exp/negative-entropy pair are the analytic engine of
 :numref:`sec_mdl-information_theory` and the variational bounds of
 :numref:`sec_mdl-divergences-distances`, and the main book's
-:numref:`sec_convexity`, :numref:`sec_softmax`, and :numref:`sec_weight_decay`
+:numref:`sec_optimization-intro`, :numref:`sec_softmax`, and :numref:`sec_weight_decay`
 all stand on results proved here.
 
 [Discussions](https://d2l.discourse.group/t/convexity)

@@ -53,11 +53,22 @@ _print_lock = threading.Lock()
 # Stops early if score >= good_enough_score.
 # ---------------------------------------------------------------------------
 
+# 2026-07-14: root-caused and fixed the notebooks that previously needed
+# multiple attempts, so they now converge reliably on a single run and were
+# removed from this table (the retries were masking real, fixable defects):
+#   - lstm            : the failure was greedy-decode (temperature=0) repetition,
+#                       not under-convergence; fixed with temperature=0.5 in the
+#                       showcase predict cells. Verified 8/8 real runs + 75/75 stress.
+#   - bahdanau-attn   : TF/MXNet were shipping *broken* (best-of-5 never reached
+#                       2.5); pure under-training. max_epochs 30->200 -> all four 3.000.
+#   - transformer     : cold-start instability + rare-target over-regularization;
+#                       fixed with LR warmup + dropout 0.2->0.1 + max_epochs 30->40.
+#                       0/39 unseeded pytorch failures; all four 3.000 on attempt 1.
+# dcgan is kept at a light best-of-2: a systematic TF BatchNorm bug (the real
+# failure the retry could never fix) is now fixed at the source, leaving only
+# TF's thin convergence margin (min ~3.03) worth a single cheap second attempt.
 BEST_OF_N = {
-    "chapter_recurrent-modern/lstm.ipynb":                                    (5, 2.0),
-    "chapter_attention-mechanisms-and-transformers/bahdanau-attention.ipynb":  (5, 2.5),
-    "chapter_attention-mechanisms-and-transformers/transformer.ipynb":         (5, 2.5),
-    "chapter_generative-adversarial-networks/dcgan.ipynb":                    (3, 3.0),
+    "chapter_generative-adversarial-networks/dcgan.ipynb":                    (2, 3.0),
 }
 
 
@@ -65,7 +76,10 @@ def score_notebook(nb_path):
     """Score an executed notebook's output quality.
 
     Returns a float >= 0.  Higher is better.
-    - seq2seq / attention notebooks: sum of BLEU scores (format: "bleu,X.XXX")
+    - seq2seq / attention notebooks: sum of translation scores. The showcase
+      prints one per sentence as "chrF 0.658" (current, character-level metric)
+      or legacy "bleu,0.658"; both are matched so a store captured under either
+      idiom scores identically.
     - LSTM / RNN text-generation notebooks: heuristic penalizing repetition
     Returns 0.0 if the notebook has no scoreable output or failed to execute.
     """
@@ -75,29 +89,34 @@ def score_notebook(nb_path):
     except Exception:
         return 0.0
 
-    bleu_scores = []
+    mt_scores = []
     generated_texts = []
     gan_loss_G = None
 
     for cell in nb.get("cells", []):
         for out in cell.get("outputs", []):
-            # BLEU scores in stream output: "bleu,0.658"
+            # Translation scores in stream output: "chrF 0.658" or "bleu,0.658"
             if "text" in out:
                 for line in out["text"]:
-                    for m in re.finditer(r"bleu,(\d+\.\d+)", line):
-                        bleu_scores.append(float(m.group(1)))
+                    for m in re.finditer(r"(?:chrF |bleu,)(\d+\.\d+)", line):
+                        mt_scores.append(float(m.group(1)))
                     # GAN loss: "loss_D 0.161, loss_G 4.254"
                     m = re.search(r"loss_G (\d+\.\d+)", line)
                     if m:
                         gan_loss_G = float(m.group(1))
+                    # Showcase prediction printed by the gated-RNN section
+                    # (10.1): "perplexity 78.3, 'the time traveller ...'"
+                    m = re.search(r"perplexity \d+\.\d+, ['\"](.+)['\"]", line)
+                    if m:
+                        generated_texts.append(m.group(1))
             # Generated text in execute_result: "'it has ...'"
             if "data" in out and "text/plain" in out["data"]:
                 txt = "".join(out["data"]["text/plain"])
                 if "it has" in txt:
                     generated_texts.append(txt)
 
-    if bleu_scores:
-        return sum(bleu_scores)
+    if mt_scores:
+        return sum(mt_scores)
 
     if generated_texts:
         return _score_generated_text(generated_texts[-1])
@@ -321,6 +340,12 @@ def execute_notebook(nb_path, timeout=600, kernel=None, cuda_devices=None,
             [sys.executable, "-m", "jupyter", "trust", str(nb_path)],
             capture_output=True, timeout=30,
         )
+        # Record the source+lib provenance this run executed under, so the
+        # capture-side guard can refuse to bless stale outputs (see the function
+        # docstring and docs/build-system.md §3.3). Provenance is a pure function
+        # of source + lib, so it is identical across best-of-N re-runs of the same
+        # notebook — safe to (re)write on every successful execution.
+        write_execution_provenance(nb_path)
         return True, elapsed, stderr or ""
     err = (stderr or "").strip() or (stdout or "").strip()
     return False, elapsed, err
@@ -353,6 +378,54 @@ def _write_error_log(fw_root, rel, stderr):
     log_path = log_dir / (rel + ".log")
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text(stderr or "")
+
+
+def write_execution_provenance(nb_path):
+    """Record, in a sidecar, the source+lib provenance a notebook was executed
+    under, so `capture_outputs.py`'s guard can REFUSE to bless outputs produced
+    under a *different* lib/source than the current tree.
+
+    This closes the freshness-disagreement trap from the capture side (see
+    docs/build-system.md §3.3): the audit keys staleness on *fingerprints* while
+    the scheduler skips on *mtime*, so a lib-fingerprint-stale-but-mtime-fresh
+    notebook can slip through un-re-executed and have its pre-edit outputs blessed
+    under the new fingerprint. The `<stem>.provenance.json` sidecar records the
+    fingerprints computed AT EXECUTION TIME; capture compares them to the current
+    tree and only blesses when they agree. A genuine re-execution rewrites this
+    sidecar, so a matching sidecar is a positive proof of freshness.
+
+    Sidecar layout (mirrors the manifest so the comparison is apples-to-apples):
+        {schema, framework, provenance:{framework_version, d2l_lib_fingerprint},
+         code_fingerprints:{cell_id: sha256}}
+
+    Written next to the executed notebook under `_notebooks/` (gitignored scratch,
+    wiped by `make clean`). Best-effort: a sidecar-write hiccup must never fail an
+    otherwise-successful execution, so failures only warn.
+    """
+    try:
+        import capture_outputs as cap
+        nb_path = Path(nb_path).resolve()
+        rel = nb_path.relative_to(NOTEBOOKS_DIR.resolve())
+        fw = rel.parts[0]
+        if fw not in cap.FRAMEWORKS:
+            return
+        repo_root = NOTEBOOKS_DIR.parent
+        nb = json.loads(nb_path.read_bytes())
+        fps, _ = cap.prefix_fingerprints(cap.code_cells_of(nb))
+        sidecar = {
+            "schema": 1,
+            "framework": fw,
+            "provenance": cap.build_provenance(
+                repo_root, fw, nb_path.with_suffix(".d")),
+            "code_fingerprints": fps,
+        }
+        nb_path.with_suffix(".provenance.json").write_text(
+            json.dumps(sidecar, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8")
+    except Exception as e:  # noqa: BLE001 — never fail a good run over the sidecar
+        with _print_lock:
+            print(f"  (warning: could not record execution provenance for "
+                  f"{nb_path}: {e})", file=sys.stderr, flush=True)
 
 
 def _touch_executed_stamp(nb):

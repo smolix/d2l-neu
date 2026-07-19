@@ -629,16 +629,18 @@ classical rates :cite:`Kloeden.Platen.1992` are:
 ![Strong versus weak convergence of Euler--Maruyama on the OU process. Left: one coarse path ($16$ steps, orange) against a fine reference ($4096$ steps, blue) driven by the *same* Brownian increments; the strong error is this pathwise gap, visible to the eye. Right: terminal histograms of $20{,}000$ paths at the two step sizes lie on top of each other and on the analytic marginal (black): the *laws* already agree to $O(\Delta t)$ where individual paths still stray. Diffusion models need only the right-hand agreement.](../img/mdl-dyn-strong-weak.svg)
 :label:`fig_mdl-dyn-strong-weak`
 
-**Proposition (strong order of Euler--Maruyama).** *Under Lipschitz and
-linear-growth conditions on $f$ and $g$, Euler--Maruyama has strong order
+**Proposition (strong order of Euler--Maruyama).** *Under global Lipschitz
+and linear-growth conditions on $f$ and $g$, Euler--Maruyama has strong order
 $\tfrac12$ in general:*
 $\mathbb{E}\,|X^{\Delta t}_N - X_T| \le C\,\Delta t^{1/2}$.
-*If the noise is* **additive** *($g = g(t)$ does not depend on the state),
-the rate improves to strong order* $1$:
+*For additive noise, $g=g(t)$, the rate improves to strong order $1$ provided
+the coefficients have the additional time regularity and bounded derivatives
+required by the stochastic Taylor estimate:*
 $\mathbb{E}\,|X^{\Delta t}_N - X_T| \le C\,\Delta t$.
 
-**Proposition (weak order of Euler--Maruyama).** *Under the same conditions
-(with smooth $f$, $g$, $\varphi$), Euler--Maruyama has weak order $1$:*
+**Proposition (weak order of Euler--Maruyama).** *If $f$, $g$, and the test
+function $\varphi$ have sufficiently many derivatives (with the usual growth
+bounds), Euler--Maruyama has weak order $1$:*
 $|\mathbb{E}\,\varphi(X^{\Delta t}_N) - \mathbb{E}\,\varphi(X_T)| \le C\,\Delta t$,
 *additive or not.*
 
@@ -651,16 +653,16 @@ $\tfrac12 g\, \partial_x g\,\left((\Delta W)^2 - \Delta t\right)$
 this is mean-zero with standard deviation proportional to $\Delta t$, and
 summing $1/\Delta t$ independent mean-zero terms grows their total like a
 random walk: $\Delta t \cdot \sqrt{1/\Delta t} = \sqrt{\Delta t}$, the
-order $\tfrac12$. For additive noise $\partial_x g = 0$ kills the term
-*identically*: EM and the higher-order Milstein scheme coincide, the next
-omissions are $O(\Delta t^{3/2})$ per step, and the global rate is $\Delta t$.
-In expectation, meanwhile, all the mean-zero noise terms cancel regardless,
-leaving only the $O(\Delta t)$ deterministic bias: weak order $1$, just
-like Euler for ODEs.
+order $\tfrac12$. For additive noise $\partial_x g = 0$ kills the Milstein term
+*identically*. Under the extra smoothness just stated, the remaining terms
+accumulate to a global $O(\Delta t)$ strong error. With sufficiently smooth
+test functions and coefficients, the leading mean-zero terms cancel in
+expectation, leaving $O(\Delta t)$ weak bias.
 
-Every SDE in this chapter (Ornstein--Uhlenbeck and both diffusion-model
-families) has additive noise, so the rate to expect from EM on our problems
-is strong order $1$, *not* $\tfrac12$. Let us measure both rates in one
+Every SDE treated numerically in this chapter (Ornstein--Uhlenbeck and the two
+diffusion-model families) has smooth additive noise, so strong order $1$ is
+the relevant prediction for these examples rather than the general
+$\tfrac12$ rate. Let us measure both rates in one
 experiment: the OU process $dX = -\theta X\,dt + \sigma\,dW$ (additive;
 compare against a fine-grid reference driven by the same increments) and
 geometric Brownian motion $dX = \mu X\,dt + \sigma X\,dW$
@@ -1002,15 +1004,18 @@ schedule (with $\bar{\alpha}_t = e^{-\int_0^t \beta(s)\,ds}$ replacing
 $e^{-2\theta t}$). This SDE is the bridge to everything that follows: its
 marginals solve the Fokker--Planck equation of
 :numref:`sec_mdl-fokker-planck-probability-flow`, its time reversal is the
-generative sampler of :numref:`sec_mdl-time-reversal`, and its Euler--Maruyama
-discretization is, step for step, DDPM's forward chain
-(:numref:`sec_mdl-ddpm-discretized-sde`).
+generative sampler of :numref:`sec_mdl-time-reversal`, and its Euler--Maruyama discretization gives the first-order continuous-time
+approximation behind DDPM's forward chain
+(:numref:`sec_mdl-ddpm-discretized-sde`). The discrete DDPM coefficients are
+chosen so that each finite Gaussian transition is exact; they are not simply
+an Euler--Maruyama step with identical coefficients.
 
 ## Summary
 
-* Randomness is what makes a forward process work in generative modeling: it
-  smears any data distribution into a *known* Gaussian endpoint, smoothly and
-  reversibly-on-average; a fixed deterministic map does neither.
+* Randomness makes the standard forward noising process useful in generative
+  modeling: under an appropriate long-time schedule it drives a broad class
+  of data distributions toward a known Gaussian reference. At finite time the
+  endpoint is generally only approximately Gaussian.
 * **Brownian motion** is the $\pm\sqrt{\Delta t}$ random walk's limit:
   independent Gaussian increments, $W_t - W_s \sim \mathcal{N}(0, t-s)$,
   $\operatorname{Var}(W_t) = t$, $\operatorname{Cov}(W_s, W_t) = \min(s,t)$.
@@ -1028,10 +1033,11 @@ discretization is, step for step, DDPM's forward chain
 * An **SDE** $dX = f\,dt + g\,dW$ is drift (mean velocity) plus diffusion
   (variance injection); $g = 0$ recovers the ODE, and a solution is a
   *distribution over paths*. **Euler--Maruyama** is forward Euler plus a
-  $\sqrt{\Delta t}$ Gaussian kick: strong order $\tfrac12$ for general
-  multiplicative noise, strong order $1$ for additive noise $g(t)$ (every SDE
-  in this chapter), weak order $1$ always; weak (marginal) accuracy is
-  what diffusion models need.
+  $\sqrt{\Delta t}$ Gaussian kick: under standard regularity assumptions it
+  has strong order $\tfrac12$ for general multiplicative noise, strong order
+  $1$ for sufficiently smooth additive-noise problems, and weak order $1$ for
+  sufficiently smooth coefficients and test functions. Weak (marginal)
+  accuracy is what diffusion models usually need.
 * The **Ornstein--Uhlenbeck process** $dX = -\theta X\,dt + \sigma\,dW$
   solves in closed form: Gaussian transition kernel
   $\mathcal{N}\!\left(x_0 e^{-\theta t}, \tfrac{\sigma^2}{2\theta}(1 - e^{-2\theta t})\right)$,
@@ -1129,7 +1135,7 @@ $$d\mathbf X = \underbrace{\mathbf f(\mathbf X,t)\,dt}_{\text{drift}}
 + \underbrace{g(t)\,d\mathbf W}_{\text{diffusion}}.$$
 
 (A *learned* flow sends one **given** $p_{\text{data}}$ there: that is
-exactly flow matching, §27.4.)
+exactly flow matching, the score-matching-diffusion-and-flow-matching section.)
 :::
 
 ::: {.col .fig}

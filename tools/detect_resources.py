@@ -6,8 +6,8 @@ job pools and the per-framework concurrency caps to the *actual* hardware, so
 the same Makefile runs unchanged on a 4×24 GB / 64-core server and on a 16 GB
 laptop. Every notebook job is budgeted a footprint (VRAM / CPU cores / RAM);
 the number of concurrent jobs is the largest count that fits ALL of the
-detected constraints simultaneously (VRAM, system RAM, cores, and — for
-DataLoader-heavy MXNet — the open-file / process ulimits).
+detected constraints simultaneously (VRAM, system RAM, cores, and process /
+open-file limits, including JAX runtime pools and DataLoader-heavy MXNet jobs).
 
 Modes:
   --report        human-readable resource + parallelism summary (default)
@@ -89,10 +89,12 @@ CPU_PER_JAX       = _envint("CPU_PER_jax",       8)       # (>=8 cores -> 1 job/
 RAM_MIB_PER_LIGHT = _envint("RAM_MIB_PER_LIGHT", 4096)    # ~4 GiB / job
 RAM_MIB_PER_JAX   = _envint("RAM_MIB_PER_jax",   8192)    # JAX CPU backend
 RAM_HEADROOM_PCT  = _envint("RAM_HEADROOM_PCT",  85)      # leave 15% for OS/cache
-# MXNet DataLoader workers are file-descriptor / process hungry; budget per job
-# so the open-file (-n) and process (-u) ulimits also bound MXNet concurrency.
+# Budget process/thread-heavy runtimes against RLIMIT_NPROC. JAX retains large
+# XLA/Eigen pools; MXNet DataLoader workers are descriptor/process hungry.
 FD_PER_MXNET_JOB   = _envint("FD_PER_MXNET_JOB",   1024)
 PROC_PER_MXNET_JOB = _envint("PROC_PER_MXNET_JOB", 128)
+PROC_PER_JAX_JOB   = _envint("PROC_PER_JAX_JOB",   384)
+PROC_HEADROOM_PCT  = _envint("PROC_HEADROOM_PCT",  75)
 
 # Slide/PDF rendering (rebuild-book-artifacts) runs one `quarto render` per
 # framework; quarto drives a Deno/V8 heap. A full framework's single-project
@@ -195,6 +197,12 @@ def derive(d):
     jax_gpu = min(vram_slots(GPU_MIB_PER_JAX), ram_jobs(RAM_MIB_PER_JAX),
                   gpu_slots)
     jax_cpu = min(core_slots(CPU_PER_JAX), cpu_slots)
+    # JAX keeps large XLA/Eigen thread pools even after OMP/BLAS are capped.
+    # Bound GPU + CPU jobs together so their aggregate threads stay below
+    # RLIMIT_NPROC with headroom for the scheduler, shells, and data workers.
+    proc_budget = d["ulimit_nproc"] * PROC_HEADROOM_PCT // 100
+    jax_proc = _floor_div(proc_budget, PROC_PER_JAX_JOB)
+    jax_total = max(1, min(jax_gpu + jax_cpu, jax_proc or 1))
     # MXNet additionally bounded by the file-descriptor / process ulimits,
     # because its Gluon DataLoader spawns FD/process-hungry workers.
     mxnet_fd = _floor_div(d["ulimit_nofile"], FD_PER_MXNET_JOB)
@@ -242,6 +250,7 @@ def derive(d):
         CPU_SLOTS=cpu_slots_cores,
         JAX_GPU_SLOTS=max(1, jax_gpu),
         JAX_CPU_SLOTS=max(1, jax_cpu),
+        JAX_TOTAL_SLOTS=jax_total,
         MXNET_GPU_SLOTS=mxnet_gpu,
         MXNET_CPU_SLOTS=max(1, min(core_slots(CPU_PER_LIGHT), cpu_slots)),
         NUM_GPU_PAIRS=pairs,
@@ -253,6 +262,7 @@ def derive(d):
     ), dict(
         raw_gpu_vram=raw_gpu, raw_cpu_cores=raw_cpu,
         total_ram_jobs=total_ram_jobs, ram_budget_mib=ram_budget,
+        jax_proc_cap=jax_proc,
         mxnet_fd_cap=mxnet_fd, mxnet_proc_cap=mxnet_proc,
     )
 
@@ -305,7 +315,9 @@ def main(argv):
     print(f"  CPU_SLOTS       = {plan['CPU_SLOTS']}  "
           f"(1 per {CPU_PER_LIGHT} cores)")
     print(f"  JAX_GPU_SLOTS   = {plan['JAX_GPU_SLOTS']}   "
-          f"JAX_CPU_SLOTS = {plan['JAX_CPU_SLOTS']}")
+          f"JAX_CPU_SLOTS = {plan['JAX_CPU_SLOTS']}   "
+          f"JAX_TOTAL_SLOTS = {plan['JAX_TOTAL_SLOTS']} "
+          f"(proc-fit {prov['jax_proc_cap']})")
     print(f"  MXNET_GPU_SLOTS = {plan['MXNET_GPU_SLOTS']}  "
           f"(FD-fit {prov['mxnet_fd_cap']}, proc-fit {prov['mxnet_proc_cap']}; "
           f"heavy notebooks claim ≥2 slots)")

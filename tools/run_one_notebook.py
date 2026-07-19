@@ -30,8 +30,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from runtime_env import (
-    HEAVY_GPU_NOTEBOOKS, MULTI_GPU_NOTEBOOKS, SHARED_DATA_NOTEBOOKS,
-    setup_framework_env, file_uses_gpu,
+    CPU_ONLY_NOTEBOOKS, HEAVY_GPU_NOTEBOOKS, MULTI_GPU_NOTEBOOKS,
+    SHARED_DATA_NOTEBOOKS, setup_framework_env, file_uses_gpu,
 )
 # Reuse functions defined in run_notebooks.py rather than duplicating them.
 from run_notebooks import (
@@ -411,6 +411,8 @@ def notebook_mode(nb_path, fw):
     """
     nb = Path(nb_path).resolve()
     rel = str(nb.relative_to((NOTEBOOKS_DIR / fw).resolve()))
+    if rel in CPU_ONLY_NOTEBOOKS:
+        return 'cpu'
     if rel in MULTI_GPU_NOTEBOOKS:
         return 'multi-gpu'
     if file_uses_gpu(nb, NOTEBOOKS_DIR):

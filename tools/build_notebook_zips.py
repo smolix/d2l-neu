@@ -12,13 +12,17 @@ seam `inject_outputs.py` uses for html/slides/pdf.
 For each framework it writes:
 
     <out-dir>/d2l-<fw>.zip        →  d2l-<fw>/<chapter>/<stem>.ipynb
-                                     d2l-<fw>/img/…                     (+ README.md)
+                                     d2l-<fw>/img/…
+                                     d2l-<fw>/d2l/…
+                                     d2l-<fw>/pylock.{cpu,gpu}.toml
+                                     d2l-<fw>/{pyproject.toml,README.md}
 
 Computed cell outputs (plots, printed values) live inline in the notebook; the
 illustrative figures a notebook pulls in via `![](../img/…)` are bundled under
 `d2l-<fw>/img/` — only the subset that framework actually references, not all of
-img/ (~118 MB) — so `../img/…` resolves and the download is self-contained.
-Notebooks import the `d2l` package (`pip install d2l`), like the d2l.ai downloads.
+img/ (~118 MB). The matching `d2l` source and pinned uv CPU/GPU environments are
+bundled too, so the extracted archive is a runnable project. Datasets remain
+on-demand downloads and are not copied into the archive.
 
 The zip is a deterministic function of the notebooks + store: fixed entry
 timestamps and sorted order, so an unchanged build re-produces a byte-identical
@@ -54,18 +58,44 @@ _IMGREF = re.compile(r'\.\./img/([\w./-]+\.(?:svg|png|jpg|jpeg|gif))')
 _README = """\
 # Dive into Deep Learning — {fw} notebooks
 
-These are the executed {fw} notebooks from the book, with computed cell outputs
-(plots, printed values) included. The `img/` folder holds the illustrative
-figures the notebooks reference, so the download is self-contained.
+These are the executed {fw} notebooks from the book. Computed outputs and the
+figures referenced by the notebooks are included. The matching `d2l` source and
+pinned environments are included as well.
 
-## Running them
+The latest source is at <https://github.com/smolix/d2l-neu>.
 
-    pip install d2l
+## CPU setup (recommended first)
 
-then open any notebook with Jupyter. Notebooks import the backend as, e.g.:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
+
+    uv venv --python 3.12
+    uv pip sync pylock.cpu.toml
+    uv run --no-sync jupyter lab
+
+{cpu_note}## NVIDIA GPU setup
+
+On Linux/x86-64 with a compatible NVIDIA driver, replace the CPU lock above:
+
+    uv pip sync pylock.gpu.toml
+    uv run --no-sync jupyter lab
+
+The GPU lock is framework-specific; check that `nvidia-smi` works before using
+it. The notebooks import the backend as, e.g.:
 
     from d2l import {mod} as d2l
+
+Notebook outputs can be read offline. Executing notebooks that use datasets or
+pretrained models downloads those assets on first use and therefore needs an
+internet connection and additional disk space.
 """
+
+_CPU_NOTE = {
+    'pytorch': '',
+    'tensorflow': '',
+    'jax': '',
+    'mxnet': ('On Apple Silicon, use `pylock.cpu-macos.toml` instead of '
+              '`pylock.cpu.toml`.\n\n'),
+}
 
 _MOD = {'pytorch': 'torch', 'tensorflow': 'tensorflow', 'jax': 'jax',
         'mxnet': 'mxnet'}
@@ -113,7 +143,8 @@ def inject_notebook(nb, store_ids):
     return nb
 
 
-def build_zip(repo_root, notebooks_dir, store_dir, img_dir, fw, out_dir):
+def build_zip(repo_root, notebooks_dir, store_dir, img_dir, env_dir,
+              project_file, package_dir, fw, out_dir):
     """Write <out-dir>/d2l-<fw>.zip. Returns a stats dict."""
     fw_root = notebooks_dir / fw
     nbs = sorted(p for p in fw_root.rglob('*.ipynb')
@@ -127,8 +158,30 @@ def build_zip(repo_root, notebooks_dir, store_dir, img_dir, fw, out_dir):
     # Deterministic: sorted entries, fixed timestamps, fixed compression.
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED,
                          compresslevel=9) as z:
-        readme = _README.format(fw=fw, mod=_MOD[fw])
+        readme = _README.format(fw=fw, mod=_MOD[fw], cpu_note=_CPU_NOTE[fw])
         _write(z, f'{top}/README.md', readme.encode('utf-8'))
+        _write(z, f'{top}/.python-version', b'3.12\n')
+        _write(z, f'{top}/pyproject.toml', project_file.read_bytes())
+
+        fw_env = env_dir / fw
+        locks = sorted(fw_env.glob('pylock.*.toml'))
+        if not locks:
+            raise FileNotFoundError(f'no uv locks found under {fw_env}')
+        for lock in locks:
+            lock_text = lock.read_text()
+            old = 'directory = { path = "../../", editable = true }'
+            new = 'directory = { path = ".", editable = true }'
+            if lock_text.count(old) != 1:
+                raise ValueError(f'{lock}: expected one editable ../.. d2l path')
+            lock_text = lock_text.replace(old, new)
+            _write(z, f'{top}/{lock.name}', lock_text.encode('utf-8'))
+
+        package_files = sorted(p for p in package_dir.glob('*.py') if p.is_file())
+        if not package_files:
+            raise FileNotFoundError(f'no Python package files under {package_dir}')
+        for src in package_files:
+            _write(z, f'{top}/d2l/{src.name}', src.read_bytes())
+
         for nb_path in nbs:
             chapter = nb_path.parent.name
             stem = nb_path.stem
@@ -160,6 +213,7 @@ def build_zip(repo_root, notebooks_dir, store_dir, img_dir, fw, out_dir):
 
     return {'notebooks': n_nb, 'with_outputs': n_out, 'images': n_img,
             'img_bytes': img_bytes, 'img_missing': missing,
+            'locks': len(locks), 'package_files': len(package_files),
             'zip_bytes': zip_path.stat().st_size}
 
 
@@ -178,6 +232,9 @@ def main():
     ap.add_argument('--notebooks-dir', default='_notebooks')
     ap.add_argument('--store-dir', default='outputs')
     ap.add_argument('--img-dir', default='img')
+    ap.add_argument('--env-dir', default='notebook_envs')
+    ap.add_argument('--project-file', default='pyproject.toml')
+    ap.add_argument('--package-dir', default='d2l')
     ap.add_argument('--out-dir', default='_book/notebooks')
     ap.add_argument('--frameworks', default=','.join(FRAMEWORKS))
     args = ap.parse_args()
@@ -186,6 +243,9 @@ def main():
     notebooks_dir = repo_root / args.notebooks_dir
     store_dir = repo_root / args.store_dir
     img_dir = repo_root / args.img_dir
+    env_dir = repo_root / args.env_dir
+    project_file = repo_root / args.project_file
+    package_dir = repo_root / args.package_dir
     out_dir = repo_root / args.out_dir
     frameworks = [f.strip() for f in args.frameworks.split(',') if f.strip()]
 
@@ -201,12 +261,15 @@ def main():
             print(f'  {fw}: no generated notebooks — run `make notebooks` (skipped)',
                   file=sys.stderr)
             continue
-        s = build_zip(repo_root, notebooks_dir, store_dir, img_dir, fw, out_dir)
+        s = build_zip(repo_root, notebooks_dir, store_dir, img_dir, env_dir,
+                      project_file, package_dir, fw, out_dir)
         total += 1
         miss = f', {s["img_missing"]} img MISSING' if s['img_missing'] else ''
         print(f'  d2l-{fw}.zip: {s["notebooks"]} notebooks '
               f'({s["with_outputs"]} with outputs) + {s["images"]} images '
-              f'({s["img_bytes"] / MB:.1f} MB raw){miss} → {s["zip_bytes"] / MB:.1f} MB')
+              f'({s["img_bytes"] / MB:.1f} MB raw) + {s["locks"]} uv locks + '
+              f'{s["package_files"]} d2l modules{miss} → '
+              f'{s["zip_bytes"] / MB:.1f} MB')
     if total == 0:
         print('  (nothing built — check --frameworks / that notebooks are generated)',
               file=sys.stderr)

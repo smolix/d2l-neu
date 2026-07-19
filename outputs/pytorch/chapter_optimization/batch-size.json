@@ -1,0 +1,329 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/batch-size.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:fd1d16f2ef3574f4bf2e37f01ff0e305098849cfb25060c40ddd2f8d00833058",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "batch-size": {
+      "code_fingerprint": "sha256:a26984c8d88835070308a93c9096fe6b5a97c888bdbee75aaf7960e872f3f9c9",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-size-a-two-batch-estimator-1": {
+      "code_fingerprint": "sha256:6dccf070510f5e0005b980f8b21201f68296bb4693d942908a246ee252a1da60",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-size-a-two-batch-estimator-2": {
+      "code_fingerprint": "sha256:c6792d0814925a48926bb9547d91530d6c420891362d5d61848326332f25a462",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-size-a-two-batch-estimator-3": {
+      "code_fingerprint": "sha256:6a3668b712e3c17da856d6e49633cec16fbf0b03d0125c1a579117756b2a6acd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "noise scale at initialization: 98\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "after 500 steps of Adam: 705\n"
+        }
+      ]
+    },
+    "batch-size-a-two-batch-estimator-4": {
+      "code_fingerprint": "sha256:585f23d433f9024b1bbedfbfff816582f7f2d91e8f52cb4722d49569ff6a0c2b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "noise scale at initialization: 2.5\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "after 500 steps of Adam: 113\n"
+        }
+      ]
+    },
+    "batch-size-steps-to-a-target": {
+      "code_fingerprint": "sha256:0f034a79a453a42862037011a579e12bee3e186752116f5abff24436e73e3135",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-size-the-language-model": {
+      "code_fingerprint": "sha256:b37cc9d367f83582c2d97ea08f873e44b989d68d5e3f14468444fe0c573ec106",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=   4  steps=  4720  examples=   18880\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  16  steps=  1180  examples=   18880\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  64  steps=   390  examples=   24960\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 256  steps=   190  examples=   48640\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "batch-size/batch-size-the-language-model-1.svg",
+          "bytes": 30539,
+          "sha256": "sha256:3dfbe147a332b5d41b587ec1457e67d41a1eff254e14d6a75e0ef4fa1b3d8c38"
+        }
+      ]
+    },
+    "batch-size-the-cnn": {
+      "code_fingerprint": "sha256:9cc9ba4ede0d1cb2cae83dab851b0fbe5a3808d829dac192893c57fcdf76ac3c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=   8  steps=  2510  examples=   20080\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  32  steps=   640  examples=   20480\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 128  steps=   220  examples=   28160\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 512  steps=   110  examples=   56320\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=2048  steps=   120  examples=  245760\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "batch-size/batch-size-the-cnn-1.svg",
+          "bytes": 31826,
+          "sha256": "sha256:378a5e59ca84f276ea74d9f70a2c9dc082259d39f5a4b60aec83057f54a77b43"
+        }
+      ]
+    },
+    "batch-size-the-bill-in-examples": {
+      "code_fingerprint": "sha256:7f453182b11ff3645c2fc2fde788782d41e79ebdceaf5dd4146d3997b0540979",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "batch-size/batch-size-the-bill-in-examples-1.svg",
+          "bytes": 30334,
+          "sha256": "sha256:13481f2d58a4c108c106f101c96a9924767fc7a443ab33f7993cd6d54cc4c057"
+        }
+      ]
+    },
+    "batch-size-learning-rate-rules-1": {
+      "code_fingerprint": "sha256:28b2bf33fc6ba51515a6e9a3e3a2663d34aaaa1072e65bd05052564b16e0bda3",
+      "kind": "text",
+      "outputs": []
+    },
+    "batch-size-learning-rate-rules-2": {
+      "code_fingerprint": "sha256:f63f022abea4ee7edb0cbe2a3e6d3abc9d698d1a2be7d006a09b87fcc5d67af2",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.003125  loss=0.593\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.00625  loss=0.529\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.0125  loss=0.550\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.025  loss=0.565\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.05  loss=1.757\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.1  loss=2.321\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.2  loss=2.347\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.003125  loss=0.787\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.00625  loss=0.687\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.0125  loss=0.614\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.025  loss=0.563\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.05  loss=0.451\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.1  loss=0.465\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.2  loss=0.693\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "batch-size/batch-size-learning-rate-rules-2-1.svg",
+          "bytes": 23706,
+          "sha256": "sha256:821cbd216e5553f0490fd785bde545a155d92a199c80d105744dc38ee22c01b0"
+        }
+      ]
+    },
+    "batch-size-learning-rate-rules-3": {
+      "code_fingerprint": "sha256:7e32db953740c04251c1e11ed32b8e7c010fc05c2fb07f81f0c4a3f561271092",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.0002  loss=0.517\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.0004  loss=0.472\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.0008  loss=0.428\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.0016  loss=0.415\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.0032  loss=0.423\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.0064  loss=0.635\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.0128  loss=0.623\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b=  8  lr=0.0256  loss=0.619\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.0002  loss=0.630\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.0004  loss=0.563\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.0008  loss=0.501\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.0016  loss=0.439\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.0032  loss=0.408\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.0064  loss=0.395\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.0128  loss=0.452\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b= 64  lr=0.0256  loss=0.508\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "batch-size/batch-size-learning-rate-rules-3-1.svg",
+          "bytes": 26037,
+          "sha256": "sha256:c028e5d34ad456e980f17160b5e8503b82069cc26d4bc6162af5d1e69b6072fd"
+        }
+      ]
+    }
+  }
+}

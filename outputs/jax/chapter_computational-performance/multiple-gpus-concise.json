@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:76361b39fbe09de14e050b55dcac1c27b0cb0c44dfca1f004b0ed19e61f8768f",
+    "d2l_lib_fingerprint": "sha256:711851e2c959448e81bc706ad1c9de757d99b5e1aae660b1df01bd37b9bb27c9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Using 4 devices: [CudaDevice(id=0), CudaDevice(id=1), CudaDevice(id=2), CudaDevice(id=3)]\n"
+          "text": "Using 2 devices: [CudaDevice(id=0), CudaDevice(id=1)]\n"
         }
       ]
     },
@@ -35,38 +35,38 @@
       "outputs": []
     },
     "multiple-gpus-concise-training-2": {
-      "code_fingerprint": "sha256:3e3d3fe83be07828ab4b6691961cb5fc204266304aa408374c802dfe5b14792f",
+      "code_fingerprint": "sha256:3358a79c87c19ec0ba1e7fd5f9912a5cfdb9d9599250c5821242e109d765077a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.92, 23.6 sec/epoch on 1 devices\n"
+          "text": "test acc: 0.91, 55.5 sec/epoch on 1 devices\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-2-1.svg",
-          "bytes": 16966,
-          "sha256": "sha256:e1f1c7e5b5da9148c071afd07473a4147fbec6febfeec78ea75f9c8cb2fa9399"
+          "bytes": 17129,
+          "sha256": "sha256:4fceaaab78b8624a9f621a66e06392e15fe8d554c954334a400bd78215e8bdcb"
         }
       ]
     },
     "multiple-gpus-concise-training-3": {
-      "code_fingerprint": "sha256:ce2dc653ea80b2089ea8fba167de3478379520facbbb808d3da3f33a19c0ba77",
+      "code_fingerprint": "sha256:a96524920d57ea0f953c272bbc871c47bce2c8cc672891d6cefb055a463f7a88",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.92, 14.7 sec/epoch on 2 devices\n"
+          "text": "test acc: 0.91, 35.9 sec/epoch on 2 devices\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-3-1.svg",
-          "bytes": 16966,
-          "sha256": "sha256:514ceb0ad1576cb6affcf68bb8369f9838e3aabfe85eb8cbd270e4718f82a008"
+          "bytes": 16234,
+          "sha256": "sha256:e97d174ef2b2b599f07ad9f09f85fd0e4913db20c7cb781fe85d7be69d874f45"
         }
       ]
     }

@@ -14,32 +14,32 @@
       "outputs": []
     },
     "geometry-linear-algebraic-ops-dot-products-and-angles": {
-      "code_fingerprint": "sha256:0c8af7e3db55932ce82bab18764414b3ee056a61eae66899ea96d12fd86d7397",
+      "code_fingerprint": "sha256:bf8715aa25ab2be4eeb1626611de8eac789d95a11f85948da4bafcba62cedc90",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.41899001598358154>"
+          "text": "np.float64(0.4189900840328574)"
         }
       ]
     },
     "mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace": {
-      "code_fingerprint": "sha256:ab53c1f777f179f445adfec53e8ebd3ca9ec9e932b36329f6246773353f8b721",
+      "code_fingerprint": "sha256:f829669268747b7148ea8432d0a269cc3c61213ff597a7705161d9d90c35fc86",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=1.7235255711511854e-07>,\n <tf.Tensor: shape=(), dtype=float32, numpy=1.1944189282075968e-07>)"
+          "text": "(np.float64(4.153077993666847e-16), np.float64(4.211628519682908e-16))"
         }
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-1": {
-      "code_fingerprint": "sha256:f896e98a4f4a95ea18e28d103415b0a00df86335232cd99599f3eff43f2df3f3",
+      "code_fingerprint": "sha256:e02c876446a9b8f4695cf7f804c9ac37baf048524dfc4f350af35102ae98d73c",
       "kind": "text",
       "outputs": []
     },
     "geometry-linear-algebraic-ops-hyperplanes-2": {
-      "code_fingerprint": "sha256:3a68f8a0d19583cd640e2f76e96f5295777e5576ece0fee06dbde3dcb9bf080b",
+      "code_fingerprint": "sha256:965f8f1099a105bbfdcf566cbf430aba13b7407c903b8d3bae13ce7599a9236e",
       "kind": "asset",
       "outputs": [
         {
@@ -47,70 +47,70 @@
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-hyperplanes-2-1.svg",
           "bytes": 26257,
-          "sha256": "sha256:d9c29282bab274f3faba015f58c3822a72da43a6906375fc038ad4ba1d5b59f6"
+          "sha256": "sha256:e4c37472b429ba25a1fc154b98f2f1f0680bca5db5d65eea464653c7f7220239"
         }
       ]
     },
     "geometry-linear-algebraic-ops-hyperplanes-4": {
-      "code_fingerprint": "sha256:a87319667ad53ae85388e5ef0cd6b146f2841fcb263f3b0b1f7e0e2a5ee6ba74",
+      "code_fingerprint": "sha256:20b74b78978b5d61a57193f374ace9b2b0c27fb40063ad33fee325c1d7676a3e",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=0.9154999852180481>"
+          "text": "np.float64(0.9155)"
         }
       ]
     },
     "geometry-linear-algebraic-ops-projection-histogram": {
-      "code_fingerprint": "sha256:a2a57c8508f8017ea22c170896005de6f6b211a7865e87f6f7107b983ed0c90c",
+      "code_fingerprint": "sha256:3cde1558f7df35a5e0bbd9bd3bf711dd3dbbd2a5a9da00c9bd6f8489a557d8a3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-geometry-linear-algebraic-ops/geometry-linear-algebraic-ops-projection-histogram-1.svg",
-          "bytes": 40895,
-          "sha256": "sha256:2a0d5e12876f97fcc81caa8f0b4904aa64155e513ab70775027a9378abc89b16"
+          "bytes": 40875,
+          "sha256": "sha256:a26ff37339a4baec53520656937f152a61ce77dfc008328241585aff07daf720"
         }
       ]
     },
     "geometry-linear-algebraic-ops-invertibility": {
-      "code_fingerprint": "sha256:82af7fa0670ede9448a0b2cfc50cd948f82fa47f0a9beda7d93388b98c2f2944",
+      "code_fingerprint": "sha256:9d3493d4999a9f4e94459797521be889ef667d602abeaa0cb0c3d3debdaf6176",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(2, 2), dtype=float32, numpy=\narray([[1., 0.],\n       [0., 1.]], dtype=float32)>"
+          "text": "array([[1., 0.],\n       [0., 1.]])"
         }
       ]
     },
     "geometry-linear-algebraic-ops-determinant": {
-      "code_fingerprint": "sha256:0c3be2bfce0e411eae4dbae1bf34ddb65478c77d95aa2f8806d4b29797ca3aac",
+      "code_fingerprint": "sha256:3c89e1e37a5c3d76bd08539c508e66c06be3828cfceca2f613a07be8fbbf8ce7",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(), dtype=float32, numpy=5.0>"
+          "text": "np.float64(4.999999999999999)"
         }
       ]
     },
     "mdl-geometry-linear-algebraic-ops-det-3x3": {
-      "code_fingerprint": "sha256:74ded92d754cd41e9b465fe08e7dc589299403815e76382c591c582e86167dad",
+      "code_fingerprint": "sha256:a7c6f0dd42d4d0e25b1e9e1091074d753dfc861cd6a4d4d44873a1119f717166",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=8.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=-8.0>,\n <tf.Tensor: shape=(), dtype=float32, numpy=6.0>)"
+          "text": "(np.float64(8.000000000000002),\n np.float64(-8.000000000000002),\n np.float64(6.0))"
         }
       ]
     },
     "geometry-linear-algebraic-ops-expressing-in-code-2": {
-      "code_fingerprint": "sha256:beda62693a748ac6b286f79639ffc4009f3191535eb22e4152f93cf2d9bef742",
+      "code_fingerprint": "sha256:4112f77532d1c757d5c2a7227c1d936b56994d4cd51f17c4ab7aa82820490b33",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(), dtype=float32, numpy=5.0>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([ 0., -5.], dtype=float32)>,\n <tf.Tensor: shape=(2, 2), dtype=float32, numpy=\n array([[-1.,  8.],\n        [-4.,  7.]], dtype=float32)>,\n <tf.Tensor: shape=(), dtype=float32, numpy=4.0>)"
+          "text": "(np.float64(5.0),\n array([ 0., -5.]),\n array([[-1.,  8.],\n        [-4.,  7.]]),\n np.float64(4.0))"
         }
       ]
     }

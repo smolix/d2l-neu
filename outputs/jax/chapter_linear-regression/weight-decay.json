@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:6f5cce4a0bdaa26d31f3f371ab576dcb3c88a80122f6a7767ec4c8ab25b9eea6",
+    "d2l_lib_fingerprint": "sha256:8ad2de56734cac25e65e5279f951bd2e3cab5788b43b111431f0f0119e4eda43",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.010900448076426983\n"
+          "text": "L2 norm of w: 0.010900449007749557\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 21861,
-          "sha256": "sha256:d5d4eda53102a43e1ec62553b660d60ca9a943a4d6167b807d8c86c0dbbeb5fd"
+          "bytes": 23680,
+          "sha256": "sha256:61c2611e8bd9a3b3b4414a5616e57df532b9e79cf04ef422357b4100233b7ac4"
         }
       ]
     },
@@ -58,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0007449396653100848\n"
+          "text": "L2 norm of w: 0.0007526460103690624\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 21234,
-          "sha256": "sha256:ec0499dbd028386dab859fa738b8e92fafa8cd2e202d244f6b2ab372d62bf5cc"
+          "bytes": 21232,
+          "sha256": "sha256:b2d4c7f90601e28b37a92d1050b4abab92047db36c693942dd8fdd1d6897991e"
         }
       ]
     },
@@ -98,8 +98,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 23231,
-          "sha256": "sha256:25adc9d4ae92b18999774b3c89356153be33728e65ae95fc90505bcca2536348"
+          "bytes": 23282,
+          "sha256": "sha256:3b66b2308bbed128a2a234e1b645ed95f18fe6c07b552df7e68ae0d5e180c337"
         }
       ]
     }

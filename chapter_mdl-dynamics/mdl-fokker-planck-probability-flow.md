@@ -292,11 +292,57 @@ $$
 $$
 :eqlabel:`eq_mdl-dyn-fokker-planck`
 
-For a full matrix diffusion $G(\mathbf{x}, t)\,d\mathbf{W}$ the second term
-becomes $\tfrac12 \sum_{ij} \partial_i \partial_j ([G G^\top]_{ij}\, p_t)$; we
-will never need more than the scalar-$g$ case, where it also equals
-$\tfrac12 \nabla \cdot (g^2 \nabla p_t)$ since $g$ does not depend on
-$\mathbf{x}$.
+For a full matrix diffusion $G(\mathbf{x}, t)\,d\mathbf{W}$, put
+$a=GG^\top$. The second-order term is then
+$\tfrac12 \sum_{ij} \partial_i\partial_j(a_{ij}p_t)$. The scalar-$g$
+case used in most examples is the special choice $a=g(t)^2I$, for which this
+reduces to $\tfrac12 g(t)^2\Delta p_t$.
+
+### Diffusion Matrices and Boundary Conditions
+
+The matrix formula becomes easier to interpret when written as conservation
+of probability. Define the probability current componentwise by
+
+$$
+J_i(\mathbf{x},t)
+= f_i(\mathbf{x},t)p_t(\mathbf{x})
+- \frac12\sum_j \partial_j\big(a_{ij}(\mathbf{x},t)p_t(\mathbf{x})\big).
+$$
+
+Then the general Fokker--Planck equation is simply
+$\partial_t p_t=-\nabla\cdot\mathbf{J}$. Integrating it over a domain
+$\Omega$ gives
+
+$$
+\frac{d}{dt}\int_\Omega p_t(\mathbf{x})\,d\mathbf{x}
+= -\int_{\partial\Omega}\mathbf{J}\cdot\mathbf{n}\,dS.
+$$
+
+This identity also says which boundary assumptions a derivation has hidden.
+On all of $\mathbb{R}^d$ we require the current to decay sufficiently fast.
+A **reflecting** boundary imposes $\mathbf{J}\cdot\mathbf{n}=0$; periodic
+boundaries match density and flux on opposite faces. A common **absorbing**
+condition is $p=0$ on the boundary, in which case probability may leave the
+domain and the integral of $p$ need not remain one unless an absorbed state is
+included. Integration by parts without the matching boundary term is not
+valid in these settings.
+
+Where $p_t>0$, dividing the current by the density gives the general
+probability-flow velocity
+
+$$
+\mathbf{v}
+= \frac{\mathbf{J}}{p_t}
+= \mathbf{f}-\frac12\,a\nabla\log p_t
+  -\frac12\,\nabla\cdot a,
+\qquad
+(\nabla\cdot a)_i=\sum_j\partial_j a_{ij}.
+$$
+
+Thus state-dependent or anisotropic noise contributes both a score term and a
+spatial-divergence term. The later formula
+$\mathbf{f}-\tfrac12g^2\nabla\log p_t$ is precisely the simplification for
+$a=g(t)^2I$.
 
 ### Drift Transports, Diffusion Smooths
 
@@ -1037,11 +1083,12 @@ it is the business of :numref:`sec_mdl-score-matching-diffusion-flow`.
 
 * A single SDE path is random, but the ensemble's time-marginal
   $p_t(\mathbf{x})$ evolves deterministically. Its law of motion is the
-  **Fokker--Planck equation**
-  $\partial_t p = -\nabla \cdot (\mathbf{f} p) + \tfrac12 g^2 \Delta p$:
-  drift transports probability mass, diffusion (the Laplacian, Itô's
-  $(dW)^2 = dt$ correction made macroscopic) smooths it. With
-  $\mathbf{f} = \mathbf{0}$ it is the heat equation.
+  **Fokker--Planck equation**. For diffusion matrix $a=GG^\top$, it is
+  $\partial_t p=-\sum_i\partial_i(f_i p)
+  +\tfrac12\sum_{ij}\partial_i\partial_j(a_{ij}p)$; the familiar scalar
+  form uses $a=g(t)^2I$. The probability current makes boundary assumptions
+  explicit: reflecting boundaries have zero normal flux, periodic boundaries
+  match flux, and absorbing boundaries can lose mass.
 * Three self-contained vector-calculus facts power everything: the divergence
   as flux per unit volume (with the divergence theorem), the Laplacian as
   deviation from the neighborhood average, and integration by parts
@@ -1058,9 +1105,11 @@ it is the business of :numref:`sec_mdl-score-matching-diffusion-flow`.
   with a *plus* sign. So Fokker--Planck is a continuity equation with
   velocity $\mathbf{v}_t = \mathbf{f} - \tfrac12 g^2 \nabla \log p_t$.
 * The **probability-flow ODE** $\dot{\mathbf{x}} = \mathbf{v}_t(\mathbf{x})$
-  shares every time-marginal with the SDE while its smooth trajectories never
-  cross; it makes diffusion models deterministic, invertible, and exactly
-  evaluable via the CNF change-of-variables integral.
+  shares every time-marginal with the SDE under the stated smoothness,
+  positivity, boundary, and well-posedness assumptions. Its trajectories are
+  deterministic and, where the flow exists uniquely in both directions,
+  invertible. CNF likelihood evaluation is exact only with the exact field,
+  divergence, and numerical integration.
 * The **score** $\nabla_{\mathbf{x}} \log p_t$ is a vector field pointing
   uphill on the log-density; it ignores the normalizing constant, which is
   why it is learnable where the density is not. Gaussian:

@@ -104,7 +104,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-gradient-based-optimization/gradient-based-optimization-sgd-schedule-1.svg",
           "bytes": 100456,
-          "sha256": "sha256:72d4ed14279a6b75e5ea070b1f36ae2878a96049e075ec8e5a0257307fef510a"
+          "sha256": "sha256:5f945397a55d93ebdeb7c45f402189632ee58b9ce823c604088031ef8c2b2183"
         }
       ]
     },
@@ -116,6 +116,24 @@
           "type": "stream",
           "name": "stdout",
           "text": "Newton on the quadratic: |x_1| = 0.0e+00 after one step\nGD with the optimal step contracts by 0.9802 per step; it needs 691 steps for |x_k| <= 1e-6\nNewton iteration 1:  |grad| = 2.8e-01\nNewton iteration 2:  |grad| = 3.2e-02\nNewton iteration 3:  |grad| = 1.1e-03\nNewton iteration 4:  |grad| = 1.2e-06\nNewton iteration 5:  |grad| = 1.6e-12\nNewton iteration 6:  |grad| = 3.1e-17\nagrees with the SGD section optimum: True\n"
+        }
+      ]
+    },
+    "mdl-gradient-bfgs-quadratic": {
+      "code_fingerprint": "sha256:3b4d5c322238b145bc53347ba6cf4beabbbb32e89bb9d37d704ee0ff20180192",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "after d = 6 steps: BFGS 1.05e-14, GD 7.94e-01\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-gradient-based-optimization/mdl-gradient-bfgs-quadratic-1.svg",
+          "bytes": 28838,
+          "sha256": "sha256:d3d2c748c4ab15a217e8920ff4f52c55bc960739067036b0ece90fd2d5af12db"
         }
       ]
     }

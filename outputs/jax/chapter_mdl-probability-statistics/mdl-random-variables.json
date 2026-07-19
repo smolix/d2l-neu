@@ -14,44 +14,29 @@
       "outputs": []
     },
     "random-variables-density-to-probability": {
-      "code_fingerprint": "sha256:de45f586066cf43eb38f1c8732a7feccbdb8109c9cf6717866d8f67db6c13a67",
+      "code_fingerprint": "sha256:1b5c26d63116dbcce281770d877d432d83f390598cca304c5d0b5a0088d5b00d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total mass     : 1.0000\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "P(-2 < X <= 3) : 0.7725\n"
+          "text": "total mass     : 1.0000\nP(-2 < X <= 3) : 0.7725\n"
         }
       ]
     },
     "random-variables-cauchy-diverges": {
-      "code_fingerprint": "sha256:7d3473b047ef5319db71336aec732b88527e50bf686330bacc77864117d2545d",
+      "code_fingerprint": "sha256:ed1c7b0babc5bb8ddfd52e40a1a29a249332eb612cb233d40f1055235e3aaa3c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "integral_-10^10 x^2 p(x) dx = 5.430\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "integral_-100^100 x^2 p(x) dx = 62.668\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "integral_-1000^1000 x^2 p(x) dx = 635.620\n"
+          "text": "integral_-10^10 x^2 p(x) dx = 5.430\nintegral_-100^100 x^2 p(x) dx = 62.668\nintegral_-1000^1000 x^2 p(x) dx = 635.620\n"
         }
       ]
     },
     "random-variables-change-of-variables": {
-      "code_fingerprint": "sha256:f5c4129c31f1354f3539df4806ca67c6e35ed0dbe3e0a3d68e248767d76cf483",
+      "code_fingerprint": "sha256:80c664e4604386f83defe5d0798a436883cb3ed81a1af96932922999ef392267",
       "kind": "asset",
       "outputs": [
         {
@@ -59,7 +44,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-random-variables/random-variables-change-of-variables-1.svg",
           "bytes": 27212,
-          "sha256": "sha256:7f0a39ba728f798e3788759bb71f5c280f4db6e9768fdd6513411fef9e922e01"
+          "sha256": "sha256:aa9bd0a759e2474269fc35b91b1b4aeca581541df52d7c4ce84c46cb2f64ee2c"
         }
       ]
     }

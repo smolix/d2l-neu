@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:57a91d9ca8b5c13a6022b2a00450ac41e0fe1c5c0cd743793a487192d34821cf",
+    "d2l_lib_fingerprint": "sha256:0f64f59272390032e6180922f1108ec66eabcd762f8dc632ed7e12bae54f4c49",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -77,14 +77,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "average validation log mse = 0.035907693989574906\n"
+          "text": "average validation log mse = 0.03639208979904652\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-linear-1.svg",
-          "bytes": 31958,
-          "sha256": "sha256:c56dae4166a8e47f6adba5ff4a12284d38d878c330230136f7d269ce2e65ff42"
+          "bytes": 32102,
+          "sha256": "sha256:d4bcffded7207939ee9c3b1f6ac7743fc5eb90b9dc6bc84072902938490e76b7"
         }
       ]
     },

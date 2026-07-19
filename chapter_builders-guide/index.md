@@ -1,4 +1,4 @@
-# Builders' Guide
+# Computation
 :label:`chap_computation`
 
 Alongside giant datasets and powerful hardware, great software tools have

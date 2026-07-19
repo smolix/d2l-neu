@@ -865,7 +865,7 @@ We return to both in the chapters on modern CNNs.
 :::
 
 ::: {.d2l-note}
-Next (§5.5): the model trains, but *why* does an over-parametrized
-network generalize at all?
+Next (the generalization-in-deep-learning section): the model trains, but
+*why* does an over-parametrized network generalize at all?
 :::
 :::

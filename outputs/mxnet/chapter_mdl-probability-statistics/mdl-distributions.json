@@ -9,12 +9,12 @@
   },
   "cells": {
     "distributions-imports": {
-      "code_fingerprint": "sha256:3fcb18e7a5bdce1d3e21c891cd5303db094ea6d4d13c6fdb9f12c08bcb959941",
+      "code_fingerprint": "sha256:edb776122986b99194cd87ebe043849874b04a0ee278da76d401be0cbb0ce8a3",
       "kind": "text",
       "outputs": []
     },
     "distributions-bernoulli": {
-      "code_fingerprint": "sha256:757f8076ae3f8e459e8582b7bed4946d0d2e32b2b55cc1c5bbbe16e6b2f0ac85",
+      "code_fingerprint": "sha256:0ca9385d96c3086f836f06bb0a56cc014b49823beb01778de5ee43372b53cbfc",
       "kind": "text",
       "outputs": [
         {
@@ -29,7 +29,7 @@
       ]
     },
     "distributions-categorical": {
-      "code_fingerprint": "sha256:92e7636c7ea78bc22a4c86056f7eff834d61a21ae277b5d42cab85308dfcddaf",
+      "code_fingerprint": "sha256:1f904756a2c2456fb488998daff6b63004859de775998392b4c3cbe697af6824",
       "kind": "text",
       "outputs": [
         {
@@ -40,7 +40,7 @@
       ]
     },
     "distributions-discrete-uniform": {
-      "code_fingerprint": "sha256:7117b3f9a1d0998740a697101974d3e933ab54613568634ff2edc3f7b1c52077",
+      "code_fingerprint": "sha256:5ca4bb5e7f0eb98fc34207238eaaf3572908111cbad42c3bb7a6fa9f08fb57b6",
       "kind": "text",
       "outputs": [
         {
@@ -51,13 +51,13 @@
       ]
     },
     "distributions-binomial": {
-      "code_fingerprint": "sha256:5909b947f2b9a59c2f3abc001cb411a884f3d470929cff21a5b22cf8ab0d8f96",
+      "code_fingerprint": "sha256:f7abbf3406e12a3946412a3ed7fc2d954fa86c56df36337c04e0c6b7cf1f00e7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean np = 4.0   var np(1-p) = 2.4\nP(X=k): [0.006 0.04  0.121 0.215 0.251 0.201 0.111 0.042 0.011 0.002 0.   ]\n"
+          "text": "mean onp = 4.0   var onp(1-p) = 2.4\nP(X=k): [0.006 0.04  0.121 0.215 0.251 0.201 0.111 0.042 0.011 0.002 0.   ]\n"
         },
         {
           "type": "execute_result",
@@ -66,7 +66,7 @@
       ]
     },
     "distributions-poisson": {
-      "code_fingerprint": "sha256:ce14da951755e16c99382bb80e0d12c190b6b5e27b1cf2ccbeb4c7bfb9b8bcd0",
+      "code_fingerprint": "sha256:4eefbb5339fc86309588d9a9b7f275bce6e0a77f04c8626669242bca029b4fb4",
       "kind": "text",
       "outputs": [
         {
@@ -81,7 +81,7 @@
       ]
     },
     "distributions-binomial-to-poisson": {
-      "code_fingerprint": "sha256:3fb5581d5c6aabe6aaf5c1fb9f8ee2be928f7b4744d54152ea931a58614ef7f7",
+      "code_fingerprint": "sha256:a0f3052d45ee81035d4e74c2a0f118d91ba0f91798371f0e0640e1a7ac287339",
       "kind": "asset",
       "outputs": [
         {
@@ -89,12 +89,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:51f70939a2c2258e2f148965550b91611ea161e4d4c038dfbb6d633e64a08106"
+          "sha256": "sha256:076afbf487d54a401076d2d0a4e593ba5596e05aaa73ab9b8dc26858a4836235"
         }
       ]
     },
     "distributions-continuous-uniform": {
-      "code_fingerprint": "sha256:6c5234352eb462e60a699f6b4644a6a5f6f63875a71179b4aaea3e49f3dabfaa",
+      "code_fingerprint": "sha256:63bf1df6a3741a9f9d78806e38b375f18424720b1239884223e7b75c2da9d144",
       "kind": "text",
       "outputs": [
         {
@@ -105,7 +105,7 @@
       ]
     },
     "distributions-exponential": {
-      "code_fingerprint": "sha256:61d2aaa39dd4ac0931e6ccb038f1c916fa2b5dc215d5b6c40c4cc68e2ebc5610",
+      "code_fingerprint": "sha256:145230afb06bf2fd1ba6a0085ec5659fb6667078fabdda8931e9049fd4d8b52a",
       "kind": "text",
       "outputs": [
         {
@@ -116,7 +116,7 @@
       ]
     },
     "mdl-distributions-gaussian-1": {
-      "code_fingerprint": "sha256:d96658d402e28e7d1309c8b640eb4951e8ad211f3d24516fdfe0216e5566218c",
+      "code_fingerprint": "sha256:2e2a74678a815fc647ebaf3f569b6fa28d021579a4fc4006c85800396df2f92a",
       "kind": "asset",
       "outputs": [
         {
@@ -124,12 +124,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:e377eb1290a5cb80bdb019c44b096bf704fa874d18bd14e3320450c2c4625509"
+          "sha256": "sha256:546921b0534d63cf5e6bf234d1e8f0a3502ebc0f11605a70aeafce25738a4838"
         }
       ]
     },
     "distributions-gaussian": {
-      "code_fingerprint": "sha256:fd24c4d4106a60da6f8d92afd9f5325849899a80d5330a6391bb615ed743b378",
+      "code_fingerprint": "sha256:172059dc400ea19f26e5182f4e36c47cc234908562f1409580f5e804c5a883f1",
       "kind": "text",
       "outputs": [
         {
@@ -144,7 +144,7 @@
       ]
     },
     "distributions-laplace": {
-      "code_fingerprint": "sha256:2f34185128a61c082814a4192ac996676b910969969508717d81a36489a700f7",
+      "code_fingerprint": "sha256:81a46376f8906902cb18df6f5ed52d7f6d6131cc10939b54fbaff535e402b7e0",
       "kind": "text",
       "outputs": [
         {
@@ -155,7 +155,7 @@
       ]
     },
     "distributions-mvn": {
-      "code_fingerprint": "sha256:7ca077e8191c311c3f4024d55619d4f17dffb3937f6c22b261178dbb013488b5",
+      "code_fingerprint": "sha256:0ae0201ff37980749fefd4b03fc1162142833f1af0f1d92c3f0cbe985efe43c7",
       "kind": "text",
       "outputs": [
         {
@@ -166,18 +166,23 @@
       ]
     },
     "mdl-distributions-multivariate-gaussian-1": {
-      "code_fingerprint": "sha256:e5ff57240536b3b7158e340011dbeb3e48a615dc70ccb56fd60febbf097d131c",
+      "code_fingerprint": "sha256:d821c0df3a742114bd2814f3be8af6977321c544f61e77b422ef10e877de50fb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =   3:  ||x||/sqrt(d) = 0.920 ± 0.378,   mean |cos(x,y)| = 0.497\nd =  30:  ||x||/sqrt(d) = 0.992 ± 0.127,   mean |cos(x,y)| = 0.145\nd = 300:  ||x||/sqrt(d) = 1.000 ± 0.039,   mean |cos(x,y)| = 0.046\n"
+          "text": "d =   3:  ||x||/sqrt(d) = 0.920 ± 0.378,   mean |cos(x,y)| = 0.497"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\nd =  30:  ||x||/sqrt(d) = 0.992 ± 0.127,   mean |cos(x,y)| = 0.145\nd = 300:  ||x||/sqrt(d) = 1.000 ± 0.039,   mean |cos(x,y)| = 0.046\n"
         }
       ]
     },
     "distributions-exp-family": {
-      "code_fingerprint": "sha256:fe2f8b3a3c0215126f8e80b570c524bdf1bf8ad6c694a1b3fa772e7f93772069",
+      "code_fingerprint": "sha256:f8fc78b23b9b7a023ab2a0d38b5af3e56c07059cd62844a50a8e8bc39169e89c",
       "kind": "text",
       "outputs": [
         {
@@ -188,7 +193,7 @@
       ]
     },
     "distributions-conjugate": {
-      "code_fingerprint": "sha256:62d0bd7a31ba9eb5e6c2bffc468984b3e13536039c07f12be0e0a276361800db",
+      "code_fingerprint": "sha256:60b7a744ec83ca562a3f8a1b3cbcf86d685a63b8aac8ca9961e7e462fba1830f",
       "kind": "text",
       "outputs": [
         {

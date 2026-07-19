@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "numpy: 0.5183 sec\nmxnet.np: 0.0019 sec\n"
+          "text": "numpy: 0.5072 sec\nmxnet.np: 0.0022 sec\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Done: 0.3064 sec\n"
+          "text": "Done: 0.4799 sec\n"
         }
       ]
     },
@@ -52,7 +52,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "waitall: 0.0245 sec\nwait_to_read: 0.0250 sec\n"
+          "text": "waitall: 0.0320 sec\nwait_to_read: 0.0242 sec\n"
         }
       ]
     },
@@ -63,7 +63,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "numpy conversion: 0.0240 sec\nscalar conversion: 0.0164 sec\n"
+          "text": "numpy conversion: 0.0233 sec\nscalar conversion: 0.0229 sec\n"
         }
       ]
     },
@@ -74,12 +74,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "synchronous: 0.7552 sec\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "asynchronous: 0.2608 sec\n"
+          "text": "synchronous: 0.8137 sec\nasynchronous: 0.2999 sec\n"
         }
       ]
     }

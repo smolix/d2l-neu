@@ -131,16 +131,18 @@ $$
 $$
 
 Flowing for $s$ seconds and then $t$ more is the same as flowing for $t+s$,
-which holds precisely because the field is frozen in time, so the second leg
-starts from $\Phi_s(\mathbf{x}_0)$ and follows the *same* rule. Taking
-$s = -t$ shows $\Phi_t \circ \Phi_{-t} = \mathrm{id}$: *the flow map is a
-bijection, and its inverse is the flow of the reversed clock*. This
-one-line observation is the seed of every invertible generative flow: push
-noise forward through a learned field to get data, run the same field backward
-to get the noise (and, as we will see in
-:numref:`sec_mdl-continuous-normalizing-flows`, the exact likelihood) back.
-But the observation is only as good as the guarantee that trajectories exist
-and are unique, which is where we turn next.
+whenever all three solutions exist. This holds because the field is frozen in
+time: the second leg starts from $\Phi_s(\mathbf{x}_0)$ and follows the *same*
+rule. If solutions exist uniquely both forward and backward over the relevant
+interval, taking $s=-t$ gives
+$\Phi_t \circ \Phi_{-t}=\mathrm{id}$, so $\Phi_t$ is a bijection with inverse
+$\Phi_{-t}$. A field whose solutions exist for every positive and negative
+time therefore generates a one-parameter group of bijections. This is the
+seed of an invertible generative flow: push noise forward through a learned
+field to get data, and integrate backward to recover the noise (and, as we
+will see in :numref:`sec_mdl-continuous-normalizing-flows`, its likelihood).
+The qualifiers about existence and uniqueness matter, which is where we turn
+next.
 
 ### Existence and Uniqueness
 :label:`sec_mdl-ode-existence-uniqueness`
@@ -206,8 +208,9 @@ $$
 These are the partial sums of $e^t$: the contraction *constructs* the
 exponential, one Taylor term per sweep through the integral.
 
-Both hypotheses are necessary, and two standard counterexamples show what
-each one rules out. **Uniqueness fails without Lipschitz.** The
+These hypotheses are a convenient sufficient package, not individually
+necessary conditions. Two standard counterexamples show the failures that
+they are designed to rule out. **Uniqueness can fail without Lipschitz.** The
 field $\dot{x} = \sqrt{|x|}$ has slope $\to \infty$ near $x = 0$ (no finite
 $L$ works there), and through $x_0 = 0$ it threads *infinitely many*
 solutions: $x(t) \equiv 0$ is one, and for every waiting time $c \ge 0$,
@@ -1111,7 +1114,7 @@ of (:numref:`sec_mdl-matrix-calculus-autodiff`). Discretize
 and you get *literally* the backpropagation recursion through the unrolled
 network: backprop **is** the discrete adjoint method, a lineage that runs
 from optimal control :cite:`Pontryagin.Boltyanskii.Gamkrelidze.ea.1962`
-straight to `loss.backward()`. The continuous formulation adds one practical
+straight to the backward pass of every deep-learning framework. The continuous formulation adds one practical
 twist: instead of storing the forward states for the VJPs, you may
 *re-integrate* $\mathbf{x}(t)$ backward alongside $\mathbf{a}(t)$, making
 memory $O(1)$ in the number of solver steps, at the cost of extra compute
@@ -1290,7 +1293,8 @@ linearity (which lets it commute with the expectation). $\blacksquare$
 
 The point is *what the estimator touches*: $\boldsymbol{\epsilon}^\top J$ is
 a single vector--Jacobian product, one reverse-mode pass through
-$\mathbf{f}$, cost $O(d)$, no Jacobian ever materialized
+$\mathbf{f}$ with cost comparable to one evaluation/backward pass, and no
+full Jacobian is ever materialized
 (:numref:`sec_mdl-matrix-calculus-autodiff`), followed by a dot product.
 An unbiased stochastic log-likelihood at the price of one extra backward
 pass is what makes CNFs scale; this is precisely the FFJORD recipe
@@ -1342,9 +1346,10 @@ integrated by exactly the solvers of this section.
 * An ODE $\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x}, t)$ is a velocity field;
   a solution is everywhere tangent to it, and the flow map $\Phi_t$ moves all
   of space at once, composing as $\Phi_{t+s} = \Phi_t \circ \Phi_s$.
-* **Picard--Lindelöf**: a Lipschitz field has exactly one trajectory through
-  each point (the Picard integral operator is a contraction), making flow
-  maps bijections, the well-posedness behind invertible generative flows.
+* **Picard--Lindelöf**: a globally Lipschitz field has exactly one trajectory
+  through each point for every finite time (the Picard integral operator is a
+  contraction). Existence and uniqueness in both time directions make its
+  flow maps bijections, the well-posedness behind invertible generative flows.
   Without Lipschitz, uniqueness fails ($\dot{x} = \sqrt{|x|}$, a fan of
   solutions); without a growth bound, solutions can blow up in finite time
   ($\dot{x} = x^2$).
@@ -1568,7 +1573,8 @@ $$e^{At} = \sum_{k=0}^{\infty}\frac{(At)^k}{k!} = V e^{\Lambda t}V^{-1}.$$
 . . .
 
 The eigenbasis decouples the system into independent scalar modes
-$e^{\lambda_i t}$, exactly the §22 eigendecomposition at work.
+$e^{\lambda_i t}$, exactly the eigendecomposition machinery of the linear
+algebra part at work.
 :::
 
 ::: {.slide title="Three ways to the same map"}

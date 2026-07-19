@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:4d7dac447de70e510f5b21a7dfa0a4c26eeb452aede9e33fe0a3b4a79ffea25e",
+    "d2l_lib_fingerprint": "sha256:ab3ca33ebc4ca830aa8c6a26c579966ec70c576ec8e93412c3030562fcbad311",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22395,
-          "sha256": "sha256:f60529fb3dcfdcece30671e71db2d397182027c3125f247e228ab0a3a738491c"
+          "bytes": 22393,
+          "sha256": "sha256:56d987fd997e1c167beecd438d710840060a009610fdd1fc6a06618528bdb946"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Test accuracy: 0.835\n"
+          "text": "Test accuracy: 0.833\n"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 49428,
-          "sha256": "sha256:5bb41ff9175a42f7c7314d5b3d4c56db0eff152ddbcbfe2ff99217e5bfe6c183"
+          "bytes": 52218,
+          "sha256": "sha256:245f53a6d579956dc42061340221838a8a09fe84bd763e97231c77a455956b5d"
         }
       ]
     },
@@ -138,8 +138,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21525,
-          "sha256": "sha256:4de512292fd4ffea31494a7b21e7f81775ba506ff393d07dd8902f47f6c93ced"
+          "bytes": 21507,
+          "sha256": "sha256:0428540771bb48cf0b466e8e334e719a5a2147a4c9e5fc429b18ee3a9dc645e2"
         }
       ]
     }

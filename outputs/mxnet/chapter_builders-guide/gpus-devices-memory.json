@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:33f60647941109d7acb67c7f67dcebd13728017f51ac5ba419e4a0e0207e59c1",
+    "d2l_lib_fingerprint": "sha256:a8a9c347083a88cdf881ccb9870ff509a5b8c027e5b67d0b5e5e784c55c0eb5d",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.77612984, 0.02931547, 0.11455398],\n       [0.7671152 , 0.95922667, 0.35406   ]], device=gpu(1))"
+          "text": "array([[0.18021426, 0.6638226 , 0.861303  ],\n       [0.5937755 , 0.84136075, 0.05806741]], device=gpu(1))"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[1.7761298, 1.0293155, 1.1145539],\n       [1.7671151, 1.9592266, 1.3540599]], device=gpu(1))"
+          "text": "array([[1.1802143, 1.6638227, 1.861303 ],\n       [1.5937755, 1.8413608, 1.0580674]], device=gpu(1))"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.11867658],\n       [-0.11867658]], device=gpu(0))"
+          "text": "array([[-0.00286683],\n       [-0.00286683]], device=gpu(0))"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "baseline          :   443.1 MiB used on device 0\nafter creating big:  1467.1 MiB used on device 0\nafter deleting it :  1467.1 MiB used on device 0\nafter empty_cache :   443.1 MiB used on device 0\n"
+          "text": "baseline          :  7526.4 MiB used on device 0\nafter creating big:  8550.4 MiB used on device 0\nafter deleting it :  8550.4 MiB used on device 0\nafter empty_cache :  7526.4 MiB used on device 0\n"
         }
       ]
     },
@@ -142,12 +142,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0022 sec\n"
+          "text": "time to queue 32 matrix products: 0.0021 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time until they all finished:     0.1690 sec\n"
+          "text": "time until they all finished:     0.1731 sec\n"
         }
       ]
     },
@@ -170,7 +170,7 @@
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-3-1.svg",
           "bytes": 21288,
-          "sha256": "sha256:3811a4fc08cd7953e07eaad21fc19c855cb27a03b258e45af7479cc2e29324be"
+          "sha256": "sha256:f660f92729f821035ca3b1fe5334affda41793b8be680c8d5081fd9f6260f333"
         }
       ]
     }

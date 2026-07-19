@@ -1,0 +1,201 @@
+<style>
+.d2l-notebook-launcher {
+  margin: .75rem 0 .5rem;
+  padding-top: .75rem;
+  border-top: 1px solid #e7e9ec;
+  font-family: 'Source Sans 3', system-ui, sans-serif;
+}
+.d2l-notebook-label {
+  margin-bottom: .45rem;
+  color: #4f5863;
+  font-size: .78rem;
+  font-weight: 600;
+}
+.d2l-notebook-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .35rem;
+}
+.d2l-notebook-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: .3rem .45rem;
+  border: 1px solid #bbdefb;
+  border-radius: 3px;
+  background: #e8f3fd;
+  color: #0d5f9e;
+  font-size: .78rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.d2l-notebook-action:last-child { grid-column: 1 / -1; }
+.d2l-notebook-action:hover,
+.d2l-notebook-action:focus-visible {
+  border-color: #2196f3;
+  background: #d5ebfc;
+  color: #0d47a1;
+}
+.d2l-notebook-action:focus-visible {
+  outline: 3px solid rgba(33, 150, 243, .25);
+  outline-offset: 2px;
+}
+.d2l-notebook-action.disabled {
+  border-color: #e0e0e0;
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+.d2l-notebook-bottom {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  margin: 2rem 0 1rem;
+  padding-top: 1rem;
+}
+.d2l-notebook-bottom .d2l-notebook-label { margin: 0; }
+.d2l-notebook-bottom .d2l-notebook-actions { display: flex; flex-wrap: wrap; }
+.d2l-notebook-bottom .d2l-notebook-action:last-child { grid-column: auto; }
+@media (min-width: 1200px) {
+  body.has-d2l-notebook-sidebar .d2l-notebook-bottom { display: none; }
+}
+@media print { .d2l-notebook-launcher { display: none !important; } }
+</style>
+
+<script>
+// The generated manifest maps a book page to its PyTorch, TensorFlow, JAX, or NumPy
+// notebook. The sidebar controls are inserted immediately after Slides.
+(function() {
+  if (!window.D2L_NOTEBOOKS_MANIFEST) return;
+  var FW_DISPLAY = {
+    pytorch: 'PyTorch', jax: 'JAX', numpy: 'NumPy',
+    tensorflow: 'TensorFlow', mxnet: 'MXNet'
+  };
+  var DISPLAY_TO_FW = {
+    PyTorch: 'pytorch', JAX: 'jax', NumPy: 'numpy',
+    TensorFlow: 'tensorflow', MXNet: 'mxnet'
+  };
+
+  function pageKey() {
+    var segs = location.pathname.replace(/\/$/, '').split('/').filter(Boolean);
+    if (segs.length < 2 || !/\.html$/.test(segs[segs.length - 1])) return null;
+    var chapter = segs[segs.length - 2];
+    if (!/^chapter_/.test(chapter)) return null;
+    return chapter + '/' + segs[segs.length - 1].replace(/\.html$/, '');
+  }
+
+  function selectedFramework() {
+    try {
+      var data = JSON.parse(localStorage.getItem('quarto-persistent-tabsets-data') || '{}');
+      if (DISPLAY_TO_FW[data.framework]) return DISPLAY_TO_FW[data.framework];
+    } catch (_) {}
+    var active = document.querySelector(
+      '.panel-tabset[data-group="framework"] .nav-link.active');
+    return active && DISPLAY_TO_FW[active.textContent.trim()]
+      ? DISPLAY_TO_FW[active.textContent.trim()] : 'pytorch';
+  }
+
+  function variantFor(entry) {
+    var variants = entry.variants || {};
+    if (variants.numpy) return 'numpy';
+    var selected = selectedFramework();
+    return variants[selected] ? selected : null;
+  }
+
+  function action(label) {
+    var link = document.createElement('a');
+    link.className = 'd2l-notebook-action';
+    link.textContent = label;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    return link;
+  }
+
+  function setAction(link, href, title) {
+    if (href) {
+      link.href = href;
+      link.classList.remove('disabled');
+      link.removeAttribute('aria-disabled');
+    } else {
+      link.removeAttribute('href');
+      link.classList.add('disabled');
+      link.setAttribute('aria-disabled', 'true');
+    }
+    link.title = title;
+  }
+
+  function makeLauncher(extraClass) {
+    var block = document.createElement('div');
+    block.className = 'd2l-notebook-launcher ' + extraClass;
+    var heading = document.createElement('div');
+    heading.className = 'd2l-notebook-label';
+    block.appendChild(heading);
+    var actions = document.createElement('div');
+    actions.className = 'd2l-notebook-actions';
+    var links = [action('Colab'), action('Kaggle'), action('Download')];
+    links.forEach(function(link) { actions.appendChild(link); });
+    block.appendChild(actions);
+    return {block: block, label: heading, links: links};
+  }
+
+  function update(ui, entry) {
+    var variant = variantFor(entry);
+    if (!variant) {
+      ui.label.textContent = 'Notebook unavailable';
+      ui.links.forEach(function(link) {
+        setAction(link, null, 'No hosted notebook is available for this page');
+      });
+      return;
+    }
+    var data = entry.variants[variant];
+    var display = FW_DISPLAY[variant] || variant;
+    ui.label.textContent = 'Run notebook · ' + display;
+    setAction(ui.links[0], data.colab, 'Open the ' + display + ' notebook in Colab');
+    setAction(ui.links[1], data.kaggle,
+      data.kaggle ? 'Import the ' + display + ' notebook into Kaggle'
+                  : 'Kaggle import is unavailable for this notebook');
+    setAction(ui.links[2], data.raw, 'Download the ' + display + ' notebook');
+  }
+
+  function init() {
+    if (window.__d2lNotebookLauncherInit) return;
+    window.__d2lNotebookLauncherInit = true;
+    var entry = window.D2L_NOTEBOOKS_MANIFEST[pageKey()];
+    if (!entry) return;
+    var toc = document.getElementById('TOC');
+    var main = document.querySelector('main.content');
+    var launchers = [];
+    var sidebar = makeLauncher('d2l-notebook-sidebar');
+    launchers.push(sidebar);
+    if (toc) {
+      var slides = toc.querySelector('.d2l-toc-slides');
+      if (slides) slides.insertAdjacentElement('afterend', sidebar.block);
+      else toc.appendChild(sidebar.block);
+      document.body.classList.add('has-d2l-notebook-sidebar');
+      if (main) {
+        var bottom = makeLauncher('d2l-notebook-bottom');
+        main.appendChild(bottom.block);
+        launchers.push(bottom);
+      }
+    } else if (main) {
+      main.appendChild(sidebar.block);
+    }
+    function refresh() {
+      launchers.forEach(function(ui) { update(ui, entry); });
+    }
+    refresh();
+    document.querySelectorAll(
+      '.panel-tabset[data-group="framework"] .nav-link'
+    ).forEach(function(tab) {
+      tab.addEventListener('click', function() { setTimeout(refresh, 0); });
+    });
+    window.addEventListener('storage', function(event) {
+      if (event.key === 'quarto-persistent-tabsets-data') refresh();
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>

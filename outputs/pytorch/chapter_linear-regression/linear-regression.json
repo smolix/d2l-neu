@@ -36,7 +36,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.01374 sec\n"
+          "text": "0.01077 sec\n"
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.00044 sec\n"
+          "text": "0.00020 sec\n"
         }
       ]
     },
@@ -65,7 +65,7 @@
           "mime": "image/svg+xml",
           "asset": "linear-regression/linear-regression-the-normal-distribution-and-squared-loss-2-1.svg",
           "bytes": 28703,
-          "sha256": "sha256:77ccc707b0b21cbdc92e417f63d57f25dc30dde75ad2a12c681599970fc4e893"
+          "sha256": "sha256:240a8a1aaa40a7b04bbee6bdde54a2319b6eed531d987b4756ac4c804fa24f67"
         }
       ]
     }

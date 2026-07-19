@@ -1,0 +1,121 @@
+{
+  "critical_apis": [
+    "jax.jit",
+    "flax.nnx.view",
+    "flax.nnx.Optimizer",
+    "flax.nnx.Param",
+    "optax.sgd",
+    "tensorflow.config.set_visible_devices"
+  ],
+  "environment_sha256": "536ad0374cd1d65744f02a96b129ab35306beab95556b8bce29afcde9f5ccb28",
+  "framework": "jax",
+  "optional_packages": [
+    {
+      "constraint": "gymnasium==1.2.3",
+      "distribution": "gymnasium",
+      "hosted_policy": "exact",
+      "import": "gymnasium",
+      "match": "exact",
+      "requirement": "gymnasium[toy-text]==1.2.3",
+      "version": "1.2.3"
+    },
+    {
+      "constraint": "safetensors==0.8.0",
+      "distribution": "safetensors",
+      "hosted_policy": "exact",
+      "import": "safetensors",
+      "match": "exact",
+      "requirement": "safetensors==0.8.0",
+      "version": "0.8.0"
+    },
+    {
+      "constraint": "tiktoken==0.13.0",
+      "distribution": "tiktoken",
+      "hosted_policy": "exact",
+      "import": "tiktoken",
+      "match": "exact",
+      "requirement": "tiktoken==0.13.0",
+      "version": "0.13.0"
+    }
+  ],
+  "packages": [
+    {
+      "constraint": "jax==0.10.2",
+      "distribution": "jax",
+      "gpu_requirement": "jax[cuda12]==0.10.2",
+      "hosted_policy": "exact",
+      "import": "jax",
+      "match": "exact",
+      "requirement": "jax==0.10.2",
+      "version": "0.10.2"
+    },
+    {
+      "constraint": "jaxlib==0.10.2",
+      "distribution": "jaxlib",
+      "hosted_policy": "exact",
+      "import": "jaxlib",
+      "match": "exact",
+      "requirement": "jaxlib==0.10.2",
+      "version": "0.10.2"
+    },
+    {
+      "constraint": "flax==0.12.7",
+      "distribution": "flax",
+      "hosted_policy": "exact",
+      "import": "flax",
+      "match": "exact",
+      "requirement": "flax==0.12.7",
+      "version": "0.12.7"
+    },
+    {
+      "constraint": "optax==0.2.8",
+      "distribution": "optax",
+      "hosted_policy": "exact",
+      "import": "optax",
+      "match": "exact",
+      "requirement": "optax==0.2.8",
+      "version": "0.2.8"
+    },
+    {
+      "constraint": "orbax-checkpoint==0.12.0",
+      "distribution": "orbax-checkpoint",
+      "hosted_policy": "exact",
+      "import": "orbax.checkpoint",
+      "match": "exact",
+      "requirement": "orbax-checkpoint==0.12.0",
+      "version": "0.12.0"
+    },
+    {
+      "constraint": "tensorflow==2.21.0",
+      "distribution": "tensorflow",
+      "hosted_policy": "preserve",
+      "import": "tensorflow",
+      "match": "exact",
+      "requirement": "tensorflow==2.21.0",
+      "version": "2.21.0"
+    },
+    {
+      "constraint": "protobuf==7.34.1",
+      "distribution": "protobuf",
+      "hosted_policy": "preserve",
+      "import": "google.protobuf",
+      "match": "exact",
+      "requirement": "protobuf==7.34.1",
+      "version": "7.34.1"
+    },
+    {
+      "constraint": "ml-dtypes==0.5.4",
+      "distribution": "ml-dtypes",
+      "hosted_policy": "preserve",
+      "import": "ml_dtypes",
+      "match": "exact",
+      "requirement": "ml-dtypes==0.5.4",
+      "version": "0.5.4"
+    }
+  ],
+  "platform": "linux-x86_64",
+  "python": "3.12",
+  "schema_version": 2,
+  "source_lock": "uv.lock",
+  "source_lock_sha256": "03bd597e77581e84b9080c73128a1af3ddcdc20000f62b56466f478299acae18"
+}

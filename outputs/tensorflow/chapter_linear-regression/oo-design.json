@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:a6436e016f4fdb58d54e53a37ee4eccd389b69fcce1a47aa43c610cab1dc7b9b",
+    "d2l_lib_fingerprint": "sha256:7693252b8b9745328334724b9d147a322ab1dcbf399402d94e1211f5694dab83",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -64,7 +64,7 @@
           "mime": "image/svg+xml",
           "asset": "oo-design/oo-design-utilities-7-1.svg",
           "bytes": 17183,
-          "sha256": "sha256:aa31971d36d0b0bfcabe47b534ead1a5305459206f3dda86a110ee483994ebdf"
+          "sha256": "sha256:f39e1a4e4f17d81a430417adb20ed721d209bdeac48b681dd38c53a0d05b39d3"
         }
       ]
     },

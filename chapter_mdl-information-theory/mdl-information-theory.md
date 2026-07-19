@@ -31,7 +31,6 @@ We import everything we need once, up front.
 #@tab mxnet
 import math
 from mxnet import autograd, np, npx
-from mxnet.ndarray import nansum
 npx.set_np()
 ```
 
@@ -93,37 +92,10 @@ walks through the argument).
 $p = 1$, infinite at $p = 0$. Computing it is one line.
 
 ```{.python .input #information-theory-self-information}
-#@tab mxnet
+import numpy as onp
 def self_information(p):
     """Self-information -log p, in nats."""
-    return -np.log(p)
-
-self_information(1 / 64)
-```
-
-```{.python .input #information-theory-self-information}
-#@tab pytorch
-def self_information(p):
-    """Self-information -log p, in nats."""
-    return -torch.log(torch.tensor(p)).item()
-
-self_information(1 / 64)
-```
-
-```{.python .input #information-theory-self-information}
-#@tab tensorflow
-def self_information(p):
-    """Self-information -log p, in nats."""
-    return -tf.math.log(tf.constant(p)).numpy()
-
-self_information(1 / 64)
-```
-
-```{.python .input #information-theory-self-information}
-#@tab jax
-def self_information(p):
-    """Self-information -log p, in nats."""
-    return -jnp.log(jnp.array(p)).item()
+    return -onp.log(p)
 
 self_information(1 / 64)
 ```
@@ -185,49 +157,15 @@ $-p \log p$ has limiting value $0$, but the direct floating-point expression
 terms: exactly the convention we want.
 
 ```{.python .input #information-theory-definition}
-#@tab mxnet
+import numpy as onp
 def entropy(p):
     """Entropy of a probability vector, in nats."""
-    ent = -p * np.log(p)
+    p = onp.asarray(p, dtype=float)
+    ent = -p * onp.log(p)
     # `nansum` encodes the convention 0 log 0 = 0
-    return nansum(ent.as_nd_ndarray()).asscalar()
+    return float(onp.nansum(ent))
 
-entropy(np.array([0.1, 0.5, 0.1, 0.3]))
-```
-
-```{.python .input #information-theory-definition}
-#@tab pytorch
-def entropy(p):
-    """Entropy of a probability vector, in nats."""
-    ent = -p * torch.log(p)
-    # `nansum` encodes the convention 0 log 0 = 0
-    return torch.nansum(ent).item()
-
-entropy(torch.tensor([0.1, 0.5, 0.1, 0.3]))
-```
-
-```{.python .input #information-theory-definition}
-#@tab tensorflow
-def nansum(x):
-    """Sum, skipping nan entries."""
-    return tf.reduce_sum(tf.where(tf.math.is_nan(x), tf.zeros_like(x), x))
-
-def entropy(p):
-    """Entropy of a probability vector, in nats."""
-    # `nansum` encodes the convention 0 log 0 = 0
-    return float(nansum(-p * tf.math.log(p)).numpy())
-
-entropy(tf.constant([0.1, 0.5, 0.1, 0.3]))
-```
-
-```{.python .input #information-theory-definition}
-#@tab jax
-def entropy(p):
-    """Entropy of a probability vector, in nats."""
-    # `nansum` encodes the convention 0 log 0 = 0
-    return jnp.nansum(-p * jnp.log(p)).item()
-
-entropy(jnp.array([0.1, 0.5, 0.1, 0.3]))
+entropy(onp.array([0.1, 0.5, 0.1, 0.3]))
 ```
 
 The distribution $(0.1, 0.5, 0.1, 0.3)$ has entropy $\approx 1.168$ nats:
@@ -331,32 +269,12 @@ $p(x) > 0$ with $q(x) = 0$, instead yields $+\infty$ (not `nan`), which
 `nansum` keeps, so the code correctly returns $+\infty$ for that divergence.
 
 ```{.python .input #information-theory-definition-2}
-#@tab mxnet
+import numpy as onp
 def kl_divergence(p, q):
     """KL(P || Q) for two probability vectors, in nats."""
-    kl = p * np.log(p / q)
-    return nansum(kl.as_nd_ndarray()).asscalar()
-```
-
-```{.python .input #information-theory-definition-2}
-#@tab pytorch
-def kl_divergence(p, q):
-    """KL(P || Q) for two probability vectors, in nats."""
-    return torch.nansum(p * torch.log(p / q)).item()
-```
-
-```{.python .input #information-theory-definition-2}
-#@tab tensorflow
-def kl_divergence(p, q):
-    """KL(P || Q) for two probability vectors, in nats."""
-    return float(nansum(p * tf.math.log(p / q)).numpy())
-```
-
-```{.python .input #information-theory-definition-2}
-#@tab jax
-def kl_divergence(p, q):
-    """KL(P || Q) for two probability vectors, in nats."""
-    return jnp.nansum(p * jnp.log(p / q)).item()
+    p, q = onp.asarray(p, dtype=float), onp.asarray(q, dtype=float)
+    kl = p * onp.log(p / q)
+    return float(onp.nansum(kl))
 ```
 
 ### Gibbs' Inequality
@@ -479,7 +397,7 @@ $D_{\textrm{KL}}(P\|Q) = E_{x\sim P}[\log p(x) - \log q(x)]$. (Note: no
 `abs()` anywhere; the divergence comes out non-negative on its own.)
 
 ```{.python .input #information-theory-example-1}
-#@tab mxnet
+import numpy as onp
 def gaussian_kl(mu1, sigma1, mu2, sigma2):
     """Closed-form KL(N(mu1, sigma1^2) || N(mu2, sigma2^2)), in nats."""
     return (math.log(sigma2 / sigma1)
@@ -492,67 +410,9 @@ def gaussian_log_pdf(x, mu, sigma):
 
 def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
     """Monte-Carlo estimate of the same KL by sampling x ~ P."""
-    x = np.random.normal(loc=mu1, scale=sigma1, size=(n, ))
+    x = onp.random.normal(loc=mu1, scale=sigma1, size=(n, ))
     return (gaussian_log_pdf(x, mu1, sigma1)
             - gaussian_log_pdf(x, mu2, sigma2)).mean()
-```
-
-```{.python .input #information-theory-example-1}
-#@tab pytorch
-def gaussian_kl(mu1, sigma1, mu2, sigma2):
-    """Closed-form KL(N(mu1, sigma1^2) || N(mu2, sigma2^2)), in nats."""
-    return (math.log(sigma2 / sigma1)
-            + (sigma1 ** 2 + (mu1 - mu2) ** 2) / (2 * sigma2 ** 2)
-            - 0.5)
-
-def gaussian_log_pdf(x, mu, sigma):
-    return (-0.5 * math.log(2 * math.pi * sigma ** 2)
-            - (x - mu) ** 2 / (2 * sigma ** 2))
-
-def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
-    """Monte-Carlo estimate of the same KL by sampling x ~ P."""
-    x = torch.normal(mu1, sigma1, (n, ))
-    return (gaussian_log_pdf(x, mu1, sigma1)
-            - gaussian_log_pdf(x, mu2, sigma2)).mean().item()
-```
-
-```{.python .input #information-theory-example-1}
-#@tab tensorflow
-def gaussian_kl(mu1, sigma1, mu2, sigma2):
-    """Closed-form KL(N(mu1, sigma1^2) || N(mu2, sigma2^2)), in nats."""
-    return (math.log(sigma2 / sigma1)
-            + (sigma1 ** 2 + (mu1 - mu2) ** 2) / (2 * sigma2 ** 2)
-            - 0.5)
-
-def gaussian_log_pdf(x, mu, sigma):
-    return (-0.5 * math.log(2 * math.pi * sigma ** 2)
-            - (x - mu) ** 2 / (2 * sigma ** 2))
-
-def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
-    """Monte-Carlo estimate of the same KL by sampling x ~ P."""
-    x = tf.random.normal((n, ), mu1, sigma1)
-    return tf.reduce_mean(gaussian_log_pdf(x, mu1, sigma1)
-                          - gaussian_log_pdf(x, mu2, sigma2)).numpy()
-```
-
-```{.python .input #information-theory-example-1}
-#@tab jax
-def gaussian_kl(mu1, sigma1, mu2, sigma2):
-    """Closed-form KL(N(mu1, sigma1^2) || N(mu2, sigma2^2)), in nats."""
-    return (math.log(sigma2 / sigma1)
-            + (sigma1 ** 2 + (mu1 - mu2) ** 2) / (2 * sigma2 ** 2)
-            - 0.5)
-
-def gaussian_log_pdf(x, mu, sigma):
-    return (-0.5 * math.log(2 * math.pi * sigma ** 2)
-            - (x - mu) ** 2 / (2 * sigma ** 2))
-
-def mc_kl(mu1, sigma1, mu2, sigma2, n=200000):
-    """Monte-Carlo estimate of the same KL by sampling x ~ P."""
-    key = jax.random.PRNGKey(1)
-    x = mu1 + sigma1 * jax.random.normal(key, (n, ))
-    return (gaussian_log_pdf(x, mu1, sigma1)
-            - gaussian_log_pdf(x, mu2, sigma2)).mean().item()
 ```
 
 Take $P = \mathcal{N}(0, 1)$ and $Q = \mathcal{N}(1, 1)$ (a unit mean shift,
@@ -623,47 +483,14 @@ small categorical distributions, and check the asymmetry of KL while we are at
 it.
 
 ```{.python .input #information-theory-kl-categorical}
-#@tab mxnet
-p = np.array([0.6, 0.3, 0.1])
-q = np.array([0.2, 0.5, 0.3])
+import numpy as onp
+p = onp.array([0.6, 0.3, 0.1])
+q = onp.array([0.2, 0.5, 0.3])
 
-ce_pq = float(-np.sum(p * np.log(q)))
+ce_pq = float(-onp.sum(p * onp.log(q)))
 print(f'KL(P||Q) = {kl_divergence(p, q):.4f} nats, '
       f'KL(Q||P) = {kl_divergence(q, p):.4f} nats')
 print(f'CE(P, Q) - H(P) = {ce_pq - float(entropy(p)):.4f} nats')
-```
-
-```{.python .input #information-theory-kl-categorical}
-#@tab pytorch
-p = torch.tensor([0.6, 0.3, 0.1])
-q = torch.tensor([0.2, 0.5, 0.3])
-
-ce_pq = -torch.sum(p * torch.log(q)).item()
-print(f'KL(P||Q) = {kl_divergence(p, q):.4f} nats, '
-      f'KL(Q||P) = {kl_divergence(q, p):.4f} nats')
-print(f'CE(P, Q) - H(P) = {ce_pq - entropy(p):.4f} nats')
-```
-
-```{.python .input #information-theory-kl-categorical}
-#@tab tensorflow
-p = tf.constant([0.6, 0.3, 0.1])
-q = tf.constant([0.2, 0.5, 0.3])
-
-ce_pq = float(-tf.reduce_sum(p * tf.math.log(q)).numpy())
-print(f'KL(P||Q) = {kl_divergence(p, q):.4f} nats, '
-      f'KL(Q||P) = {kl_divergence(q, p):.4f} nats')
-print(f'CE(P, Q) - H(P) = {ce_pq - entropy(p):.4f} nats')
-```
-
-```{.python .input #information-theory-kl-categorical}
-#@tab jax
-p = jnp.array([0.6, 0.3, 0.1])
-q = jnp.array([0.2, 0.5, 0.3])
-
-ce_pq = -jnp.sum(p * jnp.log(q)).item()
-print(f'KL(P||Q) = {kl_divergence(p, q):.4f} nats, '
-      f'KL(Q||P) = {kl_divergence(q, p):.4f} nats')
-print(f'CE(P, Q) - H(P) = {ce_pq - entropy(p):.4f} nats')
 ```
 
 The forward and reverse KL disagree ($\approx 0.396$ vs. $\approx 0.365$
@@ -693,36 +520,11 @@ probabilities to zero; :numref:`subsec_mdl-stable-softmax` derives that
 implementation.
 
 ```{.python .input #information-theory-formal-definition-1}
-#@tab mxnet
+import numpy as onp
 def cross_entropy(y_hat, y):
     """Mean cross-entropy loss for predicted probabilities, in nats."""
-    ce = -np.log(y_hat[range(len(y_hat)), y])
+    ce = -onp.log(y_hat[range(len(y_hat)), y])
     return float(ce.mean())
-```
-
-```{.python .input #information-theory-formal-definition-1}
-#@tab pytorch
-def cross_entropy(y_hat, y):
-    """Mean cross-entropy loss for predicted probabilities, in nats."""
-    ce = -torch.log(y_hat[range(len(y_hat)), y])
-    return ce.mean().item()
-```
-
-```{.python .input #information-theory-formal-definition-1}
-#@tab tensorflow
-def cross_entropy(y_hat, y):
-    """Mean cross-entropy loss for predicted probabilities, in nats."""
-    ce = -tf.math.log(tf.gather_nd(y_hat, indices=[[i, j] for i, j in zip(
-        range(len(y_hat)), y)]))
-    return float(tf.reduce_mean(ce).numpy())
-```
-
-```{.python .input #information-theory-formal-definition-1}
-#@tab jax
-def cross_entropy(y_hat, y):
-    """Mean cross-entropy loss for predicted probabilities, in nats."""
-    ce = -jnp.log(y_hat[jnp.arange(len(y_hat)), y])
-    return ce.mean().item()
 ```
 
 Two examples, three classes: the first example's true class is $0$, predicted
@@ -730,33 +532,9 @@ with probability $0.3$; the second's is $2$, predicted with probability $0.5$.
 The loss is $\tfrac{1}{2}(-\ln 0.3 - \ln 0.5) \approx 0.949$ nats.
 
 ```{.python .input #information-theory-formal-definition-2}
-#@tab mxnet
-labels = np.array([0, 2])
-preds = np.array([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
-
-cross_entropy(preds, labels)
-```
-
-```{.python .input #information-theory-formal-definition-2}
-#@tab pytorch
-labels = torch.tensor([0, 2])
-preds = torch.tensor([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
-
-cross_entropy(preds, labels)
-```
-
-```{.python .input #information-theory-formal-definition-2}
-#@tab tensorflow
-labels = tf.constant([0, 2])
-preds = tf.constant([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
-
-cross_entropy(preds, labels)
-```
-
-```{.python .input #information-theory-formal-definition-2}
-#@tab jax
-labels = jnp.array([0, 2])
-preds = jnp.array([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
+import numpy as onp
+labels = onp.array([0, 2])
+preds = onp.array([[0.3, 0.6, 0.1], [0.2, 0.3, 0.5]])
 
 cross_entropy(preds, labels)
 ```
@@ -774,37 +552,45 @@ applies softmax twice; applying `log` to a computed softmax can underflow.
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab mxnet
-logits = np.log(preds)
+preds_mx = np.array(preds.tolist())
+labels_mx = np.array(labels.tolist())
+logits = np.log(preds_mx)
 log_probs = npx.log_softmax(logits, axis=1)
--log_probs[np.arange(len(labels)), labels].mean()
+-log_probs[np.arange(len(labels_mx)), labels_mx].mean()
 ```
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab pytorch
-logits = torch.log(preds)
-torch.nn.CrossEntropyLoss()(logits, labels)
+preds_torch = torch.tensor(preds, dtype=torch.float32)
+labels_torch = torch.tensor(labels)
+logits = torch.log(preds_torch)
+torch.nn.CrossEntropyLoss()(logits, labels_torch)
 ```
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab tensorflow
-logits = tf.math.log(preds)
+preds_tf = tf.convert_to_tensor(preds, dtype=tf.float32)
+labels_tf = tf.convert_to_tensor(labels)
+logits = tf.math.log(preds_tf)
 loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-loss_fn(labels, logits).numpy()
+loss_fn(labels_tf, logits).numpy()
 ```
 
 ```{.python .input #information-theory-cross-entropy-as-an-objective-function-of-multi-class-classification}
 #@tab jax
-logits = jnp.log(preds)
+preds_jax = jnp.asarray(preds)
+labels_jax = jnp.asarray(labels)
+logits = jnp.log(preds_jax)
 optax.softmax_cross_entropy_with_integer_labels(
-    logits, labels).mean()
+    logits, labels_jax).mean()
 ```
 
 The loss also has a decision-theoretic pedigree. A
 *scoring rule* assigns a penalty $S(\mathbf{q}, y)$ for having reported the
 probability vector $\mathbf{q}$ when class $y$ then occurs. The rule is
-*proper* if honesty is optimal, i.e., if, when the truth is $\mathbf{p}$, the
+*proper* if truthful reporting is optimal: when the data-generating distribution is $\mathbf{p}$, the
 expected penalty $E_{y \sim \mathbf{p}}[S(\mathbf{q}, y)]$ is minimized by
-reporting $\mathbf{q} = \mathbf{p}$, and *strictly proper* if honesty is the
+reporting $\mathbf{q} = \mathbf{p}$, and *strictly proper* if this report is the
 *unique* optimum. The cross-entropy loss is the *log score*
 $S(\mathbf{q}, y) = -\log q_y$, and it is strictly proper: its expected
 penalty is exactly
@@ -822,7 +608,7 @@ restricted model class, regularization, imperfect optimization, and
 distribution shift can still produce miscalibration. Nor is the log score the
 only strictly proper rule: the *Brier score*
 $S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}[j = y])^2$ penalizes the whole
-vector by squared error, and its expected penalty exceeds the honest
+vector by squared error, and its expected penalty exceeds the truthful
 reporter's by $\|\mathbf{q} - \mathbf{p}\|^2$: a squared-distance waste term
 in place of the KL-flavored one. Different strictly proper rules disagree
 about how severely to punish which mistakes (the log score's penalty diverges
@@ -1070,6 +856,144 @@ frequencies suggest: Shannon estimated the entropy rate of printed English at
 roughly one bit per character :cite:`Shannon.1951`, far below the
 $\log_2 27 \approx 4.75$ bits of uniformly random letters and spaces.
 
+### Typical Sequences and the Source-Coding Theorem
+:label:`subsec_mdl-aep`
+
+The entropy bound above concerns an expected code length. A stronger statement
+explains what a **typical long message** looks like. Let
+$X_1,\ldots,X_n$ be i.i.d. draws from a finite-alphabet distribution $P$. The
+probability of the realized block is
+$P(X_{1:n})=\prod_i p(X_i)$, so its surprisal per symbol is a sample mean:
+
+$$
+-\frac{1}{n}\log P(X_{1:n})
+=\frac{1}{n}\sum_{i=1}^n -\log p(X_i)
+\xrightarrow{P} H(P).
+$$
+:eqlabel:`eq_mdl-aep`
+
+This is the **asymptotic equipartition property** (AEP): with probability
+approaching one, a long draw belongs to a **typical set** in which every block
+has probability approximately $e^{-nH}$. Because the typical set carries almost
+all the probability, it must contain approximately $e^{nH}$ blocks. The full
+space may have $k^n$ possible strings, but a source uses only an exponentially
+smaller effective subset when $H<\log k$.
+
+This counting picture is the operational core of Shannon's source-coding
+theorem :cite:`Shannon.1948,Cover.Thomas.1999`. Encode typical blocks by their
+index using about $nH$ nats (or $nH_2$ bits), and handle the vanishing atypical
+set separately: rates just above entropy are achievable with failure
+probability tending to zero. Conversely, fewer than about $e^{nH}$ codewords
+cannot name almost all typical blocks, so rates below entropy cannot be
+reliable. For stationary ergodic sources the entropy rate
+:eqref:`eq_mdl-entropy_rate` replaces $H$.
+
+For a Bernoulli source the counting claim can be checked *exactly*, because
+strings with the same number of ones share one probability. The cell groups
+the $2^{200}$ binary strings of length $n=200$ by their count of ones,
+declares a string typical when its surprisal is within $0.1$ bit per symbol
+of $H$, and adds up exactly how many strings are typical and how much
+probability they carry.
+
+```{.python .input #mdl-information-theory-typical-sequences-and-the-source-coding-theorem}
+import numpy as onp
+n, p = 200, 0.3
+k = onp.arange(n + 1)
+log_fact = onp.concatenate([[0.0], onp.cumsum(onp.log(onp.arange(1, n + 1)))])
+log_count = log_fact[n] - log_fact[k] - log_fact[n - k]     # log #strings, k ones
+prob_k = onp.exp(log_count + k * onp.log(p) + (n - k) * onp.log(1 - p))
+h2 = -(p * onp.log2(p) + (1 - p) * onp.log2(1 - p))
+bits_per_symbol = -(k * onp.log2(p) + (n - k) * onp.log2(1 - p)) / n
+typical = onp.abs(bits_per_symbol - h2) < 0.1
+
+m = log_count[typical].max()
+log2_typical = (m + onp.log(onp.exp(log_count[typical] - m).sum())) / onp.log(2)
+print(f'entropy H = {h2:.3f} bits/symbol, so nH = {n * h2:.0f} bits')
+print(f'typical strings: 2^{log2_typical:.1f} of all 2^{n}')
+print(f'probability they carry: {prob_k[typical].sum():.4f}')
+```
+
+A vanishing fraction of the strings — about $2^{nH}$ of the $2^n$, missing
+some $24$ orders of magnitude of the count — soaks up almost all of the
+probability. Indexing just those strings *is* the compressor, and $nH$ bits
+is the length of the index.
+
+### Lossy Compression and Rate--Distortion
+:label:`subsec_mdl-rate-distortion`
+
+Lossless recovery is often unnecessary. An image codec may change pixels
+slightly, and a learned representation may deliberately discard nuisance
+detail. Choose a distortion measure $d(x,\hat x)$ and allow average distortion
+at most $D$. The **rate--distortion function** is
+
+$$
+R(D)=\inf_{p(\hat x\mid x):\;E[d(X,\hat X)]\le D} I(X;\hat X).
+$$
+:eqlabel:`eq_mdl-rate-distortion`
+
+It is the smallest information rate a representation can retain while meeting
+the distortion budget. A stricter budget costs more bits; relaxing $D$ lowers
+the rate. For a Gaussian source $X\sim\mathcal N(0,\sigma^2)$ under squared
+error,
+
+$$
+R(D)=\frac12\log\frac{\sigma^2}{D}
+\quad (0<D<\sigma^2),
+\qquad R(D)=0\quad(D\ge\sigma^2),
+$$
+
+in nats per sample. The left panel of :numref:`fig_mdl-it-capacity-rd` plots
+it: bits buy reconstruction quality at a rate that explodes as $D\to0$ and
+drops to zero once the allowed distortion exceeds the source variance —
+at that point transmitting nothing and reconstructing the mean is already
+good enough. This curve is a useful benchmark for learned compression:
+reconstruction losses measure distortion, while quantized latents and entropy
+models determine rate. Objectives of the form
+$D+\beta R$ select one supporting point of the trade-off — geometrically, the
+point where the curve has slope $-1/\beta$. Autoencoders and
+variational bottlenecks use approximations to these two terms; they do not evade
+the trade-off by learning the codec.
+
+### Noisy Channels and Capacity
+:label:`subsec_mdl-channel-capacity`
+
+Compression asks how few bits describe a source. Communication asks how many
+bits survive a noisy channel. A memoryless channel is a conditional distribution
+$p(y\mid x)$. Its **capacity** is
+
+$$
+C=\max_{p(x)} I(X;Y),
+$$
+:eqlabel:`eq_mdl-channel-capacity`
+
+where the maximization chooses the input distribution best matched to the
+channel. Shannon's noisy-channel coding theorem says that long block codes can
+make decoding error arbitrarily small at every rate below $C$, while rates
+above $C$ cannot be made reliable :cite:`Shannon.1948,Cover.Thomas.1999`.
+For a binary symmetric channel that flips each bit independently with
+probability $\varepsilon$, the uniform input is optimal and
+
+$$
+C=1-h_2(\varepsilon)\quad\text{bits per channel use},
+$$
+
+where $h_2$ is binary entropy. The right panel of
+:numref:`fig_mdl-it-capacity-rd` plots this curve, and it rewards a moment's
+reading. At $\varepsilon=0$ one bit survives per use. At $\varepsilon=1/2$
+the output is independent of the input and capacity is zero — no code, however
+clever, gets anything through. And at $\varepsilon=1$ capacity is back to one
+bit: a channel that *always* lies is as good as one that always tells the
+truth, because the receiver can simply flip every bit. What destroys
+information is not corruption but *unpredictability*.
+
+![Shannon's two operational curves. Left: the Gaussian rate–distortion function — the number of bits per sample needed to reconstruct within squared error $D$; fidelity gets expensive fast, and beyond the source variance no bits are needed at all. Right: the capacity of a binary symmetric channel with flip probability $\varepsilon$; a coin-flip channel carries nothing, while a channel that always flips is again perfect.](../img/mdl-it-capacity-rd.svg)
+:label:`fig_mdl-it-capacity-rd`
+
+The same mutual-information lens applies when a representation passes through
+noise, quantization, dropout, or a bandwidth bottleneck. Data processing limits
+what later layers can recover, while coding or redundancy determines how close
+a designed system comes to the limit.
+
 ### Perplexity
 
 Language models are evaluated by exactly the quantity this section has been
@@ -1136,6 +1060,36 @@ compression rate of the previous subsection, which is tokenizer-free.
 
 Two modern training techniques follow directly from these identities; both
 are corollaries of Gibbs' inequality.
+
+### Learning by Compression: Minimum Description Length
+:label:`subsec_mdl-mdl`
+
+Likelihood measures the bits needed to encode data **after** a model is shared.
+Model selection must also account for sharing the model. The minimum description
+length (MDL) principle chooses the hypothesis that gives the shortest complete
+code,
+
+$$
+\hat h_{\textrm{MDL}}
+=\mathop{\mathrm{argmin}}_h
+\bigl[L(h)+L(\mathcal D\mid h)\bigr].
+$$
+:eqlabel:`eq_mdl-mdl`
+
+The second term is usually a negative log-likelihood; the first pays for model
+complexity. A highly flexible model may compress the training residuals while
+losing overall because its parameters or structure are expensive to describe.
+This is Occam's razor in operational units rather than a parameter-count slogan.
+
+There is a close Bayesian connection. Choosing
+$L(h)=-\log P(h)$ and $L(\mathcal D\mid h)=-\log P(\mathcal D\mid h)$ gives the
+MAP objective. A one-part Bayesian code instead uses the marginal likelihood
+$-\log\int P(\mathcal D\mid\theta)P(\theta)\,d\theta$, averaging rather than
+plugging in one parameter. For real-valued neural weights, a literal two-part
+code also needs a quantization precision and a concrete coder; counting
+parameters alone is not a description length. MDL is therefore a disciplined
+way to compare complete predictive codes, not an automatic theorem that every
+compressed network generalizes.
 
 ### Label Smoothing
 
@@ -1377,15 +1331,22 @@ mutual information, the quantity behind contrastive representation learning
   most two bits. An autoregressive model supplies the probabilities for that
   lossless code; its cross-entropy times the token count is the model code
   length before file-format overhead. The entropy rate is the per-symbol floor
-  for any such code.
+  for any such code. The AEP explains this floor by showing that almost all
+  length-$n$ messages occupy a typical set of size about $e^{nH}$.
+* **Rate--distortion** gives the smallest retained information compatible with
+  a distortion budget, while **channel capacity** $C=\max_{p(x)}I(X;Y)$ gives
+  the largest reliable communication rate through noise.
+* **Minimum description length** selects a complete code for model plus data;
+  negative log-likelihood is only the data-given-model part.
 * Perplexity $\textrm{PPL} = \exp(\textrm{CE})$ is the exponentiated
   per-token cross-entropy of a language model: an effective branching factor,
   independent of the log base. Empirically it falls as a power law in
   parameters, data, and compute, and it is comparable only under a shared
   tokenizer.
 * Label smoothing and knowledge distillation are corollaries of the same
-  identities: the smoothed target makes the cross-entropy optimum a finite,
-  calibrated prediction, and the $T^2$ factor on the distillation KL keeps
+  identities: the smoothed target makes the cross-entropy optimum finite and
+  equal to the deliberately softened target; it does not by itself guarantee
+  calibration to the original data distribution, and the $T^2$ factor on the distillation KL keeps
   gradients scale-matched across temperatures.
 
 ## Exercises
@@ -1421,7 +1382,7 @@ mutual information, the quantity behind contrastive representation learning
    $S(\mathbf{q}, y) = -\log q_y$ is strictly proper. Then prove that the
    Brier score $S(\mathbf{q}, y) = \sum_j (q_j - \mathbf{1}[j = y])^2$ is
    strictly proper too, by showing that its expected penalty exceeds the
-   honest reporter's by exactly $\|\mathbf{q} - \mathbf{p}\|^2$
+   truthful reporter's by exactly $\|\mathbf{q} - \mathbf{p}\|^2$
    :cite:`Gneiting.Raftery.2007`.
 1. Show that perplexity does not depend on the log base: if
    $\textrm{CE}_b$ denotes the per-token cross-entropy in base-$b$ units,
@@ -1633,7 +1594,7 @@ distribution onto the model family. One loss, three readings.
 :::
 :::
 
-::: {.slide title="Honesty is the unique optimum"}
+::: {.slide title="Truthful reporting is the unique optimum"}
 [Proper scoring rules]{.kicker}
 
 A scoring rule $S(\mathbf q, y)$ is **strictly proper** if reporting the truth

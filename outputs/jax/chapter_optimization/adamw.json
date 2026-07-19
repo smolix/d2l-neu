@@ -1,0 +1,181 @@
+{
+  "schema": 1,
+  "source": "chapter_optimization/adamw.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:25644135ada79042d0205be47458399be16eb714a78083752ad4a1a1346a5934",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "adamw": {
+      "code_fingerprint": "sha256:b842bc21b9d605c609e2d141e7a30cc6e04b2ea300094b1b1b55366240f9bb8d",
+      "kind": "text",
+      "outputs": []
+    },
+    "adamw-adamw-from-scratch-1": {
+      "code_fingerprint": "sha256:8e0678c620cd64cd997092683b3e70300826da0b1e974f830971926b6c72f446",
+      "kind": "text",
+      "outputs": []
+    },
+    "adamw-adamw-from-scratch-2": {
+      "code_fingerprint": "sha256:58c6f079dc9663c706a79d49d3466f23c53767adb68fcbe1e71abc17cfecc504",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.244, 1.990 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adamw/adamw-adamw-from-scratch-2-1.svg",
+          "bytes": 18776,
+          "sha256": "sha256:78e696506587efb016f75701fe2d2c654af471c517a8fa8c75a906de563361d3"
+        }
+      ]
+    },
+    "adamw-adamw-from-scratch-3": {
+      "code_fingerprint": "sha256:f7a9a93758fa7c6caad1966b0db3ffa9d536398184dde4c9195687863203a593",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss: 0.244, 0.423 sec/epoch\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adamw/adamw-adamw-from-scratch-3-1.svg",
+          "bytes": 18704,
+          "sha256": "sha256:8e3a34a117e0d14e5066f3a90e15d5e75e68704118254ebd214446bb19e2381e"
+        }
+      ]
+    },
+    "adamw-decoupling-demonstrated-1": {
+      "code_fingerprint": "sha256:d2dc7c5b3a8b0f590a0c6e50a5afc8e2963d070508365f3fb14db4ceee0d66c3",
+      "kind": "text",
+      "outputs": []
+    },
+    "adamw-decoupling-demonstrated-2": {
+      "code_fingerprint": "sha256:5d6376e73340d984233912ae86aaa1c720ec3c15c8d90ed88e4432431bc070c1",
+      "kind": "text",
+      "outputs": []
+    },
+    "adamw-one-number-two-meanings": {
+      "code_fingerprint": "sha256:286593b5e4bb795b365f16f7d9cc2e21219038b00888bd52937dd73275ae3871",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adamw/adamw-one-number-two-meanings-1.svg",
+          "bytes": 25775,
+          "sha256": "sha256:ce9ee5a23f106b7ce1d78b9fbd7d06e3b716e4328b87112d4ee92f50c5e92173"
+        }
+      ]
+    },
+    "adamw-a-grid-twice-1": {
+      "code_fingerprint": "sha256:1c22240acb05d72de4601eda5ce2f106defb85b49b63bec40b76ae965a8ac032",
+      "kind": "text",
+      "outputs": []
+    },
+    "adamw-a-grid-twice-2": {
+      "code_fingerprint": "sha256:0b94c8a27222877d9b7bb3ec001174634f48baedc5287b8c4a8d7b660eb53002",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2.62 2.26 2.20\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3.17 2.19 2.37\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2.74 2.34 2.38\n"
+        }
+      ]
+    },
+    "adamw-a-grid-twice-3": {
+      "code_fingerprint": "sha256:e520939eefbb0939e45431eecfaca1aecaadc1ae0f2d8cbfa2769d58a32625db",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2.66 2.34 2.44\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3.10 2.35 2.57\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "3.11 2.21 2.61\n"
+        }
+      ]
+    },
+    "adamw-a-grid-twice-4": {
+      "code_fingerprint": "sha256:0d8e76e6962d9a346b94c8bbc66e9f7fad869cbd341dd66c76d441aecd9e5f6a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adamw/adamw-a-grid-twice-4-1.svg",
+          "bytes": 41020,
+          "sha256": "sha256:d31babe41271dca29940cce505b57ff8b9bf32557a9d2e771cc36a34dbb0705f"
+        }
+      ]
+    },
+    "adamw-what-not-to-decay-1": {
+      "code_fingerprint": "sha256:ca80e56bc26de0f82a4f48dbaf7cfb02738da5035f2fe57ab8e2c3be699be8f6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "decayed: 396800 of 412188 parameters\n"
+        }
+      ]
+    },
+    "adamw-what-not-to-decay-2": {
+      "code_fingerprint": "sha256:88760389d620fa29ae466b2f8c692e5e62e6105b210f5ce26467412987b1dc20",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "perplexity per character: 2.78\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "adamw/adamw-what-not-to-decay-2-1.svg",
+          "bytes": 19448,
+          "sha256": "sha256:760bee3da86dcdc832d7cb57f6fae8e5bd3c2b8d9b6fb5988aadaaec9432c0db"
+        }
+      ]
+    },
+    "adamw-optimizer-state-and-memory": {
+      "code_fingerprint": "sha256:62529592c6f8a40490d57e878a473be6fa484b01d905ca182e80832109f2d49e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                                           B/param    TinyLM  7B model\nfp32 weights, grads, m, v                       16     6.6MB     112GB\nbf16 weights + grads, fp32 master, m, v         16     6.6MB     112GB\nthe same + fp32 gradient accumulator            20     8.2MB     140GB\n"
+        }
+      ]
+    }
+  }
+}

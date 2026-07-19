@@ -243,9 +243,10 @@ ledger.
 
 ### Guarantees Without Convexity
 
-The lemma alone, with no convexity anywhere, already yields the one
-convergence guarantee in this section that applies *literally* to deep
-networks.
+The lemma alone, with no convexity, yields the standard smooth nonconvex
+benchmark for neural-network optimization. It is an idealized model rather than
+a theorem about every network: ReLU objectives are nonsmooth, and a useful
+$L$-smooth bound may hold only locally or along a particular trajectory.
 
 **Proposition (gradient descent finds approximate stationary points).** *Let
 $f$ be $L$-smooth and bounded below by $f^\star$, and run
@@ -262,12 +263,12 @@ Sum over $k = 0, \ldots, K-1$; the right side telescopes to
 $2L\,(f(\mathbf{x}_0) - f(\mathbf{x}_K)) \le 2L\,(f(\mathbf{x}_0) - f^\star)$.
 The smallest of $K$ numbers is at most their average. $\blacksquare$
 
-The hypotheses ask very little: a loss bounded below (every nonnegative training
-loss qualifies) and bounded curvature along the trajectory. No convexity, no
-unique minimum, no guarantee the function is anything but smooth; and still,
-some iterate among the first $K$ has squared gradient norm $O(1/K)$. This is
-the theorem that applies to training neural networks: gradient descent reliably
-finds points where the gradient is *small*. What it does not promise is that
+Within this smooth model the hypotheses are modest: a loss bounded below and a
+finite smoothness constant on the region traversed by the iterates. No
+convexity or unique minimum is required, and some iterate among the first $K$
+has squared gradient norm $O(1/K)$. The result is a useful reference point for
+neural-network training, but it guarantees a small gradient only when those
+smoothness and step-size assumptions actually hold. What it does not promise is that
 such a point is a *minimum*, let alone a global one: it could be a saddle
 point (:numref:`sec_mdl-multivariable_calculus`) or
 a flat shelf. Upgrading "stationary" to "globally optimal" is precisely what
@@ -933,11 +934,13 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-robbins-monro`
 
-The schedule $\eta_k \propto 1/k$ satisfies both, and with it strongly convex
-SGD attains $\mathbb{E}[f(\mathbf{w}_k)] - f^\star = O(1/k)$; without strong
-convexity, SGD with Polyak--Ruppert averaging (report the running average
-$\bar{\mathbf{w}}_k = \tfrac1k \sum_{j < k} \mathbf{w}_j$ rather than the
-last iterate) attains $O(1/\sqrt{k})$
+These step-size conditions are only one part of a convergence theorem. With
+unbiased stochastic gradients, controlled second moments, a smooth strongly
+convex objective, and a suitable constant in $\eta_k \propto 1/k$, SGD attains
+$\mathbb{E}[f(\mathbf{w}_k)] - f^\star = O(1/k)$. For a convex but not strongly
+convex objective, appropriately scheduled SGD or averaged iterates attain the
+usual $O(1/\sqrt{k})$ stochastic rate; Polyak--Ruppert averaging has sharper
+asymptotic conclusions under its own regularity conditions
 :cite:`Polyak.Juditsky.1992,Bottou.2010,Goodfellow.Bengio.Courville.2016`. A
 classical trap hides
 in the constant: with $\eta_k = c/k$ the $O(1/k)$ guarantee requires $c$
@@ -1078,6 +1081,124 @@ and it is what deep learning libraries ship. The mathematics of this family
 is the subject of
 :numref:`sec_mdl-adaptive-stochastic-methods`.
 
+### Quasi-Newton Methods: Curvature from Secants
+:label:`subsec_mdl-quasi-newton`
+
+The L-BFGS mention above hides an elegant idea. Newton asks the Hessian for a
+local map from a step to a gradient change. A **quasi-Newton** method infers
+that map from differences it has already observed. After moving by
+
+$$
+\mathbf s_k=\mathbf x_{k+1}-\mathbf x_k,
+\qquad
+\mathbf y_k=\nabla f(\mathbf x_{k+1})-\nabla f(\mathbf x_k),
+$$
+
+an inverse-Hessian approximation $H_{k+1}$ should satisfy the **secant
+equation** $H_{k+1}\mathbf y_k=\mathbf s_k$. One vector equation cannot
+determine a whole matrix, so BFGS chooses the symmetric rank-two update closest
+to the previous approximation in a suitable matrix metric:
+
+$$
+H_{k+1}
+=(I-\rho_k\mathbf s_k\mathbf y_k^\top)H_k
+ (I-\rho_k\mathbf y_k\mathbf s_k^\top)
+ +\rho_k\mathbf s_k\mathbf s_k^\top,
+\qquad
+\rho_k=(\mathbf y_k^\top\mathbf s_k)^{-1}.
+$$
+:eqlabel:`eq_mdl-opt-bfgs`
+
+When $H_k$ is positive definite and the **curvature condition**
+$\mathbf y_k^\top\mathbf s_k>0$ holds, the update remains positive definite,
+so $-H_k\nabla f$ is a descent direction. A Wolfe line search is commonly used
+because its conditions imply this positive-curvature test on a smooth
+objective. On a strongly convex quadratic with exact line searches, BFGS
+recovers the solution in at most $d$ iterations in exact arithmetic: each
+secant pair identifies another curvature direction.
+
+```{.python .input #mdl-gradient-bfgs-quadratic}
+rng = np.random.default_rng(9)
+d_bfgs = 6
+Q, _ = np.linalg.qr(rng.standard_normal((d_bfgs, d_bfgs)))
+A_bfgs = Q @ np.diag(np.geomspace(1., 1000., d_bfgs)) @ Q.T
+b_bfgs = rng.standard_normal(d_bfgs)
+x_star_bfgs = np.linalg.solve(A_bfgs, b_bfgs)
+x_bfgs, H_bfgs = np.zeros(d_bfgs), np.eye(d_bfgs)
+x_gd = np.zeros(d_bfgs)
+eta_gd = 2 / (1 + 1000)                       # optimal fixed quadratic step
+dist_bfgs, dist_gd = [], []
+for k in range(d_bfgs):
+    g = A_bfgs @ x_bfgs - b_bfgs
+    p_bfgs = -H_bfgs @ g
+    alpha = -(g @ p_bfgs) / (p_bfgs @ A_bfgs @ p_bfgs)  # exact line search
+    step = alpha * p_bfgs
+    y_diff = A_bfgs @ step
+    rho = 1.0 / (y_diff @ step)
+    V = np.eye(d_bfgs) - rho * np.outer(step, y_diff)
+    H_bfgs = V @ H_bfgs @ V.T + rho * np.outer(step, step)
+    x_bfgs += step
+    x_gd -= eta_gd * (A_bfgs @ x_gd - b_bfgs)
+    dist_bfgs.append(np.linalg.norm(x_bfgs - x_star_bfgs))
+    dist_gd.append(np.linalg.norm(x_gd - x_star_bfgs))
+d2l.plot(np.arange(1, d_bfgs + 1), [dist_gd, dist_bfgs],
+         'iteration', 'distance to optimum',
+         legend=['gradient descent', 'BFGS'], yscale='log')
+print(f'after d = {d_bfgs} steps: BFGS {dist_bfgs[-1]:.2e}, '
+      f'GD {dist_gd[-1]:.2e}')
+```
+
+The finite-termination property is an ideal quadratic benchmark, not a promise
+for a neural loss. In general the line search is inexact, curvature changes,
+and stochastic gradients corrupt $\mathbf y_k$. Full BFGS also stores a dense
+$d\times d$ matrix. **L-BFGS** keeps only the most recent $m$ secant pairs and
+applies the implied inverse by a two-loop recursion, reducing storage and work
+to $O(md)$. This makes it attractive for deterministic medium-scale problems
+and full-batch fine-tuning, but less natural when fresh minibatch noise makes
+gradient differences unreliable.
+
+### Trust Regions: Make the Model Earn Its Radius
+:label:`subsec_mdl-trust-region`
+
+Line search first chooses a direction and then decides how far to travel along
+it. A **trust-region method** instead asks where the quadratic model is useful:
+
+$$
+\min_{\|\mathbf p\|\le\Delta_k}
+ m_k(\mathbf p)
+ =f(\mathbf x_k)+\nabla f(\mathbf x_k)^\top\mathbf p
+  +\tfrac12\mathbf p^\top B_k\mathbf p.
+$$
+:eqlabel:`eq_mdl-opt-trust-region`
+
+The radius $\Delta_k$ prevents an inaccurate local model from making an
+arbitrarily large proposal and makes the subproblem bounded even when $B_k$ has
+a negative eigenvalue. After approximately solving the subproblem, compare
+actual with predicted improvement,
+
+$$
+r_k=
+\frac{f(\mathbf x_k)-f(\mathbf x_k+\mathbf p_k)}
+     {m_k(\mathbf 0)-m_k(\mathbf p_k)}.
+$$
+:eqlabel:`eq_mdl-opt-trust-ratio`
+
+A ratio near one says the model predicted the step well, so accept it and
+possibly enlarge the radius. A small or negative ratio rejects the step and
+shrinks the radius. Thus the objective, not a fixed schedule, decides how much
+of the curvature model to trust. Exact trust-region solves are unnecessary:
+the dogleg method combines steepest descent with Newton on positive-definite
+models, while truncated conjugate gradient stops at the boundary or upon
+finding negative curvature using only Hessian--vector products
+(:numref:`sec_mdl-matrix-calculus-autodiff`).
+
+Trust regions and quasi-Newton updates solve complementary problems. BFGS asks
+how to estimate curvature without forming a Hessian; a trust region asks how
+to safeguard whichever model we have. Neither displaces SGD for enormous
+noisy objectives, but both are important for smaller deterministic models,
+inner optimization problems, and understanding what “second order” means
+beyond explicitly inverting a Hessian.
+
 ## Summary
 
 * A direction $\mathbf{d}$ is a descent direction iff
@@ -1089,8 +1210,9 @@ is the subject of
   $\eta(1 - L\eta/2)\,\|\nabla f\|^2$ per step, positive for $\eta < 2/L$,
   best guaranteed at $\eta = 1/L$. Telescoping it gives
   $\min_k \|\nabla f(\mathbf{x}_k)\|^2 \le 2L(f(\mathbf{x}_0) - f^\star)/K$:
-  stationarity at rate $O(1/K)$ with **no convexity**, the one guarantee
-  that applies verbatim to deep networks. Backtracking line search achieves a
+  stationarity at rate $O(1/K)$ with **no convexity**, a useful smooth-model
+  benchmark for deep networks rather than a literal guarantee for nonsmooth
+  architectures or trajectories without a finite smoothness bound. Backtracking line search achieves a
   step within a constant of $1/L$ without knowing $L$.
 * On a quadratic, GD decouples into per-mode factors $1 - \eta\lambda_i$:
   stability demands $\eta < 2/L$, the optimal step
@@ -1113,9 +1235,11 @@ is the subject of
   ($\sum \eta_k = \infty$, $\sum \eta_k^2 < \infty$) trades the geometric rate
   for convergence that actually reaches the optimum.
 * Newton's method is affine-invariant, immune to $\kappa$, and quadratically
-  convergent, and costs $O(d^2)$ memory and $O(d^3)$ time per step, which
-  is why deep learning uses its diagonal and low-rank shadows (Adam, L-BFGS)
-  instead.
+  convergent, and costs $O(d^2)$ memory and $O(d^3)$ time per step. **BFGS**
+  learns an inverse-Hessian approximation from secant pairs; **L-BFGS** stores
+  only a short history. **Trust-region methods** bound the quadratic model's
+  step and use actual-versus-predicted improvement to adjust that bound, making
+  curvature useful without trusting it globally.
 
 ## Exercises
 
@@ -1186,6 +1310,17 @@ is the subject of
    exercise is deliberately pencil-and-paper; its numerical companion,
    watching the iterates land on $\mathbf{w}^\dagger$, is Exercise 8 of
    :numref:`sec_mdl-convexity`.)
+
+10. **BFGS and the secant equation.** Verify directly that the update
+    :eqref:`eq_mdl-opt-bfgs` is symmetric and satisfies
+    $H_{k+1}\mathbf y_k=\mathbf s_k$. Show that it remains positive definite
+    when $H_k\succ0$ and $\mathbf y_k^\top\mathbf s_k>0$.
+11. **Trust-region acceptance.** For
+    $f(x)=\tfrac14x^4-\tfrac12x^2$ at $x=0.2$, form the quadratic Taylor model.
+    Solve the one-dimensional trust-region subproblem for several radii
+    $\Delta$, compute :eqref:`eq_mdl-opt-trust-ratio`, and determine which
+    proposals should be accepted. What goes wrong with the unrestricted Newton
+    step at this point?
 
 ## Discussions
 

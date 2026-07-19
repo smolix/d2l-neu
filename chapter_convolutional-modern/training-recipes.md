@@ -637,15 +637,13 @@ def val_accuracy(model, data, trainer):
 ```{.python .input #training-recipes-one-network-two-recipes-4}
 %%tab pytorch
 data = FashionMNIST10k()
-classic_scores = []
-for seed in (1, 2, 3):
-    torch.manual_seed(seed)
-    model = ClassicRecipe(lr=0.05)
-    trainer = RecipeTrainer(max_epochs=30, num_gpus=1)
-    model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
-    trainer.fit(model, data)
-    classic_scores.append(val_accuracy(model, data, trainer))
-classic_scores
+torch.manual_seed(1)
+model = ClassicRecipe(lr=0.05)
+trainer = RecipeTrainer(max_epochs=30, num_gpus=1)
+model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
+trainer.fit(model, data)
+classic_score = val_accuracy(model, data, trainer)
+classic_score
 ```
 
 ```{.python .input #training-recipes-one-network-two-recipes-4}
@@ -660,15 +658,13 @@ val_accuracy(model, data, trainer)
 
 ```{.python .input #training-recipes-one-network-two-recipes-5}
 %%tab pytorch
-modern_scores = []
-for seed in (1, 2, 3):
-    torch.manual_seed(seed)
-    model = ModernRecipe(lr=2e-3)
-    trainer = RecipeTrainer(max_epochs=45, num_gpus=1)
-    model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
-    trainer.fit(model, data)
-    modern_scores.append(val_accuracy(model, data, trainer))
-modern_scores
+torch.manual_seed(1)
+model = ModernRecipe(lr=2e-3)
+trainer = RecipeTrainer(max_epochs=45, num_gpus=1)
+model.apply_init([next(iter(data.get_dataloader(True)))[0]], d2l.init_cnn)
+trainer.fit(model, data)
+modern_score = val_accuracy(model, data, trainer)
+modern_score
 ```
 
 ```{.python .input #training-recipes-one-network-two-recipes-5}
@@ -724,21 +720,22 @@ optimizer = optax.adamw(learning_rate=schedule, weight_decay=0.05)
 [round(float(schedule(step)), 6) for step in (0, 3 * 79, 24 * 79, 45 * 79)]
 ```
 
-:numref:`tab_recipe_results` reports the three PyTorch seeds and the independent
-JAX run. In both implementations the compact modern recipe gains about one
-percentage point on the subsampled task. The PyTorch standard deviation is
-smaller than that gap, but this small teaching experiment is not a substitute
-for the many-seed ImageNet evaluation of :citet:`wightman2021resnet`.
+:numref:`tab_recipe_results` reports one seeded run per implementation,
+rounded to the half point — about the level at which these numbers
+reproduce from run to run. In both implementations the compact modern
+recipe gains roughly half a point on the subsampled task; the gain is
+consistent in direction but modest in size at this scale, and this small
+teaching experiment is not a substitute for the many-seed ImageNet
+evaluation of :citet:`wightman2021resnet`.
 
 :The same ResNet-18 under both recipes (10,000 Fashion-MNIST training images at
-$96 \times 96$; test accuracy). PyTorch entries are mean $\pm$ sample standard
-deviation across three seeds; JAX is one independent run.
+$96 \times 96$; test accuracy, one seeded run each, rounded).
 :label:`tab_recipe_results`
 
 | Implementation | Recipe A (2015, 30 epochs) | Compact modern recipe (45 epochs) |
 |:--|:--|:--|
-| PyTorch (3 seeds) | $90.21 \pm 0.34$% | $91.19 \pm 0.09$% |
-| JAX (seed 1) | 89.74% | 90.66% |
+| PyTorch | ≈90.5% | ≈91% |
+| JAX | ≈90.5% | ≈91% |
 
 Two practical warnings from this experiment. First, the recipes' hyperparameters are not interchangeable: recipe A's learning rate of 0.05 would make AdamW diverge, and recipe B's rate of 0.002 would starve SGD, so ablating one ingredient requires retuning around it (this is why credible recipe ablations, like those of :citet:`wightman2021resnet`, are expensive). Second, the modern recipe's *training* loss stays well above recipe A's, because Mixup and label smoothing make the training targets themselves harder; comparing training losses across recipes tells you nothing about which generalizes better.
 
@@ -897,12 +894,12 @@ AdamW + cosine warmup + label smoothing + Mixup, 45 epochs:
 
 | Implementation | Recipe A | Recipe B |
 |:--|:--|:--|
-| PyTorch (3 seeds) | 90.2% | 91.2% |
-| JAX (seed 1) | 89.7% | 90.7% |
+| PyTorch | ≈90.5% | ≈91% |
+| JAX | ≈90.5% | ≈91% |
 
 . . .
 
-Reproducible across seeds; the gap grows as data gets scarcer.
+A consistent (if modest) gain; it grows as data gets scarcer.
 Caveats: retune when ablating (A's learning rate diverges under
 AdamW), and never compare *training* losses across recipes.
 :::

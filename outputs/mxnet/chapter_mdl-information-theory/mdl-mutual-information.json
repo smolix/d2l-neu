@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:089dc347efa010763ff06f49da62c36a7b483eaf5ec034576d888c46b885cc9a"
+          "sha256": "sha256:08329b7b91f619e414c7cfcf32d3b24fd3a36178db24864d8f4dccfb2943b419"
         }
       ]
     },
@@ -131,7 +131,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:e27e71151140c64471820b3dfd335a54c4dd5244f18c4ec59154d130dadd88e0"
+          "sha256": "sha256:03c468f1fc2ac1821da845839313989b8a1b80f23f536561f24e89b677f5c657"
         }
       ]
     },
@@ -142,7 +142,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n"
+          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n"
         },
         {
           "type": "stream",
@@ -158,7 +163,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[18:23:11] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
+          "text": "[06:28:07] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         },
         {
           "type": "stream",
@@ -173,7 +178,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =   32: ln N = 3.466, InfoNCE bound = 1.764 nats\nN =  128: ln N = 4.852, InfoNCE bound = 1.891 nats\ntrue I(X;Y) = 1.959 nats\n"
+          "text": "N =   32: ln N = 3.466, InfoNCE bound = 1.764 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N =  128: ln N = 4.852, InfoNCE bound = 1.891 nats\ntrue I(X;Y) = 1.959 nats\n"
         }
       ]
     },
@@ -191,7 +201,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:3efe7ed07cf41e505f9a6a3c78c9dda36dc13462ddd6d3c920c7586da68f382d"
+          "sha256": "sha256:5e861ffcc434523ac553069670636da0052d7480b0ecfe81ae88308e74dff090"
         }
       ]
     },

@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:5e0502f24254dcbefdf05f93aa91f7a653b06e0f63df2255bf0c8b7730830a2d",
+    "d2l_lib_fingerprint": "sha256:df2aea0c793e707e30c0300cc13fe1a9e1c8adaea76aff825cf8c7e27edc933e",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -42,11 +42,6 @@
           "type": "stream",
           "name": "stdout",
           "text": "before allreduce:\n [[1. 1.]] \n [[2. 2.]]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "W0712 04:34:18.435837   19938 allocator_memory_registration.cc:63] Failed to register GPU memory with clique devices=2:[0,1]; local_participants=2; communication_id=0; incarnations=[]: INTERNAL: NCCL operation ncclCommRegister(comm, addr.opaque(), addr.size(), &handle) failed: unhandled cuda error (run with NCCL_DEBUG=INFO for details). Last NCCL warning(error) log entry (may be unrelated) 'Cuda failure 500 'named symbol not found''.\n"
         },
         {
           "type": "stream",
@@ -88,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.84, 0.7 sec/epoch on [CudaDevice(id=0)]\n"
+          "text": "test acc: 0.84, 1.1 sec/epoch on [CudaDevice(id=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
           "bytes": 16964,
-          "sha256": "sha256:ebc1c2929693dff70f749c953417346b1b75885046963d6cfd06dca0406c51eb"
+          "sha256": "sha256:3365d749ec895667415dcf18396c3f0f048abba56cb416d8c13abd261695c7e2"
         }
       ]
     },
@@ -106,14 +101,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.85, 1.1 sec/epoch on [CudaDevice(id=0), CudaDevice(id=1)]\n"
+          "text": "test acc: 0.85, 1.4 sec/epoch on [CudaDevice(id=0), CudaDevice(id=1)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
-          "bytes": 16964,
-          "sha256": "sha256:d425abeb4374d1f68adf595ae69a813f5d1bb96dbf71bb8623efbc4a250e0ad1"
+          "bytes": 16959,
+          "sha256": "sha256:faa6807b78355829de2d47024d49f62afde5574705789485424123d88ea79da4"
         }
       ]
     }

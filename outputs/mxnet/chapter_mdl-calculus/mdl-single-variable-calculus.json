@@ -9,12 +9,12 @@
   },
   "cells": {
     "single-variable-calculus-imports": {
-      "code_fingerprint": "sha256:3c9a4eb1dc4c9028034d7ff503387a2efb43b590e4d980d869c867e996843ea5",
+      "code_fingerprint": "sha256:fdb5dfd3cf534f7a347f7c81d44723cf6530f962def494d411f671d795e688b1",
       "kind": "text",
       "outputs": []
     },
     "single-variable-calculus-differential-calculus-4": {
-      "code_fingerprint": "sha256:42fca36c1339ced7bd7b5cf7af8dd3bb90ab96dc4cccfc71b608b5c444440e30",
+      "code_fingerprint": "sha256:8177866b5ef6cd7372715cb17112c2edeee39ab73830957fef4f4e9eb4c3a639",
       "kind": "text",
       "outputs": [
         {
@@ -25,36 +25,31 @@
       ]
     },
     "single-variable-calculus-autograd-check": {
-      "code_fingerprint": "sha256:1246e9cde3c228aa51620ec783caad06ee96f9be71defce6c81c697dce476920",
+      "code_fingerprint": "sha256:183bad3ab9ab8a43e7089bcf17a9fc4f28813b66e0170c9701aeaba5a223c3ca",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
           "text": "autograd: f'(4) = 8.0\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[18:22:09] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },
     "single-variable-calculus-linear-approximation": {
-      "code_fingerprint": "sha256:a213515d940f8eee84d576c593db6eb561053e45a7c99356a1031a733ab82b08",
+      "code_fingerprint": "sha256:802afe3704a84b29cd0222d24f203f85bc4f9d8bedba721c1580d57e0be05cf8",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-linear-approximation-1.svg",
-          "bytes": 15837,
-          "sha256": "sha256:109bcb31e3eff9dac3bb121fd0e0b00c4747a3c720f90262981ef430abb20284"
+          "bytes": 15846,
+          "sha256": "sha256:c694cc0ff0321acccec6fa3f757d3617d54d1a404611004463a758d08929218c"
         }
       ]
     },
     "single-variable-calculus-gradient-descent": {
-      "code_fingerprint": "sha256:90427f62fb8befb22a2f132a07fc208c06bee8787d8c661c3c251cd79ff8dd3a",
+      "code_fingerprint": "sha256:f6eba3113edfb9ec582a3a346d4447a71347e03c494662548ab6bce96d3f841d",
       "kind": "mixed",
       "outputs": [
         {
@@ -67,12 +62,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-gradient-descent-1.svg",
           "bytes": 25211,
-          "sha256": "sha256:8cea04ef9ed24f22cba15cb07c1ff5451a81a024b812abd669fd87ad4fa9f167"
+          "sha256": "sha256:e648a367eec8c6d0e386a5c185c846dee5d47c0632bd32a875f6473fc47f33b4"
         }
       ]
     },
     "mdl-single-variable-calculus-newton-s-method": {
-      "code_fingerprint": "sha256:6abf7e50524adc83032ccf5586d9ec5d45d4fd5e37e09f1e658381d384aab391",
+      "code_fingerprint": "sha256:813cce9e7c44277024d8be96c5131c6b22dd8788b7f1d3d509a52c9c817ad463",
       "kind": "text",
       "outputs": [
         {
@@ -83,7 +78,7 @@
       ]
     },
     "single-variable-calculus-taylor-error-rate": {
-      "code_fingerprint": "sha256:1906606c05e08a699db135c44228984e5199bfbda7c7c6273bb469a246ae1c1e",
+      "code_fingerprint": "sha256:d3866b825a078b91e089517758d534bfa7b20d7a6876759d452f5847a6000308",
       "kind": "text",
       "outputs": [
         {
@@ -94,20 +89,20 @@
       ]
     },
     "single-variable-calculus-taylor-series": {
-      "code_fingerprint": "sha256:abd1015fe03da29b70ae5d53bea67419d6aed19b695c3b22d585ccf85a77df02",
+      "code_fingerprint": "sha256:506f71e832c95637b4576a133922fc2c30e0dccb98592dd6d9197e4493f699d9",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-single-variable-calculus/single-variable-calculus-taylor-series-1.svg",
-          "bytes": 28556,
-          "sha256": "sha256:a503bc391b4988f2e95a6959a823eb6617517fd8f74dec3254dc740a2665643b"
+          "bytes": 28560,
+          "sha256": "sha256:702441c6272015e001be425177c6d750d3b2b9502dbad317209ea6976a2e5caf"
         }
       ]
     },
     "single-variable-calculus-one-sided": {
-      "code_fingerprint": "sha256:d72e9283c2ba3a5480a92a2a40fcfbf6b39e1b765a7114a60b7ae075d2d4b4cb",
+      "code_fingerprint": "sha256:60c18da99917b9e67c1491328212fd4db5d589b3e748e75d65239cbe4932287a",
       "kind": "text",
       "outputs": [
         {
@@ -118,7 +113,7 @@
       ]
     },
     "mdl-single-variable-calculus-why-sgd-shrugs": {
-      "code_fingerprint": "sha256:7e2b3017d0c3a38441881b5360e4e53da9aa14a35778da7541af4359fba7c737",
+      "code_fingerprint": "sha256:9bb991e2c82c16a609fe5d664b7e0544b0f1ad66a073d5b7529946a282097004",
       "kind": "text",
       "outputs": [
         {

@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-one-dimensional-gradient-descent-4-1.svg",
           "bytes": 18445,
-          "sha256": "sha256:b96a4ff6bee4745e3bb925f1a3f315e52d4fa75b5ac8800ce5910e8349cea200"
+          "sha256": "sha256:250a63479855ea140c5a5b67870ea526c496f1eaf33aa1da72650a3b707e0b74"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-1-1.svg",
           "bytes": 18443,
-          "sha256": "sha256:7d5e5c2912ee841911034ae9b881eb048dd19f8375ad8b1747e771fa074cafc3"
+          "sha256": "sha256:f8d4a665e3d9fed74c4b05cb9806c287e1aae7372d736355b1eec8117e403208"
         }
       ]
     },
@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-2-1.svg",
           "bytes": 17956,
-          "sha256": "sha256:9338cb85b5b1a36e0bc2b36dcb4d2dfb11798935ae2c46d62a803996788a0485"
+          "sha256": "sha256:3df048e6d51e97025ad160fa2287726f26ced4949caaef1dfc41088ec30aa06f"
         }
       ]
     },
@@ -92,22 +92,22 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-local-minima-1.svg",
           "bytes": 14963,
-          "sha256": "sha256:fff767249b0ff6a5dfa3e9563ffcca7df40109c7981afcf4cdb712634bef63b1"
+          "sha256": "sha256:dc303de3323015c1b03328eb7bf6cd8ccb8538a3f21b90f19754505ba7a80862"
         }
       ]
     },
     "gd-multivariate-gradient-descent-1": {
-      "code_fingerprint": "sha256:3329287b8d89f53c64f53610c2d551cef9203c2555f219ba2460a2c89b56bd59",
+      "code_fingerprint": "sha256:80ef0a2d728cedeca15a7a1e024004d901111608beee3a712f01a169651ff912",
       "kind": "text",
       "outputs": []
     },
     "gd-multivariate-gradient-descent-2": {
-      "code_fingerprint": "sha256:d28b08e978cbb0ea2bff96b012b5438d76ef053ecf9049355b24f16de453fce8",
+      "code_fingerprint": "sha256:51209bf8197dfd3fe16125a99c906caee1965baf860e41dc7de46b358fdf074b",
       "kind": "text",
       "outputs": []
     },
     "gd-multivariate-gradient-descent-3": {
-      "code_fingerprint": "sha256:0d70df530dbf11eb15c9ffd5e8d8973b106a73613b96921d014b138ae5573d30",
+      "code_fingerprint": "sha256:1a641164aa663c4c158fbd0739250b21d1882acb6700ec3c3c302247dc815eb1",
       "kind": "mixed",
       "outputs": [
         {
@@ -120,12 +120,12 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-multivariate-gradient-descent-3-1.svg",
           "bytes": 19542,
-          "sha256": "sha256:9ca434ab07e9136e6e1e533e1280e36f0d4fdf224d94f52c730d4fb16305575d"
+          "sha256": "sha256:da44a077d9073367223572db36c648680a716e9d7058acb8dbbe43a28d60691b"
         }
       ]
     },
     "gd-newton-s-method-1": {
-      "code_fingerprint": "sha256:effc3d6bcd542a78949586f0ee9976cfadd115330ee200f9ae169dd247bbe359",
+      "code_fingerprint": "sha256:2ed1bb04d439eaeb052e74a6376a2768d64448846e20bc421dbcd8ed036b4b0b",
       "kind": "mixed",
       "outputs": [
         {
@@ -138,12 +138,12 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-1-1.svg",
           "bytes": 16481,
-          "sha256": "sha256:e857b63626743c2faf50c76b70078f1a5e51e99acfb6ddf32e5fa229edf845ad"
+          "sha256": "sha256:d6da14891e517560fcc68f080536fb72f5317f2bec9561706c85de9501cfe7a2"
         }
       ]
     },
     "gd-newton-s-method-2": {
-      "code_fingerprint": "sha256:84e3cf8ee03d660a2d679250a19c2d8c023b69cb96ef64cf7554e82ce24b36a6",
+      "code_fingerprint": "sha256:acc5db10a76ba4b4f573e73a3160f12fc4a2a1a856cfdebe0f0b05a02604915e",
       "kind": "mixed",
       "outputs": [
         {
@@ -156,12 +156,12 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-2-1.svg",
           "bytes": 16762,
-          "sha256": "sha256:0017e78c0efb2d5e856c2dfbe38f754ac56f2d667c77123c6a6ec5a2d8b8f9ad"
+          "sha256": "sha256:a0d83e8b52d62aa1c41c596514eed528144b2e4226541324012fc5367b42a297"
         }
       ]
     },
     "gd-newton-s-method-3": {
-      "code_fingerprint": "sha256:c39f6a3abef7aa914b9d6c6e3f5c9b86acad03fa906854eb39f670686cb4dd67",
+      "code_fingerprint": "sha256:3077ec0c6a4b884509304b822f306472bf9711cc1a483ec9d26aebb9a1e1bfa3",
       "kind": "mixed",
       "outputs": [
         {
@@ -174,7 +174,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-3-1.svg",
           "bytes": 14971,
-          "sha256": "sha256:ac6eea63f1ac8da9187633c24525fcdb3c7c9aea453675f0f444d24475363e34"
+          "sha256": "sha256:1d3d1c71d3c3877134a82aee7843361ad81af36c7125d8fb7af44dfd509f0c69"
         }
       ]
     }

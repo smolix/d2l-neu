@@ -36,7 +36,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9933627, -0.9177382]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.34295547, -0.41500005]], dtype=float32)>"
         }
       ]
     },
@@ -46,7 +46,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.9933626, -0.9177381]], dtype=float32)>"
+          "text": "<tf.Tensor: shape=(1, 2), dtype=float32, numpy=array([[ 0.34295553, -0.415     ]], dtype=float32)>"
         }
       ]
     },
@@ -62,17 +62,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Eager Mode: 2.6082 sec\n"
+          "text": "Eager Mode: 2.1868 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Graph Mode: 0.6376 sec\n"
+          "text": "Graph Mode: 0.7064 sec\n"
         }
       ]
     },
     "hybridize-serialization-1": {
-      "code_fingerprint": "sha256:21a68a76d420504814381a8cda85c1fb0cd4cbd9ede5371e4de7f4c6252f1bdc",
+      "code_fingerprint": "sha256:2b316a4b4526721f63a07c32156e0a170369673a3547eb30e817b2e8d171dde1",
       "kind": "text",
       "outputs": [
         {
@@ -88,7 +88,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "total 44K\r\ndrwx------ 2 smola smola   6 Jul 10 18:22 assets\r\n-rw------- 1 smola smola  96 Jul 10 18:22 fingerprint.pb\r\n-rw------- 1 smola smola 39K Jul 10 18:22 saved_model.pb\r\ndrwx------ 2 smola smola  66 Jul 10 18:22 variables\r\n"
+          "text": "Saved artifact at 'my_mlp'. The following endpoints are available:\n\n* Endpoint 'serve'\n  args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 512), dtype=tf.float32, name='keras_tensor_14')\nOutput Type:\n  TensorSpec(shape=(None, 2), dtype=tf.float32, name=None)\nCaptures:\n  129581445785424: TensorSpec(shape=(), dtype=tf.resource, name=None)\n  129581445786768: TensorSpec(shape=(), dtype=tf.resource, name=None)\n  129583690669456: TensorSpec(shape=(), dtype=tf.resource, name=None)\n  129581445784080: TensorSpec(shape=(), dtype=tf.resource, name=None)\n  129581445784848: TensorSpec(shape=(), dtype=tf.resource, name=None)\n  129581445783888: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "total 48K\r\ndrwx------ 2 smola smola   6 Jul 14 06:35 assets\r\n-rw------- 1 smola smola  96 Jul 16 11:30 fingerprint.pb\r\n-rw------- 1 smola smola 44K Jul 16 11:30 saved_model.pb\r\ndrwx------ 2 smola smola  66 Jul 16 11:30 variables\r\n"
         }
       ]
     }

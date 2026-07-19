@@ -1,4 +1,4 @@
-# Multilayer Perceptrons
+# Multilayer Perceptron
 :label:`chap_perceptrons`
 
 In this chapter, we will introduce your first truly *deep* network.

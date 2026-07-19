@@ -4,17 +4,17 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:621eeaf803f67761775c95898265c316649bbd78c4025f2d89d1b60afe7bc031",
+    "d2l_lib_fingerprint": "sha256:0084c939c06a03a4c09619205548189f2f0c55e0483cbd0ef6359f54932e2645",
     "max_inline_bytes": 0
   },
   "cells": {
     "text-sequence-converting-raw-text-into-sequence-data": {
-      "code_fingerprint": "sha256:32d6a85c6c52581b96fe449a40015bfe3147ccd2aec29875e709ff08f4b877a6",
+      "code_fingerprint": "sha256:0ebec140fb873c054e353a1ac40acd84a1725fd8d4aa3baf237505e4381b3dd8",
       "kind": "text",
       "outputs": []
     },
     "text-sequence-reading-the-dataset-1": {
-      "code_fingerprint": "sha256:1d9f1b9c951dbed6369ed05c5714e82b93bdb4055d642835fe4a24543ca7db69",
+      "code_fingerprint": "sha256:fbcf43cb8e4c4f4a78480f25519e104add0e5dae4fe0857b9331e3409a6427df",
       "kind": "text",
       "outputs": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "text-sequence-reading-the-dataset-2": {
-      "code_fingerprint": "sha256:8e29c671d9f2d3bfb523b9ba138ef25dc04e3a465c464f26cb689c1ee83ca2b8",
+      "code_fingerprint": "sha256:0de91324ae50fd0e28e72369f1ac11a50f331b23de90dca682257bd15654705b",
       "kind": "text",
       "outputs": [
         {
@@ -34,7 +34,7 @@
       ]
     },
     "text-sequence-tokenization": {
-      "code_fingerprint": "sha256:31038d3235bc166d1e07f16c073bcba9e6f4da83073fa7733ed7f31bceec5c9a",
+      "code_fingerprint": "sha256:990ae2130f77c2838d56e5e049ce103ffd6b2d309b8f0abc9096c97914c62ac1",
       "kind": "text",
       "outputs": [
         {
@@ -43,24 +43,138 @@
         }
       ]
     },
-    "text-sequence-vocabulary-1": {
-      "code_fingerprint": "sha256:7055febc17d9505a12df358de85e7db55bd7937189537bfe0b66318b90b3afc7",
-      "kind": "text",
-      "outputs": []
-    },
-    "text-sequence-vocabulary-2": {
-      "code_fingerprint": "sha256:f83f03ac47092912ea08e387e7cb2173aad153a9afcc2302ad686cd5a70315cc",
+    "text-sequence-two-ends-of-a-spectrum-1": {
+      "code_fingerprint": "sha256:5e91c300db63c86d1b213dc6df2603432be1adf7641222c0765804e368b0761f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "indices: [3, 9, 2, 1, 3, 5, 13, 2, 1, 13]\nwords: ['t', 'h', 'e', ' ', 't', 'i', 'm', 'e', ' ', 'm']\n"
+          "text": "characters:     27 distinct,  173428 tokens in the corpus\nwords:        4579 distinct,   32775 tokens in the corpus\n"
+        }
+      ]
+    },
+    "text-sequence-text-as-bytes": {
+      "code_fingerprint": "sha256:264128b8283e202c1f277f6d572c80c060f5cc0d5cd3a54f6f38fb44b513af68",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "23 characters, 32 bytes\n'a' -> [97]\n'é' -> [195, 169]\n'你' -> [228, 189, 160]\n'🚀' -> [240, 159, 154, 128]\n"
+        }
+      ]
+    },
+    "text-sequence-implementation-1": {
+      "code_fingerprint": "sha256:dc7590d007b632ce2cb42957d2dd38401a7c6bc7d655aca30ffebb53aadeddda",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-sequence-implementation-2": {
+      "code_fingerprint": "sha256:06aee765b1a3315a36bc871d992b8108a162b794310f375e02a1087042dcf688",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "b'u' + b'g' -> b'ug'\nb'h' + b'ug' -> b'hug'\nb'hug' + b' ' -> b'hug '\n"
+        }
+      ]
+    },
+    "text-sequence-encoding-and-decoding-1": {
+      "code_fingerprint": "sha256:b57c1eccc0d011b0c5d23878a4962e437d8bb1d80512ba55c3f3c7f06bc70fe0",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-sequence-encoding-and-decoding-2": {
+      "code_fingerprint": "sha256:2a5038562802acb069f3e6bc6b12004af4f723473d3fc8c97d04c241e43a95b8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[b'hug', b's']\n[b'b', b'u', b'n']\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "'hug pug hugs'"
+        }
+      ]
+    },
+    "text-sequence-training-on-the-time-machine-1": {
+      "code_fingerprint": "sha256:e792a0c99d50af8296438e2df35e14c84566c2fdcb6aeaeea92d5abcd5c278ac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first: [b'e ', b'th', b'd ', b'in', b't ', b's ', b'an', b'er']\nlast:  [b'appe', b'vo', b'ering ', b'too ', b'door', b'acro', b'clo', b'after ']\n13 tokens: [b'The ', b'Time Traveller ', b's', b'mi', b'le', b'd', b'. A', b'r', b'e ', b'you ', b'su', b're', b'?']\n"
+        }
+      ]
+    },
+    "text-sequence-training-on-the-time-machine-2": {
+      "code_fingerprint": "sha256:4cfafab4b3b36ff4258fd495c0cec086ea06cb399e51915578747130f2a0aee4",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "text-sequence/text-sequence-training-on-the-time-machine-2-1.svg",
+          "bytes": 19053,
+          "sha256": "sha256:acc5f8799c4fe47e16ca7c955ab72f103598369d6f611371e719d351946c86a5"
+        }
+      ]
+    },
+    "text-sequence-pre-tokenization-telling-bpe-where-words-end-1": {
+      "code_fingerprint": "sha256:c3fb35c67e76b7b789cd555e4ff45d0093e10f1dadc43507e2fe37eb69068776",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "78 tokens cross a word boundary, e.g. [', and ', 'of the ', '. I ', '. Th', '. A', '. I', 'in the ', 'ed to ']\n"
+        }
+      ]
+    },
+    "text-sequence-pre-tokenization-telling-bpe-where-words-end-2": {
+      "code_fingerprint": "sha256:7492e5b637c396e266d67dfdc99f8ac1de257c1c0080bfc3f73866d7318ece1a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "['The',\n ' traveller',\n \"'s\",\n ' clock',\n ' struck',\n ' 12',\n ',',\n '345',\n ' times',\n '.']"
+        }
+      ]
+    },
+    "text-sequence-pre-tokenization-telling-bpe-where-words-end-3": {
+      "code_fingerprint": "sha256:22653c06dd7be14b6d4b55eebfe3bb2902425c13d372682f061d11c7338b245a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "boundary-crossing tokens now: 0\nlongest tokens gained instead: [' Psychologist', 'sychologist', ' Traveller', ' Morlocks', ' darkness', ' Machine']\n"
+        }
+      ]
+    },
+    "text-sequence-vocabulary-1": {
+      "code_fingerprint": "sha256:4663c12292b7ccbce14a916b9ab8141dc33d637402a8b5632cb5e9635a98b567",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-sequence-vocabulary-2": {
+      "code_fingerprint": "sha256:28fa2667383aadbc73f433f69a2c0f0ed8f6a0d38c38c9d68feb0b8b88f654dc",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "indices: [3, 9, 2, 1, 3, 5, 13, 2, 1, 13]\ntokens: ['t', 'h', 'e', ' ', 't', 'i', 'm', 'e', ' ', 'm']\n"
         }
       ]
     },
     "text-sequence-putting-it-all-together": {
-      "code_fingerprint": "sha256:26e4b70f2fdc9116a9614931f465a4bb8c1dd3ff5079e47ebf209291416b7948",
+      "code_fingerprint": "sha256:9eba22f785c434ec05a297bdd040396d270ad44a4a0b38e8fa9932da8f233335",
       "kind": "text",
       "outputs": [
         {
@@ -69,59 +183,86 @@
         }
       ]
     },
-    "text-sequence-exploratory-language-statistics-1": {
-      "code_fingerprint": "sha256:d58d40b7de53e9978a23407ecb7712eca332bfaf1b8a2a89ccd518cc856af789",
+    "text-sequence-special-tokens": {
+      "code_fingerprint": "sha256:4c95dfc97643f4072a9a342cfb7a3b91974a26c4fa2cc7ca73034dabe1713ce0",
       "kind": "text",
       "outputs": [
         {
-          "type": "execute_result",
-          "text": "[('the', 2261),\n ('i', 1267),\n ('and', 1245),\n ('of', 1155),\n ('a', 816),\n ('to', 695),\n ('was', 552),\n ('in', 541),\n ('that', 443),\n ('my', 440)]"
+          "type": "stream",
+          "name": "stdout",
+          "text": "as plain text:   [60, 98, 111, 115, 62, 341, 513, 680]\nas control code: [1025, 341, 513, 680]\npad/bos/eos ids: 1024 1025 1026 | len: 1027\n"
         }
       ]
     },
-    "text-sequence-exploratory-language-statistics-2": {
-      "code_fingerprint": "sha256:815dc72de943933305b62e8c6821a1053a8cec97fddf34a02fe91bde387f6b67",
+    "text-sequence-what-a-production-tokenizer-stores": {
+      "code_fingerprint": "sha256:206f900eccfda7a3eee93ef3813479fb58d683069cd61adf64ed254fef9f9c20",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[(b'\\xa0', 254), (b'\\xad', 255), (b' t', 256), (b' a', 257), (b'he', 258), (b'in', 259)]\n{'<|endoftext|>': 50256}\n"
+        }
+      ]
+    },
+    "text-sequence-verifying-our-implementation-1": {
+      "code_fingerprint": "sha256:8ef7ca736c83b9d942020cb37071ac98ac6f051ad129c35c048d15de752ebba5",
+      "kind": "text",
+      "outputs": []
+    },
+    "text-sequence-verifying-our-implementation-2": {
+      "code_fingerprint": "sha256:1de97603a830808fa01f7f35fe916300c19cefbc08fe2d20da6573da14de57b0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "60 tokens, identical to tiktoken\n['The', ' Time', ' Trave', 'ller', ' (', 'for', ' so', ' it']\n"
+        }
+      ]
+    },
+    "text-sequence-verifying-our-implementation-3": {
+      "code_fingerprint": "sha256:bda487ce5d0ffe0fd686413ea9f8035ed283d409ee46db93c25f14a47bfd3c92",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  ours (1k, in-domain):  65741 tokens, 2.72 bytes/token\n            gpt2 (50k):  44073 tokens, 4.06 bytes/token\n     o200k_base (199k):  42624 tokens, 4.20 bytes/token\n"
+        }
+      ]
+    },
+    "text-sequence-fertility-digits-and-glitch-tokens-1": {
+      "code_fingerprint": "sha256:ae6e5e1f9ffe0ad40099a057a56ef629a7b69a40601bca87456e6c33d0c612a8",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
-          "asset": "text-sequence/text-sequence-exploratory-language-statistics-2-1.svg",
-          "bytes": 33996,
-          "sha256": "sha256:c3d52e7b0e60d67b93bc939b90102e6779d31a7f22758313fd0bc524296a011a"
+          "asset": "text-sequence/text-sequence-fertility-digits-and-glitch-tokens-1-1.svg",
+          "bytes": 25538,
+          "sha256": "sha256:2d5a72333632dbe56eae8242c7f8debfbe65e9eaf8e8e067e6249a36268ad665"
         }
       ]
     },
-    "text-sequence-exploratory-language-statistics-3": {
-      "code_fingerprint": "sha256:02c9b6bf5584a6f0a40f1988a281cd4712fbcc3d89edeb30c98267d9bb5abcea",
+    "text-sequence-fertility-digits-and-glitch-tokens-2": {
+      "code_fingerprint": "sha256:a277362814058b6794846f528f9c45d451a084ed125f8068693f419b06a2c4b5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "gpt2: 12345678 -> ['123', '45', '678']\no200k_base: 12345678 -> ['123', '456', '78']\n"
+        }
+      ]
+    },
+    "text-sequence-fertility-digits-and-glitch-tokens-3": {
+      "code_fingerprint": "sha256:541759835ff5b2d35dc88e520cb2e3e1204b4cc76da5cebffe5446da05130432",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[('of--the', 309),\n ('in--the', 169),\n ('i--had', 130),\n ('i--was', 112),\n ('and--the', 109),\n ('the--time', 102),\n ('it--was', 99),\n ('to--the', 85),\n ('as--i', 78),\n ('of--a', 73)]"
-        }
-      ]
-    },
-    "text-sequence-exploratory-language-statistics-4": {
-      "code_fingerprint": "sha256:d729aad6581feb2ffad440b2f5cfd40e699940991ac8ef4cee26d05c985f2384",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "execute_result",
-          "text": "[('the--time--traveller', 59),\n ('the--time--machine', 30),\n ('the--medical--man', 24),\n ('it--seemed--to', 16),\n ('it--was--a', 15),\n ('here--and--there', 15),\n ('seemed--to--me', 14),\n ('i--did--not', 14),\n ('i--saw--the', 13),\n ('i--began--to', 13)]"
-        }
-      ]
-    },
-    "text-sequence-exploratory-language-statistics-5": {
-      "code_fingerprint": "sha256:71e0581eed9ff4b6aa016a726b308d58191a96ba7d609b2d1db56bc164d65bfb",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "text-sequence/text-sequence-exploratory-language-statistics-5-1.svg",
-          "bytes": 45605,
-          "sha256": "sha256:203e033c9bfb023234e0f29ec55baf6981e832fa726ef7991a6f91d13747d5e3"
+          "text": "[43453]"
         }
       ]
     }

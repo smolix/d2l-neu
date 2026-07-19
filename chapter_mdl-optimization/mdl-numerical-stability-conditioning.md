@@ -108,9 +108,12 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-rounding-model`
 
-and IEEE arithmetic guarantees the same for every single operation: the
-computed $x \oplus y$ equals $(x + y)(1 + \delta)$ with $|\delta| \le u$
-(:cite:`IEEE.754.2019,Goldberg.1991`). The quantity $u$ is the *unit
+For a correctly rounded basic operation whose exact finite result lies in the
+normal range, IEEE arithmetic gives the analogous model: the computed
+$x \oplus y$ equals $(x + y)(1 + \delta)$ with $|\delta| \le u$
+(:cite:`IEEE.754.2019,Goldberg.1991`). Overflow, division by zero, NaNs, and
+results in the subnormal/underflow region require separate absolute-error
+reasoning; those exceptions are central rather than incidental below. The quantity $u$ is the *unit
 roundoff*. Everything
 in this section is bookkeeping on these $(1+\delta)$ factors: one of them is
 harmless; trouble starts when millions of them interact, or when a
@@ -121,57 +124,24 @@ Deep learning juggles three formats; the table below prints their parameters
 directly from the library:
 
 ```{.python .input #numerical-stability-conditioning-finfo}
-#@tab mxnet
+import numpy as onp
 header = f'{"dtype":>10} {"eps":>12} {"smallest normal":>17} {"max":>12}'
 print(header)
-for dt in [np.float16, np.float32]:
-    fi = np.finfo(dt)
-    print(f'{np.dtype(dt).name:>10} {fi.eps:12.3e} '
+for dt in [onp.float16, onp.float32]:
+    fi = onp.finfo(dt)
+    print(f'{onp.dtype(dt).name:>10} {fi.eps:12.3e} '
           f'{fi.smallest_normal:17.3e} {fi.max:12.3e}')
 
 def to_bf16(x):
     """Round float32 to the nearest bfloat16 (round half to even)."""
-    bits = np.atleast_1d(np.asarray(x, np.float32)).view(np.uint32)
+    bits = onp.atleast_1d(onp.asarray(x, onp.float32)).view(onp.uint32)
     bits = (bits + 0x7FFF + ((bits >> 16) & 1)) & 0xFFFF0000
-    return bits.astype(np.uint32).view(np.float32)
+    return bits.astype(onp.uint32).view(onp.float32)
 
 eps_bf16 = (to_bf16(1.0 + 2.0**-7) - 1.0).item()  # emulated: mxnet has no bf16
 print(f'{"bfloat16":>10} {eps_bf16:12.3e}   (exponent range = float32)')
 print('bfloat16 eps equals 2^-7:', eps_bf16 == 2.0**-7,
       ' and 1 + 2^-8 rounds back to 1:', to_bf16(1.0 + 2.0**-8).item() == 1.0)
-```
-
-```{.python .input #numerical-stability-conditioning-finfo}
-#@tab pytorch
-print(f'{"dtype":>10} {"eps":>12} {"smallest normal":>17} {"max":>12}')
-for dt in [torch.float16, torch.bfloat16, torch.float32]:
-    fi = torch.finfo(dt)
-    print(f'{str(dt)[6:]:>10} {fi.eps:12.3e} '
-          f'{fi.smallest_normal:17.3e} {fi.max:12.3e}')
-print('bfloat16 eps equals 2^-7:',
-      torch.finfo(torch.bfloat16).eps == 2.0**-7)
-```
-
-```{.python .input #numerical-stability-conditioning-finfo}
-#@tab tensorflow
-print(f'{"dtype":>10} {"eps":>12} {"smallest normal":>17} {"max":>12}')
-for dt in [tf.float16, tf.bfloat16, tf.float32]:
-    fi = ml_dtypes.finfo(dt.as_numpy_dtype)
-    print(f'{dt.name:>10} {float(fi.eps):12.3e} '
-          f'{float(fi.smallest_normal):17.3e} {float(fi.max):12.3e}')
-print('bfloat16 eps equals 2^-7:',
-      float(ml_dtypes.finfo(tf.bfloat16.as_numpy_dtype).eps) == 2.0**-7)
-```
-
-```{.python .input #numerical-stability-conditioning-finfo}
-#@tab jax
-print(f'{"dtype":>10} {"eps":>12} {"smallest normal":>17} {"max":>12}')
-for dt in [jnp.float16, jnp.bfloat16, jnp.float32]:
-    fi = jnp.finfo(dt)
-    print(f'{np.dtype(dt).name:>10} {float(fi.eps):12.3e} '
-          f'{float(fi.smallest_normal):17.3e} {float(fi.max):12.3e}')
-print('bfloat16 eps equals 2^-7:',
-      float(jnp.finfo(jnp.bfloat16).eps) == 2.0**-7)
 ```
 
 Read the three rows as three different bargains. **fp32** ($p = 23$ mantissa
@@ -345,16 +315,16 @@ $$
 :eqlabel:`eq_mdl-opt-stable-lse`
 
 :numref:`subsec_softmax-implementation-revisited` also gave the reason the
-shifted route is safe: with $c = \max_i z_i$ every exponent is at most $0$,
-so every $e^{z_i - c}$ lies in $(0, 1]$ and overflow is impossible at any
-logit scale, in any format; the largest term equals exactly $1$, so the
-denominator, the sum in :eqref:`eq_mdl-opt-stable-lse`, lies in $[1, n]$ and
-can neither overflow nor underflow to $0$, so its logarithm is finite and
-its reciprocal exists. What the floating-point model of this section adds is
-the quantification: the overflow thresholds ($88.72$ in fp32, $11.09$ in
-fp16) say exactly when the naive route dies, and the only number the shifted
-route ever exposes to the exponential is $c$ itself, a single logit that was
-already representable. The cell below watches the naive route produce `NaN`
+shifted route is safe for finite logits: with $c = \max_i z_i$ every
+exponent is at most $0$, so each $e^{z_i-c}$ lies in $(0,1]$ and exponential
+overflow is avoided; the largest term equals $1$, so the denominator, the sum
+in :eqref:`eq_mdl-opt-stable-lse`, lies in $[1,n]$ and cannot underflow to
+zero. For any practically storable vector this sum is also representable.
+Non-finite inputs need separate handling (for example, subtracting an
+all-$-\infty$ maximum is undefined). What the floating-point model of this
+section adds is the quantification: the overflow thresholds ($88.72$ in fp32,
+$11.09$ in fp16) say exactly when the naive route dies, while the shifted
+route sends only the nonpositive differences $z_i-c$ to the exponential. The cell below watches the naive route produce `NaN`
 on logits that the shifted route handles, and checks whether, where both
 routes work, the two agree:
 
@@ -387,8 +357,8 @@ naive route's first entry differing by a single ulp ($0.09003058$ versus
 $0.09003057$). That one-bit discrepancy is the section's lesson in
 miniature: the identity constrains the real values, not the rounded ones.
 The library's `softmax` does this max-subtraction internally; the trap is
-re-implementing it yourself, which is why the rule of thumb is *never
-exponentiate a raw logit*.
+re-implementing it yourself, which is why the practical rule is to use a
+library's stable softmax or log-sum-exp rather than exponentiating raw logits.
 
 ### The Log-Sum-Exp Sandwich
 
@@ -421,9 +391,9 @@ $$
 $$
 :eqlabel:`eq_mdl-opt-log-softmax`
 
-a *subtraction of two safe quantities* that never materializes a probability,
-so probabilities that would underflow to $0$ (and then explode under
-$\log$) never exist. Logits around $1000$ would overflow even float64;
+a subtraction that does not materialize the probability itself. It therefore
+avoids the route in which a tiny probability first underflows to $0$ and its
+log then becomes $-\infty$. Logits around $1000$ would overflow even float64;
 in log space they are effortless:
 
 ```{.python .input #numerical-stability-conditioning-logsumexp}
@@ -1027,7 +997,8 @@ stabilizing your arithmetic and accelerating your optimizer the whole time.
   for fp32's exponent range; fp8 (E4M3/E5M2) tightens both budgets further
   and makes per-tensor scaling mandatory.
 * Softmax is shift-invariant, so subtract the max before exponentiating;
-  log-sum-exp with the same shift is an exact identity that never overflows;
+  shifted log-sum-exp is an exact identity that prevents exponential overflow
+  for finite logits (provided the final result itself is representable);
   cross-entropy should be computed from logits as
   $\mathrm{lse}(\mathbf{z}) - z_y$. Pass logits to your loss; the
   from-probabilities route ends in `inf`, `NaN`, or (worse) a silently
@@ -1314,8 +1285,8 @@ exponentiates logits, so any logit past $88.7$ makes the numerator
 
 $$\mathrm{softmax}(\mathbf{z} - c\mathbf{1}) = \mathrm{softmax}(\mathbf{z}),$$
 
-so shift by $c = \max_i z_i$: every exponent $\le 0$, the denominator
-sits in $[1, n]$, and overflow is impossible.
+so, for finite logits, shift by $c = \max_i z_i$: every exponent is
+$\le 0$, the denominator sits in $[1,n]$, and exponential overflow is avoided.
 
 . . .
 

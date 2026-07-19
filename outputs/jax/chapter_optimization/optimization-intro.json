@@ -4,35 +4,35 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c32060569bacd41ac66d45dca87b5091a6a28a056c4e5ea112fc2b0fc308b568",
+    "d2l_lib_fingerprint": "sha256:17df279e7f1afe77618e554785ce518eee1e5de1b573564ca3a223827236906f",
     "max_inline_bytes": 0
   },
   "cells": {
     "optimization-intro-goal-of-optimization-1": {
-      "code_fingerprint": "sha256:9228eb7efcde378417667bdfd8c288c26279cf35645a1f809e42470e8949af78",
+      "code_fingerprint": "sha256:ecbc62fcb2bd997e453b44b0819c7c3138c04067250eacfd17a0151da0084bcc",
       "kind": "text",
       "outputs": []
     },
     "optimization-intro-goal-of-optimization-2": {
-      "code_fingerprint": "sha256:f0b67641ccff54f2e09e41bb985b84082c93f36cef5968152a162d54d1f2c8c6",
+      "code_fingerprint": "sha256:aaf6cc2bcc1563e10580bbbab0f242724cc0bb38b5acb8a35f5a8b1b630e71e3",
       "kind": "text",
       "outputs": []
     },
     "optimization-intro-goal-of-optimization-3": {
-      "code_fingerprint": "sha256:e99bf7613fce57e41d14beb8214c21ad5cace17df903b8bc8b723eb10cfb3ee6",
+      "code_fingerprint": "sha256:5bb60783d3400044c5ff3082a28a4fa96b6370b51153a134ba8921e922bfa064",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-goal-of-optimization-3-1.svg",
-          "bytes": 30007,
-          "sha256": "sha256:59328821650e530e66ded16b7245591f1c960acc054c39889ab5720d0e13d29f"
+          "bytes": 30002,
+          "sha256": "sha256:042fcf0d54a221b7affe0a05571191b2971fcbbdd8b47fea27185c1f08935c2c"
         }
       ]
     },
     "optimization-intro-local-minima": {
-      "code_fingerprint": "sha256:1482c4d99a8aac2354216dd5b0028d01784ed408d83f67b0d07043823bddb1f7",
+      "code_fingerprint": "sha256:4fd9455580c8101a8d3faac260065788689500abe9c858b023c67bf61a331169",
       "kind": "asset",
       "outputs": [
         {
@@ -40,12 +40,12 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-local-minima-1.svg",
           "bytes": 19689,
-          "sha256": "sha256:12a761bc69f7fdbf26e052e18a8ce42ead79bb72632aefaea464eb676ef51d03"
+          "sha256": "sha256:672a364927165e4dedf109bd2af9764898616e3d8ec23fe3b5bed80ef9b6acac"
         }
       ]
     },
     "optimization-intro-saddle-points-1": {
-      "code_fingerprint": "sha256:35b569b1b0ee4eb88d41995a34a1fb10a8c08742437c63af83544457bba1be2f",
+      "code_fingerprint": "sha256:732f1e32d6af3f2efca784a1716e560a48407ed07755e6e0dfad45ac35a10b66",
       "kind": "asset",
       "outputs": [
         {
@@ -53,33 +53,51 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-saddle-points-1-1.svg",
           "bytes": 17872,
-          "sha256": "sha256:4fbf2d2d53c32bb546991f456d4d19acadbd102d99d92496b73ae83c3c86388e"
+          "sha256": "sha256:71e7f664e2601d28d540add42e6d3ac13259441fda62ea9121622f64b702467c"
         }
       ]
     },
     "optimization-intro-saddle-points-2": {
-      "code_fingerprint": "sha256:d6b18087f086d79bc5ceae35ae9b0120a9a488f4f8db1ea81bfab9853e839bb2",
+      "code_fingerprint": "sha256:a88739961f6bbb3564b3ee63f81d32cd3dcd0cd8d9cd3400fe19fb6f03f94a0f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-saddle-points-2-1.svg",
-          "bytes": 63302,
-          "sha256": "sha256:999f6945083831bfd44aef0a5f8d6458301ce43ad72b4d73e00b89f6c0648ced"
+          "bytes": 63315,
+          "sha256": "sha256:47342dfb991dbb943854cc6c20f7a57afd6afc3f5f8533e39bb0e537512b027e"
         }
       ]
     },
     "optimization-intro-vanishing-gradients": {
-      "code_fingerprint": "sha256:6abdc62186234557b400888ea2a5724c352b6d6d2cc04f3013a1617e6b4a8d88",
+      "code_fingerprint": "sha256:d0ef5c99a8101b81c370bfc7d25fffa0ed4e5659943df47bc52d3da4de64a7e3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-vanishing-gradients-1.svg",
-          "bytes": 20456,
-          "sha256": "sha256:ff410f39ea3ba95bbf9fd8dae39e209cb875ae326b30072266ca19e208efe2cd"
+          "bytes": 20458,
+          "sha256": "sha256:21b134100fe7c6abd1f7c5f805a95604eb216b5be5193c884a680fc1bf00ccf1"
+        }
+      ]
+    },
+    "optimization-intro-an-ill-conditioned-valley": {
+      "code_fingerprint": "sha256:c2cbed913e76924a27f4e9e89b27e150c88171c225e049d014b1c9d1d2ab33ae",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 30, x1: -0.295265, x2: -0.002476\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
+          "bytes": 25400,
+          "sha256": "sha256:acca2e6b9b5ba5ad387f74a183494cc6c6501e063c17337b220e13d684e3003b"
         }
       ]
     }

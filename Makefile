@@ -135,8 +135,12 @@ export PYTHONUNBUFFERED := 1
 
 .PHONY: help all all-quick rebuild-book-artifacts check-all-artifacts html lib clean veryclean
 .PHONY: pdf pdfs $(addprefix pdf-,$(FRAMEWORKS))
-.PHONY: notebooks run-all-notebooks slides
-.PHONY: capture-outputs audit-outputs verify-outputs-fresh refresh-stale render-fresh
+.PHONY: notebooks run-all-notebooks slides notebook-env-locks notebook-zips
+.PHONY: hosted-notebooks hosted-env-locks check-hosted-env-locks
+.PHONY: check-hosted-runtime-contracts check-hosted-notebooks
+.PHONY: check-hosted-docker check-hosted-docker-cpu check-hosted-docker-gpu
+.PHONY: dry-run-notebooks-branch publish-notebooks-branch
+.PHONY: capture-outputs audit-outputs verify-outputs-fresh refresh-stale render-fresh test-trap
 
 # ── Help ───────────────────────────────────────────────────
 
@@ -150,9 +154,18 @@ help:
 	@echo "  slides-<fw> / slides    [any] Build slides (CPU; slides safe with -j4)"
 	@echo "  notebooks-<fw>         [any] Generate (not execute) notebooks for one framework"
 	@echo "  notebooks               [any] Generate notebooks for all frameworks"
+	@echo "  notebook-env-locks      [any] Refresh downloadable CPU/GPU uv locks (network)"
+	@echo "  notebook-zips           [any] Build runnable per-framework notebook downloads"
+	@echo "  hosted-notebooks        [any] Stage PyTorch/TF/JAX/NumPy notebooks + site manifest"
+	@echo "  hosted-env-locks        [any] Regenerate hosted profiles/constraints from uv.lock"
+	@echo "  check-hosted-notebooks  [any] Verify hosted staging + runtime contracts"
+	@echo "  check-hosted-docker     [GPU] Opt-in Colab CPU/GPU framework matrix (slow)"
+	@echo "  dry-run-notebooks-branch      Build the generated branch commit without pushing"
+	@echo "  publish-notebooks-branch      Replace and push the generated notebooks branch"
 	@echo "  capture-outputs         [any] Bless executed _notebooks/ → committed outputs/ [FILES=...]"
 	@echo "  audit-outputs           [any] Report stale notebooks (code drift) + store integrity"
 	@echo "  verify-outputs-fresh    [any] Render gate: fail on stale inline outputs / orphaned ids"
+	@echo "  test-trap               [any] Regression test for the refresh-stale freshness trap"
 	@echo "  lib                     [any] Build d2l Python package"
 	@echo "  venv-<fw> / kernels     [any] Sync UV env / register ipykernels (for VS Code)"
 	@echo "  detect                  [any] Print the auto-detected resource + parallelism plan"
@@ -214,21 +227,41 @@ audit-outputs:
 verify-outputs-fresh:
 	@python3 tools/audit_outputs.py --verify-fresh
 
-# Re-execute only what the audit reports stale, then re-capture those files.
+# Fast, self-contained regression test (no GPU, no venv) that reproduces the
+# freshness-disagreement trap on a tmp fixture and asserts all three defenses:
+# the audit flags the lib-stale stamp, `refresh-stale`'s stamp-removal forces a
+# re-run, and the capture-side guard refuses to bless the stale outputs. Never
+# touches the committed store. See docs/build-system.md §3.3.
+test-trap:
+	@python3 tools/test_refresh_stale_trap.py
+
+# Re-execute exactly what the audit reports stale, then re-capture those files.
 # Execution goes through the unified scheduler (parallel GPU/CPU dispatch),
 # NOT a serial per-notebook `make -B` loop — the old loop ran one notebook at a
-# time with the GPU pool mostly idle. The scheduler is filtered to the stale set
-# (`--files`) and, crucially, is NOT forced: a notebook that is stale-in-store
-# but already executed (its .ipynb up to date, only never captured) is skipped
-# by the scheduler and picked up by the single capture pass below — so this is a
-# fast capture-only path when nothing actually needs a GPU re-run. `notebooks`
-# is a prereq so .ipynb reflect current source before staleness is judged (the
-# regen is mtime-conservative — unchanged notebooks are not re-executed).
+# time with the GPU pool mostly idle.
+#
+# THE TRAP this target must NOT fall into (see docs/build-system.md §3.3): the
+# audit's staleness is code-provenance/**fingerprint** based, while the
+# scheduler's own skip check (`tools/notebook_scheduler._stale`) is **mtime**
+# based. A notebook whose *source* is unchanged but whose store is
+# lib-fingerprint-stale (a `#@save` symbol it imports was edited elsewhere)
+# regenerates a byte-identical .ipynb, keeps a stamp newer than that .ipynb, and
+# so looks "fresh" to the scheduler — it is silently skipped, and the capture
+# pass then blesses its *pre-edit* outputs under the new fingerprint (falsely
+# green). `--files` alone does NOT fix this; the scheduler is not forced.
+#
+# Fix: `rm` exactly the audit's stale (framework, file) `.executed` stamps
+# (emitted by `audit_outputs.py --stale-stamps`) BEFORE dispatch. A missing
+# stamp makes both `_stale()` and Make itself re-execute the notebook, so only
+# genuinely-fresh outputs are ever captured. `notebooks` is a prereq so .ipynb
+# reflect current source before staleness is judged.
 refresh-stale: notebooks
 	@mkdir -p $(LOGDIR)
 	@stale="$$(python3 tools/audit_outputs.py --stale)"; \
 	if [ -z "$$stale" ]; then echo "Nothing stale — store is fresh."; exit 0; fi; \
-	echo "Stale (will re-execute if needed, then capture):"; echo "$$stale" | sed 's/^/  /'; \
+	stamps="$$(python3 tools/audit_outputs.py --stale-stamps)"; \
+	echo "Stale (will FORCE re-execute, then capture):"; echo "$$stale" | sed 's/^/  /'; \
+	rm -f $$stamps; \
 	$(SCHED_ENV) python3 tools/notebook_scheduler.py --files "$$stale" \
 		2>&1 | tee -a $(LOGDIR)/scheduler-$(TS).log; rc=$$?; \
 	$(MAKE) capture-outputs FILES="$$(echo $$stale)"; \
@@ -372,7 +405,7 @@ html: _book/index.html
 	@touch $@
 
 # Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
-_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html d2l.bib | .venv-build/.synced
+_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-notebooks.html tools/build_hosted_notebooks.py d2l.bib | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Verifying committed outputs are fresh ==="
 	@python3 tools/audit_outputs.py --verify-fresh || \
@@ -385,6 +418,8 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 		fi; \
 		echo "Building slides manifest (TOC button + landing page)..."; \
 		python3 tools/build_slides_index.py; \
+		echo "Building hosted-notebook manifest (buttons below Slides)..."; \
+		python3 tools/build_hosted_notebooks.py manifest; \
 		"$(CURDIR)/$(QUARTO)" render --to html; \
 		python3 tools/fix_crossref_numbers.py .; \
 		python3 tools/add_cfasync.py _book; \
@@ -485,6 +520,57 @@ _notebooks/%/.generated: $(SRC_MDS) tools/gen_notebooks.py tools/d2l_preprocess.
 notebooks-%: _notebooks/%/.generated _notebooks/%/.symlinks
 	@echo "Notebooks for $* in _notebooks/$*/ ($(words $(IPYNB_$*)) notebooks)"
 
+# Public, provider-neutral notebook tree. NumPy variants are derived from
+# framework-independent sources in the PyTorch generation tree.
+hosted-env-locks:
+	@python3 tools/export_hosted_env.py generate
+
+check-hosted-env-locks:
+	@python3 tools/export_hosted_env.py check
+
+hosted-notebooks: check-hosted-env-locks notebooks-pytorch notebooks-tensorflow notebooks-jax
+	@python3 tools/build_hosted_notebooks.py build
+
+check-hosted-runtime-contracts: check-hosted-env-locks d2l/.built \
+		.venv-pytorch/.synced .venv-tensorflow/.synced .venv-jax/.synced
+	@env MPLBACKEND=Agg OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+		.venv-pytorch/bin/python tools/check_hosted_runtime.py pytorch
+	@env MPLBACKEND=Agg TF_FORCE_GPU_ALLOW_GROWTH=true \
+		TF_NUM_INTRAOP_THREADS=2 TF_NUM_INTEROP_THREADS=2 \
+		OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+		.venv-tensorflow/bin/python tools/check_hosted_runtime.py tensorflow
+	@env MPLBACKEND=Agg XLA_PYTHON_CLIENT_PREALLOCATE=false \
+		OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+		.venv-jax/bin/python tools/check_hosted_runtime.py jax
+
+check-hosted-notebooks: hosted-notebooks check-hosted-runtime-contracts
+	@PYTHONPATH=tools python3 -m unittest \
+		tools/test_export_hosted_env.py tools/test_check_hosted_runtime.py \
+		tools/test_build_hosted_notebooks.py tools/test_check_pip_delta.py \
+		tools/test_run_hosted_docker.py
+	@python3 tools/build_hosted_notebooks.py check
+
+# Slow, opt-in provider compatibility canary. It runs serial, executes no full
+# notebook, and hard-limits every ephemeral container. Select cases or storage
+# policy without changing the Makefile, for example:
+#   make check-hosted-docker HOSTED_DOCKER_ARGS='--device cpu'
+#   make check-hosted-docker HOSTED_DOCKER_ARGS='--prune-other-image'
+HOSTED_DOCKER_ARGS ?=
+check-hosted-docker: check-hosted-env-locks
+	@python3 tools/run_hosted_docker.py $(HOSTED_DOCKER_ARGS)
+
+check-hosted-docker-cpu: check-hosted-env-locks
+	@python3 tools/run_hosted_docker.py --device cpu $(HOSTED_DOCKER_ARGS)
+
+check-hosted-docker-gpu: check-hosted-env-locks
+	@python3 tools/run_hosted_docker.py --device gpu $(HOSTED_DOCKER_ARGS)
+
+dry-run-notebooks-branch: check-hosted-notebooks
+	@tools/publish_notebooks_branch.sh _hosted_notebooks notebooks --dry-run
+
+publish-notebooks-branch: check-hosted-notebooks
+	@tools/publish_notebooks_branch.sh _hosted_notebooks notebooks
+
 notebooks: $(addprefix notebooks-,$(FRAMEWORKS))
 
 # ── Notebooks (execute) — per-notebook granularity ────────
@@ -546,7 +632,7 @@ $(DEP_FILES) &: $(SRC_MDS) tools/scan_d2l_usage.py \
 # slots than the global pool. Today only JAX is heavier than "light";
 # caps for other frameworks would just equal the global pool, which is
 # the same as "no cap" — `run_one_notebook.py` treats 0/unset as no cap.
-$(foreach v,JAX_GPU_SLOTS JAX_CPU_SLOTS,$(eval $(call _detected,$(v))))
+$(foreach v,JAX_GPU_SLOTS JAX_CPU_SLOTS JAX_TOTAL_SLOTS,$(eval $(call _detected,$(v))))
 
 # Memory-and-thread-conservative defaults for JAX. PREALLOCATE=false: don't
 # grab 75 % of GPU on init (1.6 GiB instead of ~19 GiB resident). OMP/BLAS=2:
@@ -559,7 +645,8 @@ $(foreach v,JAX_GPU_SLOTS JAX_CPU_SLOTS,$(eval $(call _detected,$(v))))
 # extra tf_XLAEigen threads (still well under the ulimit headroom).
 EXTRA_ENV_jax := XLA_PYTHON_CLIENT_PREALLOCATE=false \
                  OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
-                 D2L_JAX_GPU_SLOTS=$(JAX_GPU_SLOTS) D2L_JAX_CPU_SLOTS=$(JAX_CPU_SLOTS)
+                 D2L_JAX_GPU_SLOTS=$(JAX_GPU_SLOTS) D2L_JAX_CPU_SLOTS=$(JAX_CPU_SLOTS) \
+                 D2L_JAX_TOTAL_SLOTS=$(JAX_TOTAL_SLOTS)
 
 # TensorFlow baseline is ~212 threads + ~22.5 GiB resident on the active GPU
 # (TF preallocates ~all of VRAM on first device init). The mitigations:
@@ -687,7 +774,8 @@ run-notebooks-%: _notebooks/%/.generated
 # per-GPU slot capacity + per-GPU VRAM (heterogeneous-aware) + CPU slots.
 $(foreach v,GPU_SLOTS_PER GPU_VRAM_PER GPU_MIB_PER_SLOT,$(eval $(call _detected,$(v))))
 SCHED_ENV = D2L_GPU_SLOTS_PER='$(GPU_SLOTS_PER)' D2L_GPU_VRAM_PER='$(GPU_VRAM_PER)' \
-	D2L_GPU_MIB_PER_SLOT=$(GPU_MIB_PER_SLOT) D2L_CPU_SLOTS=$(CPU_SLOTS)
+	D2L_GPU_MIB_PER_SLOT=$(GPU_MIB_PER_SLOT) D2L_CPU_SLOTS=$(CPU_SLOTS) \
+	D2L_JAX_TOTAL_SLOTS=$(JAX_TOTAL_SLOTS)
 
 # The unified scheduler (tools/notebook_scheduler.py) replaces the old "two
 # background `make -jN` queues" orchestration: it owns the GPU/CPU/multi-GPU
@@ -800,13 +888,17 @@ slides: $(addprefix slides-,$(FRAMEWORKS))
 
 # ── Downloadable notebook zips (per framework) ────────────
 # A first-class build output, linked from the navbar "Notebooks" menu: one
-# d2l-<fw>.zip of that framework's executed notebooks. CPU-only / GPU-free, like
-# PDFs and slides — the *code* comes from the generated _notebooks/ tree and the
-# *outputs* are injected from the committed store (tools/build_notebook_zips.py),
-# so it never needs a framework venv. Deterministic (fixed zip timestamps) so an
-# unchanged build re-produces byte-identical zips and the R2 sync skips them.
+# d2l-<fw>.zip of that framework's executed notebooks. Building the ZIP is
+# CPU-only: code comes from _notebooks/, outputs from the committed store, and
+# pinned reader environments from notebook_envs/. The ZIP also carries the d2l
+# source, so readers can select its CPU or GPU lock and run it directly.
+# Fixed ZIP timestamps keep unchanged builds byte-identical for the R2 sync.
 NOTEBOOK_ZIP_DIR := _book/notebooks
-.PHONY: notebook-zips
+
+notebook-env-locks:
+	python3 tools/lock_notebook_envs.py \
+		$(if $(FRAMEWORKS_FILTER),--frameworks $(FRAMEWORKS_FILTER))
+
 notebook-zips: notebooks
 	@mkdir -p $(LOGDIR) $(NOTEBOOK_ZIP_DIR)
 	@echo "=== Building per-framework notebook zips → $(NOTEBOOK_ZIP_DIR)/ ==="

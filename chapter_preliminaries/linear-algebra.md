@@ -1701,7 +1701,8 @@ deep learning's favorite **similarity measure**.
 Why can $\cos\theta$ never escape $[-1, 1]$? That is the
 **Cauchy–Schwarz inequality**
 $|\mathbf{x}^\top\mathbf{y}| \le \|\mathbf{x}\|\,\|\mathbf{y}\|$
-(proved in §22.1). One random pair checks both facts at once:
+(proved in the geometry-and-linear-algebraic-operations section). One
+random pair checks both facts at once:
 
 @linear-algebra-dot-products-3
 
@@ -1807,7 +1808,8 @@ random vectors:
 
 ::: {.d2l-note}
 For $\ell_2$, the triangle inequality **is** Cauchy–Schwarz in disguise:
-expand $\|\mathbf{u}+\mathbf{v}\|^2$ and bound the cross term (§22.1).
+expand $\|\mathbf{u}+\mathbf{v}\|^2$ and bound the cross term (the
+geometry-and-linear-algebraic-operations section).
 :::
 :::
 
@@ -1822,7 +1824,8 @@ $\sqrt{36} = 6$:
 
 ::: {.d2l-note}
 The *spectral* norm (how much $\mathbf{X}$ can stretch a vector) needs
-the singular value decomposition; it arrives in §22.3.
+the singular value decomposition; it arrives in the SVD-and-low-rank-
+approximation section.
 :::
 :::
 
@@ -1865,7 +1868,7 @@ vector you start from, the largest eigenvalue soon dominates.
 ::: {.d2l-note .rule}
 Deep networks multiply by dozens of matrices in a row. Whether signals
 and gradients **explode or vanish** is this experiment at scale; the
-analysis returns in §5.4.
+analysis returns in the numerical-stability section.
 :::
 :::
 
@@ -1893,7 +1896,8 @@ analysis returns in §5.4.
 :::
 
 ::: {.d2l-note}
-Next, calculus (§2.4): every gradient there is built from these
-products. The full linear-algebra story continues in §22.
+Next, calculus (the calculus section): every gradient there is built
+from these products. The full linear-algebra story continues in the
+linear algebra part of the math appendix.
 :::
 :::

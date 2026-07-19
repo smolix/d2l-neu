@@ -34,7 +34,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array(-5.552465e-10)"
+          "text": "array(-1.0327312e-09)"
         }
       ]
     },
@@ -49,7 +49,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([0.99999994, 1.        , 0.99999994, 0.99999994])"
+          "text": "array([1., 1., 1., 1.])"
         }
       ]
     },
@@ -76,7 +76,12 @@
     "custom-layers-the-composability-guarantee-3": {
       "code_fingerprint": "sha256:349782404d1bceefa92c361a7974fb71b47411c32c6d3582a853cdbcd84de03d",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "True"
+        }
+      ]
     },
     "custom-layers-precomputed-state-buffers-1": {
       "code_fingerprint": "sha256:d823c3a06ce94c4cfa1853b10e8667cfa8c4c052de4add3d4f53eb446aceb0ef",

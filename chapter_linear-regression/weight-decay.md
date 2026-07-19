@@ -1064,14 +1064,14 @@ $$\mathbf{w}\sim\mathcal{N}(\mathbf{0},\lambda^{-1}\mathbf{I})
   \;\Rightarrow\;
   -\log p(\mathbf{w}) = \tfrac{\lambda}{2}\|\mathbf{w}\|^2 + \textrm{const}.$$
 
-Add it to the Gaussian-noise NLL from §3.1:
+Add it to the Gaussian-noise NLL from the linear-regression section:
 
 $$\underbrace{-\log p(\mathbf{y}\mid\mathbf{X},\mathbf{w})}_{\textrm{MLE: }\,\frac{1}{2\sigma^2}\sum(\hat{y}-y)^2}
   \;\; \underbrace{-\log p(\mathbf{w})}_{=\,\frac{\lambda}{2}\|\mathbf{w}\|^2}
   \;\Rightarrow\; \textrm{MAP} = \textrm{ridge}.$$
 
 ::: {.d2l-note .rule}
-**MAP = MLE + a prior.** §3.1 got squared loss from Gaussian *noise*; weight decay adds a Gaussian *prior* on $\mathbf{w}$, with $\lambda$ the prior precision.
+**MAP = MLE + a prior.** The linear-regression section got squared loss from Gaussian *noise*; weight decay adds a Gaussian *prior* on $\mathbf{w}$, with $\lambda$ the prior precision.
 :::
 :::
 

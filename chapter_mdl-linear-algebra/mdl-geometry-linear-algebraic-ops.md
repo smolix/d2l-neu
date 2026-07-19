@@ -265,35 +265,11 @@ Taking square roots gives the claim. $\blacksquare$
 As a simple example, let's see how to compute the angle between a pair of vectors:
 
 ```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
-#@tab mxnet
+import numpy as onp
 def angle(v, w):
-    return np.arccos(v.dot(w) / (np.linalg.norm(v) * np.linalg.norm(w)))
+    return onp.arccos(v.dot(w) / (onp.linalg.norm(v) * onp.linalg.norm(w)))
 
-angle(np.array([0, 1, 2]), np.array([2, 3, 4]))
-```
-
-```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
-#@tab pytorch
-def angle(v, w):
-    return torch.acos(v.dot(w) / (torch.norm(v) * torch.norm(w)))
-
-angle(torch.tensor([0.0, 1, 2]), torch.tensor([2.0, 3, 4]))
-```
-
-```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
-#@tab tensorflow
-def angle(v, w):
-    return tf.acos(tf.tensordot(v, w, axes=1) / (tf.norm(v) * tf.norm(w)))
-
-angle(tf.constant([0, 1, 2], dtype=tf.float32), tf.constant([2.0, 3, 4]))
-```
-
-```{.python .input #geometry-linear-algebraic-ops-dot-products-and-angles}
-#@tab jax
-def angle(v, w):
-    return jnp.arccos(jnp.dot(v, w) / (jnp.linalg.norm(v) * jnp.linalg.norm(w)))
-
-angle(jnp.array([0, 1, 2], dtype=jnp.float32), jnp.array([2.0, 3, 4]))
+angle(onp.array([0, 1, 2]), onp.array([2, 3, 4]))
 ```
 
 Two vectors whose angle is $\pi/2$ (equivalently $90^{\circ}$) are called
@@ -522,55 +498,16 @@ orthonormal columns and the same column space. Let us verify the proposition
 numerically on a random 3-dimensional subspace of $\mathbb{R}^5$.
 
 ```{.python .input #mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace}
-#@tab mxnet
+import numpy as onp
 # A random 5x3 matrix whose columns span a 3-dim subspace of R^5
-np.random.seed(0)
-A = np.random.randn(5, 3)
-Q, _ = np.linalg.qr(A)  # orthonormal basis of the column space
+onp.random.seed(0)
+A = onp.random.randn(5, 3)
+Q, _ = onp.linalg.qr(A)  # orthonormal basis of the column space
 P = Q.dot(Q.T)          # projection matrix onto that subspace
-x = np.random.randn(5)
+x = onp.random.randn(5)
 r = x - P.dot(x)        # residual
-(np.linalg.norm(P.dot(P) - P),  # P^2 = P (idempotent)
- np.linalg.norm(Q.T.dot(r)))    # residual is orthogonal to the subspace
-```
-
-```{.python .input #mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace}
-#@tab pytorch
-# A random 5x3 matrix whose columns span a 3-dim subspace of R^5
-torch.manual_seed(0)
-A = torch.randn(5, 3)
-Q, _ = torch.linalg.qr(A)  # orthonormal basis of the column space
-P = Q @ Q.T                # projection matrix onto that subspace
-x = torch.randn(5)
-r = x - P @ x              # residual
-(torch.norm(P @ P - P),    # P^2 = P (idempotent)
- torch.norm(Q.T @ r))      # residual is orthogonal to the subspace
-```
-
-```{.python .input #mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace}
-#@tab tensorflow
-# A random 5x3 matrix whose columns span a 3-dim subspace of R^5
-tf.random.set_seed(0)
-A = tf.random.normal((5, 3))
-Q, _ = tf.linalg.qr(A)     # orthonormal basis of the column space
-P = Q @ tf.transpose(Q)    # projection matrix onto that subspace
-x = tf.random.normal((5,))
-r = x - tf.linalg.matvec(P, x)  # residual
-(tf.norm(P @ P - P),       # P^2 = P (idempotent)
- tf.norm(tf.linalg.matvec(tf.transpose(Q), r)))  # residual orthogonal to S
-```
-
-```{.python .input #mdl-geometry-linear-algebraic-ops-projection-onto-a-subspace}
-#@tab jax
-# A random 5x3 matrix whose columns span a 3-dim subspace of R^5
-key1, key2 = jax.random.split(jax.random.PRNGKey(0))
-A = jax.random.normal(key1, (5, 3))
-Q, _ = jnp.linalg.qr(A)    # orthonormal basis of the column space
-P = Q @ Q.T                # projection matrix onto that subspace
-x = jax.random.normal(key2, (5,))
-r = x - P @ x              # residual
-(jnp.linalg.norm(P @ P - P),  # P^2 = P (idempotent)
- jnp.linalg.norm(Q.T @ r))    # residual is orthogonal to the subspace
+(onp.linalg.norm(P.dot(P) - P),  # P^2 = P (idempotent)
+ onp.linalg.norm(Q.T.dot(r)))    # residual is orthogonal to the subspace
 ```
 
 Both numbers are zero up to floating-point roundoff: $\mathbf{P}$ really is
@@ -925,50 +862,25 @@ framework uses for pixel intensities, which a hand-picked numeric threshold
 would not.
 
 ```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
-#@tab mxnet
+import numpy as onp
+def as_numpy(x):
+    if hasattr(x, 'asnumpy'):                   # MXNet
+        return x.asnumpy()
+    if hasattr(x, 'detach'):                    # PyTorch
+        return x.detach().cpu().numpy()
+    if hasattr(x, 'numpy'):                     # TensorFlow
+        return x.numpy()
+    return onp.asarray(x)                       # JAX / NumPy
+
+X_test_np, y_test_np = as_numpy(X_test), as_numpy(y_test)
+ave_0_np, ave_1_np = as_numpy(ave_0), as_numpy(ave_1)
 # Normal = difference of class means; threshold = midpoint of their projections
-w = (ave_1 - ave_0).flatten()
-b = np.dot(w, (ave_0 + ave_1).flatten()) / 2
-predictions = X_test.reshape(2000, -1).dot(w) > b
+w = (ave_1_np - ave_0_np).ravel()
+b = onp.dot(w, (ave_0_np + ave_1_np).ravel()) / 2
+predictions = X_test_np.reshape(len(X_test_np), -1).dot(w) > b
 
 # Accuracy
-np.mean(predictions.astype(y_test.dtype) == y_test, dtype=np.float64)
-```
-
-```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
-#@tab pytorch
-# Normal = difference of class means; threshold = midpoint of their projections
-w = (ave_1 - ave_0).flatten()
-b = torch.dot(w, (ave_0 + ave_1).flatten()) / 2
-# '@' is the matrix-multiplication operator in PyTorch.
-predictions = X_test.reshape(2000, -1) @ w > b
-
-# Accuracy
-torch.mean((predictions.type(y_test.dtype) == y_test).float(), dtype=torch.float64)
-```
-
-```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
-#@tab tensorflow
-# Normal = difference of class means; threshold = midpoint of their projections
-w = tf.reshape(ave_1 - ave_0, [-1])
-b = tf.tensordot(w, tf.reshape(ave_0 + ave_1, [-1]), axes=1) / 2
-# Genuine per-example dot product: flatten each image and matvec against w.
-predictions = tf.linalg.matvec(tf.reshape(X_test, (2000, -1)), w) > b
-
-# Accuracy
-tf.reduce_mean(
-    tf.cast(tf.cast(predictions, y_test.dtype) == y_test, tf.float32))
-```
-
-```{.python .input #geometry-linear-algebraic-ops-hyperplanes-4}
-#@tab jax
-# Normal = difference of class means; threshold = midpoint of their projections
-w = (ave_1 - ave_0).flatten()
-b = jnp.dot(w, (ave_0 + ave_1).flatten()) / 2
-predictions = X_test.reshape(2000, -1) @ w > b
-
-# Accuracy
-jnp.mean((predictions.astype(y_test.dtype) == y_test).astype(jnp.float32))
+onp.mean(predictions.astype(y_test_np.dtype) == y_test_np, dtype=onp.float64)
 ```
 
 This rule classifies about $92\%$ of the
@@ -982,59 +894,12 @@ direction from "mean t-shirt" to "mean trousers", and histogram the two
 classes separately.
 
 ```{.python .input #geometry-linear-algebraic-ops-projection-histogram}
-#@tab mxnet
+import numpy as onp
 # Histogram of the test images' projections onto the normal direction w
-proj = X_test.reshape(2000, -1).dot(w)
+proj = X_test_np.reshape(len(X_test_np), -1).dot(w)
 d2l.set_figsize()
-d2l.plt.hist(proj[y_test == 0].asnumpy(), bins=50, alpha=0.6,
-             label='t-shirts')
-d2l.plt.hist(proj[y_test == 1].asnumpy(), bins=50, alpha=0.6,
-             label='trousers')
-d2l.plt.axvline(float(b), color='black', linestyle='--', label='threshold')
-d2l.plt.xlabel(r'$\mathbf{w}\cdot\mathbf{x}$')
-d2l.plt.legend()
-d2l.plt.show()
-```
-
-```{.python .input #geometry-linear-algebraic-ops-projection-histogram}
-#@tab pytorch
-# Histogram of the test images' projections onto the normal direction w
-proj = X_test.reshape(2000, -1) @ w
-d2l.set_figsize()
-d2l.plt.hist(proj[y_test == 0].numpy(), bins=50, alpha=0.6,
-             label='t-shirts')
-d2l.plt.hist(proj[y_test == 1].numpy(), bins=50, alpha=0.6,
-             label='trousers')
-d2l.plt.axvline(float(b), color='black', linestyle='--', label='threshold')
-d2l.plt.xlabel(r'$\mathbf{w}\cdot\mathbf{x}$')
-d2l.plt.legend()
-d2l.plt.show()
-```
-
-```{.python .input #geometry-linear-algebraic-ops-projection-histogram}
-#@tab tensorflow
-# Histogram of the test images' projections onto the normal direction w
-proj = tf.linalg.matvec(tf.reshape(X_test, (2000, -1)), w)
-d2l.set_figsize()
-d2l.plt.hist(tf.boolean_mask(proj, y_test == 0).numpy(), bins=50, alpha=0.6,
-             label='t-shirts')
-d2l.plt.hist(tf.boolean_mask(proj, y_test == 1).numpy(), bins=50, alpha=0.6,
-             label='trousers')
-d2l.plt.axvline(float(b), color='black', linestyle='--', label='threshold')
-d2l.plt.xlabel(r'$\mathbf{w}\cdot\mathbf{x}$')
-d2l.plt.legend()
-d2l.plt.show()
-```
-
-```{.python .input #geometry-linear-algebraic-ops-projection-histogram}
-#@tab jax
-# Histogram of the test images' projections onto the normal direction w
-proj = X_test.reshape(2000, -1) @ w
-d2l.set_figsize()
-d2l.plt.hist(np.array(proj[y_test == 0]), bins=50, alpha=0.6,
-             label='t-shirts')
-d2l.plt.hist(np.array(proj[y_test == 1]), bins=50, alpha=0.6,
-             label='trousers')
+d2l.plt.hist(proj[y_test_np == 0], bins=50, alpha=0.6, label='t-shirts')
+d2l.plt.hist(proj[y_test_np == 1], bins=50, alpha=0.6, label='trousers')
 d2l.plt.axvline(float(b), color='black', linestyle='--', label='threshold')
 d2l.plt.xlabel(r'$\mathbf{w}\cdot\mathbf{x}$')
 d2l.plt.legend()
@@ -1151,9 +1016,10 @@ Nothing requires the matrix to be square, either. An $m \times n$ matrix takes
 vectors with $n$ entries to vectors with $m$ entries: it is a linear map
 *between* spaces, from $\mathbb{R}^n$ to $\mathbb{R}^m$, and it is still
 determined by where it sends the $n$ basis vectors (whose images are its
-columns). A $2 \times 3$ matrix flattens three-dimensional space onto a plane;
-a $3 \times 2$ matrix lays the plane into three-dimensional space as a
-(generally tilted) plane through the origin. Every fully connected layer of a
+columns). A $2 \times 3$ matrix has an image of dimension at most two; it
+fills the output plane only when its rank is two. A $3 \times 2$ matrix has a
+plane through the origin as its image when its rank is two, and a line or the
+origin at lower rank. Every fully connected layer of a
 neural network is exactly such a map between spaces of different dimensions,
 composed with a nonlinearity.
 
@@ -1412,31 +1278,10 @@ We can test to see this by seeing that multiplying
 by the inverse given by the formula above works in practice.
 
 ```{.python .input #geometry-linear-algebraic-ops-invertibility}
-#@tab mxnet
-M = np.array([[1, 2], [1, 4]])
-M_inv = np.array([[2, -1], [-0.5, 0.5]])
+import numpy as onp
+M = onp.array([[1, 2], [1, 4]])
+M_inv = onp.array([[2, -1], [-0.5, 0.5]])
 M_inv.dot(M)
-```
-
-```{.python .input #geometry-linear-algebraic-ops-invertibility}
-#@tab pytorch
-M = torch.tensor([[1, 2], [1, 4]], dtype=torch.float32)
-M_inv = torch.tensor([[2, -1], [-0.5, 0.5]])
-M_inv @ M
-```
-
-```{.python .input #geometry-linear-algebraic-ops-invertibility}
-#@tab tensorflow
-M = tf.constant([[1, 2], [1, 4]], dtype=tf.float32)
-M_inv = tf.constant([[2, -1], [-0.5, 0.5]])
-tf.matmul(M_inv, M)
-```
-
-```{.python .input #geometry-linear-algebraic-ops-invertibility}
-#@tab jax
-M = jnp.array([[1, 2], [1, 4]], dtype=jnp.float32)
-M_inv = jnp.array([[2, -1], [-0.5, 0.5]])
-M_inv @ M
 ```
 
 #### Numerical Issues
@@ -1506,23 +1351,8 @@ $\mathbf{A}$ above the determinant should come out to
 $1 \cdot 3 - 2 \cdot (-1) = 5$.
 
 ```{.python .input #geometry-linear-algebraic-ops-determinant}
-#@tab mxnet
-np.linalg.det(np.array([[1, 2], [-1, 3]]))
-```
-
-```{.python .input #geometry-linear-algebraic-ops-determinant}
-#@tab pytorch
-torch.det(torch.tensor([[1, 2], [-1, 3]], dtype=torch.float32))
-```
-
-```{.python .input #geometry-linear-algebraic-ops-determinant}
-#@tab tensorflow
-tf.linalg.det(tf.constant([[1, 2], [-1, 3]], dtype=tf.float32))
-```
-
-```{.python .input #geometry-linear-algebraic-ops-determinant}
-#@tab jax
-jnp.linalg.det(jnp.array([[1, 2], [-1, 3]], dtype=jnp.float32))
+import numpy as onp
+onp.linalg.det(onp.array([[1, 2], [-1, 3]]))
 ```
 
 Note that the expression $ad - bc$ can be zero or even negative, and
@@ -1672,49 +1502,13 @@ properties above: swapping two columns flips the sign, and the determinant of
 a triangular matrix is the product of its diagonal entries.
 
 ```{.python .input #mdl-geometry-linear-algebraic-ops-det-3x3}
-#@tab mxnet
-A = np.array([[2, 1, 0], [1, 3, 1], [0, 1, 2]])
-A_swap = np.array([[1, 2, 0], [3, 1, 1], [1, 0, 2]])  # first two columns swapped
-T = np.array([[2, 5, 1], [0, 3, 4], [0, 0, 1]])       # upper triangular
-(np.linalg.det(A),       # 8, matching the cofactor expansion
- np.linalg.det(A_swap),  # -8: a column swap flips the sign
- np.linalg.det(T))       # 6 = 2 * 3 * 1, the diagonal product
-```
-
-```{.python .input #mdl-geometry-linear-algebraic-ops-det-3x3}
-#@tab pytorch
-A = torch.tensor([[2, 1, 0], [1, 3, 1], [0, 1, 2]], dtype=torch.float32)
-A_swap = torch.tensor([[1, 2, 0], [3, 1, 1], [1, 0, 2]],
-                      dtype=torch.float32)  # first two columns swapped
-T = torch.tensor([[2, 5, 1], [0, 3, 4], [0, 0, 1]],
-                 dtype=torch.float32)       # upper triangular
-(torch.det(A),       # 8, matching the cofactor expansion
- torch.det(A_swap),  # -8: a column swap flips the sign
- torch.det(T))       # 6 = 2 * 3 * 1, the diagonal product
-```
-
-```{.python .input #mdl-geometry-linear-algebraic-ops-det-3x3}
-#@tab tensorflow
-A = tf.constant([[2, 1, 0], [1, 3, 1], [0, 1, 2]], dtype=tf.float32)
-A_swap = tf.constant([[1, 2, 0], [3, 1, 1], [1, 0, 2]],
-                     dtype=tf.float32)  # first two columns swapped
-T = tf.constant([[2, 5, 1], [0, 3, 4], [0, 0, 1]],
-                dtype=tf.float32)       # upper triangular
-(tf.linalg.det(A),       # 8, matching the cofactor expansion
- tf.linalg.det(A_swap),  # -8: a column swap flips the sign
- tf.linalg.det(T))       # 6 = 2 * 3 * 1, the diagonal product
-```
-
-```{.python .input #mdl-geometry-linear-algebraic-ops-det-3x3}
-#@tab jax
-A = jnp.array([[2, 1, 0], [1, 3, 1], [0, 1, 2]], dtype=jnp.float32)
-A_swap = jnp.array([[1, 2, 0], [3, 1, 1], [1, 0, 2]],
-                   dtype=jnp.float32)  # first two columns swapped
-T = jnp.array([[2, 5, 1], [0, 3, 4], [0, 0, 1]],
-              dtype=jnp.float32)       # upper triangular
-(jnp.linalg.det(A),       # 8, matching the cofactor expansion
- jnp.linalg.det(A_swap),  # -8: a column swap flips the sign
- jnp.linalg.det(T))       # 6 = 2 * 3 * 1, the diagonal product
+import numpy as onp
+A = onp.array([[2, 1, 0], [1, 3, 1], [0, 1, 2]])
+A_swap = onp.array([[1, 2, 0], [3, 1, 1], [1, 0, 2]])  # first two columns swapped
+T = onp.array([[2, 5, 1], [0, 3, 4], [0, 0, 1]])       # upper triangular
+(onp.linalg.det(A),       # 8, matching the cofactor expansion
+ onp.linalg.det(A_swap),  # -8: a column swap flips the sign
+ onp.linalg.det(T))       # 6 = 2 * 3 * 1, the diagonal product
 ```
 
 The triangular rule deserves its one-paragraph proof, since the next section
@@ -1935,43 +1729,13 @@ notation at all. The rule is exposed directly as
 the contraction.
 
 ```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
-#@tab mxnet
-A = np.array([[1.0, 2.0], [-1.0, 3.0]])
-v = np.array([2.0, -1.0])
-(np.einsum('i,i->', v, v),      # dot product: v.v
- np.einsum('ij,j->i', A, v),    # matrix-vector product: Av
- np.einsum('ij,jk->ik', A, A),  # matrix product: AA
- np.einsum('ii->', A))          # trace: tr(A)
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
-#@tab pytorch
-A = torch.tensor([[1.0, 2.0], [-1.0, 3.0]])
-v = torch.tensor([2.0, -1.0])
-(torch.einsum('i,i->', v, v),      # dot product: v.v
- torch.einsum('ij,j->i', A, v),    # matrix-vector product: Av
- torch.einsum('ij,jk->ik', A, A),  # matrix product: AA
- torch.einsum('ii->', A))          # trace: tr(A)
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
-#@tab tensorflow
-A = tf.constant([[1.0, 2.0], [-1.0, 3.0]])
-v = tf.constant([2.0, -1.0])
-(tf.einsum('i,i->', v, v),      # dot product: v.v
- tf.einsum('ij,j->i', A, v),    # matrix-vector product: Av
- tf.einsum('ij,jk->ik', A, A),  # matrix product: AA
- tf.einsum('ii->', A))          # trace: tr(A)
-```
-
-```{.python .input #geometry-linear-algebraic-ops-expressing-in-code-2}
-#@tab jax
-A = jnp.array([[1.0, 2.0], [-1.0, 3.0]])
-v = jnp.array([2.0, -1.0])
-(jnp.einsum('i,i->', v, v),      # dot product: v.v
- jnp.einsum('ij,j->i', A, v),    # matrix-vector product: Av
- jnp.einsum('ij,jk->ik', A, A),  # matrix product: AA
- jnp.einsum('ii->', A))          # trace: tr(A)
+import numpy as onp
+A = onp.array([[1.0, 2.0], [-1.0, 3.0]])
+v = onp.array([2.0, -1.0])
+(onp.einsum('i,i->', v, v),      # dot product: v.v
+ onp.einsum('ij,j->i', A, v),    # matrix-vector product: Av
+ onp.einsum('ij,jk->ik', A, A),  # matrix product: AA
+ onp.einsum('ii->', A))          # trace: tr(A)
 ```
 
 The matrix here is $\mathbf{A}$ from

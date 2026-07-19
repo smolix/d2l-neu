@@ -137,13 +137,22 @@ computer graphics, in particular high-throughput $4 \times 4$ matrix--vector
 products, math very similar to that of convolutional layers, and around that
 time NVIDIA and ATI had begun optimizing them for general computing
 :cite:`Fernando.2004`, marketing them as *general-purpose GPUs* (GPGPUs).
-Where a CPU devotes substantial area to low-latency execution, caches, and
-general control flow, a GPU devotes more of the chip to parallel arithmetic and
-supports much higher memory bandwidth. A convolution applies the same small
-program at many output locations and channels, providing enough independent
-work to use that throughput. Between the late 1990s and 2012, programmable GPU
-throughput grew by orders of magnitude and general-purpose GPU interfaces made
-it accessible without expressing the computation as a graphics pipeline.
+Where a CPU core runs at a high clock frequency and spends most of its chip
+area on the machinery of general control flow (branch predictors, deep
+pipelines, speculative execution, large caches), a GPU packs thousands of
+much simpler cores onto one chip. This wins on power, since consumption grows
+roughly quadratically with clock frequency: for the budget of one CPU core
+running at four times the speed, 16 GPU cores at $\frac{1}{4}$ the speed
+deliver $16 \times \frac{1}{4} = 4$ times the throughput. GPUs also have far
+wider memory buses, which matters because many deep learning operations are
+limited by memory bandwidth. A convolution applies the same small program at
+many output locations and channels, providing exactly this kind of
+independent work. The effect compounded quickly: between 1999, when NVIDIA's
+GeForce 256 processed roughly 480 million floating-point operations per
+second with no programming framework beyond graphics APIs, and 2012,
+consumer GPU throughput grew by roughly three orders of magnitude, and
+general-purpose GPU interfaces made it accessible without expressing the
+computation as a graphics pipeline.
 
 This was the situation in 2012 when Alex Krizhevsky and Ilya Sutskever
 implemented a deep CNN that could run on GPUs. They realized that the

@@ -44,7 +44,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(tensor([[0.2350, 0.2001, 0.1644, 0.1535, 0.2470],\n         [0.2303, 0.2022, 0.1828, 0.1576, 0.2271]]),\n tensor([1.0000, 1.0000]))"
+          "text": "(tensor([[0.1192, 0.2842, 0.1520, 0.2848, 0.1598],\n         [0.1916, 0.1288, 0.2266, 0.2365, 0.2164]]),\n tensor([1.0000, 1.0000]))"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22391,
-          "sha256": "sha256:d9c2ed9072e3373b3ca7cdfdea18773c787019bb5fca4fa4ae289147ff45f037"
+          "bytes": 22396,
+          "sha256": "sha256:088e854c54aeecd04ab51b8ac7cfcc85a530b81c4206007560b2f53749cd18b9"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 48702,
-          "sha256": "sha256:84612bf33087efb450debbebc75d2d485f479425b1ca9d107ca16bf701dadf23"
+          "bytes": 50738,
+          "sha256": "sha256:b3d07c5cd157875b76ff0e158276f831cbe12a549dd34d351f5f98941d0072bb"
         }
       ]
     },
@@ -138,8 +138,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21538,
-          "sha256": "sha256:16d5cec00dc1f77368d704517f152fe506ef0f5fb13e1cc4f2c7ffc271249b6b"
+          "bytes": 21531,
+          "sha256": "sha256:8d443e4c2280b292a78f797e29b8eb59a700bb5025c7af017ea1b2ce76ac71b0"
         }
       ]
     }

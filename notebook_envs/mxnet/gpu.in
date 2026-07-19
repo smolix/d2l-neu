@@ -1,0 +1,5 @@
+-e .
+jupyterlab
+ipykernel
+safetensors
+mxnet @ https://github.com/smolix/mxnet/releases/download/mxnet-2.0.0.zombie.1/mxnet-2.0.0%2Bcu133.bw.zombie.1-cp312-cp312-linux_x86_64.whl ; python_version == "3.12"

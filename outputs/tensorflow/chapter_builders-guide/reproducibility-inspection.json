@@ -14,18 +14,18 @@
       "outputs": []
     },
     "reproducibility-inspection-seeds-and-randomness": {
-      "code_fingerprint": "sha256:28796a51a70f1c725cf2ca043826a220b6749ab5fc57ec69447faef23a730eb2",
+      "code_fingerprint": "sha256:d3adf0c1e4c5650c6095dca05e82cc77814eaa127165afa91c6e03c84865a733",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "same seed, identical loss and weights: True True\ndifferent seed: 1.0948162078857422 vs 1.0243310928344727\n"
+          "text": "same seed, identical loss and weights: True True\ndifferent seed: 1.0948041677474976 vs 1.0242893695831299\n"
         }
       ]
     },
     "reproducibility-inspection-generator-objects": {
-      "code_fingerprint": "sha256:6a2c365d3d3f9610ed5a037504acb33a78b66605cc960dae4f1f494b9718b1db",
+      "code_fingerprint": "sha256:cb2f4ef1be92420c942894768dad074136aec708349b742768648a9591588406",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "reproducibility-inspection-dataloader-workers-3": {
-      "code_fingerprint": "sha256:14d1da09d1af1eacac6eeb34f8095018932a19fd978a01921e2e6925cb17d239",
+      "code_fingerprint": "sha256:86f4f7e78db3b475dd0e470c82a82da193a9309d377a29821550f5b6f5848b2f",
       "kind": "text",
       "outputs": [
         {
@@ -47,7 +47,7 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-1": {
-      "code_fingerprint": "sha256:51aaca9d1dccacfb07008fe317f5a48343b87408ac7e8af4be0851d5f8db3310",
+      "code_fingerprint": "sha256:13aefdf56588f275c8c2217ecf2143d2b5ff866d8d1dcd22748444f2696e451c",
       "kind": "text",
       "outputs": [
         {
@@ -58,7 +58,7 @@
       ]
     },
     "reproducibility-inspection-determinism-and-its-price-2": {
-      "code_fingerprint": "sha256:901da669126ba551a16155705ace39063d304e38f0dddfd589929600a461ede8",
+      "code_fingerprint": "sha256:67ac46a4852400a86cf8eb9df585b510038f147c3df4fe4e30b3d588c3299ea6",
       "kind": "text",
       "outputs": [
         {
@@ -69,12 +69,12 @@
       ]
     },
     "reproducibility-inspection-hooks-looking-inside": {
-      "code_fingerprint": "sha256:e9c8cb6ca2249b05d1b0038d35e0fd9b8b96aebf8e8be3ef7b33178a96d8ac73",
+      "code_fingerprint": "sha256:be7f833382c6a7d4b2203a8576e01ffd84f068986123e8c270e20c9ac696fe4a",
       "kind": "text",
       "outputs": []
     },
     "reproducibility-inspection-capturing-activation-statistics": {
-      "code_fingerprint": "sha256:5f5e30779ecb416707d2991f2b9c86730e119af646bd86b5bf4ff92c195ed657",
+      "code_fingerprint": "sha256:88fa452fab6ef33c9f8de24b849dc0f4c809bc6cdc4078ce5fac5f5197fba2c5",
       "kind": "text",
       "outputs": [
         {
@@ -85,7 +85,7 @@
       ]
     },
     "reproducibility-inspection-a-nan-finder": {
-      "code_fingerprint": "sha256:18e1d924ae6972aa00497db0962ba7a268b10a58d6343ef8628d70158386dbe9",
+      "code_fingerprint": "sha256:c146d293704c860dbc21a04e9f0e14a8818365f3e1c6c6b369a401129a67a1a0",
       "kind": "text",
       "outputs": [
         {
@@ -96,7 +96,7 @@
       ]
     },
     "reproducibility-inspection-backward-hooks-and-beyond": {
-      "code_fingerprint": "sha256:d9165d32376b2bd28c7f6a24559d72ae389d66f2351280ebce4ac235c962cf08",
+      "code_fingerprint": "sha256:976adccca16a70150899783e33ab557f87b221161167e48069df8ed73f8b9154",
       "kind": "text",
       "outputs": [
         {

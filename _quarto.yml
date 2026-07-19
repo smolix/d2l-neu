@@ -51,11 +51,12 @@ book:
     logo: static/logo-with-text.png
   chapters:
     - index.qmd
-    - chapter_preface/index.qmd
-    - chapter_installation/index.qmd
-    - chapter_notation/index.qmd
-    - chapter_introduction/index.qmd
-    - part: "Preliminaries"
+    - part: chapter_preface/index.qmd
+      chapters:
+        - chapter_installation/index.qmd
+        - chapter_notation/index.qmd
+        - chapter_introduction/index.qmd
+    - part: "Basics"
       chapters:
         - chapter_preliminaries/index.qmd
         - chapter_preliminaries/ndarray.qmd
@@ -65,8 +66,6 @@ book:
         - chapter_preliminaries/autograd.qmd
         - chapter_preliminaries/probability.qmd
         - chapter_preliminaries/lookup-api.qmd
-    - part: "Linear Neural Networks"
-      chapters:
         - chapter_linear-regression/index.qmd
         - chapter_linear-regression/linear-regression.qmd
         - chapter_linear-regression/oo-design.qmd
@@ -83,8 +82,6 @@ book:
         - chapter_linear-classification/softmax-regression-concise.qmd
         - chapter_linear-classification/generalization-classification.qmd
         - chapter_linear-classification/environment-and-distribution-shift.qmd
-    - part: "Multilayer Perceptrons"
-      chapters:
         - chapter_multilayer-perceptrons/index.qmd
         - chapter_multilayer-perceptrons/mlp.qmd
         - chapter_multilayer-perceptrons/mlp-implementation.qmd
@@ -93,8 +90,6 @@ book:
         - chapter_multilayer-perceptrons/generalization-deep.qmd
         - chapter_multilayer-perceptrons/dropout.qmd
         - chapter_multilayer-perceptrons/kaggle-house-price.qmd
-    - part: "Deep Learning Computation"
-      chapters:
         - chapter_builders-guide/index.qmd
         - chapter_builders-guide/model-construction.qmd
         - chapter_builders-guide/parameters-state-memory.qmd
@@ -104,8 +99,6 @@ book:
         - chapter_builders-guide/saving-loading.qmd
         - chapter_builders-guide/gpus-devices-memory.qmd
         - chapter_builders-guide/reproducibility-inspection.qmd
-    - part: "Convolutional Neural Networks"
-      chapters:
         - chapter_convolutional-neural-networks/index.qmd
         - chapter_convolutional-neural-networks/why-conv.qmd
         - chapter_convolutional-neural-networks/conv-layer.qmd
@@ -122,27 +115,29 @@ book:
         - chapter_convolutional-modern/training-recipes.qmd
         - chapter_convolutional-modern/convnext.qmd
         - chapter_convolutional-modern/cnn-design.qmd
-    - part: "Recurrent Neural Networks"
-      chapters:
         - chapter_recurrent-neural-networks/index.qmd
         - chapter_recurrent-neural-networks/sequence.qmd
         - chapter_recurrent-neural-networks/text-sequence.qmd
         - chapter_recurrent-neural-networks/language-model.qmd
         - chapter_recurrent-neural-networks/rnn.qmd
-        - chapter_recurrent-neural-networks/rnn-scratch.qmd
-        - chapter_recurrent-neural-networks/rnn-concise.qmd
+        - chapter_recurrent-neural-networks/rnn-implementation.qmd
         - chapter_recurrent-neural-networks/bptt.qmd
-        - chapter_recurrent-modern/index.qmd
-        - chapter_recurrent-modern/lstm.qmd
-        - chapter_recurrent-modern/gru.qmd
-        - chapter_recurrent-modern/deep-rnn.qmd
-        - chapter_recurrent-modern/bi-rnn.qmd
-        - chapter_recurrent-modern/machine-translation-and-dataset.qmd
-        - chapter_recurrent-modern/encoder-decoder.qmd
-        - chapter_recurrent-modern/seq2seq.qmd
-        - chapter_recurrent-modern/beam-search.qmd
-    - part: "Attention Mechanisms and Transformers"
+        - chapter_recurrent-neural-networks/decoding.qmd
+    - part: "Advanced"
       chapters:
+        - chapter_optimization/index.qmd
+        - chapter_optimization/optimization-intro.qmd
+        - chapter_optimization/gd.qmd
+        - chapter_optimization/sgd.qmd
+        - chapter_optimization/minibatch-sgd.qmd
+        - chapter_optimization/momentum.qmd
+        - chapter_optimization/adam.qmd
+        - chapter_optimization/adamw.qmd
+        - chapter_optimization/lr-scheduler.qmd
+        - chapter_optimization/muon.qmd
+        - chapter_optimization/batch-size.qmd
+        - chapter_optimization/scaling.qmd
+        - chapter_optimization/practice.qmd
         - chapter_attention-mechanisms-and-transformers/index.qmd
         - chapter_attention-mechanisms-and-transformers/queries-keys-values.qmd
         - chapter_attention-mechanisms-and-transformers/attention-pooling.qmd
@@ -153,22 +148,6 @@ book:
         - chapter_attention-mechanisms-and-transformers/transformer.qmd
         - chapter_attention-mechanisms-and-transformers/vision-transformer.qmd
         - chapter_attention-mechanisms-and-transformers/large-pretraining-transformers.qmd
-    - part: "Optimization"
-      chapters:
-        - chapter_optimization/index.qmd
-        - chapter_optimization/optimization-intro.qmd
-        - chapter_optimization/convexity.qmd
-        - chapter_optimization/gd.qmd
-        - chapter_optimization/sgd.qmd
-        - chapter_optimization/minibatch-sgd.qmd
-        - chapter_optimization/momentum.qmd
-        - chapter_optimization/adagrad.qmd
-        - chapter_optimization/rmsprop.qmd
-        - chapter_optimization/adadelta.qmd
-        - chapter_optimization/adam.qmd
-        - chapter_optimization/lr-scheduler.qmd
-    - part: "Computational Performance"
-      chapters:
         - chapter_computational-performance/index.qmd
         - chapter_computational-performance/hybridize.qmd
         - chapter_computational-performance/async-computation.qmd
@@ -177,24 +156,21 @@ book:
         - chapter_computational-performance/multiple-gpus.qmd
         - chapter_computational-performance/multiple-gpus-concise.qmd
         - chapter_computational-performance/parameterserver.qmd
-    - part: "Computer Vision"
-      chapters:
-        - chapter_computer-vision/index.qmd
-        - chapter_computer-vision/image-augmentation.qmd
-        - chapter_computer-vision/fine-tuning.qmd
-        - chapter_computer-vision/bounding-box.qmd
-        - chapter_computer-vision/anchor.qmd
-        - chapter_computer-vision/multiscale-object-detection.qmd
-        - chapter_computer-vision/object-detection-dataset.qmd
-        - chapter_computer-vision/ssd.qmd
-        - chapter_computer-vision/rcnn.qmd
-        - chapter_computer-vision/semantic-segmentation-and-dataset.qmd
-        - chapter_computer-vision/transposed-conv.qmd
-        - chapter_computer-vision/fcn.qmd
-        - chapter_computer-vision/neural-style.qmd
-        - chapter_computer-vision/kaggle-cifar10.qmd
-        - chapter_computer-vision/kaggle-dog.qmd
-    - part: "Natural Language Processing"
+        - chapter_transformers/index.qmd
+        - chapter_recurrent-modern/index.qmd
+        - chapter_recurrent-modern/lstm.qmd
+        - chapter_recurrent-modern/seq2seq.qmd
+        - chapter_recurrent-modern/ssm.qmd
+        - chapter_recurrent-modern/mamba.qmd
+        - chapter_reinforcement-learning/index.qmd
+        - chapter_reinforcement-learning/mdp.qmd
+        - chapter_reinforcement-learning/value-iter.qmd
+        - chapter_reinforcement-learning/qlearning.qmd
+        - chapter_generative-adversarial-networks/index.qmd
+        - chapter_generative-adversarial-networks/gan.qmd
+        - chapter_generative-adversarial-networks/dcgan.qmd
+        - chapter_diffusion-models/index.qmd
+    - part: "Language Models"
       chapters:
         - chapter_natural-language-processing-pretraining/index.qmd
         - chapter_natural-language-processing-pretraining/word2vec.qmd
@@ -215,12 +191,25 @@ book:
         - chapter_natural-language-processing-applications/natural-language-inference-attention.qmd
         - chapter_natural-language-processing-applications/finetuning-bert.qmd
         - chapter_natural-language-processing-applications/natural-language-inference-bert.qmd
-    - part: "Advanced Topics"
+    - part: "Image Models"
       chapters:
-        - chapter_reinforcement-learning/index.qmd
-        - chapter_reinforcement-learning/mdp.qmd
-        - chapter_reinforcement-learning/value-iter.qmd
-        - chapter_reinforcement-learning/qlearning.qmd
+        - chapter_computer-vision/index.qmd
+        - chapter_computer-vision/image-augmentation.qmd
+        - chapter_computer-vision/fine-tuning.qmd
+        - chapter_computer-vision/bounding-box.qmd
+        - chapter_computer-vision/anchor.qmd
+        - chapter_computer-vision/multiscale-object-detection.qmd
+        - chapter_computer-vision/object-detection-dataset.qmd
+        - chapter_computer-vision/ssd.qmd
+        - chapter_computer-vision/rcnn.qmd
+        - chapter_computer-vision/semantic-segmentation-and-dataset.qmd
+        - chapter_computer-vision/transposed-conv.qmd
+        - chapter_computer-vision/fcn.qmd
+        - chapter_computer-vision/neural-style.qmd
+        - chapter_computer-vision/kaggle-cifar10.qmd
+        - chapter_computer-vision/kaggle-dog.qmd
+    - part: "Attic"
+      chapters:
         - chapter_gaussian-processes/index.qmd
         - chapter_gaussian-processes/gp-intro.qmd
         - chapter_gaussian-processes/gp-priors.qmd
@@ -231,9 +220,6 @@ book:
         - chapter_hyperparameter-optimization/rs-async.qmd
         - chapter_hyperparameter-optimization/sh-intro.qmd
         - chapter_hyperparameter-optimization/sh-async.qmd
-        - chapter_generative-adversarial-networks/index.qmd
-        - chapter_generative-adversarial-networks/gan.qmd
-        - chapter_generative-adversarial-networks/dcgan.qmd
         - chapter_recommender-systems/index.qmd
         - chapter_recommender-systems/recsys-intro.qmd
         - chapter_recommender-systems/movielens.qmd
@@ -266,6 +252,7 @@ book:
         - chapter_mdl-probability-statistics/mdl-random-variables.qmd
         - chapter_mdl-probability-statistics/mdl-distributions.qmd
         - chapter_mdl-probability-statistics/mdl-maximum-likelihood.qmd
+        - chapter_mdl-probability-statistics/mdl-bayesian-computation.qmd
         - chapter_mdl-probability-statistics/mdl-statistics.qmd
         - chapter_mdl-probability-statistics/mdl-concentration-generalization.qmd
         - chapter_mdl-probability-statistics/mdl-naive-bayes.qmd
@@ -278,15 +265,17 @@ book:
         - chapter_mdl-dynamics/mdl-sdes.qmd
         - chapter_mdl-dynamics/mdl-fokker-planck-probability-flow.qmd
         - chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.qmd
-    - part: "Appendix: Tools for Deep Learning"
+    - part: "Tools for Deep Learning"
       chapters:
         - chapter_appendix-tools-for-deep-learning/index.qmd
-        - chapter_appendix-tools-for-deep-learning/jupyter.qmd
-        - chapter_appendix-tools-for-deep-learning/sagemaker.qmd
-        - chapter_appendix-tools-for-deep-learning/aws.qmd
-        - chapter_appendix-tools-for-deep-learning/colab.qmd
-        - chapter_appendix-tools-for-deep-learning/selecting-servers-gpus.qmd
-        - chapter_appendix-tools-for-deep-learning/contributing.qmd
+        - chapter_appendix-tools-for-deep-learning/interactive-development.qmd
+        - chapter_appendix-tools-for-deep-learning/hosted-notebooks.qmd
+        - chapter_appendix-tools-for-deep-learning/cloud-instances.qmd
+        - chapter_appendix-tools-for-deep-learning/hardware.qmd
+        - chapter_appendix-tools-for-deep-learning/software-ecosystem.qmd
+        - chapter_appendix-tools-for-deep-learning/training-systems.qmd
+        - chapter_appendix-tools-for-deep-learning/model-serving.qmd
+        - chapter_appendix-tools-for-deep-learning/developers-guide.qmd
         - chapter_appendix-tools-for-deep-learning/utils.qmd
         - chapter_appendix-tools-for-deep-learning/d2l.qmd
     - references.qmd
@@ -316,7 +305,9 @@ format:
     css: _d2l-style.css
     include-after-body:
       - _d2l-slides-data.html
+      - _d2l-notebooks-data.html
       - _d2l-tabs.html
+      - _d2l-notebooks.html
   pdf:
     pdf-engine: xelatex
     documentclass: book

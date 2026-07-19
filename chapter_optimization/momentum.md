@@ -1,174 +1,231 @@
 # Momentum
 :label:`sec_momentum`
 
-In :numref:`sec_sgd` we reviewed what happens when performing stochastic gradient descent, i.e., when performing optimization where only a noisy variant of the gradient is available. In particular, we noticed that for noisy gradients we need to be extra cautious when it comes to choosing the learning rate in the face of noise. If we decrease it too rapidly, convergence stalls. If we are too lenient, we fail to converge to a good enough solution since noise keeps on driving us away from optimality.
+Gradient descent moves in the best direction available *at a single point*;
+it has no memory. This section shows what that costs and how cheaply it is
+fixed. The cost appears whenever different parameter directions demand
+different step sizes — the conditioning problem previewed in :numref:`sec_gd`
+— because a single learning rate must be small enough for the steepest
+direction and is then far too small for the shallowest. The fix is a running
+average of past gradients, the *velocity*: one extra buffer and one extra
+hyperparameter, and it speeds up gradient descent precisely on the problems
+where gradient descent crawls. Some form of momentum is built into nearly
+every optimizer used in deep learning, including the Adam family of
+:numref:`sec_adam`.
 
-## Basics
-
-In this section, we will explore more effective optimization algorithms, especially for certain types of optimization problems that are common in practice.
-
-
-### Leaky Averages
-
-The previous section saw us discussing minibatch SGD as a means for accelerating computation. It also had the nice side-effect that averaging gradients reduced the amount of variance. The minibatch stochastic gradient descent can be calculated by:
-
-$$\mathbf{g}_{t, t-1} = \partial_{\mathbf{w}} \frac{1}{|\mathcal{B}_t|} \sum_{i \in \mathcal{B}_t} f(\mathbf{x}_{i}, \mathbf{w}_{t-1}) = \frac{1}{|\mathcal{B}_t|} \sum_{i \in \mathcal{B}_t} \mathbf{h}_{i, t-1}.
-$$
-
-To keep the notation simple, here we used $\mathbf{h}_{i, t-1} = \partial_{\mathbf{w}} f(\mathbf{x}_i, \mathbf{w}_{t-1})$ as the stochastic gradient descent for sample $i$ using the weights updated at time $t-1$.
-It would be nice if we could benefit from the effect of variance reduction even beyond averaging gradients on a minibatch. One option to accomplish this task is to replace the gradient computation by a "leaky average":
-
-$$\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_{t, t-1}$$
-
-for some $\beta \in (0, 1)$. This effectively replaces the instantaneous gradient by one that is been averaged over multiple *past* gradients. $\mathbf{v}$ is called *velocity*. It accumulates past gradients similar to how a heavy ball rolling down the objective function landscape integrates over past forces. To see what is happening in more detail let's expand $\mathbf{v}_t$ recursively into
-
-$$\begin{aligned}
-\mathbf{v}_t = \beta^2 \mathbf{v}_{t-2} + \beta \mathbf{g}_{t-1, t-2} + \mathbf{g}_{t, t-1}
-= \ldots, = \sum_{\tau = 0}^{t-1} \beta^{\tau} \mathbf{g}_{t-\tau, t-\tau-1}.
-\end{aligned}$$
-
-Large $\beta$ amounts to a long-range average, whereas small $\beta$ amounts to only a slight correction relative to a gradient method. The new gradient replacement no longer points into the direction of steepest descent on a particular instance any longer but rather in the direction of a weighted average of past gradients. This allows us to realize most of the benefits of averaging over a batch without the cost of actually computing the gradients on it. We will revisit this averaging procedure in more detail later.
-
-The above reasoning formed the basis for what is now known as *accelerated* gradient methods, such as gradients with momentum. They enjoy the additional benefit of being much more effective in cases where the optimization problem is ill-conditioned (i.e., where there are some directions where progress is much slower than in others, resembling a narrow canyon). Furthermore, they allow us to average over subsequent gradients to obtain more stable directions of descent. Indeed, the aspect of acceleration even for noise-free convex problems is one of the key reasons why momentum works and why it works so well.
-
-As one would expect, due to its efficacy momentum is a well-studied subject in optimization for deep learning and beyond. See e.g., the beautiful [expository article](https://distill.pub/2017/momentum/) by :citet:`Goh.2017` for an in-depth analysis and interactive animation. It was proposed by :citet:`Polyak.1964`. :citet:`Nesterov.2018` has a detailed theoretical discussion in the context of convex optimization. Momentum in deep learning has been known to be beneficial for a long time. See e.g., the discussion by :citet:`Sutskever.Martens.Dahl.ea.2013` for details.
-
-### An Ill-conditioned Problem
-
-To get a better understanding of the geometric properties of the momentum method we revisit gradient descent, albeit with a significantly less pleasant objective function. Recall that in :numref:`sec_gd` we used $f(\mathbf{x}) = x_1^2 + 2 x_2^2$, i.e., a moderately distorted ellipsoid objective. We distort this function further by stretching it out in the $x_1$ direction via
-
-$$f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2.$$
-
-As before $f$ has its minimum at $(0, 0)$. This function is *very* flat in the direction of $x_1$. Let's see what happens when we perform gradient descent as before on this new function. We pick a learning rate of $0.4$.
-
-```{.python .input #momentum-an-ill-conditioned-problem-1}
-#@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import np, npx
-npx.set_np()
-
-eta = 0.4
-def f_2d(x1, x2):
-    return 0.1 * x1 ** 2 + 2 * x2 ** 2
-def gd_2d(x1, x2, s1, s2):
-    return (x1 - eta * 0.2 * x1, x2 - eta * 4 * x2, 0, 0)
-
-d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d))
-```
-
-```{.python .input #momentum-an-ill-conditioned-problem-1}
-#@tab pytorch
+```{.python .input #momentum}
+%%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import torch
-
-eta = 0.4
-def f_2d(x1, x2):
-    return 0.1 * x1 ** 2 + 2 * x2 ** 2
-def gd_2d(x1, x2, s1, s2):
-    return (x1 - eta * 0.2 * x1, x2 - eta * 4 * x2, 0, 0)
-
-d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d))
 ```
 
-```{.python .input #momentum-an-ill-conditioned-problem-1}
-#@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
-
-eta = 0.4
-def f_2d(x1, x2):
-    return 0.1 * x1 ** 2 + 2 * x2 ** 2
-def gd_2d(x1, x2, s1, s2):
-    return (x1 - eta * 0.2 * x1, x2 - eta * 4 * x2, 0, 0)
-
-d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d))
-```
-
-```{.python .input #momentum-an-ill-conditioned-problem-1}
-#@tab jax
+```{.python .input #momentum}
+%%tab jax
 %matplotlib inline
 from d2l import jax as d2l
-import jax
-from jax import numpy as jnp
-import numpy as np
-
-eta = 0.4
-def f_2d(x1, x2):
-    return 0.1 * x1 ** 2 + 2 * x2 ** 2
-def gd_2d(x1, x2, s1, s2):
-    return (x1 - eta * 0.2 * x1, x2 - eta * 4 * x2, 0, 0)
-
-d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d))
+import optax
 ```
 
-By construction, the gradient in the $x_2$ direction is *much* higher and changes much more rapidly than in the horizontal $x_1$ direction. Thus we are stuck between two undesirable choices: if we pick a small learning rate we ensure that the solution does not diverge in the $x_2$ direction but we are saddled with slow convergence in the $x_1$ direction. Conversely, with a large learning rate we progress rapidly in the $x_1$ direction but diverge in $x_2$. The example below illustrates what happens even after a slight increase in learning rate from $0.4$ to $0.6$. Convergence in the $x_1$ direction improves but the overall solution quality is much worse.
+## An Ill-Conditioned Valley
+
+In :numref:`sec_gd` we minimized $f(\mathbf{x}) = x_1^2 + 2 x_2^2$, a
+moderately distorted bowl, and already saw the trajectory bend: the two
+coordinates wanted different step sizes. Let's make the distortion severe by
+flattening the first direction,
+
+$$f(\mathbf{x}) = 0.1 x_1^2 + 2 x_2^2.$$
+
+The minimum is still at $(0, 0)$, but the curvature is now $0.2$ in the
+$x_1$ direction and $4$ in $x_2$ — a ratio of $20$. Gradient descent with
+learning rate $0.4$ does what it can:
+
+```{.python .input #momentum-an-ill-conditioned-problem-1}
+eta = 0.4
+def f_2d(x1, x2):  # Objective
+    return 0.1 * x1 ** 2 + 2 * x2 ** 2
+def f_2d_grad(x1, x2):  # Gradient of the objective
+    return (0.2 * x1, 4 * x2)
+def gd_2d(x1, x2, s1, s2, f_grad):
+    g1, g2 = f_grad(x1, x2)
+    return (x1 - eta * g1, x2 - eta * g2, 0, 0)
+
+d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d, f_grad=f_2d_grad))
+```
+
+The gradient in the $x_2$ direction is much larger and changes much faster
+than in $x_1$, so one learning rate serves two masters. Keep it small and the
+iterate does not diverge in $x_2$ — but crawls along $x_1$, as above. Raise
+it, and progress along $x_1$ improves while $x_2$ starts to oscillate out of
+control. Even the slight increase from $0.4$ to $0.6$ tips the balance:
 
 ```{.python .input #momentum-an-ill-conditioned-problem-2}
 eta = 0.6
-d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d))
+d2l.show_trace_2d(f_2d, d2l.train_2d(gd_2d, f_grad=f_2d_grad))
 ```
 
-### The Momentum Method
+The information needed to do better is sitting in the history of the
+trajectory. Along $x_1$ successive gradients agree — small, but all pointing
+the same way. Along $x_2$ they alternate in sign, each step undoing the last.
+An average over past gradients would amplify the first and cancel the second.
 
-The momentum method allows us to solve the gradient descent problem described
-above. Looking at the optimization trace above we might intuit that averaging gradients over the past would work well. After all, in the $x_1$ direction this will aggregate well-aligned gradients, thus increasing the distance we cover with every step. Conversely, in the $x_2$ direction where gradients oscillate, an aggregate gradient will reduce step size due to oscillations that cancel each other out.
-Using $\mathbf{v}_t$ instead of the gradient $\mathbf{g}_t$ yields the following update equations:
+## The Momentum Method
+
+### Leaky Averages
+
+Minibatches (:numref:`sec_minibatch_sgd`) average gradients across
+*examples*. The idea here is to also average across *time*, with an average
+that leaks: discount each past gradient by a factor of $\beta$ per step.
+Concretely, replace the gradient in the update by a *velocity*
+$\mathbf{v}_t$,
 
 $$
 \begin{aligned}
-\mathbf{v}_t &\leftarrow \beta \mathbf{v}_{t-1} + \mathbf{g}_{t, t-1}, \\
-\mathbf{x}_t &\leftarrow \mathbf{x}_{t-1} - \eta_t \mathbf{v}_t.
+\mathbf{v}_t &\leftarrow \beta \mathbf{v}_{t-1} + \mathbf{g}_{t}, \\
+\mathbf{x}_t &\leftarrow \mathbf{x}_{t-1} - \eta\, \mathbf{v}_t,
 \end{aligned}
 $$
+:eqlabel:`eq_momentum`
 
-Note that for $\beta = 0$ we recover regular gradient descent. Before delving deeper into the mathematical properties let's have a quick look at how the algorithm behaves in practice.
+where $\beta \in [0, 1)$, $\mathbf{g}_t$ is the gradient — full-batch,
+single-example, or minibatch — evaluated at $\mathbf{x}_{t-1}$, and
+$\mathbf{v}_0 = \mathbf{0}$. For $\beta = 0$ we recover plain gradient
+descent. Unrolling the recursion shows what the velocity holds:
+
+$$\mathbf{v}_t = \sum_{\tau = 0}^{t-1} \beta^{\tau} \mathbf{g}_{t-\tau},$$
+
+an exponentially weighted sum of all past gradients. The name comes from the
+physical picture: a heavy ball rolling down the objective integrates past
+forces rather than reacting to the instantaneous slope, and $1 - \beta$
+plays the role of friction. This is *heavy-ball momentum*, due to
+:citet:`Polyak.1964`; :citet:`Sutskever.Martens.Dahl.ea.2013` document how
+much it matters for training deep networks, and the expository article by
+:citet:`Goh.2017` develops everything in this section with interactive
+animations.
+
+### Back to the Valley
+
+On the valley, the leaky average does exactly what the trajectory history
+suggested: the persistent $x_1$ components accumulate while the alternating
+$x_2$ components cancel. With the same learning rate $0.6$ that just
+diverged, momentum $\beta = 0.5$ converges well:
 
 ```{.python .input #momentum-the-momentum-method-1}
-def momentum_2d(x1, x2, v1, v2):
-    v1 = beta * v1 + 0.2 * x1
-    v2 = beta * v2 + 4 * x2
+def momentum_2d(x1, x2, v1, v2, f_grad):
+    g1, g2 = f_grad(x1, x2)
+    v1, v2 = beta * v1 + g1, beta * v2 + g2
     return x1 - eta * v1, x2 - eta * v2, v1, v2
 
 eta, beta = 0.6, 0.5
-d2l.show_trace_2d(f_2d, d2l.train_2d(momentum_2d))
+d2l.show_trace_2d(f_2d, d2l.train_2d(momentum_2d, f_grad=f_2d_grad))
 ```
 
-As we can see, even with the same learning rate that we used before, momentum still converges well. Let's see what happens when we decrease the momentum parameter. Halving it to $\beta = 0.25$ leads to a trajectory that barely converges at all. Nonetheless, it is a lot better than without momentum (when the solution diverges).
+Halving the momentum to $\beta = 0.25$ weakens the effect — the trajectory
+barely converges — but even this beats plain gradient descent, which diverged
+outright at this learning rate:
 
 ```{.python .input #momentum-the-momentum-method-2}
 eta, beta = 0.6, 0.25
-d2l.show_trace_2d(f_2d, d2l.train_2d(momentum_2d))
+d2l.show_trace_2d(f_2d, d2l.train_2d(momentum_2d, f_grad=f_2d_grad))
 ```
 
-Note that we can combine momentum with stochastic gradient descent and in particular, minibatch stochastic gradient descent. The only change is that in that case we replace the gradients $\mathbf{g}_{t, t-1}$ with $\mathbf{g}_t$. Last, for convenience we initialize $\mathbf{v}_0 = 0$ at time $t=0$. Let's look at what leaky averaging actually does to the updates.
+Nothing in :eqref:`eq_momentum` requires the gradient to be exact. With
+minibatch gradients the same leaky average additionally smooths the sampling
+noise across steps — variance reduction beyond what the minibatch itself
+buys, at no extra gradient evaluations. Momentum thus earns its keep twice:
+against curvature, as above, and against noise.
 
-### Effective Sample Weight
+### The Timescale of $\beta$
 
-Recall that $\mathbf{v}_t = \sum_{\tau = 0}^{t-1} \beta^{\tau} \mathbf{g}_{t-\tau, t-\tau-1}$. In the limit the terms add up to $\sum_{\tau=0}^\infty \beta^\tau = \frac{1}{1-\beta}$. In other words, rather than taking a step of size $\eta$ in gradient descent or stochastic gradient descent we take a step of size $\frac{\eta}{1-\beta}$ while at the same time, dealing with a potentially much better behaved descent direction. These are two benefits in one. To illustrate how weighting behaves for different choices of $\beta$ consider the diagram below.
+How much history does the velocity hold? The weights
+$1, \beta, \beta^2, \ldots$ sum to $\frac{1}{1-\beta}$ in the limit, so a
+useful reading is: **momentum $\beta$ averages over roughly the last
+$\frac{1}{1-\beta}$ gradients**. $\beta = 0.9$ — the `momentum=0.9` you
+have been passing to optimizers since :numref:`sec_training_recipes` — looks
+back about $10$ steps; $\beta = 0.99$ about $100$. The plot shows how sharply
+the weights decay for various $\beta$:
 
 ```{.python .input #momentum-effective-sample-weight}
 d2l.set_figsize()
-betas = [0.95, 0.9, 0.6, 0]
-for beta in betas:
-    x = d2l.numpy(d2l.arange(40))
+x = d2l.numpy(d2l.arange(40))
+for beta in [0.95, 0.9, 0.6, 0]:
     d2l.plt.plot(x, beta ** x, label=f'beta = {beta:.2f}')
 d2l.plt.xlabel('time')
 d2l.plt.legend();
 ```
 
-## Practical Experiments
+The same sum says something about step length. When successive gradients
+roughly agree, the velocity builds up to $\frac{1}{1-\beta}$ times a typical
+gradient, so momentum takes steps of effective size
+$\frac{\eta}{1-\beta}$ in persistent directions. This matters when tuning:
+raising $\beta$ without lowering $\eta$ makes the updates larger, not just
+smoother, and the two hyperparameters must move together — we will see this
+in the experiments below.
 
-Let's see how momentum works in practice, i.e., when used within the context of a proper optimizer. For this we need a somewhat more scalable implementation.
+### Acceleration and Damping
+:label:`subsec_momentum_acceleration`
 
-### Implementation from Scratch
+Momentum does more than stabilize; on ill-conditioned problems it is
+provably *faster*. For a quadratic whose Hessian eigenvalues lie between
+$\mu$ and $L$, the condition number $\kappa = L/\mu$ governs everything:
+gradient descent needs on the order of $\kappa \log \frac{1}{\epsilon}$
+iterations to reach precision $\epsilon$, while heavy-ball momentum with
+optimally chosen $\eta$ and $\beta$ needs only on the order of
+$\sqrt{\kappa} \log \frac{1}{\epsilon}$, achieved at
 
-Compared with (minibatch) stochastic gradient descent the momentum method needs to maintain a set of  auxiliary variables, i.e., velocity. It has the same shape as the gradients (and variables of the optimization problem). In the implementation below we call these variables `states`.
+$$\beta^\star = \left(\frac{\sqrt{\kappa} - 1}{\sqrt{\kappa} + 1}\right)^{\!2}.$$
+
+For $\kappa = 100$ that is a $10\times$ saving with $\beta^\star \approx
+0.67$; for $\kappa = 10^4$, a $100\times$ saving with $\beta^\star \approx
+0.96$. Note the trend: the harder the problem, the closer $\beta^\star$
+pushes toward $1$ — in the timescale reading, hard problems reward a memory
+of roughly $\sqrt{\kappa}$ steps.
+
+The right mental model for tuning $\beta$ is a damped oscillator. In each
+eigendirection of the Hessian, :eqref:`eq_momentum` is a second-order
+recurrence — a mass on a spring with friction $1 - \beta$. Too little
+momentum and the system is *over-damped*: it creeps down the valley like
+gradient descent. Too much and it is *under-damped*: the iterate overshoots
+and rings around the minimum. The fastest setting, $\beta^\star$, sits at
+critical damping between the two. Our valley has $\kappa = 20$, giving
+$\beta^\star \approx 0.4$ — and in hindsight, the tuning that sailed down
+the valley earlier, $\eta = 0.6$ with $\beta = 0.5$, sits close to the
+optimum. Push $\beta$ too far and momentum turns against us. Here is
+$\beta = 0.8$, well past the fastest-converging $\beta^\star$, at a
+learning rate where plain gradient descent would be perfectly stable:
+
+```{.python .input #momentum-acceleration-and-damping}
+eta, beta = 0.3, 0.8
+d2l.show_trace_2d(f_2d, d2l.train_2d(momentum_2d, f_grad=f_2d_grad))
+```
+
+![Convergence rate per step of heavy-ball momentum on a single quadratic mode, as a function of the momentum $\beta$. Below the critical value $\beta^{*}$ the iteration is over-damped and slow; at $\beta^{*}$ it is fastest; beyond it the rate degrades gently as $\sqrt{\beta}$. Worse conditioning (smaller $\eta\lambda$, dashed) pushes $\beta^{*}$ toward one — the reason large momentum values are the common default.](../img/mdl-opt-critical-damping.svg)
+:label:`fig_opt_critical_damping`
+
+The trajectory now sails along the valley floor but orbits the minimum
+before settling — momentum's own oscillation, distinct from the
+learning-rate divergence we saw earlier. :numref:`fig_opt_critical_damping`
+summarizes the tradeoff on a single quadratic mode: the per-step
+convergence rate falls as $\beta$ grows, is best at a critical value
+$\beta^{*}$, and degrades gently past it. The eigenmode analysis behind this
+picture, the $\sqrt{\kappa}$ theorem and its matching lower bound, and the
+proofs are developed in :numref:`subsec_mdl-momentum-acceleration`; one
+caveat worth carrying away from there is that the heavy-ball $\sqrt{\kappa}$
+rate is a statement about quadratics, and its practical standing on general
+objectives rests on the local quadratic picture plus a long empirical record
+:cite:`Sutskever.Martens.Dahl.ea.2013`.
+
+## Implementation
+
+### From Scratch
+
+Compared with plain minibatch SGD, momentum needs to maintain one auxiliary
+buffer per parameter — the velocity, with the same shape as the parameter.
+In the harness of :numref:`sec_minibatch_sgd` this is exactly what the
+`states` argument is for.
 
 ```{.python .input #momentum-implementation-from-scratch-1}
-#@tab mxnet,pytorch
+%%tab pytorch
 def init_momentum_states(feature_dim):
     v_w = d2l.zeros((feature_dim, 1))
     v_b = d2l.zeros(1)
@@ -176,15 +233,7 @@ def init_momentum_states(feature_dim):
 ```
 
 ```{.python .input #momentum-implementation-from-scratch-1}
-#@tab tensorflow
-def init_momentum_states(features_dim):
-    v_w = tf.Variable(d2l.zeros((features_dim, 1)))
-    v_b = tf.Variable(d2l.zeros(1))
-    return (v_w, v_b)
-```
-
-```{.python .input #momentum-implementation-from-scratch-1}
-#@tab jax
+%%tab jax
 def init_momentum_states(feature_dim):
     v_w = d2l.zeros((feature_dim, 1))
     v_b = d2l.zeros(1)
@@ -192,15 +241,7 @@ def init_momentum_states(feature_dim):
 ```
 
 ```{.python .input #momentum-implementation-from-scratch-2}
-#@tab mxnet
-def sgd_momentum(params, states, hyperparams):
-    for p, v in zip(params, states):
-        v[:] = hyperparams['momentum'] * v + p.grad
-        p[:] -= hyperparams['lr'] * v
-```
-
-```{.python .input #momentum-implementation-from-scratch-2}
-#@tab pytorch
+%%tab pytorch
 def sgd_momentum(params, states, hyperparams):
     for p, v in zip(params, states):
         with torch.no_grad():
@@ -210,15 +251,7 @@ def sgd_momentum(params, states, hyperparams):
 ```
 
 ```{.python .input #momentum-implementation-from-scratch-2}
-#@tab tensorflow
-def sgd_momentum(params, grads, states, hyperparams):
-    for p, v, g in zip(params, states, grads):
-            v[:].assign(hyperparams['momentum'] * v + g)
-            p[:].assign(p - hyperparams['lr'] * v)
-```
-
-```{.python .input #momentum-implementation-from-scratch-2}
-#@tab jax
+%%tab jax
 def sgd_momentum(params, grads, states, hyperparams):
     for i in range(len(params)):
         states[i] = hyperparams['momentum'] * states[i] + grads[i]
@@ -226,7 +259,8 @@ def sgd_momentum(params, grads, states, hyperparams):
     return params[0], params[1]
 ```
 
-Let's see how this works in practice.
+On the airfoil regression problem, a moderate $\beta = 0.5$ with learning
+rate $0.02$ trains without drama:
 
 ```{.python .input #momentum-implementation-from-scratch-3}
 def train_momentum(lr, momentum, num_epochs=2):
@@ -238,13 +272,17 @@ data_iter, feature_dim = d2l.get_data_ch11(batch_size=10)
 train_momentum(0.02, 0.5)
 ```
 
-When we increase the momentum hyperparameter `momentum` to 0.9, it amounts to a significantly larger effective sample size of $\frac{1}{1 - 0.9} = 10$. We reduce the learning rate slightly to $0.01$ to keep matters under control.
+Raising the momentum to $\beta = 0.9$ extends the average to roughly
+$\frac{1}{1-0.9} = 10$ past gradients — and, by the effective-step reading
+above, quintuples the effective step $\frac{\eta}{1-\beta}$ if we leave
+$\eta$ alone. We halve the learning rate to $0.01$ to rein it in:
 
 ```{.python .input #momentum-implementation-from-scratch-4}
 train_momentum(0.01, 0.9)
 ```
 
-Reducing the learning rate further addresses any issue of non-smooth optimization problems. Setting it to $0.005$ yields good convergence properties.
+Halving it again to $0.005$ brings the effective step to $0.05$ — the range
+of the first experiment — and the loss curve settles accordingly:
 
 ```{.python .input #momentum-implementation-from-scratch-5}
 train_momentum(0.005, 0.9)
@@ -252,125 +290,115 @@ train_momentum(0.005, 0.9)
 
 ### Concise Implementation
 
-There is very little to do in Gluon since the standard `sgd` solver already had momentum built in. Setting matching parameters yields a very similar trajectory.
+Momentum is built into every framework's SGD optimizer as a single argument.
+Matching the hyperparameters reproduces the trajectory.
 
 ```{.python .input #momentum-concise-implementation}
-#@tab mxnet
-d2l.train_concise_ch11('sgd', {'learning_rate': 0.005, 'momentum': 0.9},
-                       data_iter)
-```
-
-```{.python .input #momentum-concise-implementation}
-#@tab pytorch
+%%tab pytorch
 trainer = torch.optim.SGD
 d2l.train_concise_ch11(trainer, {'lr': 0.005, 'momentum': 0.9}, data_iter)
 ```
 
 ```{.python .input #momentum-concise-implementation}
-#@tab tensorflow
-trainer = tf.keras.optimizers.SGD
-d2l.train_concise_ch11(trainer, {'learning_rate': 0.005, 'momentum': 0.9},
-                       data_iter)
-```
-
-```{.python .input #momentum-concise-implementation}
-#@tab jax
-import optax
-
+%%tab jax
 trainer = optax.sgd
 d2l.train_concise_ch11(trainer, {'learning_rate': 0.005, 'momentum': 0.9},
                        data_iter)
 ```
 
-## Theoretical Analysis
+## Nesterov Momentum
 
-So far the 2D example of $f(x) = 0.1 x_1^2 + 2 x_2^2$ seemed rather contrived. We will now see that this is actually quite representative of the types of problem one might encounter, at least in the case of minimizing convex quadratic objective functions.
+Heavy ball has one characteristic failure, and we have already seen it: with
+$\beta$ past the critical value, the accumulated velocity overshoots and the
+iterate rings around the minimum. :citet:`Nesterov.1983` proposed a fix of
+almost comic economy — look before you leap. Evaluate the gradient not at
+the current point but at the point the velocity is about to carry you to:
 
-### Quadratic Convex Functions
+$$
+\begin{aligned}
+\mathbf{v}_t &\leftarrow \beta \mathbf{v}_{t-1} + \nabla f(\mathbf{x}_{t-1} - \eta \beta\, \mathbf{v}_{t-1}), \\
+\mathbf{x}_t &\leftarrow \mathbf{x}_{t-1} - \eta\, \mathbf{v}_t.
+\end{aligned}
+$$
+:eqlabel:`eq_nesterov`
 
-Consider the function
+If the momentum step is about to overshoot, the gradient at the look-ahead
+point already points back, correcting the velocity *before* the mistake
+rather than one step after. In code it is a two-line change to the momentum
+update — the gradient is taken at the shifted point:
 
-$$h(\mathbf{x}) = \frac{1}{2} \mathbf{x}^\top \mathbf{Q} \mathbf{x} + \mathbf{x}^\top \mathbf{c} + b.$$
+```{.python .input #momentum-nesterov-momentum-1}
+def nesterov_2d(x1, x2, v1, v2, f_grad):
+    g1, g2 = f_grad(x1 - eta * beta * v1,  # Gradient at the look-ahead
+                    x2 - eta * beta * v2)  # point, not at (x1, x2)
+    v1, v2 = beta * v1 + g1, beta * v2 + g2
+    return x1 - eta * v1, x2 - eta * v2, v1, v2
 
-This is a general quadratic function. For positive definite matrices $\mathbf{Q} \succ 0$, i.e., for matrices with positive eigenvalues this has a minimizer at $\mathbf{x}^* = -\mathbf{Q}^{-1} \mathbf{c}$ with minimum value $b - \frac{1}{2} \mathbf{c}^\top \mathbf{Q}^{-1} \mathbf{c}$. Hence we can rewrite $h$ as
-
-$$h(\mathbf{x}) = \frac{1}{2} (\mathbf{x} - \mathbf{x}^*)^\top \mathbf{Q} (\mathbf{x} - \mathbf{x}^*) + b - \frac{1}{2} \mathbf{c}^\top \mathbf{Q}^{-1} \mathbf{c}.$$
-
-The gradient is given by $\partial_{\mathbf{x}} h(\mathbf{x}) = \mathbf{Q} (\mathbf{x} - \mathbf{x}^*) = \mathbf{Q}\mathbf{x} + \mathbf{c}$. That is, it is given by the displacement from the minimizer, multiplied by $\mathbf{Q}$. Consequently the velocity is also a linear combination of terms $\mathbf{Q} (\mathbf{x}_t - \mathbf{x}^*)$.
-
-Since $\mathbf{Q}$ is positive definite it can be decomposed into its eigensystem via $\mathbf{Q} = \mathbf{O}^\top \boldsymbol{\Lambda} \mathbf{O}$ for an orthogonal (rotation) matrix $\mathbf{O}$ and a diagonal matrix $\boldsymbol{\Lambda}$ of positive eigenvalues. This allows us to perform a change of variables from $\mathbf{x}$ to $\mathbf{z} \stackrel{\textrm{def}}{=} \mathbf{O} (\mathbf{x} - \mathbf{x}^*)$ to obtain a much simplified expression:
-
-$$h(\mathbf{z}) = \frac{1}{2} \mathbf{z}^\top \boldsymbol{\Lambda} \mathbf{z} + b'.$$
-
-Here $b' = b - \frac{1}{2} \mathbf{c}^\top \mathbf{Q}^{-1} \mathbf{c}$. Since $\mathbf{O}$ is only an orthogonal matrix this does not perturb the gradients in a meaningful way. Expressed in terms of $\mathbf{z}$ gradient descent becomes
-
-$$\mathbf{z}_t = \mathbf{z}_{t-1} - \boldsymbol{\Lambda} \mathbf{z}_{t-1} = (\mathbf{I} - \boldsymbol{\Lambda}) \mathbf{z}_{t-1}.$$
-
-The important fact in this expression is that gradient descent *does not mix* between different eigenspaces. That is, when expressed in terms of the eigensystem of $\mathbf{Q}$ the optimization problem proceeds in a coordinate-wise manner. This also holds for
-
-$$\begin{aligned}
-\mathbf{v}_t & = \beta \mathbf{v}_{t-1} + \boldsymbol{\Lambda} \mathbf{z}_{t-1} \\
-\mathbf{z}_t & = \mathbf{z}_{t-1} - \eta \left(\beta \mathbf{v}_{t-1} + \boldsymbol{\Lambda} \mathbf{z}_{t-1}\right) \\
-    & = (\mathbf{I} - \eta \boldsymbol{\Lambda}) \mathbf{z}_{t-1} - \eta \beta \mathbf{v}_{t-1}.
-\end{aligned}$$
-
-In doing this we just proved the following theorem: gradient descent with and without momentum for a convex quadratic function decomposes into coordinate-wise optimization in the direction of the eigenvectors of the quadratic matrix.
-
-### Scalar Functions
-
-Given the above result let's see what happens when we minimize the function $f(x) = \frac{\lambda}{2} x^2$. For gradient descent we have
-
-$$x_{t+1} = x_t - \eta \lambda x_t = (1 - \eta \lambda) x_t.$$
-
-Whenever $|1 - \eta \lambda| < 1$ this optimization converges at an exponential rate since after $t$ steps we have $x_t = (1 - \eta \lambda)^t x_0$. This shows how the rate of convergence improves initially as we increase the learning rate $\eta$ until $\eta \lambda = 1$. Beyond that things diverge and for $\eta \lambda > 2$ the optimization problem diverges.
-
-```{.python .input #momentum-scalar-functions}
-lambdas = [0.1, 1, 10, 19]
-eta = 0.1
-d2l.set_figsize((6, 4))
-for lam in lambdas:
-    t = d2l.numpy(d2l.arange(20))
-    d2l.plt.plot(t, (1 - eta * lam) ** t, label=f'lambda = {lam:.2f}')
-d2l.plt.xlabel('time')
-d2l.plt.legend();
+eta, beta = 0.3, 0.8
+d2l.show_trace_2d(f_2d, d2l.train_2d(nesterov_2d, f_grad=f_2d_grad))
 ```
 
-To analyze convergence in the case of momentum we begin by rewriting the update equations in terms of two scalars: one for $x$ and one for velocity $v$. This yields:
+Same learning rate, same $\beta = 0.8$ that made heavy ball ring — and the
+oscillation is gone: the look-ahead acts as built-in damping. Beyond the
+picture, Nesterov's method carries guarantees that heavy ball lacks. On
+smooth convex functions it converges as $\mathcal{O}(1/k^2)$ against
+gradient descent's $\mathcal{O}(1/k)$, which is optimal for any method built
+from gradients; on strongly convex functions it achieves the
+$\sqrt{\kappa}$ rate with a proof that is not confined to quadratics
+:cite:`Nesterov.2018`. Statements, proofs, and the matching lower bound are
+in :numref:`subsec_mdl-momentum-acceleration`.
 
-$$
-\begin{bmatrix} v_{t+1} \\ x_{t+1} \end{bmatrix} =
-\begin{bmatrix} \beta & \lambda \\ -\eta \beta & (1 - \eta \lambda) \end{bmatrix}
-\begin{bmatrix} v_{t} \\ x_{t} \end{bmatrix} = \mathbf{R}(\beta, \eta, \lambda) \begin{bmatrix} v_{t} \\ x_{t} \end{bmatrix}.
-$$
+In frameworks, Nesterov momentum is one flag. Both PyTorch and Optax
+implement an equivalent rewrite of :eqref:`eq_nesterov` that evaluates the
+gradient at the current iterate (the exercises ask you to verify the
+equivalence), so no extra gradient evaluation is needed:
 
-We used $\mathbf{R}$ to denote the $2 \times 2$ governing convergence behavior. After $t$ steps the initial choice $[v_0, x_0]$ becomes $\mathbf{R}(\beta, \eta, \lambda)^t [v_0, x_0]$. Hence, it is up to the eigenvalues of $\mathbf{R}$ to determine the speed of convergence. See the [Distill post](https://distill.pub/2017/momentum/) of :citet:`Goh.2017` for a great animation and :citet:`Flammarion.Bach.2015` for a detailed analysis. One can show that when $0 < \eta \lambda < 2 + 2 \beta$, velocity converges. This is a larger range of feasible parameters when compared to $0 < \eta \lambda < 2$ for gradient descent. It also suggests that in general large values of $\beta$ are desirable. Further details require a fair amount of technical detail and we suggest that the interested reader consult the original publications.
+```{.python .input #momentum-nesterov-momentum-2}
+%%tab pytorch
+d2l.train_concise_ch11(
+    torch.optim.SGD,
+    {'lr': 0.005, 'momentum': 0.9, 'nesterov': True}, data_iter)
+```
+
+```{.python .input #momentum-nesterov-momentum-2}
+%%tab jax
+d2l.train_concise_ch11(
+    optax.sgd,
+    {'learning_rate': 0.005, 'momentum': 0.9, 'nesterov': True}, data_iter)
+```
+
+On this small, noisy problem the curve is essentially indistinguishable from
+plain momentum, as is typical at small batch: the look-ahead correction is
+dwarfed by sampling noise.
+Nesterov momentum earns its difference where curvature dominates noise —
+full-batch or large-batch training, and $\beta$ pushed close to $1$. Since
+it costs nothing extra, it is often simply switched on.
 
 ## Summary
 
-* Momentum replaces gradients with a leaky average over past gradients. This accelerates convergence significantly.
-* It is desirable for both noise-free gradient descent and (noisy) stochastic gradient descent.
-* Momentum prevents stalling of the optimization process that is much more likely to occur for stochastic gradient descent.
-* The effective number of gradients is given by $\frac{1}{1-\beta}$ due to exponentiated downweighting of past data.
-* In the case of convex quadratic problems this can be analyzed explicitly in detail.
-* Implementation is quite straightforward but it requires us to store an additional state vector (velocity $\mathbf{v}$).
+Momentum replaces the gradient with a leaky average over past gradients —
+one buffer, one hyperparameter $\beta$. On ill-conditioned problems it cures
+the zigzag: persistent gradient components accumulate up to
+$\frac{1}{1-\beta}$-fold while oscillating ones cancel, and with optimal
+tuning the iteration count improves from order $\kappa$ to order
+$\sqrt{\kappa}$. The parameter $\beta$ reads as a timescale — an average
+over roughly $\frac{1}{1-\beta}$ recent gradients — and as a damping knob,
+with too large a value producing ringing rather than progress. Nesterov's
+look-ahead variant damps that ringing and carries convergence guarantees
+beyond quadratics, at no extra cost per step. With stochastic gradients the
+same leaky average also smooths sampling noise, which is why some form of
+momentum appears in essentially every optimizer in the rest of this chapter.
 
 ## Exercises
 
 1. Use other combinations of momentum hyperparameters and learning rates and observe and analyze the different experimental results.
 1. Try out gradient descent and momentum for a quadratic problem where you have multiple eigenvalues, i.e., $f(x) = \frac{1}{2} \sum_i \lambda_i x_i^2$, e.g., $\lambda_i = 2^{-i}$. Plot how the values of $x$ decrease for the initialization $x_i = 1$.
-1. Derive minimum value and minimizer for $h(\mathbf{x}) = \frac{1}{2} \mathbf{x}^\top \mathbf{Q} \mathbf{x} + \mathbf{x}^\top \mathbf{c} + b$.
-1. What changes when we perform stochastic gradient descent with momentum? What happens when we use minibatch stochastic gradient descent with momentum? Experiment with the parameters?
-
-:begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/t/354)
-:end_tab:
+1. PyTorch's `nesterov=True` performs $\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t$ followed by $\mathbf{x}_t = \mathbf{x}_{t-1} - \eta\,(\mathbf{g}_t + \beta \mathbf{v}_t)$, with the gradient taken at $\mathbf{x}_{t-1}$. Show by a change of variables that this generates the same iterates as :eqref:`eq_nesterov`. What point do the framework's parameters correspond to?
+1. For $f(x) = \frac{\lambda}{2} x^2$, sweep $\beta$ over $[0, 1)$ at fixed $\eta$ and measure the number of iterations until $|x_t| \leq 10^{-6} |x_0|$. Where is the minimum, and how does it compare to $\beta^\star$?
+1. What changes when we use momentum with minibatch stochastic gradient descent? What happens as the batch size shrinks? Experiment with the parameters.
 
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1070)
-:end_tab:
-
-:begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/t/1071)
 :end_tab:
 
 :begin_tab:`jax`
@@ -379,68 +407,90 @@ We used $\mathbf{R}$ to denote the $2 \times 2$ governing convergence behavior. 
 
 <!-- slides -->
 
-::: {.slide title="Why Momentum"}
-SGD on ill-conditioned problems is dreadful. In a steep
-narrow valley, gradients zigzag across the walls instead
-of moving along the floor. Drop $\eta$ to stop
-overshooting → progress along the valley dies.
-:::
-
 ::: {.slide title="Momentum"}
-Keep a running average of past gradients — a velocity
-$\mathbf{v}_t$:
+Gradient descent has **no memory** — and pays for it whenever directions
+disagree about step size.
 
-$$\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t,\quad
-\mathbf{x}_t = \mathbf{x}_{t-1} - \eta \mathbf{v}_t.$$
-
-Components that *consistently* point one way accumulate;
-components that flip sign cancel. Faster progress along
-the valley, less zigzag.
-
-$\beta \in [0, 1)$, typically $0.9$. Effective averaging
-window: $1/(1-\beta)$ steps.
+- Ill-conditioned valley: steep walls cap $\eta$, flat floor needs big
+  $\eta$. One knob, two masters.
+- Fix: a running (leaky) average of past gradients — the **velocity**.
+- One buffer, one hyperparameter $\beta$; inside nearly every deep
+  learning optimizer.
 :::
 
-::: {.slide title="The ill-conditioned problem"}
-Anisotropic quadratic $f(x_1, x_2) = 0.1 x_1^2 + 2 x_2^2$
-— gradient in $x_2$ is 20× larger than in $x_1$:
+::: {.slide title="An ill-conditioned valley"}
+$f(x_1, x_2) = 0.1 x_1^2 + 2 x_2^2$ — curvatures $0.2$ vs $4$:
 
 @momentum-an-ill-conditioned-problem-1
 
 . . .
 
-A larger $\eta$ diverges in $x_2$ before making progress
-in $x_1$:
+Raise $\eta$ from 0.4 to 0.6: $x_1$ speeds up, $x_2$ diverges:
 
 @momentum-an-ill-conditioned-problem-2
 :::
 
-::: {.slide title="Momentum on the same problem"}
-Same $\eta$, add $\beta = 0.5$ momentum. Trajectory now
-sails straight down the valley:
+::: {.slide title="Leaky averages"}
+Replace the gradient by a velocity:
+
+$$\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t,\qquad
+\mathbf{x}_t = \mathbf{x}_{t-1} - \eta \mathbf{v}_t.$$
+
+Unrolled: $\mathbf{v}_t = \sum_{\tau} \beta^{\tau} \mathbf{g}_{t-\tau}$ —
+an exponentially weighted sum of the past.
+
+- Components that **agree** accumulate (up to $\tfrac{1}{1-\beta}\times$).
+- Components that **alternate** cancel.
+- Heavy ball rolling downhill; friction $1-\beta$ (Polyak, 1964).
+:::
+
+::: {.slide title="Momentum in the valley"}
+Same $\eta = 0.6$ that just diverged, now with $\beta = 0.5$:
 
 @momentum-the-momentum-method-1
 
 . . .
 
-Bigger $\beta$ — even straighter, but overshoot risk
-grows:
+$\beta = 0.25$: weaker, barely converges — still beats divergence:
 
 @momentum-the-momentum-method-2
 :::
 
-::: {.slide title="Effective sample weight"}
-The series $\mathbf{v}_t = \sum_{i=0}^{t} \beta^i \mathbf{g}_{t-i}$
-is an exponentially weighted moving average. Effective
-horizon: $1/(1-\beta)$ steps. $\beta = 0.9$ → ~10 steps;
-$\beta = 0.99$ → ~100 steps.
+::: {.slide title="The timescale of β"}
+Weights sum to $\tfrac{1}{1-\beta}$: momentum $\beta$ ≈ average over the
+last $\tfrac{1}{1-\beta}$ gradients. $\beta=0.9$ → ~10 steps;
+$\beta=0.99$ → ~100.
 
 @momentum-effective-sample-weight
+
+Effective step in persistent directions: $\eta / (1-\beta)$ —
+**raise $\beta$, lower $\eta$**.
 :::
 
-::: {.slide title="From-scratch implementation"}
-Carry a velocity buffer per parameter. Standard PyTorch /
-SGD-with-momentum convention:
+::: {.slide title="Acceleration: the √κ law"}
+Quadratic with condition number $\kappa$:
+
+- Gradient descent: $\mathcal{O}(\kappa \log \tfrac{1}{\epsilon})$ steps.
+- Tuned momentum: $\mathcal{O}(\sqrt{\kappa} \log \tfrac{1}{\epsilon})$,
+  at $\beta^\star = \left(\tfrac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^2$.
+- $\kappa = 10^4$: hundreds of steps instead of tens of thousands.
+
+Each eigenmode = damped oscillator; $\beta$ is the damping knob.
+Proofs: math appendix (gradient-based optimization).
+:::
+
+::: {.slide title="Too much momentum: ringing"}
+This valley: $\kappa = 20$ → $\beta^\star \approx 0.4$. Now
+$\eta = 0.3$ (GD-stable), $\beta = 0.8$ — well past $\beta^\star$, under-damped:
+
+@momentum-acceleration-and-damping
+
+The iterate orbits the minimum before settling. Over-damped ↔ crawl;
+under-damped ↔ ringing; $\beta^\star$ = critical damping.
+:::
+
+::: {.slide title="From scratch"}
+Velocity = one buffer per parameter, carried in `states`:
 
 @momentum-implementation-from-scratch-1
 
@@ -449,12 +499,15 @@ SGD-with-momentum convention:
 @momentum-implementation-from-scratch-2
 :::
 
-::: {.slide title="Training: $\beta$ sweep"}
-Same airfoil regression, $\beta \in \{0, 0.5, 0.9\}$:
+::: {.slide title="On the airfoil harness"}
+$\beta = 0.5$, $\eta = 0.02$:
 
 @momentum-implementation-from-scratch-3
 
 . . .
+
+$\beta = 0.9$ quintuples the effective step $\eta/(1-\beta)$ — so lower
+$\eta$ to 0.01, then 0.005:
 
 @momentum-implementation-from-scratch-4
 
@@ -463,29 +516,42 @@ Same airfoil regression, $\beta \in \{0, 0.5, 0.9\}$:
 @momentum-implementation-from-scratch-5
 :::
 
-::: {.slide title="Concise: framework SGD with momentum"}
-Most frameworks take `momentum=0.9` as a one-line argument:
-
+::: {.slide title="Concise: one argument"}
 @momentum-concise-implementation
 :::
 
-::: {.slide title="Theory: scalar quadratic"}
-For $f(x) = \tfrac{1}{2} \lambda x^2$, the momentum
-recurrence is a 2D linear system. Eigenvalues of the
-update matrix dictate convergence — momentum effectively
-reduces the *condition number* the optimizer sees:
+::: {.slide title="Nesterov: look before you leap"}
+Evaluate the gradient at the point the velocity is taking you to:
 
-@momentum-scalar-functions
+$$\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \nabla f(\mathbf{x}_{t-1} - \eta \beta \mathbf{v}_{t-1}),\qquad
+\mathbf{x}_t = \mathbf{x}_{t-1} - \eta \mathbf{v}_t.$$
+
+About to overshoot? The look-ahead gradient already points back.
+
+@momentum-nesterov-momentum-1
+
+Same $\eta$, $\beta$ as the ringing demo — oscillation gone.
+:::
+
+::: {.slide title="Nesterov in practice"}
+One flag; no extra gradient evaluations:
+
+@momentum-nesterov-momentum-2
+
+- Guarantees heavy ball lacks: $\mathcal{O}(1/k^2)$ convex (optimal),
+  $\sqrt{\kappa}$ beyond quadratics.
+- Small-batch noise dwarfs the correction → curves match plain momentum
+  here. Matters when curvature dominates: large batches, $\beta \to 1$.
 :::
 
 ::: {.slide title="Recap"}
 - $\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t$,
   $\mathbf{x}_t = \mathbf{x}_{t-1} - \eta \mathbf{v}_t$.
-- Smooths zigzag from ill-conditioning; effective averaging
-  window $1/(1-\beta)$.
-- $\beta = 0.9$ is the practical default; $\beta = 0.99$ for
-  very noisy gradients.
-- Standard SGD-with-momentum is the workhorse of computer
-  vision; Adam (coming up) generalizes the idea with
-  per-parameter scaling.
+- Persistent components accumulate, oscillating ones cancel; noise
+  smooths too.
+- $\beta$ = timescale ($\tfrac{1}{1-\beta}$ steps) **and** damping knob;
+  tuned momentum: $\kappa \to \sqrt{\kappa}$.
+- Nesterov look-ahead: damps ringing, adds guarantees, costs nothing.
+- $\beta = 0.9$ is the default; Adam (:numref:`sec_adam`) keeps the idea
+  and adds per-coordinate scaling.
 :::

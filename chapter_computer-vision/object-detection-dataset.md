@@ -460,8 +460,8 @@ return aligned arrays of images and label tensors:
 :::
 
 ::: {.slide title="Custom Dataset class"}
-Wrap the loader in a framework-native `Dataset` so we get
-a standard DataLoader:
+Wrap the loader in the framework's dataset abstraction so we get
+a standard batched loader:
 
 @object-detection-dataset-reading-the-dataset-2
 :::

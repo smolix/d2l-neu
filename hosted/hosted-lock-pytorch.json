@@ -1,0 +1,81 @@
+{
+  "critical_apis": [
+    "torch.nn.Linear",
+    "torch.optim.SGD",
+    "torchvision.transforms.Compose"
+  ],
+  "environment_sha256": "f87317feefa68f51e5cb08aea370bdf7046ab16589002fe1ab87c8645d6899ab",
+  "framework": "pytorch",
+  "optional_packages": [
+    {
+      "constraint": "gpytorch==1.15.2",
+      "distribution": "gpytorch",
+      "hosted_policy": "exact",
+      "import": "gpytorch",
+      "match": "exact",
+      "requirement": "gpytorch==1.15.2",
+      "version": "1.15.2"
+    },
+    {
+      "constraint": "gymnasium==1.2.3",
+      "distribution": "gymnasium",
+      "hosted_policy": "exact",
+      "import": "gymnasium",
+      "match": "exact",
+      "requirement": "gymnasium[toy-text]==1.2.3",
+      "version": "1.2.3"
+    },
+    {
+      "constraint": "safetensors==0.8.0",
+      "distribution": "safetensors",
+      "hosted_policy": "exact",
+      "import": "safetensors",
+      "match": "exact",
+      "requirement": "safetensors==0.8.0",
+      "version": "0.8.0"
+    },
+    {
+      "constraint": "syne-tune==0.3.3",
+      "distribution": "syne-tune",
+      "hosted_policy": "exact",
+      "import": "syne_tune.optimizer.baselines",
+      "match": "exact",
+      "requirement": "syne-tune[gpsearchers]==0.3.3",
+      "version": "0.3.3"
+    },
+    {
+      "constraint": "tiktoken==0.13.0",
+      "distribution": "tiktoken",
+      "hosted_policy": "exact",
+      "import": "tiktoken",
+      "match": "exact",
+      "requirement": "tiktoken==0.13.0",
+      "version": "0.13.0"
+    }
+  ],
+  "packages": [
+    {
+      "constraint": "torch==2.11.0",
+      "distribution": "torch",
+      "hosted_policy": "preserve",
+      "import": "torch",
+      "match": "public",
+      "requirement": "torch==2.11.0",
+      "version": "2.11.0"
+    },
+    {
+      "constraint": "torchvision==0.26.0",
+      "distribution": "torchvision",
+      "hosted_policy": "preserve",
+      "import": "torchvision",
+      "match": "public",
+      "requirement": "torchvision==0.26.0",
+      "version": "0.26.0"
+    }
+  ],
+  "platform": "linux-x86_64",
+  "python": "3.12",
+  "schema_version": 2,
+  "source_lock": "uv.lock",
+  "source_lock_sha256": "03bd597e77581e84b9080c73128a1af3ddcdc20000f62b56466f478299acae18"
+}

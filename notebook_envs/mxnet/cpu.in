@@ -1,0 +1,6 @@
+-e .
+jupyterlab
+ipykernel
+safetensors
+mxnet @ https://github.com/smolix/mxnet/releases/download/mxnet-2.0.0.zombie.1/mxnet-2.0.0%2Bcpu.linux.zombie.1-cp312-cp312-linux_x86_64.whl ; sys_platform == "linux" and platform_machine == "x86_64" and python_version == "3.12"
+mxnet @ https://github.com/smolix/mxnet/releases/download/mxnet-2.0.0.zombie.1/mxnet-2.0.0%2Bcpu.macos.zombie.1-cp312-cp312-macosx_26_0_arm64.whl ; sys_platform == "darwin" and platform_machine == "arm64" and python_version == "3.12"

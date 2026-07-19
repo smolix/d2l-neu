@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
           "bytes": 16908,
-          "sha256": "sha256:bcae3418c61cf17223178034dcc16783145cac20e5eaeaf9be79269e4185d436"
+          "sha256": "sha256:5f31e838690d2a1e15777a488d01e81491aba83d604d154ef21261e4cf0d3442"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
           "bytes": 21200,
-          "sha256": "sha256:dd2f59048f124ef9e17361b187909665eb882f36e5e74e5caa87f54edee929d5"
+          "sha256": "sha256:61638959d95948c18d619f2d617154748299b0e31cd73b3c281b030c3eb1af2d"
         }
       ]
     },
@@ -79,7 +79,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
           "bytes": 21780,
-          "sha256": "sha256:e3561b8cfc393080343aa0800e89cea9ad6ec3e459400792e0f38ac6cd5142b1"
+          "sha256": "sha256:ee8af374c0e54c1a2746667629ff517ba954b6ccba1685c7350738f21a735750"
         }
       ]
     },
@@ -92,7 +92,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
           "bytes": 24513,
-          "sha256": "sha256:9194849bea7df539cdece184a6bcb760a33cdade52fa043ca0eca20b15c80442"
+          "sha256": "sha256:e3d693627ff689396333208b15b5fc0a473d73bc76bbea5f481f5631fb34c304"
         }
       ]
     },
@@ -105,7 +105,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
           "bytes": 20163,
-          "sha256": "sha256:f83222b8c1579ae70b14d7f2abb752ca106d24290f47ca9e420fc11b6150b5ee"
+          "sha256": "sha256:5da63964bd75320b10c9b72482ea062617f7b19dab5aba67918e2562e4c64d17"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
           "bytes": 22666,
-          "sha256": "sha256:3b981209410409666b86b44dd00a878ebb3634888c14d48199e6ad469f51cc14"
+          "sha256": "sha256:77ff21cb1edd97468d0f700b23808a0977ef0b2d702a5db34fd4d400a28be18e"
         }
       ]
     }

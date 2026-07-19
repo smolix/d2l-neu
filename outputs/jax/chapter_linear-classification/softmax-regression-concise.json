@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d3aefb1468e5838ae451af6a0d6ff7ebe646c311b7c670f3797638098703cb14",
+    "d2l_lib_fingerprint": "sha256:4684cdafaf90cf6b01806a4001b6a279b3bbbb1a6b3f6a2cabdc335cb33f12e3",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-lse-vs-max-1.svg",
           "bytes": 20593,
-          "sha256": "sha256:c9bf56c3b6cbfc1de396503358da555ebf767bc56ff3ada3edddcceadbecfa4b"
+          "sha256": "sha256:9383d9dab28a04efe0b28b3c7df1acf21028b4e9e0c0d9e10193614fe5e60bf8"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "softmax-regression-concise/softmax-regression-concise-training-1.svg",
           "bytes": 22398,
-          "sha256": "sha256:811561b2fb1ec25b747337e9de8408c13630d924644db3745726ec0faa11935c"
+          "sha256": "sha256:2406f5e566fb9ef7680b3319b2ee0eb5359b03cc39bec19506848e6ffce9ce80"
         }
       ]
     }

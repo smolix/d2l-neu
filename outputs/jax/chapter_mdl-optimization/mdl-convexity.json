@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-optimization/mdl-convexity.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "convexity-imports": {
+      "code_fingerprint": "sha256:233bb22443fdb8d00cee4bd8b5c7179c8539bb43e5758a2feab0634b896f1ee6",
+      "kind": "text",
+      "outputs": []
+    },
+    "convexity-three-lenses": {
+      "code_fingerprint": "sha256:94a663f3f118562aed62ef25b4063a58eda4a9ba2ca73302a12cafca702f565c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "worst chord violation over 1000 trials:   -2.46e-03\nworst tangent violation over 1000 trials: -4.95e-02\nHessian eigenvalues: [ 6.273  18.6557]\n"
+        }
+      ]
+    },
+    "convexity-jensen-mc": {
+      "code_fingerprint": "sha256:5869b9c6c1d1674b4f0b6133f376276291ee515663290fae3be283919cf41528",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "E[exp(X)] = 1.6466  vs  exp(E[X]) = 0.9998  (theory: sqrt(e) = 1.6487 vs 1)\nAM >= GM in all trials: True,  smallest AM/GM ratio = 1.0002\nmin KL(p||q) = 0.1331 >= 0,  max |KL(p||p)| = 0.0e+00\n"
+        }
+      ]
+    },
+    "convexity-basins": {
+      "code_fingerprint": "sha256:2e3066c404497a6d4b719a5e13455a84f6e1c01d3acad198ccaaa01e3c79bbe7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "convex bowl: all 500 runs end at x = 0.500000  (spread 6.7e-16)\ndouble well: 271 runs -> x = -1.0575  (g = -0.5148)\n             229 runs -> x = 0.9304  (g = 0.4833)\n"
+        }
+      ]
+    },
+    "convexity-rate-check": {
+      "code_fingerprint": "sha256:f331e6c522cb0f5009b9efe3012ff578d8f2c8f6ea29a7792cbfc25cf91e851b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mu = 6.2730, L = 18.6557:  the theorem promises contraction <= 1 - mu/L = 0.6637\nmeasured per-step contraction of f - f*: [0.4406 0.4406 0.4406 0.4406]\nworst step: 0.4406  (the bound holds at every step)\n"
+        }
+      ]
+    },
+    "convexity-lse-hessian": {
+      "code_fingerprint": "sha256:0f7cc653638fed361adbec6cf36aa2976bb3185e118160a6057100ac0f42a12e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eigenvalues of H: [-0.        0.008103  0.052497  0.063313  0.099101  0.284324]\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |H - covariance of one-hot samples| = 0.0006\nmax |H @ 1| = 1.8e-16  (flat shift direction)\n"
+        }
+      ]
+    },
+    "convexity-prox-ista": {
+      "code_fingerprint": "sha256:3d7ee654593614fb67356350e78063cd426c52cb93cfc268d9ad0b984401af2d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |prox - brute-force argmin| = 8.9e-16\nw after 20 ISTA steps: [ 1.964  0.     0.    -1.462  0.     0.     0.     0.963]\nexact zeros: 5 of 8 coordinates\n"
+        }
+      ]
+    },
+    "mdl-convexity-coordinate-descent": {
+      "code_fingerprint": "sha256:6de9836e1f15f95273dc0cc24933332f8927f914ea821c1e9e4087d37cb05719",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-convexity/mdl-convexity-coordinate-descent-1.svg",
+          "bytes": 33273,
+          "sha256": "sha256:cd1d021ad39c5a790f5730ec9e78524d03148bf2cb8ba1e8c32ce5256f3c53f7"
+        }
+      ]
+    },
+    "convexity-pl-rate": {
+      "code_fingerprint": "sha256:0535c93c0ed2b2c38d4467124dedce6cf77ab0073c630227e7b8aeba114e8cb1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "PL constant on [-5, 5]: mu = 0.1755\nmin f'' = -4.00  (f is not convex)\nsuccessive gap ratios: [0.6293 0.2907 0.25   0.25   0.25  ]\n"
+        }
+      ]
+    }
+  }
+}

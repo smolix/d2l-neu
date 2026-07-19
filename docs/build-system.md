@@ -357,23 +357,87 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
   current and render."
 
   Both phases run in **parallel**, not serially:
-  - `refresh-stale` feeds the audit-stale set to the unified scheduler
+  - `refresh-stale` **force-re-executes exactly the audit-stale set**, then
+    re-captures it in one pass. It asks the audit for the stale
+    `(framework, file)` `.executed` stamps (`audit_outputs.py --stale-stamps`)
+    and `rm`s them, then feeds the stale *source* set to the unified scheduler
     (`notebook_scheduler.py --files <stale>`) for full GPU/CPU-slot parallel
-    dispatch, then re-captures the whole set in one pass. It is *not* forced:
-    a notebook that is stale-in-store but already executed (its `.ipynb` up to
-    date, merely never captured — e.g. right after a `make all` whose
-    `run-all-notebooks` executed but did not bless the store) is **skipped by
-    the scheduler and picked up by the single capture pass** — so recovery after
-    a full execution is a fast capture-only path, no wasted GPU re-run. (The
+    dispatch. Removing the stamps is load-bearing — see the trap below. (The
     earlier implementation looped `make -B …executed` one notebook at a time
     with the GPU pool idle, then captured per file.)
   - `render-fresh` then rebuilds slides and PDFs with the same RAM-aware fleet as
     `rebuild-book-artifacts` (`$(MAKE) -j$(RENDER_JOBS)` under `RENDER_V8_ENV`),
     rather than a bare serial `make slides`.
 
-  Typical recovery when `make all` executed cleanly but left the store unblessed
-  (so the `--verify-fresh` html gate fails): just `make render-fresh` — the
-  scheduler sees the stamps are fresh, skips execution, captures, and re-renders.
+  > **The freshness-disagreement trap (why `refresh-stale` removes stamps).**
+  > The audit judges staleness by **code provenance** (fingerprints: framework
+  > version, `d2l_lib_fingerprint`, per-cell `code_fingerprint`), comparing the
+  > *committed store* against the *current notebook*. The scheduler's own skip
+  > check (`notebook_scheduler._stale`) judges by **mtime** (is the `.executed`
+  > stamp newer than its `.ipynb` / `.d` deps?). These disagree exactly when a
+  > notebook's **source is unchanged but a `#@save` symbol it imports was edited
+  > elsewhere**: `make notebooks` regenerates a byte-identical `.ipynb`, the
+  > stamp stays newer than it, so the scheduler thinks it is fresh and **skips**
+  > it — yet its outputs were produced against the *old* library and are stale.
+  > A plain `--files` dispatch skips it, and the capture pass then blesses its
+  > pre-edit outputs under the *new* fingerprint: **falsely green**. `rm`-ing the
+  > audit's `--stale-stamps` first makes a missing stamp force both `_stale()`
+  > and Make to actually re-run the notebook, so only genuinely-fresh outputs are
+  > ever captured. (This is the bug that once shipped stale word-level BLEU into
+  > the attention chapter after `MTFraEng` moved to a shared byte-level BPE.)
+
+  > **The capture-side guard (the deeper, bless-boundary defense).** `refresh-stale`
+  > removing stamps fixes the *scheduler* path, but the trap can still be entered
+  > by hand — anyone who runs `make capture-outputs FILES=…` (the fast path just
+  > below) on a lib-stale-but-un-re-executed notebook would bless old-lib outputs
+  > under the new fingerprint. So the same disagreement is caught a second time at
+  > the point where it would do damage: **`capture_outputs.py` refuses to bless
+  > outputs it cannot prove were produced under the current lib.**
+  >
+  > The mechanism is an **execution-provenance sidecar**. Every successful notebook
+  > execution (`tools/run_notebooks.write_execution_provenance`, the single
+  > chokepoint through `execute_notebook`, so it covers the scheduler, direct
+  > `make …executed`, and best-of-N paths) drops
+  > `_notebooks/<fw>/<ch>/<stem>.provenance.json` recording the
+  > `framework_version` + `d2l_lib_fingerprint` + per-cell `code_fingerprint`
+  > **at execution time** (gitignored scratch, wiped by `make clean`). At capture
+  > time `capture_outputs.py` recomputes the *current* fingerprints and compares:
+  >
+  > | sidecar vs current | meaning | capture does |
+  > |---|---|---|
+  > | present, **agree** | proven executed under the current lib/source | bless |
+  > | present, **disagree** | old-lib outputs (or source regenerated w/o re-run) | **REFUSE** (non-zero exit, store untouched) |
+  > | absent, store already lib-stale | can't prove a re-run | **WARN**, still bless (back-compat) |
+  > | absent, nothing suspicious | pre-sidecar tree, nothing to flag | bless |
+  >
+  > A genuine re-execution rewrites the sidecar (provenance is a pure function of
+  > source+lib, so it is identical across best-of-N attempts), so a matching
+  > sidecar is *positive proof* of freshness — the guard is a strict no-op on a
+  > freshly-executed tree and has **zero false positives** on the normal capture
+  > flow. It refuses only the exact trap: a sidecar written under an old lib with
+  > no re-execution since. `--force` overrides (escape hatch; the refusal is
+  > normally correct — re-execute instead). `make test-trap`
+  > (`tools/test_refresh_stale_trap.py`) is a fast, GPU-free regression test that
+  > reproduces the trap on a tmp fixture and asserts all three defenses hold: the
+  > audit flags it, stamp-removal forces a re-run, and the guard refuses the stale
+  > bless while still accepting a genuine re-capture.
+
+  Because `refresh-stale` now always re-executes the stale set, the *fast*
+  recovery for the "I just ran `make all` after editing sources, so the
+  `_notebooks/` outputs are already fresh and I only need to bless them" case is a
+  **direct capture**, which never re-executes:
+
+  ```
+  make capture-outputs FILES="chapter_x/foo.md chapter_y/bar.md"
+  ```
+
+  This shortcut is safe precisely because the capture-side guard above backs it:
+  if those `_notebooks/` outputs turn out to be lib-stale (not actually
+  re-executed under the current lib), the guard refuses rather than silently
+  blessing them. Reserve `refresh-stale` / `render-fresh` for "re-execute the
+  audit-stale set from scratch to be safe, then render." A no-op `refresh-stale`
+  on a fresh store prints `Nothing stale — store is fresh.` and exits without
+  touching anything.
 
 This is the contract that lets us keep deterministic small outputs inline safely:
 they are kept correct by construction.
@@ -410,21 +474,38 @@ Two consequences worth knowing:
   `_quarto.yml` alone is not enough. (This was exactly why the
   Mathematics-for-Deep-Learning chapters first rendered without numbers.)
 - **Part titles in `_quarto.yml` are cosmetic.** `build_chapter_map` flattens the
-  `chapters:` lists and ignores the `part:` strings, so whether *N* groups live
-  under one part or *N* parts has **zero** effect on numbering — only the map and
-  the flat file order do. Part grouping is purely the left-nav/sidebar structure.
-  (A part whose `part:` is a bare title string keeps its `index.md` as a numbered
-  chapter; pointing `part:` at a `.qmd` file instead makes that page an *unnumbered
-  divider*, which breaks any `:numref:` that targets it — so we use title strings.)
+  `chapters:` lists, so whether *N* groups live under one part or *N* parts has
+  **zero** effect on numbering — only the map and flat file order do. A bare
+  `part:` title contributes no page. Quarto renders a file-backed part as an
+  unnumbered divider but does not allocate it a Pandoc chapter position, so the
+  postprocessor deliberately excludes that page from its positional map. The
+  Preface uses this form and remains `None` in `CHAPTER_NUMBERING` for source
+  preprocessing.
 
-Current tail of the map: the **Mathematics for Deep Learning** part is chapters
-**22–27** (Linear Algebra 22, Calculus 23, Optimization 24, Probability &
-Statistical Learning 25, Information Theory 26, Dynamics 27) — each group's
-`index.md` is the chapter, its siblings the `N.k` sections — and the **Tools for
-Deep Learning** appendix is chapter **28**. The legacy
-`chapter_appendix-mathematics-for-deep-learning/` part (formerly chapter 22) has
-been retired; inserting or retiring a group means renumbering the map's tail and
-the matching `_quarto.yml` order together.
+Current tail of the map (2026-07-17 layout): **Attic** = GP **20**, HPO **21**,
+RecSys **22**; the **Mathematics for Deep Learning** part is chapters **23–28**
+(Linear Algebra 23, Calculus 24, Optimization 25, Probability & Statistical
+Learning 26, Information Theory 27, Dynamics 28) — each group's `index.md` is
+the chapter, its siblings the `N.k` sections — and the **Tools for Deep
+Learning** appendix is chapter **29**. The legacy
+`chapter_appendix-mathematics-for-deep-learning/` part has been retired;
+inserting or retiring a group means renumbering the map's tail and the matching
+`_quarto.yml` order together.
+
+**Dict order is load-bearing for the PDF.** `gen_pdf.py` emits the PDF book's
+chapter list from `PDF_CHAPTER_FILES` — i.e. `CHAPTER_NUMBERING` **dict order**
+— and `fix_latex.py` pairs the rendered tex's `\chapter` commands against that
+same list *positionally*. HTML instead follows `_quarto.yml` order. If the two
+orders diverge, the HTML stays correct but the PDF silently misnumbers and
+misorders chapters (this happened in the 2026-07-16 restructure: the dict was
+renumbered but not reordered, so the PDF placed State Space Models before
+Attention and lettered GANs as appendix "T"; fixed 2026-07-17). Keep
+`CHAPTER_NUMBERING` dict order identical to `_quarto.yml` chapter order —
+there is a matching guard in `gen_pdf.py`. Related constant: `fix_latex.py`
+Phase 6 starts `\appendix` lettering at logical chapter **23** (the math part;
+the Attic stays numbered so PDF matches HTML), keyed on
+`\setcounter{chapter}{22}` — renumbering the map's tail means revisiting that
+boundary.
 
 ### 4.2 The one index that matters: cell-id → output
 
@@ -571,7 +652,12 @@ request. Those run through the aggregate targets:
 | `make all` | `lib` → `notebooks` → `run-all-notebooks` → `rebuild-book-artifacts`. The full pipeline; ~3 h on the 4×4090 box. | **Yes** (all 4 fw) |
 | `make all-quick` | `lib` → `notebooks` → `rebuild-book-artifacts`. Regenerate + render from the **committed** `outputs/`; no execution. | No |
 | `make rebuild-book-artifacts` | `slides` → `html` → `notebook-zips` → `-j4 pdfs` → `check-all-artifacts`. Renders everything from `outputs/`. | No |
-| `make notebook-zips` | One `d2l-<fw>.zip` of that framework's **executed** notebooks per framework → `_book/notebooks/` (~23 MB each). Code from generated `_notebooks/`, outputs injected from the committed store, plus the referenced `../img/` figure subset bundled under `d2l-<fw>/img/` so the download is self-contained (`tools/build_notebook_zips.py`); CPU-only, deterministic. Linked from the navbar **Notebooks** menu (`/notebooks/d2l-<fw>.zip`). | No |
+| `make notebook-env-locks` | Refresh the committed `pylock.cpu.toml` and `pylock.gpu.toml` files under `notebook_envs/` from their `.in` inputs. MXNet also gets an Apple Silicon CPU lock. Requires package-index/network access; run only when changing reader dependencies. | No |
+| `make notebook-zips` | One runnable `d2l-<fw>.zip` per framework → `_book/notebooks/`. Each deterministic archive combines generated notebooks, committed outputs, referenced figures, the matching `d2l` source, `pyproject.toml`, and pinned CPU/GPU uv locks (`tools/build_notebook_zips.py`). Linked from the navbar **Notebooks** menu (`/notebooks/d2l-<fw>.zip`). | No |
+| `make hosted-env-locks` | Regenerate `hosted/hosted-lock-*.json` and `hosted/constraints-*.txt` from `uv.lock`. | No |
+| `make check-hosted-runtime-contracts` | Validate hosted package versions, imports, critical APIs, and one optimizer/state update in each local framework venv. | No notebooks |
+| `make check-hosted-notebooks` | Stage all hosted variants, run runtime contracts and focused tests, and verify deterministic output. | No notebooks |
+| `make check-hosted-docker` | Slowly test the generated setup layer and a real optimizer update for PyTorch, TensorFlow, and JAX on CPU and GPU in current official Colab images. | Six small contracts; no notebooks |
 | `make check-all-artifacts` | Asserts `_book/index.html`, `_slides/index.html`, `_book/slides/index.html` exist, per-fw PDFs, slide coverage, and per-fw notebook zips. | No |
 | `make clean` | Wipe build products (`_book _pdf _notebooks _slides`, generated `.qmd`, `d2l/.built`, stamps). **Keeps** `./data/`, `logs/`, `.upload-manifest-*.txt`. | — |
 | `make veryclean` | `clean` **plus** wipe `./data/` (datasets), `logs/`, upload manifests — forces dataset re-download. | — |
@@ -605,6 +691,108 @@ Things that bite if you don't know them:
   unchanged. Only a public-version change (`2.0.0 → 2.1.0`) or a per-cell code
   change invalidates. Re-capture after a same-public-version wheel rebuild is a
   deliberate choice, not something the gate forces.
+
+### 6.4.1 Hosted notebook environment contracts
+
+The public Colab/Kaggle notebooks download a revision-pinned `d2l` helper, so
+their framework runtime must match that revision too. Package presence is not a
+compatibility test: a provider may already contain an older Flax, or a newer
+generated Protobuf module with an older runtime. Hosted environments therefore
+have a committed, generated contract under `hosted/`:
+
+- `tools/export_hosted_env.py` reads `uv.lock` and emits one JSON profile and
+  pip constraints file for PyTorch, TensorFlow, and JAX. Core packages,
+  cross-framework ABI packages (`protobuf`, `ml-dtypes`), and page-specific
+  optional dependencies all get their reference versions from the lock. Each
+  core record also declares its hosted policy. Colab's coherent
+  PyTorch/TensorFlow/protobuf stack is preserved and validated behaviorally;
+  the JAX/Flax/Optax/Orbax NNX stack and notebook-specific optional packages are
+  exact pins. Extras such as `jax[cuda12]`, `tensorflow-probability[tf]`, and
+  `syne-tune[gpsearchers]` remain installation requirements while constraints
+  use their base distribution names.
+- `tools/build_hosted_notebooks.py` consumes those JSON files when creating the
+  setup cell. It embeds the environment fingerprint in notebook metadata,
+  preserves compatible provider-managed packages, installs exact mismatches in
+  one transaction, and validates those exact pins before downloading the
+  revision-pinned helper. A missing preserved package falls back to the lock
+  version. JAX selects its CPU wheel by default and its CUDA 12 extra only when
+  a GPU is available.
+- `tools/check_hosted_runtime.py` is the small compatibility canary. It checks
+  exact local versions by default. Its provider-compatible mode checks exact
+  hosted pins plus external API symbols, exercises the TensorFlow Metadata
+  Protobuf path, and performs a real optimizer update on the selected CPU or
+  GPU. The JAX contract additionally tests `nnx.view`, shared parameter state,
+  BatchNorm, Dropout, and a jitted update.
+
+The normal update sequence is:
+
+```bash
+# after changing pyproject.toml / uv.lock
+make hosted-env-locks
+
+# fast compatibility tests; no Docker and no notebook execution
+make check-hosted-runtime-contracts
+
+# full generation/publication gate
+make check-hosted-notebooks
+```
+
+`hosted-notebooks` fails when the generated profiles are stale, so a direct
+publication cannot silently combine a new lock with old setup cells. Dockerized
+Colab-image canaries remain an occasional, explicit check; these local contracts
+are the fast first gate.
+
+#### Colab Docker compatibility matrix
+
+Run the slow provider check after changing a framework stack, hosted setup
+logic, or when Colab updates its runtime:
+
+```bash
+make check-hosted-docker
+```
+
+`tools/run_hosted_docker.py` runs six serial cases: PyTorch, TensorFlow, and JAX
+on both CPU and GPU. Each case starts from the current official Colab image,
+executes the same generated setup cell published in notebooks, imports the
+revision-pinned downloaded `d2l` helper, and performs an optimizer update on the
+requested device. It also exercises the TensorFlow Metadata generated-Protobuf
+path. Full notebook execution is deliberately outside this canary.
+
+The harness defaults to at most 8 CPUs, 24 GiB RAM, 2,048 PIDs, one explicitly
+selected GPU, and serial execution. Overrides are rejected when they exceed the
+host's CPU count, 50% of currently available RAM, or the smaller of 4,096 PIDs
+and 75% of `RLIMIT_NPROC`. Framework thread pools, JAX preallocation, TensorFlow
+memory growth, shared memory, and pip's download cache are also bounded.
+Each case compares `pip check` before and after setup: conflicts already present
+in the provider image are reported as its baseline, while newly introduced
+conflicts fail the case. A zero process exit is not sufficient: the completed
+case log is also scanned, and CUDA/XLA error diagnostics, Python tracebacks, and
+version/API exceptions fail the case.
+
+Useful narrower runs are:
+
+```bash
+make check-hosted-docker-cpu
+make check-hosted-docker-gpu HOSTED_DOCKER_ARGS='--framework jax --gpu 1'
+make check-hosted-docker HOSTED_DOCKER_ARGS='--framework pytorch --device gpu'
+```
+
+The official CPU and GPU images are large and may share no layers. On a Docker
+volume that cannot hold both, process CPU and GPU serially and explicitly allow
+the harness to delete the other cached provider image before pulling:
+
+```bash
+make check-hosted-docker HOSTED_DOCKER_ARGS='--prune-other-image'
+```
+
+Images are otherwise retained, containers are always removed, and each run
+writes per-case setup scripts, output logs, the resolved immutable image digest,
+resource limits, timings, and `summary.json` under
+`logs/hosted-docker/<timestamp>/`. The default `:latest` tags intentionally
+detect provider drift; pass `--cpu-image` or `--gpu-image` to reproduce a
+specific image. Linux hosts need Docker plus NVIDIA Container Toolkit for GPU
+cases. `--network auto` uses bridge networking when its DNS works and otherwise
+falls back to host networking on Linux.
 
 ### 6.5 Updating a framework wheel pin (MXNet)
 
@@ -829,8 +1017,10 @@ yubikey-free path recorded in CLAUDE.md memory); LFS rides the same HTTPS remote
 
 | Script | Status | Contract |
 |---|---|---|
-| `tools/capture_outputs.py` | **NEW** | `_notebooks/<fw>/<chapter>/<stem>.ipynb` → `outputs/<fw>/<chapter>/<stem>.json` + asset files. Idempotent: identical inputs → byte-identical manifest (stable key order, no timestamps in the hashed payload). Writes assets to stable per-cell paths (overwrite in place); records `bytes`+`sha256` per asset. Computes `code_fingerprint` per §3.1. |
-| `tools/audit_outputs.py` | **NEW** | Freshness (§3.2) + integrity (§4.3). Exit non-zero on integrity failure; `--stale` lists the minimal re-execution set; `--json` for tooling. |
+| `tools/capture_outputs.py` | **NEW** | `_notebooks/<fw>/<chapter>/<stem>.ipynb` → `outputs/<fw>/<chapter>/<stem>.json` + asset files. Idempotent: identical inputs → byte-identical manifest (stable key order, no timestamps in the hashed payload). Writes assets to stable per-cell paths (overwrite in place); records `bytes`+`sha256` per asset. Computes `code_fingerprint` per §3.1. **Freshness guard (§3.3):** a pre-write pass refuses (non-zero exit, nothing written) to bless any notebook whose execution-provenance sidecar disagrees with the current lib/source; `--force` overrides. |
+| `tools/audit_outputs.py` | **NEW** | Freshness (§3.2) + integrity (§4.3). Exit non-zero on integrity failure; `--stale` lists the minimal re-execution set; `--stale-stamps` lists the `.executed` stamps to `rm` to force re-execution (§3.3); `--json` for tooling. |
+| `tools/run_notebooks.py` | **CHANGED** | Executes notebooks; on every successful run `write_execution_provenance()` records the source+lib fingerprints the run used into `_notebooks/<fw>/<ch>/<stem>.provenance.json` (gitignored, `make clean`-wiped) — the signal the capture guard reads (§3.3). Single chokepoint (`execute_notebook`) covers scheduler / direct-make / best-of-N paths. |
+| `tools/test_refresh_stale_trap.py` | **NEW** | `make test-trap`. Fast, GPU-free e2e regression for the §3.3 trap: builds a tmp fixture, moves a lib fingerprint under an unchanged notebook, and asserts the audit flags it, `refresh-stale`'s stamp-removal forces a re-run, and the capture guard refuses the stale bless (and accepts a genuine re-capture). Never touches the real store. |
 | `tools/inject_outputs.py` | **CHANGED** | Output source flips from `_notebooks/` to `outputs/` via a new `index_store_by_id()` that returns the **same shape** as `index_ipynb_by_id()` — `{cell_id: [nbformat-output-dict]}` — by reconstructing nbformat dicts from the manifest (inline text → `stream`/`text/plain` dicts; assets → re-read the file, re-encode to the dict's `data`). Everything downstream (`format_cell_output`, dedup, markup) is **unchanged**, so injected output is byte-identical to the `_notebooks/` path. Auto-detects: uses `outputs/` when a manifest exists, else falls back to `_notebooks/`. |
 | `tools/add_cell_ids.py` | unchanged | Still the authority for stable ids — the invariant capture/audit rely on. |
 | `tools/scan_notebook_manifests.py` | unchanged | Execution queues. Capture reuses its file enumeration. |

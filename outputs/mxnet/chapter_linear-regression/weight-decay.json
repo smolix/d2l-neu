@@ -4,7 +4,7 @@
   "framework": "mxnet",
   "provenance": {
     "framework_version": "mxnet==2.0.0",
-    "d2l_lib_fingerprint": "sha256:17268f3fe768ae7a832c6ad834b84a51a3031fd3c671adda3c8ecc7d3341af0a",
+    "d2l_lib_fingerprint": "sha256:cad2e8b0efc4ba86d85b36a677d9a92e3ba4149ea97c0b9d8773b6a11bf60fb9",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.009599177166819572\n"
+          "text": "L2 norm of w: 0.010061698034405708\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-training-without-regularization-1.svg",
-          "bytes": 21868,
-          "sha256": "sha256:ebd34d94713bed07473dd5674d16f3d2c858773f82b6573116f9e21ada02240c"
+          "bytes": 23678,
+          "sha256": "sha256:9c3d5faa589b222e9ab100e497c498dd1f7ba0422b9497811b616fd3b6a23f45"
         }
       ]
     },
@@ -58,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.0010785040212795138\n"
+          "text": "L2 norm of w: 0.0008424330735579133\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-using-weight-decay-1.svg",
-          "bytes": 21053,
-          "sha256": "sha256:64c97a5b09ed18de6c1439ed6255e4cab24d0ec3d834c9910e451e6600f10183"
+          "bytes": 21631,
+          "sha256": "sha256:41e39b803058f6aa12b37cc6dde9034308b2f7978a62957f4faa84f40cb800a6"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda= 0  df= 20.0  strongest 1.00  weakest 1.00\nlambda= 3  df= 15.1  strongest 0.84  weakest 0.65\nlambda=30  df=  4.9  strongest 0.35  weakest 0.16\n"
+          "text": "lambda= 0  df= 20.0  strongest 1.00  weakest 1.00\nlambda= 3  df= 15.2  strongest 0.84  weakest 0.66\nlambda=30  df=  5.0  strongest 0.35  weakest 0.16\n"
         }
       ]
     },
@@ -92,14 +92,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "L2 norm of w: 0.001369509962387383\n"
+          "text": "L2 norm of w: 0.0010585944401100278\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "weight-decay/weight-decay-concise-implementation-2-1.svg",
-          "bytes": 23892,
-          "sha256": "sha256:f16e3a07955d629822b583200c0996746665ce6b0400b03e26777c839ced60ce"
+          "bytes": 25463,
+          "sha256": "sha256:1012ddb256e531158a03d96d154988b1654d6f88b753b3d7b1e62abe82bba9f2"
         }
       ]
     }

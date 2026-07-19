@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "numpy: 0.5002 sec\ntorch: 0.0008 sec\n"
+          "text": "numpy: 0.5407 sec\ntorch: 0.0008 sec\n"
         }
       ]
     },

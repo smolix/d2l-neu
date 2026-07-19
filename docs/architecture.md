@@ -415,7 +415,8 @@ with the install hint.
 
 ### JAX + TF memory coexistence
 
-JAX notebooks use TF for data loading (via `tensorflow_datasets`).
+JAX notebooks use `tf.data` for data loading and convert batches with
+`Dataset.as_numpy_iterator()`.
 Two mechanisms prevent TF from fighting JAX for GPU memory:
 
 1. **d2l/jax.py preamble**: Calls

@@ -12,11 +12,38 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from d2l_preprocess import CHAPTER_NUMBERING
+from d2l_preprocess import CHAPTER_NUMBERING, PDF_CHAPTER_FILES
+
+
+# References into pages that exist only in the HTML edition (the
+# PDF_EXCLUDED_FILES reference pages). Quarto renders a :numref: to an
+# absent target as a literal bold "?@sec-..." marker; rewrite the known
+# ones into prose that degrades gracefully in print. Any *other* residual
+# "?@" marker is a genuine broken reference — warn loudly so it is caught
+# at build time instead of shipping.
+HTML_ONLY_REFS = {
+    'sec-utils': 'the utility reference of the online edition',
+    'sec-d2l': 'the d2l API reference of the online edition',
+}
+
+
+def fix_html_only_refs(content):
+    for target, wording in HTML_ONLY_REFS.items():
+        for pat in (r'\textbf{?@%s}' % target, '?@%s' % target):
+            if pat in content:
+                n = content.count(pat)
+                content = content.replace(pat, wording)
+                print(f'  Rewrote {n} reference(s) to HTML-only {target}')
+    residual = sorted(set(re.findall(r'\?@[a-z0-9-]+', content)))
+    if residual:
+        print(f'  WARNING: unresolved crossrefs remain in the PDF: '
+              f'{", ".join(residual)}')
+    return content
 
 
 def fix_all(content):
-    files = list(CHAPTER_NUMBERING.items())
+    content = fix_html_only_refs(content)
+    files = [(rel, CHAPTER_NUMBERING[rel]) for rel in PDF_CHAPTER_FILES]
 
     # Find all \chapter{...} with optional \label{...}
     chapter_re = re.compile(r'\\chapter\{[^}]+\}(?:\\label\{[^}]+\})?')
@@ -136,39 +163,56 @@ def fix_all(content):
                     break
     content = '\n'.join(lines)
 
+    # Cross-references to unnumbered frontmatter must use their titles. A
+    # numeric \ref is undefined for \chapter* and can otherwise inherit the
+    # preceding chapter counter.
+    frontmatter_refs = {
+        'sec-chap-installation': 'Installation',
+        'sec-chap-notation': 'Notation',
+        'sec-chap-introduction': 'Introduction',
+    }
+    for label, title in frontmatter_refs.items():
+        content = content.replace(
+            f'Chapter~\\ref{{{label}}}', f'\\hyperref[{label}]{{{title}}}')
+
     # ── Phase 5: Page numbering ──
     content = content.replace(
         '\\begin{document}',
         '\\begin{document}\n\\pagenumbering{roman}', 1)
 
-    intro_m = re.search(r'\\setcounter\{chapter\}\{0\}\n\\chapter\{Introduction\}', content)
-    if intro_m:
-        content = (content[:intro_m.start()] +
+    first_chapter = re.search(
+        r'\\setcounter\{chapter\}\{0\}\n\\chapter\{Preliminaries\}', content)
+    if first_chapter:
+        content = (content[:first_chapter.start()] +
                   '\\pagenumbering{arabic}\\setcounter{page}{1}\n' +
-                  content[intro_m.start():])
+                  content[first_chapter.start():])
 
     # ── Phase 6: Appendix ──
-    # The "Mathematics for Deep Learning" appendix (logical chapters 22+)
-    # renders with \appendix lettering (A, B, C, …), sections nested (A.1…).
-    # Phase 2 gave each appendix chapter \setcounter{chapter}{ch-1}; under
-    # \appendix we want them counted from 0 (→A), so remap every appendix
-    # counter N>=21 → N-21 (22→A, 23→B, 24→C, …). The previous code hardcoded
-    # only 21→0 and 22→1, so chapters 24+ kept their global numbers and
-    # rendered as A, B, X, Y, Z… (and \Alph overflows past 26).
-    first_app = re.search(r'\\setcounter\{chapter\}\{21\}', content)
+    # The "Mathematics for Deep Learning" part and everything after it
+    # (logical chapters 23+: mdl chapters + Tools) render with \appendix
+    # lettering (A, B, C, …), sections nested (A.1…). The Attic (20-22)
+    # stays numbered so PDF numbers match the HTML edition. Phase 2 gave
+    # each chapter \setcounter{chapter}{ch-1}; under \appendix we want the
+    # appendix counted from 0 (→A), so remap every appendix counter
+    # N>=22 → N-22 (23→A, 24→B, …, 29→G).
+    first_app = re.search(r'\\setcounter\{chapter\}\{22\}', content)
     if first_app:
         idx = first_app.start()
         head, tail = content[:idx], content[idx:]
 
         def _shift_appendix(m):
             n = int(m.group(1))
-            return f'\\setcounter{{chapter}}{{{n - 21}}}' if n >= 21 else m.group(0)
+            return f'\\setcounter{{chapter}}{{{n - 22}}}' if n >= 22 else m.group(0)
 
         tail = re.sub(r'\\setcounter\{chapter\}\{(\d+)\}', _shift_appendix, tail)
         content = head + '\\appendix\n' + tail
 
-    # ── Phase 7: Remove the "X" empty chapter (from zreferences) ──
+    # ── Phase 7: Remove the empty chapter (from zreferences) ──
+    # Older Quarto emitted \chapter{\texorpdfstring{}{}}; current Quarto emits
+    # a bare \chapter{}\label{section}. Both would render as an empty lettered
+    # appendix before References.
     content = re.sub(r'\\chapter\{\\texorpdfstring[^}]*\}[^\n]*\n', '', content)
+    content = re.sub(r'\\chapter\{\}\\label\{section\}[^\n]*\n', '', content)
 
     # ── Phase 8: TOC depth ──
     # Set depth to 2 so sections within chapters show in TOC

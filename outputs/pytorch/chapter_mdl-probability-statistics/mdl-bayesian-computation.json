@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "source": "chapter_mdl-probability-statistics/mdl-bayesian-computation.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:c331c425e61294a34df98bc5aa3a46f822d5b083c2df77144f35a38e6963aaf2",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "bayesian-computation-imports": {
+      "code_fingerprint": "sha256:81e703cb4950d4e170895e8cb478d065a075863abe4d5407525405af88e09586",
+      "kind": "text",
+      "outputs": []
+    },
+    "bayesian-computation-model": {
+      "code_fingerprint": "sha256:5c42459898f8296981fed1106ae9f06ccf4f2a5757224e50d8e1c3899c8b7452",
+      "kind": "text",
+      "outputs": []
+    },
+    "bayesian-computation-grid": {
+      "code_fingerprint": "sha256:c201be74d597934e72b278768c634e711e0402919f82f731b0a6e75be6793f36",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "grid posterior mean: [-0.3335  1.4794]\ngrid posterior sd  : [0.3353 0.2871]\ngrid correlation   : -0.2288\n"
+        }
+      ]
+    },
+    "bayesian-computation-map-predictive": {
+      "code_fingerprint": "sha256:e627345699c1b2ad7d87bbb5529a75d16e7d4a9ec98e9e952eba5be89a484e1b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "MAP                 : [-0.3134  1.4039]\nposterior mean      : [-0.3335  1.4794]\nx=-2.0: plug-in MAP=0.042, posterior predictive=0.044\nx=+0.0: plug-in MAP=0.422, posterior predictive=0.420\nx=+2.0: plug-in MAP=0.924, posterior predictive=0.923\n"
+        }
+      ]
+    },
+    "bayesian-computation-importance": {
+      "code_fingerprint": "sha256:a0cb16cec0f582b819a820a7873a153f87da12c213eecff384debcb65ce1fbb7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "prior proposal    : ESS=  681.1/20000, max weight=0.0029, mean=[-0.3415  1.4898]\nLaplace proposal  : ESS= 4287.3/5000, max weight=0.0025, mean=[-0.3359  1.4772]\n"
+        }
+      ]
+    },
+    "bayesian-computation-metropolis": {
+      "code_fingerprint": "sha256:b8f10417be8b055ed04761f9d14ad10f3ec2965a097353c138c0b210993f3868",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chain 1: acceptance rate=0.525\nchain 2: acceptance rate=0.526\nchain 3: acceptance rate=0.526\nchain 4: acceptance rate=0.527\n"
+        }
+      ]
+    },
+    "bayesian-computation-mcmc-diagnostics": {
+      "code_fingerprint": "sha256:58ec004049fd3d194cf4be9aec31ccd4ba77f1985e2db4f898c66c299af51396",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "split R-hat: [1.0008 1.0004]\nESS        : [4521 4098]\nMCMC mean  : [-0.3317  1.4768]   grid mean: [-0.3335  1.4794]\nMCSE       : [0.005  0.0044]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-bayesian-computation/bayesian-computation-mcmc-diagnostics-1.svg",
+          "bytes": 89462,
+          "sha256": "sha256:8de9575f12045635ad3a1f72708228636ec268c6ef0f6dd1917196bf61e53fdf"
+        }
+      ]
+    },
+    "bayesian-computation-variational": {
+      "code_fingerprint": "sha256:468590e0fa0c01e8f17e8aa0a964f16b5eed3be01d1799790ec33d76fa39f988",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "method       mean                 marginal sd\ngrid       [-0.3335  1.4794] [0.3353 0.2871]\nLaplace    [-0.3134  1.4039] [0.3256 0.2746]\nmean-field [-0.2958  1.4816] [0.3233 0.2733]\n"
+        }
+      ]
+    },
+    "bayesian-computation-comparison-plot": {
+      "code_fingerprint": "sha256:05d3d1a5d543f9fba1dbdf3b83585f6fa6d6fcb8502472cf930c467a65b1b9de",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.svg",
+          "bytes": 140281,
+          "sha256": "sha256:798eb8e10ccc9ebb5fafdf56eb5e97064ff05ea833fec3a8eb172cda69c213c3"
+        }
+      ]
+    }
+  }
+}

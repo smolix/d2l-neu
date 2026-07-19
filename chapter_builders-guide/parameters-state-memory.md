@@ -1,3 +1,8 @@
+```{.python .input}
+%load_ext d2lbook.tab
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
+```
+
 # Parameters, State, and Memory
 :label:`sec_parameters`
 
@@ -10,10 +15,6 @@ training loop updated them. This section opens the box: how to reach any tensor 
 which tensors are trained and which merely travel with the model, what they
 all cost in bytes, and how to share or freeze them.
 
-```{.python .input}
-%load_ext d2lbook.tab
-tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
-```
 
 ```{.python .input #parameters-state-memory-parameters-state-and-memory}
 %%tab pytorch
@@ -1513,6 +1514,14 @@ final iterate depends on its decay and the training schedule; controlled
 examples appear in :numref:`sec_training_recipes`. Like BatchNorm statistics,
 the average is state updated outside backpropagation.
 
+:begin_tab:`pytorch`
+PyTorch ships the mechanism in `torch.optim.swa_utils`: `AveragedModel`
+clones the model once and, given the EMA averaging function, blends the live
+weights into the copy after every optimizer step; evaluation then uses the
+averaged clone. Continuing the fine-tuning above, the average trails the
+moving head:
+:end_tab:
+
 :begin_tab:`jax`
 In optax the average is one more piece of explicit state. `optax.ema` is a
 transformation like any other: feed it the weights after each step, in place
@@ -1536,6 +1545,18 @@ one dictionary it is a short loop: copy the trainable leaves once, then blend
 the new weights in after each step. Continuing the fine-tuning above, the
 average trails the moving head:
 :end_tab:
+
+```{.python .input #parameters-state-memory-freezing-parameters-5}
+%%tab pytorch
+ema_model = torch.optim.swa_utils.AveragedModel(
+    finetune, multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.9))
+for _ in range(5):
+    finetune(X).sum().backward()
+    head_opt.step()
+    head_opt.zero_grad()
+    ema_model.update_parameters(finetune)
+float((ema_model.module[3].bias - finetune[3].bias).detach().abs().max())
+```
 
 ```{.python .input #parameters-state-memory-freezing-parameters-5}
 %%tab jax

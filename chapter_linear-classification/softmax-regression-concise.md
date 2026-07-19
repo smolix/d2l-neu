@@ -419,8 +419,8 @@ $-104$.
 ::: {.d2l-note .warn}
 Feed the from-scratch softmax the logits $\mathbf{o}=(1000, 0, 0)$:
 $\exp(1000)=\infty$, the ratio is $\infty/\infty=$ `NaN`, and one
-`NaN` poisons the entire backward pass. We watched this happen in §4.4;
-the fused loss below never forms that ratio.
+`NaN` poisons the entire backward pass. We watched this happen in the
+softmax-from-scratch section; the fused loss below never forms that ratio.
 :::
 :::
 
@@ -490,8 +490,8 @@ $\mathrm{lse}(x, 0) = \log(1 + e^x)$. Plot it against $\max(x, 0)$:
 
 ::: {.d2l-note .rule}
 The gap peaks at the **tie** $x = 0$, where it equals
-$\log 2 \approx 0.69$, the bound $\log q$ you proved in §4.1
-(exercise 6), here at $q = 2$. Away from the tie, soft and hard max are
+$\log 2 \approx 0.69$, the bound $\log q$ you proved in the softmax-regression
+section (exercise 6), here at $q = 2$. Away from the tie, soft and hard max are
 indistinguishable.
 :::
 :::
@@ -513,8 +513,8 @@ $$\max_k o_k \;\le\; \mathrm{lse}(\mathbf{o}) \;\le\; \max_k o_k + \log q.$$
 
 ::: {.d2l-note .rule}
 The gap peaks at the **tie** $x = 0$, where it equals
-$\log 2 \approx 0.69$, the bound $\log q$ you proved in §4.1
-(exercise 6), here at $q = 2$. Away from the tie, soft and hard max are
+$\log 2 \approx 0.69$, the bound $\log q$ you proved in the softmax-regression
+section (exercise 6), here at $q = 2$. Away from the tie, soft and hard max are
 indistinguishable.
 :::
 :::
@@ -602,8 +602,8 @@ Same Fashion-MNIST, same 10 epochs, same `Trainer`:
 
 ::: {.col .narrow}
 Converges to the **same ~83–84%** validation accuracy as the
-from-scratch model of §4.4, now in a handful of lines, and with
-the *correct* loss instead of a clamped one.
+from-scratch model of the softmax-from-scratch section, now in a handful of
+lines, and with the *correct* loss instead of a clamped one.
 :::
 :::
 :::

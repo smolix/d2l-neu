@@ -1,0 +1,163 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-neural-networks/decoding.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:d3a59957534bfdbbe1b1b7fb1046126d7a4b15b1669c63f82253935af51db8ef",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "decoding-decoding-and-generation": {
+      "code_fingerprint": "sha256:212824fd147bed1e10f7fdceef3bb97f265be24e13e488375957dff63301a661",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-model-to-decode-from-1": {
+      "code_fingerprint": "sha256:7df5ac05830d480d83c5d13242cee00852c693b3ad3c656d3711fe41c593b2dc",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-model-to-decode-from-2": {
+      "code_fingerprint": "sha256:48a1146703a01a87c728d773eb5479fb7ab81c759cece5530307474ea72fdc5a",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-model-to-decode-from-3": {
+      "code_fingerprint": "sha256:c9a0c068b234f24b33eab4f3e9b55368ae15ada9e4ebb3550925454e70b48a69",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
+          "bytes": 18939,
+          "sha256": "sha256:459d2bc7fbc53c3fb84a323326ef972c3c91b33b6fc3d513a8e9ec03152d5f65"
+        }
+      ]
+    },
+    "decoding-a-model-to-decode-from-4": {
+      "code_fingerprint": "sha256:1ec545754b07730ed6ac151dd3e165c5980987c1443db2aece9064129ef4ff5e",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-greedy-decoding": {
+      "code_fingerprint": "sha256:3de559983450f37af8bf4583a817c8f8af5fad28eaf8f1f62b406d6943d83d07",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "'the time traveller I\\nwas drey to the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the'\n'it seemed to me that I had\\nlittlefort of the\\nshamient, and\\nmind. I was\\nthe bushes\\ndistinct,\\nand the\\nside, I saw the\\nside, I saw the'\n"
+        }
+      ]
+    },
+    "decoding-beam-search-1": {
+      "code_fingerprint": "sha256:7414fa5240b549aa31b845cd91c92c838042707e5fe91db09407c56864e3f3c0",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-beam-search-2": {
+      "code_fingerprint": "sha256:2868bcbf4e6777380f782b067881f067e38e79be209597b2b4238e82639a33e0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=1, score -4.69, distinct-3 0.37: 'the time traveller I\\nwas drey to the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside,'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=4, score -4.08, distinct-3 1.00: 'the time traveller I could friend to the\\ntime. It was a\\nlooking to me. I had a\\npossibly a violently,\\nand I was'\nk=1, score -4.67, distinct-3 0.97: 'it seemed to me that I had\\nlittlefort of the\\nshamient, and\\nmind. I was\\nthe bushes\\ndistinct,\\nand the\\nside,'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=4, score -4.02, distinct-3 0.79: \"it seemed to me that I had\\ndisength of the\\nshall of a\\nback to me.\\n\\n'And here\\n\\n'And here\\n\\n'As I\"\n"
+        }
+      ]
+    },
+    "decoding-a-unified-sampler-1": {
+      "code_fingerprint": "sha256:da46afbd506a299548c7e2e111ed829ced262d5d7744db17e76a0b5026c12378",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-unified-sampler-2": {
+      "code_fingerprint": "sha256:9165c28146d7344f08ddc3497128406ac325436e8be31d53a6180bf7d5f2f0a8",
+      "kind": "text",
+      "outputs": []
+    },
+    "decoding-a-unified-sampler-3": {
+      "code_fingerprint": "sha256:9ab99e3bc1ddfc838d98255c1acb519775ab3fb30b448009b8eca77898375ab9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "greedy: 0\n{'k': 2} [0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1]\n{'p': 0.85} [0, 2, 1, 0, 0, 0, 0, 1, 1, 1, 0, 2, 2, 1, 1]\n{'min_p': 0.5} [1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0]\n"
+        }
+      ]
+    },
+    "decoding-one-distribution-three-cutoffs-1": {
+      "code_fingerprint": "sha256:930d722f552be7e06385d0dd97e7612d4b1f75c591cbdfdcdec2412addc230e0",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<matplotlib.legend.Legend at 0x7f8b3997db80>"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
+          "bytes": 47887,
+          "sha256": "sha256:0ff5b0f355ab302bd21c5265cfbe93c8e0accceb8b7de8791884853b25804250"
+        }
+      ]
+    },
+    "decoding-one-distribution-three-cutoffs-2": {
+      "code_fingerprint": "sha256:846e8bb689c5be78af79b4fec4d9affdb780b889474309a7f69c132bf33f2372",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "'the time traveller': top prob 0.25, top-k keeps 20, top-p keeps 93, min-p keeps 9\n'it seemed to me that': top prob 0.29, top-k keeps 20, top-p keeps 95, min-p keeps 10\n"
+        }
+      ]
+    },
+    "decoding-the-same-prefix-under-every-strategy-1": {
+      "code_fingerprint": "sha256:78015e3a916818d5dbc0aaab6547edfe81bfa56ce933608d095414ea43131b15",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=0.5: \"the time traveller, I had\\ntheless take the speak\\nine was house, I had the balance in this\\nprise.\\n\\n'I looked not\\nbeenions, the vaguely a\"\nT=1.0: 'the time traveller with\\nbacking pl in one as some where I wan with, an in the sphinx of them again as it intmsk--I find on the spleidort. And now all the atheblement of even'\nT=2.0: 'the time traveller o he\\ns gr�neps before� min not min\\npswod tob examkass-eryasby� en obkenedally am sl oniult�ensong had!ple is-th isple'\n"
+        }
+      ]
+    },
+    "decoding-the-same-prefix-under-every-strategy-2": {
+      "code_fingerprint": "sha256:7200e8fcc9d4dd8fbcf75c3bea7246edda4a9e12cba8a032fe136cb8f9195563",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " greedy (distinct-3 0.29): 'the time traveller I\\nwas drey to the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the\\nside, I saw the'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  T=1.0 (distinct-3 1.00): 'the time traveller with\\nbacking pl in one as some where I wan with, an in the sphinx of them again as it intmsk--I find on the spleidort. And now all the atheblement of even'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  top-k (distinct-3 1.00): 'the time traveller the\\ntime wastingoors I reme.\\nThe Time,\\nand\\nwere, perhaps, I began idea cheerious. The thingbf in a\\nreal exicusible, as'\n  top-p (distinct-3 1.00): 'the time traveller. I had\\nuate on\\nmoo out of,\\nbeen air\\nwells, of his lo with a me of simply haray to spred hired. And it into the weimated'\n  min-p (distinct-3 0.98): 'the time traveller, and the little, that they mights a houth, and the line,\\nand the thingsing of a tasss of angth. I had a spread. But the dawn of the parad'\n"
+        }
+      ]
+    }
+  }
+}

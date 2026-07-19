@@ -1218,8 +1218,11 @@ the current iterate :cite:`Nocedal.Wright.2006`.
   objectives such as GANs and adversarial training. **Weight decay** is the
   flagship application: the penalty
   $\lambda\|\mathbf{w}\|^2$ and the constraint $\|\mathbf{w}\|^2 \le r^2$
-  share one KKT stationarity equation, exactly interchangeable for convex
-  losses, locally and heuristically for deep networks.
+  share one KKT stationarity equation. Under convexity and suitable regularity,
+  an active constraint and its optimal multiplier connect corresponding
+  solutions; inactive constraints, zero multipliers, and nonunique solutions
+  prevent a one-to-one correspondence. For deep networks the analogy is local
+  and heuristic.
 * Multipliers are **shadow prices**: $\lambda_i^\star = -\partial p^\star/\partial u_i$
   measures what relaxing constraint $i$ is worth: $1/w$ in
   water-filling, and the reason slack constraints cost nothing.
@@ -1598,8 +1601,9 @@ Verified on ridge regression, where the theorem is exact:
 @!constrained-weight-decay
 
 ::: {.d2l-note}
-One number, three readings: **weight decay** (§3.7), a norm budget's
-shadow price, and a Gaussian prior (§25.3).
+One number, three readings: **weight decay** (the weight-decay section), a
+norm budget's shadow price, and a Gaussian prior (the maximum-likelihood
+section).
 :::
 :::
 

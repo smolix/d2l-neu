@@ -1,3 +1,8 @@
+```{.python .input}
+%load_ext d2lbook.tab
+tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
+```
+
 # Numerics: Dtypes and Mixed Precision
 :label:`sec_numerics`
 
@@ -14,10 +19,6 @@ exponent, mantissa) see :numref:`sec_mdl-numerical-stability-conditioning`;
 here we ask the practical questions: when does it break, and which switch do
 I flip.
 
-```{.python .input}
-%load_ext d2lbook.tab
-tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
-```
 
 ```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
 %%tab pytorch

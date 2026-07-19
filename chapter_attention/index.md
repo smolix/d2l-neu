@@ -4,7 +4,7 @@
 A recurrent network reads a sequence the way a clerk with one notepad
 reads a ledger: each entry is folded into the running summary, and by the
 end the summary is all that remains. :numref:`chap_rnn` built models of
-exactly this shape and :numref:`chap_modern-rnn` will confront their
+exactly this shape and :numref:`chap_modern_rnn` will confront their
 limit directly: a fixed-size state must eventually discard something,
 and the model cannot know at reading time what it will be asked later.
 Attention removes the constraint by refusing to summarize. It keeps
@@ -54,28 +54,30 @@ model, ending with an experiment on what happens beyond the training
 length — whose outcome is not what the folklore promises.
 :numref:`sec_attention-at-scale` faces the price: computing every
 query–key pair is quadratic in sequence length, and we measure it, then
-implement the three escapes — computing exact attention without ever
+implement the three escapes: computing exact attention without ever
 materializing the score matrix, restricting it to a window, and
 linearizing it, which turns attention back into a recurrence and hands
-the story to :numref:`chap_modern-rnn`. :numref:`sec_what-attention-computes`
+the story to :numref:`chap_modern_rnn`. :numref:`sec_what-attention-computes`
 closes by asking what trained attention layers actually do, and answers
 with running code: a two-layer attention-only model visibly learns an
 induction circuit — find the previous occurrence of the current token,
 copy what followed it — and that small mechanism is the clearest
 laboratory example of how in-context learning arises.
 
-Along the way we train exactly one model, a character-level language
-model a few blocks deep (:numref:`sec_positional-information`), and use
-it twice; everything else runs in seconds on synthetic data chosen so
+Along the way we train one model *architecture*: a character-level,
+attention-only language model a few blocks deep, introduced in
+:numref:`sec_positional-information` and trained afresh on a different
+task in :numref:`sec_what-attention-computes`, with no run longer than
+about a minute. Everything else executes in seconds on data chosen so
 that the phenomenon under study is unmistakable. A word on what this
-chapter is not. It builds no transformer — no feed-forward layers, no
-normalization, no training recipes; that assembly, and the architecture
+chapter is not. It builds no transformer (no feed-forward layers, no
+normalization, no training recipes); that assembly, and the architecture
 zoo around it, is :numref:`chap_transformers`. It says nothing about
 optimizers, which have :numref:`chap_optimization` to themselves. And it
 treats the efficient-attention literature with deliberate economy: a
 decade of approximations is summarized in a paragraph, because the
 variants that survived are the ones we implement. Where attention
-touches state-space models, :numref:`chap_modern-rnn` owns the
+touches state-space models, :numref:`chap_modern_rnn` owns the
 recurrence side of the correspondence.
 
 ```toc
@@ -111,7 +113,7 @@ are freely accessible online.
 **The cost of attention**
 
 - [FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness — Dao et al. (2022)](https://arxiv.org/abs/2205.14135) — the industrial form of :numref:`sec_attention-at-scale`'s chunked online-softmax cell: exact attention, quadratic time, linear memory, organized around memory traffic rather than arithmetic.
-- [Transformers are RNNs — Katharopoulos et al. (2020)](https://arxiv.org/abs/2006.16236) — the linear-attention equivalence that :numref:`sec_attention-at-scale` verifies numerically, and the cleanest bridge between this chapter and :numref:`chap_modern-rnn`.
+- [Transformers are RNNs — Katharopoulos et al. (2020)](https://arxiv.org/abs/2006.16236) — the linear-attention equivalence that :numref:`sec_attention-at-scale` verifies numerically, and the cleanest bridge between this chapter and :numref:`chap_modern_rnn`.
 - [The Transformer Family v2.0 — Lilian Weng (2023)](https://lilianweng.github.io/posts/2023-01-27-the-transformer-family-v2/) — a taxonomy of the attention-variant design space; the map for which :numref:`sec_attention-at-scale` implements the surviving territory.
 
 **What attention computes**

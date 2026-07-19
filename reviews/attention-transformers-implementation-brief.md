@@ -97,7 +97,16 @@ flagging it:
 | `TinyCharLM` (working name) | A4 | attention-only char-LM: embed + stacked attention (+RoPE flag) + tied head; reused by A6 |
 | `TransformerBlock` | B1 | configurable: `norm∈{'layer','rms'}`, `act∈{'gelu','swiglu'}`, `ffn_factory=None`, `attn_factory=None` (default builds `d2l.MultiHeadAttention`; B3 swaps in a GQA attention), pre/post flag |
 | `GPT` (or `GPTLM`) | B2 | takes block config + `pos∈{'learned','rope'}`; pluggable FFN factory (B6) and attn factory (B3); RoPE implemented internally (self-contained class, mirroring `TinyCharLM._rope` — do not import A4's teaching `rope()`) |
+| `FeedForward` | B1 | `(num_hiddens, act='swiglu'|'gelu', bias=False[, rngs])`; the block constructs it (added to registry post-hoc, shipped) |
+| `GQAAttention` (name may vary) | B3 | grouped-query attention pluggable via `attn_factory`; must accept the `(queries, keys, values, valid_lens)` call shape; JAX returns `(output, weights_or_None)` |
 | `PatchEmbedding`, `ViTBlock`, `ViT` | B5 | carried over from the old file, PT+JAX `#@save` (old file saved them only on the TF tab) |
+
+Shipped factory contracts (B1/B2, binding for B3/B6/B7): PT factories take no
+args; JAX factories take `rngs`. `TransformerBlock` submodule names are
+`norm1, norm2, attention, ffn` (GPT-2 weight mapping relies on them).
+`GPT.generate(prefix, num_tokens, temperature=1.0, top_k=None)` (PT) /
+`(prefix, num_tokens, seed=0, temperature=1.0, top_k=None)` (JAX, fixed-size
+buffer, jit-compiled once) is B3's naive baseline.
 
 NOT defined in the new chapters: `show_heatmaps` (use `d2l.show_heatmaps`;
 its `#@save` moves to ch. 3 at switchover), `AdditiveAttention` (A2 shows the

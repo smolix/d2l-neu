@@ -405,6 +405,7 @@ class DotProductAttention(nnx.Module):  #@save
         # Swap the last two dimensions of keys with keys.swapaxes(1, 2)
         scores = queries@(keys.swapaxes(1, 2)) / math.sqrt(d)
         attention_weights = masked_softmax(scores, valid_lens)
+        # NNX idiom: return (output, weights); PyTorch stores weights on self
         return self.dropout(attention_weights) @ values, attention_weights
 ```
 

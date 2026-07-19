@@ -282,6 +282,7 @@ class MultiHeadAttention(nnx.Module):  #@save
             queries, keys, values, valid_lens)
         # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
         output_concat = self.transpose_output(output)
+        # NNX idiom: return (output, weights); PyTorch returns output only
         return self.W_o(output_concat), attention_weights
 ```
 
@@ -510,7 +511,7 @@ d2l.show_heatmaps(attention_weights[None],
 Read the map row by row (queries are the letters of "attention", keys the
 letters of "translation"). Three regimes appear. The `i` and `o` queries find
 their unique partners and attend sharply. The `a`, `t`, and `n` queries find
-*two* copies each and split their weight — a single head cannot choose
+*two* copies each and split their weight: a single head cannot choose
 between identical keys, the averaging of the first section in miniature.
 And the `e` query, whose letter does not occur in "translation" at all,
 spreads its weight diffusely: softmax must hand out probability mass

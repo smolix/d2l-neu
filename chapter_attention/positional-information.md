@@ -10,13 +10,13 @@ theorem, then works through the repairs in the order the field adopted them:
 *adding* position vectors to the input (sinusoidal and learned encodings),
 *rotating* queries and keys by position-dependent angles (RoPE, the scheme in
 essentially every current open-weights model), and *biasing* attention scores
-by distance (ALiBi) — or trusting the causal mask to leak position on its own
+by distance (ALiBi), or trusting the causal mask to leak position on its own
 (NoPE). What separates these schemes in practice is not accuracy at the
 training length but *extrapolation*: what happens when a model trained at one
 context length is asked to run at a longer one. To answer that question
 experimentally we build this chapter's shared workhorse, a character-level
 language model whose only trainable machinery is attention, and train it five
-times — once per positional scheme.
+times, once per positional scheme.
 
 ```{.python .input #positional-information}
 %%tab pytorch
@@ -329,8 +329,8 @@ print(f'additive sinusoidal, shifted by  17: max score change '
       f'{jnp.abs(added(17) - added(0)).max():.1e}')
 ```
 
-RoPE's scores are unchanged up to floating-point round-off — at least three
-orders of magnitude below the scores themselves — at every shift, including
+RoPE's scores are unchanged up to floating-point round-off (at least three
+orders of magnitude below the scores themselves) at every shift, including
 one far beyond where any additive table would end; the additive encoding
 moves the scores by an amount comparable to the scores themselves.
 Relative position is now a property of the *architecture*, not something the
@@ -654,10 +654,10 @@ d2l.plot(list(contexts), [ppls[pos] for pos in schemes],
 Two readings of this table, both instructive. At the training context, the
 ranking rewards explicit position information: RoPE comes out best at
 perplexity around 5, the absolute schemes close behind, ALiBi gives up a
-little to its fixed recency prior, and NoPE trails at around 9 — the causal
+little to its fixed recency prior, and NoPE trails at around 9. The causal
 mask does leak position, but weakly at this scale. At four times the
 training context, the ordering inverts. Both absolute schemes degrade badly,
-to several times their training-length perplexity — the learned table because
+to several times their training-length perplexity: the learned table because
 positions past 128 are untrained noise, the sinusoidal one because the model
 has never seen those fingerprints. The striking failure is RoPE: *relative in
 form is not relative in practice*. Its scores depend only on offsets — we
@@ -678,7 +678,7 @@ RoPE's failure at unseen offsets has a distinctive geometry: an offset of
 But the rotation dial is continuous, which suggests a fix no other scheme
 admits: *rescale* the angles so that the deployed range maps back into the
 trained one. Evaluating at length $4L$ with every angle multiplied by $1/4$
-makes position $4\delta$ look like the familiar $\delta$ — interpolation
+makes position $4\delta$ look like the familiar $\delta$: interpolation
 instead of extrapolation. This is *position interpolation*
 :cite:`Chen.Wong.Chen.ea.2023`, which (with a brief fine-tune) extended
 Llama from 2k to 32k context; YaRN :cite:`Peng.Quesnelle.Fan.ea.2024`
@@ -697,12 +697,12 @@ you reproduce both halves.
 Unmasked attention is permutation equivariant: shuffle the tokens and the
 outputs shuffle along, which we proved in one line and verified numerically.
 Absolute position embeddings restore order by adding a position vector to
-each token — sinusoidal tables encode position like a continuous binary
+each token: sinusoidal tables encode position like a continuous binary
 counter, learned tables let the data pick the code but say nothing beyond
 the trained length. The sinusoidal table hides a cleaner idea: shifting
 positions is a rotation of feature pairs. RoPE applies that rotation
 directly to queries and keys, making attention scores depend on relative
-offsets by construction — the scheme of essentially every current
+offsets by construction, the scheme of essentially every current
 open-weights model. ALiBi replaces encodings with a per-head linear distance
 penalty, and NoPE relies on the causal mask's leak of position. Our
 train-short/test-long experiment on an attention-only character model sorted

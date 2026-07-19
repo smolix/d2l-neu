@@ -349,6 +349,7 @@ def chunked_attention(Q, K, V, chunk_size=512):
         return (m_new, s, O, start + Kc.shape[0]), None
     init = (jnp.full((n, 1), jnp.finfo(Q.dtype).min), jnp.zeros((n, 1)),
             jnp.zeros((n, V.shape[-1])), 0)
+    # n must be a multiple of chunk_size; the scan needs equal-sized blocks
     chunks = (K.reshape(-1, chunk_size, d), V.reshape(-1, chunk_size, d))
     (m, s, O, _), _ = jax.lax.scan(block, init, chunks)
     return O / s
@@ -432,8 +433,8 @@ traffic it avoids. The result is exact attention that is faster *and*
 asymptotically smaller, and it ships in every framework as a fused kernel:
 `torch.nn.functional.scaled_dot_product_attention` in PyTorch,
 `jax.nn.dot_product_attention` in JAX. Let's measure it against our naive
-implementation in a realistic configuration—8 heads of dimension 64, half
-precision, $n = 8192$:
+implementation in a realistic configuration (8 heads of dimension 64, half
+precision, $n = 8192$):
 
 ```{.python .input #attention-at-scale-the-bottleneck-is-memory-traffic}
 %%tab pytorch
@@ -630,6 +631,7 @@ def windowed_attention(Q, K, V, w):
 def windowed_attention(Q, K, V, w):
     """Causal sliding-window attention in O(nw) time and memory."""
     d, n = Q.shape[-1], Q.shape[0]
+    # Assumes n is a multiple of w (blocks must tile the sequence exactly)
     Qb = Q.reshape(-1, w, d)                       # (n/w, w, d) query blocks
     KV = jnp.concatenate([jnp.zeros((w, 2 * d)),
                           jnp.concatenate([K, V], axis=-1)])  # Zero-pad
@@ -899,7 +901,7 @@ axes[0].legend();
 
 :begin_tab:`pytorch`
 The picture rewards a careful read. Dense attention's curves bend to slope
-two on the log-log axes—quadratic, as derived—while the windowed
+two on the log-log axes (quadratic, as derived), while the windowed
 mechanism's cost is so small at these sizes that it stays pinned near the
 launch-overhead floor throughout. Linear attention is the instructive
 case. Its memory grows linearly but with the large constant $nd^2$—the
@@ -927,7 +929,7 @@ $n$ around eight thousand the linear form runs several times faster than
 dense attention in our measurements. Its memory column holds a small
 compiler lesson: at moderate lengths the reported temporaries track the
 parallel form's $nd^2$ state materialization, then *drop* at the largest
-sizes—XLA stops materializing the stacked outer products and streams them
+sizes. XLA stops materializing the stacked outer products and streams them
 instead. Under a fusing compiler, what exists in memory is a scheduling
 decision. Both panels aside, the decisive advantage of the linear form is
 the constant-memory *recurrent* mode at generation time; production
@@ -970,7 +972,7 @@ occupy.
 ## Summary
 
 An attention layer costs $4n^2d$ FLOPs and two $n \times n$ activation
-buffers—we verified both against the GPU allocator (and, in JAX, against
+buffers. We verified both against the GPU allocator (and, in JAX, against
 the XLA compiler's own memory report), and the quadratic term dominates the
 layer beyond $n = 2d$. The $n \times n$ matrix, however, is an artifact of
 the naive schedule, not of the mathematics: online softmax maintains a
@@ -980,7 +982,7 @@ is this algorithm engineered to the memory hierarchy, and the fused kernels
 in both frameworks deliver its answer far faster and smaller than the naive
 schedule, because the true bottleneck of attention on modern hardware is
 memory traffic, not arithmetic. Beyond exact attention, sliding windows cut
-the arithmetic to $\mathcal{O}(nw)$ and rely on depth to restore reach—the
+the arithmetic to $\mathcal{O}(nw)$ and rely on depth to restore reach: the
 receptive field grows as $1 + L(w-1)$, a bet deployed in production models.
 Dropping the softmax for a factorizing kernel goes further: the query
 factors out of the attention sum, leaving a $d \times d$ matrix-valued

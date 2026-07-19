@@ -45,7 +45,7 @@ learned latent array that reads an arbitrarily long input, the idea
 behind the Perceiver family and the input adapters of current
 multimodal models. :numref:`sec_vision-transformer` feeds the
 architecture images by cutting them into patch tokens, and lets the
-honest result teach the lesson: at our scale a matched convolutional
+result teach the lesson: at our scale a matched convolutional
 network wins, because the transformer must learn the locality a
 convolution assumes. :numref:`sec_moe` decouples parameters from
 computation with mixture-of-experts layers, where the interesting
@@ -55,7 +55,7 @@ closes with the arithmetic of scale: counting FLOPs, a miniature
 scaling study whose bend reproduces the data-starvation effect behind
 compute-optimal training, and the modern recipe table.
 
-The history is short enough to tell honestly. The 2017 transformer was
+The history is short enough to tell in full. The 2017 transformer was
 an encoder–decoder for translation, normalized after each sublayer,
 with sinusoidal positions and a plain ReLU network. What survived is
 the block; nearly every choice around it changed, and the changes
@@ -99,7 +99,7 @@ record, and the arithmetic of scale. All free unless noted.
 
 **Build-alongs**
 
-- [Let's build GPT: from scratch, in code — Andrej Karpathy (2023)](https://www.youtube.com/watch?v=kCc8FmEb1nY) — the video counterpart of :numref:`sec_gpt`: a character-level GPT assembled and trained in real time; [nanoGPT](https://github.com/karpathy/nanoGPT) and [build-nanogpt](https://github.com/karpathy/build-nanogpt) are its repository forms, and [nanochat](https://github.com/karpathy/nanochat) extends the same discipline to a full chat system with honest dollar costs.
+- [Let's build GPT: from scratch, in code — Andrej Karpathy (2023)](https://www.youtube.com/watch?v=kCc8FmEb1nY) — the video counterpart of :numref:`sec_gpt`: a character-level GPT assembled and trained in real time; [nanoGPT](https://github.com/karpathy/nanoGPT) and [build-nanogpt](https://github.com/karpathy/build-nanogpt) are its repository forms, and [nanochat](https://github.com/karpathy/nanochat) extends the same discipline to a full chat system with stated dollar costs.
 - [The Annotated Transformer — Harvard NLP (2018, refreshed 2022)](https://nlp.seas.harvard.edu/annotated-transformer/) — the original encoder–decoder implemented line by line against the paper; the format this book's executable sections descend from, and the best companion to :numref:`sec_transformer`.
 - [Build a Large Language Model (From Scratch) — Sebastian Raschka (2024)](https://github.com/rasbt/LLMs-from-scratch) — a book-length version of :numref:`sec_transformer-block` through :numref:`sec_kv-cache`, with bonus notebooks for GQA, sliding windows, and from-scratch ports of current open models.
 - [Stanford CS336: Language Modeling from Scratch](https://cs336.stanford.edu/) — the course whose first assignment is this chapter as graded homework: BPE, RMSNorm, RoPE, SwiGLU, causal attention, and the training loop, all from primitives, with lectures on YouTube.

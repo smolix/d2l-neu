@@ -43,10 +43,11 @@ scaled dot products, why the $1/\sqrt{d}$ factor is a matter of softmax
 saturation rather than convention, and masking, the small bookkeeping
 device that lets one implementation serve padded batches and causal
 language models alike. :numref:`sec_multihead-attention` runs several
-attention functions in parallel and shows why one head is provably not
-enough, then separates the two wirings — self-attention, where a
-sequence queries itself, and cross-attention, where one sequence queries
-another. :numref:`sec_positional-information` restores what the lookup
+attention functions in parallel and proves, on the smallest task that
+defeats it, that a single head must average what a query asks for
+separately while two heads recover it, then separates the two wirings —
+self-attention, where a sequence queries itself, and cross-attention,
+where one sequence queries another. :numref:`sec_positional-information` restores what the lookup
 deliberately ignores: order. Attention is permutation-equivariant, so
 position must be injected, and we follow the idea from sinusoidal
 encodings to the rotary embeddings used by essentially every current

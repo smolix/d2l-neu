@@ -22,8 +22,8 @@ patch as a token, and run an unmodified transformer encoder over the
 resulting sequence. Trained on enough images (300 million of them), it beat
 the best CNNs of the day.
 
-We build that model here and train it on Fashion-MNIST, where the honest
-headline is that it *loses* to a CNN of the same parameter count. The loss is
+We build that model here and train it on Fashion-MNIST, where the headline
+result is that it *loses* to a CNN of the same parameter count. The loss is
 the lesson: a convolutional network gets locality and translation
 equivariance by construction, while a transformer must learn them from data,
 and 60,000 images are not enough to close the gap that 300 million close
@@ -87,6 +87,10 @@ class PatchEmbedding(nn.Module):  #@save
                 return (x, x)
             return x
         img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
+        # A partial trailing patch would silently shrink the token grid
+        assert img_size[0] % patch_size[0] == 0 and \
+            img_size[1] % patch_size[1] == 0, \
+            'image size must be divisible by the patch size'
         self.num_patches = (img_size[0] // patch_size[0]) * (
             img_size[1] // patch_size[1])
         self.conv = nn.LazyConv2d(num_hiddens, kernel_size=patch_size,
@@ -109,10 +113,14 @@ class PatchEmbedding(nnx.Module):  #@save
                 return (x, x)
             return x
         img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
+        # A partial trailing patch would silently shrink the token grid
+        assert img_size[0] % patch_size[0] == 0 and \
+            img_size[1] % patch_size[1] == 0, \
+            'image size must be divisible by the patch size'
         self.num_patches = (img_size[0] // patch_size[0]) * (
             img_size[1] // patch_size[1])
         self.conv = nnx.Conv(num_channels, num_hiddens, kernel_size=patch_size,
-                             strides=patch_size, padding='SAME', rngs=rngs)
+                             strides=patch_size, padding='VALID', rngs=rngs)
 
     def __call__(self, X):
         # Output shape: (batch size, no. of patches, no. of channels)
@@ -363,11 +371,11 @@ does with the same ten epochs.
 ### Do the Position Embeddings Discover the Grid?
 
 First, though, let us look inside. The position embeddings started as noise,
-and nothing in the training signal ever named a row or a column. Fully
-trained ViTs famously work out the grid anyway: in the original paper's
-analysis, each position's embedding is most similar to the embeddings of its
-spatial neighbors, with clear row and column bands — two-dimensional
-structure the model inferred from the data alone
+and nothing in the training signal ever named a row or a column. In fully
+trained ViTs the embeddings famously end up reflecting the grid anyway: in
+the original paper's analysis, each position's embedding is most similar to
+the embeddings of its spatial neighbors, with clear row and column bands —
+two-dimensional structure induced by the data alone
 :cite:`Dosovitskiy.Beyer.Kolesnikov.ea.2021`. Does our small model already
 show this? For each of the 36 patch positions we take its embedding vector,
 compute its cosine similarity with the embeddings of all 36 positions, and
@@ -413,10 +421,10 @@ and several maps show a diffuse halo around their own cell or a weak band
 along their own column — but the values are small and the pattern is easy
 to miss without the summary statistics. Compare this with the crisp
 row-and-column structure that emerges in fully trained ViTs, and the state
-of our model is clear: it has begun to infer the geometry it was never
-told, and at this scale of data and training it has not gotten far. Keep
-that in mind as we turn to an architecture that does not need to infer the
-geometry at all.
+of our model is clear: the geometry it was never told is beginning to show
+in its embeddings, and at this scale of data and training it has not
+gotten far. Keep that in mind as we turn to an architecture that does not
+need to learn the geometry at all.
 
 ### A Convolutional Baseline at the Same Budget
 
@@ -499,11 +507,12 @@ Same parameter count, same data, same number of epochs — and the CNN wins
 by several points, about 90–92% against the ViT's 86–87%, a margin well
 beyond the run-to-run noise of these ten-epoch runs. The gap is what the
 convolutional prior is worth at this scale. Locality and translation
-equivariance are theorems the CNN gets for free; the transformer must buy
-the same facts with data, and we just watched how slowly that purchase
-proceeds: after ten epochs its position embeddings have barely begun to
-encode the grid. Nothing here says transformers are worse at vision. It
-says that *at 60,000 images* the architecture with the stronger prior wins,
+equivariance are a strong prior the CNN has by construction; the
+transformer must buy the same facts with data, and we just watched how
+slowly that purchase proceeds: after ten epochs its position embeddings
+have barely begun to encode the grid. Nothing here says transformers are
+worse at vision. It says that *at 60,000 images* the architecture with
+the stronger prior wins,
 and it sets the stakes for the discussion below, where the data budget
 grows by four orders of magnitude and the verdict flips.
 
@@ -655,7 +664,7 @@ reshaped into the 6×6 grid — position $(i,j)$ shows its map at $(i,j)$:
   slightly negative — a faint halo, a weak column band here and there.
 
 ::: {.d2l-note}
-The model has *begun* to infer the geometry it was never told — and at
+The geometry the model was never told is *beginning* to show — and at
 this scale it has not gotten far.
 :::
 :::

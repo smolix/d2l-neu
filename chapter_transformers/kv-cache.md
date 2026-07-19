@@ -7,10 +7,13 @@ section measures that waste, eliminates it, and then studies what the fix
 costs. The fix is the *KV cache*: because causal attention never lets the
 past depend on the future, the keys and values of every token already
 generated are final the moment they are computed, and can simply be stored.
-Caching turns generation from quadratic work into linear work, but it
-converts a compute problem into a *memory* problem, and the second half of
-this section is about the bill. We derive the cache-size formula and check
-it against the allocator, see why generating tokens is bound by memory
+Caching makes the dominant dense-layer work linear in the generated length
+— attention itself still reads the whole growing cache at every step, so
+its cumulative cost stays quadratic, a term that is real but subdominant at
+the sizes we run — and it converts a compute problem into a *memory*
+problem, so the second half of this section is about the bill. We derive
+the cache-size formula and check it against the allocator, see why
+generating tokens is bound by memory
 bandwidth while reading a prompt is bound by arithmetic, and then shrink
 the cache three ways: sharing keys and values across heads (MQA and GQA),
 compressing them to a low-rank latent (the idea behind MLA), and bounding
@@ -93,7 +96,10 @@ We extend the `CausalAttention` of :numref:`sec_gpt` with a
 dictionary of two tensors that we concatenate onto. Two cases arrive
 here: *prefill*, where the whole prompt enters at once into an empty
 cache and the mask must be causal, and *decode*, where a single token
-attends to everything stored.
+attends to everything stored. These are the only two shapes the step
+supports — appending a multi-token chunk to a non-empty cache would need
+an offset causal mask that the `is_causal` flag cannot express, so the
+assert below refuses the combination.
 :end_tab:
 
 :begin_tab:`jax`
@@ -129,6 +135,9 @@ def rope(x, offset=0):
 def forward_step(self, X, cache):
     """Attention for the new tokens X against cached keys and values."""
     B, T, D = X.shape
+    assert not (cache and T > 1), \
+        'chunked append to a non-empty cache is unsupported ' \
+        '(is_causal would misalign the mask)'
     q, k, v = self.W_qkv(X).chunk(3, -1)
     q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
                for u in (q, k, v))
@@ -226,6 +235,9 @@ def cached_forward(model, ks, vs, X, t):
         q, k, v = (u.reshape(B, T, attn.num_heads, -1) for u in (q, k, v))
         if attn.rope:
             q, k = rope(q, t), rope(k, t)
+        # Callers must keep t + T <= max_len: an out-of-range write does
+        # not fail here -- dynamic_update_slice clamps its start index
+        # silently. (t is traced under jit, so generate_cached asserts.)
         ks = jax.lax.dynamic_update_slice(ks, k[None], (i, 0, t, 0, 0))
         vs = jax.lax.dynamic_update_slice(vs, v[None], (i, 0, t, 0, 0))
         Y = jax.nn.dot_product_attention(q, ks[i], vs[i], mask=mask)
@@ -237,6 +249,7 @@ def cached_forward(model, ks, vs, X, t):
 def generate_cached(self, prefix, num_tokens, seed=0, temperature=1.0,
                     top_k=None):
     """Sample as generate does, but never recompute the prefix."""
+    assert len(prefix) + num_tokens <= self.max_len, 'cache overflow'
     ks, vs = init_cache(self, 1, self.max_len)
     logits, ks, vs = cached_forward(self, ks, vs,
                                     jnp.asarray(prefix)[None], jnp.array(0))
@@ -425,17 +438,17 @@ for name, gen in (('naive ', model.generate),
 
 :begin_tab:`pytorch`
 Several times faster at this prompt length, with the naive quadratic
-growing worse from here and the cached line staying put. Every serving
-system in production generates this way; "time to first token" is our
+growing worse from here and the cached line staying put. Production
+serving systems generate this way; "time to first token" is our
 prefill call, and "tokens per second" is the cached decode loop.
 :end_tab:
 
 :begin_tab:`jax`
 Several times faster at this prompt length — each timing includes one XLA
 compilation for its shapes, so the steady-state gap is larger still, as
-the per-step curve above shows. Every serving system in production
-generates this way; "time to first token" is our prefill call, and
-"tokens per second" is the cached decode loop.
+the per-step curve above shows. Production serving systems generate this
+way; "time to first token" is our prefill call, and "tokens per second"
+is the cached decode loop.
 :end_tab:
 
 ## The Memory Bill
@@ -628,6 +641,8 @@ class GQAAttention(nn.Module):  #@save
     def __init__(self, num_hiddens, num_heads, num_kv_heads, bias=False,
                  rope=False, causal=True):
         super().__init__()
+        assert num_hiddens % num_heads == 0
+        assert num_heads % num_kv_heads == 0
         self.num_heads, self.num_kv_heads = num_heads, num_kv_heads
         self.head_dim = num_hiddens // num_heads
         self.rope, self.causal = rope, causal
@@ -683,6 +698,8 @@ class GQAAttention(nnx.Module):  #@save
     def __init__(self, num_hiddens, num_heads, num_kv_heads, bias=False,
                  rope=False, causal=True, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
+        assert num_hiddens % num_heads == 0
+        assert num_heads % num_kv_heads == 0
         self.num_heads, self.num_kv_heads = num_heads, num_kv_heads
         self.head_dim = num_hiddens // num_heads
         self.rope, self.causal = rope, causal
@@ -841,8 +858,8 @@ for G in (8, 4, 2, 1):
 The cache shrinks eightfold from top to bottom of the table; the loss
 column does not move outside run-to-run noise (rerunning any row with a
 different seed shifts it by a few hundredths, about the spread of the
-whole column). At this scale, that is the honest claim: the sharing is
-free. It would be too strong a conclusion to carry to large models on our
+whole column). At this scale the sharing costs nothing we can measure.
+That conclusion would be too strong to carry to large models on our
 evidence alone, but the large-scale literature reaches a similar verdict
 by more careful means: full MQA costs a measurable sliver of quality,
 while GQA at $H/8$ matches multi-head attention in the ablations of
@@ -1092,9 +1109,12 @@ indistinguishable from the full model's (the tiny difference between the
 two numbers is single-passage noise, and we make nothing of it). At rank
 128 the model measurably worsens but remains coherent. The premise
 holds: what attention actually reads back from its cache lives in a far
-lower-dimensional space than the cache stores, and a model *trained* to
-write through such a bottleneck, rather than truncated after the fact,
-can push the compression much further.
+lower-dimensional space than the cache stores. The six-fold saving is
+notional here — our SVD basis is fitted to this very passage and would
+itself need storing — and that is exactly what MLA supplies: one
+projection, trained once and shared globally, that the model learns to
+write through, pushing the compression much further than after-the-fact
+truncation can.
 
 ### A Window Needs a Sink
 
@@ -1149,8 +1169,9 @@ is. This is the *attention sink* :cite:`Xiao.Tian.Chen.ea.2024`: softmax
 must hand out probability mass that sums to one, a head that currently
 has nothing to retrieve needs somewhere harmless to put it, and training
 converges on the one position every query can always see. The first
-token becomes the designated dumping ground, its *value* contributing
-little more than a learned bias.
+token becomes the designated dumping ground — an observation about the
+attention *weights*; how much its value vector actually contributes to
+the output is a separate quantity, which we have not measured.
 
 Now the trap springs. Evict that token, as a naive rolling buffer of the
 most recent $w$ entries would, and every head's dumping ground vanishes:
@@ -1231,7 +1252,9 @@ to :numref:`chap_performance`.
 
 Naive generation reruns the full forward pass per token, quadratic in
 the length of the text; since causality freezes every past token's keys
-and values, storing them turns generation linear. The cached step is
+and values, storing them makes the dominant dense-layer work linear
+(attention still reads the growing cache, a cumulative quadratic that
+stays subdominant at our sizes). The cached step is
 mostly plumbing — a per-layer K/V buffer and a position offset for RoPE
 (in JAX, a preallocated fixed-shape buffer with index writes, so one
 compiled function serves every step) — and it leaves the logits
@@ -1248,7 +1271,7 @@ the oracle version of its premise checks out on GPT-2 (a rank-256
 truncation of the 1536-wide KV cache leaves the loss unchanged on our
 passage). Bounding length with a sliding window fails catastrophically
 if it evicts the *attention sink* (the first token, where trained
-softmax attention parks a third to a half of its mass as a no-op), and
+softmax attention parks a third to a half of its weight), and
 keeping even one sink token restores the model; gpt-oss builds the sink
 in as a learned logit. Linear attention removes the cache entirely, and
 hybrid stacks interleave the two regimes.
@@ -1444,8 +1467,9 @@ Attack the factors of the cache formula:
 :::
 
 ::: {.slide title="Recap"}
-- Causality freezes the past: cache K/V, decode goes quadratic → linear,
-  logits unchanged.
+- Causality freezes the past: cache K/V — the dense work goes quadratic →
+  linear (cache reads stay cumulatively quadratic, subdominant), logits
+  unchanged.
 - Cache bytes $= 2 L\, n_\textrm{kv} d_\textrm{head}\, n\, b$ — verified
   against the allocator; it *moves* every step.
 - Prefill compute-bound, decode memory-bound: cache bytes are the currency

@@ -396,13 +396,13 @@ def translate_directives(text):
     # ── Inline equation references ──
     # eqref always produces eq- prefix
     text = re.sub(
-        r':eqref:`([^`]+)`',
+        r':eqref:`([^`\s]+)`',
         lambda m: f'@{eqlabel_to_eq(m.group(1))}',
         text)
 
     # ── Numbered cross-references (single or double backticks) ──
     text = re.sub(
-        r':numref:`{1,2}([^`]+)`{1,2}',
+        r':numref:`{1,2}([^`\s]+)`{1,2}',
         lambda m: f'@{convert_label_id(m.group(1))}',
         text)
 
@@ -418,7 +418,7 @@ def translate_directives(text):
 
     # ── Named cross-references ──
     text = re.sub(
-        r':ref:`([^`]+)`',
+        r':ref:`([^`\s]+)`',
         lambda m: f'@{convert_label_id(m.group(1))}',
         text)
 

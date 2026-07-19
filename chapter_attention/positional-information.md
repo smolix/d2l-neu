@@ -15,8 +15,9 @@ by distance (ALiBi), or trusting the causal mask to leak position on its own
 training length but *extrapolation*: what happens when a model trained at one
 context length is asked to run at a longer one. To answer that question
 experimentally we build this chapter's shared workhorse, a character-level
-language model whose only trainable machinery is attention, and train it five
-times, once per positional scheme.
+language model in which attention is the only trainable machinery that mixes
+information across positions, and train it five times, once per positional
+scheme.
 
 ```{.python .input #positional-information}
 %%tab pytorch
@@ -67,9 +68,10 @@ because $\boldsymbol{\Pi}^\top \boldsymbol{\Pi} = \mathbf{I}$. Concatenating
 heads and applying $\mathbf{W}_o$ row-wise preserves the property, so it
 holds for multi-head attention too. $\blacksquare$
 
-Shuffle the input, and the output shuffles along — attention computes a
-bag-of-tokens summary in which order plays no role. The claim is easy to
-check on the multi-head layer of :numref:`sec_multihead-attention`:
+Shuffle the input, and the output shuffles along: each token's output is
+unchanged, only relabeled by the permutation, so nothing the layer computes
+depends on where in the sequence a token sits. The claim is easy to check
+on the multi-head layer of :numref:`sec_multihead-attention`:
 
 ```{.python .input #positional-information-attention-ignores-order}
 %%tab pytorch
@@ -247,9 +249,10 @@ the same amount rotates query and key *together*, so the angle between them —
 and with it the dot product — never changes. Position vanishes from the
 score except through the offset. Two further properties come free: rotations
 preserve norms, so RoPE never inflates or shrinks a token's content, and the
-geometric frequency ladder means low-frequency pairs barely rotate over a
-sentence (carrying content) while high-frequency pairs discriminate
-neighboring positions sharply. Only queries and keys are rotated; values pass
+geometric frequency ladder means low-frequency pairs rotate only slightly
+across a sentence while high-frequency pairs discriminate neighboring
+positions sharply — every pair carries content; the ladder only sets how
+fast position turns it. Only queries and keys are rotated; values pass
 through untouched. (Learned *relative*-position embeddings
 :cite:`shaw2018self,huang2018music` pursued the same goal by adding trained
 offset vectors into the score; RoPE gets it with no parameters at all.)
@@ -329,10 +332,10 @@ print(f'additive sinusoidal, shifted by  17: max score change '
       f'{jnp.abs(added(17) - added(0)).max():.1e}')
 ```
 
-RoPE's scores are unchanged up to floating-point round-off (at least three
-orders of magnitude below the scores themselves) at every shift, including
-one far beyond where any additive table would end; the additive encoding
-moves the scores by an amount comparable to the scores themselves.
+RoPE's scores are unchanged up to floating-point round-off (three or more
+orders of magnitude below the score scale in these runs) at every shift,
+including one far beyond where any additive table would end; the additive
+encoding moves the scores by an amount comparable to the scores themselves.
 Relative position is now a property of the *architecture*, not something the
 model must discover. Whether that property survives contact with training
 data — in particular, with offsets the training data never contained — is a
@@ -359,10 +362,12 @@ $$
 :eqlabel:`eq_alibi-def`
 
 Each head discounts far-away tokens at its own geometric rate — head 1
-steeply (local view), head $H$ barely (global view). The bias depends only on
-distance, so it is defined for every context length, and a distance of 400 is
-merely "further" rather than "never seen". The cost is a fixed recency prior
-the model cannot fully unlearn.
+steeply (local view), head $H$ barely (global view); the slope formula
+$2^{-8h/H}$ is the paper's choice for head counts that are powers of two,
+with other $H$ interpolating the same geometric sequence. The bias depends
+only on distance, so it is defined for every context length, and a distance
+of 400 is merely "further" rather than "never seen". The cost is a fixed
+recency prior the model cannot fully unlearn.
 
 *NoPE* (no positional encoding) pushes the loophole from our proposition to
 its logical end :cite:`Kazemnejad.Padhi.Ramamurthy.ea.2023`: in a *causal*
@@ -380,9 +385,15 @@ below — the chapter's shared specimen, reused later for a look inside
 trained attention — is deliberately minimal: a token embedding, a stack of
 residual causal attention blocks, and an output head tied to the embedding
 :cite:`Press.Wolf.2017`. There is no feed-forward network and no
-normalization layer: every trainable notion the model forms passes through
-attention, which is the point. It is the attention-only cousin of the
-`TinyLM` of :numref:`subsec_tinylm`, and the positional scheme is a
+normalization layer, and the attention projections carry no bias terms by
+default (a `bias` switch restores them;
+:numref:`sec_what-attention-computes` has one use for it): besides the
+embedding table (which doubles as the output head), attention
+is the only trainable machinery, and all mixing of information across
+positions passes through it — which is the point, and what makes the model
+exactly analyzable when we dissect it in
+:numref:`sec_what-attention-computes`. It is the attention-only cousin of
+the `TinyLM` of :numref:`subsec_tinylm`, and the positional scheme is a
 constructor argument taking `'learned'`, `'sinusoidal'`, `'rope'`,
 `'alibi'`, or `'none'`, implemented exactly as in the equations above.
 
@@ -391,7 +402,7 @@ constructor argument taking `'learned'`, `'sinusoidal'`, `'rope'`,
 class TinyCharLM(nn.Module):  #@save
     """Attention-only character-level language model."""
     def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
-                 pos='rope', max_len=512):
+                 pos='rope', max_len=512, bias=False):
         super().__init__()
         self.num_heads, self.pos = num_heads, pos
         self.token_emb = nn.Embedding(vocab_size, num_hiddens)
@@ -405,8 +416,8 @@ class TinyCharLM(nn.Module):  #@save
             P = torch.stack([torch.sin(theta), torch.cos(theta)], -1)
             self.register_buffer('P', P.reshape(max_len, num_hiddens))
         self.blks = nn.ModuleList([nn.ModuleDict(dict(
-            qkv=nn.Linear(num_hiddens, 3 * num_hiddens),
-            proj=nn.Linear(num_hiddens, num_hiddens)))
+            qkv=nn.Linear(num_hiddens, 3 * num_hiddens, bias=bias),
+            proj=nn.Linear(num_hiddens, num_hiddens, bias=bias)))
             for _ in range(num_blks)])
 
     def _rope(self, x):
@@ -472,7 +483,7 @@ class TinyCharLM(nn.Module):  #@save
 class TinyCharLM(nnx.Module):  #@save
     """Attention-only character-level language model."""
     def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
-                 pos='rope', max_len=512, rngs=None):
+                 pos='rope', max_len=512, bias=False, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
         self.num_heads, self.pos = num_heads, pos
         init = nnx.initializers.normal(0.02)
@@ -487,8 +498,10 @@ class TinyCharLM(nnx.Module):  #@save
             P = jnp.stack([jnp.sin(theta), jnp.cos(theta)], -1)
             self.P = nnx.Cache(P.reshape(max_len, num_hiddens))
         self.blks = nnx.List([nnx.Dict(
-            qkv=nnx.Linear(num_hiddens, 3 * num_hiddens, rngs=rngs),
-            proj=nnx.Linear(num_hiddens, num_hiddens, rngs=rngs))
+            qkv=nnx.Linear(num_hiddens, 3 * num_hiddens, use_bias=bias,
+                           rngs=rngs),
+            proj=nnx.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                            rngs=rngs))
             for _ in range(num_blks)])
 
     def _rope(self, x):
@@ -653,9 +666,10 @@ d2l.plot(list(contexts), [ppls[pos] for pos in schemes],
 
 Two readings of this table, both instructive. At the training context, the
 ranking rewards explicit position information: RoPE comes out best at
-perplexity around 5, the absolute schemes close behind, ALiBi gives up a
-little to its fixed recency prior, and NoPE trails at around 9. The causal
-mask does leak position, but weakly at this scale. At four times the
+perplexity around 5, the learned table close behind, the sinusoidal table
+and ALiBi land together at around 7 — ALiBi's handicap being its fixed
+recency prior — and NoPE trails at around 9. The causal mask does leak
+position, but weakly at this scale. At four times the
 training context, the ordering inverts. Both absolute schemes degrade badly,
 to several times their training-length perplexity: the learned table because
 positions past 128 are untrained noise, the sinusoidal one because the model
@@ -663,9 +677,9 @@ has never seen those fingerprints. The striking failure is RoPE: *relative in
 form is not relative in practice*. Its scores depend only on offsets — we
 proved and measured as much — but offsets beyond 127 were still never seen in
 training, and its length-512 perplexity lands at several times its
-training-length value, as bad as the absolute schemes and in some runs
-worse (training longer widens the gap). Only the
-two schemes with no position table are stable: ALiBi stays essentially flat
+training-length value — a blow-up as large, relative to where it started,
+as the absolute schemes suffer, and in some runs far larger. Only the two
+schemes with no position table are stable: ALiBi stays essentially flat
 across every length, as its authors' "train short, test long" title
 promised, and NoPE is flat too, just from a weaker starting point. (The
 exact perplexities fluctuate run to run and between frameworks; the ordering
@@ -686,11 +700,11 @@ refines it by rescaling the fast, position-discriminating frequencies
 differently from the slow, content-carrying ones. Schemes of this family are
 how every long-context RoPE model you are likely to use was produced. Note
 that the recipe has two halves: rescaling *and* a brief fine-tune at the
-scaled angles. On our character model the rescaling alone actually hurts —
-compressing the angle ladder blurs exactly the fast pairs that tell
-neighboring characters apart — while rescaling followed by a few hundred
-fine-tuning steps recovers most of the lost perplexity. The exercises have
-you reproduce both halves.
+scaled angles. Exercise 3 walks through both halves on our character model;
+in our runs the rescaling alone actually hurts — compressing the angle
+ladder blurs exactly the fast pairs that tell neighboring characters
+apart — while rescaling followed by a few hundred fine-tuning steps
+recovers most of the lost perplexity.
 
 ## Summary
 
@@ -706,8 +720,8 @@ offsets by construction, the scheme of essentially every current
 open-weights model. ALiBi replaces encodings with a per-head linear distance
 penalty, and NoPE relies on the causal mask's leak of position. Our
 train-short/test-long experiment on an attention-only character model sorted
-the schemes: explicit-position schemes win at the training length, but at
-four times it, absolute encodings and RoPE alike blow up — relative form
+the schemes: RoPE wins at the training length, but at four times it,
+absolute encodings and RoPE alike blow up — relative form
 does not imply out-of-range competence — while ALiBi and NoPE hold flat.
 Position interpolation and YaRN exploit RoPE's continuous dial to map long
 contexts back into the trained range. The model behind the experiment,
@@ -844,15 +858,17 @@ Contexts grow after deployment. Two schemes designed for extrapolation:
 - **ALiBi** (Press et al., 2022): no encoding; subtract a per-head linear
   distance penalty
   $\mathrm{score}_{ij} = \mathbf{q}_i^\top\mathbf{k}_j/\sqrt{d} - m_h\,(i-j)$,
-  slopes $m_h = 2^{-8h/H}$. Distance 400 is just "further", never "unseen".
+  slopes $m_h = 2^{-8h/H}$ (power-of-two $H$). Distance 400 is just
+  "further", never "unseen".
 - **NoPE** (Kazemnejad et al., 2023): nothing at all — the causal mask
   leaks position; how much is usable?
 :::
 
 ::: {.slide title="An attention-only language model"}
 `TinyCharLM`: token embedding + stacked residual causal attention + tied
-head. **No FFN, no LayerNorm** — everything the model learns passes through
-attention. Positional scheme is a constructor choice:
+head. **No FFN, no LayerNorm, no projection biases** — attention is the
+only machinery mixing information across positions. Positional scheme is a
+constructor choice:
 `'learned' · 'sinusoidal' · 'rope' · 'alibi' · 'none'`.
 
 @positional-information-an-attention-only-language-model
@@ -867,7 +883,8 @@ Character-level Time Machine, context 128, 3000 steps each:
 ::: {.slide title="The verdict at 4× the training length"}
 @!positional-information-the-experiment-2
 
-- Training length: RoPE best (~5), absolute close, NoPE worst (~9).
+- Training length: RoPE best (~5), learned close behind, sinusoidal ≈
+  ALiBi (~7), NoPE worst (~9).
 - Length 512: **absolute schemes blow up; RoPE blows up too** — relative
   in form is not relative in practice (offsets > 127 were never trained).
 - **ALiBi: flat.** NoPE: flat, from a weaker start.

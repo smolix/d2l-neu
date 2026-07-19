@@ -10,9 +10,9 @@ chapter asked how to *tune* across scale — muP transfers a learning rate
 found on a small model to a large one. Here we ask what scale itself buys,
 and how a training budget should be split between model size and data. We
 learn to count parameters and FLOPs, deriving the $6ND$ rule and checking
-it against a profiler; we run a scaling study small enough for one GPU and
-honest enough to show both the celebrated straight line and its less
-celebrated end; and we read the 2023–2025 open-weights reports as a table
+it against a profiler; we run a scaling study small enough for one GPU
+that shows both the celebrated straight line and its less celebrated end;
+and we read the 2023–2025 open-weights reports as a table
 whose rows are, almost verbatim, constructor calls of the `GPT` class from
 :numref:`sec_gpt`.
 
@@ -136,8 +136,8 @@ and the optimizer update are all vector work, $\mathcal{O}(d)$ or
 $\mathcal{O}(N)$ per step rather than per token: noise. A useful habit
 follows: the cost of any dense transformer run is two numbers multiplied,
 which is how our one-minute run in :numref:`sec_gpt` could be placed at
-$5 \times 10^{14}$ FLOPs, GPT-2's near $10^{20}$, and frontier runs near
-$10^{25}$ without consulting any profiler.
+$5 \times 10^{14}$ FLOPs, the 124M GPT-2's near $7 \times 10^{18}$, and
+frontier runs near $10^{25}$, all without consulting a profiler.
 
 ### Checking the Arithmetic
 
@@ -204,9 +204,9 @@ print(f'{dt * 1e3:.0f} ms per step: '
 ```{.python .input #scaling-laws-checking-the-arithmetic}
 %%tab jax
 model = d2l.GPT(vocab_size=28, act='gelu', rngs=nnx.Rngs(0))
-key = jax.random.key(0)
-X = jax.random.randint(key, (64, 128), 0, 28)
-Y = jax.random.randint(key, (64, 128), 0, 28)
+key_x, key_y = jax.random.split(jax.random.key(0))
+X = jax.random.randint(key_x, (64, 128), 0, 28)
+Y = jax.random.randint(key_y, (64, 128), 0, 28)
 graphdef, params, rest = nnx.split(model, nnx.Param, ...)
 N = sum(p.size for p in jax.tree.leaves(params) if p.ndim == 2)
 
@@ -470,14 +470,58 @@ miniature shows is the *shape* those fits live on: the straight stretch
 where scaling laws are trustworthy, and the departure that marks the edge
 of their jurisdiction.
 
-Two footnotes for honest reading. First, a scaling study is only as good
-as the tuning of each point: had we frozen the learning rate across
+Two footnotes before trusting the plot. First, a scaling study is only as
+good as the tuning of each point: had we frozen the learning rate across
 widths, part of our "bend" would have been a tuning artifact
 (:numref:`sec_scaling`; exercise 5 has you produce this artifact
 deliberately). Second, loss is the quantity that scales smoothly;
 downstream abilities can surface abruptly as loss creeps down, which is
 why small differences on this axis are worth more than they look
 :cite:`wei2022emergent`.
+
+### The Published Form of the Law
+
+Our miniature moved $N$ with $D$ pinned; the published fits treat both as
+free variables. Across more than four hundred training runs,
+:citet:`hoffmann2022training` fit the loss surface
+
+$$
+L(N, D) = E + \frac{A}{N^{\alpha}} + \frac{B}{D^{\beta}},
+$$
+:eqlabel:`eq_chinchilla_law`
+
+three terms with three different jobs. $E$ is the floor: the intrinsic
+entropy of text, the loss that would remain with unlimited parameters and
+unlimited data. Its presence is why raw loss cannot fall along a straight
+line forever — a log–log plot only looks straight far above the floor, or
+after a fitted $E$ has been subtracted; every raw-loss line must
+eventually flatten into it. The term $A/N^{\alpha}$ is the capacity price of
+approximating the true distribution with only $N$ parameters; it is the
+term our five-point sweep traversed. The term $B/D^{\beta}$ is the
+estimation price of seeing only $D$ tokens, and it is what bent our
+largest model away from the line: with $D$ fixed, $E + B/D^{\beta}$ acts
+as an effective floor that no added capacity can pierce.
+
+Compute-optimal allocation drops out of :eqref:`eq_chinchilla_law` with
+one constraint. Fix a budget $C \approx 6ND$, substitute $D = C/6N$, and
+set the derivative in $N$ to zero: the optimum satisfies
+
+$$
+\alpha \frac{A}{N^{\alpha}} = \beta \frac{B}{D^{\beta}},
+$$
+
+i.e., spend until the two shrinkable terms are shrinking at equal
+marginal rates. Solving gives $N^* \propto C^{\beta/(\alpha+\beta)}$ and
+$D^* \propto C^{\alpha/(\alpha+\beta)}$. The fitted exponents come out
+nearly equal ($\alpha \approx 0.34$, $\beta \approx 0.28$), so both
+optima scale close to $C^{1/2}$: parameters and tokens should grow in
+near-lockstep, and their ratio at the optimum is roughly constant — the
+twenty tokens per parameter quoted above is that constant, evaluated at
+the fit. We do not fit $E$, $\alpha$, $\beta$ to our own five points (the
+previous subsection said why); what the miniature contributes is the
+shape of both terms — the straight stretch is $A/N^{\alpha}$ falling
+while the data term is negligible, and the bend is the crossover where
+the fixed corpus's $B/D^{\beta}$ takes over.
 
 ## The Modern Recipe
 
@@ -501,7 +545,7 @@ this chapter built.
 |:--|:--|:--|:--|:--|:--|:--|
 | Mistral 7B (2023) | GQA $32{:}8$; sliding window 4096 | RMSNorm, pre | RoPE, $\theta = 10^4$ | SwiGLU | dense | none |
 | Llama 3 (2024) | GQA $32{:}8$ | RMSNorm, pre | RoPE, $\theta = 5 \times 10^5$ | SwiGLU | dense | none |
-| Qwen3 (2025) | GQA $64{:}8$ | RMSNorm, pre; QK-norm | RoPE, $\theta = 10^6$; YaRN for long context | SwiGLU | dense, and MoE: 128 experts, 8 active | none |
+| Qwen3 (2025) | GQA: $64{:}8$ dense (32B), $64{:}4$ MoE (235B-A22B) | RMSNorm, pre; QK-norm | RoPE, $\theta = 10^6$; YaRN for long context | SwiGLU | dense, and MoE: 128 experts, 8 active | none |
 | OLMo 2/3 (2024/25) | MHA (7B), GQA (32B); OLMo 3: window 4096 on 3 of 4 layers | RMSNorm, post but off-stream; QK-norm | RoPE | SwiGLU | dense | none |
 | DeepSeek-V3 (2024) | MLA: KV compressed to a 512-dim latent | RMSNorm, pre | RoPE on a decoupled 64-dim slice per head | SwiGLU | MoE: 256 experts plus 1 shared, 8 active | none |
 | Gemma 3 (2025) | GQA; local:global $5{:}1$, window 1024 | RMSNorm, pre and post; QK-norm | RoPE, $\theta = 10^6$ global, $10^4$ local | GeGLU | dense | none |
@@ -518,7 +562,7 @@ is the one live dissent, and it concedes the residual stream's identity
 path, the actual lesson of our signal-propagation experiment). *The
 cache*: GQA as the default, with the window-plus-sink and latent
 compressions of :numref:`sec_kv-cache` where long contexts make the
-cache the binding cost. *Capacity per FLOP*: gated FFNs universally, and
+cache the binding cost. *Capacity per FLOP*: gated FFNs in every row, and
 mixture of experts (:numref:`sec_moe`) where the budget wants more
 parameters than FLOPs. The dropout column is the quiet punchline of our
 scaling study: at trillion-token scale the corpus outweighs the
@@ -625,7 +669,9 @@ engineering discipline of its own: the number in a model card is a
 compound of RoPE base inflation and interpolation
 (:numref:`sec_positional-information`), window-and-sink cache policies
 (:numref:`sec_kv-cache`), and the systems work of
-:numref:`chap_performance`; architecture appears nowhere in that list.
+:numref:`chap_performance` — none of it a new body plan; the
+architectural moves are settings of the attention layer this chapter
+already built, and the rest is positional bookkeeping and systems work.
 Third, everything this chapter held fixed — what to train *on*, and what
 happens after the loss stops falling — is where the gains have moved:
 data curation, instruction tuning, and learning from feedback are the
@@ -644,9 +690,12 @@ our GPT to within a few percent. On a fixed diet of tokens, loss falls
 with model size along a rough power law until the corpus can no longer
 feed the model, then bends away: our five-size study on 5.1M characters
 shows the straight stretch, the departure of the largest model, and the
-widening train–validation gap that explains it. The published version of
-that bend is the Chinchilla ratio (about twenty tokens per parameter at
-compute-optimum), whose lesson is that data must scale with parameters.
+widening train–validation gap that explains it. The published account of
+that shape is $L(N,D) = E + A N^{-\alpha} + B D^{-\beta}$ — an entropy
+floor, a capacity term, a data term — whose compute-optimal allocation
+under $C \approx 6ND$ grows parameters and tokens together, at about
+twenty tokens per parameter (the Chinchilla ratio); its lesson is that
+data must scale with parameters.
 What the scaled-up runs build has converged: GQA or latent-compressed
 attention over a pre-norm RMSNorm block with a gated FFN, RoPE positions,
 no dropout, and mixture of experts where parameters should outnumber
@@ -686,7 +735,7 @@ frontier.
    size. Which points move, and in which direction? Explain each
    movement using the width-dependence of the tuned optimum from
    :numref:`sec_scaling`, and state what a naive reader of the resulting
-   plot would conclude that the honest plot does not support.
+   plot would conclude that the properly tuned plot does not support.
 6. Extend the sweep one size upward: width 512, ten blocks, about 31M
    non-embedding parameters. Before running it, predict its validation
    loss twice — once by extending the straight line through the small
@@ -703,7 +752,7 @@ frontier.
 [Dive into Deep Learning · §12.7]{.kicker}
 
 Scaling laws and the modern recipe<br>
-**count parameters and FLOPs · a scaling study with an honest bend · seven model families, one argument list**
+**count parameters and FLOPs · a scaling study, bend included · seven model families, one argument list**
 :::
 :::
 
@@ -785,12 +834,27 @@ decimals. The shape — line, then bend — is the finding.
 :::
 :::
 
+::: {.slide title="The published form of the law"}
+$$L(N, D) = E + \frac{A}{N^{\alpha}} + \frac{B}{D^{\beta}} \qquad \textrm{(Hoffmann et al., 2022)}$$
+
+- $E$: the entropy floor — why raw loss cannot stay on a straight line
+  forever.
+- $A/N^{\alpha}$: capacity — the term our five sizes traversed.
+- $B/D^{\beta}$: data — with $D$ fixed, an effective floor: our bend.
+- Under $C \approx 6ND$, the optimum sets
+  $\alpha A N^{-\alpha} = \beta B D^{-\beta}$ →
+  $N^* \propto C^{\beta/(\alpha+\beta)}$,
+  $D^* \propto C^{\alpha/(\alpha+\beta)}$; fitted $\alpha \approx 0.34$,
+  $\beta \approx 0.28$ put both near $C^{1/2}$: **grow them together**,
+  ~20 tokens per parameter.
+:::
+
 ::: {.slide title="The modern recipe (2023–2025)"}
 | model | attention + cache | norm | FFN / experts |
 |:--|:--|:--|:--|
 | Mistral 7B | GQA 32:8, window 4096 | RMS pre | SwiGLU, dense |
 | Llama 3 | GQA 32:8 | RMS pre | SwiGLU, dense |
-| Qwen3 | GQA 64:8 | RMS pre + QK | SwiGLU, dense & MoE 128/8 |
+| Qwen3 | GQA 64:8 dense, 64:4 MoE | RMS pre + QK | SwiGLU, dense & MoE 128/8 |
 | DeepSeek-V3 | MLA: 512-d latent | RMS pre | SwiGLU, MoE 256+1/8 |
 | Gemma 3 | GQA, local:global 5:1 | RMS pre+post + QK | GeGLU, dense |
 | GPT-OSS | GQA 64:8, window 128 alt., sinks | RMS pre | SwiGLU, MoE 128/4 |

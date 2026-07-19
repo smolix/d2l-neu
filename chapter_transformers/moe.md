@@ -52,7 +52,7 @@ integral of" and after "Act I, Scene" exercise different knowledge; a
 dense FFN pays for both everywhere, a routed one lets each token consult
 the specialists it needs. What makes the bet so attractive is the
 asymmetry of the two costs. Stored parameters are cheap: they sit in
-memory (or on other devices) and idle experts charge nothing per token.
+memory (or on other devices) and idle experts charge no FLOPs per token.
 Compute is the expensive, per-token resource. An MoE layer holds
 $E$ experts' parameters but each token pays the FLOPs of $k$, so — at
 roughly 2 forward FLOPs per active parameter per token — the model's
@@ -106,9 +106,10 @@ configuration keeps Mixtral's eight-expert layout but routes top-1
 rather than top-2, so its 8x store-to-active ratio is twice as sparse
 as Mixtral's 4x.
 
-Two caveats before we cash in. First, *training* still touches every
-expert: gradients flow to whichever experts each token visited, and the
-whole store must live in accelerator memory (in practice sharded across
+Two caveats before we cash in. First, over any real batch *training*
+still touches nearly every expert: gradients flow to whichever experts
+the batch's tokens visited, and the whole store must live in accelerator
+memory (in practice sharded across
 devices, with tokens shipped to their experts and back — the systems
 half of MoE, which belongs to a systems chapter). Second, the accounting
 assumed the router spreads tokens evenly. Nothing so far makes that
@@ -146,7 +147,7 @@ dwelling on, and the subject of the first exercise.
 ![A mixture-of-experts layer. The router scores all experts for each token; the top-$k$ (here one) expert runs and its output is weighted by the router probability. Unselected experts hold parameters but perform no computation for this token.](../img/mdl-transformers-moe.svg)
 :label:`fig_moe-layer`
 
-One honest disclosure about the implementation below: it computes
+One disclosure about the implementation below: it computes
 *every* expert on *every* token and multiplies by a gate that is zero
 for the unselected ones. The mathematics of :eqref:`eq_moe-layer` is
 exact, but the FLOPs savings of the accounting cell is deliberately not
@@ -347,7 +348,12 @@ up, making the starved experts slightly easier to *select* — but because
 $b_i$ never enters the mixture weight $p_i$, the loss the model
 optimizes contains no balancing term at all, so there is no gradient
 interference to tune away. The controller steers where tokens go; the
-gradients remain purely about predicting text.
+gradients remain purely about predicting text. One simplification to
+note: DeepSeek-V3's router scores experts with per-expert sigmoids and
+restricts each token's choices to a few expert groups (which also limits
+cross-device traffic); our layer keeps the softmax router and changes
+only the selection bias — the mechanism :citet:`Wang.Gao.Zeng.ea.2024`
+isolate.
 
 ### Three Runs, One Budget
 
@@ -613,8 +619,8 @@ depending on the seed — the same order as the run-to-run spread of any
 single variant — so take the direction from the loss column and the
 conviction from the histograms. Between the two repairs our experiment
 offers no verdict at all: their loss ranges overlap across seeds, and
-the honest summary is that both recover the lost capacity equally well
-here. The reason DeepSeek prefers the bias is the interference
+the summary our data supports is that both recover the lost capacity
+equally well here. The reason DeepSeek prefers the bias is the interference
 argument above, and that is a frontier-scale, small-margin effect
 :cite:`Wang.Gao.Zeng.ea.2024`, far below our noise floor; we say so
 rather than pretend our 800 steps could adjudicate it.
@@ -750,7 +756,7 @@ spread that reseeding produces. The training loss ends slightly lower
 for the MoE, consistently across seeds and frameworks: the spare
 experts are real capacity, and on a corpus this small, real capacity
 spends itself on memorizing faster (:numref:`sec_gpt`). That is the
-honest claim at our scale: matched on active compute, the MoE trains
+claim our scale supports: matched on active compute, the MoE trains
 comparably while carrying several times the parameters, and nothing
 more. The regime where the extra capacity pays on *validation* is the
 one the accounting cell described: corpora that outweigh any dense
@@ -782,8 +788,8 @@ other by less than seed noise. Modern designs slice capacity thinner
 (many narrow experts, sometimes one shared always-on expert), and our
 GPT accepts the whole apparatus through a swapped FFN: at matched
 active parameters, the mixture trains comparably to dense while
-holding several times the weights — the trade that has made MoE the
-default economics of frontier models.
+holding several times the weights — the trade that has made MoE a
+major scaling strategy at the frontier.
 
 ## Exercises
 
@@ -920,7 +926,7 @@ Same init, same data, same 800 steps; only the balancing differs:
   every balanced run beats every collapsed one.
 - Aux vs. bias: loss differences **within seed noise** at this scale;
   DeepSeek's preference rests on the interference argument, a
-  frontier-scale margin we honestly cannot see from here.
+  frontier-scale margin invisible from here.
 :::
 
 ::: {.slide title="Fine-grained and shared experts"}
@@ -962,5 +968,5 @@ Swap every block's FFN (`moe_gpt`), balance with the thermostat, match
 - Fine-grained + shared experts: the same budget, sliced for
   composability.
 - In our GPT: several times the parameters at matched active compute,
-  comparable training — the economics that run the 2026 frontier.
+  comparable training — the economics behind much of the 2026 frontier.
 :::

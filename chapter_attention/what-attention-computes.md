@@ -109,9 +109,9 @@ $d \times d$ but of rank at most $d_h = d/H$: a head can test and move only a
 $d_h$-dimensional slice of the stream. With $d = 128$ and four heads, each
 head works through a rank-32 bottleneck. In `TinyCharLM` the four
 projections live in two fused layers — `qkv` stacks the query, key, and
-value maps, and `proj` holds the per-head output maps side by side — so
-extracting a head's circuits is a matter of slicing (we ignore the small
-bias terms):
+value maps, and `proj` holds the per-head output maps side by side — and
+neither layer carries a bias, so extracting a head's circuits is a matter
+of slicing, and the slices are the head, exactly:
 
 ```{.python .input #what-attention-computes-where-and-what-the-qk-and-ov-circuits}
 %%tab pytorch
@@ -133,11 +133,11 @@ for name, M in (('W_QK', W_QK), ('W_OV', W_OV)):
 ```{.python .input #what-attention-computes-where-and-what-the-qk-and-ov-circuits}
 %%tab jax
 model = d2l.TinyCharLM(vocab_size=64, pos='rope', rngs=nnx.Rngs(0))
-D = model.token_emb.embedding.value.shape[1]
+D = model.token_emb.embedding[...].shape[1]
 d_h = D // model.num_heads
-W = model.blks[0]['qkv'].kernel.value  # Columns stack W_q, W_k, W_v
+W = model.blks[0]['qkv'].kernel[...]   # Columns stack W_q, W_k, W_v
 W_q, W_k, W_v = W[:, :D], W[:, D:2 * D], W[:, 2 * D:]
-W_o = model.blks[0]['proj'].kernel.value  # Rows split by head
+W_o = model.blks[0]['proj'].kernel[...]  # Rows split by head
 h = 0
 W_QK = W_q[:, h * d_h:(h + 1) * d_h] @ W_k[:, h * d_h:(h + 1) * d_h].T
 W_OV = W_v[:, h * d_h:(h + 1) * d_h] @ W_o[h * d_h:(h + 1) * d_h]
@@ -159,9 +159,13 @@ default of the models this chapter builds toward.
 
 The path expansion tells us what depth buys before we run anything. With
 *zero* blocks, $\mathbf{z}_i = \mathbf{E}\,\mathbf{e}_{x_i}$: the logits
-are a function of the current token only — a lookup table of size
-$|\mathcal{V}| \times |\mathcal{V}|$, which training on text fills with
-bigram statistics. With *one* block,
+are a function of the current token only — a bigram model, and a
+constrained one. Because the output head is tied to the embedding, the
+logit of token $b$ after token $a$ is $\mathbf{e}_b^\top \mathbf{e}_a$,
+the Gram matrix of the embeddings: symmetric and of rank at most $d$, not
+an arbitrary $|\mathcal{V}| \times |\mathcal{V}|$ lookup table. Training
+on text fills it with as much of the bigram statistics as that form can
+hold. With *one* block,
 
 $$
 \mathbf{z}_i = \mathbf{E}\,\mathbf{e}_{x_i} + \sum_{h=1}^{H} \sum_{j \leq i} \alpha_{ij}^{h}\; \mathbf{E}\,\mathbf{W}_{\mathrm{OV}}^{h}\,\mathbf{e}_{x_j}.
@@ -336,12 +340,15 @@ def eval_copy(model, Lmin, Lmax, batch_size=256, vocab=64):
 The most natural version of the task concatenates each pattern with itself:
 pattern length fixed at 32, sequence length 64. Our expressiveness analysis
 said one layer cannot run the two-hop algorithm — so let us falsify
-something by training a one-block model on it:
+something by training a one-block model on it. (One equipment choice, whose
+reason will be clear in a moment: this model, alone in the section, gets
+its projection biases back with `bias=True`.)
 
 ```{.python .input #what-attention-computes-the-positional-shortcut-1}
 %%tab pytorch
 torch.manual_seed(0)
-model_shortcut = d2l.TinyCharLM(vocab_size=64, num_blks=1, pos='rope')
+model_shortcut = d2l.TinyCharLM(vocab_size=64, num_blks=1, pos='rope',
+                                bias=True)
 train_repeat(model_shortcut, 800, Lmin=32, Lmax=32)
 first, rep, acc = eval_copy(model_shortcut, 32, 32)
 print(f'first copy {first:.2f} nats, second copy {rep:.2f} nats, '
@@ -351,7 +358,7 @@ print(f'first copy {first:.2f} nats, second copy {rep:.2f} nats, '
 ```{.python .input #what-attention-computes-the-positional-shortcut-1}
 %%tab jax
 model_shortcut = d2l.TinyCharLM(vocab_size=64, num_blks=1, pos='rope',
-                                rngs=nnx.Rngs(0))
+                                bias=True, rngs=nnx.Rngs(0))
 train_repeat(model_shortcut, 800, Lmin=32, Lmax=32)
 first, rep, acc = eval_copy(model_shortcut, 32, 32)
 print(f'first copy {first:.2f} nats, second copy {rep:.2f} nats, '
@@ -396,7 +403,14 @@ Accuracy collapses to roughly chance, and the reason is on display: nearly
 all attention mass still sits at offset 31, almost none at the offset the
 new patterns require. The model learned *look back exactly 31 positions* —
 the cheapest circuit that fits fixed-period data, and a circuit that has
-nothing to do with induction. This is a lesson about synthetic tasks worth
+nothing to do with induction. This also explains the equipment choice
+above. A pure-position head needs a query that *ignores content*, and the
+`qkv` bias supplies exactly that: a constant query–key pair whose
+RoPE-rotated score depends only on the offset, peaking at a fixed
+distance. With biases disabled the shortcut only half-forms (second-copy
+accuracy roughly 0.5–0.7 in our probe runs), which is why this demo
+re-enables them — while every model we *analyze* keeps biases off, so the
+QK/OV algebra above stays exact. This is a lesson about synthetic tasks worth
 stating once and remembering: a benchmark rewards the cheapest shortcut it
 admits, not the mechanism its designer had in mind. The repair is to make
 the shortcut impossible: sample the pattern length uniformly from 16 to 32,
@@ -439,7 +453,7 @@ for name, model in (('2 blocks', model_two), ('1 block', model_one)):
 
 Now the composition argument holds up. The two-block model drives its loss
 on later copies below half a nat and predicts roughly nine out of ten
-repeated tokens; the one-block model is stuck around three nats and fewer
+repeated tokens; the one-block model is stuck above three nats and fewer
 than one token in five — better than chance, because copying-style heads
 can at least concentrate probability on tokens present in the context, but
 nowhere near retrieval. Both models sit at chance on the first copy: at
@@ -638,9 +652,9 @@ d2l.show_heatmaps(C[None, None].cpu(), xlabel='logit boosted',
 
 ```{.python .input #what-attention-computes-the-circuit-is-in-the-weights}
 %%tab jax
-E, D = model_two.token_emb.embedding.value, 128
-qkv = model_two.blks[1]['qkv'].kernel.value
-proj = model_two.blks[1]['proj'].kernel.value
+E, D = model_two.token_emb.embedding[...], 128
+qkv = model_two.blks[1]['qkv'].kernel[...]
+proj = model_two.blks[1]['proj'].kernel[...]
 OV = sum(qkv[:, 2 * D + h * 32:2 * D + (h + 1) * 32]
          @ proj[h * 32:(h + 1) * 32] for h in range(4))
 C = E @ OV @ E.T
@@ -719,11 +733,11 @@ because the model is linear once the patterns are fixed. In a real
 transformer, feed-forward layers and normalization break that linearity,
 features are packed into shared directions rather than neat subspaces, and
 each step of the triangulation becomes a research problem — this is the
-active field of mechanistic interpretability, and the honest summary is
-that a handful of circuits, induction heads first among them, are
-understood at the level we reached here, while most of what large models
-do is not. Attention weights are evidence, and this section is a template
-for what turning evidence into understanding takes.
+active field of mechanistic interpretability, where a handful of circuits,
+induction heads first among them, are understood at the level we reached
+here, while most of what large models do is not. Attention weights are
+evidence, and this section is a template for what turning evidence into
+understanding takes.
 
 ## Summary
 
@@ -733,16 +747,18 @@ attention heads are the only writers. Every head factors into a QK circuit
 $\mathbf{W}_q^\top \mathbf{W}_k$ that decides where to attend and an OV
 circuit $\mathbf{W}_o \mathbf{W}_v$ that decides what the attended stream
 contributes, two rank-$d_h$ matrices readable from the checkpoint. Depth
-buys expressiveness in discrete steps: zero layers store bigram statistics,
-one layer adds skip-trigrams (including copying), and two layers can
+buys expressiveness in discrete steps: zero layers store bigram statistics
+in the low-rank Gram form the tied head allows, one layer adds
+skip-trigrams (including copying), and two layers can
 compose a previous-token head with a match-and-copy head into an induction
 head that finds the previous occurrence of the current token and predicts
 what followed it. Trained on repeated random tokens with variable period,
 `TinyCharLM` discovers exactly this circuit — abruptly, in a phase change
 visible in the second-copy loss — while a one-block control cannot, and a
 fixed-period version of the task is solved by a positional shortcut
-instead, a reminder that synthetic benchmarks reward the cheapest circuit
-they admit. The trained model completes patterns it has never seen, which
+instead (one that a projection bias, restored for that demo alone, makes
+cheap to express), a reminder that synthetic benchmarks reward the
+cheapest circuit they admit. The trained model completes patterns it has never seen, which
 is in-context learning in miniature, and the mechanism matches the
 induction heads implicated in in-context learning in large language
 models. Attention maps alone license none of these conclusions: the
@@ -843,10 +859,12 @@ $$s_{ij} = \frac{\mathbf{h}_i^\top \mathbf{W}_{\mathrm{QK}} \mathbf{h}_j}{\sqrt{
 With attention patterns as if–then rules, the one-layer logits expand into
 paths:
 
-$$\mathbf{z}_i = \underbrace{\mathbf{E}\,\mathbf{e}_{x_i}}_{\textrm{bigram table}} + \sum_{h}\sum_{j \leq i} \alpha_{ij}^{h}\; \underbrace{\mathbf{E}\,\mathbf{W}_{\mathrm{OV}}^{h}\,\mathbf{e}_{x_j}}_{\textrm{skip-trigram}}$$
+$$\mathbf{z}_i = \underbrace{\mathbf{E}\,\mathbf{e}_{x_i}}_{\textrm{low-rank bigram}} + \sum_{h}\sum_{j \leq i} \alpha_{ij}^{h}\; \underbrace{\mathbf{E}\,\mathbf{W}_{\mathrm{OV}}^{h}\,\mathbf{e}_{x_j}}_{\textrm{skip-trigram}}$$
 
-- Zero layers: bigram statistics. One layer: skip-trigrams
-  ("$[\mathrm{A}]$ before $[\mathrm{B}]$ → boost $[\mathrm{C}]$"), incl. copying.
+- Zero layers: bigram statistics — constrained to the tied head's
+  low-rank Gram form $\mathbf{e}_b^\top\mathbf{e}_a$. One layer:
+  skip-trigrams ("$[\mathrm{A}]$ before $[\mathrm{B}]$ → boost
+  $[\mathrm{C}]$"), incl. copying.
 - **Not expressible in one layer**: attend to the token *after* the previous
   $[\mathrm{A}]$ — the key at $j$ knows nothing about position $j-1$.
 :::
@@ -868,7 +886,7 @@ way to predict later copies is retrieval from context:
 
 ::: {.slide title="A one-block model solves it…"}
 Fixed pattern length 32 — and the model our theory says is too shallow gets
-a perfect score:
+a perfect score (note `bias=True`; the reason is on the next slide):
 
 @!what-attention-computes-the-positional-shortcut-1
 :::
@@ -880,6 +898,9 @@ Probe: same model, patterns of length 24.
 
 - It learned *look back exactly 31 positions* — a RoPE offset head, no
   content, no matching.
+- The `qkv` bias makes that head cheap: a constant, content-free query.
+  Biases off — as in every model we analyze — the shortcut only
+  half-forms.
 
 ::: {.d2l-note}
 A synthetic benchmark rewards the cheapest circuit it admits, not the
@@ -893,7 +914,7 @@ Pattern length now uniform in 16–32; no fixed offset works.
 @!what-attention-computes-two-blocks-learn-to-look-things-up-1
 
 - Two blocks: later copies below half a nat, ~9 of 10 tokens right.
-- One block: stuck around three nats — copying-style heads only.
+- One block: stuck above three nats — copying-style heads only.
 :::
 
 ::: {.slide title="The phase change"}

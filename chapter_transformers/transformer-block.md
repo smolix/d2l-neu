@@ -9,8 +9,8 @@ positions and a position-wise feed-forward network supplies computation
 within each one, both writing their results into a shared residual stream.
 This section builds that unit. We settle the two design decisions that
 separate a 2017 block from a 2026 one: where the normalization layers go
-(with an experiment at initialization that shows why every modern model
-moved them), and what the feed-forward network computes (with a
+(with an experiment at initialization that shows why nearly every modern
+model moved them), and what the feed-forward network computes (with a
 matched-budget race between the classic MLP and its gated successor). The
 product is a single configurable `TransformerBlock` class whose flags span
 a decade of architectures; the next section stacks it into a language model,
@@ -203,16 +203,20 @@ def signal_stats(pre_norm, num_blks=32, num_hiddens=256):
         rms.append(H.pow(2).mean().sqrt().item())
     (H * torch.randn_like(H)).mean().backward()  # generic readout loss
     grads = [blk.attention.W_q.weight.grad.norm().item() for blk in blks]
-    return spreads, rms, grads
+    proj = {n: getattr(blks[-1].attention, n).weight.grad.norm().item()
+            for n in ('W_q', 'W_k', 'W_v', 'W_o')}
+    return spreads, rms, grads, proj
 
 stats = {pre: signal_stats(pre) for pre in (False, True)}
 for pre, name in ((False, 'post-LN'), (True, 'pre-LN')):
-    spreads, rms, grads = stats[pre]
+    spreads, rms, grads, proj = stats[pre]
     print(f'{name:>8}: stream RMS at k=32: {rms[-1]:5.2f},  '
           'token spread at k=8,16,32: '
           + ' '.join(f'{spreads[k-1]:8.1e}' for k in (8, 16, 32)))
+    print('          grad norms at k=32: '
+          + '  '.join(f'{n} {g:7.1e}' for n, g in proj.items()))
 d2l.plot(torch.arange(1, 33), [stats[False][2], stats[True][2]],
-         'block index k', 'attention gradient norm',
+         'block index k', 'query projection gradient norm',
          legend=['post-LN', 'pre-LN'], yscale='log')
 ```
 
@@ -248,19 +252,24 @@ def signal_stats(pre_norm, num_blks=32, num_hiddens=256):
                              / jnp.linalg.norm(H)))
         rms.append(float(jnp.sqrt((H ** 2).mean())))
     grads = nnx.grad(lambda m: (m(X) * R).mean())(stack)  # generic readout
+    top = grads['blks'][num_blks - 1]['attention']
+    proj = {n: float(jnp.linalg.norm(top[n]['kernel'][...]))
+            for n in ('W_q', 'W_k', 'W_v', 'W_o')}
     grads = [float(jnp.linalg.norm(
         grads['blks'][k]['attention']['W_q']['kernel'][...]))
         for k in range(num_blks)]
-    return spreads, rms, grads
+    return spreads, rms, grads, proj
 
 stats = {pre: signal_stats(pre) for pre in (False, True)}
 for pre, name in ((False, 'post-LN'), (True, 'pre-LN')):
-    spreads, rms, grads = stats[pre]
+    spreads, rms, grads, proj = stats[pre]
     print(f'{name:>8}: stream RMS at k=32: {rms[-1]:5.2f},  '
           'token spread at k=8,16,32: '
           + ' '.join(f'{spreads[k-1]:8.1e}' for k in (8, 16, 32)))
+    print('          grad norms at k=32: '
+          + '  '.join(f'{n} {g:7.1e}' for n, g in proj.items()))
 d2l.plot(jnp.arange(1, 33), [stats[False][2], stats[True][2]],
-         'block index k', 'attention gradient norm',
+         'block index k', 'query projection gradient norm',
          legend=['post-LN', 'pre-LN'], yscale='log')
 ```
 
@@ -281,16 +290,21 @@ then renormalizes, locking in the contraction, and the spread decays
 ten thousand. Pre-LN dilutes the same contraction by the growing stream,
 and the spread falls only polynomially, still at $0.4$ after 32 blocks.
 This is the *rank collapse* of :citet:`Dong.Cordonnier.Loukas.2021` caught
-in the act, and the gradient plot shows why it matters for learning: a head
+in the act, and the gradients show why it matters for learning: a head
 attending over identical tokens returns the same mixture *whatever its
-weights*, so the attention parameters of the collapsed upper blocks receive
-essentially no gradient — six orders of magnitude below the healthy bottom
-blocks, while pre-LN tapers gently across the whole stack. (The FFN
-parameters, which never compare tokens, get healthy gradients in both
-arrangements; it is specifically the attention pathway that dies. The
-effect also softens under today's smaller initializations — one of several
-crutches, along with learning-rate warmup, that kept deep post-LN models
-trainable :cite:`xiong2020layer`.)
+query and key weights*, so those weights stop receiving gradient. The
+block-32 norms printed above locate the starvation precisely: post-LN's
+query and key projections receive gradients of order $10^{-9}$, six
+orders of magnitude below their pre-LN counterparts, while its value and
+output projections — which transform the one surviving token rather than
+compare tokens — come in around $0.06$, as healthy as pre-LN's (the FFN
+parameters, fed by the same residual stream, are likewise unaffected). It
+is specifically the query/key pathway, the part that decides *where* to
+attend, that dies; the plot shows the same starvation deepening block by
+block down the post-LN stack, while pre-LN tapers gently. (The effect
+softens under today's smaller initializations — one of several crutches,
+along with learning-rate warmup, that kept deep post-LN models trainable
+:cite:`xiong2020layer`.)
 
 The practical verdict matched this picture: post-LN transformers diverge
 without carefully tuned warmup, pre-LN models train without incident at the
@@ -364,8 +378,8 @@ memory-bound, and what dropping the mean subtraction saves depends on the
 framework's kernel — nothing measurable in our PyTorch run, roughly a third
 in our JAX run, and either way microseconds in blocks that spend their time
 elsewhere. What RMSNorm actually buys is less machinery — no centering, no
-bias parameter, one statistic instead of two — for equal quality, which is
-why Llama and most open models since use it :cite:`touvron2023llama`. The
+bias parameter, one statistic instead of two — at comparable quality, which
+is why Llama and most open models since use it :cite:`touvron2023llama`. The
 lesson is about defaults rather than speed: when a component's job is "keep
 the scale near one", the simplest layer that does the job wins.
 
@@ -386,9 +400,16 @@ has become a standard ingredient of 2025-era models (Gemma 3, Qwen3, and
 OLMo 2 all ship it). OLMo 2 is also the one prominent re-litigation of this
 section's verdict: it pairs QK-norm with norms placed *after* each sublayer
 — though still off the stream's identity path, conceding the main lesson of
-the experiment above :cite:`OLMo.2025`. We leave QK-norm as an exercise
-rather than a flag; it drops into the block through the `attn_factory` hook
-introduced below.
+the experiment above :cite:`OLMo.2025`. Gemma 3 hedges in the other
+direction and normalizes each branch on both sides, before *and* after the
+sublayer :cite:`Gemma.Team.2025`. :numref:`fig_norm-taxonomy` lays the four
+placements now in circulation side by side; note that only the original
+post-LN interrupts the stream itself, which is why it alone collapses in
+the experiment above. We leave QK-norm as an exercise rather than a flag;
+it drops into the block through the `attn_factory` hook introduced below.
+
+![Four placements of normalization around one sublayer; the FFN sublayer is treated identically, and the residual stream runs bottom to top. Post-LN normalizes the stream itself after each addition; pre-LN normalizes what the branch reads; OLMo 2 normalizes what the branch writes; Gemma 3 normalizes the branch on both sides. Only post-LN touches the stream's identity path.](../img/mdl-transformers-norm-taxonomy.svg)
+:label:`fig_norm-taxonomy`
 
 ## The Feed-Forward Network
 
@@ -437,6 +458,7 @@ class FeedForward(nn.Module):  #@save
     """Position-wise FFN: GELU MLP or SwiGLU at matched parameter count."""
     def __init__(self, num_hiddens, act='swiglu', bias=False):
         super().__init__()
+        assert act in ('swiglu', 'gelu'), f'unknown act: {act!r}'
         self.act = act
         if act == 'gelu':
             width = 4 * num_hiddens
@@ -458,6 +480,7 @@ class FeedForward(nnx.Module):  #@save
     """Position-wise FFN: GELU MLP or SwiGLU at matched parameter count."""
     def __init__(self, num_hiddens, act='swiglu', bias=False, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
+        assert act in ('swiglu', 'gelu'), f'unknown act: {act!r}'
         self.act = act
         if act == 'gelu':
             width = 4 * num_hiddens
@@ -495,7 +518,7 @@ for act in ('gelu', 'swiglu'):
 ```
 
 Whether the gate is *worth* anything at equal cost is an empirical
-question, and we can afford to ask it honestly — but only once we have a
+question, and a matched-budget race settles it — but only once we have a
 model to train. That is the closing experiment of this section.
 
 ## A Configurable Block
@@ -505,11 +528,14 @@ will use it: every design decision above becomes a constructor argument.
 `norm` selects LayerNorm or RMSNorm, `act` selects the FFN, `pre_norm`
 selects the arrangement, and two factory hooks let later sections swap
 whole sublayers — a mixture-of-experts FFN, or a cache-friendly
-grouped-query attention — without touching this class again. The default
-configuration (pre-norm, RMSNorm, SwiGLU) is the one you would find inside
-an open-weights model released this year; `TransformerBlock(num_hiddens,
-num_heads, norm='layer', act='gelu', pre_norm=False, bias=True)` is,
-weight for weight, the encoder block of 2017.
+grouped-query attention — without touching this class again. The
+constructor validates its flag strings: a typo must fail loudly, not
+silently select an architecture. The default configuration (pre-norm,
+RMSNorm, SwiGLU) is the one you would find inside an open-weights model
+released this year; `TransformerBlock(num_hiddens, num_heads, norm='layer',
+act='gelu', pre_norm=False, bias=True)` is a compact post-norm block in the
+2017 encoder arrangement (with one anachronism kept for simplicity: GELU,
+where the 2017 original used ReLU).
 
 ```{.python .input #transformer-block-a-configurable-block}
 %%tab pytorch
@@ -520,6 +546,8 @@ class TransformerBlock(nn.Module):  #@save
                  act='swiglu', pre_norm=True, bias=False, attn_factory=None,
                  ffn_factory=None):
         super().__init__()
+        assert norm in ('rms', 'layer'), f'unknown norm: {norm!r}'
+        assert num_hiddens % num_heads == 0
         self.pre_norm = pre_norm
         make_norm = nn.RMSNorm if norm == 'rms' else nn.LayerNorm
         self.norm1, self.norm2 = make_norm(num_hiddens), make_norm(num_hiddens)
@@ -548,6 +576,8 @@ class TransformerBlock(nnx.Module):  #@save
                  act='swiglu', pre_norm=True, bias=False, attn_factory=None,
                  ffn_factory=None, rngs=None):
         rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        assert norm in ('rms', 'layer'), f'unknown norm: {norm!r}'
+        assert num_hiddens % num_heads == 0
         self.pre_norm = pre_norm
         make_norm = nnx.RMSNorm if norm == 'rms' else nnx.LayerNorm
         self.norm1 = make_norm(num_hiddens, rngs=rngs)
@@ -702,7 +732,7 @@ The gated FFN ends more than a tenth of a nat ahead — a margin that holds up
 across seeds (rerunning with seeds 1 and 2 moves each number by a couple of
 hundredths, not the gap) and, more importantly, agrees in direction with
 :citet:`Shazeer.2020`'s systematic sweep and with the consistent choice of
-every major model family since Llama. It is a modest, real improvement of
+the major model families since Llama. It is a modest, real improvement of
 the kind that architecture progress is actually made of: no single dramatic
 win, but a percent here and a percent there, at equal cost, compounding.
 
@@ -714,16 +744,19 @@ within each one and holds about two thirds of the parameters. Where the
 normalization goes decides how deep stacks behave at initialization: the
 post-LN arrangement of 2017 renormalizes the stream after each addition,
 which pins its scale but lets near-uniform attention collapse the tokens
-geometrically — the attention layers at the top of a 32-block stack
-receive gradients six orders of magnitude smaller than at the bottom.
+geometrically — the query and key projections at the top of a 32-block
+stack receive gradients six orders of magnitude smaller than at the
+bottom, while the value, output, and FFN weights keep ordinary gradients;
+it is the where-to-attend pathway that starves.
 Pre-norm moves the normalizer onto each branch, lets the stream grow like
 the square root of the depth, and keeps every block trainable; it has been
 the default since GPT-2. RMSNorm keeps only the scale statistic (same
 measured cost, less machinery), and QK-norm extends the same discipline to
 the attention logits. In the FFN, SwiGLU replaces the fixed nonlinearity
 with a learned soft gate; at matched parameter count it wins by a small,
-seed-stable margin on our character model, consistent with its universal
-adoption. The section's product is `TransformerBlock`: normalization,
+seed-stable margin on our character model, consistent with its
+near-universal adoption. The section's product is `TransformerBlock`:
+normalization,
 activation, and arrangement as flags, attention and FFN as swappable
 factories — the single unit from which this chapter builds a GPT, a
 KV-cached decoder, an encoder, a vision transformer, and a
@@ -812,9 +845,10 @@ sequence through — deterministic, seconds:
 - **Token spread**: uniform attention pulls tokens toward their mean;
   post-LN locks it in → geometric collapse (to $10^{-4}$ by block 32).
   Pre-LN dilutes it → polynomial.
-- **Gradients**: a head attending over identical tokens returns the same
-  mixture *whatever its weights* — post-LN's upper attention layers get
-  ~$10^{6}\times$ less gradient. FFN gradients stay healthy in both.
+- **Gradients**: identical tokens make the mixture independent of the
+  query/key weights — post-LN's upper $\mathbf{W}_q, \mathbf{W}_k$ get
+  ~$10^{6}\times$ less gradient; value, output, and FFN weights stay
+  healthy in both.
 
 ::: {.d2l-note}
 Rank collapse (Dong et al., 2021) caught in the act; why post-LN needed
@@ -827,8 +861,16 @@ $$\mathrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\tfrac{1}{d}\sum_i x_i^
 
 @!transformer-block-rmsnorm
 
-No centering, no bias, one statistic — same quality, less machinery
+No centering, no bias, one statistic — comparable quality, less machinery
 (Zhang & Sennrich, 2019; Llama onward).
+:::
+
+::: {.slide title="Four places for the norm"}
+Post-LN (2017), pre-LN (the default), post-sublayer off-stream (OLMo 2),
+pre-and-post (Gemma 3) — only post-LN interrupts the stream's identity
+path:
+
+@fig:mdl-transformers-norm-taxonomy
 :::
 
 ::: {.slide title="QK-norm: the same discipline, inside attention"}

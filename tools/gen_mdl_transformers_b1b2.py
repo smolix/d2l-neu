@@ -136,7 +136,88 @@ def fig_block_anatomy() -> None:
     fl.save(fig, "mdl-transformers-block-anatomy")
 
 
+# --------------------------------------------------------------------------- #
+# B1: normalization-placement taxonomy -- post-LN, pre-LN, post-sublayer      #
+# (OLMo 2), pre+post (Gemma 3), one sublayer each on the same stream          #
+# --------------------------------------------------------------------------- #
+
+MSX = 1.5           # x of the residual stream in the mini panels
+MBX0, MBX1 = 3.3, 7.7   # branch box left/right edges
+MBC = (MBX0 + MBX1) / 2  # branch column center
+
+
+def _mini_panel(ax, order, stream_norm, title):
+    """One sublayer on a residual stream; `order` lists the branch boxes
+    bottom-to-top ('norm'/'attn'); `stream_norm` puts a norm on the stream
+    itself after the addition (post-LN)."""
+    heights = {"norm": 0.85, "attn": 1.15}
+    gap, y_read, y_top = 0.5, 0.7, 6.4
+
+    # branch boxes, bottom to top
+    y, spans = 1.25, []
+    for kind in order:
+        h = heights[kind]
+        spans.append((kind, y, y + h))
+        y += h + gap
+    y_add = y - gap + 0.5
+
+    # stream (interrupted by a norm box only for post-LN)
+    if stream_norm:
+        ax.add_patch(Circle((MSX, y_add), 0.30, fc="white", ec="black",
+                            lw=1.5, zorder=5))
+        n0, n1 = y_add + 0.55, y_add + 1.40
+        fl.arrow(ax, (MSX, 0.0), (MSX, n0), color=BLUE, lw=3.0, mut=18)
+        _box(ax, MSX - NW / 2, MSX + NW / 2, n0, n1, "norm", "white", GRAY)
+        fl.arrow(ax, (MSX, n1), (MSX, y_top), color=BLUE, lw=3.0, mut=18)
+    else:
+        ax.add_patch(Circle((MSX, y_add), 0.30, fc="white", ec="black",
+                            lw=1.5, zorder=5))
+        fl.arrow(ax, (MSX, 0.0), (MSX, y_top), color=BLUE, lw=3.0, mut=18)
+    ax.text(MSX, y_add - 0.02, "+", ha="center", va="center", fontsize=15,
+            color="black", zorder=6)
+
+    # the branch: read, boxes, write into the +
+    ax.plot([MSX, MBC], [y_read, y_read], color=ORANGE, lw=1.8,
+            solid_capstyle="round", zorder=2)
+    _elbow(ax, [(MBC, y_read), (MBC, spans[0][1])], ORANGE)
+    for kind, y0, y1 in spans:
+        if kind == "attn":
+            _box(ax, MBX0, MBX1, y0, y1, "attention", "#ffe8d0", ORANGE)
+        else:
+            _box(ax, MBX0 + 1.1, MBX1 - 1.1, y0, y1, "norm", "white", GRAY)
+    for (_, _, top), (_, nxt, _) in zip(spans, spans[1:]):
+        _elbow(ax, [(MBC, top), (MBC, nxt)], ORANGE)
+    _elbow(ax, [(MBC, spans[-1][2]), (MBC, y_add), (MSX + 0.30, y_add)],
+           ORANGE)
+
+    ax.text(MSX + 0.42, 0.05, r"$\mathbf{x}$", ha="left", va="bottom",
+            fontsize=14, color="black")
+    ax.set_title(title, fontsize=13, color="black")
+    ax.set_xlim(-0.5, 8.3)
+    ax.set_ylim(-0.2, 6.6)
+    ax.set_aspect("equal")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for s in ax.spines.values():
+        s.set_visible(False)
+
+
+def fig_norm_taxonomy() -> None:
+    fig, axes = plt.subplots(1, 4, figsize=(10.6, 3.3))
+    panels = [
+        (["attn"], True, "post-LN\n(2017)"),
+        (["norm", "attn"], False, "pre-LN\n(default)"),
+        (["attn", "norm"], False, "post-sublayer\n(OLMo 2)"),
+        (["norm", "attn", "norm"], False, "pre + post\n(Gemma 3)"),
+    ]
+    for ax, (order, stream_norm, title) in zip(axes, panels):
+        _mini_panel(ax, order, stream_norm, title)
+    fig.subplots_adjust(wspace=0.05)
+    fl.save(fig, "mdl-transformers-norm-taxonomy")
+
+
 if __name__ == "__main__":
     fig_block_anatomy()
+    fig_norm_taxonomy()
     for path in fl.WRITTEN:
         print(f"wrote {os.path.relpath(path)}")

@@ -64,7 +64,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gap    CE from logits    CE via probabilities\n   20          20.0000          16.1181\n   60          60.0000          16.1181\n  103         103.0000          16.1181\n  104         104.0000          16.1181\n"
+          "text": "gap    CE from logits    CE via probabilities\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   20          20.0000          16.1181\n   60          60.0000          16.1181\n  103         103.0000          16.1181\n  104         104.0000          16.1181\n"
         }
       ]
     },
@@ -126,7 +131,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/numerical-stability-conditioning-ridge-1.svg",
           "bytes": 40773,
-          "sha256": "sha256:7652ebe647eb93a3163d57c716b74e4d9d32a6405f51522b749582868176e5d7"
+          "sha256": "sha256:a26280fbcff2f4d38a1d39581068bf60b9283534665b39c8ca39b577aa507a29"
         }
       ]
     }

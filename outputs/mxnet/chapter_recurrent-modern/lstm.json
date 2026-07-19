@@ -46,8 +46,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-3-1.svg",
-          "bytes": 18364,
-          "sha256": "sha256:5c4be73f2b76130e1b3a57733d8ff0680606d60d9ee50126f293f080ed04d2fc"
+          "bytes": 18367,
+          "sha256": "sha256:1c5b5a18667eb40a0c381b680c5986d96e159631228e0c678313879b2d5ede0a"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 103.0\n"
+          "text": "validation perplexity 104.0\n"
         }
       ]
     },
@@ -80,8 +80,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-3-1.svg",
-          "bytes": 18555,
-          "sha256": "sha256:14fe376340cddf5bd77709a40af7f27d85569fc9a1ec3219de3aacaf6d5d3763"
+          "bytes": 18561,
+          "sha256": "sha256:440ac71d928cbf7ede089616c378b915f960bb891528c27cc2e0ad84c07d7402"
         }
       ]
     },
@@ -92,7 +92,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 91.9, 'the time travellering aston and tasonze. I had a fancied. I had a busheslitable. I d'\n"
+          "text": "perplexity 91.1, 'the time traveller, and the floor. I had to tal telled it. I was that the\\nfircy. I was for'\n"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-implementation-and-comparison-3-1.svg",
-          "bytes": 18937,
-          "sha256": "sha256:904d3a57799661baad20834049dbabcb7a7fd3d696c0c0ac3d5f2b289395cf88"
+          "bytes": 18940,
+          "sha256": "sha256:8524455b6ccfeab45513d715cb45cede57b1a97e635d21f49a36c1138c7daa8a"
         }
       ]
     },
@@ -126,7 +126,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 76.0\n"
+          "text": "validation perplexity 74.9\n"
         }
       ]
     },
@@ -143,8 +143,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-deep-recurrent-networks-2-1.svg",
-          "bytes": 20324,
-          "sha256": "sha256:57c9038fe26b1a7dbc4509105cd613427a208e230a89731884f40a2356275c62"
+          "bytes": 20323,
+          "sha256": "sha256:9d03abd67a0ae4764494c263ce067f4eff9616fa3e6f18845faea069448baae0"
         }
       ]
     },
@@ -155,7 +155,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "           model  val ppl\n  LSTM (scratch)    103.0\n            LSTM     91.9\n             GRU     76.0\n LSTM (2 layers)    129.0\n"
+          "text": "           model  val ppl\n  LSTM (scratch)    104.0\n            LSTM     91.1\n             GRU     74.9\n LSTM (2 layers)    122.0\n"
         }
       ]
     },

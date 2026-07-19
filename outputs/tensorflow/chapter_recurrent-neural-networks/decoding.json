@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
           "bytes": 18939,
-          "sha256": "sha256:9c323ebbbba49d7b68995b3488b719db2bd4e8984db657931c7a3316cc58893a"
+          "sha256": "sha256:6a2b8314b630785f43c3ba0e917c1f48a6a77e7808e90e9910040f587ad376f7"
         }
       ]
     },
@@ -48,12 +48,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller, and I\\nwas the fram. I\\nwas the fram. I\\nwas the fram. I\\nwas the fram. I\\nwas the fram. I\\nwas the fram.'\n"
+          "text": "'the time traveller the\\nside, I saw\\nlittleess of the\\nfour of the floor of the\\nsunned and\\npresented\\ntheseength, the\\nfour of the faint of'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"it seemed to me that the little\\ndowarden the\\nsunpres,\\nI had the Time Traveller's\\ndisappeared to the\\nsunpted\\nit, I\\nflance, and\\nslited a\"\n"
+          "text": "'it seemed to me that the\\nhim, and that the\\nfour of the floor of the\\nsunned and\\npresented\\ntheseength, the\\nfour of the faint of\\nthese, I'\n"
         }
       ]
     },
@@ -69,22 +69,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.81, distinct-3 0.26: 'the time traveller, and I\\nwas the fram. I\\nwas the fram. I\\nwas the fram. I\\nwas the fram. I\\nwas the fra'\n"
+          "text": "k=1, score -4.74, distinct-3 0.95: 'the time traveller the\\nside, I saw\\nlittleess of the\\nfour of the floor of the\\nsunned and\\npresented\\ntheseength'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.73, distinct-3 0.63: \"the time traveller.\\n\\n'There I found it in the\\nsurface, and\\npresented me.\\n\\n'There I found it in the\\nsurface\"\n"
+          "text": "k=4, score -3.16, distinct-3 0.45: \"the time traveller the Time Traveller.\\n\\n'There I found a\\npresented.\\n\\n'There I found a\\npresented.\\n\\n'There I found a\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -4.53, distinct-3 0.92: \"it seemed to me that the little\\ndowarden the\\nsunpres,\\nI had the Time Traveller's\\ndisappeared to the\\nsunpted\\nit, I\\nf\"\n"
+          "text": "k=1, score -4.62, distinct-3 0.95: 'it seemed to me that the\\nhim, and that the\\nfour of the floor of the\\nsunned and\\npresented\\ntheseength, the\\nfour'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.86, distinct-3 0.79: \"it seemed to me that there was nothing to the\\nsunning.\\n\\n'There I found the\\nshavaled.\\n\\n'There I found it in the\\nsurf\"\n"
+          "text": "k=4, score -3.15, distinct-3 0.58: \"it seemed to me that I had\\ndisappef.\\n\\n'There I found a\\npresented.\\n\\n'There I found a\\npresented.\\n\\n'\"\n"
         }
       ]
     },
@@ -115,14 +115,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x7eec4c30dd60>"
+          "text": "<matplotlib.legend.Legend at 0x73b5d87d9880>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 47632,
-          "sha256": "sha256:2f3cf4e4ed3d1d411b6eb1dcb951160a772750bf5022e60a63527055912f1df6"
+          "bytes": 47842,
+          "sha256": "sha256:6e8c70f370f2076c21d7fea50524a51f4cb3155c321c47adc16ce7afacf9a09a"
         }
       ]
     },
@@ -133,7 +133,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.10, top-k keeps 20, top-p keeps 127, min-p keeps 24\n'it seemed to me that': top prob 0.29, top-k keeps 20, top-p keeps 67, min-p keeps 10\n"
+          "text": "'the time traveller': top prob 0.07, top-k keeps 20, top-p keeps 149, min-p keeps 42\n'it seemed to me that': top prob 0.20, top-k keeps 20, top-p keeps 53, min-p keeps 11\n"
         }
       ]
     },
@@ -144,17 +144,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: \"the time traveller;\\nthese, I found it in a\\ns--and taken.\\n\\n'I do not know how well when\\nthe bars.\\n\\n'There I found a\\nproin the silver\\n\"\n"
+          "text": "T=0.5: \"the time travellerce a\\nbut in.\\n\\n'That's guessy, I saw\\nstrdle. L\\n\\n\\nmake, and I\\npresently read\\nscessively\\nfour;\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0: \"the time travelleries of the\\nBeltybled you one of ulgered we all ril.\\n\\n'Thatround eyep hasded by it on\\nciance I heard some simved of wilders\"\n"
+          "text": "T=1.0: 'the time travellers and.\\nI either him to and approumpessity upon me. It was\\nbeto either� lever of proenox orually the twoworic, and gallery were very siln'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0: 'the time travellerund coming\\nsolute\\x12 buible do�ory.2o clefove down I knew, back--ak awayway�tyren tustesatedit to im much.. there will onilagause peor lit bl'\n"
+          "text": "T=2.0: 'the time traveller hech.\\near�ich part seemed� along the they wereullh�ffently once;off perhaps onlyndwas above under such betbleag arearereive\\x06istme aser j onether; round witheen'\n"
         }
       ]
     },
@@ -165,27 +165,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 0.21): 'the time traveller, and I\\nwas the fram. I\\nwas the fram. I\\nwas the fram. I\\nwas the fram. I\\nwas the fram. I\\nwas the fram.'\n"
+          "text": " greedy (distinct-3 0.85): 'the time traveller the\\nside, I saw\\nlittleess of the\\nfour of the floor of the\\nsunned and\\npresented\\ntheseength, the\\nfour of the faint of'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 1.00): \"the time travelleries of the\\nBeltybled you one of ulgered we all ril.\\n\\n'Thatround eyep hasded by it on\\nciance I heard some simved of wilders\"\n"
+          "text": "  T=1.0 (distinct-3 1.00): 'the time travellers and.\\nI either him to and approumpessity upon me. It was\\nbeto either� lever of proenox orually the twoworic, and gallery were very siln'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): \"the time traveller of\\nthesereci in a battitut of the machine, for the _found my eyes. 're which we, or\\nthe lay of\\ninrongs that ran, no sight of r\"\n"
+          "text": "  top-k (distinct-3 1.00): \"the time travellerces, and I went downsetulate\\nMy and\\ns the breathing of detewomion, it's have been during. Soets and spiming. For\\nmyself he\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-p (distinct-3 1.00): \"the time traveller\\nof the R gr bok; but\\nchaned the matching, I had it would my ark at me\\nthis the earth's.\\nIhames was those\\none, perhaps, how\"\n"
+          "text": "  top-p (distinct-3 1.00): \"the time travellercondon of white had come me thinks upon\\nthated; and eitherance of\\nbacstand. So who Man oner, and disappceptuooing.\\n\\n'Aman, and you\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  min-p (distinct-3 1.00): \"the time traveller of\\nthese, ' a vague to a sweaker ears, to the me\\nMy. Hvowing stramemncept prping.\\n\\n'Of wok\"\n"
+          "text": "  min-p (distinct-3 1.00): \"the time traveller\\nthereenumy of a marms of us. 'I bewered.\\n\\n'Tondeedorce the\\nwellorner, the night, and that was the starteroots!\"\n"
         }
       ]
     }

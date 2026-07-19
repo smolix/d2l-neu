@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D: final validation accuracy 0.591\n"
+          "text": "S4D: final validation accuracy 0.536\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-3-1.svg",
-          "bytes": 21946,
-          "sha256": "sha256:9d74e02ad811822e229956381b49dcf405b51afdcd652e5babc180be510c434e"
+          "bytes": 21865,
+          "sha256": "sha256:eaad7414d2bcbbe30f468998aba16032889a1e543385b6bb4f4c8e804bf05eb5"
         }
       ]
     },
@@ -58,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM: final validation accuracy 0.986\n"
+          "text": "LSTM: final validation accuracy 0.995\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-4-1.svg",
-          "bytes": 21863,
-          "sha256": "sha256:9cc92df9265a5a1f17c0eb271cf1f582bc4fcbde3ff92e5a8e62c63d9f774264"
+          "bytes": 21865,
+          "sha256": "sha256:f95fcfde822c6a6c89b775dd328d0e53fcbbb2481e6391431c83d01e96991782"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-5-1.svg",
-          "bytes": 27645,
-          "sha256": "sha256:0822b0a9bbef90bcfeb64afb92eae6fbb20a45a0506e7c64bcaaff50c6b2dbbf"
+          "bytes": 27647,
+          "sha256": "sha256:6a61da2c316f1709add2837bf3b39e56833b489f6cf8cd57d7c19e7d5ad997f4"
         }
       ]
     },
@@ -89,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time-varying scan vs loop: 2.38e-07\n"
+          "text": "time-varying scan vs loop: 4.77e-07\n"
         }
       ]
     },
@@ -121,8 +121,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-3-1.svg",
-          "bytes": 18366,
-          "sha256": "sha256:3ad0ec8b6b332825f69e79a1c03b2ceca748bdd6a330029ca2c98cc607703137"
+          "bytes": 18364,
+          "sha256": "sha256:ae88ce67bb276821768bff099d319f0a9617d46825576602d8adcc5728b181b7"
         }
       ]
     },
@@ -134,8 +134,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-4-1.svg",
-          "bytes": 18753,
-          "sha256": "sha256:371ad6c3862041cd78b59e5d8ac638c2e18b668354ab37c2fef72f59a0d24b27"
+          "bytes": 18752,
+          "sha256": "sha256:8e2ceb7fe986e15f2155dd97d3de2d72d953bb6572fc3df05d074175ff56732f"
         }
       ]
     },
@@ -147,8 +147,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-5-1.svg",
-          "bytes": 20816,
-          "sha256": "sha256:e015896ca722a7b16afe7c578d1dda024ad39d50eb035ab0a99f33bdfabbea3e"
+          "bytes": 20814,
+          "sha256": "sha256:0f521e69b3f86f3ed824e1a962d5ceff6d5ae74a84b1b569ca2ab1bb8788d206"
         }
       ]
     },
@@ -159,7 +159,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     92.3   2.35   297,027      2.4\n minGRU     80.8   2.28   214,851      2.7\n  Mamba     72.1   2.22   488,739     13.5\n"
+          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM    100.3   2.39   297,027      2.4\n minGRU     86.0   2.31   214,851      2.5\n  Mamba     71.1   2.21   488,739     11.6\n"
         }
       ]
     },
@@ -170,17 +170,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   LSTM: 'the time travellerit, and the hars. The were greating. I remember. The\\nfiration of'\n"
+          "text": "   LSTM: 'the time travellernalist. Weven that was ocess of the metiling in a circch.'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " minGRU: \"the time travelleraken.\\n\\nThe Time Traveller. It's a thickaps. As the pated it,\"\n"
+          "text": " minGRU: \"the time travellerwerest, no though, I knew, as I went on my own.\\n\\n'It wee\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  Mamba: 'the time travelleres, and I could see a waler of\\nshandered my own affection, but the'\n"
+          "text": "  Mamba: 'the time traveller.\\nThen I lay to reccess of the earth seemed to me, and I was dreamed'\n"
         }
       ]
     },
@@ -191,14 +191,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba: final validation accuracy 0.999\n"
+          "text": "Mamba: final validation accuracy 1.000\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-1-1.svg",
-          "bytes": 21884,
-          "sha256": "sha256:bc108e71c2abc0dadd606fd849e15a867844f20dc5df82bb0de2c0ebdce13289"
+          "bytes": 21885,
+          "sha256": "sha256:3599f2f30cdb97bca1d4be03ba184a20d07cfbacbef9204532d7cdcd5ef2e57c"
         }
       ]
     },
@@ -210,8 +210,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-2-1.svg",
-          "bytes": 30438,
-          "sha256": "sha256:5a07957d3c613a29d8c2163603ea59b798b62ea50bb32b242920e527c9bf426e"
+          "bytes": 30385,
+          "sha256": "sha256:a1463d11101166f0baf5bc8c4dd6ed545b7a3bf7321a7c5186f7b2631b2f921c"
         }
       ]
     }

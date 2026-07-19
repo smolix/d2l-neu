@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(0.519784893201361, 0.5197848932013611)"
+          "text": "(0.5392973590020046, 0.5392973590020046)"
         }
       ]
     },
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance    = 4\nE[divide by n]   = 2.670  (biased)\nE[divide by n-1] = 4.005  (unbiased)\n"
+          "text": "true variance    = 4\nE[divide by n]   = 2.665  (biased)\nE[divide by n-1] = 3.997  (unbiased)\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/statistics-permutation-test-1.svg",
           "bytes": 32404,
-          "sha256": "sha256:c4c6e3562a63fd3e59666387ea7f83a8e7f38b019601a0c936022feed681041d"
+          "sha256": "sha256:b271e58704de79f152bf0f48cafef6e219307d5c86f063dd854bfb95cc477ee8"
         }
       ]
     },
@@ -68,7 +68,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(-0.09597399859530559, 0.027255595625125736)"
+          "text": "(-0.045842359011470823, 0.07687907624025951)"
         }
       ]
     },

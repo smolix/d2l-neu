@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-tools-for-deep-learning/cloud-instances.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "cloud-instances-cost-model": {
+      "code_fingerprint": "sha256:d18047ebd319b66ef16dbe5bd05758072cc4100ed617c40747f322dd0cc4f60a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "('RTX 4090', np.float64(8.0), np.float64(5.4), np.float64(35.4))\n('A100 80GB', np.float64(5.0), np.float64(10.25), np.float64(40.25))\n('H100', np.float64(2.7), np.float64(9.92), np.float64(39.92))\n"
+        }
+      ]
+    }
+  }
+}

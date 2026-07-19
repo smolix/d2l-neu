@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-a-nan-averted-3-1.svg",
-          "bytes": 36831,
-          "sha256": "sha256:72b0b84b5651a2ccc34ab24677255cf00648bfb22dd4c44d140a21734f206637"
+          "bytes": 36980,
+          "sha256": "sha256:bc65f753c86c73918ad8a5e22e46a6d8c4793af762528ce024628945e60decc1"
         }
       ]
     },
@@ -64,7 +64,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final test accuracy: live 0.906, EMA 0.911\n"
+          "text": "final test accuracy: live 0.899, EMA 0.911\n"
         }
       ]
     },
@@ -76,8 +76,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "practice/practice-weight-averaging-3-1.svg",
-          "bytes": 24051,
-          "sha256": "sha256:f040b395725ca19b91f8ff1cef41e676f64404d1ba51d83f32c971a55f171e69"
+          "bytes": 24044,
+          "sha256": "sha256:60ba722773d466221899a8fcbc498512f516d7cea2c37e706973fc8d971d007f"
         }
       ]
     }

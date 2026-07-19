@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:cd8490d275dbed53965ce9f6c51f97edc66e92fe1d81b58ed043c44d03c2b6d2",
+    "d2l_lib_fingerprint": "sha256:706227925dd2f60db78b9aad0161ea8b7413e8a219892973e77ba9c102fd30bb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "masked loss at step 500/1000/2000: 1.91/1.45/1.12\n"
+          "text": "masked loss at step 500/1000/2000: 1.97/1.54/1.21\n"
         }
       ]
     },
@@ -36,19 +36,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "masked accuracy 0.63\n"
+          "text": "masked accuracy 0.61\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss at position 0: 2.15, at position 63: 2.13, interior mean: 1.14\n"
+          "text": "loss at position 0: 2.11, at position 63: 2.20, interior mean: 1.20\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-what-the-second-side-is-worth-1-1.svg",
-          "bytes": 22231,
-          "sha256": "sha256:b80b02db2733373ea21c37142a7034a0ac7ef8f57aa70edf4dbec1323c203b81"
+          "bytes": 22683,
+          "sha256": "sha256:c89faa348b3c8b00fef1349da170426623d85f1864586ca43369ea62ad3d09dc"
         }
       ]
     },
@@ -59,7 +59,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time _raveller for so it will be con'... -> 't' 0.96, 'c' 0.01, 'g' 0.01\n'the time trave_ler for so it will be con'... -> 'l' 0.98, ' ' 0.00, 'b' 0.00\n'the time traveller for so it w_ll be con'... -> 'e' 0.71, 'i' 0.25, 'a' 0.03\n"
+          "text": "'the time _raveller for so it will be con'... -> 't' 0.72, 'g' 0.05, 'f' 0.05\n'the time trave_ler for so it will be con'... -> 'l' 0.96, ' ' 0.02, 'r' 0.01\n'the time traveller for so it w_ll be con'... -> 'e' 0.46, 'i' 0.40, 'o' 0.09\n"
         }
       ]
     },
@@ -84,8 +84,24 @@
       "kind": "text",
       "outputs": []
     },
+    "encoders-decoders-assembling-the-masks": {
+      "code_fingerprint": "sha256:c868225772b271f8b755b9e8b31c25d78d48f7e85da5f523e448f33ac49e5229",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "encoder self-attention mask, sequence 0 (1 = may attend):\n[[1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]]\ndecoder self-attention mask, sequence 0 (1 = may attend):\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[[1 0 0 0]\n [1 1 0 0]\n [1 1 1 0]\n [1 1 1 0]]\ncross-attention mask, sequence 0 (1 = may attend):\n[[1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]]\n"
+        }
+      ]
+    },
     "encoders-decoders-training-and-decoding-1": {
-      "code_fingerprint": "sha256:e09c7e2066149b77fea221c2eadf23d697c899b21d60fd81811c9751296026e6",
+      "code_fingerprint": "sha256:46296d2b681458a0f2083df512ec6ca9f02a4af6636dfc5f36bdadb0e6b5edd4",
       "kind": "text",
       "outputs": [
         {
@@ -96,7 +112,7 @@
       ]
     },
     "encoders-decoders-training-and-decoding-2": {
-      "code_fingerprint": "sha256:0f78494245b2637b9c6baa8f635a049bbf13b1ace78b97174de8e6b0421c19a8",
+      "code_fingerprint": "sha256:5c1deef26ef48c4b481b00836da25b1dc427b7edcaab0a9e13c1cd5eb2fffb8d",
       "kind": "text",
       "outputs": [
         {
@@ -107,7 +123,7 @@
       ]
     },
     "encoders-decoders-reading-the-alignment": {
-      "code_fingerprint": "sha256:8fa0434a6fecab9efad46350b733aa6074aca96ad7f53679aaaa1874ab092dbd",
+      "code_fingerprint": "sha256:388c7dc211be2a123a1ea34033fabef27bfd61d800086807046616d15074d40c",
       "kind": "mixed",
       "outputs": [
         {
@@ -119,13 +135,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-reading-the-alignment-1.svg",
-          "bytes": 37727,
-          "sha256": "sha256:a5c6d721aec8327c166ca6b6279e5dda6487b24f1c652b5f5e0c4f916aae0f4f"
+          "bytes": 37718,
+          "sha256": "sha256:9c1c60bf95fe189f43b399309609de26672a57eb31b36471a225bcd3a045cb56"
         }
       ]
     },
     "encoders-decoders-queries-need-not-come-from-a-sequence": {
-      "code_fingerprint": "sha256:dbaf3945f4b9e6bf3967d8039143266acaa98d2e821d4386738d10c92a790da3",
+      "code_fingerprint": "sha256:0c9e1e6f071d1294f20afff2fd4ca7725e68c4106f5b145150f4209c762124f4",
       "kind": "text",
       "outputs": [
         {
@@ -136,35 +152,35 @@
       ]
     },
     "encoders-decoders-the-cost-curve": {
-      "code_fingerprint": "sha256:d40de779e1f003702b0bc28ba3b1fc044b07ec8bdb1a81fce58d29384b977d95",
+      "code_fingerprint": "sha256:222b27b31fc49f01ac1f86945767663d6a507285d6a2c667da9370a6ebb4c564",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 1024: self-attention   0.43 ms, perceiver  0.39 ms\n"
+          "text": "N= 1024: self-attention   0.33 ms, perceiver  0.23 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 2048: self-attention   0.97 ms, perceiver  0.49 ms\n"
+          "text": "N= 2048: self-attention   0.62 ms, perceiver  0.34 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 4096: self-attention   4.54 ms, perceiver  0.36 ms\n"
+          "text": "N= 4096: self-attention   2.69 ms, perceiver  0.16 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N= 8192: self-attention  12.76 ms, perceiver  0.37 ms\n"
+          "text": "N= 8192: self-attention  10.00 ms, perceiver  0.27 ms\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "encoders-decoders/encoders-decoders-the-cost-curve-1.svg",
-          "bytes": 30804,
-          "sha256": "sha256:5d7fb8a083499ffbedd442c6097fe362e273039dc9ded3ab6fbf90c21052fd87"
+          "bytes": 31187,
+          "sha256": "sha256:dc3321ecbdc70c875b8d8be88efed8e0bd710cf38e0228381d9a739cbb51d0fc"
         }
       ]
     }

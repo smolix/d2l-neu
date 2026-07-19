@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-cloud-marginals-1.svg",
           "bytes": 71874,
-          "sha256": "sha256:c99c1c3a1eab78ba92e56558d8f90ef7ddbe4f4d20c9a51ffda9105ad33e3aca"
+          "sha256": "sha256:67ac75f2d176b9b240612cbda4ca6c274e3025ea1beea9f43b3cd74bdc18bfd4"
         }
       ]
     },
@@ -71,14 +71,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\nt=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
+          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-pf-ode-overlay-1.svg",
           "bytes": 245349,
-          "sha256": "sha256:f591ac711c8fff84680a0baa8666573730e869831a10039340b213320db52c8a"
+          "sha256": "sha256:9cdc5ce083f3e0c9af9bfc452264fb6443969bf99c27e683a61af5f5c09bee03"
         }
       ]
     },
@@ -96,7 +101,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-mixture-score-1.svg",
           "bytes": 25825,
-          "sha256": "sha256:e498c65ea51ed21e0afb97eb1567785d515ebf4f0ec4dd65d943f6df55bf27d0"
+          "sha256": "sha256:6f2242823aa2f4debde2b4db2de50afac77b404f51d639eb07b242f67b3a4637"
         }
       ]
     },
@@ -119,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-reverse-sde-1.svg",
           "bytes": 43149,
-          "sha256": "sha256:406cb25fc0162b0b57e21cab57792af016504709c6fc713414043202230bc7ea"
+          "sha256": "sha256:0dfdc26c0b9c19636a448a8328ad5ad6f233b5978d7ce18cd914471868dc71c2"
         }
       ]
     }

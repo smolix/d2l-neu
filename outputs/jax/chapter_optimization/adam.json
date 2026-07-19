@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-1-1.svg",
           "bytes": 23686,
-          "sha256": "sha256:c01b024c9426644abb778b274ef6d18541931810fa760f3e8d1d99871f8dccf0"
+          "sha256": "sha256:457547303023413e090fda08694a77fed9d549e00c84b0f6180302be315fff40"
         }
       ]
     },
@@ -45,7 +45,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-2-1.svg",
           "bytes": 23700,
-          "sha256": "sha256:2077777636ee122e150a1e240e11931733998b6acd904b635ac3e8cc287bec68"
+          "sha256": "sha256:3e4b5a3138fc8c322449523ae679456857fc399b8355b272044cbc3fa2dff2bb"
         }
       ]
     },
@@ -61,14 +61,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 1.434 sec/epoch\n"
+          "text": "loss: 0.243, 1.447 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-per-coordinate-learning-rates-4-1.svg",
-          "bytes": 18783,
-          "sha256": "sha256:b7ae7cd69c2e04fafe580142d1a33062694f9e696cd48542f08ea7e2d8716f72"
+          "bytes": 18782,
+          "sha256": "sha256:d13d8cf9af2663bf88dfa9311d17f73123797b77d86cd6ad94cf071a3873370c"
         }
       ]
     },
@@ -86,7 +86,7 @@
           "mime": "image/svg+xml",
           "asset": "adam/adam-rmsprop-forgetting-on-purpose-1-1.svg",
           "bytes": 23700,
-          "sha256": "sha256:251f6e1734f60ecdbf932d498fe476446b3159b7c47e8441e382f0683ca5bd54"
+          "sha256": "sha256:e0087974297bddf3008ddf03e80e6ca6048ef539d830b5f49865cb319db347e6"
         }
       ]
     },
@@ -102,14 +102,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.244, 0.483 sec/epoch\n"
+          "text": "loss: 0.244, 0.449 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-rmsprop-forgetting-on-purpose-3-1.svg",
-          "bytes": 18780,
-          "sha256": "sha256:17c84b31541f1f73ce146a291ba265801fa50145ed62a4d94453a1e62c754314"
+          "bytes": 18779,
+          "sha256": "sha256:195e9712aa48dc278c2794f3175c65361ce4648537b26a0793fdef8c119b705a"
         }
       ]
     },
@@ -125,14 +125,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.243, 0.735 sec/epoch\n"
+          "text": "loss: 0.244, 0.717 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-adam-both-moments-debiased-2-1.svg",
-          "bytes": 18774,
-          "sha256": "sha256:d5a1dea7317a08fef53653de4d5abc56967ce3198c0c2426c6189fc690a0a773"
+          "bytes": 18773,
+          "sha256": "sha256:fcd75cffb9c482aae613a8d2ef2ce98ec229cac0fb93b1823fa2934c3b725902"
         }
       ]
     },
@@ -143,14 +143,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss: 0.246, 0.410 sec/epoch\n"
+          "text": "loss: 0.245, 0.400 sec/epoch\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-adam-both-moments-debiased-3-1.svg",
-          "bytes": 18706,
-          "sha256": "sha256:5ef076853e2754e73b11f8ec233aebae5531de1b44c7b7ddba09094922421490"
+          "bytes": 18702,
+          "sha256": "sha256:c33bc54a272122dde565dc1dd22b301c3ffc040016ad93f409e1534e37d84e8a"
         }
       ]
     },
@@ -192,14 +192,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity per character: 2.88\n"
+          "text": "perplexity per character: 2.76\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-a-tiny-language-model-6-1.svg",
-          "bytes": 19439,
-          "sha256": "sha256:764778e0287b6811272b3faa9c98e34d7964394850076cb3a5263b8b7c0b5d2a"
+          "bytes": 19443,
+          "sha256": "sha256:fde4fadec7098d9da27c70c645dd535404ddac358f917c8e2ec0a6fd4db7f484"
         }
       ]
     },
@@ -210,12 +210,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.03: final loss 1.331\n"
+          "text": "lr 0.03: final loss 1.343\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 1.180\n"
+          "text": "lr 0.1: final loss 1.206\n"
         },
         {
           "type": "stream",
@@ -241,17 +241,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 1.043\n"
+          "text": "lr 0.001: final loss 0.994\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 1.026\n"
+          "text": "lr 0.003: final loss 1.040\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 2.290\n"
+          "text": "lr 0.01: final loss 2.263\n"
         }
       ]
     },
@@ -262,14 +262,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final perplexity: SGD 3.26, Adam 2.79\n"
+          "text": "final perplexity: SGD 3.34, Adam 2.70\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-the-race-on-the-language-model-3-1.svg",
-          "bytes": 30427,
-          "sha256": "sha256:7744dc51029311c51895f70a0399826ad9f20048b327a1c03a0c1f8d3cc86f7a"
+          "bytes": 31145,
+          "sha256": "sha256:f4f278b80a7e8a49ada191b25c908e85cccada73fecf67defd0bfda5f3a51d89"
         }
       ]
     },
@@ -285,22 +285,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.247, test accuracy 0.897\n"
+          "text": "lr 0.01: final loss 0.243, test accuracy 0.899\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.03: final loss 0.176, test accuracy 0.912\n"
+          "text": "lr 0.03: final loss 0.185, test accuracy 0.902\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.1: final loss 0.132, test accuracy 0.917\n"
+          "text": "lr 0.1: final loss 0.132, test accuracy 0.919\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.3: final loss 0.208, test accuracy 0.893\n"
+          "text": "lr 0.3: final loss 0.232, test accuracy 0.885\n"
         }
       ]
     },
@@ -311,22 +311,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.0003: final loss 0.242, test accuracy 0.898\n"
+          "text": "lr 0.0003: final loss 0.241, test accuracy 0.898\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.001: final loss 0.153, test accuracy 0.914\n"
+          "text": "lr 0.001: final loss 0.154, test accuracy 0.913\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 0.094, test accuracy 0.924\n"
+          "text": "lr 0.003: final loss 0.091, test accuracy 0.920\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.167, test accuracy 0.899\n"
+          "text": "lr 0.01: final loss 0.144, test accuracy 0.907\n"
         }
       ]
     },
@@ -337,14 +337,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test accuracy: SGD 0.917, Adam 0.924\n"
+          "text": "test accuracy: SGD 0.919, Adam 0.920\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "adam/adam-the-same-race-on-a-cnn-4-1.svg",
-          "bytes": 31030,
-          "sha256": "sha256:8582a51d76c65168f6cbe7e4bd5f71b3fcdbd351f8aca64bad52af0b79ae9ef1"
+          "bytes": 31037,
+          "sha256": "sha256:482906139fa189519345f43e84c255f395bc340520dca800359abe1833a920b9"
         }
       ]
     }

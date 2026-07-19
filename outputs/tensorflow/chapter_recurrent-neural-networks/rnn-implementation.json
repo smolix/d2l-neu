@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 19145,
-          "sha256": "sha256:65e8d3ddfeba06ce8ae5789ae296fcb04f62c030971c2c3b815286bc44df08e4"
+          "bytes": 20634,
+          "sha256": "sha256:db5b6ec64b5edf99999515b24cbb9e5c3fd6ff5854ac0c7d37c9bbe902dbaba2"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 94.7\n"
+          "text": "validation perplexity 97.5\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.36 bits per byte\n"
+          "text": "2.78 bytes/token, 2.38 bits per byte\n"
         }
       ]
     },
@@ -124,7 +124,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'the time traveller, I had seen. I had the bigature, and the wrong. I had the bigature, and the wrong. I had the bigature, and the wrong. I had'"
+          "text": "'the time traveller pastesture of the faint and purtening, and I was not seem, and I was not seem, and I was the little people were of the Time Traveller, and I was the little people were of the'"
         }
       ]
     },
@@ -135,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time traveller un by the though in his horimli and pout that the earth stood into u and vap for of a were Sning G\nthe time traveller, and the wanitions of the little people of the sunlitions and that is\ntravelling the slopes of\n"
+          "text": "the time traveller ' kns. It was very utentationsly and dis Thisationsausereadies. Then Filby, and hisib dist\nthe time travellerly premipes, and I could not see I had a long'sion had seen in this faster thannesset\n"
         }
       ]
     },
@@ -160,7 +160,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has�roughue�hingps\\x7factTheown�btast our-- trens thinkace then'"
+          "text": "'it hasaceull�ywardspp doatedyC any so beganhingtain�ars\\x08 could'"
         }
       ]
     },
@@ -172,8 +172,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 18940,
-          "sha256": "sha256:b1eae76dab9f6fac14354d62a0119b220e95895c275e0b22ab8844234b0be2e9"
+          "bytes": 19516,
+          "sha256": "sha256:bf81955f7f17b566793fd02f469e7eab2217abe57c7c7d6c1e2b0a92d2a74919"
         }
       ]
     },
@@ -184,7 +184,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 109.1, \"the time traveller. I was\\nfound not see I\\nmatheie, and I was nothing to\\n\\n'In a moment I\"\n"
+          "text": "perplexity 109.5, \"the time travellerre I\\nwas decay.\\n\\n'In a breathing of the little people were sensible. I was not a\"\n"
         }
       ]
     },
@@ -195,7 +195,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      54.7     94.7\n concise      53.5    109.1\n"
+          "text": "   model  time (s)  val ppl\n scratch      57.4     97.5\n concise      42.1    109.5\n"
         }
       ]
     }

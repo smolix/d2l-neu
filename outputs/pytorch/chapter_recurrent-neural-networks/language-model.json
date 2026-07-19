@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:eb5121343bc644585b1e2b5f46204cb75b9ed92eab32b9a9c8a5402f78f39328"
+          "sha256": "sha256:0bdd9dc99a045ef0e6cefce3524e8d2766b8db2989752a7d8dcaac997db7c4a9"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:61700669ffa5372a662c65f9be79d7fe7b0a23a5a69e317cb7537bdeb9fc7ae1"
+          "sha256": "sha256:7e68774ff3a602cabca76151fb27714900154e2a675587291699d0f4882db7e4"
         }
       ]
     },
@@ -135,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tensor([[ 116,  701,   46,   10,   80,  320,  102,  380,  282,  459],\n        [1015,  275,  667,   10,   10,   39,   89,  292,  545,  491]]) \nY: tensor([[701,  46,  10,  80, 320, 102, 380, 282, 459, 337],\n        [275, 667,  10,  10,  39,  89, 292, 545, 491, 260]])\nX[0]: 'try.\\nProfessor S'\nY[0]: 'ry.\\nProfessor Sim'\n"
+          "text": "X: tensor([[869,  32, 992,  46, 523, 870, 291, 806, 847, 612],\n        [ 46, 269, 600, 400, 112, 704, 353, 258, 762,  46]]) \nY: tensor([[ 32, 992,  46, 523, 870, 291, 806, 847, 612,  10],\n        [269, 600, 400, 112, 704, 353, 258, 762,  46, 691]])\nX[0]: \"that ... very clear indeed.'\"\nY[0]: \" ... very clear indeed.'\\n\"\n"
         }
       ]
     }

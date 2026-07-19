@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-one-dimensional-gradient-descent-4-1.svg",
           "bytes": 18445,
-          "sha256": "sha256:250a63479855ea140c5a5b67870ea526c496f1eaf33aa1da72650a3b707e0b74"
+          "sha256": "sha256:50adbceca0d558caf162e719a8a4b963c3fdb7a3ffc584f155b4de5b203994e0"
         }
       ]
     },
@@ -56,7 +56,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-1-1.svg",
           "bytes": 18443,
-          "sha256": "sha256:f8d4a665e3d9fed74c4b05cb9806c287e1aae7372d736355b1eec8117e403208"
+          "sha256": "sha256:beb243b82dd0512a887c17c4d50e4fbb383d793f18cc93ff141635a5e2daa806"
         }
       ]
     },
@@ -74,7 +74,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-learning-rate-2-1.svg",
           "bytes": 17956,
-          "sha256": "sha256:3df048e6d51e97025ad160fa2287726f26ced4949caaef1dfc41088ec30aa06f"
+          "sha256": "sha256:01498d791ec33c0f9afe73a34da7a45209da03f70f75dc8ddc2485bc4b41d446"
         }
       ]
     },
@@ -92,7 +92,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-local-minima-1.svg",
           "bytes": 14963,
-          "sha256": "sha256:dc303de3323015c1b03328eb7bf6cd8ccb8538a3f21b90f19754505ba7a80862"
+          "sha256": "sha256:dd440fb71e2bb3d8af4e0beb9be0fbe8d9f34c2e64ea15b4c2bc69c78024ebf0"
         }
       ]
     },
@@ -120,7 +120,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-multivariate-gradient-descent-3-1.svg",
           "bytes": 19542,
-          "sha256": "sha256:da44a077d9073367223572db36c648680a716e9d7058acb8dbbe43a28d60691b"
+          "sha256": "sha256:1c2e7a128d957205bd4e539a261bbfbe018c1de6c36a7017ec58509a8b68c622"
         }
       ]
     },
@@ -138,7 +138,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-1-1.svg",
           "bytes": 16481,
-          "sha256": "sha256:d6da14891e517560fcc68f080536fb72f5317f2bec9561706c85de9501cfe7a2"
+          "sha256": "sha256:c48f080b2940683c114f59a440c205bbdfa15b3a82a2392ffcd6ed231131cd0d"
         }
       ]
     },
@@ -156,7 +156,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-2-1.svg",
           "bytes": 16762,
-          "sha256": "sha256:a0d83e8b52d62aa1c41c596514eed528144b2e4226541324012fc5367b42a297"
+          "sha256": "sha256:9b9c13022a7323de64236ccbc995a208e5b4b2e446ce5c10f9278050b8ac1c70"
         }
       ]
     },
@@ -174,7 +174,7 @@
           "mime": "image/svg+xml",
           "asset": "gd/gd-newton-s-method-3-1.svg",
           "bytes": 14971,
-          "sha256": "sha256:1d3d1c71d3c3877134a82aee7843361ad81af36c7125d8fb7af44dfd509f0c69"
+          "sha256": "sha256:1fbbc1a7d831176b5bfb85f62690b84ce1dfe2c5d9f869169c103717280c2c38"
         }
       ]
     }

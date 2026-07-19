@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "muon/muon-orthogonalization-by-newton-schulz-2-1.svg",
           "bytes": 30186,
-          "sha256": "sha256:fbf90e8ae7934d60dd7735e04d0ac42a9d4c05d4cde6230418db232e81ca8d6b"
+          "sha256": "sha256:25e30f8d881129992eb91bde3116115f71d81ecde2178c6b86114b47f4537abf"
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.982\n"
+          "text": "lr 0.01: final loss 0.972\n"
         }
       ]
     },
@@ -100,12 +100,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.003: final loss 0.929\n"
+          "text": "lr 0.003: final loss 0.928\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lr 0.01: final loss 0.841\n"
+          "text": "lr 0.01: final loss 0.833\n"
         }
       ]
     },
@@ -116,14 +116,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final perplexity: AdamW 2.49, Muon+AdamW 2.32\n"
+          "text": "final perplexity: AdamW 2.49, Muon+AdamW 2.30\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-race-on-the-language-model-3-1.svg",
-          "bytes": 28627,
-          "sha256": "sha256:2d22be03d0356c64f8256002225769667d33df18db624ffd8e61e2e6d2356c45"
+          "bytes": 28630,
+          "sha256": "sha256:19e540f0d40c86e08ff5e6e82d8dfa3b83e061bf3f493af379b15fd0dd452b70"
         }
       ]
     },
@@ -193,7 +193,7 @@
           "mime": "image/svg+xml",
           "asset": "muon/muon-the-same-race-on-a-cnn-3-1.svg",
           "bytes": 28752,
-          "sha256": "sha256:591a6d49dbdcd3f50f85c47afe493bba775b4fcf5f7707b4bebf57e37d6d913d"
+          "sha256": "sha256:e28c4b62b074e21791f6d0f028f7093da5487ae315ddd9c9964021512c0bc1fc"
         }
       ]
     },
@@ -204,7 +204,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final loss 0.827\n"
+          "text": "final loss 0.832\n"
         }
       ]
     }

@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D: final validation accuracy 0.609\n"
+          "text": "S4D: final validation accuracy 0.556\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-3-1.svg",
-          "bytes": 21300,
-          "sha256": "sha256:dc383dc3f7ca99fc93364fe6f61c1795c8d224ce6364e258aab3993e77c705d7"
+          "bytes": 21357,
+          "sha256": "sha256:ef4340df0083733565020a003d2814cd5007871c9482f8cbea4049beff94b8ef"
         }
       ]
     },
@@ -58,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM: final validation accuracy 0.996\n"
+          "text": "LSTM: final validation accuracy 1.000\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-4-1.svg",
-          "bytes": 21875,
-          "sha256": "sha256:1fd193726d490a2ba0b5983375c8cb588b0b2501a1d9000e734f3c593ae398cf"
+          "bytes": 21876,
+          "sha256": "sha256:70ed870c459ff63e421a7240e215c55317efd4f77d5836336bcd06939e8b882f"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-5-1.svg",
-          "bytes": 27642,
-          "sha256": "sha256:55ce766a39d4c33316607c9948cbba10a0a1412eb3703e5b588c9af669102919"
+          "bytes": 27640,
+          "sha256": "sha256:0ab3ffa626b9d96140c331c62a9665e89be2712bf145a42153b10cbb5a85e9b4"
         }
       ]
     },
@@ -89,7 +89,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time-varying scan vs loop: 4.77e-07\n"
+          "text": "time-varying scan vs loop: 3.58e-07\n"
         }
       ]
     },
@@ -121,8 +121,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-3-1.svg",
-          "bytes": 18556,
-          "sha256": "sha256:29cc12ca4b576553349cd5c18b69e3901ad5420956f4fb66181c39af906d6768"
+          "bytes": 18557,
+          "sha256": "sha256:43dfc9fe9c6e8fdba0dd6400e5b5bd9fa6c9cf45c837fc5e72ca519fe8130c5f"
         }
       ]
     },
@@ -135,7 +135,7 @@
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-4-1.svg",
           "bytes": 18562,
-          "sha256": "sha256:1384e760a6b1addc3ead3bf78d87c7c8de73a5de80ec2b9b5493ebacf40a3eab"
+          "sha256": "sha256:7216f3664ae0dd879219a94e96a3da52c91a85c26a89f243dda720ccbb8205d2"
         }
       ]
     },
@@ -147,8 +147,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-5-1.svg",
-          "bytes": 20812,
-          "sha256": "sha256:0e7261651e38314892be3b93fd4edea0fcf8ed443f97b2b550babfd0b1962792"
+          "bytes": 20813,
+          "sha256": "sha256:6c9e985c3a87ce1876ed7af83011a8607b7075976ee703e0176166666d840d26"
         }
       ]
     },
@@ -159,7 +159,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     93.8   2.36   297,539      0.9\n minGRU     83.7   2.30   214,851      1.0\n  Mamba     80.0   2.27   488,739     10.2\n"
+          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     88.4   2.33   297,539      0.7\n minGRU     85.1   2.31   214,851      0.9\n  Mamba     80.7   2.28   488,739      6.4\n"
         }
       ]
     },
@@ -170,12 +170,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   LSTM: 'the time traveller, and I was tilles\\nsillled my mind. I looked round the morning, and wh'\n minGRU: 'the time traveller and there was the world to myself. Then the sound. I tried to showed the\\nswoes'\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  Mamba: \"the time traveller than the\\nbut. With the machine, and sat down to the room.\\n\\n'Well,\"\n"
+          "text": "   LSTM: \"the time travellerive\\nbutotter, and, 'oxening the little\\npresention. Then I d\"\n minGRU: \"the time travellery.\\n\\n'Youched my electure, to\\nexcame, and\\nweve\"\n  Mamba: \"the time traveller.\\n\\n'It would behind this light. They were gucess of the Time Traveller\\ndist\"\n"
         }
       ]
     },
@@ -186,14 +181,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Mamba: final validation accuracy 0.999\n"
+          "text": "Mamba: final validation accuracy 0.998\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-1-1.svg",
-          "bytes": 21898,
-          "sha256": "sha256:07cbb2d566ed5f09eccf988052d5421b71c49d54e9bce681afa4b31339eb3179"
+          "bytes": 21887,
+          "sha256": "sha256:0c97ce9e016d9c1d2d3903f63de4bda110f7602a9beadf273444c5daf0fbaad4"
         }
       ]
     },
@@ -205,8 +200,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-2-1.svg",
-          "bytes": 30483,
-          "sha256": "sha256:5f3455762b94981738730a5479dfd032cbcd72f1be39dedd180520922225bc96"
+          "bytes": 30463,
+          "sha256": "sha256:cb349fe9b85e1478a2bbd31dccbf13a300a205aa3b39c71a559dc1fbbdf321ce"
         }
       ]
     }

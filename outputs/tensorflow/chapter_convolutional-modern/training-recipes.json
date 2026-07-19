@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-cosine-schedules-with-warmup-1.svg",
           "bytes": 29157,
-          "sha256": "sha256:a4c5431e78992e9bad991144d5a8740234fe171eeacaf989fe1fde1c740c596e"
+          "sha256": "sha256:e62e18060866c9d7fb77a2b6ad18176b95c8f26691c9290a0883ece693dc0eb9"
         }
       ]
     },
@@ -49,14 +49,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "lambda = 0.64\n"
+          "text": "lambda = 0.14\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "training-recipes/training-recipes-mixup-2-1.svg",
-          "bytes": 71439,
-          "sha256": "sha256:bf689615f50ace8073e96537da4dd1aa3454eaf3e9bd754464de5e1c2bce901f"
+          "bytes": 62431,
+          "sha256": "sha256:edb2160b285103318b3a1b55eef85042975b93d0c3ea5052cbca4c73cd42b4a1"
         }
       ]
     },
@@ -67,7 +67,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fraction of samples with a dropped branch: 0.508\n"
+          "text": "fraction of samples with a dropped branch: 0.523\n"
         }
       ]
     },

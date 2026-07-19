@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:23b613a15199fb17e1fd97caa13f7d745cb2a3a3f593e13d2fe2b4d8846c39e3",
+    "d2l_lib_fingerprint": "sha256:e164cc454d0f47d29a1889282b21a8e0684f1bf04203ffe3dc835354347f10c8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,7 +30,7 @@
       ]
     },
     "scaling-laws-checking-the-arithmetic": {
-      "code_fingerprint": "sha256:e7a08950b20a3faed760b0264b36ef24cdd3652b9d8f4ec9d985892c6016fdf5",
+      "code_fingerprint": "sha256:c4a2641e65da94a2812c781c1ac11544d0134421d94b08b70ef939c0923bd9a2",
       "kind": "text",
       "outputs": [
         {
@@ -41,7 +41,7 @@
       ]
     },
     "scaling-laws-a-corpus-bigger-than-a-novella": {
-      "code_fingerprint": "sha256:205467243778761d3864780373dc38980bc678e101e4f1c44c1e904b63c32d1c",
+      "code_fingerprint": "sha256:08da909fc4e41ddbfe9b5bc4d29b39797cfa3780f96ba0407250839a55a5279d",
       "kind": "text",
       "outputs": [
         {
@@ -52,28 +52,28 @@
       ]
     },
     "scaling-laws-five-sizes-one-diet-1": {
-      "code_fingerprint": "sha256:fcd69ed88f611b5a5b614979251d12b5de7ef65aeb7a8fbd6bcf32835997d406",
+      "code_fingerprint": "sha256:5d2ceed914cb2aa820b33d56ead8eef48fe364b4a251a4c5a813780dc46d5774",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.20, validation 1.20\n"
+          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.21, validation 1.21\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=128, 3 blocks:  0.59M parameters, train 1.18, validation 1.18\n"
+          "text": "d=128, 3 blocks:  0.59M parameters, train 1.17, validation 1.17\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=192, 4 blocks:  1.77M parameters, train 1.10, validation 1.12\n"
+          "text": "d=192, 4 blocks:  1.77M parameters, train 1.11, validation 1.12\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d=256, 6 blocks:  4.72M parameters, train 1.06, validation 1.09\n"
+          "text": "d=256, 6 blocks:  4.72M parameters, train 1.06, validation 1.08\n"
         },
         {
           "type": "stream",
@@ -83,20 +83,20 @@
       ]
     },
     "scaling-laws-five-sizes-one-diet-2": {
-      "code_fingerprint": "sha256:124ccafaa49d19cf53452ce6459c6474bcf896bc28ba86b0aec97a5d941de914",
+      "code_fingerprint": "sha256:36ed8890d6068cb71e4376a6955510de9e1f3dc3c4a99878806450d23706e998",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
-          "bytes": 35126,
-          "sha256": "sha256:1fa752ff4bc59e039f6bfd11e5277e8fef2dea1d615cf17174818630dca2f27e"
+          "bytes": 32684,
+          "sha256": "sha256:7731a9e1539e201048b34e9480088c3db251bf999dcf5e9ab8b073640a7733b6"
         }
       ]
     },
     "scaling-laws-recipe-rows-as-constructor-calls": {
-      "code_fingerprint": "sha256:d474c709b4e2829f8ed4b2586e81d337d4f4c35776bd7fc08806e01b4b163b35",
+      "code_fingerprint": "sha256:bc843b6325d63e1cf28d9bd467fbf0066aad82702eb790baa3246319b4721b89",
       "kind": "text",
       "outputs": [
         {

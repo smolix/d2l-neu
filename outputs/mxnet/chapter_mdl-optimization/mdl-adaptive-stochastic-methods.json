@@ -57,12 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
+          "text": "GD, optimal single eta = 2.0e-03: f < 1e-8 at k = 6160\nAdam, eta = 0.01:\n   k =    1: effective steps [1.e-02 1.e-05]\n   k =  100: effective steps [1.6534e-02 1.7000e-05]\n   k = 1000: effective steps [6.5755e-02 6.6000e-05]\n"
         },
         {
           "type": "stream",
@@ -94,7 +89,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine         8.71e-03       1.58e-03\nWSD 80/20      9.53e-02       5.48e-03\n"
+          "text": "cosine         8.71e-03       1.58e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "WSD 80/20      9.53e-02       5.48e-03\n"
         }
       ]
     },
@@ -107,7 +107,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
           "bytes": 29558,
-          "sha256": "sha256:dbc88bec47c478ea9801290fcf598dc413426799b453aceed3a127af1614708a"
+          "sha256": "sha256:cd01b9b5bd6c43413260795d4a2921933b5d9fdc9b5bb9fe0f135a09d9d0ed8f"
         }
       ]
     }

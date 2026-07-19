@@ -30,12 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t torch.Size([1, 64, 112, 112])\nSequential output shape:\t torch.Size([1, 128, 56, 56])\nSequential output shape:\t torch.Size([1, 256, 28, 28])\nSequential output shape:\t torch.Size([1, 512, 14, 14])\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential output shape:\t torch.Size([1, 512, 7, 7])\nFlatten output shape:\t torch.Size([1, 25088])\n"
+          "text": "Sequential output shape:\t torch.Size([1, 64, 112, 112])\nSequential output shape:\t torch.Size([1, 128, 56, 56])\nSequential output shape:\t torch.Size([1, 256, 28, 28])\nSequential output shape:\t torch.Size([1, 512, 14, 14])\nSequential output shape:\t torch.Size([1, 512, 7, 7])\nFlatten output shape:\t torch.Size([1, 25088])\n"
         },
         {
           "type": "stream",
@@ -52,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 20988,
-          "sha256": "sha256:30f5f359662057bf4d1107033821af16302133b4d3316cd36a5b7efbcbe5d8ed"
+          "bytes": 20987,
+          "sha256": "sha256:5ced4f54abcc3ee9c78bb908e12f75eb52ae3f671639e7460fcb591246d7ad08"
         }
       ]
     },
@@ -86,8 +81,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 20974,
-          "sha256": "sha256:e867efaa9cda30bb7e5af95c3a3457b126a454633376ccc34e8f2b010081ed92"
+          "bytes": 21519,
+          "sha256": "sha256:069516a17492b95669cd1d5002542a3a79852e3486f8212b15b8757a7b3178e5"
         }
       ]
     },

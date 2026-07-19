@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:124877baf36eb0349913288e7cb125228a3297e9525e870a11146d71c38db6b6"
+          "sha256": "sha256:4b6fd938b87bd40b1bcc2e53f30a7387fc8628664a251ccc2d2fe8e9f74d233f"
         }
       ]
     },
@@ -71,12 +71,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sample correlation rho = -0.0028\nbinned MI estimate     = 0.9814 nats\n"
+          "text": "sample correlation rho = -0.0028\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "after x -> 2x + 3      = 0.9814 nats\n"
+          "text": "binned MI estimate     = 0.9814 nats\nafter x -> 2x + 3      = 0.9814 nats\n"
         }
       ]
     },
@@ -131,7 +131,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:8bd9d3459cca08d8869550da7ca9dd91510e5e95cba3842fa4a468243827929b"
+          "sha256": "sha256:3a810cd744f395d75b48c89fe8b97476e9e6d00176f7d41ac8afe934844b63a6"
         }
       ]
     },
@@ -163,22 +163,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =    2: ln N = 0.693, InfoNCE bound = 0.570 nats\n"
+          "text": "N =    2: ln N = 0.693, InfoNCE bound = 0.571 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =    8: ln N = 2.079, InfoNCE bound = 1.407 nats\n"
+          "text": "N =    8: ln N = 2.079, InfoNCE bound = 1.410 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =   32: ln N = 3.466, InfoNCE bound = 1.762 nats\n"
+          "text": "N =   32: ln N = 3.466, InfoNCE bound = 1.767 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =  128: ln N = 4.852, InfoNCE bound = 1.889 nats\ntrue I(X;Y) = 1.959 nats\n"
+          "text": "N =  128: ln N = 4.852, InfoNCE bound = 1.895 nats\ntrue I(X;Y) = 1.959 nats\n"
         }
       ]
     },
@@ -196,7 +196,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:faeea4813c3b91e7990e7db5d644c07a0f8fe32ff77140c9442cd8f0d690ce23"
+          "sha256": "sha256:810da83697a5adba49601359cd68ff6bcf044f2bbd10f512bbcced3e618f803e"
         }
       ]
     },

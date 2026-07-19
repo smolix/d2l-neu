@@ -46,8 +46,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-3-1.svg",
-          "bytes": 18373,
-          "sha256": "sha256:4cf26fd45b9cd3a41d2fc1fb96fda093dd53493a15dd62ad5d925283116994e6"
+          "bytes": 18375,
+          "sha256": "sha256:c9d60f40e45cfd8c79a189a87f43cf92d884ab5202258ae97d149c9d9dc45452"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 109.3\n"
+          "text": "validation perplexity 106.4\n"
         }
       ]
     },
@@ -80,8 +80,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-3-1.svg",
-          "bytes": 18956,
-          "sha256": "sha256:ec2daf9f26d7d91c79115e35654840f8a1cb74ba07d26d8745f9f0b34269e799"
+          "bytes": 18954,
+          "sha256": "sha256:90d7cca5b5a2bcd3ed9a880db6d8ace2ec620d42aa89a7cce49b05b006dca0b5"
         }
       ]
     },
@@ -92,7 +92,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 90.1, 'the time traveller of\\nfall, I saw a moment painst the\\nboon, and then I was started to the\\nsha'\n"
+          "text": "perplexity 90.5, 'the time traveller, and I\\nmidless, perhaps, the three I could have\\nnotondiired, I had a kind of\\n'\n"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-implementation-and-comparison-3-1.svg",
-          "bytes": 18755,
-          "sha256": "sha256:15f7c41b62a89af26edfa82e0b6e8408f758a027ccb84b2025d67a864955c399"
+          "bytes": 18752,
+          "sha256": "sha256:e79d774563df48446beca997e8aff05790c746612115d58ee7528d6eb40b61bd"
         }
       ]
     },
@@ -126,7 +126,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 81.2\n"
+          "text": "validation perplexity 81.9\n"
         }
       ]
     },
@@ -143,8 +143,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-deep-recurrent-networks-2-1.svg",
-          "bytes": 18370,
-          "sha256": "sha256:47a9b888a991e7c569478b7e22bb17aa148f3ef251b09588a63e3b53007cf5e4"
+          "bytes": 18374,
+          "sha256": "sha256:81d3feb230923bae5be2ee7abbfd5d0e360b972733a8f7ddd5cce478fd505f58"
         }
       ]
     },
@@ -155,7 +155,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "           model  val ppl\n  LSTM (scratch)    109.3\n            LSTM     90.1\n             GRU     81.2\n LSTM (2 layers)    104.0\n"
+          "text": "           model  val ppl\n  LSTM (scratch)    106.4\n            LSTM     90.5\n             GRU     81.9\n LSTM (2 layers)     97.3\n"
         }
       ]
     },

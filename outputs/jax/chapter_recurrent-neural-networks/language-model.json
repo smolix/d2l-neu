@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:3e40b096d519117a8bea7f13e4cc54e575b5ce1ee531513ac019e5c1f04a35e9"
+          "sha256": "sha256:fdd03612fe667a80121d6efdcb3b2897764a2fc0254f60afe7d25dc4102334cc"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:955082ecea810f47f1085f035769c66def44a917ad6e50b70a7d135206b9dffb"
+          "sha256": "sha256:82606413458bf50470e3ad7d89c7e1f758900670e1844125b24d2fb6df3bcfe9"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[ 46 492 455 262 666 279 391 111 278 115]\n [ 68 278 836 865 415 545 491 516 360 844]] \nY: [[492 455 262 666 279 391 111 278 115 612]\n [278 836 865 415 545 491 516 360 844  46]]\nX[0]: \". 'There are balloons\"\nY[0]: \" 'There are balloons.'\"\n"
+          "text": "X: [[419 578 290 456 424 409 665 496 737 260]\n [335 750  10 104 289 280 465 291 535 260]] \nY: [[578 290 456 424 409 665 496 737 260 459]\n [750  10 104 289 280 465 291 535 260 293]]\nX[0]: ' Time Traveller pushed his glass towards the'\nY[0]: ' Traveller pushed his glass towards the S'\n"
         }
       ]
     }

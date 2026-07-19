@@ -55,14 +55,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.347, train acc 0.851, test acc 0.836\n883.6 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.349, train acc 0.845, test acc 0.812\n535.7 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sentiment-analysis-rnn/sentiment-analysis-rnn-training-and-evaluating-the-model-1-1.svg",
-          "bytes": 25205,
-          "sha256": "sha256:aae8b9b018d5b569198237d94b6537ca1ac6694039823245821b3697a9d6c0e6"
+          "bytes": 25220,
+          "sha256": "sha256:8ca58fe146517cb85b7e3d4cfa8b781f3983e76c0382e98e3b3bd3a68656f9d4"
         }
       ]
     },
@@ -87,7 +87,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'negative'"
+          "text": "'positive'"
         }
       ]
     }

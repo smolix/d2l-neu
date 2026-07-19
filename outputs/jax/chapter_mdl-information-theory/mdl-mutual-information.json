@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:6f38fbc5218369183e704ec3a1ac0ea124696cb0b95e904c02cb491cfec5789a"
+          "sha256": "sha256:9191cc3af743579b430d0f7c94549178d246e5a88f94b2453eeb8ef591e630a4"
         }
       ]
     },
@@ -93,12 +93,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 1, rho = 0.5: KSG = 0.121, closed form = 0.144 nats\nd = 1, rho = 0.7: KSG = 0.335, closed form = 0.337 nats\n"
+          "text": "d = 1, rho = 0.5: KSG = 0.121, closed form = 0.144 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 1, rho = 0.9: KSG = 0.863, closed form = 0.830 nats\n"
+          "text": "d = 1, rho = 0.7: KSG = 0.335, closed form = 0.337 nats\nd = 1, rho = 0.9: KSG = 0.863, closed form = 0.830 nats\n"
         },
         {
           "type": "stream",
@@ -126,7 +126,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:be491474cad8eaa9ffbd396a578324bcfb22b45a268ba6abff73ef094d3b27e0"
+          "sha256": "sha256:937b7cdd51faafe0554d05c41095bb453f01ba9e602c29ed937ef88651690af3"
         }
       ]
     },
@@ -137,17 +137,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n"
+          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
+          "text": "  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
         }
       ]
     },
@@ -163,7 +158,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =    8: ln N = 2.079, InfoNCE bound = 1.405 nats\n"
+          "text": "N =    8: ln N = 2.079, InfoNCE bound = 1.404 nats\n"
         },
         {
           "type": "stream",
@@ -191,7 +186,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:a8655bc4375cdc9ffe71f7266bb00a16ba5a02680c7d9a00698a6b6cc37281e2"
+          "sha256": "sha256:772cd4944109a4bc6c0074417d9ced80eee71cfc1cbc6b1dc80ea47141f37a23"
         }
       ]
     },

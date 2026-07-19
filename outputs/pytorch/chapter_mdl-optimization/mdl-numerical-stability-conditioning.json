@@ -86,12 +86,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "gap    CE from logits    CE via probabilities\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "   20          20.0000          20.0000\n   60          60.0000          60.0000\n  103         103.0000         103.2789\n  104         104.0000              inf\n"
+          "text": "gap    CE from logits    CE via probabilities\n   20          20.0000          20.0000\n   60          60.0000          60.0000\n  103         103.0000         103.2789\n  104         104.0000              inf\n"
         }
       ]
     },
@@ -113,12 +108,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive E[x^2] - E[x]^2 :   384.000000"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\nWelford, one pass     :     1.000257\ntwo-pass reference    :     1.000257\n"
+          "text": "naive E[x^2] - E[x]^2 :   384.000000\nWelford, one pass     :     1.000257\ntwo-pass reference    :     1.000257\n"
         }
       ]
     },
@@ -158,7 +148,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-numerical-stability-conditioning/numerical-stability-conditioning-ridge-1.svg",
           "bytes": 40773,
-          "sha256": "sha256:0494d90f0884b191f2b813147311363000a52634c799cdd246777af38197a459"
+          "sha256": "sha256:27d9af97d612810f9c2c35966a11d3021dd605b8da7e28ef6363f1c9ba2caa3a"
         }
       ]
     }

@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 22965,
-          "sha256": "sha256:e7f4053c8102b57f26ac8b4c6269387679006351e68310c4f1d8bba80cdd2263"
+          "bytes": 19139,
+          "sha256": "sha256:dc91acd7c5d35ac748472d51f9c64cdbc030643fbc514ea905a343b16f31d99d"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 94.9\n"
+          "text": "validation perplexity 88.3\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.36 bits per byte\n"
+          "text": "2.78 bytes/token, 2.33 bits per byte\n"
         }
       ]
     },
@@ -124,7 +124,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "\"the time travellerns. I was nothing of the\\nshames, and I was nothing of the Time Traveller.\\n\\n'I had a triumph of a\\ndiskcame of my fruits of\""
+          "text": "\"the time traveller.\\n\\n'In the Time Traveller, and\\nsossibly the Time Traveller.\\n\\n'In the Time Traveller, and\\nsossibly the Time Traveller.\\n\\n'In the Time Traveller,\""
         }
       ]
     },
@@ -135,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time travellerally have mo guming upon the thing as indversation of pressty about white and seemed even it ageases ourwith\nthe time travelleral my art of the unancialistless. And in a certain followed me. The skyits the palace of\n"
+          "text": "the time traveller soly in a little recognive out of pastentre Neverildren of explain genepecies than\nthe time traveller.\n\n'Soverny, but the half-dimension of the probleiss, and I had come\n"
         }
       ]
     },
@@ -172,8 +172,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 18757,
-          "sha256": "sha256:5bf477e35dcc5dc39cb75b474b0831e86ec3db41b38ac8f1d4bc93b0e369471c"
+          "bytes": 18947,
+          "sha256": "sha256:1e281f030fc4610ebcfc3dc91381eb76998576ddbded9a776f234139f810fe57"
         }
       ]
     },
@@ -184,7 +184,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 105.9, \"the time traveller.\\n\\n'Then I\\ncame a\\nhuman and touching\\ndism, and then\\nbrown\"\n"
+          "text": "perplexity 107.5, \"the time traveller, and\\nthemathem of\\nthem, and,\\nthe silent of of\\nthe Time Traveller. 'You\"\n"
         }
       ]
     },
@@ -195,7 +195,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      20.7     94.9\n concise      12.5    105.9\n"
+          "text": "   model  time (s)  val ppl\n scratch      21.0     88.3\n concise      15.0    107.5\n"
         }
       ]
     }

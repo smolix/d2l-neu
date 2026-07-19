@@ -31,27 +31,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 1.2e-06\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 6.0e-07\n"
+          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 1.4e-06\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 6.0e-07\n"
         }
       ]
     },
     "multihead-attention-implementation-1": {
-      "code_fingerprint": "sha256:e16b3513e4333e173c1e35d5e93b8f2cc7a1f32940f247c926044d238348ecd9",
+      "code_fingerprint": "sha256:f47b1a92253178c771fe982576ac4e1a6b8ed456fa0e41c37b27b9984efa37bc",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-implementation-2": {
-      "code_fingerprint": "sha256:ce6de6790442ed62b06aa35693a471e19eff97c4ddbe5cea19d2ace9819f6145",
+      "code_fingerprint": "sha256:bdd96659f1ec5b0dfdd682e3fc3bd2c21e4ef077a0ec04517ea7fd962d8471ad",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-implementation-3": {
-      "code_fingerprint": "sha256:3f0cc363d90352bb15fd62db51c3bba8049a8cf2808501c492849a69710112f2",
+      "code_fingerprint": "sha256:315c5748eeb247cbd48e72427b61234185ca45658687e8641f433807793e121d",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-implementation-4": {
-      "code_fingerprint": "sha256:1dc6b1603a11a961fdea05c72a41705958891f8295d06803e7490c2a58402038",
+      "code_fingerprint": "sha256:e45f9680a0448b2deed6d09ad3e38d458c564a8fc367f1434824957167e50cc1",
       "kind": "text",
       "outputs": [
         {
@@ -62,17 +62,17 @@
       ]
     },
     "multihead-attention-one-sequence-querying-itself": {
-      "code_fingerprint": "sha256:c48ff91224d1de76880fbfd3fd52a87d0f3d998c1b46ba594d75e44918ec144b",
+      "code_fingerprint": "sha256:34f650576ba49dc2dd72fd88730f215560e7c8acd210732a2746ce6771ce4324",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-one-sequence-querying-another": {
-      "code_fingerprint": "sha256:54cd7b334842f314f5526a20cd28bd6ad5ef98c0a5f8a67530bfb9306fe5a9b2",
+      "code_fingerprint": "sha256:85dd25408839d9f31069c28d96e6792968822dca3a266a8d3e1f7e8db812cf8a",
       "kind": "text",
       "outputs": []
     },
     "multihead-attention-an-alignment-you-can-read": {
-      "code_fingerprint": "sha256:535d42fd5928df0b950d9c8102dceb735ec4106e6bc3958dcf191702c78418b0",
+      "code_fingerprint": "sha256:3aebe879d16607349394ef66efb9574eee0446b85a7a6f8137ea54d521e9a43f",
       "kind": "asset",
       "outputs": [
         {
@@ -80,7 +80,7 @@
           "mime": "image/svg+xml",
           "asset": "multihead-attention/multihead-attention-an-alignment-you-can-read-1.svg",
           "bytes": 27075,
-          "sha256": "sha256:02649be66988d0dc5cd1e4622c628c16ca397f2cdf3ec79a649a0ab22574c669"
+          "sha256": "sha256:b8d48bbe9a929aef0f5f4d4c6b2c9778f6c72126cde9ef60808b9857bbeaf38e"
         }
       ]
     }

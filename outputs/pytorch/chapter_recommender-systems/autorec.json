@@ -30,14 +30,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 40.036, test RMSE 0.908\n"
+          "text": "train loss 40.838, test RMSE 0.906\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "autorec/autorec-training-and-evaluating-the-model-1.svg",
-          "bytes": 21851,
-          "sha256": "sha256:6fce2a814716a63bdf497ac4c2801944214f644de333ddd442747abbeedc2ef6"
+          "bytes": 21850,
+          "sha256": "sha256:c450cae1c03987b272cdab8e67340f25297d7f5e3dbcfc75e49d8aa8b4a9f7b0"
         }
       ]
     }

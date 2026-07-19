@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 25785,
-          "sha256": "sha256:87b4759ad11e6f67125e75499aee1ec4354cf3791d9dc6718909002e8924e6d1"
+          "bytes": 20822,
+          "sha256": "sha256:37c08e894c0a8b83d8d9bdc17dcbb782f24dfadae69aa748403ea434de2124f4"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 92.8\n"
+          "text": "validation perplexity 89.3\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.35 bits per byte\n"
+          "text": "2.78 bytes/token, 2.33 bits per byte\n"
         }
       ]
     },
@@ -124,7 +124,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'the time traveller, I saw the\\nside, I saw the\\nside. I had a bigned the\\nside, I saw the\\nside, I saw the\\nside. I had a bigned the\\n'"
+          "text": "'the time travellerularlyification, and the little people, and the little people, and the little people, and the little people, and the little people, and the little people, and the little people, and the little people, and the little people'"
         }
       ]
     },
@@ -135,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time travellerward with similill one of the daylight. I first there was laty for us. Then is alwayalelo will conf\nthe time travelleratural\ndayed a\nmistinct, but I was no suchoubt, with that I was a fallery of\n"
+          "text": "the time travellerhingions of the roantound.\n\n'So,' said the refms soible I felt other flicks of gurnod\nthe time travellerour to the find\nits the Time Machine, the Palace of Green Porcelain.\n\n'The Time\n"
         }
       ]
     },
@@ -160,7 +160,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it hasnot�myowsical�very�wh�\\x1d worldauseap whatountere arar�'"
+          "text": "'it has upsolars slby al suchownousby� car oTheart wayll slTheart'"
         }
       ]
     },
@@ -172,8 +172,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 21596,
-          "sha256": "sha256:bf4f154f4f97b50e4fdd421cbe07486d533df553744c0f4ec9fe49765d3186e7"
+          "bytes": 18939,
+          "sha256": "sha256:c6779c4da7adece58a8aeb181ac6203ff218176ed7b4652de9a53ef74508a495"
         }
       ]
     },
@@ -184,7 +184,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 106.0, 'the time travellerying a little people. The\\ndelice. I had come of histeneathy I had noted me.'\n"
+          "text": "perplexity 105.4, \"the time travellerlidence.\\n\\n'In that the\\nface, and\\nthere were\\ndelight, and\\nafter a\"\n"
         }
       ]
     },
@@ -195,7 +195,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch      19.5     92.8\n concise       6.3    106.0\n"
+          "text": "   model  time (s)  val ppl\n scratch      20.1     89.3\n concise       6.6    105.4\n"
         }
       ]
     }

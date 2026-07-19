@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0d61bc435cc1c56365993654b61101747682dcbd7755821019bb2b050daa5a28",
+    "d2l_lib_fingerprint": "sha256:277f65276eb46fdbfd1f1ed0dca139daf36e28ea81fe18c206cba0f0e4cbf462",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,14 +14,9 @@
       "outputs": []
     },
     "what-attention-computes-where-and-what-the-qk-and-ov-circuits": {
-      "code_fingerprint": "sha256:a026567ecccc8b36d62309c676610401c3c13da11dc0ede6704fc9afc2cf2fa6",
+      "code_fingerprint": "sha256:1cc8f3f62d2a06cfb24be361e276994b6c42f3f69f72e3ccd371cfac07cafb1a",
       "kind": "text",
       "outputs": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "/tmp/ipykernel_10892/3387307346.py:2: DeprecationWarning: '.value' access is now deprecated. For Variable[Array] instances use:\n\n  variable[...]\n\nFor other Variable types use:\n\n  variable.get_value()\n\n  D = model.token_emb.embedding.value.shape[1]\n/tmp/ipykernel_10892/3387307346.py:4: DeprecationWarning: '.value' access is now deprecated. For Variable[Array] instances use:\n\n  variable[...]\n\nFor other Variable types use:\n\n  variable.get_value()\n\n  W = model.blks[0]['qkv'].kernel.value  # Columns stack W_q, W_k, W_v\n/tmp/ipykernel_10892/3387307346.py:6: DeprecationWarning: '.value' access is now deprecated. For Variable[Array] instances use:\n\n  variable[...]\n\nFor other Variable types use:\n\n  variable.get_value()\n\n  W_o = model.blks[0]['proj'].kernel.value  # Rows split by head\n"
-        },
         {
           "type": "stream",
           "name": "stdout",
@@ -30,7 +25,7 @@
       ]
     },
     "what-attention-computes-repetition-as-a-task-1": {
-      "code_fingerprint": "sha256:23c4480db8c49ab489250323596eedcd91628958558b43095f98872ce2c8c79d",
+      "code_fingerprint": "sha256:99a02df8876f60c75ea2b6407a41d73a3485706571db3c32b585b1c65322cb0b",
       "kind": "text",
       "outputs": [
         {
@@ -41,12 +36,12 @@
       ]
     },
     "what-attention-computes-repetition-as-a-task-2": {
-      "code_fingerprint": "sha256:92f3e36cb14ff75d7e8aaa56b207e3caac5ea58136590bbf76f198db4b0d9087",
+      "code_fingerprint": "sha256:b91b6787f0da1b6b8406e492f11888a5987117357843724c6d336bec0f8a47aa",
       "kind": "text",
       "outputs": []
     },
     "what-attention-computes-the-positional-shortcut-1": {
-      "code_fingerprint": "sha256:66b1be4c5a0eba7907bd83e741374d988da5f8e9c9ab7d206f70dc28ff3238b4",
+      "code_fingerprint": "sha256:878f41c14a1d3422c340c801e033259cb95ad326713e183f42d92e5862ae613e",
       "kind": "text",
       "outputs": [
         {
@@ -57,7 +52,7 @@
       ]
     },
     "what-attention-computes-the-positional-shortcut-2": {
-      "code_fingerprint": "sha256:e7d0e839dffd0dbaff2ca16f3d8933bd72c99272106726da25ec7c4f46d38bc6",
+      "code_fingerprint": "sha256:a93bfbcbc07de16d6b89c1ce9254d687e6c6b4c038b92fc5ad830c0a5400e3ab",
       "kind": "text",
       "outputs": [
         {
@@ -68,91 +63,91 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "attention mass at offset 31: 0.96\nattention mass at offset 23: 0.00\n"
+          "text": "attention mass at offset 31: 0.96\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "attention mass at offset 23: 0.00\n"
         }
       ]
     },
     "what-attention-computes-two-blocks-learn-to-look-things-up-1": {
-      "code_fingerprint": "sha256:23df613ec24b69d227b1e9a0014c59318bcb470015a927edc0cae1272ed98061",
+      "code_fingerprint": "sha256:dcaca6dd2e84a55d6c20dd00e14fad424648f48562a4f36a4fc5f2cf4b26ae86",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2 blocks: first copy 4.36, later copies 0.28, accuracy 0.94\n1 block: first copy 4.51, later copies 2.85, accuracy 0.19\n"
+          "text": "2 blocks: first copy 4.45, later copies 0.45, accuracy 0.87\n1 block: first copy 4.31, later copies 3.67, accuracy 0.11\n"
         }
       ]
     },
     "what-attention-computes-two-blocks-learn-to-look-things-up-2": {
-      "code_fingerprint": "sha256:62aa7870764a557aed9589c09475eb47dd657a9ebc4c28d615309e336dc95d5a",
+      "code_fingerprint": "sha256:e78f41ce9ba378d009f6890ba9a96319c595955044f3c514ac31a4bd36079177",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-two-blocks-learn-to-look-things-up-2-1.svg",
-          "bytes": 35044,
-          "sha256": "sha256:bb3dd26124f17e985bb50f54e13bd896c5d65615917cdf924a8e572587df8c8a"
+          "bytes": 35013,
+          "sha256": "sha256:e95d81f3dd4d7696826cc0f2fc4c81a7ce334a0fcae018e5dbfa386d23f2f920"
         }
       ]
     },
     "what-attention-computes-the-heads-caught-in-the-act-1": {
-      "code_fingerprint": "sha256:44251f2d5d0ad6886edc6623e37aa01839552b5f152e1c1dad5c5585059f3e4a",
+      "code_fingerprint": "sha256:0202cc07ed8af49a4b951206e37596910c538f75fca07227289b429f55facddc",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-heads-caught-in-the-act-1-1.svg",
-          "bytes": 172545,
-          "sha256": "sha256:b8250f5f997c584a3968d8e22a75ce112e9a0062a34bbcb94a90e32af6dca504"
+          "bytes": 176441,
+          "sha256": "sha256:ad80d33b273cab1dcebd9d8a9f77a7817191c839b20beb2edf0da58420cb813f"
         }
       ]
     },
     "what-attention-computes-the-heads-caught-in-the-act-2": {
-      "code_fingerprint": "sha256:7f8dfd6349a1b17e20c5767af7c6c0f92bb26d3bd2edc44c2e3f963356aa6be6",
+      "code_fingerprint": "sha256:0f9a04c096851e14bc8ae5c2981d30d1fc3f2231c2aa80faa142680d061c19e1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "block 1: previous token 0.21 0.39 0.69 0.08 | induction target 0.00 0.00 0.00 0.00\nblock 2: previous token 0.14 0.05 0.05 0.08 | induction target 0.35 0.58 0.67 0.49\n"
+          "text": "block 1: previous token 0.02 0.01 0.92 0.03 | induction target 0.01 0.00 0.00 0.01\nblock 2: previous token 0.04 0.04 0.04 0.04 | induction target 0.62 0.68 0.69 0.49\n"
         }
       ]
     },
     "what-attention-computes-completing-patterns-it-has-never-seen": {
-      "code_fingerprint": "sha256:251214b7aa558134ef6a18e77a18a1f5d4a8c2cfb5eb1b5c5d58ffc8a80a51d2",
+      "code_fingerprint": "sha256:fe7bcd3d1ac2a53f8ba2bcc93e77bb2511480b5546ff96801fc284077a25b163",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-completing-patterns-it-has-never-seen-1.svg",
-          "bytes": 21803,
-          "sha256": "sha256:e7fc6922f44f314e88638aa7455394dee938cafce78faf4b8a5c783d23cffc11"
+          "bytes": 21051,
+          "sha256": "sha256:7df8bc50ef0a33e61d3aab5ecf47d154ee1f9d8ca08563a26a91ca4afe5222a3"
         }
       ]
     },
     "what-attention-computes-the-circuit-is-in-the-weights": {
-      "code_fingerprint": "sha256:fe5c235c97e22df71c56ea31c2c111bc4acaa2d6b08eeac43f9c6f5a11d244f1",
+      "code_fingerprint": "sha256:d47761ddd282f1ae9b1aed32760a78fd3b20bb8f1a19de322f280a064e1dbf5b",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "/tmp/ipykernel_10892/1941578983.py:1: DeprecationWarning: '.value' access is now deprecated. For Variable[Array] instances use:\n\n  variable[...]\n\nFor other Variable types use:\n\n  variable.get_value()\n\n  E, D = model_two.token_emb.embedding.value, 128\n/tmp/ipykernel_10892/1941578983.py:2: DeprecationWarning: '.value' access is now deprecated. For Variable[Array] instances use:\n\n  variable[...]\n\nFor other Variable types use:\n\n  variable.get_value()\n\n  qkv = model_two.blks[1]['qkv'].kernel.value\n/tmp/ipykernel_10892/1941578983.py:3: DeprecationWarning: '.value' access is now deprecated. For Variable[Array] instances use:\n\n  variable[...]\n\nFor other Variable types use:\n\n  variable.get_value()\n\n  proj = model_two.blks[1]['proj'].kernel.value\n"
-        },
-        {
-          "type": "stream",
           "name": "stdout",
-          "text": "rows whose largest entry is the diagonal: 0.72 (chance 1/64)\n"
+          "text": "rows whose largest entry is the diagonal: 0.77 (chance 1/64)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "what-attention-computes/what-attention-computes-the-circuit-is-in-the-weights-1.svg",
-          "bytes": 40253,
-          "sha256": "sha256:a13500fc29b4fe83b8a1b991d9cfb5be9421394e80fdcae2d34b0e0baf9e683c"
+          "bytes": 42305,
+          "sha256": "sha256:8110e101447ba850102f84cc66e2f05097413c0daddfef7eb853ae323ccc68c5"
         }
       ]
     }

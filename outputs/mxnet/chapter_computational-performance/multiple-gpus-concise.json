@@ -30,21 +30,16 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[07:41:45] /home/smola/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n[07:41:45] /home/smola/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n"
+          "text": "[16:03:16] /home/smola/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n[16:03:16] /home/smola/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n"
         },
         {
           "type": "stream",
           "name": "stderr",
-          "text": "[07:41:46] /home/smola/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[07:41:46] /home/smola/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n"
+          "text": "[16:03:16] /home/smola/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n[16:03:16] /home/smola/mxnet/src/operator/cudnn_ops.cc:431: Auto-tuning cuDNN op, set MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable\n"
         },
         {
           "type": "execute_result",
-          "text": "(array([[-4.6296779e-07,  2.1138349e-06, -2.3301995e-06,  6.2497026e-07,\n         -4.1521463e-07, -2.7563686e-07, -4.7805543e-06, -3.6471706e-06,\n          3.4810521e-06, -4.0214045e-06],\n        [-7.5311283e-07,  2.4530996e-06, -2.1022729e-06,  1.1062864e-07,\n         -4.0731362e-07, -9.0344315e-07, -4.4650869e-06, -3.8283756e-06,\n          3.6136485e-06, -3.6959482e-06]], device=gpu(0)),\n array([[-8.5355248e-07,  2.5335059e-06, -1.9057318e-06,  3.8714865e-07,\n          3.1869718e-08, -1.0807962e-06, -4.9789551e-06, -3.8372723e-06,\n          3.9635947e-06, -4.2903521e-06],\n        [-9.2032610e-07,  1.8014632e-06, -2.1951337e-06,  5.8453438e-08,\n         -6.4034123e-07, -1.1369610e-07, -4.4640301e-06, -3.5704952e-06,\n          3.5179137e-06, -3.7934869e-06]], device=gpu(1)))"
+          "text": "(array([[-6.6523285e-07,  4.3134659e-07,  4.8794500e-06, -2.4358631e-06,\n         -5.3909166e-06, -2.7004139e-06, -8.6226925e-07,  2.5135203e-06,\n         -3.6999088e-06,  1.4177638e-06],\n        [-3.3274853e-07,  5.9822622e-07,  4.6588580e-06, -2.6722703e-06,\n         -5.5894334e-06, -2.1830542e-06, -1.3422269e-06,  1.9301481e-06,\n         -3.1280185e-06,  9.7520626e-07]], device=gpu(0)),\n array([[-3.9383337e-07,  5.2303301e-07,  4.8409838e-06, -2.9681501e-06,\n         -5.8053834e-06, -2.3048185e-06, -7.3380335e-07,  1.6258369e-06,\n         -3.8748399e-06,  1.5037842e-06],\n        [-4.3070713e-08,  6.7035387e-07,  4.8138536e-06, -2.8685040e-06,\n         -5.4301850e-06, -2.4514814e-06, -1.6275490e-06,  2.2802647e-06,\n         -4.1737385e-06,  1.4294194e-06]], device=gpu(1)))"
         }
       ]
     },
@@ -59,7 +54,7 @@
         },
         {
           "type": "execute_result",
-          "text": "(array([[[-0.01373541,  0.00714705,  0.00894382],\n         [ 0.00896517, -0.0070175 ,  0.00333945],\n         [ 0.01653882, -0.00639205, -0.01705812]]], device=gpu(0)),\n array([[[-0.01373541,  0.00714705,  0.00894382],\n         [ 0.00896517, -0.0070175 ,  0.00333945],\n         [ 0.01653882, -0.00639205, -0.01705812]]], device=gpu(1)))"
+          "text": "(array([[[-0.00692412, -0.00689156,  0.01314662],\n         [-0.00100101,  0.00467872, -0.00810493],\n         [ 0.00109009, -0.00275587,  0.01050759]]], device=gpu(0)),\n array([[[-0.00692412, -0.00689156,  0.01314662],\n         [-0.00100101,  0.00467872, -0.00810493],\n         [ 0.00109009, -0.00275587,  0.01050759]]], device=gpu(1)))"
         }
       ]
     },
@@ -80,14 +75,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.93, 21.2 sec/epoch on [gpu(0)]\n"
+          "text": "test acc: 0.93, 34.5 sec/epoch on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-2-1.svg",
-          "bytes": 17959,
-          "sha256": "sha256:f1899e224ddd82eb4350ee40482cbbf959835ee38c1391996a24e8ff3eec96be"
+          "bytes": 19443,
+          "sha256": "sha256:741c0c0d92c396371f2f7fe8e462d55dd334c90c802a7e1bf2b00801b12be6bc"
         }
       ]
     },
@@ -98,14 +93,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.92, 31.9 sec/epoch on [gpu(0), gpu(1)]\n"
+          "text": "test acc: 0.92, 23.1 sec/epoch on [gpu(0), gpu(1)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-3-1.svg",
-          "bytes": 17064,
-          "sha256": "sha256:89fab8b1228fd696bff47e745e7d7eef96a4d260aeb4efbab74b6eda87c9f502"
+          "bytes": 20921,
+          "sha256": "sha256:80475df3ae60123baeb28be666328f228d680668b34fe92bbca96708ac58d3f6"
         }
       ]
     }

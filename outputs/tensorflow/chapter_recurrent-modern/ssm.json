@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "maximum deviation: 9.54e-07\n"
+          "text": "maximum deviation: 4.77e-07\n"
         }
       ]
     },
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 32173,
-          "sha256": "sha256:e8f93bc847b9e96f0eab15ad59a363710f97a3a171790063c57b137f22e1e825"
+          "bytes": 32176,
+          "sha256": "sha256:59c03b14c2f9ae9dd31ef458857aed675433317c9e5fa5c802667c170d420488"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-a-mingru-language-model-4-1.svg",
-          "bytes": 18750,
-          "sha256": "sha256:5b277135aa483e376eea2947ae46548877c2e6fe74a5218df167d6354e97e38e"
+          "bytes": 18749,
+          "sha256": "sha256:16aa33b9ee0bd40a881669eb490311f77d46d217c9d9d9088848bf2ec9a6c5e5"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 83.9, 34s wall clock\nthe time traveller. I\nfoice.\n\n'Inoon, and\ntherewhen the\nshamones,\n"
+          "text": "validation perplexity 85.1, 35s wall clock\nthe time traveller.\n\n'I thought of the\nshames of\ntheseen of the\ndelicate,\nands of\n"
         }
       ]
     },
@@ -88,7 +88,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scan vs loop: 2.38e-07, conv vs loop: 2.38e-07\n"
+          "text": "scan vs loop: 4.47e-08, conv vs loop: 4.47e-08\n"
         }
       ]
     },
@@ -115,8 +115,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-2-1.svg",
-          "bytes": 20456,
-          "sha256": "sha256:5456cf90913a71cc2f1321cbb8e67a98a0d32c22ada0128d292d67b3f874ff2b"
+          "bytes": 20454,
+          "sha256": "sha256:945f32db27bae98640575acd3c9b05882b31fcb0bbd0e688854ce2871ecf948a"
         }
       ]
     },
@@ -128,8 +128,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-3-1.svg",
-          "bytes": 22085,
-          "sha256": "sha256:c9a2c0bd7a7680b5bbeaadcf1a4d4e6f057687fbf4f46bc2aa56bb44a35eb944"
+          "bytes": 20976,
+          "sha256": "sha256:3b8f799bda2393a6f86fa26b88ca0a3da257fcffa7c07954941bc80b5ca71490"
         }
       ]
     },
@@ -140,7 +140,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.827     10.6\n  LSTM   29,674    0.814     21.4\n"
+          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.822     10.5\n  LSTM   29,674    0.820     21.0\n"
         }
       ]
     }

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-tools-for-deep-learning/software-ecosystem.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "software-ecosystem-manifest": {
+      "code_fingerprint": "sha256:dc441ca47c7f2f1ce29c747a5402f42cba3ada9333f03a859681c0987fa63507",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{\n  \"repository\": \"organization/model-name\",\n  \"revision\": \"0123456789abcdef\",\n  \"task\": \"text-generation\",\n  \"license\": \"apache-2.0\",\n  \"parent\": null\n}\n"
+        }
+      ]
+    }
+  }
+}

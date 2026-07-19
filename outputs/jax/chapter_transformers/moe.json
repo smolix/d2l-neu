@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:d54fbfebfdb556e3474ed460010bb128e7a0137817f568326450403a0d715e48",
+    "d2l_lib_fingerprint": "sha256:c83dce1dd871e3a7d18e9cafe167cb89b30bf4760ec5edbb56727504a3edba2a",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -66,12 +66,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "auxiliary loss: training loss 0.42, experts under 2% usage: 0 of 16\n"
+          "text": "auxiliary loss: training loss 0.53, experts under 2% usage: 0 of 16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          bias: training loss 0.42, experts under 2% usage: 0 of 16\n"
+          "text": "          bias: training loss 0.46, experts under 2% usage: 0 of 16\n"
         }
       ]
     },
@@ -81,14 +81,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x7b8eb01c8bc0>"
+          "text": "<matplotlib.legend.Legend at 0x765ee00d91f0>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-three-runs-one-budget-4-1.svg",
-          "bytes": 44936,
-          "sha256": "sha256:c2a0ab7407dbaf14bc993d317cd29bd778040e2451a0dda17a325cd6a6aac782"
+          "bytes": 44929,
+          "sha256": "sha256:cccafc36ab15f8048578d13bc57fcf8ffe6193ed633b52b9b9fce30bb66836eb"
         }
       ]
     },

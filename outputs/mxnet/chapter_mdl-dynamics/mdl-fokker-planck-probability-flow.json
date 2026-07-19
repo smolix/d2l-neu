@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-cloud-marginals-1.svg",
           "bytes": 71874,
-          "sha256": "sha256:0c7238fdd8a844c13b5ded8542b611783ff560ec30a0441b6f30b4c17a8e2cbb"
+          "sha256": "sha256:252222a64dacfd10189b6ff203666cfabdc434b3a219b4dbe71bc806e5beb1a2"
         }
       ]
     },
@@ -71,19 +71,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "t=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
+          "text": "t=0.25: KS(SDE cloud, ODE cloud) = 0.0065\nt=1.0: KS(SDE cloud, ODE cloud) = 0.0086\nt=3.0: KS(SDE cloud, ODE cloud) = 0.0081\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-pf-ode-overlay-1.svg",
           "bytes": 245349,
-          "sha256": "sha256:42eb0f412f561fd72f8313e93256c3e13196f5c5f2bbb82510aecac1df444266"
+          "sha256": "sha256:5e41c53392e76f9bb2a7624565fbf4b8cff8a03adc1a031ce436b8550d2813d9"
         }
       ]
     },
@@ -101,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-mixture-score-1.svg",
           "bytes": 25825,
-          "sha256": "sha256:7049957e35a04a6648bbfe9ff337485ce1cbcf77733bfe9451d5462d3236f72e"
+          "sha256": "sha256:6ca203b1228f0bf6edd1d29fb24b127cb129149d2df8d17314040f317e4199a1"
         }
       ]
     },
@@ -124,7 +119,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-fokker-planck-probability-flow/fokker-planck-reverse-sde-1.svg",
           "bytes": 43149,
-          "sha256": "sha256:644f509fd019832f353c26767a1ea1ff4becbd2d6ba13342440d040885795ba2"
+          "sha256": "sha256:fb84b7b065f98e8c84089ea8fa189dc1be9df4edd2a10581e6bf835ea0785915"
         }
       ]
     }

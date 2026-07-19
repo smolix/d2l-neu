@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-tools-for-deep-learning/hosted-notebooks.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "hosted-notebooks-resource-check": {
+      "code_fingerprint": "sha256:22ecc551bbac759071bd98d08637fbfa3ad1557f63560d82d653a0d8f948417d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'cpu_count_visible': 64, 'colab': False, 'kaggle': False}"
+        }
+      ]
+    },
+    "hosted-notebooks-portable-setup": {
+      "code_fingerprint": "sha256:1476c828c8ca23b85897fd95d9d0d0250e2e7b3376c5f96556304b786d942958",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "{'python': '3.12.3', 'missing': [], 'reconstructible': True}"
+        }
+      ]
+    },
+    "hosted-notebooks-environment-fingerprint": {
+      "code_fingerprint": "sha256:54629717fe9fa9ac8fa4566e8639ee7bc4caa23769c0779fd482c8ba4d368f06",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{\n  \"python\": \"3.12.3\",\n  \"numpy\": \"2.4.4\",\n  \"machine\": \"x86_64\"\n}\n"
+        }
+      ]
+    },
+    "hosted-notebooks-work-directory": {
+      "code_fingerprint": "sha256:750280479ac4fc2d695679e57735df5fe1e1415815d29c38e19b1d7f7bfdf5fe",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "PosixPath('/home/smola/d2l-neu/_notebooks/pytorch/chapter_appendix-tools-for-deep-learning')"
+        }
+      ]
+    }
+  }
+}

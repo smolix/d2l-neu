@@ -30,7 +30,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "features: [ 0.36147076 -0.18093473] \nlabel: [5.5248775]\n"
+          "text": "features: [ 1.2680211 -0.9800729] \nlabel: [10.066712]\n"
         }
       ]
     },

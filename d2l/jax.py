@@ -1510,6 +1510,7 @@ class MultiHeadAttention(nnx.Module):
 
     Defined in :numref:`sec_multihead-attention`"""
     def __init__(self, num_hiddens, num_heads, dropout, bias=False, rngs=None):
+        assert num_hiddens % num_heads == 0, 'heads must divide num_hiddens'
         rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
         self.num_hiddens, self.num_heads = num_hiddens, num_heads
         self.attention = d2l.DotProductAttention(dropout, rngs=rngs)
@@ -1572,7 +1573,7 @@ class TinyCharLM(nnx.Module):
 
     Defined in :numref:`sec_positional-information`"""
     def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
-                 pos='rope', max_len=512, rngs=None):
+                 pos='rope', max_len=512, bias=False, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
         self.num_heads, self.pos = num_heads, pos
         init = nnx.initializers.normal(0.02)
@@ -1587,8 +1588,10 @@ class TinyCharLM(nnx.Module):
             P = jnp.stack([jnp.sin(theta), jnp.cos(theta)], -1)
             self.P = nnx.Cache(P.reshape(max_len, num_hiddens))
         self.blks = nnx.List([nnx.Dict(
-            qkv=nnx.Linear(num_hiddens, 3 * num_hiddens, rngs=rngs),
-            proj=nnx.Linear(num_hiddens, num_hiddens, rngs=rngs))
+            qkv=nnx.Linear(num_hiddens, 3 * num_hiddens, use_bias=bias,
+                           rngs=rngs),
+            proj=nnx.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                            rngs=rngs))
             for _ in range(num_blks)])
 
     def _rope(self, x):
@@ -1653,6 +1656,7 @@ class FeedForward(nnx.Module):
     Defined in :numref:`sec_transformer-block`"""
     def __init__(self, num_hiddens, act='swiglu', bias=False, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
+        assert act in ('swiglu', 'gelu'), f'unknown act: {act!r}'
         self.act = act
         if act == 'gelu':
             width = 4 * num_hiddens
@@ -1676,6 +1680,8 @@ class TransformerBlock(nnx.Module):
                  act='swiglu', pre_norm=True, bias=False, attn_factory=None,
                  ffn_factory=None, rngs=None):
         rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        assert norm in ('rms', 'layer'), f'unknown norm: {norm!r}'
+        assert num_hiddens % num_heads == 0
         self.pre_norm = pre_norm
         make_norm = nnx.RMSNorm if norm == 'rms' else nnx.LayerNorm
         self.norm1 = make_norm(num_hiddens, rngs=rngs)
@@ -1795,6 +1801,8 @@ class GQAAttention(nnx.Module):
     def __init__(self, num_hiddens, num_heads, num_kv_heads, bias=False,
                  rope=False, causal=True, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
+        assert num_hiddens % num_heads == 0
+        assert num_heads % num_kv_heads == 0
         self.num_heads, self.num_kv_heads = num_heads, num_kv_heads
         self.head_dim = num_hiddens // num_heads
         self.rope, self.causal = rope, causal
@@ -1853,10 +1861,14 @@ class PatchEmbedding(nnx.Module):
                 return (x, x)
             return x
         img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
+        # A partial trailing patch would silently shrink the token grid
+        assert img_size[0] % patch_size[0] == 0 and \
+            img_size[1] % patch_size[1] == 0, \
+            'image size must be divisible by the patch size'
         self.num_patches = (img_size[0] // patch_size[0]) * (
             img_size[1] // patch_size[1])
         self.conv = nnx.Conv(num_channels, num_hiddens, kernel_size=patch_size,
-                             strides=patch_size, padding='SAME', rngs=rngs)
+                             strides=patch_size, padding='VALID', rngs=rngs)
 
     def __call__(self, X):
         # Output shape: (batch size, no. of patches, no. of channels)

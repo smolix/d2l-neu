@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-tools-for-deep-learning/training-systems.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "training-systems-memory-model": {
+      "code_fingerprint": "sha256:0c8f17cb1d7027a0f762e3fb341319620a47362a5f74c821f8ea028e9006aed7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        1 GPU, plain:  107.0 GiB/device\n    8 GPU DDP + ckpt:   95.3 GiB/device\n   8 GPU FSDP + ckpt:   21.8 GiB/device\n"
+        }
+      ]
+    }
+  }
+}

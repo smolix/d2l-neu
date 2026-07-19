@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:ed689460e388527f82b0ed303dc5832df3dfa59ae5fb9fc7cb6dd3181b7da5a1",
+    "d2l_lib_fingerprint": "sha256:1faf210528ca04b0537d96bdc0744407ecaac431b85fa5a676d3f13648722470",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -33,7 +33,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-1-1.svg",
           "bytes": 31474,
-          "sha256": "sha256:c9d2bf1a5b4cc149f5aa2b5120ef07c3b6ccf4b400c5f5078a9068e69e49607e"
+          "sha256": "sha256:866250606a1cfa88818f0b277f2d97fb0d4a9e487e53caa2ec9f45f9c5ac1091"
         }
       ]
     },
@@ -57,7 +57,7 @@
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-sinusoidal-encodings-3-1.svg",
           "bytes": 30701,
-          "sha256": "sha256:f6c7fe1f3f70c38779ce540365175de8c682ca4259b1a423fbb291b44f35cbd4"
+          "sha256": "sha256:5c0fbe4f19fd282a415b81b994e134d0275236f083a6b7a875a4d8c5a5022a47"
         }
       ]
     },
@@ -83,56 +83,56 @@
       ]
     },
     "positional-information-an-attention-only-language-model": {
-      "code_fingerprint": "sha256:4268cb5dc5d2043834961022892b07b9ba70716b51b4033d271c608f3793ad82",
+      "code_fingerprint": "sha256:9fc9f34934136a7e6e2a5eb3211905aecc9522b90c3f4c5234cee7eb7cbe6d15",
       "kind": "text",
       "outputs": []
     },
     "positional-information-the-experiment-1": {
-      "code_fingerprint": "sha256:1b51cb5f549b0199337a6a5f1b90dc1098a8eba644e80fb5bcbb21759e42fe9e",
+      "code_fingerprint": "sha256:ac9965902922fe50e0b90bb2921eb0124997fc02eae963598bac67a72f4d6679",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned: final training loss 1.87\n"
+          "text": "   learned: final training loss 1.84\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sinusoidal: final training loss 1.97\n"
+          "text": "sinusoidal: final training loss 2.09\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      rope: final training loss 1.48\n"
+          "text": "      rope: final training loss 1.56\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     alibi: final training loss 1.91\n"
+          "text": "     alibi: final training loss 1.96\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      none: final training loss 2.24\n"
+          "text": "      none: final training loss 2.25\n"
         }
       ]
     },
     "positional-information-the-experiment-2": {
-      "code_fingerprint": "sha256:3a6f6939604f6a7e96e54f1d8a38a253fbf839f696b94a7a57d90fd23e8afb84",
+      "code_fingerprint": "sha256:a8b08768da21fca03abe06a197608f5d1cb8e11d53014b1103f9bb03deaffcfc",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   learned:     6.4     17.7     30.2\nsinusoidal:     6.9     18.2     31.7\n      rope:     4.9     10.2     45.2\n     alibi:     6.6      6.6      6.6\n      none:     9.2      9.3      9.4\n"
+          "text": "   learned:     6.2     18.0     31.1\nsinusoidal:     7.8     17.4     38.3\n      rope:     5.1     10.3     37.0\n     alibi:     7.1      7.1      7.1\n      none:     9.2      9.4      9.5\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "positional-information/positional-information-the-experiment-2-1.svg",
-          "bytes": 27838,
-          "sha256": "sha256:bd89b8115fe68feb302edc07e47510deddee1918f753d4d7fb452a69027ca80c"
+          "bytes": 31005,
+          "sha256": "sha256:5839b551f1383418cfaa6f6fe021b4b881eb3f7dec80d7e420734a2511a351a1"
         }
       ]
     }

@@ -28,11 +28,6 @@
       "kind": "text",
       "outputs": [
         {
-          "type": "stream",
-          "name": "stderr",
-          "text": "E0716 22:23:30.664377   32292 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
-        },
-        {
           "type": "execute_result",
           "text": "542474"
         }
@@ -56,15 +51,15 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-1.svg",
-          "bytes": 20496,
-          "sha256": "sha256:b616b849817170c6903fce34201719981b2ef176663e5904dbd8357e990dd637"
+          "bytes": 20495,
+          "sha256": "sha256:653a389e8860eed7aa2667b18e25f84894f17353398d014eb24eda726ff9dc2e"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "efficient-convnets/efficient-convnets-training-and-comparison-3-2.svg",
-          "bytes": 20495,
-          "sha256": "sha256:749a7461d13d446169fb87e1d4a5f49fea618ea05c44caf85cd73cae391f0723"
+          "bytes": 20521,
+          "sha256": "sha256:f5ab366e3c372c383f9092cafabbf4380786d13ef688ea8ddc5124e87e4b6ab0"
         }
       ]
     },
@@ -75,7 +70,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mini-MobileNet: 542,474 params, val acc 0.908\nVGG-style: 583,594 params, val acc 0.896\n"
+          "text": "mini-MobileNet: 542,474 params, val acc 0.909\nVGG-style: 583,594 params, val acc 0.887\n"
         }
       ]
     },

@@ -29,7 +29,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(0.5298750336241945), np.float64(0.5298750336241943))"
+          "text": "(np.float64(0.5284503820141454), np.float64(0.5284503820141454))"
         }
       ]
     },
@@ -40,7 +40,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true variance    = 4\nE[divide by n]   = 2.665  (biased)\nE[divide by n-1] = 3.998  (unbiased)\n"
+          "text": "true variance    = 4\nE[divide by n]   = 2.666  (biased)\nE[divide by n-1] = 3.998  (unbiased)\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-statistics/statistics-permutation-test-1.svg",
           "bytes": 32404,
-          "sha256": "sha256:2ba8fffaaad1d58dc1ed3cbc851f9fddd5c223f8cd0dd5a685df53a5b6d3e0e4"
+          "sha256": "sha256:98e8c592f66bdef5cc0f2920eae9ae44e693d871aac46038d8b5faf14db29c21"
         }
       ]
     },
@@ -68,7 +68,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(np.float64(-0.06253732841769813), np.float64(0.06007599348940811))"
+          "text": "(np.float64(-0.059154483584664394), np.float64(0.06315527195971658))"
         }
       ]
     },

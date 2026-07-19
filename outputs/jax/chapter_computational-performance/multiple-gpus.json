@@ -83,14 +83,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.84, 1.1 sec/epoch on [CudaDevice(id=0)]\n"
+          "text": "test acc: 0.83, 0.7 sec/epoch on [CudaDevice(id=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
-          "bytes": 16964,
-          "sha256": "sha256:3365d749ec895667415dcf18396c3f0f048abba56cb416d8c13abd261695c7e2"
+          "bytes": 16960,
+          "sha256": "sha256:e27c3a7f4720c2bfa1105011473092b5780fdd6290ee8c55a0ed2dd1aad1eb3f"
         }
       ]
     },
@@ -101,14 +101,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.85, 1.4 sec/epoch on [CudaDevice(id=0), CudaDevice(id=1)]\n"
+          "text": "test acc: 0.85, 1.3 sec/epoch on [CudaDevice(id=0), CudaDevice(id=1)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
-          "bytes": 16959,
-          "sha256": "sha256:faa6807b78355829de2d47024d49f62afde5574705789485424123d88ea79da4"
+          "bytes": 16964,
+          "sha256": "sha256:ebb014de3fa7dfb83e084ced81aeb61880b163a4611d3b2c0337d69ac78d60a5"
         }
       ]
     }

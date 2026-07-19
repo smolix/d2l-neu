@@ -61,8 +61,8 @@
           "type": "display_data",
           "mime": "image/png",
           "asset": "object-detection-dataset/object-detection-dataset-demonstration-1.png",
-          "bytes": 417034,
-          "sha256": "sha256:f910661cc80ff0ab0f8b66d7962beec43ff2c62ca43316a2a942fe2781af4e43"
+          "bytes": 384042,
+          "sha256": "sha256:de5930ad9cd367b2c7260e0073521b7412824c2707990902fe07fcad04711e70"
         }
       ]
     }

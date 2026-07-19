@@ -30,27 +30,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 112, 112, 64)\n"
+          "text": "Sequential output shape:\t (1, 112, 112, 64)\nSequential output shape:\t (1, 56, 56, 128)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 56, 56, 128)\n"
+          "text": "Sequential output shape:\t (1, 28, 28, 256)\nSequential output shape:\t (1, 14, 14, 512)\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Sequential output shape:\t (1, 28, 28, 256)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential output shape:\t (1, 14, 14, 512)\nSequential output shape:\t (1, 7, 7, 512)\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Sequential output shape:\t (1, 10)\n"
+          "text": "Sequential output shape:\t (1, 7, 7, 512)\nSequential output shape:\t (1, 10)\n"
         }
       ]
     },
@@ -62,8 +52,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/vgg-training-1.svg",
-          "bytes": 21057,
-          "sha256": "sha256:7f14831182b786329c35cd1eb5433999e51898cfb62a1ebad69faef50bf9bdac"
+          "bytes": 20444,
+          "sha256": "sha256:84739042feef756862e14f269d9780fc3a1c42976f9fd5d8d813c99438c2d96a"
         }
       ]
     },
@@ -96,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "blocks/nin-training-1.svg",
-          "bytes": 20961,
-          "sha256": "sha256:f7d32da1e9970ee85b2966b366860e5c1d32f5a1f825b83d8e1cc5c488faa09b"
+          "bytes": 21504,
+          "sha256": "sha256:a31f013c841aecf2179359f1a7059d5a553f0a6a60c9a93a6eec3ecfa24d8a4b"
         }
       ]
     },

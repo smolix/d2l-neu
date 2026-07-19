@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:2797c6a2a3bd5332e1487f6e373ef7a74de117dc653cf947c89caf1f8547e53f",
+    "d2l_lib_fingerprint": "sha256:e26a4ce04e7f1c471d6690600d8277c1822695562f3333ee0ee66a72e0cbea25",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,31 +30,31 @@
       ]
     },
     "gpt-training-the-modern-configuration": {
-      "code_fingerprint": "sha256:4d35babbec34e700344496050ae9b239f8132276e4203854ed8c856b6f769eed",
+      "code_fingerprint": "sha256:d7f57af4f72d2947958ff67df24139da6dc9b5fe3fad9e198dbf234c845714ae",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final: train 0.15, validation 3.37; best validation 1.46 at step 200\n"
+          "text": "final: train 0.15, validation 3.26; best validation 1.47 at step 200\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 18991,
-          "sha256": "sha256:a8b7d55eb96a2cba4cb69f0b2b7c44106d86bd4160ad2d1f362fc9c12870e322"
+          "bytes": 18990,
+          "sha256": "sha256:18516d681489ed6ddf76637e2cabb1d5274a7b15ee8afb0dc6348beca5f169af"
         }
       ]
     },
     "gpt-breaking-it-with-one-flag": {
-      "code_fingerprint": "sha256:d1a069af37065d4f920b9881af1263cc08bbccfa74d013583368b33745d60e7f",
+      "code_fingerprint": "sha256:3c4829cd63a8a9fdbe398492357d6e0bca0d601168d4bcab802bd0fd08ac283e",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True: loss at step 100/200/400/800: 1.95/1.49/1.08/0.51\n"
+          "text": "pre_norm=True: loss at step 100/200/400/800: 1.94/1.48/1.10/0.54\n"
         },
         {
           "type": "stream",
@@ -64,12 +64,12 @@
       ]
     },
     "gpt-sampling-from-the-model-1": {
-      "code_fingerprint": "sha256:01b7d4e10ed6461549caa0b8f50ee44a92ec15e1d151dd2cb4ca6fdc3b1fd40a",
+      "code_fingerprint": "sha256:a0a73cf0b8440ac3cfe269023d77d2812e728566ef7de100ec9f7a010e329515",
       "kind": "text",
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:4a01be1cf1db7f30a9573fbd474f4ab466a53a39381ba922ce8eca6a8d9304b2",
+      "code_fingerprint": "sha256:35bc75f61e8cf7ab3823ce754d4e96c04dedbbd40f1b05db9f2663c6c5e723f1",
       "kind": "text",
       "outputs": [
         {
@@ -85,12 +85,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'the time traveller hot got from the beginning to the end of our lives that said a very young man making spasmodic efforts to relight his ci'\n"
+          "text": "T=2.0, top_k=None: 'the time traveller holding the lamp aloft i intend to explore time is that plain i was never more serious in my life none of us quite knew '\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:ba631cd80056a97fbd1c09c70dbd4142c160684785d6c3722cb2f6afda0a3aa5",
+      "code_fingerprint": "sha256:6e863a5cb806f0cf8e2693b692257115bd99af6d5356dfc5701b7790b92e9aff",
       "kind": "text",
       "outputs": [
         {
@@ -101,7 +101,7 @@
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:bf483aeb2f717af38bd8c1a955b66395c7cde6bde5457fedb6c5804cf0f8bd26",
+      "code_fingerprint": "sha256:fc7616ec8839574cb26425757a35cb7b0a52e15e07bfe6f271a731b58df5019e",
       "kind": "text",
       "outputs": [
         {
@@ -112,7 +112,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:40f2f7ffe93947cf580bdc67f49239924335993185572bccb4064a8a714c8020",
+      "code_fingerprint": "sha256:7bdebe357b439285e774ddd5f6f106deb17259da0df8e1d694d887db192338d4",
       "kind": "text",
       "outputs": [
         {
@@ -123,7 +123,7 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:32b2a9c3f12a03c6e7aa876f8f7e3b15679198b7fdc10f91a8d8f5f7b7440155",
+      "code_fingerprint": "sha256:9b7f97399f2ad825134c0d818ad8507d086c942979c3027b11c6ef699c330414",
       "kind": "text",
       "outputs": [
         {

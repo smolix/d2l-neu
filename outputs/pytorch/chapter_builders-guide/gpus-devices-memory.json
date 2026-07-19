@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.2574, 0.8899, 0.1212],\n        [0.0504, 0.7712, 0.0423]], device='cuda:1')"
+          "text": "tensor([[0.0769, 0.4852, 0.9990],\n        [0.3158, 0.7800, 0.9361]], device='cuda:1')"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[1.2574, 1.8899, 1.1212],\n        [1.0504, 1.7712, 1.0423]], device='cuda:1')"
+          "text": "tensor([[1.0769, 1.4852, 1.9990],\n        [1.3158, 1.7800, 1.9361]], device='cuda:1')"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[-0.3977],\n        [-0.3977]], device='cuda:0', grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[0.5078],\n        [0.5078]], device='cuda:0', grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -180,7 +180,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0010 sec\ntime until they all finished:     0.0764 sec\n"
+          "text": "time to queue 32 matrix products: 0.0014 sec\ntime until they all finished:     0.0801 sec\n"
         }
       ]
     },
@@ -191,12 +191,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pageable copy:              0.731 ms\n"
+          "text": "pageable copy:              0.521 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pinned, non-blocking copy:  0.370 ms\n"
+          "text": "pinned, non-blocking copy:  0.408 ms\n"
         }
       ]
     },
@@ -214,7 +214,7 @@
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-2-1.svg",
           "bytes": 21806,
-          "sha256": "sha256:22fb7e248e9d1e9659ebb4904241c9a600f814da638b311f1263e0c74785b178"
+          "sha256": "sha256:6ce36ab98e8feb7dbbdc60b1e0b89ec2766e90a30286e6a3ef30c0c1c0110211"
         }
       ]
     }

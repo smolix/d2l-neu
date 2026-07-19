@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:45ef386742139722835dcd8ddb0e91fa59b85d243699b16eadc6beb0464e14a8",
+    "d2l_lib_fingerprint": "sha256:32699e57ee703f73d2173e54ec5ed624f5ab507206adb1e3dcc46a0461d188f4",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -61,17 +61,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  no balancing: training loss 0.72, experts under 2% usage: 3 of 16\n"
+          "text": "  no balancing: training loss 0.72, experts under 2% usage: 5 of 16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "auxiliary loss: training loss 0.69, experts under 2% usage: 0 of 16\n"
+          "text": "auxiliary loss: training loss 0.66, experts under 2% usage: 0 of 16\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          bias: training loss 0.52, experts under 2% usage: 0 of 16\n"
+          "text": "          bias: training loss 0.54, experts under 2% usage: 0 of 16\n"
         }
       ]
     },
@@ -81,14 +81,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x7d87ae1a7f50>"
+          "text": "<matplotlib.legend.Legend at 0x7b98db7ec7a0>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "moe/moe-three-runs-one-budget-4-1.svg",
-          "bytes": 44163,
-          "sha256": "sha256:2c30e83b21c31bd0e9dff7d236d645894ec5eca04f0359fa0b32e6486b5fcdc7"
+          "bytes": 44169,
+          "sha256": "sha256:f425047ccd3d2013576b9ded089c01400aa3b5334fdf4b308c4f02c80e2445f5"
         }
       ]
     },
@@ -104,7 +104,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  MoE: 17.85M parameters (3.16M active), best validation 1.52, final training loss 0.18\n"
+          "text": "  MoE: 17.85M parameters (3.16M active), best validation 1.52, final training loss 0.19\n"
         }
       ]
     }

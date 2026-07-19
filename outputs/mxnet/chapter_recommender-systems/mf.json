@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.129, test RMSE 1.056\n190926.7 examples/sec on [gpu(0)]\n"
+          "text": "train loss 0.129, test RMSE 1.060\n45692.3 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mf/mf-training-and-evaluating-the-model-2-1.svg",
           "bytes": 21541,
-          "sha256": "sha256:9d4d9dfb7e963fce85ec54dc750dcaf049374765ea44d313b4e91aa14fbe0dae"
+          "sha256": "sha256:32cdb1fc29efd6a1f9dad086f6e682fe3db563768ea107e120aa64e80f5db10c"
         }
       ]
     },
@@ -52,7 +52,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([3.1344671], device=gpu(0))"
+          "text": "array([3.158529], device=gpu(0))"
         }
       ]
     }

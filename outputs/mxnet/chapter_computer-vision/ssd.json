@@ -137,14 +137,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class err 3.60e-03, bbox mae 3.74e-03\n3481.6 examples/sec on gpu(0)\n"
+          "text": "class err 3.59e-03, bbox mae 3.89e-03\n1476.3 examples/sec on gpu(0)\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-training-the-model-1.svg",
-          "bytes": 20989,
-          "sha256": "sha256:21f4a8119c57736317bae9639edc49497394a5668efbb54e4e4ee1fa7f5271cd"
+          "bytes": 20101,
+          "sha256": "sha256:32f0100d8266abe8d2af9bb507ee813c2c9e6210679fbf7145798a0044aff10a"
         }
       ]
     },
@@ -172,8 +172,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-prediction-3-1.svg",
-          "bytes": 420381,
-          "sha256": "sha256:fefd5910b77f52afb766e654fda47a3f97990b1e01cd2a065e4e2a5f7c3d002a"
+          "bytes": 421908,
+          "sha256": "sha256:312bc63e8e149be779ff2914e4462c242caf95fa8506861c0d84aaa7d4e54362"
         }
       ]
     },
@@ -186,7 +186,7 @@
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-exercises-1-1.svg",
           "bytes": 18956,
-          "sha256": "sha256:904a9a9b946f0f4a224a9b2843db1be1f1310c9bf9d2bedbea9630468a4595eb"
+          "sha256": "sha256:8cf8ae03b0a71727a64af9943dbae3dfc51a1404a3d47a525b5241a578ec555e"
         }
       ]
     },
@@ -199,7 +199,7 @@
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-exercises-2-1.svg",
           "bytes": 24994,
-          "sha256": "sha256:6fee405e1f90b780f0114422dbf34f29ba55947724ea11b164b80a6d03111de1"
+          "sha256": "sha256:decbbd6d64c1ea3277b6bcf533c209f79935953883f88ab2434d333c77db6aff"
         }
       ]
     }

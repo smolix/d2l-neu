@@ -46,8 +46,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-training-3-1.svg",
-          "bytes": 18359,
-          "sha256": "sha256:04f6d2f0571495541540ea7bff6f4b4db594a473bbfe3159cbce7f120d657a47"
+          "bytes": 18362,
+          "sha256": "sha256:79fda0f1db7b7084a363805b5eda6c595a97dddbc9988bb2e2eadc826f419cf3"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 104.0\n"
+          "text": "validation perplexity 99.5\n"
         }
       ]
     },
@@ -81,7 +81,7 @@
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-concise-implementation-3-1.svg",
           "bytes": 18364,
-          "sha256": "sha256:00f1f0bfc14f6f86fe8818a5ec98ac630fcca20ab1da8b8621e0964e0ea94b3c"
+          "sha256": "sha256:576f3d920c0841c3541b64d2e454fb4bd8a5987d592cc2e0d2a6f1dbc018a434"
         }
       ]
     },
@@ -92,7 +92,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 93.5, 'the time traveller you of my mind. It was nothing of the\\ntremat, and I was nothing of a phow, I was'\n"
+          "text": "perplexity 97.4, 'the time traveller had beened to beautifulation. I feltk, and then, I thought, in theirll, and there were the little people'\n"
         }
       ]
     },
@@ -114,8 +114,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-implementation-and-comparison-3-1.svg",
-          "bytes": 18938,
-          "sha256": "sha256:a99cef58905d87fb94626b844cc3c4aa617b856315d61c78a58d677cc20da43d"
+          "bytes": 18937,
+          "sha256": "sha256:cf8b54ae61c1626a60b596d0a3332d7e53d2949e8d1c8dcc0043787b962fd3ba"
         }
       ]
     },
@@ -126,7 +126,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 76.0\n"
+          "text": "validation perplexity 78.1\n"
         }
       ]
     },
@@ -143,8 +143,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lstm/lstm-deep-recurrent-networks-2-1.svg",
-          "bytes": 20134,
-          "sha256": "sha256:62c22c246c2ea4500b8c8ce9c008e1e964d28c81393c294d125fc3ec3f925fa1"
+          "bytes": 20848,
+          "sha256": "sha256:c5661907f076609f58dabbf68292472768f66e78f60e955c3dedf7e9c06c6099"
         }
       ]
     },
@@ -155,7 +155,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "           model  val ppl\n  LSTM (scratch)    104.0\n            LSTM     93.5\n             GRU     76.0\n LSTM (2 layers)    139.8\n"
+          "text": "           model  val ppl\n  LSTM (scratch)     99.5\n            LSTM     97.4\n             GRU     78.1\n LSTM (2 layers)    121.5\n"
         }
       ]
     },

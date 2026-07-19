@@ -44,7 +44,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\n array([[0.1643518 , 0.144785  , 0.15841034, 0.21657774, 0.3158751 ],\n        [0.2131914 , 0.19188969, 0.19575362, 0.25237206, 0.14679326]],\n       dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([1., 1.], dtype=float32)>)"
+          "text": "(<tf.Tensor: shape=(2, 5), dtype=float32, numpy=\n array([[0.21319394, 0.13474208, 0.20669897, 0.17184985, 0.27351508],\n        [0.18383098, 0.17291924, 0.17053534, 0.20444588, 0.26826856]],\n       dtype=float32)>,\n <tf.Tensor: shape=(2,), dtype=float32, numpy=array([0.9999999, 1.       ], dtype=float32)>)"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22397,
-          "sha256": "sha256:eb2366af0fd9b58618624343ca139bbaf5a567fa41d289c9c787dea1c8838646"
+          "bytes": 22391,
+          "sha256": "sha256:27b39ab3e6db89426a2f2145abb768e646a5adc25769fb52bf731b463bd9bbef"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Test accuracy: 0.835\n"
+          "text": "Test accuracy: 0.834\n"
         }
       ]
     },
@@ -125,8 +125,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 49215,
-          "sha256": "sha256:e79b2b29611432ff43001981e6f898d02eac70ddfcae88d6ca2cfdde095adb7e"
+          "bytes": 50972,
+          "sha256": "sha256:016117469404b00f16ee3bbd96e5a19e9f9ed5f7e353e80c8ace8b7dade66ef0"
         }
       ]
     },
@@ -143,8 +143,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21518,
-          "sha256": "sha256:911cc69e0ee952852d34dc059d29c72df100c2ba86edd0062d47cf837921f718"
+          "bytes": 21495,
+          "sha256": "sha256:b2d61709c8d1c764d37e2a01e4dfef5f4d01f62f775538d3e998ee482fa69c24"
         }
       ]
     }

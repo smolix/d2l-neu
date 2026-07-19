@@ -47,7 +47,7 @@
           "mime": "image/svg+xml",
           "asset": "word-embedding-dataset/word-embedding-dataset-subsampling-2-1.svg",
           "bytes": 28955,
-          "sha256": "sha256:2e731addfa979288b2096c826652aea21c2bb13000b49064fe8a63aa4620a15d"
+          "sha256": "sha256:20f41350a330536fdbebd5ccd1976edbf32698dc41867564fc9d6020fd02b099"
         }
       ]
     },
@@ -57,7 +57,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'# of \"the\": before=50770, after=2043'"
+          "text": "'# of \"the\": before=50770, after=2049'"
         }
       ]
     },
@@ -77,7 +77,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[[], [2116, 275, 407], [5278, 3055, 1581]]"
+          "text": "[[], [393, 2116, 146, 275, 407], [141, 5278, 1, 3055, 1581, 96]]"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "dataset [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9]]\ncenter 0 has contexts [1]\ncenter 1 has contexts [0, 2, 3]\ncenter 2 has contexts [1, 3]\ncenter 3 has contexts [2, 4]\ncenter 4 has contexts [3, 5]\ncenter 5 has contexts [4, 6]\ncenter 6 has contexts [4, 5]\ncenter 7 has contexts [8, 9]\ncenter 8 has contexts [7, 9]\ncenter 9 has contexts [8]\n"
+          "text": "dataset [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9]]\ncenter 0 has contexts [1, 2]\ncenter 1 has contexts [0, 2, 3]\ncenter 2 has contexts [1, 3]\ncenter 3 has contexts [2, 4]\ncenter 4 has contexts [2, 3, 5, 6]\ncenter 5 has contexts [3, 4, 6]\ncenter 6 has contexts [4, 5]\ncenter 7 has contexts [8]\ncenter 8 has contexts [7, 9]\ncenter 9 has contexts [7, 8]\n"
         }
       ]
     },
@@ -103,7 +103,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'# center-context pairs: 1504667'"
+          "text": "'# center-context pairs: 1502048'"
         }
       ]
     },
@@ -118,7 +118,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "[3, 2, 1, 1, 2, 2, 3, 2, 1, 2]"
+          "text": "[3, 3, 3, 1, 2, 1, 1, 2, 1, 1]"
         }
       ]
     },

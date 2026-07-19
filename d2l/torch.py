@@ -1392,6 +1392,7 @@ class MultiHeadAttention(d2l.Module):
     Defined in :numref:`sec_multihead-attention`"""
     def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
         super().__init__()
+        assert num_hiddens % num_heads == 0, 'heads must divide num_hiddens'
         self.num_heads = num_heads
         self.attention = d2l.DotProductAttention(dropout)
         self.W_q = nn.LazyLinear(num_hiddens, bias=bias)
@@ -1448,7 +1449,7 @@ class TinyCharLM(nn.Module):
 
     Defined in :numref:`sec_positional-information`"""
     def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
-                 pos='rope', max_len=512):
+                 pos='rope', max_len=512, bias=False):
         super().__init__()
         self.num_heads, self.pos = num_heads, pos
         self.token_emb = nn.Embedding(vocab_size, num_hiddens)
@@ -1462,8 +1463,8 @@ class TinyCharLM(nn.Module):
             P = torch.stack([torch.sin(theta), torch.cos(theta)], -1)
             self.register_buffer('P', P.reshape(max_len, num_hiddens))
         self.blks = nn.ModuleList([nn.ModuleDict(dict(
-            qkv=nn.Linear(num_hiddens, 3 * num_hiddens),
-            proj=nn.Linear(num_hiddens, num_hiddens)))
+            qkv=nn.Linear(num_hiddens, 3 * num_hiddens, bias=bias),
+            proj=nn.Linear(num_hiddens, num_hiddens, bias=bias)))
             for _ in range(num_blks)])
 
     def _rope(self, x):
@@ -1529,6 +1530,7 @@ class FeedForward(nn.Module):
     Defined in :numref:`sec_transformer-block`"""
     def __init__(self, num_hiddens, act='swiglu', bias=False):
         super().__init__()
+        assert act in ('swiglu', 'gelu'), f'unknown act: {act!r}'
         self.act = act
         if act == 'gelu':
             width = 4 * num_hiddens
@@ -1551,6 +1553,8 @@ class TransformerBlock(nn.Module):
                  act='swiglu', pre_norm=True, bias=False, attn_factory=None,
                  ffn_factory=None):
         super().__init__()
+        assert norm in ('rms', 'layer'), f'unknown norm: {norm!r}'
+        assert num_hiddens % num_heads == 0
         self.pre_norm = pre_norm
         make_norm = nn.RMSNorm if norm == 'rms' else nn.LayerNorm
         self.norm1, self.norm2 = make_norm(num_hiddens), make_norm(num_hiddens)
@@ -1654,6 +1658,8 @@ class GQAAttention(nn.Module):
     def __init__(self, num_hiddens, num_heads, num_kv_heads, bias=False,
                  rope=False, causal=True):
         super().__init__()
+        assert num_hiddens % num_heads == 0
+        assert num_heads % num_kv_heads == 0
         self.num_heads, self.num_kv_heads = num_heads, num_kv_heads
         self.head_dim = num_hiddens // num_heads
         self.rope, self.causal = rope, causal
@@ -1712,6 +1718,10 @@ class PatchEmbedding(nn.Module):
                 return (x, x)
             return x
         img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
+        # A partial trailing patch would silently shrink the token grid
+        assert img_size[0] % patch_size[0] == 0 and \
+            img_size[1] % patch_size[1] == 0, \
+            'image size must be divisible by the patch size'
         self.num_patches = (img_size[0] // patch_size[0]) * (
             img_size[1] // patch_size[1])
         self.conv = nn.LazyConv2d(num_hiddens, kernel_size=patch_size,

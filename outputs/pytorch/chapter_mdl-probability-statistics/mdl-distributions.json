@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:f8b8bd8bba8de4abe6cb349d119a2a3329048321791d973fcfd4e9f2e61ac2c1"
+          "sha256": "sha256:dad0c54de9731e6b888bd959b0d502d697ce99fa0a7ffcc03b58c091477c36de"
         }
       ]
     },
@@ -124,7 +124,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:e566b19f72b13f413fdcbd3b77a19b7008bc248ffaa7c6765fd7463138fe9af0"
+          "sha256": "sha256:ac90b86a09d80f4b7b97765f346f61bbfc6b6db6fcd7b149dbf4dbe2e362b4d9"
         }
       ]
     },

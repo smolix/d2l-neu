@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:bdbe03e537ff01f9865fa64516aca2996c4a91411e17637694d0e0ca8cd6ddb7",
+    "d2l_lib_fingerprint": "sha256:ca8ae7eabb0ed278ea7600bc5084d1b6703bf49cba993de990e69876f4a9aa52",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -19,41 +19,46 @@
       "outputs": []
     },
     "transformer-block-signal-propagation-at-initialization": {
-      "code_fingerprint": "sha256:96ea104c6341c2c64a70467baf1156a783614876aacb5f5c9632c0d8d8f6cbae",
+      "code_fingerprint": "sha256:3bfc8d9e909f2905ddc667f68293516d7850b8d6472f639d8f2fd3b413447dc4",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " post-LN: stream RMS at k=32:  1.00,  token spread at k=8,16,32:  3.7e-01  3.6e-02  1.2e-04\n  pre-LN: stream RMS at k=32:  5.25,  token spread at k=8,16,32:  7.4e-01  5.2e-01  3.7e-01\n"
+          "text": " post-LN: stream RMS at k=32:  1.00,  token spread at k=8,16,32:  3.7e-01  3.6e-02  1.2e-04\n          grad norms at k=32: W_q 2.9e-09  W_k 2.6e-09  W_v 5.8e-02  W_o 5.9e-02\n  pre-LN: stream RMS at k=32:  5.25,  token spread at k=8,16,32:  7.4e-01  5.2e-01  3.7e-01\n          grad norms at k=32: W_q 1.9e-03  W_k 1.9e-03  W_v 8.1e-02  W_o 8.4e-02\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-1.svg",
-          "bytes": 27216,
-          "sha256": "sha256:46e5548b4ea99c7b7aae58466295a84ccd03d2f20a97ffa8e9c5fb249e9ee5f4"
+          "bytes": 29255,
+          "sha256": "sha256:fa5bc72f6350c8a8ba273d819d0b679ab1fe534641a4548e7c1a3d0e3f814f3b"
         }
       ]
     },
     "transformer-block-rmsnorm": {
-      "code_fingerprint": "sha256:c96da1189952c2108ff6d2db02e0e6d9a581e0c6bf1150ff1214c49565086724",
+      "code_fingerprint": "sha256:cabe21fbbf39296a649eed93a14591a5227283d3974adf53f70127ccf0528ee0",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ours vs. built-in: max deviation 9.5e-07\nLayerNorm: 0.293 ms\nRMSNorm: 0.293 ms\n"
+          "text": "ours vs. built-in: max deviation 9.5e-07\nLayerNorm: 0.681 ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RMSNorm: 0.652 ms\n"
         }
       ]
     },
     "transformer-block-the-feed-forward-network-1": {
-      "code_fingerprint": "sha256:ac29b78ed9847f92301dcf84a7262a641d4032f868979ccd65a5bd5e508a3903",
+      "code_fingerprint": "sha256:729260f1b57f544517e1179e7860562ad71dac2a6aa54f9514a4ce2614787215",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-the-feed-forward-network-2": {
-      "code_fingerprint": "sha256:6cc0ed7bcde971fefa77b8ac58871d9662cb7222a9938a9cdd1a28fef6537740",
+      "code_fingerprint": "sha256:a954b9aef3b221853f99f482e1c5b8482e35b6eb9f7477a416a1fcb87ddd2f7d",
       "kind": "text",
       "outputs": [
         {
@@ -64,12 +69,12 @@
       ]
     },
     "transformer-block-a-configurable-block": {
-      "code_fingerprint": "sha256:1b307e7e23400e13dce9133803b815471f96a5f74ca78ce26caab395e53524da",
+      "code_fingerprint": "sha256:c841ecf9e40f8527f985b5166857eda0004092cd92389ebcc377d8d42683aa70",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-shapes-and-parameters-1": {
-      "code_fingerprint": "sha256:0165b793cec58964d155dc6ac3634354a059577558a372dce1debb271f3acf0b",
+      "code_fingerprint": "sha256:60a19626623f6f44c4309296e137161647ce5c8255aa93505a538a7dd67d9855",
       "kind": "text",
       "outputs": [
         {
@@ -80,12 +85,12 @@
       ]
     },
     "transformer-block-shapes-and-parameters-2": {
-      "code_fingerprint": "sha256:cf95ed84cf6c8930b51b9d302725d825f5bab583e79beb448590f22486c446ea",
+      "code_fingerprint": "sha256:71332bc752125dff92ec2be3b706f9f8c6db10524316900131479c7ccdbb5e74",
       "kind": "text",
       "outputs": []
     },
     "transformer-block-the-flags-at-work-gelu-versus-swiglu": {
-      "code_fingerprint": "sha256:7aa28db05e6ce5c7d9e25f5102726f9f3a460fae360366abc3f79b33c056a0d5",
+      "code_fingerprint": "sha256:923b0fff6153e1aa5585ebffe8bc4092aeeec35d41373625b14fa1b1330747e9",
       "kind": "text",
       "outputs": [
         {

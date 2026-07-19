@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-1-1.svg",
           "bytes": 16908,
-          "sha256": "sha256:5b0f037499b8c721ee350a7852f14fb29ba5a3ef6ff086a7a6dc20aca829a1c0"
+          "sha256": "sha256:dc47d213308404d1f945e47cab2f76f7671f8516e47b224cb355924524b9fc4e"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-relu-function-2-1.svg",
           "bytes": 21200,
-          "sha256": "sha256:a7223668e6421e1f3fbf920855688b22f3feef1de294ccfbe10f33b3df30bdb5"
+          "sha256": "sha256:e225114566bd874afc662bbc4a0225b96c38c2cf0bf99751c3d4d7a339846897"
         }
       ]
     },
@@ -78,8 +78,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-1-1.svg",
-          "bytes": 21781,
-          "sha256": "sha256:e5604a53687f35399eea1f26a371047a029c3fac5580b73eebefe29b9ea85b18"
+          "bytes": 21780,
+          "sha256": "sha256:3a502c559340a07d13d5d750bd9487b883ba1c2871bc46652757f9df49effe6c"
         }
       ]
     },
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-sigmoid-function-2-1.svg",
-          "bytes": 24512,
-          "sha256": "sha256:628c106b16867b4a333d52c0a8cbb489663c6ce5931bb12014c801e7580a2d42"
+          "bytes": 24514,
+          "sha256": "sha256:f64d9513dba0beeccb95959e54e47a9dcf561078b2fd5e1443f0827c50e7c7c3"
         }
       ]
     },
@@ -104,8 +104,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-1-1.svg",
-          "bytes": 20169,
-          "sha256": "sha256:32b342ff05960817a92743b2863a4fc999c9654cf221e0621d8d62fdf940a37a"
+          "bytes": 20168,
+          "sha256": "sha256:fa1a5122779fe7aa274953586c91b90450de180f46dc297de5ea580c48507682"
         }
       ]
     },
@@ -118,7 +118,7 @@
           "mime": "image/svg+xml",
           "asset": "mlp/mlp-tanh-function-2-1.svg",
           "bytes": 22667,
-          "sha256": "sha256:a5bb3628ae29b58af47ff9a65a15e2307809f0308d3bdf375a462acbe0e9d7af"
+          "sha256": "sha256:329da30017da8b37c45ace7b487b48129a88e41a6e7ba2cb52444275ce824d7a"
         }
       ]
     }

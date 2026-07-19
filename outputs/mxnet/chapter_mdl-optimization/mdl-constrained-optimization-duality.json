@@ -31,17 +31,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n"
+          "text": " lambda    r = |w_pen|   |w_con - w_pen|   recovered multiplier\n   0.10       0.4460         9.23e-17             0.1000\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   0.10       0.4460         9.23e-17             0.1000\n   1.00       0.4235         9.64e-17             1.0000\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  10.00       0.2840         5.55e-17            10.0000\n"
+          "text": "   1.00       0.4235         9.64e-17             1.0000\n  10.00       0.2840         5.55e-17            10.0000\n"
         }
       ]
     },
@@ -81,7 +76,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-constrained-optimization-duality/constrained-duality-gap-1.svg",
           "bytes": 26638,
-          "sha256": "sha256:63e95ce105571306f6c8eb910b6831e94469bea02f34891d3dc513a834a1d5ef"
+          "sha256": "sha256:5af105f8afa271cea7e9f7f0164d19ccc3502a13d257ddfd91bce1130e708f48"
         }
       ]
     }

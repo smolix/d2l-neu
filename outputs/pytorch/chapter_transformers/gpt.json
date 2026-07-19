@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:e15d466dbc8d20ccab330c899a190f70155a86b77c5ee3000c2008b53c755b4c",
+    "d2l_lib_fingerprint": "sha256:730e350b4c92bc4ab5e9162f1f99e675f2ff06a634a76eef8e41335b3086722b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -30,31 +30,31 @@
       ]
     },
     "gpt-training-the-modern-configuration": {
-      "code_fingerprint": "sha256:343da7728c01132014b94ebfd04405a536d47941028e2cf4e4dc39ce0ec5846a",
+      "code_fingerprint": "sha256:76686a148382a09a3b79f9c83ca0b4db582f997c458410eb6c1053a39f28189a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final: train 0.14, validation 3.41; best validation 1.49 at step 200\n"
+          "text": "final: train 0.14, validation 3.44; best validation 1.49 at step 200\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
-          "bytes": 18992,
-          "sha256": "sha256:43aa79a534f8b3f688af667c748c618a0abf98818d36ba8375897e59a35ddb80"
+          "bytes": 18993,
+          "sha256": "sha256:3bf9f71e4514cb639014c2388e497835dcd36cb90d7407dfbae84be3ed533930"
         }
       ]
     },
     "gpt-breaking-it-with-one-flag": {
-      "code_fingerprint": "sha256:1436f80864f8417fcaae1a4c85578d62fcf0287b99000120256e69332318c2c0",
+      "code_fingerprint": "sha256:4214c3fa64c1331eb321973d488da7911543d3ba3ba84bd34935d75f9393113a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True: loss at step 100/200/400/800: 2.20/1.84/1.39/1.12\n"
+          "text": "pre_norm=True: loss at step 100/200/400/800: 2.20/1.81/1.36/1.06\n"
         },
         {
           "type": "stream",
@@ -64,33 +64,33 @@
       ]
     },
     "gpt-sampling-from-the-model-1": {
-      "code_fingerprint": "sha256:40055cf21d685611a4922675d3787f3e86f0f28113cd92959a2913fbc3dc34d6",
+      "code_fingerprint": "sha256:0b64b55fb89a20766ba35e3d8a52b9270a6da56434d08f9248dabbdf599459c7",
       "kind": "text",
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:3d0325083d70e757f4f4f90480fa9f7b501ad7438da56d5ece5d35f7da62713c",
+      "code_fingerprint": "sha256:a27708b4b8a91e7eefd7c4173a8381cec8f0b5fb4ac0d47312a0b3aa21187957",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'the time traveller and to the psychologist you think you can explain that it s presentation below the threshold you know diluted presentati'\n"
+          "text": "T=1.0, top_k=None: 'the time traveller put forth his finger towards the lever no he said suddenly lend me your hand and turning to the psychologist he took tha'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'the time traveller and to the psychologist you think you can explain that it s presentation below the threshold you know diluted presentati'\n"
+          "text": "T=0.7, top_k=8: 'the time traveller pushed his plate away and looked round us i suppose i must apologize he said i was simply starving i ve had a most amazi'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'the time traveller after but even consitions what so natural three as the silent my eyes rather than we cannot mean to have a rexistence th'\n"
+          "text": "T=2.0, top_k=None: 'the time traveller then when we had all imitated the actual asory may ejustionted you cannot move about in all of them i shook her off litt'\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:5a88aa21fdd8e4547a2cdc0fa73e0573e8ffbc5fc3ef732e5ec9f943c1fdd1e9",
+      "code_fingerprint": "sha256:40fd2290b35ea5bf46e8d90cc840ad3f3460f28906f1906eeee4c3c1ee6d9be5",
       "kind": "text",
       "outputs": [
         {
@@ -101,7 +101,7 @@
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:12b6322f6436109ee6ec493d107710612a48b0c6e58f71fed102fec3dc140820",
+      "code_fingerprint": "sha256:7ca47cc1de315e73b1ecd76b1db23f76f39c36d0da1e6bdb8a2d249b23e2a35d",
       "kind": "text",
       "outputs": [
         {
@@ -112,7 +112,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:e2d0277b09ae5225c6e4cf52b35a8ca180db5ab76ce63633312b6666187be7d0",
+      "code_fingerprint": "sha256:226936831d74b6068a5ca2e6daf3bbfc3c3e855af847020f5f94fd0cf1301dc4",
       "kind": "text",
       "outputs": [
         {
@@ -123,7 +123,7 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:51312c71e3b31246b4cd10db2bb52a8f8c92db9e7ecb763d0a68a7efca259694",
+      "code_fingerprint": "sha256:e80ccba05c207647731ca1fcc40a3539510ae927ecd808edd6c3e6e0d7d708be",
       "kind": "text",
       "outputs": [
         {

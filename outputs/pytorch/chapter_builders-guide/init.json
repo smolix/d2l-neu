@@ -77,7 +77,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  8      83.5      2.38         1\n 32  6.37e+07      2.63         1\n"
+          "text": "  8      83.5      2.38         1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 32  6.37e+07      2.63         1\n"
         }
       ]
     },

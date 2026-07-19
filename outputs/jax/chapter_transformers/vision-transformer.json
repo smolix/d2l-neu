@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "source": "chapter_transformers/vision-transformer.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:d95a9e99b69cec5b729851eb5024657900b492985ffd48fc7cf977b9b7531664",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "vision-transformer": {
+      "code_fingerprint": "sha256:641a26f6427261ce8468f9dcff3c22d0f8f519579e948bff4c66f7efd4919114",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-patches-as-tokens-1": {
+      "code_fingerprint": "sha256:e26b1b0f3f6dc8a740d0b8354723c85dcc00c8f6b596bb947249e0bf4dd89bb3",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-patches-as-tokens-2": {
+      "code_fingerprint": "sha256:3d00cceb2b2b6892225564f63baac05513163513ae43a42738fa6b3fc3f6ec21",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-the-vision-transformer-block-1": {
+      "code_fingerprint": "sha256:36ec10be7e4b96504b681ee0ee4a6006c93c655e82fa0bc0a957c93ed93f6457",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-the-vision-transformer-block-2": {
+      "code_fingerprint": "sha256:9f895a785cdebace4da4eb331b6ffba7dcf09f2812a08af6f8513b993df1662c",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-the-full-model": {
+      "code_fingerprint": "sha256:e24a69839159efcbb52e44925b4fff801dc6b9b1052be4d1943625e1ddf2891c",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-a-first-run-1": {
+      "code_fingerprint": "sha256:98ec96c360a309cc154245bb93aed67ebe580d79a7ec5b4fa8dcd3b4f28965b0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vision-transformer/vision-transformer-a-first-run-1-1.svg",
+          "bytes": 19972,
+          "sha256": "sha256:f6c969edaca586d3df1ec02e31cb9838a33667af960bad0f35130029cde7dfc9"
+        }
+      ]
+    },
+    "vision-transformer-a-first-run-2": {
+      "code_fingerprint": "sha256:deadd1ccbbed7e69d02bb1a77058a1a3abc18fbb9829a0e2b879951610226c4c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ViT: 6.5M parameters, validation accuracy 0.87\n"
+        }
+      ]
+    },
+    "vision-transformer-do-the-position-embeddings-discover-the-grid": {
+      "code_fingerprint": "sha256:97fc016323c51404ed665b9364ba5e81e67e24cffc6b5bfb9fcceeabd4f72fb9",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean cosine similarity: grid neighbors 0.04, distant positions -0.02\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vision-transformer/vision-transformer-do-the-position-embeddings-discover-the-grid-1.svg",
+          "bytes": 108871,
+          "sha256": "sha256:6f619a10b7bc62b18e04aba28b6191ebd4b476492b5d2a91ce934b887881186c"
+        }
+      ]
+    },
+    "vision-transformer-a-convolutional-baseline-at-the-same-budget-1": {
+      "code_fingerprint": "sha256:3d71a90561506da1dfa772bb928fb157a69a52ba2ac4b1d3c4d21faffa05f1a4",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-a-convolutional-baseline-at-the-same-budget-2": {
+      "code_fingerprint": "sha256:6ec7ca292a5542ada35e2ed1c471d9610c389b138a3c9a5d42718c26e418945c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "CNN: 6.5M parameters, validation accuracy 0.91\nViT: 6.5M parameters, validation accuracy 0.87\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-2-1.svg",
+          "bytes": 20496,
+          "sha256": "sha256:d8557e1bac3f5a9dc270b8418ad1243207bd7af754207569009e3d30666367e4"
+        }
+      ]
+    }
+  }
+}

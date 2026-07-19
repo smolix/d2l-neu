@@ -1308,11 +1308,14 @@ matrix-valued state updated by a learned decay plus an outer-product
 write, evaluated in parallel by a scan, differing mainly in the update
 rule and how the decay is parameterized. When three research lineages
 meet at one design, the design is probably not an accident. The precise
-statement of the meeting point, Mamba-2's *state space duality* showing
-that a selective SSM is a form of masked attention :cite:`Dao.Gu.2024`,
-needs the attention machinery of the next chapter, and we defer it
-there; a third generation, Mamba-3, had just been announced as this
-chapter was written.
+statement of the meeting point is Mamba-2's *state space duality*:
+a selective SSM is a form of masked attention :cite:`Dao.Gu.2024`. We
+have in fact already verified its simplest case — in
+:numref:`sec_attention-at-scale` the parallel (attention) and recurrent
+forms of linear attention computed identical outputs, and the duality
+generalizes that equivalence to selective state spaces. A third
+generation, Mamba-3, had just been announced as this chapter was
+written.
 
 **Where no attention is needed at all.** On modalities without natural
 tokens, sampled at high rates, with information spread thinly and
@@ -1344,9 +1347,11 @@ lost, at unchanged scan cost, and the resulting Mamba block solved our
 selective-copy task and topped our capstone scoreboard. What no update
 rule can change is that a fixed-size state holds a fixed number of bits:
 exact recall of an unbounded past demands memory that grows with the past.
-The remaining move is to keep *everything* and learn what to look at.
-That mechanism is attention, and it is the subject of the next chapter
-(:numref:`chap_attention-and-transformers`).
+The remaining move is to keep *everything* and learn what to look at
+— attention (:numref:`chap_attention`), whose cost we measured in
+:numref:`sec_attention-at-scale`. The production hybrids above show the
+resolution the field has settled on: a few attention layers for exact
+recall, recurrence everywhere else.
 
 ## Exercises
 
@@ -1566,8 +1571,9 @@ Neither dominates.
   at one attention layer per 3-7 recurrent ones. A few exact-retrieval
   layers + cheap always-on context between them.
 - **Siblings converged**: RWKV, xLSTM, GLA: different update rules on a
-  matrix state, all scanned. Mamba-2's SSM ≡ masked-attention duality:
-  *deferred* until attention is taught (Mamba-3: just announced).
+  matrix state, all scanned. Mamba-2's SSM ≡ masked-attention duality
+  generalizes the linear-attention ≡ recurrence identity of §"The Cost
+  of Attention" (Mamba-3: just announced).
 - **SSMs win outright** where sequences are long and tokens are raw:
   audio waveforms, DNA, byte-level text.
 :::

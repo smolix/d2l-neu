@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "source": "chapter_transformers/transformer-block.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:ac1ed049c97f5a21345504419e5b83825a4dd4f373b7ff550370a1ce29abc97f",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "transformer-block-the-transformer-block": {
+      "code_fingerprint": "sha256:6940a2722cb1307529be7de475d750590456380d306fb1f7fe55b6d01e62ca08",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-two-arrangements": {
+      "code_fingerprint": "sha256:ab7a3d04795aa9ab530fa58b1784e46352c7773365ce06cf9b57373fffddebdb",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-signal-propagation-at-initialization": {
+      "code_fingerprint": "sha256:5e470075b0529349a7188aefb9658f6d93a3926a4117f3f21f2526c48466757e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " post-LN: stream RMS at k=32:  1.00,  token spread at k=8,16,32:  3.5e-01  2.5e-02  2.0e-04\n  pre-LN: stream RMS at k=32:  5.22,  token spread at k=8,16,32:  7.2e-01  5.3e-01  3.7e-01\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-1.svg",
+          "bytes": 26290,
+          "sha256": "sha256:8bde02f27025c41e3e8fd2e603f3b7d45182f4132473436c7f60beb84ba255df"
+        }
+      ]
+    },
+    "transformer-block-rmsnorm": {
+      "code_fingerprint": "sha256:203ded1469ac761e1df2957c1e00f38ff084df4a17a925c234ea0bd533774fa6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ours vs. built-in: max deviation 9.5e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "LayerNorm: 0.778 ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RMSNorm: 0.512 ms\n"
+        }
+      ]
+    },
+    "transformer-block-the-feed-forward-network-1": {
+      "code_fingerprint": "sha256:e6d8dc3b1625ee01c81787ac00dff51b2634f285e7fddac4df62adb4c1f7fa48",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-the-feed-forward-network-2": {
+      "code_fingerprint": "sha256:48f57017dad215d10d69e7c144d2f299d7760c9a02285087bb3328a89bec5746",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   gelu: 524288 parameters\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " swiglu: 524544 parameters\n"
+        }
+      ]
+    },
+    "transformer-block-a-configurable-block": {
+      "code_fingerprint": "sha256:97c941ef595e6e68114ee6d9cc34745a24b55c74f52b11210db14833652d15aa",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-shapes-and-parameters-1": {
+      "code_fingerprint": "sha256:e91e62b07d11f37029dc70ed6b2665838e02e819d203f8ed68d7031e81b26661",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "attention 262144, ffn 524544, total 787200 = 12.01 d^2\n"
+        }
+      ]
+    },
+    "transformer-block-shapes-and-parameters-2": {
+      "code_fingerprint": "sha256:7579644d7a208c41369f71934ed83a266b9fbb0a2370257d6b10c98877a2117e",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-the-flags-at-work-gelu-versus-swiglu": {
+      "code_fingerprint": "sha256:01ee620abbb29a3ae902d74cedae4318ff64c6564b41e99bce749bcdcadea8d7",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   gelu: loss at step 200/400/600: 2.27/1.71/1.40\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " swiglu: loss at step 200/400/600: 2.22/1.55/1.24\n"
+        }
+      ]
+    }
+  }
+}

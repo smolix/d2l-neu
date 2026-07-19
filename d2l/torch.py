@@ -558,6 +558,26 @@ def cross_entropy(y_hat, y):
     p = y_hat[list(range(len(y_hat))), y].clamp(min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
+def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
+                  cmap='Reds'):
+    """Show heatmaps of matrices.
+
+    Defined in :numref:`sec_softmax_scratch`"""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
+
 class SoftmaxRegression(d2l.Classifier):
     """The softmax regression model.
 
@@ -1328,51 +1348,24 @@ def train_lm(model, data, optimizer, num_steps):
             if step >= num_steps:
                 return losses
 
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices.
-
-    Defined in :numref:`sec_queries-keys-values`"""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
-
 def masked_softmax(X, valid_lens):
     """Perform softmax operation by masking elements on the last axis.
 
     Defined in :numref:`sec_attention-scoring-functions`"""
-    # X: 3D tensor, valid_lens: 1D or 2D tensor 
-    def _sequence_mask(X, valid_len, value=0):
-        maxlen = X.size(1)
-        mask = torch.arange((maxlen), dtype=torch.float32,
-                            device=X.device)[None, :] < valid_len[:, None]
-        # Out-of-place to avoid mutating the input tensor in-place, which
-        # autograd can flag and which interferes with downstream views.
-        return torch.where(mask, X, torch.full_like(X, value))
-    
+    # X: 3D tensor, valid_lens: 1D or 2D tensor
     if valid_lens is None:
-        return nn.functional.softmax(X, dim=-1)
+        return F.softmax(X, dim=-1)
+    shape = X.shape
+    if valid_lens.dim() == 1:
+        valid_lens = torch.repeat_interleave(valid_lens, shape[1])
     else:
-        shape = X.shape
-        if valid_lens.dim() == 1:
-            valid_lens = torch.repeat_interleave(valid_lens, shape[1])
-        else:
-            valid_lens = valid_lens.reshape(-1)
-        # On the last axis, replace masked elements with a very large negative
-        # value, whose exponentiation outputs 0
-        X = _sequence_mask(X.reshape(-1, shape[-1]), valid_lens, value=-1e6)
-        return nn.functional.softmax(X.reshape(shape), dim=-1)
+        valid_lens = valid_lens.reshape(-1)
+    mask = torch.arange(shape[-1], device=X.device)[None, :]
+    mask = mask < valid_lens[:, None]
+    # Most negative finite score: exactly zero weight after the softmax,
+    # at any precision, without the NaN risk of literal -inf
+    X = X.reshape(-1, shape[-1]).masked_fill(~mask, torch.finfo(X.dtype).min)
+    return F.softmax(X.reshape(shape), dim=-1)
 
 class DotProductAttention(nn.Module):
     """Scaled dot product attention.
@@ -1393,33 +1386,6 @@ class DotProductAttention(nn.Module):
         self.attention_weights = masked_softmax(scores, valid_lens)
         return torch.bmm(self.dropout(self.attention_weights), values)
 
-class AdditiveAttention(nn.Module):
-    """Additive attention.
-
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, num_hiddens, dropout):
-        super().__init__()
-        self.W_k = nn.LazyLinear(num_hiddens, bias=False)
-        self.W_q = nn.LazyLinear(num_hiddens, bias=False)
-        self.w_v = nn.LazyLinear(1, bias=False)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, queries, keys, values, valid_lens):
-        queries, keys = self.W_q(queries), self.W_k(keys)
-        # After dimension expansion, shape of queries: (batch_size, no. of
-        # queries, 1, num_hiddens) and shape of keys: (batch_size, 1, no. of
-        # key-value pairs, num_hiddens). Sum them up with broadcasting
-        features = queries.unsqueeze(2) + keys.unsqueeze(1)
-        features = torch.tanh(features)
-        # There is only one output of self.w_v, so we remove the last
-        # one-dimensional entry from the shape. Shape of scores: (batch_size,
-        # no. of queries, no. of key-value pairs)
-        scores = self.w_v(features).squeeze(-1)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        # Shape of values: (batch_size, no. of key-value pairs, value
-        # dimension)
-        return torch.bmm(self.dropout(self.attention_weights), values)
-
 class MultiHeadAttention(d2l.Module):
     """Multi-head attention.
 
@@ -1437,9 +1403,6 @@ class MultiHeadAttention(d2l.Module):
         # Shape of queries, keys, or values:
         # (batch_size, no. of queries or key-value pairs, num_hiddens)
         # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-        # After transposing, shape of output queries, keys, or values:
-        # (batch_size * num_heads, no. of queries or key-value pairs,
-        # num_hiddens / num_heads)
         queries = self.transpose_qkv(self.W_q(queries))
         keys = self.transpose_qkv(self.W_k(keys))
         values = self.transpose_qkv(self.W_v(values))
@@ -1480,120 +1443,335 @@ class MultiHeadAttention(d2l.Module):
         X = X.permute(0, 2, 1, 3)
         return X.reshape(X.shape[0], X.shape[1], -1)
 
-class PositionalEncoding(nn.Module):
-    """Positional encoding.
+class TinyCharLM(nn.Module):
+    """Attention-only character-level language model.
 
-    Defined in :numref:`sec_self-attention-and-positional-encoding`"""
-    def __init__(self, num_hiddens, dropout, max_len=1000):
+    Defined in :numref:`sec_positional-information`"""
+    def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
+                 pos='rope', max_len=512):
         super().__init__()
-        self.dropout = nn.Dropout(dropout)
-        # Create a long enough P
-        self.P = d2l.zeros((1, max_len, num_hiddens))
-        X = d2l.arange(max_len, dtype=torch.float32).reshape(
-            -1, 1) / torch.pow(10000, torch.arange(
-            0, num_hiddens, 2, dtype=torch.float32) / num_hiddens)
-        self.P[:, :, 0::2] = torch.sin(X)
-        self.P[:, :, 1::2] = torch.cos(X[:, :num_hiddens // 2])
+        self.num_heads, self.pos = num_heads, pos
+        self.token_emb = nn.Embedding(vocab_size, num_hiddens)
+        nn.init.normal_(self.token_emb.weight, std=0.02)
+        if pos == 'learned':
+            self.pos_emb = nn.Embedding(max_len, num_hiddens)
+            nn.init.normal_(self.pos_emb.weight, std=0.02)
+        if pos == 'sinusoidal':
+            theta = torch.arange(max_len)[:, None] / 10000 ** (
+                torch.arange(0, num_hiddens, 2) / num_hiddens)
+            P = torch.stack([torch.sin(theta), torch.cos(theta)], -1)
+            self.register_buffer('P', P.reshape(max_len, num_hiddens))
+        self.blks = nn.ModuleList([nn.ModuleDict(dict(
+            qkv=nn.Linear(num_hiddens, 3 * num_hiddens),
+            proj=nn.Linear(num_hiddens, num_hiddens)))
+            for _ in range(num_blks)])
 
-    def forward(self, X, offset=0):
-        # `offset` lets autoregressive decoders advance the encoding position
-        # past tokens already emitted, instead of always slicing from 0.
-        X = X + self.P[:, offset:offset + X.shape[1], :].to(X.device)
-        return self.dropout(X)
+    def _rope(self, x):
+        d = x.shape[-1]
+        pos = torch.arange(x.shape[-2], dtype=torch.float32, device=x.device)
+        inv_freq = 10000.0 ** (-torch.arange(0, d, 2, device=x.device) / d)
+        theta = pos[:, None] * inv_freq[None, :]
+        cos, sin = torch.cos(theta), torch.sin(theta)
+        x1, x2 = x[..., 0::2], x[..., 1::2]
+        return torch.stack([x1 * cos - x2 * sin,
+                            x1 * sin + x2 * cos], -1).flatten(-2)
 
-class PositionWiseFFN(nn.Module):
-    """The positionwise feed-forward network.
+    def _alibi(self, T, device):
+        h = torch.arange(1, self.num_heads + 1, device=device)
+        slopes = 2.0 ** (-8.0 * h / self.num_heads)
+        pos = torch.arange(T, device=device, dtype=torch.float32)
+        return slopes[:, None, None] * (pos[None, :] - pos[:, None])
 
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, ffn_num_hiddens, ffn_num_outputs):
-        super().__init__()
-        self.dense1 = nn.LazyLinear(ffn_num_hiddens)
-        self.relu = nn.ReLU()
-        self.dense2 = nn.LazyLinear(ffn_num_outputs)
+    def _attend(self, blk, H):
+        B, T, D = H.shape
+        q, k, v = blk['qkv'](H).chunk(3, -1)
+        q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
+                   for u in (q, k, v))
+        if self.pos == 'rope':
+            q, k = self._rope(q), self._rope(k)
+        scores = q @ k.transpose(-2, -1) / math.sqrt(q.shape[-1])
+        if self.pos == 'alibi':
+            scores = scores + self._alibi(T, H.device)
+        mask = torch.triu(torch.ones(T, T, dtype=torch.bool,
+                                     device=H.device), 1)
+        scores = scores.masked_fill(mask, torch.finfo(scores.dtype).min)
+        weights = F.softmax(scores, dim=-1)
+        out = (weights @ v).transpose(1, 2).reshape(B, T, D)
+        return blk['proj'](out), weights
+
+    def _embed(self, X):
+        H = self.token_emb(X)
+        if self.pos == 'learned':
+            H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
+        if self.pos == 'sinusoidal':
+            H = H + self.P[:X.shape[1]]
+        return H
 
     def forward(self, X):
-        return self.dense2(self.relu(self.dense1(X)))
+        H = self._embed(X)
+        for blk in self.blks:
+            out, _ = self._attend(blk, H)
+            H = H + out
+        return F.linear(H, self.token_emb.weight)  # Tied output head
 
-class AddNorm(nn.Module):
-    """The residual connection followed by layer normalization.
+    def attention_weights(self, X):
+        """Per-block attention maps, each (batch, num_heads, T, T)."""
+        H, maps = self._embed(X), []
+        for blk in self.blks:
+            out, weights = self._attend(blk, H)
+            maps.append(weights)
+            H = H + out
+        return maps
 
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, norm_shape, dropout):
+class FeedForward(nn.Module):
+    """Position-wise FFN: GELU MLP or SwiGLU at matched parameter count.
+
+    Defined in :numref:`sec_transformer-block`"""
+    def __init__(self, num_hiddens, act='swiglu', bias=False):
         super().__init__()
+        self.act = act
+        if act == 'gelu':
+            width = 4 * num_hiddens
+        else:  # 'swiglu': three matrices; width 8d/3 matches the MLP budget
+            width = round(8 * num_hiddens / 3)
+            self.W_g = nn.Linear(num_hiddens, width, bias=bias)
+        self.W_1 = nn.Linear(num_hiddens, width, bias=bias)
+        self.W_2 = nn.Linear(width, num_hiddens, bias=bias)
+
+    def forward(self, X):
+        if self.act == 'gelu':
+            return self.W_2(F.gelu(self.W_1(X), approximate='tanh'))
+        return self.W_2(F.silu(self.W_g(X)) * self.W_1(X))
+
+class TransformerBlock(nn.Module):
+    """Configurable transformer block: attention + FFN on a residual
+
+    Defined in :numref:`sec_transformer-block`"""
+    def __init__(self, num_hiddens, num_heads, dropout=0, norm='rms',
+                 act='swiglu', pre_norm=True, bias=False, attn_factory=None,
+                 ffn_factory=None):
+        super().__init__()
+        self.pre_norm = pre_norm
+        make_norm = nn.RMSNorm if norm == 'rms' else nn.LayerNorm
+        self.norm1, self.norm2 = make_norm(num_hiddens), make_norm(num_hiddens)
+        self.attention = (d2l.MultiHeadAttention(num_hiddens, num_heads,
+                                                 dropout, bias=bias)
+                          if attn_factory is None else attn_factory())
+        self.ffn = (FeedForward(num_hiddens, act, bias=bias)
+                    if ffn_factory is None else ffn_factory())
         self.dropout = nn.Dropout(dropout)
-        self.ln = nn.LayerNorm(norm_shape)
 
-    def forward(self, X, Y):
-        return self.ln(self.dropout(Y) + X)
+    def forward(self, X, valid_lens=None):
+        if self.pre_norm:
+            Y = self.norm1(X)
+            X = X + self.dropout(self.attention(Y, Y, Y, valid_lens))
+            return X + self.dropout(self.ffn(self.norm2(X)))
+        X = self.norm1(X + self.dropout(self.attention(X, X, X, valid_lens)))
+        return self.norm2(X + self.dropout(self.ffn(X)))
 
-class TransformerEncoderBlock(nn.Module):
-    """The Transformer encoder block.
+class GPT(nn.Module):
+    """Decoder-only transformer language model built from configurable
 
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
+    Defined in :numref:`sec_gpt`"""
+
+    class CausalAttention(nn.Module):
+        """Multi-head causal self-attention, optionally rotary."""
+        def __init__(self, num_hiddens, num_heads, bias=False, rope=False):
+            super().__init__()
+            self.num_heads, self.rope = num_heads, rope
+            self.W_qkv = nn.Linear(num_hiddens, 3 * num_hiddens, bias=bias)
+            self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=bias)
+
+        def _rope(self, x):
+            d = x.shape[-1]
+            pos = torch.arange(x.shape[-2], dtype=torch.float32,
+                               device=x.device)
+            inv_freq = 10000.0 ** (
+                -torch.arange(0, d, 2, device=x.device) / d)
+            theta = pos[:, None] * inv_freq[None, :]
+            cos, sin = torch.cos(theta), torch.sin(theta)
+            x1, x2 = x[..., 0::2], x[..., 1::2]
+            return torch.stack([x1 * cos - x2 * sin,
+                                x1 * sin + x2 * cos], -1).flatten(-2)
+
+        def forward(self, X, *_):
+            B, T, D = X.shape
+            q, k, v = self.W_qkv(X).chunk(3, -1)
+            q, k, v = (u.reshape(B, T, self.num_heads, -1).transpose(1, 2)
+                       for u in (q, k, v))
+            if self.rope:
+                q, k = self._rope(q), self._rope(k)
+            Y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+            return self.W_o(Y.transpose(1, 2).reshape(B, T, D))
+
+    def __init__(self, vocab_size, num_hiddens=256, num_heads=8, num_blks=6,
+                 max_len=1024, pos='rope', norm='rms', act='swiglu',
+                 pre_norm=True, bias=False, dropout=0):
+        super().__init__()
+        self.pos, self.max_len = pos, max_len
+        self.token_emb = nn.Embedding(vocab_size, num_hiddens)
+        nn.init.normal_(self.token_emb.weight, std=0.02)
+        if pos == 'learned':
+            self.pos_emb = nn.Embedding(max_len, num_hiddens)
+            nn.init.normal_(self.pos_emb.weight, std=0.02)
+        attn = lambda: self.CausalAttention(num_hiddens, num_heads, bias,
+                                            rope=(pos == 'rope'))
+        self.blks = nn.ModuleList([
+            d2l.TransformerBlock(num_hiddens, num_heads, dropout, norm, act,
+                                 pre_norm, bias, attn_factory=attn)
+            for _ in range(num_blks)])
+        self.norm = (nn.RMSNorm if norm == 'rms'
+                     else nn.LayerNorm)(num_hiddens)
+
+    def forward(self, X):
+        H = self.token_emb(X)
+        if self.pos == 'learned':
+            H = H + self.pos_emb(torch.arange(X.shape[1], device=X.device))
+        for blk in self.blks:
+            H = blk(H)
+        return F.linear(self.norm(H), self.token_emb.weight)
+
+    @torch.no_grad()
+    def generate(self, prefix, num_tokens, temperature=1.0, top_k=None):
+        """Sample a continuation of the token-id list prefix.
+
+        Defined in :numref:`sec_gpt`"""
+        ids = list(prefix)
+        device = next(self.parameters()).device
+        for _ in range(num_tokens):
+            X = torch.tensor(ids[-self.max_len:], device=device)[None]
+            logits = self(X)[0, -1] / temperature
+            if top_k is not None:
+                cutoff = torch.topk(logits, top_k).values[-1]
+                logits[logits < cutoff] = -torch.inf
+            ids.append(int(torch.multinomial(F.softmax(logits, -1), 1)))
+        return ids
+
+class GQAAttention(nn.Module):
+    """Causal multi-head attention with num_kv_heads shared KV heads.
+
+    Defined in :numref:`sec_kv-cache`"""
+    def __init__(self, num_hiddens, num_heads, num_kv_heads, bias=False,
+                 rope=False, causal=True):
+        super().__init__()
+        self.num_heads, self.num_kv_heads = num_heads, num_kv_heads
+        self.head_dim = num_hiddens // num_heads
+        self.rope, self.causal = rope, causal
+        self.W_q = nn.Linear(num_hiddens, num_hiddens, bias=bias)
+        self.W_k = nn.Linear(num_hiddens, num_kv_heads * self.head_dim,
+                             bias=bias)
+        self.W_v = nn.Linear(num_hiddens, num_kv_heads * self.head_dim,
+                             bias=bias)
+        self.W_o = nn.Linear(num_hiddens, num_hiddens, bias=bias)
+
+    def _rope(self, x):  # the rotation of d2l.GPT, kept self-contained
+        d = x.shape[-1]
+        pos = torch.arange(x.shape[-2], dtype=torch.float32,
+                           device=x.device)
+        inv_freq = 10000.0 ** (-torch.arange(0, d, 2, device=x.device) / d)
+        theta = pos[:, None] * inv_freq[None, :]
+        cos, sin = torch.cos(theta), torch.sin(theta)
+        x1, x2 = x[..., 0::2], x[..., 1::2]
+        return torch.stack([x1 * cos - x2 * sin,
+                            x1 * sin + x2 * cos], -1).flatten(-2)
+
+    def forward(self, queries, keys, values, valid_lens=None):
+        B, T, D = queries.shape
+        q = self.W_q(queries).reshape(B, T, self.num_heads, -1)
+        k = self.W_k(keys).reshape(B, -1, self.num_kv_heads, self.head_dim)
+        v = self.W_v(values).reshape(B, -1, self.num_kv_heads,
+                                     self.head_dim)
+        q, k, v = (u.transpose(1, 2) for u in (q, k, v))
+        if self.rope:
+            q, k = self._rope(q), self._rope(k)
+        mask, causal = None, self.causal
+        if valid_lens is not None:      # mask padding (and causality)
+            S = k.shape[2]
+            if valid_lens.dim() == 1:
+                valid_lens = valid_lens[:, None].expand(B, T)
+            mask = (torch.arange(S, device=q.device)[None, None, :]
+                    < valid_lens[:, :, None])[:, None]
+            if causal:
+                i = torch.arange(T, device=q.device)[:, None]
+                j = torch.arange(S, device=q.device)[None, :]
+                mask = mask & (j <= i + S - T)
+            causal = False
+        Y = F.scaled_dot_product_attention(q, k, v, attn_mask=mask,
+                                           is_causal=causal,
+                                           enable_gqa=True)
+        return self.W_o(Y.transpose(1, 2).reshape(B, T, -1))
+
+class PatchEmbedding(nn.Module):
+    """Image-to-sequence stem of the vision transformer.
+
+    Defined in :numref:`sec_vision-transformer`"""
+    def __init__(self, img_size=96, patch_size=16, num_hiddens=512):
+        super().__init__()
+        def _make_tuple(x):
+            if not isinstance(x, (list, tuple)):
+                return (x, x)
+            return x
+        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
+        self.num_patches = (img_size[0] // patch_size[0]) * (
+            img_size[1] // patch_size[1])
+        self.conv = nn.LazyConv2d(num_hiddens, kernel_size=patch_size,
+                                  stride=patch_size)
+
+    def forward(self, X):
+        # Output shape: (batch size, no. of patches, no. of channels)
+        return self.conv(X).flatten(2).transpose(1, 2)
+
+class ViTBlock(nn.Module):
+    """Pre-norm transformer block with a GELU MLP.
+
+    Defined in :numref:`sec_vision-transformer`"""
+    def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
                  use_bias=False):
         super().__init__()
+        self.ln1 = nn.LayerNorm(num_hiddens)
         self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
                                                 dropout, use_bias)
-        self.addnorm1 = AddNorm(num_hiddens, dropout)
-        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
-        self.addnorm2 = AddNorm(num_hiddens, dropout)
+        self.ln2 = nn.LayerNorm(num_hiddens)
+        self.mlp = nn.Sequential(
+            nn.LazyLinear(mlp_num_hiddens), nn.GELU(), nn.Dropout(dropout),
+            nn.LazyLinear(num_hiddens), nn.Dropout(dropout))
 
-    def forward(self, X, valid_lens):
-        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens))
-        return self.addnorm2(Y, self.ffn(Y))
+    def forward(self, X, valid_lens=None):
+        X = X + self.attention(*([self.ln1(X)] * 3), valid_lens)
+        return X + self.mlp(self.ln2(X))
 
-class Benchmark:
-    """For measuring running time.
+class ViT(d2l.Classifier):
+    """Vision transformer.
 
-    Defined in :numref:`sec_hybridize`"""
-    def __init__(self, description='Done'):
-        self.description = description
+    Defined in :numref:`sec_vision-transformer`"""
+    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
+                 num_heads, num_blks, emb_dropout, blk_dropout, lr=0.1,
+                 use_bias=False, num_classes=10):
+        super().__init__()
+        self.save_hyperparameters()
+        self.patch_embedding = PatchEmbedding(
+            img_size, patch_size, num_hiddens)
+        self.cls_token = nn.Parameter(d2l.zeros(1, 1, num_hiddens))
+        num_steps = self.patch_embedding.num_patches + 1  # Add the cls token
+        # Positional embeddings are learnable, initialized to small noise
+        self.pos_embedding = nn.Parameter(
+            torch.randn(1, num_steps, num_hiddens) * 0.02)
+        self.dropout = nn.Dropout(emb_dropout)
+        self.blks = nn.Sequential()
+        for i in range(num_blks):
+            self.blks.add_module(f"{i}", ViTBlock(
+                num_hiddens, mlp_num_hiddens, num_heads, blk_dropout,
+                use_bias))
+        self.head = nn.Sequential(nn.LayerNorm(num_hiddens),
+                                  nn.Linear(num_hiddens, num_classes))
 
-    def __enter__(self):
-        self.timer = d2l.Timer()
-        return self
-
-    def __exit__(self, *args):
-        print(f'{self.description}: {self.timer.stop():.4f} sec')
-
-def split_batch(X, y, devices):
-    """Split `X` and `y` into multiple devices.
-
-    Defined in :numref:`sec_multi_gpu`"""
-    assert X.shape[0] == y.shape[0]
-    return (nn.parallel.scatter(X, devices),
-            nn.parallel.scatter(y, devices))
-
-def resnet18(num_classes, in_channels=1):
-    """A slightly modified ResNet-18 model.
-
-    Defined in :numref:`sec_multi_gpu_concise`"""
-    def resnet_block(in_channels, out_channels, num_residuals,
-                     first_block=False):
-        blk = []
-        for i in range(num_residuals):
-            if i == 0 and not first_block:
-                blk.append(d2l.Residual(out_channels, use_1x1conv=True, 
-                                        strides=2))
-            else:
-                blk.append(d2l.Residual(out_channels))
-        return nn.Sequential(*blk)
-
-    # This model uses a smaller convolution kernel, stride, and padding and
-    # removes the max-pooling layer
-    net = nn.Sequential(
-        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(64),
-        nn.ReLU())
-    net.add_module("resnet_block1", resnet_block(64, 64, 2, first_block=True))
-    net.add_module("resnet_block2", resnet_block(64, 128, 2))
-    net.add_module("resnet_block3", resnet_block(128, 256, 2))
-    net.add_module("resnet_block4", resnet_block(256, 512, 2))
-    net.add_module("global_avg_pool", nn.AdaptiveAvgPool2d((1,1)))
-    net.add_module("fc", nn.Sequential(nn.Flatten(),
-                                       nn.Linear(512, num_classes)))
-    return net
+    def forward(self, X):
+        X = self.patch_embedding(X)
+        X = d2l.concat((self.cls_token.expand(X.shape[0], -1, -1), X), 1)
+        X = self.dropout(X + self.pos_embedding)
+        for blk in self.blks:
+            X = blk(X)
+        return self.head(X[:, 0])
 
 class LSTMScratch(d2l.Module):
     """The long short-term memory (LSTM) cell implemented from scratch.
@@ -1878,6 +2056,58 @@ def associative_scan(a, b, dim=0):
                 torch.cat([b[:step], a[step:] * b_prev + b[step:]]))
         step *= 2
     return b.movedim(0, dim)
+
+class Benchmark:
+    """For measuring running time.
+
+    Defined in :numref:`sec_hybridize`"""
+    def __init__(self, description='Done'):
+        self.description = description
+
+    def __enter__(self):
+        self.timer = d2l.Timer()
+        return self
+
+    def __exit__(self, *args):
+        print(f'{self.description}: {self.timer.stop():.4f} sec')
+
+def split_batch(X, y, devices):
+    """Split `X` and `y` into multiple devices.
+
+    Defined in :numref:`sec_multi_gpu`"""
+    assert X.shape[0] == y.shape[0]
+    return (nn.parallel.scatter(X, devices),
+            nn.parallel.scatter(y, devices))
+
+def resnet18(num_classes, in_channels=1):
+    """A slightly modified ResNet-18 model.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    def resnet_block(in_channels, out_channels, num_residuals,
+                     first_block=False):
+        blk = []
+        for i in range(num_residuals):
+            if i == 0 and not first_block:
+                blk.append(d2l.Residual(out_channels, use_1x1conv=True, 
+                                        strides=2))
+            else:
+                blk.append(d2l.Residual(out_channels))
+        return nn.Sequential(*blk)
+
+    # This model uses a smaller convolution kernel, stride, and padding and
+    # removes the max-pooling layer
+    net = nn.Sequential(
+        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU())
+    net.add_module("resnet_block1", resnet_block(64, 64, 2, first_block=True))
+    net.add_module("resnet_block2", resnet_block(64, 128, 2))
+    net.add_module("resnet_block3", resnet_block(128, 256, 2))
+    net.add_module("resnet_block4", resnet_block(256, 512, 2))
+    net.add_module("global_avg_pool", nn.AdaptiveAvgPool2d((1,1)))
+    net.add_module("fc", nn.Sequential(nn.Flatten(),
+                                       nn.Linear(512, num_classes)))
+    return net
 
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
     """Update discriminator.
@@ -4128,43 +4358,41 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
         output_seq.append(pred)
     return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
 
-class AttentionDecoder(d2l.Decoder):
-    """The base attention-based decoder interface.
-
-    Defined in :numref:`sec_seq2seq_attention`"""
-    def __init__(self):
+class PositionWiseFFN(nn.Module):
+    """The positionwise feed-forward network."""
+    def __init__(self, ffn_num_hiddens, ffn_num_outputs):
         super().__init__()
+        self.dense1 = nn.LazyLinear(ffn_num_hiddens)
+        self.relu = nn.ReLU()
+        self.dense2 = nn.LazyLinear(ffn_num_outputs)
 
-    @property
-    def attention_weights(self):
-        raise NotImplementedError
+    def forward(self, X):
+        return self.dense2(self.relu(self.dense1(X)))
 
-class TransformerEncoder(d2l.Encoder):
-    """The Transformer encoder.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens,
-                 num_heads, num_blks, dropout, use_bias=False):
+class AddNorm(nn.Module):
+    """The residual connection followed by layer normalization."""
+    def __init__(self, norm_shape, dropout):
         super().__init__()
-        self.num_hiddens = num_hiddens
-        self.embedding = nn.Embedding(vocab_size, num_hiddens)
-        self.pos_encoding = d2l.PositionalEncoding(num_hiddens, dropout)
-        self.blks = nn.Sequential()
-        for i in range(num_blks):
-            self.blks.add_module("block"+str(i), TransformerEncoderBlock(
-                num_hiddens, ffn_num_hiddens, num_heads, dropout, use_bias))
+        self.dropout = nn.Dropout(dropout)
+        self.ln = nn.LayerNorm(norm_shape)
+
+    def forward(self, X, Y):
+        return self.ln(self.dropout(Y) + X)
+
+class TransformerEncoderBlock(nn.Module):
+    """The Transformer encoder block."""
+    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
+                 use_bias=False):
+        super().__init__()
+        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
+                                                dropout, use_bias)
+        self.addnorm1 = AddNorm(num_hiddens, dropout)
+        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
+        self.addnorm2 = AddNorm(num_hiddens, dropout)
 
     def forward(self, X, valid_lens):
-        # Since positional encoding values are between -1 and 1, the embedding
-        # values are multiplied by the square root of the embedding dimension
-        # to rescale before they are summed up
-        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
-        self.attention_weights = [None] * len(self.blks)
-        for i, blk in enumerate(self.blks):
-            X = blk(X, valid_lens)
-            self.attention_weights[
-                i] = blk.attention.attention.attention_weights
-        return X
+        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens))
+        return self.addnorm2(Y, self.ffn(Y))
 
 
 ones_like = torch.ones_like

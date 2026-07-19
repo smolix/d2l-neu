@@ -138,16 +138,26 @@ book:
         - chapter_optimization/batch-size.qmd
         - chapter_optimization/scaling.qmd
         - chapter_optimization/practice.qmd
-        - chapter_attention-mechanisms-and-transformers/index.qmd
-        - chapter_attention-mechanisms-and-transformers/queries-keys-values.qmd
-        - chapter_attention-mechanisms-and-transformers/attention-pooling.qmd
-        - chapter_attention-mechanisms-and-transformers/attention-scoring-functions.qmd
-        - chapter_attention-mechanisms-and-transformers/bahdanau-attention.qmd
-        - chapter_attention-mechanisms-and-transformers/multihead-attention.qmd
-        - chapter_attention-mechanisms-and-transformers/self-attention-and-positional-encoding.qmd
-        - chapter_attention-mechanisms-and-transformers/transformer.qmd
-        - chapter_attention-mechanisms-and-transformers/vision-transformer.qmd
-        - chapter_attention-mechanisms-and-transformers/large-pretraining-transformers.qmd
+        - chapter_attention/index.qmd
+        - chapter_attention/queries-keys-values.qmd
+        - chapter_attention/attention-scoring.qmd
+        - chapter_attention/multihead-attention.qmd
+        - chapter_attention/positional-information.qmd
+        - chapter_attention/attention-at-scale.qmd
+        - chapter_attention/what-attention-computes.qmd
+        - chapter_transformers/index.qmd
+        - chapter_transformers/transformer-block.qmd
+        - chapter_transformers/gpt.qmd
+        - chapter_transformers/kv-cache.qmd
+        - chapter_transformers/encoders-decoders.qmd
+        - chapter_transformers/vision-transformer.qmd
+        - chapter_transformers/moe.qmd
+        - chapter_transformers/scaling-laws.qmd
+        - chapter_recurrent-modern/index.qmd
+        - chapter_recurrent-modern/lstm.qmd
+        - chapter_recurrent-modern/seq2seq.qmd
+        - chapter_recurrent-modern/ssm.qmd
+        - chapter_recurrent-modern/mamba.qmd
         - chapter_computational-performance/index.qmd
         - chapter_computational-performance/hybridize.qmd
         - chapter_computational-performance/async-computation.qmd
@@ -156,12 +166,6 @@ book:
         - chapter_computational-performance/multiple-gpus.qmd
         - chapter_computational-performance/multiple-gpus-concise.qmd
         - chapter_computational-performance/parameterserver.qmd
-        - chapter_transformers/index.qmd
-        - chapter_recurrent-modern/index.qmd
-        - chapter_recurrent-modern/lstm.qmd
-        - chapter_recurrent-modern/seq2seq.qmd
-        - chapter_recurrent-modern/ssm.qmd
-        - chapter_recurrent-modern/mamba.qmd
         - chapter_reinforcement-learning/index.qmd
         - chapter_reinforcement-learning/mdp.qmd
         - chapter_reinforcement-learning/value-iter.qmd

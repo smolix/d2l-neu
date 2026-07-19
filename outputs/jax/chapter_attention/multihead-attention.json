@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "source": "chapter_attention/multihead-attention.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:46a5f7f591ffdd4fa4eac49f1c2acad2a62f5a42661a8e7eec9b6f99c2b60f55",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multihead-attention-multi-head-and-cross-attention": {
+      "code_fingerprint": "sha256:641a26f6427261ce8468f9dcff3c22d0f8f519579e948bff4c66f7efd4919114",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-one-head-must-average-1": {
+      "code_fingerprint": "sha256:9922f83e5b231e47f0e8ac1af3b74a2af63941b2150bc28544c5e4e3bc07bf7e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "single head, weights (0.5, 0.5): relative error 0.706\nsingle head, weights (0.7, 0.3): relative error 0.706\nsingle head, weights (0.9, 0.1): relative error 0.705\nsingle head, weights (1.0, 0.0): relative error 0.705\ntheory: sqrt(1/2) = 0.707\n"
+        }
+      ]
+    },
+    "multihead-attention-one-head-must-average-2": {
+      "code_fingerprint": "sha256:29c881679bb8d7a95498e421f8f30fc0713007be7d78c5f657549c6c61356ed9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "two heads, weights (1.00, 0.00) and (0.00, 1.00): relative error 6.9e-07\ntwo heads, weights (0.88, 0.12) and (0.12, 0.88): relative error 6.8e-07\n"
+        }
+      ]
+    },
+    "multihead-attention-implementation-1": {
+      "code_fingerprint": "sha256:9845f52a7c3d04286f99d5262500b32aa8d4731efdd0f41667c7877582987d2b",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-implementation-2": {
+      "code_fingerprint": "sha256:327bbbdd6a152351786b2193c1c78048b2c8d3e8336f4aa19b3bc6f99408c5fe",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-implementation-3": {
+      "code_fingerprint": "sha256:9aaaf8f693f57dc3ccf5af77796c6d3188265aaf082d757272383443bf3c5551",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-implementation-4": {
+      "code_fingerprint": "sha256:78a597a864a01cd6a3fa12e0f0b4083549081ea1818df552994aa9623eadb608",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1 heads: 262144 parameters\n2 heads: 262144 parameters\n4 heads: 262144 parameters\n8 heads: 262144 parameters\n"
+        }
+      ]
+    },
+    "multihead-attention-one-sequence-querying-itself": {
+      "code_fingerprint": "sha256:96b3a99516c9337bf74a355fc2cfc9e80c91425efe68d108a9c1dd684495178f",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-one-sequence-querying-another": {
+      "code_fingerprint": "sha256:10dd5a967566d08a795f79c787d99127939bf3c7d4bf17e52957eeb5f62d05b3",
+      "kind": "text",
+      "outputs": []
+    },
+    "multihead-attention-an-alignment-you-can-read": {
+      "code_fingerprint": "sha256:def59b0967cedac0d5ba92f123cf551b62dd4ce750b2dd7ae45f399f218a74b1",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multihead-attention/multihead-attention-an-alignment-you-can-read-1.svg",
+          "bytes": 27042,
+          "sha256": "sha256:d48313455e44d0a031da9af0391b67be404b38f63d0066f28d4bfcf03408753d"
+        }
+      ]
+    }
+  }
+}

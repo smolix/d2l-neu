@@ -758,6 +758,14 @@ def main():
     config.read(config_path)
 
     files = list(CHAPTER_NUMBERING.keys())
+    # Build-only sources: unlisted files that carry #@save blocks for the
+    # library without being part of the rendered book (no CHAPTER_NUMBERING
+    # entry, no outputs). Appended last so they can never shadow a rendered
+    # chapter's definition. See each file's header for its rationale.
+    LIB_ONLY_FILES = [
+        'chapter_natural-language-processing-pretraining/legacy-attention-lib.md',
+    ]
+    files += [f for f in LIB_ONLY_FILES if (args.source / f).exists()]
 
     # Copy __init__.py
     init_src = args.source / 'd2l' / '__init__.py'

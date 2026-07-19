@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:ab3ca33ebc4ca830aa8c6a26c579966ec70c576ec8e93412c3030562fcbad311",
+    "d2l_lib_fingerprint": "sha256:a39b5cfb95d898df1974acb87d793f4361394d4529b2a0be026a6d166074d7cc",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -91,8 +91,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-training-1.svg",
-          "bytes": 22393,
-          "sha256": "sha256:56d987fd997e1c167beecd438d710840060a009610fdd1fc6a06618528bdb946"
+          "bytes": 22398,
+          "sha256": "sha256:33205189ca8986d87e42d1255ba67b083554606844e533e7f5fe88a9d4821337"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Test accuracy: 0.833\n"
+          "text": "Test accuracy: 0.834\n"
         }
       ]
     },
@@ -125,21 +125,26 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-2-1.svg",
-          "bytes": 52218,
-          "sha256": "sha256:245f53a6d579956dc42061340221838a8a09fe84bd763e97231c77a455956b5d"
+          "bytes": 50831,
+          "sha256": "sha256:e0afd54a630969a1c4ffe88e0acc5bb43fd803cff113f42abd796c08abda5a02"
         }
       ]
     },
+    "softmax-regression-scratch-prediction-3": {
+      "code_fingerprint": "sha256:03ae245552c4c51200014f9532a3541e350c871db24be5dab2eb9d1c9e1f25a5",
+      "kind": "text",
+      "outputs": []
+    },
     "softmax-regression-scratch-prediction-confusion": {
-      "code_fingerprint": "sha256:c3d9554219594bb8a65dfe150cc5159e078c07da6589cde66963f11148f3ff8f",
+      "code_fingerprint": "sha256:521ea02bc8b97203d9dfff786450ba94f7a5a3fd86d65f78370f9bde61932fe7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "softmax-regression-scratch/softmax-regression-scratch-prediction-confusion-1.svg",
-          "bytes": 21507,
-          "sha256": "sha256:0428540771bb48cf0b466e8e334e719a5a2147a4c9e5fc429b18ee3a9dc645e2"
+          "bytes": 21510,
+          "sha256": "sha256:47c9b09c9906817a8c508d5d85749f6cc6a5692c153ccc4fe7268c18a6a85276"
         }
       ]
     }

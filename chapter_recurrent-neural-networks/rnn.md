@@ -153,7 +153,7 @@ The hidden state $\mathbf{H}_t$ has a fixed size $n \times h$ no matter how long
 Everything older can be discarded the moment $\mathbf{H}_t$ is formed.
 An RNN can therefore consume a sequence of any length while its memory and its per-step computation stay flat, in sharp contrast to the neural $n$-gram, whose window (and cost) must grow to reach further back.
 This is recurrence's defining trade. The state is a *lossy*, fixed-size summary of the whole past, so to record something new it must overwrite something old, and the network has to learn what is worth keeping.
-The opposite design keeps every past representation around and lets the model look back over all of them on demand: this is *attention* (:numref:`chap_attention-and-transformers`), which buys exact recall at a memory and compute cost that instead grows with the sequence length.
+The opposite design keeps every past representation around and lets the model look back over all of them on demand: this is *attention* (:numref:`chap_attention`), which buys exact recall at a memory and compute cost that instead grows with the sequence length.
 Bounded, forgetful state versus unbounded, exact memory is the tension the rest of this part explores: first by making the recurrent state far better at remembering (:numref:`chap_modern_rnn`), then by turning to attention.
 
 ## RNN Language Models

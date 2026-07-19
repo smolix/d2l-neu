@@ -53,8 +53,9 @@ time in the sequence length, a bargain that keeps it attractive wherever
 generation must run cheaply and at scale. Yet no fixed-size state can recall
 arbitrary detail on demand; asked to
 reproduce a phone number it read a thousand tokens ago, it fails where a
-simple lookup would not. That honest limit hands the story to
-:numref:`chap_attention-and-transformers`. The ideas gathered here span nearly
+simple lookup would not. That honest limit is exactly what attention
+(:numref:`chap_attention`) pays quadratic cost to remove, and this
+chapter maps how far recurrence goes without paying it. The ideas gathered here span nearly
 three decades, from the 1997 LSTM to the 2024 selective state space models,
 and together they make recurrence a living architecture rather than a
 historical one.

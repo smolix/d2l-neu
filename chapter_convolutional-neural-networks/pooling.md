@@ -396,7 +396,7 @@ the result substantially more shift-consistent, though not exactly invariant
 :cite:`zhang2019making`. Beyond these mainstays there are randomized variants
 such as stochastic pooling :cite:`Zeiler.Fergus.2013` and fractional
 max-pooling :cite:`Graham.2014`, and the attention mechanisms of
-:numref:`chap_attention-and-transformers` aggregate by learned alignment
+:numref:`chap_attention` aggregate by learned alignment
 between a query and representation vectors rather than by spatial location.
 
 

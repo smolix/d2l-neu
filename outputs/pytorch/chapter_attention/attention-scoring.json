@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "source": "chapter_attention/attention-scoring.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:3fe572f366966fd200462b2562a1921b6ea7ada5d67434959d6eb352846276bd",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "attention-scoring-attention-scoring-and-masking": {
+      "code_fingerprint": "sha256:a26984c8d88835070308a93c9096fe6b5a97c888bdbee75aaf7960e872f3f9c9",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1": {
+      "code_fingerprint": "sha256:fa6aa53d1e70d13816734db905be710521fdf7ab916dba3a0686f55c8009489c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring/attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1-1.svg",
+          "bytes": 25631,
+          "sha256": "sha256:c3d17b31e793977343e15da2c82b99db45aed0f5b3530a622943801144c4c66b"
+        }
+      ]
+    },
+    "attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2": {
+      "code_fingerprint": "sha256:fc5dfc0711cfcd5cf75e6b90845a44bababe99eb12e308e8699272417a552d62",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d =   4: Jacobian norm 0.259 (unscaled), 0.178 (scaled)\nd =  64: Jacobian norm 0.208 (unscaled), 0.182 (scaled)\nd = 512: Jacobian norm 0.093 (unscaled), 0.184 (scaled)\n"
+        }
+      ]
+    },
+    "attention-scoring-the-masked-softmax-operation-1": {
+      "code_fingerprint": "sha256:4cd126199a455eb9d26e3361c4510539eac86533e68fc59dc93db1225a7446b3",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-the-masked-softmax-operation-2": {
+      "code_fingerprint": "sha256:8a5d8a3af7123108dff56f682743f14af2e819cc5050155b6a29e1280fa9a017",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[0.7005, 0.2995, 0.0000, 0.0000],\n         [0.5080, 0.4920, 0.0000, 0.0000]],\n\n        [[0.2296, 0.3997, 0.3707, 0.0000],\n         [0.1914, 0.4130, 0.3956, 0.0000]]])"
+        }
+      ]
+    },
+    "attention-scoring-the-masked-softmax-operation-3": {
+      "code_fingerprint": "sha256:0a9253298bb77b594c27dd695ce0408f12192d33a8cafb91bdaf5f5d18c2c275",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[[1.0000, 0.0000, 0.0000, 0.0000],\n         [0.3538, 0.3878, 0.2584, 0.0000]],\n\n        [[0.5266, 0.4734, 0.0000, 0.0000],\n         [0.2870, 0.2921, 0.2345, 0.1864]]])"
+        }
+      ]
+    },
+    "attention-scoring-causal-masking": {
+      "code_fingerprint": "sha256:113adb3a83c809e54f211db115041477c8a3367701e9bec25287a9c0a48a0e7e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring/attention-scoring-causal-masking-1.svg",
+          "bytes": 16481,
+          "sha256": "sha256:8aefdc419f839c4b3b70300e27e34c19188c88e2513f3599bd5887fbe14a3ee4"
+        }
+      ]
+    },
+    "attention-scoring-batch-matrix-multiplication": {
+      "code_fingerprint": "sha256:5c1309993fa8a617b03d86a28b6b85b4fa93af4325903214e74e88d1dd399d56",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-the-dotproductattention-class-1": {
+      "code_fingerprint": "sha256:9c55e527bcb6253703a52affc93537dc32cb0f6de9d6d8d26ae5aeac76d7a24b",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-the-dotproductattention-class-2": {
+      "code_fingerprint": "sha256:f5e604c41ef2b1e41ee99d4c94ff2e61ac09be42632cbf0e0c0ec90a755400b2",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-the-dotproductattention-class-3": {
+      "code_fingerprint": "sha256:b6b3ff263ec9bc651f36b0de32ca9aeeabc82c81b4ebfdd5bde5bf2aa1b4ab90",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
+          "bytes": 14822,
+          "sha256": "sha256:944586a504420da4f471a670ab5c620e92e36c0b6fc068350aac27c07cb08f50"
+        }
+      ]
+    },
+    "attention-scoring-from-alignment-to-attention": {
+      "code_fingerprint": "sha256:a2c76d0f654f0b335d0f6e949a02d882175f2d16360a531cdb177013fb30f81a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "tensor([[0.1692, 0.1612, 0.1816, 0.1560, 0.1502, 0.1818],\n        [0.1664, 0.1849, 0.1657, 0.1338, 0.1623, 0.1870],\n        [0.1517, 0.2188, 0.1441, 0.1317, 0.2166, 0.1371]])"
+        }
+      ]
+    }
+  }
+}

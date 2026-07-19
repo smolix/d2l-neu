@@ -329,6 +329,23 @@ notebooks; when unsure, rerun all frameworks." Under this model that guesswork
 disappears: the `d2l_lib_fingerprint` in each manifest covers exactly the symbols
 that notebook uses, so `audit_outputs.py` names the exact blast radius.
 
+### 3.4a Build-only library sources (`LIB_ONLY_FILES`)
+
+`build_lib.py` scans exactly the files in `CHAPTER_NUMBERING` — not a
+directory glob — plus an explicit `LIB_ONLY_FILES` list (defined next to the
+file-list construction in `tools/build_lib.py`). A build-only source is a
+`chapter_*/…​.md` file that carries `#@save` blocks for the library but is not
+part of the rendered book: no `_quarto.yml` entry, no `CHAPTER_NUMBERING`
+entry, no outputs, never executed as a notebook. Entries are appended after
+the numbered chapters, so a build-only file can never shadow a rendered
+chapter's definition under the last-writer-wins collision rule. Current sole
+member: `chapter_natural-language-processing-pretraining/legacy-attention-lib.md`,
+which quarantines the frozen 2017 `TransformerEncoderBlock` (all four
+frameworks) plus the tensorflow/mxnet variants of the attention primitives
+whose PyTorch/JAX homes moved to `chapter_attention/` — BERT (ch. 17) builds
+on these until the Language-Models part is modernized, at which point the file
+is deleted and its entry removed.
+
 ### 3.5 "Regenerated when a new render occurs" (the requirement, made concrete)
 
 Inline outputs are a **regenerated snapshot, not a frozen cache:**

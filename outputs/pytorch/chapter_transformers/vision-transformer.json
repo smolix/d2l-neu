@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "source": "chapter_transformers/vision-transformer.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:1239d56113694a0f9be4d201098118f1979eaa34dac01883d678ccee6270c466",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "vision-transformer": {
+      "code_fingerprint": "sha256:1e23f474261132c9fa835561067fc0e924cb1f1ec6e07b3f17ee78d03d6a6af9",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-patches-as-tokens-1": {
+      "code_fingerprint": "sha256:76838bff170481120e5d991628064bea0d4b679a048c0534be75b9851987e6d2",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-patches-as-tokens-2": {
+      "code_fingerprint": "sha256:afd2fe6fea96b3e61c22f52d274d6a73003142def0a794e73b2f95cf5fed9398",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-the-vision-transformer-block-1": {
+      "code_fingerprint": "sha256:d035464737610b422cec478e682b281f69923c4a25fab591c32307252eb86f42",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-the-vision-transformer-block-2": {
+      "code_fingerprint": "sha256:534707df1ecdbe43a8b5270c2270d15ad7cd46c92d372b0239dc962771ddd166",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-the-full-model": {
+      "code_fingerprint": "sha256:73882b6aa80b5511df18b25038d66b8b5e9f4153f738e35c96eb5851bfe1d965",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-a-first-run-1": {
+      "code_fingerprint": "sha256:e8b4e187de034aa705cadb61b64be28b03106cc0b6933b411a7a163aaf49f013",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vision-transformer/vision-transformer-a-first-run-1-1.svg",
+          "bytes": 19971,
+          "sha256": "sha256:5d6c290106c5413ec8b8dd51f5a75b01ba2d2b8cd938379bfa11b36133211a89"
+        }
+      ]
+    },
+    "vision-transformer-a-first-run-2": {
+      "code_fingerprint": "sha256:8bbc8e0e99ee4e517b92893e781e8ecddbb8842de2ca2a3d88b17223588f287a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ViT: 6.5M parameters, validation accuracy 0.85\n"
+        }
+      ]
+    },
+    "vision-transformer-do-the-position-embeddings-discover-the-grid": {
+      "code_fingerprint": "sha256:9954979bb1edc1afb394b99f554c2c812ab021cdb0cd17c99dac8c229fd740c1",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean cosine similarity: grid neighbors 0.05, distant positions -0.02\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vision-transformer/vision-transformer-do-the-position-embeddings-discover-the-grid-1.svg",
+          "bytes": 109072,
+          "sha256": "sha256:2669bd378f4a6f995ffc27530b4149b71c3590286ae71799d884ea4738b72e14"
+        }
+      ]
+    },
+    "vision-transformer-a-convolutional-baseline-at-the-same-budget-1": {
+      "code_fingerprint": "sha256:5cda27fac97873895885bebc4e015116e74c2697a12408cd3af7c077f63e52fa",
+      "kind": "text",
+      "outputs": []
+    },
+    "vision-transformer-a-convolutional-baseline-at-the-same-budget-2": {
+      "code_fingerprint": "sha256:8206899041a6a3f80bdd179dedb3c824dcf2fe3f336d0f604e06c28982ecb250",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "CNN: 6.5M parameters, validation accuracy 0.92\nViT: 6.5M parameters, validation accuracy 0.85\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "vision-transformer/vision-transformer-a-convolutional-baseline-at-the-same-budget-2-1.svg",
+          "bytes": 21056,
+          "sha256": "sha256:1048055bc53d08b724b907c83e9982befe1877c9d9f8b05987c14d9d6571935a"
+        }
+      ]
+    }
+  }
+}

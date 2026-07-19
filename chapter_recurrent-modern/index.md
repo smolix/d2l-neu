@@ -95,11 +95,11 @@ layer buy back the recall the recurrent stack loses while perplexity
 barely moves; measured design rules for how much attention to keep and
 where to put it, and a recipe table of shipped hybrids from Jamba to Kimi
 Linear, turn the trade into engineering. One recipe threads all of these
-experiments together: the language-modeling scoreboard reuses the *Time
-Machine* setup of :numref:`sec_rnn-scratch` throughout, so every
-architecture in the chapter lands on one comparable table, and the
-mechanistic experiments (capacity, overwrite, the regression spectrum)
-run in seconds on a CPU.
+experiments together: every trained language model in the chapter runs on
+the *Time Machine* text of :numref:`sec_rnn-scratch` — the classical spine
+and the Gated DeltaNet row on one shared scoreboard, the hybrid stacks on
+their own matched panel — and the mechanistic experiments (capacity,
+overwrite, the regression spectrum) run in seconds on a CPU.
 
 The history here is a pendulum. The LSTM
 :cite:`Hochreiter.Schmidhuber.1997` made recurrence trainable and carried

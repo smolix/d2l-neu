@@ -1250,6 +1250,14 @@ outputs store in place:
 - Distinguish the two SVG kinds: **`img/auto/`** = authored diagrams (committed,
   plain git, hand-curated); **`outputs/<fw>/…/*.svg`** = matplotlib output
   figures (LFS, machine-regenerated). Don't cross them.
+- **Slide-only figures survive via an explicit copy step.** Quarto's HTML render
+  populates `_book/img/` only with images referenced from *page* bodies. A
+  figure referenced solely from a `<!-- slides -->` section (legal — e.g.
+  `lstm.md`'s deep-RNN/bi-RNN schematics after the ch. 12 slimming) would be
+  silently missing from `_book/img/` and get purged from the bucket by
+  `upload_r2.sh --delete`. The `make html` slides-integration block therefore
+  scans the staged decks' `../../../img/` refs and copies any missing asset
+  from `img/` into `_book/img/` (added 2026-07-19 after exactly this breakage).
 
 ---
 

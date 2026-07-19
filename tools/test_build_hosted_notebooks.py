@@ -32,6 +32,17 @@ class HostedNotebookTests(unittest.TestCase):
     def test_prose_only_page_has_no_notebook(self):
         self.assertEqual(self.classify("# Prose only\n"), [])
 
+    def test_source_files_exclude_library_only_sources(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            regular = root / "chapter_demo" / "page.md"
+            regular.parent.mkdir(parents=True)
+            regular.write_text("# Demo\n", encoding="utf-8")
+            lib_only = root / hosted.LIB_ONLY_FILES[0]
+            lib_only.parent.mkdir(parents=True, exist_ok=True)
+            lib_only.write_text("# Library extraction only\n", encoding="utf-8")
+            self.assertEqual(hosted.source_files(root), [regular])
+
     def test_prose_tab_does_not_claim_an_unimplemented_variant(self):
         text = """```{.python .input}
 #@tab pytorch

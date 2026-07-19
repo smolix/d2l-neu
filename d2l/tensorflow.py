@@ -1214,82 +1214,95 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
-class LSTMScratch(d2l.Module):
-    """The long short-term memory (LSTM) cell implemented from scratch.
+class Benchmark:
+    """For measuring running time.
 
-    Defined in :numref:`sec_lstm`"""
-    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
-        super().__init__()
-        self.save_hyperparameters()
+    Defined in :numref:`sec_hybridize`"""
+    def __init__(self, description='Done'):
+        self.description = description
 
-        init_weight = lambda *shape: tf.Variable(d2l.normal(shape) * sigma)
-        triple = lambda: (init_weight(num_inputs, num_hiddens),
-                          init_weight(num_hiddens, num_hiddens),
-                          tf.Variable(d2l.zeros(num_hiddens)))
-        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
-        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
-        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
-        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
+    def __enter__(self):
+        self.timer = d2l.Timer()
+        return self
 
-    def forward(self, inputs, H_C=None):
-        if H_C is None:
-            # Initial state with shape: (batch_size, num_hiddens)
-            H = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
-            C = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
-        else:
-            H, C = H_C
-        outputs = []
-        for X in tf.unstack(inputs):
-            I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
-                            d2l.matmul(H, self.W_hi) + self.b_i)
-            F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
-                            d2l.matmul(H, self.W_hf) + self.b_f)
-            O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
-                            d2l.matmul(H, self.W_ho) + self.b_o)
-            C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
-                               d2l.matmul(H, self.W_hc) + self.b_c)
-            C = F * C + I * C_tilde
-            H = O * d2l.tanh(C)
-            outputs.append(H)
-        return outputs, (H, C)
+    def __exit__(self, *args):
+        print(f'{self.description}: {self.timer.stop():.4f} sec')
 
-class LSTM(d2l.RNN):
-    """The multilayer LSTM model implemented with high-level APIs.
+def split_batch(X, y, devices):
+    """Split `X` and `y` into multiple devices.
 
-    Defined in :numref:`sec_lstm`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.lstms = [tf.keras.layers.LSTM(
-            num_hiddens, return_sequences=True, return_state=True,
-            dropout=dropout) for _ in range(num_layers)]
+    Defined in :numref:`sec_multi_gpu`"""
+    assert X.shape[0] == y.shape[0]
+    return (tf.split(X, len(devices)), tf.split(y, len(devices)))
 
-    def forward(self, inputs, H_C=None):
-        X = tf.transpose(inputs, perm=[1, 0, 2])  # To batch-major layout
-        if H_C is None:
-            H_C = [None] * self.num_layers
-        new_H_C = []
-        for lstm, state in zip(self.lstms, H_C):
-            X, *state = lstm(X, initial_state=state)
-            new_H_C.append(state)
-        return tf.transpose(X, perm=[1, 0, 2]), new_H_C
+def resnet18(num_classes, in_channels=1):
+    """A slightly modified ResNet-18 model built with Keras.
 
-class GRU(d2l.RNN):
-    """The multilayer GRU model implemented with high-level APIs.
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    def resnet_block(num_channels, num_residuals, first_block=False):
+        blk = tf.keras.Sequential()
+        for i in range(num_residuals):
+            if i == 0 and not first_block:
+                blk.add(d2l.Residual(num_channels, use_1x1conv=True,
+                                     strides=2))
+            else:
+                blk.add(d2l.Residual(num_channels))
+        return blk
 
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        gru_cells = [tf.keras.layers.GRUCell(num_hiddens, dropout=dropout)
-                     for _ in range(num_layers)]
-        self.rnn = tf.keras.layers.RNN(gru_cells, return_sequences=True,
-                                       return_state=True)
+    # Smaller conv, no max-pool (same as the PT version)
+    net = tf.keras.Sequential([
+        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Activation('relu'),
+        resnet_block(64, 2, first_block=True),
+        resnet_block(128, 2),
+        resnet_block(256, 2),
+        resnet_block(512, 2),
+        tf.keras.layers.GlobalAveragePooling2D(),
+        tf.keras.layers.Dense(num_classes),
+    ])
+    return net
 
-    def forward(self, X, state=None):
-        outputs, *state = self.rnn(tf.transpose(X, perm=[1, 0, 2]), state)
-        state = [s[0] if isinstance(s, list) else s for s in state]
-        return tf.transpose(outputs, perm=[1, 0, 2]), state
+def update_D(X, Z, net_D, net_G, loss, optimizer_D):
+    """Update discriminator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = tf.shape(X)[0]
+    ones = tf.ones((batch_size,)) # Labels corresponding to real data
+    zeros = tf.zeros((batch_size,)) # Labels corresponding to fake data
+    # Do not need to compute gradient for `net_G`, so it is outside GradientTape
+    fake_X = net_G(Z)
+    with tf.GradientTape() as tape:
+        real_Y = net_D(X)
+        fake_Y = net_D(fake_X)
+        # We multiply the loss by batch_size to match PyTorch's BCEWithLogitsLoss
+        loss_D = (loss(ones, tf.reshape(real_Y, [-1])) + loss(
+            zeros, tf.reshape(fake_Y, [-1]))) * tf.cast(
+                batch_size, tf.float32) / 2
+    grads_D = tape.gradient(loss_D, net_D.trainable_variables)
+    optimizer_D.apply_gradients(zip(grads_D, net_D.trainable_variables))
+    return loss_D
+
+def update_G(Z, net_D, net_G, loss, optimizer_G):
+    """Update generator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = tf.shape(Z)[0]
+    ones = tf.ones((batch_size,))
+    with tf.GradientTape() as tape:
+        # We could reuse `fake_X` from `update_D` to save computation
+        fake_X = net_G(Z)
+        # Recomputing `fake_Y` is needed since `net_D` is changed
+        fake_Y = net_D(fake_X)
+        # We multiply the loss by batch_size to match PyTorch's BCEWithLogits loss
+        loss_G = loss(ones, tf.reshape(fake_Y, [-1])) * tf.cast(
+            batch_size, tf.float32)
+    grads_G = tape.gradient(loss_G, net_G.trainable_variables)
+    optimizer_G.apply_gradients(zip(grads_G, net_G.trainable_variables))
+    return loss_G
+
+d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
+                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 class Encoder(tf.keras.layers.Layer):
     """The base encoder interface for the encoder-decoder architecture.
@@ -1483,96 +1496,6 @@ def bleu(pred_seq, label_seq, k):
                 label_subs[' '.join(pred_tokens[i: i + n])] -= 1
         score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
     return score
-
-class Benchmark:
-    """For measuring running time.
-
-    Defined in :numref:`sec_hybridize`"""
-    def __init__(self, description='Done'):
-        self.description = description
-
-    def __enter__(self):
-        self.timer = d2l.Timer()
-        return self
-
-    def __exit__(self, *args):
-        print(f'{self.description}: {self.timer.stop():.4f} sec')
-
-def split_batch(X, y, devices):
-    """Split `X` and `y` into multiple devices.
-
-    Defined in :numref:`sec_multi_gpu`"""
-    assert X.shape[0] == y.shape[0]
-    return (tf.split(X, len(devices)), tf.split(y, len(devices)))
-
-def resnet18(num_classes, in_channels=1):
-    """A slightly modified ResNet-18 model built with Keras.
-
-    Defined in :numref:`sec_multi_gpu_concise`"""
-    def resnet_block(num_channels, num_residuals, first_block=False):
-        blk = tf.keras.Sequential()
-        for i in range(num_residuals):
-            if i == 0 and not first_block:
-                blk.add(d2l.Residual(num_channels, use_1x1conv=True,
-                                     strides=2))
-            else:
-                blk.add(d2l.Residual(num_channels))
-        return blk
-
-    # Smaller conv, no max-pool (same as the PT version)
-    net = tf.keras.Sequential([
-        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same'),
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Activation('relu'),
-        resnet_block(64, 2, first_block=True),
-        resnet_block(128, 2),
-        resnet_block(256, 2),
-        resnet_block(512, 2),
-        tf.keras.layers.GlobalAveragePooling2D(),
-        tf.keras.layers.Dense(num_classes),
-    ])
-    return net
-
-def update_D(X, Z, net_D, net_G, loss, optimizer_D):
-    """Update discriminator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = tf.shape(X)[0]
-    ones = tf.ones((batch_size,)) # Labels corresponding to real data
-    zeros = tf.zeros((batch_size,)) # Labels corresponding to fake data
-    # Do not need to compute gradient for `net_G`, so it is outside GradientTape
-    fake_X = net_G(Z)
-    with tf.GradientTape() as tape:
-        real_Y = net_D(X)
-        fake_Y = net_D(fake_X)
-        # We multiply the loss by batch_size to match PyTorch's BCEWithLogitsLoss
-        loss_D = (loss(ones, tf.reshape(real_Y, [-1])) + loss(
-            zeros, tf.reshape(fake_Y, [-1]))) * tf.cast(
-                batch_size, tf.float32) / 2
-    grads_D = tape.gradient(loss_D, net_D.trainable_variables)
-    optimizer_D.apply_gradients(zip(grads_D, net_D.trainable_variables))
-    return loss_D
-
-def update_G(Z, net_D, net_G, loss, optimizer_G):
-    """Update generator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = tf.shape(Z)[0]
-    ones = tf.ones((batch_size,))
-    with tf.GradientTape() as tape:
-        # We could reuse `fake_X` from `update_D` to save computation
-        fake_X = net_G(Z)
-        # Recomputing `fake_Y` is needed since `net_D` is changed
-        fake_Y = net_D(fake_X)
-        # We multiply the loss by batch_size to match PyTorch's BCEWithLogits loss
-        loss_G = loss(ones, tf.reshape(fake_Y, [-1])) * tf.cast(
-            batch_size, tf.float32)
-    grads_G = tape.gradient(loss_G, net_G.trainable_variables)
-    optimizer_G.apply_gradients(zip(grads_G, net_G.trainable_variables))
-    return loss_G
-
-d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
-                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
                        '319d85e578af0cdc590547f26231e4e31cdf1e42')
@@ -3648,6 +3571,77 @@ class TransformerEncoderBlock(tf.keras.layers.Layer):
         Y = self.addnorm1(X, self.attention(X, X, X, valid_lens,
                           training=training), training=training)
         return self.addnorm2(Y, self.ffn(Y), training=training)
+
+class LSTMScratch(d2l.Module):
+    """The long short-term memory (LSTM) cell implemented from scratch."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+
+        init_weight = lambda *shape: tf.Variable(d2l.normal(shape) * sigma)
+        triple = lambda: (init_weight(num_inputs, num_hiddens),
+                          init_weight(num_hiddens, num_hiddens),
+                          tf.Variable(d2l.zeros(num_hiddens)))
+        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
+        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
+        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
+        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
+
+    def forward(self, inputs, H_C=None):
+        if H_C is None:
+            # Initial state with shape: (batch_size, num_hiddens)
+            H = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
+            C = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
+        else:
+            H, C = H_C
+        outputs = []
+        for X in tf.unstack(inputs):
+            I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
+                            d2l.matmul(H, self.W_hi) + self.b_i)
+            F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
+                            d2l.matmul(H, self.W_hf) + self.b_f)
+            O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
+                            d2l.matmul(H, self.W_ho) + self.b_o)
+            C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
+                               d2l.matmul(H, self.W_hc) + self.b_c)
+            C = F * C + I * C_tilde
+            H = O * d2l.tanh(C)
+            outputs.append(H)
+        return outputs, (H, C)
+
+class LSTM(d2l.RNN):
+    """The multilayer LSTM model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        self.lstms = [tf.keras.layers.LSTM(
+            num_hiddens, return_sequences=True, return_state=True,
+            dropout=dropout) for _ in range(num_layers)]
+
+    def forward(self, inputs, H_C=None):
+        X = tf.transpose(inputs, perm=[1, 0, 2])  # To batch-major layout
+        if H_C is None:
+            H_C = [None] * self.num_layers
+        new_H_C = []
+        for lstm, state in zip(self.lstms, H_C):
+            X, *state = lstm(X, initial_state=state)
+            new_H_C.append(state)
+        return tf.transpose(X, perm=[1, 0, 2]), new_H_C
+
+class GRU(d2l.RNN):
+    """The multilayer GRU model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        gru_cells = [tf.keras.layers.GRUCell(num_hiddens, dropout=dropout)
+                     for _ in range(num_layers)]
+        self.rnn = tf.keras.layers.RNN(gru_cells, return_sequences=True,
+                                       return_state=True)
+
+    def forward(self, X, state=None):
+        outputs, *state = self.rnn(tf.transpose(X, perm=[1, 0, 2]), state)
+        state = [s[0] if isinstance(s, list) else s for s in state]
+        return tf.transpose(outputs, perm=[1, 0, 2]), state
 
 
 reshape = tf.reshape

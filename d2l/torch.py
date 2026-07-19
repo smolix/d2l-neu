@@ -1847,6 +1847,266 @@ class GRU(d2l.RNN):
         self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
                           dropout=dropout)
 
+def associative_scan(a, b, dim=0):
+    """Parallel prefix scan for h_t = a_t * h_{t-1} + b_t with h_0 = 0.
+
+    Defined in :numref:`sec_ssm`"""
+    a, b = a.movedim(dim, 0), b.movedim(dim, 0)
+    step = 1
+    while step < b.shape[0]:  # ceil(log2 T) rounds of combines
+        a_prev, b_prev = a[:-step], b[:-step]
+        a, b = (torch.cat([a[:step], a_prev * a[step:]]),
+                torch.cat([b[:step], a[step:] * b_prev + b[step:]]))
+        step *= 2
+    return b.movedim(0, dim)
+
+class S4D(nn.Module):
+    """A diagonal state space layer: one SSM per feature channel.
+
+    Defined in :numref:`sec_ssm`"""
+    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1):
+        super().__init__()
+        H, N = num_hiddens, num_states
+        self.log_a = nn.Parameter(
+            torch.log(torch.arange(1., N + 1)).repeat(H, 1))
+        self.log_dt = nn.Parameter(
+            torch.rand(H, 1) * math.log(dt_max / dt_min) + math.log(dt_min))
+        self.C = nn.Parameter(torch.randn(H, N) / math.sqrt(N))
+        self.D = nn.Parameter(torch.ones(H))
+
+    def forward(self, u):                    # (num_steps, batch, num_hiddens)
+        a = -torch.exp(self.log_a)                    # (H, N), Re(a) < 0
+        a_bar = torch.exp(torch.exp(self.log_dt) * a)
+        b_bar = (a_bar - 1) / a                       # ZOH with B = 1
+        a_elems = a_bar.expand(u.shape[0], 1, -1, -1) # Same at every step
+        b_elems = b_bar * u.unsqueeze(-1)             # (T, batch, H, N)
+        x = associative_scan(a_elems, b_elems)
+        return (x * self.C).sum(-1) + self.D * u
+
+    def step(self, u, x=None):
+        """Advance one token: u is (batch, H); x is the (batch, H, N) state.
+
+        Defined in :numref:`sec_ssm`"""
+        a = -torch.exp(self.log_a)
+        a_bar = torch.exp(torch.exp(self.log_dt) * a)     # Same ZOH as forward
+        b_bar = (a_bar - 1) / a
+        if x is None:
+            x = u.new_zeros(*u.shape, a_bar.shape[-1])
+        x = a_bar * x + b_bar * u.unsqueeze(-1)           # One recurrence step
+        return (x * self.C).sum(-1) + self.D * u, x
+
+class S4DBlock(nn.Module):
+    def __init__(self, num_hiddens, num_states):
+        super().__init__()
+        self.ln1 = nn.LayerNorm(num_hiddens)
+        self.ssm = S4D(num_hiddens, num_states)
+        self.ln2 = nn.LayerNorm(num_hiddens)
+        self.W_v = nn.Linear(num_hiddens, 2 * num_hiddens)
+        self.W_g = nn.Linear(num_hiddens, 2 * num_hiddens)
+        self.W_o = nn.Linear(2 * num_hiddens, num_hiddens)
+
+    def forward(self, X):
+        X = X + self.ssm(self.ln1(X))
+        Y = self.ln2(X)
+        return X + self.W_o(self.W_v(Y) * torch.sigmoid(self.W_g(Y)))
+
+    def step(self, X, x=None):
+        """Advance the block one token; only the SSM carries state.
+
+        Defined in :numref:`sec_ssm`"""
+        y, x = self.ssm.step(self.ln1(X), x)
+        X = X + y
+        Y = self.ln2(X)
+        return X + self.W_o(self.W_v(Y) * torch.sigmoid(self.W_g(Y))), x
+
+class SelectiveSSM(nn.Module):
+    """A diagonal SSM whose step size, input matrix, and read-out are
+
+    Defined in :numref:`sec_mamba`"""
+    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1):
+        super().__init__()
+        H, N, R = num_hiddens, num_states, max(2, num_hiddens // 16)
+        self.log_a = nn.Parameter(
+            torch.log(torch.arange(1., N + 1)).repeat(H, 1))
+        self.W_dt = nn.Sequential(nn.Linear(H, R), nn.Linear(R, H, bias=False))
+        dt = torch.exp(torch.rand(H) * math.log(dt_max / dt_min)
+                       + math.log(dt_min))
+        self.b_dt = nn.Parameter(dt + torch.log(-torch.expm1(-dt)))
+        self.W_B = nn.Linear(H, N, bias=False)
+        self.W_C = nn.Linear(H, N, bias=False)
+        self.D = nn.Parameter(torch.ones(H))
+
+    def forward(self, u):                    # (num_steps, batch, num_hiddens)
+        a = -torch.exp(self.log_a)                    # (H, N), Re(a) < 0
+        dt = F.softplus(self.W_dt(u) + self.b_dt)     # (T, batch, H)
+        B, C = self.W_B(u), self.W_C(u)               # (T, batch, N)
+        a_bar = torch.exp(dt.unsqueeze(-1) * a)       # (T, batch, H, N)
+        b_bar = (dt * u).unsqueeze(-1) * B.unsqueeze(-2)
+        x = associative_scan(a_bar, b_bar)
+        return (x * C.unsqueeze(-2)).sum(-1) + self.D * u
+
+    def step(self, u, x=None):
+        """Advance one token: u is (batch, H); x is the (batch, H, N) state.
+
+        Defined in :numref:`sec_mamba`"""
+        a = -torch.exp(self.log_a)
+        dt = F.softplus(self.W_dt(u) + self.b_dt)         # (batch, H)
+        B, C = self.W_B(u), self.W_C(u)                   # (batch, N)
+        a_bar = torch.exp(dt.unsqueeze(-1) * a)           # (batch, H, N)
+        b_bar = (dt * u).unsqueeze(-1) * B.unsqueeze(-2)
+        x = b_bar if x is None else a_bar * x + b_bar
+        return (x * C.unsqueeze(-2)).sum(-1) + self.D * u, x
+
+class MambaBlock(nn.Module):
+    """Conv + SiLU + selective SSM, gated, inside a pre-norm residual.
+
+    Defined in :numref:`sec_mamba`"""
+    def __init__(self, num_hiddens, num_states=4, expand=2, conv_width=4,
+                 dropout=0):
+        super().__init__()
+        d = expand * num_hiddens
+        self.ln = nn.LayerNorm(num_hiddens)
+        self.W_in = nn.Linear(num_hiddens, 2 * d)
+        self.conv = nn.Conv1d(d, d, conv_width, groups=d,
+                              padding=conv_width - 1)
+        self.ssm = SelectiveSSM(d, num_states)
+        self.W_out = nn.Linear(d, num_hiddens)
+        self.drop = nn.Dropout(dropout)
+
+    def forward(self, X):                    # (num_steps, batch, num_hiddens)
+        u, gate = self.W_in(self.ln(X)).chunk(2, -1)
+        u = self.conv(u.permute(1, 2, 0))[..., :X.shape[0]]  # Causal: trim
+        y = self.ssm(F.silu(u.permute(2, 0, 1)))
+        return X + self.drop(self.W_out(y * F.silu(gate)))
+
+    def step(self, X, state=None):
+        """Advance one token, carrying (conv buffer, SSM state).
+
+        Defined in :numref:`sec_mamba`"""
+        u, gate = self.W_in(self.ln(X)).chunk(2, -1)
+        if state is None:
+            state = (u.new_zeros(*u.shape, self.conv.kernel_size[0]), None)
+        buf, x = state
+        buf = torch.cat([buf[..., 1:], u.unsqueeze(-1)], -1)  # Roll the window
+        u = (buf * self.conv.weight[:, 0]).sum(-1) + self.conv.bias
+        y, x = self.ssm.step(F.silu(u), x)
+        return X + self.drop(self.W_out(y * F.silu(gate))), (buf, x)
+
+class Mamba(d2l.Module):
+    """A stack of Mamba blocks with the recurrent-cell interface.
+
+    Defined in :numref:`sec_mamba`"""
+    def __init__(self, num_inputs, num_blocks=2, num_states=4, dropout=0):
+        super().__init__()
+        self.save_hyperparameters()
+        self.num_hiddens = num_inputs                 # Output width, for heads
+        self.blocks = nn.Sequential(*[
+            MambaBlock(num_inputs, num_states, dropout=dropout)
+            for _ in range(num_blocks)])
+        self.ln = nn.LayerNorm(num_inputs)
+
+    def forward(self, X, state=None):
+        return self.ln(self.blocks(X)), None
+
+    def step(self, X, state=None):
+        """Advance the stack one token: X is (batch, d); one state per block.
+
+        Defined in :numref:`sec_mamba`"""
+        state = [None] * len(self.blocks) if state is None else list(state)
+        for i, blk in enumerate(self.blocks):
+            X, state[i] = blk.step(X, state[i])
+        return self.ln(X), state
+
+class Benchmark:
+    """For measuring running time.
+
+    Defined in :numref:`sec_hybridize`"""
+    def __init__(self, description='Done'):
+        self.description = description
+
+    def __enter__(self):
+        self.timer = d2l.Timer()
+        return self
+
+    def __exit__(self, *args):
+        print(f'{self.description}: {self.timer.stop():.4f} sec')
+
+def split_batch(X, y, devices):
+    """Split `X` and `y` into multiple devices.
+
+    Defined in :numref:`sec_multi_gpu`"""
+    assert X.shape[0] == y.shape[0]
+    return (nn.parallel.scatter(X, devices),
+            nn.parallel.scatter(y, devices))
+
+def resnet18(num_classes, in_channels=1):
+    """A slightly modified ResNet-18 model.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    def resnet_block(in_channels, out_channels, num_residuals,
+                     first_block=False):
+        blk = []
+        for i in range(num_residuals):
+            if i == 0 and not first_block:
+                blk.append(d2l.Residual(out_channels, use_1x1conv=True, 
+                                        strides=2))
+            else:
+                blk.append(d2l.Residual(out_channels))
+        return nn.Sequential(*blk)
+
+    # This model uses a smaller convolution kernel, stride, and padding and
+    # removes the max-pooling layer
+    net = nn.Sequential(
+        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU())
+    net.add_module("resnet_block1", resnet_block(64, 64, 2, first_block=True))
+    net.add_module("resnet_block2", resnet_block(64, 128, 2))
+    net.add_module("resnet_block3", resnet_block(128, 256, 2))
+    net.add_module("resnet_block4", resnet_block(256, 512, 2))
+    net.add_module("global_avg_pool", nn.AdaptiveAvgPool2d((1,1)))
+    net.add_module("fc", nn.Sequential(nn.Flatten(),
+                                       nn.Linear(512, num_classes)))
+    return net
+
+def update_D(X, Z, net_D, net_G, loss, trainer_D):
+    """Update discriminator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = X.shape[0]
+    ones = torch.ones((batch_size,), device=X.device)
+    zeros = torch.zeros((batch_size,), device=X.device)
+    trainer_D.zero_grad()
+    real_Y = net_D(X)
+    fake_X = net_G(Z)
+    # Do not need to compute gradient for `net_G`, detach it from
+    # computing gradients.
+    fake_Y = net_D(fake_X.detach())
+    loss_D = (loss(real_Y, ones.reshape(real_Y.shape)) +
+              loss(fake_Y, zeros.reshape(fake_Y.shape))) / 2
+    loss_D.backward()
+    trainer_D.step()
+    return loss_D
+
+def update_G(Z, net_D, net_G, loss, trainer_G):
+    """Update generator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = Z.shape[0]
+    ones = torch.ones((batch_size,), device=Z.device)
+    trainer_G.zero_grad()
+    # We could reuse `fake_X` from `update_D` to save computation
+    fake_X = net_G(Z)
+    # Recomputing `fake_Y` is needed since `net_D` is changed
+    fake_Y = net_D(fake_X)
+    loss_G = loss(fake_Y, ones.reshape(fake_Y.shape))
+    loss_G.backward()
+    trainer_G.step()
+    return loss_G
+
+d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
+                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
+
 class Encoder(nn.Module):
     """The base encoder interface for the encoder-decoder architecture.
 
@@ -2053,109 +2313,6 @@ def bleu(pred_seq, label_seq, k):
                 label_subs[' '.join(pred_tokens[i: i + n])] -= 1
         score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
     return score
-
-def associative_scan(a, b, dim=0):
-    """Parallel prefix scan for h_t = a_t * h_{t-1} + b_t with h_0 = 0.
-
-    Defined in :numref:`sec_ssm`"""
-    a, b = a.movedim(dim, 0), b.movedim(dim, 0)
-    step = 1
-    while step < b.shape[0]:  # ceil(log2 T) rounds of combines
-        a_prev, b_prev = a[:-step], b[:-step]
-        a, b = (torch.cat([a[:step], a_prev * a[step:]]),
-                torch.cat([b[:step], a[step:] * b_prev + b[step:]]))
-        step *= 2
-    return b.movedim(0, dim)
-
-class Benchmark:
-    """For measuring running time.
-
-    Defined in :numref:`sec_hybridize`"""
-    def __init__(self, description='Done'):
-        self.description = description
-
-    def __enter__(self):
-        self.timer = d2l.Timer()
-        return self
-
-    def __exit__(self, *args):
-        print(f'{self.description}: {self.timer.stop():.4f} sec')
-
-def split_batch(X, y, devices):
-    """Split `X` and `y` into multiple devices.
-
-    Defined in :numref:`sec_multi_gpu`"""
-    assert X.shape[0] == y.shape[0]
-    return (nn.parallel.scatter(X, devices),
-            nn.parallel.scatter(y, devices))
-
-def resnet18(num_classes, in_channels=1):
-    """A slightly modified ResNet-18 model.
-
-    Defined in :numref:`sec_multi_gpu_concise`"""
-    def resnet_block(in_channels, out_channels, num_residuals,
-                     first_block=False):
-        blk = []
-        for i in range(num_residuals):
-            if i == 0 and not first_block:
-                blk.append(d2l.Residual(out_channels, use_1x1conv=True, 
-                                        strides=2))
-            else:
-                blk.append(d2l.Residual(out_channels))
-        return nn.Sequential(*blk)
-
-    # This model uses a smaller convolution kernel, stride, and padding and
-    # removes the max-pooling layer
-    net = nn.Sequential(
-        nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(64),
-        nn.ReLU())
-    net.add_module("resnet_block1", resnet_block(64, 64, 2, first_block=True))
-    net.add_module("resnet_block2", resnet_block(64, 128, 2))
-    net.add_module("resnet_block3", resnet_block(128, 256, 2))
-    net.add_module("resnet_block4", resnet_block(256, 512, 2))
-    net.add_module("global_avg_pool", nn.AdaptiveAvgPool2d((1,1)))
-    net.add_module("fc", nn.Sequential(nn.Flatten(),
-                                       nn.Linear(512, num_classes)))
-    return net
-
-def update_D(X, Z, net_D, net_G, loss, trainer_D):
-    """Update discriminator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = X.shape[0]
-    ones = torch.ones((batch_size,), device=X.device)
-    zeros = torch.zeros((batch_size,), device=X.device)
-    trainer_D.zero_grad()
-    real_Y = net_D(X)
-    fake_X = net_G(Z)
-    # Do not need to compute gradient for `net_G`, detach it from
-    # computing gradients.
-    fake_Y = net_D(fake_X.detach())
-    loss_D = (loss(real_Y, ones.reshape(real_Y.shape)) +
-              loss(fake_Y, zeros.reshape(fake_Y.shape))) / 2
-    loss_D.backward()
-    trainer_D.step()
-    return loss_D
-
-def update_G(Z, net_D, net_G, loss, trainer_G):
-    """Update generator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = Z.shape[0]
-    ones = torch.ones((batch_size,), device=Z.device)
-    trainer_G.zero_grad()
-    # We could reuse `fake_X` from `update_D` to save computation
-    fake_X = net_G(Z)
-    # Recomputing `fake_Y` is needed since `net_D` is changed
-    fake_Y = net_D(fake_X)
-    loss_G = loss(fake_Y, ones.reshape(fake_Y.shape))
-    loss_G.backward()
-    trainer_G.step()
-    return loss_G
-
-d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
-                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
                        '319d85e578af0cdc590547f26231e4e31cdf1e42')

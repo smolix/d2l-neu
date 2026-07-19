@@ -2029,6 +2029,280 @@ class GRU(d2l.RNN):
                 outputs = self.dropouts[i](outputs)
         return outputs, new_state
 
+def scan_combine(prev, cur):
+    a_prev, b_prev = prev
+    a_cur, b_cur = cur
+    return a_prev * a_cur, a_cur * b_prev + b_cur
+
+def associative_scan(a, b):
+    """Parallel prefix scan for h_t = a_t * h_{t-1} + b_t with h_0 = 0.
+
+    Defined in :numref:`sec_ssm`"""
+    return jax.lax.associative_scan(scan_combine, (a, b))[1]
+
+class S4D(nnx.Module):
+    """A diagonal state space layer: one SSM per feature channel.
+
+    Defined in :numref:`sec_ssm`"""
+    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1,
+                 rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        H, N = num_hiddens, num_states
+        self.log_a = nnx.Param(jnp.tile(jnp.log(jnp.arange(1., N + 1)),
+                                        (H, 1)))
+        self.log_dt = nnx.Param(
+            rngs.params.uniform((H, 1)) * math.log(dt_max / dt_min)
+            + math.log(dt_min))
+        self.C = nnx.Param(rngs.params.normal((H, N)) / math.sqrt(N))
+        self.D = nnx.Param(jnp.ones(H))
+
+    def __call__(self, u):                   # (num_steps, batch, num_hiddens)
+        a = -jnp.exp(self.log_a[...])                 # (H, N), Re(a) < 0
+        a_bar = jnp.exp(jnp.exp(self.log_dt[...]) * a)
+        b_bar = (a_bar - 1) / a                       # ZOH with B = 1
+        a_elems = jnp.broadcast_to(                   # Same at every step
+            a_bar[None, None], (u.shape[0], 1, *a_bar.shape))
+        b_elems = b_bar * u[..., None]                # (T, batch, H, N)
+        x = associative_scan(a_elems, b_elems)
+        return (x * self.C).sum(-1) + self.D * u
+
+    def step(self, u, x=None):
+        """Advance one token: u is (batch, H); x is the (batch, H, N) state.
+
+        Defined in :numref:`sec_ssm`"""
+        a = -jnp.exp(self.log_a[...])
+        a_bar = jnp.exp(jnp.exp(self.log_dt[...]) * a)    # Same ZOH as forward
+        b_bar = (a_bar - 1) / a
+        if x is None:
+            x = jnp.zeros((*u.shape, a_bar.shape[-1]))
+        x = a_bar * x + b_bar * u[..., None]              # One recurrence step
+        return (x * self.C).sum(-1) + self.D * u, x
+
+class S4DBlock(nnx.Module):
+    def __init__(self, num_hiddens, num_states, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.ln1 = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.ssm = S4D(num_hiddens, num_states, rngs=rngs)
+        self.ln2 = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.W_v = nnx.Linear(num_hiddens, 2 * num_hiddens, rngs=rngs)
+        self.W_g = nnx.Linear(num_hiddens, 2 * num_hiddens, rngs=rngs)
+        self.W_o = nnx.Linear(2 * num_hiddens, num_hiddens, rngs=rngs)
+
+    def __call__(self, X):
+        X = X + self.ssm(self.ln1(X))
+        Y = self.ln2(X)
+        return X + self.W_o(self.W_v(Y) * jax.nn.sigmoid(self.W_g(Y)))
+
+    def step(self, X, x=None):
+        """Advance the block one token; only the SSM carries state.
+
+        Defined in :numref:`sec_ssm`"""
+        y, x = self.ssm.step(self.ln1(X), x)
+        X = X + y
+        Y = self.ln2(X)
+        return X + self.W_o(self.W_v(Y) * jax.nn.sigmoid(self.W_g(Y))), x
+
+class SelectiveSSM(nnx.Module):
+    """A diagonal SSM whose step size, input matrix, and read-out are
+
+    Defined in :numref:`sec_mamba`"""
+    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1,
+                 rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        H, N, R = num_hiddens, num_states, max(2, num_hiddens // 16)
+        self.log_a = nnx.Param(jnp.tile(jnp.log(jnp.arange(1., N + 1)),
+                                        (H, 1)))
+        self.W_dt = nnx.Sequential(
+            nnx.Linear(H, R, rngs=rngs),
+            nnx.Linear(R, H, use_bias=False, rngs=rngs))
+        dt = jnp.exp(rngs.params.uniform((H,)) * math.log(dt_max / dt_min)
+                     + math.log(dt_min))
+        self.b_dt = nnx.Param(dt + jnp.log(-jnp.expm1(-dt)))
+        self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)
+        self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)
+        self.D = nnx.Param(jnp.ones(H))
+
+    def __call__(self, u):                   # (num_steps, batch, num_hiddens)
+        a = -jnp.exp(self.log_a[...])                 # (H, N), Re(a) < 0
+        dt = jax.nn.softplus(self.W_dt(u) + self.b_dt)    # (T, batch, H)
+        B, C = self.W_B(u), self.W_C(u)               # (T, batch, N)
+        a_bar = jnp.exp(dt[..., None] * a)            # (T, batch, H, N)
+        b_bar = (dt * u)[..., None] * B[..., None, :]
+        x = associative_scan(a_bar, b_bar)
+        return (x * C[..., None, :]).sum(-1) + self.D * u
+
+    def step(self, u, x=None):
+        """Advance one token: u is (batch, H); x is the (batch, H, N) state.
+
+        Defined in :numref:`sec_mamba`"""
+        a = -jnp.exp(self.log_a[...])
+        dt = jax.nn.softplus(self.W_dt(u) + self.b_dt)    # (batch, H)
+        B, C = self.W_B(u), self.W_C(u)                   # (batch, N)
+        a_bar = jnp.exp(dt[..., None] * a)                # (batch, H, N)
+        b_bar = (dt * u)[..., None] * B[..., None, :]
+        x = b_bar if x is None else a_bar * x + b_bar
+        return (x * C[..., None, :]).sum(-1) + self.D * u, x
+
+class MambaBlock(nnx.Module):
+    """Conv + SiLU + selective SSM, gated, inside a pre-norm residual.
+
+    Defined in :numref:`sec_mamba`"""
+    def __init__(self, num_hiddens, num_states=4, expand=2, conv_width=4,
+                 dropout=0, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        d = expand * num_hiddens
+        self.ln = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.W_in = nnx.Linear(num_hiddens, 2 * d, rngs=rngs)
+        self.conv = nnx.Conv(d, d, kernel_size=(conv_width,),
+                             feature_group_count=d, padding='CAUSAL',
+                             rngs=rngs)
+        self.ssm = SelectiveSSM(d, num_states, rngs=rngs)
+        self.W_out = nnx.Linear(d, num_hiddens, rngs=rngs)
+        self.drop = nnx.Dropout(dropout, rngs=rngs)
+
+    def __call__(self, X):                   # (num_steps, batch, num_hiddens)
+        u, gate = jnp.split(self.W_in(self.ln(X)), 2, axis=-1)
+        u = jnp.swapaxes(self.conv(jnp.swapaxes(u, 0, 1)), 0, 1)
+        y = self.ssm(jax.nn.silu(u))
+        return X + self.drop(self.W_out(y * jax.nn.silu(gate)))
+
+    def step(self, X, state=None):
+        """Advance one token, carrying (conv buffer, SSM state).
+
+        Defined in :numref:`sec_mamba`"""
+        u, gate = jnp.split(self.W_in(self.ln(X)), 2, axis=-1)
+        if state is None:
+            state = (jnp.zeros((u.shape[0], self.conv.kernel_size[0],
+                                u.shape[-1])), None)
+        buf, x = state
+        buf = jnp.concatenate([buf[:, 1:], u[:, None]], 1)    # Roll the window
+        u = (buf * self.conv.kernel[:, 0]).sum(1) + self.conv.bias
+        y, x = self.ssm.step(jax.nn.silu(u), x)
+        return X + self.drop(self.W_out(y * jax.nn.silu(gate))), (buf, x)
+
+class Mamba(nnx.Module):
+    """A stack of Mamba blocks with the recurrent-cell interface.
+
+    Defined in :numref:`sec_mamba`"""
+    def __init__(self, num_inputs, num_blocks=2, num_states=4, dropout=0,
+                 rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.num_inputs = self.num_hiddens = num_inputs
+        self.blocks = nnx.Sequential(*[
+            MambaBlock(num_inputs, num_states, dropout=dropout, rngs=rngs)
+            for _ in range(num_blocks)])
+        self.ln = nnx.LayerNorm(num_inputs, rngs=rngs)
+
+    def __call__(self, X, state=None):
+        return self.ln(self.blocks(X)), None
+
+    def step(self, X, state=None):
+        """Advance the stack one token: X is (batch, d); one state per block.
+
+        Defined in :numref:`sec_mamba`"""
+        state = ([None] * len(self.blocks.layers) if state is None
+                 else list(state))
+        for i, blk in enumerate(self.blocks.layers):
+            X, state[i] = blk.step(X, state[i])
+        return self.ln(X), state
+
+class Benchmark:
+    """For measuring running time.
+
+    Defined in :numref:`sec_hybridize`"""
+    def __init__(self, description='Done'):
+        self.description = description
+
+    def __enter__(self):
+        self.timer = d2l.Timer()
+        return self
+
+    def __exit__(self, *args):
+        print(f'{self.description}: {self.timer.stop():.4f} sec')
+
+def split_batch(X, y, num_devices):
+    """Split `X` and `y` across devices by reshaping.
+
+    Defined in :numref:`sec_multi_gpu`"""
+    assert X.shape[0] == y.shape[0]
+    batch_size = X.shape[0]
+    # Reshape (batch, ...) -> (num_devices, batch_per_device, ...)
+    def _reshape(a):
+        return a.reshape(num_devices, batch_size // num_devices, *a.shape[1:])
+    return _reshape(X), _reshape(y)
+
+class ResNet18(nnx.Module):
+    """A slightly modified ResNet-18 model.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    def __init__(self, num_classes=10, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.net = nnx.Sequential(
+            nnx.Conv(1, 64, kernel_size=(3, 3), strides=(1, 1),
+                     padding='same', rngs=rngs),
+            nnx.BatchNorm(64, rngs=rngs),
+            nnx.relu,
+            # ResNet blocks
+            d2l.Residual(64, in_channels=64, rngs=rngs),
+            d2l.Residual(64, in_channels=64, rngs=rngs),
+            d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
+                         in_channels=64, rngs=rngs),
+            d2l.Residual(128, in_channels=128, rngs=rngs),
+            d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
+                         in_channels=128, rngs=rngs),
+            d2l.Residual(256, in_channels=256, rngs=rngs),
+            d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
+                         in_channels=256, rngs=rngs),
+            d2l.Residual(512, in_channels=512, rngs=rngs),
+            # Global average pooling and classifier
+            lambda x: x.mean(axis=(1, 2)),
+            nnx.Linear(512, num_classes, rngs=rngs))
+
+    def __call__(self, x):
+        return self.net(x)
+
+@nnx.jit
+def update_D(X, Z, net_D, net_G, optimizer_D):
+    """Update discriminator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = X.shape[0]
+    ones = jnp.ones((batch_size,))
+    zeros = jnp.zeros((batch_size,))
+    # Do not need to compute gradient for `net_G`
+    fake_X = net_G(Z)
+    def loss_D_fn(model_D):
+        real_Y = model_D(X).squeeze()
+        fake_Y = model_D(fake_X).squeeze()
+        loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(real_Y, ones)) +
+                  jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, zeros))
+                  ) / 2
+        return loss_D
+    loss_D, grads_D = nnx.value_and_grad(loss_D_fn)(net_D)
+    optimizer_D.update(net_D, grads_D)
+    return loss_D
+
+@nnx.jit
+def update_G(Z, net_D, net_G, optimizer_G):
+    """Update generator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = Z.shape[0]
+    ones = jnp.ones((batch_size,))
+    def loss_G_fn(model_G):
+        # We could reuse `fake_X` from `update_D` to save computation
+        fake_X = model_G(Z)
+        # Recomputing `fake_Y` is needed since `net_D` is changed
+        fake_Y = net_D(fake_X).squeeze()
+        loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, ones))
+        return loss_G
+    loss_G, grads_G = nnx.value_and_grad(loss_G_fn)(net_G)
+    optimizer_G.update(net_G, grads_G)
+    return loss_G
+
+d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
+                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
+
 class Encoder(nnx.Module):
     """The base encoder interface for the encoder-decoder architecture.
 
@@ -2219,103 +2493,6 @@ def bleu(pred_seq, label_seq, k):
                 label_subs[' '.join(pred_tokens[i: i + n])] -= 1
         score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
     return score
-
-class Benchmark:
-    """For measuring running time.
-
-    Defined in :numref:`sec_hybridize`"""
-    def __init__(self, description='Done'):
-        self.description = description
-
-    def __enter__(self):
-        self.timer = d2l.Timer()
-        return self
-
-    def __exit__(self, *args):
-        print(f'{self.description}: {self.timer.stop():.4f} sec')
-
-def split_batch(X, y, num_devices):
-    """Split `X` and `y` across devices by reshaping.
-
-    Defined in :numref:`sec_multi_gpu`"""
-    assert X.shape[0] == y.shape[0]
-    batch_size = X.shape[0]
-    # Reshape (batch, ...) -> (num_devices, batch_per_device, ...)
-    def _reshape(a):
-        return a.reshape(num_devices, batch_size // num_devices, *a.shape[1:])
-    return _reshape(X), _reshape(y)
-
-class ResNet18(nnx.Module):
-    """A slightly modified ResNet-18 model.
-
-    Defined in :numref:`sec_multi_gpu_concise`"""
-    def __init__(self, num_classes=10, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        self.net = nnx.Sequential(
-            nnx.Conv(1, 64, kernel_size=(3, 3), strides=(1, 1),
-                     padding='same', rngs=rngs),
-            nnx.BatchNorm(64, rngs=rngs),
-            nnx.relu,
-            # ResNet blocks
-            d2l.Residual(64, in_channels=64, rngs=rngs),
-            d2l.Residual(64, in_channels=64, rngs=rngs),
-            d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
-                         in_channels=64, rngs=rngs),
-            d2l.Residual(128, in_channels=128, rngs=rngs),
-            d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
-                         in_channels=128, rngs=rngs),
-            d2l.Residual(256, in_channels=256, rngs=rngs),
-            d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
-                         in_channels=256, rngs=rngs),
-            d2l.Residual(512, in_channels=512, rngs=rngs),
-            # Global average pooling and classifier
-            lambda x: x.mean(axis=(1, 2)),
-            nnx.Linear(512, num_classes, rngs=rngs))
-
-    def __call__(self, x):
-        return self.net(x)
-
-@nnx.jit
-def update_D(X, Z, net_D, net_G, optimizer_D):
-    """Update discriminator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = X.shape[0]
-    ones = jnp.ones((batch_size,))
-    zeros = jnp.zeros((batch_size,))
-    # Do not need to compute gradient for `net_G`
-    fake_X = net_G(Z)
-    def loss_D_fn(model_D):
-        real_Y = model_D(X).squeeze()
-        fake_Y = model_D(fake_X).squeeze()
-        loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(real_Y, ones)) +
-                  jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, zeros))
-                  ) / 2
-        return loss_D
-    loss_D, grads_D = nnx.value_and_grad(loss_D_fn)(net_D)
-    optimizer_D.update(net_D, grads_D)
-    return loss_D
-
-@nnx.jit
-def update_G(Z, net_D, net_G, optimizer_G):
-    """Update generator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = Z.shape[0]
-    ones = jnp.ones((batch_size,))
-    def loss_G_fn(model_G):
-        # We could reuse `fake_X` from `update_D` to save computation
-        fake_X = model_G(Z)
-        # Recomputing `fake_Y` is needed since `net_D` is changed
-        fake_Y = net_D(fake_X).squeeze()
-        loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, ones))
-        return loss_G
-    loss_G, grads_G = nnx.value_and_grad(loss_G_fn)(net_G)
-    optimizer_G.update(net_G, grads_G)
-    return loss_G
-
-d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
-                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
                        '319d85e578af0cdc590547f26231e4e31cdf1e42')

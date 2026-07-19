@@ -1,4 +1,4 @@
-# Gated Recurrent Networks
+# Gated Recurrence
 :label:`sec_lstm`
 
 :numref:`subsec_bptt-gradient-pathologies` ended with a diagnosis. The
@@ -17,29 +17,16 @@ the *long short-term memory* (LSTM) cell of
 translation, and language modeling for most of the 2010s.
 
 Gates are worth understanding in 2026 for a reason beyond history. The
-architectures that displaced the LSTM kept its central trick: transformer
-MLP blocks multiply one branch of activations by another, and the modern
-linear recurrences we meet later in this chapter are, at heart, a forget
-gate wrapped around a linear state. We develop the idea once, carefully,
-here: first the gate itself, then the LSTM from scratch and with framework
-layers, then the gated recurrent unit (GRU) as its streamlined descendant,
-then two structural axes (depth and bidirectionality), and finally a look
-at where gating lives today.
-
-```{.python .input}
-%load_ext d2lbook.tab
-tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
-```
-
-```{.python .input #lstm-gated-recurrent-networks}
-%%tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-import math
-from mxnet import np, npx
-from mxnet.gluon import rnn
-npx.set_np()
-```
+architectures that displaced the LSTM kept its central trick: the
+transformer's gated feed-forward networks multiply one branch of
+activations by another, a design whose value :numref:`sec_transformer-block`
+measured directly, and the modern linear recurrences that occupy the rest
+of this chapter are, at heart, a forget gate wrapped around a linear
+state. We develop the idea once, carefully, here: first the gate itself,
+then the LSTM from scratch and with framework layers, then the gated
+recurrent unit (GRU) as its streamlined descendant, then a brief look at
+two structural axes (depth and bidirectionality), and finally a survey of
+where gating lives today.
 
 ```{.python .input #lstm-gated-recurrent-networks}
 %%tab pytorch
@@ -48,14 +35,6 @@ from d2l import torch as d2l
 import math
 import torch
 from torch import nn
-```
-
-```{.python .input #lstm-gated-recurrent-networks}
-%%tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import math
-import tensorflow as tf
 ```
 
 ```{.python .input #lstm-gated-recurrent-networks}
@@ -224,42 +203,6 @@ class LSTMScratch(d2l.Module):  #@save
 ```
 
 ```{.python .input #lstm-implementation-from-scratch-1}
-%%tab mxnet
-class LSTMScratch(d2l.Module):  #@save
-    """The long short-term memory (LSTM) cell implemented from scratch."""
-    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
-        super().__init__()
-        self.save_hyperparameters()
-
-        init_weight = lambda *shape: d2l.randn(*shape) * sigma
-        triple = lambda: (init_weight(num_inputs, num_hiddens),
-                          init_weight(num_hiddens, num_hiddens),
-                          d2l.zeros(num_hiddens))
-        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
-        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
-        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
-        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
-```
-
-```{.python .input #lstm-implementation-from-scratch-1}
-%%tab tensorflow
-class LSTMScratch(d2l.Module):  #@save
-    """The long short-term memory (LSTM) cell implemented from scratch."""
-    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
-        super().__init__()
-        self.save_hyperparameters()
-
-        init_weight = lambda *shape: tf.Variable(d2l.normal(shape) * sigma)
-        triple = lambda: (init_weight(num_inputs, num_hiddens),
-                          init_weight(num_hiddens, num_hiddens),
-                          tf.Variable(d2l.zeros(num_hiddens)))
-        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
-        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
-        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
-        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
-```
-
-```{.python .input #lstm-implementation-from-scratch-1}
 %%tab jax
 class LSTMScratch(nnx.Module):  #@save
     """The long short-term memory (LSTM) cell implemented from scratch."""
@@ -285,7 +228,7 @@ and :eqref:`lstm_update`, and the carried state is now the pair
 $(\mathbf{H}, \mathbf{C})$.
 
 :begin_tab:`jax`
-The explicit Python loop of the other tabs is the readable teaching form,
+The explicit Python loop of the other tab is the readable teaching form,
 but under JIT compilation it is unrolled into a graph that grows with the
 sequence length, which for the LSTM's eight matrix products per step makes
 compilation painfully slow. As promised in :numref:`sec_rnn-scratch`, we
@@ -308,60 +251,6 @@ def forward(self, inputs, H_C=None):
         H, C = H_C
     outputs = []
     for X in inputs:
-        I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
-                        d2l.matmul(H, self.W_hi) + self.b_i)
-        F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
-                        d2l.matmul(H, self.W_hf) + self.b_f)
-        O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
-                        d2l.matmul(H, self.W_ho) + self.b_o)
-        C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
-                           d2l.matmul(H, self.W_hc) + self.b_c)
-        C = F * C + I * C_tilde
-        H = O * d2l.tanh(C)
-        outputs.append(H)
-    return outputs, (H, C)
-```
-
-```{.python .input #lstm-implementation-from-scratch-2}
-%%tab mxnet
-@d2l.add_to_class(LSTMScratch)  #@save
-def forward(self, inputs, H_C=None):
-    if H_C is None:
-        # Initial state with shape: (batch_size, num_hiddens)
-        H = d2l.zeros((inputs.shape[1], self.num_hiddens),
-                      ctx=inputs.ctx)
-        C = d2l.zeros((inputs.shape[1], self.num_hiddens),
-                      ctx=inputs.ctx)
-    else:
-        H, C = H_C
-    outputs = []
-    for X in inputs:
-        I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
-                        d2l.matmul(H, self.W_hi) + self.b_i)
-        F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
-                        d2l.matmul(H, self.W_hf) + self.b_f)
-        O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
-                        d2l.matmul(H, self.W_ho) + self.b_o)
-        C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
-                           d2l.matmul(H, self.W_hc) + self.b_c)
-        C = F * C + I * C_tilde
-        H = O * d2l.tanh(C)
-        outputs.append(H)
-    return outputs, (H, C)
-```
-
-```{.python .input #lstm-implementation-from-scratch-2}
-%%tab tensorflow
-@d2l.add_to_class(LSTMScratch)  #@save
-def forward(self, inputs, H_C=None):
-    if H_C is None:
-        # Initial state with shape: (batch_size, num_hiddens)
-        H = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
-        C = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
-    else:
-        H, C = H_C
-    outputs = []
-    for X in tf.unstack(inputs):
         I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
                         d2l.matmul(H, self.W_hi) + self.b_i)
         F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
@@ -407,6 +296,7 @@ A quick shape check confirms that the cell consumes a
 state keep the (`batch_size`, `num_hiddens`) shape from step to step.
 
 ```{.python .input #lstm-implementation-from-scratch-3}
+%%tab pytorch, jax
 lstm = LSTMScratch(num_inputs=16, num_hiddens=32)
 X = d2l.ones((9, 4, 16))  # (num_steps, batch_size, num_inputs)
 outputs, (H, C) = lstm(X)
@@ -424,6 +314,7 @@ windows of 32 tokens, embedding dimension 64, 128 hidden units, ten epochs
 with gradients clipped to norm 1.
 
 ```{.python .input #lstm-training-1}
+%%tab pytorch, jax
 data = d2l.TimeMachine(batch_size=1024, num_steps=32,
                        num_train=50000, num_val=5000)
 ```
@@ -433,19 +324,13 @@ cell without modification, because the cell keeps the same interface:
 embeddings in, per-step hidden states out. Only the recurrence changed.
 
 ```{.python .input #lstm-training-2}
-%%tab pytorch, mxnet, jax
+%%tab pytorch, jax
 lstm = LSTMScratch(num_inputs=64, num_hiddens=128)
 model = d2l.RNNLMScratch(lstm, vocab_size=len(data.vocab), lr=4)
 ```
 
-```{.python .input #lstm-training-2}
-%%tab tensorflow
-with d2l.try_gpu():
-    lstm = LSTMScratch(num_inputs=64, num_hiddens=128)
-    model = d2l.RNNLMScratch(lstm, vocab_size=len(data.vocab), lr=4)
-```
-
 ```{.python .input #lstm-training-3}
+%%tab pytorch, jax
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
 model.board.yscale = 'log'
 trainer.fit(model, data)
@@ -455,7 +340,7 @@ We will train several models in this section, so we wrap the perplexity
 readout in a helper and start a small scoreboard.
 
 ```{.python .input #lstm-training-4}
-%%tab pytorch, mxnet, tensorflow
+%%tab pytorch
 def val_ppl(model):
     return float(model.board.data['val_ppl'][-1].y)
 
@@ -501,9 +386,9 @@ vanilla cell, the fused kernel is what you use for any model you train at
 length, and for the LSTM the gap is larger because each hand-rolled step
 launches eight matrix products. The `LSTM` class below keeps the interface
 of `LSTMScratch` and adds a `num_layers` argument, which stacks recurrent
-layers on top of one another; we use it later in this section and when we
-build encoder-decoder models. As before, `num_inputs` is the width of the
-per-step input vectors.
+layers on top of one another; we use it later in this section, and the
+following sections of this chapter reuse it as their recurrent baseline.
+As before, `num_inputs` is the width of the per-step input vectors.
 
 ```{.python .input #lstm-concise-implementation-1}
 %%tab pytorch
@@ -517,43 +402,6 @@ class LSTM(d2l.RNN):  #@save
 
     def forward(self, inputs, H_C=None):
         return self.rnn(inputs, H_C)
-```
-
-```{.python .input #lstm-concise-implementation-1}
-%%tab mxnet
-class LSTM(d2l.RNN):  #@save
-    """The multilayer LSTM model implemented with high-level APIs."""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.rnn = rnn.LSTM(num_hiddens, num_layers, dropout=dropout)
-
-    def forward(self, inputs, H_C=None):
-        if H_C is None:
-            H_C = self.rnn.begin_state(inputs.shape[1], ctx=inputs.ctx)
-        return self.rnn(inputs, H_C)
-```
-
-```{.python .input #lstm-concise-implementation-1}
-%%tab tensorflow
-class LSTM(d2l.RNN):  #@save
-    """The multilayer LSTM model implemented with high-level APIs."""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.lstms = [tf.keras.layers.LSTM(
-            num_hiddens, return_sequences=True, return_state=True,
-            dropout=dropout) for _ in range(num_layers)]
-
-    def forward(self, inputs, H_C=None):
-        X = tf.transpose(inputs, perm=[1, 0, 2])  # To batch-major layout
-        if H_C is None:
-            H_C = [None] * self.num_layers
-        new_H_C = []
-        for lstm, state in zip(self.lstms, H_C):
-            X, *state = lstm(X, initial_state=state)
-            new_H_C.append(state)
-        return tf.transpose(X, perm=[1, 0, 2]), new_H_C
 ```
 
 ```{.python .input #lstm-concise-implementation-1}
@@ -591,19 +439,13 @@ counterpart did, and training is the same call with the same
 hyperparameters.
 
 ```{.python .input #lstm-concise-implementation-2}
-%%tab pytorch, mxnet, jax
+%%tab pytorch, jax
 lstm = LSTM(num_inputs=64, num_hiddens=128)
 model = d2l.RNNLM(lstm, vocab_size=len(data.vocab), lr=4)
 ```
 
-```{.python .input #lstm-concise-implementation-2}
-%%tab tensorflow
-with d2l.try_gpu():
-    lstm = LSTM(num_inputs=64, num_hiddens=128)
-    model = d2l.RNNLM(lstm, vocab_size=len(data.vocab), lr=4)
-```
-
 ```{.python .input #lstm-concise-implementation-3}
+%%tab pytorch, jax
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
 model.board.yscale = 'log'
 trainer.fit(model, data)
@@ -612,10 +454,10 @@ trainer.fit(model, data)
 The trained model reaches a somewhat better perplexity than our
 from-scratch cell. The difference is not the arithmetic, which is
 identical, but the starting point: framework cells ship initialization
-schemes tuned over many years (orthogonal recurrent matrices; in Keras,
-forget-gate biases set to 1) where our teaching code drew every weight
-from the same small Gaussian. At a fixed training budget, how you start
-matters.
+schemes refined over many years (fan-in-scaled weights, orthogonal
+recurrent matrices, and in some frameworks forget-gate biases set to 1)
+where our teaching code drew every weight from the same small Gaussian.
+At a fixed training budget, how you start matters.
 
 Reading the perplexity off the scoreboard, we let the model continue
 *the time traveller*. As :numref:`sec_rnn-scratch` explained, greedy
@@ -624,7 +466,7 @@ repetition loop, so we sample at a low temperature: the continuation stays
 close to the model's preferences yet keeps moving.
 
 ```{.python .input #lstm-concise-implementation-4}
-%%tab pytorch, mxnet
+%%tab pytorch
 ppls['LSTM'] = val_ppl(model)
 pred = model.predict('the time traveller', 30, data.tokenizer, d2l.try_gpu(),
                      temperature=0.5)
@@ -632,7 +474,7 @@ print(f"perplexity {ppls['LSTM']:.1f}, {pred!r}")
 ```
 
 ```{.python .input #lstm-concise-implementation-4}
-%%tab tensorflow, jax
+%%tab jax
 ppls['LSTM'] = val_ppl(model)
 pred = model.predict('the time traveller', 30, data.tokenizer,
                      temperature=0.5)
@@ -701,8 +543,9 @@ and update gates capture long-range ones (how long to hold state).
 After the LSTM, a from-scratch GRU offers no new idea, only one fewer
 head, so we skip straight to the framework layer (an exercise asks you to
 write the scratch version by editing `LSTMScratch`). The class mirrors
-`LSTM`, including the `num_layers` argument; we will lean on it heavily
-when the GRU becomes our encoder workhorse in the next section.
+`LSTM`, including the `num_layers` argument; the GRU is also the cell
+that the next section (:numref:`sec_ssm`) strips down to its minimal
+linear core.
 
 ```{.python .input #lstm-implementation-and-comparison-1}
 %%tab pytorch
@@ -713,34 +556,6 @@ class GRU(d2l.RNN):  #@save
         self.save_hyperparameters()
         self.rnn = nn.GRU(num_inputs, num_hiddens, num_layers,
                           dropout=dropout)
-```
-
-```{.python .input #lstm-implementation-and-comparison-1}
-%%tab mxnet
-class GRU(d2l.RNN):  #@save
-    """The multilayer GRU model implemented with high-level APIs."""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.rnn = rnn.GRU(num_hiddens, num_layers, dropout=dropout)
-```
-
-```{.python .input #lstm-implementation-and-comparison-1}
-%%tab tensorflow
-class GRU(d2l.RNN):  #@save
-    """The multilayer GRU model implemented with high-level APIs."""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        gru_cells = [tf.keras.layers.GRUCell(num_hiddens, dropout=dropout)
-                     for _ in range(num_layers)]
-        self.rnn = tf.keras.layers.RNN(gru_cells, return_sequences=True,
-                                       return_state=True)
-
-    def forward(self, X, state=None):
-        outputs, *state = self.rnn(tf.transpose(X, perm=[1, 0, 2]), state)
-        state = [s[0] if isinstance(s, list) else s for s in state]
-        return tf.transpose(outputs, perm=[1, 0, 2]), state
 ```
 
 ```{.python .input #lstm-implementation-and-comparison-1}
@@ -776,25 +591,20 @@ class GRU(d2l.RNN):  #@save
 One training run under the same recipe puts the GRU on our scoreboard.
 
 ```{.python .input #lstm-implementation-and-comparison-2}
-%%tab pytorch, mxnet, jax
+%%tab pytorch, jax
 gru = GRU(num_inputs=64, num_hiddens=128)
 model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=4)
 ```
 
-```{.python .input #lstm-implementation-and-comparison-2}
-%%tab tensorflow
-with d2l.try_gpu():
-    gru = GRU(num_inputs=64, num_hiddens=128)
-    model = d2l.RNNLM(gru, vocab_size=len(data.vocab), lr=4)
-```
-
 ```{.python .input #lstm-implementation-and-comparison-3}
+%%tab pytorch, jax
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
 model.board.yscale = 'log'
 trainer.fit(model, data)
 ```
 
 ```{.python .input #lstm-implementation-and-comparison-4}
+%%tab pytorch, jax
 ppls['GRU'] = val_ppl(model)
 print(f"validation perplexity {ppls['GRU']:.1f}")
 ```
@@ -818,7 +628,7 @@ $\tilde{\mathbf{H}}_t$ and the gates. If one makes the gates functions of
 the input alone and lets the candidate ignore the previous state, the
 update becomes *linear* in $\mathbf{H}_{t-1}$, and a linear recurrence can
 be trained in parallel across the whole sequence rather than step by step.
-That observation, worked out later in this chapter, is the seed of minimal
+That observation, worked out in :numref:`sec_ssm`, is the seed of minimal
 gated cells such as minGRU :cite:`Feng.Tung.Ahmed.ea.2024`, of linear
 recurrent units :cite:`Orvieto.Smith.Gu.ea.2023`, and of the state space
 models that now appear inside production language models. The GRU is not
@@ -827,66 +637,33 @@ follow.
 
 ## Depth and Direction
 
-Gating changes what happens *inside* a cell. Two further design axes leave
-the cell alone and change how cells are wired together: stacking them in
-layers, and running them in both temporal directions.
+Gating changes what happens *inside* a cell; two further RNN-era design
+axes change how cells are wired together. We compress both to the lessons
+that outlived them.
 
 ### Deep Recurrent Networks
 :label:`sec_deep_rnn`
 
-A single recurrent layer is already deep in time: an input can influence an
-output hundreds of steps later. Within one time step, though, input and
-output are separated by just one nonlinearity, and some structure (say,
-composing "characters into words" with "words into syntax") is more
-naturally expressed by composing *functions* than by widening one layer. A
-deep RNN stacks recurrent layers so that the sequence of hidden states
-produced by layer $l-1$ is the input sequence of layer $l$. Writing
-$\mathbf{H}_t^{(0)} = \mathbf{X}_t$ for the input, the hidden state of
-layer $l$ with cell function $\phi_l$ is
-
-$$
-\mathbf{H}_t^{(l)} = \phi_l(\mathbf{H}_t^{(l-1)}, \mathbf{H}_{t-1}^{(l)}),
-$$
-:eqlabel:`eq_deep_rnn_H`
-
-so each cell sees two contexts: the layer below at the same time step and
-its own layer at the previous step, as :numref:`fig_deep_rnn` shows. The
-output layer reads only the top layer's state, and $\phi_l$ can be a
-vanilla, LSTM, or GRU cell; only the wiring is new.
-
-![A deep RNN. Each layer's hidden state feeds both the next time step of its own layer (rightward arrows) and the same time step of the layer above (upward arrows).](../img/mdl-modernrnn-deep-rnn.svg)
-:label:`fig_deep_rnn`
-
-Depth compounds the optimization difficulties of recurrence: gradients now
-traverse a product of Jacobians in the layer direction on top of the one in
-the time direction. Gated cells handle time; for the layer direction,
-practitioners reach for the same remedy as in deep feedforward networks,
-namely residual connections between layers (:numref:`sec_resnet`), plus
-dropout between layers as the standard regularizer. Stacks beyond four to
-eight layers rarely paid off for recurrent models. Since our `LSTM` class
-already accepts `num_layers`, trying a two-layer model is a one-argument
-change.
+A deep RNN stacks recurrent layers, each reading the hidden-state
+sequence of the layer below as its input sequence: function composition
+within a time step, on top of recurrence across steps. Gated cells handle
+the time direction; the layer direction borrows the feedforward remedies
+of residual connections (:numref:`sec_resnet`) and between-layer dropout,
+and stacks beyond four to eight layers rarely paid off for recurrent
+models. Since our `LSTM` class already accepts `num_layers`, a two-layer
+model is a one-argument change, and it completes our scoreboard.
 
 ```{.python .input #lstm-deep-recurrent-networks-1}
-%%tab pytorch, mxnet, jax
+%%tab pytorch, jax
 lstm2 = LSTM(num_inputs=64, num_hiddens=128, num_layers=2)
 model = d2l.RNNLM(lstm2, vocab_size=len(data.vocab), lr=4)
-```
-
-```{.python .input #lstm-deep-recurrent-networks-1}
-%%tab tensorflow
-with d2l.try_gpu():
-    lstm2 = LSTM(num_inputs=64, num_hiddens=128, num_layers=2)
-    model = d2l.RNNLM(lstm2, vocab_size=len(data.vocab), lr=4)
-```
-
-```{.python .input #lstm-deep-recurrent-networks-2}
 trainer = d2l.Trainer(max_epochs=10, gradient_clip_val=1, num_gpus=1)
 model.board.yscale = 'log'
 trainer.fit(model, data)
 ```
 
 ```{.python .input #lstm-deep-recurrent-networks-3}
+%%tab pytorch, jax
 ppls['LSTM (2 layers)'] = val_ppl(model)
 print(f'{"model":>16} {"val ppl":>8}')
 for name, p in ppls.items():
@@ -904,44 +681,17 @@ corpora; knowing when it will not is part of the craft.
 ### Bidirectional Recurrent Networks
 :label:`sec_bi_rnn`
 
-Everything so far reads the sequence left to right, which is forced for
-language modeling: a model that predicts the next token may only condition
-on the past. But many sequence tasks *analyze* a complete, given sequence
-rather than extend it, and for those the future context is both available
-and informative. Consider filling in a blank:
-
-* I am `___`.
-* I am `___` hungry.
-* I am `___` hungry, and I can eat half a pig.
-
-"Happy" fits the first blank, "not" or "very" the second, but only "very"
-the third: the right context decides. A part-of-speech tagger faces the
-same situation at every token.
-
-A *bidirectional RNN* :cite:`Schuster.Paliwal.1997` exploits this with two
-independent recurrent layers over the same input, one running forward, one
-backward:
-
-$$
-\begin{aligned}
-\overrightarrow{\mathbf{H}}_t &= \phi(\mathbf{X}_t \mathbf{W}_{\textrm{xh}}^{(f)} + \overrightarrow{\mathbf{H}}_{t-1} \mathbf{W}_{\textrm{hh}}^{(f)} + \mathbf{b}_\textrm{h}^{(f)}),\\
-\overleftarrow{\mathbf{H}}_t &= \phi(\mathbf{X}_t \mathbf{W}_{\textrm{xh}}^{(b)} + \overleftarrow{\mathbf{H}}_{t+1} \mathbf{W}_{\textrm{hh}}^{(b)} + \mathbf{b}_\textrm{h}^{(b)}),
-\end{aligned}
-$$
-
-and the per-step output is the concatenation
+Language modeling forces left-to-right reading, but a model that
+*analyzes* a complete, given sequence, a part-of-speech tagger say, has
+the future context in hand, and it is informative. A *bidirectional RNN*
+:cite:`Schuster.Paliwal.1997` runs a second, independent recurrent layer
+backward over the same input and concatenates the two states at each
+step into
 $\mathbf{H}_t = [\overrightarrow{\mathbf{H}}_t, \overleftarrow{\mathbf{H}}_t]
-\in \mathbb{R}^{n \times 2h}$, which conditions on the entire sequence in
-both directions (:numref:`fig_birnn`). The two directions double compute
-and parameters, and the layer is only defined once the whole input is in
-hand.
-
-![A bidirectional RNN. A forward and a backward recurrent layer process the same inputs; their hidden states are concatenated at each step, so every output conditions on the whole sequence.](../img/mdl-modernrnn-bi-rnn.svg)
-:label:`fig_birnn`
-
-In frameworks this is a flag or a wrapper on the recurrent layer, and a
-shape check shows exactly what changed: the per-step output width doubles
-to $2h$.
+\in \mathbb{R}^{n \times 2h}$: every output conditions on the entire
+sequence, at twice the compute. In frameworks this is a flag or a
+wrapper, and the shape check shows exactly what changed, the per-step
+output width doubling to $2h$.
 
 ```{.python .input #lstm-bidirectional-recurrent-networks}
 %%tab pytorch
@@ -949,24 +699,6 @@ birnn = nn.LSTM(64, 128, bidirectional=True)
 X = d2l.randn(32, 8, 64)  # (num_steps, batch_size, num_inputs)
 outputs, (H, C) = birnn(X)
 outputs.shape, H.shape
-```
-
-```{.python .input #lstm-bidirectional-recurrent-networks}
-%%tab mxnet
-birnn = rnn.LSTM(128, bidirectional=True)
-birnn.initialize()
-X = d2l.randn(32, 8, 64)  # (num_steps, batch_size, num_inputs)
-outputs = birnn(X)
-outputs.shape
-```
-
-```{.python .input #lstm-bidirectional-recurrent-networks}
-%%tab tensorflow
-birnn = tf.keras.layers.Bidirectional(
-    tf.keras.layers.LSTM(128, return_sequences=True))
-X = d2l.normal((8, 32, 64))  # Keras is batch-major: (batch, steps, inputs)
-outputs = birnn(X)
-outputs.shape
 ```
 
 ```{.python .input #lstm-bidirectional-recurrent-networks}
@@ -983,25 +715,25 @@ outputs.shape
 ```
 
 One warning matters more than the mechanics: **a bidirectional network is
-an encoder, not a generator**. Because every $\mathbf{H}_t$ already
-conditions on tokens after $t$, the model cannot be run autoregressively;
-at generation time the future it expects does not exist yet. Worse,
-training one to "predict the next token" is an exercise in self-deception:
-the backward pass hands the network the very token it is being asked to
-predict, training loss becomes spectacularly low, and the model is useless
-at inference. This misuse was a common and expensive mistake in the RNN
-era. Use bidirectional layers where the full input is given up front and
+an encoder, not a generator**. Every $\mathbf{H}_t$ conditions on tokens
+after $t$, so the model cannot run autoregressively; at generation time
+the future it expects does not exist. Worse, training one to "predict the
+next token" is self-deception: the backward pass hands the network the
+very token it must predict, training loss collapses, and the model is
+useless at inference, a common and expensive mistake in the RNN era. Use
+bidirectional layers where the full input is given up front and
 per-position representations are wanted: tagging, span labeling, and
 encoding. Their most consequential success was ELMo
-:cite:`Peters.Neumann.Iyyer.ea.2018`, which trained deep bidirectional
-LSTMs (see also :cite:`Graves.Schmidhuber.2005`) to produce contextual word
-embeddings; its role, and the entire encode-both-directions idea, passed to
-the bidirectional attention of BERT :cite:`Devlin.Chang.Lee.ea.2018`, which
-we study in the pretraining chapters.
+:cite:`Peters.Neumann.Iyyer.ea.2018`, deep bidirectional LSTMs trained to
+produce contextual word embeddings (see also
+:cite:`Graves.Schmidhuber.2005`); that role, and the entire
+encode-both-directions idea, passed to the bidirectional attention of
+BERT :cite:`Devlin.Chang.Lee.ea.2018`, which we study in the pretraining
+chapters.
 
 ## Gates beyond Recurrent Networks
 
-The cells above are, by the standards of this book's later chapters, old
+The cells above are, by the standards of this book's earlier chapters, old
 technology. The gate is not. Once you know its shape, a sigmoid (or other
 bounded) branch elementwise-multiplying a signal branch, you will find it
 across modern deep learning, doing the same job of content-dependent
@@ -1014,33 +746,48 @@ before normalization made it routine, and prefiguring the residual
 connections of :numref:`sec_resnet`. Transformer blocks carry gates in
 their MLPs: the gated linear unit family, whose SwiGLU variant
 :cite:`Shazeer.2020` computes
-$\textrm{Swish}(\mathbf{x}\mathbf{W}_1) \odot \mathbf{x}\mathbf{W}_2$ and
-is the standard MLP in most contemporary open language models. And the
-recurrence story of this chapter continues the pattern most directly: the
-selective state space model Mamba :cite:`Gu.Dao.2023` modulates a linear
-state with an input-dependent step size $\Delta_t$ that plays precisely
-the role of a forget gate; Griffin :cite:`De.Smith.Fernando.ea.2024` builds
-production-scale hybrids from gated linear recurrences; and xLSTM
-:cite:`Beck.Poppel.Spanring.ea.2024` revisits the LSTM itself with
-exponential gates and a matrix cell. One idea, many wardrobes:
+$\textrm{Swish}(\mathbf{x}\mathbf{W}_1) \odot \mathbf{x}\mathbf{W}_2$, is
+the standard MLP in most contemporary open language models, and
+:numref:`sec_transformer-block` measured what that gate buys in a
+matched-parameter sweep. And the recurrence story of this chapter
+continues the pattern most directly: the selective state space model
+Mamba :cite:`Gu.Dao.2023` modulates a linear state with an
+input-dependent step size $\Delta_t$ that plays precisely the role of a
+forget gate, and Griffin :cite:`De.Smith.Fernando.ea.2024` builds
+production-scale hybrids from gated linear recurrences.
+
+The gate even circled back to the cell it came from. xLSTM
+:cite:`Beck.Poppel.Spanring.ea.2024` revisits the LSTM with *exponential*
+gating: its sLSTM cell replaces the sigmoid's $(0,1)$ range with $\exp$,
+so a confident new write can overwhelm the accumulated state rather than
+merely dilute it, and a running maximum carried in log space keeps the
+unbounded gates numerically stable. The result revives the classic
+recurrent, state-dependent cell at modern scale. Its sibling, the
+matrix-memory mLSTM, gives up state-dependent gating to regain parallel
+training, and appears where it belongs, in the family table of
+:numref:`sec_matrix-state`. One idea, many wardrobes:
 
 | Where | The gate | What it controls |
 | :-- | :-- | :-- |
 | LSTM (1997) | forget gate $\mathbf{F}_t$ | decay of the cell state $\mathbf{C}_t$ |
 | GRU (2014) | update gate $\mathbf{Z}_t$ | copy-vs-overwrite blend of $\mathbf{H}_t$ |
 | Highway nets (2015) | transform gate | skip-vs-transform blend across depth |
-| GLU, SwiGLU MLPs | activation branch | which channels pass through the MLP |
+| GLU, SwiGLU MLPs (:numref:`sec_transformer-block`) | activation branch | which channels pass through the MLP |
 | Mamba (2023) | step size $\Delta_t$ | decay of a linear state, from input only |
-| Griffin, xLSTM (2024) | recurrence gates | decay and input scaling of linear cells |
+| Griffin, mLSTM (2024) | recurrence gates | decay and write strength of linear cells |
 
-The last three rows share a further twist that the next sections develop:
-their gates depend on the *input only*, not on the state. Give up
-state-dependent gating and the recurrence becomes linear, which unlocks
-parallel training across the sequence while keeping the learned-forgetting
-behavior that made the LSTM work. Before we take that step, the next
-section puts the gated cells we just built to work on their signature
-application, sequence-to-sequence learning, whose fixed-size-state
-bottleneck will sharpen the questions the rest of the chapter answers.
+The last three rows share a further twist: their gates depend on the
+*input only*, not on the state. Give up state-dependent gating and the
+recurrence becomes linear, which unlocks parallel training across the
+sequence while keeping the learned forgetting that made the LSTM work.
+:numref:`sec_ssm` takes exactly that step, and the rest of the chapter
+rides it: linear state space models, made selective in
+:numref:`sec_mamba`, reconciled with attention in
+:numref:`sec_matrix-state`, taught to edit their memory in
+:numref:`sec_deltanet`, reread as learning at test time in
+:numref:`sec_test-time-regression`, and finally hybridized with the
+transformer in :numref:`sec_hybrids`. The gate you now understand is the
+first rung of that ladder.
 
 ## Summary
 
@@ -1057,13 +804,13 @@ the recurrent parameters. On an identical short training recipe the GRU
 clearly outperforms the vanilla RNN from :numref:`sec_rnn-scratch`, while
 the LSTM needs a longer budget or a friendlier initialization before its
 extra machinery pays: architecture and optimization cannot be judged
-separately. Depth
-(stacked layers) and bidirectionality (a backward pass concatenated to the
-forward one) are orthogonal wiring choices; the latter yields encoders,
-never generators. The gate itself outlived these architectures: it routes
-channels in transformer MLPs and, made input-dependent only, powers the
-linear recurrences and state space models that the rest of this chapter
-builds toward.
+separately. Depth (stacked layers) and bidirectionality (a backward pass
+concatenated to the forward one) are orthogonal wiring choices; the
+latter yields encoders, never generators. The gate itself outlived these
+architectures: it routes channels in transformer MLPs
+(:numref:`sec_transformer-block`), revives the LSTM in exponential form
+(xLSTM), and, made input-dependent only, powers the linear recurrences
+and state space models that the rest of this chapter builds.
 
 ## Exercises
 
@@ -1107,16 +854,8 @@ builds toward.
    $P(x_1, \ldots, x_T) = \prod_t P(x_t \mid x_{<t})$, then describe what
    concretely goes wrong at sampling time if you try.
 
-:begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/t/343)
-:end_tab:
-
 :begin_tab:`pytorch`
 [Discussions](https://d2l.discourse.group/t/1057)
-:end_tab:
-
-:begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/t/3861)
 :end_tab:
 
 :begin_tab:`jax`
@@ -1125,7 +864,7 @@ builds toward.
 
 <!-- slides -->
 
-::: {.slide title="Gated Recurrent Networks"}
+::: {.slide title="Gated Recurrence"}
 BPTT's verdict: the gradient $k$ steps back scales as $\rho^k$:
 vanishing or exploding. Clipping fixes explosion; **vanishing needs
 architecture**.
@@ -1135,9 +874,9 @@ Schmidhuber, 1997).
 
 - **LSTM**: a protected memory cell + three learned gates.
 - **GRU**: the streamlined two-gate version.
-- Depth and bidirectionality as orthogonal wiring axes.
-- The same gate primitive lives on in SwiGLU MLPs, Mamba, Griffin,
-  xLSTM.
+- Depth and direction, compressed to their surviving lessons.
+- The same gate primitive lives on in SwiGLU MLPs, Mamba, xLSTM —
+  and in every linear recurrence of this chapter.
 :::
 
 ::: {.slide title="The gate"}
@@ -1267,7 +1006,7 @@ short budget. Its 2020s legacy: strip the gates to input-only
 functions and the recurrence turns **linear** → minGRU, LRU, SSMs.
 :::
 
-::: {.slide title="Deep RNNs"}
+::: {.slide title="Depth and direction, briefly"}
 Layer $l$ reads layer $l{-}1$ at the same step and itself at the
 previous step; a one-argument change with `num_layers`:
 
@@ -1278,6 +1017,9 @@ previous step; a one-argument change with `num_layers`:
 @lstm-deep-recurrent-networks-1
 
 @lstm-deep-recurrent-networks-3
+
+The honest scoreboard: the second layer does **not** pay on a corpus
+this small. Depth pays at scale; knowing when it won't is craft.
 :::
 
 ::: {.slide title="Bidirectional RNNs"}
@@ -1303,10 +1045,15 @@ tagging/encoding (ELMo → BERT), never for LM.
 | Highway nets | transform gate | depth routing |
 | GLU/SwiGLU MLPs | $\sigma$/Swish branch | channel selection |
 | Mamba | step size $\Delta_t$ | linear-state decay |
-| Griffin / xLSTM | recurrence gates | linear-cell decay |
+| Griffin / mLSTM | recurrence gates | linear-cell decay |
 
-Bottom three: gates from the **input only** → linear recurrence →
-parallel training. That is where this chapter goes next.
+- SwiGLU's payoff: measured in the transformer chapter's
+  matched-parameter sweep.
+- xLSTM: **exponential** gates (log-space stabilized) revive the
+  classic cell; its matrix sibling mLSTM joins the family table
+  two sections ahead.
+- Bottom rows: gates from the **input only** → linear recurrence →
+  parallel training. The rest of the chapter rides that step.
 :::
 
 ::: {.slide title="Recap"}
@@ -1318,7 +1065,7 @@ parallel training. That is where this chapter goes next.
   perplexity: it beats the vanilla RNN decisively.
 - The LSTM needs budget and init care before its machinery pays:
   architecture and optimization are judged together.
-- Depth = stacked cells; bidirectional = encoder-only.
-- The gate outlived the RNN: SwiGLU, Mamba's $\Delta_t$, Griffin,
-  xLSTM.
+- Depth = stacked cells (rarely paid); bidirectional = encoder-only.
+- The gate outlived the RNN: SwiGLU, Mamba's $\Delta_t$, xLSTM —
+  input-only gates open the door to linear recurrence, next.
 :::

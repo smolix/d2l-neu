@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 
 from runtime_env import CPU_ONLY_NOTEBOOKS, GPU_KEYWORDS, MULTI_GPU_NOTEBOOKS
+from build_lib import LIB_ONLY_FILES
 
 
 FRAMEWORKS = ('pytorch', 'tensorflow', 'jax', 'mxnet')
@@ -122,8 +123,13 @@ def main():
     # resource class so Make can admit CPU and GPU jobs independently.
     per_fw = {fw: {'all': [], 'cpu': [], 'gpu': [], 'multi-gpu': []}
               for fw in FRAMEWORKS}
+    lib_only = set(LIB_ONLY_FILES)
     for md in sorted(args.source.glob('chapter_*/*.md')):
         rel = md.relative_to(args.source)
+        if str(rel) in lib_only:
+            # Build-only lib-extraction source: scanned by `make lib` for
+            # #@save blocks, but never generated or executed as a notebook.
+            continue
         mode = source_execution_class(md, rel)
         for fw in file_frameworks(md):
             per_fw[fw]['all'].append(rel)

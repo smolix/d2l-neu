@@ -91,7 +91,7 @@ from d2l_preprocess import (
     clean_save_markers, translate_directives, CodeBlock, MarkdownBlock,
     CodeTabSet, TocBlock,
 )
-from build_lib import flatten_tab_branches
+from build_lib import flatten_tab_branches, LIB_ONLY_FILES
 
 
 def convert_prose_tabs_single(text, framework):
@@ -458,6 +458,11 @@ def main():
         standalone = sorted(str(path.relative_to(src))
                             for path in src.glob("chapter_*/*.md"))
         files = list(dict.fromkeys([*CHAPTER_NUMBERING.keys(), *standalone]))
+        # Build-only lib-extraction sources (e.g. legacy-attention-lib.md) carry
+        # #@save blocks for `make lib` but are never rendered or executed as
+        # notebooks — their cells reference nn/tf/… with no imports cell. Keep
+        # them out of the notebook set so they are neither generated nor run.
+        files = [f for f in files if f not in set(LIB_ONLY_FILES)]
 
     # In --files mode (per-notebook Make invocation), suppress the verbose
     # batch-style banner / counts. Each per-notebook rebuild fires gen

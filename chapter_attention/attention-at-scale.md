@@ -1193,7 +1193,7 @@ $$\mathbf{S}_t = \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\,\mathbf{v}_t^\top$$
 
 . . .
 
-That recurrence **is** the state-space recurrence of the next chapter with
+That recurrence **is** the state-space recurrence of ch. 12 with
 identity decay; train it with the parallel scan, gate it and you get Mamba —
 attention and recurrence are two ends of one design space (SSD, 2024).
 :::

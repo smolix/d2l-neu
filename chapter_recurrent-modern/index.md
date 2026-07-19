@@ -44,9 +44,9 @@ transformer's cache would have grown a thousandfold. :numref:`sec_mamba`
 restores what linearization gave up. A selective-copying task that no
 time-invariant model can solve motivates making the step size a function
 of the input (the forget gate derived a third time), and the resulting
-Mamba block solves the copy task, tops the chapter's three-answers
-scoreboard, and generates text at constant cost per token through its own
-stepped path.
+Mamba block solves the copy task, in most runs tops the chapter's
+three-answers scoreboard, and generates text at constant cost per token
+through its own stepped path.
 
 The next three sections carry the story to the present.
 :numref:`sec_matrix-state` is where this chapter's road meets the one

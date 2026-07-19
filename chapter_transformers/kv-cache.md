@@ -1461,7 +1461,7 @@ Attack the factors of the cache formula:
 - **Width**: GQA (fewer KV heads), MLA (low-rank latent).
 - **Length**: sliding window + sinks.
 - **Remove it**: linear attention → fixed recurrent state (§10.5);
-  hybrids interleave a few full-attention layers (ch. 13).
+  hybrids interleave a few full-attention layers (ch. 12).
 - Decode bandwidth arithmetic also powers **speculative decoding** —
   draft cheap, verify at prefill price (→ Computational Performance).
 :::

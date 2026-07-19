@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:17c09bec64d532a4e906a5d6a217aac5d4abe8e1c65908142a08d8e3dd42803f",
+    "d2l_lib_fingerprint": "sha256:b892bcf9eb1363aa48cf93ea5df0cfd3a84079d759ea229b96b3d0b86ae1fd72",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,76 +14,76 @@
       "outputs": []
     },
     "mamba-selective-state-space-models-2": {
-      "code_fingerprint": "sha256:e3a1b655ae25667df46be4207fc334031499e7dc535348c298e3e127859fd58a",
+      "code_fingerprint": "sha256:7447c759fec0503423c1ac567750b57d49ce356e01a67f4d9e0af931dc0b734e",
       "kind": "text",
       "outputs": []
     },
     "mamba-a-task-that-defeats-time-invariance": {
-      "code_fingerprint": "sha256:0422f075cd6b9f5036c9025d20e88ef1279dfc402cf5273da6abd18ab8d524b8",
+      "code_fingerprint": "sha256:b994eefa3486489fe0479e2fdfd972882250a44685e684e763f9e88b0946d32c",
       "kind": "text",
       "outputs": []
     },
     "mamba-an-lti-baseline-and-a-gated-one-1": {
-      "code_fingerprint": "sha256:cf31088fade4551631e6f1d9e78c6d59a9f519f742de0b0ee0e430d8679d9376",
+      "code_fingerprint": "sha256:f98c7460681384ef5212d0aa58556d63c810c1c8547cc258d08258815dc578d4",
       "kind": "text",
       "outputs": []
     },
     "mamba-an-lti-baseline-and-a-gated-one-2": {
-      "code_fingerprint": "sha256:22e866e7dbeecf2aacfc4f357bc656dfbf9002594b754b0291dcb198b3f1c4ef",
+      "code_fingerprint": "sha256:bfe3f83672b1d440a55e0a4cf191d0429cad208bbbda22829ca2e1a3f51840be",
       "kind": "text",
       "outputs": []
     },
     "mamba-an-lti-baseline-and-a-gated-one-3": {
-      "code_fingerprint": "sha256:a506e5a0cc8a38a96a6512963438e2c80fb629c1c492fb94d0184f33b89a041e",
+      "code_fingerprint": "sha256:3657b794c8ed78d23e76eee6f2223fa5d49193e3e0a47416dc3b54dba511540f",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D: final validation accuracy 0.570\n"
+          "text": "S4D: final validation accuracy 0.641\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-3-1.svg",
           "bytes": 21297,
-          "sha256": "sha256:09f03fb31b079d94a93f250c11c8a6f97af99f7de1eaff0eb9cf81ea8916cfe0"
+          "sha256": "sha256:9c8375454aee2dbd6e588e85362619d998c8bdefd9977c7cf6db06e52bd218fc"
         }
       ]
     },
     "mamba-an-lti-baseline-and-a-gated-one-4": {
-      "code_fingerprint": "sha256:586f9d08809378f27d19fab5ac67d47b34594fd1023c9273b263136054c21553",
+      "code_fingerprint": "sha256:c74c757f0d00290c161849a57d2cc6fec6c10dea399f1131edbdc79ef7b27d36",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM: final validation accuracy 0.993\n"
+          "text": "LSTM: final validation accuracy 0.937\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-4-1.svg",
-          "bytes": 21867,
-          "sha256": "sha256:1735e5f73f241e45b3da8767ba5dfbf651c04636c778279bab5db315d874ea04"
+          "bytes": 21325,
+          "sha256": "sha256:31b1dcd7cc661b9e98915c952f43d0e24190b5b660804e5470d49daa1ea4b56b"
         }
       ]
     },
     "mamba-an-lti-baseline-and-a-gated-one-5": {
-      "code_fingerprint": "sha256:c588d107dea87b59f6dbb913b2b9479810c1f54271e10bed5451befcf675641e",
+      "code_fingerprint": "sha256:0f303a559ff68ff989c373dfff2bbb873eee3442cbb63ae9eb3a6d6a260fb55f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-5-1.svg",
-          "bytes": 27639,
-          "sha256": "sha256:3173398f9777a14a492ffb19254c54aad049e7402cb0c7ab63b88cc0781c37bd"
+          "bytes": 26903,
+          "sha256": "sha256:05248ab97d65b5095229edf381c5a34013f3b51a064859bc9c738cecd2789f0f"
         }
       ]
     },
     "mamba-what-selectivity-costs-and-what-survives-1": {
-      "code_fingerprint": "sha256:f968ea06f125fd92e3ea84de0dffb7c90abb6fc2ce87b75186184a321951b2e2",
+      "code_fingerprint": "sha256:569dc28e17660f00de3112da92efdcad8f3a4d0c59903abc02f5ce8369ae032c",
       "kind": "text",
       "outputs": [
         {
@@ -94,40 +94,40 @@
       ]
     },
     "mamba-what-selectivity-costs-and-what-survives-2": {
-      "code_fingerprint": "sha256:0f2abd49796178f205e94db4a961f1fbb995103c924162df3e7da9cf903d9e9f",
+      "code_fingerprint": "sha256:bde69fa3a148cac66a1d135356f30ce8c2a8c10310fd8eddfbf3caaf8aa99ef9",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-mamba-block": {
-      "code_fingerprint": "sha256:7c71a711431412795177176a54a5291d1ed7a0e3e3db38a6df6a1e24dbe8cea0",
+      "code_fingerprint": "sha256:3698c14a09804966ce3451e0dc944a4cb63beb077541560db83ebca5970f3416",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-three-answers-measured-on-one-task-1": {
-      "code_fingerprint": "sha256:eb072d4c2b7a0181198110973887959fc4a6dc9a0d2877e99cff94371e9741d4",
+      "code_fingerprint": "sha256:aad0d9090ab082d6998ed3a5ab9d80e69e8a6a76d13434a859aeca5d7c10ff2e",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-three-answers-measured-on-one-task-2": {
-      "code_fingerprint": "sha256:2eb92e4af799d660c628a2cc2629863b35476c19bf72b08e223c9ee1d66f6ba0",
+      "code_fingerprint": "sha256:f58eb6d17b7d11526983bcee027f9d427b851bfce42d8afe8b485ce4f956ec9c",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-three-answers-measured-on-one-task-3": {
-      "code_fingerprint": "sha256:98d986f75cecbb1fe3891a186e1e6a7348b94039bbe8875aa57cf427b2f9538c",
+      "code_fingerprint": "sha256:1efd49d0718233c51316bf2553dc2ab27c51f8b4f5c6696113977f904d08c890",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-3-1.svg",
-          "bytes": 18952,
-          "sha256": "sha256:51e17d5ba374f60118e082b431ad3f514702e1537367cf946162f5bc2e1a77a3"
+          "bytes": 18954,
+          "sha256": "sha256:c1a3f8265da51b1713dc9c5aae896d7612781628c36b9fb0692d9ee6b929c20d"
         }
       ]
     },
     "mamba-the-three-answers-measured-on-one-task-4": {
-      "code_fingerprint": "sha256:ed5126aa4493fc7a71c9abdb1214300b9028e79b6dfa31fd3738f7a957695f1c",
+      "code_fingerprint": "sha256:c7296c681e2f985b178765f058bfd89a236d65aa82e7b508a626a835fb773c4f",
       "kind": "asset",
       "outputs": [
         {
@@ -135,57 +135,73 @@
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-4-1.svg",
           "bytes": 18569,
-          "sha256": "sha256:8938114e20be922d1655d9a0edb4cebdbecd3499eaa2258ead8f65b9110504c2"
+          "sha256": "sha256:fe32ff7e67335766de2cddd3457d356ec9e96cca418d92825a1711159b2657d8"
         }
       ]
     },
     "mamba-the-three-answers-measured-on-one-task-5": {
-      "code_fingerprint": "sha256:bc19e4be733593679e6818d43917bdb1233d467177b290f27148d9a2cf8008dd",
+      "code_fingerprint": "sha256:9016759972b3fb3f87082a8e7c0d7aaf0a581e6a56897400d8f1a6ae3b4f1fca",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-5-1.svg",
-          "bytes": 20825,
-          "sha256": "sha256:82083b470ee17d74c620f1cbfbeabb993adcf4232ee4b2a82707315ed261fe12"
+          "bytes": 20827,
+          "sha256": "sha256:a25960f86f030942c26617bb68596c3d44a07d0c0dd282af987071bf1dc7fc90"
         }
       ]
     },
     "mamba-the-three-answers-measured-on-one-task-6": {
-      "code_fingerprint": "sha256:15655ee3a282a2811bdae463b8718f6df6678d98d67353e2ac039a512a3eec37",
+      "code_fingerprint": "sha256:738ce50a0c98c87904caec4ae887320dc6f8804f9a05c4f8b41197fa5858936f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     90.6   2.34   297,027      2.5\n minGRU     85.1   2.31   214,851      1.6\n  Mamba     88.4   2.33   488,739      4.8\n"
+          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     93.1   2.35   297,027      1.6\n minGRU     85.1   2.31   214,851      1.0\n  Mamba     88.9   2.33   488,739      2.5\n"
+        }
+      ]
+    },
+    "mamba-stepping-the-selective-model-1": {
+      "code_fingerprint": "sha256:49712fc90865d19e5cf7b6405b6b8251d5052a8794932a988f34a75153017667",
+      "kind": "text",
+      "outputs": []
+    },
+    "mamba-stepping-the-selective-model-2": {
+      "code_fingerprint": "sha256:e0478556960108a726a8e9d007437c65cadab0795aa0f3a8bd82872026fa361f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "stepped vs scanned logits: deviation 5.25e-06, relative 4.67e-07\n"
         }
       ]
     },
     "mamba-the-three-answers-measured-on-one-task-7": {
-      "code_fingerprint": "sha256:2fb93b0c81613601167a3fe5a630d47f615f0d1cb81b624ee74e4a98d246bd3c",
+      "code_fingerprint": "sha256:f84fd0ac95320ac05bbc1949f467234c9cc7935ffb2fe058322ad7b78d0c2e26",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   LSTM: 'the time traveller. I had\\nI fruit, which it, I was recome,\\ncued me.\\n'\n"
+          "text": "   LSTM: 'the time traveller a gallery I did not mery or sociallective, and then\\nnold had'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": " minGRU: 'the time traveller, and the Time Machine of the human\\n\\nafterly\\nbeenuckets of the draid'\n"
+          "text": " minGRU: 'the time traveller,\\nand a maned as a pit that\\nnoversation, and I saw the\\nreme'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  Mamba: \"the time traveller, I was sense of the shaft?\\n\\n'I took the sunset of the little people fic\"\n"
+          "text": "  Mamba: 'the time traveller, I was not reccessity in\\nthe Morlocks, and the ranished. I felt the first time'\n"
         }
       ]
     },
     "mamba-selective-copying-revisited-1": {
-      "code_fingerprint": "sha256:4e476c4ac9b669dde0671a622080148a7c1d42f2965f8e8b3ad930e1156be212",
+      "code_fingerprint": "sha256:f64d29a3289248ec7b61787d4f6ceb25b3a061d1fd88321118dad7f899c96270",
       "kind": "mixed",
       "outputs": [
         {
@@ -197,21 +213,21 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-1-1.svg",
-          "bytes": 21900,
-          "sha256": "sha256:c00aa0426085c8489e3736784bd10dde3d6a5f8253b05b6626554ad450c39c58"
+          "bytes": 21905,
+          "sha256": "sha256:8319f7544d4055abe1de3cc82eb2275ba9d9e338fc73f1a8fe4f198fb19fa7e4"
         }
       ]
     },
     "mamba-selective-copying-revisited-2": {
-      "code_fingerprint": "sha256:e220cdba9eabdea377b9d5eaf1648bdaaf6b138a9b1f4da476d4ea40eb8a1deb",
+      "code_fingerprint": "sha256:3d14211bac99c1c1d1bcb8a5934cb71b76c14eaf586e8cd13698a21e5cd7aa3b",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-2-1.svg",
-          "bytes": 30453,
-          "sha256": "sha256:8a04045a87d6d9f4a76ae88e66bc7c7beb5d2b3f085fcc673f7afc08d7ff1b9e"
+          "bytes": 30440,
+          "sha256": "sha256:0787939d4266a2a21133f27b99ff36c268d7dcf9f0a2693a0078cd91f7d0e4d2"
         }
       ]
     }

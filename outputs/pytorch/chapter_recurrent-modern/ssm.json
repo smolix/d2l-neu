@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d801db6a93b0950d0514485144d5941728fff2fb6ab3eea1735aac9d5629f9db",
+    "d2l_lib_fingerprint": "sha256:e7e036499eb890958f88c61f6721919f24627f4f24dce9790ae7ad4553061416",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
           "bytes": 31168,
-          "sha256": "sha256:9930ce8f979bcc971febbbd0ad57b1f3a44f034e1081686fcb179d97f59b2bf0"
+          "sha256": "sha256:eb88cb36d93ffefc9a4b585d24b5afed8be4eadeb4a02aa9a263e4d2e5f22f5c"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-a-mingru-language-model-4-1.svg",
-          "bytes": 18558,
-          "sha256": "sha256:de9bb7b9378cd681438d1aaf4c5d3082c7fb01451a1da4d66cd448bc8395c293"
+          "bytes": 18565,
+          "sha256": "sha256:3c825427bed58b6e05b7c49c9b334255a871abb6baf121da9bfc2dcb466a0e81"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 84.2, 9s wall clock\nthe time travellerinceed\ntheirccent, and\nthese of the\nfournalist and\ntheirccent,\n"
+          "text": "validation perplexity 83.1, 9s wall clock\nthe time traveller, and the\ntinceed the\nshammber\nfound of the\nshammber\nfound of\n"
         }
       ]
     },
@@ -88,7 +88,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scan vs loop: 7.45e-08, conv vs loop: 5.22e-08\n"
+          "text": "scan vs loop: 1.79e-07, conv vs loop: 1.79e-07\n"
         }
       ]
     },
@@ -115,8 +115,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-2-1.svg",
-          "bytes": 22075,
-          "sha256": "sha256:98a2b220d579ea496f601757c00fd99fd8e8b62a37c08814ae9aa9655e501f1a"
+          "bytes": 21509,
+          "sha256": "sha256:d1c7bed31d8abca10ba3600c471c489a28cbb6b5cc2480f660bb6d1276d70388"
         }
       ]
     },
@@ -128,8 +128,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-3-1.svg",
-          "bytes": 21510,
-          "sha256": "sha256:6dc16ff28d73c222900ab4a3be2bfbf15d6e41458b9924ae2631875deb6fdd37"
+          "bytes": 21515,
+          "sha256": "sha256:18cc2be9f0534ac2fbf12d0bc20f2aa1f98136320d71f1bca1afa236c65b4a32"
         }
       ]
     },
@@ -140,7 +140,41 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.814     36.3\n  LSTM   29,930    0.767      4.6\n"
+          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.829     31.1\n  LSTM   29,930    0.810      4.2\n"
+        }
+      ]
+    },
+    "ssm-inference-one-token-at-a-time-1": {
+      "code_fingerprint": "sha256:6383ea2772371124719d4ea5d22a5d2b369a2726965c3b8a003e561148ed8500",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-inference-one-token-at-a-time-2": {
+      "code_fingerprint": "sha256:4e234e7e95a8a4b0cd1c38f3eb418d6b415a9945f6a4e8ee266eacabf6e8e61e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "stepped vs scanned: deviation 5.09e-04 on activations of scale 71: relative 7.22e-06\n"
+        }
+      ]
+    },
+    "ssm-inference-one-token-at-a-time-3": {
+      "code_fingerprint": "sha256:fa784bed4c4e7e0af52b3aa9bc7dacf670dd0acea322c6fb5df4e692be8322b5",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "carried state: 1536 bytes per sequence, at every prefix length\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssm/ssm-inference-one-token-at-a-time-3-1.svg",
+          "bytes": 29560,
+          "sha256": "sha256:20f0e7ac0c7f9ba25fd42e3ad2954ab2460001527fd00ebceeb95fe6f93a8b03"
         }
       ]
     }

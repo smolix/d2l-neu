@@ -786,7 +786,7 @@ $$C \approx \underbrace{2ND}_{\textrm{forward}} + \underbrace{4ND}_{\textrm{back
   parity only near $n = 6d$.
 
 ::: {.d2l-note}
-Decode-time arithmetic (why a generated token costs $2N$) was §12.3's —
+Decode-time arithmetic (why a generated token costs $2N$) was §11.3's —
 the KV cache turns it into a memory bill.
 :::
 :::
@@ -868,7 +868,7 @@ outweighs the parameters.
 
 - The three modern rows print the **same argument list**.
 - What the flags don't reach: window widths, RoPE bases, expert counts;
-  MLA = §12.3's low-rank cache, MoE swaps in via `ffn_factory` (§12.6).
+  MLA = §11.3's low-rank cache, MoE swaps in via `ffn_factory` (§11.6).
 - Convergent evolution: three selection pressures — stability, cache,
   capacity per FLOP — one body plan: the 2017 block.
 :::

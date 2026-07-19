@@ -16,7 +16,7 @@ on a single recurrence, differing only in how they *forget*. Unrolling that
 recurrence proves the promised duality: a gated linear recurrence and masked
 attention are the same matrix, computed in two different orders, and a third
 order, chunkwise, is how every model in this family trains at scale. We
-close with the family table that organizes the modern landscape, from
+close with the family table that organizes these models, from
 RetNet to Mamba-2 to xLSTM.
 
 ```{.python .input #matrix-state-the-matrix-state-from-linear-attention-to-mamba-2}

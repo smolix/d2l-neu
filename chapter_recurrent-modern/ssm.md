@@ -1074,8 +1074,8 @@ encoder both ways: all 784 pixels at once through the scan, then one
 pixel at a time through `step`, carrying one state per block. The two
 schedules perform the same arithmetic in different association orders,
 so they can differ only by float32 rounding, and over 784 steps of
-trained, near-unit decays that rounding accumulates; the honest
-comparison is therefore *relative* to the activation scale. (Checked
+trained, near-unit decays that rounding accumulates; the comparison
+must therefore be *relative* to the activation scale. (Checked
 against exact float64 stepping, each path sits about ten times farther
 from the true answer than the two sit from each other.) The assertion
 is a regression guard as much as a demonstration: a genuine mismatch
@@ -1301,7 +1301,7 @@ scan, is the subject of the next section.
 ::: {.slide title="Linear Recurrence and State Space Models"}
 Gated RNNs fixed the memory problem and kept a compute problem:
 $\mathbf{H}_t$ needs $\mathbf{H}_{t-1}$, so training is **sequential in
-$t$** while GPUs sit idle. CNNs (ch. 7) compute all positions at once.
+$t$** while GPUs sit idle. CNNs (ch. 6) compute all positions at once.
 
 Goal: **parallel training, O(1)-state inference**. Two passes at it:
 

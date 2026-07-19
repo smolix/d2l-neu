@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source": "chapter_recurrent-modern/seq2seq.md",
+  "source": "chapter_natural-language-processing-pretraining/seq2seq.md",
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: [[1553  579  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 288  589  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [2574  561  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001 2341  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  324 1240  835  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 3509  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 4 4]\nshared vocabulary size: 4003\n"
+          "text": "source: [[ 524  735  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 641 1346  111  466  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 623  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\ndecoder input: [[4001  815  361 1819  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 1118  338 1830  371 3663  262 4002 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  740   45  507  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]]\nsource valid length: [4 6 3]\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24562,
-          "sha256": "sha256:fb7167769df205aa984eafa4ae3d3ea8dcaf648fbbf3b3a28da94760f2df8495"
+          "sha256": "sha256:d7c9fdf0736132346b6667f4b5de12be9f1233b140c457b51d7d3d69aeedf9bc"
         }
       ]
     },
@@ -116,8 +116,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 20434,
-          "sha256": "sha256:a1a179e23a3a79f8266619e0bc77e11aba36e18882c48afe0ec691a7dda1cb1e"
+          "bytes": 20438,
+          "sha256": "sha256:3b8b0c756670ffe8b82816d76889fbc80e747c22ae0cabfd93f8c684792a027b"
         }
       ]
     },
@@ -138,7 +138,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis chez moi .'\n"
+          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis calme .'\ni'm home . => 'je suis timide .'\n"
         }
       ]
     },
@@ -154,7 +154,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis chez moi .', chrF 1.000\n"
+          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis calme .', chrF 1.000\ni'm home . => 'je suis timide .', chrF 0.342\n"
         }
       ]
     },
@@ -185,7 +185,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i'm home .   k=1: 1.00  k=2: 1.00  k=5: 1.00\n"
+          "text": "i'm home .   k=1: 0.34  k=2: 0.34  k=5: 0.34\n"
         }
       ]
     },
@@ -202,8 +202,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 24542,
-          "sha256": "sha256:0b6bd70ecd5a9d6d15dd4987abe7fa1e4fc759df48c9b36e34ef4d090c5e4403"
+          "bytes": 24538,
+          "sha256": "sha256:7b93cfa2c26cee5a16db7ce12048589c7c2b6f21a46681c06e02dcdef889aa61"
         }
       ]
     }

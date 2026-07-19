@@ -771,7 +771,7 @@ most runs it posts the best number of the chapter outright, though in
 some the minGRU, at fewer than half the parameters, stays within a few
 points or even edges it out: at this scale, framework initialization
 defaults and optimizer choices move the scoreboard by amounts comparable
-to the architectural gap. The honest caveats cut both ways: Mamba trains
+to the architectural gap. The caveats cut both ways: Mamba trains
 with Adam and dropout while the gated baselines keep their sections'
 plain SGD recipe, and at this corpus size a stronger model mostly buys
 sharper memorization of Wells's prose. This scoreboard says the selective
@@ -1251,7 +1251,7 @@ A dozen lines around `SelectiveSSM`; the stack keeps the
 
 - Mamba: best validation perplexity of the chapter in most runs (minGRU
   edges it on some tabs).
-- Caveats stated honestly: Adam vs. the baselines' SGD; more parameters;
+- Caveats: Adam vs. the baselines' SGD; more parameters;
   a small corpus rewards memorization.
 :::
 

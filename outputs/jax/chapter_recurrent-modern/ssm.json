@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:86db787e0e0064aee150df74313cc7e01373afd86c1b2ee1c6ba495e9c578b44",
+    "d2l_lib_fingerprint": "sha256:13815ea380b1ec67198ad97a68b7faa4c05c7b8cf99365e346a82b472bb286c5",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 31167,
-          "sha256": "sha256:1403c5077598925558a273968808bb43c07def01a0056cff0b822a6f73298238"
+          "bytes": 31164,
+          "sha256": "sha256:508831d164014c03a989edaa0008d8be009debc910bbe77077cef78a79eb6b3d"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-a-mingru-language-model-4-1.svg",
-          "bytes": 18569,
-          "sha256": "sha256:b2e67cb73baa2d724857d94629c6badf2a1861e7de90e2419f5ba2babbbdd7f2"
+          "bytes": 18567,
+          "sha256": "sha256:68469addf7e4b5a6cfd2e9d45df8d22e2747834eacb8d4dd7831e993766cce54"
         }
       ]
     },
@@ -77,7 +77,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 85.1, 14s wall clock\nthe time traveller. I had\ndism.\n\n'I had a chemer, and I saw the\nfossibly,\n"
+          "text": "validation perplexity 85.3, 11s wall clock\nthe time traveller.\n\n'I had a\nmpatient,\nand a\nmpatient,\nand a\nmp\n"
         }
       ]
     },
@@ -93,54 +93,88 @@
       ]
     },
     "ssm-s4d-in-practice-1": {
-      "code_fingerprint": "sha256:4c13a231f2524089ea922a082dd6a692d7b697e2dadba751647b2863cce746c6",
+      "code_fingerprint": "sha256:97955edff42bd0045d48057ded4b0ceb1801dc94eac2861cf635856de14e7436",
       "kind": "text",
       "outputs": []
     },
     "ssm-s4d-in-practice-2": {
-      "code_fingerprint": "sha256:b2b8ebb95ee3b3c49e044f3b277b917a34e7aaf149356169ad5a0cfaa700acbc",
+      "code_fingerprint": "sha256:cf92f6675067f3b6ea88822ffe40f9a1e32f9e994c5b4948fbc2ce1c5b3010dc",
       "kind": "text",
       "outputs": []
     },
     "ssm-sequential-image-classification-1": {
-      "code_fingerprint": "sha256:754b3527fd33a7dad21c7b4f90308c65cc982d4777316b14d1e2354ba8b26869",
+      "code_fingerprint": "sha256:16c0e2ab11b65db74ad990e8cbe7d086b2f4de019043f6246f70ee165d8c880a",
       "kind": "text",
       "outputs": []
     },
     "ssm-sequential-image-classification-2": {
-      "code_fingerprint": "sha256:52ce2d90615fddd691af96d1b575d1e13782249fe740ab4513912aa59c5cc327",
+      "code_fingerprint": "sha256:e0d044dd7d0e1f2ce5adda90cb9efa8ae8d8fa3be02fdc392e6c6b35dbec8e98",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-2-1.svg",
-          "bytes": 20597,
-          "sha256": "sha256:2290f18dc9469233e30960ee19d9817dc61013b85894724dba3528d9dca53b75"
+          "bytes": 20454,
+          "sha256": "sha256:07423c0ea1ea6bb6da4f3d256a3e8b5018c5549cfc52ca83c4f3fd0ff5654297"
         }
       ]
     },
     "ssm-sequential-image-classification-3": {
-      "code_fingerprint": "sha256:56dfd55bf41349c6529966e8ba765c677726297a04456037a4829969aacaf968",
+      "code_fingerprint": "sha256:ec8adb105ffb924be965333b3c1982646ac7ea6934890e5495bcd40600b0d31f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-3-1.svg",
-          "bytes": 21485,
-          "sha256": "sha256:9abcb4990ef6f77621d66d01591b81618a4208c664bb0374b37bd2f664bd39cd"
+          "bytes": 22723,
+          "sha256": "sha256:f821c0433adbe199ec7e22011415621c9b96fa781e7aa9e0ab7d1654e12b6bee"
         }
       ]
     },
     "ssm-sequential-image-classification-4": {
-      "code_fingerprint": "sha256:c7d28c251af6c912ed76a4007ac1ed101157271a0a0f0d085c2067bd99ca3d8e",
+      "code_fingerprint": "sha256:cb137251c8aaf817e3950a0729ca89d874ab79a7cb3ab570285200b6dc4370c2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.827      5.2\n  LSTM   29,674    0.795     33.3\n"
+          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.807      4.5\n  LSTM   29,674    0.773     28.9\n"
+        }
+      ]
+    },
+    "ssm-inference-one-token-at-a-time-1": {
+      "code_fingerprint": "sha256:7efb090b257167d2407afbe780d7139811d160ca54452ff93c9afa1536265b27",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-inference-one-token-at-a-time-2": {
+      "code_fingerprint": "sha256:76355b7307164929ed1d8855cddf63b4a41e4ab06cfe99a8b17185b03695f90f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "stepped vs scanned: deviation 8.36e-04 on activations of scale 67: relative 1.25e-05\n"
+        }
+      ]
+    },
+    "ssm-inference-one-token-at-a-time-3": {
+      "code_fingerprint": "sha256:d3a83934a838545c7e4ce16904e6105a8fb754f4b0983790c7104ab0d4ac57f7",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "carried state: 1536 bytes per sequence, at every prefix length\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssm/ssm-inference-one-token-at-a-time-3-1.svg",
+          "bytes": 28778,
+          "sha256": "sha256:5941420ee77af989defd1e1f94232aba379b35ccd9b3d5930430d274b5826fe4"
         }
       ]
     }

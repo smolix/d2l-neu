@@ -735,7 +735,7 @@ for R in (1, 2, 4, 8):
 assert recalls[0] > 0.95 and recalls[-1] < 0.5
 ```
 
-At one write per key, recall is perfect; at two it is still above $0.9$;
+At one write per key, recall is perfect; at two it is still high;
 by four and eight overwrites it collapses toward chance
 (chance is about $0.03$ here). Momentum has made the memory a *softer*
 overwriter than the pure delta rule, and the mechanism is visible in

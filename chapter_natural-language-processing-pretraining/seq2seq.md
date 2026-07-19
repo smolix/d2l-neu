@@ -1136,7 +1136,7 @@ follows.
 1. The dataset uses one shared vocabulary for both languages. Rebuild `MTFraEng`
    with two separate tokenizers, one per language, and compare training loss and
    translation quality. When would separate vocabularies help, and when hurt?
-1. Sweep the beam width $k \in \{1, 2, 4, 8, 16\}$ on the three showcase
+1. Sweep the beam width $k \in \{1, 2, 4, 8, 16\}$ on the three example
    sentences and on a handful of longer held-out sentences. Where does quality
    stop improving, and why (recall the large-beam discussion of
    :numref:`sec_beam-search`)?
@@ -1150,7 +1150,7 @@ follows.
 1. Feed the context $\mathbf{c}$ only at the first decoder step (as in
    :citet:`Sutskever.Vinyals.Le.2014`) instead of at every step. How does that
    change the results, and why might repeating the context help a small model?
-1. Score the showcase translations with both `chrf` and `d2l.bleu`. Construct a
+1. Score the example translations with both `chrf` and `d2l.bleu`. Construct a
    translation on which the two metrics most disagree, and explain the mechanism.
 
 :begin_tab:`mxnet`
@@ -1278,7 +1278,7 @@ feed back, stop at `<eos>`):
 :::
 
 ::: {.slide title="Beam search"}
-The 9.7 toolkit plugs straight in: wrap the decoder in a `step_fn` (source
+The 8.7 toolkit plugs straight in: wrap the decoder in a `step_fn` (source
 fixed, target prefix varies), then `d2l.beam_search`. Greedy is beam size 1;
 score it vs $k = 2, 5$ with chrF:
 
@@ -1315,7 +1315,7 @@ states — where the attention chapters began) or a **better recurrent state**
 - Encoder-decoder: source $\to$ fixed state $\to$ target; decoder is a
   conditional LM.
 - Shared BPE vocab, teacher forcing, masked cross-entropy.
-- Decode with greedy or beam search (9.7's toolkit, unchanged).
+- Decode with greedy or beam search (8.7's toolkit, unchanged).
 - chrF over BLEU for lexical scoring.
 - The single-vector bottleneck degrades with length and motivates the rest
   of the book.

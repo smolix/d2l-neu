@@ -128,6 +128,8 @@ hebbian, delta = (overwrite_recall(r, reps) for r in ('hebbian', 'delta'))
 print(f"{'writes/key':>10} {'Hebbian':>9} {'delta':>7}")
 for row in zip(reps, hebbian, delta):
     print('{:>10} {:>9.3f} {:>7.3f}'.format(*row))
+assert min(delta) > 0.99, 'delta write must recall the latest value exactly'
+assert hebbian[-1] < 0.4, 'Hebbian recall must collapse under overwrites'
 d2l.plot(reps, [hebbian, delta], 'writes per key', 'recall of latest value',
          legend=['Hebbian write', 'delta write'], fmts=('-o', '-s'))
 ```
@@ -299,9 +301,13 @@ def train_recall(rule, R, num_keys=8, num_values=16, epochs=12,
         return float((pred[mask] == Vy[mask]).float().mean())
 
 print(f"{'writes/key':>10} {'Hebbian':>9} {'delta':>7}")
+final = {}
 for R in [1, 2, 4, 6]:
     accs = [train_recall(rule, R) for rule in ('hebbian', 'delta')]
+    final[R] = accs
     print(f'{R:>10} {accs[0]:>9.3f} {accs[1]:>7.3f}')
+assert final[6][1] > 0.95, 'trained delta must keep near-perfect recall'
+assert final[6][0] < 0.5, 'trained Hebbian must collapse under overwrites'
 ```
 
 ```{.python .input #deltanet-trained-models-hit-the-same-ceiling-3}
@@ -335,9 +341,13 @@ def train_recall(rule, R, num_keys=8, num_values=16, epochs=12,
     return float((jnp.where(mask, pred == Vy, False)).sum() / mask.sum())
 
 print(f"{'writes/key':>10} {'Hebbian':>9} {'delta':>7}")
+final = {}
 for R in [1, 2, 4, 6]:
     accs = [train_recall(rule, R) for rule in ('hebbian', 'delta')]
+    final[R] = accs
     print(f'{R:>10} {accs[0]:>9.3f} {accs[1]:>7.3f}')
+assert final[6][1] > 0.95, 'trained delta must keep near-perfect recall'
+assert final[6][0] < 0.5, 'trained Hebbian must collapse under overwrites'
 ```
 
 Training does not rescue the additive write. The trained Hebbian model

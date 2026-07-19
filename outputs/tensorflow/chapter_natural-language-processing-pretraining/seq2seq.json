@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "source": "chapter_recurrent-modern/seq2seq.md",
+  "source": "chapter_natural-language-processing-pretraining/seq2seq.md",
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:6bdec6a9a3cdc1b8aaee08ccad589ecf23d26ad9bf84fd0f8f47df642351100d",
+    "d2l_lib_fingerprint": "sha256:9c94cd17dedef38f5129e6bc9e26e7392256dd112ebbbce91b4fa43986878949",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -50,7 +50,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "source: tf.Tensor(\n[[ 105  297  265 1341  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 623  770  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 421 1886  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\ndecoder input: tf.Tensor(\n[[4001  270  296 1519  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  962   45  407  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  497  503 3652  256 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\nsource valid length: tf.Tensor([6 4 4], shape=(3,), dtype=int32)\nshared vocabulary size: 4003\n"
+          "text": "source: tf.Tensor(\n[[ 421  701  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [1910  822  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 271 2164  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\ndecoder input: tf.Tensor(\n[[4001  497 3577  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 1383  275  810  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  536 1776  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\nsource valid length: tf.Tensor([4 4 4], shape=(3,), dtype=int32)\nshared vocabulary size: 4003\n"
         }
       ]
     },
@@ -68,7 +68,7 @@
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-length-hist-1.svg",
           "bytes": 24562,
-          "sha256": "sha256:2404eb47faa4647e56dd8dab9b5603e9060f659bc9030d7219bd1f67d6c1de8c"
+          "sha256": "sha256:2b135eed37420cab0b4648f7e5108a8d802214823a7909b06eeaaa6a409f096c"
         }
       ]
     },
@@ -110,8 +110,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-training-1.svg",
-          "bytes": 23977,
-          "sha256": "sha256:4d42153d9cb2a208b13d8b31b0bba6aab2a0a3208337e438de1fdbd7b040e7f7"
+          "bytes": 23696,
+          "sha256": "sha256:ed4d47fc5dd071715c8f0005e29ac118a3908fd709bb876d0a9f7d35f0a23c01"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis en vie .'\ni'm home . => 'je suis enonne .'\n"
+          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis en colère .'\ni'm home . => 'je suis en tom .'\n"
         }
       ]
     },
@@ -148,7 +148,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis en vie .', chrF 0.390\ni'm home . => 'je suis enonne .', chrF 0.330\n"
+          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis en colère .', chrF 0.394\ni'm home . => 'je suis en tom .', chrF 0.347\n"
         }
       ]
     },
@@ -170,8 +170,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
-          "bytes": 24543,
-          "sha256": "sha256:a92571e1dd8a6069ffd386b81a8923d2e3bce6736aeac3fec0d94e6a950e3c8b"
+          "bytes": 26032,
+          "sha256": "sha256:df9249def81bf85c9d06f846bfb253f3b1bd230e073c5abb7b19dfe5a960ff94"
         }
       ]
     }

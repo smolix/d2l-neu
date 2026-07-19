@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/test-time-regression.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:ec198d830afbbd8f4dbb01fbac22048236471410b480244abeb686c48660c08e",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "test-time-regression-learning-at-test-time": {
+      "code_fingerprint": "sha256:ecbc62fcb2bd997e453b44b0819c7c3138c04067250eacfd17a0151da0084bcc",
+      "kind": "text",
+      "outputs": []
+    },
+    "test-time-regression-a-fixed-kernel-revisited": {
+      "code_fingerprint": "sha256:2c90a8f6c61273dca4627af2ac9bd992bf1ddf8be8a08e4872cd354eaad6d3b3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sigma = 0.1: MSE against the noise-free function 0.875\nsigma = 0.5: MSE against the noise-free function 0.480\nsigma = 2.0: MSE against the noise-free function 1.155\n"
+        }
+      ]
+    },
+    "test-time-regression-learning-it-without-cheating": {
+      "code_fingerprint": "sha256:93c1e1dc107600ad1607fe0263c168b354d64951b04b66206d076c63b60a8c47",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "epoch 1: leave-one-out loss 1.849, w = 1.266\nepoch 2: leave-one-out loss 1.703, w = 1.541\nepoch 3: leave-one-out loss 1.560, w = 1.781\nepoch 4: leave-one-out loss 1.455, w = 1.975\nepoch 5: leave-one-out loss 1.387, w = 2.132\nlearned bandwidth 1/w = 0.469\n"
+        }
+      ]
+    },
+    "test-time-regression-what-learning-sharpened-1": {
+      "code_fingerprint": "sha256:13b22ccbb65d1efe9c6624d50f26f0924e2baf5ac658b6fb4adf3d7072342e3c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "test-time-regression/test-time-regression-what-learning-sharpened-1-1.svg",
+          "bytes": 35753,
+          "sha256": "sha256:4b7c86f512511d8cf0f6f94004a29e50548ad7ba49b94c05ffba91912078962b"
+        }
+      ]
+    },
+    "test-time-regression-what-learning-sharpened-2": {
+      "code_fingerprint": "sha256:73d5973700c6caa8d4b0da7ff9fe0b9d6341ea812d8f46468115a630ee7ab129",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "test-time-regression/test-time-regression-what-learning-sharpened-2-1.svg",
+          "bytes": 45189,
+          "sha256": "sha256:f37198f536459e09c7e5819d0e2f503151a9867f84c82368e8bfc610ea5768d3"
+        }
+      ]
+    },
+    "test-time-regression-the-spectrum-measured-1": {
+      "code_fingerprint": "sha256:083c25fc81a2cae0b3cbb15de549542f0d2239d2187679f31b270320e4288b37",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "                solver   test MSE   rmse to batch fit\n       Nadaraya-Watson      0.023               0.114\n     online GD, 1 pass      0.151               0.372\n   online GD, 5 passes      0.022               0.127\n  online GD, 30 passes      0.008               0.032\n           batch ridge      0.010               0.000\n"
+        }
+      ]
+    },
+    "test-time-regression-the-spectrum-measured-2": {
+      "code_fingerprint": "sha256:bca5ae2c2c5df684597b28ca9fc8c1a4b54d4da11439590bef28d4f85ffddf34",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "test-time-regression/test-time-regression-the-spectrum-measured-2-1.svg",
+          "bytes": 43747,
+          "sha256": "sha256:2e78cce367e68a79f58fd7d67625cf85de78e792187b31d3bc7fd3b725be0b95"
+        }
+      ]
+    },
+    "test-time-regression-deriving-the-gate-longhorn": {
+      "code_fingerprint": "sha256:5b18dbe93b28c126cd906cebc4cddf21bc94522e8b0d888977911a30e757a96b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "closed form vs linear solve, 200 instances: 4.53e-06\nclosed form vs gradient descent, 5 instances: 2.38e-07\n"
+        }
+      ]
+    },
+    "test-time-regression-a-linear-memory-by-hand": {
+      "code_fingerprint": "sha256:44199bc66adadb867bfadbbe1f3dce69eb29828f6e4a46963400dda4c12f48ba",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " overwrites per key  recall of latest\n                  1             1.000\n                  2             0.927\n                  4             0.185\n                  8             0.100\n"
+        }
+      ]
+    },
+    "test-time-regression-a-deep-memory-via-autograd": {
+      "code_fingerprint": "sha256:21d3b7a8871ceedac30d3faf00b8a372a2898cde909da78cf1bf3d37d0401217",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "retrieval MSE: empty memory 0.0312 -> after the stream 0.0013\n"
+        }
+      ]
+    },
+    "test-time-regression-regression-that-tracks-the-forecasting-connection": {
+      "code_fingerprint": "sha256:27ba9f553cb956a1491dde875477a679bda25ae62b3430af9aa8957b12da9dae",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "mean error over the last 500 steps: {'uniform LS': 0.99, 'decayed LS': 0.29, 'implicit step': 0.3}\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "test-time-regression/test-time-regression-regression-that-tracks-the-forecasting-connection-1.svg",
+          "bytes": 64287,
+          "sha256": "sha256:d385e493b3425b4e2fbfb23b8893e8a0c55e4474cbfd7cb8cee915e57b79db7d"
+        }
+      ]
+    }
+  }
+}

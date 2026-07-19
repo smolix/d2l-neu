@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/matrix-state.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "matrix-state-the-matrix-state-from-linear-attention-to-mamba-2": {
+      "code_fingerprint": "sha256:a212ef780e2fff536002f69f1f4a93f3c51733d6025bbb7359f8cedbe49e4309",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-what-the-memory-costs": {
+      "code_fingerprint": "sha256:76903e29ef334a0dce320fbe063d6e868e2a031b4ae238b5df73b723a1cf588e",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "matrix-state/matrix-state-what-the-memory-costs-1.png",
+          "bytes": 51698,
+          "sha256": "sha256:18fed2149cbb82cab2ec90f7973ba27ddd9d1a9e785ea85537681361f31a882f"
+        }
+      ]
+    },
+    "matrix-state-the-state-space-duality-1": {
+      "code_fingerprint": "sha256:d41e24636b8b0db8358f13075d7a8263229283dee12d452303db15e2eed4a408",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-the-state-space-duality-2": {
+      "code_fingerprint": "sha256:c277c8eca2b802c2ff00ac371e0a2e71059b20d64ae990705d9d6b5d7acd2599",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "relative deviation, dual vs recurrence: 4.14e-06\na_t = 1, deviation from masked linear attention: 0.00e+00\n"
+        }
+      ]
+    },
+    "matrix-state-chunked-computation-mostly-matmul-a-little-scan-1": {
+      "code_fingerprint": "sha256:66a2f875d2749d07deea122439475328b72ee78c583392924c7a2ec8672a4aa4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size   16: relative deviation 2.13e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size   64: relative deviation 3.84e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size  256: relative deviation 1.54e-06\n"
+        }
+      ]
+    },
+    "matrix-state-chunked-computation-mostly-matmul-a-little-scan-2": {
+      "code_fingerprint": "sha256:78e42e2a8cc9139c9f810f212fbbbfa37e31f343fdac63d7378f3ec28ad6476d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "           form  time (ms)  temp (MiB)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     recurrence      50.88         0.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   chunked (16)       4.53         1.1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   chunked (64)       2.69         1.1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  chunked (256)       0.35         5.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " chunked (1024)       0.47        21.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " quadratic dual       1.33        68.0\n"
+        }
+      ]
+    },
+    "matrix-state-what-the-hardware-bought": {
+      "code_fingerprint": "sha256:19f57f2e801a486c9f08f1b805b5bc9decc258aabd6d44ea006ac3a80f581557",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "matrix state, one 64x64 head:      0.02 MiB, constant\nmatrix state, Mamba-2 scale:       2.50 MiB, constant\nGQA KV cache at n =     4,096:    16.00 MiB and growing\nGQA KV cache at n =   131,072:   512.00 MiB and growing\nGQA KV cache at n = 1,048,576:  4096.00 MiB and growing\n"
+        }
+      ]
+    },
+    "matrix-state-the-one-that-kept-the-normalizer": {
+      "code_fingerprint": "sha256:f0666527c833e19a48a71570ac627345a73f3dff06c8e8ff41ebeec7529d5fe4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "float32 unstabilized: first non-finite output at step 47\nfloat32 stabilized vs float64: relative deviation 1.38e-06\n"
+        }
+      ]
+    }
+  }
+}

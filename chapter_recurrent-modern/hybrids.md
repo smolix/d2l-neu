@@ -100,8 +100,8 @@ diagnosed in the wild.
 At production scale the failure has a name. In NVIDIA's controlled
 8B-parameter comparison, a pure Mamba-2 model matched a transformer on
 perplexity and most benchmarks while scoring 29% on five-shot MMLU
-against the transformer's 46%, and its phone-book recall collapsed a few
-hundred tokens past its training length; the authors call the mode
+against the transformer's 46%, and its phone-book recall collapsed once
+the book grew past a few hundred tokens; the authors call the mode
 *fuzzy memory* — the model returns an answer that shares digits with
 the right one :cite:`Waleffe.Byeon.Riach.ea.2024`. The practitioner's
 version of the diagnosis is blunter: ablate the few full-attention

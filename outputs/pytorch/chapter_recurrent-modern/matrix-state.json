@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/matrix-state.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:0b92965b6edea7f7a9774fe1454bcf5d97917bed08e8e8d3b9e0adb033ed3dae",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "matrix-state-the-matrix-state-from-linear-attention-to-mamba-2": {
+      "code_fingerprint": "sha256:ae8080b4e22fbee0bbe12da95f359132e9408353e40da137aaacca0ff50cbcc3",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-what-the-memory-costs": {
+      "code_fingerprint": "sha256:26af231a6b938f52b6d94debc6c03edb38bdeea7a6c0e1e75e6e667f9634917f",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "matrix-state/matrix-state-what-the-memory-costs-1.png",
+          "bytes": 51698,
+          "sha256": "sha256:18fed2149cbb82cab2ec90f7973ba27ddd9d1a9e785ea85537681361f31a882f"
+        }
+      ]
+    },
+    "matrix-state-the-state-space-duality-1": {
+      "code_fingerprint": "sha256:2ac892b0adf3c64692b5e1b98fb920c0193ece9fd1ea9d31d1cf984dffe588f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-the-state-space-duality-2": {
+      "code_fingerprint": "sha256:e1c8871246b783736c9bbdcb065f3a759c9923b39fd77d6782f999f3ab54d2a2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "relative deviation, dual vs recurrence: 5.11e-06\na_t = 1, deviation from masked linear attention: 0.00e+00\n"
+        }
+      ]
+    },
+    "matrix-state-chunked-computation-mostly-matmul-a-little-scan-1": {
+      "code_fingerprint": "sha256:57c635b73a46618739944a4fe398bb0394fe01ea3a94ddf87c0d0abc34e8dfac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size   16: relative deviation 1.92e-07\nchunk size   64: relative deviation 6.81e-07\nchunk size  256: relative deviation 1.75e-06\n"
+        }
+      ]
+    },
+    "matrix-state-chunked-computation-mostly-matmul-a-little-scan-2": {
+      "code_fingerprint": "sha256:5c55a23fecdd87c67d293ca62857d68836482a80bc5b9d59aa1ad9ea553964f9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "           form  time (ms)  peak (MiB)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     recurrence     281.62         3.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   chunked (16)      36.24         1.5\n   chunked (64)       9.42         3.0\n  chunked (256)       2.61        12.0\n chunked (1024)       0.86        48.0\n quadratic dual       1.18       272.0\n"
+        }
+      ]
+    },
+    "matrix-state-what-the-hardware-bought": {
+      "code_fingerprint": "sha256:a727cd6d494c710870f7e579ed54c788ebb3ce9f5847b21902fde153b1391c66",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "matrix state, one 64x64 head:      0.02 MiB, constant\nmatrix state, Mamba-2 scale:       2.50 MiB, constant\nGQA KV cache at n =     4,096:    16.00 MiB and growing\nGQA KV cache at n =   131,072:   512.00 MiB and growing\nGQA KV cache at n = 1,048,576:  4096.00 MiB and growing\n"
+        }
+      ]
+    },
+    "matrix-state-the-one-that-kept-the-normalizer": {
+      "code_fingerprint": "sha256:1264cc38502c4e7b0b412f1bb5314ec58e4b5e173ccf7e422ab67069dc328ed9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "float32 unstabilized: first non-finite output at step 49\nfloat32 stabilized vs float64: relative deviation 2.02e-05\n"
+        }
+      ]
+    }
+  }
+}

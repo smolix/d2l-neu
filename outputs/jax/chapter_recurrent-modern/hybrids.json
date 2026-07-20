@@ -19,46 +19,52 @@
       "outputs": []
     },
     "hybrids-three-matched-models-2": {
-      "code_fingerprint": "sha256:3be4118ccb858202b2e179b59c4420c98d757d0b5921dea9df09138a2d853921",
+      "code_fingerprint": "sha256:d84ff51e8d843bd5ef4f4c17ce44275cda035d1495b7388440998e704421bac4",
       "kind": "text",
       "outputs": []
     },
     "hybrids-three-matched-models-3": {
-      "code_fingerprint": "sha256:ecfbf2f8eef706cbaadc07a4c7e0d5b3b11ba5596d15198d6b69373541f6cc0e",
+      "code_fingerprint": "sha256:fd641468e8738f505eafdc948f6e48b07e52c2402a668851730a994cb19fadd2",
       "kind": "text",
       "outputs": []
     },
     "hybrids-three-matched-models-4": {
-      "code_fingerprint": "sha256:69db34479c1c501844b82cd63b527b575cc539a132c4e457e0c16ab475b466b6",
-      "kind": "text",
-      "outputs": []
-    },
-    "hybrids-the-recall-sweep-1": {
-      "code_fingerprint": "sha256:be84a52f40d96ed872c7e44779b3b12552f667f8ab0f5eb7824d4cc82d583ac0",
+      "code_fingerprint": "sha256:29453f1a2cc2246b23b63f80c5beb79f61259b3894eaf9e215e52938a89fcdce",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     pairs      4      8     16     32     64\n    linear  0.974  0.898  0.890  0.589  0.455\n attention  1.000  1.000  1.000  1.000  1.000\n    hybrid  0.984  0.946  0.941  0.993  1.000\n    chance  0.031  0.031  0.031  0.031  0.031\n"
+          "text": "    linear: 58,544 parameters\n attention: 57,984 parameters\n    hybrid: 58,404 parameters\n"
+        }
+      ]
+    },
+    "hybrids-the-recall-sweep-1": {
+      "code_fingerprint": "sha256:6cfa81f651501b1b5e45052d659d17fa66cd71c0ef44339bf1adf4a7a35352e1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     pairs      4      8     16     32     64\n    linear  0.964  0.950  0.734  0.591  0.376\n attention  1.000  1.000  1.000  1.000  1.000\n    hybrid  0.980  0.936  0.923  0.998  1.000\n    chance  0.031  0.031  0.031  0.031  0.031\n"
         }
       ]
     },
     "hybrids-the-recall-sweep-2": {
-      "code_fingerprint": "sha256:11517466cf64e05e4e37ba49e19e29c439d70f174d82c61d4006ca5b2b0976d2",
+      "code_fingerprint": "sha256:ac8b7f39c7b8e8d443142852be7e00e28f24b976ae1948351a0cf2eb7918c598",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-recall-sweep-2-1.svg",
-          "bytes": 30866,
-          "sha256": "sha256:2e9853435ee62a61b10f6e193a86fff4c949a6d17c8777717381c23574f17086"
+          "bytes": 30870,
+          "sha256": "sha256:9f0ebb8107c0a55fc1a67444ed3a3e35d04ef2ca219a3a839557009b59a769d8"
         }
       ]
     },
     "hybrids-the-language-modeling-panel": {
-      "code_fingerprint": "sha256:f7097e147929fd559b76d6b519f5decaf7c12a361c3f3192434add02ae66fc2b",
+      "code_fingerprint": "sha256:fdbce14d5d46c1e2b60ad2a1a168b320f89a76cee9ea113f49704cb105067321",
       "kind": "text",
       "outputs": [
         {
@@ -74,25 +80,25 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " attention      1.85       2.67\n"
+          "text": " attention      1.84       2.66\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "    hybrid      1.78       2.57\n"
+          "text": "    hybrid      1.77       2.55\n"
         }
       ]
     },
     "hybrids-the-memory-bill-measured": {
-      "code_fingerprint": "sha256:ce8a85e805790ba5d080be8539756c1eec097d6d8967b4338c5697a445331d19",
+      "code_fingerprint": "sha256:c398863c9751efe2b0bb7cba9cfd45727437da153c1802a3d7f9c0380609b2e6",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "hybrids/hybrids-the-memory-bill-measured-1.svg",
-          "bytes": 28999,
-          "sha256": "sha256:8a597f76c6557e6fa4c2dfa1868d85970ab7c6ea323be641dd3102dadd6cc802"
+          "bytes": 29175,
+          "sha256": "sha256:309c47644dc4224dc8d478515a90a36cd278a1af8027380f27a9266bfcf3544c"
         }
       ]
     }

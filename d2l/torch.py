@@ -1876,8 +1876,9 @@ class S4D(nn.Module):
 
     def forward(self, u):                    # (num_steps, batch, num_hiddens)
         a = -torch.exp(self.log_a)                    # (H, N), Re(a) < 0
-        a_bar = torch.exp(torch.exp(self.log_dt) * a)
-        b_bar = (a_bar - 1) / a                       # ZOH with B = 1
+        da = torch.exp(self.log_dt) * a
+        a_bar = torch.exp(da)
+        b_bar = torch.expm1(da) / a                   # ZOH with B = 1
         a_elems = a_bar.expand(u.shape[0], 1, -1, -1) # Same at every step
         b_elems = b_bar * u.unsqueeze(-1)             # (T, batch, H, N)
         x = associative_scan(a_elems, b_elems)
@@ -1888,8 +1889,9 @@ class S4D(nn.Module):
 
         Defined in :numref:`sec_ssm`"""
         a = -torch.exp(self.log_a)
-        a_bar = torch.exp(torch.exp(self.log_dt) * a)     # Same ZOH as forward
-        b_bar = (a_bar - 1) / a
+        da = torch.exp(self.log_dt) * a
+        a_bar = torch.exp(da)                             # Same ZOH as forward
+        b_bar = torch.expm1(da) / a
         if x is None:
             x = u.new_zeros(*u.shape, a_bar.shape[-1])
         x = a_bar * x + b_bar * u.unsqueeze(-1)           # One recurrence step

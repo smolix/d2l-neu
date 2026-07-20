@@ -16,17 +16,23 @@ and :numref:`sec_scaling-laws` called the bet on that rung "that
 chapter's story". This is that story.
 
 The plan follows the trade itself. First the *limit*: what a fixed state
-provably cannot do, with the theorem and the production symptoms that
-made hybrids necessary. Then the *price*: only attention layers pay a
+cannot do, with the counting theorem — conditions included — and the
+production symptoms that made hybrids necessary. Then the *price*: only
+attention layers pay a
 growing cache, an asymmetry worth a factor of eight in serving memory at
 long context. Then the *experiment*, the section's centerpiece: three
 matched models — pure linear recurrence, pure attention, and a hybrid
 differing by a single layer — swept until the fixed state saturates,
-with a language-modeling panel that shows why perplexity never saw the
+with a language-modeling panel that shows why perplexity did not see the
 problem. Finally the *engineering*: the measured design rules from
 shipped systems, a recipe table from Jamba to Kimi Linear, and the
 distillation shortcut that turns a pretrained transformer into a hybrid
 for a fraction of the training bill.
+
+*Prerequisites: the KV-cache accounting of :numref:`sec_kv-cache`
+(:eqref:`eq_kv-cache-bytes`); the matrix state, its capacity
+proposition, and the duality of :numref:`sec_matrix-state`; and the
+recall task of :numref:`subsec_dn-trained`.*
 
 ```{.python .input #hybrids-hybrid-architectures}
 %%tab pytorch
@@ -56,31 +62,52 @@ import optax
 
 Selectivity fixed content-blindness. The delta rule fixed the additive
 write. Test-time learning fixed staleness. None of them fixed capacity,
-and none can: a state of $N$ numbers holds a bounded number of bits, and
+and none can: a state of $N$ numbers at any fixed numerical precision
+holds a bounded number of bits, and
 information theory does not care how cleverly the update rule was
 chosen. To reproduce $k$ arbitrary tokens from a vocabulary of size
 $V$, *something* in the model must hold $k \log_2 V$ bits from the
 moment they appear to the moment they are needed. Our own measurements
-have circled this wall all chapter. The crowding law of
-:numref:`subsec_ms-capacity` is the wall seen from below: squared read
-error $(n-1)/d_k$ after $n$ writes, interference growing linearly in
+have circled this wall all chapter. The crowding proposition of
+:numref:`subsec_ms-capacity` is the wall seen from below: expected
+squared read
+error $(n-1)/d_k$ after $n$ random-key writes, interference growing
+linearly in
 how much you store. And the transition ladder of :numref:`tab_dn-ladder`
 is the wall seen from the side: each rung changed what the state can
 *compute* — forgetting, erasure, reflections, group words — while the
 number of bits it holds never moved.
 
 :citet:`Jelassi.Brandfonbrener.Kakade.ea.2024` make the limit a theorem,
-using the purest recall task there is: copying. A transformer of depth
-two and width $O(n \log D)$ can copy strings of length $D^n$ over an
-alphabet of size $D$ — its "state", the attention window over
-everything so far, grows with the sequence, so it can afford to look
-everything up. Any *generalized SSM*, meaning any model that pushes the
-sequence through a fixed state space $\mathcal{S}$ — every architecture
-in this chapter qualifies — errs on copying length-$L$ strings with
-probability at least $1 - |\mathcal{S}|/D^L$, and once its state holds
-fewer than about $L \log_2 D$ bits it gets most copies wrong. No
-parameterization, gating, or training trick appears anywhere in that
-bound. Empirically the crossover is not close: on synthetic phone-book
+using the purest recall task there is: copying. Both directions of their
+comparison carry conditions, so we state the two results together, with
+matching quantifiers.
+
+> **The copy bounds** :cite:`Jelassi.Brandfonbrener.Kakade.ea.2024`.
+> *Transformer, upper bound:* there is a depth-two transformer of width
+> $O(n \log D)$ that copies any string over an alphabet of size $D$ up
+> to length $D^n$, *provided no length-$n$ substring repeats* — the
+> construction addresses the archive by hashed $n$-grams, and the
+> attention window over everything so far supplies the storage, growing
+> with the sequence. *Generalized SSM, lower bound:* any model that
+> pushes the sequence through a fixed, finite state set $\mathcal{S}$ —
+> every architecture in this chapter, at any fixed precision — errs on
+> copying a string drawn *uniformly at random* from the $D^L$ strings of
+> length $L$ with probability at least $1 - |\mathcal{S}|/D^L$; once the
+> state holds fewer than about $L \log_2 D$ bits, it gets most such
+> copies wrong.
+
+Neither half reduces to "attention remembers, recurrence cannot". The
+upper bound is a construction, valid for strings without repeated
+$n$-grams; the lower bound is a counting argument over the uniform copy
+distribution, and it says nothing about a narrower workload — a state
+that stores just the strings its training distribution favors evades
+it. What the count does rule out is a fixed state that copies
+*arbitrary* strings much longer than its bit budget: there are $D^L$
+required outputs and only $|\mathcal{S}|$ states to route them through,
+and no parameterization, gating, or training trick appears anywhere in
+that ratio. Empirically the crossover is not close: on synthetic
+phone-book
 lookup, the smallest transformer they test, at 410M parameters, beats a
 2.8B-parameter Mamba once the book exceeds roughly seventy entries.
 
@@ -94,7 +121,7 @@ perplexity gap between efficient architectures and attention fell on
 the recall slice — the tokens whose prediction requires retrieving a
 binding seen once before. Attention solves MQAR at a width independent
 of sequence length; recurrent models solve it only while the bindings
-in play fit in their state, which is the crowding law again, now
+in play fit in their state — the crowding picture again, now
 diagnosed in the wild.
 
 At production scale the failure has a name. In NVIDIA's controlled
@@ -128,11 +155,17 @@ If the fixed state loses the recall fight, why not concede and serve
 pure transformers? Because of the bill that :numref:`sec_kv-cache`
 measured: cache bytes $= 2 \cdot n_\textrm{layers} \cdot n_\textrm{kv}
 \cdot d_\textrm{head} \cdot n \cdot b$ times the element size,
-:eqref:`eq_kv-cache-bytes`, growing without bound in the context length
+:eqref:`eq_kv-cache-bytes`, growing linearly in the context length
 $n$. The factor that matters here is $n_\textrm{layers}$: *the cache is
-paid per attention layer*. A recurrent layer holds a state whose size
-:eqref:`eq_ms-recurrence` fixes at $d_k \times d_v$ numbers per head —
-for a Mamba-2 layer at production width, about 2 MB in 16-bit precision
+paid per attention layer*. A recurrent layer holds a state whose shape
+:eqref:`eq_ms-recurrence` fixes at $d_k \times d_v$ numbers per head
+and whose bytes the per-layer formula :eqref:`eq_ms-state-bytes`
+prices. Priced concretely, a Mamba-2 layer at $d_\textrm{model} = 4096$
+with the usual expansion factor of two (so $d_\textrm{inner} = 8192$)
+and state width $d_\textrm{state} = 128$ carries $8192 \cdot 128
+\approx 1.05\textrm{M}$ state elements — about 2 MB at the fp16
+serving precision that formula's headline uses, with the small
+convolution buffer adding another two percent
 — and that figure is the same at token one hundred and at token one
 million. A full-attention layer with grouped queries at the same width
 pays 4 KB *per token*: past a few hundred tokens the growing archive
@@ -143,7 +176,7 @@ most attention layers with recurrent ones and the memory bill drops by
 almost exactly the fraction of attention you removed, because the
 surviving attention layers are the only ones still paying rent.
 
-![Decode-time memory against context length for a 32-layer model at production width (GQA with $8$ key–value heads of dimension 128, Mamba-2-sized states, 16-bit). A pure transformer's cache reaches 32 GB at 256K context; a pure recurrent stack stays near 64 MB forever; a 4-of-32 hybrid pays the attention fraction of the transformer bill.](../img/mdl-modernrnn-hybrid-cache.svg)
+![Persistent decode state against context length for a 32-layer model at production width (GQA with $8$ key–value heads of dimension 128, Mamba-2-sized states, 16-bit). The count covers only the per-user state a server holds between decode steps — KV cache plus recurrent state — excluding parameters, activations, and workspace. A pure transformer's cache reaches 32 GB at 256K context; a pure recurrent stack stays near 64 MB at every length; a 4-of-32 hybrid pays the attention fraction of the transformer bill.](../img/mdl-modernrnn-hybrid-cache.svg)
 :label:`fig_hy-cache`
 
 Those curves are not hypothetical: they are the memory column of
@@ -162,11 +195,14 @@ The cache relief of :numref:`sec_kv-cache` came in flavors that
 *compose*: GQA and MLA shrink the width of each cached token, sliding
 windows bound its lifetime, quantization shrinks its bytes, and a
 deployment can apply all three to the same cache. Replacing attention
-with recurrence is different in kind — it removes the cache rather than
-shrinking it, so it composes with nothing and competes with everything.
-A hybrid is the reconciliation: the recurrent majority removes its
-cache entirely, and the attention minority keeps a cache that GQA, MLA,
-and quantization can still shrink (the recipe table below shows shipped
+with recurrence removes the growing term rather than shrinking it. The
+recurrent state is a tensor like any other — it can be quantized or held
+in lower precision too — but it is already constant in context length,
+so there is no growth left to attack; the contrast that matters is not
+compressible-versus-not but *what grows with context and what does not*.
+A hybrid gets both moves: the recurrent majority contributes only
+constant state, and the attention minority keeps a cache that GQA, MLA,
+and quantization still shrink (the recipe table below shows shipped
 hybrids doing exactly this). That is the last rung of the cache-relief
 map, delivered. What remains is the quantitative question the map could
 not answer: how few attention layers can a model keep and still recall
@@ -177,7 +213,8 @@ like a transformer?
 
 We answer at teaching scale, with machinery this book has already
 built. Three models, identical in every dimension — depth, width,
-heads, embeddings, MLPs, parameter count to within a percent — except
+heads, embeddings, MLPs, parameter count to within a percent (the model
+cell below prints the counts) — except
 for the token mixer inside each block. The task is MQAR, sized so that
 the sweep crosses the fixed state's capacity. The claim to test is the
 one the last two sections set up: recall should collapse for the pure
@@ -213,10 +250,14 @@ def make_recall(num_seqs, num_pairs, num_keys=64, num_values=32, seed=0):
     return keys, vals, tgt                # tgt = -1 outside the query phase
 ```
 
-The recurrent mixer is gated linear attention from the scalar rung of
-:numref:`fig_ms-decay-ladder`: per-head input-dependent decay $a_t$,
-matrix state per head — Mamba-2's transition structure
-:cite:`Yang.Wang.Shen.ea.2024,Dao.Gu.2024`. We train it through the
+The recurrent mixer is *scalar-gated* linear attention: an
+input-dependent decay $a_t$, one number per head per token, applied to a
+matrix state per head. On the decay ladder of
+:numref:`fig_ms-decay-ladder` this is Mamba-2's rung
+:cite:`Dao.Gu.2024`, one below the per-coordinate diagonal gate that
+defines GLA proper :cite:`Yang.Wang.Shen.ea.2024`; we take the scalar
+rung because it is the cheapest transition that forgets, and name the
+class for what it is: `ScalarGatedMixer`. We train it through the
 quadratic dual $\mathbf{Y} = (\mathbf{L} \circ
 \mathbf{Q}\mathbf{K}^\top)\mathbf{V}$ of :eqref:`eq_ms-semiseparable`,
 which :numref:`subsec_ms-duality` verified equal to the recurrence to
@@ -242,7 +283,8 @@ training pushes some head's decay toward zero — which language modeling
 does within a few hundred steps — the $\exp$ overflows to infinity and
 `inf * 0 = nan` kills the run. Masking with $-\infty$ *before* the
 $\exp$, as `segsum` did in :numref:`subsec_ms-chunked`, makes the upper
-triangle an exact zero instead. The recall task never triggers this
+triangle an exact zero instead. In our runs the recall task does not
+trigger this
 overflow; the language-modeling panel below does, reliably. A bug that
 only fires on one of your two benchmarks is the expensive kind. Third,
 **normalize the read-out**. The memory read $\mathbf{S}_t^\top
@@ -260,8 +302,8 @@ downstream never sees the tokens.
 
 ```{.python .input #hybrids-three-matched-models-2}
 %%tab pytorch
-class GLAMixer(nn.Module):
-    """Gated linear attention, trained through its quadratic dual."""
+class ScalarGatedMixer(nn.Module):
+    """Scalar-gated linear attention (Mamba-2's rung), via the dual."""
     def __init__(self, num_hiddens, num_heads):
         super().__init__()
         self.num_heads, self.d_head = num_heads, num_hiddens // num_heads
@@ -288,8 +330,8 @@ class GLAMixer(nn.Module):
 
 ```{.python .input #hybrids-three-matched-models-2}
 %%tab jax
-class GLAMixer(nnx.Module):
-    """Gated linear attention, trained through its quadratic dual."""
+class ScalarGatedMixer(nnx.Module):
+    """Scalar-gated linear attention (Mamba-2's rung), via the dual."""
     def __init__(self, num_hiddens, num_heads, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
         self.num_heads, self.d_head = num_heads, num_hiddens // num_heads
@@ -319,8 +361,8 @@ The attention mixer needs no new code at all: it is the causal
 multi-head attention of :numref:`sec_gpt`, dropped into the
 configurable block of :numref:`sec_transformer-block` through its
 `attn_factory` hook — the same hook the GPT model itself uses. A stack
-is then a *string*: one letter per block, `'G'` for gated linear
-attention, `'A'` for full attention. The entire architectural question
+is then a *string*: one letter per block, `'G'` for the scalar-gated
+recurrence, `'A'` for full attention. The entire architectural question
 of this section fits in three such strings.
 
 ```{.python .input #hybrids-three-matched-models-3}
@@ -333,79 +375,113 @@ not first, a choice the design rules below will justify. Everything
 around the mixers (pre-norm residuals, MLPs, embeddings, readout) is
 identical across the three models; the key and value channels are
 embedded separately and summed, as in :numref:`subsec_dn-trained`, plus
-a learned position embedding shared by all three.
+a learned position embedding shared by all three (a `pos=False` switch
+drops it, and a guard in `forward` refuses sequences longer than the
+table — the first exercise relies on both).
 
 ```{.python .input #hybrids-three-matched-models-4}
 %%tab pytorch
 def make_blocks(layout, num_hiddens, num_heads):
-    """'G' = gated-linear-attention block, 'A' = full-attention block."""
-    gla = lambda: GLAMixer(num_hiddens, num_heads)
+    """'G' = scalar-gated recurrence block, 'A' = full-attention block."""
+    gated = lambda: ScalarGatedMixer(num_hiddens, num_heads)
     attn = lambda: d2l.GPT.CausalAttention(num_hiddens, num_heads)
     return nn.ModuleList([
         d2l.TransformerBlock(num_hiddens, num_heads, norm='layer', act='gelu',
-                             attn_factory=attn if c == 'A' else gla)
+                             attn_factory=attn if c == 'A' else gated)
         for c in layout])
 
 class RecallModel(nn.Module):
     def __init__(self, layout, num_keys, num_values, max_len,
-                 num_hiddens=32, num_heads=4):
+                 num_hiddens=32, num_heads=4, pos=True):
         super().__init__()
         self.key_emb = nn.Embedding(num_keys, num_hiddens)
         self.val_emb = nn.Embedding(num_values + 1, num_hiddens)
-        self.pos_emb = nn.Embedding(max_len, num_hiddens)
+        self.pos_emb = nn.Embedding(max_len, num_hiddens) if pos else None
         self.blocks = make_blocks(layout, num_hiddens, num_heads)
         self.norm = nn.LayerNorm(num_hiddens)
         self.head = nn.Linear(num_hiddens, num_values)
 
     def forward(self, keys, vals):
-        pos = torch.arange(keys.shape[1], device=keys.device)
-        X = self.key_emb(keys) + self.val_emb(vals) + self.pos_emb(pos)
+        X = self.key_emb(keys) + self.val_emb(vals)
+        if self.pos_emb is not None:
+            assert keys.shape[1] <= self.pos_emb.num_embeddings, \
+                'sequence exceeds the position table: raise max_len'
+            X = X + self.pos_emb(torch.arange(keys.shape[1],
+                                              device=keys.device))
         for blk in self.blocks:
             X = blk(X)
         return self.head(self.norm(X))
+
+for name, layout in LAYOUTS.items():
+    model = RecallModel(layout, num_keys=64, num_values=32, max_len=128)
+    print(f'{name:>10}: '
+          f'{sum(p.numel() for p in model.parameters()):,} parameters')
 ```
 
 ```{.python .input #hybrids-three-matched-models-4}
 %%tab jax
 def make_blocks(layout, num_hiddens, num_heads, rngs):
-    """'G' = gated-linear-attention block, 'A' = full-attention block."""
-    gla = lambda rngs: GLAMixer(num_hiddens, num_heads, rngs=rngs)
+    """'G' = scalar-gated recurrence block, 'A' = full-attention block."""
+    gated = lambda rngs: ScalarGatedMixer(num_hiddens, num_heads, rngs=rngs)
     attn = lambda rngs: d2l.GPT.CausalAttention(num_hiddens, num_heads,
                                                 rngs=rngs)
     return nnx.List([
         d2l.TransformerBlock(num_hiddens, num_heads, norm='layer', act='gelu',
-                             attn_factory=attn if c == 'A' else gla,
+                             attn_factory=attn if c == 'A' else gated,
                              rngs=rngs)
         for c in layout])
 
 class RecallModel(nnx.Module):
     def __init__(self, layout, num_keys, num_values, max_len,
-                 num_hiddens=32, num_heads=4, rngs=None):
+                 num_hiddens=32, num_heads=4, pos=True, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
         self.key_emb = nnx.Embed(num_keys, num_hiddens, rngs=rngs)
         self.val_emb = nnx.Embed(num_values + 1, num_hiddens, rngs=rngs)
-        self.pos_emb = nnx.Embed(max_len, num_hiddens, rngs=rngs)
+        self.pos_emb = nnx.Embed(max_len, num_hiddens, rngs=rngs) \
+            if pos else None
         self.blocks = make_blocks(layout, num_hiddens, num_heads, rngs)
         self.norm = nnx.LayerNorm(num_hiddens, rngs=rngs)
         self.head = nnx.Linear(num_hiddens, num_values, rngs=rngs)
 
     def __call__(self, keys, vals):
-        X = (self.key_emb(keys) + self.val_emb(vals)
-             + self.pos_emb(jnp.arange(keys.shape[1])))
+        X = self.key_emb(keys) + self.val_emb(vals)
+        if self.pos_emb is not None:
+            assert keys.shape[1] <= self.pos_emb.num_embeddings, \
+                'sequence exceeds the position table: raise max_len'
+            X = X + self.pos_emb(jnp.arange(keys.shape[1]))
         for blk in self.blocks:
             X = blk(X)
         return self.head(self.norm(X))
+
+for name, layout in LAYOUTS.items():
+    model = RecallModel(layout, num_keys=64, num_values=32, max_len=128,
+                        rngs=nnx.Rngs(0))
+    n_params = sum(x.size for x in
+                   jax.tree.leaves(nnx.state(model, nnx.Param)))
+    print(f'{name:>10}: {n_params:,} parameters')
 ```
+
+The printed counts back the "matched" claim with numbers: 58,544
+(linear), 57,984 (attention), and 58,404 (hybrid) parameters — a spread
+of 560, just under one percent, coming from the gate projection and
+read-out norm that each scalar-gated mixer carries and the attention
+mixer does not. Parameter count is not the whole story of a fair
+comparison (the mixers do different amounts of compute per token, which
+:numref:`tab_hy-ledger` prices), but it rules out the
+crudest confound: none of the recall differences below can come from
+one model simply being bigger.
 
 ### The Recall Sweep
 
 Width is the experiment's one carefully chosen number. At
-`num_hiddens=32` with four heads, each head's state is $8 \times 8$: by
-the capacity law of :numref:`subsec_ms-capacity`, eight is also roughly
-the number of bindings a head can hold before interference bites, so a
-sweep of `num_pairs` from 4 to 64 crosses the whole stack's capacity
-mid-sweep. (Widen the model and the cliff moves right; it does not
-disappear — the theorem above says where it must reappear.) One
+`num_hiddens=32` with four heads, each head's state is $8 \times 8$.
+The random-key proposition of :numref:`subsec_ms-capacity` — used here
+as a sizing heuristic, not as the theory of this model: a trained
+four-layer stack with learned keys is far from the proposition's single
+random-key memory — suggests a head crowds at order-eight bindings, so
+a sweep of `num_pairs` from 4 to 64 should cross the whole stack's
+capacity mid-sweep. (Widen the model and the cliff should move right;
+the counting bound above says it cannot disappear.) One
 protocol note: small-scale MQAR results are notoriously sensitive to
 the learning rate, so :citet:`Arora.Eyuboglu.Timalsina.ea.2024` sweep
 it per configuration and report the best. We piloted their grid
@@ -507,14 +583,20 @@ assert recall['linear'][-1] < 0.6      # The fixed state has saturated
 
 The three curves are the section's thesis in one picture. The pure
 linear-recurrence stack degrades as the load grows and collapses at 64
-pairs, where it recovers fewer than half of the queries — the
-saturation the capacity law predicts for $8 \times 8$ states asked to
-hold 64 bindings. The pure attention stack is perfect throughout: its
+pairs, where it recovers fewer than half of the queries — consistent
+with the crowding heuristic's cliff for $8 \times 8$ states asked to
+hold 64 bindings, though read that as a diagnostic analogy: the
+proposition's random-key assumptions do not cover this trained,
+four-layer model. The pure attention stack scores 1.000 at every load
+in both frameworks' runs: its
 "state" at the query is the whole write phase, so load never crowds
 it. And the hybrid, three quarters of which is the same recurrence
-that just collapsed, holds attention-level recall across the sweep —
-at the loads past the linear stack's capacity it is indistinguishable
-from pure attention. One mid-stack attention layer buys back the
+that just collapsed, tracks attention closely — in our PyTorch run it
+too scores 1.000 at every load; in JAX it dips to roughly 0.92–0.94
+mid-sweep
+and returns to 0.99–1.00 at the two largest loads, exactly the loads
+that break the linear stack. One mid-stack attention layer buys back
+the
 recall deficit at this scale — the miniature of the finding, in
 controlled studies at the hundred-million-parameter scale, that adding
 attention to a Mamba backbone lifts recall benchmarks by about thirty
@@ -632,16 +714,28 @@ for name, layout in LAYOUTS.items():
 assert max(lm_loss.values()) - min(lm_loss.values()) < 0.15
 ```
 
-All three land within a tenth of a nat of one another — about a tenth
+All three land within roughly a tenth of a nat of one another — about
+a tenth
 of a bit per character — and in our runs the pure-linear stack matches
-or beats the pure-attention stack: the model that just collapsed on
+or beats the pure-attention stack: the model that just
+collapsed on
 the recall sweep is, by the language-modeling objective, the equal of
 the models that aced it.
 This is the cautionary dissociation, and it is the single most
-important measurement in this section. Next-character prediction on
+important measurement in this section. Scope it first: one pass over
+one small corpus at one seed, so it demonstrates that perplexity *can*
+sit still while exact recall collapses, not that it always does. The
+larger-scale evidence says the dissociation is the rule, though:
+across seventeen trained language models most of the
+efficient-architecture perplexity gap concentrated on the rare recall
+tokens :cite:`Arora.Eyuboglu.Timalsina.ea.2024`, and in controlled
+hybrid-ratio sweeps recall climbs steeply with the attention fraction
+while perplexity barely responds :cite:`Wang.Zhu.Abreu.ea.2025`. The
+mechanism is the same at both scales: next-character prediction on
 ordinary text is dominated by local structure that a compressed,
-always-on state models well; the rare tokens that require exact
-long-range retrieval barely move the average. Perplexity is blind to
+always-on state models well, and the tokens that require exact
+long-range retrieval are too rare to move the average. Perplexity was
+blind to
 the recall deficit — which is why the field needed MQAR-style probes
 and needle-in-a-haystack evaluations to see it at all
 :cite:`Arora.Eyuboglu.Timalsina.ea.2024,Waleffe.Byeon.Riach.ea.2024`,
@@ -652,8 +746,14 @@ retrieval engine in production. Benchmark what you actually need.
 
 The third panel is the other side of the trade, on our own models. At
 generation time an attention layer must carry its keys and values for
-the whole context, :eqref:`eq_kv-cache-bytes`; a GLA layer carries its
-$d_k \times d_v$ state per head, full stop. Counting bytes per model at
+the whole context, :eqref:`eq_kv-cache-bytes`; a scalar-gated layer
+carries its
+$d_k \times d_v$ state per head, full stop. As in
+:numref:`fig_hy-cache`, we count only the *persistent decode state* —
+the bytes a server must hold for a user between decode steps.
+Parameters, activations, and workspace are excluded; they are nearly
+identical across the three stacks anyway, as the parameter counts
+above showed. Counting those bytes per model at
 our toy width (float32, batch of one):
 
 ```{.python .input #hybrids-the-memory-bill-measured}
@@ -669,12 +769,14 @@ for name, layout in LAYOUTS.items():
                      for c in layout) / 2**10 for T in lengths]
     d2l.plt.loglog(lengths, per_model, label=name, base=2)
 d2l.plt.xlabel('context length (tokens)')
-d2l.plt.ylabel('decode-time memory (KiB)')
+d2l.plt.ylabel('persistent decode state (KiB)')
 d2l.plt.legend();
 ```
 
-The attention stack's line grows without bound; the linear stack's is
-flat at four kilobytes forever; and the hybrid's line grows with
+The attention stack's line grows linearly with context; the linear
+stack's is
+flat at four kilobytes at every length; and the hybrid's line grows
+with
 exactly one quarter of the attention stack's slope — one of its four
 layers still pays per token. That slope ratio *is* the attention
 fraction, and it is the entire economic content of the hybrid design:
@@ -683,6 +785,15 @@ gap between the lines is measured in tens of gigabytes. Both sides of
 the trade are now on the table, from our own runs: the hybrid recalls
 like the attention model and pays like the recurrent one, plus one
 quarter of the rent.
+
+What the experiment shows: at this scale, on this diagnostic, one
+attention layer in four recovers pure attention's recall while paying
+a quarter of its growing state — with the caveats already given
+(single seeded runs, a learning rate the pilot sweep pinned, a
+capacity heuristic rather than a theorem). What it does not show: that
+the result transfers to billion-parameter models trained on language.
+For that, the ablation studies and shipped configurations of the next
+two sections are the evidence.
 
 ## Design Rules, Measured
 :label:`subsec_hy-design`
@@ -694,7 +805,7 @@ hundred-million-to-billion scale, and by the engineering teams whose
 models the recipe table below records. :numref:`fig_hy-stacks` shows
 where four representative systems landed.
 
-![Four shipped answers to "where does the attention go?". Jamba repeats a 1-attention-in-8 block; Nemotron-H spreads 4 attention layers on an 11-layer period, never at the front; Samba alternates Mamba with sliding-window attention only; Zamba2 re-enters two weight-shared attention blocks along a Mamba-2 backbone.](../img/mdl-modernrnn-hybrid-stacks.svg)
+![Four shipped answers to "where does the attention go?", drawn from each release's config at the variant named in the label. Jamba 52B repeats a 1-attention-in-8 block; Nemotron-H 8B spreads 4 attention layers on an 11-layer period, none at the front; Samba 3.8B alternates Mamba with sliding-window attention only; Zamba2 7B re-enters two weight-shared attention blocks 13 times along an 81-layer Mamba-2 backbone.](../img/mdl-modernrnn-hybrid-stacks.svg)
 :label:`fig_hy-stacks`
 
 **How much attention?** Less than you would guess, with a measurable
@@ -719,7 +830,8 @@ about 1:3 while perplexity stays nearly flat across the whole range
 a perplexity dial, which is our dissociation panel again, now as a
 design tool.
 
-**Where does it go?** Evenly spread, and never first.
+**Where does it go?** Evenly spread, and — in every report so far —
+not first.
 :citet:`Waleffe.Byeon.Riach.ea.2024` found no placement better than
 even spacing with the first layer recurrent; the systematic study of
 :citet:`Bae.Acun.Lin.ea.2025` is blunter — "never place Transformer
@@ -729,10 +841,13 @@ supplies the sharpest single datapoint: inserting one full-attention
 layer at the *front* of its stack made length extrapolation collapse
 (perplexity exploding by 16K context), where the same capacity spent
 elsewhere extrapolated to 256K :cite:`Ren.Liu.Lu.ea.2024`. The shipped
-models obey: Nemotron-H's four attention layers sit at depths 8, 19,
+models agree: Nemotron-H's four attention layers sit at depths 8, 19,
 30, 41 of 52 :cite:`NVIDIA.2025`; Granite's at 6, 16, 26, 36 of 40
 :cite:`Granite.Team.2025`; Jamba's at 4, 12, 20, 28 of 32
-:cite:`Lieber.Lenz.Bata.ea.2024`. None puts attention at layer one.
+:cite:`Lieber.Lenz.Bata.ea.2024`. None of these puts attention at
+layer one. Read the rule as a heuristic distilled from a handful of
+systematic studies plus shipped practice — consistent so far, but
+extracted from a young design space, not derived from anything.
 
 **Sequential or parallel?** Interleaving whole layers is not the only
 composition. Hymba runs attention heads and Mamba-2 heads *in parallel
@@ -790,11 +905,11 @@ against each model's technical report or released configuration. The
 convergence is looser than the transformer recipe's (this design space
 is younger), but the clustering is already unmistakable: a strong
 recurrence from the ladder of :numref:`tab_dn-ladder`, roughly a tenth
-to a quarter of layers as attention, evenly spread and never first,
+to a quarter of layers as attention, evenly spread and none first,
 with the attention layers wearing the cache compressions of
 :numref:`sec_kv-cache`.
 
-:Shipped hybrid recipes, 2024–2025. "Attention" counts full-attention layers (Samba's window-only attention noted); positions are 1-indexed. For the recurrence column see :numref:`sec_mamba` and :numref:`sec_deltanet`; for the attention variants see :numref:`sec_kv-cache`.
+:Shipped hybrid recipes, 2024–2025. "Attention" counts full-attention layers (Samba's window-only attention noted); positions are 1-indexed. Layer counts follow each release's own convention — one entry per mixer block, so a Zamba2 entry is one backbone block and its 81 is not comparable to Jamba's 32 without the config; check the source config before comparing depths across rows. The context column gives the longest context the release claims to support (the configured maximum, where a config is public); training context and long-range evaluation length are different numbers, listed separately where the report distinguishes them (Samba trains at 4K and evaluates recall at 256K). For the recurrence column see :numref:`sec_mamba` and :numref:`sec_deltanet`; for the attention variants see :numref:`sec_kv-cache`.
 :label:`tab_hy-recipe`
 
 | model | layers | attention: count, positions | attention variant | recurrence | context |
@@ -827,13 +942,19 @@ the alternative a hardware bill.
 :label:`subsec_hy-distill`
 
 One practical question remains: must a hybrid be pretrained from
-scratch? No — and the shortcut is the state-space duality again.
-Because attention and the linear-recurrence read are two
-parameterizations of the same token-mixing computation
-(:numref:`subsec_ms-duality`), a pretrained transformer's attention
-weights are a *warm start* for a recurrent student. MOHAWK distills in
+scratch? No — a pretrained transformer can be *converted*, and the
+state-space duality explains why conversion has a head start without
+guaranteeing it. The duality of :numref:`subsec_ms-duality` is an exact
+statement about *linear* attention: a semiseparable mixing matrix can
+be computed as a recurrence or as a masked matmul. A pretrained
+transformer's *softmax* attention is not in that family, so its weights
+are not a recurrence in disguise — but its projections and per-layer
+mixing patterns are close enough to serve as a *warm start*:
+initialize the student's recurrence from the attention projections and
+learn the rest. MOHAWK distills in
 three stages — match each layer's mixing matrix (the attention pattern
-against the recurrence's semiseparable equivalent), then match hidden
+against the recurrence's semiseparable approximation of it), then match
+hidden
 states, then fine-tune end to end — and turns Phi-1.5 into a
 Mamba-architecture model using about 3B tokens, under one percent of a
 from-scratch pretraining budget, with quality above same-size
@@ -844,15 +965,57 @@ attention layers intact; quality falls smoothly as attention is
 removed, the shipped configuration keeps about a quarter, and the
 distilled hybrid still solves needle-in-a-haystack at twenty times its
 training length — while the zero-attention variant does not
-:cite:`Wang.Paliotta.May.ea.2024`. The retained attention layers are
-exactly where the recall lives, which by this point in the section is
+:cite:`Wang.Paliotta.May.ea.2024`. Both are learned approximations,
+not exact conversions: the duality supplies the initialization and the
+layer-wise matching targets, and the distillation data supplies
+whatever softmax attention computed that a linear recurrence cannot.
+The retained attention layers are
+where the recall lives, which by this point in the section is
 not a surprise; it is the design rule, observed a third way.
+
+### The Chapter in One Table
+
+The chapter's architectures differ in what they compute; what they
+*charge* lines up in one table. Each row prices one layer of one
+architecture on the axes this section has been trading against each
+other: work and persistent state when decoding token $t$, work and
+sequential depth when training on a length-$T$ sequence, and whether
+the training-time parallel form computes the same function as the
+step-by-step form in real arithmetic (floating-point reassociation
+still changes rounding, which :numref:`subsec_ms-duality` measured).
+Every "constant cost", "linear time", or "same computation" claim made
+along the way resolves to a cell here, and each row cites the section
+that established it.
+
+:Per-layer contracts of the chapter's architectures. $d$ = model width, $h$ = heads of dimension $d_k = d_v$, $N$ = SSM state width per channel, $C$ = chunk length, $t$ = decode position, $T$ = training sequence length. Work entries are leading-order; MLP, normalization, and projection costs shared by all rows are omitted. "Exact" means the parallel and sequential forms coincide in real arithmetic.
+:label:`tab_hy-ledger`
+
+| architecture | decode work per token | persistent decode state | training work | sequential depth | parallel form exact? |
+|:--|:--|:--|:--|:--|:--|
+| LSTM / GRU (:numref:`sec_lstm`) | $O(d^2)$ | $O(d)$: $\mathbf{h}_t$ (and $\mathbf{c}_t$) | $O(T d^2)$ | $T$ | none: nonlinearity inside the recurrence (minGRU removes it, :numref:`subsec_mingru`) |
+| diagonal SSM, S4D (:numref:`subsec_s4d`) | $O(d N)$ | $d N$ numbers | $O(T d N)$ work-efficient scan, or $O(T \log T\, d)$ FFT convolution (:numref:`subsec_ssm-conv`) | $O(\log T)$ (:numref:`subsec_parallel-scans`) | yes |
+| Mamba-1 (:numref:`subsec_selective-ssm`) | $O(d N)$ | $d_\textrm{inner} N$ numbers | $O(T d N)$ work-efficient scan | $O(\log T)$ | yes: selective steps are still affine |
+| SSD / Mamba-2 (:numref:`subsec_ms-duality`) | $O(h\, d_k d_v)$ | $h\, d_k d_v$ numbers | $O(T C d)$ chunked matmuls (:numref:`subsec_ms-chunked`) | $T/C$ | yes, verified to float rounding |
+| GLA (:numref:`subsec_ms-decay-ladder`) | $O(h\, d_k d_v)$ | $h\, d_k d_v$ numbers | $O(T C d)$ chunked | $T/C$ | yes |
+| DeltaNet (:numref:`subsec_dn-wy`) | $O(h\, d_k d_v)$ | $h\, d_k d_v$ numbers | $O(T C d)$ chunked WY | $T/C$ | yes: the WY form is exact algebra |
+| softmax attention (:numref:`sec_gpt`, :numref:`sec_kv-cache`) | $O(t\, d)$ — grows | $2 t d$ numbers — grows (:eqref:`eq_kv-cache-bytes`) | $O(T^2 d)$ | $O(1)$ | trivially: the parallel form is the definition |
+| 1-in-4 hybrid (this section) | $\tfrac{3}{4} O(h\, d_k d_v) + \tfrac{1}{4} O(t\, d)$ | constant $+\ \tfrac14$ of the cache | mixed | per component | per component |
+
+Read across the attention row and the SSD row and the whole section
+reappears: attention pays $t$-dependent work and state for exact recall;
+the matrix-state family pays a constant for a bounded memory; the
+hybrid row is a convex combination with the attention fraction as the
+mixing weight. Read down the exactness column for the chapter's other
+running theme: every linear-recurrence training trick — scan, chunk,
+dual, WY — is a reassociation of the same arithmetic, not an
+approximation, which is what made their speed free of modeling cost.
 
 So: where does this leave the fixed state? This chapter gave it five
 upgrades, and this section drew its boundary. The fixed state lost the
-exact-recall fight — not narrowly but by a theorem, with the collapse
-measurable in an afternoon at width 32 — and it won the economics, also
-not narrowly: flat kilobytes against gigabytes that grow with every
+exact-recall fight — by a counting bound under its stated assumptions,
+and by a collapse
+measurable in an afternoon at width 32 — and it won the economics, not
+narrowly: flat kilobytes against gigabytes that grow with every
 token of context. Production stopped treating those as competing claims
 and shipped both, in proportions this section measured from three
 independent directions — ablation sweeps, shipped configurations, and
@@ -875,66 +1038,95 @@ measured question, and you now own every tool it is measured with.
 
 A fixed-size state cannot perform unbounded exact recall: reproducing
 $k$ tokens from a vocabulary of $V$ requires $k \log_2 V$ bits in the
-state, any generalized SSM's copy error is at least
-$1 - |\mathcal{S}|/D^L$, and the failure is measurable as fuzzy recall
+state, and a finite-state model's error on copying uniformly random
+length-$L$ strings is at least
+$1 - |\mathcal{S}|/D^L$; the failure is measurable as fuzzy recall
 on phone-book and needle tasks long before it shows in perplexity. The
 economics run the other way: by :eqref:`eq_kv-cache-bytes` only
-attention layers pay a context-proportional cache, so a hybrid's memory
-bill is the attention fraction times the transformer's — Jamba's
+attention layers pay a context-proportional cache, so a hybrid's
+persistent decode state
+is the attention fraction times the transformer's — Jamba's
 measured 4 GB against Mixtral's 32 GB at 256K. Our three matched stacks
-made both claims concrete: pure gated-linear-attention recall collapsed
-once the load crossed its $8 \times 8$-per-head state capacity, one
-mid-stack attention layer restored attention-level recall at the loads
-that broke it, language-modeling loss was blind to the whole affair (the
-pure-linear model matched the field, beating pure attention in our
-runs), and decode memory grew
+(parameter counts printed, spread under one percent)
+made both claims concrete: the pure scalar-gated stack's recall
+collapsed
+once the load crossed roughly its $8 \times 8$-per-head state size, one
+mid-stack attention layer restored recall at the loads
+that broke it (1.000 throughout in our PyTorch run; 0.99–1.00 at the
+post-collapse loads in JAX, with a mid-sweep dip to roughly 0.92–0.94),
+language-modeling loss barely separated the three stacks (the
+pure-linear model matched or beat pure attention in our
+runs), and the persistent decode state grew
 with slope equal to the attention fraction. The shipped design rules:
 attention fractions cluster at 5–25%, with a measured knee near 1:3 for
 the DeltaNet family and near 8% for Mamba-2 hybrids; placement is even
-and never front; parallel fusion and weight sharing are live
+and, in every report so far, not front; parallel fusion and weight
+sharing are live
 refinements; and the components interact (Jamba chose Mamba-1 *because*
 attention was present). Pretrained transformers distill into hybrids
-for under a percent of the original token budget, with the retained
-attention layers carrying recall. Three implementation lessons from the
+for under a percent of the original token budget — a learned
+approximation the duality warm-starts, with the retained
+attention layers carrying recall. :numref:`tab_hy-ledger` collects the
+per-layer cost and state contracts of every architecture in the
+chapter. Three implementation lessons from the
 experiment: initialize decay gates to retain, mask in log space before
 exponentiating a decay kernel, and normalize the memory read-out
 before it joins the residual stream.
 
 ## Exercises
 
-1. *Placement, self-discovered.* Rerun the recall sweep with the
+1. *Placement, self-discovered.* [extended] Rerun the recall sweep
+   with the
    attention layer first (`'AGGG'`) and last (`'GGGA'`) instead of
-   mid-stack. Then probe length generalization: train each variant at
-   `num_pairs=32` and evaluate on sequences with the same 32 bindings
-   but 32 extra padding tokens between the write and query phases
-   (extend `make_recall`). Which placement degrades, and does your
+   mid-stack. Then probe length generalization — carefully, because
+   `RecallModel`'s learned position table is a confound: it is built
+   with `max_len = 2 * num_pairs`, so a longer evaluation sequence
+   would index past it (the guard in `forward` stops you), and even a
+   longer table leaves the extra rows untrained at evaluation time.
+   Remove the confound by dropping absolute positions: adapt
+   `train_recall` to build its models with `pos=False` — the recall
+   task is content-addressed, so none of the three mixers needs the
+   position table; verify this first by reproducing the sweep's
+   accuracy at `num_pairs=32`. Then extend `make_recall` to insert
+   filler tokens between the write and query phases (reserve one extra
+   key index for the filler and pass `num_keys=65`), train at zero
+   padding, and evaluate the same models on sequences padded by 32.
+   Which placement degrades, and does your
    result match Samba's report that a single *front* attention layer
    breaks length extrapolation :cite:`Ren.Liu.Lu.ea.2024`?
-1. *Price a million tokens.* Using :eqref:`eq_kv-cache-bytes`, compute
-   the decode-time memory at a 1M-token context, batch of one, 16-bit,
+1. *Price a million tokens.* [conceptual] Using
+   :eqref:`eq_kv-cache-bytes`, compute
+   the persistent decode state at a 1M-token context, batch of one,
+   16-bit,
    for three 48-layer models with $n_\textrm{kv} = 8$ and
    $d_\textrm{head} = 128$: a pure transformer, a pure recurrent stack
    whose per-layer state matches Mamba-2 at $d_\textrm{model} = 4096$
-   (state $2 \cdot d_\textrm{model} \cdot 128$ elements), and a 12.5%
+   (expansion two, $d_\textrm{state} = 128$: $2 \cdot 4096 \cdot 128$
+   elements per :eqref:`eq_ms-state-bytes`, ignoring the small
+   convolution buffer), and
+   a 12.5%
    hybrid. How many concurrent 1M-token users fit in 80 GB of spare
    HBM under each design? Compare your hybrid figure against Jamba's
    published 4 GB at 256K.
-1. *The ratio axis.* Sweep the attention fraction at fixed depth:
+1. *The ratio axis.* [short-code] Sweep the attention fraction at
+   fixed depth:
    layouts `'GGGG'`, `'GGAG'`, `'GAGA'`, `'AAAA'`. Plot recall at
    `num_pairs=64` and decode memory at 64K context (from the
    memory-panel cell) against the fraction. Where is the knee at this
    scale, and how does it compare with Kimi Linear's reported 3:1
    :cite:`Kimi.Team.2025b`?
-1. *A window instead.* Replace the hybrid's full-attention mixer with
+1. *A window instead.* [extended] Replace the hybrid's full-attention
+   mixer with
    sliding-window attention of window 16 (mask scores outside the
    window before the softmax). At which loads does the windowed hybrid
    match the full one, and where does it break? Explain both regimes:
    at what load does every query's answer still sit within the window,
    and what does this say about Samba's window-only design
    :cite:`Ren.Liu.Lu.ea.2024`?
-1. *Bit accounting.* The linear stack's total state is $4$ layers
+1. *Bit accounting.* [conceptual] The linear stack's total state is
+   $4$ layers
    $\times\, 4$ heads $\times\, 8 \times 8$ floats. Estimate its
-   capacity in bindings via the crowding law of
+   capacity in bindings via the crowding heuristic of
    :numref:`subsec_ms-capacity` (interference $(n-1)/d_k$ per head
    against unit signal) and via raw bits ($k \log_2 V$ at $V = 32$
    values against one float carrying, say, 8 useful bits). Where do
@@ -960,8 +1152,10 @@ Five upgrades this chapter — gate, linearize, select, edit, learn — and
 
 - Reproducing $k$ tokens from vocabulary $V$ needs $k \log_2 V$ bits,
   held from write to query.
-- Copy theorem (Jelassi et al. 2024): any fixed-state model errs with
-  probability $\ge 1 - |\mathcal{S}|/D^L$ on length-$L$ strings.
+- Copy bound (Jelassi et al. 2024): a finite-state model errs with
+  probability $\ge 1 - |\mathcal{S}|/D^L$ on **uniformly random**
+  length-$L$ strings — a counting argument, no training trick appears
+  in it.
 
 . . .
 
@@ -1006,9 +1200,9 @@ The hybrid's bill = attention fraction × the transformer's.
 
 . . .
 
-Removing the cache **replaces** rather than composes — but the
-surviving attention layers still take GQA / MLA / NoPE / quantization
-on top.
+Recurrence removes the growing term; the constant state can still be
+quantized, but nothing grows. The surviving attention cache takes
+GQA / MLA / quantization on top.
 :::
 
 ::: {.slide title="Three matched models, one letter apart"}
@@ -1017,10 +1211,12 @@ differs:
 
 @hybrids-three-matched-models-3
 
-- `'G'` = gated linear attention (the scalar-decay rung of §12.4,
-  trained via the quadratic dual).
+- `'G'` = `ScalarGatedMixer`: scalar-per-head decay, **Mamba-2's rung**
+  of the decay ladder (not GLA's per-coordinate gate), trained via the
+  quadratic dual.
 - `'A'` = the causal attention of ch. 11, through
   `d2l.TransformerBlock`'s `attn_factory` hook.
+- Printed parameter counts: 58,544 / 57,984 / 58,404 — spread < 1%.
 :::
 
 ::: {.slide title="Three lessons before training"}
@@ -1046,27 +1242,35 @@ the attention layer downstream never sees the tokens.
 ::: {.slide title="The sweep: one layer buys back recall"}
 @!hybrids-the-recall-sweep-2
 
-- Linear: steady degradation, collapse at 64 pairs (state $8 \times
-  8$ per head — the capacity law's prediction).
+- Linear: degradation, then collapse at 64 pairs — the crowding
+  heuristic's cliff for $8 \times 8$ head states (a diagnostic
+  analogy, not a theorem about this trained stack).
 - Hybrid = 3/4 the *same* recurrence + one mid-stack attention layer:
-  attention-level recall exactly where the linear stack breaks.
+  **1.000 at every load (PyTorch)**; JAX dips to ~0.92–0.94 mid-sweep,
+  then 0.99–1.00 at the loads that break the linear stack. Attention:
+  1.000 throughout.
 :::
 
-::: {.slide title="Perplexity is blind"}
+::: {.slide title="Perplexity misses the deficit"}
 Same three stacks as character LMs on *The Time Machine*:
 
 @!hybrids-the-language-modeling-panel
 
-- All within a tenth of a nat; the **pure-linear model beats pure
-  attention** — while collapsing on recall.
-- The dissociation is why the field needed MQAR and needle probes: the
-  training objective never saw the deficit.
+- All within ~0.1 nat; the **pure-linear model matches or
+  beats pure attention** — while collapsing on recall. (One pass, one
+  small corpus, one seed: a demonstration.)
+- At scale the dissociation is the rule: the perplexity gap sits on
+  the rare recall tokens (Zoology); ratio sweeps move recall, barely
+  perplexity (2507.06457). MQAR and needle probes exist because the
+  training objective did not see the deficit.
 :::
 
-::: {.slide title="The memory bill, measured"}
+::: {.slide title="Persistent decode state, measured"}
 @!hybrids-the-memory-bill-measured
 
-- Attention: grows without bound. Linear: 4 KiB forever.
+- KV cache + recurrent state only — parameters and activations are
+  the same across stacks.
+- Attention: grows linearly. Linear: 4 KiB at every length.
 - Hybrid: **slope = attention fraction** (here 1/4).
 
 . . .
@@ -1079,8 +1283,9 @@ rent.
 - **Ratio:** shipped 5–25% attention; ablation optimum ~8% (NVIDIA);
   DeltaNet-family knee at 3:1 (Kimi ablation). Recall climbs to ~1:3;
   perplexity flat throughout.
-- **Placement:** evenly spread, **never first** — one front attention
-  layer broke Samba's length extrapolation.
+- **Placement:** evenly spread, **not first in any report so far** —
+  one front attention layer broke Samba's length extrapolation. A
+  heuristic from a young design space, not a law.
 - **Parallel** (Hymba, Falcon-H1): fuse per layer; beats sequential in
   controlled ablation.
 - **Sharing** (Zamba2): re-enter two weight-tied attention blocks
@@ -1113,20 +1318,36 @@ where quality saturates, economics decides.
 | Qwen3-Next | 48 | 12, GQA $16{:}2$ | gated DeltaNet | 262K |
 | Kimi Linear | 27 | 7 MLA, NoPE | KDA | 1M |
 
-Every row: evenly spread, never first; the surviving attention wears
+Every row: evenly spread, none first; the surviving attention wears
 every compression of ch. 11.
 :::
 
-::: {.slide title="Distillation, and where this leaves us"}
-Cheap conversion, via the duality: **MOHAWK** distills Phi-1.5 into
-Mamba with ~3B tokens (<1% of scratch); **Mamba-in-the-Llama** keeps
-~1/4 of attention layers — recall survives at 20× training length;
-remove them all and it does not.
+::: {.slide title="Distillation: duality warm-starts, data does the rest"}
+Duality is exact for **linear** attention only; softmax attention is
+not a recurrence in disguise. Conversion is a *learned approximation*:
+
+- **MOHAWK**: match mixing matrices → hidden states → fine-tune;
+  Phi-1.5 → Mamba with ~3B tokens (<1% of scratch).
+- **Mamba-in-the-Llama**: init recurrence from attention projections,
+  keep ~1/4 of attention layers — recall survives at 20× training
+  length; remove them all and it does not.
+:::
+
+::: {.slide title="The chapter in one table"}
+Per layer: decode work / persistent state / training depth / exact?
+
+| architecture | decode | state | depth | exact? |
+|:--|:--|:--|:--|:--|
+| LSTM/GRU | $O(d^2)$ | $O(d)$ | $T$ | no parallel form |
+| S4D, Mamba-1 | $O(dN)$ | $dN$ | $O(\log T)$ | yes |
+| SSD / GLA / DeltaNet | $O(h d_k d_v)$ | $h d_k d_v$ | $T/C$ | yes |
+| softmax attention | $O(td)$ ↑ | $2td$ ↑ | $O(1)$ | by definition |
+| 1-in-4 hybrid | mix | const + cache/4 | mix | per component |
 
 . . .
 
-The fixed state **lost exact recall** (by a theorem) and **won the
-economics** (by a factor that grows with context). Production stopped
-choosing. Kernels → Computational Performance; pretrained stacks → the
-Language Models part.
+The fixed state **lost exact recall** (a counting bound, plus our
+measured collapse) and **won the economics** (by a factor that grows
+with context). Production stopped choosing. Kernels → Computational
+Performance; pretrained stacks → the Language Models part.
 :::

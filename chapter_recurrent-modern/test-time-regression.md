@@ -12,10 +12,16 @@ are weighted, which function class the regressor comes from, and how hard
 the fit is pursued, and the models we have met occupy corners of that
 design cube. Two corners we have not met fall out of the same view: a
 state update whose gate is *derived* rather than designed (Longhorn), and
-a memory that is itself a small neural network trained inside the forward
+a memory that is itself a small neural network adapted inside the forward
 pass (Titans). We end where a regression view must end, with data whose
-distribution drifts, and find that forgetting is not a memory-management
-trick but a statistical necessity.
+distribution drifts, where forgetting becomes a statistical necessity.
+
+*Prerequisites: attention as kernel regression
+(:numref:`sec_attention-pooling`), the matrix-state family and its
+capacity law (:numref:`sec_matrix-state`), the delta rule
+(:numref:`sec_deltanet`), and gradient descent with momentum and weight
+decay (:numref:`chap_optimization`). Every experiment in this section runs
+on a CPU.*
 
 We start small, though, with a thread left hanging in
 :numref:`sec_attention-pooling`: a regression estimator with exactly one
@@ -252,8 +258,11 @@ $$
 :eqlabel:`eq_ttr-memorize`
 
 The regression is solved afresh at every step, on the sequence being
-processed, with no gradient flowing from any pretraining objective: it is
-learning *at test time*. A layer is then specified by three choices:
+processed: it is learning *at test time*. That phrase needs one
+distinction kept sharp, because two learning loops are involved — an
+outer loop that trains the layer and an inner loop that runs inside it —
+and :numref:`subsec_ttr-two-loops` fixes the vocabulary before we lean on
+it. A layer is then specified by three choices:
 
 1. **The weights** $\gamma_i^{(t)}$: which past pairs count, and by how
    much.
@@ -286,24 +295,45 @@ recurrence's does not.
 
 **Linear attention is least squares with a term deleted.** Let
 $\mathcal{M}$ be linear maps $m(\mathbf{k}) = \mathbf{S}^\top \mathbf{k}$
-with uniform weights. Stacking keys and values as rows of $\mathbf{K}_t$
-and $\mathbf{V}_t$, the exact solution of :eqref:`eq_ttr-memorize` is
+with uniform weights. Stack the keys as the rows of $\mathbf{K}_t \in
+\mathbb{R}^{t \times d_k}$ and the values as the rows of $\mathbf{V}_t
+\in \mathbb{R}^{t \times d_v}$. The minimizers of
+:eqref:`eq_ttr-memorize` solve the normal equations
+$\mathbf{K}_t^\top \mathbf{K}_t\, \mathbf{S} = \mathbf{K}_t^\top
+\mathbf{V}_t$, where the $d_k \times d_k$ key covariance
+$\mathbf{K}_t^\top \mathbf{K}_t$ has rank at most $\min(t, d_k)$ — early
+in the sequence it is necessarily singular, so the well-posed statements
+come first: the minimum-norm solution through the pseudoinverse, or a
+ridge term,
 
 $$
 \mathbf{S}_t^\star
-= \big( \mathbf{K}_t^\top \mathbf{K}_t \big)^{-1} \mathbf{K}_t^\top \mathbf{V}_t .
+= \mathbf{K}_t^{+} \mathbf{V}_t
+= \lim_{\lambda \downarrow 0}\,
+\big( \mathbf{K}_t^\top \mathbf{K}_t + \lambda \mathbf{I} \big)^{-1}
+\mathbf{K}_t^\top \mathbf{V}_t,
 $$
 :eqlabel:`eq_ttr-least-squares`
 
-Now pretend the keys are orthonormal, $\mathbf{K}_t^\top \mathbf{K}_t
-\approx \mathbf{I}$, and the inverse disappears:
+with the plain inverse
+$(\mathbf{K}_t^\top \mathbf{K}_t)^{-1} \mathbf{K}_t^\top \mathbf{V}_t$
+legitimate once the covariance has full rank.
+
+Now suppose the design is *white*: $\mathbf{K}_t^\top \mathbf{K}_t
+\approx \mathbf{I}$, that is, the columns of $\mathbf{K}_t$ are
+approximately orthonormal — the keys, in aggregate, have identity
+covariance. (This is a statement about the $d_k$ columns of the design,
+not about the $t$ stored keys being mutually orthogonal; for $t > d_k$
+the rows cannot all be orthonormal.) Then the inverse disappears:
 $\mathbf{S}_t = \mathbf{K}_t^\top \mathbf{V}_t = \sum_{i \le t}
 \mathbf{k}_i \mathbf{v}_i^\top$, the running outer-product state of
 :eqref:`eq_ms-recurrence` with identity transition. Linear attention is a
 memory that skips the covariance correction, and the price of the skipped
-term is precisely the interference sum of :eqref:`eq_ms-retrieval-error`:
-the capacity ceiling we measured in :numref:`subsec_ms-capacity` is the
-statistical bias of this shortcut.
+term is the interference sum of :eqref:`eq_ms-retrieval-error`. Note the
+statistical character of that price: for random independent keys the
+cross-talk is zero *in expectation*, so the capacity ceiling measured in
+:numref:`subsec_ms-capacity` is interference *variance*, not a systematic
+bias.
 
 **Decay is a choice of weights.** Set $\gamma_i^{(t)} =
 \prod_{j=i+1}^{t} \gamma_j$ with per-token discounts $\gamma_j \in (0,
@@ -312,10 +342,16 @@ statistical bias of this shortcut.
 decayed outer products, which is the decay ladder of
 :numref:`sec_matrix-state`, from RetNet's fixed scalar to the
 input-dependent gates of Mamba-2 and GLA. This cashes the promise made
-there: the decayed state is the sufficient statistic of a regression that
-discounts old evidence, and choosing the gate is choosing how fast
-evidence expires. We will see at the end of this section *when* that
-choice is statistically forced.
+there, with the same fine print as above: writing
+$\boldsymbol{\Gamma}_t = \mathrm{diag}(\gamma_1^{(t)}, \ldots,
+\gamma_t^{(t)})$, the decayed state is the weighted cross-moment
+$\mathbf{K}_t^\top \boldsymbol{\Gamma}_t \mathbf{V}_t$ — one half of the
+sufficient pair for weighted least squares. The exact minimizer also
+needs the weighted key covariance $\mathbf{K}_t^\top \boldsymbol{\Gamma}_t
+\mathbf{K}_t$, and dropping it is the identical covariance-deletion
+shortcut. Choosing the gate is choosing how fast evidence expires; we
+will see at the end of this section *when* that choice is statistically
+forced.
 
 **The delta rule is a solver.** Keep the linear class and uniform
 weights, but instead of solving, take one stochastic-gradient step on the
@@ -327,7 +363,8 @@ In the recipe's terms: DeltaNet differs from linear attention not in what
 it remembers but in *how it fits*, an online solver with a per-token step
 size $\beta_t$ in place of no solver at all. Running the same
 gradient-descent solver for several passes, were the sequence to hold
-still, would converge to the exact least-squares memory
+still, would converge — from $\mathbf{S} = \mathbf{0}$ and with a small
+enough step — to the minimum-norm least-squares memory
 :eqref:`eq_ttr-least-squares`.
 
 :numref:`tab_ttr-recipe` assembles the corners, including the two rows
@@ -354,6 +391,48 @@ of :eqref:`eq_ttr-least-squares` with a rank-one update per token; it
 costs more state and more arithmetic than any row above, and the first
 exercise places it on the table.
 
+### Two Loops: What Learns When
+:label:`subsec_ttr-two-loops`
+
+"Learning at test time" invites a confusion this chapter cannot afford,
+so we fix the vocabulary now. Two different quantities adapt, on two
+different schedules (:numref:`fig_ttr-inner-outer`).
+
+The **inner loop** is the regression of :eqref:`eq_ttr-memorize`. Its
+variable is the layer's *state* — the matrix $\mathbf{S}_t$, or the
+memory weights $\mathbf{W}_t$ of the Titans row — which starts fresh for
+every sequence, is updated token by token by the layer's update rule, and
+is discarded when the sequence ends. This loop runs during *every*
+forward pass, in pretraining and at inference alike. At inference it is
+the only loop running: the state adapts online with no labels, because
+the regression targets are the values $\mathbf{v}_t$ that the sequence
+itself supplies, and no parameter of the network changes.
+
+The **outer loop** is ordinary pretraining. Its variables are the layer's
+*learned parameters* $\theta$: the projections that produce
+$\mathbf{q}_t, \mathbf{k}_t, \mathbf{v}_t$, the networks that emit gates
+and step sizes ($\beta_t$, $\alpha_t$, and their kin), the state
+initialization, and any coefficients of the update rule itself. These
+receive gradients from the pretraining objective, and those gradients
+flow *through* the inner updates: a forward pass chains $T$ state
+updates, and backpropagation differentiates the loss through every one of
+them. That is how a model learns to emit write strengths and decay rates
+that make its inner regressor fit well — when :numref:`sec_deltanet`
+trained delta-rule models end to end, the outer loop was shaping the
+inner one.
+
+So "no gradient at test time" is a statement about the outer loop only:
+at inference $\theta$ is frozen and no pretraining objective exists,
+while the inner state keeps adapting. The distinction applies verbatim to
+every row of :numref:`tab_ttr-recipe` — DeltaNet, Longhorn, and Titans
+differ in their inner update rules, and all three learn the coefficients
+of those rules in the outer loop. Readers who know meta-learning will
+recognize the two-level pattern: parameters optimized across sequences,
+state adapted within one.
+
+![Two learning loops. Left: during pretraining, the outer parameters $\theta$ — projections, gate networks, the initial state — parameterize every inner update, and the gradient of the pretraining loss reaches them through the whole chain of inner updates. Right: at inference only the inner loop runs; the state adapts online, with no labels and no update to $\theta$.](../img/mdl-modernrnn-inner-outer.svg)
+:label:`fig_ttr-inner-outer`
+
 ### The Spectrum, Measured
 :label:`subsec_ttr-spectrum`
 
@@ -370,14 +449,26 @@ stays one-dimensional enough to plot. Then we answer the same queries
 five ways: Nadaraya--Watson smoothing (softmax attention, no fitting at
 all), online gradient descent over the stream with one, five, and thirty
 passes (the delta rule, taken increasingly seriously as a solver), and
-the exact batch ridge solve (the converged optimum). Alongside test error
-we record each online fit's distance to the batch fit on the query grid,
-the direct measure of "how far along the spectrum" a solver sits.
+the exact batch ridge solve.
+
+One alignment matters and is easy to get wrong: a solver spectrum is
+meaningful only if every solver pursues the *same objective*. We
+therefore give each online step the same $L2$ term the batch solve
+carries — a small per-step shrink of the weights, the decoupled decay of
+this chapter's gated cells — so that online gradient descent and the
+batch solve are two solvers of one ridge problem, and "distance to the
+optimum" means distance to that shared problem's minimizer.
+Nadaraya--Watson stays what it has always been: a different *estimator
+family*, with its own similarity and normalization, not an iteration
+count of this solver. Alongside test error we record each parametric
+fit's value of the shared objective and its distance to the batch
+solution on the query grid, the direct measures of how far along the
+spectrum a solver sits.
 
 ```{.python .input #test-time-regression-the-spectrum-measured-1}
 %%tab pytorch
 torch.manual_seed(1)
-n_ctx, num_feats = 80, 128
+n_ctx, num_feats, lam = 80, 128, 1e-2
 x_ctx = torch.rand(n_ctx) * 6 - 3
 y_ctx = torch.sin(1.5 * x_ctx) + 0.3 * x_ctx + 0.35 * torch.randn(n_ctx)
 x_q = torch.linspace(-3, 3, 400)
@@ -392,29 +483,39 @@ def nw_attention(x_q, sigma=0.12):           # Softmax attention over the pairs
     logits = -(x_q[:, None] - x_ctx[None, :])**2 / (2 * sigma**2)
     return torch.softmax(logits, dim=1) @ y_ctx
 
-def online_gd(passes, beta=0.06):            # The delta rule in feature space
-    feats, w_hat = phi(x_ctx), torch.zeros(num_feats)
-    for _ in range(passes):
-        for f, v in zip(feats, y_ctx):
-            w_hat = w_hat + beta * (v - w_hat @ f) * f
-    return phi(x_q) @ w_hat
-
 feats = phi(x_ctx)
-w_batch = torch.linalg.solve(                # The converged optimum (ridge)
-    feats.T @ feats + 1e-2 * torch.eye(num_feats), feats.T @ y_ctx)
+
+def objective(w):                            # The one shared ridge objective
+    return float(0.5 * ((feats @ w - y_ctx)**2).sum() + 0.5 * lam * (w @ w))
+
+def online_gd(passes, beta=0.06):            # Delta rule + per-step decay
+    w_hat = torch.zeros(num_feats)
+    for _ in range(passes):
+        for f, v in zip(feats, y_ctx):       # SGD steps on the same objective
+            w_hat = w_hat + beta * ((v - w_hat @ f) * f - lam / n_ctx * w_hat)
+    return w_hat
+
+w_batch = torch.linalg.solve(                # Exact minimizer, same objective
+    feats.T @ feats + lam * torch.eye(num_feats), feats.T @ y_ctx)
 f_batch = phi(x_q) @ w_batch
 
+ws = {f'online GD, {p} pass' + ('es' if p > 1 else ''): online_gd(p)
+      for p in (1, 5, 30)}
 fits = {'Nadaraya-Watson': nw_attention(x_q)}
-for passes in (1, 5, 30):
-    fits[f'online GD, {passes} pass' + ('es' if passes > 1 else '')] = \
-        online_gd(passes)
+fits.update({name: phi(x_q) @ w for name, w in ws.items()})
 fits['batch ridge'] = f_batch
+objs = {name: objective(w) for name, w in ws.items()}
+objs['batch ridge'] = objective(w_batch)
 dist = {name: float(((f - f_batch)**2).mean()**0.5) for name, f in fits.items()}
-print(f'{"solver":>22} {"test MSE":>10} {"rmse to batch fit":>19}')
+print(f'{"solver":>22} {"test MSE":>9} {"objective":>10} {"dist to opt":>12}')
 for name, f in fits.items():
-    print(f'{name:>22} {float(((f - y_q)**2).mean()):>10.3f} {dist[name]:>19.3f}')
-gd = [dist[k] for k in fits if k.startswith('online')]
+    obj = f'{objs[name]:>10.3f}' if name in objs else f'{"--":>10}'
+    print(f'{name:>22} {float(((f - y_q)**2).mean()):>9.3f} {obj} '
+          f'{dist[name]:>12.3f}')
+gd_names = [k for k in fits if k.startswith('online')]
+gd, og = [dist[k] for k in gd_names], [objs[k] for k in gd_names]
 assert gd[0] > gd[1] > gd[2]         # More solving moves closer to the optimum
+assert og[0] > og[1] > og[2] > objs['batch ridge']   # On the SAME objective
 assert float(((f_batch - y_q)**2).mean()) < \
     float(((fits['online GD, 1 pass'] - y_q)**2).mean())
 ```
@@ -422,7 +523,7 @@ assert float(((f_batch - y_q)**2).mean()) < \
 ```{.python .input #test-time-regression-the-spectrum-measured-1}
 %%tab jax
 kc, kn, kw, kb = jax.random.split(jax.random.key(1), 4)
-n_ctx, num_feats = 80, 128
+n_ctx, num_feats, lam = 80, 128, 1e-2
 x_ctx = jax.random.uniform(kc, (n_ctx,)) * 6 - 3
 y_ctx = (jnp.sin(1.5 * x_ctx) + 0.3 * x_ctx
          + 0.35 * jax.random.normal(kn, (n_ctx,)))
@@ -438,45 +539,61 @@ def nw_attention(x_q, sigma=0.12):           # Softmax attention over the pairs
     logits = -(x_q[:, None] - x_ctx[None, :])**2 / (2 * sigma**2)
     return jax.nn.softmax(logits, axis=1) @ y_ctx
 
-def online_gd(passes, beta=0.06):            # The delta rule in feature space
+feats = phi(x_ctx)
+
+def objective(w):                            # The one shared ridge objective
+    return float(0.5 * ((feats @ w - y_ctx)**2).sum() + 0.5 * lam * (w @ w))
+
+def online_gd(passes, beta=0.06):            # Delta rule + per-step decay
     def step(w_hat, fv):
-        f, v = fv
-        return w_hat + beta * (v - w_hat @ f) * f, None
+        f, v = fv                            # SGD steps on the same objective
+        return w_hat + beta * ((v - w_hat @ f) * f - lam / n_ctx * w_hat), None
     w_hat = jnp.zeros(num_feats)
     for _ in range(passes):
-        w_hat, _ = jax.lax.scan(step, w_hat, (phi(x_ctx), y_ctx))
-    return phi(x_q) @ w_hat
+        w_hat, _ = jax.lax.scan(step, w_hat, (feats, y_ctx))
+    return w_hat
 
-feats = phi(x_ctx)
-w_batch = jnp.linalg.solve(                  # The converged optimum (ridge)
-    feats.T @ feats + 1e-2 * jnp.eye(num_feats), feats.T @ y_ctx)
+w_batch = jnp.linalg.solve(                  # Exact minimizer, same objective
+    feats.T @ feats + lam * jnp.eye(num_feats), feats.T @ y_ctx)
 f_batch = phi(x_q) @ w_batch
 
+ws = {f'online GD, {p} pass' + ('es' if p > 1 else ''): online_gd(p)
+      for p in (1, 5, 30)}
 fits = {'Nadaraya-Watson': nw_attention(x_q)}
-for passes in (1, 5, 30):
-    fits[f'online GD, {passes} pass' + ('es' if passes > 1 else '')] = \
-        online_gd(passes)
+fits.update({name: phi(x_q) @ w for name, w in ws.items()})
 fits['batch ridge'] = f_batch
+objs = {name: objective(w) for name, w in ws.items()}
+objs['batch ridge'] = objective(w_batch)
 dist = {name: float(((f - f_batch)**2).mean()**0.5) for name, f in fits.items()}
-print(f'{"solver":>22} {"test MSE":>10} {"rmse to batch fit":>19}')
+print(f'{"solver":>22} {"test MSE":>9} {"objective":>10} {"dist to opt":>12}')
 for name, f in fits.items():
-    print(f'{name:>22} {float(((f - y_q)**2).mean()):>10.3f} {dist[name]:>19.3f}')
-gd = [dist[k] for k in fits if k.startswith('online')]
+    obj = f'{objs[name]:>10.3f}' if name in objs else f'{"--":>10}'
+    print(f'{name:>22} {float(((f - y_q)**2).mean()):>9.3f} {obj} '
+          f'{dist[name]:>12.3f}')
+gd_names = [k for k in fits if k.startswith('online')]
+gd, og = [dist[k] for k in gd_names], [objs[k] for k in gd_names]
 assert gd[0] > gd[1] > gd[2]         # More solving moves closer to the optimum
+assert og[0] > og[1] > og[2] > objs['batch ridge']   # On the SAME objective
 assert float(((f_batch - y_q)**2).mean()) < \
     float(((fits['online GD, 1 pass'] - y_q)**2).mean())
 ```
 
-The spectrum lands as the recipe predicts. A single online pass, the
-budget an actual recurrent layer gets, visibly underfits: its test error
-is several times the batch solve's. A few passes already sit near the
-batch fit, thirty are closer still, and the distance-to-batch column
-shrinks several-fold from one pass to thirty; the
-asserts pin the ordering rather than the digits, which move with the
-seed. Nadaraya--Watson sits off the parametric axis entirely, competitive
-in error yet fitting nothing, because it keeps all eighty pairs and
-smooths at query time. The three characters are easiest to tell apart by
-their fits:
+The spectrum lands as the recipe predicts, and every parametric row is
+now graded on one scale. A single online pass, the budget an actual
+recurrent layer gets, visibly underfits: its test error is several times
+the batch solve's. More passes improve both solver columns
+monotonically — the shared objective falls toward the batch value, and
+the distance to the batch fit shrinks severalfold from one pass to
+thirty; the asserts pin these orderings rather than the digits, which
+move with the seed. One reading of the table deserves care: the
+"optimum" is the minimizer of the *training* objective, and on *test*
+error an unconverged iterate can land near it, in some of our runs
+slightly below it — stopping a solver early acts as a regularizer, so
+the objective column, not the test column, is what orders the solvers.
+Nadaraya--Watson sits off the parametric axis entirely, competitive in
+error yet fitting nothing, because it keeps all eighty pairs and smooths
+at query time. The three characters are easiest to tell apart by their
+fits:
 
 ```{.python .input #test-time-regression-the-spectrum-measured-2}
 %%tab pytorch
@@ -552,9 +669,12 @@ stated; multiplying out and collecting terms gives
 
 Look at what emerged. The update has exactly the delta-rule shape of
 :numref:`sec_deltanet`, erase along the key, write the correction, but
-its step size $\Delta_t$ was not designed, parameterized, or learned: it
-fell out of the algebra. And it arrives with guarantees the explicit step
-lacks. Since $\Delta_t\, \mathbf{k}_t^\top \mathbf{k}_t = \beta_t
+the functional *form* of its step size $\Delta_t$ was not designed: it
+fell out of the algebra. What remains learned is the coefficient that
+drives it — the model emits $\beta_t$, and $\Delta_t = \beta_t / (1 +
+\beta_t \mathbf{k}_t^\top \mathbf{k}_t)$ inherits that data dependence.
+And the derived form arrives with guarantees the explicit step lacks.
+Since $\Delta_t\, \mathbf{k}_t^\top \mathbf{k}_t = \beta_t
 \mathbf{k}_t^\top \mathbf{k}_t / (1 + \beta_t \mathbf{k}_t^\top
 \mathbf{k}_t) < 1$ for every $\beta_t \ge 0$, the transition's eigenvalue
 along the key stays in $(0, 1]$: the implicit step can approach a full
@@ -564,8 +684,9 @@ delta rule buys stability by constraining its gate to a bounded range;
 the implicit rule is stable by construction. For small $\beta_t$,
 $\Delta_t \approx \beta_t$ and the two rules coincide. Compare the state
 transition of :numref:`sec_mamba`, whose input-dependent gate is a
-carefully chosen parameterization, a good *design*; here the same kind of
-gate is a *theorem*. The distinction is worth having because derived
+carefully chosen parameterization, a good *design*; here the *form* of
+the gate is a theorem, and only its coefficient is left to the model to
+learn. The distinction is worth having because derived
 updates generalize: change the objective and the machinery re-derives the
 architecture, which is exactly how the models of the next subsection
 arise. Longhorn's authors report that this single change, the implicit
@@ -854,9 +975,15 @@ assert after < before / 5
 ```
 
 Retrieval error falls by more than an order of magnitude from the
-empty-memory baseline, on a CPU, in well under a second: a neural network
-was trained, from scratch, inside what is conceptually a single forward
-pass over $64$ tokens. In the full architecture this neural memory is one
+empty-memory baseline, on a CPU, in well under a second: the inner loop
+of :numref:`subsec_ttr-two-loops` ran alone, a fresh neural memory
+adapting online inside what is conceptually a single forward pass over
+$64$ tokens. Keep the two loops straight here: in this standalone demo
+every outer quantity — the coefficients $\theta, \eta$, the
+initialization — was set by hand, whereas in the full Titans model those
+are outer-loop parameters, learned during pretraining together with the
+projections that produce keys and values, so the model learns *how* its
+memory should adapt. In the full architecture this neural memory is one
 branch of a layer; Titans studies three ways of wiring it to attention,
 as *context* (retrieved memories are prepended to the window that
 attention reads, MAC), as a *gate* (the memory branch and a
@@ -875,8 +1002,10 @@ it, and this book stops at the recipe.
 One question from the recipe is still open. The weights $\gamma_i^{(t)}$
 are the *statistical* knob, and everything measured so far, capacity in
 :numref:`subsec_ms-capacity`, the spectrum above, treated the stream as
-stationary, in which case uniform weights are the right call: more
-evidence, better fit. So when is decay not merely harmless but
+stationary. For a fixed target, a linear model that contains it, and
+constant parameters, uniform weights are then the efficient choice:
+every observation is equally informative about the same quantity. So
+when is decay not merely harmless but
 *necessary*? When the quantity being regressed refuses to sit still. This
 is the native habitat of forecasting, and it deserves a demonstration,
 because it is the cleanest statistical argument for why sequence models
@@ -935,7 +1064,7 @@ assert tails['uniform LS'] > 2 * tails['decayed LS']
 assert tails['uniform LS'] > 2 * tails['implicit step']
 ```
 
-The curves separate exactly as the regression view predicts. For the
+The curves separate as the regression view predicts. For the
 first few dozen steps the three trackers are indistinguishable, since
 with little drift accumulated, all evidence is good evidence. Then
 uniform least squares goes *stale*: its error climbs steadily and never
@@ -947,17 +1076,29 @@ and the implicit step tracks nearly as well with no solve, no matrix,
 and a step size $\Delta_t$ it derived for itself.
 
 This is the forecasting connection, and it is the last piece of the
-chapter's argument. A sequence model predicting a nonstationary stream,
-which is to say, any interesting stream, a market, a conversation, a
-climate, is exactly this experiment writ large: it must regress recent
-structure onto the present without being anchored by a past that has
-expired. Decay implements a *belief about how fast the world changes*,
-and because the right rate varies, token by token, the input-dependent
-gates of :numref:`sec_matrix-state`, the write strengths of
-:numref:`sec_deltanet`, and the surprise-driven learning rates of Titans
-are all mechanisms for letting the data choose its own discount. Test-time
-learning is not an exotic trick bolted onto sequence models. It is what
-adaptation to drift *is*.
+chapter's argument. A sequence model predicting a nonstationary stream —
+a market, a conversation — is this experiment writ large: it must
+regress recent structure onto the present without being anchored by a
+past that has expired. Decay implements a *belief about how fast the
+world changes*. In the cell above that belief was ours, not the data's:
+we fixed $\gamma = 0.95$ and $\beta = 1$ by hand, and a differently
+paced drift would want different values. The trained models of this
+chapter emit these coefficients per token — the input-dependent gates of
+:numref:`sec_matrix-state`, the write strengths of :numref:`sec_deltanet`,
+the surprise-driven learning rates of Titans — which is what lets the
+data set its own discount, a capability this fixed-coefficient cell
+motivates rather than demonstrates. The conclusion that the experiment
+does support is the scoped one: forgetting reduces tracking error under
+drift, at the price of statistical efficiency on stationary stretches.
+
+**What this section's experiments do and do not show.** The bandwidth,
+spectrum, Longhorn, Titans, and drift cells are identity checks and
+mechanism illustrations on synthetic streams: they verify derivations
+(the closed-form implicit step), exhibit solver behavior (underfit
+approaching the shared optimum; momentum softening overwrites; staleness
+under drift), and settle nothing about language modeling at scale. The
+production-scale claims — which update rules ship, at what quality —
+rest on the cited papers.
 
 ## Summary
 
@@ -971,14 +1112,21 @@ this book introduced attention through kernel regression, and our opening
 experiment learned the one parameter that classical estimator has, its
 bandwidth, by leave-one-out gradient descent, sharpening its attention
 weights. Linear attention is least squares with the key covariance
-deleted, its capacity ceiling the bias of that deletion; decay is
-weighted least squares; the delta rule is one explicit gradient step, and
-the measured spectrum from one online pass to the batch solve confirms
-that more solving means closer to the optimum. The two new models were
-both *derived*: Longhorn's gate $\Delta_t$ is the closed-form implicit
-step of a per-token objective, stable by construction where explicit
-steps must be clamped, and Titans trains a deep memory inside the forward
-pass with momentum as persisting surprise and weight decay as
+deleted, its capacity ceiling the interference of that deletion; decay
+keeps the weighted cross-moment of a weighted least-squares problem; the
+delta rule is one explicit gradient step, and the measured spectrum —
+every parametric solver on one shared ridge objective — confirms that
+more solving lands closer to that objective's optimum. Throughout, the
+two-loop distinction of :numref:`subsec_ttr-two-loops` governs what
+"learning at test time" means: the inner state adapts online in every
+forward pass, while the outer parameters, the projections, gate
+networks, and initializations, receive gradients only during
+pretraining, flowing through the chain of inner updates. The two new
+models were both *derived*: the *form* of Longhorn's gate $\Delta_t$ is
+the closed-form implicit step of a per-token objective, its coefficient
+$\beta_t$ still learned, stable by construction where explicit steps
+must be clamped, and Titans adapts a deep memory online inside the
+forward pass with momentum as persisting surprise and weight decay as
 forgetting, a softer overwriter than the delta rule but an expressively
 deeper one. Against a drifting target, exact uniform regression goes
 stale while decayed and implicit solvers track, which is the statistical
@@ -989,7 +1137,8 @@ in :numref:`sec_hybrids`.
 
 ## Exercises
 
-1. **Recursive least squares joins the table.** The exact solution
+1. **[short-code]** **Recursive least squares joins the table.** The
+   exact solution
    :eqref:`eq_ttr-least-squares` can be maintained online: with
    $\mathbf{P}_t = (\mathbf{K}_t^\top \mathbf{K}_t + \lambda
    \mathbf{I})^{-1}$, use the Sherman--Morrison identity to derive the
@@ -999,31 +1148,40 @@ in :numref:`sec_hybrids`.
    pass it matches the batch ridge fit to numerical precision. What does
    it cost per token in memory and arithmetic compared with the delta
    rule, and where does it sit in :numref:`tab_ttr-recipe`?
-1. Derive :eqref:`eq_ttr-longhorn-gate` yourself: write the stationarity
+1. **[conceptual]** Derive :eqref:`eq_ttr-longhorn-gate` yourself: write
+   the stationarity
    condition of :eqref:`eq_ttr-longhorn-objective`, apply
    Sherman--Morrison, and check the two limits $\beta_t \to 0$ (explicit
    gradient step) and $\beta_t \to \infty$ (exact interpolation of the
    newest pair). For unit-norm keys, what range does $\Delta_t$ cover?
-1. In :numref:`subsec_ttr-bandwidth`, remove the leave-one-out masking
+1. **[short-code]** In :numref:`subsec_ttr-bandwidth`, remove the
+   leave-one-out masking
    and train $w$ on the plain training error. Report where $w$ goes and
    what the fit looks like, then explain why a *causal* memory, which can
    only regress pairs from strictly earlier steps, gets the exclusion for
    free.
-1. With unit-norm keys and queries, expand $\|\mathbf{q} -
+1. **[conceptual]** With unit-norm keys and queries, expand $\|\mathbf{q} -
    \mathbf{k}\|^2$ to show the Gaussian kernel of
    :eqref:`eq_ttr-parametric-nw` equals $\exp(\mathbf{q}^\top
    \mathbf{k}\, w^2)$ up to query-independent factors, so the learned
    bandwidth is a learned softmax temperature. Which normalization
    schemes in modern attention stacks make this correspondence exact?
-1. On the drifting stream of :numref:`subsec_ttr-tracking`, add momentum
+1. **[short-code]** On the drifting stream of
+   :numref:`subsec_ttr-tracking`, add momentum
    to the implicit tracker as in :eqref:`eq_ttr-titans`. Sweep $\eta \in
    \{0, 0.5, 0.9\}$ under (a) the random-walk drift above and (b) a
    *consistent* drift that rotates $\mathbf{w}^*_t$ steadily in a fixed
    plane. When does past surprise help, and why?
-1. In the spectrum experiment, the thirty-pass fit's distance to the
-   ridge solution does not go to zero. Give two reasons why, one about
-   the solver's step size, one about which problem each is solving, and
-   check both by shrinking $\beta$ and by shrinking the ridge parameter.
+1. **[short-code]** In the spectrum experiment, the thirty-pass fit's
+   distance to the batch solution is small but not zero. Explain the two
+   remaining causes, the fixed step size $\beta$ and the finite number
+   of passes over one fixed ordering of the stream, and check both by
+   shrinking $\beta$ while increasing the passes. Then remove the $L2$
+   term from the online steps only and rerun: the distance now stalls at
+   a floor that no number of passes removes, because the online and
+   batch solvers no longer share an objective. Which solution does plain
+   online gradient descent from $\mathbf{w} = \mathbf{0}$ approach
+   instead?
 
 [Discussions](https://d2l.discourse.group/)
 
@@ -1096,19 +1254,34 @@ Three choices fix a layer:
 . . .
 
 Softmax attention **is** the Nadaraya–Watson estimator — ch. 10's analogy
-was an identity. Linear attention's capacity ceiling = the bias of the
-deleted covariance term.
+was an identity. Linear attention's capacity ceiling = the interference
+of the deleted covariance term (zero in expectation — variance, not
+bias).
+:::
+
+::: {.slide title="Two loops: what learns when"}
+![Left — pretraining updates the outer parameters through every inner update. Right — at inference only the inner loop runs.](../img/mdl-modernrnn-inner-outer.svg){width=100%}
+
+- **Inner loop**: the state $\mathbf{S}_t$ — fresh per sequence, adapts
+  token by token, runs in *every* forward pass. No labels at inference:
+  the targets are the sequence's own values.
+- **Outer loop**: projections, gate networks, $\mathbf{S}_0$ — get
+  gradients **through** the chain of inner updates; frozen at inference.
+- Applies verbatim to DeltaNet, Longhorn, Titans.
 :::
 
 ::: {.slide title="The spectrum, measured"}
-One dataset, one feature space, five solvers:
+One dataset, one feature space, one **shared ridge objective** — five
+solvers:
 
 @!test-time-regression-the-spectrum-measured-1
 
-- One online pass underfits; more passes approach the batch fit
-  (the distance to it shrinks several-fold).
-- Nadaraya–Watson: competitive, but it *fits nothing* — it keeps every
-  pair.
+- One online pass underfits; more passes fall monotonically toward the
+  optimum — in objective *and* in distance to the batch fit.
+- Test error is not the objective: an unconverged iterate can edge past
+  the optimum there (early stopping as a regularizer).
+- Nadaraya–Watson: a different estimator family — it *fits nothing*, it
+  keeps every pair.
 :::
 
 ::: {.slide title="Three characters"}
@@ -1128,10 +1301,12 @@ $$\mathbf{s}_t = \mathop{\mathrm{argmin}}_{\mathbf{s}} \|\mathbf{s} - \mathbf{s}
 
 $$\mathbf{s}_t = (\mathbf{I} - \Delta_t \mathbf{k}_t \mathbf{k}_t^\top)\, \mathbf{s}_{t-1} + \Delta_t v_t \mathbf{k}_t, \qquad \Delta_t = \frac{\beta_t}{1 + \beta_t \mathbf{k}_t^\top \mathbf{k}_t}$$
 
-- Delta-rule shape, but $\Delta_t$ is a **theorem**, not a design:
+- Delta-rule shape; the **form** of $\Delta_t$ is a theorem, its
+  coefficient $\beta_t$ still learned. And
   $\Delta_t \mathbf{k}_t^\top \mathbf{k}_t < 1$ — stable for *any*
   $\beta_t$.
-- Mamba's gate is a design choice; Longhorn derives it.
+- Mamba parameterizes its gate; Longhorn derives the form and learns
+  only the coefficient.
 :::
 
 ::: {.slide title="Closed form == argmin"}
@@ -1145,7 +1320,8 @@ brute-force gradient descent on the objective:
 :::
 
 ::: {.slide title="Titans: surprise, momentum, forgetting"}
-The memory is a **module**, trained during the forward pass:
+The memory is a **module**, adapted online during the forward pass (the
+inner loop; the full model learns its coefficients in the outer loop):
 
 $$\mathbf{U}_t = \eta_t \mathbf{U}_{t-1} - \theta_t \nabla_{\mathbf{W}} \ell(\mathbf{W}_{t-1}; \mathbf{k}_t, \mathbf{v}_t), \qquad \mathbf{W}_t = (1 - \alpha_t) \mathbf{W}_{t-1} + \mathbf{U}_t$$
 
@@ -1172,13 +1348,17 @@ writing superseded values.
   solver, right class, *wrong weights*.
 - Decayed LS tracks; the implicit step tracks with no solve at all.
   Decay = a belief about how fast the world changes.
+- Discount fixed by hand here ($\gamma = 0.95$); trained models emit it
+  per token. Forgetting buys tracking under drift, costs efficiency on
+  stationary stretches.
 :::
 
 ::: {.slide title="Where this leaves the chapter"}
 - One problem: memorize by weighted regression, retrieve at the query.
 - Softmax attention = Nadaraya–Watson; linear attention = LS with a term
-  deleted; decay = weighted LS; delta = one SGD step; Longhorn = the
-  implicit step, gate derived; Titans = a deep memory, optimizer inside.
+  deleted; decay = the weighted cross-moment of weighted LS; delta = one
+  SGD step; Longhorn = the implicit step, gate form derived; Titans = a
+  deep memory, optimizer inside.
 - Forgetting is statistics, not housekeeping: stationary streams want
   uniform weights, drifting streams force decay.
 

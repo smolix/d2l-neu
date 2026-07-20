@@ -5,18 +5,22 @@ style defined in ``gen_mdl_figures.py``.
 
 Two figures:
 
-  * the hybrid cache curve -- decode-time memory against context length for a
-    32-layer model at production width: a pure transformer's KV cache grows
-    linearly (32 GB at 256K), a pure recurrent stack is flat (64 MB), and a
-    4-of-32 hybrid pays exactly the attention fraction of the transformer
-    bill.  All three curves are computed from the KV-cache byte formula of
-    the transformers chapter plus the Mamba-2 state-size accounting;
+  * the hybrid cache curve -- persistent decode state against context length
+    for a 32-layer model at production width: a pure transformer's KV cache
+    grows linearly (32 GB at 256K), a pure recurrent stack is flat (64 MB),
+    and a 4-of-32 hybrid pays exactly the attention fraction of the
+    transformer bill.  All three curves are computed from the KV-cache byte
+    formula of the transformers chapter plus the Mamba-2 state-size
+    accounting;
   * the hybrid stack schematic -- four shipped answers to "where does the
-    attention go": Jamba (attention every 8th layer), Nemotron-H (a strict
-    11-layer period, never at the front), Samba (sliding-window attention on
-    every second layer, no global attention at all), Zamba2 (two weight-shared
-    attention blocks re-entered along a Mamba-2 backbone).  Attention layer
-    positions are the config-verified ones from the section's recipe table.
+    attention go": Jamba 52B (attention every 8th layer), Nemotron-H 8B (a
+    strict 11-layer period, never at the front), Samba 3.8B (sliding-window
+    attention on every second layer, no global attention at all), Zamba2 7B
+    (two weight-shared attention blocks re-entered 13 times along an 81-layer
+    Mamba-2 backbone; the released config has num_hidden_layers=81 with 13
+    hybrid positions).  Layer counts and attention positions are the
+    config-verified ones from the section's recipe table, with the model
+    variant named in every label.
 
 Run with the repo's pytorch venv:
 
@@ -88,7 +92,7 @@ def fig_hybrid_cache():
     ax.minorticks_off()
     ax.tick_params(colors="black")
     ax.set_xlabel("context length (tokens)", fontsize=13, color="black")
-    ax.set_ylabel("decode-time memory", fontsize=13, color="black")
+    ax.set_ylabel("persistent decode state", fontsize=13, color="black")
     for spine in ("left", "bottom"):
         ax.spines[spine].set_color("black")
     ax.grid(True, which="major", linestyle="--", color=LIGHT, lw=0.8)
@@ -103,14 +107,16 @@ def fig_hybrid_cache():
 # (name, total layers, dict of special positions).  Positions are 1-indexed
 # from the input; verified against each model's released config / report.
 STACKS = [
-    ("Jamba\n32 layers", 32,
+    ("Jamba 52B\n32 layers", 32,
      {"attn": [4, 12, 20, 28], "swa": [], "shared": []}),
-    ("Nemotron-H\n52 layers", 52,
+    ("Nemotron-H 8B\n52 layers", 52,
      {"attn": [8, 19, 30, 41], "swa": [], "shared": []}),
-    ("Samba\n64 layers", 64,
+    ("Samba 3.8B\n64 layers", 64,
      {"attn": [], "swa": list(range(2, 65, 2)), "shared": []}),
-    ("Zamba2\n54 layers", 54,
-     {"attn": [], "swa": [], "shared": list(range(6, 55, 6))}),
+    # Zamba2-7B released config: num_hidden_layers=81, 13 hybrid (shared
+    # attention) positions, one every 6 backbone layers.
+    ("Zamba2 7B\n81 layers", 81,
+     {"attn": [], "swa": [], "shared": list(range(6, 82, 6))}),
 ]
 
 
@@ -163,7 +169,7 @@ def fig_hybrid_stacks():
               handlelength=1.2, handleheight=1.2)
 
     ax.set_xlim(-2.4, len(STACKS) * (cell_w + gap) - gap + 0.4)
-    ax.set_ylim(-9.5, 65)
+    ax.set_ylim(-9.5, 82)
     ax.axis("off")
     fl.save(fig, "mdl-modernrnn-hybrid-stacks")
 

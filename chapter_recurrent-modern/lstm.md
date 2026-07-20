@@ -28,6 +28,11 @@ recurrent unit (GRU) as its streamlined descendant, then a brief look at
 two structural axes (depth and bidirectionality), and finally a survey of
 where gating lives today.
 
+*Prerequisites: the RNN language-modeling pipeline of
+:numref:`sec_rnn-scratch` (data, scaffold, and training recipe are reused
+verbatim) and the gradient analysis of
+:numref:`subsec_bptt-gradient-pathologies`.*
+
 ```{.python .input #lstm-gated-recurrent-networks}
 %%tab pytorch
 %matplotlib inline
@@ -49,10 +54,16 @@ import math
 
 ## Memory Needs a Controller
 
-Start from what the gradient analysis demands. The contribution of a
-dependency $k$ steps back scales as $\rho^k$, where $\rho$ is the spectral
-radius of the state-to-state Jacobian, and the only value of $\rho$ that
-neither buries nor explodes distant information is $1$. The simplest
+Start from what the gradient analysis demands. As motivation, take the
+simplest caricature: if the state-to-state Jacobian were one fixed
+matrix, the contribution of a dependency $k$ steps back would scale
+asymptotically as $\rho^k$, where $\rho$ is the spectral radius, and the
+only value of $\rho$ that neither buries nor explodes distant information
+is $1$. (The full story is subtler — a product of time-varying,
+generally non-normal Jacobians can grow for many steps even with every
+eigenvalue inside the unit circle, a phenomenon
+:numref:`sec_mdl-nonnormal-transient` develops — but the caricature
+points at the right target.) The simplest
 recurrence with that property is an *accumulator*,
 
 $$
@@ -65,8 +76,9 @@ matter how many steps they travel. Additive updates, not repeated matrix
 multiplication, are the memory-friendly primitive.
 
 But a pure accumulator is a terrible memory. It adds *everything*, forever:
-irrelevant tokens pile onto relevant ones, the state grows without bound,
-and there is no way to discard a fact once it has stopped mattering. A
+irrelevant tokens pile onto relevant ones, the sum typically grows with
+sequence length, and there is no way to discard a fact once it has stopped
+mattering. A
 useful memory must make decisions. Should this input be written down?
 Should this stored value be kept or cleared? Should the memory influence
 the output right now, or stay silent? What turns these discrete-sounding
@@ -161,11 +173,21 @@ where $\odot$ is the elementwise (Hadamard) product.
 Follow the top path of :numref:`fig_lstm_cell` from left to right. The cell
 state is touched only by an elementwise product and an elementwise sum; no
 matrix multiplication and no saturating nonlinearity stands between
-$\mathbf{C}_{t-1}$ and $\mathbf{C}_t$. Its Jacobian is
+$\mathbf{C}_{t-1}$ and $\mathbf{C}_t$. Along this *direct* path — gates
+and candidate held fixed — the Jacobian is
 $\partial \mathbf{C}_t / \partial \mathbf{C}_{t-1} =
 \textrm{diag}(\mathbf{F}_t)$, so with the forget gate near $1$ and the
 input gate near $0$ the cell holds its value, and the gradient holds with
-it, across arbitrarily many steps. This protected additive path is the
+it, across arbitrarily many steps. To be precise about what is and is not
+guaranteed: $\mathbf{F}_t$, $\mathbf{I}_t$, and $\tilde{\mathbf{C}}_t$
+all depend on $\mathbf{H}_{t-1}$, which depends on $\mathbf{C}_{t-1}$, so
+the *total* derivative of $\mathbf{C}_t$ with respect to
+$\mathbf{C}_{t-1}$ carries additional terms that flow through the gates
+and reintroduce exactly the matrix products the direct path avoids
+(:numref:`sec_mdl-nonnormal-transient` analyzes such Jacobian products).
+The architecture supplies a well-conditioned additive route and lets
+learning control it; it does not guarantee that every gradient is
+preserved. This protected additive path is the
 *constant error carousel* that gives the LSTM its resistance to vanishing
 gradients: it is precisely the controlled accumulator we asked for. The
 output gate adds a subtler ability: a cell can accumulate evidence silently
@@ -453,10 +475,14 @@ trainer.fit(model, data)
 
 The trained model reaches a somewhat better perplexity than our
 from-scratch cell. The difference is not the arithmetic, which is
-identical, but the starting point: framework cells ship initialization
-schemes refined over many years (fan-in-scaled weights, orthogonal
-recurrent matrices, and in some frameworks forget-gate biases set to 1)
-where our teaching code drew every weight from the same small Gaussian.
+identical, but the starting point, and it is worth being precise about
+what each framework actually does. PyTorch's `nn.LSTM` draws every
+weight *and bias* uniformly at scale $1/\sqrt{h}$; Flax's `LSTMCell`
+pairs fan-in-scaled input weights with orthogonal recurrent matrices and
+zero biases. Both are better starting points than our teaching code's
+small Gaussian, and they differ from each other — one reason the
+two tabs' numbers do not match. Note what neither default includes: the
+forget-gate bias of 1 recommended above remains yours to set.
 At a fixed training budget, how you start matters.
 
 Reading the perplexity off the scoreboard, we let the model continue
@@ -525,9 +551,11 @@ $$
 
 Here the additive memory path is plain to see: wherever
 $\mathbf{Z}_t \approx 1$ the new state is a copy of the old one and the
-step is effectively skipped, giving the same near-identity Jacobian as the
-LSTM's carousel; wherever $\mathbf{Z}_t \approx 0$ the state is overwritten
-by the proposal. Because :eqref:`gru_H` is a convex combination of two
+step is effectively skipped, giving the same near-identity direct-path
+Jacobian as the LSTM's carousel (with the same caveat: the gates
+themselves depend on $\mathbf{H}_{t-1}$, so this is the protected route,
+not the total derivative); wherever $\mathbf{Z}_t \approx 0$ the state is
+overwritten by the proposal. Because :eqref:`gru_H` is a convex combination of two
 bounded quantities, the state stays bounded by construction, and the GRU
 needs neither a separate protected accumulator nor an output squashing: one
 vector serves as memory and output at once. The division of labor is that
@@ -670,8 +698,8 @@ for name, p in ppls.items():
     print(f'{name:>16} {p:>8.1f}')
 ```
 
-The scoreboard is honest rather than triumphant. The GRU beats the vanilla
-RNN of :numref:`sec_rnn-scratch` decisively at the same recipe; the
+The scoreboard repays a careful read. The GRU beats the vanilla
+RNN of :numref:`sec_rnn-scratch` clearly at the same recipe; the
 single-layer LSTM roughly matches the vanilla model within this short
 budget, for the initialization and budget reasons discussed above; and the
 second layer does not pay at all, adding optimization difficulty and
@@ -714,13 +742,19 @@ outputs = birnn(X)
 outputs.shape
 ```
 
-One warning matters more than the mechanics: **a bidirectional network is
-an encoder, not a generator**. Every $\mathbf{H}_t$ conditions on tokens
-after $t$, so the model cannot run autoregressively; at generation time
-the future it expects does not exist. Worse, training one to "predict the
+One warning matters more than the mechanics: **a bidirectional network
+cannot serve unchanged as a causal decoder**. Every $\mathbf{H}_t$
+conditions on tokens after $t$, so the model cannot emit tokens
+left-to-right autoregressively; at generation time the future it expects
+does not exist. Worse, training one to "predict the
 next token" is self-deception: the backward pass hands the network the
 very token it must predict, training loss collapses, and the model is
-useless at inference, a common and expensive mistake in the RNN era. Use
+useless at inference, a common and expensive mistake in the RNN era.
+The scope of the warning is the causal role, not generation wholesale:
+bidirectional encoders live inside generative systems (the encoder half
+of a translation model conditions a causal decoder), and
+non-autoregressive decoders generate whole sequences by iterative
+refinement rather than left to right. Use
 bidirectional layers where the full input is given up front and
 per-position representations are wanted: tagging, span labeling, and
 encoding. Their most consequential success was ELMo
@@ -792,7 +826,8 @@ first rung of that ladder.
 ## Summary
 
 Vanishing gradients are an architectural problem, and gating is the
-architectural answer: keep an additive state path whose Jacobian stays
+architectural answer: keep an additive state path whose direct-path
+Jacobian stays
 near the identity, and control reads, writes, and erasures with learned
 sigmoid gates that multiply elementwise. The LSTM realizes this with a
 protected cell state and three gates; its cell update
@@ -806,50 +841,59 @@ the LSTM needs a longer budget or a friendlier initialization before its
 extra machinery pays: architecture and optimization cannot be judged
 separately. Depth (stacked layers) and bidirectionality (a backward pass
 concatenated to the forward one) are orthogonal wiring choices; the
-latter yields encoders, never generators. The gate itself outlived these
+latter yields encoders, which cannot double unchanged as causal
+decoders. The gate itself outlived these
 architectures: it routes channels in transformer MLPs
 (:numref:`sec_transformer-block`), revives the LSTM in exponential form
 (xLSTM), and, made input-dependent only, powers the linear recurrences
 and state space models that the rest of this chapter builds.
 
+**What the experiments show, and what they do not.** Under one fixed
+small-corpus recipe, gate-equipped cells train reliably where the vanilla
+RNN plateaus, and initialization can matter as much as architecture at a
+ten-epoch budget. These are single seeded runs on one small corpus: they
+do not rank LSTM against GRU in general, and they say nothing about
+behavior at scale, where budgets, tuning, and data change the ordering.
+
 ## Exercises
 
-1. Adjust the hyperparameters (width, embedding dimension, learning rate,
+1. [extended] Adjust the hyperparameters (width, embedding dimension,
+   learning rate,
    number of epochs) and study their effect on training time and
    perplexity. How far below the section's result can you push the LSTM at
    this data budget?
-1. Ablate the forget gate: modify `LSTMScratch` so that
+1. [short-code] Ablate the forget gate: modify `LSTMScratch` so that
    $\mathbf{F}_t = 1$ always (the original 1997 design, which lacked a
    forget gate). Retrain with the section's recipe and report the
    perplexity. Explain the result using :eqref:`lstm_update`: what happens
    to the cell state over a 32-step window when nothing is ever erased?
-1. Initialize the forget-gate bias $\mathbf{b}_\textrm{f}$ to 1 instead of
+1. [short-code] Initialize the forget-gate bias $\mathbf{b}_\textrm{f}$ to 1 instead of
    0 in `LSTMScratch` and retrain. Why does starting from
    $\mathbf{F}_t \approx 0.73$ rather than $0.5$ help at short training
    budgets? Then double the number of epochs: does the LSTM now match or
    beat the section's GRU?
-1. Parameter-matched comparison: compute the number of recurrent-core
+1. [short-code] Parameter-matched comparison: compute the number of recurrent-core
    parameters of the LSTM at $h = 128$ and find the GRU width $h'$ with
    approximately the same count. Train that GRU and compare perplexities.
    Does the GRU's advantage survive the handicap being removed?
-1. Compare the per-step computational cost of vanilla RNN, GRU, and LSTM
+1. [conceptual] Compare the per-step computational cost of vanilla RNN, GRU, and LSTM
    cells for a given $d$ and $h$, counting matrix products. How do
    training cost and single-token inference cost differ?
-1. The cell state is already squashed once in :eqref:`lstm_c_tilde`. Why
+1. [conceptual] The cell state is already squashed once in :eqref:`lstm_c_tilde`. Why
    does :eqref:`lstm_update` apply $\tanh$ to $\mathbf{C}_t$ again before
    the output gate, rather than using $\mathbf{O}_t \odot \mathbf{C}_t$?
    What could go wrong after many steps of accumulation without it?
-1. Implement a GRU variant with only a reset gate, and one with only an
+1. [extended] Implement a GRU variant with only a reset gate, and one with only an
    update gate. Which one still trains well on this section's task, and
    why would you expect that from :eqref:`gru_H`?
-1. Suppose the input at step $t'$ must determine the output at a much
+1. [conceptual] Suppose the input at step $t'$ must determine the output at a much
    later step $t$. For each gate of the GRU (and of the LSTM), state the
    ideal values in the interval from $t'$ to $t$.
-1. Sweep `num_layers` from 1 to 4 for the concise LSTM. Report perplexity
+1. [extended] Sweep `num_layers` from 1 to 4 for the concise LSTM. Report perplexity
    and wall-clock time per configuration. At what depth does this corpus
    stop rewarding extra layers, and what would you change to make depth
    pay?
-1. Why can a bidirectional RNN not be used for language modeling or any
+1. [conceptual] Why can a bidirectional RNN not be used for language modeling or any
    other autoregressive generation? Argue from the factorization
    $P(x_1, \ldots, x_T) = \prod_t P(x_t \mid x_{<t})$, then describe what
    concretely goes wrong at sampling time if you try.
@@ -909,9 +953,12 @@ The update that matters:
 
 $$\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t,\qquad \mathbf{H}_t = \mathbf{O}_t \odot \tanh(\mathbf{C}_t).$$
 
-- $\partial \mathbf{C}_t/\partial \mathbf{C}_{t-1} = \textrm{diag}(\mathbf{F}_t)$:
+- Direct path (gates held fixed):
+  $\partial \mathbf{C}_t/\partial \mathbf{C}_{t-1} = \textrm{diag}(\mathbf{F}_t)$:
   hold $\mathbf{F} \approx 1$, $\mathbf{I} \approx 0$ and the cell (and its
   gradient) survives: the **constant error carousel**.
+- The *total* derivative adds gate paths through $\mathbf{H}_{t-1}$: an
+  additive route is supplied, not a guarantee.
 - $\mathbf{O}_t$ lets a cell accumulate silently, then reveal.
 :::
 
@@ -1018,7 +1065,7 @@ previous step; a one-argument change with `num_layers`:
 
 @lstm-deep-recurrent-networks-3
 
-The honest scoreboard: the second layer does **not** pay on a corpus
+Read the scoreboard: the second layer does **not** pay on a corpus
 this small. Depth pays at scale; knowing when it won't is craft.
 :::
 
@@ -1032,9 +1079,10 @@ so every output conditions on the *whole* sequence:
 
 @lstm-bidirectional-recurrent-networks
 
-**Encoder, not generator**: at sampling time the future does not
-exist; "next-token training" hands the model the answer. Use for
-tagging/encoding (ELMo → BERT), never for LM.
+**No use unchanged as a causal decoder**: at sampling time the future
+does not exist; "next-token training" hands the model the answer. Use
+for tagging/encoding (ELMo → BERT); fine *inside* generative systems as
+the encoder.
 :::
 
 ::: {.slide title="Gates everywhere"}
@@ -1060,9 +1108,9 @@ tagging/encoding (ELMo → BERT), never for LM.
 - Vanishing gradients are architectural; the cure is an **additive
   state path** plus learned multiplicative gates.
 - LSTM: $\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t$
-  is the constant error carousel.
+  is the constant error carousel (the protected direct path).
 - GRU: two gates, convex blend, cheaper, and the section's best
-  perplexity: it beats the vanilla RNN decisively.
+  perplexity: it beats the vanilla RNN clearly.
 - The LSTM needs budget and init care before its machinery pays:
   architecture and optimization are judged together.
 - Depth = stacked cells (rarely paid); bidirectional = encoder-only.

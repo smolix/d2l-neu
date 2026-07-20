@@ -19,6 +19,12 @@ order, chunkwise, is how every model in this family trains at scale. We
 close with the family table that organizes these models, from
 RetNet to Mamba-2 to xLSTM.
 
+*Prerequisites: the linear-attention recurrence and its normalizer from
+:numref:`sec_attention-at-scale`; the selective SSM of
+:numref:`sec_mamba` and the parallel scan of
+:numref:`subsec_parallel-scans`; the KV-cache accounting of
+:numref:`sec_kv-cache`.*
+
 ```{.python .input #matrix-state-the-matrix-state-from-linear-attention-to-mamba-2}
 %%tab pytorch
 %matplotlib inline
@@ -63,7 +69,7 @@ evaluated by the parallel scan of :numref:`subsec_parallel-scans`; here the
 state is a matrix rather than a vector, but the algebra, affine maps
 composing into affine maps, is identical.
 
-Before building on this template, we should be honest about what it keeps
+Before building on this template, we should record what it keeps
 from :numref:`sec_attention-at-scale` and what it drops. What you verified
 there was a *pair* of states: $\mathbf{S}_t$ together with a normalizer
 $\mathbf{z}_t = \sum_{s \le t} \phi(\mathbf{k}_s)$, read as
@@ -101,21 +107,52 @@ those: the capacity of the memory is capped by its width, not by time. As
 Songlin Yang puts it, the enemy of such a memory is not time, it is other
 memories :cite:`Yang.Wang.Zhang.ea.2024`.
 
-How fast does interference bite? For random unit keys the expected squared
-overlap is $\mathbb{E}[(\mathbf{k}_i^\top \mathbf{k}_j)^2] = 1/d_k$, so the
-expected squared read error after $n$ unit-norm writes is $(n-1)/d_k$:
-linear in how much you store, inverse in the width you store it into. That
-is a law we can measure rather than assert. The cell below fills a memory
-with $n$ random pairs whose values come from a codebook of 256 unit
-vectors, reads every key back, and decodes by nearest codebook entry,
-sweeping $n$ across three widths.
+How fast does interference bite? The answer is a proposition whose
+assumptions matter as much as its formula.
+
+**Proposition.** Let the keys $\mathbf{k}_1, \ldots, \mathbf{k}_n$ be
+independent and isotropic on the unit sphere of $\mathbb{R}^{d_k}$
+(normalized Gaussians, for instance), and let the stored values be any
+unit-norm vectors chosen independently of the keys. Then the expected
+squared read error at every stored key $j$ is
+
+$$
+\mathbb{E}\,\big\| \mathbf{S}^\top \mathbf{k}_j - \mathbf{v}_j \big\|^2
+= \frac{n-1}{d_k},
+$$
+
+where the expectation is over the keys and the squared norm sums over
+all $d_v$ coordinates of the read-out; coordinate $c$ alone contributes
+$\sum_{i \neq j} v_{i,c}^2 / d_k$ in expectation.
+
+**Proof.** The error is $\sum_{i \neq j} (\mathbf{k}_i^\top
+\mathbf{k}_j)\, \mathbf{v}_i$. For $i \neq l$, the cross term
+$\mathbb{E}[(\mathbf{k}_i^\top \mathbf{k}_j)(\mathbf{k}_l^\top
+\mathbf{k}_j)]\, \mathbf{v}_i^\top \mathbf{v}_l$ vanishes: conditioned
+on $\mathbf{k}_j$, the factors are independent with mean zero. What
+remains is $\sum_{i \neq j} \mathbb{E}[(\mathbf{k}_i^\top
+\mathbf{k}_j)^2]\, \|\mathbf{v}_i\|^2$, and by isotropy each
+$\mathbb{E}[(\mathbf{k}_i^\top \mathbf{k}_j)^2] = 1/d_k$, with $n-1$
+terms. $\blacksquare$
+
+Error linear in how much you store, inverse in the width you store it
+into — *for keys that are independent and spread evenly*. Both
+assumptions are load-bearing: correlated keys revive the cancelled
+cross terms, and learned keys are rarely isotropic. The cell below
+measures the law under its own assumptions and then breaks them on
+purpose. It fills a memory with $n$ random pairs whose values come from
+a codebook of 256 unit vectors, reads every key back, and decodes by
+nearest codebook entry, sweeping $n$ across three widths; a final curve
+mixes every key with one shared direction ($\rho = 0.5$) to correlate
+them.
 
 ```{.python .input #matrix-state-what-the-memory-costs}
 %%tab pytorch, jax
 rng = np.random.default_rng(0)
 
-def hebbian_memory(d, nums, num_values=256, trials=20):
-    """Read error and recall of S = sum_i k_i v_i^T over random unit keys."""
+def hebbian_memory(d, nums, num_values=256, trials=20, rho=0):
+    """Read error and recall of S = sum_i k_i v_i^T over random unit keys;
+    rho > 0 mixes every key with one shared direction (correlated keys)."""
     codebook = rng.standard_normal((num_values, d))
     codebook /= np.linalg.norm(codebook, axis=1, keepdims=True)
     errs, accs = [], []
@@ -124,6 +161,10 @@ def hebbian_memory(d, nums, num_values=256, trials=20):
         for _ in range(trials):
             K = rng.standard_normal((n, d))
             K /= np.linalg.norm(K, axis=1, keepdims=True)  # Unit-norm keys
+            if rho:                    # Break independence: shared component
+                c = rng.standard_normal(d)
+                K = np.sqrt(1 - rho ** 2) * K + rho * c / np.linalg.norm(c)
+                K /= np.linalg.norm(K, axis=1, keepdims=True)
             ids = rng.integers(0, num_values, n)
             S = K.T @ codebook[ids]                        # Write: sum k v^T
             read = K @ S                                   # Rows are S^T k_j
@@ -140,6 +181,11 @@ for d in [32, 64, 128]:
     axes[0].loglog(nums, errs, marker='o', label=f'$d_k$ = {d}')
     axes[0].loglog(nums, [(n - 1) / d for n in nums], 'k--', lw=1)
     axes[1].semilogx(nums, accs, marker='o', label=f'$d_k$ = {d}')
+nums = [16, 32, 64, 128, 256, 512]                 # Width 64, correlated keys
+errs, accs = hebbian_memory(64, nums, rho=0.5)
+axes[0].loglog(nums, errs, marker='s', ls=':', color='C1',
+               label=r'$d_k$ = 64, $\rho$ = 0.5')
+axes[1].semilogx(nums, accs, marker='s', ls=':', color='C1')
 for ax, ylabel in zip(axes, ['squared read error', 'recall accuracy']):
     ax.set_xlabel('stored pairs n')
     ax.set_ylabel(ylabel)
@@ -147,17 +193,38 @@ for ax, ylabel in zip(axes, ['squared read error', 'recall accuracy']):
 axes[0].legend();
 ```
 
-The left panel is the capacity law: the measured error sits on the dashed
-$(n-1)/d_k$ prediction so exactly that the curves are hard to tell apart,
-across a 256-fold range of $n$ and three widths. The right panel is its
-consequence. Recall is essentially perfect while the interference stays
-small against the unit-norm signal, then collapses as $n$ grows past
-$d_k$; at a fixed error level, doubling the width doubles how many pairs
-fit. Nothing in either panel depends on *when* a pair was stored. This is
-the number that matters for everything ahead: a fixed-size state does not
-lose memories to time, it loses them to crowding, and
-:numref:`sec_hybrids` will price exactly this quantity when deciding how
-much full attention a production model must keep.
+The left panel is the capacity law (both panels: independent isotropic
+unit keys, except the dotted curve): the measured error sits on the
+dashed $(n-1)/d_k$ prediction so closely that the curves are hard to
+tell apart, across a 256-fold range of $n$ and three widths. The dotted
+curve breaks the proposition's assumptions as promised, and the
+proposition's cancellation is what it loses: with a common component in
+every key, the cross terms no longer vanish in expectation, the read
+error at $d_k = 64$ sits about five-fold above the independent curve
+already at small $n$ and grows faster than linearly, and recall
+degrades well before $n$ reaches $d_k$.
+Width stops helping when the keys all resemble one another; this is why
+the family normalizes its keys and why key *geometry*, not just key
+count, decides what a matrix memory holds. The right panel is the
+law's consequence. Recall is essentially perfect while the interference
+stays small against the unit-norm signal, then collapses as $n$ grows
+past $d_k$; at a fixed error level, doubling the width doubles how many
+pairs fit. Nothing in either panel depends on *when* a pair was stored.
+This is the number that matters for everything ahead: a fixed-size
+state does not lose memories to time, it loses them to crowding, and
+:numref:`sec_hybrids` will price exactly this quantity when deciding
+how much full attention a production model must keep.
+
+One caution about the word "capacity", which this chapter uses for
+four distinct quantities. *Algebraic rank*: $\mathbf{S}$ has rank at
+most $d_k$, so no write rule stores more than $d_k$ pairs with exact
+recall. *Interference capacity*: the proposition above, an expected
+read error under random independent keys. *Information capacity*: at
+finite precision, $d_k d_v$ numbers hold at most a fixed number of
+bits, the counting behind the copying lower bound of
+:numref:`sec_hybrids`. *Task-usable capacity*: what a trained model
+retrieves in practice, which :numref:`sec_hybrids` measures with its
+recall sweep and which none of the first three numbers guarantees.
 
 ### The Decay Ladder
 :label:`subsec_ms-decay-ladder`
@@ -192,11 +259,34 @@ each key coordinate at its own rate, the design of gated linear attention
 draws the ladder. The selective SSM of :numref:`sec_mamba` lives on the
 diagonal rung too, run per channel: $e^{\Delta_t \mathbf{a}}$ in
 :eqref:`eq_selective_ssm` is an input-dependent diagonal decay in
-everything but notation. Each rung also has a statistical reading, which
-we note now in one sentence and develop in
-:numref:`sec_test-time-regression`: the decayed state solves a *weighted*
-least-squares regression of values on keys, with the decay setting how
-fast old evidence is discounted.
+everything but notation.
+
+Each rung also has a statistical reading, which we note here and
+develop in :numref:`sec_test-time-regression`. Stack the keys and
+values seen so far as rows of $\mathbf{K}$ and $\mathbf{V}$, and let
+the diagonal matrix $\mathbf{W}$ hold each row's accumulated decay. The
+linear read-out minimizing the decay-weighted squared error
+$\sum_i w_i \|\mathbf{S}^\top \mathbf{k}_i - \mathbf{v}_i\|^2$ is the
+weighted least-squares solution
+
+$$
+\mathbf{S}^\star
+= \big(\mathbf{K}^\top \mathbf{W} \mathbf{K} + \lambda \mathbf{I}\big)^{-1}
+  \mathbf{K}^\top \mathbf{W} \mathbf{V},
+$$
+:eqlabel:`eq_ms-wls`
+
+with a small ridge $\lambda$ (or a pseudoinverse at $\lambda = 0$)
+covering rank-deficient keys. The decayed state on any rung of the
+ladder stores only the *weighted cross-moment*
+$\mathbf{K}^\top \mathbf{W} \mathbf{V}$: the shortcut that deletes the
+covariance correction
+$(\mathbf{K}^\top \mathbf{W} \mathbf{K} + \lambda \mathbf{I})^{-1}$.
+For orthonormal keys the deletion costs nothing beyond the decay's own
+discounting of each stored value; for overlapping keys it also pays the
+interference sum of :eqref:`eq_ms-retrieval-error`. The decay sets how
+fast old evidence expires, and which architectures restore the deleted
+correction is part of :numref:`sec_test-time-regression`'s subject.
 
 ![The decay ladder. Left to right, the transition $\mathbf{D}_t$ of :eqref:`eq_ms-recurrence` gains structure: identity (linear attention), a fixed scalar per head (RetNet), an input-dependent scalar (Mamba-2), an input-dependent diagonal (GLA, RWKV-6, and per channel the selective SSM). Every rung keeps the same additive write; the write rule that can edit the state is the next section's subject.](../img/mdl-modernrnn-decay-ladder.svg)
 :label:`fig_ms-decay-ladder`
@@ -231,7 +321,10 @@ attention whose 0/1 causal mask has been replaced by a *learned, decaying*
 mask. One object, two readings; :citet:`Dao.Gu.2024` named the
 correspondence *state space duality* (SSD), and matrices of $\mathbf{L}$'s
 form, every submatrix below the diagonal having rank one, are called
-1-semiseparable.
+1-semiseparable. Keep the equivalence's scope in view: it is an identity
+for this structured family, a scalar-gated (1-semiseparable) mask on
+*linear* attention, not a statement about softmax attention, whose
+exponential kernel is no masked linear read.
 
 The duality is also a statement about computation. The right-hand side of
 :eqref:`eq_ms-semiseparable` is a triple product, and the two ways of
@@ -442,12 +535,29 @@ with jax.default_matmul_precision('highest'):
         assert err < 1e-3                  # Chunked == recurrence
 ```
 
+One numerical note before we time these forms. Within a chunk, `segsum`
+works in log space and masks with $-\infty$ *before* exponentiating, so
+the diagonal blocks cannot overflow. The boundary step is less careful:
+it exponentiates the prefix products $b$ and then divides, and $b$
+shrinks geometrically with position in the chunk. For our decay range
+the smallest prefix product at $C = 256$ is around $10^{-28}$, still
+inside float32's range; by $C = 512$ it underflows to exactly zero and
+the late-chunk ratios $b_C / b_t$ degenerate to $0/0$. The $C = 1024$
+row of the timing table below therefore measures the right arithmetic
+shape — the work and memory traffic are unchanged — on values that have
+already turned to NaN; correctness holds for the chunk sizes asserted
+above. Production kernels carry the boundary decays in log space too,
+or rescale chunk by chunk, for exactly this reason; we keep the plain
+ratio because it leaves the algebra visible.
+
 The chunk size interpolates between the two modes we proved dual: at
-$C = 1$ the diagonal blocks vanish and only the state recurrence remains,
-at $C = T$ there is one block and no recurrence. Where between the
-endpoints should we sit? Time and memory answer differently, so we measure
-both, on the same footing as the attention measurements of
-:numref:`sec_attention-at-scale`.
+$C = 1$ each diagonal block shrinks to the $1 \times 1$ self-write
+$(\mathbf{q}_t^\top \mathbf{k}_t)\,\mathbf{v}_t$ — within-chunk
+interaction between *distinct* tokens is gone, and everything earlier
+flows through the state recurrence; at $C = T$ there is one block and
+no recurrence. Where between the endpoints should we sit? Time and
+memory answer differently, so we measure both, on the same footing as
+the attention measurements of :numref:`sec_attention-at-scale`.
 
 ```{.python .input #matrix-state-chunked-computation-mostly-matmul-a-little-scan-2}
 %%tab pytorch
@@ -487,6 +597,9 @@ for name, f in forms.items():
     mem = (f'{peak_memory(f, Q, K, V, a) / 2**20:11.1f}'
            if device.type == 'cuda' else f'{"n/a":>11}')
     print(f'{name:>15} {t:10.2f} {mem}')
+dev = torch.cuda.get_device_name(device) if device.type == 'cuda' else 'CPU'
+print(f'({dev}, float32, torch {torch.__version__}; '
+      f'teaching implementations, warmed up)')
 ```
 
 ```{.python .input #matrix-state-chunked-computation-mostly-matmul-a-little-scan-2}
@@ -515,9 +628,17 @@ for name, f in forms.items():
     stats = f.lower(Q, K, V, a).compile().memory_analysis()
     print(f'{name:>15} {wall_clock(f, Q, K, V, a) * 1e3:10.2f} '
           f'{stats.temp_size_in_bytes / 2**20:11.1f}')
+print(f'({jax.devices()[0].device_kind}, float32, jax {jax.__version__}; '
+      f'teaching implementations, all forms compiled)')
 ```
 
-The pattern in our runs is the one the derivation predicts. The token
+Provenance first: these are our teaching implementations, timed in
+float32 on the printed device after a warm-up pass, and the two
+frameworks do not measure quite the same thing — the PyTorch recurrence
+is an eager Python loop paying per-step dispatch, while JAX compiles
+all three forms, which flatters the recurrence. Read the orders of
+magnitude, not the exact ratios. The pattern in our runs is the one the
+derivation predicts. The token
 recurrence is by far the slowest, a couple of orders of magnitude behind
 the best schedule: its $T$ steps are serialized, whether as eager kernel
 launches or as a compiled scan, so the accelerator's parallelism sits
@@ -542,13 +663,14 @@ dense matrix products on tensor cores. Mamba-1's parallel scan is
 elementwise work, so it runs at memory bandwidth and leaves the matmul
 units idle. Restricting the transition to a scalar per head buys the
 chunked form above, whose inner loop is matmuls, and the practical
-consequence was startling: training got several times faster *and* the
-state dimension could jump from $N = 16$ to $64$--$256$ essentially for
-free, because a bigger state just makes the matmuls better shaped for the
-hardware :cite:`Dao.Gu.2024`. The capacity law of
+consequence — the Mamba-2 paper's empirical scaling observation, not a
+theorem — was startling: training got several times faster *and* the
+state dimension could jump from $N = 16$ to $64$--$256$ at little extra
+wall clock, because a bigger state just makes the matmuls better shaped
+for the hardware :cite:`Dao.Gu.2024`. The capacity law of
 :numref:`subsec_ms-capacity` says what that buys: an order of magnitude
 more pairs held at the same read error. The trade is not one-sided, and
-the honest comparison runs in both directions: Mamba-1's per-coordinate
+it runs in both directions: Mamba-1's per-coordinate
 decay is a more expressive transition per unit of state, and for pure
 recurrent inference, where there are no chunks and every step is
 elementwise either way, nothing forces the scalar restriction. Production
@@ -561,29 +683,54 @@ matmuls) :cite:`Lahoti.Li.Chen.ea.2026`.
 One accounting cell closes the systems thread that
 :numref:`sec_kv-cache` opened. A transformer's per-layer cache grows
 linearly with context; every matrix state in this section is a constant.
-The comparison below uses the KV-cache formula of :numref:`sec_kv-cache`
-with the grouped-query settings measured there, against the $64 \times 64$
-head state of our cells and a Mamba-2-scale state.
+Priced per layer and per sequence, at $b$ bytes per element, the two
+sides of the ledger are
+
+$$
+\underbrace{\big(d_{\textrm{inner}}\, d_{\textrm{state}}
++ d_{\textrm{inner}}\, (w - 1)\big)\, b}_{\textrm{recurrent: SSM state + conv buffer, constant}}
+\qquad \textrm{vs.} \qquad
+\underbrace{2\, n\, h_{\textrm{kv}}\, d_{\textrm{head}}\, b}_{\textrm{KV cache, grows with the } n \textrm{ tokens kept}},
+$$
+:eqlabel:`eq_ms-state-bytes`
+
+where $w$ is the causal-convolution width whose rolling buffer decoding
+must also carry (:numref:`subsec_mamba-step`) and $h_{\textrm{kv}}$ the
+number of KV heads; a batch multiplies both sides by its size, and a
+whole model multiplies both by its layer count. The cell prices the
+$64 \times 64$ head state of our cells and one fully specified
+production instance — a Mamba-2 2.7B layer: $d_{\textrm{model}} = 2560$,
+expansion $2$, so $d_{\textrm{inner}} = 5120$, $d_{\textrm{state}} =
+128$, $w = 4$, hence $5120 \times 128 = 655{,}360$ state elements per
+layer — against the grouped-query KV settings of :numref:`sec_kv-cache`.
+Headline numbers use fp16 ($b = 2$) on *both* sides, the common serving
+precision; the formula re-prices any row for other dtypes.
 
 ```{.python .input #matrix-state-what-the-hardware-bought}
 %%tab pytorch, jax
-def mib(floats, bytes_per=4):
-    return floats * bytes_per / 2**20
+def mib(elements, bytes_per=2):             # fp16 headline; re-price at will
+    return elements * bytes_per / 2**20
 
-state_ours = 64 * 64                        # One d_k x d_v head, this section
-state_mamba2 = 5120 * 128                   # d_inner x d_state, Mamba-2 2.7B
-print(f'matrix state, one 64x64 head:  {mib(state_ours):8.2f} MiB, constant')
-print(f'matrix state, Mamba-2 scale:   {mib(state_mamba2):8.2f} MiB, constant')
+d_inner, d_state, w = 5120, 128, 4          # Mamba-2 2.7B layer
+ssm, conv = d_inner * d_state, d_inner * (w - 1)
+print('per layer, per sequence, fp16:')
+print(f'matrix state, one 64x64 head:  {mib(64 * 64):8.2f} MiB, constant')
+print(f'Mamba-2 2.7B, SSM {ssm:,} + conv {conv:,} elements: '
+      f'{mib(ssm + conv):.2f} MiB, constant')
 for n in [4096, 131072, 1048576]:
     kv = 2 * n * 8 * 128                    # 2 x tokens x kv-heads x head-dim
-    print(f'GQA KV cache at n = {n:>9,}: {mib(kv, 2):8.2f} MiB and growing')
+    print(f'GQA KV cache at n = {n:>9,}: {mib(kv):8.2f} MiB and growing')
 ```
 
-The recurrent side of the ledger is flat forever; the cache side crosses
-it early and grows without bound. What the flat line costs, we measured at
+The recurrent side of the ledger is constant in context length; the
+cache side crosses it within a few thousand tokens and keeps growing
+with every token kept. Both sides compose with quantization, and the
+cache side with sharing and eviction schemes, so the constants move;
+the shapes do not. What the flat line costs, we measured at
 the start of this section: a capacity ceiling set by the state's width.
 Holding both numbers in mind at once is the whole hybrid-design problem of
-:numref:`sec_hybrids`.
+:numref:`sec_hybrids`, which prices whole models with exactly
+:eqref:`eq_ms-state-bytes`.
 
 ## The Family, So Far
 :label:`subsec_ms-family`
@@ -718,7 +865,8 @@ def mlstm_stabilized(q, k, v, i_pre, f_pre):
 
 exact = mlstm_naive(q, k, v, i_pre, f_pre, torch.float64)
 naive = mlstm_naive(q, k, v, i_pre, f_pre, torch.float32)
-first_bad = int((~torch.isfinite(naive).all(-1)).float().argmax())
+bad = ~torch.isfinite(naive).all(-1)        # argmax(bool) would report 0
+first_bad = int(bad.float().argmax()) if bool(bad.any()) else 'none'
 stab = mlstm_stabilized(q, k, v, i_pre, f_pre)
 err = (stab - exact.float()).abs().max() / exact.abs().max()
 print(f'float32 unstabilized: first non-finite output at step {first_bad}')
@@ -764,7 +912,8 @@ def mlstm_stabilized(q, k, v, i_pre, f_pre):
 exact = mlstm_naive(q, k, v, i_pre, f_pre, np.float64)
 with np.errstate(over='ignore', invalid='ignore'):   # The overflow is the point
     naive = mlstm_naive(q, k, v, i_pre, f_pre, np.float32)
-first_bad = int((~np.isfinite(naive).all(-1)).argmax())
+bad = ~np.isfinite(naive).all(-1)           # argmax(bool) would report 0
+first_bad = int(bad.argmax()) if bad.any() else 'none'
 stab = mlstm_stabilized(q, k, v, i_pre, f_pre)
 err = jnp.abs(stab - exact).max() / jnp.abs(exact).max()
 print(f'float32 unstabilized: first non-finite output at step {first_bad}')
@@ -798,8 +947,10 @@ that edits rather than accumulates, is the subject of
 Linear attention's matrix state and the selective SSM's recurrence are one
 template, $\mathbf{S}_t = \mathbf{D}_t \mathbf{S}_{t-1} + \mathbf{k}_t
 \mathbf{v}_t^\top$ read by the query. As a memory it has a measured
-capacity law: after $n$ unit-norm writes into width $d_k$, the squared
-read error is $(n-1)/d_k$, so capacity is set by width, not by time. The
+capacity law: after $n$ writes with independent isotropic unit keys
+into width $d_k$, the expected squared read error is $(n-1)/d_k$ — and
+measurably worse once keys correlate — so capacity is set by width, not
+by time. The
 decay ladder, fixed scalar (RetNet), input-dependent scalar (Mamba-2),
 input-dependent diagonal (GLA, RWKV-6, and per channel the selective SSM),
 adds forgetting one line at a time. Unrolling the scalar-decay recurrence
@@ -810,15 +961,26 @@ recurrence are the same matrix, and the quadratic and recurrent modes are
 two orders of one contraction. That is Mamba-2's state space duality,
 verified here by assertion, and its chunked middle order, attention within
 chunks, a short state recurrence across them, is how the family trains:
-matmul-heavy, linear in sequence length, and the reason state sizes grew
-an order of magnitude at no wall-clock cost. The family table collects the
+matmul-heavy, linear in sequence length, and the schedule the Mamba-2
+paper credits for growing state sizes an order of magnitude at little
+wall-clock cost. The family table collects the
 members, including the mLSTM, which keeps the normalizer state of :numref:`chap_attention` and
 stabilizes its exponential gates with the online-softmax rescaling. Every
 write rule in the table only adds; editing the memory is next.
 
+What this section's evidence does and does not show: the capacity law
+is a *proposition* under independent isotropic random keys, confirmed
+by measurement under exactly those assumptions and shown failing under
+correlated keys; it bounds nothing about trained or whitened key
+geometries. The duality and chunking checks are *identities* for the
+scalar-gated family, verified to float tolerance. The timing and
+memory tables are *illustrations* from one device, dtype, and teaching
+implementation: constants that move across hardware and kernels around
+asymptotic shapes that do not.
+
 ## Exercises
 
-1. Count FLOPs for the three schedules of :eqref:`eq_ms-semiseparable` at
+1. [conceptual] Count FLOPs for the three schedules of :eqref:`eq_ms-semiseparable` at
    sequence length $T$, chunk size $C$, and $d_k = d_v = d$: the token
    recurrence, the quadratic dual, and the chunked form (diagonal blocks
    plus state passing). Show that the chunked total is minimized near
@@ -826,7 +988,7 @@ write rule in the table only adds; editing the memory is next.
    $T = 4096$, $d = 64$, $C = 256$. Then reconcile your formula with the
    measured table: why does the measured optimum sit at a larger $C$ than
    the FLOP-optimal one?
-1. Extend the capacity sweep to the decayed write
+1. [short-code] Extend the capacity sweep to the decayed write
    $\mathbf{S}_t = \gamma \mathbf{S}_{t-1} + \mathbf{k}_t \mathbf{v}_t^\top$.
    Store $n$ pairs sequentially, then query all of them, plotting recall
    separately for the oldest and newest quarter of the pairs as $\gamma$
@@ -834,24 +996,24 @@ write rule in the table only adds; editing the memory is next.
    items, what does it cost the oldest, and why does no value of $\gamma$
    raise the total number of pairs recallable at once above the
    $\mathcal{O}(d_k)$ ceiling?
-1. Restore the construction of :numref:`chap_attention` inside the dual form: apply
+1. [short-code] Restore the construction of :numref:`chap_attention` inside the dual form: apply
    $\phi = \mathrm{elu} + 1$ to queries and keys, add a normalizer row to
    the computation, and verify that with $a_t = 1$ your result matches the
    `linear_attention_parallel` of :numref:`sec_attention-at-scale`
-   exactly. Which of the two changes (feature map, normalizer) alters the
+   to float tolerance. Which of the two changes (feature map, normalizer) alters the
    attention pattern, and which only rescales it?
-1. In the chunked form, replace the scalar decay $a_t$ by a per-coordinate
+1. [short-code] In the chunked form, replace the scalar decay $a_t$ by a per-coordinate
    vector gate $\boldsymbol{\alpha}_t \in (0,1)^{d_k}$ (the GLA rung of
    the ladder). Which of `segsum`, the diagonal-block product, and the
    boundary recurrence change, and to what shapes? Implement it and verify
    against a per-coordinate token loop.
-1. The mLSTM demonstration used forget pre-activations around $+2$.
+1. [short-code] The mLSTM demonstration used forget pre-activations around $+2$.
    Compute analytically at which step the unstabilized float32 recurrence
    must overflow as a function of the mean of $\tilde{f}_t$, and check
    your prediction by varying the mean over $\{1, 2, 4\}$. What changes
    when $f_t = \sigma(\tilde{f}_t)$ instead, and why does the stabilizer
    still matter then?
-1. RetNet fixes per-head decays $\gamma_h = 1 - 2^{-5-h}$ for heads
+1. [conceptual] RetNet fixes per-head decays $\gamma_h = 1 - 2^{-5-h}$ for heads
    $h = 0, 1, \ldots$ Using the effective-horizon definition of
    :numref:`sec_ssm`'s exercises (the lag at which influence drops below
    $0.01$), compute each head's memory horizon for eight heads. Why might
@@ -894,8 +1056,10 @@ $\mathbf{S}^\top \mathbf{k}_j = \mathbf{v}_j + \sum_{i \neq j} (\mathbf{k}_i^\to
 
 @!matrix-state-what-the-memory-costs
 
-- Measured error **on** the $(n-1)/d_k$ prediction; recall collapses past
-  $n \approx d_k$.
+- Measured error **on** the $(n-1)/d_k$ prediction — for i.i.d.
+  isotropic unit keys; recall collapses past $n \approx d_k$.
+- Correlated keys (dotted) revive the cancelled cross terms: width
+  stops helping.
 - Capacity is set by **width**, not time: the enemy of memory is other
   memories.
 :::
@@ -922,7 +1086,8 @@ Gu 2024).
 
 - Quadratic mode: materialize $\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top$ — attention.
 - Linear mode: sweep the sum left to right — the recurrence, state $\mathbf{S}_t$.
-- Two contraction orders, one computation.
+- Two contraction orders, one computation — an identity for this
+  scalar-gated (1-semiseparable) *linear* family, not softmax attention.
 :::
 
 ::: {.slide title="The duality, asserted"}
@@ -962,8 +1127,9 @@ $C$ interpolates recurrence ($C = 1$) → quadratic dual ($C = T$):
 ::: {.slide title="What the hardware bought"}
 - Tensor cores run **matmuls**; Mamba-1's scan is elementwise
   (bandwidth-bound). Mamba-2's scalar transition buys the chunked form.
-- Training several times faster **and** state size $N$: 16 → 64–256, free —
-  the capacity law says what that buys.
+- The paper's empirical scaling observation: training several times
+  faster **and** state size $N$: 16 → 64–256 at little extra wall
+  clock — the capacity law says what that buys.
 - Frontier: Mamba-3 upgrades the discretization itself (trapezoidal rule,
   complex states, MIMO).
 

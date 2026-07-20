@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "deltanet/deltanet-the-trouble-with-adding-1.svg",
           "bytes": 27273,
-          "sha256": "sha256:f0859cd425addfa0f20aa656c2d68596dab7eb816bb0261fa561d083b227dc3d"
+          "sha256": "sha256:9311049dbbf39aac3aa2b05876e62aca0d91ba024b285921c4d30e2a04915cc4"
         }
       ]
     },
@@ -37,12 +37,12 @@
       "outputs": []
     },
     "deltanet-trained-models-hit-the-same-ceiling-2": {
-      "code_fingerprint": "sha256:93983330aa70e3e64bad670c3b92f39fd0b8b1fc16b44d64630deaf27c497477",
+      "code_fingerprint": "sha256:704ef610a9808878c9b56da8ffc1f18d698b43e7171de2e05cf2b11fe8736c3d",
       "kind": "text",
       "outputs": []
     },
     "deltanet-trained-models-hit-the-same-ceiling-3": {
-      "code_fingerprint": "sha256:d7a384d353388de83e2330f782523f50b55fa00108d6a5fc85b9505da70e480f",
+      "code_fingerprint": "sha256:a4d5f1aab759a321745b428c7ef322dbfd561adc276fb7552633296a507f18da",
       "kind": "text",
       "outputs": [
         {
@@ -68,49 +68,49 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "         6     0.266   1.000\n"
+          "text": "         6     0.265   1.000\n"
         }
       ]
     },
     "deltanet-the-delta-rule": {
-      "code_fingerprint": "sha256:f2c2dff15e75ab9ec602aaf62a07a506a3e7a7323fa75e7112a411d8c4126df2",
+      "code_fingerprint": "sha256:aec167a7c07adb96b7fac420d2eb444ce113ce4ee10f91d3cec6410427bdbe99",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "error form vs matrix form: relative deviation 1.42e-06\n"
+          "text": "error form vs matrix form: relative deviation 1.38e-06\n"
         }
       ]
     },
     "deltanet-training-it-the-wy-trick": {
-      "code_fingerprint": "sha256:a7bc63d594213492e3deef72c46d44c6e564af539885a6d38cd675b848aa1bec",
+      "code_fingerprint": "sha256:b40640e26c75a2fb8e7e4dfe10ae845a3a8782180d27afd6e14af76587e7db97",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size   16: relative deviation 4.32e-07\n"
+          "text": "chunk size   16: relative deviation 3.46e-07\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size   64: relative deviation 3.89e-07\n"
+          "text": "chunk size   64: relative deviation 4.32e-07\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chunk size  256: relative deviation 5.35e-07\n"
+          "text": "chunk size  256: relative deviation 4.76e-07\n"
         }
       ]
     },
     "deltanet-a-language-model-1": {
-      "code_fingerprint": "sha256:775efbb4784cec722cd89d1492e218ae29838975ef37b622314987f464579b18",
+      "code_fingerprint": "sha256:9228b1384028185de1b18ec8e0bcb0b886cab26394d785c36b2a8f291fd99ddb",
       "kind": "text",
       "outputs": []
     },
     "deltanet-a-language-model-2": {
-      "code_fingerprint": "sha256:98c0db3864af4e55d8b4577f0543c8b9215a8bf56e55501271816e0daa6458f0",
+      "code_fingerprint": "sha256:2752e77d286dc9f200a8bde7de6825248a545fe08b4799de598aba45283c5e70",
       "kind": "mixed",
       "outputs": [
         {
@@ -121,19 +121,19 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " Gated DeltaNet     74.4   562,315      4.4\n"
+          "text": " Gated DeltaNet     74.5   562,315      4.4\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deltanet/deltanet-a-language-model-2-1.svg",
-          "bytes": 20636,
-          "sha256": "sha256:a0d93b3b5b30fe2101baeadd5773a55269bf5ffc9c59a3788b97e2c1181076f5"
+          "bytes": 20631,
+          "sha256": "sha256:e5361d5a4bdd76978142c9048aae1070e42e7614a227ec4343358ecb65719b09"
         }
       ]
     },
     "deltanet-the-generalized-delta-rule": {
-      "code_fingerprint": "sha256:bb1d0d01e0b9b0a168c9aba03f3a7d43a905c4c3e855512c5c2ea54d2cf5cb4f",
+      "code_fingerprint": "sha256:48136cccd34c94e173c5eb0fe243ba2d2971cd695b068ff76ed2f3a34bd5aed5",
       "kind": "text",
       "outputs": [
         {
@@ -144,7 +144,7 @@
       ]
     },
     "deltanet-what-the-transition-can-compute": {
-      "code_fingerprint": "sha256:f827e204061387b18e9782143749db13c1169c45c9290e446ee3daeff6f2815a",
+      "code_fingerprint": "sha256:02785a0f7f1e9d8ce09b59c46ff3b2e0f838bcb06debfe983b8c90e1938421cb",
       "kind": "text",
       "outputs": [
         {
@@ -160,7 +160,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=16  sigmoid, a in (0,1): 0.497  0.486  0.496\n"
+          "text": "T=16  sigmoid, a in (0,1): 0.486  0.486  0.496\n"
         },
         {
           "type": "stream",
@@ -180,7 +180,7 @@
       ]
     },
     "deltanet-the-reflection-in-the-delta-rule": {
-      "code_fingerprint": "sha256:6242a31c7ba3c9e75034e44cf912ba8a1096368ce3e5229ffddeb64ab7745f92",
+      "code_fingerprint": "sha256:6659a13f3d349903c20283fa7262f53d6f7223016925111ac6b442d17d5a8389",
       "kind": "text",
       "outputs": [
         {

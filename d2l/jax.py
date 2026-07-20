@@ -2058,8 +2058,9 @@ class S4D(nnx.Module):
 
     def __call__(self, u):                   # (num_steps, batch, num_hiddens)
         a = -jnp.exp(self.log_a[...])                 # (H, N), Re(a) < 0
-        a_bar = jnp.exp(jnp.exp(self.log_dt[...]) * a)
-        b_bar = (a_bar - 1) / a                       # ZOH with B = 1
+        da = jnp.exp(self.log_dt[...]) * a
+        a_bar = jnp.exp(da)
+        b_bar = jnp.expm1(da) / a                     # ZOH with B = 1
         a_elems = jnp.broadcast_to(                   # Same at every step
             a_bar[None, None], (u.shape[0], 1, *a_bar.shape))
         b_elems = b_bar * u[..., None]                # (T, batch, H, N)
@@ -2071,8 +2072,9 @@ class S4D(nnx.Module):
 
         Defined in :numref:`sec_ssm`"""
         a = -jnp.exp(self.log_a[...])
-        a_bar = jnp.exp(jnp.exp(self.log_dt[...]) * a)    # Same ZOH as forward
-        b_bar = (a_bar - 1) / a
+        da = jnp.exp(self.log_dt[...]) * a
+        a_bar = jnp.exp(da)                               # Same ZOH as forward
+        b_bar = jnp.expm1(da) / a
         if x is None:
             x = jnp.zeros((*u.shape, a_bar.shape[-1]))
         x = a_bar * x + b_bar * u[..., None]              # One recurrence step

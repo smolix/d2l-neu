@@ -25,11 +25,16 @@ depth. Then we rebuild the linear recurrence properly, starting from a
 continuous-time *state space model* (SSM): discretization will hand us
 principled gates, stability by construction rather than by hope, an exact
 equivalence between recurrence and convolution, and, through the HiPPO
-theory, an answer to what a state must be for its memory of the past to be
-provably good. The result, the S4 family of models
+theory, a principled answer to what dynamics make a fixed-size state a
+good memory of the past. The result, the S4 family of models
 :cite:`Gu.Goel.Re.2022`, is the backbone of the selective state space
 models we meet in the next section and of recurrent layers inside several
 production language models.
+
+*Prerequisites: the gated cells and language-modeling recipe of
+:numref:`sec_lstm`, the gradient analysis of
+:numref:`subsec_bptt-gradient-pathologies`, and, for the classifier
+experiment, Fashion-MNIST from :numref:`sec_fashion_mnist`.*
 
 ```{.python .input #ssm-linear-recurrence-and-state-space-models}
 %%tab pytorch
@@ -446,7 +451,7 @@ that the minGRU is better, but that very little of the GRU's quality is
 lost at this scale while the training computation becomes a parallel
 scan. At 32-step windows the
 sequential loop was never the bottleneck; the wall-clock argument is the
-benchmark above, whose gap widens without bound as sequences grow. What
+benchmark above, whose gap keeps widening as sequences grow. What
 the stripped cell *does* give up is any dependence of the gates on the
 state: the decay $\mathbf{a}_t$ is decided by the current input alone.
 Hold that thought; it returns as the central limitation at the end of this
@@ -504,11 +509,18 @@ with
 $$
 \bar{\mathbf{A}} = \exp(\Delta \mathbf{A}),
 \qquad
-\bar{\mathbf{B}} = (\Delta \mathbf{A})^{-1} \left(\exp(\Delta \mathbf{A}) - \mathbf{I}\right) \Delta \mathbf{B},
+\bar{\mathbf{B}} = \left( \int_0^{\Delta} \exp(\tau \mathbf{A})\, d\tau \right) \mathbf{B},
 $$
 :eqlabel:`eq_zoh`
 
-where $\exp$ is the matrix exponential. (A cruder alternative, the Euler
+where $\exp$ is the matrix exponential: the state decays under the flow
+for a full interval, while the held input is carried in by the flow from
+every instant $\tau$ at which it entered. The integral is the definition;
+when $\mathbf{A}$ is invertible it has the familiar closed form
+$\bar{\mathbf{B}} = \mathbf{A}^{-1}(\exp(\Delta \mathbf{A}) -
+\mathbf{I})\, \mathbf{B}$, and for singular $\mathbf{A}$ the integral
+still exists (at $\mathbf{A} = \mathbf{0}$ it is simply $\Delta
+\mathbf{B}$). (A cruder alternative, the Euler
 step $\bar{\mathbf{A}} \approx \mathbf{I} + \Delta \mathbf{A}$, is the
 subject of an exercise.) In practice $\mathbf{A}$ is taken *diagonal*,
 $\mathbf{A} = \mathrm{diag}(a_1, \ldots, a_N)$, which costs surprisingly
@@ -517,9 +529,15 @@ little modeling power and makes :eqref:`eq_zoh` elementwise:
 $$
 \bar{a}_n = e^{\Delta a_n},
 \qquad
-\bar{b}_n = \frac{e^{\Delta a_n} - 1}{a_n}\, b_n.
+\bar{b}_n = \frac{e^{\Delta a_n} - 1}{a_n}\, b_n
+\quad (a_n \neq 0; \textrm{ the limit at } a_n = 0 \textrm{ is } \Delta b_n).
 $$
 :eqlabel:`eq_zoh_diag`
+
+One numerical note travels with :eqref:`eq_zoh_diag`: for small
+$|\Delta a_n|$ the numerator $e^{\Delta a_n} - 1$ cancels catastrophically
+in floating point, so code should call `expm1`, which computes
+$e^x - 1$ accurately near zero. Our implementations below do.
 
 Now make $\Delta$ a *learnable parameter* and watch what it does.
 
@@ -529,7 +547,7 @@ Now make $\Delta$ a *learnable parameter* and watch what it does.
 > As $\Delta$ grows (with the real parts of the eigenvalues of
 > $\mathbf{A}$ negative), $\bar{\mathbf{A}} \to \mathbf{0}$ and the state
 > is rewritten from the current input alone. A learned $\Delta$ is
-> therefore exactly an update gate in the sense of :numref:`sec_lstm`,
+> therefore an update gate in the sense of :numref:`sec_lstm`,
 > interpolating between "remember everything" and "overwrite everything",
 > except that it was not bolted on: it fell out of asking how fast a
 > continuous memory should run. This one correspondence is the bridge
@@ -537,16 +555,41 @@ Now make $\Delta$ a *learnable parameter* and watch what it does.
 > $\Delta$ becomes input-dependent and gating is rediscovered a third
 > time.
 
-The correspondence is in fact an identity, not an analogy. Discretize the
+The correspondence becomes an identity, not an analogy, in one worked
+scalar case. Discretize the
 same ODE with the *backward* Euler rule instead of the ZOH and, for
-$a = -1$, the update becomes $x_t = (1 - z)\, x_{t-1} + z\, u_t$ with
+the scalar mode $a = -1$, $b = 1$, the update becomes
+$x_t = (1 - z)\, x_{t-1} + z\, u_t$ with
 $z = \Delta / (1 + \Delta)$; store the step size in log space, as we are
 about to, and $z = \sigma(\log \Delta)$ is *exactly* a sigmoid gate. A
-GRU-style gated update is the backward-Euler discretization of the same
-linear dynamics whose ZOH we just took, with the gate's pre-activation
-playing the role of the log step size :cite:`Gu.2023`. The gates that
+GRU-style gated update is the backward-Euler discretization of this
+scalar mode, with the gate's pre-activation
+playing the role of the log step size :cite:`Gu.2023`. Keep the scope of
+the identity in view: for general matrix $\mathbf{A}$ the backward-Euler
+transition $(\mathbf{I} - \Delta \mathbf{A})^{-1}$ is matrix-valued and
+each mode carries its own decay and tied input response, so not every
+discretized SSM is a GRU-style update. The gates that
 :numref:`sec_lstm` engineered and the step size that calculus hands us
-here are one object seen through two discretization rules.
+here are, in this scalar case, one object seen through two
+discretization rules.
+
+ZOH and backward Euler are two entries in a standard menu. The rules
+differ in the transition they produce, in whether they preserve
+stability, and in what happens when the sampling rate changes:
+
+| Rule | $\bar{\mathbf{A}}$ | $\mathrm{Re}(a) < 0$ maps to | Accuracy | Changing $\Delta$ |
+| :-- | :-- | :-- | :-- | :-- |
+| Zero-order hold | $e^{\Delta \mathbf{A}}$ | $\lvert\bar{a}\rvert < 1$, always | exact for piecewise-constant input | rediscretize; stays stable |
+| Bilinear (Tustin) | $(\mathbf{I} - \tfrac{\Delta}{2}\mathbf{A})^{-1}(\mathbf{I} + \tfrac{\Delta}{2}\mathbf{A})$ | $\lvert\bar{a}\rvert < 1$, always | second order in $\Delta$ | rediscretize; stays stable |
+| Forward Euler | $\mathbf{I} + \Delta \mathbf{A}$ | $\lvert 1 + \Delta a\rvert < 1$ only for small $\Delta$ | first order in $\Delta$ | a coarser $\Delta$ can destabilize |
+| Backward Euler | $(\mathbf{I} - \Delta \mathbf{A})^{-1}$ | $\lvert\bar{a}\rvert < 1$, always | first order in $\Delta$ | rediscretize; stays stable |
+
+The choice is less about accuracy than about guarantees: every rule but
+forward Euler maps the stable half-plane into the stable disk for any
+$\Delta$. S4 used the bilinear transform :cite:`Gu.Goel.Re.2022`; we use
+ZOH throughout this chapter, as Mamba does (with a further first-order
+simplification we meet in :numref:`sec_mamba`); forward Euler earns its
+place in the exercise that shows how it fails.
 
 Stability, which :numref:`subsec_bptt-gradient-pathologies` taught us to
 fear, is now a matter of *parameterization* rather than luck. Store
@@ -560,13 +603,46 @@ $$
 
 for *every* value of the learned parameters: the spectral radius lives
 inside the unit circle *by construction*, and no gradient update can push
-the recurrence into the exploding regime. Contrast the vanilla RNN, whose
+the recurrence into the exploding regime. One scoping remark keeps this
+claim exact. For a *diagonal* — hence normal — $\mathbf{A}$, the
+eigenvalue bound controls every transient too: each coordinate shrinks at
+every single step. A general non-normal matrix is slipperier, since its
+powers can grow substantially for many steps before eigenvalue decay
+wins (:numref:`sec_mdl-nonnormal-transient`); every $\mathbf{A}$ this
+chapter trains is diagonal, so the stronger, per-step reading applies.
+Contrast the vanilla RNN, whose
 $\mathbf{W}_{\textrm{hh}}$ had to be coaxed toward the knife-edge
 $\rho \approx 1$ by clipping and prayer. Allowing complex $a_n$
 (conjugate pairs) adds rotation to the decay: each state dimension
 becomes a damped oscillator with a learned frequency, enriching the
 dynamics at no cost to stability. For everything we train below, plain
 negative-real $a_n$ suffices.
+
+> **Four meanings of "stable".** The word is doing several jobs in this
+> chapter, and they are not interchangeable. *Asymptotic (internal)
+> stability*: the autonomous state decays, $\mathbf{x}_t \to \mathbf{0}$;
+> for our diagonal systems this is exactly $|\bar{a}_n| < 1$, and it is
+> what "by construction" above means. *BIBO stability*: bounded inputs
+> yield bounded outputs; internal stability implies it here, though the
+> two can part ways when an unstable mode hides from the output (a story
+> told below). *Nonexpansive transition*: a single step never increases
+> the state norm — a stronger per-step property that returns for the
+> delta-rule transitions of :numref:`sec_deltanet`. *Numerical
+> stability*: the floating-point computation neither loses accuracy nor
+> overflows; a mathematically stable scan can still hit it (notes at the
+> end of this subsection).
+
+A last word on precision, since discretized recurrences live or die by
+it. Three habits cover this chapter. First, compute $e^x - 1$ with
+`expm1`, as above. Second, respect what the scan does to rounding: it
+*reassociates* a length-$T$ product of decays, so its output matches the
+sequential loop only to float tolerance, never bitwise — every check in
+this chapter compares against a tolerance scaled to the dtype. Third,
+watch long products: with all $|\bar{a}| < 1$ a product of $T$ decays
+underflows gracefully toward zero, but *ratios* of separately
+exponentiated prefix products, which the chunked forms of
+:numref:`sec_matrix-state` are built from, can overflow; log-domain and
+chunk-rescaled implementations are the production answer.
 
 ### Recurrence is Convolution
 :label:`subsec_ssm-conv`
@@ -613,7 +689,7 @@ num_states, num_steps, delta = 8, 64, 0.1
 a = -torch.arange(1., num_states + 1)               # Re(a) < 0
 b, c = torch.ones(num_states), torch.randn(num_states)
 a_bar = torch.exp(delta * a)                        # Zero-order hold
-b_bar = (a_bar - 1) / a * b
+b_bar = torch.expm1(delta * a) / a * b              # expm1: accurate e^x - 1
 u = torch.randn(num_steps)
 
 x, ys = torch.zeros(num_states), []                 # (i) recurrence
@@ -641,7 +717,7 @@ num_states, num_steps, delta = 8, 64, 0.1
 a = -jnp.arange(1., num_states + 1)                 # Re(a) < 0
 b, c = jnp.ones(num_states), jax.random.normal(d2l.get_key(), (num_states,))
 a_bar = jnp.exp(delta * a)                          # Zero-order hold
-b_bar = (a_bar - 1) / a * b
+b_bar = jnp.expm1(delta * a) / a * b                # expm1: accurate e^x - 1
 u = jax.random.normal(d2l.get_key(), (num_steps,))
 
 def step(x, u_t):                                   # (i) recurrence
@@ -665,6 +741,69 @@ The three views agree to floating-point precision. Each is the right tool
 for a different job, and the freedom to switch among them at will is the
 practical superpower of keeping the recurrence linear.
 
+### What Control Theory Already Knew
+:label:`subsec_classical_ssm`
+
+State space models were not invented for deep learning: they are the
+core formalism of 1960s control theory, and four of its ideas earn their
+keep in this chapter. All four show up in the smallest interesting
+example, a two-state diagonal system
+
+$$
+\dot{\mathbf{x}}(t) = \begin{pmatrix} -1 & 0 \\ 0 & -2 \end{pmatrix} \mathbf{x}(t) + \mathbf{B}\, u(t),
+\qquad
+y(t) = \mathbf{C}\, \mathbf{x}(t).
+$$
+
+*Controllability and observability.* With $\mathbf{B} = (1, 0)^\top$ the
+input never touches the second state: that mode is *uncontrollable*, and
+no input signal can move it off its decay. With $\mathbf{C} = (1, 0)$
+the output never sees it: the mode is *unobservable*. Either way, the
+two-state system behaves at its terminals exactly like a one-state
+system. State size is an upper bound on dynamical richness, not a
+measurement of it — worth remembering whenever a later section prices a
+model by its state, since $N$ counts coordinates, not used memory.
+
+*Transfer function and poles.* Solved in the frequency domain, the LTI
+system is multiplication by the *transfer function*
+$H(s) = \mathbf{C}(s\mathbf{I} - \mathbf{A})^{-1}\mathbf{B}$, a rational
+function whose poles are a subset of the eigenvalues of $\mathbf{A}$.
+For the example with $\mathbf{B} = (1, 0)^\top$ and
+$\mathbf{C} = (1, 1)$, $H(s) = 1/(s+1)$: one pole, not two, because the
+unreachable mode cancels. The impulse response — our convolution kernel
+:eqref:`eq_ssm_kernel` — is the same object in the time domain; the
+kernel view above is control theory's oldest view, rediscovered.
+
+*Internal versus BIBO stability.* The cancellation is also where the two
+stability notions of the box above part ways: a system can be BIBO
+stable, with bounded inputs producing bounded outputs, while an unstable
+mode grows unseen because it is hidden from the output. Internal
+stability, every mode decaying, is the stronger certificate, and it is
+the one our left-half-plane parameterization provides.
+
+*Similarity and non-identifiability.* Change state coordinates by any
+invertible $\mathbf{T}$, sending $(\mathbf{A}, \mathbf{B}, \mathbf{C})$
+to $(\mathbf{T}\mathbf{A}\mathbf{T}^{-1}, \mathbf{T}\mathbf{B},
+\mathbf{C}\mathbf{T}^{-1})$, and the input–output map is unchanged. The
+state is a coordinate system, not a canonical object. That freedom is
+why restricting $\mathbf{A}$ to diagonal form (as S4D will) is less of a
+sacrifice than it looks, and why two different-looking recurrences can
+compute one function — a theme that returns as the state-space duality
+of :numref:`sec_matrix-state`. For the classical theory at full
+strength, see :citet:`Astrom.Murray.2021`.
+
+A scope note, finally, because the term is older than our usage of it.
+In statistics and signal processing a "state space model" is usually
+*stochastic*: process noise drives the state, observation noise corrupts
+the output, and the computational problem is inference — recovering a
+posterior over the latent trajectory, by the Kalman filter
+:cite:`Kalman.1960` in the linear-Gaussian case and by particle methods
+beyond it, with system identification as the matching learning problem.
+The SSMs of this chapter share the state equation but not the problem:
+they are deterministic feature extractors trained by backpropagation,
+with no noise model and no posterior. The shared name records lineage,
+not equivalence.
+
 ## Remembering the Past: HiPPO
 :label:`subsec_hippo`
 
@@ -683,10 +822,16 @@ $N$ coefficients of the best *orthogonal polynomial approximation* (of
 degree less than $N$) of the input's history under that measure, the same
 least-squares projection that powers Fourier and Legendre series. The remarkable
 theorem is that this optimal compression can be maintained *online*: as
-new input arrives, the optimal coefficients evolve according to a linear
-ODE of exactly the form :eqref:`eq_ssm_cont`, with a specific,
-input-independent matrix. For the uniform ("scaled Legendre", LegS)
-measure it is
+new input arrives, the optimal coefficients evolve according to a
+linear, *time-varying* ODE,
+
+$$
+\dot{\mathbf{x}}(t) = \frac{1}{t} \left( \mathbf{A}\, \mathbf{x}(t) + \mathbf{B}\, u(t) \right),
+$$
+:eqlabel:`eq_hippo_ode`
+
+with a specific, input-independent matrix. For the uniform ("scaled
+Legendre", LegS) measure it is
 
 $$
 A_{nk} = -\begin{cases}
@@ -699,33 +844,72 @@ B_n = \sqrt{2n + 1},
 $$
 :eqlabel:`eq_hippo`
 
-for $n, k = 0, \ldots, N-1$. We state the matrix and cite the derivation;
-what matters for us is what it buys. :numref:`fig_hippo_reconstruction`
-shows a signal compressed online into a HiPPO state of size $N$ and then
-reconstructed from the state alone at the final time: with $N = 64$
+for $n, k = 0, \ldots, N-1$. We state the matrix and cite the
+derivation; the $1/t$, though, deserves a sentence, because it is what
+makes :eqref:`eq_hippo_ode` *not* an instance of the LTI system
+:eqref:`eq_ssm_cont`. The measure spreads uniform weight over all of
+$[0, t]$, so by time $t$ each new instant is only a $1/t$ fraction of
+the history it joins, and the dynamics must slow down accordingly:
+discretized at unit steps the update is
+$\mathbf{x}_k = (\mathbf{I} + \mathbf{A}/k)\, \mathbf{x}_{k-1} +
+(\mathbf{B}/k)\, u_k$, a recurrence whose effective step size decays
+like $1/k$ rather than holding constant. (A pleasant consequence: the
+system has no timescale $\Delta$ to tune, because rescaling time maps
+its trajectories onto themselves.) What the theorem buys is shown in
+:numref:`fig_hippo_reconstruction`, whose generator integrates exactly
+this time-varying system: a signal is compressed online into a LegS
+state of size $N$ and then reconstructed from the state alone at the
+final time. With $N = 64$
 numbers, a thousand-step history is recovered almost perfectly, smoothing
 only the sharpest transients. A fixed-size state provably *can* carry a
-long past, provided its dynamics are chosen for the job. That is what
-initializing an SSM with HiPPO provides, and it is the ingredient random
-initialization was missing.
+long past, provided its dynamics are chosen for the job.
 
 ![Compressing a function into $N$ numbers, online. A HiPPO-LegS state of size $N$ is updated as the signal (black) streams in; afterwards, the full history is reconstructed (color) from the final state alone. Larger states recover the past in increasing detail.](../img/mdl-modernrnn-hippo-reconstruction.svg)
 :label:`fig_hippo_reconstruction`
 
-The path from this theorem to a practical layer was walked in three quick
-steps. S4 :cite:`Gu.Goel.Re.2022` made the HiPPO recurrence trainable and
-fast by exploiting the matrix's *normal plus low-rank* structure to
-compute the convolution kernel :eqref:`eq_ssm_kernel` efficiently, and
-demonstrated the payoff on the Long Range Arena benchmark
-:cite:`Tay.Dehghani.Abnar.ea.2021`, solving tasks with dependencies over
-16,000 steps ahead of every transformer of its day. S4D
-:cite:`Gu.Gupta.Goel.Re.2022` showed that keeping only a diagonal
-approximation of the HiPPO matrix loses almost nothing, collapsing the
-machinery to the elementwise formulas :eqref:`eq_zoh_diag`; the simplest
-variant initializes $a_n = -(n + 1)$, the diagonal of :eqref:`eq_hippo`,
-which is exactly what we implement below. S5
-:cite:`Smith.Warrington.Linderman.2023` replaced the per-channel scalar
-systems and FFTs with one multi-input state space layer evaluated by the
+### From HiPPO to S4 to S4D
+:label:`subsec_hippo_s4_bridge`
+
+The path from this theorem to the layer we implement passes through
+three different objects, and it pays to keep them distinct.
+
+*The online LegS projection* is the time-varying system
+:eqref:`eq_hippo_ode`. It, and only it, carries the optimality theorem:
+run those dynamics and the state is, at every moment, the best
+degree-$N$ polynomial summary of the entire past under the uniform
+measure.
+
+*S4 is an LTI model initialized at the HiPPO matrix.* S4
+:cite:`Gu.Goel.Re.2022` freezes :eqref:`eq_hippo` into the
+time-invariant system :eqref:`eq_ssm_cont`, adds a learnable step size
+per channel, and trains everything by gradient descent. The optimality
+theorem does not transfer — a time-invariant system maintains no
+uniform-measure projection; tracking one is precisely what the $1/t$ was
+for — but the HiPPO matrix proved to be a superb *initialization*,
+giving the state a spread of decay timescales and long-memory structure
+that random matrices lack. Speed came from structure: the HiPPO matrix
+is *normal plus low-rank* (NPLR), so it is unitarily similar to a
+diagonal-plus-low-rank (DPLR) matrix with complex-conjugate modes, and
+with that form the convolution kernel :eqref:`eq_ssm_kernel` reduces to
+Cauchy-kernel evaluations computable in near-linear time — machinery we
+cite rather than rebuild. The payoff landed on the Long Range Arena
+benchmark :cite:`Tay.Dehghani.Abnar.ea.2021`: tasks with dependencies
+over 16,000 steps, solved ahead of every transformer of S4's day.
+
+*S4D is the diagonal approximation.* Drop the low-rank correction and
+keep a diagonal state matrix, collapsing the machinery to the
+elementwise formulas :eqref:`eq_zoh_diag`. :citet:`Gu.Gupta.Goel.Re.2022`
+supply the evidence that this step is safe: suitably initialized
+diagonal systems approximate S4's kernel as the state grows and match
+its accuracy across the Long Range Arena in practice. The simplest of
+their initializations is the one we implement below, real
+$a_n = -(n + 1)$, the diagonal of :eqref:`eq_hippo`. Be clear about what
+that inherits and what it does not: it is a *multiscale initialization*,
+a bank of decay rates from slow to fast, not the optimal Legendre
+projection — the theorem stays behind with the time-varying system, and
+the case for the diagonal toy is the S4D paper's empirical one. Finally,
+S5 :cite:`Smith.Warrington.Linderman.2023` replaced the per-channel
+FFTs with one multi-input state space layer evaluated by the
 parallel scan, the same computational pattern we built above. Our
 implementation sits deliberately at the intersection: S4D's diagonal
 parameterization, S5's scan.
@@ -765,8 +949,9 @@ class S4D(nn.Module):  #@save
 
     def forward(self, u):                    # (num_steps, batch, num_hiddens)
         a = -torch.exp(self.log_a)                    # (H, N), Re(a) < 0
-        a_bar = torch.exp(torch.exp(self.log_dt) * a)
-        b_bar = (a_bar - 1) / a                       # ZOH with B = 1
+        da = torch.exp(self.log_dt) * a
+        a_bar = torch.exp(da)
+        b_bar = torch.expm1(da) / a                   # ZOH with B = 1
         a_elems = a_bar.expand(u.shape[0], 1, -1, -1) # Same at every step
         b_elems = b_bar * u.unsqueeze(-1)             # (T, batch, H, N)
         x = associative_scan(a_elems, b_elems)
@@ -791,8 +976,9 @@ class S4D(nnx.Module):  #@save
 
     def __call__(self, u):                   # (num_steps, batch, num_hiddens)
         a = -jnp.exp(self.log_a[...])                 # (H, N), Re(a) < 0
-        a_bar = jnp.exp(jnp.exp(self.log_dt[...]) * a)
-        b_bar = (a_bar - 1) / a                       # ZOH with B = 1
+        da = jnp.exp(self.log_dt[...]) * a
+        a_bar = jnp.exp(da)
+        b_bar = jnp.expm1(da) / a                     # ZOH with B = 1
         a_elems = jnp.broadcast_to(                   # Same at every step
             a_bar[None, None], (u.shape[0], 1, *a_bar.shape))
         b_elems = b_bar * u[..., None]                # (T, batch, H, N)
@@ -852,11 +1038,19 @@ class S4DBlock(nnx.Module):  #@save
 Where should a long-memory architecture prove itself? A classic stress
 test is *sequential image classification*: feed a model the
 Fashion-MNIST images of :numref:`sec_fashion_mnist` one pixel at a time,
-as a plain sequence of 784 scalars, and ask for the class at the end. No
-spatial structure is given; whatever relates pixel 3 to pixel 787 must be
-carried across hundreds of steps of state. The classifier below embeds
-each pixel, runs an encoder over the sequence, mean-pools the features
-over time, and classifies; it accepts any encoder with our
+as a plain sequence of 784 scalars, and predict the class. No
+spatial structure is given: any relation between pixel 3 and pixel 787
+must travel through the sequence model. How it is allowed to travel is
+decided by the *readout*, and the choice changes what the experiment
+measures. Mean-pooling all 784 per-step outputs is the standard
+benchmark form of the task: every pixel contributes through its own
+output, so the score measures how well the encoder *mixes* information
+across the sequence, not whether anything survives to the end. Reading
+only the *final* step's features is the sterner retention diagnostic:
+whatever the model uses must still be present in the state after
+hundreds of updates. The classifier below embeds
+each pixel, runs an encoder over the sequence, and supports both
+readouts; it accepts any encoder with our
 `(num_steps, batch, features)` calling convention, which lets us swap an
 S4D stack against an LSTM without touching anything else. We train with
 Adam (:numref:`chap_optimization`), whose per-parameter step sizes suit
@@ -866,8 +1060,8 @@ handles the SSM's exponentials awkwardly.
 ```{.python .input #ssm-sequential-image-classification-1}
 %%tab pytorch
 class SeqClassifier(d2l.Classifier):
-    """Classify a sequence with an encoder plus mean pooling."""
-    def __init__(self, encoder, num_hiddens, lr=3e-3):
+    """Classify a sequence: encoder, then mean or final-step readout."""
+    def __init__(self, encoder, num_hiddens, pool='mean', lr=3e-3):
         super().__init__()
         self.save_hyperparameters()
         self.emb = nn.Linear(1, num_hiddens)
@@ -877,7 +1071,7 @@ class SeqClassifier(d2l.Classifier):
         X = X.reshape(X.shape[0], -1, 1).movedim(1, 0)  # Pixel sequence
         Y = self.encoder(self.emb(X))
         Y = Y[0] if isinstance(Y, tuple) else Y         # RNNs return a state
-        return self.head(Y.mean(dim=0))
+        return self.head(Y.mean(dim=0) if self.pool == 'mean' else Y[-1])
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.lr)
@@ -886,9 +1080,9 @@ class SeqClassifier(d2l.Classifier):
 ```{.python .input #ssm-sequential-image-classification-1}
 %%tab jax
 class SeqClassifier(d2l.Classifier):
-    """Classify a sequence with an encoder plus mean pooling."""
-    def __init__(self, encoder, num_hiddens, num_features=None, lr=3e-3,
-                 rngs=None):
+    """Classify a sequence: encoder, then mean or final-step readout."""
+    def __init__(self, encoder, num_hiddens, num_features=None, pool='mean',
+                 lr=3e-3, rngs=None):
         super().__init__()
         self.save_hyperparameters(ignore=['encoder', 'rngs'])
         rngs = nnx.Rngs(1) if rngs is None else rngs
@@ -901,7 +1095,7 @@ class SeqClassifier(d2l.Classifier):
         X = X.reshape(X.shape[0], -1, 1).transpose(1, 0, 2)  # Pixel sequence
         Y = self.encoder(self.emb(X))
         Y = Y[0] if isinstance(Y, tuple) else Y         # RNNs return a state
-        return self.head(Y.mean(axis=0))
+        return self.head(Y.mean(axis=0) if self.pool == 'mean' else Y[-1])
 
     def configure_optimizers(self):
         return optax.adam(self.lr)
@@ -910,7 +1104,8 @@ class SeqClassifier(d2l.Classifier):
 Our S4D model stacks two blocks of width 48 with $N = 4$ states per
 channel; the baseline is the LSTM of :numref:`sec_lstm` sized to the same
 parameter count (48-dimensional pixel embeddings, 64 hidden units,
-roughly 30,000 parameters each). Ten epochs each, identical data
+roughly 30,000 parameters each), trained under the benchmark mean-pool
+readout. Ten epochs each, identical data
 pipeline, identical head, and gradients clipped to norm 1 for both
 models: at 784 steps the LSTM otherwise destabilizes mid-training, its
 loss spiking exactly as :numref:`subsec_bptt-gradient-pathologies` would
@@ -954,6 +1149,25 @@ s4d = SeqClassifier(nnx.Sequential(*[S4DBlock(48, 4) for _ in range(2)]),
 train_and_report('S4D', s4d)
 ```
 
+The retention diagnostic is the same mixer read only at the final step,
+one more training run.
+
+```{.python .input #ssm-sequential-image-classification-5}
+%%tab pytorch
+s4d_final = SeqClassifier(
+    nn.Sequential(*[S4DBlock(48, 4) for _ in range(2)]),
+    num_hiddens=48, pool='last')
+train_and_report('S4D (final)', s4d_final)
+```
+
+```{.python .input #ssm-sequential-image-classification-5}
+%%tab jax
+s4d_final = SeqClassifier(
+    nnx.Sequential(*[S4DBlock(48, 4) for _ in range(2)]),
+    num_hiddens=48, pool='last')
+train_and_report('S4D (final)', s4d_final)
+```
+
 ```{.python .input #ssm-sequential-image-classification-3}
 %%tab pytorch, jax
 if tab.selected('pytorch'):
@@ -967,13 +1181,21 @@ train_and_report('LSTM', lstm)
 
 ```{.python .input #ssm-sequential-image-classification-4}
 %%tab pytorch, jax
-print(f'{"model":>6} {"params":>8} {"val acc":>8} {"s/epoch":>8}')
+print(f'{"model":>12} {"params":>8} {"val acc":>8} {"s/epoch":>8}')
 for name, (params, acc, secs) in results.items():
-    print(f'{name:>6} {params:>8,} {acc:>8.3f} {secs:>8.1f}')
+    print(f'{name:>12} {params:>8,} {acc:>8.3f} {secs:>8.1f}')
 ```
 
-In our runs the S4D lands in the low-to-mid eighties in every framework
-and every rerun, clipped or unclipped. The LSTM baseline is another
+Read the table one comparison at a time. On the mean-pool benchmark the
+S4D lands in the low-to-mid eighties in both frameworks
+and every rerun, clipped or unclipped. The final-state run answers the
+retention question the mean pool cannot: reading nothing but the state
+after 784 updates costs the S4D little to nothing in our runs — the two
+readouts finish within run-to-run noise of each other, at most a few
+points apart and sometimes nearly tied — so what the classifier uses
+genuinely survives to the end of the
+sequence rather than being rescued by early outputs. The LSTM baseline
+is another
 story: across repeated runs (with and without clipping, at nearby
 learning rates) its final accuracy has ranged from roughly 60 to 84
 percent, and where a given run lands is a matter of initialization and
@@ -988,8 +1210,9 @@ orders of magnitude (what the log-uniform $\Delta$ init provides), so
 pixel-to-pixel structure hundreds of steps apart is visible to the model
 from the first gradient step, in any framework; an LSTM holds long-range
 state only when a decade's worth of initialization folklore is applied
-on its behalf, and hopes for a lucky draw otherwise. What HiPPO and
-discretization provide is that memory *by design*, robustly, rather than
+on its behalf, and hopes for a lucky draw otherwise. What the SSM
+parameterization provides — stability by construction and a multiscale
+initialization — is that memory *by design*, robustly, rather than
 by folklore. Wall-clock per epoch, also in the table,
 depends on what each framework fuses: against PyTorch's cuDNN-fused LSTM
 our teaching-grade scan pays its log-factor overhead, while in JAX,
@@ -1030,8 +1253,9 @@ into the `d2l` library next to their classes.
 def step(self, u, x=None):
     """Advance one token: u is (batch, H); x is the (batch, H, N) state."""
     a = -torch.exp(self.log_a)
-    a_bar = torch.exp(torch.exp(self.log_dt) * a)     # Same ZOH as forward
-    b_bar = (a_bar - 1) / a
+    da = torch.exp(self.log_dt) * a
+    a_bar = torch.exp(da)                             # Same ZOH as forward
+    b_bar = torch.expm1(da) / a
     if x is None:
         x = u.new_zeros(*u.shape, a_bar.shape[-1])
     x = a_bar * x + b_bar * u.unsqueeze(-1)           # One recurrence step
@@ -1052,8 +1276,9 @@ def step(self, X, x=None):
 def step(self, u, x=None):
     """Advance one token: u is (batch, H); x is the (batch, H, N) state."""
     a = -jnp.exp(self.log_a[...])
-    a_bar = jnp.exp(jnp.exp(self.log_dt[...]) * a)    # Same ZOH as forward
-    b_bar = (a_bar - 1) / a
+    da = jnp.exp(self.log_dt[...]) * a
+    a_bar = jnp.exp(da)                               # Same ZOH as forward
+    b_bar = jnp.expm1(da) / a
     if x is None:
         x = jnp.zeros((*u.shape, a_bar.shape[-1]))
     x = a_bar * x + b_bar * u[..., None]              # One recurrence step
@@ -1188,7 +1413,8 @@ long enough for real work to dominate per-call overhead; the recurrent
 step costs the same at every prefix length. How wide the gap has grown
 by our longest prefix depends on the framework's per-call overhead
 (severalfold to two orders of magnitude in our runs), and it keeps
-widening with the prefix, without bound. At this toy width the absolute
+widening for as long as the prefix, and the memory holding it, keep
+growing. At this toy width the absolute
 times are launch-overhead-bound, so read the shapes, not the
 milliseconds.
 
@@ -1220,29 +1446,48 @@ dynamics yields the ZOH formulas, in which the learnable step size
 $\Delta$ *is* an update gate and stability holds by construction, with
 eigenvalues pinned inside the unit circle by parameterization rather than
 by clipping (:numref:`subsec_bptt-gradient-pathologies`). Time-invariance
-makes the same model a recurrence, a convolution, and an ODE at once, and
-HiPPO supplies the state matrix for which the fixed-size state is a
-provably good compression of the whole past. Assembled into residual
-blocks (S4D), the result decisively beats a plainly initialized,
-parameter-matched LSTM on 784-step sequential image classification and
-matches the best-initialized one, carrying its long-range memory from
-the first step rather than learning it. Finally we ran the trained model
+makes the same model a recurrence, a convolution, and an ODE at once.
+HiPPO supplies dynamics under which a fixed-size state is a
+provably good compression of the whole past — a time-varying system
+whose matrix, frozen, initializes the LTI S4 family, with the diagonal
+S4D as the empirically vindicated simplification we implement.
+Assembled into residual
+blocks, the S4D trains reliably on 784-step sequential image
+classification where a plainly initialized,
+parameter-matched LSTM succeeds only on a lucky draw, and it holds its
+accuracy to within a few points when read from the final state alone,
+the retention diagnostic. Finally we ran the trained model
 the other way, one token at a time: stepping agrees with the scan to
 floating-point accuracy, costs the same at any prefix length, and
 carries a state a few hundred bytes per layer where a transformer's KV
-cache grows without bound (:numref:`sec_kv-cache`).
+cache grows with the length of the context (:numref:`sec_kv-cache`).
 
 Everything here, though, is *linear and time-invariant*: the kernel
 $\bar{\mathbf{K}}$, and with it the decision of what to remember, is fixed
-before the model ever sees the input. An S4D cannot read a token and
-decide that *this one* matters while its neighbor is noise: its gates,
-unlike the LSTM's, do not look at the data as it flows past, and the model
-is in this precise sense content-blind. Curing that, and keeping the
-scan, is the subject of the next section.
+before the model ever sees the input. An S4D *layer* cannot read a token
+and decide that *this one* matters while its neighbor is noise: its
+gates, unlike the LSTM's, do not look at the data as it flows past, so
+the state-update operator is in this precise sense content-blind. The
+qualifier matters: the blocks *around* each SSM are input-dependent, and
+a deep stack can modulate between layers what it cannot modulate within
+the state update — which is why such models earn partial credit, though
+not success, on the selectivity task of the next section. Curing the
+limitation at the operator level, and keeping the
+scan, is the subject of that section.
+
+**What the experiments show, and what they do not.** The scan-vs-loop
+and step-vs-rerun benchmarks establish *shapes* (logarithmic against
+linear, flat against growing), measured with teaching-grade kernels on
+one GPU; they are not production throughput numbers. The equivalence
+checks (scan against loop, stepping against scanning) are identities up
+to float rounding, the strongest claims here. The classifier is one
+seeded run per framework per readout: it shows that the multiscale
+initialization trains reliably where the plainly initialized LSTM is at
+the mercy of its draw, not a general architecture ranking.
 
 ## Exercises
 
-1. *Effective memory.* For a scalar recurrence
+1. [short-code] *Effective memory.* For a scalar recurrence
    $h_t = \bar{a} h_{t-1} + u_t$, define the effective memory horizon as
    the lag $k$ at which the influence $\bar{a}^k$ of an input drops below
    $0.01$. Plot the horizon as a function of $\bar{a} \in (0.9, 0.999)$
@@ -1250,7 +1495,7 @@ scan, is the subject of the next section.
    $\Delta$ scale for the model to remember 10 times longer, and how does
    this connect the step-size-as-gate box to the eigenvalue analysis of
    :numref:`subsec_bptt-gradient-pathologies`?
-1. *ZOH versus Euler.* The Euler discretization uses
+1. [short-code] *ZOH versus Euler.* The Euler discretization uses
    $\bar{\mathbf{A}} = \mathbf{I} + \Delta \mathbf{A}$ and
    $\bar{\mathbf{B}} = \Delta \mathbf{B}$. For the scalar system
    $a = -1, b = 1$ driven by $u_t = \sin(0.1 t)$, compare Euler and ZOH
@@ -1258,13 +1503,15 @@ scan, is the subject of the next section.
    $\Delta \in \{0.1, 0.5, 1.0, 2.5\}$. Which discretization degrades
    gracefully, and what goes visibly wrong with Euler at $\Delta = 2.5$?
    (Check the eigenvalue $|1 + \Delta a|$ first.)
-1. *Kernels as fingerprints.* Materialize and plot the convolution kernel
+1. [short-code] *Kernels as fingerprints.* Materialize and plot the
+   convolution kernel
    :eqref:`eq_ssm_kernel` for (a) our diagonal initialization
    $a_n = -(n+1)$ with $\mathbf{B} = \mathbf{1}$ and random $\mathbf{C}$,
-   and (b) the full (non-diagonal) HiPPO matrix :eqref:`eq_hippo`, using
+   and (b) the LTI system that S4 initializes, the full (non-diagonal)
+   HiPPO matrix :eqref:`eq_hippo` frozen into :eqref:`eq_ssm_cont`, using
    matrix powers. How do the kernels differ in shape and in how much mass
    they place on the distant past?
-1. *minLSTM.* Apply the minGRU recipe to the LSTM of :numref:`sec_lstm`:
+1. [extended] *minLSTM.* Apply the minGRU recipe to the LSTM of :numref:`sec_lstm`:
    make all gates functions of the input only, drop the output gate's
    dependence on the state, and write the cell update
    $\mathbf{C}_t = \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t
@@ -1273,12 +1520,12 @@ scan, is the subject of the next section.
    and train it with this section's language-modeling recipe. Does the
    extra gate help? (Compare :citet:`Feng.Tung.Ahmed.ea.2024`, who also
    normalize the two gates to sum to one.)
-1. *The candidate nonlinearity.* Our minGRU keeps a $\tanh$ on the
+1. [short-code] *The candidate nonlinearity.* Our minGRU keeps a $\tanh$ on the
    candidate $\tilde{\mathbf{H}}_t$, while :citet:`Feng.Tung.Ahmed.ea.2024`
    use a purely linear candidate. Remove the $\tanh$ and retrain. What
    happens to training stability and final perplexity, and why does an
    unbounded candidate interact badly with a convex-combination update?
-1. *Streaming classification.* The stepped path of :numref:`subsec_ssm-step`
+1. [short-code] *Streaming classification.* The stepped path of :numref:`subsec_ssm-step`
    makes anytime prediction almost free: the classifier head only needs the
    running mean of the encoder features seen so far, which you can carry as
    one more piece of constant-size state. Stream validation images pixel by
@@ -1286,11 +1533,13 @@ scan, is the subject of the next section.
    pixels seen. After how many of the 784 pixels does the model commit to
    its final answer, and does the shape of that curve match what mean
    pooling would lead you to expect?
-1. *State passing.* The scan assumes $\mathbf{h}_0 = \mathbf{0}$, and
+1. [short-code] *State passing.* The scan assumes $\mathbf{h}_0 = \mathbf{0}$, and
    `MinGRU` folds a carried state into $\mathbf{b}_1$. Use this to process
    a length-$T$ sequence in $T/\tau$ chunks of length $\tau$, passing the
    final state of each chunk into the next, and verify that the outputs
-   match the unchunked scan exactly. Why might chunking be useful at
+   match the unchunked scan to floating-point tolerance (chunking
+   reassociates the arithmetic, so compare against a tolerance scaled to
+   the dtype, not bitwise). Why might chunking be useful at
    training time? (Think memory, and recall truncated BPTT from
    :numref:`sec_bptt`.)
 
@@ -1422,7 +1671,7 @@ weights: one extra scalar $\Delta$ (step size) converts $(\mathbf{A},
 ::: {.slide title="ZOH discretization: the step size is a gate"}
 Hold $u$ constant over $\Delta$, integrate exactly:
 
-$$\bar{\mathbf{A}} = \exp(\Delta \mathbf{A}), \qquad \bar{\mathbf{B}} = (\Delta \mathbf{A})^{-1}(\exp(\Delta \mathbf{A}) - \mathbf{I})\, \Delta \mathbf{B}.$$
+$$\bar{\mathbf{A}} = \exp(\Delta \mathbf{A}), \qquad \bar{\mathbf{B}} = \left(\textstyle\int_0^{\Delta} e^{\tau \mathbf{A}} d\tau\right) \mathbf{B} = \mathbf{A}^{-1}(\exp(\Delta \mathbf{A}) - \mathbf{I})\, \mathbf{B} \ \textrm{(invertible } \mathbf{A}\textrm{)}.$$
 
 . . .
 
@@ -1430,15 +1679,18 @@ $$\bar{\mathbf{A}} = \exp(\Delta \mathbf{A}), \qquad \bar{\mathbf{B}} = (\Delta 
 - $\Delta$ large: $\bar{\mathbf{A}} \to 0$. Overwrite from the input.
 - A learned $\Delta$ **is an update gate**, not bolted on: it fell out
   of the calculus. (Next section: $\Delta$ becomes input-dependent.)
-- Not an analogy, an identity: *backward* Euler on the same ODE gives
+- Identity in the worked scalar mode $a=-1$: *backward* Euler gives
   $x_t = (1-z)x_{t-1} + z u_t$ with $z = \sigma(\log \Delta)$: the GRU
-  gate **is** a discretization rule (Gu, 2023).
+  gate **is** a discretization rule there (Gu, 2023).
+- Menu of rules: ZOH / bilinear (S4's choice) / backward Euler all keep
+  stability at any $\Delta$; forward Euler does not. In code: `expm1`.
 
 . . .
 
 Stability **by construction**: store $a_n = -e^{\theta_n}$, then
 $|\bar{a}_n| = e^{\Delta\,\mathrm{Re}(a_n)} < 1$ for every parameter
-value. No clipping, no knife-edge (8.6).
+value; diagonal (normal) $\mathbf{A}$ ⇒ no transients either. No
+clipping, no knife-edge (8.6).
 :::
 
 ::: {.slide title="Recurrence is convolution"}
@@ -1464,14 +1716,19 @@ section; the kernel view will not.
 The state is $N$ numbers summarizing all history. Which $N$ lose least?
 **HiPPO**: make $\mathbf{x}(t)$ the coefficients of the optimal
 polynomial approximation of the past; maintaining it online *is* a
-linear ODE with a fixed matrix ($A_{nn} = -(n{+}1)$, $B_n = \sqrt{2n+1}$).
+linear, **time-varying** ODE with a fixed matrix pattern:
+$\dot{\mathbf{x}} = (\mathbf{A}\mathbf{x} + \mathbf{B}u)/t$
+($A_{nn} = -(n{+}1)$, $B_n = \sqrt{2n+1}$) — the $1/t$ tracks the
+uniform measure over a growing past.
 
 ![Reconstructing 1,000 steps of history from the final state alone.](../img/mdl-modernrnn-hippo-reconstruction.svg){width=100%}
 
 . . .
 
-Lineage: **S4** (fast kernels, solved Long Range Arena) → **S4D**
-(diagonal suffices; init $a_n = -(n{+}1)$) → **S5** (parallel scan).
+Three objects: online LegS projection (owns the theorem) → **S4** = LTI
+model *initialized* at the HiPPO matrix (DPLR kernels, solved Long Range
+Arena) → **S4D** = diagonal approximation (matches S4 empirically; init
+$a_n = -(n{+}1)$ is multiscale, not optimal). Plus **S5**: the scan.
 We implement S4D's parameterization with S5's scan.
 :::
 
@@ -1494,11 +1751,15 @@ SSM mixes time, gated MLP mixes channels and restores nonlinearity:
 :::
 
 ::: {.slide title="Sequential Fashion-MNIST"}
-784 pixels, one at a time; class at the end. Same head, data, epochs,
-clip 1 (the LSTM destabilizes without it; the S4D *can't* explode):
-S4D stack vs. parameter-matched LSTM (~30k params each):
+784 pixels, one at a time. The **readout decides the question**:
+mean-pool all outputs = mixing benchmark; read the final step only =
+retention diagnostic. Same head, data, epochs, clip 1 (the LSTM
+destabilizes without it; the S4D *can't* explode); S4D stack vs.
+parameter-matched LSTM (~30k params each):
 
 @ssm-sequential-image-classification-2
+
+@ssm-sequential-image-classification-5
 
 @ssm-sequential-image-classification-3
 :::
@@ -1508,10 +1769,12 @@ S4D stack vs. parameter-matched LSTM (~30k params each):
 
 . . .
 
-- S4D: low-to-mid 80s in every framework, every rerun. LSTM: 60-84%
-  across reruns, tracking init defaults: plain uniform init leaves
-  memory to chance, orthogonal weights improve the odds, and parity
-  takes the full folklore (+ forget bias 1).
+- S4D (mean-pool): low-to-mid 80s in both frameworks, every rerun.
+  S4D (final state): within run-to-run noise of it — the memory really
+  is in the state after 784 steps, not rescued by early outputs.
+- LSTM: 60-84% across reruns, tracking init defaults: plain uniform
+  init leaves memory to chance, orthogonal weights improve the odds,
+  and parity takes the full folklore (+ forget bias 1).
 - The $\Delta$-init hands the S4D multi-scale memory **by design**; the
   LSTM gets it only from initialization folklore.
 - LRA (16k steps) is where this family first beat everything.
@@ -1557,10 +1820,11 @@ streams:
 - minGRU ≈ GRU quality on our LM recipe.
 - SSMs: $\Delta$ **is** a gate; eigenvalues inside the unit circle **by
   construction**; recurrence $\equiv$ convolution $\equiv$ ODE.
-- HiPPO: a fixed-size state *provably* carries a long past.
+- HiPPO: a fixed-size state *provably* carries a long past — via a
+  time-varying system; frozen, its matrix initializes S4/S4D.
 - Inference delivered: `step` == scan to float precision; flat cost per
   token; ~1 KiB of state vs. a KV cache that grows with context.
 - But everything is **LTI**: the kernel is fixed before the model sees
-  the data: content-blind. Fixing that (and keeping the scan) is the
-  next section.
+  the data — the state update is content-blind (the MLPs around it are
+  not). Fixing that (and keeping the scan) is the next section.
 :::

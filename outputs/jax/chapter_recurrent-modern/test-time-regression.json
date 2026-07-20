@@ -44,7 +44,7 @@
           "mime": "image/svg+xml",
           "asset": "test-time-regression/test-time-regression-what-learning-sharpened-1-1.svg",
           "bytes": 35753,
-          "sha256": "sha256:4b7c86f512511d8cf0f6f94004a29e50548ad7ba49b94c05ffba91912078962b"
+          "sha256": "sha256:ce030174bdb1f7b14f4772402b8c247ede1294de2afaf5b28fd9a313e0d8e702"
         }
       ]
     },
@@ -57,36 +57,36 @@
           "mime": "image/svg+xml",
           "asset": "test-time-regression/test-time-regression-what-learning-sharpened-2-1.svg",
           "bytes": 45189,
-          "sha256": "sha256:f37198f536459e09c7e5819d0e2f503151a9867f84c82368e8bfc610ea5768d3"
+          "sha256": "sha256:779c239cc66343575889e10227d44740caf752e067b955470fc5207da6c96773"
         }
       ]
     },
     "test-time-regression-the-spectrum-measured-1": {
-      "code_fingerprint": "sha256:083c25fc81a2cae0b3cbb15de549542f0d2239d2187679f31b270320e4288b37",
+      "code_fingerprint": "sha256:b522f437ef3f52c421c9fff92dd16a298c61c41e5fc27867866fc1a43c17cb31",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "                solver   test MSE   rmse to batch fit\n       Nadaraya-Watson      0.023               0.114\n     online GD, 1 pass      0.151               0.372\n   online GD, 5 passes      0.022               0.127\n  online GD, 30 passes      0.008               0.032\n           batch ridge      0.010               0.000\n"
+          "text": "                solver  test MSE  objective  dist to opt\n       Nadaraya-Watson     0.023         --        0.114\n     online GD, 1 pass     0.151      9.372        0.372\n   online GD, 5 passes     0.022      5.108        0.128\n  online GD, 30 passes     0.008      4.542        0.031\n           batch ridge     0.010      4.487        0.000\n"
         }
       ]
     },
     "test-time-regression-the-spectrum-measured-2": {
-      "code_fingerprint": "sha256:bca5ae2c2c5df684597b28ca9fc8c1a4b54d4da11439590bef28d4f85ffddf34",
+      "code_fingerprint": "sha256:8931c98b3048b141c5a686c8cef1c0c4bc6e1c799961b14e4dbb6d6f1c7e1a08",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "test-time-regression/test-time-regression-the-spectrum-measured-2-1.svg",
-          "bytes": 43747,
-          "sha256": "sha256:2e78cce367e68a79f58fd7d67625cf85de78e792187b31d3bc7fd3b725be0b95"
+          "bytes": 43752,
+          "sha256": "sha256:3ac327cda40b9b2e50d650cc4d8c4cfe5abf0b5806c770ec5cb768c6f66b3df7"
         }
       ]
     },
     "test-time-regression-deriving-the-gate-longhorn": {
-      "code_fingerprint": "sha256:5b18dbe93b28c126cd906cebc4cddf21bc94522e8b0d888977911a30e757a96b",
+      "code_fingerprint": "sha256:17c04a13b2440058698c01e5b649883e36ec087fe3a52f2ebbf1f69fbdaee2b5",
       "kind": "text",
       "outputs": [
         {
@@ -97,7 +97,7 @@
       ]
     },
     "test-time-regression-a-linear-memory-by-hand": {
-      "code_fingerprint": "sha256:44199bc66adadb867bfadbbe1f3dce69eb29828f6e4a46963400dda4c12f48ba",
+      "code_fingerprint": "sha256:ed4e1dc88da9e2a064b241d13991d833c1e690e93d62ed97b216a6116b364ae4",
       "kind": "text",
       "outputs": [
         {
@@ -108,7 +108,7 @@
       ]
     },
     "test-time-regression-a-deep-memory-via-autograd": {
-      "code_fingerprint": "sha256:21d3b7a8871ceedac30d3faf00b8a372a2898cde909da78cf1bf3d37d0401217",
+      "code_fingerprint": "sha256:d032cb32c244b4f5b7e1f7f74cff5b87e7c1cc7122f1253438aa48e967871e61",
       "kind": "text",
       "outputs": [
         {
@@ -119,7 +119,7 @@
       ]
     },
     "test-time-regression-regression-that-tracks-the-forecasting-connection": {
-      "code_fingerprint": "sha256:27ba9f553cb956a1491dde875477a679bda25ae62b3430af9aa8957b12da9dae",
+      "code_fingerprint": "sha256:7e6fdbd365728bbb8e647895f21455bf705ba83eaf47e16dc3928c0de12ee40b",
       "kind": "mixed",
       "outputs": [
         {
@@ -132,7 +132,7 @@
           "mime": "image/svg+xml",
           "asset": "test-time-regression/test-time-regression-regression-that-tracks-the-forecasting-connection-1.svg",
           "bytes": 64287,
-          "sha256": "sha256:d385e493b3425b4e2fbfb23b8893e8a0c55e4474cbfd7cb8cee915e57b79db7d"
+          "sha256": "sha256:bb22e51a33ab8e0d97dd17b128ac087f4059d6d2f153d1cc83951614222ee832"
         }
       ]
     }

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:c4c70f9358d1662d5b37f6107ef656bf10417477e8fdd3f924e184dca48a8c4a",
+    "d2l_lib_fingerprint": "sha256:98fcfd76e02828aec5ea42843b719c68ce3362971133eae525370b232d63fdb8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -40,14 +40,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "S4D: final validation accuracy 0.560\n"
+          "text": "S4D: final validation accuracy 0.611\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-3-1.svg",
-          "bytes": 21291,
-          "sha256": "sha256:d9b2aac573f89ad2126301d5039d29c2a1ad0c947234b0c0944dadcc8fc8fcab"
+          "bytes": 21293,
+          "sha256": "sha256:ed46db2097d11c758f0d971b13ae9dbfa959cb38c060f0ebe6fe83622fa6046d"
         }
       ]
     },
@@ -58,14 +58,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "LSTM: final validation accuracy 0.999\n"
+          "text": "LSTM: final validation accuracy 0.994\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-4-1.svg",
-          "bytes": 21881,
-          "sha256": "sha256:58fdc7a02d89bba996f78d51d8a94474e12d4d3b65bc3f7323655750818575fb"
+          "bytes": 21889,
+          "sha256": "sha256:10725377f50915632ca0569e5f4f95c02cc77089b5fb1111287d71ff918e6b98"
         }
       ]
     },
@@ -77,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-an-lti-baseline-and-a-gated-one-5-1.svg",
-          "bytes": 27637,
-          "sha256": "sha256:17aa7cac0b06d872329a7b148698da2fe31449450ea52ae0edc76341dc8cdfda"
+          "bytes": 27621,
+          "sha256": "sha256:f0838e463a13713727de6222e45895cede314df6859929dd103c5eb2104e441b"
         }
       ]
     },
@@ -104,99 +104,99 @@
       "outputs": []
     },
     "mamba-the-three-answers-measured-on-one-task-1": {
-      "code_fingerprint": "sha256:8ea4861ad74ba2db642ff7ea870ef5c9e627597f5429d978bb90494058bcaf33",
+      "code_fingerprint": "sha256:a61aa7e6d309db9aa3ef68b8fcab995bdd3e5f9e22ed35940a2b40329c57f5e2",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-three-answers-measured-on-one-task-2": {
-      "code_fingerprint": "sha256:4cadbdcd946d20127efe9834adb1f1389982087508b91998e12b68f25303e69b",
+      "code_fingerprint": "sha256:1e4a5b77fa0378d53b2da3db1760e3353d5c16c8772ae85ca122b42c87f737dd",
       "kind": "text",
       "outputs": []
     },
     "mamba-the-three-answers-measured-on-one-task-3": {
-      "code_fingerprint": "sha256:7dae081210f9b8dccc535acd8f8a5f5b2ad8910bd1ef5113de9e0565196f7996",
+      "code_fingerprint": "sha256:713dfb896301fc6fec44fe1149dea3018f750c1a59637869248b25032feda92f",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-3-1.svg",
-          "bytes": 18558,
-          "sha256": "sha256:42eefd833f5bdc18e4b4a0ceec031801ca2928b272a7aedfe328ba0c4bb84485"
+          "bytes": 18750,
+          "sha256": "sha256:42954e0cb250b5fab08cc5932cf7b886bf003c554ddd918197e6c989cbb45c71"
         }
       ]
     },
     "mamba-the-three-answers-measured-on-one-task-4": {
-      "code_fingerprint": "sha256:75b85684ba2c205be44a0c2295df1a96a5d0df98dfba2cdd6ad033018547f438",
+      "code_fingerprint": "sha256:a01d82aea43454864c7a17ebe60378b4473a0f89b3f829c69ac189d13ac3b8c7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-4-1.svg",
-          "bytes": 18560,
-          "sha256": "sha256:43fd1cc6cd117b77da902e234cb4a4d6365d873ecc2cfe8c1a8002edefcd0d77"
+          "bytes": 18561,
+          "sha256": "sha256:5988bfec859edd41cd85c6104d6dc7080dd10cd199464478fa7900a85da9c361"
         }
       ]
     },
     "mamba-the-three-answers-measured-on-one-task-5": {
-      "code_fingerprint": "sha256:4aedf344f5337f3285bdd6dd5ead5e5641600e9296838bcfc7490ce9ce66c622",
+      "code_fingerprint": "sha256:2ae1e4287a5d672beab015708f7a62c57b8a2bdad40ebe3f46c3898fcd12abe9",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-the-three-answers-measured-on-one-task-5-1.svg",
-          "bytes": 20813,
-          "sha256": "sha256:11a48fa9a7122bdcd309f6e176951522219495fd7f297eb68b06e8ea3f52b854"
+          "bytes": 20810,
+          "sha256": "sha256:35c2c24e9610419826cc993c2d2ee0c5e6be7dde2e4e4bfff720ae3263d8820f"
         }
       ]
     },
     "mamba-the-three-answers-measured-on-one-task-6": {
-      "code_fingerprint": "sha256:66798979ec0274537d368a43d4efc3488b32027a65c29b90faabf671f84f71ea",
+      "code_fingerprint": "sha256:fca3163f602ac019b41eb1630a0ae96cfc77f90f1c49e7b80f78f0c28ca5679c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     91.8   2.35   297,539      0.8\n minGRU     85.0   2.31   214,851      1.0\n  Mamba     78.5   2.27   488,739      6.9\n"
+          "text": "  model  val ppl    bpb    params  s/epoch\n   LSTM     88.9   2.33   297,539      0.7\n minGRU     83.5   2.30   214,851      0.8\n  Mamba     80.5   2.28   488,739      5.0\n"
         }
       ]
     },
     "mamba-stepping-the-selective-model-1": {
-      "code_fingerprint": "sha256:f2db5bcd72ad8fa1d4a60e0e299e05e7e15bc2f132f55986f87efb47e4c05fa0",
+      "code_fingerprint": "sha256:e8dcc469f7813c900b68ed9d2e9b22b25863a02e2b8bab0a0e9c2bef306aa7f3",
       "kind": "text",
       "outputs": []
     },
     "mamba-stepping-the-selective-model-2": {
-      "code_fingerprint": "sha256:0b1ec96bfd8854ff057c43a5330b8f343a1ff7b7e4f1d369d49e6c827f016b6b",
+      "code_fingerprint": "sha256:45e4184f934df43690dab2e34f7163bbc0a120280424add08039fd9049162504",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "stepped vs scanned logits: deviation 7.15e-06, relative 6.07e-07\n"
+          "text": "stepped vs scanned logits: deviation 6.20e-06, relative 5.47e-07\n"
         }
       ]
     },
     "mamba-the-three-answers-measured-on-one-task-7": {
-      "code_fingerprint": "sha256:88f49696bc0497c6931b98945110af23c1033e225e41b4345a227e4400c0d303",
+      "code_fingerprint": "sha256:b2defe794c4424991d3cadc8980e1ca92f59be0523b3d75c4983145955cbdc85",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   LSTM: \"the time traveller.\\n\\n'Thisred as my own, in the Time Traveller,\\nI'mbat in a\"\n minGRU: \"the time traveller had come in the ranted\\nwgle, for the softing.\\n\\n'I wals\"\n"
+          "text": "   LSTM: 'the time travelleren the Time Traveller and diling with cry. Weve it will was the\\nside and mon'\n minGRU: 'the time travellered, and the unlination. And\\nthe mean, and it seemed to the faint, and a'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  Mamba: 'the time traveller, and I was faster and\\nmistaked to me, as I was, and I\\nsto'\n"
+          "text": "  Mamba: 'the time traveller, I was not believent the lever, and\\nfolden in the sunt of the d'\n"
         }
       ]
     },
     "mamba-selective-copying-revisited-1": {
-      "code_fingerprint": "sha256:94ff0aab397dfe92217004fbe16b7aa962596fee335c5d35863ed818bb80f567",
+      "code_fingerprint": "sha256:91350ea48772b90348d8079afe234d59c5f4227423f227305e25051da29c80db",
       "kind": "mixed",
       "outputs": [
         {
@@ -208,21 +208,34 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-1-1.svg",
-          "bytes": 21902,
-          "sha256": "sha256:00ee0bf79533e67d7cff7bf1334393b82bc86d732e0131bd9c74c824c894823d"
+          "bytes": 21888,
+          "sha256": "sha256:26e1cc9e8717070604130a21f1afa6fcdddbbf3dd77fb3cedfbd70ad72d1021d"
         }
       ]
     },
     "mamba-selective-copying-revisited-2": {
-      "code_fingerprint": "sha256:b4f66972b523b8ab72c0d4625d096d8e5c1e8bbfa744efc4e39665c127f118e6",
+      "code_fingerprint": "sha256:1d586492a4d52d749ebe612d34a9e397f38b4405c9e16ef3e88324d417e6c505",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mamba/mamba-selective-copying-revisited-2-1.svg",
-          "bytes": 30471,
-          "sha256": "sha256:6efb85a75e7e012b0b04514b3d1f7dd99068d38e703185df4e0eee7cc37f7881"
+          "bytes": 30435,
+          "sha256": "sha256:2c34f8b00b1e88c960513b43e4ef92b36e1fbda23018c78ec8ac32519e136c4b"
+        }
+      ]
+    },
+    "mamba-selective-copying-revisited-3": {
+      "code_fingerprint": "sha256:3c76e5053f3d7ca17a9d2e811698650c4ea781eacf4dd4f1291feeaaba89835d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "mamba/mamba-selective-copying-revisited-3-1.svg",
+          "bytes": 39417,
+          "sha256": "sha256:57b94934dadf118cf992fe06f1a13ec7bf72f13327456d52542c9ffd930f22cf"
         }
       ]
     }

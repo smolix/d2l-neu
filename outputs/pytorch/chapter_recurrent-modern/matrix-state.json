@@ -14,25 +14,25 @@
       "outputs": []
     },
     "matrix-state-what-the-memory-costs": {
-      "code_fingerprint": "sha256:26af231a6b938f52b6d94debc6c03edb38bdeea7a6c0e1e75e6e667f9634917f",
+      "code_fingerprint": "sha256:3c2714b4ddc42d2dcdddb2c793f1434ce9f6a57d5f12cb0432bf7b32c9daa3a5",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "matrix-state/matrix-state-what-the-memory-costs-1.png",
-          "bytes": 51698,
-          "sha256": "sha256:18fed2149cbb82cab2ec90f7973ba27ddd9d1a9e785ea85537681361f31a882f"
+          "bytes": 57201,
+          "sha256": "sha256:7bc8b1ca13bb8122ac6b39fd47be8ae2b1e144d791f2774f316ff29c886ae778"
         }
       ]
     },
     "matrix-state-the-state-space-duality-1": {
-      "code_fingerprint": "sha256:2ac892b0adf3c64692b5e1b98fb920c0193ece9fd1ea9d31d1cf984dffe588f6",
+      "code_fingerprint": "sha256:dd7a7cb80af96b0153a7327962f2e8d4f6a1d381e388f51f09912a2e2a079677",
       "kind": "text",
       "outputs": []
     },
     "matrix-state-the-state-space-duality-2": {
-      "code_fingerprint": "sha256:e1c8871246b783736c9bbdcb065f3a759c9923b39fd77d6782f999f3ab54d2a2",
+      "code_fingerprint": "sha256:49126fe027ec1853b9284c6a955c88d24f00e8241cbcedeb5d2ab3ec26802f4f",
       "kind": "text",
       "outputs": [
         {
@@ -43,7 +43,7 @@
       ]
     },
     "matrix-state-chunked-computation-mostly-matmul-a-little-scan-1": {
-      "code_fingerprint": "sha256:57c635b73a46618739944a4fe398bb0394fe01ea3a94ddf87c0d0abc34e8dfac",
+      "code_fingerprint": "sha256:2f385335f562152c587519af18dd5aa01842f2ee225d72f664bba0822e0ee732",
       "kind": "text",
       "outputs": [
         {
@@ -54,7 +54,7 @@
       ]
     },
     "matrix-state-chunked-computation-mostly-matmul-a-little-scan-2": {
-      "code_fingerprint": "sha256:5c55a23fecdd87c67d293ca62857d68836482a80bc5b9d59aa1ad9ea553964f9",
+      "code_fingerprint": "sha256:2cded9204e0546a84fcfa128bf252edf33f6bf407759356833caeaa6bab38d13",
       "kind": "text",
       "outputs": [
         {
@@ -65,28 +65,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     recurrence     281.62         3.0\n"
+          "text": "     recurrence     282.93         3.0\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   chunked (16)      36.24         1.5\n   chunked (64)       9.42         3.0\n  chunked (256)       2.61        12.0\n chunked (1024)       0.86        48.0\n quadratic dual       1.18       272.0\n"
+          "text": "   chunked (16)      36.12         1.5\n   chunked (64)       9.42         3.0\n  chunked (256)       2.61        12.0\n chunked (1024)       0.87        48.0\n quadratic dual       1.01       272.0\n(NVIDIA GeForce RTX 4090, float32, torch 2.11.0+cu128; teaching implementations, warmed up)\n"
         }
       ]
     },
     "matrix-state-what-the-hardware-bought": {
-      "code_fingerprint": "sha256:a727cd6d494c710870f7e579ed54c788ebb3ce9f5847b21902fde153b1391c66",
+      "code_fingerprint": "sha256:38f4e1bd0aa3a0eee52f41e9b40bf7a63010979b2fd0fe0c0f2a647197020940",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "matrix state, one 64x64 head:      0.02 MiB, constant\nmatrix state, Mamba-2 scale:       2.50 MiB, constant\nGQA KV cache at n =     4,096:    16.00 MiB and growing\nGQA KV cache at n =   131,072:   512.00 MiB and growing\nGQA KV cache at n = 1,048,576:  4096.00 MiB and growing\n"
+          "text": "per layer, per sequence, fp16:\nmatrix state, one 64x64 head:      0.01 MiB, constant\nMamba-2 2.7B, SSM 655,360 + conv 15,360 elements: 1.28 MiB, constant\nGQA KV cache at n =     4,096:    16.00 MiB and growing\nGQA KV cache at n =   131,072:   512.00 MiB and growing\nGQA KV cache at n = 1,048,576:  4096.00 MiB and growing\n"
         }
       ]
     },
     "matrix-state-the-one-that-kept-the-normalizer": {
-      "code_fingerprint": "sha256:1264cc38502c4e7b0b412f1bb5314ec58e4b5e173ccf7e422ab67069dc328ed9",
+      "code_fingerprint": "sha256:8a2d9558d4b4ba0b0ae850902abc872c7d06dce8e2757bec6cf2233fc2c0f61f",
       "kind": "text",
       "outputs": [
         {

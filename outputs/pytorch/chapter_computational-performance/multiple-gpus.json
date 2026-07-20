@@ -4,111 +4,71 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:5668de212d6ae8734024ffe60068752e9d6d60a1f9765b8d4cadac4746e30983",
+    "d2l_lib_fingerprint": "sha256:79c7afe0cffd90ae6bf73727550b2462146c63d9669392b78cba2bb04dbc09a9",
     "max_inline_bytes": 0
   },
   "cells": {
-    "multiple-gpus-data-parallelism": {
-      "code_fingerprint": "sha256:c38248a0ecf9cdd9707a4826e65ea2c21edf63bdfb707498f792440190542680",
+    "multiple-gpus-multi-gpu-from-first-principles": {
+      "code_fingerprint": "sha256:36109979366dbae81219289444bde20742a68440a8e7eb645a02e5dbca101026",
       "kind": "text",
       "outputs": []
     },
-    "multiple-gpus-a-toy-network": {
-      "code_fingerprint": "sha256:0d4adc02361162f4626d48c58f1f7598d470bbbb5cd1a85a5496de7a8f504614",
+    "multiple-gpus-data-parallelism-by-hand-1": {
+      "code_fingerprint": "sha256:75a8542c085b38830946f54e06e3c0b11e16982eacc23a975ec364aee9f630ed",
       "kind": "text",
       "outputs": []
     },
-    "multiple-gpus-data-synchronization-1": {
-      "code_fingerprint": "sha256:74e199da0d62adaecb625ba611b2f5ccb5255b66bc3e91903cca1ba445803c6b",
+    "multiple-gpus-data-parallelism-by-hand-2": {
+      "code_fingerprint": "sha256:deeed234a94cae8a8748ca4892fbfcbf08f8dc6aa9d59be4414a2c9092f0166a",
       "kind": "text",
       "outputs": []
     },
-    "multiple-gpus-data-synchronization-2": {
-      "code_fingerprint": "sha256:4ddf5699bb98c5ed37cf2183afbcd065e58b9d58b6f27d73a5fbb51d401332e9",
+    "multiple-gpus-data-parallelism-by-hand-3": {
+      "code_fingerprint": "sha256:7d62286f0df1625c312beb8829bc57d834518b0f1bfbd6902d84434d874a5cc9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b1 weight: tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],\n       device='cuda:0', requires_grad=True)\nb1 grad: None\n"
+          "text": "before: [[[1.0, 1.0]], [[2.0, 2.0]]]\nafter:  [[[3.0, 3.0]], [[3.0, 3.0]]]\n"
         }
       ]
     },
-    "multiple-gpus-data-synchronization-3": {
-      "code_fingerprint": "sha256:7493c641a2f7475e938b7e09fb7e26236dc83fed07d9a7427782eac206347132",
+    "multiple-gpus-data-parallelism-by-hand-4": {
+      "code_fingerprint": "sha256:bdcb6c34c623e61db679ca27cf7834e84c8beb55a1b4ed94d59ad4d320c81414",
       "kind": "text",
       "outputs": []
     },
-    "multiple-gpus-data-synchronization-5": {
-      "code_fingerprint": "sha256:bb46d32f86bb2663af7d1e0df6e0be227fdb3231d5779272f31c2a6fe88db88a",
+    "multiple-gpus-data-parallelism-by-hand-5": {
+      "code_fingerprint": "sha256:2090e54e62140d881f517906671418423f2e725127cb96487348d1523840fc11",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "before allreduce:\n tensor([[1., 1.]], device='cuda:0') \n tensor([[2., 2.]], device='cuda:1')\nafter allreduce:\n tensor([[3., 3.]], device='cuda:0') \n tensor([[3., 3.]], device='cuda:1')\n"
+          "text": "test acc 0.78, 2.18 sec/epoch on 1 GPU(s)\n"
         }
       ]
     },
-    "multiple-gpus-distributing-data-1": {
-      "code_fingerprint": "sha256:5c38ae503ac83e4dcdb1f7b2fa8a81fd82b282f2d8f930d0788d080a09c17146",
+    "multiple-gpus-data-parallelism-by-hand-6": {
+      "code_fingerprint": "sha256:7219189f858910e03189431e415656c53cdf64f29417eb76d07d200513802795",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "input : tensor([[ 0,  1,  2,  3,  4],\n        [ 5,  6,  7,  8,  9],\n        [10, 11, 12, 13, 14],\n        [15, 16, 17, 18, 19]])\nload into [device(type='cuda', index=0), device(type='cuda', index=1)]\noutput: (tensor([[0, 1, 2, 3, 4],\n        [5, 6, 7, 8, 9]], device='cuda:0'), tensor([[10, 11, 12, 13, 14],\n        [15, 16, 17, 18, 19]], device='cuda:1'))\n"
+          "text": "test acc 0.81, 2.36 sec/epoch on 2 GPU(s)\n"
         }
       ]
     },
-    "multiple-gpus-distributing-data-2": {
-      "code_fingerprint": "sha256:cab9ca957036a90f70e9531d62544d1e9f8ae7e0827654ffca935686b28673d7",
+    "multiple-gpus-the-accounting": {
+      "code_fingerprint": "sha256:f4d5afb75dfb347440d474c1fcf9e0131cc0718f9ee7e5f4c72e21187df8d7ef",
       "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-training-1": {
-      "code_fingerprint": "sha256:3ac5cb8f6b369cfc8d79258f5762c203a5fdc12f0e365ecf4cbce504d421eb83",
-      "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-training-2": {
-      "code_fingerprint": "sha256:c06bd7f110747d486cf61a6759bd8ef914e4d42af7395c79bd47d54d375313d7",
-      "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-training-3": {
-      "code_fingerprint": "sha256:14a769fda19a94a218b6e66963887654b298421ab068ec816586ef5abcd52c5f",
-      "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.84, 1.8 sec/epoch on [device(type='cuda', index=0)]\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
-          "bytes": 16960,
-          "sha256": "sha256:98435858e9d3789f958db3627b4d827738dc06e13a9dc9c38cdd50e3ead74280"
-        }
-      ]
-    },
-    "multiple-gpus-training-4": {
-      "code_fingerprint": "sha256:433cc7560fb0095292f6256ef3613f810f947b2a1ef0a261b0341b1ec97abb14",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "test acc: 0.83, 8.1 sec/epoch on [device(type='cuda', index=0), device(type='cuda', index=1)]\n"
-        },
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
-          "bytes": 16964,
-          "sha256": "sha256:c20461afe66cc0e6fca33464971e7161314fc80c199d3ab998114c1c827d289b"
+          "text": "allreduce 20.73 GB/s effective over 25.9 ms\n"
         }
       ]
     }

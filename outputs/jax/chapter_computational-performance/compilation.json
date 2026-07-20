@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/compilation.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:8b59fd8e216bc85594c6f7351afe9aea3406f44990d7f9e3d5600cab9242f41a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "compilation-compute-graphs-and-compilation": {
+      "code_fingerprint": "sha256:a212ef780e2fff536002f69f1f4a93f3c51733d6025bbb7359f8cedbe49e4309",
+      "kind": "text",
+      "outputs": []
+    },
+    "compilation-capture-two-philosophies-2": {
+      "code_fingerprint": "sha256:a8d54e16d0aafe7704212a251fa70933b9ff55841816245379076edbe1f89ad5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "{ \u001b[34;1mlambda \u001b[39;22m; a\u001b[35m:f32[4]\u001b[39m. \u001b[34;1mlet\u001b[39;22m b\u001b[35m:f32[4]\u001b[39m = sin a; c\u001b[35m:f32[4]\u001b[39m = add b 1.0:f32[] \u001b[34;1min \u001b[39;22m(c,) }\nthis prints once, at trace time\n"
+        }
+      ]
+    },
+    "compilation-what-the-compiler-does-fusion": {
+      "code_fingerprint": "sha256:84561f10f7860c9fc3a93380fc6f6170442add11240641648bf615ae0b26f8b3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eager: 1.29 ms/call\ncompiled: 0.15 ms/call\n"
+        }
+      ]
+    },
+    "compilation-whole-step-compilation-measured": {
+      "code_fingerprint": "sha256:692730a23c482d701845d3ede2669ac47cbfa719b2329d59b53184eeb3bc3fe8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ahead-of-time compile: 1.8 s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eager: 17.40 ms/call\ncompiled: 0.17 ms/call\n"
+        }
+      ]
+    },
+    "compilation-the-overhead-regime-capture-and-replay": {
+      "code_fingerprint": "sha256:fcfe648b793584447fe5adcdd0e68da8a05a25caffaa8b3f530cce8deec5e0a4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eager: 7.71 ms/call\njit: 0.27 ms/call\n"
+        }
+      ]
+    }
+  }
+}

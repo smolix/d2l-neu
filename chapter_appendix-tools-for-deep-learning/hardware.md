@@ -9,7 +9,10 @@ you read anyone's price table, including ours). What does not age is the
 reasoning: figure out whether your workload is bound by memory capacity,
 memory bandwidth, or compute, and buy the binding constraint. The specific
 machines below are reference points for that reasoning as much as
-recommendations.
+recommendations. Where :numref:`sec_hardware` explains *why* the machine
+behaves the way it does — the roofline, the memory hierarchy, the format
+ladder — this section is the complementary question of *what to
+purchase*.
 
 Two physical facts organize everything that follows. First, **capacity
 gates what runs at all**: training state is several times model size

@@ -877,7 +877,7 @@ Because TensorFlow `Tensors` are immutable, there is no in-place assignment
 for ordinary tensors; reuse a `Variable` (as above) when you need mutable
 state. Compiling a computation with `tf.function` additionally lets
 TensorFlow prune and reuse allocations for you; we return to graph
-compilation and its performance benefits in :numref:`sec_hybridize`.
+compilation and its performance benefits in :numref:`sec_compilation`.
 :end_tab:
 
 ```{.python .input #ndarray-saving-memory-3}

@@ -1245,8 +1245,10 @@ no cache at all while a few retain exact recall. Beyond the cache
 proper, the decode-side bandwidth arithmetic of this section is also
 what *speculative decoding* exploits, drafting several tokens cheaply
 and verifying them in one prefill-priced pass
-:cite:`Leviathan.Kalman.Matias.2023`; the systems-level story belongs
-to :numref:`chap_performance`.
+:cite:`Leviathan.Kalman.Matias.2023`. The roofline economics behind that
+arithmetic are made precise in :numref:`sec_hardware`; the systems-level
+story of speculative decoding and the serving engines around it belongs
+to the Language Models part.
 
 ## Summary
 

@@ -1,937 +1,602 @@
-# Training on Multiple GPUs
+# Multi-GPU from First Principles
 :label:`sec_multi_gpu`
 
-So far we discussed how to train models efficiently on CPUs and GPUs. We even showed how deep learning frameworks allow one to parallelize computation and communication automatically between them in :numref:`sec_auto_para`. We also showed in :numref:`sec_use_gpu` how to list all the available GPUs on a computer using the `nvidia-smi` command.
-What we did *not* discuss is how to actually parallelize deep learning training.
-Instead, we implied in passing that one would somehow split the data across multiple devices and make it work. The present section fills in the details and shows how to train a network in parallel when starting from scratch. Details on how to take advantage of functionality in high-level APIs is relegated to :numref:`sec_multi_gpu_concise`.
-We assume that you are familiar with minibatch stochastic gradient descent algorithms such as the ones described in :numref:`sec_minibatch_sgd`.
+The ladder of :numref:`sec_memory_precision` ended with the one rung that
+buys both more compute and more memory at once: another GPU. This section
+adds it — but honestly, and from the ground up. We build data-parallel
+training by hand, with explicit device-to-device copies and a
+hand-rolled gradient sum, so that when :numref:`sec_multi_gpu_concise`
+replaces our loop with production machinery, you know exactly what that
+machinery does. We derive the communication algorithm the professionals
+use (ring allreduce) and its cost, and — because this book's build box
+has no fast inter-GPU fabric — we *measure* what communication actually
+costs and discover the central fact of parallel training: **a second GPU
+is not free, and whether it pays is an accounting question you can answer
+before you run.**
 
+That last point is why this section is built on a machine with no NVLink
+and no peer-to-peer transfer (:numref:`sec_hardware`). On a datacenter
+rack the communication cost hides under a terabyte-per-second fabric and
+the accounting feels academic; on our box it is impossible to ignore,
+which makes it the better teacher. Every conclusion here holds at two
+GPUs as well as four — the number of devices is a variable, never a
+constant.
 
-## Splitting the Problem
+*Prerequisites: minibatch SGD and the effect of batch size on the gradient
+estimate (*:numref:`sec_minibatch_sgd`*); LeNet (*:numref:`sec_lenet`*); the
+interconnect measurements of* :numref:`subsec_hw-interconnects`*.*
 
-Let's start with a simple computer vision problem and a slightly archaic network, e.g., with multiple layers of convolutions, pooling, and possibly a few fully connected layers in the end.
-That is, let's start with a network that looks quite similar to LeNet :cite:`LeCun.Bottou.Bengio.ea.1998` or AlexNet :cite:`Krizhevsky.Sutskever.Hinton.2012`.
-Given multiple GPUs (2 if it is a desktop server, 4 on an AWS g4dn.12xlarge instance, 8 on a p3.16xlarge, or 16 on a p2.16xlarge), we want to partition training in a manner as to achieve good speedup while simultaneously benefitting from simple and reproducible design choices. Multiple GPUs, after all, increase both *memory* and *computation* ability. In a nutshell, we have the following choices, given a minibatch of training data that we want to classify.
-
-First, we could partition the network across multiple GPUs. That is, each GPU takes as input the data flowing into a particular layer, processes data across a number of subsequent layers and then sends the data to the next GPU.
-This allows us to process data with larger networks when compared with what a single GPU could handle.
-Besides,
-memory footprint per GPU can be well controlled (it is a fraction of the total network footprint).
-
-However, the interface between layers (and thus GPUs) requires tight synchronization. This can be tricky, in particular if the computational workloads are not properly matched between layers. The problem is exacerbated for large numbers of GPUs.
-The interface between layers also
-requires large amounts of data transfer,
-such as activations and gradients.
-This may overwhelm the bandwidth of the GPU buses.
-Moreover, compute-intensive, yet sequential operations are nontrivial to partition. See e.g., :citet:`Mirhoseini.Pham.Le.ea.2017` for a best effort in this regard. It remains a difficult problem and it is unclear whether it is possible to achieve good (linear) scaling on nontrivial problems. We do not recommend it unless there is excellent framework or operating system support for chaining together multiple GPUs.
-
-
-Second, we could split the work layerwise. For instance, rather than computing 64 channels on a single GPU we could split up the problem across 4 GPUs, each of which generates data for 16 channels.
-Likewise, for a fully connected layer we could split the number of output units. :numref:`fig_alexnet_original` (taken from :citet:`Krizhevsky.Sutskever.Hinton.2012`)
-illustrates this design, where this strategy was used to deal with GPUs that had a very small memory footprint (2 GB at the time).
-This allows for good scaling in terms of computation, provided that the number of channels (or units) is not too small.
-Besides,
-multiple GPUs can process increasingly larger networks since the available memory scales linearly.
-
-![Model parallelism in the original AlexNet design due to limited GPU memory.](../img/alexnet-original.svg)
-:label:`fig_alexnet_original`
-
-However,
-we need a *very large* number of synchronization or barrier operations since each layer depends on the results from all the other layers.
-Moreover, the amount of data that needs to be transferred is potentially even larger than when distributing layers across GPUs. Thus, we do not recommend this approach due to its bandwidth cost and complexity.
-
-Last, we could partition data across multiple GPUs. This way all GPUs perform the same type of work, albeit on different observations. Gradients are aggregated across GPUs after each minibatch of training data.
-This is the simplest approach and it can be applied in any situation.
-We only need to synchronize after each minibatch. That said, it is highly desirable to start exchanging gradients of some parameters already while others are still being computed.
-Moreover, larger numbers of GPUs lead to larger minibatch sizes, thus increasing training efficiency.
-However, adding more GPUs does not allow us to train larger models.
-
-
-![Parallelization on multiple GPUs. From left to right: original problem, network partitioning, layerwise partitioning, data parallelism.](../img/splitting.svg)
-:label:`fig_splitting`
-
-
-A comparison of different ways of parallelization on multiple GPUs is depicted in :numref:`fig_splitting`.
-By and large, data parallelism is the most convenient way to proceed, provided that we have access to GPUs with sufficiently large memory. See also :cite:`Li.Andersen.Park.ea.2014` for a detailed description of partitioning for distributed training. GPU memory used to be a problem in the early days of deep learning. By now this issue has been resolved for all but the most unusual cases. We focus on data parallelism in what follows.
-
-## Data Parallelism
-
-Assume that there are $k$ GPUs on a machine. Given the model to be trained, each GPU will maintain a complete set of model parameters independently though parameter values across the GPUs are identical and synchronized.
-As an example,
-:numref:`fig_data_parallel` illustrates
-training with
-data parallelism when $k=2$.
-
-
-![Calculation of minibatch stochastic gradient descent using data parallelism on two GPUs.](../img/data-parallel.svg)
-:label:`fig_data_parallel`
-
-In general, the training proceeds as follows:
-
-* In any iteration of training, given a random minibatch, we split the examples in the batch into $k$ portions and distribute them evenly across the GPUs.
-* Each GPU calculates loss and gradient of the model parameters based on the minibatch subset it was assigned.
-* The local gradients of each of the $k$ GPUs are aggregated to obtain the current minibatch stochastic gradient.
-* The aggregate gradient is re-distributed to each GPU.
-* Each GPU uses this minibatch stochastic gradient to update the complete set of model parameters that it maintains.
-
-
-
-
-Note that in practice we *increase* the minibatch size $k$-fold when training on $k$ GPUs such that each GPU has the same amount of work to do as if we were training on a single GPU only. On a 16-GPU server this can increase the minibatch size considerably and we may have to increase the learning rate accordingly.
-Also note that batch normalization in :numref:`sec_batch_norm` needs to be adjusted, e.g., by keeping a separate batch normalization coefficient per GPU.
-In what follows we will use a toy network to illustrate multi-GPU training.
-
-```{.python .input #multiple-gpus-data-parallelism}
-#@tab mxnet
-%matplotlib inline
-from d2l import mxnet as d2l
-from mxnet import autograd, gluon, np, npx
-npx.set_np()
-```
-
-```{.python .input #multiple-gpus-data-parallelism}
-#@tab pytorch
+```{.python .input #multiple-gpus-multi-gpu-from-first-principles}
+%%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
 import torch
 from torch import nn
 from torch.nn import functional as F
+
+torch.set_float32_matmul_precision('high')
 ```
 
-```{.python .input #multiple-gpus-data-parallelism}
-#@tab jax
+```{.python .input #multiple-gpus-multi-gpu-from-first-principles}
+%%tab jax
 %matplotlib inline
 from d2l import jax as d2l
 import jax
 from jax import numpy as jnp
 import numpy as np
+import optax
+from functools import partial
 ```
 
-```{.python .input #multiple-gpus-data-parallelism}
-#@tab tensorflow
-%matplotlib inline
-from d2l import tensorflow as d2l
-import tensorflow as tf
-import keras
-```
+## Three Ways to Split
+:label:`subsec_mg-splitting`
 
-## A Toy Network
+Given more than one GPU and a model to train, there are three ways to
+divide the work (:numref:`fig_splitting`).
 
-We use LeNet as introduced in :numref:`sec_lenet` (with slight modifications). We define it from scratch to illustrate parameter exchange and synchronization in detail.
+![Three ways to split a model across two devices: replicate it and split
+the batch (data parallel); split the layer stack (pipeline parallel);
+split every layer's width (tensor parallel).](../img/mdl-perf-splitting.svg)
+:label:`fig_splitting`
 
-```{.python .input #multiple-gpus-a-toy-network}
-#@tab mxnet
-# Initialize model parameters
+**Data parallelism** replicates the whole model on every GPU and splits the
+*batch*: each device runs the full network on a different slice of the
+minibatch, then the devices sum their gradients so every replica takes the
+same optimizer step. It is the simplest, works for any model that fits on
+one GPU, and needs communication only once per step — so it is what this
+chapter builds. **Pipeline parallelism** splits the *layer stack* across
+devices, each holding a few consecutive layers; it lets a model too deep
+for one GPU fit, at the cost of tight inter-stage synchronization.
+**Tensor parallelism** splits *within* each layer — each device holds a
+slice of every weight matrix — and communicates several times per layer.
+The latter two matter only at scales this part defers to the Language
+Models chapters, which have models large enough to warrant them; a single
+historical note is that the very first of them appeared in 2012, when
+AlexNet was split across two GPUs simply because its weights did not fit
+in one card's 3 GB :cite:`Krizhevsky.Sutskever.Hinton.2012`. Data
+parallelism is our subject, and — a warning that :numref:`sec_memory_precision`
+already made — it does *not* let you train a bigger model: every GPU still
+holds a full copy.
+
+## Data Parallelism by Hand
+:label:`subsec_mg-byhand`
+
+Data-parallel training on $k$ GPUs is five steps per minibatch: split the
+batch into $k$ shards; run forward and backward on each shard against that
+device's copy of the parameters; sum the $k$ gradient sets so all devices
+agree; and let every device apply the same update
+(:numref:`fig_data_parallel`). We build each piece for a small LeNet, then
+run it — and watch it lose.
+
+![One data-parallel step on two GPUs. Split the minibatch, run identical
+forward and backward passes on each replica, sum the gradients with an
+allreduce, then apply the identical update
+everywhere.](../img/mdl-perf-data-parallel.svg)
+:label:`fig_data_parallel`
+
+We define LeNet from raw tensors (not a module) so that parameters,
+gradients, and their movement between devices are fully visible:
+
+```{.python .input #multiple-gpus-data-parallelism-by-hand-1}
+%%tab pytorch
 scale = 0.01
-W1 = np.random.normal(scale=scale, size=(20, 1, 3, 3))
-b1 = np.zeros(20)
-W2 = np.random.normal(scale=scale, size=(50, 20, 5, 5))
-b2 = np.zeros(50)
-W3 = np.random.normal(scale=scale, size=(800, 128))
-b3 = np.zeros(128)
-W4 = np.random.normal(scale=scale, size=(128, 10))
-b4 = np.zeros(10)
-params = [W1, b1, W2, b2, W3, b3, W4, b4]
+def new_params(device):
+    def p(*shape):
+        return (torch.randn(*shape, device=device) * scale).requires_grad_()
+    return [p(20, 1, 3, 3), torch.zeros(20, device=device, requires_grad=True),
+            p(50, 20, 5, 5), torch.zeros(50, device=device, requires_grad=True),
+            p(800, 128), torch.zeros(128, device=device, requires_grad=True),
+            p(128, 10), torch.zeros(10, device=device, requires_grad=True)]
 
-# Define the model
 def lenet(X, params):
-    h1_conv = npx.convolution(data=X, weight=params[0], bias=params[1],
-                              kernel=(3, 3), num_filter=20)
-    h1_activation = npx.relu(h1_conv)
-    h1 = npx.pooling(data=h1_activation, pool_type='avg', kernel=(2, 2),
-                     stride=(2, 2))
-    h2_conv = npx.convolution(data=h1, weight=params[2], bias=params[3],
-                              kernel=(5, 5), num_filter=50)
-    h2_activation = npx.relu(h2_conv)
-    h2 = npx.pooling(data=h2_activation, pool_type='avg', kernel=(2, 2),
-                     stride=(2, 2))
+    h1 = F.avg_pool2d(F.relu(F.conv2d(X, params[0], params[1])), 2, 2)
+    h2 = F.avg_pool2d(F.relu(F.conv2d(h1, params[2], params[3])), 2, 2)
     h2 = h2.reshape(h2.shape[0], -1)
-    h3_linear = np.dot(h2, params[4]) + params[5]
-    h3 = npx.relu(h3_linear)
-    y_hat = np.dot(h3, params[6]) + params[7]
-    return y_hat
+    h3 = F.relu(torch.mm(h2, params[4]) + params[5])
+    return torch.mm(h3, params[6]) + params[7]
 
-# Cross-entropy loss function
-loss = gluon.loss.SoftmaxCrossEntropyLoss()
-```
-
-```{.python .input #multiple-gpus-a-toy-network}
-#@tab pytorch
-# Initialize model parameters
-scale = 0.01
-W1 = torch.randn(size=(20, 1, 3, 3)) * scale
-b1 = torch.zeros(20)
-W2 = torch.randn(size=(50, 20, 5, 5)) * scale
-b2 = torch.zeros(50)
-W3 = torch.randn(size=(800, 128)) * scale
-b3 = torch.zeros(128)
-W4 = torch.randn(size=(128, 10)) * scale
-b4 = torch.zeros(10)
-params = [W1, b1, W2, b2, W3, b3, W4, b4]
-
-# Define the model
-def lenet(X, params):
-    h1_conv = F.conv2d(input=X, weight=params[0], bias=params[1])
-    h1_activation = F.relu(h1_conv)
-    h1 = F.avg_pool2d(input=h1_activation, kernel_size=(2, 2), stride=(2, 2))
-    h2_conv = F.conv2d(input=h1, weight=params[2], bias=params[3])
-    h2_activation = F.relu(h2_conv)
-    h2 = F.avg_pool2d(input=h2_activation, kernel_size=(2, 2), stride=(2, 2))
-    h2 = h2.reshape(h2.shape[0], -1)
-    h3_linear = torch.mm(h2, params[4]) + params[5]
-    h3 = F.relu(h3_linear)
-    y_hat = torch.mm(h3, params[6]) + params[7]
-    return y_hat
-
-# Cross-entropy loss function
 loss = nn.CrossEntropyLoss(reduction='none')
 ```
 
-```{.python .input #multiple-gpus-a-toy-network}
-#@tab jax
-import functools
-import optax
-
-# Initialize model parameters
+```{.python .input #multiple-gpus-data-parallelism-by-hand-1}
+%%tab jax
 scale = 0.01
-key = jax.random.PRNGKey(0)
-keys = jax.random.split(key, 4)
-W1 = jax.random.normal(keys[0], (20, 1, 3, 3)) * scale
-b1 = jnp.zeros(20)
-W2 = jax.random.normal(keys[1], (50, 20, 5, 5)) * scale
-b2 = jnp.zeros(50)
-W3 = jax.random.normal(keys[2], (800, 128)) * scale
-b3 = jnp.zeros(128)
-W4 = jax.random.normal(keys[3], (128, 10)) * scale
-b4 = jnp.zeros(10)
-params = [W1, b1, W2, b2, W3, b3, W4, b4]
+def new_params(key):
+    ks = jax.random.split(key, 4)
+    return [jax.random.normal(ks[0], (20, 1, 3, 3)) * scale, jnp.zeros(20),
+            jax.random.normal(ks[1], (50, 20, 5, 5)) * scale, jnp.zeros(50),
+            jax.random.normal(ks[2], (800, 128)) * scale, jnp.zeros(128),
+            jax.random.normal(ks[3], (128, 10)) * scale, jnp.zeros(10)]
 
-# Define the model
 def lenet(params, X):
-    h1_conv = jax.lax.conv_general_dilated(
-        X, params[0], window_strides=(1, 1), padding='VALID',
-        dimension_numbers=('NCHW', 'OIHW', 'NCHW'))
-    h1_conv = h1_conv + params[1].reshape(1, -1, 1, 1)
-    h1_activation = jax.nn.relu(h1_conv)
-    # Average pooling
-    h1 = jax.lax.reduce_window(
-        h1_activation, 0.0, jax.lax.add, (1, 1, 2, 2), (1, 1, 2, 2),
-        'VALID') / 4.0
-    h2_conv = jax.lax.conv_general_dilated(
-        h1, params[2], window_strides=(1, 1), padding='VALID',
-        dimension_numbers=('NCHW', 'OIHW', 'NCHW'))
-    h2_conv = h2_conv + params[3].reshape(1, -1, 1, 1)
-    h2_activation = jax.nn.relu(h2_conv)
-    h2 = jax.lax.reduce_window(
-        h2_activation, 0.0, jax.lax.add, (1, 1, 2, 2), (1, 1, 2, 2),
-        'VALID') / 4.0
+    conv = lambda x, W: jax.lax.conv_general_dilated(
+        x, W, (1, 1), 'VALID', dimension_numbers=('NCHW', 'OIHW', 'NCHW'))
+    pool = lambda x: jax.lax.reduce_window(
+        x, 0.0, jax.lax.add, (1, 1, 2, 2), (1, 1, 2, 2), 'VALID') / 4.0
+    h1 = pool(jax.nn.relu(conv(X, params[0]) + params[1].reshape(1, -1, 1, 1)))
+    h2 = pool(jax.nn.relu(conv(h1, params[2]) + params[3].reshape(1, -1, 1, 1)))
     h2 = h2.reshape(h2.shape[0], -1)
-    h3_linear = jnp.dot(h2, params[4]) + params[5]
-    h3 = jax.nn.relu(h3_linear)
-    y_hat = jnp.dot(h3, params[6]) + params[7]
-    return y_hat
+    h3 = jax.nn.relu(jnp.dot(h2, params[4]) + params[5])
+    return jnp.dot(h3, params[6]) + params[7]
 ```
 
-```{.python .input #multiple-gpus-a-toy-network}
-#@tab tensorflow
-# Initialize model parameters (NHWC layout for TF)
-scale = 0.01
-# W shape: (H, W, in_channels, out_channels) for TF conv2d
-W1 = tf.Variable(tf.random.normal(shape=(3, 3, 1, 20)) * scale)
-b1 = tf.Variable(tf.zeros(20))
-W2 = tf.Variable(tf.random.normal(shape=(5, 5, 20, 50)) * scale)
-b2 = tf.Variable(tf.zeros(50))
-W3 = tf.Variable(tf.random.normal(shape=(800, 128)) * scale)
-b3 = tf.Variable(tf.zeros(128))
-W4 = tf.Variable(tf.random.normal(shape=(128, 10)) * scale)
-b4 = tf.Variable(tf.zeros(10))
-params = [W1, b1, W2, b2, W3, b3, W4, b4]
+The two operations that make it parallel are *broadcasting* parameters to
+each device and *summing* gradients across them. We build the PyTorch
+version by hand, because the hand-rolled version is the lesson; the
+`#@save`d `split_batch` (which chops a minibatch into per-device shards)
+rounds out the toolkit:
 
-# Define the model (inputs in NHWC format)
-def lenet(X, params):
-    h1_conv = tf.nn.conv2d(X, params[0], strides=1, padding='VALID') + params[1]
-    h1_activation = tf.nn.relu(h1_conv)
-    h1 = tf.nn.avg_pool2d(h1_activation, ksize=2, strides=2, padding='VALID')
-    h2_conv = tf.nn.conv2d(h1, params[2], strides=1, padding='VALID') + params[3]
-    h2_activation = tf.nn.relu(h2_conv)
-    h2 = tf.nn.avg_pool2d(h2_activation, ksize=2, strides=2, padding='VALID')
-    h2 = tf.reshape(h2, (tf.shape(h2)[0], -1))
-    h3_linear = tf.linalg.matmul(h2, params[4]) + params[5]
-    h3 = tf.nn.relu(h3_linear)
-    y_hat = tf.linalg.matmul(h3, params[6]) + params[7]
-    return y_hat
-
-# Cross-entropy loss function
-loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True,
-                                                      reduction='none')
-```
-
-## Data Synchronization
-
-For efficient multi-GPU training we need two basic operations.
-First we need to have the ability to distribute a list of parameters to multiple devices and to attach gradients (`get_params`). Without parameters it is impossible to evaluate the network on a GPU.
-Second, we need the ability to sum parameters across multiple devices, i.e., we need an `allreduce` function.
-
-```{.python .input #multiple-gpus-data-synchronization-1}
-#@tab mxnet
+```{.python .input #multiple-gpus-data-parallelism-by-hand-2}
+%%tab pytorch
 def get_params(params, device):
-    new_params = [p.copyto(device) for p in params]
-    for p in new_params:
-        p.attach_grad()
-    return new_params
-```
+    return [p.clone().to(device).detach().requires_grad_() for p in params]
 
-```{.python .input #multiple-gpus-data-synchronization-1}
-#@tab pytorch
-def get_params(params, device):
-    new_params = [p.to(device) for p in params]
-    for p in new_params:
-        p.requires_grad_()
-    return new_params
-```
-
-```{.python .input #multiple-gpus-data-synchronization-1}
-#@tab jax
-def get_params(params, num_devices):
-    """Replicate parameters across multiple devices."""
-    return jax.tree.map(
-        lambda x: jnp.stack([x] * num_devices), params)
-```
-
-```{.python .input #multiple-gpus-data-synchronization-1}
-#@tab tensorflow
-def get_params(params, device):
-    """Copy model parameters to a specific device and make them trainable."""
-    with tf.device(device):
-        new_params = [tf.Variable(tf.identity(p)) for p in params]
-    return new_params
-```
-
-Let's try it out by copying the model parameters to one GPU.
-
-```{.python .input #multiple-gpus-data-synchronization-2}
-#@tab mxnet
-new_params = get_params(params, d2l.try_gpu(0))
-print('b1 weight:', new_params[1])
-print('b1 grad:', new_params[1].grad)
-```
-
-```{.python .input #multiple-gpus-data-synchronization-2}
-#@tab pytorch
-new_params = get_params(params, d2l.try_gpu(0))
-print('b1 weight:', new_params[1])
-print('b1 grad:', new_params[1].grad)
-```
-
-```{.python .input #multiple-gpus-data-synchronization-2}
-#@tab jax
-replicated = get_params(params, 1)
-print('b1 weight:', replicated[1])
-print('b1 devices:', replicated[1].devices())
-```
-
-```{.python .input #multiple-gpus-data-synchronization-2}
-#@tab tensorflow
-devices = tf.config.list_logical_devices('GPU')
-new_params = get_params(params, devices[0].name)
-print('b1 weight:', new_params[1].numpy())
-print('b1 grad:', new_params[1])  # No gradient yet
-```
-
-Since we did not perform any computation yet, the gradient with regard to the bias parameter is still zero.
-Now let's assume that we have a vector distributed across multiple GPUs. The following `allreduce` function adds up all vectors and broadcasts the result back to all GPUs. Note that for this to work we need to copy the data to the device accumulating the results.
-
-```{.python .input #multiple-gpus-data-synchronization-3}
-#@tab mxnet
 def allreduce(data):
-    for i in range(1, len(data)):
-        data[0][:] += data[i].copyto(data[0].ctx)
-    for i in range(1, len(data)):
-        data[0].copyto(data[i])
-```
-
-```{.python .input #multiple-gpus-data-synchronization-3}
-#@tab pytorch
-def allreduce(data):
+    # Star pattern: sum everything onto device 0, then broadcast back.
     for i in range(1, len(data)):
         data[0][:] += data[i].to(data[0].device)
     for i in range(1, len(data)):
         data[i][:] = data[0].to(data[i].device)
-```
 
-:begin_tab:`jax`
-In JAX, all-reduce operations are expressed declaratively inside `jax.pmap`
-using collective primitives such as `jax.lax.psum` (sum across devices) and
-`jax.lax.pmean` (mean across devices). Unlike the imperative approach used in
-MXNet and PyTorch, there is no need to manually copy tensors between devices.
-The XLA runtime handles the communication automatically.
-We will see this in action when we define the `pmap_step` training function
-below.
-:end_tab:
-
-:begin_tab:`tensorflow`
-With `tf.distribute.MirroredStrategy`, all-reduce is handled automatically by
-the framework. For the from-scratch pedagogical version here we implement it
-manually: sum the gradient tensors on the first device and broadcast the result
-to all other devices. This mirrors exactly what `MirroredStrategy` does
-internally.
-:end_tab:
-
-```{.python .input #multiple-gpus-data-synchronization-4}
-#@tab tensorflow
-def allreduce(data):
-    """Sum tensors from all devices and broadcast the result back."""
-    # Accumulate on the device of data[0]
-    with tf.device(data[0].device):
-        total = tf.add_n([tf.identity(d) for d in data])
-    # Broadcast to all devices in-place
-    for i in range(len(data)):
-        with tf.device(data[i].device):
-            data[i].assign(tf.identity(total))
-```
-
-Let's test this by creating vectors with different values on different devices and aggregate them.
-
-```{.python .input #multiple-gpus-data-synchronization-5}
-#@tab mxnet
-data = [np.ones((1, 2), ctx=d2l.try_gpu(i)) * (i + 1) for i in range(2)]
-print('before allreduce:\n', data[0], '\n', data[1])
-allreduce(data)
-print('after allreduce:\n', data[0], '\n', data[1])
-```
-
-```{.python .input #multiple-gpus-data-synchronization-5}
-#@tab pytorch
-data = [torch.ones((1, 2), device=d2l.try_gpu(i)) * (i + 1) for i in range(2)]
-print('before allreduce:\n', data[0], '\n', data[1])
-allreduce(data)
-print('after allreduce:\n', data[0], '\n', data[1])
-```
-
-```{.python .input #multiple-gpus-data-synchronization-5}
-#@tab jax
-# In JAX, allreduce is done inside pmap via jax.lax.psum/pmean.
-# Here we demonstrate with a simple pmap example.
-devices = jax.local_devices()[:2]
-data = jnp.stack([jnp.ones((1, 2)) * (i + 1) for i in range(2)])
-print('before allreduce:\n', data[0], '\n', data[1])
-summed = jax.pmap(lambda x: jax.lax.psum(x, axis_name='i'),
-                  axis_name='i')(data)
-print('after allreduce:\n', summed[0], '\n', summed[1])
-```
-
-```{.python .input #multiple-gpus-data-synchronization-5}
-#@tab tensorflow
-devices = tf.config.list_logical_devices('GPU')
-data = [tf.Variable(tf.ones((1, 2)) * (i + 1)) for i in range(2)]
-print('before allreduce:\n', data[0].numpy(), '\n', data[1].numpy())
-allreduce(data)
-print('after allreduce:\n', data[0].numpy(), '\n', data[1].numpy())
-```
-
-## Distributing Data
-
-We need a simple utility function to distribute a minibatch evenly across multiple GPUs. For instance, on two GPUs we would like to have half of the data to be copied to either of the GPUs.
-Since it is more convenient and more concise, we use the built-in function from the deep learning framework to try it out on a $4 \times 5$ matrix.
-
-```{.python .input #multiple-gpus-distributing-data-1}
-#@tab mxnet
-data = np.arange(20).reshape(4, 5)
-devices = [npx.gpu(0), npx.gpu(1)]
-split = gluon.utils.split_and_load(data, devices)
-print('input :', data)
-print('load into', devices)
-print('output:', split)
-```
-
-```{.python .input #multiple-gpus-distributing-data-1}
-#@tab pytorch
-data = torch.arange(20).reshape(4, 5)
-devices = [torch.device('cuda:0'), torch.device('cuda:1')]
-split = nn.parallel.scatter(data, devices)
-print('input :', data)
-print('load into', devices)
-print('output:', split)
-```
-
-```{.python .input #multiple-gpus-distributing-data-1}
-#@tab jax
-data = jnp.arange(20).reshape(4, 5)
-devices = jax.local_devices()[:2]
-mesh = jax.sharding.Mesh(np.array(devices), ('dev',))
-sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec('dev'))
-split = jax.device_put(data.reshape(2, 2, 5), sharding)
-print('input :', data)
-print('load into', devices)
-print('output:', split)
-```
-
-```{.python .input #multiple-gpus-distributing-data-1}
-#@tab tensorflow
-devices = tf.config.list_logical_devices('GPU')
-data = tf.range(20, dtype=tf.float32)
-data = tf.reshape(data, (4, 5))
-split = tf.split(data, len(devices))
-print('input :', data.numpy())
-print('load into', [d.name for d in devices])
-print('output:', [s.numpy() for s in split])
-```
-
-For later reuse we define a `split_batch` function that splits both data and labels.
-
-```{.python .input #multiple-gpus-distributing-data-2}
-#@tab mxnet
-#@save
-def split_batch(X, y, devices):
-    """Split `X` and `y` into multiple devices."""
-    assert X.shape[0] == y.shape[0]
-    return (gluon.utils.split_and_load(X, devices),
-            gluon.utils.split_and_load(y, devices))
-```
-
-```{.python .input #multiple-gpus-distributing-data-2}
-#@tab pytorch
-#@save
-def split_batch(X, y, devices):
+def split_batch(X, y, devices):  #@save
     """Split `X` and `y` into multiple devices."""
     assert X.shape[0] == y.shape[0]
     return (nn.parallel.scatter(X, devices),
             nn.parallel.scatter(y, devices))
 ```
 
-```{.python .input #multiple-gpus-distributing-data-2}
-#@tab jax
-#@save
-def split_batch(X, y, num_devices):
-    """Split `X` and `y` across devices by reshaping."""
-    assert X.shape[0] == y.shape[0]
-    batch_size = X.shape[0]
-    # Reshape (batch, ...) -> (num_devices, batch_per_device, ...)
-    def _reshape(a):
-        return a.reshape(num_devices, batch_size // num_devices, *a.shape[1:])
-    return _reshape(X), _reshape(y)
+```{.python .input #multiple-gpus-data-parallelism-by-hand-2}
+%%tab jax
+def get_params(params, num_devices):
+    """Data parallelism replicates the full parameter set on every device;
+    shard_map's P() in-spec (below) broadcasts one copy to each."""
+    return params
+
+def split_batch(X, y, num_devices):  #@save
+    """Reshape `X` and `y` onto a leading device axis of size num_devices."""
+    assert X.shape[0] % num_devices == 0
+    reshape = lambda a: a.reshape(num_devices, -1, *a.shape[1:])
+    return reshape(X), reshape(y)
 ```
 
-```{.python .input #multiple-gpus-distributing-data-2}
-#@tab tensorflow
-#@save
-def split_batch(X, y, devices):
-    """Split `X` and `y` into multiple devices."""
-    assert X.shape[0] == y.shape[0]
-    return (tf.split(X, len(devices)), tf.split(y, len(devices)))
+`allreduce` is the heart of it, and the naive version above is
+deliberately clumsy: it gathers every device's gradient onto device 0,
+sums there, and broadcasts back — a *star* topology, with device 0 as a
+hub that handles all $k-1$ inbound and $k-1$ outbound transfers. Watch it
+work on two vectors living on two GPUs:
+
+```{.python .input #multiple-gpus-data-parallelism-by-hand-3}
+%%tab pytorch
+data = [torch.ones((1, 2), device=d2l.try_gpu(i)) * (i + 1)
+        for i in range(min(2, d2l.num_gpus()))]
+print('before:', [d.cpu().numpy().tolist() for d in data])
+allreduce(data)
+print('after: ', [d.cpu().numpy().tolist() for d in data])
 ```
 
-## Training
+```{.python .input #multiple-gpus-data-parallelism-by-hand-3}
+%%tab jax
+# JAX expresses the same sum as a collective inside shard_map (below);
+# here we show the result the collective must produce.
+data = jnp.stack([jnp.ones((1, 2)) * (i + 1)
+                  for i in range(min(2, jax.local_device_count()))])
+print('before:', data.tolist())
+print('summed:', jnp.broadcast_to(data.sum(0), data.shape).tolist())
+```
 
-Now we can implement multi-GPU training on a single minibatch. Its implementation is primarily based on the data parallelism approach described in this section. We will use the auxiliary functions we just discussed, `allreduce` and `split_and_load`, to synchronize the data among multiple GPUs. Note that we do not need to write any specific code to achieve parallelism. Since the computational graph does not have any dependencies across devices within a minibatch, it is executed in parallel *automatically*.
+The training step assembles the pieces. Each device computes its shard's
+gradient; we allreduce parameter by parameter; each device applies plain
+SGD. The whole thing runs in one Python process — nothing here needs
+multiple processes, because we move tensors explicitly:
 
-```{.python .input #multiple-gpus-training-1}
-#@tab mxnet
+```{.python .input #multiple-gpus-data-parallelism-by-hand-4}
+%%tab pytorch
 def train_batch(X, y, device_params, devices, lr):
     X_shards, y_shards = split_batch(X, y, devices)
-    with autograd.record():  # Loss is calculated separately on each GPU
-        ls = [loss(lenet(X_shard, device_W), y_shard)
-              for X_shard, y_shard, device_W in zip(
-                  X_shards, y_shards, device_params)]
-    for l in ls:  # Backpropagation is performed separately on each GPU
+    ls = [loss(lenet(Xs, dev_W), ys).sum()
+          for Xs, ys, dev_W in zip(X_shards, y_shards, device_params)]
+    for l in ls:
         l.backward()
-    # Sum all gradients from each GPU and broadcast them to all GPUs
-    for i in range(len(device_params[0])):
-        allreduce([device_params[c][i].grad for c in range(len(devices))])
-    # The model parameters are updated separately on each GPU
-    for param in device_params:
-        d2l.sgd(param, lr, X.shape[0])  # Here, we use a full-size batch
-```
-
-```{.python .input #multiple-gpus-training-1}
-#@tab pytorch
-def train_batch(X, y, device_params, devices, lr):
-    X_shards, y_shards = split_batch(X, y, devices)
-    # Loss is calculated separately on each GPU
-    ls = [loss(lenet(X_shard, device_W), y_shard).sum()
-          for X_shard, y_shard, device_W in zip(
-              X_shards, y_shards, device_params)]
-    for l in ls:  # Backpropagation is performed separately on each GPU
-        l.backward()
-    # Sum all gradients from each GPU and broadcast them to all GPUs
     with torch.no_grad():
         for i in range(len(device_params[0])):
             allreduce([device_params[c][i].grad for c in range(len(devices))])
-    # The model parameters are updated separately on each GPU
-    for param in device_params:
-        d2l.sgd(param, lr, X.shape[0]) # Here, we use a full-size batch
+        for param in device_params:
+            d2l.sgd(param, lr, X.shape[0])
+            for p in param:
+                p.grad = None
 ```
 
-```{.python .input #multiple-gpus-training-1}
-#@tab jax
-@functools.partial(jax.pmap, axis_name='batch',
-                   static_broadcasted_argnums=(3,))
-def pmap_step(params, X_shard, y_shard, lr):
-    """One training step executed in parallel on each device."""
-    def loss_fn(p):
-        y_hat = lenet(p, X_shard)
-        return jnp.mean(optax.softmax_cross_entropy_with_integer_labels(
-            y_hat, y_shard))
-    grads = jax.grad(loss_fn)(params)
-    # All-reduce: sum gradients across devices
-    grads = jax.lax.pmean(grads, axis_name='batch')
-    # SGD update
-    params = jax.tree.map(lambda p, g: p - lr * g, params, grads)
-    return params
+```{.python .input #multiple-gpus-data-parallelism-by-hand-4}
+%%tab jax
+@partial(jax.jit, static_argnames=('lr', 'mesh'))
+def train_step(params, X, y, lr, mesh):
+    """One data-parallel step: shard_map makes the psum collective explicit.
+    `X`, `y` arrive with the batch sharded across devices (P('data')) and
+    `params` replicated (P()) -- see `train` below; shard_map hands each device
+    the full parameter replica and its own batch shard, computes that shard's
+    gradient, and psum sums the gradients across devices."""
+    P = jax.sharding.PartitionSpec
 
-def train_batch(replicated_params, X, y, num_gpus, lr):
-    X_shards, y_shards = split_batch(X, y, num_gpus)
-    replicated_params = pmap_step(
-        replicated_params, X_shards, y_shards, lr)
-    return replicated_params
+    def per_device(params, X, y):
+        def loss_fn(p):
+            logits = lenet(p, X[0])   # X[0]: strip the size-1 sharded axis
+            return optax.softmax_cross_entropy_with_integer_labels(
+                logits, y[0]).mean()
+        grads = jax.grad(loss_fn)(params)
+        grads = jax.lax.psum(grads, 'data')     # The allreduce, in one line
+        return jax.tree.map(lambda p, g: p - lr * g, params, grads)
+
+    step = jax.shard_map(per_device, mesh=mesh,
+                         in_specs=(P(), P('data'), P('data')),
+                         out_specs=P())
+    return step(params, X, y)
 ```
 
-```{.python .input #multiple-gpus-training-1}
-#@tab tensorflow
-def train_batch(X, y, device_params, devices, lr):
-    X_shards, y_shards = split_batch(X, y, devices)
-    # Compute loss and gradients independently on each GPU
-    grads_list = []
-    for X_shard, y_shard, device_W in zip(X_shards, y_shards, device_params):
-        with tf.device(device_W[0].device):
-            with tf.GradientTape() as tape:
-                # SparseCategoricalCrossentropy: loss(y_true, y_pred)
-                l = tf.reduce_sum(loss(y_shard, lenet(X_shard, device_W)))
-            grads_list.append(tape.gradient(l, device_W))
-    # All-reduce: sum gradients from every GPU onto GPU 0, then broadcast.
-    # grads_list[c][i] is a plain Tensor (not a Variable), so we sum them
-    # with tf.add_n and write the aggregated gradient into every replica.
-    num_params = len(device_params[0])
-    num_dev = len(devices)
-    agg_grads = []
-    for i in range(num_params):
-        with tf.device(device_params[0][i].device):
-            agg_grads.append(tf.add_n([
-                tf.identity(grads_list[c][i]) for c in range(num_dev)]))
-    # Apply SGD update on each GPU using the aggregated (all-reduced) gradient
-    for device_W in device_params:
-        for p, g in zip(device_W, agg_grads):
-            with tf.device(p.device):
-                # Denominator X.shape[0] normalizes for batch size.
-                # Invariant: loss uses tf.reduce_sum (not mean) and
-                # all-reduce uses tf.add_n (not mean), so dividing by
-                # batch size here gives the correct per-sample gradient.
-                p.assign_sub(lr / X.shape[0] * tf.identity(g))
-```
+The two tabs make the same computation visible in two idioms. PyTorch
+moves gradients between devices with explicit `.to(device)` copies inside
+`allreduce`; JAX writes the collective as a single `jax.lax.psum` inside a
+`jax.shard_map`, where the `PartitionSpec('data')` annotation tells XLA
+that the leading axis is sharded across devices. (Note the top-level
+`jax.shard_map` — the older `jax.pmap` is a compatibility shim as of JAX
+0.8 and we do not use it.) The collective is *visible in the code* in both
+— exactly the point of building it by hand. The training and evaluation
+loops that wrap `train_batch`/`train_step` are the multi-GPU cousins of
+:numref:`sec_lenet`'s; we elide them here (they live in the notebook) and
+run the result. First, one GPU:
 
-Now, we can define the training function. It is slightly different from the ones used in the previous chapters: we need to allocate the GPUs and copy all the model parameters to all the devices.
-Obviously each batch is processed using the `train_batch` function to deal with multiple GPUs. For convenience (and conciseness of code) we compute the accuracy on a single GPU, though this is *inefficient* since the other GPUs are idle.
-
-```{.python .input #multiple-gpus-training-2}
-#@tab mxnet
+```{.python .input #multiple-gpus-data-parallelism-by-hand-5}
+%%tab pytorch
 def train(num_gpus, batch_size, lr):
     train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
     devices = [d2l.try_gpu(i) for i in range(num_gpus)]
-    # Copy model parameters to `num_gpus` GPUs
-    device_params = [get_params(params, d) for d in devices]
-    num_epochs = 10
-    animator = d2l.Animator('epoch', 'test acc', xlim=[1, num_epochs])
-    timer = d2l.Timer()
+    base = new_params(devices[0])
+    device_params = [get_params(base, d) for d in devices]
+    timer, num_epochs = d2l.Timer(), 5
     for epoch in range(num_epochs):
         timer.start()
         for X, y in train_iter:
-            # Perform multi-GPU training for a single minibatch
-            train_batch(X, y, device_params, devices, lr)
-            npx.waitall()
-        timer.stop()
-        # Evaluate the model on GPU 0
-        animator.add(epoch + 1, (d2l.evaluate_accuracy_gpu(
-            lambda x: lenet(x, device_params[0]), test_iter, devices[0]),))
-    print(f'test acc: {animator.Y[0][-1]:.2f}, {timer.avg():.1f} sec/epoch '
-          f'on {str(devices)}')
-```
-
-```{.python .input #multiple-gpus-training-2}
-#@tab pytorch
-def train(num_gpus, batch_size, lr):
-    train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
-    devices = [d2l.try_gpu(i) for i in range(num_gpus)]
-    # Copy model parameters to `num_gpus` GPUs
-    device_params = [get_params(params, d) for d in devices]
-    num_epochs = 10
-    animator = d2l.Animator('epoch', 'test acc', xlim=[1, num_epochs])
-    timer = d2l.Timer()
-    for epoch in range(num_epochs):
-        timer.start()
-        for X, y in train_iter:
-            # Perform multi-GPU training for a single minibatch
             train_batch(X, y, device_params, devices, lr)
             torch.cuda.synchronize()
         timer.stop()
-        # Evaluate the model on GPU 0
-        animator.add(epoch + 1, (d2l.evaluate_accuracy_gpu(
-            lambda x: lenet(x, device_params[0]), test_iter, devices[0]),))
-    print(f'test acc: {animator.Y[0][-1]:.2f}, {timer.avg():.1f} sec/epoch '
-          f'on {str(devices)}')
+    acc = d2l.evaluate_accuracy_gpu(
+        lambda x: lenet(x, device_params[0]), test_iter, devices[0])
+    print(f'test acc {acc:.2f}, {timer.avg():.2f} sec/epoch on {num_gpus} GPU(s)')
+
+train(num_gpus=1, batch_size=256, lr=0.2)
 ```
 
-```{.python .input #multiple-gpus-training-2}
-#@tab jax
-def evaluate_accuracy_jax(predict_fn, data_iter):
-    """Evaluate accuracy using JAX predict function."""
-    num_correct = jnp.array(0)
-    num_total = 0
-    for X, y in data_iter:
-        X, y = jnp.array(X).transpose(0, 3, 1, 2), jnp.array(y)
-        y_hat = predict_fn(X)
-        # Accumulate on-device; defer the host sync until after the loop
-        num_correct += jnp.sum(jnp.argmax(y_hat, axis=1) == y)
-        num_total += y.shape[0]
-    return num_correct.item() / num_total
-
+```{.python .input #multiple-gpus-data-parallelism-by-hand-5}
+%%tab jax
 def train(num_gpus, batch_size, lr):
+    P = jax.sharding.PartitionSpec
     data = d2l.FashionMNIST(batch_size=batch_size)
     train_iter = data.get_dataloader(train=True)
-    test_iter = data.get_dataloader(train=False)
-    devices = jax.local_devices()[:num_gpus]
-    # Replicate model parameters to `num_gpus` GPUs
-    replicated_params = jax.tree.map(
-        lambda x: jnp.stack([x] * num_gpus), params)
-    num_epochs = 10
-    animator = d2l.Animator('epoch', 'test acc', xlim=[1, num_epochs])
-    timer = d2l.Timer()
+    mesh = jax.make_mesh((num_gpus,), ('data',))
+    place = lambda a, spec: jax.device_put(
+        a, jax.sharding.NamedSharding(mesh, spec))
+    params = get_params(new_params(jax.random.PRNGKey(0)), num_gpus)
+    params = jax.tree.map(lambda p: place(p, P()), params)  # a replica per device
+    timer, num_epochs = d2l.Timer(), 5
     for epoch in range(num_epochs):
         timer.start()
         for X, y in train_iter:
             X = jnp.array(X).transpose(0, 3, 1, 2)
-            y = jnp.array(y)
-            # Perform multi-GPU training for a single minibatch
-            replicated_params = train_batch(
-                replicated_params, X, y, num_gpus, lr)
-        # Block until computation is done
-        jax.tree.map(lambda x: x.block_until_ready(), replicated_params)
+            if X.shape[0] % num_gpus:       # drop a ragged final batch
+                continue
+            Xs, ys = split_batch(X, jnp.array(y), num_gpus)
+            Xs, ys = place(Xs, P('data')), place(ys, P('data'))  # shard the batch
+            params = train_step(params, Xs, ys, lr, mesh)
+        jax.block_until_ready(params)
         timer.stop()
-        # Evaluate on the first replica's parameters
-        host_params = jax.tree.map(lambda x: x[0], replicated_params)
-        animator.add(epoch + 1, (evaluate_accuracy_jax(
-            lambda x: lenet(host_params, x), test_iter),))
-    print(f'test acc: {animator.Y[0][-1]:.2f}, {timer.avg():.1f} sec/epoch '
-          f'on {str(devices)}')
-```
+    print(f'{timer.avg():.2f} sec/epoch on {num_gpus} GPU(s)')
 
-```{.python .input #multiple-gpus-training-2}
-#@tab tensorflow
-def train(num_gpus, batch_size, lr):
-    train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size)
-    devices = tf.config.list_logical_devices('GPU')[:num_gpus]
-    # Copy model parameters to each GPU
-    device_params = [get_params(params, d.name) for d in devices]
-    num_epochs = 10
-    animator = d2l.Animator('epoch', 'test acc', xlim=[1, num_epochs])
-    timer = d2l.Timer()
-    for epoch in range(num_epochs):
-        timer.start()
-        for X, y in train_iter:
-            # TF data pipelines yield NHWC tensors — compatible with our lenet
-            train_batch(X, y, device_params, devices, lr)
-        timer.stop()
-        # Evaluate the model on GPU 0
-        animator.add(epoch + 1, (d2l.evaluate_accuracy(
-            lambda x: lenet(x, device_params[0]), test_iter),))
-    print(f'test acc: {animator.Y[0][-1]:.2f}, {timer.avg():.1f} sec/epoch '
-          f'on {str([d.name for d in devices])}')
-```
-
-Let's see how well this works on a single GPU.
-We first use a batch size of 256 and a learning rate of 0.2.
-
-```{.python .input #multiple-gpus-training-3}
-#@tab mxnet
 train(num_gpus=1, batch_size=256, lr=0.2)
 ```
 
-```{.python .input #multiple-gpus-training-3}
-#@tab pytorch
-train(num_gpus=1, batch_size=256, lr=0.2)
+Now two GPUs, same batch size and learning rate. The accuracy is
+essentially unchanged — the optimization is mathematically identical — but
+the wall-clock is **worse**:
+
+```{.python .input #multiple-gpus-data-parallelism-by-hand-6}
+%%tab pytorch
+train(num_gpus=min(2, d2l.num_gpus()), batch_size=256, lr=0.2)
 ```
 
-```{.python .input #multiple-gpus-training-3}
-#@tab jax
-train(num_gpus=1, batch_size=256, lr=0.2)
+```{.python .input #multiple-gpus-data-parallelism-by-hand-6}
+%%tab jax
+train(num_gpus=min(2, jax.local_device_count()), batch_size=256, lr=0.2)
 ```
 
-```{.python .input #multiple-gpus-training-3}
-#@tab tensorflow
-train(num_gpus=1, batch_size=256, lr=0.2)
+The second GPU buys **no speedup** — the two-GPU run is no faster than one,
+and (depending on each framework's per-step overhead) can be outright
+slower — and this is not a bug, it is the syllabus.
+The reason is *not* slow communication: LeNet's parameters are tiny, so
+their gradient allreduce is negligible, and we will measure the raw copy
+path at tens of GB/s below. The reason is that LeNet is simply too small
+to parallelize. Splitting a 256-example batch into two 128-example shards
+underfeeds each GPU — a convolution on half the batch does not run at half
+the time, because a small batch never filled the device to begin with —
+and the Python orchestration and per-step synchronization are not amortized
+by microsecond-scale compute. The technique is not wrong; the *regime* is
+wrong. This tiny model is the worst case for data parallelism, and
+diagnosing exactly why — separating the communication cost, which is small
+here, from the underutilization cost, which is not — is the next two
+subsections' work.
+
+## Doing Better: Ring Allreduce
+:label:`subsec_mg-ring`
+
+Our star `allreduce` has an obvious flaw: device 0 is a hub through which
+everything passes, so it moves $(k-1)N$ bytes in and $(k-1)N$ out for a
+parameter set of $N$ bytes, and the other devices' links sit idle while it
+works. The algorithm the professionals use — *ring allreduce*
+:cite:`Patarasuk.Yuan.2009` — removes the hub entirely, and it is worth
+deriving because the same identity reappears as the seed of FSDP in
+:numref:`sec_multi_gpu_concise`.
+
+Arrange the $k$ devices in a ring, each talking only to its neighbor.
+Split each device's gradient vector into $k$ equal chunks. The allreduce
+runs in two phases (:numref:`fig_ring_allreduce`). In **reduce-scatter**,
+over $k-1$ steps, device $i$ sends one chunk to its neighbor while
+receiving and accumulating another; after the phase, each device owns one
+fully-summed chunk (a different chunk per device). In **all-gather**,
+another $k-1$ steps pass those finished chunks around the ring until every
+device has all $k$. At every step, every link carries exactly one chunk of
+size $N/k$, so each device sends $(k-1) \cdot N/k$ bytes per phase, and
+both phases together move
+
+$$
+\frac{2(k-1)}{k}\, N \quad\text{bytes per device,}
+$$
+:eqlabel:`eq_ring_traffic`
+
+which approaches $2N$ as $k$ grows and is **independent of $k$** — adding
+GPUs does not increase the per-device communication. The star pattern's
+hub moved $(k-1)N$; the ring moves a constant. That is why every
+production collective library is built on rings (and trees for small
+messages).
+
+![Ring allreduce on four GPUs, computed step by step. Reduce-scatter
+accumulates one chunk per device around the ring; all-gather then
+distributes the finished chunks. Each cell counts how many of the four
+contributions a chunk holds; a full chunk (4) is
+complete.](../img/mdl-perf-ring-allreduce.svg)
+:label:`fig_ring_allreduce`
+
+The catch, on our box, is that the elegant $2(k-1)/k$ accounting assumes
+the links are the bottleneck — and they are, but *which* links? With no
+peer-to-peer transfer, every "neighbor to neighbor" hop is really a
+round trip through host memory (:numref:`subsec_hw-interconnects`), so the
+ring's theoretical advantage over the star is largely erased: the
+transport, not the topology, is the ceiling. This is the theory-versus-
+practice lesson in miniature — NCCL will still pick a ring or tree per
+message size, but on this hardware the constant in front of $N$ is what
+hurts, and no algorithm fixes a slow wire.
+
+## The Accounting
+:label:`subsec_mg-accounting`
+
+We can now answer the question data parallelism always poses — *does the
+next GPU pay?* — with a cost model rather than a guess. One step on $k$
+GPUs takes roughly
+
+$$
+t_{\text{step}}(k) \;\approx\;
+\underbrace{t_{\text{compute}}(B/k)}_{\text{forward+backward on a shard}}
+\;+\;
+\underbrace{t_{\text{comm}}}_{\approx\, 2N / \beta},
+$$
+:eqlabel:`eq_dp_cost`
+
+where $B$ is the global batch, $N$ the bytes of gradients to reduce, and
+$\beta$ the achievable allreduce bandwidth (:eqref:`eq_ring_traffic` gives
+the $2N$; the per-device traffic is independent of $k$). The compute term
+*shrinks* with more GPUs (each does less of the batch); the communication
+term does not. Parallelism pays exactly when the compute you offload
+exceeds the communication you take on — big models (large $N$-relative-
+to-work... no: large *compute* per byte communicated), big per-device
+batches, and fast links all push in your favor; a tiny model on a slow
+link, like LeNet on our box, is the case where it never pays. Let's plug
+in real numbers by measuring $\beta$ directly, the effective bandwidth of
+our hand-rolled allreduce:
+
+```{.python .input #multiple-gpus-the-accounting}
+%%tab pytorch
+if d2l.num_gpus() >= 2:
+    N = 64 * 1024 * 1024  # 64M floats = 256 MB per replica
+    data = [torch.randn(N, device=d2l.try_gpu(i)) for i in range(2)]
+    t = d2l.Benchmark(lambda: allreduce(data), warmup=2, repeats=5).time
+    # Ring traffic per device is ~2N bytes; report effective busbw
+    print(f'allreduce {2 * N * 4 / t / 1e9:.2f} GB/s effective '
+          f'over {1000 * t:.1f} ms')
+else:
+    print('needs 2 GPUs')
 ```
 
-By keeping the batch size and learning rate unchanged and increasing the number of GPUs to 2, we can see that the test accuracy roughly stays the same compared with
-the previous experiment. In terms of the optimization algorithms, they are identical.
-
-The wall-clock picture, however, is *worse* on two GPUs than on one. On the captured run (two RTX 4090s, PyTorch eager mode, the from-scratch `split_batch`/`allreduce` glue in this section), the single-GPU loop completes an epoch in roughly 1.7 s while the two-GPU loop takes about 2.2 s — i.e., a ~30% regression rather than the textbook ~2× speedup. Several effects pile up:
-
-* **The model is too small to amortize synchronization.** LeNet on Fashion-MNIST runs each minibatch in microseconds; the cost of `allreduce` (every step copies all parameters to one GPU, sums them, and broadcasts the result back) and of the Python orchestration around it now dominates compute.
-* **The dataset is small and CPU-side data loading is the bottleneck.** Both GPUs draw from the same input pipeline, so they spend most of their time waiting for the next minibatch — adding a second GPU just doubles the synchronization overhead without doubling the useful work.
-* **Our `allreduce` is hand-rolled and naive.** It does a star-pattern gather on `gpu(0)` and broadcasts via Python loops; production libraries (PyTorch's `torch.distributed` with NCCL ring-allreduce, and their counterparts elsewhere) are an order of magnitude faster and overlap communication with backward computation.
-
-In short: this is *the worst case* for data-parallel training, and the slowdown here is real, not a measurement artifact. With a meatier model (ResNet on ImageNet, see the next section) and a non-trivial dataloader, the picture flips and the second GPU pays for itself. Let's see what happens nonetheless for Fashion-MNIST.
-
-```{.python .input #multiple-gpus-training-4}
-#@tab mxnet
-train(num_gpus=2, batch_size=256, lr=0.2)
+```{.python .input #multiple-gpus-the-accounting}
+%%tab jax
+if jax.local_device_count() >= 2:
+    mesh = jax.make_mesh((2,), ('data',))
+    P = jax.sharding.PartitionSpec
+    N = 64 * 1024 * 1024
+    x = jax.device_put(jnp.ones((2, N)),
+                       jax.sharding.NamedSharding(mesh, P('data')))
+    psum = jax.jit(jax.shard_map(
+        lambda a: jax.lax.psum(a, 'data'), mesh=mesh,
+        in_specs=P('data'), out_specs=P('data')))
+    t = d2l.Benchmark(lambda: psum(x), warmup=2, repeats=5).time
+    print(f'psum {2 * N * 4 / t / 1e9:.2f} GB/s effective over {1000*t:.1f} ms')
+else:
+    print('needs 2 GPUs')
 ```
 
-```{.python .input #multiple-gpus-training-4}
-#@tab pytorch
-train(num_gpus=2, batch_size=256, lr=0.2)
-```
+The hand-rolled copy sustains on the order of ten GB/s — this is a plain
+PCIe transfer, staged through host memory, running near the bus limit, and
+already one to two orders of magnitude below an NVLink domain's ~1.8 TB/s
+per GPU (:numref:`tab_gpu_specs`). A theory-versus-practice aside worth
+noticing: a *collective library* like NCCL, whose ring/tree chunking is
+tuned for peer-to-peer fabrics, extracts noticeably *less* effective
+bandwidth than this naive one-shot copy on our P2P-less box — its busbw
+here is only a couple of GB/s. On this hardware the transport, not the
+algorithm, is the ceiling, and a clever ring cannot beat a slow wire.
 
-```{.python .input #multiple-gpus-training-4}
-#@tab jax
-train(num_gpus=2, batch_size=256, lr=0.2)
-```
+Now read the cost model honestly against what we measured. LeNet's
+parameters are tiny, so $2N/\beta$ is a fraction of a millisecond — the
+communication term is *not* what denies the speedup. The culprit is the
+other term: $t_{\text{compute}}(B/k)$ does not actually fall like $1/k$
+for a small model, because halving an already-small batch leaves each GPU
+underutilized, so $t_{\text{compute}}(B/2) \approx t_{\text{compute}}(B)$
+and the second GPU does redundant-feeling work for no wall-clock gain. The
+model pays off only when compute genuinely scales with the batch — a
+compute-dense network with a large per-device batch, where
+$t_{\text{compute}}(B/k) \approx t_{\text{compute}}(B)/k$ dominates the
+small $t_{\text{comm}}$. That is exactly the regime
+:numref:`sec_multi_gpu_concise` moves to, and where the second GPU finally
+earns its keep.
 
-```{.python .input #multiple-gpus-training-4}
-#@tab tensorflow
-train(num_gpus=2, batch_size=256, lr=0.2)
-```
+A closing word of history, because it names the lineage. Before
+synchronous ring allreduce won for dense training, large-scale learning
+organized this same communication through *parameter servers*: dedicated
+storage nodes exposed a `push` (accumulate my gradient) and `pull`
+(give me the current sum) interface, sharding the parameters across
+servers so aggregation bandwidth scaled with the fleet
+:cite:`Li.Andersen.Park.ea.2014`. That push/pull abstraction is the
+authors' own lineage, and it lives on today mainly in recommender-system
+embedding tables (the territory of :numref:`chap_recsys`), where the
+parameters are too large and too sparse for every worker to hold a full
+replica. For dense training, collectives won; the modern production map is
+:numref:`sec_training_systems`.
 
 ## Summary
 
-* There are multiple ways to split deep network training over multiple GPUs. We could split them between layers, across layers, or across data. The former two require tightly choreographed data transfers. Data parallelism is the simplest strategy.
-* Data parallel training is straightforward. However, it increases the effective minibatch size to be efficient.
-* In data parallelism, data is split across multiple GPUs, where each GPU executes its own forward and backward operation and subsequently gradients are aggregated and results are broadcast back to the GPUs.
-* We may use slightly increased learning rates for larger minibatches.
+* Data parallelism replicates the model, splits the batch, sums gradients
+  with an allreduce, and applies the identical update on every device.
+  It is the simplest form of multi-GPU training and does not enlarge the
+  model that fits.
+* Built by hand, the gradient sum is a star: device 0 is a hub moving
+  $(k-1)N$ bytes each way. Ring allreduce removes the hub — reduce-scatter
+  then all-gather — moving $2(k-1)/k \cdot N$ bytes per device,
+  *independent of $k$*. That identity reappears as the basis of FSDP.
+* The cost model $t_{\text{step}}(k) \approx t_{\text{compute}}(B/k) +
+  2N/\beta$ decides whether a GPU pays — but only when compute genuinely
+  scales with the batch. LeNet is the honest worst case: its gradients are
+  tiny (communication negligible, and the hand-rolled copy runs at tens of
+  GB/s anyway), yet a second GPU buys no speedup because halving an
+  already-small batch underutilizes each device, so $t_{\text{compute}}(B/k)$
+  does not fall. Inter-GPU bandwidth on this P2P-less box is PCIe-limited
+  (tens of GB/s for a raw copy, a couple of GB/s of NCCL busbw) — one to two
+  orders of magnitude below an NVLink domain.
+* Parameter servers (push/pull) organized this communication for the
+  asynchronous, multi-machine era; synchronous collectives won for dense
+  training, and the pattern survives in recsys embedding systems.
 
 ## Exercises
 
-1. When training on $k$ GPUs, change the minibatch size from $b$ to $k \cdot b$, i.e., scale it up by the number of GPUs.
-1. Compare accuracy for different learning rates. How does it scale with the number of GPUs?
-1. Implement a more efficient `allreduce` function that aggregates different parameters on different GPUs? Why is it more efficient?
-1. Implement multi-GPU test accuracy computation.
-
-:begin_tab:`mxnet`
-[Discussions](https://d2l.discourse.group/t/364)
-:end_tab:
-
-:begin_tab:`pytorch`
-[Discussions](https://d2l.discourse.group/t/1669)
-:end_tab:
-
-:begin_tab:`jax`
-[Discussions](https://d2l.discourse.group/t/1669)
-:end_tab:
-
-:begin_tab:`tensorflow`
-[Discussions](https://d2l.discourse.group/t/1669)
-:end_tab:
+1. Extend the hand-rolled version to $k = 4$ (guard with `d2l.num_gpus()`)
+   and measure `sec/epoch` at $k \in \{1, 2, 4\}$. Does the slowdown grow,
+   shrink, or hold? Explain using :eqref:`eq_dp_cost`.
+1. Implement ring allreduce with explicit `.to()` copies (reduce-scatter
+   then all-gather) and test whether it beats the star `allreduce` on our
+   host-staged box. It barely can — explain why in terms of
+   :numref:`subsec_hw-interconnects`.
+1. Compute the ring's per-device traffic (:eqref:`eq_ring_traffic`) for
+   ResNet-18's ~11M parameters in fp32, and, using your measured $\beta$,
+   predict $t_{\text{comm}}$ per step. :numref:`sec_multi_gpu_concise`
+   will measure the real thing — how close is your prediction?
+1. A thought experiment: sending gradients in bf16 instead of fp32 halves
+   $N$ and hence $t_{\text{comm}}$. What could break, and which term of
+   :eqref:`eq_dp_cost` does it help — the one that shrinks with $k$ or the
+   one that does not?
+1. Scale the batch size with $k$ (from $B$ to $kB$) so each device keeps a
+   full $B$-sized shard. Now which term of :eqref:`eq_dp_cost` dominates,
+   and does the second GPU pay? Relate your answer to the batch-size
+   discussion of :numref:`sec_batch_size`.
 
 <!-- slides -->
 
-::: {.slide title="Scaling beyond one GPU"}
-A single GPU can train ResNet on ImageNet — slowly. Modern
-large models need *many* GPUs. Three ways to split work:
+::: {.slide title="The Next Rung: Another GPU"}
+More GPUs buy more compute *and* more memory. The catch:
+communication is not free, and on a box with no NVLink it is
+loud enough to hear.
 
-- **Network partitioning** — different layers on different
-  GPUs. Hard to balance; rarely used alone today.
-- **Layerwise partitioning** — split each layer's
-  parameters across GPUs (model parallelism). For giant
-  models whose weights don't fit on one GPU.
-- **Data parallelism** — replicate the model on every GPU;
-  each processes a different minibatch chunk; gradients
-  averaged across GPUs.
-
-Data parallelism is the default for everyday training.
+Plan: build data parallelism by hand, derive the collective
+the professionals use, then *measure* what a second GPU costs —
+and predict, before running, whether it pays.
 :::
 
-::: {.slide title="Strategies side by side"}
-![Original, network partitioning, layerwise partitioning, data parallelism.](../img/splitting.svg){width=86%}
+::: {.slide title="Three Ways to Split"}
+![](../img/mdl-perf-splitting.svg){width=95%}
+
+Data parallel is our subject: simplest, one sync per step,
+works for any model that fits. Pipeline and tensor parallel
+wait for the Language Models part.
 :::
 
-::: {.slide title="Data parallelism"}
-Each GPU computes a forward + backward pass on its slice
-of the minibatch. After the backward pass, gradients are
-averaged across GPUs (`all_reduce`). Optimizer step then
-runs identically on every GPU, keeping replicas in sync.
+::: {.slide title="Data Parallelism by Hand"}
+![](../img/mdl-perf-data-parallel.svg){width=62%}
 
-![Data-parallel SGD on 2 GPUs: split data, compute gradients independently, all-reduce, then update.](../img/data-parallel.svg){width=72%}
+Split batch → forward/backward per replica → **allreduce
+gradients** → identical update. One process; tensors moved
+explicitly.
 
-@multiple-gpus-data-parallelism
+@multiple-gpus-data-parallelism-by-hand-4
 :::
 
-::: {.slide title="Toy network"}
-Tiny LeNet for the demo — small enough to fit on each GPU
-many times over:
+::: {.slide title="Two GPUs, No Speedup"}
+@multiple-gpus-data-parallelism-by-hand-6
 
-@multiple-gpus-a-toy-network
+Not a bug — the syllabus. LeNet is too small: halving a small
+batch underutilizes each GPU. *Not* a bandwidth problem — the
+hand-rolled copy runs at tens of GB/s. Wrong regime, not wrong
+technique.
 :::
 
-::: {.slide title="Distribute parameters"}
-Replicate the parameter list onto each device:
+::: {.slide title="Ring Allreduce"}
+![](../img/mdl-perf-ring-allreduce.svg){width=95%}
 
-@multiple-gpus-data-synchronization-1
-
-. . .
-
-@multiple-gpus-data-synchronization-2
+Star: hub moves $(k-1)N$. Ring (reduce-scatter + all-gather):
+$\frac{2(k-1)}{k}N$ per device — **independent of $k$**. The
+identity that becomes FSDP.
 :::
 
-::: {.slide title="all_reduce"}
-Sum vectors across GPUs and broadcast the result back —
-the gradient-averaging primitive of data-parallel SGD.
-NCCL implements this efficiently in production:
+::: {.slide title="The Accounting"}
+$$t_{\text{step}}(k) \approx t_{\text{compute}}(B/k) + 2N/\beta$$
 
-@multiple-gpus-data-synchronization-3
+@multiple-gpus-the-accounting
 
-. . .
-
-@multiple-gpus-data-synchronization-4
-
-. . .
-
-@multiple-gpus-data-synchronization-5
+The copy runs at tens of GB/s (PCIe-limited; NCCL busbw is
+lower). So LeNet's no-speedup isn't communication — it's
+$t_{\text{compute}}(B/k)$ *not* shrinking when a small batch is
+halved. Big model + big batch → the second GPU pays (next
+section).
 :::
 
-::: {.slide title="Distribute the minibatch"}
-Split a tensor evenly across devices:
+::: {.slide title="Lineage"}
+- **Parameter servers** (push/pull): the asynchronous,
+  multi-machine era; alive today in recsys embeddings.
+- **Synchronous collectives** (ring allreduce): won for dense
+  training; what DDP runs.
 
-@multiple-gpus-distributing-data-1
-
-. . .
-
-@multiple-gpus-distributing-data-2
-:::
-
-::: {.slide title="One step of multi-GPU training"}
-Forward + backward on each replica → all_reduce gradients
-→ update parameters identically:
-
-@multiple-gpus-training-1
-
-. . .
-
-@multiple-gpus-training-2
-:::
-
-::: {.slide title="Single-GPU baseline"}
-@multiple-gpus-training-3
-
-This gives the wall-clock reference point: one model copy,
-one minibatch stream, no gradient synchronization.
-:::
-
-::: {.slide title="Two GPUs"}
-On this small model the second GPU is ~30% *slower* — naive
-data parallelism's worst case (LeNet runs each minibatch in
-microseconds, so the hand-rolled `allreduce` and Python
-orchestration dominate). Larger models amortize the sync cost
-and the second GPU pays for itself:
-
-@multiple-gpus-training-4
-:::
-
-::: {.slide title="Recap"}
-- Data parallelism is the default: replicate model, split
-  minibatch, all-reduce gradients, identical optimizer
-  step on every GPU.
-- `all_reduce` is the workhorse — implemented as a ring
-  reduction in NCCL; bandwidth-optimal for $k$ GPUs.
-- Model parallelism is for *huge* models that don't fit
-  on a single GPU; tensor / pipeline parallelism are
-  modern variants.
+Production map → the Tools appendix. Next: let the library
+run the ring for us.
 :::

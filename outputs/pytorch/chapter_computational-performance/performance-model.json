@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/performance-model.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:0b92965b6edea7f7a9774fe1454bcf5d97917bed08e8e8d3b9e0adb033ed3dae",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "performance-model-the-performance-model": {
+      "code_fingerprint": "sha256:dbf3534690d8e5cffb3e03016455ddb838590b1666cf79214de0b844dbead7c2",
+      "kind": "text",
+      "outputs": []
+    },
+    "performance-model-counting-flops-bytes-and-arithmetic-intensity": {
+      "code_fingerprint": "sha256:ce291f1e976b7cd2fcc0aa55d8eb2f2405d438f1c950521ab5f90bfd58948c0e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "NVIDIA GeForce RTX 4090, 25 GB\nridge point = 164 FLOP/byte\n"
+        }
+      ]
+    },
+    "performance-model-measuring-without-lying-1": {
+      "code_fingerprint": "sha256:40f658e29d107dd9b6be5a93cad9953314049818c4dce59c67fcac4a840b348a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "naive timer: 0.87 ms   with synchronize: 9.12 ms\n"
+        }
+      ]
+    },
+    "performance-model-measuring-without-lying-2": {
+      "code_fingerprint": "sha256:e87ed1c55ce8c40e25c842c4ba8716f0d1d67577bd13ee4dff044dbdc6626511",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read every step: 0.061 s   read once: 0.029 s\n"
+        }
+      ]
+    },
+    "performance-model-measuring-without-lying-3": {
+      "code_fingerprint": "sha256:8650b28f5f29006ed0832b4cb251a99454f8a446f431790bc446695bde965de5",
+      "kind": "text",
+      "outputs": []
+    },
+    "performance-model-measuring-without-lying-4": {
+      "code_fingerprint": "sha256:7db9779f9cd89c78f2bc55cc62386b5d7af0442b67c6b844b38eb4193fc133a4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "4096-matmul: 0.91 ms/call"
+        }
+      ]
+    },
+    "performance-model-the-sweep-mapping-our-gpu": {
+      "code_fingerprint": "sha256:1f70a7f4d4f7139a3c246584106b827edfdb2be47e89a7e27e26131d2c3d05d2",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "['256: 2.2', '512: 16.2', '1024: 116.7', '2048: 157.0', '4096: 150.7', '8192: 165.1']\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "performance-model/performance-model-the-sweep-mapping-our-gpu-1.svg",
+          "bytes": 23261,
+          "sha256": "sha256:1a1993d07054f0fa995227826a4ebfe2e7826d88d2a1f3621c3817fbfd5a2e32"
+        }
+      ]
+    },
+    "performance-model-three-regimes-1": {
+      "code_fingerprint": "sha256:a9c45a6124e1b9fb3ecefbf0cb06b3f20d4ca157f8c24bd6851015a06b8bda08",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "add: 0.14 ms/call\nmul: 0.14 ms/call\nsin: 0.14 ms/call\nsigmoid: 0.14 ms/call\n"
+        }
+      ]
+    },
+    "performance-model-three-regimes-2": {
+      "code_fingerprint": "sha256:048020b7c6cae0a438054346fa44ce1a6b5ac08ae1fa21bd2b841e4f106a52b6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1 op: 0.15 ms/call\nchain: 1.28 ms/call\n"
+        }
+      ]
+    },
+    "performance-model-the-profiler": {
+      "code_fingerprint": "sha256:83eea77af02ad1214f4c9cd3c33494ee87f2e3c90541cb6461394fd5f7b5fcaf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                           aten::linear         0.55%      45.671us        38.45%       3.218ms     214.550us       0.000us         0.00%     198.302us      13.220us            15  \n                                            aten::addmm         6.75%     564.794us        36.24%       3.034ms     202.265us     182.494us        41.88%     198.302us      13.220us            15  \n    autograd::engine::evaluate_function: AddmmBackward0         3.16%     264.505us        33.31%       2.788ms     185.890us       0.000us         0.00%     176.894us      11.793us            15  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us     156.129us        35.83%     156.129us      15.613us            10  \n                                         AddmmBackward0         1.95%     163.254us        24.01%       2.010ms     133.977us       0.000us         0.00%     134.880us       8.992us            15  \n                                               aten::mm        10.80%     904.414us        19.54%       1.636ms      65.422us     122.625us        28.14%     134.880us       5.395us            25  \n                                              aten::sum         5.12%     428.678us         7.19%     602.242us      30.112us      52.126us        11.96%      52.126us       2.606us            20  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      49.217us        11.29%      49.217us       4.922us            10  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nSelf CPU time total: 8.371ms\nSelf CUDA time total: 435.772us\n\n"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/smola/d2l-neu/.venv-pytorch/lib/python3.12/site-packages/torch/profiler/profiler.py:224: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.\n  _warn_once(\n"
+        }
+      ]
+    }
+  }
+}

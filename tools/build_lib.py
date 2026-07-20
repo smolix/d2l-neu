@@ -32,7 +32,23 @@ from d2l_preprocess import (
 # this list to keep them out of the notebook set.
 LIB_ONLY_FILES = [
     'chapter_natural-language-processing-pretraining/legacy-attention-lib.md',
+    'chapter_computational-performance/legacy-multigpu-lib.md',
 ]
+
+# A LIB_ONLY file whose symbols are referenced at *module-import time* by a
+# later chapter (e.g. as a default argument `def f(..., split_f=d2l.split_batch)`
+# in ch. 19's train_batch_ch13) must be emitted BEFORE that consumer, or the
+# default evaluates against a not-yet-defined attribute ("partially initialized
+# module"). Files listed here are prepended (emitted before the numbered
+# chapters) instead of appended. Last-writer-wins de-duplication is unchanged —
+# a rendered chapter that redefines the same symbol in the same framework still
+# wins — so early emission cannot shadow a rendered definition; it only makes
+# the symbol available in time. (Such a file's own blocks must be self-ordered:
+# a symbol used as another block's import-time default must appear earlier in
+# the file. legacy-multigpu-lib puts split_batch before evaluate_accuracy_gpus.)
+LIB_ONLY_EARLY_FILES = {
+    'chapter_computational-performance/legacy-multigpu-lib.md',
+}
 
 # ──────────────────────────────────────────────────────────
 # Block extraction
@@ -767,11 +783,18 @@ def main():
     config = configparser.ConfigParser()
     config.read(config_path)
 
-    files = list(CHAPTER_NUMBERING.keys())
-    # Build-only sources (module-level LIB_ONLY_FILES) are appended last so
-    # they can never shadow a rendered chapter's definition. See each file's
-    # header for its rationale.
-    files += [f for f in LIB_ONLY_FILES if (args.source / f).exists()]
+    # Build-only sources (module-level LIB_ONLY_FILES): appended last so
+    # last-writer-wins de-dup never lets them shadow a rendered chapter's
+    # definition — EXCEPT files in LIB_ONLY_EARLY_FILES, which are prepended
+    # because a later chapter references their symbols at import time (see the
+    # LIB_ONLY_EARLY_FILES comment). De-dup semantics are order-independent for
+    # these files (no same-framework collisions with rendered chapters), so
+    # prepending changes only emit order, not which copy wins.
+    early = [f for f in LIB_ONLY_FILES
+             if f in LIB_ONLY_EARLY_FILES and (args.source / f).exists()]
+    late = [f for f in LIB_ONLY_FILES
+            if f not in LIB_ONLY_EARLY_FILES and (args.source / f).exists()]
+    files = early + list(CHAPTER_NUMBERING.keys()) + late
 
     # Copy __init__.py
     init_src = args.source / 'd2l' / '__init__.py'

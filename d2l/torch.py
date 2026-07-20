@@ -2020,18 +2020,24 @@ class Mamba(d2l.Module):
         return self.ln(X), state
 
 class Benchmark:
-    """For measuring running time.
+    """Time a callable: warmup, then device-synchronized average seconds.
 
-    Defined in :numref:`sec_hybridize`"""
-    def __init__(self, description='Done'):
-        self.description = description
+    Defined in :numref:`sec_perf_model`"""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc = desc
+        for _ in range(warmup):
+            f()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            f()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        self.time = (time.perf_counter() - t0) / repeats
 
-    def __enter__(self):
-        self.timer = d2l.Timer()
-        return self
-
-    def __exit__(self, *args):
-        print(f'{self.description}: {self.timer.stop():.4f} sec')
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
 
 def split_batch(X, y, devices):
     """Split `X` and `y` into multiple devices.

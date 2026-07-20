@@ -2209,42 +2209,40 @@ class Mamba(nnx.Module):
         return self.ln(X), state
 
 class Benchmark:
-    """For measuring running time.
+    """Time a callable: warmup, then device-synchronized average seconds.
 
-    Defined in :numref:`sec_hybridize`"""
-    def __init__(self, description='Done'):
-        self.description = description
+    Defined in :numref:`sec_perf_model`"""
+    def __init__(self, f, warmup=3, repeats=10, desc='time'):
+        self.desc = desc
+        for _ in range(warmup):
+            out = f()
+        jax.block_until_ready(out)
+        t0 = time.perf_counter()
+        for _ in range(repeats):
+            out = f()
+        jax.block_until_ready(out)
+        self.time = (time.perf_counter() - t0) / repeats
 
-    def __enter__(self):
-        self.timer = d2l.Timer()
-        return self
-
-    def __exit__(self, *args):
-        print(f'{self.description}: {self.timer.stop():.4f} sec')
+    def __repr__(self):
+        return f'{self.desc}: {1000 * self.time:.2f} ms/call'
 
 def split_batch(X, y, num_devices):
-    """Split `X` and `y` across devices by reshaping.
+    """Reshape `X` and `y` onto a leading device axis of size num_devices.
 
     Defined in :numref:`sec_multi_gpu`"""
-    assert X.shape[0] == y.shape[0]
-    batch_size = X.shape[0]
-    # Reshape (batch, ...) -> (num_devices, batch_per_device, ...)
-    def _reshape(a):
-        return a.reshape(num_devices, batch_size // num_devices, *a.shape[1:])
-    return _reshape(X), _reshape(y)
+    assert X.shape[0] % num_devices == 0
+    reshape = lambda a: a.reshape(num_devices, -1, *a.shape[1:])
+    return reshape(X), reshape(y)
 
 class ResNet18(nnx.Module):
-    """A slightly modified ResNet-18 model.
+    """A slightly modified ResNet-18 (small stem, no max-pool).
 
     Defined in :numref:`sec_multi_gpu_concise`"""
     def __init__(self, num_classes=10, rngs=None):
         rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
         self.net = nnx.Sequential(
-            nnx.Conv(1, 64, kernel_size=(3, 3), strides=(1, 1),
-                     padding='same', rngs=rngs),
-            nnx.BatchNorm(64, rngs=rngs),
-            nnx.relu,
-            # ResNet blocks
+            nnx.Conv(1, 64, (3, 3), (1, 1), padding='same', rngs=rngs),
+            nnx.BatchNorm(64, rngs=rngs), nnx.relu,
             d2l.Residual(64, in_channels=64, rngs=rngs),
             d2l.Residual(64, in_channels=64, rngs=rngs),
             d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
@@ -2256,7 +2254,6 @@ class ResNet18(nnx.Module):
             d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
                          in_channels=256, rngs=rngs),
             d2l.Residual(512, in_channels=512, rngs=rngs),
-            # Global average pooling and classifier
             lambda x: x.mean(axis=(1, 2)),
             nnx.Linear(512, num_classes, rngs=rngs))
 

@@ -79,6 +79,8 @@ class Item:
     def slots(self):  # total slots, for reporting / big-first tie-break
         if self.req[0] == "cpu":
             return 1
+        if self.req[1] == "all":
+            return -1  # host-sized; unknown until reserve() resolves it
         return self.req[1] * self.req[2]
 
 
@@ -221,22 +223,42 @@ class Scheduler:
             return {"cuda": "", "cpu_cores": self.core_groups[slot],
                     "_": ("cpu", slot), "_fw": it.fw}
         _, ngpu, spg = it.req
-        # GPUs with at least spg free, most-free first (spread load)
-        cand = sorted((g for g in range(self.num_gpus) if self.gpu_free[g] >= spg),
-                      key=lambda g: self.gpu_free[g], reverse=True)
-        if len(cand) < ngpu:
-            return None
-        chosen = sorted(cand[:ngpu])
-        for g in chosen:
-            self.gpu_free[g] -= spg
+        if ngpu == "all":
+            # Whole-box: every GPU on the host (never a hardcoded count —
+            # self.num_gpus degrades correctly on a 2-GPU host), each at its
+            # own full slot capacity. Exclusive reservation: only fits when
+            # EVERY GPU is entirely free, a fundamentally different admission
+            # test from "n emptiest GPUs with >= spg free", so it gets its own
+            # branch. Nothing below special-cases the number of GPUs.
+            if any(free < cap for free, cap in zip(self.gpu_free, self.gpu_cap)):
+                return None
+            chosen = list(range(self.num_gpus))
+            per_gpu_spg = list(self.gpu_cap)  # each card's own full capacity
+        else:
+            # GPUs with at least spg free, most-free first (spread load)
+            cand = sorted((g for g in range(self.num_gpus)
+                           if self.gpu_free[g] >= spg),
+                          key=lambda g: self.gpu_free[g], reverse=True)
+            if len(cand) < ngpu:
+                return None
+            chosen = sorted(cand[:ngpu])
+            per_gpu_spg = [spg] * len(chosen)
+        for g, s in zip(chosen, per_gpu_spg):
+            self.gpu_free[g] -= s
         env = {}
-        if it.fw == "jax":   # jax preallocates: cap to the slots we reserved
-            vram = min(self.gpu_vram[g] for g in chosen)
-            frac = min(0.95, max(0.05, (spg * self.mib_per_slot) / vram))
+        if it.fw == "jax":   # jax preallocates: cap to the slots we reserved.
+            # Per-GPU fraction, tightest (min) across chosen cards so no GPU is
+            # over-committed. Strict generalization of the old scalar formula:
+            # when per_gpu_spg is constant this reduces to spg*mib/min(vram_g),
+            # byte-for-byte the previous formula, for any n_gpus.
+            frac = min(0.95, max(0.05, min(
+                (s * self.mib_per_slot) / self.gpu_vram[g]
+                for g, s in zip(chosen, per_gpu_spg))))
             env["XLA_PYTHON_CLIENT_MEM_FRACTION"] = f"{frac:.2f}"
         self.fw_inflight[it.fw] += 1
         return {"cuda": ",".join(str(g) for g in chosen), "cpu_cores": None,
-                "extra_env": env, "_": ("gpu", chosen, spg), "_fw": it.fw}
+                "extra_env": env, "_": ("gpu", chosen, per_gpu_spg),
+                "_fw": it.fw}
 
     def _release(self, asg):
         self.fw_inflight[asg["_fw"]] -= 1
@@ -244,9 +266,9 @@ class Scheduler:
         if kind == "cpu":
             self.cpu_free.append(asg["_"][1])
         else:
-            _, chosen, spg = asg["_"]
-            for g in chosen:
-                self.gpu_free[g] += spg
+            _, chosen, per_gpu_spg = asg["_"]
+            for g, s in zip(chosen, per_gpu_spg):
+                self.gpu_free[g] += s
 
     def _track(self):
         for g in range(self.num_gpus):

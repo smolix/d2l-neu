@@ -1,232 +1,543 @@
 # Hardware
 :label:`sec_hardware`
 
-Building systems with great performance requires a good understanding of the algorithms and models to capture the statistical aspects of the problem. At the same time it is also indispensable to have at least a modicum of knowledge of the underlying hardware. The current section is no substitute for a proper course on hardware and system design. Instead, it might serve as a starting point for understanding why some algorithms are more efficient than others and how to achieve good throughput. A good design can easily make a difference of an order of magnitude and, in turn, this can make the difference between being able to train a network (e.g., in a week) and not at all (in 3 months, thus missing the deadline). 
-We will start by looking at computers. Then we will zoom in to look more carefully at CPUs and GPUs. Lastly we zoom out to review how multiple computers are connected in a server center or in the cloud. 
-
-![Latency Numbers that every programmer should know.](../img/latencynumbers.png)
-:label:`fig_latencynumbers`
-
-Impatient readers may be able to get by with :numref:`fig_latencynumbers`. It is taken from Colin Scott's [interactive post](https://people.eecs.berkeley.edu/%7Ercs/research/interactive_latency.html) that gives a good overview of the progress over the past decade. The original numbers are due to Jeff Dean's [Stanford talk from 2010](https://static.googleusercontent.com/media/research.google.com/en//people/jeff/Stanford-DL-Nov-2010.pdf).
-The discussion below explains some of the rationale for these numbers and how they can guide us in designing algorithms. It is very high level and cursory. It is clearly *no substitute* for a proper course but rather just meant to provide enough information for a statistical modeler to make suitable design decisions. For an in-depth overview of computer architecture we refer the reader to :cite:`Hennessy.Patterson.2011` or a recent course on the subject, such as the one by [Krste Asanović](http://inst.eecs.berkeley.edu/%7Ecs152/sp19/).
-
-## Computers
-
-Most deep learning researchers and practitioners have access to a computer with a fair amount of memory, computation, some form of an accelerator such as a GPU, or multiples thereof. A computer consists of the following key components:
-
-* A processor (also referred to as a CPU) that is able to execute the programs we give it (in addition to running an operating system and many other things), typically consisting of 8 or more cores.
-* Memory (RAM) to store and retrieve the results from computation, such as weight vectors and activations, and training data.
-* An Ethernet network connection (sometimes multiple) with speeds ranging from 1 GB/s to 100 GB/s. On high end servers more advanced interconnects can be found.
-* A high speed expansion bus (PCIe) to connect the system to one or more GPUs. Servers have up to 8 accelerators, often connected in an advanced topology, while desktop systems have 1 or 2, depending on the budget of the user and the size of the power supply.
-* Durable storage, such as a magnetic hard disk drive, a solid state drive, in many cases connected using the PCIe bus. It provides efficient transfer of training data to the system and storage of intermediate checkpoints as needed.
-
-![Connectivity of components of a computer.](../img/mobo-symbol.svg)
-:label:`fig_mobo-symbol`
-
-As :numref:`fig_mobo-symbol` indicates, most components (network, GPU, and storage) are connected to the CPU across the PCIe bus. It consists of multiple lanes that are directly attached to the CPU. For instance AMD's Threadripper 3 has 64 PCIe 4.0 lanes, each of which is capable of 16 Gbit/s data transfer in both directions. The memory is directly attached to the CPU with a total bandwidth of up to 100 GB/s.
-
-When we run code on a computer we need to shuffle data to the processors (CPUs or GPUs), perform computation, and then move the results off the processor back to RAM and durable storage. Hence, in order to get good performance we need to make sure that this works seamlessly without any one of the systems becoming a major bottleneck. For instance, if we cannot load images quickly enough the processor will not have any work to do. Likewise, if we cannot move matrices quickly enough to the CPU (or GPU), its processing elements will starve. Finally, if we want to synchronize multiple computers across the network, the latter should not slow down computation. One option is to interleave communication and computation. Let's have a look at the various components in more detail.
-
-
-## Memory
-
-At its most basic memory is used to store data that needs to be readily accessible. At present CPU RAM is typically of the [DDR4](https://en.wikipedia.org/wiki/DDR4_SDRAM) variety, offering 20--25 GB/s bandwidth per module. Each module has a 64-bit-wide bus. Typically pairs of memory modules are used to allow for multiple channels. CPUs have between 2 and 4 memory channels, i.e., they have between 40 GB/s and 100 GB/s peak memory bandwidth. Often there are two banks per channel. For instance AMD's Zen 3 Threadripper has 8 slots.
-
-While these numbers are impressive, indeed, they only tell part of the story. When we want to read a portion from memory we first need to tell the memory module where the information can be found. That is, we first need to send the *address* to RAM. Once this is accomplished we can choose to read just a single 64 bit record or a long sequence of records. The latter is called *burst read*. In a nutshell, sending an address to memory and setting up the transfer takes approximately 100 ns (details depend on the specific timing coefficients of the memory chips used), every subsequent transfer takes only 0.2 ns. In short, the first read is 500 times as expensive as subsequent ones! Note that we could perform up to 10,000,000 random reads per second. This suggests that we avoid random memory access as far as possible and use burst reads (and writes) instead.
-
-Matters are a bit more complex when we take into account that we have multiple *banks*. Each bank can read memory largely independently. This means two things. 
-On the one hand, the effective number of random reads is up to 4 times higher, provided that they are spread evenly across memory. It also means that it is still a bad idea to perform random reads since burst reads are 4 times faster, too. On the other hand, due to memory alignment to 64 bit boundaries it is a good idea to align any data structures with the same boundaries. Compilers do this pretty much [automatically](https://en.wikipedia.org/wiki/Data_structure_alignment) when the appropriate flags are set. Curious readers are encouraged to review a lecture on DRAMs such as the one by [Zeshan Chishti](http://web.cecs.pdx.edu/%7Ezeshan/ece585_lec5.pdf).
-
-GPU memory is subject to even higher bandwidth requirements since they have many more processing elements than CPUs. By and large there are two options to address them. The first is to make the memory bus significantly wider. For instance, NVIDIA's RTX 2080 Ti has a 352-bit-wide bus. This allows for much more information to be transferred at the same time. Second, GPUs use specific high-performance memory. Consumer-grade devices, such as NVIDIA's RTX and Titan series typically use [GDDR6](https://en.wikipedia.org/wiki/GDDR6_SDRAM) chips with over 500 GB/s aggregate bandwidth. An alternative is to use HBM (high bandwidth memory) modules. They use a very different interface and connect directly with GPUs on a dedicated silicon wafer. This makes them very expensive and their use is typically limited to high-end server chips, such as the NVIDIA Volta V100 series of accelerators. Quite unsurprisingly, GPU memory is generally *much* smaller than CPU memory due to the higher cost of the former. For our purposes, by and large their performance characteristics are similar, just a lot faster. We can safely ignore the details for the purpose of this book. They only matter when tuning GPU kernels for high throughput.
-
-## Storage
-
-We saw that some of the key characteristics of RAM are *bandwidth* and *latency*. The same is true for storage devices, just that the differences can be even more extreme.
-
-### Hard Disk Drives
-
-*Hard disk drives* (HDDs) have been in use for over half a century. In a nutshell they contain a number of spinning platters with heads that can be positioned to read or write at any given track. High-end disks hold up to 16 TB on 9 platters. One of the key benefits of HDDs is that they are relatively inexpensive. One of their many downsides are their typically catastrophic failure modes and their relatively high read latency.
-
-To understand the latter, consider the fact that HDDs spin at around 7,200 RPM (revolutions per minute). If they were much faster they would shatter due to the centrifugal force exerted on the platters. This has a major downside when it comes to accessing a specific sector on the disk: we need to wait until the platter has rotated in position (we can move the heads but not accelerate the actual disks). Hence it can take over 8 ms until the requested data is available. A common way this is expressed is to say that HDDs can operate at approximately 100 IOPs (input/output operations per second). This number has essentially remained unchanged for the past two decades. Worse still, it is equally difficult to increase bandwidth (it is in the order of 100--200 MB/s). After all, each head reads a track of bits, hence the bit rate only scales with the square root of the information density. As a result, HDDs are quickly becoming relegated to archival storage and low-grade storage for very large datasets.
-
-
-### Solid State Drives
-
-Solid state drives (SSDs) use flash memory to store information persistently. This allows for *much faster* access to stored records. Modern SSDs can operate at 100,000 to 500,000 IOPs, i.e., up to 3 orders of magnitude faster than HDDs. Furthermore, their bandwidth can reach 1--3GB/s, i.e., one order of magnitude faster than HDDs. These improvements sound almost too good to be true. Indeed, they come with the following caveats, due to the way SSDs are designed.
-
-* SSDs store information in blocks (256 KB or larger). They can only be written as a whole, which takes significant time. Consequently bit-wise random writes on SSD have very poor performance. Likewise, writing data in general takes significant time since the block has to be read, erased and then rewritten with new information. By now SSD controllers and firmware have developed algorithms to mitigate this. Nonetheless, writes can be much slower, in particular for QLC (quad level cell) SSDs. The key for improved performance is to maintain a *queue* of operations, to prefer reads and to write in large blocks if possible.
-* The memory cells in SSDs wear out relatively quickly (often already after a few thousand writes). Wear-level protection algorithms are able to spread the degradation over many cells. That said, it is not recommended to use SSDs for swapping files or for large aggregations of log-files.
-* Lastly, the massive increase in bandwidth has forced computer designers to attach SSDs directly to the PCIe bus. The drives capable of handling this, referred to as NVMe (Non Volatile Memory enhanced), can use up to 4 PCIe lanes. This amounts to up to 8GB/s on PCIe 4.0.
-
-### Cloud Storage
-
-Cloud storage provides a configurable range of performance. That is, the assignment of storage to virtual machines is dynamic, both in terms of quantity and in terms of speed, as chosen by users. We recommend that users increase the provisioned number of IOPs whenever latency is too high, e.g., during training with many small records.
-
-## CPUs
-
-Central processing units (CPUs) are the centerpiece of any computer. They consist of a number of key components: *processor cores* that are able to execute machine code, a *bus* connecting them (the specific topology differs significantly between processor models, generations, and vendors), and *caches* to allow for higher bandwidth and lower latency memory access than what is possible by reads from main memory. Lastly, almost all modern CPUs contain *vector processing units* to aid with high performance linear algebra and convolutions, as they are common in media processing and machine learning.
-
-![Intel Skylake consumer quad-core CPU.](../img/skylake.svg)
-:label:`fig_skylake`
-
-:numref:`fig_skylake` depicts an Intel Skylake consumer-grade quad-core CPU. It has an integrated GPU, caches, and a ringbus connecting the four cores. Peripherals, such as Ethernet, WiFi, Bluetooth, SSD controller, and USB, are either part of the chipset or directly attached (PCIe) to the CPU.
-
-
-### Microarchitecture
-
-Each of the processor cores consists of a rather sophisticated set of components. While details differ between generations and vendors, the basic functionality is pretty much standard. The front-end loads instructions and tries to predict which path will be taken (e.g., for control flow). Instructions are then decoded from assembly code to microinstructions. Assembly code is often not the lowest level code that a processor executes. Instead, complex instructions may be decoded into a set of lower-level operations. These are then processed by the actual execution core. Often the latter is capable of performing many operations simultaneously. For instance, the ARM Cortex A77 core of :numref:`fig_cortexa77` is able to perform up to 8 operations simultaneously.
-
-![ARM Cortex A77 Microarchitecture.](../img/a77.svg)
-:label:`fig_cortexa77`
-
-This means that efficient programs might be able to perform more than one instruction per clock cycle, provided that they can be carried out independently. Not all units are created equal. Some specialize in integer instructions whereas others are optimized for floating point performance. To increase throughput, the processor might also follow  multiple code paths simultaneously in a branching instruction and then discard the results of the branches not taken. This is why branch prediction units matter (on the front-end) such that only the most promising paths are pursued.
-
-### Vectorization
-
-Deep learning is extremely compute-hungry. Hence, to make CPUs suitable for machine learning, one needs to perform many operations in one clock cycle. This is achieved via vector units. They have different names: on ARM they are called NEON, on x86 they (a recent generation) are referred to as [AVX2](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) units. A common aspect is that they are able to perform SIMD (single instruction multiple data) operations. :numref:`fig_neon128` shows how 8 short integers can be added in one clock cycle on ARM.
-
-![128 bit NEON vectorization.](../img/neon128.svg)
-:label:`fig_neon128`
-
-Depending on architecture choices, such registers are up to 512 bits long, allowing for the combination of up to 64 pairs of numbers. For instance, we might be multiplying two numbers and adding them to a third, which is also known as a fused multiply-add. Intel's [OpenVino](https://01.org/openvinotoolkit) uses these to achieve respectable throughput for deep learning on server-grade CPUs. Note, though, that this number is entirely dwarfed by what GPUs are capable of achieving. For instance, NVIDIA's RTX 2080 Ti has 4,352 CUDA cores, each of which is capable of processing such an operation at any time.
-
-### Cache
-
-Consider the following situation: we have a modest CPU core with 4 cores as depicted in :numref:`fig_skylake` above, running at 2 GHz frequency.
-Moreover, let's assume that we have an IPC (instructions per clock) count of 1 and that the units have AVX2 with 256-bit width enabled. Let's furthermore assume that at least one of the registers used for AVX2 operations needs to be retrieved from memory. This means that the CPU consumes $4 \times 256 \textrm{ bit} = 128 \textrm{ bytes}$ of data per clock cycle. Unless we are able to transfer $2 \times 10^9 \times 128 = 256 \times 10^9$ bytes to the processor per second the processing elements are going to starve. Unfortunately the memory interface of such a chip only supports 20--40 GB/s data transfer, i.e., one order of magnitude less. The fix is to avoid loading *new* data from memory as far as possible and rather to cache it locally on the CPU. This is where caches come in handy. Commonly the following names or concepts are used:
-
-* **Registers** are strictly speaking not part of the cache. They help stage instructions. That said, CPU registers are memory locations that a CPU can access at clock speed without any delay penalty. CPUs have tens of registers. It is up to the compiler (or programmer) to use registers efficiently. For instance the C programming language has a `register` keyword.
-* **L1 caches** are the first line of defense against high memory bandwidth requirements. L1 caches are tiny (typical sizes might be 32--64 KB) and often split into data and instructions caches. When data is found in the L1 cache, access is very fast. If they cannot be found there, the search progresses down the cache hierarchy.
-* **L2 caches** are the next stop. Depending on architecture design and processor size they might be exclusive. They might be accessible only by a given core or shared among multiple cores. L2 caches are larger (typically 256--512 KB per core) and slower than L1. Furthermore, to access something in L2 we first need to check to realize that the data is not in L1, which adds a small amount of extra latency.
-* **L3 caches** are shared among multiple cores and can be quite large. AMD's Epyc 3 server CPUs have a whopping 256 MB of cache spread across multiple chiplets. More typical numbers are in the 4--8 MB range.
-
-Predicting which memory elements will be needed next is one of the key optimization parameters in chip design. For instance, it is advisable to traverse memory in a *forward* direction since most caching algorithms will try to *read ahead* rather than backwards. Likewise, keeping memory access patterns local is a good way of improving performance.
-
-Adding caches is a double-edge sword. On the one hand they ensure that the processor cores do not starve of data. At the same time they increase chip size, using up area that otherwise could have been spent on increasing processing power. Moreover, *cache misses* can be expensive. Consider the worst case scenario, *false sharing*, as depicted in :numref:`fig_falsesharing`. A memory location is cached on processor 0 when a thread on processor 1 requests the data. To obtain it, processor 0 needs to stop what it is doing, write the information back to main memory and then let processor 1 read it from memory. During this operation both processors wait. Quite potentially such code runs *more slowly* on multiple processors when compared with an efficient single-processor implementation. This is one more reason for why there is a practical limit to cache sizes (besides their physical size).
-
-![False sharing (image courtesy of Intel).](../img/falsesharing.svg)
-:label:`fig_falsesharing`
-
-## GPUs and other Accelerators
-
-It is not an exaggeration to claim that deep learning would not have been successful without GPUs. By the same token, it is quite reasonable to argue that GPU manufacturers' fortunes have increased significantly due to deep learning. This co-evolution of hardware and algorithms has led to a situation where for better or worse deep learning is the preferable statistical modeling paradigm. Hence it pays to understand the specific benefits that GPUs and related accelerators such as the TPU :cite:`Jouppi.Young.Patil.ea.2017` offer.
-
-Of note is a distinction that is often made in practice: accelerators are optimized either for training or inference. For the latter we only need to compute the forward propagation in a network. No storage of intermediate data is needed for backpropagation. Moreover, we may not need very precise computation (FP16 or INT8 typically suffice). On the other hand, during training all intermediate results need storage to compute gradients. Moreover, accumulating gradients requires higher precision to avoid numerical underflow (or overflow). This means that FP16 (or mixed precision with FP32) is the minimum requirement. All of this necessitates faster and larger memory (HBM2 vs. GDDR6) and more processing power. For instance, NVIDIA's [Turing](https://devblogs.nvidia.com/nvidia-turing-architecture-in-depth/) T4 GPUs are optimized for inference whereas the V100 GPUs are preferable for training.
-
-Recall vectorization as illustrated in :numref:`fig_neon128`. Adding vector units to a processor core allowed us to increase throughput significantly. For example, in the example in :numref:`fig_neon128` we were able to perform 16 operations simultaneously.
-First,
-what if we added operations that optimized not just operations between vectors but also between matrices? This strategy led to tensor cores (to be covered shortly). 
-Second, what if we added many more cores? In a nutshell, these two strategies summarize the design decisions in GPUs. :numref:`fig_turing_processing_block` gives an overview of a basic processing block. It contains 16 integer and 16 floating point units. In addition to that, two tensor cores accelerate a narrow subset of additional operations relevant for deep learning. Each streaming multiprocessor consists of four such blocks.
-
-![NVIDIA Turing processing block (image courtesy of NVIDIA).](../img/turing-processing-block.png)
-:width:`150px`
-:label:`fig_turing_processing_block`
-
-Next, 12 streaming multiprocessors are grouped into graphics processing clusters which make up the high-end TU102 processors. Ample memory channels and an L2 cache complement the setup. :numref:`fig_turing` has the relevant details. One of the reasons for designing such a device is that individual blocks can be added or removed as needed to allow for more compact chips and to deal with yield issues (faulty modules might not be activated). Fortunately programming such devices is well hidden from the casual deep learning researcher beneath layers of CUDA and framework code. In particular, more than one of the programs might well be executed simultaneously on the GPU, provided that there are available resources. Nonetheless it pays to be aware of the limitations of the devices to avoid picking models that do not fit into device memory.
-
-![NVIDIA Turing architecture (image courtesy of NVIDIA)](../img/turing.png)
-:width:`350px`
-:label:`fig_turing`
-
-A last aspect that is worth mentioning in more detail are *tensor cores*. They are an example of a recent trend of adding more optimized circuits that are specifically effective for deep learning. For instance, the TPU added a systolic array :cite:`Kung.1988` for fast matrix multiplication. There the design was to support a very small number (one for the first generation of TPUs) of large operations. Tensor cores are at the other end. They are optimized for small operations involving between $4 \times 4$ and $16 \times 16$ matrices, depending on their numerical precision. :numref:`fig_tensorcore` gives an overview of the optimizations.
-
-![NVIDIA tensor cores in Turing (image courtesy of NVIDIA).](../img/tensorcore.jpg)
-:width:`400px`
-:label:`fig_tensorcore`
-
-Obviously when optimizing for computation we end up making certain compromises. One of them is that GPUs are not very good at handling interrupts and sparse data. While there are notable exceptions, such as [Gunrock](https://github.com/gunrock/gunrock) :cite:`Wang.Davidson.Pan.ea.2016`, the access pattern of sparse matrices and vectors do not go well with the high bandwidth burst read operations where GPUs excel. Matching both goals is an area of active research. See e.g., [DGL](http://dgl.ai), a library tuned for deep learning on graphs.
-
-
-## Networks and Buses
-
-Whenever a single device is insufficient for optimization we need to transfer data to and from it to synchronize processing. This is where networks and buses come in handy. We have a number of design parameters: bandwidth, cost, distance, and flexibility.
-On one end we have WiFi that has a pretty good range, is very easy to use (no wires, after all), cheap but it offers comparatively mediocre bandwidth and latency. No machine learning researcher within their right mind would use it to build a cluster of servers. In what follows we focus on interconnects that are suitable for deep learning.
-
-* **PCIe** is a dedicated bus for very high bandwidth point-to-point connections (up to 32 GB/s on PCIe 4.0 in a 16-lane slot) per lane. Latency is in the order of single-digit microseconds (5 μs). PCIe links are precious. Processors only have a limited number of them: AMD's EPYC 3 has 128 lanes, Intel's Xeon has up to 48 lanes per chip; on desktop-grade CPUs the numbers are 20 (Ryzen 9) and 16 (Core i9) respectively. Since GPUs have typically 16 lanes, this limits the number of GPUs that can connect to the CPU at full bandwidth. After all, they need to share the links with other high bandwidth peripherals such as storage and Ethernet. Just like with RAM access, large bulk transfers are preferable due to reduced packet overhead.
-* **Ethernet** is the most commonly used way of connecting computers. While it is significantly slower than PCIe, it is very cheap and resilient to install and covers much longer distances. Typical bandwidth for low-grade servers is 1 GBit/s. Higher-end devices (e.g., [C5 instances](https://aws.amazon.com/ec2/instance-types/c5/) in the cloud) offer between 10 and 100 GBit/s bandwidth. As in all previous cases data transmission has significant overheads. Note that we almost never use raw Ethernet directly but rather a protocol that is executed on top of the physical interconnect (such as UDP or TCP/IP). This adds further overhead. Like PCIe, Ethernet is designed to connect two devices, e.g., a computer and a switch.
-* **Switches** allow us to connect multiple devices in a manner where any pair of them can carry out a (typically full bandwidth) point-to-point connection simultaneously. For instance, Ethernet switches might connect 40 servers at high cross-sectional bandwidth. Note that switches are not unique to traditional computer networks. Even PCIe lanes can be [switched](https://www.broadcom.com/products/pcie-switches-bridges/pcie-switches). This occurs, e.g., to connect a large number of GPUs to a host processor, as is the case for the [P2 instances](https://aws.amazon.com/ec2/instance-types/p2/).
-* **NVLink** is an alternative to PCIe when it comes to very high bandwidth interconnects. It offers up to 300 Gbit/s data transfer rate per link. Server GPUs (Volta V100) have six links whereas consumer-grade GPUs (RTX 2080 Ti) have only one link, operating at a reduced 100 Gbit/s rate. We recommend using [NCCL](https://github.com/NVIDIA/nccl) to achieve high data transfer between GPUs.
-
-
-
-## More Latency Numbers
-
-The summary in :numref:`table_latency_numbers` and :numref:`table_latency_numbers_tesla` are from [Eliot Eshelman](https://gist.github.com/eshelman) who maintains an updated version of the numbers as a [GitHub gist](https://gist.github.com/eshelman/343a1c46cb3fba142c1afdcdeec17646).
-
-:Common Latency Numbers.
-
-| Action | Time | Notes |
-| :----------------------------------------- | -----: | :---------------------------------------------- |
-| L1 cache reference/hit                     | 1.5 ns | 4 cycles                                        |
-| Floating-point add/mult/FMA                | 1.5 ns | 4 cycles                                        |
-| L2 cache reference/hit                     |   5 ns | 12 ~ 17 cycles                                  |
-| Branch mispredict                          |   6 ns | 15 ~ 20 cycles                                  |
-| L3 cache hit (unshared cache)              |  16 ns | 42 cycles                                       |
-| L3 cache hit (shared in another core)      |  25 ns | 65 cycles                                       |
-| Mutex lock/unlock                          |  25 ns |                                                 |
-| L3 cache hit (modified in another core)    |  29 ns | 75 cycles                                       |
-| L3 cache hit (on a remote CPU socket)      |  40 ns | 100 ~ 300 cycles (40 ~ 116 ns)                  |
-| QPI hop to a another CPU (per hop)         |  40 ns |                                                 |
-| 64MB memory ref. (local CPU)          |  46 ns | TinyMemBench on Broadwell E5-2690v4             |
-| 64MB memory ref. (remote CPU)         |  70 ns | TinyMemBench on Broadwell E5-2690v4             |
-| 256MB memory ref. (local CPU)         |  75 ns | TinyMemBench on Broadwell E5-2690v4             |
-| Intel Optane random write                  |  94 ns | UCSD Non-Volatile Systems Lab                   |
-| 256MB memory ref. (remote CPU)        | 120 ns | TinyMemBench on Broadwell E5-2690v4             |
-| Intel Optane random read                   | 305 ns | UCSD Non-Volatile Systems Lab                   |
-| Send 4KB over 100 Gbps HPC fabric          |   1 μs | MVAPICH2 over Intel Omni-Path                   |
-| Compress 1KB with Google Snappy            |   3 μs |                                                 |
-| Send 4KB over 10 Gbps ethernet             |  10 μs |                                                 |
-| Write 4KB randomly to NVMe SSD             |  30 μs | DC P3608 NVMe SSD (QOS 99% is 500μs)            |
-| Transfer 1MB to/from NVLink GPU            |  30 μs | ~33GB/s on NVIDIA 40GB NVLink                 |
-| Transfer 1MB to/from PCI-E GPU             |  80 μs | ~12GB/s on PCIe 3.0 x16 link                  |
-| Read 4KB randomly from NVMe SSD            | 120 μs | DC P3608 NVMe SSD (QOS 99%)                     |
-| Read 1MB sequentially from NVMe SSD        | 208 μs | ~4.8GB/s DC P3608 NVMe SSD                    |
-| Write 4KB randomly to SATA SSD             | 500 μs | DC S3510 SATA SSD (QOS 99.9%)                   |
-| Read 4KB randomly from SATA SSD            | 500 μs | DC S3510 SATA SSD (QOS 99.9%)                   |
-| Round trip within same data center          | 500 μs | One-way ping is ~250μs                          |
-| Read 1MB sequentially from SATA SSD        |   2 ms | ~550MB/s DC S3510 SATA SSD                    |
-| Read 1MB sequentially from disk            |   5 ms | ~200MB/s server HDD                           |
-| Random Disk Access (seek+rotation)         |  10 ms |                                                 |
-| Send packet CA->Netherlands->CA            | 150 ms |                                                 |
-:label:`table_latency_numbers`
-
-:Latency Numbers for NVIDIA Tesla GPUs.
-
-| Action | Time | Notes |
-| :------------------------------ | -----: | :---------------------------------------- |
-| GPU Shared Memory access        |  30 ns | 30~90 cycles (bank conflicts add latency) |
-| GPU Global Memory access        | 200 ns | 200~800 cycles                            |
-| Launch CUDA kernel on GPU       |  10 μs | Host CPU instructs GPU to start kernel    |
-| Transfer 1MB to/from NVLink GPU |  30 μs | ~33GB/s on NVIDIA 40GB NVLink           |
-| Transfer 1MB to/from PCI-E GPU  |  80 μs | ~12GB/s on PCI-Express x16 link         |
-:label:`table_latency_numbers_tesla`
+The previous section handed us a model with two free parameters: a machine
+delivers $\min(P, I\beta)$ — peak arithmetic $P$ if you feed it enough work
+per byte, bandwidth $\beta$ times intensity if you cannot. This section
+explains where those two numbers come from, why their ratio — the ridge
+point — keeps climbing with every hardware generation, and what else about
+the machine (latency, capacity, interconnect, energy) a practitioner needs
+in order to reason about performance before running anything. The aim is
+working knowledge, not a computer architecture course: enough to read a
+profiler, size a model, and predict which fix will pay. For the
+complementary question — *what hardware should I buy* — see the buyer's
+guide in :numref:`sec_hardware_buyers`; this section is about why the
+machine behaves the way it does, whatever machine you have. For a proper
+treatment of computer architecture see :cite:`Hennessy.Patterson.2011`.
+
+One warning before the numbers. Hardware numbers decay: the specific
+gigabytes per second below were verified in mid-2026 and will drift; every
+generation roughly doubles something. What does not decay are the *ratios
+and their trends* — memory is orders of magnitude slower than arithmetic,
+every chip boundary costs roughly another order of magnitude, and compute
+grows faster than bandwidth, which grows faster than capacity. Learn the
+ladder shapes; look up the rungs when you need them.
+
+```{.python .input #hardware}
+%%tab pytorch
+from d2l import torch as d2l
+import time
+import torch
+
+torch.set_float32_matmul_precision('high')
+```
+
+```{.python .input #hardware}
+%%tab jax
+from d2l import jax as d2l
+import jax
+from jax import numpy as jnp
+import numpy as np
+import time
+```
+
+## Where Bytes Live
+:label:`subsec_hw-bytes`
+
+Every byte your program touches lives somewhere in a hierarchy
+(:numref:`fig_memory_hierarchy`), and each level trades capacity for speed:
+small pools close to the arithmetic are fast; large pools far away are
+slow. On one end sit the GPU's on-die memories — registers and caches
+totaling on the order of a tenth of a gigabyte, reachable at tens of
+terabytes per second. Then comes the GPU's own DRAM — the *high-bandwidth
+memory* (HBM) of datacenter parts or the GDDR of consumer cards — tens to
+hundreds of gigabytes at one to eight terabytes per second. Host DRAM
+holds hundreds of gigabytes at a few hundred gigabytes per second; NVMe
+flash holds terabytes at about fourteen gigabytes per second; and network
+storage extends without bound at whatever your network card delivers.
+
+![The memory hierarchy in 2026. Each level downward holds orders of
+magnitude more bytes and delivers orders of magnitude fewer of them per
+second.](../img/mdl-perf-memory-hierarchy.svg)
+:label:`fig_memory_hierarchy`
+
+Two ladders quantify the hierarchy, and both are worth staring at.
+:numref:`fig_bandwidth_ladder` ranks the *pipes* by bandwidth: from an
+NVMe drive's 14 GB/s, through PCIe and socket DRAM, up to on-package HBM
+at 8 TB/s. The span is almost three orders of magnitude, and the rungs
+correspond to physical boundaries: on-package memory is fastest because
+it sits micrometers from the die; everything that crosses a connector,
+a board trace, or a cable pays. The rule of thumb: **every chip boundary
+costs roughly an order of magnitude of bandwidth**. Keep the bytes home.
+
+![The 2026 bandwidth ladder. Our own GPU's GDDR6X sits two rungs below a
+B200's HBM3e; every boundary crossed costs roughly an order of
+magnitude.](../img/mdl-perf-bandwidth-ladder.svg)
+:label:`fig_bandwidth_ladder`
+
+:numref:`fig_latency_ladder` ranks the same world by *latency* — how long
+before the first byte arrives — and spans eight orders of magnitude, from
+a one-nanosecond L1 hit to a sixty-millisecond WAN round trip. Note where
+the highlighted rung sits: launching a CUDA kernel costs 5–15 µs of
+latency, thousands of L2 hits' worth, which is why the overhead regime of
+:numref:`sec_perf_model` exists at all and why this chapter keeps returning
+to "fewer, larger operations".
+
+![The 2026 latency ladder (log scale, nanoseconds). The kernel-launch rung
+is the one deep learning code trips over most often.](../img/mdl-perf-latency-ladder.svg)
+:label:`fig_latency_ladder`
+
+Latency and bandwidth interact through *access patterns*. DRAM delivers
+its rated bandwidth only for *burst* reads: addressing a location costs
+on the order of a hundred nanoseconds, after which sequential transfers
+stream at full rate — so the first word of a random read is hundreds of
+times more expensive than the words that follow it. Hardware therefore
+rewards streaming through memory in order and punishes pointer-chasing;
+caches amortize latency only when access patterns are local and
+predictable. For dense tensors this is mostly handled for you — a matmul
+kernel is a carefully choreographed burst-read machine — but it is why
+sparse and gather-heavy workloads struggle to reach more than a fraction
+of rated bandwidth, and why shuffled *dataset* access is best done at the
+granularity of large blocks. (The classic multi-core pathology of *false
+sharing* — two CPU threads bouncing one cache line between cores — is
+relegated to the exercises.)
+
+Let's measure the one number from this subsection that matters most for
+the roofline: our card's achievable memory bandwidth. A large elementwise
+scaling reads and writes every element once — bytes moved are known
+exactly, arithmetic is negligible — so timing it *is* measuring bandwidth:
+
+```{.python .input #hardware-where-bytes-live}
+%%tab pytorch
+x = torch.randn(256 * 1024 * 1024, device=d2l.try_gpu())  # 1 GB fp32
+t = d2l.Benchmark(lambda: x * 2.0).time
+print(f'measured {2 * x.numel() * 4 / t / 1e12:.2f} TB/s '
+      f'(spec: about 1.0 TB/s)')
+```
+
+```{.python .input #hardware-where-bytes-live}
+%%tab jax
+x = jax.random.normal(jax.random.PRNGKey(0), (256 * 1024 * 1024,))  # 1 GB
+t = d2l.Benchmark(lambda: x * 2.0).time
+print(f'measured {2 * x.size * 4 / t / 1e12:.2f} TB/s '
+      f'(spec: about 1.0 TB/s)')
+```
+
+A well-shaped streaming kernel lands within tens of percent of the
+specification — the spec number is real, not marketing. Remember what
+this kernel is: the bandwidth-bound regime made flesh. Every elementwise
+operation in every network you train runs at this speed, no matter how
+little it computes.
+
+## Why Compute Outruns Bandwidth
+:label:`subsec_hw-shoreline`
+
+The ridge point of :numref:`sec_perf_model` is not an accident of one
+product; it is geometry. Arithmetic units fill the *interior* of a die:
+double the die's side length (or halve the feature size) and you get four
+times the compute, because compute scales with *area*. But the wires that
+leave the chip — the I/O drivers that talk to memory — live on the die's
+*edge*, and the edge only doubles. Compute scales as $n^2$, I/O as $n$
+(:numref:`fig_shoreline`). Chip designers call the edge "beachfront", and
+there is never enough of it: with every generation, bytes-per-FLOP falls,
+and the model starves a little more.
+
+![The shoreline problem: compute is area, I/O is perimeter. Scaling the
+die up buys compute four times faster than it buys
+bandwidth.](../img/mdl-perf-shoreline.svg)
+:label:`fig_shoreline`
+
+HBM is the countermeasure: stack DRAM dies vertically and place the stack
+on a silicon *interposer* millimeters from the GPU die, so thousands of
+short, dense wires replace the few hundred long board traces a socketed
+DIMM gets. That is how a B200 reaches 8 TB/s while a CPU socket manages
+0.5 TB/s — not faster DRAM cells, but vastly more, vastly shorter wires.
+The second countermeasure is size: dies are manufactured against a hard
+lithographic ceiling (the *reticle limit*, about $858\,\textrm{mm}^2$),
+and flagship accelerators live at it — a B200 is two reticle-limit dies
+bridged into one logical GPU. When you cannot grow the die, you bridge
+dies; when you cannot bridge, you network — the interconnect story of
+:numref:`subsec_hw-interconnects` is the shoreline problem continued by
+other means.
+
+The trend to memorize, per hardware generation, at fixed precision:
+**compute grows about $4\times$, bandwidth about $2\times$, capacity about
+$1.7\times$.** The ridge point — compute over bandwidth — therefore
+*rises* every generation; workloads that were compute-bound five years ago
+are bandwidth-bound today. This is why a chapter about performance is
+mostly a chapter about bytes, and why it will remain one.
+
+## The GPU
+:label:`subsec_hw-gpu`
+
+A GPU spends its area on thousands of simple arithmetic units rather than
+on the deep control logic of a CPU core. The units are organized into
+*streaming multiprocessors* (SMs) — our RTX 4090 has 128 of them — and
+each SM executes threads in lockstep groups of 32 called *warps*,
+swapping between many resident warps to hide memory latency. That is as
+much microarchitecture as this book needs: when a profiler reports
+"occupancy" it means resident warps available for latency-hiding; when a
+kernel is "too small for the machine" it means too few warps to keep 128
+SMs busy — the launch-overhead regime again.
+
+What makes GPUs *deep learning* machines is a further specialization:
+**tensor cores**, silicon shaped exactly like a small matrix
+multiply-accumulate. A scalar unit spends most of its energy on
+instruction handling per multiply; a tensor core amortizes that control
+over an entire $16\times 16$-ish tile, executing it as one instruction —
+the same insight as the TPU's systolic array
+:cite:`Jouppi.Young.Patil.ea.2017,Kung.1988`. The consequence: matrix
+multiplications run an order of magnitude faster than anything else on
+the chip, *provided* the data comes in the formats the tensor cores
+speak. Those formats are the ladder in :numref:`fig_float_formats`.
+
+![The floating-point format ladder, bit-for-bit to scale. fp32, tf32, and
+bf16 share an 8-bit exponent and hence a dynamic range; each halving of
+width doubles peak arithmetic and halves the bytes
+moved.](../img/mdl-perf-float-formats.svg)
+:label:`fig_float_formats`
+
+Two rules organize the ladder. First, **the exponent width sets the
+range, the mantissa width sets the precision**. fp32, tf32, and bf16 all
+carry the same 8-bit exponent: they represent the same span of magnitudes
+and can be swapped without overflow — you only lose decimal places, which
+deep learning mostly tolerates. fp16's 5-bit exponent trades range for
+precision, which is why it needs the loss-scaling machinery we will meet
+in :numref:`sec_memory_precision`, and why bf16 has become the training
+default. The sub-byte formats — fp8 in two flavors (E4M3 for activations
+and weights, wider-range E5M2 for gradients) and fp4 with just sixteen
+representable values — push the same trade to its limit and lean on
+per-block scaling factors to survive :cite:`Micikevicius.Stosic.Burgess.ea.2022`.
+Second, **every halving wins twice**: half the bits means double the peak
+FLOP/s (twice the tile fits in the same silicon) *and* half the bytes per
+operand — the format ladder climbs the roofline along both axes at once.
+The catch: each halving buys about $2\times$ on real silicon, not the
+$4\times$ the marketing arithmetic suggests, and the big jumps between
+generations come from new architectures, not formats alone.
+
+The numbers-dense table, for orientation (dense compute, fp32
+accumulation; sparsity-doubled marketing figures excluded):
+
+| | H100 SXM | B200 SXM | RTX 4090 (ours) | RTX 5090 |
+|---|---|---|---|---|
+| memory | 80 GB HBM3 | 192 GB HBM3e | 24 GB GDDR6X | 32 GB GDDR7 |
+| bandwidth | 3.35 TB/s | 8.0 TB/s | 1.0 TB/s | 1.8 TB/s |
+| bf16 dense | 989 TF | 2,250 TF | 165 TF | 210 TF |
+| fp8 dense | 1,979 TF | 4,500 TF | 330 TF | 419 TF |
+| fp4 dense | — | 9,000 TF | — | 1,676 TF |
+| ridge (bf16) | ~295 FLOP/B | ~281 FLOP/B | ~165 FLOP/B | ~117 FLOP/B |
+| power | 700 W | 1,000–1,200 W | 450 W | 575 W |
+:label:`tab_gpu_specs`
+
+The same physics produces the same shape at every vendor — high-bandwidth
+stacked memory next to a die full of matrix engines: AMD's MI355X (288 GB
+HBM3e at 8 TB/s, 5,000 TF bf16), Google's TPU v7 (192 GB at 7.4 TB/s,
+2,307 TF), Amazon's Trainium2 (96 GB at 2.9 TB/s, 667 TF). Different
+silicon, one design point; the roofline reasoning of this chapter applies
+unchanged to all of them.
+
+One more distinction the table hides: *training* hardware must hold
+activations for the backward pass and accumulate gradients robustly
+(bf16 with fp32 accumulation as the floor — :numref:`sec_memory_precision`),
+while *inference* can run forward-only in the smallest format quality
+allows. That asymmetry, plus capacity — note that memory capacity grew
+the *slowest* of the three curves — shapes the memory anatomy we build in
+:numref:`sec_memory_precision`.
+
+## The CPU's Role
+:label:`subsec_hw-cpu`
+
+The CPU in a deep learning machine is no longer where the FLOPs happen —
+one RTX 4090 out-multiplies a 64-core CPU by two orders of magnitude —
+but three jobs still live or die on it. First, the CPU is the
+*orchestrator*: every kernel the GPU runs was launched by a CPU thread at
+5–15 µs apiece (:numref:`fig_latency_ladder`), which is exactly the
+Python-must-stay-ahead story of :numref:`sec_perf_model`. Second, it runs
+the *input pipeline*: decoding JPEGs, tokenizing text, augmenting,
+batching — if those fall behind, the GPU starves no matter how fast it
+is (a dataloader-starved profile is the overhead regime with extra
+steps). Third, it *feeds the bus*: host-to-device copies cross PCIe, and
+how you stage the host memory matters. A regular (pageable) host tensor
+must first be copied into a locked staging buffer before DMA can move it;
+allocating the tensor in *pinned* (page-locked) memory skips that step
+and, as a bonus, allows the copy to proceed asynchronously alongside
+compute (`non_blocking=True`, `DataLoader(pin_memory=True)`):
+
+```{.python .input #hardware-the-cpu-s-role}
+%%tab pytorch
+x_pageable = torch.randn(64 * 1024 * 1024)          # 256 MB on the host
+x_pinned = x_pageable.pin_memory()
+gpu = d2l.try_gpu()
+for desc, src in [('pageable', x_pageable), ('pinned', x_pinned)]:
+    t = d2l.Benchmark(lambda: src.to(gpu, non_blocking=True),
+                      desc=f'{desc} H2D').time
+    print(f'{desc}: {x_pageable.numel() * 4 / t / 1e9:.1f} GB/s')
+```
+
+```{.python .input #hardware-the-cpu-s-role}
+%%tab jax
+# JAX manages host staging internally; measure the achieved H2D rate.
+x_host = np.random.randn(64 * 1024 * 1024).astype(np.float32)  # 256 MB
+t = d2l.Benchmark(lambda: jax.device_put(x_host), desc='H2D').time
+print(f'device_put: {x_host.nbytes / t / 1e9:.1f} GB/s')
+```
+
+The measured rate tops out near PCIe's practical ceiling — tens of GB/s,
+two orders of magnitude below the GPU's own memory. The conclusion is
+structural: get data onto the device, keep it there, and overlap the
+unavoidable transfers with compute. This is also your first sighting of
+the number that will dominate the multi-GPU sections: *everything that
+leaves the GPU moves at bus speed, not memory speed*.
+
+## Interconnects: Our Box as the Worked Example
+:label:`subsec_hw-interconnects`
+
+When one GPU is not enough, GPUs must talk to each other, and the
+bandwidth ladder says this is where performance goes to die. Datacenter
+parts attack the problem with dedicated fabrics: NVLink gives each B200
+1.8 TB/s to its peers — memory-class bandwidth, one rung below HBM — and
+an NVL72 rack wires 72 GPUs into a single 130 TB/s domain. Consumer
+parts get PCIe, and — the fact that shapes the rest of this chapter —
+consumer GeForce cards have *peer-to-peer transfers disabled* as market
+segmentation: two RTX 4090s in one box may not even talk PCIe-directly to
+each other.
+
+Our build machine makes the consequence concrete
+(:numref:`fig_pcie_topology`). Its four RTX 4090s hang in pairs off two
+PCIe host bridges; with P2P disabled, *every* byte from one GPU to
+another is staged through host DRAM — up one PCIe link, through the
+CPU's memory system, down another. Measured end to end
+(:numref:`sec_multi_gpu` does the measuring), a large GPU-to-GPU copy
+sustains a few tens of GB/s — PCIe-limited, roughly two orders of magnitude
+below an NVL72's ~1.8 TB/s per GPU — and a collective library like NCCL,
+whose ring/tree chunking assumes a peer-to-peer fabric, extracts even less
+(a couple of GB/s of effective bus bandwidth) on this staged path. Either
+way the per-GPU staging step, not the link count, is the ceiling, so it
+does *not* improve from two GPUs to four.
+
+![This book's build machine, per `nvidia-smi topo`: four RTX 4090s in
+pairs behind two PCIe host bridges, no P2P, no NVLink. The highlighted
+path is what every inter-GPU byte actually travels.](../img/mdl-perf-pcie-topology.svg)
+:label:`fig_pcie_topology`
+
+We treat this as a teaching instrument, not an embarrassment. Most
+readers' multi-GPU machines look like ours, not like an NVL72; and a slow
+fabric makes the *accounting* of parallel training vivid — on this box,
+communication costs are impossible to ignore, so the cost model of
+:numref:`sec_multi_gpu` predicts real behavior instead of disappearing
+into NVLink headroom. Why datacenter fabrics exist will not need to be
+asserted; we will have measured it.
+
+## Energy: Why Moving Bytes Is the Budget
+:label:`subsec_hw-energy`
+
+There is a final ladder underneath the other two.
+:numref:`fig_energy_ladder` shows the energy cost of elementary
+operations at a fixed process node :cite:`Horowitz.2014`: an 8-bit
+integer add costs 0.03 pJ, an fp32 multiply 3.7 pJ — and *one 64-bit
+read from DRAM costs about 2,000 pJ*. One memory access buys roughly
+five hundred multiplies. Arithmetic is nearly free; fetching operands is
+the budget, and a chip's power limit is in the end an energy-per-second
+limit. This is the deepest version of the ridge-point story: the reason
+compute outruns bandwidth is not just wire count but joules — you can
+afford to place more multipliers, but you cannot afford to feed them
+from far away.
+
+![Energy per operation (45 nm-class magnitudes). One DRAM access costs
+about five hundred fp32 multiplies.](../img/mdl-perf-energy-ladder.svg)
+:label:`fig_energy_ladder`
+
+The practical corollaries are the fixes this chapter teaches: fusion
+(:numref:`sec_compilation`) saves energy, not just time, by keeping
+intermediates on-die; low-precision formats
+(:numref:`sec_memory_precision`) halve the bytes and hence nearly halve
+the energy per operand; recomputation trades cheap arithmetic for
+expensive memory traffic. When a technique in this chapter feels like a
+trick, check it against :numref:`fig_energy_ladder` — nearly all of them
+are the same move: *do more arithmetic per byte fetched*.
+
+## Reading the Roofline: Two Workloads
+:label:`subsec_hw-two-workloads`
+
+Close the loop by reading one model's two working regimes straight off
+the hardware numbers — the exercise this section exists to enable.
+Consider a language model of the kind built in
+:numref:`sec_gpt`, with $N$ parameters in bf16 ($2N$ bytes of weights),
+serving a prompt and then generating.
+
+**Prefill** — processing the prompt — pushes the whole context through
+the network at once. Each weight fetched from memory is reused across
+every token in the context, so arithmetic intensity is on the order of
+the context length: hundreds to tens of thousands of FLOPs per byte,
+far above any ridge point. Prefill is *compute-bound*: it runs at the
+tensor cores' pace and benefits from every format halving.
+
+**Decode** — generating one token at a time — is the opposite. Producing
+a single token performs about $2N$ FLOPs but must read all $2N$ weight
+bytes (plus the KV cache of :numref:`sec_kv-cache`): intensity $\approx
+1$ FLOP/byte, the bottom of the roofline. Decode is *bandwidth-bound*,
+and its speed limit is arithmetic you can do on a napkin:
+
+$$
+\textrm{tokens/s} \;\lesssim\;
+\frac{\beta}{\textrm{bytes per token}} \;=\;
+\frac{\beta}{2N + \textrm{KV bytes}}.
+$$
+
+An 8-billion-parameter model in bf16 reads at least 16 GB per generated
+token; on our 1 TB/s card that caps generation near sixty tokens per
+second *regardless of compute*, while the same card's prefill chews
+through the prompt at tensor-core speed. One model, both ends of
+:numref:`fig_roofline` — and the reason batching multiple generation
+streams (which shares each weight read across streams, multiplying
+intensity by the batch size) is the central trick of inference serving.
+The systems that exploit this — batching schedulers, paged caches,
+speculative decoding — belong to the Language Models part; the
+*economics* fit in the equation above.
+
+Rules of thumb worth carrying out of this section:
+
+| quantity | magnitude | why it matters |
+|---|---|---|
+| kernel launch | 5–15 µs | small ops cannot feed the GPU (:numref:`sec_compilation`) |
+| GPU memory bandwidth | 1–8 TB/s | the decode/elementwise speed limit |
+| PCIe per direction | tens of GB/s | host↔device; get data on-device, keep it there |
+| NVLink-class fabric | ~1.8 TB/s per GPU | why datacenter multi-GPU scales and PCIe boxes struggle |
+| bytes/param, training with Adam | ~16–20 (mixed precision) | memory anatomy of :numref:`sec_memory_precision` |
+| bytes/token, decode | ~2 × params + KV | tokens/s ≤ bandwidth / this |
+| DRAM read vs fp32 multiply | ~500× the energy | fuse, shrink formats, recompute |
+:label:`tab_rules_of_thumb`
 
 ## Summary
 
-* Devices have overheads for operations. Hence it is important to aim for a small number of large transfers rather than many small ones. This applies to RAM, SSDs, networks and GPUs.
-* Vectorization is key for performance. Make sure you are aware of the specific abilities of your accelerator. E.g., some Intel Xeon CPUs are particularly good for INT8 operations, NVIDIA Volta GPUs excel at FP16 matrix-matrix operations and NVIDIA Turing shines at FP16, INT8, and INT4 operations.
-* Numerical overflow due to small data types can be a problem during training (and to a lesser extent during inference).
-* Aliasing can significantly degrade performance. For instance, memory alignment on 64 bit CPUs should be done with respect to 64 bit boundaries. On GPUs it is a good idea to keep convolution sizes aligned, e.g., to tensor cores.
-* Match your algorithms to the hardware (e.g., memory footprint, and bandwidth). Great speedup (orders of magnitude) can be achieved when fitting the parameters into caches.
-* We recommend that you sketch out the performance of a novel algorithm on paper before verifying the experimental results. Discrepancies of an order-of-magnitude or more are reasons for concern.
-* Use profilers to debug performance bottlenecks.
-* Training and inference hardware have different sweet spots in terms of price and performance.
+* Memory is a hierarchy: each level away from the arithmetic holds orders
+  of magnitude more bytes and delivers orders of magnitude fewer per
+  second, with a latency ladder spanning eight decades. Bandwidth is
+  earned by streaming; boundaries cost an order of magnitude each.
+* Compute scales with die area, I/O with die perimeter — so compute grows
+  ~4× per generation while bandwidth grows ~2× and capacity ~1.7×, and
+  the ridge point keeps rising. HBM-on-interposer is a countermeasure,
+  not a repeal.
+* Tensor cores make matrix arithmetic an order of magnitude faster than
+  everything else, in exchange for format discipline: same exponent =
+  same range; every halving of width doubles FLOP/s and halves bytes.
+* The CPU orchestrates (kernel launches), feeds (input pipeline), and
+  stages (pinned-memory PCIe copies). Inter-GPU bandwidth on consumer
+  boxes is host-staged and PCIe-limited — tens of GB/s for a raw copy,
+  and only a couple of GB/s of NCCL busbw — one to two orders of magnitude
+  below an NVLink domain, which is why datacenter fabrics exist.
+* Energy explains everything twice: a DRAM access costs ~500 multiplies,
+  so every technique in this chapter is a variation on "more arithmetic
+  per byte fetched".
+* One model can live at both ends of the roofline: prefill is
+  compute-bound, single-stream decode is bandwidth-bound with tokens/s ≲
+  bandwidth / model bytes.
 
 ## Exercises
 
-1. Write C code to test whether there is any difference in speed between accessing memory aligned or misaligned relative to the external memory interface. Hint: be careful of caching effects.
-1. Test the difference in speed between accessing memory in sequence or with a given stride.
-1. How could you measure the cache sizes on a CPU?
-1. How would you lay out data across multiple memory channels for maximum bandwidth? How would you lay it out if you had many small threads?
-1. An enterprise-class HDD is spinning at 10,000 rpm. What is the absolutely minimum time an HDD needs to spend worst case before it can read data (you can assume that heads move almost instantaneously)? Why are 2.5" HDDs becoming popular for commercial servers (relative to 3.5" and 5.25" drives)?
-1. Assume that an HDD manufacturer increases the storage density from 1 Tbit per square inch to 5 Tbit per square inch. How much information can you store on a ring on a 2.5" HDD? Is there a difference between the inner and outer tracks?
-1. Going from 8 bit to 16 bit data types increases the amount of silicon approximately by four times. Why? Why might NVIDIA have added INT4 operations to their Turing GPUs?
-1. How much faster is it to read forward through memory vs. reading backwards? Does this number differ between different computers and CPU vendors? Why? Write C code and experiment with it.
-1. Can you measure the cache size of your disk? What is it for a typical HDD? Do SSDs need a cache?
-1. Measure the packet overhead when sending messages across the Ethernet. Look up the difference between UDP and TCP/IP connections.
-1. Direct memory access allows devices other than the CPU to write (and read) directly to (from) memory. Why is this a good idea?
-1. Look at the performance numbers for the Turing T4 GPU. Why does the performance "only" double as you go from FP16 to INT8 and INT4?
-1. What is the shortest time it should take for a packet on a round trip between San Francisco and Amsterdam? Hint: you can assume that the distance is 10,000 km.
+1. Compute the ridge point for each GPU in :numref:`tab_gpu_specs` at
+   bf16 and at fp8. Which direction has it moved between the H100 and
+   the B200 generations, and why is that the expected direction?
+1. Take the GPT of :numref:`sec_gpt` (count its parameters) and your own
+   GPU's specifications. Estimate (a) the prefill arithmetic intensity at
+   context length 128 and (b) the decode tokens-per-second bound. Which
+   regime is each in?
+1. Using :numref:`fig_energy_ladder`, estimate the energy spent on DRAM
+   traffic alone in one epoch of the Fashion-MNIST training loop of
+   :numref:`sec_lenet` (count the bytes your activations and weights
+   move). At $0.30/kWh, what does the epoch's memory traffic cost?
+1. Measure the cache cliff on your GPU: time `x * 2.0` for tensor sizes
+   from 1 MB to 2 GB and plot achieved bandwidth against size. Where do
+   the level transitions of :numref:`fig_memory_hierarchy` appear?
+1. Why is HBM placed on a silicon interposer rather than on the
+   motherboard next to the CPU's DRAM slots? Answer using the shoreline
+   argument, then check: how many signal wires does a DIMM socket carry,
+   versus an HBM stack's interface?
+1. Burst versus random access: allocate a large tensor and compare
+   summing it in natural order against summing it through a random
+   permutation of indices. Explain the ratio using the
+   address-setup-versus-streaming model of
+   :numref:`subsec_hw-bytes`.
+1. (False sharing.) Write a two-thread CPU program in which each thread
+   increments its own counter, first with the counters adjacent in
+   memory, then padded to separate cache lines. Measure, and explain why
+   the "shared-nothing" version can be many times faster despite
+   identical arithmetic.
+1. Your DataLoader delivers batches at 300 MB/s from NVMe while your GPU
+   consumes them at 2 GB/s. Using the ladders in this section, list the
+   three cheapest interventions in order of expected payoff.
 
+<!-- slides -->
 
-[Discussions](https://d2l.discourse.group/t/363)
+::: {.slide title="Where the Two Numbers Come From"}
+The roofline had two free parameters: peak compute $P$ and
+bandwidth $\beta$. This section is where they come from — and
+why $P/\beta$ keeps climbing.
+
+- bytes live in a **hierarchy**: each level out is bigger and
+  slower by orders of magnitude
+- compute is **area**, I/O is **perimeter**
+- arithmetic is (energetically) free; **moving operands is the
+  budget**
+
+Properties here; buying advice lives in the Tools appendix.
+:::
+
+::: {.slide title="Two Ladders"}
+![](../img/mdl-perf-bandwidth-ladder.svg){width=85%}
+
+Every chip boundary ≈ one order of magnitude. Keep bytes home.
+:::
+
+::: {.slide title="Latency: Eight Orders of Magnitude"}
+![](../img/mdl-perf-latency-ladder.svg){width=85%}
+
+The highlighted rung — 5–15 µs to launch a kernel — is why the
+overhead regime exists.
+:::
+
+::: {.slide title="Measured, Not Asserted"}
+A big elementwise op *is* a bandwidth meter — bytes known,
+arithmetic negligible:
+
+@hardware-where-bytes-live
+
+Streaming kernels land within tens of percent of spec.
+:::
+
+::: {.slide title="The Shoreline"}
+![](../img/mdl-perf-shoreline.svg){width=80%}
+
+Per generation: compute ~4×, bandwidth ~2×, capacity ~1.7×.
+The ridge point rises; the model starves a little more each
+generation. HBM-on-interposer is the countermeasure.
+:::
+
+::: {.slide title="The Format Ladder"}
+![](../img/mdl-perf-float-formats.svg){width=75%}
+
+Same 8-bit exponent (fp32/tf32/bf16) ⇒ same range, swap freely.
+Every halving wins twice: 2× FLOP/s *and* half the bytes.
+:::
+
+::: {.slide title="Our Box vs. a Datacenter Rack"}
+![](../img/mdl-perf-pcie-topology.svg){width=70%}
+
+No P2P on GeForce: every inter-GPU byte staged through host
+DRAM — PCIe-limited, tens of GB/s for a raw copy (a couple for
+NCCL busbw), flat from 2 to 4 GPUs. An NVL72 gives each GPU
+1.8 TB/s. One to two orders of magnitude — that gap *is* the
+multi-GPU chapter.
+:::
+
+::: {.slide title="Energy, and One Model at Both Ends"}
+![](../img/mdl-perf-energy-ladder.svg){width=72%}
+
+One DRAM read ≈ 500 fp32 multiplies.
+
+. . .
+
+Prefill: weight reuse ~ context length ⇒ compute-bound.
+Decode: every token reads all weights ⇒ tokens/s ≲ β / model
+bytes. One model, both ends of the roofline.
+:::

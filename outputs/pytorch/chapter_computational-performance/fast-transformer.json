@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/fast-transformer.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:95f1607922973d6c15b87c96dd8e31ca6c1e9d2ff41aa2cfeec61a43b6902792",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "fast-transformer-case-study-making-a-transformer-fast": {
+      "code_fingerprint": "sha256:46ab488c50c9d5a70856560c1396f7d9be01fbb9a51dac6168435900cec177aa",
+      "kind": "text",
+      "outputs": []
+    },
+    "fast-transformer-the-subject-1": {
+      "code_fingerprint": "sha256:702808afba6056f44b4e2e0a95f71dd82ea50e06a3830e3911f5164244449b6b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "18.9M parameters\n"
+        }
+      ]
+    },
+    "fast-transformer-the-subject-2": {
+      "code_fingerprint": "sha256:f2b810a38468d4f64c38a0fdacb8b3240a6faeca4e3f36eac3346bb662707f6b",
+      "kind": "text",
+      "outputs": []
+    },
+    "fast-transformer-rung-0-baseline-profiled": {
+      "code_fingerprint": "sha256:fd71bcca6c2e5b6aa44fe9791b43f1f1980b38cb37090d4b60276c50bb86b2c5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/smola/d2l-neu/.venv-pytorch/lib/python3.12/site-packages/torch/profiler/profiler.py:224: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.\n  _warn_once(\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                               aten::mm         9.90%      13.869ms        14.15%      19.835ms      42.656us      70.279ms        53.66%      70.279ms     151.137us           465  \n       autograd::engine::evaluate_function: MmBackward0         1.62%       2.274ms        14.80%      20.746ms     133.847us       0.000us         0.00%      46.893ms     302.538us           155  \n                                            MmBackward0         1.41%       1.972ms        13.18%      18.472ms     119.177us       0.000us         0.00%      46.893ms     302.538us           155  \n                                           aten::linear         0.28%     392.722us         6.63%       9.296ms      59.972us       0.000us         0.00%      23.385ms     150.872us           155  \n                                           aten::matmul         0.55%     764.731us         5.61%       7.857ms      50.692us       0.000us         0.00%      23.385ms     150.872us           155  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      16.923ms        12.92%      16.923ms     188.038us            90  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nSelf CPU time total: 140.155ms\nSelf CUDA time total: 130.977ms\n\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R0 eager: 221455 tokens/s\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-1": {
+      "code_fingerprint": "sha256:c6d19c89bf41957e75f85375d84c95c152f86f43b4187b5766e40435c586019e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first (compiling) step: 1.9 s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R1 compiled: 229778 tokens/s (1.04x)\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-2": {
+      "code_fingerprint": "sha256:f5708deb8c9a9d4ef7bb0d3dac8fb9226cfc4c0be4cb25e2f876852a2a4e7566",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R2 +bf16: 388715 tokens/s (1.69x)\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-3": {
+      "code_fingerprint": "sha256:55690e7f8bf6caad1904125da5f91679c6958e38e9536f7e3901a4b2373eb7d2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R3 +batch-up (512): 621021 tokens/s (1.60x), peak 8.7 GiB\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-4": {
+      "code_fingerprint": "sha256:e3dfc09591aa9188455ecfa3dadedc8f8d998995895c09a6b0093883c24a5128",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R4 +checkpoint: 545042 tokens/s (0.88x), peak 3.1 GiB\n"
+        }
+      ]
+    },
+    "fast-transformer-the-waterfall": {
+      "code_fingerprint": "sha256:3c954d80dc0cef892d0024ed54b936ff073cfaef3aeecdb54553fb3c111180c7",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "fast-transformer/fast-transformer-the-waterfall-1.png",
+          "bytes": 24063,
+          "sha256": "sha256:f05af4888bac74f0f3742642a3b994e2cc07fcc41f749e2bd046e7e650c05bd5"
+        }
+      ]
+    }
+  }
+}

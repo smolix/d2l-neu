@@ -162,13 +162,13 @@ book:
         - chapter_recurrent-modern/test-time-regression.qmd
         - chapter_recurrent-modern/hybrids.qmd
         - chapter_computational-performance/index.qmd
-        - chapter_computational-performance/hybridize.qmd
-        - chapter_computational-performance/async-computation.qmd
-        - chapter_computational-performance/auto-parallelism.qmd
+        - chapter_computational-performance/performance-model.qmd
         - chapter_computational-performance/hardware.qmd
+        - chapter_computational-performance/compilation.qmd
+        - chapter_computational-performance/memory-precision.qmd
         - chapter_computational-performance/multiple-gpus.qmd
-        - chapter_computational-performance/multiple-gpus-concise.qmd
-        - chapter_computational-performance/parameterserver.qmd
+        - chapter_computational-performance/multi-gpu-practice.qmd
+        - chapter_computational-performance/fast-transformer.qmd
         - chapter_reinforcement-learning/index.qmd
         - chapter_reinforcement-learning/mdp.qmd
         - chapter_reinforcement-learning/value-iter.qmd

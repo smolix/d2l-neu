@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/memory-precision.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:8556c86c1bc602f57fcd0e4be618ee37fc5edbcc1441627a1f9cb676f96fbac3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "memory-precision-memory-and-precision": {
+      "code_fingerprint": "sha256:9afca4d4b2ecb1124863366ed8bc80d2d5fceb6127faec0692cb8cd34b67b36a",
+      "kind": "text",
+      "outputs": []
+    },
+    "memory-precision-measuring-memory-1": {
+      "code_fingerprint": "sha256:cf024b784303dcffd73d28d2b198a0afcb712edc600dc6f2ba1d9ec5ae8cbc57",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "25.2M params  predicted states+grads+params: 403 MB\nmeasured peak: 524 MB\n"
+        }
+      ]
+    },
+    "memory-precision-measuring-memory-2": {
+      "code_fingerprint": "sha256:546714bdb9ae528802cf46ffe83ef45d7bd8f73e8cf06935fdcaa9136c8de88d",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "memory-precision/memory-precision-measuring-memory-2-1.svg",
+          "bytes": 24434,
+          "sha256": "sha256:68cd02c3613e809f156225557d403854a9600f1ead267bdcf2a9fd71460cb2e9"
+        }
+      ]
+    },
+    "memory-precision-mixed-precision": {
+      "code_fingerprint": "sha256:5fc47f0172b86091857d585956fef2e4dc2737762824d992c131ea2ec973886c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fp32 (tf32 off): 22.45 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tf32: 15.43 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bf16 autocast: 9.78 ms/call\n"
+        }
+      ]
+    },
+    "memory-precision-activation-checkpointing": {
+      "code_fingerprint": "sha256:749f3421e9e5874433c6aa9b9eb0c08c65cfbbaeb3cd1ceef6cef28be7f15daf",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "store all: peak 4318 MB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "checkpointed: peak 2507 MB\n"
+        }
+      ]
+    },
+    "memory-precision-gradient-accumulation": {
+      "code_fingerprint": "sha256:485226a4857be5e9b9b3581c923378f448c1544a2e36763979a41d6ee03f65bd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max gradient difference: 1.19e-07\n"
+        }
+      ]
+    }
+  }
+}

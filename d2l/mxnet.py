@@ -19,6 +19,57 @@ nn_Module = nn.Block
 import sys
 d2l = sys.modules[__name__]
 
+def split_batch(X, y, devices):
+    """Split `X` and `y` into multiple devices.
+
+    Defined in :numref:`sec_multi_gpu`"""
+    assert X.shape[0] == y.shape[0]
+    return (gluon.utils.split_and_load(X, devices),
+            gluon.utils.split_and_load(y, devices))
+
+def resnet18(num_classes):
+    """A slightly modified ResNet-18 model.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    def resnet_block(num_channels, num_residuals, first_block=False):
+        blk = nn.Sequential()
+        for i in range(num_residuals):
+            if i == 0 and not first_block:
+                blk.add(d2l.Residual(
+                    num_channels, use_1x1conv=True, strides=2))
+            else:
+                blk.add(d2l.Residual(num_channels))
+        return blk
+
+    net = nn.Sequential()
+    # This model uses a smaller convolution kernel, stride, and padding and
+    # removes the max-pooling layer
+    net.add(nn.Conv2D(64, kernel_size=3, strides=1, padding=1),
+            nn.BatchNorm(), nn.Activation('relu'))
+    net.add(resnet_block(64, 2, first_block=True),
+            resnet_block(128, 2),
+            resnet_block(256, 2),
+            resnet_block(512, 2))
+    net.add(nn.GlobalAvgPool2D(), nn.Dense(num_classes))
+    return net
+
+def evaluate_accuracy_gpus(net, data_iter, split_f=d2l.split_batch):
+    """Compute the accuracy for a model on a dataset using multiple GPUs.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    # Query the list of devices
+    devices = list(net.collect_params().values())[0].list_ctx()
+    # No. of correct predictions, no. of predictions
+    metric = d2l.Accumulator(2)
+    for features, labels in data_iter:
+        X_shards, y_shards = split_f(features, labels, devices)
+        # Run in parallel
+        pred_shards = [net(X_shard) for X_shard in X_shards]
+        metric.add(sum(float(d2l.accuracy(pred_shard, y_shard)) for
+                       pred_shard, y_shard in zip(
+                           pred_shards, y_shards)), labels.size)
+    return metric[0] / metric[1]
+
 import inspect
 import collections
 from collections import defaultdict
@@ -1222,71 +1273,6 @@ class Timer:
     def cumsum(self):
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
-
-class Benchmark:
-    """For measuring running time.
-
-    Defined in :numref:`sec_hybridize`"""
-    def __init__(self, description='Done'):
-        self.description = description
-
-    def __enter__(self):
-        self.timer = d2l.Timer()
-        return self
-
-    def __exit__(self, *args):
-        print(f'{self.description}: {self.timer.stop():.4f} sec')
-
-def split_batch(X, y, devices):
-    """Split `X` and `y` into multiple devices.
-
-    Defined in :numref:`sec_multi_gpu`"""
-    assert X.shape[0] == y.shape[0]
-    return (gluon.utils.split_and_load(X, devices),
-            gluon.utils.split_and_load(y, devices))
-
-def resnet18(num_classes):
-    """A slightly modified ResNet-18 model.
-
-    Defined in :numref:`sec_multi_gpu_concise`"""
-    def resnet_block(num_channels, num_residuals, first_block=False):
-        blk = nn.Sequential()
-        for i in range(num_residuals):
-            if i == 0 and not first_block:
-                blk.add(d2l.Residual(
-                    num_channels, use_1x1conv=True, strides=2))
-            else:
-                blk.add(d2l.Residual(num_channels))
-        return blk
-
-    net = nn.Sequential()
-    # This model uses a smaller convolution kernel, stride, and padding and
-    # removes the max-pooling layer
-    net.add(nn.Conv2D(64, kernel_size=3, strides=1, padding=1),
-            nn.BatchNorm(), nn.Activation('relu'))
-    net.add(resnet_block(64, 2, first_block=True),
-            resnet_block(128, 2),
-            resnet_block(256, 2),
-            resnet_block(512, 2))
-    net.add(nn.GlobalAvgPool2D(), nn.Dense(num_classes))
-    return net
-
-def evaluate_accuracy_gpus(net, data_iter, split_f=d2l.split_batch):
-    """Compute the accuracy for a model on a dataset using multiple GPUs.
-
-    Defined in :numref:`sec_multi_gpu_concise`"""
-    # Query the list of devices
-    devices = list(net.collect_params().values())[0].list_ctx()
-    # No. of correct predictions, no. of predictions
-    metric = d2l.Accumulator(2)
-    for features, labels in data_iter:
-        X_shards, y_shards = split_f(features, labels, devices)
-        # Run in parallel
-        pred_shards = [net(X_shard) for X_shard in X_shards]
-        metric.add(sum(float(d2l.accuracy(pred_shard, y_shard)) for
-                       pred_shard, y_shard in zip(
-                           pred_shards, y_shards)), labels.size)
-    return metric[0] / metric[1]
 
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
     """Update discriminator.

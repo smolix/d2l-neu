@@ -102,10 +102,28 @@ SHARED_DATA_NOTEBOOKS = {
 MULTI_GPU_NOTEBOOKS = {
     "chapter_builders-guide/gpus-devices-memory.ipynb",
     "chapter_computational-performance/multiple-gpus.ipynb",
-    "chapter_computational-performance/multiple-gpus-concise.ipynb",
-    "chapter_computational-performance/auto-parallelism.ipynb",
-    "chapter_computational-performance/async-computation.ipynb",
     "chapter_optimization/minibatch-sgd.ipynb",
+}
+
+# Notebooks that need an EXCLUSIVE, whole-box GPU reservation: every GPU the
+# host has, at that GPU's full slot capacity — nothing else may share any
+# card while one of these runs. Unlike MULTI_GPU_NOTEBOOKS (a fixed 2 GPUs,
+# 1-2 slots each, happy to share the rest of each card with other jobs),
+# these build a jax.sharding.Mesh over every jax.devices() entry in one
+# process (13.6/13.7's Mesh + NamedSharding + jitted sharded-training-step
+# notebooks) and therefore must see ALL physical GPUs via CUDA_VISIBLE_DEVICES
+# with no other tenant preallocating VRAM on any of them. The PyTorch tabs of
+# the same notebooks launch torchrun --nproc-per-node over all physical GPUs,
+# so the resource class is framework-agnostic.
+#
+# The requirement is deliberately host-sized, not a hardcoded GPU count: on a
+# 4-GPU box this reserves 4 GPUs; on a 2-GPU box it degrades to reserving both
+# (matching the chapter's 2-GPU-demonstrability rule — the notebook itself
+# must never hardcode 4, only len(jax.devices())). See notebook_resource()'s
+# ('gpu', 'all', 'all') sentinel and Scheduler._reserve's whole-box branch.
+WHOLE_BOX_NOTEBOOKS = {
+    "chapter_computational-performance/multi-gpu-practice.ipynb",
+    "chapter_computational-performance/fast-transformer.ipynb",
 }
 
 # (framework, relative-path) → number of global GPU slots to hold for
@@ -146,17 +164,24 @@ TWO_GPU_SLOTS_PER = {
 def notebook_resource(framework, rel, uses_gpu):
     """Resource requirement of one notebook, for the unified scheduler:
 
-        ('cpu',)         → 1 CPU slot
-        ('gpu', n, spg)  → spg GPU slots on EACH of n distinct GPUs:
-                           (1,1) default 1 slot · (1,2) 2 slots on one GPU
-                           (2,1) "2x1" (1 each on 2 GPUs) · (2,2) "2x2"
+        ('cpu',)           → 1 CPU slot
+        ('gpu', n, spg)    → spg GPU slots on EACH of n distinct GPUs:
+                             (1,1) default 1 slot · (1,2) 2 slots on one GPU
+                             (2,1) "2x1" (1 each on 2 GPUs) · (2,2) "2x2"
+        ('gpu', 'all', 'all') → whole-box: every GPU on the host, every slot
+                             on each (host-sized, never a literal count —
+                             resolved against the live GPU pool at reserve
+                             time, see Scheduler._reserve).
 
     A GPU slot is GPU_MIB_PER_SLOT (7.5 GiB) of VRAM. Default is 1 slot;
     memory-heavy single-GPU notebooks (HEAVY_GPU_NOTEBOOKS) take 2 on one GPU;
-    data-parallel notebooks (MULTI_GPU_NOTEBOOKS) take 2 GPUs at 1 (or 2) each.
+    data-parallel notebooks (MULTI_GPU_NOTEBOOKS) take 2 GPUs at 1 (or 2) each;
+    whole-box notebooks (WHOLE_BOX_NOTEBOOKS) take every GPU, fully.
     """
     if rel in CPU_ONLY_NOTEBOOKS:
         return ('cpu',)
+    if rel in WHOLE_BOX_NOTEBOOKS:
+        return ('gpu', 'all', 'all')
     if rel in MULTI_GPU_NOTEBOOKS:
         return ('gpu', 2, TWO_GPU_SLOTS_PER.get((framework, rel), 1))
     heavy = HEAVY_GPU_NOTEBOOKS.get((framework, rel))

@@ -4,111 +4,81 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:df2aea0c793e707e30c0300cc13fe1a9e1c8adaea76aff825cf8c7e27edc933e",
+    "d2l_lib_fingerprint": "sha256:467bcc80e8a06f4b2218471d602c798ec57e5a5eb8ba2b5e80b3141ba16edf57",
     "max_inline_bytes": 0
   },
   "cells": {
-    "multiple-gpus-data-parallelism": {
-      "code_fingerprint": "sha256:ecbc62fcb2bd997e453b44b0819c7c3138c04067250eacfd17a0151da0084bcc",
+    "multiple-gpus-multi-gpu-from-first-principles": {
+      "code_fingerprint": "sha256:e8e80c3a291f26cbe7cbfe7656b9b9718d13065da1b96515d1b522b92cc3702a",
       "kind": "text",
       "outputs": []
     },
-    "multiple-gpus-a-toy-network": {
-      "code_fingerprint": "sha256:036fe43091bd560a9dfed52d03d6288530c07a4d363acbef0bb1624087cbe6f9",
+    "multiple-gpus-data-parallelism-by-hand-1": {
+      "code_fingerprint": "sha256:b2e45bd95c9a97648da968355092bd41fd0694c91a059e30c6b4a322470d2955",
       "kind": "text",
       "outputs": []
     },
-    "multiple-gpus-data-synchronization-1": {
-      "code_fingerprint": "sha256:6a4eee9d0ce0f579bc376b47b0df64db9ad0642086353114d15d2a7546e9e745",
+    "multiple-gpus-data-parallelism-by-hand-2": {
+      "code_fingerprint": "sha256:966383619fc9cac28e7ff577c348f9e32bc5dbebc1f984d1f562103cf75c6a56",
       "kind": "text",
       "outputs": []
     },
-    "multiple-gpus-data-synchronization-2": {
-      "code_fingerprint": "sha256:f4e96649bc19b31571a43642f2a40f122d7c975d940532ce687007f63cc601a7",
+    "multiple-gpus-data-parallelism-by-hand-3": {
+      "code_fingerprint": "sha256:bf1866b7b819247548afe14b234dddb6490c12f84b7fe506e26330f09a3b05f5",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b1 weight: [[0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]]\nb1 devices: {CudaDevice(id=0)}\n"
-        }
-      ]
-    },
-    "multiple-gpus-data-synchronization-5": {
-      "code_fingerprint": "sha256:0dfa4ecf9d02f5e6904ee4ca6d45016707107cf212ded5cdc78f01e1038a3943",
-      "kind": "text",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "before allreduce:\n [[1. 1.]] \n [[2. 2.]]\n"
+          "text": "before: [[[1.0, 1.0]], [[2.0, 2.0]]]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "after allreduce:\n [[3. 3.]] \n [[3. 3.]]\n"
+          "text": "summed: [[[3.0, 3.0]], [[3.0, 3.0]]]\n"
         }
       ]
     },
-    "multiple-gpus-distributing-data-1": {
-      "code_fingerprint": "sha256:d282ce5adc9e4f58c91488d1c90acc3511d5eb01d11b13a9b2c380f8f3cab128",
+    "multiple-gpus-data-parallelism-by-hand-4": {
+      "code_fingerprint": "sha256:e4e3c83348c12fc98c3a19322de6d01c20a184e29d200aabed3b6fe13d8e102b",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-data-parallelism-by-hand-5": {
+      "code_fingerprint": "sha256:9c5f7bec74f4a2ae5046771bea0a0f0a13a9fd6827e4ef3369756a82f5a62912",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
-          "name": "stdout",
-          "text": "input : [[ 0  1  2  3  4]\n [ 5  6  7  8  9]\n [10 11 12 13 14]\n [15 16 17 18 19]]\nload into [CudaDevice(id=0), CudaDevice(id=1)]\noutput: [[[ 0  1  2  3  4]\n  [ 5  6  7  8  9]]\n\n [[10 11 12 13 14]\n  [15 16 17 18 19]]]\n"
-        }
-      ]
-    },
-    "multiple-gpus-distributing-data-2": {
-      "code_fingerprint": "sha256:d16ca581e591bdadd2459cb88e0a1b9ca774d53ce78df2133d4a0a7f6c4bd1a5",
-      "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-training-1": {
-      "code_fingerprint": "sha256:cee70a38d0bbf973b15beced917db537e1e76877d90706756b3a916a36a0ce03",
-      "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-training-2": {
-      "code_fingerprint": "sha256:a01479c9d8c5f5125979f0aad368eb825a6211efe76fd11bce6ef42870c2fa14",
-      "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-training-3": {
-      "code_fingerprint": "sha256:12e10221d68d526cb9a306e5123d4e2003bc578110ada24811805ece46d3c699",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "test acc: 0.83, 0.7 sec/epoch on [CudaDevice(id=0)]\n"
+          "name": "stderr",
+          "text": "E0720 06:54:06.215661    2811 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
         },
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
-          "bytes": 16960,
-          "sha256": "sha256:e27c3a7f4720c2bfa1105011473092b5780fdd6290ee8c55a0ed2dd1aad1eb3f"
+          "type": "stream",
+          "name": "stdout",
+          "text": "0.93 sec/epoch on 1 GPU(s)\n"
         }
       ]
     },
-    "multiple-gpus-training-4": {
-      "code_fingerprint": "sha256:da2e1470744d3296f58d5a843850c206c0447f7ad936d197597c64c1bac09f2f",
-      "kind": "mixed",
+    "multiple-gpus-data-parallelism-by-hand-6": {
+      "code_fingerprint": "sha256:d2e16bf75c63b5b185efa6575a5bac3eb75dac85184d57c567813325152e7645",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.85, 1.3 sec/epoch on [CudaDevice(id=0), CudaDevice(id=1)]\n"
-        },
+          "text": "1.54 sec/epoch on 2 GPU(s)\n"
+        }
+      ]
+    },
+    "multiple-gpus-the-accounting": {
+      "code_fingerprint": "sha256:2e9d3e7af8800fb0a6bbbf7cb1574af17622adc3ebe4c5959d2edc49c29d1c35",
+      "kind": "text",
+      "outputs": [
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
-          "bytes": 16964,
-          "sha256": "sha256:ebb014de3fa7dfb83e084ced81aeb61880b163a4611d3b2c0337d69ac78d60a5"
+          "type": "stream",
+          "name": "stdout",
+          "text": "psum 4.47 GB/s effective over 120.1 ms\n"
         }
       ]
     }

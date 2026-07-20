@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/multi-gpu-practice.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:ff6ab8a3e3a2523618a7ee935290ca695a42233e3ef6f77fc63f8d37d44b00a5",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multi-gpu-practice-multi-gpu-in-practice": {
+      "code_fingerprint": "sha256:807d4792bc71cc8940c400223d8dfd01ee9dbd9974a0a607e403751269c527b2",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-ddp-really-run-1": {
+      "code_fingerprint": "sha256:4dd9eff6f7cadbb4c0b084e9038bc49c3b2008c894394a3b76be74f785a6cd4f",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-sharding-the-redundant-the-fsdp-idea": {
+      "code_fingerprint": "sha256:1cb1b5a57c2cb211157ceba675adcafb0b39c154d3a184425421c666dc44097d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "JAX shards by annotation; the next subsection is the demo\n"
+        }
+      ]
+    },
+    "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-1": {
+      "code_fingerprint": "sha256:6bcb4e5ca2378bb3793c2fe0f74b99e8b5d66edfd88496798e7eab623dd02915",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-jax-annotate-the-layout-the-compiler-writes-the-collectives-2": {
+      "code_fingerprint": "sha256:c21d98ec28005e74972410bd38ab2c09a9a3a3819328ff1872ed625e260fb256",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "display_data",
+          "text": "\u001b[38;2;255;255;255;48;2;57;59;121m                                                                                \u001b[0m\n\u001b[38;2;255;255;255;48;2;57;59;121m                                     \u001b[0m\u001b[38;2;255;255;255;48;2;57;59;121mGPU 0\u001b[0m\u001b[38;2;255;255;255;48;2;57;59;121m                                      \u001b[0m\n\u001b[38;2;255;255;255;48;2;57;59;121m                                                                                \u001b[0m\n\u001b[38;2;255;255;255;48;2;222;158;214m                                                                                \u001b[0m\n\u001b[38;2;255;255;255;48;2;222;158;214m                                     \u001b[0m\u001b[38;2;255;255;255;48;2;222;158;214mGPU 1\u001b[0m\u001b[38;2;255;255;255;48;2;222;158;214m                                      \u001b[0m\n\u001b[38;2;255;255;255;48;2;222;158;214m                                                                                \u001b[0m\n\u001b[38;2;255;255;255;48;2;173;73;74m                                                                                \u001b[0m\n\u001b[38;2;255;255;255;48;2;173;73;74m                                     \u001b[0m\u001b[38;2;255;255;255;48;2;173;73;74mGPU 2\u001b[0m\u001b[38;2;255;255;255;48;2;173;73;74m                                      \u001b[0m\n\u001b[38;2;255;255;255;48;2;173;73;74m                                                                                \u001b[0m\n\u001b[38;2;0;0;0;48;2;181;207;107m                                                                                \u001b[0m\n\u001b[38;2;0;0;0;48;2;181;207;107m                                     \u001b[0m\u001b[38;2;0;0;0;48;2;181;207;107mGPU 3\u001b[0m\u001b[38;2;0;0;0;48;2;181;207;107m                                      \u001b[0m\n\u001b[38;2;0;0;0;48;2;181;207;107m                                                                                \u001b[0m\n"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/memory-precision.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:8b59fd8e216bc85594c6f7351afe9aea3406f44990d7f9e3d5600cab9242f41a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "memory-precision-memory-and-precision": {
+      "code_fingerprint": "sha256:ecbc62fcb2bd997e453b44b0819c7c3138c04067250eacfd17a0151da0084bcc",
+      "kind": "text",
+      "outputs": []
+    },
+    "memory-precision-measuring-memory-3": {
+      "code_fingerprint": "sha256:cacfb1730a7f73b8126c4d2b0e82b9fb40850e9ab4d31d0f30481bd068812133",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "compiler-planned temp memory: 15 MB\nargument + output: 203 MB\n"
+        }
+      ]
+    },
+    "memory-precision-mixed-precision": {
+      "code_fingerprint": "sha256:eecc5ebc6450b8314e7a3bd8afdf4eb7f5ad2f6f63ae2834e9a2e6ad038b6565",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fp32: 13.12 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bf16: 6.73 ms/call\n"
+        }
+      ]
+    },
+    "memory-precision-activation-checkpointing": {
+      "code_fingerprint": "sha256:a7aa112fb2092d6e9028bf47c6d9ce5739b5db5e4b15b41116b54c2687994b31",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "store all: compiler temp 3230 MB\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "checkpointed: compiler temp 1216 MB\n"
+        }
+      ]
+    },
+    "memory-precision-gradient-accumulation": {
+      "code_fingerprint": "sha256:43d233f96685cc3f625fc9d8bb9939a68277cb9d14010781912e47d2b9096972",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max gradient difference: 2.86e-06\n"
+        }
+      ]
+    }
+  }
+}

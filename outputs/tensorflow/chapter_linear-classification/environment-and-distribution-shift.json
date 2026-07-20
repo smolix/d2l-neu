@@ -36,7 +36,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "weighted      target accuracy: 0.933   (source accuracy: 0.795)\nclipped, c=5  target accuracy: 0.945   (source accuracy: 0.817)\n"
+          "text": "weighted      target accuracy: 0.933   (source accuracy: 0.795)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "clipped, c=5  target accuracy: 0.945   (source accuracy: 0.817)\n"
         }
       ]
     }

@@ -25,7 +25,7 @@ networks, in short CNNs, that provided significant performance
 improvements :cite:`Krizhevsky.Sutskever.Hinton.2012`, and CNN-based
 architectures dominated computer vision from roughly 2012 to 2021.
 Today they share the field with vision transformers
-(:numref:`chap_attention-and-transformers`) and remain the default
+(:numref:`chap_transformers`) and remain the default
 where latency, small datasets, or dense prediction dominate.
 
 Modern CNNs, as they are called colloquially, owe their design to

@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gp-priors/gp-priors-a-simple-gaussian-process-1.svg",
-          "bytes": 27861,
-          "sha256": "sha256:9d670655324cc1f88d023943131516dae794f286f44777dd417e0389f0e9830d"
+          "bytes": 27868,
+          "sha256": "sha256:00e09e613c66e66a07ee92ebb64c32bcd557ea6cd854fb9abb7edf3fd53cc024"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "mime": "image/svg+xml",
           "asset": "gp-priors/gp-priors-rbf-basis-figure-1.svg",
           "bytes": 45894,
-          "sha256": "sha256:1f0ca9c667b94bf462b38ecb483aa59b08fd15ebfac18f846fca0b2ee306d09d"
+          "sha256": "sha256:3029df1c657ab2452029ff4816e9c56c0f4b65a20dc98d48ac3c000306be0e8c"
         }
       ]
     },
@@ -47,8 +47,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gp-priors/gp-priors-the-radial-basis-function-rbf-kernel-1.svg",
-          "bytes": 16860,
-          "sha256": "sha256:15d75333168c8456079fdcddff142a7e51537e5dc33ca0971c9a27f8f942fd7d"
+          "bytes": 15543,
+          "sha256": "sha256:65ab0516143ddf709f829592f404f955c4982015d0af528fc75a9203efa441ee"
         }
       ]
     }

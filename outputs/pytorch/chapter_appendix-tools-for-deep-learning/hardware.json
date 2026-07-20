@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-tools-for-deep-learning/hardware.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "hardware-memory-estimate": {
+      "code_fingerprint": "sha256:7d7ca03c388735f09b51448d1163e144bda2185e791281fe07bc9e6fb35ccb98",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " 0.1B params:    9.1 GiB\n   1B params:   19.2 GiB\n   7B params:   86.2 GiB\n"
+        }
+      ]
+    },
+    "hardware-decode-bound": {
+      "code_fingerprint": "sha256:16048262e5b23a5e8de799ae73e4e6f99ab836cdcac354d5c1f35d223e8a758c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        H100 SXM: <=   744 tok/s\n        RTX 5090: <=   398 tok/s\n    RTX PRO 6000: <=   398 tok/s\n RTX 3090 (used): <=   208 tok/s\n     RTX 5070 Ti: <=   199 tok/s\n        M3 Ultra: <=   182 tok/s\n          M4 Max: <=   121 tok/s\n       DGX Spark: <=    61 tok/s\n      Strix Halo: <=    57 tok/s\n"
+        }
+      ]
+    },
+    "hardware-break-even": {
+      "code_fingerprint": "sha256:413f9d39ece3743f6181aa31e4ddd4c043990bcc6ce79dc58f5e5742ef458dc6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1680 productive hours to break even\n"
+        }
+      ]
+    }
+  }
+}

@@ -91,6 +91,12 @@ CPU_ONLY_ENV = {
 SHARED_DATA_NOTEBOOKS = {
     "chapter_computer-vision/kaggle-cifar10.ipynb",
     "chapter_computer-vision/kaggle-dog.ipynb",
+    # chapter_transformers: gpt.md and kv-cache.md both download the pinned
+    # GPT-2 checkpoint into data/gpt2/; scaling-laws.md downloads PTB.
+    # Serialize them so concurrent first-run downloads cannot race.
+    "chapter_transformers/gpt.ipynb",
+    "chapter_transformers/kv-cache.ipynb",
+    "chapter_transformers/scaling-laws.ipynb",
 }
 
 MULTI_GPU_NOTEBOOKS = {
@@ -112,6 +118,12 @@ MULTI_GPU_NOTEBOOKS = {
 # stacks ~1000 tensors via tf.stack/Pack and OOMs with the default 8 GB
 # budget; 2 slots (~16 GB) is enough.
 HEAVY_GPU_NOTEBOOKS = {
+    # A5's fused-vs-naive timing cell transiently allocates ~4 GiB inside the
+    # XLA arena; fine solo, OOMs when sharing a GPU at 2 slots. Run exclusive.
+    ("jax", "chapter_attention/attention-at-scale.ipynb"): 2,
+    # 12.5's Gated-DeltaNet LM + chunked-WY cells peak ~8 GiB in the XLA
+    # arena; green solo, RESOURCE_EXHAUSTED at 2-slot sharing. Run exclusive.
+    ("jax", "chapter_recurrent-modern/deltanet.ipynb"): 2,
     ("tensorflow", "chapter_computer-vision/ssd.ipynb"): 2,
     # bert-pretraining: hidden=128, seq=64, batch=512 lands a
     # BatchMatMulV2 of ~512×64×128×128 that OOMs the 8 GB budget.

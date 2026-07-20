@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "batch-size/batch-size-the-language-model-1.svg",
           "bytes": 30539,
-          "sha256": "sha256:3dfbe147a332b5d41b587ec1457e67d41a1eff254e14d6a75e0ef4fa1b3d8c38"
+          "sha256": "sha256:4372a0636d95f743d3c81fa4aa49fb46957d1ea0a15f397ffc57c70903335e57"
         }
       ]
     },
@@ -127,7 +127,7 @@
           "mime": "image/svg+xml",
           "asset": "batch-size/batch-size-the-cnn-1.svg",
           "bytes": 31826,
-          "sha256": "sha256:378a5e59ca84f276ea74d9f70a2c9dc082259d39f5a4b60aec83057f54a77b43"
+          "sha256": "sha256:b8aa1b37f258263b99b25ab14db5e8583b61ca4702c8e79667fba4923c12aa03"
         }
       ]
     },
@@ -140,7 +140,7 @@
           "mime": "image/svg+xml",
           "asset": "batch-size/batch-size-the-bill-in-examples-1.svg",
           "bytes": 30334,
-          "sha256": "sha256:13481f2d58a4c108c106f101c96a9924767fc7a443ab33f7993cd6d54cc4c057"
+          "sha256": "sha256:d30166c951f151e47338f2cc1a090c2fec70c0ed81d12e99f4b4d9f201924fb4"
         }
       ]
     },
@@ -156,27 +156,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.003125  loss=0.593\n"
+          "text": "b=  8  lr=0.003125  loss=0.594\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.00625  loss=0.529\n"
+          "text": "b=  8  lr=0.00625  loss=0.518\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.0125  loss=0.550\n"
+          "text": "b=  8  lr=0.0125  loss=0.515\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.025  loss=0.565\n"
+          "text": "b=  8  lr=0.025  loss=0.554\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.05  loss=1.757\n"
+          "text": "b=  8  lr=0.05  loss=1.554\n"
         },
         {
           "type": "stream",
@@ -228,7 +228,7 @@
           "mime": "image/svg+xml",
           "asset": "batch-size/batch-size-learning-rate-rules-2-1.svg",
           "bytes": 23706,
-          "sha256": "sha256:821cbd216e5553f0490fd785bde545a155d92a199c80d105744dc38ee22c01b0"
+          "sha256": "sha256:7d5605640f77aaff1a7634ec2e9f65ca9cbf9f217714d20dc04a7a269c6ac283"
         }
       ]
     },
@@ -239,42 +239,42 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.0002  loss=0.517\n"
+          "text": "b=  8  lr=0.0002  loss=0.519\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.0004  loss=0.472\n"
+          "text": "b=  8  lr=0.0004  loss=0.476\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.0008  loss=0.428\n"
+          "text": "b=  8  lr=0.0008  loss=0.450\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.0016  loss=0.415\n"
+          "text": "b=  8  lr=0.0016  loss=0.426\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.0032  loss=0.423\n"
+          "text": "b=  8  lr=0.0032  loss=0.429\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.0064  loss=0.635\n"
+          "text": "b=  8  lr=0.0064  loss=0.455\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.0128  loss=0.623\n"
+          "text": "b=  8  lr=0.0128  loss=0.558\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "b=  8  lr=0.0256  loss=0.619\n"
+          "text": "b=  8  lr=0.0256  loss=0.599\n"
         },
         {
           "type": "stream",
@@ -320,8 +320,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "batch-size/batch-size-learning-rate-rules-3-1.svg",
-          "bytes": 26037,
-          "sha256": "sha256:c028e5d34ad456e980f17160b5e8503b82069cc26d4bc6162af5d1e69b6072fd"
+          "bytes": 26031,
+          "sha256": "sha256:3dfe4219d7b589f709e448a498eaa93d08ce94ff26ca40652017ce5a09bdbf1d"
         }
       ]
     }

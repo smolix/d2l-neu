@@ -11,8 +11,8 @@ class, with the modern flags, trains from scratch on *The Time Machine* in
 about a minute; with the 2019 flags, it accepts the released weights of
 GPT-2 :cite:`Radford.Wu.Child.ea.2019` and completes English sentences.
 Between those two demonstrations sit the practical crafts this section
-teaches: reading a loss curve honestly, breaking a model with a
-normalization flag, and sampling from a trained distribution.
+teaches: reading a loss curve for what it actually shows, breaking a model
+with a normalization flag, and sampling from a trained distribution.
 
 ```{.python .input #gpt-a-gpt-from-scratch}
 %%tab pytorch
@@ -229,9 +229,10 @@ print(f'{n / 1e6:.2f}M parameters')
 ```
 
 One decision above deserves a defense: the model reads *characters*, not
-subwords. Every serious language model tokenizes with byte-pair encoding,
-and :numref:`sec_text-sequence` built a full BPE tokenizer — we will even
-reuse its GPT-2 pattern verbatim when we load GPT-2 below. But BPE earns
+subwords. Deployed language models tokenize into subwords — byte-pair
+encoding is the most common scheme — and :numref:`sec_text-sequence` built
+a full BPE tokenizer; we will even reuse its GPT-2 pattern verbatim when we
+load GPT-2 below. But BPE earns
 its keep on gigabytes; on a 180 KB novel a subword vocabulary would leave
 each token type a handful of training examples. Characters keep the
 statistics dense, the vocabulary trivial, and the comparison fair against
@@ -253,14 +254,19 @@ data = d2l.TimeMachine(batch_size=64, num_steps=128, tokenization='char',
                        num_train=100000, num_val=3000)
 
 def val_loss(model, data):
+    """Mean per-token validation loss (weighted by batch size: the final
+    batch may be smaller)."""
     device = d2l.try_gpu()
     model.to(device).eval()
+    total = count = 0
     with torch.no_grad():
-        losses = [F.cross_entropy(
-            model(X.to(device)).flatten(0, 1), Y.to(device).flatten())
-            for X, Y in data.val_dataloader()]
+        for X, Y in data.val_dataloader():
+            loss = F.cross_entropy(model(X.to(device)).flatten(0, 1),
+                                   Y.to(device).flatten())
+            total += loss.item() * Y.numel()
+            count += Y.numel()
     model.train()
-    return sum(l.item() for l in losses) / len(losses)
+    return total / count
 
 torch.manual_seed(0)
 model = GPT(len(data.vocab), dropout=0.1)
@@ -292,11 +298,16 @@ def batch_loss(model, X, Y):
         logits.reshape(-1, logits.shape[-1]), Y.reshape(-1)).mean()
 
 def val_loss(model, data):
+    """Mean per-token validation loss (weighted by batch size: the final
+    batch may be smaller)."""
     model.eval()
-    losses = [float(batch_loss(model, jnp.asarray(X), jnp.asarray(Y)))
-              for X, Y in data.val_dataloader()]
+    total = count = 0
+    for X, Y in data.val_dataloader():
+        Y = jnp.asarray(Y)
+        total += float(batch_loss(model, jnp.asarray(X), Y)) * Y.size
+        count += Y.size
     model.train()
-    return sum(losses) / len(losses)
+    return total / count
 
 model = GPT(len(data.vocab), dropout=0.1, rngs=nnx.Rngs(0))
 optimizer = nnx.Optimizer(model, optax.adamw(1e-3, weight_decay=0.0),
@@ -324,26 +335,32 @@ million tokens drawn from a corpus of one hundred thousand characters,
 about 160 passes over the book, with 4.7 million parameters to spend —
 dozens of parameters per unique character of text. Past the first epochs,
 gradient descent has nothing left to learn from this book except the book
-itself, verbatim. The cure is not fewer steps or a bigger dropout but
+itself. The cure is not fewer steps or a bigger dropout but
 *more data*; how loss actually scales when data and parameters grow
 together is the business of this chapter's closing section on scaling laws
 :cite:`kaplan2020scaling,hoffmann2022training`.
 
 It is worth locating this run on the cost map. At roughly $6ND$
 floating-point operations for training a model of $N$ parameters on $D$
-tokens, our minute of GPU time spent about $5 \times 10^{14}$ FLOPs.
-GPT-2's training run — same class, sixty times the parameters, a corpus
-five orders of magnitude larger — sits near $10^{20}$, and frontier runs
-land around $10^{25}$ or beyond. Nothing in the code changes across those
-eleven orders of magnitude; that is precisely why the machinery of this
-section is worth learning on a novella.
+tokens, our minute of GPU time spent about $5 \times 10^{14}$ FLOPs. The
+124M-parameter GPT-2 we load below — same class, about 26 times our
+parameter count, a corpus five orders of magnitude larger — cost on the
+order of $7 \times 10^{18}$ by the same estimate, taking WebText at
+roughly ten billion tokens (the 1.5B-parameter GPT-2 XL lands near
+$10^{20}$), and frontier runs sit around $10^{25}$ or beyond. Across
+those ten orders of magnitude the model definition barely changes —
+block, mask, embedding, head — but everything around it does: data
+pipelines, custom kernels, and the parallelism of
+:numref:`chap_performance`. The block abstraction is the part that
+transfers, which is why it is worth learning on a novella.
 
 ### Breaking It with One Flag
 
 :numref:`sec_transformer-block` predicted, from initialization statistics
-alone, that the post-LN arrangement starves its attention layers of
-gradient. Now that we own a trainable model, we can watch the prediction
-come true. Same model, same data, same 800 steps at learning rate
+alone, that the post-LN arrangement starves its attention layers' query
+and key projections of gradient. Now that we own a trainable model, we
+can watch the prediction come true. Same model, same data, same 800
+steps at learning rate
 $3 \times 10^{-3}$ — three times the rate above, still comfortable for
 pre-norm — with `pre_norm` flipped:
 
@@ -378,7 +395,7 @@ sticks at about $2.8$ nats and never leaves. That number is exactly the
 unigram entropy of this text ($2.83$ nats: predict letter frequencies,
 ignore all context), and a language model pinned there is a model whose
 attention has learned nothing — the training-time realization of the
-starved attention gradients we measured at initialization. At the gentler
+starved query/key gradients we measured at initialization. At the gentler
 learning rate of the previous run, post-LN does train, trailing early
 (this is what learning-rate warmup was invented for
 :cite:`xiong2020layer`); at the rate pre-norm shrugs off, it fails
@@ -478,11 +495,11 @@ for temperature, top_k in ((1.0, None), (0.7, 8), (2.0, None)):
           + repr(''.join(data.vocab.to_tokens(out))))
 ```
 
-The samples are fluent pseudo-Wells — and if you search the corpus you
-will find long stretches of them are not pseudo at all but verbatim
-quotation: the overfitting that the validation curve reported, made
-audible. Note how little the temperature changes the early tokens. A
-memorizing model is a *confident* model, and dividing near-one-hot logits
+The samples are fluent pseudo-Wells — and much of that fluency appears
+memorized rather than composed: the overfitting that the validation curve
+reported, made audible. Note how little the temperature changes the early
+tokens. A memorizing model is a *confident* model, and dividing
+near-one-hot logits
 by $0.7$ or $2$ barely moves them; the knobs only start to matter once
 the model is genuinely uncertain. We need a model whose uncertainty is
 real — so let's load one.
@@ -682,7 +699,7 @@ Take stock of what just happened: a class we wrote in two notebook
 sections, with the right five flags, runs a model that in 2019 was
 considered too dangerous to release. The gap between our minute of
 training and GPT-2 was never architectural — it is five orders of
-magnitude of data and compute, and the engineering to spend them. The
+magnitude of data, four of compute, and the engineering to spend them. The
 rest of this chapter dissects exactly that gap: making generation cheap
 (the KV cache, next), other ways of wiring the same block
 (encoders and cross-attention), scaling its FFN sideways
@@ -702,8 +719,8 @@ attention drops into `d2l.TransformerBlock` through the same
 `attn_factory` hook later sections use for cache-friendly attention.
 Trained from scratch on a 180 KB novel, the modern configuration reaches
 its best validation loss within a few hundred steps and then memorizes —
-the val/train gap, and the verbatim quotations in its samples, are the
-honest reading of a 30-to-1 parameter-to-data ratio, and the argument for
+the val/train gap, and the apparently memorized stretches in its samples,
+both read straight off a 30-to-1 parameter-to-data ratio, and argue for
 the scaling laws that close the chapter. Flipping `pre_norm=False` at a
 learning rate the pre-norm model tolerates pins training at the unigram
 entropy: the initialization-time gradient starvation of the previous
@@ -795,13 +812,14 @@ Four ingredients on top of the stacked block:
   a few hundred steps, then **rises**.
 - 16M training tokens over a 100k-character book ≈ 160 passes, with
   dozens of parameters per character: past the first epochs there is
-  nothing to learn but the book itself, verbatim.
+  nothing to learn but the book itself.
 - The cure is **more data**, not more steps — the scaling-laws section's
   subject.
 
 ::: {.d2l-note}
-Cost anchor: this run ≈ $6ND \approx 5 \times 10^{14}$ FLOPs. GPT-2's
-run ≈ $10^{20}$. Frontier ≈ $10^{25}$+. Same code at every scale.
+Cost anchor: this run ≈ $6ND \approx 5 \times 10^{14}$ FLOPs. GPT-2
+(124M) ≈ $7 \times 10^{18}$. Frontier ≈ $10^{25}$+. Same block at every
+scale — the systems around it change.
 :::
 :::
 
@@ -825,9 +843,9 @@ and fixing that is the next section (KV cache).
 ::: {.slide title="What a minute of training sounds like"}
 @!gpt-sampling-from-the-model-2
 
-Fluent pseudo-Wells — much of it *verbatim* Wells: the validation gap
-made audible. Temperature barely matters when a memorizing model is this
-confident.
+Fluent pseudo-Wells — much of it apparently *memorized* Wells: the
+validation gap made audible. Temperature barely matters when a memorizing
+model is this confident.
 :::
 
 ::: {.slide title="Loading GPT-2: config = constructor call"}
@@ -860,7 +878,7 @@ Silent-failure insurance, one number and one sentence:
 ::: {.slide title="Recap"}
 - GPT = embedding + causal blocks + final norm + tied head; positions
   learned-or-rotary; one class, flags for a decade of designs.
-- Honest curves: best validation early, then memorization — data, not
+- Read both curves: best validation early, then memorization — data, not
   steps.
 - `pre_norm=False` at a healthy learning rate pins training at the
   unigram plateau.

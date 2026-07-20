@@ -647,6 +647,26 @@ def cross_entropy(y_hat, y):
                                      axis=1).squeeze(-1), min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
+def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
+                  cmap='Reds'):
+    """Show heatmaps of matrices.
+
+    Defined in :numref:`sec_softmax_scratch`"""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(matrix, cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
+
 class SoftmaxRegression(d2l.Classifier):
     def __init__(self, num_outputs, lr, num_inputs=784, rngs=None):
         super().__init__()
@@ -1447,49 +1467,23 @@ def train_lm(model, data, optimizer, num_steps):
             if step >= num_steps:
                 return losses
 
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices.
-
-    Defined in :numref:`sec_queries-keys-values`"""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(matrix, cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
-
 def masked_softmax(X, valid_lens):
     """Perform softmax operation by masking elements on the last axis.
 
     Defined in :numref:`sec_attention-scoring-functions`"""
     # X: 3D tensor, valid_lens: 1D or 2D tensor
-    def _sequence_mask(X, valid_len, value=0):
-        maxlen = X.shape[1]
-        mask = jnp.arange((maxlen),
-                          dtype=jnp.float32)[None, :] < valid_len[:, None]
-        return jnp.where(mask, X, value)
-
     if valid_lens is None:
         return jax.nn.softmax(X, axis=-1)
+    shape = X.shape
+    if valid_lens.ndim == 1:
+        valid_lens = jnp.repeat(valid_lens, shape[1])
     else:
-        shape = X.shape
-        if valid_lens.ndim == 1:
-            valid_lens = jnp.repeat(valid_lens, shape[1])
-        else:
-            valid_lens = valid_lens.reshape(-1)
-        # On the last axis, replace masked elements with a very large negative
-        # value, whose exponentiation outputs 0
-        X = _sequence_mask(X.reshape(-1, shape[-1]), valid_lens, value=-1e6)
-        return jax.nn.softmax(X.reshape(shape), axis=-1)
+        valid_lens = valid_lens.reshape(-1)
+    mask = jnp.arange(shape[-1])[None, :] < valid_lens[:, None]
+    # Most negative finite score: exactly zero weight after the softmax,
+    # at any precision, without the NaN risk of literal -inf
+    X = jnp.where(mask, X.reshape(-1, shape[-1]), jnp.finfo(X.dtype).min)
+    return jax.nn.softmax(X.reshape(shape), axis=-1)
 
 class DotProductAttention(nnx.Module):
     """Scaled dot product attention.
@@ -1508,35 +1502,15 @@ class DotProductAttention(nnx.Module):
         # Swap the last two dimensions of keys with keys.swapaxes(1, 2)
         scores = queries@(keys.swapaxes(1, 2)) / math.sqrt(d)
         attention_weights = masked_softmax(scores, valid_lens)
-        return self.dropout(attention_weights) @ values, attention_weights
-
-class AdditiveAttention(nnx.Module):
-    def __init__(self, key_size, query_size, num_hiddens, dropout, rngs=None):
-        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
-        self.W_k = nnx.Linear(key_size, num_hiddens, use_bias=False, rngs=rngs)
-        self.W_q = nnx.Linear(query_size, num_hiddens, use_bias=False,
-                              rngs=rngs)
-        self.w_v = nnx.Linear(num_hiddens, 1, use_bias=False, rngs=rngs)
-        self.dropout = nnx.Dropout(dropout, rngs=rngs)
-
-    def __call__(self, queries, keys, values, valid_lens):
-        queries, keys = self.W_q(queries), self.W_k(keys)
-        # After dimension expansion, shape of queries: (batch_size, no. of
-        # queries, 1, num_hiddens) and shape of keys: (batch_size, 1, no. of
-        # key-value pairs, num_hiddens). Sum them up with broadcasting
-        features = jnp.expand_dims(queries, axis=2) + jnp.expand_dims(keys, axis=1)
-        features = nnx.tanh(features)
-        # There is only one output of self.w_v, so we remove the last
-        # one-dimensional entry from the shape. Shape of scores: (batch_size,
-        # no. of queries, no. of key-value pairs)
-        scores = self.w_v(features).squeeze(-1)
-        attention_weights = masked_softmax(scores, valid_lens)
-        # Shape of values: (batch_size, no. of key-value pairs, value
-        # dimension)
+        # NNX idiom: return (output, weights); PyTorch stores weights on self
         return self.dropout(attention_weights) @ values, attention_weights
 
 class MultiHeadAttention(nnx.Module):
+    """Multi-head attention.
+
+    Defined in :numref:`sec_multihead-attention`"""
     def __init__(self, num_hiddens, num_heads, dropout, bias=False, rngs=None):
+        assert num_hiddens % num_heads == 0, 'heads must divide num_hiddens'
         rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
         self.num_hiddens, self.num_heads = num_hiddens, num_heads
         self.attention = d2l.DotProductAttention(dropout, rngs=rngs)
@@ -1553,9 +1527,6 @@ class MultiHeadAttention(nnx.Module):
         # Shape of queries, keys, or values:
         # (batch_size, no. of queries or key-value pairs, num_hiddens)
         # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-        # After transposing, shape of output queries, keys, or values:
-        # (batch_size * num_heads, no. of queries or key-value pairs,
-        # num_hiddens / num_heads)
         queries = self.transpose_qkv(self.W_q(queries))
         keys = self.transpose_qkv(self.W_k(keys))
         values = self.transpose_qkv(self.W_v(values))
@@ -1571,6 +1542,7 @@ class MultiHeadAttention(nnx.Module):
             queries, keys, values, valid_lens)
         # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
         output_concat = self.transpose_output(output)
+        # NNX idiom: return (output, weights); PyTorch returns output only
         return self.W_o(output_concat), attention_weights
 
     def transpose_qkv(self, X):
@@ -1596,128 +1568,367 @@ class MultiHeadAttention(nnx.Module):
         X = jnp.transpose(X, (0, 2, 1, 3))
         return X.reshape((X.shape[0], X.shape[1], -1))
 
-class PositionalEncoding(nnx.Module):
-    """Positional encoding.
+class TinyCharLM(nnx.Module):
+    """Attention-only character-level language model.
 
-    Defined in :numref:`sec_self-attention-and-positional-encoding`"""
-    def __init__(self, num_hiddens, dropout, max_len=1000, rngs=None):
-        rngs = nnx.Rngs(dropout=0) if rngs is None else rngs
-        # Create a long enough P
-        P = d2l.zeros((1, max_len, num_hiddens))
-        X = d2l.arange(max_len, dtype=jnp.float32).reshape(
-            -1, 1) / jnp.power(10000, jnp.arange(
-            0, num_hiddens, 2, dtype=jnp.float32) / num_hiddens)
-        P = P.at[:, :, 0::2].set(jnp.sin(X))
-        P = P.at[:, :, 1::2].set(jnp.cos(X[:, :num_hiddens // 2]))
-        self.P = nnx.Cache(P)
-        self.dropout = nnx.Dropout(dropout, rngs=rngs)
-
-    def __call__(self, X, offset=0):
-        # `offset` lets autoregressive decoders advance the encoding position
-        # past tokens already emitted, instead of always slicing from 0.
-        X = X + self.P[:, offset:offset + X.shape[1], :]
-        return self.dropout(X)
-
-class PositionWiseFFN(nnx.Module):
-    """The positionwise feed-forward network.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, ffn_num_hiddens, ffn_num_outputs,
-                 ffn_num_inputs=None, rngs=None):
+    Defined in :numref:`sec_positional-information`"""
+    def __init__(self, vocab_size, num_hiddens=128, num_heads=4, num_blks=2,
+                 pos='rope', max_len=512, bias=False, rngs=None):
         rngs = nnx.Rngs(0) if rngs is None else rngs
-        ffn_num_inputs = (ffn_num_hiddens if ffn_num_inputs is None
-                          else ffn_num_inputs)
-        self.dense1 = nnx.Linear(ffn_num_inputs, ffn_num_hiddens, rngs=rngs)
-        self.dense2 = nnx.Linear(ffn_num_hiddens, ffn_num_outputs, rngs=rngs)
+        self.num_heads, self.pos = num_heads, pos
+        init = nnx.initializers.normal(0.02)
+        self.token_emb = nnx.Embed(vocab_size, num_hiddens,
+                                   embedding_init=init, rngs=rngs)
+        if pos == 'learned':
+            self.pos_emb = nnx.Embed(max_len, num_hiddens,
+                                     embedding_init=init, rngs=rngs)
+        if pos == 'sinusoidal':
+            theta = jnp.arange(max_len)[:, None] / 10000 ** (
+                jnp.arange(0, num_hiddens, 2) / num_hiddens)
+            P = jnp.stack([jnp.sin(theta), jnp.cos(theta)], -1)
+            self.P = nnx.Cache(P.reshape(max_len, num_hiddens))
+        self.blks = nnx.List([nnx.Dict(
+            qkv=nnx.Linear(num_hiddens, 3 * num_hiddens, use_bias=bias,
+                           rngs=rngs),
+            proj=nnx.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                            rngs=rngs))
+            for _ in range(num_blks)])
+
+    def _rope(self, x):
+        d = x.shape[-1]
+        pos = jnp.arange(x.shape[-2], dtype=jnp.float32)
+        inv_freq = 10000.0 ** (-jnp.arange(0, d, 2) / d)
+        theta = pos[:, None] * inv_freq[None, :]
+        cos, sin = jnp.cos(theta), jnp.sin(theta)
+        x1, x2 = x[..., 0::2], x[..., 1::2]
+        return jnp.stack([x1 * cos - x2 * sin,
+                          x1 * sin + x2 * cos], -1).reshape(x.shape)
+
+    def _alibi(self, T):
+        h = jnp.arange(1, self.num_heads + 1)
+        slopes = 2.0 ** (-8.0 * h / self.num_heads)
+        pos = jnp.arange(T, dtype=jnp.float32)
+        return slopes[:, None, None] * (pos[None, :] - pos[:, None])
+
+    def _attend(self, blk, H):
+        B, T, D = H.shape
+        q, k, v = jnp.split(blk['qkv'](H), 3, axis=-1)
+        q, k, v = (u.reshape(B, T, self.num_heads, -1).swapaxes(1, 2)
+                   for u in (q, k, v))
+        if self.pos == 'rope':
+            q, k = self._rope(q), self._rope(k)
+        scores = q @ k.swapaxes(-2, -1) / math.sqrt(q.shape[-1])
+        if self.pos == 'alibi':
+            scores = scores + self._alibi(T)
+        mask = jnp.triu(jnp.ones((T, T), dtype=bool), 1)
+        scores = jnp.where(mask, jnp.finfo(scores.dtype).min, scores)
+        weights = jax.nn.softmax(scores, axis=-1)
+        out = (weights @ v).swapaxes(1, 2).reshape(B, T, D)
+        return blk['proj'](out), weights
+
+    def _embed(self, X):
+        H = self.token_emb(X)
+        if self.pos == 'learned':
+            H = H + self.pos_emb(jnp.arange(X.shape[1]))
+        if self.pos == 'sinusoidal':
+            H = H + self.P[:X.shape[1]]
+        return H
 
     def __call__(self, X):
-        return self.dense2(nnx.relu(self.dense1(X)))
+        H = self._embed(X)
+        for blk in self.blks:
+            out, _ = self._attend(blk, H)
+            H = H + out
+        return self.token_emb.attend(H)  # Tied output head
 
-class AddNorm(nnx.Module):
-    """The residual connection followed by layer normalization.
+    def attention_weights(self, X):
+        """Per-block attention maps, each (batch, num_heads, T, T)."""
+        H, maps = self._embed(X), []
+        for blk in self.blks:
+            out, weights = self._attend(blk, H)
+            maps.append(weights)
+            H = H + out
+        return maps
 
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, num_hiddens, dropout, rngs=None):
+class FeedForward(nnx.Module):
+    """Position-wise FFN: GELU MLP or SwiGLU at matched parameter count.
+
+    Defined in :numref:`sec_transformer-block`"""
+    def __init__(self, num_hiddens, act='swiglu', bias=False, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        assert act in ('swiglu', 'gelu'), f'unknown act: {act!r}'
+        self.act = act
+        if act == 'gelu':
+            width = 4 * num_hiddens
+        else:  # 'swiglu': three matrices; width 8d/3 matches the MLP budget
+            width = round(8 * num_hiddens / 3)
+            self.W_g = nnx.Linear(num_hiddens, width, use_bias=bias,
+                                  rngs=rngs)
+        self.W_1 = nnx.Linear(num_hiddens, width, use_bias=bias, rngs=rngs)
+        self.W_2 = nnx.Linear(width, num_hiddens, use_bias=bias, rngs=rngs)
+
+    def __call__(self, X):
+        if self.act == 'gelu':
+            return self.W_2(nnx.gelu(self.W_1(X)))
+        return self.W_2(nnx.silu(self.W_g(X)) * self.W_1(X))
+
+class TransformerBlock(nnx.Module):
+    """Configurable transformer block: attention + FFN on a residual
+
+    Defined in :numref:`sec_transformer-block`"""
+    def __init__(self, num_hiddens, num_heads, dropout=0, norm='rms',
+                 act='swiglu', pre_norm=True, bias=False, attn_factory=None,
+                 ffn_factory=None, rngs=None):
         rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        assert norm in ('rms', 'layer'), f'unknown norm: {norm!r}'
+        assert num_hiddens % num_heads == 0
+        self.pre_norm = pre_norm
+        make_norm = nnx.RMSNorm if norm == 'rms' else nnx.LayerNorm
+        self.norm1 = make_norm(num_hiddens, rngs=rngs)
+        self.norm2 = make_norm(num_hiddens, rngs=rngs)
+        self.attention = (d2l.MultiHeadAttention(num_hiddens, num_heads,
+                                                 dropout, bias=bias,
+                                                 rngs=rngs)
+                          if attn_factory is None else attn_factory(rngs))
+        self.ffn = (FeedForward(num_hiddens, act, bias=bias, rngs=rngs)
+                    if ffn_factory is None else ffn_factory(rngs))
         self.dropout = nnx.Dropout(dropout, rngs=rngs)
-        self.ln = nnx.LayerNorm(num_hiddens, rngs=rngs)
 
-    def __call__(self, X, Y):
-        return self.ln(self.dropout(Y) + X)
+    def __call__(self, X, valid_lens=None):
+        if self.pre_norm:
+            Y = self.norm1(X)
+            X = X + self.dropout(self.attention(Y, Y, Y, valid_lens)[0])
+            return X + self.dropout(self.ffn(self.norm2(X)))
+        X = self.norm1(X + self.dropout(
+            self.attention(X, X, X, valid_lens)[0]))
+        return self.norm2(X + self.dropout(self.ffn(X)))
 
-class TransformerEncoderBlock(nnx.Module):
-    """The Transformer encoder block.
+class GPT(nnx.Module):
+    """Decoder-only transformer language model built from configurable
 
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
+    Defined in :numref:`sec_gpt`"""
+
+    class CausalAttention(nnx.Module):
+        """Multi-head causal self-attention, optionally rotary."""
+        def __init__(self, num_hiddens, num_heads, bias=False, rope=False,
+                     rngs=None):
+            rngs = nnx.Rngs(0) if rngs is None else rngs
+            self.num_heads, self.rope = num_heads, rope
+            self.W_qkv = nnx.Linear(num_hiddens, 3 * num_hiddens,
+                                    use_bias=bias, rngs=rngs)
+            self.W_o = nnx.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                                  rngs=rngs)
+
+        def _rope(self, x):
+            # x: (batch, num_steps, num_heads, head_dim)
+            d = x.shape[-1]
+            pos = jnp.arange(x.shape[1], dtype=jnp.float32)
+            inv_freq = 10000.0 ** (-jnp.arange(0, d, 2) / d)
+            theta = pos[:, None] * inv_freq[None, :]
+            cos = jnp.cos(theta)[:, None, :]  # broadcast over heads
+            sin = jnp.sin(theta)[:, None, :]
+            x1, x2 = x[..., 0::2], x[..., 1::2]
+            return jnp.stack([x1 * cos - x2 * sin,
+                              x1 * sin + x2 * cos], -1).reshape(x.shape)
+
+        def __call__(self, X, *_):
+            B, T, D = X.shape
+            q, k, v = jnp.split(self.W_qkv(X), 3, axis=-1)
+            q, k, v = (u.reshape(B, T, self.num_heads, -1)
+                       for u in (q, k, v))
+            if self.rope:
+                q, k = self._rope(q), self._rope(k)
+            Y = jax.nn.dot_product_attention(q, k, v, is_causal=True)
+            return self.W_o(Y.reshape(B, T, D)), None
+
+    def __init__(self, vocab_size, num_hiddens=256, num_heads=8, num_blks=6,
+                 max_len=1024, pos='rope', norm='rms', act='swiglu',
+                 pre_norm=True, bias=False, dropout=0, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.pos, self.max_len = pos, max_len
+        init = nnx.initializers.normal(0.02)
+        self.token_emb = nnx.Embed(vocab_size, num_hiddens,
+                                   embedding_init=init, rngs=rngs)
+        if pos == 'learned':
+            self.pos_emb = nnx.Embed(max_len, num_hiddens,
+                                     embedding_init=init, rngs=rngs)
+        attn = lambda rngs: self.CausalAttention(
+            num_hiddens, num_heads, bias, rope=(pos == 'rope'), rngs=rngs)
+        self.blks = nnx.List([
+            d2l.TransformerBlock(num_hiddens, num_heads, dropout, norm, act,
+                                 pre_norm, bias, attn_factory=attn,
+                                 rngs=rngs)
+            for _ in range(num_blks)])
+        self.norm = (nnx.RMSNorm if norm == 'rms'
+                     else nnx.LayerNorm)(num_hiddens, rngs=rngs)
+
+    def __call__(self, X):
+        H = self.token_emb(X)
+        if self.pos == 'learned':
+            H = H + self.pos_emb(jnp.arange(X.shape[1]))
+        for blk in self.blks:
+            H = blk(H)
+        return self.token_emb.attend(self.norm(H))
+
+    def generate(self, prefix, num_tokens, seed=0, temperature=1.0,
+                 top_k=None):
+        """Sample a continuation of the token-id list prefix.
+
+        Defined in :numref:`sec_gpt`"""
+        total = len(prefix) + num_tokens
+        buf = jnp.zeros((1, total), dtype=jnp.int32)
+        buf = buf.at[0, :len(prefix)].set(jnp.asarray(prefix))
+
+        @nnx.jit
+        def logits_at(model, buf, t):
+            return model(buf)[0, t - 1]
+
+        ids, key = list(prefix), jax.random.key(seed)
+        for t in range(len(prefix), total):
+            logits = logits_at(self, buf, t) / temperature
+            if top_k is not None:
+                logits = jnp.where(logits < jnp.sort(logits)[-top_k],
+                                   -jnp.inf, logits)
+            key, sub = jax.random.split(key)
+            ids.append(int(jax.random.categorical(sub, logits)))
+            buf = buf.at[0, t].set(ids[-1])
+        return ids
+
+class GQAAttention(nnx.Module):
+    """Causal multi-head attention with num_kv_heads shared KV heads.
+
+    Defined in :numref:`sec_kv-cache`"""
+    def __init__(self, num_hiddens, num_heads, num_kv_heads, bias=False,
+                 rope=False, causal=True, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        assert num_hiddens % num_heads == 0
+        assert num_heads % num_kv_heads == 0
+        self.num_heads, self.num_kv_heads = num_heads, num_kv_heads
+        self.head_dim = num_hiddens // num_heads
+        self.rope, self.causal = rope, causal
+        self.W_q = nnx.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                              rngs=rngs)
+        self.W_k = nnx.Linear(num_hiddens, num_kv_heads * self.head_dim,
+                              use_bias=bias, rngs=rngs)
+        self.W_v = nnx.Linear(num_hiddens, num_kv_heads * self.head_dim,
+                              use_bias=bias, rngs=rngs)
+        self.W_o = nnx.Linear(num_hiddens, num_hiddens, use_bias=bias,
+                              rngs=rngs)
+
+    def _rope(self, x):  # the rotation of d2l.GPT, kept self-contained
+        d = x.shape[-1]
+        pos = jnp.arange(x.shape[1], dtype=jnp.float32)
+        inv_freq = 10000.0 ** (-jnp.arange(0, d, 2) / d)
+        theta = pos[:, None] * inv_freq[None, :]
+        cos = jnp.cos(theta)[:, None, :]
+        sin = jnp.sin(theta)[:, None, :]
+        x1, x2 = x[..., 0::2], x[..., 1::2]
+        return jnp.stack([x1 * cos - x2 * sin,
+                          x1 * sin + x2 * cos], -1).reshape(x.shape)
+
+    def __call__(self, queries, keys, values, valid_lens=None):
+        B, T, D = queries.shape
+        q = self.W_q(queries).reshape(B, T, self.num_heads, -1)
+        k = self.W_k(keys).reshape(B, -1, self.num_kv_heads, self.head_dim)
+        v = self.W_v(values).reshape(B, -1, self.num_kv_heads,
+                                     self.head_dim)
+        if self.rope:
+            q, k = self._rope(q), self._rope(k)
+        mask, causal = None, self.causal
+        if valid_lens is not None:      # mask padding (and causality)
+            S = k.shape[1]
+            if valid_lens.ndim == 1:
+                valid_lens = jnp.broadcast_to(valid_lens[:, None], (B, T))
+            mask = (jnp.arange(S)[None, None, :]
+                    < valid_lens[:, :, None])[:, None]
+            if causal:
+                i, j = jnp.arange(T)[:, None], jnp.arange(S)[None, :]
+                mask = mask & (j <= i + S - T)
+            causal = False
+        Y = jax.nn.dot_product_attention(q, k, v, mask=mask,
+                                         is_causal=causal)
+        return self.W_o(Y.reshape(B, T, -1)), None
+
+class PatchEmbedding(nnx.Module):
+    """Image-to-sequence stem of the vision transformer.
+
+    Defined in :numref:`sec_vision-transformer`"""
+    def __init__(self, img_size=96, patch_size=16, num_hiddens=512,
+                 num_channels=3, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        def _make_tuple(x):
+            if not isinstance(x, (list, tuple)):
+                return (x, x)
+            return x
+        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
+        # A partial trailing patch would silently shrink the token grid
+        assert img_size[0] % patch_size[0] == 0 and \
+            img_size[1] % patch_size[1] == 0, \
+            'image size must be divisible by the patch size'
+        self.num_patches = (img_size[0] // patch_size[0]) * (
+            img_size[1] // patch_size[1])
+        self.conv = nnx.Conv(num_channels, num_hiddens, kernel_size=patch_size,
+                             strides=patch_size, padding='VALID', rngs=rngs)
+
+    def __call__(self, X):
+        # Output shape: (batch size, no. of patches, no. of channels)
+        X = self.conv(X)
+        return X.reshape((X.shape[0], -1, X.shape[3]))
+
+class ViTBlock(nnx.Module):
+    """Pre-norm transformer block with a GELU MLP.
+
+    Defined in :numref:`sec_vision-transformer`"""
+    def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
                  use_bias=False, rngs=None):
         rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.ln1 = nnx.LayerNorm(num_hiddens, rngs=rngs)
         self.attention = d2l.MultiHeadAttention(
             num_hiddens, num_heads, dropout, use_bias, rngs=rngs)
-        self.addnorm1 = AddNorm(num_hiddens, dropout, rngs=rngs)
-        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens,
-                                   num_hiddens, rngs=rngs)
-        self.addnorm2 = AddNorm(num_hiddens, dropout, rngs=rngs)
+        self.ln2 = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.mlp = nnx.Sequential(
+            nnx.Linear(num_hiddens, mlp_num_hiddens, rngs=rngs), nnx.gelu,
+            nnx.Dropout(dropout, rngs=rngs),
+            nnx.Linear(mlp_num_hiddens, num_hiddens, rngs=rngs),
+            nnx.Dropout(dropout, rngs=rngs))
 
-    def __call__(self, X, valid_lens):
-        output, attention_weights = self.attention(X, X, X, valid_lens)
-        Y = self.addnorm1(X, output)
-        return self.addnorm2(Y, self.ffn(Y)), attention_weights
+    def __call__(self, X, valid_lens=None):
+        X_norm = self.ln1(X)
+        X = X + self.attention(X_norm, X_norm, X_norm, valid_lens)[0]
+        return X + self.mlp(self.ln2(X))
 
-class Benchmark:
-    """For measuring running time.
+class ViT(d2l.Classifier):
+    """Vision transformer.
 
-    Defined in :numref:`sec_hybridize`"""
-    def __init__(self, description='Done'):
-        self.description = description
+    Defined in :numref:`sec_vision-transformer`"""
+    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
+                 num_heads, num_blks, emb_dropout, blk_dropout, lr=0.1,
+                 use_bias=False, num_classes=10, num_channels=1, rngs=None):
+        super().__init__()
+        self.save_hyperparameters(ignore=['rngs'])
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.patch_embedding = PatchEmbedding(
+            img_size, patch_size, num_hiddens, num_channels, rngs=rngs)
+        self.cls_token = nnx.Param(jnp.zeros((1, 1, num_hiddens)))
+        num_steps = self.patch_embedding.num_patches + 1  # Add the cls token
+        # Positional embeddings are learnable, initialized to small noise
+        self.pos_embedding = nnx.Param(
+            rngs.params.normal((1, num_steps, num_hiddens)) * 0.02)
+        self.embedding_dropout = nnx.Dropout(emb_dropout, rngs=rngs)
+        self.blks = nnx.List([
+            ViTBlock(num_hiddens, mlp_num_hiddens, num_heads, blk_dropout,
+                     use_bias, rngs=rngs) for _ in range(num_blks)])
+        self.head = nnx.Sequential(
+            nnx.LayerNorm(num_hiddens, rngs=rngs),
+            nnx.Linear(num_hiddens, num_classes, rngs=rngs))
 
-    def __enter__(self):
-        self.timer = d2l.Timer()
-        return self
-
-    def __exit__(self, *args):
-        print(f'{self.description}: {self.timer.stop():.4f} sec')
-
-def split_batch(X, y, num_devices):
-    """Split `X` and `y` across devices by reshaping.
-
-    Defined in :numref:`sec_multi_gpu`"""
-    assert X.shape[0] == y.shape[0]
-    batch_size = X.shape[0]
-    # Reshape (batch, ...) -> (num_devices, batch_per_device, ...)
-    def _reshape(a):
-        return a.reshape(num_devices, batch_size // num_devices, *a.shape[1:])
-    return _reshape(X), _reshape(y)
-
-class ResNet18(nnx.Module):
-    """A slightly modified ResNet-18 model.
-
-    Defined in :numref:`sec_multi_gpu_concise`"""
-    def __init__(self, num_classes=10, rngs=None):
-        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
-        self.net = nnx.Sequential(
-            nnx.Conv(1, 64, kernel_size=(3, 3), strides=(1, 1),
-                     padding='same', rngs=rngs),
-            nnx.BatchNorm(64, rngs=rngs),
-            nnx.relu,
-            # ResNet blocks
-            d2l.Residual(64, in_channels=64, rngs=rngs),
-            d2l.Residual(64, in_channels=64, rngs=rngs),
-            d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
-                         in_channels=64, rngs=rngs),
-            d2l.Residual(128, in_channels=128, rngs=rngs),
-            d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
-                         in_channels=128, rngs=rngs),
-            d2l.Residual(256, in_channels=256, rngs=rngs),
-            d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
-                         in_channels=256, rngs=rngs),
-            d2l.Residual(512, in_channels=512, rngs=rngs),
-            # Global average pooling and classifier
-            lambda x: x.mean(axis=(1, 2)),
-            nnx.Linear(512, num_classes, rngs=rngs))
-
-    def __call__(self, x):
-        return self.net(x)
+    def forward(self, X):
+        X = self.patch_embedding(X)
+        X = d2l.concat((jnp.tile(self.cls_token, (X.shape[0], 1, 1)), X), 1)
+        X = self.embedding_dropout(X + self.pos_embedding)
+        for blk in self.blks:
+            X = blk(X)
+        return self.head(X[:, 0])
 
 class LSTMScratch(nnx.Module):
     """The long short-term memory (LSTM) cell implemented from scratch.
@@ -1817,6 +2028,282 @@ class GRU(d2l.RNN):
             if i < self.num_layers - 1:
                 outputs = self.dropouts[i](outputs)
         return outputs, new_state
+
+def scan_combine(prev, cur):
+    a_prev, b_prev = prev
+    a_cur, b_cur = cur
+    return a_prev * a_cur, a_cur * b_prev + b_cur
+
+def associative_scan(a, b):
+    """Parallel prefix scan for h_t = a_t * h_{t-1} + b_t with h_0 = 0.
+
+    Defined in :numref:`sec_ssm`"""
+    return jax.lax.associative_scan(scan_combine, (a, b))[1]
+
+class S4D(nnx.Module):
+    """A diagonal state space layer: one SSM per feature channel.
+
+    Defined in :numref:`sec_ssm`"""
+    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1,
+                 rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        H, N = num_hiddens, num_states
+        self.log_a = nnx.Param(jnp.tile(jnp.log(jnp.arange(1., N + 1)),
+                                        (H, 1)))
+        self.log_dt = nnx.Param(
+            rngs.params.uniform((H, 1)) * math.log(dt_max / dt_min)
+            + math.log(dt_min))
+        self.C = nnx.Param(rngs.params.normal((H, N)) / math.sqrt(N))
+        self.D = nnx.Param(jnp.ones(H))
+
+    def __call__(self, u):                   # (num_steps, batch, num_hiddens)
+        a = -jnp.exp(self.log_a[...])                 # (H, N), Re(a) < 0
+        da = jnp.exp(self.log_dt[...]) * a
+        a_bar = jnp.exp(da)
+        b_bar = jnp.expm1(da) / a                     # ZOH with B = 1
+        a_elems = jnp.broadcast_to(                   # Same at every step
+            a_bar[None, None], (u.shape[0], 1, *a_bar.shape))
+        b_elems = b_bar * u[..., None]                # (T, batch, H, N)
+        x = associative_scan(a_elems, b_elems)
+        return (x * self.C).sum(-1) + self.D * u
+
+    def step(self, u, x=None):
+        """Advance one token: u is (batch, H); x is the (batch, H, N) state.
+
+        Defined in :numref:`sec_ssm`"""
+        a = -jnp.exp(self.log_a[...])
+        da = jnp.exp(self.log_dt[...]) * a
+        a_bar = jnp.exp(da)                               # Same ZOH as forward
+        b_bar = jnp.expm1(da) / a
+        if x is None:
+            x = jnp.zeros((*u.shape, a_bar.shape[-1]))
+        x = a_bar * x + b_bar * u[..., None]              # One recurrence step
+        return (x * self.C).sum(-1) + self.D * u, x
+
+class S4DBlock(nnx.Module):
+    def __init__(self, num_hiddens, num_states, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.ln1 = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.ssm = S4D(num_hiddens, num_states, rngs=rngs)
+        self.ln2 = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.W_v = nnx.Linear(num_hiddens, 2 * num_hiddens, rngs=rngs)
+        self.W_g = nnx.Linear(num_hiddens, 2 * num_hiddens, rngs=rngs)
+        self.W_o = nnx.Linear(2 * num_hiddens, num_hiddens, rngs=rngs)
+
+    def __call__(self, X):
+        X = X + self.ssm(self.ln1(X))
+        Y = self.ln2(X)
+        return X + self.W_o(self.W_v(Y) * jax.nn.sigmoid(self.W_g(Y)))
+
+    def step(self, X, x=None):
+        """Advance the block one token; only the SSM carries state.
+
+        Defined in :numref:`sec_ssm`"""
+        y, x = self.ssm.step(self.ln1(X), x)
+        X = X + y
+        Y = self.ln2(X)
+        return X + self.W_o(self.W_v(Y) * jax.nn.sigmoid(self.W_g(Y))), x
+
+class SelectiveSSM(nnx.Module):
+    """A diagonal SSM whose step size, input matrix, and read-out are
+
+    Defined in :numref:`sec_mamba`"""
+    def __init__(self, num_hiddens, num_states=4, dt_min=0.001, dt_max=0.1,
+                 rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        H, N, R = num_hiddens, num_states, max(2, num_hiddens // 16)
+        self.log_a = nnx.Param(jnp.tile(jnp.log(jnp.arange(1., N + 1)),
+                                        (H, 1)))
+        self.W_dt = nnx.Sequential(
+            nnx.Linear(H, R, rngs=rngs),
+            nnx.Linear(R, H, use_bias=False, rngs=rngs))
+        dt = jnp.exp(rngs.params.uniform((H,)) * math.log(dt_max / dt_min)
+                     + math.log(dt_min))
+        self.b_dt = nnx.Param(dt + jnp.log(-jnp.expm1(-dt)))
+        self.W_B = nnx.Linear(H, N, use_bias=False, rngs=rngs)
+        self.W_C = nnx.Linear(H, N, use_bias=False, rngs=rngs)
+        self.D = nnx.Param(jnp.ones(H))
+
+    def __call__(self, u):                   # (num_steps, batch, num_hiddens)
+        a = -jnp.exp(self.log_a[...])                 # (H, N), Re(a) < 0
+        dt = jax.nn.softplus(self.W_dt(u) + self.b_dt)    # (T, batch, H)
+        B, C = self.W_B(u), self.W_C(u)               # (T, batch, N)
+        a_bar = jnp.exp(dt[..., None] * a)            # (T, batch, H, N)
+        b_bar = (dt * u)[..., None] * B[..., None, :]
+        x = associative_scan(a_bar, b_bar)
+        return (x * C[..., None, :]).sum(-1) + self.D * u
+
+    def step(self, u, x=None):
+        """Advance one token: u is (batch, H); x is the (batch, H, N) state.
+
+        Defined in :numref:`sec_mamba`"""
+        a = -jnp.exp(self.log_a[...])
+        dt = jax.nn.softplus(self.W_dt(u) + self.b_dt)    # (batch, H)
+        B, C = self.W_B(u), self.W_C(u)                   # (batch, N)
+        a_bar = jnp.exp(dt[..., None] * a)                # (batch, H, N)
+        b_bar = (dt * u)[..., None] * B[..., None, :]
+        x = b_bar if x is None else a_bar * x + b_bar
+        return (x * C[..., None, :]).sum(-1) + self.D * u, x
+
+class MambaBlock(nnx.Module):
+    """Conv + SiLU + selective SSM, gated, inside a pre-norm residual.
+
+    Defined in :numref:`sec_mamba`"""
+    def __init__(self, num_hiddens, num_states=4, expand=2, conv_width=4,
+                 dropout=0, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        d = expand * num_hiddens
+        self.ln = nnx.LayerNorm(num_hiddens, rngs=rngs)
+        self.W_in = nnx.Linear(num_hiddens, 2 * d, rngs=rngs)
+        self.conv = nnx.Conv(d, d, kernel_size=(conv_width,),
+                             feature_group_count=d, padding='CAUSAL',
+                             rngs=rngs)
+        self.ssm = SelectiveSSM(d, num_states, rngs=rngs)
+        self.W_out = nnx.Linear(d, num_hiddens, rngs=rngs)
+        self.drop = nnx.Dropout(dropout, rngs=rngs)
+
+    def __call__(self, X):                   # (num_steps, batch, num_hiddens)
+        u, gate = jnp.split(self.W_in(self.ln(X)), 2, axis=-1)
+        u = jnp.swapaxes(self.conv(jnp.swapaxes(u, 0, 1)), 0, 1)
+        y = self.ssm(jax.nn.silu(u))
+        return X + self.drop(self.W_out(y * jax.nn.silu(gate)))
+
+    def step(self, X, state=None):
+        """Advance one token, carrying (conv buffer, SSM state).
+
+        Defined in :numref:`sec_mamba`"""
+        u, gate = jnp.split(self.W_in(self.ln(X)), 2, axis=-1)
+        if state is None:
+            state = (jnp.zeros((u.shape[0], self.conv.kernel_size[0],
+                                u.shape[-1])), None)
+        buf, x = state
+        buf = jnp.concatenate([buf[:, 1:], u[:, None]], 1)    # Roll the window
+        u = (buf * self.conv.kernel[:, 0]).sum(1) + self.conv.bias
+        y, x = self.ssm.step(jax.nn.silu(u), x)
+        return X + self.drop(self.W_out(y * jax.nn.silu(gate))), (buf, x)
+
+class Mamba(nnx.Module):
+    """A stack of Mamba blocks with the recurrent-cell interface.
+
+    Defined in :numref:`sec_mamba`"""
+    def __init__(self, num_inputs, num_blocks=2, num_states=4, dropout=0,
+                 rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        self.num_inputs = self.num_hiddens = num_inputs
+        self.blocks = nnx.Sequential(*[
+            MambaBlock(num_inputs, num_states, dropout=dropout, rngs=rngs)
+            for _ in range(num_blocks)])
+        self.ln = nnx.LayerNorm(num_inputs, rngs=rngs)
+
+    def __call__(self, X, state=None):
+        return self.ln(self.blocks(X)), None
+
+    def step(self, X, state=None):
+        """Advance the stack one token: X is (batch, d); one state per block.
+
+        Defined in :numref:`sec_mamba`"""
+        state = ([None] * len(self.blocks.layers) if state is None
+                 else list(state))
+        for i, blk in enumerate(self.blocks.layers):
+            X, state[i] = blk.step(X, state[i])
+        return self.ln(X), state
+
+class Benchmark:
+    """For measuring running time.
+
+    Defined in :numref:`sec_hybridize`"""
+    def __init__(self, description='Done'):
+        self.description = description
+
+    def __enter__(self):
+        self.timer = d2l.Timer()
+        return self
+
+    def __exit__(self, *args):
+        print(f'{self.description}: {self.timer.stop():.4f} sec')
+
+def split_batch(X, y, num_devices):
+    """Split `X` and `y` across devices by reshaping.
+
+    Defined in :numref:`sec_multi_gpu`"""
+    assert X.shape[0] == y.shape[0]
+    batch_size = X.shape[0]
+    # Reshape (batch, ...) -> (num_devices, batch_per_device, ...)
+    def _reshape(a):
+        return a.reshape(num_devices, batch_size // num_devices, *a.shape[1:])
+    return _reshape(X), _reshape(y)
+
+class ResNet18(nnx.Module):
+    """A slightly modified ResNet-18 model.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    def __init__(self, num_classes=10, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        self.net = nnx.Sequential(
+            nnx.Conv(1, 64, kernel_size=(3, 3), strides=(1, 1),
+                     padding='same', rngs=rngs),
+            nnx.BatchNorm(64, rngs=rngs),
+            nnx.relu,
+            # ResNet blocks
+            d2l.Residual(64, in_channels=64, rngs=rngs),
+            d2l.Residual(64, in_channels=64, rngs=rngs),
+            d2l.Residual(128, use_1x1conv=True, strides=(2, 2),
+                         in_channels=64, rngs=rngs),
+            d2l.Residual(128, in_channels=128, rngs=rngs),
+            d2l.Residual(256, use_1x1conv=True, strides=(2, 2),
+                         in_channels=128, rngs=rngs),
+            d2l.Residual(256, in_channels=256, rngs=rngs),
+            d2l.Residual(512, use_1x1conv=True, strides=(2, 2),
+                         in_channels=256, rngs=rngs),
+            d2l.Residual(512, in_channels=512, rngs=rngs),
+            # Global average pooling and classifier
+            lambda x: x.mean(axis=(1, 2)),
+            nnx.Linear(512, num_classes, rngs=rngs))
+
+    def __call__(self, x):
+        return self.net(x)
+
+@nnx.jit
+def update_D(X, Z, net_D, net_G, optimizer_D):
+    """Update discriminator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = X.shape[0]
+    ones = jnp.ones((batch_size,))
+    zeros = jnp.zeros((batch_size,))
+    # Do not need to compute gradient for `net_G`
+    fake_X = net_G(Z)
+    def loss_D_fn(model_D):
+        real_Y = model_D(X).squeeze()
+        fake_Y = model_D(fake_X).squeeze()
+        loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(real_Y, ones)) +
+                  jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, zeros))
+                  ) / 2
+        return loss_D
+    loss_D, grads_D = nnx.value_and_grad(loss_D_fn)(net_D)
+    optimizer_D.update(net_D, grads_D)
+    return loss_D
+
+@nnx.jit
+def update_G(Z, net_D, net_G, optimizer_G):
+    """Update generator.
+
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = Z.shape[0]
+    ones = jnp.ones((batch_size,))
+    def loss_G_fn(model_G):
+        # We could reuse `fake_X` from `update_D` to save computation
+        fake_X = model_G(Z)
+        # Recomputing `fake_Y` is needed since `net_D` is changed
+        fake_Y = net_D(fake_X).squeeze()
+        loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, ones))
+        return loss_G
+    loss_G, grads_G = nnx.value_and_grad(loss_G_fn)(net_G)
+    optimizer_G.update(net_G, grads_G)
+    return loss_G
+
+d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
+                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 class Encoder(nnx.Module):
     """The base encoder interface for the encoder-decoder architecture.
@@ -2008,48 +2495,6 @@ def bleu(pred_seq, label_seq, k):
                 label_subs[' '.join(pred_tokens[i: i + n])] -= 1
         score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
     return score
-
-@nnx.jit
-def update_D(X, Z, net_D, net_G, optimizer_D):
-    """Update discriminator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = X.shape[0]
-    ones = jnp.ones((batch_size,))
-    zeros = jnp.zeros((batch_size,))
-    # Do not need to compute gradient for `net_G`
-    fake_X = net_G(Z)
-    def loss_D_fn(model_D):
-        real_Y = model_D(X).squeeze()
-        fake_Y = model_D(fake_X).squeeze()
-        loss_D = (jnp.sum(optax.sigmoid_binary_cross_entropy(real_Y, ones)) +
-                  jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, zeros))
-                  ) / 2
-        return loss_D
-    loss_D, grads_D = nnx.value_and_grad(loss_D_fn)(net_D)
-    optimizer_D.update(net_D, grads_D)
-    return loss_D
-
-@nnx.jit
-def update_G(Z, net_D, net_G, optimizer_G):
-    """Update generator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = Z.shape[0]
-    ones = jnp.ones((batch_size,))
-    def loss_G_fn(model_G):
-        # We could reuse `fake_X` from `update_D` to save computation
-        fake_X = model_G(Z)
-        # Recomputing `fake_Y` is needed since `net_D` is changed
-        fake_Y = net_D(fake_X).squeeze()
-        loss_G = jnp.sum(optax.sigmoid_binary_cross_entropy(fake_Y, ones))
-        return loss_G
-    loss_G, grads_G = nnx.value_and_grad(loss_G_fn)(net_G)
-    optimizer_G.update(net_G, grads_G)
-    return loss_G
-
-d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
-                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
                        '319d85e578af0cdc590547f26231e4e31cdf1e42')
@@ -3673,51 +4118,45 @@ def extract(filename, folder=None):
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
-class AttentionDecoder(d2l.Decoder):
-    """The base attention-based decoder interface.
+class PositionWiseFFN(nnx.Module):
+    """The positionwise feed-forward network."""
+    def __init__(self, ffn_num_hiddens, ffn_num_outputs,
+                 ffn_num_inputs=None, rngs=None):
+        rngs = nnx.Rngs(0) if rngs is None else rngs
+        ffn_num_inputs = (ffn_num_hiddens if ffn_num_inputs is None
+                          else ffn_num_inputs)
+        self.dense1 = nnx.Linear(ffn_num_inputs, ffn_num_hiddens, rngs=rngs)
+        self.dense2 = nnx.Linear(ffn_num_hiddens, ffn_num_outputs, rngs=rngs)
 
-    Subclasses build their layers in an ordinary `__init__`, as with any
-    NNX module; this base class only adds the accessor for the attention
-    weights recorded during decoding.
+    def __call__(self, X):
+        return self.dense2(nnx.relu(self.dense1(X)))
 
-    Defined in :numref:`sec_seq2seq_attention`"""
-    @property
-    def attention_weights(self):
-        raise NotImplementedError
-
-class TransformerEncoder(d2l.Encoder):
-    """The Transformer encoder.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
-                 num_blks, dropout, use_bias=False, rngs=None):
+class AddNorm(nnx.Module):
+    """The residual connection followed by layer normalization."""
+    def __init__(self, num_hiddens, dropout, rngs=None):
         rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
-        self.num_hiddens = num_hiddens
-        self.embedding = nnx.Embed(vocab_size, num_hiddens, rngs=rngs)
-        self.pos_encoding = d2l.PositionalEncoding(
-            num_hiddens, dropout, rngs=rngs)
-        self.blks = nnx.List([
-            TransformerEncoderBlock(num_hiddens, ffn_num_hiddens,
-                                    num_heads, dropout, use_bias, rngs=rngs)
-            for _ in range(num_blks)])
-        self._attention_weights = nnx.Intermediate(jnp.empty((0,)))
+        self.dropout = nnx.Dropout(dropout, rngs=rngs)
+        self.ln = nnx.LayerNorm(num_hiddens, rngs=rngs)
+
+    def __call__(self, X, Y):
+        return self.ln(self.dropout(Y) + X)
+
+class TransformerEncoderBlock(nnx.Module):
+    """The Transformer encoder block."""
+    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
+                 use_bias=False, rngs=None):
+        rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
+        self.attention = d2l.MultiHeadAttention(
+            num_hiddens, num_heads, dropout, use_bias, rngs=rngs)
+        self.addnorm1 = AddNorm(num_hiddens, dropout, rngs=rngs)
+        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens,
+                                   num_hiddens, rngs=rngs)
+        self.addnorm2 = AddNorm(num_hiddens, dropout, rngs=rngs)
 
     def __call__(self, X, valid_lens):
-        # Since positional encoding values are between -1 and 1, the embedding
-        # values are multiplied by the square root of the embedding dimension
-        # to rescale before they are summed up
-        X = self.embedding(X) * math.sqrt(self.num_hiddens)
-        X = self.pos_encoding(X)
-        attention_weights = [None] * len(self.blks)
-        for i, blk in enumerate(self.blks):
-            X, attention_w = blk(X, valid_lens)
-            attention_weights[i] = attention_w
-        self._attention_weights.set_value(jnp.stack(attention_weights))
-        return X
-
-    @property
-    def attention_weights(self):
-        return self._attention_weights.get_value()
+        output, attention_weights = self.attention(X, X, X, valid_lens)
+        Y = self.addnorm1(X, output)
+        return self.addnorm2(Y, self.ffn(Y)), attention_weights
 
 
 ones_like = jnp.ones_like

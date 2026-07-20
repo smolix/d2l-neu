@@ -45,7 +45,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read 549367 examples\nread 9824 examples\n"
+          "text": "read 549367 examples\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read 9824 examples\n"
         }
       ]
     },
@@ -66,14 +71,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.514, train acc 0.797, test acc 0.816\n4357.8 examples/sec on [gpu(0)]\n"
+          "text": "loss 0.513, train acc 0.796, test acc 0.821\n2130.2 examples/sec on [gpu(0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "natural-language-inference-attention/natural-language-inference-attention-training-and-evaluating-the-model-2-2-1.svg",
-          "bytes": 27068,
-          "sha256": "sha256:72b016691aa117b5e6dd0156961f8f3a0e9bcd5571d99c0c6bd91fb9aba24769"
+          "bytes": 27069,
+          "sha256": "sha256:c528e37c97a19730c81145856a7e2c573e5919e7683e16d59c1456d9f3b89fcd"
         }
       ]
     },

@@ -61,22 +61,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.8428, test acc 0.7434\n"
+          "text": "epoch 1, loss 0.8543, test acc 0.7414\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.6242, test acc 0.7875\n"
+          "text": "epoch 2, loss 0.6290, test acc 0.7910\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.5592, test acc 0.8076\n"
+          "text": "epoch 3, loss 0.5628, test acc 0.8029\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.5244, test acc 0.8177\n1207.6 examples/sec\n"
+          "text": "epoch 4, loss 0.5267, test acc 0.8184\n937.5 examples/sec\n"
         }
       ]
     },

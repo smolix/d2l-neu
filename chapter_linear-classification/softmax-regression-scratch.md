@@ -471,6 +471,98 @@ normalize each column so that column $j$ shows the distribution of predictions
 for class $j$ (classes are indexed in the order of `text_labels`: t-shirt,
 trouser, pullover, dress, coat, sandal, shirt, sneaker, bag, ankle boot).
 
+To display that matrix of counts as a grid of colored cells rather than a
+wall of numbers, we define `show_heatmaps`, a display utility we reuse
+throughout the book (e.g., for visualizing attention weights).
+
+```{.python .input #softmax-regression-scratch-prediction-3}
+%%tab pytorch
+#@save
+def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
+                  cmap='Reds'):
+    """Show heatmaps of matrices."""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
+```
+
+```{.python .input #softmax-regression-scratch-prediction-3}
+%%tab mxnet
+#@save
+def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
+                  cmap='Reds'):
+    """Show heatmaps of matrices."""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
+```
+
+```{.python .input #softmax-regression-scratch-prediction-3}
+%%tab tensorflow
+#@save
+def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
+                  cmap='Reds'):
+    """Show heatmaps of matrices."""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
+```
+
+```{.python .input #softmax-regression-scratch-prediction-3}
+%%tab jax
+#@save
+def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
+                  cmap='Reds'):
+    """Show heatmaps of matrices."""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(matrix, cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
+```
+
 ```{.python .input #softmax-regression-scratch-prediction-confusion}
 %%tab pytorch
 C = torch.zeros(10, 10)

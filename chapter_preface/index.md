@@ -280,7 +280,7 @@ models that exploit sequential (e.g., temporal)
 structure in data and are commonly used
 for natural language processing
 and time series prediction.
-In :numref:`chap_attention-and-transformers`,
+In :numref:`chap_attention` and :numref:`chap_transformers`,
 we describe a relatively new class of models,
 based on so-called *attention mechanisms*,
 that has displaced RNNs as the dominant architecture

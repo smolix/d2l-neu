@@ -63,7 +63,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chain 2: acceptance rate=0.526\nchain 3: acceptance rate=0.526\n"
+          "text": "chain 2: acceptance rate=0.526\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chain 3: acceptance rate=0.526\n"
         },
         {
           "type": "stream",
@@ -86,7 +91,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-mcmc-diagnostics-1.svg",
           "bytes": 89462,
-          "sha256": "sha256:937e4a121d3d859571be3b1999d16ad083bdc92200740a487ec3e527f05ea6ac"
+          "sha256": "sha256:fc868c2f6d1e0fef16805a105e8b7cf4bcdb9941fad1dc09f074bdd2f0c310d8"
         }
       ]
     },
@@ -110,7 +115,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-bayesian-computation/bayesian-computation-comparison-plot-1.svg",
           "bytes": 140281,
-          "sha256": "sha256:4d403e1941450d3f6793c4cbecf243325f5a54d9804e8e3355cb94028498f9c4"
+          "sha256": "sha256:753bf3a42e2ce3876f9d8db6f9434dd99be1fe8b86f75f91dc648387a29c3a4a"
         }
       ]
     }

@@ -8,7 +8,7 @@ picture. Since roughly 2021, vision transformers have led large-scale
 image classification benchmarks, beginning with
 :citet:`Dosovitskiy.Beyer.Kolesnikov.ea.2021` and the Swin Transformer
 :cite:`liu2021swin`; we cover them in
-:numref:`chap_attention-and-transformers`. Convnets remain the workhorse
+:numref:`chap_transformers`. Convnets remain the workhorse
 wherever latency budgets are tight, training data is scarce, or the
 prediction is dense, as in segmentation
 :cite:`Long.Shelhamer.Darrell.2015` and object detection

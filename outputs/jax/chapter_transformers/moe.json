@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "source": "chapter_transformers/moe.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:c83dce1dd871e3a7d18e9cafe167cb89b30bf4760ec5edbb56727504a3edba2a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "moe-mixture-of-experts": {
+      "code_fingerprint": "sha256:196859e268a004259681e117f31b170bd48e3250d5386c057e0254d7381ffd06",
+      "kind": "text",
+      "outputs": []
+    },
+    "moe-conditional-computation": {
+      "code_fingerprint": "sha256:0a137df22e05ed6dc39fed0a9b377bc9275ab38741ad747007a603f44ebc9a3f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "        ours:   16.8M in experts,   2.1M active per token, ratio  8.0x\nMixtral 8x7B:   45.1B in experts,  11.3B active per token, ratio  4.0x\n     with attention and embeddings: 46.7B total, 12.9B active\n DeepSeek-V3:  656.5B in experts,  23.1B active per token, ratio 28.4x\n"
+        },
+        {
+          "type": "execute_result",
+          "text": "(656463101952, 23095410688)"
+        }
+      ]
+    },
+    "moe-a-mixture-of-experts-layer-1": {
+      "code_fingerprint": "sha256:04d0f3832509d011f8e4828d7e8449227755a227fd62f08e3110bdb0fb062055",
+      "kind": "text",
+      "outputs": []
+    },
+    "moe-a-mixture-of-experts-layer-2": {
+      "code_fingerprint": "sha256:3a4f63951a71f7fd3cc6d02871b7d003c5604b6e1854963cb524fdba46cacd02",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "router 2048, per expert 524544, total 4198400, active 1051136\nusage at initialization: 0.13 0.11 0.13 0.13 0.15 0.12 0.11 0.12\n"
+        }
+      ]
+    },
+    "moe-three-runs-one-budget-1": {
+      "code_fingerprint": "sha256:915038b424233f64cb6fed0e512473d6027b3231f32627976fe137e257b79c98",
+      "kind": "text",
+      "outputs": []
+    },
+    "moe-three-runs-one-budget-2": {
+      "code_fingerprint": "sha256:1a4eaa6aedfea0217fbd5c51ebff57fb2a273fd39040cbc4967530cc8fba2905",
+      "kind": "text",
+      "outputs": []
+    },
+    "moe-three-runs-one-budget-3": {
+      "code_fingerprint": "sha256:b04ab6f2246672c6833441657166ce644b6a8444016163088bfdf9f2bd242a09",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  no balancing: training loss 0.74, experts under 2% usage: 6 of 16\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "auxiliary loss: training loss 0.53, experts under 2% usage: 0 of 16\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          bias: training loss 0.46, experts under 2% usage: 0 of 16\n"
+        }
+      ]
+    },
+    "moe-three-runs-one-budget-4": {
+      "code_fingerprint": "sha256:094055d1e73962c4223415034d01f72b7029a0449ca012463e433df138fcd150",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "<matplotlib.legend.Legend at 0x765ee00d91f0>"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "moe/moe-three-runs-one-budget-4-1.svg",
+          "bytes": 44929,
+          "sha256": "sha256:cccafc36ab15f8048578d13bc57fcf8ffe6193ed633b52b9b9fce30bb66836eb"
+        }
+      ]
+    },
+    "moe-a-mixture-of-experts-gpt": {
+      "code_fingerprint": "sha256:1be53ee9de9cc4fd412c8b7a2a0e409c17b712c439a9cecd3b18cf4a7a97ec7c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "dense:  3.16M parameters (3.16M active), best validation 1.49, final training loss 0.20\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  MoE: 17.85M parameters (3.16M active), best validation 1.49, final training loss 0.17\n"
+        }
+      ]
+    }
+  }
+}

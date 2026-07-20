@@ -89,7 +89,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/distributions-binomial-to-poisson-1.svg",
           "bytes": 25789,
-          "sha256": "sha256:076afbf487d54a401076d2d0a4e593ba5596e05aaa73ab9b8dc26858a4836235"
+          "sha256": "sha256:002579d933538cfc2a532ad3e50b2046413921f0a2b3421363b3f2ed1b8ee064"
         }
       ]
     },
@@ -111,7 +111,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean 1/lambda = 2.0   sample mean = 2.001\nvar 1/lambda^2 = 4.0  sample var = 3.984\n"
+          "text": "mean 1/lambda = 2.0   sample mean = 2.001\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "var 1/lambda^2 = 4.0  sample var = 3.984\n"
         }
       ]
     },
@@ -124,7 +129,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-distributions/mdl-distributions-gaussian-1-1.svg",
           "bytes": 29086,
-          "sha256": "sha256:546921b0534d63cf5e6bf234d1e8f0a3502ebc0f11605a70aeafce25738a4838"
+          "sha256": "sha256:df4d8e36d9f1f26b8553b247179c24d07ab9cddc7105ec553b11973f2f1ecbde"
         }
       ]
     },
@@ -172,12 +177,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =   3:  ||x||/sqrt(d) = 0.920 ± 0.378,   mean |cos(x,y)| = 0.497"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "\nd =  30:  ||x||/sqrt(d) = 0.992 ± 0.127,   mean |cos(x,y)| = 0.145\nd = 300:  ||x||/sqrt(d) = 1.000 ± 0.039,   mean |cos(x,y)| = 0.046\n"
+          "text": "d =   3:  ||x||/sqrt(d) = 0.920 ± 0.378,   mean |cos(x,y)| = 0.497\nd =  30:  ||x||/sqrt(d) = 0.992 ± 0.127,   mean |cos(x,y)| = 0.145\nd = 300:  ||x||/sqrt(d) = 1.000 ± 0.039,   mean |cos(x,y)| = 0.046\n"
         }
       ]
     },

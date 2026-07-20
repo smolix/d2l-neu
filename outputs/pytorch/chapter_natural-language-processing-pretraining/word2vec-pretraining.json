@@ -30,7 +30,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[[ 0.2136, -0.6345,  1.2336,  1.1815],\n         [ 0.4338,  1.6465, -0.4987, -0.2896],\n         [ 0.1116,  0.9888,  0.5657,  0.8477]],\n\n        [[-1.3625,  0.7604, -0.0898, -0.3149],\n         [-0.5700, -2.2596, -1.4589, -0.4798],\n         [-0.0613,  0.8475, -0.4634, -0.6199]]], grad_fn=<EmbeddingBackward0>)"
+          "text": "tensor([[[ 0.0794,  0.4566, -1.8318,  0.0370],\n         [-0.3005,  0.9329, -0.7579, -0.8366],\n         [-0.5757,  0.1299, -1.1041, -0.7266]],\n\n        [[-1.5791,  0.0219, -0.3503, -0.8378],\n         [-0.5352,  0.8726, -0.2184, -0.4465],\n         [-0.4829,  1.5386, -0.9559, -0.8959]]], grad_fn=<EmbeddingBackward0>)"
         }
       ]
     },
@@ -92,14 +92,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "loss 0.410, 241428.0 tokens/sec on cuda:0\n"
+          "text": "loss 0.410, 405527.4 tokens/sec on cuda:0\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "word2vec-pretraining/word2vec-pretraining-defining-the-training-loop-2-1.svg",
-          "bytes": 17541,
-          "sha256": "sha256:a059b38e7f7dff69b02c05ec6148502c434c167378eddaa6a0c3e3dc1468c16e"
+          "bytes": 17534,
+          "sha256": "sha256:09d9d8e74e35c6d6b80d6d9bd1b8c1df1120f13a8995e61351c013dca37c1977"
         }
       ]
     },
@@ -110,7 +110,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cosine sim=0.725: intel\ncosine sim=0.686: desktop\ncosine sim=0.648: laptop\n"
+          "text": "cosine sim=0.731: bugs\ncosine sim=0.650: memory\ncosine sim=0.649: desktop\n"
         }
       ]
     }

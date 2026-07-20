@@ -1,0 +1,160 @@
+{
+  "schema": 1,
+  "source": "chapter_attention/attention-at-scale.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:26c163c25eaf134b70b97ec90c20d63a56d0276a56a65f85899d523d4b37ed8a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "attention-at-scale-the-cost-of-attention": {
+      "code_fingerprint": "sha256:5db1e5d64ba0376e2756fbd87918c482d6642fdcb534285d34410f4eaa886ab7",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-counting-memory-1": {
+      "code_fingerprint": "sha256:7970fe788dd87ad47dc6df449e91ec1816ce0508f2c0d8accd93cf598c7f4eb5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  2048: measured    40.6 MiB, predicted 8n^2 B =    32.0 MiB\nn =  4096: measured   128.0 MiB, predicted 8n^2 B =   128.0 MiB\nn =  8192: measured   512.0 MiB, predicted 8n^2 B =   512.0 MiB\nn = 16384: measured  2048.0 MiB, predicted 8n^2 B =  2048.0 MiB\n"
+        }
+      ]
+    },
+    "attention-at-scale-counting-memory-2": {
+      "code_fingerprint": "sha256:4238713add958b3fac90e9d5ae0dc11b5ccc3ce84a988fa0d2485b283bdade01",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  2048:   0.15 ms\nn =  4096:   0.47 ms\nn =  8192:   1.84 ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n = 16384:   7.37 ms\n"
+        }
+      ]
+    },
+    "attention-at-scale-a-chunked-implementation-1": {
+      "code_fingerprint": "sha256:858a3cdab4b2b2d1d1f340ab314d19cac0b5dcacc3724014f50dab5ee64e1be3",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-a-chunked-implementation-2": {
+      "code_fingerprint": "sha256:da2702a8a646a72df18bb6a9c84f6eac62ffb96722fd7f258023bd0440a0fc94",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "maximum deviation: 4.77e-07\n"
+        }
+      ]
+    },
+    "attention-at-scale-a-chunked-implementation-3": {
+      "code_fingerprint": "sha256:8b31498400a777ad2a6224ba6152e3b179103a5cd3b64499abf1ddb30cf584bd",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-at-scale/attention-at-scale-a-chunked-implementation-3-1.svg",
+          "bytes": 31289,
+          "sha256": "sha256:4422ecc5478a695c956be97a84cb8b31a04bfa602483eb17cc7abd4e46fe3d28"
+        }
+      ]
+    },
+    "attention-at-scale-the-bottleneck-is-memory-traffic": {
+      "code_fingerprint": "sha256:4fbab7ea3c0e2a85c2db374ad351d3cc4706559b110acd3a11798de5ee90c0e9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "naive:  19.79 ms, peak memory  4112.1 MiB\nfused:   1.05 ms, peak memory    16.5 MiB\n"
+        }
+      ]
+    },
+    "attention-at-scale-attention-through-a-window": {
+      "code_fingerprint": "sha256:1af1591441369891d6c0de9757fc342b91c705c1bde85998022da45e57e58473",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-at-scale/attention-at-scale-attention-through-a-window-1.svg",
+          "bytes": 18052,
+          "sha256": "sha256:a3103e599661d8766077d99ff3b16363a82191b86e7fee2373b1b8d5691079d5"
+        }
+      ]
+    },
+    "attention-at-scale-depth-restores-the-reach": {
+      "code_fingerprint": "sha256:395bbd617a589e0dd6baf6016dc9ae342b5928c799e92a4be84111c43ecc0cb4",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "depth 1: last query reaches 8 positions (formula: 8)\ndepth 2: last query reaches 15 positions (formula: 15)\ndepth 4: last query reaches 29 positions (formula: 29)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-at-scale/attention-at-scale-depth-restores-the-reach-1.svg",
+          "bytes": 103391,
+          "sha256": "sha256:4cba04b38dfdee7c7f93991cadab4b4589965fc29a7f1f34b78df5075422cabc"
+        }
+      ]
+    },
+    "attention-at-scale-a-linear-cost-implementation-1": {
+      "code_fingerprint": "sha256:d80e0054aaa6f9b65ab3bb7b582fee448e7d8394ac418808766433e00d65a322",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-a-linear-cost-implementation-2": {
+      "code_fingerprint": "sha256:464c00a35bf80d6aaa8ede2ceffb9380092eec98c24ef9dbe46f09c935d1adbd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "maximum deviation: 4.17e-07\n"
+        }
+      ]
+    },
+    "attention-at-scale-kernelizing-the-score-1": {
+      "code_fingerprint": "sha256:15afba82a45a39794408d47636c3969e0269ccdc003e774e52efbb82b37c776f",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-at-scale-kernelizing-the-score-2": {
+      "code_fingerprint": "sha256:c8c4d0255987c1d8d81c63757cc2c56c528fe636cc313b4d55f2ea0cda571a0e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "maximum deviation: 2.38e-07\nrecurrent state: 64x64 + 64 floats = 16 KiB at any sequence length\n"
+        }
+      ]
+    },
+    "attention-at-scale-the-price-of-attention-measured": {
+      "code_fingerprint": "sha256:eed932297441f2127dbabba0114778b4243b6f256189f67ff8d3677fb55357d0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-at-scale/attention-at-scale-the-price-of-attention-measured-1.svg",
+          "bytes": 54934,
+          "sha256": "sha256:310d51eb91398a1fbf84c587258836773af3c4334753515b8b99bda8c38bb6d1"
+        }
+      ]
+    }
+  }
+}

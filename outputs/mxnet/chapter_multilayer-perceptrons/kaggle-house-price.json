@@ -77,14 +77,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "average validation log mse = 0.03639208979904652\n"
+          "text": "average validation log mse = 0.05294514182955027\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-linear-1.svg",
-          "bytes": 32102,
-          "sha256": "sha256:d4bcffded7207939ee9c3b1f6ac7743fc5eb90b9dc6bc84072902938490e76b7"
+          "bytes": 31036,
+          "sha256": "sha256:fffc1e599af0ca3b0bfcecd4c9efb23d88d55abffed31b1debe229431cf834ce"
         }
       ]
     },

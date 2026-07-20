@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/deltanet.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:c412ef89fc38385bb8fd84f549a102bebd3ba560af58947e31214a37eba69db2",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "deltanet-deltanet-memory-that-edits": {
+      "code_fingerprint": "sha256:ca76ed60a205dd4e1d3f5954a80080763e7ebd1a8f800ada6c816afbff75ce60",
+      "kind": "text",
+      "outputs": []
+    },
+    "deltanet-the-trouble-with-adding": {
+      "code_fingerprint": "sha256:5deffa4ffc37e0c1b0815fd521dfc0024429564c88d50c775734fa356bb9cd07",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "writes/key   Hebbian   delta\n         1     1.000   1.000\n         2     0.510   1.000\n         4     0.299   1.000\n         8     0.217   1.000\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deltanet/deltanet-the-trouble-with-adding-1.svg",
+          "bytes": 27273,
+          "sha256": "sha256:9311049dbbf39aac3aa2b05876e62aca0d91ba024b285921c4d30e2a04915cc4"
+        }
+      ]
+    },
+    "deltanet-trained-models-hit-the-same-ceiling-1": {
+      "code_fingerprint": "sha256:fb4590e5f4370fec5b4f482eefb16d8bf2926a69aa6fbfd2cba070f9e4ecc902",
+      "kind": "text",
+      "outputs": []
+    },
+    "deltanet-trained-models-hit-the-same-ceiling-2": {
+      "code_fingerprint": "sha256:704ef610a9808878c9b56da8ffc1f18d698b43e7171de2e05cf2b11fe8736c3d",
+      "kind": "text",
+      "outputs": []
+    },
+    "deltanet-trained-models-hit-the-same-ceiling-3": {
+      "code_fingerprint": "sha256:a4d5f1aab759a321745b428c7ef322dbfd561adc276fb7552633296a507f18da",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "writes/key   Hebbian   delta\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "         1     1.000   1.000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "         2     0.531   1.000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "         4     0.327   1.000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "         6     0.265   1.000\n"
+        }
+      ]
+    },
+    "deltanet-the-delta-rule": {
+      "code_fingerprint": "sha256:aec167a7c07adb96b7fac420d2eb444ce113ce4ee10f91d3cec6410427bdbe99",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "error form vs matrix form: relative deviation 1.38e-06\n"
+        }
+      ]
+    },
+    "deltanet-training-it-the-wy-trick": {
+      "code_fingerprint": "sha256:b40640e26c75a2fb8e7e4dfe10ae845a3a8782180d27afd6e14af76587e7db97",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size   16: relative deviation 3.46e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size   64: relative deviation 4.32e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size  256: relative deviation 4.76e-07\n"
+        }
+      ]
+    },
+    "deltanet-a-language-model-1": {
+      "code_fingerprint": "sha256:9228b1384028185de1b18ec8e0bcb0b886cab26394d785c36b2a8f291fd99ddb",
+      "kind": "text",
+      "outputs": []
+    },
+    "deltanet-a-language-model-2": {
+      "code_fingerprint": "sha256:2752e77d286dc9f200a8bde7de6825248a545fe08b4799de598aba45283c5e70",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "          model  val ppl    params  s/epoch\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " Gated DeltaNet     74.5   562,315      4.4\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deltanet/deltanet-a-language-model-2-1.svg",
+          "bytes": 20631,
+          "sha256": "sha256:e5361d5a4bdd76978142c9048aae1070e42e7614a227ec4343358ecb65719b09"
+        }
+      ]
+    },
+    "deltanet-the-generalized-delta-rule": {
+      "code_fingerprint": "sha256:48136cccd34c94e173c5eb0fe243ba2d2971cd695b068ff76ed2f3a34bd5aed5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RWKV-7, delta-rule setting: max deviation 4.44e-16\n"
+        }
+      ]
+    },
+    "deltanet-what-the-transition-can-compute": {
+      "code_fingerprint": "sha256:02785a0f7f1e9d8ce09b59c46ff3b2e0f838bcb06debfe983b8c90e1938421cb",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T= 8  sigmoid, a in (0,1): 0.512  0.697  0.375\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T= 8  tanh,    a in (-1,1): 1.000  1.000  1.000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=16  sigmoid, a in (0,1): 0.486  0.486  0.496\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=16  tanh,    a in (-1,1): 0.487  1.000  1.000\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=24  sigmoid, a in (0,1): 0.483  0.483  0.483\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=24  tanh,    a in (-1,1): 0.483  1.000  1.000\n"
+        }
+      ]
+    },
+    "deltanet-the-reflection-in-the-delta-rule": {
+      "code_fingerprint": "sha256:6659a13f3d349903c20283fa7262f53d6f7223016925111ac6b442d17d5a8389",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta = 0.5: eigenvalues +0.5 (along k), +1.0 (elsewhere)\nbeta = 1.0: eigenvalues -0.0 (along k), +1.0 (elsewhere)\nbeta = 1.5: eigenvalues -0.5 (along k), +1.0 (elsewhere)\nbeta = 2.0: eigenvalues -1.0 (along k), +1.0 (elsewhere)\nT =  8, beta = 1 (projection): parity accuracy 0.529\nT =  8, beta = 2 (reflection): parity accuracy 1.000\nT = 24, beta = 1 (projection): parity accuracy 0.518\nT = 24, beta = 2 (reflection): parity accuracy 1.000\nT = 64, beta = 1 (projection): parity accuracy 0.501\nT = 64, beta = 2 (reflection): parity accuracy 1.000\n"
+        }
+      ]
+    }
+  }
+}

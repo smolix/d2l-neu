@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/matrix-state.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "matrix-state-the-matrix-state-from-linear-attention-to-mamba-2": {
+      "code_fingerprint": "sha256:a212ef780e2fff536002f69f1f4a93f3c51733d6025bbb7359f8cedbe49e4309",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-what-the-memory-costs": {
+      "code_fingerprint": "sha256:1e493e06b2879097959c161bb555d2a4a1b025798e36dd6c8edbfc94f31f144c",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "matrix-state/matrix-state-what-the-memory-costs-1.png",
+          "bytes": 57201,
+          "sha256": "sha256:7bc8b1ca13bb8122ac6b39fd47be8ae2b1e144d791f2774f316ff29c886ae778"
+        }
+      ]
+    },
+    "matrix-state-the-state-space-duality-1": {
+      "code_fingerprint": "sha256:ffd5b1867186209b18c0675c2368514ac908a69ce14f651577524cd7ca24f746",
+      "kind": "text",
+      "outputs": []
+    },
+    "matrix-state-the-state-space-duality-2": {
+      "code_fingerprint": "sha256:c03bb3995db456047ac43566465245e071018bbc633cba7a08254098fd03a869",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "relative deviation, dual vs recurrence: 4.14e-06\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "a_t = 1, deviation from masked linear attention: 0.00e+00\n"
+        }
+      ]
+    },
+    "matrix-state-chunked-computation-mostly-matmul-a-little-scan-1": {
+      "code_fingerprint": "sha256:180cf195f1adae2991faa15863a0cd7c8f623d96c7489dc3b8218cd14356c327",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size   16: relative deviation 2.13e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size   64: relative deviation 3.84e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "chunk size  256: relative deviation 1.54e-06\n"
+        }
+      ]
+    },
+    "matrix-state-chunked-computation-mostly-matmul-a-little-scan-2": {
+      "code_fingerprint": "sha256:cb50e2c2503912bac82450400b349ef62145f48fd28411d90b05e4cb33bc1aec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "           form  time (ms)  temp (MiB)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     recurrence      49.63         0.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   chunked (16)       2.80         1.1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   chunked (64)       1.62         1.1\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  chunked (256)       0.46         5.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " chunked (1024)       0.37        21.0\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " quadratic dual       0.45        68.0\n(NVIDIA GeForce RTX 4090, float32, jax 0.10.2; teaching implementations, all forms compiled)\n"
+        }
+      ]
+    },
+    "matrix-state-what-the-hardware-bought": {
+      "code_fingerprint": "sha256:16bba49fd0ee9f4a15ec57dee42ecdf40b4c1aff28f5a00f8b5a168d2dc265a4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per layer, per sequence, fp16:\nmatrix state, one 64x64 head:      0.01 MiB, constant\nMamba-2 2.7B, SSM 655,360 + conv 15,360 elements: 1.28 MiB, constant\nGQA KV cache at n =     4,096:    16.00 MiB and growing\nGQA KV cache at n =   131,072:   512.00 MiB and growing\nGQA KV cache at n = 1,048,576:  4096.00 MiB and growing\n"
+        }
+      ]
+    },
+    "matrix-state-the-one-that-kept-the-normalizer": {
+      "code_fingerprint": "sha256:c5ee56a28542a90a94cd3ac4b10d44bd96c823bf93ad4b9ab72aa6d461ba0fbd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "float32 unstabilized: first non-finite output at step 47\nfloat32 stabilized vs float64: relative deviation 1.38e-06\n"
+        }
+      ]
+    }
+  }
+}

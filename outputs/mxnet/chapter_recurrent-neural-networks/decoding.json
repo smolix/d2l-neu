@@ -31,8 +31,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-a-model-to-decode-from-3-1.svg",
-          "bytes": 21015,
-          "sha256": "sha256:6651425d44d910bf854268df17fb76a4692108d62ef97dc6ca3f0c6c954c6eb1"
+          "bytes": 18335,
+          "sha256": "sha256:e5fe4fc9e1485c21a86a4919fc8bf6b7108899b0ef1943bdb031d6af79adea77"
         }
       ]
     },
@@ -48,7 +48,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "\"the time traveller metals and the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller\"\n\"it seemed to me that the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to re\"\n"
+          "text": "'the time traveller I had come into the future. I was a vast array of a vast array of a vast array of a vast array of a vast array of a vast arr'\n'it seemed to me that the sun willutes of a tramblance of the Time Traveller. The Time Traveller. The Time Traveller. The Time Traveller. The Time Traveller. The Time Traveller. The Time Traveller. The Time Traveller. The Time Traveller.'\n"
         }
       ]
     },
@@ -64,17 +64,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=1, score -5.44, distinct-3 0.68: \"the time traveller metals and the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to reserved in the sun\"\n"
+          "text": "k=1, score -4.23, distinct-3 0.45: 'the time traveller I had come into the future. I was a vast array of a vast array of a vast array of a vast array of a v'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -4.16, distinct-3 0.76: 'the time traveller whole to the Time Machine was direction of\\npresently I could see no signs--and I could see no signs--and I felt assu'\nk=1, score -5.40, distinct-3 0.55: \"it seemed to me that the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to reserved in the sunseday of\\n\"\n"
+          "text": "k=4, score -2.40, distinct-3 0.29: \"the time traveller-side windows. 'II\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "k=4, score -3.81, distinct-3 0.26: 'it seemed to me that I could see no signs--and I could see no signs--and I could see no signs--and I could see no signs--and'\n"
+          "text": "k=1, score -4.62, distinct-3 0.50: 'it seemed to me that the sun willutes of a tramblance of the Time Traveller. The Time Traveller. The Time Traveller. The Time Traveller. The Time Traveller. The Time Traveller. The Time'\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=4, score -3.42, distinct-3 0.76: \"it seemed to me that they were no doubt. I thought I heard a signs of the Time Traveller. The Time Traveller. 'II\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\"\n"
         }
       ]
     },
@@ -105,14 +110,14 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x7a7e33fcf020>"
+          "text": "<matplotlib.legend.Legend at 0x76b93a316000>"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "decoding/decoding-one-distribution-three-cutoffs-1-1.svg",
-          "bytes": 46232,
-          "sha256": "sha256:d30f9fe258af1e8a10e5c6d94a0340a162eab041b297fd02fd47df894f44f784"
+          "bytes": 37966,
+          "sha256": "sha256:1a453b9ede3db14cd359a5e904ec74c1f44a1805b133bc39bb15066f3381b69d"
         }
       ]
     },
@@ -123,7 +128,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "'the time traveller': top prob 0.06, top-k keeps 20, top-p keeps 307, min-p keeps 78\n'it seemed to me that': top prob 0.14, top-k keeps 20, top-p keeps 101, min-p keeps 30\n"
+          "text": "'the time traveller': top prob 0.28, top-k keeps 20, top-p keeps 40, min-p keeps 12\n'it seemed to me that': top prob 0.14, top-k keeps 20, top-p keeps 56, min-p keeps 20\n"
         }
       ]
     },
@@ -134,17 +139,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.5: 'the time traveller; and I was always of popleiallysity of decay to the smoking a tile I began to make to full I was nextes I heard a half-gre'\n"
+          "text": "T=0.5: 'the time traveller I had come into my hand. I thought, for a small shadows. I was a vast array I that my tanger. I felt a valthyoins. Indeed, and sat'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0: 'the time traveller decays mustiniteed him jay of evening away of reolden Age I rudgnerear us too arroracness in thisreadion? For of anach we came open came'\n"
+          "text": "T=1.0: 'the time travelleriveley. (ason b another queuge and ta-haoces I scattered� lirial swific earlyt. Oittly comfort. I should a shome'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0: \"the time travellerte waitkedence last himily� off-usein day e place Sure susp an hies you;ouZust caant op sha't. And not hill whichious indle ' that too8 as get rcl\"\n"
+          "text": "T=2.0: \"the time traveller from lesseres� pl her long At perhaps a ruin necileking my to myself, incenseace from<pad>\\x14ren neous,'edolog surtingideitt incingsence had part lastplacx toac\"\n"
         }
       ]
     },
@@ -155,27 +160,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": " greedy (distinct-3 0.54): \"the time traveller metals and the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller'slding to reserved in the sunseday of\\nbeen the Time Traveller\"\n"
+          "text": " greedy (distinct-3 0.35): 'the time traveller I had come into the future. I was a vast array of a vast array of a vast array of a vast array of a vast array of a vast arr'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  T=1.0 (distinct-3 1.00): 'the time traveller decays mustiniteed him jay of evening away of reolden Age I rudgnerear us too arroracness in thisreadion? For of anach we came open came'\n"
+          "text": "  T=1.0 (distinct-3 1.00): 'the time travelleriveley. (ason b another queuge and ta-haoces I scattered� lirial swific earlyt. Oittly comfort. I should a shome'\n  top-k (distinct-3 1.00): \"the time traveller by moderonke at it for any more. 'I supposit and course. It is this lit a civiliz. I felt asked in avolution. Instance of n\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-k (distinct-3 1.00): 'the time traveller idea of charical corous in particularly hairits of the little lawn. Sapted prettyly it was in parturslses an in free-worth D'\n"
+          "text": "  top-p (distinct-3 1.00): \"the time traveller of a cigarened intoansites on ekingic were direain of the Time Traveller, however, catodous feet. 'Halloations togethering at elects of any kind r\"\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  top-p (distinct-3 1.00): \"the time traveller moate of the ruinous?' I sc,' said I was projiveracted to meat anyte haes smis time were rust asport me wallsical droppeds from the Prou\"\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "  min-p (distinct-3 1.00): 'the time travellerite was a paod fast at though and hesitated in his minds animals as having very lighteve and as I was lay in my necism a range bet as flower'\n"
+          "text": "  min-p (distinct-3 1.00): 'the time traveller-sidered that, was the chinased me. And there are of our own time. What it was this yet railway to the shaday very. One nothing had flowers. I do'\n"
         }
       ]
     }

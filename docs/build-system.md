@@ -329,6 +329,23 @@ notebooks; when unsure, rerun all frameworks." Under this model that guesswork
 disappears: the `d2l_lib_fingerprint` in each manifest covers exactly the symbols
 that notebook uses, so `audit_outputs.py` names the exact blast radius.
 
+### 3.4a Build-only library sources (`LIB_ONLY_FILES`)
+
+`build_lib.py` scans exactly the files in `CHAPTER_NUMBERING` — not a
+directory glob — plus an explicit `LIB_ONLY_FILES` list (defined next to the
+file-list construction in `tools/build_lib.py`). A build-only source is a
+`chapter_*/…​.md` file that carries `#@save` blocks for the library but is not
+part of the rendered book: no `_quarto.yml` entry, no `CHAPTER_NUMBERING`
+entry, no outputs, never executed as a notebook. Entries are appended after
+the numbered chapters, so a build-only file can never shadow a rendered
+chapter's definition under the last-writer-wins collision rule. Current sole
+member: `chapter_natural-language-processing-pretraining/legacy-attention-lib.md`,
+which quarantines the frozen 2017 `TransformerEncoderBlock` (all four
+frameworks) plus the tensorflow/mxnet variants of the attention primitives
+whose PyTorch/JAX homes moved to `chapter_attention/` — BERT (ch. 17) builds
+on these until the Language-Models part is modernized, at which point the file
+is deleted and its entry removed.
+
 ### 3.5 "Regenerated when a new render occurs" (the requirement, made concrete)
 
 Inline outputs are a **regenerated snapshot, not a frozen cache:**
@@ -1233,6 +1250,14 @@ outputs store in place:
 - Distinguish the two SVG kinds: **`img/auto/`** = authored diagrams (committed,
   plain git, hand-curated); **`outputs/<fw>/…/*.svg`** = matplotlib output
   figures (LFS, machine-regenerated). Don't cross them.
+- **Slide-only figures survive via an explicit copy step.** Quarto's HTML render
+  populates `_book/img/` only with images referenced from *page* bodies. A
+  figure referenced solely from a `<!-- slides -->` section (legal — e.g.
+  `lstm.md`'s deep-RNN/bi-RNN schematics after the ch. 12 slimming) would be
+  silently missing from `_book/img/` and get purged from the bucket by
+  `upload_r2.sh --delete`. The `make html` slides-integration block therefore
+  scans the staged decks' `../../../img/` refs and copies any missing asset
+  from `img/` into `_book/img/` (added 2026-07-19 after exactly this breakage).
 
 ---
 

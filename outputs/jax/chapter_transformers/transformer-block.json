@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "source": "chapter_transformers/transformer-block.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e08df9610ed6641c4950df241351810bf6d6d0e96ee7b8ab36a21c1e49dd977b",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "transformer-block-the-transformer-block": {
+      "code_fingerprint": "sha256:6940a2722cb1307529be7de475d750590456380d306fb1f7fe55b6d01e62ca08",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-two-arrangements": {
+      "code_fingerprint": "sha256:ab7a3d04795aa9ab530fa58b1784e46352c7773365ce06cf9b57373fffddebdb",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-signal-propagation-at-initialization": {
+      "code_fingerprint": "sha256:edb2c732d4796ca390b6bb5498d8e4b284a58b4ec5d2482a204485100c3168ea",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " post-LN: stream RMS at k=32:  1.00,  token spread at k=8,16,32:  3.5e-01  2.5e-02  2.0e-04\n          grad norms at k=32: W_q 5.6e-09  W_k 4.9e-09  W_v 6.5e-02  W_o 6.6e-02\n  pre-LN: stream RMS at k=32:  5.22,  token spread at k=8,16,32:  7.2e-01  5.3e-01  3.7e-01\n          grad norms at k=32: W_q 2.3e-03  W_k 2.3e-03  W_v 8.2e-02  W_o 8.4e-02\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "transformer-block/transformer-block-signal-propagation-at-initialization-1.svg",
+          "bytes": 28328,
+          "sha256": "sha256:165213e1d7511e16809089eb973875bcf93598b00f7fec6264beed91b4fb07ee"
+        }
+      ]
+    },
+    "transformer-block-rmsnorm": {
+      "code_fingerprint": "sha256:f7710ffa44ba288b39ccf848e872ffce96404cb6ab92aa79e8faabc4f3d02c0f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ours vs. built-in: max deviation 9.5e-07\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "LayerNorm: 1.076 ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RMSNorm: 0.732 ms\n"
+        }
+      ]
+    },
+    "transformer-block-the-feed-forward-network-1": {
+      "code_fingerprint": "sha256:8638617f57fb475b7648f9f1f29f4842de2de66a79a234028bdd35c343cee2f7",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-the-feed-forward-network-2": {
+      "code_fingerprint": "sha256:a65a72661e5ecbf35ea8a42b9c06b6fd4a688474778c42118aef96c2a1b26570",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   gelu: 524288 parameters\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " swiglu: 524544 parameters\n"
+        }
+      ]
+    },
+    "transformer-block-a-configurable-block": {
+      "code_fingerprint": "sha256:3a8753ae450350cb5f95cb3f8cefef0579426688aee21dc1b2b44013effaa063",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-shapes-and-parameters-1": {
+      "code_fingerprint": "sha256:12aa2d297f38f63a723f46c3394ad9e2ffb9e6f16b3f22aab472564671503f05",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "attention 262144, ffn 524544, total 787200 = 12.01 d^2\n"
+        }
+      ]
+    },
+    "transformer-block-shapes-and-parameters-2": {
+      "code_fingerprint": "sha256:b2b6330f153fa32d13f882dac7288a269de6512d92e2b269ac5504fa2d4f10f3",
+      "kind": "text",
+      "outputs": []
+    },
+    "transformer-block-the-flags-at-work-gelu-versus-swiglu": {
+      "code_fingerprint": "sha256:ece9b3e7668a640d595bff6e7ae725e518257c9656f94828ce9ffe3845e95989",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   gelu: loss at step 200/400/600: 2.27/1.73/1.41\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " swiglu: loss at step 200/400/600: 2.22/1.57/1.24\n"
+        }
+      ]
+    }
+  }
+}

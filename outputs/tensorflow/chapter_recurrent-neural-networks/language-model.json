@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:8aba38855e6674eef27be6df09ccdf1db72a51899b47532815a23188a8b26a6b"
+          "sha256": "sha256:0c3dca850aaede38ad6ad209fbf32df050bff487fad06ba5593a1d04625d371d"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:9eadb2c8479fd80fac0c21e58f351a6317efa91e2f178a7e29b4c4ed5643f94f"
+          "sha256": "sha256:9f95303019d5f2fcfa372296a36855288bd1eef5a4242e09a1892ef65e4dc827"
         }
       ]
     },
@@ -109,12 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "        word  4579    3373   2618.1  2.21\n"
+          "text": "   character    27   17345      6.4  2.68\n BPE (1,024)  1024    5509    281.6  2.58\n        word  4579    3373   2618.1  2.21\n"
         }
       ]
     },
@@ -135,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[ 44 310 109  98 114 300 270 277  10  99]\n [415 536 102 568 304 261 268 719  63  10]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[310 109  98 114 300 270 277  10  99 521]\n [536 102 568 304 261 268 719  63  10  79]], shape=(2, 10), dtype=int32)\nX[0]: ', embraced and\\nc'\nY[0]: ' embraced and\\ncare'\n"
+          "text": "X: tf.Tensor(\n[[293 333 502 102 259 919 453 260  10  98]\n [524  45 267 264 571 601 480 649 545 491]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[333 502 102 259 919 453 260  10  98 274]\n [ 45 267 264 571 601 480 649 545 491 260]], shape=(2, 10), dtype=int32)\nX[0]: ' lay unfinished upon the\\nb'\nY[0]: 'ay unfinished upon the\\nben'\n"
         }
       ]
     }

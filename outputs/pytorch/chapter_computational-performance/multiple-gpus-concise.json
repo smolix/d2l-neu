@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.84, 38.0 sec/epoch on [device(type='cuda', index=0)]\n"
+          "text": "test acc: 0.92, 33.1 sec/epoch on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-2-1.svg",
-          "bytes": 17681,
-          "sha256": "sha256:bbf5f56626d72f0a61a051f25cf78ec91e7b5862dfc56f31109900ad67a3730b"
+          "bytes": 17821,
+          "sha256": "sha256:2c61c0e0235f3cac963f46492a206a8400fb828a322a2f677980ffa2432520c0"
         }
       ]
     },
@@ -53,14 +53,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.89, 21.8 sec/epoch on [device(type='cuda', index=0), device(type='cuda', index=1)]\n"
+          "text": "test acc: 0.90, 38.8 sec/epoch on [device(type='cuda', index=0), device(type='cuda', index=1)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "multiple-gpus-concise/multiple-gpus-concise-training-3-1.svg",
-          "bytes": 20266,
-          "sha256": "sha256:8e3f5e938543ecce15b108297ba115f8ece6c6598d904ba772051bb5c866bd3b"
+          "bytes": 19467,
+          "sha256": "sha256:4d8cb2427c0396ad17e8586231bd5d8196d7ae0e14df9d447a235406d75a1481"
         }
       ]
     }

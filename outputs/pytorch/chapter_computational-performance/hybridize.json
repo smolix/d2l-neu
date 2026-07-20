@@ -36,7 +36,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.0072, 0.1321]], grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[-0.0493,  0.1655]], grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -46,7 +46,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "tensor([[0.0072, 0.1321]], grad_fn=<AddmmBackward0>)"
+          "text": "tensor([[-0.0493,  0.1655]], grad_fn=<AddmmBackward0>)"
         }
       ]
     },
@@ -62,7 +62,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Without torchscript: 0.0648 sec\nWith torchscript: 0.0581 sec\n"
+          "text": "Without torchscript: 0.0633 sec\nWith torchscript: 0.0572 sec\n"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "-rw------- 1 smola smola 652K Jul 14 06:15 my_mlp\r\n"
+          "text": "-rw------- 1 smola smola 652K Jul 19 13:40 my_mlp\r\n"
         }
       ]
     }

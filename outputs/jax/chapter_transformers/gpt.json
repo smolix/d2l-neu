@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "source": "chapter_transformers/gpt.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e26a4ce04e7f1c471d6690600d8277c1822695562f3333ee0ee66a72e0cbea25",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "gpt-a-gpt-from-scratch": {
+      "code_fingerprint": "sha256:eac6c08409322f365ff8ad4d05cdef18b7ea73945bd0bd1ee7cb9ed6eb49c09b",
+      "kind": "text",
+      "outputs": []
+    },
+    "gpt-from-blocks-to-a-language-model-1": {
+      "code_fingerprint": "sha256:0dbaa0b1467c5f593a60dcdcb1db63f5dff00c3f71add896c9dbf0798d2a0422",
+      "kind": "text",
+      "outputs": []
+    },
+    "gpt-from-blocks-to-a-language-model-2": {
+      "code_fingerprint": "sha256:7131e1792572ada9e21a0f8c52a4e35ae30945b1c41f8d3b46294fa1ec9f9e1f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "4.73M parameters\n"
+        }
+      ]
+    },
+    "gpt-training-the-modern-configuration": {
+      "code_fingerprint": "sha256:d7f57af4f72d2947958ff67df24139da6dc9b5fe3fad9e198dbf234c845714ae",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "final: train 0.15, validation 3.26; best validation 1.47 at step 200\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
+          "bytes": 18990,
+          "sha256": "sha256:18516d681489ed6ddf76637e2cabb1d5274a7b15ee8afb0dc6348beca5f169af"
+        }
+      ]
+    },
+    "gpt-breaking-it-with-one-flag": {
+      "code_fingerprint": "sha256:3c4829cd63a8a9fdbe398492357d6e0bca0d601168d4bcab802bd0fd08ac283e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pre_norm=True: loss at step 100/200/400/800: 1.94/1.48/1.10/0.54\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pre_norm=False: loss at step 100/200/400/800: 2.83/2.83/2.83/2.83\n"
+        }
+      ]
+    },
+    "gpt-sampling-from-the-model-1": {
+      "code_fingerprint": "sha256:a0a73cf0b8440ac3cfe269023d77d2812e728566ef7de100ec9f7a010e329515",
+      "kind": "text",
+      "outputs": []
+    },
+    "gpt-sampling-from-the-model-2": {
+      "code_fingerprint": "sha256:35bc75f61e8cf7ab3823ce754d4e96c04dedbbd40f1b05db9f2663c6c5e723f1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=1.0, top_k=None: 'the time traveller holding the lamp aloft i intend to explore time is that plain i was never more serious in my life none of us quite knew '\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=0.7, top_k=8: 'the time traveller holding the lamp aloft i intend to explore time is that plain i was never more serious in my life none of us quite knew '\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "T=2.0, top_k=None: 'the time traveller holding the lamp aloft i intend to explore time is that plain i was never more serious in my life none of us quite knew '\n"
+        }
+      ]
+    },
+    "gpt-loading-gpt-2-1": {
+      "code_fingerprint": "sha256:6e863a5cb806f0cf8e2693b692257115bd99af6d5356dfc5701b7790b92e9aff",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[8086, 1463, 318, 477, 345, 761, 13] ['Att', 'ention', ' is', ' all', ' you', ' need', '.']\n"
+        }
+      ]
+    },
+    "gpt-loading-gpt-2-2": {
+      "code_fingerprint": "sha256:fc7616ec8839574cb26425757a35cb7b0a52e15e07bfe6f271a731b58df5019e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "124.4M parameters\n"
+        }
+      ]
+    },
+    "gpt-loading-gpt-2-3": {
+      "code_fingerprint": "sha256:7bdebe357b439285e774ddd5f6f106deb17259da0df8e1d694d887db192338d4",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per-token loss 3.89, perplexity 49\n"
+        }
+      ]
+    },
+    "gpt-loading-gpt-2-4": {
+      "code_fingerprint": "sha256:9b7f97399f2ad825134c0d818ad8507d086c942979c3027b11c6ef699c330414",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Alan Turing theorized that computers would one day become the most powerful machines on the planet.\n\nThe computer is a computer that\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "The secret of a good deep learning textbook is to make sure that you have the right skills set to get started.\n\nA good deep learning textbook is to make sure you have the right skills set to get started.\n\nI used to\n"
+        }
+      ]
+    }
+  }
+}

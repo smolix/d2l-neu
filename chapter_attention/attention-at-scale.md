@@ -17,7 +17,7 @@ quadratic cost of one attention layer against the actual allocator of a GPU.
 The rest of the section develops the three ways out that survived a decade
 of research. Exact attention can be computed *without ever holding the
 $n \times n$ matrix*, a trick of bookkeeping that underlies FlashAttention
-and the fused kernels every framework now ships. Attention can be
+and the fused kernels that frameworks now ship. Attention can be
 *restricted* to a sliding window, betting on depth to restore long-range
 communication. Or the softmax can be dropped altogether, which turns
 attention into—of all things—a recurrent network, and builds the bridge to
@@ -120,8 +120,10 @@ Recall from :eqref:`eq_multihead-flops` that the projections wrapped around
 attention in a multi-head layer cost $8nd^2$—linear in $n$—and that the head
 count drops out of both terms. Setting $4n^2d = 8nd^2$ locates the
 crossover: the quadratic part dominates the layer as soon as $n > 2d$.
-With per-layer widths of a few thousand and contexts of a few hundred
-thousand tokens, production models sit three orders of magnitude beyond the
+Working the ratio for a production-sized configuration, $d = 4096$ and
+$n = 131{,}072$ give $n/2d = 16$: an attention layer at that context does
+sixteen times as much score-and-mix work as projection work, and the
+longest-context configurations sit one to two orders of magnitude past the
 crossover.
 
 ### Counting Memory
@@ -132,7 +134,8 @@ two $n \times n$ buffers of activations, $8n^2$ bytes in single precision,
 per head and per sequence in the batch; during training the attention
 weights are also saved for the backward pass. The projections, by contrast,
 keep only $\mathcal{O}(nd)$ activations. To feel the asymmetry: at
-$n = 8192$ and $d = 64$ the inputs $\mathbf{Q}, \mathbf{K}, \mathbf{V}$
+$n = 8192$ and a head dimension of $d_h = 64$ — the setting of the
+experiments below — the inputs $\mathbf{Q}, \mathbf{K}, \mathbf{V}$
 occupy 6 MB together, while the two score buffers occupy 512 MB. At a
 context of $n = 131{,}072$ tokens a *single* attention map in fp32 would be
 $n^2 \times 4$ bytes $\approx 69$ GB (per head, per sequence), which is why
@@ -174,9 +177,9 @@ def peak_memory(f, *args):
     torch.cuda.synchronize()
     return torch.cuda.max_memory_allocated() - base
 
-d = 64
+d_h = 64
 for n in [2048, 4096, 8192, 16384]:
-    Q = torch.randn(1, n, d, device=d2l.try_gpu())
+    Q = torch.randn(1, n, d_h, device=d2l.try_gpu())
     with torch.no_grad():
         measured = peak_memory(attention, Q, Q, Q)
     print(f'n = {n:5d}: measured {measured/2**20:7.1f} MiB, '
@@ -189,16 +192,19 @@ def attention_layer(Q, K, V):
     scores = Q @ K.T / math.sqrt(Q.shape[-1])
     return jax.nn.softmax(scores, axis=-1) @ V
 
-d = 64
+d_h = 64
 for n in [2048, 4096, 8192, 16384]:
-    Q = jax.random.normal(jax.random.key(0), (n, d))
+    Q = jax.random.normal(jax.random.key(0), (n, d_h))
     stats = jax.jit(attention_layer).lower(Q, Q, Q).compile()
     temp = stats.memory_analysis().temp_size_in_bytes
     print(f'n = {n:5d}: XLA temp {temp/2**20:7.1f} MiB, '
           f'predicted 8n^2 B = {8*n*n/2**20:7.1f} MiB')
 ```
 
-The formula holds to the byte: doubling $n$ quadruples the footprint, and at
+The formula matches the measurement exactly from $n = 4096$ up — and the
+XLA compiler's report matches it at every size — while the allocator's
+smallest run ($n = 2048$) shows a few MiB of workspace overhead on top of
+the two score buffers. Doubling $n$ quadruples the footprint, and at
 $n = 16{,}384$ a single fp32 head already needs 2 GB of scratch. Time tells
 the same story. We time the forward pass as $n$ doubles (after a warm-up
 call, and synchronizing before reading the clock—on an accelerator, kernel
@@ -216,7 +222,7 @@ def wall_clock(f, *args, reps=10):
     return (time.time() - start) / reps
 
 for n in [2048, 4096, 8192, 16384]:
-    Q = torch.randn(1, n, d, device=d2l.try_gpu())
+    Q = torch.randn(1, n, d_h, device=d2l.try_gpu())
     with torch.no_grad():
         t = wall_clock(attention, Q, Q, Q)
     print(f'n = {n:5d}: {t*1e3:6.2f} ms')
@@ -233,7 +239,7 @@ def wall_clock(f, *args, reps=10):
 
 layer = jax.jit(attention_layer)
 for n in [2048, 4096, 8192, 16384]:
-    Q = jax.random.normal(jax.random.key(0), (n, d))
+    Q = jax.random.normal(jax.random.key(0), (n, d_h))
     print(f'n = {n:5d}: {wall_clock(layer, Q, Q, Q)*1e3:6.2f} ms')
 ```
 
@@ -349,8 +355,10 @@ def chunked_attention(Q, K, V, chunk_size=512):
         return (m_new, s, O, start + Kc.shape[0]), None
     init = (jnp.full((n, 1), jnp.finfo(Q.dtype).min), jnp.zeros((n, 1)),
             jnp.zeros((n, V.shape[-1])), 0)
-    # n must be a multiple of chunk_size; the scan needs equal-sized blocks
-    chunks = (K.reshape(-1, chunk_size, d), V.reshape(-1, chunk_size, d))
+    # The scan needs equal-sized blocks (the PyTorch loop handles a tail)
+    assert n % chunk_size == 0, 'n must be a multiple of chunk_size'
+    chunks = (K.reshape(-1, chunk_size, d),
+              V.reshape(-1, chunk_size, V.shape[-1]))
     (m, s, O, _), _ = jax.lax.scan(block, init, chunks)
     return O / s
 ```
@@ -363,16 +371,16 @@ the $10^{-4}$ level.)
 ```{.python .input #attention-at-scale-a-chunked-implementation-2}
 %%tab pytorch
 torch.manual_seed(0)
-n, d = 2048, 64
-Q, K, V = (torch.randn(n, d, device=d2l.try_gpu()) for _ in range(3))
+n, d_h = 2048, 64
+Q, K, V = (torch.randn(n, d_h, device=d2l.try_gpu()) for _ in range(3))
 err = (chunked_attention(Q, K, V) - causal_attention(Q, K, V)).abs().max()
 print(f'maximum deviation: {float(err):.2e}')
 ```
 
 ```{.python .input #attention-at-scale-a-chunked-implementation-2}
 %%tab jax
-n, d = 2048, 64
-Q, K, V = (jax.random.normal(k, (n, d))
+n, d_h = 2048, 64
+Q, K, V = (jax.random.normal(k, (n, d_h))
            for k in jax.random.split(jax.random.key(0), 3))
 with jax.default_matmul_precision('highest'):
     err = jnp.abs(chunked_attention(Q, K, V)
@@ -390,7 +398,7 @@ quadratically:
 %%tab pytorch
 lengths, mems = [2048, 4096, 8192, 16384], [[], []]
 for n in lengths:
-    Q = torch.randn(n, d, device=d2l.try_gpu())
+    Q = torch.randn(n, d_h, device=d2l.try_gpu())
     mems[0].append(peak_memory(causal_attention, Q, Q, Q) / 2**20)
     mems[1].append(peak_memory(chunked_attention, Q, Q, Q) / 2**20)
 d2l.plot(lengths, mems, 'sequence length n', 'peak memory (MiB)',
@@ -401,7 +409,7 @@ d2l.plot(lengths, mems, 'sequence length n', 'peak memory (MiB)',
 %%tab jax
 lengths, mems = [2048, 4096, 8192, 16384], [[], []]
 for n in lengths:
-    Q = jax.random.normal(jax.random.key(0), (n, d))
+    Q = jax.random.normal(jax.random.key(0), (n, d_h))
     for i, f in enumerate([causal_attention, chunked_attention]):
         stats = jax.jit(f).lower(Q, Q, Q).compile()
         mems[i].append(stats.memory_analysis().temp_size_in_bytes / 2**20)
@@ -439,7 +447,7 @@ precision, $n = 8192$):
 ```{.python .input #attention-at-scale-the-bottleneck-is-memory-traffic}
 %%tab pytorch
 B, H, n = 2, 8, 8192
-X = torch.randn(B, H, n, d, device=d2l.try_gpu(), dtype=torch.float16)
+X = torch.randn(B, H, n, d_h, device=d2l.try_gpu(), dtype=torch.float16)
 
 def naive_heads(X):
     i = torch.arange(X.shape[-2], device=X.device)
@@ -459,7 +467,7 @@ for name, f in [('naive', naive_heads), ('fused', fused_heads)]:
 ```{.python .input #attention-at-scale-the-bottleneck-is-memory-traffic}
 %%tab jax
 B, H, n = 2, 8, 8192
-X = jax.random.normal(jax.random.key(0), (B, n, H, d), dtype=jnp.float16)
+X = jax.random.normal(jax.random.key(0), (B, n, H, d_h), dtype=jnp.float16)
 
 def naive_heads(X):
     Xt = X.transpose(0, 2, 1, 3)
@@ -487,7 +495,7 @@ where the naive version allocates gigabytes. Both effects come from the
 same place: the score matrix never travels to off-chip memory. There is no
 trade-off to weigh here; for dense attention on sequences beyond a few
 hundred tokens, the fused kernel is simply the right way to compute it,
-which is why every production stack routes through it.
+which is why production stacks route through it.
 :end_tab:
 
 :begin_tab:`jax`
@@ -497,7 +505,7 @@ difference stark: the naive version reserves gigabytes of temporary buffer
 for its score matrices, the fused kernel essentially none—the scores never
 exist outside on-chip memory. For dense attention on sequences beyond a
 few hundred tokens the fused kernel is simply the right way to compute it,
-which is why every production stack routes through it.
+which is why production stacks route through it.
 :end_tab:
 
 ## Windowed and Sparse Attention
@@ -591,7 +599,7 @@ sliding-window models: Mistral 7B attends through a window of 4096 across
 window with a handful of global tokens to process whole documents
 :cite:`beltagy2020longformer`, following the strided-and-local patterns of
 :citet:`child2019generating`. The trade is the table of
-:numref:`tab_cnn-rnn-attn` in miniature: windowed attention gives back the
+:numref:`tab_cnn-rnn-attn` in miniature: windowed attention gives up the
 $\mathcal{O}(1)$ path length that made attention attractive, keeping
 $\mathcal{O}(n/w)$ instead—betting that with $w$ in the thousands, few
 dependencies need more than a couple of hops.
@@ -610,8 +618,9 @@ is $2nw$ scores instead of $n^2$—linear in $n$ at fixed window.
 def windowed_attention(Q, K, V, w):
     """Causal sliding-window attention in O(nw) time and memory."""
     d, n = Q.shape[-1], Q.shape[0]
+    assert n % w == 0, 'blocks must tile the sequence exactly'
     Qb = Q.reshape(-1, w, d)                       # (n/w, w, d) query blocks
-    KV = torch.cat([torch.zeros(w, 2 * d, device=Q.device),
+    KV = torch.cat([torch.zeros(w, 2 * d, device=Q.device, dtype=K.dtype),
                     torch.cat([K, V], dim=-1)])   # Zero-pad one block
     idx = (torch.arange(n // w, device=Q.device)[:, None] * w
            + torch.arange(2 * w, device=Q.device)[None, :])
@@ -631,9 +640,9 @@ def windowed_attention(Q, K, V, w):
 def windowed_attention(Q, K, V, w):
     """Causal sliding-window attention in O(nw) time and memory."""
     d, n = Q.shape[-1], Q.shape[0]
-    # Assumes n is a multiple of w (blocks must tile the sequence exactly)
+    assert n % w == 0, 'blocks must tile the sequence exactly'
     Qb = Q.reshape(-1, w, d)                       # (n/w, w, d) query blocks
-    KV = jnp.concatenate([jnp.zeros((w, 2 * d)),
+    KV = jnp.concatenate([jnp.zeros((w, 2 * d), dtype=K.dtype),
                           jnp.concatenate([K, V], axis=-1)])  # Zero-pad
     idx = jnp.arange(n // w)[:, None] * w + jnp.arange(2 * w)[None, :]
     KVb = KV[idx]                                  # (n/w, 2w, 2d) key blocks
@@ -654,8 +663,8 @@ semantics, cheaper schedule:
 %%tab pytorch
 n, w = 2048, 128
 torch.manual_seed(0)
-Q, K, V = (torch.randn(n, d, device=d2l.try_gpu()) for _ in range(3))
-scores = Q @ K.T / math.sqrt(d)
+Q, K, V = (torch.randn(n, d_h, device=d2l.try_gpu()) for _ in range(3))
+scores = Q @ K.T / math.sqrt(d_h)
 i = torch.arange(n, device=d2l.try_gpu())
 band = (i[None, :] <= i[:, None]) & (i[:, None] - i[None, :] < w)
 scores.masked_fill_(~band, torch.finfo(Q.dtype).min)
@@ -667,12 +676,12 @@ print(f'maximum deviation: {float(err):.2e}')
 ```{.python .input #attention-at-scale-a-linear-cost-implementation-2}
 %%tab jax
 n, w = 2048, 128
-Q, K, V = (jax.random.normal(k, (n, d))
+Q, K, V = (jax.random.normal(k, (n, d_h))
            for k in jax.random.split(jax.random.key(0), 3))
 with jax.default_matmul_precision('highest'):
     i = jnp.arange(n)
     band = (i[None, :] <= i[:, None]) & (i[:, None] - i[None, :] < w)
-    scores = jnp.where(band, Q @ K.T / math.sqrt(d),
+    scores = jnp.where(band, Q @ K.T / math.sqrt(d_h),
                        jnp.finfo(jnp.float32).min)
     reference = jax.nn.softmax(scores, axis=-1) @ V
     err = jnp.abs(windowed_attention(Q, K, V, w) - reference).max()
@@ -803,24 +812,24 @@ floating-point rounding:
 %%tab pytorch
 torch.manual_seed(0)
 n = 512
-Q, K, V = (torch.randn(n, d, device=d2l.try_gpu()) for _ in range(3))
+Q, K, V = (torch.randn(n, d_h, device=d2l.try_gpu()) for _ in range(3))
 err = (linear_attention_parallel(Q, K, V)
        - linear_attention_recurrent(Q, K, V)).abs().max()
 print(f'maximum deviation: {float(err):.2e}')
-print(f'recurrent state: {d}x{d} + {d} floats '
-      f'= {(d * d + d) * 4 / 1024:.0f} KiB at any sequence length')
+print(f'recurrent state: {d_h}x{d_h} + {d_h} floats '
+      f'= {(d_h * d_h + d_h) * 4 / 1024:.0f} KiB at any sequence length')
 ```
 
 ```{.python .input #attention-at-scale-kernelizing-the-score-2}
 %%tab jax
 n = 512
-Q, K, V = (jax.random.normal(k, (n, d))
+Q, K, V = (jax.random.normal(k, (n, d_h))
            for k in jax.random.split(jax.random.key(0), 3))
 err = jnp.abs(linear_attention_parallel(Q, K, V)
               - linear_attention_recurrent(Q, K, V)).max()
 print(f'maximum deviation: {float(err):.2e}')
-print(f'recurrent state: {d}x{d} + {d} floats '
-      f'= {(d * d + d) * 4 / 1024:.0f} KiB at any sequence length')
+print(f'recurrent state: {d_h}x{d_h} + {d_h} floats '
+      f'= {(d_h * d_h + d_h) * 4 / 1024:.0f} KiB at any sequence length')
 ```
 
 The number printed last is the point: at generation time this layer carries
@@ -856,7 +865,7 @@ lengths = [512, 1024, 2048, 4096, 8192, 16384]
 times = {name: [] for name in mechanisms}
 mems = {name: [] for name in mechanisms}
 for n in lengths:
-    Q = torch.randn(n, d, device=d2l.try_gpu())
+    Q = torch.randn(n, d_h, device=d2l.try_gpu())
     for name, f in mechanisms.items():
         times[name].append(wall_clock(f, Q, Q, Q) * 1e3)
         mems[name].append(peak_memory(f, Q, Q, Q) / 2**20)
@@ -882,7 +891,7 @@ lengths = [512, 1024, 2048, 4096, 8192, 16384]
 times = {name: [] for name in mechanisms}
 mems = {name: [] for name in mechanisms}
 for n in lengths:
-    Q = jax.random.normal(jax.random.key(0), (n, d))
+    Q = jax.random.normal(jax.random.key(0), (n, d_h))
     for name, f in mechanisms.items():
         times[name].append(wall_clock(f, Q, Q, Q) * 1e3)
         stats = f.lower(Q, Q, Q).compile().memory_analysis()
@@ -904,16 +913,16 @@ The picture rewards a careful read. Dense attention's curves bend to slope
 two on the log-log axes (quadratic, as derived), while the windowed
 mechanism's cost is so small at these sizes that it stays pinned near the
 launch-overhead floor throughout. Linear attention is the instructive
-case. Its memory grows linearly but with the large constant $nd^2$—the
+case. Its memory grows linearly but with the large constant $nd_h^2$—the
 parallel form materializes the running matrix state for every position—so
-it undercuts dense attention only once $n$ clearly exceeds $d^2$. Its wall
-clock is *worse* than dense attention's at moderate lengths: a cumulative
-sum of outer products is bandwidth-bound, while dense attention rides
-highly optimized matrix-multiply units, and asymptotics only pull the two
-level at the longest length we measure, with every further doubling
-tilting the balance. The honest summary is that the decisive advantage of
-the linear form is the constant-memory *recurrent* mode at generation
-time, not raw training speed at moderate lengths. Production
+it undercuts dense attention only once $n$ clearly exceeds $d_h^2$. Its
+wall clock is *worse* than dense attention's at moderate lengths: a
+cumulative sum of outer products is bandwidth-bound, while dense attention
+rides highly optimized matrix-multiply units, and asymptotics only pull
+the two level at the longest length we measure, with every further
+doubling tilting the balance. The decisive advantage of the linear form
+is the constant-memory *recurrent* mode at generation time, not raw
+training speed at moderate lengths. Production
 linear-attention kernels close the training gap with the same blocking
 tricks as FlashAttention, processing the sequence in chunks with the
 recurrence carried between them.
@@ -928,7 +937,7 @@ sum of outer products might suggest: the compiler fuses the scan, and from
 $n$ around eight thousand the linear form runs several times faster than
 dense attention in our measurements. Its memory column holds a small
 compiler lesson: at moderate lengths the reported temporaries track the
-parallel form's $nd^2$ state materialization, then *drop* at the largest
+parallel form's $nd_h^2$ state materialization, then *drop* at the largest
 sizes. XLA stops materializing the stacked outer products and streams them
 instead. Under a fusing compiler, what exists in memory is a scheduling
 decision. Both panels aside, the decisive advantage of the linear form is
@@ -1071,7 +1080,8 @@ One layer: $4n^2d$ FLOPs, two $n \times n$ score buffers = $8n^2$ bytes
 
 @!attention-at-scale-counting-memory-1
 
-- The formula holds **to the byte**; doubling $n$ quadruples the bill.
+- Exact from $n = 4096$ up (the smallest run adds a few MiB of allocator
+  overhead); doubling $n$ quadruples the bill.
 - At $n = 131{,}072$: one fp32 attention map $\approx$ 69 GB. Nobody stores
   it.
 :::
@@ -1167,7 +1177,7 @@ $\mathbf{S}, \mathbf{z}$) for generation:
 @!attention-at-scale-the-price-of-attention-measured
 
 - Dense bends to slope 2; windowed hugs the launch floor; linear pays
-  $nd^2$ memory and bandwidth-bound cumsums — its decisive win is the
+  $nd_h^2$ memory and bandwidth-bound cumsums — its decisive win is the
   constant-memory recurrent mode.
 - The approximation zoo (Performer, Linformer, Reformer) is history: what
   survived is exact-but-clever, windowed, and linear-as-recurrence.
@@ -1183,7 +1193,7 @@ $$\mathbf{S}_t = \mathbf{S}_{t-1} + \phi(\mathbf{k}_t)\,\mathbf{v}_t^\top$$
 
 . . .
 
-That recurrence **is** the state-space recurrence of ch. 13 with identity
-decay; train it with the parallel scan, gate it and you get Mamba —
+That recurrence **is** the state-space recurrence of ch. 12 with
+identity decay; train it with the parallel scan, gate it and you get Mamba —
 attention and recurrence are two ends of one design space (SSD, 2024).
 :::

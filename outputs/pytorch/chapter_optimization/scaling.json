@@ -42,7 +42,7 @@
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-sweep-1.svg",
           "bytes": 30814,
-          "sha256": "sha256:9ba196a9c2a7e8040b8f13ad6b222fa76dc6c3a32663eee4590f1a27bf8ead73"
+          "sha256": "sha256:dbf59bfda92f51a7fd25cba305c173e863353829fc75addff25f12dc1d8128c2"
         }
       ]
     },
@@ -65,7 +65,7 @@
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-2-1.svg",
           "bytes": 26566,
-          "sha256": "sha256:bef7229cd377a71f95fe776d71df146d28f9ddc0c47faad7af68a56562deeed9"
+          "sha256": "sha256:1d605209f216ce878f21a0a35df295f5689e5c649dacc11fe3a489317ae79fcc"
         }
       ]
     },
@@ -78,7 +78,7 @@
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-the-coordinate-check-3-1.svg",
           "bytes": 26431,
-          "sha256": "sha256:9888aeb47ecab2b4689afa67311421ea2c230d8242fc17560359cc01c6e0b2e9"
+          "sha256": "sha256:d86cd811241b05c9f64ef5eb73c35a92a25a55726a4cc257c8a8db827f3eaea9"
         }
       ]
     },
@@ -96,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "scaling/scaling-learning-rate-transfer-1.svg",
           "bytes": 30896,
-          "sha256": "sha256:ca553da9b662fd8bffe27e4bd138f93d9bbaf78f84fa7681d0c999ea535d7437"
+          "sha256": "sha256:3544bfd2693a6bcbb4eeb7dcceb89a151c0fa352350b418e4995b45036b72115"
         }
       ]
     }

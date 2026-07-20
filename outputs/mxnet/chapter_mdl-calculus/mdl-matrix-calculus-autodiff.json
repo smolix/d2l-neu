@@ -32,11 +32,6 @@
           "type": "stream",
           "name": "stdout",
           "text": "grad a^T x   equals a        : True\ngrad x^T A x equals (A+A^T)x : True\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "[06:26:57] /home/smola/mxnet/src/base.cc:48: GPU context requested, but no GPUs found.\n"
         }
       ]
     },

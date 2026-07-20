@@ -86,8 +86,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-training-3-1.svg",
-          "bytes": 25620,
-          "sha256": "sha256:12995fe1f83ea75fe460333f65c8ddd66a90c708f6fe11f0c6b210de3309f8c5"
+          "bytes": 19319,
+          "sha256": "sha256:9f4abd2d14798c9eeb872f71a95de5cab741f6cbf02040cc79ecd8b33d1c0f0d"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 95.7\n"
+          "text": "validation perplexity 89.9\n"
         }
       ]
     },
@@ -109,7 +109,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "2.78 bytes/token, 2.37 bits per byte\n"
+          "text": "2.78 bytes/token, 2.34 bits per byte\n"
         }
       ]
     },
@@ -124,7 +124,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "\"the time traveller,\\nand a very great\\n\\n'Ince\\ndisappeared to me, I\\nwas finger,\\nand a number\\nof the\\nside. I had\\nwas finger,\\n\""
+          "text": "'the time traveller. I had a fainting. I was not a little\\ndemed. I was in the\\nsharised. I was not a little\\ndemed. I was in the\\nsharised.'"
         }
       ]
     },
@@ -135,7 +135,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "the time traveller expection. The�are, was saungis sere ris faceations was scarted do that that, had not know sur\nthe time traveller of\nthere I had seening, and I\nwas memory with believe his\nmonze\nof some\n"
+          "text": "the time travellerers of mening dery; to you towards of the presentlys com muchntself to about deepaccentousily ad\nthe time traveller. I had a pursued the Time Machine. I seemed to my mind and to letallicie. I had come out\n"
         }
       ]
     },
@@ -160,7 +160,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "'it has enoughizup upon disousof any?zite molfachin uponpt��not and'"
+          "text": "'it haseringivertainward&ped swmentP�Yaaseter theseanped sat if one'"
         }
       ]
     },
@@ -172,8 +172,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "rnn-implementation/rnn-implementation-concise-implementation-5-1.svg",
-          "bytes": 25623,
-          "sha256": "sha256:9cb9e0c8919d7d140a6ab685e3707a8dae3c4bf97db911fc915d5b385c7ef1ae"
+          "bytes": 20408,
+          "sha256": "sha256:46c07189aa76403c7d4483d96aa97c8d7ce4fac4bb792622ffd213994d539e9c"
         }
       ]
     },
@@ -184,7 +184,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "perplexity 116.2, 'the time traveller. I thought of the little people. I could not face, I had the floor, I was deling the Time Traveller. I'\n"
+          "text": "perplexity 109.8, 'the time traveller forgotten in his hand and\\nside that dawned\\ninstant and in a patigention of'\n"
         }
       ]
     },
@@ -195,7 +195,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "   model  time (s)  val ppl\n scratch     107.7     95.7\n concise      29.7    116.2\n"
+          "text": "   model  time (s)  val ppl\n scratch     199.9     89.9\n concise      68.1    109.8\n"
         }
       ]
     }

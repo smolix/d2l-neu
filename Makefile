@@ -436,6 +436,16 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 			echo "Rewriting deck '../img/' refs to '../../../img/' (single-source)..."; \
 			find _book/slides -mindepth 3 -maxdepth 3 -name '*.html' \
 				-exec perl -i -pe 's|src="\.\./img/|src="../../../img/|g' {} +; \
+			echo "Copying slide-only img assets into _book/img/ ..."; \
+			{ find _book/slides -mindepth 3 -maxdepth 3 -name '*.html' \
+				-exec grep -ho 'src="\.\./\.\./\.\./img/[^"]*"' {} + || true; } | \
+				sed 's|src="\.\./\.\./\.\./img/||; s|"$$||' | sort -u | \
+				while read -r f; do \
+					if [ ! -f "_book/img/$$f" ] && [ -f "img/$$f" ]; then \
+						cp "img/$$f" "_book/img/$$f"; \
+						echo "  + img/$$f (slide-only)"; \
+					fi; \
+				done; \
 		fi; \
 		if [ -d _pdf ]; then \
 			echo "Staging PDFs into _book/pdf/ ..."; \

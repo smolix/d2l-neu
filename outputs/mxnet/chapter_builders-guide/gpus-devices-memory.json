@@ -69,7 +69,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.18021426, 0.6638226 , 0.861303  ],\n       [0.5937755 , 0.84136075, 0.05806741]], device=gpu(1))"
+          "text": "array([[0.13094102, 0.38239557, 0.9510336 ],\n       [0.31433177, 0.23414226, 0.12296525]], device=gpu(1))"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[1.1802143, 1.6638227, 1.861303 ],\n       [1.5937755, 1.8413608, 1.0580674]], device=gpu(1))"
+          "text": "array([[1.130941 , 1.3823955, 1.9510336],\n       [1.3143318, 1.2341423, 1.1229652]], device=gpu(1))"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[-0.00286683],\n       [-0.00286683]], device=gpu(0))"
+          "text": "array([[0.04115244],\n       [0.04115244]], device=gpu(0))"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "baseline          :  7526.4 MiB used on device 0\nafter creating big:  8550.4 MiB used on device 0\nafter deleting it :  8550.4 MiB used on device 0\nafter empty_cache :  7526.4 MiB used on device 0\n"
+          "text": "baseline          :   886.4 MiB used on device 0\nafter creating big:  1910.4 MiB used on device 0\nafter deleting it :  1910.4 MiB used on device 0\nafter empty_cache :   886.4 MiB used on device 0\n"
         }
       ]
     },
@@ -142,12 +142,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time to queue 32 matrix products: 0.0021 sec\n"
+          "text": "time to queue 32 matrix products: 0.0014 sec\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "time until they all finished:     0.1731 sec\n"
+          "text": "time until they all finished:     0.4117 sec\n"
         }
       ]
     },
@@ -169,8 +169,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpus-devices-memory/gpus-devices-memory-the-trainer-now-with-devices-3-1.svg",
-          "bytes": 21288,
-          "sha256": "sha256:f660f92729f821035ca3b1fe5334affda41793b8be680c8d5081fd9f6260f333"
+          "bytes": 21290,
+          "sha256": "sha256:d8f9136895c3bfb9c396836941f0f59ba4cf6c17771e4c4e4757ad920ec3e442"
         }
       ]
     }

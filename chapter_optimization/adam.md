@@ -371,7 +371,7 @@ The reader has trained language models on exactly this data before: *The
 Time Machine*, tokenized and batched as in :numref:`sec_text-sequence`, with
 quality measured in perplexity as in :numref:`sec_language-model`. Only the
 architecture is new. `TinyLM` is a *decoder-only transformer*, the
-architecture of :numref:`chap_attention-and-transformers`, and we are
+architecture of :numref:`chap_transformers`, and we are
 deliberately using it two chapters early: nothing in this chapter requires
 knowing how attention works. For our purposes it is a black box, a
 differentiable function with a particular *census* of parameters, and the

@@ -38,6 +38,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import quote
 
+from build_lib import LIB_ONLY_FILES
 from export_hosted_env import load_profile
 
 
@@ -100,7 +101,11 @@ def git_revision(root: Path = ROOT) -> str:
 
 def source_files(root: Path = ROOT) -> list[Path]:
     """Return code-bearing book sources and notebook-only supplements."""
-    return sorted(root.glob("chapter_*/*.md"))
+    lib_only = set(LIB_ONLY_FILES)
+    return sorted(
+        path for path in root.glob("chapter_*/*.md")
+        if path.relative_to(root).as_posix() not in lib_only
+    )
 
 
 def classify_source(path: Path) -> list[str]:

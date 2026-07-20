@@ -1,0 +1,179 @@
+{
+  "schema": 1,
+  "source": "chapter_natural-language-processing-pretraining/seq2seq.md",
+  "framework": "tensorflow",
+  "provenance": {
+    "framework_version": "tensorflow==2.21.0",
+    "d2l_lib_fingerprint": "sha256:9c94cd17dedef38f5129e6bc9e26e7392256dd112ebbbce91b4fa43986878949",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "seq2seq-imports": {
+      "code_fingerprint": "sha256:54f7badf6879d2e1d055f4e271ddbc9e80442050b384d82bd0bf74ecdf3047fe",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-abstraction-encoder": {
+      "code_fingerprint": "sha256:7d0de48c429487c6d9671239b09e3e75fcc6c9bc8a4189896702414a2bbe2415",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-abstraction-decoder": {
+      "code_fingerprint": "sha256:1c7112b52b06a63bdb160a086f575c62bc9e736d4323cd1cce40c8b161bf0f0f",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-abstraction-together": {
+      "code_fingerprint": "sha256:2cfd4676ab62c5fb9a3cc1f3947b05dac71ef77de83e8d67401d6605e885e1f5",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-mtfraeng": {
+      "code_fingerprint": "sha256:40000adf65c9e9f940393bc4c6ddfdfdda68def69d3d451866d76e8403943b40",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-mtfraeng-encode": {
+      "code_fingerprint": "sha256:2d63e6bf8fcec35a3642cce80e8a0f60b98e807a46a9e5bd79950a91f097e871",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-vocab-shims": {
+      "code_fingerprint": "sha256:5b1bc23d4fc9ac853c4ecadc1d5a0e55035deb64a0823369fea2243fb049bce5",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-mtfraeng-batch": {
+      "code_fingerprint": "sha256:de789639d4af78d6beb026a2f5bad168de716c5928d684678f316e6a39f6d68e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "source: tf.Tensor(\n[[ 421  701  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [1910  822  262 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [ 271 2164  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\ndecoder input: tf.Tensor(\n[[4001  497 3577  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001 1383  275  810  262 4002 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]\n [4001  536 1776  256 4002 4000 4000 4000 4000 4000 4000 4000 4000 4000\n  4000 4000 4000 4000 4000 4000]], shape=(3, 20), dtype=int32)\nsource valid length: tf.Tensor([4 4 4], shape=(3,), dtype=int32)\nshared vocabulary size: 4003\n"
+        }
+      ]
+    },
+    "seq2seq-length-hist-fn": {
+      "code_fingerprint": "sha256:e98d4a144aa473e03f9172714a3a063f072e926c82032e5c272ec6d62813f639",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-length-hist": {
+      "code_fingerprint": "sha256:0e2f1fdc79f39b3669a5e1bf3950a3ba39f4783818e79ce01491e81cf7d4ddb9",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-length-hist-1.svg",
+          "bytes": 24562,
+          "sha256": "sha256:2b135eed37420cab0b4648f7e5108a8d802214823a7909b06eeaaa6a409f096c"
+        }
+      ]
+    },
+    "seq2seq-encoder": {
+      "code_fingerprint": "sha256:37bd4b5489a3f71308243d72478606e23da80ec09614fdf02377747bf463ff06",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-encoder-check": {
+      "code_fingerprint": "sha256:8f7bd0f3d1f79f33fc67084c62065da2aea7425221051a103cb32d5a4c353ad5",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-decoder": {
+      "code_fingerprint": "sha256:6b5ca87a4af17809467b15e9e7f084deb037e821c175090849624bddf0a41758",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-decoder-check": {
+      "code_fingerprint": "sha256:d71908c95af6fe2c7ea459efbe217791463a3dc8854f3369d25d6a24caea61ce",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-model": {
+      "code_fingerprint": "sha256:00bfe308d294a4e847f26c61aa17fc79ff5bdc44e5d0eea0e89c6e969edf6870",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-loss": {
+      "code_fingerprint": "sha256:ab046311d5d0bc168f1fefcf576de578a5b90db4d9b3e30ac23d8d648fca0163",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-training": {
+      "code_fingerprint": "sha256:12a6cd960c3728cf3d1b543f3031fbbe473c9f4c4727b494f5e7762480638043",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-training-1.svg",
+          "bytes": 23696,
+          "sha256": "sha256:ed4d47fc5dd071715c8f0005e29ac118a3908fd709bb876d0a9f7d35f0a23c01"
+        }
+      ]
+    },
+    "seq2seq-predict-step": {
+      "code_fingerprint": "sha256:1ca28d287683fe22745326a9b40745f64c6676c4a93be39264daea9a31e0dd0f",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-detok": {
+      "code_fingerprint": "sha256:31f08ddeecd27f43aa0fc1ca02711cd4eb11c65d58a1f0283936c6dc88fa0282",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-greedy": {
+      "code_fingerprint": "sha256:2774c11a15cff179061e6aa06a3a949514efcdcbd735974f4f64f2fdb96e8d5a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost . => \"j'ai perdu .\"\ni'm calm . => 'je suis en colère .'\ni'm home . => 'je suis en tom .'\n"
+        }
+      ]
+    },
+    "seq2seq-chrf": {
+      "code_fingerprint": "sha256:1a5a2415988a48da649bae993a51f2615d8c289f1930331753452a6671609a62",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-chrf-eval": {
+      "code_fingerprint": "sha256:3fd4fa64649dde1186092faa6f84af7bbb7141dc0d30c981496cc3da52a6cfb1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "i lost . => \"j'ai perdu .\", chrF 1.000\ni'm calm . => 'je suis en colère .', chrF 0.394\ni'm home . => 'je suis en tom .', chrF 0.347\n"
+        }
+      ]
+    },
+    "seq2seq-bleu": {
+      "code_fingerprint": "sha256:c027a1edf05aa6c5d03f6c20c51e2bd6a99ca1cf7c702c34fee8169d5c3ad6f6",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-bottleneck": {
+      "code_fingerprint": "sha256:4a13367b7981587aebe8441c69f5e55c32f06be4e604120cbaa75120e2498ed0",
+      "kind": "text",
+      "outputs": []
+    },
+    "seq2seq-bottleneck-plot": {
+      "code_fingerprint": "sha256:d040aea543e33e8edc62564d781e94a86e02c914adfe0a8f6a10df28340f9527",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "seq2seq/seq2seq-bottleneck-plot-1.svg",
+          "bytes": 26032,
+          "sha256": "sha256:df9249def81bf85c9d06f846bfb253f3b1bd230e073c5abb7b19dfe5a960ff94"
+        }
+      ]
+    }
+  }
+}

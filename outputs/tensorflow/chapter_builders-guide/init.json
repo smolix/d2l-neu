@@ -61,12 +61,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "normal:    std 0.0200, max weight 0.1046\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "truncated: std 0.0176, max weight 0.0400\n"
+          "text": "normal:    std 0.0200, max weight 0.1046\ntruncated: std 0.0176, max weight 0.0400\n"
         }
       ]
     },

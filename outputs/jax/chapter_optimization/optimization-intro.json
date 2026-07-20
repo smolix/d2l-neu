@@ -27,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-goal-of-optimization-3-1.svg",
           "bytes": 30002,
-          "sha256": "sha256:042fcf0d54a221b7affe0a05571191b2971fcbbdd8b47fea27185c1f08935c2c"
+          "sha256": "sha256:9d9e39a660e40b1f5fd0aab5092d6194e74630994cade46bf6b0451663cfeaa2"
         }
       ]
     },
@@ -40,7 +40,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-local-minima-1.svg",
           "bytes": 19689,
-          "sha256": "sha256:672a364927165e4dedf109bd2af9764898616e3d8ec23fe3b5bed80ef9b6acac"
+          "sha256": "sha256:1d6cfa3a9161dca9b8d38f2bcdc4eadb0b13ea5d54b189cee04b0d8492fb0a79"
         }
       ]
     },
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-saddle-points-1-1.svg",
           "bytes": 17872,
-          "sha256": "sha256:71e7f664e2601d28d540add42e6d3ac13259441fda62ea9121622f64b702467c"
+          "sha256": "sha256:f4bbf2ef01dfe133ebe428b376e6f0c35cd22cd531491587109841c846dfaba0"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-saddle-points-2-1.svg",
           "bytes": 63315,
-          "sha256": "sha256:47342dfb991dbb943854cc6c20f7a57afd6afc3f5f8533e39bb0e537512b027e"
+          "sha256": "sha256:f13a8aba30d50aa52d82163779a399b728b596356c02cf8ee41459875adc9267"
         }
       ]
     },
@@ -79,7 +79,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-vanishing-gradients-1.svg",
           "bytes": 20458,
-          "sha256": "sha256:21b134100fe7c6abd1f7c5f805a95604eb216b5be5193c884a680fc1bf00ccf1"
+          "sha256": "sha256:de58360914477649d08451981f52146e3c0a21581a9a46b07a43e5c8cef2eb87"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
           "bytes": 25400,
-          "sha256": "sha256:acca2e6b9b5ba5ad387f74a183494cc6c6501e063c17337b220e13d684e3003b"
+          "sha256": "sha256:9b3a8a41fadc12c40a783489f183a0259053db1496e6a312315882ce42607870"
         }
       ]
     }

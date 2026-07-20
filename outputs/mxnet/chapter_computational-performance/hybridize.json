@@ -36,7 +36,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.05783576, 0.02402582]])"
+          "text": "array([[0.12314283, 0.1260838 ]])"
         }
       ]
     },
@@ -46,7 +46,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[0.05783576, 0.02402582]])"
+          "text": "array([[0.12314283, 0.1260838 ]])"
         }
       ]
     },
@@ -62,7 +62,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Without hybridization: 0.3754 sec\nWith hybridization: 0.1660 sec\n"
+          "text": "Without hybridization: 0.3642 sec\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "With hybridization: 0.2248 sec\n"
         }
       ]
     },
@@ -73,7 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "-rw------- 1 smola smola 644K Jul 14 07:10 my_mlp-0000.params\r\n-rw------- 1 smola smola 3.1K Jul 14 07:10 my_mlp-symbol.json\r\n"
+          "text": "-rw------- 1 smola smola 644K Jul 19 15:19 my_mlp-0000.params\r\n-rw------- 1 smola smola 3.1K Jul 19 15:19 my_mlp-symbol.json\r\n"
         }
       ]
     },
@@ -100,11 +105,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "value  x:  [[ 0.7253138 -2.354084   0.6564052]]\nresult  :  [[0.         0.         0.20565777 0.05976029]]\n"
+          "text": "value  x:  [[-0.17728344 -2.1936803   0.07458904]]\nresult  :  [[0.10241988 0.06611139 0.00768797 0.14865166]]\n"
         },
         {
           "type": "execute_result",
-          "text": "array([[ 0.00235467, -0.0006045 ]])"
+          "text": "array([[ 0.01186147, -0.00082527]])"
         }
       ]
     },
@@ -115,11 +120,11 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "value  x:  [[ 0.7253138 -2.354084   0.6564052]]\nresult  :  [[0.         0.         0.20565777 0.05976029]]\n"
+          "text": "value  x:  [[-0.17728344 -2.1936803   0.07458904]]\nresult  :  [[0.10241988 0.06611139 0.00768797 0.14865166]]\n"
         },
         {
           "type": "execute_result",
-          "text": "array([[ 0.00235467, -0.0006045 ]])"
+          "text": "array([[ 0.01186147, -0.00082527]])"
         }
       ]
     },
@@ -129,7 +134,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "array([[ 0.00235467, -0.0006045 ]])"
+          "text": "array([[ 0.01186147, -0.00082527]])"
         }
       ]
     }

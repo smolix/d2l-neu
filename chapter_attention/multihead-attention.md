@@ -11,9 +11,10 @@ one vector. This section first makes the restriction precise: we construct a
 task on which a single attention head provably loses half of what it is asked
 to report, however it allocates its weights, and we verify the bound
 numerically. *Multi-head attention* :cite:`Vaswani.Shazeer.Parmar.ea.2017`
-removes the restriction at essentially no extra cost, and we implement it the
-way every production system does, with one batched matrix multiplication for
-all heads. Finally we separate what is often conflated: the attention
+removes the restriction at essentially no extra cost, and we implement it
+with one batched matrix multiplication for all heads — a common
+implementation strategy (fused attention kernels keep an explicit head axis
+instead). Finally we separate what is often conflated: the attention
 *function* is one piece of code, and *self-attention* and *cross-attention*
 are merely two ways of wiring its inputs.
 
@@ -195,15 +196,17 @@ $$
 *independent of $h$*: the four projection matrices are $d \times d$
 regardless of how their outputs are sliced into heads, and each head's score
 and mixing matmuls shrink by the factor $h$ that their count grows by
-(counting one multiply–add as two FLOPs). The number of heads is a free
-dial that buys representational diversity, not extra compute. What *does*
+(counting one multiply–add as two FLOPs). In this arithmetic the number of
+heads is a free dial that buys representational diversity, not extra
+compute — realized cost is not quite as flat, since more heads mean more,
+smaller matmuls and softmaxes for the kernels to keep efficient. What *does*
 change with $h$ is the shape of the attention map — $h$ distributions of $n$
 weights per query instead of one.
 
 ### Implementation
 
-The per-head dimension choice also yields the implementation trick that
-every framework uses: compute *one* query projection of width $d$, then
+The per-head dimension choice also yields a standard implementation trick:
+compute *one* query projection of width $d$, then
 *reshape* it into $h$ heads of width $d/h$, and fold the head axis into the
 batch axis. The attention code from :numref:`sec_attention-scoring-functions`
 then runs all heads of all sequences as one big batched matrix
@@ -217,6 +220,7 @@ class MultiHeadAttention(d2l.Module):  #@save
     """Multi-head attention."""
     def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
         super().__init__()
+        assert num_hiddens % num_heads == 0, 'heads must divide num_hiddens'
         self.num_heads = num_heads
         self.attention = d2l.DotProductAttention(dropout)
         self.W_q = nn.LazyLinear(num_hiddens, bias=bias)
@@ -251,6 +255,7 @@ class MultiHeadAttention(d2l.Module):  #@save
 class MultiHeadAttention(nnx.Module):  #@save
     """Multi-head attention."""
     def __init__(self, num_hiddens, num_heads, dropout, bias=False, rngs=None):
+        assert num_hiddens % num_heads == 0, 'heads must divide num_hiddens'
         rngs = nnx.Rngs(params=0, dropout=1) if rngs is None else rngs
         self.num_hiddens, self.num_heads = num_hiddens, num_heads
         self.attention = d2l.DotProductAttention(dropout, rngs=rngs)
@@ -523,8 +528,9 @@ care — a diffuse row may mean "nothing relevant", not "everything relevant".
 
 A single attention head gives each query one softmax distribution over the
 keys and hence one convex mixture of the values; on a task that asks one
-query to report two values, any single head loses half the target variance,
-however it allocates its weights. Multi-head attention fixes this by running
+query to report two values through position-only keys — so the weights
+cannot adapt to the values — any single head loses half the target
+variance, however it allocates its weights. Multi-head attention fixes this by running
 $h$ independently projected attention heads and linearly recombining their
 concatenated outputs. With the per-head width set to $d/h$, parameters and
 FLOPs are independent of $h$ — heads buy diversity of views, not extra
@@ -632,7 +638,8 @@ Per-head width $p = d/h$ ⇒ for $n$ tokens:
 
 $$\underbrace{8nd^2}_{\textrm{projections}} + \underbrace{4n^2 d}_{\textrm{scores, mixing}} \ \textrm{FLOPs}, \qquad 4d^2 \ \textrm{parameters}$$
 
-— **independent of $h$**. Heads buy diversity of views, not compute.
+— **independent of $h$**. Heads buy diversity of views, not FLOPs or
+parameters (realized kernel efficiency does vary with head count).
 
 ::: {.d2l-note}
 What does change with $h$: the attention map — $h$ distributions per query

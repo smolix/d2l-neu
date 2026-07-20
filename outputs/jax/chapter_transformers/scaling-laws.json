@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "source": "chapter_transformers/scaling-laws.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e164cc454d0f47d29a1889282b21a8e0684f1bf04203ffe3dc835354347f10c8",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "scaling-laws-scaling-laws-and-the-modern-recipe": {
+      "code_fingerprint": "sha256:196859e268a004259681e117f31b170bd48e3250d5386c057e0254d7381ffd06",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-laws-a-parameter-census": {
+      "code_fingerprint": "sha256:76cf5f5057f36ddda4456c0fa51c617e3313083c8894fc92944795e89ec5c837",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "embedding   0.01M (  0%),  blocks   4.72M = 12.01 L d^2,  total 4.73M\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "embedding  39.38M ( 32%),  blocks  85.06M = 12.02 L d^2,  total 124.44M\n"
+        }
+      ]
+    },
+    "scaling-laws-checking-the-arithmetic": {
+      "code_fingerprint": "sha256:c4a2641e65da94a2812c781c1ac11544d0134421d94b08b70ef939c0923bd9a2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "2ND analytic: 7.743e+10 FLOPs, XLA forward: 8.480e+10 (ratio 1.10)\n6ND analytic: 2.323e+11 FLOPs, XLA step:    2.547e+11 (ratio 1.10)\nbackward / forward = 2.00\n"
+        }
+      ]
+    },
+    "scaling-laws-a-corpus-bigger-than-a-novella": {
+      "code_fingerprint": "sha256:08da909fc4e41ddbfe9b5bc4d29b39797cfa3780f96ba0407250839a55a5279d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "5.1M characters in 39491 windows, vocabulary size 28\n"
+        }
+      ]
+    },
+    "scaling-laws-five-sizes-one-diet-1": {
+      "code_fingerprint": "sha256:5d2ceed914cb2aa820b33d56ead8eef48fe364b4a251a4c5a813780dc46d5774",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.21, validation 1.21\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d=128, 3 blocks:  0.59M parameters, train 1.17, validation 1.17\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d=192, 4 blocks:  1.77M parameters, train 1.11, validation 1.12\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d=256, 6 blocks:  4.72M parameters, train 1.06, validation 1.08\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d=384, 8 blocks: 14.16M parameters, train 1.04, validation 1.07\n"
+        }
+      ]
+    },
+    "scaling-laws-five-sizes-one-diet-2": {
+      "code_fingerprint": "sha256:36ed8890d6068cb71e4376a6955510de9e1f3dc3c4a99878806450d23706e998",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
+          "bytes": 32684,
+          "sha256": "sha256:7731a9e1539e201048b34e9480088c3db251bf999dcf5e9ab8b073640a7733b6"
+        }
+      ]
+    },
+    "scaling-laws-recipe-rows-as-constructor-calls": {
+      "code_fingerprint": "sha256:bc843b6325d63e1cf28d9bd467fbf0066aad82702eb790baa3246319b4721b89",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GPT-2 (2019) 5.26M  pos='learned', norm='layer', act='gelu', pre_norm=True, bias=True, kv_heads=8\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Mistral-7B   4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Llama-3      4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Qwen3        4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
+        }
+      ]
+    }
+  }
+}

@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:d801db6a93b0950d0514485144d5941728fff2fb6ab3eea1735aac9d5629f9db",
+    "d2l_lib_fingerprint": "sha256:e7e036499eb890958f88c61f6721919f24627f4f24dce9790ae7ad4553061416",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -25,7 +25,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "maximum deviation: 9.54e-07\n"
+          "text": "maximum deviation: 4.77e-07\n"
         }
       ]
     },
@@ -37,8 +37,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-implementation-3-1.svg",
-          "bytes": 31364,
-          "sha256": "sha256:532f20b33871548a92e312c926ccc1ddcad6d4bc3078a39f03d6d47f0392a7d1"
+          "bytes": 31168,
+          "sha256": "sha256:ea8a2610016a3466e570000951cfb30c139cd040680d7ede4f96343671c96c6e"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-a-mingru-language-model-4-1.svg",
-          "bytes": 18562,
-          "sha256": "sha256:f111b74f9d900040200e7115734a8b5366d786e45a83f70d8bc05e74cc244366"
+          "bytes": 18564,
+          "sha256": "sha256:8374edc0292a96ac2deaecf08568c80551590fab476e805c03f889610dc9c8b7"
         }
       ]
     },
@@ -77,70 +77,117 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "validation perplexity 83.6, 10s wall clock\nthe time traveller.\n\n'II had been\ntheir.\n\n'II had been\ntheir.\n\n'II had been\n"
+          "text": "validation perplexity 83.6, 9s wall clock\nthe time traveller. I had a\ndised. I was in the\nside, and the\nside, and the\nside, and\n"
         }
       ]
     },
     "ssm-recurrence-is-convolution": {
-      "code_fingerprint": "sha256:ecb6ab92778d5fea860a15053704f11e6a3d4e429643cfecd810a01a053c5e48",
+      "code_fingerprint": "sha256:d960589d3b21037cf1f558a679337c826c6cdb12de2f7c5df0aecdbe6b861bd2",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "scan vs loop: 5.96e-08, conv vs loop: 1.19e-07\n"
+          "text": "scan vs loop: 2.38e-07, conv vs loop: 2.38e-07\n"
         }
       ]
     },
     "ssm-s4d-in-practice-1": {
-      "code_fingerprint": "sha256:c490dad14853705bfc1efd43ecc866712802bd1a29edf3143fa9f861e97739a9",
+      "code_fingerprint": "sha256:f4b8c795d36df309a8822cca46e06efd90ef5eb07637f6921bbee556cdd85a7d",
       "kind": "text",
       "outputs": []
     },
     "ssm-s4d-in-practice-2": {
-      "code_fingerprint": "sha256:0f8077ff5ebc2e0adc7e2ddf156f73913375cf407ad700683fa713cd74c445b9",
+      "code_fingerprint": "sha256:4ecb764748cdf8b4443a1fb9bfc2315c18a81c34223c7cbf2df359604a4818ea",
       "kind": "text",
       "outputs": []
     },
     "ssm-sequential-image-classification-1": {
-      "code_fingerprint": "sha256:ae27e57908e2241dc2cac75a364a9711417410f2a9b754fc1f77a512c0a2c399",
+      "code_fingerprint": "sha256:983904f9f2f20a68c2df06545c96292c1acec6a3c893f3b0e1f0347b8a0af4ee",
       "kind": "text",
       "outputs": []
     },
     "ssm-sequential-image-classification-2": {
-      "code_fingerprint": "sha256:e8d9098727fd0cf29063aab0fa6831ca2080b09af74e88cb893b162c7b525ccc",
+      "code_fingerprint": "sha256:8808e58be2ad0c86ca7a00a34dcf62bb1c0313d833f38b9bbee6d955f10168e7",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-2-1.svg",
-          "bytes": 21664,
-          "sha256": "sha256:e5adb7e420442f61e99b80391a877b3e65c0267306d4acb9f28702f77ac45892"
+          "bytes": 22075,
+          "sha256": "sha256:3a24ad9be0397be4949f619564e674c9b2eafb42029c05abc08e1213f995a171"
+        }
+      ]
+    },
+    "ssm-sequential-image-classification-5": {
+      "code_fingerprint": "sha256:081c6fade19779c21ec98e281f33af52f12fbb95f27a0387a2c0738dc6fa2035",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssm/ssm-sequential-image-classification-5-1.svg",
+          "bytes": 22820,
+          "sha256": "sha256:cac7521eea0b44f1fc13ac85dd49ce265343ff4aa699de6be7e1dbfca1c214fa"
         }
       ]
     },
     "ssm-sequential-image-classification-3": {
-      "code_fingerprint": "sha256:5b7eb255e566cb022fc19f44ad24b643201723316ebd6c9f9c44b29e94662ceb",
+      "code_fingerprint": "sha256:11e8685b2a2de8167f70998fba23de0620c8b9adc2a6a46d7c2fef9fa7d4d1ad",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssm/ssm-sequential-image-classification-3-1.svg",
-          "bytes": 22668,
-          "sha256": "sha256:613eeb4f914264d18bdfd81eaccf11861f53a288c66c75071b8d1d7f3e66eaae"
+          "bytes": 22113,
+          "sha256": "sha256:734a4f8f00bf440f4a1dce5cb542d081e9a8241306868ef7365624679420fa02"
         }
       ]
     },
     "ssm-sequential-image-classification-4": {
-      "code_fingerprint": "sha256:570ef2a25c96bec25216072b053a25ef26bb1913531a57697692524ce944fdb3",
+      "code_fingerprint": "sha256:c5ea0d3dda2c5e62720ef49eb4aec852e920a54db4f6162f2cc2d5f3228b120b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " model   params  val acc  s/epoch\n   S4D   30,058    0.827     35.8\n  LSTM   29,930    0.797      6.0\n"
+          "text": "       model   params  val acc  s/epoch\n         S4D   30,058    0.808     47.6\n S4D (final)   30,058    0.806     36.9\n        LSTM   29,930    0.819      4.0\n"
+        }
+      ]
+    },
+    "ssm-inference-one-token-at-a-time-1": {
+      "code_fingerprint": "sha256:a0fb24402fc9afdb791311ace950c62071c0212168e2d97245f0df4c340214d4",
+      "kind": "text",
+      "outputs": []
+    },
+    "ssm-inference-one-token-at-a-time-2": {
+      "code_fingerprint": "sha256:187f81f290b43880e460d18365f64bd2ca3252c2bdd57076552a95e555ab5f15",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "stepped vs scanned: deviation 4.41e-04 on activations of scale 71: relative 6.21e-06\n"
+        }
+      ]
+    },
+    "ssm-inference-one-token-at-a-time-3": {
+      "code_fingerprint": "sha256:b42c5c7f6f774cc1ae8286e0496e021267f5bd5a75b5f5b66957976c7dd1d9d9",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "carried state: 1536 bytes per sequence, at every prefix length\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ssm/ssm-inference-one-token-at-a-time-3-1.svg",
+          "bytes": 29558,
+          "sha256": "sha256:5438a92eed81da96c664e8150b37486c5fb15eeb60d19692dd1c5786f7130c09"
         }
       ]
     }

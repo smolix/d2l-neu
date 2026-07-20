@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 29488,
-          "sha256": "sha256:cc52031c6769d7fe76f0c5c4c5be084e940fd4f195469f5ca82ee2e7d7f39f8c"
+          "sha256": "sha256:090db02c50a27ce778ceeca5de5d06f63bcfd7791b017c9f7c4731818d3ed7f5"
         }
       ]
     },
@@ -71,12 +71,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "iter   0  loss 1.18094\niter 100  loss 0.00011\niter 200  loss 0.00002\niter 300  loss 0.00001\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "iter 400  loss 0.00000\n"
+          "text": "iter   0  loss 1.18094\niter 100  loss 0.00011\niter 200  loss 0.00002\niter 300  loss 0.00001\niter 400  loss 0.00000\n"
         },
         {
           "type": "stream",

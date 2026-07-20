@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/hybrids.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:a6e4289db884fdfd1bf30818257f98345daac4a92def4ff154f361c699b06371",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "hybrids-hybrid-architectures": {
+      "code_fingerprint": "sha256:e44d03fc9d6cc26d6a34b506194c03f826b8e2eadea6537785eea8f13671e7c6",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybrids-three-matched-models-1": {
+      "code_fingerprint": "sha256:d5f960ba4fa69add24949ed5b5a7e0365d68cfb8c4370e5377433d78564b3919",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybrids-three-matched-models-2": {
+      "code_fingerprint": "sha256:1a0f18807850deabbae205d615ef527299dbabb8d5dd17ff23e012bcddf9d6a9",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybrids-three-matched-models-3": {
+      "code_fingerprint": "sha256:0a4dc40ded7d86fffd70e9e9cd94794c0ba3b6f95ecdd219e9c2ba7cf2cd8d69",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybrids-three-matched-models-4": {
+      "code_fingerprint": "sha256:23915b36b31a803a9404fd4ce7c7d8657630ef968715866eb959fa2ca3bc6e26",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    linear: 58,544 parameters\n attention: 57,984 parameters\n    hybrid: 58,404 parameters\n"
+        }
+      ]
+    },
+    "hybrids-the-recall-sweep-1": {
+      "code_fingerprint": "sha256:213911f9350d1d46149d254a12d3c131348248e440c3309fe252b1a6886f6922",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     pairs      4      8     16     32     64\n    linear  0.991  0.976  0.934  0.888  0.301\n attention  1.000  1.000  1.000  1.000  1.000\n    hybrid  1.000  1.000  1.000  1.000  1.000\n    chance  0.031  0.031  0.031  0.031  0.031\n"
+        }
+      ]
+    },
+    "hybrids-the-recall-sweep-2": {
+      "code_fingerprint": "sha256:8298c0bd7eb726bc6846410f32a487490f06e27ee3696494490ef9d133ef0d80",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "hybrids/hybrids-the-recall-sweep-2-1.svg",
+          "bytes": 30892,
+          "sha256": "sha256:7420ef6d43272b63bd3922c2d94604d4ec92542060b62d427cb88c9c4557a121"
+        }
+      ]
+    },
+    "hybrids-the-language-modeling-panel": {
+      "code_fingerprint": "sha256:a4be30b47d1ac6db17073bfd3f49fddd2480d60214404c48105f7b98516956ae",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     model  val loss  bits/char\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    linear      1.75       2.52\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " attention      1.83       2.64\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    hybrid      1.76       2.54\n"
+        }
+      ]
+    },
+    "hybrids-the-memory-bill-measured": {
+      "code_fingerprint": "sha256:209809582e29fb4ec6364f6c7aa0f837b9e0fdbaac4dd0277eecac440ba93d49",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "hybrids/hybrids-the-memory-bill-measured-1.svg",
+          "bytes": 29175,
+          "sha256": "sha256:a314ea06e514d866004521a1f3b0f0f723f3fb6d66406f2f742680c7de3ee11c"
+        }
+      ]
+    }
+  }
+}

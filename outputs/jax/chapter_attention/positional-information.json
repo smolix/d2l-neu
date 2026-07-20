@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "source": "chapter_attention/positional-information.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:1faf210528ca04b0537d96bdc0744407ecaac431b85fa5a676d3f13648722470",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "positional-information": {
+      "code_fingerprint": "sha256:b842bc21b9d605c609e2d141e7a30cc6e04b2ea300094b1b1b55366240f9bb8d",
+      "kind": "text",
+      "outputs": []
+    },
+    "positional-information-attention-ignores-order": {
+      "code_fingerprint": "sha256:a5816a12ca7ad3850c1e1228020af671a21c9780a40864441bec3bafca2bdeed",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max |Y[perm] - Y_perm|: 0.00e+00\n"
+        }
+      ]
+    },
+    "positional-information-sinusoidal-encodings-1": {
+      "code_fingerprint": "sha256:07e3372d06321c76f8166482b44eae8622ebc8e03ae0ff15cfdf646f77c47b9a",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "positional-information/positional-information-sinusoidal-encodings-1-1.svg",
+          "bytes": 31474,
+          "sha256": "sha256:866250606a1cfa88818f0b277f2d97fb0d4a9e487e53caa2ec9f45f9c5ac1091"
+        }
+      ]
+    },
+    "positional-information-sinusoidal-encodings-2": {
+      "code_fingerprint": "sha256:3aff626c9872e4071e821f7f90027f36dfe2a30bf2879b3fee633b3da67a3349",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "0 in binary is 000\n1 in binary is 001\n2 in binary is 010\n3 in binary is 011\n4 in binary is 100\n5 in binary is 101\n6 in binary is 110\n7 in binary is 111\n"
+        }
+      ]
+    },
+    "positional-information-sinusoidal-encodings-3": {
+      "code_fingerprint": "sha256:eb38a85cb1501d14cadf4ca56895d6640741a1471dfe0a6f558c7a7ed6381074",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "positional-information/positional-information-sinusoidal-encodings-3-1.svg",
+          "bytes": 30701,
+          "sha256": "sha256:5c0fbe4f19fd282a415b81b994e134d0275236f083a6b7a875a4d8c5a5022a47"
+        }
+      ]
+    },
+    "positional-information-rotary-position-embeddings-1": {
+      "code_fingerprint": "sha256:bbd180eb6522c3c352464665665b756ef060a8f9a02b412f8d71522ec3c5d836",
+      "kind": "text",
+      "outputs": []
+    },
+    "positional-information-rotary-position-embeddings-2": {
+      "code_fingerprint": "sha256:981a7fbccba4169a3ed3029721f5d60d87aeb75652dbfb7180916516aab30da2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RoPE, all positions shifted by   1: max score change 1.5e-03\nRoPE, all positions shifted by  17: max score change 1.7e-03\nRoPE, all positions shifted by 480: max score change 1.8e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "additive sinusoidal, shifted by  17: max score change 3.3e+00\n"
+        }
+      ]
+    },
+    "positional-information-an-attention-only-language-model": {
+      "code_fingerprint": "sha256:9fc9f34934136a7e6e2a5eb3211905aecc9522b90c3f4c5234cee7eb7cbe6d15",
+      "kind": "text",
+      "outputs": []
+    },
+    "positional-information-the-experiment-1": {
+      "code_fingerprint": "sha256:ac9965902922fe50e0b90bb2921eb0124997fc02eae963598bac67a72f4d6679",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   learned: final training loss 1.84\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "sinusoidal: final training loss 2.09\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      rope: final training loss 1.56\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     alibi: final training loss 1.96\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "      none: final training loss 2.25\n"
+        }
+      ]
+    },
+    "positional-information-the-experiment-2": {
+      "code_fingerprint": "sha256:a8b08768da21fca03abe06a197608f5d1cb8e11d53014b1103f9bb03deaffcfc",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "   learned:     6.2     18.0     31.1\nsinusoidal:     7.8     17.4     38.3\n      rope:     5.1     10.3     37.0\n     alibi:     7.1      7.1      7.1\n      none:     9.2      9.4      9.5\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "positional-information/positional-information-the-experiment-2-1.svg",
+          "bytes": 31005,
+          "sha256": "sha256:5839b551f1383418cfaa6f6fe021b4b881eb3f7dec80d7e420734a2511a351a1"
+        }
+      ]
+    }
+  }
+}

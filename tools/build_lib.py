@@ -24,6 +24,16 @@ from d2l_preprocess import (
     clean_save_markers, CodeBlock, MarkdownBlock, CodeTabSet, TocBlock,
 )
 
+# Build-only sources: unlisted files that carry #@save blocks for the
+# library without being part of the rendered book (no CHAPTER_NUMBERING
+# entry, no outputs). `make lib` scans them for #@save blocks, but they must
+# never be generated or executed as notebooks (their cells reference nn/tf/…
+# with no imports cell — see each file's header). gen_notebooks.py imports
+# this list to keep them out of the notebook set.
+LIB_ONLY_FILES = [
+    'chapter_natural-language-processing-pretraining/legacy-attention-lib.md',
+]
+
 # ──────────────────────────────────────────────────────────
 # Block extraction
 # ──────────────────────────────────────────────────────────
@@ -758,6 +768,10 @@ def main():
     config.read(config_path)
 
     files = list(CHAPTER_NUMBERING.keys())
+    # Build-only sources (module-level LIB_ONLY_FILES) are appended last so
+    # they can never shadow a rendered chapter's definition. See each file's
+    # header for its rationale.
+    files += [f for f in LIB_ONLY_FILES if (args.source / f).exists()]
 
     # Copy __init__.py
     init_src = args.source / 'd2l' / '__init__.py'

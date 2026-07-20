@@ -57,12 +57,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read 549367 examples\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "read 9824 examples\n"
+          "text": "read 549367 examples\nread 9824 examples\n"
         },
         {
           "type": "execute_result",

@@ -55,14 +55,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.151, test hit rate 0.359, test AUC 0.883\n9.4 examples/sec on [device(type='cuda', index=0)]\n"
+          "text": "train loss 0.154, test hit rate 0.363, test AUC 0.880\n14.8 examples/sec on [device(type='cuda', index=0)]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "neumf/neumf-training-and-evaluating-the-model-4-1.svg",
-          "bytes": 22611,
-          "sha256": "sha256:7ddedfba0e73961242dd5fd791556a08b2eaadba5d439619af649d45a31c15e5"
+          "bytes": 22608,
+          "sha256": "sha256:8eef652ce1bdeb63b9defb175ab91fc19990d721fc197155f5f7be9ca342f07d"
         }
       ]
     }

@@ -30,6 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from scan_notebook_manifests import FRAMEWORKS, file_frameworks
+from build_lib import LIB_ONLY_FILES
 
 
 # Match `d2l.<identifier>`. The identifier rule is greedy enough for the
@@ -122,8 +123,12 @@ def main():
                 available[fw].add(p.stem)
 
     n_written = 0
+    lib_only = set(LIB_ONLY_FILES)
     for md in sorted(args.source.glob('chapter_*/*.md')):
         rel = md.relative_to(args.source)
+        if str(rel) in lib_only:
+            # Build-only lib-extraction source: never produces a notebook.
+            continue
         produces = file_frameworks(md)
         if not produces:
             continue

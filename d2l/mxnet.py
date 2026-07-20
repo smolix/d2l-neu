@@ -577,6 +577,26 @@ def cross_entropy(y_hat, y):
     p = y_hat[list(range(len(y_hat))), y].clip(min=1e-12)
     return -d2l.reduce_mean(d2l.log(p))
 
+def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
+                  cmap='Reds'):
+    """Show heatmaps of matrices.
+
+    Defined in :numref:`sec_softmax_scratch`"""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
+
 class SoftmaxRegression(d2l.Classifier):
     """The softmax regression model.
 
@@ -1203,216 +1223,6 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices.
-
-    Defined in :numref:`sec_queries-keys-values`"""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
-
-def masked_softmax(X, valid_lens):
-    """Perform softmax operation by masking elements on the last axis.
-
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    # X: 3D tensor, valid_lens: 1D or 2D tensor
-    if valid_lens is None:
-        return npx.softmax(X)
-    else:
-        shape = X.shape
-        if valid_lens.ndim == 1:
-            valid_lens = valid_lens.repeat(shape[1])
-        else:
-            valid_lens = valid_lens.reshape(-1)
-        # On the last axis, replace masked elements with a very large negative
-        # value, whose exponentiation outputs 0
-        X = npx.sequence_mask(X.reshape(-1, shape[-1]), valid_lens, True,
-                              value=-1e6, axis=1)
-        return npx.softmax(X).reshape(shape)
-
-class DotProductAttention(nn.Block):
-    """Scaled dot product attention.
-
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, dropout):
-        super().__init__()
-        self.dropout = nn.Dropout(dropout)
-
-    # Shape of queries: (batch_size, no. of queries, d)
-    # Shape of keys: (batch_size, no. of key-value pairs, d)
-    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
-    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-    def forward(self, queries, keys, values, valid_lens=None):
-        d = queries.shape[-1]
-        # Set transpose_b=True to swap the last two dimensions of keys
-        scores = npx.batch_dot(queries, keys, transpose_b=True) / math.sqrt(d)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        return npx.batch_dot(self.dropout(self.attention_weights), values)
-
-class AdditiveAttention(nn.Block):
-    """Additive attention.
-
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, num_hiddens, dropout):
-        super().__init__()
-        # Use flatten=False to only transform the last axis so that the
-        # shapes for the other axes are kept the same
-        self.W_k = nn.Dense(num_hiddens, use_bias=False, flatten=False)
-        self.W_q = nn.Dense(num_hiddens, use_bias=False, flatten=False)
-        self.w_v = nn.Dense(1, use_bias=False, flatten=False)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, queries, keys, values, valid_lens):
-        queries, keys = self.W_q(queries), self.W_k(keys)
-        # After dimension expansion, shape of queries: (batch_size, no. of
-        # queries, 1, num_hiddens) and shape of keys: (batch_size, 1,
-        # no. of key-value pairs, num_hiddens). Sum them up with
-        # broadcasting
-        features = np.expand_dims(queries, axis=2) + np.expand_dims(
-            keys, axis=1)
-        features = np.tanh(features)
-        # There is only one output of self.w_v, so we remove the last
-        # one-dimensional entry from the shape. Shape of scores:
-        # (batch_size, no. of queries, no. of key-value pairs)
-        scores = np.squeeze(self.w_v(features), axis=-1)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        # Shape of values: (batch_size, no. of key-value pairs, value
-        # dimension)
-        return npx.batch_dot(self.dropout(self.attention_weights), values)
-
-class MultiHeadAttention(d2l.Module):
-    """Multi-head attention.
-
-    Defined in :numref:`sec_multihead-attention`"""
-    def __init__(self, num_hiddens, num_heads, dropout, use_bias=False,
-                 **kwargs):
-        super().__init__()
-        self.num_heads = num_heads
-        self.attention = d2l.DotProductAttention(dropout)
-        self.W_q = nn.Dense(num_hiddens, use_bias=use_bias, flatten=False)
-        self.W_k = nn.Dense(num_hiddens, use_bias=use_bias, flatten=False)
-        self.W_v = nn.Dense(num_hiddens, use_bias=use_bias, flatten=False)
-        self.W_o = nn.Dense(num_hiddens, use_bias=use_bias, flatten=False)
-
-    def forward(self, queries, keys, values, valid_lens):
-        # Shape of queries, keys, or values:
-        # (batch_size, no. of queries or key-value pairs, num_hiddens)
-        # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-        # After transposing, shape of output queries, keys, or values:
-        # (batch_size * num_heads, no. of queries or key-value pairs,
-        # num_hiddens / num_heads)
-        queries = self.transpose_qkv(self.W_q(queries))
-        keys = self.transpose_qkv(self.W_k(keys))
-        values = self.transpose_qkv(self.W_v(values))
-
-        if valid_lens is not None:
-            # On axis 0, copy the first item (scalar or vector) for num_heads
-            # times, then copy the next item, and so on
-            valid_lens = valid_lens.repeat(self.num_heads, axis=0)
-
-        # Shape of output: (batch_size * num_heads, no. of queries,
-        # num_hiddens / num_heads)
-        output = self.attention(queries, keys, values, valid_lens)
-        
-        # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
-        output_concat = self.transpose_output(output)
-        return self.W_o(output_concat)
-
-    def transpose_qkv(self, X):
-        """Transposition for parallel computation of multiple attention heads.
-
-        Defined in :numref:`sec_multihead-attention`"""
-        # Shape of input X: (batch_size, no. of queries or key-value pairs,
-        # num_hiddens). Shape of output X: (batch_size, no. of queries or
-        # key-value pairs, num_heads, num_hiddens / num_heads)
-        X = X.reshape(X.shape[0], X.shape[1], self.num_heads, -1)
-        # Shape of output X: (batch_size, num_heads, no. of queries or key-value
-        # pairs, num_hiddens / num_heads)
-        X = X.transpose(0, 2, 1, 3)
-        # Shape of output: (batch_size * num_heads, no. of queries or key-value
-        # pairs, num_hiddens / num_heads)
-        return X.reshape(-1, X.shape[2], X.shape[3])
-
-    def transpose_output(self, X):
-        """Reverse the operation of transpose_qkv.
-
-        Defined in :numref:`sec_multihead-attention`"""
-        X = X.reshape(-1, self.num_heads, X.shape[1], X.shape[2])
-        X = X.transpose(0, 2, 1, 3)
-        return X.reshape(X.shape[0], X.shape[1], -1)
-
-class PositionalEncoding(nn.Block):
-    """Positional encoding.
-
-    Defined in :numref:`sec_self-attention-and-positional-encoding`"""
-    def __init__(self, num_hiddens, dropout, max_len=1000):
-        super().__init__()
-        self.dropout = nn.Dropout(dropout)
-        # Create a long enough P
-        self.P = d2l.zeros((1, max_len, num_hiddens))
-        X = d2l.arange(max_len).reshape(-1, 1) / np.power(
-            10000, np.arange(0, num_hiddens, 2) / num_hiddens)
-        self.P[:, :, 0::2] = np.sin(X)
-        self.P[:, :, 1::2] = np.cos(X[:, :num_hiddens // 2])
-
-    def forward(self, X):
-        X = X + self.P[:, :X.shape[1], :].as_in_ctx(X.ctx)
-        return self.dropout(X)
-
-class PositionWiseFFN(nn.Block):
-    """The positionwise feed-forward network.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, ffn_num_hiddens, ffn_num_outputs):
-        super().__init__()
-        self.dense1 = nn.Dense(ffn_num_hiddens, flatten=False,
-                               activation='relu')
-        self.dense2 = nn.Dense(ffn_num_outputs, flatten=False)
-
-    def forward(self, X):
-        return self.dense2(self.dense1(X))
-
-class AddNorm(nn.Block):
-    """The residual connection followed by layer normalization.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, dropout):
-        super().__init__()
-        self.dropout = nn.Dropout(dropout)
-        self.ln = nn.LayerNorm()
-
-    def forward(self, X, Y):
-        return self.ln(self.dropout(Y) + X)
-
-class TransformerEncoderBlock(nn.Block):
-    """The Transformer encoder block.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
-                 use_bias=False):
-        super().__init__()
-        self.attention = d2l.MultiHeadAttention(
-            num_hiddens, num_heads, dropout, use_bias)
-        self.addnorm1 = AddNorm(dropout)
-        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
-        self.addnorm2 = AddNorm(dropout)
-
-    def forward(self, X, valid_lens):
-        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens))
-        return self.addnorm2(Y, self.ffn(Y))
-
 class Benchmark:
     """For measuring running time.
 
@@ -1478,69 +1288,42 @@ def evaluate_accuracy_gpus(net, data_iter, split_f=d2l.split_batch):
                            pred_shards, y_shards)), labels.size)
     return metric[0] / metric[1]
 
-class LSTMScratch(d2l.Module):
-    """The long short-term memory (LSTM) cell implemented from scratch.
+def update_D(X, Z, net_D, net_G, loss, trainer_D):
+    """Update discriminator.
 
-    Defined in :numref:`sec_lstm`"""
-    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
-        super().__init__()
-        self.save_hyperparameters()
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = X.shape[0]
+    ones = np.ones((batch_size,), ctx=X.ctx)
+    zeros = np.zeros((batch_size,), ctx=X.ctx)
+    with autograd.record():
+        real_Y = net_D(X)
+        fake_X = net_G(Z)
+        # Do not need to compute gradient for `net_G`, detach it from
+        # computing gradients.
+        fake_Y = net_D(fake_X.detach())
+        loss_D = (loss(real_Y, ones) + loss(fake_Y, zeros)) / 2
+    loss_D.backward()
+    trainer_D.step(batch_size)
+    return float(loss_D.sum())
 
-        init_weight = lambda *shape: d2l.randn(*shape) * sigma
-        triple = lambda: (init_weight(num_inputs, num_hiddens),
-                          init_weight(num_hiddens, num_hiddens),
-                          d2l.zeros(num_hiddens))
-        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
-        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
-        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
-        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
+def update_G(Z, net_D, net_G, loss, trainer_G):
+    """Update generator.
 
-    def forward(self, inputs, H_C=None):
-        if H_C is None:
-            # Initial state with shape: (batch_size, num_hiddens)
-            H = d2l.zeros((inputs.shape[1], self.num_hiddens),
-                          ctx=inputs.ctx)
-            C = d2l.zeros((inputs.shape[1], self.num_hiddens),
-                          ctx=inputs.ctx)
-        else:
-            H, C = H_C
-        outputs = []
-        for X in inputs:
-            I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
-                            d2l.matmul(H, self.W_hi) + self.b_i)
-            F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
-                            d2l.matmul(H, self.W_hf) + self.b_f)
-            O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
-                            d2l.matmul(H, self.W_ho) + self.b_o)
-            C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
-                               d2l.matmul(H, self.W_hc) + self.b_c)
-            C = F * C + I * C_tilde
-            H = O * d2l.tanh(C)
-            outputs.append(H)
-        return outputs, (H, C)
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = Z.shape[0]
+    ones = np.ones((batch_size,), ctx=Z.ctx)
+    with autograd.record():
+        # We could reuse `fake_X` from `update_D` to save computation
+        fake_X = net_G(Z)
+        # Recomputing `fake_Y` is needed since `net_D` is changed
+        fake_Y = net_D(fake_X)
+        loss_G = loss(fake_Y, ones)
+    loss_G.backward()
+    trainer_G.step(batch_size)
+    return float(loss_G.sum())
 
-class LSTM(d2l.RNN):
-    """The multilayer LSTM model implemented with high-level APIs.
-
-    Defined in :numref:`sec_lstm`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.rnn = rnn.LSTM(num_hiddens, num_layers, dropout=dropout)
-
-    def forward(self, inputs, H_C=None):
-        if H_C is None:
-            H_C = self.rnn.begin_state(inputs.shape[1], ctx=inputs.ctx)
-        return self.rnn(inputs, H_C)
-
-class GRU(d2l.RNN):
-    """The multilayer GRU model implemented with high-level APIs.
-
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.rnn = rnn.GRU(num_hiddens, num_layers, dropout=dropout)
+d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
+                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 class Encoder(nn.Block):
     """The base encoder interface for the encoder-decoder architecture.
@@ -1738,43 +1521,6 @@ def bleu(pred_seq, label_seq, k):
                 label_subs[' '.join(pred_tokens[i: i + n])] -= 1
         score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
     return score
-
-def update_D(X, Z, net_D, net_G, loss, trainer_D):
-    """Update discriminator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = X.shape[0]
-    ones = np.ones((batch_size,), ctx=X.ctx)
-    zeros = np.zeros((batch_size,), ctx=X.ctx)
-    with autograd.record():
-        real_Y = net_D(X)
-        fake_X = net_G(Z)
-        # Do not need to compute gradient for `net_G`, detach it from
-        # computing gradients.
-        fake_Y = net_D(fake_X.detach())
-        loss_D = (loss(real_Y, ones) + loss(fake_Y, zeros)) / 2
-    loss_D.backward()
-    trainer_D.step(batch_size)
-    return float(loss_D.sum())
-
-def update_G(Z, net_D, net_G, loss, trainer_G):
-    """Update generator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = Z.shape[0]
-    ones = np.ones((batch_size,), ctx=Z.ctx)
-    with autograd.record():
-        # We could reuse `fake_X` from `update_D` to save computation
-        fake_X = net_G(Z)
-        # Recomputing `fake_Y` is needed since `net_D` is changed
-        fake_Y = net_D(fake_X)
-        loss_G = loss(fake_Y, ones)
-    loss_G.backward()
-    trainer_G.step(batch_size)
-    return float(loss_G.sum())
-
-d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
-                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
                        '319d85e578af0cdc590547f26231e4e31cdf1e42')
@@ -3638,44 +3384,188 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
         output_seq.append(pred)
     return ' '.join(tgt_vocab.to_tokens(output_seq)), attention_weight_seq
 
-class AttentionDecoder(d2l.Decoder):
-    """The base attention-based decoder interface.
+def masked_softmax(X, valid_lens):
+    """Perform softmax operation by masking elements on the last axis."""
+    # X: 3D tensor, valid_lens: 1D or 2D tensor
+    if valid_lens is None:
+        return npx.softmax(X)
+    else:
+        shape = X.shape
+        if valid_lens.ndim == 1:
+            valid_lens = valid_lens.repeat(shape[1])
+        else:
+            valid_lens = valid_lens.reshape(-1)
+        # On the last axis, replace masked elements with a very large negative
+        # value, whose exponentiation outputs 0
+        X = npx.sequence_mask(X.reshape(-1, shape[-1]), valid_lens, True,
+                              value=-1e6, axis=1)
+        return npx.softmax(X).reshape(shape)
 
-    Defined in :numref:`sec_seq2seq_attention`"""
-    def __init__(self):
+class DotProductAttention(nn.Block):
+    """Scaled dot product attention."""
+    def __init__(self, dropout):
         super().__init__()
+        self.dropout = nn.Dropout(dropout)
 
-    @property
-    def attention_weights(self):
-        raise NotImplementedError
+    # Shape of queries: (batch_size, no. of queries, d)
+    # Shape of keys: (batch_size, no. of key-value pairs, d)
+    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
+    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
+    def forward(self, queries, keys, values, valid_lens=None):
+        d = queries.shape[-1]
+        # Set transpose_b=True to swap the last two dimensions of keys
+        scores = npx.batch_dot(queries, keys, transpose_b=True) / math.sqrt(d)
+        self.attention_weights = masked_softmax(scores, valid_lens)
+        return npx.batch_dot(self.dropout(self.attention_weights), values)
 
-class TransformerEncoder(d2l.Encoder):
-    """The Transformer encoder.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens,
-                 num_heads, num_blks, dropout, use_bias=False):
+class MultiHeadAttention(d2l.Module):
+    """Multi-head attention."""
+    def __init__(self, num_hiddens, num_heads, dropout, use_bias=False,
+                 **kwargs):
         super().__init__()
-        self.num_hiddens = num_hiddens
-        self.embedding = nn.Embedding(vocab_size, num_hiddens)
-        self.pos_encoding = d2l.PositionalEncoding(num_hiddens, dropout)
-        self.blks = nn.Sequential()
-        for _ in range(num_blks):
-            self.blks.add(TransformerEncoderBlock(
-                num_hiddens, ffn_num_hiddens, num_heads, dropout, use_bias))
-        self.initialize()
+        self.num_heads = num_heads
+        self.attention = d2l.DotProductAttention(dropout)
+        self.W_q = nn.Dense(num_hiddens, use_bias=use_bias, flatten=False)
+        self.W_k = nn.Dense(num_hiddens, use_bias=use_bias, flatten=False)
+        self.W_v = nn.Dense(num_hiddens, use_bias=use_bias, flatten=False)
+        self.W_o = nn.Dense(num_hiddens, use_bias=use_bias, flatten=False)
+
+    def forward(self, queries, keys, values, valid_lens):
+        # Shape of queries, keys, or values:
+        # (batch_size, no. of queries or key-value pairs, num_hiddens)
+        # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
+        # After transposing, shape of output queries, keys, or values:
+        # (batch_size * num_heads, no. of queries or key-value pairs,
+        # num_hiddens / num_heads)
+        queries = self.transpose_qkv(self.W_q(queries))
+        keys = self.transpose_qkv(self.W_k(keys))
+        values = self.transpose_qkv(self.W_v(values))
+
+        if valid_lens is not None:
+            # On axis 0, copy the first item (scalar or vector) for num_heads
+            # times, then copy the next item, and so on
+            valid_lens = valid_lens.repeat(self.num_heads, axis=0)
+
+        # Shape of output: (batch_size * num_heads, no. of queries,
+        # num_hiddens / num_heads)
+        output = self.attention(queries, keys, values, valid_lens)
+        
+        # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
+        output_concat = self.transpose_output(output)
+        return self.W_o(output_concat)
+
+    def transpose_qkv(self, X):
+        """Transposition for parallel computation of multiple attention heads."""
+        # Shape of input X: (batch_size, no. of queries or key-value pairs,
+        # num_hiddens). Shape of output X: (batch_size, no. of queries or
+        # key-value pairs, num_heads, num_hiddens / num_heads)
+        X = X.reshape(X.shape[0], X.shape[1], self.num_heads, -1)
+        # Shape of output X: (batch_size, num_heads, no. of queries or key-value
+        # pairs, num_hiddens / num_heads)
+        X = X.transpose(0, 2, 1, 3)
+        # Shape of output: (batch_size * num_heads, no. of queries or key-value
+        # pairs, num_hiddens / num_heads)
+        return X.reshape(-1, X.shape[2], X.shape[3])
+
+    def transpose_output(self, X):
+        """Reverse the operation of transpose_qkv."""
+        X = X.reshape(-1, self.num_heads, X.shape[1], X.shape[2])
+        X = X.transpose(0, 2, 1, 3)
+        return X.reshape(X.shape[0], X.shape[1], -1)
+
+class PositionWiseFFN(nn.Block):
+    """The positionwise feed-forward network."""
+    def __init__(self, ffn_num_hiddens, ffn_num_outputs):
+        super().__init__()
+        self.dense1 = nn.Dense(ffn_num_hiddens, flatten=False,
+                               activation='relu')
+        self.dense2 = nn.Dense(ffn_num_outputs, flatten=False)
+
+    def forward(self, X):
+        return self.dense2(self.dense1(X))
+
+class AddNorm(nn.Block):
+    """The residual connection followed by layer normalization."""
+    def __init__(self, dropout):
+        super().__init__()
+        self.dropout = nn.Dropout(dropout)
+        self.ln = nn.LayerNorm()
+
+    def forward(self, X, Y):
+        return self.ln(self.dropout(Y) + X)
+
+class TransformerEncoderBlock(nn.Block):
+    """The Transformer encoder block."""
+    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
+                 use_bias=False):
+        super().__init__()
+        self.attention = d2l.MultiHeadAttention(
+            num_hiddens, num_heads, dropout, use_bias)
+        self.addnorm1 = AddNorm(dropout)
+        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
+        self.addnorm2 = AddNorm(dropout)
 
     def forward(self, X, valid_lens):
-        # Since positional encoding values are between -1 and 1, the embedding
-        # values are multiplied by the square root of the embedding dimension
-        # to rescale before they are summed up
-        X = self.pos_encoding(self.embedding(X) * math.sqrt(self.num_hiddens))
-        self.attention_weights = [None] * len(self.blks)
-        for i, blk in enumerate(self.blks):
-            X = blk(X, valid_lens)
-            self.attention_weights[
-                i] = blk.attention.attention.attention_weights
-        return X
+        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens))
+        return self.addnorm2(Y, self.ffn(Y))
+
+class LSTMScratch(d2l.Module):
+    """The long short-term memory (LSTM) cell implemented from scratch."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+
+        init_weight = lambda *shape: d2l.randn(*shape) * sigma
+        triple = lambda: (init_weight(num_inputs, num_hiddens),
+                          init_weight(num_hiddens, num_hiddens),
+                          d2l.zeros(num_hiddens))
+        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
+        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
+        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
+        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
+
+    def forward(self, inputs, H_C=None):
+        if H_C is None:
+            # Initial state with shape: (batch_size, num_hiddens)
+            H = d2l.zeros((inputs.shape[1], self.num_hiddens),
+                          ctx=inputs.ctx)
+            C = d2l.zeros((inputs.shape[1], self.num_hiddens),
+                          ctx=inputs.ctx)
+        else:
+            H, C = H_C
+        outputs = []
+        for X in inputs:
+            I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
+                            d2l.matmul(H, self.W_hi) + self.b_i)
+            F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
+                            d2l.matmul(H, self.W_hf) + self.b_f)
+            O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
+                            d2l.matmul(H, self.W_ho) + self.b_o)
+            C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
+                               d2l.matmul(H, self.W_hc) + self.b_c)
+            C = F * C + I * C_tilde
+            H = O * d2l.tanh(C)
+            outputs.append(H)
+        return outputs, (H, C)
+
+class LSTM(d2l.RNN):
+    """The multilayer LSTM model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        self.rnn = rnn.LSTM(num_hiddens, num_layers, dropout=dropout)
+
+    def forward(self, inputs, H_C=None):
+        if H_C is None:
+            H_C = self.rnn.begin_state(inputs.shape[1], ctx=inputs.ctx)
+        return self.rnn(inputs, H_C)
+
+class GRU(d2l.RNN):
+    """The multilayer GRU model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        self.rnn = rnn.GRU(num_hiddens, num_layers, dropout=dropout)
 
 
 ones_like = np.ones_like

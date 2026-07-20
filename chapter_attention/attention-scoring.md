@@ -45,11 +45,14 @@ $$
 
 First, the final term depends on $\mathbf{q}$ only, so it is identical for
 all keys, and the softmax normalization :eqref:`eq_softmax_attention`
-removes it entirely. Second, both batch and layer normalization (the latter
-will accompany attention everywhere from the next chapter on) produce
-activations with well-bounded, often constant norms $\|\mathbf{k}_i\|$, so
-dropping the middle term changes little in practice. What remains is the dot
-product $\mathbf{q}^\top \mathbf{k}_i$.
+removes it entirely. Second, if the key norms $\|\mathbf{k}_i\|$ are all
+equal, the middle term drops out the same way, and the Gaussian kernel and
+the dot product induce identical attention weights. In general the norms are
+not equal, and dropping the term is a modeling decision rather than an
+approximation: we adopt the dot product $\mathbf{q}^\top \mathbf{k}_i$ as a
+compatibility function in its own right — one that learned query and key
+representations can shape freely — with the Gaussian expansion surviving as
+the exact special case of equal key norms.
 
 One adjustment is still needed, to keep the magnitude of the scores under
 control. Assume that all elements of the query $\mathbf{q} \in \mathbb{R}^d$
@@ -212,7 +215,9 @@ and poisons the training run. The dtype-safe idiom, which we adopt, masks
 with the most negative *finite* value of the score's dtype
 (`torch.finfo(X.dtype).min` and `jnp.finfo(X.dtype).min`, respectively): the
 masked weights are exactly zero at any precision, and a fully masked query
-degrades to a uniform distribution instead of NaN.
+degrades to a uniform distribution instead of NaN — though a uniform average
+over *invalid* values is still garbage, so callers must guarantee that every
+query keeps at least one valid key.
 
 ```{.python .input #attention-scoring-the-masked-softmax-operation-1}
 %%tab pytorch
@@ -307,10 +312,64 @@ d2l.show_heatmaps(masked_softmax(scores, causal_lens)[None],
                   xlabel='Keys', ylabel='Queries')
 ```
 
-This triangular mask is the entire difference between a model that merely
-reads a sequence and one that can be trained, in parallel over all
-positions, to generate it. It will accompany us through every decoder in
-the chapters ahead.
+On the attention side, this triangular mask is the key difference between a
+model that merely reads a sequence and one that can be trained, in parallel
+over all positions, to generate it — generation also needs the shifted
+next-token objective and a decoding loop. The mask will accompany us through
+every decoder in the chapters ahead.
+
+### Composing Masks
+
+`valid_lens` describes prefixes, which cover the two cases above, but the
+general interface is a boolean tensor: entry $(i, j)$ says whether query $i$
+may attend to key $j$. Every requirement takes this form — padding excludes
+keys beyond the sequence length, causality excludes keys beyond the query,
+and structural patterns such as the attention windows of
+:numref:`sec_attention-at-scale` exclude by distance — and a key must
+survive *all* requirements at once, so masks compose by logical AND.
+Broadcasting keeps the bookkeeping cheap: a padding mask has shape
+$(\textrm{batch}, 1, \textrm{keys})$, a causal mask
+$(1, \textrm{queries}, \textrm{keys})$, and their AND broadcasts to the full
+$(\textrm{batch}, \textrm{queries}, \textrm{keys})$ without materializing
+either input per example. Applying the composite is the same idiom as
+before: overwrite the excluded scores with the dtype's most negative finite
+value, then softmax.
+
+```{.python .input #attention-scoring-composing-masks}
+%%tab pytorch
+valid_lens, n = torch.tensor([6, 3]), 6
+j = torch.arange(n)
+padding = (j[None, :] < valid_lens[:, None])[:, None, :]  # (batch, 1, key)
+causal = (j[None, :] <= j[:, None])[None, :, :]         # (1, query, key)
+mask = padding & causal                                 # (batch, query, key)
+torch.manual_seed(0)
+scores = torch.randn(2, n, n)
+weights = F.softmax(
+    scores.masked_fill(~mask, torch.finfo(scores.dtype).min), dim=-1)
+d2l.show_heatmaps(weights[:, None], xlabel='Keys', ylabel='Queries')
+```
+
+```{.python .input #attention-scoring-composing-masks}
+%%tab jax
+valid_lens, n = jnp.array([6, 3]), 6
+j = jnp.arange(n)
+padding = (j[None, :] < valid_lens[:, None])[:, None, :]  # (batch, 1, key)
+causal = (j[None, :] <= j[:, None])[None, :, :]         # (1, query, key)
+mask = padding & causal                                 # (batch, query, key)
+scores = jax.random.normal(jax.random.key(0), (2, n, n))
+weights = jax.nn.softmax(
+    jnp.where(mask, scores, jnp.finfo(scores.dtype).min), axis=-1)
+d2l.show_heatmaps(weights[:, None], xlabel='Keys', ylabel='Queries')
+```
+
+The first sequence shows the plain causal triangle; the second is cut off
+at its valid length of $3$, the intersection of both constraints. Composition
+sharpens the fully-masked hazard flagged above: masks that are harmless
+alone can leave some query with an empty intersection, so the guarantee of
+at least one valid key per query must hold for the *composite*. The same
+machinery handles *packed sequences* — several documents concatenated into
+one training row — by ANDing the causal mask with a block-diagonal mask
+that keeps each document from attending into its neighbors.
 
 ## Batched Attention
 
@@ -325,7 +384,8 @@ $$
 \mathbf{K} = [\mathbf{K}_1, \mathbf{K}_2, \ldots, \mathbf{K}_n]  \in \mathbb{R}^{n \times b \times c}.
 $$
 
-Then the batch matrix multiplication (BMM) computes the elementwise product
+Then the batch matrix multiplication (BMM) computes one matrix product per
+batch element,
 
 $$\textrm{BMM}(\mathbf{Q}, \mathbf{K}) = [\mathbf{Q}_1 \mathbf{K}_1, \mathbf{Q}_2 \mathbf{K}_2, \ldots, \mathbf{Q}_n \mathbf{K}_n] \in \mathbb{R}^{n \times a \times c}.$$
 :eqlabel:`eq_batch-matrix-mul`
@@ -558,7 +618,8 @@ dimension grows—an effect we measured directly. Masking makes the same
 batched computation respect variable sequence lengths and causal
 structure: overwrite invalid scores with the most negative finite value of
 the dtype (not a hard-coded constant, which breaks in half precision)
-before the softmax. `DotProductAttention` packages scoring, masking,
+before the softmax; arbitrary boolean requirements — padding, causality,
+structure — compose into one mask by logical AND. `DotProductAttention` packages scoring, masking,
 dropout on the weights, and value pooling in a dozen lines that the rest of
 this book reuses. Additive attention, the original scoring function of the
 translation models that started the field, survives as history and as a
@@ -608,8 +669,9 @@ Expand the Gaussian kernel's exponent:
 
 $$-\tfrac{1}{2}\|\mathbf{q} - \mathbf{k}_i\|^2 = \mathbf{q}^\top \mathbf{k}_i - \tfrac{1}{2}\|\mathbf{k}_i\|^2 - \tfrac{1}{2}\|\mathbf{q}\|^2.$$
 
-The query term cancels in the softmax; normalization layers keep key norms
-roughly constant. What survives is the dot product.
+The query term cancels in the softmax; the key-norm term cancels too when
+all key norms are equal. Keeping only the dot product is a modeling choice:
+a compatibility score that learned representations can shape freely.
 
 . . .
 
@@ -687,8 +749,22 @@ $(1, 2, \ldots, n)$. The pattern is lower triangular:
 
 @attention-scoring-causal-masking
 
-- This mask is the entire difference between reading a sequence and being
-  trainable, in parallel, to generate one.
+- On the attention side, this mask is the key difference between reading a
+  sequence and being trainable, in parallel, to generate one.
+:::
+
+::: {.slide title="Composing masks"}
+The general interface is a boolean tensor — entry $(i, j)$: may query $i$
+see key $j$? Requirements compose by AND, broadcasting does the bookkeeping:
+padding $(\textrm{batch}, 1, \textrm{keys})$ ∧ causal
+$(1, \textrm{queries}, \textrm{keys})$.
+
+@!attention-scoring-composing-masks
+
+::: {.d2l-note}
+The composite must still leave every query at least one valid key — masks
+that are harmless alone can intersect to an empty row.
+:::
 :::
 
 ::: {.slide title="Batched attention"}

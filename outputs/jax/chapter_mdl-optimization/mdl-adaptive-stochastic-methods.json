@@ -78,12 +78,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "per-step decay rate, l2 through Adam (alpha*lam/sigma_i): [1.e-05 1.e-03]\nper-step decay rate, AdamW (uniform):                     0.0001\n|w| after 4000 steps,  Adam + l2: [0.9677 0.0235]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "|w| after 4000 steps,  AdamW    : [0.6681 0.6598]\nAdamW prediction (1 - alpha*lam)^T = 0.6703\n"
+          "text": "per-step decay rate, l2 through Adam (alpha*lam/sigma_i): [1.e-05 1.e-03]\nper-step decay rate, AdamW (uniform):                     0.0001\n|w| after 4000 steps,  Adam + l2: [0.9677 0.0235]\n|w| after 4000 steps,  AdamW    : [0.6681 0.6598]\nAdamW prediction (1 - alpha*lam)^T = 0.6703\n"
         }
       ]
     },
@@ -127,7 +122,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-adaptive-stochastic-methods/mdl-adaptive-svrg-1.svg",
           "bytes": 29558,
-          "sha256": "sha256:1c29cc1ce3fd182243fa3f239a55a5ec0ea9275aaa8346d9e7eea54911c16570"
+          "sha256": "sha256:5930e56d1d1c481d7289429d9bb4b02612f0f552ff1a97f3a1aee8c27c279682"
         }
       ]
     }

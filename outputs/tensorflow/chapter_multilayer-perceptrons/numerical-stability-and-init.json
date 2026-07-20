@@ -21,8 +21,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-vanishing-gradients-1.svg",
-          "bytes": 26183,
-          "sha256": "sha256:dea066d00f4683371c5504253bf3141b1c40c1811a26b02bb43d24fe29365c39"
+          "bytes": 26181,
+          "sha256": "sha256:15399fd3c27ff0f59618a8c1aa28eced18b58c89f478e3ddd74de3d042e372c3"
         }
       ]
     },
@@ -33,7 +33,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "a single matrix \n tf.Tensor(\n[[ 1.5210209  -0.88856184 -0.07754578 -0.32905936]\n [ 1.0190389   0.17391072  1.5148035  -0.24358614]\n [-0.7181747   0.08507871  0.47897276  1.5523188 ]\n [ 1.0908694   0.45480898 -0.59772885  1.141397  ]], shape=(4, 4), dtype=float32)\nafter multiplying 100 matrices\n [[-1.46470290e+24 -7.11200152e+24  1.42295417e+24  6.23691104e+24]\n [-2.01947979e+24 -9.80576572e+24  1.96191615e+24  8.59922184e+24]\n [ 1.07305845e+23  5.21033186e+23 -1.04247189e+23 -4.56922968e+23]\n [ 8.00093009e+23  3.88492350e+24 -7.77286852e+23 -3.40690524e+24]]\n"
+          "text": "a single matrix \n tf.Tensor(\n[[ 0.88569    -0.53551334 -2.0258462  -1.6222503 ]\n [ 0.08253931  0.37377733 -1.1129707   0.7584501 ]\n [-0.30639806  0.44809902  1.0800251  -0.8498218 ]\n [-0.37185267 -1.3523052   0.4892188  -1.1749656 ]], shape=(4, 4), dtype=float32)\nafter multiplying 100 matrices\n [[-3.3796842e+23 -1.4009740e+23  4.3313110e+23  7.5757996e+23]\n [ 8.0702145e+22  3.3508249e+22 -1.0345620e+23 -1.8100430e+23]\n [-1.6039657e+23 -6.6450585e+22  2.0551867e+23  3.5942717e+23]\n [-7.8191073e+22 -3.2419027e+22  1.0021750e+23  1.7529337e+23]]\n"
         }
       ]
     },
@@ -45,8 +45,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "numerical-stability-and-init/numerical-stability-and-init-depth-sweep-1.svg",
-          "bytes": 31002,
-          "sha256": "sha256:51695de8e534e194d467fdd18348b1d27feb09b48cfcd201865f3f4350182200"
+          "bytes": 32907,
+          "sha256": "sha256:da4d60a3657924cc4b2cbfa51d1f7a4a78b9e1b61b076a52eedc173b2893662a"
         }
       ]
     }

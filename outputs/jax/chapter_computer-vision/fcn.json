@@ -79,7 +79,7 @@
         {
           "type": "stream",
           "name": "stderr",
-          "text": "E0714 06:52:08.547785   57865 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
+          "text": "E0719 14:24:24.060179   40677 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
         }
       ]
     },
@@ -97,7 +97,7 @@
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-initializing-transposed-convolutional-layers-4-1.svg",
           "bytes": 86064,
-          "sha256": "sha256:6ca941af6e4d34486001c831e6427fbb3c99df58774672c6cf2ac830288ad1b6"
+          "sha256": "sha256:5b5f7b3418a8127cf72ec5a09010cb5130866dc9d823b5b5467a18bc54fb281a"
         }
       ]
     },
@@ -129,27 +129,27 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 1.594, pixel acc 0.706, val loss 1.178, val pixel acc 0.732\n"
+          "text": "epoch 1, loss 1.635, pixel acc 0.706, val loss 1.202, val pixel acc 0.731\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 1.113, pixel acc 0.741, val loss 1.047, val pixel acc 0.750\n"
+          "text": "epoch 2, loss 1.132, pixel acc 0.738, val loss 1.059, val pixel acc 0.747\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 1.002, pixel acc 0.761, val loss 0.961, val pixel acc 0.767\n"
+          "text": "epoch 3, loss 1.016, pixel acc 0.757, val loss 0.974, val pixel acc 0.765\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.918, pixel acc 0.778, val loss 0.888, val pixel acc 0.782\n"
+          "text": "epoch 4, loss 0.924, pixel acc 0.775, val loss 0.886, val pixel acc 0.781\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 5, loss 0.849, pixel acc 0.792, val loss 0.889, val pixel acc 0.788\n"
+          "text": "epoch 5, loss 0.852, pixel acc 0.790, val loss 0.826, val pixel acc 0.790\n"
         }
       ]
     },
@@ -171,8 +171,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "fcn/fcn-prediction-3-1.svg",
-          "bytes": 156673,
-          "sha256": "sha256:8202dc98b3d25065ca339b488db6682226d54e2187d34ac126cdcf766da6b70e"
+          "bytes": 157337,
+          "sha256": "sha256:55aae45cda692495f6a72174661ea55103cc6302528e4749c514342931b075b5"
         }
       ]
     }

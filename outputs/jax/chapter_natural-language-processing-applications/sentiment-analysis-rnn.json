@@ -55,22 +55,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 1, loss 0.673, train acc 0.574, test acc 0.750\n"
+          "text": "epoch 1, loss 0.627, train acc 0.632, test acc 0.796\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 2, loss 0.409, train acc 0.816, test acc 0.834\n"
+          "text": "epoch 2, loss 0.418, train acc 0.814, test acc 0.825\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 3, loss 0.332, train acc 0.858, test acc 0.858\n"
+          "text": "epoch 3, loss 0.364, train acc 0.844, test acc 0.847\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "epoch 4, loss 0.294, train acc 0.878, test acc 0.862\n"
+          "text": "epoch 4, loss 0.333, train acc 0.857, test acc 0.846\n"
         }
       ]
     },

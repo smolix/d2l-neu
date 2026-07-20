@@ -1,0 +1,173 @@
+{
+  "schema": 1,
+  "source": "chapter_transformers/encoders-decoders.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:3d65ff8a5354abed2cba0fc2e48cbfc1f6eebf671964a998b8564a7504c9f788",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "encoders-decoders-encoders-decoders-and-cross-attention": {
+      "code_fingerprint": "sha256:2a0737215efdbb8232bb6761d60d2b8e993b0aa1d07e2266242f419c7ef9b4d6",
+      "kind": "text",
+      "outputs": []
+    },
+    "encoders-decoders-a-bidirectional-encoder-in-a-dozen-lines": {
+      "code_fingerprint": "sha256:a2a4085db152c0cc5ecb45c2ee73aa6fd31dafe95918695f404f4222b11b4e0f",
+      "kind": "text",
+      "outputs": []
+    },
+    "encoders-decoders-the-masked-token-objective": {
+      "code_fingerprint": "sha256:629d4f02b8c97902bd25a8165d9ecd75bbb95042400a6a489b47e4f5fe7f1be8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "masked loss at step 500/1000/2000: 1.92/1.35/1.08\n"
+        }
+      ]
+    },
+    "encoders-decoders-what-the-second-side-is-worth-1": {
+      "code_fingerprint": "sha256:bfb2aac62c674b19bd4c069ee07c8a4f763403f8dbc936e5f669b9bd2a5e7588",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "masked accuracy 0.65\nloss at position 0: 2.06, at position 63: 2.08, interior mean: 1.10\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "encoders-decoders/encoders-decoders-what-the-second-side-is-worth-1-1.svg",
+          "bytes": 22687,
+          "sha256": "sha256:c89d78b9371b94233e62bc2093217ba271cb55b7d6afd291f2e6c764d6b89b64"
+        }
+      ]
+    },
+    "encoders-decoders-what-the-second-side-is-worth-2": {
+      "code_fingerprint": "sha256:e5c941426fcd14b336765649ba4ff0fe090a85c86951264617e2fc425bec67a5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "'the time _raveller for so it will be con'... -> 't' 0.94, 'g' 0.02, 'f' 0.01\n'the time trave_ler for so it will be con'... -> 'l' 0.99, ' ' 0.01, 'r' 0.00\n'the time traveller for so it w_ll be con'... -> 'i' 0.63, 'e' 0.29, 'a' 0.06\n"
+        }
+      ]
+    },
+    "encoders-decoders-a-task-whose-alignment-we-know": {
+      "code_fingerprint": "sha256:0c2cb11a123d4b4ca4a6d58248dd2b1768b42f8ff27f19ca426b120c29e8a11f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "source 'ioaofaoebgaj' -> target 'jagbeoafoaoi'\n"
+        }
+      ]
+    },
+    "encoders-decoders-the-decoder-block-one-more-sublayer-1": {
+      "code_fingerprint": "sha256:2e97b999cf05e97e9a579e68651194328a3bde3865f6d5c490a0040f58217c3c",
+      "kind": "text",
+      "outputs": []
+    },
+    "encoders-decoders-the-decoder-block-one-more-sublayer-2": {
+      "code_fingerprint": "sha256:8b15f284fbf3635ae61d33c1705a942604a7fa10312aab941b5867b100eb18c2",
+      "kind": "text",
+      "outputs": []
+    },
+    "encoders-decoders-assembling-the-masks": {
+      "code_fingerprint": "sha256:2c9f6c03da4d3bdcd5890b155b18eb1702408471f18924127c0674f3315916ec",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "encoder self-attention mask, sequence 0 (1 = may attend):\n[[1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]]\ndecoder self-attention mask, sequence 0 (1 = may attend):\n[[1 0 0 0]\n [1 1 0 0]\n [1 1 1 0]\n [1 1 1 0]]\ncross-attention mask, sequence 0 (1 = may attend):\n[[1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]\n [1 1 1 0 0]]\n"
+        }
+      ]
+    },
+    "encoders-decoders-training-and-decoding-1": {
+      "code_fingerprint": "sha256:bf29d365838e85f2794d6f55162a6ee167eb037c97be1141683f420858279329",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "loss at step 100/200/400/600: 0.005/0.001/0.001/0.000\n"
+        }
+      ]
+    },
+    "encoders-decoders-training-and-decoding-2": {
+      "code_fingerprint": "sha256:3e7f824fb6da0cc581626696ddda1b66878d4163d8be43c5cec3fa8f8f52daf9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "exact match on 1000 fresh strings: 1.000\nsource 'acppaolbfbak' -> predicted 'kabfbloappca'\n"
+        }
+      ]
+    },
+    "encoders-decoders-reading-the-alignment": {
+      "code_fingerprint": "sha256:1bf5b17eb8c533ef5ce6a92cd4a7c19d58953664d127afca59449c162bb7a4f3",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "head-averaged argmax hits the true source position on 100% of rows; mean weight there 0.88\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "encoders-decoders/encoders-decoders-reading-the-alignment-1.svg",
+          "bytes": 38529,
+          "sha256": "sha256:7fee8aab0d375479ffa7b72b0b15b7f5f8648478ad4d1794863df88e129bd3ca"
+        }
+      ]
+    },
+    "encoders-decoders-queries-need-not-come-from-a-sequence": {
+      "code_fingerprint": "sha256:2a16ad0565dcea17376ae4a40943efc06282b8a165b3f4158fed94d79a8c1ba3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "input (1, 4096, 256) -> latent summary (1, 64, 256)\n"
+        }
+      ]
+    },
+    "encoders-decoders-the-cost-curve": {
+      "code_fingerprint": "sha256:3b0cbb5244f11bb98d474b564a86334fe09607faef1b0551e11a5ad9b2bec261",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N= 1024: self-attention   0.99 ms, perceiver  1.31 ms\nN= 2048: self-attention   2.80 ms, perceiver  1.40 ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N= 4096: self-attention   9.46 ms, perceiver  1.35 ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "N= 8192: self-attention  34.79 ms, perceiver  1.72 ms\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "encoders-decoders/encoders-decoders-the-cost-curve-1.svg",
+          "bytes": 30405,
+          "sha256": "sha256:a17ad8a9a5863c5288e41197bbed328a40fa7275ba4a14caaf1e08e9c4cc7b99"
+        }
+      ]
+    }
+  }
+}

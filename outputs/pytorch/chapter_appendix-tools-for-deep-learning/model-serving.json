@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "source": "chapter_appendix-tools-for-deep-learning/model-serving.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "model-serving-scheduler": {
+      "code_fingerprint": "sha256:156662ca7b94eaf104b405e6dbdcd9524e73af733ee296ee7613afcd9807e01d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[(5, 2), (4, 1), (3, 7), (2, 6), (1, 5), (4, 3), (3, 2), (2, 1), (1,)]"
+        }
+      ]
+    }
+  }
+}

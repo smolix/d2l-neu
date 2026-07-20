@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "source": "chapter_attention/attention-scoring.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:345a4d7096a85f6fca6530ddc0231eb9ccbed75383a63734764ad3edfe2d8ceb",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "attention-scoring-attention-scoring-and-masking": {
+      "code_fingerprint": "sha256:1e1f90a6c47635e6350f4f645795dce34693b25fcca1d2222b776e9b792cbe27",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1": {
+      "code_fingerprint": "sha256:4e5db47db3e7eabd98ce21019f81db76224f94aee7d614abafe47320a9461c90",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring/attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1-1.svg",
+          "bytes": 25631,
+          "sha256": "sha256:685db7286773eb98f0714633caee9c2077b8a124c634f742ace9dddc5a0db995"
+        }
+      ]
+    },
+    "attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2": {
+      "code_fingerprint": "sha256:0638c3736b4abb073a834da6005766ffa2901ab08ab45911ff897cfa662d41cd",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d =   4: Jacobian norm 0.258 (unscaled), 0.178 (scaled)\nd =  64: Jacobian norm 0.218 (unscaled), 0.184 (scaled)\nd = 512: Jacobian norm 0.103 (unscaled), 0.186 (scaled)\n"
+        }
+      ]
+    },
+    "attention-scoring-the-masked-softmax-operation-1": {
+      "code_fingerprint": "sha256:96a011d874c218d21c8dc80953a84ecc342b58d59301fa28bad891b27543402a",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-the-masked-softmax-operation-2": {
+      "code_fingerprint": "sha256:ced49b09d736506253b00247946dc2932c176a089084a31dc602f459499c66a6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[0.4922724 , 0.5077276 , 0.        , 0.        ],\n        [0.5997409 , 0.40025908, 0.        , 0.        ]],\n\n       [[0.3531402 , 0.19856434, 0.4482954 , 0.        ],\n        [0.31042197, 0.2873157 , 0.40226236, 0.        ]]], dtype=float32)"
+        }
+      ]
+    },
+    "attention-scoring-the-masked-softmax-operation-3": {
+      "code_fingerprint": "sha256:ff7a492bec5f3997854728b4cfa71d14635a9cd998dab26dd772759bb732be12",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[[1.        , 0.        , 0.        , 0.        ],\n        [0.35672572, 0.2543091 , 0.38896522, 0.        ]],\n\n       [[0.43679553, 0.5632045 , 0.        , 0.        ],\n        [0.2580636 , 0.2509437 , 0.258296  , 0.23269679]]], dtype=float32)"
+        }
+      ]
+    },
+    "attention-scoring-causal-masking": {
+      "code_fingerprint": "sha256:cc57a2652ecd59473ed61c96b2f61b3aa9a12a581611a5b08abb75ca4a2c8b94",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring/attention-scoring-causal-masking-1.svg",
+          "bytes": 16485,
+          "sha256": "sha256:5d53057dd9074bf439f20a87a377e0532c90b5546b1c975378eb9933e2cd491b"
+        }
+      ]
+    },
+    "attention-scoring-composing-masks": {
+      "code_fingerprint": "sha256:2ed00e9e77434c3b2f9a5a31fcafd2a05b305b715ff63af77826b5cad93d5219",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
+          "bytes": 19831,
+          "sha256": "sha256:5b0b9f201ee663b3bc92d9fc602552e4aba1f31f7d58d8440fe5dfb1f56ef9ba"
+        }
+      ]
+    },
+    "attention-scoring-batch-matrix-multiplication": {
+      "code_fingerprint": "sha256:12a76f0fc86cba12dae22b52cc4312373caa3649395e333c64c5d61c82c7ca6d",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-the-dotproductattention-class-1": {
+      "code_fingerprint": "sha256:ee19646b6add6dd1aa1ae5eaae771c965541e83b4ebb5fe95a4bcb3564c88933",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-the-dotproductattention-class-2": {
+      "code_fingerprint": "sha256:c5f3e5f8fdbd17580f77ef6a4fbfe9b129724f465a73c8cf3669cdb1367ee3f1",
+      "kind": "text",
+      "outputs": []
+    },
+    "attention-scoring-the-dotproductattention-class-3": {
+      "code_fingerprint": "sha256:06f57ca7d208612d1fd0c0bc691dbfa571da4239b320d637336051d550ca6792",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
+          "bytes": 13609,
+          "sha256": "sha256:2036803f80f9a0dde63056cf2bd023cd8e659368754c4dee2a653301b363a444"
+        }
+      ]
+    },
+    "attention-scoring-from-alignment-to-attention": {
+      "code_fingerprint": "sha256:6c23f6b8d14b590b816bb716847f89409507e948394ea9c3e2d33f16528ec558",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "Array([[0.13390937, 0.3772766 , 0.17127123, 0.1027277 , 0.06276076,\n        0.15205443],\n       [0.19218282, 0.31524566, 0.14511336, 0.08953383, 0.07662669,\n        0.18129766],\n       [0.15669951, 0.3378386 , 0.15281527, 0.11713327, 0.09428051,\n        0.1412329 ]], dtype=float32)"
+        }
+      ]
+    }
+  }
+}

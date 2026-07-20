@@ -310,7 +310,7 @@ RegNetX32().layer_summary((1, 96, 96, 1))
 ### Squeeze-and-Excitation Gates
 :label:`subsec_se`
 
-The global channel activation that turns RegNetX into RegNetY is the *squeeze-and-excitation* (SE) gate :cite:`Hu.Shen.Sun.2018`. A convolution mixes information locally; an SE gate lets the network reweight entire channels based on global context. It *squeezes* each channel to a single number by global average pooling, passes the resulting vector of $c$ channel summaries through a two-layer bottleneck MLP with a sigmoid output (the *excitation*), and multiplies each channel of the input by its gate value. The extra cost is negligible, about $2c^2/r$ parameters for reduction ratio $r$ and almost no FLOPs, since the MLP acts on a pooled vector rather than on the feature map. This is a simple form of attention, computed per channel rather than per location; the general mechanism is the subject of :numref:`chap_attention-and-transformers`. The gate outlived its namesake network: EfficientNet :cite:`tan2019efficientnet` and most of the mobile architectures of :numref:`sec_efficient_cnns` include SE blocks.
+The global channel activation that turns RegNetX into RegNetY is the *squeeze-and-excitation* (SE) gate :cite:`Hu.Shen.Sun.2018`. A convolution mixes information locally; an SE gate lets the network reweight entire channels based on global context. It *squeezes* each channel to a single number by global average pooling, passes the resulting vector of $c$ channel summaries through a two-layer bottleneck MLP with a sigmoid output (the *excitation*), and multiplies each channel of the input by its gate value. The extra cost is negligible, about $2c^2/r$ parameters for reduction ratio $r$ and almost no FLOPs, since the MLP acts on a pooled vector rather than on the feature map. This is a simple form of attention, computed per channel rather than per location; the general mechanism is the subject of :numref:`chap_attention`. The gate outlived its namesake network: EfficientNet :cite:`tan2019efficientnet` and most of the mobile architectures of :numref:`sec_efficient_cnns` include SE blocks.
 
 An SE gate is only a few lines: pool, two dense layers, rescale.
 
@@ -418,7 +418,7 @@ What remains is a division of labor. Foundation-scale pretraining and multimodal
 
 The same pattern holds beyond classification. Diffusion image generators moved from convolutional U-Nets to diffusion Transformers at the frontier :cite:`peebles2023dit`, while convolutional U-Nets remain standard in deployed and smaller systems.
 
-The lesson of the chapter, then, is that inductive bias is a data-efficiency dial, not a ceiling. With limited data and compute, locality and translation equivariance buy accuracy that a less constrained model must learn from examples; with enough of both, a Transformer learns those regularities and others besides. :numref:`chap_attention-and-transformers` develops that architecture in full.
+The lesson of the chapter, then, is that inductive bias is a data-efficiency dial, not a ceiling. With limited data and compute, locality and translation equivariance buy accuracy that a less constrained model must learn from examples; with enough of both, a Transformer learns those regularities and others besides. :numref:`chap_transformers` develops that architecture in full.
 
 ## Exercises
 

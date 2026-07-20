@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "source": "chapter_transformers/scaling-laws.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:113a192508e5e7084dc6ff4fba550561f3a97a9d919f984a964fc8c998d25f6f",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "scaling-laws-scaling-laws-and-the-modern-recipe": {
+      "code_fingerprint": "sha256:175cf8f75fda2862fae7354285d04dd414290a43be89c0c142cc3500a958dc32",
+      "kind": "text",
+      "outputs": []
+    },
+    "scaling-laws-a-parameter-census": {
+      "code_fingerprint": "sha256:3dde23005de95e845bfff5ea635057aa708a02e97cb8be5f591dc3d8fbcae71c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "embedding   0.01M (  0%),  blocks   4.72M = 12.01 L d^2,  total 4.73M\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "embedding  39.38M ( 32%),  blocks  85.06M = 12.02 L d^2,  total 124.44M\n"
+        }
+      ]
+    },
+    "scaling-laws-checking-the-arithmetic": {
+      "code_fingerprint": "sha256:460fea092bfa5a612a5ca6156b6410dcf830218d8dd98d09ce3ae6d83cce1681",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/smola/d2l-neu/.venv-pytorch/lib/python3.12/site-packages/torch/profiler/profiler.py:224: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.\n  _warn_once(\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "6ND analytic: 2.324e+11 FLOPs\nprofiler:     2.326e+11 FLOPs (ratio 1.001)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "26 ms per step: 8.8 TFLOP/s achieved\n"
+        }
+      ]
+    },
+    "scaling-laws-a-corpus-bigger-than-a-novella": {
+      "code_fingerprint": "sha256:9829f84a4bb10b8466a1ed57849f9ef2402570c219299f8b800ed1122c47b41d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "5.1M characters in 39491 windows, vocabulary size 28\n"
+        }
+      ]
+    },
+    "scaling-laws-five-sizes-one-diet-1": {
+      "code_fingerprint": "sha256:4bc83c542fcc75ea563677c1918e57ac0fdf9639cb0b09484cbfb852fa919523",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d= 96, 3 blocks:  0.33M parameters, train 1.21, validation 1.20\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d=128, 3 blocks:  0.59M parameters, train 1.17, validation 1.17\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d=192, 4 blocks:  1.77M parameters, train 1.11, validation 1.12\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d=256, 6 blocks:  4.72M parameters, train 1.06, validation 1.09\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d=384, 8 blocks: 14.16M parameters, train 1.03, validation 1.07\n"
+        }
+      ]
+    },
+    "scaling-laws-five-sizes-one-diet-2": {
+      "code_fingerprint": "sha256:93fb4c70c62449f7bac64b9b408567e8c3cf395fc3eba06ebcbe4add336c92f0",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "scaling-laws/scaling-laws-five-sizes-one-diet-2-1.svg",
+          "bytes": 33782,
+          "sha256": "sha256:99b56032eb28129e8f3f0626700f0c48e76fb5dfe9996623897af77b56b96506"
+        }
+      ]
+    },
+    "scaling-laws-recipe-rows-as-constructor-calls": {
+      "code_fingerprint": "sha256:604cab1ee209e552a502a942f17a5047797df53246641220cbf1daf994f27de8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "GPT-2 (2019) 5.26M  pos='learned', norm='layer', act='gelu', pre_norm=True, bias=True, kv_heads=8\nMistral-7B   4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\nLlama-3      4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\nQwen3        4.40M  pos='rope', norm='rms', act='swiglu', pre_norm=True, bias=False, kv_heads=2\n"
+        }
+      ]
+    }
+  }
+}

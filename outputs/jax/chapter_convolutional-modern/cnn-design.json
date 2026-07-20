@@ -39,11 +39,6 @@
       "outputs": [
         {
           "type": "stream",
-          "name": "stderr",
-          "text": "E0715 18:38:19.246548   30432 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
-        },
-        {
-          "type": "stream",
           "name": "stdout",
           "text": "Sequential output shape:\t (1, 48, 48, 32)\n"
         },
@@ -82,8 +77,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "cnn-design/cnn-design-training-1.svg",
-          "bytes": 21656,
-          "sha256": "sha256:3ad820d390edd4dbd8c0776ef17cab6893284e79a0c6aeacb6b589448d7f638c"
+          "bytes": 20443,
+          "sha256": "sha256:795dd6c75362c576b8d32f2a87bb5c9b109dd23ade7b07114c8fbc51aa8eadc7"
         }
       ]
     }

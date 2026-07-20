@@ -1,69 +1,228 @@
 # State Space Models
 :label:`chap_modern_rnn`
 
-The recurrent networks of :numref:`chap_rnn` compress an unbounded past into a
-fixed-size hidden state: one vector that must carry forward everything later
-steps will need. That raises a question the vanilla RNN never really answers.
-What should the state remember? Its reply is "whatever stochastic gradient
-descent happens to find," and :numref:`sec_bptt` showed why that reply is
-unsatisfying. Learning a long-range dependency means pushing a gradient back
-through many steps, where the recurrent Jacobian multiplies it again and again
-until it vanishes or explodes. Clipping tames the blow-up, but a signal that
-has decayed into noise cannot be recovered. To decide what a state remembers,
-we have to change the recurrence itself.
+You now own two kinds of memory. The transformer of
+:numref:`chap_transformers` keeps everything: its key–value cache is an
+archive that grows with every token, answers exact-recall questions by
+lookup, and presents a bill that :numref:`sec_kv-cache` measured directly
+— a bill that in production sets the economics of long-context serving.
+The recurrent networks of :numref:`chap_rnn` keep one thing: a fixed-size
+state, updated in place, whose cost per token does not grow with the
+length of the context and whose memory of the past is whatever its
+finitely many bits managed to squeeze in. This chapter
+asks the question that sits between those designs: how far can a fixed
+state actually go? Its answer, which is the field's answer as of this
+writing, comes as five verbs and a truce. *Gate* the state, so that learned sigmoids
+decide what is written and what is erased. *Linearize* it, so that
+training parallelizes across the sequence. *Select*, so that the dynamics
+read the data as it flows past. *Edit*, so that a write can correct the
+memory instead of piling on top of it. *Learn*, the reading under which
+all of these turn out to be one algorithm fitting a regressor at test
+time. And then the truce that production systems have settled on:
+*hybridize*, keeping a few layers of genuine attention inside a mostly
+recurrent stack.
 
-This chapter gives three answers, in roughly historical and conceptual order.
-The first is to *gate* it. The long short-term memory (LSTM) cell and its
-streamlined cousin the gated recurrent unit (GRU, :numref:`sec_lstm`) attach
-learned, input- and state-dependent gates that control what the state reads,
-writes, and forgets; a value protected by a forget gate can survive hundreds
-of steps. The second is to *linearize* it. Dropping the nonlinearity from the
-state update, as minGRU does and as the structured state space models S4 and
-S4D do from a continuous-time starting point (:numref:`sec_ssm`), turns the
-recurrence into an affine map. Training then parallelizes across the sequence
-with a scan instead of crawling one step at a time, and the memory becomes
-analyzable, its decay read straight off the eigenvalues. The third is to
-*select* it. A linear recurrence with fixed coefficients is content-blind, so
-we make its dynamics input-dependent again, the move behind Mamba
-(:numref:`sec_mamba`); this recovers the content-awareness of a gate while
-keeping the linear-time, parallel-training cost. Gate, linearize, select:
-three ways to answer one question. Remarkably, the forget gate of the first
-answer reappears inside the third, since Mamba's input-dependent step size is
-a gate wrapped around a linear state, and the arc closes on the idea it opened
-with.
+The first three verbs are the chapter's classical spine.
+:numref:`sec_lstm` builds the gate once, carefully: starting from the
+observation that only an additive state passes gradients unattenuated, it
+derives the LSTM's three gates and the GRU's two, trains both against the
+vanilla RNN under one fixed recipe, and keeps the scoreboard — at
+a ten-epoch budget the cheaper GRU wins while the LSTM merely matches the
+baseline until its initialization is repaired, because architecture and
+optimization cannot be judged separately. :numref:`sec_ssm` deletes the
+nonlinearity from the state path: what remains of the GRU is an affine
+recurrence that an associative scan evaluates in logarithmic depth, and
+the state space view rebuilds the same object from continuous time, where
+discretization *derives* the gate rather than positing it and the HiPPO
+theory supplies dynamics under which a fixed state's memory of the past
+is provably good. The section trains an S4D classifier on 784-pixel
+image sequences, then runs the trained model both ways (all pixels at
+once through the scan, one pixel at a time through a carried state,
+verifying that the two agree) and prints the punchline: the model's entire
+memory of an arbitrarily long history is a kilobyte-scale state, the same
+at token one hundred as at token one hundred thousand, where a
+transformer's cache would have grown a thousandfold. :numref:`sec_mamba`
+restores what linearization gave up. A selective-copying task built to
+defeat time-invariant dynamics motivates making the step size a function
+of the input (the forget gate derived a third time), and the resulting
+Mamba block solves the copy task, tops the chapter's three-answers
+scoreboard in our PyTorch run (in the JAX run the far cheaper minGRU
+edges it out), and generates text at a per-token cost that does not grow
+with the prefix, through its own stepped path.
 
-Woven through this progression is a second thread. :numref:`sec_seq2seq`
-develops the encoder-decoder architecture that first carried recurrent
-networks to large-scale machine translation, the application that drove the
-field for years. The same abstraction still frames speech recognition,
-captioning, and multimodal front-ends, so it is worth building once even
-though word-level translation is behind us. It also exposes a limitation that
-reframes the whole chapter: the encoder squeezes an entire source sentence
-through a single fixed-size vector. That bottleneck is the memory question in
-another guise, and it points to two escapes, namely building a *better* fixed
-state (the rest of this chapter) or letting the model *look back* at
-everything at once (attention, the next part).
+The next three sections carry the story to the present.
+:numref:`sec_matrix-state` is where this chapter's road meets the one
+from :numref:`chap_attention`: linear attention's matrix state and the
+selective recurrence are one template that varies only in how it forgets.
+The section measures the memory's capacity law: after $n$ independent
+random unit-norm writes into key width $d_k$ the expected squared read
+error is $(n-1)/d_k$, and
+the measured curves sit on that prediction across three widths. It then
+climbs the decay ladder from RetNet to Mamba-2 to GLA, and derives the
+promised state-space duality — a gated linear recurrence and masked
+attention are the same matrix computed in two contraction orders, with
+the chunked third order being how these models train at scale.
+:numref:`sec_deltanet` changes the write rule. A memory that can only add
+fails when a key must be re-bound: in the section's flagship experiment,
+recall of the latest value roughly halves by two writes per key and
+approaches chance by eight, a collapse that end-to-end training does not
+escape within the section's deliberately restricted memory class,
+while the delta rule (read first, then write only the correction)
+holds recall essentially perfect throughout and turns out to be one step of
+gradient descent on a recall loss, running inside the forward pass. The
+section makes it trainable with a triangular solve, gates it into the
+Gated DeltaNet cell that several production models now ship, and shows
+that the new transition genuinely computes: a single eigenvalue explains
+why letting the write strength exceed one makes parity representable at
+any length.
+:numref:`sec_test-time-regression` then supplies the theory the instances
+have been hinting at: every memory in this chapter can be read as
+maintaining itself by
+solving a weighted regression of values on keys at test time. Softmax
+attention is the Nadaraya–Watson estimator (closing a loop opened in
+:numref:`sec_attention-pooling`, whose one learnable bandwidth the
+section finally trains); linear attention is least squares with the key
+covariance deleted; the delta rule is one explicit gradient step; and a
+measured spectrum from a single online pass to the batch solve confirms
+that more solving buys a better memory. Two models fall out of the view
+rather than being designed: Longhorn, whose gate is the closed form of an
+implicit update, and Titans, a memory that is itself a small network
+trained inside the forward pass; a drifting-target experiment ends the
+section with the statistical reason forgetting exists at all.
 
-The chapter therefore has one recurring adversary, the fixed-size state, met
-at growing sophistication and never fully beaten. Gating, linearization, and
-selection each make a bounded memory hold more of what matters, and modern
-hybrid language models run these layers in production for exactly that reason.
-What recurrence buys in exchange is inference at constant memory and linear
-time in the sequence length, a bargain that keeps it attractive wherever
-generation must run cheaply and at scale. Yet no fixed-size state can recall
-arbitrary detail on demand; asked to
-reproduce a phone number it read a thousand tokens ago, it fails where a
-simple lookup would not. That honest limit hands the story to
-:numref:`chap_attention-and-transformers`. The ideas gathered here span nearly
-three decades, from the 1997 LSTM to the 2024 selective state space models,
-and together they make recurrence a living architecture rather than a
-historical one.
+:numref:`sec_hybrids` closes the chapter where production begins. A fixed
+state loses the exact-recall fight (the section quantifies what it
+cannot copy, and why language-modeling loss hides the deficit), but only
+attention layers pay a growing cache, so shipped systems interleave a few
+of them into a mostly recurrent stack. The centerpiece experiment trains
+three matched models, a pure recurrent stack, a pure attention stack, and
+a hybrid with a single attention layer mid-stack, and watches that one
+layer buy back most to all of the recall the recurrent stack loses
+(roughly 0.92 to 1.00 across the sweep in our runs) while perplexity
+barely moves; measured design rules for how much attention to keep and
+where to put it, and a recipe table of shipped hybrids from Jamba to Kimi
+Linear, turn the trade into engineering. One recipe threads all of these
+experiments together: every trained language model in the chapter runs on
+the *Time Machine* text of :numref:`sec_rnn-scratch` — the classical spine
+and the Gated DeltaNet row on one shared scoreboard, the hybrid stacks on
+their own matched panel — and the mechanistic experiments (capacity,
+overwrite, the regression spectrum) run in seconds on a CPU.
+
+The history here is a pendulum. The LSTM
+:cite:`Hochreiter.Schmidhuber.1997` made recurrence trainable and carried
+speech recognition and translation through the 2010s; the transformer
+displaced it almost completely, and for a few years recurrence looked
+finished. It returned through an unexpected door: S4
+:cite:`Gu.Goel.Re.2022` arrived from continuous-time modeling rather than
+the RNN lineage, Mamba :cite:`Gu.Dao.2023` made the dynamics selective
+and competitive with transformers on language, and the state-space
+duality of Mamba-2 :cite:`Dao.Gu.2024` collapsed the wall between the
+returning recurrences and the linear attention that transformer
+researchers had been simplifying toward. After that the lineages merged
+outright: delta-rule cells and attention–recurrence hybrids now ship
+inside production language models from many labs at once. Whether the
+pendulum swings all the way back is a question with a date on it: a
+public wager between Jonathan Frankle (yes) and Sasha Rush (no) resolves
+on January 1, 2027, on whether a transformer-like model still holds the
+state of the art in most benchmarked language tasks
+([isattentionallyouneed.com](https://www.isattentionallyouneed.com/)).
+This chapter takes no side; it teaches what each side is counting on.
+
+A word on the name, and on what this chapter is not. We use *state space
+models* the way the field now uses it: as the umbrella term for the whole
+fixed-state family — gated RNNs, linear recurrences, selective SSMs,
+matrix memories, test-time learners, and their hybrids — and not only for
+the continuous-time linear systems from which :numref:`sec_ssm` takes the
+term (that section also notes what the phrase means to a statistician,
+which is different again). The chapter teaches algorithms, not kernels:
+the chunked forms here are twenty-line teaching implementations, and the
+Triton kernels, memory hierarchies, and serving systems that make them
+fast belong to :numref:`chap_performance`. It trains no large models:
+pretraining recipes, data pipelines, and everything downstream of a base
+model belong to the Language Models part. The efficient-attention
+taxonomy stays in :numref:`chap_attention`, which already implemented the
+surviving variants; applications of state space models to vision, audio,
+and genomics are out of scope; and the fast-moving family of
+test-time-training architectures beyond Titans is fenced off at a
+pointer in the resources below. What remains is one adversary, met six
+ways: the fixed-size state, and the measured question of how much
+attention a model must keep when the state is not enough.
+
+Two maps are worth carrying into the chapter. The first pins down its
+most overloaded word. *State* names five related but distinct objects in
+the sections ahead:
+
+| What "state" means | Where | Typical shape | At autoregressive inference |
+| :-- | :-- | :-- | :-- |
+| RNN hidden vector $\mathbf{H}_t$ (plus the LSTM cell $\mathbf{C}_t$) | :numref:`sec_lstm` | $h$ numbers per layer | carried, updated in place |
+| Continuous-time latent $\mathbf{x}(t)$ | :numref:`sec_ssm` | $N$ numbers per channel | analysis object; only its discretization runs |
+| Discretized SSM state $\mathbf{x}_t$ | :numref:`sec_ssm`, :numref:`sec_mamba` | $(H, N)$ block per layer | carried, updated in place |
+| Matrix fast weight $\mathbf{S}_t$ | :numref:`sec_matrix-state`, :numref:`sec_deltanet` | $d_k \times d_v$ per head | carried, updated in place |
+| Inner-loop parameters of a memory network | :numref:`sec_test-time-regression` | a small MLP's weights | carried, updated by inner gradient steps |
+
+All but the second are one idea at different granularities: the numbers a
+fixed-memory model carries from token to token. The KV cache of
+:numref:`sec_kv-cache` is the contrast class, per-token storage that
+grows with the context; "state" in this chapter never means that.
+
+The second map is for reading the experiments. Each probes one property,
+and each has a confounder worth knowing before its conclusion arrives:
+
+| Experiment | Probes | Main confounder |
+| :-- | :-- | :-- |
+| Sequential-image classification (:numref:`sec_ssm`) | long-range mixing (mean-pool readout) vs. state retention (final-step readout) | the readout decides which is measured; the LSTM baseline is initialization-sensitive |
+| Selective copying (:numref:`sec_mamba`) | content-dependent selection | a deep network around LTI mixers earns partial credit without selectivity |
+| Random-key capacity (:numref:`sec_matrix-state`) | additive-memory interference vs. key width | assumes independent isotropic keys; learned keys are neither |
+| Overwrite task (:numref:`sec_deltanet`) | key re-binding: additive vs. delta writes | the trained baseline is a deliberately restricted memory class |
+| Parity vs. length (:numref:`sec_deltanet`) | representability vs. trainability of sign-flipping transitions | optimization noise across seeds and lengths |
+| Solver spectrum (:numref:`sec_test-time-regression`) | value of more inner-solver compute | the estimators optimize related, not identical, objectives |
+| Hybrid recall sweep (:numref:`sec_hybrids`) | exact recall vs. attention budget | position handling and parameter matching |
+| LM scoreboards (:numref:`sec_lstm`, :numref:`sec_mamba`, :numref:`sec_hybrids`) | end-to-end quality at teaching scale | one seeded run each; optimizer and parameter-count asymmetries |
+
+When a section's conclusion reads stronger than its table, this map is
+the antidote.
 
 ```toc
 :maxdepth: 2
 
 lstm
-seq2seq
 ssm
 mamba
+matrix-state
+deltanet
+test-time-regression
+hybrids
 ```
+
+## Resources and Further Reading {.unnumbered}
+
+Grouped by the chapter's arc: implementations to build from, the
+explanations behind the ideas, the papers that organize the field, and
+course counterparts. All are freely accessible online.
+
+**Annotated implementations**
+
+- [The Annotated S4 — Sasha Rush (2022)](https://srush.github.io/annotated-s4/) and [Mamba: The Hard Way (2024)](https://srush.github.io/annotated-mamba/hard.html) — S4 and the Mamba scan implemented line by line against the papers, in the executable-textbook format this book shares; the closest companions to :numref:`sec_ssm` and :numref:`sec_mamba`.
+- [mamba-minimal](https://github.com/johnma2006/mamba-minimal) — the architecture of :numref:`sec_mamba` in one readable PyTorch file, deliberately without the kernels.
+- [state-spaces/mamba](https://github.com/state-spaces/mamba) — the authors' reference implementation, including the `ssd_minimal` listing that distills Mamba-2's chunked algorithm (:numref:`sec_matrix-state`) to a page.
+- [flash-linear-attention — fla-org](https://github.com/fla-org/flash-linear-attention) — production Triton kernels for GLA, DeltaNet, RWKV, and their relatives; the industrial form of the chunked cells taught in :numref:`sec_matrix-state` and :numref:`sec_deltanet`.
+- [Gated DeltaNet, from scratch — Sebastian Raschka](https://github.com/rasbt/LLMs-from-scratch/tree/main/ch04/08_deltanet) — a bonus chapter of *LLMs from Scratch* implementing Qwen3-Next's linear-attention layer, hybrid ratio and all; a build-along for :numref:`sec_deltanet` and :numref:`sec_hybrids`.
+- [zoology — HazyResearch](https://github.com/HazyResearch/zoology) — the synthetic associative-recall harness behind the recall results that :numref:`sec_hybrids` reproduces at teaching scale.
+
+**The ideas, explained**
+
+- [A Visual Guide to Mamba and State Space Models — Maarten Grootendorst (2024)](https://newsletter.maartengrootendorst.com/p/a-visual-guide-to-mamba-and-state) — more than fifty custom figures from SSM basics to the selective scan; the gentlest on-ramp to :numref:`sec_ssm` and :numref:`sec_mamba`.
+- [State Space Duality (Mamba-2), parts I–IV — Albert Gu and Tri Dao (2024)](https://goombalab.github.io/blog/2024/mamba2-part1-model/) — the authors' own four-part development of the duality that :numref:`sec_matrix-state` teaches: model, theory, algorithm, systems.
+- [DeltaNet Explained, parts I–III — Songlin Yang (2024)](https://sustcsonglin.github.io/blog/2024/deltanet-1/) and her [Linear Attention and Beyond slides](https://github.com/sustcsonglin/linear-attention-and-beyond-slides) — the delta rule, the WY trick, and the whole linear-attention design space, from the researcher behind much of it; :numref:`sec_deltanet` in its original voice.
+- [On the Tradeoffs of SSMs and Transformers — Albert Gu (2025)](https://goombalab.github.io/blog/2025/tradeoffs/) — the argument, adapted from a widely given talk, that compression and lookup are different jobs and the best models will do both; the thesis :numref:`sec_hybrids` prices out.
+- [ASAP seminar series](https://asap-seminar.github.io/) — an ongoing virtual seminar on sequence-model architectures; where the topics of this chapter continue past its cutoff, including the post-Titans test-time-training line.
+
+**Papers that organize the field**
+
+- [Test-Time Regression — Wang, Shi, and Fox (2025)](https://arxiv.org/abs/2501.12352) — the unifying frame of :numref:`sec_test-time-regression` at full mathematical strength; the closest thing this chapter has to a companion paper.
+- [Speed Always Wins — Sun et al. (2025)](https://arxiv.org/abs/2508.09834) — an eighty-page survey of linear sequence modeling, sparse attention, mixtures of experts, hybrids, and diffusion language models; the field-scale map for everything this chapter had to leave out.
+
+**Course counterparts**
+
+- [Stanford CS336: Language Modeling from Scratch, Lecture 4](https://cs336.stanford.edu/) — attention alternatives and mixture of experts: this chapter's material as one lecture of the from-scratch language-modeling course.
+- [CMU 10-423 Generative AI, Lecture 22: State Space Models](https://www.cs.cmu.edu/~mgormley/courses/10423-s25/slides/lecture22-ssm.pdf) — a careful lecture-notes treatment of S4 and Mamba (Gormley and Virtue); a second angle on :numref:`sec_ssm` and :numref:`sec_mamba`.

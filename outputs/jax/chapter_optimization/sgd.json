@@ -37,7 +37,7 @@
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-stochastic-gradient-updates-3-1.svg",
           "bytes": 23593,
-          "sha256": "sha256:b66643d935e42b5ab273ecaf0d5ace79937d66737e313c17ac5deb1b4982312a"
+          "sha256": "sha256:ede71d5f3aff045e5c627a0998e77f9d5a0d2bf36b20596b4240f02ad66f2989"
         }
       ]
     },
@@ -55,7 +55,7 @@
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-1-1.svg",
           "bytes": 123943,
-          "sha256": "sha256:d0fdea006b7cb8cc39a4039bfefabf34ae48c4065c7b6abac7cf4f50c005d068"
+          "sha256": "sha256:6c9700031405c3ea07bc3366ebcce5c4e228f8ef0c3642403530669cbc7ff0da"
         }
       ]
     },
@@ -73,7 +73,7 @@
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-dynamic-learning-rate-2-1.svg",
           "bytes": 23597,
-          "sha256": "sha256:c2b9a45c9eb6e8a8ed040e984426ebea6c572bda158d4b46f873a4a5331e4123"
+          "sha256": "sha256:ff9f6a9bdf3626466d7ac37e4eaf64f48cba1945e3cfe86ac7e66c224429ff64"
         }
       ]
     },
@@ -85,8 +85,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sgd/sgd-gradient-variance-and-batch-size-1.svg",
-          "bytes": 30067,
-          "sha256": "sha256:285a04224b69c7f9bea0deba7524e1cac3b748bcd36471752c696ef03071153c"
+          "bytes": 29860,
+          "sha256": "sha256:992913fa3122f02dfbf81f2cdedb35604eca743ad19fdf61b6e6ee19da8b95d0"
         }
       ]
     }

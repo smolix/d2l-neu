@@ -592,6 +592,26 @@ def cross_entropy(y_hat, y):
     # Tiny clip to keep log finite when softmax outputs underflow to 0.
     return -tf.reduce_mean(tf.math.log(tf.maximum(p, 1e-12)))
 
+def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
+                  cmap='Reds'):
+    """Show heatmaps of matrices.
+
+    Defined in :numref:`sec_softmax_scratch`"""
+    d2l.use_svg_display()
+    num_rows, num_cols, _, _ = matrices.shape
+    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
+                                 sharex=True, sharey=True, squeeze=False)
+    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
+        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
+            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
+            if i == num_rows - 1:
+                ax.set_xlabel(xlabel)
+            if j == 0:
+                ax.set_ylabel(ylabel)
+            if titles:
+                ax.set_title(titles[j])
+    fig.colorbar(pcm, ax=axes, shrink=0.6);
+
 class SoftmaxRegression(d2l.Classifier):
     """The softmax regression model.
 
@@ -1194,313 +1214,6 @@ class Timer:
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
 
-def show_heatmaps(matrices, xlabel, ylabel, titles=None, figsize=(2.5, 2.5),
-                  cmap='Reds'):
-    """Show heatmaps of matrices.
-
-    Defined in :numref:`sec_queries-keys-values`"""
-    d2l.use_svg_display()
-    num_rows, num_cols, _, _ = matrices.shape
-    fig, axes = d2l.plt.subplots(num_rows, num_cols, figsize=figsize,
-                                 sharex=True, sharey=True, squeeze=False)
-    for i, (row_axes, row_matrices) in enumerate(zip(axes, matrices)):
-        for j, (ax, matrix) in enumerate(zip(row_axes, row_matrices)):
-            pcm = ax.imshow(d2l.numpy(matrix), cmap=cmap)
-            if i == num_rows - 1:
-                ax.set_xlabel(xlabel)
-            if j == 0:
-                ax.set_ylabel(ylabel)
-            if titles:
-                ax.set_title(titles[j])
-    fig.colorbar(pcm, ax=axes, shrink=0.6);
-
-def masked_softmax(X, valid_lens):
-    """Perform softmax operation by masking elements on the last axis.
-
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    # X: 3D tensor, valid_lens: 1D or 2D tensor
-    def _sequence_mask(X, valid_len, value=0):
-        maxlen = tf.shape(X)[1]
-        mask = tf.range(start=0, limit=maxlen, dtype=tf.float32)[
-            None, :] < tf.cast(valid_len[:, None], dtype=tf.float32)
-        return tf.where(mask, X, value)
-
-    if valid_lens is None:
-        return tf.nn.softmax(X, axis=-1)
-    else:
-        shape = tf.shape(X)
-        if len(valid_lens.shape) == 1:
-            valid_lens = tf.repeat(valid_lens, repeats=shape[1])
-        else:
-            valid_lens = tf.reshape(valid_lens, shape=(-1,))
-        # On the last axis, replace masked elements with a very large negative
-        # value, whose exponentiation outputs 0
-        X = _sequence_mask(tf.reshape(X, (-1, shape[-1])), valid_lens,
-                           value=-1e6)
-        return tf.nn.softmax(tf.reshape(X, shape), axis=-1)
-
-class DotProductAttention(tf.keras.layers.Layer):
-    """Scaled dot product attention.
-
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, dropout):
-        super().__init__()
-        self.dropout = tf.keras.layers.Dropout(dropout)
-        
-    # Shape of queries: (batch_size, no. of queries, d)
-    # Shape of keys: (batch_size, no. of key-value pairs, d)
-    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
-    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-    def call(self, queries, keys, values, valid_lens=None, training=False,
-             **kwargs):
-        d = tf.cast(tf.shape(queries)[-1], dtype=tf.float32)
-        scores = tf.matmul(queries, keys, transpose_b=True)/tf.math.sqrt(d)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        return tf.matmul(self.dropout(
-            self.attention_weights, training=training), values)
-
-class AdditiveAttention(tf.keras.layers.Layer):
-    """Additive attention.
-
-    Defined in :numref:`sec_attention-scoring-functions`"""
-    def __init__(self, key_size, query_size, num_hiddens, dropout, **kwargs):
-        super().__init__(**kwargs)
-        self.W_k = tf.keras.layers.Dense(num_hiddens, use_bias=False)
-        self.W_q = tf.keras.layers.Dense(num_hiddens, use_bias=False)
-        self.w_v = tf.keras.layers.Dense(1, use_bias=False)
-        self.dropout = tf.keras.layers.Dropout(dropout)
-        
-    def call(self, queries, keys, values, valid_lens, training=False, **kwargs):
-        queries, keys = self.W_q(queries), self.W_k(keys)
-        # After dimension expansion, shape of queries: (batch_size, no. of
-        # queries, 1, num_hiddens) and shape of keys: (batch_size, 1, no. of
-        # key-value pairs, num_hiddens). Sum them up with broadcasting
-        features = tf.expand_dims(queries, axis=2) + tf.expand_dims(
-            keys, axis=1)
-        features = tf.nn.tanh(features)
-        # There is only one output of self.w_v, so we remove the last
-        # one-dimensional entry from the shape. Shape of scores: (batch_size,
-        # no. of queries, no. of key-value pairs)
-        scores = tf.squeeze(self.w_v(features), axis=-1)
-        self.attention_weights = masked_softmax(scores, valid_lens)
-        # Shape of values: (batch_size, no. of key-value pairs, value
-        # dimension)
-        return tf.matmul(self.dropout(
-            self.attention_weights, training=training), values)
-
-class MultiHeadAttention(d2l.Module):
-    """Multi-head attention.
-
-    Defined in :numref:`sec_multihead-attention`"""
-    def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
-        super().__init__()
-        self.num_heads = num_heads
-        self.attention = d2l.DotProductAttention(dropout)
-        self.W_q = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
-        self.W_k = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
-        self.W_v = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
-        self.W_o = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
-    
-    def call(self, queries, keys, values, valid_lens, training=False, **kwargs):
-        # Shape of queries, keys, or values:
-        # (batch_size, no. of queries or key-value pairs, num_hiddens)
-        # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
-        # After transposing, shape of output queries, keys, or values:
-        # (batch_size * num_heads, no. of queries or key-value pairs,
-        # num_hiddens / num_heads)
-        queries = self.transpose_qkv(self.W_q(queries))
-        keys = self.transpose_qkv(self.W_k(keys))
-        values = self.transpose_qkv(self.W_v(values))
-        
-        if valid_lens is not None:
-            # On axis 0, copy the first item (scalar or vector) for num_heads
-            # times, then copy the next item, and so on
-            valid_lens = tf.repeat(valid_lens, repeats=self.num_heads, axis=0)
-            
-        # Shape of output: (batch_size * num_heads, no. of queries,
-        # num_hiddens / num_heads)
-        output = self.attention(queries, keys, values, valid_lens,
-                                training=training)
-        
-        # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
-        output_concat = self.transpose_output(output)
-        return self.W_o(output_concat)
-
-    def transpose_qkv(self, X):
-        """Transposition for parallel computation of multiple attention heads.
-
-        Defined in :numref:`sec_multihead-attention`"""
-        # Shape of input X: (batch_size, no. of queries or key-value pairs,
-        # num_hiddens). Shape of output X: (batch_size, no. of queries or
-        # key-value pairs, num_heads, num_hiddens / num_heads)
-        X = tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], self.num_heads, -1))
-        # Shape of output X: (batch_size, num_heads, no. of queries or key-value
-        # pairs, num_hiddens / num_heads)
-        X = tf.transpose(X, perm=(0, 2, 1, 3))
-        # Shape of output: (batch_size * num_heads, no. of queries or key-value
-        # pairs, num_hiddens / num_heads)
-        return tf.reshape(X, (-1, tf.shape(X)[2], tf.shape(X)[3]))
-
-    def transpose_output(self, X):
-        """Reverse the operation of transpose_qkv.
-
-        Defined in :numref:`sec_multihead-attention`"""
-        X = tf.reshape(X, (-1, self.num_heads, tf.shape(X)[1], tf.shape(X)[2]))
-        X = tf.transpose(X, perm=(0, 2, 1, 3))
-        return tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], -1))
-
-class PositionalEncoding(tf.keras.layers.Layer):
-    """Positional encoding.
-
-    Defined in :numref:`sec_self-attention-and-positional-encoding`"""
-    def __init__(self, num_hiddens, dropout, max_len=1000):
-        super().__init__()
-        self.dropout = tf.keras.layers.Dropout(dropout)
-        # Create a long enough P
-        self.P = np.zeros((1, max_len, num_hiddens))
-        X = np.arange(max_len, dtype=np.float32).reshape(
-            -1,1)/np.power(10000, np.arange(
-            0, num_hiddens, 2, dtype=np.float32) / num_hiddens)
-        self.P[:, :, 0::2] = np.sin(X)
-        self.P[:, :, 1::2] = np.cos(X[:, :num_hiddens // 2])
-        
-    def call(self, X, training=False, **kwargs):
-        X = X + self.P[:, :X.shape[1], :]
-        return self.dropout(X, training=training)
-
-class PositionWiseFFN(tf.keras.layers.Layer):
-    """The positionwise feed-forward network.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, ffn_num_hiddens, ffn_num_outputs):
-        super().__init__()
-        self.dense1 = tf.keras.layers.Dense(ffn_num_hiddens)
-        self.relu = tf.keras.layers.ReLU()
-        self.dense2 = tf.keras.layers.Dense(ffn_num_outputs)
-
-    def call(self, X):
-        return self.dense2(self.relu(self.dense1(X)))
-
-class AddNorm(tf.keras.layers.Layer):
-    """The residual connection followed by layer normalization.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, norm_shape, dropout):
-        super().__init__()
-        self.dropout = tf.keras.layers.Dropout(dropout)
-        # `norm_shape` mirrors PyTorch's `nn.LayerNorm` convention: it gives
-        # the shape of the trailing dims to normalize over. Convert that to
-        # Keras's `axis` argument (negative axis indices counting from the end).
-        self.ln = tf.keras.layers.LayerNormalization(
-            axis=list(range(-len(norm_shape), 0)))
-
-    def call(self, X, Y, training=False, **kwargs):
-        return self.ln(self.dropout(Y, training=training) + X)
-
-class TransformerEncoderBlock(tf.keras.layers.Layer):
-    """The Transformer encoder block.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
-                 bias=False):
-        super().__init__()
-        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
-                                                dropout, bias)
-        self.addnorm1 = AddNorm([num_hiddens], dropout)
-        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
-        self.addnorm2 = AddNorm([num_hiddens], dropout)
-
-    def call(self, X, valid_lens, training=False, **kwargs):
-        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens,
-                          training=training), training=training)
-        return self.addnorm2(Y, self.ffn(Y), training=training)
-
-class PatchEmbedding(tf.keras.layers.Layer):
-    def __init__(self, img_size=96, patch_size=16, num_hiddens=512):
-        super().__init__()
-        def _make_tuple(x):
-            if not isinstance(x, (list, tuple)):
-                return (x, x)
-            return x
-        img_size, patch_size = _make_tuple(img_size), _make_tuple(patch_size)
-        self.num_patches = (img_size[0] // patch_size[0]) * (
-            img_size[1] // patch_size[1])
-        self.conv = tf.keras.layers.Conv2D(num_hiddens, kernel_size=patch_size,
-                                           strides=patch_size)
-
-    def call(self, X):
-        # Input shape: (batch, H, W, C); output: (batch, num_patches, num_hiddens)
-        X = self.conv(X)
-        return tf.reshape(X, (tf.shape(X)[0], -1, X.shape[-1]))
-
-class ViTMLP(tf.keras.layers.Layer):
-    def __init__(self, mlp_num_hiddens, mlp_num_outputs, dropout=0.5):
-        super().__init__()
-        self.dense1 = tf.keras.layers.Dense(mlp_num_hiddens, activation='gelu')
-        self.dropout1 = tf.keras.layers.Dropout(dropout)
-        self.dense2 = tf.keras.layers.Dense(mlp_num_outputs)
-        self.dropout2 = tf.keras.layers.Dropout(dropout)
-
-    def call(self, x, training=False):
-        return self.dropout2(self.dense2(
-            self.dropout1(self.dense1(x), training=training)),
-            training=training)
-
-class ViTBlock(tf.keras.layers.Layer):
-    def __init__(self, num_hiddens, mlp_num_hiddens, num_heads, dropout,
-                 use_bias=False):
-        super().__init__()
-        self.ln1 = tf.keras.layers.LayerNormalization()
-        self.attention = tf.keras.layers.MultiHeadAttention(
-            num_heads=num_heads, key_dim=num_hiddens // num_heads,
-            dropout=dropout, use_bias=use_bias)
-        self.ln2 = tf.keras.layers.LayerNormalization()
-        self.mlp = ViTMLP(mlp_num_hiddens, num_hiddens, dropout)
-
-    def call(self, X, training=False):
-        X_norm = self.ln1(X, training=training)
-        X = X + self.attention(X_norm, X_norm, training=training)
-        return X + self.mlp(self.ln2(X, training=training), training=training)
-
-class ViT(d2l.Classifier):
-    """Vision Transformer.
-
-    Defined in :numref:`sec_vision-transformer`"""
-    def __init__(self, img_size, patch_size, num_hiddens, mlp_num_hiddens,
-                 num_heads, num_blks, emb_dropout, blk_dropout, lr=0.1,
-                 use_bias=False, num_classes=10):
-        super().__init__()
-        self.save_hyperparameters()
-        self.patch_embedding = PatchEmbedding(img_size, patch_size, num_hiddens)
-        num_steps = self.patch_embedding.num_patches + 1  # Add the cls token
-        self.num_steps = num_steps
-        self.num_hiddens = num_hiddens
-        self.emb_dropout = tf.keras.layers.Dropout(emb_dropout)
-        self.blks = [ViTBlock(num_hiddens, mlp_num_hiddens, num_heads,
-                              blk_dropout, use_bias)
-                     for _ in range(num_blks)]
-        self.head_norm = tf.keras.layers.LayerNormalization()
-        self.head_dense = tf.keras.layers.Dense(num_classes)
-
-    def build(self, input_shape):
-        self.cls_token = self.add_weight(
-            name='cls_token', shape=(1, 1, self.num_hiddens),
-            initializer='zeros', trainable=True)
-        self.pos_embedding = self.add_weight(
-            name='pos_embedding', shape=(1, self.num_steps, self.num_hiddens),
-            initializer='random_normal', trainable=True)
-        super().build(input_shape)
-
-    def call(self, X, training=False):
-        X = self.patch_embedding(X)
-        batch_size = tf.shape(X)[0]
-        cls_tokens = tf.tile(self.cls_token, [batch_size, 1, 1])
-        X = tf.concat([cls_tokens, X], axis=1)
-        X = self.emb_dropout(X + self.pos_embedding, training=training)
-        for blk in self.blks:
-            X = blk(X, training=training)
-        return self.head_dense(self.head_norm(X[:, 0]))
-
 class Benchmark:
     """For measuring running time.
 
@@ -1550,82 +1263,46 @@ def resnet18(num_classes, in_channels=1):
     ])
     return net
 
-class LSTMScratch(d2l.Module):
-    """The long short-term memory (LSTM) cell implemented from scratch.
+def update_D(X, Z, net_D, net_G, loss, optimizer_D):
+    """Update discriminator.
 
-    Defined in :numref:`sec_lstm`"""
-    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
-        super().__init__()
-        self.save_hyperparameters()
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = tf.shape(X)[0]
+    ones = tf.ones((batch_size,)) # Labels corresponding to real data
+    zeros = tf.zeros((batch_size,)) # Labels corresponding to fake data
+    # Do not need to compute gradient for `net_G`, so it is outside GradientTape
+    fake_X = net_G(Z)
+    with tf.GradientTape() as tape:
+        real_Y = net_D(X)
+        fake_Y = net_D(fake_X)
+        # We multiply the loss by batch_size to match PyTorch's BCEWithLogitsLoss
+        loss_D = (loss(ones, tf.reshape(real_Y, [-1])) + loss(
+            zeros, tf.reshape(fake_Y, [-1]))) * tf.cast(
+                batch_size, tf.float32) / 2
+    grads_D = tape.gradient(loss_D, net_D.trainable_variables)
+    optimizer_D.apply_gradients(zip(grads_D, net_D.trainable_variables))
+    return loss_D
 
-        init_weight = lambda *shape: tf.Variable(d2l.normal(shape) * sigma)
-        triple = lambda: (init_weight(num_inputs, num_hiddens),
-                          init_weight(num_hiddens, num_hiddens),
-                          tf.Variable(d2l.zeros(num_hiddens)))
-        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
-        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
-        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
-        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
+def update_G(Z, net_D, net_G, loss, optimizer_G):
+    """Update generator.
 
-    def forward(self, inputs, H_C=None):
-        if H_C is None:
-            # Initial state with shape: (batch_size, num_hiddens)
-            H = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
-            C = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
-        else:
-            H, C = H_C
-        outputs = []
-        for X in tf.unstack(inputs):
-            I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
-                            d2l.matmul(H, self.W_hi) + self.b_i)
-            F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
-                            d2l.matmul(H, self.W_hf) + self.b_f)
-            O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
-                            d2l.matmul(H, self.W_ho) + self.b_o)
-            C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
-                               d2l.matmul(H, self.W_hc) + self.b_c)
-            C = F * C + I * C_tilde
-            H = O * d2l.tanh(C)
-            outputs.append(H)
-        return outputs, (H, C)
+    Defined in :numref:`sec_basic_gan`"""
+    batch_size = tf.shape(Z)[0]
+    ones = tf.ones((batch_size,))
+    with tf.GradientTape() as tape:
+        # We could reuse `fake_X` from `update_D` to save computation
+        fake_X = net_G(Z)
+        # Recomputing `fake_Y` is needed since `net_D` is changed
+        fake_Y = net_D(fake_X)
+        # We multiply the loss by batch_size to match PyTorch's BCEWithLogits loss
+        loss_G = loss(ones, tf.reshape(fake_Y, [-1])) * tf.cast(
+            batch_size, tf.float32)
+    grads_G = tape.gradient(loss_G, net_G.trainable_variables)
+    optimizer_G.apply_gradients(zip(grads_G, net_G.trainable_variables))
+    return loss_G
 
-class LSTM(d2l.RNN):
-    """The multilayer LSTM model implemented with high-level APIs.
-
-    Defined in :numref:`sec_lstm`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        self.lstms = [tf.keras.layers.LSTM(
-            num_hiddens, return_sequences=True, return_state=True,
-            dropout=dropout) for _ in range(num_layers)]
-
-    def forward(self, inputs, H_C=None):
-        X = tf.transpose(inputs, perm=[1, 0, 2])  # To batch-major layout
-        if H_C is None:
-            H_C = [None] * self.num_layers
-        new_H_C = []
-        for lstm, state in zip(self.lstms, H_C):
-            X, *state = lstm(X, initial_state=state)
-            new_H_C.append(state)
-        return tf.transpose(X, perm=[1, 0, 2]), new_H_C
-
-class GRU(d2l.RNN):
-    """The multilayer GRU model implemented with high-level APIs.
-
-    Defined in :numref:`sec_gru`"""
-    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
-        d2l.Module.__init__(self)
-        self.save_hyperparameters()
-        gru_cells = [tf.keras.layers.GRUCell(num_hiddens, dropout=dropout)
-                     for _ in range(num_layers)]
-        self.rnn = tf.keras.layers.RNN(gru_cells, return_sequences=True,
-                                       return_state=True)
-
-    def forward(self, X, state=None):
-        outputs, *state = self.rnn(tf.transpose(X, perm=[1, 0, 2]), state)
-        state = [s[0] if isinstance(s, list) else s for s in state]
-        return tf.transpose(outputs, perm=[1, 0, 2]), state
+d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
+                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 class Encoder(tf.keras.layers.Layer):
     """The base encoder interface for the encoder-decoder architecture.
@@ -1819,47 +1496,6 @@ def bleu(pred_seq, label_seq, k):
                 label_subs[' '.join(pred_tokens[i: i + n])] -= 1
         score *= math.pow(num_matches / (len_pred - n + 1), math.pow(0.5, n))
     return score
-
-def update_D(X, Z, net_D, net_G, loss, optimizer_D):
-    """Update discriminator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = tf.shape(X)[0]
-    ones = tf.ones((batch_size,)) # Labels corresponding to real data
-    zeros = tf.zeros((batch_size,)) # Labels corresponding to fake data
-    # Do not need to compute gradient for `net_G`, so it is outside GradientTape
-    fake_X = net_G(Z)
-    with tf.GradientTape() as tape:
-        real_Y = net_D(X)
-        fake_Y = net_D(fake_X)
-        # We multiply the loss by batch_size to match PyTorch's BCEWithLogitsLoss
-        loss_D = (loss(ones, tf.reshape(real_Y, [-1])) + loss(
-            zeros, tf.reshape(fake_Y, [-1]))) * tf.cast(
-                batch_size, tf.float32) / 2
-    grads_D = tape.gradient(loss_D, net_D.trainable_variables)
-    optimizer_D.apply_gradients(zip(grads_D, net_D.trainable_variables))
-    return loss_D
-
-def update_G(Z, net_D, net_G, loss, optimizer_G):
-    """Update generator.
-
-    Defined in :numref:`sec_basic_gan`"""
-    batch_size = tf.shape(Z)[0]
-    ones = tf.ones((batch_size,))
-    with tf.GradientTape() as tape:
-        # We could reuse `fake_X` from `update_D` to save computation
-        fake_X = net_G(Z)
-        # Recomputing `fake_Y` is needed since `net_D` is changed
-        fake_Y = net_D(fake_X)
-        # We multiply the loss by batch_size to match PyTorch's BCEWithLogits loss
-        loss_G = loss(ones, tf.reshape(fake_Y, [-1])) * tf.cast(
-            batch_size, tf.float32)
-    grads_G = tape.gradient(loss_G, net_G.trainable_variables)
-    optimizer_G.apply_gradients(zip(grads_G, net_G.trainable_variables))
-    return loss_G
-
-d2l.DATA_HUB['pokemon'] = (d2l.DATA_URL + 'pokemon.zip',
-                           'c065c0e2593b8b161a2d7873e42418bf6a21106c')
 
 d2l.DATA_HUB['ptb'] = (d2l.DATA_URL + 'ptb.zip',
                        '319d85e578af0cdc590547f26231e4e31cdf1e42')
@@ -3799,43 +3435,213 @@ def predict_seq2seq(net, src_sentence, src_vocab, tgt_vocab, num_steps,
         output_seq.append(pred.numpy())
     return ' '.join(tgt_vocab.to_tokens(tf.reshape(output_seq, shape = -1).numpy().tolist())), attention_weight_seq
 
-class AttentionDecoder(d2l.Decoder):
-    """The base attention-based decoder interface.
+def masked_softmax(X, valid_lens):
+    """Perform softmax operation by masking elements on the last axis."""
+    # X: 3D tensor, valid_lens: 1D or 2D tensor
+    def _sequence_mask(X, valid_len, value=0):
+        maxlen = tf.shape(X)[1]
+        mask = tf.range(start=0, limit=maxlen, dtype=tf.float32)[
+            None, :] < tf.cast(valid_len[:, None], dtype=tf.float32)
+        return tf.where(mask, X, value)
 
-    Defined in :numref:`sec_seq2seq_attention`"""
-    def __init__(self):
+    if valid_lens is None:
+        return tf.nn.softmax(X, axis=-1)
+    else:
+        shape = tf.shape(X)
+        if len(valid_lens.shape) == 1:
+            valid_lens = tf.repeat(valid_lens, repeats=shape[1])
+        else:
+            valid_lens = tf.reshape(valid_lens, shape=(-1,))
+        # On the last axis, replace masked elements with a very large negative
+        # value, whose exponentiation outputs 0
+        X = _sequence_mask(tf.reshape(X, (-1, shape[-1])), valid_lens,
+                           value=-1e6)
+        return tf.nn.softmax(tf.reshape(X, shape), axis=-1)
+
+class DotProductAttention(tf.keras.layers.Layer):
+    """Scaled dot product attention."""
+    def __init__(self, dropout):
         super().__init__()
+        self.dropout = tf.keras.layers.Dropout(dropout)
+        
+    # Shape of queries: (batch_size, no. of queries, d)
+    # Shape of keys: (batch_size, no. of key-value pairs, d)
+    # Shape of values: (batch_size, no. of key-value pairs, value dimension)
+    # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
+    def call(self, queries, keys, values, valid_lens=None, training=False,
+             **kwargs):
+        d = tf.cast(tf.shape(queries)[-1], dtype=tf.float32)
+        scores = tf.matmul(queries, keys, transpose_b=True)/tf.math.sqrt(d)
+        self.attention_weights = masked_softmax(scores, valid_lens)
+        return tf.matmul(self.dropout(
+            self.attention_weights, training=training), values)
 
-    @property
-    def attention_weights(self):
-        raise NotImplementedError
-
-class TransformerEncoder(d2l.Encoder):
-    """The Transformer encoder.
-
-    Defined in :numref:`sec_transformer`"""
-    def __init__(self, vocab_size, num_hiddens, ffn_num_hiddens, num_heads,
-                 num_blks, dropout, bias=False):
+class MultiHeadAttention(d2l.Module):
+    """Multi-head attention."""
+    def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
         super().__init__()
-        self.num_hiddens = num_hiddens
-        self.embedding = tf.keras.layers.Embedding(vocab_size, num_hiddens)
-        self.pos_encoding = d2l.PositionalEncoding(num_hiddens, dropout)
-        self.blks = [TransformerEncoderBlock(
-            num_hiddens, ffn_num_hiddens, num_heads, dropout, bias)
-            for _ in range(num_blks)]
+        self.num_heads = num_heads
+        self.attention = d2l.DotProductAttention(dropout)
+        self.W_q = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
+        self.W_k = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
+        self.W_v = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
+        self.W_o = tf.keras.layers.Dense(num_hiddens, use_bias=bias)
+    
+    def call(self, queries, keys, values, valid_lens, training=False, **kwargs):
+        # Shape of queries, keys, or values:
+        # (batch_size, no. of queries or key-value pairs, num_hiddens)
+        # Shape of valid_lens: (batch_size,) or (batch_size, no. of queries)
+        # After transposing, shape of output queries, keys, or values:
+        # (batch_size * num_heads, no. of queries or key-value pairs,
+        # num_hiddens / num_heads)
+        queries = self.transpose_qkv(self.W_q(queries))
+        keys = self.transpose_qkv(self.W_k(keys))
+        values = self.transpose_qkv(self.W_v(values))
+        
+        if valid_lens is not None:
+            # On axis 0, copy the first item (scalar or vector) for num_heads
+            # times, then copy the next item, and so on
+            valid_lens = tf.repeat(valid_lens, repeats=self.num_heads, axis=0)
+            
+        # Shape of output: (batch_size * num_heads, no. of queries,
+        # num_hiddens / num_heads)
+        output = self.attention(queries, keys, values, valid_lens,
+                                training=training)
+        
+        # Shape of output_concat: (batch_size, no. of queries, num_hiddens)
+        output_concat = self.transpose_output(output)
+        return self.W_o(output_concat)
+
+    def transpose_qkv(self, X):
+        """Transposition for parallel computation of multiple attention heads."""
+        # Shape of input X: (batch_size, no. of queries or key-value pairs,
+        # num_hiddens). Shape of output X: (batch_size, no. of queries or
+        # key-value pairs, num_heads, num_hiddens / num_heads)
+        X = tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], self.num_heads, -1))
+        # Shape of output X: (batch_size, num_heads, no. of queries or key-value
+        # pairs, num_hiddens / num_heads)
+        X = tf.transpose(X, perm=(0, 2, 1, 3))
+        # Shape of output: (batch_size * num_heads, no. of queries or key-value
+        # pairs, num_hiddens / num_heads)
+        return tf.reshape(X, (-1, tf.shape(X)[2], tf.shape(X)[3]))
+
+    def transpose_output(self, X):
+        """Reverse the operation of transpose_qkv."""
+        X = tf.reshape(X, (-1, self.num_heads, tf.shape(X)[1], tf.shape(X)[2]))
+        X = tf.transpose(X, perm=(0, 2, 1, 3))
+        return tf.reshape(X, (tf.shape(X)[0], tf.shape(X)[1], -1))
+
+class PositionWiseFFN(tf.keras.layers.Layer):
+    """The positionwise feed-forward network."""
+    def __init__(self, ffn_num_hiddens, ffn_num_outputs):
+        super().__init__()
+        self.dense1 = tf.keras.layers.Dense(ffn_num_hiddens)
+        self.relu = tf.keras.layers.ReLU()
+        self.dense2 = tf.keras.layers.Dense(ffn_num_outputs)
+
+    def call(self, X):
+        return self.dense2(self.relu(self.dense1(X)))
+
+class AddNorm(tf.keras.layers.Layer):
+    """The residual connection followed by layer normalization."""
+    def __init__(self, norm_shape, dropout):
+        super().__init__()
+        self.dropout = tf.keras.layers.Dropout(dropout)
+        # `norm_shape` mirrors PyTorch's `nn.LayerNorm` convention: it gives
+        # the shape of the trailing dims to normalize over. Convert that to
+        # Keras's `axis` argument (negative axis indices counting from the end).
+        self.ln = tf.keras.layers.LayerNormalization(
+            axis=list(range(-len(norm_shape), 0)))
+
+    def call(self, X, Y, training=False, **kwargs):
+        return self.ln(self.dropout(Y, training=training) + X)
+
+class TransformerEncoderBlock(tf.keras.layers.Layer):
+    """The Transformer encoder block."""
+    def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
+                 bias=False):
+        super().__init__()
+        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
+                                                dropout, bias)
+        self.addnorm1 = AddNorm([num_hiddens], dropout)
+        self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
+        self.addnorm2 = AddNorm([num_hiddens], dropout)
 
     def call(self, X, valid_lens, training=False, **kwargs):
-        # Since positional encoding values are between -1 and 1, the embedding
-        # values are multiplied by the square root of the embedding dimension
-        # to rescale before they are summed up
-        X = self.pos_encoding(self.embedding(X) * tf.math.sqrt(
-            tf.cast(self.num_hiddens, dtype=tf.float32)), training=training)
-        self.attention_weights = [None] * len(self.blks)
-        for i, blk in enumerate(self.blks):
-            X = blk(X, valid_lens, training=training)
-            self.attention_weights[
-                i] = blk.attention.attention.attention_weights
-        return X
+        Y = self.addnorm1(X, self.attention(X, X, X, valid_lens,
+                          training=training), training=training)
+        return self.addnorm2(Y, self.ffn(Y), training=training)
+
+class LSTMScratch(d2l.Module):
+    """The long short-term memory (LSTM) cell implemented from scratch."""
+    def __init__(self, num_inputs, num_hiddens, sigma=0.01):
+        super().__init__()
+        self.save_hyperparameters()
+
+        init_weight = lambda *shape: tf.Variable(d2l.normal(shape) * sigma)
+        triple = lambda: (init_weight(num_inputs, num_hiddens),
+                          init_weight(num_hiddens, num_hiddens),
+                          tf.Variable(d2l.zeros(num_hiddens)))
+        self.W_xi, self.W_hi, self.b_i = triple()  # Input gate
+        self.W_xf, self.W_hf, self.b_f = triple()  # Forget gate
+        self.W_xo, self.W_ho, self.b_o = triple()  # Output gate
+        self.W_xc, self.W_hc, self.b_c = triple()  # Input node
+
+    def forward(self, inputs, H_C=None):
+        if H_C is None:
+            # Initial state with shape: (batch_size, num_hiddens)
+            H = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
+            C = tf.zeros((tf.shape(inputs)[1], self.num_hiddens))
+        else:
+            H, C = H_C
+        outputs = []
+        for X in tf.unstack(inputs):
+            I = d2l.sigmoid(d2l.matmul(X, self.W_xi) +
+                            d2l.matmul(H, self.W_hi) + self.b_i)
+            F = d2l.sigmoid(d2l.matmul(X, self.W_xf) +
+                            d2l.matmul(H, self.W_hf) + self.b_f)
+            O = d2l.sigmoid(d2l.matmul(X, self.W_xo) +
+                            d2l.matmul(H, self.W_ho) + self.b_o)
+            C_tilde = d2l.tanh(d2l.matmul(X, self.W_xc) +
+                               d2l.matmul(H, self.W_hc) + self.b_c)
+            C = F * C + I * C_tilde
+            H = O * d2l.tanh(C)
+            outputs.append(H)
+        return outputs, (H, C)
+
+class LSTM(d2l.RNN):
+    """The multilayer LSTM model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        self.lstms = [tf.keras.layers.LSTM(
+            num_hiddens, return_sequences=True, return_state=True,
+            dropout=dropout) for _ in range(num_layers)]
+
+    def forward(self, inputs, H_C=None):
+        X = tf.transpose(inputs, perm=[1, 0, 2])  # To batch-major layout
+        if H_C is None:
+            H_C = [None] * self.num_layers
+        new_H_C = []
+        for lstm, state in zip(self.lstms, H_C):
+            X, *state = lstm(X, initial_state=state)
+            new_H_C.append(state)
+        return tf.transpose(X, perm=[1, 0, 2]), new_H_C
+
+class GRU(d2l.RNN):
+    """The multilayer GRU model implemented with high-level APIs."""
+    def __init__(self, num_inputs, num_hiddens, num_layers=1, dropout=0):
+        d2l.Module.__init__(self)
+        self.save_hyperparameters()
+        gru_cells = [tf.keras.layers.GRUCell(num_hiddens, dropout=dropout)
+                     for _ in range(num_layers)]
+        self.rnn = tf.keras.layers.RNN(gru_cells, return_sequences=True,
+                                       return_state=True)
+
+    def forward(self, X, state=None):
+        outputs, *state = self.rnn(tf.transpose(X, perm=[1, 0, 2]), state)
+        state = [s[0] if isinstance(s, list) else s for s in state]
+        return tf.transpose(outputs, perm=[1, 0, 2]), state
 
 
 reshape = tf.reshape

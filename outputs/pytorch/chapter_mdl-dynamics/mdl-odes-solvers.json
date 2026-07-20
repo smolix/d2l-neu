@@ -38,7 +38,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 29488,
-          "sha256": "sha256:a7ecf27a58fc5596d62af85de0a9006c95ad9f917d0bd6fcce3090cd3c15d497"
+          "sha256": "sha256:22f5ea139f6e4c72c75211f2ee35764fb2444ea479c55b2ae7a3971c692a60a8"
         }
       ]
     },
@@ -107,7 +107,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
         }
       ]
     },

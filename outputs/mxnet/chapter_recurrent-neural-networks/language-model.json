@@ -69,7 +69,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:7ded15ea557af992ae738bcf869fb10cbd3a6b5e6bd867eedc27a8b28fa348d2"
+          "sha256": "sha256:3f3c498969fc90851f9312b176f67d93a2222c6519f2b48179dc4758f35619f8"
         }
       ]
     },
@@ -82,7 +82,7 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:c399167963825700e2478bc777e837e62d9edf58109b3f015a52f15ea73c5420"
+          "sha256": "sha256:1b577abeee67cdbf376f9bae336055b02935d2be22ad0e502620f7d633501e98"
         }
       ]
     },
@@ -130,7 +130,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[116.  41. 284.  10. 257. 348. 108. 259. 292.  46.]\n [ 44. 657. 329. 466. 272. 262. 270. 589. 273.  32.]] \nY: [[ 41. 284.  10. 257. 348. 108. 259. 292.  46. 497.]\n [657. 329. 466. 272. 262. 270. 589. 273.  32. 325.]]\nX[0]: 't) in\\nheadlines.'\nY[0]: ') in\\nheadlines. And'\n"
+          "text": "X: [[344. 374. 119.  44. 277. 313. 477.  10. 289. 354.]\n [115. 261. 275. 395. 743. 344. 374. 119.  44. 277.]] \nY: [[374. 119.  44. 277. 313. 477.  10. 289. 354. 263.]\n [261. 275. 395. 743. 344. 374. 119.  44. 277. 313.]]\nX[0]: ' askew, and that there\\nis an'\nY[0]: 'kew, and that there\\nis an o'\n"
         }
       ]
     }

@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "source": "chapter_recurrent-modern/hybrids.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:72424136fefbf448a918f984c8010f5d1224c056169c05af18e9b163350d30ea",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "hybrids-hybrid-architectures": {
+      "code_fingerprint": "sha256:b92137072a7445913521a60c0804e46f52f537bf0769b1f13e20631590acabed",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybrids-three-matched-models-1": {
+      "code_fingerprint": "sha256:7b63dccc0a16cee06afb04719150ba49ef96a604319da27b4f29723e0adb74d1",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybrids-three-matched-models-2": {
+      "code_fingerprint": "sha256:d84ff51e8d843bd5ef4f4c17ce44275cda035d1495b7388440998e704421bac4",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybrids-three-matched-models-3": {
+      "code_fingerprint": "sha256:fd641468e8738f505eafdc948f6e48b07e52c2402a668851730a994cb19fadd2",
+      "kind": "text",
+      "outputs": []
+    },
+    "hybrids-three-matched-models-4": {
+      "code_fingerprint": "sha256:29453f1a2cc2246b23b63f80c5beb79f61259b3894eaf9e215e52938a89fcdce",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    linear: 58,544 parameters\n attention: 57,984 parameters\n    hybrid: 58,404 parameters\n"
+        }
+      ]
+    },
+    "hybrids-the-recall-sweep-1": {
+      "code_fingerprint": "sha256:6cfa81f651501b1b5e45052d659d17fa66cd71c0ef44339bf1adf4a7a35352e1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     pairs      4      8     16     32     64\n    linear  0.964  0.950  0.734  0.591  0.376\n attention  1.000  1.000  1.000  1.000  1.000\n    hybrid  0.980  0.936  0.923  0.998  1.000\n    chance  0.031  0.031  0.031  0.031  0.031\n"
+        }
+      ]
+    },
+    "hybrids-the-recall-sweep-2": {
+      "code_fingerprint": "sha256:ac8b7f39c7b8e8d443142852be7e00e28f24b976ae1948351a0cf2eb7918c598",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "hybrids/hybrids-the-recall-sweep-2-1.svg",
+          "bytes": 30870,
+          "sha256": "sha256:9f0ebb8107c0a55fc1a67444ed3a3e35d04ef2ca219a3a839557009b59a769d8"
+        }
+      ]
+    },
+    "hybrids-the-language-modeling-panel": {
+      "code_fingerprint": "sha256:fdbce14d5d46c1e2b60ad2a1a168b320f89a76cee9ea113f49704cb105067321",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "     model  val loss  bits/char\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    linear      1.76       2.54\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " attention      1.84       2.66\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "    hybrid      1.77       2.55\n"
+        }
+      ]
+    },
+    "hybrids-the-memory-bill-measured": {
+      "code_fingerprint": "sha256:c398863c9751efe2b0bb7cba9cfd45727437da153c1802a3d7f9c0380609b2e6",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "hybrids/hybrids-the-memory-bill-measured-1.svg",
+          "bytes": 29175,
+          "sha256": "sha256:309c47644dc4224dc8d478515a90a36cd278a1af8027380f27a9266bfcf3544c"
+        }
+      ]
+    }
+  }
+}

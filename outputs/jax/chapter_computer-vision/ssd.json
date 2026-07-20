@@ -23,11 +23,6 @@
       "kind": "text",
       "outputs": [
         {
-          "type": "stream",
-          "name": "stderr",
-          "text": "E0714 06:53:30.165073    8318 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
-        },
-        {
           "type": "execute_result",
           "text": "((2, 20, 20, 55), (2, 10, 10, 33))"
         }
@@ -142,14 +137,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "class err 3.44e-03, bbox mae 3.53e-03\n5980.1 examples/sec on cuda:0\n"
+          "text": "class err 3.53e-03, bbox mae 3.52e-03\n8036.9 examples/sec on cuda:0\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-training-the-model-1.svg",
-          "bytes": 20099,
-          "sha256": "sha256:2470f4355f114e0106acfc43e58073ab715f43fb04dc66112c5cd1010736dd9e"
+          "bytes": 20097,
+          "sha256": "sha256:f703b6a1f75f363982286da35e1cc396b50ceafdd42949a426449f8f8638fe60"
         }
       ]
     },
@@ -171,8 +166,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-prediction-3-1.svg",
-          "bytes": 421051,
-          "sha256": "sha256:1882b9e0e0172ca38c955a0255300682eb00d4d8aa6b0c9939c9d940b7e0432f"
+          "bytes": 421719,
+          "sha256": "sha256:f2ee73d3eb2738b22b2c6f7774edf51123cafa300e9c6db3eaf9410d65d5ab59"
         }
       ]
     },
@@ -185,7 +180,7 @@
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-exercises-1-1.svg",
           "bytes": 18956,
-          "sha256": "sha256:32bdefc2807ba75eae9f2d1f853a8d2ddc9acfcc541acc0aa4b4a0bb567cb238"
+          "sha256": "sha256:190df67287ca31527484c6c702c8220476b2129f900ff76922764d37846b1209"
         }
       ]
     },
@@ -198,7 +193,7 @@
           "mime": "image/svg+xml",
           "asset": "ssd/ssd-exercises-2-1.svg",
           "bytes": 24992,
-          "sha256": "sha256:c5241a160ec879b1602fa9b41b432d5324d026c7f09b2f962c4472244d675367"
+          "sha256": "sha256:866f6337e3a41c9c3f35d4048ff1ca6001fd78c305aa9b07d6a36dc013efcfd0"
         }
       ]
     }

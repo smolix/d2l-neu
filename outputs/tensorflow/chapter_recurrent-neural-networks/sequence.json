@@ -26,8 +26,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-2-1.svg",
-          "bytes": 39670,
-          "sha256": "sha256:1038c7bd8c38630e7a4642cf6e9604d24ab6e7b6b8f2f0c9626d0bad7c5fa858"
+          "bytes": 40491,
+          "sha256": "sha256:fe60571b8f61a4eed94a1dd2d36c7e22728dec9cd137804fe248745148713350"
         }
       ]
     },
@@ -44,8 +44,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-training-4-1.svg",
-          "bytes": 19944,
-          "sha256": "sha256:986b0bbb00275dd90066e8ee7a7e071b80be3e202bfb7229d6da1553f358c276"
+          "bytes": 17929,
+          "sha256": "sha256:807c4d4c868e01fbfb8aa34d8655dc27bb36eae65ca4ab4397d271bdc5b04873"
         }
       ]
     },
@@ -57,8 +57,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-1-1.svg",
-          "bytes": 67221,
-          "sha256": "sha256:c86d997eca4b90e1480f816d666461c747ae01b9c91def3d12dff80bc38f1d4f"
+          "bytes": 68138,
+          "sha256": "sha256:879c238429c26b60ab2f341af840b186b131b304c7beecbfd2bc6a9c3a3cb7de"
         }
       ]
     },
@@ -75,8 +75,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-3-1.svg",
-          "bytes": 44598,
-          "sha256": "sha256:f012f48dea1da4f8343ce24df566b60a3c98b2d3f170e044cbe82d0f418c4474"
+          "bytes": 44751,
+          "sha256": "sha256:37ad5e623433867daf4f85c002fee371e6aa07bd25935f46b9b9cd93577a5d53"
         }
       ]
     },
@@ -93,8 +93,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sequence/sequence-prediction-5-1.svg",
-          "bytes": 104151,
-          "sha256": "sha256:db9f415141c2ab61b8e7eda3439dee573777cbac71810adb44d75c841bc71e79"
+          "bytes": 104797,
+          "sha256": "sha256:4585ce8b36da0bcb6c2ddc78580761353610fa5f40a6bb38f02c826de5985169"
         }
       ]
     }

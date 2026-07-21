@@ -1,0 +1,175 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/fast-transformer.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:37013f8f588241e3afd51a041ab132182179c08066a47b5e8743bf115c6e5b93",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "fast-transformer-case-study-making-a-transformer-fast": {
+      "code_fingerprint": "sha256:62a6bc06747198ec98d0a2a08b6d8d99e54e8db080d6f8b08147edd97d075eb7",
+      "kind": "text",
+      "outputs": []
+    },
+    "fast-transformer-the-subject-1": {
+      "code_fingerprint": "sha256:2ce539fada1d9d70a8a1771f48ca283d262d1aa8b98623c360b582ab26c7fac0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "18.9M parameters\n"
+        }
+      ]
+    },
+    "fast-transformer-the-subject-2": {
+      "code_fingerprint": "sha256:0ba7b8319fc7d4700d470f56e59c4c063ede5ce92c7c70b2e6f54d7e71c68ae4",
+      "kind": "text",
+      "outputs": []
+    },
+    "fast-transformer-rung-0-baseline-profiled": {
+      "code_fingerprint": "sha256:31aeb921d77797dcd1e3ecc5c8e4f4847d048d42a8179ecff2846e738cb29982",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                               aten::mm         9.84%      13.373ms        14.07%      19.133ms      41.146us      67.959ms        53.15%      67.959ms     146.148us           465  \n       autograd::engine::evaluate_function: MmBackward0         1.60%       2.176ms        15.00%      20.388ms     131.537us       0.000us         0.00%      45.438ms     293.149us           155  \n                                            MmBackward0         1.44%       1.963ms        13.40%      18.212ms     117.498us       0.000us         0.00%      45.438ms     293.149us           155  \n                                           aten::linear         0.29%     394.204us         6.43%       8.736ms      56.360us       0.000us         0.00%      22.521ms     145.295us           155  \n                                           aten::matmul         0.53%     715.844us         5.41%       7.357ms      47.462us       0.000us         0.00%      22.521ms     145.295us           155  \n                                              aten::mul         6.15%       8.366ms        10.25%      13.933ms      21.111us      16.700ms        13.06%      16.700ms      25.303us           660  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nSelf CPU time total: 135.957ms\nSelf CUDA time total: 127.873ms\n\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R0 eager: 262957 tokens/s\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-1": {
+      "code_fingerprint": "sha256:c9f9f7a76d29f434a28403fd699146ee0e935180b8d7d736500d5d756f1faf14",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first (compiling) step: 1.9 s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R1 compiled: 345595 tokens/s (1.31x)\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-5": {
+      "code_fingerprint": "sha256:9d74c73b9a1d0086c5c1af8100c5cbc482b40dc5949485c4222bdc5909cf34fa",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nautograd::engine::evaluate_function: CompiledFunctio...         0.34%     401.876us        45.09%      53.268ms      10.654ms       0.000us         0.00%      72.528ms      14.506ms             5  \n                               CompiledFunctionBackward         1.01%       1.198ms        44.75%      52.866ms      10.573ms       0.000us         0.00%      72.528ms      14.506ms             5  \n## Call CompiledFxGraph fdcdeefsm5ww4waci2yvsvbra44l...        14.62%      17.273ms        43.73%      51.668ms      10.334ms       0.000us         0.00%      72.528ms      14.506ms             5  \n                                               aten::mm        10.74%      12.691ms        15.78%      18.642ms      40.527us      68.973ms        59.32%      68.973ms     149.941us           460  \n                             Torch-Compiled Region: 0/0         0.47%     550.283us        12.21%      14.430ms       2.886ms       0.000us         0.00%      35.378ms       7.076ms             5  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nSelf CPU time total: 118.147ms\nSelf CUDA time total: 116.272ms\n\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-2": {
+      "code_fingerprint": "sha256:f1f761db30bca81a5eecd2c4e04c1f4a1d093aea49f96519b9f56f51663469d8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R2 +bf16: 468280 tokens/s (1.35x)\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-3": {
+      "code_fingerprint": "sha256:1a0b89051261a03d1609e6e03422281f53002e03b4937ac2a9b94cd31332e24b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R3 +batch-up (512): 622604 tokens/s (1.33x), peak 8.6 GiB (fp32 control: 16.6 GiB)\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-6": {
+      "code_fingerprint": "sha256:f595cf8a624c6640cd95d7ce50fc29a898f4137b37f2508049e68521aa44fee9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nautograd::engine::evaluate_function: CompiledFunctio...         0.09%     453.758us        14.88%      78.479ms      15.696ms       0.000us         0.00%     334.474ms      66.895ms             5  \n                               CompiledFunctionBackward         0.30%       1.575ms        14.79%      78.025ms      15.605ms       0.000us         0.00%     334.474ms      66.895ms             5  \n## Call CompiledFxGraph fqqnnoosg4xsoqgb7lugw72ak7fg...         5.19%      27.371ms        14.49%      76.450ms      15.290ms       0.000us         0.00%     334.474ms      66.895ms             5  \n                                               aten::mm         2.56%      13.512ms         3.82%      20.170ms      43.377us     236.886ms        45.31%     236.886ms     509.432us           465  \n                             Torch-Compiled Region: 0/2         0.12%     653.556us         4.51%      23.769ms       4.754ms       0.000us         0.00%     179.349ms      35.870ms             5  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nSelf CPU time total: 527.430ms\nSelf CUDA time total: 522.771ms\n\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-4": {
+      "code_fingerprint": "sha256:dfb5865c83d28f5b8ae6426b52b4f3e3d2c2c70efd5fb99ad38837172fedac3e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R4 +checkpoint: 545503 tokens/s (0.88x), peak 3.1 GiB\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-7": {
+      "code_fingerprint": "sha256:4094eedad812b3dc3bd060cb1e2154dbe39a916b6454198f26238f7f1975f331",
+      "kind": "text",
+      "outputs": []
+    },
+    "fast-transformer-rungs-each-one-measured-8": {
+      "code_fingerprint": "sha256:35cc747822a3fb86d5d1e98ff5c51bd2d34834aec97d3f012fdf01354749d9b8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per step: t_comm ~ 34 ms vs t_compute ~ 31 ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R5 k=2: no-overlap floor 253k tokens/s, measured 297k (1.13x of one GPU)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R5 k=4: no-overlap floor 506k tokens/s, measured 455k (1.73x of one GPU)\n"
+        }
+      ]
+    },
+    "fast-transformer-the-waterfall": {
+      "code_fingerprint": "sha256:8e2c782e1835f8cf8ae7d088827bb14a0977faf91ede4e899be92e09dd7d701e",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cumulative, R0 -> R3: 2.37x\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "fast-transformer/fast-transformer-the-waterfall-1.png",
+          "bytes": 23810,
+          "sha256": "sha256:5b40774d69f59b6ac5d7537a710a82cccd36fec363909d212872bbab31f1361b"
+        }
+      ]
+    },
+    "fast-transformer-the-waterfall-1": {
+      "code_fingerprint": "sha256:dfd6a02fd0c585b74671d2acc7de6f4c0afb67801d6532a67e146ae72ff1d6e3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "smoothed loss: first 20 steps 3.01 -> last 20 steps 0.07\n"
+        }
+      ]
+    }
+  }
+}

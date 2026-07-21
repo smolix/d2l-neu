@@ -24,6 +24,41 @@ nn_Module = tf.keras.Model
 import sys
 d2l = sys.modules[__name__]
 
+def split_batch(X, y, devices):
+    """Split `X` and `y` into multiple devices.
+
+    Defined in :numref:`sec_multi_gpu`"""
+    assert X.shape[0] == y.shape[0]
+    return (tf.split(X, len(devices)), tf.split(y, len(devices)))
+
+def resnet18(num_classes, in_channels=1):
+    """A slightly modified ResNet-18 model built with Keras.
+
+    Defined in :numref:`sec_multi_gpu_concise`"""
+    def resnet_block(num_channels, num_residuals, first_block=False):
+        blk = tf.keras.Sequential()
+        for i in range(num_residuals):
+            if i == 0 and not first_block:
+                blk.add(d2l.Residual(num_channels, use_1x1conv=True,
+                                     strides=2))
+            else:
+                blk.add(d2l.Residual(num_channels))
+        return blk
+
+    # Smaller conv, no max-pool (same as the PT version)
+    net = tf.keras.Sequential([
+        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Activation('relu'),
+        resnet_block(64, 2, first_block=True),
+        resnet_block(128, 2),
+        resnet_block(256, 2),
+        resnet_block(512, 2),
+        tf.keras.layers.GlobalAveragePooling2D(),
+        tf.keras.layers.Dense(num_classes),
+    ])
+    return net
+
 import inspect
 import collections
 from collections import defaultdict
@@ -1213,55 +1248,6 @@ class Timer:
     def cumsum(self):
         """Return the accumulated time."""
         return np.array(self.times).cumsum().tolist()
-
-class Benchmark:
-    """For measuring running time.
-
-    Defined in :numref:`sec_hybridize`"""
-    def __init__(self, description='Done'):
-        self.description = description
-
-    def __enter__(self):
-        self.timer = d2l.Timer()
-        return self
-
-    def __exit__(self, *args):
-        print(f'{self.description}: {self.timer.stop():.4f} sec')
-
-def split_batch(X, y, devices):
-    """Split `X` and `y` into multiple devices.
-
-    Defined in :numref:`sec_multi_gpu`"""
-    assert X.shape[0] == y.shape[0]
-    return (tf.split(X, len(devices)), tf.split(y, len(devices)))
-
-def resnet18(num_classes, in_channels=1):
-    """A slightly modified ResNet-18 model built with Keras.
-
-    Defined in :numref:`sec_multi_gpu_concise`"""
-    def resnet_block(num_channels, num_residuals, first_block=False):
-        blk = tf.keras.Sequential()
-        for i in range(num_residuals):
-            if i == 0 and not first_block:
-                blk.add(d2l.Residual(num_channels, use_1x1conv=True,
-                                     strides=2))
-            else:
-                blk.add(d2l.Residual(num_channels))
-        return blk
-
-    # Smaller conv, no max-pool (same as the PT version)
-    net = tf.keras.Sequential([
-        tf.keras.layers.Conv2D(64, kernel_size=3, strides=1, padding='same'),
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Activation('relu'),
-        resnet_block(64, 2, first_block=True),
-        resnet_block(128, 2),
-        resnet_block(256, 2),
-        resnet_block(512, 2),
-        tf.keras.layers.GlobalAveragePooling2D(),
-        tf.keras.layers.Dense(num_classes),
-    ])
-    return net
 
 def update_D(X, Z, net_D, net_G, loss, optimizer_D):
     """Update discriminator.

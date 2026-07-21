@@ -1,0 +1,217 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/fast-transformer.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:6ac1adf59431bb8eb86256f35887e0c3fa439f28c7b496de5a95430c296de3e2",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "fast-transformer-case-study-making-a-transformer-fast": {
+      "code_fingerprint": "sha256:774ff3c6fa112f5214db139d9f2bcc3d2934c875b8e260b0498884f2e74cd6b5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'0'"
+        }
+      ]
+    },
+    "fast-transformer-the-subject-1": {
+      "code_fingerprint": "sha256:09c539aff8ddf5eb424d34e3f3dca971c78580c6dec7de0776281f0407de3d27",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "18.9M parameters\n"
+        }
+      ]
+    },
+    "fast-transformer-the-subject-2": {
+      "code_fingerprint": "sha256:b5829158c49b2afd018ae683f3d39f290eb2765e1bc4692ff6892ef273621d49",
+      "kind": "text",
+      "outputs": []
+    },
+    "fast-transformer-the-subject-3": {
+      "code_fingerprint": "sha256:debebca658220b3749c0717054fe1bde8215b07d087830b7096023303f84ca35",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fp32 control @512 (clocked up front): 216489 tokens/s, plan 15.1 GiB\n"
+        }
+      ]
+    },
+    "fast-transformer-rung-0-baseline-profiled": {
+      "code_fingerprint": "sha256:903219f4946ecdbcb7c51b5cc6a7779a92698c41eb3d5df88b60006631ffb273",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R0 un-jitted: 13287 tokens/s\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-1": {
+      "code_fingerprint": "sha256:23df1af65432f1a65224c266949cfc37c39f44da594e4108cfa8eed74f0598b9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first (compiling) step: 7.0 s\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R1 jit: 253478 tokens/s (19x)\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-5": {
+      "code_fingerprint": "sha256:77a7b48ef9d5d54d24b5468809e169ec5bde58788aa89ec578ca125374d66e85",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "XLA counts 765 GFLOP per step; at 32.3 ms per step that is 24 TFLOP/s achieved\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-2": {
+      "code_fingerprint": "sha256:ab6eecae2d5aad7427df8a5c0f80bee3c9d9adea582bdba6e42101912b05aa02",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\"bf16\", naive cast: 249436 tokens/s (0.98x)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "the receipt: float32\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-9": {
+      "code_fingerprint": "sha256:bb68481a585750b820fdbaf076aea57ed67991cabb518383d341632d0723bb0f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "the receipt, again: bfloat16\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "planned temp: bf16 1149 MiB (fp32: 1989 MiB)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R2 +bf16, threaded: 242897 tokens/s (0.96x)\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-3": {
+      "code_fingerprint": "sha256:f166e828d31d353776eb6e8691b062255fa59059741a87d0d3b9ff494e0bf94f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R3 +batch-up (512): 434987 tokens/s (1.79x), 44 TFLOP/s achieved\nfp32 control at 512: 216489 tokens/s -> bf16 pays 2.01x here\nplanned temp: bf16 8.9 GiB (fp32 control: 15.1 GiB)\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-4": {
+      "code_fingerprint": "sha256:a33b87699449ac27c16c41e2d807470e8eb5c34ca1d6f89796bfbf1ed5deda4b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R4 +checkpoint: 377077 tokens/s (0.87x), planned temp 1.8 GiB\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-7": {
+      "code_fingerprint": "sha256:8d388bea972bae78bc5876065073136affea6542d7ca3a01e57be8c507237c29",
+      "kind": "text",
+      "outputs": []
+    },
+    "fast-transformer-rungs-each-one-measured-8": {
+      "code_fingerprint": "sha256:bf5e9146b3e95e19dc86340603ac9dabf8d0ff7e5bbf64eb8f371e5335a2f654",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "per step: t_comm ~ 34 ms vs t_compute ~ 32 ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R5 k=2: no-overlap floor 249k tokens/s, measured 199k (0.79x of one GPU)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "R5 k=4: no-overlap floor 497k tokens/s, measured 297k (1.17x of one GPU)\n"
+        }
+      ]
+    },
+    "fast-transformer-rungs-each-one-measured-10": {
+      "code_fingerprint": "sha256:3a029bda223919e2bf2c8e19e5f44592b78edb0e373d2ec947d85880bd1f2d7d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fast config, k=2: 513k tokens/s (59% weak-scaling efficiency)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fast config, k=4: 995k tokens/s (57% weak-scaling efficiency)\n"
+        }
+      ]
+    },
+    "fast-transformer-the-waterfall": {
+      "code_fingerprint": "sha256:f5d94ce800a97c1cc79d10e73da377f3fc837b3b3e1ac6bff6b28e26e7647dcf",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "cumulative, R1 -> R3: 1.72x (and R0 -> R3: 33x)\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "fast-transformer/fast-transformer-the-waterfall-1.png",
+          "bytes": 22991,
+          "sha256": "sha256:fc1c13f07907fb4dc31fcc6e6fb6db7aa9ebb34f699810bf2c7f15e7c31fa426"
+        }
+      ]
+    },
+    "fast-transformer-the-waterfall-1": {
+      "code_fingerprint": "sha256:8caf372805fde005b87b12e6de4906d1ca91de7607b3decc624a13bf318c0de9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "smoothed loss: first 20 steps 2.84 -> last 20 steps 0.06\n"
+        }
+      ]
+    }
+  }
+}

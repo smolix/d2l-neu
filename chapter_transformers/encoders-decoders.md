@@ -618,7 +618,8 @@ encoder--decoder assembles for every batch it trains on.
 ### Training and Decoding
 
 One encoder block, one decoder block, and a few hundred steps of on-line
-batches suffice — the model sees about ten million characters, none twice.
+batches suffice — the model sees on the order of a million characters,
+none twice.
 
 ```{.python .input #encoders-decoders-training-and-decoding-1}
 %%tab pytorch
@@ -953,8 +954,10 @@ time by about four, the signature of an $N^2$ term taking over. The
 Perceiver's time barely moves (its $O(MN)$ cross-attention grows
 linearly but stays dominated by the fixed $O(M^2)$ latent processing),
 and by $N = 8192$ the gap exceeds an order of magnitude. The left end of
-the plot belongs in the reading too: at short inputs the bottleneck
-buys nothing, and full self-attention is as fast or faster. A latent
+the plot belongs in the reading too: at short inputs the perceiver's
+fixed $O(M^2)$ latent cost is a large fraction of its total, so its
+margin is slim — and with PyTorch's kernels full self-attention is
+actually faster at $N = 1024$. A latent
 bottleneck is worth having when the input is long and a fixed-size
 summary of it suffices.
 

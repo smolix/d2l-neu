@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/memory-precision.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:8556c86c1bc602f57fcd0e4be618ee37fc5edbcc1441627a1f9cb676f96fbac3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "memory-precision-memory-and-precision": {
+      "code_fingerprint": "sha256:9afca4d4b2ecb1124863366ed8bc80d2d5fceb6127faec0692cb8cd34b67b36a",
+      "kind": "text",
+      "outputs": []
+    },
+    "memory-precision-measuring-memory-1": {
+      "code_fingerprint": "sha256:b06222c2afa59c8ba35b83ae5d4a815f071382ac2b3b2d6ebcbc0aeb75360ed9",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "25.2M params  predicted states+grads+params: 403 MB\nmeasured peak: 524 MB allocated, 547 MB reserved\n"
+        }
+      ]
+    },
+    "memory-precision-measuring-memory-2": {
+      "code_fingerprint": "sha256:e99cea865b47387fd4fbcb8f75f8cab02609ac0913a7d868999d0658898b5479",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "memory-precision/memory-precision-measuring-memory-2-1.svg",
+          "bytes": 24434,
+          "sha256": "sha256:483a57c90838261aeb0fa292cf55c48bee750f2ea1da1d5448b04509aaa03f9f"
+        }
+      ]
+    },
+    "memory-precision-mixed-precision": {
+      "code_fingerprint": "sha256:2f6c34a77230b9b0894b31afa944db023696a22e07c37479f4e29dabca17bd45",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fp32 (tf32 off): 22.58 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tf32: 17.79 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bf16 autocast: 9.78 ms/call\n"
+        }
+      ]
+    },
+    "memory-precision-activation-checkpointing": {
+      "code_fingerprint": "sha256:94088193ef40ddb2462e6fb2f6a4a7648ec2af40719c8e16935ec7127999ac14",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "store all: peak 4318 MB, fwd+bwd 59.9 ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "checkpointed: peak 2306 MB, fwd+bwd 71.1 ms\n"
+        }
+      ]
+    },
+    "memory-precision-gradient-accumulation": {
+      "code_fingerprint": "sha256:13405d37f0165e115b392bfb33491c70aaa1c22a9b29a09634ea4be0f631ba89",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max gradient difference: 1.19e-07\n"
+        }
+      ]
+    }
+  }
+}

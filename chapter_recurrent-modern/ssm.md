@@ -458,7 +458,7 @@ Hold that thought; it returns as the central limitation at the end of this
 section.
 
 ## State Space Models
-:label:`subsec_ssm`
+:label:`subsec_state-space`
 
 The minGRU linearized an RNN by deletion. State space models arrive at the
 same destination from the opposite direction, starting from a classical
@@ -1300,9 +1300,7 @@ pixel at a time through `step`, carrying one state per block. The two
 schedules perform the same arithmetic in different association orders,
 so they can differ only by float32 rounding, and over 784 steps of
 trained, near-unit decays that rounding accumulates; the comparison
-must therefore be *relative* to the activation scale. (Checked
-against exact float64 stepping, each path sits about ten times farther
-from the true answer than the two sit from each other.) The assertion
+must therefore be *relative* to the activation scale. The assertion
 is a regression guard as much as a demonstration: a genuine mismatch
 between `forward` and `step` shows up at relative errors near one, five
 orders of magnitude above this gate.

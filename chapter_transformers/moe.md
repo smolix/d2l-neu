@@ -658,7 +658,8 @@ justification is a frontier-scale ablation
 What the deployed configurations converged on, however, is worth
 reading as data:
 
-:Routed-expert configurations of deployed MoE language models
+:Routed-expert configurations of deployed MoE language models.
+:label:`tab_moe-experts`
 
 | Model | Experts per layer | Active $k$ | Expert width / $d$ | Shared expert |
 |---|---|---|---|---|

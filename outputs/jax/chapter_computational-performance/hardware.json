@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/hardware.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:8b59fd8e216bc85594c6f7351afe9aea3406f44990d7f9e3d5600cab9242f41a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "hardware": {
+      "code_fingerprint": "sha256:372ca5d63bdedd0943fc2398e9a235b7711006386f5734144375d05aceaa1a26",
+      "kind": "text",
+      "outputs": []
+    },
+    "hardware-where-bytes-live": {
+      "code_fingerprint": "sha256:940ddfbbc52f8294896ad922fdadc631e9b94e15300a3c740a97bb640eab67e2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "measured 0.91 TB/s (spec: about 1.0 TB/s)\n"
+        }
+      ]
+    },
+    "hardware-the-cpu-s-role": {
+      "code_fingerprint": "sha256:90fc9311771da0943a0669c8ed637fb05a930dd976858eb732a323ad6a6a32ed",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "device_put: 0.9 GB/s\n"
+        }
+      ]
+    }
+  }
+}

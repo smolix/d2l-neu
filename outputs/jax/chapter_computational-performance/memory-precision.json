@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/memory-precision.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:8b59fd8e216bc85594c6f7351afe9aea3406f44990d7f9e3d5600cab9242f41a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "memory-precision-memory-and-precision": {
+      "code_fingerprint": "sha256:ecbc62fcb2bd997e453b44b0819c7c3138c04067250eacfd17a0151da0084bcc",
+      "kind": "text",
+      "outputs": []
+    },
+    "memory-precision-measuring-memory-3": {
+      "code_fingerprint": "sha256:cacfb1730a7f73b8126c4d2b0e82b9fb40850e9ab4d31d0f30481bd068812133",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "compiler-planned temp memory: 15 MB\nargument + output: 203 MB\n"
+        }
+      ]
+    },
+    "memory-precision-mixed-precision": {
+      "code_fingerprint": "sha256:3c0c3b190fe912197497485096676b80acb0fed8589c56fd607bf2741f0eda9c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fp32 (tf32 off): 26.41 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "tf32: 15.99 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bf16: 8.70 ms/call\n"
+        }
+      ]
+    },
+    "memory-precision-activation-checkpointing": {
+      "code_fingerprint": "sha256:b3533364cc44fd99660dadcadc4c37fde85da65694850dcddc06074d9e55dee1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "store all: compiler temp 3230 MB, fwd+bwd 50.5 ms\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "checkpointed: compiler temp 1216 MB, fwd+bwd 58.7 ms\n"
+        }
+      ]
+    },
+    "memory-precision-gradient-accumulation": {
+      "code_fingerprint": "sha256:437ded853ef7a6562f1ac781db747eee963fe1ae4831e9fe8cb7b9bf6a39bd97",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "max gradient difference: 3.10e-06\n"
+        }
+      ]
+    }
+  }
+}

@@ -4,111 +4,97 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:df2aea0c793e707e30c0300cc13fe1a9e1c8adaea76aff825cf8c7e27edc933e",
+    "d2l_lib_fingerprint": "sha256:467bcc80e8a06f4b2218471d602c798ec57e5a5eb8ba2b5e80b3141ba16edf57",
     "max_inline_bytes": 0
   },
   "cells": {
-    "multiple-gpus-data-parallelism": {
-      "code_fingerprint": "sha256:ecbc62fcb2bd997e453b44b0819c7c3138c04067250eacfd17a0151da0084bcc",
-      "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-a-toy-network": {
-      "code_fingerprint": "sha256:036fe43091bd560a9dfed52d03d6288530c07a4d363acbef0bb1624087cbe6f9",
-      "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-data-synchronization-1": {
-      "code_fingerprint": "sha256:6a4eee9d0ce0f579bc376b47b0df64db9ad0642086353114d15d2a7546e9e745",
-      "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-data-synchronization-2": {
-      "code_fingerprint": "sha256:f4e96649bc19b31571a43642f2a40f122d7c975d940532ce687007f63cc601a7",
+    "multiple-gpus-multi-gpu-from-first-principles": {
+      "code_fingerprint": "sha256:b49b646603fb222e97ef6e0bc74be31c306aeb6e8077c3fbda69b956c0b76a09",
       "kind": "text",
       "outputs": [
         {
-          "type": "stream",
-          "name": "stdout",
-          "text": "b1 weight: [[0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.]]\nb1 devices: {CudaDevice(id=0)}\n"
+          "type": "execute_result",
+          "text": "'0'"
         }
       ]
     },
-    "multiple-gpus-data-synchronization-5": {
-      "code_fingerprint": "sha256:0dfa4ecf9d02f5e6904ee4ca6d45016707107cf212ded5cdc78f01e1038a3943",
+    "multiple-gpus-data-parallelism-by-hand-1": {
+      "code_fingerprint": "sha256:b4a2fa2876eb8e252777d76a63f74c56b2b2f3b511384713b33684e7838ab3b3",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-data-parallelism-by-hand-2": {
+      "code_fingerprint": "sha256:5e99bde13ad3838c4d1fb9a8fa788fbbbea87171c260d6793b8c43d861eeb2c9",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-data-parallelism-by-hand-3": {
+      "code_fingerprint": "sha256:119f630e062600f425ef61602750bfd4c33ba5a4cca308514eee439cd806e622",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "before allreduce:\n [[1. 1.]] \n [[2. 2.]]\n"
+          "text": "before: [[[1.0, 1.0]], [[2.0, 2.0]]]\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "after allreduce:\n [[3. 3.]] \n [[3. 3.]]\n"
+          "text": "summed: [[[3.0, 3.0]], [[3.0, 3.0]]]\n"
         }
       ]
     },
-    "multiple-gpus-distributing-data-1": {
-      "code_fingerprint": "sha256:d282ce5adc9e4f58c91488d1c90acc3511d5eb01d11b13a9b2c380f8f3cab128",
+    "multiple-gpus-data-parallelism-by-hand-4": {
+      "code_fingerprint": "sha256:6781f979e355a6739ec315b41b2c7848b34c71afd1cfaa187ba1b2c07fc4aeed",
+      "kind": "text",
+      "outputs": []
+    },
+    "multiple-gpus-data-parallelism-by-hand-7": {
+      "code_fingerprint": "sha256:f71a11f9396cabac267c23795565a3fcc3f7dcb73d812a0bd9b55e75ac09acde",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
-          "name": "stdout",
-          "text": "input : [[ 0  1  2  3  4]\n [ 5  6  7  8  9]\n [10 11 12 13 14]\n [15 16 17 18 19]]\nload into [CudaDevice(id=0), CudaDevice(id=1)]\noutput: [[[ 0  1  2  3  4]\n  [ 5  6  7  8  9]]\n\n [[10 11 12 13 14]\n  [15 16 17 18 19]]]\n"
-        }
-      ]
-    },
-    "multiple-gpus-distributing-data-2": {
-      "code_fingerprint": "sha256:d16ca581e591bdadd2459cb88e0a1b9ca774d53ce78df2133d4a0a7f6c4bd1a5",
-      "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-training-1": {
-      "code_fingerprint": "sha256:cee70a38d0bbf973b15beced917db537e1e76877d90706756b3a916a36a0ce03",
-      "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-training-2": {
-      "code_fingerprint": "sha256:a01479c9d8c5f5125979f0aad368eb825a6211efe76fd11bce6ef42870c2fa14",
-      "kind": "text",
-      "outputs": []
-    },
-    "multiple-gpus-training-3": {
-      "code_fingerprint": "sha256:12e10221d68d526cb9a306e5123d4e2003bc578110ada24811805ece46d3c699",
-      "kind": "mixed",
-      "outputs": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "test acc: 0.83, 0.7 sec/epoch on [CudaDevice(id=0)]\n"
+          "name": "stderr",
+          "text": "E0720 20:17:16.713029   44902 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
         },
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "multiple-gpus/multiple-gpus-training-3-1.svg",
-          "bytes": 16960,
-          "sha256": "sha256:e27c3a7f4720c2bfa1105011473092b5780fdd6290ee8c55a0ed2dd1aad1eb3f"
+          "type": "stream",
+          "name": "stdout",
+          "text": "max update difference, k=1 vs k=2: 1.86e-09\n"
         }
       ]
     },
-    "multiple-gpus-training-4": {
-      "code_fingerprint": "sha256:da2e1470744d3296f58d5a843850c206c0447f7ad936d197597c64c1bac09f2f",
-      "kind": "mixed",
+    "multiple-gpus-data-parallelism-by-hand-5": {
+      "code_fingerprint": "sha256:846cca9fe48513bd52c6ec4de32146f5be6101a1883fd69e7fbef417cdf0f87d",
+      "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc: 0.85, 1.3 sec/epoch on [CudaDevice(id=0), CudaDevice(id=1)]\n"
-        },
+          "text": "test acc 0.79, 0.56 sec/epoch on 1 GPU(s)\n"
+        }
+      ]
+    },
+    "multiple-gpus-data-parallelism-by-hand-6": {
+      "code_fingerprint": "sha256:1f1603b4dd8af8275b2e348f198342113f0cefb47f7ae987f926404d7581d36b",
+      "kind": "text",
+      "outputs": [
         {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "multiple-gpus/multiple-gpus-training-4-1.svg",
-          "bytes": 16964,
-          "sha256": "sha256:ebb014de3fa7dfb83e084ced81aeb61880b163a4611d3b2c0337d69ac78d60a5"
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc 0.81, 1.00 sec/epoch on 2 GPU(s)\n"
+        }
+      ]
+    },
+    "multiple-gpus-the-accounting": {
+      "code_fingerprint": "sha256:213c00a1ef35338f7ddc97103a2f524d51a9f15cbe39e33eee41e1b77a40f518",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "psum 6.53 GB/s effective over 82.3 ms\n"
         }
       ]
     }

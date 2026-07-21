@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/compilation.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:8556c86c1bc602f57fcd0e4be618ee37fc5edbcc1441627a1f9cb676f96fbac3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "compilation-compute-graphs-and-compilation": {
+      "code_fingerprint": "sha256:303790d37fb5aaf57c08f2fb5544320499588e51602a543c680372702c7774ff",
+      "kind": "text",
+      "outputs": []
+    },
+    "compilation-capture-two-philosophies-1": {
+      "code_fingerprint": "sha256:2ee939950b84c9b35f3239fcfcde5610d3c3ba48f7d238291b29216301b8d5f1",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "graph breaks: 1\n"
+        }
+      ]
+    },
+    "compilation-what-the-compiler-does-fusion": {
+      "code_fingerprint": "sha256:d941c0acf4061d2e7c1e6ca10f67667fd50929af84e256883e54b305b0f956a5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eager: 1.25 ms/call\ncompiled: 0.15 ms/call\n"
+        }
+      ]
+    },
+    "compilation-whole-step-compilation-measured": {
+      "code_fingerprint": "sha256:7361de07f14432722defd3cd234225a3bf848cfea6ee88c21cb53748cc87b5f2",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "first compiled step: 0.3 s\neager: 1.84 ms/call\ncompiled: 1.28 ms/call\n"
+        }
+      ]
+    },
+    "compilation-the-overhead-regime-capture-and-replay": {
+      "code_fingerprint": "sha256:65d716dcb9ad6863219185b93296c5ed151ef66a52baf1d33452be19ae268a70",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "eager: 2.33 ms/call\nreduce-overhead: 0.31 ms/call\n"
+        }
+      ]
+    }
+  }
+}

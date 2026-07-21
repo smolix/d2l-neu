@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/multi-gpu-practice.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:2dd1bc3ce573dfaeea130ff56f022c3607083d783c1b98adc9898db900e657c4",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "multi-gpu-practice-multi-gpu-in-practice": {
+      "code_fingerprint": "sha256:21f17656b15ed91627f3898f542ad41e8aa1a254d047064ddc8d38d90f8e1591",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-ddp-really-run-1": {
+      "code_fingerprint": "sha256:7345ebeca6fa589209229ed9429db8510600cee786424214e5ec4f5ad91f4f47",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-ddp-really-run-2": {
+      "code_fingerprint": "sha256:bc547aaf40bf12a5e8c1b87e0ef28238abacb0dda2399268ef4bcd4630d64033",
+      "kind": "text",
+      "outputs": []
+    },
+    "multi-gpu-practice-ddp-really-run-3": {
+      "code_fingerprint": "sha256:f8a887e73b523b3abd1fd6bcaaffef72fe70aca8b0d0fc20d222d81d659c2578",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1 GPU(s): 2107 samples/s, 1.00x, 100% weak-scaling efficiency\n2 GPU(s): 3714 samples/s, 1.76x, 88% weak-scaling efficiency\n4 GPU(s): 6924 samples/s, 3.29x, 82% weak-scaling efficiency\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-3-1.svg",
+          "bytes": 19030,
+          "sha256": "sha256:3fac807de239377917cdcc84d47a2c67ef74d9e84fc7332ca964c37d0abb17af"
+        }
+      ]
+    },
+    "multi-gpu-practice-ddp-really-run-4": {
+      "code_fingerprint": "sha256:c354b3c38bdd8930e5c1348c561c000c4ee737003b3a4910e975e09a3b0ab9bd",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1 GPU(s): 2092 samples/s, 1.00x, 100% strong-scaling efficiency\n2 GPU(s): 3717 samples/s, 1.78x, 89% strong-scaling efficiency\n4 GPU(s): 5885 samples/s, 2.81x, 70% strong-scaling efficiency\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "multi-gpu-practice/multi-gpu-practice-ddp-really-run-4-1.svg",
+          "bytes": 27157,
+          "sha256": "sha256:3c3d6601e7067464c2fb87677c9f85403a3092887ccb7a39eeba8ed6ed9118d3"
+        }
+      ]
+    },
+    "multi-gpu-practice-ddp-really-run-5": {
+      "code_fingerprint": "sha256:49e0497f74a913efefd13f4074b46aac370d35300625eb6d962a52369f963e82",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "k=2: predicted comm 2N/beta = 20 ms/step; measured 15 ms (synced 132, no_sync 117)\n"
+        }
+      ]
+    },
+    "multi-gpu-practice-ddp-really-run-6": {
+      "code_fingerprint": "sha256:3b0bee440bfc0df864ddfd162e7c9bb5b171cdc03f8f7afc189b98764e6b73b8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bare allreduce, effective bytes/device/s: 4.4 GB/s at the default, 22.3 GB/s configured (5.1x)\n"
+        }
+      ]
+    },
+    "multi-gpu-practice-sharding-the-redundant-the-fsdp-idea": {
+      "code_fingerprint": "sha256:8a9db47e8f2f736a8040b847102099e1ec783c454573a94e82c58f62ddb590b6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "FSDP sketch: reach for it past a few billion parameters, not on an 11M-param demo\n"
+        }
+      ]
+    }
+  }
+}

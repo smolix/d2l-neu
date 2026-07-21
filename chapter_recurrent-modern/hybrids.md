@@ -1023,11 +1023,11 @@ distillation experiments, all pointing at a small attention minority
 carrying retrieval through a cheap recurrent majority. What this
 section did *not* cover is the systems story that makes the recurrent
 majority fast in practice — the chunked forms of
-:numref:`subsec_ms-chunked` living as fused kernels, and the serving
-stacks that exploit a mostly flat memory bill — which belongs to
+:numref:`subsec_ms-chunked` living as fused kernels, which belongs to
 :numref:`chap_performance`; and the pretraining and post-training of
-full-scale language models, hybrid or not, which is the subject of the
-Language Models part. The pendulum question from this chapter's
+full-scale language models, hybrid or not, together with the serving
+stacks that exploit their mostly flat memory bill, which are the subject
+of the Language Models part. The pendulum question from this chapter's
 introduction — whether attention remains on top on January 1, 2027 —
 stays open. But notice what would settle it: not a better gate or a
 cleverer write rule, both of which this chapter taught, but whether a

@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/hardware.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:8556c86c1bc602f57fcd0e4be618ee37fc5edbcc1441627a1f9cb676f96fbac3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "hardware": {
+      "code_fingerprint": "sha256:3bdbf006b79c50f5196210a029ae4a31d0a4c074cb98537f873e16da664d3391",
+      "kind": "text",
+      "outputs": []
+    },
+    "hardware-where-bytes-live": {
+      "code_fingerprint": "sha256:cb0fb0c951c187f00e299bf04a66632af99a41ea1f6584bd096446e1ebc2674f",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "measured 0.80 TB/s (spec: about 1.0 TB/s)\n"
+        }
+      ]
+    },
+    "hardware-the-cpu-s-role": {
+      "code_fingerprint": "sha256:fb9f70b66140adc625fda24a05c219654d20d2b7af9c0787f64964048e87e993",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "pageable: 13.4 GB/s\npinned: 24.3 GB/s\n"
+        }
+      ]
+    }
+  }
+}

@@ -136,10 +136,11 @@ the continuous-time linear systems from which :numref:`sec_ssm` takes the
 term (that section also notes what the phrase means to a statistician,
 which is different again). The chapter teaches algorithms, not kernels:
 the chunked forms here are twenty-line teaching implementations, and the
-Triton kernels, memory hierarchies, and serving systems that make them
-fast belong to :numref:`chap_performance`. It trains no large models:
-pretraining recipes, data pipelines, and everything downstream of a base
-model belong to the Language Models part. The efficient-attention
+Triton kernels and memory hierarchies that make them fast belong to
+:numref:`chap_performance`. It trains no large models: pretraining
+recipes, data pipelines, the serving stacks that turn a trained model
+into a service, and everything downstream of a base model belong to the
+Language Models part. The efficient-attention
 taxonomy stays in :numref:`chap_attention`, which already implemented the
 surviving variants; applications of state space models to vision, audio,
 and genomics are out of scope; and the fast-moving family of

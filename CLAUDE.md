@@ -367,17 +367,20 @@ re-fetches everything from scratch (slow, throttled by Wikipedia).
 - **Part structure (2026-07-17 restructure, per Alex):** front matter
   (introduction is unnumbered) | **Basics** = ch. 1–8 (preliminaries through
   Sequence Models) | **Advanced** = 9 Optimization, 10 Attention, 11
-  Computational Performance, 12 Transformers (placeholder), 13 State Space
-  Models (formerly "Gated and Linear Recurrence"), 14 RL, 15 GANs, 16
-  Diffusion Models (placeholder) | **Language Models** (formerly "Natural
-  Language Processing") = 17–18 | **Image Models** (formerly "Computer
-  Vision") = 19 | **Attic** = 20 GP, 21 HPO, 22 RecSys (GP leads the Attic:
-  it is the Bayesian-optimization background HPO builds on) | math appendix
-  23–28 | Tools 29. Title shortenings ("Computation", "Modern Convnets",
-  "Sequence Models", singular "Multilayer Perceptron") are deliberate:
-  inside a single "Basics" part the long framework-y titles were redundant,
-  and ch. 13's rename marks the book's pivot to the linear-recurrence/SSM
-  view. The preface still describes the old three-part plan and needs a
+  Transformers, 12 State Space Models (formerly "Gated and Linear
+  Recurrence"), 13 Computational Performance (rebuilt 2026-07-20:
+  roofline/regimes method, hardware, compilation, memory/precision, from-
+  scratch + practical multi-GPU, transformer case study; PyTorch+JAX only),
+  14 RL, 15 GANs, 16 Diffusion Models (placeholder) | **Language Models**
+  (formerly "Natural Language Processing") = 17–18 | **Image Models**
+  (formerly "Computer Vision") = 19 | **Attic** = 20 GP, 21 HPO, 22 RecSys
+  (GP leads the Attic: it is the Bayesian-optimization background HPO builds
+  on) | math appendix 23–28 | Tools 29. Title shortenings ("Computation",
+  "Modern Convnets", "Sequence Models", singular "Multilayer Perceptron")
+  are deliberate: inside a single "Basics" part the long framework-y titles
+  were redundant, and ch. 12's rename marks the book's pivot to the
+  linear-recurrence/SSM view. The preface still describes the old three-part
+  plan and needs a
   full rewrite (deferred, per Alex). **Invariant:** `CHAPTER_NUMBERING`
   dict order must equal `_quarto.yml` chapter order — `gen_pdf.py` emits
   the PDF book in dict order and `fix_latex.py` pairs tex `\chapter`s

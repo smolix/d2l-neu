@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "source": "chapter_computational-performance/performance-model.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:0b92965b6edea7f7a9774fe1454bcf5d97917bed08e8e8d3b9e0adb033ed3dae",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "performance-model-the-performance-model": {
+      "code_fingerprint": "sha256:dbf3534690d8e5cffb3e03016455ddb838590b1666cf79214de0b844dbead7c2",
+      "kind": "text",
+      "outputs": []
+    },
+    "performance-model-counting-flops-bytes-and-arithmetic-intensity": {
+      "code_fingerprint": "sha256:ce291f1e976b7cd2fcc0aa55d8eb2f2405d438f1c950521ab5f90bfd58948c0e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "NVIDIA GeForce RTX 4090, 25 GB\nridge point = 164 FLOP/byte\n"
+        }
+      ]
+    },
+    "performance-model-measuring-without-lying-1": {
+      "code_fingerprint": "sha256:40f658e29d107dd9b6be5a93cad9953314049818c4dce59c67fcac4a840b348a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "naive timer: 0.69 ms   with synchronize: 8.99 ms\n"
+        }
+      ]
+    },
+    "performance-model-measuring-without-lying-2": {
+      "code_fingerprint": "sha256:3d9e3d962175cb264f223317f487b8f23c79cf1bdc5a4e930c9c6f49ccf43f9b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "read every step: 0.061 s   read once: 0.042 s\n"
+        }
+      ]
+    },
+    "performance-model-measuring-without-lying-3": {
+      "code_fingerprint": "sha256:3a235f2c4ea68bae2d75f02337217fc160c2e5b46de92057f6bf874c5933f604",
+      "kind": "text",
+      "outputs": []
+    },
+    "performance-model-measuring-without-lying-4": {
+      "code_fingerprint": "sha256:2290fec4cbc87dc8e5537d0a442547441431848a47b25aec971cfd90e9789624",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "4096-matmul: 0.89 ms/call"
+        }
+      ]
+    },
+    "performance-model-the-sweep-mapping-our-gpu": {
+      "code_fingerprint": "sha256:ea37467e4ae3407151ecf62eb7af3b2b75366744333f453c756017f824b34c51",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "['256: 2.3', '512: 18.6', '1024: 119.6', '2048: 157.5', '4096: 152.8', '8192: 165.8']\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "performance-model/performance-model-the-sweep-mapping-our-gpu-1.svg",
+          "bytes": 23259,
+          "sha256": "sha256:019563e9116074c532b94e5587311fb7e97cb900016e17b1cb932eec4c6327ef"
+        }
+      ]
+    },
+    "performance-model-three-regimes-1": {
+      "code_fingerprint": "sha256:221b664887b8f8691ebed1641ce2d23ccbdee03a421f2c2c05ca10efef1e8a37",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "add: 0.14 ms/call\nmul: 0.14 ms/call\nsin: 0.14 ms/call\nsigmoid: 0.14 ms/call\n"
+        }
+      ]
+    },
+    "performance-model-three-regimes-2": {
+      "code_fingerprint": "sha256:c9773ad7d123d5adadcdf2abda3595bcaf7462c1d9e55c5eaa76a027e1038a83",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "1 op: 0.14 ms/call\nchain: 1.25 ms/call\n"
+        }
+      ]
+    },
+    "performance-model-the-profiler": {
+      "code_fingerprint": "sha256:c7a753183ed0a49d05be1bdc65c8d9ee1dd2bd37b6891fac8e29f1cfdbaa6b3a",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "operator                    CPU total  CUDA total\naten::linear                  3.21 ms     0.20 ms\naten::addmm                   3.02 ms     0.20 ms\nautograd::engine::evaluat     2.74 ms     0.17 ms\nvoid cutlass::Kernel2<cut     0.00 ms     0.15 ms\nAddmmBackward0                1.97 ms     0.13 ms\naten::mm                      1.57 ms     0.13 ms\naten::sum                     0.59 ms     0.05 ms\nvoid cutlass::Kernel2<cut     0.00 ms     0.05 ms\n"
+        }
+      ]
+    }
+  }
+}

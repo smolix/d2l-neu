@@ -103,7 +103,7 @@ reinforcement learning methods :cite:`Mnih.Heess.Graves.ea.2014`, but they
 are much harder to optimize. The bulk of modern attention research follows
 the framework of :numref:`fig_qkv`, and so will we.
 
-![The attention mechanism computes a linear combination over values $\mathbf{v}_\mathit{i}$ via attention pooling, where weights are derived according to the compatibility between a query $\mathbf{q}$ and keys $\mathbf{k}_\mathit{i}$.](../img/qkv.svg)
+![The attention mechanism computes a linear combination over values $\mathbf{v}_\mathit{i}$ via attention pooling, where weights are derived according to the compatibility between a query $\mathbf{q}$ and keys $\mathbf{k}_\mathit{i}$.](../img/mdl-attention-soft-lookup.svg)
 :label:`fig_qkv`
 
 Note what :eqref:`eq_attention_pooling` buys us. The "code" executed against
@@ -365,7 +365,7 @@ $$\textrm{Attention}(\mathbf{q}, \mathcal{D}) = \sum_{i=1}^m \alpha(\mathbf{q}, 
 One-hot $\alpha$ → exact lookup; uniform $\alpha$ → average pooling.
 Everything in between is attention.
 
-![Attention pooling: a linear combination of values, with weights from query–key compatibility.](../img/qkv.svg){width=64%}
+![Attention pooling: a linear combination of values, with weights from query–key compatibility.](../img/mdl-attention-soft-lookup.svg){width=64%}
 :::
 
 ::: {.slide title="Softmax makes any score a weight"}

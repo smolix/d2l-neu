@@ -183,7 +183,7 @@ $$
 
 :numref:`fig_multi-head-attention` shows the layout.
 
-![Multi-head attention: each head projects queries, keys, and values into its own subspace and attends there; the head outputs are concatenated and linearly recombined.](../img/multi-head-attention.svg)
+![Multi-head attention: each head projects queries, keys, and values into its own subspace and attends there; the head outputs are concatenated and linearly recombined.](../img/mdl-attention-multi-head.svg)
 :label:`fig_multi-head-attention`
 
 ### Same FLOPs, More Views

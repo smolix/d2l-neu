@@ -4,40 +4,45 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:c2747597d8c3128147e6a2b95fdf215105ade3f8d506b50b4ef6dbfe7953a277",
+    "d2l_lib_fingerprint": "sha256:9f5dac8661a96eb2b6d28b59704ccac02f70d103d4d4cb7ee22a4b2a0e113fcb",
     "max_inline_bytes": 0
   },
   "cells": {
     "lr-scheduler-a-testbed-1": {
-      "code_fingerprint": "sha256:b92137072a7445913521a60c0804e46f52f537bf0769b1f13e20631590acabed",
+      "code_fingerprint": "sha256:bd19be790b9460eb538f541b327dbe2847fb1d5fcf9e94d9c9ddf6ff6d17413c",
+      "kind": "text",
+      "outputs": []
+    },
+    "lr-scheduler-a-testbed-board": {
+      "code_fingerprint": "sha256:c594e873c39c58b9ae6f76a18461951be971a569bc61a35c238d472ee730b2da",
       "kind": "text",
       "outputs": []
     },
     "lr-scheduler-a-testbed-2": {
-      "code_fingerprint": "sha256:e46aaafac49ae18266f8576b9addc358f63adc67d11afceeb20f9c299f1c8980",
+      "code_fingerprint": "sha256:25328efe21001e269509e48908282468df2ea8d3524fa0e50844bc6f3f8c6b62",
       "kind": "text",
       "outputs": []
     },
     "lr-scheduler-a-testbed-3": {
-      "code_fingerprint": "sha256:ca07a4c2f6f6c578d50d8d21639d28593638de72b028736e63b58b55228db3c1",
+      "code_fingerprint": "sha256:a6e4faccf2f70be1526d906a8c0ab3fc2d423614215c3f4eb99afb5bfb0dfa28",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.060, train acc 0.978, test acc 0.901\n"
+          "text": "train loss 0.058, train acc 0.979, test acc 0.897\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-a-testbed-3-1.svg",
-          "bytes": 30745,
-          "sha256": "sha256:f0698863e20c5e3bae4b2915a1a72b99388cba5a6070dc8daffc3887acd41249"
+          "bytes": 42557,
+          "sha256": "sha256:e4b43e325be12ea73e48485f328bd8e4edc879e477985d5659d211959a073711"
         }
       ]
     },
     "lr-scheduler-square-root-decay-1": {
-      "code_fingerprint": "sha256:66ce098c0e0ea01a765c82fff8d3b68a5dd8b3514b4c530d2ee5c4ed7a8463b0",
+      "code_fingerprint": "sha256:7a409017431b1b12f45cda2ece00039f94e158f52e10032dcdb5b408fd3e0449",
       "kind": "asset",
       "outputs": [
         {
@@ -45,30 +50,30 @@
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-square-root-decay-1-1.svg",
           "bytes": 19860,
-          "sha256": "sha256:1a16467aafbfe2dfd041d526a7cf760f662442d963010c0ad936396087f63769"
+          "sha256": "sha256:8a680e771c5e9660a8f3d34ea38fe9d2d1fdfcc50ccc534b7275bc85e64d2f1d"
         }
       ]
     },
     "lr-scheduler-square-root-decay-2": {
-      "code_fingerprint": "sha256:49213808e2af1ea25c565dd36e8c6d58de94e97e2a554986451ac2df2288146a",
+      "code_fingerprint": "sha256:17c852ab4790ac7bfc98664c8b15f3ab56bc6bbb4a5b269ff7cdc228f99957ab",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.090, train acc 0.970, test acc 0.895\n"
+          "text": "train loss 0.085, train acc 0.971, test acc 0.905\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-square-root-decay-2-1.svg",
-          "bytes": 30944,
-          "sha256": "sha256:00229cb9313091b125de0378f00a69db64062198338e45af14af9f454bb2b222"
+          "bytes": 42600,
+          "sha256": "sha256:4db8d6fb9c473c0913368bbe691624f7b9eff854c31aeac8cb01dfe91ec3f91e"
         }
       ]
     },
     "lr-scheduler-multiplicative-decay-1": {
-      "code_fingerprint": "sha256:cff70ab6e305cc0db7db997ff78a138bd42412deccaa464a1bf9de4b2d6a2369",
+      "code_fingerprint": "sha256:1c4768daaef09107721e5a034d7f0dcf426e29795ee8ffb1ed0d72c5db1c9a23",
       "kind": "asset",
       "outputs": [
         {
@@ -76,30 +81,30 @@
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-multiplicative-decay-1-1.svg",
           "bytes": 19951,
-          "sha256": "sha256:f214427c35a8dd96bd7c9b9c140f1036cf36e03053529023f2424569412358b0"
+          "sha256": "sha256:a1e62cd79929260554b21abb7c1ece559e1ba09f6e8d6f5022e0ea242fab7e41"
         }
       ]
     },
     "lr-scheduler-multiplicative-decay-2": {
-      "code_fingerprint": "sha256:b1d43f2ddd8ca2466067ba6916cfb4dbf28bca7d8272299eb57eeecd14c97ac2",
+      "code_fingerprint": "sha256:49e370170324f17c06cb285d2bb0841a34039fba4a07d32bca84c2448e42bfda",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.079, train acc 0.976, test acc 0.909\n"
+          "text": "train loss 0.079, train acc 0.975, test acc 0.907\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-multiplicative-decay-2-1.svg",
-          "bytes": 30920,
-          "sha256": "sha256:b4f12ef2c920e9fd2641ac7c7afac7b56b8c00a2ae238aaf642c5e4be037e0f1"
+          "bytes": 45492,
+          "sha256": "sha256:9f05db0195a37c7b1ea30b00f2bf0260151bad68d86285aaca9b5015745cdd0a"
         }
       ]
     },
     "lr-scheduler-piecewise-constant-decay-1": {
-      "code_fingerprint": "sha256:af11e4bc7aa631b6ac5fc899cbb865583fb352540ce1bdaddb4ad20d64997b14",
+      "code_fingerprint": "sha256:7a3e7011524c3b037e1a94362cabc5c7cc7ec3823d73f39f12d8d3f75648ac77",
       "kind": "asset",
       "outputs": [
         {
@@ -107,30 +112,30 @@
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-piecewise-constant-decay-1-1.svg",
           "bytes": 18862,
-          "sha256": "sha256:e0cf61847e7239a874f923d9e4c6ecc88e22fd7e4161ba8eb7da12d181bd7072"
+          "sha256": "sha256:c582b7de42527dc8a3c0e3e34b772953991e1788974d5f98cbf89d6d9fc597e4"
         }
       ]
     },
     "lr-scheduler-piecewise-constant-decay-2": {
-      "code_fingerprint": "sha256:d80b4f4c2f603bd508838f3ff5856d357fafb37da61d33028ef2c912568fc424",
+      "code_fingerprint": "sha256:8a2c9dbc71f901262e4d418bdb09c1af14ac6b1d3300b353f4f30d8a2f03ea25",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.035, train acc 0.990, test acc 0.903\n"
+          "text": "train loss 0.040, train acc 0.989, test acc 0.906\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-piecewise-constant-decay-2-1.svg",
-          "bytes": 31473,
-          "sha256": "sha256:c758c17bc66f9f82808f9ad500b420043fb961b6cf49293e2e5f0578e6890b30"
+          "bytes": 43614,
+          "sha256": "sha256:8dcc65187117ecce0d22f9f7ff922f5c23c7b9a80f39409e2021017289405610"
         }
       ]
     },
     "lr-scheduler-cosine-decay-1": {
-      "code_fingerprint": "sha256:89b069f0f42d414a3519feab541f947949270bf32dfed5e845dc2351adc85b84",
+      "code_fingerprint": "sha256:a4a2e5a888075eeae2d790fd48d93bb90393d5fcc775a0c0790a8ac56ee816f5",
       "kind": "asset",
       "outputs": [
         {
@@ -138,71 +143,71 @@
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-cosine-decay-1-1.svg",
           "bytes": 17368,
-          "sha256": "sha256:8499df4d71d04d7d0187c4f7e430ad3b42cf95f926c5a6cfc19fe5384c5a9d8e"
+          "sha256": "sha256:fdbfc2b6c569c9efbab677d639fd334873c630568771f073cd5836fb7f86e418"
         }
       ]
     },
     "lr-scheduler-cosine-decay-2": {
-      "code_fingerprint": "sha256:f072f0134485369c67c70d7328fd3198985432497d790e2e1c527996b82181a3",
+      "code_fingerprint": "sha256:6372ec93c54f352158ccc789150357e056ae3d789c6b444ec15fd6425a86e2a9",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.080, train acc 0.975, test acc 0.910\n"
+          "text": "train loss 0.084, train acc 0.972, test acc 0.911\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-cosine-decay-2-1.svg",
-          "bytes": 30944,
-          "sha256": "sha256:41d6c760e2490c98bf9abecc1f40bf15f05f1b4f712f16b959e95238959b0a05"
+          "bytes": 45499,
+          "sha256": "sha256:f50675e549985caaea49cd8b7a2d74d196c207af02dc434613fd43fd3f1ff12b"
         }
       ]
     },
     "lr-scheduler-warmup-1": {
-      "code_fingerprint": "sha256:2f4dfb443b3413e455a920c48a3be8afe625371cf2afaa22664bb16883125dc2",
+      "code_fingerprint": "sha256:ce67d20be0f6385d4afb4502f9a074c59c40392c8d5fde9b6c14b39359b6898e",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 2.011, train acc 0.196, test acc 0.198\n"
+          "text": "train loss 2.253, train acc 0.125, test acc 0.100\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-warmup-1-1.svg",
-          "bytes": 24867,
-          "sha256": "sha256:c33e7d8e0fcdb32d59f327f20370b1f96777889199b1e9dd63d84054262962cc"
+          "bytes": 37171,
+          "sha256": "sha256:c48edcff580b14456c43e8be6073919d1a3a922c0fd471fbd08542a90e08692b"
         }
       ]
     },
     "lr-scheduler-warmup-2": {
-      "code_fingerprint": "sha256:56be5457261895842e4d4898fdc354e1cf237c52f44a7506fdf6ef73a589bd90",
+      "code_fingerprint": "sha256:501bfac8793e7a787bd20c3ed7f0b4f73ca2ea10147d3fe046f83c840bf694f5",
       "kind": "text",
       "outputs": []
     },
     "lr-scheduler-warmup-3": {
-      "code_fingerprint": "sha256:4fda3d41ee9db1e9567e66ddc31e85993b78736d284bcaf2fd6fcb62cb1cf08c",
+      "code_fingerprint": "sha256:6981137e9e157c2cd51316b28db7a00cfddfd7bef6b4b253abbcbf4ffdf07a57",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.204, train acc 0.923, test acc 0.879\n"
+          "text": "train loss 0.213, train acc 0.918, test acc 0.896\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-warmup-3-1.svg",
-          "bytes": 23633,
-          "sha256": "sha256:95c4ec7f03571d0289debac8409a39ffc101c2ab461b870d290ec9213d125bef"
+          "bytes": 36547,
+          "sha256": "sha256:3469c801ea34ee49eb284e5a4e7a965cb3a57eae584dd87d2acfb5f4538a8d0d"
         }
       ]
     },
     "lr-scheduler-warmup-4": {
-      "code_fingerprint": "sha256:2ba50f7f6fbb02f5db4195bd0d3c300b6bbb81e45474f9c96c7c67671a6c478c",
+      "code_fingerprint": "sha256:5fdabbc2f18fdb2966dc4f947da19634f8b0861907d893cff8024c761fc4fa4f",
       "kind": "asset",
       "outputs": [
         {
@@ -210,30 +215,30 @@
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-warmup-4-1.svg",
           "bytes": 17398,
-          "sha256": "sha256:a2ff87fc1879effc4cb23f7edbfdb9f86de25cb84ef16a16283496fb81d6bf74"
+          "sha256": "sha256:6ffddf5b7848329efcbc17c10b74ed3165fd6cda28f1e88217a62ba7ea1022fd"
         }
       ]
     },
     "lr-scheduler-warmup-5": {
-      "code_fingerprint": "sha256:76a95eae846fbdd968cc8156bec0600f20ab3cec581d4c2d21cded09c2f55b36",
+      "code_fingerprint": "sha256:217019c70ebbc009704659ade59b42941e7c05842f0823272f8da656c275d6f1",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.046, train acc 0.988, test acc 0.910\n"
+          "text": "train loss 0.042, train acc 0.989, test acc 0.913\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-warmup-5-1.svg",
-          "bytes": 31462,
-          "sha256": "sha256:208f5a6e03607050f1e0a3abb24a70203061124f27afea0433b41b786f62fd24"
+          "bytes": 46627,
+          "sha256": "sha256:47dbb486c028ad1946a776384df220ccc5d8c51c6b3137edc9776b1950738845"
         }
       ]
     },
     "lr-scheduler-warmup-stable-decay-1": {
-      "code_fingerprint": "sha256:c8683beeef11d865f7a8aa315f1a45a98969f3e1cef75c68113181482666916e",
+      "code_fingerprint": "sha256:5e8314a9dbd56ed332c2aa25c173672de115ee3431915be610ef3b0b3a731650",
       "kind": "asset",
       "outputs": [
         {
@@ -241,79 +246,79 @@
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-warmup-stable-decay-1-1.svg",
           "bytes": 17284,
-          "sha256": "sha256:bff52409c72cddb91208f495a078359035148a8e8709c6305a47b9fd00e182a0"
+          "sha256": "sha256:d97f67694933229f9f5e4d3faf9dffcf1ab206312164feffb9850d2094118c92"
         }
       ]
     },
     "lr-scheduler-warmup-stable-decay-2": {
-      "code_fingerprint": "sha256:59a51eb7a5af02e79920133900dd9ac81ca6a47d45d1a6421cefecf54332e53a",
+      "code_fingerprint": "sha256:1cdc8b05b90643f689031a58bc47f254058fbed1aaf125ec4b954998a2ada679",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.027, train acc 0.994, test acc 0.909\n"
+          "text": "train loss 0.027, train acc 0.994, test acc 0.912\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-warmup-stable-decay-2-1.svg",
-          "bytes": 31485,
-          "sha256": "sha256:8b826d0505d4d835e660739e6714f08058718258fdd417e5404e6aa9bbe4e869"
+          "bytes": 46649,
+          "sha256": "sha256:48948d62b8f2d5cd3cb34aa76df63c9aa66819efa7735d6b11d0ac56fd7c958b"
         }
       ]
     },
     "lr-scheduler-branching-off-the-plateau-1": {
-      "code_fingerprint": "sha256:b8499d114bca8f01b27d50970164d6ad5e4f9cc941bb797fb3bb1a0005d53712",
+      "code_fingerprint": "sha256:750b6ed542e47c06ea2c503ea303755bed8860f7f07139253badab78ff6eaf8a",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.086, train acc 0.968, test acc 0.896\n"
+          "text": "train loss 0.090, train acc 0.967, test acc 0.901\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-branching-off-the-plateau-1-1.svg",
-          "bytes": 27232,
-          "sha256": "sha256:07201e93ae45395dd9e438e283ab0f88f8b4610dfd023be8e0263b01a4c22783"
+          "bytes": 40037,
+          "sha256": "sha256:b848c8898270e563ce2921d464a84dc960d811907be440114ba109b8db6051a4"
         }
       ]
     },
     "lr-scheduler-branching-off-the-plateau-2": {
-      "code_fingerprint": "sha256:300302817dd34d7a77a3d0df534533ca6220eb073e1e5734ad726da44540216c",
+      "code_fingerprint": "sha256:997ea2c97dd3d19731c7ff7bba98d3aafe58228b7e5d6a5c6c33d7bf406a0c37",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.063, train acc 0.978, test acc 0.899\n"
+          "text": "train loss 0.060, train acc 0.979, test acc 0.888\n"
         },
         {
           "type": "execute_result",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-branching-off-the-plateau-2-1.svg",
-          "bytes": 28396,
-          "sha256": "sha256:2b5b31edfa68a864be6d717528bbf877ed6faf09672a2d356991cc10c0aa068f"
+          "bytes": 41288,
+          "sha256": "sha256:587bed7a8e7787a934c6bf339092eb427f74cf298593b2997cb27b8057da86f7"
         }
       ]
     },
     "lr-scheduler-branching-off-the-plateau-3": {
-      "code_fingerprint": "sha256:b6e4210fc4a6ca3592761c5fd0ce5df86b9937c0ef6462d3e158e4a70dc2acf1",
+      "code_fingerprint": "sha256:1542b243186f95ef563aef3400c1057c6abad169c7ab78d65bc1ac3b9847af9f",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 0.015, train acc 0.998, test acc 0.911\n"
+          "text": "train loss 0.015, train acc 0.998, test acc 0.905\n"
         },
         {
           "type": "execute_result",
           "mime": "image/svg+xml",
           "asset": "lr-scheduler/lr-scheduler-branching-off-the-plateau-3-1.svg",
-          "bytes": 28967,
-          "sha256": "sha256:4c8f3d430689cf25088075dc33d73871f4138bb85d2007ad7dab53fed31927f2"
+          "bytes": 43353,
+          "sha256": "sha256:e4453bff9df33ebe6e028036e9b660e386aa59df52dfe94ffca155e8c63d976e"
         }
       ]
     }

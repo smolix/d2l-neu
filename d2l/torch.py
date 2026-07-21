@@ -1162,10 +1162,6 @@ def generate(step_fn, prefix, num_tokens, eos_id=None, **strategy):
             break
     return ids
 
-def annotate(text, xy, xytext):
-    d2l.plt.gca().annotate(text, xy=xy, xytext=xytext,
-                           arrowprops=dict(arrowstyle='->'))
-
 def train_2d(trainer, steps=20, f_grad=None):
     """Optimize a 2D objective function with a customized trainer.
 
@@ -1365,7 +1361,11 @@ def masked_softmax(X, valid_lens):
     # Most negative finite score: exactly zero weight after the softmax,
     # at any precision, without the NaN risk of literal -inf
     X = X.reshape(-1, shape[-1]).masked_fill(~mask, torch.finfo(X.dtype).min)
-    return F.softmax(X.reshape(shape), dim=-1)
+    weights = F.softmax(X, dim=-1)
+    # A fully masked query (no valid key) would be a uniform average over
+    # invalid values; zero those rows so no padded position leaks through
+    weights = torch.where(mask.any(-1, keepdim=True), weights, 0.0)
+    return weights.reshape(shape)
 
 class DotProductAttention(nn.Module):
     """Scaled dot product attention.

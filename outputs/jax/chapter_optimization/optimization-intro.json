@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:17df279e7f1afe77618e554785ce518eee1e5de1b573564ca3a223827236906f",
+    "d2l_lib_fingerprint": "sha256:f50aca06339ee96c4e6e3f876dc36ce5c5a11da5ee5870af53fcde1d66d78c89",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -13,78 +13,8 @@
       "kind": "text",
       "outputs": []
     },
-    "optimization-intro-goal-of-optimization-2": {
-      "code_fingerprint": "sha256:aaf6cc2bcc1563e10580bbbab0f242724cc0bb38b5acb8a35f5a8b1b630e71e3",
-      "kind": "text",
-      "outputs": []
-    },
-    "optimization-intro-goal-of-optimization-3": {
-      "code_fingerprint": "sha256:5bb60783d3400044c5ff3082a28a4fa96b6370b51153a134ba8921e922bfa064",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "optimization-intro/optimization-intro-goal-of-optimization-3-1.svg",
-          "bytes": 30002,
-          "sha256": "sha256:9d9e39a660e40b1f5fd0aab5092d6194e74630994cade46bf6b0451663cfeaa2"
-        }
-      ]
-    },
-    "optimization-intro-local-minima": {
-      "code_fingerprint": "sha256:4fd9455580c8101a8d3faac260065788689500abe9c858b023c67bf61a331169",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "optimization-intro/optimization-intro-local-minima-1.svg",
-          "bytes": 19689,
-          "sha256": "sha256:1d6cfa3a9161dca9b8d38f2bcdc4eadb0b13ea5d54b189cee04b0d8492fb0a79"
-        }
-      ]
-    },
-    "optimization-intro-saddle-points-1": {
-      "code_fingerprint": "sha256:732f1e32d6af3f2efca784a1716e560a48407ed07755e6e0dfad45ac35a10b66",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "optimization-intro/optimization-intro-saddle-points-1-1.svg",
-          "bytes": 17872,
-          "sha256": "sha256:f4bbf2ef01dfe133ebe428b376e6f0c35cd22cd531491587109841c846dfaba0"
-        }
-      ]
-    },
-    "optimization-intro-saddle-points-2": {
-      "code_fingerprint": "sha256:a88739961f6bbb3564b3ee63f81d32cd3dcd0cd8d9cd3400fe19fb6f03f94a0f",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "optimization-intro/optimization-intro-saddle-points-2-1.svg",
-          "bytes": 63315,
-          "sha256": "sha256:f13a8aba30d50aa52d82163779a399b728b596356c02cf8ee41459875adc9267"
-        }
-      ]
-    },
-    "optimization-intro-vanishing-gradients": {
-      "code_fingerprint": "sha256:d0ef5c99a8101b81c370bfc7d25fffa0ed4e5659943df47bc52d3da4de64a7e3",
-      "kind": "asset",
-      "outputs": [
-        {
-          "type": "display_data",
-          "mime": "image/svg+xml",
-          "asset": "optimization-intro/optimization-intro-vanishing-gradients-1.svg",
-          "bytes": 20458,
-          "sha256": "sha256:de58360914477649d08451981f52146e3c0a21581a9a46b07a43e5c8cef2eb87"
-        }
-      ]
-    },
     "optimization-intro-an-ill-conditioned-valley": {
-      "code_fingerprint": "sha256:c2cbed913e76924a27f4e9e89b27e150c88171c225e049d014b1c9d1d2ab33ae",
+      "code_fingerprint": "sha256:cc923d54c561dcd243d49fdd366c4f53a082feff65684f9c554f1700725364c0",
       "kind": "mixed",
       "outputs": [
         {
@@ -97,7 +27,7 @@
           "mime": "image/svg+xml",
           "asset": "optimization-intro/optimization-intro-an-ill-conditioned-valley-1.svg",
           "bytes": 25400,
-          "sha256": "sha256:9b3a8a41fadc12c40a783489f183a0259053db1496e6a312315882ce42607870"
+          "sha256": "sha256:2ee1b171f8bf098326f09cabdc0292646c25f9737f3e4b2523fb82576cd96f54"
         }
       ]
     }

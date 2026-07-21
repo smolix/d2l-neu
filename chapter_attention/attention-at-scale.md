@@ -61,7 +61,7 @@ how easily long-range dependencies can be learned; long multiplicative
 chains between distant positions are precisely the gradient pathology of
 :cite:`Hochreiter.Bengio.Frasconi.ea.2001`.
 
-![Comparing CNN (padding tokens are omitted), RNN, and self-attention architectures.](../img/cnn-rnn-self-attention.svg)
+![Comparing CNN, RNN, and self-attention architectures.](../img/mdl-attention-cnn-rnn-self-attention.svg)
 :label:`fig_cnn-rnn-self-attention`
 
 A convolutional layer with kernel size $k$ and $d$ channels in and out costs
@@ -1078,7 +1078,7 @@ Map $n$ tokens of dimension $d$ to $n$ tokens of dimension $d$:
 | recurrence | $\mathcal{O}(nd^2)$ | $\mathcal{O}(n)$ | $\mathcal{O}(n)$ |
 | self-attention | $\mathcal{O}(n^2d)$ (mixing) | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
 
-![](../img/cnn-rnn-self-attention.svg){width=62%}
+![](../img/mdl-attention-cnn-rnn-self-attention.svg){width=62%}
 
 Full parallelism **and** constant path length — paid for by the one
 quadratic entry.

@@ -1249,10 +1249,6 @@ def generate(step_fn, prefix, num_tokens, eos_id=None, **strategy):
             break
     return ids
 
-def annotate(text, xy, xytext):
-    d2l.plt.gca().annotate(text, xy=xy, xytext=xytext,
-                           arrowprops=dict(arrowstyle='->'))
-
 def train_2d(trainer, steps=20, f_grad=None):
     """Optimize a 2D objective function with a customized trainer.
 
@@ -1483,7 +1479,11 @@ def masked_softmax(X, valid_lens):
     # Most negative finite score: exactly zero weight after the softmax,
     # at any precision, without the NaN risk of literal -inf
     X = jnp.where(mask, X.reshape(-1, shape[-1]), jnp.finfo(X.dtype).min)
-    return jax.nn.softmax(X.reshape(shape), axis=-1)
+    weights = jax.nn.softmax(X, axis=-1)
+    # A fully masked query (no valid key) would be a uniform average over
+    # invalid values; zero those rows so no padded position leaks through
+    weights = jnp.where(mask.any(-1, keepdims=True), weights, 0.0)
+    return weights.reshape(shape)
 
 class DotProductAttention(nnx.Module):
     """Scaled dot product attention.

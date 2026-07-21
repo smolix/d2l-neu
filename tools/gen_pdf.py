@@ -199,6 +199,21 @@ def convert_file_pdf(src_path, framework, chapter_number=None):
         output = _re.sub(r'@' + _re.escape(qid) + r'(?![\w-])', phrase,
                          output)
 
+    # Quarto 1.9.37 has a LaTeX-only crossref bug: for an emergent,
+    # edition-specific subset of section labels it freezes `@sec-X` into the
+    # .tex as a bare parent-chapter number (dropping the section digit, the
+    # "Section"/"Chapter" word, and the hyperlink) instead of a live
+    # `\ref{sec-X}`. HTML is unaffected. We sidestep it by emitting explicit
+    # LaTeX refs for every section/chapter crossref, so xelatex resolves them
+    # directly (hyperref, already loaded by Quarto, hyperlinks `\ref`). The
+    # label-type map is the prefix: chap_ -> sec-chap- reads "Chapter N";
+    # sec_/subsec_ -> sec- reads "Section N.M" (see convert_label_id).
+    # PDF-only — the HTML path (d2l_preprocess) must not be touched.
+    output = _re.sub(r'@sec-chap-([A-Za-z0-9-]+)',
+                     r'`Chapter~\\ref{sec-chap-\1}`{=latex}', output)
+    output = _re.sub(r'@sec-(?!chap-)([A-Za-z0-9-]+)',
+                     r'`Section~\\ref{sec-\1}`{=latex}', output)
+
     # Auto-number all display equations
     output = _add_equation_numbers(output, src_path)
 

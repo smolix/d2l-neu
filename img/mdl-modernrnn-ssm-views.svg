@@ -2053,8 +2053,8 @@ L 617.067337 123.596506
 " style="fill: none; stroke: #7f7f7f; stroke-width: 1.2; stroke-linecap: round"/>
    </g>
    <g id="text_23">
-    <!-- $\bar{K}_5$ -->
-    <g transform="translate(510.869586 103.178308) scale(0.115 -0.115)">
+    <!-- $\bar{K}_4$ -->
+    <g transform="translate(510.869586 103.120808) scale(0.115 -0.115)">
      <defs>
       <path id="Cmmi10-4b" d="M 300 0 
 Q 238 0 238 84 
@@ -2125,7 +2125,7 @@ z
      </defs>
      <use xlink:href="#Cmr10-b9" transform="translate(28.337402 26.015625)"/>
      <use xlink:href="#Cmmi10-4b" transform="translate(0 0.71875)"/>
-     <use xlink:href="#Cmr10-35" transform="translate(89.37625 -16.2875) scale(0.7)"/>
+     <use xlink:href="#Cmr10-34" transform="translate(89.37625 -16.2875) scale(0.7)"/>
     </g>
    </g>
    <g id="text_24">

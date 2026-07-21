@@ -664,7 +664,7 @@ def fig_ssm_views():
                  color=GRAY, lw=1.2, mut=9)
     ax.plot([xs[0] - 0.3, xs[-1] + 0.3], [y_ker, y_ker], color="black",
             lw=1.0)
-    ax.text(xs[2], y_ker + 0.62, r"$\bar{K}_5$", fontsize=11.5,
+    ax.text(xs[2], y_ker + 0.62, r"$\bar{K}_4$", fontsize=11.5,
             color="black", ha="right", va="center")
     ax.text(xs[-1] + 0.28, y_ker + 1.15 * kvals[0], r"$\bar{K}_0$",
             fontsize=11.5, color="black", ha="left", va="center")

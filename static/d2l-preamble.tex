@@ -6,6 +6,12 @@
 % Allow line breaks inside long verbatim spans (URLs, code lines).
 \usepackage{fvextra}
 \DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\},breaklines,breakanywhere,fontsize=\small}
+% Highlighting (above) wraps source code, but pandoc emits cell *output* as the
+% kernel's plain `verbatim`, which clips at the right margin. Redefine it as a
+% breakable fvextra Verbatim so wide output — generated-text samples, dir() API
+% dumps, profiler tables — wraps instead of running off the page. (Pandoc always
+% puts \end{verbatim} on its own line, which fvextra requires.)
+\DefineVerbatimEnvironment{verbatim}{Verbatim}{breaklines,breakanywhere,fontsize=\small}
 
 % Better float placement for figures inside narrow sections.
 \usepackage{float}

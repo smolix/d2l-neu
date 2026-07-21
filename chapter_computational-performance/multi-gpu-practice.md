@@ -462,13 +462,15 @@ shard.](../img/mdl-perf-fsdp-lifecycle.svg)
 That completes the small family of collectives this chapter needs — worth
 one table, since the rest of the book will name them without ceremony:
 
+:The collective operations behind data-parallel and sharded training.
+:label:`tab_collectives`
+
 | collective | what every rank ends with | where it appears |
 |---|---|---|
 | allreduce | the full sum | DDP's gradient buckets; :numref:`sec_multi_gpu` |
 | reduce-scatter | one shard of the sum | FSDP gradients |
 | all-gather | every shard, concatenated | FSDP parameters, just-in-time |
 | all-to-all | a different shard from each peer | expert parallelism (:numref:`sec_training_systems`) |
-:label:`tab_collectives`
 
 FSDP's payoff — fitting a model that does not fit — is invisible on our
 11.2M-parameter demo, which occupies a few hundred MB of a 24 GB card, so
@@ -691,6 +693,9 @@ spectrum is the `jax.shard_map` + `lax.psum` of :numref:`sec_multi_gpu`,
 where you write the collective yourself; `jit` + sharding is the
 automatic end.
 
+:Multi-GPU parallelism in PyTorch versus JAX.
+:label:`tab_pt_jax_parallel`
+
 | | PyTorch | JAX |
 |---|---|---|
 | processes | one per GPU (`torchrun`) | one, sees all GPUs |
@@ -699,7 +704,6 @@ automatic end.
 | tensor parallel | separate wrappers / DTensor | change the `PartitionSpec` |
 | sharded (FSDP) | `fully_shard` | change the `PartitionSpec` |
 | control | imperative, visible | declarative, compiler-driven |
-:label:`tab_pt_jax_parallel`
 
 Neither deal is strictly better: PyTorch's explicitness makes the
 communication legible and debuggable; JAX's declarativeness makes the same

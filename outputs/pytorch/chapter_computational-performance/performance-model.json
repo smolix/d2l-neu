@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive timer: 0.68 ms   with synchronize: 9.17 ms\n"
+          "text": "naive timer: 0.69 ms   with synchronize: 8.99 ms\n"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read every step: 0.060 s   read once: 0.039 s\n"
+          "text": "read every step: 0.061 s   read once: 0.042 s\n"
         }
       ]
     },
@@ -57,7 +57,7 @@
       "outputs": [
         {
           "type": "execute_result",
-          "text": "4096-matmul: 0.91 ms/call"
+          "text": "4096-matmul: 0.89 ms/call"
         }
       ]
     },
@@ -68,14 +68,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['256: 2.2', '512: 18.2', '1024: 118.3', '2048: 157.6', '4096: 153.1', '8192: 165.8']\n"
+          "text": "['256: 2.3', '512: 18.6', '1024: 119.6', '2048: 157.5', '4096: 152.8', '8192: 165.8']\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "performance-model/performance-model-the-sweep-mapping-our-gpu-1.svg",
-          "bytes": 23261,
-          "sha256": "sha256:7e4f121f49ea48dbe0177c00187e8b122696edf34298d0e3caa19d3f1cd68de2"
+          "bytes": 23259,
+          "sha256": "sha256:019563e9116074c532b94e5587311fb7e97cb900016e17b1cb932eec4c6327ef"
         }
       ]
     },
@@ -102,13 +102,13 @@
       ]
     },
     "performance-model-the-profiler": {
-      "code_fingerprint": "sha256:ebf4ba05811b29ff98ecafcf3b5e61835f3cf5f8c8901cd7c0796c7619d20467",
+      "code_fingerprint": "sha256:c7a753183ed0a49d05be1bdc65c8d9ee1dd2bd37b6891fac8e29f1cfdbaa6b3a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                           aten::linear         0.52%      49.161us        34.58%       3.258ms     217.229us       0.000us         0.00%     195.584us      13.039us            15  \n                                            aten::addmm         6.71%     632.566us        32.58%       3.070ms     204.666us     180.000us        41.61%     195.584us      13.039us            15  \n    autograd::engine::evaluate_function: AddmmBackward0         3.01%     283.521us        33.01%       3.110ms     207.342us       0.000us         0.00%     177.024us      11.802us            15  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us     153.889us        35.57%     153.889us      15.389us            10  \n                                         AddmmBackward0         2.06%     194.037us        23.99%       2.260ms     150.695us       0.000us         0.00%     133.759us       8.917us            15  \n                                               aten::mm        10.53%     992.494us        19.49%       1.836ms      73.454us     121.438us        28.07%     133.759us       5.350us            25  \n                                              aten::sum         4.98%     469.384us         7.59%     715.464us      35.773us      53.409us        12.35%      53.409us       2.670us            20  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      48.255us        11.15%      48.255us       4.825us            10  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nSelf CPU time total: 9.423ms\nSelf CUDA time total: 432.608us\n\n"
+          "text": "operator                    CPU total  CUDA total\naten::linear                  3.21 ms     0.20 ms\naten::addmm                   3.02 ms     0.20 ms\nautograd::engine::evaluat     2.74 ms     0.17 ms\nvoid cutlass::Kernel2<cut     0.00 ms     0.15 ms\nAddmmBackward0                1.97 ms     0.13 ms\naten::mm                      1.57 ms     0.13 ms\naten::sum                     0.59 ms     0.05 ms\nvoid cutlass::Kernel2<cut     0.00 ms     0.05 ms\n"
         }
       ]
     }

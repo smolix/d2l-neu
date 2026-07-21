@@ -173,7 +173,7 @@ moves faster in any single generation is a packaging and market decision,
 and it can go the other way. The H100$\to$B200 step grew compute and
 bandwidth almost in lockstep (both about $2.3\times$ — the ridge point
 barely moved, in fact edging slightly *down*), and the consumer
-4090$\to$5090 step bought bandwidth far faster than compute, dropping its
+4090→5090 step bought bandwidth far faster than compute, dropping its
 ridge point by nearly a third — check the ridge row of
 :numref:`tab_gpu_specs` below. The shoreline sets the long-run pressure;
 engineering chooses, one generation at a time, which wall to push.
@@ -236,6 +236,9 @@ between generations come from new architectures, not formats alone.
 
 The numbers-dense table, for orientation (conventions below it):
 
+:Representative accelerator specifications, mid-2026 (dense throughput, fp32 accumulation, boost clocks).
+:label:`tab_gpu_specs`
+
 | | H100 SXM | B200 SXM | RTX 4090 (ours) | RTX 5090 |
 |---|---|---|---|---|
 | memory | 80 GB HBM3 | 180 GB HBM3e | 24 GB GDDR6X | 32 GB GDDR7 |
@@ -245,7 +248,6 @@ The numbers-dense table, for orientation (conventions below it):
 | fp4 dense | — | 9,000 TF | — | 1,676 TF |
 | ridge (bf16) | ~295 FLOP/B | ~292 FLOP/B | ~165 FLOP/B | ~117 FLOP/B |
 | power | 700 W | 1,000 W | 450 W | 575 W |
-:label:`tab_gpu_specs`
 
 *Conventions: dense throughput (no 2:4 sparsity), fp32 accumulation, boost
 clocks, vendor datasheets as of mid-2026. The B200 column is the shipping
@@ -453,16 +455,18 @@ speculative decoding — belong to the Language Models part; the
 
 Rules of thumb worth carrying out of this section:
 
+:Performance rules of thumb — characteristic magnitudes and why each matters.
+:label:`tab_rules_of_thumb`
+
 | quantity | magnitude | why it matters |
 |---|---|---|
 | kernel launch | 5–15 µs | small ops cannot feed the GPU (:numref:`sec_compilation`) |
 | GPU memory bandwidth | 1–8 TB/s | the decode/elementwise speed limit |
-| PCIe per direction | tens of GB/s | host↔device; get data on-device, keep it there |
+| PCIe per direction | tens of GB/s | host$\leftrightarrow$device; get data on-device, keep it there |
 | NVLink-class fabric | ~1.8 TB/s per GPU | why datacenter multi-GPU scales and PCIe boxes struggle |
 | bytes/param, training with Adam | ~16–20 (mixed precision) | memory anatomy of :numref:`sec_memory_precision` |
 | bytes/token, decode | ~2 × params + KV | tokens/s ≤ bandwidth / this |
 | DRAM read vs fp32 multiply | ~500× the energy | fuse, shrink formats, recompute |
-:label:`tab_rules_of_thumb`
 
 ## Summary
 

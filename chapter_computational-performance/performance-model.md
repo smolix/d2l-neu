@@ -571,7 +571,12 @@ with torch.profiler.profile(
         acc_events=True) as prof:
     for _ in range(5):
         step()
-print(prof.key_averages().table(sort_by='cuda_time_total', row_limit=8))
+# The profiler's full table has eleven columns; we read the two that
+# diagnose the regime — total CPU vs total device time, per operator.
+dev = lambda e: getattr(e, 'device_time_total', 0)  # 'cuda_...' before 2.11
+print(f"{'operator':<26}{'CPU total':>11}{'CUDA total':>12}")
+for e in sorted(prof.key_averages(), key=dev, reverse=True)[:8]:
+    print(f'{e.key[:25]:<26}{e.cpu_time_total/1e3:>8.2f} ms{dev(e)/1e3:>9.2f} ms')
 ```
 
 ```{.python .input #performance-model-the-profiler}

@@ -250,7 +250,8 @@ class Scheduler:
             # Per-GPU fraction, tightest (min) across chosen cards so no GPU is
             # over-committed. Strict generalization of the old scalar formula:
             # when per_gpu_spg is constant this reduces to spg*mib/min(vram_g),
-            # byte-for-byte the previous formula, for any n_gpus.
+            # byte-for-byte the previous formula, for any n_gpus. Whole-box
+            # (per_gpu_spg == gpu_cap) reduces to 1.0, capped to 0.95.
             frac = min(0.95, max(0.05, min(
                 (s * self.mib_per_slot) / self.gpu_vram[g]
                 for g, s in zip(chosen, per_gpu_spg))))

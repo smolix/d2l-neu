@@ -48,10 +48,11 @@ production data parallelism and contrasts PyTorch's explicit collectives
 with JAX's declarative sharding. Finally :numref:`sec_fast_transformer`
 runs the whole method on a real Transformer, taking one of the book's own
 GPT models down a measured waterfall of every technique the chapter
-taught. That capstone is PyTorch-only — it exercises `torch.compile`,
-autocast, checkpointing, and DDP as one stack; JAX readers get the same
-method through the JAX tabs of the preceding sections and their
-exercises.
+taught. That capstone runs in both frameworks, each in its own idiom —
+`torch.compile`, autocast, and DDP on the PyTorch side; `jax.jit`,
+explicit bf16 threading, and declarative sharding on the JAX side — and
+the two waterfalls diverge exactly where the frameworks do: what a
+"compile" rung even means, and how data parallelism is launched.
 
 A word on the machine this chapter is built on, because it shapes what
 you will see. The book's build box is four consumer RTX 4090 GPUs with no

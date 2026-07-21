@@ -96,7 +96,8 @@ $$\alpha(\mathbf{q}, \mathbf{k}_i) = \frac{\exp(a(\mathbf{q}, \mathbf{k}_i))}{\s
 :eqlabel:`eq_softmax_attention`
 
 This operation is available in all deep learning frameworks, it is
-differentiable, and its gradient never vanishes identically. Attention
+differentiable, and its Jacobian is never the zero matrix, so gradients keep
+flowing. Attention
 mechanisms that are not differentiable exist, e.g., trained with
 reinforcement learning methods :cite:`Mnih.Heess.Graves.ea.2014`, but they
 are much harder to optimize. The bulk of modern attention research follows

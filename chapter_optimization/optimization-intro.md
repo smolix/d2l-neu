@@ -134,9 +134,12 @@ below, that the noise in minibatch gradients is not purely a nuisance.
 
 Besides local minima, *saddle points* make gradients vanish: locations
 where every gradient component is zero but which are neither a minimum nor
-a maximum of the function. Consider $f(x) = x^3$. Its first and second
+a maximum of the function. Take $f(x) = x^3$: its first and second
 derivatives both vanish at $x=0$, and optimization can stall there even
-though it is no minimum at all:
+though it is no minimum at all. Strictly, this one-dimensional point is a
+*stationary inflection*; the true saddle geometry — down along one direction,
+up along another — needs at least two dimensions. Both are critical points
+that are not extrema, and we use "saddle" broadly for either:
 
 ```{.python .input #optimization-intro-saddle-points-1}
 x = d2l.arange(-2.0, 2.0, 0.01)
@@ -170,14 +173,25 @@ Suppose the input of a function is a $k$-dimensional vector and its output
 a scalar, so its Hessian matrix has $k$ eigenvalues. At a point where the
 gradient is zero:
 
-* if all $k$ eigenvalues are positive, we have a local minimum;
-* if all are negative, a local maximum;
-* if some are positive and some negative, a saddle point.
+* if all $k$ eigenvalues are strictly positive — the Hessian is *positive
+  definite* — we have a strict local minimum;
+* if all are strictly negative, a strict local maximum;
+* if some are strictly positive and some strictly negative — the Hessian is
+  *indefinite* — a saddle point;
+* if the nonzero eigenvalues share a sign but at least one eigenvalue is
+  zero — the Hessian is only semidefinite, hence singular — the test is
+  inconclusive: the flat directions are settled by higher-order terms, and
+  the point may be a minimum, a maximum, or a saddle.
 
 For a zero-gradient point of a high-dimensional function to be a local
 minimum, *every one* of thousands or millions of eigenvalues must be
 positive; if signs were even roughly balanced coin flips, nearly every
-critical point would be a saddle. Convex functions — those whose Hessian
+critical point would be a saddle. Independent fair coin flips are only a
+heuristic: the eigenvalues of a Hessian at a critical point form a structured
+spectrum, not independent balanced signs — the second exercise below is one
+probe of why — and conditioning on criticality further ties the fraction of
+negative eigenvalues to the height of the loss. The conclusion survives the
+caveats, though: exact local minima are vanishingly rare beside saddles. Convex functions — those whose Hessian
 eigenvalues are nowhere negative — have neither saddle points nor spurious
 minima, which is one reason classical optimization theory is built on
 them. Deep learning objectives are not convex, but the theory has not

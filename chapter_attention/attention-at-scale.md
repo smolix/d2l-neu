@@ -87,11 +87,16 @@ token attends to any other directly, path length $\mathcal{O}(1)$.
 |:--|:--|:--|:--|
 | convolution (kernel $k$) | $\mathcal{O}(knd^2)$ | $\mathcal{O}(1)$ | $\mathcal{O}(n/k)$ |
 | recurrence | $\mathcal{O}(nd^2)$ | $\mathcal{O}(n)$ | $\mathcal{O}(n)$ |
-| self-attention | $\mathcal{O}(n^2 d)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
+| self-attention | $\mathcal{O}(n^2 d)$ (mixing only) | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
 
 Read as a bargain, the table says: self-attention buys full parallelism
 *and* constant path length, and the price is the only entry in the table
-that is quadratic in $n$. For short sequences the bargain is excellent—with
+that is quadratic in $n$. Two of these rows fold a per-token $d \times d$
+channel map into the figure shown — a convolution or a recurrence has no
+separate projection step — while the self-attention row counts the *mixing*
+only; the surrounding query/key/value/output projections add a further
+$\mathcal{O}(nd^2)$, linear in $n$ like the others' work and accounted for at
+the crossover below. For short sequences the bargain is excellent—with
 $n$ in the hundreds and $d$ comparable, $n^2 d$ and $nd^2$ are the same
 size—which is the regime in which the Transformer conquered machine
 translation. The regime of a million-token context is another matter, and
@@ -489,8 +494,9 @@ for name, f in [('naive', naive_heads), ('fused', fused_heads)]:
 ```
 
 :begin_tab:`pytorch`
-In our runs the fused kernel is more than ten times faster than the naive
-implementation and its footprint is hundreds of times smaller—megabytes
+In our runs — one GPU, half precision, the FlashAttention backend — the fused
+kernel is more than ten times faster than the naive implementation and its
+footprint is hundreds of times smaller—megabytes
 where the naive version allocates gigabytes. Both effects come from the
 same place: the score matrix never travels to off-chip memory. There is no
 trade-off to weigh here; for dense attention on sequences beyond a few
@@ -499,8 +505,9 @@ which is why production stacks route through it.
 :end_tab:
 
 :begin_tab:`jax`
-In our runs the fused cuDNN kernel is several times faster than the naive
-implementation, and the compiler's memory report makes the structural
+In our runs — one GPU, half precision, the cuDNN backend — the fused cuDNN
+kernel is several times faster than the naive implementation, and the
+compiler's memory report makes the structural
 difference stark: the naive version reserves gigabytes of temporary buffer
 for its score matrices, the fused kernel essentially none—the scores never
 exist outside on-chip memory. For dense attention on sequences beyond a
@@ -853,7 +860,10 @@ layers into a mostly-linear stack.
 We close with the section's accounting in one picture: time and peak memory
 per forward pass for the three mechanisms—dense (exact, quadratic),
 windowed (sparse, linear at fixed $w$), and linear attention's parallel
-form—as the sequence grows from 512 to 16,384 tokens.
+form—as the sequence grows from 512 to 16,384 tokens. These wall-clock and
+memory figures come from a single GPU in fp32 and shift with hardware, dtype,
+and kernel; what carries across machines is the *shape* of each curve, not the
+milliseconds.
 
 ```{.python .input #attention-at-scale-the-price-of-attention-measured}
 %%tab pytorch
@@ -956,7 +966,7 @@ hashed similar queries and keys into shared buckets
 :cite:`Kitaev.Kaiser.Levskaya.2020`, and surveys catalogued dozens more
 :cite:`Tay.Dehghani.Bahri.ea.2020`. Almost none of it is deployed today.
 What survived is instructive: *exact* attention computed intelligently
-(FlashAttention), *restricted* attention with honest sparsity (windows),
+(FlashAttention), *restricted* attention with a fixed, local sparsity pattern (windows),
 and the *linear* family reborn as recurrence. Approximating the softmax
 turned out to be the wrong margin; reorganizing the computation was the
 right one.
@@ -1066,7 +1076,7 @@ Map $n$ tokens of dimension $d$ to $n$ tokens of dimension $d$:
 |:--|:--|:--|:--|
 | convolution ($k$) | $\mathcal{O}(knd^2)$ | $\mathcal{O}(1)$ | $\mathcal{O}(n/k)$ |
 | recurrence | $\mathcal{O}(nd^2)$ | $\mathcal{O}(n)$ | $\mathcal{O}(n)$ |
-| self-attention | $\mathcal{O}(n^2d)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
+| self-attention | $\mathcal{O}(n^2d)$ (mixing) | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
 
 ![](../img/cnn-rnn-self-attention.svg){width=62%}
 

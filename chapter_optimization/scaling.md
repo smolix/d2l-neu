@@ -272,7 +272,12 @@ softer and layers freeze into their initialization. "Maximal update" names
 the knife's edge between the two.
 
 For Adam-family optimizers and a width multiplier $m = n / n_{\text{base}}$,
-the rules are compact:
+the rules are compact.
+
+:The maximal update parametrization for Adam, relative to a chosen base
+width. Only the hidden-matrix learning rate and the output logits scale with
+the width; initialization and everything else stay width-independent.
+:label:`tab_mup-rules`
 
 | parameters | initialization | Adam learning rate | forward pass |
 |:--|:--|:--|:--|
@@ -493,10 +498,11 @@ $$
 :eqlabel:`eq_spectral_condition`
 
 :citet:`Yang.Simon.Bernstein.2023` show that this *spectral condition* is
-equivalent to muP: the per-layer learning rates and multipliers of the table
-above are exactly what it takes to make Adam's raw updates — whose spectral
-norm grows with the layer's dimensions, as :eqref:`eq_scaling_first_step`
-witnessed — land at the right spectral scale at every width. Seen this way,
+equivalent to muP: the per-layer learning rates and multipliers of
+:numref:`tab_mup-rules` are exactly what it takes to make Adam's raw
+updates — whose spectral norm grows with the layer's dimensions, as
+:eqref:`eq_scaling_first_step` witnessed — land at the right spectral scale at
+every width. Seen this way,
 muP is bookkeeping that repairs an optimizer which measures updates in the
 wrong norm. An optimizer that measures them in the right norm needs less
 repair: Muon orthogonalizes each hidden matrix's update and scales it per

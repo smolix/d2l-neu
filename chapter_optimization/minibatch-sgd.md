@@ -275,9 +275,14 @@ themselves; it has a name, the *critical batch size*, and gets its own
 treatment in :numref:`sec_batch_size`. In practice one picks $b$ large
 enough to keep the device busy and small enough to fit its memory. When the
 batch you want exceeds memory, gradients can be *accumulated* over several
-forward–backward passes before a single update — arithmetically identical to
-a larger batch — a systems technique we return to in
-:numref:`chap_performance`.
+forward–backward passes before a single update. This reproduces the gradient
+of a larger batch only if the details line up: the per-pass losses must be
+scaled so their sum is the mean over the full effective batch, the optimizer
+step and any gradient clipping must wait until after the last pass rather than
+fire per micro-batch, and layers whose forward pass couples the examples in a
+batch — batch normalization above all, and stochastic layers such as dropout —
+still see only the micro-batch, not the larger one. It is a systems technique
+we return to in :numref:`chap_performance`.
 
 To see the hardware side in isolation, we perform the same matrix
 multiplication as before, but broken into "minibatches" of 64 columns at a

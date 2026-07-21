@@ -12,7 +12,7 @@ every entry, and when a question arrives it *looks the answer up*:
 compare the question against a key describing each entry, convert the
 comparison scores into weights, and return the weighted average of the
 entries' values. The three names — query, key, value — come from
-databases, and the analogy is exact except on one point: a database
+databases, and the analogy is a useful one, though not exact: a database
 returns the single best match, while attention returns a soft blend of
 all of them. That one change makes lookup differentiable, and a
 differentiable lookup can be *learned*.
@@ -50,8 +50,9 @@ self-attention, where a sequence queries itself, and cross-attention,
 where one sequence queries another. :numref:`sec_positional-information` restores what the lookup
 deliberately ignores: order. Attention is permutation-equivariant, so
 position must be injected, and we follow the idea from sinusoidal
-encodings to the rotary embeddings used by essentially every current
-model, ending with an experiment on what happens beyond the training
+encodings to the rotary embeddings that most current large models adopt by
+default (as of the mid-2020s; ALiBi, NoPE, and hybrid schemes remain in use),
+ending with an experiment on what happens beyond the training
 length — whose outcome is not what the folklore promises.
 :numref:`sec_attention-at-scale` faces the price: computing every
 query–key pair is quadratic in sequence length, and we measure it, then
@@ -77,7 +78,7 @@ zoo around it, is :numref:`chap_transformers`. It says nothing about
 optimizers, which have :numref:`chap_optimization` to themselves. And it
 treats the efficient-attention literature with deliberate economy: a
 decade of approximations is summarized in a paragraph, because the
-variants that survived are the ones we implement. Where attention
+handful of ideas that have lasted are the ones we implement. Where attention
 touches state-space models, :numref:`chap_modern_rnn` owns the
 recurrence side of the correspondence.
 

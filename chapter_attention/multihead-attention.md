@@ -145,6 +145,11 @@ exercises probe what happens as they collapse toward each other).
 ![One distribution per query versus several. A single head must serve the copy-both task with one softmax weighting, so its output blends the two requested values; two heads supply two different weightings, and a linear readout recovers both values exactly.](../img/mdl-attention-one-head-averages.svg)
 :label:`fig_one-head-averages`
 
+The bound is a fact about this deliberately restricted interface — one layer,
+with value-blind keys that mark position only — not a universal law: a one-head
+model with content-dependent keys, more depth, or a residual connection is not
+bound by it, and the copy-both separation from two heads narrows accordingly.
+
 This is the design brief for multi-head attention: give each query several
 independently parametrized attention distributions — several *views* of the
 same key–value set — and let a learned output projection recombine them.
@@ -530,7 +535,9 @@ A single attention head gives each query one softmax distribution over the
 keys and hence one convex mixture of the values; on a task that asks one
 query to report two values through position-only keys — so the weights
 cannot adapt to the values — any single head loses half the target
-variance, however it allocates its weights. Multi-head attention fixes this by running
+variance, however it allocates its weights — a limit of that value-blind,
+single-layer interface, not of one-head attention in general. Multi-head
+attention fixes this by running
 $h$ independently projected attention heads and linearly recombining their
 concatenated outputs. With the per-head width set to $d/h$, parameters and
 FLOPs are independent of $h$ — heads buy diversity of views, not extra

@@ -41,7 +41,7 @@ of what not to decay, and the memory arithmetic of optimizer state
 schedules of large-model training (:numref:`sec_scheduler`); the
 realization that steepest descent depends on the norm — under one norm it
 recovers sign descent and, in essence, Adam, and under the spectral norm
-it yields Muon, the first credible challenger to Adam's decade
+it yields Muon, a credible challenger to Adam's decade
 (:numref:`sec_muon`); how large a batch can grow before more parallelism
 stops buying anything (:numref:`sec_batch_size`); how to tune a small
 model and transfer the result to one too expensive to tune

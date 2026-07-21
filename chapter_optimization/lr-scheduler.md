@@ -51,6 +51,7 @@ would disagree exactly where this section looks.
 %%tab pytorch
 %matplotlib inline
 from d2l import torch as d2l
+from IPython import display
 import copy
 import math
 import torch
@@ -61,6 +62,7 @@ from torch import nn
 %%tab jax
 %matplotlib inline
 from d2l import jax as d2l
+from IPython import display
 from flax import nnx
 import jax
 from jax import numpy as jnp
@@ -72,6 +74,43 @@ import optax
 The training function takes the scheduler as an argument. At the start of
 every epoch it asks the scheduler for that epoch's learning rate and installs
 it in the optimizer; everything else is the standard classification loop.
+
+Two conventions make the runs below comparable. The training loss and the
+accuracies go on separate panels, since a loss near $0.3$ and an accuracy
+near $0.9$ do not belong on one scale; and we fix the random seed before
+building each network, so every run starts from the identical initialization
+and what differs between runs is the schedule, not the draw.
+
+```{.python .input #lr-scheduler-a-testbed-board}
+class SchedulerBoard:
+    """Two-panel training board: loss on the left axis, accuracy on the
+    right, so the two scales are not conflated on one axis. The interface
+    mirrors d2l.Animator: add(x, (loss, train_acc, test_acc))."""
+    def __init__(self, xlim, xlabel='epoch'):
+        d2l.use_svg_display()
+        self.fig, self.axes = d2l.plt.subplots(
+            1, 2, figsize=(7, 2.5), constrained_layout=True)
+        self.xlim, self.xlabel = xlim, xlabel
+        self.X = [[] for _ in range(3)]
+        self.Y = [[] for _ in range(3)]
+
+    def add(self, x, ys):
+        for i, y in enumerate(ys):
+            if y is not None:
+                self.X[i].append(x)
+                self.Y[i].append(y)
+        self.axes[0].cla()
+        self.axes[0].plot(self.X[0], self.Y[0], '-')
+        d2l.set_axes(self.axes[0], self.xlabel, 'loss', self.xlim, None,
+                     'linear', 'linear', ['train loss'])
+        self.axes[1].cla()
+        self.axes[1].plot(self.X[1], self.Y[1], 'm--')
+        self.axes[1].plot(self.X[2], self.Y[2], 'g-.')
+        d2l.set_axes(self.axes[1], self.xlabel, 'accuracy', self.xlim, None,
+                     'linear', 'linear', ['train acc', 'test acc'])
+        display.display(self.fig)
+        display.clear_output(wait=True)
+```
 
 :begin_tab:`pytorch`
 Installing the rate is one assignment to `trainer.param_groups`. PyTorch
@@ -117,9 +156,7 @@ def train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
           scheduler=None, animator=None, epoch_offset=0):
     net.to(device)
     if animator is None:
-        animator = d2l.Animator(xlabel='epoch', xlim=[0, num_epochs],
-                                legend=['train loss', 'train acc',
-                                        'test acc'])
+        animator = SchedulerBoard(xlim=[0, num_epochs])
     for epoch in range(num_epochs):
         if scheduler:
             for param_group in trainer.param_groups:
@@ -220,9 +257,7 @@ def train(net, train_iter, test_iter, num_epochs, lr, scheduler=None,
         return jnp.array([l * X.shape[0], correct, X.shape[0]])
 
     if animator is None:
-        animator = d2l.Animator(xlabel='epoch', xlim=[0, num_epochs],
-                                legend=['train loss', 'train acc',
-                                        'test acc'])
+        animator = SchedulerBoard(xlim=[0, num_epochs])
     num_batches = len(train_iter)
     for epoch in range(num_epochs):
         model.train()
@@ -249,6 +284,7 @@ $\eta = 0.3$ and train for 30 epochs.
 ```{.python .input #lr-scheduler-a-testbed-3}
 %%tab pytorch
 lr, num_epochs = 0.3, 30
+torch.manual_seed(0)
 net = net_fn()
 trainer = torch.optim.SGD(net.parameters(), lr=lr)
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device)
@@ -301,6 +337,7 @@ Training with it is a one-argument change.
 
 ```{.python .input #lr-scheduler-square-root-decay-2}
 %%tab pytorch
+torch.manual_seed(0)
 net = net_fn()
 trainer = torch.optim.SGD(net.parameters(), lr)
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
@@ -354,6 +391,7 @@ too small the rate collapses before the model has learned anything.
 
 ```{.python .input #lr-scheduler-multiplicative-decay-2}
 %%tab pytorch
+torch.manual_seed(0)
 net = net_fn()
 trainer = torch.optim.SGD(net.parameters(), lr)
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
@@ -400,6 +438,7 @@ d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)],
 
 ```{.python .input #lr-scheduler-piecewise-constant-decay-2}
 %%tab pytorch
+torch.manual_seed(0)
 net = net_fn()
 trainer = torch.optim.SGD(net.parameters(), lr)
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
@@ -462,6 +501,7 @@ d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)],
 
 ```{.python .input #lr-scheduler-cosine-decay-2}
 %%tab pytorch
+torch.manual_seed(0)
 net = net_fn()
 trainer = torch.optim.SGD(net.parameters(), lr)
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
@@ -575,6 +615,7 @@ d2l.plot(d2l.arange(num_epochs), [scheduler(t) for t in range(num_epochs)],
 
 ```{.python .input #lr-scheduler-warmup-5}
 %%tab pytorch
+torch.manual_seed(0)
 net = net_fn()
 trainer = torch.optim.SGD(net.parameters(), lr)
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
@@ -643,6 +684,7 @@ epoch, then drops abruptly once the decay begins.
 
 ```{.python .input #lr-scheduler-warmup-stable-decay-2}
 %%tab pytorch
+torch.manual_seed(0)
 net = net_fn()
 trainer = torch.optim.SGD(net.parameters(), lr)
 train(net, train_iter, test_iter, num_epochs, loss, trainer, device,
@@ -688,12 +730,12 @@ theirs: not yet a finished model.
 
 ```{.python .input #lr-scheduler-branching-off-the-plateau-1}
 %%tab pytorch
+torch.manual_seed(0)
 net_plateau = net_fn()
 trainer = torch.optim.SGD(net_plateau.parameters(), lr)
 stable = WSDScheduler(max_update=24, decay_steps=0, base_lr=0.3,
                       warmup_steps=5)
-board = d2l.Animator(xlabel='epoch', xlim=[0, 36],
-                     legend=['train loss', 'train acc', 'test acc'])
+board = SchedulerBoard(xlim=[0, 36])
 train(net_plateau, train_iter, test_iter, 24, loss, trainer, device, stable,
       animator=board)
 ```
@@ -703,8 +745,7 @@ train(net_plateau, train_iter, test_iter, 24, loss, trainer, device, stable,
 model_plateau = net_fn()
 stable = WSDScheduler(max_update=24, decay_steps=0, base_lr=0.3,
                       warmup_steps=5)
-board = d2l.Animator(xlabel='epoch', xlim=[0, 36],
-                     legend=['train loss', 'train acc', 'test acc'])
+board = SchedulerBoard(xlim=[0, 36])
 train(model_plateau, train_iter, test_iter, 24, lr, stable, animator=board)
 ```
 
@@ -762,7 +803,8 @@ along with them.
 
 ### The Current Frontier
 
-Three developments close the section.
+Three developments close the section; the balance among them is a snapshot of
+mid-2026, and this is the corner of the chapter most likely to date.
 
 **Linear decay to zero.** :citet:`Defazio.Cutkosky.Mehta.ea.2023` argue from
 worst-case analysis that a linear decay to exactly zero is the shape to

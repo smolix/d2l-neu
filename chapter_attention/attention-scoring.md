@@ -83,10 +83,14 @@ $$
 $$
 
 which tends to the zero matrix as $\boldsymbol{\alpha}$ approaches a one-hot
-vector, gradients stop flowing to everything upstream of the scores. The
-softmax's gradient never vanishes exactly, as we noted in
-:numref:`sec_queries-keys-values`, but it can come arbitrarily close. Let's
-measure both effects rather than take them on faith. We draw random queries
+vector, the gradient returning along the *score* path shrinks with it, and the
+queries and keys behind those scores stop being updated. (Only that query–key
+route saturates; gradients still flow through the values, the output
+projection, and any residual connection.) For finite scores this Jacobian is
+never the zero matrix — as we noted in :numref:`sec_queries-keys-values`, it
+always keeps the all-ones vector in its null space and nothing else — but it
+can come arbitrarily close. Let's measure both effects rather than take them
+on faith. We draw random queries
 and keys with unit-variance entries, compute attention over $64$ candidate
 keys, and record the entropy of the resulting weight distribution as the
 dimension $d$ grows, with and without the $1/\sqrt{d}$ factor.
@@ -141,8 +145,8 @@ The scaled scores hold their entropy essentially constant, at about $3.7$
 nats, across two orders of magnitude in $d$: the weight distribution keeps
 the same moderate sharpness no matter how wide the vectors are. Without
 scaling, the entropy collapses as $d$ grows—below $0.2$ nats by $d = 512$,
-meaning the average query puts a weight of more than $0.9$ on a single key
-purely because the vectors are long. The gradient tells the same story:
+a near-deterministic weighting that concentrates almost all its mass on a
+single key purely because the vectors are long. The gradient tells the same story:
 
 ```{.python .input #attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-2}
 %%tab pytorch
@@ -214,10 +218,11 @@ exactly, but if every key of some query is masked the softmax returns NaN
 and poisons the training run. The dtype-safe idiom, which we adopt, masks
 with the most negative *finite* value of the score's dtype
 (`torch.finfo(X.dtype).min` and `jnp.finfo(X.dtype).min`, respectively): the
-masked weights are exactly zero at any precision, and a fully masked query
-degrades to a uniform distribution instead of NaN — though a uniform average
-over *invalid* values is still garbage, so callers must guarantee that every
-query keeps at least one valid key.
+masked weights are exactly zero at any precision, with no NaN. A fully masked
+query — one with no valid key — would otherwise come out as a uniform average
+over its *invalid* values, still garbage, so `masked_softmax` zeroes any such
+row; callers should nonetheless guarantee that every query keeps at least one
+valid key.
 
 ```{.python .input #attention-scoring-the-masked-softmax-operation-1}
 %%tab pytorch
@@ -236,7 +241,11 @@ def masked_softmax(X, valid_lens):  #@save
     # Most negative finite score: exactly zero weight after the softmax,
     # at any precision, without the NaN risk of literal -inf
     X = X.reshape(-1, shape[-1]).masked_fill(~mask, torch.finfo(X.dtype).min)
-    return F.softmax(X.reshape(shape), dim=-1)
+    weights = F.softmax(X, dim=-1)
+    # A fully masked query (no valid key) would be a uniform average over
+    # invalid values; zero those rows so no padded position leaks through
+    weights = torch.where(mask.any(-1, keepdim=True), weights, 0.0)
+    return weights.reshape(shape)
 ```
 
 ```{.python .input #attention-scoring-the-masked-softmax-operation-1}
@@ -255,7 +264,11 @@ def masked_softmax(X, valid_lens):  #@save
     # Most negative finite score: exactly zero weight after the softmax,
     # at any precision, without the NaN risk of literal -inf
     X = jnp.where(mask, X.reshape(-1, shape[-1]), jnp.finfo(X.dtype).min)
-    return jax.nn.softmax(X.reshape(shape), axis=-1)
+    weights = jax.nn.softmax(X, axis=-1)
+    # A fully masked query (no valid key) would be a uniform average over
+    # invalid values; zero those rows so no padded position leaks through
+    weights = jnp.where(mask.any(-1, keepdims=True), weights, 0.0)
+    return weights.reshape(shape)
 ```
 
 To illustrate how this function works, consider a minibatch of two examples
@@ -689,8 +702,8 @@ weight distribution as $d$ grows:
 @!attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1
 
 - Uniform over 64 keys ≈ 4.2 nats; scaled scores hold ≈ 3.7 nats at every $d$.
-- Unscaled: below 0.2 nats by $d = 512$ — top weight above 0.9, from
-  vector length alone.
+- Unscaled: below 0.2 nats by $d = 512$ — a near-deterministic weighting,
+  from vector length alone.
 :::
 
 ::: {.slide title="Saturation kills the gradient"}

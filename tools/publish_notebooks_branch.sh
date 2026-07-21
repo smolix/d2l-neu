@@ -19,18 +19,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Base the published branch on main (NOT an orphan) so it shares history with
-# main and stays reviewable via a PR. The hosted notebooks are overlaid on
-# main's tree; their image assets live under img/, which is not LFS-tracked
-# (only outputs/** is), so Colab renders them from raw blobs. Earlier this
-# branch was a git orphan, which GitHub refuses to open a PR for
-# ("no history in common with main").
-git -C "$root" fetch --quiet origin main
-git -C "$root" worktree add --detach "$worktree" origin/main
-git -C "$worktree" checkout -B "$temp_branch"
+git -C "$root" worktree add --detach "$worktree" HEAD
+git -C "$worktree" checkout --orphan "$temp_branch"
+git -C "$worktree" rm -rf -q .
 cp -a "$staging"/. "$worktree"/
 git -C "$worktree" add --all
-git -C "$worktree" commit -q -m "Publish hosted Colab notebooks (re-rooted on main)"
+git -C "$worktree" commit -q -m "Publish hosted notebooks"
 
 if [[ "$dry_run" == "--dry-run" ]]; then
   echo "Dry run: generated commit $(git -C "$worktree" rev-parse --short HEAD)"

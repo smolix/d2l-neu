@@ -53,7 +53,11 @@ A neural network *is* a computation graph — you have been building them
 since :numref:`sec_autograd`. When you write `y = relu(x @ W + b)`,
 autograd records a directed graph of operations precisely so it can walk
 it backward for gradients (:numref:`fig_compute_graph`). The graph is not
-new; what is new is *who gets to see it*.
+new; what is new is *who gets to see it*. (Two footnotes keep the picture
+honest: what autograd records is a *tape* for the backward pass, not a
+compiler's whole-program IR; and not every node costs a kernel — a view
+launches nothing, and a library matmul is already many operations fused
+behind one launch.)
 
 ![The compute graph of a two-layer network. Autograd already builds this
 to run the backward pass; a compiler that sees the whole graph can rewrite
@@ -169,7 +173,8 @@ def gelu_ish(x):
     return 0.5 * x * (1 + torch.tanh(0.8 * (x + 0.04 * x**3)))
 
 compiled = torch.compile(gelu_ish)
-compiled(x)  # Warmup: first call compiles
+# First call compiles; then verify the rewrite: same answer, then faster
+assert torch.allclose(gelu_ish(x), compiled(x), atol=1e-6)
 
 print(d2l.Benchmark(lambda: gelu_ish(x), desc='eager'))
 print(d2l.Benchmark(lambda: compiled(x), desc='compiled'))
@@ -183,13 +188,18 @@ def gelu_ish(x):
     return 0.5 * x * (1 + jnp.tanh(0.8 * (x + 0.04 * x**3)))
 
 compiled = jax.jit(gelu_ish)
-compiled(x).block_until_ready()  # Warmup: first call compiles
+# First call compiles; then verify the rewrite: same answer, then faster
+assert jnp.allclose(gelu_ish(x), compiled(x), atol=1e-6)
 
 print(d2l.Benchmark(lambda: gelu_ish(x), desc='eager'))
 print(d2l.Benchmark(lambda: compiled(x), desc='compiled'))
 ```
 
-The fused version is dramatically faster — close to an order of magnitude
+The `assert` is not decoration: a compiler that rewrites your arithmetic
+must first return the same answer — here to within $10^{-6}$, the slack
+that reordered floating-point arithmetic legitimately needs — and only
+then is "faster" worth having. It is: the fused version is dramatically
+faster — close to an order of magnitude
 on this chain — and the reason is entirely on the bytes side of the
 roofline: the chain performs the same arithmetic either way, but eager
 execution makes one memory round trip *per operation* while the fused
@@ -208,20 +218,26 @@ hand-written FlashAttention kernel of :numref:`sec_attention-at-scale` is
 exactly this: the same "keep intermediates on-chip, never round-trip the
 big matrix" idea, executed by an expert for a pattern the general
 compiler cannot discover. Writing such kernels is its own craft — Triton
-:cite:`Tillet.Kung.Cox.2019` (which is in fact `torch.compile`'s own code
-generator) and Pallas let you author them in Python-like syntax — and it
+:cite:`Tillet.Kung.Cox.2019` (an important backend of `torch.compile`'s
+Inductor, which also draws on template and library kernels) and Pallas
+let you author them in Python-like syntax — and it
 is deliberately out of scope for this book (:numref:`sec_custom_layer`
 drew that fence). The point here is that the compiler gets you most of the
 fusion win automatically, for free, on the code you already wrote.
 
-## Whole-Step Compilation, Measured
+## Compiling the Training Step, Measured
 :label:`subsec_comp-wholestep`
 
 Fusing one elementwise chain is a demonstration; the real use is
-compiling an entire training step — forward, backward, and optimizer — so
-the compiler fuses across all of it. The lesson to internalize is the
-*shape* of the cost: a large fixed price on the first call, repaid over
-every step after:
+compiling the training step. It is worth being precise about what each
+framework captures, because they differ. In PyTorch,
+`torch.compile(net)` captures the model's forward *and* the backward that
+flows through it, but the optimizer's `opt.step()` below stays eager —
+compiling the optimizer too is possible, just not what the one-liner
+gives you. In JAX, nothing stops the jitted function from *being* the
+whole step: loss, gradients, and the parameter update, one compiled
+program. Either way, the lesson to internalize is the *shape* of the
+cost: a fixed price on the first call, repaid over every step after:
 
 ```{.python .input #compilation-whole-step-compilation-measured}
 %%tab pytorch
@@ -259,31 +275,46 @@ def loss_fn(params, X):
     W, b = params[-1]
     return (h @ W + b).sum()
 
+def train_step(params, X, lr=0.01):  # Loss, gradients, AND the update
+    loss, grads = jax.value_and_grad(loss_fn)(params, X)
+    return loss, jax.tree.map(lambda p, g: p - lr * g, params, grads)
+
 key = jax.random.PRNGKey(0)
 shapes = [(1024, 1024), (1024, 1024), (1024, 1024)]
 params = [(jax.random.normal(k, s) * 0.03, jnp.zeros(s[1]))
           for k, s in zip(jax.random.split(key, 3), shapes)]
 X = jax.random.normal(key, (512, 1024))
-grad_fn = jax.value_and_grad(loss_fn)
 
 t0 = time.perf_counter()
-compiled = jax.jit(grad_fn).lower(params, X).compile()  # AOT: compile now
+compiled = jax.jit(train_step).lower(params, X).compile()  # AOT: compile now
 print(f'ahead-of-time compile: {time.perf_counter() - t0:.1f} s')
 
-print(d2l.Benchmark(lambda: grad_fn(params, X), desc='eager'))
+print(d2l.Benchmark(lambda: train_step(params, X), desc='eager'))
 print(d2l.Benchmark(lambda: compiled(params, X), desc='compiled'))
 ```
 
 The compiled step is faster in steady state — a fused training step makes
-far fewer trips to memory and issues far fewer launches — but the first
-call costs seconds while the compiler works. On a short experiment the
-compile time may never be repaid; on a real training run of thousands of
-steps it is amortized to nothing. The JAX tab also shows off its
+far fewer trips to memory and issues far fewer launches — and the first
+call carries a visible one-time cost while the compiler works: a fraction
+of a second to a couple of seconds on this toy step, depending on the
+framework and the state of its compile cache, and about two seconds for
+the real Transformer of :numref:`sec_fast_transformer`. On a short
+experiment that price may never be repaid; on a real training run of
+thousands of steps it is amortized to nothing. The JAX tab also shows off its
 ahead-of-time staging: `lower(...).compile()` runs the compiler *now*, as
 an explicit step rather than lazily on first call, returning a compiled
 object you can then introspect — `compiled.memory_analysis()` reports the
 memory the compiler *planned* before a single byte is allocated, a theme
 we develop in :numref:`sec_memory_precision`.
+
+:begin_tab:`jax`
+Look at the JAX ratio once more: the un-jitted step is about two orders
+of magnitude slower than the compiled one, because every operation in the
+loss, the gradient, *and* the update dispatches separately. The practical
+rule for JAX users is blunt — never run a training step un-jitted except
+to debug. Eager JAX is a development surface; essentially all of its
+performance lives behind `jax.jit`.
+:end_tab:
 
 ## The Overhead Regime: Capture and Replay
 :label:`subsec_comp-overhead`
@@ -302,15 +333,16 @@ them through one mode flag:
 ```{.python .input #compilation-the-overhead-regime-capture-and-replay}
 %%tab pytorch
 # Many small layers: launch overhead dominates the actual arithmetic
-deep = nn.Sequential(*[nn.Linear(256, 256) for _ in range(60)]).to(
+deep = nn.Sequential(*[m for _ in range(60)
+                       for m in (nn.Linear(256, 256), nn.Tanh())]).to(
     d2l.try_gpu())
 x = torch.randn(64, 256, device=d2l.try_gpu())
 
 reduced = torch.compile(deep, mode='reduce-overhead')
-reduced(x)  # Warmup: compiles and captures the CUDA graph
-
-print(d2l.Benchmark(lambda: deep(x), desc='eager'))
-print(d2l.Benchmark(lambda: reduced(x), desc='reduce-overhead'))
+with torch.no_grad():  # Forward only: replay wants fixed buffers
+    reduced(x)  # Warmup: compiles and captures the CUDA graph
+    print(d2l.Benchmark(lambda: deep(x), desc='eager'))
+    print(d2l.Benchmark(lambda: reduced(x), desc='reduce-overhead'))
 ```
 
 ```{.python .input #compilation-the-overhead-regime-capture-and-replay}
@@ -333,10 +365,14 @@ print(d2l.Benchmark(lambda: compiled(deep_params, x), desc='jit'))
 ```
 
 The `reduce-overhead` mode captures the model's kernel launches into a
-CUDA graph and replays the whole thing per call, collapsing sixty launch
-latencies into one. The catch is a static-shape requirement: a replayed
-graph is a fixed sequence, so the input shape must not change between
-calls (change it and PyTorch re-captures). The JAX tab needs no separate
+CUDA graph and replays the whole thing per call, collapsing a
+hundred-odd launch latencies into one. The catch is that replay is
+*rigid*: a replayed graph is a fixed sequence of kernels on fixed memory
+addresses, so the input shape must not change between calls (change it
+and PyTorch re-captures) — and it is why we time the forward pass under
+`torch.no_grad()`: autograd's saved-for-backward activations are fresh
+allocations on every call, and their changing addresses would force a
+re-capture each time. The JAX tab needs no separate
 mechanism and says so: a jitted function is *already* a single dispatched
 executable, so XLA amortizes launch overhead by construction — the
 absence of a "reduce-overhead" knob in JAX is not a missing feature but a
@@ -345,7 +381,7 @@ consequence of compile-by-tracing.
 ## When Compilation Hurts
 :label:`subsec_comp-hurts`
 
-Compilation is not free and not always worth it. The honest checklist:
+Compilation is not free and not always worth it. The checklist:
 
 * **Short runs.** If you train for a few dozen steps, the seconds of
   compile time may exceed everything you save. Compilation pays over
@@ -359,15 +395,17 @@ Compilation is not free and not always worth it. The honest checklist:
   every step recompiles every step. Pad to fixed shapes, or accept that
   this particular function should not be jitted.
 * **Already compute-bound.** If the profiler shows one big matmul
-  dominating, there is nothing to fuse and no overhead to hide; compile
-  it anyway (it costs nothing at steady state), but do not expect a win.
+  dominating, there is nothing to fuse and no overhead to hide.
+  Compiling is usually harmless, but measure rather than assume —
+  compilation can also regress time or memory — and do not expect a win.
 
 Diagnosis still comes first. Compilation is the fix for the bandwidth and
 overhead regimes; reach for it when :numref:`sec_perf_model`'s method
 points there, not reflexively. One last note on portability: the same
 capture machinery that compiles a graph can also *export* it — PyTorch's
-`torch.export` and the shared StableHLO representation let a captured
-graph run outside Python entirely, in a serving runtime or on a phone.
+`torch.export` emits a portable captured graph, and JAX lowers jitted
+functions to the StableHLO interchange format; either path lets a model
+run outside Python entirely, in a serving runtime or on a phone.
 That is the modern successor to the old model-serialization story, and it
 belongs to deployment rather than training; we note it and move on.
 
@@ -381,10 +419,10 @@ belongs to deployment rather than training; we note it and move on.
   where it meets untraceable Python; `jax.jit` traces to a shape-
   specialized *jaxpr* with no breaks but *recompiles on new shapes*. Watch
   breaks in one, recompiles in the other.
-* Fusion is the fix for the bandwidth regime — roughly $2\times$ on an
-  unfused elementwise chain — because it trades memory round trips for
-  free register arithmetic. It barely helps already-compute-bound
-  kernels.
+* Fusion is the fix for the bandwidth regime — close to an order of
+  magnitude on our unfused elementwise chain — because it trades memory
+  round trips for free register arithmetic. It barely helps
+  already-compute-bound kernels.
 * `torch.compile(mode="reduce-overhead")` uses CUDA graphs to collapse
   many small launches into one replay, curing the overhead regime; XLA
   amortizes launches by construction and needs no such knob. Both require
@@ -400,9 +438,13 @@ belongs to deployment rather than training; we note it and move on.
    with `torch.where` and confirm the break count drops to zero. What
    happened to the steady-state time?
 1. Force a `jax.jit` retrace by calling a jitted function with three
-   different input lengths in a loop; time it. Then fix it two ways —
-   padding to a common length, and marking the length `static_argnums` —
-   and explain when each is preferable.
+   different input lengths in a loop, and time it. Fix it by padding
+   every input to a common length (mask the padding out of the result)
+   and confirm the recompiles stop. Then explain why `static_argnums` is
+   *not* a fix here: a static argument becomes part of the compilation
+   cache key, so every new value triggers a fresh trace-and-compile —
+   verify this by putting a counter in the function and watching it tick.
+   When *is* `static_argnums` the right tool?
 1. Sweep the depth of the thin-layer stack from 10 to 200 at fixed width
    256 and plot eager time and `reduce-overhead` time against depth. At
    what depth does capture-and-replay start to win, and why does the
@@ -436,11 +478,11 @@ but **recompile on new shapes**.
 :::
 
 ::: {.slide title="Breaks vs. Retraces"}
-@compilation-capture-two-philosophies-1
+@compilation-capture-two-philosophies-1@pytorch
 
 . . .
 
-@compilation-capture-two-philosophies-2
+@compilation-capture-two-philosophies-2@jax
 
 The print vanishes: tracing sees tensor ops only. Purity is the
 price of having no graph breaks.
@@ -451,15 +493,18 @@ The bleeding chain from §13.1, cured in one line:
 
 @compilation-what-the-compiler-does-fusion
 
-Close to an order of magnitude, entirely on the bytes side:
-one memory round trip instead of one per op. FlashAttention
-(§10.5) is this idea by hand.
+Same answer first (the `allclose`), then faster: close to an
+order of magnitude, entirely on the bytes side — one memory
+round trip instead of one per op. FlashAttention (§10.5) is this
+idea by hand.
 :::
 
-::: {.slide title="Compile the Whole Step"}
+::: {.slide title="Compile the Training Step"}
 @compilation-whole-step-compilation-measured
 
-Large fixed cost on call one; repaid over every step after.
+Fixed cost on call one; repaid over every step after.
+`torch.compile(net)` captures forward+backward (the optimizer
+stays eager); `jax.jit` swallows the whole step, update included.
 JAX's AOT `lower().compile()` also lets you *inspect* the plan.
 :::
 

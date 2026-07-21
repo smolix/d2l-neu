@@ -5,7 +5,7 @@ The previous section handed us a model with two free parameters: a machine
 delivers $\min(P, I\beta)$ — peak arithmetic $P$ if you feed it enough work
 per byte, bandwidth $\beta$ times intensity if you cannot. This section
 explains where those two numbers come from, why their ratio — the ridge
-point — keeps climbing with every hardware generation, and what else about
+point — has climbed over the long run of hardware generations, and what else about
 the machine (latency, capacity, interconnect, energy) a practitioner needs
 in order to reason about performance before running anything. The aim is
 working knowledge, not a computer architecture course: enough to read a
@@ -54,7 +54,8 @@ memory* (HBM) of datacenter parts or the GDDR of consumer cards — tens to
 hundreds of gigabytes at one to eight terabytes per second. Host DRAM
 holds hundreds of gigabytes at a few hundred gigabytes per second; NVMe
 flash holds terabytes at about fourteen gigabytes per second; and network
-storage extends without bound at whatever your network card delivers.
+storage offers effectively unbounded capacity, at whatever your network
+card delivers.
 
 ![The memory hierarchy in 2026. Each level downward holds orders of
 magnitude more bytes and delivers orders of magnitude fewer of them per
@@ -66,7 +67,8 @@ Two ladders quantify the hierarchy, and both are worth staring at.
 NVMe drive's 14 GB/s, through PCIe and socket DRAM, up to on-package HBM
 at 8 TB/s. The span is almost three orders of magnitude, and the rungs
 correspond to physical boundaries: on-package memory is fastest because
-it sits micrometers from the die; everything that crosses a connector,
+it sits on the same package, millimeters from the die over thousands of
+short interposer wires; everything that crosses a connector,
 a board trace, or a cable pays. The rule of thumb: **every chip boundary
 costs roughly an order of magnitude of bandwidth**. Keep the bytes home.
 
@@ -150,8 +152,9 @@ bandwidth.](../img/mdl-perf-shoreline.svg)
 HBM is the countermeasure: stack DRAM dies vertically and place the stack
 on a silicon *interposer* millimeters from the GPU die, so thousands of
 short, dense wires replace the few hundred long board traces a socketed
-DIMM gets. That is how a B200 reaches 8 TB/s while a CPU socket manages
-0.5 TB/s — not faster DRAM cells, but vastly more, vastly shorter wires.
+DIMM gets. That is how a B200 reaches nearly 8 TB/s while a CPU socket
+manages 0.5 TB/s — not faster DRAM cells, but vastly more, vastly shorter
+wires.
 The second countermeasure is size: dies are manufactured against a hard
 lithographic ceiling (the *reticle limit*, about $858\,\textrm{mm}^2$),
 and flagship accelerators live at it — a B200 is two reticle-limit dies
@@ -160,12 +163,22 @@ dies; when you cannot bridge, you network — the interconnect story of
 :numref:`subsec_hw-interconnects` is the shoreline problem continued by
 other means.
 
-The trend to memorize, per hardware generation, at fixed precision:
-**compute grows about $4\times$, bandwidth about $2\times$, capacity about
-$1.7\times$.** The ridge point — compute over bandwidth — therefore
-*rises* every generation; workloads that were compute-bound five years ago
-are bandwidth-bound today. This is why a chapter about performance is
-mostly a chapter about bytes, and why it will remain one.
+The long-run trend to memorize, averaged over many hardware generations
+at fixed precision: **compute grows about $4\times$ per generation,
+bandwidth about $2\times$, capacity about $1.7\times$.** Over the years
+the ridge point — compute over bandwidth — has therefore *risen*, and
+workloads that were compute-bound a decade ago are bandwidth-bound today.
+Do not expect every product step to obey the average, though: which roof
+moves faster in any single generation is a packaging and market decision,
+and it can go the other way. The H100$\to$B200 step grew compute and
+bandwidth almost in lockstep (both about $2.3\times$ — the ridge point
+barely moved, in fact edging slightly *down*), and the consumer
+4090$\to$5090 step bought bandwidth far faster than compute, dropping its
+ridge point by nearly a third — check the ridge row of
+:numref:`tab_gpu_specs` below. The shoreline sets the long-run pressure;
+engineering chooses, one generation at a time, which wall to push.
+Averaged over the decade, compute wins — which is why a chapter about
+performance is mostly a chapter about bytes, and why it will remain one.
 
 ## The GPU
 :label:`subsec_hw-gpu`
@@ -199,42 +212,54 @@ moved.](../img/mdl-perf-float-formats.svg)
 
 Two rules organize the ladder. First, **the exponent width sets the
 range, the mantissa width sets the precision**. fp32, tf32, and bf16 all
-carry the same 8-bit exponent: they represent the same span of magnitudes
-and can be swapped without overflow — you only lose decimal places, which
-deep learning mostly tolerates. fp16's 5-bit exponent trades range for
-precision, which is why it needs the loss-scaling machinery we will meet
-in :numref:`sec_memory_precision`, and why bf16 has become the training
-default. The sub-byte formats — fp8 in two flavors (E4M3 for activations
-and weights, wider-range E5M2 for gradients) and fp4 with just sixteen
-representable values — push the same trade to its limit and lean on
-per-block scaling factors to survive :cite:`Micikevicius.Stosic.Burgess.ea.2022`.
-Second, **every halving wins twice**: half the bits means double the peak
-FLOP/s (twice the tile fits in the same silicon) *and* half the bytes per
-operand — the format ladder climbs the roofline along both axes at once.
-The catch: each halving buys about $2\times$ on real silicon, not the
-$4\times$ the marketing arithmetic suggests, and the big jumps between
-generations come from new architectures, not formats alone.
+carry the same 8-bit exponent: they represent the same span of
+magnitudes, so swapping among them costs precision, not range — you give
+up decimal places, which deep learning mostly tolerates, rather than the
+ability to represent a large activation at all. fp16's 5-bit exponent
+trades range for precision, which is why it needs the loss-scaling
+machinery we will meet in :numref:`sec_memory_precision`, and why bf16
+has become the training default. The sub-byte formats — fp8 in two
+flavors (E4M3 for activations and weights, wider-range E5M2 for
+gradients, in the usual recipe rather than by any rule) and fp4 with just
+sixteen representable values — push the same trade to its limit and lean
+on per-block scaling factors to survive
+:cite:`Micikevicius.Stosic.Burgess.ea.2022`.
+Second, **every halving of storage wins twice**: half the bits means
+double the peak FLOP/s (twice the tile fits in the same silicon) *and*
+half the bytes per operand — the format ladder climbs the roofline along
+both axes at once. tf32 is the exception that proves the byte rule: it is
+a tensor-core *compute* format that still stores 32 bits (the figure
+draws exactly this), so it buys throughput but saves nothing on memory
+traffic. The catch: each halving buys about $2\times$ on real silicon,
+not the $4\times$ the marketing arithmetic suggests, and the big jumps
+between generations come from new architectures, not formats alone.
 
-The numbers-dense table, for orientation (dense compute, fp32
-accumulation; sparsity-doubled marketing figures excluded):
+The numbers-dense table, for orientation (conventions below it):
 
 | | H100 SXM | B200 SXM | RTX 4090 (ours) | RTX 5090 |
 |---|---|---|---|---|
-| memory | 80 GB HBM3 | 192 GB HBM3e | 24 GB GDDR6X | 32 GB GDDR7 |
-| bandwidth | 3.35 TB/s | 8.0 TB/s | 1.0 TB/s | 1.8 TB/s |
+| memory | 80 GB HBM3 | 180 GB HBM3e | 24 GB GDDR6X | 32 GB GDDR7 |
+| bandwidth | 3.35 TB/s | 7.7 TB/s | 1.0 TB/s | 1.8 TB/s |
 | bf16 dense | 989 TF | 2,250 TF | 165 TF | 210 TF |
 | fp8 dense | 1,979 TF | 4,500 TF | 330 TF | 419 TF |
 | fp4 dense | — | 9,000 TF | — | 1,676 TF |
-| ridge (bf16) | ~295 FLOP/B | ~281 FLOP/B | ~165 FLOP/B | ~117 FLOP/B |
-| power | 700 W | 1,000–1,200 W | 450 W | 575 W |
+| ridge (bf16) | ~295 FLOP/B | ~292 FLOP/B | ~165 FLOP/B | ~117 FLOP/B |
+| power | 700 W | 1,000 W | 450 W | 575 W |
 :label:`tab_gpu_specs`
 
-The same physics produces the same shape at every vendor — high-bandwidth
-stacked memory next to a die full of matrix engines: AMD's MI355X (288 GB
-HBM3e at 8 TB/s, 5,000 TF bf16), Google's TPU v7 (192 GB at 7.4 TB/s,
-2,307 TF), Amazon's Trainium2 (96 GB at 2.9 TB/s, 667 TF). Different
-silicon, one design point; the roofline reasoning of this chapter applies
-unchanged to all of them.
+*Conventions: dense throughput (no 2:4 sparsity), fp32 accumulation, boost
+clocks, vendor datasheets as of mid-2026. The B200 column is the shipping
+HGX B200 spec; the GB200 NVL72 variant of the same silicon runs 186 GB at
+8 TB/s and up to 1,200 W. The 5090's fp4 entry is $4\times$ its fp8 entry,
+not $2\times$, because GeForce parts run fp8/fp16 tensor math at half rate
+when accumulating in fp32 while fp4 carries no such penalty.*
+
+The same constraints produce the same shape at every vendor —
+high-bandwidth stacked memory next to a die full of matrix engines: AMD's
+MI355X (288 GB HBM3e at 8 TB/s, 2,500 TF dense bf16), Google's TPU v7
+(192 GB at 7.4 TB/s, 2,307 TF), Amazon's Trainium2 (96 GB at 2.9 TB/s,
+667 TF). Different silicon, one design point; the roofline reasoning of
+this chapter applies unchanged to all of them.
 
 One more distinction the table hides: *training* hardware must hold
 activations for the backward pass and accumulate gradients robustly
@@ -251,7 +276,9 @@ The CPU in a deep learning machine is no longer where the FLOPs happen —
 one RTX 4090 out-multiplies a 64-core CPU by two orders of magnitude —
 but three jobs still live or die on it. First, the CPU is the
 *orchestrator*: every kernel the GPU runs was launched by a CPU thread at
-5–15 µs apiece (:numref:`fig_latency_ladder`), which is exactly the
+5–15 µs apiece (:numref:`fig_latency_ladder`) — until the
+capture-and-replay of :numref:`sec_compilation` takes the CPU out of that
+loop — which is exactly the
 Python-must-stay-ahead story of :numref:`sec_perf_model`. Second, it runs
 the *input pipeline*: decoding JPEGs, tokenizing text, augmenting,
 batching — if those fall behind, the GPU starves no matter how fast it
@@ -261,7 +288,8 @@ how you stage the host memory matters. A regular (pageable) host tensor
 must first be copied into a locked staging buffer before DMA can move it;
 allocating the tensor in *pinned* (page-locked) memory skips that step
 and, as a bonus, allows the copy to proceed asynchronously alongside
-compute (`non_blocking=True`, `DataLoader(pin_memory=True)`):
+compute. How much the staging costs — and who controls it — differs
+between our two frameworks:
 
 ```{.python .input #hardware-the-cpu-s-role}
 %%tab pytorch
@@ -282,12 +310,33 @@ t = d2l.Benchmark(lambda: jax.device_put(x_host), desc='H2D').time
 print(f'device_put: {x_host.nbytes / t / 1e9:.1f} GB/s')
 ```
 
-The measured rate tops out near PCIe's practical ceiling — tens of GB/s,
-two orders of magnitude below the GPU's own memory. The conclusion is
-structural: get data onto the device, keep it there, and overlap the
-unavoidable transfers with compute. This is also your first sighting of
-the number that will dominate the multi-GPU sections: *everything that
-leaves the GPU moves at bus speed, not memory speed*.
+:begin_tab:`pytorch`
+Pinned memory roughly doubles the pageable rate, and the pinned figure
+sits near PCIe's practical ceiling — tens of GB/s, a factor of about
+forty below the GPU's own memory. This is why the standard input
+pipeline asks for both pieces at once: `DataLoader(pin_memory=True)` to
+stage batches in pinned memory, `.to(device, non_blocking=True)` to
+overlap the copy with compute.
+:end_tab:
+
+:begin_tab:`jax`
+The number deserves a hard look: the wire underneath is capable of tens
+of GB/s, yet `jax.device_put` from a pageable NumPy array lands far below
+the bus limit — around one gigabyte per second at our pin. The copy is
+not the cost; JAX's transfer path (validation, layout, staging through
+its own host buffer) is, and that is itself the lesson: a transfer runs
+at the speed of its slowest *stage*, and the framework owns some of the
+stages. JAX programs sidestep the problem structurally rather than tuning
+it — keep arrays resident on the device, let the input pipeline overlap
+transfers with compute, and treat a per-step `device_put` of fresh host
+data as a red flag.
+:end_tab:
+
+Either way the conclusion is structural: get data onto the device, keep
+it there, and overlap the unavoidable transfers with compute. This is
+also your first sighting of the number that will dominate the multi-GPU
+sections: *everything that leaves the GPU moves at bus speed — at best —
+not memory speed*.
 
 ## Interconnects: Our Box as the Worked Example
 :label:`subsec_hw-interconnects`
@@ -298,9 +347,10 @@ parts attack the problem with dedicated fabrics: NVLink gives each B200
 1.8 TB/s to its peers — memory-class bandwidth, one rung below HBM — and
 an NVL72 rack wires 72 GPUs into a single 130 TB/s domain. Consumer
 parts get PCIe, and — the fact that shapes the rest of this chapter —
-consumer GeForce cards have *peer-to-peer transfers disabled* as market
-segmentation: two RTX 4090s in one box may not even talk PCIe-directly to
-each other.
+the current GeForce generations (RTX 40 and 50 series) have *peer-to-peer
+transfers disabled* as market segmentation: two RTX 4090s in one box may
+not even talk PCIe-directly to each other. (It was not always so — the
+RTX 3090 still carried an NVLink bridge; its successors dropped it.)
 
 Our build machine makes the consequence concrete
 (:numref:`fig_pcie_topology`). Its four RTX 4090s hang in pairs off two
@@ -308,11 +358,15 @@ PCIe host bridges; with P2P disabled, *every* byte from one GPU to
 another is staged through host DRAM — up one PCIe link, through the
 CPU's memory system, down another. Measured end to end
 (:numref:`sec_multi_gpu` does the measuring), a large GPU-to-GPU copy
-sustains a few tens of GB/s — PCIe-limited, roughly two orders of magnitude
+sustains roughly twenty GB/s — PCIe-limited, two orders of magnitude
 below an NVL72's ~1.8 TB/s per GPU — and a collective library like NCCL,
 whose ring/tree chunking assumes a peer-to-peer fabric, extracts even less
-(a couple of GB/s of effective bus bandwidth) on this staged path. Either
-way the per-GPU staging step, not the link count, is the ceiling, so it
+(a couple of GB/s of effective bus bandwidth) on this staged path — not
+because the wire slows down for NCCL, but because its P2P-less fallback
+moves bytes with a latency-bound mechanism by default;
+:numref:`sec_multi_gpu` diagnoses this and names the one-line
+workaround, which :numref:`sec_multi_gpu_concise` weighs. Either
+way the staging path, not the link count, sets the ceiling, so the rate
 does *not* improve from two GPUs to four.
 
 ![This book's build machine, per `nvidia-smi topo`: four RTX 4090s in
@@ -369,8 +423,10 @@ serving a prompt and then generating.
 the network at once. Each weight fetched from memory is reused across
 every token in the context, so arithmetic intensity is on the order of
 the context length: hundreds to tens of thousands of FLOPs per byte,
-far above any ridge point. Prefill is *compute-bound*: it runs at the
-tensor cores' pace and benefits from every format halving.
+far above any ridge point. A long, well-batched prefill is therefore
+typically *compute-bound*: it runs at the tensor cores' pace and benefits
+from every format halving. (A one-line prompt is not — intensity needs
+context to reuse each weight against.)
 
 **Decode** — generating one token at a time — is the opposite. Producing
 a single token performs about $2N$ FLOPs but must read all $2N$ weight
@@ -414,30 +470,37 @@ Rules of thumb worth carrying out of this section:
   of magnitude more bytes and delivers orders of magnitude fewer per
   second, with a latency ladder spanning eight decades. Bandwidth is
   earned by streaming; boundaries cost an order of magnitude each.
-* Compute scales with die area, I/O with die perimeter — so compute grows
-  ~4× per generation while bandwidth grows ~2× and capacity ~1.7×, and
-  the ridge point keeps rising. HBM-on-interposer is a countermeasure,
-  not a repeal.
+* Compute scales with die area, I/O with die perimeter. The long-run
+  outcome is compute growing ~4× per generation against bandwidth's ~2×
+  and capacity's ~1.7×, so the ridge point has risen over the years —
+  though a single product step can move it either way (B200 and the RTX
+  5090 both nudged it *down* by buying bandwidth). HBM-on-interposer is a
+  countermeasure, not a repeal.
 * Tensor cores make matrix arithmetic an order of magnitude faster than
   everything else, in exchange for format discipline: same exponent =
   same range; every halving of width doubles FLOP/s and halves bytes.
 * The CPU orchestrates (kernel launches), feeds (input pipeline), and
   stages (pinned-memory PCIe copies). Inter-GPU bandwidth on consumer
   boxes is host-staged and PCIe-limited — tens of GB/s for a raw copy,
-  and only a couple of GB/s of NCCL busbw — one to two orders of magnitude
-  below an NVLink domain, which is why datacenter fabrics exist.
+  and only a couple of GB/s of NCCL busbw at its default fallback
+  settings (:numref:`sec_multi_gpu` finds the binding stage) — one to
+  three orders of magnitude below an NVLink domain, which is why
+  datacenter fabrics exist.
 * Energy explains everything twice: a DRAM access costs ~500 multiplies,
   so every technique in this chapter is a variation on "more arithmetic
   per byte fetched".
-* One model can live at both ends of the roofline: prefill is
-  compute-bound, single-stream decode is bandwidth-bound with tokens/s ≲
-  bandwidth / model bytes.
+* One model can live at both ends of the roofline: long-context prefill
+  is typically compute-bound, single-stream decode is bandwidth-bound
+  with tokens/s ≲ bandwidth / model bytes.
 
 ## Exercises
 
 1. Compute the ridge point for each GPU in :numref:`tab_gpu_specs` at
-   bf16 and at fp8. Which direction has it moved between the H100 and
-   the B200 generations, and why is that the expected direction?
+   bf16 and at fp8. Which direction did it move from the H100 to the
+   B200, and from the RTX 4090 to the RTX 5090? Reconcile what you find
+   with the shoreline argument of :numref:`subsec_hw-shoreline`: what did
+   each step's packaging buy, and why does the *long-run* direction still
+   differ from these two steps?
 1. Take the GPT of :numref:`sec_gpt` (count its parameters) and your own
    GPU's specifications. Estimate (a) the prefill arithmetic intensity at
    context length 128 and (b) the decode tokens-per-second bound. Which
@@ -472,7 +535,7 @@ Rules of thumb worth carrying out of this section:
 ::: {.slide title="Where the Two Numbers Come From"}
 The roofline had two free parameters: peak compute $P$ and
 bandwidth $\beta$. This section is where they come from — and
-why $P/\beta$ keeps climbing.
+why $P/\beta$ has climbed over the long run.
 
 - bytes live in a **hierarchy**: each level out is bigger and
   slower by orders of magnitude
@@ -483,7 +546,7 @@ why $P/\beta$ keeps climbing.
 Properties here; buying advice lives in the Tools appendix.
 :::
 
-::: {.slide title="Two Ladders"}
+::: {.slide title="The Bandwidth Ladder"}
 ![](../img/mdl-perf-bandwidth-ladder.svg){width=85%}
 
 Every chip boundary ≈ one order of magnitude. Keep bytes home.
@@ -508,16 +571,20 @@ Streaming kernels land within tens of percent of spec.
 ::: {.slide title="The Shoreline"}
 ![](../img/mdl-perf-shoreline.svg){width=80%}
 
-Per generation: compute ~4×, bandwidth ~2×, capacity ~1.7×.
-The ridge point rises; the model starves a little more each
-generation. HBM-on-interposer is the countermeasure.
+Long run, per generation: compute ~4×, bandwidth ~2×, capacity
+~1.7× — the ridge point climbs, the model starves a little more.
+Any single step can buck it: B200 and RTX 5090 both bought
+bandwidth faster, and their ridge points *fell*. Packaging picks
+which wall moves; HBM-on-interposer is the countermeasure.
 :::
 
 ::: {.slide title="The Format Ladder"}
 ![](../img/mdl-perf-float-formats.svg){width=75%}
 
-Same 8-bit exponent (fp32/tf32/bf16) ⇒ same range, swap freely.
-Every halving wins twice: 2× FLOP/s *and* half the bytes.
+Same 8-bit exponent (fp32/tf32/bf16) ⇒ same range: swapping costs
+precision, not magnitude. Every halving of *storage* wins twice:
+2× FLOP/s *and* half the bytes — tf32 buys throughput only, it
+still stores 32 bits.
 :::
 
 ::: {.slide title="Our Box vs. a Datacenter Rack"}
@@ -525,9 +592,9 @@ Every halving wins twice: 2× FLOP/s *and* half the bytes.
 
 No P2P on GeForce: every inter-GPU byte staged through host
 DRAM — PCIe-limited, tens of GB/s for a raw copy (a couple for
-NCCL busbw), flat from 2 to 4 GPUs. An NVL72 gives each GPU
-1.8 TB/s. One to two orders of magnitude — that gap *is* the
-multi-GPU chapter.
+NCCL busbw at its default fallback — §13.5 finds the stage),
+flat from 2 to 4 GPUs. An NVL72 gives each GPU 1.8 TB/s. That
+gap *is* the multi-GPU chapter.
 :::
 
 ::: {.slide title="Energy, and One Model at Both Ends"}
@@ -537,7 +604,7 @@ One DRAM read ≈ 500 fp32 multiplies.
 
 . . .
 
-Prefill: weight reuse ~ context length ⇒ compute-bound.
+Prefill: weight reuse ~ context length ⇒ typically compute-bound.
 Decode: every token reads all weights ⇒ tokens/s ≲ β / model
 bytes. One model, both ends of the roofline.
 :::

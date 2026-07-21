@@ -13,7 +13,7 @@ well-understood techniques to buy headroom: lower-precision formats, which
 also buy speed; activation checkpointing, which trades compute for memory;
 and gradient accumulation, which trades *time* for the effect of a bigger
 batch. Together these are the "it doesn't fit" rung of the ladder, and
-they are what stand between a 24 GB card and a model that wants 30.
+they are what stands between a 24 GB card and a model that wants 30.
 
 *Prerequisites: the format ladder and tensor-core requirement of*
 :numref:`sec_hardware`*; the* `d2l.Benchmark` *timer of*
@@ -102,8 +102,22 @@ opt.step()
 P = sum(p.numel() for p in net.parameters())
 print(f'{P/1e6:.1f}M params  '
       f'predicted states+grads+params: {16 * P / 1e6:.0f} MB')
-print(f'measured peak: {torch.cuda.max_memory_allocated() / 1e6:.0f} MB')
+print(f'measured peak: {torch.cuda.max_memory_allocated() / 1e6:.0f} MB '
+      f'allocated, {torch.cuda.max_memory_reserved() / 1e6:.0f} MB reserved')
 ```
+
+The measured peak overshoots the $16P$ prediction by roughly 30%, and the
+gap has an anatomy of its own: this stack's activations (about 13 MB),
+autograd bookkeeping and cuBLAS workspaces, temporaries that the fused
+optimizer update allocates (about the size of one more gradient set), and
+the caching allocator's block rounding. The second printed number is
+larger again: `max_memory_allocated` counts bytes inside live tensors,
+while `max_memory_reserved` is the caching allocator's high-water mark —
+the distinction :numref:`sec_use_gpu` dissects. So read $16P$ as this
+*configuration's* floor — fp32 parameters under Adam — rather than as the
+whole anatomy; and whether activations dominate the total, as they do in
+the transformer regime, is workload-dependent: batch, sequence length,
+and depth decide.
 
 For a finer picture, PyTorch can record every allocation and free as a
 *snapshot*. Rather than embed its interactive viewer, we reconstruct the
@@ -164,7 +178,8 @@ The contrast is worth stating plainly: **PyTorch counts allocations as
 they happen; XLA plans memory at compile time.** Neither is better; they
 reflect the eager-versus-traced split of :numref:`sec_compilation`, and
 knowing which mental model your framework uses tells you where to look
-when memory surprises you.
+when memory surprises you. Just do not compare the two frameworks' digits
+head-to-head: a compiler's plan is not an allocator's high-water mark.
 
 ## Mixed Precision
 :label:`subsec_mp-mixed`
@@ -176,10 +191,13 @@ compute-heavy operations (matmuls, convolutions) in bf16, where tensor
 cores are fastest and activations are half-size, while keeping a few
 numerically delicate things (the master weights, the loss reduction) in
 fp32. On our Ada card the arithmetic win is real and robust — but only if
-you measure against an *honest* baseline, which is the lesson
-:numref:`sec_hardware` flagged: tf32 tensor cores are off by default, so a
-naive fp32 baseline is needlessly slow and inflates the apparent speedup.
-We show both baselines, once, so the difference is unmistakable:
+you know what your baseline is running, the lesson :numref:`sec_hardware`
+flagged. Whether plain fp32 matmuls use the tensor cores' tf32 path is a
+framework default: PyTorch ships with tf32 *off*, so a naive fp32
+baseline is needlessly slow and inflates the apparent speedup; JAX on
+this card runs tf32-class dot compute *by default*, so its naive baseline
+is already fair — but is not the true fp32 it appears to be. We time all
+three configurations, once, so the difference is unmistakable:
 
 ```{.python .input #memory-precision-mixed-precision}
 %%tab pytorch
@@ -225,16 +243,21 @@ X = jax.random.normal(key, (2048, 64 * 64))
 def loss_fn(params, dtype):
     return (net_fn(params, X, dtype) ** 2).sum()
 
-f32 = jax.jit(jax.grad(loss_fn), static_argnums=1)
-print(d2l.Benchmark(lambda: f32(params, jnp.float32), desc='fp32'))
-print(d2l.Benchmark(lambda: f32(params, jnp.bfloat16), desc='bf16'))
+grad_fn = jax.jit(jax.grad(loss_fn), static_argnums=1)
+with jax.default_matmul_precision('highest'):  # Unfair baseline: tf32 off
+    print(d2l.Benchmark(lambda: grad_fn(params, jnp.float32),
+                        desc='fp32 (tf32 off)'))
+# The default on this card is tf32-class compute -- the fair baseline
+print(d2l.Benchmark(lambda: grad_fn(params, jnp.float32), desc='tf32'))
+print(d2l.Benchmark(lambda: grad_fn(params, jnp.bfloat16), desc='bf16'))
 ```
 
-Against the fair tf32 baseline, bf16 autocast runs about one and a half
-times as fast here — and note the two-step story the three timings tell:
-turning tf32 on (the fair baseline) already bought a good fraction over
-plain fp32, and bf16 then adds roughly that much again. Both are genuine
-tensor-core wins, not measurement artifacts.
+Against the fair tf32 baseline, bf16 runs about one and a half to two
+times as fast here — the exact ratio is framework- and shape-dependent —
+and the three timings tell the same two-step story in both tabs: moving
+true fp32 dots onto the tf32 tensor cores already buys a sizable step,
+and bf16 then adds at least as much again. Both are genuine tensor-core
+wins, not measurement artifacts.
 Note what the PyTorch tab does *not* use: a `GradScaler`. Loss scaling
 exists to keep tiny fp16 gradients from underflowing fp16's narrow
 5-bit-exponent range; bf16 shares fp32's 8-bit exponent
@@ -242,10 +265,13 @@ exists to keep tiny fp16 gradients from underflowing fp16's narrow
 scaler is needed. fp16-plus-`GradScaler` is the pre-Ampere legacy path,
 worth one sentence and an exercise. The JAX tab makes the philosophical
 difference visible: precision in JAX is *explicit* — you thread dtypes
-through the computation (or set `jax.default_matmul_precision`) rather than
-wrapping a context manager. PyTorch decides per-operation what to cast;
-JAX makes you say it. Both report the same physics: bf16 halves the bytes
-and doubles the tensor-core rate.
+through the computation, and `jax.default_matmul_precision` sets how fp32
+dots are *computed* (true fp32 versus tf32-class tensor-core compute)
+without changing what any tensor *stores*. On this card JAX's default
+matches `'high'`, tf32-class, bit for bit — which is why the middle
+timing is the fair baseline. PyTorch decides per-operation what to cast;
+JAX makes you say it. Both land on the same design point: bf16 halves the
+bytes and doubles the tensor-core rate.
 
 ## Activation Checkpointing
 :label:`subsec_mp-checkpointing`
@@ -257,9 +283,10 @@ moment the forward pass produces them until the backward pass consumes
 them — that storage is the peak. Checkpointing makes a different trade:
 store only a few activations (at block boundaries), and when the backward
 pass needs the ones in between, *recompute them* by re-running that block's
-forward pass. You pay extra compute — at most one extra forward pass, a
-modest increase in step time — to avoid holding a large fraction of the
-activations. This is the same "recompute rather than store" argument the
+forward pass. You pay extra compute — at most one extra forward pass — to
+avoid holding a large fraction of the activations; the cells below
+measure both sides of the trade. This is the same
+"recompute rather than store" argument the
 Mamba kernel of :numref:`sec_mamba` made one level down in the hardware
 :cite:`Chen.Xu.Zhang.ea.2016`.
 
@@ -285,10 +312,15 @@ def run(use_ckpt):
     return h.sum()
 
 for use_ckpt in (False, True):
+    for p in blocks.parameters():  # clear grads so the peaks are comparable
+        p.grad = None
+    X.grad = None
     torch.cuda.reset_peak_memory_stats()
     run(use_ckpt).backward()
+    peak = torch.cuda.max_memory_allocated() / 1e6
+    t = d2l.Benchmark(lambda: run(use_ckpt).backward()).time
     tag = 'checkpointed' if use_ckpt else 'store all'
-    print(f'{tag}: peak {torch.cuda.max_memory_allocated() / 1e6:.0f} MB')
+    print(f'{tag}: peak {peak:.0f} MB, fwd+bwd {1000 * t:.1f} ms')
 ```
 
 ```{.python .input #memory-precision-activation-checkpointing}
@@ -297,9 +329,10 @@ def block(W1, W2, x):
     return x + jax.nn.gelu(x @ W1) @ W2
 
 key = jax.random.PRNGKey(1)
-Ws = [(jax.random.normal(k, (1024, 1024)) * 0.02,
-       jax.random.normal(k, (1024, 1024)) * 0.02)
-      for k in jax.random.split(key, 16)]
+ks = jax.random.split(key, 32)             # one key per weight matrix
+Ws = [(jax.random.normal(ks[2 * i], (1024, 1024)) * 0.02,
+       jax.random.normal(ks[2 * i + 1], (1024, 1024)) * 0.02)
+      for i in range(16)]
 X = jax.random.normal(key, (16384, 1024))
 
 # jax.checkpoint (a.k.a. remat) recomputes the block in the backward pass.
@@ -314,13 +347,18 @@ for name, blk in [('store all', block), ('checkpointed', ckpt_block)]:
     compiled = jax.jit(jax.grad(forward), static_argnums=2).lower(
         Ws, X, blk).compile()
     mb = compiled.memory_analysis().temp_size_in_bytes / 1e6
-    print(f'{name}: compiler temp {mb:.0f} MB')
+    t = d2l.Benchmark(lambda: compiled(Ws, X)).time
+    print(f'{name}: compiler temp {mb:.0f} MB, fwd+bwd {1000 * t:.1f} ms')
 ```
 
-Checkpointing cuts peak memory by a large fraction here — well over a
-factor of one and a half on this deep stack — for a modest increase in
-step time; it is a trade you make only when memory is the binding
-constraint, never for speed (it *costs* speed). JAX exposes the same
+Checkpointing releases about 2 GB of held activations on this 16-block
+stack — the measured peak falls by nearly half in the allocator's count
+and by more than half in the compiler's plan — and the completion-timed
+step runs only about 15–20% longer, comfortably under the one-extra-forward bound, since the
+backward pass dominates the step. It is a trade you make when memory is
+the binding constraint: checkpointing normally costs time, and its
+purpose is memory (the rare configurations where recomputation beats a
+cache-hostile stash do not change the rule). JAX exposes the same
 mechanism as `jax.checkpoint` (equivalently `jax.remat`), with a nicer
 knob: policies like `checkpoint_dots` let you say *which* intermediates to
 keep, and `jax.remat`'s companion tools let you *watch* what was saved —
@@ -384,10 +422,17 @@ print(f'max gradient difference: {jnp.abs(full - acc).max():.2e}')
 The gradients match to floating-point noise. The one subtlety is the
 averaging: if your loss already averages over the batch (as MSE and
 cross-entropy do), each micro-batch gradient must be scaled by $1/k$ so
-the sum reproduces the mean. Accumulation is the right tool when you are
-memory-bound and want a bigger *effective* batch; it is the wrong tool
-when you want to go faster, because it does the same work in the same
-time — it only rearranges *when* the optimizer step happens.
+the sum reproduces the mean. The equivalence also rests on conditions
+this tiny example satisfies silently: an additive per-example loss,
+equal-size micro-batches (or a properly weighted mean), the same dropout
+and RNG draws, no batch-coupled state such as BatchNorm — whose
+statistics would be computed per micro-batch — and clipping or optimizer
+steps applied only at the global boundary. Accumulation is the right tool
+when you are memory-bound and want a bigger *effective* batch; it is the
+wrong tool when you want to go faster: the arithmetic is identical but
+arrives as more launches over smaller, lower-intensity GEMMs, so by this
+chapter's own accounting it is usually slightly *slower* — it only
+rearranges *when* the optimizer step happens.
 
 ## The Ladder So Far
 :label:`subsec_mp-ladder`
@@ -396,20 +441,20 @@ Four sections in, the escalation is worth naming as a checklist. When a
 model does not fit or does not run fast enough, in order of cost:
 
 1. **It's slow, bandwidth- or overhead-bound** → compile it
-   (:numref:`sec_compilation`). Free.
+   (:numref:`sec_compilation`). Usually free.
 2. **It's slow, compute-bound, or it's tight on memory** → drop to bf16
-   (mixed precision). Around $1.5\times$ speed and half the activation
-   bytes.
+   (mixed precision). Around $1.5$–$2\times$ speed and half the
+   activation bytes.
 3. **It still doesn't fit** → checkpoint activations. Large memory saving
    for a modest increase in time.
 4. **It still doesn't fit, and you want a bigger effective batch** →
-   accumulate gradients. Bigger effective batch at micro-batch memory,
-   same wall-clock.
+   accumulate gradients. Bigger effective batch at micro-batch memory —
+   about the same wall-clock, never faster.
 5. **It's still too slow, or genuinely too big for one card** → add
    devices (:numref:`sec_multi_gpu`).
 
 The next section takes that last step — and finds that adding devices is
-where the honest accounting gets hardest.
+where the accounting gets hardest.
 
 ## Summary
 
@@ -420,13 +465,15 @@ where the honest accounting gets hardest.
 * PyTorch measures memory with runtime counters and allocation snapshots;
   JAX reports the compiler's ahead-of-time memory *plan*. Counting versus
   planning — the eager-versus-traced split again.
-* Mixed-precision bf16 raises tensor-core throughput (~1.5× over a fair
-  tf32 baseline here) and halves activation bytes; measure it against that
-  *fair* tf32 baseline, and skip the `GradScaler` (bf16 shares fp32's
-  exponent range — only fp16 needs loss scaling).
-* Activation checkpointing recomputes instead of stores: a large fraction
-  of activation memory saved (well over 1.5× on a deep stack) for a modest
-  increase in compute. Use it when memory binds, never for speed.
+* Mixed-precision bf16 raises tensor-core throughput (1.5–2× over a fair
+  tf32 baseline here, framework- and shape-dependent) and halves
+  activation bytes; measure it against that *fair* tf32 baseline — the
+  frameworks' fp32 defaults differ — and skip the `GradScaler` (bf16
+  shares fp32's exponent range — only fp16 needs loss scaling).
+* Activation checkpointing recomputes instead of stores: peak memory cut
+  roughly in half or better on a deep stack (about 2 GB of activations
+  released) for about 15–20% more step time here. It normally costs time; its
+  purpose is memory — use it when memory binds.
 * Gradient accumulation reaches a large *effective* batch at micro-batch
   memory cost — $B_{\textrm{global}} = B_{\textrm{micro}} \times k$ — at
   the same wall-clock; scale per-micro-batch losses by $1/k$ when the loss
@@ -445,10 +492,15 @@ where the honest accounting gets hardest.
 1. Implement "checkpoint every $\sqrt{n}$-th block" for the deep block
    stack above and measure peak memory and step time. Why is $\sqrt{n}$ the
    memory-optimal checkpointing interval?
-1. Show fp16 (not bf16) diverging: train a deep net with
-   `torch.autocast(dtype=torch.float16)` and no `GradScaler`, watch the
-   loss go to NaN, then fix it with a `GradScaler` and explain what the
-   scaler did in terms of :numref:`fig_float_formats`.
+1. Break fp16 (not bf16) deliberately: construct a step whose gradients
+   are small enough to underflow fp16's subnormal floor (e.g., scale the
+   loss by $10^{-4}$ before calling backward), run it under
+   `torch.autocast(dtype=torch.float16)` without a `GradScaler`, and
+   verify that gradients flush to zero while the same step under bf16
+   survives. Then enable a `GradScaler`, confirm the gradients return,
+   and explain what the scaler did in terms of
+   :numref:`fig_float_formats`. Why does a full training run fail this
+   way only *sometimes* — what makes the failure workload-dependent?
 1. With a fixed global batch of 512, sweep the micro-batch size $\in
    \{512, 256, 128, 64\}$ (so $k \in \{1, 2, 4, 8\}$), and plot peak
    memory and wall-clock per optimizer step. Confirm that memory follows
@@ -481,9 +533,10 @@ PyTorch counts at runtime; XLA plans at compile time.
 ::: {.slide title="Mixed Precision, Fairly Measured"}
 @memory-precision-mixed-precision
 
-fp32→tf32 is a config; tf32→bf16 adds ~1.5× more. No
-`GradScaler` for bf16 — it shares fp32's exponent range. Only
-fp16 underflows and needs loss scaling.
+fp32→tf32 is a config (opposite defaults: PyTorch off, JAX on);
+tf32→bf16 adds ~1.5–2× more. No `GradScaler` for bf16 — it
+shares fp32's exponent range. Only fp16 underflows and needs
+loss scaling.
 :::
 
 ::: {.slide title="Activation Checkpointing"}
@@ -491,9 +544,10 @@ Store a few activations; recompute the rest in backward.
 
 @memory-precision-activation-checkpointing
 
-Large memory saving for ~⅓ more time. Same trade as Mamba's
-recompute-in-kernel (§12), one level up. Use it when memory
-binds, never for speed.
+Peak memory cut roughly in half or better (~2 GB of activations
+released) for ~15–20% more time. Same trade as Mamba's recompute-in-kernel
+(§12), one level up. It buys memory, not speed — use it when
+memory binds.
 :::
 
 ::: {.slide title="Gradient Accumulation"}
@@ -504,13 +558,13 @@ batch, sum the gradients, step once.
 
 Gradients match a full-batch step to noise (scale by $1/k$ for
 mean-losses). Big *effective* batch at micro-batch memory —
-same wall-clock, not faster.
+≈ same wall-clock, never faster.
 :::
 
 ::: {.slide title="The Ladder So Far"}
-1. slow (bandwidth/overhead) → **compile** (free)
-2. slow (compute) or tight → **bf16** (~1.5×, half the bytes)
+1. slow (bandwidth/overhead) → **compile** (usually free)
+2. slow (compute) or tight → **bf16** (~1.5–2×, half the bytes)
 3. doesn't fit → **checkpoint** (large memory cut, modest time)
-4. want a bigger batch → **accumulate** (same wall-clock)
+4. want a bigger batch → **accumulate** (≈ same wall-clock)
 5. still too slow / too big → **more devices** (next)
 :::

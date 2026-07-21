@@ -845,6 +845,18 @@ Caveats (each learned the hard way):
 
 ### 6.6 PDF build (XeLaTeX via Quarto) — pitfalls and how it's kept green
 
+Two crossref tripwires (2026-07-20). (1) **PDF-excluded pages**: files in
+`PDF_EXCLUDED_FILES` (`d2l_preprocess.py` — the website-only `utils.md` /
+`d2l.md` API appendices) render in HTML but not the PDF, so `:numref:` refs
+to their labels would emit "Unable to resolve crossref" + dead `??` links;
+`gen_pdf.py` (`_pdf_excluded_ref_replacements`) now rewrites such refs to
+plain "the online appendix …" text automatically. (2) **`subsec_X` /
+`sec_X` collisions**: `convert_label_id` maps *both* prefixes to `sec-X`,
+so a `subsec_ssm` label collides with `sec_ssm` ("Duplicate identifier" in
+pandoc, and one anchor silently wins). Keep subsection label stems distinct
+from every section label stem (the `subsec_ssm` case was renamed
+`subsec_state-space`).
+
 `make pdfs` (and `make all`) renders one `_pdf/<fw>/` Quarto book per framework
 → `quarto render --to pdf` → XeLaTeX → `_pdf/<fw>/_pdf/Dive-into-Deep-Learning-<fw>.pdf`,
 then copies it into `_book/pdf/` for the site. The render is **CPU-only** and

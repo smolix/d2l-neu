@@ -39,36 +39,47 @@
       "kind": "text",
       "outputs": []
     },
-    "multiple-gpus-data-parallelism-by-hand-5": {
-      "code_fingerprint": "sha256:2090e54e62140d881f517906671418423f2e725127cb96487348d1523840fc11",
+    "multiple-gpus-data-parallelism-by-hand-7": {
+      "code_fingerprint": "sha256:b0133e46e211bbc45f9613e673ab6a2a5e333c62c3c503b8f8706996ed693b96",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc 0.78, 2.18 sec/epoch on 1 GPU(s)\n"
+          "text": "max update difference, k=1 vs k=2: 9.31e-10\n"
+        }
+      ]
+    },
+    "multiple-gpus-data-parallelism-by-hand-5": {
+      "code_fingerprint": "sha256:01c0259f2940441a200f59752d340af65af382f5e26c20d1ec26d7ac97c4baf3",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc 0.70, 2.37 sec/epoch on 1 GPU(s)\n"
         }
       ]
     },
     "multiple-gpus-data-parallelism-by-hand-6": {
-      "code_fingerprint": "sha256:7219189f858910e03189431e415656c53cdf64f29417eb76d07d200513802795",
+      "code_fingerprint": "sha256:ec9e992bb00221279cca24cba03bcca4c08b3bff3d8228afde31073bdcd34631",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "test acc 0.81, 2.36 sec/epoch on 2 GPU(s)\n"
+          "text": "test acc 0.79, 2.31 sec/epoch on 2 GPU(s)\n"
         }
       ]
     },
     "multiple-gpus-the-accounting": {
-      "code_fingerprint": "sha256:f4d5afb75dfb347440d474c1fcf9e0131cc0718f9ee7e5f4c72e21187df8d7ef",
+      "code_fingerprint": "sha256:51634e77165602df432590d478531c6c4ee50c2046eb1f20f4bf69b196651770",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "allreduce 20.73 GB/s effective over 25.9 ms\n"
+          "text": "allreduce 17.28 GB/s effective over 31.1 ms\n"
         }
       ]
     }

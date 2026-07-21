@@ -154,6 +154,24 @@ def _add_equation_numbers(output, src_path):
     return number_all_equations(output, file_slug)
 
 
+def _pdf_excluded_ref_replacements():
+    """Labels defined in PDF_EXCLUDED_FILES cannot resolve inside the PDF
+    (their pages render on the website only), so rewrite @-references to
+    them as plain text.  Returns {quarto_id: replacement_text}."""
+    import re as _re
+    from d2l_preprocess import PDF_EXCLUDED_FILES, convert_label_id
+    root = Path(__file__).parent.parent
+    repl = {}
+    for rel in sorted(PDF_EXCLUDED_FILES):
+        text = (root / rel).read_text(encoding='utf-8')
+        m = _re.search(r'^# (.+)$', text, _re.M)
+        title = m.group(1).strip() if m else rel
+        for label in _re.findall(r':label:`([^`]+)`', text):
+            repl[convert_label_id(label)] = (
+                f'the online appendix "{title}"')
+    return repl
+
+
 def convert_file_pdf(src_path, framework, chapter_number=None):
     """Convert a d2l .md file to single-framework .qmd for PDF."""
     from d2l_preprocess import strip_slide_divs
@@ -173,6 +191,13 @@ def convert_file_pdf(src_path, framework, chapter_number=None):
 
     # Emit single-framework output
     output = emit_pdf_qmd(blocks, framework)
+
+    # References to PDF-excluded pages (website-only appendices) would
+    # emit "Unable to resolve crossref" warnings and dead "??" links.
+    import re as _re
+    for qid, phrase in _pdf_excluded_ref_replacements().items():
+        output = _re.sub(r'@' + _re.escape(qid) + r'(?![\w-])', phrase,
+                         output)
 
     # Auto-number all display equations
     output = _add_equation_numbers(output, src_path)

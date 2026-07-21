@@ -813,7 +813,7 @@ def fig_ring_allreduce():
     axl = axes[1, 3]
     axl.text(0.9, -0.25,
              "per link, per phase:\n$\\frac{k-1}{k}\\,N$ bytes\n\n"
-             "total $\\frac{2(k-1)}{k}\\,N$\nindependent of $k$",
+             "total $\\frac{2(k-1)}{k}\\,N$\nbounded by $2N$ for any $k$",
              ha="center", va="center", fontsize=13, color="black")
     fl.clean_axes(axl, lim=((-1.25, 2.8), (-1.95, 1.35)), hide=True)
 

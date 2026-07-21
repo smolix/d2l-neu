@@ -31,28 +31,28 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive timer: 0.87 ms   with synchronize: 9.12 ms\n"
+          "text": "naive timer: 0.68 ms   with synchronize: 9.17 ms\n"
         }
       ]
     },
     "performance-model-measuring-without-lying-2": {
-      "code_fingerprint": "sha256:e87ed1c55ce8c40e25c842c4ba8716f0d1d67577bd13ee4dff044dbdc6626511",
+      "code_fingerprint": "sha256:3d9e3d962175cb264f223317f487b8f23c79cf1bdc5a4e930c9c6f49ccf43f9b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read every step: 0.061 s   read once: 0.029 s\n"
+          "text": "read every step: 0.060 s   read once: 0.039 s\n"
         }
       ]
     },
     "performance-model-measuring-without-lying-3": {
-      "code_fingerprint": "sha256:8650b28f5f29006ed0832b4cb251a99454f8a446f431790bc446695bde965de5",
+      "code_fingerprint": "sha256:3a235f2c4ea68bae2d75f02337217fc160c2e5b46de92057f6bf874c5933f604",
       "kind": "text",
       "outputs": []
     },
     "performance-model-measuring-without-lying-4": {
-      "code_fingerprint": "sha256:7db9779f9cd89c78f2bc55cc62386b5d7af0442b67c6b844b38eb4193fc133a4",
+      "code_fingerprint": "sha256:2290fec4cbc87dc8e5537d0a442547441431848a47b25aec971cfd90e9789624",
       "kind": "text",
       "outputs": [
         {
@@ -62,25 +62,25 @@
       ]
     },
     "performance-model-the-sweep-mapping-our-gpu": {
-      "code_fingerprint": "sha256:1f70a7f4d4f7139a3c246584106b827edfdb2be47e89a7e27e26131d2c3d05d2",
+      "code_fingerprint": "sha256:ea37467e4ae3407151ecf62eb7af3b2b75366744333f453c756017f824b34c51",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['256: 2.2', '512: 16.2', '1024: 116.7', '2048: 157.0', '4096: 150.7', '8192: 165.1']\n"
+          "text": "['256: 2.2', '512: 18.2', '1024: 118.3', '2048: 157.6', '4096: 153.1', '8192: 165.8']\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "performance-model/performance-model-the-sweep-mapping-our-gpu-1.svg",
           "bytes": 23261,
-          "sha256": "sha256:1a1993d07054f0fa995227826a4ebfe2e7826d88d2a1f3621c3817fbfd5a2e32"
+          "sha256": "sha256:7e4f121f49ea48dbe0177c00187e8b122696edf34298d0e3caa19d3f1cd68de2"
         }
       ]
     },
     "performance-model-three-regimes-1": {
-      "code_fingerprint": "sha256:a9c45a6124e1b9fb3ecefbf0cb06b3f20d4ca157f8c24bd6851015a06b8bda08",
+      "code_fingerprint": "sha256:221b664887b8f8691ebed1641ce2d23ccbdee03a421f2c2c05ca10efef1e8a37",
       "kind": "text",
       "outputs": [
         {
@@ -91,29 +91,24 @@
       ]
     },
     "performance-model-three-regimes-2": {
-      "code_fingerprint": "sha256:048020b7c6cae0a438054346fa44ce1a6b5ac08ae1fa21bd2b841e4f106a52b6",
+      "code_fingerprint": "sha256:c9773ad7d123d5adadcdf2abda3595bcaf7462c1d9e55c5eaa76a027e1038a83",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 op: 0.15 ms/call\nchain: 1.28 ms/call\n"
+          "text": "1 op: 0.14 ms/call\nchain: 1.25 ms/call\n"
         }
       ]
     },
     "performance-model-the-profiler": {
-      "code_fingerprint": "sha256:83eea77af02ad1214f4c9cd3c33494ee87f2e3c90541cb6461394fd5f7b5fcaf",
+      "code_fingerprint": "sha256:ebf4ba05811b29ff98ecafcf3b5e61835f3cf5f8c8901cd7c0796c7619d20467",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                           aten::linear         0.55%      45.671us        38.45%       3.218ms     214.550us       0.000us         0.00%     198.302us      13.220us            15  \n                                            aten::addmm         6.75%     564.794us        36.24%       3.034ms     202.265us     182.494us        41.88%     198.302us      13.220us            15  \n    autograd::engine::evaluate_function: AddmmBackward0         3.16%     264.505us        33.31%       2.788ms     185.890us       0.000us         0.00%     176.894us      11.793us            15  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us     156.129us        35.83%     156.129us      15.613us            10  \n                                         AddmmBackward0         1.95%     163.254us        24.01%       2.010ms     133.977us       0.000us         0.00%     134.880us       8.992us            15  \n                                               aten::mm        10.80%     904.414us        19.54%       1.636ms      65.422us     122.625us        28.14%     134.880us       5.395us            25  \n                                              aten::sum         5.12%     428.678us         7.19%     602.242us      30.112us      52.126us        11.96%      52.126us       2.606us            20  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      49.217us        11.29%      49.217us       4.922us            10  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nSelf CPU time total: 8.371ms\nSelf CUDA time total: 435.772us\n\n"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "/home/smola/d2l-neu/.venv-pytorch/lib/python3.12/site-packages/torch/profiler/profiler.py:224: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.\n  _warn_once(\n"
+          "text": "-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                           aten::linear         0.52%      49.161us        34.58%       3.258ms     217.229us       0.000us         0.00%     195.584us      13.039us            15  \n                                            aten::addmm         6.71%     632.566us        32.58%       3.070ms     204.666us     180.000us        41.61%     195.584us      13.039us            15  \n    autograd::engine::evaluate_function: AddmmBackward0         3.01%     283.521us        33.01%       3.110ms     207.342us       0.000us         0.00%     177.024us      11.802us            15  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us     153.889us        35.57%     153.889us      15.389us            10  \n                                         AddmmBackward0         2.06%     194.037us        23.99%       2.260ms     150.695us       0.000us         0.00%     133.759us       8.917us            15  \n                                               aten::mm        10.53%     992.494us        19.49%       1.836ms      73.454us     121.438us        28.07%     133.759us       5.350us            25  \n                                              aten::sum         4.98%     469.384us         7.59%     715.464us      35.773us      53.409us        12.35%      53.409us       2.670us            20  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      48.255us        11.15%      48.255us       4.825us            10  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nSelf CPU time total: 9.423ms\nSelf CUDA time total: 432.608us\n\n"
         }
       ]
     }

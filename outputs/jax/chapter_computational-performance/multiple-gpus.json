@@ -9,22 +9,27 @@
   },
   "cells": {
     "multiple-gpus-multi-gpu-from-first-principles": {
-      "code_fingerprint": "sha256:e8e80c3a291f26cbe7cbfe7656b9b9718d13065da1b96515d1b522b92cc3702a",
+      "code_fingerprint": "sha256:b49b646603fb222e97ef6e0bc74be31c306aeb6e8077c3fbda69b956c0b76a09",
       "kind": "text",
-      "outputs": []
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "'0'"
+        }
+      ]
     },
     "multiple-gpus-data-parallelism-by-hand-1": {
-      "code_fingerprint": "sha256:b2e45bd95c9a97648da968355092bd41fd0694c91a059e30c6b4a322470d2955",
+      "code_fingerprint": "sha256:b4a2fa2876eb8e252777d76a63f74c56b2b2f3b511384713b33684e7838ab3b3",
       "kind": "text",
       "outputs": []
     },
     "multiple-gpus-data-parallelism-by-hand-2": {
-      "code_fingerprint": "sha256:966383619fc9cac28e7ff577c348f9e32bc5dbebc1f984d1f562103cf75c6a56",
+      "code_fingerprint": "sha256:5e99bde13ad3838c4d1fb9a8fa788fbbbea87171c260d6793b8c43d861eeb2c9",
       "kind": "text",
       "outputs": []
     },
     "multiple-gpus-data-parallelism-by-hand-3": {
-      "code_fingerprint": "sha256:bf1866b7b819247548afe14b234dddb6490c12f84b7fe506e26330f09a3b05f5",
+      "code_fingerprint": "sha256:119f630e062600f425ef61602750bfd4c33ba5a4cca308514eee439cd806e622",
       "kind": "text",
       "outputs": [
         {
@@ -40,45 +45,56 @@
       ]
     },
     "multiple-gpus-data-parallelism-by-hand-4": {
-      "code_fingerprint": "sha256:e4e3c83348c12fc98c3a19322de6d01c20a184e29d200aabed3b6fe13d8e102b",
+      "code_fingerprint": "sha256:6781f979e355a6739ec315b41b2c7848b34c71afd1cfaa187ba1b2c07fc4aeed",
       "kind": "text",
       "outputs": []
     },
-    "multiple-gpus-data-parallelism-by-hand-5": {
-      "code_fingerprint": "sha256:9c5f7bec74f4a2ae5046771bea0a0f0a13a9fd6827e4ef3369756a82f5a62912",
+    "multiple-gpus-data-parallelism-by-hand-7": {
+      "code_fingerprint": "sha256:f71a11f9396cabac267c23795565a3fcc3f7dcb73d812a0bd9b55e75ac09acde",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stderr",
-          "text": "E0720 06:54:06.215661    2811 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
+          "text": "E0720 20:17:16.713029   44902 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "0.93 sec/epoch on 1 GPU(s)\n"
+          "text": "max update difference, k=1 vs k=2: 1.86e-09\n"
+        }
+      ]
+    },
+    "multiple-gpus-data-parallelism-by-hand-5": {
+      "code_fingerprint": "sha256:846cca9fe48513bd52c6ec4de32146f5be6101a1883fd69e7fbef417cdf0f87d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "test acc 0.79, 0.56 sec/epoch on 1 GPU(s)\n"
         }
       ]
     },
     "multiple-gpus-data-parallelism-by-hand-6": {
-      "code_fingerprint": "sha256:d2e16bf75c63b5b185efa6575a5bac3eb75dac85184d57c567813325152e7645",
+      "code_fingerprint": "sha256:1f1603b4dd8af8275b2e348f198342113f0cefb47f7ae987f926404d7581d36b",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1.54 sec/epoch on 2 GPU(s)\n"
+          "text": "test acc 0.81, 1.00 sec/epoch on 2 GPU(s)\n"
         }
       ]
     },
     "multiple-gpus-the-accounting": {
-      "code_fingerprint": "sha256:2e9d3e7af8800fb0a6bbbf7cb1574af17622adc3ebe4c5959d2edc49c29d1c35",
+      "code_fingerprint": "sha256:213c00a1ef35338f7ddc97103a2f524d51a9f15cbe39e33eee41e1b77a40f518",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "psum 4.47 GB/s effective over 120.1 ms\n"
+          "text": "psum 6.53 GB/s effective over 82.3 ms\n"
         }
       ]
     }

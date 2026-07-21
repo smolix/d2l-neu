@@ -7,12 +7,13 @@ much, how batched, how tokenized. This chapter is about the third choice,
 the one every training run makes whether or not you attend to it: how to
 use the *machine*. Two models with identical loss curves can differ by an
 order of magnitude in wall-clock time and in whether they fit in memory
-at all, and the difference is almost never the algorithm. It is whether
+at all — and holding the model and its loss curve fixed, that difference
+is systems, not mathematics. It is whether
 the code kept the arithmetic units fed, moved as few bytes as it could,
 stayed out of the interpreter's way, and spent its memory where it
 counted.
 
-There is one map for all of this, and one method. The map is the
+There is one map to start from, and one method. The map is the
 *roofline*: a computation is limited either by how fast the machine can do
 arithmetic or by how fast it can move bytes, and a single ratio —
 arithmetic intensity, the FLOPs performed per byte moved — tells you which,
@@ -31,26 +32,32 @@ dispatch makes non-optional. :numref:`sec_hardware` explains where the
 roofline's two numbers come from — the memory hierarchy, the tensor cores
 and their format ladder, the interconnects, and the energy budget
 underneath them all — using our own four-GPU box as the worked example.
-:numref:`sec_compilation` cures the bandwidth and overhead regimes by
-capturing the compute graph and letting a compiler fuse it, contrasting
-`torch.compile`'s bytecode capture with `jax.jit`'s tracing.
+:numref:`sec_compilation` targets the bandwidth and overhead regimes:
+capturing the compute graph and letting a compiler fuse it can collapse
+both — though not every technique pays on every model, and
+:numref:`sec_fast_transformer` measures one that *costs* time when its
+constraint does not bind, which is why diagnosis comes first —
+contrasting `torch.compile`'s bytecode capture with `jax.jit`'s tracing.
 :numref:`sec_memory_precision` turns to space: the memory anatomy of a
 training step, mixed precision, activation checkpointing, and gradient
 accumulation — the techniques that decide whether a model fits.
 :numref:`sec_multi_gpu` builds data parallelism from scratch, derives the
-ring allreduce, and confronts the honest communication bill;
+ring allreduce, and measures the communication bill;
 :numref:`sec_multi_gpu_concise` replaces the hand-rolled version with
 production data parallelism and contrasts PyTorch's explicit collectives
 with JAX's declarative sharding. Finally :numref:`sec_fast_transformer`
 runs the whole method on a real Transformer, taking one of the book's own
 GPT models down a measured waterfall of every technique the chapter
-taught.
+taught. That capstone is PyTorch-only — it exercises `torch.compile`,
+autocast, checkpointing, and DDP as one stack; JAX readers get the same
+method through the JAX tabs of the preceding sections and their
+exercises.
 
 A word on the machine this chapter is built on, because it shapes what
 you will see. The book's build box is four consumer RTX 4090 GPUs with no
 NVLink and — a deliberate market segmentation — no peer-to-peer transfer:
 every byte between two GPUs is staged through host memory over PCIe — tens
-of gigabytes per second at best, one to two orders of magnitude below a
+of gigabytes per second at best, roughly two orders of magnitude below a
 datacenter NVLink fabric. This is not a handicap to apologize for; it is a
 teaching instrument. Most readers'
 multi-GPU machines look like ours, not like a datacenter rack with a

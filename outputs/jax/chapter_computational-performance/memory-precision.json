@@ -25,45 +25,50 @@
       ]
     },
     "memory-precision-mixed-precision": {
-      "code_fingerprint": "sha256:eecc5ebc6450b8314e7a3bd8afdf4eb7f5ad2f6f63ae2834e9a2e6ad038b6565",
+      "code_fingerprint": "sha256:3c0c3b190fe912197497485096676b80acb0fed8589c56fd607bf2741f0eda9c",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "fp32: 13.12 ms/call\n"
+          "text": "fp32 (tf32 off): 26.41 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "bf16: 6.73 ms/call\n"
+          "text": "tf32: 15.99 ms/call\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "bf16: 8.70 ms/call\n"
         }
       ]
     },
     "memory-precision-activation-checkpointing": {
-      "code_fingerprint": "sha256:a7aa112fb2092d6e9028bf47c6d9ce5739b5db5e4b15b41116b54c2687994b31",
+      "code_fingerprint": "sha256:b3533364cc44fd99660dadcadc4c37fde85da65694850dcddc06074d9e55dee1",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "store all: compiler temp 3230 MB\n"
+          "text": "store all: compiler temp 3230 MB, fwd+bwd 50.5 ms\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "checkpointed: compiler temp 1216 MB\n"
+          "text": "checkpointed: compiler temp 1216 MB, fwd+bwd 58.7 ms\n"
         }
       ]
     },
     "memory-precision-gradient-accumulation": {
-      "code_fingerprint": "sha256:43d233f96685cc3f625fc9d8bb9939a68277cb9d14010781912e47d2b9096972",
+      "code_fingerprint": "sha256:437ded853ef7a6562f1ac781db747eee963fe1ae4831e9fe8cb7b9bf6a39bd97",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "max gradient difference: 2.86e-06\n"
+          "text": "max gradient difference: 3.10e-06\n"
         }
       ]
     }

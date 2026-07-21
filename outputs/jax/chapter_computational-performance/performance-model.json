@@ -25,34 +25,34 @@
       ]
     },
     "performance-model-measuring-without-lying-1": {
-      "code_fingerprint": "sha256:da01b2f157f2bef4643fe1a5abfc34ee7ec58ec528b34329ce2dccd5c8022cf7",
+      "code_fingerprint": "sha256:ea5b8d0ee2b0eb0198b0678e60f542613ce96240eb71bd57cc007aa60e509884",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive timer: 1.48 ms   with block_until_ready: 15.83 ms\n"
+          "text": "naive timer: 0.74 ms   with block_until_ready: 8.84 ms\n"
         }
       ]
     },
     "performance-model-measuring-without-lying-2": {
-      "code_fingerprint": "sha256:254dfe292aaa11ed3c355b008ab49f24108b6576515f5a508220f343c04e6323",
+      "code_fingerprint": "sha256:4ec58cb4aadf25460c98267bf3d90e16ada0eef284f706a38b2906ac06fd33c6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "read every step: 0.842 s   read once: 2.217 s\n"
+          "text": "read every step: 0.983 s   read once: 0.361 s\n"
         }
       ]
     },
     "performance-model-measuring-without-lying-3": {
-      "code_fingerprint": "sha256:a71993942e291f6fd30a5a60b16450580a833f53b657c2d9f63d0cdb94621766",
+      "code_fingerprint": "sha256:be86438fd0ea8470ef58788bcf26602b3ba88f7797f40285cfe3bed9c4025020",
       "kind": "text",
       "outputs": []
     },
     "performance-model-measuring-without-lying-4": {
-      "code_fingerprint": "sha256:21d4c5cd40f2b35a0315217e33052cbd15e0fdedbd37c267805d38f5998b1e88",
+      "code_fingerprint": "sha256:e534d1765ea34f21ebe061c48dd3ac796dd2d3291e828c4ea758b87ac52cb578",
       "kind": "text",
       "outputs": [
         {
@@ -62,31 +62,31 @@
       ]
     },
     "performance-model-the-sweep-mapping-our-gpu": {
-      "code_fingerprint": "sha256:c55bb0bff3fb407330ed635bb22ab01b4f28e0ed22f1d7d5f7f4ea43a30f9d16",
+      "code_fingerprint": "sha256:586963afdc15f453db63e18252dfd9843dfea3b5c48101ef4d1bae0c021d6033",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['256: 0.4', '512: 2.8', '1024: 29.2', '2048: 136.9', '4096: 159.8', '8192: 161.7']\n"
+          "text": "['256: 0.4', '512: 4.7', '1024: 21.8', '2048: 119.9', '4096: 158.7', '8192: 173.1']\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "performance-model/performance-model-the-sweep-mapping-our-gpu-1.svg",
-          "bytes": 25456,
-          "sha256": "sha256:6c95104143e5496bd98e71626c7cd9f520335c4b6821a77acbeb7a21db3afc66"
+          "bytes": 25454,
+          "sha256": "sha256:b01fcc588a67658fde23296560867cae72fdf1007473ab818b36d74d81ef4d16"
         }
       ]
     },
     "performance-model-three-regimes-1": {
-      "code_fingerprint": "sha256:7f24e6044a4a6905b9d4338d6e949b3227528d9372bf959c6f380433302965b9",
+      "code_fingerprint": "sha256:41d3b40a7ee54ba7745f004ce07c2533a919a9ffc9a716ba24b41ee2006672a3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "add: 0.21 ms/call\nmul: 0.21 ms/call\nsin: 0.16 ms/call\n"
+          "text": "add: 0.29 ms/call\nmul: 0.30 ms/call\nsin: 0.17 ms/call\n"
         },
         {
           "type": "stream",
@@ -96,29 +96,29 @@
       ]
     },
     "performance-model-three-regimes-2": {
-      "code_fingerprint": "sha256:20d68461ddaa27ee0d55ba695bc7150f403fabba3aef2e40d4015cdb9ef13e65",
+      "code_fingerprint": "sha256:47f0ba6e7873ea8c2c8c353eeee0759522b686ee2ffc4b3582afdc4a3c428a92",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1 op: 0.23 ms/call\n"
+          "text": "1 op: 0.30 ms/call\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "chain: 1.54 ms/call\n"
+          "text": "chain: 1.70 ms/call\n"
         }
       ]
     },
     "performance-model-the-profiler": {
-      "code_fingerprint": "sha256:d4ef28d992961c6ff9a71fe040c6736931a0b5dbce573ea2987f1533a9977251",
+      "code_fingerprint": "sha256:c20e2589d69cdcb8f73e952d537befe7e73ff0ca310cd51a73092e12ef82e90f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "trace files: 2\n"
+          "text": "trace written to /tmp/jax-trace; open it in Perfetto (ui.perfetto.dev) or TensorBoard\n"
         }
       ]
     }

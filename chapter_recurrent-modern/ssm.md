@@ -458,7 +458,7 @@ Hold that thought; it returns as the central limitation at the end of this
 section.
 
 ## State Space Models
-:label:`subsec_ssm`
+:label:`subsec_state-space`
 
 The minGRU linearized an RNN by deletion. State space models arrive at the
 same destination from the opposite direction, starting from a classical

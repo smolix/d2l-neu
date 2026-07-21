@@ -25,40 +25,40 @@
       ]
     },
     "compilation-what-the-compiler-does-fusion": {
-      "code_fingerprint": "sha256:84561f10f7860c9fc3a93380fc6f6170442add11240641648bf615ae0b26f8b3",
+      "code_fingerprint": "sha256:eaef60327f31190e30298d27d3fa83fd404a686c28f4724702ff90adbec98838",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.29 ms/call\ncompiled: 0.15 ms/call\n"
+          "text": "eager: 1.92 ms/call\ncompiled: 0.18 ms/call\n"
         }
       ]
     },
     "compilation-whole-step-compilation-measured": {
-      "code_fingerprint": "sha256:692730a23c482d701845d3ede2669ac47cbfa719b2329d59b53184eeb3bc3fe8",
+      "code_fingerprint": "sha256:4b96e5991ea9fef33fd1a92ced47185f4acff1ee7751ee0b994aeb19c4ba4750",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ahead-of-time compile: 1.8 s\n"
+          "text": "ahead-of-time compile: 2.2 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 17.40 ms/call\ncompiled: 0.17 ms/call\n"
+          "text": "eager: 19.29 ms/call\ncompiled: 0.18 ms/call\n"
         }
       ]
     },
     "compilation-the-overhead-regime-capture-and-replay": {
-      "code_fingerprint": "sha256:fcfe648b793584447fe5adcdd0e68da8a05a25caffaa8b3f530cce8deec5e0a4",
+      "code_fingerprint": "sha256:8040eafa91fcc0e781bd67cc98ca3b199e0a86e309e78257d9276dfa836e538a",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 7.71 ms/call\njit: 0.27 ms/call\n"
+          "text": "eager: 9.42 ms/call\njit: 0.43 ms/call\n"
         }
       ]
     }

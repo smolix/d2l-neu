@@ -843,8 +843,17 @@ _pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated | .venv-bu
 				rsvg-convert -f pdf -o "$$$$pdf" "$$$$svg" 2>/dev/null && count=$$$$((count + 1)); \
 			fi; \
 		done; [ $$$$count -gt 0 ] && echo "Converted $$$$count SVGs to PDF" || true; \
-		cd _pdf/$(1) && "$(CURDIR)/$(QUARTO)" render --to pdf; \
+		: 'Render LaTeX ONLY — skip quartos ~2 discarded xelatex passes (we compile'; \
+		: 'the fix_latex-patched .tex ourselves below). quarto --to latex writes the'; \
+		: 'book to _pdf/<fw>/_pdf/book-latex/Dive-into-Deep-Learning.tex with image'; \
+		: 'paths relative to the PROJECT ROOT (chapter_x/../img/...), so copy it up'; \
+		: 'to _pdf/<fw>/ and compile there (where chapter_*/ + img/ live).'; \
+		cd _pdf/$(1) && "$(CURDIR)/$(QUARTO)" render --to latex; \
 		cd "$(CURDIR)"; \
+		src_tex="$$$$(find _pdf/$(1) -name Dive-into-Deep-Learning.tex -path '*book-latex*' -print -quit 2>/dev/null)"; \
+		[ -n "$$$$src_tex" ] || src_tex="$$$$(find _pdf/$(1) -name Dive-into-Deep-Learning.tex -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)"; \
+		[ -n "$$$$src_tex" ] || { echo "ERROR: quarto --to latex produced no Dive-into-Deep-Learning.tex under _pdf/$(1)"; exit 1; }; \
+		cp -f "$$$$src_tex" _pdf/$(1)/Dive-into-Deep-Learning.tex; \
 		python3 tools/fix_latex.py _pdf/$(1)/Dive-into-Deep-Learning.tex; \
 		cd _pdf/$(1) && xelatex -interaction=nonstopmode Dive-into-Deep-Learning.tex > /dev/null 2>&1; \
 		xelatex -interaction=nonstopmode Dive-into-Deep-Learning.tex > /dev/null 2>&1; \
@@ -959,12 +968,25 @@ rebuild-book-artifacts:
 	@# over-committed RAM on <128 GiB boxes → rc=137; 24 GiB starved a full
 	@# framework render → rc=133. See detect_resources.py.)
 	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) slides
-	@# HTML (light, ~8 GiB V8) and PDFs (heavy, ~48 GiB each) render CONCURRENTLY
-	@# in ONE RAM-aware pool: make runs <= RENDER_JOBS jobs at once, so the
-	@# 4-heavy RAM peak is unchanged while html slots into a free worker. The
-	@# html recipe no longer stages _book/pdf (the pdf rule self-stages), so the
-	@# two never race on the same output file.
-	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) html pdfs
+	@# HTML is LIGHT (~8 GiB V8, quarto's default heap); PDFs are HEAVY (~48 GiB
+	@# each, RAM-capped to RENDER_JOBS). Render html CONCURRENTLY with the
+	@# full-width heavy PDF pool — html as its own light make, pdfs at
+	@# -j$(RENDER_JOBS) — so all RENDER_JOBS PDFs run at once instead of html
+	@# stealing a heavy slot (which forced one PDF to wait a whole slot-time).
+	@# Folding html into the same -j pool with -j(RENDER_JOBS+1) would be unsafe
+	@# on smaller boxes (make could then run RENDER_JOBS+1 *heavy* PDFs → OOM),
+	@# so keep them as two makes. They share no buildable target here: lib+venvs
+	@# are already built, html owns .preprocess.stamp + chapter_*.qmd, pdfs own
+	@# _pdf/<fw> — and the html recipe no longer stages _book/pdf (the pdf rule
+	@# self-stages) — so the two concurrent makes never race. Peak RAM ≈
+	@# RENDER_JOBS×heap + ~8 GiB.
+	@$(MAKE) html & HTML_PID=$$!; \
+	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) pdfs; PDF_RC=$$?; \
+	wait $$HTML_PID; HTML_RC=$$?; \
+	if [ $$PDF_RC -ne 0 ] || [ $$HTML_RC -ne 0 ]; then \
+		echo "ERROR: concurrent html/pdf render failed (html=$$HTML_RC pdf=$$PDF_RC)"; \
+		exit 1; \
+	fi
 	@# Notebook download bundles — after html+pdfs so quarto's render can't wipe
 	@# _book/notebooks/; CPU-only, injects outputs from the committed store.
 	$(MAKE) notebook-zips

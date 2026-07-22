@@ -19,22 +19,22 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Base the published branch on main (NOT an orphan) so it shares history with
-# main and stays reviewable via a PR. The hosted notebooks are overlaid on
-# main's tree; their image assets live under img/, which is not LFS-tracked
-# (only outputs/** is), so Colab renders them from raw blobs. Earlier this
-# branch was a git orphan, which GitHub refuses to open a PR for
-# ("no history in common with main").
-git -C "$root" fetch --quiet origin main
-git -C "$root" worktree add --detach "$worktree" origin/main
-git -C "$worktree" checkout -B "$temp_branch"
+# Publish the hosted notebooks as a git ORPHAN branch: it shares NO history with
+# main, so GitHub structurally refuses any PR that would merge it back into main
+# — the safeguard against dumping regenerable notebooks into the source tree (see
+# the PR #30 incident). Colab needs only the raw .ipynb + inline img/ assets
+# (img/ is NOT LFS-tracked — only outputs/** is — so Colab fetches raw blobs),
+# not history or PR-reviewability, so we push the orphan directly (no PR needed).
+git -C "$root" worktree add --detach "$worktree" HEAD
+git -C "$worktree" checkout --orphan "$temp_branch"
+git -C "$worktree" rm -rf . >/dev/null 2>&1 || true   # drop the inherited tree
 cp -a "$staging"/. "$worktree"/
 git -C "$worktree" add --all
-git -C "$worktree" commit -q -m "Publish hosted Colab notebooks (re-rooted on main)"
+git -C "$worktree" commit -q -m "Publish hosted Colab notebooks (orphan serving artifact)"
 
 if [[ "$dry_run" == "--dry-run" ]]; then
-  echo "Dry run: generated commit $(git -C "$worktree" rev-parse --short HEAD)"
-  echo "Dry run: would push HEAD to refs/heads/$branch"
+  echo "Dry run: generated ORPHAN commit $(git -C "$worktree" rev-parse --short HEAD)"
+  echo "Dry run: would force-push HEAD to refs/heads/$branch (orphan)"
   exit 0
 fi
 

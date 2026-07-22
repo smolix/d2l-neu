@@ -438,7 +438,7 @@ requires-dist = [
     { name = "jax", marker = "sys_platform == 'darwin' and extra == 'jax'", specifier = "==0.10.2" },
     { name = "jax", extras = ["cuda12"], marker = "platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'jax'", specifier = "==0.10.2" },
     { name = "jupyter", marker = "extra == 'run'" },
-    { name = "matplotlib" },
+    { name = "matplotlib", specifier = "==3.10.8" },
     { name = "matplotlib-inline" },
     { name = "mxnet", marker = "python_full_version == '3.12.*' and sys_platform == 'darwin' and extra == 'mxnet'", url = "https://github.com/smolix/mxnet/releases/download/mxnet-2.0.0.zombie.1/mxnet-2.0.0%2Bcpu.macos.zombie.1-cp312-cp312-macosx_26_0_arm64.whl" },
     { name = "mxnet", marker = "python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'mxnet'", url = "https://github.com/smolix/mxnet/releases/download/mxnet-2.0.0.zombie.1/mxnet-2.0.0%2Bcu133.bw.zombie.1-cp312-cp312-linux_x86_64.whl" },

@@ -8,7 +8,11 @@ authors = [{ name = "D2L Developers", email = "d2l.devs@gmail.com" }]
 
 dependencies = [
     "numpy",
-    "matplotlib",
+    # Pinned so committed illustrative figures (img/mdl-*.svg) regenerate
+    # byte-identically: matplotlib's SVG path/tessellation output shifts across
+    # minor versions, which otherwise makes a clean `make figures` dirty the tree.
+    # Bump deliberately, then re-run `make figures` and commit the SVG diff.
+    "matplotlib==3.10.8",
     "matplotlib-inline",
     "requests",
     "tiktoken",

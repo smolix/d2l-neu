@@ -95,7 +95,11 @@ pdfs: $(addprefix pdf-,$(FRAMEWORKS))
 # This is why slides build on a render-only host (e.g. macOS) and are
 # parallel-safe across frameworks (see `slides:` below).
 
-_slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/build_lib.py | .venv-build/.synced
+# $$(wildcard outputs/$$*/*/*.json) (secondary expansion, $$* = framework): slides
+# inject that framework's committed outputs (gen_slides.py), so an output change
+# re-renders its decks and an unchanged store lets the recipe skip entirely — no
+# force-rm needed in rebuild-book-artifacts.
+_slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/build_lib.py $$(wildcard outputs/$$*/*/*.json) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building $* slides ==="
 	@# pipefail is global (.SHELLFLAGS) so gen_slides.py's non-zero exit on a

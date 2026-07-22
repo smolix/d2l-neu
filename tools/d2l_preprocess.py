@@ -915,6 +915,14 @@ def convert_index(src_path):
 # Generated from d2l-en/index.md and each chapter's toc block.
 CHAPTER_NUMBERING = {
     'chapter_preface/index.md': None,
+    # Part overview pages (unnumbered part title pages, like the preface).
+    'chapter_basics/index.md': None,
+    'chapter_advanced/index.md': None,
+    'chapter_language-models/index.md': None,
+    'chapter_image-models/index.md': None,
+    'chapter_attic/index.md': None,
+    'chapter_mathematics-for-deep-learning/index.md': None,
+    'chapter_tools-for-deep-learning/index.md': None,
     'chapter_installation/index.md': None,
     'chapter_notation/index.md': None,
     'chapter_introduction/index.md': None,

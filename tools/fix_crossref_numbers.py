@@ -431,6 +431,65 @@ def fix_search_json(search_path, ch_map, unnumbered, section_files):
     return count
 
 
+def fix_breadcrumbs(output_dir):
+    """Rewrite the 2nd breadcrumb crumb from the current *section* to its parent
+    *chapter*: "Basics > 1.1 Data Manipulation" -> "Basics > 1 Preliminaries".
+
+    A section page sits in the same directory as its chapter's index.html
+    (chapter_preliminaries/ndarray.html -> chapter_preliminaries/index.html), so
+    we harvest each chapter index's own crumb-2 (its "<num> <title>" anchor) and
+    stamp it onto the section pages in that directory, linking to index.html.
+    The part crumb (crumb 1) already links to the part page and is left as is.
+    """
+    CRUMB = re.compile(r'(<ol class="breadcrumb">)(.*?)(</ol>)', re.S)
+    ITEM = re.compile(r'<li class="breadcrumb-item">.*?</li>', re.S)
+    AINNER = re.compile(r'<a\b[^>]*>(.*?)</a>', re.S)
+    NUM = re.compile(r'chapter-number">([\d.]+)<')
+
+    # Pass 1: harvest each chapter index's crumb-2 (the "<num> <title>" anchor).
+    chapter_inner = {}
+    for p in output_dir.rglob('index.html'):
+        m = CRUMB.search(p.read_text())
+        if not m:
+            continue
+        items = ITEM.findall(m.group(2))
+        if len(items) < 2:
+            continue
+        a = AINNER.search(items[1])
+        if a and 'chapter-number' in a.group(1):
+            chapter_inner[str(p.parent.relative_to(output_dir))] = a.group(1)
+
+    # Pass 2: stamp it onto the section (non-index) pages in that directory.
+    count = 0
+    for p in output_dir.rglob('*.html'):
+        if p.name == 'index.html':
+            continue
+        inner = chapter_inner.get(str(p.parent.relative_to(output_dir)))
+        if not inner:
+            continue
+        html = p.read_text()
+        m = CRUMB.search(html)
+        if not m:
+            continue
+        items = ITEM.findall(m.group(2))
+        if len(items) < 2:
+            continue
+        # Only rewrite genuine sections: their crumb-2 number is dotted ("1.1");
+        # a chapter's is not ("1"). Guards directories holding several chapters.
+        cur = AINNER.search(items[1])
+        nm = cur and NUM.search(cur.group(1))
+        if not (nm and '.' in nm.group(1)):
+            continue
+        new_crumb2 = ('<li class="breadcrumb-item"><a href="index.html">'
+                      + inner + '</a></li>')
+        newol = m.group(1) + items[0] + new_crumb2 + m.group(3)
+        html2 = html[:m.start()] + newol + html[m.end():]
+        if html2 != html:
+            p.write_text(html2)
+            count += 1
+    return count
+
+
 def main():
     book_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path('.')
     output_dir = book_dir / '_book'
@@ -475,6 +534,8 @@ def main():
     if search_json.exists():
         search_fixes = fix_search_json(search_json, ch_map, unnumbered, section_files)
 
+    breadcrumb_fixes = fix_breadcrumbs(output_dir)
+
     print(f'\nFixed: {totals["numbers"]} numbers, '
           f'{totals["chap2sec"]} Chapter→Section, '
           f'{totals["eqrefs"]} equation refs, '
@@ -482,7 +543,8 @@ def main():
           f'{totals["citations"]} citations, '
           f'stripped {totals["strip"]} sidebar + {totals["figstrip"]} frontmatter figs '
           f'in {files_modified} files, '
-          f'{search_fixes} search.json entries')
+          f'{search_fixes} search.json entries, '
+          f'{breadcrumb_fixes} breadcrumbs')
 
 
 if __name__ == '__main__':

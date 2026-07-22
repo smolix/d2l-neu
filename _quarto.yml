@@ -56,7 +56,7 @@ book:
         - chapter_installation/index.qmd
         - chapter_notation/index.qmd
         - chapter_introduction/index.qmd
-    - part: "Basics"
+    - part: chapter_basics/index.qmd
       chapters:
         - chapter_preliminaries/index.qmd
         - chapter_preliminaries/ndarray.qmd
@@ -123,7 +123,7 @@ book:
         - chapter_recurrent-neural-networks/rnn-implementation.qmd
         - chapter_recurrent-neural-networks/bptt.qmd
         - chapter_recurrent-neural-networks/decoding.qmd
-    - part: "Advanced"
+    - part: chapter_advanced/index.qmd
       chapters:
         - chapter_optimization/index.qmd
         - chapter_optimization/optimization-intro.qmd
@@ -177,7 +177,7 @@ book:
         - chapter_generative-adversarial-networks/gan.qmd
         - chapter_generative-adversarial-networks/dcgan.qmd
         - chapter_diffusion-models/index.qmd
-    - part: "Language Models"
+    - part: chapter_language-models/index.qmd
       chapters:
         - chapter_natural-language-processing-pretraining/index.qmd
         - chapter_natural-language-processing-pretraining/seq2seq.qmd
@@ -199,7 +199,7 @@ book:
         - chapter_natural-language-processing-applications/natural-language-inference-attention.qmd
         - chapter_natural-language-processing-applications/finetuning-bert.qmd
         - chapter_natural-language-processing-applications/natural-language-inference-bert.qmd
-    - part: "Image Models"
+    - part: chapter_image-models/index.qmd
       chapters:
         - chapter_computer-vision/index.qmd
         - chapter_computer-vision/image-augmentation.qmd
@@ -216,7 +216,7 @@ book:
         - chapter_computer-vision/neural-style.qmd
         - chapter_computer-vision/kaggle-cifar10.qmd
         - chapter_computer-vision/kaggle-dog.qmd
-    - part: "Attic"
+    - part: chapter_attic/index.qmd
       chapters:
         - chapter_gaussian-processes/index.qmd
         - chapter_gaussian-processes/gp-intro.qmd
@@ -239,7 +239,7 @@ book:
         - chapter_recommender-systems/ctr.qmd
         - chapter_recommender-systems/fm.qmd
         - chapter_recommender-systems/deepfm.qmd
-    - part: "Mathematics for Deep Learning"
+    - part: chapter_mathematics-for-deep-learning/index.qmd
       chapters:
         - chapter_mdl-linear-algebra/index.qmd
         - chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.qmd
@@ -273,7 +273,7 @@ book:
         - chapter_mdl-dynamics/mdl-sdes.qmd
         - chapter_mdl-dynamics/mdl-fokker-planck-probability-flow.qmd
         - chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.qmd
-    - part: "Tools for Deep Learning"
+    - part: chapter_tools-for-deep-learning/index.qmd
       chapters:
         - chapter_appendix-tools-for-deep-learning/index.qmd
         - chapter_appendix-tools-for-deep-learning/interactive-development.qmd

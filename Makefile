@@ -116,6 +116,13 @@ $(foreach v,NUM_GPU_PAIRS MULTIGPU_PER_PAIR MULTIGPU_SLOTS JAX_MGPU_MEM_FRACTION
 # (rc=133). See tools/detect_resources.py (RENDER_V8_MIN_MIB / RENDER_JOBS).
 $(foreach v,RENDER_JOBS RENDER_V8_HEAP_MIB,$(eval $(call _detected,$(v))))
 RENDER_V8_ENV := QUARTO_DENO_V8_OPTIONS=--max-old-space-size=$(RENDER_V8_HEAP_MIB),--max-heap-size=$(RENDER_V8_HEAP_MIB)
+# Per-framework slide-render workers. gen_slides.py now renders each deck in an
+# ISOLATED clone project, so it parallelizes WITHIN a framework. With
+# `make -j$(RENDER_JOBS) slides` running RENDER_JOBS frameworks at once, size
+# workers so RENDER_JOBS × SLIDE_WORKERS ≈ cores — full CPU utilization without
+# oversubscribing. Slide clones are light (--no-execute), so this is CPU- not
+# RAM-bound. Override with SLIDE_WORKERS=N.
+SLIDE_WORKERS ?= $(shell n=$$(nproc 2>/dev/null || echo 8); w=$$((n / $(RENDER_JOBS))); [ $$w -ge 1 ] && echo $$w || echo 1)
 FILES         ?=
 SLIDES_FILTER ?= $(FILES)
 
@@ -429,6 +436,7 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 			mkdir -p _book/slides; \
 			rsync -a --exclude='*.qmd' --exclude='_quarto.yml' \
 				--exclude='.gitignore' --exclude='.quarto/' --exclude='errors/' \
+				--exclude='.deckhashes.json' --exclude='.render-*' \
 				_slides/ _book/slides/; \
 			echo "Stripping per-fw data/img symlinks (R2 storage bloat)..."; \
 			find _book/slides -mindepth 2 -maxdepth 2 -type l \
@@ -447,14 +455,9 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 					fi; \
 				done; \
 		fi; \
-		if [ -d _pdf ]; then \
-			echo "Staging PDFs into _book/pdf/ ..."; \
-			mkdir -p _book/pdf; \
-			for fw in $(FRAMEWORKS); do \
-				src="_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; \
-				[ -f "$$src" ] && cp "$$src" _book/pdf/ || true; \
-			done; \
-		fi; \
+		: 'PDFs are staged into _book/pdf by the pdf rule (PDF_RULE) itself,'; \
+		: 'so html no longer copies them here — avoids a same-file cp race'; \
+		: 'when html and pdfs render concurrently (rebuild-book-artifacts).'; \
 	} 2>&1 | tee $(LOGDIR)/html-$(TS).log
 
 # ── Notebooks (generate) ──────────────────────────────────
@@ -884,7 +887,7 @@ _slides/%/.built: $(SRC_MDS) tools/gen_slides.py tools/d2l_preprocess.py tools/b
 	@# before `touch $@` — a failed slide build no longer stamps .built.
 	PATH="$(CURDIR)/.venv-build/bin:$$PATH" \
 	python3 tools/gen_slides.py $(SOURCE) _slides --frameworks $* \
-		--render --workers 16 \
+		--render --workers $(SLIDE_WORKERS) \
 		$(if $(SLIDES_FILTER),--files $(SLIDES_FILTER)) \
 		2>&1 | tee $(LOGDIR)/slides-$*-$(TS).log
 	@touch $@
@@ -893,7 +896,9 @@ slides-%: _slides/%/.built
 	@echo "Slides for $* in _slides/$*/"
 	@echo "Log: $(LOGDIR)/slides-$*-$(TS).log"
 
-# CPU-only after the slide refactor — parallel-safe across frameworks.
+# CPU-only. gen_slides.py parallelizes WITHIN a framework (isolated clone
+# projects, --workers), and frameworks run in parallel under
+# `make -j$(RENDER_JOBS) slides`; SLIDE_WORKERS is sized so the product ≈ cores.
 slides: $(addprefix slides-,$(FRAMEWORKS))
 
 # ── Downloadable notebook zips (per framework) ────────────
@@ -936,24 +941,33 @@ rebuild-book-artifacts:
 	@# pointers — slides render before the html verify-fresh gate, so without
 	@# this they'd bake broken figures before anything noticed. (`git lfs pull`)
 	@python3 tools/audit_outputs.py --check-lfs
+	@# Force the slide recipe to run (below) by dropping its stamps, so
+	@# notebook-output changes are always re-checked. gen_slides.py is now
+	@# internally incremental — it re-renders only decks whose post-injection
+	@# .qmd content hash changed — so a nav/prose-only rebuild re-renders zero
+	@# decks even though the recipe runs.
 	@rm -f $(SLIDE_STAMPS)
 	@rm -f _book/index.html
 	@for fw in $(FRAMEWORKS); do rm -f "_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; done
-	@# Render slides/PDFs with a RAM-aware fleet: RENDER_JOBS frameworks in
-	@# parallel, each quarto capped to RENDER_V8_HEAP_MIB. A hardcoded `-j4` at
-	@# the old 24 GiB heap over-committed RAM on <128 GiB boxes (4×24=96 GiB →
-	@# OOM-kill rc=137), and 24 GiB was too small for one framework's full
-	@# single-project render anyway (V8 abort rc=133). See detect_resources.py.
+	@# Clear stale render-scratch PDFs BEFORE the render fleet starts, so the
+	@# parallel PDF render can't skip-then-read a corrupt one (Quarto
+	@# convert_svg, main.lua:7348). Makes `make all` self-sufficient with no
+	@# preceding `make clean`.
+	@find img/outputs -name '*.pdf' -delete 2>/dev/null || true
+	@# Render slides with a RAM-aware fleet: RENDER_JOBS frameworks in parallel,
+	@# each quarto capped to RENDER_V8_HEAP_MIB. (Old hardcoded -j4 @ 24 GiB
+	@# over-committed RAM on <128 GiB boxes → rc=137; 24 GiB starved a full
+	@# framework render → rc=133. See detect_resources.py.)
 	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) slides
-	$(MAKE) html
-	@# Notebook download bundles — after html so quarto's render can't wipe
+	@# HTML (light, ~8 GiB V8) and PDFs (heavy, ~48 GiB each) render CONCURRENTLY
+	@# in ONE RAM-aware pool: make runs <= RENDER_JOBS jobs at once, so the
+	@# 4-heavy RAM peak is unchanged while html slots into a free worker. The
+	@# html recipe no longer stages _book/pdf (the pdf rule self-stages), so the
+	@# two never race on the same output file.
+	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) html pdfs
+	@# Notebook download bundles — after html+pdfs so quarto's render can't wipe
 	@# _book/notebooks/; CPU-only, injects outputs from the committed store.
 	$(MAKE) notebook-zips
-	@# Clear stale render-scratch PDFs so the parallel PDF render can't
-	@# skip-then-read a corrupt one (Quarto convert_svg, main.lua:7348). This
-	@# makes `make all` self-sufficient without a preceding `make clean`.
-	@find img/outputs -name '*.pdf' -delete 2>/dev/null || true
-	$(RENDER_V8_ENV) $(MAKE) -j$(RENDER_JOBS) pdfs
 	$(MAKE) check-all-artifacts
 
 # Quick build without notebook execution

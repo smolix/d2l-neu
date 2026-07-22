@@ -379,6 +379,27 @@ def fix_search_json(search_path, ch_map, unnumbered, section_files):
             return m.group(0)
         return re.sub(r'Chapter[ \xa0](\d+\.\d+(?:\.\d+)*)', repl, text)
 
+    def fix_leading_number(text):
+        # A search entry's own title/section carries the chapter number as a
+        # bare leading prefix ("42\xa0 Numerics", "42.2 Dtype Rules") — Quarto's
+        # flat file-position number. Remap that leading number to the logical
+        # one (→ "5.5\xa0 Numerics", "5.5.2 …"), mirroring the HTML
+        # fix_section_numbers, or strip it for frontmatter pages. This is the
+        # field the earlier reference/crumb passes never touched.
+        nonlocal count
+        m = re.match(r'(\d+)((?:\.\d+)*)([\xa0 ]+)', text)
+        if not m:
+            return text
+        pandoc = int(m.group(1))
+        if pandoc in unnumbered:
+            count += 1
+            return text[m.end():]
+        logical = ch_map.get(pandoc)
+        if logical is not None:
+            count += 1
+            return f'{logical}{m.group(2)}{m.group(3)}{text[m.end():]}'
+        return text
+
     for entry in data:
         for field in ['text', 'title', 'section']:
             val = entry.get(field, '')
@@ -388,6 +409,8 @@ def fix_search_json(search_path, ch_map, unnumbered, section_files):
                 r'(Figure|Table|Section|Equation|Listing)([ \xa0])(\d+)(\.\d+(?:\.\d+)*)',
                 replace_text_number, val)
             new_val = fix_chapter_label(new_val)
+            if field in ('title', 'section'):
+                new_val = fix_leading_number(new_val)
             if new_val != val:
                 entry[field] = new_val
 

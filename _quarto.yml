@@ -316,6 +316,7 @@ format:
       - _d2l-notebooks-data.html
       - _d2l-tabs.html
       - _d2l-notebooks.html
+      - _d2l-mobilenav.html
   pdf:
     pdf-engine: xelatex
     documentclass: book

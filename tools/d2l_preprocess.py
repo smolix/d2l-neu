@@ -915,17 +915,15 @@ def convert_index(src_path):
 # Generated from d2l-en/index.md and each chapter's toc block.
 CHAPTER_NUMBERING = {
     'chapter_preface/index.md': None,
-    # Part overview pages (unnumbered part title pages, like the preface).
-    'chapter_basics/index.md': None,
-    'chapter_advanced/index.md': None,
-    'chapter_language-models/index.md': None,
-    'chapter_image-models/index.md': None,
-    'chapter_attic/index.md': None,
-    'chapter_mathematics-for-deep-learning/index.md': None,
-    'chapter_tools-for-deep-learning/index.md': None,
     'chapter_installation/index.md': None,
     'chapter_notation/index.md': None,
     'chapter_introduction/index.md': None,
+    # Part overview pages (unnumbered part title pages, like the preface).
+    # Each part index MUST sit immediately before its first member chapter:
+    # gen_pdf.py pairs the PDF's \chapter tex against CHAPTER_NUMBERING key
+    # order positionally, so this dict's key order must equal _quarto.yml's
+    # part/chapter order (build-system.md §4.1).
+    'chapter_basics/index.md': None,
     'chapter_preliminaries/index.md': [1],
     'chapter_preliminaries/ndarray.md': [1, 1],
     'chapter_preliminaries/pandas.md': [1, 2],
@@ -991,6 +989,7 @@ CHAPTER_NUMBERING = {
     'chapter_recurrent-neural-networks/rnn-implementation.md': [8, 5],
     'chapter_recurrent-neural-networks/bptt.md': [8, 6],
     'chapter_recurrent-neural-networks/decoding.md': [8, 7],
+    'chapter_advanced/index.md': None,
     'chapter_optimization/index.md': [9],
     'chapter_optimization/optimization-intro.md': [9, 1],
     'chapter_optimization/gd.md': [9, 2],
@@ -1043,6 +1042,7 @@ CHAPTER_NUMBERING = {
     'chapter_generative-adversarial-networks/gan.md': [15, 1],
     'chapter_generative-adversarial-networks/dcgan.md': [15, 2],
     'chapter_diffusion-models/index.md': [16],
+    'chapter_language-models/index.md': None,
     'chapter_natural-language-processing-pretraining/index.md': [17],
     'chapter_natural-language-processing-pretraining/seq2seq.md': [17, 1],
     'chapter_natural-language-processing-pretraining/word2vec.md': [17, 2],
@@ -1063,6 +1063,7 @@ CHAPTER_NUMBERING = {
     'chapter_natural-language-processing-applications/natural-language-inference-attention.md': [18, 5],
     'chapter_natural-language-processing-applications/finetuning-bert.md': [18, 6],
     'chapter_natural-language-processing-applications/natural-language-inference-bert.md': [18, 7],
+    'chapter_image-models/index.md': None,
     'chapter_computer-vision/index.md': [19],
     'chapter_computer-vision/image-augmentation.md': [19, 1],
     'chapter_computer-vision/fine-tuning.md': [19, 2],
@@ -1078,6 +1079,7 @@ CHAPTER_NUMBERING = {
     'chapter_computer-vision/neural-style.md': [19, 12],
     'chapter_computer-vision/kaggle-cifar10.md': [19, 13],
     'chapter_computer-vision/kaggle-dog.md': [19, 14],
+    'chapter_attic/index.md': None,
     'chapter_gaussian-processes/index.md': [20],
     'chapter_gaussian-processes/gp-intro.md': [20, 1],
     'chapter_gaussian-processes/gp-priors.md': [20, 2],
@@ -1099,6 +1101,7 @@ CHAPTER_NUMBERING = {
     'chapter_recommender-systems/ctr.md': [22, 8],
     'chapter_recommender-systems/fm.md': [22, 9],
     'chapter_recommender-systems/deepfm.md': [22, 10],
+    'chapter_mathematics-for-deep-learning/index.md': None,
     'chapter_mdl-linear-algebra/index.md': [23],
     'chapter_mdl-linear-algebra/mdl-geometry-linear-algebraic-ops.md': [23, 1],
     'chapter_mdl-linear-algebra/mdl-eigendecomposition.md': [23, 2],
@@ -1131,6 +1134,7 @@ CHAPTER_NUMBERING = {
     'chapter_mdl-dynamics/mdl-sdes.md': [28, 2],
     'chapter_mdl-dynamics/mdl-fokker-planck-probability-flow.md': [28, 3],
     'chapter_mdl-dynamics/mdl-score-matching-diffusion-flow.md': [28, 4],
+    'chapter_tools-for-deep-learning/index.md': None,
     'chapter_appendix-tools-for-deep-learning/index.md': [29],
     'chapter_appendix-tools-for-deep-learning/interactive-development.md': [29, 1],
     'chapter_appendix-tools-for-deep-learning/hosted-notebooks.md': [29, 2],

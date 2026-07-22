@@ -181,14 +181,13 @@ rebuild-book-artifacts:
 	@# pointers — slides render before the html verify-fresh gate, so without
 	@# this they'd bake broken figures before anything noticed. (`git lfs pull`)
 	@python3 tools/audit_outputs.py --check-lfs
-	@# Force the slide recipe to run (below) by dropping its stamps, so
-	@# notebook-output changes are always re-checked. gen_slides.py is now
-	@# internally incremental — it re-renders only decks whose post-injection
-	@# .qmd content hash changed — so a nav/prose-only rebuild re-renders zero
-	@# decks even though the recipe runs.
+	@# Slides are force-re-checked (recipe re-runs, but gen_slides.py is internally
+	@# incremental — 0 decks re-render when nothing changed). HTML and the PDFs are
+	@# NOT force-removed: they list the committed outputs/ store as a prerequisite
+	@# (make/render.mk OUTPUT_MANIFESTS), so Make re-renders them only when a source
+	@# .md or an injected output manifest actually changed — and only the affected
+	@# framework's PDF. An otherwise-unchanged rebuild is a no-op.
 	@rm -f $(SLIDE_STAMPS)
-	@rm -f _book/index.html
-	@for fw in $(FRAMEWORKS); do rm -f "_pdf/$$fw/_pdf/Dive-into-Deep-Learning-$$fw.pdf"; done
 	@# Clear stale render-scratch PDFs BEFORE the render fleet starts, so the
 	@# parallel PDF render can't skip-then-read a corrupt one (Quarto
 	@# convert_svg, main.lua:7348). Makes `make all` self-sufficient with no

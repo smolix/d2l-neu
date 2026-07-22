@@ -31,13 +31,19 @@ Follow-ups requested mid-pass, also landed:
   `re.search` = first/mobile only). Verified on real rendered HTML.
 - **Logging sweep** — every substantive `make` recipe now tees to `logs/`.
 
-**Deferred:** Phase 3 (make `outputs/` a tracked prerequisite so `all-quick` is a
-no-op when nothing changed and only affected frameworks' PDFs rebuild). **Open
-finding:** 8 `mdl-*` figures (la/cal/clf/opt) drift when regenerated with the
-current venv — a matplotlib-version reproducibility gap that predates this work;
-committed SVGs left as-is.
+- **Phase 3 — incrementality.** The committed store
+  (`outputs/<fw>/<chapter>/<stem>.json`) is now a tracked prerequisite — HTML on
+  the whole store, each PDF on its own framework subtree — and the blanket
+  force-`rm` in `rebuild-book-artifacts` is gone. Verified: an unchanged
+  `make all-quick` is a **26 s no-op** (was ~15 min); touching one pytorch
+  manifest rebuilds only the pytorch PDF + HTML (jax/tf/mxnet PDFs skip). HTML
+  stays whole-book (subset render breaks cross-refs); slides keep their cheap
+  force-recheck (gen_slides is internally per-deck incremental).
 
-Changes are **not committed** — awaiting review.
+**All phases 0–4 are implemented.** **Open finding:** 8 `mdl-*` figures
+(la/cal/clf/opt) drift when regenerated with the current venv — a
+matplotlib-version reproducibility gap that predates this work; committed SVGs
+left as-is.
 
 ## 0. Guardrail — what this proposal must NOT touch
 

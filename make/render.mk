@@ -2,6 +2,15 @@
 # Included by the top-level Makefile — see docs/build-system.md and
 # reviews/build-system-cleanup-proposal-2026-07-22.md.
 
+# Committed notebook-output store (outputs/<fw>/<chapter>/<stem>.json). A change to
+# any manifest must re-render whatever injects it: HTML injects ALL frameworks
+# (every tab) → depends on the whole store; each PDF injects only its own
+# framework's outputs → depends on just that subtree (see PDF_RULE below). This is
+# what lets an otherwise-unchanged `make all-quick` no-op and rebuild only the
+# affected framework's PDF — it replaces the blanket force-rm that
+# rebuild-book-artifacts used to do.
+OUTPUT_MANIFESTS := $(wildcard outputs/*/*/*.json)
+
 # ── HTML book ──────────────────────────────────────────────
 
 html: _book/index.html
@@ -18,7 +27,7 @@ html: _book/index.html
 	@touch $@
 
 # Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
-_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-notebooks.html tools/build_hosted_notebooks.py d2l.bib | .venv-build/.synced
+_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-notebooks.html tools/build_hosted_notebooks.py d2l.bib $(OUTPUT_MANIFESTS) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Verifying committed outputs are fresh ==="
 	@python3 tools/audit_outputs.py --verify-fresh || \
@@ -64,7 +73,7 @@ pdf-preflight:
 
 # Generate per-framework PDF rules (GNU Make only supports one % per pattern)
 define PDF_RULE
-_pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated | .venv-build/.synced pdf-preflight
+_pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated $$(wildcard outputs/$(1)/*/*.json) | .venv-build/.synced pdf-preflight
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building PDF ($(1)) ==="
 	@QUARTO="$(CURDIR)/$(QUARTO)" tools/build_one_pdf.sh $(1) 2>&1 | tee $(LOGDIR)/pdf-$(1)-$(TS).log

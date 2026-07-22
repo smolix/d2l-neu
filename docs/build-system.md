@@ -1076,6 +1076,16 @@ PDFs render concurrently in ~6 min, hidden under the HTML render · notebook-zip
 ~9 s] · colab publish ~45 s · R2 upload ~12 s. **Total ≈ 15.7 min.** HTML is the
 bottleneck (single `quarto render`, §6.8); everything else is ≤1 min or hidden.
 
+**Incrementality (2026-07-22).** The committed store
+(`outputs/<fw>/<chapter>/<stem>.json`) is a tracked prerequisite of the HTML book
+(the whole store — HTML carries every framework tab) and of each PDF (that
+framework's subtree only); `rebuild-book-artifacts` no longer force-`rm`s HTML +
+the PDFs. So an **unchanged `make all-quick` is a ~26 s no-op** (audit-lfs +
+slides' zero-deck recheck + notebook-zips + check), and a single notebook-output
+change re-renders HTML (whole-book) and rebuilds **only the affected framework's
+PDF**. HTML stays whole-book by design (§6.8); slides keep the cheap force-recheck
+since `gen_slides.py` is already per-deck incremental.
+
 ---
 
 ## 7. Git & LFS setup (one-time)

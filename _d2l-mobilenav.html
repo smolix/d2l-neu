@@ -15,6 +15,9 @@
     body.d2l-mnav-ready #quarto-header .navbar .navbar-toggler,
     body.d2l-mnav-ready #quarto-header .navbar .quarto-navbar-tools .quarto-btn-toggle{display:none!important}
     body.d2l-mnav-ready #quarto-header .navbar #navbarCollapse{display:none!important}
+    /* the duplicate sidebar-toggle in Quarto's secondary nav — the drawer's
+       Contents tab already carries this table of contents */
+    body.d2l-mnav-ready .quarto-secondary-nav .quarto-btn-toggle{display:none!important}
     body.d2l-mnav-ready #quarto-header .navbar .navbar-container{position:relative;display:flex;align-items:center;gap:4px}
 
     body.d2l-mnav-ready #d2l-burger{display:inline-grid;place-items:center;height:40px;width:44px;order:-2;
@@ -37,7 +40,7 @@
     body.d2l-mnav-ready.d2l-open #d2l-scrim{opacity:1;visibility:visible}
     body.d2l-mnav-ready.d2l-open #d2l-drawer{transform:none}
 
-    #d2l-drawer .d2l-dhead{flex:0 0 auto;height:52px;background:#0D47A1;color:#fff;
+    #d2l-drawer .d2l-dhead{flex:0 0 auto;height:52px;background:#2196F3;color:#fff;
       display:flex;align-items:center;gap:10px;padding:0 12px}
     #d2l-drawer .d2l-dhead img{height:22px}
     #d2l-drawer .d2l-dx{margin-left:auto;appearance:none;border:0;background:transparent;color:#fff;
@@ -137,7 +140,14 @@
         drawer.querySelectorAll(".d2l-pane").forEach(function(p){p.classList.toggle("on", p.id===b.getAttribute("data-pane"));});
       });
     });
-    drawer.addEventListener("click",function(e){ if(e.target.closest("a")) setOpen(false); });
+    // close on real navigation links, but stay open when a part's expand/collapse
+    // toggle is used (those are <a class="sidebar-item-toggle" data-bs-toggle="collapse">)
+    drawer.addEventListener("click",function(e){
+      var a=e.target.closest("a"); if(!a) return;
+      if(a.hasAttribute("data-bs-toggle") || a.closest(".sidebar-item-toggle")) return;
+      var href=a.getAttribute("href")||"";
+      if(href && href.charAt(0)!=="#") setOpen(false);
+    });
     document.addEventListener("keydown",function(e){ if(e.key==="Escape") setOpen(false); });
 
     // success → let CSS swap Quarto's default hamburgers for our bar

@@ -52,8 +52,8 @@ tools/                      Build scripts (5,235 lines total)
 d2l/                        Generated Python package (preamble + auto-generated code)
   torch.py, tensorflow.py, jax.py, mxnet.py, __init__.py
 config.ini                  Per-framework library aliases and metadata
-Makefile                    Primary build entry point (277 lines)
-build.sh                    Legacy bash wrapper (203 lines)
+Makefile                    Primary build entry point (thin; includes make/*.mk)
+make/*.mk                   Included rule modules (resources, notebooks, render, deploy, …)
 _quarto.yml                 Quarto book config (307 lines)
 pyproject.toml              UV package manager, framework extras (93 lines)
 _d2l-theme.scss             Material Design blue theme (149 lines)
@@ -146,7 +146,7 @@ Use `@<id>@<fw>` or `@!<id>@<fw>` to force a framework-specific variant.
 
 ## Build pipeline
 
-Entry point: `make <target>` (preferred) or `./build.sh <target>`.
+Entry point: `make <target>`.
 
 ### Full pipeline (`make all`)
 

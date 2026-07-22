@@ -468,22 +468,29 @@ def fix_breadcrumbs(output_dir):
         if not inner:
             continue
         html = p.read_text()
-        m = CRUMB.search(html)
-        if not m:
-            continue
-        items = ITEM.findall(m.group(2))
-        if len(items) < 2:
-            continue
-        # Only rewrite genuine sections: their crumb-2 number is dotted ("1.1");
-        # a chapter's is not ("1"). Guards directories holding several chapters.
-        cur = AINNER.search(items[1])
-        nm = cur and NUM.search(cur.group(1))
-        if not (nm and '.' in nm.group(1)):
-            continue
-        new_crumb2 = ('<li class="breadcrumb-item"><a href="index.html">'
-                      + inner + '</a></li>')
-        newol = m.group(1) + items[0] + new_crumb2 + m.group(3)
-        html2 = html[:m.start()] + newol + html[m.end():]
+
+        # Quarto emits the breadcrumb TWICE per page: once in the mobile
+        # secondary-nav (<nav class="quarto-secondary-nav">) and once in the
+        # desktop title-block header (<nav class="... d-none d-lg-block">). We
+        # must rewrite crumb-2 in BOTH — a single re.search() only ever hit the
+        # first (mobile) one, leaving the desktop breadcrumb showing Quarto's raw
+        # self-linked section title ("5.6 Saving, loading…") with the wrong link.
+        def _rewrite(m, inner=inner):
+            items = ITEM.findall(m.group(2))
+            if len(items) < 2:
+                return m.group(0)
+            # Only rewrite genuine sections: their crumb-2 number is dotted
+            # ("1.1"); a chapter's is not ("1"). Guards directories holding
+            # several chapters, and leaves the chapter index's own crumb alone.
+            cur = AINNER.search(items[1])
+            nm = cur and NUM.search(cur.group(1))
+            if not (nm and '.' in nm.group(1)):
+                return m.group(0)
+            new_crumb2 = ('<li class="breadcrumb-item"><a href="index.html">'
+                          + inner + '</a></li>')
+            return m.group(1) + items[0] + new_crumb2 + m.group(3)
+
+        html2 = CRUMB.sub(_rewrite, html)
         if html2 != html:
             p.write_text(html2)
             count += 1

@@ -83,3 +83,6 @@ Thumbs.db
 **/*.quarto_ipynb
 .env
 run_one.sh
+
+# incremental `make figures` per-generator stamps
+.figstamps/

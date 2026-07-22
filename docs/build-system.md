@@ -668,7 +668,7 @@ request. Those run through the aggregate targets:
 |---|---|---|
 | `make all` | `lib` → `notebooks` → `run-all-notebooks` → `rebuild-book-artifacts`. The full pipeline; ~3 h on the 4×4090 box. | **Yes** (all 4 fw) |
 | `make all-quick` | `lib` → `notebooks` → `rebuild-book-artifacts`. Regenerate + render from the **committed** `outputs/`; no execution. | No |
-| `make rebuild-book-artifacts` | `slides` → `html` → `notebook-zips` → `-j4 pdfs` → `check-all-artifacts`. Renders everything from `outputs/`. | No |
+| `make rebuild-book-artifacts` | `slides` (parallel, per-deck-incremental) → then **`html` ∥ `pdfs` concurrently** (html as its own light make; the 4 PDFs at `-j$(RENDER_JOBS)`, so all render at once and finish hidden under the longer HTML render) → `notebook-zips` → `check-all-artifacts`. Renders everything from `outputs/`. | No |
 | `make notebook-env-locks` | Refresh the committed `pylock.cpu.toml` and `pylock.gpu.toml` files under `notebook_envs/` from their `.in` inputs. MXNet also gets an Apple Silicon CPU lock. Requires package-index/network access; run only when changing reader dependencies. | No |
 | `make notebook-zips` | One runnable `d2l-<fw>.zip` per framework → `_book/notebooks/`. Each deterministic archive combines generated notebooks, committed outputs, referenced figures, the matching `d2l` source, `pyproject.toml`, and pinned CPU/GPU uv locks (`tools/build_notebook_zips.py`). Linked from the navbar **Notebooks** menu (`/notebooks/d2l-<fw>.zip`). | No |
 | `make hosted-env-locks` | Regenerate `hosted/hosted-lock-*.json` and `hosted/constraints-*.txt` from `uv.lock`. | No |
@@ -857,12 +857,18 @@ pandoc, and one anchor silently wins). Keep subsection label stems distinct
 from every section label stem (the `subsec_ssm` case was renamed
 `subsec_state-space`).
 
-`make pdfs` (and `make all`) renders one `_pdf/<fw>/` Quarto book per framework
-→ `quarto render --to pdf` → XeLaTeX → `_pdf/<fw>/_pdf/Dive-into-Deep-Learning-<fw>.pdf`,
-then copies it into `_book/pdf/` for the site. The render is **CPU-only** and
-reads the committed `outputs/` store like every other artifact (§6.1). Four
-pitfalls bit us; each now has a guard, so a clean `make all` builds all four PDFs
-(~46 MB each) with no manual steps:
+`make pdfs` (and `make all`) builds one `_pdf/<fw>/` Quarto book per framework
+via **`tools/build_one_pdf.sh`**: `quarto render --to latex` (NOT `--to pdf` — we
+skip Quarto's own ~2 discarded XeLaTeX passes) → `tools/fix_latex.py`
+(hierarchical chapter/section numbering) → **XeLaTeX ×3** →
+`_pdf/<fw>/_pdf/Dive-into-Deep-Learning-<fw>.pdf`, then copies it into `_book/pdf/`
+for the site. `build_one_pdf.sh` is the extracted form of the old inline
+`PDF_RULE` recipe (which had to quadruple-escape `$$$$` inside a `define`/`$(eval)`);
+behavior is identical, and `--to latex` + our own compile is what made the 4 PDFs
+cheap enough to render concurrently under the HTML render. The render is
+**CPU-only** and reads the committed `outputs/` store like every other artifact
+(§6.1). Four pitfalls bit us; each now has a guard, so a clean `make all` builds
+all four PDFs (~46–51 MB each) with no manual steps:
 
 - **`static/d2l-preamble.tex` is a tracked SOURCE file.** It is the hand-written
   LaTeX preamble (`gen_pdf.py` injects it via `include-in-header`) and **must**
@@ -1003,9 +1009,72 @@ is deliberate, and we measured why parallelizing it is counter-productive here:
   cold flake rate and was removed.)
 
 Recipe order: `quarto render --to html` → `fix_crossref_numbers.py` (rewrites
-logical numbering in the HTML *and* `search.json`) → `add_cfasync.py`. The render
-is single-threaded but it's only ~9 min of a ~2.5 h full build — see §6.9 for the
-artifact-phase breakdown.
+logical numbering in the HTML *and* `search.json`, and the Part→Chapter
+breadcrumb in **both** the mobile and desktop breadcrumb blocks Quarto emits) →
+`add_cfasync.py` → `tools/integrate_slides.sh` (folds `_slides/` into
+`_book/slides/`). The render is single-threaded but it's only ~9 min of a
+~2.5 h full build — see §6.9 for the artifact-phase breakdown.
+
+### 6.9 Makefile layout, extracted scripts & artifact-phase timing
+
+**`make/*.mk` includes (2026-07-22 cleanup).** The top-level `Makefile` is a thin
+orchestrator (variables, `.PHONY`, `help`, the aggregate goals `all` / `all-quick`
+/ `deploy`, `clean`) that `include`s ordered rule modules. `resources.mk` **must**
+come first — it defines the `_detected`/detection helpers every other module
+consumes.
+
+| Include | Owns |
+|---|---|
+| `make/resources.mk` | host resource detection + render/slide-fleet sizing (`_detected`, `RENDER_JOBS`, `SLIDE_WORKERS`, …) |
+| `make/venvs.mk` | UV framework venvs, mxnet preflight, Quarto build venv, `kernels` |
+| `make/lib.mk` | `d2l/.built` (rebuilt from `#@save` blocks) |
+| `make/figures.mk` | committed illustrative SVGs (incremental; see below) |
+| `make/store.mk` | committed outputs store — `capture` / `audit` / `refresh-stale` / `render-fresh` |
+| `make/notebooks.mk` | **SCHEDULER CORE** — generation + resource-scheduled execution (`MANIFEST.mk`, `.d`, `EXEC_RULE`, `notebook_scheduler.py`). Relocated verbatim; logic unchanged. |
+| `make/hosted.mk` | hosted/Colab notebook staging + downloadable zips |
+| `make/render.mk` | `html`, per-framework `pdf`, `slides` |
+| `make/universities.mk` | landing-page adoption grid (independent of the book) |
+| `make/deploy.mk` | `publish-colab`, `upload-r2*`, `deploy` |
+
+**Extracted recipe scripts.** Two large inline-shell recipe bodies now live in
+`tools/`: `tools/build_one_pdf.sh <fw>` (the PDF pipeline, §6.6) and
+`tools/integrate_slides.sh` (the html slide-integration block). This removed the
+quadruple-`$$$$` escaping that `define`/`$(eval)` templates force, and makes both
+independently runnable and lintable.
+
+**Deploy targets (`make/deploy.mk`).** `make deploy` = `all-quick` → then
+`publish-colab` **and** `upload-r2-delete`, both gated on the build passing but
+independent of each other (a Colab failure does not block the R2 upload). This
+promotes the old throwaway `scratchpad/fullrun.sh` into first-class targets.
+`make publish-colab` is the *verified* Colab path (`tools/publish_colab_notebooks.sh`
+— orphan-ness, per-fw counts, inline-`img/`, raw-URL checks); `make upload-r2`
+[`-delete`|`-full`|`-dry-run`] wraps `tools/upload_r2.sh` behind an `_r2-preflight`
+guard (`_book/` built, `.env` creds, `aws` present).
+
+**`make figures` is incremental + manual.** It covers *every* chapter generator —
+including the ch6/7/8/9 ones (`gen_bg_*`, `gen_arch_*`, `gen_opt_figures`) the old
+`gen_mdl_*_figures.py` glob silently skipped — via a `.figstamps/<name>` per
+generator keyed on the generator script + the shared `gen_mdl_figures.py` style.
+Only a changed generator re-runs; it is never part of `all`/`all-quick`.
+
+**Logging.** Every substantive recipe tees to `logs/<target>-<TS>.log` (pipefail
+is global, so the upstream exit status is preserved). Purely informational guards
+(`detect`, `pdf-preflight`, `.preflight.mxnet-pin`) stay terminal-only.
+
+**Removed / archived (2026-07-22).** `build.sh` (superseded legacy wrapper) and
+`tools/mkstamp.py` (unused) were deleted; already-applied one-shot migrations and
+ad-hoc probes moved to `tools/oneshot/` (see its README). University-adoption and
+diagnostic tools (`repro_mxnet_*`, `audit_slides.py`, …) are kept as **manual**
+tools — see `reviews/build-system-cleanup-proposal-2026-07-22.md` for the full
+inventory and rationale.
+
+**Artifact-phase timing** (from-scratch, post-notebook-execution, on the 4×4090
+box, rendering from the committed store): `clean` ~4 s · **build (`all-quick`)
+~14.7 min** [lib ~3 s · notebook regen ~65 s · slides ~60 s cold (0 s when
+unchanged — per-deck hash) · **`html` ∥ `pdfs` ~12.3 min**, HTML-bound: all four
+PDFs render concurrently in ~6 min, hidden under the HTML render · notebook-zips
+~9 s] · colab publish ~45 s · R2 upload ~12 s. **Total ≈ 15.7 min.** HTML is the
+bottleneck (single `quarto render`, §6.8); everything else is ≤1 min or hidden.
 
 ---
 

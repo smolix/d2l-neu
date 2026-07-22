@@ -150,7 +150,7 @@ def notebook_uses_gpu(nb_path):
 def find_notebooks(framework, glob_pattern=None, files=None):
     fw_dir = NOTEBOOKS_DIR / framework
     if not fw_dir.is_dir():
-        print(f"Error: {fw_dir} does not exist. Run ./build.sh notebooks first.",
+        print(f"Error: {fw_dir} does not exist. Run `make notebooks-{framework}` first.",
               file=sys.stderr)
         sys.exit(1)
 

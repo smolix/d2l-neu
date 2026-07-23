@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:0c7a1029c6afe776d2a246c7afbf742a750641a7602a7b748d06d2b593dbd886",
+    "d2l_lib_fingerprint": "sha256:62f593d6551217b0b15ba6e78a1580b7521f15a6ab550db8bbbbc84ce760185f",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,20 +14,33 @@
       "outputs": []
     },
     "qlearning-implementation-of-q-learning-2": {
-      "code_fingerprint": "sha256:1655c1e2bbfbb61e7e580ea5a40b3a4f353319d8cead5519504e4810d570533b",
+      "code_fingerprint": "sha256:4da0b6723d7593fd2c25d1f06d90c3bd8894b81a23ea48e63742ca2576c1c9b8",
       "kind": "text",
       "outputs": []
     },
     "qlearning-implementation-of-q-learning-3": {
-      "code_fingerprint": "sha256:bb2e8eebe0954a4b5bbc9d5ab189742804a0f97067ef0b3f8e4986ae9af18191",
+      "code_fingerprint": "sha256:389bd459e599e156139b43e9c3a409339b49f9dbc18c0715b7695e7f57216b6d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "qlearning/qlearning-implementation-of-q-learning-3-1.png",
-          "bytes": 72909,
-          "sha256": "sha256:40a082a129d9422eada8e0d7aeafc4798e44c3b9cbf12a78f3f61ad450f501b8"
+          "bytes": 82913,
+          "sha256": "sha256:8b5ae9c39064a79099ca868c519d23acb0014fd1de6cb91650aaa0b98148227e"
+        }
+      ]
+    },
+    "qlearning-implementation-of-q-learning-4": {
+      "code_fingerprint": "sha256:aebbd6cce9b8df86ea01212ed49011703e0786e0463bbda5bfb92c60accb2f67",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "qlearning/qlearning-implementation-of-q-learning-4-1.svg",
+          "bytes": 25063,
+          "sha256": "sha256:3b5fce5f4a6665e652a48ca5e9b497d2563a143a85e15d643010840540433a39"
         }
       ]
     }

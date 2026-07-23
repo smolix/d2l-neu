@@ -33,7 +33,7 @@ Imagine, as in :numref:`sec_valueiter`, that the robot starts at a state $s_0$ a
 $$P(\tau; \theta) = \prod_{t=0}^{T-1} \pi_\theta(a_t \mid s_t)\ P(s_{t+1} \mid s_t, a_t).$$
 :eqlabel:`eq_traj_prob`
 
-Our objective is the average *return* over trajectories, which we now view as a function of the policy parameters,
+If the start state were drawn from a distribution $\rho(s_0)$ instead of being fixed, a factor $\rho(s_0)$ would multiply this product; it does not depend on $\theta$ and drops out of every gradient below, so we keep the start state fixed as in our gridworld. Our objective is the average *return* over trajectories, which we now view as a function of the policy parameters,
 
 $$J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ R(\tau) \Big] = \sum_{\tau} R(\tau)\ P(\tau; \theta),$$
 :eqlabel:`eq_pg_objective`
@@ -72,7 +72,7 @@ $$
 \end{aligned}
 $$
 
-The transition probabilities do not depend on the policy parameters $\theta$, so their gradient is zero and they vanish from the expression. Just as in Q-Learning, we have not cheated: the transition function still determines *which* trajectories the robot is likely to experience, but we never need to evaluate it — it enters only implicitly, through the sampled data.
+The transition probabilities do not depend on the policy parameters $\theta$, so their gradient is zero and they vanish from the expression. Just as in Q-Learning, we have not cheated: the transition function still determines *which* trajectories the robot is likely to experience, but we never need to evaluate it; it enters only implicitly, through the sampled data.
 
 ### The REINFORCE Estimator
 
@@ -83,35 +83,9 @@ $$\hat{u} = \frac{1}{n} \sum_{i=1}^n R(\tau_i)\ \sum_{t=0}^{T-1} \nabla_\theta \
 
 which is an unbiased estimate of $\nabla_\theta J(\theta)$, and then takes a gradient ascent step $\theta \leftarrow \theta + \alpha \hat{u}$ with learning rate $\alpha$. This algorithm is known as REINFORCE :cite:`Williams.1992`. It has a simple interpretation: each term pushes up the log-probability of the actions taken in trajectory $\tau_i$, scaled by the return of that trajectory. Trajectories with high *return* have the probability of their actions increased; trajectories with low *return* have them decreased. Note that after every parameter update the policy changes, so the robot must collect fresh trajectories from the new policy before the next update.
 
-## Reducing the Variance
-
-The estimator :eqref:`eq_reinforce` is unbiased but can be very noisy. We approximate an average over all trajectories using only a handful of samples; different trajectories can produce very different returns; the score function is scaled by the entire return, so if returns vary a lot, the gradient estimate varies a lot; and long trajectories compound the noise, because every timestep contributes a term. Training with such high-variance gradient estimates is unstable, and reducing the variance is essential for making policy gradient methods work in practice.
-
-### Baselines
-
-A remarkable fact is that we can subtract any constant $b$, called a baseline, from the return without changing the average value of the estimator:
-
-$$\hat{u} = \frac{1}{n} \sum_{i=1}^n \big( R(\tau_i) - b \big) \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i).$$
-:eqlabel:`eq_pg_baseline`
-
-**Proposition.** For any constant $b$, the baseline term has zero mean: $E_{\tau \sim P(\cdot;\, \theta)} \big[ b\ \nabla_\theta \log P(\tau; \theta) \big] = 0$.
-
-**Proof.** $\sum_\tau P(\tau; \theta)\ b\ \nabla_\theta \log P(\tau; \theta) = b \sum_\tau \nabla_\theta P(\tau; \theta) = b\ \nabla_\theta \sum_\tau P(\tau; \theta) = b\ \nabla_\theta 1 = 0.$ $\blacksquare$
-
-Subtracting a baseline therefore leaves the estimator unbiased, but a good choice of $b$ can reduce its variance dramatically: if $b$ is close to the typical return, then $R(\tau_i) - b$ is positive for better-than-typical trajectories and negative for worse-than-typical ones, and the update pushes probabilities in opposite directions for the two groups instead of pushing all of them up by different amounts. The baseline can be a fixed number, the average return observed so far, a moving average, or even a learned estimate of the value function.
-
-### Normalized Returns
-
-A simple and practical baseline uses the batch of trajectories itself. Suppose the robot samples $k$ trajectories $\tau_1, \ldots, \tau_k$ from its starting state. We compute the mean and the standard deviation of their returns and normalize,
-
-$$\mu = \frac{1}{k} \sum_{j=1}^{k} R(\tau_j), \qquad \sigma = \sqrt{\frac{1}{k} \sum_{j=1}^{k} \big(R(\tau_j) - \mu\big)^2}, \qquad \hat{R}(\tau_i) = \frac{R(\tau_i) - \mu}{\sigma + \epsilon},$$
-:eqlabel:`eq_pg_normalized`
-
-where the small constant $\epsilon$ avoids division by zero, and use $\hat{R}(\tau_i)$ in place of $R(\tau_i)$ in :eqref:`eq_reinforce`. Subtracting $\mu$ is a baseline; dividing by $\sigma + \epsilon$ additionally rescales the update so that its size does not depend on the scale of the rewards. We will use this normalized form in our implementation.
-
 ## Implementation of Policy Gradient
 
-We now implement REINFORCE on FrozenLake from [Gymnasium](https://gymnasium.farama.org/), the same environment as in :numref:`sec_valueiter` and :numref:`sec_qlearning`: the robot moves on a $4 \times 4$ grid of hole (H), frozen (F) and goal (G) cells, all of which are unknown to the robot, transitions are deterministic, and the only reward is $1$ for reaching the goal. In each iteration the robot collects a batch of `batch_size` trajectories with its current policy, normalizes their returns as in :eqref:`eq_pg_normalized`, and takes one gradient ascent step :eqref:`eq_pg_baseline`.
+We now implement REINFORCE on FrozenLake from [Gymnasium](https://gymnasium.farama.org/), the same environment as in :numref:`sec_valueiter` and :numref:`sec_qlearning`: the robot moves on a $4 \times 4$ grid of hole (H), frozen (F) and goal (G) cells, all of which are unknown to the robot, transitions are deterministic, and the only reward is $1$ for reaching the goal. In each iteration the robot collects a batch of `batch_size` trajectories with its current policy and takes one gradient ascent step along :eqref:`eq_reinforce`.
 
 ```{.python .input #policy-gradient-implementation-of-policy-gradient-1}
 
@@ -123,8 +97,8 @@ from d2l import torch as d2l
 seed = 0  # Random number generator seed
 gamma = 0.95  # Discount factor
 num_iters = 256  # Number of gradient ascent updates
-batch_size = 16  # Trajectories sampled per update (k)
-alpha = 0.5  # Learning rate
+batch_size = 16  # Trajectories sampled per update (n)
+alpha = 2.0  # Learning rate
 random.seed(seed)  # Set the random seed
 np.random.seed(seed)
 
@@ -171,23 +145,24 @@ def reinforce(env_info, gamma, num_iters, batch_size, alpha):
     theta = np.zeros((num_states, num_actions))  # Action preferences
     V  = np.zeros((num_iters + 1, num_states))
     pi = np.zeros((num_iters + 1, num_states))
+    avg_returns = []  # Mean return of each batch: the estimate of J(theta)
 
     for k in range(1, num_iters + 1):
-        grads, returns = [], []
+        # The REINFORCE estimator: average of R(tau) * sum_t grad log pi
+        u = np.zeros_like(theta)
+        batch_returns = []
         for _ in range(batch_size):
             states, actions, R = sample_trajectory(env, theta, gamma)
+            batch_returns.append(R)
             # \sum_t grad log pi(a_t|s_t): one-hot(a_t) minus probabilities
             g = np.zeros_like(theta)
             for s, a in zip(states, actions):
                 g[s] -= softmax_policy(theta, s)
                 g[s, a] += 1.0
-            grads.append(g)
-            returns.append(R)
-        # Normalize the returns within the batch (baseline + rescaling)
-        returns = np.array(returns)
-        returns = (returns - returns.mean()) / (returns.std() + 1e-8)
-        # Gradient ascent step on the REINFORCE estimator
-        theta += alpha * sum(g * r for g, r in zip(grads, returns)) / batch_size
+            u += R * g
+        avg_returns.append(np.mean(batch_returns))
+        # Gradient ascent step
+        theta += alpha * u / batch_size
         # Record the policy for visualization purposes only: the color shows
         # the probability of the most likely action (0.25 = uniform, 1 = sure)
         for s in range(num_states):
@@ -195,30 +170,44 @@ def reinforce(env_info, gamma, num_iters, batch_size, alpha):
             V[k, s]  = np.max(probs)
             pi[k, s] = np.argmax(probs)
     d2l.show_Q_function_progress(env_desc, V[1:], pi[1:])
+    return np.array(avg_returns)
 
-reinforce(env_info=env_info, gamma=gamma, num_iters=num_iters,
-          batch_size=batch_size, alpha=alpha)
+avg_returns = reinforce(env_info=env_info, gamma=gamma, num_iters=num_iters,
+                        batch_size=batch_size, alpha=alpha)
 ```
 
-The visualization is read slightly differently than in the previous sections: the arrow still shows the most probable action at each state, but the color now shows the *probability* that the policy assigns to that action, from dark (near-uniform, $0.25$ with four actions) to light (near-certain). We see the policy sharpen along the same optimal path to the goal that Value Iteration and Q-Learning found: after a few dozen updates the most probable action at every state on the path is the optimal one, and its probability keeps growing towards one. Away from this path the policy stays close to uniform — those states are visited rarely once the policy improves, so they receive almost no gradient signal, just as Q-Learning obtained rough value estimates for states far off the greedy path.
+The visualization is read slightly differently than in the previous sections: the arrow still shows the most probable action at each state, but the color now shows the *probability* that the policy assigns to that action, from dark (near-uniform, $0.25$ with four actions) to light (near-certain). The policy sharpens along the same optimal path to the goal that Value Iteration and Q-Learning found. A trajectory that never reaches the goal has $R(\tau) = 0$ and contributes nothing to :eqref:`eq_reinforce`, so early training crawls: until the robot stumbles into the goal by chance, every update is zero. In our run the average return of the batch does not stabilize until roughly update 75, as the learning curve below shows. States that appear only on failed trajectories keep their preferences at exactly zero and stay at probability $0.25$ in the plot. The estimator is unbiased, but most of its samples say nothing at all; the next section is about fixing this.
 
-Notice, however, how much experience this took: each of the 256 updates consumed a fresh batch of 16 trajectories, i.e., 4096 episodes in total, compared to the 256 episodes of Q-Learning in :numref:`sec_qlearning`. This is not an accident of our hyper-parameters but a structural property of the method, which we discuss next.
+Since the algorithm performs gradient ascent on $J(\theta)$, the most direct learning curve is $J(\theta)$ itself. The mean discounted return of each batch is exactly the Monte Carlo estimate of $J(\theta)$ computed from the same 16 trajectories that produced the update, so we get the curve for free:
+
+```{.python .input #policy-gradient-implementation-of-policy-gradient-4}
+
+d2l.set_figsize((6, 4))
+d2l.plt.plot(np.arange(1, num_iters + 1), avg_returns)
+d2l.plt.axhline(gamma ** 5, linestyle='--', color='gray')
+d2l.plt.xlabel('update')
+d2l.plt.ylabel('average return of the batch');
+```
+
+The curve makes the two phases of the run visible. It hugs zero for the first stretch, since a batch without a single successful trajectory produces no update at all and the rare lucky batch barely moves it. It then climbs toward the dashed line at $\gamma^5 \approx 0.774$, the return of the optimal six-step path. It hovers slightly below that ceiling because the policy stays stochastic: any sampled action that deviates from the optimal path either lengthens the trajectory or ends it in a hole.
+
+Notice also how much experience this took: each of the 256 updates consumed a fresh batch of 16 trajectories, i.e., 4096 episodes in total, compared to the 256 episodes of Q-Learning in :numref:`sec_qlearning`. This is a structural property of the method, which we discuss next.
 
 ## On-Policy versus Off-Policy Learning
 
-The REINFORCE estimator :eqref:`eq_reinforce` is an average over trajectories drawn from the *current* policy $\pi_\theta$: it approximates :eqref:`eq_pg_gradient`, an expectation under $P(\tau; \theta)$. As soon as the parameters are updated, trajectories collected earlier come from the wrong distribution and can no longer be used. Methods with this property are called *on-policy*: the robot learns only about the policy it is currently executing. On-policy methods are conceptually simple, but data hungry — every update needs fresh trajectories.
+The REINFORCE estimator :eqref:`eq_reinforce` is an average over trajectories drawn from the *current* policy $\pi_\theta$: it approximates :eqref:`eq_pg_gradient`, an expectation under $P(\tau; \theta)$. As soon as the parameters are updated, trajectories collected earlier come from the wrong distribution and can no longer be used. Methods with this property are called *on-policy*: the robot learns only about the policy it is currently executing. On-policy methods are conceptually simple, but data hungry: every update needs fresh trajectories.
 
 Q-Learning is different. Its update uses $\max_{a'} \hat{Q}(s', a')$ regardless of which action the robot actually took at $s'$, so it learns about the greedy policy while collecting data with a different, exploratory policy $\pi_e$. Methods of this kind are called *off-policy*: the robot can learn about one policy from data generated by another, and in particular can keep reusing old data. This makes off-policy methods far more sample efficient, but they come with their own difficulties in practice, typically requiring more careful hyper-parameter tuning and exhibiting stability issues, especially when combined with function approximation.
 
 ## Summary
 
-Policy gradient methods learn the policy directly: the policy is written as a differentiable function of parameters, e.g., a softmax over per-state action preferences, and the parameters are updated by gradient ascent on the average return. The log-derivative trick turns the gradient of the objective into an expectation over trajectories, in which the transition probabilities cancel, so the method needs no knowledge of the MDP. The resulting REINFORCE estimator increases the probability of actions on high-return trajectories and decreases the probability of actions on low-return ones. The estimator is unbiased but noisy; subtracting a baseline, e.g., normalizing the returns within each batch, reduces the variance without introducing bias. Policy gradient methods are on-policy and therefore need fresh trajectories after every update, in contrast to off-policy methods like Q-Learning that can reuse data.
+Policy gradient methods learn the policy directly: the policy is written as a differentiable function of parameters, e.g., a softmax over per-state action preferences, and the parameters are updated by gradient ascent on the average return. The log-derivative trick turns the gradient of the objective into an expectation over trajectories, in which the transition probabilities cancel, so the method needs no knowledge of the MDP. The resulting REINFORCE estimator increases the probability of actions on high-return trajectories and decreases the probability of actions on low-return ones. The estimator is unbiased but noisy, and reducing its variance is the subject of the next section. Policy gradient methods are on-policy and therefore need fresh trajectories after every update, in contrast to off-policy methods like Q-Learning that can reuse data.
 
 ## Exercises
 
 1. Try increasing the grid size to $8 \times 8$. Compared with the $4 \times 4$ grid, how many updates does it take to find a policy that reaches the goal?
 1. Run the REINFORCE algorithm again with the discount factor $\gamma$ (i.e., `gamma` in the above code) set to $0$, $0.5$, and $1$, and analyze the results.
-1. Remove the return normalization, i.e., use the raw returns $R(\tau_i)$ in the update instead of $\hat{R}(\tau_i)$. What happens, and why? Then subtract only the batch mean (without dividing by the standard deviation) and compare.
+1. The derivative in :eqref:`eq_softmax_score` sums to zero over $b \in \mathcal{A}$. Verify this, and explain what it means for how a single update changes the preferences at one state.
 1. Experiment with different values of `batch_size` and `alpha`. How does the batch size affect the noise in the learning process and the total number of episodes needed?
 
 <!-- slides -->
@@ -268,31 +257,16 @@ $$\hat u=\frac1n\sum_i R(\tau_i)\sum_t
 \qquad \theta \leftarrow \theta + \alpha\,\hat u.$$
 :::
 
-::: {.slide title="Variance and baselines"}
-$\hat u$ is unbiased but **noisy**: few samples, returns scale
-every term, long horizons compound it. Fix: subtract a baseline —
-
-$$\hat u=\frac1n\sum_i \big(R(\tau_i)-b\big)\sum_t
-  \nabla_\theta\log\pi_\theta(a^i_t\mid s^i_t)$$
-
-- still unbiased: $\mathbb{E}[b\,\nabla_\theta \log P(\tau;\theta)]
-  = b\,\nabla_\theta \sum_\tau P(\tau;\theta) = 0$;
-- practical choice: normalize returns within each batch,
-  $\hat R = (R-\mu)/(\sigma+\epsilon)$ — center *and* rescale.
-:::
-
 ::: {.slide title="Frozen Lake setup"}
 Same gridworld as the previous two decks; the policy is a
-softmax over per-state preferences, updated by REINFORCE
-with batch-normalized returns:
+softmax over per-state preferences, updated by REINFORCE:
 
 @policy-gradient-implementation-of-policy-gradient-1
 :::
 
 ::: {.slide title="REINFORCE training loop"}
-Sample a batch with the current policy, normalize the returns,
-push up the log-probability of actions on above-average
-trajectories:
+Sample a batch with the current policy, push up the
+log-probability of actions on high-return trajectories:
 
 @policy-gradient-implementation-of-policy-gradient-2
 
@@ -305,7 +279,8 @@ trajectories:
 - Policy gradient = gradient ascent directly on $J(\theta)$;
   the log-derivative trick makes it estimable from rollouts.
 - Transition probabilities cancel — model-free.
-- Baselines / normalized returns cut variance at no bias cost.
+- Unbiased but noisy: zero-return trajectories contribute
+  nothing, so early training crawls (next deck fixes this).
 - Finds the same optimal FrozenLake policy as VI and
   Q-learning — but needed 4096 episodes (vs. 256): **on-policy**
   methods can't reuse data. Off-policy methods (Q-learning) can,

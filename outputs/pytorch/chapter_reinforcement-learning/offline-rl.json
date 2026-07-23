@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/offline-rl.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "offline-rl-offline-rl-learning-without-touching-the-world-1": {
+      "code_fingerprint": "sha256:631c917f1cce969b55debcc1cba29db2482bb529a5051fb635f1ff0c653d97dd",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-offline-rl-learning-without-touching-the-world-2": {
+      "code_fingerprint": "sha256:09c62e10baca433b31b6258b6def545d515cd043ad1f7a76936a01fdc7ae90ad",
+      "kind": "text",
+      "outputs": []
+    },
+    "offline-rl-offline-rl-learning-without-touching-the-world-3": {
+      "code_fingerprint": "sha256:ed06ca8da35c3e09b0a916b337c73baf28ef4b744ae1e91dd97a526f94abdec5",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true optimal value of the start state: 0.180\n"
+        }
+      ]
+    },
+    "offline-rl-offline-rl-learning-without-touching-the-world-4": {
+      "code_fingerprint": "sha256:1517730a22637835ed476d96e5c339412378b5acb03812133c6a2dd8bf8bc074",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "naive: predicted value 0.301, actual return of the greedy policy 0.094\npessimistic: predicted value 0.167, actual return of the greedy policy 0.101\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "offline-rl/offline-rl-offline-rl-learning-without-touching-the-world-4-1.svg",
+          "bytes": 23545,
+          "sha256": "sha256:c31875e6294cce17a0287964cad8e81fbccabec8ce4086b30fdb9c30303595a7"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/deep-rl.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:b62a26eca62efc7d8e7df1bd169af851dc3c6f363bdc15a6714d2c76d2dee70a",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "deep-rl-implementation-on-cartpole-1": {
+      "code_fingerprint": "sha256:dd253b48ab56644f7467ef91cb3ec02084a17c469b8e276aeb3bb965136cac1a",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-implementation-on-cartpole-2": {
+      "code_fingerprint": "sha256:00e9b63aa3d18898e98c80c6116acf68486a367d7fbae59561fe6202b1d240ae",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-implementation-on-cartpole-3": {
+      "code_fingerprint": "sha256:a6dda33aa362b98a876838bed1007b417a69ea670dc4da15a331c36058c43327",
+      "kind": "text",
+      "outputs": []
+    },
+    "deep-rl-implementation-on-cartpole-4": {
+      "code_fingerprint": "sha256:3639afb49867f283f4e031fc914bfb83dcb4ac389eb3371de946399f44f148e7",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "REINFORCE + baseline: mean return over the last 10 updates = 460\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "PPO: mean return over the last 10 updates = 463\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "deep-rl/deep-rl-implementation-on-cartpole-4-1.svg",
+          "bytes": 37229,
+          "sha256": "sha256:9ec51a30fe2d1883408e6442db957249dd481ed5c1aff747b04f1f000c2c390b"
+        }
+      ]
+    }
+  }
+}

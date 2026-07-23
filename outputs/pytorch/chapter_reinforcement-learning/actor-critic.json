@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/actor-critic.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:62f593d6551217b0b15ba6e78a1580b7521f15a6ab550db8bbbbc84ce760185f",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "actor-critic-implementation-of-actor-critic-1": {
+      "code_fingerprint": "sha256:a2e948c7c994ffcad16d9969bae8e6ed71524872705b3ccd747c33ef7c44a1fa",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-implementation-of-actor-critic-2": {
+      "code_fingerprint": "sha256:ebba1f67a648cca9caa4a15ace96ead6b041427981418d77b6fd30c9f27c310a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "actor-critic/actor-critic-implementation-of-actor-critic-2-1.png",
+          "bytes": 89839,
+          "sha256": "sha256:15ee76fcdebb9552c4bdfa5dd8bcf18fb87aef9aa948f46e7db0c8a7a9c5ca3c"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "critic estimate at the start state: 0.768 (Value Iteration: 0.774)\n"
+        }
+      ]
+    },
+    "actor-critic-implementation-of-actor-critic-3": {
+      "code_fingerprint": "sha256:61bafc52742f1e4392ca4c40862b5b2dd065b1aaf1a4f0ca2c08b60a239efb42",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "actor-critic: median episodes to 90% success = 172\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "REINFORCE (normalized): median episodes to 90% success = 206\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "actor-critic/actor-critic-implementation-of-actor-critic-3-1.svg",
+          "bytes": 219739,
+          "sha256": "sha256:5dd84d5bf9d617bc8437eda0d2618187c689bd4ca08a621c833f538daf2d2acf"
+        }
+      ]
+    }
+  }
+}

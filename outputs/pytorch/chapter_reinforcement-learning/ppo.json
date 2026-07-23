@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/ppo.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:95f1890104d7c4972197cc9f0e576c51c8cd3e61c85c485701d58ae67a5edca9",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "ppo-when-one-step-is-too-big-1": {
+      "code_fingerprint": "sha256:58dbb2e539ef05e25efa6b097aba650dc8ecfc24affe731174ce1aa978c0f36b",
+      "kind": "text",
+      "outputs": []
+    },
+    "ppo-implementation-of-ppo-1": {
+      "code_fingerprint": "sha256:4694e3a2b8cfec373305977e89fb50dbfff140819ab08970239f05cc147f05d8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "fraction of samples clipped: 0.16\n"
+        }
+      ]
+    },
+    "ppo-implementation-of-ppo-2": {
+      "code_fingerprint": "sha256:b873725a6d89d8411438c71a4625c22272ce9549cac38704e2689f1ea8f4246a",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "clipped (PPO): seeds that never recover = []\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "no clip: seeds that never recover = [1, 4]\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "ppo/ppo-implementation-of-ppo-2-1.svg",
+          "bytes": 44555,
+          "sha256": "sha256:4d7c92d9462664418a877cae8f600c2736fc965036a74774dd796e932c23739a"
+        }
+      ]
+    }
+  }
+}

@@ -27,12 +27,12 @@ $$\hat{Q} = \min_Q \underbrace{\frac{1}{nT} \sum_{i=1}^n \sum_{t=0}^{T-1} (Q(s_t
 
 Let us first observe the similarities and differences between this expression and value iteration above. If the robot's policy $\pi_e$ were equal to the optimal policy $\pi^*$, and if it collected an infinite amount of data, then this optimization problem would be identical to the optimization problem underlying value iteration. But while value iteration requires us to know $P(s' \mid s, a)$, the optimization objective does not have this term. We have not cheated: as the robot uses the policy $\pi_e$ to take an action $a_t^i$ at state $s_t^i$, the next state $s_{t+1}^i$ is a sample drawn from the transition function. So the optimization objective also has access to the transition function, but implicitly in terms of the data collected by the robot.
 
-The variables of our optimization problem are $Q(s, a)$ for all $s \in \mathcal{S}$ and $a \in \mathcal{A}$. We can minimize the objective using gradient descent. For every pair $(s_t^i, a_t^i)$ in our dataset, we can write
+The variables of our optimization problem are $Q(s, a)$ for all $s \in \mathcal{S}$ and $a \in \mathcal{A}$. We can minimize the objective with updates of a gradient-descent flavor. For every pair $(s_t^i, a_t^i)$ in our dataset, we take a step on the corresponding squared-error term while treating the bootstrapped target $r(s_t^i, a_t^i) + \gamma \max_{a'} Q(s_{t+1}^i, a')$ as fixed, i.e., we do not differentiate through the $Q$ inside the target. Folding the remaining constant factors into the learning rate $\alpha$, the update becomes
 
-$$\begin{aligned}Q(s_t^i, a_t^i) &\leftarrow Q(s_t^i, a_t^i) - \alpha \nabla_{Q(s_t^i,a_t^i)} \ell(Q) \\&=(1 - \alpha) Q(s_t^i,a_t^i) + \alpha \Big( r(s_t^i, a_t^i) + \gamma \max_{a'} Q(s_{t+1}^i, a') \Big),\end{aligned}$$
+$$Q(s_t^i, a_t^i) \leftarrow (1 - \alpha) Q(s_t^i,a_t^i) + \alpha \Big( r(s_t^i, a_t^i) + \gamma \max_{a'} Q(s_{t+1}^i, a') \Big),$$
 :eqlabel:`q_learning`
 
-where $\alpha$ is the learning rate. Typically in real problems, when the robot reaches the goal location, the trajectories end. The value of such a terminal state is zero because the robot does not take any further actions beyond this state. We should modify our update to handle such states as
+where $\alpha$ is the learning rate. Because the target itself depends on $Q$ and we deliberately hold it fixed, this is called a semi-gradient step: Q-Learning is not gradient descent on $\ell(Q)$ in the strict sense, but the update is simple, cheap, and works well in practice. Typically in real problems, when the robot reaches the goal location, the trajectories end. The value of such a terminal state is zero because the robot does not take any further actions beyond this state. We should modify our update to handle such states as
 
 $$Q(s_t^i, a_t^i) =(1 - \alpha) Q(s_t^i,a_t^i) + \alpha \Big( r(s_t^i, a_t^i) + \gamma (1 - \mathbb{1}_{s_{t+1}^i \textrm{ is terminal}} )\max_{a'} Q(s_{t+1}^i, a') \Big).$$
 
@@ -95,7 +95,7 @@ np.random.seed(seed)
 env_info = d2l.make_env('FrozenLake-v1', seed=seed)
 ```
 
-In the FrozenLake environment, the robot moves on a $4 \times 4$ grid (these are the states) with actions that are "up" ($\uparrow$), "down" ($\downarrow$), "left" ($\leftarrow$), and "right" ($\rightarrow$). The environment contains a number of holes (H) cells and frozen (F) cells as well as a goal cell (G), all of which are unknown to the robot. To keep the problem simple, we assume the robot has reliable actions, i.e. $P(s' \mid s, a) = 1$ for all $s \in \mathcal{S}, a \in \mathcal{A}$. If the robot reaches the goal, the trial ends and the robot receives a reward of $1$ irrespective of the action; the reward at any other state is $0$ for all actions. The objective of the robot is to learn a policy that reaches the goal location (G) from a given start location (S) (this is $s_0$) to maximize the *return*.
+In the FrozenLake environment, the robot moves on a $4 \times 4$ grid (these are the states) with actions that are "up" ($\uparrow$), "down" ($\downarrow$), "left" ($\leftarrow$), and "right" ($\rightarrow$). The environment contains a number of holes (H) cells and frozen (F) cells as well as a goal cell (G), all of which are unknown to the robot. To keep the problem simple, we assume the robot has reliable actions, i.e., the transitions are deterministic: for each state $s$ and action $a$ there is a unique next state $s'$ with $P(s' \mid s, a) = 1$, and probability zero for all other states. If the robot reaches the goal, the trial ends and the robot receives a reward of $1$ irrespective of the action; the reward at any other state is $0$ for all actions. The objective of the robot is to learn a policy that reaches the goal location (G) from a given start location (S) (this is $s_0$) to maximize the *return*.
 
 We first implement $\epsilon$-greedy method as follows:
 
@@ -104,9 +104,12 @@ We first implement $\epsilon$-greedy method as follows:
 def e_greedy(env, Q, s, epsilon):
     if random.random() < epsilon:
         return env.action_space.sample()
-
-    else:
-        return np.argmax(Q[s,:])
+    # Exploit: greedy action, breaking ties uniformly at random. Plain
+    # np.argmax always returns the first maximizing index, so on a
+    # zero-initialized Q table every unvisited state would deterministically
+    # pick action 0 ("left"), and the robot can fail to ever find the goal.
+    best_actions = np.flatnonzero(Q[s,:] == np.max(Q[s,:]))
+    return np.random.choice(best_actions)
 
 ```
 
@@ -123,6 +126,7 @@ def q_learning(env_info, gamma, num_iters, alpha, epsilon_start, epsilon_end):
     Q  = np.zeros((num_states, num_actions))
     V  = np.zeros((num_iters + 1, num_states))
     pi = np.zeros((num_iters + 1, num_states))
+    episode_returns = []  # Per-episode return, for the learning curve
 
     for k in range(1, num_iters + 1):
         # Linearly anneal epsilon over episodes
@@ -131,15 +135,18 @@ def q_learning(env_info, gamma, num_iters, alpha, epsilon_start, epsilon_end):
         # Reset environment
         state, _ = env.reset()
         done = False
+        episode_return = 0.0
         while not done:
             # Select an action for a given state and acts in env based on selected action
             action = e_greedy(env, Q, state, epsilon)
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
+            episode_return += reward
 
-            # Q-update: mask the bootstrap term at terminal states so the
-            # target is just the observed reward when the episode ends.
-            if done:
+            # Q-update: mask the bootstrap term only at *terminal* states
+            # (their value is zero). A truncated episode is merely cut off
+            # by the time limit, so we still bootstrap from the next state.
+            if terminated:
                 y = reward
             else:
                 y = reward + gamma * np.max(Q[next_state,:])
@@ -147,18 +154,36 @@ def q_learning(env_info, gamma, num_iters, alpha, epsilon_start, epsilon_end):
 
             # Move to the next state
             state = next_state
+        episode_returns.append(episode_return)
         # Record max value and max action for visualization purpose only
         for s in range(num_states):
             V[k,s]  = np.max(Q[s,:])
             pi[k,s] = np.argmax(Q[s,:])
     d2l.show_Q_function_progress(env_desc, V[:-1], pi[:-1])
+    return np.array(episode_returns)
 
-q_learning(env_info=env_info, gamma=gamma, num_iters=num_iters, alpha=alpha,
-           epsilon_start=epsilon_start, epsilon_end=epsilon_end)
+episode_returns = q_learning(env_info=env_info, gamma=gamma,
+                             num_iters=num_iters, alpha=alpha,
+                             epsilon_start=epsilon_start,
+                             epsilon_end=epsilon_end)
 
 ```
 
 This result shows that Q-learning can find the optimal solution for this problem roughly after 250 iterations. However, when we compare this result with the Value Iteration algorithm's result (see :numref:`subsec_valueitercode`), we can see that the Value Iteration algorithm needs far fewer iterations to find the optimal solution for this problem. This happens because the Value Iteration algorithm has access to the full MDP whereas Q-learning does not.
+
+The grid above shows the end product; the reward curve shows the learning as it happened. Each training episode on FrozenLake returns $1$ if the robot reached the goal and $0$ otherwise, so the raw signal is a jittery sequence of zeros and ones and we smooth it with a moving average:
+
+```{.python .input #qlearning-implementation-of-q-learning-4}
+
+d2l.set_figsize((6, 4))
+window = 25
+moving_avg = np.convolve(episode_returns, np.ones(window) / window, 'valid')
+d2l.plt.plot(np.arange(window, num_iters + 1), moving_avg)
+d2l.plt.xlabel('episode')
+d2l.plt.ylabel(f'return (moving average over {window} episodes)');
+```
+
+The curve stays low while the robot explores and the goal is still a rare accident, climbs once the first successes propagate value backward through the table, and approaches one as $\epsilon$ anneals and the robot exploits what it has learned. By the end it strings together a perfect window of successes even though $\epsilon = 0.05$ keeps injecting the occasional random action: on this small grid, a single random step is usually recoverable.
 
 
 ## Summary

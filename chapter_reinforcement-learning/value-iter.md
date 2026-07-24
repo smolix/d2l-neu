@@ -1,7 +1,6 @@
 ```{.python .input}
 %load_ext d2lbook.tab
 tab.interact_select('pytorch')
-#required_libs("setuptools==66", "wheel==0.38.4", "gym==0.21.0")
 ```
 
 # Value Iteration
@@ -11,23 +10,23 @@ In this section we will discuss how to pick the best action for the robot at eac
 
 ## Stochastic Policy
 
-A stochastic policy denoted as $\pi(a \mid s)$ (policy for short) is a conditional distribution over the actions $a \in \mathcal{A}$ given the state $s \in \mathcal{S}$, $\pi(a \mid s) \equiv P(a \mid s)$. As an example, if the robot has four actions $\mathcal{A}=$ {go left, go down, go right, go up}. The policy at a state $s \in \mathcal{S}$ for such a set of actions $\mathcal{A}$ is a categorical distribution where the probabilities of the four actions could be $[0.4, 0.2, 0.1, 0.3]$; at some other state $s' \in \mathcal{S}$ the probabilities $\pi(a \mid s')$ of the same four actions could be $[0.1, 0.1, 0.2, 0.6]$. Note that we should have $\sum_a \pi(a \mid s) = 1$ for any state $s$. A deterministic policy is a special case of a stochastic policy in that the distribution $\pi(a \mid s)$ only gives non-zero probability to one particular action, e.g., $[1, 0, 0, 0]$ for our example with four actions.
+A stochastic policy denoted as $\pi(a \mid s)$ (policy for short) is a conditional distribution over the actions $a \in \mathcal{A}$ given the state $s \in \mathcal{S}$, $\pi(a \mid s) \equiv P(a \mid s)$. As an example, suppose the robot has four actions $\mathcal{A}= \{\textrm{go left}, \textrm{go down}, \textrm{go right}, \textrm{go up}\}$. The policy at a state $s \in \mathcal{S}$ for such a set of actions $\mathcal{A}$ is a categorical distribution where the probabilities of the four actions could be $[0.4, 0.2, 0.1, 0.3]$; at some other state $s' \in \mathcal{S}$ the probabilities $\pi(a \mid s')$ of the same four actions could be $[0.1, 0.1, 0.2, 0.6]$. Note that we should have $\sum_a \pi(a \mid s) = 1$ for any state $s$. A deterministic policy is a special case of a stochastic policy in that the distribution $\pi(a \mid s)$ only gives non-zero probability to one particular action, e.g., $[1, 0, 0, 0]$ for our example with four actions.
 
 To make the notation less cumbersome, we will often write $\pi(s)$ as the conditional distribution instead of $\pi(a \mid s)$.
 
 ## Value Function
 
-Imagine now that the robot starts at a state $s_0$ and at each time instant, it first samples an action from the policy $a_t \sim \pi(s_t)$ and takes this action to result in the next state $s_{t+1}$. The trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$, can be different depending upon which particular action $a_t$ is sampled at intermediate instants. We define the average *return* $R(\tau) = \sum_{t=0}^\infty \gamma^t r(s_t, a_t)$ of all such trajectories
-$$V^\pi(s_0) = E_{a_t \sim \pi(s_t)} \Big[ R(\tau) \Big] = E_{a_t \sim \pi(s_t)} \Big[ \sum_{t=0}^\infty \gamma^t r(s_t, a_t) \Big],$$
+Imagine now that the robot starts at a state $s_0$ and at each time instant, it first samples an action from the policy $a_t \sim \pi(s_t)$ and takes this action to result in the next state $s_{t+1} \sim P(s_{t+1} \mid s_t, a_t)$. The trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$, can be different depending upon which particular action $a_t$ is sampled and which next state $s_{t+1}$ the environment transitions to at intermediate instants. Each trajectory has a *return* $R(\tau) = \sum_{t=0}^\infty \gamma^t r(s_t, a_t)$, and we define the return averaged over all such trajectories
+$$V^\pi(s_0) = E_{a_t \sim \pi(s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ R(\tau) \Big] = E_{a_t \sim \pi(s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ \sum_{t=0}^\infty \gamma^t r(s_t, a_t) \Big],$$
 
-where $s_{t+1} \sim P(s_{t+1} \mid s_t, a_t)$ is the next state of the robot and $r(s_t, a_t)$ is the instantaneous reward obtained by taking action $a_t$ in state $s_t$ at time $t$. This is called the "value function" for the policy $\pi$. In simple words, the value of a state $s_0$ for a policy $\pi$, denoted by $V^\pi(s_0)$, is the expected $\gamma$-discounted *return* obtained by the robot if it begins at state $s_0$ and takes actions from the policy $\pi$ at each time instant.
+where $r(s_t, a_t)$ is the instantaneous reward obtained by taking action $a_t$ in state $s_t$ at time $t$. This is called the "value function" for the policy $\pi$. In simple words, the value of a state $s_0$ for a policy $\pi$, denoted by $V^\pi(s_0)$, is the expected $\gamma$-discounted *return* obtained by the robot if it begins at state $s_0$ and takes actions from the policy $\pi$ at each time instant.
 
-We next break down the trajectory into two stages (i) the first stage which corresponds to $s_0 \to s_1$ upon taking the action $a_0$, and (ii) a second stage which is the trajectory $\tau' = (s_1, a_1, r_1, \ldots)$ thereafter. The key idea behind all algorithms in reinforcement learning is that the value of state $s_0$ can be written as the average reward obtained in the first stage and the value function averaged over all possible next states $s_1$. This is quite intuitive and arises from our Markov assumption: the average return from the current state is the sum of the average return from the next state and the average reward of going to the next state. Mathematically, we write the two stages as
+We next break down the trajectory into two stages (i) the first stage which corresponds to $s_0 \to s_1$ upon taking the action $a_0$, and (ii) a second stage which is the trajectory $\tau' = (s_1, a_1, r_1, \ldots)$ thereafter. The key idea behind all algorithms in reinforcement learning is that the value of state $s_0$ can be written as the average reward obtained in the first stage and the value function averaged over all possible next states $s_1$. This is quite intuitive and arises from our Markov assumption: the average return from the current state is the average reward of the first step plus $\gamma$ times the average return from the next state. Mathematically, we write the two stages as
 
 $$V^\pi(s_0) = E_{a_0 \sim \pi(s_0)} \Big[ r(s_0, a_0) + \gamma\ E_{s_1 \sim P(s_1 \mid s_0, a_0)} \Big[ V^\pi(s_1) \Big] \Big].$$
 :eqlabel:`eq_dynamic_programming`
 
-This decomposition is very powerful: it is the foundation of the principle of dynamic programming upon which all reinforcement learning algorithms are based. Notice that the second stage gets two expectations, one over the choices of the action $a_0$ taken in the first stage using the stochastic policy and another over the possible states $s_1$ obtained from the chosen action. We can write :eqref:`eq_dynamic_programming` using the transition probabilities in the Markov decision process (MDP) as
+This decomposition is very powerful: it is the foundation of the principle of dynamic programming upon which all reinforcement learning algorithms are based. Notice that the second term involves two expectations, one over the choices of the action $a_0$ taken in the first stage using the stochastic policy and another over the possible states $s_1$ obtained from the chosen action. We can write :eqref:`eq_dynamic_programming` using the transition probabilities in the Markov decision process (MDP) as
 
 $$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s,  a) + \gamma\  \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^\pi(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
 :eqlabel:`eq_dynamic_programming_val`
@@ -38,7 +37,7 @@ An important thing to notice here is that the above identity holds for all state
 
 In implementations, it is often useful to maintain a quantity called the "action value" function which is a closely related quantity to the value function. This is defined to be the average *return* of a trajectory that begins at $s_0$ but when the action of the first stage is fixed to be $a_0$
 
-$$Q^\pi(s_0, a_0) = r(s_0, a_0) + E_{a_t \sim \pi(s_t)} \Big[ \sum_{t=1}^\infty \gamma^t r(s_t, a_t) \Big],$$
+$$Q^\pi(s_0, a_0) = r(s_0, a_0) + E_{a_t \sim \pi(s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ \sum_{t=1}^\infty \gamma^t r(s_t, a_t) \Big],$$
 
 note that the summation inside the expectation is from $t=1,\ldots, \infty$ because the reward of the first stage is fixed in this case. We can again break down the trajectory into two parts and write
 
@@ -52,9 +51,9 @@ This version is the analog of :eqref:`eq_dynamic_programming_val` for the action
 Both the value function and the action-value function depend upon the policy that the robot chooses. We will next think of the "optimal policy" that achieves the maximal average *return*
 $$\pi^* = \underset{\pi}{\mathrm{argmax}} V^\pi(s_0).$$
 
-Of all possible stochastic policies that the robot could have taken, the optimal policy $\pi^*$  achieves the largest average discounted *return* for trajectories starting from state $s_0$. Let us denote the value function and the action-value function of the optimal policy as $V^* \equiv V^{\pi^*}$ and $Q^* \equiv Q^{\pi^*}$.
+Of all possible stochastic policies that the robot could have taken, the optimal policy $\pi^*$  achieves the largest average discounted *return* for trajectories starting from state $s_0$. It turns out that for discounted MDPs there is a policy that attains this maximum simultaneously for *every* starting state, so the optimal policy does not depend on which $s_0$ we picked. Let us denote the value function and the action-value function of the optimal policy as $V^* \equiv V^{\pi^*}$ and $Q^* \equiv Q^{\pi^*}$.
 
-Let us note that for a deterministic policy, in which there is only one action possible at each state, this gives us
+Let us note that for a deterministic policy, i.e., one that puts all its probability on a single action at each state, this gives us (as we will justify in the next section)
 
 $$\pi^*(s) = \underset{a \in \mathcal{A}}{\mathrm{argmax}} \Big[ r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^*(s') \Big].$$
 
@@ -62,18 +61,19 @@ A good mnemonic to remember this is that the optimal action at state $s$ (for a 
 
 ## Principle of Dynamic Programming
 
-Our development in the previous section in :eqref:`eq_dynamic_programming` or :eqref:`eq_dynamic_programming_q` can be turned into an algorithm to compute the optimal value function $V^*$ or the action-value function $Q^*$, respectively. Observe that
+Our development in the previous section in :eqref:`eq_dynamic_programming` or :eqref:`eq_dynamic_programming_q` can be turned into an algorithm to compute the optimal value function $V^*$ or the action-value function $Q^*$, respectively. Since $V^*$ is the value function of the optimal policy, :eqref:`eq_dynamic_programming_val` applied to $\pi^*$ gives
 $$ V^*(s) = \sum_{a \in \mathcal{A}} \pi^*(a \mid s) \Big[ r(s,  a) + \gamma\  \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^*(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
 
-For a deterministic optimal policy $\pi^*$, since there is only one action that can be taken at state $s$, we can also write 
+Now observe that at every state the optimal policy must put all its probability on actions that maximize the bracketed quantity — a policy that did not could be improved by switching to such an action at that state. The average over actions above is therefore also a maximum, and the optimal value function satisfies
 
-$$\pi^*(s) = \mathrm{argmax}_{a \in \mathcal{A}} \Big\{ r(s,a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^*(s') \Big\}$$
+$$V^*(s) = \max_{a \in \mathcal{A}} \Big\{ r(s,a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^*(s') \Big\};\ \textrm{for all } s \in \mathcal{S}.$$
+:eqlabel:`eq_bellman_optimality`
 
-for all states $s \in \mathcal{S}$. This identity is called the "principle of dynamic programming" :cite:`BellmanDPPaper,BellmanDPBook`. It was formulated by Richard Bellman in the 1950s and we can remember it as "the remainder of an optimal trajectory is also optimal".
+This identity, called the Bellman optimality equation, expresses the "principle of dynamic programming" :cite:`BellmanDPPaper,BellmanDPBook`. It was formulated by Richard Bellman in the 1950s and we can remember it as "the remainder of an optimal trajectory is also optimal": the value of a state is the best immediate reward-plus-discounted-value achievable in one step, where the value of the next state is itself computed under optimal behavior from there on. The greedy rule $\pi^*(s) = \mathrm{argmax}_{a \in \mathcal{A}} \big\{ r(s,a) + \gamma \sum_{s'} P(s' \mid s, a) V^*(s') \big\}$ from the previous section recovers a deterministic optimal policy from $V^*$.
 
 ## Value Iteration
 
-We can turn the principle of dynamic programming into an algorithm for finding the optimal value function called value iteration. The key idea behind value iteration is to think of this identity as a set of constraints that tie together $V^*(s)$ at different states $s \in \mathcal{S}$. We initialize the value function to some arbitrary values $V_0(s)$ for all states $s \in \mathcal{S}$. At the $k^{\textrm{th}}$ iteration, the Value Iteration algorithm updates the value function as
+We can turn the principle of dynamic programming into an algorithm for finding the optimal value function called value iteration. The key idea behind value iteration is to think of the Bellman optimality equation :eqref:`eq_bellman_optimality` as a set of constraints that tie together $V^*(s)$ at different states $s \in \mathcal{S}$, and to solve for its fixed point by repeatedly applying its right-hand side as an update. We initialize the value function to some arbitrary values $V_0(s)$ for all states $s \in \mathcal{S}$. At the $k^{\textrm{th}}$ iteration, the Value Iteration algorithm updates the value function as
 
 $$V_{k+1}(s) = \max_{a \in \mathcal{A}} \Big\{ r(s,  a) + \gamma\  \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V_k(s') \Big\};\ \textrm{for all } s \in \mathcal{S}.$$
 
@@ -118,7 +118,7 @@ np.random.seed(seed)
 env_info = d2l.make_env('FrozenLake-v1', seed=seed)
 ```
 
-In the FrozenLake environment, the robot moves on a $4 \times 4$ grid (these are the states) with actions that are "up" ($\uparrow$), "down" ($\downarrow$), "left" ($\leftarrow$), and "right" ($\rightarrow$). The environment contains a number of holes (H) cells and frozen (F) cells as well as a goal cell (G), all of which are unknown to the robot. To keep the problem simple, we assume the robot has reliable actions, i.e. $P(s' \mid s, a) = 1$ for all $s \in \mathcal{S}, a \in \mathcal{A}$. If the robot reaches the goal, the trial ends and the robot receives a reward of $1$ irrespective of the action; the reward at any other state is $0$ for all actions. The objective of the robot is to learn a policy that reaches the goal location (G) from a given start location (S) (this is $s_0$) to maximize the *return*.
+In the FrozenLake environment, the robot moves on a $4 \times 4$ grid (these are the states) with actions that are "up" ($\uparrow$), "down" ($\downarrow$), "left" ($\leftarrow$), and "right" ($\rightarrow$). The environment contains a number of hole (H) cells and frozen (F) cells as well as a goal cell (G). Since Value Iteration requires the full MDP, the transition and reward functions of this environment are given to the algorithm. To keep the problem simple, we assume the robot has reliable actions, i.e., the transitions are deterministic: each action moves the robot to the intended neighboring cell with probability one. If the robot reaches the goal, the trial ends and the robot receives a reward of $1$; the reward everywhere else is $0$ for all actions. The objective of the robot is to find a policy that reaches the goal location (G) from a given start location (S) (this is $s_0$) to maximize the *return*.
 
 The following function implements Value Iteration, where `env_info` contains MDP and environment related information and `gamma` is the discount factor:
 
@@ -140,7 +140,7 @@ def value_iteration(env_info, gamma, num_iters):
     for k in range(1, num_iters + 1):
         for s in range(num_states):
             for a in range(num_actions):
-                # Calculate \sum_{s'} p(s'\mid s,a) [r + \gamma v_k(s')]
+                # Calculate \sum_{s'} p(s'\mid s,a) [r + \gamma v_{k-1}(s')]
                 for pxrds in mdp[(s,a)]:
                     # mdp(s,a): [(p1,next1,r1,d1),(p2,next2,r2,d2),..]
                     pr = pxrds[prob_idx]  # p(s'\mid s,a)
@@ -150,12 +150,12 @@ def value_iteration(env_info, gamma, num_iters):
             # Record max value and max action
             V[k,s] = np.max(Q[k,s,:])
             pi[k,s] = np.argmax(Q[k,s,:])
-    d2l.show_value_function_progress(env_desc, V[:-1], pi[:-1])
+    d2l.show_value_function_progress(env_desc, V[1:], pi[1:])
 
 value_iteration(env_info=env_info, gamma=gamma, num_iters=num_iters)
 ```
 
-The above pictures show the policy (the arrow indicates the action) and value function (the change in color shows how the value function changes over time from the initial value shown by dark color to the optimal value shown by light colors.). As we see, Value Iteration finds the optimal value function after 10 iterations and the goal state (G) can be reached starting from any state as long as it is not an H cell. Another interesting aspect of the implementation is that in addition to finding the optimal value function, we also automatically found the optimal policy $\pi^*$ corresponding to this value function.
+The above pictures show the policy (the arrow indicates the action) and value function (the change in color shows how the value function changes over time from the initial value shown by dark color to the optimal value shown by light colors). As we see, Value Iteration converges to the optimal value function within a few iterations — the values stop changing well before the tenth iteration — and under the resulting policy the goal state (G) can be reached starting from any state as long as it is not an H cell. Another interesting aspect of the implementation is that in addition to finding the optimal value function, we also automatically found the optimal policy $\pi^*$ corresponding to this value function.
 
 
 ## Summary
@@ -166,7 +166,7 @@ The main idea behind the Value Iteration algorithm is to use the principle of dy
 
 1. Try increasing the grid size to $8 \times 8$. Compared with $4 \times 4$ grid, how many iterations does it take to find the optimal value function?
 1. What is the computational complexity of the Value Iteration algorithm?
-1. Run the Value Iteration algorithm again with $\gamma$ (i.e. "gamma" in the above code) when it equals to $0$, $0.5$, and $1$ and analyze its results. 
+1. Run the Value Iteration algorithm again with the discount factor $\gamma$ (i.e., `gamma` in the above code) set to $0$, $0.5$, and $1$, and analyze the results. 
 1. How does the value of $\gamma$ affect the number of iterations taken by Value Iteration to converge? What happens when $\gamma=1$?
 
 :begin_tab:`pytorch`
@@ -238,7 +238,7 @@ $\pi(s) = \arg\max_a [r + \gamma P V]$:
 - Requires *known* transitions and rewards — won't work
   on real environments where the dynamics aren't given.
 - Converges geometrically with rate $\gamma$.
-- The starting point for *all* model-based RL; learning
-  algorithms (Q-learning, next deck) replace the known
-  $P, r$ with sampled experience.
+- The starting point for planning with a known model;
+  learning algorithms (Q-learning, next deck) replace the
+  known $P, r$ with sampled experience.
 :::

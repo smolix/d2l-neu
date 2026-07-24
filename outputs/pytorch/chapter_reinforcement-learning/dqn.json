@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/dqn.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:5e41b993af7c5b187cbdb0afd17e2d71968f263fc9d0c91e86bda48833f0efa5",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "dqn-implementation-on-cartpole-1": {
+      "code_fingerprint": "sha256:d9c2a06a4e53f3066bdbd02ee867b3bc01db94b529de99ac0284d58215ba4788",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-implementation-on-cartpole-2": {
+      "code_fingerprint": "sha256:ef233cd0c20a440123a04806a78ebab80bcdac962667a3cf06fe27032b17b627",
+      "kind": "text",
+      "outputs": []
+    },
+    "dqn-implementation-on-cartpole-3": {
+      "code_fingerprint": "sha256:f7db3ddfb7937c0a2d638c3c80f46ab0fbd93654b910f8c305d73529fd2e8a9c",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "DQN (with target network): median best 20-episode average = 500, median final 20-episode average = 98\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "no target network: median best 20-episode average = 29, median final 20-episode average = 10\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "dqn/dqn-implementation-on-cartpole-3-1.svg",
+          "bytes": 129533,
+          "sha256": "sha256:daf3889d3994696112284a8f0249e23a98ae7d7e44e614d167050ee7aa12ceb3"
+        }
+      ]
+    }
+  }
+}

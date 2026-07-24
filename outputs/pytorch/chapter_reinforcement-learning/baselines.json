@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/baselines.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:bf15bbf027abde585e756aadb7ebdf143b066dd9f312e5c7f974b2b4e71d81c3",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "baselines-comparing-the-variants-1": {
+      "code_fingerprint": "sha256:9c43058a1af40a5ae1671fa795dd00ed6b3958aabc50895b6e31ec4dff430d64",
+      "kind": "text",
+      "outputs": []
+    },
+    "baselines-comparing-the-variants-2": {
+      "code_fingerprint": "sha256:a60855f1efa4aee64e4a24db869f98d7d3eccf81ff7dcd77529f93fc69575d58",
+      "kind": "text",
+      "outputs": []
+    },
+    "baselines-comparing-the-variants-3": {
+      "code_fingerprint": "sha256:811ec7af2f5a86f8fcb9b2de50fb2a7b4c43ed32474f52152d6c7114fe4e9588",
+      "kind": "text",
+      "outputs": []
+    },
+    "baselines-comparing-the-variants-4": {
+      "code_fingerprint": "sha256:81b97022055852c04a3b67190435a098f7e6e80335f23405cbbe27094246aab8",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "return: median updates to reach 90% success = 69\nreward-to-go: median updates to reach 90% success = 43\nnormalized: median updates to reach 90% success = 32\nlearned baseline: median updates to reach 90% success = 46\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "baselines/baselines-comparing-the-variants-4-1.svg",
+          "bytes": 67170,
+          "sha256": "sha256:0398eb62ec46c2f9d2f55fca1c86192d2c5b646d97bc41dcb25d3fb0363a564b"
+        }
+      ]
+    }
+  }
+}

@@ -173,6 +173,13 @@ book:
         - chapter_reinforcement-learning/mdp.qmd
         - chapter_reinforcement-learning/value-iter.qmd
         - chapter_reinforcement-learning/qlearning.qmd
+        - chapter_reinforcement-learning/policy-gradient.qmd
+        - chapter_reinforcement-learning/baselines.qmd
+        - chapter_reinforcement-learning/deep-rl.qmd
+        - chapter_reinforcement-learning/actor-critic.qmd
+        - chapter_reinforcement-learning/ppo.qmd
+        - chapter_reinforcement-learning/dqn.qmd
+        - chapter_reinforcement-learning/offline-rl.qmd
         - chapter_generative-adversarial-networks/index.qmd
         - chapter_generative-adversarial-networks/gan.qmd
         - chapter_generative-adversarial-networks/dcgan.qmd

@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/policy-gradient.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:81e84fb4a26b3b8f5e5010f9d1ce3e728f97f097fb6ce7f4b3c32698f8432c29",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "policy-gradient-implementation-of-policy-gradient-1": {
+      "code_fingerprint": "sha256:6f5b31ea7af0010dbcdb8bfbaede982f8f21860718df617996847274ad51637d",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-implementation-of-policy-gradient-2": {
+      "code_fingerprint": "sha256:8163c1f718a7f7ae2da00fcb61d4b480390d86db8a717e5c4e548a9a31cce485",
+      "kind": "text",
+      "outputs": []
+    },
+    "policy-gradient-implementation-of-policy-gradient-3": {
+      "code_fingerprint": "sha256:75c0ca76e1662f44d9b30412d3d2716e292188152e304b911ee7869f629350f8",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/png",
+          "asset": "policy-gradient/policy-gradient-implementation-of-policy-gradient-3-1.png",
+          "bytes": 96922,
+          "sha256": "sha256:6386d171ae336cefa6d480e8a0c6ac8f5ddede21f15db7dc7e65c6f07e05042c"
+        }
+      ]
+    },
+    "policy-gradient-implementation-of-policy-gradient-4": {
+      "code_fingerprint": "sha256:b4a70b740a3275df1f3f8afaa34d6c12cec65b47e332a90923d31de363cfc985",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "policy-gradient/policy-gradient-implementation-of-policy-gradient-4-1.svg",
+          "bytes": 30317,
+          "sha256": "sha256:90de674c3a00107af21b72f1f16413cf955366a3362f824430054e64c008a369"
+        }
+      ]
+    }
+  }
+}

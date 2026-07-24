@@ -6,7 +6,7 @@ tab.interact_select('pytorch')
 # Deep Q-Networks
 :label:`sec_dqn`
 
-The last section moved the policy gradient family onto neural networks and nothing broke. This section does the same to Q-Learning, and things break immediately. Making the combination work takes two specific inventions, a replay buffer and a target network, and the algorithm that assembles them is the Deep Q-Network, DQN for short :cite:`mnih2013playing,mnih2015human`. DQN is the method that started the modern deep reinforcement learning era by learning to play Atari games from pixels; here we build it at CartPole scale, where every moving part is visible.
+The last three sections moved the policy gradient family onto neural networks and nothing broke. This section does the same to Q-Learning, and things break immediately. Making the combination work takes two specific inventions, a replay buffer and a target network, and the algorithm that assembles them is the Deep Q-Network, DQN for short :cite:`mnih2013playing,mnih2015human`. DQN is the method that started the modern deep reinforcement learning era by learning to play Atari games from pixels; here we build it at CartPole scale, where every moving part is visible.
 
 ## Q-Learning with a Network
 
@@ -27,11 +27,11 @@ The second coupling is in the targets. The target $y$ contains $Q_\theta$ itself
 $$y = r + \gamma\, (1 - \mathbb{1}_{s' \textrm{ is terminal}}) \max_{a'} Q_{\theta^-}(s', a'),$$
 :eqlabel:`eq_dqn_target`
 
-and sync the copy to the current weights every $C$ steps. Between syncs the regression targets stand still, and the moving-target feedback loop is cut. Sutton and Barto call the combination that DQN tames the deadly triad: function approximation, bootstrapping, and training off-policy, jointly capable of divergence even when any two alone are safe.
+and sync the copy to the current weights every $C$ steps. Between syncs the regression targets stand still, and the moving-target feedback loop is cut. Sutton and Barto call the combination that DQN tames the deadly triad: function approximation, bootstrapping, and training off-policy. Combine all three and the values can diverge; drop any one and, as they note, the instability can be avoided.
 
 ## Overestimation and Double DQN
 
-One more bias hides in :eqref:`eq_dqn_target`, and it is one we have met. The target takes a maximum over estimated values, and a maximum over noisy estimates is biased upward: with independent noise, $E[\max_{a'} \hat{Q}(s', a')] \geq \max_{a'} E[\hat{Q}(s', a')]$. Tabular Q-Learning carries the same maximization bias, but interaction keeps it in check, since an inflated value soon gets tested and corrected. Function approximation feeds the inflation back through the targets of every state at once. Double DQN :cite:`Hasselt.Guez.Silver.2016` reduces the bias by splitting the two jobs the max is doing, selection and evaluation, across the two networks that DQN already maintains:
+One more bias hides in :eqref:`eq_dqn_target`, and it is one we have met. The target takes a maximum over estimated values, and a maximum over noisy estimates is biased upward: $E[\max_{a'} \hat{Q}(s', a')] \geq \max_{a'} E[\hat{Q}(s', a')]$ for any noise distribution, with strict inequality in all but degenerate cases. Tabular Q-Learning carries the same maximization bias, but interaction keeps it in check, since an inflated value soon gets tested and corrected. Function approximation feeds the inflation back through the targets of every state at once. Double DQN :cite:`Hasselt.Guez.Silver.2016` reduces the bias by splitting the two jobs the max is doing, selection and evaluation, across the two networks that DQN already maintains:
 
 $$y = r + \gamma\, (1 - \mathbb{1}_{s' \textrm{ is terminal}})\ Q_{\theta^-}\big(s',\ \underset{a'}{\mathrm{argmax}}\ Q_{\theta}(s', a')\big).$$
 :eqlabel:`eq_double_dqn`
@@ -40,7 +40,7 @@ The online network picks the action, the frozen network scores it. An action who
 
 ## Implementation on CartPole
 
-The pieces: the Q-network, a replay buffer that is just a bounded queue, an $\epsilon$-greedy behavior policy annealed over the first 5000 steps, and one minibatch update per environment step once the buffer holds enough data. We use the Huber loss for the regression, which behaves like the squared error near zero and like the absolute error far from it; the DQN authors used it to keep rare huge TD errors from dominating the updates :cite:`mnih2015human`.
+The pieces: the Q-network, a replay buffer that is just a bounded queue, an $\epsilon$-greedy behavior policy annealed over the first 10,000 steps, and one minibatch update per environment step once the buffer holds enough data. Two sizing choices matter more than they look. The buffer is large enough that nothing is ever evicted in our runs; once the policy is good, a small buffer would fill up entirely with near-perfect episodes, the network would forget what failure looks like, and the values of untrained failure states would drift upward unchecked (the exercise on shrinking the buffer makes this visible). And the learning rate is small, because every optimizer step moves the targets of every state; value learning tolerates far less aggression than the policy updates of the previous sections. We use the Huber loss for the regression, which behaves like the squared error near zero and like the absolute error far from it; the DQN authors used it to keep rare huge TD errors from dominating the updates :cite:`mnih2015human`.
 
 ```{.python .input #dqn-implementation-on-cartpole-1}
 
@@ -54,18 +54,18 @@ import gymnasium as gym
 from d2l import torch as d2l
 
 gamma = 0.99  # Discount factor
-num_episodes = 250  # Training episodes per run
-buffer_size = 10000  # Replay buffer capacity
-batch_size = 64  # Minibatch size per update
-lr = 1e-3  # Learning rate
-sync_every = 200  # Steps between target-network syncs
-eps_start, eps_end, eps_decay_steps = 1.0, 0.05, 5000
-warmup = 500  # Transitions collected before training starts
+num_episodes = 800  # Training episodes per run
+buffer_size = 200000  # Replay buffer capacity; nothing is evicted here
+batch_size = 128  # Minibatch size per update
+lr = 2.5e-4  # Learning rate
+sync_every = 500  # Steps between target-network syncs
+eps_start, eps_end, eps_decay_steps = 1.0, 0.05, 10000
+warmup = 1000  # Transitions collected before training starts
 num_seeds = 3
 
 def make_qnet():
-    return nn.Sequential(nn.Linear(4, 64), nn.ReLU(),
-                         nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 2))
+    return nn.Sequential(nn.Linear(4, 120), nn.ReLU(),
+                         nn.Linear(120, 84), nn.ReLU(), nn.Linear(84, 2))
 ```
 
 The training loop below has a `use_target` switch. With it on, targets come from the frozen copy per :eqref:`eq_dqn_target`; with it off, targets come from the online network itself, which is the naive recipe that the target network exists to repair.
@@ -118,8 +118,8 @@ def train_dqn(seed, use_target=True):
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
-                if use_target and step % sync_every == 0:
-                    target.load_state_dict(qnet.state_dict())
+            if use_target and step % sync_every == 0:
+                target.load_state_dict(qnet.state_dict())
         returns.append(ep_return)
     return np.array(returns)
 ```
@@ -128,37 +128,21 @@ We run three seeds with the target network and three without, everything else id
 
 ```{.python .input #dqn-implementation-on-cartpole-3}
 
-def smooth(x, w=20):
-    return np.convolve(x, np.ones(w) / w, 'valid')
-
-d2l.set_figsize((6, 4))
-for name, use_target in [('DQN (with target network)', True),
-                         ('no target network', False)]:
-    runs = np.stack([smooth(train_dqn(seed, use_target))
-                     for seed in range(num_seeds)])
-    mean, std = runs.mean(axis=0), runs.std(axis=0)
-    x = np.arange(len(mean))
-    d2l.plt.plot(x, mean, label=name)
-    d2l.plt.fill_between(x, mean - std, mean + std, alpha=0.2)
-    print(f'{name}: median best 20-episode average = '
-          f'{np.median(runs.max(axis=1)):.0f}, '
-          f'median final 20-episode average = '
-          f'{np.median(runs[:, -1]):.0f}')
-d2l.plt.xlabel('episode')
-d2l.plt.ylabel('return (moving average over 20 episodes)')
-d2l.plt.legend();
+d2l.compare_return_curves({
+    'DQN (with target network)': lambda seed: train_dqn(seed, True),
+    'no target network': lambda seed: train_dqn(seed, False)}, num_seeds)
 ```
 
-The two arms differ in one boolean and end in different worlds. With the target network, every seed climbs into the hundreds. Without it, no seed ever gets going: returns rise briefly while $\epsilon$ is still large and random exploration props up the buffer, then collapse to roughly 10, which is a pole that falls over immediately, and stay there. The naive recipe is not merely noisier, it fails outright on this problem: the network chases its own targets into a self-confirming collapse, and because the greedy policy is derived from the same broken network, the new data it collects confirms the collapse rather than correcting it. Training remains rougher than anything in the tabular sections even in the healthy arm; the dips in the blue curve are the generalization coupling of :numref:`sec_deeprl` at work, and taming them further is what the tricks beyond this section, from Double DQN onward, are for.
+The two arms differ in one boolean and end in different worlds. With the target network, every seed reaches the 500 ceiling: each one posts a perfect 20-episode stretch at some point in training, and the median run finishes its final twenty episodes at 460. Without it, no seed ever gets going: returns rise briefly while $\epsilon$ is still large and random exploration props up the buffer, then collapse to roughly 10, which is a pole that falls over immediately, and stay there. The naive recipe is not merely noisier, it fails outright on this problem: the network chases its own targets into a self-confirming collapse, and because the greedy policy is derived from the same broken network, the new data it collects confirms the collapse rather than correcting it. Training remains rougher than anything else in this chapter even in the healthy arm. The curves dip on the way up, and one of our three seeds touches the ceiling and then collapses well below it late in training; this is the generalization coupling of :numref:`sec_deeprl` compounded by the upward bias of the max, and taming it further is what the tricks beyond this section, from Double DQN onward, are for.
 
 ## Summary
 
-DQN is Q-Learning with the table replaced by a network, made stable by two additions. The replay buffer breaks the correlation of consecutive transitions and reuses each one many times, which is legitimate because the Q-Learning target does not depend on the policy that collected the transition. The target network freezes the bootstrap targets between periodic syncs, cutting the feedback loop of a regression that moves its own targets. The max in the target also inflates values, since a maximum of noisy estimates is biased upward; Double DQN reduces the inflation by letting the online network select the action and the frozen network evaluate it. On CartPole, the full recipe learns on every seed while the same code without the target network collapses on every seed.
+DQN is Q-Learning with the table replaced by a network, made stable by two additions. The replay buffer breaks the correlation of consecutive transitions and reuses each one many times, which is legitimate because the Q-Learning target does not depend on the policy that collected the transition. The target network freezes the bootstrap targets between periodic syncs, cutting the feedback loop of a regression that moves its own targets. The max in the target also inflates values, since a maximum of noisy estimates is biased upward; Double DQN reduces the inflation by letting the online network select the action and the frozen network evaluate it. On CartPole, the full recipe reaches the 500 ceiling on every seed while the same code without the target network collapses to an immediately falling pole on every seed.
 
 ## Exercises
 
 1. Implement Double DQN by replacing the target computation with :eqref:`eq_double_dqn`. Compare the two on CartPole across several seeds; also track $\max_a Q_\theta(s_0, a)$ at the start state over training and compare it with the returns actually achieved.
-1. Sweep the sync period over $C \in \{1, 50, 200, 1000\}$. Explain what $C = 1$ is equivalent to, and why very large $C$ also slows learning.
+1. Sweep the sync period over $C \in \{1, 50, 500, 5000\}$. Explain what $C = 1$ is equivalent to, and why very large $C$ also slows learning.
 1. Shrink the replay buffer to 500 transitions and retrain. Which of the two couplings does this reintroduce, and what do the curves look like?
 1. DQN stores `float(terminated)` and not `done` in the buffer. Recalling the discussion in :numref:`sec_qlearning`, what would go wrong with the targets on truncated CartPole episodes if `done` were stored instead?
 
@@ -199,7 +183,7 @@ target.
 
 Double DQN: split selection from evaluation,
 
-$$y = r + \gamma\, Q_{\theta^-}\big(s',\,
+$$y = r + \gamma\,(1-\mathbb{1}_{\text{terminal}})\, Q_{\theta^-}\big(s',\,
   \mathrm{argmax}_{a'} Q_\theta(s', a')\big),$$
 
 so an action the online net overrates is not scored by the same
@@ -213,10 +197,10 @@ Identical code, three seeds each, `use_target` on vs off:
 
 . . .
 
-With the target network every seed climbs into the hundreds.
-Without it, every seed collapses to a pole that falls
-immediately, and the greedy policy keeps collecting data that
-confirms the collapse.
+With the target network every seed reaches the 500 ceiling
+(median final 20-episode average: 460). Without it, every seed
+collapses to a pole that falls immediately, and the greedy
+policy keeps collecting data that confirms the collapse.
 :::
 
 ::: {.slide title="Recap"}
@@ -225,6 +209,6 @@ confirms the collapse.
   transition — the off-policy license, next deck's topic.
 - Max of noisy estimates overestimates; Double DQN decouples
   select/evaluate.
-- The ablation is binary on CartPole: learns on every seed vs
-  fails on every seed.
+- The ablation is binary on CartPole: every seed reaches the
+  ceiling vs every seed fails outright.
 :::

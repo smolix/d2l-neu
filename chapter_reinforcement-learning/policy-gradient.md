@@ -176,17 +176,14 @@ avg_returns = reinforce(env_info=env_info, gamma=gamma, num_iters=num_iters,
                         batch_size=batch_size, alpha=alpha)
 ```
 
-The visualization is read slightly differently than in the previous sections: the arrow still shows the most probable action at each state, but the color now shows the *probability* that the policy assigns to that action, from dark (near-uniform, $0.25$ with four actions) to light (near-certain). The policy sharpens along the same optimal path to the goal that Value Iteration and Q-Learning found. A trajectory that never reaches the goal has $R(\tau) = 0$ and contributes nothing to :eqref:`eq_reinforce`, so early training crawls: until the robot stumbles into the goal by chance, every update is zero. In our run the average return of the batch does not stabilize until roughly update 75, as the learning curve below shows. States that appear only on failed trajectories keep their preferences at exactly zero and stay at probability $0.25$ in the plot. The estimator is unbiased, but most of its samples say nothing at all; the next section is about fixing this.
+The visualization is read slightly differently than in the previous sections: the arrow still shows the most probable action at each state, but the color now shows the *probability* that the policy assigns to that action, from dark (near-uniform, $0.25$ with four actions) to light (near-certain). The policy sharpens along the same optimal path to the goal that Value Iteration and Q-Learning found. A trajectory that never reaches the goal has $R(\tau) = 0$ and contributes nothing to :eqref:`eq_reinforce`, so early training crawls: until the robot stumbles into the goal by chance, every update is zero. In our run the average return of the batch does not stabilize until roughly update 75, as the learning curve below shows. The cells that stay at exactly $0.25$ in the plot are the holes and the goal: the robot never takes an action *from* a terminal state, so their preferences are never touched. The darker of the remaining cells are states visited mostly on failed trajectories, whose preferences have moved the least. The estimator is unbiased, but most of its samples say nothing at all; the next section is about fixing this.
 
 Since the algorithm performs gradient ascent on $J(\theta)$, the most direct learning curve is $J(\theta)$ itself. The mean discounted return of each batch is exactly the Monte Carlo estimate of $J(\theta)$ computed from the same 16 trajectories that produced the update, so we get the curve for free:
 
 ```{.python .input #policy-gradient-implementation-of-policy-gradient-4}
 
-d2l.set_figsize((6, 4))
-d2l.plt.plot(np.arange(1, num_iters + 1), avg_returns)
-d2l.plt.axhline(gamma ** 5, linestyle='--', color='gray')
-d2l.plt.xlabel('update')
-d2l.plt.ylabel('average return of the batch');
+d2l.show_value_convergence(avg_returns, reference=gamma ** 5, xlabel='update',
+                           ylabel='average return of the batch', marker=None)
 ```
 
 The curve makes the two phases of the run visible. It hugs zero for the first stretch, since a batch without a single successful trajectory produces no update at all and the rare lucky batch barely moves it. It then climbs toward the dashed line at $\gamma^5 \approx 0.774$, the return of the optimal six-step path. It hovers slightly below that ceiling because the policy stays stochastic: any sampled action that deviates from the optimal path either lengthens the trajectory or ends it in a hole.

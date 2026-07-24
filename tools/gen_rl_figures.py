@@ -4,7 +4,7 @@
 
 Run with the repo's pytorch venv:
 
-    .venv-pytorch/bin/python tools/gen_mdl_rl_figures.py
+    .venv-pytorch/bin/python tools/gen_rl_figures.py
 
 All figures are written to ``img/mdl-rl-<id>.svg``.
 """
@@ -41,7 +41,7 @@ def fig_policy_vs_parameter():
         ax.legend(fontsize=12, loc="upper right")
     axes[0].set_ylabel(r"$\pi_\theta(a)$", fontsize=14, color="black")
     fig.subplots_adjust(wspace=0.12)
-    fl.save(fig, "mdl-rl-policy-vs-parameter")
+    fl.save(fig, "rl-policy-vs-parameter")
 
 
 FIGURES = [

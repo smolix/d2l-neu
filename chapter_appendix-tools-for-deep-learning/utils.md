@@ -281,7 +281,7 @@ def show_value_function_progress(env_desc, V, pi): #@save
         # LEFT action: 0, DOWN action: 1
         # RIGHT action: 2, UP action: 3
         action2dxdy = {0:(-.25, 0),1: (0, .25),
-                       2:(0.25, 0),3: (-.25, 0)}
+                       2:(0.25, 0),3: (0, -.25)}
 
         for y in range(4):
             for x in range(4):
@@ -354,7 +354,7 @@ def show_Q_function_progress(env_desc, V_all, pi_all): #@save
         # LEFT action: 0, DOWN action: 1
         # RIGHT action: 2, UP action: 3
         action2dxdy = {0:(-.25, 0),1:(0, .25),
-                       2:(0.25, 0),3:(-.25, 0)}
+                       2:(0.25, 0),3:(0, -.25)}
 
         for y in range(4):
             for x in range(4):
@@ -384,6 +384,110 @@ def show_Q_function_progress(env_desc, V_all, pi_all): #@save
 
     fig.tight_layout()
     plt.show()
+
+def show_return_curve(episode_returns, window=25): #@save
+    """Plot a moving average of per-episode returns."""
+    set_figsize((6, 4))
+    moving_avg = np.convolve(np.asarray(episode_returns),
+                             np.ones(window) / window, 'valid')
+    plt.plot(np.arange(window, len(episode_returns) + 1), moving_avg)
+    plt.xlabel('episode')
+    plt.ylabel(f'return (moving average over {window} episodes)')
+
+def show_learning_curves(runs, xlabel, ylabel): #@save
+    """Plot mean learning curves with one-standard-deviation seed bands."""
+    set_figsize((6, 4))
+    for name, r in runs.items():
+        mean, std = r.mean(axis=0), r.std(axis=0)
+        x = np.arange(len(mean))
+        plt.plot(x, mean, label=name)
+        plt.fill_between(x, mean - std, mean + std, alpha=0.2)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+
+def compare_agents(agents, num_seeds, final_window=10): #@save
+    """Train each agent across seeds, print the mean return over the
+    final updates, and plot the learning curves with seed bands."""
+    runs = {}
+    for name, fn in agents.items():
+        runs[name] = np.stack([fn(seed) for seed in range(num_seeds)])
+        print(f'{name}: mean return over the last {final_window} updates = '
+              f'{runs[name][:, -final_window:].mean():.0f}')
+    show_learning_curves(runs, 'update', 'average return of the batch')
+
+def show_value_bars(bars, ticks, ylabel, reference=None): #@save
+    """Grouped bar chart; `bars` maps a label to one height per tick."""
+    set_figsize((5, 3.5))
+    x = np.arange(len(ticks))
+    width = 0.7 / len(bars)
+    for i, (name, heights) in enumerate(bars.items()):
+        plt.bar(x + (i - (len(bars) - 1) / 2) * width, heights, width,
+                label=name)
+    if reference is not None:
+        plt.axhline(reference, linestyle='--', color='gray')
+    plt.xticks(x, ticks)
+    plt.ylabel(ylabel)
+    plt.legend()
+
+def compare_return_curves(agents, num_seeds, window=20): #@save
+    """Train each agent across seeds, smooth the per-episode returns
+    with a moving average, print median best and final values, plot."""
+    runs = {}
+    for name, fn in agents.items():
+        r = np.stack([np.convolve(fn(seed), np.ones(window) / window,
+                                  'valid') for seed in range(num_seeds)])
+        runs[name] = r
+        print(f'{name}: median best {window}-episode average = '
+              f'{np.median(r.max(axis=1)):.0f}, '
+              f'median final {window}-episode average = '
+              f'{np.median(r[:, -1]):.0f}')
+    show_learning_curves(runs, 'episode',
+                         f'return (moving average over {window} episodes)')
+
+def show_clip_ablation(agents, num_seeds, floor=100): #@save
+    """Train each PPO variant across seeds; report seeds that never
+    recover and each variant's clipped-sample fraction, then plot."""
+    runs = {}
+    for name, fn in agents.items():
+        curves, clip_fracs = [], []
+        for seed in range(num_seeds):
+            curve, clip_frac = fn(seed)
+            curves.append(curve)
+            clip_fracs.append(clip_frac)
+        runs[name] = np.stack(curves)
+        dead = [sd for sd, c in enumerate(curves) if c[-10:].mean() < floor]
+        print(f'{name}: seeds that never recover = {dead}')
+        if max(clip_fracs) > 0:
+            print(f'{name}: fraction of samples clipped = '
+                  f'{np.mean(clip_fracs):.3f}')
+    show_learning_curves(runs, 'update', 'average return of the batch')
+
+def compare_success_curves(curves, window=10, threshold=0.9): #@save
+    """Smooth per-update success rates, print the median number of
+    updates each variant needs to reach `threshold`, and plot."""
+    runs = {}
+    for name, cs in curves.items():
+        smoothed = [np.convolve(c, np.ones(window) / window, 'valid')
+                    for c in cs]
+        runs[name] = np.stack(smoothed)
+        m = [int(np.argmax(sc >= threshold)) if (sc >= threshold).any()
+             else len(c) for sc, c in zip(smoothed, cs)]
+        print(f'{name}: median updates to reach '
+              f'{int(threshold * 100)}% success = {int(np.median(m))}')
+    show_learning_curves(runs, 'update', 'batch success rate')
+
+#@save
+def show_value_convergence(values, reference=None, xlabel='iteration',
+                           ylabel='value estimate at the start state',
+                           marker='o'):
+    """Plot a per-update scalar with an optional dashed reference line."""
+    set_figsize((6, 4))
+    plt.plot(np.arange(1, len(values) + 1), values, marker=marker)
+    if reference is not None:
+        plt.axhline(reference, linestyle='--', color='gray')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
 
 ```
 

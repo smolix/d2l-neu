@@ -215,6 +215,16 @@ rebuild-book-artifacts:
 		echo "ERROR: concurrent html/pdf render failed (html=$$HTML_RC pdf=$$PDF_RC)"; \
 		exit 1; \
 	fi
+	@# Stage _slides/ → _book/slides/ unconditionally. The html recipe also calls
+	@# integrate_slides.sh, but ONLY when it actually runs: if the slide render
+	@# above rebuilt decks while _book/index.html was already up to date (edit a
+	@# source .md, render html, then render slides — or add a chapter whose
+	@# .built stamp is stale but whose html isn't), make correctly skips html and
+	@# _book/slides/ silently keeps the previous render's deck set. That shipped
+	@# a book missing the new decks until check-all-artifacts caught it. Slides
+	@# are done and html has joined by here, so nothing races the rm -rf/rsync;
+	@# re-running it after html is an idempotent no-op costing one rsync.
+	tools/integrate_slides.sh
 	@# Notebook download bundles — after html+pdfs so quarto's render can't wipe
 	@# _book/notebooks/; CPU-only, injects outputs from the committed store.
 	$(MAKE) notebook-zips

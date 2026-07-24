@@ -1015,6 +1015,24 @@ breadcrumb in **both** the mobile and desktop breadcrumb blocks Quarto emits) �
 `_book/slides/`). The render is single-threaded but it's only ~9 min of a
 ~2.5 h full build — see §6.9 for the artifact-phase breakdown.
 
+**`_book/slides/` staging is NOT owned by the html recipe alone** (fixed
+2026-07-24). `integrate_slides.sh` runs inside the html recipe, so it only ran
+when html itself was out of date — but `_book/slides/` is a product of the
+*slides* render, and the two go stale independently. Render html, then render
+slides (or add a chapter whose `.built` stamp is stale while `_book/index.html`
+is current), and Make correctly skips html while `_book/slides/` silently keeps
+the **previous** render's deck set. That is how a `make deploy` shipped a
+`_book/` missing the seven new RL decks in every framework — caught only by
+`check-all-artifacts` (§6.9), which is exactly the silent-deck-drop class it
+exists to catch. `rebuild-book-artifacts` therefore calls
+`tools/integrate_slides.sh` **unconditionally** after the html∥pdf block. It is
+safe there (slides are finished and html has joined, so nothing races the
+`rm -rf`/`rsync`) and idempotent (one extra rsync when html already staged).
+Note the gate's expected-deck set is *store-driven*: a PyTorch-only chapter like
+RL generates decks for all four frameworks but is only asserted for pytorch, so
+a missing deck in a framework with no `outputs/` tree for that chapter will not
+trip it.
+
 ### 6.9 Makefile layout, extracted scripts & artifact-phase timing
 
 **`make/*.mk` includes (2026-07-22 cleanup).** The top-level `Makefile` is a thin

@@ -20,13 +20,15 @@ A Markov decision process (MDP) :cite:`BellmanMDP` is a model for how the state 
 The different components above together form a Markov decision process (MDP)
 $$\textrm{MDP}: (\mathcal{S}, \mathcal{A}, P, r).$$
 
+Some treatments fold the discount factor of the next subsection into this tuple, and some let the reward be random or depend on the next state; our $r(s, a)$ then plays the role of the expected reward, and nothing in this chapter loses generality from the simpler form.
+
 Let us now consider the situation when the robot starts at a particular state $s_0 \in \mathcal{S}$ and continues taking actions to result in a trajectory
 $$\tau = (s_0, a_0, r_0, s_1, a_1, r_1, s_2, a_2, r_2, \ldots).$$
 
 At each time step $t$ the robot is at a state $s_t$ and takes an action $a_t$ which results in a reward $r_t = r(s_t, a_t)$. The *return* of a trajectory is the total reward obtained by the robot along such a trajectory
 $$R(\tau) = r_0 + r_1 + r_2 + \cdots.$$
 
-The goal in reinforcement learning is to find a trajectory that has the largest *return*.
+The goal in reinforcement learning is to take actions so that the trajectories it produces have the largest *return*, on average over their randomness; we will make this precise using policies and value functions in :numref:`sec_valueiter`.
 
 Think of the situation when the robot continues to travel in the gridworld without ever reaching the goal location. The sequence of states and actions in a trajectory can be infinitely long in this case and the *return* of such an infinitely long trajectory can grow without bound, e.g., if the robot earns a fixed positive reward at each step. In order to keep the reinforcement learning formulation meaningful even for such trajectories, we introduce the notion of a discount factor $0 \leq \gamma < 1$. If the rewards are bounded, the discounted *return* is always finite:
 $$R(\tau) = r_0 + \gamma r_1 + \gamma^2 r_2 + \cdots = \sum_{t=0}^\infty \gamma^t r_t.$$
@@ -66,7 +68,7 @@ Reinforcement learning starts with an **agent-environment loop**.
 At time $t$:
 
 $$s_t \xrightarrow{\text{agent chooses } a_t}
-  (r_t, s_{t+1}) \xrightarrow{\text{environment}} s_{t+1}.$$
+  (s_t, a_t) \xrightarrow{\text{environment}} (r_t, s_{t+1}).$$
 
 The hard part is delayed consequence: an action can look bad
 immediately but set up large future reward, or look good now and

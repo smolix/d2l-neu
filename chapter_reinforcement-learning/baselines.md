@@ -6,7 +6,7 @@ tab.interact_select('pytorch')
 # Baselines and Variance Reduction
 :label:`sec_baselines`
 
-The REINFORCE estimator of :numref:`sec_policygradient` is unbiased, and it found the optimal FrozenLake policy. It is also wasteful. A trajectory that never reaches the goal has $R(\tau) = 0$ and drops out of the estimator entirely, so early in training most of the robot's experience produces no learning signal at all, and the updates that do arrive swing the parameters around a lot. In this section we reduce the variance of the estimator without changing what it estimates. We first drop terms whose average is zero anyway, then subtract a reference value from the rest, and finally learn that reference value per state. Each step keeps the estimator unbiased and each step makes the same 4096 episodes go further.
+The REINFORCE estimator of :numref:`sec_policygradient` is unbiased, and it found the optimal FrozenLake policy. It is also wasteful. A trajectory that never reaches the goal has $R(\tau) = 0$ and drops out of the estimator entirely, so early in training most of the robot's experience produces no learning signal at all, and the updates that do arrive swing the parameters around a lot. In this section we reduce the variance of the estimator without changing what it estimates. We first drop terms whose average is zero anyway, then subtract a reference value from the rest, and finally learn that reference value per state. Each step keeps the estimator unbiased and each step makes the same episode budget go further.
 
 ## A Zero-Mean Identity
 
@@ -32,7 +32,7 @@ The inner sum equals $\gamma^t \hat{G}_t$ where
 
 $$\hat{G}_t = \sum_{t'=t}^{T-1} \gamma^{t'-t}\, r_{t'}$$
 
-is called the reward-to-go from step $t$: the discounted return of the remainder of the trajectory, as if it started at $s_t$. Implementations almost always drop the leading $\gamma^t$ and weight the score at step $t$ by $\hat{G}_t$ alone, which treats every timestep equally instead of down-weighting late ones; Sutton and Barto make the same simplification when presenting REINFORCE and we follow it here. The estimator becomes
+is called the reward-to-go from step $t$: the discounted return of the remainder of the trajectory, as if it started at $s_t$. Implementations almost always drop the leading $\gamma^t$ and weight the score at step $t$ by $\hat{G}_t$ alone, which treats every timestep equally instead of down-weighting late ones. Sutton and Barto's boxed REINFORCE keeps the factor, and their text derivation sidesteps the question by treating the undiscounted case; we follow implementation practice instead, and the price is that the simplified update is no longer an exact unbiased estimate of the gradient of the discounted objective. The estimator becomes
 
 $$\hat{u} = \frac{1}{n} \sum_{i=1}^n \sum_{t=0}^{T-1} \hat{G}_t^i\ \nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i).$$
 :eqlabel:`eq_rtg`
@@ -79,7 +79,7 @@ $$Y = \nabla_\theta \log \pi_\theta(a_t \mid s_t).$$
 
 $Y$ moves together with $X$ almost by construction, since $X$ is $Y$ times a scalar. And we know the true average of $Y$ exactly: it is zero, by the lemma. The scale factor is the baseline itself, $c = b(s_t)$. Line up the pieces and :eqref:`eq_pg_baseline` is :eqref:`eq_control_variate`, term by term: a baseline is a control variate built from the score.
 
-The reframing pays twice. First, unbiasedness for every $b$ stops being a lucky algebraic fact; it is the any-$c$-is-allowed property that every control variate has. Second, the question of which baseline is best now has an exact answer: the optimal scale is $c^*$, the covariance-over-variance ratio, computed state by state. Carried out for the vector-valued score, where the products become inner products, it gives the score-weighted optimal baseline of the exercises. The plain average return has the right scale but is not that exact optimum, which is why it is good without being best. :citet:`Greensmith.Bartlett.Baxter.2004` develop this view for policy gradient estimators and show that the value-function critic of the next section can be read as a control variate as well.
+The reframing pays twice. First, unbiasedness for every $b$ stops being a lucky algebraic fact; it is the any-$c$-is-allowed property that every control variate has. Second, the question of which baseline is best now has an exact answer: the optimal scale is $c^*$, the covariance-over-variance ratio, computed state by state. Carried out for the vector-valued score, where the products become inner products, it gives the score-weighted optimal baseline of the exercises. The plain average return has the right scale but is not that exact optimum, which is why it is good without being best. :citet:`Greensmith.Bartlett.Baxter.2004` develop this view for policy gradient estimators and show that the value-function critic of :numref:`sec_actorcritic` can be read as a control variate as well.
 
 ## Normalized Returns
 
@@ -88,13 +88,13 @@ A practical variant standardizes the reward-to-go values within each batch. Coll
 $$\tilde{G}_t^i = \frac{\hat{G}_t^i - \mu}{\sigma + \epsilon}$$
 :eqlabel:`eq_pg_normalized`
 
-in place of $\hat{G}_t^i$, where the small constant $\epsilon$ avoids dividing by zero. Subtracting $\mu$ is a baseline. Dividing by $\sigma + \epsilon$ is different in kind: it rescales the update so that its size no longer depends on the scale of the rewards, which spares us from re-tuning the learning rate every time the reward magnitudes change.
+in place of $\hat{G}_t^i$, where the small constant $\epsilon$ avoids dividing by zero. Subtracting $\mu$ acts as a baseline, with one caveat: $\mu$ is computed from the same batch, so it depends weakly on the sampled actions, and the exact zero-bias argument above holds only up to a correction that vanishes as the batch grows. Dividing by $\sigma + \epsilon$ is different in kind: it rescales the update so that its size no longer depends on the scale of the rewards, which spares us from re-tuning the learning rate every time the reward magnitudes change.
 
 The reason to dwell on this variant is what it became. Group Relative Policy Optimization (GRPO), the method used to train recent reasoning language models, samples a *group* of $G$ responses to the same prompt, scores each response with a reward $r_j$, and weights the score function with
 
 $$A_j = \frac{r_j - \mu}{\sigma + \epsilon},$$
 
-where $\mu$ and $\sigma$ are the mean and standard deviation of the rewards within the group. This is :eqref:`eq_pg_normalized`, with the prompt in the role of our start state and the group of responses in the role of our batch of $k$ trajectories. Even the motivation is the one from this section, read at scale: for a model with billions of parameters, a learned baseline of the kind we build next is a value network as large as the policy and as hard to train, so GRPO drops it and lets the group mean act as a per-prompt baseline, while the group standard deviation makes advantages comparable across prompts whose reward magnitudes differ. GRPO adds machinery around the update itself, which :numref:`sec_ppo` will explain, but its advantage estimate is this subsection's normalization, nothing more.
+where $\mu$ and $\sigma$ are the mean and standard deviation of the rewards within the group. This is :eqref:`eq_pg_normalized`, with the prompt in the role of our start state and the group of responses in the role of our batch of $n$ trajectories. Even the motivation is the one from this section, read at scale: for a model with billions of parameters, a learned baseline of the kind we build next is a value network as large as the policy and as hard to train, so GRPO drops it and lets the group mean act as a per-prompt baseline, while the group standard deviation makes advantages comparable across prompts whose reward magnitudes differ. GRPO adds machinery around the update itself, which :numref:`sec_ppo` will explain, but its advantage estimate is this subsection's normalization, nothing more.
 
 ## A Learned Baseline
 
@@ -102,7 +102,7 @@ The best baseline at state $s$ should say what return is typical *from that stat
 
 $$\hat{V}(s_t) \leftarrow \hat{V}(s_t) + \beta \big( \hat{G}_t - \hat{V}(s_t) \big),$$
 
-with a step size $\beta$. The weight in :eqref:`eq_pg_baseline` becomes $\hat{G}_t - \hat{V}(s_t)$, which reads as: how much better did the trajectory do from $s_t$ than trajectories usually do from $s_t$. A quantity of this form is called an advantage, and this algorithm is REINFORCE with a baseline :cite:`Williams.1992`. Note that $\hat{V}$ is trained here by regression on Monte Carlo returns, meaning reward-to-go values computed from complete sampled trajectories; in the next section we will let it build its targets from its own predictions instead, and the pair of a parameterized policy and a learned value estimate will get a name of its own.
+with a step size $\beta$. The weight in :eqref:`eq_pg_baseline` becomes $\hat{G}_t - \hat{V}(s_t)$, which reads as: how much better did the trajectory do from $s_t$ than trajectories usually do from $s_t$. A quantity of this form is called an advantage, and this algorithm is REINFORCE with a baseline :cite:`Williams.1992`. Note that $\hat{V}$ is trained here by regression on Monte Carlo returns, meaning reward-to-go values computed from complete sampled trajectories; in :numref:`sec_actorcritic` we will let it build its targets from its own predictions instead, and the pair of a parameterized policy and a learned value estimate will get a name of its own.
 
 ## Comparing the Variants
 
@@ -205,40 +205,22 @@ We plot, for every variant, the batch success rate over training, averaged over 
 
 ```{.python .input #baselines-comparing-the-variants-4}
 
-def smooth(x, w=10):
-    return np.convolve(x, np.ones(w) / w, 'valid')
-
-def first_reach(curve, threshold=0.9):
-    idx = np.where(smooth(curve) >= threshold)[0]
-    return int(idx[0]) if len(idx) else num_iters
-
-d2l.set_figsize((6, 4))
-for v in variants:
-    runs = np.stack([smooth(c) for c in curves[v]])
-    mean, std = runs.mean(axis=0), runs.std(axis=0)
-    x = np.arange(len(mean))
-    d2l.plt.plot(x, mean, label=v)
-    d2l.plt.fill_between(x, mean - std, mean + std, alpha=0.2)
-    m = [first_reach(c) for c in curves[v]]
-    print(f'{v}: median updates to reach 90% success = {int(np.median(m))}')
-d2l.plt.xlabel('update')
-d2l.plt.ylabel('batch success rate')
-d2l.plt.legend();
+d2l.compare_success_curves(curves)
 ```
 
-The ordering matches the theory. Plain trajectory returns are the slowest, a median of about 69 updates to reach a 90% success rate in this run. Reward-to-go cuts that to about 45. Normalization brings it to about 33, roughly half of what the plain estimator needs. The learned baseline lands next to reward-to-go here, around 46, and the reason it does not win on this problem is plain: rewards are sparse, so $\hat{V}$ stays near zero until the robot has reached the goal a few times, and until then the learned-baseline variant *is* reward-to-go. Its payoff is the per-state advantage view, which the next section builds on.
+The ordering matches the theory. Plain trajectory returns are the slowest, a median of about 69 updates to reach a 90% success rate in this run. Reward-to-go cuts that to about 45. Normalization brings it to about 33, roughly half of what the plain estimator needs. The learned baseline lands next to reward-to-go here, around 46, and the reason it does not win on this problem is plain: rewards are sparse, so $\hat{V}$ stays near zero until the robot has reached the goal a few times, and until then the learned-baseline variant *is* reward-to-go. Its payoff is the per-state advantage view, which :numref:`sec_actorcritic` builds on.
 
 The figure also demonstrates how results in reinforcement learning should be read. Every band in the plot is wide. On the plain-return variant, individual seeds in this experiment reached the 90% mark anywhere between update 39 and update 87, more than a factor of two apart, with nothing changed but the random seed. A single training curve is an anecdote; had we shown you the luckiest seed of the slowest variant next to the unluckiest seed of the fastest one, the conclusion would have flipped. When you compare algorithms, run several seeds, plot the spread, keep the hyper-parameters matched, and report medians rather than best runs. We kept the learning rate at $2.0$ for all four variants above for exactly this reason.
 
 ## Summary
 
-The REINFORCE estimator pairs every score with the whole trajectory return, and much of that pairing averages to zero. The zero-mean property of the score function lets us drop rewards from before an action and subtract any action-independent baseline, both without bias. Reward-to-go judges each action by what came after it. A baseline turns "push everything up by different amounts" into "push good steps up and bad steps down". Normalizing the reward-to-go values inside a batch additionally makes the step size insensitive to reward scale. Estimating the baseline per state with a value table produces advantage-weighted updates and is one bootstrap away from the actor-critic method of the next section. Finally, learning curves in reinforcement learning are noisy; conclusions require several seeds and matched hyper-parameters, not one lucky run.
+The REINFORCE estimator pairs every score with the whole trajectory return, and much of that pairing averages to zero. The zero-mean property of the score function lets us drop rewards from before an action and subtract any action-independent baseline, both without bias. Reward-to-go judges each action by what came after it. A baseline turns "push everything up by different amounts" into "push good steps up and bad steps down". Normalizing the reward-to-go values inside a batch additionally makes the step size insensitive to reward scale. Estimating the baseline per state with a value table produces advantage-weighted updates and is one bootstrap away from the actor-critic method of :numref:`sec_actorcritic`. Finally, learning curves in reinforcement learning are noisy; conclusions require several seeds and matched hyper-parameters, not one lucky run.
 
 ## Exercises
 
 1. In :eqref:`eq_pg_normalized`, replace the full normalization by mean subtraction alone, i.e., use $\hat{G}_t - \mu$ without dividing by $\sigma + \epsilon$. Compare all three of raw, mean-subtracted, and fully normalized reward-to-go at a couple of learning rates. Which part of the improvement comes from centering and which from rescaling?
 1. Vary the baseline step size $\beta$ (e.g., $0.01$, $0.1$, $0.5$). How sensitive is the learned-baseline variant to it, and what goes wrong when $\beta$ is too large?
-1. For a single state and a constant baseline $b$, the variance of the estimator is minimized not by the average return but by a weighted average, $b^* = E[\|\nabla_\theta \log \pi_\theta(a \mid s)\|^2\, \hat{G}] \,/\, E[\|\nabla_\theta \log \pi_\theta(a \mid s)\|^2]$. Derive this by differentiating the variance with respect to $b$, and check that it is the coefficient $c^*$ of :eqref:`eq_control_variate` for the vector-valued score.
+1. For a single state and a constant baseline $b$, the variance of the estimator is minimized not by the average return but by a weighted average, $b^* = E[\|\nabla_\theta \log \pi_\theta(a \mid s)\|^2\, \hat{G}] \,/\, E[\|\nabla_\theta \log \pi_\theta(a \mid s)\|^2]$. Derive this by differentiating the variance with respect to $b$, and check that it is the optimal coefficient $c^*$ derived after :eqref:`eq_control_variate`, carried over to the vector-valued score.
 1. Repeat the comparison on the $8 \times 8$ FrozenLake map. Does the gap between the variants grow or shrink, and why would you expect that from the length of the trajectories?
 
 <!-- slides -->

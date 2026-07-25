@@ -48,7 +48,7 @@ Two learning rates appear because the two learners have different jobs. The crit
 
 ## Implementation on CartPole
 
-We stay on CartPole with the networks of :numref:`sec_deeprl`. The helpers change in one place: the batch must now carry each transition's reward, next state, and termination flag, because the TD error consumes transitions rather than trajectories.
+We stay on CartPole with the networks of :numref:`sec_deeprl`. The helpers change in two places. The batch must now carry each transition's reward, next state, and termination flag, because the TD error consumes transitions rather than trajectories. And the shared actor update bounds the norm of the policy gradient at the customary 0.5. Both methods scale their weights to unit variance before the update, so it is tempting to assume both take steps of the same size; measured on these runs the actor-critic gradients are an order of magnitude larger, and the clip binds on about half of the actor-critic updates and on none of the Monte Carlo ones. The reason is the baseline argument of :numref:`sec_baselines` read backwards: whatever part of the weight depends on the state alone contributes nothing in expectation, and the Monte Carlo weight spends much of its variance there, while $\delta_t$ is almost all action-dependent signal. A better advantage estimate is also a bigger step at the same learning rate, and how to take big steps safely is what :numref:`sec_ppo` is about.
 
 ```{.python .input #actor-critic-implementation-of-actor-critic-1}
 
@@ -64,6 +64,7 @@ num_updates = 150  # Gradient updates per training run
 batch_size = 8  # Episodes per update
 num_seeds = 3  # Independent runs per algorithm
 critic_steps = 20  # Critic regression passes per batch
+grad_clip = 0.5  # Maximum policy-gradient norm per update
 
 def make_nets():
     policy = nn.Sequential(nn.Linear(4, 64), nn.ReLU(), nn.Linear(64, 2))
@@ -122,6 +123,7 @@ def policy_step(policy, opt_policy, S, A, adv):
     loss = -(adv * logp).mean()
     opt_policy.zero_grad()
     loss.backward()
+    nn.utils.clip_grad_norm_(policy.parameters(), grad_clip)
     opt_policy.step()
 
 def value_step(value, opt_value, S, target):
@@ -181,11 +183,11 @@ d2l.compare_agents({'REINFORCE + baseline': train_reinforce,
                     'actor-critic': train_ac}, num_seeds)
 ```
 
-The two curves are the bias-variance trade drawn by the algorithms themselves. Actor-critic starts slower: for its first stretch the critic is still wrong, the TD errors point in poorly chosen directions, and the biased updates buy little. REINFORCE is faster out of the gate because its Monte Carlo weight is correct on average from the first batch. Then the roles reverse. Once the critic has caught up, the actor-critic runs settle onto the 500 ceiling, and every seed spends the final ten updates exactly there, while the Monte Carlo curve keeps dipping and recovering to the end: its advantage estimates still carry the sampled noise of every remaining coin flip of the trajectory, and a run at the ceiling is only ever one noisy batch away from a stumble. The early cost is the bias while the critic trains, the late payoff is the variance that left with the Monte Carlo tail, and both halves of the bargain from the theory are visible in one figure.
+The two curves are the bias-variance trade drawn by the algorithms themselves. Actor-critic starts slower: for its first stretch the critic is still wrong, the TD errors point in poorly chosen directions, and the biased updates buy little. REINFORCE is faster out of the gate because its Monte Carlo weight is correct on average from the first batch, and it stays ahead through roughly the first third of the updates on every seed we have run. Then the two curves stop differing in level and start differing in shape. Most actor-critic runs settle onto the 500 ceiling and stop moving, posting exactly 500 batch after batch through the final stretch; the Monte Carlo curve plateaus a little under the ceiling and keeps dipping and recovering to the end, because its advantage estimates still carry the sampled noise of every remaining coin flip of the trajectory, and a run at the ceiling is only ever one noisy batch away from a stumble. Not every actor-critic seed gets there, and the two printed numbers sit close enough together that which of them is larger changes with the choice of seeds, so do not read them as a ranking. What separates the methods here is not the height of the plateau but whether a run ever comes to rest on it: a stretch of dozens of consecutive perfect batches happens only on the bootstrapped side. The early cost is the bias while the critic trains, the late payoff is the variance that left with the Monte Carlo tail, and both halves of the bargain from the theory are visible in one figure.
 
 ## Summary
 
-Actor-critic replaces the sampled reward-to-go in the policy gradient with a bootstrapped one-step estimate. The TD error $\delta_t = r_t + \gamma \hat{V}(s_{t+1}) - \hat{V}(s_t)$ is, in expectation under an exact critic, the advantage of the action taken, so it can serve as the weight on the score function. The actor is the policy, the critic is the value network, and the weight consumes single transitions rather than trajectory tails, so updates need not wait for episodes to end. The critic introduces bias while it is still wrong, in exchange for removing the variance of the Monte Carlo tail; this is the same bargain Q-Learning struck, now on the policy side. On CartPole the bargain is visible in the learning curves: actor-critic trails while its critic trains, then holds the ceiling with a steadiness that the Monte Carlo method never reaches. The critic must also learn faster than the actor, which our implementation arranges by giving it multiple regression passes per batch, taken before the actor uses the advantages.
+Actor-critic replaces the sampled reward-to-go in the policy gradient with a bootstrapped one-step estimate. The TD error $\delta_t = r_t + \gamma \hat{V}(s_{t+1}) - \hat{V}(s_t)$ is, in expectation under an exact critic, the advantage of the action taken, so it can serve as the weight on the score function. The actor is the policy, the critic is the value network, and the weight consumes single transitions rather than trajectory tails, so updates need not wait for episodes to end. The critic introduces bias while it is still wrong, in exchange for removing the variance of the Monte Carlo tail; this is the same bargain Q-Learning struck, now on the policy side. On CartPole the bargain is visible in the learning curves: actor-critic trails while its critic trains, then, on most seeds, comes to rest on the ceiling with a steadiness the Monte Carlo method never reaches, while the Monte Carlo run plateaus just under it and keeps stumbling to the end. The critic must also learn faster than the actor, which our implementation arranges by giving it multiple regression passes per batch, taken before the actor uses the advantages.
 
 ## Exercises
 
@@ -193,6 +195,7 @@ Actor-critic replaces the sampled reward-to-go in the policy gradient with a boo
 1. Replace the one-step target in :eqref:`eq_td_error` by a three-step target $r_t + \gamma r_{t+1} + \gamma^2 r_{t+2} + \gamma^3 \hat{V}(s_{t+3})$. What does this do to bias and variance, and where do the two extremes of this family land?
 1. The actor update in :eqref:`eq_actor_critic` is biased whenever $\hat{V} \neq V^{\pi_\theta}$. Explain why the baseline argument of :numref:`sec_baselines`, which allowed any $b(s_t)$ without bias, does not cover the bootstrapped weight $\delta_t$.
 1. :eqref:`eq_actor_critic` can be applied at every single transition, with no batch at all. Implement this fully online variant on CartPole and compare it with the batched version. What goes wrong, and which ingredient of :numref:`sec_dqn`'s recipe would address it?
+1. Log the norm of the policy gradient in both methods, before the clip is applied. Although both normalize their weights to unit variance, the actor-critic norms come out roughly an order of magnitude larger. Explain the gap with the baseline argument of :numref:`sec_baselines`, then predict, and check, which of the two runs changes at all when `grad_clip` is removed.
 
 <!-- slides -->
 
@@ -238,6 +241,8 @@ $$w \mathrel{+}= \alpha_w\, \delta_t\, \nabla_w \hat V_w(s_t),
   episode's tail.
 - Two timescales: the critic must stay ahead of the actor.
   Here: 20 critic regression passes per batch, taken *first*.
+- At equal weight scale $\delta_t$ makes far bigger steps than
+  the Monte Carlo weight, so clip the actor's gradient norm.
 
 @actor-critic-implementation-of-actor-critic-3
 :::
@@ -250,9 +255,10 @@ $$w \mathrel{+}= \alpha_w\, \delta_t\, \nabla_w \hat V_w(s_t),
 . . .
 
 Early: actor-critic trails — the critic is still wrong, the
-bias is real. Late: every actor-critic seed pins the 500
-ceiling while Monte Carlo keeps stumbling — the tail variance
-is gone.
+bias is real. Late: most actor-critic seeds come to rest on
+the ceiling, exactly 500 batch after batch, while Monte Carlo
+plateaus just under it and keeps stumbling. Not a higher
+plateau — a still one. The tail variance is gone.
 :::
 
 ::: {.slide title="Recap"}

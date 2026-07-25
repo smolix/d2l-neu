@@ -9,22 +9,22 @@
   },
   "cells": {
     "actor-critic-implementation-of-actor-critic-1": {
-      "code_fingerprint": "sha256:689e9c9cbd8dbf361b60ff3ffa1079e4bad3718cf36b963ba21b5aff4cdfa049",
+      "code_fingerprint": "sha256:f3d27adab5c51a1f9dce8c30f2b794af058e6c7158ba62f3fd6e2a9f99e69247",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-implementation-of-actor-critic-2": {
-      "code_fingerprint": "sha256:24f028cc1f8842add21fc6d37e0458fdc5dbc672e811cccec9adda762d98c4c3",
+      "code_fingerprint": "sha256:a39ad21a6b1c29e68ab131b3aba2892a135259f5acc8f0041196ca072b9e2163",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-implementation-of-actor-critic-3": {
-      "code_fingerprint": "sha256:70aff3f1b941d34dc55bea6e51357e606c3c83f43e4edab79e5332d87b3e289b",
+      "code_fingerprint": "sha256:b86278ecc1e09db165e0837c914035a3f89273825a75839f17efa02a657ac1a5",
       "kind": "text",
       "outputs": []
     },
     "actor-critic-implementation-of-actor-critic-4": {
-      "code_fingerprint": "sha256:b6257e965fed633e1591f87ef977816e64c5f814421398108b4a27642fd4a809",
+      "code_fingerprint": "sha256:5151dc41c087a0dc7976621a8e2e84179dc9645a1b30798be846d6d8a8ede4f4",
       "kind": "mixed",
       "outputs": [
         {
@@ -35,14 +35,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "actor-critic: mean return over the last 10 updates = 489\n"
+          "text": "actor-critic: mean return over the last 10 updates = 500\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "actor-critic/actor-critic-implementation-of-actor-critic-4-1.svg",
-          "bytes": 51130,
-          "sha256": "sha256:11bcfa72868624afa6aad2f565865e79d38249010e230e969ce3bb97c2805bfc"
+          "bytes": 50567,
+          "sha256": "sha256:28c4d8d43c6a91667e8fd8265790c50c47fedd254454d7dd214a2f9c43f27663"
         }
       ]
     }

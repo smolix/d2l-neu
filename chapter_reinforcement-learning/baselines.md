@@ -106,7 +106,7 @@ with a step size $\beta$. The weight in :eqref:`eq_pg_baseline` becomes $\hat{G}
 
 ## Comparing the Variants
 
-We now run the four estimators against each other on FrozenLake: the plain trajectory return of :numref:`sec_policygradient`, reward-to-go :eqref:`eq_rtg`, normalized reward-to-go :eqref:`eq_pg_normalized`, and reward-to-go with the learned baseline. To make the comparison fair, every variant uses the same batch size and the same learning rate.
+We now run the four estimators against each other on FrozenLake: the plain trajectory return of :numref:`sec_policygradient`, reward-to-go :eqref:`eq_rtg`, normalized reward-to-go :eqref:`eq_pg_normalized`, and reward-to-go with the learned baseline. To make the comparison fair, every variant uses the same batch size, the same learning rate, and the same twenty random seeds.
 
 ```{.python .input #baselines-comparing-the-variants-1}
 
@@ -120,7 +120,7 @@ num_iters = 150  # Gradient ascent updates per run
 batch_size = 4  # Trajectories per update; small on purpose, to expose variance
 alpha = 2.0  # Learning rate, identical for all variants
 beta = 0.1  # Step size for the learned value baseline
-num_seeds = 5  # Independent runs per variant
+num_seeds = 20  # Independent runs per variant; with 5 the medians are noise
 
 env_info = d2l.make_env('FrozenLake-v1', seed=0)
 env = env_info['env']
@@ -208,9 +208,9 @@ We plot, for every variant, the batch success rate over training, averaged over 
 d2l.compare_success_curves(curves)
 ```
 
-The ordering matches the theory. Plain trajectory returns are the slowest, a median of about 69 updates to reach a 90% success rate in this run. Reward-to-go cuts that to about 45. Normalization brings it to about 33, roughly half of what the plain estimator needs. The learned baseline lands next to reward-to-go here, around 46, and the reason it does not win on this problem is plain: rewards are sparse, so $\hat{V}$ stays near zero until the robot has reached the goal a few times, and until then the learned-baseline variant *is* reward-to-go. Its payoff is the per-state advantage view, which :numref:`sec_actorcritic` builds on.
+The ordering matches the theory. Plain trajectory returns are the slowest: the median run spends something like fifty to seventy updates before its batch success rate holds at 90%. Reward-to-go is faster on nine seeds out of ten and takes the median down by a quarter or so. Normalization brings it to roughly half of what the plain estimator needs. The learned baseline lands next to reward-to-go here — the gap between the two is smaller than the spread across seeds, and which of them comes out ahead depends on the seeds one happens to draw — and the reason it does not win on this problem is plain: rewards are sparse, so $\hat{V}$ stays near zero until the robot has reached the goal a few times, and until then the learned-baseline variant *is* reward-to-go. Its payoff is the per-state advantage view, which :numref:`sec_actorcritic` builds on.
 
-The figure also demonstrates how results in reinforcement learning should be read. Every band in the plot is wide. On the plain-return variant, individual seeds in this experiment reached the 90% mark anywhere between update 39 and update 87, more than a factor of two apart, with nothing changed but the random seed. A single training curve is an anecdote; had we shown you the luckiest seed of the slowest variant next to the unluckiest seed of the fastest one, the conclusion would have flipped. When you compare algorithms, run several seeds, plot the spread, keep the hyper-parameters matched, and report medians rather than best runs. We kept the learning rate at $2.0$ for all four variants above for exactly this reason.
+The figure also demonstrates how results in reinforcement learning should be read. Every band in the plot is wide. Within any single variant the slowest seed needs more than twice as many updates to reach the 90% mark as the fastest one, with nothing changed but the random seed. A single training curve is an anecdote; had we shown you the luckiest seed of the slowest variant next to the unluckiest seed of the fastest one, the conclusion would have flipped. The medians move too: rerun the comparison on twenty *different* seeds and each of them lands a few updates away, the plain-return one anywhere in that fifty-to-seventy band. Twenty seeds are enough to pin the ordering of the variants; they are not enough to pin the numbers to the unit, which is why we quote ranges and ratios above rather than the digits the cell happens to print. When you compare algorithms, run several seeds, plot the spread, keep the hyper-parameters matched, and report medians rather than best runs. We kept the learning rate at $2.0$ for all four variants above for exactly this reason.
 
 ## Summary
 
@@ -297,7 +297,7 @@ things go from $s_t$. One bootstrap away from actor-critic
 :::
 
 ::: {.slide title="The comparison"}
-Same batch size, same learning rate, five seeds each:
+Same batch size, same learning rate, twenty seeds each:
 
 @baselines-comparing-the-variants-3
 
@@ -307,15 +307,17 @@ Same batch size, same learning rate, five seeds each:
 :::
 
 ::: {.slide title="Recap"}
-- Median updates to 90% success: return 69, reward-to-go 45,
-  normalized 33, learned baseline 46.
+- Median updates to 90% success, twenty seeds: reward-to-go beats
+  plain returns on nine seeds in ten, normalized needs about half
+  the updates.
 - The learned baseline ties reward-to-go *here* because sparse
   rewards keep $\hat V \approx 0$ early — its value is the
   per-state advantage view.
 - Batch-normalized returns are GRPO's group-relative advantage:
   prompt ↔ start state, group of responses ↔ batch of
   trajectories, group statistics instead of a value network.
-- The bands are wide: single seeds ranged 39–87 on the same
-  variant. Compare algorithms with several seeds, matched
-  hyper-parameters, medians — never one lucky curve.
+- The bands are wide: inside one variant the slowest seed takes
+  more than twice as many updates as the fastest. Compare
+  algorithms with several seeds, matched hyper-parameters,
+  medians — never one lucky curve.
 :::

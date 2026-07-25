@@ -9,35 +9,35 @@
   },
   "cells": {
     "baselines-comparing-the-variants-1": {
-      "code_fingerprint": "sha256:9c43058a1af40a5ae1671fa795dd00ed6b3958aabc50895b6e31ec4dff430d64",
+      "code_fingerprint": "sha256:ead27205ac8fc3d87b7e150cd7fa122edd8e3478ac93204efb25b640f773d6f3",
       "kind": "text",
       "outputs": []
     },
     "baselines-comparing-the-variants-2": {
-      "code_fingerprint": "sha256:a60855f1efa4aee64e4a24db869f98d7d3eccf81ff7dcd77529f93fc69575d58",
+      "code_fingerprint": "sha256:5eccd95be67c06b610b8a1fe1ed15fd3cc6e85f84b6603b5666132e94a16f335",
       "kind": "text",
       "outputs": []
     },
     "baselines-comparing-the-variants-3": {
-      "code_fingerprint": "sha256:811ec7af2f5a86f8fcb9b2de50fb2a7b4c43ed32474f52152d6c7114fe4e9588",
+      "code_fingerprint": "sha256:6c64b6d0636ac7541578902920cb042078d92ced6e8da6bbdfe17e6938b41603",
       "kind": "text",
       "outputs": []
     },
     "baselines-comparing-the-variants-4": {
-      "code_fingerprint": "sha256:81b97022055852c04a3b67190435a098f7e6e80335f23405cbbe27094246aab8",
+      "code_fingerprint": "sha256:b906ce7c5eb97f3940883c0ee990929892ae0990048a97af928997ba5a567fbd",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "return: median updates to reach 90% success = 69\nreward-to-go: median updates to reach 90% success = 43\nnormalized: median updates to reach 90% success = 32\nlearned baseline: median updates to reach 90% success = 46\n"
+          "text": "return: median updates to reach 90% success = 53\nreward-to-go: median updates to reach 90% success = 37\nnormalized: median updates to reach 90% success = 22\nlearned baseline: median updates to reach 90% success = 41\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-comparing-the-variants-4-1.svg",
-          "bytes": 67170,
-          "sha256": "sha256:0398eb62ec46c2f9d2f55fca1c86192d2c5b646d97bc41dcb25d3fb0363a564b"
+          "bytes": 68420,
+          "sha256": "sha256:65ad663ecf368b05cec174d79e38ce8987a674fe6f5bbc127f8cbc4cfde1ccc0"
         }
       ]
     }

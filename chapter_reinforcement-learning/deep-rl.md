@@ -34,7 +34,7 @@ import gymnasium as gym
 from d2l import torch as d2l
 
 gamma = 0.99  # Discount factor
-num_updates = 60  # Gradient updates per training run
+num_updates = 80  # Gradient updates per training run
 batch_size = 8  # Episodes per update
 num_seeds = 3  # Independent runs per algorithm
 
@@ -109,20 +109,20 @@ def train_reinforce(seed, lr=1e-2):
     return np.array(curve)
 ```
 
-We run 60 updates of 8 episodes each, three seeds, and plot the average return of each batch:
+We run 80 updates of 8 episodes each, three seeds, and plot the average return of each batch:
 
 ```{.python .input #deep-rl-implementation-on-cartpole-4}
 
 d2l.compare_agents({'REINFORCE + baseline': train_reinforce}, num_seeds)
 ```
 
-The curve climbs from a return near 20, the score of the untrained random policy, toward the ceiling of 500, and averages above 400 over the final updates. The tabular derivation survived the move without a single new equation. What did change is the texture of training. The curve dips and recovers along the way, because a network generalizes: an update driven by one batch moves the policy and the values at every state, including states the batch never visited, for better and for worse. Tables never did that, and this coupling across states will return as a central difficulty when we train value functions by bootstrapping in :numref:`sec_dqn`.
+The curve climbs from a return near 20, the score of the untrained random policy, toward the ceiling of 500, and over the final updates it averages above 400 on every seed we ran. Where in the upper range it settles moves by a few tens of points from seed to seed, so read the level and not the last digit. The tabular derivation survived the move without a single new equation. What did change is the texture of training. The curve dips and recovers along the way, because a network generalizes: an update driven by one batch moves the policy and the values at every state, including states the batch never visited, for better and for worse. Tables never did that, and this coupling across states will return as a central difficulty when we train value functions by bootstrapping in :numref:`sec_dqn`.
 
 One Monte Carlo habit also survived the move untouched. The value network is trained on reward-to-go targets, so nothing can be learned from an episode until it has ended, and every advantage still carries the noise of the entire sampled tail of the trajectory. The next section removes that dependence by giving the critic the bootstrapped one-step target that Q-Learning built its update on.
 
 ## Summary
 
-Tables hold one number per state, so they cannot represent a policy or a value function over continuous states. Replacing the preference table with a small network and the value table with another changes nothing in the algorithms: the policy gradient machinery of :numref:`sec_policygradient` and :numref:`sec_baselines` only ever asked for $\log \pi_\theta$ and its gradient, which automatic differentiation supplies. In practice the estimator is written as a scalar loss whose gradient equals the estimator, with advantages held fixed; the loss value itself carries no meaning. On CartPole, REINFORCE with a learned baseline reaches near-ceiling returns within 480 episodes. Networks also introduce generalization across states, which speeds learning and destabilizes it at the same time.
+Tables hold one number per state, so they cannot represent a policy or a value function over continuous states. Replacing the preference table with a small network and the value table with another changes nothing in the algorithms: the policy gradient machinery of :numref:`sec_policygradient` and :numref:`sec_baselines` only ever asked for $\log \pi_\theta$ and its gradient, which automatic differentiation supplies. In practice the estimator is written as a scalar loss whose gradient equals the estimator, with advantages held fixed; the loss value itself carries no meaning. On CartPole, REINFORCE with a learned baseline reaches near-ceiling returns within a few hundred episodes. Networks also introduce generalization across states, which speeds learning and destabilizes it at the same time.
 
 ## Exercises
 
@@ -159,7 +159,7 @@ The loss *value* means nothing. Only the return curve does.
 :::
 
 ::: {.slide title="CartPole results"}
-60 updates $\times$ 8 episodes, three seeds:
+80 updates $\times$ 8 episodes, three seeds:
 
 @deep-rl-implementation-on-cartpole-2
 
@@ -169,8 +169,8 @@ The loss *value* means nothing. Only the return curve does.
 :::
 
 ::: {.slide title="Recap"}
-- REINFORCE + baseline transfers verbatim; above 400 of the
-  500 ceiling within 480 episodes.
+- REINFORCE + baseline transfers verbatim; past 400 of the
+  500 ceiling on every seed, in a few hundred episodes.
 - New with networks: generalization across states — updates
   move states the batch never visited. It speeds learning and
   causes the dips.

@@ -40,7 +40,7 @@ gamma = 0.95  # Discount factor
 num_episodes = 500  # Episodes in the fixed dataset
 num_sweeps = 200  # Passes of offline Q-learning over the dataset
 alpha = 0.2  # Learning rate
-num_seeds = 5
+num_seeds = 15  # Independent datasets: one of them tells us little
 
 def collect_dataset(seed, num_episodes):
     # A uniformly random behavior policy gathers the dataset once
@@ -122,7 +122,7 @@ v_star = V[0]
 print(f'true optimal value of the start state: {v_star:.3f}')
 ```
 
-Now the experiment. For each seed we collect 500 episodes with the random policy, run naive offline Q-Learning and its pessimistic variant, and compare what each *predicts* the start state is worth against what its greedy policy *actually earns*:
+Now the experiment. Each seed collects its own 500 episodes with the random policy, and on that dataset we run naive offline Q-Learning and its pessimistic variant and compare what each *predicts* the start state is worth against what its greedy policy *actually earns*. Fifteen datasets rather than one, because a single draw of 500 random episodes can move these numbers by a factor of two: the bars are medians across datasets and the printout carries the spread, so read the bars for the pattern and never a single run for a number.
 
 ```{.python .input #offline-rl-offline-rl-learning-without-touching-the-world-4}
 
@@ -137,17 +137,19 @@ for seed in range(num_seeds):
 bars = {}
 for name, (pred, actual) in results.items():
     bars[name] = [np.median(pred), np.median(actual)]
-    print(f'{name}: predicted value {np.median(pred):.3f}, '
-          f'actual return of the greedy policy {np.median(actual):.3f}')
+    print(f'{name}: median predicted value {np.median(pred):.2f}, '
+          f'median actual return {np.median(actual):.2f}')
+    print(f'{name}: over seeds, {min(pred):.2f}-{max(pred):.2f} '
+          f'predicted and {min(actual):.2f}-{max(actual):.2f} actual')
 d2l.show_value_bars(bars, ['predicted value at start', 'actual return'],
                     'discounted value', reference=v_star)
 ```
 
-Read the naive bars first. The algorithm predicts a start-state value around $0.30$. The dashed line is the true optimum, $0.18$: the prediction is above what *any* policy can achieve in this environment, which is overestimation caught red-handed, no baseline policy needed for the comparison. What the greedy policy actually earns is roughly $0.09$. The algorithm promises three times what it delivers, and in a real offline deployment the promise is the only number you would see before acting on the policy. Comparing what a method predicts against what it earns is the standard diagnostic of the field, and our factor of three is the gentle, tabular edition: run the same comparison with deep networks on continuous control and the predicted values run orders of magnitude above reality :cite:`Levine.Kumar.Tucker.ea.2020`.
+Read the naive bars first. The algorithm predicts a start-state value of $0.25$ to $0.3$, half again more than the true optimum of $0.18$ drawn as the dashed line: the prediction is above what *any* policy can achieve in this environment, which is overestimation caught red-handed, no baseline policy needed for the comparison. What the greedy policy actually earns is roughly $0.1$. The algorithm promises two to three times what it delivers, and in a real offline deployment the promise is the only number you would see before acting on the policy. Comparing what a method predicts against what it earns is the standard diagnostic of the field, and our factor of two or three is the gentle, tabular edition: run the same comparison with deep networks on continuous control and the predicted values run orders of magnitude above reality :cite:`Levine.Kumar.Tucker.ea.2020`.
 
 ## Pessimism
 
-The repair follows from the diagnosis. The inflated entries are the poorly estimated ones, and poorly estimated means rarely observed, so distrust value in proportion to how little data supports it. The variant above implements the simplest version: subtract a penalty $\kappa / \sqrt{n(s, a)}$, where $n(s, a)$ counts the visits to that pair in the dataset, both inside the bootstrap max and from the final values. The $1/\sqrt{n}$ shape is the natural one, since that is the rate at which the noise in an average of $n$ samples shrinks. With $\kappa = 0.1$, the prediction drops to roughly $0.17$, in line with the true optimum instead of above it, and the actual return edges up to roughly $0.10$. Pessimism did not conjure a much better policy out of the same data; what it bought is a prediction the deployment could have trusted, and that is the currency of the offline setting. This under-promise principle, in many more sophisticated forms, runs through most of modern offline RL :cite:`Levine.Kumar.Tucker.ea.2020`.
+The repair follows from the diagnosis. The inflated entries are the poorly estimated ones, and poorly estimated means rarely observed, so distrust value in proportion to how little data supports it. The variant above implements the simplest version: subtract a penalty $\kappa / \sqrt{n(s, a)}$, where $n(s, a)$ counts the visits to that pair in the dataset, both inside the bootstrap max and from the final values. The $1/\sqrt{n}$ shape is the natural one, since that is the rate at which the noise in an average of $n$ samples shrinks. With $\kappa = 0.1$, the prediction drops to $0.1$ to $0.15$, at or below the true optimum instead of above it, and the gap between what is promised and what is delivered falls from well over $0.1$ to a few hundredths. The achieved return itself barely moves; across datasets the pessimistic policy is about as often a little worse as a little better. Pessimism did not conjure a better policy out of the same data; what it bought is a prediction the deployment could have trusted, and that is the currency of the offline setting. This under-promise principle, in many more sophisticated forms, runs through most of modern offline RL :cite:`Levine.Kumar.Tucker.ea.2020`.
 
 The asymmetry with the online setting deserves one plain statement. Online, optimistic errors self-correct through action, so algorithms can afford optimism and even exploit it to explore. Offline, optimistic errors are never tested, so the safe direction of error is downward: what you cannot verify, you discount.
 
@@ -163,7 +165,7 @@ There is also a way out of the bootstrapping business altogether. The max in the
 
 ## Summary
 
-On-policy updates estimate expectations under the current policy and spoil when the data comes from anyone else; importance ratios extend their reach only as far as their variance allows. Off-policy updates like Q-Learning's estimate the Bellman optimality backup, which depends on the environment and not on the data collector, so replay across stale policies is legitimate. SARSA differs from Q-Learning by evaluating the action actually taken instead of the max, which is exactly the difference between estimating the behavior policy's value and the optimal one, and between on-policy and off-policy. Offline RL removes interaction altogether: the max over finitely-sampled values overestimates, nothing corrects it, and the learned policy is assembled from the most inflated entries. On slippery FrozenLake the naive method predicted more than the theoretical optimum and delivered a third of its promise; a $1/\sqrt{n}$ pessimism penalty restored honest predictions at the same data budget. Past the gridworld, the same instincts scale as paired value and policy constraints, as explicit budgets on out-of-distribution actions, and as the sequence-modeling route that drops value bootstrapping entirely.
+On-policy updates estimate expectations under the current policy and spoil when the data comes from anyone else; importance ratios extend their reach only as far as their variance allows. Off-policy updates like Q-Learning's estimate the Bellman optimality backup, which depends on the environment and not on the data collector, so replay across stale policies is legitimate. SARSA differs from Q-Learning by evaluating the action actually taken instead of the max, which is exactly the difference between estimating the behavior policy's value and the optimal one, and between on-policy and off-policy. Offline RL removes interaction altogether: the max over finitely-sampled values overestimates, nothing corrects it, and the learned policy is assembled from the most inflated entries. On slippery FrozenLake the naive method predicted more than the theoretical optimum and delivered under half of what it promised; a $1/\sqrt{n}$ pessimism penalty restored honest predictions at the same data budget, without making the policy any better. Past the gridworld, the same instincts scale as paired value and policy constraints, as explicit budgets on out-of-distribution actions, and as the sequence-modeling route that drops value bootstrapping entirely.
 
 ## Exercises
 
@@ -206,7 +208,8 @@ Self-correction is gone: an inflated value is never tested. And
 inflation is built in: the max is biased up on noisy estimates,
 and maximization *hunts* the upward errors.
 
-Slippery FrozenLake, random-policy dataset, 500 episodes:
+Slippery FrozenLake, random-policy datasets of 500 episodes,
+medians over 15 of them:
 
 @offline-rl-offline-rl-learning-without-touching-the-world-4
 :::
@@ -228,12 +231,12 @@ and actions:
 :::
 
 ::: {.slide title="Caught red-handed, then repaired"}
-- Naive offline Q: predicts $\approx 0.30$ at the start state.
+- Naive offline Q: predicts $0.25$ to $0.3$ at the start state.
   The true optimum is $0.18$ — the promise beats every possible
-  policy. Delivered: $\approx 0.09$.
+  policy. Delivered: $\approx 0.1$, two to three times less.
 - Pessimism: subtract $\kappa/\sqrt{n(s,a)}$ inside the max and
-  from the result. Prediction $\approx 0.17$, honest; return
-  edges up.
+  from the result. Prediction $0.1$ to $0.15$, at or below the
+  optimum. The policy is no better; the promise is.
 - Online, optimism self-corrects through action. Offline, the
   safe direction of error is down: what you cannot verify, you
   discount.

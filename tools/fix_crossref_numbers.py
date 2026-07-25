@@ -379,6 +379,27 @@ def fix_search_json(search_path, ch_map, unnumbered, section_files):
             return m.group(0)
         return re.sub(r'Chapter[ \xa0](\d+\.\d+(?:\.\d+)*)', repl, text)
 
+    def fix_leading_number(text):
+        # A search entry's own title/section carries the chapter number as a
+        # bare leading prefix ("42\xa0 Numerics", "42.2 Dtype Rules") — Quarto's
+        # flat file-position number. Remap that leading number to the logical
+        # one (→ "5.5\xa0 Numerics", "5.5.2 …"), mirroring the HTML
+        # fix_section_numbers, or strip it for frontmatter pages. This is the
+        # field the earlier reference/crumb passes never touched.
+        nonlocal count
+        m = re.match(r'(\d+)((?:\.\d+)*)([\xa0 ]+)', text)
+        if not m:
+            return text
+        pandoc = int(m.group(1))
+        if pandoc in unnumbered:
+            count += 1
+            return text[m.end():]
+        logical = ch_map.get(pandoc)
+        if logical is not None:
+            count += 1
+            return f'{logical}{m.group(2)}{m.group(3)}{text[m.end():]}'
+        return text
+
     for entry in data:
         for field in ['text', 'title', 'section']:
             val = entry.get(field, '')
@@ -388,6 +409,8 @@ def fix_search_json(search_path, ch_map, unnumbered, section_files):
                 r'(Figure|Table|Section|Equation|Listing)([ \xa0])(\d+)(\.\d+(?:\.\d+)*)',
                 replace_text_number, val)
             new_val = fix_chapter_label(new_val)
+            if field in ('title', 'section'):
+                new_val = fix_leading_number(new_val)
             if new_val != val:
                 entry[field] = new_val
 
@@ -405,6 +428,72 @@ def fix_search_json(search_path, ch_map, unnumbered, section_files):
     with open(search_path, 'w') as f:
         json.dump(data, f, ensure_ascii=False)
 
+    return count
+
+
+def fix_breadcrumbs(output_dir):
+    """Rewrite the 2nd breadcrumb crumb from the current *section* to its parent
+    *chapter*: "Basics > 1.1 Data Manipulation" -> "Basics > 1 Preliminaries".
+
+    A section page sits in the same directory as its chapter's index.html
+    (chapter_preliminaries/ndarray.html -> chapter_preliminaries/index.html), so
+    we harvest each chapter index's own crumb-2 (its "<num> <title>" anchor) and
+    stamp it onto the section pages in that directory, linking to index.html.
+    The part crumb (crumb 1) already links to the part page and is left as is.
+    """
+    CRUMB = re.compile(r'(<ol class="breadcrumb">)(.*?)(</ol>)', re.S)
+    ITEM = re.compile(r'<li class="breadcrumb-item">.*?</li>', re.S)
+    AINNER = re.compile(r'<a\b[^>]*>(.*?)</a>', re.S)
+    NUM = re.compile(r'chapter-number">([\d.]+)<')
+
+    # Pass 1: harvest each chapter index's crumb-2 (the "<num> <title>" anchor).
+    chapter_inner = {}
+    for p in output_dir.rglob('index.html'):
+        m = CRUMB.search(p.read_text())
+        if not m:
+            continue
+        items = ITEM.findall(m.group(2))
+        if len(items) < 2:
+            continue
+        a = AINNER.search(items[1])
+        if a and 'chapter-number' in a.group(1):
+            chapter_inner[str(p.parent.relative_to(output_dir))] = a.group(1)
+
+    # Pass 2: stamp it onto the section (non-index) pages in that directory.
+    count = 0
+    for p in output_dir.rglob('*.html'):
+        if p.name == 'index.html':
+            continue
+        inner = chapter_inner.get(str(p.parent.relative_to(output_dir)))
+        if not inner:
+            continue
+        html = p.read_text()
+
+        # Quarto emits the breadcrumb TWICE per page: once in the mobile
+        # secondary-nav (<nav class="quarto-secondary-nav">) and once in the
+        # desktop title-block header (<nav class="... d-none d-lg-block">). We
+        # must rewrite crumb-2 in BOTH — a single re.search() only ever hit the
+        # first (mobile) one, leaving the desktop breadcrumb showing Quarto's raw
+        # self-linked section title ("5.6 Saving, loading…") with the wrong link.
+        def _rewrite(m, inner=inner):
+            items = ITEM.findall(m.group(2))
+            if len(items) < 2:
+                return m.group(0)
+            # Only rewrite genuine sections: their crumb-2 number is dotted
+            # ("1.1"); a chapter's is not ("1"). Guards directories holding
+            # several chapters, and leaves the chapter index's own crumb alone.
+            cur = AINNER.search(items[1])
+            nm = cur and NUM.search(cur.group(1))
+            if not (nm and '.' in nm.group(1)):
+                return m.group(0)
+            new_crumb2 = ('<li class="breadcrumb-item"><a href="index.html">'
+                          + inner + '</a></li>')
+            return m.group(1) + items[0] + new_crumb2 + m.group(3)
+
+        html2 = CRUMB.sub(_rewrite, html)
+        if html2 != html:
+            p.write_text(html2)
+            count += 1
     return count
 
 
@@ -452,6 +541,8 @@ def main():
     if search_json.exists():
         search_fixes = fix_search_json(search_json, ch_map, unnumbered, section_files)
 
+    breadcrumb_fixes = fix_breadcrumbs(output_dir)
+
     print(f'\nFixed: {totals["numbers"]} numbers, '
           f'{totals["chap2sec"]} Chapter→Section, '
           f'{totals["eqrefs"]} equation refs, '
@@ -459,7 +550,8 @@ def main():
           f'{totals["citations"]} citations, '
           f'stripped {totals["strip"]} sidebar + {totals["figstrip"]} frontmatter figs '
           f'in {files_modified} files, '
-          f'{search_fixes} search.json entries')
+          f'{search_fixes} search.json entries, '
+          f'{breadcrumb_fixes} breadcrumbs')
 
 
 if __name__ == '__main__':

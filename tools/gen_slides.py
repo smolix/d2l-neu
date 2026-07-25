@@ -40,12 +40,15 @@ Usage:
 """
 
 import argparse
+import hashlib
+import json
 import os
 import re
 import shutil
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -627,6 +630,88 @@ def _strip_phantom_title_slide(html: str) -> str:
 # CLI
 # ──────────────────────────────────────────────────────────
 
+def _render_deck_chunk(clone_dir, fw_dir, chunk_rels, base_env):
+    """Render one chunk of decks in an ISOLATED clone project, then move the
+    outputs back into fw_dir. The clone has its own .quarto cache, so parallel
+    chunks never race on the shared crossref INDEX (the read-modify-write
+    corruption that made the old multi-process single-project design unsafe).
+    Returns {rel: [err_lines]} for decks that produced no HTML."""
+    if clone_dir.exists():
+        shutil.rmtree(clone_dir)
+    clone_dir.mkdir(parents=True)
+    (clone_dir / '_quarto.yml').write_text('project:\n  type: default\n',
+                                            encoding='utf-8')
+    # The clone is a direct child of _slides/, i.e. the SAME depth as a
+    # framework dir, so every relative asset path inside a deck resolves
+    # identically: ../../../ -> repo root (theme SCSS, static), ../../img and
+    # ../../libs -> the shared _slides/ trees (reached without any per-clone
+    # copy), and ../img -> this symlink into the repo img tree (figures).
+    (clone_dir / 'img').symlink_to(Path('../../img'))
+    data_dir = Path.cwd() / 'data'
+    if data_dir.exists():
+        (clone_dir / 'data').symlink_to(data_dir)
+    for rel in chunk_rels:
+        dst = clone_dir / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(fw_dir / rel, dst)
+
+    proc = subprocess.run(
+        ['quarto', 'render', *chunk_rels, '--to', 'revealjs', '--no-execute'],
+        cwd=clone_dir, env=base_env, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, text=True)
+    out_lines = (proc.stdout or '').splitlines()
+
+    errors = {}
+    for rel in chunk_rels:
+        src_html = clone_dir / Path(rel).with_suffix('.html')
+        if src_html.exists():
+            dst_html = fw_dir / Path(rel).with_suffix('.html')
+            dst_html.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(src_html), str(dst_html))
+            sidecar = Path(rel).stem + '_files'
+            src_files = src_html.parent / sidecar
+            if src_files.exists():
+                dst_files = dst_html.parent / sidecar
+                if dst_files.exists():
+                    shutil.rmtree(dst_files)
+                shutil.move(str(src_files), str(dst_files))
+        else:
+            errors[rel] = out_lines or ['no output written']
+    shutil.rmtree(clone_dir, ignore_errors=True)
+    return errors
+
+
+def _render_decks_parallel(fw, fw_dir, output_root, rel_paths, base_env,
+                           workers):
+    """Render rel_paths across up to `workers` isolated clone projects in
+    parallel. Returns (file_errors, elapsed_seconds)."""
+    if not rel_paths:
+        return {}, 0.0
+    workers = max(1, min(workers, len(rel_paths)))
+    # ~`workers` chunks: amortizes each clone's Quarto project setup (theme
+    # SCSS compile) while keeping every worker busy.
+    chunk_size = (len(rel_paths) + workers - 1) // workers
+    chunks = [rel_paths[i:i + chunk_size]
+              for i in range(0, len(rel_paths), chunk_size)]
+    print(f'  Rendering {len(rel_paths)} deck(s) across {len(chunks)} '
+          f'isolated clone(s) (workers={workers})', flush=True)
+    file_errors = {}
+    t0 = time.time()
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = {
+            ex.submit(_render_deck_chunk,
+                      output_root / f'.render-{fw}-{i}', fw_dir, chunk,
+                      base_env): chunk
+            for i, chunk in enumerate(chunks)}
+        for fut in as_completed(futs):
+            try:
+                file_errors.update(fut.result())
+            except Exception as exc:  # noqa: BLE001
+                for rel in futs[fut]:
+                    file_errors[rel] = [f'clone render raised: {exc!r}']
+    return file_errors, time.time() - t0
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Generate per-framework Reveal.js slides')
@@ -792,74 +877,62 @@ def main():
             # character after JSON at position …` from
             # `crossrefIndexForOutputFile`. --workers is preserved as a
             # CLI knob for backwards compatibility but is now ignored.
-            total = len(qmd_files)
-            print(f'  Rendering {total} deck(s) via single-project quarto')
-            rel_paths = [str(q.relative_to(fw_dir)) for q in qmd_files]
+            # ── Incremental render (#1) ──────────────────────────────────
+            # Re-render only decks whose post-injection .qmd content hash
+            # changed (this hash covers BOTH slide-text edits AND injected
+            # code-output changes, so a changed evaluation also triggers a
+            # re-render) or whose .html output is missing. Hashes persist in
+            # _slides/<fw>/.deckhashes.json. A nav/prose-only rebuild becomes
+            # zero deck renders; a deck whose text or outputs changed is never
+            # skipped.
+            all_rel = [str(q.relative_to(fw_dir)) for q in qmd_files]
+            hash_store = fw_dir / '.deckhashes.json'
+            try:
+                old_hashes = json.loads(hash_store.read_text(encoding='utf-8'))
+            except (OSError, ValueError):
+                old_hashes = {}
+            cur_hashes = {
+                rel: hashlib.sha256((fw_dir / rel).read_bytes()).hexdigest()
+                for rel in all_rel}
 
-            # --no-execute skips Quarto's per-deck Python-kernel startup
-            # (~3-5s × N decks). Code-cell outputs are already injected
-            # into the .qmd by inject_outputs.py before this render, so
-            # there's nothing to execute — kernel startup was pure
-            # overhead. eval: false in each deck's frontmatter is not
-            # enough; Quarto still spins up nbconvert.
-            cmd = ['quarto', 'render', *rel_paths,
-                   '--to', 'revealjs', '--no-execute']
-            t0 = time.time()
-            proc = subprocess.Popen(
-                cmd, cwd=fw_dir, env=base_env,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, bufsize=1)
+            def _needs_render(rel):
+                html = fw_dir / Path(rel).with_suffix('.html')
+                return (cur_hashes[rel] != old_hashes.get(rel)
+                        or not html.exists())
 
-            current_file = None
-            current_buf = []
-            file_errors = {}
-            line_re = re.compile(r'^\s*\[\d+/\d+\]\s+(\S+\.qmd)\s*$')
-            fail_re = re.compile(r'^\s*FAIL\s+\([\d.]+s\)\s+(\S+\.qmd)\s*$')
+            rel_paths = [rel for rel in all_rel if _needs_render(rel)]
+            total = len(rel_paths)
+            n_skip = len(all_rel) - total
+            print(f'  {len(all_rel)} deck(s): {total} changed/new to render, '
+                  f'{n_skip} unchanged (skipped)')
 
-            def _flush():
-                if current_file and current_buf:
-                    file_errors.setdefault(current_file, []).extend(current_buf)
+            # --no-execute skips Quarto's per-deck Python-kernel startup;
+            # code outputs are already injected. Render the changed decks
+            # across up to --workers ISOLATED clone projects in parallel (#2):
+            # each clone is a direct child of _slides/ (so a deck's ../../../
+            # theme + static, ../../img/outputs and ../../libs shared trees,
+            # and ../img figures all resolve exactly as in the framework dir)
+            # with its OWN .quarto cache — sidestepping the crossref-INDEX
+            # corruption that made the previous multi-process single-project
+            # design unsafe. Rendered outputs are moved back into fw_dir; the
+            # shared-libs dedup below then runs over fw_dir as before.
+            file_errors, elapsed = _render_decks_parallel(
+                fw, fw_dir, args.output, rel_paths, base_env, args.workers)
+            rc = 1 if file_errors else 0
 
-            assert proc.stdout is not None
-            for line in proc.stdout:
-                line = line.rstrip('\n')
-                print(f'  {line}', flush=True)
-                m = line_re.match(line)
-                if m:
-                    _flush()
-                    current_file = m.group(1)
-                    current_buf = []
-                    continue
-                m = fail_re.match(line)
-                if m:
-                    _flush()
-                    current_file = m.group(1)
-                    current_buf = [line]
-                    file_errors.setdefault(current_file, []).append(line)
-                    continue
-                if current_file:
-                    current_buf.append(line)
-            _flush()
-            rc = proc.wait()
-            elapsed = time.time() - t0
-
-            # Anything still in errors/* without a corresponding .html
-            # output is treated as a failure (Quarto sometimes emits
-            # FAIL without exiting non-zero on the first try).
+            # Any attempted deck without a corresponding .html output is a
+            # failure (Quarto sometimes emits FAIL without a non-zero exit).
             failed_paths = set(file_errors.keys())
             for rel in rel_paths:
                 html = fw_dir / Path(rel).with_suffix('.html')
                 if not html.exists():
                     failed_paths.add(rel)
 
-            # A non-zero exit from quarto that didn't surface as a
-            # per-file FAIL means the project-level render failed
-            # before any file got re-rendered (typical cause: a theme
-            # SCSS compile error). The old .html files from a prior
-            # build still exist on disk, so the per-file existence
-            # check above would otherwise spuriously report 0 failures.
-            # Treat this as "every file failed" so the build is
-            # visibly broken.
+            # A non-zero exit that didn't surface as a per-file FAIL means the
+            # project-level render died before any file re-rendered (typical
+            # cause: a theme SCSS compile error). Old .html from a prior build
+            # still exist, so the existence check above would otherwise report
+            # 0 failures. Treat every attempted file as failed.
             if rc != 0 and not failed_paths:
                 for rel in rel_paths:
                     failed_paths.add(rel)
@@ -881,8 +954,32 @@ def main():
             ]
             failures = [(q, err) for q, ok, err in results if not ok]
             render_failures.extend((fw, q, err) for q, err in failures)
+
+            # Persist hashes so the next run skips unchanged decks. Start from
+            # the previous map so a --files subset build does NOT discard the
+            # hashes of decks it never touched; update every processed deck
+            # that succeeded; drop failed decks so they retry next run. On a
+            # full run (no --files filter) prune entries for decks that no
+            # longer exist.
+            new_hashes = dict(old_hashes)
+            for rel in all_rel:
+                if rel in failed_paths:
+                    new_hashes.pop(rel, None)
+                else:
+                    new_hashes[rel] = cur_hashes[rel]
+            if not file_filter:
+                new_hashes = {rel: new_hashes[rel]
+                              for rel in all_rel if rel in new_hashes}
+            try:
+                hash_store.write_text(
+                    json.dumps(new_hashes, indent=0, sort_keys=True),
+                    encoding='utf-8')
+            except OSError:
+                pass
+
             print(f'  Rendered {total - len(failures)} / {total} '
-                  f'({len(failures)} failed) in {elapsed:.0f}s (rc={rc})')
+                  f'({len(failures)} failed), {n_skip} unchanged '
+                  f'in {elapsed:.0f}s (rc={rc})')
 
             # Dedupe per-deck `<deck>_files/libs/` into a shared
             # `_slides/libs/`. Quarto writes a full copy of revealjs +

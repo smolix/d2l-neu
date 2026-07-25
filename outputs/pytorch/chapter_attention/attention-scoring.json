@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1-1.svg",
           "bytes": 25631,
-          "sha256": "sha256:cf6238625fea4f1ac7b064a8fd663bb53491ffbff462197a50fc3fcc71017c85"
+          "sha256": "sha256:2479eb5b4cca92b8dc42d72d3bb783ab9c554939564a4d2b977337b61e9abff0"
         }
       ]
     },
@@ -38,12 +38,12 @@
       ]
     },
     "attention-scoring-the-masked-softmax-operation-1": {
-      "code_fingerprint": "sha256:4cd126199a455eb9d26e3361c4510539eac86533e68fc59dc93db1225a7446b3",
+      "code_fingerprint": "sha256:6ef8d42c512a9346933a6e08041efb150af40ab3f2f671edb12b14a6f54be001",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-masked-softmax-operation-2": {
-      "code_fingerprint": "sha256:8a5d8a3af7123108dff56f682743f14af2e819cc5050155b6a29e1280fa9a017",
+      "code_fingerprint": "sha256:30fbc871534d67deac322c258217e9906e6798ac06c4cdc8a3b20c64d1a00b68",
       "kind": "text",
       "outputs": [
         {
@@ -53,7 +53,7 @@
       ]
     },
     "attention-scoring-the-masked-softmax-operation-3": {
-      "code_fingerprint": "sha256:0a9253298bb77b594c27dd695ce0408f12192d33a8cafb91bdaf5f5d18c2c275",
+      "code_fingerprint": "sha256:b930d3f00d87648b77a20d5ea821d003987d73f20ec23bfcab3dfb5df98a45ae",
       "kind": "text",
       "outputs": [
         {
@@ -63,7 +63,7 @@
       ]
     },
     "attention-scoring-causal-masking": {
-      "code_fingerprint": "sha256:113adb3a83c809e54f211db115041477c8a3367701e9bec25287a9c0a48a0e7e",
+      "code_fingerprint": "sha256:ebb183d70e1b32614a695266305b9e2ea34b046be75aae7c5a62960d3b376b77",
       "kind": "asset",
       "outputs": [
         {
@@ -71,12 +71,12 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-causal-masking-1.svg",
           "bytes": 16481,
-          "sha256": "sha256:96bbe20891b24b7dc187878863ce186587d0f743a32401f4ab536e1162db318a"
+          "sha256": "sha256:af8e48963a065ea9f1f828ded80f580ae7a70f5f05aede84cb0d5aeae6b6eb30"
         }
       ]
     },
     "attention-scoring-composing-masks": {
-      "code_fingerprint": "sha256:a66dac504c66b8caa67321f5756caf3cb6d3b41f5e6332463bbfeb4a8e68c7df",
+      "code_fingerprint": "sha256:ced274bbbce7ac5e8ec9ea3e25859210157aad63dae5f7526b2ff52ae1ed8854",
       "kind": "asset",
       "outputs": [
         {
@@ -84,27 +84,27 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
           "bytes": 19827,
-          "sha256": "sha256:8f41a2aa442478ffd38bfd2cd0873148ee6f6e5187883d2aa567b8fc601f1140"
+          "sha256": "sha256:dcb8bb381a6f3f424942b1f6348c18029a0dcae9d04f30eebb61c15649178322"
         }
       ]
     },
     "attention-scoring-batch-matrix-multiplication": {
-      "code_fingerprint": "sha256:9a069b8203382eb632549c50267c771c90d64e346a74e2d397cf42af20a76302",
+      "code_fingerprint": "sha256:344b73388967a90c7a23c96233fcc1652ab666a2e71fd363541b873c93ca33a6",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-1": {
-      "code_fingerprint": "sha256:8d27da888eac9039ffd5d9a5d46213090b13a68ed6e345ccfc3761c5f2eee81e",
+      "code_fingerprint": "sha256:f5e0b8940755bb58cce958dcf70008f7273a03cbb7736c4f4d164318b2b2d57f",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-2": {
-      "code_fingerprint": "sha256:46ed3cd09c9d650526158878c31ee286451c62f4c0b0a3d1e9acf4df62f41387",
+      "code_fingerprint": "sha256:ad4b7ef3d003b96ed42430e3461344d313779441a17198ba13ddaf73383ac446",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-3": {
-      "code_fingerprint": "sha256:e423a84334d0f5d2d733eeb55eec21d901436e3a6dec460b8e0d8d3ec0b87b0b",
+      "code_fingerprint": "sha256:fa674e9366ca531a57dfdcb65e25e02f49c9b8a129225991ae482a5d33cc5fc5",
       "kind": "asset",
       "outputs": [
         {
@@ -112,12 +112,12 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
           "bytes": 14822,
-          "sha256": "sha256:cef589818a669afebe6af879503af49a584cdd1da24e54fc5fc04eaae835e85e"
+          "sha256": "sha256:3bdf9b5159d158c0edd61b1dc46d36e5329bb70c8480579151945a93e5d81285"
         }
       ]
     },
     "attention-scoring-from-alignment-to-attention": {
-      "code_fingerprint": "sha256:6b61b317b6017833be461ed9fd57c11451ee00bc6a92be42b1a28613018d7853",
+      "code_fingerprint": "sha256:31c642ea5f8129147a26239e5a372174b1d447248045e4a3e617a6a69287e45a",
       "kind": "text",
       "outputs": [
         {

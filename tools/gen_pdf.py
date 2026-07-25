@@ -382,7 +382,7 @@ filters:
   - _svg-to-pdf.lua
 
 format:
-  pdf:
+  latex:
     pdf-engine: xelatex
     documentclass: book
     papersize: a4

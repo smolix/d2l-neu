@@ -8,8 +8,8 @@ language this is disqualifying: "dog bites man" and "man bites dog" contain
 the same tokens. This section first sharpens the deficiency into a one-line
 theorem, then works through the repairs in the order the field adopted them:
 *adding* position vectors to the input (sinusoidal and learned encodings),
-*rotating* queries and keys by position-dependent angles (RoPE, the scheme in
-essentially every current open-weights model), and *biasing* attention scores
+*rotating* queries and keys by position-dependent angles (RoPE, the default in
+most current open-weights models), and *biasing* attention scores
 by distance (ALiBi), or trusting the causal mask to leak position on its own
 (NoPE). What separates these schemes in practice is not accuracy at the
 training length but *extrapolation*: what happens when a model trained at one
@@ -601,9 +601,11 @@ for pos in schemes:
     print(f'{pos:>10}: final training loss {sum(losses[-100:]) / 100:.2f}')
 ```
 
-Now the test the section has been building toward. We evaluate every model's
-validation perplexity at the training context and at two and four times it,
-on the same held-out text:
+Now the test the section has been building toward. Every model was trained on
+length-$128$ sequences, so we evaluate validation perplexity at that training
+context, $n = 128$, and at two and four times it ($n = 256$ and $512$) — the
+first point is in range, the other two probe extrapolation — on the same
+held-out text:
 
 ```{.python .input #positional-information-the-experiment-2}
 %%tab pytorch
@@ -716,8 +718,8 @@ counter, learned tables let the data pick the code but say nothing beyond
 the trained length. The sinusoidal table hides a cleaner idea: shifting
 positions is a rotation of feature pairs. RoPE applies that rotation
 directly to queries and keys, making attention scores depend on relative
-offsets by construction, the scheme of essentially every current
-open-weights model. ALiBi replaces encodings with a per-head linear distance
+offsets by construction, the default in most current
+open-weights models. ALiBi replaces encodings with a per-head linear distance
 penalty, and NoPE relies on the causal mask's leak of position. Our
 train-short/test-long experiment on an attention-only character model sorted
 the schemes: RoPE wins at the training length, but at four times it,
@@ -829,7 +831,7 @@ directly?
 :::
 
 ::: {.slide title="Rotary position embeddings (RoPE)"}
-[The scheme of essentially every open-weights model]{.kicker}
+[The default in most current open-weights models]{.kicker}
 
 Demand scores that see only the offset:
 $(\mathbf{R}_i \mathbf{q})^\top(\mathbf{R}_j \mathbf{k}) = \mathbf{q}^\top \mathbf{R}_{j-i}\, \mathbf{k}$

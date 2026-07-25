@@ -61,33 +61,14 @@ from jax import numpy as jnp
 import numpy as np
 ```
 
-To make the gap concrete we define two functions: a smooth risk function
-`f`, and an empirical risk function `g` that wobbles around it, the way an
-average over finitely many training examples wobbles around an
-expectation.
+To make the gap concrete, picture a smooth risk function $f$ and an
+empirical risk function $g$ that wobbles around it, the way an average over
+finitely many training examples wobbles around an expectation. The minimum
+of the empirical risk need not sit at the minimum of the risk, and here it
+does not:
 
-```{.python .input #optimization-intro-goal-of-optimization-2}
-def f(x):
-    return x * d2l.cos(np.pi * x)
-
-def g(x):
-    return f(x) + 0.2 * d2l.cos(5 * np.pi * x)
-```
-
-The minimum of the empirical risk need not sit at the minimum of the risk,
-and here it does not:
-
-```{.python .input #optimization-intro-goal-of-optimization-3}
-def annotate(text, xy, xytext):  #@save
-    d2l.plt.gca().annotate(text, xy=xy, xytext=xytext,
-                           arrowprops=dict(arrowstyle='->'))
-
-x = d2l.arange(0.5, 1.5, 0.01)
-d2l.set_figsize((4.5, 2.5))
-d2l.plot(x, [f(x), g(x)], 'x', 'risk')
-annotate('min of\nempirical risk', (1.0, -1.2), (0.5, -1.1))
-annotate('min of risk', (1.1, -1.05), (0.95, -0.5))
-```
+![The optimizer minimizes the empirical risk $g$, which wobbles around the risk $f$; their minima lie in different places.](../img/mdl-opt-risk-gap.svg)
+:label:`fig_mdl-opt-risk-gap`
 
 No optimizer, however good, can close this gap: it is a property of the
 data, not of the algorithm, and closing it is the business of the
@@ -117,12 +98,8 @@ $$f(x) = x \cdot \textrm{cos}(\pi x) \textrm{ for } -1.0 \leq x \leq 2.0$$
 
 has a local minimum that is not global:
 
-```{.python .input #optimization-intro-local-minima}
-x = d2l.arange(-1.0, 2.0, 0.01)
-d2l.plot(x, [f(x), ], 'x', 'f(x)')
-annotate('local minimum', (-0.3, -0.25), (-0.77, -1.0))
-annotate('global minimum', (1.1, -0.95), (0.6, 0.8))
-```
+![$f(x)=x\cos(\pi x)$ has a local minimum that is not global; near either the gradient vanishes.](../img/mdl-opt-local-minima.svg)
+:label:`fig_mdl-opt-local-minima`
 
 Deep learning objectives have many local minima, and an iterate that lands
 near one sees its gradient approach zero: from the signal alone, a local
@@ -134,50 +111,48 @@ below, that the noise in minibatch gradients is not purely a nuisance.
 
 Besides local minima, *saddle points* make gradients vanish: locations
 where every gradient component is zero but which are neither a minimum nor
-a maximum of the function. Consider $f(x) = x^3$. Its first and second
+a maximum of the function. Take $f(x) = x^3$: its first and second
 derivatives both vanish at $x=0$, and optimization can stall there even
-though it is no minimum at all:
+though it is no minimum at all. Strictly, this one-dimensional point is a
+*stationary inflection*; the true saddle geometry — down along one direction,
+up along another — needs at least two dimensions. Both are critical points
+that are not extrema, and we use "saddle" broadly for either:
 
-```{.python .input #optimization-intro-saddle-points-1}
-x = d2l.arange(-2.0, 2.0, 0.01)
-d2l.plot(x, [x**3], 'x', 'f(x)')
-annotate('saddle point', (0, -0.2), (-0.52, -5.0))
-```
+![At $x=0$ the cubic $f(x)=x^3$ has $f'=f''=0$ yet no extremum: a stationary inflection.](../img/mdl-opt-inflection.svg)
+:label:`fig_mdl-opt-inflection`
 
 Saddle points in higher dimensions are more insidious. Consider
 $f(x, y) = x^2 - y^2$: its saddle point at $(0, 0)$ is a minimum with
 respect to $x$ and a maximum with respect to $y$, and the surface looks
 like the saddle that gives the phenomenon its name:
 
-```{.python .input #optimization-intro-saddle-points-2}
-x, y = d2l.meshgrid(
-    d2l.linspace(-1.0, 1.0, 101), d2l.linspace(-1.0, 1.0, 101))
-z = x**2 - y**2
-
-ax = d2l.plt.figure().add_subplot(111, projection='3d')
-ax.plot_wireframe(x, y, z, **{'rstride': 10, 'cstride': 10})
-ax.plot([0], [0], [0], 'rx')
-ticks = [-1, 0, 1]
-d2l.plt.xticks(ticks)
-d2l.plt.yticks(ticks)
-ax.set_zticks(ticks)
-d2l.plt.xlabel('x')
-d2l.plt.ylabel('y');
-```
+![The saddle $z=x^2-y^2$: a minimum along $x$ and a maximum along $y$ (left), seen in the two slices through the origin (right).](../img/mdl-opt-saddle.svg)
+:label:`fig_mdl-opt-saddle`
 
 Why saddle points dominate in high dimension is a counting argument.
 Suppose the input of a function is a $k$-dimensional vector and its output
 a scalar, so its Hessian matrix has $k$ eigenvalues. At a point where the
 gradient is zero:
 
-* if all $k$ eigenvalues are positive, we have a local minimum;
-* if all are negative, a local maximum;
-* if some are positive and some negative, a saddle point.
+* if all $k$ eigenvalues are strictly positive — the Hessian is *positive
+  definite* — we have a strict local minimum;
+* if all are strictly negative, a strict local maximum;
+* if some are strictly positive and some strictly negative — the Hessian is
+  *indefinite* — a saddle point;
+* if the nonzero eigenvalues share a sign but at least one eigenvalue is
+  zero — the Hessian is only semidefinite, hence singular — the test is
+  inconclusive: the flat directions are settled by higher-order terms, and
+  the point may be a minimum, a maximum, or a saddle.
 
 For a zero-gradient point of a high-dimensional function to be a local
 minimum, *every one* of thousands or millions of eigenvalues must be
 positive; if signs were even roughly balanced coin flips, nearly every
-critical point would be a saddle. Convex functions — those whose Hessian
+critical point would be a saddle. Independent fair coin flips are only a
+heuristic: the eigenvalues of a Hessian at a critical point form a structured
+spectrum, not independent balanced signs — the second exercise below is one
+probe of why — and conditioning on criticality further ties the fraction of
+negative eigenvalues to the height of the loss. The conclusion survives the
+caveats, though: exact local minima are vanishingly rare beside saddles. Convex functions — those whose Hessian
 eigenvalues are nowhere negative — have neither saddle points nor spurious
 minima, which is one reason classical optimization theory is built on
 them. Deep learning objectives are not convex, but the theory has not
@@ -198,11 +173,8 @@ $f'(x) = 1 - \tanh^2(x)$, so $f'(4) = 0.0013$: the surface is simply very
 flat where we happen to stand, and gradient descent barely moves for a
 long time before making progress.
 
-```{.python .input #optimization-intro-vanishing-gradients}
-x = d2l.arange(-2.0, 5.0, 0.01)
-d2l.plot(x, [d2l.tanh(x)], 'x', 'f(x)')
-annotate('vanishing gradient', (4, 1), (2, 0.0))
-```
+![Minimizing $f(x)=\tanh x$ from $x=4$ stalls: the surface is nearly flat, slope about $0.0013$ — a vanishing gradient with no critical point.](../img/mdl-opt-tanh-flat.svg)
+:label:`fig_mdl-opt-tanh-flat`
 
 Vanishing gradients made deep networks genuinely hard to train before the
 ReLU activation and careful initialization; those fixes belong to model
@@ -444,26 +416,17 @@ three decisions.
 ::: {.slide title="Optimization vs. learning"}
 Optimization minimizes the *empirical risk* (training loss). Learning
 wants low *risk* (expected loss on the population). The optimizer only
-ever sees the former:
+ever sees the former — and the two minima sit in different places, which
+no optimizer can fix:
 
-@optimization-intro-goal-of-optimization-1
-
-. . .
-
-@optimization-intro-goal-of-optimization-2
-
-. . .
-
-The two minima sit in different places — and no optimizer can fix that:
-
-@optimization-intro-goal-of-optimization-3
+![](../img/mdl-opt-risk-gap.svg){width=62%}
 :::
 
 ::: {.slide title="Local minima"}
 $f(x) = x \cos(\pi x)$ has a local minimum that is not global. Near it,
 the gradient goes to zero — the signal cannot tell the two apart:
 
-@optimization-intro-local-minima
+![](../img/mdl-opt-local-minima.svg){width=58%}
 
 *Noise* can knock the iterate out of a shallow basin — minibatch variance
 supplies exactly that.
@@ -472,7 +435,7 @@ supplies exactly that.
 ::: {.slide title="Saddle points"}
 1D: $f(x) = x^3$ has $f'(0) = 0$, yet no minimum:
 
-@optimization-intro-saddle-points-1
+![](../img/mdl-opt-inflection.svg){width=52%}
 
 . . .
 
@@ -480,14 +443,14 @@ High-dim: a zero-gradient point is a minimum only if **all** Hessian
 eigenvalues are positive — with mixed signs it is a saddle. At $10^6$
 parameters, essentially every critical point is a saddle:
 
-@optimization-intro-saddle-points-2
+![](../img/mdl-opt-saddle.svg){width=72%}
 :::
 
 ::: {.slide title="Vanishing gradients"}
 No critical point needed: $f(x) = \tanh(x)$ at $x = 4$ has
 $f'(4) \approx 0.0013$. The surface is just *flat* where we stand:
 
-@optimization-intro-vanishing-gradients
+![](../img/mdl-opt-tanh-flat.svg){width=58%}
 
 ReLU and good initialization fixed this at the *model* level — not the
 optimizer's job.

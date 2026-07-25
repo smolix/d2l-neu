@@ -77,5 +77,5 @@
   "python": "3.12",
   "schema_version": 2,
   "source_lock": "uv.lock",
-  "source_lock_sha256": "03bd597e77581e84b9080c73128a1af3ddcdc20000f62b56466f478299acae18"
+  "source_lock_sha256": "a2b7be925a0e83392fa316ef3f46bdd33341a10e8aba7ccef7ee7e4fe1af831f"
 }

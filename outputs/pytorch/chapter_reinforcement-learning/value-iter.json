@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:60b54ceb8a95fc45ac2513a73f4579bc45bf4ba78de59d87cbd1c0c78ec9e508",
+    "d2l_lib_fingerprint": "sha256:5320cf06febd40d6eaf41ac185f60d3a0efc11cdb0876c64653f64d22e149b36",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -14,15 +14,28 @@
       "outputs": []
     },
     "value-iter-implementation-of-value-iteration-2": {
-      "code_fingerprint": "sha256:6eae430f5e7d6a4d93cd1cf38e8898286160717930041b73d3cbbe60c0a62e3c",
+      "code_fingerprint": "sha256:b10364dbced9db3d36350e570a9b4518488a6cd55c2c7d5f77fc640d1e4509c4",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/png",
           "asset": "value-iter/value-iter-implementation-of-value-iteration-2-1.png",
-          "bytes": 73361,
-          "sha256": "sha256:75780499dc0be490d0da90946b14a3f036491ab6fc24b0e821fb112f0e4e4e69"
+          "bytes": 74223,
+          "sha256": "sha256:cce97383c1580c187f7884d884b68fe4d9b2ab2ae31c17991a062a7abca477a6"
+        }
+      ]
+    },
+    "value-iter-implementation-of-value-iteration-3": {
+      "code_fingerprint": "sha256:bbeb663a2ddf27cf6131c4a4e583c3bf05417aa12e45e87f81edfc87a6a85ff5",
+      "kind": "asset",
+      "outputs": [
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "value-iter/value-iter-implementation-of-value-iteration-3-1.svg",
+          "bytes": 24544,
+          "sha256": "sha256:14f8a7b66ccfad1dee6b1fc9b85ed894f2ef700d9cca200e9d45c6f89cb8f9f5"
         }
       ]
     }

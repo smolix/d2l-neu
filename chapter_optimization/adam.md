@@ -1,8 +1,3 @@
-```{.python .input}
-%load_ext d2lbook.tab
-tab.interact_select('pytorch', 'jax')
-```
-
 # Adam
 :label:`sec_adam`
 
@@ -337,8 +332,11 @@ d2l.train_ch11(adam, init_adam_states(feature_dim),
                {'lr': 0.01, 't': 1}, data_iter, feature_dim);
 ```
 
-In practice one calls the framework implementation, which applies exactly
-:eqref:`eq_adam-moments` and :eqref:`eq_adam-update`.
+In practice one calls the framework implementation, which follows
+:eqref:`eq_adam-moments` and :eqref:`eq_adam-update` up to small conventions
+that differ by framework and version — where $\epsilon$ sits relative to the
+square root, optional flags such as AMSGrad, and the precise bias-correction
+bookkeeping — none of which usually matters at default settings.
 
 ```{.python .input #adam-adam-both-moments-debiased-3}
 %%tab pytorch

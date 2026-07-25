@@ -1,8 +1,3 @@
-```{.python .input}
-%load_ext d2lbook.tab
-tab.interact_select('pytorch', 'jax')
-```
-
 # AdamW
 :label:`sec_adamw`
 
@@ -164,7 +159,9 @@ d2l.train_ch11(adamw, init_adamw_states(feature_dim),
                {'lr': 0.01, 'wd': 0.01, 't': 1}, data_iter, feature_dim);
 ```
 
-The framework implementations apply exactly :eqref:`eq_adamw`.
+The framework implementations follow :eqref:`eq_adamw` up to small
+conventions that differ by framework and version — $\epsilon$ placement,
+optional flags, and whether the decay is scaled by the learning rate.
 
 ```{.python .input #adamw-adamw-from-scratch-3}
 %%tab pytorch
@@ -441,10 +438,16 @@ $\lambda = 0.1$ remains in every frontier recipe. What is it doing there?
 The current understanding, assembled from careful ablations
 :cite:`DAngelo.Andriushchenko.Varre.ea.2024,Kosson.Messmer.Jaggi.2024`, is
 that weight decay at scale is a *training-dynamics* control, not an
-explicit regularizer. The mechanism runs through the weight norms. Layers
-followed by normalization (most of a transformer) are scale-invariant: only
-the *direction* of the weight vector matters, and the effective step size
-of an update is roughly the update divided by the weight norm. Gradient
+explicit regularizer. The mechanism runs through the weight norms. A weight matrix whose output is
+consumed only through a normalization layer is *scale-invariant*: rescaling
+the matrix leaves the network's function unchanged, because the norm discards
+the scale, so only the *direction* of the weight vector matters and the
+effective step size of an update is roughly the update divided by the weight
+norm. This is exact for a weight immediately followed by a normalization
+layer; in a pre-LN residual transformer it holds only approximately, since the
+residual stream carries each block's output around the next norm rather than
+through it. It still describes enough of the parameters to drive the dynamics
+below. Gradient
 noise pushes weight norms up; decay pulls them down; the two settle into an
 equilibrium, a steady state that :citet:`Kosson.Messmer.Jaggi.2024`
 describe as rotational, in which each weight vector turns by a roughly

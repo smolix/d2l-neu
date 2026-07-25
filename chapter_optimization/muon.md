@@ -7,8 +7,8 @@ shrinks them all uniformly. Yet the census of :numref:`subsec_tinylm` showed
 that a network is not a homogeneous vector: it is a collection of embedding
 tables, hidden *matrices*, and normalization vectors, with most of the
 parameters in the matrices. This section takes that structure seriously, and
-the reward is the first credible challenger to the Adam family's decade-long
-hold on large-scale training.
+the reward is one of the most credible recent challengers to the Adam
+family's decade-long hold on large-scale training.
 
 The organizing idea of this chapter says an optimizer begins with a choice of
 descent direction, and this section makes the choice explicit: the direction

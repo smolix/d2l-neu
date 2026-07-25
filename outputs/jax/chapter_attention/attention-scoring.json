@@ -22,7 +22,7 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-softmax-saturation-and-the-1-sqrt-d-factor-1-1.svg",
           "bytes": 25631,
-          "sha256": "sha256:685db7286773eb98f0714633caee9c2077b8a124c634f742ace9dddc5a0db995"
+          "sha256": "sha256:3cdf299675cd0ded12308a6391ad542b5236d936399f8aed0a2234b0517b8a30"
         }
       ]
     },
@@ -33,17 +33,22 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d =   4: Jacobian norm 0.258 (unscaled), 0.178 (scaled)\nd =  64: Jacobian norm 0.218 (unscaled), 0.184 (scaled)\nd = 512: Jacobian norm 0.103 (unscaled), 0.186 (scaled)\n"
+          "text": "d =   4: Jacobian norm 0.258 (unscaled), 0.178 (scaled)\nd =  64: Jacobian norm 0.218 (unscaled), 0.184 (scaled)\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d = 512: Jacobian norm 0.103 (unscaled), 0.186 (scaled)\n"
         }
       ]
     },
     "attention-scoring-the-masked-softmax-operation-1": {
-      "code_fingerprint": "sha256:96a011d874c218d21c8dc80953a84ecc342b58d59301fa28bad891b27543402a",
+      "code_fingerprint": "sha256:a2017041dfdfddf858987aa7f49950f26798524bebb024e92cb7d528809fac8b",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-masked-softmax-operation-2": {
-      "code_fingerprint": "sha256:ced49b09d736506253b00247946dc2932c176a089084a31dc602f459499c66a6",
+      "code_fingerprint": "sha256:58b77158268426fd02878eeb2e173a6043a53c1842f5ae942202d87f30f7dfd5",
       "kind": "text",
       "outputs": [
         {
@@ -53,7 +58,7 @@
       ]
     },
     "attention-scoring-the-masked-softmax-operation-3": {
-      "code_fingerprint": "sha256:ff7a492bec5f3997854728b4cfa71d14635a9cd998dab26dd772759bb732be12",
+      "code_fingerprint": "sha256:60dad203c3de3278a9b458c265641a9002564331ba06834de6ec48ec8cb85959",
       "kind": "text",
       "outputs": [
         {
@@ -63,7 +68,7 @@
       ]
     },
     "attention-scoring-causal-masking": {
-      "code_fingerprint": "sha256:cc57a2652ecd59473ed61c96b2f61b3aa9a12a581611a5b08abb75ca4a2c8b94",
+      "code_fingerprint": "sha256:61322809786b875c351a17e92f7290fbe93605fec51e109cdb9df78ccf6b2248",
       "kind": "asset",
       "outputs": [
         {
@@ -71,12 +76,12 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-causal-masking-1.svg",
           "bytes": 16485,
-          "sha256": "sha256:5d53057dd9074bf439f20a87a377e0532c90b5546b1c975378eb9933e2cd491b"
+          "sha256": "sha256:583ebf12c529e0553411898ddd46fe3ab36a40b6c178d8571adebb92fb1e334e"
         }
       ]
     },
     "attention-scoring-composing-masks": {
-      "code_fingerprint": "sha256:2ed00e9e77434c3b2f9a5a31fcafd2a05b305b715ff63af77826b5cad93d5219",
+      "code_fingerprint": "sha256:07d28a189dafa2b02b218ffe440d91e7886c0da97f82b8cfc3b2e59ee0730f27",
       "kind": "asset",
       "outputs": [
         {
@@ -84,27 +89,27 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-composing-masks-1.svg",
           "bytes": 19831,
-          "sha256": "sha256:5b0b9f201ee663b3bc92d9fc602552e4aba1f31f7d58d8440fe5dfb1f56ef9ba"
+          "sha256": "sha256:2179499d64e83adfd6f9d6444b636d3661a1f8c421b5f2267bc7e791e6394992"
         }
       ]
     },
     "attention-scoring-batch-matrix-multiplication": {
-      "code_fingerprint": "sha256:12a76f0fc86cba12dae22b52cc4312373caa3649395e333c64c5d61c82c7ca6d",
+      "code_fingerprint": "sha256:f9dd5bc49f0a26cfe1eafe94938ca9e31158245a2f28c39babb837ab0399e240",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-1": {
-      "code_fingerprint": "sha256:ee19646b6add6dd1aa1ae5eaae771c965541e83b4ebb5fe95a4bcb3564c88933",
+      "code_fingerprint": "sha256:8f87f047579064763624e07deb224b648127c261249e83956028cc934d8a3de3",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-2": {
-      "code_fingerprint": "sha256:c5f3e5f8fdbd17580f77ef6a4fbfe9b129724f465a73c8cf3669cdb1367ee3f1",
+      "code_fingerprint": "sha256:b9ccdd2896eed5bdc32fa5b1e1185a5e8c21bd57eb017ec72c2cd2f8b3716139",
       "kind": "text",
       "outputs": []
     },
     "attention-scoring-the-dotproductattention-class-3": {
-      "code_fingerprint": "sha256:06f57ca7d208612d1fd0c0bc691dbfa571da4239b320d637336051d550ca6792",
+      "code_fingerprint": "sha256:619bb8fb18cff7890ae2dce99b3d2b83ea69686c2997c8aa8ddc03003d4744ec",
       "kind": "asset",
       "outputs": [
         {
@@ -112,12 +117,12 @@
           "mime": "image/svg+xml",
           "asset": "attention-scoring/attention-scoring-the-dotproductattention-class-3-1.svg",
           "bytes": 13609,
-          "sha256": "sha256:2036803f80f9a0dde63056cf2bd023cd8e659368754c4dee2a653301b363a444"
+          "sha256": "sha256:032c2844e333cb060fdc1237ac3542fc5cc48b5a2c971db0c3cae891f8bc7f9c"
         }
       ]
     },
     "attention-scoring-from-alignment-to-attention": {
-      "code_fingerprint": "sha256:6c23f6b8d14b590b816bb716847f89409507e948394ea9c3e2d33f16528ec558",
+      "code_fingerprint": "sha256:e9d5ae6699e76ffd5c8b79e89251b55247ac4772b704e17840bf7910f5fb3f7f",
       "kind": "text",
       "outputs": [
         {

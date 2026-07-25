@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/actor-critic.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:e081cdd82ae0286d5871ffcf361dcda4c0f7ac529e9421119f87c2859bb5ccc4",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "actor-critic-implementation-of-actor-critic-1": {
+      "code_fingerprint": "sha256:689e9c9cbd8dbf361b60ff3ffa1079e4bad3718cf36b963ba21b5aff4cdfa049",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-implementation-of-actor-critic-2": {
+      "code_fingerprint": "sha256:24f028cc1f8842add21fc6d37e0458fdc5dbc672e811cccec9adda762d98c4c3",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-implementation-of-actor-critic-3": {
+      "code_fingerprint": "sha256:70aff3f1b941d34dc55bea6e51357e606c3c83f43e4edab79e5332d87b3e289b",
+      "kind": "text",
+      "outputs": []
+    },
+    "actor-critic-implementation-of-actor-critic-4": {
+      "code_fingerprint": "sha256:b6257e965fed633e1591f87ef977816e64c5f814421398108b4a27642fd4a809",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "REINFORCE + baseline: mean return over the last 10 updates = 475\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "actor-critic: mean return over the last 10 updates = 489\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "actor-critic/actor-critic-implementation-of-actor-critic-4-1.svg",
+          "bytes": 51130,
+          "sha256": "sha256:11bcfa72868624afa6aad2f565865e79d38249010e230e969ce3bb97c2805bfc"
+        }
+      ]
+    }
+  }
+}

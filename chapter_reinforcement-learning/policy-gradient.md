@@ -176,7 +176,7 @@ avg_returns = reinforce(env_info=env_info, gamma=gamma, num_iters=num_iters,
                         batch_size=batch_size, alpha=alpha)
 ```
 
-The visualization is read slightly differently than in the previous sections: the arrow still shows the most probable action at each state, but the color now shows the *probability* that the policy assigns to that action, from dark (near-uniform, $0.25$ with four actions) to light (near-certain). The policy sharpens along the same optimal path to the goal that Value Iteration and Q-Learning found. A trajectory that never reaches the goal has $R(\tau) = 0$ and contributes nothing to :eqref:`eq_reinforce`, so early training crawls: until the robot stumbles into the goal by chance, every update is zero. In our run the average return of the batch does not stabilize until roughly update 75, as the learning curve below shows. The cells that stay at exactly $0.25$ in the plot are the holes and the goal: the robot never takes an action *from* a terminal state, so their preferences are never touched. The darker of the remaining cells are states visited mostly on failed trajectories, whose preferences have moved the least. The estimator is unbiased, but most of its samples say nothing at all; the next section is about fixing this.
+The visualization is read slightly differently than in the previous sections: the arrow still shows the most probable action at each state, but the color now shows the *probability* that the policy assigns to that action, from dark (near-uniform, $0.25$ with four actions) to light (near-certain). The policy sharpens along a shortest path to the goal, though not necessarily the one Value Iteration settled on in :numref:`subsec_valueitercode`: this grid admits three distinct six-step routes that avoid the holes, all of them optimal, and REINFORCE locks onto whichever one its first lucky trajectories happened to take, so a different seed can lock onto a different one. A trajectory that never reaches the goal has $R(\tau) = 0$ and contributes nothing to :eqref:`eq_reinforce`, so early training crawls: until the robot stumbles into the goal by chance, every update is zero. In our run the average return of the batch stays flat for the first few dozen updates and does not level off until somewhere around update seventy or eighty, as the learning curve below shows; where that crossover falls is decided by when the robot first reaches the goal often enough to matter, so a different seed shifts it by tens of updates in either direction. The cells that stay at exactly $0.25$ in the plot are the holes and the goal: the robot never takes an action *from* a terminal state, so their preferences are never touched. The darker of the remaining cells are states visited mostly on failed trajectories, whose preferences have moved the least. The estimator is unbiased, but while the goal is still a rare accident most of its samples say nothing at all; the next section is about fixing this.
 
 Since the algorithm performs gradient ascent on $J(\theta)$, the most direct learning curve is $J(\theta)$ itself. The mean discounted return of each batch is exactly the Monte Carlo estimate of $J(\theta)$ computed from the same 16 trajectories that produced the update, so we get the curve for free:
 
@@ -186,7 +186,7 @@ d2l.show_value_convergence(avg_returns, reference=gamma ** 5, xlabel='update',
                            ylabel='average return of the batch', marker=None)
 ```
 
-The curve makes the two phases of the run visible. It hugs zero for the first stretch, since a batch without a single successful trajectory produces no update at all and the rare lucky batch barely moves it. It then climbs toward the dashed line at $\gamma^5 \approx 0.774$, the return of the optimal six-step path. It hovers slightly below that ceiling because the policy stays stochastic: any sampled action that deviates from the optimal path either lengthens the trajectory or ends it in a hole.
+The curve makes the two phases of the run visible. It hugs zero for the first stretch, since a batch without a single successful trajectory produces no update at all and the rare lucky batch barely moves it. It then climbs toward the dashed line at $\gamma^5 \approx 0.774$, the return of a six-step path to the goal. It hovers slightly below that ceiling because the policy stays stochastic: any sampled action that deviates from the optimal path either lengthens the trajectory or ends it in a hole.
 
 Notice also how much experience this took: each of the 256 updates consumed a fresh batch of 16 trajectories, i.e., 4096 episodes in total, compared to the 256 episodes of Q-Learning in :numref:`sec_qlearning`. This is a structural property of the method, which we discuss next.
 
@@ -278,8 +278,9 @@ log-probability of actions on high-return trajectories:
 - Transition probabilities cancel — model-free.
 - Unbiased but noisy: zero-return trajectories contribute
   nothing, so early training crawls (next deck fixes this).
-- Finds the same optimal FrozenLake policy as VI and
-  Q-learning — but needed 4096 episodes (vs. 256): **on-policy**
-  methods can't reuse data. Off-policy methods (Q-learning) can,
-  trading simplicity for sample efficiency.
+- Finds an optimal FrozenLake route — one of the three the grid
+  admits, not necessarily the one VI picked — but needed 4096
+  episodes (vs. 256): **on-policy** methods can't reuse data.
+  Off-policy methods (Q-learning) can, trading simplicity for
+  sample efficiency.
 :::

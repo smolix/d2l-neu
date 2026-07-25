@@ -9,17 +9,17 @@
   },
   "cells": {
     "offline-rl-offline-rl-learning-without-touching-the-world-1": {
-      "code_fingerprint": "sha256:631c917f1cce969b55debcc1cba29db2482bb529a5051fb635f1ff0c653d97dd",
+      "code_fingerprint": "sha256:fe8bcd3941f5bf097e1299fd3dba2fb2826e799dbb49e6609a2be4dc3434fc45",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-offline-rl-learning-without-touching-the-world-2": {
-      "code_fingerprint": "sha256:09c62e10baca433b31b6258b6def545d515cd043ad1f7a76936a01fdc7ae90ad",
+      "code_fingerprint": "sha256:0498896d14fe3ae9e4d191e815d391355e7d0c101d038cf6a612f664d63abac9",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-offline-rl-learning-without-touching-the-world-3": {
-      "code_fingerprint": "sha256:ed06ca8da35c3e09b0a916b337c73baf28ef4b744ae1e91dd97a526f94abdec5",
+      "code_fingerprint": "sha256:06b3fe58fe468f0d3ece050d365388920fefa862e55ed97d1fd818a251c11dbf",
       "kind": "text",
       "outputs": [
         {
@@ -30,20 +30,20 @@
       ]
     },
     "offline-rl-offline-rl-learning-without-touching-the-world-4": {
-      "code_fingerprint": "sha256:371c9e55ff3a96da0eadd6a166182c702dd93272139cd42650f52bb4f310dc4e",
+      "code_fingerprint": "sha256:878d776b63242bd741901e986a4ed3dbaaa1c7b23fc904078b6573ed8bba5489",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive: predicted value 0.301, actual return of the greedy policy 0.094\npessimistic: predicted value 0.167, actual return of the greedy policy 0.101\n"
+          "text": "naive: median predicted value 0.27, median actual return 0.09\nnaive: over seeds, 0.18-0.35 predicted and 0.05-0.17 actual\npessimistic: median predicted value 0.14, median actual return 0.08\npessimistic: over seeds, 0.02-0.19 predicted and 0.04-0.17 actual\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-offline-rl-learning-without-touching-the-world-4-1.svg",
-          "bytes": 23545,
-          "sha256": "sha256:1658b75e87ed82ebad03b6f701f51694a3cc67d4a110eb88611f5fe6aa08c415"
+          "bytes": 22240,
+          "sha256": "sha256:358b50fc14d416c9eb7e134ddd8f9f07ca8e3a139e76104e7bd9d5d828724f4d"
         }
       ]
     }

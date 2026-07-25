@@ -9,35 +9,35 @@
   },
   "cells": {
     "dqn-implementation-on-cartpole-1": {
-      "code_fingerprint": "sha256:d9c2a06a4e53f3066bdbd02ee867b3bc01db94b529de99ac0284d58215ba4788",
+      "code_fingerprint": "sha256:13de5339d9be10f64ec4d8bedd731a15c6c751b785d42210075a91e516c274e1",
       "kind": "text",
       "outputs": []
     },
     "dqn-implementation-on-cartpole-2": {
-      "code_fingerprint": "sha256:ef233cd0c20a440123a04806a78ebab80bcdac962667a3cf06fe27032b17b627",
+      "code_fingerprint": "sha256:3a73baa35e044c95a622b9c4f67bbf1d3f4807014b5f1c9272aea18a3b93bfa5",
       "kind": "text",
       "outputs": []
     },
     "dqn-implementation-on-cartpole-3": {
-      "code_fingerprint": "sha256:f7db3ddfb7937c0a2d638c3c80f46ab0fbd93654b910f8c305d73529fd2e8a9c",
+      "code_fingerprint": "sha256:75b50d79dada7c85725e63aa7fd9f2e4e59a5bb530486910ecc3c56ab54c8dee",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DQN (with target network): median best 20-episode average = 500, median final 20-episode average = 98\n"
+          "text": "DQN (with target network): median best 20-episode average = 500, median final 20-episode average = 500\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "no target network: median best 20-episode average = 29, median final 20-episode average = 10\n"
+          "text": "no target network: median best 20-episode average = 25, median final 20-episode average = 9\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-implementation-on-cartpole-3-1.svg",
-          "bytes": 129533,
-          "sha256": "sha256:daf3889d3994696112284a8f0249e23a98ae7d7e44e614d167050ee7aa12ceb3"
+          "bytes": 128421,
+          "sha256": "sha256:3a48ec8fef898865617597ba9c568432db2d1cf3b3d423d1b1168f7cc89523b7"
         }
       ]
     }

@@ -40,7 +40,7 @@ The online network picks the action, the frozen network scores it. An action who
 
 ## Implementation on CartPole
 
-The pieces: the Q-network, a replay buffer that is just a bounded queue, an $\epsilon$-greedy behavior policy annealed over the first 10,000 steps, and one minibatch update per environment step once the buffer holds enough data. Two sizing choices matter more than they look. The buffer is large enough that nothing is ever evicted in our runs; once the policy is good, a small buffer would fill up entirely with near-perfect episodes, the network would forget what failure looks like, and the values of untrained failure states would drift upward unchecked (the exercise on shrinking the buffer makes this visible). And the learning rate is small, because every optimizer step moves the targets of every state; value learning tolerates far less aggression than the policy updates of the previous sections. We use the Huber loss for the regression, which behaves like the squared error near zero and like the absolute error far from it; the DQN authors used it to keep rare huge TD errors from dominating the updates :cite:`mnih2015human`.
+The pieces: the Q-network, a replay buffer that is just a bounded queue, an $\epsilon$-greedy behavior policy annealed over the first 10,000 steps, and one minibatch update per environment step once the buffer holds enough data. Two sizing choices matter more than they look. The buffer is large enough that nothing is ever evicted in our runs; once the policy is good, a small buffer would fill up entirely with near-perfect episodes, the network would forget what failure looks like, and the values of untrained failure states would drift upward unchecked (the exercise on shrinking the buffer makes this visible). And the learning rate is small, because every optimizer step moves the targets of every state; value learning tolerates far less aggression than the policy updates of the previous sections. We use the Huber loss for the regression, which behaves like the squared error near zero and like the absolute error far from it; the DQN authors used it to keep rare huge TD errors from dominating the updates :cite:`mnih2015human`. Huber bounds what any *one* transition contributes to the gradient but not what a batch of them contributes together, and the moment after a target sync is exactly when every error in the batch jumps at once, so we clip the gradient norm as well. Last, the $\epsilon$ floor is 0.01 rather than the more common 0.05, for a reason about measurement rather than learning: once episodes run 500 steps, a 0.05 floor is twenty-five forced random actions per episode, enough to hold the return we *measure* well below the ceiling the greedy policy has already learned to reach.
 
 ```{.python .input #dqn-implementation-on-cartpole-1}
 
@@ -58,8 +58,9 @@ num_episodes = 800  # Training episodes per run
 buffer_size = 200000  # Replay buffer capacity; nothing is evicted here
 batch_size = 128  # Minibatch size per update
 lr = 2.5e-4  # Learning rate
+grad_clip = 10.0  # Maximum gradient norm per update
 sync_every = 500  # Steps between target-network syncs
-eps_start, eps_end, eps_decay_steps = 1.0, 0.05, 10000
+eps_start, eps_end, eps_decay_steps = 1.0, 0.01, 10000
 warmup = 1000  # Transitions collected before training starts
 num_seeds = 3
 
@@ -117,6 +118,7 @@ def train_dqn(seed, use_target=True):
                 loss = nn.functional.smooth_l1_loss(q, y)
                 opt.zero_grad()
                 loss.backward()
+                nn.utils.clip_grad_norm_(qnet.parameters(), grad_clip)
                 opt.step()
             if use_target and step % sync_every == 0:
                 target.load_state_dict(qnet.state_dict())
@@ -133,18 +135,23 @@ d2l.compare_return_curves({
     'no target network': lambda seed: train_dqn(seed, False)}, num_seeds)
 ```
 
-The two arms differ in one boolean and end in different worlds. With the target network, every seed reaches the 500 ceiling: each one posts a perfect 20-episode stretch at some point in training, and the median run finishes its final twenty episodes at 460. Without it, no seed ever gets going: returns rise briefly while $\epsilon$ is still large and random exploration props up the buffer, then collapse to roughly 10, which is a pole that falls over immediately, and stay there. The naive recipe is not merely noisier, it fails outright on this problem: the network chases its own targets into a self-confirming collapse, and because the greedy policy is derived from the same broken network, the new data it collects confirms the collapse rather than correcting it. Training remains rougher than anything else in this chapter even in the healthy arm. The curves dip on the way up, and one of our three seeds touches the ceiling and then collapses well below it late in training; this is the generalization coupling of :numref:`sec_deeprl` compounded by the upward bias of the max, and taming it further is what the tricks beyond this section, from Double DQN onward, are for.
+The two arms differ in one boolean and end in different worlds. With the target network, every seed reaches the 500 ceiling: each one posts a perfect 20-episode stretch at some point in training. None of them settles there, and the curve says so more honestly than any summary number can. The average climbs, falls back, grinds sideways for stretches of a hundred episodes and more, and touches the ceiling in bursts, with the band across seeds wide the whole way. Because the return keeps falling off the ceiling and climbing back, an average over the last twenty episodes measures where a run happened to be in that cycle when we stopped it: it moves by hundreds of points from seed to seed, and it would move again if we stopped fifty episodes earlier. It is the wrong statistic to conclude anything from — the best 20-episode average is the one to report, and that one is the ceiling for every seed we have run.
+
+Without the target network, no seed ever gets going: returns rise briefly while $\epsilon$ is still large and random exploration props up the buffer, then collapse to roughly 10, which is a pole that falls over immediately, and stay there. The naive recipe is not merely noisier, it fails outright on this problem: the network chases its own targets into a self-confirming collapse, and because the greedy policy is derived from the same broken network, the new data it collects confirms the collapse rather than correcting it. This ablation, unlike the numbers above it, comes out the same way every time.
+
+Training remains rougher than anything else in this chapter even in the healthy arm, and it is worth being precise about what that roughness is *not*. Track $\max_{a} Q_\theta(s_0, a)$ over training and it rises smoothly, almost linearly, to roughly the discounted value of a perfect episode, $(1 - \gamma^{500}) / (1 - \gamma) \approx 99$. The values are converging, and converging to about the right number; nothing here is diverging. What churns is the greedy policy read off those values, which can flip between balancing the pole and dropping it on a change too small to see in the value estimates at all. This is the generalization coupling of :numref:`sec_deeprl` compounded by the upward bias of the max, and taming it further is what the tricks beyond this section, from Double DQN onward, are for.
 
 ## Summary
 
-DQN is Q-Learning with the table replaced by a network, made stable by two additions. The replay buffer breaks the correlation of consecutive transitions and reuses each one many times, which is legitimate because the Q-Learning target does not depend on the policy that collected the transition. The target network freezes the bootstrap targets between periodic syncs, cutting the feedback loop of a regression that moves its own targets. The max in the target also inflates values, since a maximum of noisy estimates is biased upward; Double DQN reduces the inflation by letting the online network select the action and the frozen network evaluate it. On CartPole, the full recipe reaches the 500 ceiling on every seed while the same code without the target network collapses to an immediately falling pole on every seed.
+DQN is Q-Learning with the table replaced by a network, made stable by two additions. The replay buffer breaks the correlation of consecutive transitions and reuses each one many times, which is legitimate because the Q-Learning target does not depend on the policy that collected the transition. The target network freezes the bootstrap targets between periodic syncs, cutting the feedback loop of a regression that moves its own targets. The max in the target also inflates values, since a maximum of noisy estimates is biased upward; Double DQN reduces the inflation by letting the online network select the action and the frozen network evaluate it. On CartPole, the full recipe reaches the 500 ceiling on every seed, while the same code without the target network collapses to an immediately falling pole on every seed. Reaching the ceiling is not the same as holding it: the return keeps falling off and climbing back, so what the last handful of episodes average to says more about when we stopped training than about the algorithm.
 
 ## Exercises
 
 1. Implement Double DQN by replacing the target computation with :eqref:`eq_double_dqn`. Compare the two on CartPole across several seeds; also track $\max_a Q_\theta(s_0, a)$ at the start state over training and compare it with the returns actually achieved.
-1. Sweep the sync period over $C \in \{1, 50, 500, 5000\}$. Explain what $C = 1$ is equivalent to, and why very large $C$ also slows learning.
+1. Sweep the sync period over $C \in \{1, 50, 500, 5000\}$. Explain what $C = 1$ is equivalent to. At the other end, distinguish two possible failures: does a very large $C$ merely slow learning down, or does it stop the agent reaching the ceiling at all within the episode budget? Report the best 20-episode average, not just the final one, to tell them apart.
 1. Shrink the replay buffer to 500 transitions and retrain. Which of the two couplings does this reintroduce, and what do the curves look like?
 1. DQN stores `float(terminated)` and not `done` in the buffer. Recalling the discussion in :numref:`sec_qlearning`, what would go wrong with the targets on truncated CartPole episodes if `done` were stored instead?
+1. Raise `num_seeds` to eight or more and, for the arm with the target network, compare the spread of the *best* 20-episode average across seeds with the spread of the *final* one. One of the two is a property of the algorithm and the other is mostly a property of when you stopped looking. Which is which, and which would you report in a paper?
 
 <!-- slides -->
 
@@ -197,10 +204,14 @@ Identical code, three seeds each, `use_target` on vs off:
 
 . . .
 
-With the target network every seed reaches the 500 ceiling
-(median final 20-episode average: 460). Without it, every seed
-collapses to a pole that falls immediately, and the greedy
-policy keeps collecting data that confirms the collapse.
+With the target network every seed reaches the 500 ceiling —
+and none of them holds it. The return keeps falling off and
+climbing back, so the final-twenty average is wherever the
+cycle happened to be: report the best, not the last.
+
+Without it, every seed collapses to a pole that falls
+immediately, and the greedy policy keeps collecting data that
+confirms the collapse.
 :::
 
 ::: {.slide title="Recap"}

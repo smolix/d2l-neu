@@ -117,6 +117,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/76/d4/81420972a676e8ffe
 wheels = [{ url = "https://files.pythonhosted.org/packages/fb/e2/79c688af8b210d232694e31e59da9f6ec747bae31c3f5946e4e9b98860d5/click-8.4.2-py3-none-any.whl", upload-time = 2026-06-24T17:45:13Z, size = 119243, hashes = { sha256 = "e6f9f66136c816745b9d65817da91d61d957fb16e02e4dcd0552553c5a197b76" } }]
 
 [[packages]]
+name = "cloudpickle"
+version = "3.1.2"
+sdist = { url = "https://files.pythonhosted.org/packages/27/fb/576f067976d320f5f0114a8d9fa1215425441bb35627b1993e5afd8111e5/cloudpickle-3.1.2.tar.gz", upload-time = 2025-11-03T09:25:26Z, size = 22330, hashes = { sha256 = "7fda9eb655c9c230dab534f1983763de5835249750e85fbcef43aaa30a9a2414" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/88/39/799be3f2f0f38cc727ee3b4f1445fe6d5e4133064ec2e4115069418a5bb6/cloudpickle-3.1.2-py3-none-any.whl", upload-time = 2025-11-03T09:25:25Z, size = 22228, hashes = { sha256 = "9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a" } }]
+
+[[packages]]
 name = "comm"
 version = "0.2.3"
 sdist = { url = "https://files.pythonhosted.org/packages/4c/13/7d740c5849255756bc17888787313b61fd38a0a8304fc4f073dfc46122aa/comm-0.2.3.tar.gz", upload-time = 2025-07-25T14:02:04Z, size = 6319, hashes = { sha256 = "2dc8048c10962d55d7ad693be1e7045d891b7ce8d999c97963a5e3e99c055971" } }
@@ -188,6 +194,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/cc/28/c14e053b6762b1044
 wheels = [{ url = "https://files.pythonhosted.org/packages/c1/ea/53f2148663b321f21b5a606bd5f191517cf40b7072c0497d3c92c4a13b1e/executing-2.2.1-py2.py3-none-any.whl", upload-time = 2025-09-01T09:48:08Z, size = 28317, hashes = { sha256 = "760643d3452b4d777d295bb167ccc74c64a81df23fb5e08eff250c425a4b2017" } }]
 
 [[packages]]
+name = "farama-notifications"
+version = "0.0.6"
+sdist = { url = "https://files.pythonhosted.org/packages/ec/91/14397890dde30adc4bee6462158933806207bc5dd10d7b4d09d5c33845cf/farama_notifications-0.0.6.tar.gz", upload-time = 2026-04-24T08:43:57Z, size = 2517, hashes = { sha256 = "b19acac4bb41d76e59e03394b5dd165f4761c86fa327f56307a35cbee3b60158" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/7c/f0/21f81892e4ed10f4ec3ef2e7cf8635fb76e7c0907c55d0da66be50094760/farama_notifications-0.0.6-py3-none-any.whl", upload-time = 2026-04-24T08:43:56Z, size = 2897, hashes = { sha256 = "f84839188efa1ce5bb361c2a84881b2dc2c0d0d7fb661ff00421820170930935" } }]
+
+[[packages]]
 name = "fastjsonschema"
 version = "2.21.2"
 sdist = { url = "https://files.pythonhosted.org/packages/20/b5/23b216d9d985a956623b6bd12d4086b60f0059b27799f23016af04a74ea1/fastjsonschema-2.21.2.tar.gz", upload-time = 2025-08-14T18:49:36Z, size = 374130, hashes = { sha256 = "b1eb43748041c880796cd077f1a07c3d94e93ae84bba5ed36800a33554ae05de" } }
@@ -255,6 +267,12 @@ name = "grpcio"
 version = "1.82.1"
 sdist = { url = "https://files.pythonhosted.org/packages/90/bc/656b89387d6f4ed7e0686c7b64c2ae7e554a759aa58122c8e5fb99392c32/grpcio-1.82.1.tar.gz", upload-time = 2026-07-08T12:36:16Z, size = 13187300, hashes = { sha256 = "707b24abd90fcb1e45bcc080577da1dbf9971d107490589b9539af8e1e77b4b5" } }
 wheels = [{ url = "https://files.pythonhosted.org/packages/e4/e7/8f855ca29c294956122a2a73023655b9b02602d5111dad2b9b00e7631c68/grpcio-1.82.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", upload-time = 2026-07-08T12:35:06Z, size = 6886855, hashes = { sha256 = "011c8badee95734dee8bf05ce3464756a0ac3ebb8d443afd20c0e2b5e4640ad9" } }]
+
+[[packages]]
+name = "gymnasium"
+version = "1.3.0"
+sdist = { url = "https://files.pythonhosted.org/packages/4d/ff/14b6880d703dfaca204490979d3254ccd280c99550798993319902873658/gymnasium-1.3.0.tar.gz", upload-time = 2026-04-22T13:47:14Z, size = 830646, hashes = { sha256 = "6939e86e835d6b71b6ba6bfd360487420876deafc79bfb7bacba83a7c446bcf3" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/e9/73/fda6a25f3beeb5e49d74330b44092b9e5a547395ccd478d1103ddcbff1fc/gymnasium-1.3.0-py3-none-any.whl", upload-time = 2026-04-22T13:47:12Z, size = 953904, hashes = { sha256 = "6b8c159a8540dcbcb221722d7efda24d78ebbcbc3bd2ea1c2611aa2a34471fc2" } }]
 
 [[packages]]
 name = "h11"
@@ -490,9 +508,9 @@ wheels = [{ url = "https://files.pythonhosted.org/packages/3c/2e/8d0c2ab90a8c1d9
 
 [[packages]]
 name = "matplotlib"
-version = "3.11.0"
-sdist = { url = "https://files.pythonhosted.org/packages/1f/24/080c99d223d158d3a8902769269ab6da5b50f7a0e6e072513907e02b7a6c/matplotlib-3.11.0.tar.gz", upload-time = 2026-06-12T02:29:15Z, size = 33251176, hashes = { sha256 = "68c0c7be01b30dcca3638934f7f591df73401235cbdbf0d1ab1c71e7db7f8b57" } }
-wheels = [{ url = "https://files.pythonhosted.org/packages/94/95/7f522393c88313336b20d70fc849555757b2e5febc22b83b3a3f0fd4bce9/matplotlib-3.11.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", upload-time = 2026-06-12T02:27:55Z, size = 10031353, hashes = { sha256 = "be5f93a1d21981bfb802ded0d77a0caa92d4342a47d45754fac77e314a506344" } }]
+version = "3.10.8"
+sdist = { url = "https://files.pythonhosted.org/packages/8a/76/d3c6e3a13fe484ebe7718d14e269c9569c4eb0020a968a327acb3b9a8fe6/matplotlib-3.10.8.tar.gz", upload-time = 2025-12-10T22:56:51Z, size = 34806269, hashes = { sha256 = "2299372c19d56bcd35cf05a2738308758d32b9eaed2371898d8f5bd33f084aa3" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/3e/f3/c5195b1ae57ef85339fd7285dfb603b22c8b4e79114bae5f4f0fcf688677/matplotlib-3.10.8-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", upload-time = 2025-12-10T22:55:34Z, size = 8716944, hashes = { sha256 = "3ab4aabc72de4ff77b3ec33a6d78a68227bf1123465887f9905ba79184a1cc04" } }]
 
 [[packages]]
 name = "matplotlib-inline"
@@ -768,6 +786,12 @@ version = "3.0"
 marker = "python_full_version < '3.14' and implementation_name != 'PyPy'"
 sdist = { url = "https://files.pythonhosted.org/packages/1b/7d/92392ff7815c21062bea51aa7b87d45576f649f16458d78b7cf94b9ab2e6/pycparser-3.0.tar.gz", upload-time = 2026-01-21T14:26:51Z, size = 103492, hashes = { sha256 = "600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29" } }
 wheels = [{ url = "https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl", upload-time = 2026-01-21T14:26:50Z, size = 48172, hashes = { sha256 = "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992" } }]
+
+[[packages]]
+name = "pygame-ce"
+version = "2.5.7"
+sdist = { url = "https://files.pythonhosted.org/packages/e9/0d/bb6a6fdf1b227c0bb9a44437a70962a3854bcc541533c261e5021a5ee691/pygame_ce-2.5.7.tar.gz", upload-time = 2026-03-02T09:26:59Z, size = 5935870, hashes = { sha256 = "86beb797cd73c141299a29b56f7df2b0543fbdc81d428022458329ff694aaa51" } }
+wheels = [{ url = "https://files.pythonhosted.org/packages/db/17/70ada4cef84eca48a995cc9e0f2f087e6190b3e4111e9c8ec3c7a8f689bd/pygame_ce-2.5.7-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", upload-time = 2026-03-02T09:25:59Z, size = 12812909, hashes = { sha256 = "0d8fa8822c0f4b5ae6b44ada7be9f2193fd512da1381c37fa3c5bda8971d64cb" } }]
 
 [[packages]]
 name = "pygments"

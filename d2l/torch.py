@@ -4134,6 +4134,70 @@ def show_value_convergence(values, reference=None, xlabel='iteration',
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
 
+def plot_curves(curves, xlabel, ylabel, smooth=1, reference=None,
+                ylim=None):
+    """One panel per call. `curves` maps a label to an array of shape
+    [seed, step] (or [step] for a single seed); plots the seed median and
+    a shaded band between the seed min and max. `smooth`, if greater than
+    1, applies a trailing moving average of that many steps before taking
+    the seed statistics. `reference`, if given, draws a dashed horizontal
+
+    Defined in :numref:`sec_utils`"""
+    set_figsize((6, 4))
+    for name, values in curves.items():
+        values = np.atleast_2d(values)
+        if smooth > 1:
+            kernel = np.ones(smooth) / smooth
+            values = np.stack([np.convolve(v, kernel, 'valid')
+                               for v in values])
+        x = np.arange(values.shape[1])
+        line, = plt.plot(x, np.median(values, axis=0), label=name)
+        if values.shape[0] > 1:
+            plt.fill_between(x, values.min(axis=0), values.max(axis=0),
+                             alpha=0.2, color=line.get_color())
+    if reference is not None:
+        plt.axhline(reference, linestyle='--', color='gray')
+    if ylim is not None:
+        plt.ylim(ylim)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+
+def show_grid(desc, values, policy, titles=None):
+    """The gridworld: cell colour = `values`, arrow = `policy`. The grid
+    shape is read from `desc` (e.g. `env_info['desc']`), so it is not tied
+    to any one map size. `values` and `policy` may each be a single frame,
+    shape (num_states,), or a sequence of frames, shape
+
+    Defined in :numref:`sec_utils`"""
+    h, w = desc.shape
+    values = np.atleast_2d(values).reshape(-1, h, w)
+    policy = np.atleast_2d(policy).reshape(-1, h, w)
+    num_frames = values.shape[0]
+    action2offset = {0: (-.25, 0), 1: (0, .25), 2: (.25, 0), 3: (0, -.25)}
+    fig, axes = plt.subplots(1, num_frames, figsize=(3 * num_frames, 3),
+                             squeeze=False)
+    for k, ax in enumerate(axes[0]):
+        ax.imshow(values[k], cmap='bone')
+        ax.set_xticks(np.arange(-.5, w), minor=True)
+        ax.set_yticks(np.arange(-.5, h), minor=True)
+        ax.grid(which='minor', color='w', linewidth=2)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for y in range(h):
+            for x in range(w):
+                cell = desc[y, x].decode()
+                color = {'H': 'y', 'G': 'w'}.get(cell, 'g')
+                ax.text(x, y, cell, ha='center', va='center', color=color,
+                       fontweight='bold')
+                if cell not in ('H', 'G'):
+                    dx, dy = action2offset[int(policy[k, y, x])]
+                    ax.arrow(x, y, dx, dy, color='r', head_width=0.2,
+                            head_length=0.15)
+        if titles is not None:
+            ax.set_title(titles[k])
+    fig.tight_layout()
+
 def load_array(data_arrays, batch_size, is_train=True):
     """Construct a PyTorch data iterator.
 

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source": "chapter_reinforcement-learning/actor-critic.md",
+  "source": "chapter_deep-reinforcement-learning/actor-critic.md",
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",

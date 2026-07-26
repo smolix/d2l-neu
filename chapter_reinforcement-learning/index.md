@@ -20,8 +20,4 @@ qlearning
 policy-gradient
 baselines
 deep-rl
-actor-critic
-ppo
-dqn
-offline-rl
 ```

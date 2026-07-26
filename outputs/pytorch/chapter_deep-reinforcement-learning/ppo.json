@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source": "chapter_reinforcement-learning/ppo.md",
+  "source": "chapter_deep-reinforcement-learning/ppo.md",
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",

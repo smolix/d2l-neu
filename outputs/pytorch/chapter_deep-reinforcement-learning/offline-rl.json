@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source": "chapter_reinforcement-learning/offline-rl.md",
+  "source": "chapter_deep-reinforcement-learning/offline-rl.md",
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",

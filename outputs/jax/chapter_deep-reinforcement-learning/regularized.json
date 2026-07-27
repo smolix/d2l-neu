@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "source": "chapter_deep-reinforcement-learning/regularized.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:77cc8101e9c8bb5e8cf3e45ceb1da8d156de616369dbe278fe45dc3ca015ad6d",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "regularized-regularized-policy-optimization": {
+      "code_fingerprint": "sha256:233bb22443fdb8d00cee4bd8b5c7179c8539bb43e5758a2feab0634b896f1ee6",
+      "kind": "text",
+      "outputs": []
+    },
+    "regularized-preferences-and-bradley-terry-1": {
+      "code_fingerprint": "sha256:47cb4efae710b5ea944aee4a5cee8715b0597b24bbe040d2c458ba6d720ae9de",
+      "kind": "text",
+      "outputs": []
+    },
+    "regularized-preferences-and-bradley-terry-2": {
+      "code_fingerprint": "sha256:1520957a4ccd5ce85740567309e1729189109d47501d2f1c193b45c34d63d944",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "never visited: 9 pairs; in at least 50 episodes: 46 pairs\nrms fit error on those 46: 0.193\nentries into the hazard lane: true [-1.5 -1.5 -1.5 -1.5], fitted [-0.03 -0.05 -0.02  0.  ]\n"
+        }
+      ]
+    },
+    "regularized-reward-hacking-and-goodhart": {
+      "code_fingerprint": "sha256:423406af534b3b07782922d54007e3674be9062fa4ef69095568ab4ff5bd5a2c",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "plan on true reward  : fitted return -0.24, true return +0.59\nplan on fitted reward: fitted return -0.03, true return -2.11\n"
+        }
+      ]
+    },
+    "regularized-the-measurement-true-return-against-the-kl-budget": {
+      "code_fingerprint": "sha256:743266a4fcf7bcce2a8d1c2b8e3aea9e07a578e0f82e041f5c65837417e11728",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "true return -0.11 at KL 0, peak +0.43 at KL 3.0, then -1.41 at KL 12.4\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
+          "bytes": 28114,
+          "sha256": "sha256:d6f577b5e51810eeace47b0fca91d254999a3e91a48c648a7a561768b2dbf638"
+        }
+      ]
+    },
+    "regularized-the-proposition-1": {
+      "code_fingerprint": "sha256:9ac73c9a19c7ad57bc7a16f6603b857a39fbab4e7b21c57f025ba822438cd4ac",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta = 5.0: pi_beta = [0.233 0.086 0.237 0.232 0.212], reward 1.38, KL 0.02\nbeta = 2.0: pi_beta = [0.146 0.062 0.2   0.264 0.327], reward 1.74, KL 0.15\nbeta = 0.5: pi_beta = [0.004 0.004 0.025 0.148 0.819], reward 2.78, KL 1.26\nbeta = 0.2: pi_beta = [0.    0.    0.    0.009 0.991], reward 2.99, KL 1.84\n"
+        }
+      ]
+    },
+    "regularized-the-proposition-2": {
+      "code_fingerprint": "sha256:3f426005e2ea55205a8461da34d7cc877373298a60c6fc972e15b8f99d3c388d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "largest gap to the closed form over the ladder: 1.4e-16\nobjective at beta = 2: numerical 1.442004, beta log Z = 1.442004\n"
+        }
+      ]
+    },
+    "regularized-four-consequences-1": {
+      "code_fingerprint": "sha256:5e9585c112849c236344c5edd88c6801cd0986615816272205957636eae53dc8",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta =  100.0: pi_star = [0.297 0.099 0.25  0.202 0.153]\nbeta =   0.01: pi_star = [0. 0. 0. 0. 1.]\n"
+        }
+      ]
+    },
+    "regularized-four-consequences-2": {
+      "code_fingerprint": "sha256:ee46b99783576645721596fe3126a17a51b24d8a1d036180698b544156cf563e",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "True\n"
+        }
+      ]
+    },
+    "regularized-four-consequences-3": {
+      "code_fingerprint": "sha256:7b10dc96ac5dfe4c95c6f70e028ffb242ccdc299ce9a76face08939ab82a6c32",
+      "kind": "mixed",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "KL 0 pays 1.15; the frontier ends at KL 1.90, reward 3\n"
+        },
+        {
+          "type": "display_data",
+          "mime": "image/svg+xml",
+          "asset": "regularized/regularized-four-consequences-3-1.svg",
+          "bytes": 23413,
+          "sha256": "sha256:06107a165e8a24af03455286e7538a26ddc74a6b569ee22b5a92133fd008d598"
+        }
+      ]
+    }
+  }
+}

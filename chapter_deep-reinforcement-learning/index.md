@@ -14,6 +14,7 @@ offline reinforcement learning.
 
 actor-critic
 ppo
+regularized
 dqn
 offline-rl
 ```

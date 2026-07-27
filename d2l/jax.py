@@ -2284,6 +2284,41 @@ class TabularMDP:
         """Q(s, a) = r(s, a) + gamma * sum_{s'} P(s'|s, a) V(s')."""
         return self.r + self.gamma * self.P @ V
 
+def value_iteration(mdp, num_iters):
+    """Sweep V <- max_a backup(V); return the whole history of iterates.
+
+    Defined in :numref:`sec_valueiter`"""
+    V, history = np.zeros(mdp.num_states), []
+    for _ in range(num_iters):
+        V = mdp.backup(V).max(axis=1)
+        history.append(V)
+    return np.array(history)
+
+def policy_evaluation(mdp, pi, num_iters):
+    """Same sweep with the max replaced by an average under pi(a|s).
+
+    Defined in :numref:`sec_valueiter`"""
+    V, history = np.zeros(mdp.num_states), []
+    for _ in range(num_iters):
+        V = (pi * mdp.backup(V)).sum(axis=1)
+        history.append(V)
+    return np.array(history)
+
+def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):
+    """Mean discounted return of an acting policy over Monte Carlo episodes.
+
+    `policy(obs, rng) -> action` is the protocol every agent in these two
+
+    Defined in :numref:`sec_valueiter`"""
+    total = 0.0
+    for _ in range(num_episodes):
+        obs, done, discount = env.reset()[0], False, 1.0
+        while not done:
+            obs, reward, terminated, truncated, _ = env.step(policy(obs, rng))
+            done = terminated or truncated
+            total, discount = total + discount * reward, discount * gamma
+    return total / num_episodes
+
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
     """Update discriminator.

@@ -2418,6 +2418,24 @@ class Batch:
         return np.array([(gamma ** np.arange(ep.stop - ep.start)
                           * self.rew[ep]).sum() for ep in self.episodes()])
 
+    def backward_scan(self, x, factor):
+        """y_t = x_t + factor * y_{t+1}, restarted at every episode boundary.
+
+        Defined in :numref:`sec_baselines`"""
+        y = np.zeros_like(x)
+        for ep in self.episodes():
+            running = 0.0
+            for t in reversed(range(ep.start, ep.stop)):
+                running = x[t] + factor * running
+                y[t] = running
+        return y
+
+    def reward_to_go(self, gamma):
+        """G_t: the discounted return of the rest of its episode, by one scan.
+
+        Defined in :numref:`sec_baselines`"""
+        return self.backward_scan(self.rew, gamma)
+
 def rollout(env, policy, num_episodes, rng):
     """Collect complete episodes from `policy(obs, rng) -> action` as a
     Batch; `term` records `terminated`, never `truncated` (:numref:`sec_mdp`).
@@ -2439,6 +2457,18 @@ def rollout(env, policy, num_episodes, rng):
     obs, act, rew, next_obs, term = (np.asarray(c) for c in cols)
     return Batch(obs, act, rew.astype(np.float32), next_obs,
                  term.astype(np.float32), np.asarray(ep_ends))
+
+def normalize(x, eps=1e-8):
+    """Center a batch of weights and rescale them to unit spread.
+
+    Defined in :numref:`sec_baselines`"""
+    return (x - x.mean()) / (x.std() + eps)
+
+def run_seeds(train, num_seeds, **kwargs):
+    """Run train(seed, **kwargs), a generator of curve points, per seed.
+
+    Defined in :numref:`sec_baselines`"""
+    return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
 
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):

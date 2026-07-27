@@ -1,30 +1,30 @@
 {
   "schema": 1,
   "source": "chapter_reinforcement-learning/baselines.md",
-  "framework": "pytorch",
+  "framework": "jax",
   "provenance": {
-    "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:eaa6635b2e56ebc466a38bc14eb57292895902cb20273926f55fa4059df0e99d",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:0401e9ccbf46e1fa80c80273d4f0343655bd28c696367c4a43077858fe6342c3",
     "max_inline_bytes": 0
   },
   "cells": {
     "baselines-baselines-advantages-and-variance-reduction-1": {
-      "code_fingerprint": "sha256:f9b5df47de6de16848dc63126b26ba183f78ebd40ae34290d3d03bad4878848a",
+      "code_fingerprint": "sha256:9922f314bc4c85fdcd59fdeb13b6600e9ccd123ded9767afce9b92053ffd6d8e",
       "kind": "text",
       "outputs": []
     },
     "baselines-baselines-advantages-and-variance-reduction-2": {
-      "code_fingerprint": "sha256:4cd2a3ca47caee0b3b8539362cc52f15b25b08930f2be169e1ae97ea188cca7a",
+      "code_fingerprint": "sha256:62e666542c6d0895150219319abc975e1e502b07b205a935008358913eb4c433",
       "kind": "text",
       "outputs": []
     },
     "baselines-reward-to-go-and-causality": {
-      "code_fingerprint": "sha256:d1da6300e610e12802bdba3a132c2015a82dd7a4a0029aeb5618e529eedb68f2",
+      "code_fingerprint": "sha256:47e1a6a5b58a0e85cfd9edb02cd14f03978ed33885a0dd950eda37ae69922d6c",
       "kind": "text",
       "outputs": []
     },
     "baselines-estimator-hygiene": {
-      "code_fingerprint": "sha256:6c1c380b70d527fb76a5e9266265513e0c6b5416003c89aba1f78149f70d914b",
+      "code_fingerprint": "sha256:4dcb617712f49d951383ef79eb55fc723842dee9031745caef85949ee4fec5ca",
       "kind": "text",
       "outputs": [
         {
@@ -35,12 +35,12 @@
       ]
     },
     "baselines-centering-is-a-baseline-dividing-by-sigma-is-a-step-size-rescaling": {
-      "code_fingerprint": "sha256:2fc5151ba25e1d4c084bfc56b115d3dcca618a9348cb5569b7d2d2c379a14cf0",
+      "code_fingerprint": "sha256:b38b97e585c69b8ea01c61de1dcfef8816b740b1d4015ccd6cc19a3639ae436d",
       "kind": "text",
       "outputs": []
     },
     "baselines-leave-one-out": {
-      "code_fingerprint": "sha256:81d676603c11a2b9ec057b73bb22b0a58f3495b7aaa080abe6ed226472630b7a",
+      "code_fingerprint": "sha256:1fd0de4cbac91578cd5547811ceaf48bc070623d0cb6b26baa684e3b16cec592",
       "kind": "text",
       "outputs": [
         {
@@ -51,7 +51,7 @@
       ]
     },
     "baselines-summing-over-episodes-of-different-lengths": {
-      "code_fingerprint": "sha256:5a063389b904296cdd4a007a3349306b03c4e6f56c7cab0b196aacaeeaa6ec13",
+      "code_fingerprint": "sha256:c39243fdcaf88ecd3cb5d3e5a147c862a7b0c2a52929f92d3a5b02c248b035b8",
       "kind": "text",
       "outputs": [
         {
@@ -62,7 +62,7 @@
       ]
     },
     "baselines-five-estimators-1": {
-      "code_fingerprint": "sha256:8abe28db01e58f6166f2cc5a026b155493ef99481050cb5251e0642759effb3b",
+      "code_fingerprint": "sha256:f5d6ea5a69671cd25bc8d88261734fbc14a476b93d2d8325156817aee74d4453",
       "kind": "text",
       "outputs": [
         {
@@ -73,35 +73,35 @@
       ]
     },
     "baselines-five-estimators-2": {
-      "code_fingerprint": "sha256:dc2522839cb68ac3b1e85926e3a321d4c7192b82aeb29508e5c1421eb04fa615",
+      "code_fingerprint": "sha256:8ab165a4a4f080074c7b53ed9ff6af7d6c921a6e11d559cd021ba66b484f26d7",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-3": {
-      "code_fingerprint": "sha256:234db3369e6346fc6489bf5ecdb7364f34db2ea905d7c09a4aad6ff550e6b6b6",
+      "code_fingerprint": "sha256:6a24c0279506683adbbef262a17e15984af1d60e68d7480279cf9e725559635e",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-4": {
-      "code_fingerprint": "sha256:8da32df0fa6f184f2931aff5b400b39fb6b76b773bd2db2116adcaa5b06562a0",
+      "code_fingerprint": "sha256:5b5427fd4e8cccb912ba8af077113df0ffbf0dd44227ae137bec06bcedf05664",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-5": {
-      "code_fingerprint": "sha256:69cbe676c5018016280b1420398d272c95e1df84bacd743e3086b4bf60963252",
+      "code_fingerprint": "sha256:35b3fb598906a410a6d356a98845d3d7230a471e68cd1c34ac95c33eb7f7d15c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
-          "bytes": 72097,
-          "sha256": "sha256:f7ea2503a51d699ad88e8760eb9df8b1c8bcf0b23d9a93945d07cf674bef9e1d"
+          "bytes": 72076,
+          "sha256": "sha256:39e5ac84aaa6ed1306e7e0ca608e37a15ac41cbf299b4d5e412765bb366baf95"
         }
       ]
     },
     "baselines-five-estimators-6": {
-      "code_fingerprint": "sha256:cdd7b60ace98cab0c70a3eafe5d42484112f1b73cdd2b0fc82adaf491d3836a7",
+      "code_fingerprint": "sha256:31fbe55d0b753ac3ddb12f962647c428e3780f77060ea953a09d5fc2bfd2c960",
       "kind": "text",
       "outputs": [
         {
@@ -112,15 +112,15 @@
       ]
     },
     "baselines-five-estimators-7": {
-      "code_fingerprint": "sha256:74ab00238961646f8c6df3d6b6d9df606f5380b9e7e7bf94b53ae9b66d74026d",
+      "code_fingerprint": "sha256:b8545febc2243d3508b7cc3be53834c1531104298b560f9ec48cca13fb2679f3",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
-          "bytes": 48138,
-          "sha256": "sha256:cea484d5732c41d6e870ec2c0fc1dcff5623c08117f9417d8e9ffd022b3b0e23"
+          "bytes": 48512,
+          "sha256": "sha256:7852874ab42e829c129861a7bb3fff837be8ebe467ca4e6346042d061fb99f22"
         }
       ]
     }

@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "source": "chapter_reinforcement-learning/mdp.md",
+  "framework": "jax",
+  "provenance": {
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "mdp-markov-decision-processes": {
+      "code_fingerprint": "sha256:52a40b001d9c0b6b5d1d4d0a904bdfde6272d9e0757adefe5b944be93a41e885",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdp-states-actions-and-the-transition-kernel-1": {
+      "code_fingerprint": "sha256:20e9dde6367c32ef5d6c0b07e042294b00805f5de850073c8082b42a29dbb325",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "execute_result",
+          "text": "[(0.33333333333333337, 8, 0, False),\n (0.3333333333333333, 13, 0, False),\n (0.33333333333333337, 10, 0, False)]"
+        }
+      ]
+    },
+    "mdp-states-actions-and-the-transition-kernel-2": {
+      "code_fingerprint": "sha256:1412fcc283bfe112f5919fe11c4bbac12d3b6d1ede52bc9f6e45f2a9e977dbcc",
+      "kind": "text",
+      "outputs": []
+    },
+    "mdp-states-actions-and-the-transition-kernel-3": {
+      "code_fingerprint": "sha256:3ab7cdc6d269f3418fd86546ece1aaa5a44b30a443c3c23c9a7f4cad3328b198",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "[0.         0.         0.         0.         0.         0.\n 0.         0.         0.33333333 0.         0.33333333 0.\n 0.         0.33333333 0.         0.        ]\n"
+        }
+      ]
+    },
+    "mdp-states-actions-and-the-transition-kernel-4": {
+      "code_fingerprint": "sha256:6b9c5cc9ffaecb800bc2f94064176c1126586b0572c3655a340045d4330f89c0",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "largest |row sum - 1|: 0.0e+00\nr(s=14, a=v) = 0.333\nr(s=14, a=>) = 0.333\nr(s=14, a=^) = 0.333\n"
+        }
+      ]
+    },
+    "mdp-return-discount-and-horizon": {
+      "code_fingerprint": "sha256:f31bcec0bb570075629a3f356ddb8b00aefa58774061cb4cbc41202e36d99622",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t= 0  s= 0  a=>  r=0\nt= 1  s= 0  a=v  r=0\nt= 2  s= 0  a=<  r=0\nt= 3  s= 4  a=^  r=0\nt= 4  s= 4  a=<  r=0\nt= 5  s= 4  a=v  r=0\nt= 6  s= 8  a=>  r=0\nt= 7  s= 9  a=^  r=0\nt= 8  s=10  a=>  r=0\nterminated=True, truncated=False, return=0\n"
+        }
+      ]
+    },
+    "mdp-the-geometric-bound-and-the-effective-horizon": {
+      "code_fingerprint": "sha256:ad8cbb6bac3483ea9cf3f49d916a8a9fc09c23aaff4804cb479423c8a5e9c0e6",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " gamma  horizon 1/(1-gamma)  t: gamma^t < 0.05\n   0.5                    2                  5\n   0.9                   10                 29\n  0.95                   20                 59\n  0.99                  100                299\n"
+        }
+      ]
+    },
+    "mdp-model-based-versus-model-free": {
+      "code_fingerprint": "sha256:db10ae9347517b0abffa4245fe5dff3461bd511c04799b87d5efa1e6d90fe410",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "shaped-optimal: at s=14 goes <, shaped value 2.15, true value 0.000\ntrue-optimal:   at s=14 goes v, true value 0.180\n"
+        }
+      ]
+    }
+  }
+}

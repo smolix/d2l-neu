@@ -2077,6 +2077,30 @@ def resnet18(num_classes, in_channels=1):
                                        nn.Linear(512, num_classes)))
     return net
 
+class TabularMDP:
+    """A finite MDP as dense arrays: P[s, a, s'] and r[s, a].
+
+    Defined in :numref:`sec_mdp`"""
+    def __init__(self, P, r, gamma):
+        self.P, self.r, self.gamma = P, r, gamma
+        self.num_states, self.num_actions = r.shape
+
+    @classmethod
+    def from_gym(cls, env, gamma):
+        """Read the transition table Gymnasium exposes as env.unwrapped.P."""
+        n_s, n_a = env.observation_space.n, env.action_space.n
+        P, r = np.zeros((n_s, n_a, n_s)), np.zeros((n_s, n_a))
+        for s, actions in env.unwrapped.P.items():
+            for a, outcomes in actions.items():
+                for p, s_next, reward, _ in outcomes:
+                    P[s, a, s_next] += p      # several outcomes may share s'
+                    r[s, a] += p * reward     # r(s,a) is the expected reward
+        return cls(P, r, gamma)
+
+    def backup(self, V):
+        """Q(s, a) = r(s, a) + gamma * sum_{s'} P(s'|s, a) V(s')."""
+        return self.r + self.gamma * self.P @ V
+
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
     """Update discriminator.
 

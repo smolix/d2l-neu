@@ -172,6 +172,7 @@ book:
         - chapter_reinforcement-learning/index.qmd
         - chapter_reinforcement-learning/mdp.qmd
         - chapter_reinforcement-learning/value-iter.qmd
+        - chapter_reinforcement-learning/imitation.qmd
         - chapter_reinforcement-learning/qlearning.qmd
         - chapter_reinforcement-learning/policy-gradient.qmd
         - chapter_reinforcement-learning/baselines.qmd

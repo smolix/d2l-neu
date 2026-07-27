@@ -2136,6 +2136,68 @@ def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):
             total, discount = total + discount * reward, discount * gamma
     return total / num_episodes
 
+class ActorCritic(nn.Module):
+    """A policy and a value function, each with its own optimizer.
+
+    Defined in :numref:`sec_imitation`"""
+    def __init__(self, policy, value, lr=1e-2):
+        super().__init__()
+        self.policy, self.value = policy, value
+        self.opt_pi = torch.optim.Adam(policy.parameters(), lr=lr)
+        self.opt_v = torch.optim.Adam(value.parameters(), lr=lr)
+
+    def forward(self, obs):
+        return torch.softmax(self.policy(obs), dim=-1)
+
+    def log_prob(self, obs, act):
+        """log pi(a|s) for a batch of states and the actions taken there."""
+        return torch.log_softmax(self.policy(obs), dim=-1) \
+                    .gather(-1, act[:, None]).squeeze(-1)
+
+    def V(self, obs):
+        return self.value(obs).squeeze(-1)
+
+    @classmethod
+    def tabular(cls, num_states, num_actions, lr=0.1):
+        """One preference theta_{s,a} per state-action pair: an embedding."""
+        policy, value = (nn.Embedding(num_states, num_actions),
+                         nn.Embedding(num_states, 1))
+        nn.init.zeros_(policy.weight), nn.init.zeros_(value.weight)
+        return cls(policy, value, lr)
+
+    def act(self, obs, rng):
+        """Sample an action; numpy in, int out, the acting protocol of evaluate.
+
+        Defined in :numref:`sec_imitation`"""
+        with torch.no_grad():
+            probs = torch.softmax(self.policy(torch.as_tensor(obs)), -1).numpy()
+        return int(rng.choice(len(probs), p=probs))
+
+    def act_greedy(self, obs, rng=None):
+        with torch.no_grad():
+            return int(self.policy(torch.as_tensor(obs)).argmax())
+
+    def value_np(self, obs):
+        with torch.no_grad():
+            return self.V(torch.as_tensor(obs)).numpy()
+
+    def log_prob_np(self, obs, act):
+        with torch.no_grad():
+            return self.log_prob(torch.as_tensor(obs),
+                                 torch.as_tensor(act)).numpy()
+
+def policy_step(ac, batch, advantage):
+    """One ascent step on E[A_t log pi(a_t|s_t)]; A_t arrives as numpy = data.
+
+    Defined in :numref:`sec_imitation`"""
+    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
+    adv = torch.as_tensor(advantage)
+    loss = -(adv * ac.log_prob(obs, act)).mean()
+    ac.opt_pi.zero_grad()
+    loss.backward()
+    ac.opt_pi.step()
+    return loss.item()
+
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
     """Update discriminator.
 

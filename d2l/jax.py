@@ -2319,6 +2319,64 @@ def evaluate(env, policy, num_episodes, gamma=1.0, rng=None):
             total, discount = total + discount * reward, discount * gamma
     return total / num_episodes
 
+class ActorCritic(nnx.Module):
+    """A policy and a value function, each with its own optimizer.
+
+    Defined in :numref:`sec_imitation`"""
+    def __init__(self, policy, value, lr=1e-2):
+        self.policy, self.value = policy, value
+        self.opt_pi = nnx.Optimizer(policy, optax.adam(lr), wrt=nnx.Param)
+        self.opt_v = nnx.Optimizer(value, optax.adam(lr), wrt=nnx.Param)
+
+    def log_prob(self, obs, act, policy=None):
+        """log pi(a|s). Gradients flow w.r.t. the module you differentiate;
+        the update functions pass that module back in as `policy`."""
+        policy = self.policy if policy is None else policy
+        logp = jax.nn.log_softmax(policy(obs), axis=-1)
+        return jnp.take_along_axis(logp, act[:, None], axis=-1).squeeze(-1)
+
+    def V(self, obs, value=None):
+        value = self.value if value is None else value
+        return value(obs).squeeze(-1)
+
+    @classmethod
+    def tabular(cls, num_states, num_actions, lr=0.1, rngs=None):
+        """One preference theta_{s,a} per state-action pair: an embedding."""
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        zeros = nnx.initializers.zeros_init()
+        return cls(nnx.Embed(num_states, num_actions,
+                             embedding_init=zeros, rngs=rngs),
+                   nnx.Embed(num_states, 1, embedding_init=zeros, rngs=rngs),
+                   lr)
+
+    def act(self, obs, rng):
+        """Sample an action; numpy in, int out, the acting protocol of evaluate.
+
+        Defined in :numref:`sec_imitation`"""
+        probs = np.asarray(jax.nn.softmax(self.policy(jnp.asarray(obs)), axis=-1))
+        return int(rng.choice(len(probs), p=probs))
+
+    def act_greedy(self, obs, rng=None):
+        return int(self.policy(jnp.asarray(obs)).argmax())
+
+    def value_np(self, obs):
+        return np.asarray(self.V(jnp.asarray(obs)))
+
+    def log_prob_np(self, obs, act):
+        return np.asarray(self.log_prob(jnp.asarray(obs), jnp.asarray(act)))
+
+def policy_step(ac, batch, advantage):
+    """One ascent step on E[A_t log pi(a_t|s_t)]; A_t arrives as numpy = data.
+
+
+    Defined in :numref:`sec_imitation`"""
+    obs, act = jnp.asarray(batch.obs), jnp.asarray(batch.act)
+    adv = jnp.asarray(advantage)
+    loss, grads = nnx.value_and_grad(
+        lambda policy: -(adv * ac.log_prob(obs, act, policy)).mean())(ac.policy)
+    ac.opt_pi.update(ac.policy, grads)
+    return float(loss)
+
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
     """Update discriminator.

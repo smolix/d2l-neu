@@ -1448,7 +1448,7 @@ def fig_variance_reduction():  # F9  -> mdl-rl-variance-reduction
         lbl.set_color(color)
         lbl.set_fontsize(13 if color != "black" else 11)
     axc.text(0.95, var_x * 1.40,
-             f"at $b^\\star$: $1 - \\rho^2 = {1 - rho ** 2:.2f}$\n"
+             f"at $b^\\star$: $1 - \\mathrm{{corr}}^2 = {1 - rho ** 2:.2f}$\n"
              f"of the variance at $b = 0$",
              ha="center", va="top", fontsize=12.5, color="black")
     axc.set_xlim(-0.58, 2.58)

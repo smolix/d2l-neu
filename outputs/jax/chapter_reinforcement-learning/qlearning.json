@@ -1,40 +1,40 @@
 {
   "schema": 1,
   "source": "chapter_reinforcement-learning/qlearning.md",
-  "framework": "pytorch",
+  "framework": "jax",
   "provenance": {
-    "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:cd8931f6f027a8a4544ab6f0f3978173e9d3c1f38c619728259b411ab24ef2a7",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:c40f066d5dcead837cb6d49ecde39cd59d3cc2364946f47ffc01646ac218b77a",
     "max_inline_bytes": 0
   },
   "cells": {
     "qlearning-temporal-differences-q-learning-and-exploration": {
-      "code_fingerprint": "sha256:f75014e863117b32a5563d437f27d01756d561630e26f20e1deae8b20af0052f",
+      "code_fingerprint": "sha256:52a40b001d9c0b6b5d1d4d0a904bdfde6272d9e0757adefe5b944be93a41e885",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-1": {
-      "code_fingerprint": "sha256:a4ff11755c4c36c0be89f4cbe6ccf49967e2237212b937f4c8c3522181638c48",
+      "code_fingerprint": "sha256:2e6da2016addf4ca9b34dacf2fb071ebb89dc32c1bece3743585af8938fb3dcc",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-2": {
-      "code_fingerprint": "sha256:97607007794fd38b0ffd554c8707526d0b662376f142e35640ff6483e25f0b4e",
+      "code_fingerprint": "sha256:43b430604f2cb5fd468076d175e5c1105b5b15349c1d6bf73c7cf3d7a0002c5f",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-3": {
-      "code_fingerprint": "sha256:45f65cf4e455b05daf75201a76872c1ad2e2efb71ed3f63b0c04054dc29b5942",
+      "code_fingerprint": "sha256:7e83f6836e27f098d628493e19549185fbb8b9c9aa046723886811b13cd49c76",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-4": {
-      "code_fingerprint": "sha256:9c799b875f70d6933028697e484a3be712ba4a769422c5f81e228ab1a4669c47",
+      "code_fingerprint": "sha256:eaa32fced7d77ac55b354312d741d0d10357086b5729c84ca70dedebd457213d",
       "kind": "text",
       "outputs": []
     },
     "qlearning-the-implementation-5": {
-      "code_fingerprint": "sha256:e562b38d7b34a5174ff6f0b3fd94a8712e81b2fe4481e7b8634cb8dbd39fcf34",
+      "code_fingerprint": "sha256:d2ede9126585315543fc91c28164dbb945200197cbb897cdae6cd19f2baee518",
       "kind": "asset",
       "outputs": [
         {
@@ -42,12 +42,12 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
           "bytes": 247382,
-          "sha256": "sha256:9bf5cb43adffb670838383232f0f628d8273daaf6d8c710804a116282c140478"
+          "sha256": "sha256:fbd3040d19bc9d2ecbe260e9abe59ff044cd3ebe277f055574ba497d74874c57"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-1": {
-      "code_fingerprint": "sha256:e229a03d3ebeeb9f7f56599c49e9b9fbff9536ca3e74cacce468ccf263717aaa",
+      "code_fingerprint": "sha256:4ba42c8c0e93e057c8bd1007a016db959cc6321e50f6cf71cf7a6a32a1457f1f",
       "kind": "text",
       "outputs": [
         {
@@ -63,7 +63,7 @@
       ]
     },
     "qlearning-reading-the-curve-honestly-2": {
-      "code_fingerprint": "sha256:5c57cce89c2adfc9430274e62f96710b356673bcf49609963bcc964e2913d448",
+      "code_fingerprint": "sha256:f9cd8909f82d69fb074ca4a50fabc019a035e734a3f30636b5cc21d0f06e1f22",
       "kind": "asset",
       "outputs": [
         {
@@ -71,12 +71,12 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
           "bytes": 38089,
-          "sha256": "sha256:6b06f82cb3244313357a5f6892e31b37f831937b8e86e570bdc06b20715b5932"
+          "sha256": "sha256:2f29cd8e167868715f3d1c8dfee82891cef8be42f652b06ce468b661474c84a7"
         }
       ]
     },
     "qlearning-reading-the-curve-honestly-3": {
-      "code_fingerprint": "sha256:84b8bf6a13527784ada079277a69b92cee771ebe1d105af35508f19e71c554d9",
+      "code_fingerprint": "sha256:6bca3f14cbd8f6d93aab12e1ad6cd076a4891fffd0d89aefa7c054482c2d1849",
       "kind": "text",
       "outputs": [
         {
@@ -87,7 +87,7 @@
       ]
     },
     "qlearning-reading-the-curve-honestly-4": {
-      "code_fingerprint": "sha256:f8f87d0a4bb6752d2acac3085c7eb2a9eb2055993f969855beb2d02df901ec5e",
+      "code_fingerprint": "sha256:cf4ee3d8d25e2c2bfa203663b0513593e2aa6c2ae8f83f7fcfd1d7938643f6da",
       "kind": "mixed",
       "outputs": [
         {
@@ -115,17 +115,17 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
           "bytes": 706464,
-          "sha256": "sha256:483f658225bebf899d081d86b63e61a02b0d2109ab14232f2391163371bf1f62"
+          "sha256": "sha256:d12aac4696badfc754cf1639a64d87d3eccf08db41662fe09cb407e70b1c6bbd"
         }
       ]
     },
     "qlearning-a-bandit-is-an-mdp-with-one-state": {
-      "code_fingerprint": "sha256:ce06fcac22b192c56322969fa409e89043673596ae7e8ceea1a49b53b6c77bdb",
+      "code_fingerprint": "sha256:fcab365beb9b3e7fd4b3b09fc4e17de4919598456417902953b8f52f5fe99dd8",
       "kind": "text",
       "outputs": []
     },
     "qlearning-regret-and-the-linear-tax": {
-      "code_fingerprint": "sha256:1e64eb2452264919b3aa6f9751f7019229dacead4b0d01dd7238c6d2565e499f",
+      "code_fingerprint": "sha256:1c0931ed0de2b038f05c476e302f63e75cdeed75a197833d763c36f277a82f73",
       "kind": "text",
       "outputs": [
         {
@@ -136,7 +136,7 @@
       ]
     },
     "qlearning-optimism-ucb-and-thompson-sampling": {
-      "code_fingerprint": "sha256:1d96ade1bd3b8dbd9c00cd6858921d103d37c010528ed199027649ddae64e879",
+      "code_fingerprint": "sha256:9935cc221e52540b99d767bcc2e2e27d6f7d625e6c7fe8f13c56afaa1c7e78b5",
       "kind": "mixed",
       "outputs": [
         {
@@ -154,7 +154,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
           "bytes": 535430,
-          "sha256": "sha256:cd39a065c2c7225926bc1b3928eb8e4f7675158498b0c2173bfee85a1c6ca814"
+          "sha256": "sha256:4bced570d777261ba5d8c28bb9ed0af90b584832bac844954abc6c15831bcb5e"
         }
       ]
     }

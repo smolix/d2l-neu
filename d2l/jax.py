@@ -2377,6 +2377,23 @@ def policy_step(ac, batch, advantage):
     ac.opt_pi.update(ac.policy, grads)
     return float(loss)
 
+def linear_schedule(start, end, num_steps):
+    """step -> value, interpolated from start to end, then held at end.
+
+    Defined in :numref:`sec_qlearning`"""
+    return lambda step: end + (start - end) * max(0.0, 1.0 - step / num_steps)
+
+def epsilon_greedy(q, epsilon, rng):
+    """Explore with probability epsilon, else act greedily on the values q.
+
+    Defined in :numref:`sec_qlearning`"""
+    if rng.random() < epsilon:
+        return int(rng.integers(len(q)))
+    # Random tie-breaking is load-bearing: np.argmax would always return
+    # action 0 on a zero-initialized table, and an agent that only ever
+    # proposes *left* on this lake never finds the goal.
+    return int(rng.choice(np.flatnonzero(q == q.max())))
+
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):
     """Update discriminator.

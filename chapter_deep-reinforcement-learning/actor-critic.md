@@ -21,11 +21,11 @@ $$\hat{G}_t \approx r_t + \gamma\, \hat{V}(s_{t+1}).$$
 The weight on the score at step $t$ was $\hat{G}_t - \hat{V}(s_t)$ in :numref:`sec_baselines`; after the substitution it becomes
 
 $$\delta_t = r_t + \gamma\, \hat{V}(s_{t+1}) - \hat{V}(s_t),$$
-:eqlabel:`eq_td_error`
+:eqlabel:`eq_td_error_v`
 
 with the convention $\hat{V}(s_{t+1}) = 0$ when $s_{t+1}$ is terminal, for the same reason as in :numref:`sec_qlearning`. This quantity is called the temporal-difference error, TD error for short: the difference between what one step actually produced, $r_t + \gamma \hat{V}(s_{t+1})$, and what the critic predicted, $\hat{V}(s_t)$.
 
-The TD error also carries the right meaning for our purpose. Suppose for a moment that the critic were exact, $\hat{V} = V^{\pi}$. Taking the expectation of :eqref:`eq_td_error` over the next state gives
+The TD error also carries the right meaning for our purpose. Suppose for a moment that the critic were exact, $\hat{V} = V^{\pi}$. Taking the expectation of :eqref:`eq_td_error_v` over the next state gives
 
 $$E\big[ \delta_t \mid s_t, a_t \big] = r(s_t, a_t) + \gamma \sum_{s'} P(s' \mid s_t, a_t)\, V^{\pi}(s') - V^{\pi}(s_t) = Q^{\pi}(s_t, a_t) - V^{\pi}(s_t),$$
 
@@ -151,7 +151,7 @@ def train_reinforce(seed):
     return np.array(curve)
 ```
 
-Actor-critic differs in two lines and one habit. The advantage is the TD error of :eqref:`eq_td_error` instead of $\hat{G}_t - \hat{V}(s_t)$, and the critic regresses on the bootstrapped one-step target instead of the reward-to-go. The habit is the two-timescale rule: the critic takes its `critic_steps` regression passes *before* the actor consumes the advantages, so the actions are judged by the freshest available critic rather than last batch's:
+Actor-critic differs in two lines and one habit. The advantage is the TD error of :eqref:`eq_td_error_v` instead of $\hat{G}_t - \hat{V}(s_t)$, and the critic regresses on the bootstrapped one-step target instead of the reward-to-go. The habit is the two-timescale rule: the critic takes its `critic_steps` regression passes *before* the actor consumes the advantages, so the actions are judged by the freshest available critic rather than last batch's:
 
 ```{.python .input #actor-critic-implementation-of-actor-critic-3}
 
@@ -192,7 +192,7 @@ Actor-critic replaces the sampled reward-to-go in the policy gradient with a boo
 ## Exercises
 
 1. Sweep `critic_steps` over $\{1, 5, 20, 50\}$ with a few seeds per setting. Where does the algorithm fail, and how does the failure connect to the two-timescale rule?
-1. Replace the one-step target in :eqref:`eq_td_error` by a three-step target $r_t + \gamma r_{t+1} + \gamma^2 r_{t+2} + \gamma^3 \hat{V}(s_{t+3})$. What does this do to bias and variance, and where do the two extremes of this family land?
+1. Replace the one-step target in :eqref:`eq_td_error_v` by a three-step target $r_t + \gamma r_{t+1} + \gamma^2 r_{t+2} + \gamma^3 \hat{V}(s_{t+3})$. What does this do to bias and variance, and where do the two extremes of this family land?
 1. The actor update in :eqref:`eq_actor_critic` is biased whenever $\hat{V} \neq V^{\pi_\theta}$. Explain why the baseline argument of :numref:`sec_baselines`, which allowed any $b(s_t)$ without bias, does not cover the bootstrapped weight $\delta_t$.
 1. :eqref:`eq_actor_critic` can be applied at every single transition, with no batch at all. Implement this fully online variant on CartPole and compare it with the batched version. What goes wrong, and which ingredient of :numref:`sec_dqn`'s recipe would address it?
 1. Log the norm of the policy gradient in both methods, before the clip is applied. Although both normalize their weights to unit variance, the actor-critic norms come out roughly an order of magnitude larger. Explain the gap with the baseline argument of :numref:`sec_baselines`, then predict, and check, which of the two runs changes at all when `grad_clip` is removed.

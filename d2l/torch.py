@@ -2215,6 +2215,52 @@ def epsilon_greedy(q, epsilon, rng):
     # proposes *left* on this lake never finds the goal.
     return int(rng.choice(np.flatnonzero(q == q.max())))
 
+class Batch:
+    """A flat batch of transitions, plus the episode boundaries.
+
+    Defined in :numref:`sec_policygradient`"""
+    def __init__(self, obs, act, rew, next_obs, term, ep_ends):
+        self.obs, self.act, self.rew = obs, act, rew
+        self.next_obs, self.term = next_obs, term
+        self.ep_ends = ep_ends    # one past the last step of each episode
+
+    def __len__(self):
+        return len(self.rew)
+
+    def episodes(self):
+        """Yield one slice per episode."""
+        start = 0
+        for end in self.ep_ends:
+            yield slice(start, end)
+            start = end
+
+    def episode_returns(self, gamma=1.0):
+        """R(tau), the discounted return, one number per episode."""
+        return np.array([(gamma ** np.arange(ep.stop - ep.start)
+                          * self.rew[ep]).sum() for ep in self.episodes()])
+
+def rollout(env, policy, num_episodes, rng):
+    """Collect complete episodes from `policy(obs, rng) -> action` as a
+    Batch; `term` records `terminated`, never `truncated` (:numref:`sec_mdp`).
+
+
+    Defined in :numref:`sec_policygradient`"""
+    cols, ep_ends = [[] for _ in range(5)], []
+    for _ in range(num_episodes):
+        obs, done = env.reset()[0], False
+        while not done:
+            act = policy(obs, rng)
+            next_obs, reward, terminated, truncated, _ = env.step(act)
+            done = terminated or truncated
+            for col, val in zip(cols, (obs, act, reward, next_obs,
+                                       float(terminated))):
+                col.append(val)
+            obs = next_obs
+        ep_ends.append(len(cols[0]))
+    obs, act, rew, next_obs, term = (np.asarray(c) for c in cols)
+    return Batch(obs, act, rew.astype(np.float32), next_obs,
+                 term.astype(np.float32), np.asarray(ep_ends))
+
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
     """Update discriminator.
 

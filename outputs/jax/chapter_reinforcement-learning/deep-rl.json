@@ -1,53 +1,53 @@
 {
   "schema": 1,
   "source": "chapter_reinforcement-learning/deep-rl.md",
-  "framework": "pytorch",
+  "framework": "jax",
   "provenance": {
-    "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:630742e561ee278b555846e8e66c9ca7e11c89f9b2a8297082672e6fa8f74713",
+    "framework_version": "jax==0.10.2",
+    "d2l_lib_fingerprint": "sha256:4ba3e6a356238e1ed58daa9e2ce55bbe415e79dde879503d933541948dccaf35",
     "max_inline_bytes": 0
   },
   "cells": {
     "deep-rl-from-tables-to-networks": {
-      "code_fingerprint": "sha256:690b7fd104799b6bc38082ccb63a6fc196c557ca72133b973266a48e4e18b6ab",
+      "code_fingerprint": "sha256:d0a170753958e2f8da4ba2a8c91de3d7fa96562ca6122c9ae0b83bbf4d6d6770",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-1": {
-      "code_fingerprint": "sha256:1764d6d501cf6d79b5d3ef49c1de55625687691fb15a27181316dd41687d27ee",
+      "code_fingerprint": "sha256:d09518b7b4611786301c7774b3e336f1e7915df0a5511fc1a66c7318a3439e1d",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-2": {
-      "code_fingerprint": "sha256:4681349d13ce2875f0be8b54d61d23e36ad3cfc12cca898dac08426d3472d142",
+      "code_fingerprint": "sha256:cd53ae869e1f07cee3fae408384b690a8bab5c691031e6d196b1f0688841c7ef",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-3": {
-      "code_fingerprint": "sha256:a6d575a16393eb7db2176fe3fdbbf30d5ef9bbc92993d066e3613475755b43ae",
+      "code_fingerprint": "sha256:bbf319bb685cedd0d4ba7e05717c356528083777e4b305732e761a4b15c22cf1",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-swap-as-a-three-line-diff-4": {
-      "code_fingerprint": "sha256:e04984dd08faf0fb768112601f56410878fc9fe3cf8b3d20dbf013435a197dde",
+      "code_fingerprint": "sha256:5e1d8d6da0dd743ae8b364b991a6ed0a618daf4b7096ab8d7d746a85927e768d",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-swap-as-a-three-line-diff-4-1.svg",
-          "bytes": 35711,
-          "sha256": "sha256:992f6c688bb5689b6a876c09c6603746345cf9dea4dbb5a922a415a738c3642c"
+          "bytes": 35639,
+          "sha256": "sha256:122efeb9b87dd061f2559469fc7e8a66959b6662a579cc4f883134f2125730e9"
         }
       ]
     },
     "deep-rl-the-gaussian-policy-1": {
-      "code_fingerprint": "sha256:5a423877f49b7eb725d3dc6ac2f304cee1fa5491bc17a5d788da21e7fefb2c3b",
+      "code_fingerprint": "sha256:8cb7f45c75c15402b37e16ab2f408806eed516a4e3f863b8619795124eed99c5",
       "kind": "text",
       "outputs": []
     },
     "deep-rl-the-gaussian-policy-2": {
-      "code_fingerprint": "sha256:86956d3717e66f6feac983c820946d0293878cf5fdf18c5c6f53c18a2f2ef995",
+      "code_fingerprint": "sha256:57eba6856c98065ce7aca3e4ba173ad0b8f89df0ea2d3bce31dd776d7db55df6",
       "kind": "text",
       "outputs": [
         {
@@ -58,20 +58,20 @@
       ]
     },
     "deep-rl-the-score-does-not-care-that-the-action-is-real": {
-      "code_fingerprint": "sha256:f876e52eb3f336ee6675d4562f68a0ba8e7cdf1e130f37f85ae99d3c2440fc8e",
+      "code_fingerprint": "sha256:8c8de120aa40814fc4308a9cf3cfe6a52bad36a9f06d3ff49c3b263b96705f2c",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-score-does-not-care-that-the-action-is-real-1.svg",
-          "bytes": 52266,
-          "sha256": "sha256:e7667d9c9c5af16999ae589b6f4038e83a0ebb099a1de6fa7f26a5eef55feaf7"
+          "bytes": 52746,
+          "sha256": "sha256:727272f14ac8055a6c557c230caf8edadcccec2b906281b62c0285b05cf1effb"
         }
       ]
     },
     "deep-rl-score-function-versus-pathwise-gradients": {
-      "code_fingerprint": "sha256:a8734a3e53b378a0677e273d3a3c887714d8b634567755a3aa56aab103dda657",
+      "code_fingerprint": "sha256:760eb1d30f459ce472f277896924b8b94a2404f3a8b5b85057f78078349d4b9e",
       "kind": "text",
       "outputs": [
         {
@@ -82,26 +82,26 @@
       ]
     },
     "deep-rl-generalization-couples-states-measured": {
-      "code_fingerprint": "sha256:c631444ec274041a0bfa621c3bd4d963245ea90f1ef30931c5657a6ab831afce",
+      "code_fingerprint": "sha256:f137bbd77d5c60dac94ef941fc3c2141a379da0134a1b94f846ab3d0bec310cf",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "network: nudged state moved +1.16; 255 of the 255 others moved too, |change| up to 1.19\ntable:   nudged entry moved +1.18; largest move among the other fifteen: 0.000000\n"
+          "text": "network: nudged state moved +1.12; 255 of the 255 others moved too, |change| up to 1.20\ntable:   nudged entry moved +1.18; largest move among the other fifteen: 0.000000\n"
         }
       ]
     },
     "deep-rl-the-estimator-written-as-a-loss": {
-      "code_fingerprint": "sha256:d771b9f6b7540e1d1c3679ddefcc27c0f352dea3141917bb3ee8dc85624b5211",
+      "code_fingerprint": "sha256:013c982b5652676a1e8fd18ee8c4b8439b7940560375879586131b4db21857ab",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "deep-rl/deep-rl-the-estimator-written-as-a-loss-1.svg",
-          "bytes": 31785,
-          "sha256": "sha256:c224bc8512f5f5ee3ef67d7005a3c9aa0c9144bf251cc7122d40160a04dd70fb"
+          "bytes": 31691,
+          "sha256": "sha256:aee1e4011983b25933dbdd7bdf2bd70b1168443166cdacfba2629d608d40d2e7"
         }
       ]
     }

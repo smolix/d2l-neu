@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:54fbbd498d758c857e46c9071e64a52ca463450955976a2db9fc2273abe20552",
+    "d2l_lib_fingerprint": "sha256:22a123fb6e7ae83a3a836e0126f24feedc05d65b14521b7e3b3792b28e52f48b",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-2-1.svg",
           "bytes": 46412,
-          "sha256": "sha256:46db6b2c537e756ac18e109fb348414f54ce73f44d531fd29d619fadc0a4574d"
+          "sha256": "sha256:85e08ba524ba0ddb0ad540cd0617c2c1c42d9a25c8bc3f1811180068c40adcfa"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-3-1.svg",
           "bytes": 15266,
-          "sha256": "sha256:99e49780030714f5ce08db7e064b94125e589ba52f99d6ab2eee046b3526c65a"
+          "sha256": "sha256:31a96ece9fa30c732ed799a9134003a7dce75cbcf94776310e6c42d3a6dee5e1"
         }
       ]
     },

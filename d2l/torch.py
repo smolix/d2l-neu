@@ -2186,6 +2186,16 @@ class ActorCritic(nn.Module):
             return self.log_prob(torch.as_tensor(obs),
                                  torch.as_tensor(act)).numpy()
 
+    @classmethod
+    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2):
+        """The same container with the tables replaced by one-hidden-layer nets.
+
+        Defined in :numref:`sec_deeprl`"""
+        def net(out):
+            return nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
+                                 nn.Linear(hidden, out))
+        return cls(net(num_actions), net(1), lr)
+
 def policy_step(ac, batch, advantage):
     """One ascent step on E[A_t log pi(a_t|s_t)]; A_t arrives as numpy = data.
 
@@ -2290,6 +2300,54 @@ def run_seeds(train, num_seeds, **kwargs):
 
     Defined in :numref:`sec_baselines`"""
     return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
+
+def fit_value(ac, obs, target, num_steps=1):
+    """Regress the value head on a fixed target: eq_value_baseline for nets.
+
+    Defined in :numref:`sec_deeprl`"""
+    obs, target = torch.as_tensor(obs), torch.as_tensor(target)
+    for _ in range(num_steps):
+        loss = ((ac.V(obs) - target) ** 2).mean()
+        ac.opt_v.zero_grad()
+        loss.backward()
+        ac.opt_v.step()
+    return loss.item()
+
+class GaussianHead(nn.Module):
+    """Mean network plus a state-independent learned log standard deviation.
+
+    Defined in :numref:`sec_deeprl`"""
+    def __init__(self, obs_dim, act_dim, hidden):
+        super().__init__()
+        self.mean = nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
+                                  nn.Linear(hidden, act_dim))
+        self.log_std = nn.Parameter(torch.zeros(act_dim))
+
+    def forward(self, obs):
+        return self.mean(obs), self.log_std.exp()
+
+class GaussianPolicy(d2l.ActorCritic):
+    """The same interface over a Normal instead of a softmax; nothing that
+
+    Defined in :numref:`sec_deeprl`"""
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2):
+        super().__init__(GaussianHead(obs_dim, act_dim, hidden),
+                         nn.Sequential(nn.Linear(obs_dim, hidden), nn.Tanh(),
+                                       nn.Linear(hidden, 1)), lr)
+
+    def log_prob(self, obs, act):
+        mean, std = self.policy(obs)
+        return torch.distributions.Normal(mean, std).log_prob(act).sum(-1)
+
+    def act(self, obs, rng):
+        with torch.no_grad():
+            mean, std = self.policy(torch.as_tensor(obs))
+        return mean.numpy() + std.numpy() * rng.standard_normal(
+            mean.shape, dtype=np.float32)
+
+    def act_greedy(self, obs, rng=None):
+        with torch.no_grad():
+            return self.policy(torch.as_tensor(obs))[0].numpy()
 
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
     """Update discriminator.

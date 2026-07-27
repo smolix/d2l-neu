@@ -2365,6 +2365,17 @@ class ActorCritic(nnx.Module):
     def log_prob_np(self, obs, act):
         return np.asarray(self.log_prob(jnp.asarray(obs), jnp.asarray(act)))
 
+    @classmethod
+    def mlp(cls, obs_dim, num_actions, hidden=64, lr=1e-2, rngs=None):
+        """The same container with the tables replaced by one-hidden-layer nets.
+
+        Defined in :numref:`sec_deeprl`"""
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        def net(out):
+            return nnx.Sequential(nnx.Linear(obs_dim, hidden, rngs=rngs), jnp.tanh,
+                                  nnx.Linear(hidden, out, rngs=rngs))
+        return cls(net(num_actions), net(1), lr)
+
 def policy_step(ac, batch, advantage):
     """One ascent step on E[A_t log pi(a_t|s_t)]; A_t arrives as numpy = data.
 
@@ -2469,6 +2480,57 @@ def run_seeds(train, num_seeds, **kwargs):
 
     Defined in :numref:`sec_baselines`"""
     return np.array([list(train(seed, **kwargs)) for seed in range(num_seeds)])
+
+def fit_value(ac, obs, target, num_steps=1):
+    """Regress the value head on a fixed target: eq_value_baseline for nets.
+
+
+    Defined in :numref:`sec_deeprl`"""
+    obs, target = jnp.asarray(obs), jnp.asarray(target)
+    for _ in range(num_steps):
+        loss, grads = nnx.value_and_grad(
+            lambda value: ((ac.V(obs, value) - target) ** 2).mean())(ac.value)
+        ac.opt_v.update(ac.value, grads)
+    return float(loss)
+
+class GaussianHead(nnx.Module):
+    """Mean network plus a state-independent learned log standard deviation.
+
+    Defined in :numref:`sec_deeprl`"""
+    def __init__(self, obs_dim, act_dim, hidden, rngs):
+        self.mean = nnx.Sequential(nnx.Linear(obs_dim, hidden, rngs=rngs),
+                                   jnp.tanh,
+                                   nnx.Linear(hidden, act_dim, rngs=rngs))
+        self.log_std = nnx.Param(jnp.zeros(act_dim))
+
+    def __call__(self, obs):
+        return self.mean(obs), jnp.exp(self.log_std[...])
+
+class GaussianPolicy(d2l.ActorCritic):
+    """The same interface over a Normal instead of a softmax; nothing that
+
+    Defined in :numref:`sec_deeprl`"""
+    def __init__(self, obs_dim, act_dim, hidden=64, lr=1e-2, rngs=None):
+        rngs = nnx.Rngs(d2l.get_key()) if rngs is None else rngs
+        super().__init__(GaussianHead(obs_dim, act_dim, hidden, rngs),
+                         nnx.Sequential(nnx.Linear(obs_dim, hidden, rngs=rngs),
+                                        jnp.tanh,
+                                        nnx.Linear(hidden, 1, rngs=rngs)), lr)
+
+    def log_prob(self, obs, act, policy=None):
+        mean, std = (self.policy if policy is None else policy)(obs)
+        return jax.scipy.stats.norm.logpdf(act, mean, std).sum(-1)
+
+    def act(self, obs, rng):
+        if not hasattr(self, '_fwd'):   # compile the fixed-shape acting
+            self._fwd = nnx.cached_partial(nnx.jit(lambda net, o: net(o)),
+                                           self.policy)  # forward, once
+        mean, std = self._fwd(jnp.asarray(obs))
+        return np.asarray(mean) + np.asarray(std) * rng.standard_normal(
+            mean.shape, dtype=np.float32)
+
+    def act_greedy(self, obs, rng=None):
+        return np.asarray(self.policy(jnp.asarray(obs))[0])
 
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):

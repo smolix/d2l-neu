@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:05012a0f5c1ebe124afe993f38f93dc61df7df90cf33389ec65320707972e800",
+    "d2l_lib_fingerprint": "sha256:15a297fc5baf2cf2c9a1baa2c2fe01d56d20a8f6249fed6b5f04abf68653d2fe",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -53,7 +53,7 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-2-1.svg",
           "bytes": 46412,
-          "sha256": "sha256:b3a75a7f3d57a176198886ee6949763d6ef44a57cdc117b651f54a685c18064e"
+          "sha256": "sha256:119612ac2e6b6696889689ac1ad0c19ae3d8bd7a7567c2bd717a5eaaeb3795c5"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-3-1.svg",
           "bytes": 15266,
-          "sha256": "sha256:7debf4cc1cd90476314de9c8fb25ba4ac647a61f1bef18b5d1c99673dfbfec92"
+          "sha256": "sha256:4715a463d3b26d57d336afc9f96f23582a148729089503610c2e3bc2fe5d5976"
         }
       ]
     },

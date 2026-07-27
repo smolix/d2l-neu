@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:0401e9ccbf46e1fa80c80273d4f0343655bd28c696367c4a43077858fe6342c3",
+    "d2l_lib_fingerprint": "sha256:172ff03b6afdcd1ba35f170a4612bc4169f56d59f123ead638ef90c51b6679e8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -95,8 +95,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
-          "bytes": 72076,
-          "sha256": "sha256:39e5ac84aaa6ed1306e7e0ca608e37a15ac41cbf299b4d5e412765bb366baf95"
+          "bytes": 72135,
+          "sha256": "sha256:d7671dd5818a59023642b5cd5da1f176a3e7ef68fa804c8d0d56308b7033b17e"
         }
       ]
     },
@@ -119,8 +119,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
-          "bytes": 48512,
-          "sha256": "sha256:7852874ab42e829c129861a7bb3fff837be8ebe467ca4e6346042d061fb99f22"
+          "bytes": 48125,
+          "sha256": "sha256:78a024ca126bac9ff316d987fb4af750b36b4553bdd6376ecd59c8e876862815"
         }
       ]
     }

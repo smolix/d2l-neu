@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:eaa6635b2e56ebc466a38bc14eb57292895902cb20273926f55fa4059df0e99d",
+    "d2l_lib_fingerprint": "sha256:d06af68cc2af66acdc61f6b546093ee2e5bcc1bbc7ee7f375c3ab19d0aa606eb",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -96,7 +96,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
           "bytes": 72097,
-          "sha256": "sha256:f7ea2503a51d699ad88e8760eb9df8b1c8bcf0b23d9a93945d07cf674bef9e1d"
+          "sha256": "sha256:5ced499dec87512955e6e44bc2b33d1e0a74011469ff2d530330513bda82e1a1"
         }
       ]
     },
@@ -120,7 +120,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
           "bytes": 48138,
-          "sha256": "sha256:cea484d5732c41d6e870ec2c0fc1dcff5623c08117f9417d8e9ffd022b3b0e23"
+          "sha256": "sha256:db490f80b0c07b474a2955fa4349c83cb26bfdc348512e8c94f064b33a6258ef"
         }
       ]
     }

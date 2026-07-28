@@ -30,18 +30,25 @@
   % pages may now end at slightly different heights — the accepted trade in
   % technical books, and far less distracting than the stretch.
   \raggedbottom
-  % The book passed 1000 pages, and LaTeX's default page-number slot in the
-  % table of contents (\@pnumwidth = 1.55em) fits three digits. Every entry
-  % pointing at a four-digit page therefore overflowed its box by exactly
-  % 4.93pt: 658 of the 811 Overfull \hbox warnings in the build came from
-  % this one measurement. Widen the slot (and the matching right margin,
-  % which must stay \@pnumwidth + ~1em or the dot leaders collide with the
-  % number).
-  \makeatletter
-  \renewcommand{\@pnumwidth}{2.4em}%
-  \renewcommand{\@tocrmarg}{3.4em}%
-  \makeatother
 }
+
+% The book passed 1000 pages, and LaTeX's default page-number slot in the table
+% of contents (\@pnumwidth = 1.55em) fits three digits. Every entry pointing at
+% a four-digit page overflows its box by exactly 4.93pt, which accounted for 653
+% of the build's Overfull \hbox warnings. Widen the slot, and the matching right
+% margin with it (\@tocrmarg must stay about 1em clear of \@pnumwidth or the dot
+% leaders run into the number).
+%
+% NOTE: \makeatletter must sit OUTSIDE any \AtBeginDocument wrapper. TeX fixes
+% catcodes when it *reads* a token list, so a \makeatletter placed inside the
+% braces comes too late: \@pnumwidth would already have been tokenized as \@
+% followed by the letters "pnumwidth", silently redefining \@ instead. These
+% assignments do not need deferring in the first place, since the TOC is
+% typeset later, at \tableofcontents.
+\makeatletter
+\renewcommand{\@pnumwidth}{2.4em}%
+\renewcommand{\@tocrmarg}{3.4em}%
+\makeatother
 
 % Better float placement for figures inside narrow sections.
 \usepackage{float}

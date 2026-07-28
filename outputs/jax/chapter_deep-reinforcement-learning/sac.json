@@ -82,25 +82,25 @@
       "outputs": []
     },
     "sac-sample-efficiency-on-the-axis-that-bills": {
-      "code_fingerprint": "sha256:608eeb8382ee39a14527005b7b6cbfe2f6635ba18dc9be9c1b114bd291238b60",
+      "code_fingerprint": "sha256:f721c58c30fd6631b9b65179c3a2c4af41ebcccf064ce8b914d20d134e95f3ea",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "SAC: trailing five-episode average first clears -200 at env steps [7400, 5400, 6400]\nsingle critic: trailing five-episode average first clears -200 at env steps [6400, 5400, 7200]\n"
+          "text": "SAC: env steps to a trailing five-episode average of -200: [7400, 5400, 6400]\nsingle critic: env steps to a trailing five-episode average of -200: [6400, 5400, 7200]\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sac/sac-sample-efficiency-on-the-axis-that-bills-1.svg",
           "bytes": 34719,
-          "sha256": "sha256:bec10fd516cf441e10161882a666d524c681406f760dc6b50887dca5b3103361"
+          "sha256": "sha256:8a02e1fbad1e93513f50b3751ca1e7d00bd81e972d07d2f7f7acce000d1c81fb"
         }
       ]
     },
     "sac-the-entropy-the-policy-keeps-1": {
-      "code_fingerprint": "sha256:7b1f0c032c3ab83005ee766b9836cc8e3fa819fb2227569112840a1930844c25",
+      "code_fingerprint": "sha256:e343c02b925ab648f3ed665a5856febbd7cc184de77a4a6bdc8c302461597a7c",
       "kind": "mixed",
       "outputs": [
         {
@@ -112,13 +112,13 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "sac/sac-the-entropy-the-policy-keeps-1-1.svg",
-          "bytes": 34326,
-          "sha256": "sha256:00f28abc9d29fb7b136d1c29aa2d17b4f96f0c346333b3d17742167bfa8ad9f3"
+          "bytes": 34327,
+          "sha256": "sha256:cf466de47def14c91b6b714f288cc81229f2fe75db3576188b02733c49729ed0"
         }
       ]
     },
     "sac-the-entropy-the-policy-keeps-2": {
-      "code_fingerprint": "sha256:50e62f071971e10f7f1d4ba19e99d145cf15cec7640d008af7d0018dcfd25f51",
+      "code_fingerprint": "sha256:b953cf2c8ba89cec4accbf87add0a72e312bb0dd573cf782733fb072c4552dc4",
       "kind": "text",
       "outputs": [
         {
@@ -154,7 +154,7 @@
       ]
     },
     "sac-honest-promises-predicted-against-delivered": {
-      "code_fingerprint": "sha256:f82637aac12fca28dca2f81cfb3d2e2600d7386d0b1cbe784eca24e4a8775d1b",
+      "code_fingerprint": "sha256:23cfefbc0e16a84c455d2fcd1245ea7e4c590da6c87f10ffc9e96326c2b37ab0",
       "kind": "text",
       "outputs": [
         {

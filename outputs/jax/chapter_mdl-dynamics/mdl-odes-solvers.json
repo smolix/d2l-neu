@@ -38,23 +38,23 @@
           "mime": "image/svg+xml",
           "asset": "mdl-odes-solvers/odes-solvers-euler-rk4-order-1.svg",
           "bytes": 29488,
-          "sha256": "sha256:090db02c50a27ce778ceeca5de5d06f63bcfd7791b017c9f7c4731818d3ed7f5"
+          "sha256": "sha256:45b28239086125781e36c7e29725a0b454be00f628509d33295c9c824de5d197"
         }
       ]
     },
     "odes-solvers-stiffness-sweep": {
-      "code_fingerprint": "sha256:18cc9418739f4b125799cc077e3dc226d8398c51e7824b0ebb987b959c84b814",
+      "code_fingerprint": "sha256:f80d25d7671ec35fe7feb98813da3b3ec27f4bb96c465990ccc68f3681a1eda3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "forward Euler is stable iff h < 2/lambda = 0.04\n       h  |1-h*lam|   forward x(T)  backward x(T)\n   0.100       4.00       1.05e+06       1.65e-08\n   0.050       1.50       3.33e+03       1.31e-11\n   0.038       0.92       1.25e-01       7.73e-13\n   0.025       0.25       8.27e-25       8.18e-15\n   0.010       0.50       7.89e-31       2.46e-18\nexact x(T) = e^{-50} = 1.93e-22\nstiff system, forward Euler with h=0.05: x(T) = [3.32526e+03 3.60000e-01] (the long-dead fast mode explodes)\n"
+          "text": "forward Euler is stable iff h < 2/lambda = 0.04\n       h  |1-h*lam|   forward x(T)  backward x(T)\n   0.100       4.00       1.05e+06       1.65e-08\n   0.050       1.50       3.33e+03       1.31e-11\n   0.038       0.92       1.25e-01       7.73e-13\n   0.025       0.25       8.27e-25       8.18e-15\n   0.010       0.50       7.89e-31       2.46e-18\nexact x(T) = e^{-50} = 1.93e-22\nstiff system, forward Euler with h=0.05 (the long-dead fast mode explodes):\nx(T) = [3.32526e+03 3.60000e-01]\n"
         }
       ]
     },
     "mdl-odes-solvers-gradient-descent-is-a-solver": {
-      "code_fingerprint": "sha256:f47c28e481f4f9e1f01104f56fee8edd2b08c886bb352cf9b8ad8147d4a8a75c",
+      "code_fingerprint": "sha256:1d76aab4849c50c4b1ab4e56790943ca8c028ff582fabcb55ec947ae3996594d",
       "kind": "text",
       "outputs": [
         {
@@ -65,7 +65,7 @@
       ]
     },
     "odes-solvers-neural-ode-train": {
-      "code_fingerprint": "sha256:95f9a9c128260fb45a9a698a7bad65ba6377887cb5e3da7bf64e3f47d0c4a6a6",
+      "code_fingerprint": "sha256:c3175e14b17bcb7b1a441fd71c8faa39494cf9ae9016a1de6e2e1fa30363f32b",
       "kind": "text",
       "outputs": [
         {
@@ -81,7 +81,7 @@
       ]
     },
     "odes-solvers-adjoint-check": {
-      "code_fingerprint": "sha256:b20fe049636ec80b9a78229919909a90d9acb1ebea1830729ab791d66cd00857",
+      "code_fingerprint": "sha256:adbb13a280a5da8fc144e42522ff242e1826446b7e7dea032ab86d3dddfafd3a",
       "kind": "text",
       "outputs": [
         {
@@ -92,23 +92,23 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\nn =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
+          "text": "n =    100 Euler steps: |discrete - continuous adjoint| = 2.9e-02\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "n =   1000 Euler steps: |discrete - continuous adjoint| = 2.8e-03\nn =  10000 Euler steps: |discrete - continuous adjoint| = 2.8e-04\n"
         }
       ]
     },
     "odes-solvers-cnf-trace": {
-      "code_fingerprint": "sha256:50d750c2974baf06b123abe2b229b35bd2d1913a6816076ccbbb087d1d4e3fab",
+      "code_fingerprint": "sha256:a49a681d13824b8b1d130a4051770b0029e9a5e335fd12619e00e55ce5daec32",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\n"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Hutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
+          "text": "log p_t(x(t)), Gaussian formula  : [-0.354507 -0.54845  -0.546723 -1.636566]\nlog p_0(x_0) - t tr(A), our rule : [-0.354507 -0.54845  -0.546723 -1.636566]\nHutchinson: tr(J) = -1.7535,  estimate = -1.7554 +- 0.0173\n"
         }
       ]
     }

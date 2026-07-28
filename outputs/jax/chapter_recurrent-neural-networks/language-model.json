@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:cbea54bc8f1730ca35a2a5d61212c1684894af2ab917b8c613cc569f3cac4bc5",
+    "d2l_lib_fingerprint": "sha256:d72fe058d7b4456497c1fbc9663a218787d0db351a628d9ea52d3679f6bba31c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,18 +29,18 @@
       "outputs": []
     },
     "language-model-sampling-from-n-gram-models": {
-      "code_fingerprint": "sha256:6887be8f0b1a91b79ef8dc87d70d2c4ed7969dd6187316e18abada87b951ea17",
+      "code_fingerprint": "sha256:11e3c72fffe6b083dd08ffd43ca16a6aa3dfd17c8f07081ce8b81f3a06ae89fa",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram: the time import meat on and looking they immediately in any up examination some and grew s his narrow fortunate risk matches in their cold good but\n2-gram: the time machine and holding one indeed no refuge there came one direction i saw for which i ve told blank the soil smelt sweet and blackening\n3-gram: the time traveller then when we were i put out my hand i had expected happened the bronze doors as yet i had hitherto seen it was\n"
+          "text": "1-gram: the time import meat on and looking they immediately in any up\n    examination some and grew s his narrow fortunate risk matches in their\n    cold good but\n2-gram: the time machine and holding one indeed no refuge there came one\n    direction i saw for which i ve told blank the soil smelt sweet and\n    blackening\n3-gram: the time traveller then when we were i put out my hand i had\n    expected happened the bronze doors as yet i had hitherto seen it was\n"
         }
       ]
     },
     "language-model-the-sparsity-wall": {
-      "code_fingerprint": "sha256:339c22de343696fc28491950dd09977ea98c0d7e78b77ae68ea5b6b140f53be1",
+      "code_fingerprint": "sha256:23494c6276b93b97e5d6e8d1d37089f3c97bfb494569e528a95954d84bb43d6e",
       "kind": "text",
       "outputs": [
         {
@@ -51,7 +51,7 @@
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-1": {
-      "code_fingerprint": "sha256:90b4057265b825fafc8b9cfb2e851da9c9720295c68c64a465b2e36a50fd34ae",
+      "code_fingerprint": "sha256:abee8e0a78c139f2b40924bc88faa90b765c81d67d05cdcf4807a791faf6de42",
       "kind": "text",
       "outputs": [
         {
@@ -61,7 +61,7 @@
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-2": {
-      "code_fingerprint": "sha256:dbae06ac83dff7567bc4516e7ae2e75bf3136c391e93739b5231d45815f58fa0",
+      "code_fingerprint": "sha256:e2dff6f829fd03058ca867709f18d909beff4a8621f545414223120346f5a1d3",
       "kind": "asset",
       "outputs": [
         {
@@ -69,12 +69,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:fdd03612fe667a80121d6efdcb3b2897764a2fc0254f60afe7d25dc4102334cc"
+          "sha256": "sha256:7c40274a4ee9f37e804f71d09348aa5947c3b4cebb8897f58294536ea6ba6e12"
         }
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-3": {
-      "code_fingerprint": "sha256:2287547ccbeb57086e4d3f24d06263595cf6b293c274126c4eafcb44358ac00a",
+      "code_fingerprint": "sha256:5223f8cfa1b10b7585d8f91de8a8ceb8fefa31187fa6c7672c49a0dbea6df592",
       "kind": "asset",
       "outputs": [
         {
@@ -82,12 +82,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:82606413458bf50470e3ad7d89c7e1f758900670e1844125b24d2fb6df3bcfe9"
+          "sha256": "sha256:99d4baae60ae2153c639605a28f2fc6e51a73988036d66628d2b8cfb72215583"
         }
       ]
     },
     "language-model-perplexity": {
-      "code_fingerprint": "sha256:d4ee11fee84c21d3af8f1795af11e77d9ea34e04083cbced7e1e7af0fa2b1246",
+      "code_fingerprint": "sha256:98cb5ece8c4260eea01d9d08575e59f1429a26242a4caba586efbc3f31a5a32c",
       "kind": "text",
       "outputs": [
         {
@@ -98,7 +98,7 @@
       ]
     },
     "language-model-bits-per-byte": {
-      "code_fingerprint": "sha256:90825930176522a8855bcb4416a7441762a848826c9cf9eab09a89ed2c380e12",
+      "code_fingerprint": "sha256:45df6bc4e5ec4a8b822344b8d8ce5e4cb39111d7d799a031634ae6f7816c36ab",
       "kind": "text",
       "outputs": [
         {
@@ -114,23 +114,23 @@
       ]
     },
     "language-model-partitioning-sequences-1": {
-      "code_fingerprint": "sha256:8182cdc839f046d8949041cff05480b71cb87cb6f5db092ef7947b78219a1c6b",
+      "code_fingerprint": "sha256:f960b047ca043196913b97b0452b004a54c6016b0522601e890613f87131e489",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-2": {
-      "code_fingerprint": "sha256:8f3d509fb214efecc6e536ab2cf7ccf284145f4aa58512769ff982daa4777697",
+      "code_fingerprint": "sha256:8159ed656a5b884111f3cc8d6ce327ba7a6dc19304224deecc2adf7e6a6f0589",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-3": {
-      "code_fingerprint": "sha256:cd968e2f8b91893ab865414814f63ca7ef494b2752900e19d5df5433a0304db5",
+      "code_fingerprint": "sha256:3bf460fdacc1ad54a15893869334875850260a74953810932ed8107ce833f199",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: [[419 578 290 456 424 409 665 496 737 260]\n [335 750  10 104 289 280 465 291 535 260]] \nY: [[578 290 456 424 409 665 496 737 260 459]\n [750  10 104 289 280 465 291 535 260 293]]\nX[0]: ' Time Traveller pushed his glass towards the'\nY[0]: ' Traveller pushed his glass towards the S'\n"
+          "text": "X: [[337 321  33  39 280 720 516 360 844  44]\n [114 300 270 277  10  99 521 357 270 708]] \nY: [[321  33  39 280 720 516 360 844  44 648]\n [300 270 277  10  99 521 357 270 708 349]]\nX[0]: \"iment!' cried Filby,\"\nY[0]: \"ent!' cried Filby, who\"\n"
         }
       ]
     }

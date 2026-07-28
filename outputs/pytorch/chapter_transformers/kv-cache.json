@@ -4,7 +4,7 @@
   "framework": "pytorch",
   "provenance": {
     "framework_version": "torch==2.11.0",
-    "d2l_lib_fingerprint": "sha256:730e350b4c92bc4ab5e9162f1f99e675f2ff06a634a76eef8e41335b3086722b",
+    "d2l_lib_fingerprint": "sha256:60405b30ab5b91c86d65d0b4cbf1763f553fec35c2203d1c47491157739db74c",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -46,29 +46,29 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n=  512: naive   9.84 ms/token, cached  9.63 ms/token\n"
+          "text": "n=  512: naive  10.12 ms/token, cached  9.77 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 1024: naive  10.44 ms/token, cached  9.81 ms/token\n"
+          "text": "n= 1024: naive  15.22 ms/token, cached  9.83 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 2048: naive  21.71 ms/token, cached  9.55 ms/token\n"
+          "text": "n= 2048: naive  33.74 ms/token, cached  9.79 ms/token\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "n= 4096: naive  48.61 ms/token, cached  9.62 ms/token\n"
+          "text": "n= 4096: naive  77.45 ms/token, cached 11.91 ms/token\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kv-cache/kv-cache-same-logits-measured-2-1.svg",
-          "bytes": 25941,
-          "sha256": "sha256:fd385d79751fa2a51b7c6771687de114f5653ea86fe1039c7d49346a0082f53d"
+          "bytes": 27106,
+          "sha256": "sha256:9dc580ee930b006a4bd16869509b328aa193ca1af05ee1ff3a4595febbef97f9"
         }
       ]
     },
@@ -79,12 +79,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "naive : 256 tokens after a 3584-token prompt: 11.5s =  22.3 tokens/s\n"
+          "text": "naive : 256 tokens after a 3584-token prompt: 19.1s =  13.4 tokens/s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "cached: 256 tokens after a 3584-token prompt:  2.9s =  87.1 tokens/s\n"
+          "text": "cached: 256 tokens after a 3584-token prompt:  4.3s =  59.5 tokens/s\n"
         }
       ]
     },
@@ -106,7 +106,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "prefill: 2048 tokens in   22 ms =  92671 tokens/s\ndecode:  one token in   9.92 ms =    101 tokens/s\ndecode intensity: 247 MFLOP / 645 MB = 0.4 FLOP/byte (GPU ridge is near 80)\nprefill intensity: about 784 FLOP/byte\nbandwidth ceiling for decode: about 1550 tokens/s\n"
+          "text": "prefill: 2048 tokens in   37 ms =  54992 tokens/s\ndecode:  one token in  13.93 ms =     72 tokens/s\ndecode intensity: 247 MFLOP / 645 MB = 0.4 FLOP/byte (GPU ridge is near 80)\nprefill intensity: about 784 FLOP/byte\nbandwidth ceiling for decode: about 1550 tokens/s\n"
         }
       ]
     },
@@ -191,18 +191,18 @@
       ]
     },
     "kv-cache-a-window-needs-a-sink-1": {
-      "code_fingerprint": "sha256:04090266bcb20826d3b73240733c7e796c6ff8497f664e7c8d3bf2e3955d7c9c",
+      "code_fingerprint": "sha256:683a92a3c2da643da544c238712029c99675e2c3b7825f36f5b498b71e6d7ad6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "mean attention weight on token 0 (uniform would be ~0.003):\nlayer 0: 0.00  layer 1: 0.01  layer 2: 0.11  layer 3: 0.30  layer 4: 0.32  layer 5: 0.51  layer 6: 0.46  layer 7: 0.57  layer 8: 0.48  layer 9: 0.48  layer 10: 0.45  layer 11: 0.34\n"
+          "text": "mean attention weight on token 0 (uniform would be ~0.003):\nlayer 0: 0.00  layer 1: 0.01  layer 2: 0.11  layer 3: 0.30  layer 4: 0.32\n    layer 5: 0.51  layer 6: 0.46  layer 7: 0.57  layer 8: 0.48  layer 9:\n    0.48  layer 10: 0.45  layer 11: 0.34\n"
         }
       ]
     },
     "kv-cache-a-window-needs-a-sink-2": {
-      "code_fingerprint": "sha256:ef500905917027de860fcb1bf9a22a3e63add25d548b29b5d8b2b0e61afa72fe",
+      "code_fingerprint": "sha256:9bd52edbe48f85a2eb0abac8beff744b3642c3ab0115700cf9c46529457ef4fd",
       "kind": "text",
       "outputs": [
         {

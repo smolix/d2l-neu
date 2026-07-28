@@ -50,7 +50,7 @@
           "mime": "image/svg+xml",
           "asset": "value-iter/value-iter-value-iteration-3-1.svg",
           "bytes": 28730,
-          "sha256": "sha256:0860d6c47cb6b3d8d3778a04493256052021b3019a504e6af4afd76e2b2c3fa1"
+          "sha256": "sha256:1db626b780d24846e5ea8723fc111739775ec778afdc2c20bfef50b9ad946ad9"
         }
       ]
     },
@@ -82,23 +82,23 @@
       "outputs": []
     },
     "value-iter-policy-iteration-and-generalized-policy-iteration-2": {
-      "code_fingerprint": "sha256:37e61b51aadcc4750176217052026490f4606dc5468e4ea8d050e530825b978d",
+      "code_fingerprint": "sha256:1ba6877271b18ebc708b8ea9915f834e040d89ba11337c0562915bbae39065e7",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "policy iteration: 2 rounds of evaluate-then-improve\nvalue iteration: certified at sweep 164, and its greedy policy already equals pi* from sweep 14 on\n"
+          "text": "policy iteration: 2 rounds of evaluate-then-improve\nvalue iteration: certified at sweep 164\nits greedy policy already equals pi* from sweep 14 on\n"
         }
       ]
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-1": {
-      "code_fingerprint": "sha256:4b19ca003e9295f10ee282cd96fff81a4a1533f8cc04c8b165f5aba033ea1f28",
+      "code_fingerprint": "sha256:f2ea5453beb25999ca7a963dd9eb7234999958aaa23a041b495352eedc7b388b",
       "kind": "text",
       "outputs": []
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-2": {
-      "code_fingerprint": "sha256:e539093f9c482589f8caac2864e2f1ba02f8fcf7388a2f5ca377ee00ab79337e",
+      "code_fingerprint": "sha256:e5db8327184fae56e03d7b31615c80fa2416aaf8bd1ff05b0473b1f789bfc83e",
       "kind": "text",
       "outputs": [
         {
@@ -109,7 +109,7 @@
       ]
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-3": {
-      "code_fingerprint": "sha256:429e99ca094e9ddbb492e4af4ce12eb5546eb138dc4d64f3b6c83148612f1944",
+      "code_fingerprint": "sha256:bd72804cdf74bf618adda62e7a1fcb20913134a7ec4891df9d58e312e8444463",
       "kind": "text",
       "outputs": [
         {
@@ -120,7 +120,7 @@
       ]
     },
     "value-iter-what-the-optimal-policy-looks-like-on-ice-4": {
-      "code_fingerprint": "sha256:aed18ca13b1a0762ac0aa615bb333cdf796326f62b6ff88ab594ddf31cb39652",
+      "code_fingerprint": "sha256:ae4fee116429c44284d7567e17c340ab8442efdd383080c1bdc846c749091c7e",
       "kind": "text",
       "outputs": [
         {

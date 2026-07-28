@@ -32,23 +32,23 @@
       ]
     },
     "offline-rl-sarsa-one-symbol-the-opposite-rule-3": {
-      "code_fingerprint": "sha256:f6fad83be4d788424c6e3b1be4abbb57b2a019f143f7917959d5a1037558a4a0",
+      "code_fingerprint": "sha256:7fadb732b7ec47149cac1702a14c6af34284eec8afbe4e8aad9eadfaa46aa28f",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Q-learning: greedy policy succeeds 72.5%; the behavior earns 0.061, and the policy-weighted table value sum_a pi(a|s0) Q(s0, a) claims 0.180\n"
+          "text": "Q-learning: greedy policy succeeds 72.5%; the behavior earns 0.061\n            the policy-weighted table value sum_a pi(a|s0) Q(s0, a) claims 0.180\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     SARSA: greedy policy succeeds 74.1%; the behavior earns 0.070, and the policy-weighted table value sum_a pi(a|s0) Q(s0, a) claims 0.061\n"
+          "text": "     SARSA: greedy policy succeeds 74.1%; the behavior earns 0.070\n            the policy-weighted table value sum_a pi(a|s0) Q(s0, a) claims 0.061\n"
         }
       ]
     },
     "offline-rl-distribution-shift-measured": {
-      "code_fingerprint": "sha256:c9af431ef92394f31c53408c3b3c128d0d5c0571f1ffa413c26bb5b084799275",
+      "code_fingerprint": "sha256:61da74eedb47c1d55c7e24e9f22d7e58546cc81c8dcdf7459fafa974631ec853",
       "kind": "text",
       "outputs": [
         {
@@ -59,17 +59,17 @@
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-1": {
-      "code_fingerprint": "sha256:97fd7dc8b5c0a3ef9f1cab2d1d4e0f4cf12192463028c61b02e90ff76e03e696",
+      "code_fingerprint": "sha256:b3b3707e51ae7f6079c351a4df31a6d36acb31b4412bc85098e01c6191c15aa0",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-2": {
-      "code_fingerprint": "sha256:41a65314d3c439689d641054cb395e94357f69c8de9244cde8507a239c856e03",
+      "code_fingerprint": "sha256:90414a4ccb9a9eb81a4c0ad02e9410746f0248f7139338f12424af4f62c9d231",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-3": {
-      "code_fingerprint": "sha256:a4dc3b021815284cd62a15106795e55d04d431b6b17b81312ee03303cbdbe24e",
+      "code_fingerprint": "sha256:6388c7f0020455aa9cb53613d314042219c6e2f1bb4f32ae47c99e3848f14b90",
       "kind": "text",
       "outputs": [
         {
@@ -80,23 +80,23 @@
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-4": {
-      "code_fingerprint": "sha256:1412032fd7f46002386c8d3668d6f26c54cee6bccf7b44a9683081111b2b8e70",
+      "code_fingerprint": "sha256:c628e9c777277be14ad7b4ea930d25b45c58249b546beff992d0afcdcd4a31c5",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-5": {
-      "code_fingerprint": "sha256:0db2a71b148fc52a1664189d7ce9843180a0937c8b944658547e6a869d998f0c",
+      "code_fingerprint": "sha256:6fe5a94a8d971737d56613d68999459c211d4ac70988fed33472fa84a0bcf080",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "      naive: predicted median 0.274, spread 0.185 to 0.388; actual median 0.097, spread 0.070 to 0.184\npessimistic: predicted median 0.121, spread 0.035 to 0.225; actual median 0.080, spread 0.050 to 0.189\n      clone: predicted median 0.007, spread 0.004 to 0.014; actual median 0.008, spread 0.003 to 0.014\npromises above V*(s0): naive on 15 of 15 datasets, pessimistic on 2 of 15\npessimism delivered the better policy on 4 of 15 datasets\n"
+          "text": "      naive: predicted median 0.274, spread 0.185 to 0.388\n             actual    median 0.097, spread 0.070 to 0.184\npessimistic: predicted median 0.121, spread 0.035 to 0.225\n             actual    median 0.080, spread 0.050 to 0.189\n      clone: predicted median 0.007, spread 0.004 to 0.014\n             actual    median 0.008, spread 0.003 to 0.014\npromises above V*(s0): naive on 15 of 15 datasets, pessimistic on 2 of 15\npessimism delivered the better policy on 4 of 15 datasets\n"
         }
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-6": {
-      "code_fingerprint": "sha256:0d952b32502d1a06ec786f9c0f1727ea557eb40af59494e75ad9113b0ba0f966",
+      "code_fingerprint": "sha256:6dc5077b36c108112d51e00de0e0ce9bc6a4bb775de6c2fb0bc43871aaac943d",
       "kind": "asset",
       "outputs": [
         {
@@ -104,30 +104,30 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
           "bytes": 29617,
-          "sha256": "sha256:f04d23766eb08513e7f39040a9479f326f3383791d474a22d73a0b5eea8926c1"
+          "sha256": "sha256:2f244ad58d6ed9018c3fca72f0865ebdb2b254715db05e7136bd21918cabca94"
         }
       ]
     },
     "offline-rl-kappa-over-root-n": {
-      "code_fingerprint": "sha256:a9cb6796dade890dff2c45531b84c560ff27c9cad3196f49ff96e0f6935e9d74",
+      "code_fingerprint": "sha256:899d940b9b2d93c14ee17177a67a40a2df0ade64458b28571c09ea1946db7804",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "659 supported live pairs over 15 datasets: error min 0.000, median 0.094, max 0.458\nkappa centering kappa/sqrt(n) on the cloud: 0.57; residual error at n > 100: median 0.077\n"
+          "text": "659 supported live pairs over 15 datasets: error min 0.000, median 0.094, max 0.458\nkappa centering kappa/sqrt(n) on the cloud: 0.57\nresidual error at n > 100: median 0.077\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-kappa-over-root-n-1.svg",
           "bytes": 101448,
-          "sha256": "sha256:34fde503cff976ff9c20b060e395ed02f302ecbc42c1698b03843cc1c55efced"
+          "sha256": "sha256:32d2e1c2aa32e9fec0f10152bff934bbb1b5c738dea31fded21b05d862724887"
         }
       ]
     },
     "offline-rl-constrain-the-policy-the-values-or-both": {
-      "code_fingerprint": "sha256:983afdf4302b25aec9460c6fd9f009761275e5e613bb4f4bc7c59d4efe0cdf96",
+      "code_fingerprint": "sha256:f147c407d1b103c69d2799c7f260c355c010ee90a66c7b492e667a6198a172a3",
       "kind": "text",
       "outputs": [
         {

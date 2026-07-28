@@ -175,6 +175,16 @@ class Scheduler:
         self.core_groups = [cores[i * per:(i + 1) * per] or [cores[i % len(cores)]]
                             for i in range(self.cpu_slots)]
         self.cpu_free = list(range(self.cpu_slots))
+        # Round-robin core group handed to *GPU* dispatches. A GPU notebook used
+        # to run with the whole box visible, and XLA/oneDNN/OpenMP size their
+        # thread pools from the visible core count, not from OMP_NUM_THREADS: on
+        # a 64-core host one JAX process opens ~380 OS threads (measured 173 for
+        # a bare CPU matmul at 64 cores, 37 at 8 cores, 25 at 4). Twenty such
+        # jobs blow past a per-user thread ceiling and the run dies with
+        # "can't start new thread", which looks like a notebook failure but is
+        # host exhaustion. Pinning GPU jobs to one core group as well keeps each
+        # process's pools proportionate; the GPU work is on the device anyway.
+        self._gpu_core_rr = 0
 
         self.lock = threading.Condition()
         self.inflight = 0
@@ -257,7 +267,15 @@ class Scheduler:
                 for g, s in zip(chosen, per_gpu_spg))))
             env["XLA_PYTHON_CLIENT_MEM_FRACTION"] = f"{frac:.2f}"
         self.fw_inflight[it.fw] += 1
-        return {"cuda": ",".join(str(g) for g in chosen), "cpu_cores": None,
+        # Hand GPU jobs a core group too (see _gpu_core_rr): unpinned, each one
+        # sizes its host thread pools to the whole box. Widen the group for a
+        # multi-GPU job, which drives more host-side work.
+        n_groups = max(1, len(chosen))
+        grp = []
+        for k in range(n_groups):
+            grp += self.core_groups[(self._gpu_core_rr + k) % len(self.core_groups)]
+        self._gpu_core_rr = (self._gpu_core_rr + n_groups) % len(self.core_groups)
+        return {"cuda": ",".join(str(g) for g in chosen), "cpu_cores": grp,
                 "extra_env": env, "_": ("gpu", chosen, per_gpu_spg),
                 "_fw": it.fw}
 

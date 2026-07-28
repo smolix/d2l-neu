@@ -54,18 +54,18 @@
       "outputs": []
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-4": {
-      "code_fingerprint": "sha256:4af7684eb79635919c1eac58c6a7075f7c3f37e1a9e32996c7408cfa8ccb36de",
+      "code_fingerprint": "sha256:73065bfc0635fe85237f127b816e3df0f0df4d4c5ad79af05d2aebfe43e48984",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "torch.Size([512, 64]) torch.Size([512, 64]) torch.Size([512]) torch.Size([512, 10]) torch.Size([512, 10]) torch.Size([512, 10]) torch.Size([512])\n"
+          "text": "torch.Size([512, 64]) torch.Size([512, 64]) torch.Size([512])\ntorch.Size([512, 10]) torch.Size([512, 10]) torch.Size([512, 10]) torch.Size([512])\n"
         }
       ]
     },
     "bert-dataset-transforming-text-into-the-pretraining-dataset-5": {
-      "code_fingerprint": "sha256:d21fe12d6684af6d4ab35278dc44668f7362a372b9c8426abf308b6ad1f2cbaa",
+      "code_fingerprint": "sha256:373d4dd8a7688f4903f72362f8b3d9295b926b25d8e753acd903f71ca2d1f548",
       "kind": "text",
       "outputs": [
         {

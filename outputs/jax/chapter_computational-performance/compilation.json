@@ -20,7 +20,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "{ \u001b[34;1mlambda \u001b[39;22m; a\u001b[35m:f32[4]\u001b[39m. \u001b[34;1mlet\u001b[39;22m b\u001b[35m:f32[4]\u001b[39m = sin a; c\u001b[35m:f32[4]\u001b[39m = add b 1.0:f32[] \u001b[34;1min \u001b[39;22m(c,) }\nthis prints once, at trace time\n"
+          "text": "{ lambda ; a:f32[4]. let b:f32[4] = sin a; c:f32[4] = add b 1.0:f32[] in (c,) }\nthis prints once, at trace time\n"
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 1.92 ms/call\ncompiled: 0.18 ms/call\n"
+          "text": "eager: 1.54 ms/call\ncompiled: 0.16 ms/call\n"
         }
       ]
     },
@@ -42,12 +42,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "ahead-of-time compile: 2.2 s\n"
+          "text": "ahead-of-time compile: 2.5 s\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 19.29 ms/call\ncompiled: 0.18 ms/call\n"
+          "text": "eager: 21.33 ms/call\ncompiled: 0.21 ms/call\n"
         }
       ]
     },
@@ -58,7 +58,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "eager: 9.42 ms/call\njit: 0.43 ms/call\n"
+          "text": "eager: 9.18 ms/call\njit: 0.28 ms/call\n"
         }
       ]
     }

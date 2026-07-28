@@ -19,35 +19,35 @@
       "outputs": []
     },
     "dqn-the-deadly-triad": {
-      "code_fingerprint": "sha256:9d9a51ce95b55c91052ad28d4b5b73eedf2d311a4e929801678edccc90484a87",
+      "code_fingerprint": "sha256:6cf05238533b9cb20e77d9ba6cad7fd6ebc7e5e7b3a799c9d28252be6c9ab58e",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "sup norm of w after 0, 500, 1000 sweeps: 10, 77, 335; the value the weights claim for state 7: 677, true value 0\n"
+          "text": "sup norm of w after 0, 500, 1000 sweeps: 10, 77, 335\nthe value the weights claim for state 7: 677, true value 0\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-deadly-triad-1.svg",
           "bytes": 23523,
-          "sha256": "sha256:544f9e0bd006e225fb6e6a68a2a3d40ea7de9b365cfd3fad872f25e516fabcc2"
+          "sha256": "sha256:8e113dce891effadc2f9fcdf9f4232640b36451032fb8fc423b9f2ded18d76cb"
         }
       ]
     },
     "dqn-replay-and-the-off-policy-licence": {
-      "code_fingerprint": "sha256:596962eac81b38b1772d85dfafc25ba0d773707a8734a82409e0aee19cc0dedd",
+      "code_fingerprint": "sha256:86d00911b2db8d0ace9bdf044ce2b4ad3e6e8b9597f9063819ed7746ab482dfa",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-target-network-1": {
-      "code_fingerprint": "sha256:c93476112182378bcc8bf23cab19892df39e30f525d4e859e1acbb0f942bfe2d",
+      "code_fingerprint": "sha256:3807605a35ff3ad42eeeb20d5162f0196be1e26fc044fcc5c249bc25d442f75a",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-target-network-2": {
-      "code_fingerprint": "sha256:afdc3c860f6e63b649f62d951a9945385d8972e1cfde3ff2891684ebff818042",
+      "code_fingerprint": "sha256:0891ab3667f23c5e8f754efcfd351071ff0e65c2071fcfedc7d42a55b2c20eb1",
       "kind": "text",
       "outputs": [
         {
@@ -58,17 +58,17 @@
       ]
     },
     "dqn-the-target-network-3": {
-      "code_fingerprint": "sha256:19abb94df95f9d77f3a7e752121541dc7af4ce06e9b37d02cdfb5d3a62ae8475",
+      "code_fingerprint": "sha256:7d5b5e9096d63594e4d89fc5cfb7ade5c8aa5ded4a4b80d2305eebcaefe78a83",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-ablation-1": {
-      "code_fingerprint": "sha256:752056f6ab0ed71766bafbde0c8b760be70626cb82791542720c5bdcffe4b419",
+      "code_fingerprint": "sha256:de60aa2f7c6be9fb3d7e8f02e176ace658cd6741a865b1f670c512e1c940f796",
       "kind": "text",
       "outputs": []
     },
     "dqn-the-ablation-2": {
-      "code_fingerprint": "sha256:2a40f8eda65fc262eff2f996fe4dbc8475c02f9a1a0398dff98998640dc138ca",
+      "code_fingerprint": "sha256:65b7f3c2258451529ce5633e9b1e08e6d97977ffe995152b8e0bfb82ad80119f",
       "kind": "asset",
       "outputs": [
         {
@@ -76,23 +76,23 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-2-1.svg",
           "bytes": 35575,
-          "sha256": "sha256:2cd14ca5ec68a618737ce60e59fbacd79845654d3ca0876e663a1a885660b66c"
+          "sha256": "sha256:670beb33eabcc00ff8a752e18bdbdc61e5c4914572abb3e3537864e01f3b8784"
         }
       ]
     },
     "dqn-the-ablation-3": {
-      "code_fingerprint": "sha256:bb9e94262b21818d707fca1bf8773fd4ac31374a246b3e9b9365f1af8b4e8157",
+      "code_fingerprint": "sha256:925df49881abcb46819c7cd6f9804ce82bfcc53d93a395d3ad48292f045b2b81",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "               DQN: best 20-episode window per seed [500. 348. 457.]\n                    final window [496. 348. 431.] (spread 148); fifty episodes earlier [163.  99. 203.]\n no target network: best 20-episode window per seed [30. 27. 25.]\n                    final window [9. 9. 9.] (spread 0); fifty episodes earlier [10. 10. 10.]\n"
+          "text": "               DQN: best 20-episode window per seed [500. 348. 457.]\n                    final window [496. 348. 431.] (spread 148)\n                    fifty episodes earlier [163.  99. 203.]\n no target network: best 20-episode window per seed [30. 27. 25.]\n                    final window [9. 9. 9.] (spread 0)\n                    fifty episodes earlier [10. 10. 10.]\n"
         }
       ]
     },
     "dqn-the-ablation-4": {
-      "code_fingerprint": "sha256:12d90fd733fdfd18d8d07ad7d4b348091f07762d6aa73f66a83206d04aa66845",
+      "code_fingerprint": "sha256:f64df63d5f3467572a607487618be1c3e4760d9ff382c76e42d28d16c10e2039",
       "kind": "text",
       "outputs": [
         {
@@ -108,12 +108,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "               DQN, seed 2: greedy return over 100 episodes 500\n no target network, seed 0: greedy return over 100 episodes 10\n no target network, seed 1: greedy return over 100 episodes 9\n no target network, seed 2: greedy return over 100 episodes 9\n"
+          "text": "               DQN, seed 2: greedy return over 100 episodes 500\n no target network, seed 0: greedy return over 100 episodes 10\n no target network, seed 1: greedy return over 100 episodes 9\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " no target network, seed 2: greedy return over 100 episodes 9\n"
         }
       ]
     },
     "dqn-the-ablation-5": {
-      "code_fingerprint": "sha256:fab6d56b5d7bf7c53ce41caee8769ffc9cef524ac00370905e22bba3841a8503",
+      "code_fingerprint": "sha256:bbacfdee8340984c4cd25512c225e86e4cf134c777d929fa99d445d60264634b",
       "kind": "mixed",
       "outputs": [
         {
@@ -126,12 +131,12 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-5-1.svg",
           "bytes": 29535,
-          "sha256": "sha256:a97ceb8d838d0acaeebd8db1c2cdd35474e02987b352154c8fd0f25e2be632a5"
+          "sha256": "sha256:204bdb4ee6249be00f5b087dafad93d9cc6e47fca743698b0d4274a1fab11b7d"
         }
       ]
     },
     "dqn-the-max-bias-measured": {
-      "code_fingerprint": "sha256:4c72b60f75b18b45d9f7498bfdbf29cf474104e5403812b18e3e9803a7257232",
+      "code_fingerprint": "sha256:bb1a1415d2891c299dd09f651969be55b9c6e5923094dc0ce4f6d8918682a1e9",
       "kind": "text",
       "outputs": [
         {
@@ -142,17 +147,17 @@
       ]
     },
     "dqn-double-dqn-in-three-lines-1": {
-      "code_fingerprint": "sha256:5f96cc20d752943329c4af4ef027d3463c2b868c578642f195f459af920407fb",
+      "code_fingerprint": "sha256:c293d1e71db261c5ee18d6812ab9b4ac3d54fc3267f5aebe0a2a6761bc76556b",
       "kind": "text",
       "outputs": []
     },
     "dqn-double-dqn-in-three-lines-2": {
-      "code_fingerprint": "sha256:d02ec1a8bbe5ef565ff74cdd7a7d8a6f2b32710180519c92ead2d6c657e1c80c",
+      "code_fingerprint": "sha256:03089d6538ff3eb202743ef0991aa90e7c3cc0302580325ab6f72d908effee89",
       "kind": "text",
       "outputs": []
     },
     "dqn-double-dqn-in-three-lines-3": {
-      "code_fingerprint": "sha256:b98f46cb76a0a52d3039ddab5d56a68c90978a158de933c161ac9f4f9a602a87",
+      "code_fingerprint": "sha256:11c95b34f09c07cc111c2c0d62d8dfdb046ca176f2bd45cf9aec6cb11ff7386a",
       "kind": "mixed",
       "outputs": [
         {
@@ -165,7 +170,7 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-double-dqn-in-three-lines-3-1.svg",
           "bytes": 35449,
-          "sha256": "sha256:104c7d2cf53ee06a5524c0c5793334feec6e515960af80ded9f58974040c7647"
+          "sha256": "sha256:5ef50891fdf017b567f37f8a32c1a0cbf2205e67b78912018af249136964865f"
         }
       ]
     }

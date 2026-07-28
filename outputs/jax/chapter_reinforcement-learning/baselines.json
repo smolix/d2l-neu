@@ -95,32 +95,32 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
-          "bytes": 72076,
-          "sha256": "sha256:6adfe56790f869f57dae77c52ef1dbe7804f5e894f7f73146ed700480ce05c69"
+          "bytes": 72154,
+          "sha256": "sha256:6c008fad1f86a18bedf2d678aca15eb6378349d3b1fe4142c00bf6223c36a02a"
         }
       ]
     },
     "baselines-five-estimators-6": {
-      "code_fingerprint": "sha256:b551d5db0c9de8baa2a69b45ad6396d0f8bd15003d5a12793e1a95a4ddfbe22e",
+      "code_fingerprint": "sha256:dc884b2d5c168d591ce169b646ec8a5b1ac10ca8e28be3dae8f44414581687a9",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          return: updates to 90%: median  60.0, fastest  26, slowest  92 | mean |step|, first 40 updates: 0.20\n    reward-to-go: updates to 90%: median  40.0, fastest  22, slowest  95 | mean |step|, first 40 updates: 0.38\n        centered: updates to 90%: median  58.0, fastest  43, slowest 108 | mean |step|, first 40 updates: 0.15\n      normalized: updates to 90%: median  30.0, fastest   8, slowest  72 | mean |step|, first 40 updates: 0.76\nlearned baseline: updates to 90%: median  40.5, fastest  22, slowest  84 | mean |step|, first 40 updates: 0.32\n"
+          "text": "          return: updates to 90%: median  60.0, fastest  26, slowest  92\n                  mean |step| over the first 40 updates: 0.20\n    reward-to-go: updates to 90%: median  40.0, fastest  22, slowest  95\n                  mean |step| over the first 40 updates: 0.38\n        centered: updates to 90%: median  58.0, fastest  43, slowest 108\n                  mean |step| over the first 40 updates: 0.15\n      normalized: updates to 90%: median  30.0, fastest   8, slowest  72\n                  mean |step| over the first 40 updates: 0.76\nlearned baseline: updates to 90%: median  40.5, fastest  22, slowest  84\n                  mean |step| over the first 40 updates: 0.32\n"
         }
       ]
     },
     "baselines-five-estimators-7": {
-      "code_fingerprint": "sha256:7b4175053670cc73044272ba5e6a728721f54d37256b54494cae1ddcea698e78",
+      "code_fingerprint": "sha256:401444895401c175a1814e5710f794c53f0669aa4f41dce9ecaee8d7185e9b1e",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
-          "bytes": 48085,
-          "sha256": "sha256:3f967ac96e6e83c63ebf170729a206b8852ea90a7204f44c471114cfa5e5fe74"
+          "bytes": 48438,
+          "sha256": "sha256:6db711ca6be1d365b35087e116be5dde02e3c69cabb4d596e7f219b2661a3337"
         }
       ]
     }

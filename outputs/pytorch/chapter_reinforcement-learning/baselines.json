@@ -96,23 +96,23 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
           "bytes": 72097,
-          "sha256": "sha256:d40687eb3073101bec7dc8b562ea4bf0711fc08bb794715635ed2f6822c2e46d"
+          "sha256": "sha256:67299a9175befa2c5a067e5cee33ad138568054a541a180454044751e60a3135"
         }
       ]
     },
     "baselines-five-estimators-6": {
-      "code_fingerprint": "sha256:037e385301574946a68fb23b8d3ffc68dd4e2f3fe222f5d5165ccd4daa8f885c",
+      "code_fingerprint": "sha256:04179fa333510f918befc3ec0438746b604e82bad826bf749a071bcc10c3195d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          return: updates to 90%: median  60.0, fastest  26, slowest  92 | mean |step|, first 40 updates: 0.20\n    reward-to-go: updates to 90%: median  40.0, fastest  22, slowest  95 | mean |step|, first 40 updates: 0.38\n        centered: updates to 90%: median  58.0, fastest  43, slowest 108 | mean |step|, first 40 updates: 0.15\n      normalized: updates to 90%: median  30.0, fastest   8, slowest  72 | mean |step|, first 40 updates: 0.76\nlearned baseline: updates to 90%: median  40.5, fastest  22, slowest  84 | mean |step|, first 40 updates: 0.32\n"
+          "text": "          return: updates to 90%: median  60.0, fastest  26, slowest  92\n                  mean |step| over the first 40 updates: 0.20\n    reward-to-go: updates to 90%: median  40.0, fastest  22, slowest  95\n                  mean |step| over the first 40 updates: 0.38\n        centered: updates to 90%: median  58.0, fastest  43, slowest 108\n                  mean |step| over the first 40 updates: 0.15\n      normalized: updates to 90%: median  30.0, fastest   8, slowest  72\n                  mean |step| over the first 40 updates: 0.76\nlearned baseline: updates to 90%: median  40.5, fastest  22, slowest  84\n                  mean |step| over the first 40 updates: 0.32\n"
         }
       ]
     },
     "baselines-five-estimators-7": {
-      "code_fingerprint": "sha256:0de7eb6994ed58b29a7d14851ae46ca566fb40cc039edd84aacd05b693324708",
+      "code_fingerprint": "sha256:affdb4b9e7234b611b8497d0161c5f5518769a7365f09f4e90d0efd1366bba28",
       "kind": "asset",
       "outputs": [
         {
@@ -120,7 +120,7 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
           "bytes": 48018,
-          "sha256": "sha256:592798f8855f737b9999064b182c3e0efd60266c129fed0ece521b83a59fc08c"
+          "sha256": "sha256:fbc0f1bbd654ecc449c74e668f2f6e38f5de93b387fd255f8a9b95a3c7ebc7ac"
         }
       ]
     }

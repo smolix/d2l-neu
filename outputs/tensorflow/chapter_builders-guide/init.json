@@ -25,27 +25,27 @@
       ]
     },
     "init-applying-initializers-1": {
-      "code_fingerprint": "sha256:b6f19bf31449fa3c794d7c802457c820ca37e8142fd583cc5c7f2f20f093dbc5",
+      "code_fingerprint": "sha256:94167a280734b980e282bf575f21e157e680bfe380ea363ef62e0958a4f849f1",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(4,), dtype=float32, numpy=array([ 0.01419753,  0.01572837, -0.02287325, -0.00140878], dtype=float32)>,\n <tf.Tensor: shape=(), dtype=float32, numpy=0.0>)"
+          "text": "(array([ 0.01419753,  0.01572837, -0.02287325, -0.00140878], dtype=float32),\n np.float32(0.0))"
         }
       ]
     },
     "init-applying-initializers-2": {
-      "code_fingerprint": "sha256:f48599c2806a0e541a06f0fcc15d9377eee514afa28560ffe0cabaeb258d38a6",
+      "code_fingerprint": "sha256:db20c992dcd72782832b4df74018e25f6eb22ac5b95ad78d809bd08ccd96d2fa",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "(<tf.Tensor: shape=(4,), dtype=float32, numpy=array([ 0.22517478, -0.18920076,  0.62674755,  0.11356837], dtype=float32)>,\n <tf.Tensor: shape=(8,), dtype=float32, numpy=array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32)>)"
+          "text": "(array([ 0.22517478, -0.18920076,  0.62674755,  0.11356837], dtype=float32),\n array([42., 42., 42., 42., 42., 42., 42., 42.], dtype=float32))"
         }
       ]
     },
     "init-applying-initializers-3": {
-      "code_fingerprint": "sha256:a850c6551d295870a66a2be18454b22aace4dcb7a97ffab6d9f0809d1c879e86",
+      "code_fingerprint": "sha256:3505c2ea3bef7b4496c6a6560200ca811ce14dade2140887a742a8b335eb66de",
       "kind": "text",
       "outputs": [
         {
@@ -55,7 +55,7 @@
       ]
     },
     "init-truncated-normals": {
-      "code_fingerprint": "sha256:f708e0e02de09ec2a7db9b56dc1080f6b13c67aad5f800a08f73672935da6b0a",
+      "code_fingerprint": "sha256:c1242c8d73ce128aaecaf97d9b9233029b22732ec6455f70c76adbe417dd1f63",
       "kind": "text",
       "outputs": [
         {
@@ -66,17 +66,17 @@
       ]
     },
     "init-watching-the-variance-compound-1": {
-      "code_fingerprint": "sha256:7fdc3c17a9500922089d64f22ed9390d49b4aa216fbc5a0a08db6d6b5f808de5",
+      "code_fingerprint": "sha256:d09a160d6e078b4f9bebb00ba7f75c81c9c0fcd98960d0cd468368ec166efdd2",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-2": {
-      "code_fingerprint": "sha256:1b07e15034d941d3980cc4a016ccc0a9b9bd87d04f118ff1330864ca4bf7fcbc",
+      "code_fingerprint": "sha256:ebd0e5f2b5d44c643af0290fc64af4717dae294e0e3be54c832d916f7e0da44d",
       "kind": "text",
       "outputs": []
     },
     "init-watching-the-variance-compound-3": {
-      "code_fingerprint": "sha256:0b6c784c794b02cd5f646322ae376e1aff4d6375f291ae228574434207d2e7ce",
+      "code_fingerprint": "sha256:19bb7770183e133462e6a45811692fbeb75656132ea37aded86f4b4c17f8f995",
       "kind": "text",
       "outputs": [
         {
@@ -102,7 +102,7 @@
       ]
     },
     "init-custom-initializers-1": {
-      "code_fingerprint": "sha256:4d30ae5f10943c640144a1ef74f968fd65bd3bd92ca6c31c8b90d364c38159a3",
+      "code_fingerprint": "sha256:1d1581800a370cfc8f1237ae6740cdc925b917075df9cdae7dab6a637ad4aeae",
       "kind": "text",
       "outputs": [
         {
@@ -112,7 +112,7 @@
       ]
     },
     "init-custom-initializers-2": {
-      "code_fingerprint": "sha256:95218eaec327e09902ed1cac7bb04863c34fc49a13fbab798ccca6df0a5add41",
+      "code_fingerprint": "sha256:d582ebf7e88e97c846b2cc1a0fde91bf49732d0214b41b124562e1fb95c8a110",
       "kind": "text",
       "outputs": [
         {

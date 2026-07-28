@@ -9,23 +9,23 @@
   },
   "cells": {
     "lookup-api-documentation": {
-      "code_fingerprint": "sha256:4b94a2431e4ba6b55c4ba65fa05215a35a14c03cfd37215bc430d50a76d05613",
+      "code_fingerprint": "sha256:c9a6baeafad940a28884c3a85b41c14b9b6f85af41b7b26ed00a04e517efbee8",
       "kind": "text",
       "outputs": []
     },
     "lookup-api-functions-and-classes-in-a-module": {
-      "code_fingerprint": "sha256:1dad46479a06fcf4ee9660b70fd1d96fbc1d7011691bcb919f76627f25cc8235",
+      "code_fingerprint": "sha256:29094fc250ec4743aa636993cb072d1aff8bc1aee219d66bb1a14a70929096df",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "['PRNGKey', 'ball', 'bernoulli', 'beta', 'binomial', 'bits', 'categorical', 'cauchy', 'chisquare', 'choice', 'clone', 'dirichlet', 'double_sided_maxwell', 'exponential', 'f', 'fold_in', 'gamma', 'generalized_normal', 'geometric', 'gumbel']\n"
+          "text": "['PRNGKey', 'ball', 'bernoulli', 'beta', 'binomial', 'bits', 'categorical',\n 'cauchy', 'chisquare', 'choice', 'clone', 'dirichlet', 'double_sided_maxwell',\n 'exponential', 'f', 'fold_in', 'gamma', 'generalized_normal', 'geometric',\n 'gumbel']\n"
         }
       ]
     },
     "lookup-api-specific-functions-and-classes-1": {
-      "code_fingerprint": "sha256:08d5cadc2e273b8fd5ebd22ea1b0ad869f9b82b495bec622720c2b2e513c8055",
+      "code_fingerprint": "sha256:0d7eec30d9c4ab02463337c027aa7f022bac077841a0b9e17476262f4f1b1cb5",
       "kind": "text",
       "outputs": [
         {
@@ -36,7 +36,7 @@
       ]
     },
     "lookup-api-specific-functions-and-classes-2": {
-      "code_fingerprint": "sha256:55c1df13672ab762c10f0c2e5e862813bde423e8343601e0348df1c8095ede85",
+      "code_fingerprint": "sha256:5d012ed94a0e6777b0d8221448566bf1e729b548bf9a8863184baa750b8a1b83",
       "kind": "text",
       "outputs": [
         {

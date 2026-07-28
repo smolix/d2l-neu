@@ -24,23 +24,23 @@
       ]
     },
     "interactive-development-identity": {
-      "code_fingerprint": "sha256:c4978990292e18c385530f0391d46027d9a80b25c53e02699c2f58096c366655",
+      "code_fingerprint": "sha256:f4d97fb4ecab00207183c717e8612d8ca71581dab4c54f5b2500e3ba30d044d7",
       "kind": "text",
       "outputs": [
         {
           "type": "execute_result",
-          "text": "{'python': '/home/smola/d2l-neu/.venv-pytorch/bin/python',\n 'version': '3.12.3',\n 'working_directory': '/home/smola/d2l-neu/_notebooks/pytorch/chapter_appendix-tools-for-deep-learning'}"
+          "text": "{'python': '~/d2l-neu/.venv-pytorch/bin/python',\n 'version': '3.12.3',\n 'working_directory': 'chapter_appendix-tools-for-deep-learning'}"
         }
       ]
     },
     "interactive-development-timing": {
-      "code_fingerprint": "sha256:27a8ad2e2fc8d738ac3a98d61e84ebf837e44e19e74796f94e80ee92b6613c63",
+      "code_fingerprint": "sha256:d9f798b40d581b90af6552989949ab44090b767a03d3ccef731b10f8092a4418",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "9.43 μs ± 473 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)\n"
+          "text": "10.1 μs ± 302 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)\n"
         }
       ]
     }

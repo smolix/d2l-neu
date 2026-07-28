@@ -4,7 +4,7 @@
   "framework": "tensorflow",
   "provenance": {
     "framework_version": "tensorflow==2.21.0",
-    "d2l_lib_fingerprint": "sha256:1a7c25762f66ced9b462708bf878a3dbd8d2fc88e36f1f7263b6359f1132eda1",
+    "d2l_lib_fingerprint": "sha256:1dee994e73a83a9f8617e14ee25e2e1d18494ab841f283da26219f2b4c068170",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -29,18 +29,18 @@
       "outputs": []
     },
     "language-model-sampling-from-n-gram-models": {
-      "code_fingerprint": "sha256:9463e7601370edae9b552736d4a2fe16e1c3afbfacc65e1daef2bfbfabcf0cd0",
+      "code_fingerprint": "sha256:d91d5c5833fbc85a3302608ab015da477be628b65de10e34b69a84c4d7e86fde",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "1-gram: the time import meat on and looking they immediately in any up examination some and grew s his narrow fortunate risk matches in their cold good but\n2-gram: the time machine and holding one indeed no refuge there came one direction i saw for which i ve told blank the soil smelt sweet and blackening\n3-gram: the time traveller then when we were i put out my hand i had expected happened the bronze doors as yet i had hitherto seen it was\n"
+          "text": "1-gram: the time import meat on and looking they immediately in any up\n    examination some and grew s his narrow fortunate risk matches in their\n    cold good but\n2-gram: the time machine and holding one indeed no refuge there came one\n    direction i saw for which i ve told blank the soil smelt sweet and\n    blackening\n3-gram: the time traveller then when we were i put out my hand i had\n    expected happened the bronze doors as yet i had hitherto seen it was\n"
         }
       ]
     },
     "language-model-the-sparsity-wall": {
-      "code_fingerprint": "sha256:2631a1b37e8b265e520fd85a09ebb75a0c5ce1af6ebe5704a52353dfba7523dc",
+      "code_fingerprint": "sha256:e2dcfc2d21b67fd6fc3ed871377e2ed362dae24aa03a741684d59601d4fc3359",
       "kind": "text",
       "outputs": [
         {
@@ -51,7 +51,7 @@
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-1": {
-      "code_fingerprint": "sha256:6ec5cebfc5149d38bb6c4cea99a41e3899259de710590f246246fbbaf50becb3",
+      "code_fingerprint": "sha256:7462b6fce5189793fc86870a30968359b35be94ed4ee3bf2c97007cc17192f40",
       "kind": "text",
       "outputs": [
         {
@@ -61,7 +61,7 @@
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-2": {
-      "code_fingerprint": "sha256:8bf5512d30ce62ea47c9f08b3ca1e4287ac2be05499afc4ce3fc3edec3817811",
+      "code_fingerprint": "sha256:146704bbad4ed9ceeedf0baa4a1ab93981961eba4072e097f927afb1e40f8976",
       "kind": "asset",
       "outputs": [
         {
@@ -69,12 +69,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-2-1.svg",
           "bytes": 33996,
-          "sha256": "sha256:0c3dca850aaede38ad6ad209fbf32df050bff487fad06ba5593a1d04625d371d"
+          "sha256": "sha256:d87a43ac303fcb4049ef2e49d08cbc56cfe5711e9e16ab11921749171a02e4b0"
         }
       ]
     },
     "language-model-word-frequency-and-zipf-s-law-3": {
-      "code_fingerprint": "sha256:c545b95d77d57eb0d107134a7f021ada65d5eeb58e076eed88542e265971c470",
+      "code_fingerprint": "sha256:24fd2fe89519daccdaa8236733c37bff30e1a6f1a05a510afa44244916afb2e3",
       "kind": "asset",
       "outputs": [
         {
@@ -82,12 +82,12 @@
           "mime": "image/svg+xml",
           "asset": "language-model/language-model-word-frequency-and-zipf-s-law-3-1.svg",
           "bytes": 45605,
-          "sha256": "sha256:9f95303019d5f2fcfa372296a36855288bd1eef5a4242e09a1892ef65e4dc827"
+          "sha256": "sha256:f8c3459e602450b739d70b70ec8ab0b6f1c113c42ff19e68a18d6f8fcd647052"
         }
       ]
     },
     "language-model-perplexity": {
-      "code_fingerprint": "sha256:45fe3678e39f62363a50644f69ac75736d78719834e406e03d91209f9d908a58",
+      "code_fingerprint": "sha256:985fc4b2b18286004caf0a1fe3396f9b6f179284ae4508de10cca573c5fb8dd1",
       "kind": "text",
       "outputs": [
         {
@@ -98,7 +98,7 @@
       ]
     },
     "language-model-bits-per-byte": {
-      "code_fingerprint": "sha256:753cafc6dd805af9cc852b376cf06a958fbf57020265ac058511ae9757a63d19",
+      "code_fingerprint": "sha256:5b93d2206388cd803897bf2a827d6bcdd135ede7f3d9ae072f25baaa80cccabd",
       "kind": "text",
       "outputs": [
         {
@@ -114,23 +114,23 @@
       ]
     },
     "language-model-partitioning-sequences-1": {
-      "code_fingerprint": "sha256:7f7151359e2880916f55380b2102a5f1ad80bbd207dbe1c80eea96d9fd2f6def",
+      "code_fingerprint": "sha256:aa47597525c88ab33b3acf16100961e0fed2fb53ffe5c08940d429e3320cf695",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-2": {
-      "code_fingerprint": "sha256:fa76cd373191e3c228877e1919a4eb22d1d5ca636044ceb632fbbbd6cb34f912",
+      "code_fingerprint": "sha256:48d0b73a466914f95074bd8a5bf1ee02e91148d538266a9102a32775f083d72e",
       "kind": "text",
       "outputs": []
     },
     "language-model-partitioning-sequences-3": {
-      "code_fingerprint": "sha256:c69255d097695ab3f8337c2a784feed7ad0803bbde530064bbe270c7cfeae2a2",
+      "code_fingerprint": "sha256:2a799675fd95a0c436e5210a411bea3ca6879c32328fb389bf02e44f7b7068b3",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "X: tf.Tensor(\n[[293 333 502 102 259 919 453 260  10  98]\n [524  45 267 264 571 601 480 649 545 491]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[333 502 102 259 919 453 260  10  98 274]\n [ 45 267 264 571 601 480 649 545 491 260]], shape=(2, 10), dtype=int32)\nX[0]: ' lay unfinished upon the\\nb'\nY[0]: 'ay unfinished upon the\\nben'\n"
+          "text": "X: tf.Tensor(\n[[109 754 275 285 298 104 277 286 682  44]\n [273 708 650 430 565 776 622 285 256 736]], shape=(2, 10), dtype=int32) \nY: tf.Tensor(\n[[754 275 285 298 104 277 286 682  44 277]\n [708 650 430 565 776 622 285 256 736 316]], shape=(2, 10), dtype=int32)\nX[0]: 'm going to wash and dress,'\nY[0]: ' going to wash and dress, and'\n"
         }
       ]
     }

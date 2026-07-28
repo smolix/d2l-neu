@@ -96,13 +96,13 @@
       ]
     },
     "reproducibility-inspection-backward-hooks-and-beyond": {
-      "code_fingerprint": "sha256:976adccca16a70150899783e33ab557f87b221161167e48069df8ed73f8b9154",
+      "code_fingerprint": "sha256:7400c4dc5f7db1fc5d010844fc5f0f43b683145a42901e6a6023764ca7f49ffb",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "{'sequential_5/dense_11/kernel': 13.867950439453125, 'sequential_5/dense_11/bias': 2.8245253562927246}\n"
+          "text": "sequential_5/dense_11/kernel 13.867950439453125\nsequential_5/dense_11/bias 2.8245253562927246\n"
         }
       ]
     }

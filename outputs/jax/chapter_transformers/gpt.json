@@ -4,7 +4,7 @@
   "framework": "jax",
   "provenance": {
     "framework_version": "jax==0.10.2",
-    "d2l_lib_fingerprint": "sha256:e26a4ce04e7f1c471d6690600d8277c1822695562f3333ee0ee66a72e0cbea25",
+    "d2l_lib_fingerprint": "sha256:521c314d2dd8d57acf6f9bcaa7bebade0f4726788b67720ef68db8bc8b2c43c8",
     "max_inline_bytes": 0
   },
   "cells": {
@@ -36,14 +36,14 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "final: train 0.15, validation 3.26; best validation 1.47 at step 200\n"
+          "text": "final: train 0.15, validation 3.19; best validation 1.46 at step 200\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "gpt/gpt-training-the-modern-configuration-1.svg",
           "bytes": 18990,
-          "sha256": "sha256:18516d681489ed6ddf76637e2cabb1d5274a7b15ee8afb0dc6348beca5f169af"
+          "sha256": "sha256:b7fef75a0a443edfb7fb4b6e224eaf27a96fa992cad6343dcb2d7ea34f80e5b9"
         }
       ]
     },
@@ -54,7 +54,7 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "pre_norm=True: loss at step 100/200/400/800: 1.94/1.48/1.10/0.54\n"
+          "text": "pre_norm=True: loss at step 100/200/400/800: 1.88/1.41/1.01/0.35\n"
         },
         {
           "type": "stream",
@@ -69,39 +69,44 @@
       "outputs": []
     },
     "gpt-sampling-from-the-model-2": {
-      "code_fingerprint": "sha256:35bc75f61e8cf7ab3823ce754d4e96c04dedbbd40f1b05db9f2663c6c5e723f1",
+      "code_fingerprint": "sha256:c19ae7f4cfeacc958cbd0a21a53868c54f0e1372b76e22b429724a53409c8b16",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=1.0, top_k=None: 'the time traveller holding the lamp aloft i intend to explore time is that plain i was never more serious in my life none of us quite knew '\n"
+          "text": "T=1.0, top_k=None: 'the time traveller hated to have servants waiting at\n    dinner for a hot plate at that the editor turned to his knife and fork\n    with a grunt an'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=0.7, top_k=8: 'the time traveller holding the lamp aloft i intend to explore time is that plain i was never more serious in my life none of us quite knew '\n"
+          "text": "T=0.7, top_k=8: 'the time traveller stood before us i gave a cry of surprise\n    good heavens man what s the matter cried the medical man who saw him\n    next and t'\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "T=2.0, top_k=None: 'the time traveller holding the lamp aloft i intend to explore time is that plain i was never more serious in my life none of us quite knew '\n"
+          "text": "T=2.0, top_k=None: 'the time traveller hated to have seubitating across the\n    lower round nature azout you like to the buildings with intricate\n    parapets and type'\n"
         }
       ]
     },
     "gpt-loading-gpt-2-1": {
-      "code_fingerprint": "sha256:6e863a5cb806f0cf8e2693b692257115bd99af6d5356dfc5701b7790b92e9aff",
+      "code_fingerprint": "sha256:808f2bc44f83f3d6cefcb05ecc58d87535d98ee2f25cbc4bcffaa34df471e4ae",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "[8086, 1463, 318, 477, 345, 761, 13] ['Att', 'ention', ' is', ' all', ' you', ' need', '.']\n"
+          "text": "[8086, 1463, 318, 477, 345, 761, 13]"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " ['Att', 'ention', ' is', ' all', ' you', ' need', '.']\n"
         }
       ]
     },
     "gpt-loading-gpt-2-2": {
-      "code_fingerprint": "sha256:fc7616ec8839574cb26425757a35cb7b0a52e15e07bfe6f271a731b58df5019e",
+      "code_fingerprint": "sha256:e984d8343d6eaf8a965a4717856fa0230a05b3a62b5c87bbdc024faebd109dbf",
       "kind": "text",
       "outputs": [
         {
@@ -112,7 +117,7 @@
       ]
     },
     "gpt-loading-gpt-2-3": {
-      "code_fingerprint": "sha256:7bdebe357b439285e774ddd5f6f106deb17259da0df8e1d694d887db192338d4",
+      "code_fingerprint": "sha256:6827feb576c9421b758951aff448e78580751a826bbe36e430331a9ea5adb6e1",
       "kind": "text",
       "outputs": [
         {
@@ -123,18 +128,18 @@
       ]
     },
     "gpt-loading-gpt-2-4": {
-      "code_fingerprint": "sha256:9b7f97399f2ad825134c0d818ad8507d086c942979c3027b11c6ef699c330414",
+      "code_fingerprint": "sha256:4434bfe8436134e68c515e3f3d6102207a8317ad3cedc72f516f37564a70ac07",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Alan Turing theorized that computers would one day become the most powerful machines on the planet.\n\nThe computer is a computer that\n"
+          "text": "Alan Turing theorized that computers would one day become the most powerful\n    machines on the planet.\n\nThe computer is a computer that\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "The secret of a good deep learning textbook is to make sure that you have the right skills set to get started.\n\nA good deep learning textbook is to make sure you have the right skills set to get started.\n\nI used to\n"
+          "text": "The secret of a good deep learning textbook is to make sure that you have\n    the right skills set to get started.\n\nA good deep learning textbook is to make sure you have the right skills set\n    to get started.\n\nI used to\n"
         }
       ]
     }

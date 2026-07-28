@@ -1,7 +1,7 @@
 # Regularized Policy Optimization
 :label:`sec_regularized`
 
-Every constraint in :numref:`sec_ppo` was measured against a moving target. The trust region and the clip keep the new policy near the *previous iterate*: they bound each step, and once the iterates stop moving they bind nothing at all, so nothing in that section stopped the policy from marching, one safe step at a time, into the saturated corner its own entropy measurements complained about. Nothing so far keeps the policy near anywhere in particular. This section adds a penalty measured against a *fixed* policy, and that change of reference point changes the optimum itself, into a closed form we can verify to machine precision, one formula that contains the entropy bonus of :numref:`sec_ppo`, maximum-entropy reinforcement learning, and the objective that every frontier language model is finished with. Before earning it, we ask a question :numref:`chap_reinforcement_learning` deferred: what happens when the reward itself is *learned*, and what an optimizer does to a learned reward's errors. The experiments are tabular throughout and run in seconds.
+Every constraint in :numref:`sec_ppo` was measured against a moving target. The trust region and the clip keep the new policy near the *previous iterate*: they bound each step, and once the iterates stop moving they bind nothing at all, so nothing in that section stopped the policy from marching, one safe step at a time, into the saturated corner its own entropy measurements complained about. Nothing so far keeps the policy near anywhere in particular. This section adds a penalty measured against a *fixed* policy, and that change of reference point changes the optimum itself, into a closed form we can verify to machine precision, one formula that contains the entropy bonus of :numref:`sec_ppo`, maximum-entropy reinforcement learning, and the KL-anchored objective behind influential language-model post-training recipes. Before earning it, we ask a question :numref:`chap_reinforcement_learning` deferred: what happens when the reward itself is *learned*, and what an optimizer does to a learned reward's errors. The experiments are tabular throughout and run in seconds.
 
 ```{.python .input #regularized-regularized-policy-optimization}
 %%tab pytorch
@@ -84,7 +84,7 @@ print(f'entries into the hazard lane: true '
       f'fitted {np.round(r_hat[[1, 4, 2, 5], [1, 2, 1, 2]], 2)}')
 ```
 
-Read the three lines together. Where the reference's data lives, the fit is decent: an rms error of $0.19$ across the forty-six well-traveled state-action pairs. Where the data never goes, the fit is not wrong so much as *silent*: nine pairs were never visited, and their fitted reward sits at its initialization of zero. The third line is the trap being armed. Entering the hazard lane truly costs $-1.5$; the fitted reward prices those entries at roughly zero, because a policy that knows better produced the data, so the comparisons contain almost no evidence about the lane. Silence reads as zero, and zero is optimistic here.
+Read the three lines together. Where the reference's data lives, the fit is decent: an rms error of $0.19$ across the forty-six well-traveled state-action pairs. Where the data never goes, the fit is not wrong so much as *silent*: nine pairs were never visited, and their fitted reward sits at its initialization of zero. The third line is the trap being armed. Entering the hazard lane truly costs $-1.5$; the fitted reward prices those entries at roughly zero, because a policy that knows better produced the data, so the comparisons contain almost no evidence about the lane. Silence reads as zero, and zero is optimistic here. One scope note: that the fit stays *quiet* rather than wild off-support is a property of this zero-initialized, weight-decayed linear model; a neural reward model owes you no such quiet, and can extrapolate unpredictably exactly where the data is absent.
 
 ### Identifiability, and a free per-prompt baseline
 
@@ -92,7 +92,7 @@ A comparison only ever weighs two trajectories from the *same* start state, so :
 
 ### Dense versus terminal reward
 
-Our comparisons scored whole trajectories, so $\hat{r}$ is anchored by end-to-end evidence, and at scale the learned reward is usually *terminal*: one number for the finished response. :numref:`sec_mdp` already priced this trade: terminal rewards are honest but sparse, dense rewards are informative but dangerous to author, and the only densification guaranteed not to change the optimum is potential-based shaping :cite:`Ng.Harada.Russell.1999`. The scale vocabulary is two sentences. An outcome reward model (ORM) scores the final result, a process reward model (PRM) scores intermediate steps; a PRM is a learned dense reward, which buys the credit-assignment help of density at the price of authoring, labeling, and guarding many more numbers.
+Our comparisons scored whole trajectories, so $\hat{r}$ is anchored by end-to-end evidence, and at scale the learned reward is usually *terminal*: one number for the finished response. :numref:`sec_mdp` already priced this trade: terminal rewards are hard to game but sparse, dense rewards are informative but dangerous to author, and the only densification guaranteed not to change the optimum is potential-based shaping :cite:`Ng.Harada.Russell.1999`. The scale vocabulary is two sentences. An outcome reward model (ORM) scores the final result, a process reward model (PRM) scores intermediate steps; a PRM is a learned dense reward, which buys the credit-assignment help of density at the price of authoring, labeling, and guarding many more numbers.
 
 ## Optimizing a Proxy
 
@@ -122,20 +122,35 @@ By the fitted yardstick the hacked plan is the better policy, $-0.03$ against $-
 
 ### The measurement: true return against the KL budget
 
-Where is $\hat{r}$ trustworthy? Where the data was, and the data came from $\pi_{\textrm{ref}}$. So the honest dial is not *how hard we optimize* but *how far from the reference we let the optimizer move*, and the natural ruler for the gap between two distributions over trajectories is the KL divergence. To trace the trade-off we need a family of policies leaning on $\hat{r}$ by increasing amounts. We take, at each state, the reference tilted by the fitted action values,
+Where is $\hat{r}$ trustworthy? Where the data was, and the data came from $\pi_{\textrm{ref}}$. So the informative dial is not *how hard we optimize* but *how far from the reference we let the optimizer move*, and the natural ruler for the gap between two distributions over trajectories is the KL divergence. To trace the trade-off we want, for each exchange rate $\beta$, the policy that best spends divergence on fitted reward: the maximizer of $\sum_t \gamma^t \big( \hat{r}_t - \beta\, D_{\textrm{KL}}( \pi(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t) ) \big)$. The next section derives this objective for a single decision and proves its optimum in closed form; in an MDP the optimum must also account for every *later* step's reward and penalty, and it does so through a $\beta$-dependent soft action value: replace value iteration's hard-max backup (:numref:`sec_valueiter`) with the reference-weighted soft one,
 
-$$\pi_\beta(a \mid s) \propto \pi_{\textrm{ref}}(a \mid s)\, e^{\hat{Q}(s, a)/\beta},$$
+$$V_\beta(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}, \qquad Q_\beta(s, a) = \hat{r}(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V_\beta(s'),$$
 
-with a dial $\beta$: large $\beta$ barely tilts, small $\beta$ commits to the argmax, recovering the hacked plan. For now this family is an ansatz; the next section proves this exponential tilting is exactly the optimal way to spend a KL budget, so take it on credit for one experiment. We sweep $\beta$, and for each policy record its true return, its fitted return, and the KL it spends, the discounted sum of per-state divergences from the reference along its own trajectories:
+whose fixed point gives the exactly optimal policy $\pi_\beta(a \mid s) \propto \pi_{\textrm{ref}}(a \mid s)\, e^{Q_\beta(s, a)/\beta}$. Take that on credit for one experiment, the way :numref:`sec_valueiter` once asked you to: the backup is a contraction like its hard parent, the loop below solves it per $\beta$, and the printed residual certifies that the sweep plots the solved frontier, not an approximation to it. Large $\beta$ barely tilts, small $\beta$ commits to the argmax, recovering the hacked plan. For each exact $\pi_\beta$ we record its true return, its fitted return, and the KL it spends, the discounted sum of per-state divergences from the reference along its own trajectories:
 
 ```{.python .input #regularized-the-measurement-true-return-against-the-kl-budget}
 %%tab pytorch, jax
-m_hat = d2l.TabularMDP(P, r_hat, gamma)
-Q_hat = m_hat.backup(d2l.value_iteration(m_hat, 200)[-1])
-kls, true_ret, prox_ret = [], [], []
+def soft_v(r, beta, num_iters=400):
+    """Soft value iteration for the KL-penalized objective: iterate
+    V(s) <- beta log sum_a pi_ref(a|s) exp((r + gamma P V)(s, a) / beta)."""
+    V = np.zeros(16)
+    for _ in range(num_iters):
+        Q = r + gamma * np.einsum('sat,t->sa', P, V)
+        m = Q.max(1)
+        V = m + beta * np.log(
+            (pi_ref * np.exp((Q - m[:, None]) / beta)).sum(1))
+    return V
+
+kls, true_ret, prox_ret, resid = [], [], [], 0.0
 for beta in np.logspace(1, -2.5, 36):
-    pi = pi_ref * np.exp((Q_hat - Q_hat.max(1, keepdims=True)) / beta)
-    pi /= pi.sum(1, keepdims=True)
+    V_b = soft_v(r_hat, beta)
+    Q_b = r_hat + gamma * np.einsum('sat,t->sa', P, V_b)
+    m = Q_b.max(1, keepdims=True)
+    pi = pi_ref * np.exp((Q_b - m) / beta)     # the exact optimum: pi_ref
+    pi /= pi.sum(1, keepdims=True)             # tilted by the soft Q_beta
+    back = m[:, 0] + beta * np.log(
+        (pi_ref * np.exp((Q_b - m) / beta)).sum(1))
+    resid = max(resid, np.abs(back - V_b).max())   # Bellman residual
     kl = (pi * np.log(np.where(pi > 0, pi / pi_ref, 1.0))).sum(1)
     kl[15] = 0.0                               # no decisions once absorbed
     rho = np.linalg.solve(np.eye(16) - gamma
@@ -144,13 +159,14 @@ for beta in np.logspace(1, -2.5, 36):
     true_ret.append(ret(pi, r_true))
     prox_ret.append(ret(pi, r_hat))
 k = int(np.argmax(true_ret))
+print(f'largest soft Bellman residual across the sweep: {resid:.1e}')
 print(f'true return {true_ret[0]:+.2f} at KL 0, peak {true_ret[k]:+.2f} '
       f'at KL {kls[k]:.1f}, then {true_ret[-1]:+.2f} at KL {kls[-1]:.1f}')
 d2l.plot(kls, [true_ret, prox_ret], 'KL from the reference (nats)', 'return',
          legend=['true return', 'fitted return'])
 ```
 
-This is the section's most transferable picture. The fitted return rises along the entire sweep: by its own yardstick, more optimization is always better. The true return rises from $-0.11$ to a peak of $+0.43$ at a budget of about three nats, well above anything the reference achieved, then falls off a cliff as the remaining budget buys commitment to the hazard lane. Moderate optimization against the flawed proxy genuinely helped; the same optimization continued became the attack we just watched. The same experiment at language-model scale, a policy optimized against a learned reward while a held-out gold reward is watched, produces the same rise and turn :cite:`Gao.Schulman.Hilton.2023`. The x axis, distance from the reference, is about to become the knob we control directly.
+This is the section's most transferable picture, and every point on it is an exact optimum: the residual prints as zero at double precision, the backup iterated to its fixed point, so the curve is the true frontier of the penalized objective, not a family of guesses. The fitted return rises along the entire sweep: by its own yardstick, more optimization is always better. The true return rises from $-0.10$ to a peak of $+0.53$ at a budget of just under four nats, well above anything the reference achieved, then falls off a cliff as the remaining budget buys commitment to the hazard lane. Moderate optimization against the flawed proxy genuinely helped; the same optimization continued became the attack we just watched. The same experiment at language-model scale, a policy optimized against a learned reward while a held-out gold reward is watched, produces the same rise and turn :cite:`Gao.Schulman.Hilton.2023`. The x axis, distance from the reference, is about to become the knob we control directly.
 
 ## The Regularized Objective
 
@@ -176,7 +192,7 @@ $$E_\pi[r] - \beta D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) = \sum_a \pi(a)
 
 Gibbs' inequality, proved in :numref:`chap_mdl-information-theory`, says the remaining divergence is nonnegative and zero exactly when $\pi = \pi^\star$. $\blacksquare$
 
-The optimum is the reference multiplied by an exponential tilt and renormalized, and the achieved value is a log-partition function. :numref:`fig_rl_kl_tilting` draws it. Verifying the proposition is cheap enough that there is no excuse not to. First solve :eqref:`eq_kl_objective` numerically, by plain exponentiated gradient ascent, multiplicative updates renormalized onto the simplex, with every line visible; the $+1$ in the exact gradient $r - \beta(\log(\pi/\pi_{\textrm{ref}}) + 1)$ is constant across actions and dies in the normalization, so we drop it:
+The optimum is the reference multiplied by an exponential tilt and renormalized, and the achieved value is a log-partition function. :numref:`fig_rl_kl_tilting` draws it. Two boundary clauses complete the statement. The optimum inherits the reference's support: if $\pi_{\textrm{ref}}(a) = 0$, any policy placing mass on $a$ has infinite divergence, so :eqref:`eq_kl_optimum` correctly assigns $a$ zero probability, and no reward, however large, can resurrect an action the reference excludes. And as $\beta \to 0$ the limit is a point mass only when the best action is unique; with ties, it is the reference renormalized over the maximizing set. Verifying the proposition is cheap enough that there is no excuse not to. First solve :eqref:`eq_kl_objective` numerically, by plain exponentiated gradient ascent, multiplicative updates renormalized onto the simplex, with every line visible; the $+1$ in the exact gradient $r - \beta(\log(\pi/\pi_{\textrm{ref}}) + 1)$ is constant across actions and dies in the normalization, so we drop it:
 
 ```{.python .input #regularized-the-proposition-1}
 %%tab pytorch, jax
@@ -220,7 +236,7 @@ The largest disagreement across the whole ladder of $\beta$ is at floating-point
 
 ### Four consequences
 
-**Without the penalty, the optimum is a point mass.** Send $\beta \to 0$ in :eqref:`eq_kl_optimum` and all mass flows to the highest-reward action; that is just the unregularized problem, whose solution was always the argmax. Every stochastic policy :numref:`chap_reinforcement_learning` trained was therefore living on borrowed time: left alone, policy optimization *should* collapse onto a point mass, and the entropy decay measured in :numref:`sec_ppo` was this destiny in progress. Regularized reinforcement learning is what makes remaining a distribution optimal rather than merely transient.
+**Without the penalty, the optimum is a point mass.** Send $\beta \to 0$ in :eqref:`eq_kl_optimum` and all mass flows to the highest-reward action, or, under ties, to the reference's distribution over the tied set; that is just the unregularized problem, whose solution was always the argmax. This characterizes the *optimum*, not the dynamics of any particular training run, but it aims every run somewhere: the entropy decay measured in :numref:`sec_ppo` was drift toward a destination built into the objective. Regularized reinforcement learning is what makes remaining a distribution optimal rather than merely transient.
 
 **The coefficient is an interpolation dial.** The two ends of the dial, read off the closed form:
 
@@ -271,11 +287,11 @@ $D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}})$ is the *reverse* divergence in t
 
 ### Maximum-entropy RL and the soft backup
 
-Everything above was one decision. In an MDP the penalty is charged at every step, $\sum_t \gamma^t \big( r_t - \beta\, D_{\textrm{KL}}( \pi(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t) ) \big)$, the quantity our frontier cell already measured, and the proposition applies state by state with $Q$ in place of $r$: the optimal policy tilts the reference by $e^{Q(s, a)/\beta}$, our ansatz, now with its credentials. Substituting the tilted policy into the Bellman equation of :numref:`sec_valueiter` replaces the hard maximum with a soft one,
+Everything above was one decision. In an MDP the penalty is charged at every step, $\sum_t \gamma^t \big( r_t - \beta\, D_{\textrm{KL}}( \pi(\cdot \mid s_t) \Vert \pi_{\textrm{ref}}(\cdot \mid s_t) ) \big)$, the objective our gridworld sweep optimized, and the proposition applies state by state with an action value in place of $r$, under one care the gridworld code already took: the value entering the tilt must itself account for every later step's reward *and* penalty, which makes it the $\beta$-dependent soft value $Q_\beta$ rather than the unregularized $Q^*$; tilting the reference by $Q^*$ is a different, merely heuristic family that is the exact optimum of no exchange rate. Writing the proposition's achieved value $\beta \log Z$ into the Bellman equation of :numref:`sec_valueiter` replaces the hard maximum with a soft one,
 
 $$V(s) = \max_a Q(s, a) \quad \textrm{becomes} \quad V(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\, e^{Q(s, a)/\beta},$$
 
-the value of the proposition, appearing as a backup: a logsumexp at inverse temperature, with the plain $\max$ recovered as $\beta \to 0$. With a uniform reference this is *soft value iteration* and the objective is maximum-entropy reinforcement learning. When :numref:`sec_dqn` builds deep learning on top of the hard $\max$, it will pay dearly for that operator's brittleness; it is worth knowing in advance that the $\max$ is the sharp corner of a family whose smooth members exist. Exercise 6 has you build the soft backup and watch one dial sweep from value iteration to policy evaluation.
+the backup that `soft_v` iterated to a fixed point, its printed residual zero at double precision: a logsumexp at inverse temperature, with the plain $\max$ recovered as $\beta \to 0$. With a uniform reference this is *soft value iteration* and the objective is maximum-entropy reinforcement learning. When :numref:`sec_dqn` builds deep learning on top of the hard $\max$, it will pay dearly for that operator's brittleness; it is worth knowing in advance that the $\max$ is the sharp corner of a family whose smooth members exist. Exercise 6 transplants the backup to the slippery lake and watches one dial sweep from value iteration to policy evaluation.
 
 ### DDPG, TD3 and SAC
 
@@ -287,9 +303,9 @@ Three sections point back here. :numref:`sec_dqn` studies what happens to the ha
 
 ## Summary
 
-Rewards can be learned from pairwise comparisons: Bradley-Terry is logistic regression on score differences, it identifies the reward only up to a function of the start state, which is why a per-prompt baseline is free on both the reward and the policy ledgers, and it is accurate where the preference data lives and silent where it does not. Optimizing a learned reward finds its errors, Goodhart's law in action: our optimal planner drove the fitted reward's unpriced hazard lane, and along a family of increasingly tilted policies the true return rose and then fell while the fitted return rose throughout, the overoptimization curve in miniature. The repair is to change the objective: expected reward minus $\beta$ times the KL divergence to a frozen reference. Its optimum is the reference exponentially tilted by reward, with value $\beta \log Z$, proved in four lines by Gibbs' inequality and verified to machine precision; no penalty gives a point mass, a uniform reference gives the entropy bonus and maximum-entropy RL, the soft backup replaces the hard maximum by a logsumexp, and the whole construction is Bayes' rule with $e^{r/\beta}$ as likelihood. A penalty against a frozen reference shapes the optimum; a trust region against the previous iterate shapes only the path; modern fine-tuning runs both, and the penalty's reverse KL direction is why it sharpens rather than broadens.
+Rewards can be learned from pairwise comparisons: Bradley-Terry is logistic regression on score differences, it identifies the reward only up to a function of the start state, which is why a per-prompt baseline is free on both the reward and the policy ledgers, and it is accurate where the preference data lives and silent where it does not. Optimizing a learned reward finds its errors, Goodhart's law in action: our optimal planner drove the fitted reward's unpriced hazard lane, and along the exact regularized frontier, solved per exchange rate by soft value iteration with its Bellman residual checked, the true return rose and then fell while the fitted return rose throughout, the overoptimization curve in miniature. The repair is to change the objective: expected reward minus $\beta$ times the KL divergence to a frozen reference. Its optimum is the reference exponentially tilted by reward, with value $\beta \log Z$, proved in four lines by Gibbs' inequality and verified to machine precision; no penalty gives a point mass, a uniform reference gives the entropy bonus and maximum-entropy RL, the soft backup replaces the hard maximum by a logsumexp, and the whole construction is Bayes' rule with $e^{r/\beta}$ as likelihood. A penalty against a frozen reference shapes the optimum; a trust region against the previous iterate shapes only the path; modern fine-tuning runs both, and the penalty's reverse KL direction is why it sharpens rather than broadens.
 
-**What the experiments show, and what they do not.** Every cell is seeded numpy and prints identically in both framework tabs; reruns reproduce the digits exactly. The bandit-side results are exact computations: the closed form and the numerical optimum agree to floating-point resolution, and the frontier and limit statements are properties of :eqref:`eq_kl_optimum`, not of a sample. The gridworld results are one map, one reference policy, and one seeded draw of preferences: the fitting errors, the hacked plan's route, and the frontier's peak location move with the seed and the map, and the peak height by a tenth or two, while the qualitative claims, an accurate fit where data lives, silence where it does not, a plan exploiting the silence, and a true-return curve that rises and then falls, are what reseeding preserves. The hazard costs and the amount of preference data were chosen so that the failure is visible rather than marginal; gentler versions of the same numbers produce gentler versions of the same story. The compute belongs to readers.
+**What the experiments show, and what they do not.** Every cell is seeded numpy and prints identically in both framework tabs; reruns reproduce the digits exactly. The bandit-side results are exact computations: the closed form and the numerical optimum agree to floating-point resolution, and the frontier and limit statements are properties of :eqref:`eq_kl_optimum`, not of a sample. The gridworld results are one map, one reference policy, and one seeded draw of preferences: the frontier is solved exactly for the fitted reward the seed produced, so what moves under reseeding is the fitted reward itself, and with it the fitting errors, the hacked plan's route, the frontier peak's location, and its height by a tenth or two, while the qualitative claims, an accurate fit where data lives, silence where it does not, a plan exploiting the silence, and a true-return curve that rises and then falls, are what reseeding preserves. The hazard costs and the amount of preference data were chosen so that the failure is visible rather than marginal; gentler versions of the same numbers produce gentler versions of the same story. The compute belongs to readers.
 
 ## Exercises
 
@@ -308,9 +324,11 @@ Rewards can be learned from pairwise comparisons: Bradley-Terry is logistic regr
 1. [conceptual] *Identifiability.* Show $r(x,y) \to r(x,y) + f(x)$ leaves the
    Bradley-Terry likelihood unchanged, and deduce that a per-prompt baseline
    costs nothing.
-1. [extended] *The soft backup.* Implement value iteration with $\max$ replaced
-   by $\beta\,\mathrm{logsumexp}$ on the slippery lake; plot $V_\beta^\star$
-   against $\beta$ and identify the two limits.
+1. [extended] *The soft backup, transplanted.* The measurement cell's
+   `soft_v` solved the regularized Bellman equations on the hazard grid.
+   Port it to the slippery lake with a uniform reference, plot
+   $V_\beta^\star(s_0)$ against $\beta$, identify the two limits, and check
+   the $\beta \to 0$ end against :numref:`sec_valueiter`'s value iteration.
 
 [Discussions](https://d2l.discourse.group/)
 
@@ -338,7 +356,8 @@ differences.
 Fit on 1000 trajectories from a competent reference:
 rms error $0.19$ where the data lives, and the hazard lane,
 truly $-1.5$ to enter, is priced at $\approx 0$: the reference
-knew better, so the data is silent. **Silence reads as zero.**
+knew better, so the data is silent. **Silence reads as zero**,
+a property of the zero-initialized linear fit.
 :::
 
 ::: {.slide title="Reward Hacking, Produced"}
@@ -354,12 +373,16 @@ an *estimated* objective finds the estimate's errors.
 :::
 
 ::: {.slide title="True Return Against KL Budget"}
+Per $\beta$: solve the *regularized* Bellman equations (soft,
+reference-weighted backup), residual printed; every point is an
+exact optimum.
+
 @!regularized-the-measurement-true-return-against-the-kl-budget
 
 . . .
 
 - fitted return rises the whole way; true return rises to
-  $+0.43$ at $\approx 3$ nats, then falls off a cliff
+  $+0.53$ at $\approx 4$ nats, then falls off a cliff
 - the same curve at language-model scale:
   :cite:`Gao.Schulman.Hilton.2023`
 - so control the x axis directly
@@ -394,8 +417,9 @@ $\beta = 2$, $1.84$ at $\beta = 0.2$.
 :::
 
 ::: {.slide title="Four Consequences"}
-- no penalty $\Rightarrow$ a point mass: PPO's entropy
-  collapse was destiny, not accident
+- no penalty $\Rightarrow$ a point-mass *optimum* (ties: the
+  reference over the tied set): PPO's entropy decay had a
+  destination built into the objective
 - $\beta$ interpolates: reference $\leftarrow \beta \to \infty$,
   greedy $\leftarrow \beta \to 0$
 - uniform reference $=$ entropy bonus $=$ max-ent RL;

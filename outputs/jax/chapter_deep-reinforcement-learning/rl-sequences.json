@@ -29,8 +29,19 @@
       "kind": "text",
       "outputs": []
     },
+    "rl-sequences-the-group-is-the-baseline-3": {
+      "code_fingerprint": "sha256:935b17c9d4bd8cec57f0539951f02ccb02c0645bfc0a75331da223fb4102e07d",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "E of the group-centered update is (K-1)/K of the gradient: True\nrescaled by K/(K-1), leave-one-out, it is exact: True\n"
+        }
+      ]
+    },
     "rl-sequences-the-group-is-the-baseline-2": {
-      "code_fingerprint": "sha256:6dcbbe2191474748063e29d307d294b6325b52ac667ee6900b6eeb0ad8d7f496",
+      "code_fingerprint": "sha256:3816797cc90dc3e3b6afe4b96c3b7596a6b1d6901ee4049fec292beaa78c74be",
       "kind": "text",
       "outputs": [
         {
@@ -56,7 +67,7 @@
       ]
     },
     "rl-sequences-reward-hacking-unified": {
-      "code_fingerprint": "sha256:e828add9f7f3a4f5cecf47c38fa8a29e55c1bb2b36939965109d5121701ad8e3",
+      "code_fingerprint": "sha256:d74188c46fd6472a851695bbd50035a4d668e90094d2b212b67ce157952d2c0f",
       "kind": "text",
       "outputs": [
         {

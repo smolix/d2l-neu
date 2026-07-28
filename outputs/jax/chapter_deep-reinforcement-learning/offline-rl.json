@@ -32,23 +32,23 @@
       ]
     },
     "offline-rl-sarsa-one-symbol-the-opposite-rule-3": {
-      "code_fingerprint": "sha256:b74292d1d4859274db72e6f5b865eb52e4d6d3d2de19ac250724b5b492d1cef9",
+      "code_fingerprint": "sha256:5282f52f5b5f4a719d08280ba45d82366bf6d2f97015260c3d3b70ce5c67748d",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "Q-learning: greedy policy succeeds 72.5%; the behavior earns 0.061 while its table claims 0.182\n"
+          "text": "Q-learning: greedy policy succeeds 72.5%; the behavior earns 0.061, and the policy-weighted table value sum_a pi(a|s0) Q(s0, a) claims 0.180\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "     SARSA: greedy policy succeeds 74.1%; the behavior earns 0.070 while its table claims 0.062\n"
+          "text": "     SARSA: greedy policy succeeds 74.1%; the behavior earns 0.070, and the policy-weighted table value sum_a pi(a|s0) Q(s0, a) claims 0.061\n"
         }
       ]
     },
     "offline-rl-distribution-shift-measured": {
-      "code_fingerprint": "sha256:c2e708f3477bda73502e32cc6cb4e76ec6aff64119483d2d8a21f05807402aed",
+      "code_fingerprint": "sha256:450cee8445f60363951280e1df85786b2d1fd0d4bf4fdaeb24ee35f5a6e1b971",
       "kind": "text",
       "outputs": [
         {
@@ -59,17 +59,17 @@
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-1": {
-      "code_fingerprint": "sha256:80741a2b4a3b42bdd1f73f8115d9f4d8c7c98e1dbff938242a78f16f291fa963",
+      "code_fingerprint": "sha256:1ae94867655ebd6c7f21c10c50f6b035453f23781bf46d84ad0138ad1ce79456",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-2": {
-      "code_fingerprint": "sha256:50af700c4f0ec14fe10905a3ac79473b8d48e8cba17517b06e1d19336cfe1c61",
+      "code_fingerprint": "sha256:89d47b4a5be39dbeeaac83399606bf9a831117c0a243ec9bcb4bf40aac49f870",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-3": {
-      "code_fingerprint": "sha256:c40d873759d731d25b2855cb0fcce75740fb87281970087d2ced7561783de155",
+      "code_fingerprint": "sha256:151d9ce99cb790755a38ad38df8f2402d8f5d0508d530c620b288c80927f9c31",
       "kind": "text",
       "outputs": [
         {
@@ -80,12 +80,12 @@
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-4": {
-      "code_fingerprint": "sha256:d868f5b0609926ed27abbda9611dd61f96680a70e8703a6584d1c21810538bc7",
+      "code_fingerprint": "sha256:a433201fb193c5c6fbbd65811fca7267bbb9bc5f26a3dcdadea91d3318958a92",
       "kind": "text",
       "outputs": []
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-5": {
-      "code_fingerprint": "sha256:4336e332a32321bc0a89db0d0afe3fc39c60c9b1c9278d340f72e7c8c49ccb3f",
+      "code_fingerprint": "sha256:8cbee2ecdb1e459890002f3c67535df58f59aa5b492278a7f4423858bae66b81",
       "kind": "text",
       "outputs": [
         {
@@ -96,24 +96,20 @@
       ]
     },
     "offline-rl-the-experiment-with-a-behavior-cloning-bar-6": {
-      "code_fingerprint": "sha256:5da2d46096a4357b3ff94ec5ad9249085834b85ff95d238ce7ab53b73c9f7348",
-      "kind": "mixed",
+      "code_fingerprint": "sha256:ae50e00c4245c6fecc44e3addb6a75597b302fd44c6d69a69acaff2b8311d08e",
+      "kind": "asset",
       "outputs": [
-        {
-          "type": "execute_result",
-          "text": "<matplotlib.legend.Legend at 0x7e5a243d4620>"
-        },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-the-experiment-with-a-behavior-cloning-bar-6-1.svg",
           "bytes": 29617,
-          "sha256": "sha256:4d27555d3d25b952de0ee8961b134cd29b5ef0b95f5683a2b98da3d846ea2032"
+          "sha256": "sha256:71d8bc43a12d4b959bc67cf04eff36af2dd0aad57a1efa70dc9efc0e85f07be2"
         }
       ]
     },
     "offline-rl-kappa-over-root-n": {
-      "code_fingerprint": "sha256:4935888b25348d353aa58353f56f9aedc5dc728385531cd53220ba79cc16829f",
+      "code_fingerprint": "sha256:8406b6eca407136bfe327144f32a2b1a2767f0e98539dceda958b264c3d47fb4",
       "kind": "mixed",
       "outputs": [
         {
@@ -126,12 +122,12 @@
           "mime": "image/svg+xml",
           "asset": "offline-rl/offline-rl-kappa-over-root-n-1.svg",
           "bytes": 101448,
-          "sha256": "sha256:517c148ae0d0656fc99d98fded5fce5dc8fc815ef79c13436bb4439983ea8ecf"
+          "sha256": "sha256:d7c9c3d0df63eb33d0e7f3ae74eef5b892401dace5c5f1861747f2b44f1e6428"
         }
       ]
     },
     "offline-rl-constrain-the-policy-the-values-or-both": {
-      "code_fingerprint": "sha256:f781f5fbfa7fb4e9b328d330165bb1ed1fe3f0497cd496282a559c520118eb9d",
+      "code_fingerprint": "sha256:656ae2d80ba1f2dd2b5130a40272ccb2608a2a10c07ab35635266142d34761c2",
       "kind": "text",
       "outputs": [
         {

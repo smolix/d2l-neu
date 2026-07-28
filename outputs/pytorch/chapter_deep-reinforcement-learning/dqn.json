@@ -32,7 +32,7 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-deadly-triad-1.svg",
           "bytes": 23523,
-          "sha256": "sha256:958558a97c58cfc0ba6cf0ec387262f659d37051b9a1813266daf0ecca8fc468"
+          "sha256": "sha256:544f9e0bd006e225fb6e6a68a2a3d40ea7de9b365cfd3fad872f25e516fabcc2"
         }
       ]
     },
@@ -76,7 +76,7 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-2-1.svg",
           "bytes": 35575,
-          "sha256": "sha256:307318b6c888e8cfa969b3132cef008608ab25a6c6d15ca138ec8663f9bbf365"
+          "sha256": "sha256:2cd14ca5ec68a618737ce60e59fbacd79845654d3ca0876e663a1a885660b66c"
         }
       ]
     },
@@ -113,25 +113,25 @@
       ]
     },
     "dqn-the-ablation-5": {
-      "code_fingerprint": "sha256:5363328ead150f44c4c4fad9fc2edd0111fd68fd1fc5557a200fb2e0a0e5facc",
+      "code_fingerprint": "sha256:fab6d56b5d7bf7c53ce41caee8769ffc9cef524ac00370905e22bba3841a8503",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "discounted ceiling: 99.3; the no-target arm ends at 1e+08, 1e+08, 1e+08\n"
+          "text": "continuing-task ceiling: 100; the no-target arm ends at 1e+08, 1e+08, 1e+08\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-the-ablation-5-1.svg",
           "bytes": 29535,
-          "sha256": "sha256:5c04a6323e8a5dcf1fc6915ed6cc359da515fdd1e8bd1a3f20870d91629e6072"
+          "sha256": "sha256:a97ceb8d838d0acaeebd8db1c2cdd35474e02987b352154c8fd0f25e2be632a5"
         }
       ]
     },
     "dqn-the-max-bias-measured": {
-      "code_fingerprint": "sha256:6d28e77b44673b788c3ec345514c65e3258ff785867e2e1d126c2fa736218b27",
+      "code_fingerprint": "sha256:4c72b60f75b18b45d9f7498bfdbf29cf474104e5403812b18e3e9803a7257232",
       "kind": "text",
       "outputs": [
         {
@@ -142,17 +142,17 @@
       ]
     },
     "dqn-double-dqn-in-three-lines-1": {
-      "code_fingerprint": "sha256:68bc4e6fcd5075cdbd339f83117293891e8cbf8321f2b1a66e9af3373a0d3f12",
+      "code_fingerprint": "sha256:5f96cc20d752943329c4af4ef027d3463c2b868c578642f195f459af920407fb",
       "kind": "text",
       "outputs": []
     },
     "dqn-double-dqn-in-three-lines-2": {
-      "code_fingerprint": "sha256:3fe46168e2b7321e0a168a69f598ba7869209921a574c0cfe6abf5a794b15e2c",
+      "code_fingerprint": "sha256:d02ec1a8bbe5ef565ff74cdd7a7d8a6f2b32710180519c92ead2d6c657e1c80c",
       "kind": "text",
       "outputs": []
     },
     "dqn-double-dqn-in-three-lines-3": {
-      "code_fingerprint": "sha256:b543f7f94d308a08eba2048de8f13193881be2a224fe30a5b58e2395a93b9f05",
+      "code_fingerprint": "sha256:b98f46cb76a0a52d3039ddab5d56a68c90978a158de933c161ac9f4f9a602a87",
       "kind": "mixed",
       "outputs": [
         {
@@ -165,7 +165,7 @@
           "mime": "image/svg+xml",
           "asset": "dqn/dqn-double-dqn-in-three-lines-3-1.svg",
           "bytes": 35449,
-          "sha256": "sha256:7875065b656cb5f9506dacd71e0fd4e761c834a1aea7acd081742c8c703583ae"
+          "sha256": "sha256:104c7d2cf53ee06a5524c0c5793334feec6e515960af80ded9f58974040c7647"
         }
       ]
     }

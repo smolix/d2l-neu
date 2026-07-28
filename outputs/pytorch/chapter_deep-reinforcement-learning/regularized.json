@@ -41,25 +41,25 @@
       ]
     },
     "regularized-the-measurement-true-return-against-the-kl-budget": {
-      "code_fingerprint": "sha256:56ed233d318c319b67be14c4cc24ca62ff7b925e0e406f7b40c1fea64aef9675",
+      "code_fingerprint": "sha256:2e56f47cb840defbd9dee5cff7bb5223ad9906b09cdd58ceaa4f431af13fb104",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true return -0.11 at KL 0, peak +0.43 at KL 3.0, then -1.41 at KL 12.4\n"
+          "text": "largest soft Bellman residual across the sweep: 0.0e+00\ntrue return -0.10 at KL 0, peak +0.53 at KL 3.7, then -1.83 at KL 14.2\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-the-measurement-true-return-against-the-kl-budget-1.svg",
-          "bytes": 28114,
-          "sha256": "sha256:e597a5c0496526a7cb3b318e7754416f589a09ae38c7e3a514bbb86f7bf56ec6"
+          "bytes": 24458,
+          "sha256": "sha256:edca048b27a62f8d64abda2f2164518ba0a6ef0c1b4a622e2d7c7e6a1b3b8720"
         }
       ]
     },
     "regularized-the-proposition-1": {
-      "code_fingerprint": "sha256:480279e239e4e4df2f427755f51b2fc61c3667c6015f21307e2bf6ec8fa15f87",
+      "code_fingerprint": "sha256:78ea64d57b4822bb98ef52b2bff5e8a47d4fef7c37bbcc22eec4c351d514c3df",
       "kind": "text",
       "outputs": [
         {
@@ -70,7 +70,7 @@
       ]
     },
     "regularized-the-proposition-2": {
-      "code_fingerprint": "sha256:f343bef84830a9aba050b4aee856489a550b6929c3b52f3e747b992783b85480",
+      "code_fingerprint": "sha256:ddadedb2e2b6960f4d411e1d5dbcbe6e3024324b78da86ab8d5f7e5e1e6be7b8",
       "kind": "text",
       "outputs": [
         {
@@ -81,7 +81,7 @@
       ]
     },
     "regularized-four-consequences-1": {
-      "code_fingerprint": "sha256:d6b95453114046395c0bf3fd89327f68aa7129247373c515f2f6d225d80aface",
+      "code_fingerprint": "sha256:7c9360aaa00ad7eac3557768747a573a4f37cf6feea14f889d6eeb3df642b5e0",
       "kind": "text",
       "outputs": [
         {
@@ -92,7 +92,7 @@
       ]
     },
     "regularized-four-consequences-2": {
-      "code_fingerprint": "sha256:315fa513ff66e62d85d4423be6ec1bc096ce058260d91c4bd8b292e6660e5205",
+      "code_fingerprint": "sha256:685c162c2b1362461343156f1d797407f30f6ee5fdd1e9249039a4ba3f914909",
       "kind": "text",
       "outputs": [
         {
@@ -103,7 +103,7 @@
       ]
     },
     "regularized-four-consequences-3": {
-      "code_fingerprint": "sha256:29fc5e4bcf56aacf4a419370a7486c78de385cb9097277ec91bc0ac53e8a19a1",
+      "code_fingerprint": "sha256:7f399a7b69dd3de61f71749c37ed4a86d8b803436775c5fd0913556b257c3a5f",
       "kind": "mixed",
       "outputs": [
         {
@@ -116,7 +116,7 @@
           "mime": "image/svg+xml",
           "asset": "regularized/regularized-four-consequences-3-1.svg",
           "bytes": 23413,
-          "sha256": "sha256:97a88fcbb671ad1007fc31d0524359671461fbae670f9f13c994855aedbc81aa"
+          "sha256": "sha256:26406ff07dfd29bf370a1d8896aa1914e2412f71fb6bb526027f03cda206893b"
         }
       ]
     }

@@ -1,7 +1,7 @@
 # Which Data May Drive Which Update
 :label:`sec_offline`
 
-Every algorithm in these two chapters answers one question differently: which data may drive which update? :numref:`sec_ppo` threw each batch away after a few reuse epochs, while the deep Q-network of :numref:`sec_dqn` trained happily on transitions collected by policies that no longer exist. That difference is not a matter of taste. This section states the rule behind it, lets SARSA flip the answer with a single symbol, and then pushes the question to its limit: no interaction at all, one fixed dataset, the *offline* setting. Learning then fails in a specific, measurable way, and on the one environment in either chapter whose true optimum we can compute, we will catch the failure red-handed and repair it with the exploration bonus of :numref:`sec_qlearning`, sign flipped.
+Every algorithm in these two chapters answers one question differently: which data may drive which update? :numref:`sec_ppo` threw each batch away after a few reuse epochs, while the deep Q-network of :numref:`sec_dqn` trained happily on transitions collected by policies that no longer exist. That difference is not a matter of taste. This section states the rule behind it, lets SARSA flip the answer with a single symbol, and then pushes the question to its limit: no interaction at all, one fixed dataset, the *offline* setting. Learning then fails in a specific, measurable way, and on the one environment in either chapter whose true optimum we can compute, we will measure the failure against that optimum and repair it with the count-shrinking radius of :numref:`sec_qlearning`'s exploration bonus, sign flipped.
 
 ```{.python .input #offline-rl-which-data-may-drive-which-update}
 %%tab pytorch
@@ -35,7 +35,7 @@ The boundary between the families is one symbol wide. Take the Q-learning update
 $$\delta_{\textrm{SARSA}} = r + \gamma\, Q(s', a') - Q(s, a),$$
 :eqlabel:`eq_sarsa`
 
-the quintuple $(s, a, r, s', a')$ giving the algorithm its name, SARSA :cite:`Rummery.Niranjan.1994`. In the backup diagrams of :numref:`fig_rl_backups` this is panel (d) with the arc removed: still a single sampled branch, but no maximum at the leaf, only the branch the behavior walked. The substitution changes the estimand. Averaging the target over $a' \sim \pi_e(\cdot \mid s')$ gives the Bellman *expectation* backup for the behavior policy $\pi_e$, so SARSA's fixed point is $Q^{\pi_e}$, the value of the behavior itself, exploration and all, where Q-learning's is $Q^*$ no matter who behaves. SARSA is on-policy: feed it stale transitions and it estimates the value of a policy that no longer runs. Both algorithms fit in one loop that differs in the marked symbol, run online on the slippery lake at a fixed $\epsilon = 0.3$:
+the quintuple $(s, a, r, s', a')$ giving the algorithm its name, SARSA :cite:`Rummery.Niranjan.1994`. In the backup diagrams of :numref:`fig_rl_backups` this is panel (d) with the arc removed: still a single sampled branch, but no maximum at the leaf, only the branch the behavior walked. The substitution changes the estimand. Averaging the target over $a' \sim \pi_e(\cdot \mid s')$ gives the Bellman *expectation* backup for the behavior policy $\pi_e$, so SARSA's fixed point is $Q^{\pi_e}$, the value of the behavior itself, exploration and all, strictly for a *stationary* behavior; ours keeps changing with its own table as it learns, so the claim below is read against the final frozen policy. Q-learning's fixed point is $Q^*$ no matter who behaves. SARSA is on-policy: feed it stale transitions and it estimates the value of a policy that no longer runs. Both algorithms fit in one loop that differs in the marked symbol, run online on the slippery lake at a fixed $\epsilon = 0.3$:
 
 ```{.python .input #offline-rl-sarsa-one-symbol-the-opposite-rule-1}
 %%tab pytorch, jax
@@ -73,7 +73,7 @@ d2l.show_grid(env.unwrapped.desc, np.stack([Q_q.max(-1), Q_sarsa.max(-1)]),
               titles=['Q-learning, epsilon = 0.3', 'SARSA, epsilon = 0.3'])
 ```
 
-At the arrow level the two panels are near twins: the greedy policies disagree only at state $6$, the exact tie of :numref:`sec_qlearning`, whose two candidate commands risk the holes at $5$ and $7$ symmetrically. The value shadings are different objects. Q-learning's table claims $0.182$ at the start, which is $V^*(s_0) = 0.180$ recovered; SARSA's is dimmer everywhere, claiming $0.062$ at the same cell, because every entry has the $\epsilon$ tax priced in: a third of the time this behavior lurches at random, and on ice beside a hole that is expensive. Which table is right? Both, about different questions, and one measurement settles which question each answers:
+At the arrow level the two panels are near twins: the greedy policies disagree only at state $6$, the exact tie of :numref:`sec_qlearning`, whose two candidate commands risk the holes at $5$ and $7$ symmetrically. The value shadings are different objects. Q-learning's table claims $0.182$ at the start, which is $V^*(s_0) = 0.180$ recovered; SARSA's is dimmer everywhere, its best entry at the start reading $0.062$, because every entry has the $\epsilon$ tax priced in: a third of the time this behavior lurches at random, and on ice beside a hole that is expensive. One care in reading it: SARSA's fixed point is $Q^{\pi_e}$, so the value its table owes the start state is not the maximum but the policy-weighted mixture $\sum_a \pi_e(a \mid s_0)\, Q(s_0, a)$, with $\pi_e$ the $\epsilon$-greedy behavior. Which table is right? Both, about different questions, and one measurement settles which question each answers:
 
 ```{.python .input #offline-rl-sarsa-one-symbol-the-opposite-rule-3}
 %%tab pytorch, jax
@@ -83,11 +83,13 @@ for name, Q in [('Q-learning', Q_q), ('SARSA', Q_sarsa)]:
     greedy = d2l.evaluate(env, lambda s, r_: int(Q[s].argmax()), 1000)
     earned = d2l.evaluate(env, lambda s, r_: d2l.epsilon_greedy(
         Q[s], epsilon, r_), 1000, gamma, rng)
+    claim = (1 - epsilon) * Q[0].max() + epsilon * Q[0].mean()
     print(f'{name:>10}: greedy policy succeeds {greedy:.1%}; the behavior '
-          f'earns {earned:.3f} while its table claims {Q[0].max():.3f}')
+          f'earns {earned:.3f}, and the policy-weighted table value '
+          f'sum_a pi(a|s0) Q(s0, a) claims {claim:.3f}')
 ```
 
-Each table matches the answer to its own question. Q-learning's claim of $0.182$ is the value of the *greedy* policy, which the agent never ran; its actual $\epsilon = 0.3$ behavior earns a third of that. SARSA's claim of $0.062$ is within a hundredth of the $0.070$ its behavior really earns. Both greedy policies succeed within a point or two of the optimum's $73.6$ percent from :numref:`sec_valueiter`, so the difference is not quality but *reference*: Q-learning learns about a policy it does not run, the freedom this section now stretches to its breaking point, while SARSA answers "what is this behavior worth", the right question whenever the exploration is part of the deployment.
+Each table matches the answer to its own question. Q-learning's entries value greedy continuation, a policy the agent never ran, so even read as the behavior's value its table claims $0.180$ while the $\epsilon = 0.3$ behavior earns $0.061$, a threefold overstatement. SARSA's policy-weighted claim of $0.061$ lands within a hundredth of the $0.070$ its behavior really earns. Both greedy policies succeed within a point or two of the optimum's $73.6$ percent from :numref:`sec_valueiter`, so the difference is not quality but *reference*: Q-learning learns about a policy it does not run, the freedom this section now stretches to its breaking point, while SARSA answers "what is this behavior worth", the right question whenever the exploration is part of the deployment.
 
 ### Where PPO's allowance comes from
 
@@ -123,7 +125,7 @@ Five hundred aimless episodes cover the lake broadly: every one of the $44$ live
 
 Off-policy methods look like the obvious fit, since their updates accept data from any policy. Q-learning on a fixed buffer is a well-defined algorithm: sweep over the dataset, apply the usual update, repeat until the values settle. Before running it, notice what we are asking of it. Doing better than the behavior policy means answering counterfactual queries, questions about actions the dataset never shows, and the only material for answering them is generalization from the actions it does show :cite:`Levine.Kumar.Tucker.ea.2020`. Worse, the learned policy will prefer exactly the actions whose values its estimates have inflated, and those are disproportionately the actions the dataset supports least, so the value estimates get consulted precisely where they are least trained. This mismatch between the actions in the dataset and the actions the learned policy asks about is called distribution shift, and it is the standing condition of the offline setting. :numref:`fig_rl_distribution_shift` measures it on a dataset like ours: the learned policy's queries include pairs deep in the thin end of the support, where the fitted values are worst.
 
-![Distribution shift, measured on its own dataset: 500 uniformly random episodes on the slippery lake, 3697 transitions. Left: the 44 state-action pairs the agent can actually choose from, sorted by how often the dataset tried them, from 428 times down to 2 with a median of 34; the marks show where the learned greedy policy asks for values, including pairs deep in the thin tail with errors near 0.3. Right: each fitted value's error against its support, spanning 0.001 to 0.374 with median 0.087, and the penalty $\kappa/\sqrt{n}$ at the fitted $\kappa = 0.53$ drawn through the cloud, numerically the mirror of the exploration bonus $\kappa = 0.6$ of :numref:`fig_rl_exploration`. Read the fitted curve as an envelope, not a law: the cloud decays more slowly than $1/\sqrt{n}$, and it floors near 0.10 at the best-supported pairs, the maximization bias of :numref:`sec_dqn`, here with nothing to correct it.](../img/mdl-rl-distribution-shift.svg)
+![Distribution shift, measured on its own dataset: 500 uniformly random episodes on the slippery lake, 3697 transitions. Left: the 44 state-action pairs the agent can actually choose from, sorted by how often the dataset tried them, from 428 times down to 2 with a median of 34; the marks show where the learned greedy policy asks for values, including pairs deep in the thin tail with errors near 0.3. Right: each fitted value's error against its support, spanning 0.001 to 0.374 with median 0.087, and the fitted count penalty $\kappa/\sqrt{n}$ at $\kappa = 0.53$ drawn through the cloud. Read the fitted curve as a descriptive envelope, not a law: many points lie on either side, the cloud decays more slowly than $1/\sqrt{n}$, and it floors near 0.10 at the best-supported pairs, a residue fed by the maximization bias of :numref:`sec_dqn`, the constant step size, and incomplete convergence, with nothing here to correct it.](../img/mdl-rl-distribution-shift.svg)
 :label:`fig_rl_distribution_shift`
 
 ### Why the self-correction is gone
@@ -158,7 +160,7 @@ def offline_q(batch, num_sweeps, alpha, gamma, kappa=0.0,  #@save
     return np.maximum(Q - penalty, 0.0)
 ```
 
-The first competitor comes from :numref:`sec_imitation`: behavior cloning, the standing baseline of offline learning, the first thing any reviewer asks an offline result to beat. On a table the cross-entropy fit of that section converges to the dataset's empirical action distribution, so the clone is six lines of counting; it acts by sampling because the policy it clones is itself random, and it proposes to reproduce the behavior, so its honest promise is the dataset's own average return.
+The first competitor comes from :numref:`sec_imitation`: behavior cloning, the standing baseline of offline learning, the first thing any reviewer asks an offline result to beat. On a table the cross-entropy fit of that section converges to the dataset's empirical action distribution, so the clone is six lines of counting; it acts by sampling because the policy it clones is itself random, and it proposes to reproduce the behavior, so its promise is the dataset's own average return.
 
 ```{.python .input #offline-rl-the-experiment-with-a-behavior-cloning-bar-2}
 %%tab pytorch, jax
@@ -235,18 +237,18 @@ for i, side in enumerate(['predicted value at the start', 'actual return']):
 d2l.plt.axhline(V_star[0], ls='--', color='gray')
 d2l.plt.xticks(x + w / 2, names)
 d2l.plt.ylabel('discounted value')
-d2l.plt.legend()
+d2l.plt.legend();
 ```
 
 Read the naive bars first, medians with the min-to-max whiskers of the printout. Across the fifteen datasets the naive method predicts a start-state value between $0.185$ and $0.388$, median $0.274$, against a true optimum of $0.180$ drawn as the dashed line: on every single dataset the prediction is above what *any* policy can achieve in this environment, which is overestimation caught red-handed, no baseline policy needed for the comparison. What its greedy policy actually earns is $0.097$ in the median. The algorithm promises close to three times what it delivers, and in a real offline deployment the promise is the only number you would see before acting on the policy. Comparing what a method predicts against what it earns is the standard diagnostic of the field, and our factor of two or three is the gentle, tabular edition: run the same comparison with deep networks on continuous control and the predicted values run orders of magnitude above reality :cite:`Levine.Kumar.Tucker.ea.2020,Fujimoto.Meger.Precup.2019`.
 
-The clone bars answer the reviewer's question. Cloning promises a median of $0.007$ and delivers $0.008$: perfectly honest, and nearly worthless, because the behavior it faithfully reproduces is a random walk. Naive offline Q-learning, for all its lying, delivers a policy worth an order of magnitude more than the behavior that collected the data, stitched together from the good halves of many bad episodes: the case for offline reinforcement learning in one number. The field's standard of evidence is exactly this pair of comparisons, against the clone and against the promise, and the naive method wins the first and fails the second.
+The clone bars answer the reviewer's question. Cloning promises a median of $0.007$ and delivers $0.008$: perfectly calibrated, and nearly worthless, because the behavior it faithfully reproduces is a random walk. Naive offline Q-learning, for all its lying, delivers a policy worth an order of magnitude more than the behavior that collected the data, stitched together from the good halves of many bad episodes: the case for offline reinforcement learning in one number. The field's standard of evidence is exactly this pair of comparisons, against the clone and against the promise, and the naive method wins the first and fails the second.
 
 ## Pessimism
 
 ### Kappa over root n
 
-The repair follows from the diagnosis. The inflated entries are the poorly estimated ones, and poorly estimated means rarely observed, so distrust value in proportion to how little data supports it: subtract a penalty $\kappa / \sqrt{n(s, a)}$, with $n(s, a)$ the dataset's visit count, both inside the bootstrap max and from the final values, which is exactly what `offline_q` does for $\kappa > 0$. The $1/\sqrt{n}$ shape is the rate at which the noise of an $n$-sample average shrinks, and it is not new: it is the UCB bonus of :numref:`sec_qlearning`, reused as a debit. Before trusting the shape, measure it. Each of our fifteen naive runs left behind a table of errors against $Q^*$ and a table of counts; pooled, they form a cloud, one point per pair per dataset:
+The repair follows from the diagnosis. The inflated entries are the poorly estimated ones, and poorly estimated means rarely observed, so distrust value in proportion to how little data supports it: subtract a penalty $\kappa / \sqrt{n(s, a)}$, with $n(s, a)$ the dataset's visit count, both inside the bootstrap max and from the final values, which is exactly what `offline_q` does for $\kappa > 0$. The $1/\sqrt{n}$ shape is the rate at which the noise of an $n$-sample average shrinks, and it is not new: it is the count-shrinking shape of :numref:`sec_qlearning`'s UCB confidence radius $\kappa \sqrt{\log t / n}$, there with the bandit's $\log t$ in the numerator, reused as a debit. Call the construction what it is, a count-based pessimistic shrinkage heuristic motivated by that rate, not a confidence interval with coverage guarantees. Before trusting the shape, measure it. Each of our fifteen naive runs left behind a table of errors against $Q^*$ and a table of counts; pooled, they form a cloud, one point per pair per dataset:
 
 ```{.python .input #offline-rl-kappa-over-root-n}
 %%tab pytorch, jax
@@ -270,11 +272,13 @@ d2l.plot([n, grid], [e, kappa_fit / np.sqrt(grid)],
          xscale='log', fmts=('o', '-'), figsize=(5, 3.5))
 ```
 
-The penalty is a usable envelope, not a law. The scale that centers $\kappa/\sqrt{n}$ on the cloud is $0.57$, an echo of the $\kappa = 0.6$ that :numref:`sec_qlearning` tuned for UCB on a different problem entirely; the same echo appears in :numref:`fig_rl_distribution_shift`'s dataset at $0.53$. But the cloud is no clean $1/\sqrt{n}$ line: the errors run from $0.000$ to $0.458$ with median $0.094$, and past a hundred visits their median refuses to fall below $0.077$, because the maximization bias is a bias, not noise, and more of the same data does not average it away. The first printed line also hides a tally: of the $660$ pair-dataset combinations, one was never tried at all, the $n = 0$ case handled honestly above. Our working $\kappa = 0.1$ is deliberately a light touch, a fifth of what the cloud suggests; exercise 4 sweeps the dial into both failure directions.
+The penalty is a usable envelope, not a law, and the fit is descriptive: the scale that centers $\kappa/\sqrt{n}$ on this pooled cloud is $0.57$, a number that summarizes these fifteen datasets and carries no guarantee. The cloud is no clean $1/\sqrt{n}$ line either: the errors run from $0.000$ to $0.458$ with median $0.094$, and past a hundred visits their median refuses to fall below $0.077$, a floor fed by the maximization bias, the constant step size $\alpha$, and the sweeps' incomplete convergence together; whatever part is bias, more of the same data does not average away. The first printed line also hides a tally: of the $660$ pair-dataset combinations, one was never tried at all, the $n = 0$ case handled explicitly above. Our working $\kappa = 0.1$ is deliberately a light touch, a fifth of what the cloud suggests; exercise 4 sweeps the dial into both failure directions.
+
+Keep four distinct failures apart, because the toy compresses them: *support failure*, where an action or region is absent from the data outright, the $n = 0$ pairs; *statistical uncertainty*, where counts are finite, the part $1/\sqrt{n}$ models; *bootstrapped extrapolation*, where function approximation propagates inflated values into other states' targets, mostly invisible in a table and first-order at deep scale; and *model selection*, where choosing $\kappa$ itself needs interaction the setting forbids, the open problem this section ends on.
 
 ### The mirror: optimism online, pessimism offline
 
-**The sign, completed.** :numref:`sec_qlearning` promised that its exploration bonus would return with the sign flipped, and here it is: UCB *adds* $\kappa/\sqrt{n}$ to the value of an action it has too little data to judge, and offline pessimism *subtracts* the same quantity for the same reason. The same $\kappa/\sqrt{n}$, opposite sign. The asymmetry deserves one plain statement. Online, optimistic errors self-correct through action, so algorithms can afford optimism and even exploit it to explore. Offline, optimistic errors are never tested, so the safe direction of error is downward: what you cannot verify, you discount. One quantity, two signs, and the sign is set by whether the loop is open.
+**The sign, completed.** :numref:`sec_qlearning` promised that its count-shrinking radius would return with the sign flipped, and here it is: UCB *adds* its confidence radius $\kappa \sqrt{\log t / n}$ to the value of an action it has too little data to judge, and offline pessimism *subtracts* $\kappa/\sqrt{n}$ for the same reason. The same count-shrinking shape, opposite sign; the mirror is conceptual, optimism grants a radius of doubt and pessimism deducts one, the two radii cousins rather than one statistical quantity: the online bonus carries a $\log t$ that lets an idle arm creep back into consideration, machinery with no offline counterpart because nothing offline ever idles, and each side tunes its own scale. The asymmetry deserves one plain statement. Online, optimistic errors self-correct through action, so algorithms can afford optimism and even exploit it to explore. Offline, optimistic errors are never tested, so the safe direction of error is downward: what you cannot verify, you discount. One quantity, two signs, and the sign is set by whether the loop is open.
 
 ### Predicted against earned
 
@@ -314,13 +318,13 @@ There is also a way out of the bootstrapping business altogether. The max in the
 
 ### Offline model selection
 
-One honesty remains. Every judgment this section passed, the actual-return bars above all, came from rolling policies out in the simulator, and a real offline deployment cannot do that: choosing $\kappa$, the number of sweeps, or between two trained policies is itself a counterfactual question, and the estimators available for it, importance-weighted values of the logged episodes and their descendants, inherit exactly the variance explosion that :numref:`sec_ppo` met when policies drift apart :cite:`Levine.Kumar.Tucker.ea.2020`. Offline model selection is an open problem; our clean bars are a luxury of the laboratory, and exercise 6 asks what survives without it.
+One caveat remains. Every judgment this section passed, the actual-return bars above all, came from rolling policies out in the simulator, and a real offline deployment cannot do that: choosing $\kappa$, the number of sweeps, or between two trained policies is itself a counterfactual question, and the estimators available for it, importance-weighted values of the logged episodes and their descendants, inherit exactly the variance explosion that :numref:`sec_ppo` met when policies drift apart :cite:`Levine.Kumar.Tucker.ea.2020`. Offline model selection is an open problem; our clean bars are a luxury of the laboratory, and exercise 6 asks what survives without it.
 
 ## Summary
 
-Which data may drive which update is a property of what the update estimates. On-policy updates estimate expectations under the current policy and spoil when the data comes from anyone else; importance ratios extend their reach exactly as far as their variance allows. Off-policy updates like Q-learning's estimate the Bellman optimality backup, which depends on the environment and not on the data collector, so replay across stale policies is legitimate; SARSA sits one symbol away :eqref:`eq_sarsa` and estimates the behavior's value instead, exploration tax included, as its dimmer table testified. Offline reinforcement learning is the off-policy license pushed to a fixed dataset, where the self-correction of online learning is severed: the max hunts the upward errors, nothing audits them, and on fifteen datasets the naive method promised more than the theoretical optimum on every one while delivering about a third of its promise. Behavior cloning promised honestly and delivered almost nothing; subtracting the exploration bonus $\kappa/\sqrt{n}$ with its sign flipped restored roughly honest promises at unchanged policy quality. Beyond tables the same instincts become constraints on the policy, penalties on the values, or both, or drop the bootstrap for sequence modeling; and selecting among offline-trained models without a simulator remains the setting's open sore.
+Which data may drive which update is a property of what the update estimates. On-policy updates estimate expectations under the current policy and spoil when the data comes from anyone else; importance ratios extend their reach exactly as far as their variance allows. Off-policy updates like Q-learning's estimate the Bellman optimality backup, which depends on the environment and not on the data collector, so replay across stale policies is legitimate; SARSA sits one symbol away :eqref:`eq_sarsa` and estimates the behavior's value instead, exploration tax included, as its dimmer table testified once read policy-weighted. Offline reinforcement learning is the off-policy license pushed to a fixed dataset, where the self-correction of online learning is severed: the max hunts the upward errors, nothing audits them, and on fifteen datasets the naive method promised more than the theoretical optimum on every one while delivering about a third of its promise. Behavior cloning's promise was calibrated and tiny; subtracting a count-shrinking penalty $\kappa/\sqrt{n}$, :numref:`sec_qlearning`'s confidence-radius idea with its sign flipped and its $\log t$ dropped, a count-based shrinkage heuristic rather than a confidence bound, restored roughly calibrated promises while leaving the policy no better. Beyond tables the same instincts become constraints on the policy, penalties on the values, or both, or drop the bootstrap for sequence modeling; and selecting among offline-trained models without a simulator remains the setting's open sore.
 
-**What the experiments show, and what they do not.** Every cell is seeded numpy, shared verbatim between the two framework tabs, so both print identical digits and reruns reproduce them exactly. The SARSA comparison is one seed of each algorithm at one exploration rate on one map: the value gap between the two tables, $0.062$ against $0.182$ at the start, is the robust content, while the single-state policy flip is a tie broken differently and would not survive reseeding. The offline results are medians over fifteen datasets with spreads printed beside them, and the spreads are wide, a factor of two between datasets being routine; the claims that survive reseeding are the ordered ones, every naive promise above the optimum, pessimistic promises honest on all but a couple of datasets, the clone honest and far below both. The offline arms' policy evaluations are $500$ episodes each, so individual actual-return entries carry noise of a few thousandths. And the grading against $V^*$ and $Q^*$ is a laboratory privilege: nothing in the algorithms used the model, but every judgment of them did, which is the one commodity a real offline deployment lacks. The compute belongs to readers.
+**What the experiments show, and what they do not.** Every cell is seeded numpy, shared verbatim between the two framework tabs, so both print identical digits and reruns reproduce them exactly. The SARSA comparison is one seed of each algorithm at one exploration rate on one map: the value gap between the two tables, $0.062$ against $0.182$ at the start entries, is the robust content, while the single-state policy flip is a tie broken differently and would not survive reseeding. The offline results are medians over fifteen datasets with spreads printed beside them, and the spreads are wide, a factor of two between datasets being routine; the claims that survive reseeding are the ordered ones, every naive promise above the optimum, pessimistic promises calibrated on all but a couple of datasets, the clone calibrated and far below both. The offline arms' policy evaluations are $500$ episodes each, so individual actual-return entries carry noise of a few thousandths. And the grading against $V^*$ and $Q^*$ is a laboratory privilege: nothing in the algorithms used the model, but every judgment of them did, which is the one commodity a real offline deployment lacks. The compute belongs to readers.
 
 ## Exercises
 
@@ -335,8 +339,8 @@ Which data may drive which update is a property of what the update estimates. On
    episodes each: from a uniform random policy, from a near-optimal policy with
    $\epsilon = 0.1$, and from a fifty-fifty mixture. Run naive offline
    Q-learning on each and report predicted value and actual return. Which
-   dataset yields the best policy, which the most honest prediction, and why is
-   the expert-only dataset not the winner?
+   dataset yields the best policy, which the best-calibrated prediction, and
+   why is the expert-only dataset not the winner?
 1. [short-code] *How much pessimism.* Sweep $\kappa$ over
    $\{0.02, 0.1, 0.3, 1.0\}$. Describe both failure directions: what happens
    when pessimism is too weak, and what happens when it is too strong? Plot
@@ -364,7 +368,7 @@ Which data may drive which update is a property of what the update estimates. On
 [Dive into Deep Learning · §15.5]{.kicker}
 
 Which data may drive which update<br>
-**one symbol flips the rule · offline severs the loop · overestimation caught red-handed · the bonus becomes a penalty**
+**one symbol flips the rule · offline severs the loop · overestimation measured against the optimum · the bonus becomes a penalty**
 :::
 :::
 
@@ -399,8 +403,10 @@ $Q^{\pi_e}$, the behavior's value, exploration and all. On-policy.
 
 - Q-learning claims $0.182$ at the start: that is $V^* = 0.180$, the
   value of a policy it never ran. Its own behavior earns a third of it.
-- SARSA claims $0.062$; its behavior earns $0.070$. The $\epsilon$ tax
-  is priced into every entry.
+- SARSA's table, read policy-weighted as
+  $\sum_a \pi_e(a \mid s_0)\, Q(s_0, a)$, claims $0.061$ against the
+  $0.070$ its behavior earns. The $\epsilon$ tax is priced into every
+  entry.
 - Same arrows, within noise; different *reference*.
 :::
 
@@ -422,9 +428,9 @@ for its soft spots.
 
 . . .
 
-The greedy policy asks deep in the thin tail. The error cloud has the
-penalty's shape, an envelope with a bias floor: $\kappa/\sqrt{n}$ at
-$\kappa \approx 0.5$, against UCB's tuned $0.6$.
+The greedy policy asks deep in the thin tail. The fitted count
+penalty $\kappa/\sqrt{n}$ is a descriptive envelope through the
+error cloud, with a floor the counts cannot explain, not a law.
 :::
 
 ::: {.slide title="Three Arms, Fifteen Datasets"}
@@ -438,26 +444,27 @@ each judged on **promise** and **delivery**.
 ::: {.slide title="Caught Red-Handed, Then Repaired"}
 - Naive: median promise $0.274$, above the optimum $0.180$ on **all
   fifteen** datasets; median delivery $0.097$. Close to a threefold lie.
-- Pessimistic: median promise $0.121$; honest on all but two datasets.
-  Delivery unchanged (better on only 4 of 15).
-- Clone: promises $0.007$, delivers $0.008$. Honest, and worthless.
+- Pessimistic: median promise $0.121$; calibrated on all but two
+  datasets. The policy is no better (ahead on only 4 of 15).
+- Clone: promises $0.007$, delivers $0.008$. Calibrated, and worthless.
 
 . . .
 
-Pessimism buys a **trustworthy promise**, not a better policy; the
-naive method beats the clone tenfold: the dataset knew more than its
-collector used.
+Pessimism buys a **roughly trustworthy promise**, not a better policy;
+the naive method beats the clone tenfold: the dataset knew more than
+its collector used.
 :::
 
 ::: {.slide title="The Sign, Completed"}
 Online, an optimistic error summons the data that convicts it.
 Offline, it is never tested: the safe direction of error is down.
 
-$$\textrm{UCB: } \hat{\mu} + \kappa/\sqrt{n} \qquad
+$$\textrm{UCB: } \hat{\mu} + \kappa\sqrt{\log t / n} \qquad
 \textrm{offline: } \hat{Q} - \kappa/\sqrt{n}$$
 
-**One quantity, two signs; the sign is set by whether the loop is
-open.**
+**One count-shrinking radius, two signs; the sign is set by
+whether the loop is open.** The $\log t$ stays online: it revives
+idle arms, and offline nothing idles.
 :::
 
 ::: {.slide title="Beyond the Gridworld"}
@@ -477,8 +484,9 @@ open.**
 - Offline = off-policy at its limit, minus self-correction.
 - Naive promise beat the computable optimum on 15 of 15 datasets;
   delivery was a third of promise.
-- The clone is the mandatory baseline: honest and weak here.
-- $\kappa/\sqrt{n}$: exploration bonus online, pessimism penalty
-  offline, the same quantity with the sign flipped.
+- The clone is the mandatory baseline: calibrated and weak here.
+- a count-shrinking radius: added online (UCB, with its $\log t$),
+  subtracted offline as $\kappa/\sqrt{n}$; the sign is set by
+  whether the loop is open.
 - At scale: constrain policy or values, or model sequences instead.
 :::

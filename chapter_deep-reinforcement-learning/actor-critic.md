@@ -82,7 +82,7 @@ What kind of object is the critic's own update? :numref:`sec_valueiter` built *p
 
 ### The trade, named
 
-Both estimates of the advantage are honest attempts at the same number, and they fail in opposite directions. The Monte Carlo weight is unbiased and noisy: its variance collects a contribution from every remaining step of the episode, so it grows with the horizon, and on CartPole the horizon grows as the policy improves. The TD error is quiet and wrong: its noise is one reward and one transition, but it leans wherever the critic leans, and early in training the critic leans everywhere. This is the same bargain Q-learning struck (:eqref:`eq_td_error`), now on the policy side, and :numref:`fig_rl_td_mc_spectrum` draws the whole family it generates: between one step of reality and the full tail sit targets of every depth, bias falling and variance rising as the estimate trusts sampling for longer before handing over to the critic. The right panel of the figure measures the family on a synthetic chain where the truth is computable; the last part of this section runs the same measurement where it is not, on CartPole itself.
+Both estimates of the advantage aim at the same number, and they fail in opposite directions. The Monte Carlo weight is unbiased and noisy: its variance collects a contribution from every remaining step of the episode, so it grows with the horizon, and on CartPole the horizon grows as the policy improves. The TD error is quiet and wrong: its noise is one reward and one transition, but it leans wherever the critic leans, and early in training the critic leans everywhere. This is the same bargain Q-learning struck (:eqref:`eq_td_error`), now on the policy side, and :numref:`fig_rl_td_mc_spectrum` draws the whole family it generates: between one step of reality and the full tail sit targets of every depth, bias falling and variance rising as the estimate trusts sampling for longer before handing over to the critic. The right panel of the figure measures the family on a synthetic chain where the truth is computable, built so that the critic's error tapers toward termination, the shape value learning tends to produce; the interior optimum is a property of that construction, not a theorem, since for an arbitrary critic and dependent trajectories the bias need not fall monotonically with depth nor the variance rise. The last part of this section runs the same measurement where the truth is not computable, on CartPole itself.
 
 ![The credit-assignment dial. Left: backup diagrams of depth one, two, $n$, and to termination; the green node is where the estimate stops sampling and starts trusting the critic, and the strip below shows the $\lambda$-return's weights $(1-\lambda)\lambda^{n-1}$ over the $n$-step targets at $\lambda = 0.9$. Right: the family measured on a synthetic ten-state chain, deterministic step right with only the final transition paying $1$, per-step reward noise of standard deviation $0.15$, and $\gamma = 0.97$, under a critic whose error tapers toward termination as $0.5\,(1 - s/9)^2$, the shape value learning actually produces; over $20{,}000$ rollouts of the depth-$n$ target from the start state, bias falls with depth, variance grows, and the mean squared error is smallest at $n = 4$. A critic equally wrong everywhere would make the error monotone in $n$; the interior optimum exists because deeper targets bootstrap from better-known states.](../img/mdl-rl-td-mc-spectrum.svg)
 :label:`fig_rl_td_mc_spectrum`
@@ -103,11 +103,11 @@ The critic's update is the sampled policy evaluation of the previous section, a 
 
 ### Two timescales
 
-Two learning rates appear because the two learners have different jobs. The critic chases a moving target twice over: every actor update changes the policy, which changes the values the critic is trying to predict, and every critic update moves the bootstrapped targets themselves. The actor then judges its actions with whatever the critic currently believes. If the actor moves much faster than the critic, the advantages are judged against stale values and the updates degrade. The practical rule is to let the critic learn faster than the actor, either through a larger learning rate or through more update steps, and our implementation uses the second form.
+Two learning rates appear because the two learners have different jobs. The critic chases a moving target twice over: every actor update changes the policy, which changes the values the critic is trying to predict, and every critic update moves the bootstrapped targets themselves. The actor then judges its actions with whatever the critic currently believes. If the actor moves much faster than the critic, the advantages are judged against stale values and the updates degrade. The practical rule of thumb, let the critic learn faster than the actor, is a *two-timescale* intuition; the theory that makes it precise assumes separated, decaying step-size schedules under function-approximation and noise conditions our setup does not meet. Our implementation keeps one nominal learning rate for both heads and buys the separation with update count instead, `critic_steps` regression passes per batch, one heuristic realization of the intuition rather than the theorem's schedule.
 
-### A2C by name
+### A batched actor-critic, and A2C by name
 
-What we implement below is not the fully online :eqref:`eq_actor_critic`, and the difference deserves its name. The code collects a batch of eight episodes, gives the critic its `critic_steps` regression passes on the batch's one-step targets, and then takes a single actor step weighted by the TD errors of the freshly updated critic: this batched, synchronous form is the *advantage actor-critic*, A2C, the workhorse descendant of the asynchronous original :cite:`Mnih.Badia.Mirza.ea.2016`. The fully online form, one update per transition with no batch at all, is exercise 5, and what goes wrong there is a preview of :numref:`sec_dqn`.
+What we implement below is not the fully online :eqref:`eq_actor_critic`, and the difference deserves a careful name. The code collects a batch of eight episodes from one environment, gives the critic its `critic_steps` regression passes on the batch's one-step targets, and then takes a single actor step weighted by the TD errors of the freshly updated critic: call it a *batched on-policy actor-critic*. Its production relative is A2C, the advantage actor-critic, which conventionally denotes the synchronous multi-actor form, many environments stepped in lockstep with $n$-step rollouts, itself the synchronous descendant of an asynchronous original :cite:`Mnih.Badia.Mirza.ea.2016`; our single-environment, whole-episode loop keeps A2C's estimator and drops its vectorization. The fully online form, one update per transition with no batch at all, is exercise 5, and what goes wrong there is a preview of :numref:`sec_dqn`.
 
 Two pieces of local machinery first. The actor's step is `d2l.policy_step` with one addition that the bootstrapped weight will shortly justify: the gradient norm is capped at the customary $0.5$, and the function reports the norm it measured *before* the cap, because that number is about to carry a lesson.
 
@@ -229,7 +229,7 @@ def train_reinforce(seed, ac, num_updates=num_updates):
         yield float(batch.episode_returns().mean()), gnorm
 ```
 
-Actor-critic is the same loop with the tail replaced, and the diff is four lines. The critic regresses on the bootstrapped one-step target instead of the reward-to-go, and takes its `critic_steps` passes *first*, so that the actor judges its actions with the freshest available critic; each pass recomputes its target from the newest critic, so the regression tracks the moving fixed point it is chasing rather than a snapshot of it. The weight handed to the actor is the TD error of :eqref:`eq_td_error_v`, normalized per batch exactly as before. Nothing else changes.
+Actor-critic is the same loop with the tail replaced, and the diff is four lines. The critic regresses on the bootstrapped one-step target instead of the reward-to-go, and takes its `critic_steps` passes *first*, so that the actor judges its actions with the freshest available critic. Name what those twenty passes are: each recomputes its target from the newest critic, so the regression surface moves under the regression, an aggressive fitted-TD teaching loop tracking a moving fixed point, not fixed-target regression; computing the targets once and fitting them would be the fixed-target alternative, and the choice between the two is exactly the choice :numref:`sec_dqn`'s target network will make the other way. The weight handed to the actor is the TD error of :eqref:`eq_td_error_v`, normalized per batch exactly as before. Nothing else changes.
 
 ```{.python .input #actor-critic-a2c-by-name-5}
 %%tab pytorch, jax
@@ -269,7 +269,7 @@ d2l.plot_curves({name: r[:, :, 0] for name, r in runs.items()},
                 reference=500)
 ```
 
-The two curves are the trade of :numref:`fig_rl_td_mc_spectrum` drawn by the algorithms themselves. Actor-critic starts slower: for its first stretch the critic is still wrong, the TD errors point in poorly chosen directions, and the biased updates buy little, while the Monte Carlo weight is correct on average from the first batch. Then the curves stop differing in level, both reach the neighborhood of the ceiling, and start differing in *texture*. A batch mean of $500$ means every one of the batch's eight episodes ran the full 500 steps, a perfect batch; $500$ is CartPole's structural ceiling, so it can be tied but never beaten, and the honest comparison is not who is higher but who, having arrived, stays. The claim is checkable in four lines:
+The two curves are the trade of :numref:`fig_rl_td_mc_spectrum` drawn by the algorithms themselves. Actor-critic starts slower: for its first stretch the critic is still wrong, the TD errors point in poorly chosen directions, and the biased updates buy little, while the Monte Carlo weight is correct on average from the first batch. Then the curves stop differing in level, both reach the neighborhood of the ceiling, and start differing in *texture*. A batch mean of $500$ means every one of the batch's eight episodes ran the full 500 steps, a perfect batch; $500$ is CartPole's structural ceiling, so it can be tied but never beaten, and the informative comparison is not who is higher but who, having arrived, stays. The claim is checkable in four lines:
 
 ```{.python .input #actor-critic-a2c-by-name-7}
 %%tab pytorch, jax
@@ -286,7 +286,7 @@ for name, r in runs.items():
           f'{[longest_streak(row == 500) for row in r[:, :, 0]]}')
 ```
 
-What separates the methods here is not the height of the plateau but whether a run ever comes to rest on it: in every tab the longest stretch of consecutive perfect batches belongs to the bootstrapped side. Not a higher plateau, a stiller one. The Monte Carlo curve keeps dipping and recovering to the end, because its weight still carries the sampled noise of every remaining coin flip of the trajectory, and a run at the ceiling is only ever one noisy batch away from a stumble; the bootstrapped weight's noise left with the tail. The early cost is the bias while the critic trains, the late payoff is the stillness, and both halves of the bargain are visible in one figure.
+What separates the methods here is not the height of the plateau but whether a run ever comes to rest on it: in every tab the longest stretch of consecutive perfect batches belongs to the bootstrapped side. Not a higher plateau, a stiller one. Read the streak as a stability *visualization* of these particular runs, not a standard estimator metric: its length entangles policy quality, batch size and environment stochasticity with the estimator's variance. The mechanism it visualizes is real, though: the Monte Carlo curve keeps dipping and recovering to the end, because its weight still carries the sampled noise of every remaining coin flip of the trajectory, and a run at the ceiling is only ever one noisy batch away from a stumble; the bootstrapped weight's noise left with the tail. The early cost is the bias while the critic trains, the late payoff is the stillness, and both halves of the bargain are visible in one figure.
 
 The training functions also brought back a second number, and it justifies the clip. Both methods scale their weights to unit variance before the update, so it is tempting to assume both take steps of the same size:
 
@@ -298,11 +298,11 @@ for name, r in runs.items():
           f'clip binds on {(g > grad_clip).mean():4.0%} of updates')
 ```
 
-Measured on these runs the actor-critic gradients are an order of magnitude larger, and the clip binds on about a third of the actor-critic updates and on none of the Monte Carlo ones. The reason is the baseline argument of :numref:`sec_baselines` read backwards: whatever part of the weight depends on the state alone contributes nothing in expectation, and the Monte Carlo weight spends much of its variance there, while $\delta_t$ is almost all action-dependent signal. A better advantage estimate is also a bigger step at the same learning rate, and how to take big steps safely is what :numref:`sec_ppo` is about.
+Measured on these runs the actor-critic gradients are an order of magnitude larger, and the clip binds on about a third of the actor-critic updates and on none of the Monte Carlo ones. The reason is the baseline argument of :numref:`sec_baselines` read backwards: whatever part of the weight depends on the state alone contributes nothing in expectation, and the Monte Carlo weight spends much of its variance there, while $\delta_t$ is almost all action-dependent. That is a statement about where the weight's variance lives, a descriptive diagnostic; a larger, or smaller, gradient norm is not by itself evidence of a better signal. What it does establish is practical: a better advantage estimate is also a bigger step at the same learning rate, and how to take big steps safely is what :numref:`sec_ppo` is about.
 
 ### Why the critic's moving target is survivable here and fatal later
 
-The two-timescale paragraph promised trouble, the critic chasing a doubly moving target, and the runs above show none. The reason is freshness. Every batch is drawn from the current policy at exactly the states the current policy visits, so wherever the critic is wrong in a way that matters, the very next batch delivers the transitions that expose it; this is :numref:`sec_qlearning`'s self-correcting loop, running on $V$ instead of $Q$. The same loop also lets us watch the trade itself in vivo. Rerun `train_ac` once more, and before each actor step compute both candidate weights for the same batch, the TD error and the Monte Carlo advantage: how much the two agree, and how much each varies.
+The two-timescale paragraph promised trouble, the critic chasing a doubly moving target, and the runs above show none. The reason is freshness, and the claim should be made at its true size. Every batch is drawn from the current policy at exactly the states the current policy visits, so wherever the critic is wrong in a way that matters, the very next batch delivers the transitions that expose it; this is :numref:`sec_qlearning`'s self-correcting loop, running on $V$ instead of $Q$. What freshness buys is *reduced distributional mismatch* between where the critic errs and where it is trained, not a stability guarantee: nonlinear temporal-difference regression can diverge even on-policy, and the classical convergence results cover linear critics under two-timescale step-size conditions our loop does not implement :cite:`Tsitsiklis.VanRoy.1997`. In these runs, on this task, the mismatch reduction is evidently enough. The same loop also lets us watch the trade itself in vivo. Rerun `train_ac` once more, and before each actor step compute both candidate weights for the same batch, the TD error and the Monte Carlo advantage: how much the two agree, and how much each varies.
 
 ```{.python .input #actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later}
 %%tab pytorch, jax
@@ -326,7 +326,7 @@ d2l.plot_curves({'corr(TD error, MC advantage)': trace[:, 0]},
                 xlabel='update', ylabel='correlation', smooth=10)
 ```
 
-When episodes last a few dozen steps the two candidate weights visibly overlap, a correlation around $0.3$; by the time the policy holds the pole for hundreds of steps the correlation has fallen to zero. This is not the critic failing. Unroll :eqref:`eq_td_error_v` one step and the Monte Carlo advantage contains the TD error, plus a discounted copy of itself one step later: $\hat{G}_t - \hat{V}(s_t) = \delta_t + \gamma \big( \hat{G}_{t+1} - \hat{V}(s_{t+1}) \big)$. At a long horizon the Monte Carlo weight is therefore one part signal shared with $\delta_t$ and hundreds of parts accumulated tail, and the share the two weights have in common shrinks toward nothing as episodes lengthen: the correlation falls because the Monte Carlo weight is dissolving into noise, not because the TD error is drifting away from it. The second half of the measurement says the same thing in absolute terms:
+When episodes last a few dozen steps the two candidate weights visibly overlap, a correlation around $0.3$; by the time the policy holds the pole for hundreds of steps the correlation has fallen to zero. The identity behind the fall is worth unrolling: take :eqref:`eq_td_error_v` one step and the Monte Carlo advantage contains the TD error, plus a discounted copy of itself one step later, $\hat{G}_t - \hat{V}(s_t) = \delta_t + \gamma \big( \hat{G}_{t+1} - \hat{V}(s_{t+1}) \big)$. At a long horizon the Monte Carlo weight is therefore one part signal shared with $\delta_t$ and hundreds of parts accumulated tail, and the share the two weights have in common shrinks toward nothing as episodes lengthen, which is consistent with the Monte Carlo weight dissolving into tail noise rather than the TD error drifting away. Read the curve as a descriptive diagnostic of this run, not a certificate of critic health: a correlation confounds the changing policy, the changing state distribution, and both weights' scales, and certifying the critic itself would mean freezing the policy and grading its predictions against a reference value, the shape of measurement the dial probe below performs on the gradient estimators. The second half of the measurement says the same thing in absolute terms:
 
 ```{.python .input #actor-critic-why-the-critic-s-moving-target-is-survivable-here-and-fatal-later-1}
 %%tab pytorch, jax
@@ -338,7 +338,7 @@ d2l.plot_curves({'TD error': trace[:, 1], 'MC advantage': trace[:, 2]},
 
 As the policy improves and episodes stretch toward 500 steps, the Monte Carlo weight's variance grows with the horizon, every extra step of tail adding its noise, from tens of squared units early in training to several hundred at the ceiling; the TD error's variance is the flat line pinned at the bottom of the same axes, one reward and one transition regardless of what follows, and it falls further as the critic sharpens, which is what pushes the printed median ratio past a hundredfold. The actor wants the advantage, and at a 500-step horizon the Monte Carlo estimate of it is almost entirely tail; averaging over a batch of eight episodes is what kept REINFORCE trainable at all.
 
-Hold on to why this worked, because :numref:`sec_dqn` is about what happens when it stops working. The critic survives its moving target because its data is never stale; sever that, by training a value function on replayed old experience, off the visited distribution, with the bootstrap still in the loop, and the same semi-gradient can diverge outright. Notice also which way our implementation leaned: every pass recomputes its target from the newest critic, maximal tracking, affordable precisely because fresh data keeps auditing the result. :numref:`sec_dqn`, having given up freshness, makes the opposite choice, freezing the bootstrap inside a second, slowly synchronized copy of the value network, the *target network*, and trades tracking away for stability.
+Hold on to why this worked here, because :numref:`sec_dqn` is about what happens when it stops working. In these runs the critic survives its moving target because its data is never stale; sever that, by training a value function on replayed old experience, off the visited distribution, with the bootstrap still in the loop, and the same semi-gradient can diverge outright. Notice also which way our implementation leaned: every pass recomputes its target from the newest critic, maximal tracking, affordable precisely because fresh data keeps auditing the result. :numref:`sec_dqn`, having given up freshness, makes the opposite choice, freezing the bootstrap inside a second, slowly synchronized copy of the value network, the *target network*, and trades tracking away for stability.
 
 ## The Dial
 
@@ -349,7 +349,7 @@ The one-step target and the Monte Carlo tail are the ends of a family. Trust sam
 $$\hat{G}^{(n)}_t = r_t + \gamma\, r_{t+1} + \cdots + \gamma^{n-1} r_{t+n-1} + \gamma^n\, \hat{V}(s_{t+n}),$$
 :eqlabel:`eq_nstep_return`
 
-and the corresponding advantage estimate is $\hat{G}^{(n)}_t - \hat{V}(s_t)$. At $n = 1$ this is $\delta_t$; run $n$ to the end of the episode and it is the Monte Carlo advantage. In between, each extra step of reality buys bias down, the critic's error arrives discounted by $\gamma^n$ and evaluated $n$ steps closer to termination where value estimates are better, and costs variance up, one more sampled reward and transition in every estimate; that is exactly the falling and rising pair measured in :numref:`fig_rl_td_mc_spectrum`.
+and the corresponding advantage estimate is $\hat{G}^{(n)}_t - \hat{V}(s_t)$. At $n = 1$ this is $\delta_t$; run $n$ to the end of the episode and it is the Monte Carlo advantage. In between, each extra step of reality typically buys bias down, the critic's error arrives discounted by $\gamma^n$ and, for a critic whose error shrinks toward termination, evaluated $n$ steps closer to states it knows better, and costs variance up, one more sampled reward and transition in every estimate; that is exactly the falling and rising pair measured, under precisely such a critic, in :numref:`fig_rl_td_mc_spectrum`.
 
 ### The lambda-return and the telescoping identity
 
@@ -358,7 +358,7 @@ Rather than pick one depth, average them all, with geometric weights that make t
 $$\hat{A}^{\textrm{GAE}}_t = (1 - \lambda) \sum_{n=1}^{\infty} \lambda^{n-1} \big( \hat{G}^{(n)}_t - \hat{V}(s_t) \big), \qquad \lambda \in [0, 1].$$
 :eqlabel:`eq_lambda_return`
 
-The weights $(1-\lambda)\lambda^{n-1}$ sum to one, $\lambda = 0$ puts everything on the one-step estimate, and $\lambda \to 1$ puts everything on the deepest one. Written this way the estimator looks like it needs every depth computed separately. It does not, and the identity that says so is why $\lambda$ survived into every deployed implementation :cite:`Schulman.Moritz.Levine.ea.2016`.
+The weights $(1-\lambda)\lambda^{n-1}$ sum to one, $\lambda = 0$ puts everything on the one-step estimate, and $\lambda \to 1$ puts everything on the deepest one. Written this way the estimator looks like it needs every depth computed separately. It does not, and the identity that says so is why $\lambda$ survived into deployed implementations :cite:`Schulman.Moritz.Levine.ea.2016`.
 
 **Proposition.** The mixture collapses to a discounted sum of TD errors:
 
@@ -384,7 +384,7 @@ def gae(self, value_fn, gamma, lam):
     return self.backward_scan(delta, gamma * lam)
 ```
 
-The endpoints are theorems, so we assert rather than assume them: at $\lambda = 0$ the scan returns the TD errors themselves, and at $\lambda = 1$ the telescoping runs to termination and returns the reward-to-go minus the baseline, the Monte Carlo advantage of :numref:`sec_baselines`.
+The endpoints are theorems, so we assert rather than assume them: at $\lambda = 0$ the scan returns the TD errors themselves, and at $\lambda = 1$, on episodes that terminate, the telescoping runs to termination and returns the reward-to-go minus the baseline, the Monte Carlo advantage of :numref:`sec_baselines`.
 
 ```{.python .input #actor-critic-gae-in-one-old-function-2}
 %%tab pytorch, jax
@@ -494,7 +494,7 @@ for lam in lams:
           f'variance {var:6.1f}, one-draw error {bias ** 2 + var:6.1f}')
 ```
 
-The table is the shallow U the whole section has been circling. Leaving $\lambda = 1$, the variance collapses first and fastest, most of it gone by $\lambda = 0.9$, while the bias climbs more slowly toward its $\lambda = 0$ plateau; the one-draw error, bias squared plus variance, is therefore highest at the pure Monte Carlo end, high again at the pure TD end, and lowest strictly inside, in the $\lambda = 0.9$ to $0.95$ band across our tabs, which is precisely the neighborhood every deployed PPO of :numref:`sec_ppo` runs. Two honesty notes. The $\lambda = 1$ row's bias reads zero by construction, since that estimator's mean *is* the reference, and the reference itself is known only to the precision of 200 draws of the noisiest estimator, so the bias column is trustworthy only where it is large; both large-$\lambda$ bias entries clear that bar. And the U's exact minimum depends on how wrong the frozen critic is, which is why the prose quotes its location as a neighborhood and not a digit.
+The table is the shallow U the whole section has been circling. Leaving $\lambda = 1$, the variance collapses first and fastest, most of it gone by $\lambda = 0.9$, while the bias climbs more slowly toward its $\lambda = 0$ plateau; the one-draw error, bias squared plus variance, is therefore highest at the pure Monte Carlo end, high again at the pure TD end, and lowest strictly inside, in the $\lambda = 0.9$ to $0.95$ band across our tabs, the neighborhood of the defaults deployed PPO implementations commonly run (:numref:`sec_ppo`), a sensible bias/variance compromise rather than a universal law. Two caveats. The $\lambda = 1$ row's bias reads zero by construction, since that estimator's mean *is* the reference, and the reference itself is known only to the precision of 200 draws of the noisiest estimator, so the bias column is trustworthy only where it is large; both large-$\lambda$ bias entries clear that bar. And the U's exact minimum depends on how wrong the frozen critic is, which is why the prose quotes its location as a neighborhood and not a digit.
 
 Finally, the audit promised at the start: strip away the sampling noise and ask what policies the two original methods actually delivered, by evaluating the trained seed-0 agents greedily.
 
@@ -511,7 +511,7 @@ Both agents land at 499 or 500 of the 500 ceiling: the ceiling can only be tied,
 
 ## Summary
 
-Actor-critic replaces the sampled reward-to-go in the policy-gradient weight with a bootstrapped one-step estimate. The TD error :eqref:`eq_td_error_v` is, in expectation under an exact critic, the advantage of the action taken; during training the critic is not exact, and the update trades the Monte Carlo tail's variance for the critic's bias, the same bargain Q-learning struck (:eqref:`eq_td_error`), now on the policy side. The critic itself is sampled, bootstrapped policy evaluation, making actor-critic generalized policy iteration with both halves approximate, and its update is a semi-gradient: this chapter's first step past the safety line :numref:`sec_deeprl` drew. The critic must learn faster than the actor, here via `critic_steps` regression passes taken before the actor consumes the advantages; what we implement, batched episodes and one actor step per batch, is A2C. Between the one-step and Monte Carlo endpoints sits the $n$-step family :eqref:`eq_nstep_return`, and the $\lambda$-return :eqref:`eq_lambda_return` mixes all depths geometrically; the telescoping identity :eqref:`eq_gae_deltas` collapses the mixture into a discounted sum of TD errors, so GAE is the reward-to-go scan of :numref:`sec_baselines` run on TD errors, two lines on an old function, with both endpoints verified by assertion. The dial's interior wins because variance collapses faster than bias grows as $\lambda$ leaves $1$. `Batch.td_target` and `Batch.gae` joined the library; :numref:`sec_ppo` runs GAE by default, and the choice our critic made, refreshing its bootstrap at every pass because fresh data audits it, is reversed by :numref:`sec_dqn`'s target network once replay takes the freshness away.
+Actor-critic replaces the sampled reward-to-go in the policy-gradient weight with a bootstrapped one-step estimate. The TD error :eqref:`eq_td_error_v` is, in expectation under an exact critic, the advantage of the action taken; during training the critic is not exact, and the update trades the Monte Carlo tail's variance for the critic's bias, the same bargain Q-learning struck (:eqref:`eq_td_error`), now on the policy side. The critic itself is sampled, bootstrapped policy evaluation, making actor-critic generalized policy iteration with both halves approximate, and its update is a semi-gradient: this chapter's first step past the safety line :numref:`sec_deeprl` drew. The two-timescale intuition, critic faster than actor, is realized heuristically via `critic_steps` regression passes taken before the actor consumes the advantages, an aggressive fitted-TD loop whose targets move as it fits; what we implement, batched episodes from one environment and one actor step per batch, is a batched on-policy actor-critic, the single-environment teaching relative of A2C. Between the one-step and Monte Carlo endpoints sits the $n$-step family :eqref:`eq_nstep_return`, and the $\lambda$-return :eqref:`eq_lambda_return` mixes all depths geometrically; the telescoping identity :eqref:`eq_gae_deltas` collapses the mixture into a discounted sum of TD errors, so GAE is the reward-to-go scan of :numref:`sec_baselines` run on TD errors, two lines on an old function, with both endpoints verified by assertion. The dial's interior wins on the frozen probe because variance collapses faster than bias grows as $\lambda$ leaves $1$. `Batch.td_target` and `Batch.gae` joined the library; :numref:`sec_ppo` runs GAE by default, and the choice our critic made, refreshing its bootstrap at every pass because fresh data audits it, is reversed by :numref:`sec_dqn`'s target network once replay takes the freshness away.
 
 **What the experiments show, and what they do not.** All curves come from seeded runs through the shared numpy sampling stream; the two framework tabs share every estimator line but initialize their networks differently, so their curves differ seed by seed while supporting the same statements, and every statistic quoted in prose is printed by a visible cell. On the main comparison, three seeds per method per tab, both methods reach the neighborhood of the 500 ceiling, and the stillness claim rests on the printed streak lengths: in every tab the longest run of consecutive perfect batches is a bootstrapped one, though a lucky Monte Carlo seed can post a respectable stretch of its own, and three seeds order the tails, not the typical case. The gradient-norm gap, roughly an order of magnitude at matched weight normalization with the clip binding only on the actor-critic side, is stable across tabs and seeds in direction and rough size; its exact percentages are not. The $\lambda$ sweep is five seeds of a fifty-update race on small batches: it licenses "the bottom of the dial trails, the top arrives together", not per-$\lambda$ digits, and a longer budget would narrow the gaps further as the critic improves. The estimator table is one frozen policy probed with 200 draws; its reference is the $\lambda = 1$ mean itself, so its bias column is trustworthy only where it is large, and the U's minimum moves within the high-$\lambda$ band from tab to tab. The greedy audit lands every run at 499 or 500 of the 500 ceiling, a statement about the task, not a ranking. The compute belongs to readers.
 
@@ -611,14 +611,16 @@ $$w \leftarrow w + \alpha_w\, \delta_t\, \nabla_w \hat V_w(s_t), \qquad
 
 - the critic: sampled, bootstrapped **policy evaluation**;
   actor-critic = GPI with both halves approximate
-- two timescales: the critic chases a moving target twice over,
-  so it must learn faster; here, 20 regression passes, taken *first*
+- two-timescale *intuition*: the critic chases a moving target
+  twice over, so let it learn faster; realized heuristically here
+  as 20 fitted-TD passes (fresh target each pass), taken *first*
 :::
 
-::: {.slide title="A2C: the Three-Line Diff"}
-Batched episodes, one actor step per batch: advantage
-actor-critic :cite:`Mnih.Badia.Mirza.ea.2016`. Against
-:numref:`sec_deeprl`'s loop, only the tail is replaced:
+::: {.slide title="A Batched Actor-Critic: the Three-Line Diff"}
+Batched episodes, one actor step per batch: a batched on-policy
+actor-critic, the single-environment teaching relative of A2C
+:cite:`Mnih.Badia.Mirza.ea.2016`. Against :numref:`sec_deeprl`'s
+loop, only the tail is replaced:
 
 @actor-critic-a2c-by-name-5
 
@@ -643,7 +645,8 @@ tie the 500 ceiling; only the bootstrapped side **rests** on it.
 . . .
 
 A perfect batch = all eight episodes at 500. The long streaks
-live on the bootstrapped side only: the Monte Carlo weight still
+live on the bootstrapped side only, a run-specific stability
+visualization of the mechanism: the Monte Carlo weight still
 carries every remaining coin flip, and a run at the ceiling is
 one noisy batch from a stumble.
 :::
@@ -668,15 +671,19 @@ Rerun the loop, measuring both candidate weights per batch:
 - $\hat G_t - \hat V(s_t) = \delta_t + \gamma(\hat G_{t+1} - \hat V(s_{t+1}))$:
   one part shared signal, hundreds of parts tail
 - their correlation **falls** from about $0.3$ to zero as episodes
-  stretch toward 500: the MC weight dissolves into tail noise
+  stretch toward 500, consistent with the MC weight dissolving
+  into tail noise (a descriptive diagnostic, not a critic
+  certificate)
 - its variance grows with the horizon; the TD error's is pinned
   flat (median ratio: beyond a hundredfold)
 
 . . .
 
-Why survivable: on-policy data audits the critic exactly where it
-is wrong, every batch (:numref:`sec_qlearning`'s loop, on $V$).
-Our critic refreshes its target every pass, maximal tracking;
+Why survivable here: freshness keeps the critic's training
+distribution matched to where its errors matter, *reduced
+mismatch*, not a guarantee (nonlinear TD can diverge even
+on-policy :cite:`Tsitsiklis.VanRoy.1997`). Our critic refreshes
+its target every pass, an aggressive fitted-TD loop;
 :numref:`sec_dqn` severs the freshness and reverses the choice:
 a frozen second copy, the target network.
 :::
@@ -731,8 +738,8 @@ starts ignorant); the *stillness* race went the other way.
 
 The shallow U: leaving $\lambda = 1$, variance collapses first
 and fastest; bias climbs more slowly. One-draw error is high
-at both pure ends, lowest strictly inside. Every deployed PPO
-runs GAE with $\lambda$ around $0.9$ to $0.97$
+at both pure ends, lowest strictly inside. Deployed PPO defaults
+commonly sit at $\lambda \approx 0.9$ to $0.97$
 (:numref:`sec_ppo`).
 :::
 
@@ -743,7 +750,8 @@ runs GAE with $\lambda$ around $0.9$ to $0.97$
 - the critic is sampled policy evaluation: GPI, both halves
   approximate, and a semi-gradient: the safety line of
   :numref:`sec_deeprl` is behind us
-- A2C: critic faster than actor, freshest critic judges
+- batched actor-critic (A2C's teaching relative): critic passes
+  first, freshest critic judges
 - the dial: $n$-step, $\lambda$-return, one telescoping identity,
   one old scan; endpoints asserted
 - next: reuse the batch safely (:numref:`sec_ppo`, GAE by

@@ -61,21 +61,25 @@ The examples below start from the standard import:
 ```{.python .input #lookup-api-documentation}
 %%tab mxnet
 from mxnet import np
+from pprint import pprint
 ```
 
 ```{.python .input #lookup-api-documentation}
 %%tab pytorch
 import torch
+from pprint import pprint
 ```
 
 ```{.python .input #lookup-api-documentation}
 %%tab tensorflow
 import tensorflow as tf
+from pprint import pprint
 ```
 
 ```{.python .input #lookup-api-documentation}
 %%tab jax
 import jax
+from pprint import pprint
 ```
 
 ## Discovering What Exists: `dir`
@@ -87,23 +91,26 @@ For instance, to see what is on offer for random sampling
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab mxnet
-print([name for name in dir(np.random) if not name.startswith('_')][:20])
+pprint([name for name in dir(np.random)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab pytorch
-print([name for name in dir(torch.distributions)
-       if not name.startswith('_')][:20])
+pprint([name for name in dir(torch.distributions)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module  n=1}
 %%tab tensorflow
-print([name for name in dir(tf.random) if not name.startswith('_')][:20])
+pprint([name for name in dir(tf.random)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 ```{.python .input #lookup-api-functions-and-classes-in-a-module}
 %%tab jax
-print([name for name in dir(jax.random) if not name.startswith('_')][:20])
+pprint([name for name in dir(jax.random)
+        if not name.startswith('_')][:20], compact=True)
 ```
 
 We can usually ignore names that begin and end with `__`

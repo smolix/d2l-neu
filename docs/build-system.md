@@ -459,6 +459,101 @@ Inline outputs are a **regenerated snapshot, not a frozen cache:**
 This is the contract that lets us keep deterministic small outputs inline safely:
 they are kept correct by construction.
 
+### 3.6 Output hygiene: no terminal decoration in the store
+
+Captured output is plain text rendered into **two** media: HTML, and a LaTeX
+`verbatim` block in the PDF. Neither can render anything a library wrote for a
+*live terminal*. Three classes of noise, in decreasing order of how badly they
+break a page:
+
+| class | what it looks like | where it is fixed |
+|---|---|---|
+| **ANSI** | `[38;2;79;201;177mState[0m`, `[1m` | execution env / `sitecustomize` |
+| **control** | an animated progress bar recorded frame-by-frame: `\r`, `\b`, `━━━━` | **the call site** |
+| **width** | a line past the page's ~100-column verbatim budget | the call site, or a display-width setting |
+
+**The rule: fix it at execution, never at capture.** `capture_outputs.py` records
+what the kernel produced; if a progress bar is in the notebook, the bar is real
+output and hiding it at capture would be a lie. So all of this lives upstream of
+capture, in two places:
+
+1. **`QUIET_ENV` in `tools/runtime_env.py`** — environment switches applied by
+   `setup_framework_env()`, inherited by `jupyter nbconvert` and its kernel.
+   `NO_COLOR=1`, `TERM=dumb`, `TTY_COMPATIBLE=0`, `TQDM_DISABLE=1`
+   (tqdm's `__init__` is `@envwrap("TQDM_")`-decorated, so this *is* its
+   `disable=` parameter), `HF_HUB_DISABLE_PROGRESS_BARS=1`,
+   `TF_CPP_MIN_LOG_LEVEL=3` (TF *and* jaxlib's CUDA plugin — level 3 is what
+   suppresses XLA's benign `cuda_timer.cc … Delay kernel timed out` ERROR line),
+   `MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0` (the multi-kilobyte oneDNN
+   "input storage types = [default, default, …]" dump, once per batch),
+   `MXNET_CUDNN_AUTOTUNE_DEFAULT=0` (whose notice names itself; note it also
+   turns cuDNN algorithm autotuning *off*, so MXNet convolutions may run a few
+   percent slower — the only knob here with a performance side effect).
+
+   > **Never set `FORCE_COLOR=0`.** Per force-color.org — and rich's
+   > implementation — `FORCE_COLOR` is truthy whenever it is *present*, whatever
+   > its value, so `0` forces colour **on**. `apply_output_hygiene()` unsets it.
+
+2. **`tools/nbquiet/sitecustomize.py`** — put on `PYTHONPATH` by
+   `apply_output_hygiene()`, so CPython's `site` imports it at startup in every
+   descendant interpreter. It handles the residue that no environment variable
+   can reach, via post-import hooks:
+
+   * **ipykernel re-forces colour.** `ZMQInteractiveShell.init_environment()`
+     unconditionally sets `TERM=xterm-color`, `FORCE_COLOR=1`, `CLICOLOR=1`,
+     `CLICOLOR_FORCE=1` in `os.environ` at kernel startup, *after* the build has
+     set its own. This is why `NO_COLOR` alone cannot fix notebook output. The
+     hook wraps it and re-applies the book's policy.
+   * **flax.nnx** picks colour from "stdout is a tty *or* IPython is
+     importable" and ignores `NO_COLOR`; its palette is rebound to its own
+     `NO_COLOR` palette.
+   * **rich** (behind `keras.Model.summary()`) returns `TRUECOLOR`
+     unconditionally when it detects a kernel; `_is_jupyter` is forced False so
+     it renders the same tables as plain text.
+   * **warnings** are reformatted to `Category: message`, wrapped to 80 columns,
+     with the absolute path dropped — a `/home/<user>/.venv-jax/lib/…` or
+     `/tmp/ipykernel_65430/…` prefix is both too wide and machine-specific.
+     Only three third-party deprecation messages are *filtered*; warnings a
+     chapter demonstrates deliberately stay.
+   * **SGR escapes on the kernel's stdout/stderr are stripped** as a last line
+     of defence, for libraries that hardcode colour with no switch at all
+     (`torch.serialization` emboldens part of its `weights_only` refusal).
+     Cursor-motion and erase sequences are deliberately *not* stripped: those
+     are progress bars, and a progress bar is a call-site bug.
+
+   `D2L_NO_QUIET=1` disables the whole mechanism when debugging a library's own
+   output.
+
+**Progress bars are a call-site fix.** Keras `fit`/`evaluate`/`predict` default
+to `verbose=1` (the animated bar). Pass **`verbose=2`** — one clean line per
+epoch, every number preserved — not `verbose=0`, which would delete information
+the reader wants.
+
+**The gate.**
+
+```bash
+python3 tools/audit_outputs.py --check-noise     # exit 1 on any finding
+python3 tools/audit_outputs.py                   # warns, never blocks a render
+```
+
+`--check-noise` fails on any stored output carrying an ANSI escape, a
+progress-bar control character, or a line wider than `--max-line-width`
+(default 100). The default is derived, not guessed: the PDF's text block is A4
+minus 1in margins = 452.6pt, and `verbatim` is `\small` (10pt in an 11pt book)
+in Inconsolata at `Scale=0.9`, i.e. 0.5em = 4.5pt per character → ~100 columns.
+Past that, `fvextra`'s `breakanywhere` wraps mid-token; nothing is lost but it
+reads badly.
+
+The plain `audit_outputs.py` report (which `make html` runs via
+`--verify-fresh`) prints the same findings as a **warning** so regressions
+surface on every render without blocking one.
+
+`tools/output_noise_allow.txt` allowlists output whose noise *is* the lesson —
+a cell that deliberately demonstrates a library's error message, a docstring the
+chapter is about. Format: `<framework> <source> <cell-id> [kind,...]  # why`,
+with `*` accepted for framework and cell-id. It is not a parking lot for
+output that should have been fixed at execution time.
+
 ---
 
 ## 4. Index & referential integrity under partial execution
@@ -890,6 +985,28 @@ all four PDFs (~46–51 MB each) with no manual steps:
   `\text{1-Lipschitz}` for the words. (`grep -nE '\$[0-9]'` over a math-heavy
   chapter is a quick smell test, though most hits are legitimate *opening*
   `$1\times 1$`.)
+- **Preamble changes must be deferred with `\AtBeginDocument`, and the staged
+  copy must be refreshed.** Two independent traps, both of which made a correct
+  preamble line silently do nothing (2026-07-27):
+  1. `gen_pdf.py` injects `static/d2l-preamble.tex` via `include-in-header`, so
+     it lands *before* Quarto's own preamble block. That block loads
+     **`tcolorbox`** (callouts + the `Shaded` code box), which
+     `\RequirePackage{verbatim}` — and `verbatim.sty` re-defines the `verbatim`
+     environment unconditionally. Any `\DefineVerbatimEnvironment{verbatim}{…}`
+     written at header level is therefore overwritten before `\begin{document}`.
+     Wide cell output kept running off the page edge (**text lost**, not
+     wrapped) for exactly this reason. Wrap such redefinitions in
+     `\AtBeginDocument{…}`, which runs after every package.
+  2. `gen_pdf.py` used to copy `static/` into `_pdf/<fw>/` only
+     `if not static_dst.exists()`, so an edited preamble never reached an
+     already-generated tree. It now re-copies every run, and
+     `static/d2l-preamble.tex` is a prerequisite of `_pdf/%/.generated`.
+- **The book is `\raggedbottom`.** `book.cls` leaves `\flushbottom` in force for
+  `twoside`; on code-dense pages that inflates every gap between code block,
+  output block and figure to centimetres of white space just to square off the
+  bottom margin. The preamble sets `\raggedbottom` (inside the same
+  `\AtBeginDocument`), so pages end short instead. Facing pages may end at
+  slightly different heights — the accepted trade.
 - **Stale PDFs in `img/outputs/` abort the parallel render.** Quarto's
   `convert_svg` (built-in `main.lua`) has a "skip conversion if the `.pdf`
   already exists" optimization, then `assert(read(pdf) ~= nil)`. A leftover
@@ -1148,6 +1265,7 @@ yubikey-free path recorded in CLAUDE.md memory); LFS rides the same HTTPS remote
 | `tools/run_notebooks.py` | **CHANGED** | Executes notebooks; on every successful run `write_execution_provenance()` records the source+lib fingerprints the run used into `_notebooks/<fw>/<ch>/<stem>.provenance.json` (gitignored, `make clean`-wiped) — the signal the capture guard reads (§3.3). Single chokepoint (`execute_notebook`) covers scheduler / direct-make / best-of-N paths. |
 | `tools/test_refresh_stale_trap.py` | **NEW** | `make test-trap`. Fast, GPU-free e2e regression for the §3.3 trap: builds a tmp fixture, moves a lib fingerprint under an unchanged notebook, and asserts the audit flags it, `refresh-stale`'s stamp-removal forces a re-run, and the capture guard refuses the stale bless (and accepts a genuine re-capture). Never touches the real store. |
 | `tools/inject_outputs.py` | **CHANGED** | Output source flips from `_notebooks/` to `outputs/` via a new `index_store_by_id()` that returns the **same shape** as `index_ipynb_by_id()` — `{cell_id: [nbformat-output-dict]}` — by reconstructing nbformat dicts from the manifest (inline text → `stream`/`text/plain` dicts; assets → re-read the file, re-encode to the dict's `data`). Everything downstream (`format_cell_output`, dedup, markup) is **unchanged**, so injected output is byte-identical to the `_notebooks/` path. Auto-detects: uses `outputs/` when a manifest exists, else falls back to `_notebooks/`. |
+| `tools/inject_outputs.py` (stream coalescing) | **CHANGED 2026-07-27** | `format_cell_output()` first runs `coalesce_stream_outputs()`, merging runs of **adjacent same-name** `stream` outputs into one. A cell that prints once per loop iteration emits one stream message per flush, so Jupyter stores N stream outputs (each already `\n`-terminated); rendering each as its own fenced block put a paragraph break between consecutive printed lines — a blank line in HTML, a stretched inter-block gap in the PDF. The store is *faithful* (the split is in the `.ipynb`); the fix is render-side only, so no re-capture is needed. Non-stream outputs and stderr↔stdout transitions still separate blocks. Side effect: the `MAX_TEXT_LINES` cap now applies to the merged block (it used to be bypassed by chunking) — 10 output groups book-wide newly elide to head-20 / `...` / tail-20 in the PDF. |
 | `tools/add_cell_ids.py` | unchanged | Still the authority for stable ids — the invariant capture/audit rely on. |
 | `tools/scan_notebook_manifests.py` | unchanged | Execution queues. Capture reuses its file enumeration. |
 | `tools/scan_d2l_usage.py` | unchanged | Emits the per-notebook `.d` files capture reads for `d2l_lib_fingerprint`. |

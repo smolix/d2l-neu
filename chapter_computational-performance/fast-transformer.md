@@ -286,6 +286,23 @@ what the first rung is worth:
 
 ```{.python .input #fast-transformer-rung-0-baseline-profiled}
 %%tab pytorch
+def profile_top(prof, rows=6):
+    """`prof.key_averages()`, ranked as `.table()` ranks it, in the columns
+    this chapter reads — and narrow enough to print on a book page."""
+    avg = prof.key_averages()
+    cuda = sum(e.self_device_time_total for e in avg)
+    cpu = sum(e.self_cpu_time_total for e in avg)
+    print(f'{"":40}{"self CUDA":>10}{"%":>5}{"us/call":>9}'
+          f'{"CPU total":>10}{"calls":>6}')
+    for e in sorted(avg, key=lambda e: -e.device_time_total)[:rows]:
+        name = e.key if len(e.key) < 40 else e.key[:36] + '...'
+        print(f'{name:<40}{e.self_device_time_total / 1e3:>8.1f}ms'
+              f'{100 * e.self_device_time_total / cuda:>5.1f}'
+              f'{e.self_device_time_total / e.count:>9.1f}'
+              f'{e.cpu_time_total / 1e3:>8.1f}ms{e.count:>6}')
+    print(f'self CUDA total {cuda / 1e3:.1f}ms, '
+          f'self CPU total {cpu / 1e3:.1f}ms')
+
 opt = torch.optim.AdamW(model.parameters(), lr=1e-3)
 
 def step_eager(X, Y):
@@ -300,7 +317,7 @@ with torch.profiler.profile(activities=[
         torch.profiler.ProfilerActivity.CUDA], acc_events=True) as prof:
     for _ in range(5):
         step_eager(*next(stream))
-print(prof.key_averages().table(sort_by='cuda_time_total', row_limit=6))
+profile_top(prof)
 tput0 = throughput(step_eager)
 print(f'R0 eager: {tput0:.0f} tokens/s')
 ```
@@ -431,7 +448,7 @@ with torch.profiler.profile(activities=[
         torch.profiler.ProfilerActivity.CUDA], acc_events=True) as prof:
     for _ in range(5):
         step_compiled(*next(stream))
-print(prof.key_averages().table(sort_by='cuda_time_total', row_limit=5))
+profile_top(prof, rows=5)
 ```
 
 ```{.python .input #fast-transformer-rungs-each-one-measured-5}
@@ -705,7 +722,7 @@ with torch.profiler.profile(activities=[
         torch.profiler.ProfilerActivity.CUDA], acc_events=True) as prof:
     for _ in range(5):
         step_bf16(*next(big_stream))
-print(prof.key_averages().table(sort_by='cuda_time_total', row_limit=5))
+profile_top(prof, rows=5)
 ```
 
 :begin_tab:`jax`

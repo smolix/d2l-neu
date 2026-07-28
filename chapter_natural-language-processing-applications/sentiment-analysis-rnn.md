@@ -395,7 +395,8 @@ lr, num_epochs = 0.01, 5
 net.compile(optimizer=keras.optimizers.Adam(lr),
             loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
             metrics=['accuracy'])
-net.fit(train_iter, validation_data=test_iter, epochs=num_epochs)
+net.fit(train_iter, validation_data=test_iter, epochs=num_epochs,
+        verbose=2)
 ```
 
 We define the following function to predict the sentiment of a text sequence using the trained model `net`.

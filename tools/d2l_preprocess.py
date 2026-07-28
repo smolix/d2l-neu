@@ -1048,6 +1048,7 @@ CHAPTER_NUMBERING = {
     'chapter_deep-reinforcement-learning/regularized.md': [15, 3],
     'chapter_deep-reinforcement-learning/dqn.md': [15, 4],
     'chapter_deep-reinforcement-learning/offline-rl.md': [15, 5],
+    'chapter_deep-reinforcement-learning/rl-sequences.md': [15, 6],
     'chapter_generative-adversarial-networks/index.md': [16],
     'chapter_generative-adversarial-networks/gan.md': [16, 1],
     'chapter_generative-adversarial-networks/dcgan.md': [16, 2],

@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "source": "chapter_deep-reinforcement-learning/rl-sequences.md",
+  "framework": "pytorch",
+  "provenance": {
+    "framework_version": "torch==2.11.0",
+    "d2l_lib_fingerprint": "sha256:6556c0d229cb959adce1b9753dcba3a4bb4429b87027af5e6426f254aa62e56b",
+    "max_inline_bytes": 0
+  },
+  "cells": {
+    "rl-sequences-sequences-are-trajectories": {
+      "code_fingerprint": "sha256:5aad5bcd4befab1eedc9bd2f4b4795d20f08d3cd9462a45629d77ccd589cd9ed",
+      "kind": "text",
+      "outputs": []
+    },
+    "rl-sequences-the-smallest-instance": {
+      "code_fingerprint": "sha256:84fb193e31e3ce95de9a7ecc69f701fb2b657ab32391414a93f5eac505880e14",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "success of a response sampled from the reference: 0.062\n"
+        }
+      ]
+    },
+    "rl-sequences-the-group-is-the-baseline-1": {
+      "code_fingerprint": "sha256:0ce380ca2eb75923a991b882d4d9ec43e184ab86f50109e4ee0bf0eefffcc479",
+      "kind": "text",
+      "outputs": []
+    },
+    "rl-sequences-the-group-is-the-baseline-2": {
+      "code_fingerprint": "sha256:11533955c14a8c5d596ccf4a31b4232e8920bb7eed1c99473946a76a8da85581",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "K =  1: success of a sampled response 0.062\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "K =  2: success of a sampled response 0.500\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "K =  4: success of a sampled response 0.500\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "K =  8: success of a sampled response 0.500\nK = 32: success of a sampled response 0.500\n"
+        }
+      ]
+    },
+    "rl-sequences-reward-hacking-unified": {
+      "code_fingerprint": "sha256:ac58a6c579e633da25aa3efb3c29c885a766b0e1d61b901bf2dd26450e0edd8b",
+      "kind": "text",
+      "outputs": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta = 0.0: sloppy 1.00, gold 0.50, hedge 0.50\nbeta = 0.1: sloppy 0.99, gold 0.50, hedge 0.49\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta = 0.2: sloppy 0.60, gold 0.48, hedge 0.12\nbeta = 0.3: sloppy 0.42, gold 0.39, hedge 0.04\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "beta = 0.5: sloppy 0.25, gold 0.24, hedge 0.01\n"
+        }
+      ]
+    }
+  }
+}

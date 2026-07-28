@@ -17,4 +17,5 @@ ppo
 regularized
 dqn
 offline-rl
+rl-sequences
 ```

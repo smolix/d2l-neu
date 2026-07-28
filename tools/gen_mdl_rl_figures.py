@@ -2263,7 +2263,7 @@ def fig_dqn_dataflow():       # F16 -> mdl-rl-dqn-dataflow
 
     # --- acting: the behaviour policy and the world ------------------------- #
     _box(ax, 2.55, 4.35, 3.5, 1.05,
-         "behaviour policy\n$\\epsilon$-greedy in $Q_\\theta$", BLUE,
+         "behaviour policy\n$\\epsilon$-greedy in $Q_w$", BLUE,
          fontsize=13.5, fc="#e8f1f8")
     _box(ax, 7.7, 4.35, 2.8, 1.05, "environment", GRAY, fontsize=13.5,
          fc="#f3f3f3")
@@ -2296,11 +2296,11 @@ def fig_dqn_dataflow():       # F16 -> mdl-rl-dqn-dataflow
          fontsize=13, fc="#e8f1f8")
 
     # --- the two networks -------------------------------------------------- #
-    _box(ax, 2.2, 0.15, 3.1, 1.05, "online $Q_\\theta$\n$Q_\\theta(s,a)$", BLUE,
+    _box(ax, 2.2, 0.15, 3.1, 1.05, "online $Q_w$\n$Q_w(s,a)$", BLUE,
          fontsize=13, fc="#e8f1f8")
     _box(ax, 8.05, 0.15, 3.9, 1.05,
-         "target $Q_{\\theta^-}$ (frozen)\n"
-         "$y = r + \\gamma \\max_{a'} Q_{\\theta^-}(s',a')$", ORANGE,
+         "target $Q_{w^-}$ (frozen)\n"
+         "$y = r + \\gamma \\max_{a'} Q_{w^-}(s',a')$", ORANGE,
          fontsize=12, fc="#fdf1e3")
     fl.arrow(ax, (4.20, 1.12), (2.95, 0.72), color=BLUE, lw=1.8, mut=14)
     fl.arrow(ax, (7.20, 1.12), (8.05, 0.72), color=BLUE, lw=1.8, mut=14)
@@ -2308,14 +2308,14 @@ def fig_dqn_dataflow():       # F16 -> mdl-rl-dqn-dataflow
     # the second fix, and the only edge that ever writes into the frozen copy
     fl.arrow(ax, (3.85, 0.02), (6.05, 0.02), color=ORANGE, lw=1.6, ls="--",
              mut=14)
-    ax.text(4.92, 0.15, "copy weights\nevery $C = 500$ steps", ha="center",
+    ax.text(4.92, 0.15, "copy weights\nevery $C$ steps", ha="center",
             va="bottom", fontsize=12, color="black")
     ax.text(8.35, -1.10, "fix 2: targets stand still\nbetween syncs",
             ha="center", va="top", fontsize=12.5, color="black")
 
     # --- the loss, and the one path a gradient may take -------------------- #
     _box(ax, 5.0, -1.45, 3.4, 0.8,
-         "Huber loss  $\\ell(Q_\\theta(s,a) - y)$", "black",
+         "Huber loss  $\\ell(Q_w(s,a) - y)$", "black",
          fontsize=12.5, lw=1.6)
     fl.arrow(ax, (2.80, -0.40), (3.90, -1.12), color=BLUE, lw=1.8, mut=14)
     fl.arrow(ax, (7.10, -0.40), (6.32, -1.10), color=ORANGE, lw=1.8, mut=14)
@@ -2324,12 +2324,12 @@ def fig_dqn_dataflow():       # F16 -> mdl-rl-dqn-dataflow
     ax.text(7.00, -0.71, "no gradient", ha="left", va="center", fontsize=11.5,
             color="black")
     _arc_arrow(ax, (3.30, -1.45), (2.20, -0.42), -0.32, "black", lw=2.0)
-    ax.text(2.02, -1.28, "$\\nabla_\\theta$", ha="right", va="center",
+    ax.text(2.02, -1.28, "$\\nabla_w$", ha="right", va="center",
             fontsize=13.5, color="black")
 
     # --- and the loop closes: the online net is the behaviour policy -------- #
     _elbow(ax, [(0.65, 0.15), (0.32, 0.15), (0.32, 4.35), (0.80, 4.35)], BLUE)
-    ax.text(0.18, 2.40, "acts with $Q_\\theta$", ha="center", va="center",
+    ax.text(0.18, 2.40, "acts with $Q_w$", ha="center", va="center",
             fontsize=12, color=BLUE, rotation=90)
 
     ax.set_xlim(-0.05, 10.15)

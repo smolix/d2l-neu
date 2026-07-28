@@ -2584,6 +2584,34 @@ def ppo_epochs(ac, batch, adv, logp_old, epsilon, num_epochs,
                           entropy_coef, use_clip)
                      for _ in range(num_epochs)])
 
+class ReplayBuffer:
+    """A ring of transitions in preallocated numpy; sample() returns a Batch.
+
+    Defined in :numref:`sec_dqn`"""
+    def __init__(self, capacity, obs_dim):
+        self.obs = np.zeros((capacity, obs_dim), np.float32)
+        self.act = np.zeros(capacity, np.int64)
+        self.rew = np.zeros(capacity, np.float32)
+        self.next_obs = np.zeros((capacity, obs_dim), np.float32)
+        self.term = np.zeros(capacity, np.float32)
+        self.capacity, self.size, self.ptr = capacity, 0, 0
+
+    def add(self, obs, act, rew, next_obs, term):
+        i = self.ptr
+        self.obs[i], self.act[i], self.rew[i] = obs, act, rew
+        self.next_obs[i], self.term[i] = next_obs, term
+        self.ptr, self.size = (i + 1) % self.capacity, min(self.size + 1,
+                                                           self.capacity)
+
+    def __len__(self):
+        return self.size
+
+    def sample(self, batch_size, rng):
+        i = rng.integers(self.size, size=batch_size)
+        return d2l.Batch(self.obs[i], self.act[i], self.rew[i],
+                         self.next_obs[i], self.term[i],
+                         np.array([batch_size]))
+
 def offline_q(batch, num_sweeps, alpha, gamma, kappa=0.0,
               shape=(16, 4), seed=0):
     """Q-learning swept over a fixed dataset, with optional pessimism.

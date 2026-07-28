@@ -197,7 +197,7 @@ def decode_greedy(text, num_tokens=50):
     return data.tokenizer.decode(ids)
 
 for text in ('the time traveller', 'it seemed to me that'):
-    print(repr(decode_greedy(text)))
+    d2l.print_wrapped(repr(decode_greedy(text)))
 ```
 
 The output is locally plausible Wells, but it drifts toward the generic,
@@ -328,9 +328,9 @@ for text in ('the time traveller', 'it seemed to me that'):
     pre = data.tokenizer.encode(text)
     for k in (1, 4):
         score, ids = beam_search(step_fn, pre, 40, beam_size=k)[0]
-        print(f'k={k}, score {score:.2f}, distinct-3 '
-              f'{distinct(ids[len(pre):]):.2f}: '
-              f'{data.tokenizer.decode(ids)!r}')
+        d2l.print_wrapped(f'k={k}, score {score:.2f}, distinct-3 '
+                          f'{distinct(ids[len(pre):]):.2f}: '
+                          f'{data.tokenizer.decode(ids)!r}')
 ```
 
 Beam search mostly does what it promises: at $k = 4$ it usually finds
@@ -572,7 +572,7 @@ prefix = data.tokenizer.encode('the time traveller')
 for T in (0.5, 1.0, 2.0):
     out = generate(step_fn, prefix, 50, strategy='sample', temperature=T,
                    rng=np.random.default_rng(0))
-    print(f'T={T}: {data.tokenizer.decode(out)!r}')
+    d2l.print_wrapped(f'T={T}: {data.tokenizer.decode(out)!r}')
 ```
 
 Finally, the whole menu on one prefix, with the distinct-3 diversity score
@@ -592,8 +592,9 @@ strategies = {'greedy': dict(strategy='greedy'),
               'min-p': dict(strategy='sample', min_p=0.05)}
 for name, s in strategies.items():
     out = generate(step_fn, prefix, 50, rng=np.random.default_rng(0), **s)
-    print(f'{name:>7} (distinct-3 {distinct(out[len(prefix):]):.2f}): '
-          f'{data.tokenizer.decode(out)!r}')
+    d2l.print_wrapped(f'{name:>7} (distinct-3 '
+                      f'{distinct(out[len(prefix):]):.2f}): '
+                      f'{data.tokenizer.decode(out)!r}')
 ```
 
 Our small model cannot make any of these continuations *good*; what it

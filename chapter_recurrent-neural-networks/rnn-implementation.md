@@ -825,12 +825,14 @@ in and decodes the generated ids on the way out.
 
 ```{.python .input #rnn-implementation-generating-text-2}
 %%tab mxnet, pytorch
-model.predict('the time traveller', 50, data.tokenizer, d2l.try_gpu())
+d2l.print_wrapped(repr(model.predict('the time traveller', 50,
+                                     data.tokenizer, d2l.try_gpu())))
 ```
 
 ```{.python .input #rnn-implementation-generating-text-2}
 %%tab tensorflow, jax
-model.predict('the time traveller', 50, data.tokenizer)
+d2l.print_wrapped(repr(model.predict('the time traveller', 50,
+                                     data.tokenizer)))
 ```
 
 The continuation is locally plausible Wells, but it does not stay
@@ -843,15 +845,16 @@ and lowering the temperature interpolates back toward the greedy behavior.
 ```{.python .input #rnn-implementation-generating-text-3}
 %%tab mxnet, pytorch
 for T in (1.0, 0.5):
-    print(model.predict('the time traveller', 30, data.tokenizer,
-                        d2l.try_gpu(), temperature=T, rng=random.Random(0)))
+    d2l.print_wrapped(model.predict('the time traveller', 30, data.tokenizer,
+                                    d2l.try_gpu(), temperature=T,
+                                    rng=random.Random(0)))
 ```
 
 ```{.python .input #rnn-implementation-generating-text-3}
 %%tab tensorflow, jax
 for T in (1.0, 0.5):
-    print(model.predict('the time traveller', 30, data.tokenizer,
-                        temperature=T, rng=random.Random(0)))
+    d2l.print_wrapped(model.predict('the time traveller', 30, data.tokenizer,
+                                    temperature=T, rng=random.Random(0)))
 ```
 
 Neither knob fixes the underlying problem: repetition, incoherence, and the
@@ -1059,14 +1062,14 @@ from-scratch implementation, and its samples read the same.
 %%tab pytorch, mxnet
 ppl_concise = float(model.board.data['val_ppl'][-1].y)
 pred = model.predict('the time traveller', 30, data.tokenizer, d2l.try_gpu())
-print(f'perplexity {ppl_concise:.1f}, {pred!r}')
+d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
 ```
 
 ```{.python .input #rnn-implementation-concise-implementation-6}
 %%tab tensorflow
 ppl_concise = float(model.board.data['val_ppl'][-1].y)
 pred = model.predict('the time traveller', 30, data.tokenizer)
-print(f'perplexity {ppl_concise:.1f}, {pred!r}')
+d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
 ```
 
 ```{.python .input #rnn-implementation-concise-implementation-6}
@@ -1078,7 +1081,7 @@ for X_val, y_val in data.val_dataloader():
     num_tokens += losses.size
 ppl_concise = math.exp(total_loss / num_tokens)
 pred = model.predict('the time traveller', 30, data.tokenizer)
-print(f'perplexity {ppl_concise:.1f}, {pred!r}')
+d2l.print_wrapped(f'perplexity {ppl_concise:.1f}, {pred!r}')
 ```
 
 ### Scratch versus Concise, Measured

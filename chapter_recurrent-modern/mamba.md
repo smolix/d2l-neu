@@ -986,7 +986,7 @@ for name, model, fn in [('LSTM', lstm_lm, step_fn),
     out = d2l.generate(fn(model), prefix, 25, strategy='sample',
                        temperature=1.0, min_p=0.1,
                        rng=np.random.default_rng(0))
-    print(f'{name:>7}: {data.tokenizer.decode(out)!r}')
+    d2l.print_wrapped(f'{name:>7}: {data.tokenizer.decode(out)!r}')
 ```
 
 ```{.python .input #mamba-the-three-answers-measured-on-one-task-7}
@@ -1018,7 +1018,7 @@ for name, model, fn in [('LSTM', lstm_lm, step_fn),
     out = d2l.generate(fn(model), prefix, 25, strategy='sample',
                        temperature=1.0, min_p=0.1,
                        rng=np.random.default_rng(0))
-    print(f'{name:>7}: {data.tokenizer.decode(out)!r}')
+    d2l.print_wrapped(f'{name:>7}: {data.tokenizer.decode(out)!r}')
 ```
 
 ### Selective Copying, Revisited

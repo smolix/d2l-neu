@@ -101,6 +101,13 @@ QUIET_ENV = {
     "TQDM_DISABLE": "1",
     # huggingface_hub keeps its own bar switch (constants.py).
     "HF_HUB_DISABLE_PROGRESS_BARS": "1",
+    # syne-tune prints the absolute results folder when a tuning run finishes
+    # ("Tuning finished, results of trials can be found on ..."). It defaults to
+    # ~/syne-tune/, so the author's home directory ended up printed in the book.
+    # syne_tune.util.experiment_path() reads this variable; a relative value
+    # keeps the printed line short and machine-independent, and the results land
+    # under the notebook's working directory, which is a build product.
+    "SYNETUNE_FOLDER": "syne-tune",
     # TensorFlow / XLA / absl C++ logging. 3 = FATAL only. Level 2 still lets
     # ERROR through, which is where XLA's benign
     # "cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal

@@ -482,8 +482,8 @@ prefix = data.vocab[list('the time traveller ')]
 for temperature, top_k in ((1.0, None), (0.7, 8), (2.0, None)):
     torch.manual_seed(0)
     out = model.generate(prefix, 120, temperature, top_k)
-    print(f'T={temperature}, top_k={top_k}: '
-          + repr(''.join(data.vocab.to_tokens(out))))
+    d2l.print_wrapped(f'T={temperature}, top_k={top_k}: '
+                      + repr(''.join(data.vocab.to_tokens(out))))
 ```
 
 ```{.python .input #gpt-sampling-from-the-model-2}
@@ -493,8 +493,8 @@ prefix = data.vocab[list('the time traveller ')]
 for temperature, top_k in ((1.0, None), (0.7, 8), (2.0, None)):
     out = model.generate(prefix, 120, seed=0, temperature=temperature,
                          top_k=top_k)
-    print(f'T={temperature}, top_k={top_k}: '
-          + repr(''.join(data.vocab.to_tokens(out))))
+    d2l.print_wrapped(f'T={temperature}, top_k={top_k}: '
+                      + repr(''.join(data.vocab.to_tokens(out))))
 ```
 
 The samples are fluent pseudo-Wells — and much of that fluency appears
@@ -678,23 +678,23 @@ to the temperature and top-$k$ knobs the way the char model could not:
 torch.manual_seed(0)
 out = gpt2.generate(enc.encode('Alan Turing theorized that computers '
                                'would one day become'), 16, top_k=1)
-print(enc.decode(out))
+d2l.print_wrapped(enc.decode(out))
 torch.manual_seed(0)
 out = gpt2.generate(enc.encode('The secret of a good deep learning '
                                'textbook is'), 40, temperature=0.8,
                     top_k=50)
-print(enc.decode(out))
+d2l.print_wrapped(enc.decode(out))
 ```
 
 ```{.python .input #gpt-loading-gpt-2-4}
 %%tab jax
 out = gpt2.generate(enc.encode('Alan Turing theorized that computers '
                                'would one day become'), 16, top_k=1)
-print(enc.decode(out))
+d2l.print_wrapped(enc.decode(out))
 out = gpt2.generate(enc.encode('The secret of a good deep learning '
                                'textbook is'), 40, seed=0, temperature=0.8,
                     top_k=50)
-print(enc.decode(out))
+d2l.print_wrapped(enc.decode(out))
 ```
 
 Take stock of what just happened: with the right five flags, a class we

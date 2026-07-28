@@ -930,6 +930,15 @@ class BPETokenizer:
     def to_tokens(self, ids):
         return [self.decode([int(i)]) for i in ids]
 
+import textwrap
+
+def print_wrapped(*args, width=76):
+    """Print like `print`, folding each line to the width of a page.
+
+    Defined in :numref:`sec_text-sequence`"""
+    for line in ' '.join(str(a) for a in args).split('\n'):
+        print(textwrap.fill(line, width, subsequent_indent='    '))
+
 class Vocab:
     """Vocabulary for text.
 

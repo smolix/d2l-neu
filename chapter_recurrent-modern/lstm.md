@@ -496,7 +496,7 @@ close to the model's preferences yet keeps moving.
 ppls['LSTM'] = val_ppl(model)
 pred = model.predict('the time traveller', 30, data.tokenizer, d2l.try_gpu(),
                      temperature=0.5)
-print(f"perplexity {ppls['LSTM']:.1f}, {pred!r}")
+d2l.print_wrapped(f"perplexity {ppls['LSTM']:.1f}, {pred!r}")
 ```
 
 ```{.python .input #lstm-concise-implementation-4}
@@ -504,7 +504,7 @@ print(f"perplexity {ppls['LSTM']:.1f}, {pred!r}")
 ppls['LSTM'] = val_ppl(model)
 pred = model.predict('the time traveller', 30, data.tokenizer,
                      temperature=0.5)
-print(f"perplexity {ppls['LSTM']:.1f}, {pred!r}")
+d2l.print_wrapped(f"perplexity {ppls['LSTM']:.1f}, {pred!r}")
 ```
 
 ## Gated Recurrent Units

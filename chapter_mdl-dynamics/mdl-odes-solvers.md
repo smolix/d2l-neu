@@ -729,8 +729,9 @@ for n in [10, 20, 26, 40, 100]:
 print('exact x(T) = e^{-50} =', f'{np.exp(-lam_f * T):.2e}')
 A_stiff = np.diag([-50.0, -1.0])               # one fast mode, one slow mode
 x_stiff = euler(lambda x: A_stiff @ x, np.array([1.0, 1.0]), T, 20)
-print('stiff system, forward Euler with h=0.05: x(T) =', x_stiff.round(2),
-      '(the long-dead fast mode explodes)')
+print('stiff system, forward Euler with h=0.05 '
+      '(the long-dead fast mode explodes):')
+print('x(T) =', x_stiff.round(2))
 ```
 
 Note what backward Euler's unconditional stability does and does not buy: at

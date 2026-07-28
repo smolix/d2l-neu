@@ -328,7 +328,7 @@ X = 100 * jax.random.normal(d2l.get_key(), (4, 8))
 %%tab tensorflow
 norm = RMSNorm()
 X = 100 * tf.random.normal((4, 8))
-tf.reduce_mean(norm(X) ** 2, axis=-1)
+tf.reduce_mean(norm(X) ** 2, axis=-1).numpy()
 ```
 
 ```{.python .input #custom-layers-layers-with-parameters-rmsnorm-2}

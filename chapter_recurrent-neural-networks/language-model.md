@@ -201,7 +201,8 @@ generate 25 tokens.
 ```{.python .input #language-model-sampling-from-n-gram-models}
 rng = random.Random(0)
 for n, model in models.items():
-    print(f'{n}-gram:', ' '.join(model.sample(['the', 'time'], 25, rng)))
+    d2l.print_wrapped(f'{n}-gram:',
+                      ' '.join(model.sample(['the', 'time'], 25, rng)))
 ```
 
 The progression is unmistakable. The unigram model emits words with the

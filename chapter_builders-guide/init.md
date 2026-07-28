@@ -291,7 +291,7 @@ net = tf.keras.Sequential([
 
 X = tf.ones((2, 4))
 net(X)
-net.layers[0].kernel[:, 0], net.layers[0].bias[0]
+net.layers[0].kernel[:, 0].numpy(), net.layers[0].bias[0].numpy()
 ```
 
 ```{.python .input #init-applying-initializers-1}
@@ -379,7 +379,7 @@ net = tf.keras.Sequential([
         1, kernel_initializer=tf.keras.initializers.Constant(42.0))])
 
 net(X)
-net.layers[0].kernel[:, 0], net.layers[2].kernel[:, 0]
+net.layers[0].kernel[:, 0].numpy(), net.layers[2].kernel[:, 0].numpy()
 ```
 
 ```{.python .input #init-applying-initializers-2}

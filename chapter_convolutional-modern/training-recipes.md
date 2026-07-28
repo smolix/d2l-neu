@@ -427,7 +427,7 @@ for t in range(100):
     with torch.no_grad():  # Simulate noisy SGD iterates around 1.0
         net.weight.copy_(1 + 0.3 * torch.randn(1, 1))
     ema.update(net)
-    raw.append(float(net.weight))
+    raw.append(float(net.weight.detach()))
     avg.append(float(ema.shadow['weight']))
 d2l.plot(list(range(100)), [raw, avg], xlabel='step', ylabel='weight',
          legend=['raw iterates', 'EMA'])

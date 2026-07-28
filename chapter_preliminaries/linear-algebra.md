@@ -1287,7 +1287,7 @@ torch.linalg.eigvalsh(S)  # Eigenvalues of a symmetric matrix are real
 ```{.python .input #linear-algebra-eigenvalues-1}
 %%tab tensorflow
 S = tf.constant([[1.0, 2, 3], [2, 0, 4], [3, 4, 5]])
-tf.linalg.eigvalsh(S)  # Eigenvalues of a symmetric matrix are real
+tf.linalg.eigvalsh(S).numpy()  # Eigenvalues of a symmetric matrix are real
 ```
 
 ```{.python .input #linear-algebra-eigenvalues-1}

@@ -1141,7 +1141,8 @@ def watch(q, k, v, i):
 with torch.no_grad():
     forward_blocks(gpt2, x, watch)
 print('mean attention weight on token 0 (uniform would be ~0.003):')
-print('  '.join(f'layer {i}: {m:.2f}' for i, m in enumerate(masses)))
+d2l.print_wrapped('  '.join(f'layer {i}: {m:.2f}'
+                            for i, m in enumerate(masses)))
 ```
 
 ```{.python .input #kv-cache-a-window-needs-a-sink-1}
@@ -1159,7 +1160,8 @@ def watch(q, k, v, i):
 
 forward_blocks(gpt2, x, watch)
 print('mean attention weight on token 0 (uniform would be ~0.003):')
-print('  '.join(f'layer {i}: {m:.2f}' for i, m in enumerate(masses)))
+d2l.print_wrapped('  '.join(f'layer {i}: {m:.2f}'
+                            for i, m in enumerate(masses)))
 ```
 
 From the middle of the stack upward, GPT-2 parks a *third to a half* of

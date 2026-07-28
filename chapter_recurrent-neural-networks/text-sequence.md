@@ -401,6 +401,20 @@ toy_tok.decode(toy_tok.encode('hug pug hugs'))
 
 ### Training on The Time Machine
 
+Token lists and, later in the chapter, generated text run wider than a
+printed page. One utility folds them, and we reach for it throughout the
+rest of the book whenever output would otherwise run off the margin.
+
+```{.python .input #text-sequence-training-on-the-time-machine-3}
+#@save
+import textwrap
+
+def print_wrapped(*args, width=76):  #@save
+    """Print like `print`, folding each line to the width of a page."""
+    for line in ' '.join(str(a) for a in args).split('\n'):
+        print(textwrap.fill(line, width, subsequent_indent='    '))
+```
+
 Now the real thing: we train a 1,024-token vocabulary on the raw,
 unnormalized novella. The first merges are humble letter pairs; by the end
 of training the tokenizer has discovered whole words of Wells' prose. Look
@@ -414,7 +428,7 @@ merged_ids = list(tok.merges.values())
 print('first:', [tok.vocab[i] for i in merged_ids[:8]])
 print('last: ', [tok.vocab[i] for i in merged_ids[-8:]])
 ids = tok.encode('The Time Traveller smiled. Are you sure?')
-print(len(ids), 'tokens:', [tok.vocab[i] for i in ids])
+print_wrapped(len(ids), 'tokens:', [tok.vocab[i] for i in ids])
 ```
 
 How much does a bigger vocabulary buy? Because ids are assigned in rank
@@ -460,7 +474,8 @@ that straddle word boundaries:
 ```{.python .input #text-sequence-pre-tokenization-telling-bpe-where-words-end-1}
 crossers = [v.decode('utf-8', 'replace') for i, v in tok.vocab.items()
             if i >= 256 and b' ' in v.strip(b' ')]
-print(len(crossers), 'tokens cross a word boundary, e.g.', crossers[:8])
+print_wrapped(len(crossers), 'tokens cross a word boundary, e.g.',
+              crossers[:8])
 ```
 
 Merges like "of the " compress the training corpus, but they are brittle
@@ -509,8 +524,8 @@ crossers = [v for i, v in bpe.vocab.items()
 print('boundary-crossing tokens now:', len(crossers))
 gained = sorted(set(bpe.vocab.values()) - set(tok.vocab.values()),
                 key=lambda v: (-len(v), v))
-print('longest tokens gained instead:',
-      [v.decode('utf-8', 'replace') for v in gained[:6]])
+print_wrapped('longest tokens gained instead:',
+              [v.decode('utf-8', 'replace') for v in gained[:6]])
 ```
 
 ![Pre-tokenization in action on a real sentence. The regex first cuts the text into chunks: words with their leading spaces, digit runs, and punctuation. BPE merges are then applied within each chunk, and can never cross a chunk boundary.](../img/mdl-rnn-pretokenization-pipeline.svg)

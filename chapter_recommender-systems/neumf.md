@@ -7,8 +7,10 @@ This section moves beyond explicit feedback, introducing the neural collaborativ
 As aforementioned, NeuMF fuses two subnetworks. The GMF is a generic neural network version of matrix factorization where the input is the elementwise product of user and item latent factors. It consists of two neural layers:
 
 $$
-\mathbf{x} = \mathbf{p}_u \odot \mathbf{q}_i \\
-\hat{y}_{ui} = \alpha(\mathbf{h}^\top \mathbf{x}),
+\begin{aligned}
+\mathbf{x} &= \mathbf{p}_u \odot \mathbf{q}_i \\
+\hat{y}_{ui} &= \alpha(\mathbf{h}^\top \mathbf{x}),
+\end{aligned}
 $$
 
 where $\odot$ denotes the Hadamard product of vectors. $\mathbf{P} \in \mathbb{R}^{m \times k}$  and $\mathbf{Q} \in \mathbb{R}^{n \times k}$ correspond to user and item latent matrix respectively. $\mathbf{p}_u \in \mathbb{R}^{ k}$ is the $u^\textrm{th}$ row of $P$ and $\mathbf{q}_i \in \mathbb{R}^{ k}$ is the $i^\textrm{th}$ row of $Q$.  $\alpha$ and $\mathbf{h}$ denote the activation function and weight of the output layer. $\hat{y}_{ui}$ is the prediction score of the user $u$ might give to the item $i$.

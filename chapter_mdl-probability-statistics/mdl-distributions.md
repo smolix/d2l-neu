@@ -1094,7 +1094,11 @@ The other discrete laws have their own conjugate partners, built the same way.
   $\mathrm{Exp}(\beta)$ waits, extending the exponential's arrow in the family
   tree just as the binomial extends the Bernoulli's.
 * **Dirichlet--Multinomial.** The **Dirichlet** distribution
-  $\mathrm{Dir}(\mathbf p\mid\boldsymbol\alpha)=\frac{\Gamma(\sum_k\alpha_k)}{\prod_k\Gamma(\alpha_k)}\prod_k p_k^{\alpha_k-1}$
+
+  $$
+  \mathrm{Dir}(\mathbf p\mid\boldsymbol\alpha)=\frac{\Gamma(\sum_k\alpha_k)}{\prod_k\Gamma(\alpha_k)}\prod_k p_k^{\alpha_k-1}
+  $$
+
   is the multivariate Beta, a density over probability vectors on the simplex,
   with mean $\mathbb E[p_k]=\alpha_k/\sum_j\alpha_j$. It is conjugate to the
   categorical/multinomial by the same multiplication: the likelihood contributes

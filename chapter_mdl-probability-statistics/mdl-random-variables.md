@@ -712,10 +712,12 @@ each slice, take the
 expectation over $Y$, and add and subtract $E\bigl[E[X\mid Y]\bigr]^2=E[X]^2$:
 
 $$
+\begin{aligned}
 E\bigl[\textrm{Var}(X\mid Y)\bigr] + \textrm{Var}\bigl(E[X\mid Y]\bigr)
- = \Bigl(E[X^2] - E\bigl[E[X\mid Y]^2\bigr]\Bigr)
- + \Bigl(E\bigl[E[X\mid Y]^2\bigr] - E[X]^2\Bigr)
- = E[X^2] - E[X]^2,
+ &= \Bigl(E[X^2] - E\bigl[E[X\mid Y]^2\bigr]\Bigr) \\
+ &\qquad + \Bigl(E\bigl[E[X\mid Y]^2\bigr] - E[X]^2\Bigr) \\
+ &= E[X^2] - E[X]^2,
+\end{aligned}
 $$
 
 which is $\textrm{Var}(X)$, using the tower property on $E[X^2]$ and on
@@ -808,9 +810,11 @@ $\mu_X+\mu_Y$ by linearity :eqref:`eq_mdl-exp_linear` and deviation $\bar X+\bar
 Then by :eqref:`eq_mdl-var_def` and linearity,
 
 $$
-\textrm{Var}(X+Y) = E\bigl[(\bar X+\bar Y)^2\bigr]
- = E[\bar X^2] + 2\,E[\bar X\bar Y] + E[\bar Y^2]
- = \textrm{Var}(X) + 2\,\textrm{Cov}(X,Y) + \textrm{Var}(Y),
+\begin{aligned}
+\textrm{Var}(X+Y) &= E\bigl[(\bar X+\bar Y)^2\bigr]
+ = E[\bar X^2] + 2\,E[\bar X\bar Y] + E[\bar Y^2] \\
+ &= \textrm{Var}(X) + 2\,\textrm{Cov}(X,Y) + \textrm{Var}(Y),
+\end{aligned}
 $$
 
 recognizing $E[\bar X\bar Y]=\textrm{Cov}(X,Y)$ from :eqref:`eq_mdl-cov_def`. $\blacksquare$
@@ -972,10 +976,12 @@ $P(Y\in A)=P\bigl(X\in g^{-1}(A)\bigr)=\int_{g^{-1}(A)}p_X(\mathbf x)\,d\mathbf 
 so the integrand on the right is the density of $Y$. Conservation of mass thus reads
 
 $$
-p_Y(\mathbf y) = p_X\!\big(g^{-1}(\mathbf y)\big)\,\big|\det J_{g^{-1}}(\mathbf y)\big|,
-\qquad\text{equivalently}\qquad
-\log p_Y(\mathbf y) = \log p_X(\mathbf x) - \log\big|\det J_{g}(\mathbf x)\big|
+\begin{aligned}
+p_Y(\mathbf y) &= p_X\!\big(g^{-1}(\mathbf y)\big)\,\big|\det J_{g^{-1}}(\mathbf y)\big|, \\
+\text{equivalently}\qquad
+\log p_Y(\mathbf y) &= \log p_X(\mathbf x) - \log\big|\det J_{g}(\mathbf x)\big|
 \quad\text{at }\mathbf x = g^{-1}(\mathbf y).
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-cov_density`
 

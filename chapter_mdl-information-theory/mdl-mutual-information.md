@@ -186,9 +186,11 @@ $$
 :eqref:`eq_mdl-mut_ent_def`:
 
 $$
+\begin{aligned}
 I(X; Y)
-= E\left[\log p_{X,Y}(x,y)\right] - E\left[\log p_X(x)\right] - E\left[\log p_Y(y)\right]
-= -H(X,Y) + H(X) + H(Y).
+&= E\left[\log p_{X,Y}(x,y)\right] - E\left[\log p_X(x)\right] - E\left[\log p_Y(y)\right] \\
+&= -H(X,Y) + H(X) + H(Y).
+\end{aligned}
 $$
 
 Substituting the chain rule $H(X,Y) = H(Y) + H(X \mid Y)$ gives
@@ -464,10 +466,12 @@ $$
 **Proof.** Telescope with the entropy identities:
 
 $$
-I(X; Y, Z) = H(X) - H(X \mid Y, Z)
-= \underbrace{H(X) - H(X \mid Z)}_{I(X;\, Z)}
+\begin{aligned}
+I(X; Y, Z) &= H(X) - H(X \mid Y, Z) \\
+&= \underbrace{H(X) - H(X \mid Z)}_{I(X;\, Z)}
 + \underbrace{H(X \mid Z) - H(X \mid Y, Z)}_{I(X;\, Y \mid Z)}.
 \quad\blacksquare
+\end{aligned}
 $$
 
 **Corollary (independent side information is free).** *If $W$ is independent

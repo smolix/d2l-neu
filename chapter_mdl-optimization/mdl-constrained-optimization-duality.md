@@ -660,10 +660,12 @@ $f(\mathbf{x}) + \boldsymbol{\lambda}^\top(A\mathbf{x} - \mathbf{b})$, and
 grouping the terms in $\mathbf{x}$,
 
 $$
+\begin{aligned}
 g(\boldsymbol{\lambda})
-= \inf_{\mathbf{x}} \left[ f(\mathbf{x}) + (A^\top\boldsymbol{\lambda})^\top\mathbf{x} \right] - \mathbf{b}^\top\boldsymbol{\lambda}
-= -\sup_{\mathbf{x}} \left[ (-A^\top\boldsymbol{\lambda})^\top\mathbf{x} - f(\mathbf{x}) \right] - \mathbf{b}^\top\boldsymbol{\lambda}
-= -f^*(-A^\top\boldsymbol{\lambda}) - \mathbf{b}^\top\boldsymbol{\lambda},
+&= \inf_{\mathbf{x}} \left[ f(\mathbf{x}) + (A^\top\boldsymbol{\lambda})^\top\mathbf{x} \right] - \mathbf{b}^\top\boldsymbol{\lambda} \\
+&= -\sup_{\mathbf{x}} \left[ (-A^\top\boldsymbol{\lambda})^\top\mathbf{x} - f(\mathbf{x}) \right] - \mathbf{b}^\top\boldsymbol{\lambda} \\
+&= -f^*(-A^\top\boldsymbol{\lambda}) - \mathbf{b}^\top\boldsymbol{\lambda},
+\end{aligned}
 $$
 
 with $f^*$ the conjugate of :numref:`subsec_mdl-convex-conjugate`. Tables

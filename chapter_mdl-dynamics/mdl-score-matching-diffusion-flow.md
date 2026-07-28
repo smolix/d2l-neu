@@ -1188,9 +1188,13 @@ and one-step generators distilled from flows.
 Time to train one. The target is a two-moons distribution (two interleaved
 crescents, a classic stress test for mode-splitting) generated in a few lines
 of NumPy; the source is a standard 2-D Gaussian. We also define the **energy
-distance**
-$\mathcal{E}(P, Q) = \left( 2\, \mathbb{E}\|X - Y\| - \mathbb{E}\|X - X'\| - \mathbb{E}\|Y - Y'\| \right)^{1/2}$
-:cite:`Szekely.Rizzo.2013`, an MMD-style two-sample discrepancy
+distance** :cite:`Szekely.Rizzo.2013`
+
+$$
+\mathcal{E}(P, Q) = \left( 2\, \mathbb{E}\|X - Y\| - \mathbb{E}\|X - X'\| - \mathbb{E}\|Y - Y'\| \right)^{1/2},
+$$
+
+an MMD-style two-sample discrepancy
 (:numref:`sec_mdl-ipm-mmd`) that is zero iff the distributions agree; we use
 its square, on $2048$-point samples, to grade generated samples against a
 held-out target sample throughout.
@@ -1655,11 +1659,13 @@ probability-flow twin of :numref:`sec_mdl-probability-flow-ode`). In
 particular $(\mathbf{X}_0, \mathbf{X}_1)$ is a coupling of $(p_0, p_1)$. Then
 
 $$
+\begin{aligned}
 W_2^2(p_0, p_1)
-\le \mathbb{E} \left\| \mathbf{X}_1 - \mathbf{X}_0 \right\|^2
-= \mathbb{E} \left\| \int_0^1 \mathbf{v}_t(\mathbf{X}_t)\, dt \right\|^2
-\le \mathbb{E} \int_0^1 \left\| \mathbf{v}_t(\mathbf{X}_t) \right\|^2 dt
+&\le \mathbb{E} \left\| \mathbf{X}_1 - \mathbf{X}_0 \right\|^2
+= \mathbb{E} \left\| \int_0^1 \mathbf{v}_t(\mathbf{X}_t)\, dt \right\|^2 \\
+&\le \mathbb{E} \int_0^1 \left\| \mathbf{v}_t(\mathbf{X}_t) \right\|^2 dt
 = \int_0^1\!\! \int \|\mathbf{v}_t\|^2\, p_t\, d\mathbf{x}\, dt,
+\end{aligned}
 $$
 
 where the first inequality is suboptimality of this particular coupling and

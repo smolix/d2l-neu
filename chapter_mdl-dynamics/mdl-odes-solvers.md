@@ -769,13 +769,15 @@ minimum with Hessian $H$ the dynamics linearize, mode by eigenmode, onto the
 test equation:
 
 $$
+\begin{aligned}
 \dot{\mathbf{x}} = -\nabla L(\mathbf{x})
-\;\;\xrightarrow{\textrm{linearize}}\;\;
+\;\;&\xrightarrow{\textrm{linearize}}\;\;
 \dot{\boldsymbol{\delta}} = -H\boldsymbol{\delta}
 \;\;\xrightarrow{\textrm{Euler}, \, h = \eta}\;\;
-\boldsymbol{\delta}_{k+1} = (I - \eta H)\,\boldsymbol{\delta}_k
-\;\;\xrightarrow{\textrm{stability}}\;\;
+\boldsymbol{\delta}_{k+1} = (I - \eta H)\,\boldsymbol{\delta}_k \\
+&\xrightarrow{\textrm{stability}}\;\;
 \eta < \frac{2}{\lambda_{\max}(H)} .
+\end{aligned}
 $$
 
 The solver bound $h < 2/\lambda$ *is* the learning-rate ceiling: a diverging

@@ -210,7 +210,7 @@ The $\epsilon^2$ term is a *higher-order term*: with $\epsilon = 10^{-7}$ it is 
 
 $$
 \begin{aligned}
-f(x+\epsilon) = g\bigl(h(x+\epsilon)\bigr)
+f(x+\epsilon) &= g\bigl(h(x+\epsilon)\bigr)\\
 &\approx g\!\left(h(x) + \epsilon\, h'(x)\right)
 &&\text{(inner: small-change identity)}\\
 &\approx g(h(x)) + \epsilon\, h'(x)\, \frac{dg}{dh}(h(x))

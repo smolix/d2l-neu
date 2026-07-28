@@ -544,7 +544,11 @@ rank that the $\ell_1$ norm plays for sparsity.
 left panel plots the singular-value spectrum on a log scale (note the rapid decay);
 the remaining panels reconstruct the image at ranks $k=1,5,20$ and full, each
 labeled with its relative Frobenius error
-$\|\mathbf{A}-\mathbf{A}_k\|_F/\|\mathbf{A}\|_F=\sqrt{\sum_{i>k}\sigma_i^2/\sum_i\sigma_i^2}$.
+
+$$
+\|\mathbf{A}-\mathbf{A}_k\|_F/\|\mathbf{A}\|_F=\sqrt{\sum_{i>k}\sigma_i^2/\sum_i\sigma_i^2}.
+$$
+
 A rank-20 truncation of this image already looks essentially correct while storing
 only a fraction of the numbers, because the discarded singular values carry little
 energy: a visual proof of Eckart--Young.

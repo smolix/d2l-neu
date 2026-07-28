@@ -969,13 +969,15 @@ those $x_i \to -\infty$ approaches the same value, so the formula holds on the
 whole simplex with the convention $0 \log 0 = 0$. Therefore
 
 $$
-\mathrm{lse}^*(\mathbf{p}) =
+\begin{aligned}
+\mathrm{lse}^*(\mathbf{p}) &=
 \begin{cases}
 \sum_i p_i \log p_i = -H(\mathbf{p}), & \mathbf{p} \in \Delta, \\
 +\infty, & \textrm{otherwise,}
-\end{cases}
-\qquad \textrm{and dually} \qquad
-\mathrm{lse}(\mathbf{x}) = \max_{\mathbf{p} \in \Delta} \left( \mathbf{p}^\top \mathbf{x} + H(\mathbf{p}) \right).
+\end{cases} \\
+\textrm{and dually} \qquad
+\mathrm{lse}(\mathbf{x}) &= \max_{\mathbf{p} \in \Delta} \left( \mathbf{p}^\top \mathbf{x} + H(\mathbf{p}) \right).
+\end{aligned}
 $$
 :eqlabel:`eq_mdl-opt-lse-entropy`
 
@@ -1212,11 +1214,13 @@ the inequality :eqref:`eq_mdl-opt-pl`, known as the
 introduced it independently in 1963 :cite:`Polyak.1963,Lojasiewicz.1963`):
 
 $$
+\begin{aligned}
 f \textrm{ is } L\textrm{-smooth} \;\;\textrm{and}\;\;
-\frac12\, \|\nabla f(\mathbf{x})\|^2 \;\ge\; \mu \left( f(\mathbf{x}) - f^\star \right)
-\;\;\textrm{for all } \mathbf{x}
-\qquad \Longrightarrow \qquad
+\frac12\, \|\nabla f(\mathbf{x})\|^2 &\;\ge\; \mu \left( f(\mathbf{x}) - f^\star \right)
+\;\;\textrm{for all } \mathbf{x} \\
+&\Longrightarrow \quad
 \textrm{GD converges linearly to } f^\star,
+\end{aligned}
 $$
 
 with no convexity required :cite:`Karimi.Nutini.Schmidt.2016` (smoothness

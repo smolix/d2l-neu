@@ -325,11 +325,13 @@ so heads enters the average with weight $\hat p_{\textrm{data}}(\textrm{H}) = 9/
 and tails with weight $4/13$. In general,
 
 $$
+\begin{aligned}
 \frac{1}{n}\,\ell(\boldsymbol{\theta})
-  = -\frac{1}{n}\sum_{i=1}^n \log p_{\boldsymbol{\theta}}(x_i)
-  = -\sum_{x} \frac{n_x}{n}\,\log p_{\boldsymbol{\theta}}(x)
-  = -\sum_{x} \hat p_{\textrm{data}}(x)\,\log p_{\boldsymbol{\theta}}(x)
+  &= -\frac{1}{n}\sum_{i=1}^n \log p_{\boldsymbol{\theta}}(x_i)
+  = -\sum_{x} \frac{n_x}{n}\,\log p_{\boldsymbol{\theta}}(x) \\
+  &= -\sum_{x} \hat p_{\textrm{data}}(x)\,\log p_{\boldsymbol{\theta}}(x)
   = \textrm{CE}\!\left(\hat p_{\textrm{data}},\, p_{\boldsymbol{\theta}}\right),
+\end{aligned}
 $$
 
 which is exactly the cross-entropy named in the proposition. Scaling by the
@@ -999,7 +1001,11 @@ alternates the two coordinates :cite:`Dempster.Laird.Rubin.1977`:
   This closes every gap, making the bound *tight*:
   $\sum_i \mathcal{L}(q_i^{(t)}, \boldsymbol{\theta}^{(t)}) = \log p(X;\boldsymbol{\theta}^{(t)})$.
 * **M-step.** Hold the guesses fixed and maximize over the parameters:
-  $\boldsymbol{\theta}^{(t+1)} = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}} \sum_i \mathbb{E}_{q_i^{(t)}}\big[\log p(x_i, z; \boldsymbol{\theta})\big]$
+
+  $$
+  \boldsymbol{\theta}^{(t+1)} = \mathop{\mathrm{argmax}}_{\boldsymbol{\theta}} \sum_i \mathbb{E}_{q_i^{(t)}}\big[\log p(x_i, z; \boldsymbol{\theta})\big]
+  $$
+
   (the entropy terms do not involve $\boldsymbol{\theta}$). This is the *easy*,
   complete-data objective, with soft assignments standing in for the oracle's
   labels.

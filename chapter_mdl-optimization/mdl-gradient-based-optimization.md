@@ -216,9 +216,11 @@ By the fundamental theorem of calculus and then Cauchy--Schwarz with the
 Lipschitz bound :eqref:`eq_mdl-opt-smoothness`,
 
 $$
+\begin{aligned}
 f(\mathbf{y}) - f(\mathbf{x}) - \nabla f(\mathbf{x})^\top (\mathbf{y}-\mathbf{x})
-= \int_0^1 \big(\nabla f(\mathbf{x} + t(\mathbf{y}-\mathbf{x})) - \nabla f(\mathbf{x})\big)^\top (\mathbf{y}-\mathbf{x})\, dt
-\;\le\; \int_0^1 L\,t\, \|\mathbf{y}-\mathbf{x}\|^2\, dt = \tfrac{L}{2}\|\mathbf{y}-\mathbf{x}\|^2,
+&= \int_0^1 \big(\nabla f(\mathbf{x} + t(\mathbf{y}-\mathbf{x})) - \nabla f(\mathbf{x})\big)^\top (\mathbf{y}-\mathbf{x})\, dt \\
+&\le \int_0^1 L\,t\, \|\mathbf{y}-\mathbf{x}\|^2\, dt = \tfrac{L}{2}\|\mathbf{y}-\mathbf{x}\|^2,
+\end{aligned}
 $$
 
 which is the same one-line argument as the 1-D proof in
@@ -346,9 +348,11 @@ $f(\mathbf{x}) \approx f(\mathbf{x}^\star) + \tfrac12 (\mathbf{x}-\mathbf{x}^\st
 with $H$ the Hessian at the minimum. So we study the model problem
 
 $$
-f(\mathbf{x}) = \tfrac12\, \mathbf{x}^\top A\, \mathbf{x},
-\qquad A \textrm{ symmetric positive definite, eigenvalues }
-0 < \lambda_{\min} = \lambda_1 \le \cdots \le \lambda_n = \lambda_{\max},
+\begin{aligned}
+f(\mathbf{x}) &= \tfrac12\, \mathbf{x}^\top A\, \mathbf{x},
+\qquad A \textrm{ symmetric positive definite,} \\
+&\textrm{eigenvalues } 0 < \lambda_{\min} = \lambda_1 \le \cdots \le \lambda_n = \lambda_{\max},
+\end{aligned}
 $$
 
 for which gradient descent can be solved *exactly*, and the answer turns out

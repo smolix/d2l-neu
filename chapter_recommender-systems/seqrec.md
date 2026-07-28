@@ -17,8 +17,10 @@ where $\mathbf{Q} \in \mathbb{R}^{n \times k}$ represents item embeddings and $\
 The horizontal convolutional layer has $d$ horizontal filters $\mathbf{F}^j \in \mathbb{R}^{h \times k}, 1 \leq j \leq d, h = \{1, ..., L\}$, and the vertical convolutional layer has $d'$ vertical filters $\mathbf{G}^j \in \mathbb{R}^{ L \times 1}, 1 \leq j \leq d'$. After a series of convolutional and pool operations, we get the two outputs:
 
 $$
-\mathbf{o} = \textrm{HConv}(\mathbf{E}^{(u, t)}, \mathbf{F}) \\
-\mathbf{o}'= \textrm{VConv}(\mathbf{E}^{(u, t)}, \mathbf{G}) ,
+\begin{aligned}
+\mathbf{o} &= \textrm{HConv}(\mathbf{E}^{(u, t)}, \mathbf{F}) \\
+\mathbf{o}' &= \textrm{VConv}(\mathbf{E}^{(u, t)}, \mathbf{G}) ,
+\end{aligned}
 $$
 
 where $\mathbf{o} \in \mathbb{R}^d$ is the output of horizontal convolutional network and $\mathbf{o}' \in \mathbb{R}^{kd'}$ is the output of vertical convolutional network. For simplicity, we omit the details of convolution and pool operations. They are concatenated and fed into a fully connected neural network layer to get more high-level representations.

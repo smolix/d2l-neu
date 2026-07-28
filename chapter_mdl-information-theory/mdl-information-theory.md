@@ -297,12 +297,14 @@ $$
 (:numref:`subsec_mdl-jensen`) to the convex function $-\log$:
 
 $$
+\begin{aligned}
 D_{\textrm{KL}}(P\|Q)
-= E_{x\sim P}\!\left[-\log\frac{q(x)}{p(x)}\right]
-\geq -\log E_{x\sim P}\!\left[\frac{q(x)}{p(x)}\right]
-= -\log \!\!\sum_{x\,:\,p(x)>0}\!\! q(x)
+&= E_{x\sim P}\!\left[-\log\frac{q(x)}{p(x)}\right]
+\geq -\log E_{x\sim P}\!\left[\frac{q(x)}{p(x)}\right] \\
+&= -\log \!\!\sum_{x\,:\,p(x)>0}\!\! q(x)
 = -\log Q(\textrm{supp}\,P)
 \geq 0.
+\end{aligned}
 $$
 
 The expectation runs only over the support of $P$, where the $p(x)$ factors

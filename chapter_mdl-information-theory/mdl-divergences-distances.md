@@ -649,10 +649,14 @@ at $a = b$ is non-negative everywhere.
 *Step 2: reduction to two outcomes.* Let $A^\star = \{p > q\}$, and set
 $a = P(A^\star)$, $b = Q(A^\star)$, so that
 $\textrm{TV}(P, Q) = a - b$ by the previous proposition. Merging the outcomes
-inside $A^\star$ and inside its complement can only *decrease* KL: by the
-log-sum inequality (for non-negative numbers,
-$\sum_i a_i \log\frac{a_i}{b_i} \geq \big(\sum_i a_i\big) \log \frac{\sum_i a_i}{\sum_i b_i}$,
-itself one application of Jensen to $t \mapsto t\log t$), applied separately
+inside $A^\star$ and inside its complement can only *decrease* KL, by the
+log-sum inequality: for non-negative numbers,
+
+$$
+\sum_i a_i \log\frac{a_i}{b_i} \geq \big(\sum_i a_i\big) \log \frac{\sum_i a_i}{\sum_i b_i},
+$$
+
+itself one application of Jensen to $t \mapsto t\log t$. Applied separately
 to the terms in $A^\star$ and in its complement,
 
 $$

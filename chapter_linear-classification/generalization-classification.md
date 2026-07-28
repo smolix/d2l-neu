@@ -415,12 +415,11 @@ d2l.plot(np.arange(1, k + 1), best, 'number of models evaluated',
 
 The best apparent accuracy climbs steadily, exceeding $0.56$ after ten
 thousand tries, even though *nothing was learned*: the models are coin flips,
-and the climb (which grows like $\sqrt{\log(k)/(2n)}$, by the same Hoeffding
-bound applied to $k$ events at once) is pure selection. Whenever you pick the
+and the climb is pure selection, growing like $\sqrt{\log(k)/(2n)}$ by the
+same Hoeffding bound applied to $k$ events at once. Whenever you pick the
 best of many models by their score on one shared test set, some of the
-apparent improvement is exactly this effect; and an adaptive modeler, who
-steers each new model *toward* what scored well before, can climb faster
-still.
+apparent improvement is exactly this effect; and an adaptive modeler can climb
+faster still, steering each new model *toward* what scored well before.
 
 
 
@@ -575,10 +574,10 @@ As :numref:`fig_mdl-clf-shattering` illustrates,
 a line in the plane can realize *every* labeling
 of three points in general position,
 while no line can realize the XOR labeling of four points,
-which already shows that lines cannot shatter *these* four points;
-the general upper bound, and hence a VC dimension of exactly $3$
-for two-dimensional linear classifiers (matching $d+1$ with $d=2$),
-comes from Radon's theorem below.
+which already shows that lines cannot shatter *these* four points.
+Radon's theorem below supplies the general upper bound, and hence
+a VC dimension of exactly $3$ for two-dimensional linear classifiers
+(matching $d+1$ with $d=2$).
 The general statement holds in both directions, and neither is deep.
 For the lower bound, the $d+1$ points
 $\{\mathbf{0}, \mathbf{e}_1, \ldots, \mathbf{e}_d\}$

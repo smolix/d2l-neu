@@ -81,9 +81,9 @@ Models chapters, which have models large enough to warrant them; a single
 historical note is that the very first of them appeared in 2012, when
 AlexNet was split across two GPUs simply because its weights did not fit
 in one card's 3 GB :cite:`Krizhevsky.Sutskever.Hinton.2012`. Data
-parallelism is our subject, and — a warning that :numref:`sec_memory_precision`
-already made — it does *not* let you train a bigger model: every GPU still
-holds a full copy.
+parallelism is our subject, and it does *not* let you train a bigger
+model, a warning that :numref:`sec_memory_precision` already made: every
+GPU still holds a full copy.
 
 ## Data Parallelism by Hand
 :label:`subsec_mg-byhand`
@@ -284,9 +284,9 @@ Both tabs also make a strong claim — that $k$ devices take *the same*
 step one device would — and a claim like that deserves a check, not a
 promise. From the same initialization, on the same minibatch, one step on
 two GPUs must move the parameters exactly where one step on one GPU does.
-The test is cheap, and it is the test that catches normalization bugs —
-a summed instead of averaged gradient is an accidental $k\times$ learning
-rate — that no accuracy curve reliably reveals:
+The test is cheap, and it catches normalization bugs that no accuracy
+curve reliably reveals, such as a summed instead of averaged gradient
+acting as an accidental $k\times$ learning rate:
 
 ```{.python .input #multiple-gpus-data-parallelism-by-hand-7}
 %%tab pytorch
@@ -415,9 +415,9 @@ the time, because a small batch never filled the device to begin with —
 and the Python orchestration and per-step dispatch are not amortized
 by microsecond-scale compute. The technique is not wrong; the *regime* is
 wrong. This tiny model is the worst case for data parallelism, and
-diagnosing exactly why — separating the communication cost, which is small
-here, from the underutilization cost, which is not — is the next two
-subsections' work.
+diagnosing exactly why is the next two subsections' work: separating the
+communication cost, which is small here, from the underutilization cost,
+which is not.
 
 ## Doing Better: Ring Allreduce
 :label:`subsec_mg-ring`

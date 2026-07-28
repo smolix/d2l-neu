@@ -45,9 +45,9 @@ so much that an unmodified ResNet-50 gains
 over four points of ImageNet accuracy from the recipe alone
 :cite:`wightman2021resnet`; :numref:`sec_training_recipes` teaches the
 modern recipe, without which comparisons between architectures mislead.
-Building on that recipe, ConvNeXt :cite:`liu2022convnet` modernized a
-ResNet step by step, using only ideas from this book, into a network
-that matches a vision transformer of equal cost
+Building on that recipe, ConvNeXt :cite:`liu2022convnet` used only ideas
+from this book to modernize a ResNet step by step into a network that
+matches a vision transformer of equal cost
 (:numref:`sec_convnext`). Finally,
 network design itself became an empirical science: rather than crafting
 a single network, the RegNet methodology

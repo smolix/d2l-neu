@@ -8,10 +8,11 @@ ever need to maximize something, flipping the sign of the objective
 suffices. One more convention: the optimization literature writes the thing
 being adjusted as a single vector $\mathbf{x}$, so for the next few sections
 $\mathbf{x}$ bundles up all the parameters that earlier chapters wrote as
-$(\mathbf{w}, b)$ — same object, shorter name. None of this is difficult to state. What is difficult is the
-surface being minimized: the graph of a deep network's loss over a
-parameter space with millions of dimensions, and the shape of that surface
-decides which algorithms work. This section surveys the terrain before the
+$(\mathbf{w}, b)$ — same object, shorter name. None of this is difficult
+to state. The difficulty lies in the surface being minimized: the graph of
+a deep network's loss over a parameter space with millions of dimensions.
+The shape of that surface decides which algorithms work.
+This section surveys the terrain before the
 chapter builds the machinery: what minimizing the objective does and does
 not accomplish, the places where gradients die, and the two properties of
 the surface — curvature and noise — that set the pace of every method that
@@ -207,10 +208,10 @@ $x_1$ by $1 - 0.2\,\eta$ and $x_2$ by $1 - 4\eta$. The steep direction
 sets a ceiling: for $x_2$ to shrink rather than explode we need
 $|1 - 4\eta| < 1$, that is $\eta < 0.5$. The flat direction sets the pace:
 for any stable $\eta$, each step keeps more than $90\%$ of $x_1$. To watch
-the squeeze we borrow two helpers built in :numref:`sec_gd` —
+the squeeze we borrow two helpers built in :numref:`sec_gd`:
 `d2l.train_2d` iterates an update rule from a fixed starting point, and
 `d2l.show_trace_2d` draws the resulting trace over the objective's
-contours — and run 30 steps at $\eta = 0.45$, just under the ceiling:
+contours. With those we run 30 steps at $\eta = 0.45$, just under the ceiling:
 
 ```{.python .input #optimization-intro-an-ill-conditioned-valley}
 def f_valley(x1, x2):  # Second derivatives 0.2 and 4
@@ -238,9 +239,9 @@ at $2/\lambda_{\max}$, the flat curvature then contracts by only
 $1 - 2/\kappa$ per step, and the iteration count grows *linearly* with
 $\kappa$ — the arithmetic is worked out in
 :numref:`subsec_mdl-quadratic-model`. For deep networks $\kappa$ is not
-$20$; measured values run to the thousands and beyond, and this valley,
-with the squeeze turned up, is the right mental model for why plain
-gradient descent crawls. Much of the
+$20$; measured values run to the thousands and beyond, so this valley is
+the right mental model for why plain gradient descent crawls, only with
+the squeeze turned much further up. Much of the
 chapter is aimed at exactly this picture: momentum cuts the effective cost
 from $\kappa$ to $\sqrt{\kappa}$ (:numref:`sec_momentum`), adaptive
 methods rescale each coordinate by its own history (:numref:`sec_adam`),
@@ -280,9 +281,9 @@ ball* whose squared radius scales with $\eta$, which is the fundamental
 reason learning rates must decay (:numref:`sec_sgd`, :numref:`sec_scheduler`).
 Batch size becomes a second dial next to the learning rate — one with
 hardware consequences (:numref:`sec_minibatch_sgd`) and, at scale, a
-measurable point of diminishing returns (:numref:`sec_batch_size`) — and
-averaging over time, momentum's second job, quiets noise that batching
-alone leaves behind (:numref:`sec_momentum`). Nor is noise purely a tax:
+measurable point of diminishing returns (:numref:`sec_batch_size`).
+Averaging over time quiets the noise that batching alone leaves behind,
+and that is momentum's second job (:numref:`sec_momentum`). Nor is noise purely a tax:
 it helps bounce the iterate out of the shallow local minima and saddle
 points of the previous section — though gradient descent from a random
 start escapes strict saddles even without noise, and a deep basin is
@@ -293,9 +294,9 @@ decisions.
 ## What Convexity Still Buys
 
 Every surface in this section was nonconvex, deliberately so. Yet the
-vocabulary we used to describe them — condition number, convergence rate,
-noise ball — comes from *convex* analysis, where each of these is a
-theorem rather than a cartoon. That is the first thing convexity still
+vocabulary we used to describe them comes from *convex* analysis, where
+condition number, convergence rate, and noise ball are each a theorem
+rather than a cartoon. That is the first thing convexity still
 buys: a language, and clean baselines. A convex function has no bad local
 minima and no saddle points to hide in, so any weakness an optimizer shows
 on a convex problem is intrinsic to the optimizer. If a method misbehaves
@@ -315,13 +316,13 @@ that transfers to deep networks essentially intact
 The limits are just as instructive. A deep network's loss cannot be convex
 globally: permuting the hidden units of a layer leaves the function
 computed unchanged, so every minimum comes with a combinatorial family of
-separated copies of itself — the first exercise below makes this precise —
-while a convex function's minima form a single connected set. Convexity
+separated copies of itself, while a convex function's minima form a single
+connected set; the first exercise below makes this precise. Convexity
 for deep learning is therefore a local approximation and a source of
-tools, never a global fact. The full treatment — convex sets and
+tools, never a global fact. The full treatment lives in
+:numref:`sec_mdl-convexity` of the mathematical appendix: convex sets and
 functions, Jensen's inequality, why local minima of convex functions are
-global, duality, projections — lives in :numref:`sec_mdl-convexity` of the
-mathematical appendix, whose optimization chapter
+global, duality, projections. Its optimization chapter
 (:numref:`chap_mdl-optimization`) carries the proofs this chapter owes.
 
 ## Summary

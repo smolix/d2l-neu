@@ -51,9 +51,9 @@ already diagnosed diseases
 for previously seen patients,
 but rather previously undiagnosed
 ailments in previously unseen patients.
-This problem (how to discover patterns that *generalize*) is
-the fundamental problem of machine learning,
-and arguably of all of statistics.
+This is the fundamental problem of machine learning,
+and arguably of all of statistics:
+how to discover patterns that *generalize*.
 We might cast this problem as just one slice
 of a far grander question
 that engulfs all of science:
@@ -94,9 +94,10 @@ than to the underlying distribution is called *overfitting*,
 and techniques for combatting overfitting
 are often called *regularization* methods.
 While it is no substitute for a proper introduction
-to statistical learning theory (:numref:`chap_classification_generalization`
-gives a first, rigorous taste; see also :citet:`Vapnik98,boucheron2005theory`),
+to statistical learning theory,
 we will give you just enough intuition to get going.
+:numref:`chap_classification_generalization` gives a first, rigorous taste;
+see also :citet:`Vapnik98,boucheron2005theory`.
 We will revisit generalization in many chapters
 throughout the book,
 exploring both what is known about
@@ -180,9 +181,9 @@ and thus the training error will in general
 be a biased estimate of the true error
 on the underlying population.
 The central question of generalization
-is then when should we expect our training error
+is then this: when should we expect our training error
 to be close to the population error
-(and thus the generalization error).
+(and thus the generalization error)?
 
 ### Model Complexity
 
@@ -192,8 +193,9 @@ the training and generalization errors tend to be close.
 However, when we work with
 more complex models and/or fewer examples,
 we expect the training error to go down
-but the *generalization gap* (the difference $R - R_\textrm{emp}$
-between the generalization error and the training error) to grow.
+but the *generalization gap* to grow.
+That gap is the difference $R - R_\textrm{emp}$
+between the generalization error and the training error.
 This should not be surprising.
 Imagine a model class so expressive that
 for any dataset of $n$ examples,
@@ -235,8 +237,8 @@ sets drawn by the same process, the classical *bias-variance decomposition*
 makes the trade-off precise: a model too simple to capture the signal makes a systematic error
 (high *bias*, i.e., underfitting), while a model flexible enough to chase the
 noise in a particular training set varies wildly from one dataset to the next
-(high *variance*, i.e., overfitting). Their sum, plus an irreducible noise floor
-$\sigma^2$, is the expected test error, which traces the U-shaped curve of
+(high *variance*, i.e., overfitting). Their sum plus an irreducible noise floor
+$\sigma^2$ is the expected test error, which traces the U-shaped curve of
 :numref:`fig_capacity_vs_error`; we derive the decomposition formally in
 :numref:`sec_mdl-statistics`.
 Often, models with more parameters
@@ -280,10 +282,10 @@ after the fact.
 Error on the holdout data, i.e., validation set,
 is called the *validation error*.
 
-This classical picture, in which more *capacity* (the richness of the model
-class) means more overfitting, is, however,
-*incomplete* for the heavily overparametrized models at the heart of modern deep
-learning. Once a model is large enough to *interpolate* its training data (drive
+The classical picture says that more *capacity* (the richness of the model
+class) means more overfitting. For the heavily overparametrized models at the
+heart of modern deep learning, however, that picture is
+*incomplete*. Once a model is large enough to *interpolate* its training data (drive
 training error to zero), pushing capacity even higher often makes test error
 *fall again* rather than rise: the *double descent* phenomenon
 :cite:`Belkin.Hsu.Ma.ea.2019,nakkiran2021deep`. We take up this modern story, and
@@ -481,9 +483,9 @@ The U-curve now *visibly decomposes*. Squared bias dominates for degrees below
 3 and collapses to essentially zero the moment the model class contains the
 truth; variance is tiny at first but grows relentlessly with surplus capacity,
 exploding as the polynomial gains the freedom to chase each draw's noise. Their
-sum (which, up to the irreducible noise floor $\sigma^2 = 0.01$, is the
-expected test error) is lowest exactly where the two failure modes trade off,
-at degree 3. This is a numerical instance of the decomposition proved in
+sum is lowest exactly where the two failure modes trade off, at degree 3, and
+up to the irreducible noise floor $\sigma^2 = 0.01$ that sum is the expected
+test error. This is a numerical instance of the decomposition proved in
 :numref:`sec_mdl-statistics`.
 
 ### Dataset Size

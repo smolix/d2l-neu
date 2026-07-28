@@ -794,9 +794,9 @@ for name, std in stats:
 ```
 
 The residual stream's spread grows block by block, since each block adds
-its body's output on top of the stream, exactly the depth effect that
-motivated the scaled initializations of :numref:`sec_init_param`, measured
-here without touching the model.
+its body's output on top of the stream. That is exactly the depth effect
+that motivated the scaled initializations of :numref:`sec_init_param`,
+measured here without touching the model.
 
 :begin_tab:`pytorch`
 Two rules keep hooks safe. First, *detach before you stash*: the hook above

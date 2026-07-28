@@ -26,8 +26,8 @@ precision for speed; :numref:`sec_multi_gpu` and
 
 Two ideas carry the section. The first is *arithmetic intensity*: how many
 floating-point operations a computation performs per byte it moves to and
-from memory. Intensity, compared against a single machine-dependent
-threshold, predicts which regime an operation lands in — before you run
+from memory. Compared against a single machine-dependent threshold,
+intensity predicts which regime an operation lands in — before you run
 anything. The second is that *timing a GPU is easy to get wrong*: the
 frameworks dispatch work asynchronously, so a naive timer measures how fast
 Python can enqueue work, not how fast the GPU can do it. We build the
@@ -436,8 +436,8 @@ throughput therefore climbs steeply — a single doubling of $n$ can buy
 several times the TFLOP/s — and the curve approaches the specification
 number only around $n \approx 2048$–$4096$, where the tensor cores
 finally saturate and the operation is compute-bound in fact as well as on
-paper. The gap between the nominal crossover ($n \approx 500$) and the
-measured knee ($n \approx 2048$–$4096$, depending on the framework) is
+paper. The nominal crossover sits at $n \approx 500$, the measured knee
+at $n \approx 2048$–$4096$ depending on the framework, and that gap is
 not a failure of the model; it *is*
 a lesson: intensity tells you when an operation stops being
 bandwidth-limited in principle, while utilization and overhead decide how

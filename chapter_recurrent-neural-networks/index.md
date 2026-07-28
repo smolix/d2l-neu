@@ -70,9 +70,9 @@ Yet recurrence has returned in modern guise, which we take up in :numref:`chap_m
 precisely because a bounded-memory state makes inference cheap
 when the alternative grows with the length of the sequence.
 Whichever architecture wins a given task,
-the concepts introduced here, namely autoregressive factorization, perplexity,
-backpropagation through time, and decoding,
-are exactly the ones on which the later material on large language models stands.
+the later material on large language models stands on exactly
+the concepts introduced here: autoregressive factorization, perplexity,
+backpropagation through time, and decoding.
 They are worth learning once, and learning carefully.
 
 ```toc

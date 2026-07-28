@@ -548,10 +548,10 @@ random stream; the process-global generator is not captured automatically.
 :begin_tab:`mxnet`
 In MXNet the bundle is three files rather than one. `save_parameters` covers
 the model; the optimizer state lives with the `gluon.Trainer`, whose
-`save_states` writes Adam's moments (though not per-parameter attributes such
-as `lr_mult`, which come from your code on rebuild), and writes them with
-pickle, so a trainer-states file deserves the same your-own-disk-only caution
-as any pickle. The step counter and config travel in a JSON sidecar. One
+`save_states` writes Adam's moments with pickle, so a trainer-states file
+deserves the same your-own-disk-only caution as any pickle. It does not write
+per-parameter attributes such as `lr_mult`, which come from your code on
+rebuild. The step counter and config travel in a JSON sidecar. One
 compartment of :numref:`fig_bg_checkpoint_contents` stays empty: MXNet has no
 API to snapshot its random-number generators, only `npx.random.seed` to
 restart them, so a resumed run reseeds rather than continuing the old stream.
@@ -1396,11 +1396,11 @@ that means something only once the code that built the network runs again.
 For your own files `save_parameters` is fine, and its format is pure array
 data with no pickle to execute; for files you share, safetensors is broadly
 readable, and the `safetensors.numpy` bridge is all MXNet needs to speak it.
-A resumable checkpoint is three versioned files whose completion should be
-published by one atomic manifest update:
-parameters, trainer states (Adam's moments, stored with pickle, so keep such
-files your own), and a JSON sidecar with the step and config; the RNG stream
-cannot be snapshotted, only reseeded. Loading someone else's weights is dict
+A resumable checkpoint is three versioned files: parameters, trainer states
+(Adam's moments, stored with pickle, so keep such files your own), and a JSON
+sidecar with the step and config. One atomic manifest update should publish
+that all three are complete, and the RNG stream cannot be snapshotted, only
+reseeded. Loading someone else's weights is dict
 surgery plus `allow_missing`/`ignore_extra`, and because those flags skip
 silently, the missing/unexpected key-set diff is yours to compute and read.
 :end_tab:

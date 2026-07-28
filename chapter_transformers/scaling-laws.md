@@ -244,8 +244,8 @@ as they are.
 ## A Miniature Scaling Study
 
 Counting tells us what a run costs; it says nothing about what the cost
-buys. The empirical regularity that changed how budgets are planned is
-the *scaling law*: across many orders of magnitude, language-model loss
+buys. The *scaling law* is the empirical regularity that changed how
+budgets are planned: across many orders of magnitude, language-model loss
 falls as a power law in each of model size, data, and compute, provided
 none of the three is the bottleneck :cite:`kaplan2020scaling`. On log-log
 axes a power law is a straight line, and straight lines extrapolate: a
@@ -446,10 +446,10 @@ visibly less than the trend predicts, while its *training* loss keeps
 falling right on schedule — the gap between the two curves grows from
 roughly nothing at the small end to several hundredths of a nat at the
 largest. Nothing is wrong with the model; something is wrong with its diet.
-Fourteen million parameters reading five million characters three times
-over have started spending capacity on the corpus itself rather than on
-English, the same failure mode :numref:`sec_gpt` produced on purpose,
-caught here at its onset.
+Fourteen million parameters have started spending capacity on the corpus
+itself rather than on English, after reading five million characters
+three times over: the same failure mode :numref:`sec_gpt` produced on
+purpose, caught here at its onset.
 
 The Chinchilla ratio says this bend is exactly where it should be.
 Twenty tokens per parameter puts the largest model a corpus this size can
@@ -528,13 +528,12 @@ the fixed corpus's $B/D^{\beta}$ takes over.
 If scale is what matters, what exactly do the trillion-token runs build?
 The reports read like a single answer arrived at independently.
 :numref:`tab_modern-recipe` compiles the architecture sections of seven
-open-weights families — Mistral 7B
+open-weights families onto the axes this chapter built: Mistral 7B
 :cite:`Jiang.Sablayrolles.Mensch.ea.2023`, Llama 3
 :cite:`Grattafiori.Dubey.Jauhri.ea.2024`, Qwen3
 :cite:`Yang.Li.Yang.ea.2025`, OLMo 2 and 3 :cite:`OLMo.2025,OLMo3.2025`,
 DeepSeek-V3 :cite:`Liu.Feng.Xue.ea.2024`, Gemma 3
-:cite:`Gemma.Team.2025`, and GPT-OSS :cite:`OpenAI.2025` — onto the axes
-this chapter built.
+:cite:`Gemma.Team.2025`, and GPT-OSS :cite:`OpenAI.2025`.
 
 ### Convergent Evolution
 
@@ -570,9 +569,9 @@ parameters, overfitting is not the failure mode, and the regularizer we
 still needed in :numref:`sec_gpt` has simply left the recipe. Even the
 positions column is one idea at different dial settings: RoPE with an
 inflated base for longer contexts, stretched further by interpolation
-schemes (:numref:`sec_positional-information`); the newest twist —
-dropping positions entirely on some layers, as Llama 4's NoPE-interleaved
-long-context layers do — is still a setting of the same dial.
+schemes (:numref:`sec_positional-information`); the newest twist is still
+a setting of the same dial, dropping positions entirely on some layers as
+Llama 4's NoPE-interleaved long-context layers do.
 
 ### Recipe Rows as Constructor Calls
 
@@ -669,13 +668,13 @@ engineering discipline of its own: the number in a model card is a
 compound of RoPE base inflation and interpolation
 (:numref:`sec_positional-information`), window-and-sink cache policies
 (:numref:`sec_kv-cache`), and the systems work of
-:numref:`chap_performance` — none of it a new body plan; the
+:numref:`chap_performance`. None of it is a new body plan: the
 architectural moves are settings of the attention layer this chapter
-already built, and the rest is positional bookkeeping and systems work.
-Third, everything this chapter held fixed — what to train *on*, and what
-happens after the loss stops falling — is where the gains have moved:
-data curation, instruction tuning, and learning from feedback are the
-subject of the Language Models part, beginning in
+already built, and the rest is positional bookkeeping and systems
+engineering. Third, the gains have moved to everything this chapter held
+fixed, namely what to train *on* and what happens after the loss stops
+falling; data curation, instruction tuning, and learning from feedback
+are the subject of the Language Models part, beginning in
 :numref:`chap_nlp_pretrain`.
 
 ## Summary
@@ -695,12 +694,12 @@ that shape is $L(N,D) = E + A N^{-\alpha} + B D^{-\beta}$ — an entropy
 floor, a capacity term, a data term — whose compute-optimal allocation
 under $C \approx 6ND$ grows parameters and tokens together, at about
 twenty tokens per parameter (the Chinchilla ratio); its lesson is that
-data must scale with parameters.
-What the scaled-up runs build has converged: GQA or latent-compressed
-attention over a pre-norm RMSNorm block with a gated FFN, RoPE positions,
-no dropout, and mixture of experts where parameters should outnumber
-FLOPs; our recipe table's modern rows collapse to a single argument list
-of the `GPT` class, differing in dial settings rather than design. The
+data must scale with parameters. What the scaled-up runs build has
+converged: GQA or latent-compressed attention over a pre-norm RMSNorm
+block with a gated FFN, RoPE positions, no dropout, and mixture of
+experts where parameters should outnumber FLOPs; our recipe table's
+modern rows collapse to a single argument list of the `GPT` class,
+differing in dial settings rather than design. The
 2017 block, plus stability, cache, and capacity engineering, is the 2026
 frontier.
 

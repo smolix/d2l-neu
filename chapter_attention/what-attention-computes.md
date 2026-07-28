@@ -74,8 +74,8 @@ One structural fact makes this model unusually transparent: once the
 attention patterns $\alpha$ are fixed, the map from embeddings to logits in
 :eqref:`eq_stream-update` is *linear* — a sum of products of weight
 matrices. Expanding the recursion writes the logits as a sum over *paths*
-through the network, each path a readable chain of matrices, which is what
-makes complete mechanistic analysis possible. This is the setting of the
+through the network, each path a readable chain of matrices, and complete
+mechanistic analysis becomes possible. This is the setting of the
 mathematical framework of :citet:`Elhage.Nanda.Olsson.ea.2021`, whose exact
 results hold for attention-only transformers without feed-forward layers or
 normalization, and it is why our specimen was built without them:
@@ -104,14 +104,14 @@ destination, and nothing else. The split matters because the individual
 projections $\mathbf{W}_q, \mathbf{W}_k, \mathbf{W}_v, \mathbf{W}_o$ are not
 identifiable (replacing $\mathbf{W}_q$ by $\mathbf{R}\mathbf{W}_q$ and
 $\mathbf{W}_k$ by $\mathbf{R}^{-\top}\mathbf{W}_k$ changes nothing the model
-computes), while the two products are what the head actually is. Both are
+computes), while the two products are the head itself. Both are
 $d \times d$ but of rank at most $d_h = d/H$: a head can test and move only a
 $d_h$-dimensional slice of the stream. With $d = 128$ and four heads, each
 head works through a rank-32 bottleneck. In `TinyCharLM` the four
 projections live in two fused layers — `qkv` stacks the query, key, and
 value maps, and `proj` holds the per-head output maps side by side — and
-neither layer carries a bias, so extracting a head's circuits is a matter
-of slicing, and the slices are the head, exactly:
+neither layer carries a bias, so we extract a head's circuits by slicing,
+and the slices are the head, exactly:
 
 ```{.python .input #what-attention-computes-where-and-what-the-qk-and-ov-circuits}
 %%tab pytorch
@@ -196,9 +196,9 @@ provides. A head in layer 1 attends to the previous token and writes its
 identity into the stream; a head in layer 2 can then match the query "I am
 $[\mathrm{A}]$" against keys enriched with "I follow $[\mathrm{A}]$", land
 on position $j$, and let its OV circuit copy $x_j = [\mathrm{B}]$ upward
-(:numref:`fig_induction-circuit`). This two-hop circuit — a previous-token
-head composing with a match-and-copy head through the residual stream — is
-the induction head. Note what the argument establishes: two layers *can*
+(:numref:`fig_induction-circuit`). This two-hop circuit is the induction
+head: a previous-token head composing with a match-and-copy head through
+the residual stream. Note what the argument establishes: two layers *can*
 express it, one layer cannot (except through position alone, a loophole we
 will meet shortly). Whether gradient descent actually finds the circuit is
 an empirical question, and the rest of the section answers it by
@@ -457,7 +457,7 @@ repeated tokens; the one-block model is stuck above three nats and fewer
 than one token in five — better than chance, because copying-style heads
 can at least concentrate probability on tokens present in the context, but
 nowhere near retrieval. Both models sit at chance on the first copy: at
-ln 64, around 4.2 nats, or a little above it, the overshoot being the price
+ln 64, around 4.2 nats, or a little above it, and the overshoot is the price
 of betting on repetitions that a fresh random pattern keeps refusing to
 deliver. How the gap opens during training is at
 least as informative as the endpoint:
@@ -572,9 +572,9 @@ heads do the reverse, with the strongest putting well over half of its mass
 on the single position the algorithm calls for, out of up to 63
 candidates. Which head plays which role varies from seed to seed, and in
 this small model several block-2 heads usually share the induction work
-rather than one doing it alone; the *structure* — previous-token attention
-below, induction attention above, never the other way around — is what
-replicates.
+rather than one doing it alone. The *structure* is what replicates:
+previous-token attention below, induction attention above, never the other
+way around.
 
 ## In-Context Learning as Pattern Completion
 
@@ -583,8 +583,8 @@ replicates.
 Step back and consider what the trained model does at evaluation time.
 Every test sequence is freshly sampled: the pattern it completes, and every
 adjacent pair inside that pattern, has never occurred in training. There is
-no association between tokens for the weights to have stored — what the
-weights store is an *algorithm*, match-and-copy, that binds tokens to their
+no association between tokens for the weights to have stored. What they
+store is an *algorithm*, match-and-copy, that binds tokens to their
 successors at inference time, inside the context window. That is in-context
 learning, in miniature: the model "learns" each new pattern from a single
 exposure, without a gradient step. Plotting accuracy per position for
@@ -687,8 +687,8 @@ token after that token's previous occurrence, on repeated random sequences.
 Three of their observations map directly onto what we just built. First,
 induction heads form abruptly early in training, and the formation
 coincides with the visible bump in the loss curve, our phase change at
-scale. Second, the same window is when models gain most of their in-context
-learning ability, measured as the gap between loss late and early in the
+scale. Second, models gain most of their in-context learning ability in that
+same window, measured as the gap between loss late and early in the
 context; ablating induction heads after training removes a large part of
 that gap. Third, the heads generalize off-distribution: heads identified on
 repeated random tokens also complete structured patterns, translate
@@ -721,7 +721,7 @@ not refute every explanatory use — sharpened rather than settled the
 debate. "The attention weights mean something" is, as an unqualified
 claim, false; qualified versions must say what the weights feed into.
 
-What our identification of the induction head actually rested on is worth
+Our identification of the induction head rested on three things worth
 listing, because the list is the method. A *behavioral* result: second-copy
 loss collapses, and only for models deep enough to express the circuit. A
 *causal* handle: change the input distribution (the period probe) or the
@@ -733,9 +733,9 @@ because the model is linear once the patterns are fixed. In a real
 transformer, feed-forward layers and normalization break that linearity,
 features are packed into shared directions rather than neat subspaces, and
 each step of the triangulation becomes a research problem — this is the
-active field of mechanistic interpretability, where a handful of circuits,
-induction heads first among them, are understood at the level we reached
-here, while most of what large models do is not. Attention weights are
+active field of mechanistic interpretability. A handful of circuits are
+understood there at the level we reached here, induction heads first among
+them, while most of what large models do is not. Attention weights are
 evidence, and this section is a template for what turning evidence into
 understanding takes.
 
@@ -757,8 +757,8 @@ what followed it. Trained on repeated random tokens with variable period,
 visible in the second-copy loss — while a one-block control cannot, and a
 fixed-period version of the task is solved by a positional shortcut
 instead (one that a projection bias, restored for that demo alone, makes
-cheap to express), a reminder that synthetic benchmarks reward the
-cheapest circuit they admit. The trained model completes patterns it has never seen, which
+cheap to express). A reminder: synthetic benchmarks reward the cheapest
+circuit they admit. The trained model completes patterns it has never seen, which
 is in-context learning in miniature, and the mechanism matches the
 induction heads implicated in in-context learning in large language
 models. Attention maps alone license none of these conclusions: the

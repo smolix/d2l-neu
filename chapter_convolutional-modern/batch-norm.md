@@ -129,7 +129,7 @@ need to be learned as part of model training.
 Before the learned affine transformation, batch normalization keeps the
 normalized activations on a controlled scale. The final activations are not
 bounded, since the learned scale $\boldsymbol{\gamma}$ can itself grow.
-Practical experience confirms that, as alluded to when discussing feature rescaling, batch normalization seems to allow for more aggressive learning rates.
+As alluded to when discussing feature rescaling, practical experience confirms that batch normalization seems to allow for more aggressive learning rates.
 We calculate $\hat{\boldsymbol{\mu}}_\mathcal{B}$ and ${\hat{\boldsymbol{\sigma}}_\mathcal{B}}$ in :eqref:`eq_batchnorm` as follows:
 
 $$\hat{\boldsymbol{\mu}}_\mathcal{B} = \frac{1}{|\mathcal{B}|} \sum_{\mathbf{x} \in \mathcal{B}} \mathbf{x}
@@ -169,8 +169,8 @@ During training, such exact calculation is infeasible
 because the intermediate variables
 for all data examples
 change every time we update our model.
-During training, implementations therefore maintain exponential moving
-averages of each layer's mean and variance. Those running estimates, rather
+Implementations therefore maintain exponential moving averages of each
+layer's mean and variance as training proceeds. Those running estimates, rather
 than exact statistics over the entire dataset, are the standard default for
 prediction; a separate calibration pass is sometimes used after fine-tuning.
 Thus batch normalization layers function differently
@@ -191,8 +191,8 @@ as we did before when introducing other layers.
 
 ### Fully Connected Layers
 
-When applying batch normalization to fully connected layers,
-:citet:`Ioffe.Szegedy.2015`, in their original paper inserted batch normalization after the affine transformation
+In their original paper, :citet:`Ioffe.Szegedy.2015` inserted batch
+normalization into a fully connected layer after the affine transformation
 and *before* the nonlinear activation function. Later applications experimented with
 inserting batch normalization right *after* activation functions.
 Denoting the input to the fully connected layer by $\mathbf{x}$,
@@ -959,22 +959,22 @@ where large per-device batches are unaffordable.
 Layer normalization from :numref:`subsec_layer-normalization-in-bn` is the
 other batch-free option, and modern convolutional networks use it in a specific
 form: at every spatial position, normalize the $c$ channel values at that
-position, just as a transformer normalizes each token's embedding. This
-per-position, channels-last layer normalization is the choice made by ConvNeXt,
-a convolutional architecture we will meet later in this chapter: it replaces
-every batch normalization in a ResNet-style network with layer normalization,
-uses fewer normalization layers overall, and loses no accuracy in the process
-(:numref:`sec_convnext`).
+position, just as a transformer normalizes each token's embedding. ConvNeXt, a
+convolutional architecture we will meet later in this chapter, makes exactly
+this choice: it replaces every batch normalization in a ResNet-style network
+with per-position, channels-last layer normalization, uses fewer normalization
+layers overall, and loses no accuracy in the process (:numref:`sec_convnext`).
 
 ### Normalizer-Free Networks
 
 One can push further and ask whether deep networks need normalization layers at
-all. Normalizer-free networks (NFNets) :cite:`brock2021nfnet` answer no:
-combining *weight standardization* (standardizing each convolution's weights
-rather than its activations) with *adaptive gradient clipping* (clipping a
-unit's gradient when its norm grows large relative to the corresponding weight
-norm) trains ResNet-style networks that held the ImageNet state of the art at
-publication, with no normalization anywhere. Dropping batch normalization
+all. Normalizer-free networks (NFNets) :cite:`brock2021nfnet` answer no. They
+train ResNet-style networks that held the ImageNet state of the art at
+publication, with no normalization anywhere, by combining *weight
+standardization* (standardizing each convolution's weights rather than its
+activations) with *adaptive gradient clipping* (clipping a unit's gradient when
+its norm grows large relative to the corresponding weight
+norm). Dropping batch normalization
 eliminates minibatch coupling and the train/serve discrepancy in one stroke,
 and it removes the cost of computing batch statistics on large activations. We
 return to normalizer-free networks when we discuss scaling up convolutional
@@ -994,7 +994,7 @@ Even with dropout and weight decay,
 they remain so flexible that their ability to generalize to unseen data
 likely needs significantly more refined learning-theoretic generalization guarantees.
 
-The original paper proposing batch normalization :cite:`Ioffe.Szegedy.2015`, in addition to introducing a powerful and useful tool,
+The original paper proposing batch normalization :cite:`Ioffe.Szegedy.2015` introduced a powerful and useful tool, and it also
 offered an explanation for why it works:
 by reducing *internal covariate shift*.
 Presumably by *internal covariate shift* they
@@ -1032,16 +1032,16 @@ troubling trends in machine learning :cite:`Lipton.Steinhardt.2018`.
 Other authors
 have proposed alternative explanations for the success of batch normalization,
 some :cite:`Santurkar.Tsipras.Ilyas.ea.2018`
-claiming that batch normalization's success comes despite exhibiting behavior
-that is in some ways opposite to those claimed in the original paper.
+claiming that batch normalization succeeds despite behavior
+that is in some ways the opposite of what the original paper claimed.
 
 
 We note that the *internal covariate shift*
 is no more worthy of criticism than any of
 thousands of similarly vague claims
 made every year in the technical machine learning literature.
-Likely, its resonance as a focal point of these debates
-owes to its broad recognizability for the target audience.
+It likely became a focal point of these debates
+because it was so broadly recognizable to the target audience.
 Batch normalization became a standard component of convolutional classifiers,
 while GroupNorm, LayerNorm, and normalizer-free networks now cover regimes in
 which batch statistics are undesirable. The competing explanations remain a

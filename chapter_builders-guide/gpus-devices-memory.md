@@ -1163,9 +1163,9 @@ on recomputation.
 Activation checkpointing is not available in MXNet: neither `mxnet.autograd`
 nor Gluon offers a recompute-during-backward transform comparable to
 `torch.utils.checkpoint`, `jax.checkpoint`, or `tf.recompute_grad`, and none
-was added before development stopped. This subsection's code, the
-gradient-equality check and the peak-memory comparison below, therefore
-appears only in the supported tabs. Recomputation can cut activation memory
+was added before development stopped. This subsection's code therefore
+appears only in the supported tabs: the gradient-equality check and the
+peak-memory comparison below. Recomputation can cut activation memory
 at the cost of roughly a third more compute. In
 MXNet the remaining memory knob is the batch size.
 :end_tab:
@@ -1425,7 +1425,8 @@ is exactly what our `ProgressBoard` from :numref:`sec_oo-design` does when the
 
 :begin_tab:`jax`
 Python returned from the loop in a few milliseconds — far less time than
-the thousand products take; they were still running. Any operation that needs a concrete value on the host forces a
+the 32 matrix products take; they were still running. Any operation that
+needs a concrete value on the host forces a
 *synchronization point*: `.item()`, `np.asarray`, `print`, an `if` on an
 array's value, and `block_until_ready()` itself, whose job is to make the
 synchronization explicit (our timings above depend on it). Each one makes

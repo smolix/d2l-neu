@@ -1,11 +1,11 @@
 # Selective State Space Models
 :label:`sec_mamba`
 
-The previous section ended on a confession. Everything we gained by
-linearizing the recurrence, parallel training by scan, stability by
-construction, provably good memory, came at the price of *time invariance*:
-the S4D applies the same dynamics at every step, so what it remembers is
-decided before it ever sees the input. Its convolution kernel weights the
+The previous section ended on a confession. Linearizing the recurrence
+gained us parallel training by scan, stability by construction, and
+provably good memory, and all of it came at the price of *time
+invariance*: the S4D applies the same dynamics at every step, so what it
+remembers is decided before it ever sees the input. Its convolution kernel weights the
 past by *position*, never by *content*. The gated cells of
 :numref:`sec_lstm` had the opposite profile: their forget gates read the
 data as it streamed past and decided, token by token, what deserved space
@@ -13,8 +13,8 @@ in the state, but their nonlinear recurrence trained sequentially. This
 section closes the loop. We make the step size, and with it the dynamics,
 a *function of the input*, following :citet:`Gu.Dao.2023`, and discover
 that this one change re-derives the forget gate a third time while keeping
-the parallel scan. The result, packaged into a residual block called
-*Mamba*, brought selective recurrence into competitive language-model
+the parallel scan. Packaged into a residual block called *Mamba*, the
+result brought selective recurrence into competitive language-model
 scaling in 2023: S4 had already beaten every transformer of its day on
 long-range classification benchmarks (:numref:`subsec_hippo`), but
 language modeling itself had remained attention's territory since the
@@ -305,8 +305,8 @@ continuous system $(\mathbf{A}, \mathbf{B}, \mathbf{C})$ and a step size
 $\Delta$, discretized by the zero-order hold into per-step coefficients.
 Everything downstream of that box stays fixed; the *selective* state
 space model of :citet:`Gu.Dao.2023` changes one design principle: the
-SSM's parameters become functions of the input. The principle is
-realized through three coupled projections. The step size, the input
+SSM's parameters become functions of the input. Three coupled
+projections realize that principle. The step size, the input
 matrix, and the read-out are no longer constants but functions of the
 current input $\mathbf{u}_t \in \mathbb{R}^H$:
 
@@ -367,9 +367,9 @@ FFT in :numref:`sec_ssm`. The recurrence
 :eqref:`eq_selective_ssm` is still an *affine* map of the state, just
 with per-step coefficients, and the associative combine
 :eqref:`eq_scan_combine` never assumed those coefficients were constant.
-The same `associative_scan`, called with tensors whose leading axis now
-varies per step, evaluates the selective recurrence in the same
-logarithmic depth. Seeing is believing, one more time: a sequential loop
+The same `associative_scan` evaluates the selective recurrence in the
+same logarithmic depth, now called with tensors whose leading axis
+varies per step. Seeing is believing, one more time: a sequential loop
 with time-varying decays against the scan.
 
 ```{.python .input #mamba-what-selectivity-costs-and-what-survives-1}
@@ -516,8 +516,8 @@ stack. Mamba fuses the same two jobs into one unit: the selective SSM is
 the sequence mixer, the expanded gated projections around it are the
 channel mixer, and a Mamba language model is this single homogeneous
 block stacked $L$ times where a transformer alternates two. The deeper
-question, whether the *mixers themselves* are secretly the same
-operation, is exactly where this chapter is headed.
+question is exactly where this chapter is headed: whether the *mixers
+themselves* are secretly the same operation.
 
 ![The Mamba block. An input projection widens $d$ to $2d$ and forks: the main branch runs a short causal convolution, a SiLU, and the selective SSM, whose step size, input and read-out matrices are functions of its input; the gate branch applies a SiLU and multiplies the SSM output elementwise. An output projection returns to width $d$ inside a pre-norm residual.](../img/mdl-modernrnn-mamba-block.svg)
 :label:`fig_mamba_block`
@@ -689,9 +689,9 @@ def benchmark(name, model, epochs=10):
                      / bytes_per_token, params, secs)
 ```
 
-The first answer, the LSTM of :numref:`sec_lstm`, and the second, the
-minGRU of :numref:`subsec_mingru` (restated below), train with the exact
-recipes of their home sections.
+The first two answers train with the exact recipes of their home
+sections: the LSTM of :numref:`sec_lstm` and the minGRU of
+:numref:`subsec_mingru` (restated below).
 
 ```{.python .input #mamba-the-three-answers-measured-on-one-task-3}
 %%tab pytorch, jax
@@ -807,8 +807,8 @@ plain SGD recipe, and at this corpus size a stronger model mostly buys
 sharper memorization of Wells's prose. This scoreboard says the selective
 architecture *can* be trained to better held-out prediction at comparable
 scale, not that it dominates pound for pound; at research scale the
-corresponding claim, matching transformers at small model sizes, is the
-Mamba paper's central result.
+corresponding claim is the Mamba paper's central result, matching
+transformers at small model sizes.
 
 ### Stepping the Selective Model
 :label:`subsec_mamba-step`

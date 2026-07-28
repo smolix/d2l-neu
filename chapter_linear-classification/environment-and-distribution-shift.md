@@ -272,10 +272,10 @@ It had supposedly learned not to find tanks
 but to tell the tank-free photos from the rest:
 the two image sets differed in lighting and shadow
 (one set was taken in the early morning, the other at noon), not in their tanks.
-Whether or not it happened exactly this way, the lesson is exact.
-A spurious feature correlated with the label in your sample,
-but absent in deployment,
-is enough to fool a model that never saw the distinction you actually care about.
+Whether or not it happened exactly this way, the lesson holds.
+A spurious feature can fool a model that never saw the distinction
+you actually care about; it need only correlate with the label
+in your sample and be absent in deployment.
 
 ### Nonstationary Distributions
 
@@ -439,7 +439,7 @@ for correcting covariate shift:
 
 Clipping the weights at a ceiling $c$ trades a little bias for much lower variance:
 when source and target barely overlap, a handful of examples acquire enormous weights
-$\beta_i$ that would otherwise dominate, and destabilize, the weighted objective.
+$\beta_i$ that would otherwise dominate and destabilize the weighted objective.
 :numref:`fig_mdl-clf-density-ratio` shows the geometry of the whole construction:
 where the target density $p$ exceeds the source density $q$,
 the ratio $\beta = p/q$ grows, and it grows *exponentially* fast
@@ -458,8 +458,8 @@ then the corresponding importance weight should be infinity.
 
 #### Covariate Shift Correction in Code
 
-The entire pipeline, from discriminator to reweighted training, fits in a
-few lines, so let us watch it work. We make the shift two-dimensional so that
+The entire pipeline fits in a few lines, from discriminator to reweighted
+training, so let us watch it work. We make the shift two-dimensional so that
 it is drastic but visible: source inputs are Gaussian around the origin,
 target inputs are the same Gaussian shifted to be centered at $(2, 0)$, and both share
 one labeling rule (covariate shift by construction). The label depends on
@@ -768,7 +768,7 @@ from domain knowledge and checked when target labels become available.
 In some cases, the environment may remember automated actions and respond in surprising ways. We must account for this possibility when building models and continue to monitor live systems, open to the possibility that our models and the environment will become entangled in unanticipated ways.
 
 These ideas predate the current era of large pretrained models, but
-distribution shift has only become more central since, as a foundation model is
+distribution shift has only become more central since: a foundation model is
 routinely deployed on domains, users, and time periods unlike its training
 corpus. Curated benchmarks such as WILDS :cite:`Koh.Sagawa.Marklund.ea.2021`
 show that models with strong in-distribution accuracy can still degrade sharply

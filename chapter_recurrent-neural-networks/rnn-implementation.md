@@ -139,9 +139,9 @@ The forward computation loops over the outermost axis of `inputs`, whose
 shape is (`num_steps`, `batch_size`, `num_inputs`), applying the recurrence
 :eqref:`rnn_h_with_state` once per time step and collecting the hidden state
 at every step. When no initial state is supplied we start from zeros. The
-explicit Python loop, kept in every tab including JAX, is the deliberately
-readable teaching form; the gated cells of :numref:`chap_modern_rnn` swap the
-JAX loop for `jax.lax.scan`, trading that clarity for acceptable JIT
+explicit Python loop is the deliberately readable teaching form, and we keep
+it in every tab including JAX; the gated cells of :numref:`chap_modern_rnn`
+swap the JAX loop for `jax.lax.scan`, trading that clarity for acceptable JIT
 compilation time.
 
 ```{.python .input #rnn-implementation-the-recurrent-cell-2}

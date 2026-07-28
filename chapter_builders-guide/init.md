@@ -454,10 +454,10 @@ across depth, and at a block's start.
 ### Truncated Normals
 
 A Gaussian gets the variance right, but its tails are unbounded. That is
-harmless for one draw and a near-certainty at scale: among the $10^8$ weights
-of a BERT-sized model, dozens land beyond five standard deviations. Large
-draws also consume disproportionate dynamic range once a model is cast to low
-precision (:numref:`sec_numerics`). BERT and implementations in the ViT
+harmless for one draw, while at scale a far-tail value is a near-certainty:
+among the $10^8$ weights of a BERT-sized model, dozens land beyond five
+standard deviations. Large draws also consume disproportionate dynamic range
+once a model is cast to low precision (:numref:`sec_numerics`). BERT and implementations in the ViT
 lineage use truncated-normal initialization
 :cite:`Devlin.Chang.Lee.ea.2018,Dosovitskiy.Beyer.Kolesnikov.ea.2021`: the
 tails are cut off at a fixed multiple of the nominal standard deviation. Raw

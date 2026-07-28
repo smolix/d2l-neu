@@ -15,7 +15,7 @@ or entirely out of our control,
 making it impossible in the short run.
 For now, we can assume that we already have
 as much high-quality data as our resources permit
-and focus the tools at our disposal
+and focus on the tools at our disposal
 when the dataset is taken as a given.
 
 Recall that in our polynomial regression example
@@ -116,7 +116,7 @@ is to add its norm as a penalty term
 to the problem of minimizing the loss.
 Thus we replace our original objective,
 *minimizing the prediction loss on the training labels*,
-with new objective,
+with a new objective,
 *minimizing the sum of the prediction loss and the penalty term*.
 Now, if our weight vector grows too large,
 our learning algorithm might focus
@@ -205,9 +205,9 @@ correspondence numerically on ridge regression.
 ![Weight decay as a constraint. The elliptical contours of the training loss $L(\mathbf{w})$, centred on the unconstrained optimum $\hat{\mathbf{w}}$, grow until they meet the constraint region at the regularized solution $\mathbf{w}^\star$. Left: the $\ell_2$ ball is met *tangentially*, shrinking both coordinates. Right: the $\ell_1$ diamond is met at a *corner*, forcing $w_2$ to exactly zero: the sparsity that distinguishes lasso from ridge.](../img/mdl-linreg-ridge-geometry.svg)
 :label:`fig_ridge_geometry`
 
-Using the same notation in :eqref:`eq_linreg_batch_update`,
-minibatch stochastic gradient descent updates
-for $\ell_2$-regularized regression as follows:
+Using the same notation as in :eqref:`eq_linreg_batch_update`,
+the minibatch stochastic gradient descent update
+for $\ell_2$-regularized regression is as follows:
 
 $$\begin{aligned}
 \mathbf{w} & \leftarrow \left(1- \eta\lambda \right) \mathbf{w} - \frac{\eta}{|\mathcal{B}|} \sum_{i \in \mathcal{B}} \mathbf{x}^{(i)} \left(\mathbf{w}^\top \mathbf{x}^{(i)} + b - y^{(i)}\right).
@@ -235,9 +235,9 @@ $\frac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss and applying the shrink-and-upda
 rule above are one and the same. This equivalence is special to SGD: for adaptive
 optimizers such as Adam, a penalty placed inside the loss is rescaled by the
 optimizer's per-coordinate second-moment estimates and no longer acts as uniform
-weight shrinkage. *Decoupling* the decay from the loss gradient (shrinking every
-weight by a fixed fraction at each step) restores the intended behavior; this is
-the decoupled-weight-decay variant AdamW, introduced by
+weight shrinkage. *Decoupling* the decay from the loss gradient restores the
+intended behavior, shrinking every weight by a fixed fraction at each step; this
+is the decoupled-weight-decay variant AdamW, introduced by
 :citet:`Loshchilov.Hutter.2019` and now a default optimizer for large models.
 The mechanism (including the per-coordinate shrinkage formula and a code
 demonstration racing the coupled and decoupled variants) is worked out in
@@ -583,9 +583,9 @@ for easy use in combination with any loss function.
 Moreover, this integration serves a computational benefit,
 allowing implementation tricks to add weight decay to the algorithm,
 without any additional computational overhead.
-Since the weight decay portion of the update
+The weight decay portion of the update
 depends only on the current value of each parameter,
-the optimizer must touch each parameter once anyway.
+and the optimizer must touch each parameter once anyway.
 
 :begin_tab:`mxnet`
 Below, we specify

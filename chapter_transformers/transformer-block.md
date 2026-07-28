@@ -88,8 +88,8 @@ a tuning nightmare. The normalizer of choice is *layer normalization*
 its $d$ features — unlike the batch normalization of
 :numref:`sec_batch_norm`, it involves no batch statistics, so it behaves
 identically in training and inference and is indifferent to sequence
-length. What the 2017 paper fixed, and what a few years of painful
-experience revised, is *where* it goes.
+length. The 2017 paper also fixed *where* it goes, and a few years of
+painful experience revised that answer.
 
 ### Two Arrangements
 
@@ -299,8 +299,8 @@ orders of magnitude below their pre-LN counterparts, while its value and
 output projections — which transform the one surviving token rather than
 compare tokens — come in around $0.06$, as healthy as pre-LN's (the FFN
 parameters, fed by the same residual stream, are likewise unaffected). It
-is specifically the query/key pathway, the part that decides *where* to
-attend, that dies; the plot shows the same starvation deepening block by
+is specifically the query/key pathway that dies, the part that decides
+*where* to attend; the plot shows the same starvation deepening block by
 block down the post-LN stack, while pre-LN tapers gently. (The effect
 softens under today's smaller initializations — one of several crutches,
 along with learning-rate warmup, that kept deep post-LN models trainable
@@ -310,8 +310,8 @@ The practical verdict matched this picture: post-LN transformers diverge
 without carefully tuned warmup, pre-LN models train without incident at the
 same depth :cite:`xiong2020layer`, and essentially every model since GPT-2
 has been pre-norm :cite:`Radford.Wu.Child.ea.2019`. We make pre-norm our
-default; the next section, which has a trainable model, will show the
-post-LN failure not at initialization but live, during training.
+default; the next section has a trainable model and will show the post-LN
+failure not at initialization but live, during training.
 
 ### RMSNorm
 
@@ -424,10 +424,11 @@ $$
 with $\mathbf{W}_1 \in \mathbb{R}^{4d \times d}$ and $\mathbf{W}_2 \in
 \mathbb{R}^{d \times 4d}$ in the classic configuration. The factor-4
 expansion is a convention the field has never found strong reason to
-revisit; what it implies is worth noticing: the FFN holds $8d^2$ parameters
-against attention's $4d^2$, so about two thirds of a block's parameters sit
-in these two matrices. When people say a transformer's knowledge lives
-mostly in its FFNs, this ratio is the accounting behind the claim.
+revisit, and it implies something worth noticing: the FFN holds $8d^2$
+parameters against attention's $4d^2$, so about two thirds of a block's
+parameters sit in these two matrices. When people say a transformer's
+knowledge lives mostly in its FFNs, this ratio is the accounting behind
+the claim.
 
 Two upgrades separate the 2017 FFN from today's. The activation $\phi$
 moved from ReLU to *GELU* :cite:`Hendrycks.Gimpel.2016`, a smoothed relative
@@ -448,9 +449,9 @@ transmitted at full strength wherever the gate is open, rather than bent
 through the activation. The multiplicative interaction is the same trick
 gates played in LSTMs, here compressed into a single layer. A third matrix
 means more parameters at the same width, so fair comparisons shrink the
-hidden width to $\tfrac{8}{3} d$, making three matrices of the gated FFN
-cost the same $8d^2$ as the classic one, up to rounding. Both variants, in
-one class:
+hidden width to $\tfrac{8}{3} d$, making the three matrices of the gated
+FFN cost the same $8d^2$ as the classic one, up to rounding. Both
+variants, in one class:
 
 ```{.python .input #transformer-block-the-feed-forward-network-1}
 %%tab pytorch
@@ -728,13 +729,14 @@ for act in ('gelu', 'swiglu'):
         f'{sum(losses[k-100:k]) / 100:.2f}' for k in (200, 400, 600)))
 ```
 
-The gated FFN ends more than a tenth of a nat ahead — a margin that holds up
-across seeds (rerunning with seeds 1 and 2 moves each number by a couple of
-hundredths, not the gap) and, more importantly, agrees in direction with
-:citet:`Shazeer.2020`'s systematic sweep and with the consistent choice of
-the major model families since Llama. It is a modest, real improvement of
-the kind that architecture progress is actually made of: no single dramatic
-win, but a percent here and a percent there, at equal cost, compounding.
+The gated FFN ends more than a tenth of a nat ahead — a margin that holds
+up across seeds, since rerunning with seeds 1 and 2 moves each number by a
+couple of hundredths, not the gap. More importantly, it agrees in direction
+with :citet:`Shazeer.2020`'s systematic sweep and with the consistent
+choice of the major model families since Llama. It is a modest, real
+improvement of the kind that architecture progress is actually made of: no
+single dramatic win, but a percent here and a percent there, at equal cost,
+compounding.
 
 ## Summary
 
@@ -756,10 +758,9 @@ the attention logits. In the FFN, SwiGLU replaces the fixed nonlinearity
 with a learned soft gate; at matched parameter count it wins by a small,
 seed-stable margin on our character model, consistent with its
 near-universal adoption. The section's product is `TransformerBlock`:
-normalization,
-activation, and arrangement as flags, attention and FFN as swappable
-factories — the single unit from which this chapter builds a GPT, a
-KV-cached decoder, an encoder, a vision transformer, and a
+normalization, activation, and arrangement as flags, attention and FFN as
+swappable factories — the single unit from which this chapter builds a
+GPT, a KV-cached decoder, an encoder, a vision transformer, and a
 mixture-of-experts model.
 
 ## Exercises

@@ -50,12 +50,12 @@ gradient clipping, weight averaging, and how to sweep
 (:numref:`sec_practice`).
 
 A word on what this chapter is not. It states results, demonstrates
-phenomena, and gives intuition; it does not prove. The descent lemma, the
-condition-number law, momentum's $\sqrt{\kappa}$ acceleration, the
+phenomena, and gives intuition; it does not prove. The optimization
+chapter of the mathematical appendix (:numref:`chap_mdl-optimization`) is
+written as this chapter's proof volume, and it is where the descent lemma,
+the condition-number law, momentum's $\sqrt{\kappa}$ acceleration, the
 Robbins–Monro conditions, Adam's bias correction, and the convex analysis
-underneath all of them live in the optimization chapter of the
-mathematical appendix (:numref:`chap_mdl-optimization`), which is written
-as this chapter's proof volume. Where a section here says "one can show",
+underneath all of them live. Where a section here says "one can show",
 the appendix shows it. The two chapters can be read in either order; the
 experiments here give the theorems something to predict.
 
@@ -100,7 +100,7 @@ with proofs — and we do not repeat those entries here.
 
 **Books**
 
-- [Convex Optimization — Boyd & Vandenberghe](https://web.stanford.edu/~boyd/cvxbook/) — free PDF; the standard reference behind the vocabulary this chapter uses informally — conditioning, convergence rates, duality, projections — and the right place to see the analyses that :numref:`sec_gd` and :numref:`sec_sgd` state without proof done properly.
+- [Convex Optimization — Boyd & Vandenberghe](https://web.stanford.edu/~boyd/cvxbook/) — free PDF; the standard reference behind the vocabulary this chapter uses informally — conditioning, convergence rates, duality, projections — and the right place to see the analyses that :numref:`sec_gd` and :numref:`sec_sgd` state without proof carried out in full.
 - [Numerical Optimization — Nocedal & Wright](https://link.springer.com/book/10.1007/978-0-387-40065-5) — the classical machinery in full: line search, trust regions, and the quasi-Newton methods that :numref:`sec_gd` names as the ideal deep learning cannot afford (paywalled, noted; widely held in university libraries).
 
 **Courses and video lectures**

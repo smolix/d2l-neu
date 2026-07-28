@@ -121,8 +121,8 @@ $$\begin{aligned} f(T_v \mathbf{X}) &= T_v f(\mathbf{X}) && \text{(equivariance)
 
 On an infinite or periodically extended grid, a stride-1 convolution is
 equivariant. Finite boundaries, padding, and subsampling require qualifications
-that we develop in :numref:`sec_padding` and :numref:`sec_pooling`. Invariance,
-where we want it, can be supplied by a global aggregation in the head: such an
+that we develop in :numref:`sec_padding` and :numref:`sec_pooling`. Where we
+want invariance, a global aggregation in the head can supply it: such an
 operation discards *where* a feature occurred and keeps whether it occurred.
 
 Let's see how this translates into mathematics.
@@ -347,13 +347,13 @@ periodic grid. Boundaries, padding, and strides can break it, as the next
 sections will show. Some of the earliest CNN-like architectures appear in the
 Neocognitron :cite:`Fukushima.1982`.
 
-A second principle that we encountered in our reasoning is how to reduce the number of parameters in a function class without limiting its expressive power, at least, whenever certain assumptions on the model hold. We saw a dramatic reduction of complexity as a result of this restriction, turning computationally and statistically infeasible problems into tractable models. 
+Our reasoning also illustrated a second principle: how to reduce the number of parameters in a function class without limiting its expressive power, at least whenever certain assumptions on the model hold. We saw a dramatic reduction of complexity as a result of this restriction, turning computationally and statistically infeasible problems into tractable models. 
 
 Adding channels restores some of the expressive capacity removed by locality
 and translation equivariance. It is natural to add channels other than red,
 green, and blue. Many satellite
-images, in particular for agriculture and meteorology, have tens to hundreds of channels, 
-generating hyperspectral images instead. They report data on many different wavelengths. In the following we will see how to use convolutions effectively to manipulate the dimensionality of the images they operate on, how to move from location-based to channel-based representations, and how to deal with large numbers of categories efficiently. 
+images, in particular for agriculture and meteorology, are hyperspectral instead: they have
+tens to hundreds of channels, reporting data on many different wavelengths. In the following we will see how to use convolutions effectively to manipulate the dimensionality of the images they operate on, how to move from location-based to channel-based representations, and how to deal with large numbers of categories efficiently. 
 
 ## Exercises
 

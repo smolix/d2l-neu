@@ -217,12 +217,12 @@ restructuring, not just merging — people write the kernel by hand. The
 hand-written FlashAttention kernel of :numref:`sec_attention-at-scale` is
 exactly this: the same "keep intermediates on-chip, never round-trip the
 big matrix" idea, executed by an expert for a pattern the general
-compiler cannot discover. Writing such kernels is its own craft — Triton
-:cite:`Tillet.Kung.Cox.2019` (an important backend of `torch.compile`'s
-Inductor, which also draws on template and library kernels) and Pallas
-let you author them in Python-like syntax — and it
+compiler cannot discover. Writing such kernels is its own craft, and it
 is deliberately out of scope for this book (:numref:`sec_custom_layer`
-drew that fence). The point here is that the compiler gets you most of the
+drew that fence); Triton :cite:`Tillet.Kung.Cox.2019` (an important
+backend of `torch.compile`'s Inductor, which also draws on template and
+library kernels) and Pallas let you author them in Python-like
+syntax. The point here is that the compiler gets you most of the
 fusion win automatically, for free, on the code you already wrote.
 
 ## Compiling the Training Step, Measured
@@ -369,10 +369,10 @@ CUDA graph and replays the whole thing per call, collapsing a
 hundred-odd launch latencies into one. The catch is that replay is
 *rigid*: a replayed graph is a fixed sequence of kernels on fixed memory
 addresses, so the input shape must not change between calls (change it
-and PyTorch re-captures) — and it is why we time the forward pass under
-`torch.no_grad()`: autograd's saved-for-backward activations are fresh
-allocations on every call, and their changing addresses would force a
-re-capture each time. The JAX tab needs no separate
+and PyTorch re-captures). That rigidity is also why we time the forward
+pass under `torch.no_grad()`: autograd's saved-for-backward activations
+are fresh allocations on every call, and their changing addresses would
+force a re-capture each time. The JAX tab needs no separate
 mechanism and says so: a jitted function is *already* a single dispatched
 executable, so XLA amortizes launch overhead by construction — the
 absence of a "reduce-overhead" knob in JAX is not a missing feature but a

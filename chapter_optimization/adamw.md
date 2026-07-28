@@ -8,10 +8,10 @@ parameters. This section explains the W. Back in :numref:`sec_weight_decay`
 we saw that adding an $\ell_2$ penalty to the loss and shrinking the weights
 by a fixed factor each step are the same operation under stochastic gradient
 descent, and we promised to return to the optimizer once we had better ones.
-That section already warned, and :numref:`sec_training_recipes` repeated in
-recipe form, that under Adam the two operations part ways: the penalty
-version is rescaled coordinate-by-coordinate and quietly stops doing its
-job. The one-line repair by :citet:`Loshchilov.Hutter.2019` became part of
+That section already warned that under Adam the two operations part ways,
+and :numref:`sec_training_recipes` repeated the warning in recipe form: the
+penalty version is rescaled coordinate-by-coordinate and quietly stops
+doing its job. The one-line repair by :citet:`Loshchilov.Hutter.2019` became part of
 the name of the method. What the earlier chapters asserted, this section
 derives and measures.
 
@@ -435,9 +435,10 @@ mostly does not. A language model trained for a single epoch on
 non-repeated data has little classical overfitting to fight, yet
 $\lambda = 0.1$ remains in every frontier recipe. What is it doing there?
 
-The current understanding, assembled from careful ablations
-:cite:`DAngelo.Andriushchenko.Varre.ea.2024,Kosson.Messmer.Jaggi.2024`, is
-that weight decay at scale is a *training-dynamics* control, not an
+Careful ablations
+:cite:`DAngelo.Andriushchenko.Varre.ea.2024,Kosson.Messmer.Jaggi.2024` have
+assembled the current understanding: weight decay at scale is a
+*training-dynamics* control, not an
 explicit regularizer. The mechanism runs through the weight norms. A weight matrix whose output is
 consumed only through a normalization layer is *scale-invariant*: rescaling
 the matrix leaves the network's function unchanged, because the norm discards
@@ -455,8 +456,8 @@ constant angle per step. Through this equilibrium $\lambda$ sets the
 *effective learning rate*, and sets it uniformly across layers. That is a
 large part of why decayed LLM runs reach *lower training loss* rather
 than trading training loss for validation loss, the signature
-:citet:`DAngelo.Andriushchenko.Varre.ea.2024` document, along with a
-second, mundane service: keeping parameters small enough that bfloat16
+:citet:`DAngelo.Andriushchenko.Varre.ea.2024` document. Decay performs a
+second, mundane service too: it keeps parameters small enough that bfloat16
 training does not wander into divergence.
 
 Two consequences carry forward. First, since the decay term is multiplied
@@ -469,8 +470,8 @@ recent scaling studies find that $\tau$ is the quantity to hold roughly
 steady, so that $\lambda$ is co-varied with batch and dataset size rather
 than re-tuned :cite:`Bergsma.Dey.Gosal.ea.2025b`. Second, none of this
 mechanism applies to parameters that are not followed by normalization,
-which is why the question of the next section, *which* parameters to
-decay, has a sharper answer than "all of them".
+which is why the next section can give a sharper answer than "all of them"
+to the question of *which* parameters to decay.
 
 ## What Not to Decay
 
@@ -479,16 +480,16 @@ populations: embeddings, two-dimensional matrices, and one-dimensional
 vectors, the LayerNorm scales and biases. Standard practice decays only
 the matrices.
 
-The reasons differ by population. LayerNorm scales and biases are few,
-set the model's normalization scales directly, and shrinking them toward
-zero fights the very equilibrium that gives decay its meaning; they are
-left alone, as biases were already in :numref:`sec_weight_decay`.
+The reasons differ by population. LayerNorm scales and biases are few, and
+they set the model's normalization scales directly, so shrinking them
+toward zero fights the very equilibrium that gives decay its meaning; they
+are left alone, as biases were already in :numref:`sec_weight_decay`.
 Embedding rows are sparse: a row receives a gradient only when its token
 occurs, but decay is applied every step, so rare rows are all decay and no
-signal. OLMo 2 traced a training instability to exactly this, decay
-grinding the embedding norms down until the $1/\|\mathbf{x}\|$ factor in
-LayerNorm's gradient blew the early layers up, and turned decay off for
-embeddings to let their norms settle :cite:`OLMo.2025`.
+signal. OLMo 2 traced a training instability to exactly this: decay ground
+the embedding norms down until the $1/\|\mathbf{x}\|$ factor in
+LayerNorm's gradient blew the early layers up. The fix was to turn decay
+off for embeddings and let their norms settle :cite:`OLMo.2025`.
 
 The implementation pattern is two parameter groups, and the census already
 computed the split. In PyTorch, `torch.optim.AdamW` takes a list of groups
@@ -575,8 +576,8 @@ for name, (w, g, s) in setups.items():
 For `TinyLM` the whole bill is a few megabytes. Scale the identical
 arithmetic to a 7-billion-parameter model and the common bf16 pattern
 costs about 140 GB before a single activation is stored, more than any
-single 80-GB accelerator holds, and 12 of the 20 bytes per parameter, the
-fp32 master, $m$, and $v$, belong to the optimizer. That ratio is why optimizer
+single 80-GB accelerator holds. Of the 20 bytes per parameter, 12 belong
+to the optimizer: the fp32 master, $m$, and $v$. That ratio is why optimizer
 state is the first target when memory runs out. Adafactor factors $v$ for
 each matrix into a row and a column sum, replacing $mn$ numbers by
 $m + n$ :cite:`Shazeer.Stern.2018`; 8-bit optimizers store $m$ and $v$

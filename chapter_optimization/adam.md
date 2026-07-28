@@ -184,8 +184,8 @@ $$
 :eqlabel:`eq_rmsprop`
 
 The average $\mathbf{v}_t$ now estimates the *current* squared-gradient
-scale over a window of about $1/(1-\beta_2)$ steps, ten at the customary
-$\beta_2 = 0.9$, rather than the lifetime total. The step size no longer
+scale rather than the lifetime total, over a window of about
+$1/(1-\beta_2)$ steps, ten at the customary $\beta_2 = 0.9$. The step size no longer
 decays by construction, and the learning rate $\eta$ becomes a knob we
 control separately, to be scheduled on its own terms
 (:numref:`sec_scheduler`). On the toy quadratic, RMSProp at $\eta = 0.4$
@@ -273,15 +273,15 @@ cancels the deficit identically at every $t$. The transient being cancelled
 is not small: at $\beta_2 = 0.999$, after ten steps $\mathbf{v}_t$ holds
 about $1\%$ of its stationary value, so uncorrected Adam would take its
 most aggressive steps precisely when its scale estimate is built from the
-fewest samples. The derivation, and a picture of the transient, are in
-:numref:`subsec_mdl-per-coordinate`.
+fewest samples. :numref:`subsec_mdl-per-coordinate` has the derivation and
+a picture of the transient.
 
 One more difference from :eqref:`eq_rmsprop`: Adam adds $\epsilon$
 *outside* the square root. At this demo's scales, where
-$\sqrt{\hat{\mathbf{v}}_t}$ is of order one, the placement matters little;
-it decides the update where $\sqrt{\hat{\mathbf{v}}_t}$ is small — sparse
-gradients, mixed precision — and the $\eta/\epsilon$ step ceiling we meet
-at the end of the section depends on it. We use $\epsilon = 10^{-6}$ in
+$\sqrt{\hat{\mathbf{v}}_t}$ is of order one, the placement matters little.
+It decides the update where $\sqrt{\hat{\mathbf{v}}_t}$ is small, as with
+sparse gradients or mixed precision, and the $\eta/\epsilon$ step ceiling
+we meet at the end of the section depends on it. We use $\epsilon = 10^{-6}$ in
 the code below, while framework implementations default to $10^{-8}$.
 
 The implementation carries two buffers per parameter and a step counter for
@@ -334,9 +334,9 @@ d2l.train_ch11(adam, init_adam_states(feature_dim),
 
 In practice one calls the framework implementation, which follows
 :eqref:`eq_adam-moments` and :eqref:`eq_adam-update` up to small conventions
-that differ by framework and version — where $\epsilon$ sits relative to the
+that differ by framework and version: where $\epsilon$ sits relative to the
 square root, optional flags such as AMSGrad, and the precise bias-correction
-bookkeeping — none of which usually matters at default settings.
+bookkeeping. None of this usually matters at default settings.
 
 ```{.python .input #adam-adam-both-moments-debiased-3}
 %%tab pytorch
@@ -361,8 +361,8 @@ hardware budgets, and we return to the accounting in the next section.
 
 On the airfoil problem every optimizer in this chapter looks fine, and on
 small image models the differences stay small. The phenomena that separate
-modern optimizers, and the reason Adam rather than SGD is the default, show
-up clearly on *language models*. So we now build the smallest language model
+modern optimizers show up clearly on *language models*, and with them the
+reason Adam rather than SGD is the default. So we now build the smallest language model
 that exhibits them, and it will serve as the chapter's testbed from here on.
 
 The reader has trained language models on exactly this data before: *The
@@ -840,11 +840,11 @@ stiffest and starve the rest. Our census is the coarse version of this
 story: three populations with different geometry and different update
 statistics, all sharing one $\eta$ under SGD.
 
-None of these accounts is final, and they are not mutually exclusive; the
-character-level vocabulary here has no starved rare tokens — its frequencies
+None of these accounts is final, and they are not mutually exclusive. The
+character-level vocabulary here has no starved rare tokens: its frequencies
 are skewed, but unlike the rare words of a word-level vocabulary, even the
-rarest character recurs thousands of times over the run — yet the
-architectural heterogeneity alone sustains a wide gap. What is settled is
+rarest character recurs thousands of times over the run. The architectural
+heterogeneity alone still sustains a wide gap. What is settled is
 the practice: on transformers, use the method that scales per coordinate.
 
 ## When the Variance Estimate Misbehaves
@@ -856,9 +856,9 @@ forgets between informative events: a coordinate's $\hat{\mathbf{v}}$ decays
 toward zero during a quiet stretch, and the rare large gradient then arrives
 with an enormous effective step. :citet:`Reddi.Kale.Kumar.2019` turned this
 into a theorem, exhibiting convex problems on which Adam converges to the
-*worst* point; their construction, and the one-line fix that keeps a running
-maximum of $\hat{\mathbf{v}}_t$ (AMSGrad), are worked through in
-:numref:`subsec_mdl-per-coordinate`. A related repair, Yogi
+*worst* point. :numref:`subsec_mdl-per-coordinate` works through their
+construction, along with the one-line fix that keeps a running maximum of
+$\hat{\mathbf{v}}_t$ (AMSGrad). A related repair, Yogi
 :cite:`Zaheer.Reddi.Sachan.ea.2018`, controls how fast $\mathbf{v}_t$ can
 shrink by making the update additive with a sign-controlled direction. Both
 are implemented in the exercises; neither displaced Adam in practice, but
@@ -889,9 +889,9 @@ at any scale, at the price of two extra state buffers per parameter.
 Where it wins is not uniform. At matched tuning on a small transformer
 language model, Adam beats SGD with momentum decisively, and no rate in
 our grid closed the gap; on a comparable CNN the two are close. The best
-current explanations point at heterogeneity, across token frequencies and
-across architectural blocks, that a single global learning rate cannot
-serve. The
+current explanations point at heterogeneity that a single global learning
+rate cannot serve, across token frequencies and across architectural
+blocks. The
 variance estimate at Adam's heart can also misbehave; $\epsilon$, AMSGrad,
 and Yogi are the standard responses.
 

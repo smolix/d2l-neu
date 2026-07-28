@@ -68,9 +68,9 @@ noise scale is still small (:numref:`sec_batch_size`). The blanks carry
 information too: even a report of Llama 3's length leaves betas, weight
 decay, and clipping unstated, because much of the recipe travels as defaults in
 training code rather than as prose. And one row breaks the optimizer
-column: Kimi K2 runs the Muon split of :numref:`sec_muon`, hidden matrices
-under orthogonalized momentum with AdamW for the rest, inside an otherwise
-consensus recipe. That is the current state of the art in one table: a
+column: Kimi K2 runs the Muon split of :numref:`sec_muon` inside an
+otherwise consensus recipe, hidden matrices under orthogonalized momentum
+with AdamW for the rest. That is the current state of the art in one table: a
 stable core, one production-proven challenger, and the details you would
 need to reproduce any row only partly on the record.
 
@@ -227,8 +227,8 @@ to lower the learning rate or raise the threshold
 :cite:`Godbole.Dahl.Gilmer.ea.2023`. For the Adam family the arithmetic
 differs but the conclusion holds. In steady state Adam's normalization
 keeps every coordinate's step near $\eta$ (:numref:`sec_adam`), transiently
-up to a few times that — $|\hat{m}/\sqrt{\hat{v}}|$ can briefly reach
-$(1 - \beta_1)/\sqrt{1 - \beta_2} \approx 3$ at the defaults — so clipping
+up to a few times that: $|\hat{m}/\sqrt{\hat{v}}|$ can briefly reach
+$(1 - \beta_1)/\sqrt{1 - \beta_2} \approx 3$ at the defaults. So clipping
 is no substitute for lowering a too-large Adam learning rate, and in our
 runs it was not. What it
 still buys is protection for the estimates: one enormous gradient otherwise
@@ -250,7 +250,7 @@ stability overhaul that its report documents :cite:`OLMo.2025`. MuonClip's
 attention logit crosses a cap, the addition that carried Kimi K2 through
 15.5T tokens without a loss spike (:numref:`sec_muon`,
 :cite:`Kimi.Team.2025`). And when prevention fails, the practice is
-unglamorous. The PaLM team, facing about twenty spikes in a run, rewound to
+unglamorous. Facing about twenty spikes in a run, the PaLM team rewound to
 a checkpoint a few hundred steps earlier and skipped the offending batches,
 after establishing that the same batches caused no spike when replayed from
 a different state: spikes came from state and data together, not from bad
@@ -262,8 +262,8 @@ actually like :cite:`zhang2022opt`.
 
 ## Weight Averaging
 
-The chapter's third recurring decision, living with noise, has one more
-tool, and it is nearly free. A constant-rate iterate rattles around its
+The chapter's third recurring decision is living with noise, and it has one
+more tool, one that is nearly free. A constant-rate iterate rattles around its
 noise ball (:numref:`sec_sgd`), and a schedule quenches the rattling by
 decaying the rate (:numref:`sec_scheduler`). Averaging quenches it without
 touching the rate: the bounces roughly cancel in the mean, so an average of
@@ -539,10 +539,10 @@ seconds to minutes, which is why we could afford the middle tier
 everywhere; the entire point of :numref:`sec_scaling` was to keep that
 affordability relevant as models grow.
 
-Finally, the log. A result you cannot reproduce is a rumor, so record, for
-every run, the full configuration including the hyperparameters you
-consider fixed, the code version, the seed, and the one thing you changed,
-and change one thing at a time. Keep the diverged runs: the NaN edge of a
+Finally, the log. A result you cannot reproduce is a rumor, so record for
+every run the full configuration, including the hyperparameters you
+consider fixed, the code version, the seed, and the one thing you changed.
+Change one thing at a time. Keep the diverged runs: the NaN edge of a
 sweep marks the stability boundary, and :numref:`sec_adam` read its NaN
 column as data, not as failure. Write the conclusion next to the curves
 while you still believe it, because a directory of loss curves with no
@@ -559,11 +559,11 @@ the flat minima whose connection to generalization
 and its dependable wins are in vision and fine-tuning rather than
 large-scale pretraining :cite:`Foret.Kleiner.Mobahi.ea.2021`. Variance-reduction methods of the
 SVRG family own an elegant theory for finite sums that has never paid its
-way on deep networks; the theory, and the honest post-mortem, live in
-:numref:`sec_mdl-variance-reduction`. LARS and LAMB, the layerwise-adaptive
-methods once synonymous with large-batch training, are superseded: with
-nuisance hyperparameters re-tuned, exactly the rule of the previous
-section, standard momentum and AdamW match them at the batch sizes they
+way on deep networks; :numref:`sec_mdl-variance-reduction` has the theory
+and the honest post-mortem. LARS and LAMB, the layerwise-adaptive
+methods once synonymous with large-batch training, are superseded: re-tune
+the nuisance hyperparameters, exactly the rule of the previous section, and
+standard momentum and AdamW match them at the batch sizes they
 were designed for :cite:`Nado.Gilmer.Shallue.ea.2021`.
 
 What remains is not optimization but placement. This chapter priced the

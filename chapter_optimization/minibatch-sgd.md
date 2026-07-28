@@ -12,8 +12,8 @@ cuts the variance by a factor of $b$. This section supplies the computational
 half: on modern processors, $b$ examples at once cost far less than $b$
 examples one at a time, for reasons of caches, vector units, and dispatch
 overhead rather than statistics. Along the way we build the equipment the
-rest of the chapter trains with — a timer, a small real regression dataset,
-and a harness that accepts any optimizer written as an update rule — and we
+rest of the chapter trains with: a timer, a small real regression dataset,
+and a harness that accepts any optimizer written as an update rule. We
 finish by racing gradient descent, SGD, and minibatch SGD against the wall
 clock.
 
@@ -269,20 +269,20 @@ steeply as $b$ grows from 1 and flattens once the device is saturated. The
 *statistical* reason is :numref:`sec_sgd`'s: a quieter gradient. But
 amplitude only falls as $b^{-1/2}$, so spending $100\times$ more compute per
 step buys a $10\times$ quieter direction. Both effects saturate, and neither
-tells us when a bigger batch stops converting into faster training. That
-question, how large is too large, depends on the optimization dynamics
-themselves; it has a name, the *critical batch size*, and gets its own
+tells us when a bigger batch stops converting into faster training. How
+large is too large depends on the optimization dynamics themselves, and the
+question has a name, the *critical batch size*, and gets its own
 treatment in :numref:`sec_batch_size`. In practice one picks $b$ large
 enough to keep the device busy and small enough to fit its memory. When the
 batch you want exceeds memory, gradients can be *accumulated* over several
 forward–backward passes before a single update. This reproduces the gradient
-of a larger batch only if the details line up: the per-pass losses must be
-scaled so their sum is the mean over the full effective batch, the optimizer
-step and any gradient clipping must wait until after the last pass rather than
-fire per micro-batch, and layers whose forward pass couples the examples in a
-batch — batch normalization above all, and stochastic layers such as dropout —
-still see only the micro-batch, not the larger one. It is a systems technique
-we return to in :numref:`chap_performance`.
+of a larger batch only if the details line up. The per-pass losses must be
+scaled so their sum is the mean over the full effective batch, and the
+optimizer step and any gradient clipping must wait until after the last pass
+rather than fire per micro-batch. Layers whose forward pass couples the
+examples in a batch still see only the micro-batch, not the larger one:
+batch normalization above all, and stochastic layers such as dropout. It is
+a systems technique we return to in :numref:`chap_performance`.
 
 To see the hardware side in isolation, we perform the same matrix
 multiplication as before, but broken into "minibatches" of 64 columns at a
@@ -310,9 +310,9 @@ print(f'performance in Gigaflops: block {0.03 / timer.times[3]:.3f}')
 Computation on the minibatch is essentially as efficient as on the full
 matrix: 64 columns at a time is already enough work per dispatch to amortize
 the overhead. One caveat before transferring this intuition wholesale to
-training: layers that compute statistics *across* the batch — batch
-normalization (:numref:`sec_batch_norm`) being the prominent case — change
-behavior as $b$ grows, since the noise they inject shrinks with the batch;
+training: layers that compute statistics *across* the batch change
+behavior as $b$ grows, since the noise they inject shrinks with the batch.
+Batch normalization (:numref:`sec_batch_norm`) is the prominent case;
 see :citet:`Ioffe.2017` for how to rescale the relevant terms.
 
 ## Reading the Dataset
@@ -470,8 +470,8 @@ def train_ch11(trainer_fn, states, hyperparams, data_iter,
 ```
 
 Now we can race the extremes against the middle. First, batch gradient
-descent: setting the minibatch size to 1500, the full dataset, updates the
-parameters once per epoch. Progress stalls after roughly six steps — each
+descent: a minibatch of 1500 is the whole dataset, so the parameters move
+once per epoch. Progress stalls after roughly six steps — each
 step is well aimed, but there are too few of them.
 
 ```{.python .input #minibatch-sgd-implementation-from-scratch-3}
@@ -636,9 +636,9 @@ orders of magnitude faster than when it waits on main memory. Combined with
 the $1/b$ variance reduction measured in :numref:`sec_sgd`, this is why
 minibatch SGD dominates both of its parents on the wall clock, as the race in
 this section showed. Choosing $b$ to fill the device without exhausting its
-memory captures most of the benefit; how far the statistics allow batch size
-to grow before the returns vanish — the critical batch size — is the subject
-of :numref:`sec_batch_size`.
+memory captures most of the benefit; :numref:`sec_batch_size` then asks how
+far the statistics allow batch size to grow before the returns vanish, a
+limit known as the critical batch size.
 
 ## Exercises
 

@@ -10,7 +10,8 @@ learning rate $\eta_t$ used at time $t$. The schedule costs nothing to change
 and touches no other part of the training loop, and few choices in this
 chapter move final accuracy more.
 
-Two facts, both already on the table, force the schedule to exist. First,
+Two facts force the schedule to exist, and both are already on the table.
+First,
 with a constant learning rate SGD does not converge: it reaches a *noise
 floor* proportional to $\eta$ and rattles there indefinitely
 (:numref:`sec_sgd`). To finish well, the learning rate must come down.
@@ -20,10 +21,10 @@ before learning begins, so the learning rate must first come *up*. Between
 those two constraints — start below the target, end near zero — lies a family
 of shapes.
 
-Theory ranks few of these shapes. The results that do exist (the noise-floor
-computation, the Robbins–Monro conditions, the minimax optimality of a
-well-chosen *constant* rate for a fixed budget) are collected in
-:numref:`subsec_mdl-schedules-warmup`, and none of them separates cosine
+Theory ranks few of these shapes. :numref:`subsec_mdl-schedules-warmup`
+collects the results that do exist: the noise-floor computation, the
+Robbins–Monro conditions, the minimax optimality of a well-chosen
+*constant* rate for a fixed budget. None of them separates cosine
 decay from linear decay on a deep network. So this section proceeds the way
 the field does: empirically. We fix one small network and one dataset, then
 train the same model under one schedule after another: the classical decay
@@ -36,8 +37,8 @@ We need a problem cheap enough to train dozens of times and honest enough to
 show schedule effects. A LeNet-style convolutional network on Fashion-MNIST
 (:numref:`chap_cnn`) fits: a few seconds per epoch, yet real minibatch
 noise, real overfitting, and a real stability ceiling. We apply the small
-standard modernizations — ReLU activations, max-pooling, and batch
-normalization (:numref:`sec_batch_norm`) after every hidden layer — and we
+standard modernizations: ReLU activations, max-pooling, and batch
+normalization (:numref:`sec_batch_norm`) after every hidden layer. We also
 pin the initialization to Xavier (:numref:`subsec_xavier`) in both
 frameworks. Neither choice is
 cosmetic. Without normalization this network's survivable learning-rate
@@ -525,9 +526,9 @@ any measured superiority, is why it spread.
 
 Every schedule so far answers "how should the rate come down?". Warmup
 answers a different question: how should it come up?
-:numref:`sec_training_recipes` gave the operational answer — a freshly
-initialized network produces large, badly scaled gradients, so ramp gently —
-and you have been warming up ever since. The mechanism deserves a closer
+:numref:`sec_training_recipes` gave the operational answer: a freshly
+initialized network produces large, badly scaled gradients, so ramp gently.
+You have been warming up ever since. The mechanism deserves a closer
 look. At initialization the parameters are random and the loss surface
 around them can be sharply curved in some directions. A learning rate that
 the network would happily accept after a few epochs of training can be fatal

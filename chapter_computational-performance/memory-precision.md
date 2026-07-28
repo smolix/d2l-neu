@@ -115,9 +115,9 @@ larger again: `max_memory_allocated` counts bytes inside live tensors,
 while `max_memory_reserved` is the caching allocator's high-water mark —
 the distinction :numref:`sec_use_gpu` dissects. So read $16P$ as this
 *configuration's* floor — fp32 parameters under Adam — rather than as the
-whole anatomy; and whether activations dominate the total, as they do in
-the transformer regime, is workload-dependent: batch, sequence length,
-and depth decide.
+whole anatomy. Whether activations dominate the total is
+workload-dependent, decided by batch, sequence length, and depth; in the
+transformer regime they do.
 
 For a finer picture, PyTorch can record every allocation and free as a
 *snapshot*. Rather than embed its interactive viewer, we reconstruct the
@@ -150,7 +150,7 @@ d2l.plot(list(range(len(series))), [series],
 Each cycle is one training step: memory climbs through the forward pass as
 activations accumulate, then falls through the backward pass as they are
 released — exactly the anatomy, now measured. The JAX side plans instead
-of counts. Ahead-of-time compilation (:numref:`sec_compilation`) hands
+of counting. Ahead-of-time compilation (:numref:`sec_compilation`) hands
 back an object whose `memory_analysis()` reports what the compiler
 *decided* to allocate, before any memory is touched:
 
@@ -380,8 +380,8 @@ optimizer step. The activations of just one micro-batch are live at a
 time, so peak memory follows the micro-batch, while the update sees the
 full global batch: $B_{\textrm{global}} = B_{\textrm{micro}} \times k$
 (times the number of devices, once :numref:`sec_multi_gpu` adds them). The
-parity check — that accumulating $k$ micro-batches matches one full-batch
-step — is worth seeing, because it is the whole correctness claim:
+parity check is worth seeing, because it is the whole correctness claim:
+accumulating $k$ micro-batches must match one full-batch step.
 
 ```{.python .input #memory-precision-gradient-accumulation}
 %%tab pytorch

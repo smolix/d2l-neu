@@ -167,9 +167,9 @@ what it computes is made precise as *vector--Jacobian products*
 in :numref:`sec_mdl-matrix-calculus-autodiff`.
 
 Recall that
-the parameters of the simple network with one hidden layer,
+the simple network with one hidden layer,
 whose computational graph is in :numref:`fig_forward`,
-are $\mathbf{W}^{(1)}$ and $\mathbf{W}^{(2)}$.
+has parameters $\mathbf{W}^{(1)}$ and $\mathbf{W}^{(2)}$.
 The objective of backpropagation is to
 calculate the gradients $\partial J/\partial \mathbf{W}^{(1)}$
 and $\partial J/\partial \mathbf{W}^{(2)}$.
@@ -314,7 +314,7 @@ $$\frac{\partial L}{\partial \mathbf{W}^{(1)}} = \frac{\partial L}{\partial \mat
 :numref:`fig_mdl-mlp-backprop-graph` traces these numbers through the graph,
 forward in black and backward in blue. Notice that the row of
 $\partial L/\partial \mathbf{W}^{(1)}$ feeding the dead unit is entirely zero:
-no gradient means no learning signal, the concrete face of the "dying ReLU" we
+no gradient means no learning signal, a concrete instance of the "dying ReLU" we
 met in :numref:`sec_mlp`. You can confirm every number here in a few lines of
 automatic differentiation (:numref:`sec_autograd`): rebuild the same tensors
 with gradient tracking, run the forward pass, sweep back through the graph, and
@@ -353,11 +353,11 @@ reverse, multiplying the local derivative at each node (our $\textrm{prod}$) to
 accumulate the gradient with respect to every parameter in a *single* pass. This
 output-to-input sweep is *reverse-mode* automatic differentiation, and it is cheap
 exactly when there are many parameters and one scalar loss, the deep learning
-regime. We use it throughout the book and developed its mechanics, including when
-the opposite *forward mode* is preferable, in :numref:`sec_autograd`; the full
-theory, with both modes expressed as Jacobian products and the memory
-trade-offs they imply, is developed in
-:numref:`sec_mdl-matrix-calculus-autodiff`.
+regime. We use it throughout the book, and :numref:`sec_autograd` develops its
+mechanics, including when the opposite *forward mode* is preferable.
+:numref:`sec_mdl-matrix-calculus-autodiff` gives the full theory, expressing
+both modes as Jacobian products and working out the memory trade-offs they
+imply.
 
 ## Training Neural Networks
 

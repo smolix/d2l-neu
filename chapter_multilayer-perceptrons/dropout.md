@@ -71,8 +71,8 @@ the dropout technique itself has proved enduring,
 and various forms of dropout are implemented
 in most deep learning libraries.
 
-A third perspective, closer to why dropout works, is due to
-:citet:`Srivastava.Hinton.Krizhevsky.ea.2014` themselves.
+:citet:`Srivastava.Hinton.Krizhevsky.ea.2014` themselves offer a third
+perspective, closer to why dropout works.
 A network with $n$ hidden units has $2^n$ possible dropout masks,
 each defining a *thinned* subnetwork that shares its weights
 with all the others.
@@ -86,7 +86,7 @@ single linear layer; in deeper networks the test-time forward pass
 computes something closer to a *geometric* mean
 of the subnetworks' predictions.)
 From this angle dropout is cheap model averaging,
-which motivates why it tends to reduce variance:
+which suggests why it tends to reduce variance:
 ensembles average away the idiosyncrasies of their members.
 The analogy is loose rather than literal, though: the $2^n$
 subnetworks share a single set of weights and are trained jointly,
@@ -128,7 +128,7 @@ By design, the expectation remains unchanged,
 since $E[h'] = p \cdot 0 + (1-p) \cdot \frac{h}{1-p} = h$.
 This is why we divide by $1-p$ and by no other constant:
 it is the unique factor that restores the original expected value.
-This scheme, with the rescaling applied during *training*, is known as
+Applying the rescaling during *training* is known as
 *inverted dropout*, and it is what every modern framework implements. The
 original formulation :cite:`Srivastava.Hinton.Krizhevsky.ea.2014` left
 activations untouched during training and instead multiplied the weights by
@@ -188,8 +188,8 @@ one element of $h_1, \ldots, h_5$.
 
 Typically, we disable dropout at test time,
 running the full network with no masking and no rescaling.
-(One notable exception, keeping dropout *on* at test time to estimate
-prediction uncertainty, is explored in exercise 5.)
+(Exercise 5 explores one notable exception, keeping dropout *on* at test time
+to estimate prediction uncertainty.)
 
 ## Implementation from Scratch
 
@@ -535,10 +535,11 @@ A word on currency. Dropout was transformative for the fully connected vision
 networks of the mid-2010s, but its role has narrowed since. Convolutional
 networks typically replace it with batch normalization (see
 :numref:`sec_batch_norm`), which supplies similar noise-driven regularization.
-The two also combine poorly: batch normalization's running statistics,
-accumulated while dropout perturbs the activations' variance during training,
-mismatch the variance it sees at evaluation time, so placing dropout before a
-batch-normalization layer tends to hurt :cite:`Li.Chen.Hu.ea.2019`.
+The two also combine poorly. Batch normalization accumulates its running
+statistics while dropout perturbs the activations' variance during training, so
+those statistics mismatch the variance it sees at evaluation time; placing
+dropout before a batch-normalization layer therefore tends to hurt
+:cite:`Li.Chen.Hu.ea.2019`.
 Large transformer-based language models use dropout lightly (rates around 0.0 to
 0.1) or not at all in their core layers, reserving it mostly for final
 classifier heads. It nonetheless remains a cheap, reliable regularizer that

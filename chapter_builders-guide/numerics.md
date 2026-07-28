@@ -554,7 +554,7 @@ update changes a weight by roughly $\eta \cdot g$, often a factor $10^{-4}$
 or less of the weight's own magnitude, and adding an increment smaller than
 about `eps` times the weight rounds to no change at all. With bf16's `eps` of
 0.0078, small updates evaporate and learning stalls; in fp16 the small
-gradients themselves flush to zero first. Hence the rule, and it resolves the
+gradients themselves flush to zero first. Hence the rule that resolves the
 single most common confusion in practice:
 
 **Cast the model for inference. For training, keep fp32 weights and run the
@@ -617,10 +617,10 @@ lists in the PyTorch style also exists, for fp16 and bf16 targets, but this
 book does not exercise it.)
 :end_tab:
 
-:numref:`fig_bg_amp-loop` draws the resulting
-loop: this is the distinction that matters between casting a whole model
-(everything in one dtype) and mixed precision (fp32 master
-weights that a 16-bit forward and backward pass read from and write back to).
+:numref:`fig_bg_amp-loop` draws the resulting loop, and with it the
+distinction that matters: casting a whole model puts everything in one dtype,
+whereas mixed precision keeps fp32 master weights that a 16-bit forward and
+backward pass read from and write back to.
 
 ![The mixed-precision training loop: fp32 master weights are cast to bf16 for the forward pass and its bf16 activations, the loss accumulates back in fp32, the backward pass produces bf16 gradients, and the optimizer step reads those gradients but updates the fp32 master copy, closing the cycle; the fp16 variant additionally scales the loss up before backward and unscales the gradients back down before the step.](../img/bg-amp-loop.svg)
 :label:`fig_bg_amp-loop`
@@ -696,8 +696,7 @@ thing on CPU, GPU, and TPU.
 
 :begin_tab:`mxnet`
 Storage in fp16, master copy in fp32, with the two halves assigned to the
-network and optimizer. The network keeps fp16 parameters, so the
-downcasts on the fly, Gluon keeps fp16 parameters in the network, so the
+network and optimizer. Gluon keeps fp16 parameters in the network, so the
 forward pass needs no machinery at all, and hides the fp32 master weights in
 the updater's state; the demonstration has to take one training step first
 (the master copy is allocated lazily) and then reaches into that internal

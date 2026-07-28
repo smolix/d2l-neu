@@ -31,9 +31,9 @@ of a decade of research developing the technology;
 LeCun's team published the first study to successfully
 train CNNs via backpropagation :cite:`LeCun.Boser.Denker.ea.1989`.
 
-At the time LeNet achieved outstanding results
-matching the performance of support vector machines,
-then a dominant approach in supervised learning, achieving an error rate of less than 1% per digit.
+At the time LeNet achieved outstanding results, matching the performance of
+support vector machines, then a dominant approach in supervised learning.
+Its error rate was less than 1% per digit.
 LeNet was eventually adapted to recognize digits
 for processing deposits in ATM machines.
 To this day, some ATMs still run the code
@@ -305,7 +305,7 @@ from 1 in the input to 6 after the first convolutional layer
 and 16 after the second convolutional layer.
 However, each pooling layer halves the height and width.
 Finally, each fully connected layer reduces dimensionality,
-finally emitting an output whose dimension
+ultimately emitting an output whose dimension
 matches the number of classes.
 
 
@@ -366,7 +366,7 @@ with d2l.try_gpu():
 
 We have made significant progress in this chapter. We moved from the MLPs of the 1980s to the CNNs of the 1990s and early 2000s. The architectures proposed, e.g., in the form of LeNet-5 remain meaningful, even to this day. Compare the error rates on Fashion-MNIST achievable with LeNet-5 both to the very best possible with MLPs (:numref:`sec_mlp-implementation`) and to those of significantly more advanced architectures such as ResNet (:numref:`sec_resnet`). LeNet is much more similar to the latter than to the former. One of the primary differences, as we shall see, is that greater amounts of computation enabled significantly more complex architectures.
 
-A second difference is the relative ease with which we were able to implement LeNet. What used to be an engineering challenge worth months of C++ and assembly code, engineering to improve SN (Simulateur Neuristique), an early Lisp-based deep learning tool :cite:`Bottou.Le-Cun.1988`, and finally experimentation with models can now be accomplished in minutes. It is this incredible productivity boost that has democratized deep learning model development tremendously.
+A second difference is the relative ease with which we were able to implement LeNet. What used to be an engineering challenge worth months of work can now be accomplished in minutes: writing C++ and assembly code, improving SN (Simulateur Neuristique), an early Lisp-based deep learning tool :cite:`Bottou.Le-Cun.1988`, and finally experimenting with models. It is this incredible productivity boost that has democratized deep learning model development tremendously.
 
 A third way to read LeNet is as a checklist of what thirty years of progress replaced. The skeleton, a convolutional encoder feeding a small classification head, is the one part that has not changed. Every component inside it has:
 

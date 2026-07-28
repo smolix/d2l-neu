@@ -268,10 +268,10 @@ Beyond that, we set `batch_size` in the built-in data loader
 and let it take care of shuffling examples  efficiently.
 
 :begin_tab:`jax`
-JAX is all about NumPy like API with device acceleration and the functional
-transformations, so at least the current version doesn’t include data loading
-methods. With other  libraries we already have great data loaders out there,
-and JAX suggests using them instead. Here we will grab TensorFlow’s data loader,
+JAX offers a NumPy-like API with device acceleration and functional
+transformations, and at least the current version ships no data loading
+methods of its own. Other libraries already provide great data loaders,
+and JAX suggests using them instead. Here we will grab TensorFlow's data loader
 and modify it slightly to make it work with JAX.
 :end_tab:
 

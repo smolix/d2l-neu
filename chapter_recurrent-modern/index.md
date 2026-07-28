@@ -4,15 +4,15 @@
 You now own two kinds of memory. The transformer of
 :numref:`chap_transformers` keeps everything: its key–value cache is an
 archive that grows with every token, answers exact-recall questions by
-lookup, and presents a bill that :numref:`sec_kv-cache` measured directly
-— a bill that in production sets the economics of long-context serving.
+lookup, and carries a cost that :numref:`sec_kv-cache` measured directly
+— a cost that in production sets the economics of long-context serving.
 The recurrent networks of :numref:`chap_rnn` keep one thing: a fixed-size
 state, updated in place, whose cost per token does not grow with the
 length of the context and whose memory of the past is whatever its
 finitely many bits managed to squeeze in. This chapter
 asks the question that sits between those designs: how far can a fixed
-state actually go? Its answer, which is the field's answer as of this
-writing, comes as five verbs and a truce. *Gate* the state, so that learned sigmoids
+state actually go? Its answer comes as five verbs and a truce, and as of
+this writing that is the field's answer too. *Gate* the state, so that learned sigmoids
 decide what is written and what is erased. *Linearize* it, so that
 training parallelizes across the sequence. *Select*, so that the dynamics
 read the data as it flows past. *Edit*, so that a write can correct the
@@ -99,9 +99,10 @@ three matched models, a pure recurrent stack, a pure attention stack, and
 a hybrid with a single attention layer mid-stack, and watches that one
 layer buy back most to all of the recall the recurrent stack loses
 (roughly 0.92 to 1.00 across the sweep in our runs) while perplexity
-barely moves; measured design rules for how much attention to keep and
-where to put it, and a recipe table of shipped hybrids from Jamba to Kimi
-Linear, turn the trade into engineering. One recipe threads all of these
+barely moves. Two further pieces turn the trade into engineering:
+measured design rules for how much attention to keep and where to put it,
+and a recipe table of shipped hybrids from Jamba to Kimi
+Linear. One recipe threads all of these
 experiments together: every trained language model in the chapter runs on
 the *Time Machine* text of :numref:`sec_rnn-scratch` — the classical spine
 and the Gated DeltaNet row on one shared scoreboard, the hybrid stacks on
@@ -137,10 +138,10 @@ term (that section also notes what the phrase means to a statistician,
 which is different again). The chapter teaches algorithms, not kernels:
 the chunked forms here are twenty-line teaching implementations, and the
 Triton kernels and memory hierarchies that make them fast belong to
-:numref:`chap_performance`. It trains no large models: pretraining
-recipes, data pipelines, the serving stacks that turn a trained model
-into a service, and everything downstream of a base model belong to the
-Language Models part. The efficient-attention
+:numref:`chap_performance`. It trains no large models: the Language
+Models part owns pretraining recipes, data pipelines, the serving stacks
+that turn a trained model into a service, and everything downstream of a
+base model. The efficient-attention
 taxonomy stays in :numref:`chap_attention`, which already implemented the
 surviving variants; applications of state space models to vision, audio,
 and genomics are out of scope; and the fast-moving family of

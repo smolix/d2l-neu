@@ -6,8 +6,8 @@ in isolation; this chapter builds the organism. A transformer wraps the
 attention layer in a *block*: attention moves information between
 positions, a position-wise feed-forward network transforms it in place,
 and residual connections with normalization keep the signal usable when
-blocks are stacked dozens or hundreds deep. That block, stacked and
-wired in one of three ways, is the entire architecture. It has carried
+blocks are stacked dozens or hundreds deep. Stacked and wired in one of
+three ways, that block is the entire architecture. It has carried
 machine translation, then language modeling, then images, audio, and
 protein structure, with so little structural change since 2017 that the
 differences between today's frontier models fit in a small table — one
@@ -35,9 +35,9 @@ from it, and then loads the published GPT-2 weights into the same class
 — the 2019 model is one setting of the flags, and our hand-built code
 generates with it. :numref:`sec_kv-cache` turns to generation, where
 the economics invert: decoding is bound by memory traffic, not
-arithmetic, and the key–value cache, grouped-query attention, low-rank
-cache compression, and sliding windows with attention sinks are the
-escalating responses; we implement and measure each.
+arithmetic, and the escalating responses are the key–value cache,
+grouped-query attention, low-rank cache compression, and sliding
+windows with attention sinks; we implement and measure each.
 :numref:`sec_transformer` steps back to the taxonomy — encoder-only,
 decoder-only, encoder–decoder as three wirings of the same block — and
 treats cross-attention fully, including its most general form: a small
@@ -73,9 +73,9 @@ and everything downstream of the base model belong to the Language
 Models part, as does BERT, whose encoder this chapter's taxonomy
 locates but does not train. Vision applications beyond the ViT itself
 are the Image Models part's. Kernels, parallelism, quantization, and
-serving systems belong to the Computational Performance chapter; here
+serving systems belong to the Computational Performance chapter. Here
 they appear only as black-box fused-attention calls, whose kernels are
-that chapter's subject, and one closing sentence on speculative
+that chapter's subject, and as one closing sentence on speculative
 decoding. And the state-space alternative to
 attention has its own chapter, :numref:`chap_modern_rnn`, which picks
 up exactly where :numref:`sec_kv-cache`'s cache-relief map leaves off.

@@ -432,7 +432,7 @@ d2l.plot(lm_bs, [lm_steps, [lm_steps[0] * lm_bs[0] / b for b in lm_bs]],
          yscale='log', legend=['measured', 'perfect scaling'])
 ```
 
-The first doubling steps are almost free: from $b=4$ to $b=16$ the measured
+The first doublings are almost free: from $b=4$ to $b=16$ the measured
 curve tracks the perfect-scaling line and the example count barely moves.
 By $b=256$ the curve has clearly left the line — steps still fall, but each
 quadrupling of the batch now buys about half the steps or less, not the
@@ -540,8 +540,8 @@ The linear rule for SGD :cite:`Goyal.Dollar.Girshick.ea.2017` follows from
 the noise-floor picture of :numref:`sec_sgd`: there we saw SGD stall in a
 noise ball whose squared radius is proportional to $\eta$ times the gradient
 variance. A batch of $b$ divides the variance by $b$, so holding $\eta / b$
-fixed holds the noise ball, and with it the whole stochastic character of
-the trajectory, fixed. It is also the small-batch limit of the optimal step
+fixed holds the noise ball fixed, and with it the whole stochastic character
+of the trajectory. It is also the small-batch limit of the optimal step
 size in the noisy-quadratic model, $\eta_{\textrm{opt}}(b) =
 \eta_{\max} / (1 + b_{\textrm{noise}}/b)$: linear in $b$ while
 $b \ll b_{\textrm{noise}}$, saturating at $\eta_{\max}$ beyond it — the rule

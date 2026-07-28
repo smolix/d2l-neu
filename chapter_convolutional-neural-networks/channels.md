@@ -6,10 +6,10 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Multiple Input and Multiple Output Channels
 :label:`sec_channels`
 
-While we described the multiple channels
+:numref:`subsec_why-conv-channels` described the multiple channels
 that comprise each image (e.g., color images have the standard RGB channels
-to indicate the amount of red, green and blue) and convolutional layers for multiple channels in :numref:`subsec_why-conv-channels`,
-until now, we simplified all of our numerical examples
+to indicate the amount of red, green and blue), along with convolutional layers for multiple channels.
+Until now, though, we simplified all of our numerical examples
 by working with just a single input and a single output channel.
 This allowed us to think of our inputs, convolution kernels,
 and outputs each as two-dimensional tensors.
@@ -135,7 +135,7 @@ as responding to a different set of features.
 The reality is a bit more complicated than this. A naive interpretation would suggest 
 that representations are learned independently per pixel or per channel. 
 Instead, channels are optimized to be jointly useful.
-This means that rather than mapping a single channel to an edge detector, it may simply mean 
+Rather than a single channel mapping to an edge detector, it may simply be 
 that some direction in channel space corresponds to detecting edges.
 
 Denote by $c_\textrm{i}$ and $c_\textrm{o}$ the number
@@ -149,9 +149,9 @@ We concatenate them on the output channel dimension,
 so that the shape of the convolution kernel
 is $c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$.
 In cross-correlation operations,
-the result on each output channel is calculated
+the result on each output channel comes
 from the convolution kernel corresponding to that output channel
-and takes input from all channels in the input tensor.
+and draws on all channels in the input tensor.
 
 We implement a cross-correlation function
 to calculate the output of multiple channels as shown below.

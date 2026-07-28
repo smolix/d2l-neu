@@ -21,9 +21,9 @@ $$\begin{aligned}&P(\textrm{deep}, \textrm{learning}, \textrm{is}, \textrm{fun})
 
 Modeling language therefore reduces to one deceptively simple subproblem:
 estimate $P(x_t \mid x_1, \ldots, x_{t-1})$, the distribution of the next
-token given everything that came before. Every language model in this book,
-from the count tables below to the largest networks in later chapters, is an
-implementation of exactly this conditional.
+token given everything that came before. Every language model in this book
+implements exactly this conditional, from the count tables below to the
+largest networks in later chapters.
 
 ## What a Language Model Buys You
 
@@ -259,10 +259,10 @@ interpolate across orders and discount frequent events, of which Kneser--Ney
 smoothing became the standard and Bayesian nonparametrics the most elegant
 expression :cite:`Wood.Gasthaus.Archambeau.ea.2011`. But no smoothing scheme
 escapes the underlying predicament: it can only redistribute probability
-mass, not *know* anything about unseen events. That "cat" and "feline"
-should behave alike, that "I want to eat, grandma" is benign while "I want
-to eat grandma" is not, is invisible to a count table, which treats every
-token as an unrelated symbol. Sharing statistical strength across related
+mass, not *know* anything about unseen events. A count table treats every
+token as an unrelated symbol, so it cannot see that "cat" and "feline"
+should behave alike, or that "I want to eat, grandma" is benign while "I
+want to eat grandma" is not. Sharing statistical strength across related
 words and contexts requires learned representations, and that is where
 neural networks enter in :numref:`sec_rnn`.
 
@@ -419,8 +419,8 @@ in disguise. When 87% of held-out trigrams are unseen, the trigram model
 spends most of its time on smoothed near-uniform guesses, and no choice of
 $\alpha$ rescues it (the exercises ask you to try). Good-looking samples and
 good generalization are different things, and the gap between them is
-memorization. Closing that gap, achieving low perplexity on *unseen* text,
-is the actual job of a language model, and perplexity will be our chief
+memorization. The actual job of a language model is to close that gap,
+achieving low perplexity on *unseen* text, and perplexity will be our chief
 metric for the neural models of the coming sections.
 
 ### Bits per Byte

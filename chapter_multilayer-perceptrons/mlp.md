@@ -323,13 +323,13 @@ number of hidden units and layers as you go.
 
 How powerful is a deep network? The universal approximation theorem gives a
 sharp answer. It says that even a single-hidden-layer
-network, given enough hidden units and the right weights, can approximate any
-continuous function on a bounded domain to arbitrary accuracy. This was proven
-in several settings: :citet:`Cybenko.1989` did it for sigmoid activations,
+network can approximate any continuous function on a bounded domain to arbitrary
+accuracy, given enough hidden units and the right weights. This was proven
+in several settings: :citet:`Cybenko.1989` did it for sigmoid activations and
 :citet:`micchelli1984interpolation` for radial basis function networks (a single
-hidden layer), and the
-result was soon generalized: :citet:`Hornik.1991` covered every bounded,
-non-constant activation, and :citet:`Leshno.Lin.Pinkus.ea.1993` extended it to
+hidden layer). The result was soon generalized, as :citet:`Hornik.1991` covered
+every bounded, non-constant activation and :citet:`Leshno.Lin.Pinkus.ea.1993`
+extended it to
 any activation that is not a polynomial, a form that also covers the unbounded
 ReLU. The conclusion therefore does not hinge on which of ReLU, sigmoid, or tanh
 we pick.
@@ -357,8 +357,8 @@ the piecewise linear output of the first layer, and composing with a hinge
 *folds the graph*: every existing piece that crosses the new joint is split in
 two. Each added layer can therefore roughly *double* the number of linear
 pieces, so $k$ layers of width $D$ can produce on the order of
-$(D+1)\,2^{k-1}$ pieces, where matching that count with a single hidden layer
-would require exponentially many units. This multiplicative-versus-additive gap
+$(D+1)\,2^{k-1}$ pieces, a count that a single hidden layer could match only
+with exponentially many units. This multiplicative-versus-additive gap
 is the essence of why depth pays. Both claims are easy to check numerically:
 below we evaluate randomly initialized ReLU MLPs on a dense one-dimensional
 grid, detect where the slope changes, and count the linear pieces.
@@ -389,8 +389,8 @@ The later rows show what happened for these seeded random networks: at each
 width, adding a layer increased the average piece count by a factor rather than
 by a fixed amount. This experiment does not establish a maximal count. Random
 weights fold less aggressively than hand-constructed networks used in depth
-separation results :cite:`Telgarsky.2016`; those constructions, rather than the
-sample averages above, establish the expressivity claim.
+separation results :cite:`Telgarsky.2016`, and the expressivity claim rests on
+those constructions rather than on the sample averages above.
 
 It is tempting to read this as "one hidden layer is all you ever need," but the
 theorem is more modest than it sounds, and three caveats matter
@@ -480,7 +480,7 @@ Note that the ReLU function is not differentiable
 when the input takes value precisely equal to 0.
 The libraries used here return a derivative of 0 at the origin, one valid
 subgradient convention. For continuously distributed preactivations the choice
-affects a probability-zero event. Exact zeros do occur in computation, for
+affects a probability-zero event, but exact zeros do occur in computation, for
 example from zero-initialized biases or a preceding ReLU, and in such degenerate
 cases the convention can change whether a unit begins to move.
 We plot the derivative of the ReLU function below.

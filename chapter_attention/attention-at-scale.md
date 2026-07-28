@@ -46,8 +46,8 @@ import time
 
 ## CNNs, RNNs, and Self-Attention
 
-Before counting FLOPs in earnest, it is worth seeing why attention is worth
-paying for. Consider the standing problem of this part of the book: map a
+Before counting FLOPs in earnest, it is worth seeing what attention buys.
+Consider the standing problem of this part of the book: map a
 sequence of $n$ tokens, each a $d$-dimensional vector, to another sequence
 of the same shape. Three architectures we now know can do it: a
 one-dimensional CNN (:numref:`chap_cnn`), an RNN (:numref:`sec_rnn`), and
@@ -92,7 +92,7 @@ token attends to any other directly, path length $\mathcal{O}(1)$.
 Read as a bargain, the table says: self-attention buys full parallelism
 *and* constant path length, and the price is the only entry in the table
 that is quadratic in $n$. Two of these rows fold a per-token $d \times d$
-channel map into the figure shown — a convolution or a recurrence has no
+channel map into the number shown — a convolution or a recurrence has no
 separate projection step — while the self-attention row counts the *mixing*
 only; the surrounding query/key/value/output projections add a further
 $\mathcal{O}(nd^2)$, linear in $n$ like the others' work and accounted for at
@@ -862,8 +862,8 @@ per forward pass for the three mechanisms—dense (exact, quadratic),
 windowed (sparse, linear at fixed $w$), and linear attention's parallel
 form—as the sequence grows from 512 to 16,384 tokens. These wall-clock and
 memory figures come from a single GPU in fp32 and shift with hardware, dtype,
-and kernel; what carries across machines is the *shape* of each curve, not the
-milliseconds.
+and kernel. The *shape* of each curve carries across machines; the
+milliseconds do not.
 
 ```{.python .input #attention-at-scale-the-price-of-attention-measured}
 %%tab pytorch

@@ -64,7 +64,7 @@ from jax import numpy as jnp
 ## Padding
 
 As described above, one tricky issue when applying convolutional layers
-is that we tend to lose pixels on the perimeter of our image. Consider :numref:`img_conv_reuse` that depicts the pixel utilization as a function of the convolution kernel size and the position within the image. The pixels in the corners are hardly used at all. 
+is that we tend to lose pixels on the perimeter of our image. Consider :numref:`img_conv_reuse`, which depicts the pixel utilization as a function of the convolution kernel size and the position within the image. The pixels in the corners are hardly used at all. 
 
 ![Pixel utilization for convolutions of size $1 \times 1$, $2 \times 2$, and $3 \times 3$ respectively.](../img/conv-reuse.svg)
 :label:`img_conv_reuse`
@@ -118,12 +118,11 @@ and the same number of columns on left and right.
 Moreover, this practice of using odd kernels
 and padding to precisely preserve dimensionality
 offers a clerical benefit.
-For any two-dimensional tensor `X`,
-when the kernel's size is odd
-and the number of padding rows and columns
-on all sides are the same,
-thereby producing an output with the same height and width as the input,
-we know that the output `Y[i, j]` is calculated
+Take any two-dimensional tensor `X`, an odd kernel size,
+and the same number of padding rows and columns
+on all sides, so that the output
+has the same height and width as the input.
+The output `Y[i, j]` is then calculated
 by cross-correlation of the input and convolution kernel
 with the window centered on `X[i, j]`.
 

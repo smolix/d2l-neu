@@ -11,8 +11,8 @@ theorem, then works through the repairs in the order the field adopted them:
 *rotating* queries and keys by position-dependent angles (RoPE, the default in
 most current open-weights models), and *biasing* attention scores
 by distance (ALiBi), or trusting the causal mask to leak position on its own
-(NoPE). What separates these schemes in practice is not accuracy at the
-training length but *extrapolation*: what happens when a model trained at one
+(NoPE). In practice these schemes separate not on accuracy at the training
+length but on *extrapolation*: what happens when a model trained at one
 context length is asked to run at a longer one. To answer that question
 experimentally we build this chapter's shared workhorse, a character-level
 language model in which attention is the only trainable machinery that mixes
@@ -219,7 +219,7 @@ directly where the comparison happens?
 
 ## Rotary Position Embeddings
 
-That question, taken seriously, produces the positional scheme of nearly
+Taken seriously, that question produces the positional scheme of nearly
 every current open-weights language model — Llama, Qwen, DeepSeek, and the
 rest. *Rotary position embeddings* (RoPE) :cite:`Su.Lu.Pan.ea.2021` skip the
 addition and instead act on queries and keys at the point where they meet:
@@ -387,8 +387,8 @@ residual causal attention blocks, and an output head tied to the embedding
 :cite:`Press.Wolf.2017`. There is no feed-forward network and no
 normalization layer, and the attention projections carry no bias terms by
 default (a `bias` switch restores them;
-:numref:`sec_what-attention-computes` has one use for it): besides the
-embedding table (which doubles as the output head), attention
+:numref:`sec_what-attention-computes` has one use for it). Besides the
+embedding table, which doubles as the output head, attention
 is the only trainable machinery, and all mixing of information across
 positions passes through it — which is the point, and what makes the model
 exactly analyzable when we dissect it in
@@ -679,9 +679,9 @@ has never seen those fingerprints. The striking failure is RoPE: *relative in
 form is not relative in practice*. Its scores depend only on offsets — we
 proved and measured as much — but offsets beyond 127 were still never seen in
 training, and its length-512 perplexity lands at several times its
-training-length value — a blow-up as large, relative to where it started,
-as the absolute schemes suffer, and in some runs far larger. Only the two
-schemes with no position table are stable: ALiBi stays essentially flat
+training-length value. Relative to where it started, that blow-up is as large
+as the one the absolute schemes suffer, and in some runs far larger. Only
+the two schemes with no position table are stable: ALiBi stays essentially flat
 across every length, as its authors' "train short, test long" title
 promised, and NoPE is flat too, just from a weaker starting point. (The
 exact perplexities fluctuate run to run and between frameworks; the ordering
@@ -699,8 +699,8 @@ instead of extrapolation. This is *position interpolation*
 :cite:`Chen.Wong.Chen.ea.2023`, which (with a brief fine-tune) extended
 Llama from 2k to 32k context; YaRN :cite:`Peng.Quesnelle.Fan.ea.2024`
 refines it by rescaling the fast, position-discriminating frequencies
-differently from the slow, content-carrying ones. Schemes of this family are
-how every long-context RoPE model you are likely to use was produced. Note
+differently from the slow, content-carrying ones. A scheme of this family
+produced every long-context RoPE model you are likely to use. Note
 that the recipe has two halves: rescaling *and* a brief fine-tune at the
 scaled angles. Exercise 3 walks through both halves on our character model;
 in our runs the rescaling alone actually hurts — compressing the angle
@@ -718,7 +718,7 @@ counter, learned tables let the data pick the code but say nothing beyond
 the trained length. The sinusoidal table hides a cleaner idea: shifting
 positions is a rotation of feature pairs. RoPE applies that rotation
 directly to queries and keys, making attention scores depend on relative
-offsets by construction, the default in most current
+offsets by construction; it is the default in most current
 open-weights models. ALiBi replaces encodings with a per-head linear distance
 penalty, and NoPE relies on the causal mask's leak of position. Our
 train-short/test-long experiment on an attention-only character model sorted

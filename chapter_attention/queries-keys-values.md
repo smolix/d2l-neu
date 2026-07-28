@@ -106,9 +106,9 @@ the framework of :numref:`fig_qkv`, and so will we.
 ![The attention mechanism computes a linear combination over values $\mathbf{v}_\mathit{i}$ via attention pooling, where weights are derived according to the compatibility between a query $\mathbf{q}$ and keys $\mathbf{k}_\mathit{i}$.](../img/mdl-attention-soft-lookup.svg)
 :label:`fig_qkv`
 
-Note what :eqref:`eq_attention_pooling` buys us. The "code" executed against
-the set of keys and values, namely the query, can be concise even when the
-space it operates on is large, so the layer does not need many parameters.
+Note what :eqref:`eq_attention_pooling` buys us. The query is the "code"
+executed against the set of keys and values, and it can be concise even when
+the space it operates on is large, so the layer does not need many parameters.
 And attention pooling works on a database of any size without changing the
 operation, which is precisely the fixed-size-state limitation we set out to
 remove.
@@ -149,8 +149,8 @@ learning, statisticians used exactly this operation with *hand-picked*
 weights: Nadaraya--Watson kernel regression
 :cite:`Nadaraya.1964,Watson.1964`. Seeing attention work in that classical
 setting is worth a short stop, both because it lets us watch the weights do
-their job on a problem we can plot, and because its limitation is what
-motivates the rest of the chapter.
+their job on a problem we can plot, and because its limitation motivates the
+rest of the chapter.
 
 ### Similarity Kernels
 
@@ -217,9 +217,9 @@ y_val = 2 * jnp.sin(x_val) + x_val
 The estimator itself is four lines: compute all query--key distances, apply
 a Gaussian kernel with bandwidth $\sigma$, normalize over the keys, and take
 the weighted sum of the values. The normalized kernel matrix *is* the
-attention weight matrix, so we return it too. The old rule of thumb that the
-kernel's precise shape matters far less than its bandwidth holds here as
-well, so we vary $\sigma$ and keep the kernel Gaussian.
+attention weight matrix, so we return it too. The old rule of thumb holds
+here as well: the kernel's precise shape matters far less than its
+bandwidth, so we vary $\sigma$ and keep the kernel Gaussian.
 
 ```{.python .input #queries-keys-values-nadaraya-watson-regression-in-action-2}
 %%tab pytorch
@@ -302,8 +302,8 @@ of an arbitrary scoring function :eqref:`eq_softmax_attention` as the
 standard recipe for valid weights. Nadaraya--Watson kernel regression is
 attention pooling with hand-picked weights: it already works without any
 training, but its fixed kernel treats every query alike. Learning the
-queries and keys, rather than fixing them, is what turns this pooling
-operation into the attention mechanism of modern deep learning.
+queries and keys rather than fixing them turns this pooling operation into
+the attention mechanism of modern deep learning.
 
 ## Exercises
 

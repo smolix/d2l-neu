@@ -53,7 +53,7 @@ and a body of empirical knowledge
 that provide guidance for deciding
 which techniques to apply in which situations.
 
-The summary of the present moment is that the theory of deep learning
+As things stand, the theory of deep learning
 has produced promising lines of attack and scattered fascinating results,
 but still appears far from a comprehensive account
 of both (i) why we are able to optimize neural networks
@@ -149,13 +149,14 @@ and all of which, in some sense, are applied to mitigate overfitting.
 Complicating things even further,
 while the guarantees provided by classical learning theory
 can be conservative even for classical models,
-they appear powerless to explain why it is
-that deep neural networks generalize in the first place.
+they appear powerless to explain
+why deep neural networks generalize in the first place.
 Because deep neural networks are capable of fitting
 arbitrary labels even for large datasets,
 and despite the use of familiar methods such as $\ell_2$ regularization,
-worst-case complexity bounds based only on the full hypothesis class, such as
-basic parameter-count VC bounds, are often vacuous at modern scales. More
+worst-case complexity bounds are often vacuous at modern scales when they
+depend only on the full hypothesis class, as basic parameter-count VC bounds
+do. More
 data-dependent and algorithm-dependent bounds remain an active research area;
 no single account yet predicts deep-network generalization across settings.
 (:numref:`chap_classification_generalization` introduces these ideas;
@@ -191,8 +192,8 @@ least-squares and random-feature models, the minimum-norm interpolant can have
 high variance near a rank transition and lower variance after more features
 create additional interpolating solutions. This mechanism gives a precise
 double-descent calculation, but it is a model-specific explanation rather than
-a theorem about all deep networks. That calculation is developed
-in :numref:`sec_mdl-concentration-generalization`;
+a theorem about all deep networks.
+:numref:`sec_mdl-concentration-generalization` develops that calculation;
 we return below to what is known about optimizer-dependent implicit bias.
 
 Model size, moreover, is only one of three knobs that trace out this curve.
@@ -213,7 +214,7 @@ let you produce the epoch-wise one yourself.
 ## Inspiration from Nonparametrics
 
 Approaching deep learning for the first time,
-it is tempting to think of them as parametric models.
+it is tempting to think of deep networks as parametric models.
 After all, the models *do* have millions of parameters.
 When we update the models, we update their parameters.
 When we save the models, we write their parameters to disk.
@@ -241,7 +242,7 @@ some distance $d(\mathbf{x}, \mathbf{x}_i')$).
 When $k=1$, this algorithm is called $1$-nearest neighbors,
 and it achieves zero training error when training inputs are distinct and
 ties are resolved in favor of the queried example.
-That however, does not mean that the algorithm will not generalize.
+That, however, does not mean that the algorithm will not generalize.
 In fact, it turns out that under some mild conditions,
 the error of the $1$-nearest neighbor rule
 comes within a factor of two of the optimal (Bayes) error
@@ -264,7 +265,7 @@ distributions; an arbitrary or degenerate distance need not satisfy it.
 Under those conditions, $1$-nearest neighbor approaches its near-optimal limit,
 but different distance metrics $d$
 encode different inductive biases
-and with a finite amount of available data
+and, with a finite amount of available data,
 will yield different predictors.
 Different choices of the distance metric $d$
 represent different assumptions about the underlying patterns
@@ -289,8 +290,8 @@ which they call the neural tangent kernel.
 While current neural tangent kernel models may not fully explain
 the behavior of modern deep networks,
 their success as an analytical tool
-shows how a nonparametric limit can help analyze
-for understanding the behavior of over-parametrized deep networks.
+shows how a nonparametric limit can help
+in understanding the behavior of over-parametrized deep networks.
 
 
 ## Early Stopping
@@ -320,10 +321,10 @@ and to cut off training when the validation error
 has not decreased by more than some small amount $\epsilon$
 for some number of epochs.
 This is sometimes called a *patience criterion*.
-As well as the potential to lead to better generalization
+Besides its potential to improve generalization
 in the setting of noisy labels,
-another benefit of early stopping is the time saved.
-Once the patience criterion is met, one can terminate training.
+early stopping also saves time:
+once the patience criterion is met, one can terminate training.
 For large models that might require days of training
 simultaneously across eight or more GPUs,
 well-tuned early stopping can save researchers days of time
@@ -350,9 +351,9 @@ in order to penalize large values of the weights.
 Depending on which weight norm is penalized
 this technique is known either as ridge regularization (for $\ell_2$ penalty)
 or lasso regularization (for an $\ell_1$ penalty).
-In the classical analysis of these regularizers,
-they are considered as sufficiently restrictive on the values
-that the weights can take to prevent the model from fitting arbitrary labels.
+The classical analysis treats them as restricting the values
+that the weights can take enough to prevent the model
+from fitting arbitrary labels.
 
 In deep learning implementations,
 weight decay remains a popular tool.

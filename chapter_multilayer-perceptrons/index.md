@@ -41,9 +41,9 @@ kaggle-house-price
 The references below develop the multilayer perceptron and the core mechanics of
 training deep networks that this chapter introduces: hidden layers and activation
 functions, the universal approximation theorem, backpropagation, initialization
-and numerical stability, modern generalization, and dropout. The optimizers,
-normalization layers, and architectures these topics point toward are developed in
-their own later parts of the book; the sources here go deeper on the foundations.
+and numerical stability, modern generalization, and dropout. Later parts of the
+book develop the optimizers, normalization layers, and architectures these
+topics point toward; the sources here go deeper on the foundations.
 All are freely accessible online except where noted.
 
 **Books**

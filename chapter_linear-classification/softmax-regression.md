@@ -406,7 +406,7 @@ l(\mathbf{y}, \hat{\mathbf{y}}) &=  - \sum_{j=1}^q y_j \log \frac{\exp(o_j)}{\su
 $$
 
 using $\sum_j y_j = 1$ in the last step and writing
-$g(\mathbf{o}) = \log \sum_k \exp(o_k)$ for the *log-partition function*. This is the recurring shape of an *exponential-family* negative log-likelihood, one whose log-likelihood is a convex log-partition term minus a linear term in the natural parameters $\mathbf{o}$. The derivative is now immediate, because the softmax *is* the gradient of the log-partition function,
+$g(\mathbf{o}) = \log \sum_k \exp(o_k)$ for the *log-partition function*. This is the recurring shape of an *exponential-family* negative log-likelihood: a convex log-partition term minus a linear term in the natural parameters $\mathbf{o}$. The derivative is now immediate, because the softmax *is* the gradient of the log-partition function,
 
 $$
 \partial_{o_j} g(\mathbf{o}) = \frac{\exp(o_j)}{\sum_{k=1}^q \exp(o_k)} = \mathrm{softmax}(\mathbf{o})_j,
@@ -460,9 +460,9 @@ value: a model trained to minimize cross-entropy is generally *not*
 calibrated, and a reported confidence of $0.9$ does not mean the prediction
 is right $90\%$ of the time. Modern deep networks tend to be systematically
 overconfident :cite:`Guo.Pleiss.Sun.Weinberger.2017`.
-A simple and effective remedy, *temperature scaling*, divides the logits by a
-single learned $T > 0$ before the softmax, exactly the temperature of the
-Boltzmann distribution in :numref:`fig_mdl-clf-temperature`. Because it
+A simple and effective remedy is *temperature scaling*, which divides the
+logits by a single learned $T > 0$ before the softmax, exactly the temperature
+of the Boltzmann distribution in :numref:`fig_mdl-clf-temperature`. Because it
 scales every logit by the same factor $1/T$ it preserves their order, leaving
 the predicted class (the $\operatorname{argmax}$) and hence the accuracy
 untouched, while sharpening or softening the confidences. Exercise 8 develops

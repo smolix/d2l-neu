@@ -1025,10 +1025,10 @@ A full DenseNet alternates four dense blocks with transition layers, mirroring
 the four-stage layout of ResNet-18; assembling and training one is a
 straightforward variation on the ResNet code above. Feature reuse makes
 DenseNet parameter-efficient: it reached ResNet-level ImageNet accuracy with
-fewer parameters. Concatenation carries a cost that addition does not. The
-unique feature maps grow linearly with depth, but a naive implementation
-repeatedly materializes ever-wider concatenations and temporary normalized
-outputs, producing quadratic memory growth inside a dense block.
+fewer parameters. Concatenation nevertheless carries a cost that addition does
+not. The unique feature maps grow linearly with depth, but a naive
+implementation repeatedly materializes ever-wider concatenations and temporary
+normalized outputs, producing quadratic memory growth inside a dense block.
 Memory-efficient implementations recompute those temporaries during
 backpropagation :cite:`pleiss2017memory`. The remaining activation traffic
 helped residual addition become the more common choice at scale.

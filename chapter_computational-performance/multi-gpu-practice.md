@@ -411,10 +411,10 @@ if d2l.num_gpus() >= 2:
           f'({fast / slow:.1f}x)')
 ```
 
-Roughly five-fold, from configuration alone. First the general lesson: a
-collective library's configuration — which transport it picks, what
-topology it assumes — can move communication performance by *factors*,
-not percent, so measure yours against what the wire demonstrably carries
+Roughly five-fold, from configuration alone. First the general lesson:
+which transport a collective library picks and what topology it assumes
+can move communication performance by *factors*, not percent, so measure
+yours against what the wire demonstrably carries
 (:numref:`sec_multi_gpu`'s raw copy) before trusting it. Then the
 specific one, which is why every training run above still uses the
 library's defaults: this workaround wins the microbenchmark and loses
@@ -472,10 +472,10 @@ one table, since the rest of the book will name them without ceremony:
 | all-gather | every shard, concatenated | FSDP parameters, just-in-time |
 | all-to-all | a different shard from each peer | expert parallelism (:numref:`sec_training_systems`) |
 
-FSDP's payoff — fitting a model that does not fit — is invisible on our
-11.2M-parameter demo, which occupies a few hundred MB of a 24 GB card, so
-we show the *shape* of the code rather than run it. The modern API is
-`fully_shard` over a `DeviceMesh`; the original `FullyShardedDataParallel`
+FSDP pays off by fitting a model that does not fit, and that payoff is
+invisible on our 11.2M-parameter demo, which occupies a few hundred MB of
+a 24 GB card, so we show the *shape* of the code rather than run it. The
+modern API is `fully_shard` over a `DeviceMesh`; the original `FullyShardedDataParallel`
 wrapper class still imports at our pin, but it is the deprecated legacy
 path:
 
@@ -499,14 +499,13 @@ print('FSDP sketch: reach for it past a few billion parameters, '
 print('JAX shards by annotation; the next subsection is the demo')
 ```
 
-You reach for FSDP when the training state at your precision — the
-parameters, gradients, and optimizer states of
-:numref:`sec_memory_precision`'s anatomy, plus activations — no longer
-fits on one GPU, or when that redundancy is worth trading away for
-communication; for this card class the threshold arrives at a few billion
-parameters. The production distributed-training map, and how to combine
-FSDP with the other parallelism axes, lives in
-:numref:`sec_training_systems`.
+You reach for FSDP when the training state at your precision no longer
+fits on one GPU — the parameters, gradients, and optimizer states of
+:numref:`sec_memory_precision`'s anatomy, plus activations — or when that
+redundancy is worth trading away for communication; for this card class
+the threshold arrives at a few billion parameters. The production
+distributed-training map, and how to combine FSDP with the other
+parallelism axes, lives in :numref:`sec_training_systems`.
 
 ## JAX: Annotate the Layout, the Compiler Writes the Collectives
 :label:`subsec_mgp-jax`
@@ -675,19 +674,19 @@ $10^{-2}$ — not the $10^{-9}$ of :numref:`sec_multi_gpu`'s LeNet check,
 and the gap is itself informative: these are two *different compiled
 programs*, whose tf32 convolutions and batch-norm reductions associate
 their arithmetic differently, so the residue is rounding. What the check
-exists to catch — a summed-instead-of-averaged gradient, an accidental
-$k\times$ learning rate — would announce itself at the scale of the update
-itself.
+exists to catch would announce itself at the scale of the update itself:
+a summed-instead-of-averaged gradient, an accidental $k\times$ learning
+rate.
 
 And here is the punchline. To move between *data* parallelism, *tensor*
 parallelism, and *FSDP*-style sharding in JAX, you change the
 `PartitionSpec` — not the model code. Sharding the batch axis gives data
 parallelism (above); sharding a weight's feature axis gives tensor
 parallelism; sharding the parameters and letting XLA all-gather them
-just-in-time gives the FSDP pattern. **One sharding vocabulary — annotate
-the layout, the compiler writes the collectives — spans what PyTorch
-exposes as three different APIs** (DDP, tensor-parallel wrappers, FSDP) —
-though an effective sharding plan is still model-aware: someone has to
+just-in-time gives the FSDP pattern. **One sharding vocabulary spans what
+PyTorch exposes as three different APIs** (DDP, tensor-parallel wrappers,
+FSDP): annotate the layout, and the compiler writes the collectives. An
+effective sharding plan is still model-aware, though: someone has to
 choose the layouts and the constraint points. The manual end of the same
 spectrum is the `jax.shard_map` + `lax.psum` of :numref:`sec_multi_gpu`,
 where you write the collective yourself; `jit` + sharding is the
@@ -723,9 +722,10 @@ collectives then run over a network fabric measured in tens of GB/s
 between nodes rather than an NVLink domain within one, and the cost model
 of :numref:`sec_multi_gpu` acquires a second, slower bandwidth term. That
 is the province of the Language Models part, which has models and datasets
-large enough to warrant it; the production library map — Megatron, the
-FSDP/DTensor stack, DeepSpeed, and how to launch and checkpoint them across
-a cluster — is :numref:`sec_training_systems`. From here the communication
+large enough to warrant it; the production library map is
+:numref:`sec_training_systems` — Megatron, the FSDP/DTensor stack,
+DeepSpeed, and how to launch and checkpoint them across a cluster. From
+here the communication
 *algebra* stays the same; what multi-node adds is engineering on top of
 it — a hierarchy of fabrics (NVLink inside a node, a network between
 nodes), rendezvous and elastic restart when machines fail, and stragglers

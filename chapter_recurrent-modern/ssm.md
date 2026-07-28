@@ -11,8 +11,9 @@ threads at once, and a recurrence at inference batch sizes leaves nearly all
 of them idle. Compare the convolutional networks of :numref:`chap_cnn`: a
 convolution applies the same weights at every position, just as a recurrence
 applies the same cell at every step, but all positions are computed *at
-once*. That difference in training throughput, far more than any difference
-in modeling power, is what pushed recurrent networks out of large-scale use.
+once*. That difference in training throughput is what pushed recurrent
+networks out of large-scale use, far more than any difference in modeling
+power.
 
 This section is about getting the parallelism back without giving up the
 thing that makes recurrence attractive: a state of fixed size, updated in
@@ -26,8 +27,8 @@ continuous-time *state space model* (SSM): discretization will hand us
 principled gates, stability by construction rather than by hope, an exact
 equivalence between recurrence and convolution, and, through the HiPPO
 theory, a principled answer to what dynamics make a fixed-size state a
-good memory of the past. The result, the S4 family of models
-:cite:`Gu.Goel.Re.2022`, is the backbone of the selective state space
+good memory of the past. The result is the S4 family of models
+:cite:`Gu.Goel.Re.2022`, the backbone of the selective state space
 models we meet in the next section and of recurrent layers inside several
 production language models.
 
@@ -71,8 +72,8 @@ $\mathbf{H}_{t-2}$ under two nested applications of $\phi$, and nothing
 simplifies. A composition of nonlinear maps has no compact closed form, so
 the only way to evaluate step $t$ is to have evaluated step $t-1$. The
 nonlinearity in the *state path* is the exact culprit. Everything else
-about the cell, gates computed from the input, nonlinear read-outs of the
-state, deep stacks of layers, creates no such obstruction.
+about the cell creates no such obstruction: gates computed from the
+input, nonlinear read-outs of the state, deep stacks of layers.
 
 That observation suggests a surgical experiment: keep the gating idea of
 :numref:`sec_lstm`, but remove every appearance of $\mathbf{H}_{t-1}$
@@ -148,11 +149,10 @@ The classic *prefix sum* problem asks for all running totals
 $s_t = x_1 + \cdots + x_t$ of a sequence. It looks as sequential as our
 recurrence, yet it parallelizes beautifully, because addition is
 *associative*: sums may be grouped arbitrarily, so partial sums of blocks
-can be computed independently and merged. The general result, due to
-:citet:`Blelloch.1990`, is that a running "total" under *any* associative
-binary operator can be computed in $O(\log T)$ parallel rounds; the
-operation is called a *parallel scan*, and it is exactly as general as it
-sounds.
+can be computed independently and merged. :citet:`Blelloch.1990` showed
+the general result: a running "total" under *any* associative binary
+operator can be computed in $O(\log T)$ parallel rounds. The operation is
+called a *parallel scan*, and it is exactly as general as it sounds.
 
 Our recurrence fits once we find the right operator. Represent the affine
 update at step $t$ by its coefficient pair $(\mathbf{a}_t, \mathbf{b}_t)$,
@@ -189,7 +189,7 @@ perfect work for an accelerator.
 ![A parallel prefix scan on eight elements. Each round combines every position with the one a fixed stride back (arrows), doubling the stride each round; dashed arrows copy unchanged values. Labels show which input elements each node has absorbed; after $\log_2 8 = 3$ rounds, every position holds its full prefix (green).](../img/mdl-modernrnn-scan-tree.svg)
 :label:`fig_scan_tree`
 
-This doubling schedule, the scheme of Hillis and Steele, performs
+This doubling schedule is the scheme of Hillis and Steele: it performs
 $O(T \log T)$ total work, a $\log T$ factor more than the sequential loop,
 in exchange for $O(\log T)$ depth.
 Blelloch's classic two-sweep scan gets the work back down to $O(T)$ at
@@ -338,8 +338,8 @@ hardware. This plot is the
 section and the next is built on top of it. Note what the scan did *not*
 change: at inference we still update
 $\mathbf{h}_t = \mathbf{a}_t \odot \mathbf{h}_{t-1} + \mathbf{b}_t$ one
-token at a time, in constant memory, exactly like any RNN. We cash that
-claim, with a stopwatch, in :numref:`subsec_ssm-step`.
+token at a time, in constant memory, exactly like any RNN. We make good
+on that claim, with a stopwatch, in :numref:`subsec_ssm-step`.
 
 ### A minGRU Language Model
 
@@ -568,10 +568,9 @@ playing the role of the log step size :cite:`Gu.2023`. Keep the scope of
 the identity in view: for general matrix $\mathbf{A}$ the backward-Euler
 transition $(\mathbf{I} - \Delta \mathbf{A})^{-1}$ is matrix-valued and
 each mode carries its own decay and tied input response, so not every
-discretized SSM is a GRU-style update. The gates that
-:numref:`sec_lstm` engineered and the step size that calculus hands us
-here are, in this scalar case, one object seen through two
-discretization rules.
+discretized SSM is a GRU-style update. In this scalar case, though, the
+gates that :numref:`sec_lstm` engineered and the step size that calculus
+hands us here are one object seen through two discretization rules.
 
 ZOH and backward Euler are two entries in a standard menu. The rules
 differ in the transition they produce, in whether they preserve
@@ -591,8 +590,9 @@ ZOH throughout this chapter, as Mamba does (with a further first-order
 simplification we meet in :numref:`sec_mamba`); forward Euler earns its
 place in the exercise that shows how it fails.
 
-Stability, which :numref:`subsec_bptt-gradient-pathologies` taught us to
-fear, is now a matter of *parameterization* rather than luck. Store
+:numref:`subsec_bptt-gradient-pathologies` taught us to fear for
+stability; here stability is a matter of *parameterization* rather than
+luck. Store
 $a_n$ as $-e^{\theta_n}$ (or any form pinned to the left half-plane), and
 the discrete eigenvalues satisfy
 
@@ -640,9 +640,9 @@ sequential loop only to float tolerance, never bitwise — every check in
 this chapter compares against a tolerance scaled to the dtype. Third,
 watch long products: with all $|\bar{a}| < 1$ a product of $T$ decays
 underflows gracefully toward zero, but *ratios* of separately
-exponentiated prefix products, which the chunked forms of
-:numref:`sec_matrix-state` are built from, can overflow; log-domain and
-chunk-rescaled implementations are the production answer.
+exponentiated prefix products can overflow, and the chunked forms of
+:numref:`sec_matrix-state` are built from exactly those ratios;
+log-domain and chunk-rescaled implementations are the production answer.
 
 ### Recurrence is Convolution
 :label:`subsec_ssm-conv`
@@ -777,9 +777,9 @@ kernel view above is control theory's oldest view, rediscovered.
 *Internal versus BIBO stability.* The cancellation is also where the two
 stability notions of the box above part ways: a system can be BIBO
 stable, with bounded inputs producing bounded outputs, while an unstable
-mode grows unseen because it is hidden from the output. Internal
-stability, every mode decaying, is the stronger certificate, and it is
-the one our left-half-plane parameterization provides.
+mode grows unseen because it is hidden from the output. The stronger
+certificate is internal stability, every mode decaying, and that is what
+our left-half-plane parameterization provides.
 
 *Similarity and non-identifiability.* Change state coordinates by any
 invertible $\mathbf{T}$, sending $(\mathbf{A}, \mathbf{B}, \mathbf{C})$
@@ -907,7 +907,7 @@ $a_n = -(n + 1)$, the diagonal of :eqref:`eq_hippo`. Be clear about what
 that inherits and what it does not: it is a *multiscale initialization*,
 a bank of decay rates from slow to fast, not the optimal Legendre
 projection — the theorem stays behind with the time-varying system, and
-the case for the diagonal toy is the S4D paper's empirical one. Finally,
+the case for the diagonal model is the S4D paper's empirical one. Finally,
 S5 :cite:`Smith.Warrington.Linderman.2023` replaced the per-channel
 FFTs with one multi-input state space layer evaluated by the
 parallel scan, the same computational pattern we built above. Our
@@ -1213,7 +1213,7 @@ state only when a decade's worth of initialization folklore is applied
 on its behalf, and hopes for a lucky draw otherwise. What the SSM
 parameterization provides — stability by construction and a multiscale
 initialization — is that memory *by design*, robustly, rather than
-by folklore. Wall-clock per epoch, also in the table,
+by folklore. The table also gives wall-clock per epoch, which
 depends on what each framework fuses: against PyTorch's cuDNN-fused LSTM
 our teaching-grade scan pays its log-factor overhead, while in JAX,
 where both models run compiled scans, the parallel scan is several times
@@ -1461,17 +1461,16 @@ carries a state a few hundred bytes per layer where a transformer's KV
 cache grows with the length of the context (:numref:`sec_kv-cache`).
 
 Everything here, though, is *linear and time-invariant*: the kernel
-$\bar{\mathbf{K}}$, and with it the decision of what to remember, is fixed
-before the model ever sees the input. An S4D *layer* cannot read a token
+$\bar{\mathbf{K}}$ is fixed before the model ever sees the input, and with
+it the decision of what to remember. An S4D *layer* cannot read a token
 and decide that *this one* matters while its neighbor is noise: its
 gates, unlike the LSTM's, do not look at the data as it flows past, so
 the state-update operator is in this precise sense content-blind. The
 qualifier matters: the blocks *around* each SSM are input-dependent, and
 a deep stack can modulate between layers what it cannot modulate within
 the state update — which is why such models earn partial credit, though
-not success, on the selectivity task of the next section. Curing the
-limitation at the operator level, and keeping the
-scan, is the subject of that section.
+not success, on the selectivity task of the next section. That section
+cures the limitation at the operator level while keeping the scan.
 
 **What the experiments show, and what they do not.** The scan-vs-loop
 and step-vs-rerun benchmarks establish *shapes* (logarithmic against

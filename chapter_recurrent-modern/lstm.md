@@ -656,10 +656,11 @@ $\tilde{\mathbf{H}}_t$ and the gates. If one makes the gates functions of
 the input alone and lets the candidate ignore the previous state, the
 update becomes *linear* in $\mathbf{H}_{t-1}$, and a linear recurrence can
 be trained in parallel across the whole sequence rather than step by step.
-That observation, worked out in :numref:`sec_ssm`, is the seed of minimal
-gated cells such as minGRU :cite:`Feng.Tung.Ahmed.ea.2024`, of linear
-recurrent units :cite:`Orvieto.Smith.Gu.ea.2023`, and of the state space
-models that now appear inside production language models. The GRU is not
+That observation is the seed of minimal gated cells such as minGRU
+:cite:`Feng.Tung.Ahmed.ea.2024`, of linear recurrent units
+:cite:`Orvieto.Smith.Gu.ea.2023`, and of the state space models that now
+appear inside production language models, and :numref:`sec_ssm` works it
+out in full. The GRU is not
 just a smaller LSTM; it is the halfway point to the linear recurrences that
 follow.
 
@@ -676,9 +677,9 @@ A deep RNN stacks recurrent layers, each reading the hidden-state
 sequence of the layer below as its input sequence: function composition
 within a time step, on top of recurrence across steps. Gated cells handle
 the time direction; the layer direction borrows the feedforward remedies
-of residual connections (:numref:`sec_resnet`) and between-layer dropout,
-and stacks beyond four to eight layers rarely paid off for recurrent
-models. Since our `LSTM` class already accepts `num_layers`, a two-layer
+of residual connections (:numref:`sec_resnet`) and between-layer dropout.
+For recurrent models, stacks beyond four to eight layers rarely paid
+off. Since our `LSTM` class already accepts `num_layers`, a two-layer
 model is a one-argument change, and it completes our scoreboard.
 
 ```{.python .input #lstm-deep-recurrent-networks-1}
@@ -710,8 +711,9 @@ corpora; knowing when it will not is part of the craft.
 :label:`sec_bi_rnn`
 
 Language modeling forces left-to-right reading, but a model that
-*analyzes* a complete, given sequence, a part-of-speech tagger say, has
-the future context in hand, and it is informative. A *bidirectional RNN*
+*analyzes* a complete, given sequence has the future context in hand, and
+that context is informative. Part-of-speech tagging is one such task. A
+*bidirectional RNN*
 :cite:`Schuster.Paliwal.1997` runs a second, independent recurrent layer
 backward over the same input and concatenates the two states at each
 step into
@@ -760,28 +762,28 @@ per-position representations are wanted: tagging, span labeling, and
 encoding. Their most consequential success was ELMo
 :cite:`Peters.Neumann.Iyyer.ea.2018`, deep bidirectional LSTMs trained to
 produce contextual word embeddings (see also
-:cite:`Graves.Schmidhuber.2005`); that role, and the entire
-encode-both-directions idea, passed to the bidirectional attention of
-BERT :cite:`Devlin.Chang.Lee.ea.2018`, which we study in the pretraining
+:cite:`Graves.Schmidhuber.2005`); the bidirectional attention of BERT
+:cite:`Devlin.Chang.Lee.ea.2018` then inherited that role and the entire
+encode-both-directions idea, and we study BERT in the pretraining
 chapters.
 
 ## Gates beyond Recurrent Networks
 
 The cells above are, by the standards of this book's earlier chapters, old
-technology. The gate is not. Once you know its shape, a sigmoid (or other
-bounded) branch elementwise-multiplying a signal branch, you will find it
-across modern deep learning, doing the same job of content-dependent
-routing that it does inside the LSTM.
+technology. The gate is not. Its shape is a sigmoid (or other bounded)
+branch elementwise-multiplying a signal branch, and once you know that
+shape you will find it across modern deep learning, doing the same job of
+content-dependent routing that it does inside the LSTM.
 
 Highway networks :cite:`srivastava2015highway` applied the LSTM's gating
 to *depth*: a transform gate blends each layer's output with its
 unmodified input, letting very deep feedforward networks train years
 before normalization made it routine, and prefiguring the residual
 connections of :numref:`sec_resnet`. Transformer blocks carry gates in
-their MLPs: the gated linear unit family, whose SwiGLU variant
-:cite:`Shazeer.2020` computes
-$\textrm{Swish}(\mathbf{x}\mathbf{W}_1) \odot \mathbf{x}\mathbf{W}_2$, is
-the standard MLP in most contemporary open language models, and
+their MLPs: the gated linear unit family is the standard MLP in most
+contemporary open language models, its SwiGLU variant
+:cite:`Shazeer.2020` computing
+$\textrm{Swish}(\mathbf{x}\mathbf{W}_1) \odot \mathbf{x}\mathbf{W}_2$;
 :numref:`sec_transformer-block` measured what that gate buys in a
 matched-parameter sweep. And the recurrence story of this chapter
 continues the pattern most directly: the selective state space model
@@ -799,7 +801,7 @@ unbounded gates numerically stable. The result revives the classic
 recurrent, state-dependent cell at modern scale. Its sibling, the
 matrix-memory mLSTM, gives up state-dependent gating to regain parallel
 training, and appears where it belongs, in the family table of
-:numref:`sec_matrix-state`. One idea, many wardrobes:
+:numref:`sec_matrix-state`. One idea, many guises:
 
 | Where | The gate | What it controls |
 | :-- | :-- | :-- |
@@ -839,10 +841,10 @@ the recurrent parameters. On an identical short training recipe the GRU
 clearly outperforms the vanilla RNN from :numref:`sec_rnn-scratch`, while
 the LSTM needs a longer budget or a friendlier initialization before its
 extra machinery pays: architecture and optimization cannot be judged
-separately. Depth (stacked layers) and bidirectionality (a backward pass
-concatenated to the forward one) are orthogonal wiring choices; the
-latter yields encoders, which cannot double unchanged as causal
-decoders. The gate itself outlived these
+separately. Depth and bidirectionality are orthogonal wiring choices:
+stacked layers in the first case, a backward pass concatenated to the
+forward one in the second. Bidirectionality yields encoders, which cannot
+double unchanged as causal decoders. The gate itself outlived these
 architectures: it routes channels in transformer MLPs
 (:numref:`sec_transformer-block`), revives the LSTM in exponential form
 (xLSTM), and, made input-dependent only, powers the linear recurrences

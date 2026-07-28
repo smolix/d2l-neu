@@ -34,10 +34,10 @@ and their format ladder, the interconnects, and the energy budget
 underneath them all — using our own four-GPU box as the worked example.
 :numref:`sec_compilation` targets the bandwidth and overhead regimes:
 capturing the compute graph and letting a compiler fuse it can collapse
-both — though not every technique pays on every model, and
+both, and the section contrasts `torch.compile`'s bytecode capture with
+`jax.jit`'s tracing. Not every technique pays on every model, though, and
 :numref:`sec_fast_transformer` measures one that *costs* time when its
-constraint does not bind, which is why diagnosis comes first —
-contrasting `torch.compile`'s bytecode capture with `jax.jit`'s tracing.
+constraint does not bind, which is why diagnosis comes first.
 :numref:`sec_memory_precision` turns to space: the memory anatomy of a
 training step, mixed precision, activation checkpointing, and gradient
 accumulation — the techniques that decide whether a model fits.
@@ -70,27 +70,28 @@ written so that a reader on two GPUs, or one, sees the same story.
 ## What This Chapter Is Not {.unnumbered}
 
 The performance story is large, and this chapter draws sharp borders.
-*Multi-node* training — splitting a model across machines with tensor,
-pipeline, or expert parallelism, and the network fabrics that make it
-possible — is the province of the Language Models part, which has data
-large enough to warrant it; :numref:`sec_multi_gpu_concise` builds the
-bridge and stops at the water's edge. *Kernel authoring* in CUDA, Triton,
+*Multi-node* training is the province of the Language Models part, which
+has data large enough to warrant it: splitting a model across machines
+with tensor, pipeline, or expert parallelism, and the network fabrics
+that make it possible, all belong there. :numref:`sec_multi_gpu_concise`
+builds the bridge and stops at the water's edge.
+*Kernel authoring* in CUDA, Triton,
 or Pallas is fenced off book-wide (:numref:`sec_custom_layer`); we teach
 how to get performance from the operations you already have, and point to
 the resources below for those who want to write their own.
-*Serving engines* — continuous batching, paged key–value caches,
-speculative decoding, the systems that turn a trained model into a
-low-latency service — belong to the Language Models part as well; this
-chapter teaches the inference *economics* (the prefill-versus-decode
-roofline reading of :numref:`sec_hardware`) but not the engines that
-exploit them. *Quantization as compression* for inference is likewise
-deferred; :numref:`sec_hardware` teaches formats as *training* precisions
-only. The production library map — which distributed framework to reach
-for at which scale, how to checkpoint a long run, how to launch across a
-cluster — and buying advice both live in the Tools appendix
-(:numref:`sec_training_systems`, :numref:`sec_hardware_buyers`): this
-chapter earns the concepts at notebook scale, and the appendix names the
-products at datacenter scale.
+*Serving engines* belong to the Language Models part as well: continuous
+batching, paged key–value caches, speculative decoding, all the systems
+that turn a trained model into a low-latency service. This chapter
+teaches the inference *economics* (the prefill-versus-decode roofline
+reading of :numref:`sec_hardware`) but not the engines that exploit them.
+*Quantization as compression* for inference is likewise deferred;
+:numref:`sec_hardware` teaches formats as *training* precisions only. The
+production library map and buying advice both live in the Tools appendix
+(:numref:`sec_training_systems`, :numref:`sec_hardware_buyers`): which
+distributed framework to reach for at which scale, how to checkpoint a
+long run, how to launch across a cluster. This chapter earns the concepts
+at notebook scale, and the appendix names the products at datacenter
+scale.
 
 ## Resources and Further Reading {.unnumbered}
 

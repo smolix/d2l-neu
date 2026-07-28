@@ -7,15 +7,15 @@ section measures that waste, eliminates it, and then studies what the fix
 costs. The fix is the *KV cache*: because causal attention never lets the
 past depend on the future, the keys and values of every token already
 generated are final the moment they are computed, and can simply be stored.
-Caching makes the dominant dense-layer work linear in the generated length
-— attention itself still reads the whole growing cache at every step, so
-its cumulative cost stays quadratic, a term that is real but subdominant at
-the sizes we run — and it converts a compute problem into a *memory*
-problem, so the second half of this section is about the bill. We derive
-the cache-size formula and check it against the allocator, see why
-generating tokens is bound by memory
-bandwidth while reading a prompt is bound by arithmetic, and then shrink
-the cache three ways: sharing keys and values across heads (MQA and GQA),
+Caching makes the dominant dense-layer work linear in the generated
+length. (Attention itself still reads the whole growing cache at every
+step, so its cumulative cost stays quadratic, a term that is real but
+subdominant at the sizes we run.) It also converts a compute problem into
+a *memory* problem, so the second half of this section is about the bill.
+We derive the cache-size formula and check it against the allocator, see
+why generating tokens is bound by memory bandwidth while reading a prompt
+is bound by arithmetic, and then shrink the cache three ways: sharing keys
+and values across heads (MQA and GQA),
 compressing them to a low-rank latent (the idea behind MLA), and bounding
 the context with a sliding window, which works only together with a
 counterintuitive companion, the *attention sink*. Everything runs on the
@@ -62,7 +62,7 @@ but subdominant at the model sizes we run here. Naive generation calls
 this forward pass once per token, over a history that grows by one each
 step: producing $T$ tokens after a prompt costs roughly
 $\sum_{t} 2Nt \approx N T^2$ operations, quadratic in the length of the
-text, for logits of which all but the last row are thrown away.
+text; of the logits it computes, all but the last row is thrown away.
 
 Almost all of that work is literally repeated. At step $t$ the model
 needs, in every layer, the attention output for one new query
@@ -597,7 +597,7 @@ that production engines eliminate with compiled decode loops and CUDA
 graphs, and the ceiling is what they climb toward. The structural point
 survives sloppy plumbing, though: decode speed is set by *bytes that must
 move per token*, weights plus cache, so every byte shaved off the cache
-is decode speed, longer feasible contexts, or more concurrent users. That
+buys decode speed, longer feasible contexts, or more concurrent users. That
 is why the rest of this section is about making the cache smaller.
 
 ## Sharing Keys and Values across Heads
@@ -629,9 +629,9 @@ key-value head across its query group (in PyTorch via `enable_gqa`; the
 JAX kernel accepts grouped shapes natively). We keep the
 `(queries, keys, values, valid_lens)` call shape of
 `d2l.MultiHeadAttention`, so the class drops into
-`d2l.TransformerBlock`'s `attn_factory` hook — the seam
-:numref:`sec_transformer-block` built for exactly this purpose — and,
-with `rope=True`, into `d2l.GPT`. Setting $H_{kv} = H$ recovers standard
+`d2l.TransformerBlock`'s `attn_factory` hook, and with `rope=True` into
+`d2l.GPT` as well; that hook is the seam :numref:`sec_transformer-block`
+built for exactly this purpose. Setting $H_{kv} = H$ recovers standard
 multi-head attention exactly.
 
 ```{.python .input #kv-cache-a-pluggable-implementation-1}
@@ -871,9 +871,9 @@ world so quickly.
 ## Compressing the Cache Further
 
 Sharing heads is one axis. This closing section looks at the two other
-levers deployed systems pull — compressing the *width* of each cached
-token further, and bounding the *length* of what is cached — and at the
-failure mode that makes the second one subtle. Our minute-trained
+levers deployed systems pull: compressing the *width* of each cached
+token further, and bounding the *length* of what is cached. The second
+comes with a failure mode that makes it subtle. Our minute-trained
 character models are too small to exhibit these phenomena, so we probe
 the real GPT-2, reloading it exactly as in :numref:`sec_gpt` (weights
 and tokenizer files are already pinned in `d2l.DATA_HUB`), along with the
@@ -1040,9 +1040,9 @@ print(f'full attention: loss {full:.2f}, perplexity {jnp.exp(full):.0f}')
 ### Low-Rank Keys and Values
 
 GQA shrinks the cache by storing fewer key-value heads. A different bet:
-keep all heads, but suppose the concatenated key and value vectors of a
-token — for GPT-2, $2 \times 768 = 1536$ numbers — do not really span
-1536 dimensions, and store only their coordinates in some
+keep all heads, but suppose that a token's concatenated key and value
+vectors do not really span the full width they occupy (for GPT-2,
+$2 \times 768 = 1536$ numbers), and store only their coordinates in some
 lower-dimensional subspace. That is the idea behind *multi-head latent
 attention* (MLA), the mechanism DeepSeek built its V2 and V3 models
 around :cite:`DeepSeek-AI.2024`: a trained projection compresses each
@@ -1110,8 +1110,8 @@ two numbers is single-passage noise, and we make nothing of it). At rank
 128 the model measurably worsens but remains coherent. The premise
 holds: what attention actually reads back from its cache lives in a far
 lower-dimensional space than the cache stores. The six-fold saving is
-notional here — our SVD basis is fitted to this very passage and would
-itself need storing — and that is exactly what MLA supplies: one
+notional here, since our SVD basis is fitted to this very passage and
+would itself need storing. MLA supplies exactly what is missing: one
 projection, trained once and shared globally, that the model learns to
 write through, pushing the compression much further than after-the-fact
 truncation can.
@@ -1169,9 +1169,9 @@ is. This is the *attention sink* :cite:`Xiao.Tian.Chen.ea.2024`: softmax
 must hand out probability mass that sums to one, a head that currently
 has nothing to retrieve needs somewhere harmless to put it, and training
 converges on the one position every query can always see. The first
-token becomes the designated dumping ground — an observation about the
-attention *weights*; how much its value vector actually contributes to
-the output is a separate quantity, which we have not measured.
+token becomes the designated dumping ground. That is an observation about
+the attention *weights*; how much its value vector actually contributes
+to the output is a separate quantity, and one we have not measured.
 
 Now the trap springs. Evict that token, as a naive rolling buffer of the
 most recent $w$ entries would, and every head's dumping ground vanishes:
@@ -1238,9 +1238,9 @@ latent in place of the full vectors. Sliding windows (with their sinks)
 bound the *length*, at the price of genuinely forgetting the far past.
 The linear attention of :numref:`sec_attention-at-scale` removes the
 cache altogether, collapsing the entire past into a fixed-size recurrent
-state — that is its real selling point, constant-memory generation — and
-the hybrid stacks of :numref:`chap_modern_rnn` interleave a few
-full-attention layers into a mostly-linear model so that most layers pay
+state, and constant-memory generation is its real selling point. The
+hybrid stacks of :numref:`chap_modern_rnn` interleave a few
+full-attention layers into a mostly-linear model, so that most layers pay
 no cache at all while a few retain exact recall. Beyond the cache
 proper, the decode-side bandwidth arithmetic of this section is also
 what *speculative decoding* exploits, drafting several tokens cheaply

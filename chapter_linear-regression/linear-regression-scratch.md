@@ -683,8 +683,8 @@ is only possible when no feature
 is linearly dependent on the others.
 However, in machine learning, 
 we are often less concerned
-with recovering true underlying parameters,
-but rather with parameters 
+with recovering true underlying parameters
+than with finding parameters 
 that lead to highly accurate prediction :cite:`Vapnik.1992`.
 Fortunately, even on difficult optimization problems,
 stochastic gradient descent can often find good solutions,
@@ -707,8 +707,8 @@ a model, a loss function, an optimization procedure,
 and a visualization and monitoring tool. 
 We did this by composing a Python object 
 that contains all relevant components for training a model. 
-While this is not yet a professional-grade implementation
-it is perfectly functional and code like this 
+While this is not yet a professional-grade implementation,
+it is perfectly functional, and code like this 
 could already help you to solve small problems quickly.
 In the coming sections, we will see how to do this
 both *more concisely* (avoiding boilerplate code)

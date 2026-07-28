@@ -123,10 +123,10 @@ that, on average, make our model's predictions
 fit the true prices observed in the data as closely as possible.
 
 
-In disciplines where it is common to focus
+In disciplines that focus
 on datasets with just a few features,
-explicitly expressing models long-form,
-as in :eqref:`eq_price-area`, is common.
+it is common to write models out long-form,
+as in :eqref:`eq_price-area`.
 In machine learning, we usually work
 with high-dimensional datasets,
 where it is more convenient to employ
@@ -371,11 +371,11 @@ Moreover, for many tasks, those hard-to-optimize models
 turn out to be so much better that figuring out how to train them
 ends up paying off.
 
-The key technique for optimizing nearly every deep learning model,
-and which we will call upon throughout this book,
+The key technique for optimizing nearly every deep learning model
 consists of iteratively reducing the error
 by updating the parameters in the direction
-that incrementally lowers the loss function.
+that incrementally lowers the loss function,
+and we will call upon it throughout this book.
 This algorithm is called *gradient descent*.
 
 The most naive application of gradient descent
@@ -390,11 +390,11 @@ the benefit of a full update is limited.
 
 The other extreme is to consider only a single example at a time and to take
 update steps based on one observation at a time.
-The resulting algorithm, *stochastic gradient descent* (SGD)
-can be an effective strategy :cite:`Bottou.2010`, even for large datasets.
+The resulting algorithm is *stochastic gradient descent* (SGD),
+which can be an effective strategy :cite:`Bottou.2010`, even for large datasets.
 Unfortunately, SGD has drawbacks, both computational and statistical.
-One problem arises from the fact that processors are a lot faster
-multiplying and adding numbers than they are
+One problem is that processors are a lot faster
+at multiplying and adding numbers than
 at moving data from main memory to processor cache.
 It is up to an order of magnitude more efficient to
 perform a matrix--vector multiplication
@@ -409,7 +409,7 @@ to more than one observation at a time.
 The solution to both problems is to pick an intermediate strategy:
 rather than taking a full batch or only a single sample at a time,
 we take a *minibatch* of observations :cite:`Li.Zhang.Chen.ea.2014`.
-The specific choice of the size of the said minibatch depends on many factors,
+The specific choice of minibatch size depends on many factors,
 such as the amount of memory, the number of accelerators,
 the choice of layers, and the total dataset size.
 Despite all that, a number between 32 and 256,
@@ -454,20 +454,19 @@ we record the estimated model parameters,
 denoted $\hat{\mathbf{w}}, \hat{b}$.
 Note that even if our function is truly linear and noiseless,
 these parameters will not be the exact minimizers of the loss, nor even deterministic.
-Although the algorithm converges slowly towards the minimizers
+Although the algorithm converges slowly towards the minimizers,
 it typically will not find them exactly in a finite number of steps.
 In fact, this vague statement has a precise form: with a constant learning
 rate, minibatch SGD does not settle on the minimizer at all but hovers in a
 *noise ball* around it, whose squared radius scales like $\eta$ times the
-gradient noise: shrinking the learning rate shrinks the ball, which is why
+gradient noise. Shrinking the learning rate shrinks the ball, which is why
 learning-rate *schedules* matter.
 Why gradient descent converges, at what rate, and how the learning rate and
 its schedule interact with gradient noise are worked out in
 :numref:`sec_mdl-gradient-based-optimization` and
 :numref:`sec_mdl-adaptive-stochastic-methods`.
-Moreover, the minibatches $\mathcal{B}$
-used for updating the parameters are chosen at random.
-This breaks determinism.
+Moreover, we choose the minibatches $\mathcal{B}$
+at random, which breaks determinism.
 
 Linear least squares always has a global minimizer because its loss is a
 convex quadratic bounded below. Full column rank, equivalently an invertible
@@ -833,15 +832,15 @@ where it reaches its destination
 (e.g., an actuator such as a muscle)
 or it is fed into another neuron via its dendrites.
 
-Certainly, the high-level idea that many such units
-could be combined, provided they have the correct connectivity and learning algorithm,
-to produce far more interesting and complex behavior
-than any one neuron alone could express
-arises from our study of real biological neural systems.
+Certainly, one high-level idea does come from our study
+of real biological neural systems: that many such units,
+provided they have the correct connectivity and learning algorithm,
+could be combined to produce far more interesting and complex behavior
+than any one neuron alone could express.
 At the same time, most research in deep learning today
 draws inspiration from a much wider source.
-We invoke :citet:`Russell.Norvig.2016`
-who pointed out that although airplanes might have been *inspired* by birds,
+As :citet:`Russell.Norvig.2016` pointed out,
+although airplanes might have been *inspired* by birds,
 ornithology has not been the primary driver
 of aeronautics innovation for some centuries.
 Likewise, inspiration in deep learning these days

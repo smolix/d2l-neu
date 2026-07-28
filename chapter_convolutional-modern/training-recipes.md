@@ -68,9 +68,9 @@ The *optimizer* row shows one common change, from SGD to AdamW
 Adam implementations folded weight decay into the gradient, where adaptive
 rescaling distorts it. AdamW decouples the weight update from the gradient and
 made adaptive methods competitive with tuned SGD on many vision recipes. At
-batch sizes in the tens of thousands, layerwise rescaling of the update (LARS
-:cite:`You.Gitman.Ginsburg.2017` and its Adam-based sibling LAMB, used for
-recipe A1 above) can keep training stable.
+batch sizes in the tens of thousands, layerwise rescaling of the update can
+keep training stable, as in LARS :cite:`You.Gitman.Ginsburg.2017` and its
+Adam-based sibling LAMB, used for recipe A1 above.
 
 The *schedule* row replaces discrete drops with a smooth cosine decay :cite:`Loshchilov.Hutter.2016`, preceded by a few epochs of linear warmup that protect the network from divergence while its randomly initialized layers produce large, poorly scaled gradients. We implement and plot it below.
 

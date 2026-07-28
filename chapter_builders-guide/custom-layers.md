@@ -239,8 +239,8 @@ current language models.
 Layer normalization standardizes each input vector: subtract the mean, divide
 by the standard deviation, then apply a learned scale and shift. Zhang and
 Sennrich observed that the re-centering contributes little and dropped it,
-along with the shift. What remains is: divide by the root mean square,
-multiply by a learned gain $\mathbf{g}$:
+along with the shift. What remains is a division by the root mean square and
+a multiplication by a learned gain $\mathbf{g}$:
 
 $$
 \textrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\sqrt{\frac{1}{d} \sum_{i=1}^{d} x_i^2 + \epsilon}} \odot \mathbf{g},
@@ -341,8 +341,8 @@ X = 100 * np.random.randn(4, 8)
 
 ### The Composability Guarantee
 
-The reason to write RMSNorm as a module, rather than as a function with a
-gain tensor floating around beside it, is what registration buys. A correctly
+We write RMSNorm as a module, not as a function with a gain tensor floating
+around beside it, because of what registration buys. A correctly
 written custom layer is indistinguishable from a built-in one along four
 axes: its parameters are tracked, it composes inside containers, its state
 serializes, and it moves across devices. We check each once.
@@ -563,10 +563,10 @@ and compare outputs.
 RMSNorm proved useful enough that most libraries now ship their own
 implementation. This Gluon version is the exception: it has `nn.LayerNorm`
 but no RMSNorm, so there is no referee
-to check our five-liner against. The general rule for custom layers, build
-one to understand it, then use the native implementation in production,
-therefore resolves differently on this tab: when the library ships nothing
-to prefer, keep the tested custom implementation.
+to check our five-liner against. The general rule for custom layers is to
+build one to understand it, then use the native implementation in production.
+Here it resolves differently: when the library ships nothing to prefer, keep
+the tested custom implementation.
 :end_tab:
 
 :begin_tab:`jax`
@@ -846,27 +846,27 @@ pretend in the backward pass that it was the identity.
 :begin_tab:`pytorch`
 No automatic system can derive a lie for us, so we override the chain rule
 with `torch.autograd.Function`, supplying both directions ourselves as static
-methods, the split :numref:`fig_bg_ste` draws explicitly.
+methods. :numref:`fig_bg_ste` draws that split explicitly.
 :end_tab:
 
 :begin_tab:`jax`
 No automatic system can derive a lie for us, so we override the chain rule
 with `jax.custom_vjp`, attaching a hand-written backward rule (a
-vector-Jacobian product) to an ordinary function, the split
-:numref:`fig_bg_ste` draws explicitly.
+vector-Jacobian product) to an ordinary function.
+:numref:`fig_bg_ste` draws that split explicitly.
 :end_tab:
 
 :begin_tab:`tensorflow`
 No automatic system can derive a lie for us, so we override the chain rule
 with `@tf.custom_gradient`, a decorator under which the function returns its
-backward rule alongside its output, the split :numref:`fig_bg_ste` draws
+backward rule alongside its output. :numref:`fig_bg_ste` draws that split
 explicitly.
 :end_tab:
 
 :begin_tab:`mxnet`
 No automatic system can derive a lie for us, so we override the chain rule
 with `autograd.Function`, supplying both directions ourselves as methods of a
-class, the split :numref:`fig_bg_ste` draws explicitly.
+class. :numref:`fig_bg_ste` draws that split explicitly.
 :end_tab:
 
 ![The straight-through estimator, forward versus backward. Forward keeps the true staircase round(x), close to but not the same as the identity it approximates; backward substitutes a constant surrogate gradient of 1, the identity's own derivative, for the true gradient, which is zero almost everywhere and would stop all learning.](../img/bg-ste.svg)

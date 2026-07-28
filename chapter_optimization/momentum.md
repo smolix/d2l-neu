@@ -4,11 +4,11 @@
 Gradient descent moves in the best direction available *at a single point*;
 it has no memory. This section shows what that costs and how cheaply it is
 fixed. The cost appears whenever different parameter directions demand
-different step sizes — the conditioning problem previewed in :numref:`sec_gd`
-— because a single learning rate must be small enough for the steepest
-direction and is then far too small for the shallowest. The fix is a running
-average of past gradients, the *velocity*: one extra buffer and one extra
-hyperparameter, and it speeds up gradient descent precisely on the problems
+different step sizes, because a single learning rate must be small enough
+for the steepest direction and is then far too small for the shallowest.
+This is the conditioning problem previewed in :numref:`sec_gd`. The fix is a
+running average of past gradients, the *velocity*: one extra buffer and one
+extra hyperparameter. It speeds up gradient descent precisely on the problems
 where gradient descent crawls. Some form of momentum is built into nearly
 every optimizer used in deep learning, including the Adam family of
 :numref:`sec_adam`.
@@ -189,8 +189,8 @@ gradient descent. Too much and it is *under-damped*: the iterate overshoots
 and rings around the minimum. The fastest setting, $\beta^\star$, sits at
 critical damping between the two. Our valley has $\kappa = 20$, giving
 $\beta^\star \approx 0.4$ — and in hindsight, the tuning that sailed down
-the valley earlier, $\eta = 0.6$ with $\beta = 0.5$, sits close to the
-optimum. Push $\beta$ too far and momentum turns against us. Here is
+the valley earlier sits close to that optimum: $\eta = 0.6$ with
+$\beta = 0.5$. Push $\beta$ too far and momentum turns against us. Here is
 $\beta = 0.8$, well past the fastest-converging $\beta^\star$, at a
 learning rate where plain gradient descent would be perfectly stable:
 
@@ -207,12 +207,13 @@ before settling — momentum's own oscillation, distinct from the
 learning-rate divergence we saw earlier. :numref:`fig_opt_critical_damping`
 summarizes the tradeoff on a single quadratic mode: the per-step
 convergence rate falls as $\beta$ grows, is best at a critical value
-$\beta^{*}$, and degrades gently past it. The eigenmode analysis behind this
-picture, the $\sqrt{\kappa}$ theorem and its matching lower bound, and the
-proofs are developed in :numref:`subsec_mdl-momentum-acceleration`; one
-caveat worth carrying away from there is that the heavy-ball $\sqrt{\kappa}$
-rate is a statement about quadratics, and its practical standing on general
-objectives rests on the local quadratic picture plus a long empirical record
+$\beta^{*}$, and degrades gently past it.
+:numref:`subsec_mdl-momentum-acceleration` develops the eigenmode analysis
+behind this picture, the $\sqrt{\kappa}$ theorem and its matching lower
+bound, and the proofs. One caveat is worth carrying away from there: the
+heavy-ball $\sqrt{\kappa}$ rate is a statement about quadratics, and its
+practical standing on general objectives rests on the local quadratic
+picture plus a long empirical record
 :cite:`Sutskever.Martens.Dahl.ea.2013`.
 
 ## Implementation

@@ -1,7 +1,7 @@
 # Multi-Head and Cross-Attention
 :label:`sec_multihead-attention`
 
-Scaled dot product attention, as built in :numref:`sec_attention-scoring-functions`,
+The scaled dot product attention of :numref:`sec_attention-scoring-functions`
 gives each query exactly one probability distribution over the keys, and
 returns the correspondingly weighted average of the values. One distribution
 per query is a real restriction: a token in a sentence participates in several
@@ -146,9 +146,10 @@ exercises probe what happens as they collapse toward each other).
 :label:`fig_one-head-averages`
 
 The bound is a fact about this deliberately restricted interface — one layer,
-with value-blind keys that mark position only — not a universal law: a one-head
-model with content-dependent keys, more depth, or a residual connection is not
-bound by it, and the copy-both separation from two heads narrows accordingly.
+with value-blind keys that mark position only — not a universal law: it
+lifts once a one-head model gets content-dependent keys, more depth, or a
+residual connection, and the copy-both separation from two heads narrows
+accordingly.
 
 This is the design brief for multi-head attention: give each query several
 independently parametrized attention distributions — several *views* of the
@@ -532,10 +533,10 @@ care — a diffuse row may mean "nothing relevant", not "everything relevant".
 ## Summary
 
 A single attention head gives each query one softmax distribution over the
-keys and hence one convex mixture of the values; on a task that asks one
+keys and hence one convex mixture of the values. On a task that asks one
 query to report two values through position-only keys — so the weights
-cannot adapt to the values — any single head loses half the target
-variance, however it allocates its weights — a limit of that value-blind,
+cannot adapt to the values — any single head loses half the target variance,
+however it allocates its weights; that is a limit of the value-blind,
 single-layer interface, not of one-head attention in general. Multi-head
 attention fixes this by running
 $h$ independently projected attention heads and linearly recombining their

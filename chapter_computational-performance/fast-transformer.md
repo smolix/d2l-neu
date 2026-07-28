@@ -151,8 +151,8 @@ configurations hardest; the `TEARDOWN_CUPTI` line in the imports cell
 makes profiling stop costing once it stops running. Both are the
 chapter's opening lesson in miniature: *the first thing to profile is
 your own experiment.* Beyond that, every measurement warms up long enough
-for one-time costs — allocator growth, autotuning, compilation caches,
-and whatever clock state the driver is in — to settle, and timed windows
+for one-time costs to settle — allocator growth, autotuning, compilation
+caches, and whatever clock state the driver is in — and timed windows
 close with a device sync:
 :end_tab:
 
@@ -274,8 +274,8 @@ optimizing, we *classify*: profile one step and read where the time goes.
 :begin_tab:`jax`
 JAX has no serious eager baseline, and it would be dishonest to pretend
 otherwise. :numref:`sec_compilation` measured why: an un-jitted step
-dispatches every operation — the forward, the hundreds of intermediate
-gradients, the optimizer's whole tree of updates — one at a time, and
+dispatches every operation one at a time — the forward, the hundreds of
+intermediate gradients, the optimizer's whole tree of updates — and
 re-traces the function on every call; eager JAX is a development surface,
 not a training mode. (It is also already tf32-fair: on this card JAX's
 default matmul precision is tensor-core tf32, the fair baseline
@@ -355,10 +355,10 @@ one rung, to the first program worth examining: the compiled one.
 :begin_tab:`pytorch`
 **Rung 1 — compile (:numref:`sec_compilation`).** The profile promised a
 fusible tail and busy dispatch; compilation is the matching fix. Before
-the timing, the correctness gate — the compiled model must produce the
-same logits as the eager one (they agree to about $10^{-2}$; the residue
-is tf32 matmuls re-associated by fusion, not a wrong answer). *Same
-answer first, then faster:*
+the timing comes the correctness gate: the compiled model must produce
+the same logits as the eager one (they agree to about $10^{-2}$; the
+residue is tf32 matmuls re-associated by fusion, not a wrong answer).
+*Same answer first, then faster:*
 :end_tab:
 
 :begin_tab:`jax`
@@ -604,11 +604,11 @@ The second surprise, and the better lesson: bf16 is now provably *real* —
 the receipt prints `bfloat16`, the compiler's planned temporaries drop by
 about two-fifths — and the throughput *still* barely moves, nowhere near
 the factor the format ladder promised. Diagnose before despairing. The
-device-side work genuinely shrank — the plan says so; what did not
-shrink is everything around it — the per-call Python that walks the
-module graph, the
-stream's dispatches, the launch path — a fixed per-step toll that the
-fp32 step was already brushing against. At batch 64 this step is
+device-side work genuinely shrank, and the plan says so. What did not
+shrink is everything around it: the per-call Python that walks the
+module graph, the stream's dispatches, the launch path, a fixed per-step
+toll that the fp32 step was already brushing against. At batch 64 this
+step is
 *overhead-bound* in exactly :numref:`sec_perf_model`'s sense, and making
 the arithmetic faster cannot move a wall made of dispatch. (The tell,
 if you re-run this notebook: the ratio above wobbles from run to run —
@@ -832,16 +832,16 @@ print(f'R4 +checkpoint: {tput4:.0f} tokens/s ({tput4 / tput3:.2f}x), '
 *predict*, using the accounting of :numref:`sec_multi_gpu`. This GPT has
 about 19M parameters, so roughly 76 MB of gradients must allreduce every
 step; the NCCL collective on our host-staged box sustains around five
-GB/s per device in :numref:`sec_multi_gpu`'s bytes-per-device convention
-(the cell prices with 4.5, toward the conservative end of its run-to-run
-range; NCCL's own "busbw" reads ~2 GB/s — the default-fallback figure:
+GB/s per device in :numref:`sec_multi_gpu`'s bytes-per-device convention,
+which puts the allreduce at roughly the same tens of milliseconds as the
+compute itself. A transformer's parameters are proportional to its
+compute, so unlike a convolutional ResNet it offers little extra compute
+to hide communication behind. (The cell prices with 4.5, toward the
+conservative end of its run-to-run range; NCCL's own "busbw" reads
+~2 GB/s — the default-fallback figure:
 :numref:`sec_multi_gpu_concise` measures a five-fold-faster configured
-mode, and shows why these runs nonetheless keep the library's defaults), which
-puts the allreduce at
-roughly the same tens of milliseconds as the compute itself — a
-transformer's parameters are
-proportional to its compute, so unlike a convolutional ResNet it offers
-little extra compute to hide communication behind. Summing the two terms,
+mode, and shows why these runs nonetheless keep the library's defaults.)
+Summing the two terms,
 :eqref:`eq_dp_cost` predicts a *weak* two-GPU gain: scarcely more than one
 single-GPU throughput at $k=2$, under half of linear at $k=4$. One
 refinement before trusting the measurement: the serial sum is a *floor* —

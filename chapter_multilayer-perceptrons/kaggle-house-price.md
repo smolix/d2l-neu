@@ -95,7 +95,7 @@ you will first need to register for an account
 On the house price prediction competition page, as illustrated
 in :numref:`fig_house_pricing`,
 you can find the dataset (under the "Data" tab),
-submit predictions, and see your ranking,
+submit predictions, and see your ranking.
 The URL is right here:
 
 > https://www.kaggle.com/c/house-prices-advanced-regression-techniques
@@ -175,12 +175,12 @@ as well as the label (SalePrice) from the first four examples.
 print(data.raw_train.iloc[:4, [0, 1, 2, 3, -3, -2, -1]])
 ```
 
-We can see that in each example, the first feature is the identifier.
-This lets us identify each record. We drop it here because the competition
+We can see that in each example, the first feature is the identifier, which
+lets us identify each record. We drop it here because the competition
 defines it as a row identifier rather than a measured house attribute.
 Identifiers are not harmless in every dataset: they can encode collection
-order, source, or time, so their semantics should be checked rather than
-discarded by rule.
+order, source, or time, so one should check what they encode rather than
+drop them by rule.
 Furthermore, given a wide variety of data types,
 we will need to preprocess the data before we can start modeling.
 
@@ -204,8 +204,9 @@ We compute $\mu$ and $\sigma$ from the *training* set only and
 apply the very same transformation to the test set. Using statistics that
 include the test data would let information about the test distribution
 seep into our preprocessing, optimistically biasing every evaluation we
-make afterwards. This pitfall, *test-set leakage*, is one of the most
-common ways a model looks better offline than it ever does in deployment.
+make afterwards. This pitfall is called *test-set leakage*, and it is one of
+the most common ways a model looks better offline than it ever does in
+deployment.
 
 Intuitively, we standardize the data for three reasons.
 First, it proves convenient for optimization, putting all coordinates on a
@@ -224,8 +225,8 @@ in the same way that we earlier transformed
 multiclass labels into vectors (see :numref:`subsec_classification-problem`).
 For instance, "MSZoning" assumes the values "RL" and "RM".
 Dropping the "MSZoning" feature,
-two new indicator features
-"MSZoning_RL" and "MSZoning_RM" are created with values being either 0 or 1.
+we create two new indicator features
+"MSZoning_RL" and "MSZoning_RM" whose values are either 0 or 1.
 According to one-hot encoding,
 if the original value of "MSZoning" is "RL",
 then "MSZoning_RL" is 1 and "MSZoning_RM" is 0.
@@ -364,8 +365,8 @@ def k_fold_data(data, k):
     return rets
 ```
 
-The average validation error is returned
-when we train $K$ times in the $K$-fold cross-validation. We pass in a
+We train $K$ times in the $K$-fold cross-validation
+and return the average validation error. We pass in a
 `model_fn` that builds a fresh model for each fold, so the *same*
 cross-validation loop can score a linear baseline or an MLP without change.
 
@@ -439,7 +440,7 @@ But it does set expectations about where neural networks shine
 (images, text, audio, and sequences) and where they currently do not
 (small-to-medium tabular data).
 
-We start with a linear model. It is a fast baseline that
+We start with a linear model, a fast baseline that
 sanity-checks the pipeline. One subtlety is easy to get wrong: a baseline
 is only meaningful if it is *trained competently*. Plain minibatch SGD on
 these standardized features needs more than a handful of passes to converge,
@@ -548,11 +549,11 @@ the mean of the log-predictions is the ensemble
 consistent with the metric
 (in price space it amounts to a geometric mean).
 
-Note what this *fold ensembling* is, though. Each of the $K$
-models saw only $(K-1)/K$ of the training data, and the "average validation
-log mse" we computed above estimates the error of a *single* such model, not
-of the ensemble we are about to submit, whose error the cross-validation
-score does not measure. The canonical alternative is to *refit* one model on
+This *fold ensembling* deserves a closer look, though. Each of the $K$
+models saw only $(K-1)/K$ of the training data, so the "average validation
+log mse" we computed above estimates the error of a *single* such model; it
+does not measure the error of the ensemble we are about to submit.
+The canonical alternative is to *refit* one model on
 all of the training data using the hyperparameters that cross-validation
 selected, so that the submitted model is a fresh draw of exactly the thing we
 scored. Fold ensembling is standard Kaggle practice: it is free (the $K$
@@ -630,9 +631,9 @@ The steps are quite simple:
 
 Real data is messy: a mix of numeric and categorical features, with missing
 values and wildly different scales. The preprocessing pipeline in this
-section (mean imputation, standardization with statistics fit on the training
-set only to avoid test-set leakage, and one-hot encoding of categoricals) is
-a sensible default that applies far beyond this competition. When the target
+section is a sensible default that applies far beyond this competition: mean
+imputation, standardization with statistics fit on the training set only to
+avoid test-set leakage, and one-hot encoding of categoricals. When the target
 spans an order of magnitude, predicting the *logarithm* of the price and
 scoring with root-mean-squared log error converts an asymmetric dollar-scale
 problem into one where a $10\%$ error on a $\$100{,}000$ house and on a

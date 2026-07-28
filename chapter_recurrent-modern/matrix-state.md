@@ -5,9 +5,9 @@ Two roads have been leading to the same place. At the end of
 :numref:`sec_attention-at-scale`, dropping the softmax turned attention into
 a recurrence: a matrix-valued state updated by an outer-product write at
 every token, trained in parallel, stepped in constant memory at generation
-time. That section closed with a promise, that Mamba-2's *state space
-duality* makes the correspondence between such recurrences and the selective
-state space models of :numref:`sec_mamba` exact. The last two sections built
+time. That section closed with a promise: Mamba-2's *state space duality*
+makes the correspondence exact between such recurrences and the selective
+state space models of :numref:`sec_mamba`. The last two sections built
 the other road: linear recurrences discretized from continuous time, made
 selective, packaged into Mamba. This section is where the roads meet. We
 first take stock of what the matrix state actually is as a memory, and
@@ -66,8 +66,8 @@ its key. Linear attention is the case $\mathbf{D}_t = \mathbf{I}$: never
 forget. The minGRU and the selective SSM obeyed the same shape one level
 down, as the elementwise affine recurrence :eqref:`eq_affine_recurrence`
 evaluated by the parallel scan of :numref:`subsec_parallel-scans`; here the
-state is a matrix rather than a vector, but the algebra, affine maps
-composing into affine maps, is identical.
+state is a matrix rather than a vector, but the algebra is identical:
+affine maps composing into affine maps.
 
 Before building on this template, we should record what it keeps
 from :numref:`sec_attention-at-scale` and what it drops. What you verified
@@ -80,9 +80,9 @@ Queries and keys come out of learned projections whose scale training can
 set freely, so the feature map goes; and rather than tracking a normalizer
 state, production layers normalize the *output*, passing $\mathbf{o}_t$
 through an RMSNorm or GroupNorm before the residual add
-:cite:`Yang.Wang.Shen.ea.2024,Dao.Gu.2024`. One member of the family, the
-mLSTM at the end of this section, keeps an explicit normalizer state; when
-we meet it, the pair $(\mathbf{S}, \mathbf{z})$ of :numref:`chap_attention` will be waiting.
+:cite:`Yang.Wang.Shen.ea.2024,Dao.Gu.2024`. The mLSTM at the end of this
+section is the one member of the family that keeps an explicit normalizer
+state; when we meet it, the pair $(\mathbf{S}, \mathbf{z})$ of :numref:`chap_attention` will be waiting.
 
 ### What the Memory Costs
 :label:`subsec_ms-capacity`
@@ -248,8 +248,8 @@ A *fixed scalar* $\gamma \in (0,1)$ is RetNet's *retention*
 different heads keep different horizons. (If you worked the closing
 exercise of :numref:`sec_attention-at-scale`, you have already built this
 rung and verified that its parallel form weights past values by
-$\gamma^{t-s}$.) An *input-dependent scalar* $a_t$, one number per head
-per token, is the transition of Mamba-2 :cite:`Dao.Gu.2024`: the model
+$\gamma^{t-s}$.) An *input-dependent scalar* $a_t$ is the transition of
+Mamba-2 :cite:`Dao.Gu.2024`, one number per head per token: the model
 reads the token and decides how much of the whole memory survives it, the
 forget gate of :numref:`sec_lstm` acting on a matrix state. And an
 input-dependent *diagonal* $\mathrm{diag}(\boldsymbol{\alpha}_t)$ decays
@@ -320,8 +320,8 @@ as in :numref:`sec_attention-at-scale`. A gated linear recurrence is
 attention whose 0/1 causal mask has been replaced by a *learned, decaying*
 mask. One object, two readings; :citet:`Dao.Gu.2024` named the
 correspondence *state space duality* (SSD), and matrices of $\mathbf{L}$'s
-form, every submatrix below the diagonal having rank one, are called
-1-semiseparable. Keep the equivalence's scope in view: it is an identity
+form are called 1-semiseparable, every submatrix below the diagonal
+having rank one. Keep the equivalence's scope in view: it is an identity
 for this structured family, a scalar-gated (1-semiseparable) mask on
 *linear* attention, not a statement about softmax attention, whose
 exponential kernel is no masked linear read.
@@ -648,15 +648,16 @@ memory column and grow fourfold with every doubling of $T$. The chunked
 schedule takes both prizes at once: with chunks of a few hundred tokens it
 runs within a small factor of the dual's speed (in some runs ahead of it)
 at an order of magnitude less memory, and its constituent operations are
-exactly the dense matmuls the hardware wants to run. The FLOP-optimal chunk size, which an exercise asks you to derive,
-sits near $C \approx d_k$; the measured optimum drifts higher because
+exactly the dense matmuls the hardware wants to run. The FLOP-optimal
+chunk size sits near $C \approx d_k$, as an exercise asks you to derive;
+the measured optimum drifts higher because
 kernel-launch overhead penalizes many small chunks.
 
 ### What the Hardware Bought
 :label:`subsec_ms-hardware`
 
-This schedule, not any change in the model class, is the main story of
-Mamba-2 relative to Mamba. Recall from
+This schedule is the main story of Mamba-2 relative to Mamba, not any
+change in the model class. Recall from
 :numref:`sec_attention-at-scale` that an accelerator moves bytes far more
 slowly than it multiplies them; its full arithmetic rate is reserved for
 dense matrix products on tensor cores. Mamba-1's parallel scan is
@@ -782,8 +783,8 @@ section derived.
 
 The last row deserves its promised closer look, because it answers a
 question :numref:`chap_attention` left open: whatever happened to the normalizer
-$\mathbf{z}$? The mLSTM, the matrix-memory cell of xLSTM
-:cite:`Beck.Poppel.Spanring.ea.2024`, is the LSTM rebuilt on
+$\mathbf{z}$? The mLSTM is the matrix-memory cell of xLSTM
+:cite:`Beck.Poppel.Spanring.ea.2024`, the LSTM rebuilt on
 :eqref:`eq_ms-recurrence`: a forget gate $f_t$ and input gate $i_t$,
 computed from the token, gating a matrix cell state and, alongside it, the
 running normalizer that the rest of the family traded for output
@@ -938,9 +939,9 @@ interference :eqref:`eq_ms-retrieval-error` is specific. The fast weight
 programmers saw this in the 1990s and proposed the repair
 :cite:`Schlag.Irie.Schmidhuber.2021`: before writing to key
 $\mathbf{k}_t$, first *read* what the memory already holds there, and
-write only the correction. That single change to the write rule, a memory
-that edits rather than accumulates, is the subject of
-:numref:`sec_deltanet`.
+write only the correction. That single change to the write rule is the
+subject of :numref:`sec_deltanet`: a memory that edits rather than
+accumulates.
 
 ## Summary
 
@@ -951,17 +952,17 @@ capacity law: after $n$ writes with independent isotropic unit keys
 into width $d_k$, the expected squared read error is $(n-1)/d_k$ — and
 measurably worse once keys correlate — so capacity is set by width, not
 by time. The
-decay ladder, fixed scalar (RetNet), input-dependent scalar (Mamba-2),
-input-dependent diagonal (GLA, RWKV-6, and per channel the selective SSM),
-adds forgetting one line at a time. Unrolling the scalar-decay recurrence
+decay ladder adds forgetting one line at a time: fixed scalar (RetNet),
+input-dependent scalar (Mamba-2), input-dependent diagonal (GLA, RWKV-6,
+and per channel the selective SSM). Unrolling the scalar-decay recurrence
 gives $\mathbf{Y} = (\mathbf{L} \circ \mathbf{Q}\mathbf{K}^\top)\mathbf{V}$
 with a 1-semiseparable $\mathbf{L}$; at $a_t = 1$ the mask $\mathbf{L}$ is
 literally the causal mask, so masked linear attention and the gated
 recurrence are the same matrix, and the quadratic and recurrent modes are
 two orders of one contraction. That is Mamba-2's state space duality,
-verified here by assertion, and its chunked middle order, attention within
-chunks, a short state recurrence across them, is how the family trains:
-matmul-heavy, linear in sequence length, and the schedule the Mamba-2
+verified here by assertion, and the family trains in the chunked middle
+order: attention within chunks, a short state recurrence across them,
+matmul-heavy and linear in sequence length, the schedule the Mamba-2
 paper credits for growing state sizes an order of magnitude at little
 wall-clock cost. The family table collects the
 members, including the mLSTM, which keeps the normalizer state of :numref:`chap_attention` and

@@ -17,8 +17,8 @@ returns the single best match, while attention returns a soft blend of
 all of them. That one change makes lookup differentiable, and a
 differentiable lookup can be *learned*.
 
-This chapter is about that mechanism, on its own terms. The reason it
-deserves a chapter is what became of it. Attention entered deep learning
+This chapter is about that mechanism, on its own terms. It deserves a
+chapter for what became of it. Attention entered deep learning
 in 2014 as a patch: machine-translation models were forcing whole
 sentences through a fixed-size vector, and letting the decoder look back
 at the source at every step repaired the bottleneck
@@ -26,9 +26,9 @@ at the source at every step repaired the bottleneck
 the architecture — :citet:`Vaswani.Shazeer.Parmar.ea.2017` discarded the
 recurrence entirely and kept only attention, and the resulting
 *transformer* is the subject of :numref:`chap_transformers`. The
-mechanism then outgrew its birthplace: the models that read and write
-text, classify and generate images, transcribe speech, and predict
-protein structures are, at their core, stacks of the same lookup. Its
+mechanism then outgrew its birthplace: at their core, the models that
+read and write text, classify and generate images, transcribe speech,
+and predict protein structures are stacks of the same lookup. Its
 weights are a quantity the field measures, engineers around, and argues
 about; its quadratic cost sets the economics of long-context models; and
 its learned circuits are the best-understood fragments of what large

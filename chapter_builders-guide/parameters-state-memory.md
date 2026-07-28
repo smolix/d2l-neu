@@ -841,8 +841,8 @@ two ends of a language model. The input embedding is a $|V| \times d$ table
 mapping each of $|V|$ tokens to a $d$-dimensional vector; the output
 projection maps a $d$-dimensional hidden state to $|V|$ logits, and its weight
 matrix has the same shape and an analogous meaning: one vector per token.
-*Tying* the two, using a single tensor for both roles, saves $|V| \times d$
-parameters. The cited studies also found lower language-model perplexity in
+*Tying* the two roles to a single tensor saves $|V| \times d$ parameters.
+The cited studies also found lower language-model perplexity in
 their experimental settings
 :cite:`Press.Wolf.2017,Inan.Khosravi.Socher.2017`. The savings are large: in
 GPT-2 :cite:`Radford.Wu.Child.ea.2019` the shared $50257 \times 768$ matrix is
@@ -1409,8 +1409,8 @@ statistics still drift because they never pass through the optimizer:
 :end_tab:
 
 :begin_tab:`tensorflow`
-Second, batch normalization, whose running statistics are non-trainable
-weights recomputed by the forward pass in training mode. Elsewhere that is a
+Second, batch normalization. Its running statistics are non-trainable weights
+that the forward pass recomputes in training mode. Elsewhere that is a
 classic trap: freeze the layer's scale and shift and the statistics drift
 anyway, since they never pass through the optimizer. Keras special-cases
 exactly this: setting `trainable = False` on a `BatchNormalization` layer

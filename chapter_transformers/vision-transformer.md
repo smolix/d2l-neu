@@ -9,8 +9,8 @@ block pieces of an image.
 
 For years the presumed answer to "transformers for vision?" was that images
 are different. CNNs (:numref:`chap_modern_cnn`) owned computer vision, and
-their structural commitments, locality and translation equivariance
-(:numref:`sec_why-conv`), looked like exactly what images demand. Early
+their structural commitments looked like exactly what images demand:
+locality and translation equivariance (:numref:`sec_why-conv`). Early
 attempts kept those commitments: :citet:`ramachandran2019stand` replaced
 convolutions with local self-attention, whose specialized attention patterns
 were hard to run fast on accelerators, and :citet:`cordonnier2020relationship`
@@ -237,8 +237,8 @@ d2l.check_shape(nnx.view(encoder_blk, deterministic=True)(X), X.shape)
 ## The Full Model
 
 Assembling the pieces takes one class. Input images pass through a
-`PatchEmbedding` instance; the “&lt;cls&gt;” token embedding, a learnable
-parameter initialized to zeros, is prepended to the resulting sequence. The
+`PatchEmbedding` instance; a learnable “&lt;cls&gt;” token embedding,
+initialized to zeros, is prepended to the resulting sequence. The
 sum with the positional embeddings goes through dropout, then through
 `num_blks` stacked `ViTBlock` instances, and finally the head projects the
 “&lt;cls&gt;” token's representation to the class logits.
@@ -413,7 +413,7 @@ d2l.show_heatmaps(sim.reshape(6, 6, 6, 6), xlabel='', ylabel='',
 ```
 
 Each map's darkest cell is its own position, which is mere self-similarity;
-the question is what surrounds it. The answer, after ten epochs, is: the
+the question is what surrounds it. After ten epochs the answer is: the
 first faint traces of the grid and no more. The printed statistic makes it
 precise: averaged over positions, immediate grid neighbors score slightly
 positive cosine similarity while distant positions score slightly negative,
@@ -512,9 +512,9 @@ transformer must buy the same facts with data, and we just watched how
 slowly that purchase proceeds: after ten epochs its position embeddings
 have barely begun to encode the grid. Nothing here says transformers are
 worse at vision. It says that *at 60,000 images* the architecture with
-the stronger prior wins,
-and it sets the stakes for the discussion below, where the data budget
-grows by four orders of magnitude and the verdict flips.
+the stronger prior wins, and it sets the stakes for the discussion below,
+where the data budget grows by four orders of magnitude and the verdict
+flips.
 
 ## Summary and Discussion
 
@@ -536,15 +536,15 @@ beat the best ResNets in image classification
 structure overtakes built-in structure, and the architecture with fewer
 commitments has more room to improve. The crossover does not even require
 new data — DeiT showed that aggressive augmentation and distillation make
-ViTs competitive on ImageNet-1k alone :cite:`touvron2021training`,
-manufacturing by transformation the invariances that convolution would have
-supplied by design. A complementary line, Swin transformers, reinstates
-convolution-like priors (local attention windows, hierarchical resolution)
-partly to escape the quadratic cost of global attention
+ViTs competitive on ImageNet-1k alone :cite:`touvron2021training`, using
+transformations of the data to manufacture the invariances that convolution
+would have supplied by design. A complementary line, Swin transformers,
+reinstates convolution-like priors (local attention windows, hierarchical
+resolution) partly to escape the quadratic cost of global attention
 (:numref:`sec_attention-at-scale`) at high resolution :cite:`liu2021swin`.
 
-In the years since, the plain ViT, not its convolution-flavored variants,
-has become the standard vision backbone. Contrastively pretrained ViT
+In the years since, the standard vision backbone has become the plain ViT,
+not its convolution-flavored variants. Contrastively pretrained ViT
 encoders such as CLIP's :cite:`radford2021learning` supply the image side
 of most vision-language models, and detection and segmentation systems
 routinely sit on ViT features; the Image Models part (:numref:`chap_cv`)

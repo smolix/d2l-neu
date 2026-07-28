@@ -679,7 +679,7 @@ Moreover,
 these fully implemented classes
 are saved in the [D2L library](https://github.com/d2l-ai/d2l-en/tree/master/d2l),
 a *lightweight toolkit* that makes structured modeling for deep learning easy. 
-In particular, it facilitates reusing many components between projects without changing much at all. This modularity keeps implementations concise: you can swap just the optimizer, the model, or the dataset, and it can do the same for your own projects. 
+In particular, it facilitates reusing many components between projects without changing much at all. This modularity keeps implementations concise: you can swap just the optimizer, the model, or the dataset, and the same holds for your own projects. 
 
 
 ## Exercises

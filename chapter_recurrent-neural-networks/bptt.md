@@ -1,9 +1,9 @@
 # Backpropagation Through Time
 :label:`sec_bptt`
 
-Gradient clipping, which you met in :numref:`sec_rnn-scratch`, is what keeps
-the occasional enormous gradient from destabilizing RNN training, and we hinted
-there that these blow-ups come from backpropagating across long sequences.
+Gradient clipping keeps the occasional enormous gradient from destabilizing
+RNN training. You met it in :numref:`sec_rnn-scratch`, where we hinted that
+these blow-ups come from backpropagating across long sequences.
 Before turning to the modern architectures of :numref:`chap_modern_rnn`, let us
 look closely at how backpropagation actually works in a sequence model, so that
 *vanishing* and *exploding* gradients become precise phenomena rather than
@@ -174,12 +174,12 @@ $$
 
 There it is: the gradient that reaches back $k = T-i$ steps is multiplied by the
 $k$-th power $(\mathbf{W}_\textrm{hh}^\top)^{k}$. A matrix power is governed by
-its eigenvalues. Writing $\rho(\mathbf{W}_\textrm{hh})$ for the spectral radius,
-the largest eigenvalue magnitude, the contribution from $k$ steps back scales
-roughly as $\rho^{k}$: eigen-directions with $|\lambda|<1$ shrink geometrically
-and *vanish*, those with $|\lambda|>1$ grow geometrically and *explode*, and only
-$\rho$ exactly at $1$ sits on the knife-edge. The parameter gradients
-$\partial L/\partial\mathbf{W}_\textrm{hx}$ and
+its eigenvalues. Write $\rho(\mathbf{W}_\textrm{hh})$ for the spectral radius,
+the largest eigenvalue magnitude; the contribution from $k$ steps back then
+scales roughly as $\rho^{k}$: eigen-directions with $|\lambda|<1$ shrink
+geometrically and *vanish*, those with $|\lambda|>1$ grow geometrically and
+*explode*, and only $\rho$ exactly at $1$ sits on the knife-edge. The parameter
+gradients $\partial L/\partial\mathbf{W}_\textrm{hx}$ and
 $\partial L/\partial\mathbf{W}_\textrm{hh}$ are just sums of these hidden-state
 gradients weighted by an input or a previous state, so they inherit the same
 fate.
@@ -276,11 +276,12 @@ for itself and regular truncation remains the default.
 The store-versus-recompute trade-off behind truncation reaches far beyond RNNs.
 Backpropagation of any kind must keep intermediate activations around to reuse on
 the backward pass, and for very deep or very long models that storage becomes the
-binding constraint. *Activation checkpointing*, the technique that lets today's
-largest models fit in memory, is the same idea applied to depth rather than time:
-keep only a sparse set of activations on the forward pass and recompute the rest
-on demand during backpropagation, spending extra compute to shrink the memory
-footprint. We will meet it again in the chapters on large-scale model training.
+binding constraint. *Activation checkpointing* applies the same idea to depth
+rather than time: keep only a sparse set of activations on the forward pass and
+recompute the rest on demand during backpropagation, spending extra compute to
+shrink the memory footprint. It is the technique that lets today's largest
+models fit in memory, and we will meet it again in the chapters on large-scale
+model training.
 
 ## Summary
 

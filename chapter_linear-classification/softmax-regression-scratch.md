@@ -611,16 +611,16 @@ d2l.show_heatmaps(C.reshape(1, 1, 10, 10), xlabel='true class',
 ```
 
 The errors are anything but uniform: they form two blocks. Upper-body garments
-(t-shirt, pullover, dress, coat, shirt: columns 0, 2, 3, 4, 6) are traded
-almost exclusively among themselves, with the *shirt* column the most polluted
-of all as it leaks into t-shirt, pullover, and coat; and footwear (sandal,
+(t-shirt, pullover, dress, coat, shirt: columns 0, 2, 3, 4, 6) trade errors
+almost exclusively among themselves, and the *shirt* column is the most
+polluted of all, leaking into t-shirt, pullover, and coat; footwear (sandal,
 sneaker, ankle boot: columns 5, 7, 9) forms a second, smaller cluster.
 Meanwhile trousers and bags are nearly pure diagonal: their overall silhouette
-is unmistakable even to a linear model. This is the summary's claim made
+is unmistakable even to a linear model. This makes the summary's claim
 visible, since to a classifier that can only weigh pixels linearly, two
-garments with the same outline and mass distribution, like a shirt and a
-pullover, are close to indistinguishable, while classes that differ in
-silhouette are easy.
+garments that share an outline and a mass distribution are close to
+indistinguishable, a shirt and a pullover for instance, while classes that
+differ in silhouette are easy.
 
 ## Summary and Discussion
 
@@ -632,11 +632,12 @@ you have seen these five moving parts separately, the one-liner in
 
 **What the training curve tells you.** After 10 epochs with minibatch SGD the
 model converges to roughly 82--83% validation accuracy. That ceiling is the
-limit of linear separability on Fashion-MNIST, not a tuning artifact.
-The ten classes are not linearly separable in pixel space (shirts and pullovers
-look nearly identical to a linear model). The misclassification gallery and the
-confusion matrix at the end of the section make this concrete. Replacing the flat linear layer with
-even a single hidden layer (:numref:`chap_perceptrons`) pushes past it.
+limit of linear separability on Fashion-MNIST rather than a tuning artifact,
+since the ten classes are not linearly separable in pixel space: shirts and
+pullovers look nearly identical to a linear model, as the misclassification
+gallery and the confusion matrix at the end of the section make concrete.
+Replacing the flat linear layer with even a single hidden layer
+(:numref:`chap_perceptrons`) pushes past it.
 
 **Why the clip is only a band-aid.** The clip stops $\log 0$ but leaves the naive
 `softmax` free to overflow for large logits; the real fix (subtracting the row

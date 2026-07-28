@@ -1,9 +1,9 @@
 # Convolutional Neural Networks
 :label:`chap_cnn`
 
-Image data is represented as a two-dimensional grid of pixels, be the image
-monochromatic or in color. Accordingly each pixel corresponds to one
-or multiple numerical values respectively. So far we have ignored this rich
+Image data is represented as a two-dimensional grid of pixels, whether the
+image is monochromatic or in color, so that each pixel carries either a single
+numerical value or several of them. So far we have ignored this rich
 structure and treated images as vectors of numbers by *flattening* them, irrespective of the spatial relation between pixels. This
 deeply unsatisfying approach was necessary in order to feed the
 resulting one-dimensional vectors through a fully connected MLP.
@@ -20,8 +20,8 @@ This chapter introduces *convolutional neural networks* (CNNs)
 :cite:`LeCun.Jackel.Bottou.ea.1995`, a powerful family of neural networks that
 are designed for precisely this purpose.
 On the ImageNet collection
-:cite:`Deng.Dong.Socher.ea.2009` it was the use of convolutional neural
-networks, in short CNNs, that provided significant performance
+:cite:`Deng.Dong.Socher.ea.2009` it was convolutional neural networks that
+provided significant performance
 improvements :cite:`Krizhevsky.Sutskever.Hinton.2012`, and CNN-based
 architectures dominated computer vision from roughly 2012 to 2021.
 Today they share the field with vision transformers

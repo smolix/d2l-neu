@@ -9,8 +9,8 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 In many cases our ultimate task asks some global question about the image,
 e.g., *does it contain a cat?* Consequently, the units of our final layer 
 should be sensitive to the entire input.
-By gradually aggregating information, yielding coarser and coarser maps,
-we accomplish this goal of ultimately learning a global representation,
+We accomplish this by gradually aggregating information into coarser and coarser
+maps, ultimately learning a global representation,
 while keeping all of the advantages of convolutional layers at the intermediate layers of processing.
 The deeper we go in the network,
 the larger the receptive field (relative to the input)
@@ -119,7 +119,7 @@ $$
 $$
 
 More generally, we can define a $p \times q$ pooling layer by aggregating over 
-a region of said size. Returning to the problem of edge detection, 
+a region of that size. Returning to the problem of edge detection, 
 we use the output of the convolutional layer
 as input for $2\times 2$ max-pooling.
 Denote the edge-detector output by `X` and the pooling output by `Y`. If a
@@ -134,8 +134,8 @@ In the code below, we implement the forward propagation
 of the pooling layer in the `pool2d` function.
 This function is similar to the `corr2d` function
 in :numref:`sec_conv_layer`.
-However, no kernel is needed, computing the output
-as either the maximum or the average of each region in the input.
+However, no kernel is needed: the output is simply
+the maximum or the average of each region in the input.
 
 ```{.python .input #pooling-maximum-pooling-and-average-pooling-1}
 %%tab mxnet, pytorch

@@ -8,12 +8,12 @@ always take the most probable token, or draw one at random from the model's
 distribution. Both produced text, and both produced problems, from
 continuations that circle through the same phrase to continuations that
 wander into gibberish. This section treats the step we improvised there as
-a subject of its own. *Decoding*, turning a model over next tokens into
-actual sequences, is a design space with its own algorithms, failure modes,
-and a modern toolkit :cite:`Graves.2013,Holtzman.Buys.Du.ea.2020`, and it is
-largely independent of the network that feeds it: everything we build here
-applies unchanged to the gated architectures of the next chapter and to the
-largest of large language models.
+a subject of its own. *Decoding* turns a model of next tokens into actual
+sequences, and it is a design space with its own algorithms, failure modes,
+and a modern toolkit :cite:`Graves.2013,Holtzman.Buys.Du.ea.2020`, largely
+independent of the network that feeds it: everything we build here applies
+unchanged to the gated architectures of the next chapter and to the largest
+of large language models.
 
 ```{.python .input}
 %load_ext d2lbook.tab
@@ -76,29 +76,29 @@ candidates is staggering. With vocabulary $\mathcal{V}$ and $T$ tokens to
 generate there are $|\mathcal{V}|^T$ sequences to compare; for our modest
 1,024-token vocabulary and a 50-token continuation that is $1024^{50} =
 2^{500} \approx 10^{150}$ sequences, vastly more than there are atoms in
-the observable universe. Evaluating them all, *exhaustive search*, costs
-$\mathcal{O}(|\mathcal{V}|^T)$ model evaluations and is out of the
-question; every practical decoder explores a vanishing fraction of this
+the observable universe. Evaluating them all is *exhaustive search*: it
+costs $\mathcal{O}(|\mathcal{V}|^T)$ model evaluations and is out of the
+question. Every practical decoder explores a vanishing fraction of this
 space and must decide, step by step, which fraction.
 
 Intractability is only half of the problem, though. The other half is that
 for many uses the most probable sequence is not even what we want. When a
-task has essentially one right answer conditioned on the input, a French
+task has essentially one right answer conditioned on the input (a French
 sentence to translate, an utterance to transcribe, a function signature to
-complete, probability mass concentrates on that answer and hunting for the
+complete), probability mass concentrates on that answer and hunting for the
 argmax is exactly right. But when we ask a model to *write*, there are
 astronomically many acceptable continuations, each individually improbable.
 A model that has learned this diversity spreads its mass accordingly, and
 insisting on the single most probable output discards the diversity we
 asked for; we will see shortly that it collapses into dull repetition.
-Matching the output's diversity to the model's is what *sampling* does.
+*Sampling* instead matches the output's diversity to the model's.
 
 These two regimes organize the whole section (:numref:`fig_decoding-taskmap`).
 *Maximization* methods, greedy decoding and beam search, chase the most
-probable output and rule tasks with a right answer, such as machine
+probable output and dominate tasks with a right answer, such as machine
 translation and speech recognition. *Sampling* methods draw from the
 model's distribution, reshaped by a small set of dials named temperature,
-top-$k$, top-$p$, and min-$p$, and rule open-ended generation: chat,
+top-$k$, top-$p$, and min-$p$, and dominate open-ended generation: chat,
 stories, and everything one now associates with a large language model.
 
 ![One trained language model, two families of decoding strategies: maximization for tasks with one right answer, sampling for tasks with many.](../img/mdl-rnn-decoding-taskmap.svg)
@@ -141,9 +141,8 @@ one narrow interface: hand me the token ids so far, and I will hand you the
 logits for the next token. We wrap the trained network in a `step_fn`
 implementing that interface, converting the result to a plain NumPy vector
 so that the strategies themselves can be written once, in ordinary Python,
-with no framework in sight. Any model that can fill this interface, today's
-RNN, next chapter's LSTM, a transformer, can be decoded by every algorithm
-below.
+with no framework in sight. Every algorithm below can decode any model that
+fills this interface: today's RNN, next chapter's LSTM, a transformer.
 
 ```{.python .input #decoding-a-model-to-decode-from-4}
 %%tab pytorch
@@ -364,9 +363,9 @@ blind spots.
 Where does beam search live today? Exactly where its assumptions hold:
 speech recognition and machine translation systems
 :cite:`Sutskever.Vinyals.Le.2014,Wu.Schuster.Chen.ea.2016` still
-beam-decode, and *constrained* decoding, which forces the output to obey a
-grammar, a JSON schema, or an API signature, is beam search over the valid
-continuations. Your chat assistant, however, does not use it: open-ended
+beam-decode, and *constrained* decoding is beam search over the valid
+continuations, forcing the output to obey a grammar, a JSON schema, or an
+API signature. Your chat assistant, however, does not use it: open-ended
 dialogue sits firmly in the second family, to which we now turn.
 
 ## Sampling and Its Dials
@@ -376,7 +375,7 @@ generate is to *sample* from it: draw $x_t \sim P(x_t \mid x_{<t})$,
 append, repeat. Text produced this way is distributed exactly as the model
 believes text should be, with all the diversity that maximization threw
 away and none of its repetition traps. The catch appears in the tail. Our
-model spreads small probability over a thousand tokens, a large one over
+model spreads small probability over a thousand tokens, a large model over
 hundreds of thousands, and although each unlikely token is individually
 negligible, their combined mass at every step is not. Sampling therefore
 regularly hits tokens the model itself considers near-nonsense, and one
@@ -543,11 +542,11 @@ d2l.plt.legend()
 
 The adaptivity argument is now checkable: apply the same dials after two
 different prefixes and compare the kept sets. Top-$k$ keeps twenty tokens
-regardless. The other two rules track the model's confidence (how
-confident it is after a given prefix varies from training run to training
-run; the printed top probability tells you what this one thinks): the
-more certain the model, the smaller the top-$p$ and min-$p$ sets tend to
-be. That is the behavior we wanted: strict where the model is sure,
+regardless. The other two rules track the model's confidence: the more
+certain the model, the smaller the top-$p$ and min-$p$ sets tend to be.
+(How confident the model is after a given prefix varies from training run
+to training run; the printed top probability tells you what this one
+thinks.) That is the behavior we wanted: strict where the model is sure,
 permissive where it is genuinely uncertain.
 
 ```{.python .input #decoding-one-distribution-three-cutoffs-2}
@@ -620,7 +619,7 @@ mode on purpose.
 The honest target is human judgment: can readers distinguish the model's
 text from text people wrote, and which do they prefer? Alongside such
 judgments, automated proxies catch specific failure modes: diversity
-statistics such as our distinct-3 flag degeneration, and repetition and
+statistics such as our distinct-3 detect degeneration, while repetition and
 length statistics serve as cheap regression tests for a decoding stack.
 Tasks with a reference answer are easier to score; the next chapter
 evaluates translations by their overlap with reference translations, the

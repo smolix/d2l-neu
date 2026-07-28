@@ -75,18 +75,19 @@ $$\alpha(\mathbf{q}, \mathbf{k}_i) = \mathrm{softmax}(a(\mathbf{q}, \mathbf{k}_i
 ### Softmax Saturation and the $1/\sqrt{d}$ Factor
 
 Why insist on unit score variance? The softmax saturates: once one score
-exceeds the others by a large margin, the winning weight approaches $1$, the
-rest approach $0$, and, since the Jacobian of the softmax is
+exceeds the others by a large margin, the winning weight approaches $1$ and
+the rest approach $0$. The gradient returning along the *score* path shrinks
+with them, because the Jacobian of the softmax is
 
 $$
 \frac{\partial \boldsymbol{\alpha}}{\partial \mathbf{a}} = \mathrm{diag}(\boldsymbol{\alpha}) - \boldsymbol{\alpha} \boldsymbol{\alpha}^\top,
 $$
 
-which tends to the zero matrix as $\boldsymbol{\alpha}$ approaches a one-hot
-vector, the gradient returning along the *score* path shrinks with it, and the
-queries and keys behind those scores stop being updated. (Only that query–key
-route saturates; gradients still flow through the values, the output
-projection, and any residual connection.) For finite scores this Jacobian is
+and this tends to the zero matrix as $\boldsymbol{\alpha}$ approaches a
+one-hot vector, so the queries and keys behind those scores stop being
+updated. (Only that query–key route saturates; gradients still flow through
+the values, the output projection, and any residual connection.) For finite
+scores this Jacobian is
 never the zero matrix — as we noted in :numref:`sec_queries-keys-values`, it
 always keeps the all-ones vector in its null space and nothing else — but it
 can come arbitrarily close. Let's measure both effects rather than take them
@@ -215,8 +216,8 @@ tops out near $6.5 \times 10^4$, so $-10^6$ silently overflows, and in
 bfloat16 a merely-large constant may fail to fully suppress a weight once
 genuine scores are large themselves. Writing literal $-\infty$ masks
 exactly, but if every key of some query is masked the softmax returns NaN
-and poisons the training run. The dtype-safe idiom, which we adopt, masks
-with the most negative *finite* value of the score's dtype
+and poisons the training run. We therefore adopt the dtype-safe idiom, which
+masks with the most negative *finite* value of the score's dtype
 (`torch.finfo(X.dtype).min` and `jnp.finfo(X.dtype).min`, respectively): the
 masked weights are exactly zero at any precision, with no NaN. A fully masked
 query — one with no valid key — would otherwise come out as a uniform average
@@ -612,8 +613,8 @@ decided by hardware: a dot product between all queries and all keys is a
 single matrix multiplication, the one operation accelerators are built
 around, while the additive score requires materializing an
 $n \times m \times h$ tensor of hidden activations. When a learned metric
-is wanted, projecting queries and keys with learned matrices *before* a dot
-product achieves it at matmul speed—which is precisely the form attention
+is wanted, we can project queries and keys with learned matrices *before* the
+dot product and have it at matmul speed—which is precisely the form attention
 takes inside the Transformer, whose authors then discarded the RNN
 scaffolding altogether and kept attention as the only mechanism relating
 sequence positions :cite:`Vaswani.Shazeer.Parmar.ea.2017`. The next
@@ -634,9 +635,9 @@ the dtype (not a hard-coded constant, which breaks in half precision)
 before the softmax; arbitrary boolean requirements — padding, causality,
 structure — compose into one mask by logical AND. `DotProductAttention` packages scoring, masking,
 dropout on the weights, and value pooling in a dozen lines that the rest of
-this book reuses. Additive attention, the original scoring function of the
-translation models that started the field, survives as history and as a
-reminder that attention weights are learned soft alignments.
+this book reuses. Additive attention survives as history and as a reminder
+that attention weights are learned soft alignments; it was the original
+scoring function of the translation models that started the field.
 
 ## Exercises
 

@@ -108,7 +108,7 @@ required outputs and only $|\mathcal{S}|$ states to route them through,
 and no parameterization, gating, or training trick appears anywhere in
 that ratio. Empirically the crossover is not close: on synthetic
 phone-book
-lookup, the smallest transformer they test, at 410M parameters, beats a
+lookup, their smallest transformer (410M parameters) beats a
 2.8B-parameter Mamba once the book exceeds roughly seventy entries.
 
 Where does the wall bite in real language?
@@ -144,8 +144,8 @@ transformer's growing key–value cache is a *database*: a lossless log of
 everything, pay-per-query at ever-growing cost, which never has to
 predict what will matter because it keeps it all. Neither dominates,
 because they fail on different bills — the brain loses exact recall, the
-database loses the economics. The obvious synthesis, a brain in front of
-a database, is where production actually landed, and the rest of this
+database loses the economics. The obvious synthesis is where production
+actually landed, a brain in front of a database, and the rest of this
 section is about its terms.
 
 ## The Economics
@@ -185,10 +185,11 @@ Jamba's model card. At 256K context, Jamba — 4 attention layers out of
 comparably sized Mixtral carries 32 GB and a Llama-2-70B-class
 transformer 128 GB :cite:`Lieber.Lenz.Bata.ea.2024`. An eightfold saving
 on the resource that decides how many concurrent users fit on an
-accelerator (recall from :numref:`sec_kv-cache` that decode is
-bandwidth-bound, so cache bytes are also the currency of generation
-speed) is the kind of number that redraws architectures, and it comes
-from nothing more than the layer count in :eqref:`eq_kv-cache-bytes`.
+accelerator is the kind of number that redraws architectures, and it
+comes from nothing more than the layer count in
+:eqref:`eq_kv-cache-bytes`. (Recall from :numref:`sec_kv-cache` that
+decode is bandwidth-bound, so cache bytes are also the currency of
+generation speed.)
 
 One structural remark before we measure the other side of the trade.
 The cache relief of :numref:`sec_kv-cache` came in flavors that
@@ -475,12 +476,12 @@ one model simply being bigger.
 
 Width is the experiment's one carefully chosen number. At
 `num_hiddens=32` with four heads, each head's state is $8 \times 8$.
-The random-key proposition of :numref:`subsec_ms-capacity` — used here
-as a sizing heuristic, not as the theory of this model: a trained
-four-layer stack with learned keys is far from the proposition's single
-random-key memory — suggests a head crowds at order-eight bindings, so
-a sweep of `num_pairs` from 4 to 64 should cross the whole stack's
-capacity mid-sweep. (Widen the model and the cliff should move right;
+The random-key proposition of :numref:`subsec_ms-capacity` suggests a
+head crowds at order-eight bindings, so a sweep of `num_pairs` from 4 to
+64 should cross the whole stack's capacity mid-sweep. Treat that as a
+sizing heuristic, not as the theory of this model: a trained four-layer
+stack with learned keys is far from the proposition's single random-key
+memory. (Widen the model and the cliff should move right;
 the counting bound above says it cannot disappear.) One
 protocol note: small-scale MQAR results are notoriously sensitive to
 the learning rate, so :citet:`Arora.Eyuboglu.Timalsina.ea.2024` sweep
@@ -590,14 +591,14 @@ proposition's random-key assumptions do not cover this trained,
 four-layer model. The pure attention stack scores 1.000 at every load
 in both frameworks' runs: its
 "state" at the query is the whole write phase, so load never crowds
-it. And the hybrid, three quarters of which is the same recurrence
-that just collapsed, tracks attention closely — in our PyTorch run it
+it. And the hybrid tracks attention closely, though three quarters of it
+is the same recurrence that just collapsed — in our PyTorch run it
 too scores 1.000 at every load; in JAX it dips to roughly 0.92–0.94
 mid-sweep
 and returns to 0.99–1.00 at the two largest loads, exactly the loads
 that break the linear stack. One mid-stack attention layer buys back
 the
-recall deficit at this scale — the miniature of the finding, in
+recall deficit at this scale — the miniature of a finding from
 controlled studies at the hundred-million-parameter scale, that adding
 attention to a Mamba backbone lifts recall benchmarks by about thirty
 points while moving reasoning benchmarks by single digits
@@ -810,8 +811,8 @@ where four representative systems landed.
 
 **How much attention?** Less than you would guess, with a measurable
 knee. The founding ablation is NVIDIA's 8B study
-:cite:`Waleffe.Byeon.Riach.ea.2024`: sweeping the attention fraction,
-validation loss was best near 8% attention and *degraded above it* —
+:cite:`Waleffe.Byeon.Riach.ea.2024`: in a sweep of the attention
+fraction, validation loss was best near 8% attention and *degraded above it* —
 more attention is not monotonically better — yielding the recipe
 (roughly 43% Mamba-2, 7% attention, 50% MLP layers) that Nemotron-H and
 Granite ship nearly verbatim. Sequential hybrids in production cluster

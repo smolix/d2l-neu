@@ -7,8 +7,8 @@ have been applying since :numref:`sec_linear_scratch`, so far without a
 justification. We begin with the noise-free version anyway because its
 failure modes carry over intact. A learning rate that diverges on
 a one-dimensional parabola diverges on a billion-parameter transformer for the
-same reason, and the cure for badly scaled coordinates — preconditioning —
-reappears, in estimated form, inside the adaptive methods of
+same reason, and preconditioning, the cure for badly scaled coordinates,
+reappears in estimated form inside the adaptive methods of
 :numref:`sec_adam`. Of the three decisions framed in
 :numref:`sec_optimization-intro`, this section isolates direction and step
 size; noise enters in :numref:`sec_sgd`.
@@ -166,10 +166,10 @@ $\eta > 0$ we obtain the prototypical gradient descent algorithm:
 $$\mathbf{x} \leftarrow \mathbf{x} - \eta \nabla f(\mathbf{x}).$$
 
 To see the algorithm in action, take the quadratic
-$f(\mathbf{x})=x_1^2+2x_2^2$ with gradient
-$\nabla f(\mathbf{x}) = [2x_1, 4x_2]^\top$ — a bowl that curves twice as
-steeply in $x_2$ as in $x_1$ — and track the trajectory of $\mathbf{x}$ from
-the initial position $[-5, -2]$. We need two helper functions: the first
+$f(\mathbf{x})=x_1^2+2x_2^2$, a bowl that curves twice as steeply in $x_2$
+as in $x_1$, whose gradient is
+$\nabla f(\mathbf{x}) = [2x_1, 4x_2]^\top$. Starting from the initial
+position $[-5, -2]$, we track the trajectory of $\mathbf{x}$. We need two helper functions: the first
 applies an update rule repeatedly from the fixed starting point, the second
 draws the trajectory over a contour plot of the objective. Both will be
 reused throughout this chapter.
@@ -342,10 +342,10 @@ curvature it converges *quadratically*: the number of correct digits roughly
 doubles at every iteration. :numref:`subsec_mdl-why-not-newton` gives the
 proof and shows the doubling numerically. Second, nothing rescues the method
 at deep-learning scale. Storing the Hessian costs $\mathcal{O}(d^2)$ memory
-and solving with it $\mathcal{O}(d^3)$ time — at $d \sim 10^9$ parameters,
-exabytes before the first step — and, as the demo above showed in one
-dimension, a nonconvex objective hands Newton negative curvature that it
-follows toward saddle points and maxima. The classical remedies are cheaper
+and solving with it $\mathcal{O}(d^3)$ time, which at $d \sim 10^9$
+parameters means exabytes before the first step. Worse, as the demo above
+showed in one dimension, a nonconvex objective hands Newton negative
+curvature that it follows toward saddle points and maxima. The classical remedies are cheaper
 curvature estimates and safer step rules: quasi-Newton methods such as BFGS
 rebuild curvature from successive gradient differences
 (:numref:`subsec_mdl-quasi-newton`), line search picks $\eta$ by trial at run

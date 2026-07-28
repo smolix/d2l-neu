@@ -524,9 +524,8 @@ For the character- and word-level pipelines that some later sections still
 use, we need the classical piece of machinery that BPE gave us for free: a
 *vocabulary* object that assigns each distinct token string an index and
 maps unknown tokens to a reserved `<unk>` slot. Rare tokens (below
-`min_freq` occurrences) can be dropped to keep the table small; that this
-is even necessary is precisely the OOV problem that byte-level BPE
-eliminates.
+`min_freq` occurrences) can be dropped to keep the table small; needing to
+do so at all is precisely the OOV problem that byte-level BPE eliminates.
 
 ```{.python .input #text-sequence-vocabulary-1}
 class Vocab:  #@save
@@ -632,8 +631,8 @@ print(enc._special_tokens)
 The first 256 ranks are the single bytes (in a permuted order: GPT-2 lists
 printable characters first), and rank 256 onward are learned merges in
 rank order, exactly the structure our `BPETokenizer` uses. Amusingly,
-GPT-2's first two merges, " t" and " a", learned from 40 gigabytes of web
-text, are among the very first our tokenizer learned from one Victorian
+GPT-2's first two merges, learned from 40 gigabytes of web text, are " t"
+and " a", among the very first our tokenizer learned from one Victorian
 novella: the head of the English fragment distribution is that stable.
 
 ### Verifying Our Implementation
@@ -797,9 +796,9 @@ forge them. Production tokenizers such as `tiktoken`'s are exactly this
 construction at scale, as we verified by reproducing GPT-2's tokenization
 token for token, and their fingerprints (fertility differences across
 languages, digit chunking, glitch tokens) are visible in the behavior of
-every deployed language model. The statistics of the token sequences we
-have just produced, and what it takes to model them, are the subject of
-:numref:`sec_language-model`.
+every deployed language model. :numref:`sec_language-model` takes up the
+statistics of the token sequences we have just produced, and what it takes
+to model them.
 
 ## Exercises
 

@@ -130,9 +130,9 @@ $$\mathbb{E}\big[x_\infty^2\big] \approx \frac{\eta\, \sigma^2}{2\lambda}.$$
 The iterates rattle around inside a *noise ball* whose squared radius grows
 linearly with the learning rate — the same noise ball that
 :numref:`sec_linear_regression` promised an explanation for when it first
-named the phenomenon; the two-line derivation, and a picture of
-GD and SGD racing on the same bowl, are in
-:numref:`subsec_mdl-stochastic-gradients`. Equation :eqref:`eq_sgd-noise-ball`
+named the phenomenon. :numref:`subsec_mdl-stochastic-gradients` supplies
+the two-line derivation, along with a picture of GD and SGD racing on the
+same bowl. Equation :eqref:`eq_sgd-noise-ball`
 says exactly what the demo showed: a constant $\eta$ stalls at a noise floor
 proportional to $\eta$. Halving $\eta$ halves the floor — and also halves the
 speed of the initial approach. The escape is a *time-dependent* learning rate
@@ -190,9 +190,9 @@ lr = polynomial_lr
 d2l.show_trace_2d(f, d2l.train_2d(sgd, steps=50, f_grad=f_grad))
 ```
 
-The two experiments are instances of a classical theorem.
-:citet:`Robbins.Monro.1951` — the paper that founded stochastic
-approximation — showed that convergence requires exactly the two properties
+The two experiments are instances of a classical theorem, due to the paper
+that founded stochastic approximation. :citet:`Robbins.Monro.1951` showed
+that convergence requires exactly the two properties
 the demos probe: the learning rates must sum to infinity,
 $\sum_t \eta(t) = \infty$, so the iterate can travel arbitrarily far (the
 condition exponential decay just violated), while their squares must remain
@@ -292,13 +292,13 @@ the log scale conceals. Variance falling like $1/b$ means
 noise *amplitude* falls like $1/\sqrt{b}$, so spending $100\times$ more
 compute per step buys only a $10\times$ quieter gradient. Batch size is thus
 a genuine second dial next to the learning rate, but one with diminishing
-returns. How to spend a compute budget between the two —
-and how batching interacts with the hardware that made it cheap — is the
-subject of :numref:`sec_minibatch_sgd`; what happens to the $1/b$ payoff at
-the scale of modern language models is taken up in :numref:`sec_batch_size`.
+returns. :numref:`sec_minibatch_sgd` takes up how to spend a compute budget
+between the two, and how batching interacts with the hardware that made it
+cheap; :numref:`sec_batch_size` asks what happens to the $1/b$ payoff at
+the scale of modern language models.
 
-One loose end. Our theory, and the measurement above, sampled indices *with
-replacement*: each draw is independent, which is what makes the analysis
+One loose end. Our theory and the measurement above both sampled indices
+*with replacement*: each draw is independent, which is what makes the analysis
 clean. Practice does something else. Drawing $n$ times with replacement
 touches only a fraction $1 - (1-1/n)^n \approx 1 - e^{-1} \approx 0.63$ of
 the dataset per pass while picking other examples twice or more — worse data
@@ -319,10 +319,10 @@ proportional to $\eta$; decaying learning rates converge, provided the decay
 is slow enough to travel arbitrarily far yet fast enough to quench the noise.
 Batch size is the other dial: minibatch gradient variance falls like $1/b$,
 measured on a real network over a factor of 500 in batch size, though at a
-linear cost in compute per step. The proofs owed here — the convex rates
-and the nonconvex Ghadimi–Lan theorem — live in
+linear cost in compute per step. The proofs owed here live in
 :numref:`subsec_mdl-stochastic-gradients` and
-:numref:`subsec_mdl-nonconvex-sgd`.
+:numref:`subsec_mdl-nonconvex-sgd`: the convex rates and the nonconvex
+Ghadimi–Lan theorem.
 
 ## Exercises
 

@@ -48,14 +48,14 @@ import optax
 
 The bet behind MoE is that a language model's FFN parameters do not all
 need to fire on every token. Predicting the next token after "the
-integral of" and after "Act I, Scene" exercise different knowledge; a
-dense FFN pays for both everywhere, a routed one lets each token consult
-the specialists it needs. What makes the bet so attractive is the
-asymmetry of the two costs. Stored parameters are cheap: they sit in
-memory (or on other devices) and idle experts charge no FLOPs per token.
-Compute is the expensive, per-token resource. An MoE layer holds
-$E$ experts' parameters but each token pays the FLOPs of $k$, so — at
-roughly 2 forward FLOPs per active parameter per token — the model's
+integral of" exercises different knowledge from predicting it after "Act
+I, Scene"; a dense FFN pays for both everywhere, a routed one lets each
+token consult the specialists it needs. What makes the bet so attractive
+is the asymmetry of the two costs. Stored parameters are cheap: they sit
+in memory (or on other devices) and idle experts charge no FLOPs per
+token. Compute is the expensive, per-token resource. An MoE layer holds
+$E$ experts' parameters but each token pays the FLOPs of $k$, so at
+roughly 2 forward FLOPs per active parameter per token, the model's
 capacity and its serving cost decouple.
 
 The arithmetic deserves to be computed rather than asserted, and it is
@@ -92,16 +92,16 @@ print(f'     with attention and embeddings: {(store+attn+emb)/1e9:.1f}B '
 moe_accounting('DeepSeek-V3', 7168, 2048, 256, 8, 58, shared=1)
 ```
 
-For Mixtral, adding the non-expert parameters — grouped-query attention
-(:numref:`sec_kv-cache`) and untied embeddings — reproduces the model
-card exactly: 46.7B parameters stored, 12.9B active per token. The name
-"8x7B" suggests eight times the cost of a 7B model; the accounting says
-a token pays for less than two-sevenths of what it could read from.
-DeepSeek-V3 pushes the same lever much harder: its 58 expert layers
-store about 656B of the model's 671B parameters, yet a token activates
-only 23B of them, a 28-fold gap between capacity and per-token compute
-(the model card's 37B "active" adds attention, embeddings, and the three
-dense layers that our expert-only census leaves out). Our toy
+For Mixtral, the model card comes out exactly right once we add the
+non-expert parameters, grouped-query attention (:numref:`sec_kv-cache`)
+and untied embeddings: 46.7B parameters stored, 12.9B active per token.
+The name "8x7B" suggests eight times the cost of a 7B model; the
+accounting says a token pays for less than two-sevenths of what it could
+read from. DeepSeek-V3 pushes the same lever much harder: its 58 expert
+layers store about 656B of the model's 671B parameters, yet a token
+activates only 23B of them, a 28-fold gap between capacity and per-token
+compute (the model card's 37B "active" adds attention, embeddings, and
+the three dense layers that our expert-only census leaves out). Our toy
 configuration keeps Mixtral's eight-expert layout but routes top-1
 rather than top-2, so its 8x store-to-active ratio is twice as sparse
 as Mixtral's 4x.
@@ -134,10 +134,10 @@ $$
 where $\mathcal{E}_k(\mathbf{x})$ is the set of $k$ largest entries of
 $\mathbf{p}(\mathbf{x})$. This is *token-choice* routing: each token
 independently chooses its experts, so two adjacent tokens in the same
-sentence may consult entirely different parameters. Keeping the raw
-probability $p_i$ as the mixture weight (rather than renormalizing over
-the selected $k$) follows the Switch transformer
-:cite:`fedus2022switch`, and it is why the router can learn at all: the
+sentence may consult entirely different parameters. The mixture weight is
+the raw probability $p_i$ rather than a renormalization over the selected
+$k$, following the Switch transformer
+:cite:`fedus2022switch`, and that is why the router can learn at all: the
 selection itself, an argmax, has no gradient, but the *weight* on each
 chosen expert does. If expert $i$'s output helps, the loss's gradient
 raises $p_i$ and the router routes to it more eagerly — a point worth
@@ -283,9 +283,9 @@ It does not.
 
 ### The Rich Get Richer
 
-Follow the feedback loop. Early in training some expert — by pure
-initialization luck — is slightly better than its peers on the tokens it
-happens to receive. The loss gradient rewards it twice: its parameters
+Follow the feedback loop. Early in training, by pure initialization luck,
+some expert is slightly better than its peers on the tokens it happens to
+receive. The loss gradient rewards it twice: its parameters
 improve on those tokens, *and* the router's gradient raises its
 selection probability, because weighting a helpful expert more heavily
 lowers the loss. More tokens mean more gradient signal, which means a
@@ -293,7 +293,8 @@ better expert, which attracts more tokens. The experts that lose the
 early rounds see ever fewer tokens, learn ever more slowly, and their
 router scores sink. The stable end state is *routing collapse*: a couple
 of experts serve everything while the rest ride along as dead weight,
-the capacity we listed as the whole point of the architecture unused.
+leaving unused the capacity we listed as the whole point of the
+architecture.
 :citet:`Shazeer.Mirhoseini.Maziarz.ea.2017` describe exactly this
 self-reinforcing imbalance, and every practical MoE since has shipped
 some countermeasure. We will see the collapse live in a moment; first,
@@ -519,11 +520,11 @@ def usage_fractions(model, data, num_batches=10):
     return jnp.stack([l.usage[...] / l.usage[...].sum() for l in layers])
 ```
 
-Now the experiment. One small model — two blocks of width 128, eight
-experts per block, one active per token (the Switch configuration,
-where the feedback loop bites hardest) — trained three times from the
-same initialization on the character-level Time Machine for the same
-800 steps. The only difference between the runs is the balancing: none,
+Now the experiment. One small model, trained three times from the same
+initialization on the character-level Time Machine for the same 800
+steps: two blocks of width 128, eight experts per block, one active per
+token (the Switch configuration, where the feedback loop bites hardest).
+The only difference between the runs is the balancing: none,
 the auxiliary loss at $\alpha = 0.01$, or the bias thermostat at
 $u = 0.01$.
 
@@ -764,9 +765,9 @@ one the accounting cell described: corpora that outweigh any dense
 model you could afford to serve, where MoEs reach a given loss at a
 fraction of the training FLOPs of dense models
 :cite:`fedus2022switch,Dai.Deng.Zhao.ea.2024` and dominate the
-deployed frontier. What our small-scale run demonstrates is the
-mechanism working end to end — routed capacity added, balance held by
-a controller, quality preserved at fixed per-token cost — which is
+deployed frontier. Our small-scale run demonstrates the mechanism
+working end to end — routed capacity added, balance held by a
+controller, quality preserved at fixed per-token cost — and that is
 precisely the part that does transfer across five orders of magnitude.
 
 ## Summary

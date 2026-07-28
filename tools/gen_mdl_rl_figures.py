@@ -446,7 +446,7 @@ def _tiles(ax, xs, y, w, h, c0=LIGHT, c1=BLUE, labels=None, fontsize=11,
 def _strike_width(fig, ax, text, fontsize):
     """Width of ``text`` as a fraction of ``ax``'s width, from the font metrics
     (no draw pass, so it is stable across runs).  Used to strike out the items
-    of F25's "collapses" column at exactly their own length."""
+    of F25's "simplifies" column at exactly their own length."""
     pts = TextPath((0, 0), text, prop=FontProperties(size=fontsize)).get_extents()
     axes_pt = fig.get_size_inches()[0] * ax.get_position().width * 72.0
     return pts.width / axes_pt
@@ -1883,6 +1883,9 @@ def fig_td_mc_spectrum():     # F12 -> mdl-rl-td-mc-spectrum
     axb.plot(ns, mse, "o-", color="black", lw=2.6, ms=5.5, zorder=4,
              label="mean squared error")
     axb.plot([nbest], [mse[nbest - 1]], "o", color="black", ms=10, zorder=5)
+    axb.text(6.9, 0.036, "the interior optimum reflects\nthis critic's error taper",
+             ha="center", va="bottom", fontsize=12, color="black",
+             linespacing=1.4, zorder=6)
     axb.text(nbest, mse[nbest - 1] + 0.011, f"best depth\n$n = {nbest}$",
              ha="center", va="bottom", fontsize=12, color="black",
              linespacing=1.4, zorder=6,
@@ -2615,7 +2618,7 @@ def fig_distribution_shift():  # F20 -> mdl-rl-distribution-shift
              label="queried by the learned policy")
     grid = np.logspace(np.log10(1.6), np.log10(700.0), 200)
     axb.plot(grid, kappa / np.sqrt(grid), color=ORANGE, lw=2.4, zorder=3,
-             label=f"$\\kappa/\\sqrt{{n}}$, $\\kappa = {kappa:.2f}$")
+             label="fitted count penalty $\\kappa/\\sqrt{n}$")
     axb.set_xscale("log")
     axb.set_xlim(1.6, 700.0)
     axb.set_ylim(0.0, 0.50)
@@ -2625,7 +2628,7 @@ def fig_distribution_shift():  # F20 -> mdl-rl-distribution-shift
     axb.set_ylabel("$|\\hat Q - Q^\\star|$", fontsize=13)
     axb.legend(loc="upper right", fontsize=11.5, handlelength=1.5,
                labelspacing=0.35)
-    axb.text(560.0, 0.305, "the penalty tracks\nthe error", ha="right",
+    axb.text(560.0, 0.305, "a fitted envelope:\npoints on either side", ha="right",
              va="center", fontsize=12, color="black")
 
     for ax in (axa, axb):
@@ -2723,7 +2726,7 @@ def fig_token_mdp():          # F25 -> mdl-rl-token-mdp
     # --- the two columns ---------------------------------------------------- #
     x0, dy = 0.07, 0.0455
     y = 0.975
-    for head, color, items, struck in (("collapses", RED, COLLAPSE, True),
+    for head, color, items, struck in (("simplifies", RED, COLLAPSE, True),
                                        ("survives", GREEN, SURVIVE, False)):
         axc.text(x0 - 0.05, y, head, ha="left", va="center", fontsize=13.5,
                  fontweight="bold", color=color, transform=axc.transAxes)

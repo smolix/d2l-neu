@@ -1631,9 +1631,9 @@ def fig_score_vs_pathwise():  # F22 -> mdl-rl-score-vs-pathwise
          "policy\n$\\mu_\\theta(s),\\ \\sigma_\\theta(s)$", BLUE,
          fontsize=BOXF, fc="#e8f1f8")
     _box(axb, 6.00, 5.35, 4.2, 1.10, "", BLUE)
-    axb.text(6.00, 5.56, r"$a = \mu_\theta(s) + \sigma_\theta(s)\,\epsilon$",
+    axb.text(6.00, 5.56, r"$a = \mu_\theta(s) + \sigma_\theta(s)\,z$",
              ha="center", va="center", fontsize=BOXF, color="black", zorder=4)
-    axb.text(6.00, 5.10, r"$\epsilon \sim \mathcal{N}(0, I)$, held fixed",
+    axb.text(6.00, 5.10, r"$z \sim \mathcal{N}(0, I)$, held fixed",
              ha="center", va="center", fontsize=11.5, color=GRAY, zorder=4)
     _box(axb, 6.10, 2.55, 4.6, 1.20, "", GREEN, fc="#eaf6ea")
     axb.text(6.10, 2.76, "critic $Q_w(s,a)$", ha="center", va="center",

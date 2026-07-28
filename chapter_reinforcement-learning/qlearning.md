@@ -290,7 +290,7 @@ Greedy is a lottery with a terrible mean: a run that happens to see the best arm
 
 ### Optimism: UCB and Thompson sampling
 
-The two remaining rules in :numref:`fig_rl_exploration` share one principle: *when unsure, err on the side of optimism*, because acting on optimism generates exactly the data that tests it. The crudest version is optimistic initialization, every estimate started above any reward the world can pay and disappointment left to run the tour :cite:`Sutton.Barto.2018`. The *upper confidence bound* (UCB) rule prices the optimism by the uncertainty instead, pulling the arm whose plausibly-best value is highest:
+Panel (a) of :numref:`fig_rl_exploration` shows the choices so far as distributions over one row of action values, alongside a third the reader will meet properly in :numref:`sec_policygradient`, a softmax over the same values whose temperature plays the role the exploration rate plays here. The two remaining rules in :numref:`fig_rl_exploration` share one principle: *when unsure, err on the side of optimism*, because acting on optimism generates exactly the data that tests it. The crudest version is optimistic initialization, every estimate started above any reward the world can pay and disappointment left to run the tour :cite:`Sutton.Barto.2018`. The *upper confidence bound* (UCB) rule prices the optimism by the uncertainty instead, pulling the arm whose plausibly-best value is highest:
 
 $$a_t = \underset{a}{\mathrm{argmax}} \Big[ \hat{\mu}(a) + \kappa \sqrt{\log t \,/\, n(a)} \Big],$$
 :eqlabel:`eq_ucb`

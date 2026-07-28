@@ -28,7 +28,7 @@ The laboratory is unchanged: the calm lake whose determinism :numref:`sec_policy
 
 ```{.python .input #baselines-baselines-advantages-and-variance-reduction-2}
 %%tab pytorch, jax
-gamma, alpha, beta = 0.95, 16.0, 0.1   # discount; SGD step; value-table step
+gamma, alpha, alpha_v = 0.95, 16.0, 0.1  # discount; SGD step; value step
 num_updates, batch_episodes = 150, 4   # small batches, to expose variance
 num_seeds = 20                         # with 5, the medians below are noise
 env = gym.make('FrozenLake-v1', is_slippery=False)
@@ -149,10 +149,10 @@ Which function of the state should the baseline be? The chapter answered before 
 
 We do not know $V^{\pi_\theta}$, but we can estimate it from the same batch of trajectories. Keep a table $\hat{V}(s)$, and after each batch move the estimate at every visited state toward the reward-to-go observed there,
 
-$$\hat{V}(s_t) \leftarrow \hat{V}(s_t) + \beta \big( \hat{G}_t - \hat{V}(s_t) \big),$$
+$$\hat{V}(s_t) \leftarrow \hat{V}(s_t) + \alpha_V \big( \hat{G}_t - \hat{V}(s_t) \big),$$
 :eqlabel:`eq_value_baseline`
 
-with a step size $\beta$. This algorithm is REINFORCE with a baseline :cite:`Williams.1992`. Note that $\hat{V}$ is trained here by regression on Monte Carlo returns, meaning reward-to-go values computed from complete sampled trajectories; in :numref:`sec_actorcritic` we will let it build its targets from its own predictions instead, and the pair of a parameterized policy and a learned value estimate will get a name of its own.
+with a step size $\alpha_V$, its subscript keeping it clear of the policy step $\alpha$. This algorithm is REINFORCE with a baseline :cite:`Williams.1992`. Note that $\hat{V}$ is trained here by regression on Monte Carlo returns, meaning reward-to-go values computed from complete sampled trajectories; in :numref:`sec_actorcritic` we will let it build its targets from its own predictions instead, and the pair of a parameterized policy and a learned value estimate will get a name of its own.
 
 ## Estimator Hygiene
 
@@ -215,7 +215,7 @@ $$\tilde{G}_t^i = \frac{\hat{G}_t^i - \mu}{\sigma + 10^{-8}}$$
 
 in place of $\hat{G}_t^i$, where the constant $10^{-8}$ avoids dividing by zero. Subtracting $\mu$ acts as a baseline, with one caveat: $\mu$ is computed from the same batch, so it depends weakly on the sampled actions, and the exact zero-bias argument above holds only up to a correction that vanishes as the batch grows. Dividing by $\sigma + 10^{-8}$ is different in kind: it rescales the update so that its size no longer depends on the scale of the rewards, which spares us from re-tuning the learning rate every time the reward magnitudes change.
 
-"Different in kind" deserves to be said sharply, because this is the most commonly blurred distinction in the practice of policy gradients. Subtracting $\mu$ changes which way the terms pull: failed steps acquire negative weight, and the estimate genuinely changes direction. Dividing by $\sigma + 10^{-8}$ multiplies the whole batch's estimate by one positive number: the direction is untouched, so the division is not a baseline and removes no noise from the direction being followed; it is a per-batch learning-rate schedule in disguise. On this lake the schedule even has a known sign: every $\hat{G}_t$ lies between $0$ and $1$, so $\sigma \le 1/2$ (a bounded variable's standard deviation is at most half its range), so $1/(\sigma + 10^{-8}) \ge 2$: at any fixed learning rate the normalized variant always steps at least twice as far, and below the factor measures about five. Whether the larger step helps is a question about the optimizer, not the estimator, and the comparison keeps the two ledgers separate.
+"Different in kind" deserves to be said sharply, because this is the most commonly blurred distinction in the practice of policy gradients. Subtracting $\mu$ changes which way the terms pull: failed steps acquire negative weight, and the estimate genuinely changes direction. Dividing by $\sigma + 10^{-8}$ multiplies the whole batch's estimate by one positive number: the direction is untouched, so the division is not a baseline and removes no noise from the direction being followed; it is a per-batch learning-rate schedule in disguise. On this lake the schedule even has a known sign: every $\hat{G}_t$ lies between $0$ and $1$, so $\sigma \le 1/2$ (a bounded variable's standard deviation is at most half its range), so $1/(\sigma + 10^{-8}) \ge 2$: at any fixed learning rate the normalized variant always steps at least twice as far, and below the factor measures about five. Whether the larger step helps is a question about the optimizer, not the estimator, the same separation of noise scale from step size that :numref:`sec_sgd` and :numref:`sec_batch_size` studied for supervised losses, and the comparison keeps the two ledgers separate.
 
 Two four-line tools make the rest of the section runnable: `normalize` is :eqref:`eq_pg_normalized`, and `run_seeds` runs a seeded training generator over a set of seeds and stacks the yielded curves. The runner is deliberately visible: every multi-seed number quoted in the rest of these two chapters is computed in a cell you can read, never inside a plotting helper.
 
@@ -356,7 +356,7 @@ for k, u in draws.items():
           f'relative variance = {rel:6.1f}')
 ```
 
-Read the two columns against the two halves of the claim. The cosine column is unbiasedness: all five means point along the exact gradient to within what 200 draws can resolve, and the residual degree or two is shared by all five weightings alike, so the baselines moved nothing, exactly as the identity promised. The variance column is the ladder, measured: centering cuts the relative variance by about a third, the exact state baseline nearly halves it, and dividing by $\sigma$ changes next to nothing beside plain centering, the first measurement behind this section's sharpest distinction. One entry is a warning about the map rather than the method: reward-to-go buys only a few percent here, because with a single terminal reward there are no earlier rewards for causality to drop; its celebrated benefit needs dense rewards to exist at all.
+Read the two columns against the two halves of the claim. The cosine column is unbiasedness: all five means point along the exact gradient to within what 200 draws can resolve, and the residual ten degrees or so of angle is shared by all five weightings alike, so the baselines moved nothing, exactly as the identity promised. The variance column is the ladder, measured: centering cuts the relative variance by about a third, the exact state baseline nearly halves it, and dividing by $\sigma$ changes next to nothing beside plain centering, the first measurement behind this section's sharpest distinction. One entry is a warning about the map rather than the method: reward-to-go buys only a few percent here, because with a single terminal reward there are no earlier rewards for causality to drop; its celebrated benefit needs dense rewards to exist at all.
 
 Now the race. One generator serves all five variants, and they differ in a single line: the weight handed to `policy_step`. Three choices are deliberate. The policy optimizer is plain SGD rather than the container's default Adam: an adaptive optimizer rescales every parameter's step by its own running statistics, a fine default for training and a blindfold here, since it would partly absorb the very scale differences the section is teaching you to see. Every run maintains the value table of :eqref:`eq_value_baseline` but only one arm consults it, so the arms share everything else, seeds included. And each update yields three numbers, the batch success rate, the size of the parameter step actually taken, and the policy's mean entropy: diagnostics are data the run returns, not lines printed from inside a helper. Two small probes read the policy from outside, through the numpy boundary:
 
@@ -401,7 +401,7 @@ def train(seed, variant):
         before = table(ac)
         d2l.policy_step(ac, batch, w)
         for s, g in zip(batch.obs, G):     # eq_value_baseline, every arm
-            V[s] += beta * (g - V[s])
+            V[s] += alpha_v * (g - V[s])
         yield (float(batch.episode_returns().mean()),
                float(np.linalg.norm(table(ac) - before)), entropy(ac))
 ```
@@ -486,9 +486,9 @@ One lemma carried the section: the score has zero conditional mean, so anything 
    Derive this by differentiating the variance with respect to $b$, and check
    that it is the optimal coefficient $c^*$ of :eqref:`eq_control_variate`
    carried over to the vector-valued score.
-1. [short-code] *Baseline step size.* Vary $\beta$ in :eqref:`eq_value_baseline`
+1. [short-code] *Baseline step size.* Vary $\alpha_V$ in :eqref:`eq_value_baseline`
    over $\{0.01, 0.1, 0.5, 1.0\}$. How sensitive is the learned-baseline variant,
-   and what exactly goes wrong at $\beta = 1$? Relate the failure to what
+   and what exactly goes wrong at $\alpha_V = 1$? Relate the failure to what
    $\hat{V}$ is being asked to average over.
 1. [short-code] *The group-relative baseline in two lines.* Replace the weight
    in :eqref:`eq_pg_baseline` by
@@ -582,7 +582,7 @@ $1 - \mathrm{corr}^2 = 0.23$ of the variance.
 The best $b(s)$ is the value function: then the weight is a
 sampled advantage (:numref:`sec_valueiter` defined it).
 
-$$\hat V(s_t) \leftarrow \hat V(s_t) + \beta\,(\hat G_t - \hat V(s_t)),
+$$\hat V(s_t) \leftarrow \hat V(s_t) + \alpha_V\,(\hat G_t - \hat V(s_t)),
 \qquad \textrm{weight} = \hat G_t - \hat V(s_t) \approx A^{\pi_\theta}.$$
 
 Monte Carlo regression today; bootstrapped targets are

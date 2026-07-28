@@ -44,18 +44,18 @@ The map's boxes hide a finer grain, and a first introduction owes the reader add
 | UCB, Thompson sampling | arm means plus their uncertainty | its own pulls (the bandit) | :numref:`sec_qlearning` |
 | REINFORCE | $\nabla_\theta J$ by the score function | fresh trajectories from the current policy only | :numref:`sec_policygradient` |
 | REINFORCE with baselines, RLOO | the same gradient at lower variance | fresh trajectories from the current policy | :numref:`sec_baselines` |
-| GRPO | group-normalized advantages, no value network | fresh groups of responses per prompt | weights in :numref:`sec_baselines`; machinery in chapter 15 |
+| GRPO | group-normalized advantages, no value network | fresh groups of responses per prompt | weights in :numref:`sec_baselines`; machinery in :numref:`chap_deep_rl` |
 | REINFORCE with a learned critic, on networks | $\pi_\theta$ and $\hat{V}$ as networks | fresh trajectories from the current policy | :numref:`sec_deeprl` |
 | actor-critic (A2C) | $\pi_\theta$ plus a bootstrapped critic | fresh, near-current trajectories | :numref:`sec_actorcritic` |
 | PPO | $\pi_\theta$ under a clipped probability ratio | one batch, reused for a few steps | :numref:`sec_ppo` |
-| KL-regularized policy optimization, RLHF | a policy tilted from a reference by reward | rollouts scored by a learned reward | chapter 15 |
+| KL-regularized policy optimization, RLHF | a policy tilted from a reference by reward | rollouts scored by a learned reward | :numref:`chap_deep_rl` |
 | DQN, Double DQN | $Q$ as a network | a replay buffer of stale experience | :numref:`sec_dqn` |
 | Rainbow | DQN plus its measured components | a replay buffer | named in :numref:`sec_dqn` |
 | DDPG, TD3, SAC | a critic, and an actor trained to be its argmax | a replay buffer (off-policy) | named in :numref:`sec_deeprl` |
 | offline Q-learning with pessimism, CQL | $Q$ penalized where the data is thin | a fixed logged dataset, no interaction at all | :numref:`sec_offline` |
 | Decision Transformer | a return-conditioned sequence model | a fixed logged dataset | named in :numref:`sec_offline` |
-| MuZero, Dreamer | a learned model of the environment, to plan or imagine in | its own interaction, replayed through the model | named in chapter 15 |
-| DPO | the regularized optimum directly from preferences | a fixed preference dataset | chapter 15 and the Language Models part |
+| MuZero, Dreamer | a learned model of the environment, to plan or imagine in | its own interaction, replayed through the model | named in :numref:`chap_deep_rl` |
+| DPO | the regularized optimum directly from preferences | a fixed preference dataset | :numref:`chap_deep_rl` and the Language Models part |
 
 Nearly everything above runs on one recipe: two environments, sixteen states and four numbers, a frozen lake read out as a transition table and a cart balancing a pole; every run in these two chapters takes seconds to a couple of minutes on a laptop CPU, and that is a design decision, not a limitation, because reinforcement-learning results are only readable across seeds and reruns, and the compute for those belongs to readers. :numref:`tab_rl_experiments` lists the headline experiments together with the thing every measurement in this field has: a confounder to hold in mind whenever a conclusion reads stronger than its table.
 

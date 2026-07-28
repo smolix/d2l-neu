@@ -1,7 +1,7 @@
 # Regularized Policy Optimization
 :label:`sec_regularized`
 
-Every constraint in :numref:`sec_ppo` was measured against a moving target. The trust region and the clip keep the new policy near the *previous iterate*: they bound each step, and once the iterates stop moving they bind nothing at all, so nothing in that section stopped the policy from marching, one safe step at a time, into the saturated corner its own entropy measurements complained about. Nothing so far keeps the policy near anywhere in particular. This section adds a penalty measured against a *fixed* policy, and that change of reference point changes the optimum itself, into a closed form we can verify to machine precision, one formula that contains the entropy bonus of :numref:`sec_ppo`, maximum-entropy reinforcement learning, and the objective that every frontier language model is finished with. Before earning it, we ask a question chapter 14 deferred: what happens when the reward itself is *learned*, and what an optimizer does to a learned reward's errors. The experiments are tabular throughout and run in seconds.
+Every constraint in :numref:`sec_ppo` was measured against a moving target. The trust region and the clip keep the new policy near the *previous iterate*: they bound each step, and once the iterates stop moving they bind nothing at all, so nothing in that section stopped the policy from marching, one safe step at a time, into the saturated corner its own entropy measurements complained about. Nothing so far keeps the policy near anywhere in particular. This section adds a penalty measured against a *fixed* policy, and that change of reference point changes the optimum itself, into a closed form we can verify to machine precision, one formula that contains the entropy bonus of :numref:`sec_ppo`, maximum-entropy reinforcement learning, and the objective that every frontier language model is finished with. Before earning it, we ask a question :numref:`chap_reinforcement_learning` deferred: what happens when the reward itself is *learned*, and what an optimizer does to a learned reward's errors. The experiments are tabular throughout and run in seconds.
 
 ```{.python .input #regularized-regularized-policy-optimization}
 %%tab pytorch
@@ -118,7 +118,7 @@ for name, r in (('true reward  ', r_true), ('fitted reward', r_hat)):
           f'true return {ret(pi, r_true):+.2f}')
 ```
 
-By the fitted yardstick the hacked plan is the better policy, $-0.03$ against $-0.24$; only differences mean anything here, since the yardstick's absolute level was never identified. Under the true reward it is a disaster, $-2.11$ against $+0.59$: inspect it and you find the route driving straight down the hazard lane, through both cells the data priced at zero. Nothing malfunctioned. Value iteration did its job on the numbers we gave it, and the numbers were wrong precisely where the reference policy's competence kept the data from going. That inversion, the proxy's errors living exactly where the data thins out, returns as the central obstacle of :numref:`sec_offline`.
+By the fitted yardstick the hacked plan is the better policy, $-0.03$ against $-0.24$; only differences mean anything here, since the yardstick's absolute level was never identified. Under the true reward it is a disaster, $-2.11$ against $+0.59$: the plan drives straight down the hazard lane, through both cells the data priced at zero. Nothing malfunctioned. Value iteration did its job on the numbers we gave it, and the numbers were wrong precisely where the reference policy's competence kept the data from going. That inversion, the proxy's errors living exactly where the data thins out, returns as the central obstacle of :numref:`sec_offline`.
 
 ### The measurement: true return against the KL budget
 
@@ -154,7 +154,7 @@ This is the section's most transferable picture. The fitted return rises along t
 
 ## The Regularized Objective
 
-Chapter 14 maximized expected reward. The measurement above says that with a learned reward this is the wrong objective: what we want is reward *net of the divergence it spends*. So write that down. For a single decision, a reward $r(a)$ over a finite action set, a reference $\pi_{\textrm{ref}}$, and a coefficient $\beta > 0$:
+:numref:`chap_reinforcement_learning` maximized expected reward. The measurement above says that with a learned reward this is the wrong objective: what we want is reward *net of the divergence it spends*. So write that down. For a single decision, a reward $r(a)$ over a finite action set, a reference $\pi_{\textrm{ref}}$, and a coefficient $\beta > 0$:
 
 $$\max_{\pi}\ E_{a \sim \pi}\big[ r(a) \big] - \beta\, D_{\textrm{KL}}\big( \pi \Vert \pi_{\textrm{ref}} \big).$$
 :eqlabel:`eq_kl_objective`
@@ -220,7 +220,7 @@ The largest disagreement across the whole ladder of $\beta$ is at floating-point
 
 ### Four consequences
 
-**Without the penalty, the optimum is a point mass.** Send $\beta \to 0$ in :eqref:`eq_kl_optimum` and all mass flows to the highest-reward action; that is just the unregularized problem, whose solution was always the argmax. Every stochastic policy chapter 14 trained was therefore living on borrowed time: left alone, policy optimization *should* collapse onto a point mass, and the entropy decay measured in :numref:`sec_ppo` was this destiny in progress. Regularized reinforcement learning is what makes remaining a distribution optimal rather than merely transient.
+**Without the penalty, the optimum is a point mass.** Send $\beta \to 0$ in :eqref:`eq_kl_optimum` and all mass flows to the highest-reward action; that is just the unregularized problem, whose solution was always the argmax. Every stochastic policy :numref:`chap_reinforcement_learning` trained was therefore living on borrowed time: left alone, policy optimization *should* collapse onto a point mass, and the entropy decay measured in :numref:`sec_ppo` was this destiny in progress. Regularized reinforcement learning is what makes remaining a distribution optimal rather than merely transient.
 
 **The coefficient is an interpolation dial.** The two ends of the dial, read off the closed form:
 
@@ -394,7 +394,7 @@ $\beta = 2$, $1.84$ at $\beta = 0.2$.
 :::
 
 ::: {.slide title="Four Consequences"}
-- no penalty $\Rightarrow$ a point mass: §15.2's entropy
+- no penalty $\Rightarrow$ a point mass: PPO's entropy
   collapse was destiny, not accident
 - $\beta$ interpolates: reference $\leftarrow \beta \to \infty$,
   greedy $\leftarrow \beta \to 0$
@@ -407,7 +407,7 @@ $\beta = 2$, $1.84$ at $\beta = 0.2$.
 :::
 
 ::: {.slide title="The Two KLs"}
-**Trust region** (§15.2): against the *previous iterate*;
+**Trust region** (the clip): against the *previous iterate*;
 constrains the path; gone at convergence.
 
 **Penalty** (here): against a *frozen reference*; in the
@@ -426,9 +426,9 @@ is mode-seeking, so post-training *sharpens*
 $$V(s) = \beta \log \sum_a \pi_{\textrm{ref}}(a \mid s)\,
 e^{Q(s, a)/\beta} \ \xrightarrow{\ \beta \to 0\ } \ \max_a Q(s, a)$$
 
-- soft backup: §15.4's $\max$ is the sharp corner of a family
+- soft backup: DQN's $\max$ is the sharp corner of a family
 - DDPG $\to$ TD3 $\to$ SAC: pathwise gradient + twin critics
   + this section's objective; three parts you already own
-- §15.6: the same objective, with a language model as
+- Ahead: the same objective, with a language model as
   $\pi_{\textrm{ref}}$
 :::

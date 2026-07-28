@@ -210,12 +210,12 @@ The printed $J(\theta) = 0.313$ matches the previous section's frozen probe to t
 
 A practical variant standardizes the reward-to-go values within each batch. Collect every $\hat{G}_t^i$ in the current batch, compute their mean $\mu$ and standard deviation $\sigma$, and use
 
-$$\tilde{G}_t^i = \frac{\hat{G}_t^i - \mu}{\sigma + \epsilon}$$
+$$\tilde{G}_t^i = \frac{\hat{G}_t^i - \mu}{\sigma + 10^{-8}}$$
 :eqlabel:`eq_pg_normalized`
 
-in place of $\hat{G}_t^i$, where the small constant $\epsilon$ avoids dividing by zero. Subtracting $\mu$ acts as a baseline, with one caveat: $\mu$ is computed from the same batch, so it depends weakly on the sampled actions, and the exact zero-bias argument above holds only up to a correction that vanishes as the batch grows. Dividing by $\sigma + \epsilon$ is different in kind: it rescales the update so that its size no longer depends on the scale of the rewards, which spares us from re-tuning the learning rate every time the reward magnitudes change.
+in place of $\hat{G}_t^i$, where the constant $10^{-8}$ avoids dividing by zero. Subtracting $\mu$ acts as a baseline, with one caveat: $\mu$ is computed from the same batch, so it depends weakly on the sampled actions, and the exact zero-bias argument above holds only up to a correction that vanishes as the batch grows. Dividing by $\sigma + 10^{-8}$ is different in kind: it rescales the update so that its size no longer depends on the scale of the rewards, which spares us from re-tuning the learning rate every time the reward magnitudes change.
 
-"Different in kind" deserves to be said sharply, because this is the most commonly blurred distinction in the practice of policy gradients. Subtracting $\mu$ changes which way the terms pull: failed steps acquire negative weight, and the estimate genuinely changes direction. Dividing by $\sigma + \epsilon$ multiplies the whole batch's estimate by one positive number: the direction is untouched, so the division is not a baseline and removes no noise from the direction being followed; it is a per-batch learning-rate schedule in disguise. On this lake the schedule even has a known sign: every $\hat{G}_t$ lies between $0$ and $1$, so $\sigma \le 1/2$ (a bounded variable's standard deviation is at most half its range), so $1/(\sigma + \epsilon) \ge 2$: at any fixed learning rate the normalized variant always steps at least twice as far, and below the factor measures about five. Whether the larger step helps is a question about the optimizer, not the estimator, and the comparison keeps the two ledgers separate.
+"Different in kind" deserves to be said sharply, because this is the most commonly blurred distinction in the practice of policy gradients. Subtracting $\mu$ changes which way the terms pull: failed steps acquire negative weight, and the estimate genuinely changes direction. Dividing by $\sigma + 10^{-8}$ multiplies the whole batch's estimate by one positive number: the direction is untouched, so the division is not a baseline and removes no noise from the direction being followed; it is a per-batch learning-rate schedule in disguise. On this lake the schedule even has a known sign: every $\hat{G}_t$ lies between $0$ and $1$, so $\sigma \le 1/2$ (a bounded variable's standard deviation is at most half its range), so $1/(\sigma + 10^{-8}) \ge 2$: at any fixed learning rate the normalized variant always steps at least twice as far, and below the factor measures about five. Whether the larger step helps is a question about the optimizer, not the estimator, and the comparison keeps the two ledgers separate.
 
 Two four-line tools make the rest of the section runnable: `normalize` is :eqref:`eq_pg_normalized`, and `run_seeds` runs a seeded training generator over a set of seeds and stacks the yielded curves. The runner is deliberately visible: every multi-seed number quoted in the rest of these two chapters is computed in a cell you can read, never inside a plotting helper.
 
@@ -302,9 +302,9 @@ Three of the four gradients are exactly parallel, at sizes an order of magnitude
 
 ### Normalized returns and GRPO
 
-The reason to dwell on this variant is what it became. Group Relative Policy Optimization (GRPO) :cite:`Shao.Wang.Zhu.ea.2024`, the method used to train recent reasoning language models, samples a *group* of $G$ responses to the same prompt, scores each response with a reward $r_j$, and weights the score function with
+The reason to dwell on this variant is what it became. Group Relative Policy Optimization (GRPO) :cite:`Shao.Wang.Zhu.ea.2024`, the method used to train recent reasoning language models, samples a *group* of $K$ responses to the same prompt, scores each response with a reward $r_j$, and weights the score function with
 
-$$A_j = \frac{r_j - \mu}{\sigma + \epsilon},$$
+$$A_j = \frac{r_j - \mu}{\sigma + 10^{-8}},$$
 
 where $\mu$ and $\sigma$ are the mean and standard deviation of the rewards within the group. This is :eqref:`eq_pg_normalized`, with the prompt in the role of our start state and the group of responses in the role of our batch of $n$ trajectories. Even the motivation is the one from this section, read at scale: for a model with billions of parameters, a learned baseline of the kind we built above is a value network as large as the policy and as hard to train, so GRPO drops it and lets the group mean act as a per-prompt baseline, while the group standard deviation makes advantages comparable across prompts whose reward magnitudes differ, at a price named above: dividing by $\sigma$ is a per-prompt step-size rescaling rather than a baseline, which is exactly the objection the "Dr. GRPO" line of work raises. GRPO adds machinery around the update itself, which :numref:`sec_ppo` will explain and :numref:`sec_rl_sequences` will take to scale, but its advantage estimate is this subsection's normalization, nothing more.
 
@@ -439,7 +439,7 @@ for v, r in runs.items():
           f'mean |step|, first 40 updates: {r[:, :40, 1].mean():.2f}')
 ```
 
-The ranking first. The plain trajectory return is the slowest: the median run spends something like fifty to seventy updates before its batch success rate holds at 90%. Reward-to-go is faster on about four seeds in five and takes the median down by a third or so. Normalization brings it to roughly half of what the plain estimator needs. The learned baseline lands next to reward-to-go; the gap between the two is smaller than the spread across seeds, and which of them comes out ahead depends on the seeds one happens to draw. The reason it does not win on this problem is plain: rewards are sparse, so $\hat{V}$ stays near zero until the agent has reached the goal a few times, and until then the learned-baseline variant *is* reward-to-go; its payoff is the per-state advantage view, which :numref:`sec_actorcritic` builds on. Meanwhile the centered arm, the one new rung that is purely a baseline, only ties the plain return at the median, despite its visibly lower variance at frozen $\theta$. The step-size column explains what the ranking alone would get wrong. Subtracting $\mu$ is a baseline; dividing by $\sigma + \epsilon$ is a per-batch step-size rescaling, not a baseline, and at the shared $\alpha$ the normalized arm's steps come out about five times larger than the centered arm's, the only thing it differs from, and about twice reward-to-go's: that, not variance, is where its lead comes from, while centering alone delivers the measured variance reduction but also shrinks the weights, and with them the steps. Even reward-to-go's win over the plain return is mostly a scale story on this map: their variances differed by a few percent at frozen $\theta$, but weighting each step by $\gamma^{T-1-t}$ instead of the whole trajectory's $\gamma^{T-1}$ roughly doubles the weights, and hence the steps. At a fixed learning rate this race is decided by effective step size at least as much as by estimator variance, which is why the two columns print side by side, and why exercise 1 reruns the race with the scales matched.
+The ranking first. The plain trajectory return is the slowest: the median run spends something like fifty to seventy updates before its batch success rate holds at 90%. Reward-to-go is faster on about four seeds in five and takes the median down by a third or so. Normalization brings it to roughly half of what the plain estimator needs. The learned baseline lands next to reward-to-go; the gap between the two is smaller than the spread across seeds, and which of them comes out ahead depends on the seeds one happens to draw. The reason it does not win on this problem is plain: rewards are sparse, so $\hat{V}$ stays near zero until the agent has reached the goal a few times, and until then the learned-baseline variant *is* reward-to-go; its payoff is the per-state advantage view, which :numref:`sec_actorcritic` builds on. Meanwhile the centered arm, the one new rung that is purely a baseline, only ties the plain return at the median, despite its visibly lower variance at frozen $\theta$. The step-size column explains what the ranking alone would get wrong. Subtracting $\mu$ is a baseline; dividing by $\sigma + 10^{-8}$ is a per-batch step-size rescaling, not a baseline, and at the shared $\alpha$ the normalized arm's steps come out about five times larger than the centered arm's, the only thing it differs from, and about twice reward-to-go's: that, not variance, is where its lead comes from, while centering alone delivers the measured variance reduction but also shrinks the weights, and with them the steps. Even reward-to-go's win over the plain return is mostly a scale story on this map: their variances differed by a few percent at frozen $\theta$, but weighting each step by $\gamma^{T-1-t}$ instead of the whole trajectory's $\gamma^{T-1}$ roughly doubles the weights, and hence the steps. At a fixed learning rate this race is decided by effective step size at least as much as by estimator variance, which is why the two columns print side by side, and why exercise 1 reruns the race with the scales matched.
 
 The third number the runs yielded is a preview. Every arm starts at the uniform policy's entropy of $\ln 4 \approx 1.39$ nats and drifts down toward roughly $0.8$ as the policy sharpens: probability mass is the currency these updates spend to buy return, and the faster arms simply spend it sooner. Nothing here manages that spend; watching this quantity, and eventually paying to keep it from collapsing, is a running concern of :numref:`sec_ppo`.
 
@@ -468,8 +468,8 @@ One lemma carried the section: the score has zero conditional mean, so anything 
 
 1. [short-code] *The step-size confound, quantified.* Rerun the five arms with
    the normalized arm's learning rate divided by its measured mean
-   $1/(\sigma + \epsilon)$: log $\sigma$ per batch during a run of `train`,
-   average $1/(\sigma + \epsilon)$ over the batches that contained any signal,
+   $1/(\sigma + 10^{-8})$: log $\sigma$ per batch during a run of `train`,
+   average $1/(\sigma + 10^{-8})$ over the batches that contained any signal,
    and scale $\alpha$ down by that factor for the normalized arm only. Does the
    ordering survive, and which arm does the normalized variant now resemble?
 1. [short-code] *Measure the variance you claim to reduce.* Freeze the
@@ -492,7 +492,7 @@ One lemma carried the section: the score has zero conditional mean, so anything 
    $\hat{V}$ is being asked to average over.
 1. [short-code] *The group-relative baseline in two lines.* Replace the weight
    in :eqref:`eq_pg_baseline` by
-   $(R(\tau_i) - \mu) / (\sigma + \epsilon)$, applied to every step of
+   $(R(\tau_i) - \mu) / (\sigma + 10^{-8})$, applied to every step of
    trajectory $i$, where $\mu$ and $\sigma$ are the mean and standard deviation
    of the returns *within the batch*. This is the advantage estimate of GRPO,
    with the batch playing the role of the group. Before running it: what happens
@@ -605,9 +605,9 @@ Dr. GRPO / token-loss debate on a four-episode batch.
 :::
 
 ::: {.slide title="Normalized Returns Became GRPO"}
-$$A_j = \frac{r_j - \mu}{\sigma + \epsilon}$$
+$$A_j = \frac{r_j - \mu}{\sigma + 10^{-8}}$$
 
-- prompt $\leftrightarrow$ start state; group of $G$ responses
+- prompt $\leftrightarrow$ start state; group of $K$ responses
   $\leftrightarrow$ batch of trajectories
 - group mean = a free per-prompt baseline (no value network!)
 - dividing by $\sigma$: a per-prompt **step-size rescaling**,
@@ -638,7 +638,7 @@ seeds; five arms differing in one line.
 
 - normalized wins the race, but its steps are about $5\times$
   centered's and $2\times$ reward-to-go's
-- subtracting $\mu$: a baseline. Dividing by $\sigma + \epsilon$:
+- subtracting $\mu$: a baseline. Dividing by $\sigma + 10^{-8}$:
   a per-batch **step size**, not a baseline.
 - at fixed $\alpha$, the race tracks step size at least as much
   as variance

@@ -2447,6 +2447,19 @@ class Batch:
         Defined in :numref:`sec_baselines`"""
         return self.backward_scan(self.rew, gamma)
 
+    def td_target(self, bootstrap, gamma):
+        """r_t + gamma (1 - terminated) V(s'), by a numpy bootstrap.
+
+        Defined in :numref:`sec_actorcritic`"""
+        return self.rew + gamma * (1 - self.term) * bootstrap(self.next_obs)
+
+    def gae(self, value_fn, gamma, lam):
+        """GAE(gamma, lam): the reward-to-go scan, run on the TD errors.
+
+        Defined in :numref:`sec_actorcritic`"""
+        delta = self.td_target(value_fn, gamma) - value_fn(self.obs)
+        return self.backward_scan(delta, gamma * lam)
+
 def rollout(env, policy, num_episodes, rng):
     """Collect complete episodes from `policy(obs, rng) -> action` as a
     Batch; `term` records `terminated`, never `truncated` (:numref:`sec_mdp`).
@@ -2531,6 +2544,67 @@ class GaussianPolicy(d2l.ActorCritic):
 
     def act_greedy(self, obs, rng=None):
         return np.asarray(self.policy(jnp.asarray(obs))[0])
+
+def _pad(x, size):
+    return jnp.asarray(np.pad(x, ((0, size - len(x)),) + ((0, 0),)
+                              * (x.ndim - 1)))
+
+@nnx.jit
+def _ppo_step(policy, opt, obs, act, adv, logp_old, mask, epsilon,
+              entropy_coef, use_clip):
+    def loss_fn(policy):
+        logp_all = jax.nn.log_softmax(policy(obs), axis=-1)
+        logp = jnp.take_along_axis(logp_all, act[:, None], -1).squeeze(-1)
+        rho = jnp.exp(logp - logp_old)
+        surr = jnp.where(use_clip, jnp.minimum(
+            rho * adv, jnp.clip(rho, 1 - epsilon, 1 + epsilon) * adv),
+            rho * adv)
+        entropy = -(jnp.exp(logp_all) * logp_all).sum(-1)
+        loss = -(mask * (surr + entropy_coef * entropy)).sum() / mask.sum()
+        return loss, (rho, logp, entropy)
+    (_, (rho, logp, entropy)), grads = nnx.value_and_grad(
+        loss_fn, has_aux=True)(policy)
+    opt.update(policy, grads)
+    n = mask.sum()
+    return ((mask * (jnp.abs(rho - 1) > epsilon)).sum() / n,
+            (mask * (logp_old - logp)).sum() / n, (mask * entropy).sum() / n)
+
+def ppo_epochs(ac, batch, adv, logp_old, epsilon, num_epochs,
+               entropy_coef=0.01, use_clip=True):
+    """num_epochs clipped-surrogate passes on one frozen batch; returns
+    [num_epochs, 3] numpy diagnostics: fraction of ratios outside the
+
+    Defined in :numref:`sec_ppo`"""
+    size = 1 << max(6, (len(adv) - 1).bit_length())
+    mask = jnp.asarray((np.arange(size) < len(adv)).astype(np.float32))
+    obs, act, adv, logp_old = (_pad(np.asarray(x), size) for x in
+                               (batch.obs, batch.act, adv, logp_old))
+    step = nnx.cached_partial(_ppo_step, ac.policy, ac.opt_pi)
+    return np.array([step(obs, act, adv, logp_old, mask, epsilon,
+                          entropy_coef, use_clip)
+                     for _ in range(num_epochs)])
+
+def offline_q(batch, num_sweeps, alpha, gamma, kappa=0.0,
+              shape=(16, 4), seed=0):
+    """Q-learning swept over a fixed dataset, with optional pessimism.
+
+    kappa > 0 subtracts kappa/sqrt(n(s, a)) from every value consulted;
+    an untried pair is distrusted entirely, and no pessimistic value
+    drops below zero, the floor this environment guarantees.
+
+    Defined in :numref:`sec_offline`"""
+    Q, counts = np.zeros(shape), np.zeros(shape)
+    np.add.at(counts, (batch.obs, batch.act), 1)
+    penalty = np.where(counts > 0, kappa / np.sqrt(np.maximum(counts, 1)),
+                       np.inf if kappa > 0 else 0.0)
+    rng = np.random.default_rng(seed)
+    for _ in range(num_sweeps):
+        for i in rng.permutation(len(batch)):
+            s, a, s2 = batch.obs[i], batch.act[i], batch.next_obs[i]
+            v2 = np.maximum(Q[s2] - penalty[s2], 0.0).max()
+            Q[s, a] += alpha * (batch.rew[i] + gamma
+                                * (1 - batch.term[i]) * v2 - Q[s, a])
+    return np.maximum(Q - penalty, 0.0)
 
 @nnx.jit
 def update_D(X, Z, net_D, net_G, optimizer_D):

@@ -2267,6 +2267,19 @@ class Batch:
         Defined in :numref:`sec_baselines`"""
         return self.backward_scan(self.rew, gamma)
 
+    def td_target(self, bootstrap, gamma):
+        """r_t + gamma (1 - terminated) V(s'), by a numpy bootstrap.
+
+        Defined in :numref:`sec_actorcritic`"""
+        return self.rew + gamma * (1 - self.term) * bootstrap(self.next_obs)
+
+    def gae(self, value_fn, gamma, lam):
+        """GAE(gamma, lam): the reward-to-go scan, run on the TD errors.
+
+        Defined in :numref:`sec_actorcritic`"""
+        delta = self.td_target(value_fn, gamma) - value_fn(self.obs)
+        return self.backward_scan(delta, gamma * lam)
+
 def rollout(env, policy, num_episodes, rng):
     """Collect complete episodes from `policy(obs, rng) -> action` as a
     Batch; `term` records `terminated`, never `truncated` (:numref:`sec_mdp`).
@@ -2348,6 +2361,54 @@ class GaussianPolicy(d2l.ActorCritic):
     def act_greedy(self, obs, rng=None):
         with torch.no_grad():
             return self.policy(torch.as_tensor(obs))[0].numpy()
+
+def ppo_epochs(ac, batch, adv, logp_old, epsilon, num_epochs,
+               entropy_coef=0.01, use_clip=True):
+    """num_epochs clipped-surrogate passes on one frozen batch; returns
+    [num_epochs, 3] numpy diagnostics: fraction of ratios outside the
+
+    Defined in :numref:`sec_ppo`"""
+    obs, act = torch.as_tensor(batch.obs), torch.as_tensor(batch.act)
+    adv, logp_old = torch.as_tensor(adv), torch.as_tensor(logp_old)
+    diag = []
+    for _ in range(num_epochs):
+        logp_all = torch.log_softmax(ac.policy(obs), dim=-1)
+        logp = logp_all.gather(-1, act[:, None]).squeeze(-1)
+        rho = torch.exp(logp - logp_old)
+        surr = rho * adv
+        if use_clip:
+            surr = torch.min(surr,
+                             rho.clamp(1 - epsilon, 1 + epsilon) * adv)
+        entropy = -(logp_all.exp() * logp_all).sum(-1).mean()
+        loss = -surr.mean() - entropy_coef * entropy
+        ac.opt_pi.zero_grad()
+        loss.backward()
+        ac.opt_pi.step()
+        diag.append((((rho - 1).abs() > epsilon).float().mean().item(),
+                     (logp_old - logp).mean().item(), entropy.item()))
+    return np.array(diag)
+
+def offline_q(batch, num_sweeps, alpha, gamma, kappa=0.0,
+              shape=(16, 4), seed=0):
+    """Q-learning swept over a fixed dataset, with optional pessimism.
+
+    kappa > 0 subtracts kappa/sqrt(n(s, a)) from every value consulted;
+    an untried pair is distrusted entirely, and no pessimistic value
+    drops below zero, the floor this environment guarantees.
+
+    Defined in :numref:`sec_offline`"""
+    Q, counts = np.zeros(shape), np.zeros(shape)
+    np.add.at(counts, (batch.obs, batch.act), 1)
+    penalty = np.where(counts > 0, kappa / np.sqrt(np.maximum(counts, 1)),
+                       np.inf if kappa > 0 else 0.0)
+    rng = np.random.default_rng(seed)
+    for _ in range(num_sweeps):
+        for i in rng.permutation(len(batch)):
+            s, a, s2 = batch.obs[i], batch.act[i], batch.next_obs[i]
+            v2 = np.maximum(Q[s2] - penalty[s2], 0.0).max()
+            Q[s, a] += alpha * (batch.rew[i] + gamma
+                                * (1 - batch.term[i]) * v2 - Q[s, a])
+    return np.maximum(Q - penalty, 0.0)
 
 def update_D(X, Z, net_D, net_G, loss, trainer_D):
     """Update discriminator.

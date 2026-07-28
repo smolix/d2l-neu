@@ -542,7 +542,9 @@ In the case of tossing a single coin,
 $\mathcal{S} = \{\textrm{heads}, \textrm{tails}\}$.
 For a single die, $\mathcal{S} = \{1, 2, 3, 4, 5, 6\}$.
 When flipping two coins, possible outcomes are
-$\{(\textrm{heads}, \textrm{heads}), (\textrm{heads}, \textrm{tails}), (\textrm{tails}, \textrm{heads}),  (\textrm{tails}, \textrm{tails})\}$.
+
+$$\{(\textrm{heads}, \textrm{heads}), (\textrm{heads}, \textrm{tails}), (\textrm{tails}, \textrm{heads}),  (\textrm{tails}, \textrm{tails})\}.$$
+
 For the finite and countable examples in this chapter, *events* are subsets
 of the sample space. On continuous sample spaces, probabilities are assigned
 to a specified collection of *measurable* subsets; the measure-theoretic
@@ -818,7 +820,9 @@ Bayes' theorem is then interpreted as telling us
 how to update the initial *prior* $P(H)$
 in light of the available evidence $E$
 to produce *posterior* beliefs
-$P(H \mid E) = \frac{P(E \mid H) P(H)}{P(E)}$.
+
+$$P(H \mid E) = \frac{P(E \mid H) P(H)}{P(E)}.$$
+
 Informally, this can be stated as
 "posterior equals prior times likelihood, divided by the evidence".
 Now, because the evidence $P(E)$ is the same for all hypotheses,

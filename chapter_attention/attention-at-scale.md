@@ -273,9 +273,11 @@ $\mathbf{o}$. A new block of scores $\{a_j\}$ with values
 $\{\mathbf{v}_j\}$ updates them as
 
 $$
-m' = \max\big(m, \max_j a_j\big), \qquad
-s' = s\, e^{m - m'} + \sum\nolimits_j e^{a_j - m'}, \qquad
-\mathbf{o}' = \mathbf{o}\, e^{m - m'} + \sum\nolimits_j e^{a_j - m'}\, \mathbf{v}_j,
+\begin{aligned}
+m' &= \max\big(m, \max_j a_j\big), \\
+s' &= s\, e^{m - m'} + \sum\nolimits_j e^{a_j - m'}, \\
+\mathbf{o}' &= \mathbf{o}\, e^{m - m'} + \sum\nolimits_j e^{a_j - m'}\, \mathbf{v}_j,
+\end{aligned}
 $$
 :eqlabel:`eq_online-softmax`
 

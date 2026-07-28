@@ -850,7 +850,9 @@ from $\mathbb{R}^{n}$ to $\mathbb{R}^{m}$
 For example, we can represent rotations
 as multiplications by certain square matrices:
 multiplying by
-$\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}$
+
+$$\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}$$
+
 rotates any vector in the plane by the angle $\theta$.
 For $\theta = 90°$ the matrix is simple,
 and we can watch it turn one axis unit vector into the other:

@@ -197,8 +197,13 @@ $$x \leftarrow \frac{x - \mu}{\sigma},$$
 
 where $\mu$ and $\sigma$ denote the feature's mean and standard deviation.
 By the definition of mean and variance, the rescaled feature has
-$E\!\left[\frac{x-\mu}{\sigma}\right] = 0$ and
-$\mathrm{Var}\!\left[\frac{x-\mu}{\sigma}\right] = 1$,
+
+$$
+E\!\left[\frac{x-\mu}{\sigma}\right] = 0
+\qquad \textrm{and} \qquad
+\mathrm{Var}\!\left[\frac{x-\mu}{\sigma}\right] = 1,
+$$
+
 so every column now lives on the same zero-mean, unit-variance scale.
 We compute $\mu$ and $\sigma$ from the *training* set only and
 apply the very same transformation to the test set. Using statistics that

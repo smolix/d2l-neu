@@ -141,7 +141,9 @@ softmax first and silently kills the gradient on any clamped entry.
 Here we remove the problem at its source rather than patch its symptom.
 
 Recall that the softmax function computes probabilities via
-$\hat y_j = \frac{\exp(o_j)}{\sum_k \exp(o_k)}$.
+
+$$\hat y_j = \frac{\exp(o_j)}{\sum_k \exp(o_k)}.$$
+
 If some of the $o_k$ are very large, i.e., very positive,
 then $\exp(o_k)$ might be larger than the largest number
 we can have for certain data types. This is called *overflow*.

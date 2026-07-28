@@ -523,7 +523,7 @@ that can be executed most efficiently on modern GPUs.
 1. The softmax has a familiar two-class special case.
     1. Verify :eqref:`eq_softmax_to_sigmoid`: for $q = 2$ the softmax reduces to the logistic sigmoid of the logit difference, $\hat{y}_1 = \sigma(o_1 - o_2)$, recovering binary logistic regression.
     1. Show that adding a constant to all logits leaves $\hat{\mathbf{y}}$ unchanged. Conclude that softmax regression carries one redundant degree of freedom per example, and that we may fix $o_q \equiv 0$ without loss.
-1. The next two exercises concern coding; see :numref:`sec_mdl-information_theory` for the information-theoretic background. Assume that we have three classes which occur with equal probability, i.e., the probability vector is $(\frac{1}{3}, \frac{1}{3}, \frac{1}{3})$.
+1. The next two exercises concern coding; see :numref:`sec_mdl-information_theory` for the information-theoretic background. Assume that we have three classes which occur with equal probability, i.e., the probability vector is $(1/3, 1/3, 1/3)$.
     1. What is the problem if we try to design a binary code for it?
     1. Can you design a better code? Hint: what happens if we try to encode two independent observations? What if we encode $n$ observations jointly?
 1. When encoding signals transmitted over a physical wire, engineers do not always use binary codes. For instance, [PAM-3](https://en.wikipedia.org/wiki/Ternary_signal) uses three signal levels $\{-1, 0, 1\}$ as opposed to two levels $\{0, 1\}$. How many ternary units do you need to transmit an integer in the range $\{0, \ldots, 7\}$? Why might this be a better idea in terms of electronics?

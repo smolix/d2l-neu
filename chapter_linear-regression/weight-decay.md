@@ -487,9 +487,11 @@ $\hat{\mathbf{w}}$ toward the origin, but not *which parts* of
 $\hat{\mathbf{w}}$ are pulled hardest. For linear regression we can say
 exactly. Adding the penalty keeps the problem quadratic, so it retains a
 closed-form solution (dropping the unpenalized intercept, which centering
-absorbs): minimizing
-$\frac{1}{2}\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2 + \frac{\tilde{\lambda}}{2}\|\mathbf{w}\|^2$
-gives
+absorbs). Minimizing
+
+$$\frac{1}{2}\|\mathbf{y} - \mathbf{X}\mathbf{w}\|^2 + \frac{\tilde{\lambda}}{2}\|\mathbf{w}\|^2$$
+
+gives the ridge estimator
 
 $$\mathbf{w}^*_{\tilde{\lambda}} = (\mathbf{X}^\top \mathbf{X} + \tilde{\lambda} \mathbf{I})^{-1} \mathbf{X}^\top \mathbf{y},$$
 

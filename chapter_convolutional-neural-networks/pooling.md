@@ -112,10 +112,12 @@ The output tensor in :numref:`fig_pooling`  has a height of 2 and a width of 2.
 The four elements are derived from the maximum value in each pooling window:
 
 $$
-\max(0, 1, 3, 4)=4,\\
-\max(1, 2, 4, 5)=5,\\
-\max(3, 4, 6, 7)=7,\\
-\max(4, 5, 7, 8)=8.\\
+\begin{aligned}
+\max(0, 1, 3, 4) &= 4,\\
+\max(1, 2, 4, 5) &= 5,\\
+\max(3, 4, 6, 7) &= 7,\\
+\max(4, 5, 7, 8) &= 8.
+\end{aligned}
 $$
 
 More generally, we can define a $p \times q$ pooling layer by aggregating over 

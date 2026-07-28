@@ -83,10 +83,12 @@ and the four elements are derived from
 the two-dimensional cross-correlation operation:
 
 $$
-0\times0+1\times1+3\times2+4\times3=19,\\
-1\times0+2\times1+4\times2+5\times3=25,\\
-3\times0+4\times1+6\times2+7\times3=37,\\
-4\times0+5\times1+7\times2+8\times3=43.
+\begin{aligned}
+0\times0+1\times1+3\times2+4\times3 &= 19,\\
+1\times0+2\times1+4\times2+5\times3 &= 25,\\
+3\times0+4\times1+6\times2+7\times3 &= 37,\\
+4\times0+5\times1+7\times2+8\times3 &= 43.
+\end{aligned}
 $$
 
 Note that along each axis, the output size
@@ -282,7 +284,11 @@ Next, we construct a kernel `K` with a height of 1 and a width of 2.
 When we perform the cross-correlation operation with the input,
 if the horizontally adjacent elements are the same,
 the output is 0. Otherwise, the output is nonzero.
-Note that this kernel is a special case of a finite difference operator. At location $(i,j)$ it computes $x_{i,j} - x_{i,j+1}$, i.e., it computes the difference between the values of horizontally adjacent pixels. This is a discrete approximation of the first derivative in the horizontal direction (up to a sign). After all, for a function $f(i,j)$ its derivative is $\partial_j f(i,j) = \lim_{\epsilon \to 0} \frac{f(i,j+\epsilon) - f(i,j)}{\epsilon}$, so the kernel output $x_{i,j} - x_{i,j+1}$ approximates $-\partial_j f(i,j)$. Let's see how this works in practice.
+Note that this kernel is a special case of a finite difference operator. At location $(i,j)$ it computes $x_{i,j} - x_{i,j+1}$, i.e., it computes the difference between the values of horizontally adjacent pixels. This is a discrete approximation of the first derivative in the horizontal direction (up to a sign). After all, for a function $f(i,j)$ its derivative is
+
+$$\partial_j f(i,j) = \lim_{\epsilon \to 0} \frac{f(i,j+\epsilon) - f(i,j)}{\epsilon},$$
+
+so the kernel output $x_{i,j} - x_{i,j+1}$ approximates $-\partial_j f(i,j)$. Let's see how this works in practice.
 
 ```{.python .input #conv-layer-object-edge-detection-in-images-2}
 K = d2l.tensor([[1.0, -1.0]])

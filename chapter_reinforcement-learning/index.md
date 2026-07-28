@@ -51,7 +51,8 @@ The map's boxes hide a finer grain, and a first introduction owes the reader add
 | KL-regularized policy optimization, RLHF | a policy tilted from a reference by reward | rollouts scored by a learned reward | :numref:`chap_deep_rl` |
 | DQN, Double DQN | $Q$ as a network | a replay buffer of stale experience | :numref:`sec_dqn` |
 | Rainbow | DQN plus its measured components | a replay buffer | named in :numref:`sec_dqn` |
-| DDPG, TD3, SAC | a critic, and an actor trained to maximize it, deterministic (DDPG, TD3) or stochastic and entropy-regularized (SAC) | a replay buffer (off-policy) | named in :numref:`sec_deeprl` |
+| DDPG, TD3 | a critic, and a deterministic actor trained to maximize it | a replay buffer (off-policy) | named in :numref:`sec_deeprl` and :numref:`sec_sac` |
+| SAC | twin soft critics, and a stochastic squashed actor maximizing reward plus entropy | a replay buffer (off-policy) | :numref:`sec_sac` |
 | offline Q-learning with pessimism, CQL | $Q$ penalized where the data is thin | a fixed logged dataset, no interaction at all | :numref:`sec_offline` |
 | Decision Transformer | a return-conditioned sequence model | a fixed logged dataset | named in :numref:`sec_offline` |
 | MuZero, Dreamer | a learned model of the environment, to plan or imagine in | its own interaction, replayed through the model | named in :numref:`chap_deep_rl` |

@@ -615,6 +615,7 @@ def fig_roadmap():            # F2  -> mdl-rl-roadmap
                                        ("GRPO", CH2)]),
         ("policy", "offline", BLUE, False, [("behaviour cloning", "black")]),
         ("both", "on", GRAY, True, [("actor-critic", CH2), ("PPO", CH2)]),
+        ("both", "off", GRAY, True, [("SAC", CH2)]),
         ("both", "offline", GRAY, True, [("Decision", CH2),
                                          ("Transformer", CH2)]),
     ]

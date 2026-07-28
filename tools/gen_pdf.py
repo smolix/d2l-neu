@@ -321,11 +321,16 @@ def main():
         else:
             shutil.copy2(asset_src, asset_dst)
 
-    # Copy static files
+    # Copy static files. Refresh on every run: the old `if not exists` guard
+    # meant an edit to static/d2l-preamble.tex (the LaTeX preamble Quarto
+    # include-in-header's) never reached an already-generated _pdf/<fw>/, so
+    # preamble changes silently did nothing until someone deleted the tree.
+    # Re-copying static/ (~21 MB, mostly fonts) costs a fraction of a second
+    # against a multi-minute PDF build, so an unconditional copy is the cheap
+    # correct answer rather than a per-file staleness check.
     static_src = Path(__file__).parent.parent / 'static'
     static_dst = dst / 'static'
-    if not static_dst.exists():
-        shutil.copytree(static_src, static_dst, dirs_exist_ok=True)
+    shutil.copytree(static_src, static_dst, dirs_exist_ok=True)
 
     # Copy SVG→PDF lua filter
     lua_src = Path(__file__).parent.parent / '_svg-to-pdf.lua'

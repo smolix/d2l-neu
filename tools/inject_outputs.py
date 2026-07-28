@@ -362,6 +362,64 @@ def _output_fingerprint(raw_outputs):
     return h.hexdigest()
 
 
+def coalesce_stream_outputs(raw_outputs):
+    """Merge runs of adjacent same-name `stream` outputs into one output.
+
+    A cell that prints once per loop iteration produces one `stream` message
+    per flush, so Jupyter stores N separate stream outputs whose texts each
+    already end in "\\n". Rendering each one as its own fenced block put a
+    *paragraph break* between consecutive printed lines — a blank line in HTML
+    and a stretched inter-block gap in the PDF (the "extra newline between the
+    first two lines" defect). Concatenating the chunks first reproduces exactly
+    what the terminal showed: one block, no invented blank lines.
+
+    Only *adjacent* streams merge, so an image or execute_result between two
+    prints still separates them, and only *same-name* runs merge, so an
+    interleaved stderr warning stays its own block (slides mode filters those
+    wholesale by name).
+    """
+    def as_list(text):
+        return text if isinstance(text, list) else [text or '']
+
+    merged = []
+    for out in raw_outputs:
+        if out.get('output_type') != 'stream':
+            merged.append(out)
+            continue
+        prev = merged[-1] if merged else None
+        if (prev is not None and prev.get('output_type') == 'stream'
+                and prev.get('name') == out.get('name')):
+            merged[-1] = {**prev,
+                          'text': prev['text'] + as_list(out.get('text'))}
+        else:
+            merged.append({**out, 'text': as_list(out.get('text'))})
+    return merged
+
+
+# Width, in monospace characters, that an output line can reach before it has
+# to wrap in the rendered column (HTML article column ≈ PDF \small textwidth).
+_WIDE_OUTPUT_COLS = 92
+# A column-aligned row: non-space, a gutter of 2+ spaces, non-space.
+_TABLE_ROW_RE = re.compile(r'\S {2,}\S')
+
+
+def is_wide_table(text):
+    """True for output that is a column-aligned table too wide for the column.
+
+    Wrapping such a block destroys the alignment that *is* the information
+    (profiler tables, Syne Tune trial status, wide DataFrames) — the reader
+    can no longer tell where a row starts. HTML can afford to scroll these
+    instead; ordinary sentence-shaped output (the large majority: ~140 of the
+    160 over-wide blocks in the store, versus ~20 tabular) still wraps, which
+    is what a reader wants for a long printed sentence.
+    """
+    lines = [ln for ln in text.split('\n') if ln.strip()]
+    if len(lines) < 3 or max(len(ln) for ln in lines) <= _WIDE_OUTPUT_COLS:
+        return False
+    aligned = sum(1 for ln in lines if _TABLE_ROW_RE.search(ln))
+    return aligned >= 0.5 * len(lines)
+
+
 def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
     """Render notebook outputs as Quarto markdown.
 
@@ -377,6 +435,10 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
     """
     if not raw_outputs:
         return ''
+
+    # One printed line per loop iteration = one stream message per flush; merge
+    # them back before rendering so consecutive lines share one block.
+    raw_outputs = coalesce_stream_outputs(raw_outputs)
 
     max_lines = MAX_TEXT_LINES_BY_MODE.get(mode, MAX_TEXT_LINES)
     parts = []
@@ -441,6 +503,10 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
             return
         text_lines = text.split('\n')
         n = len(text_lines)
+        # HTML only: the PDF cannot scroll, so a wide table there has to wrap
+        # (fvextra `breaklines` in static/d2l-preamble.tex) like everything else.
+        wide = (' .d2l-output-wide'
+                if mode == 'html' and is_wide_table(text) else '')
 
         if n > max_lines:
             if mode in ('pdf', 'slides'):
@@ -453,10 +519,10 @@ def format_cell_output(raw_outputs, img_dir, cell_id, qmd_parent, mode):
             else:
                 parts.append(
                     f'::: {{.cell-output .cell-output-stdout '
-                    f'.d2l-output-scroll}}\n```\n{text}\n```\n:::')
+                    f'.d2l-output-scroll{wide}}}\n```\n{text}\n```\n:::')
         else:
             parts.append(
-                f'::: {{.cell-output .cell-output-stdout}}\n'
+                f'::: {{.cell-output .cell-output-stdout{wide}}}\n'
                 f'```\n{text}\n```\n:::')
 
     for out in raw_outputs:

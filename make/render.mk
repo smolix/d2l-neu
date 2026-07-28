@@ -27,7 +27,7 @@ html: _book/index.html
 	@touch $@
 
 # Stage 2+3+4: inject (optional) + slides manifest + quarto render + fix numbering
-_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-notebooks.html tools/build_hosted_notebooks.py d2l.bib $(OUTPUT_MANIFESTS) | .venv-build/.synced
+_book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _d2l-tabs.html _d2l-notebooks.html tools/build_hosted_notebooks.py tools/inject_outputs.py d2l.bib $(OUTPUT_MANIFESTS) | .venv-build/.synced
 	@mkdir -p $(LOGDIR)
 	@echo "=== Verifying committed outputs are fresh ==="
 	@python3 tools/audit_outputs.py --verify-fresh || \
@@ -53,7 +53,7 @@ _book/index.html: .preprocess.stamp _quarto.yml _d2l-theme.scss _d2l-style.css _
 
 # ── PDFs (per-framework, parallel-safe) ───────────────────
 
-_pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/build_lib.py
+_pdf/%/.generated: $(SRC_MDS) tools/gen_pdf.py tools/d2l_preprocess.py tools/build_lib.py static/d2l-preamble.tex
 	@mkdir -p $(LOGDIR)
 	@echo "=== Generating PDF sources for $* ==="
 	@python3 tools/gen_pdf.py $(SOURCE) _pdf/$* --framework $* 2>&1 | tee $(LOGDIR)/pdf-$*-gen-$(TS).log
@@ -73,7 +73,7 @@ pdf-preflight:
 
 # Generate per-framework PDF rules (GNU Make only supports one % per pattern)
 define PDF_RULE
-_pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated $$(wildcard outputs/$(1)/*/*.json) | .venv-build/.synced pdf-preflight
+_pdf/$(1)/_pdf/Dive-into-Deep-Learning-$(1).pdf: _pdf/$(1)/.generated tools/inject_outputs.py tools/build_one_pdf.sh tools/fix_latex.py $$(wildcard outputs/$(1)/*/*.json) | .venv-build/.synced pdf-preflight
 	@mkdir -p $(LOGDIR)
 	@echo "=== Building PDF ($(1)) ==="
 	@QUARTO="$(CURDIR)/$(QUARTO)" tools/build_one_pdf.sh $(1) 2>&1 | tee $(LOGDIR)/pdf-$(1)-$(TS).log

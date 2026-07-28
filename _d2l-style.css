@@ -18,6 +18,57 @@ code, pre, .sourceCode {
   line-height: 1.6;
 }
 
+/* ── Cell output: wrap, never clip ─────────────────────── */
+
+/* Bootstrap gives `pre` overflow:auto, so an output line wider than the
+   article column is clipped at the right edge behind an overlay scrollbar
+   that is invisible until hovered — the reader just sees a sentence that
+   stops. Printed output is data, not code the reader retypes, so wrap it
+   instead (matching the PDF, where static/d2l-preamble.tex makes the
+   verbatim environment breakable). `anywhere` only kicks in for tokens that
+   cannot fit at all (long URLs, unspaced tensor dumps). */
+.cell-output pre,
+.cell-output pre code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* …except column-aligned tables too wide for the column (profiler output,
+   tuning-status tables, wide DataFrames). Wrapping those destroys the
+   alignment that carries the meaning, so scroll them instead — with a slim
+   scrollbar and a right-edge shadow so the overflow is discoverable.
+   inject_outputs.py tags these blocks (`is_wide_table`). */
+.d2l-output-wide pre,
+.d2l-output-wide pre code {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.d2l-output-wide pre {
+  overflow-x: auto;
+  /* Edge shadow that shows only while there is more table off-screen: the two
+     `local` layers scroll with the content and mask the shadow once that edge
+     is reached; the two `scroll` layers are pinned to the box. */
+  background-image:
+    linear-gradient(to right, #f5f7fa, rgba(245, 247, 250, 0)),
+    linear-gradient(to left, #f5f7fa, rgba(245, 247, 250, 0)),
+    linear-gradient(to right, rgba(58, 64, 73, 0.16), rgba(58, 64, 73, 0)),
+    linear-gradient(to left, rgba(58, 64, 73, 0.16), rgba(58, 64, 73, 0));
+  background-position: left center, right center, left center, right center;
+  background-repeat: no-repeat;
+  background-size: 22px 100%, 22px 100%, 11px 100%, 11px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+/* Styling ::-webkit-scrollbar opts out of Chrome/Safari overlay scrollbars, so
+   the bar is permanently visible — the affordance that tells the reader there
+   is more table to the right. (Don't add `scrollbar-width`: setting it makes
+   Chrome ignore these rules and fall back to an overlay bar.) */
+.d2l-output-wide pre::-webkit-scrollbar { height: 8px; }
+.d2l-output-wide pre::-webkit-scrollbar-track { background: transparent; }
+.d2l-output-wide pre::-webkit-scrollbar-thumb {
+  background: #C7CCD3;
+  border-radius: 4px;
+}
+
 /* ── Scrollable output ─────────────────────────────────── */
 
 .d2l-output-scroll {

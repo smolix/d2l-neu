@@ -11,7 +11,26 @@
 % breakable fvextra Verbatim so wide output — generated-text samples, dir() API
 % dumps, profiler tables — wraps instead of running off the page. (Pandoc always
 % puts \end{verbatim} on its own line, which fvextra requires.)
-\DefineVerbatimEnvironment{verbatim}{Verbatim}{breaklines,breakanywhere,fontsize=\small}
+%
+% This MUST be deferred to \AtBeginDocument. This file is injected via
+% `include-in-header`, and Quarto appends its own preamble *after* it — that
+% block loads tcolorbox (for callouts / the Shaded code box), which in turn
+% \RequirePackage{verbatim}. verbatim.sty re-defines the `verbatim` environment
+% unconditionally, silently reverting a definition made here at header time.
+% That is why wide cell output kept overflowing the page edge (text lost, not
+% wrapped) even with this line present: it was being overwritten before
+% \begin{document}. \AtBeginDocument runs after every package, so ours wins.
+\AtBeginDocument{%
+  \DefineVerbatimEnvironment{verbatim}{Verbatim}%
+    {breaklines,breakanywhere,fontsize=\small}%
+  % Let pages end short rather than stretching the glue between code blocks,
+  % output blocks and figures. book.cls leaves \flushbottom in force for
+  % `twoside`, which on code-dense pages inflates every inter-block gap to
+  % centimetres of white space just to square off the bottom margin. Facing
+  % pages may now end at slightly different heights — the accepted trade in
+  % technical books, and far less distracting than the stretch.
+  \raggedbottom
+}
 
 % Better float placement for figures inside narrow sections.
 \usepackage{float}

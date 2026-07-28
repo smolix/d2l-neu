@@ -47,7 +47,7 @@ if tab.selected('jax'):
 
 ## The Objective and Its Two Backups
 
-### Maximum entropy, charged at every step
+### The Maximum-Entropy Objective
 
 Start from what :numref:`sec_regularized` proved. That section's objective charged, at every step, a KL penalty against a fixed reference policy, and its proposition gave the optimum in closed form; one of its four consequences was that a uniform reference turns the penalty into an entropy bonus, up to a constant that moves no optimizer. SAC maximizes exactly that special case, written in the field's notation, $\alpha$ for the exchange rate :numref:`sec_regularized` called $\beta$:
 
@@ -60,7 +60,7 @@ Read the term placement carefully, because it is the most common misreading of t
 
 Like every objective in these two chapters, :eqref:`eq_maxent_objective` is optimized by generalized policy iteration (:numref:`fig_rl_gpi`): an evaluation half that estimates values under the current policy, and an improvement half that uses them. Both halves go soft, and each is a two-line edit of machinery you have.
 
-### Soft evaluation: one new term in the target
+### Soft Policy Evaluation
 
 Under :eqref:`eq_maxent_objective` the value of a state collects reward *and* the entropy the policy will earn later, so the state value satisfies $V^{\pi}(s) = E_{a \sim \pi}\big[ Q^{\pi}(s, a) - \alpha \log \pi(a \mid s) \big]$: the entropy is $-E[\log \pi]$, sampled by the action just drawn. Substituting this into the one-step bootstrap of :numref:`sec_actorcritic` grows the critic's regression target by exactly one term,
 
@@ -89,7 +89,7 @@ for temp in (0.1, 0.5, 2.0):                   # pi* proportional to e^{Q/temp}
 
 The sampled form in :eqref:`eq_sac_target` is what an actor-critic can compute when the sum over actions is an integral: the logsumexp of :numref:`sec_regularized` needed to enumerate the action set, and $\tilde{a}' \sim \pi_\theta$ estimates the same expectation with one draw.
 
-### Soft improvement is the proposition we already proved
+### Soft Policy Improvement
 
 The improvement half is where owning :numref:`sec_regularized` pays most. Its proposition's proof established, for any policy $\pi$ and any reward vector,
 
@@ -120,13 +120,13 @@ Expand $Q^{\pi_{\textrm{old}}}(s, a) = r(s, a) + \gamma\, E_{s'}\big[ V^{\pi_{\t
 
 The caveat is the one :numref:`sec_actorcritic` and :numref:`sec_dqn` attach to their own guarantees: the argument assumes exact per-state maximization and a converged $Q^{\pi_{\textrm{old}}}$, and SAC takes one gradient step on each. It is the shape of the guarantee, not a certificate for the loop below; the full telescoping treatment is Appendix B of :cite:`Haarnoja.Zhou.Abbeel.ea.2018`.
 
-## A Policy That Fits in a Box
+## Bounded Actions and the Squashed Gaussian Policy
 
-### Why clipping kills a pathwise gradient
+### Why Clipping Breaks the Pathwise Gradient
 
 :numref:`sec_deeprl`'s `GaussianPolicy` emitted an unbounded Gaussian and let the environment clip the torque to $[-2, 2]$, and that was correct there, because the score-function estimator touches the environment only through the returned reward; nothing behind that interface needs a derivative. The pathwise estimator differentiates *through the action*, and the clip destroys it twice. First, outside the box the clip has derivative zero, so for any state whose sampled action lands beyond the boundary, $\partial a / \partial \theta = 0$ and the actor receives no signal at all, and states whose best action sits *at* the boundary, maximum torque mid-swing, are exactly where a swing-up controller lives. Second, a clipped Gaussian is not a density: it piles atoms of probability onto the two boundary points, and the $\alpha \log \pi$ that :eqref:`eq_sac_target` and :eqref:`eq_sac_actor` both charge is undefined on an atom. Two failures, one repair: make the boundedness part of the distribution, differentiably.
 
-### The change of variables
+### The Tanh Change of Variables
 
 Draw $u \sim \mathcal{N}\big(\mu_\theta(s), \sigma_\theta(s)^2\big)$ and squash, $a = c \tanh u$ with $c = 2$ the action scale. The map is smooth and strictly monotone, so the change-of-variables formula gives the density its Jacobian correction, diagonal here because the squash acts coordinatewise:
 
@@ -219,7 +219,7 @@ class SquashedGaussianPolicy(nnx.Module):
 
 One bookkeeping rule inside `log_prob` deserves its sentence: the Gaussian term and the Jacobian term are summed *together* over the action dimension before anything is averaged over the batch. Mixing a sum on one with a mean on the other is a documented bug class in public implementations, invisible at one action dimension and quietly wrong at two, and exercise 6 ports this code to a two-dimensional action.
 
-### The stable form, and what the epsilon hides
+### A Numerically Stable Log-Determinant
 
 The direct transcription `log(1 - tanh(u)**2)` is numerically dead on arrival, and the repair is two lines of algebra rather than an epsilon. Since $1 - \tanh^2 u = \operatorname{sech}^2 u = 4 e^{-2u} / (1 + e^{-2u})^2$, taking logarithms gives
 
@@ -268,15 +268,15 @@ With the correction the density integrates to $1.000000$ at both parameter setti
 
 ## The Algorithm
 
-### Two critics, and why the minimum
+### Twin Critics and the Pessimistic Minimum
 
 :numref:`sec_dqn` measured what a maximum over noisy estimates does: it flatters itself, one full unit of bias from four actions of unit noise. SAC's actor is not an argmax, but it is trained to *climb* the critic, which makes it a maximizer over the critic's errors all the same, the Thrun-Schwartz argument :cite:`Thrun.Schwartz.1993` with the enumeration replaced by gradient ascent. The repair is imported from TD3 :cite:`Fujimoto.vanHoof.Meger.2018`, the deterministic sibling that diagnosed this bias in continuous control: train two critics, independently initialized, and let every consumer of a value take the pointwise minimum, both the target in :eqref:`eq_sac_target` and the actor loss in :eqref:`eq_sac_actor`. The point is not that an ensemble of two averages away noise; the point is the $\min$, the cheapest available pessimistic estimate. What that pessimism buys on this task is measured at the end of the section, and it is a calibration story, not a return story.
 
-### A target that drifts instead of jumping
+### Polyak-Averaged Target Networks
 
 The frozen copies $w_j^-$ do the target network's job from :numref:`sec_dqn` on a different schedule. Rather than a hard sync every $C$ steps, every update moves the copy a small fraction of the way to the online weights, Polyak averaging, $w^- \leftarrow \tau w + (1 - \tau) w^-$ with $\tau = 0.005$: an exponential moving average with a half-life of $\ln 2 / \tau \approx 139$ updates, so the regression surface drifts continuously instead of standing still and jumping. Same stability mechanism, no sync-moment shocks to guard against. One asymmetry is worth noticing because DDPG and TD3 got it wrong before SAC got it right: only the *critics* have frozen copies. The action $\tilde{a}'$ in the target comes from the live policy, and no target-policy smoothing is needed, because a stochastic policy smooths its own targets by sampling.
 
-### Nothing here needs a ratio
+### Off-Policy Learning without Importance Ratios
 
 This is the chapter's second off-policy algorithm, and it earns the license the way :numref:`sec_dqn` did, not the way :numref:`sec_ppo` did. PPO's importance ratios corrected an expectation over actions *the old policy chose*; here no estimate is ever taken under the collecting policy. The critic's target never mentions the collector, and the actor's expectation re-samples its own fresh actions, so the buffer contributes only states. What replay does shift is the *state distribution* the losses average over, a shift no action ratio repairs. The cost of that shift is the organizing subject of :numref:`sec_offline`; here, where the agent keeps interacting, it stays mild.
 
@@ -339,7 +339,7 @@ def make_sac(seed, num_critics=2):
     return SoftActorCritic(actor, qs, [nnx.clone(q) for q in qs])
 ```
 
-### One update
+### The Update Step
 
 The update is :eqref:`eq_sac_target` and :eqref:`eq_sac_actor` verbatim: a regression step for both critics toward the shared soft target, one pathwise ascent step for the actor against the current critics' minimum, then the Polyak drift. The critic target is computed without gradients, data by the time the regression sees it, the same discipline `td_target`'s numpy boundary enforced in :numref:`sec_actorcritic`; both fresh actions are drawn inside the update, $\tilde{a}'$ for the target and $\tilde{a}$ for the actor.
 
@@ -465,9 +465,9 @@ runs = {arm: np.array([list(train_sac(seed, agents[arm][seed]))
         for arm in arms}
 ```
 
-## What It Bought
+## Sample Efficiency, Entropy and Calibration
 
-### Sample efficiency, in environment steps
+### Sample Efficiency in Environment Steps
 
 The headline claim of the off-policy family is sample efficiency, so the headline plot puts the return against environment steps, with the $-200$ line of a working swing-up controller dashed:
 
@@ -494,13 +494,13 @@ d2l.plot_curves({arm: on_grid(arm, 1) for arm in runs},
                 xlabel='thousand environment steps', ylabel='episode return',
                 reference=-200)
 for arm in runs:
-    print(f'{arm}: trailing five-episode average first clears -200 at '
-          f'env steps {[steps_to(r) for r in runs[arm]]}')
+    print(f'{arm}: env steps to a trailing five-episode average of -200: '
+          f'{[steps_to(r) for r in runs[arm]]}')
 ```
 
 Every seed of both arms starts at the aimless policy's $-1200$ or worse and clears the $-200$ line before ten thousand environment steps, most within about five to eight thousand. Put that number against this book's own baseline rather than a foreign one. :numref:`sec_deeprl` trained the same task with REINFORCE and a learned baseline at 300 updates of 8 episodes of 200 steps, which is $480{,}000$ environment steps, twenty-four runs of this budget, and reported improvement without mastery: no seed reached $-200$. The gap is the chapter's two licenses compounding. The pathwise gradient turns the critic into a differentiable model of the objective, so each update extracts more signal per sample, and replay lets every one of those samples drive hundreds of updates instead of one. Note also what the plot does *not* show: the two arms are indistinguishable, their bands overlap the whole way, and neither orders the crossings consistently across tabs. Whatever the second critic buys, it is not visible on this axis at this scale, which is exactly the reading :numref:`sec_dqn` gave for Double DQN at two actions; the last experiment goes looking for what it does buy.
 
-### The entropy the policy keeps
+### The Entropy Trace and the Cost of Noise
 
 The training loop logged the policy's entropy all along, the quantity the objective pays $\alpha$ per nat for, with the autotuning literature's target of $-\dim \mathcal{A} = -1$ drawn dashed:
 
@@ -535,7 +535,7 @@ for arm in runs:
 
 Every deterministic evaluation, both arms and both tabs, lands between about $-140$ and $-190$, and the stochastic policy lands within about ten points of its own deterministic twin: at the entropy this policy kept, the noise costs almost nothing. That near-equality is not a triviality; it is :numref:`sec_regularized`'s frontier read at its flat top. A concave trade of reward against entropy is nearly level near its peak, so the first nat of noise is nearly free, and a state-dependent $\sigma$ spends it where it is cheapest. The contrast with :numref:`sec_dqn`'s $\epsilon$-greedy tax is instructive: there the exploration noise was a constant foreign forcing that the evaluation had to strip away; here the noise is priced into the objective, and the policy has already moved it out of harm's way.
 
-### Honest promises: predicted against delivered
+### Critic Calibration: Predicted against Delivered
 
 Promised value against delivered return (:numref:`tab_rl_diagnostics`) is what finally separates the arms. This is the diagnostic this chapter trusts most. For each trained agent, run twenty stochastic episodes, record the critics' promise $\min_j Q_{w_j}(s_0, a_0)$ at each episode's first state and action, and compare it with what the episode then delivered. One bookkeeping precaution makes the comparison fair, and skipping it manufactures a phantom bias: a soft critic predicts the *soft* return, $\sum_t \gamma^t (r_t - \alpha \log \pi(a_t \mid s_t))$, so that is the yardstick, computed from the same log-probabilities the sampler already knows; the plain return is printed beside it to show the stakes of the distinction.
 

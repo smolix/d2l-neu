@@ -280,9 +280,10 @@ d2l.plot([copy_curves[n][0] for n in names],
 
 The curves separate the way the content-blindness argument predicts. Both models
 start at chance (one symbol in eight). The LSTM climbs toward a complete
-solution, and in our runs ends the budget at or near perfect accuracy
-(how fast depends on each framework's initialization defaults, the same
-effect :numref:`subsec_s4d` dissected): its input and forget gates are
+solution, and in our runs ends the budget well above 0.9, in some
+frameworks essentially perfect (how far it gets inside the budget depends
+on each framework's initialization defaults, the same effect
+:numref:`subsec_s4d` dissected): its input and forget gates are
 functions of the data, so "store this, it is a symbol" is a computation
 it can learn, given enough epochs. The S4D crawls. Its pointwise
 nonlinear blocks can learn to suppress filler locally, which earns it

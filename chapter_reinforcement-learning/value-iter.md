@@ -21,7 +21,7 @@ import numpy as np
 
 ## Policies and Value Functions
 
-### V and Q
+### State Values and Action Values
 
 A *stochastic policy* $\pi(a \mid s)$ (policy for short) is a conditional distribution over the actions $a \in \mathcal{A}$ given the state $s \in \mathcal{S}$: at some state of the lake the probabilities of *left*, *down*, *right*, *up* might be $(0.4, 0.2, 0.1, 0.3)$. A *deterministic* policy puts all its probability on a single action, which we then call $\pi(s)$; more generally we abbreviate the distribution $\pi(\cdot \mid s)$ as $\pi(s)$.
 
@@ -37,7 +37,7 @@ $$Q^\pi(s_0, a_0) = r(s_0, a_0) + E_{a_t \sim \pi(s_t),\ s_{t+1} \sim P(\cdot \m
 
 note that the summation inside the expectation is from $t=1,\ldots, \infty$ because the reward of the first stage is fixed in this case: act as you must for one step, then follow the policy forever.
 
-### The identity that links them
+### The Identity Linking $V$ and $Q$
 
 The two functions are one step apart. Average the pinned first action of $Q^\pi$ under the policy and the pin disappears:
 
@@ -45,7 +45,7 @@ $$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\, Q^\pi(s, a);\ \textrm{for 
 
 Conversely, the first stage of $Q^\pi$ is explicit: $Q^\pi(s, a) = r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) V^\pi(s')$. The identity looks innocent and is not: it makes $V^\pi(s)$ a convex combination of the $Q^\pi(s, a)$, so $\max_a Q^\pi(s, a) \geq V^\pi(s)$, with a strict gap exactly when the policy wastes probability on worse actions. Every improvement step in these two chapters lives in that gap.
 
-### The advantage
+### The Advantage Function
 
 The gap deserves a name: the *advantage* of an action is its value in excess of the policy's own habit at that state,
 
@@ -60,7 +60,7 @@ the zero mean being the averaging identity read backwards. The advantage is the 
 
 The definitions above are infinite sums over trajectories; the Markov assumption collapses them into local equations.
 
-### The expectation form
+### The Expectation Form
 
 We next break down the trajectory into two stages: (i) the first stage which corresponds to $s_0 \to s_1$ upon taking the action $a_0$, and (ii) a second stage which is the trajectory $\tau' = (s_1, a_1, r_1, \ldots)$ thereafter. The key idea behind all algorithms in reinforcement learning is that the value of state $s_0$ can be written as the average reward obtained in the first stage and the value function averaged over all possible next states $s_1$. This is quite intuitive and arises from our Markov assumption: the average return from the current state is the sum of the average return from the next state and the average reward of going to the next state. Mathematically, we write the two stages as
 
@@ -79,7 +79,7 @@ $$Q^\pi(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \sum_
 
 This version is the analog of :eqref:`eq_dynamic_programming_val` for the action value function. These are the *Bellman expectation equations*: for a fixed policy, :eqref:`eq_dynamic_programming_val` is a system of $|\mathcal{S}|$ linear equations in $|\mathcal{S}|$ unknowns. The infinite horizon has disappeared into the recursion.
 
-### The optimality equation
+### The Optimality Equation
 
 Value functions rank policies: we want the top of the ranking, $\pi^* = \mathrm{argmax}_\pi\, V^\pi(s_0)$. As written, the winner could depend on the start state; for discounted MDPs it does not.
 
@@ -101,14 +101,14 @@ $$Q^*(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a
 
 and it hides a fact :numref:`sec_qlearning` will build a whole algorithm on: extracting $\pi^*(s) = \mathrm{argmax}_a Q^*(s, a)$ from $Q^*$ needs no model, whereas extraction from $V^*$ via :eqref:`eq_optimal_policy` needs $P$ and $r$ for the lookahead.
 
-### Backup diagrams
+### Backup Diagrams
 
 The four equations of this section share one shape: the value at a root is assembled from values one step below it. Updates of this kind are called *backups*, because they carry value backwards, from futures to presents; :numref:`fig_rl_backups` draws the vocabulary. Every algorithm in these two chapters walks one step down such a tree, and when :numref:`sec_qlearning` replaces the environment's average by a single observed transition, the change is the one blue path through the rightmost diagram.
 
 ![Backup diagrams. Open circles are states, filled dots are state-action pairs, and each diagram shows how the value at the root is assembled from the values one step below it. Left to right: (a) the value function averages over the policy's actions and the environment's next states; (b) the action-value function fixes the first action and averages afterwards; (c) the optimality operator replaces the average over actions by a maximum, drawn as the arc; (d) a sampled backup cannot take the environment's average, so it uses the single observed transition, in blue, and keeps the maximum at the next state.](../img/mdl-rl-backups.svg)
 :label:`fig_rl_backups`
 
-## Why It Converges
+## Convergence via Contraction
 
 The Bellman optimality equation defines $V^*$ implicitly. To compute it, read :eqref:`eq_bellman_optimality` as a map: the *Bellman optimality operator* $T$ acts on any table $V: \mathcal{S} \to \mathbb{R}$ by
 
@@ -116,7 +116,7 @@ $$(TV)(s) = \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma \sum_{s' \in \mathca
 
 so that :eqref:`eq_bellman_optimality` says exactly $V^* = TV^*$: the optimal value function is a *fixed point* of $T$, and $T$ turns out to shrink distances.
 
-### The contraction
+### The Contraction Proposition
 
 Distance between value functions is measured in the sup norm $\|V\|_\infty = \max_{s} |V(s)|$, the largest disagreement at any state.
 
@@ -131,7 +131,7 @@ The discount that made the return finite in :numref:`sec_mdp` here makes plannin
 ![Value iteration converges because the Bellman operator is a contraction. (a) A two-state MDP in the plane of its value functions: the sup-norm balls of radius $\gamma^k r_0$ around $V^*$ are nested squares, and each backup lands the iterate strictly inside the next smaller one. (b) The same statement measured on the slippery lake at $\gamma = 0.95$, starting from $V_0 = 0$: the distance to $V^*$ never exceeds the $\gamma^k$ guarantee, the dashed line, and here shrinks somewhat faster.](../img/mdl-rl-contraction.svg)
 :label:`fig_rl_contraction`
 
-### Four consequences: uniqueness, rate, stopping rule, and what breaks at $\gamma = 1$
+### Four Consequences: Uniqueness, Rate, Stopping Rule and the $\gamma = 1$ Boundary
 
 Everything this chapter needs falls out in four steps. First, **uniqueness**: two fixed points would satisfy $\|V - V'\|_\infty \leq \gamma \|V - V'\|_\infty$, which for $\gamma < 1$ forces $\|V - V'\|_\infty = 0$: the optimality equation pins $V^*$ down completely. Second, **convergence from anywhere, at rate $\gamma$**: iterating $V_{k+1} = TV_k$ from any $V_0$ gives
 
@@ -143,7 +143,7 @@ $$\|V_k - V^*\|_\infty \leq \frac{\gamma}{1 - \gamma}\, \|V_k - V_{k-1}\|_\infty
 
 a certificate built from the observable sweep-to-sweep change, which is what an implementation should actually test; we do so below. Fourth, **the boundary**: at $\gamma = 1$ the contraction modulus is $1$, the argument collapses, and the undiscounted operator can have no fixed point or a continuum of them; episodic problems at $\gamma = 1$ can still behave (ours does), but the *guarantee* is gone (exercise 5 makes both halves precise). Finally, the max entered the proof only through the "maximum of differences" step, so replacing it by an average under a fixed policy $\pi$ yields an operator $T^\pi$ that contracts by the same argument, with unique fixed point $V^\pi$. One proof, two algorithms; the full theory is in :cite:`Puterman.1994,Bertsekas.2025`.
 
-## Three Algorithms
+## Value Iteration, Policy Evaluation and Policy Iteration
 
 A theorem this constructive is rare: its proof *is* an algorithm, and this section runs it on the slippery lake of :numref:`sec_mdp`, rebuilt as a dense model in two lines:
 
@@ -155,7 +155,7 @@ env = gym.make('FrozenLake-v1', is_slippery=True)
 mdp = d2l.TabularMDP.from_gym(env, gamma)
 ```
 
-### Value iteration
+### Value Iteration
 
 Iterate the operator: initialize $V_0$ arbitrarily (we use zeros) and sweep
 
@@ -216,7 +216,7 @@ k_cert = np.argmax(certified <= 1e-6) + 2
 
 The naive test, "stop when a sweep changes nothing beyond $10^{-6}$", fires at sweep $128$ and promises nothing by itself. Multiplied by $\gamma / (1 - \gamma) = 19$ it becomes a certificate, firing at sweep $164$; the truth it certifies crossed $10^{-6}$ at sweep $158$. A guaranteed answer costs a handful of extra sweeps, and the assert confirms the certificate never lies.
 
-### Policy evaluation
+### Policy Evaluation
 
 Replace the max in :eqref:`eq_value_iteration` by the policy's own average and the same iteration computes the value of any fixed policy $\pi$:
 
@@ -242,7 +242,7 @@ print(f'V(s0) for the uniformly random policy: '
 
 The uniformly random walker of :numref:`sec_mdp` finished almost none of its episodes; it is worth $0.0078$ at the start, about four percent of the optimum. Evaluation is measurement without improvement, and the critics of :numref:`sec_actorcritic` will spend most of their capacity doing approximately what these seven lines do exactly.
 
-### Policy iteration and generalized policy iteration
+### Policy Iteration and Generalized Policy Iteration
 
 Evaluation plus the greedy step :eqref:`eq_optimal_policy` suggests a different algorithm: evaluate the current policy fully, act greedily on its value function, repeat. For this to work, greedy improvement must actually improve; that is the chapter's third short theorem.
 
@@ -271,8 +271,9 @@ The assert is the point: two different algorithms agree on $V^*$ to twelve decim
 %%tab pytorch, jax
 ok = [(mdp.backup(V).argmax(axis=1) == pi_star).all() for V in history]
 print(f'policy iteration: {num_outer} rounds of evaluate-then-improve')
-print(f'value iteration: certified at sweep {k_cert}, and its greedy policy '
-      f'already equals pi* from sweep {np.argmax(ok) + 1} on')
+print(f'value iteration: certified at sweep {k_cert}')
+print(f'its greedy policy already equals pi* from sweep '
+      f'{np.argmax(ok) + 1} on')
 ```
 
 Policy iteration needed two rounds: greedy on the random walker's values is already optimal on this small lake, and the second round merely confirms it. But each round hid $800$ evaluation sweeps, so the like-for-like comparison is in Bellman backups, not rounds; exercise 6 does that accounting. The more interesting number is value iteration's: its greedy policy stops changing at sweep $14$, some $150$ sweeps before the values are certified. Policies converge long before values do, because the argmax needs only the ranking of the actions, not the digits.
@@ -282,7 +283,7 @@ That observation licenses a whole design space: evaluation need not run to conve
 ![Generalized policy iteration. Evaluation, $V = V^\pi$, and greediness, $\pi = \mathrm{greedy}(V)$, hold together only at the optimum, and each algorithm is a discipline for stepping toward both: policy iteration completes each move, value iteration improves after one sweep, Q-learning takes single sampled backups, actor-critic moves along both axes at once.](../img/mdl-rl-gpi.svg)
 :label:`fig_rl_gpi`
 
-### What the optimal policy looks like on ice
+### The Optimal Policy on Slippery Ice
 
 The theory certifies that $\pi^*$ maximizes expected return; it does not say the result will look reasonable. Before reading the strange arrows, we need an instrument that scores a policy by average return over real episodes, the only standard that counts, with no access to the model:
 

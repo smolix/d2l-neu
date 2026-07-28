@@ -21,7 +21,7 @@ import numpy as np
 
 ## The Sampled Backup
 
-### From the operator to the update
+### From the Bellman Operator to the TD Update
 
 Value iteration, written for the action-value function, sweeps
 
@@ -50,7 +50,7 @@ The scalar $\delta$ is the *temporal-difference error* :cite:`Sutton.1988`: what
 
 There is exactly one alternative target, with a different estimand. *Monte Carlo* prediction waits for the episode to end and regresses $Q(s_t, a_t)$ toward the realized return: an unbiased estimate of $Q^{\pi_e}(s_t, a_t)$, the value of the behavior policy that produced the episode, not of $Q^*$, and each target folds in the noise of every step to come while nothing is learned mid-episode. *Temporal-difference* prediction bootstraps after one step: biased while the table is wrong, far lower variance, learning as it goes :cite:`Sutton.1988,Sutton.Barto.2018`. Q-learning is the TD member of the family, with a max in the target because it aims at $Q^*$ rather than at the behavior's value; :numref:`sec_actorcritic` turns the dial between the extremes, taking $n$ steps of reality before bootstrapping.
 
-### What actually converges
+### Convergence and the Double-Sampling Problem
 
 It is tempting to justify the update by the objective: if $\pi_e$ visited every state-action pair and collected infinite data, would minimizing $\ell(Q)$ pin down the same solution as value iteration? Yes *provided the transitions are deterministic*; in general, no, and the reason deserves one display. As the data grows, $\ell(Q)$ converges to its population version, and conditioning on $(s, a)$ splits each squared term into a squared mean plus a variance:
 
@@ -61,13 +61,13 @@ where $\mu$ is the visitation distribution of $\pi_e$. The first term is the squ
 
 So the objective motivated the update, but the update is what deserves the trust, and the semi-gradient disclaimer above is where correctness actually hangs. Average :eqref:`eq_td_error` over the next state: $E_{s'}[\delta \mid s, a] = (TQ)(s, a) - Q(s, a)$, zero exactly when $Q = TQ$, whose unique solution is $Q^*$ by the contraction of :numref:`sec_valueiter`. Q-learning is not gradient descent on anything; it is *stochastic approximation* of the fixed-point iteration we already trust, moving the table on average the way value iteration would, and under the step-size conditions below, with every pair visited indefinitely, it converges to $Q^*$ with probability one :cite:`Watkins.Dayan.1992,Jaakkola.Jordan.Singh.1994`. The variance that poisons the argmin only slows the path; it does not move the destination. The visitation condition, though, is a condition on the behavior, not a gift of the algorithm: an $\epsilon$ floor delivers it only where the induced chain keeps returning; a pair sitting behind states the behavior stops reaching is simply never constrained, and the experiments below therefore check coverage rather than assume it.
 
-### Step sizes and Robbins-Monro
+### Step Sizes and the Robbins-Monro Conditions
 
 How fast may $\alpha$ shrink? Stochastic approximation gives the classical answer :cite:`Robbins.Monro.1951`, two conditions on the steps used at an entry: $\sum_k \alpha_k = \infty$, enough total motion to reach the target from any start, and $\sum_k \alpha_k^2 < \infty$, finite total noise energy. A constant step fails the second, and on ice the failure is visible: the bootstrapped target is random, so the table never settles, hovering in a noise ball around $Q^*$ whose radius grows with $\alpha$. On a *deterministic* environment the target is not noisy at all: each visited entry moves by the damped noiseless backup $Q(s, a) \leftarrow (1 - \alpha)\, Q(s, a) + \alpha\, (TQ)(s, a)$. One scoping note is owed here. Applied to *all* entries at once, this map is a damped Bellman sweep contracting with modulus $(1 - \alpha) + \alpha \gamma < 1$; the algorithm updates one sampled entry at a time, and a single asynchronous update is not a sup-norm contraction of the whole table, so the argument covers the sampled algorithm only when the behavior keeps visiting every pair, sweeping in expectation what the operator sweeps in one stroke. Panel (c) of :numref:`fig_rl_exploration` verifies that coverage for this deterministic setting rather than assuming it. Granted that coverage, a large constant step is exactly right; early editions of this section ran on the calm lake with $\alpha = 0.9$ and were done in 256 episodes, a run we preserve below as a labeled special case.
 
 The conditions are necessary for the guarantee, not sufficient for a budget. The textbook sample-average rule $\alpha = 1/(1 + n(s, a))$, with $n(s, a)$ counting visits to the entry, passes Robbins-Monro yet weights the useless early targets (computed when the table was all zeros) as heavily as the informed late ones, and at a realistic budget it strands the estimate. Our default $\alpha = 1/(1 + 0.1\, n(s, a))$ also passes but stays ten times larger at the same visit count. We measure all three schedules below on the same seeds; the difference is not a constant factor but success against failure.
 
-### Terminal masking
+### Terminal Masking
 
 One term must be repaired before the update meets an episodic environment. When $s'$ is terminal, the goal or a hole, there is no continuation to bootstrap: the future is empty and worth exactly zero, so the target is the reward alone,
 
@@ -77,7 +77,7 @@ The flag that gates the mask is `terminated`, never `truncated`: :numref:`sec_md
 
 ## Q-Learning on the Lake
 
-### The implementation
+### The Implementation
 
 Back to the slippery lake of :numref:`sec_mdp`, same discount. We compute the exact solution one last time and lock it away: the learner touches the environment only through `reset` and `step`; `mdp`, `V_star` and `pi_star` exist so that, for once in reinforcement learning, the learned table can be graded against the truth.
 
@@ -154,7 +154,7 @@ d2l.plot_curves({'Q-learning': returns}, xlabel='episode',
 
 The curve is a trailing 200-episode average with the band spanning the seeds. It sits at zero while success is a rare accident, climbs as the first successes propagate value backward through the table, and flattens once the schedule reaches its floor.
 
-### Reading the curve against the truth
+### The Learned Table against the Exact Solution
 
 Taken at face value the curve disappoints: it plateaus near $0.55$, while :numref:`sec_valueiter` measured the optimal policy at $73.6$ percent. But the curve mixes the quality of the learned table with the tax of the exploration still running. Separate them, starting with the table, graded against the locked-away truth; this is the check :numref:`sec_valueiter` makes possible and no agent in the wild could run, because no one hands out $V^*$:
 
@@ -227,15 +227,15 @@ d2l.plot_curves(trace, xlabel='episode', ylabel='estimate of Q(s0, left)',
 
 Each claim gets its picture. The constant step never settles: after four thousand episodes its five estimates of a value whose truth is $0.180$ range from $0.06$ to $0.27$, a noise ball no further data will shrink. The default schedule lands all five seeds between $0.180$ and $0.195$: converged, leaning slightly high, a detail the last part of this section returns to. And the sample-average rule $1/(1 + n)$ strands all five seeds below $0.025$, under a seventh of the truth, still averaging in the worthless targets of its first hundred episodes; it is the only schedule of the three a textbook would print beside the convergence theorem. Robbins-Monro is the entry ticket, not the race: the schedule that violates no theorem is the one that failed.
 
-### The self-correcting property
+### The Self-Correcting Property
 
 Why does bootstrapping from a wrong table not entrench the wrongness? Because the behavior is coupled to the table, errors trigger their own correction. Suppose $\hat{Q}(s, a)$ is too optimistic: $\epsilon$-greedy then picks $a$ at $s$ more often, generating precisely the transitions whose TD errors are negative on average, and the estimate is driven back down. An overvalued action summons the data that convicts it; an *undervalued* action is corrected only at the slow drumbeat of the $\epsilon$ floor, an asymmetry between the error directions to hold on to. Stated as a property of the fixed point: the only tables that survive their own data collection are those whose expected correction vanishes at every pair the behavior keeps visiting, and by :eqref:`eq_td_error` those are exactly the tables satisfying Bellman optimality on the visited set. This ability to not only collect new data but also collect the right kind of data is the central feature of reinforcement learning algorithms, and this is what distinguishes them from supervised learning. The converse defines a problem class: with a fixed logged dataset and no acting, optimism is never audited and the safe direction of error flips; that severed loop is offline reinforcement learning, :numref:`sec_offline`.
 
 The argument leaned twice on the $\epsilon$ floor. How much exploration is enough, and what does it cost? The question deserves the cleanest environment that can ask it.
 
-## How Much Exploration Is Enough
+## Exploration and Regret
 
-### A bandit is an MDP with one state
+### The Multi-Armed Bandit
 
 :numref:`sec_mdp` promised that when exploration needed isolating, the instrument would be the one-state MDP. Delete the states, the kernel and the discount; what remains is the *multi-armed bandit*: pull one of the arms, observe a reward, and earn as much as possible while still learning which arm is best. No planning, no credit assignment, no generalization; nothing but the tension between estimating values and earning with them. Ten Bernoulli arms, one clearly best:
 
@@ -258,7 +258,7 @@ def bandit_run(rule, num_pulls, seed):
 
 A bandit policy is any rule from the running tallies to an arm, so `epsilon_greedy` applies unchanged, acting on the empirical means. One rung up sits the *contextual bandit*: a fresh state arrives each round, independent of anything the agent did, one action is scored, and the episode ends; generalization across states, still no dynamics. Remember the name: recommendation systems largely live there, and :numref:`sec_rl_sequences` will need the distinction when asking whether tuning a language model on single-turn preferences is reinforcement learning or a contextual bandit wearing its clothes.
 
-### Regret, and the linear tax
+### Regret and the Epsilon-Greedy Family
 
 The bandit also fixes the right score. Success rate flattered our training curve; regret charges each pull the gap between the best arm's mean $\mu^* = \max_a \mu_a$ and the pulled arm's,
 
@@ -288,7 +288,7 @@ Greedy is a lottery with a terrible mean: a run that happens to see the best arm
 ![Exploration, measured three ways. (a) One row of action values, $\hat Q(s, \cdot) = (0.20, 0.90, 0.55, 0.10)$, turned into three behavior policies: greedy, $\epsilon$-greedy at $\epsilon = 0.3$, and a softmax at temperature $0.3$. (b) Cumulative regret on this section's ten-armed Bernoulli bandit, mean of 20 runs, on logarithmic axes, a finite-budget illustration rather than a measurement of any asymptotic rate: after $2000$ pulls greedy pays $824$, fixed $\epsilon = 0.1$ pays $117$, annealed $69$, UCB at the tuned $\kappa = 0.5$ pays $37$, and Thompson sampling $32$; the inset is the UCB confidence radius $\kappa \sqrt{\log t / n}$ at the run's horizon $t = 2000$, shrinking in the count $n$ and, through the $\log t$, creeping up while an arm idles, the count-shrinking shape :numref:`sec_offline` will subtract instead of add. (c) Coverage of the 44 live state-action pairs (solid) and success rate (dashed) under three schedules, tabular Q-learning on the deterministic lake at the settings of this section's deterministic-contrast cell, $\alpha = 0.9$ over 256 episodes: pure greedy still covers 92 percent of the pairs because ties are broken uniformly at random, while $\epsilon = 1$ covers everything and earns nothing.](../img/mdl-rl-exploration.svg)
 :label:`fig_rl_exploration`
 
-### Optimism: UCB and Thompson sampling
+### Optimism: UCB and Thompson Sampling
 
 Panel (a) of :numref:`fig_rl_exploration` shows the choices so far as distributions over one row of action values, alongside a third the reader will meet properly in :numref:`sec_policygradient`, a softmax over the same values whose temperature plays the role the exploration rate plays here. The two remaining rules in :numref:`fig_rl_exploration` share one principle: *when unsure, err on the side of optimism*, because acting on optimism generates exactly the data that tests it. The crudest version is optimistic initialization, every estimate started above any reward the world can pay and disappointment left to run the tour :cite:`Sutton.Barto.2018`. The *upper confidence bound* (UCB) rule prices the optimism by the uncertainty instead, pulling the arm whose plausibly-best value is highest:
 
@@ -321,17 +321,17 @@ Both land far below the $\epsilon$ family, and on the logarithmic axes of :numre
 
 **Remember the sign.** The confidence radius this subsection *adds* and the pessimism penalty :numref:`sec_offline` *subtracts* are the same idea with two signs: a count-shrinking measure of uncertainty, priced into the values. The sign is set by whether the loop is open: online, an optimistic error gets acted on, tested, and corrected by the data it provokes; offline, it is never tested, so the only safe direction to be wrong is down. The two radii are cousins, not one statistical quantity: ours carries the bandit's $\log t$ and a scale tuned online; the offline penalty is calibrated against a fixed dataset.
 
-### Why an MDP is harder: you have to commit
+### Exploration in MDPs
 
 A fence around what the bandit just taught. In a bandit every action is one pull away, so uncertainty can be visited the moment it is priced. In an MDP the uncertain pair may sit behind a corridor of individually unpromising actions, and per-step dithering explores like a random walk: the probability of stringing together the $k$ specific moves a detour needs shrinks geometrically in $k$. No schedule fixes this: exploration in an MDP requires *committing* to sequences of actions that look bad individually, which is why $\epsilon$-greedy on hard-exploration tasks is not merely slower but qualitatively wrong. What carries over is optimism propagated by the values: award unvisited pairs a bonus, let the backup :eqref:`eq_td_error` flow it backward, and the greedy policy will commit to multi-step detours toward uncertainty on its own. In deep reinforcement learning the counts $n(s, a)$ have no table to live in, and their stand-ins form a small industry: pseudo-counts from density models, curiosity as the prediction error of a learned dynamics model, prediction error against a frozen random network (random network distillation), Go-Explore's archive of states to return to, and posterior sampling by an ensemble of value functions (bootstrapped DQN) :cite:`Burda.Edwards.Storkey.ea.2019`. Our lake needed none of this: with four actions from each of eleven frozen cells, the $\epsilon$ floor covered all 44 live pairs within budget, which made it a fair first laboratory and would make it a misleading last one.
 
-## Which Policy Is Being Learned
+## Off-Policy Learning
 
-### Off-policy, at its mechanism
+### The Off-Policy Mechanism
 
 One property of the update has been hiding in plain sight, inside the $\max_{a'}$ of :eqref:`eq_td_error`: whatever action the behavior policy actually took next at $s'$, the target ignores it and evaluates the greedy continuation instead. The policy being learned about is the greedy policy with respect to $\hat{Q}$, not the policy generating the data, $\pi_e$; algorithms with this split are called *off-policy*. One symbol away sits the on-policy sibling: bootstrap on the action the behavior actually took at $s'$ and the algorithm, called SARSA, learns the value of the behavior itself, $\epsilon$ floor and all :cite:`Sutton.Barto.2018`. Off-policyness is why our agent behaved with a permanent exploration floor yet printed a table whose greedy policy matched $\pi^*$: the tax was paid by the behavior, and the $\max$ kept it out of the targets. The same license cuts the other way. Because the target never asks where the data came from, the data can come from anywhere: old experience, another agent, a fixed log. How far that freedom stretches before it breaks is the organizing question of the next chapter: one leg of the instability triad of :numref:`sec_dqn` and, at the limit of a fixed log, the defining constraint of :numref:`sec_offline`.
 
-### A first sight of maximization bias
+### Maximization Bias
 
 The $\max$ has a second, quieter consequence: the maximum of noisy estimates overestimates the maximum of their means, since whichever entry the noise happens to inflate is the one selected, so bootstrapped targets lean optimistic wherever estimates are uncertain. The fingerprint is already in this section's numbers: four of the five converged estimates of $Q(s_0, \textrm{left})$ finished above the true $0.180$, the fifth on it to the printed precision, none below. At tabular scale the lean fades with the noise; with function approximation it feeds back through the targets and becomes a first-order design problem, which :numref:`sec_dqn` measures and repairs with a second estimator that decouples selecting an action from evaluating it, a repair that removes the upward selection bias on average but can undershoot, not an unbiased oracle :cite:`vanHasselt.2010`. For now, one clause: when a $\max$ sits inside your target, expect your values to lean high.
 

@@ -36,7 +36,7 @@ env = gym.wrappers.TimeLimit(
 
 The determinism is an assumption, and it buys this section its subject: on ice a policy that is still mostly random reaches the goal so rarely that whole-trajectory credit assignment collects no signal at any budget a textbook would spend, and here the estimator is the subject while the environment is only scenery. The wrapper juggling is a second deliberate choice, about the horizon: `gym.make` normally caps FrozenLake episodes at 100 steps, and we strip that limit, keeping a 10,000-step cap only as a safety net. The objective this section differentiates is the return of *complete* episodes, and a time limit imposed for data collection would quietly change it: an episode cut at step 100 would enter the average as if its future were worth nothing, so the estimator would be unbiased for that truncated objective, not for the $J(\theta)$ it is about to be graded against. Stripping the limit costs nothing here: a softmax policy keeps every action's probability positive, a walk on this finite lake therefore reaches a hole or the goal with probability one, and quickly in practice (a hundred thousand episodes of the uniform starting policy produced none longer than 80 steps), so the safety cap is never hit. :numref:`sec_qlearning` measured what the stochasticity costs the value-based side; :numref:`sec_baselines` stays on this same calm map, same horizon convention.
 
-### Softmax preferences
+### Softmax Preferences
 
 To learn a policy by gradient ascent we must first write it as a differentiable function of parameters. We already own the object that does: `ActorCritic.tabular` from :numref:`sec_imitation` keeps one free parameter $\theta_{s,a}$ per state-action pair, a *preference*, in an embedding table, and turns the preferences at state $s$ into a distribution with a softmax,
 
@@ -45,7 +45,7 @@ $$\pi_\theta(a \mid s) = \frac{e^{\theta_{s,a}}}{\sum_{a'} e^{\theta_{s,a'}}}.$$
 
 This is the model of :numref:`sec_softmax` with an image replaced by a state index, and it is deliberately the class that behavior cloning trained: this section builds no new policy machinery, and `policy_step` will reappear below with only its weights reinterpreted. Zero initialization starts the policy exactly uniform. Note what the preferences are not: nothing constrains $\theta_{s,a}$ to approximate a value such as $Q(s, a)$, and nothing will; they are free parameters whose only job is to place probability well.
 
-### The score function
+### The Score Function
 
 The softmax is easy to differentiate. Since $\log \pi_\theta(a \mid s) = \theta_{s,a} - \log \sum_{a'} e^{\theta_{s,a'}}$, the derivative with respect to the preference $\theta_{s,b}$ of any action $b$ at the same state is
 
@@ -80,7 +80,7 @@ print(bool(jnp.allclose(score, hand, atol=1e-6)))
 
 Both tabs confirm the identity from the same random table, each by its own mechanism: the `pytorch` tab backpropagates through the model's `log_prob` and reads the gradient off the embedding table, while the `jax` tab differentiates the log-softmax as a pure function of the table. From here on, every qualitative claim about what REINFORCE does to the preferences reads directly off :eqref:`eq_softmax_score`.
 
-### Why this parameterization survives
+### The Case for Stochastic Policies
 
 :numref:`sec_valueiter` proved that a deterministic optimal policy always exists, so why parameterize a stochastic one? Three reasons, in increasing order of importance. A stochastic policy explores as a side effect of acting: the softmax keeps every action's probability positive, so no separate $\epsilon$-greedy mechanism needs bolting on, though positive support is not a visitation guarantee, since a probability can fall so low that no finite budget of rollouts samples the action again, which is exactly how the plateaus at the end of this section form. A deterministic policy is not usefully differentiable: as a function of $\theta$, an argmax is piecewise constant, its gradient zero almost everywhere, while the softmax makes $\pi_\theta$, and through it the objective, smooth. And it is the parameterization that scales: put a network under the same softmax and :eqref:`eq_softmax_policy` is unchanged (:numref:`sec_deeprl`); let the state be a context and the actions a vocabulary and it is a language model's next-token distribution, trained at scale by the very updates this section derives (:numref:`sec_rl_sequences`).
 
@@ -88,7 +88,7 @@ Both tabs confirm the identity from the same random table, each by its own mecha
 
 With a differentiable policy in hand, acting well becomes an optimization problem, and this section is one derivation run to its end.
 
-### An optimization problem over trajectories
+### An Optimization Problem over Trajectories
 
 Imagine, as in :numref:`sec_valueiter`, that the agent starts at a state $s_0$ and takes actions from the policy $\pi_\theta$ for $T$ timesteps, producing a trajectory $\tau = (s_0, a_0, r_0, s_1, a_1, r_1, \ldots, s_T)$ with return $R(\tau) = \sum_{t=0}^{T-1} \gamma^t r(s_t, a_t)$. The probability of observing a particular trajectory $\tau$ is the product of the probabilities of each action taken by the agent and each transition made by the environment,
 
@@ -159,7 +159,7 @@ def rollout(env, policy, num_episodes, rng):  #@save
 
 Both objects are plain numpy and shared verbatim between the framework tabs; framework arrays appear only inside update functions, converted at their first line, so everything a batch carries is data by construction. Nothing here is specific to this section: `rollout` feeds every learning algorithm in the rest of these two chapters.
 
-### The log-derivative trick
+### The Log-Derivative Trick
 
 To maximize $J(\theta)$ by gradient ascent we need its gradient. The return $R(\tau)$ of a fixed trajectory does not depend on $\theta$, only the probability of the trajectory does, so (the summation is finite, so we can exchange it with the gradient)
 
@@ -178,7 +178,7 @@ $$\nabla_\theta J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ R(\tau)\ \nab
 
 and averages over trajectories are exactly what the agent can estimate by sampling: it simply runs its current policy.
 
-### The transition probabilities drop out
+### Cancellation of the Transition Probabilities
 
 At first sight :eqref:`eq_pg_gradient` still seems to require the MDP, because $P(\tau; \theta)$ in :eqref:`eq_traj_prob` contains the transition function. But watch what happens when we take the logarithm of the product and differentiate:
 
@@ -191,7 +191,7 @@ $$
 
 The transition probabilities do not depend on the policy parameters $\theta$, so their gradient is zero and they vanish from the expression. Just as in Q-Learning, we have not cheated: the transition function still determines *which* trajectories the agent is likely to experience, but we never need to evaluate it; it enters only implicitly, through the sampled data.
 
-### The REINFORCE estimator
+### The REINFORCE Estimator
 
 We now approximate the expectation in :eqref:`eq_pg_gradient` with an empirical average. The agent runs its current policy $\pi_\theta$ to collect $n$ trajectories $\tau_1, \ldots, \tau_n$ and computes
 
@@ -250,7 +250,7 @@ d2l.show_grid(env.unwrapped.desc, probs.max(axis=1), probs.argmax(axis=1))
 
 The arrows show each state's most probable action and the shading its probability, from near-uniform ($0.25$ with four actions) to near-certain. The policy has sharpened along a shortest path to the goal, though not necessarily the one value iteration produced for this calm map in :numref:`sec_valueiter`: the grid admits three distinct six-step routes that avoid the holes, all of them optimal, and REINFORCE locks onto whichever one its first lucky trajectories happened to take, so a different seed can lock onto a different one. The cells that stay at exactly $0.25$ are the holes and the goal: the agent never takes an action *from* a terminal state, so their preferences are never touched. The remaining cells are sharp in proportion to how often trajectories still visit them; states the converged policy no longer passes through stopped learning wherever they were.
 
-### The policy gradient theorem
+### The Policy Gradient Theorem
 
 REINFORCE weights a whole trajectory's score by the whole trajectory's return. The same gradient has a second form, organized by states rather than by trajectories, which is how the literature most often writes it and how this book will use it from the next section on.
 
@@ -263,9 +263,9 @@ $$\nabla_\theta J(\theta) = E_{\tau \sim P(\cdot;\, \theta)} \Big[ \sum_{t \geq 
 
 Three readings. First, what multiplies the score at step $t$ is no longer the whole trajectory's return but the action value $Q^{\pi_\theta}(s_t, a_t)$ of :numref:`sec_valueiter`: rewards collected *before* step $t$ cannot have been caused by the action taken there, and dropping them is the first variance reduction of :numref:`sec_baselines`. Second, the right-hand form averages over where the policy spends its discounted time rather than over trajectories; this is the form in which policy gradients meet theory, and the occupancy is where the start distribution $\mu_0$ enters everything downstream. Third, a caveat that rarely gets a name: practical implementations sample states as visits accumulate, without the $\gamma^t$ weights, which replaces the discounted occupancy $d^{\pi_\theta}_\gamma$ by an undiscounted one. That is a change of *state weighting*, not merely of scale, so what they estimate is the gradient of a different objective than $J$, with a direction of its own; nearly everyone drops the factor anyway, and exercise 6 prices the choice.
 
-## What It Costs
+## Costs and Limitations
 
-### On-policy: fresh data after every update
+### The On-Policy Data Requirement
 
 The estimator :eqref:`eq_reinforce` is an average over trajectories drawn from the *current* policy: it approximates :eqref:`eq_pg_gradient`, an expectation under $P(\tau; \theta)$. The moment the parameters move, trajectories collected earlier come from the wrong distribution, and the derivation licenses nothing about them. Methods with this property are called *on-policy*: the agent learns only about the policy it is executing, and every update pays for a fresh batch. Q-learning is the opposite kind, *off-policy*: the $\max$ in its target lets it learn about the greedy policy from data collected by any policy (:numref:`sec_qlearning`), so old experience keeps its value. The difference is not elegance but cost, and the ledger we kept prices it in the same currency as :numref:`sec_qlearning`, environment steps:
 
@@ -280,7 +280,7 @@ print(f'environment steps spent by the full run: {np.sort(steps.sum(axis=1))}')
 
 The learning cost between three and four and a half thousand environment steps; the run cost about twenty-seven thousand, because an on-policy method keeps buying fresh data at the same rate after the policy has converged, and nothing it bought earlier can be reused. For scale, the median Q-learning run of :numref:`sec_qlearning` consumed $95{,}569$ environment steps, though on the slippery map, where the task itself is harder; its deterministic contrast cell solved this same calm map from 256 episodes. The habit to keep is the bookkeeping itself: measure in environment steps, and remember that an on-policy bill scales with updates whether or not the updates still teach anything. Reusing a batch for several updates without correction is the obvious economy, and exercise 5 has you try it while watching the quantity that decides when it breaks, the probability ratio between the new policy and the one that collected the data; making that reuse safe is the subject of :numref:`sec_ppo`.
 
-### Unbiased, and how noisy
+### Unbiasedness and Variance
 
 The word *unbiased* has been doing quiet work since :eqref:`eq_reinforce`. It is a strong claim: the noisy vector computed from a handful of trajectories points, on average, exactly along $\nabla_\theta J(\theta)$. Almost nobody ever checks it, because almost nobody has the true gradient; on sixteen states we do. For the softmax policy, writing $P^\pi$ for its transition matrix and $r^\pi$ for its expected one-step reward, the objective of :eqref:`eq_pg_objective` has the closed form
 
@@ -377,7 +377,7 @@ for n in [4, 16, 64]:
 
 Read the columns against the claim. The *mean* of the fifty estimates points essentially along the truth, its cosine with the exact gradient climbing from about $0.93$ to $1.00$ as $n$ grows: that is what unbiasedness predicts, measured. The cosine is a diagnostic, not a proof, blind to length and to any error component parallel to the truth, so read it as consistency with the claim the derivation established. A *single* estimate is another matter. At $n = 4$ its typical error is more than three and a half times the size of the gradient it estimates, and a few of the fifty batches contain no success at all, making their estimate exactly zero, a vector with no direction; the sparse reward is not just slow, it is degenerate (exercise 4). The error shrinks like $1/\sqrt{n}$, roughly halving each time the batch quadruples, about $3.6$ to $1.7$ to $0.9$ here, so brute force buys accuracy at quadratic cost in trajectories. These two cells are the chapter's yardstick: :numref:`sec_baselines` will change what multiplies the score, claim each change lowers the variance without moving the mean, and measure every such claim against this same exact gradient.
 
-### J is not concave
+### Nonconcavity of the Objective
 
 One more limitation before summing up. Gradient ascent converged here, but nothing guarantees it in general, because $J(\theta)$ is not a concave function of $\theta$. The softmax makes $J$ smooth, not concave: a policy that is nearly deterministic and wrong sits on a plateau where every probability in :eqref:`eq_softmax_score` is close to $0$ or $1$, the scores and with them the whole gradient are vanishingly small, and ascent can spend arbitrarily long escaping. What the theory promises is a stationary point, under conditions our implementation does not check: smoothness, bounded estimator variance, Robbins-Monro step sizes rather than Adam at a fixed rate. That REINFORCE found an optimal policy every time here is a fact about a sixteen-state lake started from the maximum-entropy table, not an instance of a convergence theorem, and it is why the uniform start is the sensible default.
 

@@ -25,11 +25,11 @@ import numpy as np
 import optax
 ```
 
-## Cloning a Policy
+## Behavior Cloning
 
 A *demonstration* is a recorded trajectory of an expert doing the task. Demonstration data in the wild may carry more: next states, timing, goals, sometimes rewards. Behavior cloning, this section's method, consumes exactly two columns of it, the states visited and the actions taken, so two columns are all our recorder keeps. No reward is logged, and no transition kernel is consulted; whoever demonstrates does not know a kernel exists. Experts are cheap to find in exactly the situations where models are not: a driver steering a vehicle, a surgeon suturing, a human writing a helpful answer. On the slippery lake we are luckier still, because :numref:`sec_valueiter` can *manufacture* the expert: we compute $\pi^*$ by value iteration one last time, let it demonstrate, and then lock the machinery away. The learner will see only what a learner ever sees, pairs $(s, a)$; keeping the solved lake underneath means every claim in this section can be checked against ground truth.
 
-### The reduction to classification
+### The Reduction to Classification
 
 Imitation is the oldest shortcut in the field: in 1989 the ALVINN system already drove a van by training a small network to map camera images to a demonstrated driver's steering commands :cite:`Pomerleau.1991`. Our expert demonstrates three episodes:
 
@@ -250,7 +250,7 @@ def policy_step(ac, batch, advantage):  #@save
 
 Note what the signature enforces: the weights arrive as a numpy array, and a numpy array cannot carry a gradient graph, so the weighting is *data* by construction, in both frameworks, with no `detach` and no stop-gradient in sight.
 
-### What the reduction quietly assumes
+### The Train-Equals-Test Assumption
 
 A classifier's guarantee has fine print: it promises accuracy *on the distribution it was trained on*. That is the train-equals-test assumption of :numref:`sec_environment-and-distribution-shift`, and behavior cloning inherits it in a treacherous form, because the clone is not tested on the expert's states. It is tested on the states that *its own actions* produce. The moment it deviates once, it is its own distribution's author. We measure both sides of the fine print, using the `evaluate` protocol of :numref:`sec_valueiter`, in which a policy is any function from observation to action, so the method `bc.act_greedy` can be passed as it is:
 
@@ -286,7 +286,7 @@ The median dataset clones this small lake well even at three episodes; the tail 
 
 ## Compounding Error
 
-### The proposition
+### The Error Bounds: $\varepsilon T^2$ versus $\varepsilon T$
 
 Supervised learning controls the probability of error per decision. Acting composes decisions, and the composition is where the quadratic comes from. Write $d^\pi_t$ for the distribution over states that an agent following $\pi$ occupies at step $t$; "the expert's distribution" means the states weighted by $d^{\pi^*}_t$, which is exactly what a demonstration dataset samples.
 
@@ -319,7 +319,7 @@ On logarithmic axes the two measurements are straight lines of different slopes:
 ![Why a small per-step error is not a small problem. (a) The expert's state distribution and the clone's drift apart along the horizon: a clone that errs with probability $\varepsilon = 0.2$ per step on the expert's states, and acts uniformly at random where it has no data, spreads over cells the expert never occupies; after the marked first mistake the classification guarantee says nothing. (b) The return lost to the expert on the chain, simulated at $\varepsilon = 0.01$ with 20,000 rollouts per point: cloning tracks the quadratic reference $\varepsilon T^2/2$ while an imitator that recovers in one step tracks the linear reference $\varepsilon T$.](../img/mdl-rl-compounding-error.svg)
 :label:`fig_rl_compounding_error`
 
-### Why this is not a defect of the fit
+### The Divergence of the State Distributions
 
 It is tempting to blame the optimizer, or the model class, or the small dataset, and all three are innocent: the classifier met its specification exactly, with zero training mistakes. What broke is the specification's premise. The distribution the clone faces at test time is not the one it was certified on, and the divergence between the two is not noise but a computable object. On the lake we can evolve both state distributions exactly, one step of the kernel at a time, expert dynamics against clone dynamics from the same start state:
 
@@ -345,9 +345,9 @@ d2l.show_grid(env.unwrapped.desc, np.stack([occ_exp, occ_clo]) / 20,
 
 For the first three steps the two distributions are *identical*: the clone acts exactly like the expert until the ice has had time to push it somewhere it was never taught, which is the proof's coupling argument printed as data. Then the gap opens and keeps growing, and by step 20 the clone has parked 22 percent of its probability mass in the hole at 12, beside state 13, a cell the expert enters with probability exactly zero. The two occupancy maps show the same story cell by cell: nearly identical mass where the demonstrations reached, and the clone's surplus sitting in the one hole and on its doorstep, under the arrow that points into it. This is the chapter's founding difficulty in its purest form. The agent generates its own data, so even a perfect teacher with a perfect student fails if the student is only certified on the teacher's states; the certificate expires the moment the first mistake, or here the first slip, moves the test distribution.
 
-## What To Do About It
+## Interactive Data Collection
 
-### DAgger: collect from the learner, relabel with the expert
+### DAgger: Dataset Aggregation
 
 The proposition does not just diagnose; it prescribes. Both of its cases have the same $\varepsilon$, and the linear one holds when the error is small *on the learner's own distribution*, so the fix is to put the training data there: roll the *learner*, keep the states it actually visits, ask the expert after the fact what it would have done at each of them, and refit on everything collected so far. This is DAgger, dataset aggregation :cite:`Ross.Gordon.Bagnell.2011`, and it is one relabeling step away from behavior cloning:
 
@@ -380,11 +380,11 @@ for k in range(4):
 
 Round 0 is behavior cloning on the original 96 pairs, back at its familiar failure. One round later the clone matches the expert. Nothing about the model, the loss, or the optimizer changed; only the sampling distribution did, and it repaired in three relabeled episodes what the ten-dataset sweep above suggested would take an order of magnitude more expert-only episodes to make reliable. The reason is precision, not volume: the learner's own rollouts spend their time exactly where the learner goes wrong, state 13 above all, so the first batch of corrections lands on the very rows of the table that caused the failure. No sampling scheme built on the expert's distribution can promise that, because the expert does not visit the learner's mistakes. Keep the demonstration in scope, though: that one round suffices is a fact about this small lake, and what ran here is a miniature of distribution repair, not the algorithm the guarantee covers. DAgger's theorem :cite:`Ross.Gordon.Bagnell.2011` is a reduction to online learning, and to bound the final policy's cost it needs the full loop: iterated collection, a no-regret learner trained on the aggregated dataset, and in the original analysis a mixture of expert and learner during collection. The price is also on a different axis: DAgger needs the expert *on call* to label states after the fact, not just a recorded dataset, and exercise 4 accounts for the two methods at an equal query budget. Aggregating rather than replacing the data is load-bearing even in miniature: each round's dataset contains all previous rounds, so the sequence of fits stabilizes rather than chasing its own latest mistakes.
 
-### Where this reappears
+### Supervised Fine-Tuning and Offline RL
 
 Twice in this book, once soon and once at scale. Supervised fine-tuning of a language model *is* behavior cloning, term for term: the state is the context, the action is the next token, the demonstrations are curated responses, and the fitted model is then deployed on contexts that it wrote itself. The proposition prices what happens next: a model tuned only on gold responses drifts off its training distribution as generations grow long, and the drift compounds; that is where :numref:`sec_rl_sequences` picks the story up. Closer by, behavior cloning is the standing baseline of offline reinforcement learning: given a fixed dataset of logged behavior and no interaction at all, cloning it is always available, and every method in :numref:`sec_offline` must justify itself against that baseline.
 
-### The frontier, in one paragraph
+### Modern Imitation Learning
 
 Modern imitation learning mostly relaxes what the expert must provide. Generative adversarial imitation learning dispenses with action labels on the learner's states: a discriminator learns to distinguish learner trajectories from expert ones, and its confusion is handed to a reinforcement-learning algorithm as a reward :cite:`Ho.Ermon.2016`. Maximum-entropy inverse reinforcement learning inverts the problem, inferring the reward function under which the demonstrations are (softly) optimal and planning against it :cite:`Ziebart.Maas.Bagnell.ea.2008`. And diffusion policies replace the softmax head with a diffusion model over action sequences, so that multimodal demonstrations (two equally good ways around an obstacle) are represented rather than averaged into something in between; they are the workhorse of current robot-manipulation imitation :cite:`Chi.Feng.Du.ea.2023`. All three inherit this section's geometry: whatever plays the role of the fit, the distribution it is tested on is the learner's own.
 

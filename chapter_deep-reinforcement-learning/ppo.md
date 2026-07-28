@@ -45,9 +45,9 @@ The derivative $\sigma'(\theta) = \sigma(\theta)(1 - \sigma(\theta))$ puts numbe
 
 So the quantity to control is the change in the policy, not the change in the parameters: what we want is an update rule that never changes the *policy* by more than we meant to, whatever that costs in parameter distance. Inside that guarantee we also want the freedom to take the largest step it allows and to reuse each batch several times.
 
-## Reusing Data
+## Reusing Data with Importance Sampling
 
-### Change of measure
+### The Change of Measure
 
 Now to the second want. Every estimator since :numref:`sec_policygradient` required trajectories sampled from the current policy: one gradient step, and the batch that produced it is stale. :numref:`sec_policygradient` priced that discipline in environment steps and found that most of the cost went to data whose only use was one update, because nothing bought earlier could be reused. Suppose instead the batch was collected by an older snapshot of the policy, $\pi_{\theta_{\textrm{old}}}$, and we want to keep learning from it after $\theta$ has moved. What, exactly, can old data tell us about a new policy?
 
@@ -65,11 +65,11 @@ so the performance of the new policy can be evaluated, without bias, on data the
 
 $$\frac{P(\tau; \theta)}{P(\tau; \theta_{\textrm{old}})} = \prod_{t=0}^{T-1} \frac{\pi_\theta(a_t \mid s_t)}{\pi_{\theta_{\textrm{old}}}(a_t \mid s_t)}.$$
 
-### The product of ratios explodes
+### The Exploding Product of Ratios
 
 Unbiased, however, does not mean usable. Each factor in the product is bounded below by zero and unbounded above, and the product compounds across the trajectory: a trajectory that was unlikely under the old policy but likely under the new one can carry a weight of many orders of magnitude and single-handedly dominate the estimate. The exact correction :eqref:`eq_offpolicy_objective` trades all of its bias for variance that grows with the horizon.
 
-### The per-step surrogate
+### The Per-Step Surrogate
 
 The practical compromise keeps one ratio per step. Define
 
@@ -82,13 +82,13 @@ $$\hat{L}(\theta) = \frac{1}{n} \sum_{i=1}^n \sum_{t} \rho_t^i(\theta)\ \hat{A}_
 
 where $\hat{A}_t^i$ is any advantage estimate for step $t$ of trajectory $i$, e.g., the normalized reward-to-go of :numref:`sec_baselines`. Two corners have been cut relative to :eqref:`eq_offpolicy_objective`, and both deserve naming: the product of ratios became a single ratio per step, and the states in the batch remain distributed as $\pi_{\theta_{\textrm{old}}}$ visits them, not as $\pi_\theta$ would. In exchange, the weights stay bounded per step and the variance stays manageable. What survives the surgery is local fidelity: at $\theta = \theta_{\textrm{old}}$ every ratio equals one, and differentiating :eqref:`eq_surrogate` there gives back exactly the policy gradient estimator, since $\nabla_\theta \rho_t \,|_{\theta_{\textrm{old}}} = \nabla_\theta \log \pi_\theta(a_t \mid s_t)\,|_{\theta_{\textrm{old}}}$. The surrogate is a local model of the objective: trustworthy near where it was built and a liar far away. This brings back the first section's concern as a concrete question: how far may $\theta$ move before we must stop trusting $\hat{L}$?
 
-### The length-normalized trajectory ratio
+### The Length-Normalized Trajectory Ratio
 
 A third choice sits between the two extremes, the full product that is exact but explosive and the single factor that is tame but local, and it earns its sentence because it is the one that scaled: raise the product of per-step ratios to the power $1/T$, the geometric mean, so that its logarithm is the *average* per-step log-ratio and its magnitude no longer compounds with the horizon. Clipping this length-normalized, sequence-level ratio rather than the per-step one is the idea marketed as GSPO in large language-model training, and :numref:`sec_rl_sequences` picks it up where trajectories become token sequences.
 
 ## Bounding the Step
 
-### The performance difference lemma
+### The Performance Difference Lemma
 
 The question at the end of the surrogate deserves a theorem before it gets an algorithm. Abbreviate the old policy's advantage :eqref:`eq_advantage` as $A^{\textrm{old}}(s, a) = Q^{\pi_{\theta_{\textrm{old}}}}(s, a) - V^{\pi_{\theta_{\textrm{old}}}}(s)$. How much better than the old policy is an arbitrary candidate $\pi_\theta$? Exactly this much:
 
@@ -103,7 +103,7 @@ $$
 
 Read it as marching orders: to improve on the old policy, put the new policy's probability mass where the old policy's own advantages say the improvement is. All the difficulty hides in one subscript: the expectation is over the *new* policy's trajectories, which cannot be sampled without deploying the candidate. Approximate it with the states the old policy visited, reweight only the actions by $\rho_t$, drop the $\gamma^t$ factor as everywhere since :eqref:`eq_rtg`, and what appears is precisely the surrogate :eqref:`eq_surrogate`. So the two corners the surrogate cut are one corner seen twice: collapsing the product to a per-step ratio and freezing the visited states are both the act of evaluating the new policy on the old policy's state distribution. The lemma also prices the corner: the surrogate is exact at $\theta_{\textrm{old}}$, and its error grows with the gap between the two policies' state distributions, again a statement about how far the *policy* has moved, not the parameters.
 
-### Trust regions and the monotonic-improvement bound
+### Trust Regions and the Monotonic-Improvement Bound
 
 Trust Region Policy Optimization answers with a constraint measured where the two-action example said it must be: in policy space. Maximize the surrogate, but keep the new policy close to the old one,
 
@@ -125,7 +125,7 @@ $$
 ![Bounding the step in policy space. Left: the surrogate $L$ is tangent to the true objective $J$ at $\theta_{\textrm{old}}$ and a liar far away; the unconstrained maximizer of $L$ drives $J$ from $0.82$ down to $-0.38$, while the best point inside the shaded trust region raises it to $1.52$. Right: for a three-action softmax family, the set of steps with $D_{\textrm{KL}} \leq 0.02$ under the exact Fisher metric at $\theta_{\textrm{old}}$ is an ellipse, not a ball; two parameter steps of equal Euclidean length move the policy by $D_{\textrm{KL}} = 0.008$ and $0.049$, so the parameter norm misprices policy change in both directions.](../img/mdl-rl-trust-region.svg)
 :label:`fig_rl_trust_region`
 
-### The clipped objective
+### The Clipped Objective
 
 PPO gets most of the benefit with none of the second-order machinery. Instead of constraining the ratios, clip their usefulness:
 
@@ -139,21 +139,21 @@ with a clipping parameter $\epsilon$, typically $0.2$. Read it one sample at a t
 
 Set against :eqref:`eq_trpo_bound`, the ledger reads: PPO keeps the *shape* of the guarantee, a per-sample bound on how far movement keeps paying, and none of the guarantee itself. Nothing in :eqref:`eq_ppo_clip` implies monotonic improvement; the ablation below is the empirical substitute for the theorem, and the diagnostics after it are what practitioners watch in the theorem's place.
 
-### Asymmetric bands
+### Asymmetric Clipping Bands
 
 The band is symmetric in ratio space and anything but symmetric in what it permits. For an action the old policy took rarely, say $\pi_{\theta_{\textrm{old}}}(a \mid s) = 0.01$, the ceiling $\rho_t \leq 1 + \epsilon$ stops rewarding growth beyond a probability of $0.012$: per reuse cycle, a rare action may at most creep upward by a fifth of its almost nothing, while an action holding $0.60$ may add twelve full points of probability mass inside the same band. Sample by sample the symmetric clip is therefore tightest exactly on the low-probability actions that exploration needs to grow, and mass drains toward the modes faster than the tails can recover it, one more ratchet turning entropy down. The repair is as blunt as the diagnosis: decouple the two edges into $1 - \epsilon_{\textrm{low}}$ and $1 + \epsilon_{\textrm{high}}$ with $\epsilon_{\textrm{high}} > \epsilon_{\textrm{low}}$, giving rare actions room to grow while keeping the pessimistic side tight. This clip-higher band appears in several of the mid-2020s language-model recipes near :numref:`sec_rl_sequences`'s material, one dated design choice in an actively churning space rather than a standing ingredient of PPO; exercise 7 works out its arithmetic.
 
-### The entropy bonus
+### The Entropy Bonus
 
 One practical companion deserves more than the sentence it usually gets. Implementations add a small *entropy bonus* to the objective, `entropy_coef` times the mean entropy of the action distributions, rewarding policies that are not too sharp. The two-action example showed what saturation costs: probabilities pinned near one, scores near zero, no way back. The entropy term is the standing pressure against drifting there, and in this section it moves from the margin notes into the code: `ppo_epochs` below adds the bonus to the objective and reports the entropy it measured, per epoch, as data, so that "the policy saturated" stops being a story and becomes a curve. :numref:`sec_regularized`'s theorem explains why a bonus of exactly this form is principled: the entropy bonus is a KL penalty measured against a uniform reference policy, one corner of a design whose optimum has a closed form.
 
-## What a Working PPO Contains
+## PPO in Practice
 
-### Which advantage estimate
+### The Choice of Advantage Estimate
 
 Anything can serve as $\hat{A}_t$ in :eqref:`eq_ppo_clip`, and the menu is not new: it is :numref:`sec_actorcritic`'s credit-assignment dial. The reward-to-go minus a learned baseline sits at the Monte Carlo end, the TD error $\delta_t$ at the bootstrapped end (no collision with the trust-region radius $\delta_{\textrm{KL}}$: the symbols are distinct because both matter here), and the $\lambda$-return mixes all depths, collapsed by the telescoping identity :eqref:`eq_gae_deltas` into the two-line `Batch.gae` that is already in the library. That section also *measured* the dial and found the one-draw error smallest strictly inside, near $\lambda = 0.95$, the neighborhood of the common deployed defaults :cite:`Schulman.Moritz.Levine.ea.2016`. There is accordingly nothing left to derive and one decision left to make, and we make the deployed one: `train_ppo` below runs GAE with $\lambda = 0.95$ *by default*. The loop as a whole also deserves a plain name: what follows is a full-batch clipped-surrogate *teaching* implementation, the deployed algorithm's estimator equations in an update schedule chosen for legibility, and the gap between it and a production loop is mapped, line by line, at the end of the section.
 
-### The implementation
+### The Implementation
 
 The laboratory is :numref:`sec_actorcritic`'s: CartPole, the `ActorCritic.mlp` container, batches of eight episodes, and `critic_steps` regression passes for the critic, so that every difference below is the algorithm. Three hyperparameters are new. `num_epochs = 20` passes over each batch is aggressive reuse, on purpose; `epsilon_clip = 0.2` is the standard band; `entropy_coef = 0.01` is the bonus just argued for.
 
@@ -329,7 +329,7 @@ def train_ppo(seed, ac, use_clip=True, trace=None):
         yield (float(batch.episode_returns().mean()), *d.mean(0), *d[-1])
 ```
 
-### The ablation
+### Ablating the Clip
 
 Twenty epochs per batch is aggressive reuse: each batch of eight episodes now drives twenty gradient steps instead of one, and the ratios have twenty chances to drift from one. This is on purpose. The failure this section is about only shows itself when the combined step gets big, and we want it on screen. We run the clipped objective on eight seeds, keeping the trained agents for the audits below and the full diagnostics for the next subsection:
 
@@ -370,21 +370,22 @@ d2l.plot_curves({name: r[:, :, 0] for name, r in runs.items()},
                 reference=500)
 ```
 
-In our runs the unclipped control leaves most of the eight seeds dead at the end, down at the score of a pole that falls almost immediately. That collapse is the two-action example made real: twenty unconstrained passes over one noisy batch add up to exactly the oversized policy change the sigmoid picture warned about, the policy lands in saturation, gradients vanish, and every later batch is collected by the broken policy, so no later data can undo it. The clipped runs take the same twenty passes over the same batches and every seed ends near the ceiling. Read the printed list of casualties as a sample rather than a fact: *which* seeds die reshuffles with the floating-point arithmetic of the run, and it is the rate that is stable, more than half of the unclipped runs in every tab we have run never recovering while every clipped seed survives. At gentler settings, fewer epochs or a smaller learning rate, the unclipped variant survives almost always; the clip is insurance against the interaction of reuse with step size, not a speedup.
+In our runs the unclipped control leaves half or more of the eight seeds dead at the end, down at the score of a pole that falls almost immediately. That collapse is the two-action example made real: twenty unconstrained passes over one noisy batch add up to exactly the oversized policy change the sigmoid picture warned about, the policy lands in saturation, gradients vanish, and every later batch is collected by the broken policy, so no later data can undo it. The clipped runs take the same twenty passes over the same batches and every seed ends near the ceiling. Read the printed list of casualties as a sample rather than a fact: *which* seeds die reshuffles with the floating-point arithmetic of the run, and it is the rate that is stable, at least half of the unclipped runs in every tab we have run never recovering while every clipped seed survives. At gentler settings, fewer epochs or a smaller learning rate, the unclipped variant survives almost always; the clip is insurance against the interaction of reuse with step size, not a speedup.
 
-Note also how rarely the insurance pays out, and count it carefully, because the denominator is easy to get wrong. Each update checks every sample's ratio once per epoch, and the first epoch's checks always find $\rho_t = 1$, inside the band by construction; so we report the fraction of *all* per-epoch ratio checks that fall outside the band, and beside it the same fraction at the last epoch of each batch, where drift has had nineteen steps to accumulate:
+Note also how rarely the insurance pays out, and count it carefully, because the denominator is easy to get wrong. Each update checks every sample's ratio once per epoch, and the first epoch's checks always find $\rho_t = 1$, inside the band by construction; so we report the fraction of *all* per-epoch ratio checks that fall outside the band, and with it the same fraction at the last epoch of each batch, where drift has had nineteen steps to accumulate:
 
 ```{.python .input #ppo-the-ablation-5}
 %%tab pytorch, jax
 for name, r in runs.items():
     print(f'{name:>13}: ratio checks outside the band: '
-          f'{r[:, :, 1].mean():.1%} across all epochs, '
-          f'{r[:, :, 4].mean():.1%} at the last epoch of each batch')
+          f'{r[:, :, 1].mean():.1%} across all epochs')
+    print(f'{"":>13}  {r[:, :, 4].mean():.1%} at the last epoch '
+          f'of each batch')
 ```
 
 For the clipped runs both counts sit near one check in twenty. The clip does not need to fire often, because zeroing the gradient of exactly the samples whose ratios have left the band is what stops the runaway from compounding in the first place; the control's ratios, with nothing to stop them, leave the band about three times as often overall and keep drifting through the epochs, which is the failure in miniature.
 
-### How to know your RL is broken
+### Training Diagnostics
 
 :numref:`sec_deeprl` closed with the warning that the loss carries no signal here and that what deserves watching are diagnostics of the *update*. This section is where that advice becomes concrete, because the run above already returned every number an engineer would watch. Within a batch:
 
@@ -462,7 +463,7 @@ score = d2l.evaluate(env, ac.act_greedy, num_episodes=100)
 print(f'greedy mean return over 100 episodes: {score:.0f}')
 ```
 
-### From a teaching loop to a real one
+### Vectorized Collection and Minibatch Updates
 
 Everything above is a teaching loop: one environment, whole episodes, full-batch epochs, and a learning rate four to forty times what tuned PPO references run, the container's default of $10^{-2}$. The rate stays because this section wants the unclipped failure on screen within sixty updates; do not carry it out of the section, since a deployed PPO anneals a rate an order of magnitude smaller, under which the unclipped control would merely limp instead of dying. Two structural differences from a deployed loop deserve to be seen at working size. First, real implementations do not collect episodes one environment at a time; they step $N$ environments in lockstep for a fixed $T$ steps, harvesting an $N \times T$ *rectangle* of transitions whose shape never changes, which is what compiled code wants, the same reasoning as our padded buckets. The rectangle's right edge almost always cuts episodes mid-flight, and the cut is priced the way this book has priced every truncation since :numref:`sec_mdp`: the value function fills in the future the recording lost.
 
@@ -513,7 +514,7 @@ for name, ag in (('full batch', full), ('minibatches', mini)):
 
 The two totals of policy movement land within a small factor of each other: minibatching is not a different algorithm, it is the same budget of drift spent in smaller coins, justified by memory and hardware throughput plus a little gradient noise that practitioners treat as a feature. What changes is bookkeeping: each ratio is re-checked against the band four times rather than twenty, and the advantage normalization of :numref:`sec_baselines` is usually recomputed per minibatch, at the granularity the gradient actually uses. One structural difference survives even at matched drift, and it is worth naming because it is an update-ordering difference, not a detail: our loop finishes the critic's twenty regression passes first and computes advantages from the updated critic before any actor pass, while a production loop computes advantages once from the pre-update critic and then interleaves the policy and value losses minibatch by minibatch.
 
-### What our PPO omits
+### Omitted Implementation Details
 
 The gap between this section's PPO and a production one is a list of small, named decisions, none of which needs new theory:
 
@@ -533,7 +534,7 @@ The list is not ours. A community audit collected 37 such implementation details
 
 Directly parameterized policies make step size treacherous: equal moves in parameter space can be a rewrite of the behavior or a no-op, so the quantity to control is the change in the policy, not the change in $\theta$. Importance sampling turns the objective of a new policy into an exact expectation over data from an old one; the trajectory-level weight is a product of policy ratios in which the transition probabilities cancel, unbiased but with variance that compounds along the horizon, and the per-step surrogate :eqref:`eq_surrogate` tames it at the price of being only a local model. The performance difference lemma :eqref:`eq_perf_diff` makes the target exact, improvement equals the new policy's expected old-policy advantage, and it exposes the surrogate's two cut corners as one: the state distribution stays the old policy's. TRPO states the bound :eqref:`eq_trpo_bound` for the population surrogate under the worst-state divergence, a monotonic improvement guarantee whose practical form relaxes the max to a mean-KL constraint; PPO keeps the shape of the guarantee and none of the guarantee, a per-sample clip at $1 \pm \epsilon$ that zeroes a sample's gradient once its ratio leaves the band in the paying direction. Our full-batch teaching implementation runs GAE($0.95$) by default, adds an entropy bonus in the objective, and returns its diagnostics as data: on CartPole, twenty epochs of reuse per batch destroy most unclipped runs through the saturation collapse of the sigmoid example, while every clipped run trains to the ceiling with about one ratio check in twenty landing outside the band. The diagnostics say why reuse is survivable in these runs: drift within a batch is front-loaded, and the clipped batch's importance weights stay nearly flat on the weight-only effective-sample-size reading. What remains between this loop and a deployed one is a fixed rectangle of vectorized experience, jointly minibatched policy and value updates, and a list of named implementation details whose collective weight rivals the algorithm's.
 
-**What the experiments show, and what they do not.** All curves come from seeded runs through the shared numpy sampling stream; the two framework tabs share every estimator line but initialize their networks differently, so their curves and casualty lists differ seed by seed while supporting the same statements, and every statistic quoted in prose is printed by a visible cell. The ablation is eight seeds per arm per tab: every clipped seed ends near the ceiling in both tabs, and the unclipped control loses more than half of its eight seeds in each tab; the casualty *rate* is the stable object, its exact value and the identities of the dead seeds are not. The outside-the-band fractions, near five percent for clipped runs against about three times that for the control, are stable in level and ordering, not in digit. The within-batch diagnostic shapes, front-loaded KL and a flattening outside-band curve, recur across seeds and tabs; the entropy decay from about $0.65$ to about $0.25$ nats varies by a few hundredths. The probe pair is a single seeded batch per tab: its weight-concentration (ESS) endpoints come out nearly flat with the clip and concentrated to half or less without; the exact fraction differs between tabs while the gap's direction and size class agree. The greedy audit ties CartPole's ceiling, a statement about the task, not the algorithm. Single seeded runs per tab, not sweeps: the compute belongs to readers.
+**What the experiments show, and what they do not.** All curves come from seeded runs through the shared numpy sampling stream; the two framework tabs share every estimator line but initialize their networks differently, so their curves and casualty lists differ seed by seed while supporting the same statements, and every statistic quoted in prose is printed by a visible cell. The ablation is eight seeds per arm per tab: every clipped seed ends near the ceiling in both tabs, and the unclipped control loses at least half of its eight seeds in each tab; the casualty *rate* is the stable object, its exact value and the identities of the dead seeds are not. The outside-the-band fractions, near five percent for clipped runs against three or four times that for the control, are stable in level and ordering, not in digit. The within-batch diagnostic shapes, front-loaded KL and a flattening outside-band curve, recur across seeds and tabs; the entropy decay from about $0.65$ to about $0.25$ nats varies by a few hundredths. The probe pair is a single seeded batch per tab: its weight-concentration (ESS) endpoints come out nearly flat with the clip and concentrated to half or less without; the exact fraction differs between tabs while the gap's direction and size class agree. The greedy audit ties CartPole's ceiling, a statement about the task, not the algorithm. Single seeded runs per tab, not sweeps: the compute belongs to readers.
 
 ## Exercises
 
@@ -712,8 +713,8 @@ there; we ship the deployed setting, $\lambda = 0.95$:
 
 . . .
 
-Same batches, same twenty passes: most unclipped seeds die near
-return 9 (saturation, for real); every clipped seed reaches the
+Same batches, same twenty passes: half or more of the unclipped
+seeds die near return 9 (saturation, for real); every clipped seed reaches the
 ceiling. The insurance pays out on about one ratio check in twenty.
 Which seeds die reshuffles; the **rate** is what is stable.
 :::

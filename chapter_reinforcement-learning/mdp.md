@@ -28,7 +28,7 @@ import numpy as np
 ![The environment for the next four sections. (a) S marks the start, G the goal, and the grey cells marked H are holes; each cell carries its state index. On non-slippery ice the shortest path takes six moves, for a discounted return of $\gamma^5$. (b) One command on slippery ice, read straight out of the transition table: from state $s = 9$ the action *down* lands in one of the three shaded cells with probability $1/3$ each; the intended move is one outcome among equals, and the probabilities sum to one.](../img/mdl-rl-gridworld.svg)
 :label:`fig_rl_gridworld`
 
-### States, actions and the transition kernel
+### States, Actions and the Transition Kernel
 
 The set of *states* $\mathcal{S}$ is here the agent's cell, $\{0, 1, \ldots, 15\}$ numbered row by row; the set of *actions* $\mathcal{A}$ available in each state is the four commands *left*, *down*, *right*, *up*, encoded as 0 through 3. On slippery ice an action changes the state only in distribution; before writing that in symbols, look at it as data, because Gymnasium stores the ground truth of this environment as a table:
 
@@ -97,7 +97,7 @@ for s, a in np.argwhere(mdp.r > 0):
 
 Rows of $P$ sum to one, exactly. The reward array is almost entirely zero: its nonzero entries all sit at state 14, the one cell from which the goal can be entered, and they equal $1/3$ rather than $1$ because each such command reaches the goal a third of the time. The sparsity records a fact we will use shortly: FrozenLake pays only for finishing.
 
-### The reward is a design choice, and an optimizer will attack it
+### Reward Design and Potential-Based Shaping
 
 The reward is designed by the user (the person who creates the reinforcement learning algorithm) with the goal in mind. The states, the actions and the kernel are facts about the environment; we read all three out of the simulator. The reward is the interface through which you tell the optimizer what you want, and the optimizer maximizes what you wrote, not what you meant: a strong optimizer seeks out any gap between the two, because the gap is where reward can be had without doing the task.
 
@@ -135,7 +135,7 @@ print(f'terminated={terminated}, truncated={truncated}, return={ret:.0f}')
 
 Read the transcript against :numref:`fig_rl_gridworld`: at $t = 0$ the agent commands *right* and does not move; at $t = 2$ it commands *left* and slides *down* to state 4; at $t = 8$ it commands *right* from state 10 and falls into the hole at 11. The ice, not the command, decides. Every reward is zero, so the return is zero: this environment pays only for finishing, and a random walker rarely finishes.
 
-### The geometric bound and the effective horizon
+### The Geometric Bound and the Effective Horizon
 
 An agent that wanders forever without reaching a hole or the goal has an infinitely long trajectory, and with positive rewards along the way the sum $R(\tau)$ could grow without bound. To keep the objective meaningful we introduce a *discount factor* $0 \leq \gamma < 1$ and use the discounted return
 
@@ -160,17 +160,17 @@ for g in [0.5, 0.9, 0.95, 0.99]:
 ![Discounting turns $\gamma$ into a horizon. (a) The weight $\gamma^t$ of a reward $t$ steps away falls below $0.05$ at $t = 5$ for $\gamma = 0.5$, at $t = 29$ for $\gamma = 0.9$, and only at $t = 299$ for $\gamma = 0.99$. (b) The horizon $1/(1-\gamma)$ on a logarithmic axis: from two steps at $\gamma = 0.5$ to a hundred at $\gamma = 0.99$.](../img/mdl-rl-return-discount.svg)
 :label:`fig_rl_return_discount`
 
-### Episodes, terminal states, and why truncated is not terminated
+### Episodes, Termination and Truncation
 
 The trajectory we sampled ended in a hole. A state that ends the process is *terminal*; for analysis it can be represented as *absorbing*, every action leading back to it with reward zero. FrozenLake's transition table happens to store the holes and the goal exactly that way, but the running episode simply ends and must be `reset`, so the absorbing continuation is a mathematical completion, not a simulator behavior to rely on. A run from start to a terminal state is an *episode*; tasks whose trajectories always end are *episodic*, unlike *continuing* tasks, where only the discount keeps the objective finite. The number of steps an episode may last is its *horizon*, and when episodes are bounded by $T$ steps, a sum of $T$ bounded rewards is finite already and $\gamma = 1$ is legitimate.
 
 Gymnasium's `step` returns two flags whose difference is a fact about the MDP, not a software detail. `terminated=True` means the process entered a terminal state: the future is empty, worth exactly zero. `truncated=True` means we merely stopped watching, usually a time limit (FrozenLake cuts episodes at one hundred steps): the state has a future that our recording does not show. Merging the flags is fine for loop control, as in the cell above, and disastrous for value estimation, where treating a truncated state as worthless trains on a lie. The learning algorithms from :numref:`sec_qlearning` onward therefore mask bootstrapped targets with `terminated` alone; the exact computations of this section never needed a mask, because absorbing states at reward zero silence their own values.
 
-## What a State Has To Be
+## The Choice of State
 
 The kernel $P(s' \mid s, a)$ conditions on the current state and action only: the *Markov assumption*, the "one assumption" of this section's opening. Given the present, the past is irrelevant for predicting the future; whether that holds depends on what you call the state, and the choice is yours.
 
-### The Markov assumption and state augmentation
+### The Markov Assumption and State Augmentation
 
 Let us think of a new agent where the state $s_t$ is the location as above but the action $a_t$ is the acceleration that the agent applies to its wheels instead of an abstract command like "go forward". If this agent has some non-zero velocity at state $s_t$, then the next location $s_{t+1}$ is a function of the past location $s_t$, the acceleration $a_t$, and also the velocity of the agent at time $t$, which is proportional to $s_t - s_{t-1}$. This indicates that we should have
 
@@ -182,23 +182,23 @@ Markov systems are all systems where the next state $s_{t+1}$ is only a function
 
 This move, *state augmentation*, is the standard repair: enlarge the state until the future depends only on it. The price is a larger state space, and what to pack into the state is one of the quiet design decisions of applied reinforcement learning. The repair also has a ceiling: the sufficient statistic may be unknown, too large to store, or simply not observable, and in the last case the principled replacement is a distribution over the hidden part, the belief of the next paragraph.
 
-### Partial observability, in one paragraph
+### Partial Observability
 
 Augmentation assumes you can observe what you add, and often you cannot: a poker player does not see the opponents' cards. An agent that receives an *observation* $o_t$ revealing only part of the state lives in a *partially observable* MDP, where exact treatments must reason over beliefs about the hidden state and become dramatically harder. The workaday remedy is augmentation applied to observations: feed the agent a short window of recent observations and call the window the state. The classic instance is Atari, where a single frame shows where the ball is but not where it is going, and stacking four frames restores enough of the Markov property to play well; exercise 1 makes precise what the frame is missing. These two chapters assume the observation *is* the state; this paragraph is the fence around that assumption.
 
-## Two Special Cases and One Axis
+## Bandits, Degenerate MDPs and the Model-Based Axis
 
 Two degenerate corners of the MDP, and one axis, organize much of what follows.
 
-### A bandit is the one-state, one-step MDP
+### The Bandit as a One-State MDP
 
 Delete the states. With $|\mathcal{S}| = 1$, every episode is a single action followed by a reward draw: the *multi-armed bandit*, exploration in its purest form. Nothing remains to plan (no next state exists) or to discount; the problem is to learn which action pays best from noisy samples, while the samples cost whatever the inferior arms lose. When :numref:`sec_qlearning` needs to isolate exploration from everything else that makes reinforcement learning hard, the bandit is the instrument we reach for.
 
-### The degenerate MDP: deterministic transitions, terminal reward
+### The Degenerate MDP: Deterministic Transitions, Terminal Reward
 
 Keep the states but delete the randomness and the intermediate payments: transitions deterministic, reward zero everywhere except at termination. Our lake is halfway there already, since the consistency check showed its reward is terminal-only; make the ice non-slippery and the degeneracy is complete. It looks too simple to need this chapter's machinery, yet it is exactly text generation viewed as a decision process: appending a token to a context is a deterministic transition, and a verifier or reward model pays once, at the end. When :numref:`sec_rl_sequences` builds that correspondence, the degeneracies will *remove* terms from our algorithms rather than add any.
 
-### Model-based versus model-free
+### Model-Based versus Model-Free Methods
 
 Everything in this section used the model itself: we read $P$ and $r$ from the simulator, and every number was an exact expectation. Algorithms that plan with a known or learned model are *model-based*; :numref:`sec_valueiter` is the canonical example. Algorithms that only touch sampled transitions $(s, a, r, s')$ are *model-free*; they begin in :numref:`sec_qlearning` and dominate everything after, because nobody hands you `env.unwrapped.P` for an environment of interest. The axis matters for data too: a model can be queried anywhere, while samples arrive only where the agent goes.
 

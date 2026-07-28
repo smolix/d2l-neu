@@ -290,7 +290,11 @@ def profile_top(prof, rows=6):
     """`prof.key_averages()`, ranked as `.table()` ranks it, in the columns
     this chapter reads — and narrow enough to print on a book page."""
     avg = prof.key_averages()
-    cuda = sum(e.self_device_time_total for e in avg)
+    # Device time is counted on the kernel entries only. Summing over every
+    # entry would count each kernel twice, once on the `aten::` op that
+    # launched it, and halve every percentage.
+    cuda = sum(e.self_device_time_total for e in avg
+               if e.device_type != torch.autograd.DeviceType.CPU)
     cpu = sum(e.self_cpu_time_total for e in avg)
     print(f'{"":40}{"self CUDA":>10}{"%":>5}{"us/call":>9}'
           f'{"CPU total":>10}{"calls":>6}')
@@ -422,7 +426,7 @@ print(f'R1 jit: {tput1:.0f} tokens/s ({tput1 / tput0:.0f}x)')
 
 :begin_tab:`pytorch`
 The first call pays about two seconds of compile time; steady state pays
-that back at roughly 1.3× — real money, from a model that is *not*
+that back at roughly 1.2× — real money, from a model that is *not*
 overhead-bound in the :numref:`sec_perf_model` sense. The gain is the
 profile's tail, cashed in: the elementwise chains between matmuls fuse
 into a handful of generated kernels, and the launch traffic drops with
@@ -1125,18 +1129,20 @@ d2l.plt.show()
 
 :begin_tab:`pytorch`
 Read left to right, and let the measurements calibrate the intuition.
-Compilation paid about 1.3× — on a model that was *not* overhead-bound —
-by fusing the elementwise tail the profile exposed. Bf16 paid about 1.4×
-on top, the tensor cores earning their silicon now that the matmuls are
-wide enough to feed them. Raising the batch bought roughly another 1.3×
-by climbing the roofline. And checkpointing, the red bar, *cost* about
+Compilation paid roughly 1.2× — on a model that was *not* overhead-bound —
+by fusing the elementwise tail the profile exposed. Bf16 paid about half
+again on top, the tensor cores earning their silicon now that the matmuls
+are wide enough to feed them. Raising the batch bought roughly another
+1.2× by climbing the roofline. And checkpointing, the red bar, *cost* about
 a tenth of the throughput while cutting peak memory to around a third
 (about 9 GiB down to 3) — a negative rung for *speed*, because memory was
 never the binding constraint at this scale, even though it did exactly
-what it promised for memory. The cumulative single-GPU speedup, baseline
-to the batch-up rung, is the number the cell prints — about 2.4× in our
-runs — and every increment traces to a section of this chapter. That the
-pieces compose; that no single rung dominated but three modest ones
+what it promised for memory. Take the per-rung ratios as approximate: they
+move by several points between runs, and it is their shape, not their last
+digit, that survives re-measurement. The cumulative single-GPU speedup,
+baseline to the batch-up rung, is the number the cell prints — a bit over
+2× in our runs — and every increment traces to a section of this
+chapter. That the pieces compose; that no single rung dominated but three modest ones
 multiplied; that a technique can *cost* time when its constraint does not
 bind; and that the largest errors we found while building this section
 were in the *measurements*, not the model — that is the whole lesson:
@@ -1237,10 +1243,10 @@ model, one rung at a time.
 :begin_tab:`pytorch`
 * The chapter's method applied whole: profile the baseline, classify the
   regime, apply one technique per rung, re-profile. On ch. 11's GPT
-  (width 512, ~19M params), compile paid about 1.3×, bf16 about 1.4× on
-  top, a bigger batch roughly another 1.3× — no single dominant win, but
-  three modest ones multiplying to about 2.4×, with the waterfall cell
-  printing the exact cumulative figure.
+  (width 512, ~19M params), compile paid roughly 1.2×, bf16 about half
+  again on top, a bigger batch roughly another 1.2× — no single dominant
+  win, but three modest ones multiplying to a bit over 2×, with the
+  waterfall cell printing the exact cumulative figure.
 * Every rung is attributed to a section, and the bottleneck is
   re-profiled as it moves: after compilation the elementwise tail is
   fused away and the matmuls' share rises, which is what makes precision
@@ -1425,10 +1431,10 @@ ladder: **bf16** — double the roof, half the bytes.
 :::
 
 ::: {.slide title="The Rungs" only="pytorch"}
-- **R1 compile** — fuses the tail: **~1.3×** (and asserts
+- **R1 compile** — fuses the tail: **~1.2×** (and asserts
   compiled ≡ eager first)
-- **R2 bf16** — tensor cores, matmuls wide enough: **~1.4×**
-- **R3 batch-up** — climb the roofline: **~1.3×** (fp32-512
+- **R2 bf16** — tensor cores, matmuls wide enough: **~1.5×**
+- **R3 batch-up** — climb the roofline: **~1.2×** (fp32-512
   control: bf16 bought headroom, not admission)
 - **R4 checkpoint** — *negative* for speed (−~10%), but cuts
   peak memory ~3× (unneeded here)
@@ -1465,7 +1471,7 @@ need — the same negative rung as the PyTorch tab.
 @fast-transformer-the-waterfall
 
 Cumulative — each bar inherits every choice to its left. No
-dominant rung; three modest wins multiply to **~2.4×**.
+dominant rung; three modest wins multiply to **a bit over 2×**.
 Checkpointing is red: a technique that helped a different
 model *hurts* this one. A 300-step run confirms the fast
 configuration still learns.

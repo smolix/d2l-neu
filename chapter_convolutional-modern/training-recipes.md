@@ -219,7 +219,7 @@ def mixup(key, X, y, alpha):
     return lam * X + (1 - lam) * X[perm], y, y[perm], lam
 ```
 
-To make the blending visible we mix a batch of Fashion-MNIST images with $\alpha = 2$, which concentrates $\lambda$ near $0.5$ (training uses a much smaller $\alpha$). The top row shows the originals, the bottom row their mixtures with a shuffled partner:
+To make the blending visible we mix a batch of Fashion-MNIST images with $\alpha = 2$, which pulls $\lambda$ toward the middle of its range instead of the extremes (training uses a much smaller $\alpha$); the cell prints the single draw this batch got, so how strongly the images blend varies from run to run. The top row shows the originals, the bottom row their mixtures with a shuffled partner:
 
 ```{.python .input #training-recipes-mixup-2}
 %%tab pytorch

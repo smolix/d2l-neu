@@ -15,9 +15,9 @@ from d2l import jax as d2l
 import numpy as np
 ```
 
-## The Dictionary
+## Text Generation as a Markov Decision Process
 
-### Prompt, token, prefix, response
+### Prompt, Token, Prefix and Response
 
 A language model with parameters $\theta$ maps a context to a distribution over the next token: the softmax head of :numref:`sec_gpt`. Sampling repeatedly, appending each drawn token and stopping at EOS, is the `generate` loop of :numref:`sec_decoding`. Read the context as a state and the token as an action, and generation *is* the agent-environment loop of these two chapters, entry by entry.
 
@@ -36,11 +36,11 @@ A language model with parameters $\theta$ maps a context to a distribution over 
 
 Two rows deserve a second look. The state is the *prefix*, not the last token: :numref:`sec_mdp`'s Markov assumption demanded a state carrying everything the past could say about the future, and the prefix is the entire past. And the start state is drawn from $\mu_0$: :numref:`sec_policygradient` noted that this factor drops out of every gradient and asked you to hold on to it anyway; the distribution over prompts is that factor, shaping everything about the trained policy while passing through none of the derivations, which is why the estimators transfer unchanged.
 
-### Deterministic transitions
+### Deterministic Transitions
 
 The transition kernel of this MDP is string concatenation: from prefix $s_t$ with token $a_t$, the next state is $(s_t, a_t)$ with probability one, and the reward is terminal, one number $r(x, y)$ when the response ends. This is the degenerate corner :numref:`sec_mdp` set aside, with the promise that the degeneracy would *remove* terms from our algorithms rather than add any. In :numref:`sec_policygradient` the trajectory probability :eqref:`eq_traj_prob` carried transition factors, and the derivation needed an argument for why they vanish from the score; here each factor *is the constant one* before anybody differentiates. Every "the transitions cancel" argument in these chapters becomes trivial rather than subtle, all randomness in a rollout is the policy's own sampling, and the model whose absence drove :numref:`sec_qlearning` is perfectly known: it is concatenation.
 
-### The factorization proposition
+### The Factorization Proposition
 
 One identity connects "a policy over responses" to "a next-token softmax"; it is the single equation the Language Models part needs from this book.
 
@@ -57,20 +57,20 @@ Read the two halves as one collapse. The left side of :eqref:`eq_seq_factorizati
 
 ## What Collapses and What Survives
 
-Sorting both chapters through the dictionary is the payoff of having built everything explicitly; :numref:`fig_rl_token_mdp` draws the sort.
+Sorting both chapters through the dictionary of :numref:`tab_rl_sequence_dictionary` is the payoff of having built everything explicitly; :numref:`fig_rl_token_mdp` draws the sort.
 
-### What collapses
+### What Collapses
 
 Nine load-bearing ideas lose their purchase. *Discounting*: a response is finite and paid once, so $\gamma = 1$ and the knob is gone. *Bootstrapping and the TD error*: :numref:`sec_actorcritic` built targets from predictions to learn before episodes end; with one terminal reward there is nothing useful to bootstrap toward. *The Bellman equations and value iteration*: they propagate value through a state space; here the states are all texts, visited once each, over a kernel that needs no solving. *Q-learning and replay*: :numref:`sec_dqn`'s off-policy machinery reused stale transitions under a moving greedy target; the methods below stay near on-policy and pay for fresh samples. *The deadly triad*: no bootstrapping, no triad. *Per-token credit assignment*: not solved but forfeited; every token inherits one scalar. Every deletion on the list is conditional on the corner's assumptions, a terminal-only reward over deterministic concatenation in a single turn: process rewards restore intermediate credit, tool calls and environment feedback restore a nontrivial kernel, multi-turn interaction restores the loop, and with each, the struck machinery returns.
 
-### What survives
+### What Survives
 
 What remains is precisely the policy-optimization spine. *The score function* :eqref:`eq_softmax_score` and REINFORCE, unchanged. *Baselines and advantages*: the zero-mean lemma asks only that $b$ ignore the action, and the prompt is the natural unit. *Variance growing with length*: :eqref:`eq_seq_factorization` sums $T$ score terms. *On-policy staleness*: a model that just updated no longer matches the responses it just generated. *Importance ratios and clipping*: :numref:`sec_ppo`'s repair for reusing a batch a few epochs. *Trust regions in policy space*, because parameter distance still lies about policy distance. *Entropy collapse*: the unregularized optimum is still a point mass, as :numref:`sec_regularized` proved, and unregularized training still drifts toward it. And *over-optimization of an estimated objective*, with its two cures. The survivors share one trait: none ever consulted the transition kernel; everything that leaned on the kernel or on intermediate reward collapsed with it.
 
 ![The token MDP, and what it deletes. Top: a response is a trajectory whose states are prefixes, whose actions are tokens, and whose transitions append the chosen token with probability one, so all randomness is the policy's; the reward arrives once, on the terminal edge into EOS. Below: the same object collapsed to one step, a single draw $y \sim \pi_\theta(\cdot \mid x)$ scored by $r(x, y)$, the two views sharing one gradient by :eqref:`eq_seq_factorization`. Right: what simplifies away under these assumptions, struck through, and what survives; the struck machinery returns with process rewards, tool calls or multi-turn feedback.](../img/mdl-rl-token-mdp.svg)
 :label:`fig_rl_token_mdp`
 
-### The smallest instance
+### The Smallest Instance: Four Prompts and a Verifier
 
 The one-step view invites the smallest laboratory in either chapter: no environment object at all, because concatenation needs no simulator. Four "prompts", nine candidate "responses" shared across them, a verifier that checks a response exactly, and a reference policy $\pi_{\textrm{ref}}$, the stand-in for a pretrained model, which spreads its mass over the honest candidates and, with probability about $0.2$ percent, *hedges* by listing every number it has seen. Two prompts are deliberately beyond this model: no candidate matches their answers, so the verifier's ceiling is $0.5$. The policy is :eqref:`eq_softmax_policy`, one preference row per prompt; training starts from the reference, as post-training does.
 
@@ -99,7 +99,7 @@ print(f'success of a response sampled from the reference: '
       f'{success(pi_ref, verify):.3f}')
 ```
 
-### The group is the baseline
+### The Group Mean as the Baseline
 
 Now run the survivors, and nothing but the survivors. Sample a group of $K$ responses per prompt, score each, standardize the scores within the group, and take one ascent step on the log-probabilities: the normalization of :eqref:`eq_pg_normalized` with the group as the batch and the prompt as the start state. The group mean is the per-prompt baseline, so no value network exists anywhere. One term rides along for later: the KL penalty of :numref:`sec_regularized` to the frozen reference, folded into each sample's reward as $r - \beta \log \big( \pi_\theta(y \mid x) / \pi_{\textrm{ref}}(y \mid x) \big)$, the simplest way to charge it; the named method assembled at the end of the section keeps its KL as a separate loss term instead. At $\beta = 0$ it is inert.
 
@@ -153,15 +153,15 @@ The prediction lands to the third decimal, and every $K \geq 2$ reaches the veri
 
 Every collapse so far concerned the policy half of the loop. What remains is the reward $r(x, y)$, and at scale it is never given; it is estimated, one of two ways.
 
-### Learned: Bradley-Terry
+### Learned Rewards from Preferences
 
 When quality cannot be computed, it is elicited: people compare pairs of responses to the same prompt, and a reward model $r_\phi(x, y)$ is fit by the Bradley-Terry logistic regression of :numref:`sec_regularized`, :eqref:`eq_bradley_terry`. Everything measured there transfers: the fit is accurate where the preference data lives and silent where it does not; the score is identified only up to a function of the prompt, which is why the group mean subtracted above removes nothing the comparisons ever measured; and the reward is terminal, exactly the shape the proposition assumed.
 
-### Checked: a verifier
+### Checked Rewards from Verifiers
 
 For a growing family of tasks the reward needs no model at all, because the response can be *checked*: a unit-test harness runs the code, a proof assistant validates the derivation, an exact-match grader scores the final answer. Training against such checked rewards is called reinforcement learning from verifiable rewards, RLVR, the regime in which recent reasoning models are trained :cite:`DeepSeekAI.2025`. A verifier is not a lesser reward model but a different trust profile: it cannot be flattered where it actually checks, and it is blind everywhere it does not.
 
-### Reward hacking, unified
+### Reward Hacking as One Mechanism
 
 Both suppliers hand the optimizer an *estimate*, and one sentence from :numref:`sec_regularized` now covers every failure of this kind at once: an optimizer pointed at an estimated objective finds the estimate's errors, whether the estimate is a $\hat{Q}$ fit on thin data (:numref:`sec_offline`) or a reward $r_\phi$ fit on comparisons (:numref:`sec_regularized`). Reward hacking at scale is a corollary, not a new topic. To watch it, replace the exact-match verifier with a deliberately sloppy one that greps the response for the answer string. The hedge now passes every prompt, including the two the model cannot solve, where it is the *only* rewarded response, a reward gap of $1$ over honesty. The cure is the one :numref:`sec_regularized` built, and its closed form :eqref:`eq_kl_optimum` prices the exploit in advance: the tilted optimum weighs the hedge against an honest candidate as $e^{-4} \, e^{(1 - 0)/\beta}$, reference log-odds gap against reward gap, so the exploit stops paying at $\beta = 1/4$.
 
@@ -181,13 +181,13 @@ for beta in (0.0, 0.1, 0.2, 0.3, 0.5):
 
 Read the columns as the grader's score, the exact verifier's score, and the hedge's average probability. At $\beta = 0$ the policy is fully hacked: perfect by the grader it optimizes while the exact verifier still scores it $0.50$, no better than honest training, the hedge owning the two hard prompts; the takeover needs only the first group that samples the hedge, since there it is the only response ever rewarded. The penalty behaves as priced: the exploit still pays at $\beta = 0.1$, is marginal at $0.2$, and stops paying just past it, bracketing the predicted $1/4$. In fact every row lands close to the tilted optimum of :eqref:`eq_kl_optimum`: the update's pull fades as the KL-shifted rewards within a group equalize, which is that optimum's defining property, though "close" is the right word, because standardizing by the group's own standard deviation puts a random denominator under the update, and the point where it stalls need not coincide exactly with the regularized optimum. The last row is the price tag: $\beta$ is an exchange rate, not a safety valve; the penalty that blocks the exploit also caps honest sharpening, gold falling to $0.24$ at $\beta = 0.5$, and choosing $\beta$ *is* choosing a point on the frontier :numref:`sec_regularized` traced.
 
-## The Contract
+## GRPO and the Notation Contract
 
-### GRPO assembled
+### GRPO Assembled from Owned Parts
 
 The pieces assemble, in prose alone, into the method :numref:`sec_baselines` promised to finish. Group Relative Policy Optimization, GRPO :cite:`Shao.Wang.Zhu.ea.2024`, trains a language model by sampling a group of $K$ responses per prompt and weighting every token of response $j$ by the group-standardized advantage $A_j = (r_j - \mu)/(\sigma + 10^{-8})$, :eqref:`eq_pg_normalized` with the group as the batch and the group mean as the per-prompt baseline, so *no value network exists*; reusing each group for a few epochs, during which each token's ratio $\rho_t$ drifts from one and the clipped objective :eqref:`eq_ppo_clip` bounds each token's payoff; adding $\beta$ times a separate nonnegative estimator of the KL divergence to the frozen reference, the penalty of :eqref:`eq_kl_objective` as its own loss term; and dividing each response's loss by its own length, one of the divisor choices whose ledger :numref:`sec_baselines` printed. Note which KL is which, because GRPO runs both of :numref:`sec_regularized`'s kinds at once: the clip plays the trust-region role against the *previous iterate*, shaping each step, while the $\beta$ term is the penalty against the *frozen reference*, shaping the optimum. This section's toy is that estimator's skeleton, not the named algorithm, and the differences deserve a list: the toy takes one step per group, so no ratio ever drifts and nothing is clipped, where GRPO reuses each group under token-level clipped ratios; it folds the KL penalty into the reward, where the cited formulation adds the separate estimator above; its responses are single tokens, so the response-level and token-level views coincide by construction; it never divides by response length; and both share the same-group mean, the self-inclusion bias measured earlier, whose exactly unbiased alternative is the leave-one-out baseline of :numref:`sec_baselines`, RLOO. Nothing in the assembly is new to you, including its sharp edges: dividing by $\sigma$ is a step-size rescaling rather than a baseline, priced in :numref:`sec_baselines`. Finally, :eqref:`eq_kl_optimum` reads in the other direction too: solving it for the reward gives $r(x, y) = \beta \log \big( \pi^\star(y \mid x) / \pi_{\textrm{ref}}(y \mid x) \big)$ up to a per-prompt constant, so preferences can fit the policy *directly*, skipping the reward model and the reinforcement learning; that is direct preference optimization, DPO :cite:`Rafailov.Sharma.Mitchell.ea.2023`, whose derivation the Language Models part owns.
 
-### Notation the Language Models part inherits
+### Notation Inherited by the Language Models Part
 
 The Language Models part inherits these symbols verbatim; every object below was defined and exercised in these two chapters.
 
@@ -210,7 +210,7 @@ The Language Models part inherits these symbols verbatim; every object below was
 | $w$, $w^-$ | critic parameters; target copy | :numref:`sec_actorcritic`, :numref:`sec_dqn` |
 | $D_{\textrm{KL}}(P \Vert Q)$, $\mathbf{1}(\cdot)$ | KL divergence; indicator | :numref:`sec_regularized` |
 
-## Where To Go Next
+## Where to Go Next
 
 Two chapters are a first introduction, not the field. Three directions matter most.
 

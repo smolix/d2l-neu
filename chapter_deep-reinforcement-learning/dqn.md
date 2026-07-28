@@ -46,9 +46,9 @@ if tab.selected('jax'):
                               nnx.Linear(128, 2, rngs=rngs))
 ```
 
-## Why This One Breaks
+## Sources of Instability
 
-### A semi-gradient is not the gradient of anything
+### The Semi-Gradient Update
 
 Replace the table of :numref:`sec_qlearning` by a network $Q_w$ and the update stays what it was, a semi-gradient step toward the bootstrapped target. Sample transitions $(s, a, r, s')$, form
 
@@ -56,15 +56,15 @@ $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big) \max_{a'} Q_w
 
 hold $y$ fixed, and take one optimizer step on the regression loss between $Q_w(s, a)$ and $y$. Unlike the policy-gradient loss of :numref:`sec_deeprl`, this loss is ordinary supervised regression, and a falling value does mean the network is fitting its targets. It does not mean the targets are right, and that gap is where the section lives. The tabular update earned its trust as a stochastic approximation of the Bellman contraction of :numref:`sec_valueiter`, moving the table on average the way value iteration would (:numref:`sec_qlearning`). With function approximation that argument dies: each step now projects the backup onto whatever the network can represent, the projection is taken under the visitation distribution of the data, and the composition of backup and projection is no longer a contraction. With linear features, bootstrapping, and a data distribution that is not the target policy's own, the iteration can diverge outright :cite:`Tsitsiklis.VanRoy.1997`.
 
-### Correlated data
+### Correlated Data
 
 The first new coupling is in the data. Consecutive transitions of an episode are near-duplicates, the cart a centimeter over, the pole a degree further, and stochastic gradient descent wants something like independent draws. Fed the raw stream, the network overfits whatever corner of the state space this minute of experience lives in, and, because an update moves every state at once (:numref:`fig_rl_table_vs_network`), it overwrites what it knew about the rest. A table could not do this: its updates touched one entry, so a correlated stream merely revisited entries. Generalization is what turned data correlation from an inefficiency into a failure mode.
 
-### Moving targets
+### Moving Targets
 
 The second coupling is in the targets. The target $y$ contains $Q_w$, so every optimizer step moves the network and the regression surface at once. This too was survivable before: the actor-critic's critic chased a doubly moving target and lived, because every batch was fresh, drawn from the current policy at exactly the states where the critic's errors mattered, so wherever the critic drifted, the next batch audited it. That protection is what this section spends. The whole point of the buffer we are about to introduce is to train on old data, and old data audits nothing: an error can compound through the bootstrap for thousands of updates before the behavior policy ever revisits the states that would expose it.
 
-### The deadly triad
+### The Deadly Triad
 
 The three ingredients have names: *function approximation*, *bootstrapping*, and *off-policy data*. Every corner of the resulting map is an algorithm this book has already taught, which is the content of :numref:`fig_rl_deadly_triad`. Drop function approximation and you have tabular Q-learning, convergent under the conditions of :numref:`sec_qlearning`. Drop bootstrapping and you have REINFORCE with a network, Monte Carlo targets and true gradients, the safe side of :numref:`sec_deeprl`'s line. Drop off-policy data and you have SARSA or the actor-critic, bootstrapped and approximate but audited by fresh data every batch, though the audit is no guarantee: nonlinear on-policy bootstrapping can still diverge, and each corner's convergence argument carries its own step-size, coverage and representation conditions. Keep all three and you have what Sutton and Barto named the *deadly triad* :cite:`Sutton.Barto.2018,vanHasselt.Doron.Strub.ea.2018`: no convergence guarantee survives, and the failure is not noise, not a bad learning rate, and not deep networks being temperamental. The classic demonstration is Baird's counterexample :cite:`Baird.1995`, a seven-state problem that sits in the center of the figure alongside DQN itself, and it is small enough to run in full. Every reward is zero, so the true value of every state is zero, and the linear features below can represent that answer exactly, with $w = 0$. The updates are *expected* temporal-difference updates, no sampling noise anywhere, applied with equal weight to all seven states, the off-policy part, while the policy being evaluated always jumps to the seventh state:
 
@@ -82,8 +82,9 @@ for _ in range(1000):
     w += 0.01 * (delta[:, None] * Phi).mean(0)   # uniform state weighting
     sup.append(np.abs(w).max())
 print(f'sup norm of w after 0, 500, 1000 sweeps: 10, {sup[499]:.0f}, '
-      f'{sup[-1]:.0f}; the value the weights claim for state 7: '
-      f'{(Phi @ w)[6]:.0f}, true value 0')
+      f'{sup[-1]:.0f}')
+print(f'the value the weights claim for state 7: {(Phi @ w)[6]:.0f}, '
+      f'true value 0')
 d2l.plot(np.arange(1, 1001), sup, 'sweeps over all seven states',
          'sup norm of w', yscale='log')
 ```
@@ -93,14 +94,14 @@ The weights grow without bound, the straight line on the logarithmic axis saying
 ![The deadly triad. Each circle is one ingredient, and every region is occupied by an algorithm these two chapters have taught; the center, all three ingredients at once, is where DQN and offline Q-learning live, and where Baird's counterexample proves that divergence is possible. Drop any one ingredient and convergence arguments become available again, each under its own step-size, coverage and representation conditions: the triad is a warning pattern, not an if-and-only-if theorem.](../img/mdl-rl-deadly-triad.svg)
 :label:`fig_rl_deadly_triad`
 
-## The Two Repairs
+## Replay and Target Networks
 
 :numref:`fig_rl_dqn_dataflow` draws the whole machine; the two subsections that follow walk its two ideas.
 
 ![Deep Q-learning as a data flow. The behavior policy acts with the online network; transitions enter the replay buffer, and uniformly sampled minibatches scramble time, which makes the data nearly independent and reusable. The regression target is computed by a frozen copy of the network, refreshed every $C$ steps, so the targets stand still between syncs. The gradient flows along exactly one path, into the online network; the marked edge from the frozen copy carries no gradient. The drawn buffer is full and evicting its oldest entries, the steady state of a long run; in this section's runs the 50,000-step budget never fills the 200,000-slot ring, so nothing is evicted.](../img/mdl-rl-dqn-dataflow.svg)
 :label:`fig_rl_dqn_dataflow`
 
-### Replay, and the off-policy license
+### Experience Replay and the Off-Policy License
 
 The repair for correlation is the *replay buffer* :cite:`Lin.1992`: store the stream in a large ring, train on minibatches drawn from it uniformly at random. Sampling scrambles time, so a minibatch mixes this minute's transitions with transitions from long-dead versions of the policy, and every transition is reused many times instead of once. The license to do this was planted in :numref:`sec_qlearning` and is the organizing question of :numref:`sec_offline`: the Q-learning target for $(s, a, r, s')$ never mentions the policy that chose $a$, so a transition collected by any policy is a valid sample of the same backup. The buffer is that license, exercised at scale.
 
@@ -135,7 +136,7 @@ class ReplayBuffer:  #@save
 
 Two notes on the container. First, capacity: $200{,}000$ transitions against a $50{,}000$-step budget, so in our runs nothing is ever evicted and the network never forgets what failure looks like; shrink the capacity far enough and it does, which is exercise 4. Second, what `sample` returns is a `Batch` whose episode structure is gone, one pseudo-boundary standing where `ep_ends` carried real ones. That is the point, and it prices what replay gives up: of the estimators the `Batch` carries, `reward_to_go` and `gae` need intact episodes and are meaningless here, while `td_target` needs only the transition itself. One-step bootstrapping is precisely the estimator that survives the scramble, which is why the value family and the replay buffer belong together, and the target below is literally `batch.td_target`, the same call the actor-critic's critic makes. "Replay is legitimate because the target does not mention the collector" stops being a slogan and becomes a line of code.
 
-### The target network
+### The Target Network
 
 The repair for moving targets is the *target network* :cite:`mnih2015human`: a frozen copy $Q_{w^-}$ of the online network computes every bootstrap,
 
@@ -293,7 +294,7 @@ def train_dqn(seed, qnet, use_target=True, step=None):
 
 Note what the buffer stores: `terminated`, never `truncated`. A CartPole episode cut off at 500 steps ends in a state with a future, and :numref:`sec_qlearning` established that masking the bootstrap there teaches the network that surviving is worthless; exercise 2 traces exactly what would go wrong.
 
-### The ablation
+### Ablating the Target Network
 
 Three seeds per arm, everything identical except the switch. The networks are caller-owned, as in :numref:`sec_actorcritic`, so later cells can audit the trained agents:
 
@@ -348,8 +349,8 @@ for arm in runs:
     early = np.array([x[-51] for x in w])
     print(f'{arm:>18}: best 20-episode window per seed {np.round(best)}\n'
           f'{"":>18}  final window {np.round(final)} '
-          f'(spread {np.ptp(final):.0f}); '
-          f'fifty episodes earlier {np.round(early)}')
+          f'(spread {np.ptp(final):.0f})\n'
+          f'{"":>18}  fifty episodes earlier {np.round(early)}')
 ```
 
 Read the DQN line against the curve. The final window measures where a run happened to be in its climb-and-fall cycle when we stopped it: it moves by well over a hundred points from seed to seed, and the third statistic shows it would have moved again had we stopped fifty episodes earlier. The best window is no report either: picking the best stretch after watching the whole run is optimistic selection, a bias that grows with run length and noise, and printing its per-seed spread does not remove it. Both windows are descriptive statistics of the training curve, good for describing the churn and for nothing else. The statistic to *report* is predeclared before the run: a fixed budget, here $50{,}000$ steps, and a separate evaluation of the policy that budget bought, which is exactly what the next cell computes. This is not a CartPole quirk; deep reinforcement learning results are notoriously sensitive to when you stop measuring, and a predeclared budget with a separate evaluation is the defense.
@@ -389,7 +390,7 @@ The trace rises smoothly into the neighborhood of the ceiling and stays on that 
 
 ## Overestimation
 
-### The max bias, measured
+### Measuring the Maximization Bias
 
 The target :eqref:`eq_dqn_target` takes a maximum over *estimated* values, and a maximum over noisy estimates is biased upward: $E[\max_{a'} \hat{Q}(s', a')] \geq \max_{a'} E[\hat{Q}(s', a')]$, with strict inequality whenever the noise can change which action wins. :numref:`sec_qlearning` sighted this bias on a table, four of five converged estimates of one entry leaning above the truth and none below, and :numref:`sec_regularized` located the operator on a dial: the hard $\max$ is the $\beta \to 0$ corner of the soft backup, and the corner inherits everything the soft version smooths, including this. The effect was first analyzed for exactly our setting, function approximation feeding its own noise through a $\max$ :cite:`Thrun.Schwartz.1993`, and it takes six lines to measure. Give four actions the same true value of zero, estimate each with unit noise, and take the max; then let one set of estimates *select* the action and an independent set *evaluate* it, the double estimator of :cite:`vanHasselt.2010`:
 
@@ -409,7 +410,7 @@ One unit of bias from nothing but noise and a $\max$; the double estimator remov
 ![A maximum over noisy estimates is biased upward. Left: the distribution of the largest of four independent estimates of the same true value of zero, against the distribution of a single estimate; the maximum carries a measured bias of $1.03$. Right: the bias of the single estimator grows with the number of actions, while the double estimator, one set of estimates selecting the action and an independent set scoring it, stays below $0.002$ in magnitude throughout.](../img/mdl-rl-max-bias.svg)
 :label:`fig_rl_max_bias`
 
-### Double DQN in three lines
+### Double DQN
 
 The double estimator wants two networks, and DQN already maintains two. Double DQN :cite:`Hasselt.Guez.Silver.2016` splits the two jobs the $\max$ performs across them: the online network selects the action, the frozen copy evaluates it,
 
@@ -460,13 +461,13 @@ for arm in ('DQN', 'Double DQN'):
 
 Across our tab-seeds the double target's trace ends mostly below the plain target's, typically by a few points, with the largest pullbacks on the seeds that had drifted furthest above the ceiling; the seed bands overlap for most of training. That modesty is itself the prediction. CartPole has two actions, and the right panel of :numref:`fig_rl_max_bias` says the bias grows with the size of the action set: two actions is where the $\max$ has the least room to flatter itself. On Atari's eighteen actions the same three lines change scores decisively :cite:`Hasselt.Guez.Silver.2016`, and they matter most of all where audits are scarce, which is why the idea returns in :numref:`sec_offline`'s setting. The effect on CartPole *returns* is inside seed noise at this budget, and is not claimed.
 
-## What Survived
+## The DQN Lineage
 
-### What came after
+### Extensions and Successors
 
 DQN turned out to be less a finished algorithm than a chassis, and its parts list has been iterated for a decade. The $n$-step target is free machinery now that :numref:`sec_actorcritic` has built the whole dial: reality for a few steps before the bootstrap. Prioritized replay samples transitions in proportion to their TD error rather than uniformly :cite:`Schaul.Quan.Antonoglou.ea.2016`, a benefit that shrinks as buffers grow large and diverse. The dueling head decomposes $Q$ into a state value plus advantages :cite:`Wang.Schaul.Hessel.ea.2016`. Distributional heads regress the whole return distribution instead of its mean :cite:`Bellemare.Dabney.Munos.2017`; in the tabular and linear cases the induced expected update provably coincides with the ordinary one, so its benefit is an interaction with deep function approximation, and the distributional head has outlived DQN itself as a component of current agents. Rainbow bolted six of these onto the chassis and, valuably, published the ablation that measures each part's contribution :cite:`Hessel.Modayil.vanHasselt.ea.2018`. Most recently, PQN removed the chassis: with LayerNorm inside the network and batches gathered from parallel environments, plain deep Q-learning trains stably with *no replay buffer and no target network* :cite:`Gallici.Fellows.Ellis.ea.2025`. That result reframes this section. The two inventions were never commandments; they were one particular solution to a stability problem, and normalization plus decorrelated-by-parallelism data is another.
 
-### The status of DQN today
+### DQN in Modern Practice
 
 For a discrete-action problem today you would reach first for PPO (:numref:`sec_ppo`), or for a modern value-based agent from the lineage above; vanilla DQN is rarely the tool. It is taught, here and everywhere, because it is the cleanest laboratory for the two failure modes that define deep value learning, targets that chase themselves and maxima that flatter themselves, and because its central license is load-bearing for everything that follows: learning from data the current policy did not collect. The family also remains confined to discrete actions, since its policy is an argmax over the action set: :numref:`sec_deeprl` wrote that gravestone, and the deterministic-actor family described there is how this section's ideas reach continuous control. :numref:`sec_offline` now takes the license to its limit, a fixed dataset with no interaction at all, where every phenomenon measured here returns with the safety net removed.
 

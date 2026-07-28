@@ -1055,8 +1055,9 @@ trainer.fit(model, data)
 t_concise = time.time() - t0
 ```
 
-The trained model reaches a validation perplexity comparable to the
-from-scratch implementation, and its samples read the same.
+The trained model reaches a validation perplexity in the same range as the
+from-scratch implementation, somewhat higher in some frameworks, and its
+samples read the same.
 
 ```{.python .input #rnn-implementation-concise-implementation-6}
 %%tab pytorch, mxnet
@@ -1097,7 +1098,7 @@ for name, t, p in [('scratch', t_scratch, ppl_scratch),
 ```
 
 :begin_tab:`pytorch`
-The framework layer wins severalfold. The reason is kernel fusion: our
+The framework layer wins by a wide margin. The reason is kernel fusion: our
 scratch loop launches several small GPU operations per time step from
 Python, and at this model size the per-launch overhead dwarfs the
 arithmetic, while `nn.RNN` executes the whole unrolled recurrence inside one
@@ -1376,7 +1377,7 @@ Same trainer, same data:
 ::: {.slide title="Scratch vs. concise, measured"}
 @rnn-implementation-scratch-versus-concise-measured
 
-- PyTorch/MXNet: fused kernel wins severalfold; per-step launch
+- PyTorch/MXNet: fused kernel wins ~2–3×; per-step launch
   overhead dominates at this size.
 - JAX: both versions JIT-compile; the gap is small.
 - TF: `SimpleRNN` has **no** fused GPU kernel; the compiled

@@ -337,11 +337,11 @@ Beam search mostly does what it promises: at $k = 4$ it usually finds
 continuations that the model scores better than the greedy ones, curing the
 myopia of the four-token example above. It remains an approximate search,
 though, so on a given prefix a wider beam can occasionally come back
-*worse*. And yet look at the text. The continuations it returns lock into a
-literal loop, repeating one phrase verbatim, and the distinct-3 numbers
-collapse far below the values sampling will achieve; where greedy decoding
-already loops, beam search simply finds a higher-probability loop to be
-stuck in. This is the
+*worse*. And yet look at the text. The continuations it returns fall back
+on the same phrase again and again, sometimes into a literal loop, and the
+wider beam's distinct-3 numbers drop below the greedy ones and far below
+the values sampling will achieve, sharply so in some frameworks: the extra
+search buys a higher-probability loop to be stuck in. This is the
 degeneration mechanism at work: the better a maximizer gets, the deeper
 it digs into the repetitive mode of the distribution. The lesson
 generalizes far beyond RNNs. For open-ended text
@@ -563,9 +563,10 @@ for text in ('the time traveller', 'it seemed to me that'):
 Time to hear the dials rather than plot them. First, temperature alone: at
 $T = 0.5$ the text hugs the model's mode and inherits some of greedy's
 repetitiveness, at $T = 1$ it is diverse but occasionally derails into
-tail nonsense, already reaching for tokens whose bytes no longer decode to
-valid text (the replacement characters below), and at $T = 2$ the flattened
-distribution produces gibberish outright.
+tail nonsense, and as the temperature rises the sampler starts reaching for
+tokens whose bytes no longer decode to valid text (the replacement
+characters below), until at $T = 2$ the flattened distribution produces
+gibberish outright.
 
 ```{.python .input #decoding-the-same-prefix-under-every-strategy-1}
 prefix = data.tokenizer.encode('the time traveller')
@@ -784,9 +785,10 @@ $$\frac{1}{L^\alpha} \sum_{t=m+1}^{m+L} \log P(x_t \mid x_{<t}),
 . . .
 
 $k = 4$ *usually* finds sequences the model scores **higher** (it is an
-approximate search, so not always), and those are the ones that lock into a
-**literal loop** (distinct-3 collapses). For open-ended text the argmax is
-the wrong target; search cannot fix that. Large beams even hurt MT. Beam
+approximate search, so not always), and those are the ones that circle back
+on a phrase, sometimes a **literal loop** (distinct-3 drops, sharply in
+some tabs). For open-ended text the argmax is the wrong target; search
+cannot fix that. Large beams even hurt MT. Beam
 search survives where its assumptions hold: ASR, MT, constrained decoding.
 :::
 
@@ -843,8 +845,9 @@ tightens the fastest; top-$k$ keeps 20 no matter what.
 ::: {.slide title="The same prefix under every strategy"}
 @decoding-the-same-prefix-under-every-strategy-2
 
-Greedy: generic and stuck. Pure sampling: diverse, erratic. Truncated
-sampling: the useful middle, and the default in deployed systems.
+Greedy: generic, and prone to getting stuck. Pure sampling: diverse,
+erratic. Truncated sampling: the useful middle, and the default in
+deployed systems.
 :::
 
 ::: {.slide title="Recap"}

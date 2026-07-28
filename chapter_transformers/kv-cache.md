@@ -399,7 +399,7 @@ d2l.plot(lengths, [t_naive, t_cached], 'context length', 'ms per token',
 Read the plot from the right. At long contexts the naive step grows
 roughly linearly with $n$, as $2Nn$ arithmetic says it must, while the
 cached step stays flat; at a context of four thousand tokens the gap in
-our runs is about a factor of five, and it doubles with every further
+our runs is six- to sevenfold, and it widens with every further
 doubling of context. At short contexts the two curves *merge* — below
 about a thousand tokens this model is so small that a step of either kind
 is dominated by launching a dozen blocks' worth of GPU kernels, not by
@@ -444,8 +444,8 @@ prefill call, and "tokens per second" is the cached decode loop.
 :end_tab:
 
 :begin_tab:`jax`
-Several times faster at this prompt length — each timing includes one XLA
-compilation for its shapes, so the steady-state gap is larger still, as
+More than twice as fast at this prompt length — each timing includes one
+XLA compilation for its shapes, so the steady-state gap is larger still, as
 the per-step curve above shows. Production serving systems generate this
 way; "time to first token" is our prefill call, and "tokens per second"
 is the cached decode loop.
@@ -588,9 +588,9 @@ print(f'bandwidth ceiling for decode: about '
 ```
 
 The measurement is blunt: this model reads a two-thousand-token prompt at
-tens of thousands of tokens per second and then generates at about a
-hundred — three orders of magnitude apart, on identical hardware, running
-identical layers. Note also the gap between our measured decode rate and
+tens of thousands of tokens per second and then generates at under a
+hundred — nearly three orders of magnitude apart, on identical hardware,
+running identical layers. Note also the gap between our measured decode rate and
 the bandwidth ceiling the arithmetic promises: a Python loop that
 launches every kernel of every block one token at a time pays overheads
 that production engines eliminate with compiled decode loops and CUDA
@@ -1396,7 +1396,7 @@ Every decoded token reads **all weights + the whole cache** for $2N$ FLOPs:
 
 @!kv-cache-prefill-is-compute-bound-decode-is-memory-bound
 
-- Same layers, same GPU: tens of thousands vs. a hundred tokens/s.
+- Same layers, same GPU: tens of thousands vs. under a hundred tokens/s.
 - Decode speed = bytes moved per token. Every cache byte shaved is speed.
 :::
 

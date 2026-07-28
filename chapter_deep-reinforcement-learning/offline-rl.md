@@ -19,16 +19,16 @@ import gymnasium as gym
 import numpy as np
 ```
 
-## The Rule
+## On-Policy and Off-Policy Updates
 
-### A recap, not a third derivation
+### The Two Families of Update Rules
 
 The update rules of the last two chapters fall into two families. Each rule was assigned to its family when it first appeared. This section only collects the results. The policy gradient of :numref:`sec_policygradient` is an expectation under the *current* policy's trajectory distribution, so a sample from any other policy estimates the wrong quantity: REINFORCE, the actor-critic of :numref:`sec_actorcritic` and, with a bounded allowance, PPO are *on-policy*. The Q-learning target $r + \gamma \max_{a'} \hat{Q}(s', a')$ is a sample of the Bellman optimality backup at $(s, a)$, and that backup depends on the environment alone: which $s'$ follows $(s, a)$, and what reward arrives. Nothing in it refers to the policy that happened to choose $a$; :numref:`sec_qlearning` planted this observation inside the $\max$, and the replay buffer of :numref:`sec_dqn` is the license exercised at scale. Any real transition is a valid sample of the same quantity, whether from yesterday's policy, another agent, or a fixed log: *off-policy*. :numref:`fig_rl_data_rules` draws the two regimes, and the third one this section adds.
 
 ![Three data regimes, one vocabulary: a policy acts, the data feeds an update, and the update hands back a new policy. On-policy methods estimate an expectation under the policy currently running, so a batch is used once and then stale, with PPO's ratios buying a few epochs of extra life. Off-policy methods estimate the Bellman optimality backup, whose target does not mention who collected the data, so the stack of every past policy's transitions remains valid. Offline learning cuts the arrow to the environment entirely: the dataset is collected once, the update can only sweep it, and no mistake the learned policy makes is ever discovered before deployment.](../img/mdl-rl-data-rules.svg)
 :label:`fig_rl_data_rules`
 
-### SARSA: one symbol, the opposite rule
+### SARSA: Bootstrapping on the Action Taken
 
 The boundary between the families is one symbol wide. Take the Q-learning update of :eqref:`eq_td_error` and bootstrap not on the best action at $s'$ but on the action $a'$ that the behavior policy *actually took* there,
 
@@ -84,20 +84,21 @@ for name, Q in [('Q-learning', Q_q), ('SARSA', Q_sarsa)]:
     earned = d2l.evaluate(env, lambda s, r_: d2l.epsilon_greedy(
         Q[s], epsilon, r_), 1000, gamma, rng)
     claim = (1 - epsilon) * Q[0].max() + epsilon * Q[0].mean()
-    print(f'{name:>10}: greedy policy succeeds {greedy:.1%}; the behavior '
-          f'earns {earned:.3f}, and the policy-weighted table value '
+    print(f'{name:>10}: greedy policy succeeds {greedy:.1%}; '
+          f'the behavior earns {earned:.3f}')
+    print(f'{"":>10}  the policy-weighted table value '
           f'sum_a pi(a|s0) Q(s0, a) claims {claim:.3f}')
 ```
 
 Each table matches the answer to its own question. Q-learning's entries value greedy continuation, a policy the agent never ran, so even read as the behavior's value its table claims $0.180$ while the $\epsilon = 0.3$ behavior earns $0.061$, a threefold overstatement. SARSA's policy-weighted claim of $0.061$ lands within a hundredth of the $0.070$ its behavior really earns. Both greedy policies succeed within a point or two of the optimum's $73.6$ percent from :numref:`sec_valueiter`, so the difference is not quality but *reference*: Q-learning learns about a policy it does not run, the freedom this section now stretches to its breaking point, while SARSA answers "what is this behavior worth", the right question whenever the exploration is part of the deployment.
 
-### Where PPO's allowance comes from
+### Bounded Staleness and Importance Ratios
 
 On-policy is a spectrum, not a prison, and :numref:`sec_ppo` already priced the slack: importance ratios reweight data from a nearby policy, exactly in principle by :eqref:`eq_change_of_measure`, at a variance cost that explodes as the collecting policy drifts away, which is why PPO reuses a batch for a bounded number of epochs and no longer. At industrial scale the same allowance is an engineering budget: distributed actors inevitably run a few parameter updates behind the central learner, and IMPALA's V-trace truncates the importance corrections so that slightly stale data stays usable at bounded variance :cite:`Espeholt.Soyer.Munos.ea.2018`. The spectrum runs from fresh-only through bounded staleness to Q-learning's any-policy license; the rest of this section walks to the far end, one fixed log and not a step more.
 
 ## Offline Learning
 
-### Distribution shift, measured
+### Measuring Distribution Shift
 
 Now remove interaction entirely. A dataset of transitions is collected once, by some behavior policy we may not control, and the agent must produce the best policy it can from the dataset alone: no exploration, no second chances, no way to test a hypothesis by acting. This is *offline* reinforcement learning, batch reinforcement learning in the older literature :cite:`Levine.Kumar.Tucker.ea.2020`, and it is the realistic setting whenever data is plentiful but experimentation is costly or unsafe: hospital records, driving logs, the interaction history of a deployed system.
 
@@ -128,11 +129,11 @@ Off-policy methods look like the obvious fit, since their updates accept data fr
 ![Distribution shift, measured on its own dataset: 500 uniformly random episodes on the slippery lake, 3697 transitions. Left: the 44 state-action pairs the agent can actually choose from, sorted by how often the dataset tried them, from 428 times down to 2 with a median of 34; the marks show where the learned greedy policy asks for values, including pairs deep in the thin tail with errors near 0.3. Right: each fitted value's error against its support, spanning 0.001 to 0.374 with median 0.087, and the fitted count penalty $\kappa/\sqrt{n}$ at $\kappa = 0.53$ drawn through the cloud. Read the fitted curve as a descriptive envelope, not a law: many points lie on either side, the cloud decays more slowly than $1/\sqrt{n}$, and it floors near 0.10 at the best-supported pairs, a residue fed by the maximization bias of :numref:`sec_dqn`, the constant step size, and incomplete convergence, with nothing here to correct it.](../img/mdl-rl-distribution-shift.svg)
 :label:`fig_rl_distribution_shift`
 
-### Why the self-correction is gone
+### The Loss of Self-Correction
 
 The catch, then, is not the validity of any single update. The catch is that :numref:`sec_qlearning`'s self-correction is gone. Online, an overestimated action soon gets chosen, tested, and corrected by fresh data. Offline, an overestimated action is chosen by the learned policy and nothing ever corrects it, because no new data arrives. And overestimation is guaranteed at some scale: a max over noisy estimates is biased upward, the maximization bias :numref:`sec_qlearning` first sighted and :numref:`sec_dqn` measures in :numref:`fig_rl_max_bias` and repairs, except that here nothing downstream repairs anything. The max is not even a neutral consumer of this noise. Maximization hunts for the entries that err upward, the way any optimizer probes a model for its soft spots, so the errors that end up in the policy are the worst ones available rather than typical ones. The bias flows through bootstrapping into other states, and the final policy is built by taking argmaxes over exactly the entries most likely to be inflated. :numref:`sec_regularized` watched the same mechanism from the reward side, a planner driving into the unpriced hazard lane of a fitted reward; here the estimate under attack is the value function itself, and the attacker sits inside the algorithm, in the $\max$ of every backup.
 
-### The experiment, with a behavior-cloning bar
+### The Experiment and the Behavior-Cloning Baseline
 
 To catch this in the act we need the algorithm, two competitors, and a yardstick. The algorithm sweeps the Q-learning update over the frozen dataset, shuffling the transition order every sweep. It takes a pessimism strength `kappa`, explained in the next section; `kappa = 0` is the naive method. One design point deserves its own sentence: a pair the dataset never tried has $n = 0$, and the usual quiet hack, clamping the count to one, silently claims data that does not exist. With pessimism switched on we instead distrust such pairs entirely, and no pessimistic value falls below zero, the least any policy can earn on this lake:
 
@@ -209,10 +210,10 @@ for seed in range(num_datasets):
 ```{.python .input #offline-rl-the-experiment-with-a-behavior-cloning-bar-5}
 %%tab pytorch, jax
 for name, (pred, actual) in results.items():
-    print(f'{name:>11}: predicted median {np.median(pred):.3f}, spread '
-          f'{min(pred):.3f} to {max(pred):.3f}; actual median '
-          f'{np.median(actual):.3f}, spread {min(actual):.3f} '
-          f'to {max(actual):.3f}')
+    print(f'{name:>11}: predicted median {np.median(pred):.3f}, '
+          f'spread {min(pred):.3f} to {max(pred):.3f}')
+    print(f'{"":>11}  actual    median {np.median(actual):.3f}, '
+          f'spread {min(actual):.3f} to {max(actual):.3f}')
 over = [sum(p > V_star[0] for p in results[k][0])
         for k in ['naive', 'pessimistic']]
 print(f'promises above V*(s0): naive on {over[0]} of {num_datasets} '
@@ -246,7 +247,7 @@ The clone bars answer the reviewer's question. Cloning promises a median of $0.0
 
 ## Pessimism
 
-### Kappa over root n
+### The Count-Based Penalty $\kappa/\sqrt{n}$
 
 The repair follows from the diagnosis. The inflated entries are the poorly estimated ones, and poorly estimated means rarely observed, so distrust value in proportion to how little data supports it: subtract a penalty $\kappa / \sqrt{n(s, a)}$, with $n(s, a)$ the dataset's visit count, both inside the bootstrap max and from the final values, which is exactly what `offline_q` does for $\kappa > 0$. The $1/\sqrt{n}$ shape is the rate at which the noise of an $n$-sample average shrinks, and it is not new: it is the count-shrinking shape of :numref:`sec_qlearning`'s UCB confidence radius $\kappa \sqrt{\log t / n}$, there with the bandit's $\log t$ in the numerator, reused as a debit. The construction should be called what it is: a count-based pessimistic shrinkage heuristic motivated by that rate, not a confidence interval with coverage guarantees. Before trusting the shape, measure it. Each of our fifteen naive runs left behind a table of errors against $Q^*$ and a table of counts; pooled, they form a cloud, one point per pair per dataset:
 
@@ -263,8 +264,8 @@ n, e = support[support > 0], error[support > 0]
 kappa_fit = np.median(e * np.sqrt(n))
 print(f'{len(n)} supported live pairs over {num_datasets} datasets: error '
       f'min {e.min():.3f}, median {np.median(e):.3f}, max {e.max():.3f}')
-print(f'kappa centering kappa/sqrt(n) on the cloud: {kappa_fit:.2f}; '
-      f'residual error at n > 100: median {np.median(e[n > 100]):.3f}')
+print(f'kappa centering kappa/sqrt(n) on the cloud: {kappa_fit:.2f}')
+print(f'residual error at n > 100: median {np.median(e[n > 100]):.3f}')
 grid = np.logspace(np.log10(n.min()), np.log10(n.max()), 50)
 d2l.plot([n, grid], [e, kappa_fit / np.sqrt(grid)],
          xlabel='n(s, a) in the dataset', ylabel='error of the fitted value',
@@ -276,17 +277,17 @@ The penalty is a usable envelope, not a law, and the fit is descriptive: the sca
 
 Keep four distinct failures apart, because the toy compresses them: *support failure*, where an action or region is absent from the data outright, the $n = 0$ pairs; *statistical uncertainty*, where counts are finite, the part $1/\sqrt{n}$ models; *bootstrapped extrapolation*, where function approximation propagates inflated values into other states' targets, mostly invisible in a table and first-order at deep scale; and *model selection*, where choosing $\kappa$ itself needs interaction the setting forbids, the open problem this section ends on.
 
-### The mirror: optimism online, pessimism offline
+### Optimism Online, Pessimism Offline
 
 **The sign, completed.** :numref:`sec_qlearning` promised that its count-shrinking radius would return with the sign flipped, and here it is: UCB *adds* its confidence radius $\kappa \sqrt{\log t / n}$ to the value of an action it has too little data to judge, and offline pessimism *subtracts* $\kappa/\sqrt{n}$ for the same reason. The same count-shrinking shape, opposite sign; but the mirror is conceptual: optimism grants a radius of doubt, pessimism deducts one, and the two radii are cousins rather than one statistical quantity. The online bonus carries a $\log t$ that lets an idle arm creep back into consideration, machinery with no offline counterpart because nothing offline ever idles, and each side tunes its own scale. The asymmetry deserves one plain statement. Online, optimistic errors self-correct through action, so algorithms can afford optimism and even exploit it to explore. Offline, optimistic errors are never tested, so the safe direction of error is downward: what you cannot verify, you discount. One quantity, two signs, and the sign is set by whether the loop is open.
 
-### Predicted against earned
+### Calibration after Pessimism
 
 With that reading, return to the statistics cell and put the pessimistic lines against the naive ones. The median prediction falls from $0.274$ to $0.121$, below the true optimum, and on all but two of the fifteen datasets the promise no longer exceeds what any policy could deliver; the spread, $0.035$ to $0.225$, is printed rather than hidden. The policy itself is *not* better: the pessimistic greedy policy out-earns the naive one on only four of the fifteen datasets, and its median return of $0.080$ sits a shade below the naive $0.097$. What improved is the ledger: the gap between promise and delivery shrank from close to threefold to about one and a half. Pessimism did not conjure a better policy out of the same data; what it bought is a prediction a deployment could roughly trust, and that is the currency of the offline setting. This under-promise principle runs through most of modern offline reinforcement learning, in far more sophisticated forms :cite:`Levine.Kumar.Tucker.ea.2020`.
 
 ## Beyond the Gridworld
 
-### Constrain the policy, the values, or both
+### Constraining the Policy, the Values, or Both
 
 Counts do not survive the trip to continuous states and actions, but the two instincts they implement do, and practical offline methods sort by which instinct they enforce, and where. The first diagnosis at deep scale named the disease extrapolation error and answered on the policy side: batch-constrained Q-learning restricts the learned policy to actions the dataset supports, so that the values it consults are ones the data can back :cite:`Fujimoto.Meger.Precup.2019`. Its tabular form is a two-line diff of `offline_q`, a hard rule where the penalty was graded:
 
@@ -312,11 +313,11 @@ print('on this dataset the support rule reproduces the naive run, '
 
 The assert is the interesting part: here the support rule changes *nothing*, bit for bit, and the reason is worth a moment. Zero-initialized values on a lake that never pays negative reward already sit at the floor, so an untried action can never win a max against a tried one, and nothing here is fully untried anyway, the thinnest pair having seven visits. Our disease is thin support, which a binary rule cannot see; the graded $\kappa/\sqrt{n}$ can tell seven visits from four hundred. At deep scale the balance flips: with continuous actions almost every action is unseen, support becomes the first-order problem, and the constraint bites. The value-side sibling is conservative Q-learning, which trains the values under an extra penalty pushing down out-of-data actions so the learned values lower-bound the truth :cite:`Kumar.Zhou.Tucker.ea.2020`; implicit Q-learning declines to query unseen actions at all, backing up an upper expectile of the values the dataset itself exhibits :cite:`Kostrikov.Nair.Levine.2022`; and a minimalist baseline, TD3+BC, keeps embarrassing more elaborate methods by simply adding a behavior-cloning term to an off-policy actor :cite:`Fujimoto.Gu.2021`. Constraining the policy, the values, or both is how most practical offline methods operate.
 
-### Drop the bootstrap
+### Sequence Modeling without Bootstrapping
 
 There is also a way out of the bootstrapping business altogether. The max in the target caused the inflation, so drop the max, drop the bootstrap, and treat the dataset as sequences to be modeled. The Decision Transformer :cite:`Chen.Lu.Rajeswaran.ea.2021` trains an autoregressive sequence model, the same family as the language models later in this book, on trajectories written as alternating returns-to-go, states, and actions; at test time it is conditioned on a high desired return and generates the actions that would earn it. Offline reinforcement learning becomes supervised sequence prediction, with no value function and no maximization anywhere, and on standard benchmarks this matches strong value-based offline methods; a sobering follow-up found that a small return-conditioned network trained by plain supervised learning recovers much of the same performance, so how much the sequence model itself contributes remains an active argument. It is one of the bridges from this chapter to reinforcement learning for language models, taken up in :numref:`sec_rl_sequences`.
 
-### Offline model selection
+### Offline Model Selection
 
 One caveat remains. Every judgment this section passed, the actual-return bars above all, came from rolling policies out in the simulator, and a real offline deployment cannot do that: choosing $\kappa$, the number of sweeps, or between two trained policies is itself a counterfactual question, and the estimators available for it inherit exactly the variance explosion that :numref:`sec_ppo` met when policies drift apart, since they are importance-weighted values of the logged episodes and their descendants :cite:`Levine.Kumar.Tucker.ea.2020`. Offline model selection is an open problem; our clean bars are a luxury of the laboratory, and exercise 6 asks what survives without it.
 

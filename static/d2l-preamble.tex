@@ -30,6 +30,17 @@
   % pages may now end at slightly different heights — the accepted trade in
   % technical books, and far less distracting than the stretch.
   \raggedbottom
+  % The book passed 1000 pages, and LaTeX's default page-number slot in the
+  % table of contents (\@pnumwidth = 1.55em) fits three digits. Every entry
+  % pointing at a four-digit page therefore overflowed its box by exactly
+  % 4.93pt: 658 of the 811 Overfull \hbox warnings in the build came from
+  % this one measurement. Widen the slot (and the matching right margin,
+  % which must stay \@pnumwidth + ~1em or the dot leaders collide with the
+  % number).
+  \makeatletter
+  \renewcommand{\@pnumwidth}{2.4em}%
+  \renewcommand{\@tocrmarg}{3.4em}%
+  \makeatother
 }
 
 % Better float placement for figures inside narrow sections.

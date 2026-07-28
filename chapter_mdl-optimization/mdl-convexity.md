@@ -69,10 +69,11 @@ $$
 As $\theta$ runs from $1$ to $0$, the point $\theta\mathbf{x} + (1-\theta)\mathbf{y}$
 walks the straight segment from $\mathbf{x}$ to $\mathbf{y}$; convexity demands
 the walk never leaves the set. :numref:`fig_mdl-opt-convex-vs-nonconvex-set`
-contrasts a convex set, where every chord lies within, with a non-convex
-crescent, where a chord between two of its points slips outside; it also shows
-the two convex sets deep learning uses most, the probability simplex (a
-hyperplane cut of the nonnegative orthant) and a half-space.
+contrasts a convex set with a non-convex crescent: every chord of the convex
+set lies within, while a chord between two points of the crescent slips
+outside. It also shows the two convex sets deep learning uses most, the
+probability simplex (a hyperplane cut of the nonnegative orthant) and a
+half-space.
 
 ![Convex versus non-convex sets. Left: a convex set, where the segment between any two points stays inside. Middle: a non-convex crescent, where a chord between two of its points passes outside the set. Right: the probability simplex $\{\mathbf{p}\succeq0,\ \mathbf{1}^\top\mathbf{p}=1\}$ and a half-space $\{\mathbf{x}:\mathbf{a}^\top\mathbf{x}\leq b\}$, both convex.](../img/mdl-opt-convex-vs-nonconvex-set.svg)
 :label:`fig_mdl-opt-convex-vs-nonconvex-set`
@@ -137,10 +138,10 @@ fixed $\mathbf{z}$, the condition $\mathbf{z}^\top A \mathbf{z} \ge 0$ is
 *linear* in the entries of $A$, so
 $\mathbb{S}^n_+ = \bigcap_{\mathbf{z}} \{A : \mathbf{z}^\top A \mathbf{z} \ge 0\}$
 is convex, a fact we will lean on when Hessians enter. More generally, every
-**polyhedron** $\{\mathbf{x} : A\mathbf{x} \preceq \mathbf{b}\}$, the
-feasible set of the constrained problems in
-:numref:`sec_mdl-constrained-optimization-duality`, is a finite intersection
-of half-spaces.
+**polyhedron** $\{\mathbf{x} : A\mathbf{x} \preceq \mathbf{b}\}$ is a finite
+intersection of half-spaces, and such polyhedra are the feasible sets of the
+constrained problems in
+:numref:`sec_mdl-constrained-optimization-duality`.
 
 Two more constructions round out the toolkit. Affine maps preserve convexity in
 both directions: images and preimages of convex sets under
@@ -345,8 +346,9 @@ $$
 and the set of all subgradients at $\mathbf{x}$ is written
 $\partial f(\mathbf{x})$. Where $f$ is differentiable it collapses to the
 singleton $\{\nabla f(\mathbf{x})\}$; at a corner it fans out
-(:numref:`fig_mdl-opt-subgradient-fan`), as it did for $|x|$, and, for the
-hinge $\max(0, 1 - z)$ at $z = 1$, $\partial f(1) = [-1, 0]$. The optimality
+(:numref:`fig_mdl-opt-subgradient-fan`), as it did for $|x|$ and as it does
+for the hinge $\max(0, 1 - z)$ at $z = 1$, where $\partial f(1) = [-1, 0]$.
+The optimality
 criterion survives verbatim: $\mathbf{x}^\star$ minimizes $f$ iff
 $\mathbf{0} \in \partial f(\mathbf{x}^\star)$. That subgradients *exist* is
 the one fact this section takes on faith:
@@ -461,11 +463,10 @@ function*. For concave $f$ the inequality flips:
 $\mathbb{E}[f(X)] \le f(\mathbb{E}[X])$.
 
 The corollary that information theory is built on follows immediately.
-:numref:`sec_mdl-information_theory`, the KL divergence's definitional home
-(with its $0 \log 0$ and support conventions), restates it as Gibbs'
-inequality and builds the
-entropy ceiling $H(X) \le \log k$ and the nonnegativity of mutual information
-on it.
+:numref:`sec_mdl-information_theory` restates it as Gibbs' inequality and
+builds the entropy ceiling $H(X) \le \log k$ and the nonnegativity of mutual
+information on it; that section is also the KL divergence's definitional home,
+with its $0 \log 0$ and support conventions.
 
 **Corollary (nonnegativity of KL divergence).** *For probability distributions
 $p$ and $q$ on a common finite alphabet (with $q(x) > 0$ where $p(x) > 0$),*
@@ -543,8 +544,8 @@ Here is the central theorem of the section, with the picture first.
 :numref:`fig_mdl-opt-local-equals-global` shows why convexity is the dividing
 line for optimization. On a convex objective, gradient descent reaches the
 single global minimum no matter where it starts; on a non-convex objective the
-same algorithm slides into whichever basin it happens to start in, separated by
-a saddle, and the local minimum on one side is *not* the global one.
+same algorithm slides into whichever of two saddle-separated basins it happens
+to start in, and the local minimum on one side is *not* the global one.
 
 ![Why convexity matters. Left: a convex objective has one global minimum, and gradient descent from any start reaches it. Right: a non-convex objective with two local minima separated by a saddle; gradient descent lands in different minima depending on its starting point, so a local minimum need not be global.](../img/mdl-opt-local-equals-global.svg)
 :label:`fig_mdl-opt-local-equals-global`
@@ -577,9 +578,9 @@ $\nabla f(\mathbf{x}) = \mathbf{0}$. $\blacksquare$
 Read the proof's geometry: a convex function cannot ambush you. If anywhere in
 the domain there were a strictly better point, the chord toward it would already
 be descending *inside your local neighborhood*, so "no local improvement"
-instantly means "no improvement anywhere." Saddle points and spurious basins,
-the failure modes that haunt deep loss surfaces, are structurally impossible.
-One more consequence follows:
+instantly means "no improvement anywhere." Saddle points and spurious basins
+are structurally impossible, and those are the very failure modes that haunt
+deep loss surfaces. One more consequence follows:
 
 **Proposition (uniqueness).** *A strictly convex $f$ has at most one minimizer;
 a continuous, strongly convex $f$ on a closed convex set has exactly one.*
@@ -818,14 +819,14 @@ $t \mapsto \log(1 + e^t)$ (second derivative
 $\sigma'(t) = \sigma(t)(1-\sigma(t)) > 0$) pre-composed with an affine map, then
 summed over data. Ridge-regularized anything is "convex plus
 $\lambda$-strongly convex," hence strongly convex (rule 1 applied to
-:eqref:`eq_mdl-opt-strong-convexity`). The one absence from the
-list, compositions with *nonlinear, non-monotone* inner maps, is where
+:eqref:`eq_mdl-opt-strong-convexity`). One operation is absent from the
+list: composition with *nonlinear, non-monotone* inner maps, and that is where
 deep networks will exit the theory below.
 
 ### Log-Sum-Exp and the Softmax Covariance
 
-The canonical worked case, the function behind every softmax cross-entropy
-loss, deserves its own proposition. Define
+The canonical worked case deserves its own proposition: the function behind
+every softmax cross-entropy loss. Define
 $\mathrm{lse}(\mathbf{x}) = \log \sum_{i=1}^n e^{x_i}$, the smooth maximum of
 :numref:`sec_mdl-numerical-stability-conditioning`.
 
@@ -932,8 +933,9 @@ $f$ is: for fixed $\mathbf{x}$ the expression
 $\mathbf{y}^\top\mathbf{x} - f(\mathbf{x})$ is affine in $\mathbf{y}$, and rule
 3 says a supremum of affine functions is convex. The same one-line argument,
 in the next section, makes the dual function of
-:numref:`subsec_mdl-lagrangian-duality` concave, and no coincidence: for
-linearly constrained problems the dual function *is* a conjugate in disguise.
+:numref:`subsec_mdl-lagrangian-duality` concave, and that is no coincidence:
+for linearly constrained problems the dual function *is* a conjugate in
+disguise.
 Second, the definition rearranges into the **Fenchel--Young inequality**,
 
 $$

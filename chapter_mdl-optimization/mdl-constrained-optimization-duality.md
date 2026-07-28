@@ -281,18 +281,19 @@ projection, complementary slackness is precisely the case split we did by hand.
 :numref:`fig_mdl-opt-kkt-active-set` draws stationarity plus dual feasibility:
 at the optimum, $-\nabla f$ must be a *nonnegative combination of the active
 constraints' outward normals*. The objective pushes against the wall of active
-constraints, and the wall, which can only push back outward, absorbs it
-exactly; inactive constraints contribute nothing.
+constraints, and the wall absorbs it exactly, since it can only push back
+outward; inactive constraints contribute nothing.
 
 ![Geometry of the KKT conditions on a feasible region cut out by two inequality constraints. At the optimum $\mathbf{x}^\star$ one constraint is active and one is inactive: $-\nabla f$ points along the active constraint's outward normal with $\lambda_1 > 0$, while the inactive constraint has $\lambda_2 = 0$. At a corner where two constraints are active, $-\nabla f$ must lie in the cone spanned by both normals.](../img/mdl-opt-kkt-active-set.svg)
 :label:`fig_mdl-opt-kkt-active-set`
 
-How strong are these conditions? In general they are **necessary**: at any local
-minimum satisfying a constraint qualification (the standard one, *LICQ*, asks
-the active constraints' gradients to be linearly independent, the inequality
-analogue of $\nabla g \neq \mathbf{0}$ above), multipliers satisfying
-:eqref:`eq_mdl-opt-kkt` exist; see :citet:`Nocedal.Wright.2006`, chapter 12,
-for the proof. They are not sufficient: a non-convex problem can have KKT points that
+How strong are these conditions? In general they are **necessary**: multipliers
+satisfying :eqref:`eq_mdl-opt-kkt` exist at any local minimum that satisfies a
+constraint qualification (the standard one, *LICQ*, asks the active
+constraints' gradients to be linearly independent, the inequality
+analogue of $\nabla g \neq \mathbf{0}$ above); see
+:citet:`Nocedal.Wright.2006`, chapter 12, for the proof. They are not
+sufficient: a non-convex problem can have KKT points that
 are saddles or maxima (Exercise 3). Under convexity, however, the implication
 reverses, with a proof short enough to be memorable.
 
@@ -484,8 +485,8 @@ positive, so the threshold is unique and found by sorting: with
 $u_1 \ge \cdots \ge u_n$ the sorted entries of $\mathbf{y}$, the active set is a
 top-$k$ prefix, and $\tau = (\sum_{j \le k} u_j - 1)/k$ for the largest $k$
 keeping $u_k > \tau$, an $O(n \log n)$ algorithm
-:cite:`Held.Wolfe.Crowder.1974,Duchi.Shalev-Shwartz.Singer.ea.2008`. This map,
-applied to scores instead of a softmax, is exactly *sparsemax*
+:cite:`Held.Wolfe.Crowder.1974,Duchi.Shalev-Shwartz.Singer.ea.2008`. Applied to
+scores instead of a softmax, this map is exactly *sparsemax*
 :cite:`Martins.Astudillo.2016`: unlike softmax it produces genuinely
 sparse attention weights, with complementary slackness deciding which entries
 are zeroed. More broadly, attention itself can be read as a *regularized
@@ -592,9 +593,9 @@ Take the supremum over $(\boldsymbol{\lambda}, \boldsymbol{\nu})$ on the left
 and the infimum over feasible $\mathbf{x}$ on the right. $\blacksquare$
 
 The
-**dual problem**, maximizing $g$ over $\boldsymbol{\lambda} \succeq 0$, is
+**dual problem** maximizes $g$ over $\boldsymbol{\lambda} \succeq 0$, and it is
 *always* a convex optimization problem (maximizing a concave function over a
-convex set), even when the primal is non-convex. And its optimal
+convex set), even when the primal is non-convex. Its optimal
 value $d^\star$ is always a *certified lower bound* on the primal optimum.
 Every dual feasible point is a certificate: if you exhibit some
 $(\boldsymbol{\lambda}, \boldsymbol{\nu})$ with
@@ -628,8 +629,8 @@ the region from below; its height at $g = 0$ is $g(\lambda)$, a lower bound on
 $p^\star$: that is weak duality drawn as a picture. For a *convex* problem
 the region is convex (more precisely, the set of points above and to the right
 of it is), so some supporting line passes through the boundary point at
-$(0, p^\star)$; this existence of a supporting line at a boundary point of a
-convex set is the granted fact of :numref:`sec_mdl-convexity`, the same one
+$(0, p^\star)$; the granted fact of :numref:`sec_mdl-convexity` supplies a
+supporting line at a boundary point of a convex set, the same fact
 that gives convex functions their subgradients. Slater's strictly feasible
 point guarantees the region pokes
 into the open left half-plane, ruling out the one failure mode: a *vertical*
@@ -752,9 +753,9 @@ The saddle-point reading is the bridge from this section to a family of
 training are $\min_{\boldsymbol{\theta}} \max_{\boldsymbol{\phi}}$ problems in
 exactly this mold
 :cite:`Goodfellow.Pouget-Abadie.Mirza.ea.2014,Madry.Makelov.Schmidt.ea.2018`,
-and the question of whether the order of play matters, that is, whether a
-duality gap separates $\min\max$ from $\max\min$, is the question
-of whether a saddle point exists at all. It is also the geometry behind
+and the question of whether the order of play matters is the question of
+whether a saddle point exists at all: a duality gap is exactly what separates
+$\min\max$ from $\max\min$. It is also the geometry behind
 **primal--dual methods**, which descend in $\mathbf{x}$ and ascend in
 $\boldsymbol{\lambda}$ simultaneously, converging (for convex problems) to the
 saddle rather than to a minimum.
@@ -1030,7 +1031,7 @@ exact enough to recognize:
 $\mathbf{w}^\star = (\tfrac47, \tfrac47)$, $b^\star = -\tfrac37$, with
 $p^\star = d^\star = \tfrac{41}{98} \approx 0.418367$ and a primal--dual gap at
 $10^{-16}$: five thousand fixed-step projected-ascent iterations, and the gap
-(the certificate of optimality duality hands us for free) has closed to
+(the certificate of optimality that duality hands us for free) has closed to
 machine precision. As a bonus, the printout
 verifies an identity you will prove in Exercise 6:
 $\sum_i \alpha_i^\star = \|\tilde{\mathbf{w}}^\star\|^2$ at the optimum, which
@@ -1224,8 +1225,8 @@ the current iterate :cite:`Nocedal.Wright.2006`.
   prevent a one-to-one correspondence. For deep networks the analogy is local
   and heuristic.
 * Multipliers are **shadow prices**: $\lambda_i^\star = -\partial p^\star/\partial u_i$
-  measures what relaxing constraint $i$ is worth: $1/w$ in
-  water-filling, and the reason slack constraints cost nothing.
+  measures what relaxing constraint $i$ is worth. It is $1/w$ in
+  water-filling, and it is why slack constraints cost nothing.
 * The SVM dual (support vectors = active constraints, kernels via inner
   products) and water-filling (pour to a common level, bisection on the level)
   show the full pipeline; LP/QP/SOCP/SDP is the solver map for the convex

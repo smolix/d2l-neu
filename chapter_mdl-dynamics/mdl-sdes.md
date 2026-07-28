@@ -14,8 +14,8 @@ discretizes. The payoff is a precise, simulatable description of the
 
 One scaling law powers everything in this section. A Brownian increment over a
 time step $\Delta t$ has size $\sqrt{\Delta t}$, not $\Delta t$: noise is
-*much larger* than drift on short time scales. Squaring it,
-$(\Delta W)^2 \approx \Delta t$ refuses to vanish to second order, so the
+*much larger* than drift on short time scales. Its square,
+$(\Delta W)^2 \approx \Delta t$, refuses to vanish to second order, so the
 second-order Taylor term that ordinary calculus discards survives as a
 first-order effect. The Itô correction, the form of Itô's lemma, the
 $\sqrt{\Delta t}$ noise kick in the Euler--Maruyama scheme, and the convergence
@@ -350,10 +350,10 @@ $$
 $$
 :eqlabel:`eq_mdl-sde-ito-integral`
 
-That this limit exists for every such $G$, and that the two identities below
-survive the passage to the limit, is the construction of
-:citet:`Oksendal.2003`, chapter 3; we take it as given. The choice of the
-*left* endpoint is the source of the integral's two key properties. Because
+:citet:`Oksendal.2003`, chapter 3, constructs this limit for every such $G$
+and shows that the two identities below survive the passage to it; we take
+both as given. The choice of the *left* endpoint is the source of the
+integral's two key properties. Because
 $G_{t_i}$ is determined by the path up
 to $t_i$ while the increment $\Delta W_i$ is independent of that past, each
 summand factorizes in expectation:

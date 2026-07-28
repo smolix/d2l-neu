@@ -147,7 +147,7 @@ accumulating from a base point $c$ at the left edge of the plot.
 :label:`fig_mdl-area-subtract`
 
 So knowing $F$ solves the whole problem. The *fundamental theorem of calculus*
-is the fact that $F$ is determined by a derivative.
+says that a derivative determines $F$.
 
 **Theorem (Fundamental theorem of calculus).** *Let $f$ be continuous and let
 $F(x)=\int_a^x f(y)\,dy$. Then $F$ is differentiable and*
@@ -260,8 +260,8 @@ with $\int_{-\infty}^\infty$ defined by splitting at any point and requiring
 *both* one-sided limits to exist on their own (a symmetric combination of the
 two is not enough). The limit may be finite, in which case the integral
 *converges*;
-otherwise, whether the partial integrals grow without bound or merely fail to
-settle, it *diverges*. Whether the tail is "thin enough" is a
+otherwise it *diverges*, whether the partial integrals grow without bound or
+merely fail to settle. Whether the tail is "thin enough" is a
 genuine question. The test case is the power law $x^{-p}$, for which the
 antiderivative gives
 
@@ -275,9 +275,9 @@ exactly $p=1$, where the integrand $x^{-1}$ has antiderivative $\log x$ instead,
 $\int_1^\infty x^{-1}\,dx=\lim_{b\to\infty}\log b=\infty$; the case split above
 already records this divergent value. So $\int_1^\infty x^{-2}\,dx = 1$ while
 $\int_1^\infty x^{-1}\,dx=\infty$: the boundary between convergence and divergence
-sits exactly at $p=1$. This single threshold is what decides whether a
-*heavy-tailed* density, one whose tail decays like a power law rather than
-exponentially, even has a finite
+sits exactly at $p=1$. A *heavy-tailed* density is one whose tail decays like a
+power law rather than exponentially, and this single threshold is what decides
+whether such a density even has a finite
 normalizer or mean, a recurring concern once we reach probability. The cell
 watches a convergent improper integral, $\int_0^\infty e^{-x}\,dx = 1$, through
 two lenses at once: the *exact* partial integrals
@@ -345,14 +345,14 @@ survives is exactly the improper integral computed above. This particular
 value is the mean of the exponential distribution
 (:numref:`sec_mdl-distributions`), and it shows the form in which the trick
 returns throughout probability: expectations $\int g(x)\,p(x)\,dx$ are
-integrals of products, and shifting a derivative from a factor we cannot handle
-onto one we can is often the only move available. The identity returns in
-Hyvärinen's score matching :cite:`Hyvarinen.2005`
+integrals of products, and often the only move available is to shift a
+derivative from a factor we cannot handle onto one we can. The identity returns
+in Hyvärinen's score matching :cite:`Hyvarinen.2005`
 (:numref:`sec_mdl-score-matching-diffusion-flow`), where a single integration
-by parts converts an objective involving the score of the data
-distribution, the gradient $\nabla_{\mathbf{x}} \log p(\mathbf{x})$ of the
-log-density with respect to the *data point*, which no one can evaluate,
-into one that can be estimated from samples.
+by parts converts an objective no one can evaluate into one that can be
+estimated from samples. The ingredient beyond reach there is the score of the
+data distribution, the gradient $\nabla_{\mathbf{x}} \log p(\mathbf{x})$ of the
+log-density with respect to the *data point*.
 
 ### A Note on Signed Area
 
@@ -550,8 +550,8 @@ the one- and two-dimensional pictures side by side.
 
 Equation :eqref:`eq_mdl-change_var_nd` is a statement about *area and volume*: it
 says how the integral of a fixed function transports under a reparametrization of
-the domain. Applied instead to a probability *density*, a function that must keep
-integrating to $1$, the very same Jacobian factor becomes the
+the domain. Apply it instead to a probability *density*, a function that must keep
+integrating to $1$, and the very same Jacobian factor becomes the
 change-of-variables-for-densities rule of :numref:`sec_mdl-random_variables`, whose
 $-\log|\det D\boldsymbol{\phi}|$ correction is the exact mechanism behind
 **normalizing flows** (:numref:`sec_mdl-continuous-normalizing-flows`). We state the
@@ -708,14 +708,14 @@ $$
 :eqlabel:`eq_mdl-monte-carlo`
 
 a stochastic counterpart of the Riemann sum that ignores the geometry of the
-domain. The **law of large numbers** (:numref:`sec_mdl-statistics`) is the
-guarantee that it works: the sample
+domain. The **law of large numbers** (:numref:`sec_mdl-statistics`) guarantees
+that it works: the sample
 average converges to the true expectation. The error scale comes from a
 variance computation: the estimator's standard deviation is
 $\mathrm{sd}(g(X))/\sqrt{n}$, an order-$1/\sqrt{n}$ error whose limiting
-distribution the **central limit theorem** (:numref:`sec_mdl-distributions`)
-supplies. The rate depends only on the sample size $n$, not
-on the dimension. (The fine print: the *constant* in front of
+distribution comes from the **central limit theorem**
+(:numref:`sec_mdl-distributions`). The rate depends only on the sample size
+$n$, not on the dimension. (The fine print: the *constant* in front of
 $1/\sqrt{n}$ is the standard deviation of $g(X)$, and *that* can grow with the
 dimension; what is dimension-free is the exponent, and it is the exponent that
 grids lose.) That dimension-free rate is decisive. A grid laid down to
@@ -810,11 +810,11 @@ $$
 = \int \nabla_{\boldsymbol{\theta}} f(x, \boldsymbol{\theta})\,dx .
 $$
 
-The swap needs a hypothesis. The standard sufficient condition, a consequence
-of the **dominated convergence theorem** that we also state on faith
-:cite:`Folland.1999`, is that, near the current $\boldsymbol{\theta}$, the
-integrands' derivatives are bounded in magnitude by a single integrable
-function of $x$. Many smooth, rapidly decaying densities used in deep learning comply, but the
+The swap needs a hypothesis. The standard sufficient condition is that, near
+the current $\boldsymbol{\theta}$, the integrands' derivatives are bounded in
+magnitude by a single integrable function of $x$; it follows from the
+**dominated convergence theorem**, which we also state on faith
+:cite:`Folland.1999`. Many smooth, rapidly decaying densities used in deep learning comply, but the
 condition must be checked rather than inferred from smoothness alone. Moving
 support and increasingly sharp parameter-dependent spikes are two common ways
 it can fail; failure is not limited to those cases.

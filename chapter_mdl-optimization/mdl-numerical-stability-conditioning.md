@@ -8,10 +8,10 @@ failure modes that bite real training runs (overflow, underflow, and
 catastrophic cancellation) and the handful of two-line fixes that keep
 softmax, cross-entropy, and ill-conditioned least squares alive:
 max-subtraction, log-space arithmetic, and ridge regularization. Two ideas
-organize everything. The first, due to numerical analysis and crystallized in
-:citet:`Higham.2002`, is to split the blame for a wrong answer between the
-*algorithm* (did it solve a nearby problem?) and the *problem* (do nearby
-problems have wildly different answers?). The second is that the dividing line
+organize everything. The first is to split the blame for a wrong answer between
+the *algorithm* (did it solve a nearby problem?) and the *problem* (do nearby
+problems have wildly different answers?), an idea from numerical analysis
+crystallized in :citet:`Higham.2002`. The second is that the dividing line
 is a single number we have already met: the **condition number**
 $\kappa = \sigma_{\max}/\sigma_{\min}$ of :numref:`subsec_mdl-condition-number`,
 the same $\kappa$ that sets gradient descent's convergence rate in
@@ -157,7 +157,7 @@ leaving $\varepsilon_{\text{mach}} = 2^{-7} = 0.0078$, between two and
 three decimal digits. The printout confirms the value that is easy to misquote:
 bfloat16's epsilon is $2^{-7}$, not $2^{-8}$; the eighth mantissa bit people
 sometimes count is the *implicit* leading $1$ in
-:eqref:`eq_mdl-opt-float-format`, which contributes precision to no gap.
+:eqref:`eq_mdl-opt-float-format`, which fills no gap.
 
 Since 2022, hardware has pushed the same ladder one rung lower, to **fp8**,
 standardized in two flavors :cite:`Micikevicius.Stosic.Burgess.ea.2022`.
@@ -224,19 +224,19 @@ $\log$ returns $-\infty$ and the backward pass turns to `NaN`.
 This is the arithmetic behind **mixed-precision training**
 :cite:`Micikevicius.Narang.Alben.ea.2018`. In fp16, gradients routinely fall
 below $6 \times 10^{-5}$ and vanish, so the loss is multiplied by a scale
-factor before the backward pass (and the gradients divided after) purely to
+factor before the backward pass (and the gradients divided after) simply to
 shift them into representable territory: *loss scaling* is purely underflow
 management. bfloat16 makes that bookkeeping
 unnecessary: with fp32's exponent range nothing reasonable overflows or
-underflows, and the price, relative precision of only $2^{-7}$, is paid
-where deep learning is most tolerant, in the noise-dominated mantissa of each
+underflows, and the price is paid where deep learning is most tolerant:
+relative precision of only $2^{-7}$, in the noise-dominated mantissa of each
 weight update. The reason a master copy of the weights is kept in fp32 is
 :eqref:`eq_mdl-opt-rounding-model` again: a weight update of relative size
 below $\varepsilon_{\text{mach}}/2$ rounds to *no update at all*, and at
 $\varepsilon_{\text{mach}} = 2^{-7}$ that threshold is hit by perfectly
-healthy learning rates. A third escape, increasingly common in fp8 and
-integer training, is **stochastic rounding**
-:cite:`Gupta.Agrawal.Gopalakrishnan.ea.2015`: round up or down at random with
+healthy learning rates. A third escape is **stochastic rounding**
+:cite:`Gupta.Agrawal.Gopalakrishnan.ea.2015`, increasingly common in fp8 and
+integer training: round up or down at random with
 probabilities proportional to proximity, so the *expected* stored value is
 exact and updates too small to survive round-to-nearest still make progress
 on average.
@@ -290,7 +290,7 @@ $$
 
 exponentiates its logits, and the table above says exactly where that goes
 wrong: fp32 overflows the moment any logit exceeds $88.72$, fp16 already at
-$11.09$: the numerator becomes `inf`, the ratio becomes `inf/inf = NaN`,
+$11.09$. The numerator becomes `inf`, the ratio becomes `inf/inf = NaN`,
 and the model dies even though the *probabilities* it was computing are
 perfectly tame numbers in $[0, 1]$. The failure is entirely an artifact of
 the route. You have met the repair before:
@@ -433,11 +433,11 @@ $$
 computable *directly from the logits* with one stable lse and one
 subtraction. This is what the library's "from logits" loss does (the
 fused implementation of :numref:`subsec_softmax-implementation-revisited`),
-and it is why those APIs exist. The alternative, computing probabilities
-first and then taking the log, forces the loss through the representable
-range of probabilities: a true-class probability below about $10^{-45}$ (the
+and it is why those APIs exist. The alternative forces the loss through the
+representable range of probabilities: compute the probabilities first and then
+take the log, and a true-class probability below about $10^{-45}$ (the
 smallest fp32 subnormal is $\approx 1.4 \times 10^{-45}$) underflows fp32 to
-exactly $0$, and the loss becomes $\infty$. The cell below pits the
+exactly $0$, so the loss becomes $\infty$. The cell below pits the
 two routes against each other on a two-class problem where the label is the
 *unlikely* class, with logit gap $t$, so the true loss is
 $\log(1 + e^{t}) \approx t$. This is the one computation in this section
@@ -555,8 +555,8 @@ phenomenon is called **catastrophic cancellation**, and a two-line experiment
 shows both the disease and a cure. In float32, $1 + 10^{-8}$ rounds to
 exactly $1$ (the increment is below $\varepsilon_{\text{mach}}/2$), so the
 textbook expression $\log(1 + x)$ returns $0$, a $100\%$ relative error,
-while the library function `log1p`, which evaluates the *reformulated*
-series around $0$, is exact. Likewise two floats agreeing to seven digits
+while the library function `log1p` is exact, because it evaluates the
+*reformulated* series around $0$. Likewise two floats agreeing to seven digits
 leave a difference made of pure noise:
 
 ```{.python .input #numerical-stability-conditioning-log1p}
@@ -705,15 +705,15 @@ computed answer is wrong, is the algorithm to blame, or the problem?
 answer $\hat{\mathbf{x}}$ and the true answer $\mathbf{x}$. The **backward
 error** is what the algorithm should be judged by: the size of the smallest
 perturbation of the *inputs* for which $\hat{\mathbf{x}}$ would be exactly
-correct: "you got the right answer to a nearby question; how nearby?" An
+correct, or "you got the right answer to a nearby question; how nearby?" An
 algorithm with backward error at the rounding floor $u$ is called
 **backward stable**: it did everything that can be asked of finite-precision
 arithmetic, since merely *storing* the inputs already perturbs them by $u$.
-Gaussian elimination with pivoting (elimination with row swaps that keep the
-multipliers small; the algorithm inside `np.linalg.solve`) is backward
-stable in practice, though not in the worst case, where its growth factor
-can reach $2^{n-1}$ :cite:`Higham.2002`; the SVD is backward stable
-outright; the naive variance formula is neither.
+Gaussian elimination with pivoting is the algorithm inside `np.linalg.solve`:
+elimination with row swaps that keep the multipliers small. It is backward
+stable in practice, though not in the worst case, where its growth factor can
+reach $2^{n-1}$ :cite:`Higham.2002`. The SVD is backward stable outright; the
+naive variance formula is neither.
 
 What converts a small backward error into a possibly-large forward error is a
 property of the *problem*, and for linear systems it is exactly the condition
@@ -784,9 +784,9 @@ $\mathbf{H}\mathbf{x} = \mathbf{b}$ with the answer rigged to be
 $\mathbf{x} = \mathbf{1}$, and tabulate the forward error, the digits that
 survive, and the *backward* error, computed as the scaled residual
 $\|\mathbf{H}\hat{\mathbf{x}} - \mathbf{b}\| / (\|\mathbf{H}\|\,\|\hat{\mathbf{x}}\|)$.
-That this residual ratio equals the smallest relative perturbation of
-$\mathbf{H}$ making $\hat{\mathbf{x}}$ exact is a classical theorem of
-Rigal--Gaches (see :cite:`Higham.2002`), which is what lets a single
+A classical theorem of Rigal--Gaches (see :cite:`Higham.2002`) says that this
+residual ratio equals the smallest relative perturbation of $\mathbf{H}$
+making $\hat{\mathbf{x}}$ exact, which is what lets a single
 computable number stand in for the definition's minimization:
 
 ```{.python .input #numerical-stability-conditioning-hilbert}
@@ -930,9 +930,10 @@ its ceiling: the narrow valley we met above rounds out
 into a bowl, as :numref:`fig_mdl-opt-conditioning-ellipse` shows, and the
 single shift pays twice.
 The solve in :eqref:`eq_mdl-opt-ridge-solution` becomes more accurate
-(fewer digits lost, by the rule of thumb) and gradient descent on the ridge
-objective, whose contraction factor $(\kappa - 1)/(\kappa + 1)$ we derived in
-:numref:`sec_mdl-gradient-based-optimization`, becomes faster. The cell below
+(fewer digits lost, by the rule of thumb), and gradient descent on the ridge
+objective becomes faster, since its contraction factor is the
+$(\kappa - 1)/(\kappa + 1)$ we derived in
+:numref:`sec_mdl-gradient-based-optimization`. The cell below
 measures both at once: for each $\lambda$ it computes
 :eqref:`eq_mdl-opt-ridge-kappa` and *runs* gradient descent to a fixed
 relative tolerance of $10^{-6}$, counting iterations.
@@ -983,7 +984,7 @@ ridge biases the solution, shrinking $\mathbf{w}_\lambda$ toward
 $\mathbf{0}$; :numref:`sec_mdl-constrained-optimization-duality` showed the
 precise sense in which the penalty $\lambda\|\mathbf{w}\|^2$ is the
 Lagrangian counterpart of a norm constraint. In practice, the $\lambda$ you
-were going to add anyway, for statistical reasons, has been quietly
+were going to add anyway for statistical reasons has been quietly
 stabilizing your arithmetic and accelerating your optimizer the whole time.
 
 ## Summary

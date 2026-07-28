@@ -4,7 +4,7 @@
 The entropies and divergences of :numref:`sec_mdl-information_theory` score
 one distribution at a time. This section asks the question that powers modern
 representation learning: how much information do *two* random variables share?
-The answer, *mutual information*, is the engine behind contrastive and
+The answer is *mutual information*, the engine behind contrastive and
 self-supervised training: SimCLR, CPC, and CLIP-style dual encoders
 :cite:`Chen.Kornblith.Norouzi.ea.2020,Oord.Li.Vinyals.2018,radford2021learning`
 are, formally, mutual-information maximizers, and the InfoNCE loss they
@@ -169,7 +169,7 @@ semicolon in $I(X; Y)$ is the standard notation, distinguishing the two
 arguments from a single joint object.) The definition presumes the joint has
 a density with respect to the product of the marginals; when it does not,
 for instance when $Y = f(X)$ is a deterministic function of a continuous
-$X$, the divergence, and hence $I(X; Y)$, is infinite. Symmetry and
+$X$, the divergence is infinite, and so is $I(X; Y)$. Symmetry and
 nonnegativity are immediate from the divergence form, and the entropy
 identities follow by expanding the logarithm.
 
@@ -372,8 +372,8 @@ The ranking flips, exactly as a fluent speaker would rank the collocations:
 $\approx 1.37$, while the frequent-but-unremarkable "the day" manages only
 $\approx 0.34$; the pair "the york" comes out *negative*
 ($\approx -1.11$ nats), occurring three times less often than independence
-would predict. The table's overall mutual information, $\approx 0.41$ nats,
-summarizes how strongly first words constrain second words on average. This
+would predict. The table's overall mutual information is $\approx 0.41$ nats,
+summarizing how strongly first words constrain second words on average. This
 count-divide-and-log pattern (and its smoothed variants) underpins
 classical word-association mining and survives inside modern embedding
 methods, where factorizing a pmi matrix recovers word vectors
@@ -432,7 +432,7 @@ above ($0.830$ nats). The third line checks invariance: an affine
 reparameterization of $X$ leaves the estimate exactly unchanged (the
 histogram bins stretch with the data, so even the bin counts are identical).
 One caution for later: this invariance is also why mutual information is hard
-to *estimate*: an estimator must implicitly cope with every
+to *estimate*, since an estimator must implicitly cope with every
 reparameterization of the data at once, and we will see in
 :numref:`sec_mdl-mi-hard` that this costs dearly.
 
@@ -538,7 +538,7 @@ No processing of $Y$, deterministic or random, clever or dumb, can
   sufficient statistic (:numref:`sec_mdl-distributions`).
 
 One caution about scope. The data-processing inequality is a statement about
-Markov chains, not about conditioning in general: conditioning can *create*
+Markov chains, not about conditioning in general. Conditioning can *create*
 dependence, and $I(X; Y \mid Z) > I(X; Y)$ is perfectly possible: in the
 extreme case of two independent fair bits with $Z$ their XOR, conditioning
 turns zero dependence into a full $\ln 2$ nats (Exercise 6 works this out).
@@ -597,9 +597,9 @@ plug-in estimate is dominated by sampling noise in the occupied few. Already
 at $d = 2$ and $\rho = 0.99$ we watched the histogram miss $0.18$ nats.
 
 Smarter nonparametric estimators improve the constants, not the story. The
-classic of the genre, due to :citet:`Kraskov.Stogbauer.Grassberger.2004`
-(KSG), replaces bins with $k$-nearest-neighbor distances: around each sample
-find the Chebyshev (max-coordinate) distance $\epsilon_i$ to its $k$-th
+classic of the genre is due to :citet:`Kraskov.Stogbauer.Grassberger.2004`
+(KSG), and it replaces bins with $k$-nearest-neighbor distances: around each
+sample find the Chebyshev (max-coordinate) distance $\epsilon_i$ to its $k$-th
 nearest neighbor in
 the *joint* space, count the marginal neighbors $n_x^{(i)}$ and $n_y^{(i)}$
 lying within $\epsilon_i$, and average
@@ -668,8 +668,8 @@ essentially capped:
 
 The intuition is a counting argument about rare events. Mutual information
 lives in the likelihood ratio $p_{X,Y}/(p_X\, p_Y)$, and when $I$ is large,
-the average of this ratio under the *product* of marginals (which equals
-$1$) is carried by a vanishingly rare set of "matched" pairs of probability
+the average of this ratio under the *product* of marginals equals $1$ but is
+carried by a vanishingly rare set of "matched" pairs of probability
 roughly $e^{-I}$. A sample of size $N$ simply never sees those events unless
 $N \gtrsim e^{I}$; and a *certifiable* bound cannot presume what it has never
 observed. Flip the inequality and you get the ceiling: $N$ samples certify
@@ -1017,8 +1017,8 @@ critic. Estimator choice is a bias--variance decision, not a ranking.
 
 Finally, let the critic be learned, as in practice. We train a small MLP
 critic $f(x, y)$ with the InfoNCE loss on a correlated Gaussian pair with
-$\rho = 0.99$, whose true mutual information
-$-\tfrac{1}{2}\log(1 - 0.99^2) \approx 1.958$ nats we know exactly. The
+$\rho = 0.99$, whose true mutual information we know exactly:
+$-\tfrac{1}{2}\log(1 - 0.99^2) \approx 1.958$ nats. The
 data are generated once in NumPy with a fixed
 seed; training uses batches of $N = 128$, and we then evaluate the trained
 critic's InfoNCE bound at several evaluation batch sizes to watch the
@@ -1225,8 +1225,8 @@ instrument.
 ## The Information Bottleneck and the Limits of Mutual Information
 :label:`sec_mdl-information-bottleneck`
 
-We close with the principle that joins this section's two themes, what
-representations preserve and what we can measure, into a single objective,
+We close with the principle that joins this section's two themes (what
+representations preserve and what we can measure) into a single objective,
 and with an assessment of where its empirical support stands.
 
 ### Compression with a Purpose: the IB Lagrangian
@@ -1257,9 +1257,9 @@ relevance instead. The *deep variational information bottleneck* (VIB)
 :cite:`Alemi.Fischer.Dillon.ea.2017` makes :eqref:`eq_mdl-ib_lagrangian`
 trainable by bounding both terms with the machinery we just built: a
 Barber--Agakov-style decoder bound for $I(Y;Z)$ from below and a variational
-upper bound for $I(X;Z)$, the same replace-the-intractable-posterior pattern
-as the ELBO of :numref:`sec_mdl-latent-em-elbo`: another reminder that in
-deep learning, mutual informations are optimized through bounds, not
+upper bound for $I(X;Z)$. That is the same replace-the-intractable-posterior
+pattern as the ELBO of :numref:`sec_mdl-latent-em-elbo`, and another reminder
+that in deep learning, mutual informations are optimized through bounds, not
 computed. The frontier this
 tradeoff traces is shown in :numref:`fig_mdl-ib-tradeoff`.
 
@@ -1289,10 +1289,10 @@ I(Y; Z) = -\tfrac{1}{2}\log\left(1 - \frac{\rho^2}{1 + \sigma^2}\right).
 $$
 
 In this scalar Gaussian family the noise level is the *only* degree of
-freedom, so sweeping $\sigma$ traces the family's entire curve; that this
-curve is the *optimal* frontier over all encoders $p(z \mid x)$ is the
-Gaussian information bottleneck theorem of
-:cite:`Chechik.Globerson.Tishby.ea.2005`. Minimizing the Lagrangian
+freedom, so sweeping $\sigma$ traces the family's entire curve; the Gaussian
+information bottleneck theorem of :cite:`Chechik.Globerson.Tishby.ea.2005`
+adds that this curve is the *optimal* frontier over all encoders
+$p(z \mid x)$. Minimizing the Lagrangian
 :eqref:`eq_mdl-ib_lagrangian` over $\sigma$ for
 each $\beta$ picks out one operating point on the frontier.
 

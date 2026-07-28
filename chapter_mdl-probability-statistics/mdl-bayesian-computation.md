@@ -191,15 +191,15 @@ print('grid correlation   :',
 Before approximating the posterior, let us see what keeping it actually
 changes. Two candidate summaries compete: the **posterior mean** (an
 average) and the **MAP** (the single most probable point). To compare them,
-compute the MAP by Newton iteration; the negative Hessian of the log
-posterior,
+compute the MAP by Newton iteration. The negative Hessian of the log
+posterior is
 
 $$
 H(\boldsymbol\theta)
 =Z^\top\operatorname{diag}(p_i(1-p_i))Z+\tau^{-2}I,
 $$
 
-is positive definite thanks to the Gaussian prior, and — keep it in hand —
+positive definite thanks to the Gaussian prior, and — keep it in hand —
 its inverse at the MAP will become the Laplace approximation below.
 
 ```{.python .input #bayesian-computation-map-predictive}

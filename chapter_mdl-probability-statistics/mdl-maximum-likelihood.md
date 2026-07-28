@@ -469,10 +469,10 @@ Gaussian. Picking a loss *is* picking a noise model.
 
 How good is $\hat{\boldsymbol{\theta}}$? The first
 reassurance is the same KL picture. Drawing genuinely i.i.d. data from a true
-distribution $p_{\boldsymbol{\theta}^\star}$, the average NLL is, by the law of
-large numbers (stated and proved in :numref:`sec_mdl-statistics`), an estimate
-of the *expected* cross-entropy
-$\textrm{CE}(p_{\boldsymbol{\theta}^\star}, p_{\boldsymbol{\theta}})$, and the
+distribution $p_{\boldsymbol{\theta}^\star}$, the average NLL estimates the
+*expected* cross-entropy
+$\textrm{CE}(p_{\boldsymbol{\theta}^\star}, p_{\boldsymbol{\theta}})$ by the law
+of large numbers (stated and proved in :numref:`sec_mdl-statistics`), and the
 decomposition $\textrm{CE} = H + D_{\textrm{KL}}$ shows that this population
 objective is minimized exactly at the truth
 $\boldsymbol{\theta}=\boldsymbol{\theta}^\star$, where the KL term vanishes.
@@ -934,9 +934,9 @@ $$
 
 The right-hand side is the **evidence lower bound** (**ELBO**). The name comes
 from calling the marginal log-likelihood $\log p(x;\boldsymbol{\theta})$ the
-*evidence*: it plays for the latent $z$ exactly the role the denominator $P(X)$
-played for the parameters in Bayes' rule at the start of this section: the
-marginal probability of what we actually observed. Expanding the fraction splits
+*evidence*: for the latent $z$ it plays exactly the role the denominator $P(X)$
+played for the parameters in Bayes' rule at the start of this section, namely
+the marginal probability of what we actually observed. Expanding the fraction splits
 the bound into two readable pieces,
 
 $$
@@ -1098,7 +1098,7 @@ And the two divergences in this section are deliberately mirrored:
 :numref:`sec_mdl-divergences-distances` recasts maximum likelihood itself as
 *forward*-KL minimization, while the ELBO gap :eqref:`eq_mdl-elbo-gap` measures
 the guess against the posterior in the *reverse* orientation,
-$D_{\textrm{KL}}(q\,\|\,p)$, a distinction with real modelling consequences,
+$D_{\textrm{KL}}(q\,\|\,p)$. The distinction has real modelling consequences,
 taken up in detail there.
 
 ## Summary

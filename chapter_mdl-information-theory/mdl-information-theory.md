@@ -4,8 +4,8 @@
 Nearly every model in this book is trained by minimizing a cross-entropy. The
 number your training loop prints is therefore a quantity from *information
 theory*, the field Claude Shannon created in a single paper published in two
-parts in 1948 :cite:`Shannon.1948`, and information theory is what tells you
-what that number *means*: it is a code length. Entropy is the irreducible
+parts in 1948 :cite:`Shannon.1948`. And information theory tells you what that
+number *means*: it is a code length. Entropy is the irreducible
 floor, the cost of the data's own randomness; cross-entropy is what your model
 actually pays; and the gap between them, the Kullback--Leibler divergence, is
 the waste you can train away. This section builds those three quantities and
@@ -245,7 +245,7 @@ distribution $Q$ with p.d.f. or p.m.f. $q(x)$ that we use to approximate $P$,
 $$D_{\textrm{KL}}(P\|Q) = E_{x \sim P} \left[ \log \frac{p(x)}{q(x)} \right].$$
 :eqlabel:`eq_mdl-kl_def`
 
-The term inside the expectation, $\log p(x) - \log q(x)$, is the difference of
+The term inside the expectation is $\log p(x) - \log q(x)$, the difference of
 two surprises: how surprised $Q$ is by the outcome $x$, minus how surprised
 $P$ is. It is positive where $Q$ underestimates ($q(x) < p(x)$: $Q$ is *more*
 surprised than it should be) and negative where $Q$ overestimates. KL averages
@@ -280,9 +280,9 @@ def kl_divergence(p, q):
 ### Gibbs' Inequality
 
 The KL divergence cannot be negative, an observation going back to Gibbs
-:cite:`Gibbs.1902`. Everything else in this section (cross-entropy as a sound
-loss, the optimality of code lengths, the label-smoothing optimum) follows
-from it.
+:cite:`Gibbs.1902`. Everything else in this section follows from it:
+cross-entropy as a sound loss, the optimality of code lengths, the
+label-smoothing optimum.
 
 **Proposition (Gibbs' inequality).** *For any distributions $P$ and $Q$ on
 the same space,*
@@ -456,7 +456,7 @@ plus the relative surprise:
 $$\textrm{CE} (P, Q) = H(P) + D_{\textrm{KL}}(P\|Q).$$
 :eqlabel:`eq_mdl-ce_decomp`
 
-This single identity, combined with Gibbs' inequality, gives the chain that
+Combined with Gibbs' inequality, this single identity gives the chain that
 explains why cross-entropy is *the* loss to minimize:
 
 $$
@@ -827,8 +827,8 @@ because encoder and decoder both condition on the already-processed prefix.
 An autoregressive language model therefore supplies the probability model for
 a lossless arithmetic coder. If encoder and decoder share the tokenizer,
 model, and finite-precision probability implementation, the ideal code length
-for a document is its total surprisal plus fewer than two bits. Its token
-cross-entropy times the token count estimates that model code length; a file
+for a document is its total surprisal plus fewer than two bits. The model's
+token cross-entropy times the token count estimates that code length; a file
 format also carries framing and does not include the cost of distributing the
 model. :citet:`Deletang.Ruoss.Duquenne.ea.2023` drive an arithmetic coder with
 an LLM's next-token probabilities and compress text better than gzip. Thus
@@ -913,9 +913,9 @@ print(f'typical strings: 2^{log2_typical:.1f} of all 2^{n}')
 print(f'probability they carry: {prob_k[typical].sum():.4f}')
 ```
 
-A vanishing fraction of the strings — about $2^{nH}$ of the $2^n$, missing
-some $24$ orders of magnitude of the count — soaks up almost all of the
-probability. Indexing just those strings *is* the compressor, and $nH$ bits
+A vanishing fraction of the strings soaks up almost all of the probability:
+about $2^{nH}$ of the $2^n$, missing some $24$ orders of magnitude of the
+count. Indexing just those strings *is* the compressor, and $nH$ bits
 is the length of the index.
 
 ### Lossy Compression and Rate--Distortion
@@ -957,9 +957,9 @@ the trade-off by learning the codec.
 ### Noisy Channels and Capacity
 :label:`subsec_mdl-channel-capacity`
 
-Compression asks how few bits describe a source. Communication asks how many
-bits survive a noisy channel. A memoryless channel is a conditional distribution
-$p(y\mid x)$. Its **capacity** is
+Compression asks how few bits describe a source; communication asks how many
+bits survive a noisy channel. A memoryless channel is a conditional
+distribution $p(y\mid x)$, whose **capacity** is
 
 $$
 C=\max_{p(x)} I(X;Y),
@@ -1081,7 +1081,7 @@ complexity. A highly flexible model may compress the training residuals while
 losing overall because its parameters or structure are expensive to describe.
 This is Occam's razor in operational units rather than a parameter-count slogan.
 
-There is a close Bayesian connection. Choosing
+The connection to Bayes is close: choosing
 $L(h)=-\log P(h)$ and $L(\mathcal D\mid h)=-\log P(\mathcal D\mid h)$ gives the
 MAP objective. A one-part Bayesian code instead uses the marginal likelihood
 $-\log\int P(\mathcal D\mid\theta)P(\theta)\,d\theta$, averaging rather than
@@ -1281,8 +1281,8 @@ $\tfrac{1}{k}\big((\mathbf{z}^{\textrm{stu}} - \bar z^{\textrm{stu}}) -
 (\mathbf{z}^{\textrm{tea}} - \bar z^{\textrm{tea}})\big) = (-0.667, 0.333,
 0.333)$ here, but the convergence is $O(1/T)$ and still visibly incomplete in
 the table: the $T = 10$ row reads $(-0.719, 0.413, 0.306)$, and the first
-component even overshoots its limit on the way. The scale-matching, which is
-what the $T^2$ factor was designed for, holds regardless. As
+component even overshoots its limit on the way. The scale-matching holds
+regardless, and that is what the $T^2$ factor was designed for. As
 $T \to 1$ the loss reduces to the ordinary KL (and, with a one-hot teacher,
 to the ordinary cross-entropy loss), recovering standard training as a special
 case.

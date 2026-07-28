@@ -981,9 +981,9 @@ The family tree so far has one half missing. The arrows of
 over its parameters, and the parameters of the distributions above are themselves
 quantities to be inferred: the Bernoulli's $p$, the Poisson's $\lambda$, the
 categorical's $\mathbf p$. A *prior* over those parameters is again a distribution,
-and three new continuous laws, the **Beta**, the **Gamma**, and the
-**Dirichlet**, are exactly the priors that pair with the discrete
-distributions we have met. A prior is **conjugate** to a likelihood when the
+and three new continuous laws are exactly the priors that pair with the discrete
+distributions we have met: the **Beta**, the **Gamma**, and the
+**Dirichlet**. A prior is **conjugate** to a likelihood when the
 posterior belongs to the *same family* as the prior, so Bayesian updating just moves
 the parameters rather than changing the shape of the distribution. This closes the
 tree: a tier of prior nodes flanks the data distributions in
@@ -1103,8 +1103,8 @@ The other discrete laws have their own conjugate partners, built the same way.
 
 These are three instances of one theorem. **Every exponential-family likelihood
 has a conjugate prior**, provided the hyperparameters are chosen so that the
-prior below is normalizable, and it is itself an exponential family in the
-natural parameters $\boldsymbol\eta$: writing the prior as
+prior below is normalizable, and that prior is itself an exponential family in
+the natural parameters $\boldsymbol\eta$: writing the prior as
 $p(\boldsymbol\eta)\propto\exp\!\bigl(\boldsymbol\nu^\top\boldsymbol\eta - \kappa\,A(\boldsymbol\eta)\bigr)$,
 multiplying by the likelihood :eqref:`eq_mdl-exp_family` just adds the data's
 sufficient statistics into $\boldsymbol\nu$ and increments $\kappa$ by the sample
@@ -1117,8 +1117,8 @@ standard losses.
 
 ## Summary
 
-The eleven data distributions of this section in one view (their three conjugate
-priors, the Beta, Gamma, and Dirichlet, close the family). For the categorical
+Here are the eleven data distributions of this section in one view; their three
+conjugate priors, the Beta, Gamma, and Dirichlet, close the family. For the categorical
 and multinomial rows we code a draw as a one-hot vector, respectively as the sum
 of $n$ one-hot vectors: the coding the cross-entropy loss already uses, and the
 object whose mean and covariance the table states.

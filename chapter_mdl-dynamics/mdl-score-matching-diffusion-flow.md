@@ -531,8 +531,8 @@ continuous pictures are one object viewed at different resolutions
 different route: write the reverse chain as a latent-variable model and
 maximize an evidence lower bound, as in
 :numref:`sec_mdl-latent-em-elbo` :cite:`sohl2015deep,ho2020denoising`.
-The KL terms between the Gaussian forward posteriors and the learned reverse
-steps collapse, after the same Gaussian algebra as above, into weighted
+After the same Gaussian algebra as above, the KL terms between the Gaussian
+forward posteriors and the learned reverse steps collapse into weighted
 $\boldsymbol{\epsilon}$-prediction losses; the ELBO and the score view land on
 the same objective with a different $\lambda(t)$, and :citet:`Luo.2022` is a
 careful walkthrough of that equivalence.
@@ -741,10 +741,10 @@ print(f'mode fraction at 1000 steps: {(x_ref > 0).mean():.3f}; '
 ```
 
 Ten strides land every sample in the same mode as the thousand-step reference
-(the mode fraction is *identical* at every stride count: the update is
-deterministic, and in this run no trajectory crosses the valley)
 and slip by only $0.08$ per sample on a scale where the modes sit at
-$\pm 0.97$. The discrepancy illustrates the central point: the predicted
+$\pm 0.97$. (The mode fraction is *identical* at every stride count: the update
+is deterministic, and in this run no trajectory crosses the valley.)
+The discrepancy illustrates the central point: the predicted
 noise is a posterior *mean*, not the realization's latent noise, so a finite
 deterministic stride need not preserve the target marginal exactly. This is
 true even for Gaussian data; Gaussianity makes the score linear, but does not
@@ -758,9 +758,9 @@ is least Gaussian.
 
 Generation is rarely unconditional: we want *a picture of a cat*, not a
 picture. Conditioning a score model turns out to be pure probability, no new
-training theory. Bayes' rule at noise level $t$,
-$p_t(\mathbf{x} \mid y) \propto p_t(\mathbf{x})\, p_t(y \mid \mathbf{x})$,
-becomes additive for scores, since the gradient is in $\mathbf{x}$ and the
+training theory. Bayes' rule at noise level $t$ reads
+$p_t(\mathbf{x} \mid y) \propto p_t(\mathbf{x})\, p_t(y \mid \mathbf{x})$, and
+it becomes additive for scores, since the gradient is in $\mathbf{x}$ and the
 evidence term drops:
 
 $$
@@ -1401,9 +1401,9 @@ for ax, (title, s) in zip(axes, panels):
     ax.set_xlim(-2.5, 2.5), ax.set_ylim(-2.5, 2.5)
 ```
 
-That a few Euler steps already work, where a comparable diffusion sampler
-would want dozens to hundreds, is the linear path keeping the learned flow
-only mildly curved. How mildly, and what it costs to be curved at all, is a
+The linear path keeps the learned flow only mildly curved, which is why a few
+Euler steps already work where a comparable diffusion sampler would want
+dozens to hundreds. How mildly, and what it costs to be curved at all, is a
 question about optimal transport.
 
 ### One Reflow Round, Measured
@@ -1831,9 +1831,9 @@ applied to dynamics in which the learned function is the only unknown, and
 the speed of that integrator is governed by the geometry (curvature, hence
 optimal transport) of the path the model chose to learn.
 
-The table's two halves (score rows sampled by reversing a stochastic process,
-velocity rows sampled by integrating a prescribed path) also admit a single
-umbrella: the **stochastic interpolants** of
+The table's two halves also admit a single umbrella (score rows are sampled by
+reversing a stochastic process, velocity rows by integrating a prescribed
+path): the **stochastic interpolants** of
 :citet:`Albergo.Boffi.VandenEijnden.2023` write
 $\mathbf{x}_t = \alpha_t \mathbf{x}_0 + \beta_t \mathbf{x}_1 + \gamma_t \mathbf{w}$
 and recover every row by a choice of schedule, the diffusion rows with

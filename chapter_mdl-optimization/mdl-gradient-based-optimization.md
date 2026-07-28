@@ -6,7 +6,7 @@ main book hands you the optimizer zoo (momentum, RMSProp, Adam, learning-rate
 schedules), this section explains the foundations underneath all of them: *why* a
 negative-gradient step makes progress, *how fast* it converges, and *what breaks
 it*. One number recurs throughout: the **condition number** $\kappa$, read off
-the Hessian's spectrum, which predicts whether gradient descent glides to
+the Hessian's spectrum. It predicts whether gradient descent glides to
 the minimum or grinds along an ill-conditioned valley. We develop the deterministic
 theory on quadratics (where everything is computable in closed form), then add the
 two ingredients that make it practical at scale, momentum and stochasticity,
@@ -20,9 +20,9 @@ and Newton's method, both of which we now grow to $n$ dimensions), and
 :numref:`sec_mdl-eigendecompositions` together with :numref:`sec_mdl-svd-low-rank`
 (eigenvalues and the condition number
 $\kappa = \lambda_{\max}/\lambda_{\min}$). Convexity is *forward*-referenced:
-the two global convergence theorems whose proofs need it, and the equivalent
-readings of strong convexity quoted alongside them, are stated here and
-proved in :numref:`sec_mdl-convexity`. Standard references are
+we state here, and prove in :numref:`sec_mdl-convexity`, the two global
+convergence theorems whose proofs need it, along with the equivalent
+readings of strong convexity quoted alongside them. Standard references are
 :citet:`Boyd.Vandenberghe.2004`, :citet:`Nesterov.2018`, and chapters 4 and 8 of
 :citet:`Goodfellow.Bengio.Courville.2016`. As in the rest of this chapter, the
 code is plain NumPy, because every algorithm
@@ -103,9 +103,9 @@ $\blacksquare$
 Statement 2 is *why* gradient descent follows
 $-\nabla f$: a theorem rather than a definition. But notice how *weak* the
 requirement for progress is. Descent directions form an entire open half-space
-(everything within $90^\circ$ of $-\nabla f$), and the family
-$\mathbf{d} = -B\,\nabla f(\mathbf{x})$ for *any* positive-definite matrix $B$
-consists of nothing but descent directions (Exercise 2). Newton's method and
+(everything within $90^\circ$ of $-\nabla f$), and for *any* positive-definite
+matrix $B$ the family $\mathbf{d} = -B\,\nabla f(\mathbf{x})$ consists of
+nothing but descent directions (Exercise 2). Newton's method and
 every preconditioned optimizer live inside this family, choosing $B$ to encode
 curvature; we return to them in :numref:`subsec_mdl-why-not-newton`. The cell
 below makes the proposition concrete on the running example of this section,
@@ -379,13 +379,13 @@ $$
 :eqlabel:`eq_mdl-opt-per-mode`
 
 Gradient descent on a quadratic is $n$ *uncoupled one-dimensional geometric
-recursions*, one per curvature eigenvalue: one per "mode". Everything
-follows from staring at the factors $1 - \eta\lambda_i$:
+recursions*, one per curvature eigenvalue, or as we will say, one per "mode".
+Everything follows from staring at the factors $1 - \eta\lambda_i$:
 
 * **Convergence** requires $|1 - \eta \lambda_i| < 1$ for every mode, i.e.
-  $0 < \eta < 2/\lambda_{\max} = 2/L$. This is the **stability ceiling**: the
-  necessity, on quadratics, of the $2/L$ that the descent lemma offered as
-  sufficiency. Past it, the stiffest mode's factor drops below $-1$ and that
+  $0 < \eta < 2/\lambda_{\max} = 2/L$. This is the **stability ceiling**: on
+  quadratics, the $2/L$ that the descent lemma offered as sufficient turns out
+  to be necessary. Past it, the stiffest mode's factor drops below $-1$ and that
   coordinate oscillates with *growing* amplitude while every other mode calmly
   converges: divergence along one axis (Exercise 4 has you build this
   half-converging, half-exploding run).
@@ -924,8 +924,8 @@ knobs, the coupling behind the practical recipes of
 
 To actually *reach* the minimizer, the step size must decay: fast enough to
 quench the noise, slowly enough to retain the ability to travel arbitrarily
-far. The classical conditions of :citet:`Robbins.Monro.1951`, from the 1951
-paper that founded stochastic approximation, make both demands precise:
+far. From the 1951 paper that founded stochastic approximation, the classical
+conditions of :citet:`Robbins.Monro.1951` make both demands precise:
 
 $$
 \sum_{k} \eta_k = \infty,
@@ -984,10 +984,10 @@ d2l.plot(np.arange(1, 4001), [gap_fix, gap_dec], 'step k', 'optimality gap',
 The numbers land exactly where the theory points. Fixed $\eta = 0.8$ stalls at
 an average gap of $2.3 \times 10^{-2}$; halving the step to $0.4$ halves the
 floor to $1.1 \times 10^{-2}$: the linear-in-$\eta$ noise ball of
-:eqref:`eq_mdl-opt-noise-ball`, measured. The $1/k$ schedule, which spends its
-early large steps crossing the valley and its late small steps shrinking the
-ball, is at $5.7 \times 10^{-4}$ after the same $4000$ steps and still
-descending as a power law, the straight line on the log-log plot. Modern
+:eqref:`eq_mdl-opt-noise-ball`, measured. The $1/k$ schedule is at
+$5.7 \times 10^{-4}$ after the same $4000$ steps and still descending as a
+power law, the straight line on the log-log plot: its early large steps cross
+the valley, and its late small steps shrink the ball. Modern
 schedules (step decay, cosine, warmup; :numref:`sec_sgd` and
 :numref:`sec_minibatch_sgd`) are engineered refinements of exactly this
 tradeoff, tuned for losses that are neither convex nor stationary. **Warmup**
@@ -1023,8 +1023,8 @@ $\kappa$. There is no condition number in Newton's world because the method is
 $\mathbf{x} = T\mathbf{y}$, and Newton's iterates map through $T$ untouched
 (Exercise 8): the warped valley and the round bowl are *the same problem*
 to Newton, while gradient descent's behavior changes with every reparametrization.
-Near a minimizer whose Hessian is positive definite and Lipschitz continuous
-in a neighborhood, Newton started close enough converges
+Started close enough to a minimizer whose Hessian is positive definite and
+Lipschitz continuous in a neighborhood, Newton converges
 **quadratically**, $\|\mathbf{x}_{k+1} - \mathbf{x}^\star\| \le C\,\|\mathbf{x}_k - \mathbf{x}^\star\|^2$
 (Theorem 3.5 of :citet:`Nocedal.Wright.2006`): the number of correct digits
 *doubles* per iteration. The cell shows both
@@ -1062,9 +1062,9 @@ Newton solve costs $O(d^3)$: at $d = 10^9$ that is $10^{18}$ entries (eight
 exabytes in double precision) before the first of $\sim 10^{27}$ floating-point
 operations (Exercise 8 asks you to put a year count on this). The objection is
 structural too: away from a minimum the Hessian of a non-convex loss is
-typically *indefinite*, and the Newton step, which seeks a stationary point
-of the model, any stationary point, happily walks *toward* saddle points
-unless safeguarded. What survives at scale is a family of cheaper curvature
+typically *indefinite*, and the Newton step happily walks *toward* saddle
+points unless safeguarded, because it seeks a stationary point of the model,
+any stationary point. What survives at scale is a family of cheaper curvature
 surrogates. **L-BFGS** rebuilds a low-rank curvature estimate from recent
 gradient differences with $O(d)$ memory :cite:`Liu.Nocedal.1989`, and the
 adaptive family (AdaGrad :cite:`Duchi.Hazan.Singer.2011`, RMSProp
@@ -1235,7 +1235,7 @@ beyond explicitly inverting a Hessian.
   ($\sum \eta_k = \infty$, $\sum \eta_k^2 < \infty$) trades the geometric rate
   for convergence that actually reaches the optimum.
 * Newton's method is affine-invariant, immune to $\kappa$, and quadratically
-  convergent, and costs $O(d^2)$ memory and $O(d^3)$ time per step. **BFGS**
+  convergent, but it costs $O(d^2)$ memory and $O(d^3)$ time per step. **BFGS**
   learns an inverse-Hessian approximation from secant pairs; **L-BFGS** stores
   only a short history. **Trust-region methods** bound the quadratic model's
   step and use actual-versus-predicted improvement to adjust that bound, making

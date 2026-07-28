@@ -250,8 +250,8 @@ the Courant--Fischer min-max principle of :numref:`subsec_mdl-rayleigh` translat
 from Rayleigh quotients to singular values.
 This "maximum stretch" reading is the one that recurs in Eckart--Young, PCA,
 conditioning, and Lipschitz/spectral-norm arguments. The constructive proof is the
-better *first* proof (concrete, reusing machinery we have); the variational one is
-the better *meaning*.
+better *first* proof (concrete, reusing machinery we have); the variational one
+explains better what $\sigma_1$ *means*.
 
 **Relationship to the eigendecomposition.** Substituting :eqref:`eq_mdl-svd` into
 the two Gram matrices gives, since $\mathbf{U}$ and $\mathbf{V}$ are orthogonal,
@@ -375,8 +375,8 @@ backwards.
 
 **Numerical rank.** In floating-point arithmetic, a matrix that is mathematically
 rank-deficient rarely has exact zero singular values; rounding leaves tiny
-$\sigma_i$ of size around $\epsilon_{\text{mach}}\,\sigma_1$ instead. The
-practical notion of rank therefore *thresholds*: count the singular values above a
+$\sigma_i$ of size around $\epsilon_{\text{mach}}\,\sigma_1$ instead. In practice,
+then, rank is set by a *threshold*: count the singular values above a
 tolerance, which is exactly what `np.linalg.matrix_rank` does; its default cutoff is
 $\sigma_1\,\max(m,n)\,\epsilon_{\text{mach}}$, scaled by both the largest singular
 value and the matrix size. Building a deliberately rank-2
@@ -767,7 +767,7 @@ $\kappa(\mathbf A)$ while the Hessian condition number that controls gradient
 descent is $\kappa(\mathbf A)^2$.) This is the same picture that ended
 the Rayleigh discussion in :numref:`subsec_mdl-rayleigh`, and it is no coincidence:
 with the best fixed step size, gradient descent's error contracts like
-$(\kappa-1)/(\kappa+1)$ per step on such a bowl: *one number, two consequences*,
+$(\kappa-1)/(\kappa+1)$ per step on such a bowl. *One number, two consequences*:
 error amplification in a solve and slow convergence in optimization. We make this
 precise when we analyze gradient descent in :numref:`sec_mdl-gradient-based-optimization`
 and study numerical conditioning in :numref:`sec_mdl-numerical-stability-conditioning`.
@@ -824,9 +824,10 @@ components :cite:`Meng.Wang.Zhang.2024`.
 **Orthogonalized updates (Muon).** The polar decomposition
 :eqref:`eq_mdl-polar` is the engine of Muon :cite:`Jordan.Jin.Boza.ea.2024`, an
 optimizer adopted in recent large-scale language-model training. Write the
-*momentum* matrix of a weight (the running average of gradients that optimizers
-keep per weight; see the optimization chapters)
-as $\mathbf{M}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$. A standard momentum
+*momentum* matrix of a weight as
+$\mathbf{M}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$; the momentum is the
+running average of gradients that optimizers keep per weight (see the
+optimization chapters). A standard momentum
 step moves along $\mathbf{M}$, which is dominated by its few largest dyads; Muon
 instead steps along the *polar factor*
 $\mathbf{Q}=\mathbf{U}\mathbf{V}^\top$, the rotation part of the update with

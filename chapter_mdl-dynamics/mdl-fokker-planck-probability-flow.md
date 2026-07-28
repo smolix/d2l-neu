@@ -7,10 +7,10 @@ simulation again and you get a different curve. But now release a *cloud*: a
 million points drawn from a density $p_0$, every one of them flowing under the
 same SDE. Each particle is unpredictable, yet the cloud's density
 $p_t(\mathbf{x})$ evolves in a perfectly deterministic, perfectly reproducible
-way: drift pushes it, diffusion smears it. This switch of viewpoint, from
-one trajectory to the evolving ensemble, is the move diffusion models are
-built on, and the law of motion of the cloud is a partial differential
-equation: the **Fokker--Planck equation**.
+way: drift pushes it, diffusion smears it. Diffusion models are built on this
+switch of viewpoint, from one trajectory to the evolving ensemble, and the law
+of motion of the cloud is a partial differential equation: the
+**Fokker--Planck equation**.
 
 From that one PDE follow two facts that diffusion models rest on. First, every
 noising SDE has a *deterministic twin*, the **probability-flow ODE**, whose
@@ -174,8 +174,8 @@ which the decay kills. $\blacksquare$
 
 Applied twice with $\mathbf{v} = \nabla u$, integration by parts moves a whole
 Laplacian across the integral sign: $\int h\, \Delta u = \int u\, \Delta h$.
-That maneuver, shifting derivatives from a test function onto a density,
-is the only trick the Fokker--Planck derivation needs.
+That maneuver is the only trick the Fokker--Planck derivation needs:
+shifting derivatives from a test function onto a density.
 
 ### Watching the Cloud
 
@@ -371,7 +371,7 @@ equation with a time-dependent $g$.
 
 ### The Ornstein--Uhlenbeck Check
 
-For OU in one dimension,
+For OU in one dimension, with
 $f(x) = -\theta x$ and $g = \sigma$, equation :eqref:`eq_mdl-dyn-fokker-planck`
 reads
 
@@ -519,8 +519,8 @@ characteristics. We are about to make diffusion models eligible for it.
 
 The Fokker--Planck equation :eqref:`eq_mdl-dyn-fokker-planck` is *not* in
 continuity form: alongside the transport term $-\nabla \cdot (\mathbf{f} p)$
-it carries the Laplacian, which looks like a different species. The key
-observation, one line of calculus, is that it is not. Wherever
+it carries the Laplacian, which looks like a different species. One line of
+calculus shows that it is not. Wherever
 $p > 0$, the chain rule gives
 
 $$
@@ -1122,10 +1122,10 @@ it is the business of :numref:`sec_mdl-score-matching-diffusion-flow`.
   $\lambda$-family interpolates at fixed marginals. The score is the only
   unknown in all of them.
 
-Everything a diffusion model does at inference time (its samplers and its
-likelihoods, the subject of :numref:`sec_mdl-score-matching-diffusion-flow`)
-runs on this section's three objects: the probability-flow ODE, the reverse
-SDE, and the likelihood integral :eqref:`eq_mdl-dyn-pf-likelihood`. The lone
+Everything a diffusion model does at inference time runs on this section's
+three objects: the probability-flow ODE, the reverse SDE, and the likelihood
+integral :eqref:`eq_mdl-dyn-pf-likelihood`. Those samplers and likelihoods are
+the subject of :numref:`sec_mdl-score-matching-diffusion-flow`, and the lone
 unknown in all three is the score.
 
 ## Exercises

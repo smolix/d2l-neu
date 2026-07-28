@@ -199,8 +199,8 @@ asymmetry of KL becomes a *choice of generator* rather than a quirk
 $f(u) = \tfrac{1}{2}|u - 1|$ unwinds to
 $\tfrac{1}{2}\sum_x |p(x) - q(x)|$, half the $\ell_1$ distance between the
 probability vectors; we study it in :numref:`sec_mdl-tv-pinsker`. And the
-**Jensen--Shannon divergence** :cite:`Lin.1991`, whose generator looks
-unguessable, is the natural symmetrization of KL: writing
+**Jensen--Shannon divergence** :cite:`Lin.1991` is the natural symmetrization
+of KL, however unguessable its generator looks: writing
 $M = \tfrac{1}{2}(P + Q)$ for the even mixture,
 
 $$
@@ -238,8 +238,8 @@ At $\alpha=\tfrac12$ it gives twice the squared Hellinger divergence under the
 table's convention. The shorter generator
 $(u^\alpha-1)/(\alpha(\alpha-1))$ defines the same divergence for fixed
 $\alpha$—the two differ only by a multiple of $u-1$—but it does **not** have
-the claimed pointwise limits. Closely related, and the form that appears in
-applications, is the **Rényi divergence** :cite:`Renyi.1961`,
+the claimed pointwise limits. Closely related is the **Rényi divergence**
+:cite:`Renyi.1961`, the form that appears in applications,
 
 $$
 D_\alpha(P\|Q) = \frac{1}{\alpha - 1}
@@ -543,8 +543,8 @@ $\sqrt{3.72} \approx 1.929$, as the proposition demands: a broad Gaussian
 draped across both modes, with substantial mass in the valley between them
 where $P$ has almost none. The reverse fit lands at $\mu = -1.998$,
 $\sigma = 0.603$: it *is* the dominant component, and the minor mode is
-simply dropped. Its divergence, $0.356$ nats, is essentially
-$\log(1/0.7) \approx 0.357$, the divergence incurred by treating the $70\%$
+simply dropped. Its divergence is $0.356$ nats, essentially
+$\log(1/0.7) \approx 0.357$: the divergence incurred by treating the $70\%$
 component as the whole distribution. And reverse KL is genuinely multimodal
 as an objective: restarting the optimizer near the minor mode converges to a
 *second* local optimum at $\mu = +1.995$ with KL
@@ -554,7 +554,7 @@ variational inference eventually meets.
 
 The generative-modeling translation: maximum-likelihood families
 (autoregressive models, normalizing flows) inherit forward KL's
-mass-covering: they rarely miss a mode but can produce blurry,
+mass-covering, so they rarely miss a mode but can produce blurry,
 over-dispersed samples; adversarial and variational objectives built on
 reverse-type divergences produce sharp samples but can silently drop modes.
 The capstone table in :numref:`sec_mdl-divergence-objective-map` files every
@@ -615,8 +615,8 @@ operational meaning. Hand a tester one sample, drawn from $P$ or $Q$ with
 equal probability, and ask which distribution produced it: the best possible
 test (guess $P$ exactly on $A^\star$) succeeds with probability
 $\tfrac{1}{2}\big(1 + \textrm{TV}(P, Q)\big)$, an excess of
-$\textrm{TV}/2$ over coin-flipping, which cryptographers double and call the
-*advantage*, so that under their convention the best achievable advantage is
+$\textrm{TV}/2$ over coin-flipping. Cryptographers double that excess and call
+it the *advantage*, so under their convention the best achievable advantage is
 exactly $\textrm{TV}(P, Q)$.
 
 ![Two densities and the region where they disagree. The total variation distance is half the shaded area, and the event that attains the supremum is the set where the first density exceeds the second: betting on P exactly there is the best possible single-sample test.](../img/mdl-it-tv-area.svg)
@@ -662,9 +662,9 @@ $$
 
 which rearranges to :eqref:`eq_mdl-pinsker`. $\blacksquare$
 
-The merging step, that coarsening the outcome space cannot increase an
-f-divergence, holds in full generality, and the proof above already contains
-the general argument.
+The merging step holds in full generality: coarsening the outcome space cannot
+increase an f-divergence, and the proof above already contains the general
+argument.
 
 **Remark (data-processing for f-divergences).** *Passing $P$ and $Q$ through
 any channel $K$ (any deterministic or random map from $x$ to $y$, with
@@ -684,9 +684,9 @@ over $y$ with $(qK)(y) > 0$ finishes, since terms with $(qK)(y) = 0$
 contribute nothing. $\blacksquare$
 
 Merging outcomes is the deterministic special case used above, and the
-data-processing inequality for *mutual information*, which
-:numref:`sec_mdl-mutual-information` states and proves, is the same
-principle in its best-known form. Note also what Pinsker does *not* say: it has no useful converse.
+data-processing inequality for *mutual information* is the same principle in
+its best-known form; :numref:`sec_mdl-mutual-information` states and proves
+it. Note also what Pinsker does *not* say: it has no useful converse.
 TV is bounded by $1$ while KL is unbounded, so the bound goes slack for
 distant pairs (two unit-variance Gaussians $50$ apart have
 $\textrm{TV} \approx 1$ but KL $= 1250$ nats), and small TV does *not* imply
@@ -723,10 +723,10 @@ original argument.
 ### Integral Probability Metrics and MMD
 :label:`sec_mdl-ipm-mmd`
 
-Total variation's definition, a supremum of differences over events,
-generalizes wholesale. Replace indicator functions of events by an arbitrary
-class $\mathcal{F}$ of test functions and you get the **integral probability
-metrics** :cite:`Muller.1997`:
+The definition of total variation takes a supremum of differences over
+events, and it generalizes wholesale. Replace indicator functions of events
+by an arbitrary class $\mathcal{F}$ of test functions and you get the
+**integral probability metrics** :cite:`Muller.1997`:
 
 $$
 \textrm{IPM}_{\mathcal{F}}(P, Q)
@@ -774,11 +774,11 @@ $$
 Within-sample similarity under $P$, plus within-sample similarity under $Q$,
 minus twice the across-sample similarity: if the two samples interleave, the
 three terms cancel; if they form separate clumps, the within terms beat the
-across term. Replacing expectations by sample averages, *excluding* the
-diagonal terms $k(x_i, x_i)$ whose inclusion would bias the within-sample
-terms upward, gives the standard unbiased estimator
-:cite:`Gretton.Borgwardt.Rasch.ea.2012`, computable in a few lines with no
-optimization and no densities. For *characteristic* kernels (the
+across term. Replacing expectations by sample averages gives the standard
+unbiased estimator :cite:`Gretton.Borgwardt.Rasch.ea.2012`, computable in a
+few lines with no optimization and no densities; the estimator *excludes* the
+diagonal terms $k(x_i, x_i)$, whose inclusion would bias the within-sample
+terms upward. For *characteristic* kernels (the
 RBF kernel is one) the embedding $P \mapsto \mu_P$ is injective, so MMD is a
 genuine metric: zero only at equality.
 
@@ -804,9 +804,9 @@ Two samples from the same standard Gaussian give
 $\textrm{MMD}^2 \approx 0.0005$ (noise around zero; the unbiased
 estimator is even allowed to go slightly negative), while shifting one
 sample's mean by half a standard deviation produces $\approx 0.059$, two
-orders of magnitude larger and consistent, up to sampling noise at
-$n = 250$, with the population value $\approx 0.047$ that Exercise 8
-derives in closed form. This
+orders of magnitude larger and, up to sampling noise at $n = 250$, consistent
+with the population value $\approx 0.047$ that Exercise 8 derives in closed
+form. This
 sample-only, optimization-free property is why MMD powers kernel two-sample
 tests and adversary-free generative training (MMD-GANs and generative moment
 matching :cite:`Li.Chang.Cheng.ea.2017,Li.Swersky.Zemel.2015`): the "critic" is the whole RKHS ball
@@ -1126,8 +1126,8 @@ closed form $0.5$ to six decimals.
 
 One apparent obstacle remains: :eqref:`eq_mdl-fisher-div-def` is an
 expectation involving $\nabla \log p$ of the *data* distribution, which we do
-not know either. The resolution, Hyvärinen's **score matching** identity
-:cite:`Hyvarinen.2005`, is an integration by parts showing that, up to a
+not know either. The resolution is Hyvärinen's **score matching** identity
+:cite:`Hyvarinen.2005`, an integration by parts showing that, up to a
 constant independent of the model,
 
 $$

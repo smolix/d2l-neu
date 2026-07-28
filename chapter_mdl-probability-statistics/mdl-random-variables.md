@@ -14,7 +14,7 @@ variance, standard deviation) that compress a distribution to a few numbers, and
 the joint/marginal/covariance machinery for several correlated variables. At
 every step the discrete sum and the continuous integral are *the same idea* seen
 through :numref:`sec_mdl-integral_calculus`, and almost everything below
-integrates the small identity :eqref:`eq_mdl-pdf_def`: *probability of a tiny
+follows from the small identity :eqref:`eq_mdl-pdf_def`: *probability of a tiny
 interval $\approx$ its width times the density there.*
 
 ```{.python .input #random-variables-imports}
@@ -165,7 +165,7 @@ The total mass prints as $1.0000$, just as :eqref:`eq_mdl-density` demands
 mass under $10^{-7}$), and the interval integral returns a genuine probability
 in $[0,1]$: the printed $0.7725$ sits within $6\times10^{-4}$ of the exact value
 $0.7731$, the small bias of a left-endpoint Riemann sum at $\epsilon=0.01$. A
-catalogue of named densities (Gaussian, exponential, and the rest) waits in
+catalogue of named densities (Gaussian, exponential, and the rest) follows in
 :numref:`sec_mdl-distributions`; here we stay abstract.
 
 ### The Cumulative Distribution Function
@@ -293,11 +293,11 @@ slice-and-refine argument that produced the normalization
 :eqref:`eq_mdl-density`. The same
 weighting averages any *function* of $X$: $E[g(X)]=\sum_i g(x_i)\,p_i$ in the
 discrete case, while the continuous form $\int g(x)\,p(x)\,dx$ restates the
-second half of :eqref:`eq_mdl-expectation`. The rule is used so routinely
-without comment (we invoke it below every time we average $X^2$ or a
-squared deviation) that it is known as the *law of the unconscious
-statistician*; what is new here is only the name and the discrete form. The
-mean tells us, with some caution, where the variable tends to sit.
+second half of :eqref:`eq_mdl-expectation`. We apply the rule so routinely and
+so silently that it has earned a name: the *law of the unconscious
+statistician*. It is at work below every time we average $X^2$ or a squared
+deviation; what is new here is only the name and the discrete form. The mean
+tells us, with some caution, where the variable tends to sit.
 
 A running example recurs through the whole section. Let $X$ take $a-2$ with
 probability $p$, $a+2$ with probability $p$, and $a$ with probability $1-2p$.
@@ -446,8 +446,8 @@ $E[\mathbf{1}_{X\ge a}]=P(X\ge a)$ gives $E[X]\ge a\,P(X\ge a)$. $\blacksquare$
 So at most a tenth of any non-negative population exceeds ten times its
 average: true of incomes, file sizes, and gradient norms alike, with no
 distributional assumption whatsoever. On its own the bound is crude, because it
-knows only the mean. Feeding it the *squared deviation* $(X-\mu_X)^2$, whose
-mean is by definition the variance, sharpens it into the statement we are
+knows only the mean. But feed it the *squared deviation* $(X-\mu_X)^2$, whose
+mean is by definition the variance, and it sharpens into the statement we are
 after, an inequality due to Bienaymé and to Chebyshev :cite:`Chebyshev.1867`.
 
 **Proposition (Chebyshev's inequality).** *For any $X$ with finite variance and
@@ -874,9 +874,9 @@ $$
 so equality holds. $\blacksquare$
 
 The two extremes thus read off: $\rho=+1$ for a perfect increasing linear
-relationship ($a>0$) and $\rho=-1$ for a perfect decreasing one ($a<0$),
-independent of the scale $|a|$: correlation
-measures direction and tightness of a linear relationship, never its slope.
+relationship ($a>0$) and $\rho=-1$ for a perfect decreasing one ($a<0$), in
+both cases independent of the scale $|a|$. Correlation measures the direction
+and tightness of a linear relationship, never its slope.
 On the running discrete
 example $\sigma_X=1$, $\sigma_Y=2$, so
 $\rho=\frac{4p-2}{2}=2p-1$, sweeping from $-1$ to $+1$ as $p$ does from $0$
@@ -935,11 +935,11 @@ through a function $Y=g(X)$, its density is *not*
 simply $p_X\!\big(g^{-1}(y)\big)$: as the map stretches and compresses space the
 density must be re-scaled to keep its total mass at $1$. We already computed
 the re-scaling factor. The integral change-of-variables theorem of
-:numref:`sec_mdl-integral_calculus`, $\int_{\boldsymbol\phi(U)}f(\mathbf
-x)\,d\mathbf x=\int_U f(\boldsymbol\phi(\mathbf x))\,|\det
-D\boldsymbol\phi(\mathbf x)|\,d\mathbf x$ :eqref:`eq_mdl-change_var_nd`, already
-established that a reparametrization scales volume locally by the absolute
-Jacobian determinant. All a density does is read that theorem with $f=p$ and the
+:numref:`sec_mdl-integral_calculus` already established that a reparametrization
+scales volume locally by the absolute Jacobian determinant,
+$\int_{\boldsymbol\phi(U)}f(\mathbf x)\,d\mathbf x=\int_U f(\boldsymbol\phi(\mathbf
+x))\,|\det D\boldsymbol\phi(\mathbf x)|\,d\mathbf x$
+:eqref:`eq_mdl-change_var_nd`. All a density does is read that theorem with $f=p$ and the
 constraint that the total integral stays $1$: *probability mass in equals
 probability mass out*.
 
@@ -1014,8 +1014,8 @@ d2l.plot(mids, [hist, analytic], 'y', 'p(y)',
 
 The two curves coincide: the mass pushed forward through $e^x$ piles up exactly
 where :eqref:`eq_mdl-cov_density_1d` says it must, including the mode at
-$y=e^{-1}$ that the naive guess $p_X(\log y)$ (which peaks at $y=1$) gets
-wrong. A linear map
+$y=e^{-1}$. The naive guess $p_X(\log y)$ gets that mode wrong, peaking at
+$y=1$ instead. A linear map
 $\mathbf y = A\mathbf x$ illustrates the multivariate rule in one stroke: $J_g=A$ is
 constant, so the density is rescaled uniformly by $1/|\det A|$; stretch space by
 $|\det A|$ and the density thins by the same factor.

@@ -88,11 +88,11 @@ $$
 \frac{L(\mathbf{w} + h\,\mathbf{u}) - L(\mathbf{w})}{h} \;\xrightarrow{\;h\to 0\;}\; \mathbf{u}\cdot\nabla_{\mathbf{w}} L(\mathbf{w}).
 $$
 
-The rate of change of $L$ as we move along $\mathbf{u}$, the *directional
-derivative*, is the projection of the gradient onto $\mathbf{u}$. The single
-vector $\nabla_{\mathbf{w}} L$ thus encodes the slope in every direction
-simultaneously. The next section turns this one identity into the geometry of
-gradient descent.
+The rate of change of $L$ as we move along $\mathbf{u}$ is the projection of
+the gradient onto $\mathbf{u}$, and that rate is the *directional derivative*.
+The single vector $\nabla_{\mathbf{w}} L$ thus encodes the slope in every
+direction simultaneously. The next section turns this one identity into the
+geometry of gradient descent.
 
 First, let us check that :eqref:`eq_mdl-nabla_use` really does approximate $L$.
 
@@ -393,12 +393,11 @@ $$
 $$
 :eqlabel:`eq_mdl-lagrange-condition`
 
-for some scalar $\lambda$, the *Lagrange multiplier*. This single picture, the
-contours of $f$ kissing the constraint surface where their gradients align
-(:numref:`fig_mdl-lagrange-tangency`), is
+for some scalar $\lambda$, the *Lagrange multiplier*. This single picture is
 the first-order condition for constrained optimization, the seed of the KKT
-conditions and of duality. We meet it again in full force in
-:numref:`sec_mdl-constrained-optimization-duality`.
+conditions and of duality: the contours of $f$ kiss the constraint surface
+where their gradients align (:numref:`fig_mdl-lagrange-tangency`). We meet it
+again in full force in :numref:`sec_mdl-constrained-optimization-duality`.
 
 ![Lagrange multipliers as tangency. At the constrained optimum the level set of $f$ is tangent to the constraint curve $g = c$ and the two gradients align, $\nabla f = \lambda \nabla g$. At a non-optimal feasible point the gradients disagree, so $\nabla f$ keeps a component along the constraint and sliding along it still improves $f$.](../img/mdl-cal-lagrange-tangency.svg)
 :label:`fig_mdl-lagrange-tangency`
@@ -686,10 +685,10 @@ print(f'df/dy at {w}, {x}, {y}, {z} is {y_grad}')
 print(f'df/dz at {w}, {x}, {y}, {z} is {z_grad}')
 ```
 
-The library's answer matches our hand-computed backward pass. Why backprop is
+The library's answer matches our hand-computed backward pass.
+:numref:`sec_mdl-matrix-calculus-autodiff` explains why backprop is
 reverse-mode automatic differentiation, a chain of vector–Jacobian products,
-and when to prefer it over forward mode is the
-subject of :numref:`sec_mdl-matrix-calculus-autodiff`.
+and when to prefer it over forward mode.
 
 ## Second-Order Structure: the Hessian
 
@@ -838,9 +837,9 @@ $$
 Stepping a unit direction $\mathbf{v}$ away from $\mathbf{x}_0$ makes the
 right-hand side $\tfrac12\mathbf{v}^\top\mathbf{H}\mathbf{v}$: the scalar
 $\mathbf{v}^\top\mathbf{H}\mathbf{v}$ is the *second directional derivative* of
-$f$ along $\mathbf{v}$, the second-order analogue of $\mathbf{v}\cdot\nabla f$,
-and at a critical point, where the slope term is gone, it is the curvature of
-$f$ along $\mathbf{v}$. Whether $f$ goes up or down as we leave $\mathbf{x}_0$
+$f$ along $\mathbf{v}$, the second-order analogue of $\mathbf{v}\cdot\nabla f$.
+At a critical point, where the slope term is gone, it is the curvature of $f$
+along $\mathbf{v}$. Whether $f$ goes up or down as we leave $\mathbf{x}_0$
 is governed entirely by the sign of this quadratic form, that is, by the
 *definiteness* of the symmetric matrix $\mathbf{H}$. The classification is read straight off the
 eigenvalues of $\mathbf{H}$ via the PSD/PD criterion of
@@ -924,10 +923,10 @@ vectors to vectors and carry matrix parameters, so the derivative becomes a
 matrix of partials, the *Jacobian*, with the gradient and Hessian as special
 cases. One caution for that road: the Mean Value Theorem of
 :numref:`sec_mdl-mvt` does *not* survive the passage to vector-valued maps;
-only an inequality remains, the mean value inequality :cite:`Rudin.1976`. The
-Jacobian machinery, the layout conventions, and how it all yields
-backpropagation as reverse-mode automatic differentiation are the subject of
-:numref:`sec_mdl-matrix-calculus-autodiff`.
+only an inequality remains, the mean value inequality :cite:`Rudin.1976`.
+:numref:`sec_mdl-matrix-calculus-autodiff` develops the Jacobian machinery, the
+layout conventions, and how it all yields backpropagation as reverse-mode
+automatic differentiation.
 
 ## Summary
 

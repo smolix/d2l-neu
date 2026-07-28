@@ -52,9 +52,10 @@ from jax import numpy as jnp
 :label:`subsec_mdl-jacobian`
 
 A layer $\mathbf f:\mathbb R^n\to\mathbb R^m$ does not have "a derivative" but a
-whole matrix of them. The single object that organizes them, and generalizes both
-the slope of :numref:`sec_mdl-single_variable_calculus` and the gradient of
-:numref:`sec_mdl-multivariable_calculus` in one stroke, is the *Jacobian*.
+whole matrix of them. The *Jacobian* is the single object that organizes them,
+generalizing in one stroke both the slope of
+:numref:`sec_mdl-single_variable_calculus` and the gradient of
+:numref:`sec_mdl-multivariable_calculus`.
 
 ### The Jacobian as the Best Linear Approximation
 
@@ -142,8 +143,8 @@ hundred, the $o(\|\boldsymbol\delta\|)$ signature of :eqref:`eq_mdl-jacobian-lin
 
 ### The Chain Rule Is Jacobian Composition
 
-The multivariate chain rule of :numref:`sec_mdl-multivariable_calculus`, a sum
-over paths, is in matrix form the *multiplication of Jacobians*.
+The multivariate chain rule of :numref:`sec_mdl-multivariable_calculus` was a
+sum over paths; in matrix form it is the *multiplication of Jacobians*.
 
 **Proposition (chain rule).** *If $\mathbf f:\mathbb R^n\to\mathbb R^p$ is
 differentiable at $\mathbf x$ and $\mathbf g:\mathbb R^p\to\mathbb R^m$ is
@@ -269,8 +270,8 @@ A reference table of matrix-derivative identities is long and forgettable. In
 practice only a handful recur in deep learning, and each one yields to the same
 two-step recipe of Parr and Howard's primer :cite:`Parr.Howard.2018`:
 *differentiate one component with the ordinary scalar rules, then reassemble the
-components into a matrix expression.* A faster cross-check, due to the same source,
-is the **scalar-collapse heuristic**: a correct matrix identity must reduce to the
+components into a matrix expression.* The same source offers a faster cross-check,
+the **scalar-collapse heuristic**: a correct matrix identity must reduce to the
 familiar single-variable result when every matrix is $1\times1$ (where products are
 scalar products, sums are sums, and transposes do nothing), so you can often *guess*
 the matrix form from the scalar one and fix the shapes by inserting transposes.
@@ -722,14 +723,14 @@ whose number of coordinate seeds matches the Jacobian's short side.
 
 A network has millions of parameters and one loss, so reverse mode wins by a factor
 of the parameter count: millions. We will count the passes with our own two
-engines once both are built. The gradient of a scalar at a small constant multiple
-of one function evaluation, regardless of parameter count, is the *cheap-gradient
-principle* :cite:`Baur.Strassen.1983,Griewank.Walther.2008`; it is what makes
-training deep networks computationally feasible. **This is backpropagation**
+engines once both are built. The *cheap-gradient principle*
+:cite:`Baur.Strassen.1983,Griewank.Walther.2008` names the phenomenon: a scalar's
+gradient costs a small constant multiple of one function evaluation, regardless of
+parameter count, and that is what makes training deep networks computationally
+feasible. **This is backpropagation**
 :cite:`Linnainmaa.1970,Speelpenning.1980,Rumelhart.Hinton.Williams.ea.1988`: the
-algorithm of :numref:`sec_mdl-multivariable_calculus`, where we insisted on
-"keeping $\partial f$ in the numerator", is reverse-mode AD, and the rule is now
-rigorous.
+algorithm of :numref:`sec_mdl-multivariable_calculus` is reverse-mode AD, and the
+rule we followed there, "keep $\partial f$ in the numerator", is now rigorous.
 
 ### The Tape: Record Forward, Replay Backward
 
@@ -808,7 +809,7 @@ adjoint is complete before it is pushed onward) and *accumulate* adjoints with
 `+=` rather than
 overwrite them: when the node $y=r\cdot r$ runs its backward step, it pushes the
 contribution $\bar y\,r$ into `r.grad` *twice*, once per argument, so the adjoint
-$\bar r = 2r\bar y$ arrives as a sum: a node's adjoint is the *sum* of the
+$\bar r = 2r\bar y$ arrives as a sum. A node's adjoint is the *sum* of the
 contributions along every outgoing edge, the chain rule's "sum over paths" made
 operational.
 
@@ -952,14 +953,15 @@ The same "don't materialize the matrix" discipline pays off a second time, one
 derivative higher. Second-order optimizers and curvature diagnostics never need
 the full Hessian $\mathbf H=\nabla^2 L$, an $n\times n$ object, hopeless to even
 store for $n$ in the millions. Newton's method, the *conjugate-gradient* (CG)
-method (an iterative linear-system solver that touches its matrix only through
-matrix-vector products), and *Gauss--Newton* (which approximates the Hessian by
-a product of first-derivative Jacobians) :cite:`Nocedal.Wright.2006`, see
-:numref:`chap_mdl-optimization`, all need only
+method, and *Gauss--Newton* :cite:`Nocedal.Wright.2006` (see
+:numref:`chap_mdl-optimization`) all need only
 the **Hessian--vector product** $\mathbf H\mathbf v$: the action of curvature in a
-single direction, e.g. one matrix-vector multiply inside a CG iteration. Pearlmutter's
-trick :cite:`Pearlmutter.1994` obtains it *without forming $\mathbf H$* by composing
-the two modes. Since $\mathbf H = \nabla^2 L$ is the Jacobian of the gradient map
+single direction, e.g. one matrix-vector multiply inside a CG iteration. CG is an
+iterative linear-system solver that touches its matrix only through matrix-vector
+products, and Gauss--Newton approximates the Hessian by a product of
+first-derivative Jacobians. Pearlmutter's
+trick :cite:`Pearlmutter.1994` obtains that product *without forming
+$\mathbf H$* by composing the two modes. Since $\mathbf H = \nabla^2 L$ is the Jacobian of the gradient map
 $\nabla L$, the Hessian--vector product is a *directional derivative of the gradient*,
 
 $$

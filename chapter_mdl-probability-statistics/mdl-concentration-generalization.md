@@ -21,8 +21,8 @@ Rademacher complexity) is the promised mechanics behind the classical
 generalization bounds of :numref:`sec_generalization_deep`. The section closes
 where the classical story visibly breaks and something more interesting
 appears: interpolation and *double descent*, reproduced from scratch in
-twenty-six lines and explained by the very quantity that the Rademacher
-calculation says is the true capacity knob: the norm of the solution.
+twenty-six lines and explained by the norm of the solution, the very quantity
+that the Rademacher calculation says is the true capacity knob.
 
 Every computation in this section is a matter of tails, norms, and least
 squares, so the worked cells below use plain NumPy, imported as `onp`, with
@@ -240,8 +240,8 @@ trade-off is the constant: Hoeffding allows for the most adversarial
 distribution
 on $[a,b]$, so the range $b-a$ stands where the Gaussian interval enjoys the
 estimated $\hat\sigma$, and when the true spread is much smaller than the
-range the interval is correspondingly conservative, slack that Bernstein's
-inequality, below, is designed to recover. Keep
+range the interval is correspondingly conservative. Bernstein's inequality,
+below, is designed to recover that slack. Keep
 :eqref:`eq_mdl-hoeffding-interval` in view; it is the statement we will
 upgrade from one function to entire function classes in the second half of
 the section.
@@ -416,8 +416,8 @@ squares to norms: writing $z=\|\mathbf x\|/\sqrt d\ge 0$, if $|z-1|\ge\varepsilo
 then $|z^2-1|=|z-1|\,(z+1)\ge\varepsilon$, so the norm event implies the
 squared-norm event and inherits its bound.
 
-First, the *fluctuation of $\|\mathbf x\|$ is of constant
-order*: the bound says deviations of $\|\mathbf x\|$ from $\sqrt d$ beyond
+The bound has two readings. First, the *fluctuation of $\|\mathbf x\|$ is of
+constant order*: it says deviations of $\|\mathbf x\|$ from $\sqrt d$ beyond
 $\varepsilon\sqrt d$ are exponentially rare in $d$, and a finer analysis puts
 the standard deviation of $\|\mathbf x\|$ near $1/\sqrt2$ *independently of
 $d$*. A standard Gaussian in $\mathbb{R}^d$ is therefore a **thin shell** of

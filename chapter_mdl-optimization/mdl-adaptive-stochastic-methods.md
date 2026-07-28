@@ -5,9 +5,9 @@ The optimizer that trains essentially every modern network is AdamW with warmup
 and a decaying learning-rate schedule, not the plain gradient descent whose
 theory :numref:`sec_mdl-gradient-based-optimization` developed. This section
 closes the gap between that theory and that default. Two questions were left
-open there. First, the smooth nonconvex benchmark used to reason about
-deep networks, the $O(1/K)$ stationarity rate, was proved for the exact
-gradient, while training uses noisy minibatch estimates; what survives?
+open there. First, the $O(1/K)$ stationarity rate, our smooth nonconvex
+benchmark for deep networks, was proved for the exact gradient, while
+training uses noisy minibatch estimates; what survives?
 Second, the whole $\kappa$ story was about a *single* step size $\eta$ forced
 to respect the stiffest curvature direction. The obvious escape, a *separate*
 step size per coordinate, is exactly what AdaGrad, RMSProp, and Adam
@@ -249,8 +249,8 @@ estimating a useful diagonal rescaling *from the gradients themselves*.
 
 ### AdaGrad: Calibrating Steps by Accumulated Evidence
 
-The first such scheme, **AdaGrad** :cite:`Duchi.Hazan.Singer.2011` (shown in
-action in :numref:`sec_adam`), keeps a
+The first such scheme is **AdaGrad** :cite:`Duchi.Hazan.Singer.2011` (shown in
+action in :numref:`sec_adam`). It keeps a
 running sum of squared gradients per coordinate and divides by its square
 root:
 
@@ -482,9 +482,10 @@ there by $t = 300$; AMSGrad and SGD settle onto the optimum $-1$. Nothing
 about the problem is pathological from SGD's point of view (it is convex,
 one-dimensional, with bounded gradients); the pathology is entirely in the
 interaction between exponential forgetting and rare informative gradients. In
-practice the construction's fingerprint, occasional large gradients that
-matter, is not exotic: rare tokens, rare classes, and loss spikes all
-qualify. Practice mostly retains plain Adam anyway (the drift needs the rare
+practice the construction's fingerprint is not exotic: it needs only
+occasional large gradients that matter, and rare tokens, rare classes, and
+loss spikes all qualify. Practice mostly retains plain Adam anyway (the drift
+needs the rare
 gradients to be *consistently* informative in the same direction, which real
 noise usually breaks up), but the theorem establishes the narrower conclusion that vanilla Adam lacks a
 general convergence guarantee without additional assumptions or modification,
@@ -561,8 +562,8 @@ preconditioning ladder at the end of this section climbs further up it.
 
 Weight decay looks too simple to interact with any of this: add
 $\tfrac{\lambda}{2}\|\mathbf{w}\|^2$ to the loss, get $\lambda \mathbf{w}$
-added to the gradient. Under SGD the two implementations, "penalize the
-loss" and "shrink the weights", are *identical*:
+added to the gradient. Under SGD the two implementations are *identical*,
+whether we "penalize the loss" or "shrink the weights":
 
 $$
 \mathbf{w}_{t+1} = \mathbf{w}_t - \eta\,(\mathbf{g}_t + \lambda \mathbf{w}_t)
@@ -604,9 +605,9 @@ $$
 $$
 
 which is verbatim the SGD shrinkage $(1 - \eta\lambda)$, applied uniformly.
-The empirical finding that motivated the fix ($\ell_2$-regularized Adam
-generalizing worse than SGD with weight decay, with the gap closed by
-decoupling) is downstream of exactly the per-coordinate distortion in
+An empirical finding motivated the fix: $\ell_2$-regularized Adam generalized
+worse than SGD with weight decay, and decoupling closed the gap. That finding
+is downstream of exactly the per-coordinate distortion in
 :eqref:`eq_mdl-opt-adamw`. The cell isolates that distortion: two weights
 whose loss gradients are pure noise (so decay is the only systematic force)
 at very different noise scales, $\sigma = (10, 0.1)$.
@@ -645,9 +646,9 @@ prediction $(1 - \eta\lambda)^T = 0.6703$: one $\lambda$ with one meaning.
 (A subtlety about fixed points: at a *deterministic* stationary point,
 coupled Adam is stationary exactly where SGD with $\ell_2$ is, at
 $\nabla L + \lambda\mathbf{w} = \mathbf{0}$, while *AdamW's* stationary
-points sit elsewhere; Exercise 4 derives both conditions and explains why the
-noisy, never-stationary training regime, where paths matter more than fixed
-points, is where decoupling matters.) In the major libraries, `AdamW` and
+points sit elsewhere; Exercise 4 derives both conditions and explains why
+decoupling matters in the noisy, never-stationary training regime, where
+paths matter more than fixed points.) In the major libraries, `AdamW` and
 `Adam` with a `weight_decay` flag implement two different regularizers: the
 former is the decoupled update exactly, the latter the coupled
 :eqref:`eq_mdl-opt-adamw`.
@@ -674,8 +675,8 @@ rate than the $K^{-1/2}$ it achieves; the matching lower bound is due to
 :citet:`Arjevani.Carmon.Duchi.ea.2023`. The theory therefore assigns decay a
 specific job: it lowers the noise floor, at a cost in transient progress, and
 beyond convex problems no theorem ranks one decay *shape* against another.
-Which of the statements below are proved and which are read off practice is
-marked as we go. The three shapes to know, drawn in
+We mark as we go which of the statements below are proved and which are read
+off practice. The three shapes to know, drawn in
 :numref:`fig_mdl-opt-schedule-zoo`, are these:
 
 ![The schedule zoo, at equal budget. A constant step never leaves its noise floor (the floor is $\propto \eta$, per the noise-ball analysis); $c/k$ decay reaches the optimum but must get $c$ right; cosine spends a long tail at small steps; warmup--stable--decay (WSD) holds the constant plateau as long as possible and drops the noise floor in a final decay phase. All four begin with the linear warmup that adaptive preconditioners need while $\hat{\mathbf{v}}$ is still estimated from a handful of gradients.](../img/mdl-opt-schedule-zoo.svg)
@@ -698,8 +699,8 @@ settles to the valley floor. That reading is this chapter's noise-ball
 result used as a design principle, and it is the level
 of theory available: the plateau's benefit on real losses (more transient
 progress per unit budget) is an empirical regularity, not a theorem. The cell
-races the shapes on the noisy quadratic, the miniature where the noise
-floor is exact, at equal budget, printing the loss at $80\%$ of the budget
+races the shapes at equal budget on the noisy quadratic, the miniature where
+the noise floor is exact, printing the loss at $80\%$ of the budget
 and at the end:
 
 ```{.python .input #adaptive-stochastic-methods-schedules}
@@ -771,9 +772,9 @@ the *mean* of the early estimate; nothing fixes its variance but data.)
 Second, the target step size is only safe *after* the landscape has adapted
 to it. The edge-of-stability measurement in
 :numref:`sec_mdl-gradient-based-optimization` showed sharpness equilibrating
-onto $2/\eta$, but that equilibration takes time, and a full-size $\eta$
-imposed at initialization, before progressive sharpening has anywhere to
-settle, simply violates the local stability ceiling and diverges or spikes.
+onto $2/\eta$, but that equilibration takes time, and at initialization
+progressive sharpening has nowhere yet to settle: a full-size $\eta$ simply
+violates the local stability ceiling and diverges or spikes.
 Warmup gives the curvature time to meet the step size it will be asked to
 tolerate. Neither argument is a theorem about deep networks; both are this
 chapter's instruments (estimator variance and the stability ceiling)
@@ -925,8 +926,8 @@ the second moment of the layer's *inputs* and
 $G = \mathbb{E}[\boldsymbol{\delta}\boldsymbol{\delta}^\top]$ that of the
 gradients at its *outputs*. The factorization is exact if the layer's inputs
 and output-gradients are statistically independent under the model's
-distribution; that independence, which holds only approximately in trained
-networks, is the approximation. The payoff is the
+distribution; that independence is the approximation, and in trained networks
+it holds only approximately. The payoff is the
 Kronecker inverse identity: writing $\mathrm{vec}(V)$ for the vector obtained
 by stacking the columns of the layer's gradient matrix $V$,
 

@@ -170,9 +170,8 @@ without change.
 
 There is, however, a subtlety we must not skip. The function $\arccos$ is only
 defined on the interval $[-1, 1]$, so :eqref:`eq_mdl-angle_formula` is
-meaningful *only if* the fraction inside it never escapes that interval. That
-this is guaranteed, in every dimension, is the content of the following
-inequality.
+meaningful *only if* the fraction inside it never escapes that interval. The
+following inequality guarantees exactly that, in every dimension.
 
 **Proposition (Cauchy–Schwarz).** *For any vectors $\mathbf{v}, \mathbf{w}$,*
 
@@ -229,8 +228,8 @@ proposition.
 
 Cauchy–Schwarz also has a one-picture summary, shown in
 :numref:`fig_mdl-la-projection`. It is a way to *remember* the inequality
-rather than a second proof, since the picture reads off the angle $\theta$
-(and with it :eqref:`eq_mdl-dot_geom`) that Cauchy–Schwarz itself makes
+rather than a second proof, since the picture reads off the angle $\theta$ and
+with it :eqref:`eq_mdl-dot_geom`, both of which Cauchy–Schwarz itself makes
 legitimate.
 On the left, the projection of $\mathbf{v}$
 onto $\mathbf{w}$ has signed length $\|\mathbf{v}\|\cos\theta$, and the residual
@@ -908,8 +907,8 @@ d2l.plt.show()
 
 This plot summarizes the key points of hyperplane classifiers. Along the single direction
 $\mathbf{w}$, the two classes form two well-separated humps, and the dashed
-threshold (the value of $\mathbf{w}\cdot\mathbf{x}$ at the midpoint of the
-two means) cuts between them; the tails that spill across it are exactly the
+threshold cuts between them, at the value $\mathbf{w}\cdot\mathbf{x}$ takes at
+the midpoint of the two means; the tails that spill across it are exactly the
 $\approx 8\%$ of images the rule misclassifies. A *learned* linear classifier, such as the softmax
 regression of :numref:`sec_softmax`, improves on this only by moving and
 tilting the same kind of boundary to cut the overlap more cleverly. A deep
@@ -1217,9 +1216,9 @@ dimension exactly $n - k$. $\blacksquare$
 
 Read it as conservation of directions: of the $n$ directions coming in,
 $\dim\ker\mathbf{A}$ are destroyed and $\operatorname{rank}\mathbf{A}$
-survive. $\mathbf{B}$ has $1 + 1 = 2$, one column-space direction
-surviving and one null-space
-direction crushed, exactly as :numref:`fig_mdl-la-null-collapse` shows. The
+survive. For $\mathbf{B}$ the count is $1 + 1 = 2$: one column-space
+direction survives and one null-space direction is crushed, exactly as
+:numref:`fig_mdl-la-null-collapse` shows. The
 singular value decomposition will make this split visible, with orthonormal
 bases attached to both halves, in :numref:`sec_mdl-svd-low-rank`.
 
@@ -1287,15 +1286,15 @@ M_inv.dot(M)
 #### Numerical Issues
 While the matrix inverse is useful in theory, in practice we rarely want to
 *compute* it. To solve the linear system $\mathbf{A}\mathbf{x} = \mathbf{b}$,
-call `linalg.solve(A, b)`, which factorizes $\mathbf{A}$ without ever forming
-its inverse, rather than the tempting but inferior `inv(A) @ b`: just as
+prefer `linalg.solve(A, b)` to the tempting but inferior `inv(A) @ b`: the
+solver factorizes $\mathbf{A}$ without ever forming its inverse, and just as
 division by a small number is numerically unstable, so is inversion of a
 matrix that is close to having low rank. Sparsity raises the stakes further.
 A matrix with a million rows and columns but only $5$ million non-zero entries
 is cheap to store, yet its inverse is typically dense, with on the order of
-$10^{12}$ non-zero entries. The quantity that makes "close to low rank"
-precise, and that measures exactly how much a solve can amplify error, is the
-condition number of :numref:`subsec_mdl-condition-number`.
+$10^{12}$ non-zero entries. The condition number of
+:numref:`subsec_mdl-condition-number` makes "close to low rank" precise, and
+measures exactly how much a solve can amplify error.
 
 ### The Determinant
 The geometric view of linear algebra gives an intuitive way
@@ -1409,10 +1408,10 @@ $n \times n$ matrix:
    parallelepiped then flattens into a lower-dimensional slab of zero volume.)
 3. **Normalized**: $\det \mathbf{I} = 1$. (The unit cube has volume one.)
 
-The granted fact for this subsection, which we use without proof, is that
-there is exactly *one* function of the columns with these three properties;
-it is the determinant (see :cite:`Horn.Johnson.2012` for the construction and
-the uniqueness argument). Uniqueness comes in a sharper form that we will use
+We grant one fact here without proof: exactly *one* function of the columns
+has these three properties, and it is the determinant (see
+:cite:`Horn.Johnson.2012` for the construction and the uniqueness argument).
+Uniqueness comes in a sharper form that we will use
 below: *every* function $f$ of the columns satisfying (1) and (2) is a
 multiple of the determinant, $f = f(\mathbf{I}) \cdot \det$. To see why, set
 $g = f - f(\mathbf{I})\cdot\det$; then $g$ satisfies (1) and (2) with
@@ -1467,8 +1466,8 @@ $$
 $$
 
 recovering the parallelogram area we computed by hand. In general the
-determinant is a signed sum, over all ways of picking one entry from each row
-and each column, of the products of the chosen entries; this is the
+determinant is a signed sum of the products of the chosen entries, taken over
+all ways of picking one entry from each row and each column; this is the
 permutation formula, and (1)+(2)+(3) leave no other possibility.
 
 For hand computation the sum is organized as *cofactor expansion*: expanding
@@ -1578,10 +1577,10 @@ characterization of :numref:`subsec_mdl-determinant-general` supplies the two
 ingredients that generalize: $\det\mathbf{A}$ is the signed factor by which
 $\mathbf{A}$ scales $n$-dimensional volume, and that volume vanishes exactly
 when the columns are linearly dependent; see :cite:`Horn.Johnson.2012` for the
-full argument. The equivalence also proves claims made earlier without proof:
-linear dependence (the columns of $\mathbf{B}$ are redundant), the missing
+full argument. The equivalence also proves claims made earlier without proof.
+The linear dependence of the columns of $\mathbf{B}$, the missing
 $ad - bc \neq 0$ hypothesis under the $2 \times 2$ inverse, and the present
-section's "$\det = 0$ means collapse" all turn out to be three faces of the
+section's "$\det = 0$ means collapse" turn out to be three faces of the
 same fact.
 
 #### Multiplicativity
@@ -1744,9 +1743,9 @@ so the second entry of the output reproduces the worked example
 $\mathbf{A}\mathbf{v} = [0, -5]^\top$. Index strings like
 `'ij,jk->ik'` recur throughout deep learning: batched matrix products
 (`'bij,bjk->bik'`), attention scores, and many custom layers are one `einsum`
-call away, and we will reach for the notation whenever a computation is easier
-to state in indices than in matrices, as soon as
-:numref:`sec_mdl-svd-low-rank`, where a one-line `einsum` will rebuild a matrix
+call away. We will reach for the notation whenever a computation is easier
+to state in indices than in matrices, starting in
+:numref:`sec_mdl-svd-low-rank`, where a one-line `einsum` rebuilds a matrix
 from its singular value decomposition.
 
 Index notation also yields one-line proofs. In indices, the trace of a

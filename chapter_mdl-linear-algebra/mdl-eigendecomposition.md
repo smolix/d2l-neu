@@ -10,9 +10,9 @@ For a well-behaved square matrix there is a special set of directions, the
 stretches. This single observation is what makes stability analysis, PCA, and
 the curvature story of optimization tractable. The goal of this section is to
 convey, with both pictures and proofs, why eigenvalues are so central. Our
-running example is an *iterated map*: repeatedly applying the same matrix, as a
-deep *linear* network (one with the nonlinearities stripped away) does, makes
-the role of the largest eigenvalue unmistakable.
+running example is an *iterated map*. A deep *linear* network, one with the
+nonlinearities stripped away, applies the same matrix over and over, and that
+repetition makes the role of the largest eigenvalue unmistakable.
 
 The numerical checks in this section use small dense matrices.
 
@@ -588,7 +588,7 @@ The Jordan example showed that eigenvalues can miss a large temporary excursion.
 Defectiveness is the sharpest version of the problem, but it is not the whole
 problem: a matrix can have distinct eigenvalues, be diagonalizable, and still
 amplify some inputs dramatically before its asymptotic decay becomes visible.
-The property separating the clean case from this behavior is **normality**.
+**Normality** is the property that separates the clean case from this behavior.
 
 ### Normality: When Eigenvalues Control Norms
 
@@ -736,8 +736,8 @@ $$
 
 Even if every factor has eigenvalues inside the unit circle, the factors need
 not share eigenvectors and their expanding singular directions can rotate into
-one another. There is therefore no rule that obtains the product's norm by
-multiplying the factors' spectral radii. Singular values give finite-horizon
+one another. The product's norm therefore cannot be obtained by multiplying
+the factors' spectral radii. Singular values give finite-horizon
 bounds,
 $\|\mathbf J_T\cdots\mathbf J_1\|_2\le\prod_t\sigma_{\max}(\mathbf J_t)$;
 long-run average logarithmic growth is summarized by **Lyapunov exponents**.
@@ -753,7 +753,7 @@ changing maps.
 
 Shears and rotations tell us what can go wrong. We now restrict attention to
 the family of matrices for which a full set of orthonormal eigenvectors is
-*guaranteed*. The most commonly encountered such family are the
+*guaranteed*. The most commonly encountered are the
 *symmetric matrices*, those with $\mathbf{A}=\mathbf{A}^\top$. Their guarantee has
 a name.
 
@@ -856,8 +856,8 @@ $\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$: in short, **the SVD i
 the eigendecomposition of $\mathbf{A}^\top\mathbf{A}$ in disguise**, with singular
 values $\sigma_i=\sqrt{\lambda_i(\mathbf{A}^\top\mathbf{A})}$. We carry out the
 construction, and give the defective shear its SVD, in
-:numref:`sec_mdl-svd-low-rank`. Positive semidefiniteness, the property doing
-the work here, is what we take up next.
+:numref:`sec_mdl-svd-low-rank`. We take up positive semidefiniteness next; it
+is the property doing the work here.
 
 ### Positive (Semi)Definiteness
 :label:`subsec_mdl-psd`
@@ -936,8 +936,9 @@ $\mathbf{A}=\mathbf{L}\mathbf{L}^\top$ for a lower-triangular $\mathbf{L}$ with
 positive diagonal (one direction is immediate: such an $\mathbf{L}$ is
 invertible, so
 $\mathbf{x}^\top\mathbf{A}\mathbf{x}=\|\mathbf{L}^\top\mathbf{x}\|^2>0$ for
-$\mathbf{x}\neq\mathbf 0$). Attempting the factorization, far cheaper than an
-eigendecomposition, is the standard numerical test for definiteness. The same
+$\mathbf{x}\neq\mathbf 0$). Attempting the factorization is the standard
+numerical test for definiteness, and it is far cheaper than an
+eigendecomposition. The same
 factorization is how multivariate Gaussians are sampled, an application we
 develop in :numref:`sec_mdl-distributions`.
 
@@ -1197,7 +1198,7 @@ $\mathbf{w}_1$, their *direction* gap closing at the rate
 $|\lambda_2/\lambda_1|=\tfrac{3-\sqrt5}{2}\approx0.382$, while the norm ratio
 flattens to $\lambda_1$ even faster, at the squared rate
 $(\lambda_2/\lambda_1)^2\approx0.146$, because for a symmetric matrix the
-eigenvectors are orthogonal, so the norm is insensitive, to first order, to the
+eigenvectors are orthogonal, so to first order the norm is insensitive to the
 remaining misalignment.
 
 ![Power iteration on the symmetric $\mathbf{B}=\left(\begin{smallmatrix}3&1\\1&2\end{smallmatrix}\right)$. Left: the renormalized iterates (lightening arrows) swing onto the principal eigenvector $\mathbf{w}_1$ (orange), the direction gap closing at rate $|\lambda_2/\lambda_1|\approx0.382$. Right: the ratio of consecutive norms converges to $\lambda_1\approx3.618$, its gap closing at the squared rate $(\lambda_2/\lambda_1)^2\approx0.146$.](../img/mdl-la-power-iter.svg)
@@ -1343,9 +1344,9 @@ the *null hypothesis* of spectral data analysis: an eigenvalue inside it is
 indistinguishable from sampling noise, and only eigenvalues that escape *above*
 the bulk edge testify to real structure (the calibration behind the
 singular-value threshold of :numref:`subsec_mdl-eckart-young`). It is also the
-baseline against which the heavy-tailed spectra of *trained* weight matrices,
-which spill far outside any Marchenko--Pastur bulk, are read as evidence of
-learned correlation in :numref:`sec_mdl-svd-low-rank`.
+baseline for the heavy-tailed spectra of *trained* weight matrices, which
+spill far outside any Marchenko--Pastur bulk; :numref:`sec_mdl-svd-low-rank`
+reads that excess as evidence of learned correlation.
 
 The iterated map is exactly what a recurrent network runs. It computes a hidden state
 $\mathbf{h}_t=\phi(\mathbf{W}\mathbf{h}_{t-1}+\cdots)$ by applying (almost) the

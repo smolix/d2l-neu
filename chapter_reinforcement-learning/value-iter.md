@@ -1,7 +1,7 @@
 # Dynamic Programming
 :label:`sec_valueiter`
 
-Hand the agent the four objects $(\mathcal{S}, \mathcal{A}, P, r)$ and "act well" becomes a computation: the value of a state decomposes into now plus later, the decomposition ties all states into one system of equations, and the system is solved by iterating a map that *contracts*, shrinking its error geometrically at rate $\gamma$ from any starting guess. This is *dynamic programming* :cite:`BellmanDPBook`, the exact, model-based corner of reinforcement learning and the yardstick for every learning algorithm in these two chapters. On our slippery lake its answer earns the machinery: the optimal policy is not the shortest path, and we will measure what the difference is worth.
+Hand the agent the four objects $(\mathcal{S}, \mathcal{A}, P, r)$ and "act well" becomes a computation: the value of a state decomposes into now plus later, the decomposition ties all states into one system of equations, and the system is solved by iterating a map that *contracts*, shrinking its error geometrically at rate $\gamma$ from any starting guess. This is *dynamic programming* :cite:`BellmanDPBook`, the exact, model-based corner of reinforcement learning and the yardstick for every learning algorithm in these two chapters. On our slippery lake the answer justifies the machinery: the optimal policy is not the shortest path, and we will measure what the difference is worth.
 
 ```{.python .input #value-iter-dynamic-programming}
 %%tab pytorch
@@ -31,7 +31,7 @@ $$V^\pi(s_0) = E_{a_t \sim \pi(s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[
 
 the *value function* of $\pi$. The start state is arbitrary, so $V^\pi$ assigns a number to every state, and it is this whole table the algorithms below manipulate.
 
-In implementations, it is often useful to maintain a quantity called the "action value" function which is a closely related quantity to the value function. This is defined to be the average *return* of a trajectory that begins at $s_0$ but when the action of the first stage is fixed to be $a_0$
+In implementations, it is often useful to maintain a closely related quantity called the "action value" function. This is defined as the average *return* of a trajectory that begins at $s_0$ but whose first-stage action is fixed to be $a_0$
 
 $$Q^\pi(s_0, a_0) = r(s_0, a_0) + E_{a_t \sim \pi(s_t),\ s_{t+1} \sim P(\cdot \mid s_t, a_t)} \Big[ \sum_{t=1}^\infty \gamma^t r(s_t, a_t) \Big],$$
 
@@ -62,7 +62,7 @@ The definitions above are infinite sums over trajectories; the Markov assumption
 
 ### The expectation form
 
-We next break down the trajectory into two stages (i) the first stage which corresponds to $s_0 \to s_1$ upon taking the action $a_0$, and (ii) a second stage which is the trajectory $\tau' = (s_1, a_1, r_1, \ldots)$ thereafter. The key idea behind all algorithms in reinforcement learning is that the value of state $s_0$ can be written as the average reward obtained in the first stage and the value function averaged over all possible next states $s_1$. This is quite intuitive and arises from our Markov assumption: the average return from the current state is the sum of the average return from the next state and the average reward of going to the next state. Mathematically, we write the two stages as
+We next break down the trajectory into two stages: (i) the first stage which corresponds to $s_0 \to s_1$ upon taking the action $a_0$, and (ii) a second stage which is the trajectory $\tau' = (s_1, a_1, r_1, \ldots)$ thereafter. The key idea behind all algorithms in reinforcement learning is that the value of state $s_0$ can be written as the average reward obtained in the first stage and the value function averaged over all possible next states $s_1$. This is quite intuitive and arises from our Markov assumption: the average return from the current state is the sum of the average return from the next state and the average reward of going to the next state. Mathematically, we write the two stages as
 
 $$V^\pi(s_0) = E_{a_0 \sim \pi(s_0)} \Big[ r(s_0, a_0) + \gamma\ E_{s_1 \sim P(s_1 \mid s_0, a_0)} \Big[ V^\pi(s_1) \Big] \Big].$$
 :eqlabel:`eq_dynamic_programming`
@@ -72,7 +72,7 @@ This decomposition is very powerful: it is the foundation of the principle of dy
 $$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s,  a) + \gamma\  \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^\pi(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
 :eqlabel:`eq_dynamic_programming_val`
 
-An important thing to notice here is that the above identity holds for all states $s \in \mathcal{S}$ because we can think of any trajectory that begins at that state and break down the trajectory into two stages. We can again break down the trajectory into two parts and write
+Importantly, the above identity holds for all states $s \in \mathcal{S}$, because we can think of any trajectory that begins at that state and break it down into two stages. We can again break down the trajectory into two parts and write
 
 $$Q^\pi(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \sum_{a' \in \mathcal{A}} \pi(a' \mid s')\ Q^\pi(s', a');\ \textrm{ for all } s \in \mathcal{S}, a \in \mathcal{A}.$$
 :eqlabel:`eq_dynamic_programming_q`
@@ -141,7 +141,7 @@ so reaching accuracy $\varepsilon$ takes at most $\log(\|V_0 - V^*\|_\infty / \v
 
 $$\|V_k - V^*\|_\infty \leq \frac{\gamma}{1 - \gamma}\, \|V_k - V_{k-1}\|_\infty,$$
 
-a certificate built from the observable sweep-to-sweep change, what an implementation should actually test; we will, below. Fourth, **the boundary**: at $\gamma = 1$ the contraction modulus is $1$, the argument collapses, and the undiscounted operator can have no fixed point or a continuum of them; episodic problems at $\gamma = 1$ can still behave, ours does, but the *guarantee* is gone (exercise 5 makes both halves precise). Finally, the max entered the proof only through the "maximum of differences" step, so replacing it by an average under a fixed policy $\pi$ yields an operator $T^\pi$ that contracts by the same argument, with unique fixed point $V^\pi$. One proof, two algorithms; the full theory is in :cite:`Puterman.1994,Bertsekas.2025`.
+a certificate built from the observable sweep-to-sweep change, which is what an implementation should actually test; we do so below. Fourth, **the boundary**: at $\gamma = 1$ the contraction modulus is $1$, the argument collapses, and the undiscounted operator can have no fixed point or a continuum of them; episodic problems at $\gamma = 1$ can still behave (ours does), but the *guarantee* is gone (exercise 5 makes both halves precise). Finally, the max entered the proof only through the "maximum of differences" step, so replacing it by an average under a fixed policy $\pi$ yields an operator $T^\pi$ that contracts by the same argument, with unique fixed point $V^\pi$. One proof, two algorithms; the full theory is in :cite:`Puterman.1994,Bertsekas.2025`.
 
 ## Three Algorithms
 
@@ -240,11 +240,11 @@ print(f'V(s0) for the uniformly random policy: '
       f'{policy_evaluation(mdp, uniform, 400)[-1][0]:.4f}')
 ```
 
-The uniformly random walker of :numref:`sec_mdp`, which finished almost none of its episodes, is worth $0.0078$ at the start: about four percent of the optimum. Evaluation is measurement without improvement, and the critics of :numref:`sec_actorcritic` will spend most of their capacity doing approximately what these seven lines do exactly.
+The uniformly random walker of :numref:`sec_mdp` finished almost none of its episodes; it is worth $0.0078$ at the start, about four percent of the optimum. Evaluation is measurement without improvement, and the critics of :numref:`sec_actorcritic` will spend most of their capacity doing approximately what these seven lines do exactly.
 
 ### Policy iteration and generalized policy iteration
 
-Evaluation plus the greedy step :eqref:`eq_optimal_policy` suggests a different algorithm: evaluate the current policy fully, act greedily on its value function, repeat. For this to work, greedy improvement must actually improve, the chapter's third short theorem.
+Evaluation plus the greedy step :eqref:`eq_optimal_policy` suggests a different algorithm: evaluate the current policy fully, act greedily on its value function, repeat. For this to work, greedy improvement must actually improve; that is the chapter's third short theorem.
 
 **Proposition (policy improvement).** *Let $\pi$ be any policy and let $\pi'$ be greedy with respect to $V^\pi$, that is $\pi'(s) = \mathrm{argmax}_a \big[ r(s, a) + \gamma \sum_{s'} P(s' \mid s, a) V^\pi(s') \big]$. Then $V^{\pi'}(s) \geq V^\pi(s)$ at every state, and if equality holds everywhere then both policies are optimal.*
 
@@ -284,7 +284,7 @@ That observation licenses a whole design space: evaluation need not run to conve
 
 ### What the optimal policy looks like on ice
 
-The theory certifies that $\pi^*$ maximizes expected return; it does not say the result will look reasonable. Before reading the strange arrows, we need an instrument that scores a policy by the only standard that counts, average return over real episodes, with no access to the model:
+The theory certifies that $\pi^*$ maximizes expected return; it does not say the result will look reasonable. Before reading the strange arrows, we need an instrument that scores a policy by average return over real episodes, the only standard that counts, with no access to the model:
 
 ```{.python .input #value-iter-what-the-optimal-policy-looks-like-on-ice-1}
 %%tab pytorch, jax
@@ -333,9 +333,9 @@ for s in away:
           f'the shortest path takes {"<v>^"[shortest[s]]}')
 ```
 
-At four of the eleven frozen cells the optimal command moves the agent *away* from the goal, on the grid of :numref:`fig_rl_gridworld`. One reads like a proof in miniature: at $s = 8$, commanding *up* is the only action whose three outcomes, slide left into the wall, slide right to $9$, move up to $4$, all avoid the hole at $12$. The policy has also learned the wall trick: at $s = 1$ and $s = 3$ it commands *up*, straight into the wall, wasting the intended move so that only the harmless sideways slips remain. None of this is cleverness we put in; it is :eqref:`eq_optimal_policy` evaluating three-outcome averages nobody would compute by hand.
+At four of the eleven frozen cells the optimal command moves the agent *away* from the goal, on the grid of :numref:`fig_rl_gridworld`. One reads like a proof in miniature: at $s = 8$, commanding *up* is the only action all three of whose outcomes avoid the hole at $12$: slide left into the wall, slide right to $9$, or move up to $4$. The policy has also learned the wall trick: at $s = 1$ and $s = 3$ it commands *up*, straight into the wall, wasting the intended move so that only the harmless sideways slips remain. None of this is cleverness we put in; it is :eqref:`eq_optimal_policy` evaluating three-outcome averages nobody would compute by hand.
 
-**Aside: calm ice, in closed form.** Switch the slip off and the subtlety vanishes so cleanly that the computation can be done in your head. With deterministic moves the optimality equation says $V^*(s) = \gamma\, V^*(s')$ along the best move, so the value is $\gamma^{d(s) - 1}$ with $d(s)$ the number of moves to the goal, and sweep $k$ reaches exactly the cells within $k$ moves of it: convergence in six sweeps because the map is six moves deep (:numref:`fig_rl_value_wavefront`). That "wavefront" reading, sweeps counting steps to the goal, holds only in this deterministic special case; on ice the sweep count is set by $\gamma$, as we measured. The closed form also explains our hand-written opponent: greedy on the calm-ice solution *is* the shortest-path policy, which the assert below checks, so the $0.05$ above is no strawman but the exact optimum of the wrong model.
+**Aside: calm ice, in closed form.** Switch the slip off and the subtlety vanishes so cleanly that the computation can be done in your head. With deterministic moves the optimality equation says $V^*(s) = \gamma\, V^*(s')$ along the best move, so the value is $\gamma^{d(s) - 1}$ with $d(s)$ the number of moves to the goal, and sweep $k$ reaches exactly the cells within $k$ moves of it: convergence in six sweeps because the map is six moves deep (:numref:`fig_rl_value_wavefront`). That wavefront reading of sweeps as steps to the goal holds only in this deterministic special case; on ice the sweep count is set by $\gamma$, as we measured. The closed form also explains our hand-written opponent: greedy on the calm-ice solution *is* the shortest-path policy, which the assert below checks, so the $0.05$ above is no strawman but the exact optimum of the wrong model.
 
 ![Value iteration on the calm lake, where the answer is available in closed form. With the slip off, sweep $k$ reaches exactly the cells within $k$ moves of the goal, the orange outline marking the newly reached ones; the value at distance $d$ is $\gamma^{d-1}$. The start cell is six moves away, so its estimate stays at zero for five sweeps and equals $\gamma^5 = 0.774$ from the sixth on.](../img/mdl-rl-value-wavefront.svg)
 :label:`fig_rl_value_wavefront`
@@ -349,11 +349,11 @@ assert (calm.backup(V_calm).argmax(axis=1) == shortest).all()
 print(f'V*(s0) on calm ice: {V_calm[0]:.4f};  gamma^5 = {gamma ** 5:.4f}')
 ```
 
-The two start-state values, $0.774$ calm and $0.180$ on ice under optimal play, bracket what the stochasticity costs: no policy can buy it back, only pay less of it than the shortest path does.
+The two start-state values bracket what the stochasticity costs, $0.774$ calm against $0.180$ on ice under optimal play: no policy can buy it back, only pay less of it than the shortest path does.
 
 ## Summary
 
-Given the model, acting well is computable. A policy is scored by $V^\pi$ and $Q^\pi$, linked by averaging, $V^\pi(s) = \sum_a \pi(a \mid s) Q^\pi(s, a)$, with the advantage :eqref:`eq_advantage` naming the gap improvement exploits. The Markov assumption folds infinite-horizon expectations into one-step recursions, the Bellman expectation equations for a fixed policy and the optimality equation :eqref:`eq_bellman_optimality` for the best one. The optimality operator is a $\gamma$-contraction in the sup norm: its fixed point $V^*$ is unique, value iteration converges geometrically from any start, and the sweep-to-sweep change certifies the error via the factor $\gamma / (1 - \gamma)$. Policy evaluation is the same sweep without the max; policy iteration alternates it with greedy improvement, which provably never hurts; interleaving the two at any granularity, generalized policy iteration, is the skeleton the coming learning algorithms hang on. All of it consumed `env.unwrapped.P`: this was the book's one purely model-based section, and the measurement primitive `evaluate` is what survives when the model is taken away.
+Given the model, acting well is computable. A policy is scored by $V^\pi$ and $Q^\pi$, linked by averaging, $V^\pi(s) = \sum_a \pi(a \mid s) Q^\pi(s, a)$, with the advantage :eqref:`eq_advantage` naming the gap improvement exploits. The Markov assumption folds infinite-horizon expectations into one-step recursions, the Bellman expectation equations for a fixed policy and the optimality equation :eqref:`eq_bellman_optimality` for the best one. The optimality operator is a $\gamma$-contraction in the sup norm: its fixed point $V^*$ is unique, value iteration converges geometrically from any start, and the sweep-to-sweep change certifies the error via the factor $\gamma / (1 - \gamma)$. Policy evaluation is the same sweep without the max; policy iteration alternates it with greedy improvement, which provably never hurts; interleaving the two at any granularity is generalized policy iteration, the skeleton the coming learning algorithms hang on. All of it consumed `env.unwrapped.P`: this was the book's one purely model-based section, and the measurement primitive `evaluate` is what survives when the model is taken away.
 
 **What the experiments show, and what they do not.** Every number here except two is an exact computation on the known model, reproducible to the printed digit: the sweep counts ($128$, $158$, $164$), the start-state values ($0.1805$ on ice, $0.7738 = \gamma^5$ calm), the round count, and the away-pointing states are deterministic facts about one MDP at $\gamma = 0.95$. The exceptions are the two Monte Carlo success rates, $2{,}000$ seeded episodes each: rerunning with these seeds reproduces $73.6\%$ and $4.7\%$ exactly; a different seed moves each by a percentage point or so. The comparison shows that planning against the true stochastic model beats planning against a simplified one on *this* lake; it does not show how to act when the model is not given, which is the entire remaining problem of these two chapters.
 

@@ -101,11 +101,11 @@ Rows of $P$ sum to one, exactly. The reward array is almost entirely zero: its n
 
 It is important to note that the reward is designed by the user (the person who creates the reinforcement learning algorithm) with the goal in mind. The states, the actions and the kernel are facts about the environment; we read all three out of the simulator. The reward is the interface through which you tell the optimizer what you want, and the optimizer maximizes what you wrote, not what you meant: a strong optimizer seeks out any gap between the two, because the gap is where reward can be had without doing the task.
 
-One modification of a reward is provably safe. Take any *potential* $\Phi: \mathcal{S} \to \mathbb{R}$ and replace the reward on each transition by
+One modification of a reward is provably safe. Take any *potential* $\Phi: \mathcal{S} \to \mathbb{R}$ that is zero at every state that ends an episode (the boundary condition doing quiet work below) and replace the reward on each transition by
 
 $$\tilde r(s, a, s') = r(s, a) + \gamma \Phi(s') - \Phi(s).$$
 
-Along any trajectory the corrections telescope to $-\Phi(s_0)$ plus a tail the discount kills, so every policy's return shifts by the same constant and the optimal policy is unchanged, for *any* $\Phi$ :cite:`Ng.Harada.Russell.1999`: *potential-based shaping* is the licensed way to densify a sparse reward. Bonuses not of this form change the optimum, however plausible they sound; at the end of the section we write one and watch the policy it makes optimal refuse to reach the goal. Guarding this interface with explicit penalties is the subject of :numref:`sec_regularized`, and reward hacking returns at scale in :numref:`sec_rl_sequences`.
+Along any trajectory the corrections telescope: summed to step $T$ they leave $\gamma^T \Phi(s_T) - \Phi(s_0)$, and the endpoint term dies either because the trajectory never ends, the discount killing the tail, or because it ends at a state where $\Phi = 0$. Every policy's return then shifts by the same constant $-\Phi(s_0)$ and the optimal policy is unchanged, for any such $\Phi$ :cite:`Ng.Harada.Russell.1999`: *potential-based shaping* is the licensed way to densify a sparse reward. The boundary condition is not decoration. A free $\Phi$ on returns that stop at the terminal transition leaves the residual $\gamma^T \Phi(s_T)$ standing, a payment that depends on where and when a policy ends, which is precisely a change of optimum; equivalently, one may keep $\Phi$ free and run the shaped reward through the absorbing continuation the next part of this section introduces, where the absorbing steps pay the residual back. Bonuses not of this form change the optimum, however plausible they sound; at the end of the section we write one and watch the policy it makes optimal refuse to reach the goal. Guarding this interface with explicit penalties is the subject of :numref:`sec_regularized`, and reward hacking returns at scale in :numref:`sec_rl_sequences`.
 
 ## Return, Discount and Horizon
 
@@ -145,7 +145,7 @@ Discounting buys finiteness at a quantifiable price. If rewards are bounded, $|r
 
 $$|R(\tau)| \leq \frac{r_{\max}}{1 - \gamma}, \qquad \Big| \sum_{t \geq k} \gamma^t r_t \Big| \leq \frac{\gamma^k \, r_{\max}}{1 - \gamma}.$$
 
-The first bound makes the objective finite; the second makes $1/(1-\gamma)$ the *effective horizon*: the window within which rewards still carry appreciable weight. Read this way, $\gamma = 0.99$ is not a magic number but a horizon of one hundred steps, and $\gamma = 0.5$ is an agent that can barely see two steps ahead, *myopic* where $\gamma$ near one is *far-sighted*. In numbers:
+The first bound makes the objective finite; the second makes $1/(1-\gamma)$ the *effective horizon*: the window within which rewards still carry appreciable weight. A scale, not a cliff: the fraction of a constant reward stream's discounted mass lying past step $k$ is exactly $\gamma^k$, so 95 percent of the mass sits in the first $\log 0.05 / \log \gamma$ steps, about three effective horizons, the third column of the table below. Read this way, $\gamma = 0.99$ is not a magic number but a horizon of one hundred steps, and $\gamma = 0.5$ is an agent that can barely see two steps ahead, *myopic* where $\gamma$ near one is *far-sighted*. In numbers:
 
 ```{.python .input #mdp-the-geometric-bound-and-the-effective-horizon}
 %%tab pytorch, jax
@@ -162,7 +162,7 @@ for g in [0.5, 0.9, 0.95, 0.99]:
 
 ### Episodes, terminal states, and why truncated is not terminated
 
-The trajectory we sampled ended in a hole. A state that ends the process is *terminal*; simulators implement it as *absorbing*, every action leading back to it with reward zero, which is how Gymnasium encodes the holes and the goal. A run from start to a terminal state is an *episode*; tasks whose trajectories always end are *episodic*, unlike *continuing* tasks, where only the discount keeps the objective finite. The number of steps an episode may last is its *horizon*, and when episodes are bounded by $T$ steps, a sum of $T$ bounded rewards is finite already and $\gamma = 1$ is legitimate.
+The trajectory we sampled ended in a hole. A state that ends the process is *terminal*; for analysis it can be represented as *absorbing*, every action leading back to it with reward zero. FrozenLake's transition table happens to store the holes and the goal exactly that way, but the running episode simply ends and must be `reset`, so the absorbing continuation is a mathematical completion, not a simulator behavior to rely on. A run from start to a terminal state is an *episode*; tasks whose trajectories always end are *episodic*, unlike *continuing* tasks, where only the discount keeps the objective finite. The number of steps an episode may last is its *horizon*, and when episodes are bounded by $T$ steps, a sum of $T$ bounded rewards is finite already and $\gamma = 1$ is legitimate.
 
 Gymnasium's `step` returns two flags whose difference is a fact about the MDP, not a software detail. `terminated=True` means the process entered a terminal state: the future is empty, worth exactly zero. `truncated=True` means we merely stopped watching, usually a time limit (FrozenLake cuts episodes at one hundred steps): the state has a future that our recording does not show. Merging the flags is fine for loop control, as in the cell above, and disastrous for value estimation, where treating a truncated state as worthless trains on a lie. The learning algorithms from :numref:`sec_qlearning` onward therefore mask bootstrapped targets with `terminated` alone; the exact computations of this section never needed a mask, because absorbing states at reward zero silence their own values.
 
@@ -180,7 +180,7 @@ the "some function" in our case would be Newton's law of motion. This is quite d
 
 Markov systems are all systems where the next state $s_{t+1}$ is only a function of the current state $s_t$ and the action $a_t$ taken at the current state. In Markov systems, the next state does not depend on which actions were taken in the past or the states that the agent was at in the past. For example, the new agent that has acceleration as the action above is not Markovian because the next location $s_{t+1}$ depends upon the previous state $s_{t-1}$ through the velocity. It may seem that Markovian nature of a system is a restrictive assumption, but it is not so. Markov Decision Processes are still capable of modeling a very large class of real systems. For example, for our new agent, if we choose our state $s_t$ to be the tuple $(\textrm{location}, \textrm{velocity})$ then the system is Markovian because its next state $(\textrm{location}_{t+1}, \textrm{velocity}_{t+1})$ depends only upon the current state $(\textrm{location}_t, \textrm{velocity}_t)$ and the action at the current state $a_t$.
 
-This move, *state augmentation*, is the standard repair: enlarge the state until the future depends only on it. The price is a larger state space, and what to pack into the state is one of the quiet design decisions of applied reinforcement learning.
+This move, *state augmentation*, is the standard repair: enlarge the state until the future depends only on it. The price is a larger state space, and what to pack into the state is one of the quiet design decisions of applied reinforcement learning. The repair also has a ceiling: the sufficient statistic may be unknown, too large to store, or simply not observable, and in the last case the principled replacement is a distribution over the hidden part, the belief of the next paragraph.
 
 ### Partial observability, in one paragraph
 
@@ -232,7 +232,7 @@ Look at state 14, the only cell from which the goal can be entered. The true opt
 
 ## Summary
 
-A Markov decision process is four objects, $(\mathcal{S}, \mathcal{A}, P, r)$: states, actions, a transition kernel giving the distribution of the next state, and a reward defining the task. Its one assumption, that the state carries everything the past could say about the future, is a property of your modeling, not of the world: augment the state until it holds. The objective is the expected discounted return, and the discount is an effective horizon $1/(1-\gamma)$: rewards beyond roughly that many steps are geometrically negligible, so $\gamma = 0.99$ means "care about the next hundred steps". Terminal states end the future; truncation ends only the recording, and confusing the two corrupts value estimates. The one-state MDP is the bandit, the deterministic terminal-reward MDP is text generation in disguise, and the first question to ask of any algorithm is whether it uses the kernel or only samples from it. Above all, the reward is authored, an optimizer is an adversary of sloppy authorship, and only potential-based reshaping is guaranteed harmless.
+A Markov decision process is four objects, $(\mathcal{S}, \mathcal{A}, P, r)$: states, actions, a transition kernel giving the distribution of the next state, and a reward defining the task. Its one assumption, that the state carries everything the past could say about the future, is a property of your modeling, not of the world: augment the state until it holds, where you can observe and afford what the augmentation needs; where you cannot, the problem is partially observed. The objective is the expected discounted return, and the discount is an effective horizon $1/(1-\gamma)$: rewards beyond roughly that many steps are geometrically negligible, so $\gamma = 0.99$ means "care about the next hundred steps". Terminal states end the future; truncation ends only the recording, and confusing the two corrupts value estimates. The one-state MDP is the bandit, the deterministic terminal-reward MDP is text generation in disguise, and the first question to ask of any algorithm is whether it uses the kernel or only samples from it. Above all, the reward is authored, an optimizer is an adversary of sloppy authorship, and only potential-based reshaping, its potential zero at episode-ending states, is guaranteed harmless.
 
 **What the experiments show, and what they do not.** Every number in this section is an exact computation on a known sixteen-state model: no learning, no seeds to vary, and any rerun reproduces it to the digit, except the single sampled trajectory, one draw shown for concreteness. The reward-hacking demonstration is an existence proof on one map with one bonus size: it shows the attack surface is real, not that every shaped reward fails, and at smaller bonuses the exploit disappears while the policy is still subtly distorted. It shows none of the difficulties of *learning*, estimation from samples, exploration, function approximation, which the rest of these two chapters measures.
 
@@ -270,8 +270,12 @@ A Markov decision process is four objects, $(\mathcal{S}, \mathcal{A}, P, r)$: s
    map with a wall this too can make a policy that never reaches the goal earn
    more than one that does. Then show that the *potential-based* form
    $r(s,a) + \gamma \Phi(s') - \Phi(s)$ leaves the optimal policy unchanged for
-   any function $\Phi$, and identify what goes wrong with the naive fixes in
-   that language.
+   any function $\Phi$ with $\Phi = 0$ at terminal states: write out the
+   telescoping sum for an episode of length $T$, exhibit the residual
+   $\gamma^T \Phi(s_T)$ that survives at the endpoint, and give the two ways to
+   kill it (the zero boundary condition, or continuing the shaped reward
+   through the absorbing state). Finally, identify what goes wrong with the
+   naive fixes in that language.
 1. [conceptual] *Random rewards.* :numref:`sec_mdp` notes that a random reward
    can be folded into $r(s,a)$ by taking its mean. Make this precise: let the
    reward at $(s,a)$ be a random variable $R$ with $E[R] = r(s,a)$, drawn
@@ -372,7 +376,8 @@ the agent closer to the goal.
 At $s = 14$, the only cell bordering the goal, the shaped optimum
 turns **away**: it never finishes. Shaped value $2.15$; true value
 exactly $0$. Only potential-based shaping,
-$r + \gamma \Phi(s') - \Phi(s)$, is guaranteed safe.
+$r + \gamma \Phi(s') - \Phi(s)$ with $\Phi = 0$ at terminal states,
+is guaranteed safe.
 :::
 
 ::: {.slide title="Recap"}

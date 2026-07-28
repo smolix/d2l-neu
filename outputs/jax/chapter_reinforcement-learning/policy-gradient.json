@@ -14,12 +14,12 @@
       "outputs": []
     },
     "policy-gradient-parameterizing-the-policy": {
-      "code_fingerprint": "sha256:c3cd9cef25b13df17470d98aa92ad94cfa987ddf6edcb78b1c01d09af3d19d51",
+      "code_fingerprint": "sha256:3e513038349735034139c4a4f13ee761d3bb8f59f1f67a4f892a7cce4df35ec2",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-the-score-function": {
-      "code_fingerprint": "sha256:0229f5c5d83b871a8d8dad678dce2b03dc1b2a8dd7202b50a772afbcafb22e7b",
+      "code_fingerprint": "sha256:7604e2c27536db076bf8eb3986b5b92cb854fd1f4e49c5e3b4085f0da7e30150",
       "kind": "text",
       "outputs": [
         {
@@ -30,22 +30,22 @@
       ]
     },
     "policy-gradient-an-optimization-problem-over-trajectories-1": {
-      "code_fingerprint": "sha256:090e61da0d65c517bef4c051856106f7610c6fd7fa5678c4e787d01660d078fd",
+      "code_fingerprint": "sha256:60fa142b1679ce90771228d1408d828c1203d691f38a438eecb2abc040f2efb3",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-an-optimization-problem-over-trajectories-2": {
-      "code_fingerprint": "sha256:1a3cafbb63b33b8957a7d62dfd25dbed46fb657c5a8e8be57ede2bef2021cb5d",
+      "code_fingerprint": "sha256:fe2ea29c194e683284c8acee17d8cdd301c9ba122ce01941b346b0da9eab16c4",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-the-reinforce-estimator-1": {
-      "code_fingerprint": "sha256:5f59e992e86c15933f7a4776601c1fd95b83b2f33acfc6b846f36cce25254c41",
+      "code_fingerprint": "sha256:48eea357f4069a5654a577283149a257db4951c6d414350a9c8aaf65f1a385e6",
       "kind": "text",
       "outputs": []
     },
     "policy-gradient-the-reinforce-estimator-2": {
-      "code_fingerprint": "sha256:a0d75f3bfe6199393bac8486e26fc3ea6e8ef5d635634200f61b8fd25d47b57d",
+      "code_fingerprint": "sha256:ff5c84e8cf4194dd51f3126fc683ddd5cf73360bd6f840666919626085281c28",
       "kind": "asset",
       "outputs": [
         {
@@ -53,12 +53,12 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-2-1.svg",
           "bytes": 46412,
-          "sha256": "sha256:119612ac2e6b6696889689ac1ad0c19ae3d8bd7a7567c2bd717a5eaaeb3795c5"
+          "sha256": "sha256:eca4aadff99afb6abaab3b21de8085a6650046c52623e8767500b20b17331c1e"
         }
       ]
     },
     "policy-gradient-the-reinforce-estimator-3": {
-      "code_fingerprint": "sha256:710bf0bcc41802e30047737438ce3ace5a69a437857ac7b4737221330722f1de",
+      "code_fingerprint": "sha256:7460e37e2d08c20c6f492811ac5536de36d7e902f87fc52b4374e653b7bd8322",
       "kind": "asset",
       "outputs": [
         {
@@ -66,12 +66,12 @@
           "mime": "image/svg+xml",
           "asset": "policy-gradient/policy-gradient-the-reinforce-estimator-3-1.svg",
           "bytes": 15266,
-          "sha256": "sha256:4715a463d3b26d57d336afc9f96f23582a148729089503610c2e3bc2fe5d5976"
+          "sha256": "sha256:7536a9ffd5cefb635dffd14f9313a7193916ff9f45f56522045876a6bdb1601a"
         }
       ]
     },
     "policy-gradient-on-policy-fresh-data-after-every-update": {
-      "code_fingerprint": "sha256:79e41c6a2ca237b4c41138f31d3271fe74cbb538ac8b7d7248679ce2c85f7873",
+      "code_fingerprint": "sha256:c7d02e3b0e033c9cd76318d19068e9f832a81b11b146f963c3afdd85ec51d74a",
       "kind": "text",
       "outputs": [
         {
@@ -82,7 +82,7 @@
       ]
     },
     "policy-gradient-unbiased-and-how-noisy-1": {
-      "code_fingerprint": "sha256:a5d9d2e02219a7be83e724817e4945620af76a99ea2f19e2d41305ca4e409fc2",
+      "code_fingerprint": "sha256:102856558e1384fb838990fd05862f7f35e4fffb774b5eb66ef8acb9e6733df6",
       "kind": "text",
       "outputs": [
         {
@@ -93,7 +93,7 @@
       ]
     },
     "policy-gradient-unbiased-and-how-noisy-2": {
-      "code_fingerprint": "sha256:d85b787f74ad5cd827337efe1457c1cbdcc04362d976cc3b528aa575b34224ea",
+      "code_fingerprint": "sha256:1e6cdad90e55a6e09c41cb36946e8dcb4dd70480ea0e1840d0f957e6454a31a0",
       "kind": "text",
       "outputs": [
         {

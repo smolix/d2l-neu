@@ -24,14 +24,15 @@ import numpy as np
 import optax
 ```
 
-The laboratory is unchanged: the calm lake whose determinism :numref:`sec_policygradient` named as a bought assumption, the discount $\gamma = 0.95$, and the softmax-over-preferences policy of `ActorCritic.tabular`. Two numbers below are choices with intent: four episodes per update is deliberately small, to expose the variance this section is about, and twenty seeds is deliberately many, for reasons the end of the section turns into a lesson of its own.
+The laboratory is unchanged: the calm lake whose determinism :numref:`sec_policygradient` named as a bought assumption, with the same stripped time limit, so that every episode ends at a terminal state and the estimators below estimate the objective they are graded against, the discount $\gamma = 0.95$, and the softmax-over-preferences policy of `ActorCritic.tabular`. Two numbers below are choices with intent: four episodes per update is deliberately small, to expose the variance this section is about, and twenty seeds is deliberately many, for reasons the end of the section turns into a lesson of its own.
 
 ```{.python .input #baselines-baselines-advantages-and-variance-reduction-2}
 %%tab pytorch, jax
 gamma, alpha, alpha_v = 0.95, 16.0, 0.1  # discount; SGD step; value step
 num_updates, batch_episodes = 150, 4   # small batches, to expose variance
 num_seeds = 20                         # with 5, the medians below are noise
-env = gym.make('FrozenLake-v1', is_slippery=False)
+env = gym.wrappers.TimeLimit(
+    gym.make('FrozenLake-v1', is_slippery=False).env, max_episode_steps=10_000)
 ```
 
 ## A Zero-Mean Identity
@@ -68,7 +69,7 @@ The inner sum equals $\gamma^t \hat{G}_t$ where
 
 $$\hat{G}_t = \sum_{t'=t}^{T-1} \gamma^{t'-t}\, r_{t'}$$
 
-is called the reward-to-go from step $t$: the discounted return of the remainder of the trajectory, as if it started at $s_t$. Implementations almost always drop the leading $\gamma^t$ and weight the score at step $t$ by $\hat{G}_t$ alone, which treats every timestep equally instead of down-weighting late ones. Sutton and Barto's boxed REINFORCE keeps the factor, and their text derivation sidesteps the question by treating the undiscounted case; we follow implementation practice instead, and the price is that the simplified update is no longer an exact unbiased estimate of the gradient of the discounted objective. The estimator becomes
+is called the reward-to-go from step $t$: the discounted return of the remainder of the trajectory, as if it started at $s_t$. Implementations almost always drop the leading $\gamma^t$ and weight the score at step $t$ by $\hat{G}_t$ alone, which treats every timestep equally instead of down-weighting late ones. Sutton and Barto's boxed REINFORCE keeps the factor, and their text derivation sidesteps the question by treating the undiscounted case; we follow implementation practice instead, and the price deserves its precise name: dropping $\gamma^t$ swaps the discounted state occupancy of :eqref:`eq_pg_theorem` for an undiscounted one, a change of state *weighting* that can move the gradient's direction, not only its length, so the simplified update is a per-step surrogate for, not an unbiased estimate of, the gradient of the discounted objective. Three labels, then, stay distinct through both chapters: the exact discounted gradient, with its $\gamma^t$; this surrogate, which our code and nearly all practice run; and the finite-batch centered estimators later in this section, which carry a small-sample correction of their own. The estimator becomes
 
 $$\hat{u} = \frac{1}{n} \sum_{i=1}^n \sum_{t=0}^{T-1} \hat{G}_t^i\ \nabla_\theta \log \pi_\theta(a_t^i \mid s_t^i).$$
 :eqlabel:`eq_rtg`
@@ -317,7 +318,7 @@ Theory in hand and hygiene declared, we can race the estimators, and, just as im
 The section has assembled a ladder, worth seeing whole. Each rung changes what multiplies the score at step $t$:
 
 1. **Trajectory return** $R(\tau)$: unbiased :eqref:`eq_reinforce`, and the noisiest.
-2. **Reward-to-go** $\hat{G}_t$: drops terms that are mean-zero by the identity; unbiased up to the dropped $\gamma^t$ factor priced in :numref:`sec_policygradient`.
+2. **Reward-to-go** $\hat{G}_t$: drops terms that are mean-zero by the identity; exactly unbiased only with the $\gamma^t$ factor kept, and run without it, as the per-step surrogate priced above, by our code and nearly everyone's.
 3. **Constant baseline** $\hat{G}_t - b$: unbiased for every $b$; the best constant is the control-variate optimum $c^*$.
 4. **State baseline** $\hat{G}_t - b(s_t)$: unbiased; the natural target for $b$ is $V^{\pi_\theta}$.
 5. **Leave-one-out**: exactly unbiased, batch coupling included.
@@ -356,7 +357,7 @@ for k, u in draws.items():
           f'relative variance = {rel:6.1f}')
 ```
 
-Read the two columns against the two halves of the claim. The cosine column is unbiasedness: all five means point along the exact gradient to within what 200 draws can resolve, and the residual ten degrees or so of angle is shared by all five weightings alike, so the baselines moved nothing, exactly as the identity promised. The variance column is the ladder, measured: centering cuts the relative variance by about a third, the exact state baseline nearly halves it, and dividing by $\sigma$ changes next to nothing beside plain centering, the first measurement behind this section's sharpest distinction. One entry is a warning about the map rather than the method: reward-to-go buys only a few percent here, because with a single terminal reward there are no earlier rewards for causality to drop; its celebrated benefit needs dense rewards to exist at all.
+Read the two columns against the two halves of the claim. The cosine column is the unbiasedness *diagnostic*: a cosine cannot prove the claim, being blind to length and to error components parallel to the truth, but it is what 200 draws can check, and all five means point along the exact gradient to within that resolution, the residual ten degrees or so of angle shared by all five weightings alike, so the baselines moved nothing measurable, exactly as the identity promised. The variance column is the ladder, measured: centering cuts the relative variance by about a third, the exact state baseline nearly halves it, and dividing by $\sigma$ changes next to nothing beside plain centering, the first measurement behind this section's sharpest distinction. One entry is a warning about the map rather than the method: reward-to-go buys only a few percent here, because with a single terminal reward there are no earlier rewards for causality to drop; its celebrated benefit needs dense rewards to exist at all.
 
 Now the race. One generator serves all five variants, and they differ in a single line: the weight handed to `policy_step`. Three choices are deliberate. The policy optimizer is plain SGD rather than the container's default Adam: an adaptive optimizer rescales every parameter's step by its own running statistics, a fine default for training and a blindfold here, since it would partly absorb the very scale differences the section is teaching you to see. Every run maintains the value table of :eqref:`eq_value_baseline` but only one arm consults it, so the arms share everything else, seeds included. And each update yields three numbers, the batch success rate, the size of the parameter step actually taken, and the policy's mean entropy: diagnostics are data the run returns, not lines printed from inside a helper. Two small probes read the policy from outside, through the numpy boundary:
 
@@ -423,7 +424,7 @@ d2l.plot_curves({v: r[:, :, 0] for v, r in runs.items()}, xlabel='update',
                 ylabel='batch success rate', smooth=10)
 ```
 
-The ranking and the step sizes belong in one place, because neither is honest without the other:
+The ranking and the step sizes belong in one place, because either alone misleads:
 
 ```{.python .input #baselines-five-estimators-6}
 %%tab pytorch, jax
@@ -456,7 +457,7 @@ None of the numbers above deserve more digits than we gave them, and the compari
 
 > **How to read the figure, and every figure like it.** The figure also demonstrates how results in reinforcement learning should be read. Every band in the plot is wide. Within any single variant the slowest seed needs more than twice as many updates to reach the 90% mark as the fastest one, with nothing changed but the random seed. A single training curve is an anecdote; had we shown you the luckiest seed of the slowest variant next to the unluckiest seed of the fastest one, the conclusion would have flipped. The medians move too: rerun the comparison on twenty *different* seeds and each of them lands a few updates away, the plain-return one anywhere in that fifty-to-seventy band. Twenty seeds are enough to pin the ordering of the variants; they are not enough to pin the numbers to the unit, which is why we quote ranges and ratios above rather than the digits the cell happens to print. When you compare algorithms, run several seeds, plot the spread, keep the hyper-parameters matched, and report medians rather than best runs :cite:`Henderson.Islam.Bachman.ea.2018,Agarwal.Schwarzer.Castro.ea.2021,Engstrom.Ilyas.Santurkar.ea.2020`.
 
-Two further honesty notes. The leave-one-out enumeration never touches a framework and prints identically in both tabs; everything downstream of a framework object, the frozen probe, the aggregation table, the race, agrees across tabs only to the precision the prose quotes. And the environment is load-bearing: the calm map was bought as an assumption in :numref:`sec_policygradient`, its terminal-only reward mutes reward-to-go, and a task with dense rewards or longer horizons would move every number and some of the ordering. What survives transplanting is the method: measure variance against a known gradient where one exists, print the step sizes next to the ranking, and distrust any comparison that does neither.
+Two further caveats. The leave-one-out enumeration never touches a framework and prints identically in both tabs; everything downstream of a framework object, the frozen probe, the aggregation table, the race, agrees across tabs only to the precision the prose quotes. And the environment is load-bearing: the calm map was bought as an assumption in :numref:`sec_policygradient`, its terminal-only reward mutes reward-to-go, and a task with dense rewards or longer horizons would move every number and some of the ordering. What survives transplanting is the method: measure variance against a known gradient where one exists, print the step sizes next to the ranking, and distrust any comparison that does neither.
 
 ## Summary
 

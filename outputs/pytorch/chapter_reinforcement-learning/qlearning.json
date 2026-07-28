@@ -42,7 +42,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-the-implementation-5-1.svg",
           "bytes": 247382,
-          "sha256": "sha256:9bf5cb43adffb670838383232f0f628d8273daaf6d8c710804a116282c140478"
+          "sha256": "sha256:dd52d209b86e987627217b4659018368300d40b6cfc4bc87b85d7b5b1a510c5d"
         }
       ]
     },
@@ -71,7 +71,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-2-1.svg",
           "bytes": 38089,
-          "sha256": "sha256:6b06f82cb3244313357a5f6892e31b37f831937b8e86e570bdc06b20715b5932"
+          "sha256": "sha256:652ab2ee9040721deeb642efb2de6c7b17774b96ec0e454aebc3caccc4ab171c"
         }
       ]
     },
@@ -115,7 +115,7 @@
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-reading-the-curve-honestly-4-1.svg",
           "bytes": 706464,
-          "sha256": "sha256:483f658225bebf899d081d86b63e61a02b0d2109ab14232f2391163371bf1f62"
+          "sha256": "sha256:e2a63ef8d1e3c1e85e8af6fb30eebc8c94f7452b35b32e7cb401a6240d5e2759"
         }
       ]
     },
@@ -136,13 +136,13 @@
       ]
     },
     "qlearning-optimism-ucb-and-thompson-sampling": {
-      "code_fingerprint": "sha256:1d96ade1bd3b8dbd9c00cd6858921d103d37c010528ed199027649ddae64e879",
+      "code_fingerprint": "sha256:5e16fd6c4c480953313e93138bb5f8140af3060671e650984fdd35defc1d0c1d",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "          UCB: mean regret after 2000 pulls   49.9\n"
+          "text": "          UCB: mean regret after 2000 pulls   36.5\n"
         },
         {
           "type": "stream",
@@ -153,8 +153,8 @@
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "qlearning/qlearning-optimism-ucb-and-thompson-sampling-1.svg",
-          "bytes": 535430,
-          "sha256": "sha256:cd39a065c2c7225926bc1b3928eb8e4f7675158498b0c2173bfee85a1c6ca814"
+          "bytes": 535592,
+          "sha256": "sha256:904e1f7d4c4a4a14f61e05677e349fa2f137b33d2115e3dd652297cc94c07570"
         }
       ]
     }

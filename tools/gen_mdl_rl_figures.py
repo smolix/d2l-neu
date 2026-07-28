@@ -34,7 +34,7 @@ DELTA = {LEFT: (0, -1), DOWN: (1, 0), RIGHT: (0, 1), UP: (-1, 0)}
 LAKE_EXPERT = {0: DOWN, 4: DOWN, 8: RIGHT, 9: DOWN, 13: RIGHT, 14: RIGHT}
 BANDIT_ARMS = np.array([0.50, 0.42, 0.90, 0.25, 0.55, 0.38, 0.60, 0.32, 0.50,
                         0.45])
-BANDIT_KAPPA = 0.6
+BANDIT_KAPPA = 0.5
 TOY_MU, TOY_FLOOR, TOY_PEAK, TOY_WIDTH = 0.0, 0.4, 2.0, 1.0
 TOY_RESCALE = 5.0                                  # only for drawing R(a)
 TRIAD_R = 2.35
@@ -273,9 +273,12 @@ def _bandit_regret(n_pulls=2000, n_seeds=20, arms=BANDIT_ARMS,
     """Mean cumulative regret of five exploration rules on a Bernoulli bandit.
 
     A bandit is an MDP with one state, so the rules the lake uses apply
-    unchanged: greedy, fixed and annealed epsilon, the optimism bonus
-    ``+kappa / sqrt(n)``, and Thompson sampling.  Regret is measured against
-    the best arm's mean and averaged over ``n_seeds`` independent runs.
+    unchanged: greedy, fixed and annealed epsilon, UCB with the time-dependent
+    index ``mean + kappa * sqrt(log t / n)`` (each arm played once first, as in
+    the notebook), and Thompson sampling.  Regret is measured against the best
+    arm's mean and averaged over ``n_seeds`` independent runs; seed streams
+    match qlearning.md's cells exactly, so the drawn curves are the printed
+    numbers.
     """
     n_arms = len(arms)
     best = arms.max()
@@ -293,10 +296,11 @@ def _bandit_regret(n_pulls=2000, n_seeds=20, arms=BANDIT_ARMS,
                 if algo == "thompson":
                     a = int(np.argmax(rng.beta(1 + total, 1 + count - total)))
                 elif algo == "ucb":
-                    bonus = np.where(count > 0,
-                                     kappa / np.sqrt(np.maximum(count, 1)),
-                                     np.inf)
-                    a = int(np.argmax(q + bonus))
+                    if (count == 0).any():   # play each arm once first
+                        a = int(np.argmax(count == 0))
+                    else:
+                        a = int(np.argmax(q + kappa
+                                          * np.sqrt(np.log(t) / count)))
                 else:
                     e = {"greedy": 0.0, "eps": 0.1}.get(
                         algo, max(0.02, 1.0 / np.sqrt(t + 1)))
@@ -568,7 +572,9 @@ def fig_roadmap():            # F2  -> mdl-rl-roadmap
     learned against which data may drive the update.  The second chapter's
     entries are greyed, so the same rendering serves as a preview there and as
     a recapitulation here.  Section numbers are deliberately absent (they rot;
-    the prose carries the :numref: cross-references)."""
+    the prose carries the :numref: cross-references).  DAgger lives in the
+    on-policy column: its update data are the learner's own rollouts,
+    relabeled by the expert, so only behaviour cloning is offline."""
     fig, ax = plt.subplots(figsize=(9.2, 5.2))
     ax.axis("off")
 
@@ -602,12 +608,12 @@ def fig_roadmap():            # F2  -> mdl-rl-roadmap
                                         ("DQN", CH2)]),
         ("value", "offline", GRAY, True, [("Q-learning", CH2),
                                           ("+ pessimism", CH2)]),
-        ("policy", "on", BLUE, False, [("REINFORCE", "black"),
+        ("policy", "on", BLUE, False, [("DAgger", "black"),
+                                       ("REINFORCE", "black"),
                                        ("+ baselines", "black"),
                                        ("regularized PO", CH2),
                                        ("GRPO", CH2)]),
-        ("policy", "offline", BLUE, False, [("behaviour cloning", "black"),
-                                           ("DAgger", "black")]),
+        ("policy", "offline", BLUE, False, [("behaviour cloning", "black")]),
         ("both", "on", GRAY, True, [("actor-critic", CH2), ("PPO", CH2)]),
         ("both", "offline", GRAY, True, [("Decision", CH2),
                                          ("Transformer", CH2)]),
@@ -1209,8 +1215,9 @@ def fig_compounding_error():  # F21 -> mdl-rl-compounding-error
 def fig_exploration():        # F7  -> mdl-rl-exploration
     """Exploration, in three measurements: (a) one action-value row read as
     three behaviour policies; (b) cumulative regret of five rules on a
-    ten-armed bandit, with the optimism bonus itself inset; (c) what three
-    schedules see, and what they earn while seeing it."""
+    ten-armed bandit, with the UCB confidence radius kappa*sqrt(log t / n)
+    inset at the run's horizon t = 2000; (c) what three schedules see, and
+    what they earn while seeing it."""
     fig, (axa, axb, axc) = plt.subplots(
         1, 3, figsize=(13.8, 4.1),
         gridspec_kw={"width_ratios": [0.86, 1.10, 1.04]})
@@ -1268,15 +1275,17 @@ def fig_exploration():        # F7  -> mdl-rl-exploration
 
     ins = axb.inset_axes([0.57, 0.155, 0.39, 0.25])
     m = np.arange(1, 41)
-    ins.plot(m, BANDIT_KAPPA / np.sqrt(m), color=ORANGE, lw=2.0)
+    ins.plot(m, BANDIT_KAPPA * np.sqrt(np.log(2000) / m), color=ORANGE, lw=2.0)
     ins.set_xlim(0, 41)
-    ins.set_ylim(0, 0.70)
+    ins.set_ylim(0, 1.55)
     ins.set_xticks([1, 20, 40])
-    ins.set_yticks([0, 0.5])
-    ins.set_yticklabels(["0", "0.5"])
-    ins.set_xlabel("$n(s,a)$", fontsize=11, labelpad=0.5)
-    ins.text(0.97, 0.94, "$+\\kappa/\\sqrt{n}$", transform=ins.transAxes,
+    ins.set_yticks([0, 1])
+    ins.set_yticklabels(["0", "1"])
+    ins.set_xlabel("$n(a)$", fontsize=11, labelpad=0.5)
+    ins.text(0.97, 0.94, "$\\kappa\\sqrt{\\log t/n}$", transform=ins.transAxes,
              ha="right", va="top", fontsize=13, color=ORANGE)
+    ins.text(0.97, 0.66, "at $t = 2000$", transform=ins.transAxes, ha="right",
+             va="top", fontsize=10, color=ORANGE)
     _black_axes(ins, labelsize=9.5)
 
     # --- (c) coverage and reward on the lake ------------------------------- #

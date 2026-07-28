@@ -14,17 +14,17 @@
       "outputs": []
     },
     "baselines-baselines-advantages-and-variance-reduction-2": {
-      "code_fingerprint": "sha256:fd417766917626ece6ec88dc19513028e11e46e3abd3db6bd10c2f1e50e038ce",
+      "code_fingerprint": "sha256:4437c71b0b8e562028a44fc6207516076b9409a65b8dfddf7b968bafec8d4c21",
       "kind": "text",
       "outputs": []
     },
     "baselines-reward-to-go-and-causality": {
-      "code_fingerprint": "sha256:35bba41202284cd23918266444aad007eb635eb7a256a350a058dadadf0be4fd",
+      "code_fingerprint": "sha256:fc4bf9c8f2639a5b88b1d718fcc34f354d63d1f6aed6c3c0b9e918843b9e9c83",
       "kind": "text",
       "outputs": []
     },
     "baselines-estimator-hygiene": {
-      "code_fingerprint": "sha256:d41a24342f18ed1275d2aa3d54ea80e34ad11a650b801a05d95f5b594f060827",
+      "code_fingerprint": "sha256:931d7888ff2a825dfd91073590d2bccf5b0a0be7da263ceb3d8b27b922563a6d",
       "kind": "text",
       "outputs": [
         {
@@ -35,12 +35,12 @@
       ]
     },
     "baselines-centering-is-a-baseline-dividing-by-sigma-is-a-step-size-rescaling": {
-      "code_fingerprint": "sha256:1abd0df07f478edccf75310c2d20e1cbe7a1954500637c836e1793dd23c327e7",
+      "code_fingerprint": "sha256:d189d2dc61f8a55c9c2c5a46a1e703b81fc84e2ce1a686f033b874c2db99ce5a",
       "kind": "text",
       "outputs": []
     },
     "baselines-leave-one-out": {
-      "code_fingerprint": "sha256:f986358e21acabbec64fd97a1de4ce29a1e9bfaafd8c584acfc815dcf6ed87cc",
+      "code_fingerprint": "sha256:fb8676d2e97c65c30b69c44c1720c917b2a810999cab8b874a32c1fa93eacacd",
       "kind": "text",
       "outputs": [
         {
@@ -51,7 +51,7 @@
       ]
     },
     "baselines-summing-over-episodes-of-different-lengths": {
-      "code_fingerprint": "sha256:e93b179ed6b4308b11fd2ebf2ef971db8e232bddc95b54b73fe0f24b1980ae92",
+      "code_fingerprint": "sha256:79c8fc920df2a4155dfb4a425d8dbf840b5e92e1780805721427bba027264677",
       "kind": "text",
       "outputs": [
         {
@@ -62,7 +62,7 @@
       ]
     },
     "baselines-five-estimators-1": {
-      "code_fingerprint": "sha256:9b6e4a715654e7e6b0d3a852596e1c9144d569c93e9a06ddb2b861038df82445",
+      "code_fingerprint": "sha256:8e8097c7466864d6927411f02a0ff3e260e9cd5a9413678f9a845c7268d3aecb",
       "kind": "text",
       "outputs": [
         {
@@ -73,22 +73,22 @@
       ]
     },
     "baselines-five-estimators-2": {
-      "code_fingerprint": "sha256:e032d77d743eb033b06f0ab68b1f5116601bf60935d0ca4e79166c3c38022b2b",
+      "code_fingerprint": "sha256:81c413651a946b7026f5244686a8949371dc122b02dccf839130a71a608c62fc",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-3": {
-      "code_fingerprint": "sha256:ca1fa8993826fc5d748f5305e436efca3ae96331ea98d630274807dd7364403b",
+      "code_fingerprint": "sha256:49abd91027d1c5463aad2bf5ed1c86926d6425a62dbf87ce78f1651e52faaf72",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-4": {
-      "code_fingerprint": "sha256:ef8373849b7967937c7da621596f334236a4d958581ae6bb48a6234afd48eae8",
+      "code_fingerprint": "sha256:5f8cfda93998230f8a9781222e79cf631843bfeba701fd7fc4cf6296aa119fd1",
       "kind": "text",
       "outputs": []
     },
     "baselines-five-estimators-5": {
-      "code_fingerprint": "sha256:1a442b8479d79fa2da2ca6590a1c8fcc41daf8b474c060241cc0aec5087211d8",
+      "code_fingerprint": "sha256:eb5489cc466334b327e48e72e82b3612f389df799bf123137654491f2a507856",
       "kind": "asset",
       "outputs": [
         {
@@ -96,12 +96,12 @@
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-5-1.svg",
           "bytes": 72097,
-          "sha256": "sha256:92a59c11cb30c94f34bdb31b0cd5653af4598497fdbfc4b528cb1562c1f56285"
+          "sha256": "sha256:d40687eb3073101bec7dc8b562ea4bf0711fc08bb794715635ed2f6822c2e46d"
         }
       ]
     },
     "baselines-five-estimators-6": {
-      "code_fingerprint": "sha256:31d01431132c5d04bd5455e066854c49e5478a629f8db1ec6d18130c31ac6cab",
+      "code_fingerprint": "sha256:037e385301574946a68fb23b8d3ffc68dd4e2f3fe222f5d5165ccd4daa8f885c",
       "kind": "text",
       "outputs": [
         {
@@ -112,15 +112,15 @@
       ]
     },
     "baselines-five-estimators-7": {
-      "code_fingerprint": "sha256:f551e80798600f6b3fd9eb5ba9051ca6ff7248004b1b616e2d634a8fc0c40440",
+      "code_fingerprint": "sha256:0de7eb6994ed58b29a7d14851ae46ca566fb40cc039edd84aacd05b693324708",
       "kind": "asset",
       "outputs": [
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "baselines/baselines-five-estimators-7-1.svg",
-          "bytes": 48138,
-          "sha256": "sha256:967fb6b68aa7990a49fb65041ccc07f6297de37bc94996fb77c869bad9ebbb28"
+          "bytes": 48018,
+          "sha256": "sha256:592798f8855f737b9999064b182c3e0efd60266c129fed0ece521b83a59fc08c"
         }
       ]
     }

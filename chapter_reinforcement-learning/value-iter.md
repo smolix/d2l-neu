@@ -275,7 +275,7 @@ print(f'value iteration: certified at sweep {k_cert}, and its greedy policy '
       f'already equals pi* from sweep {np.argmax(ok) + 1} on')
 ```
 
-Policy iteration needed two rounds: greedy on the random walker's values is already optimal on this small lake, and the second round merely confirms it. But each round hid $800$ evaluation sweeps, so the honest comparison is in Bellman backups, not rounds; exercise 6 does that accounting. The more interesting number is value iteration's: its greedy policy stops changing at sweep $14$, some $150$ sweeps before the values are certified. Policies converge long before values do, because the argmax needs only the ranking of the actions, not the digits.
+Policy iteration needed two rounds: greedy on the random walker's values is already optimal on this small lake, and the second round merely confirms it. But each round hid $800$ evaluation sweeps, so the like-for-like comparison is in Bellman backups, not rounds; exercise 6 does that accounting. The more interesting number is value iteration's: its greedy policy stops changing at sweep $14$, some $150$ sweeps before the values are certified. Policies converge long before values do, because the argmax needs only the ranking of the actions, not the digits.
 
 That observation licenses a whole design space: evaluation need not run to convergence before improvement acts, and improvement need not wait. Any interleaving that keeps nudging $V$ toward $V^\pi$ and $\pi$ toward greedy($V$) ends at the same corner, where both conditions hold and :eqref:`eq_bellman_optimality` is satisfied. Sutton and Barto call this schema *generalized policy iteration* (GPI) :cite:`Sutton.Barto.2018`, and :numref:`fig_rl_gpi` draws it: policy iteration completes each move, value iteration improves after a single sweep, and the algorithms ahead take smaller, noisier steps still, Q-learning improving on one sampled backup (:numref:`sec_qlearning`), actor-critic moving along both axes at once (:numref:`sec_actorcritic`). Whenever you wonder why acting greedily on a learned value estimate is sensible at all, the answer is the policy improvement theorem, applied with more or less patience.
 
@@ -400,7 +400,7 @@ Given the model, acting well is computable. A policy is scored by $V^\pi$ and $Q
    all rewards are non-negative, and say what the limit $V_k(s)$ means in that
    case. Then construct a two-state MDP with a single action on which $V_k$
    grows without bound at $\gamma = 1$, and verify it in three lines of code.
-1. [extended] *Policy iteration, charged honestly.* Policy iteration
+1. [extended] *Policy iteration, charged in backups.* Policy iteration
    converged in $2$ rounds against value iteration's $164$ certified sweeps,
    which looks like a rout, but each round contained $800$ evaluation sweeps
    of :eqref:`eq_policy_eval` before the greedy step :eqref:`eq_optimal_policy`.

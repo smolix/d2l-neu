@@ -26,10 +26,13 @@
 #                                     # do not refresh _book/slides from _slides
 #   R2_BUCKET=temporary-d2l ./tools/upload_r2.sh
 #                                     # target a different bucket (e.g. a
-#                                     # throwaway preview). The manifest name
-#                                     # embeds the bucket, so each bucket keeps
-#                                     # its own upload state and a new one
-#                                     # starts with a full sync.
+#                                     # throwaway preview). Credentials and
+#                                     # endpoint are selected per bucket — R2
+#                                     # tokens are bucket-scoped — by the table
+#                                     # in the "Per-bucket credentials" block
+#                                     # below. The manifest name embeds the
+#                                     # bucket, so each keeps its own upload
+#                                     # state and a new one starts full.
 #
 # Set UPLOAD_JOBS to tune local hashing and parallel incremental uploads
 # (default: 32).
@@ -71,9 +74,50 @@ for arg in "$@"; do
     esac
 done
 
-if [[ -z "${R2_ACCOUNT_ID:-}" ]]; then
-    echo "Error: R2_ACCOUNT_ID is not set." >&2
-    exit 1
+# ── Per-bucket credentials ──────────────────────────────────
+# R2 API tokens are scoped to a bucket, so one ambient keypair cannot serve two
+# buckets: the staging keys are denied on temporary-d2l and vice versa (verified
+# against both live buckets). .env therefore carries one credential set per
+# bucket — the staging pair unsuffixed, and a suffixed set per additional bucket
+# — and the table below is the whole mapping. R2_CRED_SUFFIX is the escape hatch
+# for a bucket not listed here yet.
+case "$BUCKET" in
+    staging-d2l)   CRED_SUFFIX="" ;;
+    temporary-d2l) CRED_SUFFIX="_TEMPORARY" ;;
+    *)             CRED_SUFFIX="${R2_CRED_SUFFIX-}" ;;
+esac
+
+if [[ -n "$CRED_SUFFIX" ]]; then
+    # The .env names are imprecise, and deliberately left alone: the variable
+    # spelled R2_ACCOUNT_ID_<SUFFIX> actually holds the S3 *Access Key ID*, and
+    # CLOUDFLARE_TOKEN_<SUFFIX> the *Secret Access Key* — the pair Cloudflare
+    # issues when you create a bucket-scoped R2 API token, neither of which is
+    # an account ID or a Cloudflare API token. Confirmed by authenticating
+    # against the live bucket; don't "correct" the names without editing .env.
+    _key_var="R2_ACCOUNT_ID${CRED_SUFFIX}"
+    _sec_var="CLOUDFLARE_TOKEN${CRED_SUFFIX}"
+    _end_var="R2_ENDPOINT${CRED_SUFFIX}"
+    if [[ -z "${!_key_var-}" || -z "${!_sec_var-}" ]]; then
+        echo "Error: bucket '$BUCKET' selects credential set '${CRED_SUFFIX}'," >&2
+        echo "       but ${_key_var} and/or ${_sec_var} is unset in .env." >&2
+        exit 1
+    fi
+    # Exported, not just set: the parallel upload/delete workers run in
+    # subshells and read the credentials from the environment.
+    export AWS_ACCESS_KEY_ID="${!_key_var}"
+    export AWS_SECRET_ACCESS_KEY="${!_sec_var}"
+    ENDPOINT="${!_end_var-}"
+else
+    ENDPOINT=""
+fi
+
+# An explicit per-bucket endpoint wins; otherwise build it from the account ID.
+if [[ -z "$ENDPOINT" ]]; then
+    if [[ -z "${R2_ACCOUNT_ID:-}" ]]; then
+        echo "Error: neither R2_ENDPOINT${CRED_SUFFIX} nor R2_ACCOUNT_ID is set." >&2
+        exit 1
+    fi
+    ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 fi
 
 if [[ ! -d "$BOOK_DIR" ]]; then
@@ -86,7 +130,6 @@ if ! [[ "$UPLOAD_JOBS" =~ ^[1-9][0-9]*$ ]]; then
     exit 1
 fi
 
-ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 # R2 only accepts its own region names (wnam/enam/.../auto); pin `auto` so the
 # upload is independent of the ambient ~/.aws/config default region.
 S3_ARGS=(--endpoint-url "$ENDPOINT" --region auto)

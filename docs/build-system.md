@@ -1191,11 +1191,31 @@ staging site) but takes any bucket via `R2_BUCKET`, which `deploy.mk` exports so
 it reaches the recipe: `make upload-r2-full R2_BUCKET=temporary-d2l`, or
 `R2_BUCKET=… tools/upload_r2.sh` directly. Upload state is per-bucket
 (`.upload-manifest-<bucket>.txt`), so one bucket's manifest never stands in for
-another's and a fresh bucket starts with a full sync. **R2 API tokens are scoped
-per-bucket unless created account-wide**, so a new bucket usually needs a new or
-re-scoped token in `.env` — the script now HeadBuckets first and fails in a
-second with that hint, rather than after minutes of hashing and then a wall of
-per-file `AccessDenied` from the parallel uploaders.
+another's and a fresh bucket starts with a full sync.
+
+**Credentials are per-bucket, because R2 tokens are.** An R2 API token is scoped
+to its bucket unless created account-wide: the `staging-d2l` keypair is denied on
+`temporary-d2l` and vice versa (verified against both live buckets), so one
+ambient `AWS_ACCESS_KEY_ID` cannot serve both. `.env` therefore holds one set per
+bucket — the staging pair unsuffixed, plus a suffixed set per additional bucket —
+and `upload_r2.sh` maps bucket → suffix in one `case` table near the top
+(`R2_CRED_SUFFIX` overrides it for a bucket not yet listed). Two traps worth
+knowing:
+
+- The suffixed `.env` names are **misnomers kept for compatibility**:
+  `R2_ACCOUNT_ID_<SUFFIX>` holds the S3 *Access Key ID* and
+  `CLOUDFLARE_TOKEN_<SUFFIX>` the *Secret Access Key* — the pair Cloudflare
+  issues for a bucket-scoped token, neither an account ID nor a Cloudflare API
+  token. `R2_ENDPOINT_<SUFFIX>` overrides the endpoint built from
+  `R2_ACCOUNT_ID`.
+- The script **HeadBuckets before doing any work**, so a missing or out-of-scope
+  token fails in about a second with that hint. Previously it surfaced only after
+  staging slides, rebuilding notebook zips and hashing ~4k files, as a wall of
+  per-file `AccessDenied` from the 32 parallel uploaders.
+
+Do not `aws s3 ls` a bucket while an upload runs against it — R2 answers
+`ServiceUnavailable: Reduce your concurrent request rate` when a listing competes
+with the 32 uploaders. Verify after the run, not during.
 
 **`make figures` is incremental + manual.** It covers *every* chapter generator —
 including the ch6/7/8/9 ones (`gen_bg_*`, `gen_arch_*`, `gen_opt_figures`) the old

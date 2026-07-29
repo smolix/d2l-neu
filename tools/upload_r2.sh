@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Upload _book/ to Cloudflare R2 bucket "staging-d2l".
+# Upload _book/ to a Cloudflare R2 bucket — "staging-d2l" (the public staging
+# site) unless R2_BUCKET names another one.
 #
 # Hash-based incremental sync: maintains `.upload-manifest-<bucket>.txt`
 # with `sha256  path` for every file uploaded last time. On each run we
@@ -23,6 +24,12 @@
 #   ./tools/upload_r2.sh --full       # ignore manifest, re-upload all
 #   ./tools/upload_r2.sh --no-stage-slides
 #                                     # do not refresh _book/slides from _slides
+#   R2_BUCKET=temporary-d2l ./tools/upload_r2.sh
+#                                     # target a different bucket (e.g. a
+#                                     # throwaway preview). The manifest name
+#                                     # embeds the bucket, so each bucket keeps
+#                                     # its own upload state and a new one
+#                                     # starts with a full sync.
 #
 # Set UPLOAD_JOBS to tune local hashing and parallel incremental uploads
 # (default: 32).
@@ -44,7 +51,7 @@ if [[ -f "$PROJECT_DIR/.env" ]]; then
     set +a
 fi
 
-BUCKET="staging-d2l"
+BUCKET="${R2_BUCKET:-staging-d2l}"
 BOOK_DIR="${BOOK_DIR:-_book}"
 MANIFEST_FILE="${PROJECT_DIR}/.upload-manifest-${BUCKET}.txt"
 UPLOAD_JOBS="${UPLOAD_JOBS:-32}"
@@ -76,6 +83,27 @@ fi
 
 if ! [[ "$UPLOAD_JOBS" =~ ^[1-9][0-9]*$ ]]; then
     echo "Error: UPLOAD_JOBS must be a positive integer." >&2
+    exit 1
+fi
+
+ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+# R2 only accepts its own region names (wnam/enam/.../auto); pin `auto` so the
+# upload is independent of the ambient ~/.aws/config default region.
+S3_ARGS=(--endpoint-url "$ENDPOINT" --region auto)
+
+# ── Confirm we can reach the bucket before doing any work ───
+# Everything below this point is minutes of local work: staging slides,
+# rebuilding notebook zips, hashing ~4k files and half a gigabyte. Without this
+# probe an unusable bucket only surfaces at the end, as a wall of per-file
+# AccessDenied from the parallel uploaders. R2 answers 403 both for "no such
+# bucket" and "token not scoped to this bucket", so the message names both.
+echo "Checking access to s3://${BUCKET}/ ..."
+if ! aws s3api head-bucket --bucket "$BUCKET" "${S3_ARGS[@]}" >/dev/null 2>&1; then
+    echo "Error: cannot access bucket '$BUCKET' at $ENDPOINT." >&2
+    echo "       Either the bucket does not exist, or the R2 API token in .env" >&2
+    echo "       is not scoped to it — R2 tokens are per-bucket unless created" >&2
+    echo "       account-wide. Check the token's bucket scope in the Cloudflare" >&2
+    echo "       dashboard under R2 > Manage API tokens." >&2
     exit 1
 fi
 
@@ -113,11 +141,6 @@ if [[ ! -f "$BOOK_DIR/notebooks/d2l-pytorch.zip" ]]; then
         echo "         run 'make notebook-zips' or the bucket's zips will go stale/deleted." >&2
     fi
 fi
-
-ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-# R2 only accepts its own region names (wnam/enam/.../auto); pin `auto` so the
-# upload is independent of the ambient ~/.aws/config default region.
-S3_ARGS=(--endpoint-url "$ENDPOINT" --region auto)
 
 # ── Hash the local tree ─────────────────────────────────────
 # sha256sum format: `<64-hex>  <path>` — 64 + 2 + path.

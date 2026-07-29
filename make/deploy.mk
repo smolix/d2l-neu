@@ -36,7 +36,14 @@ publish-notebooks-branch: check-hosted-notebooks
 # tools/upload_r2.sh sources .env for R2 creds and does a hash-manifest
 # incremental upload of _book/. Preflight guards the common footguns: _book/ must
 # be built, .env must carry the creds, and the aws CLI must exist.
+#
+# Target another bucket (e.g. a throwaway preview) with R2_BUCKET, which the
+# script reads and which is exported here so it survives into the recipe:
+#   make upload-r2-full R2_BUCKET=temporary-d2l
+# Each bucket keeps its own .upload-manifest-<bucket>.txt, so switching buckets
+# never makes one bucket's upload state stand in for another's.
 R2_UPLOAD := tools/upload_r2.sh
+export R2_BUCKET
 
 .PHONY: _r2-preflight
 _r2-preflight:

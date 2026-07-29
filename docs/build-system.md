@@ -1186,6 +1186,17 @@ promotes the old throwaway `scratchpad/fullrun.sh` into first-class targets.
 [`-delete`|`-full`|`-dry-run`] wraps `tools/upload_r2.sh` behind an `_r2-preflight`
 guard (`_book/` built, `.env` creds, `aws` present).
 
+**Targeting another bucket.** The upload defaults to `staging-d2l` (the public
+staging site) but takes any bucket via `R2_BUCKET`, which `deploy.mk` exports so
+it reaches the recipe: `make upload-r2-full R2_BUCKET=temporary-d2l`, or
+`R2_BUCKET=… tools/upload_r2.sh` directly. Upload state is per-bucket
+(`.upload-manifest-<bucket>.txt`), so one bucket's manifest never stands in for
+another's and a fresh bucket starts with a full sync. **R2 API tokens are scoped
+per-bucket unless created account-wide**, so a new bucket usually needs a new or
+re-scoped token in `.env` — the script now HeadBuckets first and fails in a
+second with that hint, rather than after minutes of hashing and then a wall of
+per-file `AccessDenied` from the parallel uploaders.
+
 **`make figures` is incremental + manual.** It covers *every* chapter generator —
 including the ch6/7/8/9 ones (`gen_bg_*`, `gen_arch_*`, `gen_opt_figures`) the old
 `gen_mdl_*_figures.py` glob silently skipped — via a `.figstamps/<name>` per

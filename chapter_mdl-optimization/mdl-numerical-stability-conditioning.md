@@ -18,12 +18,13 @@ losses (:numref:`sec_mdl-information_theory`).
 We proceed in four steps: the representation and range of floating-point
 numbers; stable computation of softmax, log-sum-exp, and cross-entropy;
 why subtracting nearly equal numbers destroys digits
-and how reformulation (not higher precision) repairs it; and finally
+and how reformulation (not higher precision) reduces the error; and finally
 conditioning: backward versus forward error, the Hilbert matrix,
 why normal equations square the condition number, and how ridge regularization
 conditions the problem the way a preconditioner does. The standard references
 are :citet:`Goldberg.1991` for floating point and :citet:`Higham.2002` for
-everything else; :citet:`Goodfellow.Bengio.Courville.2016` (chapter 4) gives
+the numerical error analysis; :citet:`Goodfellow.Bengio.Courville.2016`
+(chapter 4) gives
 the deep-learning framing. Most code in this section is plain NumPy, since
 these phenomena belong to the arithmetic rather than to any library; the
 exception is the cross-entropy experiment, where library behavior genuinely
@@ -94,9 +95,9 @@ while the *relative* gap between neighbors stays essentially constant.
 
 That constant relative gap has a name. **Machine epsilon**
 $\varepsilon_{\text{mach}}$ is the distance from $1$ to the next representable
-number, $\varepsilon_{\text{mach}} = 2^{-p}$ for a $p$-bit mantissa, and it is
-the relative-error floor of the entire arithmetic: rounding any real $x$ to
-the nearest float $\mathrm{fl}(x)$ obeys
+number, $\varepsilon_{\text{mach}} = 2^{-p}$ for a $p$-bit mantissa. For a
+nonzero real $x$ whose rounded value is finite and normal, round-to-nearest
+obeys
 
 $$
 \mathrm{fl}(x) = x\,(1 + \delta), \qquad |\delta| \le u = \tfrac12\,\varepsilon_{\text{mach}},
@@ -108,11 +109,10 @@ normal range, IEEE arithmetic gives the analogous model: the computed
 $x \oplus y$ equals $(x + y)(1 + \delta)$ with $|\delta| \le u$
 (:cite:`IEEE.754.2019,Goldberg.1991`). Overflow, division by zero, NaNs, and
 results in the subnormal/underflow region require separate absolute-error
-reasoning; those exceptions are central rather than incidental below. The quantity $u$ is the *unit
-roundoff*. Everything
-in this section is bookkeeping on these $(1+\delta)$ factors: one of them is
-harmless; trouble starts when millions of them interact, or when a
-subtraction promotes one from relative to *catastrophic* (we get there in
+reasoning; those exceptions are central rather than incidental below. The
+quantity $u$ is the *unit roundoff*. Repeated operations accumulate these
+rounding terms, and subtraction can amplify error already present in its
+operands, as discussed in
 :numref:`subsec_mdl-catastrophic-cancellation`).
 
 Deep learning juggles three formats; the table below prints their parameters
@@ -161,11 +161,11 @@ $\varepsilon_{\text{mach}} = 2^{-3} = 0.125$ or roughly *one* decimal digit,
 inside a range that tops out at $448$; **E5M2** ($p = 2$) sacrifices another
 mantissa bit to buy fp16's full exponent range (maximum $57344$, smallest
 normal $6.1 \times 10^{-5}$). The division of labor is visible in the numbers:
-E4M3 holds weights and activations, which need digits; E5M2 holds gradients,
-which need range. And at $\varepsilon_{\text{mach}} = 0.125$ there is no slack
-left in the format, so fp8 training must pair every tensor with a *scale
-factor* that recenters its values on the representable window. Every halving
-of the bit budget is paid for in digits, in range, or in bookkeeping.
+E4M3 is often used for weights and activations, where precision matters, while
+E5M2 is useful for gradients that need more range. Practical fp8 training
+therefore uses explicit tensor- or block-level *scale factors* to place values
+inside the representable window. Reducing the bit budget requires a tradeoff
+among precision, range, and scaling overhead.
 
 ```{.python .input #numerical-stability-conditioning-fp8}
 #@tab pytorch
@@ -209,8 +209,7 @@ $e^x = \infty$ in fp32 once $x > \ln(3.4 \times 10^{38}) \approx 88.72$, and
 in fp16 once $x > \ln(65504) \approx 11.09$. Logits near $88.7$ are rare in
 healthy training, so fp32 softmax overflow is uncommon in practice; fp16's
 threshold of $11.09$ sits well inside the range of ordinary unnormalized
-scores, and it is the one that bites, which is why the mixed-precision recipe
-below exists. At the
+scores, so mixed-precision implementations must account for it. At the
 other end, $e^{-x}$ *underflows*: below the smallest normal number the format
 degrades gracefully through *subnormal* numbers with fewer and fewer
 significant bits, and then hits exactly $0$, at which point a subsequent
@@ -221,25 +220,26 @@ This is the arithmetic behind **mixed-precision training**
 below $6 \times 10^{-5}$ and vanish, so the loss is multiplied by a scale
 factor before the backward pass (and the gradients divided after) simply to
 shift them into representable territory: *loss scaling* is purely underflow
-management. bfloat16 makes that bookkeeping
-unnecessary: with fp32's exponent range nothing reasonable overflows or
-underflows, and the price is paid where deep learning is most tolerant:
-relative precision of only $2^{-7}$, in the noise-dominated mantissa of each
-weight update. The reason a master copy of the weights is kept in fp32 is
+management. Because bfloat16 has fp32's exponent range, it often avoids the
+gradient underflow that motivates fp16 loss scaling. It does not eliminate
+overflow: exponentials still overflow near $88.7$, and products or accumulators
+can exceed the finite range. Stable formulations and higher-precision
+accumulation remain necessary. The tradeoff is relative precision of only
+$2^{-7}$. The reason a master copy of the weights is kept in fp32 is
 :eqref:`eq_mdl-opt-rounding-model` again: a weight update of relative size
 below $\varepsilon_{\text{mach}}/2$ rounds to *no update at all*, and at
 $\varepsilon_{\text{mach}} = 2^{-7}$ that threshold is hit by perfectly
-healthy learning rates. A third escape is **stochastic rounding**
+healthy learning rates. A third alternative is **stochastic rounding**
 :cite:`Gupta.Agrawal.Gopalakrishnan.ea.2015`, increasingly common in fp8 and
 integer training: round up or down at random with
 probabilities proportional to proximity, so the *expected* stored value is
 exact and updates too small to survive round-to-nearest still make progress
 on average.
 
-Both fp16 failure modes, and both rescues, fit in one cell. A gradient
+Both fp16 failure modes and their corresponding remedies fit in one cell. A gradient
 whose true value is $10^{-8}$ underflows to zero during an fp16 backward
 pass, and multiplying the *loss* by $2^{14}$ before differentiating shifts
-the whole gradient chain into representable territory; a perfectly healthy
+the gradient chain into representable territory; a representable
 update of relative size $10^{-4}$ is lost to round-to-nearest in
 fp16, and an fp32 master copy of the weights accepts it without complaint:
 
@@ -286,11 +286,10 @@ $$
 exponentiates its logits, and the table above says exactly where that goes
 wrong: fp32 overflows the moment any logit exceeds $88.72$, fp16 already at
 $11.09$. The numerator becomes `inf`, the ratio becomes `inf/inf = NaN`,
-and the model dies even though the *probabilities* it was computing are
-perfectly tame numbers in $[0, 1]$. The failure is entirely an artifact of
-the route. You have met the repair before:
-:numref:`subsec_softmax-implementation-revisited` derived it when the fused
-cross-entropy loss was introduced, and we will not re-derive it here.
+even though the resulting *probabilities* lie in $[0, 1]$. The failure is due
+to the intermediate exponentials. The stable formulation was derived in
+:numref:`subsec_softmax-implementation-revisited` when the fused
+cross-entropy loss was introduced.
 Factoring the positive constant $e^{-c}$ out of numerator and denominator
 shows that softmax is *shift-invariant*,
 
@@ -351,8 +350,8 @@ builds, but under one NumPy build in our environments it prints `False`, the
 naive route's first entry differing by a single ulp ($0.09003058$ versus
 $0.09003057$). That one-bit discrepancy is the section's lesson in
 miniature: the identity constrains the real values, not the rounded ones.
-The library's `softmax` does this max-subtraction internally; the trap is
-re-implementing it yourself, which is why the practical rule is to use a
+The library's `softmax` does this max-subtraction internally. A direct
+reimplementation may omit it, so the practical rule is to use a
 library's stable softmax or log-sum-exp rather than exponentiating raw logits.
 
 ### Bounds for Log-Sum-Exp
@@ -432,8 +431,8 @@ and it is why those APIs exist. The alternative forces the loss through the
 representable range of probabilities: compute the probabilities first and then
 take the log, and a true-class probability below about $10^{-45}$ (the
 smallest fp32 subnormal is $\approx 1.4 \times 10^{-45}$) underflows fp32 to
-exactly $0$, so the loss becomes $\infty$. The cell below pits the
-two routes against each other on a two-class problem where the label is the
+exactly $0$, so the loss becomes $\infty$. The cell below compares the
+two routes on a two-class problem where the label is the
 *unlikely* class, with logit gap $t$, so the true loss is
 $\log(1 + e^{t}) \approx t$. This is the one computation in this section
 where library behavior genuinely differs; the from-probabilities route fails
@@ -547,7 +546,8 @@ $$
 
 an amplification factor that blows up precisely when $a \approx b$. The
 phenomenon is called **catastrophic cancellation**, and a two-line experiment
-shows both the disease and a cure. In float32, $1 + 10^{-8}$ rounds to
+compares an unstable expression with a stable formulation. In float32,
+$1 + 10^{-8}$ rounds to
 exactly $1$ (the increment is below $\varepsilon_{\text{mach}}/2$), so the
 textbook expression $\log(1 + x)$ returns $0$, a $100\%$ relative error,
 while the library function `log1p` is exact, because it evaluates the
@@ -572,9 +572,9 @@ near $0$ (use `log1p` and `expm1`), $1 - \cos x$ near $0$ (use
 $2\sin^2(x/2)$), the quadratic formula near a double root, and finite
 differences with too small a step, which is exactly the trade-off we
 quantified in :numref:`sec_mdl-single_variable_calculus`. In every case the
-cure is the same: *reformulate so that the subtraction happens analytically*,
-where it costs nothing, rather than numerically, where it costs everything.
-Higher precision merely postpones the failure; reformulation removes it
+remedy is the same: when an equivalent expression avoids subtracting nearby
+rounded values, use that formulation. Higher precision reduces the error but
+does not remove the amplification mechanism; reformulation can remove it
 :cite:`Higham.2002`.
 
 ### Case Study: Variance in One Pass
@@ -586,15 +586,16 @@ $$
 \mathrm{Var}(x) = \mathbb{E}[x^2] - \mathbb{E}[x]^2,
 $$
 
-beloved because it needs one pass over the data. As algebra it is flawless; as
-arithmetic it is a trap. For data with mean $\mu$ and standard deviation
+because it needs one pass over the data. The identity is exact in real
+arithmetic but unstable in floating-point arithmetic. For data with mean
+$\mu$ and standard deviation
 $\sigma \ll |\mu|$, both terms are about $\mu^2$ while their difference is
 $\sigma^2$, so :eqref:`eq_mdl-opt-cancellation-factor` predicts an error
 amplification of about $\mu^2/\sigma^2$, and with $\mu = 10^9$ and
 $\sigma = 1$ that is $10^{18}$: more than every digit float64 has. The naive
 formula can even return a *negative* variance.
 
-The repair is a reformulation due to
+An alternative formulation due to
 :citet:`Welford.1962` that keeps a running mean $m_k$ and a running sum of
 *centered* squares $M_k = \sum_{i \le k} (x_i - m_k)^2$, so no large numbers
 are ever subtracted:
@@ -692,18 +693,20 @@ form, and it is how running moments are combined across devices.
 
 ### Backward and Forward Error
 
-So far the *algorithms* were at fault, and rewriting them fixed everything.
-The deeper half of numerical analysis begins with a different question: when a
-computed answer is wrong, is the algorithm to blame, or the problem?
+The previous examples had unstable formulations whose algorithmic error could
+be reduced by reformulation. Numerical analysis must also distinguish error
+introduced by an algorithm from sensitivity inherent in the problem.
 :citet:`Higham.2002` makes the split precise with two definitions. The
 **forward error** is what you care about: the distance between the computed
 answer $\hat{\mathbf{x}}$ and the true answer $\mathbf{x}$. The **backward
 error** is what the algorithm should be judged by: the size of the smallest
 perturbation of the *inputs* for which $\hat{\mathbf{x}}$ would be exactly
 correct, or "you got the right answer to a nearby question; how nearby?" An
-algorithm with backward error at the rounding floor $u$ is called
-**backward stable**: it did everything that can be asked of finite-precision
-arithmetic, since merely *storing* the inputs already perturbs them by $u$.
+An algorithm is called **backward stable** when its computed result is the exact
+solution to a nearby problem whose input perturbation is of order $u$, up to
+modest dimension- and growth-dependent factors. This is often close to the best
+accuracy compatible with rounded inputs, but it does not imply small forward
+error for an ill-conditioned problem.
 Gaussian elimination with pivoting is the algorithm inside `np.linalg.solve`:
 elimination with row swaps that keep the multipliers small. It is backward
 stable in practice, though not in the worst case, where its growth factor can
@@ -977,20 +980,20 @@ one difference: a true preconditioner leaves the minimizer unchanged, while
 ridge biases the solution, shrinking $\mathbf{w}_\lambda$ toward
 $\mathbf{0}$; :numref:`sec_mdl-constrained-optimization-duality` showed the
 precise sense in which the penalty $\lambda\|\mathbf{w}\|^2$ is the
-Lagrangian counterpart of a norm constraint. In practice, the $\lambda$ you
-were going to add anyway for statistical reasons has been quietly
-stabilizing your arithmetic and accelerating your optimizer the whole time.
+Lagrangian counterpart of a norm constraint. Thus a regularization parameter
+chosen for statistical reasons can also improve the conditioning of the linear
+algebra and the convergence rate of gradient descent.
 
 ## Summary
 
 * Floating point is scientific notation with a finite mantissa: relative
   precision $\varepsilon_{\text{mach}}$ ($2^{-23}$ for fp32, $2^{-10}$ for
   fp16, $2^{-7}$ for bfloat16), absolute gaps that double at every power of
-  two, and overflow/underflow thresholds ($e^x$ dies at $x \approx 88.7$ in
+  two, and overflow/underflow thresholds ($e^x$ overflows at $x \approx 88.7$ in
   fp32, $x \approx 11.1$ in fp16). Mixed precision is engineering around
   these limits: loss scaling fights fp16 underflow; bfloat16 trades mantissa
   for fp32's exponent range; fp8 (E4M3/E5M2) tightens both budgets further
-  and makes per-tensor scaling mandatory.
+  and typically uses explicit tensor- or block-level scaling.
 * Softmax is shift-invariant, so subtract the max before exponentiating;
   shifted log-sum-exp is an exact identity that prevents exponential overflow
   for finite logits (provided the final result itself is representable);
@@ -999,7 +1002,7 @@ stabilizing your arithmetic and accelerating your optimizer the whole time.
   from-probabilities route ends in `inf`, `NaN`, or (worse) a silently
   clipped gradient.
 * Catastrophic cancellation: subtracting nearly equal numbers amplifies
-  existing relative error by $(|a|+|b|)/|a-b|$. The cure is reformulation,
+  existing relative error by $(|a|+|b|)/|a-b|$. The remedy is reformulation,
   not precision: `log1p`/`expm1` near zero, and Welford's recursion
   $m_k = m_{k-1} + (x_k - m_{k-1})/k$,
   $M_k = M_{k-1} + (x_k - m_{k-1})(x_k - m_k)$ in place of
@@ -1073,8 +1076,8 @@ log-sum-exp power every softmax and attention layer; log-space arithmetic is
 what makes naive Bayes (:numref:`sec_mdl-naive_bayes`) and probabilistic
 inference generally feasible; the from-logits cross-entropy is the computation
 :numref:`sec_mdl-information_theory` analyzes; and Welford-style running
-moments live inside batch normalization. One neighboring story is told
-elsewhere: the *depth* dimension of numerical stability (vanishing and
+moments live inside batch normalization. The main text treats the *depth*
+dimension of numerical stability (vanishing and
 exploding gradients as the conditioning of Jacobian products through many
 layers, and the initialization schemes that tame them) is the subject of
 :numref:`sec_numerical_stability` in the main text, and
@@ -1181,8 +1184,8 @@ for fp16's full range, for gradients:
 @!numerical-stability-conditioning-fp8
 
 ::: {.d2l-note .warn}
-At $\varepsilon_{\text{mach}} = 0.125$ there is no slack left: fp8
-training must pair *every tensor* with a scale factor.
+Practical fp8 training uses explicit tensor- or block-level scale factors to
+keep values within the representable range.
 :::
 :::
 
@@ -1201,28 +1204,29 @@ gradients, which need range.
 :::
 
 ::: {.d2l-note .warn}
-At $\varepsilon_{\text{mach}} = 0.125$ there is no slack left: fp8
-training must pair *every tensor* with a scale factor. (The `ml_dtypes`
-package provides both formats.)
+Practical fp8 training uses explicit tensor- or block-level scale factors.
+The `ml_dtypes` package provides both formats.
 :::
 :::
 
 ::: {.slide title="Where the thresholds are"}
 [Floating point]{.kicker}
 
-Because $e^x$ turns additive scale into multiplicative scale, a modest
-*logit* overflows: fp32 dies at $x \approx 88.7$, fp16 at $x \approx 11.1$.
+Because $e^x$ turns additive scale into multiplicative scale, finite thresholds
+matter: exponentiation overflows near $x \approx 88.7$ in fp32 and
+$x \approx 11.1$ in fp16.
 
 @!numerical-stability-conditioning-spacing
 
 ::: {.d2l-note .warn}
-fp16 gradients below $6\times10^{-5}$ vanish; updates of relative size
-below $\varepsilon_{\text{mach}}/2$ round to *no update at all*. Both
-limits bite mixed-precision training (next slide).
+fp16 gradients below $6\times10^{-5}$ enter the subnormal range and lose
+precision; values below about $6\times10^{-8}$ round to zero. Updates of
+relative size below $\varepsilon_{\text{mach}}/2$ can round to *no update at
+all*. Both effects matter in mixed-precision training.
 :::
 :::
 
-::: {.slide title="Both fp16 failure modes, both rescues, one cell" only="pytorch"}
+::: {.slide title="Two fp16 failure modes require different remedies" only="pytorch"}
 [Floating point]{.kicker}
 
 A true gradient of $10^{-8}$ underflows fp16's backward pass to $0.0$;
@@ -1235,15 +1239,15 @@ round-to-nearest; an fp32 master copy accepts it:
 ::: {.d2l-note .rule}
 **Loss scaling is underflow management; master weights are rounding
 management.** This is precisely what `torch.amp`'s `GradScaler` plus
-fp32 master weights automate, and what bfloat16's fp32-sized exponent
-makes unnecessary.
+fp32 master weights automate. Bfloat16's fp32-sized exponent often removes the
+need for loss scaling, but not for stable exponentials or accurate accumulation.
 :::
 :::
 
-::: {.slide title="Both fp16 failure modes, both rescues" except="pytorch"}
+::: {.slide title="Two fp16 failure modes require different remedies" except="pytorch"}
 [Floating point]{.kicker}
 
-The two failure modes, and their two escapes, in mixed-precision training:
+The two failure modes, and their two remedies, in mixed-precision training:
 
 - A true gradient of $10^{-8}$ **underflows** an fp16 backward pass to an
   exact $0.0$; multiplying the *loss* by $2^{14}$ before differentiating
@@ -1255,8 +1259,9 @@ The two failure modes, and their two escapes, in mixed-precision training:
 
 ::: {.d2l-note .rule}
 **Loss scaling is underflow management; master weights are rounding
-management**: this is what the library's mixed-precision utilities
-automate, and what bfloat16's fp32-sized exponent makes unnecessary.
+management**: this is what the library's mixed-precision utilities automate.
+Bfloat16's fp32-sized exponent often removes the need for loss scaling, but
+not for stable exponentials or accurate accumulation.
 :::
 :::
 
@@ -1466,7 +1471,7 @@ summation order. This is what `BatchNorm` avoids with running moments.
 The naive variance's noise changed *sign* between NumPy builds. That is
 summation error at work. Adding $n$ floats left to
 right commits one rounding per addition, worst case $\approx n\,u$; the
-repairs reorganize the additions:
+stable methods reorganize the additions:
 
 ::: {.d2l-note .rule}
 **left-to-right** $O(n\,u)$ · **pairwise** (sum halves recursively)
@@ -1575,13 +1580,13 @@ $\mathbf{w}_\lambda$ toward $\mathbf{0}$.
 :::
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Stable algorithms control error; conditioning controls sensitivity"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}
 ::: {.col}
 - **Floating point:** relative precision $\varepsilon_{\text{mach}}$,
-  gaps that double, overflow thresholds ($e^x$ dies at $x\approx 88.7$ in
+  gaps that double, overflow thresholds ($e^x$ overflows at $x\approx 88.7$ in
   fp32).
 - **Stable softmax:** subtract the max; log-sum-exp is exact; compute
   cross-entropy from logits as $\mathrm{lse}(\mathbf{z}) - z_y$.

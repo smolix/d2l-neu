@@ -57,14 +57,14 @@ import numpy as np
 
 ## Brownian Motion
 
-### Why Add Randomness
+### Randomness as a Data-Independent Noising Mechanism
 :label:`sec_mdl-why-randomness`
 
 :numref:`sec_mdl-odes-solvers` gave us a *deterministic* law of motion: a
 velocity field $\mathbf{f}$ moves every point along the one trajectory through
-it, and the resulting flow map is invertible: run it backward and you
-recover exactly where each point started. That is a feature for physics and a
-bug for generative modeling. The forward half of a diffusion model must
+it, and the resulting exact flow map is invertible under the well-posedness
+conditions of :numref:`sec_mdl-odes-solvers`. This is useful for deterministic
+transport, whereas the forward half of a diffusion model must
 *destroy* information, and destroy it *controllably*: starting from data
 distributed as $p_0 = p_{\textrm{data}}$, it should end at a known,
 distribution-independent target,
@@ -97,9 +97,8 @@ d\mathbf{X} \;=\; \underbrace{\mathbf{f}(\mathbf{X}, t)\,dt}_{\textrm{drift}}
 $$
 :eqlabel:`eq_mdl-sde-template`
 
-The plan for the rest of the section: define the noise
-source $\mathbf{W}$ (Brownian motion, this section's first half), learn the
-calculus it forces on us (Itô), then give :eqref:`eq_mdl-sde-template` a
+The rest of the section first defines the noise source $\mathbf{W}$, then
+develops Itô calculus and gives :eqref:`eq_mdl-sde-template` a
 precise meaning, simulate it (Euler--Maruyama), and work the one example that
 diffusion models actually use (Ornstein--Uhlenbeck).
 
@@ -160,7 +159,7 @@ $$
 
 The multivariate version $\mathbf{W}_t$ runs one independent scalar
 Brownian motion per coordinate; for the diagonal, state-independent noise
-$g(t)\,d\mathbf{W}$ used throughout this chapter, everything below extends
+$g(t)\,d\mathbf{W}$ used throughout this chapter, the calculations below extend
 coordinate-wise. Two
 consequences of the definition do a lot of work later. The first is the
 correlation structure.
@@ -181,22 +180,27 @@ independent of $W_s$, and both factors have mean zero. Since the means vanish,
 $\operatorname{Cov}(W_s, W_t) = \mathbb{E}[W_s W_t] = \min(s, t)$.
 $\blacksquare$
 
-The second consequence is a paradox that motivates the entire next section:
-Brownian paths are continuous but **nowhere differentiable**, a genuine
-theorem :cite:`Paley.Wiener.Zygmund.1933`. The heuristic is one line of
+The second consequence motivates stochastic integration. Brownian paths are
+almost surely continuous but **nowhere differentiable**, a theorem
+:cite:`Paley.Wiener.Zygmund.1933`. The increment scaling supplies a useful
+heuristic:
 :eqref:`eq_mdl-sde-increment`:
 
 $$
-\frac{\Delta W}{\Delta t} = \frac{\sqrt{\Delta t}\,\xi}{\Delta t}
-= \frac{\xi}{\sqrt{\Delta t}} \;\longrightarrow\; \pm\infty
-\quad \textrm{as } \Delta t \to 0.
+\left|\frac{\Delta W}{\Delta t}\right|
+= \frac{|\xi|}{\sqrt{\Delta t}}
+\;\longrightarrow\; \infty
+\quad \textrm{in probability as } \Delta t \to 0.
 $$
 
-The difference quotient does not settle down; it diverges. Zooming in on a
+Thus a fresh difference quotient does not remain bounded in probability. This
+scaling is not a proof of the pathwise theorem: increments at nested scales are
+dependent, and nowhere differentiability requires a separate argument. It does
+explain the obstruction. Zooming in on a
 smooth curve flattens it into its tangent line
 (:numref:`sec_mdl-single_variable_calculus`); zooming in on a Brownian path
-reveals more wiggles at every scale, statistically identical to the ones you
-zoomed past. So "$dW/dt$" does not exist, and a velocity-field reading of
+reveals fluctuations at every scale, with the same statistical structure
+after rescaling. Thus "$dW/dt$" does not exist, and a velocity-field reading of
 :eqref:`eq_mdl-sde-template` is unavailable: we will have to make sense of
 $dW$ *inside integrals*, which is exactly what the Itô calculus does.
 
@@ -247,11 +251,11 @@ path so far; only the current position matters.
 ### Quadratic Variation: Why Ordinary Calculus Fails
 :label:`sec_mdl-quadratic-variation`
 
-Here is the single fact from which every extra term in stochastic calculus
-springs. Take a partition $0 = t_0 < t_1 < \cdots < t_n = t$ with mesh
+Quadratic variation distinguishes Brownian paths from smooth ones. Take a
+partition $0 = t_0 < t_1 < \cdots < t_n = t$ with mesh
 $\delta = \max_i \Delta t_i$, and ask what happens to the sum of *squared*
 increments of a function along it. For a continuously differentiable path
-$x(t)$ the answer is: nothing survives,
+$x(t)$ the sum vanishes,
 
 $$
 \sum_{i} (\Delta x_i)^2
@@ -306,8 +310,8 @@ $$
 
 The first rule is :eqref:`eq_mdl-sde-qv` in shorthand; the other two record
 that $dW\,dt \sim \Delta t^{3/2}$ and $(dt)^2 = \Delta t^2$ vanish faster than
-$\Delta t$ and so contribute nothing in the limit. Watch the first rule
-materialize numerically: we accumulate $\sum (\Delta W_i)^2$ along *one fixed
+$\Delta t$ and so contribute nothing in the limit. The following computation
+accumulates $\sum (\Delta W_i)^2$ along *one fixed
 Brownian path*, sampled on finer and finer grids, and contrast it with the
 same sum for the smooth path $\sin(2\pi t)$.
 
@@ -334,38 +338,35 @@ other converges to the elapsed time: that gap *is* stochastic calculus.
 
 ### The Itô Integral
 
-To give :eqref:`eq_mdl-sde-template` meaning we must integrate against a
-nowhere-differentiable integrator: define $\int_0^t G_s\,dW_s$ for a process
-$G$ that is **non-anticipating** ($G_s$ is determined by the path on $[0, s]$
-and jointly measurable, never a function of the future) and square-integrable,
-$\int_0^t \mathbb{E}[G_s^2]\,ds < \infty$. The **Itô integral** is the
-mean-square limit of left-endpoint Riemann sums,
+To give :eqref:`eq_mdl-sde-template` meaning, begin with a **simple
+predictable process**. On each interval $(t_i,t_{i+1}]$, let $G_s=G_i$, where
+$G_i$ is determined by the path through time $t_i$ and
+$\mathbb{E}[G_i^2]<\infty$. Define its **Itô integral** by
 
 $$
 \int_0^t G_s \, dW_s
-\;=\; \lim_{\delta \to 0} \sum_{i} G_{t_i}\left(W_{t_{i+1}} - W_{t_i}\right),
+\;=\; \sum_i G_i\left(W_{t_{i+1}}-W_{t_i}\right).
 $$
 :eqlabel:`eq_mdl-sde-ito-integral`
 
-:citet:`Oksendal.2003`, chapter 3, constructs this limit for every such $G$
-and shows that the two identities below survive the passage to it; we take
-both as given. The choice of the *left* endpoint is the source of the
-integral's two key properties. Because
-$G_{t_i}$ is determined by the path up
-to $t_i$ while the increment $\Delta W_i$ is independent of that past, each
-summand factorizes in expectation:
-$\mathbb{E}[G_{t_i}\,\Delta W_i] = \mathbb{E}[G_{t_i}]\,\mathbb{E}[\Delta W_i] = 0$.
-Two facts follow immediately.
+Because $G_i$ is fixed before the increment $\Delta W_i$, independence gives
+$\mathbb{E}[G_i\Delta W_i]=0$. The Itô isometry below makes this definition
+continuous in the norm
+$\|G\|_{L^2}^2=\int_0^t\mathbb{E}[G_s^2]ds$. Simple predictable processes
+are dense among square-integrable predictable processes, so the integral
+extends uniquely by an $L^2$ limit :cite:`Oksendal.2003`. For sufficiently
+regular adapted $G$, ordinary left-endpoint sums converge to this integral;
+arbitrary point samples are not the general definition.
 
 First, the **zero-mean property**: $\mathbb{E}\!\left[\int_0^t G\,dW\right] = 0$.
-Betting on a fair coin with a stake you must fix *before* each toss leaves you
-with nothing on average, however cleverly the stake depends on the history. (A
+The zero mean follows from choosing each coefficient before observing the
+corresponding increment. (A
 stronger fact holds, which we grant: given everything observed up to time $s$,
 the expected future value of the integral equals its current value; processes
 with this fair-game property are called *martingales* :cite:`Oksendal.2003`.)
 Second, its variance is computable:
 
-**Proposition (Itô isometry).** *For non-anticipating $G$ with
+**Proposition (Itô isometry).** *For predictable $G$ with
 $\int_0^t \mathbb{E}[G_s^2]\,ds < \infty$,*
 
 $$
@@ -374,18 +375,19 @@ $$
 $$
 :eqlabel:`eq_mdl-sde-ito-isometry`
 
-**Proof.** Expand the square of the approximating sum in
-:eqref:`eq_mdl-sde-ito-integral`. A cross term with $i < j$ contains the
+**Proof.** First take a simple predictable $G$ and expand the square of the sum
+in :eqref:`eq_mdl-sde-ito-integral`. A cross term with $i < j$ contains the
 factor $\Delta W_j$, independent of everything determined by time $t_j$
 (including $G_{t_i} \Delta W_i G_{t_j}$), so it factorizes:
 $\mathbb{E}\!\left[G_{t_i}\Delta W_i\, G_{t_j} \Delta W_j\right] =
 \mathbb{E}\!\left[G_{t_i}\Delta W_i\, G_{t_j}\right]\mathbb{E}[\Delta W_j] = 0$.
 A diagonal term factorizes the same way into
 $\mathbb{E}\!\left[G_{t_i}^2\right]\mathbb{E}\!\left[(\Delta W_i)^2\right] =
-\mathbb{E}\!\left[G_{t_i}^2\right]\Delta t_i$. Summing the surviving diagonal,
-$\sum_i \mathbb{E}[G_{t_i}^2]\,\Delta t_i \to \int_0^t \mathbb{E}[G_s^2]\,ds$,
-an ordinary Riemann limit; the passage from the sums to their mean-square
-limit is exactly the granted construction above. $\blacksquare$
+\mathbb{E}\!\left[G_i^2\right]\Delta t_i$. Summing the surviving diagonal gives
+$\sum_i \mathbb{E}[G_i^2]\,\Delta t_i = \int_0^t \mathbb{E}[G_s^2]\,ds$.
+For a general square-integrable predictable $G$, approximate it in $L^2$ by
+simple predictable processes. Both sides converge by the defining norm, so
+the identity extends. $\blacksquare$
 
 The isometry converts a stochastic computation (the variance of a noise
 integral) into an ordinary integral, and it is how we will obtain the
@@ -413,7 +415,8 @@ may not peek at the upcoming noise), which is why this book builds on it.
 The chain rule for this calculus now writes itself. Let $X_t$ solve
 $dX = f\,dt + g\,dW$ (made fully precise in
 :numref:`sec_mdl-sde-definition`; for now, read it through its increments)
-and let $\phi(x, t)$ be twice differentiable. Taylor-expand a small change of
+and let $\phi(x, t)$ be once continuously differentiable in time and twice in
+state. Taylor-expand a small change of
 $\phi$ *to second order*, since first order is no longer enough:
 
 $$
@@ -431,8 +434,9 @@ The drift and cross terms vanish; the noise-squared term survives as a genuine
 first-order contribution. Collecting terms gives the central formula of the
 subject.
 
-**Proposition (Itô's lemma).** *If $dX = f\,dt + g\,dW$ and $\phi(x, t)$ is
-twice continuously differentiable, then $Y_t = \phi(X_t, t)$ satisfies*
+**Proposition (Itô's lemma).** *Suppose the SDE and the integrals below are
+well-defined, and let $\phi\in C^{1,2}$: once continuously differentiable in
+time and twice in the state variable. Then $Y_t=\phi(X_t,t)$ satisfies*
 
 $$
 d\phi \;=\; \left(\phi_t + f\,\phi_x + \tfrac12 g^2\,\phi_{xx}\right) dt
@@ -442,8 +446,8 @@ $$
 
 The Taylor argument above is a heuristic; the full proof controls the
 error terms in mean square and can be found in :citet:`Oksendal.2003`,
-chapter 4. Everything is the ordinary chain rule except the one new term
-$\tfrac12 g^2 \phi_{xx}\,dt$, the **Itô correction**, which exists
+chapter 4. Relative to the ordinary chain rule, the additional term is
+$\tfrac12 g^2 \phi_{xx}\,dt$, the **Itô correction**, which appears
 because $(dW)^2 = dt$. Curvature of $\phi$ interacts with the jitter of $X$:
 a convex $\phi$ gains from symmetric noise (both wiggle directions push the
 value up), and the correction quantifies that gain. This single term seeds the
@@ -484,7 +488,7 @@ where the $-t$ is forced by consistency: the left-endpoint integral has mean
 zero while $\mathbb{E}[W_t^2] = t$, so the ordinary-calculus answer
 $\tfrac12 W_t^2$ *cannot* be right. The correction is large enough to see on a
 single simulated path: we accumulate the left-endpoint sum
-$\int_0^t 2W\,dW$ and watch its gap to $W_t^2$ grow along the diagonal.
+$\int_0^t 2W\,dW$ and plot its gap to $W_t^2$.
 
 ```{.python .input #sdes-ito-correction}
 rng = np.random.default_rng(3)
@@ -535,8 +539,8 @@ step, $\mathbb{E}[dX] = f\,dt$ while $\operatorname{Var}(dX) = g^2\,dt$, so
 $f$ is the conditional mean velocity and $g^2$ the rate at which variance is
 pumped in. Setting $g \equiv 0$ recovers the deterministic ODE of
 :numref:`sec_mdl-odes-solvers` exactly. As with ODEs, Lipschitz continuity of
-$f$ and $g$ (in $x$, with at most linear growth) guarantees a unique solution
-driven by each Brownian path: the stochastic Picard iteration of
+$f$ and $g$ (in $x$, with at most linear growth) guarantees a unique strong
+solution up to indistinguishability: the stochastic Picard iteration of
 :citet:`Oksendal.2003`, chapter 5, mirrors the deterministic one of
 :numref:`sec_mdl-ode-existence-uniqueness`.
 
@@ -552,9 +556,10 @@ Ornstein--Uhlenbeck design we build in
 :numref:`sec_mdl-ornstein-uhlenbeck` and reuse in
 :numref:`sec_mdl-score-matching-diffusion-flow`).
 
-The conceptual leap from ODEs: a *solution is a distribution over paths*, not
-a curve. Fix $X_0$ and run :eqref:`eq_mdl-sde-general` many times with fresh
-noise; you get a fan of jittery trajectories whose ensemble statistics, the
+Unlike an ODE solution, an SDE solution is a stochastic process whose law is
+a distribution over paths rather than a single curve. Fixing $X_0$ and running
+:eqref:`eq_mdl-sde-general` many times with fresh noise produces a fan of
+jittery trajectories whose ensemble statistics, the
 time marginals $p_t$, are what generative modeling cares about.
 :numref:`fig_mdl-dyn-sde-paths` shows this fan for the Ornstein--Uhlenbeck
 process: the mean follows the drift, the spread is set by the diffusion, and
@@ -583,8 +588,8 @@ $$
 The noise scales as $\sqrt{\Delta t}$, never $\Delta t$: the kick *is* a
 Brownian increment over the step, and we saw in
 :numref:`sec_mdl-wiener-process` that any other exponent makes the noise
-vanish or explode in the limit. When $g = 0$ the scheme is forward Euler,
-literally. The helper below implements :eqref:`eq_mdl-sde-em` for a whole
+vanish or explode in the limit. When $g = 0$ the scheme is forward Euler.
+The helper below implements :eqref:`eq_mdl-sde-em` for a whole
 batch of paths at once, and the sanity check runs it with $g = 0$ on
 $\dot{x} = -x$.
 
@@ -617,13 +622,14 @@ $\mathbb{E}\,|X^{\Delta t}_N - X_T|$ measures pathwise tracking: does the
 simulated trajectory follow the true trajectory driven by that noise? The
 **weak error** $|\mathbb{E}\,\varphi(X^{\Delta t}_N) - \mathbb{E}\,\varphi(X_T)|$,
 for smooth test functions $\varphi$, measures distributional accuracy: do the
-*marginals* come out right, even if individual paths wander? Weak is the one
-diffusion models care about: samples are drawn from marginals, and nobody
-asks a generated image to track a particular noise path.
+*marginals* come out right, even if individual paths wander? Weak error is the
+direct criterion for endpoint-law sampling. Strong error remains relevant when
+an application couples trajectories across resolutions, reconstructs a fixed
+latent path, or differentiates through a particular numerical realization.
 :numref:`fig_mdl-dyn-strong-weak` shows the two notions side by side. The
 classical rates :cite:`Kloeden.Platen.1992` are:
 
-![Strong versus weak convergence of Euler--Maruyama on the OU process. Left: one coarse path ($16$ steps, orange) against a fine reference ($4096$ steps, blue) driven by the *same* Brownian increments; the strong error is this pathwise gap, visible to the eye. Right: terminal histograms of $20{,}000$ paths at the two step sizes lie on top of each other and on the analytic marginal (black): the *laws* already agree to $O(\Delta t)$ where individual paths still stray. Diffusion models need only the right-hand agreement.](../img/mdl-dyn-strong-weak.svg)
+![Strong versus weak convergence of Euler--Maruyama on the OU process. Left: one coarse path ($16$ steps, orange) against a fine reference ($4096$ steps, blue) driven by the same Brownian increments; their endpoint gap contributes to strong error. Right: terminal histograms of $20{,}000$ paths at the two step sizes lie on top of each other and on the analytic marginal (black), illustrating weak accuracy. Endpoint-law generation uses the right-hand criterion; coupled-path tasks can require the left-hand one.](../img/mdl-dyn-strong-weak.svg)
 :label:`fig_mdl-dyn-strong-weak`
 
 **Proposition (strong order of Euler--Maruyama).** *Under global Lipschitz
@@ -736,8 +742,8 @@ sm, sv = np.polyfit(np.log(dts), np.log(np.array(errs)), 1)[0]
 print(f'weak-order slopes on OU:  mean {sm:.2f},  variance {sv:.2f}')
 ```
 
-Slope $1.01$ for the mean error and $1.01$ for the variance error: weak order
-$1$, on the nose. (The exact OU mean and variance used as ground truth here
+The slopes are $1.01$ for both the mean and variance errors, consistent with
+weak order $1$. (The exact OU mean and variance used as ground truth here
 are derived in the next section.) Halving the step halves the marginal error:
 the rate at which a discretized diffusion model's forward marginals
 approach the SDE's, a fact :numref:`sec_mdl-ddpm-discretized-sde` leans on
@@ -769,7 +775,7 @@ therefore provides a convenient basis for variance-preserving diffusion.
 We use the same integrating factor that solves the deterministic
 equation. Apply Itô's lemma :eqref:`eq_mdl-sde-ito-lemma` to
 $\phi(x, t) = e^{\theta t} x$, for which $\phi_t = \theta e^{\theta t} x$,
-$\phi_x = e^{\theta t}$, and (the punchline) $\phi_{xx} = 0$, so the Itô
+$\phi_x = e^{\theta t}$, and $\phi_{xx} = 0$, so the Itô
 correction *vanishes* (knowing when the correction is zero is as useful as
 knowing its value):
 
@@ -816,8 +822,8 @@ $$
 A closed-form Gaussian at *every* time, for *every* start: this is the
 Gaussian noising kernel that lets denoising score matching evaluate its
 regression target in closed form
-(:numref:`sec_mdl-denoising-score-matching`). Let us watch the kernel emerge
-from raw Euler--Maruyama simulation: an ensemble launched from the single
+(:numref:`sec_mdl-denoising-score-matching`). The following Euler--Maruyama
+simulation compares the kernel with an ensemble launched from the single
 point $X_0 = 2$ (matching :numref:`fig_mdl-dyn-sde-paths`), with the analytic
 mean and $\pm 2\sigma_t$ band overlaid.
 
@@ -874,11 +880,11 @@ $$
 
 while the mean stays zero; and since :eqref:`eq_mdl-sde-ou-solution` writes
 $X_t$ as a sum of independent Gaussians, $X_t$ is Gaussian with these
-moments, hence equal in law to $X_0$. The law never moves again. The relaxation toward it happens on the time
+moments, hence equal in law to $X_0$. Relaxation toward stationarity happens on the time
 scale $1/\theta$: after a few multiples, $e^{-\theta t}$ is negligible. At
 $t = 4$ (four relaxation times, for our $\theta = 1$) the ensemble from the
-previous cell should already be a sample from the stationary Gaussian,
-even though every path started from the same point $2$.
+previous cell should already be close to the stationary Gaussian, even though
+every path started from the same point $2$.
 
 ```{.python .input #sdes-ou-stationary}
 var_inf = sigma**2 / (2 * theta)
@@ -905,8 +911,7 @@ $\Delta t = 5 \times 10^{-3}$, so discretization explains only $+0.001$ of
 the $+0.0045$ gap. The Monte-Carlo standard error of a $10{,}000$-sample
 variance is $\approx 0.006$; the rest, indeed most, of the gap is
 statistics, sitting on top of a small deterministic bias.) Mean reversion has
-converted a point mass into a fixed Gaussian; run longer and nothing more
-happens.
+converted a point mass into a distribution close to the stationary Gaussian.
 
 ### The Variance-Preserving Normalization
 
@@ -950,8 +955,8 @@ drift balances diffusion at stationarity (true of any process that has a
 stationary distribution). The forward process reallocates the variance (a
 fraction $\bar{\alpha}_t$ still carried by the data, the complementary
 $1 - \bar{\alpha}_t$ already replaced by noise) without ever changing the
-total. Everything *else* about the distribution changes: it morphs from the
-data law to the Gaussian. We demonstrate this with data as un-Gaussian
+total. Higher moments and the distribution's shape still change as the law
+approaches the Gaussian. We demonstrate this with data as non-Gaussian
 as possible at unit variance, the two-point (Rademacher) distribution
 $X_0 = \pm 1$, and track two moments: the variance, which should stay
 pinned at $1$, and the fourth moment $\mathbb{E}[X_t^4]$, which
@@ -982,8 +987,8 @@ $2.286$ (analytic $2.264$) to $3.06$ against the Gaussian $3$. The overshoot
 is mostly EM's weak bias: the printed variance $1.014$ corresponds to a
 Gaussian fourth moment of $3v^2 \approx 3.08$, and the remainder sits inside
 one Monte-Carlo standard error ($\approx 0.04$ for a fourth moment on
-$50{,}000$ paths). The distribution has become Gaussian; the variance never
-moved. Time-dependent noise schedules are a cosmetic
+$50{,}000$ paths). The distribution is close to Gaussian, while the variance
+remains near one. Time-dependent noise schedules are a direct
 generalization: the **VP-SDE** of score-based diffusion
 :cite:`song2021score`,
 
@@ -996,7 +1001,7 @@ is an OU process with time-rescaled rate $\theta(t) = \beta(t)/2$ and noise
 $\sigma(t)^2 = \beta(t)$, which satisfies $\sigma(t)^2 = 2\,\theta(t)$ *at
 every instant*: the unit-variance normalization, maintained along the whole
 schedule (with $\bar{\alpha}_t = e^{-\int_0^t \beta(s)\,ds}$ replacing
-$e^{-2\theta t}$). This SDE is the bridge to everything that follows: its
+$e^{-2\theta t}$). This SDE supplies the forward marginals used below: its
 marginals solve the Fokker--Planck equation of
 :numref:`sec_mdl-fokker-planck-probability-flow`, its time reversal is the
 generative sampler of :numref:`sec_mdl-time-reversal`, and its Euler--Maruyama discretization gives the first-order continuous-time
@@ -1019,8 +1024,8 @@ an Euler--Maruyama step with identical coefficients.
 * **Quadratic variation**: $\sum (\Delta W_i)^2 \to t$ in mean square;
   squared noise accumulates deterministically. In differential shorthand,
   $(dW)^2 = dt$, $dW\,dt = 0$, $(dt)^2 = 0$.
-* The **Itô integral** evaluates integrands at the *left* endpoint
-  (no peeking at the future), which buys zero mean and the **isometry**
+* The **Itô integral** is defined first for predictable simple processes and
+  extended by an $L^2$ limit. Predictability yields zero mean and the **isometry**
   $\mathbb{E}[(\int G\,dW)^2] = \int \mathbb{E}[G^2]\,ds$. **Itô's lemma** is
   the chain rule plus the correction $\tfrac12 g^2 \phi_{xx}\,dt$ forced by
   $(dW)^2 = dt$; on $\phi = W^2$ the correction is the visible $+t$ in
@@ -1036,7 +1041,7 @@ an Euler--Maruyama step with identical coefficients.
 * The **Ornstein--Uhlenbeck process** $dX = -\theta X\,dt + \sigma\,dW$
   solves in closed form: Gaussian transition kernel
   $\mathcal{N}\!\left(x_0 e^{-\theta t}, \tfrac{\sigma^2}{2\theta}(1 - e^{-2\theta t})\right)$,
-  stationary law $\mathcal{N}(0, \sigma^2\!/2\theta)$ reached from any start.
+  stationary law $\mathcal{N}(0, \sigma^2\!/2\theta)$ approached from any start.
 * With $\sigma^2 = 2\theta$ and unit-variance data, the marginal is
   $X_t = \sqrt{\bar{\alpha}_t} X_0 + \sqrt{1 - \bar{\alpha}_t}\,\epsilon$ and
   $\operatorname{Var}(X_t) = \bar{\alpha}_t + (1 - \bar{\alpha}_t) = 1$ for
@@ -1112,11 +1117,11 @@ an Euler--Maruyama step with identical coefficients.
 ::: {.cover}
 [Dive into Deep Learning · §27.2]{.kicker}
 
-Brownian motion, Itô's calculus, and the SDE<br>**the forward process of every diffusion model**.
+Brownian motion, Itô calculus, and the SDE<br>**a continuous-time model for diffusion forward processes**.
 :::
 :::
 
-::: {.slide title="Why add noise?"}
+::: {.slide title="Noise supplies a data-independent forward process"}
 [Motivation]{.kicker}
 
 ::: {.cols .vc}
@@ -1156,7 +1161,7 @@ The $\pm\sqrt{\Delta t}$ random walk has a non-degenerate limit $W_t$:
 $W_0=0$, independent increments, $W_t-W_s\sim\mathcal N(0,t-s)$, continuous
 paths. Simulate with $\Delta W = \sqrt{\Delta t}\,\xi$, $\xi\sim\mathcal N(0,1)$.
 
-![](../img/mdl-dyn-brownian-paths.svg){width=80%}
+@fig:mdl-dyn-brownian-paths
 :::
 
 ::: {.slide title="Covariance and non-differentiability"}
@@ -1169,8 +1174,9 @@ independence and both factors are mean-zero. $\blacksquare$
 
 . . .
 
-But $\Delta W/\Delta t = \xi/\sqrt{\Delta t}\to\pm\infty$: paths are
-**nowhere differentiable**. We must integrate, never differentiate.
+The magnitude $|\Delta W/\Delta t|=|\xi|/\sqrt{\Delta t}$ diverges in
+probability for a fresh increment. This scaling motivates, but does not prove,
+the theorem that Brownian paths are **nowhere differentiable**.
 
 @sdes-brownian-paths
 :::
@@ -1193,7 +1199,7 @@ to the elapsed time:
 
 $$\sum_i (\Delta W_i)^2 \longrightarrow t.$$
 
-![](../img/mdl-dyn-qv-convergence.svg){width=78%}
+@fig:mdl-dyn-qv-convergence
 :::
 
 ::: {.slide title="The Itô multiplication table"}
@@ -1208,12 +1214,13 @@ A squared increment is no longer negligible: it is $dt$.
 :::
 :::
 
-::: {.slide title="The Itô integral locks the left endpoint"}
+::: {.slide title="Predictability makes the Itô integral non-anticipating"}
 [The integral]{.kicker}
 
-Evaluate the integrand *before* the increment,
-$\int_0^t G_s\,dW_s = \lim\sum G_{t_i}(W_{t_{i+1}}-W_{t_i})$. Then
-$G_{t_i}\perp\Delta W_i$, so
+For a simple predictable process, choose $G_i$ using information available at
+$t_i$ and define $\int_0^tG_s\,dW_s=\sum_iG_i\Delta W_i$. Extend this definition
+to square-integrable predictable processes by the isometry. Since
+$G_i\perp\Delta W_i$,
 
 $$\mathbb E\Bigl[\textstyle\int_0^t G\,dW\Bigr] = 0, \qquad
 \mathbb E\Bigl[\bigl(\textstyle\int_0^t G\,dW\bigr)^2\Bigr]
@@ -1225,7 +1232,8 @@ The **Itô isometry** turns a stochastic variance into an ordinary integral.
 ::: {.slide title="Itô's lemma: a chain rule with a correction"}
 [The chain rule]{.kicker}
 
-Expand $\phi(X)$ to second order; since $(dX)^2=g^2\,dt$ survives,
+For $\phi\in C^{1,2}$, expand $\phi(X,t)$ to second order; since
+$(dX)^2=g^2\,dt$ survives,
 
 $$d\phi = \bigl(\phi_t + f\,\phi_x + \tfrac12 g^2\,\phi_{xx}\bigr)dt + g\,\phi_x\,dW.$$
 
@@ -1247,7 +1255,7 @@ Check $\phi=x^2$, $X=W$: $d(W^2)=2W\,dW+dt$, so $\int_0^t W\,dW=\tfrac12(W_t^2-t
 :::
 :::
 
-::: {.slide title="An SDE is a distribution over paths"}
+::: {.slide title="An SDE induces a distribution over paths"}
 [The objects]{.kicker}
 
 $dX = f\,dt + g\,dW$ means
@@ -1256,7 +1264,7 @@ $X_t = X_0 + \int_0^t f\,ds + \int_0^t g\,dW_s$. Here $f$ is the mean velocity
 ($\operatorname{Var}(dX)=g^2\,dt$); a solution is an **ensemble** of jittery
 paths, and $g=0$ recovers the ODE.
 
-![](../img/mdl-dyn-sde-paths.svg){width=70%}
+@fig:mdl-dyn-sde-paths
 :::
 
 ::: {.slide title="Euler–Maruyama: Euler plus a √Δt kick"}
@@ -1270,23 +1278,24 @@ Euler:
 @sdes-euler-maruyama
 :::
 
-::: {.slide title="Paths stray; laws agree"}
+::: {.slide title="Strong and weak errors measure different quantities"}
 [Convergence]{.kicker}
 
 **Strong** error tracks one path against a fine reference driven by the *same*
 increments; **weak** error compares only the terminal *laws*. The coarse path
-visibly strays while the histograms already coincide, and marginals are all a
-diffusion model needs:
+visibly strays while the histograms already coincide. Endpoint-law sampling
+uses weak accuracy; path-coupled computations may require strong accuracy:
 
-![](../img/mdl-dyn-strong-weak.svg){width=94%}
+![](../img/mdl-dyn-strong-weak.svg)
 :::
 
-::: {.slide title="The measured orders"}
+::: {.slide title="Euler–Maruyama has distinct strong and weak orders"}
 [Convergence]{.kicker}
 
-Strong order is $\tfrac12$ in general but $1$ for **additive** noise: the
-omitted Milstein term carries $\partial_x g$, which vanishes. Weak order is
-$1$ regardless:
+Under the standard Lipschitz and smoothness assumptions, strong order is
+$\tfrac12$ in general but improves to $1$ for sufficiently regular
+**additive** noise: the omitted Milstein term carries $\partial_x g$, which
+vanishes. Weak order is $1$ for sufficiently smooth coefficients and tests:
 
 @!sdes-em-strong-order
 
@@ -1303,17 +1312,17 @@ Measured slopes: additive OU $\approx 1$, multiplicative GBM $\approx 0.5$.
 :::
 :::
 
-::: {.slide title="Mean reversion vs noise"}
+::: {.slide title="OU drift and diffusion balance at stationarity"}
 [OU]{.kicker}
 
 $$dX = -\theta X\,dt + \sigma\,dW, \qquad \theta > 0.$$
 
 A restoring drift pulls toward $0$ while constant diffusion pushes out:
 
-![](../img/mdl-dyn-ou-mean-reversion.svg){width=72%}
+@fig:mdl-dyn-ou-mean-reversion
 :::
 
-::: {.slide title="Solved by an integrating factor"}
+::: {.slide title="The OU transition kernel is Gaussian"}
 [OU]{.kicker}
 
 Apply Itô to $e^{\theta t}X$: the correction vanishes ($\phi_{xx}=0$) and the
@@ -1343,10 +1352,11 @@ confirm it:
 @!sdes-ou-cloud
 :::
 
-::: {.slide title="Variance-preserving = DDPM's forward marginal"}
+::: {.slide title="VP normalization preserves unit variance"}
 [VP]{.kicker}
 
-Choose $\sigma^2 = 2\theta$ and write $\bar\alpha_t = e^{-2\theta t}$:
+Choose $\sigma^2 = 2\theta$, assume unit-variance data, and write
+$\bar\alpha_t = e^{-2\theta t}$:
 
 $$X_t = \sqrt{\bar\alpha_t}\,X_0 + \sqrt{1-\bar\alpha_t}\,\epsilon,
 \qquad \operatorname{Var}(X_t) = 1\ \ \forall t.$$
@@ -1370,7 +1380,7 @@ $dX=-\tfrac12\beta(t)X\,dt+\sqrt{\beta(t)}\,dW$.
 :::
 
 ::: {.col}
-- An SDE is a law over paths; Euler–Maruyama adds a $\sqrt{\Delta t}$ kick; weak order $1$.
+- An SDE is a law over paths; Euler–Maruyama adds a $\sqrt{\Delta t}$ kick and has weak order 1 for sufficiently smooth coefficients and tests.
 - OU mean-reverts to $\mathcal N(0,\sigma^2/2\theta)$.
 - VP normalization ($\sigma^2=2\theta$) is DDPM's forward marginal.
 :::

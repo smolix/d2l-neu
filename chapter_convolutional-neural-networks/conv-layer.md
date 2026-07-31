@@ -658,7 +658,7 @@ Later, :citet:`Field.1987` modeled these responses on natural images
 with what are, in effect, convolutional kernels.
 We reprint a key figure in :numref:`field_visual`.
 
-![Figure and caption taken from :citet:`Field.1987`: An example of coding with six different channels. (Left) Examples of the six types of sensor associated with each channel. (Right) Convolution of the image in (Middle) with the six sensors shown in (Left). The response of the individual sensors is determined by sampling these filtered images at a distance proportional to the size of the sensor (shown with dots). This diagram shows the response of only the even symmetric sensors.](../img/field-visual.png)
+![Six receptive-field filters and their responses to a natural image, adapted from :citet:`Field.1987`. The left panel shows the filters, the middle panel the input image, and the right panel the filtered responses sampled at intervals proportional to each filter's size. Different filters respond to different local edge patterns.](../img/field-visual.png)
 :label:`field_visual`
 
 The correspondence extends to features computed by deeper layers of networks trained on image classification :cite:`Kuzovkin.Vicente.Petton.ea.2018`.

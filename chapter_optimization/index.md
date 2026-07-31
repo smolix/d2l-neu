@@ -27,41 +27,23 @@ AdaGrad through RMSProp to Adam (:numref:`sec_adam`) — where we also build
 the tiny transformer language model on which the rest of the chapter runs
 its experiments.
 
-The second half of the chapter studies choices used in current training:
-decoupled weight decay, the rule
-of what not to decay, and the memory arithmetic of optimizer state
-(:numref:`sec_adamw`); warmup, cosine decay, and the warmup–stable–decay
-schedules of large-model training (:numref:`sec_scheduler`); the
-realization that steepest descent depends on the norm — under one norm it
-recovers sign descent and, in essence, Adam, and under the spectral norm
-it yields Muon, a credible challenger to Adam's decade
-(:numref:`sec_muon`); how large a batch can grow before more parallelism
-stops buying anything (:numref:`sec_batch_size`); how to tune a small
-model and transfer the result to one too expensive to tune
-(:numref:`sec_scaling`); and the craft of running real training — recipes,
-gradient clipping, weight averaging, and how to sweep
-(:numref:`sec_practice`).
+The second half removes simplifying assumptions from this progression. AdamW
+separates shrinkage from adaptive preconditioning, and learning-rate schedules
+vary the step over time. Muon changes the geometry used to choose matrix
+updates. Batch-size experiments connect gradient variance to parallel compute,
+while scaling and practice address hyperparameter transfer, clipping, weight
+averaging, and matched comparisons.
 
-This chapter states results, demonstrates phenomena, and develops intuition.
-The optimization chapter of the mathematical appendix
-(:numref:`chap_mdl-optimization`) develops the descent lemma,
-the condition-number law, momentum's $\sqrt{\kappa}$ acceleration, the
-Robbins–Monro conditions, Adam's bias correction, and the convex analysis
-underneath them are developed. The two chapters can be read in either order;
-the experiments here illustrate the behavior described by the theory.
+This chapter emphasizes computations and controlled experiments. The
+mathematical appendix (:numref:`chap_mdl-optimization`) proves the descent
+lemma, the condition-number law, momentum's $\sqrt{\kappa}$ acceleration,
+the Robbins–Monro conditions, and Adam's bias correction under explicit
+assumptions. The two treatments can be read in either order.
 
-The modern layer is younger than it looks, and parts of it are still
-moving. Decoupled weight decay was published in 2017 and became a
-universal default only years later; warmup–stable–decay schedules entered
-large-model practice around 2024; Muon went from a speed-run leaderboard
-in late 2024 to reported trillion-parameter production runs within about a
-year — for optimizers, unusually fast. The field has also grown a
-benchmarking discipline: matched-tuning comparisons and public benchmarks
-now routinely shrink headline claims, and more than one celebrated
-optimizer has failed to replicate under them. Where the evidence is
-unsettled we say so in place, and the chapter's comparisons follow one
-rule throughout: tuned against tuned, never a tuned challenger against a
-default baseline.
+Several methods in the second half are recent, and their relative performance
+remains protocol-dependent. The comparisons therefore tune each optimizer
+under the same budget and distinguish evidence from small testbeds, public
+benchmarks, and reported production runs.
 
 ```toc
 :maxdepth: 2

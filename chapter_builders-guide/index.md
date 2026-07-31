@@ -18,13 +18,12 @@ weights, and checkpointed together with optimizer state.
 Accordingly, we proceed in eight steps. We start with how models are built
 from modules and configs (:numref:`sec_model_construction`), what a model's
 state is and what it costs in memory (:numref:`sec_parameters`), how that
-state is initialized (:numref:`sec_init_param`), and how to write layers the
-library does not provide (:numref:`sec_custom_layer`). We then turn to the
-numeric formats models compute in (:numref:`sec_numerics`), how state is
-saved, restored, and adopted from pretrained models
-(:numref:`sec_read_write`), how tensors and models live on GPUs and in GPU
-memory (:numref:`sec_use_gpu`), and finally how to make runs repeatable and
-inspect a model from the outside (:numref:`sec_repro`). The chapter
+state is initialized (:numref:`sec_init_param`), and how that state is saved,
+restored, and adopted from pretrained models (:numref:`sec_read_write`). We then
+turn to numeric formats (:numref:`sec_numerics`), devices and GPU memory
+(:numref:`sec_use_gpu`), and layers the library does not provide
+(:numref:`sec_custom_layer`). Finally, we distinguish repeatable experiments
+from inspecting a model's execution (:numref:`sec_repro`). The chapter
 introduces no new models or datasets; the advanced modeling chapters that
 follow rely on these techniques throughout.
 
@@ -34,10 +33,10 @@ follow rely on these techniques throughout.
 model-construction
 parameters-state-memory
 init
-custom-layers
-numerics
 saving-loading
+numerics
 gpus-devices-memory
+custom-layers
 reproducibility-inspection
 ```
 

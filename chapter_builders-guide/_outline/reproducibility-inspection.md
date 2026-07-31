@@ -1,6 +1,9 @@
 # Reproducibility and Inspection
 :label:`sec_repro`
 
+> **Archive notice.** This file records pre-promotion design decisions. The live
+> source one directory above is authoritative; markers and API claims here are historical.
+
 > **Role.** Entirely new, and the shortest section. Two power-user skills
 > the current chapter never teaches: making runs repeatable (seeding and
 > determinism, including why JAX handles randomness the way it does), and

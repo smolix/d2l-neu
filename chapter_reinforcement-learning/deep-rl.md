@@ -120,7 +120,13 @@ def train_reinforce(seed, make_agent, env_name, gamma=0.99, num_updates=80,
         yield float(batch.episode_returns().mean()), L
 ```
 
-Against :numref:`sec_baselines`, the diff that moves this loop from the lake to the cart is three lines long: the constructor is `ActorCritic.mlp(4, 2)` instead of `ActorCritic.tabular(16, 4)`, the environment is `'CartPole-v1'` instead of `'FrozenLake-v1'`, and the discount is $0.99$, suited to a 500-step horizon, instead of $0.95$. Nothing else. Three seeds:
+Relative to :numref:`sec_baselines`, three inputs change: the constructor
+is `ActorCritic.mlp(4, 2)` instead of `ActorCritic.tabular(16, 4)`, the
+environment is `'CartPole-v1'` instead of `'FrozenLake-v1'`, and the
+discount is $0.99$, suited to a 500-step horizon, instead of $0.95$. The
+rollout, reward-to-go, policy update, and value-regression code remains
+unchanged. This compact diagnostic omits the replay, bootstrapped targets,
+and update constraints introduced in Chapter 15. We run three seeds:
 
 ```{.python .input #deep-rl-the-swap-as-a-three-line-diff-4}
 %%tab pytorch, jax
@@ -463,9 +469,9 @@ the constructor and the environment promoted to arguments.
 
 . . .
 
-The diff against the lake: `mlp(4, 2)` for `tabular(16, 4)`,
-`'CartPole-v1'` for `'FrozenLake-v1'`, $\gamma$ $0.99$ for $0.95$.
-Nothing else.
+The changed inputs are `mlp(4, 2)` for `tabular(16, 4)`,
+`'CartPole-v1'` for `'FrozenLake-v1'`, and $\gamma=0.99$ for $0.95$.
+The estimator and value-regression steps remain unchanged.
 :::
 
 ::: {.slide title="CartPole, Three Seeds"}
@@ -572,7 +578,9 @@ One optimizer step on $L$ = one ascent step on the return.
 @!deep-rl-the-estimator-written-as-a-loss
 
 The return climbed twenty-fold; $L$ wandered around zero.
-**The loss value means nothing; only the return curve does.**
+Because the sampled advantages and state distribution change between
+updates, this surrogate loss is not comparable across iterations. Report
+return, entropy, and value-error diagnostics alongside it.
 :::
 
 ::: {.slide title="Recap and Limitations"}

@@ -518,44 +518,25 @@ d2l.plot(list(range(1, depth + 1)), curves, 'layer', 'second moment of h',
          legend=list(scales), yscale='log')
 ```
 
-The plot shows all three regimes at once. Under $\mathcal{N}(0,1)$ weights
-each layer multiplies the signal's scale by roughly $n_\textrm{in}/2 = 50$, and
-fifty layers compound that to an astronomical $\sim\!10^{80}$: the exploding
-regime. Xavier, derived for *linear* layers, is off by exactly the rectifier's
-factor of $\tfrac{1}{2}$ per layer, so the signal *vanishes* like $2^{-l}$,
-reaching $\sim\!10^{-15}$ by the bottom of the stack. He initialization
-compensates for the rectifier and holds the signal's scale essentially flat
-across all fifty layers (the slight downward drift is a finite-width
-fluctuation effect, not a bias in the rule). Only the He-initialized network
-delivers usable forward signals. A related backward calculation gives the
-same scaling under additional mean-field independence assumptions; it is an
-initialization approximation, not an exact statement about gradients during
-training. The exercises ask you to repeat the sweep with the
-nonlinearity removed, where Xavier is the scheme that stays flat.
+This finite-width realization displays the three regimes predicted by the
+second-moment calculation. Under $\mathcal{N}(0,1)$ weights the expected gain is
+$n_\textrm{in}/2=50$ per layer. For Xavier weights followed by ReLU it is
+$1/2$, whereas for He weights it is $1$. The plotted trajectories fluctuate
+around those expectation-level factors; repeated seeds would reveal their
+dispersion. A related backward calculation gives the same scaling under
+additional mean-field independence assumptions. Both are initialization-time
+approximations, not exact statements about gradients during training. The
+exercises repeat the sweep without ReLU, where Xavier has expected gain one.
 
-### Beyond
+### Scope of the Initialization Rules
 
-The reasoning above barely scratches the surface
-of modern approaches to parameter initialization.
-A deep learning framework often implements over a dozen different heuristics.
-Moreover, parameter initialization continues to be
-a hot area of fundamental research in deep learning.
-Among these are heuristics specialized for
-tied (shared) parameters, super-resolution,
-sequence models, and other situations.
-For instance,
-:citet:`Xiao.Bahri.Sohl-Dickstein.ea.2018` demonstrated the possibility of training
-10,000-layer neural networks without architectural tricks
-by using a carefully-designed initialization method.
-
-In very deep networks, normalization layers (:numref:`sec_batch_norm`)
-and residual connections (:numref:`sec_resnet`)
-largely remove this burden from initialization
-by re-centering activations during training;
-we cover them in later chapters.
-
-If the topic interests you, read the papers that proposed and analyzed each
-heuristic and the more recent work that builds on them.
+Xavier and He initialization assume independent weights and simple feedforward
+layers at initialization. Shared parameters, recurrent dynamics, attention, and
+very deep compositions violate parts of that analysis. Later chapters introduce
+normalization layers (:numref:`sec_batch_norm`) and residual connections
+(:numref:`sec_resnet`), which provide additional paths for controlling signal
+scale. Specialized initializers remain useful when those architectural
+assumptions differ.
 
 
 ## Summary

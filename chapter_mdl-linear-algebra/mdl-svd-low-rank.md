@@ -290,8 +290,8 @@ $$
 $$
 
 is *defective*: $\lambda=1$ has algebraic multiplicity $2$ but only a
-one-dimensional eigenspace, so it has **no eigenbasis** and the eigendecomposition
-simply does not exist. The SVD has no such trouble. Form
+one-dimensional eigenspace, so it has no eigenbasis and hence no diagonal
+eigendecomposition. The SVD instead permits distinct input and output bases. Form
 
 $$
 \mathbf{A}^\top\mathbf{A} = \begin{bmatrix} 1 & 1\\ 1 & 2\end{bmatrix},
@@ -308,14 +308,13 @@ $$
 $$
 
 the golden ratio and its reciprocal (consistent with
-$\sigma_1\sigma_2=|\det\mathbf{A}|=1$). Both are strictly positive, so the shear
-has full rank $2$ and a clean orthonormal factorization
-$\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$: there is nothing
-defective about it. The eigendecomposition stumbled because it insists on a
-*single* basis that both diagonalizes and is reused for input and output; the SVD
-succeeds because it is allowed two different orthonormal frames, which is exactly
-what the shear needs. The cell below verifies the singular values against
-the golden ratio.
+$\sigma_1\sigma_2=|\det\mathbf{A}|=1$). Both are positive, so the shear has rank
+$2$ and an SVD $\mathbf{A}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^\top$ with
+orthonormal factors. The obstruction to eigendecomposition was the requirement
+for one basis that serves on both sides of the map. The SVD avoids that
+requirement by choosing orthonormal input directions $\mathbf v_i$ and output
+directions $\mathbf u_i$ separately. The following calculation verifies the
+singular values against the golden ratio.
 
 ```{.python .input #svd-defective-shear}
 A = np.array([[1., 1.], [0., 1.]])
@@ -512,20 +511,24 @@ $k$ captures most of the Frobenius norm, and low-rank compression is then
 effective.
 
 **Truncation as denoising.** There is a second, statistical reason to truncate.
-Suppose the matrix you observe is a low-rank signal plus noise,
-$\mathbf{A}=\mathbf{B}+\mathbf{N}$, with $\operatorname{rank}\mathbf{B}=r$ small
-and $\mathbf{N}$ having i.i.d. entries of standard deviation
-$\sigma_{\text{noise}}$. Then the spectrum of $\mathbf{A}$ *splits*: the $r$
-signal values stand essentially where they were, while the noise contributes a
-floor of singular values clustered below roughly
-$(\sqrt{m}+\sqrt{n})\,\sigma_{\text{noise}}$. Truncating just above that floor
-discards almost pure noise, so $\mathbf{A}_k$ can be *closer to the truth*
-$\mathbf{B}$ than the observed $\mathbf{A}$ is. Gavish and Donoho made the cutoff
-precise: for an $n\times n$ matrix with known noise level, the asymptotically
-optimal hard threshold is
-$\tfrac{4}{\sqrt3}\sqrt{n}\,\sigma_{\text{noise}}\approx2.309\,\sqrt{n}\,\sigma_{\text{noise}}$
-:cite:`Gavish.Donoho.2014`, a principled alternative to the 95%-energy dial when
-the data is noisy. Exercise 3 lets you watch the spectrum split.
+Suppose the observed matrix is a low-rank signal plus noise,
+$\mathbf{A}=\mathbf{B}+\mathbf{N}$, where $\mathbf{A}\in\mathbb R^{m\times n}$,
+$\operatorname{rank}\mathbf{B}=r$, and the entries of $\mathbf N$ are
+independent, mean zero, and have standard deviation
+$\sigma_{\text{noise}}$. In the large-dimensional iid model, the noise singular
+values lie below an edge near
+$(\sqrt{m}+\sqrt{n})\sigma_{\text{noise}}$. A sufficiently strong signal can
+produce singular values beyond this edge; weak components need not separate
+from the noise bulk. Truncation above an appropriate threshold can therefore
+reduce error, but the location of that threshold depends on the model.
+
+Under the square-matrix model with known noise level, Gavish and Donoho derive the
+asymptotically optimal hard threshold
+$\tfrac{4}{\sqrt3}\sqrt n\,\sigma_{\mathrm{noise}}\approx2.309\sqrt n\,\sigma_{\mathrm{noise}}$
+:cite:`Gavish.Donoho.2014`. Applying this constant to a different aspect ratio,
+noise distribution, normalization, or unknown-noise setting requires the
+corresponding version of the theory. Exercise 3 illustrates the spectral
+separation; it does not establish the asymptotic result.
 
 The same low-rank premise, with *missing* rather than noisy entries, is *matrix
 completion*: recommender systems fill in a sparsely observed ratings matrix by
@@ -543,9 +546,9 @@ $$
 \|\mathbf{A}-\mathbf{A}_k\|_F/\|\mathbf{A}\|_F=\sqrt{\sum_{i>k}\sigma_i^2/\sum_i\sigma_i^2}.
 $$
 
-A rank-20 truncation of this image already looks essentially correct while storing
-only a fraction of the numbers, because the discarded singular values carry little
-energy: a visual proof of Eckart--Young.
+For this image, the rank-20 truncation has small relative Frobenius error and
+retains the visually dominant structure. The panels illustrate the approximation
+theorem; the algebraic argument above supplies its proof.
 
 ![Eckart--Young on a grayscale image: the singular-value spectrum on a log scale (left, note the rapid decay) and the rank-$k$ reconstructions $\mathbf{A}_k$ for $k=1,5,20$ and full rank, each labeled with its relative Frobenius error.](../img/mdl-la-eckart-young.svg)
 :label:`fig_mdl-la-eckart-young`
@@ -966,8 +969,9 @@ exactly the construction of :numref:`subsec_mdl-svd-via-ata`.
   $\sim\sigma_1\max(m,n)\,\epsilon_{\text{mach}}$.
 * **Eckart--Young--Mirsky:** the top-$k$ truncation $\mathbf{A}_k$ is the optimal
   rank-$k$ approximation, with $\|\mathbf{A}-\mathbf{A}_k\|_2=\sigma_{k+1}$ and
-  $\|\mathbf{A}-\mathbf{A}_k\|_F^2=\sum_{i>k}\sigma_i^2$. The energy ratio is the
-  retained-energy ratio quantifies the approximation.
+  $\|\mathbf{A}-\mathbf{A}_k\|_F^2=\sum_{i>k}\sigma_i^2$. The retained-energy
+  ratio $\sum_{i\leq k}\sigma_i^2/\sum_i\sigma_i^2$ is one minus the squared
+  relative Frobenius error.
 * **PCA is Eckart--Young on centered data:** principal directions are the right
   singular vectors $\mathbf{v}_i$, explained variance is $\sigma_i^2/n$.
 * The pseudoinverse $\mathbf{A}^{+}=\mathbf{V}\boldsymbol{\Sigma}^{+}\mathbf{U}^\top$
@@ -1252,7 +1256,7 @@ There $\mathbf{B}$ is blind while $\mathbf{A}$ still stretches:
 $\|(\mathbf{A}-\mathbf{B})\mathbf{x}\|=\|\mathbf{A}\mathbf{x}\|\ge\sigma_{k+1}$. The energy ratio $\sum_{i\le k}\sigma_i^2/\sum_i\sigma_i^2$ is the compression dial.
 :::
 
-::: {.slide title="A visual proof on an image"}
+::: {.slide title="Image truncation illustrates the Eckart--Young error"}
 [Approximation]{.kicker}
 
 The spectrum decays fast (log scale, left), so rank-20 already looks
@@ -1384,7 +1388,7 @@ the escapees are the learned correlation.
 :::
 :::
 
-::: {.slide title="Summary"}
+::: {.slide title="Two orthonormal bases expose rank and approximation"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

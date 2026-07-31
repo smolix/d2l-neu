@@ -1,20 +1,39 @@
 # Personalized Ranking for Recommender Systems
 
-In the former sections, only explicit feedback was considered and models were trained and tested on observed ratings.  There are two demerits of such methods: First, most feedback is not explicit but implicit in real-world scenarios, and explicit feedback can be more expensive to collect.  Second, non-observed user-item pairs which may be predictive for users' interests are totally ignored, making these methods unsuitable for cases where ratings are not missing at random but because of users' preferences.  Non-observed user-item pairs are a  mixture of real negative feedback (users are not interested in the items) and missing values (the user might interact with the items in the future). We simply ignore the non-observed pairs in matrix factorization and AutoRec. Clearly, these models are incapable of distinguishing between observed and non-observed pairs and are usually not suitable for personalized ranking tasks.
+Explicit-rating models learn only from user--item pairs with recorded scores.
+Implicit-feedback data pose a different problem. An observed click or purchase
+is evidence of interaction, but an unobserved pair may represent dislike, lack
+of exposure, or a future interaction. It is therefore safer to call such pairs
+*unobserved items*, not negative examples. A training procedure that samples
+them as negatives is making an explicit modeling assumption.
 
-To this end, a class of recommendation models targeting at generating ranked recommendation lists from implicit feedback have gained popularity. In general, personalized ranking models can be optimized with pointwise, pairwise or listwise approaches. Pointwise approaches consider a single interaction at a time and train a classifier or a regressor to predict individual preferences. Matrix factorization and AutoRec are optimized with pointwise objectives. Pairwise approaches consider a pair of items for each user and aim to approximate the optimal ordering for that pair. Usually, pairwise approaches are more suitable for the ranking task because predicting relative order is reminiscent to the nature of ranking. Listwise approaches approximate the ordering of the entire list of items, for example, direct optimizing the ranking measures such as Normalized Discounted Cumulative Gain ([NDCG](https://en.wikipedia.org/wiki/Discounted_cumulative_gain)). However, listwise approaches are more complex and compute-intensive than pointwise or pairwise approaches. In this section, we will introduce two pairwise objectives/losses, Bayesian Personalized Ranking loss and Hinge loss, and their respective implementations.
+Ranking objectives differ in the unit they compare. A **pointwise** objective
+fits one user--item score or label at a time. A **pairwise** objective asks that,
+for a given user, an observed item receive a higher score than a sampled
+unobserved item. A **listwise** objective operates on a candidate list and may
+approximate a ranking metric such as normalized discounted cumulative gain
+(NDCG). Pairwise objectives align directly with local ordering constraints and
+are cheaper than most listwise alternatives, but they do not by themselves
+identify which unobserved items are genuine negatives. This section develops
+the Bayesian personalized ranking (BPR) and hinge objectives.
 
 ## Bayesian Personalized Ranking Loss and its Implementation
 
-Bayesian personalized ranking (BPR) :cite:`Rendle.Freudenthaler.Gantner.ea.2009` is a pairwise personalized ranking loss that is derived from the maximum posterior estimator. It has been widely used in many existing recommendation models. The training data of BPR consists of both positive and negative pairs (missing values). It assumes that the user prefers the positive item over all other non-observed items.
+Bayesian personalized ranking (BPR)
+:cite:`Rendle.Freudenthaler.Gantner.ea.2009` derives a pairwise objective from a
+maximum-a-posteriori model. A training triple $(u,i,j)$ asserts that user $u$
+prefers observed item $i$ to sampled unobserved item $j$.
 
-In formal, the training data is constructed by tuples in the form of $(u, i, j)$, which represents that the user $u$ prefers the item $i$ over the item $j$. The Bayesian formulation of BPR which aims to maximize the posterior probability is given below:
+Let $D$ denote the collection of such triples. The posterior factorizes into a
+pairwise likelihood and a parameter prior,
 
 $$
 p(\Theta \mid >_u )  \propto  p(>_u \mid \Theta) p(\Theta)
 $$
 
-Where $\Theta$ represents the parameters of an arbitrary recommendation model, $>_u$ represents the desired personalized total ranking of all items for user $u$. We can formulate the maximum posterior estimator to derive the generic optimization criterion for the personalized ranking task.
+Here $\Theta$ contains the recommender parameters and $>_u$ denotes the latent
+ordering for user $u$. With a logistic likelihood for each observed ordering
+constraint, the log posterior is
 
 $$
 \begin{aligned}
@@ -27,9 +46,15 @@ $$
 $$
 
 
-where $D \stackrel{\textrm{def}}{=} \{(u, i, j) \mid i \in I^+_u \wedge j \in I \backslash I^+_u \}$ is the training set, with $I^+_u$ denoting the items the user $u$ liked, $I$ denoting all items, and $I \backslash I^+_u$ indicating all other items excluding items the user liked. $\hat{y}_{ui}$ and $\hat{y}_{uj}$ are the predicted scores of the user $u$ to item $i$ and $j$, respectively. The prior $p(\Theta)$ is a normal distribution with zero mean and variance-covariance matrix $\Sigma_\Theta$. Here, we let $\Sigma_\Theta = \lambda_\Theta I$.
+Here $I_u^+$ is the set of observed positive items, $I$ is the item catalog,
+and $j$ is sampled from $I\setminus I_u^+$. The scores $\hat y_{ui}$ and
+$\hat y_{uj}$ come from any differentiable recommender. We use a zero-mean
+isotropic Gaussian prior with precision $2\lambda_\Theta$, equivalently
+$p(\Theta)\propto\exp(-\lambda_\Theta\|\Theta\|^2)$. If
+$\lambda_\Theta$ instead denoted the prior variance, the regularization
+coefficient would be its inverse, up to a factor of $1/2$.
 
-![Illustration of Bayesian Personalized Ranking](../img/rec-ranking.svg)
+![BPR compares an observed item $i$ with a sampled unobserved item $j$ for the same user $u$. The score difference $\hat y_{ui}-\hat y_{uj}$ enters a logistic pairwise loss; the comparison is a sampling assumption, not an observed dislike of $j$.](../img/rec-ranking.svg)
 
 :begin_tab:`mxnet`
 We will implement the base class `mxnet.gluon.loss.Loss` and override the `forward` method to construct the Bayesian personalized ranking loss. We begin by importing the Loss class and the np module.
@@ -88,7 +113,10 @@ $$
  \sum_{(u, i, j) \in D} \max( m - \hat{y}_{ui} + \hat{y}_{uj}, 0)
 $$
 
-where $m$ is the safety margin size. It aims to push negative items away from positive items. Similar to BPR, it aims to optimize for relevant distance between positive and negative samples instead of absolute outputs, making it well suited to recommender systems.
+where $m>0$ is the required score margin. For each sampled triple, the loss is
+zero once the observed item's score exceeds the sampled unobserved item's score
+by at least $m$. As with BPR, this is a constraint induced by the sampling
+procedure, not evidence that the unobserved item is disliked.
 
 ```{.python .input #ranking-hinge-loss-and-its-implementation  n=3}
 #@tab mxnet
@@ -117,17 +145,30 @@ class HingeLossbRec(nn.Module):
         return loss
 ```
 
-These two losses are interchangeable for personalized ranking in recommendation.
+Both losses express the same ordering goal, but they have different gradients.
+BPR is smooth and continues to reward larger score gaps; the hinge loss has a
+fixed margin and zero gradient once that margin is satisfied.
 
 ## Summary
 
-- There are three types of ranking losses available for the personalized ranking task in recommender systems, namely, pointwise, pairwise and listwise methods.
-- The two pairwise losses, Bayesian personalized ranking loss and hinge loss, can be used interchangeably.
+- Pointwise, pairwise, and listwise objectives compare different units: one
+  item, an ordered pair, or a candidate list.
+- BPR and hinge losses encode pairwise order constraints with different gradient
+  behavior. Neither turns an unobserved item into a verified negative.
 
 ## Exercises
 
-- Are there any variants of BPR and hinge loss available?
-- Can you find any recommendation models that use BPR or hinge loss?
+1. Differentiate the BPR and hinge losses with respect to the score difference
+   $d=\hat y_{ui}-\hat y_{uj}$. Compare their gradients as $d\to-\infty$, at
+   $d=0$, and after the hinge margin is satisfied.
+2. Suppose unobserved items are sampled uniformly or in proportion to item
+   popularity. Write the expectation optimized by each proposal. Which proposal
+   is more likely to sample an exposed but skipped item, and which requires
+   importance weights to estimate the uniform-item objective?
+3. Construct a user history in which a held-out positive is sampled as a
+   training negative. Explain how this label contradiction affects BPR and how
+   a strict train/validation/test protocol can avoid consulting test identities
+   during model fitting.
 
 :begin_tab:`mxnet`
 [Discussions](https://d2l.discourse.group/t/402)
@@ -214,7 +255,7 @@ $$\ell_\textrm{BPR}(\Delta) = -\log \sigma(\Delta), \qquad
   sampler, not the algebraic form of the loss.
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Pairwise objectives encode different margin behavior"}
 - Personalized ranking turns implicit feedback into a
   pairwise comparison task.
 - BPR: log-sigmoid of the (positive - negative) score

@@ -300,18 +300,16 @@ def configure_optimizers(self):
 
 ## Training
 
-You might have noticed that expressing our model through
-high-level APIs of a deep learning framework
-requires fewer lines of code.
+Expressing the model through high-level framework APIs requires fewer lines of
+code.
 We did not have to allocate parameters individually,
 define our loss function, or implement minibatch SGD.
 Once we start working with much more complex models,
 the advantages of the high-level API will grow considerably.
 
-Now that we have all the basic pieces in place,
-the training loop itself is the same
-as the one we implemented from scratch.
-So we just call the `fit` method (introduced in :numref:`oo-design-training`),
+The batch-level computation is now delegated to standard layers, loss, and
+optimizer objects, while the training loop is the same one used from scratch.
+We call the `fit` method (introduced in :numref:`oo-design-training`),
 which relies on the implementation of the `fit_epoch` method
 in :numref:`sec_linear_scratch`,
 to train our model.

@@ -484,7 +484,7 @@ So far all padding that we discussed simply extended images with zeros. This is 
 <!-- slides -->
 
 ::: {.slide title="Padding and stride control resolution"}
-A plain convolution always **shrinks** its input. With an
+An unpadded convolution with $k>1$ **shrinks** its input. With an
 $n \times n$ image and a $k \times k$ kernel:
 
 $$n \times n \;\longrightarrow\; (n - k + 1) \times (n - k + 1).$$
@@ -493,9 +493,9 @@ Stack ten 5×5 layers on a 240×240 image:
 
 $$240 \to 236 \to 232 \to \ldots \to 200.$$
 
-30% of the area gone — *all* of it from the boundary. Two
-knobs to control this: **padding** (fight the shrink) and
-**stride** (lean into it, on purpose).
+The output has 30% less area, with positions removed at the boundary.
+**Padding** controls this shrinkage; **stride** deliberately reduces the
+number of evaluated positions.
 :::
 
 ::: {.slide title="The boundary problem"}
@@ -506,8 +506,9 @@ windows, corner pixels in just one:
 
 ![Pixel utilization: 1×1, 2×2, and 3×3 kernels. Larger kernels make the boundary problem worse.](../img/conv-reuse.svg){width=88%}
 
-Information at the edges is systematically underweighted.
-Padding fixes both the shrinking *and* the underweighting.
+Boundary pixels contribute to fewer windows than interior pixels. Padding
+increases their participation and can preserve output shape, although the
+chosen boundary values still affect the result.
 :::
 
 ::: {.slide title="Padding: add zeros around the input"}
@@ -537,8 +538,8 @@ input $(i, j)$. Clean to reason about.
 - Even $k$ forces a left/right asymmetry — pad floor on one
   side, ceil on the other.
 
-That's why every modern CNN you see uses 3×3 kernels with
-padding 1, or 5×5 with padding 2, or 7×7 with padding 3.
+This alignment is why odd kernels with symmetric padding are common in CNNs,
+for example 3×3 kernels with padding 1 and 7×7 kernels with padding 3.
 :::
 
 ::: {.slide title="Padding helper"}

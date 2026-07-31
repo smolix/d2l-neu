@@ -51,7 +51,13 @@ pi_ref = np.exp(Q_true / 0.25)                 # competent but hedging
 pi_ref /= pi_ref.sum(1, keepdims=True)
 ```
 
-Now hide $r^*$ and learn it back from comparisons alone. We collect a thousand trajectories from $\pi_{\textrm{ref}}$, describe each by its discounted visit counts $x(\tau)$, so that the true return is exactly the linear function $x(\tau)^\top r^*$, sample six thousand pairs, label each by :eqref:`eq_bradley_terry`, and fit $\hat{r}$ by logistic regression on feature differences, with a little weight decay, as one always should:
+We now hide $r^*$ and estimate it from comparisons. We collect one
+thousand trajectories from $\pi_{\textrm{ref}}$ and represent each by its
+discounted visit counts $x(\tau)$, for which the true return is
+$x(\tau)^\top r^*$. We sample six thousand pairs, label them according to
+:eqref:`eq_bradley_terry`, and fit $\hat r$ by logistic regression on
+feature differences. A stated weight-decay coefficient regularizes this
+finite diagnostic:
 
 ```{.python .input #regularized-preferences-and-bradley-terry-2}
 %%tab pytorch, jax
@@ -94,7 +100,14 @@ A comparison only ever weighs two trajectories from the *same* start state, so :
 
 ### Dense versus Terminal Rewards
 
-Our comparisons scored whole trajectories, so $\hat{r}$ is anchored by end-to-end evidence, and at scale the learned reward is usually *terminal*: one number for the finished response. :numref:`sec_mdp` already priced this trade: terminal rewards are hard to game but sparse, dense rewards are informative but dangerous to author, and the only densification guaranteed not to change the optimum is potential-based shaping :cite:`Ng.Harada.Russell.1999`. The vocabulary used at scale takes two sentences. An outcome reward model (ORM) scores the final result, a process reward model (PRM) scores intermediate steps; a PRM is a learned dense reward, which buys the credit-assignment help of density at the price of authoring, labeling, and guarding many more numbers.
+Our comparisons score complete trajectories, so $\hat r$ is trained on
+end-to-end evidence. At scale, an outcome reward model (ORM) likewise
+scores a completed response, whereas a process reward model (PRM) scores
+intermediate steps. Intermediate rewards provide denser credit-assignment
+signals but require additional labels and introduce more opportunities for
+misspecification. Potential-based shaping is the standard densification
+that preserves the optimal policy under its stated conditions
+:cite:`Ng.Harada.Russell.1999`.
 
 ## Optimizing a Proxy Reward
 
@@ -260,7 +273,14 @@ print(np.allclose(pi_star(r, np.full(5, 0.2), 0.5), boltzmann))
 
 That is the shape of :numref:`sec_policygradient`'s softmax policies, and the Boltzmann exploration rule of :numref:`sec_qlearning` was sampling from the optimal solution of an entropy-regularized problem all along, with its temperature playing the role of $\beta$. The sequential version of this consequence is the soft backup, which closes the section.
 
-**The optimum is a posterior.** Read :eqref:`eq_kl_optimum` as Bayes' rule: prior $\pi_{\textrm{ref}}$, likelihood $e^{r/\beta}$, posterior $\pi^\star$, evidence $Z$. This is a change of viewpoint with its own literature, in which reinforcement learning is inference, rewards are log-likelihoods of an optimality event, and regularized policy optimization is variational inference against that posterior :cite:`Levine.2018,Korbak.Perez.Buckley.2022`; everything known about approximate posteriors and the choice of divergence then transfers to policies wholesale.
+**A posterior interpretation.** Equation :eqref:`eq_kl_optimum` has the
+form of Bayes' rule: $\pi_{\textrm{ref}}$ is a prior, $e^{r/\beta}$ an
+unnormalized likelihood, $\pi^\star$ a posterior, and $Z$ the normalizer.
+Control-as-inference methods use this identity to interpret rewards as
+log-likelihoods of optimality events and regularized policy optimization
+as variational inference :cite:`Levine.2018,Korbak.Perez.Buckley.2022`.
+The analogy permits selected inference tools, but it does not by itself
+establish their approximation quality or empirical advantage for policies.
 
 Sweeping $\beta$ traces the exact frontier of reward against divergence, the curve the gridworld experiment could only approximate through a broken $\hat{r}$:
 

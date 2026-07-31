@@ -58,13 +58,11 @@ import numpy as np
 ## The Unrolled Graph and the Full Gradient
 :label:`subsec_bptt_analysis`
 
-Start with a deliberately schematic RNN that hides the details of the hidden
-state and its update; the notation does not distinguish scalars, vectors, and
-matrices, because right now we only want the *shape* of the computation. Write
-$h_t$ for the hidden state, $x_t$ for the input, and $o_t$ for the output at
-step $t$, with $w_\textrm{h}$ and $w_\textrm{o}$ the hidden- and output-layer
-weights (recall from :numref:`subsec_rnn_w_hidden_states` that the input and the
-state can be concatenated so a single weight drives the hidden layer). Then
+We first use scalar notation to expose the dependency structure. Write
+$h_t,x_t,o_t\in\mathbb{R}$ for the state, input, and output, and let
+$w_\textrm{h},w_\textrm{o}\in\mathbb{R}$ denote shared parameters. The
+vector case replaces each derivative below with a Jacobian; its dimensions are
+given when we specialize to a linear RNN. Then
 
 $$
 \begin{aligned}h_t &= f(x_t, h_{t-1}, w_\textrm{h}),\\
@@ -131,7 +129,7 @@ are exactly where the numbers go wrong.
 
 ## Vanishing and Exploding Gradients
 
-Everything now hinges on the product of Jacobians
+The numerical difficulty comes from the product of state Jacobians
 $\prod_{j=i+1}^{t} \partial f/\partial h_{j-1}$ in
 :eqref:`eq_bptt_partial_ht_wh_gen`. To see what it does, make the recurrence
 concrete: drop the biases and the nonlinearity so that the hidden layer is a

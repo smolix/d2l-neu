@@ -561,12 +561,13 @@ d = a + b
 print(f'{time.time() - t:.5f} sec')
 ```
 
-The second method is dramatically faster than the first. The reason is not that
+On this run, the second method is substantially faster than the first. The
+reason is not that
 addition itself got cheaper but that we replaced $n$ round-trips through the
 Python interpreter (one per element, each dispatching a separate tensor
 operation) with a single call into a compiled linear-algebra kernel. The speedup
-therefore grows with vector length and hardware (here, anywhere from roughly
-tenfold to a thousandfold), but the qualitative lesson is the same: push inner
+therefore depends on vector length, hardware, synchronization, and framework
+overhead. The qualitative lesson is the same: push inner
 loops down into vectorized library calls rather than writing them out in Python.
 Moreover, we push more of the mathematics to the library
 so we do not have to write as many calculations ourselves,
@@ -779,7 +780,7 @@ The diagram shows the connectivity pattern,
 such as how each input is connected to the output,
 but not the specific values taken by the weights or biases.
 
-![Linear regression is a single-layer neural network.](../img/singleneuron.svg)
+![Linear regression as a one-layer network: each feature $x_j$ contributes through a weighted edge $w_j$, and the output is their affine sum $\hat y=\mathbf{w}^\top\mathbf{x}+b$.](../img/singleneuron.svg)
 :label:`fig_single_neuron`
 
 The inputs are $x_1, \ldots, x_d$.
@@ -797,55 +798,13 @@ We will encounter networks
 with far more layers
 in later chapters.
 
-### Biology
+### Historical Note
 
-Because linear regression predates computational neuroscience,
-it might seem anachronistic to describe
-linear regression in terms of neural networks.
-Nonetheless, they were a natural place to start
-when the cyberneticists and neurophysiologists
-Warren McCulloch and Walter Pitts began to develop
-models of artificial neurons :cite:`McCulloch.Pitts.1943`.
-Consider the cartoonish picture
-of a biological neuron in :numref:`fig_Neuron`,
-consisting of *dendrites* (input terminals),
-the *nucleus* (CPU), the *axon* (output wire),
-and the *axon terminals* (output terminals),
-enabling connections to other neurons via *synapses*.
-
-![The real neuron (source: "Anatomy and Physiology" by the US National Cancer Institute's Surveillance, Epidemiology and End Results (SEER) Program).](../img/neuron.svg)
-:label:`fig_Neuron`
-
-Information $x_i$ arriving from other neurons
-(or environmental sensors) is received in the dendrites.
-In particular, that information is weighted
-by *synaptic weights* $w_i$,
-determining the effect of the inputs,
-e.g., activation or inhibition via the product $x_i w_i$.
-The weighted inputs arriving from multiple sources
-are aggregated in the nucleus
-as a weighted sum $y = \sum_i x_i w_i + b$,
-possibly subject to some nonlinear postprocessing via a function $\sigma(y)$.
-This information is then sent via the axon to the axon terminals,
-where it reaches its destination
-(e.g., an actuator such as a muscle)
-or it is fed into another neuron via its dendrites.
-
-Certainly, one high-level idea does come from our study
-of real biological neural systems: that many such units,
-provided they have the correct connectivity and learning algorithm,
-could be combined to produce far more interesting and complex behavior
-than any one neuron alone could express.
-At the same time, most research in deep learning today
-draws inspiration from a much wider source.
-As :citet:`Russell.Norvig.2016` pointed out,
-although airplanes might have been *inspired* by birds,
-ornithology has not been the primary driver
-of aeronautics innovation for some centuries.
-Likewise, inspiration in deep learning these days
-comes in equal or greater measure
-from mathematics, linguistics, psychology,
-statistics, computer science, and many other fields.
+The terminology of inputs, weighted connections, and activations reflects the
+early artificial-neuron models of :citet:`McCulloch.Pitts.1943`. The analogy is
+limited: the affine computation above is a mathematical model, not a biological
+description. Modern network design is developed primarily through mathematics,
+statistics, computer science, and empirical study.
 
 ## Summary
 
@@ -1287,3 +1246,9 @@ and computer science as on the brain.
 :::
 :::
 :::
+There is also a probabilistic reason for this choice. If the label equals the
+linear prediction plus independent Gaussian noise of constant variance, then
+minimizing squared error is exactly maximum-likelihood estimation. Other noise
+models produce other losses. We derive this correspondence and compare several
+choices in :numref:`subsec_normal_distribution_and_squared_loss`; for now, the
+squared loss supplies the objective whose optimization we study.

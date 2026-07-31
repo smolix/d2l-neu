@@ -15,8 +15,9 @@ are typically related to each other, to build efficient models for
 learning from image data.
 
 This chapter introduces *convolutional neural networks* (CNNs)
-:cite:`LeCun.Jackel.Bottou.ea.1995`, a powerful family of neural networks that
-are designed for precisely this purpose.
+:cite:`LeCun.Jackel.Bottou.ea.1995`. CNNs preserve spatial organization by
+connecting each output to a local neighborhood and sharing the same weights
+across locations.
 On the ImageNet collection
 :cite:`Deng.Dong.Socher.ea.2009` it was convolutional neural networks that
 provided significant performance
@@ -26,36 +27,19 @@ Today they share the field with vision transformers
 (:numref:`chap_transformers`) and remain the default
 where latency, small datasets, or dense prediction dominate.
 
-CNN design draws on ideas from biology, group theory, and empirical research.
-In addition to their sample efficiency in
-achieving accurate models, CNNs tend to be computationally efficient,
-both because they require fewer parameters than fully connected
-architectures and because convolutions are easy to parallelize across
-GPU cores :cite:`Chetlur.Woolley.Vandermersch.ea.2014`.  Consequently, practitioners often
-apply CNNs whenever possible, and increasingly they have emerged as
-credible competitors even on tasks with a one-dimensional sequence
-structure, such as audio :cite:`Abdel-Hamid.Mohamed.Jiang.ea.2014`, text
-:cite:`Kalchbrenner.Grefenstette.Blunsom.2014`, and time series analysis
-:cite:`LeCun.Bengio.ea.1995`, where recurrent neural networks are
-conventionally used.  Some clever adaptations of CNNs have also
-brought them to bear on graph-structured data :cite:`Kipf.Welling.2016` and
-in recommender systems.
+These restrictions reduce the parameter count relative to a fully connected
+layer, and convolution kernels can be evaluated in parallel on GPUs
+:cite:`Chetlur.Woolley.Vandermersch.ea.2014`. The same operation also appears
+in models for audio, text, and time series, but this chapter concentrates on
+images, where locality and translation equivariance have a direct spatial
+interpretation.
 
-We begin by deriving the structural assumptions behind convolutional neural
-networks and then introduce their basic operations. These include
-convolutional layers, padding, stride, dilation,
-the pooling layers used to aggregate information
-across adjacent spatial regions,
-the use of multiple channels at each layer,
-including grouped and depthwise-separable convolutions,
-and a careful discussion of the structure of modern architectures.
-We will conclude the chapter with a full working example of LeNet,
-one of the earliest convolutional networks deployed at scale,
-long before the rise of modern deep learning.
-In the next chapter, we will develop full implementations
-of some popular and comparatively recent CNN architectures
-whose designs represent most of the techniques
-commonly used by modern practitioners.
+We first derive convolution from locality and translation equivariance. We
+then define the operation and show how padding, stride, dilation, channels,
+and pooling control its shape and information flow. LeNet combines these
+components in a complete image classifier. The next chapter studies the
+architectural and training changes that made substantially deeper CNNs
+practical.
 
 ```toc
 :maxdepth: 2

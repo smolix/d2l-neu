@@ -11,9 +11,9 @@ Is this morning's change an improvement, or a lucky seed? Answering that
 question requires knowing where every random number in a training run comes
 from. And once two runs *do* disagree, or a loss turns into NaN, the next
 question is what the model computed layer by layer, ideally without editing
-its source. This section covers both skills: controlling randomness (seeds,
-generators, determinism) and observing a running model from the outside
-(hooks).
+its source. These are two independent tasks, treated in two parts: first an
+inventory of random streams and determinism controls, then inspection of a
+running model through call wrappers and hooks.
 
 ```{.python .input #reproducibility-inspection-reproducibility-and-inspection}
 %%tab pytorch
@@ -600,7 +600,11 @@ mirrors :numref:`sec_numerics`: changing dtype changes results in the
 last bits by design, and an experimental claim that survives neither a new
 seed nor bfloat16 was never a result.
 
-## Hooks: Looking Inside
+## Inspecting Model Execution with Hooks
+
+Reproducibility determines whether a run can be repeated; inspection determines
+where a particular run produced an unexpected value. Hooks address the second
+question without changing the model's mathematical computation.
 
 :begin_tab:`pytorch`
 In :numref:`sec_model_construction` we noted that `net(X)` does not call
@@ -1081,10 +1085,10 @@ on operations that cannot comply.
 :end_tab:
 
 :begin_tab:`jax`
-In JAX the inventory collapses to one item, the key you pass: the same
-key gives the same draws by construction of the counter-based PRNG, and
-independent streams come from `jax.random.split`, never from hidden
-state. Keys make the program repeatable, not the arithmetic: on CPU,
+The JAX PRNG portion of the inventory is explicit: the same key gives the same
+draws, and independent JAX streams come from `jax.random.split`. A whole program
+must still inventory Python `random`, NumPy, data loaders, host callbacks, and
+external libraries. Keys make JAX draws repeatable, not the arithmetic: on CPU,
 XLA's kernels are already deterministic, while on GPU the flag
 `--xla_gpu_deterministic_ops=true` pins kernel choice too.
 :end_tab:

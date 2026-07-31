@@ -81,6 +81,9 @@ outcome with probability $p_1 p_2$ is $I(p_1) + I(p_2)$, which forces a
 logarithm (:citet:`Csiszar.2008` gives the formal axiomatics; Exercise 5
 walks through the argument).
 
+This surprise is relative to the stated probabilistic model and its event partition. A confidently wrong model can assign large self-information to an ordinary event; the number does not by itself measure semantic importance or anomaly.
+
+
 ![Self-information $I(x) = -\log p(x)$ in nats as a function of the probability $p$. Certain events ($p = 1$) carry zero information, the fair coin ($p = \tfrac{1}{2}$) carries $\ln 2 \approx 0.693$ nats, and the curve diverges as $p \to 0$: rare means surprising.](../img/mdl-it-self-info-curve.svg)
 :label:`fig_mdl-self-info-curve`
 
@@ -101,24 +104,17 @@ $6$ bits: it takes six fair-coin flips to have probability $1/64$).
 
 ### Shannon Entropy
 
-Self-information scores a single outcome. To score a *random variable*, a
-whole distribution of outcomes, we average. For $X \sim P$ with probability
-mass function (p.m.f.) or probability density function (p.d.f.) $p(x)$, the
-*entropy* (or *Shannon entropy*) of $X$ is the expected self-information,
+Let $X$ be a discrete random variable with probability mass function $p$.
+Its *Shannon entropy* is the expected self-information of its outcome:
 
 $$H(X) = - E_{x \sim P} [\log p(x)].$$
 :eqlabel:`eq_mdl-ent_def`
 
-For discrete $X$ this reads $H(X) = -\sum_i p_i \log p_i$ with
-$p_i = P(X = x_i)$. Each term weighs the surprise $-\log p(x)$ of an outcome
-by how often it occurs, so entropy is the *average surprise* of observing
-$X$: a distribution concentrated on one value never surprises us ($H = 0$),
-while a spread-out distribution surprises us constantly. Why exactly this
-form? The logarithm is forced by additivity over independent observations,
-the minus sign makes the measure positive and decreasing in probability, and
-the expectation is the only consistent way to aggregate outcome-level
-surprise into a single number for the distribution; this is the content of
-the axiomatic characterizations mentioned above.
+Equivalently, $H(X)=-\sum_i p_i\log p_i$, where $p_i=P(X=x_i)$. A point mass has
+entropy zero, and a distribution on a fixed finite support has maximal entropy
+when it is uniform. These nonnegativity and coding interpretations apply to
+probability masses. They must not be transferred to density values, which can
+exceed one and change under a coordinate transformation.
 
 For continuous $X$ with density $p$ the sum becomes an integral, and the
 result is called the *differential entropy*,
@@ -146,20 +142,23 @@ differences, their gradients in $Q$, and the argmin do not. That is the
 precise sense in which objectives that *compare* distributions are safe under
 reparameterization while raw differential entropy is not.
 
-In code, entropy needs one piece of care: the convention $0 \log 0 = 0$ (an
-outcome of probability zero contributes nothing). Where $p(x) = 0$ the term
-$-p \log p$ has limiting value $0$, but the direct floating-point expression
-`0 * -inf` evaluates to `nan`, so we sum with `nansum`, which drops those
-terms: exactly the convention we want.
+The convention $0\log0=0$ should be implemented by masking only zero probabilities.
+A general `nansum` would also hide NaNs caused by negative, unnormalized, or
+otherwise invalid input, so the helper validates the vector.
 
 ```{.python .input #information-theory-definition}
 import numpy as onp
 def entropy(p):
     """Entropy of a probability vector, in nats."""
     p = onp.asarray(p, dtype=float)
-    ent = -p * onp.log(p)
-    # `nansum` encodes the convention 0 log 0 = 0
-    return float(onp.nansum(ent))
+    if p.ndim != 1 or not onp.all(onp.isfinite(p)):
+        raise ValueError("p must be a finite one-dimensional probability vector")
+    if onp.any(p < 0):
+        raise ValueError("probabilities must be nonnegative")
+    if not onp.isclose(p.sum(), 1.0):
+        raise ValueError("probabilities must sum to one")
+    positive = p > 0
+    return float(-onp.dot(p[positive], onp.log(p[positive])))
 
 entropy(onp.array([0.1, 0.5, 0.1, 0.3]))
 ```
@@ -611,16 +610,16 @@ about how severely to punish which mistakes (the log score's penalty diverges
 on confident errors; the Brier score's stays bounded), but they agree about
 where the optimum is: the truth :cite:`Gneiting.Raftery.2007`.
 
-Why is *this* the loss that training a probabilistic classifier by maximum
-likelihood produces? We proved that already, in
-:numref:`subsec_mdl-nll-crossentropy`: the average negative log-likelihood of
-any i.i.d. dataset *is* the cross-entropy from the empirical distribution
-$\hat p_{\textrm{data}}$ to the model, so maximizing likelihood, minimizing
-cross-entropy, and minimizing
-$D_{\textrm{KL}}(\hat p_{\textrm{data}} \| p_{\boldsymbol{\theta}})$ are one
-and the same optimization, for binary labels, multiclass labels, and
-densities alike. We will not re-derive it here; this section's contribution is
-the *interpretation* of that loss as a code length, which we build next.
+For discrete observations, the average negative log-likelihood is exactly the
+cross-entropy from the empirical mass function to the model; its empirical
+entropy is constant in the model, so minimizing NLL also minimizes the
+corresponding empirical KL. For continuous observations, the atomic empirical
+measure is generally singular with respect to a model density, and that KL is
+not finite. The sample NLL remains a valid empirical objective. At the population
+level, if the data have density $p$, its expectation is the cross-entropy
+$-E_p[\log q_{\boldsymbol\theta}]$ and differs from
+$D_{\mathrm{KL}}(p\|q_{\boldsymbol\theta})$ by the model-independent differential
+entropy of $p$ when these quantities are finite.
 
 ## The Coding View and Perplexity
 
@@ -1030,20 +1029,16 @@ $0.05$ contributes $3.0$ nats, as much as several good predictions
 combined. When you encounter perplexity as the headline metric in
 :numref:`sec_language-model` and the Transformer chapters, it is this number.
 
-Perplexity is also the quantity behind the defining empirical fact of the
-LLM era: held-out cross-entropy falls as a *power law* in model parameters,
-dataset size, and training compute, smoothly across many orders of magnitude
-:cite:`kaplan2020scaling`, with exponents stable enough that one can budget
-compute against a target loss in advance :cite:`hoffmann2022training`. Read
-through this section's lens, the scaling laws say that the approach to the
-language's entropy rate (the floor :eqref:`eq_mdl-entropy_rate` that no
-model can beat) is empirically
-*predictable*: each constant multiple of compute removes a roughly constant
-fraction of the remaining excess over the floor. One caution when comparing
-reported numbers: per-token quantities depend on what a token is, so
-perplexities are comparable only between models that share a tokenizer.
-To compare across tokenizers, convert to bits per character, the
-compression rate of the previous subsection, which is tokenizer-free.
+Empirical studies have fitted held-out cross-entropy by power laws in model size,
+data, and training compute over substantial observed ranges
+:cite:`kaplan2020scaling,hoffmann2022training`. Such fits can support planning
+within a studied regime, but their fitted irreducible term is not an identified
+entropy rate of natural language. Nor does a generic power law imply that each
+constant multiple of compute removes a constant fraction of the remaining loss;
+that interpretation describes exponential decay. Per-token quantities also
+depend on the tokenizer, so perplexities are directly comparable only under a
+shared tokenization and evaluation protocol. Bits per character or byte can
+improve cross-tokenizer comparability when text normalization is held fixed.
 
 ## Modern Uses
 
@@ -1124,7 +1119,7 @@ target instead of a runaway one. (A logit difference is a log-odds ratio, so
 we leave it unitless rather than calling it nats.) The loss at the optimum
 is the (nonzero) entropy $H(\mathbf{p}^\epsilon)$, which is why a
 label-smoothed loss curve plateaus above zero even when the model is doing
-everything right. Both numbers are easy to check:
+exactly what the softened target requests. Both numbers are easy to check:
 
 ```{.python .input #information-theory-label-smoothing}
 k, eps = 10, 0.1
@@ -1731,14 +1726,15 @@ the update scale-matched. Autograd confirms the closed form:
 
 ::: {.d2l-note .rule}
 Maximum likelihood $=$ cross-entropy minimization $=$ KL-projection of the data
-onto the model. Label smoothing and distillation are both just Gibbs with a
-softened target.
+onto the model. Label smoothing and distillation follow from the same Gibbs
+inequality after replacing a hard target with a softened distribution.
 :::
 
-Pick the target distribution; Gibbs picks the optimum and guarantees the floor.
+Once the target distribution is specified, Gibbs' inequality identifies both
+the optimum and the irreducible loss.
 :::
 
-::: {.slide title="Recap"}
+::: {.slide title="Information Measures Link Prediction and Compression"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

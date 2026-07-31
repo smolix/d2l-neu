@@ -286,19 +286,20 @@ trainer = d2l.Trainer(max_epochs=10)
 trainer.fit(model, data)
 ```
 
-As before, training converges to about 83--84% validation accuracy, the
-same solution as the from-scratch version of :numref:`sec_softmax_scratch`
-(read it off the validation curve), now in far fewer lines of code.
+In the displayed run, training reaches about 83--84% validation accuracy, close
+to the from-scratch implementation in :numref:`sec_softmax_scratch`. The shorter
+program changes the implementation interface, not the underlying linear model.
 
 
 ## Summary
 
-High-level APIs are very convenient at hiding from their user potentially dangerous aspects, such as numerical stability. Moreover, they allow users to design models concisely with very few lines of code. This is both a blessing and a curse. The obvious benefit is that it makes things highly accessible, even to engineers who never took a single class of statistics in their life (in fact, they are part of the target audience of the book). But hiding the sharp edges also comes with a price: a disincentive to add new and different components on your own, since there is little muscle memory for doing it. Moreover, it makes it more difficult to *fix* things whenever the protective padding of
-a framework fails to cover all the corner cases entirely. Again, this is due to lack of familiarity.
-
-As such, we strongly urge you to review *both* the bare bones and the concise versions of many of the implementations that follow. While we emphasize ease of understanding, the implementations are nonetheless usually quite performant (convolutions are the big exception here). It is our intention to allow you to build on these when you invent something new that no framework can give you.
-
-The fused cross-entropy loss in this section is the implementation to reach for: it computes the log-sum-exp directly and never materializes an unstable softmax.
+The concise model uses a single linear layer for its logits and a framework
+cross-entropy operator for its loss. That operator combines log-softmax with
+negative log-likelihood, avoiding the overflow and underflow of an explicitly
+materialized softmax. The from-scratch version exposes the algebra and data
+flow; the concise version supplies the stable components normally used in
+applications. Comparing them makes clear which behavior belongs to the model
+and which belongs to its implementation.
 
 
 ## Exercises

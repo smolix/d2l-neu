@@ -49,11 +49,11 @@ self-attention (:numref:`sec_multihead-attention`).
 :numref:`fig_cnn-rnn-self-attention` draws all three as graphs over the
 sequence. Two properties of these graphs matter beyond raw arithmetic. The
 number of *sequential* operations bounds how much of the work can run in
-parallel on modern hardware. And the *maximum path length*—how many layers
-information must traverse to travel between two arbitrary positions—governs
-how easily long-range dependencies can be learned; long multiplicative
-chains between distant positions are precisely the gradient pathology of
-:cite:`Hochreiter.Bengio.Frasconi.ea.2001`.
+parallel on modern hardware. The *maximum path length* counts how many layer
+transformations connect two positions. It is an architectural proxy, not a
+learnability theorem: shorter paths avoid repeatedly multiplying recurrent
+state Jacobians, but they do not by themselves guarantee that optimization
+will recover a long-range dependency.
 
 ![Comparing CNN, RNN, and self-attention architectures.](../img/mdl-attention-cnn-rnn-self-attention.svg)
 :label:`fig_cnn-rnn-self-attention`
@@ -67,11 +67,12 @@ takes a stack of depth $\mathcal{O}(n/k)$. An RNN requires
 $\mathcal{O}(nd^2)$ for the sequence—one $d \times d$ state update per
 token—but the updates are inherently ordered: $\mathcal{O}(n)$ sequential
 steps, and a signal from the first token reaches the last only through
-$\mathcal{O}(n)$ applications of the cell. Self-attention computes an
-$n \times d$ by $d \times n$ product and then an $n \times n$ by
-$n \times d$ product, $\mathcal{O}(n^2 d)$ in total. These operations form
-a batch of matrix multiplications with $\mathcal{O}(1)$ sequential steps, and any
-token attends to any other directly, path length $\mathcal{O}(1)$.
+$\mathcal{O}(n)$ applications of the cell. Self-attention first projects the
+inputs at cost $\mathcal{O}(nd^2)$, then computes an $n \times d$ by
+$d \times n$ product and an $n \times n$ by $n \times d$ product at cost
+$\mathcal{O}(n^2d)$. These matrix multiplications have $\mathcal{O}(1)$
+sequential depth, and any token can attend to any other in one layer, giving
+path length $\mathcal{O}(1)$.
 :numref:`tab_cnn-rnn-attn` collects the accounting.
 
 :Per-layer cost of mapping $n$ tokens of dimension $d$ to $n$ tokens of dimension $d$.
@@ -81,20 +82,14 @@ token attends to any other directly, path length $\mathcal{O}(1)$.
 |:--|:--|:--|:--|
 | convolution (kernel $k$) | $\mathcal{O}(knd^2)$ | $\mathcal{O}(1)$ | $\mathcal{O}(n/k)$ |
 | recurrence | $\mathcal{O}(nd^2)$ | $\mathcal{O}(n)$ | $\mathcal{O}(n)$ |
-| self-attention | $\mathcal{O}(n^2 d)$ (mixing only) | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
+| self-attention | $\mathcal{O}(nd^2+n^2d)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
 
-Self-attention has full parallelism and constant path length, but its operation
-count is quadratic in $n$. Two of these rows fold a per-token $d \times d$
-channel map into the number shown — a convolution or a recurrence has no
-separate projection step — while the self-attention row counts the *mixing*
-only; the surrounding query/key/value/output projections add a further
-$\mathcal{O}(nd^2)$, linear in $n$ like the others' work and accounted for at
-the crossover below. For short sequences the bargain is excellent—with
-$n$ in the hundreds and $d$ comparable, $n^2 d$ and $nd^2$ are the same
-size—which is the regime in which the Transformer conquered machine
-translation. The regime of a million-token context is another matter, and
-the rest of this section is about living with, or getting rid of, the
-$n^2$.
+Self-attention has constant sequential depth and path length, but its mixing
+term is quadratic in $n$. The table includes the query, key, value, and
+output projections so that all three rows count the complete layer. When
+$n$ and $d$ are comparable, the linear projection and quadratic mixing terms
+have similar order; for $n\gg d$, the mixing term dominates. The remainder
+of this section studies ways to reduce its memory use or arithmetic cost.
 
 ## Quadratic Time and Memory
 
@@ -829,21 +824,20 @@ print(f'recurrent state: {d_h}x{d_h} + {d_h} floats '
       f'= {(d_h * d_h + d_h) * 4 / 1024:.0f} KiB at any sequence length')
 ```
 
-The number printed last is the point: at generation time this layer carries
-16 KiB of state *regardless of context length*, where softmax attention
-must keep every past key and value—about 4 MiB per head at
-$n = 8192$ in fp32 and growing linearly forever. Constant-memory inference
-is exactly the property we prized in RNNs, and here it re-emerges from
-attention itself, by removing one exponential.
+At generation time this linear-attention layer carries 16 KiB of state,
+independent of context length for $d_h=64$. A softmax head instead caches
+every past key and value: $2nd_h\cdot4$ bytes in fp32, or about 4 MiB at
+$n=8192$. Its cache therefore grows linearly with the generated sequence,
+whereas the recurrent state above remains fixed.
 
 The state $\mathbf{S}_t$ is a lossy summary. All past values are represented
 by $d \times d$ numbers, so retrieving one
 specific token from a long context—the thing exact attention is best
 at—degrades as the context grows, and softmax's sharp, winner-take-all
 weighting is replaced by a milder polynomial kernel. Where the quality
-gap matters and where it does not is an active empirical question, and
-production systems increasingly hedge by interleaving a few full-attention
-layers into a mostly-linear stack.
+gap matters and where it does not is an empirical question. A hybrid design
+can retain occasional full-attention layers within a mostly linear stack, but
+its quality and efficiency must be evaluated for the target workload.
 
 ### Measured Time and Memory
 
@@ -852,8 +846,8 @@ per forward pass for the three mechanisms—dense (exact, quadratic),
 windowed (sparse, linear at fixed $w$), and linear attention's parallel
 form—as the sequence grows from 512 to 16,384 tokens. These wall-clock and
 memory figures come from a single GPU in fp32 and shift with hardware, dtype,
-and kernel. The *shape* of each curve carries across machines; the
-milliseconds do not.
+and kernel. The theoretical scaling predicts the shape of each curve; the
+milliseconds are specific to this run.
 
 ```{.python .input #attention-at-scale-the-price-of-attention-measured}
 %%tab pytorch
@@ -1054,9 +1048,9 @@ Map $n$ tokens of dimension $d$ to $n$ tokens of dimension $d$:
 |:--|:--|:--|:--|
 | convolution ($k$) | $\mathcal{O}(knd^2)$ | $\mathcal{O}(1)$ | $\mathcal{O}(n/k)$ |
 | recurrence | $\mathcal{O}(nd^2)$ | $\mathcal{O}(n)$ | $\mathcal{O}(n)$ |
-| self-attention | $\mathcal{O}(n^2d)$ (mixing) | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
+| self-attention | $\mathcal{O}(nd^2+n^2d)$ | $\mathcal{O}(1)$ | $\mathcal{O}(1)$ |
 
-![](../img/mdl-attention-cnn-rnn-self-attention.svg){width=62%}
+![Sequence-layer connectivity for a convolution, a recurrence, and self-attention.](../img/mdl-attention-cnn-rnn-self-attention.svg){width=62%}
 
 Self-attention combines full parallelism and constant path length with
 quadratic complexity in sequence length.
@@ -1090,7 +1084,7 @@ $$m' = \max(m, \max_j a_j), \quad s' = s\,e^{m-m'} + \sum_j e^{a_j - m'}, \quad 
 $\mathbf{o}/s$ is **exactly** $\mathrm{softmax}(\mathbf{a})\mathbf{V}$ —
 raising the max retroactively rescales the past.
 
-![](../img/mdl-attention-online-softmax.svg){width=72%}
+![Online softmax carries a running maximum, normalizer, and weighted-value sum across key blocks.](../img/mdl-attention-online-softmax.svg){width=72%}
 :::
 
 ::: {.slide title="Chunked attention: exact, in linear memory"}
@@ -1113,8 +1107,9 @@ in registers, backward pass *recomputes* instead of storing.
 
 @attention-at-scale-the-bottleneck-is-memory-traffic
 
-- Exact attention, an order of magnitude faster, quadratic buffer gone —
-  ship it: `scaled_dot_product_attention` / `jax.nn.dot_product_attention`.
+- Exact attention with no quadratic score buffer; use
+  `scaled_dot_product_attention` or `jax.nn.dot_product_attention` when the
+  corresponding optimized backend is available.
 :::
 
 ::: {.slide title="Attention through a window"}

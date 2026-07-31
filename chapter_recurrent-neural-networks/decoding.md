@@ -68,36 +68,36 @@ $$P(x_1, \ldots, x_T) = \prod_{t=1}^{T} P(x_t \mid x_{<t}).$$
 Decoding asks the inverse question: given the conditionals, which sequence
 should we output? One natural answer is the *most probable* sequence, the
 argmax of :eqref:`eq_decoding-chain` over all candidates. But the number of
-candidates is staggering. With vocabulary $\mathcal{V}$ and $T$ tokens to
+candidates grows exponentially. With vocabulary $\mathcal{V}$ and $T$ tokens to
 generate there are $|\mathcal{V}|^T$ sequences to compare; for our modest
 1,024-token vocabulary and a 50-token continuation that is $1024^{50} =
-2^{500} \approx 10^{150}$ sequences, vastly more than there are atoms in
-the observable universe. Evaluating them all is *exhaustive search*: it
-costs $\mathcal{O}(|\mathcal{V}|^T)$ model evaluations and is out of the
-question. Every practical decoder explores a vanishing fraction of this
-space and must decide, step by step, which fraction.
+2^{500} \approx 10^{150}$ sequences. Exhaustive search is therefore
+infeasible. A practical decoder evaluates only a small subset of prefixes and
+must decide which ones to retain at each step.
 
 Intractability is only half of the problem, though. The other half is that
 for many uses the most probable sequence is not even what we want. When a
-task has essentially one right answer conditioned on the input (a French
-sentence to translate, an utterance to transcribe, a function signature to
-complete), probability mass concentrates on that answer and hunting for the
-argmax is exactly right. But when we ask a model to *write*, there are
-astronomically many acceptable continuations, each individually improbable.
+task has a narrow set of acceptable answers conditioned on the input, as in
+transcription, searching for a high-probability sequence is often useful.
+This is a model-level decision rule, not necessarily the task-optimal rule:
+translation may have several valid references, and length or utility can
+matter in addition to model probability. For open-ended writing there are
+many acceptable continuations, each individually improbable.
 A model that has learned this diversity spreads its mass accordingly, and
 insisting on the single most probable output discards the diversity we
 asked for; we will see shortly that it collapses into dull repetition.
 *Sampling* instead matches the output's diversity to the model's.
 
-These two regimes organize the whole section (:numref:`fig_decoding-taskmap`).
-*Maximization* methods, greedy decoding and beam search, chase the most
-probable output and dominate tasks with a right answer, such as machine
-translation and speech recognition. *Sampling* methods draw from the
+These two families organize the methods in this section
+(:numref:`fig_decoding-taskmap`). *Maximization* methods, including greedy
+decoding and beam search, seek high-probability outputs and are common when
+the acceptable output set is narrow. *Sampling* methods draw from the
 model's distribution, reshaped by a small set of dials named temperature,
 top-$k$, top-$p$, and min-$p$, and dominate open-ended generation: chat,
-stories, and everything one now associates with a large language model.
+stories, and dialogue. Applications can also combine search, sampling, and
+task-specific reranking.
 
-![One trained language model, two families of decoding strategies: maximization for tasks with one right answer, sampling for tasks with many.](../img/mdl-rnn-decoding-taskmap.svg)
+![Two common decoding families. Search for high-probability sequences often suits tasks with a narrow acceptable-output set; sampling preserves diversity in open-ended generation. Task-specific utility or reranking may alter this division.](../img/mdl-rnn-decoding-taskmap.svg)
 :label:`fig_decoding-taskmap`
 
 ### A Model to Decode From
@@ -711,9 +711,9 @@ token, a property the next chapter's architectures inherit.
 A trained LM supplies conditionals $P(x_t \mid x_{<t})$. **Decoding** turns
 them into actual sequences, and the strategy is a design decision of its own:
 
-![](../img/mdl-rnn-decoding-taskmap.svg){width=75%}
+![Search is common for narrow-output tasks, while sampling preserves diversity for open-ended generation; many systems combine the two.](../img/mdl-rnn-decoding-taskmap.svg){width=75%}
 
-- **Maximization** (greedy, beam search): tasks with one right answer.
+- **Maximization** (greedy, beam search): tasks with a narrow output set.
 - **Sampling** (temperature, top-$k$/$p$, min-$p$): open-ended generation.
 :::
 
@@ -722,12 +722,13 @@ The chain rule scores any full sequence:
 
 $$P(x_1, \ldots, x_T) = \prod_{t=1}^{T} P(x_t \mid x_{<t}).$$
 
-The "best" sequence is an argmax over $|\mathcal{V}|^T$ candidates:
-$1024^{50} \approx 10^{150}$. Exhaustive search is hopeless.
+The model's highest-probability sequence is an argmax over
+$|\mathcal{V}|^T$ candidates: $1024^{50} \approx 10^{150}$. Exhaustive
+search is infeasible.
 
 . . .
 
-Worse: for open-ended text the argmax is not even *desirable*. Many
+For open-ended text, the argmax is often not the desired decision rule. Many
 acceptable continuations, each individually improbable; picking the single
 most probable one discards the diversity we asked for.
 :::
@@ -759,7 +760,7 @@ $$x_t = \operatorname*{argmax}_{x \in \mathcal{V}} P(x \mid x_{<t})$$
 Keep the $k$ best prefixes alive; expand each over the vocabulary, keep the
 best $k$ of the $k \cdot |\mathcal{V}|$ candidates:
 
-![](../img/mdl-rnn-beam-tree.svg){width=55%}
+![Beam size two retains the two highest-scoring prefixes after each expansion and discards all other branches.](../img/mdl-rnn-beam-tree.svg){width=55%}
 
 Cost $\mathcal{O}(k |\mathcal{V}| T)$: greedy is $k = 1$, exhaustive is
 $k \to \infty$.

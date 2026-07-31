@@ -7,6 +7,9 @@ variable, then introduce gradients and the multivariable chain rule. Matrix
 calculus and automatic differentiation explain how backpropagation computes
 these derivatives efficiently. The final section develops integration for
 continuous probability (:numref:`chap_mdl-probability-statistics`) and the
+
+The chapter has two tracks. The first three sections form the differentiation track needed for optimization: scalar derivatives, gradients and chain rules, then Jacobian products and automatic differentiation. The integration section is not a prerequisite for backpropagation; it begins a second track used by continuous probability models, expectations, and differential equations.
+
 differential equations of :numref:`chap_mdl-dynamics`.
 
 ```toc

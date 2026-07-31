@@ -250,12 +250,24 @@ Our goal is to find a distribution $p$ over *networks* such that most networks h
 
 $$\hat{F}(e, \mathcal{Z}) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}(e_i \leq e).$$
 
-Whenever the CDF for one set of choices majorizes (or matches) another CDF, its choice of parameters is superior (or indifferent). This gives us a cheap experimental protocol: constrain the design space, draw networks from the constrained and the unconstrained distribution, and compare the two CDFs. Accordingly, :citet:`Radosavovic.Kosaraju.Girshick.ea.2020` tried a shared bottleneck ratio $k_i = k$ for all stages $i$, removing three of the four bottleneck parameters. As the first panel of :numref:`fig_regnet-fig` shows, this constraint does not affect the error distribution at all. Sharing the group width $g_i = g$ across stages is equally harmless (second panel). Both steps combined remove six free parameters.
+If the empirical CDF for one sampled design space lies above another, a larger
+fraction of its sampled networks achieve any given error threshold. This is an
+estimate of first-order stochastic dominance under the paper's sampling and
+training protocol, not a universal ranking of architectures. Under that
+protocol, tying the bottleneck ratios $k_i=k$ produces a CDF nearly
+indistinguishable from the original space (first panel of
+:numref:`fig_regnet-fig`). Tying group widths $g_i=g$ has similarly little
+visible effect in the second panel. Together these constraints remove six
+parameters from the design space.
 
-![Comparing error empirical distribution functions of design spaces. $\textrm{AnyNet}_\mathit{A}$ is the original design space; $\textrm{AnyNet}_\mathit{B}$ ties the bottleneck ratios, $\textrm{AnyNet}_\mathit{C}$ also ties group widths, $\textrm{AnyNet}_\mathit{D}$ increases the network depth across stages. From left to right: (i) tying bottleneck ratios has no effect on performance; (ii) tying group widths has no effect on performance; (iii) increasing network widths (channels) across stages improves performance; (iv) increasing network depths across stages improves performance. Figure courtesy of :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`.](../img/regnet-fig.png)
+![Empirical error CDFs for sampled design spaces under the protocol of :citet:`Radosavovic.Kosaraju.Girshick.ea.2020`. The panels compare the original AnyNet space with spaces that tie bottleneck ratios, tie group widths, or constrain widths and depths to increase across stages. Upward shifts indicate that more sampled models fall below a given error threshold; overlapping curves indicate no resolved difference at this sample size.](../img/regnet-fig.png)
 :label:`fig_regnet-fig`
 
-Next we reduce the choices for width and depth of the stages. It is reasonable to assume that channels increase with depth, i.e., $c_i \geq c_{i-1}$ ($w_{i+1} \geq w_i$ per their notation in :numref:`fig_regnet-fig`), yielding $\textrm{AnyNetX}_D$, and likewise that later stages are deeper, i.e., $d_i \geq d_{i-1}$, yielding $\textrm{AnyNetX}_E$. The third and fourth panels of :numref:`fig_regnet-fig` verify both experimentally.
+The next constraints require channels and depths to increase across stages:
+$c_i\geq c_{i-1}$ and $d_i\geq d_{i-1}$. In the third and fourth panels,
+these constrained spaces shift the sampled error CDF upward under the same
+protocol. The experiment supports retaining the constraints in this search
+space; it does not prove that every task or block family benefits from them.
 
 ## RegNet
 
@@ -422,7 +434,23 @@ What remains is a division of labor. Foundation-scale pretraining and multimodal
 
 The same pattern holds beyond classification. Diffusion image generators moved from convolutional U-Nets to diffusion Transformers at the frontier :cite:`peebles2023dit`, while convolutional U-Nets remain standard in deployed and smaller systems.
 
-The lesson of the chapter, then, is that inductive bias is a data-efficiency dial, not a ceiling. With limited data and compute, locality and translation equivariance buy accuracy that a less constrained model must learn from examples; with enough of both, a Transformer learns those regularities and others besides. :numref:`chap_transformers` develops that architecture in full.
+The comparison suggests that locality and translation equivariance can improve
+data efficiency, while large-scale pretraining can let less constrained models
+learn useful spatial regularities. The balance depends on data, compute,
+latency, and task; neither architecture family dominates every regime.
+:numref:`chap_transformers` develops the alternative architecture in full.
+
+## Summary
+
+AnyNet turns architecture design into a distribution over block depths,
+widths, group widths, and bottleneck ratios. Under the RegNet sampling and
+training protocol, tying several stage parameters preserves the observed error
+distribution, while increasing widths and depths across stages improves it.
+RegNet further constrains stage widths to a quantized linear rule, producing a
+small, interpretable family rather than one selected network. These conclusions
+are empirical and depend on the block family, compute budget, and training
+recipe; the exercise below tests whether they survive a change to ConvNeXt
+blocks.
 
 ## Exercises
 

@@ -295,9 +295,9 @@ In some cases, we get lucky and the models work
 despite covariate, label, or concept shift.
 In other cases, we can do better by employing
 principled strategies to cope with the shift.
-The remainder of this section grows considerably more technical.
-The impatient reader could continue on to the next section
-as this material is not prerequisite to subsequent concepts.
+The remainder of this section develops two correction methods. It may be read
+independently of the later chapters, but its assumptions delimit exactly when
+unlabeled target data can support reweighting.
 
 Recall from :numref:`subsec_empirical-risk-and-risk` the distinction
 between the *empirical risk* :eqref:`eq_empirical-risk-min` (the average
@@ -418,7 +418,7 @@ are drawn from the target distribution.
 Here is a prototypical algorithm
 for correcting covariate shift:
 
-1. Create a binary-classification training set: $\{(\mathbf{x}_1, -1), \ldots, (\mathbf{x}_n, -1), (\mathbf{u}_1, 1), \ldots, (\mathbf{u}_m, 1)\}$.
+1. Create a binary-classification training set from source and target features. Balance the two domain classes by subsampling or class weighting; otherwise include the known domain-prior correction in the odds.
 1. Train a binary classifier using logistic regression to get the function $h$.
 1. Weigh training data using $\beta_i = \exp(h(\mathbf{x}_i))$ or better $\beta_i = \min(\exp(h(\mathbf{x}_i)), c)$ for some constant $c$.
 1. Use weights $\beta_i$ for training on $\{(\mathbf{x}_1, y_1), \ldots, (\mathbf{x}_n, y_n)\}$ in :eqref:`eq_weighted-empirical-risk-min`.
@@ -502,14 +502,13 @@ for name, wts in [('unweighted', None), ('weighted', beta),
           f'   (source accuracy: {acc(wb, X_src, y_src):.3f})')
 ```
 
-The unweighted model is fitted where the *source* data lives, so on the
-target domain it is no better than a coin flip; reweighting by $\beta$ lifts
-target accuracy above 90%, at the price of a worse fit on the now-discounted
-source region, exactly the trade the identity
-:eqref:`eq_covariate-shift-identity` prescribes. The clipped run bears out the
-earlier warning: the largest raw weight here is over 50, so a handful of the
-thousand source points would otherwise dominate the objective, and capping
-$\beta$ at $c=5$ here even helps a little.
+In this seeded construction, the unweighted model fits the source region and
+performs near chance on the target domain. Reweighting raises target accuracy
+above 90% at the cost of a worse source fit, as
+:eqref:`eq_covariate-shift-identity` predicts. The largest raw weight exceeds 50,
+so clipping at $c=5$ reduces the influence of a few source points and happens to
+improve this run slightly. Repeated seeds or confidence intervals are needed
+before treating that last comparison as systematic.
 Exercises 3 and 4 let you probe when this pipeline fails, most instructively
 when the supports stop overlapping.
 
@@ -631,92 +630,34 @@ old products become less popular. This means that the distribution over ads and 
 In such cases, we can use the same approach that we used for training networks to make them adapt to the change in the data. In other words, we use the existing network weights and simply perform a few update steps with the new data rather than training from scratch.
 
 
-## A Taxonomy of Learning Problems
+## Beyond Static Supervised Learning
 
-Armed with knowledge about how to deal with changes in distributions, we can now consider some other aspects of machine learning problem formulation.
-
-
-### Batch Learning
-
-In *batch learning*, we have access to training features and labels $\{(\mathbf{x}_1, y_1), \ldots, (\mathbf{x}_n, y_n)\}$, which we use to train a model $f(\mathbf{x})$. Later on, we deploy this model to score new data $(\mathbf{x}, y)$ drawn from the same distribution. This is the default assumption for any of the problems that we discuss here. For instance, we might train a cat detector based on lots of pictures of cats and dogs. Once we have trained it, we ship it as part of a smart catdoor computer vision system that lets only cats in. This is then installed in a customer's home and is never updated again (barring extreme circumstances).
-
-
-### Online Learning
-
-Now imagine that the data $(\mathbf{x}_i, y_i)$ arrives one sample at a time. More specifically, assume that we first observe $\mathbf{x}_i$, then we need to come up with an estimate $f(\mathbf{x}_i)$. Only once we have done this do we observe $y_i$ and so receive a reward or incur a loss, given our decision.
-Many real problems fall into this category. For example, we need to predict tomorrow's stock price, which allows us to trade based on that estimate and at the end of the day we find out whether our estimate made us a profit. In other words, in *online learning*, we have the following cycle where we are continuously improving our model given new observations:
-
-$$\begin{aligned}&\textrm{model } f_t \longrightarrow \textrm{data }  \mathbf{x}_t \longrightarrow \textrm{estimate } f_t(\mathbf{x}_t) \longrightarrow\\ \textrm{obs}&\textrm{ervation } y_t \longrightarrow \textrm{loss } l(y_t, f_t(\mathbf{x}_t)) \longrightarrow \textrm{model } f_{t+1}\end{aligned}$$
-
-### Bandits
-
-A *bandit* problem supplies only partial feedback: after choosing an action, the
-learner observes the reward for that action rather than labels or rewards for
-all alternatives. The classical multi-armed bandit has finitely many actions;
-contextual and continuous-action variants are also common. This feedback
-structure distinguishes bandits from ordinary supervised online learning.
-
-
-### Control
-
-In control problems, an action changes the system state and therefore affects
-later observations. A coffee-boiler controller, for example, sees a temperature
-that depends on its earlier heating decisions; a PID
-(proportional-integral-derivative) controller is one standard approach.
-Likewise, recommendations shown to a user can change what the user reads next.
-Sequential dynamics distinguish control from ordinary online prediction.
+This chapter studies supervised prediction under distribution shift. Other
+problem formulations change the information available to the learner: online
+learning reveals observations sequentially, bandits reveal rewards only for
+chosen actions, and reinforcement learning allows actions to alter later states.
+Those settings require their own notation and algorithms and are developed in
+the corresponding later chapters. Here the relevant boundary is simpler: once
+deployment decisions change future data, the evaluation distribution is partly
+produced by the model itself.
 
 
 
 
-### Reinforcement Learning
+## Deployment Decisions and Feedback
 
-*Reinforcement learning* studies sequential decisions in which actions affect
-future states and rewards may be delayed. It includes single-agent control as
-well as cooperative and competitive multiagent problems. Chess, Go, and
-StarCraft are multiagent examples; autonomous driving is a control problem in
-which other road users also respond to the vehicle's actions. Partial
-observability, delayed credit, and exploration are separate difficulties that
-may occur in these settings.
-
-### Considering the Environment
-
-One key distinction between the different situations above is that a strategy that might have worked throughout in the case of a stationary environment, might not work throughout in an environment that can adapt. For instance, an arbitrage opportunity discovered by a trader is likely to disappear once it is exploited. The speed and manner at which the environment changes determines to a large extent the type of algorithms that we can bring to bear. For instance, if we know that things may only change slowly, we can force any estimate to change only slowly, too. If we know that the environment might change instantaneously, but only very infrequently, we can make allowances for that. These types of knowledge are what let the aspiring data scientist deal with concept shift, i.e., when the problem that is being solved can change over time.
-
-
-
-
-## Fairness, Accountability, and Transparency in Machine Learning
-
-Deploying a machine learning system often turns predictions into decisions
-that affect people.
-These technical systems can impact the lives
-of individuals who are subject to the resulting decisions.
-The leap from considering predictions to making decisions
-raises new ethical questions alongside the technical ones,
-and these must be carefully considered.
-If we are deploying a medical diagnostic system,
-we need to know for which populations
-it may work and for which it may not.
-Overlooking foreseeable risks to the welfare of
-a subpopulation could cause us to administer inferior care.
-Moreover, once we contemplate decision-making systems,
-we must step back and reconsider how we evaluate our technology.
-Among other consequences of this change of scope,
-we will find that *accuracy* is seldom the right measure.
-For instance, when translating predictions into actions,
-we will often want to take into account
-the potential cost sensitivity of erring in various ways.
-The cost of an error can differ across decisions and populations. Thresholds
+Deploying a model often turns predictions into decisions that affect both people
+and the data observed later. A medical classifier, for example, must be evaluated
+across relevant populations and against the costs of different errors, not only
+by aggregate accuracy. Thresholds
 should therefore be chosen from an explicit loss model and evaluated separately
 for affected groups. Threshold adjustment alone does not establish fairness:
 different fairness criteria can conflict, and the labels, data-collection
-process, and decision policy may themselves create harm. This section only
-identifies the problem; a later treatment develops the definitions and their
-limitations.
-We also want to be careful about
-how prediction systems can lead to feedback loops.
-For example, consider predictive policing systems,
+process, and decision policy may themselves create harm. This section identifies
+the connection to distribution shift; a dedicated treatment is needed for
+competing fairness definitions and their limitations.
+
+Decisions can also create feedback loops. Consider predictive policing systems,
 which allocate patrol officers
 to areas with high forecasted crime.
 It is easy to see how a worrying pattern can emerge:
@@ -726,18 +667,10 @@ It is easy to see how a worrying pattern can emerge:
  1. Exposed to more positives, the model predicts yet more crime in these neighborhoods.
  1. In the next iteration, the updated model targets the same neighborhood even more heavily leading to yet more crimes discovered, etc.
 
-Often, the various mechanisms by which
-a model's predictions become coupled to its training data
-are unaccounted for in the modeling process.
-This can lead to what researchers call *runaway feedback loops*.
-Additionally, we want to be careful about
-whether we are addressing the right problem in the first place.
-Predictive algorithms now play an outsize role
-in mediating the dissemination of information.
-Should the news that an individual encounters
-be determined by the set of Facebook pages they have *Liked*?
-These are just a few among the many pressing ethical dilemmas
-that you might encounter in a career in machine learning.
+The model's decisions change where labels are collected, which changes the next
+training distribution and reinforces the original allocation. Monitoring this
+coupling is part of distribution-shift analysis, but it does not replace a
+normative assessment of whether the decision system serves an appropriate goal.
 
 
 ## Summary
@@ -1074,7 +1007,8 @@ sufficient condition; then form $\beta_i$ and reweight.
 ::: {.slide title="Concept shift requires updating the model"}
 [Concept shift correction]{.kicker}
 
-When the labels are redefined, there is no clever reweighting, the old answers are simply wrong.
+Covariate reweighting cannot repair a changed $P(y\mid\mathbf{x})$; adaptation
+requires information about the new labeling relation.
 
 . . .
 

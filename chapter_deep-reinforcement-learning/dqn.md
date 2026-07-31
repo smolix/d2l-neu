@@ -64,7 +64,12 @@ The first new coupling is in the data. Consecutive transitions of an episode are
 
 ### Moving Targets
 
-The second coupling is in the targets. The target $y$ contains $Q_w$, so every optimizer step moves the network and the regression surface at once. This too was survivable before: the actor-critic's critic chased a doubly moving target and lived, because every batch was fresh, drawn from the current policy at exactly the states where the critic's errors mattered, so wherever the critic drifted, the next batch audited it. That protection is what this section spends. The whole point of the buffer we are about to introduce is to train on old data, and old data audits nothing: an error can compound through the bootstrap for thousands of updates before the behavior policy ever revisits the states that would expose it.
+The second coupling is in the targets. The target $y$ contains $Q_w$, so every
+optimizer step changes both the regressor and its target. In actor--critic, new
+batches come from the current policy and may expose critic errors in the states
+that policy visits, although this does not guarantee convergence. Replay instead
+uses older transitions. A bootstrapping error can therefore persist across many
+updates before the behavior policy revisits the affected states.
 
 ### The Deadly Triad
 
@@ -91,7 +96,18 @@ d2l.plot(np.arange(1, 1001), sup, 'sweeps over all seven states',
          'sup norm of w', yscale='log')
 ```
 
-The weights grow without bound, the straight line on the logarithmic axis saying the growth is exponential: after a thousand sweeps the sup norm has gone from $10$ to $335$ and the claimed value of state 7 is $677$, in a problem whose every true value is $0$ and whose correct weights are representable. Nothing is estimated, nothing is sampled, and no learning rate fixes it; shrinking the step only slows the doubling. The divergence is a property of the composed operator, projection under the wrong distribution plus bootstrapped backup, exactly the combination :cite:`Tsitsiklis.VanRoy.1997` indicts; reweight the same updates by the evaluated policy's own visitation and they converge (exercise 7 investigates which repairs help). This is the cliff DQN walks beside. The two inventions that follow remove no corner of the triad; they weaken the couplings enough that, on most problems, the walk succeeds.
+The weights grow approximately exponentially: after a thousand sweeps, their
+sup norm has increased from $10$ to $335$, and the estimated value of state 7
+is $677$ although its true value is zero. This deterministic expected-update
+calculation has no sampling error, and reducing the step size slows but does not
+remove the divergence. The cause is the composition of projection under the
+off-policy weighting with a bootstrapped backup
+:cite:`Tsitsiklis.VanRoy.1997`. Reweighting the updates by the evaluated
+policy's visitation distribution converges in this example (exercise 7).
+
+Replay and target networks do not remove an element of the triad. They reduce
+temporal correlation and slow target changes, which often improves empirical
+stability but does not restore a general convergence guarantee.
 
 ![The deadly triad. Each circle is one ingredient, and every region is occupied by an algorithm these two chapters have taught; the center, all three ingredients at once, is where DQN and offline Q-learning live, and where Baird's counterexample proves that divergence is possible. Drop any one ingredient and convergence arguments become available again, each under its own step-size, coverage and representation conditions: the triad is a warning pattern, not an if-and-only-if theorem.](../img/mdl-rl-deadly-triad.svg)
 :label:`fig_rl_deadly_triad`
@@ -355,7 +371,16 @@ for arm in runs:
           f'{"":>18}  fifty episodes earlier {np.round(early)}')
 ```
 
-Read the DQN line against the curve. The final window measures where a run happened to be in its climb-and-fall cycle when we stopped it: it moves by well over a hundred points from seed to seed, and the third statistic shows it would have moved again had we stopped fifty episodes earlier. The best window is no report either: picking the best stretch after watching the whole run is optimistic selection, a bias that grows with run length and noise, and printing its per-seed spread does not remove it. Both windows are descriptive statistics of the training curve, good for describing the churn and for nothing else. The statistic to *report* is predeclared before the run: a fixed budget, here $50{,}000$ steps, and a separate evaluation of the policy that budget bought, which is exactly what the next cell computes. This is not a CartPole quirk; deep reinforcement learning results are notoriously sensitive to when you stop measuring, and a predeclared budget with a separate evaluation is the defense.
+The final-window return varies by more than one hundred points across seeds,
+and the value fifty episodes earlier differs again. It therefore describes the
+state of each training run at the stopping time rather than a stable endpoint.
+Selecting the best window after observing the entire curve introduces
+optimistic selection bias; reporting its seed spread does not remove that bias.
+
+For evaluation, we predeclare a budget of $50{,}000$ environment steps and
+then evaluate the resulting policy separately. This separates the policy from
+the exploration noise in the training return and avoids choosing a stopping
+point after inspecting the curves.
 
 The behavior return combines policy quality with the effect of $\epsilon$-greedy exploration. After the fixed training budget, we therefore evaluate the greedy policy separately with $\epsilon=0$:
 
@@ -407,7 +432,14 @@ print(f'select with one, evaluate with the other: '
       f'{second[np.arange(100_000), sel].mean():+.3f}')
 ```
 
-One unit of bias from nothing but noise and a $\max$; the double estimator removes essentially all of it, because the evaluator's noise is independent of the selector's and averages to zero whatever the selector picks. :numref:`fig_rl_max_bias` extends the measurement: the bias grows with the number of actions, and the double estimator stays flat. In tabular Q-learning the lean fades as the noise does, and online interaction keeps auditing it. In DQN it is a design problem: generalization broadcasts every inflated estimate into the targets of every state, and replay lets the inflation compound before any audit arrives. :numref:`sec_offline` will meet the same bias with the audit removed entirely, where it becomes the central obstacle.
+The maximum of four unit-noise estimates has about one unit of upward
+bias. With independent selection and evaluation estimates, the evaluator's
+noise has zero conditional mean for the selected action, and the measured
+bias is near zero. :numref:`fig_rl_max_bias` shows that the single-estimator
+bias grows with the number of actions while the independent double
+estimator remains near zero. In DQN, shared parameters and bootstrapping
+can propagate this bias to other states; a fixed offline dataset also
+removes the corrective effect of new interaction (:numref:`sec_offline`).
 
 ![A maximum over noisy estimates is biased upward. Left: the distribution of the largest of four independent estimates of the same true value of zero, against the distribution of a single estimate; the maximum carries a measured bias of $1.03$. Right: the bias of the single estimator grows with the number of actions, while the double estimator, one set of estimates selecting the action and an independent set scoring it, stays below $0.002$ in magnitude throughout.](../img/mdl-rl-max-bias.svg)
 :label:`fig_rl_max_bias`
@@ -419,7 +451,11 @@ The double estimator wants two networks, and DQN already maintains two. Double D
 $$y = r + \gamma\, \big(1 - \mathbf{1}(s' \textrm{ terminal})\big)\ Q_{w^-}\big(s',\ \underset{a'}{\mathrm{argmax}}\ Q_w(s', a')\big).$$
 :eqlabel:`eq_double_dqn`
 
-An action the online network has overrated is no longer scored by the same overrated number. The copy is not independent of the online network, so this is the double estimator's idea rather than its letter, but it costs nothing, since the two forwards were already being computed, and the swap against `q_step` is three lines:
+An action selected by an overestimate in the online network is therefore
+not evaluated by that same output. The target copy is correlated with the
+online network, so Double DQN only approximates the independent double
+estimator analyzed above. It reuses the two forward passes already
+required by DQN; the change to `q_step` is three lines:
 
 ```{.python .input #dqn-double-dqn-in-three-lines-1}
 %%tab pytorch
@@ -440,7 +476,9 @@ def q_step_double(qnet, target, opt, obs, act, rew, next_obs, term):
         target(next_obs), sel[:, None], -1).squeeze(-1))
 ```
 
-The training loop takes the swapped step as an argument and changes nothing else, and the diagnostic that shows the effect is the one we have been logging all along:
+The training loop changes only the update function; data collection, replay,
+target synchronization, and evaluation remain fixed. We use the same logged
+diagnostic for the comparison:
 
 ```{.python .input #dqn-double-dqn-in-three-lines-2}
 %%tab pytorch, jax

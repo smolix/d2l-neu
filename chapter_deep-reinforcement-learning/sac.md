@@ -99,7 +99,14 @@ $$
 E_{\pi}[r] - \beta\, D_{\textrm{KL}}(\pi \Vert \pi_{\textrm{ref}}) = \beta \log Z - \beta\, D_{\textrm{KL}}(\pi \Vert \pi^\star).
 $$
 
-Read it with $r \to Q(s, \cdot)$, a uniform reference, and $\beta \to \alpha$: **maximizing $E_{\pi}[Q] + \alpha H(\pi)$ and minimizing $D_{\textrm{KL}}\big(\pi \,\Vert\, e^{Q/\alpha}/Z\big)$ are the same optimization**, their objectives differing by $\alpha \log Z$, which does not depend on the policy. The literature states SAC's actor update in both forms, usually asserting one and gesturing at the other; the bridge between them is a proof this book has already run, and it costs nothing to cross. A parametric policy $\pi_\theta$ cannot represent the tilted optimum exactly, so the actor update is the KL projection of $e^{Q/\alpha}/Z$ onto the family, or equivalently, by the bridge, a few gradient steps on
+Set $r\to Q(s,\cdot)$, use a uniform reference, and replace $\beta$ by
+$\alpha$. Then maximizing $E_\pi[Q]+\alpha H(\pi)$ is equivalent to
+minimizing
+$D_{\textrm{KL}}\big(\pi\Vert e^{Q/\alpha}/Z\big)$: the two objectives
+differ by the policy-independent constant $\alpha\log Z$. A restricted
+parametric policy generally cannot represent the tilted distribution
+exactly. SAC therefore takes gradient steps toward its reverse-KL
+projection, equivalently optimizing
 
 $$
 L_{\pi}(\theta) = E_{s \sim \mathcal{D},\, z}\Big[ \alpha \log \pi_\theta\big(\tilde{a}_\theta(s, z) \mid s\big) - \min_{j=1,2} Q_{w_j}\big(s, \tilde{a}_\theta(s, z)\big) \Big], \qquad \tilde{a}_\theta(s, z) = c \tanh\big(\mu_\theta(s) + \sigma_\theta(s)\, z\big),
@@ -137,7 +144,25 @@ $$
 $$
 :eqlabel:`eq_tanh_logdet`
 
-This is the deferred mechanism in its entirety, Appendix C of :cite:`Haarnoja.Zhou.Abbeel.ea.2018` with the action scale carried explicitly; implementations disagree about the $\log c$, and the convention matters, because it cancels in the actor's *gradient* but not in the printed entropy nor in the $\alpha \log \pi$ inside the target, where dropping it shifts every reported nat by $\log 2$. We carry it: :eqref:`eq_tanh_logdet` is the density of the action the environment actually receives, and the quadrature check below holds it to that standard. In code, the policy is :numref:`sec_deeprl`'s idea with the same three methods, `log_prob`, `act`, `act_greedy`, overridden a second time, plus the one method the pathwise gradient demands and the score function never needed: `sample`, a reparameterized draw that returns the action together with its log-probability, differentiable end to end. Two details are new. The standard deviation is state-dependent, a second head next to the mean, because a squashed policy must be able to keep noise where it is cheap and shed it where it saturates, and its logarithm is clamped to $[-5, 2]$, without which $\sigma$ collapses and $\log \pi$ diverges within a thousand updates. And `log_prob` takes the *pre-squash* $u$ rather than the action: the sampler always keeps $u$, so the training path never needs to invert the $\tanh$, and the one place that does invert it, the quadrature check, is the one place $\mathrm{arctanh}$ appears in this section.
+Equation :eqref:`eq_tanh_logdet` follows Appendix C of
+:cite:`Haarnoja.Zhou.Abbeel.ea.2018` while retaining the action scale $c$.
+The $\log c$ term cancels from the actor gradient, but it remains in the
+reported entropy and in $\alpha\log\pi$ inside the target. Omitting it
+therefore shifts reported log densities by $\log c$. The quadrature check
+below verifies the density convention used here.
+
+The policy adds a reparameterized `sample` method that returns both the
+bounded action and its log-probability. Its mean and log standard
+deviation are state-dependent. We clamp the latter to $[-5,2]$ as a
+numerical implementation choice; without this bound, the present setup
+produced very small scales and divergent log densities within roughly one
+thousand updates. This observation is specific to the stated task and
+hyperparameters, not a property of all SAC implementations.
+
+During training, `log_prob` receives the stored pre-squash variable $u$,
+so no inverse hyperbolic tangent is required on the differentiable path.
+The quadrature diagnostic inverts the transformation only to evaluate the
+density on a fixed action grid.
 
 ```{.python .input #sac-the-change-of-variables}
 %%tab pytorch
@@ -223,7 +248,10 @@ One bookkeeping rule inside `log_prob` deserves its sentence: the Gaussian term 
 
 ### A Numerically Stable Log-Determinant
 
-The direct transcription `log(1 - tanh(u)**2)` is numerically dead on arrival, and the repair is two lines of algebra rather than an epsilon. Since $1 - \tanh^2 u = \operatorname{sech}^2 u = 4 e^{-2u} / (1 + e^{-2u})^2$, taking logarithms gives
+The direct transcription `log(1 - tanh(u)**2)` becomes numerically unstable
+when `tanh(u)` rounds to $1$ in finite precision. Rewriting the expression
+avoids this subtraction. Since $1 - \tanh^2 u = \operatorname{sech}^2 u = 4
+e^{-2u} / (1 + e^{-2u})^2$, taking logarithms gives
 
 $$
 \log\big(1 - \tanh^2 u\big) = 2\, \big( \log 2 - u - \operatorname{softplus}(-2u) \big),
@@ -282,7 +310,12 @@ The frozen copies $w_j^-$ do the target network's job from :numref:`sec_dqn` on 
 
 SAC is off-policy for the same reason as DQN, rather than through PPO-style importance weighting. The critic target does not depend on the collecting policy, and the actor draws new actions from its current policy; the replay buffer supplies states and transitions. Replay still changes the state distribution over which the losses are averaged, and action-probability ratios do not correct that shift. :numref:`sec_offline` studies the consequences when no new interaction is available.
 
-The container is three lines of bookkeeping. :numref:`sec_deeprl`'s `ActorCritic` finally stops fitting, for a structural reason worth naming: its second head was $V(s)$, and SAC's critics take the action as an input, so the pair $(Q_{w_1}, Q_{w_2})$ with their frozen copies replaces the value head. The replay buffer of :numref:`sec_dqn` needs one column widened, since it stored actions as integers for a discrete world and Pendulum's action is a float vector; everything else, the ring, the eviction, the time-scrambling `sample`, is inherited unchanged.
+The `ActorCritic` container of :numref:`sec_deeprl` is not suitable here:
+its second head represents $V(s)$, whereas SAC uses two action-conditioned
+critics $(Q_{w_1},Q_{w_2})$ and their target copies. The replay buffer from
+:numref:`sec_dqn` also changes its action field from a scalar integer to a
+floating-point vector. Its ring indexing, eviction rule, random sampling,
+reward field, next observation, and termination mask are otherwise reused.
 
 ```{.python .input #sac-nothing-here-needs-a-ratio-1}
 %%tab pytorch, jax
@@ -400,7 +433,16 @@ def sac_step(agent, obs, act, rew, next_obs, term, key):
     return logp.mean()
 ```
 
-The loop stores `terminated` and never `truncated`, as every buffer in this chapter does, and here the rule reaches its cleanest instance: Pendulum has *no* terminal state, every episode is a 200-step recording cut off by the clock, so the stored flag is identically zero and the bootstrap is always taken. Store `done` instead and the agent is taught that the world ends at step 200, at whatever state the clock happened to catch it in. The loop yields, at every episode's end, the step count, the episode's return, and the average of $-\log \pi$ over the episode's updates, the policy's entropy as the training batches sample it; the entropy is a first-class diagnostic here, since it is the quantity the objective buys.
+The loop stores `terminated`, not `truncated`. Pendulum has no terminal
+state; each recorded episode ends only because of the 200-step time limit.
+The stored termination flag is therefore zero and the critic bootstraps
+across that boundary. Treating `done` as terminal would instead impose an
+artificial zero continuation value at step 200.
+
+At the end of each recorded episode, the loop reports the environment-step
+count, episode return, and the mean of $-\log\pi$ over its update batches.
+The last quantity estimates policy entropy under the sampled training
+states and is monitored because it appears explicitly in the objective.
 
 ```{.python .input #sac-one-update-2}
 %%tab pytorch
@@ -502,9 +544,11 @@ for arm in runs:
 
 Every seed of both arms starts at the aimless policy's $-1200$ or worse and clears the $-200$ line before ten thousand environment steps, most within about five to eight thousand. Put that number against this book's own baseline rather than a foreign one. :numref:`sec_deeprl` trained the same task with REINFORCE and a learned baseline at 300 updates of 8 episodes of 200 steps, which is $480{,}000$ environment steps, twenty-four runs of this budget, and reported improvement without mastery: no seed reached $-200$. The gap is the chapter's two licenses compounding. The pathwise gradient turns the critic into a differentiable model of the objective, so each update extracts more signal per sample, and replay lets every one of those samples drive hundreds of updates instead of one. Note also what the plot does *not* show: the two arms are indistinguishable, their bands overlap the whole way, and neither orders the crossings consistently across tabs. Whatever the second critic buys, it is not visible on this axis at this scale, which is exactly the reading :numref:`sec_dqn` gave for Double DQN at two actions; the last experiment goes looking for what it does buy.
 
-### The Entropy Trace and the Cost of Noise
+### Policy Entropy and Temperature
 
-The training loop logged the policy's entropy all along, the quantity the objective pays $\alpha$ per nat for, with the autotuning literature's target of $-\dim \mathcal{A} = -1$ drawn dashed:
+The training loop records policy entropy because its coefficient $\alpha$
+sets the objective's reward--entropy tradeoff. The dashed line shows the
+commonly used autotuning target $-\dim\mathcal{A}=-1$:
 
 ```{.python .input #sac-the-entropy-the-policy-keeps-1}
 %%tab pytorch, jax
@@ -516,7 +560,24 @@ for arm in runs:
           f'{np.round([np.nanmean(r[-20:, 2]) for r in runs[arm]], 2)}')
 ```
 
-Read the shape before the level. The trace enters high, a wide young policy, and the objective spends that entropy quickly while the critic learns what the noise costs; it overshoots to roughly half a nat below zero during the steepest stretch of the return curve, then buys some of the entropy back once the task is mastered and noise near the balanced state is cheap, and ends in the neighborhood of zero, where the printed final values sit in both arms and both tabs. Nothing about that ending is a collapse: the policy remains a genuine distribution at convergence, exactly the "stochastic by design" the objective promised. And since the entropy here is differential, zero is not special and negative values along the way are not a bug, merely a density that concentrates, a fact exercise 4 makes quantitative. Two accounting notes keep this plot honest. The printed entropy is under our convention that carries the $\log c$ of :eqref:`eq_tanh_logdet`; implementations that drop it report the same policy $\log 2 \approx 0.69$ nats lower, and comparing entropy numbers across codebases without checking that convention is comparing different quantities. And the level the trace settles at is the measured justification for fixing $\alpha = 0.2$ rather than building the autotuning apparatus: the constrained variant of :cite:`Haarnoja.Zhou.Hartikainen.ea.2018` would target $\bar{H} = -\dim \mathcal{A} = -1$ and let $\alpha$ float, our fixed exchange rate lands the entropy within about a nat of that target on its own, and exercise 1 closes the remaining gap. What $\alpha$ is *not* is a learning rate: it is an exchange rate in reward units per nat, which makes it reward-scale dependent, doubling every reward halves the effective temperature, and that sensitivity, not any optimization subtlety, is what the autotuning variant automates away.
+The trace begins high, falls during the period of rapid return improvement,
+and finishes near zero in both ablations. The policy remains stochastic;
+for differential entropy, zero has no special status and negative values
+simply indicate a sufficiently concentrated density.
+
+Reported entropy depends on the density convention. We retain the
+$\log c$ term in :eqref:`eq_tanh_logdet`; an implementation that omits it
+would report the same policy lower by $\log 2\approx0.69$ nats in this
+environment. Entropy values should therefore be compared only after
+checking the action-scale convention.
+
+We fix $\alpha=0.2$ in this diagnostic. The resulting entropy happens to
+finish within about one nat of the common target
+$\bar H=-\dim\mathcal{A}=-1$, but this single run does not justify the
+coefficient generally. Temperature autotuning instead adjusts $\alpha$ to
+enforce a chosen entropy constraint
+:cite:`Haarnoja.Zhou.Hartikainen.ea.2018`. The coefficient has units of
+reward per nat and is reward-scale dependent; it is not a learning rate.
 
 Training returns are generated by the stochastic policy because entropy is part of the objective. We therefore evaluate both that policy and the deterministic mean action $c\tanh(\mu_\theta(s))$:
 

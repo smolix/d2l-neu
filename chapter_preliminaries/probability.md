@@ -6,73 +6,25 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Probability and Statistics
 :label:`sec_prob`
 
-One way or another,
-machine learning is all about uncertainty.
-In supervised learning, we want to predict
-something unknown (the *target*)
-given something known (the *features*).
-Depending on our objective,
-we might attempt to predict
-the most likely value of the target.
-Or we might predict the value with the smallest
-expected distance from the target.
-And sometimes we wish
-to *quantify our uncertainty*
-about the prediction itself.
-For example, given some features
-describing a patient,
-we might want to know *how likely* they are
-to suffer a heart attack in the next year.
-In unsupervised learning,
-we often care about uncertainty.
-To determine whether a set of measurements are anomalous,
-it helps to know how likely one is
-to observe values in a population of interest.
-Furthermore, in reinforcement learning,
-we wish to develop agents
-that act intelligently in various environments.
-This requires reasoning about
-how an environment might be expected to change
-and what rewards one might expect to encounter
-in response to each of the available actions.
+Suppose that a coin is tossed 100 times and produces 56 heads. The count alone
+does not tell us whether the coin is biased: even a fair coin produces unequal
+counts in most finite experiments. We need a language for describing the
+data-generating process, calculating how likely an outcome is under that
+process, and estimating its unknown properties from observations.
 
-*Probability* is the mathematical field
-concerned with reasoning under uncertainty.
-Given a probabilistic model of some process,
-we can reason about the likelihood of various events.
-The use of probabilities to describe
-the frequencies of repeatable events
-(like coin tosses)
-is fairly uncontroversial.
-In fact, *frequentist* scholars adhere
-to an interpretation of probability
-that applies *only* to such repeatable events.
-By contrast *Bayesian* scholars
-use the language of probability more broadly
-to formalize reasoning under uncertainty.
-Bayesian probability is characterized
-by two unique features:
-(i) assigning degrees of belief
-to non-repeatable events,
-e.g., what is the *probability*
-that a dam will collapse?;
-and (ii) subjectivity. While Bayesian
-probability provides unambiguous rules
-for how one should update their beliefs
-in light of new evidence,
-it allows for different individuals
-to start off with different *prior* beliefs.
-*Statistics* helps us to reason backwards,
-starting off with collection and organization of data
-and backing out to what inferences
-we might draw about the process
-that generated the data.
-Whenever we analyze a dataset, hunting for patterns
-that we hope might characterize a broader population,
-we are employing statistical thinking.
-While this section only scratches the surface,
-we will provide the foundation
-that you need to begin building models.
+*Probability* supplies the forward direction: given a model of a random
+process, it assigns probabilities to possible events. *Statistics* supplies
+the inverse direction: given observations, it asks what can be inferred about
+the process that generated them. This pair of questions recurs throughout
+machine learning, from predicting a patient's outcome to deciding whether a
+measurement is anomalous or estimating the return from an action.
+
+This section begins with repeated coin tosses, then introduces random
+variables, joint and conditional distributions, independence, expectation,
+and variance. The same definitions support a worked diagnostic-testing example
+and the probabilistic models used in later chapters. Interpretations of
+probability differ—for example, frequencies of repeatable events versus
+degrees of belief—but the calculation rules developed here are shared.
 
 ```{.python .input #probability-probability-and-statistics}
 %%tab mxnet
@@ -136,9 +88,9 @@ Note that this is only possible
 if on average we expect to see
 $1/2$ of tosses come up heads
 and $1/2$ come up tails.
-Of course, if you conduct this experiment
+Even if this experiment is repeated
 many times with $n=1000000$ tosses each,
-you might never see a trial
+none of the trials need have
 where $n_\textrm{h} = n_\textrm{t}$ exactly.
 
 
@@ -312,7 +264,8 @@ and only saw the outcome,
 how would we know if the coin were slightly unfair
 or if the possible deviation from $1/2$ was
 just an artifact of the small sample size?
-Let's see what happens when we simulate 10,000 tosses.
+Increasing the experiment to 10,000 tosses separates these possibilities more
+clearly.
 
 ```{.python .input #probability-a-simple-example-tossing-coins-4}
 %%tab mxnet
@@ -512,17 +465,13 @@ after each group of experiments.
 The dashed black line gives the true underlying probability.
 As we get more data by conducting more experiments,
 the curves converge towards the true probability.
-You might already begin to see the shape
-of some of the more advanced questions
-that preoccupy statisticians:
+This convergence raises the statistical questions developed later in the book:
 How quickly does this convergence happen?
 If we had already tested many coins
 manufactured at the same plant,
 how might we incorporate this information?
 
-## The Formal Language
-
-### A More Formal Treatment
+## From Counts to Random Variables and Distributions
 
 We have already gotten pretty far: posing
 a probabilistic model,
@@ -766,7 +715,7 @@ of the sample space associated with $A=a$
 and then renormalizing so that
 all probabilities sum to 1.
 
-![The joint distribution $P(A,B)$ determines everything: summing a row or column gives a *marginal* ($P(A)$ or $P(B)$), and renormalizing one row by its sum gives a *conditional* $P(B \mid A=a)$.](../img/probability-joint-grid.svg)
+![For the displayed variables, summing a row or column of the joint distribution $P(A,B)$ gives a marginal, while dividing a row with positive mass by its sum gives the conditional distribution $P(B \mid A=a)$.](../img/probability-joint-grid.svg)
 :label:`fig_prob_joint`
 
 Conditional probabilities
@@ -832,16 +781,14 @@ Note that $\sum_a P(A=a \mid B) = 1$ also allows us to *marginalize* over random
 
 $$\sum_a P(B \mid A=a) P(A=a) = \sum_a P(B, A=a) = P(B).$$
 
-Independence is another fundamentally important concept
-that forms the backbone of
-many important ideas in statistics.
-In short, two variables are *independent*
-if conditioning on the value of $A$ does not
-cause any change to the probability distribution
-associated with $B$ and vice versa.
-More formally, independence, denoted $A \perp B$,
-requires that $P(A \mid B) = P(A)$ and, consequently,
-that $P(A,B) = P(A \mid B) P(B) = P(A) P(B)$.
+Two random variables are *independent*, denoted $A \perp B$, when their joint
+distribution factorizes:
+
+$$P(A=a,B=b)=P(A=a)P(B=b)$$
+
+for every pair of values $a,b$. Equivalently, conditioning on one variable does
+not change the distribution of the other whenever the conditioning event has
+positive probability: $P(A=a\mid B=b)=P(A=a)$ for $P(B=b)>0$.
 Independence is often an appropriate assumption.
 For example, if the random variable $A$
 represents the outcome from tossing one fair coin
@@ -896,8 +843,8 @@ but this correlation disappears if we condition on age.
 ## Worked Example: HIV Testing
 :label:`subsec_probability_hiv_app`
 
-Let's put our skills to the test.
-Assume that a doctor administers an HIV test to a patient.
+The following diagnostic-testing example applies conditional probability and
+Bayes' rule. Assume that a doctor administers an HIV test to a patient.
 This test is fairly accurate: it has a 1% false-positive rate,
 i.e., healthy patients test positive in 1% of cases.
 Moreover, it never fails to detect HIV if the patient actually has it.
@@ -1224,13 +1171,12 @@ what such concentration results say about generalization
 in machine learning are developed in
 :numref:`sec_mdl-concentration-generalization`.
 
-## Discussion
+## What the Probability Model Leaves Uncertain
 
-In machine learning, there are many things to be uncertain about!
-We can be uncertain about the value of a label given an input.
-We can be uncertain about the estimated value of a parameter.
-We can even be uncertain about whether data arriving at deployment
-is even from the same distribution as the training data.
+The definitions above distinguish several sources of uncertainty in a learning
+problem. A label may remain random even when the model and its parameters are
+known; a finite dataset also leaves the parameters uncertain; and deployment
+data may come from a different distribution than the training sample.
 
 By *aleatoric uncertainty*, we mean uncertainty
 that is intrinsic to the problem,
@@ -1239,7 +1185,7 @@ unaccounted for by the observed variables.
 By *epistemic uncertainty*, we mean uncertainty
 over a model's parameters, the sort of uncertainty
 that we can hope to reduce by collecting more data.
-We might have epistemic uncertainty
+For example, there is epistemic uncertainty
 concerning the probability
 that a coin turns up heads,
 but even once we know this probability,
@@ -1482,7 +1428,7 @@ $-\tfrac12$** on log--log axes.
 :::
 :::
 
-::: {.slide title="Three axioms generate every rule"}
+::: {.slide title="Three axioms determine the probability calculus"}
 [Formal treatment]{.kicker}
 
 ::: {.cols .vc}
@@ -1496,7 +1442,7 @@ three rules (Kolmogorov):
 - disjoint events **add**.
 
 ::: {.d2l-note .rule}
-Everything else follows, e.g. inclusion–exclusion:
+Standard identities follow from them; for example, inclusion–exclusion gives
 $P(\mathcal{A}\cup\mathcal{B}) =
 P(\mathcal{A}) + P(\mathcal{B}) - P(\mathcal{A}\cap\mathcal{B})$.
 :::
@@ -1540,7 +1486,7 @@ density.
 :::
 :::
 
-::: {.slide title="One table holds everything"}
+::: {.slide title="A joint table yields marginals and conditionals"}
 [Multiple variables]{.kicker}
 
 ::: {.cols .vc}

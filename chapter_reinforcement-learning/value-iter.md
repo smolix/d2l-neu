@@ -67,7 +67,12 @@ We next break down the trajectory into two stages: (i) the first stage which cor
 $$V^\pi(s_0) = E_{a_0 \sim \pi(s_0)} \Big[ r(s_0, a_0) + \gamma\ E_{s_1 \sim P(s_1 \mid s_0, a_0)} \Big[ V^\pi(s_1) \Big] \Big].$$
 :eqlabel:`eq_dynamic_programming`
 
-This decomposition is very powerful: it is the foundation of the principle of dynamic programming upon which all reinforcement learning algorithms are based. Notice that the second stage gets two expectations, one over the choices of the action $a_0$ taken in the first stage using the stochastic policy and another over the possible states $s_1$ obtained from the chosen action. We can write :eqref:`eq_dynamic_programming` using the transition probabilities in the Markov decision process (MDP) as
+This decomposition is the basis of dynamic programming and of the Bellman
+updates used by many reinforcement-learning algorithms. The outer
+expectation averages over the policy's choice of $a_0$; the inner one
+averages over the environment's next state $s_1$ conditional on that
+action. For finite state and action spaces, we can write these expectations
+as sums:
 
 $$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s) \Big[ r(s,  a) + \gamma\  \sum_{s' \in \mathcal{S}} P(s' \mid s, a) V^\pi(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
 :eqlabel:`eq_dynamic_programming_val`
@@ -90,7 +95,13 @@ The intuition is the two-stage decomposition itself: what is best at a state doe
 $$V^*(s) = \max_{a \in \mathcal{A}} \Big[ r(s, a) + \gamma\ \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^*(s') \Big];\ \textrm{for all } s \in \mathcal{S}.$$
 :eqlabel:`eq_bellman_optimality`
 
-This is the *Bellman optimality equation* :cite:`BellmanDPPaper,BellmanDPBook`, formulated by Richard Bellman in the 1950s, and we can remember it as "the remainder of an optimal trajectory is also optimal": the tail must be worth the most that can be earned from wherever the first step landed, or splicing in a better tail would improve the whole. Unlike the expectation form it mentions no policy: one equation in the single unknown table $V^*$, nonlinear because of the max. From its solution, a best action is one lookahead away,
+This is the *Bellman optimality equation*
+:cite:`BellmanDPPaper,BellmanDPBook`. Its optimal-substructure property says
+that after any first transition, the continuation must itself be optimal
+from the resulting state. Unlike the expectation form, it mentions no
+policy: it is an equation in the unknown table $V^*$ and is nonlinear
+because of the maximum. Given its solution, a maximizing action follows
+from one model-based lookahead:
 
 $$\pi^*(s) = \underset{a \in \mathcal{A}}{\mathrm{argmax}} \Big[ r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\ V^*(s') \Big].$$
 :eqlabel:`eq_optimal_policy`
@@ -99,7 +110,10 @@ A good mnemonic to remember this is that the optimal action at state $s$ (for a 
 
 $$Q^*(s, a) = r(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \max_{a' \in \mathcal{A}} Q^*(s', a'),$$
 
-and it hides a fact :numref:`sec_qlearning` will build a whole algorithm on: extracting $\pi^*(s) = \mathrm{argmax}_a Q^*(s, a)$ from $Q^*$ needs no model, whereas extraction from $V^*$ via :eqref:`eq_optimal_policy` needs $P$ and $r$ for the lookahead.
+The distinction matters for :numref:`sec_qlearning`: extracting
+$\pi^*(s) = \mathrm{argmax}_a Q^*(s, a)$ from $Q^*$ needs no additional
+model, whereas extraction from $V^*$ via :eqref:`eq_optimal_policy` uses
+$P$ and $r$ in the lookahead.
 
 ### Backup Diagrams
 
@@ -175,7 +189,11 @@ def value_iteration(mdp, num_iters):  #@save
     return np.array(history)
 ```
 
-Value iteration is the only algorithm in this book that plans with the model itself: everything from :numref:`sec_qlearning` onward touches only sampled transitions, because outside a simulator nobody hands you `env.unwrapped.P`. Keep this section in mind as the model-based corner of the map. We run it far past convergence, keep the final iterate as $V^*$, and extract the policy by the greedy lookahead :eqref:`eq_optimal_policy`:
+Value iteration is the chapter's explicit model-based planning algorithm:
+it uses the transition and reward arrays directly. The model-free methods
+introduced next use sampled transitions instead. We run value iteration
+past the stopping tolerance, keep the final iterate as $V^*$, and extract
+the policy by the greedy lookahead :eqref:`eq_optimal_policy`:
 
 ```{.python .input #value-iter-value-iteration-2}
 %%tab pytorch, jax

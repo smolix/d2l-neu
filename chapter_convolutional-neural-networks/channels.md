@@ -6,22 +6,15 @@ tab.interact_select('mxnet', 'pytorch', 'tensorflow', 'jax')
 # Multiple Input and Multiple Output Channels
 :label:`sec_channels`
 
-:numref:`subsec_why-conv-channels` described the multiple channels
-that comprise each image (e.g., color images have the standard RGB channels
-to indicate the amount of red, green and blue), along with convolutional layers for multiple channels.
-Until now, though, we simplified all of our numerical examples
-by working with just a single input and a single output channel.
-This allowed us to think of our inputs, convolution kernels,
-and outputs each as two-dimensional tensors.
-
-When we add channels into the mix,
-our inputs and hidden representations
-both become three-dimensional tensors.
-For example, each RGB input image has shape $3\times h\times w$.
-We refer to this axis, with a size of 3, as the *channel* dimension. The notion of
-channels is as old as CNNs themselves: for instance LeNet-5 :cite:`LeCun.Jackel.Bottou.ea.1995` uses them. 
-In this section, we will take a deeper look
-at convolution kernels with multiple input and multiple output channels.
+The single-channel operator of :numref:`sec_conv_layer` cannot yet combine
+the red, green, and blue measurements of an image, nor can it produce several
+learned feature maps. With $c_\textrm{i}$ input channels, an input has shape
+$c_\textrm{i}\times h\times w$ and each filter has one spatial kernel per
+input channel. Producing $c_\textrm{o}$ features requires
+$c_\textrm{o}$ such filters, so the complete kernel has shape
+$c_\textrm{o}\times c_\textrm{i}\times k_\textrm{h}\times k_\textrm{w}$.
+This section derives both channel operations and then factorizes the dense
+kernel to reduce its cost.
 
 ```{.python .input #channels-multiple-input-and-multiple-output-channels}
 %%tab mxnet

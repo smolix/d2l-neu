@@ -9,6 +9,17 @@ stability analysis, PCA, and the analysis of loss curvature; singular value
 decompositions support low-rank approximation, conditioning, and
 parameter-efficient fine-tuning.
 
+The three parts answer progressively more specific questions:
+
+| Object | Question | Principal tool |
+|:--|:--|:--|
+| Vectors and subspaces | Which directions agree, and what information does a map preserve or discard? | Angles, projections, range, and null space |
+| Repeated square maps | Which directions evolve independently under iteration? | Eigenvalues and eigenvectors |
+| An arbitrary rectangular map | Which input directions are amplified most, and how well can the map be approximated at low rank? | Singular values and left/right singular vectors |
+
+The eigendecomposition requires a square matrix and may lack a complete
+eigenbasis. The SVD uses separate input and output bases and exists for every
+finite matrix; this distinction organizes the chapter.
 ```toc
 :maxdepth: 2
 

@@ -266,8 +266,8 @@ def generate_cached(self, prefix, num_tokens, seed=0, temperature=1.0,
 
 ### Same Logits, Measured
 
-A cache is an optimization, and the first duty of an optimization is to
-change nothing. We compare the cached path against the full forward pass
+Caching should preserve the model's logits. We compare the cached path against
+the full forward pass
 on both positional schemes: prefill sixteen tokens, then decode one at a
 time, and stack the resulting logits against those of a single
 whole-sequence call.
@@ -401,8 +401,9 @@ our runs is six- to sevenfold, and it widens with every further
 doubling of context. At short contexts the two curves *merge* — below
 about a thousand tokens this model is so small that a step of either kind
 is dominated by launching a dozen blocks' worth of GPU kernels, not by
-computing. The cache is not a magic constant factor; it removes a term
-that grows with context, and pays off precisely when that term dominates.
+computing. The cache is not a constant-factor optimization: it removes a term
+that grows with context. A measurable latency reduction appears once that term
+is large relative to kernel-launch and other fixed overheads.
 End to end, the effect on `generate` is what the per-step curve promises:
 
 ```{.python .input #kv-cache-same-logits-measured-3}
@@ -509,7 +510,7 @@ was closed; measuring memory is how such quiet leaks are found.
 
 :begin_tab:`jax`
 In JAX the check is almost circular, and that is itself the lesson: the
-fixed-size discipline forces the entire bill to be allocated up front, so
+fixed-size discipline allocates the full cache up front, so
 :eqref:`eq_kv-cache-bytes` is not a prediction about hidden allocator
 behavior but the literal size of two arrays you created. A serving
 configuration that does not fit fails at initialization, not mid-request.
@@ -776,7 +777,7 @@ for G in (8, 4, 2, 1):
           f'cache {2 * G * 32 * 4:4d} bytes per token per layer')
 ```
 
-### Cache Against Quality
+### GQA Cache Size and Validation Loss
 
 What does the sharing cost in modeling power? We train the
 :numref:`sec_gpt` configuration on the character-level Time Machine at
@@ -785,6 +786,9 @@ swapping the attention in each block after construction. Because the
 validation loss of this small model bottoms out within a few hundred
 steps and then climbs into memorization (:numref:`sec_gpt`), we compare
 models at their *best* validation loss over a fixed 600-step budget.
+Each row below is one fixed-seed run evaluated on the same validation split.
+This design can reveal differences larger than ordinary run-to-run variation,
+but it cannot estimate a confidence interval or establish equivalence.
 
 ```{.python .input #kv-cache-cache-against-quality}
 %%tab pytorch
@@ -850,14 +854,14 @@ for G in (8, 4, 2, 1):
           f'cache {2 * 6 * G * 32 * 4 / 1024:4.1f} KiB per token')
 ```
 
-The cache shrinks eightfold from top to bottom of the table; the loss
-column does not move outside run-to-run noise (rerunning any row with a
-different seed shifts it by a few hundredths, about the spread of the
-whole column). At this scale the sharing costs nothing we can measure.
-That conclusion would be too strong to carry to large models on our
-evidence alone, but the large-scale literature reaches a similar verdict
-by more careful means: full MQA costs a measurable sliver of quality,
-while GQA at $H/8$ matches multi-head attention in the ablations of
+The cache shrinks eightfold from top to bottom of the table. Each configuration
+uses one initialization per framework, 600 training steps, and a validation
+corpus configured with `num_val=3000`; losses are displayed to 0.01 nat. The
+rows differ by only a few hundredths, but without repeated seeds this protocol
+provides no uncertainty estimate or equivalence test. In larger-scale
+ablations, full
+MQA incurs a small quality reduction, while GQA at $H/8$ matches multi-head
+attention under the protocol of
 :citet:`Ainslie.Lee-Thorp.Jong.ea.2023` — and an existing multi-head
 checkpoint can be *uptrained* into a grouped one for a small fraction of
 its original compute, which is how GQA spread through the open-model
@@ -1099,17 +1103,12 @@ for r in (256, 128):
           f'loss {loss:.2f}, perplexity {jnp.exp(loss):.0f}')
 ```
 
-At rank 256 — a cache six times smaller — the loss on this passage is
-indistinguishable from the full model's (the tiny difference between the
-two numbers is single-passage noise, and we make nothing of it). At rank
-128 the model measurably worsens but remains coherent. The premise
-holds: what attention actually reads back from its cache lives in a far
-lower-dimensional space than the cache stores. The six-fold saving is
-notional here, since our SVD basis is fitted to this very passage and
-would itself need storing. MLA supplies exactly what is missing: one
-projection, trained once and shared globally, that the model learns to
-write through, pushing the compression much further than after-the-fact
-truncation can.
+At rank 256, loss on this one passage changes by less than the displayed
+precision; at rank 128 it increases. This oracle SVD is fitted to the evaluated
+sequence, so it neither implements a cache reduction nor shows that one fixed
+projection would generalize. It establishes only that the realized K/V matrix
+for this passage admits a low-rank approximation. MLA instead learns a shared
+projection during training and retains a separate rotary component.
 
 ### Sliding Windows and Attention Sinks
 
@@ -1159,22 +1158,19 @@ d2l.print_wrapped('  '.join(f'layer {i}: {m:.2f}'
                             for i, m in enumerate(masses)))
 ```
 
-From the middle of the stack upward, GPT-2 parks a *third to a half* of
-its entire attention mass on the first token — a hundred times more than
-an even spread would give it, and mostly regardless of what that token
-is. This is the *attention sink* :cite:`Xiao.Tian.Chen.ea.2024`: softmax
-must hand out probability mass that sums to one, a head that currently
-has nothing to retrieve needs somewhere harmless to put it, and training
-converges on the one position every query can always see. The first
-token becomes the designated dumping ground. That is an observation about
-the attention *weights*; how much its value vector actually contributes
-to the output is a separate quantity, and one we have not measured.
+From the middle of the stack upward, the measured GPT-2 heads assign roughly a
+third to a half of their attention mass to the first token, far above a uniform
+reference. :citet:`Xiao.Tian.Chen.ea.2024` call such positions *attention
+sinks* and interpret them as locations that absorb probability mass when a
+head has no useful retrieval. Our measurement establishes the weight pattern
+for one passage; it does not test that functional explanation. The effect of
+the first token also depends on its value vector, which we have not measured.
 
-Now the trap springs. Evict that token, as a naive rolling buffer of the
-most recent $w$ entries would, and every head's dumping ground vanishes:
+Evicting that token, as a rolling buffer of the most recent $w$ entries would,
+removes this high-attention position:
 the discarded mass is renormalized onto tokens the head actively chose
-not to attend to. StreamingLLM's fix is embarrassingly small — keep the
-first few tokens in the cache forever, alongside the sliding window
+not to attend to. StreamingLLM retains the first few tokens in the cache
+alongside the sliding window
 :cite:`Xiao.Tian.Chen.ea.2024`. We reproduce both the failure and the
 fix, evaluating our passage with attention restricted to a 256-token
 window plus a varying number of retained *sink tokens*:
@@ -1212,36 +1208,38 @@ print(f'full attention:            loss {full:.2f}, '
       f'perplexity {jnp.exp(full):.0f}')
 ```
 
-The numbers are dramatic. Windowed attention alone destroys the model:
-perplexity explodes from the mid-thirties into the thousands, on text
-where every evaluated token has its entire 256-token window available —
-the damage is not lost context but the lost sink. Restoring a *single*
-initial token recovers almost everything, and four sink tokens land
-within a fraction of a nat of full attention. (Our mask-based experiment
+In this passage, windowed attention without retained sink tokens raises
+perplexity from the mid-thirties into the thousands. Retaining one initial
+token removes most of this increase, and four retained tokens bring loss
+within a fraction of a nat of full attention. The comparison supports a sink
+effect for this checkpoint and passage, but it does not isolate all effects of
+discarding older context. (Our mask-based experiment
 keeps original position indices; a real rolling buffer also has to
 handle positions carefully as entries are evicted, which is an
-exercise.) The lesson generalizes beyond eviction: the sink is a
-structural fact about softmax attention in trained transformers.
-Modern designs increasingly build it in on purpose: gpt-oss ships an
+exercise.) :citet:`Xiao.Tian.Chen.ea.2024` provide broader experiments on
+attention sinks, and gpt-oss provides one concrete design with an
 explicit learned sink logit per head in its sliding-window layers
 :cite:`OpenAI.2025`, which frees the first token from double duty.
 
 ### Comparison of Cache-Reduction Methods
 
-The techniques of this section slot into one map, organized by which
-factor of :eqref:`eq_kv-cache-bytes` they attack. GQA and MLA shrink the
-*width* of each cached token: fewer key-value heads, or a low-rank
-latent in place of the full vectors. Sliding windows (with their sinks)
-bound the *length*, at the price of genuinely forgetting the far past.
-The linear attention of :numref:`sec_attention-at-scale` removes the
-cache altogether, collapsing the entire past into a fixed-size recurrent
-state, and constant-memory generation is its real selling point. The
-hybrid stacks of :numref:`chap_modern_rnn` interleave a few
-full-attention layers into a mostly-linear model, so that most layers pay
-no cache at all while a few retain exact recall. Beyond the cache
-proper, the decode-side bandwidth arithmetic of this section is also
-what *speculative decoding* exploits, drafting several tokens cheaply
-and verifying them in one prefill-priced pass
+For one sequence, the baseline stores $2L n H_{kv}d_h$ elements. The table
+uses the same contract for each alternative; constants and auxiliary buffers
+depend on the implementation.
+
+| method | reduced dimension | stored state | information no longer available | training requirement | evidence used here |
+|:--|:--|:--|:--|:--|:--|
+| GQA/MQA | KV heads | $2LnH_{kv}d_h$ | independent K/V projections for every query head | train with sharing or uptrain a checkpoint | fixed-seed character model; cited large-model ablations |
+| MLA | width per token | approximately $Lnr$ plus a rotary component | full K/V coordinates, reconstructed from an $r$-dimensional latent | learned compression and reconstruction maps | oracle SVD on one GPT-2 passage; cited trained MLA models |
+| sliding window with sinks | cached length | $2L(w+s)H_{kv}d_h$ for window $w$ and $s$ sinks | tokens outside the window and retained sinks | train or adapt for the restricted pattern | one GPT-2 passage; cited StreamingLLM experiments |
+| linear attention | token-indexed cache | fixed feature-state matrices, independent of $n$ | exact softmax attention and tokenwise recall | replace and train the attention mechanism | derivation and toy experiment in :numref:`sec_attention-at-scale` |
+
+Hybrid stacks (:numref:`chap_modern_rnn`) combine recurrent layers with a
+smaller number of full-attention layers, so only the latter retain a growing
+tokenwise cache. Beyond the cache proper, the decode-side bandwidth accounting
+of this section is also
+what *speculative decoding* exploits, drafting several tokens with a smaller
+model and verifying them together in a parallel forward pass
 :cite:`Leviathan.Kalman.Matias.2023`. The roofline economics behind that
 arithmetic are made precise in :numref:`sec_hardware`; the systems-level
 story of speculative decoding and the serving engines around it belongs
@@ -1256,14 +1254,18 @@ cache. A cached implementation requires a per-layer key--value buffer and a
 position offset for RoPE; JAX uses a preallocated, fixed-shape buffer with
 indexed updates. The cached and uncached implementations agree to numerical
 precision, and caching gives several-fold faster decoding at long contexts.
-The cache contains $2 \cdot n_\textrm{layers} \cdot n_\textrm{kv} \cdot
-d_\textrm{head} \cdot n \cdot b$ elements. Prefill is compute-bound, whereas
+For a batch of $b$ sequences, the cache contains $2 \cdot
+n_\textrm{layers} \cdot n_\textrm{kv} \cdot d_\textrm{head} \cdot n \cdot b$
+elements. Multiplying by the bytes per element gives the tensor storage; this
+count excludes allocator and metadata overhead. Prefill is compute-bound, whereas
 decoding is usually memory-bandwidth-bound. GQA reduces storage by sharing
 keys and values across query heads; in our experiment, reducing eight KV
-heads to one reduces the cache eightfold without a measurable change in
-validation loss. MLA instead compresses the width of the cache. Sliding
-windows bound its length, but must retain attention-sink tokens to avoid the
-large loss observed when the first token is evicted. Linear-attention and
+heads to one reduces the cache eightfold, while the fixed-seed validation
+losses differ by only a few hundredths of a nat. This is not an equivalence
+test. MLA instead compresses the width of the cache. Sliding
+windows bound its length; for checkpoints that rely on initial attention
+sinks, retaining those positions can avoid the loss increase observed in our
+single-passage test. Linear-attention and
 hybrid architectures provide further alternatives.
 
 ## Exercises
@@ -1313,7 +1315,7 @@ Generation and the KV cache<br>
 :::
 :::
 
-::: {.slide title="Generation recomputes everything"}
+::: {.slide title="Naive Autoregressive Generation Recomputes the Prefix"}
 The naive `generate`: one full forward pass per token.
 
 - Step $t$ costs $\approx 2Nt$ FLOPs; $T$ tokens cost
@@ -1341,7 +1343,7 @@ JAX: growing shapes would recompile every step — preallocate
 :::
 :::
 
-::: {.slide title="First duty of an optimization: change nothing"}
+::: {.slide title="Cached and Uncached Logits Agree"}
 @!kv-cache-same-logits-measured-1
 
 - Prefill 16, decode 32, stack the logits against one full forward pass:
@@ -1372,8 +1374,8 @@ $$\textrm{cache bytes} = 2 \cdot n_\textrm{layers} \cdot n_\textrm{kv} \cdot d_\
 @!kv-cache-the-memory-bill
 
 ::: {.d2l-note}
-PyTorch trap found by measuring: caching a *view* of the fused QKV buffer
-pinned 2x the formula; `contiguous()` closed the gap.
+In PyTorch, caching a *view* of the fused QKV buffer retained twice the storage
+predicted by the formula; `contiguous()` removed the excess allocation.
 :::
 :::
 
@@ -1405,14 +1407,15 @@ $H_{kv} = H$ recovers multi-head attention exactly.
 @!kv-cache-a-pluggable-implementation-2
 :::
 
-::: {.slide title="Cache against quality"}
+::: {.slide title="GQA Cache Size and Validation Loss"}
 Same GPT config, $H_{kv} \in \{8, 4, 2, 1\}$, best validation loss over a
 fixed budget:
 
 @!kv-cache-cache-against-quality
 
-- Cache shrinks $8\times$; the loss column moves within seed noise.
-- At scale: MQA costs a sliver, GQA at $H/8$ matches (Ainslie et al., 2023).
+- Cache shrinks $8\times$; with one seed and values rounded to 0.01 nat,
+  the experiment supplies no uncertainty estimate or equivalence test.
+- Ainslie et al. (2023) provide separate large-model ablations of MQA and GQA.
 :::
 
 ::: {.slide title="Low-rank keys and values — the MLA idea"}
@@ -1422,26 +1425,26 @@ Oracle check on GPT-2: truncate every layer's realized K/V to rank $r$ of
 
 @!kv-cache-low-rank-keys-and-values
 
-- Rank 256 (6x smaller): loss unchanged on this passage; rank 128 degrades
-  gently. The premise holds — MLA makes the projection *trained*.
+- Rank 256 changes loss by less than displayed precision on this passage;
+  rank 128 increases it. This oracle, passage-specific SVD is not MLA; MLA
+  learns a shared projection during training.
 :::
 
 ::: {.slide title="Where trained attention actually goes"}
 @!kv-cache-a-window-needs-a-sink-1
 
-- GPT-2 parks a **third to a half** of its attention mass on token 0 —
-  softmax must sum to one; idle heads need a dumping ground
-  (StreamingLLM, 2024).
+- On the displayed passage, several GPT-2 layers assign a **third to a half**
+  of their attention mass to token 0. StreamingLLM (2024) calls this pattern
+  an attention sink and tests its role more broadly.
 :::
 
 ::: {.slide title="A window needs a sink"}
-Bound the cache to a 256-token window — but evicting token 0 evicts every
-head's dumping ground:
+Compare a 256-token window with variants that retain initial sink positions:
 
 @!kv-cache-a-window-needs-a-sink-2
 
-- Window alone: perplexity 36 → thousands, *with the full window intact*.
-- One retained sink token recovers almost everything; gpt-oss ships a
+- On this passage, the window-only mask raises perplexity from 36 to thousands.
+- One retained initial token removes most of the increase; gpt-oss ships a
   learned sink logit per head.
 :::
 
@@ -1464,6 +1467,8 @@ The methods address different factors in the cache formula:
   against the allocator; it *moves* every step.
 - Prefill is compute-bound, while decode speed is often limited by the
   number of cache bytes transferred per token.
-- GQA: 8x smaller cache, quality flat at our scale and at theirs.
-- MLA: compress width; windows: bound length — but keep the sink.
+- GQA: 8x smaller cache in the fixed-seed experiment; quality equivalence is
+  not established.
+- MLA compresses width; windows bound length while retaining designated sink
+  positions.
 :::

@@ -181,9 +181,10 @@ head-to-head: a compiler's plan is not an allocator's high-water mark.
 ## Mixed Precision
 :label:`subsec_mp-mixed`
 
-The format ladder of :numref:`sec_hardware` promised that every halving of
-width wins twice — double the tensor-core throughput and half the bytes.
-Mixed precision cashes that promise for training. The idea: run the
+The format comparison in :numref:`sec_hardware` shows that narrower
+formats can increase supported tensor-core throughput and reduce stored
+bytes. Mixed precision applies these effects selectively during training:
+run the
 compute-heavy operations (matmuls, convolutions) in bf16, where tensor
 cores are fastest and activations are half-size, while keeping a few
 numerically delicate things (the master weights, the loss reduction) in
@@ -252,7 +253,7 @@ print(d2l.Benchmark(lambda: grad_fn(params, jnp.bfloat16), desc='bf16'))
 Against the fair tf32 baseline, bf16 runs about one and a half to two
 times as fast here — the exact ratio is framework- and shape-dependent —
 and the three timings tell the same two-step story in both tabs: moving
-true fp32 dots onto the tf32 tensor cores already buys a sizable step,
+true fp32 dots onto the tf32 tensor cores already yields a sizable change,
 and bf16 then adds at least as much again. Both are genuine tensor-core
 wins, not measurement artifacts.
 Note what the PyTorch tab does *not* use: a `GradScaler`. Loss scaling
@@ -280,7 +281,7 @@ moment the forward pass produces them until the backward pass consumes
 them — that storage is the peak. Checkpointing makes a different trade:
 store only a few activations (at block boundaries), and when the backward
 pass needs the ones in between, *recompute them* by re-running that block's
-forward pass. You pay extra compute — at most one extra forward pass — to
+forward pass. This adds recomputation — at most one extra forward pass — to
 avoid holding a large fraction of the activations; the cells below
 measure both sides of the trade. This is the same
 "recompute rather than store" argument the
@@ -543,8 +544,8 @@ Store a few activations; recompute the rest in backward.
 
 Peak memory cut roughly in half or better (~2 GB of activations
 released) for ~15–20% more time. Same trade as Mamba's recompute-in-kernel
-(§12), one level up. It buys memory, not speed — use it when
-memory binds.
+(§12), one level up. It reduces memory at the cost of additional compute;
+use it when memory capacity is the limiting resource.
 :::
 
 ::: {.slide title="Gradient Accumulation"}
@@ -559,7 +560,7 @@ mean-losses). Big *effective* batch at micro-batch memory —
 :::
 
 ::: {.slide title="Choosing a Memory Optimization"}
-1. slow (bandwidth/overhead) → **compile** (usually free)
+1. slow (bandwidth/overhead) → **compile** (measure compilation overhead)
 2. slow (compute) or tight → **bf16** (~1.5–2×, half the bytes)
 3. doesn't fit → **checkpoint** (large memory cut, modest time)
 4. want a bigger batch → **accumulate** (≈ same wall-clock)

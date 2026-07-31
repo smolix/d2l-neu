@@ -610,10 +610,11 @@ bool(tf.experimental.numpy.allclose(ours(X), native(X)))
 ```
 
 :begin_tab:`pytorch, jax, tensorflow`
-They match to floating-point precision. This is the general rule for custom
-layers: build one to understand it, then use the native implementation in
-production. The native version may fuse the reduction and the scale into a
-single kernel, and it will be maintained as the library evolves.
+They match to floating-point precision. Prefer a native implementation when its
+semantics match because it may use fused kernels and receive library maintenance.
+A custom layer remains appropriate for new semantics, research modifications,
+or missing kernels, provided its values, gradients, serialization, export, and
+performance are tested against the intended contract.
 :end_tab:
 
 ## Precomputed State: Buffers

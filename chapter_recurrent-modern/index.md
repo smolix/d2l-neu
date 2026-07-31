@@ -14,23 +14,23 @@ by discretizing continuous linear dynamics. :numref:`sec_mamba` makes
 those dynamics input-dependent so that the model can select which tokens
 affect the state.
 
-The next three sections carry the story to the present.
-:numref:`sec_matrix-state` is where this chapter's road meets the one
-from :numref:`chap_attention`: linear attention's matrix state and the
-selective recurrence are one template that varies only in how it forgets.
+The remaining sections compare matrix-valued state, editable memory,
+online regression, and hybrid architectures. :numref:`sec_matrix-state`
+connects linear attention to selective recurrence: both use a matrix
+state, while their transitions determine how previous writes decay.
 The section measures the memory's capacity law: after $n$ independent
 random unit-norm writes into key width $d_k$ the expected squared read
 error is $(n-1)/d_k$, and
 the measured curves sit on that prediction across three widths. It then
-climbs the decay ladder from RetNet to Mamba-2 to GLA, and derives the
-promised state-space duality — a gated linear recurrence and masked
+compares the scalar and diagonal transitions used by RetNet, Mamba-2,
+and GLA, and derives state-space duality — a gated linear recurrence and masked
 attention are the same matrix computed in two contraction orders, with
 the chunked third order being how these models train at scale.
 :numref:`sec_deltanet` changes the write rule. A memory that can only add
 fails when a key must be re-bound: in the section's flagship experiment,
 recall of the latest value roughly halves by two writes per key and
-approaches chance by eight, a collapse that end-to-end training does not
-escape within the section's deliberately restricted memory class,
+approaches chance by eight. End-to-end training does not prevent this
+failure in the deliberately restricted memory class tested there,
 while the delta rule (read first, then write only the correction)
 holds recall essentially perfect throughout and turns out to be one step of
 gradient descent on a recall loss, running inside the forward pass. The
@@ -39,31 +39,29 @@ Gated DeltaNet cell that several production models now ship, and shows
 that the new transition genuinely computes: a single eigenvalue explains
 why letting the write strength exceed one makes parity representable at
 any length.
-:numref:`sec_test-time-regression` then supplies the theory the instances
-have been hinting at: every memory in this chapter can be read as
-maintaining itself by
-solving a weighted regression of values on keys at test time. Softmax
+:numref:`sec_test-time-regression` interprets these updates as approximate
+online regression of values on keys. Softmax
 attention is the Nadaraya–Watson estimator (closing a loop opened in
 :numref:`sec_attention-pooling`, whose one learnable bandwidth the
 section finally trains); linear attention is least squares with the key
 covariance deleted; the delta rule is one explicit gradient step; and a
 measured spectrum from a single online pass to the batch solve confirms
-that more solving buys a better memory. Two models fall out of the view
-rather than being designed: Longhorn, whose gate is the closed form of an
+how additional optimization steps affect test error. The same view
+recovers Longhorn, whose gate is the closed form of an
 implicit update, and Titans, a memory that is itself a small network
-trained inside the forward pass; a drifting-target experiment ends the
-section with the statistical reason forgetting exists at all.
+updated inside the forward pass. A drifting-target experiment then shows
+why discounting old observations can reduce tracking error in a
+nonstationary stream.
 
-:numref:`sec_hybrids` closes the chapter where production begins. A fixed
-state loses the exact-recall fight (the section quantifies what it
-cannot copy, and why language-modeling loss hides the deficit), but only
-attention layers pay a growing cache, so shipped systems interleave a few
-of them into a mostly recurrent stack. The centerpiece experiment trains
+:numref:`sec_hybrids` compares fixed-state and attention layers. A fixed
+state has limited exact-recall capacity, whereas an attention cache grows
+with context length. Several deployed architectures therefore interleave
+attention and recurrent layers. The section trains
 three matched models, a pure recurrent stack, a pure attention stack, and
 a hybrid with a single attention layer mid-stack, and watches that one
-layer buy back most to all of the recall the recurrent stack loses
+layer recover most or all of the recall lost by the recurrent stack
 (roughly 0.92 to 1.00 across the sweep in our runs) while perplexity
-barely moves. Two further pieces turn the trade into engineering:
+barely moves. It then relates this tradeoff to engineering choices:
 measured design rules for how much attention to keep and where to put it,
 and a recipe table of shipped hybrids from Jamba to Kimi
 Linear. One recipe threads all of these
@@ -73,25 +71,18 @@ and the Gated DeltaNet row on one shared scoreboard, the hybrid stacks on
 their own matched panel — and the mechanistic experiments (capacity,
 overwrite, the regression spectrum) run in seconds on a CPU.
 
-The history here is a pendulum. The LSTM
+The LSTM
 :cite:`Hochreiter.Schmidhuber.1997` made recurrence trainable and carried
 speech recognition and translation through the 2010s; the transformer
-displaced it almost completely, and for a few years recurrence looked
-finished. It returned through an unexpected door: S4
+displaced it in many sequence applications. S4
 :cite:`Gu.Goel.Re.2022` arrived from continuous-time modeling rather than
 the RNN lineage, Mamba :cite:`Gu.Dao.2023` made the dynamics selective
 and competitive with transformers on language, and the state-space
-duality of Mamba-2 :cite:`Dao.Gu.2024` collapsed the wall between the
-returning recurrences and the linear attention that transformer
-researchers had been simplifying toward. After that the lineages merged
-outright: delta-rule cells and attention–recurrence hybrids now ship
-inside production language models from many labs at once. Whether the
-pendulum swings all the way back is a question with a date on it: a
-public wager between Jonathan Frankle (yes) and Sasha Rush (no) resolves
-on January 1, 2027, on whether a transformer-like model still holds the
-state of the art in most benchmarked language tasks
-([isattentionallyouneed.com](https://www.isattentionallyouneed.com/)).
-This chapter takes no side; it teaches what each side is counting on.
+duality of Mamba-2 :cite:`Dao.Gu.2024` connected gated recurrences with
+masked linear attention. Delta-rule cells and attention–recurrence
+hybrids now combine elements of both lineages. Because these developments
+change quickly, this chapter emphasizes state, update, readout, and
+complexity rather than predicting which family will dominate.
 
 A word on the name, and on what this chapter is not. We use *state space
 models* the way the field now uses it: as the umbrella term for the whole

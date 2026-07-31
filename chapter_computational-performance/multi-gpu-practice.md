@@ -347,10 +347,9 @@ if d2l.num_gpus() >= 2:
           f"(synced {comm['synced_ms']:.0f}, no_sync {comm['no_sync_ms']:.0f})")
 ```
 
-Prediction and measurement land within tens of percent of each other, and
-**that agreement is the result**: a scaling curve you can price before you
-buy, not a marketing "N× faster" claim — and it holds at two GPUs as
-clearly as at four. One line on what a datacenter box changes: an NVLink
+Prediction and measurement are within tens of percent in this setup. This
+agreement supports using :eqref:`eq_dp_cost` for the tested message sizes
+and topology; it is not a hardware-independent scaling guarantee. An NVLink
 fabric shrinks $t_{\text{comm}}$ by roughly two orders of magnitude
 (:numref:`tab_gpu_specs`), so the same accounting predicts near-linear
 scaling — same model, different constant. (The legacy `nn.DataParallel` is
@@ -428,20 +427,21 @@ whatever $\beta$ your fabric, as configured, sustains.
 ## Fully Sharded Data Parallelism
 :label:`subsec_mgp-fsdp`
 
-DDP replicates *everything* on every rank: $k$ identical copies of the
-parameters, the gradients, and the optimizer states. For the $16P$-byte
+DDP replicates the parameters, gradients, and optimizer states on every
+rank. For the $16P$-byte
 training footprint of :numref:`sec_memory_precision`, that is $k-1$ copies
 of everything, wasted — and it caps the model size at what one GPU holds,
 the limitation :numref:`sec_multi_gpu` flagged. **Fully Sharded Data
 Parallel** (FSDP) removes the redundancy by *sharding* those tensors across
 ranks, each rank owning $1/k$ of each, and materializing a full layer only
 for the moment it is needed :cite:`Zhao.Gu.Varma.ea.2023`. The idea is the
-ZeRO ladder :cite:`Rajbhandari.Rasley.Ruwase.ea.2020`: shard the
+ZeRO sequence :cite:`Rajbhandari.Rasley.Ruwase.ea.2020`: shard the
 optimizer states first (they are the biggest, $8P$), then the gradients,
-then the parameters — each rung cutting memory toward $1/k$ at the cost of
-more communication.
+then the parameters. Each stage reduces replicated memory toward $1/k$ while
+introducing additional communication.
 
-The mechanism is the :numref:`sec_multi_gpu` identity, cashed in. Recall
+The mechanism follows the collective identity in :numref:`sec_multi_gpu`.
+Recall
 that allreduce = reduce-scatter + all-gather. FSDP simply *keeps the two
 halves separate*: an **all-gather** reconstructs a layer's full parameters
 just before it computes, and frees them just after; a **reduce-scatter**
@@ -469,8 +469,8 @@ one table, since the rest of the book will name them without ceremony:
 | all-gather | every shard, concatenated | FSDP parameters, just-in-time |
 | all-to-all | a different shard from each peer | expert parallelism (:numref:`sec_training_systems`) |
 
-FSDP pays off by fitting a model that does not fit, and that payoff is
-invisible on our 11.2M-parameter demo, which occupies a few hundred MB of
+FSDP is useful when replicated training state does not fit on one device.
+That benefit is not measurable on our 11.2M-parameter demo, which occupies a few hundred MB of
 a 24 GB card, so we show the *shape* of the code rather than run it. The
 modern API is `fully_shard` over a `DeviceMesh`; the original `FullyShardedDataParallel`
 wrapper class still imports at our pin, but it is the deprecated legacy
@@ -546,9 +546,9 @@ def train_step(model, opt, X, y):
     return loss
 ```
 
-Now run it — a real `ResNet18`, a real optimizer, a real Fashion-MNIST
-batch (resized once to 64×64 and kept as host arrays). The reveal is
-`visualize_array_sharding`, which draws where a tensor actually lives: the
+We run the example with `ResNet18`, an optimizer, and a Fashion-MNIST batch
+resized once to 64×64 and retained as host arrays.
+`visualize_array_sharding` displays where each tensor resides: the
 batch split across the mesh before the step, and a weight *after* the step
 still replicated everywhere — the compiler's allreduce is what kept every
 copy identical:
@@ -675,7 +675,7 @@ exists to catch would announce itself at the scale of the update itself:
 a summed-instead-of-averaged gradient, an accidental $k\times$ learning
 rate.
 
-And here is the punchline. To move between *data* parallelism, *tensor*
+In JAX, moving between *data* parallelism, *tensor*
 parallelism, and *FSDP*-style sharding in JAX, you change the
 `PartitionSpec` — not the model code. Sharding the batch axis gives data
 parallelism (above); sharding a weight's feature axis gives tensor
@@ -747,8 +747,8 @@ that turn a synchronous step into a queueing problem.
   library's defaults and teach the pair of measurements instead.
   Collective-library configuration moves communication by factors, not
   percent; a workaround is validated per platform *and* per workload.
-* FSDP shards the $16P$-byte training state across ranks — the ZeRO ladder
-  — by splitting allreduce back into its reduce-scatter and all-gather
+* FSDP shards the $16P$-byte training state across ranks in successive ZeRO
+  stages by splitting allreduce back into its reduce-scatter and all-gather
   halves and materializing each layer just-in-time. It is for models whose
   training state outgrows one GPU — a few billion parameters on this card
   class.

@@ -67,8 +67,12 @@ import time
 ## Utilities
 :label:`oo-design-utilities`
 
-We need a few utilities to simplify object-oriented programming in Jupyter notebooks. One of the challenges is that class definitions tend to be fairly long blocks of code. Notebook readability demands short code fragments, interspersed with explanations, a requirement incompatible with the style of programming common for Python libraries. The first
-utility function allows us to register functions as methods in a class *after* the class has been created. In fact, we can do so *even after* we have created instances of the class! It allows us to split the implementation of a class into multiple code blocks.
+The book presents class definitions in short notebook cells next to the prose
+that explains them. The following decorator registers a function as a method
+after a class has been created, allowing one class definition to be split across
+those cells. This is notebook scaffolding rather than part of the learning
+algorithm; ordinary Python modules would usually define the complete class in
+one place.
 
 ```{.python .input #oo-design-utilities-1}
 def add_to_class(Class):  #@save
@@ -121,9 +125,14 @@ class B(d2l.HyperParameters):
 b = B(a=1, b=2, c=3)
 ```
 
-The final utility allows us to plot experiment progress interactively while it is going on. In deference to the much more powerful (and complex) [TensorBoard](https://www.tensorflow.org/tensorboard) we name it `ProgressBoard`. The  implementation is deferred to :numref:`sec_utils`. For now, let's simply see it in action.
+The final utility plots experiment progress interactively. We call it
+`ProgressBoard`; its implementation is deferred to :numref:`sec_utils`.
 
-The `draw` method records a point `(x, y)` to be shown in the figure, with `label` specified in the legend. The optional `every_n` smooths the line: it shows one point per $n$ calls to `draw`, plotting the average of the last $n$ recorded values. As we explain just below, `draw` is *asynchronous*: it merely schedules the point and returns immediately, so that plotting never slows down training.
+The `draw` method records a point `(x, y)` to be shown in the figure, with
+`label` specified in the legend. The optional `every_n` smooths the line by
+plotting the average of the last $n$ recorded values. The method schedules the
+point and returns immediately, reducing synchronization and rendering overhead
+on the training path.
 
 ```{.python .input #oo-design-utilities-6}
 class ProgressBoard(d2l.HyperParameters):  #@save
@@ -140,23 +149,22 @@ class ProgressBoard(d2l.HyperParameters):  #@save
 
 Why does `draw` go to the trouble of *scheduling* work instead of plotting
 right away? The answer previews a theme that runs through the entire book.
-Modern frameworks get their speed by *compiling* the training computation into a
-graph that runs on the accelerator with little Python in the loop. Compilation
-imposes two rules we must respect. First, a compiled step has to be *pure*: a
-`print` or a plotting call inside it cannot be captured by the compiler, forcing a
-fallback to slower eager execution. Second, the accelerator runs *asynchronously*,
+Modern frameworks can compile or trace the training computation so that an
+accelerator executes it with little Python in the loop. The exact restrictions
+differ by framework: Python side effects may cause graph breaks, execute only
+during tracing, or be rejected. A second issue is common to accelerator
+execution: the device often runs *asynchronously*,
 ahead of Python; the instant we ask for a concrete number (to print or plot it),
 Python must *block* until the device catches up, stalling the very pipeline we
 worked to speed up.
 
-Real-time monitoring therefore seems to be at odds with efficiency. `ProgressBoard`
-resolves the tension by *decoupling* the two: `draw` hands the value to a queue and
-returns at once, while a background thread performs the device-to-host transfer and
-the (comparatively slow) rendering at its own pace, dropping points if it falls
-behind, since a live loss curve needs no more than a few updates per second. The
-training loop stays compiled and the device stays busy, yet we still watch the loss
-go down as it happens. The pattern is general: keep the hot path pure and compiled,
-and push logging, plotting, and checkpointing off to the side.
+`ProgressBoard` decouples monitoring from rendering: `draw` hands the value
+to a queue and returns, while a background thread performs device-to-host
+transfer and rendering at its own pace, dropping points if it falls behind.
+This design usually keeps rendering off the critical path, although queueing,
+host transfer, and the worker still have a measurable cost. The general pattern
+is to keep the hot path compatible with compilation and move logging, plotting,
+and checkpointing outside it.
 
 In the following example, we draw `sin` and `cos` with different smoothness. If you
 run this code block interactively, you will see the lines grow in animation. Because
@@ -815,8 +823,8 @@ $n$ values:
 :::
 
 ::: {.d2l-note}
-Why `draw` merely *schedules* the point (and `flush()` waits for the
-queue) is the point of the next slide.
+Fetching a device value can synchronize execution; scheduling the point and
+waiting only at `flush()` separates measurement from rendering.
 :::
 :::
 

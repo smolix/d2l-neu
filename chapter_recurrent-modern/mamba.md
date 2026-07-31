@@ -803,7 +803,7 @@ transformers at small model sizes.
 ### Stepping the Selective Model
 :label:`subsec_mamba-step`
 
-Before we sample from these models, a debt falls due.
+Before sampling, we verify that recurrent stepping matches the parallel form.
 :numref:`subsec_ssm-step` stepped the LTI model one token at a time;
 does the trick survive selectivity? It does, and for a reason worth
 noticing: :eqref:`eq_selective_heads` computes $\boldsymbol{\Delta}_t,
@@ -1118,7 +1118,7 @@ attention side, with the linear-attention recurrence of
 
 ## Summary
 
-![One question, three answers so far: gate the state (LSTM), linearize the state path and scan (minGRU, S4D), make the linear dynamics select by content (Mamba).](../img/mdl-modernrnn-three-answers.svg)
+![Three recurrent designs compared by their state update: LSTMs use state-dependent gates; minGRU and S4D use linear state paths that admit a scan; Mamba makes the linear dynamics input-dependent.](../img/mdl-modernrnn-three-answers.svg)
 :label:`fig_three_answers`
 
 This chapter opened by asking what a hidden state should remember, and
@@ -1132,8 +1132,9 @@ added principled step-size gates, stability by construction, and
 provably good memory. *Select it*: making the step size and projections
 functions of the input restored the content-awareness that
 linearization lost, at the same asymptotic scan depth though not the
-same wall clock (our teaching-grade scan materializes its coefficient
-tensors and pays several times the gated baselines' time per epoch).
+same wall clock. Our teaching implementation materializes the scan
+coefficients and therefore takes several times longer per epoch than the
+gated baselines in this experiment.
 The resulting Mamba block solved our selective-copy task, posted the
 best perplexity of the chapter in our PyTorch run (the minGRU edged it
 out in the JAX run), and, stepped one token at a time, generated text

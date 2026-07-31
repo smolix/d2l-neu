@@ -28,14 +28,14 @@ $f(x)=L(w_1,\ldots,x,\ldots,w_n)$.
 ### Local Linear Approximation
 
 Consider a point $x$ and a small perturbation $\epsilon$. A nonlinear function,
-such as $f(x)=\sin(x^x)$ on $[0,3]$, becomes increasingly close to a straight
-line when viewed on smaller neighborhoods of a smooth point.
+such as the smooth curve in :numref:`fig_mdl-zoom-sequence`, becomes increasingly
+close to its tangent line on smaller neighborhoods of a differentiable point.
 :numref:`fig_mdl-zoom-sequence` shows three successively smaller windows.
 
 ![The same smooth curve viewed over shrinking $x$-ranges: as we zoom in around the base point it flattens onto its tangent line.](../img/mdl-cal-zoom-sequence.svg)
 :label:`fig_mdl-zoom-sequence`
 
-This is the observation single-variable calculus is built on: *locally, a smooth function is a line.* So as we shift $x$ by a little, $f(x)$ shifts by a little too, and the only thing left to pin down is the proportionality: is the output change half the input change? Twice? That ratio is the slope of the line we zoomed in on.
+At a differentiable point, the tangent is a first-order approximation: after a step $\epsilon$, the approximation error is negligible relative to $|\epsilon|$ as $\epsilon\to0$. The proportionality between the leading input and output changes is the tangent slope.
 
 ### The Difference Quotient and the Derivative
 
@@ -461,7 +461,7 @@ a parabola that hugs the curve over a visibly wider window than the tangent line
 ### Newton's Method
 :label:`subsec_mdl-newton`
 
-The best quadratic is a better *optimizer*. Gradient descent treats the local model as a line, and a line has no minimum, so we had to be told how far to walk down it by the step size $\eta$. The quadratic model has a minimum of its own, and we can simply jump there. Writing the model at the current iterate $x_t$ (with $f''(x_t) > 0$ so it opens upward),
+The quadratic model supplies a candidate step rather than an automatic improvement. When $f''(x_t)>0$, its local model opens upward and has a unique minimizer. Writing that model at the current iterate,
 
 $$
 q(x) = f(x_t) + f'(x_t)\,(x - x_t) + \tfrac{1}{2}f''(x_t)\,(x - x_t)^2,
@@ -474,7 +474,7 @@ x_{t+1} = x_t - \frac{f'(x_t)}{f''(x_t)}.
 $$
 :eqlabel:`eq_mdl-newton`
 
-Read against the gradient-descent loop :eqref:`eq_mdl-gd-loop`, this is the same step with the hand-tuned $\eta$ replaced by the *curvature-adapted* step size $1/f''(x_t)$: sharp curvature prescribes caution, gentle curvature boldness. On $f(x) = x^2$ it sets $\eta = 1/f'' = \tfrac12$, exactly the one-shot optimal step we found by hand. Its speed in general is a theorem we state without proof: if $f''$ is Lipschitz near a local minimizer $x^\star$ with $f''(x^\star) > 0$, and the iteration starts close enough to $x^\star$, then it converges *quadratically*, roughly doubling the number of correct digits per step :cite:`Nocedal.Wright.2006`. The price is the curvature itself: where $f''(x_t) \le 0$ the model's "minimum" is a maximum or does not exist and the raw step must be safeguarded, and in $n$ dimensions $f''$ becomes the Hessian matrix, so each step requires solving an $n \times n$ linear system. :numref:`sec_mdl-gradient-based-optimization` takes up how this trade plays out at deep-learning scale, and why first-order methods win there anyway.
+For positive curvature, this resembles a gradient step with the local scale $1/f''(x_t)$. On $f(x)=x^2$ it reaches the minimizer in one step. More generally, if $f''$ is Lipschitz near a local minimizer $x^\star$, $f''(x^\star)>0$, and the iteration begins sufficiently close, Newton's method converges quadratically :cite:`Nocedal.Wright.2006`. Outside that local regime a full step may increase the true objective; if curvature is nonpositive or nearly zero, the quadratic minimizer is absent or unstable. Damping and trust-region methods safeguard the step. In $n$ dimensions the curvature becomes a Hessian, and each Newton step requires solving a linear system; :numref:`sec_mdl-gradient-based-optimization` develops this tradeoff.
 
 The quadratic convergence is easy to watch. Take $f(x) = \tfrac14 x^4 - x$, whose stationarity condition $f'(x) = x^3 - 1 = 0$ has the root $x^* = 1$; the next cell iterates :eqref:`eq_mdl-newton` from $x_0 = 2$ and prints the error at each step.
 
@@ -508,7 +508,8 @@ $$
 P_n(x) = \sum_{i = 0}^{n} \frac{f^{(i)}(x_0)}{i!}(x-x_0)^{i},
 $$
 
-the best degree-$n$ polynomial approximation to $f$ near $x_0$.
+the unique degree-$n$ polynomial whose derivatives through order $n$ match
+those of $f$ at $x_0$.
 
 How good is it? The Mean Value Theorem gives an exact bound.
 
@@ -527,13 +528,30 @@ $$
 G(t) = f(x) - \sum_{k=0}^{n} \frac{f^{(k)}(t)}{k!}\,(x-t)^k - M\,\frac{(x-t)^{n+1}}{(n+1)!},
 $$
 
-where the constant $M$ is chosen so that $G(x_0) = 0$. Since $G(x_0) = f(x) - P_n(x) - M\,(x-x_0)^{n+1}/(n+1)!$, the claim :eqref:`eq_mdl-lagrange` is exactly that this $M$ equals $f^{(n+1)}(\xi)$ for some interior $\xi$. We also have $G(x) = 0$: at $t = x$ every power of $(x - t)$ vanishes and the $k = 0$ term leaves $f(x) - f(x)$. Because $f$ is $(n+1)$-times differentiable, $G$ is differentiable between $x_0$ and $x$, so Rolle's theorem (the flat case established in :numref:`sec_mdl-mvt`) gives a $\xi$ strictly between $x_0$ and $x$ with $G'(\xi) = 0$. Now differentiate $G$ in $t$. By the product rule, the $k$-th summand contributes $\frac{f^{(k+1)}(t)}{k!}(x-t)^k - \frac{f^{(k)}(t)}{(k-1)!}(x-t)^{k-1}$ for $k \ge 1$, and the $k = 0$ term contributes $f'(t)$; the second half of each summand cancels the first half of the one before it, so the sum telescopes to its last surviving piece, $\frac{f^{(n+1)}(t)}{n!}(x-t)^n$. Hence
+Choose the constant $M$ so that $G(x_0)=0$. The proof now has three steps.
+
+First, the endpoints vanish. The choice of $M$ gives $G(x_0)=0$, while
+$G(x)=0$ because every positive power of $(x-t)$ vanishes at $t=x$ and the
+$k=0$ term becomes $f(x)-f(x)$. Rolle's theorem therefore supplies a point
+$\xi$ strictly between $x_0$ and $x$ for which $G'(\xi)=0$.
+
+Second, differentiate the sum. For $k\geq1$, the $k$-th summand contributes
 
 $$
-G'(t) = -\frac{f^{(n+1)}(t)}{n!}\,(x-t)^n + M\,\frac{(x-t)^n}{n!},
+\frac{f^{(k+1)}(t)}{k!}(x-t)^k
+-\frac{f^{(k)}(t)}{(k-1)!}(x-t)^{k-1}.
 $$
 
-and setting $t = \xi$, where $(x - \xi)^n \neq 0$, forces $M = f^{(n+1)}(\xi)$. $\blacksquare$
+The $k=0$ term contributes $f'(t)$. Each negative term cancels the matching
+positive term at the preceding index, leaving only the final derivative. Hence
+
+$$
+G'(t) = -\frac{f^{(n+1)}(t)}{n!}\,(x-t)^n + M\,\frac{(x-t)^n}{n!}.
+$$
+
+Third, set $t=\xi$. Since $(x-\xi)^n\neq0$, the equation $G'(\xi)=0$
+forces $M=f^{(n+1)}(\xi)$. Substituting this value into $G(x_0)=0$ gives
+:eqref:`eq_mdl-lagrange`. $\blacksquare$
 
 The remainder evaluates the next derivative at an unknown interior point
 $\xi$. It quantifies local accuracy: the error scales as
@@ -1037,9 +1055,12 @@ It is why a positive slope means $f$ climbs, and what makes the Taylor remainder
 
 ::: {.cols .vc}
 ::: {.col}
-Matching value, slope, **and** curvature gives the best local *parabola*, which hugs the curve over a wider window than the tangent. It has a minimum of its own, so jump straight to it: **Newton's method** $x_{t+1} = x_t - f'(x_t)/f''(x_t)$.
+Matching value, slope, **and** curvature gives the local quadratic Taylor model.
+When $f''(x_t)>0$, minimizing that model proposes **Newton's step**
+$x_{t+1}=x_t-f'(x_t)/f''(x_t)$.
 
-This is gradient descent with $\eta$ replaced by the curvature-adapted $1/f''(x_t)$: sharp curvature, caution; gentle, boldness.
+The proposal need not improve the original function far from a solution;
+damping or a trust region controls the step when the local model is unreliable.
 :::
 
 ::: {.col .fig}
@@ -1057,10 +1078,13 @@ On $f(x) = \tfrac14 x^4 - x$, Newton's method solves $f'(x) = x^3 - 1 = 0$ from 
 
 . . .
 
-Each step roughly **squares** the previous error. Gradient descent shrinks the error by the same fixed factor every step, gaining a fixed number of digits; Newton *doubles* them.
+For this run, each step roughly **squares** the previous error. Under the local
+regularity assumptions stated in the text, this is quadratic convergence.
+Fixed-step gradient descent on a smooth, strongly convex neighborhood instead
+has linear convergence.
 :::
 
-::: {.slide title="Taylor series: the best degree-$n$ polynomial"}
+::: {.slide title="The Taylor Polynomial Matches $n$ Derivatives"}
 [Curvature]{.kicker}
 
 ::: {.cols .vc}
@@ -1164,20 +1188,20 @@ Under a continuous sampling distribution, a fixed measure-zero set is hit with p
 :::
 :::
 
-::: {.slide title="Summary"}
+::: {.slide title="Derivatives organize local prediction and optimization"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}
 ::: {.col}
 - **Derivative** = slope the curve flattens onto = limit of secants.
-- **Small-change identity** $f(x+\epsilon)\approx f(x)+\epsilon f'(x)$ generates everything.
+- The **small-change identity** $f(x+\epsilon)\approx f(x)+\epsilon f'(x)$ organizes the derivative rules and local optimization arguments in this section.
 - First-order term → **gradient descent** $x \leftarrow x - \eta f'(x)$, safe for $\eta < 2/L$.
 :::
 
 ::: {.col}
 - Second derivative = **curvature**; its sign is the min/max test.
 - Quadratic term → **Newton's method** $x_{t+1} = x_t - f'(x_t)/f''(x_t)$.
-- At corners use the **subgradient** ($0 \in \partial f$); kinks form a measure-zero set, so stochastic training is unaffected.
+- At corners, a **subgradient** may define optimality, while autodiff follows an implementation convention that requires separate convergence assumptions.
 :::
 :::
 :::

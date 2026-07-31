@@ -50,27 +50,28 @@ compatibility function in its own right — one that learned query and key
 representations can shape freely — with the Gaussian expansion surviving as
 the exact special case of equal key norms.
 
-One adjustment is still needed, to keep the magnitude of the scores under
-control. Assume that all elements of the query $\mathbf{q} \in \mathbb{R}^d$
-and the key $\mathbf{k}_i \in \mathbb{R}^d$ are independent random variables
-with zero mean and unit variance. The dot product of the two vectors then
-has zero mean and variance $d$: the typical score grows like $\sqrt{d}$ for
-no reason other than vector length. Rescaling by $1/\sqrt{d}$ keeps the
-score variance at $1$ regardless of dimension, and yields the *scaled
+One adjustment controls the nominal score magnitude at initialization. Assume
+for this calculation that the $d_k$ coordinates of the query and key are
+independent, zero-mean, unit-variance random variables. Their dot product then
+has zero mean and variance $d_k$. Rescaling by $1/\sqrt{d_k}$ removes this
+dimension dependence under the stated assumptions and yields the *scaled
 dot-product attention* scoring function of the Transformer
 :cite:`Vaswani.Shazeer.Parmar.ea.2017`:
 
-$$ a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i / \sqrt{d}.$$
+$$ a(\mathbf{q}, \mathbf{k}_i) = \mathbf{q}^\top \mathbf{k}_i / \sqrt{d_k}.$$
 :eqlabel:`eq_dot_product_attention`
 
 The attention weights are obtained, as always, with the softmax:
 
-$$\alpha(\mathbf{q}, \mathbf{k}_i) = \mathrm{softmax}(a(\mathbf{q}, \mathbf{k}_i)) = \frac{\exp(\mathbf{q}^\top \mathbf{k}_i / \sqrt{d})}{\sum_{j=1}^m \exp(\mathbf{q}^\top \mathbf{k}_j / \sqrt{d})}.$$
+$$\alpha(\mathbf{q}, \mathbf{k}_i) = \mathrm{softmax}(a(\mathbf{q}, \mathbf{k}_i)) = \frac{\exp(\mathbf{q}^\top \mathbf{k}_i / \sqrt{d_k})}{\sum_{j=1}^m \exp(\mathbf{q}^\top \mathbf{k}_j / \sqrt{d_k})}.$$
 :eqlabel:`eq_attn-scoring-alpha`
 
 ### Score Variance and the $1/\sqrt{d}$ Factor
 
-Why insist on unit score variance? The softmax saturates: once one score
+Learned queries and keys need not retain the independence or unit-variance
+assumptions, so the calculation is a scaling heuristic rather than a
+trained-model guarantee. Its purpose is to avoid dimension-induced softmax
+saturation at initialization. Once one score
 exceeds the others by a large margin, the winning weight approaches $1$ and
 the rest approach $0$. The gradient returning along the *score* path shrinks
 with them, because the Jacobian of the softmax is

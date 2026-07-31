@@ -405,8 +405,8 @@ for name, d in [('underfitting (degree 1) ', 1),
     print(f'{name}: train {train_mse:8.4f}   test {test_mse:12.4f}')
 ```
 
-Sweeping the degree from 1 to 19 traces out exactly the U-shaped test-error curve
-that :numref:`fig_capacity_vs_error` sketches: error first falls as the model
+For this seeded dataset, sweeping the degree from 1 to 19 produces the
+U-shaped test-error pattern sketched in :numref:`fig_capacity_vs_error`: error first falls as the model
 gains the capacity to represent the signal, then rises as the surplus capacity is
 spent fitting noise. Training error, by contrast, only ever decreases.
 
@@ -441,13 +441,13 @@ d2l.plot(list(range(1, 15)), [bias2, var, np.array(bias2) + np.array(var)],
          legend=['bias^2', 'variance', 'bias^2 + variance'])
 ```
 
-The U-curve now *visibly decomposes*. Squared bias dominates for degrees below
-3 and collapses to essentially zero the moment the model class contains the
-truth; variance is tiny at first but grows relentlessly with surplus capacity,
-exploding as the polynomial gains the freedom to chase each draw's noise. Their
-sum is lowest exactly where the two failure modes trade off, at degree 3, and
-up to the irreducible noise floor $\sigma^2 = 0.01$ that sum is the expected
-test error. This is a numerical instance of the decomposition proved in
+The estimated curve now separates into its two components. For these inputs and
+200 noise redraws, squared bias becomes small once the model class contains the
+cubic target, while variance rises sharply at high degrees. Their sum is
+smallest near degree 3. Up to the irreducible noise floor
+$\sigma^2 = 0.01$, the population bias--variance decomposition identifies this
+sum with expected test error; the plotted quantities are Monte Carlo estimates
+of its terms. This is a numerical instance of the decomposition proved in
 :numref:`sec_mdl-statistics`.
 
 ### Dataset Size
@@ -821,9 +821,9 @@ redraw the training noise 200 times, refit each degree, and measure
 - **variance**: how much the fit *fluctuates* across draws.
 
 ::: {.d2l-note .rule}
-Bias collapses once the model class contains the truth (degree 3);
-variance grows relentlessly with surplus capacity. Their sum bottoms out
-exactly at the sweet spot.
+In this experiment, bias becomes small once the class contains the cubic
+target, while variance rises at high degrees. Their estimated sum is smallest
+near degree 3.
 :::
 :::
 
@@ -843,9 +843,9 @@ test loss dips to a sweet spot near the true degree 3, then explodes as
 surplus capacity fits noise.
 
 Redrawing the training noise 200 times and refitting decomposes that
-test error into its two parts: **bias²** collapses once the model class
-contains the truth; **variance** grows relentlessly with surplus
-capacity. Their sum bottoms out exactly at the sweet spot.
+test error into its two estimated parts: **bias²** becomes small once the model
+class contains the cubic target, while **variance** rises at high degrees.
+Their sum is smallest near degree 3 for this setup.
 :::
 
 ::: {.col .fig}

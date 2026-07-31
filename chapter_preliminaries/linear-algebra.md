@@ -1354,17 +1354,16 @@ and their uses) is developed in :numref:`sec_mdl-eigendecompositions`.
 
 ## Discussion
 
-In this section, we have reviewed all the linear algebra
-that you will need to understand
-a significant chunk of modern deep learning.
+This section introduced the tensor shapes, products, reductions, and norms used
+in the next modeling chapters.
 There is a lot more to it: matrix decompositions, for example,
 reveal low-dimensional structure in real-world datasets
 and power entire subfields of machine learning.
 The later mathematics chapters develop these topics when they become relevant
 to specific learning problems.
 
-If you are eager to learn more linear algebra,
-start with :numref:`chap_mdl-linear-algebra`,
+For the eigendecompositions, singular value decomposition, and geometric
+structure deferred here, continue with :numref:`chap_mdl-linear-algebra`,
 which develops eigendecompositions, the singular value decomposition,
 and their use in machine learning in full.
 For further reading, there are many excellent books and online resources;
@@ -1551,12 +1550,12 @@ Covariance and Gram matrices are symmetric, a structure that many methods
 :::
 :::
 
-::: {.slide title="Rank *n* is just *n* axes"}
+::: {.slide title="An order-*n* tensor has *n* axes"}
 [The objects]{.kicker}
 
 ::: {.cols .vc}
 ::: {.col .narrow}
-Stack matrices and the naming continues. A batch of images is rank-4
+Stack matrices and the naming continues. A batch of images is order 4
 (`N×C×H×W` in PyTorch, `N×H×W×C` in TF):
 
 @-linear-algebra-tensors

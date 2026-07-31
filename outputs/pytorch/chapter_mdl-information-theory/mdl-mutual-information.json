@@ -49,7 +49,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-gaussian-binned-1.svg",
           "bytes": 27873,
-          "sha256": "sha256:8a88e5f9c18a0f5d3ce9e15a5678cf53ded78240d87e653bab5c935aa934ec44"
+          "sha256": "sha256:a963be5d2f14ee79bda07a203a6900a1b54b93b11edb02de4b459caac7d0128d"
         }
       ]
     },
@@ -93,7 +93,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "d = 1, rho = 0.5: KSG = 0.121, closed form = 0.144 nats\nd = 1, rho = 0.7: KSG = 0.335, closed form = 0.337 nats\n"
+          "text": "d = 1, rho = 0.5: KSG = 0.121, closed form = 0.144 nats\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "d = 1, rho = 0.7: KSG = 0.335, closed form = 0.337 nats\n"
         },
         {
           "type": "stream",
@@ -126,7 +131,7 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-log-n-ceiling-1.svg",
           "bytes": 29955,
-          "sha256": "sha256:a355379deb8ff951ac263f25231d86f7c87f965f36e09b440d0979553dcb5566"
+          "sha256": "sha256:cc91261bd4692a67fc8a0206f721680739ec91fa0716c7860aeb96b56e0780d2"
         }
       ]
     },
@@ -137,12 +142,17 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n"
+          "text": "true I    DV (MINE)         NWJ              InfoNCE\n  0.5     0.50 +-  0.12     0.50 +-  0.12     0.50 +-  0.07\n  1.0     1.01 +-  0.19     0.99 +-  0.22     1.00 +-  0.07\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
+          "text": "  2.0     1.93 +-  0.35     1.83 +-  0.97     1.94 +-  0.09\n  4.0     3.79 +-  0.92     3.36 +-  1.18     3.67 +-  0.08\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "  6.0    23.22 +- 56.65     1.23 +- 11.74     4.61 +-  0.05\n"
         }
       ]
     },
@@ -153,12 +163,12 @@
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =    2: ln N = 0.693, InfoNCE bound = 0.570 nats\nN =    8: ln N = 2.079, InfoNCE bound = 1.407 nats\n"
+          "text": "N =    2: ln N = 0.693, InfoNCE bound = 0.570 nats\nN =    8: ln N = 2.079, InfoNCE bound = 1.407 nats\nN =   32: ln N = 3.466, InfoNCE bound = 1.762 nats\n"
         },
         {
           "type": "stream",
           "name": "stdout",
-          "text": "N =   32: ln N = 3.466, InfoNCE bound = 1.762 nats\nN =  128: ln N = 4.852, InfoNCE bound = 1.888 nats\ntrue I(X;Y) = 1.959 nats\n"
+          "text": "N =  128: ln N = 4.852, InfoNCE bound = 1.888 nats\ntrue I(X;Y) = 1.959 nats\n"
         }
       ]
     },
@@ -176,18 +186,18 @@
           "mime": "image/svg+xml",
           "asset": "mdl-mutual-information/mutual-information-ib-plane-1.svg",
           "bytes": 31736,
-          "sha256": "sha256:e40318aa2d915cbe098801072e2728933fa7979cefd0ba7241c5ab2c9eb52dbc"
+          "sha256": "sha256:5bc90da319357b0960275218c174975d0b5a4cd21901140ae8f58751c766ff2b"
         }
       ]
     },
     "mutual-information-fano": {
-      "code_fingerprint": "sha256:446b8a8f7b700d6986d7cb2f38e0722d35402481de5343ef4f4f76d41dcfb738",
+      "code_fingerprint": "sha256:3c467cb11066b4fe6e70045e3cbcef92c378843e65a5484b471bdd74545408c8",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "5% error on 1000 balanced classes needs I(X;Y) >= 6.364 nats\ncertifying that much MI needs N > e^I = 581 samples\n"
+          "text": "5% error on 1000 balanced classes needs I(X;Y) >= 6.364 nats\nInfoNCE can reach that value only if N >= e^I = 581\n"
         }
       ]
     }

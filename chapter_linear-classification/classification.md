@@ -40,9 +40,11 @@ import optax
 
 ## The `Classifier` Class
 
-:begin_tab:`pytorch, mxnet, tensorflow`
-We define the `Classifier` class below. In the `validation_step` we report both the loss value and the classification accuracy on a validation batch. The plotting machinery records one point per batch, and since all validation batches (except possibly the last) contain the same number of examples, the average of the plotted per-batch values equals the loss and accuracy over the whole validation set. That average is off only when the final batch is smaller, a minor discrepancy we ignore to keep the code simple.
-:end_tab:
+The `Classifier` class reports loss and accuracy for each validation batch.
+These curves are monitoring diagnostics: an unweighted average of batch means
+differs from the exact dataset metric when the final batch is smaller. Final
+evaluation should instead sum per-example losses and correct indicators and
+divide by the total number of examples.
 
 :begin_tab:`tensorflow`
 The `_report_val` method mirrors `validation_step`
@@ -53,8 +55,6 @@ only needs to run the forward pass once.
 :end_tab:
 
 :begin_tab:`jax`
-We define the `Classifier` class below. In the `validation_step` we report both the loss value and the classification accuracy on a validation batch. The plotting machinery records one point per batch, and since all validation batches (except possibly the last) contain the same number of examples, the average of the plotted per-batch values equals the loss and accuracy over the whole validation set. That average is off only when the final batch is smaller, a minor discrepancy we ignore to keep the code simple.
-
 NNX modules own their parameters and other state. The compiled trainer can
 therefore call the model directly, while NNX tracks updates such as BatchNorm
 running statistics automatically. The validation step returns its two metrics
@@ -220,7 +220,7 @@ $$\textrm{precision} = \frac{\textrm{TP}}{\textrm{TP} + \textrm{FP}}, \qquad \te
 
 Precision asks: of the examples we *flagged*, how many were real? Recall asks: of the real positives, how many did we *find*? The always-healthy classifier above has recall $0$ (and its precision is undefined, since it never flags anyone), which tells the true story that the 99% accuracy conceals. When a single summary number is needed, the conventional compromise is the *F1 score*, the harmonic mean $2\,\textrm{PR}/(\textrm{P}+\textrm{R})$ of precision and recall, which is high only when both are.
 
-For $q$ classes the same bookkeeping becomes a $q \times q$ *confusion matrix*: entry $(i, j)$ counts the examples of true class $j$ that the model predicted as class $i$, so the diagonal holds the correct decisions and every off-diagonal cell isolates one specific kind of error. The confusion matrix is the classification diagnostic; a single accuracy number is just the normalized trace (the fraction on the diagonal). We will meet it twice more in this chapter: in :numref:`sec_softmax_scratch` we compute one for our trained Fashion-MNIST classifier to see *which* classes it confuses, and in :numref:`sec_environment-and-distribution-shift` the very same matrix becomes the key computational object for correcting label shift.
+For $q$ classes the same bookkeeping becomes a $q \times q$ *confusion matrix*: entry $(i, j)$ counts the examples of true class $j$ that the model predicted as class $i$, so the diagonal holds the correct decisions and every off-diagonal cell isolates one specific kind of error. A confusion matrix is one useful classification diagnostic; a single accuracy number is its normalized trace (the fraction on the diagonal). We will meet it twice more in this chapter: in :numref:`sec_softmax_scratch` we compute one for our trained Fashion-MNIST classifier to see *which* classes it confuses, and in :numref:`sec_environment-and-distribution-shift` the same matrix becomes the key computational object for correcting label shift.
 
 ## Summary
 
@@ -229,8 +229,8 @@ The `Classifier` class adds two things to `d2l.Module`: an overridden `validatio
 
 ## Exercises
 
-1. Denote by $L_\textrm{v}$ the validation loss, and let $L_\textrm{v}^\textrm{q}$ be its quick and dirty estimate computed by the loss function averaging in this section. Lastly, denote by $l_\textrm{v}^\textrm{b}$ the loss on the last minibatch. Express $L_\textrm{v}$ in terms of $L_\textrm{v}^\textrm{q}$, $l_\textrm{v}^\textrm{b}$, and the sample and minibatch sizes.
-1. Show that the quick and dirty estimate $L_\textrm{v}^\textrm{q}$ is unbiased. That is, show that $E[L_\textrm{v}] = E[L_\textrm{v}^\textrm{q}]$. Why would you still want to use $L_\textrm{v}$ instead?
+1. Denote by $L_\textrm{v}$ the validation loss, and let $L_\textrm{v}^\textrm{q}$ be its unweighted batch-mean estimate computed by the loss averaging in this section. Lastly, denote by $l_\textrm{v}^\textrm{b}$ the loss on the last minibatch. Express $L_\textrm{v}$ in terms of $L_\textrm{v}^\textrm{q}$, $l_\textrm{v}^\textrm{b}$, and the sample and minibatch sizes.
+1. Show that the unweighted batch-mean estimate $L_\textrm{v}^\textrm{q}$ is unbiased. That is, show that $E[L_\textrm{v}] = E[L_\textrm{v}^\textrm{q}]$. Why would you still want to use $L_\textrm{v}$ instead?
 1. Given a multiclass classification loss, denoting by $l(y,y')$ the penalty of estimating $y'$ when we see $y$ and given a probability $p(y \mid x)$, formulate the rule for an optimal selection of $y'$. Hint: express the expected loss, using $l$ and $p(y \mid x)$.
 1. Suppose two classifiers $A$ and $B$ both achieve 90% accuracy on a ten-class test set, but on the examples they get right, $A$ assigns probability $0.91$ on average to the correct class while $B$ assigns only $0.51$. (i) Compute the average cross-entropy loss each incurs on those examples. (ii) Explain why these averages are insufficient to decide which classifier is safer: what must we know about their probabilities on incorrect predictions, calibration by subgroup, and the costs of their errors? (iii) Construct a simple monotone rescaling of the scores (a temperature) that sharpens $B$'s probabilities without changing any of its $\arg\max$ decisions, and argue why its accuracy is therefore unchanged.
 1. Generalize `accuracy` to *top-$k$ accuracy*, which counts a prediction as correct when the true class is among the $k$ highest-scoring classes. (i) Modify the four-line implementation to take a `k` argument (hint: replace the single `argmax` with the indices of the $k$ largest scores). (ii) On a $q$-class problem, what is top-$q$ accuracy always equal to, and why? (iii) Why is top-5 accuracy a standard companion to top-1 on benchmarks with many fine-grained classes?

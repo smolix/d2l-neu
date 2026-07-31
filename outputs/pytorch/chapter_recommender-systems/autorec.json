@@ -14,30 +14,30 @@
       "outputs": []
     },
     "autorec-implementing-the-model": {
-      "code_fingerprint": "sha256:0c3c071b2efa62d5e22543d1be86137cf93741b9fb785a8a9c9cb6d3d470248c",
+      "code_fingerprint": "sha256:166f0a3e74327e7101a1dd30b02ccea83bb1eb15978cdb51b1a05eb013ae89e0",
       "kind": "text",
       "outputs": []
     },
     "autorec-reimplementing-the-evaluator": {
-      "code_fingerprint": "sha256:1d7ddbf73c8e5edbbbc4405f233a0be9435d28f0688f8bafa0b2ca337e99290c",
+      "code_fingerprint": "sha256:295fcd003e6b7ec99754266d27b29d7791156ea807b21c6a5faf6f56c5311663",
       "kind": "text",
       "outputs": []
     },
     "autorec-training-and-evaluating-the-model": {
-      "code_fingerprint": "sha256:52dd97e02e7efde6234f968ce5e405b547572e0bde0922bf705d914561ac974b",
+      "code_fingerprint": "sha256:7bf304a47cdb8402f70bc9a92634a94708abf69a5b37b32f64a0056a8f7831dd",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "train loss 40.838, test RMSE 0.906\n"
+          "text": "train loss 38.668, test RMSE 0.904\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "autorec/autorec-training-and-evaluating-the-model-1.svg",
           "bytes": 21850,
-          "sha256": "sha256:c450cae1c03987b272cdab8e67340f25297d7f5e3dbcfc75e49d8aa8b4a9f7b0"
+          "sha256": "sha256:27d378f61cb5b9985dd9526728be91fd1c9c0f82566b138d926b4c48b4c6a80b"
         }
       ]
     }

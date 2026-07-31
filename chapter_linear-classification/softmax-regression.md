@@ -5,26 +5,10 @@ In :numref:`sec_linear_regression`, linear regression produced numerical
 predictions using a linear output and a loss derived from a noise model.
 Classification instead predicts which of several categories applies.
 
-Regression is appropriate for *how much?* or *how many?* questions.
-If you want to predict the number of dollars (price)
-at which a house will be sold,
-or the number of wins a baseball team might have,
-or the number of days that a patient
-will remain hospitalized before being discharged,
-then you are probably looking for a regression model.
-However, even within regression models,
-there are important distinctions.
-For instance, the price of a house is never negative,
-and changes are often *relative* to its baseline,
-so it can pay to regress on the logarithm of the price.
-Likewise, the number of days a patient spends in hospital
-is a *discrete nonnegative* random variable,
-for which least mean squares is not ideal either;
-such time-to-event analysis is the province
-of a specialized subfield called *survival modeling*.
-
-These examples also show why squared error is not a universal objective.
-This section develops *classification* for *which category?* questions.
+Regression predicts a quantity; classification predicts which category applies.
+The change in target space requires a corresponding probability model and loss.
+This section develops that categorical model, just as the preceding chapter
+derived squared loss from a continuous noise model.
 
 
 
@@ -33,7 +17,6 @@ This section develops *classification* for *which category?* questions.
   or not to sign up for a subscription service?
 * Does this image depict a donkey, a dog, a cat, or a rooster?
 * Which movie is Aston most likely to watch next?
-* Which section of the book are you going to read next?
 
 Colloquially, machine learning practitioners
 overload the word *classification*
@@ -60,8 +43,7 @@ for an effective algorithm when tagging images.
 ## Classification
 :label:`subsec_classification-problem`
 
-To get our feet wet, let's start with
-a simple image classification problem.
+Begin with a simple image classification problem.
 Here, each input consists of a $2\times2$ grayscale image.
 We can represent each pixel value with a single scalar,
 giving us four features $x_1, x_2, x_3, x_4$.
@@ -463,8 +445,7 @@ this dial in detail.
 
 ## Summary and Discussion
 
-In this section, we encountered the first nontrivial loss function,
-allowing us to optimize over *discrete* output spaces.
+This section derived a differentiable loss for a discrete label space.
 Key in its design was that we took a probabilistic approach,
 treating discrete categories as instances of draws from a probability distribution.
 As a side effect, we encountered the softmax,
@@ -482,31 +463,11 @@ to statistical physics (the Boltzmann distribution behind the softmax) and to
 information theory (cross-entropy as a code length), the latter taken up in
 :numref:`sec_mdl-information_theory`.
 
-This is enough to get you started.
-Among other things, we skipped over computational considerations.
-Specifically, for any fully connected layer with $d$ inputs and $q$ outputs,
-the parametrization and computational cost is $\mathcal{O}(dq)$,
-which can be prohibitively high in practice.
-Fortunately, this cost of transforming $d$ inputs into $q$ outputs
-can be reduced through approximation and compression.
-For instance, Deep Fried Convnets :cite:`Yang.Moczulski.Denil.ea.2015`
-uses a combination of permutations,
-Fourier transforms, and scaling
-to reduce the cost from quadratic to log-linear.
-Similar techniques work for more advanced
-structural matrix approximations :cite:`sindhwani2015structured`.
-Lastly, we can use quaternion-like decompositions
-to reduce the cost to $\mathcal{O}(\frac{dq}{n})$,
-again if we are willing to trade off a small amount of accuracy
-for computational and storage cost :cite:`Zhang.Tay.Zhang.ea.2021`
-based on a compression factor $n$.
-This is an active area of research.
-What makes it challenging is that
-we do not necessarily strive
-for the most compact representation
-or the smallest number of floating point operations
-but rather for the solution
-that can be executed most efficiently on modern GPUs.
+The resulting chain is the one used throughout the chapter: affine logits,
+softmax probabilities, categorical likelihood, cross-entropy, and the residual
+gradient $\hat{\mathbf y}-\mathbf y$. Computational approximations for very
+large output spaces are treated with the systems and large-vocabulary models
+for which they are needed.
 
 ## Exercises
 
@@ -788,7 +749,10 @@ $$\partial_{o_j}\, l(\mathbf{y}, \hat{\mathbf{y}}) = \mathrm{softmax}(\mathbf{o}
 
 . . .
 
-The gradient is the **residual**, predicted probability minus observed label, exactly as in linear regression. This "prediction minus truth" form is shared by *every* exponential-family model, and it makes the loss convex in $\mathbf{o}$.
+The gradient is the **residual**, predicted probability minus observed label,
+exactly as in linear regression. In an exponential-family model with canonical
+natural parameters, the general form is expected sufficient statistics minus
+observed sufficient statistics; here those statistics are class indicators.
 :::
 
 ::: {.slide title="Why \"cross-entropy\"?"}

@@ -2,8 +2,8 @@
 :label:`sec_mdl-distributions`
 
 A *distribution* assigns probabilities to the possible values of a random
-variable (:numref:`sec_mdl-random_variables`). This section introduces a small
-collection of distributions used frequently in machine learning and relates
+variable (:numref:`sec_mdl-random_variables`). This section develops eleven
+data distributions and three conjugate priors used frequently in machine learning and relates
 them through constructions and limits. A sum of Bernoulli variables has a
 binomial distribution. Appropriate many-trial limits yield the Poisson or,
 under the central limit theorem, the Gaussian distribution. The categorical
@@ -19,7 +19,21 @@ picture sits inside the exponential-family envelope.
 ![The distribution family. Solid arrows *construct*: Bernoulli is the seed; summing $n$ copies gives the Binomial; the many-and-rare limit ($n\to\infty$, $np\to\lambda$) gives the Poisson, whose waiting time between events is the Exponential; the many-and-ordinary limit (the central limit theorem) gives the Gaussian; the Categorical generalizes Bernoulli to $K$ outcomes and the Multinomial counts $n$ of them. Dashed arrows attach each likelihood to its *conjugate prior*: the Beta to the Bernoulli and Binomial, the Gamma to the Poisson, and the Dirichlet to the Categorical and Multinomial. Every node, the conjugate priors included, lies inside the exponential-family envelope.](../img/mdl-prob-family-tree.svg)
 :label:`fig_mdl-prob-family-tree`
 
-For each distribution we keep to a tight template: its mass or density function,
+The first two parts form a reference gallery; the exponential-family and
+conjugacy parts explain shared structure. A modeling choice also depends on the
+support and data-generating question:
+
+| observed quantity | useful starting model | condition or omission to check |
+|:--|:--|:--|
+| binary or one-of-$K$ outcome | Bernoulli or categorical | probabilities may depend on covariates |
+| successes in fixed trials | binomial | conditionally independent trials with a common success probability |
+| event count over exposure | Poisson | mean equals variance; overdispersion may require another count law |
+| positive waiting time | exponential | constant hazard; Gamma, Weibull, and log-normal laws are omitted |
+| bounded continuous value | continuous uniform as a baseline | an application need not have constant density |
+| real-valued residual | Gaussian or Laplace | mixtures and heavier-tailed laws may fit better |
+| correlated real vector | multivariate Gaussian | multimodality and structured covariance need richer models |
+
+For each distribution we use a common template: its mass or density function,
 where it *arises* in machine learning, its mean and variance *derived* rather than
 asserted, and a compact teaching cell that evaluates the law and draws a
 sample. We treat the discrete distributions first, then the continuous ones, then
@@ -88,8 +102,8 @@ p_1 = P(X=1) = p, \qquad p_0 = P(X=0) = 1-p .
 $$
 :eqlabel:`eq_mdl-bernoulli_pmf`
 
-**Where it arises.** The Bernoulli is the output distribution of *every binary
-classifier*: a model emits $\hat p$, and the negative log-likelihood
+**Where it arises.** A probabilistic binary classifier commonly uses a
+Bernoulli output: the model emits $\hat p$, and the negative log-likelihood
 $-y\log\hat p-(1-y)\log(1-\hat p)$ is exactly the *binary cross-entropy* loss,
 the maximum-likelihood view of binary classification developed in
 :numref:`subsec_mdl-nll-crossentropy`.
@@ -851,8 +865,16 @@ this section shows.
 
 ### Maximum-Entropy Derivation
 
-The exponential form is exactly what *maximizing
-entropy* produces. The two maximum-entropy facts cited earlier
+Maximum entropy produces an exponential-family form only relative to a chosen
+support, base measure, and feasible set of constraints. Fix a base measure
+$h$, require $p$ to be absolutely continuous with respect to it, and impose
+normalization together with $\mathbb E_p[T(\mathbf x)]=\boldsymbol\tau$. If
+the constraints are feasible, the log-partition function is finite, and a
+maximizer exists in the regular interior case, the optimizer has the
+exponential form below. Existence can fail for incompatible constraints or
+heavy-tailed settings.
+
+The two maximum-entropy facts cited earlier
 :cite:`Cover.Thomas.1999` are the same
 statement seen twice: the discrete uniform is the maximum-entropy distribution on a
 finite set when we fix *nothing* but the support, and the Gaussian is the
@@ -872,11 +894,10 @@ are the natural parameters and $A(\boldsymbol\eta)$ is again the normalizer
 real work here. With plain Shannon entropy, i.e. $h\equiv1$, fixing the mean on
 $\{0,1,2,\dots\}$ yields the *geometric* distribution; only entropy relative to
 $h(k)=1/k!$ yields the Poisson. For the uniform and the Gaussian above, $h$ is
-constant, so plain entropy was the right notion all along. So the exponential
-family is the *least-committal* family
-consistent with knowing a fixed set of averages: the uniform fixes none, the
-Bernoulli/categorical fix the class probabilities, and the Gaussian fixes the first
-two moments.
+constant, so plain entropy was the relevant objective in those cases. Thus,
+when the optimization problem has a solution, the solution is least committal
+only relative to the selected support, base measure, entropy, and moment
+constraints. Changing those choices can change the optimizer.
 
 ### The Moment Property
 
@@ -1157,9 +1178,9 @@ object whose mean and covariance the table states.
   limits, and standard integrals) rather than memorization.
 * The **exponential family** $p(\mathbf x)=h(\mathbf x)\exp(\boldsymbol\eta^\top
   T(\mathbf x)-A(\boldsymbol\eta))$ unifies almost all of them (the uniforms, whose
-  support moves with their parameters, stay outside); it is exactly the
-  maximum-entropy family (entropy taken relative to the base measure $h$) for a
-  fixed set of expected sufficient statistics. Its
+  support moves with their parameters, stay outside). Under feasible moment
+  constraints and regularity conditions, the form arises by maximizing
+  entropy relative to a selected base measure $h$. Its
   log-partition $A$ generates moments: $\nabla A(\boldsymbol\eta)=\mathbb E[T(\mathbf x)]$,
   and $A$ is convex. Thus its negative log-likelihood is convex in the natural
   parameters; with an affine parameter map this yields a convex generalized
@@ -1238,7 +1259,7 @@ object whose mean and covariance the table states.
 ::: {.cover}
 [Dive into Deep Learning · §25.2]{.kicker}
 
-The distributions a practitioner needs<br>**from Bernoulli to the Gaussian, and the family they belong to**.
+A core distribution vocabulary<br>**from Bernoulli to the Gaussian, and the family they belong to**.
 :::
 :::
 
@@ -1247,9 +1268,10 @@ The distributions a practitioner needs<br>**from Bernoulli to the Gaussian, and 
 
 ::: {.cols .vc}
 ::: {.col}
-Fourteen distributions cover almost everything in practice, and they
-**connect**: Bernoulli is the seed; construction and limit arrows grow
-the rest; conjugate priors close the tree, all inside one envelope.
+These fourteen distributions form a useful core vocabulary, and they
+**connect** through constructions, limits, and conjugacy. Important omissions
+include mixtures, heavy-tailed multivariate laws, survival families, and
+structured stochastic processes.
 
 ::: {.d2l-note}
 Learn the *map*, not a flat list of formulas.
@@ -1281,8 +1303,8 @@ collapse instantly: $\mathbb E[X]=p$, $\operatorname{Var}(X)=p(1-p)$.
 @distributions-bernoulli
 
 ::: {.d2l-note .rule}
-Every binary classifier outputs a Bernoulli; its negative log-likelihood
-**is** binary cross-entropy.
+A probabilistic binary classifier with a Bernoulli likelihood has binary
+cross-entropy as its negative log-likelihood.
 :::
 :::
 

@@ -14,36 +14,41 @@
       "outputs": []
     },
     "score-matching-diffusion-flow-dsm-train": {
-      "code_fingerprint": "sha256:71954943422284add2bc8a6f34c27c1463d703021cddee665a8bad060c6da8dc",
+      "code_fingerprint": "sha256:e1347204252d1b795cc5c85dc01c1de778aff2a593560f348198961273e631f0",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "DSM loss 2.036 vs irreducible floor 2.038; max |s_theta - score| on [-4, 4]: 0.199\n"
+          "text": "DSM loss 2.036 vs estimated Bayes risk 2.038; max |s_theta - score| on [-4, 4]: 0.199\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-dsm-train-1.svg",
           "bytes": 24746,
-          "sha256": "sha256:d346f6c4a5d820cc65af5a87aaa483b5d050ef387a5f6f17534f661b1a208d61"
+          "sha256": "sha256:895d0ad13bf34c17a463f7b7f93ba245dd0217e84f035258db23a61cbec689e6"
         }
       ]
     },
     "score-matching-diffusion-flow-ddpm-marginal": {
-      "code_fingerprint": "sha256:76ea64406ddf8985123aa82a81f6c91c670772447da28cd69d0b794eb328dc1c",
+      "code_fingerprint": "sha256:3fb8c04e369662d38648ca4113cae584d2d51088f744036e34beb7752a4a4be6",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\nt = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
+          "text": "t =   10: Var(x_t) chain 1.000, formula 1.000, alpha_bar 0.9981\nt =  100: Var(x_t) chain 0.994, formula 1.000, alpha_bar 0.8970\n"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "t = 1000: Var(x_t) chain 1.024, formula 1.000, alpha_bar 0.0000\nchain vs one-shot at T: mean -0.027 vs +0.005, std 1.012 vs 1.000\n"
         }
       ]
     },
     "score-matching-diffusion-flow-langevin": {
-      "code_fingerprint": "sha256:cb0a017170177df2766a6d3def52dc69243b5edbcab355afcb7b7db781c9b676",
+      "code_fingerprint": "sha256:b75c459fbd09bd94fbaacbead1c1ec9c3a82d4d16506a29d7813a389802de69c",
       "kind": "text",
       "outputs": [
         {
@@ -59,18 +64,18 @@
       ]
     },
     "mdl-score-matching-diffusion-flow-ddim-trading-noise-for-speed": {
-      "code_fingerprint": "sha256:a88c5cc0b3ee5360e65ef4a253c568173282303eeea2ce2ba3ccfa6c0f9a3ba4",
+      "code_fingerprint": "sha256:ca725e29f194c1a0af3f9cdd2755987ecafc0599f3a6324148168e5e6f9bf459",
       "kind": "text",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": " 10 strides vs 1000: mean |gap| 0.083, KS 0.080, mode fraction 0.495\n 50 strides vs 1000: mean |gap| 0.015, KS 0.018, mode fraction 0.495\nmode fraction at 1000 steps: 0.495; 5% KS threshold: 0.021\n"
+          "text": " 10 strides vs 1000: mean |gap| 0.083, KS 0.080, mode fraction 0.495\n 50 strides vs 1000: mean |gap| 0.015, KS 0.018, mode fraction 0.495\nmode fraction at 1000 steps: 0.495; the same initial draws are used at every stride count\n"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule": {
-      "code_fingerprint": "sha256:75e2774f2520199bad591c7b8873cafdaefa9c40e912968c89bfb511985ccf79",
+      "code_fingerprint": "sha256:ee29d442496783b9069abdb5d5c0d6bb9c274587a6680a34c0b5563075a67911",
       "kind": "mixed",
       "outputs": [
         {
@@ -83,12 +88,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/mdl-score-matching-diffusion-flow-guidance-steering-with-bayes-rule-1.svg",
           "bytes": 30656,
-          "sha256": "sha256:6421013f37bcc04be482e349353b9e0ac5a55a1aeaec31238389362292f60412"
+          "sha256": "sha256:6b4c9ca096ce1281e2f8b7d78b93212bfbf97c360360de7d3df64eb5f424757a"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-score-noise-and-velocity-are-one-function": {
-      "code_fingerprint": "sha256:1ac54078a3b5fffcdabccc5b447ddd4d30242da7c23195b4b71b5581561a2093",
+      "code_fingerprint": "sha256:2e1e4a7ad3cd4035ca57559bc335fbe97f005dcc72212258fb9718454583e31b",
       "kind": "text",
       "outputs": [
         {
@@ -99,7 +104,7 @@
       ]
     },
     "score-matching-diffusion-flow-two-moons": {
-      "code_fingerprint": "sha256:039c512b70b1a9caaa13fb7e151f7fcc615b1a064ca1c455b716c36b3ba6c840",
+      "code_fingerprint": "sha256:2d3d58d7023de81fdeaf51c6fdee9076442d03eccdce7ee57f997cad856d23d8",
       "kind": "text",
       "outputs": [
         {
@@ -110,7 +115,7 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-train": {
-      "code_fingerprint": "sha256:68f3dfad3183b39ff9daeff6603b58a5b6e3544ec03058506055cd6956efa0b8",
+      "code_fingerprint": "sha256:62fb980de25a4d3f45a10bfe3e543bf885e57a0c196aab60b53e3ffa51da9dd0",
       "kind": "text",
       "outputs": [
         {
@@ -121,12 +126,12 @@
       ]
     },
     "score-matching-diffusion-flow-cfm-sample": {
-      "code_fingerprint": "sha256:4ade071843c5a295fc568a7837af356acd83ffab4f5013cc9db3b2861b692339",
+      "code_fingerprint": "sha256:6dc357f1d55846503a19624e18725780009eae916a6f0d4404726d523985233d",
       "kind": "text",
       "outputs": []
     },
     "score-matching-diffusion-flow-cfm-panels": {
-      "code_fingerprint": "sha256:1ce366ff1a43c5580651de2d590c2e376a1464cc01ec25362f22a196295ae886",
+      "code_fingerprint": "sha256:fa108ca72af9dd133aba878d4acc8685f861114e140243b9f6d91122ef47c975",
       "kind": "asset",
       "outputs": [
         {
@@ -134,12 +139,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-cfm-panels-1.svg",
           "bytes": 1114921,
-          "sha256": "sha256:75479308ba1e491052bef8f201e0623d168238ff680899e5a013efab649d2f02"
+          "sha256": "sha256:d12e35ae472df212dca6ccf23a280ca08b76f803723e94da08cf44e11366e019"
         }
       ]
     },
     "mdl-score-matching-diffusion-flow-one-reflow-round-measured": {
-      "code_fingerprint": "sha256:4c4f15c168eab74c7bf21ae0c5dc474c06d6e2b64a64a6f1c2a3bf6b8b518571",
+      "code_fingerprint": "sha256:a70d5c48f7093f7c387a16961da5bfdbced161e90329e7db5a4e5b12e56bdac1",
       "kind": "text",
       "outputs": [
         {
@@ -165,7 +170,7 @@
       ]
     },
     "score-matching-diffusion-flow-steps-quality": {
-      "code_fingerprint": "sha256:32e930788e577db47ac755afa8aab92b9f2d55d47a69fcae8b30cf47b45f1390",
+      "code_fingerprint": "sha256:5e4f0aae845ff66d9b5cc938265a1952fa6497f6cf9f7c68866b87766f6e032b",
       "kind": "mixed",
       "outputs": [
         {
@@ -178,12 +183,12 @@
           "mime": "image/svg+xml",
           "asset": "mdl-score-matching-diffusion-flow/score-matching-diffusion-flow-steps-quality-1.svg",
           "bytes": 24630,
-          "sha256": "sha256:6bb5d6590b3438100df461ac10472787ee43fe2de51aec952ac8355fecb4c0a0"
+          "sha256": "sha256:48fab1510c549620a4798745c7dc35d65afcb4285e0ccdaa0225d8d986b46745"
         }
       ]
     },
     "score-matching-diffusion-flow-euler-vs-heun": {
-      "code_fingerprint": "sha256:f3ed172a060e94a557e21f331854e6efdf6ef8a1db2af68ed71118d951404aea",
+      "code_fingerprint": "sha256:d7c07568491584e0c3c167bfdc558824cc562acdd5601803f8fcf8311ebc639b",
       "kind": "text",
       "outputs": [
         {

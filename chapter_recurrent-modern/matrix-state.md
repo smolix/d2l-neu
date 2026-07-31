@@ -202,12 +202,12 @@ Width stops helping when the keys all resemble one another; this is why
 the family normalizes its keys and why key *geometry*, not just key
 count, decides what a matrix memory holds. The right panel is the
 law's consequence. Recall is essentially perfect while the interference
-stays small against the unit-norm signal, then collapses as $n$ grows
+stays small relative to the unit-norm signal, then grows with $n$
 past $d_k$; at a fixed error level, doubling the width doubles how many
 pairs fit. Nothing in either panel depends on *when* a pair was stored.
-This is the number that matters for everything ahead: a fixed-size
+This quantity controls the capacity comparison below: a fixed-size
 state does not lose memories to time, it loses them to crowding, and
-:numref:`sec_hybrids` will price exactly this quantity when deciding
+:numref:`sec_hybrids` will use this quantity when comparing
 how much full attention a production model must keep.
 
 One caution about the word "capacity", which this chapter uses for
@@ -256,7 +256,7 @@ diagonal rung too, run per channel: $e^{\Delta_t \mathbf{a}}$ in
 :eqref:`eq_selective_ssm` is an input-dependent diagonal decay in
 everything but notation.
 
-Each rung also has a statistical reading, which we note here and
+Each transition also has a statistical interpretation, which we note here and
 develop in :numref:`sec_test-time-regression`. Stack the keys and
 values seen so far as rows of $\mathbf{K}$ and $\mathbf{V}$, and let
 the diagonal matrix $\mathbf{W}$ hold each row's accumulated decay. The
@@ -277,20 +277,21 @@ ladder stores only the *weighted cross-moment*
 $\mathbf{K}^\top \mathbf{W} \mathbf{V}$: the shortcut that deletes the
 covariance correction
 $(\mathbf{K}^\top \mathbf{W} \mathbf{K} + \lambda \mathbf{I})^{-1}$.
-For orthonormal keys the deletion costs nothing beyond the decay's own
-discounting of each stored value; for overlapping keys it also pays the
+For orthonormal keys the deletion adds no error beyond the decay's own
+discounting of each stored value; for overlapping keys it also incurs
 interference sum of :eqref:`eq_ms-retrieval-error`. The decay sets how
 fast old evidence expires, and which architectures restore the deleted
 correction is part of :numref:`sec_test-time-regression`'s subject.
 
-![The decay ladder. Left to right, the transition $\mathbf{D}_t$ of :eqref:`eq_ms-recurrence` gains structure: identity (linear attention), a fixed scalar per head (RetNet), an input-dependent scalar (Mamba-2), an input-dependent diagonal (GLA, RWKV-6, and per channel the selective SSM). Every rung keeps the same additive write; the write rule that can edit the state is the next section's subject.](../img/mdl-modernrnn-decay-ladder.svg)
+![Transition structures for matrix-state recurrences. Left to right, $\mathbf{D}_t$ in :eqref:`eq_ms-recurrence` is the identity (linear attention), a fixed scalar per head (RetNet), an input-dependent scalar (Mamba-2), or an input-dependent diagonal (GLA, RWKV-6, and, per channel, the selective SSM). All four use the same additive write; :numref:`sec_deltanet` changes the write rule.](../img/mdl-modernrnn-decay-ladder.svg)
 :label:`fig_ms-decay-ladder`
 
 ## The State-Space Duality
 :label:`subsec_ms-duality`
 
-We now make good on the promise of :numref:`chap_attention`. Take the scalar-decay rung of the
-ladder, the simplest one that forgets, and *unroll* it, exactly as we
+We now connect this recurrence to :numref:`chap_attention`. Take the
+scalar-decay transition, the simplest form with forgetting, and *unroll*
+it, exactly as we
 unrolled the LTI recurrence into a convolution in
 :numref:`subsec_ssm-conv`. Substituting the update into itself, the state
 at time $t$ is a decayed sum of every write so far, and the read-out is
@@ -734,7 +735,7 @@ Holding both numbers in mind at once is the whole hybrid-design problem of
 We can now lay out the family that this section and its two predecessors
 have assembled, one row per model, every row an instance of
 :eqref:`eq_ms-recurrence`. The table is worth reading column by column:
-the *transition* column is the decay ladder, and the *write* column is,
+the *transition* column compares decay structures, and the *write* column is,
 for now, monotonous by design.
 
 > **Reading the papers.** The literature does not agree on which way the
@@ -753,7 +754,7 @@ for now, monotonous by design.
 :The matrix-state family. Every model is :eqref:`eq_ms-recurrence` with a choice of transition $\mathbf{D}_t$ and an additive write; the columns for state and transition vary, the write column does not.
 :label:`tab_ms-family`
 
-| model | state | transition $\mathbf{D}_t$ | write | origin, in one line |
+| model | state | transition $\mathbf{D}_t$ | write | update interpretation |
 |:--|:--|:--|:--|:--|
 | linear attention (2020) | $\mathbf{S}$ and normalizer $\mathbf{z}$ | $\mathbf{I}$ | add $\phi(\mathbf{k}_t)\mathbf{v}_t^\top$ | attention minus softmax |
 | RetNet (2023) | $\mathbf{S}$ per head | $\gamma\,\mathbf{I}$, fixed per head | add $\mathbf{k}_t\mathbf{v}_t^\top$ | linear attention plus decay |
@@ -1026,7 +1027,7 @@ asymptotic shapes that do not.
 [Dive into Deep Learning · §12.4]{.kicker}
 
 The matrix state<br>
-**one recurrence, measured capacity · the decay ladder · state-space duality · chunked training · the family table**
+**one recurrence · measured capacity · transition structure · state-space duality · chunked training · model families**
 :::
 :::
 

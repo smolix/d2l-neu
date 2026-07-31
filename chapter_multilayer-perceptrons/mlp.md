@@ -194,22 +194,10 @@ $$
 \end{aligned}
 $$
 
-Note that after adding the hidden layer,
-our model now requires us to track and update
-additional sets of parameters.
-So what have we gained in exchange?
-You might be surprised to find out
-that (in the model defined above) *we
-gain nothing for our troubles*!
-The reason is plain.
-The hidden units above are given by
-an affine function of the inputs,
-and the outputs (pre-softmax) are just
-an affine function of the hidden units.
-An affine function of an affine function
-is itself an affine function.
-Moreover, our linear model was already
-capable of representing any affine function.
+Without a nonlinearity, the additional layer does not enlarge the represented
+function class. The hidden units are affine functions of the inputs, and the
+outputs are affine functions of those hidden units. A composition of affine
+maps is again affine, which the original linear model could already represent.
 
 To see this formally we can just collapse out the hidden layer in the above definition,
 yielding an equivalent single-layer model with parameters
@@ -310,10 +298,12 @@ number of hidden units and layers as you go.
 
 ### Universal Approximators
 
-How powerful is a deep network? The universal approximation theorem gives a
-sharp answer. It says that even a single-hidden-layer
-network can approximate any continuous function on a bounded domain to arbitrary
-accuracy, given enough hidden units and the right weights. This was proven
+The universal approximation theorem answers a specific representational
+question. A single-hidden-layer network can approximate any continuous function
+on a compact domain to arbitrary accuracy, given enough hidden units and suitable
+weights. This is an existence result: it does not say that optimization will find
+those weights, that the fitted model will generalize, or that the required width
+is practical. The theorem was proven
 in several settings: :citet:`Cybenko.1989` did it for sigmoid activations and
 :citet:`micchelli1984interpolation` for radial basis function networks (a single
 hidden layer). The result was soon generalized, as :citet:`Hornik.1991` covered
@@ -381,17 +371,8 @@ weights fold less aggressively than hand-constructed networks used in depth
 separation results :cite:`Telgarsky.2016`, and the expressivity claim rests on
 those constructions rather than on the sample averages above.
 
-It is tempting to read this as "one hidden layer is all you ever need," but the
-theorem is more modest than it sounds, and three caveats matter
-(:citet:`Goodfellow.Bengio.Courville.2016`, Chapter 6). First, it guarantees
-that a good approximation *exists*; it says nothing about whether gradient
-descent will *find* it. Second, even a network that fits the training data
-perfectly may fail to *generalize* to new examples. Third, the promised single
-layer can be impractically wide: matching a target may require *exponentially*
-many hidden units. You might think of your neural network as being a bit like
-the C programming language. The language, like any other modern language, is
-capable of expressing any computable program, but actually coming up with a
-program that meets your specifications is the hard part.
+The third caveat—potentially impractical width—also motivates the distinction
+between depth and width :cite:`Goodfellow.Bengio.Courville.2016`.
 
 So the theorem tells us deep networks are expressive enough; it does not tell us
 they are the right tool, nor how to build them. For some problems other methods
@@ -709,12 +690,10 @@ d2l.plot(x, grad_tanh(x), 'x', 'grad of tanh', figsize=(5, 2.5))
 
 ## Summary and Discussion
 
-We now know how to incorporate nonlinearities
-to build expressive multilayer neural network architectures.
-Your knowledge already puts you in command of a toolkit
-much like that of a practitioner circa 1990, except that you can lean on
-powerful open-source frameworks to build models in a few lines of code,
-rather than coding up layers and their derivatives by hand in C or Fortran.
+Nonlinear activations prevent stacked affine layers from reducing to one affine
+map. They make MLPs expressive enough for nonlinear decision boundaries, while
+the universal approximation theorem supplies only a representational guarantee,
+not an optimization or generalization guarantee.
 
 A key reason ReLU displaced sigmoid and tanh in hidden layers is that it
 is so much more amenable to optimization. One could argue that this was one
@@ -845,7 +824,7 @@ $$\mathbf{H} = \mathbf{X} \mathbf{W}^{(1)} + \mathbf{b}^{(1)}, \qquad
 . . .
 
 Two weight matrices, two biases. It *looks* like we have
-bought ourselves a more powerful model.
+obtained a model that can represent nonlinear functions.
 :::
 
 ::: {.slide title="But two affine maps collapse into one"}
@@ -984,7 +963,9 @@ one would, trading width for layers.
 ::: {.slide title="Why it is plausible: one hinge at a time"}
 [Expressive power]{.kicker}
 
-Each ReLU unit contributes a **hinge** $a_k\operatorname{ReLU}(x - t_k)$: with $D$ units the output is piecewise linear with at most $D+1$ pieces. Approximating a curve is then just fitting a **polyline**: more joints, less error.
+For a one-dimensional construction, each ReLU unit contributes a **hinge**
+$a_k\operatorname{ReLU}(x - t_k)$: with $D$ units the output is piecewise linear
+with at most $D+1$ pieces. Additional joints can refine this polyline approximation.
 
 ![Three hinges (left) sum to a 4-piece polyline that tracks the smooth target (right); the shaded band is the error.](../img/mdl-mlp-uat-hinges.svg){width=88%}
 :::

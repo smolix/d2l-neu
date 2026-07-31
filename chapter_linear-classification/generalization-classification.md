@@ -288,106 +288,21 @@ rather than only asymptotically.
 
 ## Test Set Reuse
 
-In some sense, you are now set up to succeed
-at conducting empirical machine learning research.
-Nearly all practical models are developed
-and validated based on test set performance
-and you are now a master of the test set.
-For any fixed classifier $f$,
-you know how to evaluate its test error $\epsilon_\mathcal{D}(f)$,
-and know precisely what can (and cannot)
-be said about its population error $\epsilon(f)$.
+The guarantee above applies to a classifier fixed independently of the test
+set. Reusing one test set creates two distinct problems. First, evaluating
+$k$ prespecified classifiers introduces multiplicity: even when every reported
+interval has 95% coverage on its own, the probability that at least one interval
+misses its target grows with $k$. Simultaneous guarantees must account for this
+collection of comparisons.
 
-So let's say that you take this knowledge
-and prepare to train your first model $f_1$.
-Knowing just how confident you need to be
-in the performance of your classifier's error rate
-you apply our analysis above to determine
-an appropriate number of examples
-to set aside for the test set.
-Moreover, let's assume that you took the lessons from
-:numref:`sec_generalization_basics` to heart
-and made sure to preserve the sanctity of the test set
-by conducting all of your preliminary analysis,
-hyperparameter tuning, and even selection
-among multiple competing model architectures
-on a validation set.
-Finally you evaluate your model $f_1$
-on the test set and report an unbiased
-estimate of the population error
-with an associated confidence interval.
-
-So far everything seems to be going well.
-However, that night you wake up at 3am
-with a brilliant idea for a new modeling approach.
-The next day, you code up your new model,
-tune its hyperparameters on the validation set
-and get your new model $f_2$ working;
-its error rate appears to be much lower than $f_1$'s.
-However, the thrill of discovery suddenly fades
-as you prepare for the final evaluation.
-You do not have a test set!
-
-Even though the original test set $\mathcal{D}$
-is still sitting on your server,
-you now face two formidable problems.
-First, when you collected your test set,
-you determined the required level of precision
-under the assumption that you were evaluating
-a single classifier $f$.
-However, if you get into the business
-of evaluating multiple classifiers $f_1, ..., f_k$
-on the same test set,
-you must consider the problem of false discovery.
-Before, you might have been 95% sure
-that $\epsilon_\mathcal{D}(f) \in \epsilon(f) \pm 0.01$
-for a single classifier $f$
-and thus the probability of a misleading result
-was a mere 5%.
-With $k$ classifiers in the mix,
-it can be hard to guarantee
-that there is not even one among them
-whose test set performance is misleading.
-With 20 classifiers under consideration,
-you might have no power at all
-to rule out the possibility
-that at least one among them
-received a misleading score.
-This problem relates to multiple hypothesis testing,
-which despite a vast literature in statistics,
-remains a persistent problem plaguing scientific research.
-
-
-If that is not enough to worry you,
-there is a special reason to distrust
-the results that you get on subsequent evaluations.
-Recall that our analysis of test set performance
-rested on the assumption that the classifier
-was chosen absent any contact with the test set
-and thus we could view the test set
-as drawn randomly from the underlying population.
-Here you are testing multiple functions, and
-the subsequent function $f_2$ was chosen
-after you observed the test set performance of $f_1$.
-Once information from the test set has leaked to the modeler,
-it can never be a true test set again in the strictest sense.
-This problem is called *adaptive overfitting* and has recently emerged
-as a topic of intense interest to learning theorists and statisticians
-:cite:`dwork2015preserving`.
-Fortunately, while it is possible
-to leak all information out of a holdout set,
-and the theoretical worst case scenarios are bleak,
-these analyses may be too conservative.
-In practice, take care to create real test sets,
-to consult them as infrequently as possible,
-to account for multiple hypothesis testing
-when reporting confidence intervals,
-and to dial up your vigilance more aggressively
-when the stakes are high and your dataset size is small.
-When running a series of benchmark challenges,
-it is often good practice to maintain
-several test sets so that after each round,
-the old test set can be demoted to a validation set.
+Second, model development is usually adaptive. If $f_2$ is selected after
+observing the test performance of $f_1$, then $f_2$ is no longer independent of
+the test set. Repeated feedback can therefore overfit the holdout itself, a
+phenomenon called *adaptive overfitting* :cite:`dwork2015preserving`. A validation
+set should absorb model selection and hyperparameter tuning, while the test set
+is reserved for a small number of final evaluations. Reports should disclose
+the number and adaptivity of comparisons; long-running benchmarks should
+periodically replace their hidden test data.
 
 How bad can it get? A simulation makes the false-discovery half of the problem
 concrete in its purest form. Take one binary test set of $n = 1000$ examples
@@ -418,35 +333,11 @@ faster still, steering each new model *toward* what scored well before.
 
 ## Statistical Learning Theory
 
-Put simply, *test sets are all that we really have*,
-and yet this fact seems strangely unsatisfying.
-First, we seldom possess a *true test set*: unless
-we are the ones creating the dataset,
-someone else has probably already evaluated
-their own classifier on our ostensible "test set".
-And even when we have first dibs,
-we soon find ourselves frustrated, wishing we could
-evaluate our subsequent modeling attempts
-without the gnawing feeling
-that we cannot trust our numbers.
-Moreover, even a true test set can only tell us *post hoc*
-whether a classifier has in fact generalized to the population,
-not whether we have any reason to expect *a priori*
-that it should generalize.
-
-With these misgivings in mind,
-you might now be sufficiently primed
-to see the appeal of *statistical learning theory*,
-the mathematical subfield of machine learning
-whose practitioners aim to elucidate the
-fundamental principles that explain
-why/when models trained on empirical data
-can/will generalize to unseen data.
-One of the primary aims
-of statistical learning researchers
-has been to bound the generalization gap,
-relating the properties of the model class
-to the number of samples in the dataset.
+A test set provides a post hoc estimate for a particular trained classifier.
+It does not, by itself, explain why a learning procedure should generalize or
+how much data a model class requires. *Statistical learning theory* addresses
+the complementary, a priori question. Its bounds relate the generalization gap
+to properties of the hypothesis class, the learning rule, and the sample size.
 
 Learning theorists aim to bound the difference
 between the *empirical error* $\epsilon_\mathcal{S}(f_\mathcal{S})$

@@ -36,7 +36,15 @@ A language model with parameters $\theta$ maps a context to a distribution over 
 | the next-token softmax of :numref:`sec_gpt` | the policy $\pi_\theta(a \mid s)$ of :numref:`sec_policygradient` |
 | the `generate` loop of :numref:`sec_decoding` | the `rollout` of :numref:`sec_policygradient` |
 
-Two rows deserve a second look. The state is the *prefix*, not the last token: :numref:`sec_mdp`'s Markov assumption demanded a state carrying everything the past could say about the future, and the prefix is the entire past. And the start state is drawn from $\mu_0$: :numref:`sec_policygradient` noted that this factor drops out of every gradient and asked you to hold on to it anyway; the distribution over prompts is that factor, shaping everything about the trained policy while passing through none of the derivations, which is why the estimators transfer unchanged.
+The state is the complete prefix, not only the last token. Conditional on
+that prefix, deterministic concatenation and the next-token policy specify
+the distribution of the next prefix, so the representation is Markov.
+
+The start-state distribution $\mu_0$ is the distribution over prompts. It
+does not depend on $\theta$ and therefore contributes no score term to the
+policy-gradient derivation. It nevertheless determines which prompts and
+responses the objective weights, so empirical conclusions remain specific
+to the chosen prompt distribution.
 
 ### Deterministic Transitions
 
@@ -55,7 +63,22 @@ $$\nabla_\theta \log \pi_\theta(y \mid x) = \sum_{t=1}^{T} \nabla_\theta \log \p
 
 **Proof.** The chain rule of probability factorizes the response's likelihood exactly, $\pi_\theta(y \mid x) = \prod_{t=1}^{T} \pi_\theta(y_t \mid x, y_{<t})$, with no transition factors because the transitions are deterministic; taking logarithms and gradients gives :eqref:`eq_seq_factorization`. With rewards zero until EOS and $\gamma = 1$, the reward-to-go of :numref:`sec_baselines` is $\hat{G}_t = r(x, y)$ at every $t$; subtracting a prompt-only baseline $b(x)$ is licensed bias-free by the zero-mean lemma of :numref:`sec_baselines`, leaving the weight $r(x, y) - b(x)$ on every score. $\blacksquare$
 
-Read the two halves as one collapse. The left side of :eqref:`eq_seq_factorization` treats the response as *one action* chosen at the prompt; the right side treats it as $T$ actions chosen token by token; REINFORCE :eqref:`eq_reinforce` computes the identical update either way. One naming rule keeps the objects straight: $r(x, y) - b(x)$ is a response-level Monte Carlo weight that happens to multiply every token's score. It is not the token advantage $A(s_t, a_t) = Q(s_t, a_t) - V(s_t)$ of :numref:`sec_actorcritic`, whose two terms condition on the prefix and which would differ from token to token if anything estimated it. And since every token carries the same weight, the token-level view buys no credit assignment *within* a response: which of ten thousand tokens earned the terminal reward is a question the estimator does not answer, which is why per-token credit is the open problem at scale. Collapsed to one action per episode, the problem lands on a rung :numref:`sec_qlearning` named: tuning a language model on single-turn scored responses is a *contextual bandit* wearing reinforcement learning's clothes, and the sequential machinery becomes necessary again exactly when the loop closes, in multi-turn dialogue and tool use.
+The left side of :eqref:`eq_seq_factorization` treats a complete response as
+one structured action, while the right side factorizes it into $T$
+next-token actions. Because the response log-probability is the sum of the
+token log-probabilities, REINFORCE gives the same gradient in either view.
+
+The quantity $r(x,y)-b(x)$ is a response-level Monte Carlo weight applied
+to every token score. It is not the token advantage
+$A(s_t,a_t)=Q(s_t,a_t)-V(s_t)$, whose terms condition on each prefix and
+may differ across positions. A single terminal response score therefore
+does not provide within-response credit assignment.
+
+Under these single-turn assumptions, the response-level problem is a
+contextual bandit: a prompt is sampled, one structured action is scored,
+and no action changes a future context. Multi-turn dialogue, tool use, and
+environment feedback restore controlled transitions and require the
+sequential formulation.
 
 ## Simplifications for Sequence Generation
 
@@ -67,7 +90,18 @@ Several parts of the general MDP formulation simplify under these assumptions. A
 
 ### The Remaining Optimization Problem
 
-What remains is precisely the policy-optimization spine. *The score function* :eqref:`eq_softmax_score` and REINFORCE, unchanged. *Baselines and advantages*: the zero-mean lemma asks only that $b$ ignore the action, and the prompt is the natural unit. *Variance growing with length*: :eqref:`eq_seq_factorization` sums $T$ score terms. *On-policy staleness*: a model that just updated no longer matches the responses it just generated. *Importance ratios and clipping*: :numref:`sec_ppo`'s repair for reusing a batch a few epochs. *Trust regions in policy space*, because parameter distance still lies about policy distance. *Entropy collapse*: the unregularized optimum is still a point mass, as :numref:`sec_regularized` proved, and unregularized training still drifts toward it. And *over-optimization of an estimated objective*, with its two cures. The survivors share one trait: none ever consulted the transition kernel; everything that leaned on the kernel or on intermediate reward collapsed with it.
+The policy-optimization components remain applicable: the score-function
+identity and REINFORCE; action-independent baselines defined per prompt;
+importance ratios and clipping for limited batch reuse; policy-space
+trust regions; entropy or reference-policy regularization; and safeguards
+against optimizing reward-model error. Sequence length still matters
+because :eqref:`eq_seq_factorization` sums $T$ score terms, and an updated
+policy no longer matches responses sampled before the update.
+
+By contrast, this terminal-reward derivation does not use a learned
+transition model, intermediate Bellman backups, or token-level TD targets.
+Those components return when the task supplies process rewards or
+nontrivial environment transitions.
 
 ![The token MDP, and what it deletes. Top: a response is a trajectory whose states are prefixes, whose actions are tokens, and whose transitions append the chosen token with probability one, so all randomness is the policy's; the reward arrives once, on the terminal edge into EOS. Below: the same object collapsed to one step, a single draw $y \sim \pi_\theta(\cdot \mid x)$ scored by $r(x, y)$, the two views sharing one gradient by :eqref:`eq_seq_factorization`. Right: what simplifies away under these assumptions, struck through, and what survives; the struck machinery returns with process rewards, tool calls or multi-turn feedback.](../img/mdl-rl-token-mdp.svg)
 :label:`fig_rl_token_mdp`
@@ -187,7 +221,43 @@ The columns report the approximate grader score, the exact score, and the averag
 
 ### GRPO Assembled from Owned Parts
 
-The pieces assemble, in prose alone, into the method :numref:`sec_baselines` promised to finish. Group Relative Policy Optimization, GRPO :cite:`Shao.Wang.Zhu.ea.2024`, trains a language model by sampling a group of $K$ responses per prompt and weighting every token of response $j$ by the group-standardized advantage $A_j = (r_j - \mu)/(\sigma + 10^{-8})$, :eqref:`eq_pg_normalized` with the group as the batch and the group mean as the per-prompt baseline, so *no value network exists*; reusing each group for a few epochs, during which each token's ratio $\rho_t$ drifts from one and the clipped objective :eqref:`eq_ppo_clip` bounds each token's payoff; adding $\beta$ times a separate nonnegative estimator of the KL divergence to the frozen reference, the penalty of :eqref:`eq_kl_objective` as its own loss term; and dividing each response's loss by its own length, one of the divisor choices whose ledger :numref:`sec_baselines` printed. Note which KL is which, because GRPO runs both of :numref:`sec_regularized`'s kinds at once: the clip plays the trust-region role against the *previous iterate*, shaping each step, while the $\beta$ term is the penalty against the *frozen reference*, shaping the optimum. This section's toy is that estimator's skeleton, not the named algorithm, and the differences deserve a list: the toy takes one step per group, so no ratio ever drifts and nothing is clipped, where GRPO reuses each group under token-level clipped ratios; it folds the KL penalty into the reward, where the cited formulation adds the separate estimator above; its responses are single tokens, so the response-level and token-level views coincide by construction; it never divides by response length; and both share the same-group mean, the self-inclusion bias measured earlier, whose exactly unbiased alternative is the leave-one-out baseline of :numref:`sec_baselines`, RLOO. Nothing in the assembly is new to you, including its sharp edges: dividing by $\sigma$ is a step-size rescaling rather than a baseline, priced in :numref:`sec_baselines`. Finally, :eqref:`eq_kl_optimum` reads in the other direction too: solving it for the reward gives $r(x, y) = \beta \log \big( \pi^\star(y \mid x) / \pi_{\textrm{ref}}(y \mid x) \big)$ up to a per-prompt constant, so preferences can fit the policy *directly*, skipping the reward model and the reinforcement learning; that is direct preference optimization, DPO :cite:`Rafailov.Sharma.Mitchell.ea.2023`, whose derivation the Language Models part owns.
+Group Relative Policy Optimization (GRPO)
+:cite:`Shao.Wang.Zhu.ea.2024` samples $K$ responses for each prompt and
+uses the group-standardized response score
+
+$$A_j=\frac{r_j-\mu}{\sigma+10^{-8}}$$
+
+as the weight on every token of response $j$. The group mean replaces a
+learned per-prompt value baseline, while division by $\sigma$ rescales the
+update rather than providing an additional zero-mean control variate.
+Reusing a group for several epochs introduces token-level ratios
+$\rho_t$ and the clipped objective :eqref:`eq_ppo_clip`. A separate KL
+penalty anchors the policy to a frozen reference, and the cited loss
+normalizes each response by its length.
+
+Two different reference policies appear. Clipping compares the current
+policy with the policy that sampled the batch and limits each update. The
+$\beta$ penalty compares with a frozen reference and changes the optimum.
+They therefore play the two distinct roles described in
+:numref:`sec_regularized`.
+
+The toy experiment above is not a complete GRPO implementation. It takes
+one update per group, folds the KL term into the reward, uses one-token
+responses, and applies no response-length normalization. It does share
+the same-group mean and hence the self-inclusion bias measured above;
+RLOO replaces that mean with the unbiased leave-one-out baseline from
+:numref:`sec_baselines`.
+
+Direct Preference Optimization (DPO) uses a different objective. Solving
+:eqref:`eq_kl_optimum` for the reward gives
+
+$$r(x,y)=\beta\log\frac{\pi^\star(y\mid x)}
+                              {\pi_{\textrm{ref}}(y\mid x)}+c(x),$$
+
+where $c(x)$ is unidentified by same-prompt comparisons. Substituting this
+relation into the preference likelihood fits the policy directly rather
+than first fitting a scalar reward model :cite:`Rafailov.Sharma.Mitchell.ea.2023`.
+The Language Models part develops that derivation and its assumptions.
 
 ### Notation Inherited by the Language Models Part
 
@@ -199,7 +269,7 @@ The Language Models part inherits these symbols verbatim; every object below was
 | symbol | meaning | built in |
 |:--|:--|:--|
 | $x$, $y$ | prompt, response | this section |
-| $\tau$ | trajectory, and nothing else | :numref:`sec_mdp` |
+| $\tau$ | trajectory | :numref:`sec_mdp` |
 | $\mu_0$ | start-state, i.e. prompt, distribution | :numref:`sec_mdp` |
 | $\pi_\theta$, $\pi_{\textrm{ref}}$ | policy; frozen reference | :numref:`sec_policygradient`, :numref:`sec_regularized` |
 | $\hat{G}_t$ | reward-to-go | :numref:`sec_baselines` |
@@ -207,7 +277,7 @@ The Language Models part inherits these symbols verbatim; every object below was
 | $K$ | group size | :numref:`sec_baselines` |
 | $\rho_t$ | importance ratio $\pi_\theta / \pi_{\theta_{\textrm{old}}}$ | :numref:`sec_ppo` |
 | $\epsilon$ | clip half-width, exploration rate; never a numerical constant | :numref:`sec_ppo`, :numref:`sec_qlearning` |
-| $\beta$ | KL coefficient, and nothing else | :numref:`sec_regularized` |
+| $\beta$ | KL coefficient | :numref:`sec_regularized` |
 | $\delta_t$ | TD error | :numref:`sec_qlearning` |
 | $w$, $w^-$ | critic parameters; target copy | :numref:`sec_actorcritic`, :numref:`sec_dqn` |
 | $D_{\textrm{KL}}(P \Vert Q)$, $\mathbf{1}(\cdot)$ | KL divergence; indicator | :numref:`sec_regularized` |
@@ -269,7 +339,7 @@ In sequence generation, prompts are start states, tokens are actions, prefixes a
 [Dive into Deep Learning · §15.6]{.kicker}
 
 Sequences are trajectories<br>
-**text generation is a degenerate MDP · one factorization identity · what collapses, what survives · the contract the Language Models part inherits**
+**text generation as an MDP · response-probability factorization · terminal-reward simplifications · policy-optimization components**
 :::
 :::
 

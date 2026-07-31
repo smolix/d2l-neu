@@ -1,19 +1,19 @@
-# Builders' Guide (v2 proposal)
+# Builders' Guide: Archived Design Record
 :label:`chap_computation`
 
-> **Status: outline for review.** One notebook per section; each notebook lists
-> its subsections and the topics each will cover, with indicative PyTorch code
-> sketches (JAX follows once the structure is approved; TensorFlow/MXNet tabs
-> are secondary). Markers: **[KEPT]** carried over from the current chapter,
+> **Status: historical design record, implemented in July 2026.** The rendered
+> Markdown files one directory above are authoritative. This directory records
+> the proposal and promotion decisions; its sketches, version claims, and
+> unverified hardware notes must not be treated as current instructions or test
+> evidence. Markers: **[KEPT]** carried over from the previous chapter,
 > **[MOD]** carried over but modernized, **[NEW]** did not exist in the current
 > chapter, **[CUT]** current material dropped or demoted.
 
 Alongside giant datasets and powerful hardware, great software tools have
 played an indispensable role in the rapid progress of deep learning. This
 chapter keeps its original contract: no new models, no new datasets — it is
-the chapter that turns you from an *end user* of a deep learning framework
-into a *power user*. What changed since the first edition is what a power
-user needs. In 2020 the working assumption was a small fp32 model, trained
+the chapter that develops the framework concepts required by later models.
+In 2020 the working assumption was a small fp32 model, trained
 from scratch on one GPU, saved with a one-liner. In 2026 the default unit of
 work is a model built from a configuration object, measured in gigabytes,
 run in reduced precision, checkpointed together with its optimizer state,

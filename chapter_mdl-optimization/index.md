@@ -1,16 +1,20 @@
 # Optimization
 :label:`chap_mdl-optimization`
 
-Optimization turns local derivative information into a procedure for choosing
-model parameters. This chapter develops the mathematical foundations of that
-procedure. It begins with gradient descent and its accelerated, stochastic, and
-second-order variants, then studies adaptive coordinatewise methods such as
-AdaGrad, Adam, and AdamW. Convexity supplies global guarantees; constrained
-optimization and duality describe feasible solutions and their multipliers; and
-numerical analysis explains how finite-precision arithmetic can invalidate an
-otherwise correct computation. The main optimization chapter emphasizes how to
-choose and diagnose methods in practice. This appendix derives representative
-guarantees and failure modes that support that treatment.
+The main optimization chapter introduces the update rules used to train models
+and discusses how to choose and diagnose them. This appendix supplies the
+mathematical analysis behind those rules. It asks when a local descent direction
+produces a finite decrease, how stochastic and coordinatewise scaling alter the
+guarantee, when convexity upgrades stationarity to global optimality, how
+constraints change first-order conditions, and when finite-precision arithmetic
+invalidates an otherwise sound algorithm.
+
+The first three sections form the main theoretical path: gradient methods,
+stochastic and adaptive variants, and convexity. The constrained-optimization
+section then develops multipliers, projections, and duality. The final section
+is largely independent and can be read whenever numerical stability becomes
+relevant. Throughout, results are stated with the assumptions that make them
+valid and are separated from empirical guidance for large neural networks.
 
 ```toc
 :maxdepth: 2

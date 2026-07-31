@@ -58,18 +58,17 @@ output head.
 ![The residual stream. Each position carries a vector from its embedding to the output logits. The QK circuit determines the attention weights $\alpha_{3j}$, and the OV circuit determines the contribution of each attended vector to the destination stream.](../img/mdl-attention-residual-stream.svg)
 :label:`fig_residual-stream`
 
-One structural fact makes this model unusually transparent: once the
-attention patterns $\alpha$ are fixed, the map from embeddings to logits in
-:eqref:`eq_stream-update` is *linear* — a sum of products of weight
-matrices. Expanding the recursion writes the logits as a sum over *paths*
-through the network, each path a readable chain of matrices, and complete
-mechanistic analysis becomes possible. This is the setting of the
-mathematical framework of :citet:`Elhage.Nanda.Olsson.ea.2021`, whose exact
-results hold for attention-only transformers without feed-forward layers or
-normalization. We therefore constructed `TinyCharLM` with only embeddings
-and attention, so that each learned computation can be expressed through
-the residual stream. Real transformers also include feed-forward layers and
-normalization; we discuss this distinction at the end of the section.
+Once the attention patterns $\alpha$ are fixed, the map from embeddings to
+logits in :eqref:`eq_stream-update` is linear: expanding the recursion writes
+it as a sum of matrix products along paths through the network. This
+decomposition supplies testable hypotheses about how an attention-only model
+computes; it does not make the learned circuit self-evident. The exact
+framework of :citet:`Elhage.Nanda.Olsson.ea.2021` assumes attention-only
+transformers without feed-forward layers or normalization. We use the same
+restriction in `TinyCharLM`, then compare weight-level hypotheses with
+behavioral and intervention evidence. Real transformers contain additional
+nonlinear components, so the conclusions below do not transfer without new
+tests.
 
 ### QK and OV Circuits
 
@@ -82,6 +81,12 @@ $$
 s_{ij} = \frac{\mathbf{h}_i^\top \mathbf{W}_{\mathrm{QK}}\, \mathbf{h}_j}{\sqrt{d_h}}, \qquad \mathbf{W}_{\mathrm{QK}} = \mathbf{W}_q^\top \mathbf{W}_k, \qquad \mathbf{W}_{\mathrm{OV}} = \mathbf{W}_o \mathbf{W}_v.
 $$
 :eqlabel:`eq_qkov`
+
+These equations use column vectors: $\mathbf{W}_q$ and $\mathbf{W}_v$ map
+from the residual stream into a head, while $\mathbf{W}_o$ maps back. The
+code below forms the same bilinear and input--output maps in each framework's
+native weight orientation; PyTorch stores linear weights transposed relative
+to JAX.
 
 The *QK circuit* $\mathbf{W}_{\mathrm{QK}} \in \mathbb{R}^{d \times d}$ is a
 bilinear form on the stream that determines the attention scores. The *OV
@@ -544,16 +549,15 @@ x, L = repeated_batch(jax.random.key(3), 256, 64, 64, 16, 32)
 head_scores(model_two, x, L)
 ```
 
-The division of labor across the two blocks is stark. Block 1 contains at
+In the displayed run, block 1 contains at
 least one head that spends well over half of its attention on the
 previous token and essentially none on the induction target; block 2's
 heads do the reverse, with the strongest putting well over half of its mass
 on the single position the algorithm calls for, out of up to 63
-candidates. Which head plays which role varies from seed to seed, and in
-this small model several block-2 heads usually share the induction work
-rather than one doing it alone. The *structure* is what replicates:
-previous-token attention below, induction attention above, never the other
-way around.
+candidates. Several block-2 heads share that pattern rather than one head
+carrying it alone. This fixed-seed result supports the proposed two-stage
+mechanism, but does not estimate how reliably either the head allocation or
+the loss transition recurs across training runs.
 
 ## In-Context Learning as Pattern Completion
 
@@ -701,22 +705,29 @@ not refute every explanatory use — sharpened rather than settled the
 debate. "The attention weights mean something" is, as an unqualified
 claim, false; qualified versions must say what the weights feed into.
 
-We identified the induction head using three forms of evidence. The
-*behavioral* evidence is the reduction in second-copy loss for models deep
-enough to express the circuit. The *causal* evidence comes from changing the
-input period or ablating model components and observing the predicted change
-in performance. The *weight-level* evidence is the copying structure of the
-OV circuit. The attention patterns locate candidate heads, but do not by
-themselves establish their computation. In our attention-only model all
-three checks were inexpensive
-because the model is linear once the patterns are fixed. In a real
-transformer, feed-forward layers and normalization break that linearity,
-features are packed into shared directions rather than neat subspaces, and
-each part of this analysis becomes a research problem within mechanistic
-interpretability. A handful of circuits are understood at this level,
-including induction heads, while many computations in large models remain
-unexplained. Attention weights are therefore one source of evidence among
-behavioral, causal, and weight-level analyses.
+Three observations support the induction-head interpretation, with different
+strengths. The lower second-copy loss in the deeper model is *behavioral*
+evidence that depth enables the task, but it does not identify a component.
+The copying structure of an OV circuit and the associated attention pattern
+are *weight-level* evidence for a candidate mechanism, but compatible weights
+need not be necessary for the prediction. Changing the input period tests for
+a positional shortcut; only a targeted head or path ablation, followed by the
+predicted loss change, provides a causal intervention on the proposed circuit.
+Attention maps therefore locate candidates rather than establish their role.
+
+| check in this section | evidence level | supported conclusion | remaining limitation |
+|:--|:--|:--|:--|
+| second-copy loss | behavioral | the deeper model fits the repeated-token task | does not identify a head |
+| attention pattern | activation | a head attends with the predicted offset pattern | attention alone omits the value transformation |
+| OV diagonal | weight-level | the candidate head contains a copy-compatible map | compatibility does not show necessity |
+| input-period change | input intervention | separates content matching from a fixed-offset shortcut | changes the task as well as the input |
+| targeted head/path ablation | component intervention | would test whether the proposed component is necessary | left as Exercise 2 rather than established here |
+
+These checks are comparatively direct in the attention-only model because
+the residual update becomes linear after fixing the patterns. Feed-forward
+layers and normalization remove that simplification, and features in larger
+models may share directions. The same claims would then require separate
+behavioral tests, component-level interventions, and weight analysis.
 
 ## Summary
 
@@ -900,9 +911,9 @@ Pattern length now uniform in 16–32; no fixed offset works.
 
 - The curve remains close to the one-block curve for hundreds of steps,
   then falls by several nats within one or two hundred steps.
-- *When* it happens varies by seed and framework — we describe the shape,
-  not the schedule. A related "induction bump" occurs in larger language models
-  (Olsson et al., 2022).
+- The displayed fixed-seed run establishes neither the frequency nor the
+  timing of this transition. Olsson et al. (2022) report a related induction
+  transition in larger language models.
 :::
 
 ::: {.slide title="Learned attention patterns"}
@@ -919,17 +930,18 @@ $j = i + 1 - L$:
 
 @!what-attention-computes-the-heads-caught-in-the-act-2
 
-- Previous-token attention lives in block 1, induction attention in block 2
-  — never the other way around. Which head does what varies by seed.
+- In this run, previous-token attention is concentrated in block 1 and
+  induction-target attention in block 2.
 :::
 
 ::: {.slide title="Pattern completion is in-context learning"}
-Every evaluation pattern is new — no pair it copies was ever in training.
-The weights store an *algorithm*, not associations:
+Every evaluation pattern is newly sampled, so the result is consistent with
+a content-based copying rule rather than memorized training sequences:
 
 @!what-attention-computes-completing-patterns-it-has-never-seen
 
-One exposure suffices; the restart itself is unpredictable in principle.
+One exposure suffices for the displayed examples; restart locations are
+sampled independently of the token values.
 :::
 
 ::: {.slide title="Verifying copying in the weights"}

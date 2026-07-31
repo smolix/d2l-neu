@@ -1,6 +1,9 @@
 # Saving, Loading, and Pretrained Weights
 :label:`sec_read_write_v2`
 
+> **Archive notice.** This file records pre-promotion design decisions. The live
+> source one directory above is authoritative; markers and API claims here are historical.
+
 > **Role.** Rewrite of the current read-write section around the workflow
 > that actually dominates 2026 practice: checkpoints are *structured state*
 > (weights + optimizer + RNG + step), the interchange format is
@@ -128,7 +131,8 @@ for torch-style flat dicts, flax, tensorflow; mxnet via the numpy module).*
   `safetensors.numpy`, verified module) — instructive ALT: it *demonstrates*
   the format is framework-neutral. Checkpoints: `save_parameters`/
   `load_parameters` DIRECT; `Trainer.save_states/load_states` exist in
-  source [UNVERIFIED; docstring admits lr_mult/wd_mult not saved]; **no RNG
+  source [not executed during the design pass; the docstring also states that
+  lr_mult/wd_mult are not saved]; **no RNG
   snapshot API** — reseed-only. Pretrained: `model_zoo resnet18_v2
   (pretrained=True)` *worked in the 2026-06-06 green run* (committed
   store) but rides on archived-project S3 — re-verify at rewrite time;

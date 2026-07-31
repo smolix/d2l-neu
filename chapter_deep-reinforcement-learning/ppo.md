@@ -124,7 +124,7 @@ $$
 
 :cite:`Kakade.Langford.2002,Schulman.Levine.Abbeel.ea.2015`. At $\theta=\theta_{\textrm{old}}$, the bound holds with equality. Increasing its right-hand side therefore guarantees an increase in the true objective. TRPO makes three practical approximations: it replaces $\bar{L}$ by the sampled surrogate, replaces the worst-state divergence by an empirical mean over visited states, and chooses the KL limit $\delta_{\textrm{KL}}$ rather than using the very conservative theoretical coefficient. It then solves the constrained problem with second-order optimization. The important point is that the step is measured in policy space rather than parameter space. Locally, the KL divergence induces the Fisher metric and the corresponding update is the natural gradient :cite:`Amari.1998,Kakade.2002`. The right panel of :numref:`fig_rl_trust_region` compares this geometry with a Euclidean constraint.
 
-![Bounding the step in policy space. Left: the surrogate $L$ is tangent to the true objective $J$ at $\theta_{\textrm{old}}$ and a liar far away; the unconstrained maximizer of $L$ drives $J$ from $0.82$ down to $-0.38$, while the best point inside the shaded trust region raises it to $1.52$. Right: for a three-action softmax family, the set of steps with $D_{\textrm{KL}} \leq 0.02$ under the exact Fisher metric at $\theta_{\textrm{old}}$ is an ellipse, not a ball; two parameter steps of equal Euclidean length move the policy by $D_{\textrm{KL}} = 0.008$ and $0.049$, so the parameter norm misprices policy change in both directions.](../img/mdl-rl-trust-region.svg)
+![Bounding a policy update. Left: the surrogate $L$ is tangent to the true objective $J$ at $\theta_{\textrm{old}}$ but becomes inaccurate after a large policy change. Here the unconstrained maximizer of $L$ lowers $J$ from $0.82$ to $-0.38$, whereas the best point inside the shaded trust region raises it to $1.52$. Right: for a three-action softmax policy, the exact local constraint $D_{\textrm{KL}}\leq0.02$ is an ellipse in parameter space. Two parameter steps of equal Euclidean length produce KL divergences $0.008$ and $0.049$, so parameter distance does not determine policy distance.](../img/mdl-rl-trust-region.svg)
 :label:`fig_rl_trust_region`
 
 ### The Clipped Objective
@@ -136,7 +136,7 @@ $$L^{\textrm{CLIP}}(\theta) = \frac{1}{n} \sum_{i,t} \min\Big( \rho_t^i(\theta)\
 
 with a clipping parameter $\epsilon$, typically $0.2$. Consider one sample. If $\hat{A}_t > 0$, its contribution increases with $\rho_t$ only until $\rho_t = 1+\epsilon$; beyond this value, the clipped term is selected and its gradient is zero. If $\hat{A}_t < 0$, the corresponding threshold is $1-\epsilon$. The minimum is deliberately one-sided: a change that lowers the objective remains visible, whereas further movement in the favorable direction is no longer rewarded. The ratio itself is not clipped and can still cross the band because other samples share the same network parameters. Thus clipping is a soft incentive rather than a hard constraint. It nevertheless permits several epochs of optimization on a single batch without continually rewarding large changes in individual action probabilities.
 
-![The clipped objective :eqref:`eq_ppo_clip` one sample at a time, as a function of the ratio $\rho_t(\theta) = \pi_\theta(a_t \mid s_t) / \pi_{\theta_{\textrm{old}}}(a_t \mid s_t)$. For a positive advantage the objective grows with the ratio only until $1 + \epsilon$; beyond that the minimum selects the clipped term and the sample's gradient is zero. For a negative advantage the same happens on the way down at $1 - \epsilon$. In both panels the unclipped side of the minimum stays open in the pessimistic direction: a sample can always pull the objective down, it just cannot keep paying out for moving further away.](../img/mdl-rl-ppo-clip.svg)
+![The one-sample clipped objective :eqref:`eq_ppo_clip` as a function of $\rho_t(\theta)=\pi_\theta(a_t\mid s_t)/\pi_{\theta_{\textrm{old}}}(a_t\mid s_t)$. For positive advantage, the contribution stops increasing above $1+\epsilon$; for negative advantage, it stops increasing below $1-\epsilon$. Movement that lowers the surrogate remains visible on the unclipped side, so clipping is an asymmetric incentive rather than a hard ratio constraint.](../img/mdl-rl-ppo-clip.svg)
 :label:`fig_rl_ppo_clip`
 
 Unlike the TRPO bound in :eqref:`eq_trpo_bound`, the clipped objective does not guarantee monotonic improvement. It is a first-order heuristic that discourages large changes in sampled action probabilities. The ablation below tests its effect empirically, and the subsequent diagnostics measure the policy changes that the theorem would otherwise constrain.
@@ -153,7 +153,20 @@ One practical companion deserves more than the sentence it usually gets. Impleme
 
 ### The Choice of Advantage Estimate
 
-Anything can serve as $\hat{A}_t$ in :eqref:`eq_ppo_clip`, and the menu is not new: it is :numref:`sec_actorcritic`'s credit-assignment dial. The reward-to-go minus a learned baseline sits at the Monte Carlo end, the TD error $\delta_t$ at the bootstrapped end (no collision with the trust-region radius $\delta_{\textrm{KL}}$: the symbols are distinct because both matter here), and the $\lambda$-return mixes all depths, collapsed by the telescoping identity :eqref:`eq_gae_deltas` into the two-line `Batch.gae` that is already in the library. That section also *measured* the dial and found the one-draw error smallest strictly inside, near $\lambda = 0.95$, the neighborhood of the common deployed defaults :cite:`Schulman.Moritz.Levine.ea.2016`. There is accordingly nothing left to derive and one decision left to make, and we make the deployed one: `train_ppo` below runs GAE with $\lambda = 0.95$ *by default*. The loop as a whole also deserves a plain name: what follows is a full-batch clipped-surrogate *teaching* implementation, the deployed algorithm's estimator equations in an update schedule chosen for legibility, and the gap between it and a production loop is mapped, line by line, at the end of the section.
+Equation :eqref:`eq_ppo_clip` accepts any declared advantage estimator.
+Reward-to-go minus a learned baseline gives the Monte Carlo endpoint;
+the TD error $\delta_t$ gives the one-step bootstrapped endpoint; and GAE
+mixes depths using the telescoping identity :eqref:`eq_gae_deltas`. This
+$\delta_t$ is distinct from the trust-region radius
+$\delta_{\textrm{KL}}$.
+
+:numref:`sec_actorcritic` found the smallest one-draw error in its local
+diagnostic near $\lambda=0.95$, also a common implementation default
+:cite:`Schulman.Moritz.Levine.ea.2016`. We use that value explicitly; it
+is a heuristic setting, not a consequence of PPO's clipped objective.
+The loop below is a full-batch teaching implementation. It preserves the
+estimator equations but uses an update schedule chosen for legibility;
+the final table lists the additional production choices it omits.
 
 ### The Implementation
 
@@ -241,7 +254,18 @@ def fit_value(ac, obs, target, num_steps=1):
     return float(loss)
 ```
 
-The heart of the section is one function. `ppo_epochs` receives a batch together with everything that must be *frozen* before reuse begins, the advantages and the collecting policy's log-probabilities, and spends `num_epochs` gradient passes on the clipped surrogate plus the entropy bonus. Its diagnostics are data, one row per epoch: the fraction of ratios outside the band; the mean log-ratio $\log \pi_{\theta_{\textrm{old}}} - \log \pi_\theta$, whose expectation over the old policy's actions is a KL divergence at the visited states, reported as the approximate KL, a sample mean that estimates a divergence and can itself dip below zero even though the divergence cannot; and the mean policy entropy. The `use_clip` switch keeps the ratio weighting of :eqref:`eq_surrogate` and removes only the clip: the control experiment. The jax tab jits the per-epoch step on the padded shapes above and caches it with `nnx.cached_partial`, one compiled step per size bucket.
+`ppo_epochs` receives a batch together with the quantities frozen before
+reuse: the advantages and the collecting policy's log-probabilities. It
+then performs `num_epochs` gradient passes on the clipped surrogate plus
+the entropy bonus.
+
+The function records one diagnostic row per epoch: the fraction of ratios
+outside the band, the sample mean of
+$\log\pi_{\theta_{\textrm{old}}}-\log\pi_\theta$, and mean policy entropy.
+The expected log-ratio under the old policy is a KL divergence at the
+visited states, but its finite-sample estimate may be negative. The
+`use_clip` control retains importance ratios and removes only clipping.
+The JAX tab compiles one padded step per size bucket.
 
 ```{.python .input #ppo-the-implementation-4}
 %%tab pytorch
@@ -385,7 +409,10 @@ for name, r in runs.items():
           f'of each batch')
 ```
 
-For the clipped runs both counts sit near one check in twenty. The clip does not need to fire often, because zeroing the gradient of exactly the samples whose ratios have left the band is what stops the runaway from compounding in the first place; the control's ratios, with nothing to stop them, leave the band about three times as often overall and keep drifting through the epochs, which is the failure in miniature.
+For the clipped runs, both counts are near one check in twenty. Clipping sets
+the surrogate gradient to zero for samples whose ratios have crossed the
+relevant boundary. In the unclipped control, ratios cross the band about three
+times as often overall and continue to move across repeated epochs.
 
 ### Training Diagnostics
 
@@ -438,7 +465,12 @@ d2l.plt.legend()
 d2l.plt.show()
 ```
 
-After twenty passes the clipped agent's ratios still form a narrow hill around one, a visible minority past the dashed edges; the unclipped agent's ratios have sprayed across the axis, many driven toward zero, the signature of probability mass being torn away from actions wholesale. And the book already owns a one-number summary of this picture: these ratios are importance weights, and the effective sample size :eqref:`eq_mdl-bayes-is-ess` of a weighted batch, $N_{\textrm{eff}} = 1 / \sum_s \bar{w}_s^2$ for normalized weights $\bar{w}$, measures how concentrated the weights have become, the full batch when they are flat, one when a single sample dominates:
+After twenty passes, the clipped agent's ratios remain concentrated near one,
+with a minority beyond the dashed boundaries. The unclipped ratios are much
+more dispersed and many approach zero. The effective sample size
+:eqref:`eq_mdl-bayes-is-ess`, $N_{\textrm{eff}} = 1 / \sum_s \bar{w}_s^2$ for
+normalized weights $\bar{w}$, summarizes this concentration: it equals the
+batch size for uniform weights and one when a single weight dominates.
 
 ```{.python .input #ppo-how-to-know-your-rl-is-broken-4}
 %%tab pytorch, jax
@@ -453,7 +485,15 @@ print(f'after {num_epochs} epochs the batch is worth '
       + f' of its {len(batch)} steps')
 ```
 
-The printed "worth" deserves its quotation marks: it is a weight-only reading. This is the folklore rule "reuse a batch for a few epochs, then stop" given a dial to watch: with the clip holding the ratios near one, the weight spectrum stays nearly flat through the twentieth epoch; without it, the weights concentrate until the batch behaves like half its size or less, every further epoch leaning on fewer, more extremely weighted samples. Read the number as a *ratio-concentration diagnostic* and nothing more. It sees only the weights: not the signs or magnitudes of the advantages they multiply, not the temporal dependence within episodes, not the repeated visits to the same states across epochs, and not the states the new policy would visit that the old batch never sampled, the state-distribution staleness both cut corners share (:numref:`fig_mdl-prob-bayes-importance` carried the same warning). It is not a count of equally informative gradient samples; watch it alongside the approximate KL, the clip fraction, the entropy, and the return, each partial in its own way.
+With clipping, the weight distribution remains comparatively flat through the
+twentieth epoch. Without clipping, it becomes concentrated enough that the
+weight-based effective sample size falls below half the batch.
+
+This is only a ratio-concentration diagnostic. It does not include advantage
+signs or magnitudes, temporal dependence, repeated state visits, or states that
+the updated policy would visit but the old batch did not. It should therefore
+be read alongside approximate KL, clip fraction, entropy, and return rather
+than as a count of independent gradient samples.
 
 Finally the audit. Strip away the sampling noise and evaluate what the clipped run actually delivered, greedily:
 
@@ -641,7 +681,7 @@ $$\rho_t = \frac{\pi_\theta(a_t\mid s_t)}
 Two corners cut: product $\to$ per-step ratio; states still from the
 old policy's visits. At $\theta_{\text{old}}$, $\nabla \hat L$ **is**
 the policy gradient. $\hat L$ is a *local* model: trustworthy near
-where it was built, a liar far away.
+where it was built, but inaccurate after large policy changes.
 :::
 
 ::: {.slide title="The Performance Difference Lemma"}

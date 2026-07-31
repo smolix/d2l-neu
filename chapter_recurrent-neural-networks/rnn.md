@@ -14,8 +14,13 @@ In general, the hidden state at any time step $t$ can be computed from both the 
 $$h_t = f(x_{t}, h_{t-1}).$$
 :eqlabel:`eq_ht_xt`
 
-For a sufficiently powerful function $f$ in :eqref:`eq_ht_xt`, the latent variable model is not an approximation at all: $h_t$ might simply store everything it has observed so far.
-Whether that is useful depends on how compactly $f$ can summarize the past, an issue we return to throughout this chapter and the next.
+The approximation becomes exact only when $h_{t-1}$ is a sufficient statistic
+of the prefix for predicting $x_t$:
+$P(x_t\mid x_{<t})=P(x_t\mid h_{t-1})$. An idealized real-valued state could
+encode an arbitrarily long prefix with unbounded precision, but that
+construction is neither robust nor operationally useful. Practical finite
+states impose an information bottleneck, so the model must learn which parts
+of the past matter for prediction.
 
 Recall the hidden layers and hidden units of :numref:`chap_perceptrons`.
 It is worth stressing that hidden layers and hidden states name two very different things.

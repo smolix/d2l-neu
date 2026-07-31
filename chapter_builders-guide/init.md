@@ -47,7 +47,10 @@ npx.set_np()
 
 ## Defaults and When to Override Them
 
-You can usually ignore initialization because the default is sensible.
+Default initializers are suitable for standard library layers at ordinary
+depths. Inspect or override them when activation functions, residual depth,
+custom parameters, or reproduction of a published model impose a specific
+scaling rule.
 
 :begin_tab:`pytorch`
 PyTorch initializes an `nn.Linear` the moment it is constructed: weight and
@@ -556,8 +559,9 @@ print(f'truncated: std {float(w.std()):.4f}, '
 
 A million plain-normal draws produce entries near $5\sigma = 0.1$; the
 truncated version guarantees $|w| \leq 0.04$. Its printed standard deviation
-dips slightly below the nominal 0.02 because truncation removes tail mass;
-practice ignores the difference.
+dips below the nominal 0.02 because truncation removes tail mass. Fixed-standard-
+deviation recipes such as BERT accept this reduced realized variance; a recipe
+whose derivation requires a target variance should compensate for truncation.
 
 ### Scaling Down Residual Branches
 

@@ -26,14 +26,11 @@ happens when we perturb several coordinates at once.
 
 ### The Gradient
 
-Suppose we perturb every coordinate, replacing each $w_i$ by $w_i + \epsilon_i$.
-Apply :eqref:`eq_mdl-part_der` one coordinate at a time. Changing $w_1$
-contributes $\epsilon_1\frac{\partial L}{\partial w_1}$; changing $w_2$
-contributes $\epsilon_2\frac{\partial L}{\partial w_2}$, and so on. The
-corrections that involve *two* perturbations, like
-$\epsilon_1\epsilon_2\frac{\partial^2 L}{\partial w_1 \partial w_2}$, are
-products of small quantities (second order), and we discard them exactly as we
-discarded $\epsilon^2$ in one variable. The first-order terms form a single sum:
+Assume first that $L$ is differentiable at $\mathbf w$. By definition, its change
+under a joint perturbation $\boldsymbol\epsilon$ equals a linear function plus an
+error $o(\|\boldsymbol\epsilon\|)$. In Euclidean coordinates that linear function
+is a dot product with some vector $\mathbf g$. Setting $\boldsymbol\epsilon=h\mathbf e_i$
+identifies $g_i$ with $\partial L/\partial w_i$. Thus differentiability gives
 
 $$
 L(w_1+\epsilon_1, \ldots, w_N+\epsilon_N) \approx L(w_1, \ldots, w_N) + \sum_{i=1}^N \epsilon_i \frac{\partial L}{\partial w_i}.
@@ -63,17 +60,13 @@ treat $\nabla_{\mathbf{w}} L$ as a column vector throughout; the layout
 conventions that make this choice precise are settled in
 :numref:`sec_mdl-matrix-calculus-autodiff`.
 
-The coordinate-at-a-time argument tacitly assumed the partials behave well
-*jointly*. The definition keeps the two ideas separate: $L$ is called
-*differentiable* at $\mathbf{w}$ if the linear approximation
-:eqref:`eq_mdl-nabla_use` holds with an error vanishing faster than
-$\|\boldsymbol{\epsilon}\|$. A sufficient condition, and the one we rely on in
-practice, is that the partials exist and are *continuous* near $\mathbf{w}$.
-Existence of the $N$ partials alone is not enough: $f(x, y) = 2xy/(x^2+y^2)$ with
+This order of reasoning matters. Existence of all partial derivatives does not
+itself imply the joint linear approximation. A convenient sufficient condition
+is that the partials exist and are continuous near $\mathbf w$. For a
+counterexample, $f(x, y) = 2xy/(x^2+y^2)$ with
 $f(0,0) = 0$ has both partials equal to zero at the origin, yet equals $1$
 everywhere on the diagonal $x = y \neq 0$, so no linear approximation can hold
-there. The losses in this book are built from pieces smooth enough that this
-hypothesis costs nothing.
+there.
 
 ### Directional Derivatives
 
@@ -235,6 +228,9 @@ $+\nabla L$ and smallest when it points along $-\nabla L$. Thus $+\nabla L$ is
 the direction of steepest ascent and $-\nabla L$ the direction of steepest
 descent.*
 
+
+Here “unit” and “steepest” refer to the Euclidean norm and its inner product. With a different norm, the unit ball changes and the minimizing direction is determined by the corresponding dual norm; it need not be the negative Euclidean gradient.
+
 **Proof.** By Cauchy–Schwarz (:eqref:`eq_mdl-cauchy-schwarz`) applied to the
 unit vector $\mathbf{v}$,
 
@@ -256,10 +252,10 @@ $$
 \mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla_{\mathbf{w}} L(\mathbf{w}).
 $$
 
-Every optimizer in this book, from momentum through RMSProp to Adam
-(:numref:`chap_optimization`), modifies *how* the step along the gradient is
-computed, but they all inherit this core idea: read the gradient, move against
-it.
+First-order optimizers use gradient information, but they need not step along
+the current negative gradient. Momentum combines gradients across time, while
+RMSProp and Adam rescale coordinates; :numref:`chap_optimization` develops the
+resulting directions.
 
 ### Gradients and Level Sets
 
@@ -481,7 +477,7 @@ block (:numref:`sec_resnet`), shape learning by controlling that gradient flow.
 ### The Backpropagation Algorithm
 
 Return to :eqref:`eq_mdl-multi_func_def` and ask for $\frac{\partial f}{\partial
-w}$. Applying the chain rule the obvious way pushes $w$ forward through the
+w}$. Expanding the chain rule directly pushes $w$ forward through the
 graph,
 
 $$
@@ -820,8 +816,8 @@ variable; :numref:`sec_gd` develops it as a practical optimizer.
 
 ### The Second-Derivative Test
 
-We can now finish the story the first-order test left open: at a critical point,
-the Hessian decides whether we sit at a minimum, a maximum, or a saddle. At a
+At a critical point of a twice continuously differentiable function, a definite
+or indefinite Hessian classifies local behavior; a semidefinite Hessian does not. At a
 critical point $\mathbf{x}_0$ the gradient term in :eqref:`eq_mdl-second_taylor`
 vanishes, so the local picture is purely quadratic,
 
@@ -1197,7 +1193,7 @@ A network is a deep composition of simple functions. Drawn out, the
 dependencies form a **graph**: each node a value, each edge a direct
 functional dependence.
 
-Substituting everything and differentiating the monster repeats the same
+Substituting the full composite expression and differentiating it repeats the same
 subexpressions over and over. The chain rule organizes that waste away.
 :::
 
@@ -1314,15 +1310,15 @@ Stepping from the base point $(-1, 0)$, the gap between $f$ and its Taylor quadr
 
 @!multivariable-calculus-hessians
 
-The gap is **third order** (double the step, eight times the gap), which is what "best quadratic" means. Iterating *fit and jump to the minimum* is Newton's method, met in one variable in the previous section.
+The gap is **third order** (double the step, eight times the gap), which is what the local quadratic guarantee predicts. Newton's method minimizes this model when it is positive definite and safeguards the step otherwise.
 :::
 
 ::: {.slide title="The second-derivative test"}
 [Hessian]{.kicker}
 
 At a critical point the picture is purely quadratic; the curvature
-$\mathbf{v}^\top\mathbf{H}\mathbf{v}$ along $\mathbf{v}$ decides everything,
-through the **definiteness** of $\mathbf{H}$, read off its eigenvalues:
+$\mathbf{v}^\top\mathbf{H}\mathbf{v}$ along $\mathbf{v}$ gives the second-order
+test through the **definiteness** of $\mathbf{H}$, read off its eigenvalues:
 
 ![](../img/mdl-la-psd.svg)
 
@@ -1358,7 +1354,7 @@ So the critical points met while training deep nets are overwhelmingly
 methods do so well in practice.
 :::
 
-::: {.slide title="Summary"}
+::: {.slide title="The gradient represents Euclidean linear change"}
 [Wrap-up]{.kicker}
 
 ::: {.cols}

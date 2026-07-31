@@ -16,6 +16,12 @@ operations. The representation of floating-point numbers is treated in
 :numref:`sec_mdl-numerical-stability-conditioning`; here the emphasis is on
 library behavior and practical failure modes.
 
+Storage dtype, compute dtype, and accumulation dtype are separate choices. The
+principles below are stable, but autocast eligibility, matmul defaults, loss-
+scaler behavior, and hardware support vary by accelerator and library release.
+Treat the API cells as examples for the book's tested environment and inspect
+the corresponding runtime documentation when reproducing them elsewhere.
+
 
 ```{.python .input #numerics-numerics-dtypes-and-mixed-precision}
 %%tab pytorch
@@ -182,8 +188,9 @@ $5.96 \times 10^{-8}$. The trade is precision against range, and for deep
 learning the choice is lopsided: activations and gradients span many orders
 of magnitude, occasional large values are routine, and running out of range
 produces `inf` while losing a low-order digit usually costs nothing a noisy
-gradient estimate had to offer anyway. That asymmetry is why bf16 became the
-default 16-bit format for training.
+gradient estimate had to offer anyway. On accelerators with native bf16 support,
+that exponent range often makes bf16 preferable to fp16 for training. Older
+devices and deployment targets may instead favor fp16 or another format.
 
 ### TF32: What Happens to fp32 Matrix Multiplication
 

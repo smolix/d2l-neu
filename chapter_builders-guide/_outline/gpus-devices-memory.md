@@ -1,6 +1,9 @@
 # GPUs, Devices, and Memory
 :label:`sec_use_gpu`
 
+> **Archive notice.** This file records pre-promotion design decisions. The live
+> source one directory above is authoritative; CPU-guarded cells do not validate GPU behavior.
+
 > **Role.** Modernization of the current use-gpu section, which is the most
 > structurally load-bearing file in the chapter: it `#@save`s
 > `d2l.cpu/gpu/num_gpus/try_gpu/try_all_gpus` **and** monkey-patches

@@ -377,7 +377,11 @@ def k_fold(trainer, data, k, model_fn):
         trainer.fit(model, data_fold)
         val_loss.append(float(model.board.data['val_loss'][-1].y))
         models.append((model, data_fold.test))
-    print(f'average validation log mse = {sum(val_loss)/len(val_loss)}')
+    mean = sum(val_loss) / len(val_loss)
+    sd = (sum((x - mean) ** 2 for x in val_loss) / (len(val_loss) - 1)) ** 0.5
+    scores = ', '.join(f'{x:.4f}' for x in val_loss)
+    print(f'fold validation log mse = [{scores}]')
+    print(f'mean = {mean:.4f}; sd = {sd:.4f}')
     return models
 ```
 
@@ -392,7 +396,11 @@ def k_fold(trainer, data, k, model_fn):
         trainer.fit(model, data_fold)
         val_loss.append(float(model.board.data['val_loss'][-1].y))
         models.append((model, data_fold.test))
-    print(f'average validation log mse = {sum(val_loss)/len(val_loss)}')
+    mean = sum(val_loss) / len(val_loss)
+    sd = (sum((x - mean) ** 2 for x in val_loss) / (len(val_loss) - 1)) ** 0.5
+    scores = ', '.join(f'{x:.4f}' for x in val_loss)
+    print(f'fold validation log mse = [{scores}]')
+    print(f'mean = {mean:.4f}; sd = {sd:.4f}')
     return models
 ```
 
@@ -409,7 +417,11 @@ def k_fold(trainer, data, k, model_fn):
         trainer.fit(model, data_fold)
         val_loss.append(float(model.board.data['val_loss'][-1].y))
         models.append((model, data_fold.test))
-    print(f'average validation log mse = {sum(val_loss)/len(val_loss)}')
+    mean = sum(val_loss) / len(val_loss)
+    sd = (sum((x - mean) ** 2 for x in val_loss) / (len(val_loss) - 1)) ** 0.5
+    scores = ', '.join(f'{x:.4f}' for x in val_loss)
+    print(f'fold validation log mse = [{scores}]')
+    print(f'mean = {mean:.4f}; sd = {sd:.4f}')
     return models
 ```
 
@@ -474,13 +486,12 @@ Can a small neural network do better? Now that we have weight decay
 (:numref:`sec_weight_decay`), dropout (:numref:`sec_dropout`), and sensible
 initialization (:numref:`sec_numerical_stability`) in hand, we can try the
 simplest possible upgrade: a single hidden layer with a ReLU
-nonlinearity. The dataset is tiny (about $1460$ rows and several hundred features after
-one-hot encoding), so capacity is the enemy. We therefore keep the network
-*small* and lean on regularization: a modest $32$-unit hidden layer, a light
+nonlinearity. The dataset is small (about $1460$ rows and several hundred features after
+one-hot encoding), so we test a compact, regularized network: a $32$-unit hidden layer, a light
 dropout of $0.1$, and a small amount of $L_2$ weight decay ($10^{-4}$) added
-straight into SGD. A wider net or aggressive dropout (the $0.5$ that is
-common on large datasets) simply overfits or fails to train on data this
-small. We reuse the squared-error loss from `LinearRegression` and only
+straight into SGD. These settings are one candidate rather than an established
+optimum; wider networks and different dropout rates require their own validation.
+We reuse the squared-error loss from `LinearRegression` and only
 override the optimizer to attach weight decay.
 :end_tab:
 
@@ -499,8 +510,9 @@ class KaggleMLP(d2l.LinearRegression):
 ```
 
 :begin_tab:`pytorch`
-We train it with the *same* $K$-fold loop, learning rate, and epoch budget
-as the linear baseline, so the only thing that changes is the model.
+We train it with the same $K$-fold loop, learning rate, and epoch budget as the
+linear baseline. This controls the stated budget but does not guarantee that
+both model classes are equally well tuned.
 :end_tab:
 
 ```{.python .input #kaggle-house-price-mlp-select}
@@ -510,15 +522,15 @@ models = k_fold(trainer, data, k=5, model_fn=lambda: KaggleMLP(lr=0.03))
 ```
 
 :begin_tab:`pytorch`
-The small MLP edges out the (now competently trained) linear baseline: the
-linear model reaches a cross-validated log error of about $0.036$ and the
-MLP about $0.027$, so the nonlinearity buys a modest but real gain. The
+For the tested configurations, the small MLP has the lower mean
+cross-validated log error: about $0.027$ versus $0.036$ for the linear model.
+The fold-level dispersion printed above is necessary for judging this difference. The
 lesson is still deliberately undramatic. The MLP survives at all only
 because it is small enough and regularized enough for a dataset of barely a
 thousand rows, and the bulk of the improvement over a careless, underfit
 baseline came simply from training *either* model to convergence. As the
-caveat above noted, a gradient-boosted tree ensemble would still be the
-stronger tabular choice. The exercises invite you to try one and see.
+caveat above motivates testing a gradient-boosted tree ensemble, but its result
+cannot be inferred without running that baseline. The exercises invite this comparison.
 :end_tab:
 
 Notice that sometimes the number of training errors
@@ -988,7 +1000,9 @@ Start with a linear model, a fast baseline, but train it **competently**: 100 ep
 
 ::: {.col .narrow}
 ::: {.d2l-note .warn}
-Same model, same data: badly underfit vs **0.036** converged. Every fancier model "beats" the underfit baseline; almost nothing beats the competent one. A baseline only counts if it is trained to convergence.
+In these runs, ten epochs leave the linear model underfit whereas the longer run
+reaches about **0.036**. Comparisons should use a baseline with a validated
+training budget.
 :::
 :::
 :::
@@ -1017,8 +1031,8 @@ Ten epochs of SGD leaves this model badly **underfit**; trained to convergence i
 
 ::: {.cols .vc}
 ::: {.col}
-The dataset is tiny, so capacity is the enemy. Keep the net **small**
-and lean on regularization: one 32-unit hidden layer, light dropout,
+The dataset is small, so we test a compact regularized network: one 32-unit
+hidden layer, light dropout,
 a little weight decay:
 
 @-kaggle-house-price-mlp-model
@@ -1041,17 +1055,23 @@ Same K-fold loop, learning rate, and epoch budget, only the model changes:
 @!kaggle-house-price-mlp-select
 
 ::: {.d2l-note .rule}
-**0.036 linear vs 0.027 MLP**: the nonlinearity buys a modest but real gain. The bulk of the improvement over a careless, underfit baseline came from training *either* model to convergence. Trees would still win here.
+For these configurations, the fold means are about **0.036 linear vs 0.027
+MLP**. Fold dispersion and model-specific tuning are needed to assess the
+difference; a tree model remains an untested baseline.
 :::
 :::
 
 ::: {.slide title="Cross-validation comparison" except="pytorch"}
 [Model selection]{.kicker}
 
-The natural next step is a small MLP: one 32-unit ReLU hidden layer, dropout $0.1$, weight decay $10^{-4}$; anything bigger overfits 1460 rows. Run through the *same* K-fold loop, learning rate, and epoch budget, it edges out the competently trained linear baseline: about $0.027$ vs $0.036$.
+We next test a small MLP with one 32-unit ReLU hidden layer, dropout $0.1$, and
+weight decay $10^{-4}$. Under the same K-fold loop, learning rate, and epoch
+budget, its fold mean is about $0.027$ versus $0.036$ for the linear baseline.
 
 ::: {.d2l-note .rule}
-The lesson is deliberately undramatic: the nonlinearity buys only a modest gain here, and the bulk of the improvement over a careless, underfit baseline came from training *either* model to convergence. On small tabular data, gradient-boosted trees would still win.
+This result applies to the tested configurations. A fairer model comparison
+would report fold dispersion, tune each model class, and run the proposed
+gradient-boosted-tree baseline.
 :::
 :::
 

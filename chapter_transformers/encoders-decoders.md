@@ -43,7 +43,7 @@ import time
 A transformer block maps a sequence of $d$-dimensional vectors to a
 sequence of the same shape, and it leaves two questions open: which
 positions may attend to which, and where the keys and values come from.
-Three answers cover essentially every deployed transformer, and
+Three common wirings answer these questions, and
 :numref:`fig_three-wirings` draws them in the convention we will use for
 every attention map in this section — queries down the rows, keys along
 the columns.
@@ -86,7 +86,7 @@ BART on denoising corrupted text :cite:`lewis2019bart`.
 The rest of this section builds the two wirings that :numref:`sec_gpt` did
 not, in order.
 
-## An Encoder: Predicting from Both Sides
+## Bidirectional Context for Masked-Token Prediction
 
 ### A Bidirectional Encoder in a Dozen Lines
 
@@ -242,7 +242,7 @@ masked-character accuracy to roughly 65% — against a 28-way vocabulary
 whose unigram entropy alone is $2.83$ nats. More interesting than the
 average is *where* the model earns it.
 
-### What the Second Side Is Worth
+### Loss by Available Context
 
 Our windows are 64 characters long, and that finiteness builds a
 comparison into every batch: a masked character in the interior has
@@ -784,7 +784,7 @@ bottleneck that reads arbitrarily long, arbitrarily structured
 inputs through cross-attention, sketched in
 :numref:`fig_latent-bottleneck`.
 
-![The latent bottleneck. A learned array of M latents (M much smaller than the input length N) reads the input once through cross-attention at cost O(MN); all further processing is self-attention and FFN among the latents at cost O(M squared), independent of N.](../img/mdl-transformers-latent-bottleneck.svg)
+![A latent bottleneck with input length $N$, $M$ learned latents, width $d$, and $L$ latent blocks. One cross-attention read has mixing cost $O(MNd)$; each subsequent latent self-attention layer has mixing cost $O(M^2d)$, for $O(LM^2d)$ across the stack. These terms hold batch size, head count, and width fixed and omit projections and FFNs.](../img/mdl-transformers-latent-bottleneck.svg)
 :label:`fig_latent-bottleneck`
 
 A minimal version needs a parameter array, one cross-attention, and a
@@ -948,8 +948,9 @@ d2l.plot(list(lengths), [t_full, t_perc], 'input length N',
 
 Each doubling of $N$ eventually multiplies the self-attention encoder's
 time by about four, the signature of an $N^2$ term taking over. The
-Perceiver's time barely moves (its $O(MN)$ cross-attention grows
-linearly but stays dominated by the fixed $O(M^2)$ latent processing),
+Perceiver's time grows more slowly over this range (its $O(MN)$
+cross-attention grows linearly but remains dominated by the fixed $O(M^2)$
+latent processing),
 and by $N = 8192$ the gap exceeds an order of magnitude. The left end of
 the plot deserves attention too: at short inputs the perceiver's fixed
 $O(M^2)$ latent cost is a large fraction of its total, so its margin is
@@ -984,14 +985,14 @@ depth.
 
 ## Choosing an Architecture
 
-The taxonomy of :numref:`fig_three-wirings` maps cleanly onto current
-practice:
+The taxonomy of :numref:`fig_three-wirings` describes several widely used
+model families. The table gives examples rather than an exhaustive ranking.
 
 | Wiring | Exemplars today | Typical use |
 |---|---|---|
 | encoder-only | BERT descendants, ModernBERT | embeddings, retrieval, classification |
 | encoder--decoder | T5 family, Whisper | translation, speech recognition |
-| decoder-only | essentially everything else | generation, chat, in-context everything |
+| decoder-only | GPT-style models | generation, chat, in-context learning |
 
 Encoder-only models remain useful when the output is a representation. An
 embedding model processes each document once and can use bidirectional
@@ -1002,16 +1003,14 @@ own tower: T5-style text-to-text :cite:`raffel2020exploring`, and Whisper,
 whose encoder reads an entire audio clip bidirectionally while a text
 decoder cross-attends into it :cite:`radford2023whisper`.
 
-Decoder-only models now cover many other applications. A single stack
+Decoder-only models cover many generative applications. A single stack
 supports a single pretraining objective: next-token prediction on raw text, with
-no masking scheme or span-corruption design to engineer. Every parameter
-serves both understanding and generation instead of splitting the budget
-between towers. Generation needs no separate machinery, and in-context
-learning falls out of it :cite:`brown2020language`: a task description in
-the prompt does what a fine-tuned head used to. When one architecture,
-trained one way, covers everything from chat to code with the same
-serving stack, decoder-only models reduce the need to maintain separate
-architectures. The other two remain preferable for the applications above.
+no masking or span-corruption objective. The same stack supplies the states
+used for next-token generation, and sufficiently large decoder-only models can
+perform tasks specified in the prompt :cite:`brown2020language`. This shared
+training and serving interface is operationally convenient, but it does not
+make decoder-only models preferable for every representation or conditional
+generation task.
 
 ## Summary
 
@@ -1101,7 +1100,7 @@ $$\max \; \sum_{t \in \mathcal{M}} \log p\left(x_t \mid \mathbf{x}_{\setminus \m
 @!encoders-decoders-the-masked-token-objective
 :::
 
-::: {.slide title="What the second side is worth"}
+::: {.slide title="Loss by Available Context"}
 Window edges are one-sided by construction — position 63 is where a
 causal LM lives *permanently*. Bin the loss by position:
 
@@ -1182,9 +1181,9 @@ $O(MN)$ to read, $O(M^2)$ to think — the $N^2$ term never appears
 ::: {.slide title="The cost curve"}
 @!encoders-decoders-the-cost-curve
 
-Self-attention: ~4× per doubling of $N$. Perceiver: barely moves; over
-an order of magnitude ahead by $N = 8192$. At short inputs the
-bottleneck buys nothing.
+Self-attention: about 4× per doubling of $N$. The Perceiver grows more slowly
+and is over an order of magnitude faster by $N = 8192$; at short inputs its
+fixed latent-processing overhead removes this advantage.
 :::
 
 ::: {.slide title="Which wiring when"}
@@ -1192,8 +1191,8 @@ bottleneck buys nothing.
   retrieval, classification (BERT descendants, ModernBERT).
 - **Encoder–decoder** — input fully known, own tower worth it: T5
   text-to-text, Whisper speech recognition.
-- **Decoder-only** — everything else: one stack, one objective,
-  generation free, in-context learning included.
+- **Decoder-only** — autoregressive generation and prompt-conditioned tasks:
+  one stack and a next-token objective.
 
 ::: {.d2l-note}
 Perceiver descendants live on inside multimodal models: Flamingo's
@@ -1209,6 +1208,6 @@ resampler, BLIP-2's Q-Former, DETR's object queries.
   the learned map.
 - Learned queries turn attention into an interface: $O(MN)$, flat cost
   curve, Perceiver → resampler → Q-Former.
-- Encoders represent, encoder–decoders translate and transcribe,
-  decoders do the rest.
+- The appropriate wiring depends on whether the output is a representation,
+  a sequence conditioned on a separate input, or an autoregressive continuation.
 :::

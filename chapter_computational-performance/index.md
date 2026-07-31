@@ -20,7 +20,7 @@ GPUs. :numref:`sec_perf_model` establishes the roofline, the three
 regimes, and the measurement discipline the frameworks' asynchronous
 dispatch makes non-optional. :numref:`sec_hardware` explains where the
 roofline's two numbers come from — the memory hierarchy, the tensor cores
-and their format ladder, the interconnects, and the energy budget
+and their numerical formats, interconnects, and energy costs
 underneath them all — using our own four-GPU box as the worked example.
 :numref:`sec_compilation` targets the bandwidth and overhead regimes:
 capturing the compute graph can reduce both, and the section contrasts
@@ -29,7 +29,7 @@ capturing the compute graph can reduce both, and the section contrasts
 training step, mixed precision, activation checkpointing, and gradient
 accumulation — the techniques that decide whether a model fits.
 :numref:`sec_multi_gpu` builds data parallelism from scratch, derives the
-ring allreduce, and measures the communication bill;
+ring allreduce, and measures communicated bytes and latency;
 :numref:`sec_multi_gpu_concise` replaces the hand-rolled version with
 production data parallelism and contrasts PyTorch's explicit collectives
 with JAX's declarative sharding. Finally :numref:`sec_fast_transformer`
@@ -38,7 +38,7 @@ framework in its usual idiom —
 `torch.compile`, autocast, and DDP on the PyTorch side; `jax.jit`,
 explicit bf16 threading, and declarative sharding on the JAX side — and
 the two waterfalls diverge exactly where the frameworks do: what a
-"compile" rung even means, and how data parallelism is launched.
+compiled execution changes, and how data parallelism is launched.
 
 A word on the machine this chapter is built on, because it shapes what
 you will see. The book's build box is four consumer RTX 4090 GPUs with no
@@ -72,7 +72,7 @@ teaches the inference *economics* (the prefill-versus-decode roofline
 reading of :numref:`sec_hardware`) but not the engines that exploit them.
 *Quantization as compression* for inference is likewise deferred;
 :numref:`sec_hardware` teaches formats as *training* precisions only. The
-production library map and buying advice both live in the Tools appendix
+production library map and hardware-selection guidance both live in the Tools appendix
 (:numref:`sec_training_systems`, :numref:`sec_hardware_buyers`): which
 distributed framework to reach for at which scale, how to checkpoint a
 long run, how to launch across a cluster. This chapter earns the concepts
@@ -90,7 +90,7 @@ it is flagged as such.
 **Books and long-form**
 
 - [How to Scale Your Model — Austin et al., Google DeepMind (2025)](https://jax-ml.github.io/scaling-book/) — free; the roofline-to-collectives-to-sharding companion to this chapter written in the same spirit, working the arithmetic-intensity accounting of :numref:`sec_perf_model` and the collective-communication cost model of :numref:`sec_multi_gpu` all the way up to datacenter scale.
-- [The Ultra-Scale Playbook — Hugging Face](https://huggingface.co/spaces/nanotron/ultrascale-playbook) — free; the memory-anatomy budgeting of :numref:`sec_memory_precision` and the 3D-parallelism ladder that :numref:`sec_multi_gpu_concise` points at, with the ZeRO/FSDP sharding math worked in detail.
+- [The Ultra-Scale Playbook — Hugging Face](https://huggingface.co/spaces/nanotron/ultrascale-playbook) — free; it develops the memory budgeting of :numref:`sec_memory_precision`, three-dimensional parallelism, and the ZeRO/FSDP sharding analysis referenced by :numref:`sec_multi_gpu_concise`.
 - [Making Deep Learning Go Brrrr From First Principles — Horace He (2022)](https://horace.io/brrr_intro.html) — free; the compute-bound / bandwidth-bound / overhead-bound taxonomy of :numref:`sec_perf_model` in its original form, from one of the authors of `torch.compile`.
 
 **Courses and video lectures**
@@ -104,7 +104,7 @@ it is flagged as such.
 - [Roofline: An Insightful Visual Performance Model — Williams, Waterman & Patterson (2009)](https://doi.org/10.1145/1498765.1498785) — free; the original roofline paper, the source of the map in :numref:`fig_roofline` and the ridge-point reasoning the whole chapter hangs on.
 - [PyTorch 2: Faster Machine Learning Through Dynamic Python Bytecode Transformation and Graph Compilation — Ansel et al. (2024)](https://doi.org/10.1145/3620665.3640366) — free; how TorchDynamo captures a graph from Python bytecode and Inductor compiles it, the mechanism behind :numref:`sec_compilation`'s `torch.compile` tab.
 - [PyTorch Distributed: Experiences on Accelerating Data Parallel Training — Li et al. (2020)](https://arxiv.org/abs/2006.15704) — free; the gradient bucketing and computation–communication overlap that make DDP faster than the hand-rolled allreduce of :numref:`sec_multi_gpu`, measured in :numref:`sec_multi_gpu_concise`.
-- [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models — Rajbhandari et al. (2020)](https://arxiv.org/abs/1910.02054) — free; the shard-what's-redundant ladder behind the FSDP idea of :numref:`sec_multi_gpu_concise`, and the cash-in of the allreduce = reduce-scatter + all-gather identity derived in :numref:`sec_multi_gpu`.
+- [ZeRO: Memory Optimizations Toward Training Trillion Parameter Models — Rajbhandari et al. (2020)](https://arxiv.org/abs/1910.02054) — free; it derives the staged sharding of optimizer states, gradients, and parameters used by FSDP in :numref:`sec_multi_gpu_concise`.
 - [Mixed Precision Training — Micikevicius et al. (2018)](https://arxiv.org/abs/1710.03740) — free; the master-weights-and-loss-scaling recipe of :numref:`sec_memory_precision`, and the reason bf16 needs no scaler where fp16 does.
 - [Training Deep Nets with Sublinear Memory Cost — Chen et al. (2016)](https://arxiv.org/abs/1604.06174) — free; the recompute-in-backward trade of :numref:`sec_memory_precision`'s activation checkpointing, and the $\sqrt{n}$-checkpointing exercise.
 

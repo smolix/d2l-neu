@@ -52,13 +52,13 @@ information theory does not care how cleverly the update rule was
 chosen. To reproduce $k$ arbitrary tokens from a vocabulary of size
 $V$, *something* in the model must hold $k \log_2 V$ bits from the
 moment they appear to the moment they are needed. Our own measurements
-have circled this wall all chapter. The crowding proposition of
-:numref:`subsec_ms-capacity` is the wall seen from below: expected
+have analyzed this limitation throughout the chapter. The crowding
+proposition of :numref:`subsec_ms-capacity` quantifies one aspect: expected
 squared read
 error $(n-1)/d_k$ after $n$ random-key writes, interference growing
 linearly in
-how much you store. And the transition ladder of :numref:`tab_dn-ladder`
-is the wall seen from the side: each rung changed what the state can
+how much you store. The transition comparison in :numref:`tab_dn-ladder`
+addresses another aspect: each row changes what the state can
 *compute* — forgetting, erasure, reflections, group words — while the
 number of bits it holds never moved.
 
@@ -95,7 +95,7 @@ phone-book
 lookup, their smallest transformer (410M parameters) beats a
 2.8B-parameter Mamba once the book exceeds roughly seventy entries.
 
-Where does the wall bite in real language?
+How does this capacity limit affect language tasks?
 :citet:`Arora.Eyuboglu.Timalsina.ea.2024` located it with *multi-query
 associative recall* (MQAR): a stream writes key–value bindings, later
 re-presents keys in arbitrary order, and the model must produce each
@@ -170,7 +170,7 @@ comparably sized Mixtral carries 32 GB and a Llama-2-70B-class
 transformer 128 GB :cite:`Lieber.Lenz.Bata.ea.2024`. An eightfold saving
 on the resource that decides how many concurrent users fit on an
 accelerator is the kind of number that redraws architectures, and it
-comes from nothing more than the layer count in
+follows from the layer count in
 :eqref:`eq_kv-cache-bytes`. (Recall from :numref:`sec_kv-cache` that
 decode is bandwidth-bound, so cache bytes are also the currency of
 generation speed.)
@@ -566,8 +566,8 @@ assert recall['hybrid'][-1] > 0.95 > recall['linear'][-1]  # One layer rescues
 assert recall['linear'][-1] < 0.6      # The fixed state has saturated
 ```
 
-The three curves are the section's thesis in one picture. The pure
-linear-recurrence stack degrades as the load grows and collapses at 64
+The three curves isolate the effect of one attention layer. The pure
+linear-recurrence stack degrades as the load grows; at 64
 pairs, where it recovers fewer than half of the queries — consistent
 with the crowding heuristic's cliff for $8 \times 8$ states asked to
 hold 64 bindings, though read that as a diagnostic analogy: the
@@ -580,10 +580,9 @@ is the same recurrence that just collapsed — in our PyTorch run it
 too scores 1.000 at every load; in JAX it dips to roughly 0.92–0.94
 mid-sweep
 and returns to 0.99–1.00 at the two largest loads, exactly the loads
-that break the linear stack. One mid-stack attention layer buys back
-the
-recall deficit at this scale — the miniature of a finding from
-controlled studies at the hundred-million-parameter scale, that adding
+that break the linear stack. One mid-stack attention layer recovers the
+recall deficit in this diagnostic. Controlled studies at the
+hundred-million-parameter scale report that adding
 attention to a Mamba backbone lifts recall benchmarks by about thirty
 points while moving reasoning benchmarks by single digits
 :cite:`Lee.Yu.Zhang.ea.2025`.
@@ -703,13 +702,13 @@ All three land within roughly a tenth of a nat of one another — about
 a tenth
 of a bit per character — and in our runs the pure-linear stack matches
 or beats the pure-attention stack: the model that just
-collapsed on
+failed on
 the recall sweep is, by the language-modeling objective, the equal of
 the models that aced it.
 This is the cautionary dissociation, and it is the single most
 important measurement in this section. Scope it first: one pass over
 one small corpus at one seed, so it demonstrates that perplexity *can*
-sit still while exact recall collapses, not that it always does. The
+remain nearly unchanged while exact recall degrades, not that it always does. The
 larger-scale evidence says the dissociation is the rule, though:
 across seventeen trained language models most of the
 efficient-architecture perplexity gap concentrated on the rare recall
@@ -762,14 +761,14 @@ The attention stack's line grows linearly with context; the linear
 stack's is
 flat at four kilobytes at every length; and the hybrid's line grows
 with
-exactly one quarter of the attention stack's slope — one of its four
-layers still pays per token. That slope ratio *is* the attention
-fraction, and it is the entire economic content of the hybrid design:
+exactly one quarter of the attention stack's slope because one of its
+four layers stores keys and values per token. That slope ratio equals the
+attention fraction:
 :numref:`fig_hy-cache` is this same plot at production width, where the
 gap between the lines is measured in tens of gigabytes. Both sides of
 the trade are now on the table, from our own runs: the hybrid recalls
-like the attention model and pays like the recurrent one, plus one
-quarter of the rent.
+like the attention model while using one quarter of the attention stack's
+context-dependent state.
 
 What the experiment shows: at this scale, on this diagnostic, one
 attention layer in four recovers pure attention's recall while paying
@@ -1127,7 +1126,7 @@ before it joins the residual stream.
 [Dive into Deep Learning · §12.7]{.kicker}
 
 Hybrid Architectures<br>
-**what a fixed state cannot do · only attention pays rent · one layer rescues recall · the shipped recipes**
+**fixed-state capacity · attention-cache growth · recall with one attention layer · deployed configurations**
 :::
 :::
 

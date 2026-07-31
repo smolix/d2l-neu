@@ -19,11 +19,11 @@ For example, the probability of a four-word sequence unrolls as
 $$\begin{aligned}&P(\textrm{deep}, \textrm{learning}, \textrm{is}, \textrm{fun}) \\
 =&P(\textrm{deep}) P(\textrm{learning}  \mid  \textrm{deep}) P(\textrm{is}  \mid  \textrm{deep}, \textrm{learning}) P(\textrm{fun}  \mid  \textrm{deep}, \textrm{learning}, \textrm{is}).\end{aligned}$$
 
-Modeling language therefore reduces to the conditional prediction problem
-estimate $P(x_t \mid x_1, \ldots, x_{t-1})$, the distribution of the next
-token given everything that came before. Every language model in this book
-implements exactly this conditional, from the count tables below to the
-largest networks in later chapters.
+For the autoregressive language models in this book, modeling the joint
+distribution therefore reduces to estimating
+$P(x_t \mid x_1, \ldots, x_{t-1})$. The chain-rule factorization is exact;
+the count tables and neural networks below are different approximations to
+these conditional distributions.
 
 ## Uses of Language Models
 

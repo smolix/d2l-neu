@@ -66,30 +66,30 @@
       "outputs": []
     },
     "kaggle-house-price-k-fold-cross-validation-2": {
-      "code_fingerprint": "sha256:fecb69a7bc7a33fce9e3bce05cd2d4402fd5d74943ad9f9a17caa74ace1d814d",
+      "code_fingerprint": "sha256:52a9ae4e3542861fe43a60a97f177b812b3a9c594a3a6b646fc44885ae237bd8",
       "kind": "text",
       "outputs": []
     },
     "kaggle-house-price-model-selection-linear": {
-      "code_fingerprint": "sha256:6ab102a8c8c2fec109eb34a13a5ed9529ff09eb4d6dcb5b54ec376e1c225b8be",
+      "code_fingerprint": "sha256:d51af97a187bb76775e06567151fa4c6f7392b618f2a820d14a1f8fe3216a6f1",
       "kind": "mixed",
       "outputs": [
         {
           "type": "stream",
           "name": "stdout",
-          "text": "average validation log mse = 0.03559860862791538\n"
+          "text": "fold validation log mse = [0.0702, 0.0336, 0.0392, 0.0355, 0.0197]\nmean = 0.0396; sd = 0.0186\n"
         },
         {
           "type": "display_data",
           "mime": "image/svg+xml",
           "asset": "kaggle-house-price/kaggle-house-price-model-selection-linear-1.svg",
-          "bytes": 31887,
-          "sha256": "sha256:2492332f143ac6402e889373af3896c6d3462b1377e142814dfdb46697557188"
+          "bytes": 31866,
+          "sha256": "sha256:00e95fcd0e882a51be8bb18486273c9dfac95d990c1dc2209a6c3954fe75a996"
         }
       ]
     },
     "kaggle-house-price-submitting-predictions-on-kaggle": {
-      "code_fingerprint": "sha256:a96a0a2499f227d05f3d9efcea02370c2e16d29bf40ab25fa6cd575f61d47d9a",
+      "code_fingerprint": "sha256:10abc77cc9ed538081055c3a6a34937dc1ca1f14662a17da5a1d200a8b58e77b",
       "kind": "text",
       "outputs": []
     }

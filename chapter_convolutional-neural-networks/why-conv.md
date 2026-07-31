@@ -11,13 +11,11 @@ Consider a classifier that distinguishes cats from dogs in one-megapixel
 photographs.
 This means that each input to the network has one million dimensions.
 Even an aggressive reduction to one thousand hidden dimensions
-would require a fully connected layer
-characterized by $10^6 \times 10^3 = 10^9$ parameters.
-Unless we have lots of GPUs, a talent
-for distributed optimization,
-and an extraordinary amount of patience,
-learning the parameters of this network
-may turn out to be infeasible.
+would require a fully connected layer with
+$10^6 \times 10^3 = 10^9$ parameters. In 32-bit floating point, the weights
+alone occupy 4 GB, before gradients, optimizer state, and activations are
+stored. The layer is therefore expensive to train and statistically difficult
+to estimate unless the dataset is correspondingly large.
 
 Reducing the resolution to one hundred thousand pixels does not remove the
 problem, because a practical representation may also require substantially
@@ -319,7 +317,13 @@ periodic grid. Boundaries, padding, and strides can break it, as the next
 sections will show. Some of the earliest CNN-like architectures appear in the
 Neocognitron :cite:`Fukushima.1982`.
 
-Our reasoning also illustrated a second principle: how to reduce the number of parameters in a function class without limiting its expressive power, at least whenever certain assumptions on the model hold. We saw a dramatic reduction of complexity as a result of this restriction, turning computationally and statistically infeasible problems into tractable models. 
+The parameter reduction comes from restricting the function class. It
+preserves a desired mapping when that mapping is local and translation
+equivariant, but it excludes mappings that depend on absolute position. For
+example, a classifier whose label changes when the same object moves from the
+left half of an image to the right cannot be represented by a translation-
+invariant head alone. The assumptions make many image problems tractable; they
+do not preserve arbitrary functions.
 
 Adding channels restores some of the expressive capacity removed by locality
 and translation equivariance. It is natural to add channels other than red,

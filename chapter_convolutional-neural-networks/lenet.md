@@ -28,13 +28,11 @@ of a decade of research developing the technology;
 LeCun's team published the first study to successfully
 train CNNs via backpropagation :cite:`LeCun.Boser.Denker.ea.1989`.
 
-At the time LeNet achieved outstanding results, matching the performance of
-support vector machines, then a dominant approach in supervised learning.
-Its error rate was less than 1% per digit.
-LeNet was eventually adapted to recognize digits
-for processing deposits in ATM machines.
-To this day, some ATMs still run the code
-that Yann LeCun and his colleague Leon Bottou wrote in the 1990s!
+LeNet matched the performance of support vector machines, then a dominant
+approach to handwritten-digit recognition, with an error rate below 1% per
+digit. Variants were deployed to read handwritten amounts on bank checks and
+deposit slips. The deployment demonstrated that a trained convolutional model
+could replace a substantial hand-engineered recognition pipeline.
 
 ```{.python .input #lenet-convolutional-neural-networks-lenet}
 %%tab mxnet

@@ -9,6 +9,16 @@ distributions, including $f$-divergences, integral probability metrics, and
 optimal transport, before turning to mutual information and contrastive
 objectives for representation learning.
 
+The quantity should follow the question:
+
+| Question | Quantity | What its notion of error retains |
+|:--|:--|:--|
+| How many bits are needed under a probabilistic model? | Entropy, cross-entropy, KL | Log-probability and coding regret |
+| How should two distributions be compared? | f-divergence, IPM, or transport distance | Density ratios, test-function expectations, or sample-space geometry |
+| Do two variables share information? | Mutual information | Departure of the joint law from the product of its marginals |
+
+These quantities are not interchangeable losses. Their support assumptions, invariances, and estimators determine what a small numerical value means.
+
 ```toc
 :maxdepth: 2
 

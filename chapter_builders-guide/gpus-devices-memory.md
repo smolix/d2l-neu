@@ -10,10 +10,11 @@ Training beyond small examples usually runs on an accelerator, most often a
 CUDA GPU. This introduces two practical constraints. Every tensor and parameter
 has a device, and an operation generally requires its inputs to be on the same
 device. GPU memory is also much smaller than main memory and often limits the
-model or batch size. This section covers device placement, the components of
-training memory, activation checkpointing, and data-transfer patterns that keep
-the accelerator occupied. The examples fall back to the CPU when no GPU is
-available.
+model or batch size. The section is organized around three operational
+questions: where arrays and state live; what occupies training memory and how
+checkpointing changes it; and when asynchronous execution or data transfer
+forces synchronization. The examples fall back to the CPU when no GPU is
+available, but CPU execution verifies API shape rather than GPU performance.
 
 ```{.python .input #gpus-devices-memory-gpus-devices-and-memory}
 %%tab pytorch
@@ -54,7 +55,7 @@ from mxnet.gluon import nn
 npx.set_np()
 ```
 
-## Devices
+## Devices and Placement
 
 :begin_tab:`pytorch`
 In PyTorch every tensor carries a device. The CPU is `torch.device('cpu')` and
@@ -278,7 +279,7 @@ degrade to the CPU instead of failing, which is exactly what lets this book's
 code run unchanged on a laptop.
 :end_tab:
 
-## Tensors, Models, and Devices
+### Tensors, Models, and Devices
 
 :begin_tab:`pytorch`
 By default, tensors are created on the CPU. We can query where a tensor lives.
@@ -677,13 +678,16 @@ need to move an already-initialized model, `net.reset_ctx(device)` (2.0 name:
 `reset_device`) re-assigns every parameter in one call.
 :end_tab:
 
-## GPU Memory
+## Training Memory and Checkpointing
+
+GPU allocators commonly retain freed blocks for reuse, so process-level memory
+reported by `nvidia-smi` can remain high after live tensors disappear. The
+durable distinction is between memory held by live arrays, memory reserved by a
+framework allocator, and memory reported for the whole process. The APIs below
+expose different layers of that accounting.
 
 :begin_tab:`pytorch`
-Here is a puzzle that every PyTorch user hits in their first week. You delete
-your tensors, yet `nvidia-smi` still shows gigabytes in use; is that a leak?
-It is not, and the explanation is the right mental model for everything else
-in this section. Requesting memory from the CUDA driver is slow, so PyTorch
+PyTorch uses a *caching allocator*: requesting memory from the CUDA driver is slow, so it
 uses a *caching allocator*: when a tensor dies, its block is not returned to
 the driver but kept in a per-process cache for the next tensor of a similar
 size. PyTorch therefore reports two numbers. `torch.cuda.memory_allocated()`
@@ -695,11 +699,7 @@ three views nest inside one another.
 :end_tab:
 
 :begin_tab:`jax`
-Here is a puzzle that every JAX user hits in their first week. You create one
-small array, yet `nvidia-smi` shows the card nearly full; is that a leak? It
-is not, and the explanation is the right mental model for everything else in
-this section. Requesting memory from the CUDA driver is slow, so on first use
-XLA *preallocates* about 75% of the GPU's memory as one block and hands out
+On first use, XLA commonly *preallocates* a configurable fraction of GPU memory and hands out
 pieces of it from its own allocator (the fraction is controlled by the
 `XLA_PYTHON_CLIENT_PREALLOCATE` and `XLA_PYTHON_CLIENT_MEM_FRACTION`
 environment variables). `nvidia-smi` sees the process from the outside, so it
@@ -712,11 +712,7 @@ allocator and the call returns `None`.
 :end_tab:
 
 :begin_tab:`tensorflow`
-Here is a puzzle that every TensorFlow user hits in their first week. You
-create one small tensor, yet `nvidia-smi` shows the card nearly full; is that
-a leak? It is not, and the explanation is the right mental model for
-everything else in this section. Requesting memory from the CUDA driver is
-slow, so on first use TensorFlow maps nearly all of the GPU's memory in one
+On first use, TensorFlow may reserve a large fraction of GPU memory in one
 grab and hands out pieces of it from its own allocator;
 `tf.config.experimental.set_memory_growth(gpu, True)`, called before the
 first computation, switches to growing the reservation on demand instead.
@@ -730,10 +726,7 @@ and the call raises on `'CPU:0'`.
 :end_tab:
 
 :begin_tab:`mxnet`
-Here is a puzzle that every MXNet user hits in their first week. You delete
-your tensors, yet `nvidia-smi` still shows gigabytes in use; is that a leak?
-It is not, and the explanation is the right mental model for everything else
-in this section. Requesting memory from the CUDA driver is slow, so MXNet
+MXNet uses a device memory pool: requesting memory from the CUDA driver is slow, so it
 keeps a *memory pool* per device: when an array dies, its block is not
 returned to the driver but kept for the next array of a similar size, and
 `nvidia-smi` keeps counting it. MXNet 2.0 has no per-process counter of live
@@ -1043,15 +1036,16 @@ them: it keeps only the inputs to selected segments of the network, and during
 the backward pass reruns each segment's forward computation to regenerate the
 activations it needs. For a stack of $N$ equally sized layers, dividing the
 stack into segments of about $\sqrt{N}$ layers reduces stored activations from
-$O(N)$ to $O(\sqrt{N})$. The price is roughly one extra forward pass, often
-30--40% more compute per step. :numref:`fig_bg_activation_checkpoint` sketches
-this schedule.
+$O(N)$ to $O(\sqrt{N})$. Recomputing selected segments adds work, but the
+runtime overhead depends on segment size, operator mix, compiler, RNG handling,
+and hardware; it is not fixed by the asymptotic memory schedule.
+:numref:`fig_bg_activation_checkpoint` sketches this schedule.
 The trade pays off exactly where deep learning spends most of its time: deep
 stacks of identical blocks, such as the residual stack we assembled in
 :numref:`sec_model_construction` and every Transformer you will meet later.
 We rebuild a compact version of that block here.
 
-![Standard backpropagation stores every activation (top); checkpointing keeps only segment-boundary activations and recomputes the rest during the backward pass (bottom), trading roughly 1.3x compute for O(sqrt(N)) instead of O(N) activation memory.](../img/bg-activation-checkpoint.svg)
+![Standard backpropagation stores every activation (top); checkpointing keeps only segment-boundary activations and recomputes the rest during the backward pass (bottom). For equally sized layers and segments of about $\sqrt{N}$ layers, stored activations fall from $O(N)$ to $O(\sqrt{N})$ while backward execution recomputes omitted forward operations.](../img/bg-activation-checkpoint.svg)
 :label:`fig_bg_activation_checkpoint`
 
 ```{.python .input #gpus-devices-memory-trading-compute-for-memory-activation-checkpointing-1}
@@ -1159,9 +1153,9 @@ nor Gluon offers a recompute-during-backward transform comparable to
 `torch.utils.checkpoint`, `jax.checkpoint`, or `tf.recompute_grad`, and none
 was added before development stopped. This subsection's code therefore
 appears only in the supported tabs: the gradient-equality check and the
-peak-memory comparison below. Recomputation can cut activation memory
-at the cost of roughly a third more compute. In
-MXNet the remaining memory knob is the batch size.
+peak-memory comparison below. Recomputation can cut activation memory in
+supported frameworks, with overhead that depends on the segmented computation.
+In MXNet the remaining memory knob demonstrated here is the batch size.
 :end_tab:
 
 Before measuring memory, we should verify the claim that nothing about the
@@ -1295,56 +1289,35 @@ model almost fits, this
 trade is the difference between training and not training, which is why large
 Transformer training runs use it as a matter of course.
 
-## Avoiding Synchronization in the Input Pipeline
+## Asynchronous Execution and Input Transfer
+
+Accelerator work is usually queued asynchronously: Python can return from an
+operation before the device finishes it. Accurate timing therefore requires a
+warm-up followed by an explicit synchronization, while frequent scalar reads,
+logging, or host conversions can serialize the pipeline. The backend-specific
+difference is the synchronization primitive and whether CPU dispatch is also
+asynchronous.
 
 :begin_tab:`pytorch`
-The GPU runs ahead of Python. When you write `B = A @ A`, PyTorch does not
-wait for the multiplication: it queues a kernel on the device and returns
-immediately, and Python races on to enqueue the next operation. This
-asynchrony is where much of the speed comes from, because the CPU can prepare
-work while the GPU crunches. It also means that timing or logging naively
-measures nothing, or worse, stalls everything. We can see the gap between
-*queueing* work and the work *finishing*.
+CUDA operations are asynchronous with respect to Python; use
+`torch.cuda.synchronize()` around a timed region. CPU operations here are
+synchronous.
 :end_tab:
 
 :begin_tab:`jax`
-The device runs ahead of Python; in JAX this *asynchronous dispatch* is the
-native execution model on every backend, the CPU included. When you write
-`B = A @ A`, JAX does not wait for the multiplication: it queues the
-computation, returns an array that is really a promise of the result, and
-Python races on to enqueue the next operation. This asynchrony is where much
-of the speed comes from, because Python can prepare work while the device
-crunches. It also means that timing or logging naively measures nothing, or
-worse, stalls everything. The explicit synchronization point is
-`block_until_ready()`; with it we can see the gap between *queueing* work and
-the work *finishing*, on this machine's CPU as well as on any GPU.
+JAX dispatch may be asynchronous on CPU and GPU. Call `block_until_ready()` on
+the result before stopping a timer.
 :end_tab:
 
 :begin_tab:`tensorflow`
-The GPU runs ahead of Python. When you write `B = A @ A` on a GPU tensor,
-eager TensorFlow does not wait for the multiplication: it enqueues the kernel
-on the device's stream and returns a handle immediately, and Python races on
-to enqueue the next operation (inside a `@tf.function`, whole traced graphs
-are handed to the runtime the same way). This asynchrony is where much of the
-speed comes from, because the CPU can prepare work while the GPU crunches. It
-also means that timing or logging naively measures nothing, or worse, stalls
-everything. Eager ops on the CPU backend run synchronously, so seeing the gap
-between *queueing* work and the work *finishing* needs a GPU.
+GPU kernels and traced graphs can be dispatched asynchronously. In these
+examples `tf.test.experimental.sync_devices()` supplies the explicit barrier;
+eager CPU operations are synchronous.
 :end_tab:
 
 :begin_tab:`mxnet`
-The device runs ahead of Python, and MXNet is where this lesson was born:
-asynchrony is the founding design of its execution engine, on the CPU as
-well as the GPU. When you write `B = np.dot(A, A)`, MXNet does not wait for
-the multiplication: the frontend pushes the operation onto the backend
-engine's queue, which tracks dependencies between operations and executes
-each one when its inputs are ready, while Python races on to enqueue the
-next. This asynchrony is where much of the speed comes from, because Python
-can prepare work while the backend crunches. It also means that timing or
-logging naively measures nothing, or worse, stalls everything. The explicit
-synchronization point is `npx.waitall()`, which blocks until every queued
-operation has finished; with it we can see the gap between *queueing* work
-and the work *finishing*, on this machine's CPU as well as on any GPU.
+MXNet's engine is asynchronous on CPU and GPU. `npx.waitall()` blocks until
+queued operations finish and is the synchronization primitive used for timing.
 :end_tab:
 
 ```{.python .input #gpus-devices-memory-don-t-break-the-pipeline-1}
@@ -1815,8 +1788,8 @@ inside it. GPU memory during training holds four things: weights, gradients,
 optimizer state (fixed by the model and optimizer), and activations (scaling
 with batch size); `memory_allocated()` tracks live tensors while `nvidia-smi`
 shows the caching allocator's high-water mark, so the two disagree by design.
-Activation checkpointing recomputes instead of stores, trading roughly a third
-more compute for activation memory. The GPU runs asynchronously ahead of
+Activation checkpointing recomputes instead of storing selected activations;
+its runtime overhead is configuration-dependent. The GPU runs asynchronously ahead of
 Python: `.item()`, `.numpy()`, and `print` are synchronization points that
 stall the pipeline, and pinned memory with `non_blocking=True` lets transfers
 overlap compute. The `Trainer` encodes the placement discipline: model moved
@@ -1832,8 +1805,8 @@ weights, gradients, optimizer state (fixed by the model and optimizer), and
 activations (scaling with batch size); `device.memory_stats()` tracks live
 buffers inside the block XLA preallocates, while `nvidia-smi` shows the whole
 block, so the two disagree by design. Activation checkpointing
-(`jax.checkpoint`) recomputes instead of stores, trading roughly a third more
-compute for activation memory. Dispatch is asynchronous on every backend:
+(`jax.checkpoint`) recomputes instead of storing selected activations, with
+configuration-dependent overhead. Dispatch is asynchronous on every backend:
 `.item()`, `np.asarray`, and `print` are synchronization points that stall
 the pipeline, and `block_until_ready()` is the explicit one that accurate
 timings need. The `Trainer` encodes the placement discipline: parameters
@@ -1852,8 +1825,8 @@ activations the `GradientTape` records (scaling with batch size);
 `get_memory_info` tracks live tensors inside the reservation TensorFlow maps
 at startup, while `nvidia-smi` shows the whole reservation, so the two
 disagree by design. Activation checkpointing (`tf.recompute_grad`) recomputes
-instead of stores, trading roughly a third more compute for activation
-memory. On a GPU, eager kernels run asynchronously ahead of Python:
+instead of storing selected activations, with configuration-dependent runtime
+overhead. On a GPU, eager kernels run asynchronously ahead of Python:
 `.numpy()`, `float()`, and `print` are synchronization points that stall the
 pipeline, and `.prefetch(tf.data.AUTOTUNE)` is where input transfer overlaps
 compute. The `Trainer` encodes the placement discipline: variables created on

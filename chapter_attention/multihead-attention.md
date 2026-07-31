@@ -28,7 +28,7 @@ import jax
 from jax import numpy as jnp
 ```
 
-## A Limitation of a Single Attention Head
+## A One-Mixture Bottleneck with Position-Only Keys
 
 Consider a task that exposes this limitation. Two source positions
 hold value vectors $\mathbf{v}_1, \mathbf{v}_2 \in \mathbb{R}^d$, drawn
@@ -45,9 +45,11 @@ linear readout $\mathbf{W}_o \mathbf{m}$. Since the keys are fixed position
 markers, the weights cannot depend on the values: whatever the head learns,
 it applies the *same* mixture to every example. How well can it do?
 
-**Proposition.** For independent isotropic Gaussian values, the best
-achievable relative squared error of a single head on the copy-both task is
-$1/2$ — for *every* choice of $(\alpha_1, \alpha_2)$.
+**Proposition.** Consider one attention layer with two fixed, position-only
+keys, independent isotropic Gaussian values, no residual path, and a linear
+readout. For the copy-both task, the best achievable relative squared error of
+a single head is $1/2$ for every softmax pair
+$(\alpha_1,\alpha_2)$.
 
 **Proof.** Given the mixture $\mathbf{m} = \alpha_1 \mathbf{v}_1 + \alpha_2
 \mathbf{v}_2$, the best estimate of $\mathbf{v}_1$ is the conditional mean
@@ -185,7 +187,10 @@ $$
 The standard dimension choice makes the heads collectively no more expensive
 than one big head: set the per-head width to $p = d/h$, so the $h$ heads
 together produce $hp = d$ numbers per token, exactly what a single head of
-width $d$ would. For a sequence of $n$ tokens the cost is then
+width $d$ would. For self-attention, write the sequence inputs as
+$\mathbf{Q},\mathbf{K},\mathbf{V}\in\mathbb{R}^{n\times d}$; each of the
+four learned projections is a $d\times d$ matrix, and each head receives
+matrices of shape $n\times p$. The resulting cost is
 
 $$
 \underbrace{8nd^2}_{\textrm{projections}} \;+\; \underbrace{4n^2 d}_{\textrm{scores and mixing}} \quad \textrm{FLOPs,} \qquad 4d^2 \ \textrm{parameters,}
